@@ -304,3 +304,78 @@ class TestSceneDuplicates:
         scn.add(Circle(name="teal_c"))
         with pytest.raises(DuplicateNameError, match="teal_c"):
             scn.add(Circle(name="teal_c"))
+
+
+class TestSceneAlias:
+    def test_alias_points_to_the_same_object(self):
+        scn = Scene()
+        pi = Real(name="pi", value=Free(3.141592653589793))
+        scn.add(pi)
+        scn.alias("π", "pi")
+        assert scn["π"] is pi
+        assert "π" in scn
+
+    def test_alias_does_not_add_a_toplevel_item(self):
+        scn = Scene()
+        scn.add(Real(name="pi"))
+        scn.alias("π", "pi")
+        assert len(scn) == 1
+        assert scn.objects == [scn["pi"]]
+
+    def test_alias_of_a_nested_object(self):
+        scn = Scene()
+        scn.add(Group(name="g", members=[Circle(name="a")]))
+        scn.alias("b", "a")
+        assert scn["b"] is scn["a"]
+
+    def test_alias_to_missing_name(self):
+        with pytest.raises(KeyError):
+            Scene().alias("π", "pi")
+
+    def test_alias_name_already_taken(self):
+        scn = Scene()
+        scn.add(Real(name="pi"))
+        scn.add(Real(name="tau"))
+        with pytest.raises(DuplicateNameError):
+            scn.alias("tau", "pi")
+
+    def test_adding_an_object_with_an_alias_name(self):
+        scn = Scene()
+        scn.add(Real(name="pi"))
+        scn.alias("π", "pi")
+        with pytest.raises(DuplicateNameError):
+            scn.add(Real(name="π"))
+
+
+class TestAnonymous:
+    def test_anonymous_object_has_no_name(self):
+        assert Circle(name=None).name is None
+
+    def test_anonymous_toplevel_object_is_kept_in_order(self):
+        scn = Scene()
+        anon = Circle(name=None)
+        scn.add(Circle(name="a"))
+        scn.add(anon)
+        assert list(scn)[1] is anon
+
+    def test_anonymous_objects_are_not_indexed(self):
+        scn = Scene()
+        scn.add(Circle(name=None))
+        scn.add(Circle(name=None))
+        assert len(scn) == 2
+
+    def test_anonymous_member_reachable_by_position(self):
+        anon = Circle(name=None)
+        g = Group(name="g", members=[anon, Circle(name="b")])
+        scn = Scene()
+        scn.add(g)
+        group = scn["g"]
+        assert isinstance(group, Group)
+        assert group.members[0] is anon
+        assert scn["b"] is g.members[1]
+
+    def test_named_members_of_anonymous_group_are_indexed(self):
+        a = Circle(name="a")
+        scn = Scene()
+        scn.add(Group(name=None, members=[a]))
+        assert scn["a"] is a

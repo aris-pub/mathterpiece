@@ -24,7 +24,7 @@ def _members():
 
 @dataclass(kw_only=True)
 class Obj:
-    name: str
+    name: str | None
 
 
 @dataclass(kw_only=True)
@@ -79,7 +79,7 @@ class Canvas(View):
 
 @runtime_checkable
 class Container(Protocol):
-    name: str
+    name: str | None
     members: list[Visual]
 
 
@@ -101,22 +101,28 @@ class Scene:
         self._index: dict[str, Obj] = {}
 
     def add(self, obj: Obj):
-        if obj.name in self._index:
+        if obj.name is not None and obj.name in self._index:
             raise DuplicateNameError(f"name {obj.name!r} is already defined")
         new: dict[str, Obj] = {}
         stack: list[Obj] = [obj]
         while stack:
             thing = stack.pop()
-            known = self._index.get(thing.name, new.get(thing.name))
-            if known is thing:
-                continue
-            if known is not None:
-                raise DuplicateNameError(f"name {thing.name!r} is already defined")
-            new[thing.name] = thing
+            if thing.name is not None:
+                known = self._index.get(thing.name, new.get(thing.name))
+                if known is thing:
+                    continue
+                if known is not None:
+                    raise DuplicateNameError(f"name {thing.name!r} is already defined")
+                new[thing.name] = thing
             if isinstance(thing, Container):
                 stack.extend(reversed(thing.members))
         self._index.update(new)
         self._items.append(obj)
+
+    def alias(self, name: str, target: str):
+        if name in self._index:
+            raise DuplicateNameError(f"name {name!r} is already defined")
+        self._index[name] = self._index[target]
 
     def __getitem__(self, name: str) -> Obj:
         return self._index[name]
