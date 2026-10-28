@@ -1,6 +1,7 @@
 # main.py
 # A LISP-y DSL for generating interactive mathematical widgets
 
+from random import uniform
 from textwrap import dedent
 from abc import abstractmethod
 import matplotlib.pyplot as plt
@@ -192,10 +193,20 @@ class Parser:
 
         self.depth += 1
         partial: str = sexp[1:-1]
-        head, rest = partial.split(' ', maxsplit=1)
+        head, rest = self.next_sexp(partial)
         self.depth -= 1
         func = getattr(self, f"parse_{head}")(rest)
         return func if return_func else func()
+
+    def parse_rand(self, partial:str):
+        a, b = 0.0, 1.0
+        if partial.strip():
+            a, b = self.toplevel_sexps(partial.strip())
+            a = self.parse_sexp(a)
+            b = self.parse_sexp(b)
+            print(a, b)
+
+        return lambda: uniform(a, b)
 
     def parse_group(self, partial: str):
         name, rest = partial.split(' ', maxsplit=1)
@@ -220,17 +231,14 @@ class Parser:
         return lambda: Circle(name, **attrs)
 
     def parse_text(self, partial: str):
-        sexp_generator = self.toplevel_sexps(partial)
-
-        name = next(sexp_generator)
+        name, partial = self.next_sexp(partial)
         name: str = self.parse_sexp(name)
 
-        val = next(sexp_generator)
+        val, rest = self.next_sexp(partial)
         val: str = self.parse_sexp(val)
         while (nextval :=  getattr(val, "val", val)) != val:
             val = nextval
 
-        rest = " ".join(sexp for sexp in sexp_generator)
         attrs = self.parse_attrs(rest)
         for k, v in attrs.items():
             attrs[k] = self.parse_sexp(v)
@@ -257,7 +265,8 @@ class Parser:
     def parse_attrs(self, attrs: str):
         attr_dict: dict[str, Any] = {}
         for sexp in self.toplevel_sexps(attrs):
-            attr, val = sexp.strip()[1:-1].split(" ")
+            sexp: str = sexp.strip()[1:-1]
+            attr, val = self.toplevel_sexps(sexp)
             attr_dict[attr.strip()] = val.strip()
         return attr_dict
 
@@ -282,6 +291,12 @@ class Parser:
         if len(split) == 2:
             val: float = self.parse_sexp(split[1])
         return lambda: Real(name, val)
+
+    def next_sexp(self, src: str):
+        sexp_generator = self.toplevel_sexps(src)
+        first = next(sexp_generator)
+        rest = " ".join(sexp for sexp in sexp_generator)
+        return first, rest
 
     def toplevel_sexps(self, src: str):
         last: int = 0
@@ -379,6 +394,12 @@ def main():
     (circle 'disk' (r 2))
     (text 'lbl' (mult 3.1415926535 disk.r disk.r) (x 0) (y 0))
     (canvas 'cnv' ['disk' 'lbl'])
+    """
+    src: str = """
+    (group 'dots'
+      (repeat i 50
+        (circle f'dot{i}' (r (rand 0 0.5)) (x (rand -10 10)) (y (rand -10 10)))))
+    (canvas 'cnv' ['dots'])
     """
     prs: Parser = Parser(src)
     scn: Scene = prs.parse()
