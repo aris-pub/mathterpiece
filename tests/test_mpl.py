@@ -28,7 +28,7 @@ class TestFree:
         assert value("(circle 'c' (r 2))", "c", "r") == 2.0
 
     def test_default(self):
-        assert value("(circle 'c')", "c", "facecolor") == "black"
+        assert value("(circle 'c')", "c", "fill") == "black"
 
     def test_builtin(self):
         assert value("(circle 'c' (r pi))", "c", "r") == math.pi
@@ -46,8 +46,12 @@ class TestBound:
         assert value(src, "c", "r") == 7.0
 
     def test_string_attribute(self):
-        src = "(circle 't' (edgecolor 'teal')) (circle 'c' (facecolor t.edgecolor))"
-        assert value(src, "c", "facecolor") == "teal"
+        src = "(circle 't' (stroke 'teal')) (circle 'c' (fill t.stroke))"
+        assert value(src, "c", "fill") == "teal"
+
+    def test_hyphenated_attribute(self):
+        src = "(circle 't' (stroke-width 3)) (circle 'c' (r t.stroke-width))"
+        assert value(src, "c", "r") == 3.0
 
     @pytest.mark.parametrize(
         "expr, result",
@@ -183,6 +187,11 @@ class TestRender:
         figures = render(compile_scene(parse(example.read_text())), random.Random(0))
         assert len(figures) == 1
 
+    def test_view_box_sets_the_axes_limits_with_y_up(self):
+        ((_, ax),) = render(scene("(canvas 'cnv' (min-x 1) (min-y -2) (width 4) (height 3))"))
+        assert ax.get_xlim() == (1.0, 5.0)
+        assert ax.get_ylim() == (-2.0, 1.0)
+
     def test_one_figure_per_canvas(self):
         assert len(render(scene("(canvas 'a') (canvas 'b')"))) == 2
 
@@ -281,6 +290,6 @@ class TestDotsExample:
 
         for dot in scn["dots"].members:  # ty: ignore[unresolved-attribute]
             expected = "teal" if touches(dot, teal) else "red" if touches(dot, red) else "gray"
-            assert ev.value(dot, "facecolor") == expected
+            assert ev.value(dot, "fill") == expected
             colors.add(expected)
         assert colors == {"teal", "red", "gray"}

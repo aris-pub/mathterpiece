@@ -41,11 +41,12 @@ class Visual(Obj):
 class Styled(Visual):
     x: Attr[float] = Free(0.0)
     y: Attr[float] = Free(0.0)
-    facecolor: Attr[str] = Free("black")
-    fill: Attr[bool] = Free(True)
-    edgecolor: Attr[str] = Free("black")
-    linewidth: Attr[float] = Free(1.0)
-    alpha: Attr[float] = Free(1.0)
+    fill: Attr[str] = Free("black")
+    stroke: Attr[str] = Free("none")
+    stroke_width: Attr[float] = Free(1.0)
+    opacity: Attr[float] = Free(1.0)
+    fill_opacity: Attr[float] = Free(1.0)
+    stroke_opacity: Attr[float] = Free(1.0)
 
 
 @dataclass(kw_only=True)
@@ -70,10 +71,11 @@ class View(Obj):
 
 @dataclass(kw_only=True)
 class Canvas(View):
-    xmin: Attr[float] = Free(-10.0)
-    xmax: Attr[float] = Free(10.0)
-    ymin: Attr[float] = Free(-10.0)
-    ymax: Attr[float] = Free(10.0)
+    # SVG viewBox, except that y points up, so min-y is the bottom edge.
+    min_x: Attr[float] = Free(-10.0)
+    min_y: Attr[float] = Free(-10.0)
+    width: Attr[float] = Free(20.0)
+    height: Attr[float] = Free(20.0)
     members: list[Visual] = _members()
 
 
@@ -83,8 +85,9 @@ class Container(Protocol):
     members: list[Visual]
 
 
+# Keys are DSL names, which use hyphens where the Python field names use underscores.
 def attributes(cls: type[Obj]) -> dict[str, Field]:
-    return {f.name: f for f in fields(cls) if f.name != "name"}
+    return {f.name.replace("_", "-"): f for f in fields(cls) if f.name != "name"}
 
 
 def variadic(cls: type[Obj]) -> Field | None:

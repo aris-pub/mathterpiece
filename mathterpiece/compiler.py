@@ -266,7 +266,7 @@ class _Compiler:
                 raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
             values[attr] = self.attr_value(spec.cls, attr, node.items[1], env)
 
-        kwargs: dict[str, Any] = dict(values)
+        kwargs: dict[str, Any] = {attrs[attr].name: value for attr, value in values.items()}
         if var is not None:
             members: list[Visual] = []
             for node in rest:

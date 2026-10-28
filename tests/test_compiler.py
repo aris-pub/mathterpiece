@@ -85,13 +85,13 @@ class TestCircle:
 
     def test_given_attributes(self):
         c = scene(
-            "(circle 'c' (r 3.5) (x -5.0) (y 4) (edgecolor 'teal') (linewidth 1.5)"
-            " (fill false) (alpha 0.25) (facecolor 'red'))"
+            "(circle 'c' (r 3.5) (x -5.0) (y 4) (stroke 'teal') (stroke-width 1.5)"
+            " (fill 'red') (opacity 0.25) (fill-opacity 0.5) (stroke-opacity 0.75))"
         )["c"]
         assert isinstance(c, Circle)
         assert (c.r, c.x, c.y) == (Free(3.5), Free(-5.0), Free(4.0))
-        assert (c.edgecolor, c.facecolor) == (Free("teal"), Free("red"))
-        assert (c.linewidth, c.fill, c.alpha) == (Free(1.5), Free(False), Free(0.25))
+        assert (c.stroke, c.fill, c.stroke_width) == (Free("teal"), Free("red"), Free(1.5))
+        assert (c.opacity, c.fill_opacity, c.stroke_opacity) == (Free(0.25), Free(0.5), Free(0.75))
 
     @pytest.mark.parametrize("text", ["2", "1/2", "2.0", "(* 2 3)", "(/ 1 2)"])
     def test_numbers_are_widened_to_real(self, text):
@@ -126,9 +126,10 @@ class TestCircle:
             ("r", "2i"),
             ("r", "$'x'"),
             ("fill", "1"),
-            ("fill", "'yes'"),
-            ("edgecolor", "2"),
-            ("edgecolor", "false"),
+            ("fill", "false"),
+            ("stroke", "2"),
+            ("stroke-width", "'thick'"),
+            ("opacity", "'half'"),
             ("r", "(+ 1 'a')"),
             ("r", "(+ 1 true)"),
         ],
@@ -138,6 +139,13 @@ class TestCircle:
 
     def test_unknown_attribute(self):
         error("(circle 'c' (rr 2))", match="'rr' is not an attribute of circle")
+
+    def test_hyphenated_attribute_read(self):
+        scn = scene("(circle 'a' (stroke-width 2)) (circle 'c' (r a.stroke-width))")
+        assert get(scn, "c", Circle).r == Bound(n("a", "stroke-width"))
+
+    def test_underscore_field_name_is_not_an_attribute(self):
+        error("(circle 'c' (stroke_width 2))", match="stroke_width")
 
     def test_attribute_given_twice(self):
         error("(circle 'c' (r 1) (r 2))", match="'r'")
@@ -273,13 +281,11 @@ class TestBound:
         assert get(scn, "c", Circle).r == Bound(expr)
 
     def test_string_attribute_from_another_object(self):
-        scn = scene(
-            "(circle 'teal_c' (edgecolor 'teal')) (circle 'c' (facecolor teal_c.edgecolor))"
-        )
-        assert get(scn, "c", Circle).facecolor == Bound(n("teal_c", "edgecolor"))
+        scn = scene("(circle 'teal_c' (stroke 'teal')) (circle 'c' (fill teal_c.stroke))")
+        assert get(scn, "c", Circle).fill == Bound(n("teal_c", "stroke"))
 
     def test_string_attribute_where_real_expected(self):
-        error("(circle 'teal_c') (circle 'c' (r teal_c.edgecolor))")
+        error("(circle 'teal_c') (circle 'c' (r teal_c.stroke))")
 
     def test_object_where_value_expected(self):
         error("(circle 'disk') (circle 'c' (r disk))")
@@ -368,10 +374,11 @@ class TestCanvas:
         assert scene("(canvas 'cnv')")["cnv"] == Canvas(name="cnv")
 
     def test_attributes_then_members(self):
-        scn = scene("(circle 'a') (canvas 'cnv' (xmin 0) (xmax 5) a (circle 'b'))")
+        scn = scene("(circle 'a') (canvas 'cnv' (min-x 0) (width 5) a (circle 'b'))")
         cnv = scn["cnv"]
         assert isinstance(cnv, Canvas)
-        assert (cnv.xmin, cnv.xmax) == (Free(0.0), Free(5.0))
+        assert (cnv.min_x, cnv.width) == (Free(0.0), Free(5.0))
+        assert (cnv.min_y, cnv.height) == (Free(-10.0), Free(20.0))
         assert cnv.members == [scn["a"], scn["b"]]
 
     def test_canvas_is_a_view(self):
@@ -379,7 +386,7 @@ class TestCanvas:
         assert scn.views == [scn["cnv"]]
 
     def test_attribute_after_members(self):
-        error("(circle 'a') (canvas 'cnv' a (xmin 0))")
+        error("(circle 'a') (canvas 'cnv' a (min-x 0))")
 
     def test_unknown_child(self):
         error(
@@ -482,16 +489,16 @@ class TestExamples:
         scn = compile_scene(parse((EXAMPLES / "dots.mtp").read_text()))
         teal, red = get(scn, "circles", Group).members
         assert isinstance(teal, Circle) and isinstance(red, Circle)
-        assert (teal.name, teal.r, teal.fill) == ("teal_c", Free(3.5), Free(False))
-        assert (red.name, red.edgecolor) == ("red_c", Free("red"))
+        assert (teal.name, teal.r, teal.fill) == ("teal_c", Free(3.5), Free("none"))
+        assert (red.name, red.stroke, red.stroke_width) == ("red_c", Free("red"), Free(1.5))
         dots = [d for d in get(scn, "dots", Group).members if isinstance(d, Circle)]
         assert len(dots) == 150
         assert [d.name for d in dots] == [f"dot{i}" for i in range(150)]
         for d in dots:
-            assert isinstance(d.facecolor, Bound)
-            assert isinstance(d.facecolor.expr, Form)
-            assert d.facecolor.expr.items[0] == n("cond")
-        assert all(isinstance(d.r, Bound) and d.alpha == Free(0.25) for d in dots)
+            assert isinstance(d.fill, Bound)
+            assert isinstance(d.fill.expr, Form)
+            assert d.fill.expr.items[0] == n("cond")
+        assert all(isinstance(d.r, Bound) and d.opacity == Free(0.25) for d in dots)
         assert get(scn, "cnv", Canvas).members == [scn["dots"], scn["circles"]]
 
     @pytest.mark.parametrize("example", sorted(EXAMPLES.glob("*.mtp")), ids=lambda p: p.name)
@@ -505,7 +512,7 @@ class TestSelf:
         assert c.y == Bound(n("self", "x"))
 
     def test_type_of_own_attribute_is_checked(self):
-        error("(circle 'c' (r self.edgecolor))")
+        error("(circle 'c' (r self.stroke))")
 
     def test_unknown_own_attribute(self):
         error("(circle 'c' (r self.nope))", match="nope")
@@ -515,12 +522,12 @@ class TestSelf:
         assert t.value == Bound(InterpStrLit(("at ", n("self", "x"))))
 
     def test_rebound_by_nested_definition(self):
-        scn = scene("(canvas 'cnv' (xmax self.xmin) (circle 'c' (r self.x)))")
-        assert get(scn, "cnv", Canvas).xmax == Bound(n("self", "xmin"))
+        scn = scene("(canvas 'cnv' (height self.width) (circle 'c' (r self.x)))")
+        assert get(scn, "cnv", Canvas).height == Bound(n("self", "width"))
         assert get(scn, "c", Circle).r == Bound(n("self", "x"))
 
     def test_nested_self_is_not_the_container(self):
-        error("(canvas 'cnv' (circle 'c' (r self.xmin)))", match="xmin")
+        error("(canvas 'cnv' (circle 'c' (r self.min-x)))", match="min-x")
 
     def test_shadows_a_global_named_self(self):
         c = get(scene("(real 'self' 2) (circle 'c' (r self.x))"), "c", Circle)

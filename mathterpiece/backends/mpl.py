@@ -4,6 +4,7 @@ from typing import Any, get_args
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 
 from mathterpiece.compiler import COMPARISONS
@@ -54,7 +55,7 @@ class Evaluator:
             return self.cache[key]
         if key in self.active:
             raise EvalError(f"cycle through {obj.name or 'an anonymous object'}.{attr}")
-        param = getattr(obj, attr)
+        param = getattr(obj, attributes(type(obj))[attr].name)
         if isinstance(param, Bound):
             self.active.add(key)
             try:
@@ -162,8 +163,9 @@ def render(scene: Scene, rng: random.Random | None = None) -> list[tuple[Figure,
     for view in scene.views:
         assert isinstance(view, Canvas)
         fig, ax = plt.subplots()
-        ax.set_xlim(ev.value(view, "xmin"), ev.value(view, "xmax"))
-        ax.set_ylim(ev.value(view, "ymin"), ev.value(view, "ymax"))
+        min_x, min_y = ev.value(view, "min-x"), ev.value(view, "min-y")
+        ax.set_xlim(min_x, min_x + ev.value(view, "width"))
+        ax.set_ylim(min_y, min_y + ev.value(view, "height"))
         for member in view.members:
             _draw(member, ax, ev)
         figures.append((fig, ax))
@@ -178,11 +180,9 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator):
         circle = plt.Circle(
             (ev.value(obj, "x"), ev.value(obj, "y")),
             ev.value(obj, "r"),
-            facecolor=ev.value(obj, "facecolor"),
-            fill=ev.value(obj, "fill"),
-            edgecolor=ev.value(obj, "edgecolor"),
-            linewidth=ev.value(obj, "linewidth"),
-            alpha=ev.value(obj, "alpha"),
+            facecolor=_paint(ev, obj, "fill"),
+            edgecolor=_paint(ev, obj, "stroke"),
+            linewidth=ev.value(obj, "stroke-width"),
         )
         ax.add_artist(circle)
     elif isinstance(obj, Text):
@@ -190,6 +190,12 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator):
             ev.value(obj, "x"),
             ev.value(obj, "y"),
             ev.value(obj, "value"),
-            color=ev.value(obj, "facecolor"),
-            alpha=ev.value(obj, "alpha"),
+            color=_paint(ev, obj, "fill"),
         )
+
+
+def _paint(ev: Evaluator, obj: Obj, attr: str):
+    color = ev.value(obj, attr)
+    if color == "none":
+        return "none"
+    return to_rgba(color, ev.value(obj, f"{attr}-opacity") * ev.value(obj, "opacity"))

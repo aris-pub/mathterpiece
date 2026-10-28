@@ -47,13 +47,13 @@ class TestDefaults:
         c = Circle(name="disk")
         assert c.name == "disk"
         assert (c.x, c.y, c.r) == (Free(0.0), Free(0.0), Free(1.0))
-        assert (c.facecolor, c.edgecolor, c.fill) == (Free("black"), Free("black"), Free(True))
-        assert (c.linewidth, c.alpha) == (Free(1.0), Free(1.0))
+        assert (c.fill, c.stroke, c.stroke_width) == (Free("black"), Free("none"), Free(1.0))
+        assert (c.opacity, c.fill_opacity, c.stroke_opacity) == (Free(1.0), Free(1.0), Free(1.0))
 
     def test_text_has_the_shared_visual_attributes(self):
         t = Text(name="lbl")
         assert t.value == Free("")
-        assert (t.x, t.y, t.facecolor, t.alpha) == (Free(0.0), Free(0.0), Free("black"), Free(1.0))
+        assert (t.x, t.y, t.fill, t.opacity) == (Free(0.0), Free(0.0), Free("black"), Free(1.0))
 
     def test_real(self):
         assert Real(name="k").value == Free(0.0)
@@ -64,8 +64,8 @@ class TestDefaults:
     def test_canvas(self):
         cnv = Canvas(name="cnv")
         assert cnv.members == []
-        bounds = (cnv.xmin, cnv.xmax, cnv.ymin, cnv.ymax)
-        assert bounds == (Free(-10.0), Free(10.0), Free(-10.0), Free(10.0))
+        bounds = (cnv.min_x, cnv.min_y, cnv.width, cnv.height)
+        assert bounds == (Free(-10.0), Free(-10.0), Free(20.0), Free(20.0))
 
     def test_defaults_are_not_shared_between_instances(self):
         a, b = Group(name="a"), Group(name="b")
@@ -121,11 +121,12 @@ class TestAttributeTable:
         assert list(attributes(Circle)) == [
             "x",
             "y",
-            "facecolor",
             "fill",
-            "edgecolor",
-            "linewidth",
-            "alpha",
+            "stroke",
+            "stroke-width",
+            "opacity",
+            "fill-opacity",
+            "stroke-opacity",
             "r",
         ]
 
@@ -138,7 +139,7 @@ class TestAttributeTable:
         )
 
     def test_canvas_attributes(self):
-        assert list(attributes(Canvas)) == ["xmin", "xmax", "ymin", "ymax", "members"]
+        assert list(attributes(Canvas)) == ["min-x", "min-y", "width", "height", "members"]
 
     def test_text_and_real_attributes(self):
         assert "value" in attributes(Text)
