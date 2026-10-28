@@ -293,3 +293,8 @@ class TestDotsExample:
             assert ev.value(dot, "fill") == expected
             colors.add(expected)
         assert colors == {"teal", "red", "gray"}
+
+
+class TestRef:
+    def test_reads_through_ref(self):
+        assert value("(circle 'a' (r 2)) (circle 'b' (r (ref 'a.r')))", "b", "r") == 2.0

@@ -1,4 +1,5 @@
 import re
+from dataclasses import replace
 from fractions import Fraction
 
 from mathterpiece.nodes import (
@@ -39,6 +40,29 @@ class ParseError(Exception):
 
 def parse(src: str) -> tuple[Form, ...]:
     return _Parser(src).parse()
+
+
+def parse_name(text: str, pos: Pos) -> Name:
+    parser = _Parser(text)
+    try:
+        node = parser.atom() if text else None
+    except ParseError:
+        node = None
+    if not isinstance(node, Name) or parser.peek() or node.parts[0] in OPERATORS:
+        raise ParseError(f"{text!r} is not a name", pos)
+    parts = tuple(p if isinstance(p, str) else _at(p, pos) for p in node.parts)
+    return Name(parts, pos)
+
+
+# Positions inside the string would be relative to the string, so every node gets its position.
+def _at(node: Node, pos: Pos) -> Node:
+    if isinstance(node, Name):
+        return Name(tuple(p if isinstance(p, str) else _at(p, pos) for p in node.parts), pos)
+    if isinstance(node, Form):
+        return Form(tuple(_at(item, pos) for item in node.items), pos)
+    if isinstance(node, InterpStrLit):
+        return InterpStrLit(node.parts, pos)
+    return replace(node, pos=pos)
 
 
 def _is_delimiter(ch: str) -> bool:

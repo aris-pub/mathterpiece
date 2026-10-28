@@ -757,3 +757,56 @@ class TestDist:
             "(circle 'a') (circle 'b') (real 'k') (group 'g') (canvas 'cnv')"
             f" (real 'd' (dist {args}))"
         )
+
+
+class TestRef:
+    def test_attribute_path(self):
+        scn = scene("(circle 'a' (r 2)) (circle 'b' (r (ref 'a.r')))")
+        assert get(scn, "b", Circle).r == Bound(n("a", "r"))
+
+    def test_generated_name_in_repeat(self):
+        scn = scene(
+            "(repeat i 2 (circle $'c{i}')) (repeat i 2 (circle $'d{i}' (x (ref $'c{i}.x'))))"
+        )
+        assert get(scn, "d1", Circle).x == Bound(n("c1", "x"))
+
+    def test_indexing_in_the_path(self):
+        scn = scene(
+            "(group 'g' (circle _ (r 3)) (circle _)) (repeat i 2 (real $'k{i}' (ref $'g[{i}].r')))"
+        )
+        assert get(scn, "k0", Real).value == Bound(n("g", IntLit(0), "r"))
+
+    def test_param_gives_its_value(self):
+        scn = scene("(real 'k' 2) (circle 'c' (r (ref 'k')))")
+        assert get(scn, "c", Circle).r == Bound(n("k"))
+
+    def test_builtin(self):
+        assert get(scene("(real 'v' (ref 'pi'))"), "v", Real).value == Bound(n("pi"))
+
+    def test_objects_for_dist(self):
+        scn = scene("(circle 'a') (circle 'b') (real 'd' (dist (ref 'a') (ref 'b')))")
+        assert get(scn, "d", Real).value == Bound(Form((n("dist"), n("a"), n("b"))))
+
+    def test_member(self):
+        scn = scene("(circle 'a') (canvas 'cnv' (ref 'a'))")
+        assert get(scn, "cnv", Canvas).members == [scn["a"]]
+
+    def test_members_from_repeat(self):
+        scn = scene("(repeat i 2 (circle $'c{i}')) (canvas 'cnv' (repeat i 2 (ref $'c{i}')))")
+        assert get(scn, "cnv", Canvas).members == [scn["c0"], scn["c1"]]
+
+    def test_type_is_checked(self):
+        error("(circle 'a' (stroke 'red')) (circle 'b' (r (ref 'a.stroke')))")
+
+    @pytest.mark.parametrize(
+        "arg",
+        ["'nope'", "'a b'", "'1'", "''", "'a.'", "'+'", "k", "(rand)", "$'c{k}'", "'a' 'b'"],
+    )
+    def test_invalid(self, arg):
+        error(f"(circle 'a') (real 'k') (circle 'c' (r (ref {arg})))")
+
+    def test_no_argument(self):
+        error("(circle 'c' (r (ref)))")
+
+    def test_non_visual_member(self):
+        error("(real 'k') (canvas 'cnv' (ref 'k'))")

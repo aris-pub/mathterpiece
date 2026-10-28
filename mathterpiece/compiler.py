@@ -18,6 +18,7 @@ from mathterpiece.nodes import (
     RealLit,
     StrLit,
 )
+from mathterpiece.parse import ParseError, parse_name
 from mathterpiece.scene import (
     Bound,
     Canvas,
@@ -287,7 +288,9 @@ class _Compiler:
         head = _head(node)
         if isinstance(node, Form) and head == "repeat":
             return self.repeat(node, env, lambda n, e: self.member(n, e, container, settable))
-        if isinstance(node, Form) and head in FORMS:
+        if isinstance(node, Form) and head == "ref":
+            node = self.ref_name(node, env)
+        elif isinstance(node, Form) and head in FORMS:
             obj = self.definition(node, env)
             if not isinstance(obj, Visual):
                 raise CompileError(f"{head} cannot be a member of {container}", node.pos)
@@ -317,7 +320,14 @@ class _Compiler:
             raise CompileError(f"expected {expected}, got {value.type}", node.pos)
         if isinstance(value, Const):
             return Free(_convert(value.value, expected))
-        return Bound(_substitute(node, env))
+        return Bound(self.resolve_refs(_substitute(node, env), env))
+
+    def resolve_refs(self, node: Node, env: Env) -> Node:
+        if isinstance(node, Form) and _head(node) == "ref":
+            return self.ref_name(node, env)
+        if isinstance(node, Form):
+            return Form(tuple(self.resolve_refs(item, env) for item in node.items), node.pos)
+        return node
 
     def expr(self, node: Node, env: Env) -> Value:
         match node:
@@ -425,9 +435,24 @@ class _Compiler:
             return self.cond(node, env)
         if head in STDLIB:
             return self.library(head, node, env)
+        if head == "ref":
+            return self.name(self.ref_name(node, env), env)
         if head in FORMS or head == "repeat":
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
         raise CompileError(f"unknown function {head!r}", node.pos)
+
+    def ref_name(self, node: Form, env: Env) -> Name:
+        if len(node.items) != 2:
+            raise CompileError("ref takes one string", node.pos)
+        arg = node.items[1]
+        value = self.expr(arg, env)
+        if not (isinstance(value, Const) and value.type == "str"):
+            raise CompileError("ref takes a string known at compile time", arg.pos)
+        assert isinstance(value.value, str)
+        try:
+            return parse_name(value.value, arg.pos)
+        except ParseError as e:
+            raise CompileError(e.msg, e.pos) from None
 
     def value_arg(self, node: Node, env: Env) -> Const | Dyn:
         value = self.expr(node, env)
