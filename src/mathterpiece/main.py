@@ -84,10 +84,25 @@ class Real(Obj):
 
 
 class VisualObj(Obj):
-    def __init__(self, name:str = "", x:float = 0.0, y:float = 0.0):
+    def __init__(
+            self,
+            name:str = "",
+            x:float = 0.0,
+            y:float = 0.0,
+            facecolor:str = "black",
+            fill:bool = True,
+            edgecolor:str = "black",
+            linewidth:float = 1.0,
+            alpha:float = 1.0,
+    ):
         super().__init__(name)
         self.x: float = x
         self.y: float = y
+        self.facecolor: str = facecolor
+        self.fill: bool = fill
+        self.edgecolor: str = edgecolor
+        self.linewidth: str = linewidth
+        self.alpha: float = alpha
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{self.name}')"
@@ -108,12 +123,20 @@ class Text(VisualObj):
 
 
 class Circle(VisualObj):
-    def __init__(self, name:str = "", x:float = 0.0, y:float = 0.0, r:float = 1.0):
-        super().__init__(name, x, y)
+    def __init__(self, name:str = "", r:float = 1.0, **kwargs):
+        super().__init__(name, **kwargs)
         self.r: float = r
 
     def draw(self, ax: plt.Axes, scn: Scene):
-        circle = plt.Circle((self.x, self.y), self.r, alpha=0.5)
+        circle = plt.Circle(
+            (self.x, self.y),
+            self.r,
+            facecolor=self.facecolor,
+            fill=self.fill,
+            edgecolor=self.edgecolor,
+            linewidth=self.linewidth,
+            alpha=self.alpha,
+        )
         ax.add_artist(circle)
 
 
@@ -204,8 +227,6 @@ class Parser:
             a, b = self.toplevel_sexps(partial.strip())
             a = self.parse_sexp(a)
             b = self.parse_sexp(b)
-            print(a, b)
-
         return lambda: uniform(a, b)
 
     def parse_group(self, partial: str):
@@ -245,8 +266,6 @@ class Parser:
         return lambda: Text(name, val=val, **attrs)
 
     def parse_mult(self, partial):
-        print("PARTIAL: ", partial)
-
         func_list: list[Callable] = [
             self.parse_sexp(sexp, return_func=True)
             for sexp in self.toplevel_sexps(partial)
@@ -397,9 +416,14 @@ def main():
     """
     src: str = """
     (group 'dots'
-      (repeat i 50
-        (circle f'dot{i}' (r (rand 0 0.5)) (x (rand -10 10)) (y (rand -10 10)))))
-    (canvas 'cnv' ['dots'])
+      (repeat i 100
+        (circle f'dot{i}'
+          (r (rand 0 0.25)) (x (rand -10 10)) (y (rand -10 10))
+          (alpha 0.25) (fill 'gray'))))
+    (group 'circles' [
+        (circle 'teal_c' (r 3.5) (x -5.0) (y  4.0) (edgecolor 'teal') (linewidth 1.5) (fill False))
+        (circle 'red_c'  (r 1.2) (x  3.5) (y -2.0) (edgecolor 'red') (linewidth 1.5) (fill False))])
+    (canvas 'cnv' ['dots' 'circles'])
     """
     prs: Parser = Parser(src)
     scn: Scene = prs.parse()
