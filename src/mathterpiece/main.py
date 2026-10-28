@@ -4,7 +4,7 @@
 from textwrap import dedent
 from abc import abstractmethod
 import matplotlib.pyplot as plt
-from typing import Any
+from typing import Any, Callable
 import logging
 
 logger = logging.getLogger("mtp")
@@ -78,6 +78,9 @@ class Real(Obj):
         super().__init__(name)
         self.val = val
 
+    def __repr__(self) -> str:
+        return f"Real({self.val})"
+
 
 class VisualObj(Obj):
     def __init__(self, name:str = "", x:float = 0.0, y:float = 0.0):
@@ -96,14 +99,15 @@ class VisualObj(Obj):
 class Text(VisualObj):
     def __init__(self, name:str = "", x:float = 0.0, y:float = 0.0, val:str = ""):
         super().__init__(name, x, y)
-        self.val: str | Ref = val
+        self.val: str = val
+        print(self.val)
 
     def draw(self, ax: plt.Axes, scn: Scene):
-        ax.text(self.x, self.y, getval(self.val, scn))
+        ax.text(self.x, self.y, self.val)
 
 
 class Circle(VisualObj):
-    def __init__(self, name:str = "", x:float = 0.0, y:float = 0.0, r:float = 0.0):
+    def __init__(self, name:str = "", x:float = 0.0, y:float = 0.0, r:float = 1.0):
         super().__init__(name, x, y)
         self.r: float = r
 
@@ -150,28 +154,6 @@ class Canvas(View):
         return fig, ax
 
 
-class Ref:
-    def __init__(self, name: str):
-        self.name: str = name
-
-    def __repr__(self) -> str:
-        return f"Ref('{self.name}')"
-
-    def resolve(self, scn: Scene):
-        ids: list[str] = self.name.split(".")
-        current = next(obj for obj in scn.objects if obj.name == ids[0])
-        for idx in ids[1:]:
-            current = getattr(current, idx)
-        return current
-
-
-def getval(thing: Any, scn: Scene):
-    if type(thing) is Ref:
-        return thing.resolve(scn)
-    else:
-        return thing
-
-
 class Group(VisualObj):
     def __init__(self, name:str = "", members: list | None = None):
         super().__init__(name)
@@ -189,61 +171,88 @@ class Parser:
         self.depth: int = -1
         self.boundvars: dict = {}
 
-    def parse_sexp(self, sexp):
+    def parse_sexp(self, sexp: str, return_func=False):
         sexp = sexp.strip()
-        # print(" " * (2*self.depth) + f"parsing: {sexp}" + (f" {self.boundvars=}" if self.boundvars else ""))
+        print(" " * (2*self.depth) + f"parsing: {sexp}" + (f" {self.boundvars=}" if self.boundvars else ""))
 
         if sexp[0] != "(":
             # list
             if sexp[0] == "[":
                 self.depth += 1
-                print(sexp[1:-1].strip())
-                print(list(self.toplevel_sexps(sexp[1:-1].strip())))
-                print([ex for ex in self.toplevel_sexps(sexp[1:-1].strip())])
-
-                return [
-                    self.parse_sexp(ex)
-                    for ex in self.toplevel_sexps(sexp[1:-1].strip())
-                ]
+                res = []
+                for ex in self.toplevel_sexps(sexp[1:-1].strip()):
+                    res.append(self.parse_sexp(ex))
+                self.depth -= 1
+                return res
 
             # atom
             else:
-                return eval(sexp, locals=self.scn.to_dict() | self.boundvars)
+                func = lambda: eval(sexp, locals=self.scn.to_dict() | self.boundvars)
+                return func if return_func else func()
 
         self.depth += 1
         partial: str = sexp[1:-1]
         head, rest = partial.split(' ', maxsplit=1)
         self.depth -= 1
-        return getattr(self, f"parse_{head}")(rest)
+        func = getattr(self, f"parse_{head}")(rest)
+        return func if return_func else func()
 
     def parse_group(self, partial: str):
         name, rest = partial.split(' ', maxsplit=1)
         name: str = self.parse_sexp(name)
         members: list = self.parse_sexp(rest)
-        return Group(name, members)
+        return lambda: Group(name, members)
 
     def parse_canvas(self, partial: str):
         name, rest = partial.split(' ', maxsplit=1)
         name: str = self.parse_sexp(name)
         members: list = self.parse_sexp(rest)
-        return Canvas(name, members)
+        return lambda: Canvas(name, members)
 
     def parse_circle(self, partial: str):
-        name, rest = partial.split(' ', maxsplit=1)
-        name: str = self.parse_sexp(name)
-        attrs = self.parse_attrs(rest)
-        for k, v in attrs.items():
-            attrs[k] = self.parse_sexp(v)
-        return Circle(name, **attrs)
+        split: list[str] = partial.split(' ', maxsplit=1)
+        name: str = self.parse_sexp(split[0])
+        attrs: dict = {}
+        if len(split) == 2:
+            attrs = self.parse_attrs(split[1])
+            for k, v in attrs.items():
+                attrs[k] = self.parse_sexp(v)
+        return lambda: Circle(name, **attrs)
 
     def parse_text(self, partial: str):
-        name, val, rest = partial.split(' ', maxsplit=2)
+        sexp_generator = self.toplevel_sexps(partial)
+
+        name = next(sexp_generator)
         name: str = self.parse_sexp(name)
+
+        val = next(sexp_generator)
         val: str = self.parse_sexp(val)
+        while (nextval :=  getattr(val, "val", val)) != val:
+            val = nextval
+
+        rest = " ".join(sexp for sexp in sexp_generator)
         attrs = self.parse_attrs(rest)
         for k, v in attrs.items():
             attrs[k] = self.parse_sexp(v)
-        return Text(name, val=val, **attrs)
+        return lambda: Text(name, val=val, **attrs)
+
+    def parse_mult(self, partial):
+        print("PARTIAL: ", partial)
+
+        func_list: list[Callable] = [
+            self.parse_sexp(sexp, return_func=True)
+            for sexp in self.toplevel_sexps(partial)
+        ]
+
+        def mult_func():
+            res: float = 1
+            for func in func_list:
+                val = func()
+                while hasattr(val, "val"):
+                    val = val.val
+                res *= val
+            return res
+        return mult_func
 
     def parse_attrs(self, attrs: str):
         attr_dict: dict[str, Any] = {}
@@ -264,7 +273,15 @@ class Parser:
             for ex in self.toplevel_sexps(sexp.strip()):
                 res.append(self.parse_sexp(ex))
         del self.boundvars[var]
-        return res
+        return lambda: res
+
+    def parse_real(self, partial: str):
+        split: list[str] = partial.split(' ', maxsplit=1)
+        name: str = self.parse_sexp(split[0])
+        val: float = 0.0
+        if len(split) == 2:
+            val: float = self.parse_sexp(split[1])
+        return lambda: Real(name, val)
 
     def toplevel_sexps(self, src: str):
         last: int = 0
@@ -302,7 +319,7 @@ class Parser:
         print(dedent(self.src).strip())
         print()
         src: str = dedent(self.src).strip().replace("\n", " ")
-        for sexp in self.toplevel_sexps(self.src):
+        for sexp in self.toplevel_sexps(src):
             res = self.parse_sexp(sexp)
             self.scn.add(res)
         self.scn.resolve_refs()
@@ -310,6 +327,10 @@ class Parser:
 
 
 def main():
+    src: str = """
+    (circle 'disk')
+    (canvas 'cnv' ['disk'])
+    """
     src: str = """
     (group 'disks' [
       (circle 'disk0' (r 1) (x 0) (y 0))
@@ -342,9 +363,25 @@ def main():
     (text 'lbl' disk.name (x 0) (y 0))
     (canvas 'cnv' ['disk' 'lbl'])
     """
+    src: str = """
+    (real 'pi' 3.1415926535)
+    (text 'lbl' pi (x 0) (y 0))
+    (canvas 'cnv' ['lbl'])
+    """
+    src: str = """
+    (circle 'disk' (r 2) (x 0) (y 0))
+    (real 'pi' 3.1415926535)
+    (real 'area' (mult pi disk.r disk.r))
+    (text 'lbl' area (x 0) (y 0))
+    (canvas 'cnv' ['disk' 'lbl'])
+    """
+    src: str = """
+    (circle 'disk' (r 2))
+    (text 'lbl' (mult 3.1415926535 disk.r disk.r) (x 0) (y 0))
+    (canvas 'cnv' ['disk' 'lbl'])
+    """
     prs: Parser = Parser(src)
     scn: Scene = prs.parse()
-    print(scn.views[0].members)
     scn.render()
     plt.show()
 
