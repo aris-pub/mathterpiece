@@ -26,13 +26,25 @@ class Scene:
             if not members:
                 continue
             for mem in members:
-                stack.append(mem)
+                if not isinstance(mem, str):
+                    stack.append(mem)
 
     def add(self, thing: Any):
         if isinstance(thing, Obj):
             self.objects.append(thing)
         elif isinstance(thing, View):
             self.views.append(thing)
+
+    def to_dict(self):
+        d: dict[str, Any] = {thing.name: thing for thing in self.objects + self.views}
+        stack: list = [mem for thing in d for mem in getattr(thing, "members", [])]
+        while stack:
+            thing: Any = stack.pop()
+            if thing in d:
+                continue
+            d[thing.name] = thing
+            stack += getattr(thing, "members", [])
+        return d
 
     def render(self) -> list[tuple[plt.Figure, plt.Axes]]:
         if not self.views:
@@ -49,12 +61,11 @@ class Scene:
         things: list = self.objects + self.views
         for obj in things:
             members = getattr(obj, "members", [])
-            if not members:
-                continue
             for mem in members:
                 if isinstance(mem, str):
+                    idx = obj.members.index(mem)
                     obj.members.remove(mem)
-                    obj.members.append(self[mem])
+                    obj.members.insert(idx, self[mem])
 
 
 class Obj:
@@ -117,7 +128,8 @@ class View:
 class Canvas(View):
     def __init__(
             self,
-            name: str, members:list[VisualObj] | None = None,
+            name: str,
+            members:list[VisualObj] | None = None,
             xmin:float = -10,
             xmax:float = 10,
             ymin:float = -10,
@@ -128,7 +140,6 @@ class Canvas(View):
         self.xmax:float = xmax
         self.ymin:float = ymin
         self.ymax:float = ymax
-        print(name, members)
 
     def render(self, scn: Scene) -> tuple[plt.Figure, plt.Axes]:
         fig, ax = plt.subplots()
@@ -165,7 +176,6 @@ class Group(VisualObj):
     def __init__(self, name:str = "", members: list | None = None):
         super().__init__(name)
         self.members: list[VisualObj] = members or []
-        print(name, members)
 
     def draw(self, ax: plt.Axes, scn: Scene):
         for obj in self.members:
@@ -175,45 +185,86 @@ class Group(VisualObj):
 class Parser:
     def __init__(self, src: str):
         self.src: str = src
+        self.scn: Scene = Scene()
+        self.depth: int = -1
+        self.boundvars: dict = {}
 
-    def parse_sexp(self, sexp, depth=0):
+    def parse_sexp(self, sexp):
         sexp = sexp.strip()
-        # print(" " * (2*depth) + f"parsing: {sexp}")
+        # print(" " * (2*self.depth) + f"parsing: {sexp}" + (f" {self.boundvars=}" if self.boundvars else ""))
 
         if sexp[0] != "(":
             # list
             if sexp[0] == "[":
-                return [self.parse_sexp(ex) for ex in self.toplevel_sexps(sexp[1:-1].strip())]
+                self.depth += 1
+                print(sexp[1:-1].strip())
+                print(list(self.toplevel_sexps(sexp[1:-1].strip())))
+                print([ex for ex in self.toplevel_sexps(sexp[1:-1].strip())])
+
+                return [
+                    self.parse_sexp(ex)
+                    for ex in self.toplevel_sexps(sexp[1:-1].strip())
+                ]
 
             # atom
             else:
-                return eval(sexp)
+                return eval(sexp, locals=self.scn.to_dict() | self.boundvars)
 
+        self.depth += 1
         partial: str = sexp[1:-1]
         head, rest = partial.split(' ', maxsplit=1)
-        head, rest = getattr(self, f"parse_{head}")(rest)
-        for k, v in rest.items():
-            rest[k] = self.parse_sexp(v, depth+1)
-        return head(**rest)
+        self.depth -= 1
+        return getattr(self, f"parse_{head}")(rest)
 
-    def parse_group(self, partial: str) -> tuple[Any, dict[str, Any]]:
+    def parse_group(self, partial: str):
         name, rest = partial.split(' ', maxsplit=1)
-        return Group, {"name": name, "members": rest}
+        name: str = self.parse_sexp(name)
+        members: list = self.parse_sexp(rest)
+        return Group(name, members)
 
-    def parse_canvas(self, partial: str) -> tuple[Any, dict[str, Any]]:
+    def parse_canvas(self, partial: str):
         name, rest = partial.split(' ', maxsplit=1)
-        return Canvas, {"name": name, "members": rest}
+        name: str = self.parse_sexp(name)
+        members: list = self.parse_sexp(rest)
+        return Canvas(name, members)
 
-    def parse_circle(self, partial: str) -> tuple[Any, dict[str, Any]]:
+    def parse_circle(self, partial: str):
         name, rest = partial.split(' ', maxsplit=1)
-        return Circle, {"name": name, **self.parse_attrs(rest)}
+        name: str = self.parse_sexp(name)
+        attrs = self.parse_attrs(rest)
+        for k, v in attrs.items():
+            attrs[k] = self.parse_sexp(v)
+        return Circle(name, **attrs)
 
-    def parse_attrs(self, attrs: str) -> dict[str, Any]:
+    def parse_text(self, partial: str):
+        name, val, rest = partial.split(' ', maxsplit=2)
+        name: str = self.parse_sexp(name)
+        val: str = self.parse_sexp(val)
+        attrs = self.parse_attrs(rest)
+        for k, v in attrs.items():
+            attrs[k] = self.parse_sexp(v)
+        return Text(name, val=val, **attrs)
+
+    def parse_attrs(self, attrs: str):
         attr_dict: dict[str, Any] = {}
         for sexp in self.toplevel_sexps(attrs):
             attr, val = sexp.strip()[1:-1].split(" ")
             attr_dict[attr.strip()] = val.strip()
         return attr_dict
+
+    def parse_repeat(self, partial: str):
+        var, num, sexp = partial.split(' ', maxsplit=2)
+        var: str = var.strip()
+        num: int = eval(num.strip())
+        sexp: str = sexp.strip()
+
+        res: list = []
+        for i in range(num):
+            self.boundvars[var] = i
+            for ex in self.toplevel_sexps(sexp.strip()):
+                res.append(self.parse_sexp(ex))
+        del self.boundvars[var]
+        return res
 
     def toplevel_sexps(self, src: str):
         last: int = 0
@@ -221,8 +272,10 @@ class Parser:
         nestedness: int = 0
         while ptr < len(src):
             sexp = ""
-            while src[ptr] in " \n\t":
+            while ptr < len(src) and src[ptr] in " \n\t":
                 ptr += 1
+            if ptr == len(src):
+                break
 
             # atom
             if src[ptr] != "(":
@@ -246,33 +299,52 @@ class Parser:
             last = ptr
 
     def parse(self):
-        scn = Scene()
+        print(dedent(self.src).strip())
+        print()
+        src: str = dedent(self.src).strip().replace("\n", " ")
         for sexp in self.toplevel_sexps(self.src):
             res = self.parse_sexp(sexp)
-            scn.add(res)
-        scn.resolve_refs()
-        return scn
+            self.scn.add(res)
+        self.scn.resolve_refs()
+        return self.scn
 
 
 def main():
     src: str = """
     (group 'disks' [
-      (circle 'disk-0' (r 1) (x 0) (y 0))
-      (circle 'disk-1' (r 1) (x 1) (y 0))
-      (circle 'disk-2' (r 1) (x 2) (y 0))])
+      (circle 'disk0' (r 1) (x 0) (y 0))
+      (circle 'disk1' (r 1) (x 1) (y 0))
+      (circle 'disk2' (r 1) (x 2) (y 0))])
     (canvas 'cnv' ['disks'])
     """
-    # src: str = """
-    # (canvas 'cnv' [
-    #   (group 'disks' [
-    #     (circle 'disk-0' (r 1) (x 0) (y 0))
-    #     (circle 'disk-1' (r 1) (x 1) (y 0))
-    #     (circle 'disk-2' (r 1) (x 2) (y 0))])])
-    # """
-    src = dedent(src).strip().replace("\n", " ")
+    src: str = """
+    (canvas 'cnv' [
+      (group 'disks' [
+        (circle 'disk0' (r 1) (x 0) (y 0))
+        (circle 'disk1' (r 1) (x 1) (y 0))
+        (circle 'disk2' (r 1) (x 2) (y 0))])])
+    """
+    src: str = """
+    (canvas 'cnv' [
+      (circle 'disk0' (r 1) (x 0) (y 0))
+      (circle 'disk1' (r 1) (x 1) (y 0))
+      (circle 'disk2' (r 1) (x 2) (y 0))])
+    """
+    src: str = """
+    (group 'disks'
+      (repeat i 3
+        (circle f'disk{i}' (r 1) (x i) (y i))
+        (text f'text{i}' f'disk{i}' (x i) (y i))))
+    (canvas 'cnv' ['disks'])
+    """
+    src: str = """
+    (circle 'disk' (r 1) (x 0) (y 0))
+    (text 'lbl' disk.name (x 0) (y 0))
+    (canvas 'cnv' ['disk' 'lbl'])
+    """
     prs: Parser = Parser(src)
     scn: Scene = prs.parse()
-    print(scn.views, scn.views[0].members)
+    print(scn.views[0].members)
     scn.render()
     plt.show()
 
