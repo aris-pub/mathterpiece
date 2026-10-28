@@ -60,10 +60,12 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
+_Add your build and test commands here_
+
 ```bash
-uv sync           # install dependencies, including pytest
-uv run pytest     # run the test suite in tests/
-uv run mtp examples/dots.mtp        # render a file; add -v, -vv, -vvv for INFO, DEBUG, TRACE logs
+# Example:
+# npm install
+# npm test
 ```
 
 ## Architecture Overview

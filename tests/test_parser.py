@@ -199,7 +199,8 @@ class TestRepeat:
 
     def test_nested_repeat(self, prs):
         res = prs.parse_sexp(
-            "(group 'g' (repeat i 2 (group f'row{i}' (repeat j 2 (circle f'c{i}{j}' (x j) (y i))))))"
+            "(group 'g' (repeat i 2 (group f'row{i}'"
+            " (repeat j 2 (circle f'c{i}{j}' (x j) (y i))))))"
         )
         assert [row.name for row in res.members] == ["row0", "row1"]
         assert [c.name for c in res.members[1].members] == ["c10", "c11"]

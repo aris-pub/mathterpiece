@@ -50,12 +50,12 @@ class Scene:
 
 
 class Obj:
-    def __init__(self, name:str = ""):
+    def __init__(self, name: str = ""):
         self.name: str = name
 
 
 class Real(Obj):
-    def __init__(self, name:str = "", val: float = 0.0):
+    def __init__(self, name: str = "", val: float = 0.0):
         super().__init__(name)
         self.val = val
 
@@ -65,15 +65,15 @@ class Real(Obj):
 
 class VisualObj(Obj):
     def __init__(
-            self,
-            name:str = "",
-            x:float = 0.0,
-            y:float = 0.0,
-            facecolor:str = "black",
-            fill:bool = True,
-            edgecolor:str = "black",
-            linewidth:float = 1.0,
-            alpha:float = 1.0,
+        self,
+        name: str = "",
+        x: float = 0.0,
+        y: float = 0.0,
+        facecolor: str = "black",
+        fill: bool = True,
+        edgecolor: str = "black",
+        linewidth: float = 1.0,
+        alpha: float = 1.0,
     ):
         super().__init__(name)
         self.x: float = x
@@ -81,7 +81,7 @@ class VisualObj(Obj):
         self.facecolor: str = facecolor
         self.fill: bool = fill
         self.edgecolor: str = edgecolor
-        self.linewidth: str = linewidth
+        self.linewidth: float = linewidth
         self.alpha: float = alpha
 
     def __repr__(self) -> str:
@@ -89,18 +89,18 @@ class VisualObj(Obj):
 
 
 class Text(VisualObj):
-    def __init__(self, name:str = "", x:float = 0.0, y:float = 0.0, val:str = ""):
+    def __init__(self, name: str = "", x: float = 0.0, y: float = 0.0, val: str = ""):
         super().__init__(name, x, y)
         self.val: str = val
 
 
 class Circle(VisualObj):
-    def __init__(self, name:str = "", r:float = 1.0, **kwargs):
+    def __init__(self, name: str = "", r: float = 1.0, **kwargs):
         super().__init__(name, **kwargs)
         self.r: float = r
 
 
 class Group(VisualObj):
-    def __init__(self, name:str = "", members: list | None = None):
+    def __init__(self, name: str = "", members: list | None = None):
         super().__init__(name)
-        self.members: list[VisualObj] = members or []
+        self.members: list[VisualObj | str] = members or []

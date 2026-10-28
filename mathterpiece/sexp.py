@@ -35,7 +35,7 @@ def toplevel_sexps(src: str) -> Iterator[str]:
                     nestedness -= 1
                 ptr += 1
 
-        sexp: str = src[last : ptr].strip()
+        sexp: str = src[last:ptr].strip()
         if sexp:
             yield sexp
         last = ptr

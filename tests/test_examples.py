@@ -1,4 +1,4 @@
-"""The example programs that used to be hardcoded in main(), checked against the Scene they produce."""
+"""Example programs that used to be hardcoded in main(), checked against their Scene."""
 
 import random
 

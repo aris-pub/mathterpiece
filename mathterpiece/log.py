@@ -13,5 +13,6 @@ def setup(verbosity: int):
     handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
     log.addHandler(handler)
     log.propagate = False
-    # Without a handler of its own, matplotlib's warnings would reach logging's last-resort stderr handler.
+    # Without a handler of its own, matplotlib's warnings would reach logging's
+    # last-resort stderr handler.
     logging.getLogger("matplotlib").addHandler(logging.NullHandler())

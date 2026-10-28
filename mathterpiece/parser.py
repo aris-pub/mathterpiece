@@ -1,7 +1,8 @@
 import logging
+from collections.abc import Callable
 from random import uniform
 from textwrap import dedent
-from typing import Any, Callable
+from typing import Any
 
 from mathterpiece.log import TRACE
 from mathterpiece.scene import Circle, Group, Real, Scene, Text
@@ -21,8 +22,11 @@ class Parser:
     def parse_sexp(self, sexp: str, return_func=False):
         sexp = sexp.strip()
         logger.log(
-            TRACE, "%sparsing: %s%s",
-            " " * (2*self.depth), sexp, f" {self.boundvars=}" if self.boundvars else "",
+            TRACE,
+            "%sparsing: %s%s",
+            " " * (2 * self.depth),
+            sexp,
+            f" {self.boundvars=}" if self.boundvars else "",
         )
 
         if sexp[0] != "(":
@@ -37,7 +41,10 @@ class Parser:
 
             # atom
             else:
-                func = lambda: eval(sexp, locals=self.scn.to_dict() | self.boundvars)
+
+                def func():
+                    return eval(sexp, locals=self.scn.to_dict() | self.boundvars)
+
                 return func if return_func else func()
 
         self.depth += 1
@@ -47,7 +54,7 @@ class Parser:
         func = getattr(self, f"parse_{head}")(rest)
         return func if return_func else func()
 
-    def parse_rand(self, partial:str):
+    def parse_rand(self, partial: str):
         a, b = 0.0, 1.0
         if partial.strip():
             a, b = toplevel_sexps(partial.strip())
@@ -56,19 +63,19 @@ class Parser:
         return lambda: uniform(a, b)
 
     def parse_group(self, partial: str):
-        name, rest = partial.split(' ', maxsplit=1)
+        name, rest = partial.split(" ", maxsplit=1)
         name: str = self.parse_sexp(name)
         members: list = self.parse_sexp(rest)
         return lambda: Group(name, members)
 
     def parse_canvas(self, partial: str):
-        name, rest = partial.split(' ', maxsplit=1)
+        name, rest = partial.split(" ", maxsplit=1)
         name: str = self.parse_sexp(name)
         members: list = self.parse_sexp(rest)
         return lambda: Canvas(name, members)
 
     def parse_circle(self, partial: str):
-        split: list[str] = partial.split(' ', maxsplit=1)
+        split: list[str] = partial.split(" ", maxsplit=1)
         name: str = self.parse_sexp(split[0])
         attrs: dict = {}
         if len(split) == 2:
@@ -83,7 +90,7 @@ class Parser:
 
         val, rest = next_sexp(partial)
         val: str = self.parse_sexp(val)
-        while (nextval :=  getattr(val, "val", val)) != val:
+        while (nextval := getattr(val, "val", val)) != val:
             val = nextval
 
         attrs = self.parse_attrs(rest)
@@ -93,8 +100,7 @@ class Parser:
 
     def parse_mult(self, partial):
         func_list: list[Callable] = [
-            self.parse_sexp(sexp, return_func=True)
-            for sexp in toplevel_sexps(partial)
+            self.parse_sexp(sexp, return_func=True) for sexp in toplevel_sexps(partial)
         ]
 
         def mult_func():
@@ -105,6 +111,7 @@ class Parser:
                     val = val.val
                 res *= val
             return res
+
         return mult_func
 
     def parse_attrs(self, attrs: str):
@@ -116,7 +123,7 @@ class Parser:
         return attr_dict
 
     def parse_repeat(self, partial: str):
-        var, num, sexp = partial.split(' ', maxsplit=2)
+        var, num, sexp = partial.split(" ", maxsplit=2)
         var: str = var.strip()
         num: int = eval(num.strip())
         sexp: str = sexp.strip()
@@ -130,7 +137,7 @@ class Parser:
         return lambda: res
 
     def parse_real(self, partial: str):
-        split: list[str] = partial.split(' ', maxsplit=1)
+        split: list[str] = partial.split(" ", maxsplit=1)
         name: str = self.parse_sexp(split[0])
         val: float = 0.0
         if len(split) == 2:

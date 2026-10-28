@@ -69,7 +69,7 @@ class TestResolveRefs:
             scn.add(Circle(name))
         scn.add(Canvas("cnv", ["z", "x", "y"]))
         scn.resolve_refs()
-        assert [m.name for m in scn.views[0].members] == ["z", "x", "y"]
+        assert scn.views[0].members == [scn["z"], scn["x"], scn["y"]]
 
     def test_mixed_refs_and_objects(self):
         scn = Scene()
@@ -77,5 +77,5 @@ class TestResolveRefs:
         y = Circle("y")
         scn.add(Canvas("cnv", ["x", y]))
         scn.resolve_refs()
-        assert [m.name for m in scn.views[0].members] == ["x", "y"]
+        assert scn.views[0].members == [scn["x"], y]
         assert scn.views[0].members[1] is y
