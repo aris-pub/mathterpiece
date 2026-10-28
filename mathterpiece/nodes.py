@@ -16,7 +16,7 @@ NOPOS = Pos(0, 0)
 
 @dataclass(frozen=True, slots=True)
 class Name:
-    parts: tuple[str, ...]
+    parts: "tuple[str | Node, ...]"
     pos: Pos = field(default=NOPOS, compare=False)
 
 

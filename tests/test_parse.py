@@ -424,6 +424,95 @@ class TestInterpStr:
             parse("(f $'a'b)")
 
 
+class TestIndexing:
+    @pytest.mark.parametrize(
+        "text, parts",
+        [
+            ("g[0]", ("g", IntLit(0))),
+            ("g[-1]", ("g", IntLit(-1))),
+            ("g[i]", ("g", n("i"))),
+            ("g['k']", ("g", StrLit("k"))),
+            ("g[(+ i 1)]", ("g", Form((n("+"), n("i"), IntLit(1))))),
+            ("g[ 0 ]", ("g", IntLit(0))),
+            ("g[\n  0\n]", ("g", IntLit(0))),
+            ("g[0 ; comment\n]", ("g", IntLit(0))),
+            ("g[0].r", ("g", IntLit(0), "r")),
+            ("g[0].r.s", ("g", IntLit(0), "r", "s")),
+            ("g[0].r[1]", ("g", IntLit(0), "r", IntLit(1))),
+            ("a.b[0].c", ("a", "b", IntLit(0), "c")),
+            ("g[0][1]", ("g", IntLit(0), IntLit(1))),
+            ("g[h[0]]", ("g", n("h", IntLit(0)))),
+            ("g[h[0].k]", ("g", n("h", IntLit(0), "k"))),
+            ("α₁[0].x'", ("α₁", IntLit(0), "x'")),
+        ],
+    )
+    def test_valid(self, text, parts):
+        assert atom(text) == Name(parts)
+
+    def test_in_a_form(self):
+        assert parse("(f g[0] h)") == (Form((n("f"), n("g", IntLit(0)), n("h"))),)
+
+    def test_before_close_paren(self):
+        assert parse("(f g[0])") == (Form((n("f"), n("g", IntLit(0)))),)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "g [0]",
+            "g[]",
+            "g[ ]",
+            "g[0 1]",
+            "g[0",
+            "g[0]x",
+            "g[0].",
+            "g[0]..r",
+            "g[0].1",
+            "g[0]]",
+            "g.[0]",
+            "1[0]",
+            "1.5[0]",
+            "true[0]",
+            "+[0]",
+            "[0]",
+            "g]",
+            "g[0]'a'",
+        ],
+    )
+    def test_invalid(self, text):
+        with pytest.raises(ParseError):
+            parse(f"(f {text})")
+
+    def test_unclosed_reports_opening_bracket(self):
+        assert error_at("(f g[0\n  h)") == Pos(1, 5)
+
+    def test_index_position(self):
+        (form,) = parse("(f g[ 12 ])")
+        name = form.items[1]
+        assert isinstance(name, Name)
+        assert name.pos == Pos(1, 4)
+        index = name.parts[1]
+        assert isinstance(index, IntLit)
+        assert index.pos == Pos(1, 7)
+
+    @pytest.mark.parametrize(
+        "text, parts",
+        [
+            ("$'{g[0].r}'", (n("g", IntLit(0), "r"),)),
+            ("$'{ g[ i ] }'", (n("g", n("i")),)),
+            ("$'{g[(+ i 1)]}'", (n("g", Form((n("+"), n("i"), IntLit(1)))),)),
+            ("$'{g['a']}'", (n("g", StrLit("a")),)),
+            ("$'x {g[0]} y'", ("x ", n("g", IntLit(0)), " y")),
+        ],
+    )
+    def test_inside_interpolated_string(self, text, parts):
+        assert atom(text) == InterpStrLit(parts)
+
+    @pytest.mark.parametrize("text", ["$'{g [0]}'", "$'{g[0]x}'", "$'{g[0}'", "$'{[0]}'"])
+    def test_invalid_inside_interpolated_string(self, text):
+        with pytest.raises(ParseError):
+            atom(text)
+
+
 class TestPositions:
     def test_form_position_is_opening_paren(self):
         (form,) = parse("\n  (a b)")

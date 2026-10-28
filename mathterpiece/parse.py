@@ -45,17 +45,21 @@ def _is_delimiter(ch: str) -> bool:
     return ch.isspace() or ch in "();"
 
 
+def _ends_run(ch: str) -> bool:
+    return _is_delimiter(ch) or ch in '[]{}"'
+
+
 def _valid_name_part(part: str) -> bool:
     if not part or part[0].isdigit() or part[0] in NAME_BAD_START or part[0] == "'":
         return False
     return not any(ch in NAME_EXCLUDED and ch != "'" for ch in part)
 
 
-def _name(text: str, pos: Pos) -> Name:
-    parts = tuple(text.split("."))
+def _name_parts(text: str, pos: Pos) -> list[str | Node]:
+    parts = text.split(".")
     if not all(_valid_name_part(part) for part in parts):
         raise ParseError(f"invalid name {text!r}", pos)
-    return Name(parts, pos)
+    return list(parts)
 
 
 def _number(text: str, pos: Pos) -> Node | None:
@@ -155,12 +159,17 @@ class _Parser:
             raise ParseError("empty form", pos)
         return Form(tuple(items), pos)
 
+    def run(self) -> str:
+        start = self.i
+        while self.peek() and not _ends_run(self.peek()):
+            self.advance()
+        return self.src[start : self.i]
+
     def atom(self) -> Node:
         pos = self.pos()
-        start = self.i
-        while self.peek() and not _is_delimiter(self.peek()):
-            self.advance()
-        text = self.src[start : self.i]
+        text = self.run()
+        if self.peek() == "[":
+            return self.access(text, pos)
         if text in OPERATORS:
             return Name((text,), pos)
         if text in ("true", "false"):
@@ -169,10 +178,35 @@ class _Parser:
             return number
         if LOOKS_NUMERIC_RE.match(text):
             raise ParseError(f"invalid number {text!r}", pos)
-        return _name(text, pos)
+        return Name(tuple(_name_parts(text, pos)), pos)
+
+    def access(self, text: str, pos: Pos) -> Name:
+        if text in OPERATORS or text in ("true", "false") or LOOKS_NUMERIC_RE.match(text):
+            raise ParseError(f"only names can be indexed, got {text!r}", pos)
+        parts = _name_parts(text, pos)
+        while self.peek() == "[":
+            bracket = self.pos()
+            self.advance()
+            self.skip_blank()
+            if self.peek() == "]":
+                raise ParseError("empty index", bracket)
+            if not self.peek():
+                raise ParseError("unclosed '['", bracket)
+            parts.append(self.node())
+            self.skip_blank()
+            if self.peek() != "]":
+                raise ParseError("expected a single expression and ']' after '['", bracket)
+            self.advance()
+            if self.peek() == ".":
+                self.advance()
+                part_pos = self.pos()
+                parts.extend(_name_parts(self.run(), part_pos))
+        if self.peek() and not _ends_run(self.peek()):
+            raise ParseError(f"unexpected {self.peek()!r} after index", self.pos())
+        return Name(tuple(parts), pos)
 
     def expect_delimiter(self):
-        if self.peek() and not _is_delimiter(self.peek()):
+        if self.peek() and not (_is_delimiter(self.peek()) or self.peek() == "]"):
             raise ParseError("expected whitespace, '(', ')' or ';' after a string", self.pos())
 
     def escape(self, start: Pos) -> str:
@@ -247,17 +281,15 @@ class _Parser:
         while self.peek().isspace():
             self.advance()
         pos = self.pos()
-        start = self.i
-        while self.peek() and not self.peek().isspace() and self.peek() not in "}'":
-            self.advance()
-        text = self.src[start : self.i]
+        text = self.run()
+        if not text:
+            raise ParseError("expected a name inside braces", brace)
+        if text in OPERATORS or text in ("true", "false") or LOOKS_NUMERIC_RE.match(text):
+            raise ParseError(f"only names are allowed inside braces, got {text!r}", pos)
+        name = self.access(text, pos)
         while self.peek().isspace():
             self.advance()
         if self.peek() != "}":
             raise ParseError("expected a single name and '}' inside braces", brace)
         self.advance()
-        if not text:
-            raise ParseError("empty braces", brace)
-        if text in OPERATORS or text in ("true", "false") or LOOKS_NUMERIC_RE.match(text):
-            raise ParseError(f"only names are allowed inside braces, got {text!r}", pos)
-        return _name(text, pos)
+        return name
