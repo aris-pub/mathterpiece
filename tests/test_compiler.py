@@ -152,7 +152,9 @@ class TestCircle:
     def test_no_positional_values(self):
         error("(circle 'c' 2)")
 
-    @pytest.mark.parametrize("src", ["(-)", "(/)", "(/ 1 0)", "(/ 1/2 0)"])
+    @pytest.mark.parametrize(
+        "src", ["(-)", "(/)", "(/ 2)", "(/ 1 0)", "(/ 1/2 0)", "(/ 1.0 0)", "(/ 1 0.0)"]
+    )
     def test_invalid_constant_arithmetic(self, src):
         error(f"(circle 'c' (r {src}))")
 
@@ -492,3 +494,43 @@ class TestExamples:
     @pytest.mark.parametrize("example", sorted(EXAMPLES.glob("*.mtp")), ids=lambda p: p.name)
     def test_examples_compile(self, example):
         compile_scene(parse(example.read_text()))
+
+
+class TestSelf:
+    def test_reads_own_attribute(self):
+        c = get(scene("(circle 'c' (x 1) (y self.x))"), "c", Circle)
+        assert c.y == Bound(n("self", "x"))
+
+    def test_type_of_own_attribute_is_checked(self):
+        error("(circle 'c' (r self.edgecolor))")
+
+    def test_unknown_own_attribute(self):
+        error("(circle 'c' (r self.nope))", match="nope")
+
+    def test_self_in_interpolated_text(self):
+        t = get(scene("(text 't' $'at {self.x}')"), "t", Text)
+        assert t.value == Bound(InterpStrLit(("at ", n("self", "x"))))
+
+    def test_rebound_by_nested_definition(self):
+        scn = scene("(canvas 'cnv' (xmax self.xmin) (circle 'c' (r self.x)))")
+        assert get(scn, "cnv", Canvas).xmax == Bound(n("self", "xmin"))
+        assert get(scn, "c", Circle).r == Bound(n("self", "x"))
+
+    def test_nested_self_is_not_the_container(self):
+        error("(canvas 'cnv' (circle 'c' (r self.xmin)))", match="xmin")
+
+    def test_shadows_a_global_named_self(self):
+        c = get(scene("(real 'self' 2) (circle 'c' (r self.x))"), "c", Circle)
+        assert c.r == Bound(n("self", "x"))
+
+    def test_bare_self_is_an_object(self):
+        error("(circle 'c' (r self))")
+
+    def test_not_allowed_in_a_name(self):
+        error("(circle $'c{self.x}')")
+
+    def test_not_a_member(self):
+        error("(group 'g' self)")
+
+    def test_undefined_outside_definitions(self):
+        error("(repeat i self.x (circle _))", match="self")

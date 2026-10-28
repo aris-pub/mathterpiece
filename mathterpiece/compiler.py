@@ -87,7 +87,13 @@ class ObjRef:
     obj: Obj
 
 
-Value = Const | Dyn | Spread | ObjRef
+@dataclass(frozen=True)
+class SelfRef:
+    cls: type[Obj]
+
+
+Value = Const | Dyn | Spread | ObjRef | SelfRef
+Env = dict[str, "int | SelfRef"]
 
 
 def compile_scene(forms: tuple[Form, ...]) -> Scene:
@@ -168,7 +174,7 @@ class _Compiler:
             raise CompileError(f"name {obj.name!r} is already defined", pos)
         self.names[obj.name] = obj
 
-    def toplevel_item(self, form: Form, env: dict[str, int]) -> list[Obj]:
+    def toplevel_item(self, form: Form, env: Env) -> list[Obj]:
         head = _head(form)
         if head == "repeat":
             return self.repeat(form, env, self.toplevel_item)
@@ -180,9 +186,7 @@ class _Compiler:
             raise CompileError(f"{head!r} is not a definition", form.pos)
         raise CompileError(f"unknown form {head!r}", form.pos)
 
-    def repeat[T](
-        self, form: Form, env: dict[str, int], item: Callable[[Form, dict[str, int]], list[T]]
-    ) -> list[T]:
+    def repeat[T](self, form: Form, env: Env, item: Callable[[Form, Env], list[T]]) -> list[T]:
         if len(form.items) < 3:
             raise CompileError("repeat takes a variable, a count, and a body", form.pos)
         var, count_node, *body = form.items[1:]
@@ -204,7 +208,7 @@ class _Compiler:
                 out.extend(item(node, inner))
         return out
 
-    def object_name(self, form: Form, env: dict[str, int]) -> str | None:
+    def object_name(self, form: Form, env: Env) -> str | None:
         if len(form.items) < 2:
             raise CompileError(f"{_head(form)} needs a name", form.pos)
         node = form.items[1]
@@ -219,11 +223,12 @@ class _Compiler:
             raise CompileError("a name must be known at compile time", node.pos)
         raise CompileError("expected a name: a string, an interpolated string, or _", node.pos)
 
-    def definition(self, form: Form, env: dict[str, int]) -> Obj:
+    def definition(self, form: Form, env: Env) -> Obj:
         head = _head(form)
         assert head is not None
         spec = FORMS[head]
         name = self.object_name(form, env)
+        env = env | {"self": SelfRef(spec.cls)}
         attrs = attributes(spec.cls)
         var = variadic(spec.cls)
         settable = {a for a in attrs if a not in spec.positional and (var is None or a != var.name)}
@@ -267,7 +272,7 @@ class _Compiler:
         self.register(obj, form.pos)
         return obj
 
-    def member(self, node: Node, env: dict[str, int], container: str, settable) -> list[Visual]:
+    def member(self, node: Node, env: Env, container: str, settable) -> list[Visual]:
         head = _head(node)
         if isinstance(node, Form) and head == "repeat":
             return self.repeat(node, env, lambda n, e: self.member(n, e, container, settable))
@@ -288,10 +293,10 @@ class _Compiler:
                 return [value.obj]
         raise CompileError(f"not a valid member of {container}", node.pos)
 
-    def attr_value(self, cls: type[Obj], attr: str, node: Node, env: dict[str, int]):
+    def attr_value(self, cls: type[Obj], attr: str, node: Node, env: Env):
         expected = _expected_type(cls, attr)
         value = self.expr(node, env)
-        if isinstance(value, ObjRef):
+        if isinstance(value, (ObjRef, SelfRef)):
             raise CompileError("expected a value, got an object", node.pos)
         if isinstance(value, Spread):
             raise CompileError(
@@ -303,7 +308,7 @@ class _Compiler:
             return Free(_convert(value.value, expected))
         return Bound(node)
 
-    def expr(self, node: Node, env: dict[str, int]) -> Value:
+    def expr(self, node: Node, env: Env) -> Value:
         match node:
             case IntLit(value=v):
                 return Const(v, "int")
@@ -324,7 +329,7 @@ class _Compiler:
             case Form():
                 return self.call(node, env)
 
-    def interp(self, node: InterpStrLit, env: dict[str, int]) -> Value:
+    def interp(self, node: InterpStrLit, env: Env) -> Value:
         text: list[str] = []
         constant = True
         for part in node.parts:
@@ -332,7 +337,7 @@ class _Compiler:
                 text.append(part)
                 continue
             value = self.name(part, env)
-            if isinstance(value, ObjRef):
+            if isinstance(value, (ObjRef, SelfRef)):
                 raise CompileError("cannot put an object in a string", part.pos)
             if isinstance(value, Const):
                 text.append(str(value.value))
@@ -340,23 +345,26 @@ class _Compiler:
                 constant = False
         return Const("".join(text), "str") if constant else Dyn("str")
 
-    def name(self, node: Name, env: dict[str, int]) -> Value:
+    def name(self, node: Name, env: Env) -> Value:
         first, *rest = node.parts
         assert isinstance(first, str)
-        if first in env:
+        local = env.get(first)
+        if isinstance(local, int):
             if rest:
                 raise CompileError(f"{first!r} is a number and has no attributes", node.pos)
-            return Const(env[first], "int")
-        if first not in self.names:
+            return Const(local, "int")
+        if local is None and first not in self.names:
             raise CompileError(f"undefined name {first!r}", node.pos)
-        current: Value = ObjRef(self.names[first])
+        current: Value = local if local is not None else ObjRef(self.names[first])
         for part in rest:
             current = self.access(current, part, env, node.pos)
         if isinstance(current, ObjRef) and isinstance(current.obj, Real):
             return Dyn("real")
         return current
 
-    def access(self, current: Value, part: str | Node, env: dict[str, int], pos: Pos) -> Value:
+    def access(self, current: Value, part: str | Node, env: Env, pos: Pos) -> Value:
+        if isinstance(current, SelfRef):
+            return self.self_access(current.cls, part, pos)
         if not isinstance(current, ObjRef):
             raise CompileError("only objects have attributes or members", pos)
         obj = current.obj
@@ -374,7 +382,13 @@ class _Compiler:
             raise CompileError(f"{obj.name!r} has no attribute {part!r}", pos)
         return Dyn(_expected_type(type(obj), part))
 
-    def index(self, obj: Obj, node: Node, env: dict[str, int]) -> Value:
+    def self_access(self, cls: type[Obj], part: str | Node, pos: Pos) -> Value:
+        attrs = attributes(cls)
+        if not isinstance(part, str) or part not in attrs or variadic(cls) is attrs[part]:
+            raise CompileError(f"self ({cls.__name__.lower()}) has no attribute {part!r}", pos)
+        return Dyn(_expected_type(cls, part))
+
+    def index(self, obj: Obj, node: Node, env: Env) -> Value:
         if not isinstance(obj, Group):
             raise CompileError("only groups can be indexed", node.pos)
         value = self.expr(node, env)
@@ -386,7 +400,7 @@ class _Compiler:
             raise CompileError(f"index {i} is out of range for {obj.name!r}", node.pos)
         return ObjRef(obj.members[i])
 
-    def call(self, node: Form, env: dict[str, int]) -> Value:
+    def call(self, node: Form, env: Env) -> Value:
         head = _head(node)
         args = node.items[1:]
         if head in ARITHMETIC:
@@ -396,20 +410,22 @@ class _Compiler:
                 raise CompileError("rand takes no arguments or two", node.pos)
             for arg in args:
                 value = self.expr(arg, env)
-                if isinstance(value, (ObjRef, Spread)) or not _widens_to(value.type, "real"):
+                if isinstance(value, (ObjRef, SelfRef, Spread)) or not _widens_to(
+                    value.type, "real"
+                ):
                     raise CompileError("rand takes real numbers", arg.pos)
             return Dyn("real")
         if head in FORMS or head == "repeat":
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
         raise CompileError(f"unknown function {head!r}", node.pos)
 
-    def arithmetic(self, op: str, node: Form, env: dict[str, int]) -> Value:
+    def arithmetic(self, op: str, node: Form, env: Env) -> Value:
         types: list[str] = []
         consts: list[Const] = []
         dynamic = False
         for arg in node.items[1:]:
             value = self.expr(arg, env)
-            if isinstance(value, ObjRef):
+            if isinstance(value, (ObjRef, SelfRef)):
                 raise CompileError("expected a number, got an object", arg.pos)
             arg_types = value.types if isinstance(value, Spread) else (value.type,)
             for t in arg_types:
