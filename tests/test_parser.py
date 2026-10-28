@@ -2,7 +2,9 @@ import random
 
 import pytest
 
-from mathterpiece.main import Canvas, Circle, Group, Parser, Real, Text
+from mathterpiece.parser import Parser
+from mathterpiece.scene import Circle, Group, Real, Text
+from mathterpiece.views import Canvas
 
 
 @pytest.fixture

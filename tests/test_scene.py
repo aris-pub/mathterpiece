@@ -1,4 +1,5 @@
-from mathterpiece.main import Canvas, Circle, Group, Real, Scene
+from mathterpiece.scene import Circle, Group, Real, Scene
+from mathterpiece.views import Canvas
 
 
 def make_scene():

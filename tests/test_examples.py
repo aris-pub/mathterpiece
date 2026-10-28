@@ -1,10 +1,12 @@
-"""The example programs hardcoded in main(), checked against the Scene they produce."""
+"""The example programs that used to be hardcoded in main(), checked against the Scene they produce."""
 
 import random
 
 import pytest
 
-from mathterpiece.main import Canvas, Circle, Group, Parser, Real, Text
+from mathterpiece.parser import Parser
+from mathterpiece.scene import Circle, Group, Real, Text
+from mathterpiece.views import Canvas
 
 
 def parse(src):
