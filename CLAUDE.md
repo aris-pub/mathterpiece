@@ -60,12 +60,9 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+uv sync           # install dependencies, including pytest
+uv run pytest     # run the test suite in tests/
 ```
 
 ## Architecture Overview

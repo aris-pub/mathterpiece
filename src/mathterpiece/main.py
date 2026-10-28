@@ -6,6 +6,7 @@ from textwrap import dedent
 from abc import abstractmethod
 import matplotlib.pyplot as plt
 from typing import Any, Callable
+import sys
 import logging
 
 logger = logging.getLogger("mtp")
@@ -38,10 +39,10 @@ class Scene:
 
     def to_dict(self):
         d: dict[str, Any] = {thing.name: thing for thing in self.objects + self.views}
-        stack: list = [mem for thing in d for mem in getattr(thing, "members", [])]
+        stack: list = [mem for thing in d.values() for mem in getattr(thing, "members", [])]
         while stack:
             thing: Any = stack.pop()
-            if thing in d:
+            if isinstance(thing, str) or thing.name in d:
                 continue
             d[thing.name] = thing
             stack += getattr(thing, "members", [])
@@ -300,7 +301,7 @@ class Parser:
             self.boundvars[var] = i
             for ex in self.toplevel_sexps(sexp.strip()):
                 res.append(self.parse_sexp(ex))
-        del self.boundvars[var]
+        self.boundvars.pop(var, None)
         return lambda: res
 
     def parse_real(self, partial: str):
@@ -361,70 +362,8 @@ class Parser:
 
 
 def main():
-    src: str = """
-    (circle 'disk')
-    (canvas 'cnv' ['disk'])
-    """
-    src: str = """
-    (group 'disks' [
-      (circle 'disk0' (r 1) (x 0) (y 0))
-      (circle 'disk1' (r 1) (x 1) (y 0))
-      (circle 'disk2' (r 1) (x 2) (y 0))])
-    (canvas 'cnv' ['disks'])
-    """
-    src: str = """
-    (canvas 'cnv' [
-      (group 'disks' [
-        (circle 'disk0' (r 1) (x 0) (y 0))
-        (circle 'disk1' (r 1) (x 1) (y 0))
-        (circle 'disk2' (r 1) (x 2) (y 0))])])
-    """
-    src: str = """
-    (canvas 'cnv' [
-      (circle 'disk0' (r 1) (x 0) (y 0))
-      (circle 'disk1' (r 1) (x 1) (y 0))
-      (circle 'disk2' (r 1) (x 2) (y 0))])
-    """
-    src: str = """
-    (group 'disks'
-      (repeat i 3
-        (circle f'disk{i}' (r 1) (x i) (y i))
-        (text f'text{i}' f'disk{i}' (x i) (y i))))
-    (canvas 'cnv' ['disks'])
-    """
-    src: str = """
-    (circle 'disk' (r 1) (x 0) (y 0))
-    (text 'lbl' disk.name (x 0) (y 0))
-    (canvas 'cnv' ['disk' 'lbl'])
-    """
-    src: str = """
-    (real 'pi' 3.1415926535)
-    (text 'lbl' pi (x 0) (y 0))
-    (canvas 'cnv' ['lbl'])
-    """
-    src: str = """
-    (circle 'disk' (r 2) (x 0) (y 0))
-    (real 'pi' 3.1415926535)
-    (real 'area' (mult pi disk.r disk.r))
-    (text 'lbl' area (x 0) (y 0))
-    (canvas 'cnv' ['disk' 'lbl'])
-    """
-    src: str = """
-    (circle 'disk' (r 2))
-    (text 'lbl' (mult 3.1415926535 disk.r disk.r) (x 0) (y 0))
-    (canvas 'cnv' ['disk' 'lbl'])
-    """
-    src: str = """
-    (group 'dots'
-      (repeat i 100
-        (circle f'dot{i}'
-          (r (rand 0 0.25)) (x (rand -10 10)) (y (rand -10 10))
-          (alpha 0.25) (fill 'gray'))))
-    (group 'circles' [
-        (circle 'teal_c' (r 3.5) (x -5.0) (y  4.0) (edgecolor 'teal') (linewidth 1.5) (fill False))
-        (circle 'red_c'  (r 1.2) (x  3.5) (y -2.0) (edgecolor 'red') (linewidth 1.5) (fill False))])
-    (canvas 'cnv' ['dots' 'circles'])
-    """
+    with open(sys.argv[1]) as f:
+        src: str = f.read()
     prs: Parser = Parser(src)
     scn: Scene = prs.parse()
     scn.render()
