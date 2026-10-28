@@ -2,17 +2,17 @@ import re
 from fractions import Fraction
 
 from mathterpiece.nodes import (
-    Bool,
-    Complex,
+    BoolLit,
+    ComplexLit,
     Form,
-    Int,
-    InterpStr,
+    InterpStrLit,
+    IntLit,
     Name,
     Node,
     Pos,
-    Ratio,
-    Real,
-    Str,
+    RatioLit,
+    RealLit,
+    StrLit,
 )
 
 OPERATORS = frozenset({"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!="})
@@ -60,17 +60,17 @@ def _name(text: str, pos: Pos) -> Name:
 
 def _number(text: str, pos: Pos) -> Node | None:
     if INT_RE.fullmatch(text):
-        return Int(int(text), pos)
+        return IntLit(int(text), pos)
     if m := RATIO_RE.fullmatch(text):
         if int(m[2]) == 0:
             raise ParseError(f"zero denominator in {text!r}", pos)
-        return Ratio(Fraction(int(m[1]), int(m[2])), pos)
+        return RatioLit(Fraction(int(m[1]), int(m[2])), pos)
     if REAL_RE.fullmatch(text):
-        return Real(float(text), pos)
+        return RealLit(float(text), pos)
     if m := IMAG_RE.fullmatch(text):
-        return Complex(complex(0, float(m[1])), pos)
+        return ComplexLit(complex(0, float(m[1])), pos)
     if m := COMPLEX_RE.fullmatch(text):
-        return Complex(complex(float(m[1]), float(m[2])), pos)
+        return ComplexLit(complex(float(m[1]), float(m[2])), pos)
     return None
 
 
@@ -164,7 +164,7 @@ class _Parser:
         if text in OPERATORS:
             return Name((text,), pos)
         if text in ("true", "false"):
-            return Bool(text == "true", pos)
+            return BoolLit(text == "true", pos)
         if (number := _number(text, pos)) is not None:
             return number
         if LOOKS_NUMERIC_RE.match(text):
@@ -186,7 +186,7 @@ class _Parser:
         self.advance()
         return ESCAPES[ch]
 
-    def string(self) -> Str:
+    def string(self) -> StrLit:
         pos = self.pos()
         self.advance()
         chars: list[str] = []
@@ -199,9 +199,9 @@ class _Parser:
                 break
             chars.append(self.escape(pos) if ch == "\\" else self.advance())
         self.expect_delimiter()
-        return Str("".join(chars), pos)
+        return StrLit("".join(chars), pos)
 
-    def interp_string(self) -> InterpStr:
+    def interp_string(self) -> InterpStrLit:
         pos = self.pos()
         self.advance()
         self.advance()
@@ -239,7 +239,7 @@ class _Parser:
                 text.append(self.advance())
         flush()
         self.expect_delimiter()
-        return InterpStr(tuple(parts), pos)
+        return InterpStrLit(tuple(parts), pos)
 
     def interp_name(self) -> Name:
         brace = self.pos()

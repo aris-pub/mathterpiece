@@ -35,4 +35,4 @@ def test_does_not_propagate_to_root():
 
 def test_module_loggers_inherit_level():
     setup(2)
-    assert logging.getLogger("mathterpiece.parser").getEffectiveLevel() == logging.DEBUG
+    assert logging.getLogger("mathterpiece.parse").getEffectiveLevel() == logging.DEBUG

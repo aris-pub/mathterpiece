@@ -21,43 +21,43 @@ class Name:
 
 
 @dataclass(frozen=True, slots=True)
-class Str:
+class StrLit:
     value: str
     pos: Pos = field(default=NOPOS, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
-class InterpStr:
+class InterpStrLit:
     parts: tuple[str | Name, ...]
     pos: Pos = field(default=NOPOS, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
-class Int:
+class IntLit:
     value: int
     pos: Pos = field(default=NOPOS, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
-class Ratio:
+class RatioLit:
     value: Fraction
     pos: Pos = field(default=NOPOS, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
-class Real:
+class RealLit:
     value: float
     pos: Pos = field(default=NOPOS, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
-class Complex:
+class ComplexLit:
     value: complex
     pos: Pos = field(default=NOPOS, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
-class Bool:
+class BoolLit:
     value: bool
     pos: Pos = field(default=NOPOS, compare=False)
 
@@ -68,4 +68,4 @@ class Form:
     pos: Pos = field(default=NOPOS, compare=False)
 
 
-Node = Form | Str | InterpStr | Int | Ratio | Real | Complex | Bool | Name
+Node = Form | StrLit | InterpStrLit | IntLit | RatioLit | RealLit | ComplexLit | BoolLit | Name

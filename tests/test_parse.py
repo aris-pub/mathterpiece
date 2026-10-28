@@ -2,7 +2,18 @@ from fractions import Fraction
 
 import pytest
 
-from mathterpiece.nodes import Bool, Complex, Form, Int, InterpStr, Name, Pos, Ratio, Real, Str
+from mathterpiece.nodes import (
+    BoolLit,
+    ComplexLit,
+    Form,
+    InterpStrLit,
+    IntLit,
+    Name,
+    Pos,
+    RatioLit,
+    RealLit,
+    StrLit,
+)
 from mathterpiece.parse import ParseError, parse
 
 
@@ -25,11 +36,11 @@ def error_at(src):
 
 class TestForms:
     def test_single_form(self):
-        assert parse("(circle 'a')") == (Form((n("circle"), Str("a"))),)
+        assert parse("(circle 'a')") == (Form((n("circle"), StrLit("a"))),)
 
     def test_nested_forms(self):
         assert parse("(circle 'a' (r 1))") == (
-            Form((n("circle"), Str("a"), Form((n("r"), Int(1))))),
+            Form((n("circle"), StrLit("a"), Form((n("r"), IntLit(1))))),
         )
 
     def test_several_toplevel_forms_in_order(self):
@@ -84,7 +95,7 @@ class TestComments:
         assert parse("(a b;comment\n)") == (Form((n("a"), n("b"))),)
 
     def test_semicolon_inside_string_is_text(self):
-        assert atom("'a;b'") == Str("a;b")
+        assert atom("'a;b'") == StrLit("a;b")
 
 
 class TestInt:
@@ -93,7 +104,7 @@ class TestInt:
     )
     def test_int(self, text, value):
         node = atom(text)
-        assert node == Int(value)
+        assert node == IntLit(value)
         assert type(node.value) is int
 
 
@@ -103,13 +114,13 @@ class TestRatio:
         [("1/2", Fraction(1, 2)), ("-3/4", Fraction(-3, 4)), ("+3/4", Fraction(3, 4))],
     )
     def test_ratio(self, text, value):
-        assert atom(text) == Ratio(value)
+        assert atom(text) == RatioLit(value)
 
     def test_ratio_is_normalized(self):
-        assert atom("2/4") == Ratio(Fraction(1, 2))
+        assert atom("2/4") == RatioLit(Fraction(1, 2))
 
     def test_whole_ratio_stays_ratio(self):
-        assert atom("4/2") == Ratio(Fraction(2))
+        assert atom("4/2") == RatioLit(Fraction(2))
 
     def test_zero_denominator_is_error(self):
         with pytest.raises(ParseError):
@@ -139,7 +150,7 @@ class TestReal:
     )
     def test_real(self, text, value):
         node = atom(text)
-        assert node == Real(value)
+        assert node == RealLit(value)
         assert type(node.value) is float
 
 
@@ -160,7 +171,7 @@ class TestComplex:
         ],
     )
     def test_complex(self, text, value):
-        assert atom(text) == Complex(value)
+        assert atom(text) == ComplexLit(value)
 
     @pytest.mark.parametrize("text", ["3+i", "3+4", "3+4j", "2ii", "1/2i", "3+4i5"])
     def test_invalid_complex(self, text):
@@ -177,10 +188,10 @@ class TestInvalidNumbers:
 
 class TestBool:
     def test_true(self):
-        assert atom("true") == Bool(True)
+        assert atom("true") == BoolLit(True)
 
     def test_false(self):
-        assert atom("false") == Bool(False)
+        assert atom("false") == BoolLit(False)
 
     @pytest.mark.parametrize("text", ["True", "False", "truex", "xtrue"])
     def test_lookalikes_are_names(self, text):
@@ -193,7 +204,7 @@ class TestOperators:
         assert atom(op) == n(op)
 
     def test_operator_as_head(self):
-        assert parse("(+ a 1)") == (Form((n("+"), n("a"), Int(1))),)
+        assert parse("(+ a 1)") == (Form((n("+"), n("a"), IntLit(1))),)
 
     @pytest.mark.parametrize("text", ["--", "->", "++", "<>", "==", "=>", "**", "+-", "<=="])
     def test_unknown_operator_like_token_is_error(self, text):
@@ -284,26 +295,26 @@ class TestNames:
 
 class TestStr:
     def test_simple(self):
-        assert atom("'hello'") == Str("hello")
+        assert atom("'hello'") == StrLit("hello")
 
     def test_empty(self):
-        assert atom("''") == Str("")
+        assert atom("''") == StrLit("")
 
     def test_spaces_and_parens_inside(self):
-        assert atom("'hello (big) world'") == Str("hello (big) world")
+        assert atom("'hello (big) world'") == StrLit("hello (big) world")
 
     def test_unicode(self):
-        assert atom("'ρ ≤ δ/2 ✓'") == Str("ρ ≤ δ/2 ✓")
+        assert atom("'ρ ≤ δ/2 ✓'") == StrLit("ρ ≤ δ/2 ✓")
 
     def test_raw_line_break(self):
-        assert atom("'line one\nline two'") == Str("line one\nline two")
+        assert atom("'line one\nline two'") == StrLit("line one\nline two")
 
     @pytest.mark.parametrize(
         "text, value",
         [(r"'it\'s'", "it's"), (r"'a\\b'", "a\\b"), (r"'a\nb'", "a\nb"), (r"'\\n'", "\\n")],
     )
     def test_escapes(self, text, value):
-        assert atom(text) == Str(value)
+        assert atom(text) == StrLit(value)
 
     @pytest.mark.parametrize("esc", [r"\t", r"\r", r"\0", r"\"", r"\q", "\\" + "u0041", r"\x41"])
     def test_other_escapes_are_errors(self, esc):
@@ -326,13 +337,13 @@ class TestStr:
             parse("(f 'a''b')")
 
     def test_followed_by_close_paren(self):
-        assert parse("(f 'a')") == (Form((n("f"), Str("a"))),)
+        assert parse("(f 'a')") == (Form((n("f"), StrLit("a"))),)
 
     def test_followed_by_open_paren(self):
-        assert parse("(f 'a'(g))") == (Form((n("f"), Str("a"), Form((n("g"),)))),)
+        assert parse("(f 'a'(g))") == (Form((n("f"), StrLit("a"), Form((n("g"),)))),)
 
     def test_followed_by_comment(self):
-        assert parse("(f 'a';c\n)") == (Form((n("f"), Str("a"))),)
+        assert parse("(f 'a';c\n)") == (Form((n("f"), StrLit("a"))),)
 
     def test_double_quotes_are_errors(self):
         with pytest.raises(ParseError):
@@ -341,40 +352,40 @@ class TestStr:
 
 class TestInterpStr:
     def test_plain_text(self):
-        assert atom("$'plain'") == InterpStr(("plain",))
+        assert atom("$'plain'") == InterpStrLit(("plain",))
 
     def test_empty(self):
-        assert atom("$''") == InterpStr(())
+        assert atom("$''") == InterpStrLit(())
 
     def test_name(self):
-        assert atom("$'dot{i}'") == InterpStr(("dot", n("i")))
+        assert atom("$'dot{i}'") == InterpStrLit(("dot", n("i")))
 
     def test_dotted_name(self):
-        assert atom("$'r = {disk.r}'") == InterpStr(("r = ", n("disk", "r")))
+        assert atom("$'r = {disk.r}'") == InterpStrLit(("r = ", n("disk", "r")))
 
     def test_several_names(self):
-        assert atom("$'{a} and {b}'") == InterpStr((n("a"), " and ", n("b")))
+        assert atom("$'{a} and {b}'") == InterpStrLit((n("a"), " and ", n("b")))
 
     def test_adjacent_names(self):
-        assert atom("$'{a}{b}'") == InterpStr((n("a"), n("b")))
+        assert atom("$'{a}{b}'") == InterpStrLit((n("a"), n("b")))
 
     def test_whitespace_inside_braces(self):
-        assert atom("$'x { i } y'") == InterpStr(("x ", n("i"), " y"))
+        assert atom("$'x { i } y'") == InterpStrLit(("x ", n("i"), " y"))
 
     def test_line_break_inside_braces(self):
-        assert atom("$'{\n i\n}'") == InterpStr((n("i"),))
+        assert atom("$'{\n i\n}'") == InterpStrLit((n("i"),))
 
     def test_literal_braces(self):
-        assert atom("$'{{x}} and {{'") == InterpStr(("{x} and {",))
+        assert atom("$'{{x}} and {{'") == InterpStrLit(("{x} and {",))
 
     def test_literal_braces_next_to_name(self):
-        assert atom("$'{{{i}}}'") == InterpStr(("{", n("i"), "}"))
+        assert atom("$'{{{i}}}'") == InterpStrLit(("{", n("i"), "}"))
 
     def test_escapes(self):
-        assert atom(r"$'it\'s {x}\n'") == InterpStr(("it's ", n("x"), "\n"))
+        assert atom(r"$'it\'s {x}\n'") == InterpStrLit(("it's ", n("x"), "\n"))
 
     def test_unicode_name(self):
-        assert atom("$'{α₁}'") == InterpStr((n("α₁"),))
+        assert atom("$'{α₁}'") == InterpStrLit((n("α₁"),))
 
     @pytest.mark.parametrize(
         "text",
@@ -441,7 +452,7 @@ class TestPositions:
     def test_name_inside_interp_has_position(self):
         (form,) = parse("(f $'ab{ x }')")
         interp = form.items[1]
-        assert isinstance(interp, InterpStr)
+        assert isinstance(interp, InterpStrLit)
         (_, name) = interp.parts
         assert isinstance(name, Name)
         assert name.pos == Pos(1, 10)
@@ -458,6 +469,6 @@ class TestPositions:
 
 class TestNodes:
     def test_nodes_are_frozen(self):
-        node = Int(1)
+        node = IntLit(1)
         with pytest.raises(AttributeError):
             node.value = 2  # ty: ignore[invalid-assignment]
