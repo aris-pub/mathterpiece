@@ -1,0 +1,9 @@
+(group 'circles' [
+    (circle 'teal_c' (r 3.5) (x -5.0) (y  4.0) (edgecolor 'teal') (linewidth 1.5) (fill False))
+    (circle 'red_c'  (r 1.2) (x  3.5) (y -2.0) (edgecolor 'red') (linewidth 1.5) (fill False))])
+(group 'dots'
+  (repeat i 100
+    (circle f'dot{i}'
+      (r (rand 0 0.25)) (x (rand -10 10)) (y (rand -10 10)) (alpha 0.25)
+      (facecolor teal_c.edgecolor))))
+(canvas 'cnv' ['dots' 'circles'])
