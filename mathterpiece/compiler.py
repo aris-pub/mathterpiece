@@ -306,7 +306,7 @@ class _Compiler:
             raise CompileError(f"expected {expected}, got {value.type}", node.pos)
         if isinstance(value, Const):
             return Free(_convert(value.value, expected))
-        return Bound(node)
+        return Bound(_substitute(node, env))
 
     def expr(self, node: Node, env: Env) -> Value:
         match node:
@@ -451,6 +451,31 @@ class _Compiler:
             return Const(_fold(op, values), result)
         except ZeroDivisionError:
             raise CompileError("division by zero", node.pos) from None
+
+
+# Loop variables do not exist after compiling, so bound expressions get their values instead.
+def _substitute(node: Node, env: Env) -> Node:
+    if isinstance(node, Name):
+        first = node.parts[0]
+        local = env.get(first) if isinstance(first, str) and len(node.parts) == 1 else None
+        if isinstance(local, int):
+            return IntLit(local, node.pos)
+        parts = tuple(p if isinstance(p, str) else _substitute(p, env) for p in node.parts)
+        return Name(parts, node.pos)
+    if isinstance(node, Form):
+        return Form(tuple(_substitute(item, env) for item in node.items), node.pos)
+    if isinstance(node, InterpStrLit):
+        out: list[str | Name] = []
+        for part in node.parts:
+            sub = part if isinstance(part, str) else _substitute(part, env)
+            if isinstance(sub, IntLit):
+                sub = str(sub.value)
+            if isinstance(sub, str) and out and isinstance(out[-1], str):
+                out[-1] += sub
+            elif isinstance(sub, (str, Name)):
+                out.append(sub)
+        return InterpStrLit(tuple(out), node.pos)
+    return node
 
 
 def _fold(op: str, values: list):

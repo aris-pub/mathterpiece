@@ -1,0 +1,187 @@
+import math
+import random
+from fractions import Fraction
+from pathlib import Path
+
+import pytest
+
+from mathterpiece.backends.mpl import EvalError, Evaluator, render
+from mathterpiece.compiler import compile_scene
+from mathterpiece.nodes import Name
+from mathterpiece.parse import parse
+from mathterpiece.scene import Bound, Circle, Scene
+
+EXAMPLES = Path(__file__).parent.parent / "examples"
+
+
+def scene(src):
+    return compile_scene(parse(src))
+
+
+def value(src, name, attr, seed=0):
+    scn = scene(src)
+    return Evaluator(scn, random.Random(seed)).value(scn[name], attr)
+
+
+class TestFree:
+    def test_free_value(self):
+        assert value("(circle 'c' (r 2))", "c", "r") == 2.0
+
+    def test_default(self):
+        assert value("(circle 'c')", "c", "facecolor") == "black"
+
+    def test_builtin(self):
+        assert value("(circle 'c' (r pi))", "c", "r") == math.pi
+
+
+class TestBound:
+    def test_reads_another_attribute(self):
+        assert value("(circle 'd' (r 3)) (circle 'c' (r d.r))", "c", "r") == 3.0
+
+    def test_reads_a_param(self):
+        assert value("(real 'k' 4) (circle 'c' (r k))", "c", "r") == 4.0
+
+    def test_chain_of_bound_values(self):
+        src = "(real 'k' 2) (real 'm' (* k 3)) (circle 'c' (r (+ m 1)))"
+        assert value(src, "c", "r") == 7.0
+
+    def test_string_attribute(self):
+        src = "(circle 't' (edgecolor 'teal')) (circle 'c' (facecolor t.edgecolor))"
+        assert value(src, "c", "facecolor") == "teal"
+
+    @pytest.mark.parametrize(
+        "expr, result",
+        [
+            ("(+ k 1)", 3.0),
+            ("(- k 1)", 1.0),
+            ("(- k)", -2.0),
+            ("(* k 3)", 6.0),
+            ("(/ k 4)", 0.5),
+            ("(+ k 1/2)", 2.5),
+            ("(+ k 1 2 3)", 8.0),
+            ("(- 10 k k)", 6.0),
+            ("(/ 8 k 2)", 2.0),
+        ],
+    )
+    def test_arithmetic(self, expr, result):
+        assert value(f"(real 'k' 2) (circle 'c' (r {expr}))", "c", "r") == result
+
+    def test_real_attribute_is_a_float(self):
+        r = value("(real 'k' 2) (circle 'c' (r (* k 1)))", "c", "r")
+        assert type(r) is float
+
+    def test_division_by_zero(self):
+        with pytest.raises(EvalError):
+            value("(real 'k' 0) (circle 'c' (r (/ 1 k)))", "c", "r")
+
+    def test_value_is_computed_once(self):
+        scn = scene("(real 'k' (rand)) (circle 'c' (r k))")
+        ev = Evaluator(scn, random.Random(1))
+        assert ev.value(scn["c"], "r") == ev.value(scn["k"], "value")
+
+
+class TestSelf:
+    def test_reads_own_attribute(self):
+        assert value("(circle 'c' (x 5) (y (* 2 self.x)))", "c", "y") == 10.0
+
+    def test_self_is_the_owner(self):
+        src = "(group 'g' (circle 'a' (x 1) (y self.x)) (circle 'b' (x 2) (y self.x)))"
+        scn = scene(src)
+        ev = Evaluator(scn, random.Random(0))
+        assert (ev.value(scn["a"], "y"), ev.value(scn["b"], "y")) == (1.0, 2.0)
+
+    def test_self_of_an_anonymous_object(self):
+        scn = scene("(group 'g' (circle _ (x 3) (y self.x)))")
+        anon = scn["g"].members[0]
+        assert Evaluator(scn, random.Random(0)).value(anon, "y") == 3.0
+
+    def test_cycle(self):
+        scn = scene("(circle 'c' (x self.y) (y self.x))")
+        with pytest.raises(EvalError, match="cycle"):
+            Evaluator(scn, random.Random(0)).value(scn["c"], "x")
+
+
+class TestRand:
+    def test_range(self):
+        scn = scene("(group 'g' (repeat i 200 (circle _ (r (rand 2 3)))))")
+        ev = Evaluator(scn, random.Random(0))
+        rs = [ev.value(m, "r") for m in scn["g"].members]
+        assert all(2 <= r <= 3 for r in rs)
+        assert len(set(rs)) > 1
+
+    def test_default_range(self):
+        scn = scene("(group 'g' (repeat i 200 (circle _ (r (rand)))))")
+        ev = Evaluator(scn, random.Random(0))
+        assert all(0 <= ev.value(m, "r") < 1 for m in scn["g"].members)
+
+    def test_same_value_when_read_through_self(self):
+        scn = scene("(circle 'c' (r (rand)) (x self.r))")
+        ev = Evaluator(scn, random.Random(0))
+        assert ev.value(scn["c"], "x") == ev.value(scn["c"], "r")
+
+    def test_seed_makes_it_repeatable(self):
+        src = "(circle 'c' (r (rand)))"
+        assert value(src, "c", "r", seed=7) == value(src, "c", "r", seed=7)
+
+    def test_two_rands_in_one_expression_differ(self):
+        scn = scene("(real 'a' (- (rand) (rand)))")
+        assert Evaluator(scn, random.Random(0)).value(scn["a"], "value") != 0.0
+
+
+class TestGroupsAndIndexing:
+    def test_splice_into_arithmetic(self):
+        src = "(group 'g' (circle 'a' (r 1)) (circle 'b' (r 2))) (real 's' (+ g.r))"
+        assert value(src, "s", "value") == 3.0
+
+    def test_index(self):
+        src = "(group 'g' (circle _ (r 4)) (circle _ (r 5))) (real 'k' g[1].r)"
+        assert value(src, "k", "value") == 5.0
+
+    def test_negative_index(self):
+        src = "(group 'g' (circle _ (r 4)) (circle _ (r 5))) (real 'k' g[-2].r)"
+        assert value(src, "k", "value") == 4.0
+
+    def test_splice_reads_bound_members(self):
+        src = "(real 'k' 3) (group 'g' (circle 'a' (r k)) (circle 'b' (r 1))) (real 's' (* g.r))"
+        assert value(src, "s", "value") == 3.0
+
+
+class TestText:
+    def test_interpolation(self):
+        src = "(circle 'disk' (r 2)) (text 't' $'r = {disk.r}')"
+        assert value(src, "t", "value") == "r = 2.0"
+
+    def test_splice_joined_with_spaces(self):
+        src = "(group 'g' (circle 'a' (r 3.5)) (circle 'b' (r 1.2))) (text 't' $'radii: {g.r}')"
+        assert value(src, "t", "value") == "radii: 3.5 1.2"
+
+    def test_param_value(self):
+        assert value("(real 'k' 1/2) (text 't' $'{k}')", "t", "value") == "0.5"
+
+    def test_self(self):
+        assert value("(text 't' $'at {self.x}' (x 1))", "t", "value") == "at 1.0"
+
+
+class TestUnevaluatedExpression:
+    def test_ratio_arithmetic_stays_exact_until_stored(self):
+        scn = Scene()
+        c = Circle(name="c", r=Bound(parse("(f (/ 1 3))")[0].items[1]))
+        scn.add(c)
+        assert Evaluator(scn, random.Random(0)).value(c, "r") == float(Fraction(1, 3))
+
+    def test_unknown_name_at_evaluation(self):
+        scn = Scene()
+        c = Circle(name="c", r=Bound(Name(("nope",))))
+        scn.add(c)
+        with pytest.raises(EvalError, match="nope"):
+            Evaluator(scn, random.Random(0)).value(c, "r")
+
+
+class TestRender:
+    @pytest.mark.parametrize("example", sorted(EXAMPLES.glob("*.mtp")), ids=lambda p: p.name)
+    def test_examples_render(self, example):
+        figures = render(compile_scene(parse(example.read_text())), random.Random(0))
+        assert len(figures) == 1
+
+    def test_one_figure_per_canvas(self):
+        assert len(render(scene("(canvas 'a') (canvas 'b')"))) == 2

@@ -534,3 +534,21 @@ class TestSelf:
 
     def test_undefined_outside_definitions(self):
         error("(repeat i self.x (circle _))", match="self")
+
+
+class TestLoopVariablesInBoundExpressions:
+    def test_replaced_by_their_value(self):
+        scn = scene("(real 'k') (repeat i 2 (circle $'c{i}' (x (* i k))))")
+        assert get(scn, "c1", Circle).x == Bound(Form((n("*"), IntLit(1), n("k"))))
+
+    def test_replaced_inside_an_index(self):
+        scn = scene("(group 'g' (circle 'a') (circle 'b')) (repeat i 2 (real $'k{i}' g[i].r))")
+        assert get(scn, "k1", Real).value == Bound(n("g", IntLit(1), "r"))
+
+    def test_replaced_inside_interpolated_text(self):
+        scn = scene("(real 'k') (repeat i 2 (text $'t{i}' $'{i}: {k}'))")
+        assert get(scn, "t1", Text).value == Bound(InterpStrLit(("1: ", n("k"))))
+
+    def test_inner_variable_wins(self):
+        scn = scene("(real 'k') (repeat i 1 (repeat i 3 (circle $'c{i}x' (x (* i k)))))")
+        assert get(scn, "c2x", Circle).x == Bound(Form((n("*"), IntLit(2), n("k"))))
