@@ -1,4 +1,5 @@
 import math
+import operator
 from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
@@ -31,6 +32,8 @@ from mathterpiece.scene import (
     attributes,
     variadic,
 )
+from mathterpiece.stdlib import STDLIB, divide, power
+from mathterpiece.stdlib import call as stdlib_call
 
 BUILTINS = [
     (("pi", "π"), math.pi),
@@ -42,6 +45,14 @@ BUILTINS = [
 NUMERIC = ["int", "ratio", "real", "complex"]
 PY_TYPES = {float: "real", str: "str", bool: "bool"}
 ARITHMETIC = {"+", "-", "*", "/"}
+COMPARISONS: dict[str, Callable[[Any, Any], bool]] = {
+    "<": operator.lt,
+    "<=": operator.le,
+    ">": operator.gt,
+    ">=": operator.ge,
+    "=": operator.eq,
+    "!=": operator.ne,
+}
 
 
 @dataclass(frozen=True)
@@ -402,22 +413,135 @@ class _Compiler:
 
     def call(self, node: Form, env: Env) -> Value:
         head = _head(node)
-        args = node.items[1:]
         if head in ARITHMETIC:
             return self.arithmetic(head, node, env)
-        if head == "rand":
-            if len(args) not in (0, 2):
-                raise CompileError("rand takes no arguments or two", node.pos)
-            for arg in args:
-                value = self.expr(arg, env)
-                if isinstance(value, (ObjRef, SelfRef, Spread)) or not _widens_to(
-                    value.type, "real"
-                ):
-                    raise CompileError("rand takes real numbers", arg.pos)
-            return Dyn("real")
+        if head in COMPARISONS:
+            return self.compare(head, node, env)
+        if head == "^":
+            return self.power(node, env)
+        if head == "if":
+            return self.if_(node, env)
+        if head == "cond":
+            return self.cond(node, env)
+        if head in STDLIB:
+            return self.library(head, node, env)
         if head in FORMS or head == "repeat":
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
         raise CompileError(f"unknown function {head!r}", node.pos)
+
+    def value_arg(self, node: Node, env: Env) -> Const | Dyn:
+        value = self.expr(node, env)
+        if isinstance(value, (ObjRef, SelfRef)):
+            raise CompileError("expected a value, got an object", node.pos)
+        if isinstance(value, Spread):
+            raise CompileError("a group attribute gives several values here", node.pos)
+        return value
+
+    def args(self, node: Form, count: int, env: Env) -> list[Const | Dyn]:
+        args = node.items[1:]
+        if len(args) != count:
+            raise CompileError(f"{_head(node)} takes {count} arguments", node.pos)
+        return [self.value_arg(arg, env) for arg in args]
+
+    def compare(self, op: str, node: Form, env: Env) -> Value:
+        a, b = self.args(node, 2, env)
+        ordered = op in ("<", "<=", ">", ">=")
+        numeric = a.type in NUMERIC and b.type in NUMERIC
+        if ordered and not (numeric and "complex" not in (a.type, b.type)):
+            raise CompileError(f"{op} compares real numbers", node.pos)
+        if not ordered and not numeric and a.type != b.type:
+            raise CompileError(f"cannot compare {a.type} with {b.type}", node.pos)
+        if isinstance(a, Const) and isinstance(b, Const):
+            return Const(COMPARISONS[op](a.value, b.value), "bool")
+        return Dyn("bool")
+
+    def power(self, node: Form, env: Env) -> Value:
+        base, exp = self.args(node, 2, env)
+        if base.type not in NUMERIC or exp.type not in NUMERIC:
+            raise CompileError("^ takes numbers", node.pos)
+        if "complex" in (base.type, exp.type):
+            result = "complex"
+        elif exp.type == "int":
+            known = isinstance(exp, Const) and isinstance(exp.value, int)
+            negative = not (known and exp.value >= 0)
+            result = "ratio" if base.type == "int" and negative else base.type
+        else:
+            result = "real"
+        if not (isinstance(base, Const) and isinstance(exp, Const)):
+            return Dyn(result)
+        try:
+            value = power(base.value, exp.value)
+        except ZeroDivisionError:
+            raise CompileError("division by zero", node.pos) from None
+        if result != "complex" and isinstance(value, complex):
+            raise CompileError("the result is not a real number", node.pos)
+        return Const(_convert(value, result), result)
+
+    def if_(self, node: Form, env: Env) -> Value:
+        test, then, other = self.args(node, 3, env)
+        if test.type != "bool":
+            raise CompileError("the condition of if must be a bool", node.items[1].pos)
+        result = _unify(then.type, other.type, node.pos)
+        if isinstance(test, Const):
+            return _retype(then if test.value else other, result)
+        return Dyn(result)
+
+    def cond(self, node: Form, env: Env) -> Value:
+        clauses = node.items[1:]
+        result: str | None = None
+        chosen: Const | Dyn | None = None
+        dynamic = False
+        for i, clause in enumerate(clauses):
+            if not (isinstance(clause, Form) and len(clause.items) == 2):
+                raise CompileError("a cond clause is (condition value)", clause.pos)
+            test_node, value_node = clause.items
+            last = i == len(clauses) - 1
+            is_else = isinstance(test_node, Name) and test_node.parts == ("else",)
+            if is_else != last:
+                raise CompileError("cond must end with exactly one else clause", clause.pos)
+            value = self.value_arg(value_node, env)
+            result = value.type if result is None else _unify(result, value.type, clause.pos)
+            test = Const(True, "bool") if is_else else self.value_arg(test_node, env)
+            if test.type != "bool":
+                raise CompileError("a cond condition must be a bool", test_node.pos)
+            if chosen is None and not dynamic:
+                if isinstance(test, Dyn):
+                    dynamic = True
+                elif test.value:
+                    chosen = value
+        if result is None:
+            raise CompileError("cond needs an else clause", node.pos)
+        return _retype(chosen, result) if chosen is not None else Dyn(result)
+
+    def library(self, name: str, node: Form, env: Env) -> Value:
+        fn = STDLIB[name]
+        kinds: list[str] = []
+        values: list[Value] = []
+        for arg in node.items[1:]:
+            value = self.expr(arg, env)
+            if isinstance(value, SelfRef):
+                point = {"x", "y"} <= attributes(value.cls).keys()
+            elif isinstance(value, ObjRef):
+                point = {"x", "y"} <= attributes(type(value.obj)).keys()
+            else:
+                point = None
+            if point is None and isinstance(value, (Const, Dyn)) and _widens_to(value.type, "real"):
+                kinds.append("real")
+            elif point:
+                kinds.append("point")
+            else:
+                kinds.append("invalid")
+            values.append(value)
+        sig = fn.find(kinds)
+        if sig is None:
+            raise CompileError(f"no form of {name} takes these arguments", node.pos)
+        consts = [v.value for v in values if isinstance(v, Const)]
+        if fn.pure and len(consts) == len(values):
+            try:
+                return Const(stdlib_call(fn, sig, consts), sig.result)
+            except (ValueError, ZeroDivisionError) as e:
+                raise CompileError(str(e) or "invalid argument", node.pos) from None
+        return Dyn(sig.result)
 
     def arithmetic(self, op: str, node: Form, env: Env) -> Value:
         types: list[str] = []
@@ -478,6 +602,18 @@ def _substitute(node: Node, env: Env) -> Node:
     return node
 
 
+def _unify(a: str, b: str, pos: Pos) -> str:
+    if a in NUMERIC and b in NUMERIC:
+        return NUMERIC[max(NUMERIC.index(a), NUMERIC.index(b))]
+    if a != b:
+        raise CompileError(f"the branches have different types: {a} and {b}", pos)
+    return a
+
+
+def _retype(value: Const | Dyn, result: str) -> Value:
+    return Const(_convert(value.value, result), result) if isinstance(value, Const) else Dyn(result)
+
+
 def _fold(op: str, values: list):
     if op == "+":
         return sum(values)
@@ -487,5 +623,5 @@ def _fold(op: str, values: list):
         return -values[0] if len(values) == 1 else values[0] - sum(values[1:])
     result = values[0]
     for v in values[1:]:
-        result = result / v
+        result = divide(result, v)
     return result

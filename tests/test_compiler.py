@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from mathterpiece.compiler import CompileError, compile_scene
-from mathterpiece.nodes import Form, InterpStrLit, IntLit, Name, Pos
+from mathterpiece.nodes import Form, InterpStrLit, IntLit, Name, Pos, StrLit
 from mathterpiece.parse import parse
 from mathterpiece.scene import Bound, Canvas, Circle, Free, Group, Real, Text
 
@@ -485,9 +485,12 @@ class TestExamples:
         assert (teal.name, teal.r, teal.fill) == ("teal_c", Free(3.5), Free(False))
         assert (red.name, red.edgecolor) == ("red_c", Free("red"))
         dots = [d for d in get(scn, "dots", Group).members if isinstance(d, Circle)]
-        assert len(dots) == 100
-        assert [d.name for d in dots] == [f"dot{i}" for i in range(100)]
-        assert all(d.facecolor == Bound(n("teal_c", "edgecolor")) for d in dots)
+        assert len(dots) == 150
+        assert [d.name for d in dots] == [f"dot{i}" for i in range(150)]
+        for d in dots:
+            assert isinstance(d.facecolor, Bound)
+            assert isinstance(d.facecolor.expr, Form)
+            assert d.facecolor.expr.items[0] == n("cond")
         assert all(isinstance(d.r, Bound) and d.alpha == Free(0.25) for d in dots)
         assert get(scn, "cnv", Canvas).members == [scn["dots"], scn["circles"]]
 
@@ -552,3 +555,198 @@ class TestLoopVariablesInBoundExpressions:
     def test_inner_variable_wins(self):
         scn = scene("(real 'k') (repeat i 1 (repeat i 3 (circle $'c{i}x' (x (* i k)))))")
         assert get(scn, "c2x", Circle).x == Bound(Form((n("*"), IntLit(2), n("k"))))
+
+
+def bound_of(src):
+    return get(scene(f"(real 'k' 2) (circle 'disk') (real 'v' {src})"), "v", Real).value
+
+
+def real_of(src):
+    return get(scene(f"(real 'v' {src})"), "v", Real).value
+
+
+def text_of(src):
+    return get(scene(f"(real 'k' 2) (text 't' {src})"), "t", Text).value
+
+
+class TestComparisons:
+    @pytest.mark.parametrize(
+        "expr, result",
+        [
+            ("(< 1 2)", "a"),
+            ("(< 2 1)", "b"),
+            ("(<= 2 2)", "a"),
+            ("(> 1/2 0.4)", "a"),
+            ("(>= 1 2)", "b"),
+            ("(= 1 1.0)", "a"),
+            ("(= 'x' 'x')", "a"),
+            ("(!= 'x' 'y')", "a"),
+            ("(= true false)", "b"),
+            ("(= 2i 2i)", "a"),
+        ],
+    )
+    def test_folded(self, expr, result):
+        assert text_of(f"(if {expr} 'a' 'b')") == Free(result)
+
+    def test_bound(self):
+        expr = Form((n("if"), Form((n("<"), n("k"), IntLit(3))), StrLit("a"), StrLit("b")))
+        assert text_of("(if (< k 3) 'a' 'b')") == Bound(expr)
+
+    @pytest.mark.parametrize(
+        "expr",
+        ["(< 1)", "(< 1 2 3)", "(< 1i 2i)", "(< 'a' 'b')", "(= 1 'a')", "(= true 1)", "(< disk 1)"],
+    )
+    def test_invalid(self, expr):
+        error(f"(circle 'disk') (text 't' (if {expr} 'a' 'b'))")
+
+    def test_result_is_bool_not_number(self):
+        error("(real 'v' (< 1 2))")
+
+
+class TestIf:
+    def test_folds_when_condition_is_constant(self):
+        assert real_of("(if true 1 2)") == Free(1.0)
+        assert real_of("(if false 1 2)") == Free(2.0)
+
+    def test_numeric_branches_widen(self):
+        assert real_of("(if false 1 2.5)") == Free(2.5)
+
+    def test_bound_when_condition_is_bound(self):
+        assert isinstance(bound_of("(if (< k 1) 1 2)"), Bound)
+
+    def test_bound_when_chosen_branch_is_bound(self):
+        assert isinstance(bound_of("(if true k 2)"), Bound)
+
+    @pytest.mark.parametrize(
+        "expr",
+        ["(if true 1)", "(if true 1 2 3)", "(if 1 2 3)", "(if 'yes' 2 3)", "(if true 1 'a')"],
+    )
+    def test_invalid(self, expr):
+        error(f"(real 'v' {expr})")
+
+    def test_unchosen_branch_is_still_checked(self):
+        error("(real 'v' (if true 1 nope))", match="nope")
+
+
+class TestCond:
+    def test_first_true_clause(self):
+        assert text_of("(cond (false 'a') (true 'b') (else 'c'))") == Free("b")
+
+    def test_else(self):
+        assert text_of("(cond (false 'a') (else 'c'))") == Free("c")
+
+    def test_only_else(self):
+        assert text_of("(cond (else 'c'))") == Free("c")
+
+    def test_bound_condition(self):
+        assert isinstance(text_of("(cond ((< k 1) 'a') (else 'c'))"), Bound)
+
+    def test_constant_true_before_bound_condition_folds(self):
+        assert text_of("(cond (true 'a') ((< k 1) 'b') (else 'c'))") == Free("a")
+
+    def test_numeric_values_widen(self):
+        assert real_of("(cond (false 1) (else 2.5))") == Free(2.5)
+
+    @pytest.mark.parametrize(
+        "expr",
+        [
+            "(cond)",
+            "(cond (true 'a'))",
+            "(cond (else 'a') (true 'b'))",
+            "(cond (else 'a') (else 'b'))",
+            "(cond (1 'a') (else 'b'))",
+            "(cond (true 'a') (else 2))",
+            "(cond (true) (else 'b'))",
+            "(cond (true 'a' 'x') (else 'b'))",
+            "(cond true (else 'b'))",
+        ],
+    )
+    def test_invalid(self, expr):
+        error(f"(text 't' {expr})")
+
+    def test_else_outside_cond_is_undefined(self):
+        error("(text 't' (if else 'a' 'b'))", match="else")
+
+
+class TestPower:
+    @pytest.mark.parametrize(
+        "expr, value",
+        [
+            ("(^ 2 3)", 8.0),
+            ("(^ 2 -1)", 0.5),
+            ("(^ 1/2 2)", 0.25),
+            ("(^ 4 0.5)", 2.0),
+            ("(^ 2 0)", 1.0),
+            ("(^ 0 0)", 1.0),
+        ],
+    )
+    def test_folded(self, expr, value):
+        assert real_of(expr) == Free(value)
+
+    @pytest.mark.parametrize("expr", ["(^ 0 -1)", "(^ -8 1/3)", "(^ 2)", "(^ 2 3 4)", "(^ 'a' 2)"])
+    def test_invalid(self, expr):
+        error(f"(real 'v' {expr})")
+
+    def test_bound(self):
+        assert bound_of("(^ k 2)") == Bound(Form((n("^"), n("k"), IntLit(2))))
+
+
+class TestSqrt:
+    def test_folded(self):
+        assert real_of("(sqrt 9)") == Free(3.0)
+
+    def test_bound(self):
+        assert isinstance(bound_of("(sqrt k)"), Bound)
+
+    @pytest.mark.parametrize(
+        "expr", ["(sqrt -1)", "(sqrt)", "(sqrt 1 2)", "(sqrt 'a')", "(sqrt 2i)"]
+    )
+    def test_invalid(self, expr):
+        error(f"(real 'v' {expr})")
+
+
+class TestDist:
+    def test_two_objects(self):
+        scn = scene("(circle 'a') (circle 'b') (real 'd' (dist a b))")
+        assert get(scn, "d", Real).value == Bound(Form((n("dist"), n("a"), n("b"))))
+
+    def test_with_self(self):
+        scn = scene("(circle 'a') (circle 'b' (r (dist self a)))")
+        assert isinstance(get(scn, "b", Circle).r, Bound)
+
+    def test_with_indexed_member(self):
+        scn = scene("(group 'g' (circle _) (circle _)) (real 'd' (dist g[0] g[1]))")
+        assert isinstance(get(scn, "d", Real).value, Bound)
+
+    def test_four_constant_numbers_fold(self):
+        assert real_of("(dist 0 0 3 4)") == Free(5.0)
+
+    def test_four_numbers_with_expressions(self):
+        assert real_of("(dist 1/2 (* 2 1) 0.5 (- 2))") == Free(4.0)
+
+    def test_four_numbers_bound(self):
+        assert isinstance(bound_of("(dist k 0 0 disk.r)"), Bound)
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            "a",
+            "a a a",
+            "a 1",
+            "1 2",
+            "1 2 3",
+            "1 2 3 4 5",
+            "a k",
+            "a g",
+            "a cnv",
+            "1 2 3 'x'",
+            "1 2 3 2i",
+            "1 2 3 a",
+            "a b 1 2",
+        ],
+    )
+    def test_invalid(self, args):
+        error(
+            "(circle 'a') (circle 'b') (real 'k') (group 'g') (canvas 'cnv')"
+            f" (real 'd' (dist {args}))"
+        )

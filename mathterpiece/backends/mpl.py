@@ -1,12 +1,12 @@
 import math
 import random
-from fractions import Fraction
 from typing import Any, get_args
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from mathterpiece.compiler import COMPARISONS
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
@@ -31,22 +31,14 @@ from mathterpiece.scene import (
     Visual,
     attributes,
 )
+from mathterpiece.stdlib import STDLIB, divide, power
+from mathterpiece.stdlib import call as stdlib_call
 
 LITERALS = (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)
 
 
 class EvalError(Exception):
     pass
-
-
-def _exact(x) -> bool:
-    return isinstance(x, (int, Fraction)) and not isinstance(x, bool)
-
-
-def _divide(a, b):
-    if b == 0:
-        raise EvalError("division by zero")
-    return Fraction(a) / b if _exact(a) and _exact(b) else a / b
 
 
 class Evaluator:
@@ -114,10 +106,28 @@ class Evaluator:
         head = node.items[0]
         assert isinstance(head, Name)
         op = head.parts[0]
+        if op == "if":
+            test, then, other = node.items[1:]
+            return self.eval(then if self.eval(test, owner) else other, owner)
+        if op == "cond":
+            for clause in node.items[1:]:
+                assert isinstance(clause, Form)
+                test, result = clause.items
+                if (isinstance(test, Name) and test.parts == ("else",)) or self.eval(test, owner):
+                    return self.eval(result, owner)
         args: list[Any] = []
         for arg in node.items[1:]:
             value = self.eval(arg, owner)
             args.extend(value if isinstance(value, list) else [value])
+        try:
+            return self.apply(op, args)
+        except (ZeroDivisionError, ValueError) as e:
+            raise EvalError(str(e) or "division by zero") from None
+
+    def point(self, obj: Obj) -> tuple[Any, Any]:
+        return self.value(obj, "x"), self.value(obj, "y")
+
+    def apply(self, op: Any, args: list[Any]) -> Any:
         if op == "+":
             return sum(args)
         if op == "*":
@@ -127,10 +137,22 @@ class Evaluator:
         if op == "/":
             result = args[0]
             for arg in args[1:]:
-                result = _divide(result, arg)
+                result = divide(result, arg)
             return result
-        if op == "rand":
-            return self.rng.uniform(float(args[0]), float(args[1])) if args else self.rng.random()
+        if op == "^":
+            result = power(*args)
+            if isinstance(result, complex):
+                raise EvalError("the result of ^ is not a real number")
+            return result
+        if op in COMPARISONS:
+            return COMPARISONS[op](*args)
+        if op in STDLIB:
+            fn = STDLIB[op]
+            kinds = ["point" if isinstance(a, Obj) else "real" for a in args]
+            sig = fn.find(kinds)
+            assert sig is not None
+            values = [self.point(a) if isinstance(a, Obj) else a for a in args]
+            return stdlib_call(fn, sig, values, self.rng)
         raise EvalError(f"unknown function {op!r}")
 
 

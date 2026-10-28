@@ -185,3 +185,102 @@ class TestRender:
 
     def test_one_figure_per_canvas(self):
         assert len(render(scene("(canvas 'a') (canvas 'b')"))) == 2
+
+
+def k_value(expr, k=2):
+    return value(f"(real 'k' {k}) (circle 'disk' (x 3) (y 4)) (real 'v' {expr})", "v", "value")
+
+
+def k_text(expr, k=2):
+    return value(f"(real 'k' {k}) (text 't' {expr})", "t", "value")
+
+
+class TestConditionals:
+    @pytest.mark.parametrize(
+        "cond, result",
+        [
+            ("(< k 3)", "a"),
+            ("(< k 2)", "b"),
+            ("(<= k 2)", "a"),
+            ("(> k 1/2)", "a"),
+            ("(>= k 3)", "b"),
+            ("(= k 2)", "a"),
+            ("(!= k 2)", "b"),
+        ],
+    )
+    def test_comparisons_in_if(self, cond, result):
+        assert k_text(f"(if {cond} 'a' 'b')") == result
+
+    def test_cond_first_true(self):
+        assert k_text("(cond ((< k 1) 'a') ((< k 3) 'b') (else 'c'))") == "b"
+
+    def test_cond_else(self):
+        assert k_text("(cond ((< k 1) 'a') (else 'c'))") == "c"
+
+    def test_if_only_evaluates_the_chosen_branch(self):
+        assert k_value("(if (< k 3) 1 (/ 1 (- k 2)))") == 1.0
+
+    def test_cond_stops_at_the_first_true_clause(self):
+        assert k_value("(cond ((< k 3) 1) ((< (/ 1 (- k 2)) 0) 2) (else 3))") == 1.0
+
+    def test_numeric_branches_widen(self):
+        assert k_value("(if (< k 3) 1 2.5)") == 1.0
+
+
+class TestPowerAndSqrt:
+    @pytest.mark.parametrize(
+        "expr, result", [("(^ k 3)", 8.0), ("(^ k -1)", 0.5), ("(^ k 0.5)", 2**0.5)]
+    )
+    def test_power(self, expr, result):
+        assert k_value(expr) == result
+
+    def test_power_of_negative_base_to_fraction(self):
+        with pytest.raises(EvalError):
+            k_value("(^ k 0.5)", k=-2)
+
+    def test_zero_to_negative_power(self):
+        with pytest.raises(EvalError):
+            k_value("(^ k -1)", k=0)
+
+    def test_sqrt(self):
+        assert k_value("(sqrt k)", k=9) == 3.0
+
+    def test_sqrt_of_negative(self):
+        with pytest.raises(EvalError):
+            k_value("(sqrt k)", k=-1)
+
+
+class TestDist:
+    def test_two_objects(self):
+        assert (
+            value("(circle 'a') (circle 'b' (x 3) (y 4)) (real 'd' (dist a b))", "d", "value")
+            == 5.0
+        )
+
+    def test_with_self(self):
+        src = "(circle 'a' (x 1) (y 1)) (circle 'b' (x 4) (y 5) (r (dist self a)))"
+        assert value(src, "b", "r") == 5.0
+
+    def test_four_numbers(self):
+        assert k_value("(dist 0 0 disk.x disk.y)") == 5.0
+
+    def test_bound_coordinates(self):
+        src = "(real 'k' 3) (circle 'a' (x k)) (circle 'b' (y 4)) (real 'd' (dist a b))"
+        assert value(src, "d", "value") == 5.0
+
+
+class TestDotsExample:
+    def test_each_dot_is_colored_by_the_circle_it_touches(self):
+        scn = compile_scene(parse((EXAMPLES / "dots.mtp").read_text()))
+        ev = Evaluator(scn, random.Random(0))
+        teal, red = scn["teal_c"], scn["red_c"]
+        colors = set()
+
+        def touches(dot, c):
+            return math.dist(ev.point(dot), ev.point(c)) < ev.value(dot, "r") + ev.value(c, "r")
+
+        for dot in scn["dots"].members:  # ty: ignore[unresolved-attribute]
+            expected = "teal" if touches(dot, teal) else "red" if touches(dot, red) else "gray"
+            assert ev.value(dot, "facecolor") == expected
+            colors.add(expected)
+        assert colors == {"teal", "red", "gray"}

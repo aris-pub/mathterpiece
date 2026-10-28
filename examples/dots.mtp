@@ -2,8 +2,12 @@
   (circle 'teal_c' (r 3.5) (x -5.0) (y 4.0) (edgecolor 'teal') (linewidth 1.5) (fill false))
   (circle 'red_c' (r 1.2) (x 3.5) (y -2.0) (edgecolor 'red') (linewidth 1.5) (fill false)))
 (group 'dots'
-  (repeat i 100
+  (repeat i 150
     (circle $'dot{i}'
       (r (rand 0 0.25)) (x (rand -10 10)) (y (rand -10 10)) (alpha 0.25)
-      (facecolor teal_c.edgecolor))))
+      (facecolor
+        (cond
+          ((< (dist self teal_c) (+ self.r teal_c.r)) teal_c.edgecolor)
+          ((< (dist self red_c) (+ self.r red_c.r)) red_c.edgecolor)
+          (else 'gray'))))))
 (canvas 'cnv' dots circles)
