@@ -641,6 +641,48 @@ class TestExamples:
         compile_scene(parse(example.read_text()))
 
 
+class TestCycles:
+    @pytest.mark.parametrize(
+        "src, path",
+        [
+            ("(circle 'c' (x self.x))", "c.x -> c.x"),
+            ("(circle 'c' (x self.y) (y self.x))", "c.x -> c.y -> c.x"),
+            ("(circle 'c' (x self.y) (y self.r) (r self.x))", "c.x -> c.y -> c.r -> c.x"),
+            ("(circle 'c' (x 1) (y self.r) (r (+ self.x self.y)))", "c.y -> c.r -> c.y"),
+            ("(circle 'a') (circle 'c' (x (dist self a)))", "c.x -> c.x"),
+            ("(circle 'a') (circle 'c' (y (dist a self)))", "c.y -> c.y"),
+            ("(text 't' $'at {self.value}')", "t.value -> t.value"),
+            ("(circle 'c' (fill (if (< self.r 1) self.fill 'red')))", "c.fill -> c.fill"),
+            ("(canvas 'v' (view-x self.view-width) (view-width self.view-x))", "v.view-x"),
+            ("(compound 'dot' (circle 'c')) (dot 'd' (x self.y) (y self.x))", "d.x -> d.y"),
+            ("(compound 'dot' (circle 'c' (r self.r)))", "c.r -> c.r"),
+            ("(group 'g' (circle _ (r self.r)))", "r -> r"),
+        ],
+    )
+    def test_cycle_is_a_compile_error(self, src, path):
+        error(src, match=f"circular.*{path}")
+
+    def test_cycle_in_a_repeat(self):
+        error("(repeat i 2 (circle $'c{i}' (x (+ i self.x))))", match="c0.x")
+
+    def test_position_is_the_first_attribute_in_the_cycle(self):
+        err = error("(circle 'c'\n  (r 1)\n  (x self.y)\n  (y self.x))")
+        assert err.pos == Pos(3, 3)
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(circle 'c' (x 1) (y self.x) (r (+ self.x self.y)))",
+            "(circle 'a') (circle 'c' (r (dist self a)))",
+            "(circle 'c' (x 1) (y (dist 0 0 self.x 1)))",
+            "(circle 'a' (x 1)) (circle 'c' (x a.y) (y a.x))",
+            "(group 'g' (circle 'a' (r self.x)) (circle 'b' (x self.r)))",
+        ],
+    )
+    def test_no_cycle(self, src):
+        scene(src)
+
+
 class TestSelf:
     def test_reads_own_attribute(self):
         c = get(scene("(circle 'c' (x 1) (y self.x))"), "c", Circle)

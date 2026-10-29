@@ -99,8 +99,9 @@ class TestSelf:
         anon = scn["g"].members[0]
         assert Evaluator(scn, random.Random(0)).value(anon, "y") == 3.0
 
-    def test_cycle(self):
-        scn = scene("(circle 'c' (x self.y) (y self.x))")
+    def test_cycle_in_a_scene_built_without_the_compiler(self):
+        scn = Scene()
+        scn.add(Circle(name="c", x=Bound(Name(("self", "y"))), y=Bound(Name(("self", "x")))))
         with pytest.raises(EvalError, match="cycle"):
             Evaluator(scn, random.Random(0)).value(scn["c"], "x")
 

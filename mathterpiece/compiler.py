@@ -161,6 +161,48 @@ def _defined_names(nodes, heads) -> set[str]:
     return names
 
 
+# The attributes of its own object that an expression reads. A bare self is a point, as in
+# (dist self a), so it reads x and y.
+def _self_reads(node: Node | str) -> set[str]:
+    if isinstance(node, Name):
+        reads: set[str] = set()
+        if node.parts[0] == "self":
+            second = node.parts[1] if len(node.parts) > 1 else None
+            reads |= {second} if isinstance(second, str) else {"x", "y"}
+        for part in node.parts[1:]:
+            if not isinstance(part, str):
+                reads |= _self_reads(part)
+        return reads
+    if isinstance(node, (Form, InterpStrLit)):
+        parts = node.items if isinstance(node, Form) else node.parts
+        return set().union(*(_self_reads(p) for p in parts))
+    return set()
+
+
+# Without forward references, objects cannot depend on each other in a loop, so a cycle can only
+# run through self, inside one object.
+def _check_cycles(name: str | None, given: dict[str, tuple[Any, Pos]]):
+    reads = {
+        attr: _self_reads(value.expr) if isinstance(value, Bound) else set()
+        for attr, (value, _) in given.items()
+    }
+    done: set[str] = set()
+
+    def visit(attr: str, path: list[str]):
+        if attr in path:
+            loop = [*path[path.index(attr) :], attr]
+            shown = " -> ".join(f"{name}.{a}" if name is not None else a for a in loop)
+            raise CompileError(f"circular dependency: {shown}", given[loop[0]][1])
+        if attr in done:
+            return
+        for dep in sorted(reads.get(attr, set())):
+            visit(dep, [*path, attr])
+        done.add(attr)
+
+    for attr in reads:
+        visit(attr, [])
+
+
 def _check_not_syntax(name: str, pos: Pos):
     if name in SYNTAX:
         raise CompileError(f"{name!r} is part of the language and cannot be used as a name", pos)
@@ -378,6 +420,7 @@ class _Compiler:
         attrs = attributes(Compound)
         values: dict[str, Any] = {}
         params: dict[str, Free | Bound] = {}
+        written: dict[str, tuple[Free | Bound, Pos]] = {}
         for node in form.items[2:]:
             head = _head(node)
             if head in FORMS or head in self.compounds or head == "repeat":
@@ -392,8 +435,11 @@ class _Compiler:
                 raise CompileError(f"attribute {head!r} takes exactly one value", node.pos)
             if head in attrs:
                 values[attrs[head].name] = self.attr_value(Compound, head, node.items[1], outer)
+                written[head] = (values[attrs[head].name], node.pos)
             else:
                 params[head] = self.param_value(spec.params[head].type, node.items[1], outer)
+                written[head] = (params[head], node.pos)
+        _check_cycles(name, written)
         if self.scopes:
             for attr in INHERITED:
                 values.setdefault(attrs[attr].name, Inherit())
@@ -437,6 +483,7 @@ class _Compiler:
         settable = {a for a in attrs if a not in spec.positional and (var is None or a != var.name)}
         rest = list(form.items[2:])
         values: dict[str, Free | Bound] = {}
+        positions: dict[str, Pos] = {}
 
         for field_name in spec.positional:
             if rest and _head(rest[0]) not in settable:
@@ -446,6 +493,7 @@ class _Compiler:
                     )
                 node = rest.pop(0)
                 values[field_name] = self.attr_value(spec.cls, field_name, node, env)
+                positions[field_name] = node.pos
 
         while rest and _head(rest[0]) in settable:
             node = rest.pop(0)
@@ -454,6 +502,7 @@ class _Compiler:
             assert attr is not None
             if attr in values:
                 raise CompileError(f"attribute {attr!r} is given twice", node.pos)
+            positions[attr] = node.pos
             if _expected_type(spec.cls, attr) == "transform":
                 head_name = Name(("transform",), node.items[0].pos)
                 composed = Form((head_name, *node.items[1:]), node.pos)
@@ -463,6 +512,7 @@ class _Compiler:
                 raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
             values[attr] = self.attr_value(spec.cls, attr, node.items[1], env)
 
+        _check_cycles(name, {attr: (values[attr], positions[attr]) for attr in values})
         kwargs: dict[str, Any] = {attrs[attr].name: value for attr, value in values.items()}
         if self.scopes and issubclass(spec.cls, Styled):
             for attr in INHERITED:
