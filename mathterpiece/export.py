@@ -18,6 +18,7 @@ from mathterpiece.model import (
     Canvas,
     Circle,
     Control,
+    Drag,
     Ellipse,
     Free,
     Group,
@@ -76,6 +77,7 @@ KINDS: dict[type[Obj], str] = {
     Button: "button",
     Steps: "steps",
     Play: "play",
+    Drag: "on-drag",
     State: "state",
 }
 OPERATORS = ARITHMETIC | set(COMPARISONS) | {"^", "mod", "abs", "transform"}
@@ -185,7 +187,7 @@ class _Writer:
                 assert isinstance(owner, Motif)
                 return _Context(around=owner, frame=owner)
             return _Context(owner, self.enclosing.get(id(owner)), self.parent.get(id(owner)))
-        if isinstance(obj, (State, Control)):
+        if isinstance(obj, (State, Control, Drag)):
             return _Context()
         return _Context(obj, self.enclosing.get(id(obj)), self.parent.get(id(obj)))
 
@@ -217,6 +219,14 @@ class _Writer:
                 if obj.problem is not None
                 else [[self.id(o), a, self.expr(e, ctx)] for o, a, e in obj.moves]
             )
+        if isinstance(obj, Drag):
+            assert obj.node is not None
+            out["node"] = self.id(obj.node)
+            out["conditions"] = [self.expr(c, ctx) for c in obj.conditions]
+            if isinstance(obj.when, State):
+                out["when"] = ["holds", self.id(obj.when)]
+            else:
+                out["when"] = None if obj.when is None else self.expr(obj.when, ctx)
         if isinstance(obj, Slider):
             assert obj.target is not None
             out["target"] = [self.id(obj.target), obj.attr]

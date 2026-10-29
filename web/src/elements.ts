@@ -1,9 +1,10 @@
 // The page elements: <mtp-model> holds a figure's JSON and its runtime, and views and controls
 // placed anywhere in the page find it by id, so an author can put each one where it fits.
 import { Animator } from "./animate.ts";
+import { Drags } from "./drag.ts";
 import type { Doc, Obj } from "./doc.ts";
 import { Runtime } from "./runtime.ts";
-import { draw } from "./svg.ts";
+import { draw, viewOf } from "./svg.ts";
 
 export const FORMAT_VERSION = 1;
 const READY = "mtp-ready";
@@ -19,6 +20,7 @@ export const frames = {
 export class MtpModel extends HTMLElement {
   runtime: Runtime | null = null;
   animator: Animator | null = null;
+  drags: Drags | null = null;
   error: string | null = null;
   private running = false;
   private last = 0;
@@ -46,6 +48,7 @@ export class MtpModel extends HTMLElement {
     const rt = new Runtime(doc);
     this.runtime = rt;
     this.animator = new Animator(rt, () => this.changed(), () => this.wake());
+    this.drags = new Drags(rt);
     this.error = null;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
@@ -74,6 +77,7 @@ export class MtpModel extends HTMLElement {
   private fail(message: string): void {
     this.runtime = null;
     this.animator = null;
+    this.drags = null;
     this.error = message;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
@@ -147,20 +151,59 @@ export class MtpCanvas extends MtpPart {
   private svg: SVGSVGElement | null = null;
   private redraw: () => void = () => {};
 
-  protected setup(_model: MtpModel, rt: Runtime): void {
+  protected setup(model: MtpModel, rt: Runtime, animator: Animator): void {
     const name = this.getAttribute("name");
     const canvas = rt.objects.find((o) => o.kind === "canvas" && (name === null || o.name === name));
     if (!canvas) throw new Error(name === null ? "the figure has no canvas" : `no canvas named ${name}`);
+    const drags = model.drags as Drags;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
+    this.svg = svg;
     this.redraw = () => {
-      this.svg = draw(rt, canvas.id, this.svg ?? undefined);
-      if (this.svg.parentNode !== this) this.replaceChildren(this.svg);
+      draw(rt, canvas.id, svg);
+      markDraggable(svg, drags);
     };
     this.redraw();
+    this.replaceChildren(svg);
+    const toScene = (event: PointerEvent): [number, number] => scenePoint(rt, canvas.id, svg, event);
+    svg.addEventListener("pointerdown", (event) => {
+      const hit = (event.target as Element).closest?.("[data-mtp-id]");
+      if (!hit || !drags.grab(Number(hit.getAttribute("data-mtp-id")), toScene(event))) return;
+      animator.cancel();
+      event.preventDefault();
+      svg.setPointerCapture?.(event.pointerId);
+    });
+    svg.addEventListener("pointermove", (event) => {
+      if (drags.dragging && drags.move(toScene(event))) model.changed();
+    });
+    const release = () => drags.release();
+    svg.addEventListener("pointerup", release);
+    svg.addEventListener("pointercancel", release);
   }
 
   protected update(): void {
     this.redraw();
   }
+}
+
+// Shapes that a press would drag take the pointer, so touch screens drag them instead of scrolling.
+function markDraggable(svg: SVGSVGElement, drags: Drags): void {
+  for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
+    if (!drags.draggable(Number(el.getAttribute("data-mtp-id")))) continue;
+    el.style.touchAction = "none";
+    el.style.cursor = "grab";
+  }
+}
+
+// A pointer position in scene coordinates. The SVG keeps its view box's shape (centered, as with
+// SVG's default preserveAspectRatio), so the scale is the smaller of the two.
+function scenePoint(rt: Runtime, canvas: number, svg: SVGSVGElement, event: PointerEvent): [number, number] {
+  const { box, toUser } = viewOf(rt, canvas);
+  const [bx, by, bw, bh] = box;
+  const rect = svg.getBoundingClientRect();
+  const scale = Math.min(rect.width / bw, rect.height / bh);
+  const ux = bx + (event.clientX - rect.left - (rect.width - bw * scale) / 2) / scale;
+  const uy = by + (event.clientY - rect.top - (rect.height - bh * scale) / 2) / scale;
+  return toUser.inverse().apply(ux, uy);
 }
 
 export class MtpSlider extends MtpPart {

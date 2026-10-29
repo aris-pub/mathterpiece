@@ -221,6 +221,15 @@ class Play(Control):
     steps: tuple[TourStep, ...] = field(default=(), metadata={"internal": True})
 
 
+# Moves node with the pointer while it is dragged, if every condition holds where the node would
+# land; when (a condition or a state) attaches the listener only while it holds.
+@dataclass(kw_only=True)
+class Drag(Obj):
+    node: Obj | None = field(default=None, metadata={"internal": True})
+    conditions: tuple[Node, ...] = field(default=(), metadata={"internal": True})
+    when: "Node | State | None" = field(default=None, metadata={"internal": True})
+
+
 @runtime_checkable
 class Container(Protocol):
     name: str | None
@@ -327,6 +336,10 @@ class Model:
     @property
     def controls(self) -> list[Control]:
         return [obj for obj in self._items if isinstance(obj, Control)]
+
+    @property
+    def listeners(self) -> list[Drag]:
+        return [obj for obj in self._items if isinstance(obj, Drag)]
 
     @property
     def views(self) -> list[View]:

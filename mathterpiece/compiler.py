@@ -15,6 +15,7 @@ from mathterpiece.model import (
     Button,
     Canvas,
     Circle,
+    Drag,
     Ellipse,
     Free,
     Function,
@@ -352,6 +353,11 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
                     for side in cond.items[1:]:
                         if isinstance(side, Name) and all(isinstance(p, str) for p in side.parts):
                             paths.add(tuple(p for p in side.parts if isinstance(p, str)))
+        if _head(node) == "on-drag" and len(node.items) > 1:
+            target = node.items[1]
+            if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
+                path = tuple(p for p in target.parts if isinstance(p, str))
+                paths.update({(*path, "x"), (*path, "y")})
         if _head(node) in ("slider", "button") and len(node.items) > 2:
             target = node.items[2]
             if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
@@ -648,6 +654,8 @@ class _Compiler:
             return []
         if head in CONTROLS or head == "state":
             return [self.control(form, env, head)]
+        if head == "on-drag":
+            return [self.on_drag(form, env)]
         if head == "scene":
             return [self.scene_form(form, env)]
         if head in self.motifs or (head in FORMS and issubclass(FORMS[head].cls, Visual)):
@@ -847,6 +855,44 @@ class _Compiler:
         obj = cls(name=name, **fields, **values)
         self.register(obj, form.pos)
         return obj
+
+    def on_drag(self, form: Form, env: Env) -> Drag:
+        if len(form.items) < 2:
+            raise CompileError("on-drag needs the object to drag, like (on-drag u)", form.pos)
+        target = form.items[1]
+        text = _text(target)
+        found = self.name(target, env) if isinstance(target, Name) else None
+        if not isinstance(found, ObjRef) or not isinstance(found.obj, Visual):
+            raise CompileError(f"{text} cannot be dragged: it is not a visual object", target.pos)
+        node = found.obj
+        for coord in ("x", "y"):
+            current = getattr(node, coord)
+            if isinstance(current, Bound):
+                raise CompileError(
+                    f"{text}.{coord} is computed, so dragging cannot move it", target.pos
+                )
+        conditions: list[Node] = []
+        when: Node | State | None = None
+        for item in form.items[2:]:
+            head = _head(item)
+            if head == "when" and isinstance(item, Form):
+                if when is not None:
+                    raise CompileError("when is given twice", item.pos)
+                if len(item.items) != 2:
+                    raise CompileError("when takes one condition or state", item.pos)
+                when = self.state_named(item.items[1]) or self.condition(item.items[1], env)
+            elif isinstance(item, Form) and head not in COMPARISONS:
+                raise CompileError("unexpected value in on-drag", item.pos)
+            else:
+                conditions.append(self.condition(item, env))
+        return Drag(name=None, node=node, conditions=tuple(conditions), when=when)
+
+    # A condition stored for drawing time; it must be true or false.
+    def condition(self, node: Node, env: Env) -> Node:
+        value = self.value_arg(node, env)
+        if value.type not in ("bool", PENDING):
+            raise CompileError("a listener's conditions must be true or false", node.pos)
+        return self.resolve_refs(_substitute(node, self.constants(env), self.lets), env)
 
     def control_attr(self, attr: str, node: Node, env: Env, cls: type[Obj]) -> Free | Bound:
         if attr == "step":

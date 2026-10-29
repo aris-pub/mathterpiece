@@ -27,6 +27,9 @@ export interface Obj {
   states?: number[];
   start?: number | null;
   steps?: unknown[][];
+  // on-drag
+  node?: number;
+  when?: Expr;
 }
 
 export interface Fn {

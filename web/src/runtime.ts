@@ -15,7 +15,8 @@ const PROPERTIES: Record<string, Set<string>> = {
   triangle: new Set(["center", "r"]),
 };
 const POINTS = new Set(["center", "from", "to"]);
-const CONTROLS = new Set(["slider", "button", "steps", "play"]);
+// Objects whose expressions read positions in scene coordinates.
+const CONTROLS = new Set(["slider", "button", "steps", "play", "on-drag"]);
 const ARITHMETIC = new Set(["+", "-", "*", "/"]);
 
 /** An object passed as a value, as in (dist a b). */
@@ -132,6 +133,8 @@ export class Runtime {
         return args.map((a) => Number(this.eval(a, frame, env)));
       case "complex":
         return new Complex(args[0] as number, args[1] as number);
+      case "holds":
+        return this.holds(args[0] as number);
       case "inf":
         return Infinity;
       case "-inf":

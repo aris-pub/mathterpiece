@@ -7,19 +7,25 @@ const NS = "http://www.w3.org/2000/svg";
 const CONTAINERS = new Set(["root", "group", "motif"]);
 const FLIP = new Matrix(1, 0, 0, 0, -1, 0);
 
-export function draw(rt: Runtime, canvas: number, svg?: SVGSVGElement): SVGSVGElement {
-  const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
-  out.replaceChildren();
+/** The SVG's view box, and the matrix from scene coordinates to the SVG's user coordinates. */
+export function viewOf(rt: Runtime, canvas: number): { box: [number, number, number, number]; toUser: Matrix } {
   const x = rt.value(canvas, "view-x") as number;
   const y = rt.value(canvas, "view-y") as number;
   const width = rt.value(canvas, "view-width") as number;
   const height = rt.value(canvas, "view-height") as number;
-  out.setAttribute("viewBox", `${x} ${-(y + height)} ${width} ${height}`);
   const cx = x + width / 2;
   const cy = y + height / 2;
   const view = compose(translate(-cx, -cy), rt.value(canvas, "transform") as Matrix, translate(cx, cy));
+  return { box: [x, -(y + height), width, height], toUser: FLIP.times(view) };
+}
+
+export function draw(rt: Runtime, canvas: number, svg?: SVGSVGElement): SVGSVGElement {
+  const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
+  out.replaceChildren();
+  const { box, toUser } = viewOf(rt, canvas);
+  out.setAttribute("viewBox", box.join(" "));
   const top = document.createElementNS(NS, "g");
-  top.setAttribute("transform", FLIP.times(view).svg());
+  top.setAttribute("transform", toUser.svg());
   for (const member of rt.obj(canvas).shows ?? []) drawObject(rt, member, top);
   out.appendChild(top);
   return out;
@@ -41,6 +47,7 @@ function drawObject(rt: Runtime, i: number, into: Element): void {
   const el = outline(rt, i);
   if (!el) return;
   el.setAttribute("transform", rt.shape(i).svg());
+  el.setAttribute("data-mtp-id", String(i));
   paint(rt, i, el, kind === "line", 1);
   into.appendChild(el);
 }
@@ -50,6 +57,7 @@ function text(rt: Runtime, i: number, value: string, fade: number): Element {
   el.setAttribute("font-size", String(rt.value(i, "font-size")));
   el.textContent = value;
   el.setAttribute("transform", rt.shape(i).times(FLIP).svg());
+  el.setAttribute("data-mtp-id", String(i));
   paint(rt, i, el, false, fade);
   return el;
 }

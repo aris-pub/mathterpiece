@@ -169,6 +169,8 @@ export const STDLIB: Record<string, (rng: () => number, ...args: unknown[]) => u
     if ((x as number) < 0) throw new MtpError("sqrt of a negative number");
     return Math.sqrt(x as number);
   },
+  max: (_r, ...xs) => Math.max(...(xs as number[])),
+  min: (_r, ...xs) => Math.min(...(xs as number[])),
   rand: (rng, a, b) => (a === undefined ? rng() : (a as number) + rng() * ((b as number) - (a as number))),
   rad: (_r, x) => degrees(x as number),
   deg: (_r, x) => x,

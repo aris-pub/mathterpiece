@@ -66,6 +66,8 @@ describe("values", () => {
     [["call", "polar", 2, 90], [0, 2]],
     [["call", "lerp", [0, 0], [10, 20], 0.5], [5, 10]],
     [["+", ["splice", 1, 2], 3], 6],
+    [["call", "max", 1, 3, 2], 3],
+    [["call", "min", 1, 3, 2], 1],
     [["inf"], Infinity],
     [["-inf"], -Infinity],
     [["list", ["inf"], 1], [Infinity, 1]],

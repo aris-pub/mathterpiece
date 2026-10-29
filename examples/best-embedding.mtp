@@ -1,0 +1,54 @@
+; Drag the points. The space: a center c at distance 1 from three leaves u, v, w, which are at
+; distance 2 from each other. The distortion of a drawing is how much it stretches the most
+; stretched pair, divided by how much it stretches the least stretched pair. No drawing in the
+; plane does better than 2/sqrt(3), the three leaves at 120 degrees around c.
+
+(const 'paper' '#f7f3ea')
+(const 'ink' '#1f2a44')
+(const 'unit' 3)
+
+(scene 'plane'
+  (rect 'backdrop' (center [0 0]) (size [20 14]) (fill paper))
+  ; Edges come after the points they join, so they are drawn on top (see mtp-jez).
+  (circle 'c' (pos [0 0]) (r 0.3) (fill '#e76f51'))
+  (circle 'u' (pos (polar unit 90)) (r 0.3) (fill ink))
+  (circle 'v' (pos (polar unit 210)) (r 0.3) (fill ink))
+  (circle 'w' (pos (polar unit 330)) (r 0.3) (fill ink))
+  (line _ (from c.pos) (to u.pos) (stroke ink) (stroke-width 0.06))
+  (line _ (from c.pos) (to v.pos) (stroke ink) (stroke-width 0.06))
+  (line _ (from c.pos) (to w.pos) (stroke ink) (stroke-width 0.06))
+  (line _ (from u.pos) (to v.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
+  (line _ (from v.pos) (to w.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
+  (line _ (from w.pos) (to u.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
+  (text _ 'c' (pos (+ c.pos [0.4 0.4])) (font-size 0.6) (fill ink))
+  (text _ 'u' (pos (+ u.pos [0.4 0.4])) (font-size 0.6) (fill ink))
+  (text _ 'v' (pos (+ v.pos [0.4 0.4])) (font-size 0.6) (fill ink))
+  (text _ 'w' (pos (+ w.pos [0.4 0.4])) (font-size 0.6) (fill ink))
+  ; How much the drawing stretches each pair, against its distance in the space.
+  (text 'readout'
+    (let ((cu (/ (dist c u) unit)) (cv (/ (dist c v) unit)) (cw (/ (dist c w) unit))
+          (uv (/ (dist u v) (* 2 unit))) (vw (/ (dist v w) (* 2 unit))) (wu (/ (dist w u) (* 2 unit)))
+          (most (max cu cv cw uv vw wu))
+          (least (min cu cv cw uv vw wu))
+          (distortion (if (> least 0) (/ most least) infty)))
+      $'distortion {distortion:.3f}')
+    (pos [-9.5 5.8]) (font-size 0.7) (fill ink))
+  (text _ 'best possible 1.155' (pos [3.5 5.8]) (font-size 0.5) (fill ink) (opacity 0.6)))
+
+(canvas 'view' (view-x -10) (view-y -7) (view-width 20) (view-height 14) plane)
+
+(on-drag c)
+(on-drag u)
+(on-drag v)
+(on-drag w)
+
+(state 'optimum'
+  (= c.x 0) (= c.y 0)
+  (= u.x 0) (= u.y unit)
+  (= v.x (* unit (cosd 210))) (= v.y (* unit (sind 210)))
+  (= w.x (* unit (cosd 330))) (= w.y (* unit (sind 330))))
+(state 'on-a-line'
+  (= c.x 0) (= c.y 0) (= u.x (- unit)) (= u.y 0) (= v.x unit) (= v.y 0) (= w.x (* 2 unit)) (= w.y 0))
+
+(button 'best' optimum (label 'show the optimum') (duration 0.8) (ease 'ease-in-out'))
+(button 'line' on-a-line (label 'collapse onto a line') (duration 0.8) (ease 'ease-in-out'))

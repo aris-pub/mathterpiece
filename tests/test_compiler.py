@@ -937,6 +937,22 @@ class TestSqrt:
         error(f"(real 'v' {expr})")
 
 
+class TestMaxMin:
+    @pytest.mark.parametrize(
+        "expr, value",
+        [("(max 1 3 2)", 3.0), ("(min 1 3 2)", 1.0), ("(max 5)", 5.0), ("(min 1/2 0.25)", 0.25)],
+    )
+    def test_folded(self, expr, value):
+        assert real_of(expr) == Free(value)
+
+    def test_bound(self):
+        assert isinstance(bound_of("(max k 1)"), Bound)
+
+    @pytest.mark.parametrize("expr", ["(max)", "(min 'a' 1)", "(max [1 2] 3)", "(min 2i 1)"])
+    def test_invalid(self, expr):
+        error(f"(real 'v' {expr})")
+
+
 class TestAngles:
     @pytest.mark.parametrize(
         "expr, value",

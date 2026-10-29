@@ -129,8 +129,13 @@ class Function:
     signatures: tuple[Signature, ...]
     # Impure functions are never folded at compile time, and their impl takes the rng first.
     pure: bool = True
+    # A variadic function's one signature takes any number (at least one) of its one parameter.
+    variadic: bool = False
 
     def find(self, kinds: list[str]) -> Signature | None:
+        if self.variadic:
+            sig = self.signatures[0]
+            return sig if kinds and all(k == sig.params[0] for k in kinds) else None
         return next((s for s in self.signatures if list(s.params) == kinds), None)
 
 
@@ -142,6 +147,8 @@ STDLIB: dict[str, Function] = {
         )
     ),
     "sqrt": _real(_sqrt),
+    "max": Function((Signature(("real",), "real", lambda *xs: float(max(xs))),), variadic=True),
+    "min": Function((Signature(("real",), "real", lambda *xs: float(min(xs))),), variadic=True),
     "rad": _real(math.degrees),
     "deg": _real(lambda x: x),
     "turn": _real(lambda x: 360 * x),
@@ -192,6 +199,6 @@ STDLIB: dict[str, Function] = {
 def call(fn: Function, sig: Signature, args: list, rng: random.Random | None = None):
     values = [
         tuple(map(float, a)) if kind == "point" else float(a)
-        for kind, a in zip(sig.params, args, strict=True)
+        for kind, a in zip(sig.params * len(args) if fn.variadic else sig.params, args, strict=True)
     ]
     return sig.impl(rng, *values) if not fn.pure else sig.impl(*values)

@@ -120,3 +120,84 @@ describe("errors", () => {
     expect(document.querySelector("mtp-button")?.textContent).toMatch(/angle is a slider, not a button/);
   });
 });
+
+describe("dragging on a canvas", () => {
+  const ID = [1, 0, 0, 0, 1, 0];
+  const style = { transform: ID, fill: "red", stroke: "none", "stroke-width": 1, opacity: 1, "fill-opacity": 1, "stroke-opacity": 1 };
+  // A 10 by 10 view drawn 100 pixels wide: 10 pixels a unit, with y pointing up.
+  const doc: Doc = {
+    mtp: 1,
+    objects: [
+      { id: 0, kind: "canvas", name: "view", attrs: { "view-x": 0, "view-y": 0, "view-width": 10, "view-height": 10, transform: ID }, shows: [1] },
+      { id: 1, kind: "root", name: "s", attrs: { transform: ID }, members: [2, 3] },
+      { id: 2, kind: "circle", name: "u", parent: 1, attrs: { ...style, x: 1, y: 1, r: 0.5 } },
+      { id: 3, kind: "circle", name: "still", parent: 1, attrs: { ...style, x: 5, y: 5, r: 0.5 } },
+      { id: 4, kind: "on-drag", name: null, attrs: {}, node: 2, conditions: [], when: null },
+    ],
+    functions: {},
+    names: { u: 2, still: 3 },
+    depends: {},
+  };
+
+  async function canvas() {
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m"></mtp-canvas>`;
+    const model = document.querySelector("mtp-model") as MtpModel;
+    model.doc = doc;
+    await new Promise((r) => setTimeout(r, 0));
+    const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON: () => ({}) });
+    const shape = (name: string) => svg.querySelector(`[data-mtp-id="${doc.names[name]}"]`) as SVGElement;
+    const pointer = (type: string, el: Element, x: number, y: number) =>
+      el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, bubbles: true, pointerId: 1 }));
+    return { rt: model.runtime!, svg, shape, pointer };
+  }
+
+  it("drags a shape with the pointer", async () => {
+    const { rt, svg, shape, pointer } = await canvas();
+    pointer("pointerdown", shape("u"), 10, 90);
+    pointer("pointermove", svg, 30, 70);
+    expect([rt.value(2, "x"), rt.value(2, "y")]).toEqual([3, 3]);
+    pointer("pointerup", svg, 30, 70);
+    pointer("pointermove", svg, 50, 50);
+    expect([rt.value(2, "x"), rt.value(2, "y")]).toEqual([3, 3]);
+  });
+
+  it("redraws while dragging", async () => {
+    const { svg, shape, pointer } = await canvas();
+    pointer("pointerdown", shape("u"), 10, 90);
+    pointer("pointermove", svg, 30, 90);
+    expect(shape("u").getAttribute("transform")).toContain(" 3 ");
+  });
+
+  it("marks what can be dragged, so the page does not scroll instead", async () => {
+    const { shape } = await canvas();
+    expect(shape("u").style.touchAction).toBe("none");
+    expect(shape("u").style.cursor).toBe("grab");
+    expect(shape("still").style.touchAction).toBe("");
+  });
+
+  it("ignores presses on shapes that cannot be dragged", async () => {
+    const { rt, svg, shape, pointer } = await canvas();
+    pointer("pointerdown", shape("still"), 50, 50);
+    pointer("pointermove", svg, 60, 50);
+    expect(rt.value(3, "x")).toBe(5);
+  });
+});
+
+describe("the best-embedding example", () => {
+  it("shows the distortion while a point is dragged, and the optimum button brings it back", async () => {
+    const { rt, anim } = await page("best-embedding", `<mtp-button model="m" name="best"></mtp-button>`);
+    const names = example("best-embedding").names;
+    expect(text("distortion")).toBe("distortion 1.155");
+    const drags = (document.querySelector("mtp-model") as MtpModel).drags!;
+    drags.grab(names.u!, [0, 3]);
+    drags.move([0, 4.5]);
+    (document.querySelector("mtp-model") as MtpModel).changed();
+    expect(text("distortion")).toBe("distortion 1.732");
+    drags.release();
+    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
+    anim.tick(1);
+    expect(text("distortion")).toBe("distortion 1.155");
+    expect(rt.value(names.u!, "y")).toBeCloseTo(3);
+  });
+});
