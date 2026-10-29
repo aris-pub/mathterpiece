@@ -83,7 +83,7 @@ LITERAL_NODES: dict[str, Callable[..., Node]] = {
 }
 
 # Heads the compiler reads specially. Everything else, like circle or dist, is standard library.
-SYNTAX = {"motif", "params", "repeat", "ref", "if", "cond", "else", "transform", "let"}
+SYNTAX = {"motif", "params", "repeat", "ref", "if", "cond", "else", "transform", "let", "const"}
 
 FORMS = {
     "circle": FormSpec(Circle),
@@ -259,6 +259,7 @@ class _Compiler:
         self.parents: dict[int, tuple[Obj, str]] = {}
         self.motifs: dict[str, MotifSpec] = {}
         self.root: Root | None = None
+        self.consts: dict[str, Const] = {}
         self.scopes: list[Scope] = []
         # Where a definition lands before anything adopts it: the top level, or a motif body.
         self.pools: list[list[Obj]] = [self.toplevel]
@@ -334,7 +335,7 @@ class _Compiler:
             for f in self.forms
             if _head(f) == "motif" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
         }
-        taken = _defined_names(self.forms, FORMS.keys() | motifs)
+        taken = _defined_names(self.forms, FORMS.keys() | motifs | {"const"})
         for names, value in BUILTINS:
             available = tuple(name for name in names if name not in taken)
             if not available:
@@ -353,7 +354,7 @@ class _Compiler:
                 raise CompileError(f"name {obj.name!r} is already defined", pos)
             scope[obj.name] = ObjRef(obj)
             return
-        if obj.name in self.names:
+        if obj.name in self.names or obj.name in self.consts:
             raise CompileError(f"name {obj.name!r} is already defined", pos)
         self.names[obj.name] = obj
 
@@ -365,6 +366,9 @@ class _Compiler:
             return self.let_items(form, env, self.toplevel_item)
         if head == "motif":
             self.define_motif(form)
+            return []
+        if head == "const":
+            self.define_const(form, env)
             return []
         if head == "scene":
             return [self.scene_form(form, env)]
@@ -456,9 +460,26 @@ class _Compiler:
             return [self.definition(node, env)]
         if head == "motif":
             raise CompileError("motifs are defined at the top level", node.pos)
+        if head == "const":
+            raise CompileError("const goes outside the scene", node.pos)
         if head == "scene":
             raise CompileError("a file has exactly one scene", node.pos)
         raise CompileError("the scene holds only visual objects", node.pos)
+
+    def define_const(self, form: Form, env: Env):
+        if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
+            raise CompileError("const takes a name given as a string and a value", form.pos)
+        name = form.items[1].value
+        _check_not_syntax(name, form.items[1].pos)
+        if name in self.names or name in self.consts:
+            raise CompileError(f"name {name!r} is already defined", form.items[1].pos)
+        value = self.value_arg(form.items[2], env)
+        if not isinstance(value, Const) or value.type not in LITERAL_NODES:
+            raise CompileError(
+                "a const must be a number, string, or bool known at compile time",
+                form.items[2].pos,
+            )
+        self.consts[name] = value
 
     def define_motif(self, form: Form):
         if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
@@ -605,8 +626,9 @@ class _Compiler:
     def constants(self, env: Env) -> dict[str, "int | SelfRef | Const | LetRef"]:
         scope = self.scopes[-1] if self.scopes else {}
         consts: dict[str, int | SelfRef | Const | LetRef] = {
-            k: v for k, v in scope.items() if isinstance(v, Const)
+            k: v for k, v in self.consts.items() if k not in scope
         }
+        consts |= {k: v for k, v in scope.items() if isinstance(v, Const)}
         return consts | env
 
     def definition(self, form: Form, env: Env) -> Obj:
@@ -818,6 +840,10 @@ class _Compiler:
                 if rest:
                     raise CompileError(f"{first!r} is a parameter and has no attributes", node.pos)
                 return current
+        elif local is None and first in self.consts:
+            if rest:
+                raise CompileError(f"{first!r} is a const and has no attributes", node.pos)
+            return self.consts[first]
         elif local is None and first not in self.names:
             raise CompileError(f"undefined name {first!r}", node.pos)
         else:

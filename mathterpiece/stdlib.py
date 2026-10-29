@@ -108,6 +108,7 @@ STDLIB: dict[str, Function] = {
     "asind": _real(lambda x: math.degrees(math.asin(x))),
     "acosd": _real(lambda x: math.degrees(math.acos(x))),
     "atand": _real(lambda x: math.degrees(math.atan(x))),
+    "lerp": Function((Signature(("real",) * 3, "real", lambda a, b, t: a + (b - a) * t),)),
     "rotate": Function((Signature(("real",), "transform", _rotate),)),
     "scale": Function(
         (

@@ -1,18 +1,22 @@
-; Seeds on a golden-angle spiral: seed i sits at radius (sqrt i), turned i times 137.508 degrees.
+(const 'golden' 137.508)
+(const 'gold' '#f6c453')
+(const 'starlight' '#c9d6ff')
+
+; Seeds on a golden-angle spiral: seed i sits at radius (sqrt i), turned i golden angles.
 (motif 'sunflower' (params (n 400) (spread 0.3) (size 0.11))
   (repeat i n
-    (let ((a (* i 137.508)) (d (* spread (sqrt i))) (t (/ i n)))
+    (let ((a (* i golden)) (d (* spread (sqrt i))) (t (/ i n)))
       (circle _
         (x (* d (cosd a)))
         (y (* d (sind a)))
         (r (* size (sqrt (+ 1 (/ i 80)))))
-        (opacity (+ 0.8 (* 0.2 t)))
+        (opacity (lerp 0.8 1 t))
         (fill
           (cond
             ((< t 0.15) '#9a4f16')
             ((< t 0.4) '#cf7424')
             ((< t 0.7) '#e89b2a')
-            ((< t 0.9) '#f6c453')
+            ((< t 0.9) gold)
             (else '#fff1b8')))))))
 
 ; Stacked translucent disks read as a soft glow that fades outward.
@@ -26,8 +30,8 @@
       (circle _
         (x (* radius (cosd a)))
         (y (* radius (sind a)))
-        (r (* size (+ 0.55 (* 0.45 (cosd (* 3 a))))))
-        (opacity (+ 0.4 (* 0.6 (sind (/ a 2)))))))))
+        (r (* size (lerp 0.55 1 (cosd (* 3 a)))))
+        (opacity (lerp 0.4 1 (sind (/ a 2))))))))
 
 ; A flower with its glow and an optional ring of moons, all centered on the flower.
 (motif 'bloom' (params (n 400) (spread 0.3) (size 0.11) (halo 8.5) (moons 0) (moon-radius 7.0))
@@ -38,7 +42,7 @@
 (scene 'night'
   (circle 'sky' (r 15) (fill '#0b1026'))
 
-  (bloom 'big' (x -2.8) (y 2.2) (fill '#f6c453') (moons 60))
+  (bloom 'big' (x -2.8) (y 2.2) (fill gold) (moons 60))
   (bloom 'small' (x 6.3) (y -5.9) (fill '#ff8c42') (n 160) (spread 0.25) (size 0.08) (halo 4.4))
 
   ; Stars take the color of whichever flower they drift near.
@@ -49,9 +53,9 @@
           (cond
             ((< (dist self big) big.moon-radius) big.fill)
             ((< (dist self small) small.halo) small.fill)
-            (else '#c9d6ff'))))))
+            (else starlight))))))
 
-  (text 'title' 'the golden angle' (x 1.5) (y 8.9) (fill '#f6c453'))
-  (text 'subtitle' '137.508°' (x 1.6) (y 8.1) (fill '#c9d6ff') (opacity 0.55)))
+  (text 'title' 'the golden angle' (x 1.5) (y 8.9) (fill gold))
+  (text 'subtitle' $'{golden}°' (x 1.6) (y 8.1) (fill starlight) (opacity 0.55)))
 
 (canvas 'cnv' (transform (rotate -8)) night)
