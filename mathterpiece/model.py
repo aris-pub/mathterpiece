@@ -160,6 +160,30 @@ class Canvas(View):
     members: list[Visual] = _members()
 
 
+# Controls write one free value: the target object's attribute (or motif parameter, or a real's
+# value). kind is that value's type, which a slider adapts to.
+@dataclass(kw_only=True)
+class Control(Obj):
+    target: Obj | None = field(default=None, metadata={"internal": True})
+    attr: str = field(default="value", metadata={"internal": True})
+    kind: str = field(default="real", metadata={"internal": True})
+    label: Attr[str] = Free("")
+
+
+@dataclass(kw_only=True)
+class Slider(Control):
+    min: Attr[float] = Free(0.0)
+    max: Attr[float] = Free(1.0)
+    # None means continuous.
+    step: Attr[object] = Free(None)
+
+
+# Writes its value, evaluated when pressed, to its target.
+@dataclass(kw_only=True)
+class Button(Control):
+    value: Attr[object] = Free(None)
+
+
 @runtime_checkable
 class Container(Protocol):
     name: str | None
@@ -258,6 +282,10 @@ class Model:
     @property
     def root(self) -> Root | None:
         return next((obj for obj in self._items if isinstance(obj, Root)), None)
+
+    @property
+    def controls(self) -> list[Control]:
+        return [obj for obj in self._items if isinstance(obj, Control)]
 
     @property
     def views(self) -> list[View]:

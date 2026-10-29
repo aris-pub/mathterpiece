@@ -12,6 +12,7 @@ from mathterpiece.model import (
     PYTHON_FRAMES,
     RECURSION_LIMIT,
     Bound,
+    Button,
     Canvas,
     Circle,
     Ellipse,
@@ -27,6 +28,7 @@ from mathterpiece.model import (
     Real,
     Rect,
     Root,
+    Slider,
     Styled,
     Text,
     Triangle,
@@ -325,6 +327,34 @@ def _check_pos(attr: str, given, pos: Pos):
         raise CompileError("pos sets both x and y, so give pos or x and y, not both", pos)
 
 
+# The values controls write, read from the source before compiling so that the compiler does not
+# fold them. A target written as a plain path gives that path; any other target only gives its
+# last name, which then counts as written in every motif instance.
+def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
+    paths: set[tuple[str, ...]] = set()
+    anywhere: set[str] = set()
+
+    def visit(node):
+        if not isinstance(node, Form):
+            return
+        if _head(node) in ("slider", "button") and len(node.items) > 2:
+            target = node.items[2]
+            if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
+                paths.add(tuple(p for p in target.parts if isinstance(p, str)))
+            elif isinstance(target, Name) and isinstance(target.parts[-1], str):
+                anywhere.add(target.parts[-1])
+            elif isinstance(target, Form) and _head(target) == "ref":
+                arg = target.items[1] if len(target.items) > 1 else None
+                if isinstance(arg, StrLit):
+                    anywhere.add(arg.value.rsplit(".", 1)[-1])
+        for item in node.items:
+            visit(item)
+
+    for form in forms:
+        visit(form)
+    return paths, anywhere
+
+
 def _check_not_syntax(name: str, pos: Pos):
     if name in SYNTAX:
         raise CompileError(f"{name!r} is part of the language and cannot be used as a name", pos)
@@ -385,6 +415,12 @@ class _Compiler:
         self.motifs: dict[str, MotifSpec] = {}
         self.root: Root | None = None
         self.consts: dict[str, Const] = {}
+        # Paths written by controls (such as ("d", "r")), and parameter names written somewhere
+        # the compiler cannot tell; these stay reactive instead of being folded.
+        self.written: set[tuple[str, ...]] = set()
+        self.written_anywhere: set[str] = set()
+        # The names of the motif instances whose bodies are being compiled, outermost first.
+        self.instance_path: list[str | None] = []
         self.funcs: dict[str, FuncSpec] = {}
         self.functions: dict[str, Function] = {}
         # The functions being compiled, with the type their recursive calls stand for.
@@ -407,6 +443,7 @@ class _Compiler:
 
     def compile(self) -> Model:
         self.add_builtins()
+        self.written, self.written_anywhere = _control_targets(self.forms)
         for form in self.forms:
             self.toplevel.extend(self.toplevel_item(form, {}))
         if self.root is None:
@@ -524,6 +561,8 @@ class _Compiler:
         if head == "func":
             self.define_func(form)
             return []
+        if head in ("slider", "button"):
+            return [self.control(form, env, head)]
         if head == "scene":
             return [self.scene_form(form, env)]
         if head in self.motifs or (head in FORMS and issubclass(FORMS[head].cls, Visual)):
@@ -619,6 +658,87 @@ class _Compiler:
         if head == "scene":
             raise CompileError("a file has exactly one scene", node.pos)
         raise CompileError("the scene holds only visual objects", node.pos)
+
+    # Which free value a control writes: an attribute, a motif parameter, or a real's value.
+    def control_target(self, node: Node, env: Env) -> tuple[Obj, str, str, str]:
+        name = self.resolve_refs(node, env)
+        if not isinstance(name, Name):
+            raise CompileError("a control's target must be a name, like disk.r", node.pos)
+        text = ".".join(p if isinstance(p, str) else "[...]" for p in name.parts)
+        first = name.parts[0]
+        if len(name.parts) == 1 and isinstance(first, str) and first in self.consts:
+            raise CompileError(f"{text!r} is a const, so a control cannot write it", node.pos)
+        if len(name.parts) == 1:
+            obj = self.names.get(first) if isinstance(first, str) else None
+            if not isinstance(obj, Real):
+                raise CompileError(f"{text!r} is not a value a control can write", node.pos)
+            attr = "value"
+        else:
+            holder = self.name(Name(name.parts[:-1], name.pos), env)
+            last = name.parts[-1]
+            if not isinstance(holder, ObjRef) or not isinstance(last, str):
+                raise CompileError(f"{text!r} is not a value a control can write", node.pos)
+            obj, attr = holder.obj, last
+        if isinstance(obj, Motif) and attr in obj.params:
+            current = obj.params[attr]
+            kind = self.motifs[obj.kind].params[attr].type
+        else:
+            attrs = attributes(type(obj))
+            if attr not in attrs or variadic(type(obj)) is attrs[attr]:
+                raise CompileError(f"{obj.name!r} has no attribute {attr!r}", node.pos)
+            current = getattr(obj, attrs[attr].name)
+            kind = _expected_type(type(obj), attr)
+        if isinstance(current, Bound):
+            raise CompileError(f"{text!r} is computed, so a control cannot write it", node.pos)
+        return obj, attr, kind, text
+
+    def control(self, form: Form, env: Env, head: str) -> Obj:
+        name = self.object_name(form, env)
+        if len(form.items) < 3:
+            raise CompileError(f"{head} needs a target, like disk.r", form.pos)
+        target, attr, kind, text = self.control_target(form.items[2], env)
+        cls: type[Slider | Button] = Slider if head == "slider" else Button
+        rest = list(form.items[3:])
+        values: dict[str, Any] = {"label": Free(text)}
+        if cls is Button:
+            if not rest or _head(rest[0]) == "label":
+                raise CompileError("a button needs the value it writes", form.pos)
+            node = rest.pop(0)
+            value = self.value_arg(node, env)
+            if not _widens_to(value.type, kind):
+                raise CompileError(f"{text} takes a {kind}, got {value.type}", node.pos)
+            if isinstance(value, Const):
+                values["value"] = Free(_convert(value.value, kind))
+            else:
+                stored = _substitute(node, self.constants(env), self.lets)
+                values["value"] = Bound(self.resolve_refs(stored, env))
+        elif kind not in ("int", "real"):
+            raise CompileError(
+                f"a slider writes a number, but {text} is a {kind}", form.items[2].pos
+            )
+        allowed = {"label", "min", "max", "step"} if cls is Slider else {"label"}
+        given: set[str] = set()
+        for node in rest:
+            attr_name = _head(node)
+            if attr_name not in allowed or not isinstance(node, Form) or len(node.items) != 2:
+                raise CompileError(f"unexpected value in {head}", node.pos)
+            if attr_name in given:
+                raise CompileError(f"attribute {attr_name!r} is given twice", node.pos)
+            given.add(attr_name)
+            item = node.items[1]
+            if attr_name != "step":
+                values[attr_name] = self.attr_value(cls, attr_name, item, env)
+                continue
+            step = self.value_arg(item, env)
+            if isinstance(step, Const) and step.value == "none":
+                values["step"] = Free(None)
+            elif isinstance(step, Const) and isinstance(step.value, (int, Fraction, float)):
+                values["step"] = Free(float(step.value))
+            else:
+                raise CompileError("step is a number known at compile time, or 'none'", item.pos)
+        obj = cls(name=name, target=target, attr=attr, kind=kind, **values)
+        self.register(obj, form.pos)
+        return obj
 
     def define_const(self, form: Form, env: Env):
         if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
@@ -924,16 +1044,23 @@ class _Compiler:
             for attr in INHERITED:
                 values.setdefault(attrs[attr].name, Inherit())
         scope: Scope = {}
+        path: tuple[str, ...] | None = None
+        if name is not None and all(p is not None for p in self.instance_path):
+            path = (*(p for p in self.instance_path if p is not None), name)
         for pname, default in spec.params.items():
             given = params.setdefault(pname, Free(default.value))
-            scope[pname] = (
-                Const(given.value, default.type) if isinstance(given, Free) else Dyn(default.type)
+            controlled = pname in self.written_anywhere or (
+                path is not None and (*path, pname) in self.written
             )
+            known = isinstance(given, Free) and not controlled
+            scope[pname] = Const(given.value, default.type) if known else Dyn(default.type)
         body_frame = Frame([], inside=True)
         self.frames.append(body_frame)
+        self.instance_path.append(name)
         try:
             members, default = self.body(spec, scope, name)
         finally:
+            self.instance_path.pop()
             self.frames.pop()
         if default is not None and "transform" not in values:
             values["transform"] = default

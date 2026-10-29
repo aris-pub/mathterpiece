@@ -1,0 +1,27 @@
+; Drag the sliders: chords join point k to point m*k, and the curve they trace changes with m.
+
+(const 'slate' '#0e1726')
+(const 'chalk' '#e8e4d8')
+
+(func 'on-circle' (params (radius 1.0) (k 0) (n 1))
+  (polar radius (turn (/ k n))))
+
+(motif 'times-table' (params (n 200) (m 2) (radius 8.0) (turn 0.0))
+  (group 'figure' (transform (rotate turn))
+    (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
+    (repeat k n
+      (line _
+        (from (on-circle radius k n))
+        (to (on-circle radius (* m k) n))
+        (stroke-width 0.03)
+        (stroke-opacity (lerp 0.2 0.85 (/ k n)))))))
+
+(scene 'board'
+  (rect 'backdrop' (center [0 0]) (size [20 20]) (fill slate))
+  (times-table 'table' (m 2) (turn -90) (stroke '#ffb703'))
+  (text 'caption' $'times {table.m}' (pos [-9.4 -9.4]) (font-size 0.6) (fill chalk)))
+
+(canvas 'cnv' board)
+(slider 'multiplier' table.m (min 2) (max 40) (label 'times'))
+(slider 'spin' table.turn (min -180) (max 180) (label 'rotate'))
+(button 'reset' table.m 2 (label 'back to 2'))

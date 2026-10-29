@@ -13,6 +13,8 @@ from matplotlib.patches import Patch, PathPatch, Polygon, Rectangle
 from matplotlib.path import Path
 from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
+from matplotlib.widgets import Button as MplButton
+from matplotlib.widgets import Slider as MplSlider
 
 from mathterpiece.compiler import ARITHMETIC, AXES, COMPARISONS, PROPERTIES
 from mathterpiece.compiler import _fold as fold
@@ -21,6 +23,7 @@ from mathterpiece.model import (
     PYTHON_FRAMES,
     RECURSION_LIMIT,
     Bound,
+    Button,
     Canvas,
     Circle,
     Ellipse,
@@ -33,6 +36,7 @@ from mathterpiece.model import (
     Obj,
     Real,
     Rect,
+    Slider,
     Text,
     Triangle,
     Visual,
@@ -81,6 +85,8 @@ class Evaluator:
         self.locals: dict[int, dict[str, Obj]] = {}
         self.frames: dict[int, Matrix] = {}
         self.depth = 0
+        # Values controls have written, which replace what the model gave.
+        self.written: dict[tuple[int, str], Any] = {}
         sys.setrecursionlimit(max(sys.getrecursionlimit(), PYTHON_FRAMES))
         stack: list[tuple[Obj, Motif | None, Group | Motif | None]] = [
             (o, None, None) for o in model.objects
@@ -95,8 +101,16 @@ class Evaluator:
             elif isinstance(obj, Group):
                 stack.extend((m, around, obj) for m in obj.members)
 
+    # A control's write. Everything computed is dropped, since anything might depend on it.
+    def write(self, obj: Obj, attr: str, value: Any):
+        self.written[(id(obj), attr)] = value
+        self.cache.clear()
+        self.frames.clear()
+
     def value(self, obj: Obj, attr: str) -> Any:
         key = (id(obj), attr)
+        if key in self.written:
+            return self.written[key]
         if key in self.cache:
             return self.cache[key]
         if key in self.active:
@@ -363,56 +377,142 @@ class Evaluator:
 
 def render(model: Model, rng: random.Random | None = None) -> list[tuple[Figure, Axes]]:
     ev = Evaluator(model, rng)
-    figures = []
+    figures: list[tuple[Figure, Axes]] = []
     for view in model.views:
         assert isinstance(view, Canvas)
         fig, ax = plt.subplots()
-        x, y = ev.value(view, "view-x"), ev.value(view, "view-y")
-        width, height = ev.value(view, "view-width"), ev.value(view, "view-height")
-        ax.set_xlim(x, x + width)
-        ax.set_ylim(y, y + height)
-        ax.set_aspect("equal")
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_frame_on(False)
-        center = translate(x + width / 2, y + height / 2)
-        to_center = translate(-(x + width / 2), -(y + height / 2))
-        matrix = compose(to_center, ev.value(view, "transform"), center)
-        to_view = _affine(matrix) + ax.transData
         strokes: list[tuple[Patch, float]] = []
-        for member in view.members:
-            _draw(member, ax, ev, to_view, strokes)
-        _stroke_in_scene_units(fig, ax, strokes, _scale(matrix))
+        _draw_canvas(view, ax, ev, strokes)
+        _stroke_in_scene_units(fig, ax, strokes)
         figures.append((fig, ax))
+        _canvases.setdefault(fig, []).append((view, ax, strokes))
+    if model.controls:
+        if not figures:
+            fig = plt.figure()
+            figures.append((fig, fig.add_axes((0, 0, 1, 1), frame_on=False)))
+        _add_controls(model, ev, [f for f, _ in figures])
     return figures
+
+
+# The canvases each figure shows, for redrawing them after a control writes.
+_canvases: dict[Figure, list[tuple[Canvas, Axes, list]]] = {}
+_widgets: dict[Figure, dict[str, Any]] = {}
+_presses: dict[Figure, dict[str, Any]] = {}
+
+
+def controls(fig: Figure) -> dict[str, Any]:
+    """The matplotlib widgets for a figure's controls, by name."""
+    return _widgets.get(fig, {})
+
+
+def press(fig: Figure, name: str):
+    """Does what clicking a button does."""
+    _presses[fig][name]()
+
+
+def _draw_canvas(view: Canvas, ax: Axes, ev: Evaluator, strokes: list):
+    ax.clear()
+    strokes.clear()
+    x, y = ev.value(view, "view-x"), ev.value(view, "view-y")
+    width, height = ev.value(view, "view-width"), ev.value(view, "view-height")
+    ax.set_xlim(x, x + width)
+    ax.set_ylim(y, y + height)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_frame_on(False)
+    center = translate(x + width / 2, y + height / 2)
+    to_center = translate(-(x + width / 2), -(y + height / 2))
+    matrix = compose(to_center, ev.value(view, "transform"), center)
+    to_view = _affine(matrix) + ax.transData
+    for member in view.members:
+        _draw(member, ax, ev, to_view, strokes, _scale(matrix))
+
+
+# Controls go along the bottom of the first figure, one row each, and redraw every canvas when
+# they write.
+def _add_controls(model: Model, ev: Evaluator, figures: list[Figure]):
+    host = figures[0]
+    rows = len(model.controls)
+    host.subplots_adjust(bottom=0.08 + 0.06 * rows)
+    widgets: dict[str, Any] = {}
+    presses: dict[str, Any] = {}
+
+    def redraw():
+        for fig in figures:
+            for view, ax, strokes in _canvases.get(fig, []):
+                _draw_canvas(view, ax, ev, strokes)
+                _update_strokes(fig, ax, strokes)
+            fig.canvas.draw_idle()
+
+    for row, control in enumerate(model.controls):
+        assert control.target is not None and control.name is not None
+        box = host.add_axes((0.25, 0.02 + 0.06 * (rows - 1 - row), 0.5, 0.04))
+        label = ev.value(control, "label")
+        target, attr, kind = control.target, control.attr, control.kind
+        if isinstance(control, Slider):
+            step = 1 if kind == "int" else ev.value(control, "step")
+            slider = MplSlider(
+                box,
+                label,
+                ev.value(control, "min"),
+                ev.value(control, "max"),
+                valinit=ev.value(target, attr),
+                valstep=step,
+            )
+            slider.valtext.set_visible(False)
+
+            def moved(value, target=target, attr=attr, kind=kind):
+                ev.write(target, attr, int(round(value)) if kind == "int" else float(value))
+                redraw()
+
+            slider.on_changed(moved)
+            widgets[control.name] = slider
+        elif isinstance(control, Button):
+            button = MplButton(box, label)
+
+            def pressed(control=control, target=target, attr=attr):
+                ev.write(target, attr, ev.value(control, "value"))
+                ev.cache.pop((id(control), "value"), None)
+                redraw()
+
+            button.on_clicked(lambda _event, pressed=pressed: pressed())
+            widgets[control.name] = button
+            presses[control.name] = pressed
+    _widgets[host] = widgets
+    _presses[host] = presses
 
 
 # matplotlib line widths are in points, but stroke-width is in scene units as in SVG, so widths
 # are set from how many points one scene unit covers, again whenever the window is resized. The
 # transform's scale counts too; for a stretch that differs by direction this is an average.
-def _stroke_in_scene_units(fig: Figure, ax: Axes, strokes: list, scale: float):
-    def update(event=None):
-        ax.apply_aspect()
-        (x0, _), (x1, _) = ax.transData.transform([(0, 0), (1, 0)])
-        points = (x1 - x0) * 72 / fig.dpi * scale
-        for artist, width in strokes:
-            artist.set_linewidth(width * points)
-
-    update()
-    fig.canvas.mpl_connect("resize_event", update)
+def _stroke_in_scene_units(fig: Figure, ax: Axes, strokes: list):
+    _update_strokes(fig, ax, strokes)
+    fig.canvas.mpl_connect("resize_event", lambda _event: _update_strokes(fig, ax, strokes))
 
 
-def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform, strokes: list):
+def _update_strokes(fig: Figure, ax: Axes, strokes: list):
+    ax.apply_aspect()
+    (x0, _), (x1, _) = ax.transData.transform([(0, 0), (1, 0)])
+    points = (x1 - x0) * 72 / fig.dpi
+    for artist, width in strokes:
+        artist.set_linewidth(width * points)
+
+
+# view_scale is how much the canvas transform scales lengths, for stroke widths.
+def _draw(
+    obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform, strokes: list, view_scale: float
+):
     if isinstance(obj, (Group, Motif)):
         for member in obj.members:
-            _draw(member, ax, ev, to_view, strokes)
+            _draw(member, ax, ev, to_view, strokes, view_scale)
     elif isinstance(obj, (Circle, Rect, Ellipse, Line, Triangle)):
         shape = ev.shape(obj)
         patch = _outline(obj, ev)
         patch.set_facecolor("none" if isinstance(obj, Line) else _paint(ev, obj, "fill"))
         patch.set_edgecolor(_paint(ev, obj, "stroke"))
         patch.set_transform(_affine(shape) + to_view)
-        strokes.append((patch, ev.value(obj, "stroke-width") * _scale(shape)))
+        strokes.append((patch, ev.value(obj, "stroke-width") * _scale(shape) * view_scale))
         ax.add_patch(patch)
     elif isinstance(obj, Text):
         # Glyph outlines in scene units, so the canvas transform turns and scales the letters
@@ -427,7 +527,7 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform, strokes: lis
             transform=_affine(shape) + to_view,
             label=value,
         )
-        strokes.append((text, ev.value(obj, "stroke-width") * _scale(shape)))
+        strokes.append((text, ev.value(obj, "stroke-width") * _scale(shape) * view_scale))
         ax.add_patch(text)
 
 
