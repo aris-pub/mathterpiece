@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from helpers import with_scene
+from matplotlib.backend_bases import ResizeEvent
 from matplotlib.colors import to_rgba
 
 from mathterpiece.backends.mpl import EvalError, Evaluator, render
@@ -212,6 +213,27 @@ class TestRender:
         text, circle = ax.patches
         assert text.get_clip_on() and circle.get_clip_on()
         assert text.get_clip_box() is not None
+
+    def test_stroke_width_is_in_scene_units(self):
+        def widths(transform="", size=None):
+            src = (
+                "(circle 'a' (stroke 'red') (stroke-width 1))"
+                " (text 't' 'hi' (stroke 'red') (stroke-width 2))"
+                f" (canvas 'cnv' {transform} a t)"
+            )
+            ((fig, ax),) = render(scene(src))
+            if size is not None:
+                fig.set_size_inches(*size)
+                fig.canvas.callbacks.process(
+                    "resize_event", ResizeEvent("resize_event", fig.canvas)
+                )
+            (x0, _), (x1, _) = ax.transData.transform([(0, 0), (1, 0)])
+            unit = (x1 - x0) * 72 / fig.dpi
+            return [p.get_linewidth() / unit for p in ax.patches]
+
+        assert widths() == pytest.approx([1, 2])
+        assert widths("(transform (scale 2))") == pytest.approx([2, 4])
+        assert widths(size=(3, 9)) == pytest.approx([1, 2])
 
     def test_no_frame(self):
         ((_, ax),) = render(scene("(canvas 'cnv')"))

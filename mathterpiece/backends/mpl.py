@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
-from matplotlib.patches import PathPatch
+from matplotlib.patches import Patch, PathPatch
 from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
 
@@ -256,25 +256,42 @@ def render(model: Model, rng: random.Random | None = None) -> list[tuple[Figure,
         matrix = compose(to_center, ev.value(view, "transform"), center)
         (a, b, c), (d, e, f), _ = matrix.rows
         to_view = Affine2D.from_values(a, d, b, e, c, f) + ax.transData
+        strokes: list[tuple[Patch, float]] = []
         for member in view.members:
-            _draw(member, ax, ev, to_view)
+            _draw(member, ax, ev, to_view, strokes)
+        _stroke_in_scene_units(fig, ax, strokes, math.sqrt(abs(a * e - b * d)))
         figures.append((fig, ax))
     return figures
 
 
-def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
+# matplotlib line widths are in points, but stroke-width is in scene units as in SVG, so widths
+# are set from how many points one scene unit covers, again whenever the window is resized. The
+# transform's scale counts too; for a stretch that differs by direction this is an average.
+def _stroke_in_scene_units(fig: Figure, ax: Axes, strokes: list, scale: float):
+    def update(event=None):
+        ax.apply_aspect()
+        (x0, _), (x1, _) = ax.transData.transform([(0, 0), (1, 0)])
+        points = (x1 - x0) * 72 / fig.dpi * scale
+        for artist, width in strokes:
+            artist.set_linewidth(width * points)
+
+    update()
+    fig.canvas.mpl_connect("resize_event", update)
+
+
+def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform, strokes: list):
     if isinstance(obj, (Group, Motif)):
         for member in obj.members:
-            _draw(member, ax, ev, to_view)
+            _draw(member, ax, ev, to_view, strokes)
     elif isinstance(obj, Circle):
         circle = plt.Circle(
             ev.point(obj),
             ev.value(obj, "r"),
             facecolor=_paint(ev, obj, "fill"),
             edgecolor=_paint(ev, obj, "stroke"),
-            linewidth=ev.value(obj, "stroke-width"),
             transform=to_view,
         )
+        strokes.append((circle, ev.value(obj, "stroke-width")))
         ax.add_artist(circle)
     elif isinstance(obj, Text):
         # Glyph outlines in scene units, so the canvas transform turns and scales the letters
@@ -285,10 +302,10 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
             glyphs,
             facecolor=_paint(ev, obj, "fill"),
             edgecolor=_paint(ev, obj, "stroke"),
-            linewidth=ev.value(obj, "stroke-width"),
             transform=Affine2D().translate(*ev.point(obj)) + to_view,
             label=value,
         )
+        strokes.append((text, ev.value(obj, "stroke-width")))
         ax.add_patch(text)
 
 

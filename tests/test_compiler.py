@@ -611,7 +611,7 @@ class TestExamples:
         teal, red = get(scn, "circles", Group).members
         assert isinstance(teal, Circle) and isinstance(red, Circle)
         assert (teal.name, teal.r, teal.fill) == ("teal_c", Free(3.5), Free("none"))
-        assert (red.name, red.stroke, red.stroke_width) == ("red_c", Free("red"), Free(1.5))
+        assert (red.name, red.stroke, red.stroke_width) == ("red_c", Free("red"), Free(0.1))
         dots = [d for d in get(scn, "dots", Group).members if isinstance(d, Circle)]
         assert len(dots) == 150
         assert [d.name for d in dots] == [f"dot{i}" for i in range(150)]

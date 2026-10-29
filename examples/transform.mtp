@@ -2,7 +2,7 @@
 (scene 'world'
   (group 'shapes'
     (circle 'center' (r 0.3) (fill 'red'))
-    (circle 'ring' (x 4) (r 2) (fill 'none') (stroke 'teal') (stroke-width 2))
+    (circle 'ring' (x 4) (r 2) (fill 'none') (stroke 'teal') (stroke-width 0.14))
     (text 'lbl' 'ring' (x 4) (y 2.5))))
 
 (canvas 'cnv' (view-x -10) (view-y -10) (view-width 20) (view-height 20)
