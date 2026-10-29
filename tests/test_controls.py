@@ -93,11 +93,13 @@ class TestButton:
     def test_writes_a_value(self):
         m = scene("(circle 'c') (button 'b' c.fill 'red')")
         b = get(m, "b", Button)
-        assert (b.target, b.attr, b.value, b.label) == (m["c"], "fill", Free("red"), Free("c.fill"))
+        assert b.state is not None
+        assert [(obj, attr) for obj, attr, _ in b.state.moves] == [(m["c"], "fill")]
+        assert b.label == Free("c.fill")
 
     def test_value_can_read_the_scene(self):
         b = get(scene("(circle 'c') (button 'b' c.r (* 2 c.r) (label 'grow'))"), "b", Button)
-        assert isinstance(b.value, Bound) and b.label == Free("grow")
+        assert b.state is not None and b.label == Free("grow")
 
     @pytest.mark.parametrize(
         "src", ["(circle 'c') (button 'b' c.r 'red')", "(circle 'c') (button 'b' c.fill)"]

@@ -160,28 +160,64 @@ class Canvas(View):
     members: list[Visual] = _members()
 
 
-# Controls write one free value: the target object's attribute (or motif parameter, or a real's
-# value). kind is that value's type, which a slider adapts to.
+# A condition on the scene: active whenever all its conditions hold. moves says how to reach it:
+# each free value (object, attribute) and the expression it moves to. problem says why it cannot
+# be animated to, if it cannot.
+@dataclass(kw_only=True)
+class State(Obj):
+    conditions: tuple[Node, ...] = field(default=(), metadata={"internal": True})
+    moves: tuple[tuple[Obj, str, Node], ...] = field(default=(), metadata={"internal": True})
+    problem: str | None = field(default=None, metadata={"internal": True})
+
+
 @dataclass(kw_only=True)
 class Control(Obj):
-    target: Obj | None = field(default=None, metadata={"internal": True})
-    attr: str = field(default="value", metadata={"internal": True})
-    kind: str = field(default="real", metadata={"internal": True})
     label: Attr[str] = Free("")
 
 
+# Writes one free value while dragged: an attribute, a motif parameter, or a real's value. kind is
+# that value's type, which the slider adapts to.
 @dataclass(kw_only=True)
 class Slider(Control):
+    target: Obj | None = field(default=None, metadata={"internal": True})
+    attr: str = field(default="value", metadata={"internal": True})
+    kind: str = field(default="real", metadata={"internal": True})
     min: Attr[float] = Free(0.0)
     max: Attr[float] = Free(1.0)
     # None means continuous.
     step: Attr[object] = Free(None)
 
 
-# Writes its value, evaluated when pressed, to its target.
+# Goes to its state when pressed, over duration seconds (0 is instant).
 @dataclass(kw_only=True)
 class Button(Control):
-    value: Attr[object] = Free(None)
+    state: State | None = field(default=None, metadata={"internal": True})
+    duration: Attr[float] = Free(0.0)
+    ease: Attr[str] = Free("linear")
+
+
+# One button per state, in order.
+@dataclass(kw_only=True)
+class Steps(Control):
+    states: list[State] = field(default_factory=list, metadata={"internal": True})
+    duration: Attr[float] = Free(0.0)
+    ease: Attr[str] = Free("linear")
+
+
+# One step of a tour: wait for duration seconds, or go to state over duration seconds.
+@dataclass(frozen=True)
+class TourStep:
+    kind: str
+    state: State | None
+    duration: Free[float]
+    ease: Free[str] = Free("linear")
+
+
+# A guided tour: jumps to start (if any) when pressed, then runs its steps in order.
+@dataclass(kw_only=True)
+class Play(Control):
+    start: State | None = field(default=None, metadata={"internal": True})
+    steps: tuple[TourStep, ...] = field(default=(), metadata={"internal": True})
 
 
 @runtime_checkable
@@ -282,6 +318,10 @@ class Model:
     @property
     def root(self) -> Root | None:
         return next((obj for obj in self._items if isinstance(obj, Root)), None)
+
+    @property
+    def states(self) -> list[State]:
+        return [obj for obj in self._items if isinstance(obj, State)]
 
     @property
     def controls(self) -> list[Control]:

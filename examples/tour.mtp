@@ -1,0 +1,37 @@
+; A guided tour through the times tables. Press play to watch the cardioid turn into a nephroid
+; and then into a curve with eight cusps, or pick a step, or drag the slider at any time.
+
+(const 'slate' '#0e1726')
+(const 'chalk' '#e8e4d8')
+
+(func 'on-circle' (params (radius 1.0) (k 0.0) (n 1))
+  (polar radius (turn (/ k n))))
+
+(motif 'times-table' (params (n 240) (m 2.0) (radius 8.0))
+  (group 'figure' (transform (rotate -90))
+    (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
+    (repeat k n
+      (line _
+        (from (on-circle radius k n))
+        (to (on-circle radius (* m k) n))
+        (stroke-width 0.03)
+        (stroke-opacity (lerp 0.2 0.85 (/ k n)))))))
+
+(scene 'board'
+  (rect 'backdrop' (center [0 0]) (size [20 20]) (fill slate))
+  (times-table 'table' (stroke '#ffb703'))
+  (text 'caption' 'cardioid' (pos [-9.4 -9.4]) (font-size 0.6) (fill chalk)))
+
+(state 'cardioid' (= table.m 2) (= table.stroke '#ffb703') (= caption.value 'cardioid'))
+(state 'nephroid' (= table.m 3) (= table.stroke '#8ecae6') (= caption.value 'nephroid'))
+(state 'eight' (= table.m 9) (= table.stroke '#f4978e') (= caption.value 'eight cusps'))
+
+(canvas 'cnv' board)
+(play 'tour'
+  (from cardioid)
+  (wait 1)
+  (to nephroid (duration 3) (ease 'ease-in-out'))
+  (wait 1)
+  (to eight (duration 4) (ease 'ease-in-out')))
+(steps 'pick' (states cardioid nephroid eight) (duration 1.5) (ease 'ease-in-out'))
+(slider 'times' table.m (min 2) (max 12) (label 'times'))

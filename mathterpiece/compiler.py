@@ -25,12 +25,16 @@ from mathterpiece.model import (
     Model,
     Motif,
     Obj,
+    Play,
     Real,
     Rect,
     Root,
     Slider,
+    State,
+    Steps,
     Styled,
     Text,
+    TourStep,
     Triangle,
     View,
     Visual,
@@ -337,6 +341,12 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
     def visit(node):
         if not isinstance(node, Form):
             return
+        if _head(node) == "state":
+            for cond in node.items[2:]:
+                if isinstance(cond, Form) and _head(cond) == "=" and len(cond.items) == 3:
+                    for side in cond.items[1:]:
+                        if isinstance(side, Name) and all(isinstance(p, str) for p in side.parts):
+                            paths.add(tuple(p for p in side.parts if isinstance(p, str)))
         if _head(node) in ("slider", "button") and len(node.items) > 2:
             target = node.items[2]
             if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
@@ -353,6 +363,47 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
     for form in forms:
         visit(form)
     return paths, anywhere
+
+
+EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
+CONTROLS: dict[str, type[Obj]] = {"slider": Slider, "button": Button, "steps": Steps, "play": Play}
+
+
+def _duration(value: "Value", pos: Pos) -> float:
+    if not (isinstance(value, Const) and isinstance(value.value, (int, Fraction, float))):
+        raise CompileError("a duration is a number of seconds known at compile time", pos)
+    if isinstance(value.value, bool) or value.value < 0:
+        raise CompileError("a duration cannot be negative", pos)
+    return float(value.value)
+
+
+def _ease(value: "Value", pos: Pos) -> str:
+    if not (isinstance(value, Const) and value.value in EASES):
+        raise CompileError(f"ease is one of {', '.join(EASES)}", pos)
+    assert isinstance(value.value, str)
+    return value.value
+
+
+def _check_reachable(state: "State", pos: Pos):
+    if state.problem is not None:
+        label = repr(state.name) if state.name is not None else "this state"
+        raise CompileError(f"cannot animate to state {label}: {state.problem}", pos)
+
+
+def _text(node: Node) -> str:
+    if isinstance(node, Name):
+        return ".".join(p if isinstance(p, str) else "[...]" for p in node.parts)
+    return "this value"
+
+
+def _names_in(node: Node) -> list[Name]:
+    if isinstance(node, Name):
+        return [node]
+    if isinstance(node, (Form, ListLit)):
+        return [n for item in node.items for n in _names_in(item)]
+    if isinstance(node, InterpStrLit):
+        return [p for p in node.parts if isinstance(p, Name)]
+    return []
 
 
 def _check_not_syntax(name: str, pos: Pos):
@@ -561,7 +612,7 @@ class _Compiler:
         if head == "func":
             self.define_func(form)
             return []
-        if head in ("slider", "button"):
+        if head in CONTROLS or head == "state":
             return [self.control(form, env, head)]
         if head == "scene":
             return [self.scene_form(form, env)]
@@ -661,23 +712,30 @@ class _Compiler:
 
     # Which free value a control writes: an attribute, a motif parameter, or a real's value.
     def control_target(self, node: Node, env: Env) -> tuple[Obj, str, str, str]:
+        found = self.free_value(node, env)
+        if isinstance(found, str):
+            raise CompileError(found, node.pos)
+        return found
+
+    # The free value a name refers to, or why it is not one.
+    def free_value(self, node: Node, env: Env) -> tuple[Obj, str, str, str] | str:
         name = self.resolve_refs(node, env)
         if not isinstance(name, Name):
-            raise CompileError("a control's target must be a name, like disk.r", node.pos)
+            return "a control's target must be a name, like disk.r"
         text = ".".join(p if isinstance(p, str) else "[...]" for p in name.parts)
         first = name.parts[0]
         if len(name.parts) == 1 and isinstance(first, str) and first in self.consts:
-            raise CompileError(f"{text!r} is a const, so a control cannot write it", node.pos)
+            return f"{text!r} is a const, so a control cannot write it"
         if len(name.parts) == 1:
             obj = self.names.get(first) if isinstance(first, str) else None
             if not isinstance(obj, Real):
-                raise CompileError(f"{text!r} is not a value a control can write", node.pos)
+                return f"{text!r} is not a value a control can write"
             attr = "value"
         else:
             holder = self.name(Name(name.parts[:-1], name.pos), env)
             last = name.parts[-1]
             if not isinstance(holder, ObjRef) or not isinstance(last, str):
-                raise CompileError(f"{text!r} is not a value a control can write", node.pos)
+                return f"{text!r} is not a value a control can write"
             obj, attr = holder.obj, last
         if isinstance(obj, Motif) and attr in obj.params:
             current = obj.params[attr]
@@ -689,34 +747,60 @@ class _Compiler:
             current = getattr(obj, attrs[attr].name)
             kind = _expected_type(type(obj), attr)
         if isinstance(current, Bound):
-            raise CompileError(f"{text!r} is computed, so a control cannot write it", node.pos)
+            return f"{text!r} is computed, so a control cannot write it"
         return obj, attr, kind, text
 
     def control(self, form: Form, env: Env, head: str) -> Obj:
+        if head == "state":
+            return self.state(form, env)
         name = self.object_name(form, env)
-        if len(form.items) < 3:
-            raise CompileError(f"{head} needs a target, like disk.r", form.pos)
-        target, attr, kind, text = self.control_target(form.items[2], env)
-        cls: type[Slider | Button] = Slider if head == "slider" else Button
-        rest = list(form.items[3:])
-        values: dict[str, Any] = {"label": Free(text)}
-        if cls is Button:
-            if not rest or _head(rest[0]) == "label":
-                raise CompileError("a button needs the value it writes", form.pos)
-            node = rest.pop(0)
-            value = self.value_arg(node, env)
-            if not _widens_to(value.type, kind):
-                raise CompileError(f"{text} takes a {kind}, got {value.type}", node.pos)
-            if isinstance(value, Const):
-                values["value"] = Free(_convert(value.value, kind))
+        rest = list(form.items[2:])
+        values: dict[str, Any] = {}
+        fields: dict[str, Any] = {}
+        if head == "slider":
+            if not rest:
+                raise CompileError("slider needs a target, like disk.r", form.pos)
+            target, attr, kind, text = self.control_target(rest.pop(0), env)
+            if kind not in ("int", "real"):
+                raise CompileError(
+                    f"a slider writes a number, but {text} is a {kind}", form.items[2].pos
+                )
+            fields = {"target": target, "attr": attr, "kind": kind}
+            values["label"] = Free(text)
+        elif head == "button":
+            if not rest:
+                raise CompileError("button needs a state, or a target and a value", form.pos)
+            state = self.state_named(rest[0])
+            if state is not None:
+                rest.pop(0)
+                values["label"] = Free(state.name)
             else:
-                stored = _substitute(node, self.constants(env), self.lets)
-                values["value"] = Bound(self.resolve_refs(stored, env))
-        elif kind not in ("int", "real"):
-            raise CompileError(
-                f"a slider writes a number, but {text} is a {kind}", form.items[2].pos
-            )
-        allowed = {"label", "min", "max", "step"} if cls is Slider else {"label"}
+                state = self.one_condition_state(rest, env, form.pos)
+                values["label"] = Free(_text(form.items[2]))
+            _check_reachable(state, form.items[2].pos)
+            fields = {"state": state}
+        elif head == "steps":
+            if not rest or _head(rest[0]) != "states":
+                raise CompileError("steps needs (states a b ...)", form.pos)
+            listed = rest.pop(0)
+            assert isinstance(listed, Form)
+            states = []
+            for item in listed.items[1:]:
+                state = self.state_named(item)
+                if state is None:
+                    raise CompileError("steps lists states by name", item.pos)
+                _check_reachable(state, item.pos)
+                states.append(state)
+            if not states:
+                raise CompileError("steps needs at least one state", listed.pos)
+            fields = {"states": states}
+            values["label"] = Free(name or "")
+        elif head == "play":
+            fields = self.tour(rest, form.pos)
+            rest = [node for node in rest if _head(node) == "label"]
+            values["label"] = Free("play")
+        cls = CONTROLS[head]
+        allowed = set(attributes(cls)) - {"label"} | {"label"}
         given: set[str] = set()
         for node in rest:
             attr_name = _head(node)
@@ -725,20 +809,145 @@ class _Compiler:
             if attr_name in given:
                 raise CompileError(f"attribute {attr_name!r} is given twice", node.pos)
             given.add(attr_name)
-            item = node.items[1]
-            if attr_name != "step":
-                values[attr_name] = self.attr_value(cls, attr_name, item, env)
-                continue
-            step = self.value_arg(item, env)
-            if isinstance(step, Const) and step.value == "none":
-                values["step"] = Free(None)
-            elif isinstance(step, Const) and isinstance(step.value, (int, Fraction, float)):
-                values["step"] = Free(float(step.value))
-            else:
-                raise CompileError("step is a number known at compile time, or 'none'", item.pos)
-        obj = cls(name=name, target=target, attr=attr, kind=kind, **values)
+            values[attr_name] = self.control_attr(attr_name, node.items[1], env, cls)
+        obj = cls(name=name, **fields, **values)
         self.register(obj, form.pos)
         return obj
+
+    def control_attr(self, attr: str, node: Node, env: Env, cls: type[Obj]) -> Free | Bound:
+        if attr == "step":
+            step = self.value_arg(node, env)
+            if isinstance(step, Const) and step.value == "none":
+                return Free(None)
+            if isinstance(step, Const) and isinstance(step.value, (int, Fraction, float)):
+                return Free(float(step.value))
+            raise CompileError("step is a number known at compile time, or 'none'", node.pos)
+        if attr == "duration":
+            return Free(_duration(self.value_arg(node, env), node.pos))
+        if attr == "ease":
+            return Free(_ease(self.value_arg(node, env), node.pos))
+        value = self.attr_value(cls, attr, node, env)
+        assert isinstance(value, (Free, Bound))
+        return value
+
+    def state_named(self, node: Node) -> State | None:
+        if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
+            found = self.names.get(node.parts[0])
+            return found if isinstance(found, State) else None
+        return None
+
+    # The shorthand (button 'b' target value): the state where target equals value.
+    def one_condition_state(self, rest: list[Node], env: Env, pos: Pos) -> State:
+        target = rest.pop(0)
+        if not rest or _head(rest[0]) in ("label", "duration", "ease"):
+            raise CompileError("a button needs the value it writes", pos)
+        value_node = rest.pop(0)
+        condition = Form((Name(("=",), target.pos), target, value_node), target.pos)
+        return self.make_state(None, (condition,), env, pos)
+
+    def state(self, form: Form, env: Env) -> State:
+        name = self.object_name(form, env)
+        conditions = tuple(form.items[2:])
+        if not conditions:
+            raise CompileError("a state needs at least one condition", form.pos)
+        state = self.make_state(name, conditions, env, form.pos)
+        self.register(state, form.pos)
+        return state
+
+    def make_state(
+        self, name: str | None, conditions: tuple[Node, ...], env: Env, pos: Pos
+    ) -> State:
+        stored = []
+        for cond in conditions:
+            value = self.value_arg(cond, env)
+            if value.type not in ("bool", PENDING):
+                raise CompileError("a state's conditions must be true or false", cond.pos)
+            stored.append(self.resolve_refs(_substitute(cond, self.constants(env), self.lets), env))
+        moves: list[tuple[Obj, str, Node]] = []
+        problem = None
+        for cond in conditions:
+            problem = problem or self.add_move(cond, env, moves)
+        if problem is None:
+            problem = self.check_reads(moves, env)
+        return State(name=name, conditions=tuple(stored), moves=tuple(moves), problem=problem)
+
+    # How one condition is reached: the free side of (= a b) moves to the other side (the left
+    # side when both are free). Returns why it cannot be animated to, if it cannot.
+    def add_move(self, cond: Node, env: Env, moves: list) -> str | None:
+        if not (isinstance(cond, Form) and _head(cond) == "=" and len(cond.items) == 3):
+            return "only conditions of the form (= free-value expression) can be animated to"
+        left, right = cond.items[1], cond.items[2]
+        for side, other in ((left, right), (right, left)):
+            found = self.free_value(side, env)
+            if isinstance(found, str):
+                continue
+            obj, attr, kind, text = found
+            if any(o is obj and a == attr for o, a, _ in moves):
+                return f"it moves {text} twice"
+            value = self.value_arg(other, env)
+            if not _widens_to(value.type, kind):
+                raise CompileError(f"{text} takes a {kind}, got {value.type}", other.pos)
+            stored = self.resolve_refs(_substitute(other, self.constants(env), self.lets), env)
+            moves.append((obj, attr, stored))
+            return None
+        return f"{_text(left)} is computed, so reaching it would mean solving an equation"
+
+    # Targets are worked out once, when a move starts, so a condition may read the value it moves
+    # itself ((= r (* 2 r)) doubles r). Reading a value another condition moves would leave the
+    # state not holding once both have arrived.
+    def check_reads(self, moves: list, env: Env) -> str | None:
+        for obj, attr, expr in moves:
+            others = {(id(o), a) for o, a, _ in moves if not (o is obj and a == attr)}
+            for name in _names_in(expr):
+                found = self.free_value(name, env)
+                if not isinstance(found, str) and (id(found[0]), found[1]) in others:
+                    return f"one condition reads {found[3]}, which another condition moves"
+        return None
+
+    def tour(self, rest: list[Node], pos: Pos) -> dict[str, Any]:
+        start = None
+        steps: list[TourStep] = []
+        for i, node in enumerate(rest):
+            head = _head(node)
+            if head == "label":
+                continue
+            if not isinstance(node, Form):
+                raise CompileError("a tour step is (wait seconds) or (to state ...)", node.pos)
+            if head == "from":
+                if i != 0 or len(node.items) != 2:
+                    raise CompileError("(from state) comes first, once", node.pos)
+                start = self.state_named(node.items[1])
+                if start is None:
+                    raise CompileError("from names a state", node.pos)
+                _check_reachable(start, node.pos)
+            elif head == "wait":
+                if len(node.items) != 2:
+                    raise CompileError("wait takes a number of seconds", node.pos)
+                seconds = _duration(self.value_arg(node.items[1], {}), node.items[1].pos)
+                steps.append(TourStep("wait", None, Free(seconds)))
+            elif head == "to":
+                state = self.state_named(node.items[1]) if len(node.items) > 1 else None
+                if state is None:
+                    raise CompileError("to names a state", node.pos)
+                _check_reachable(state, node.pos)
+                options = {"duration": Free(0.0), "ease": Free("linear")}
+                for option in node.items[2:]:
+                    key = _head(option)
+                    if key not in options or not isinstance(option, Form) or len(option.items) != 2:
+                        raise CompileError(
+                            "to takes (duration seconds) and (ease name)", option.pos
+                        )
+                    value = self.value_arg(option.items[1], {})
+                    item = option.items[1].pos
+                    options[key] = Free(
+                        _duration(value, item) if key == "duration" else _ease(value, item)
+                    )
+                steps.append(TourStep("to", state, options["duration"], options["ease"]))
+            else:
+                raise CompileError("a tour step is (wait seconds) or (to state ...)", node.pos)
+        if not steps:
+            raise CompileError("a tour needs at least one step", pos)
+        return {"start": start, "steps": tuple(steps)}
 
     def define_const(self, form: Form, env: Env):
         if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
