@@ -49,7 +49,7 @@
   ; Stars take the color of whichever flower they drift near.
   (group 'stars'
     (repeat i 320
-      (circle _ (x (rand -10 10)) (y (rand -10 10)) (r (rand 0.015 0.07)) (opacity (rand 0.25 1))
+      (circle _ (pos [(rand -10 10) (rand -10 10)]) (r (rand 0.015 0.07)) (opacity (rand 0.25 1))
         (fill
           (cond
             ((< (dist self big) big.moon-radius) big.fill)

@@ -6,7 +6,7 @@ from helpers import with_scene
 from mathterpiece.backends.mpl import Evaluator
 from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.model import Bound, Circle, Free, Motif, Real, local_names
-from mathterpiece.nodes import Form, IntLit, Name
+from mathterpiece.nodes import Form, IntLit, Name, RealLit
 
 SQ = "(func 'sq' (params (x 0.0)) (* x x))"
 GAP = "(func 'gap' (params (a) (b)) (- (dist a b) a.r b.r))"
@@ -83,27 +83,30 @@ class TestCalls:
 
 
 class TestBoundArguments:
-    def test_bound_argument_is_computed_once(self):
+    def test_bound_argument_keeps_the_call(self):
         v = value_of(f"(real 'k' 2) {SQ} (real 'v' (sq k))")
-        assert isinstance(v, Bound) and isinstance(v.expr, Form)
-        _, a, b = v.expr.items
-        assert a == b and isinstance(a, Name) and a.parts != ("k",)
+        assert v == Bound(Form((n("sq"), n("k"))))
 
-    def test_object_arguments_are_written_in(self):
+    def test_object_arguments_keep_the_call(self):
         v = value_of(f"{GAP} (circle 'p') (circle 'q' (x 5)) (real 'v' (gap p q))")
-        expected = Form((n("-"), Form((n("dist"), n("p"), n("q"))), n("p", "r"), n("q", "r")))
-        assert v == Bound(expected)
+        assert v == Bound(Form((n("gap"), n("p"), n("q"))))
 
     def test_self_as_an_argument(self):
         src = "(func 'twice-x' (params (o)) (* 2 o.x)) (circle 'c' (x 3) (r (twice-x self)))"
-        assert get(scene(src), "c", Circle).r == Bound(Form((n("*"), IntLit(2), n("self", "x"))))
+        assert get(scene(src), "c", Circle).r == Bound(Form((n("twice-x"), n("self"))))
 
     def test_indexed_object_argument(self):
         src = (
             "(func 'radius-of' (params (o)) o.r) (group 'g' (circle _ (r 1)) (circle _ (r 2)))"
             " (repeat i 2 (circle $'c{i}' (x (radius-of g[i]))))"
         )
-        assert get(scene(src), "c1", Circle).x == Bound(Name(("g", IntLit(1), "r")))
+        x = get(scene(src), "c1", Circle).x
+        assert x == Bound(Form((n("radius-of"), Name(("g", IntLit(1))))))
+
+    def test_the_model_holds_the_functions(self):
+        m = scene(f"(const 'g' 2.0) (func 'f' (params (x 0.0)) (* g x)) {SQ}")
+        assert set(m.functions) == {"f", "sq"}
+        assert m.functions["f"].body == Form((n("*"), RealLit(2.0), n("x")))
 
 
 class TestErrors:
@@ -117,7 +120,7 @@ class TestErrors:
             (f"{GAP} (circle 'p') (real 'v' (gap p 1))", None),
             (f"{SQ} (circle 'p') (real 'v' (sq p))", None),
             ("(real 'k' 2) (func 'f' (params (x 0.0)) (* k x))", "'k'"),
-            ("(func 'f' (params (x 0.0)) (f x))", "'f'"),
+            ("(func 'f' (params (x 0.0)) (f x))", "what 'f' returns"),
             ("(func 'f' (params (x 0.0)) (+ x 'a'))", None),
             ("(func 'f' (params (x 0.0)) x x)", "one"),
             ("(func 'f' (params (x 0.0)))", None),

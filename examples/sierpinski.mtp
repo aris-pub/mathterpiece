@@ -1,6 +1,7 @@
-; The Sierpinski triangle to depth 6. Each level picks one of the three corners of the triangle
-; above it and moves halfway there, so a small triangle sits at the sum of six offsets, each
-; half as long as the one before. Six nested repeats give 3^6 = 729 triangles.
+; The Sierpinski triangle. Each level picks one of the three corners of the triangle above it
+; and moves halfway there, so a small triangle sits at the sum of one offset per level, each
+; half as long as the one before. Triangle i picks its corners from the base-3 digits of i,
+; so 3^depth triangles fill the gasket and depth sets how deep it goes.
 
 (const 'radius' 9.0)
 (const 'depth' 6)
@@ -8,13 +9,26 @@
 (const 'ink' '#1d2433')
 
 ; The offset towards corner digit (0, 1, or 2) at a level, from the center of the triangle above.
-(func 'corner' (params (digit 0) (level 1))
+(func 'corner' (params (digit 0.0) (level 1))
   (polar (/ radius (^ 2 level)) (+ 90 (* 120 digit))))
 
-(func 'shade' (params (k 0))
+; Drops the last base-3 digit.
+(func 'shift' (params (code 0.0))
+  (/ (- code (mod code 3)) 3))
+
+; Where triangle code sits: its last digit picks the corner at this level, the rest go deeper.
+(func 'spot' (params (code 0.0) (level 1))
+  (if (> level depth)
+      [0 0]
+      (+ (corner (mod code 3) level) (spot (shift code) (+ level 1)))))
+
+(func 'digit-sum' (params (code 0.0))
+  (if (< code 1) 0 (+ (mod code 3) (digit-sum (shift code)))))
+
+(func 'shade' (params (digit 0.0))
   (cond
-    ((= k 0) '#e63946')
-    ((= k 1) '#1d3557')
+    ((= digit 0) '#e63946')
+    ((= digit 1) '#1d3557')
     (else '#f1a208')))
 
 (scene 'page'
@@ -22,13 +36,13 @@
 
   (group 'gasket' (transform (translate 0 -2.2))
     (triangle 'outline' (center [0 0]) (r radius) (fill 'none') (stroke ink) (stroke-width 0.05))
-    (repeat a 3 (repeat b 3 (repeat c 3 (repeat d 3 (repeat e 3 (repeat f 3
-      (triangle _
-        (center
-          (+ (corner a 1) (corner b 2) (corner c 3) (corner d 4) (corner e 5) (corner f 6)))
-        (r (/ radius (^ 2 depth)))
-        (fill (shade a))
-        (fill-opacity (lerp 0.35 1 (/ (mod (+ b c d e f) 3) 2)))))))))))
+    (repeat i (^ 3 depth)
+      (let ((top (mod i 3)))
+        (triangle _
+          (center (spot i))
+          (r (/ radius (^ 2 depth)))
+          (fill (shade top))
+          (fill-opacity (lerp 0.35 1 (/ (mod (- (digit-sum i) top) 3) 2)))))))
 
   (text 'title' 'sierpiński triangle' (pos [-9.3 9]) (font-size 0.6) (fill ink))
   (text 'count' $'3^{depth} triangles' (pos [-9.3 8.2]) (font-size 0.45) (fill ink) (opacity 0.6)))

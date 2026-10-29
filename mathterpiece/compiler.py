@@ -1,6 +1,7 @@
 import functools
 import math
 import operator
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
@@ -8,11 +9,14 @@ from typing import Any, get_args, get_origin
 
 from mathterpiece.matrix import Matrix, compose
 from mathterpiece.model import (
+    PYTHON_FRAMES,
+    RECURSION_LIMIT,
     Bound,
     Canvas,
     Circle,
     Ellipse,
     Free,
+    Function,
     Group,
     Inherit,
     Line,
@@ -67,6 +71,9 @@ BUILTINS = [
 ]
 
 NUMERIC = ["int", "ratio", "real", "complex"]
+# The type of a recursive call while its function's result type is still being worked out. It
+# fits wherever a value is expected.
+PENDING = "pending"
 PY_TYPES = {float: "real", str: "str", bool: "bool", Matrix: "transform"}
 ARITHMETIC = {"+", "-", "*", "/"}
 COMPARISONS: dict[str, Callable[[Any, Any], bool]] = {
@@ -190,9 +197,12 @@ class FuncSpec:
     # A parameter without a default takes an object.
     params: dict[str, "Const | None"]
     body: Node
-    # The functions and consts defined before this one, which is what its body sees.
+    # The functions and consts defined before this one (and itself), which its body sees.
     funcs: dict[str, "FuncSpec"]
     consts: dict[str, "Const"]
+    name: str
+    # Its name in the model's functions.
+    key: str
 
 
 # The let values created while one object is being defined, which that object will own.
@@ -208,6 +218,7 @@ Scope = dict[str, Value]
 
 
 def compile_model(forms: tuple[Form, ...]) -> Model:
+    sys.setrecursionlimit(max(sys.getrecursionlimit(), PYTHON_FRAMES))
     return _Compiler(forms).compile()
 
 
@@ -320,6 +331,8 @@ def _check_not_syntax(name: str, pos: Pos):
 
 
 def _widens_to(src: str, dst: str) -> bool:
+    if src == PENDING:
+        return True
     if src in NUMERIC and dst in NUMERIC:
         return NUMERIC.index(src) <= NUMERIC.index(dst)
     return src == dst
@@ -373,6 +386,12 @@ class _Compiler:
         self.root: Root | None = None
         self.consts: dict[str, Const] = {}
         self.funcs: dict[str, FuncSpec] = {}
+        self.functions: dict[str, Function] = {}
+        # The functions being compiled, with the type their recursive calls stand for.
+        self.active: dict[int, str] = {}
+        self.depth = 0
+        # How many enclosing branches are never taken; calls there are checked but not folded.
+        self.speculative = 0
         self.builtin_names: set[str] = set()
         # How many function bodies are being compiled; inside one, values and objects are hidden.
         self.in_func = 0
@@ -402,6 +421,7 @@ class _Compiler:
         self.settle(self.frames[0], None)
         for obj in [*self.toplevel, *self.locals]:
             model.add(obj)
+        model.functions.update(self.functions)
         return model
 
     def settle(self, frame: Frame, owner: Obj | None):
@@ -631,13 +651,22 @@ class _Compiler:
             rest = rest[1:]
         if len(rest) != 1:
             raise CompileError("a function body is exactly one expression", form.pos)
-        spec = FuncSpec(params, rest[0], dict(self.funcs), dict(self.consts))
+        # A function that hides a library function gets its own key in the model, so calls
+        # written before it still reach the library one.
+        key = f"{name} (user)" if name in LIBRARY_HEADS else name
+        spec = FuncSpec(params, rest[0], dict(self.funcs), dict(self.consts), name, key)
+        spec.funcs[name] = spec
+        keys = {n: f.key for n, f in spec.funcs.items()}
+        body = _store_body(spec.body, spec.consts, keys, set(params))
+        self.functions[key] = Function(
+            tuple((p, None if d is None else d.value) for p, d in params.items()), body
+        )
         # With only value parameters the body can be checked now, before any call.
         if all(default is not None for default in params.values()):
             check: Env = {k: Dyn(v.type) for k, v in params.items() if v is not None}
             self.frames.append(Frame([]))
             try:
-                self.func_body(spec, check)
+                self.infer(spec, check, form.pos)
             finally:
                 self.frames.pop()
         self.funcs[name] = spec
@@ -665,18 +694,45 @@ class _Compiler:
             params[name] = default
         return params
 
-    def func_body(self, spec: FuncSpec, env: Env) -> Value:
-        saved = self.funcs, self.consts
+    def func_body(self, spec: FuncSpec, env: Env, guess: str, pos: Pos) -> Value:
+        if self.depth >= RECURSION_LIMIT:
+            raise CompileError(f"recursion is deeper than {RECURSION_LIMIT} calls", pos)
+        saved = self.funcs, self.consts, self.active.get(id(spec))
         self.funcs, self.consts = spec.funcs, spec.consts
+        self.active[id(spec)] = guess
         self.in_func += 1
+        self.depth += 1
         # An empty scope hides the names of a motif body the call may sit in.
         self.scopes.append({})
+        frame = Frame([])
+        self.frames.append(frame)
         try:
             return self.expr(spec.body, env)
         finally:
+            self.frames.pop()
             self.scopes.pop()
+            self.depth -= 1
             self.in_func -= 1
-            self.funcs, self.consts = saved
+            self.funcs, self.consts, previous = saved
+            if previous is None:
+                del self.active[id(spec)]
+            else:
+                self.active[id(spec)] = previous
+
+    # The type a call returns when its arguments are not all known. Recursive calls inside the
+    # body return the current guess, starting from "not known yet", until the guess settles.
+    def infer(self, spec: FuncSpec, env: Env, pos: Pos) -> Value:
+        guess = PENDING
+        for _ in range(4):
+            result = self.func_body(spec, env, guess, pos)
+            if not isinstance(result, (Const, Dyn)):
+                return result
+            if result.type == guess:
+                break
+            guess = result.type
+        if guess == PENDING:
+            raise CompileError(f"cannot work out what {spec.name!r} returns", pos)
+        return Dyn(guess)
 
     def func_call(self, name: str, node: Form, env: Env) -> Value:
         spec = self.funcs[name]
@@ -685,6 +741,7 @@ class _Compiler:
             raise CompileError(f"{name} takes at most {len(spec.params)} arguments", node.pos)
         outer = self.constants(env)
         inner: Env = {}
+        known = True
         for i, (pname, default) in enumerate(spec.params.items()):
             if i >= len(args):
                 if default is None:
@@ -699,6 +756,7 @@ class _Compiler:
                 written = self.resolve_refs(_substitute(arg, outer, self.lets), env)
                 assert isinstance(written, Name)
                 inner[pname] = ArgRef(value, written)
+                known = False
                 continue
             if isinstance(value, (ObjRef, SelfRef, Spread)):
                 raise CompileError(f"{pname!r} takes a value", arg.pos)
@@ -706,14 +764,18 @@ class _Compiler:
                 raise CompileError(f"expected {default.type}, got {value.type}", arg.pos)
             if isinstance(value, Const):
                 inner[pname] = Const(_convert(value.value, default.type), default.type)
-                continue
-            # Computed once and shared by every use in the body, like a let value.
-            inner[pname] = LetRef(self.hidden_value(pname, arg, env, default.type), default.type)
-        result = self.func_body(spec, inner)
-        # The body is written into the caller's stored expression right away, because compiling
-        # the same body for another call replaces the bindings of the lets inside it.
-        self.lets[id(node)] = _substitute(spec.body, {**spec.consts, **inner}, self.lets)
-        return result
+            else:
+                inner[pname] = Dyn(default.type)
+                known = False
+        stored = tuple(self.resolve_refs(_substitute(a, outer, self.lets), env) for a in args)
+        self.lets[id(node)] = Form((Name((spec.key,), node.items[0].pos), *stored), node.pos)
+        # A call inside its own body that cannot be folded, or that sits in a branch never taken,
+        # stands for whatever the function turns out to return.
+        if id(spec) in self.active and (not known or self.speculative):
+            return Dyn(self.active[id(spec)])
+        if known:
+            return self.func_body(spec, inner, self.active.get(id(spec), PENDING), node.pos)
+        return self.infer(spec, inner, node.pos)
 
     def define_motif(self, form: Form):
         if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
@@ -1214,7 +1276,7 @@ class _Compiler:
         known: list[float] = []
         for item in node.items:
             value = self.value_arg(item, env)
-            if value.type not in ("int", "ratio", "real"):
+            if value.type not in ("int", "ratio", "real", PENDING):
                 raise CompileError(f"a list holds only real numbers, got {value.type}", item.pos)
             if isinstance(value, Const):
                 assert isinstance(value.value, (int, Fraction, float))
@@ -1376,6 +1438,8 @@ class _Compiler:
             return self.power(node, env)
         if head == "mod":
             return self.modulo(node, env)
+        if head == "abs":
+            return self.absolute(node, env)
         if head == "if":
             return self.if_(node, env)
         if head == "cond":
@@ -1426,6 +1490,8 @@ class _Compiler:
     def compare(self, op: str, node: Form, env: Env) -> Value:
         a, b = self.args(node, 2, env)
         ordered = op in ("<", "<=", ">", ">=")
+        if PENDING in (a.type, b.type):
+            return Dyn("bool")
         numeric = a.type in NUMERIC and b.type in NUMERIC
         if ordered and not (numeric and "complex" not in (a.type, b.type)):
             raise CompileError(f"{op} compares real numbers", node.pos)
@@ -1438,6 +1504,8 @@ class _Compiler:
     # The remainder with the sign of the divisor, as in mathematics and Python's %.
     def modulo(self, node: Form, env: Env) -> Value:
         a, b = self.args(node, 2, env)
+        if PENDING in (a.type, b.type):
+            return Dyn(PENDING)
         if not {a.type, b.type} <= {"int", "ratio", "real"}:
             raise CompileError("mod takes real numbers", node.pos)
         result = NUMERIC[max(NUMERIC.index(a.type), NUMERIC.index(b.type))]
@@ -1449,8 +1517,23 @@ class _Compiler:
             raise CompileError("mod by zero", node.pos)
         return Const(_convert(x % y, result), result)
 
+    # The size of a number: |x| for reals, the modulus for complex numbers.
+    def absolute(self, node: Form, env: Env) -> Value:
+        (a,) = self.args(node, 1, env)
+        if a.type == PENDING:
+            return Dyn(PENDING)
+        if a.type not in NUMERIC:
+            raise CompileError("abs takes a number", node.pos)
+        result = "real" if a.type == "complex" else a.type
+        if isinstance(a, Const):
+            assert isinstance(a.value, (int, Fraction, float, complex))
+            return Const(_convert(abs(a.value), result), result)
+        return Dyn(result)
+
     def power(self, node: Form, env: Env) -> Value:
         base, exp = self.args(node, 2, env)
+        if PENDING in (base.type, exp.type):
+            return Dyn(PENDING)
         if base.type not in NUMERIC or exp.type not in NUMERIC:
             raise CompileError("^ takes numbers", node.pos)
         if "complex" in (base.type, exp.type):
@@ -1472,9 +1555,20 @@ class _Compiler:
         return Const(_convert(value, result), result)
 
     def if_(self, node: Form, env: Env) -> Value:
-        test, then, other = self.args(node, 3, env)
-        if test.type != "bool":
+        if len(node.items) != 4:
+            raise CompileError("if takes 3 arguments", node.pos)
+        test = self.value_arg(node.items[1], env)
+        if test.type not in ("bool", PENDING):
             raise CompileError("the condition of if must be a bool", node.items[1].pos)
+        branches: list[Const | Dyn] = []
+        for i, branch in enumerate(node.items[2:]):
+            taken = not isinstance(test, Const) or bool(test.value) == (i == 0)
+            self.speculative += 0 if taken else 1
+            try:
+                branches.append(self.value_arg(branch, env))
+            finally:
+                self.speculative -= 0 if taken else 1
+        then, other = branches
         result = _unify(then.type, other.type, node.pos)
         if isinstance(test, Const):
             return _retype(then if test.value else other, result)
@@ -1493,11 +1587,21 @@ class _Compiler:
             is_else = isinstance(test_node, Name) and test_node.parts == ("else",)
             if is_else != last:
                 raise CompileError("cond must end with exactly one else clause", clause.pos)
-            value = self.value_arg(value_node, env)
-            result = value.type if result is None else _unify(result, value.type, clause.pos)
-            test = Const(True, "bool") if is_else else self.value_arg(test_node, env)
-            if test.type != "bool":
+            settled = chosen is not None and not dynamic
+            self.speculative += settled
+            try:
+                test = Const(True, "bool") if is_else else self.value_arg(test_node, env)
+            finally:
+                self.speculative -= settled
+            if test.type not in ("bool", PENDING):
                 raise CompileError("a cond condition must be a bool", test_node.pos)
+            skipped = settled or (not dynamic and isinstance(test, Const) and not test.value)
+            self.speculative += skipped
+            try:
+                value = self.value_arg(value_node, env)
+            finally:
+                self.speculative -= skipped
+            result = value.type if result is None else _unify(result, value.type, clause.pos)
             if chosen is None and not dynamic:
                 if isinstance(test, Dyn):
                     dynamic = True
@@ -1567,7 +1671,7 @@ class _Compiler:
                 raise CompileError("expected a number, got an object", arg.pos)
             arg_types = value.types if isinstance(value, Spread) else (value.type,)
             for t in arg_types:
-                if t not in NUMERIC and _list_len(t) is None:
+                if t not in NUMERIC and _list_len(t) is None and t != PENDING:
                     raise CompileError(f"expected a number, got {t}", arg.pos)
             types.extend(arg_types)
             if isinstance(value, Const):
@@ -1579,8 +1683,12 @@ class _Compiler:
         if op == "/" and len(types) < 2:
             raise CompileError("/ needs at least two arguments", node.pos)
         if any(_list_len(t) is not None for t in types):
-            return self.list_arithmetic(op, node, types, consts, dynamic)
-        rank = max((NUMERIC.index(t) for t in types), default=0)
+            return self.list_arithmetic(
+                op, node, [t for t in types if t != PENDING], consts, dynamic
+            )
+        if types and all(t == PENDING for t in types):
+            return Dyn(PENDING)
+        rank = max((NUMERIC.index(t) for t in types if t != PENDING), default=0)
         if op == "/":
             rank = max(rank, NUMERIC.index("ratio"))
         result = NUMERIC[rank]
@@ -1613,6 +1721,44 @@ class _Compiler:
             raise CompileError("division by zero", node.pos) from None
 
 
+# The heads the standard library already uses; a user function with one of these names gets its
+# own key in the model.
+LIBRARY_HEADS = set(STDLIB) | {"mod", "abs"}
+
+
+# A function body as the model stores it: consts written in, and calls to user functions named
+# by their key. Names bound by parameters or lets hide consts and functions of the same name.
+def _store_body(node: Node, consts: dict, keys: dict[str, str], bound: set[str]) -> Node:
+    if isinstance(node, Name):
+        first = node.parts[0]
+        value = consts.get(first) if isinstance(first, str) and first not in bound else None
+        if value is None:
+            return node
+        if len(node.parts) == 1:
+            return _literal(value, node.pos)
+        return RealLit(_take(value.value, node.parts[1:]), node.pos)
+    if isinstance(node, Form) and _head(node) == "let" and len(node.items) == 3:
+        pairs, inner = [], set(bound)
+        assert isinstance(node.items[1], Form)
+        for pair in node.items[1].items:
+            assert isinstance(pair, Form)
+            key, expr = pair.items
+            pairs.append(Form((key, _store_body(expr, consts, keys, inner)), pair.pos))
+            if isinstance(key, Name) and isinstance(key.parts[0], str):
+                inner.add(key.parts[0])
+        body = _store_body(node.items[2], consts, keys, inner)
+        return Form((node.items[0], Form(tuple(pairs), node.items[1].pos), body), node.pos)
+    if isinstance(node, Form):
+        items = [_store_body(item, consts, keys, bound) for item in node.items]
+        head = _head(node)
+        if head in keys and head not in bound:
+            items[0] = Name((keys[head],), node.items[0].pos)
+        return Form(tuple(items), node.pos)
+    if isinstance(node, ListLit):
+        return ListLit(tuple(_store_body(i, consts, keys, bound) for i in node.items), node.pos)
+    return node
+
+
 # Loop variables and known parameters do not exist after compiling, so bound expressions get
 # their values instead.
 def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
@@ -1636,12 +1782,6 @@ def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
             if isinstance(whole, LetRef):
                 return Name((whole.hidden, *rest), node.pos)
             return RealLit(_take(whole.value, rest), node.pos)
-        argument = env.get(first) if isinstance(first, str) else None
-        if isinstance(argument, ArgRef):
-            rest = tuple(
-                p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts[1:]
-            )
-            return Name((*argument.node.parts, *rest), node.pos)
         if isinstance(local, int):
             return IntLit(local, node.pos)
         parts = tuple(p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts)
@@ -1667,6 +1807,8 @@ def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
 
 
 def _unify(a: str, b: str, pos: Pos) -> str:
+    if PENDING in (a, b):
+        return b if a == PENDING else a
     if a in NUMERIC and b in NUMERIC:
         return NUMERIC[max(NUMERIC.index(a), NUMERIC.index(b))]
     if a != b:

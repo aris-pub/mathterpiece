@@ -25,6 +25,21 @@ class Inherit:
 type Attr[T] = Free[T] | Bound | Inherit
 
 
+# How deep function calls may nest, in the compiler and while drawing, like Python's limit.
+RECURSION_LIMIT = 1000
+# Each call nests a few dozen Python frames in the compiler and evaluator, so Python's own
+# limit has to be well above ours.
+PYTHON_FRAMES = 60 * RECURSION_LIMIT
+
+
+# A user function: its parameters with their defaults (None for one that takes an object), and
+# its body, with consts written in and calls naming functions by their key in Model.functions.
+@dataclass(frozen=True)
+class Function:
+    params: tuple[tuple[str, object], ...]
+    body: Node
+
+
 def _members():
     return field(default_factory=list, metadata={"variadic": True})
 
@@ -195,6 +210,7 @@ class Model:
         self._items: list[Obj] = []
         self._index: dict[str, Obj] = {}
         self._tree: set[int] = set()
+        self.functions: dict[str, Function] = {}
 
     # Each object has one parent. A view is not a parent: it shows objects already in the tree.
     def add(self, obj: Obj):

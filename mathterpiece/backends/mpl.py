@@ -1,5 +1,6 @@
 import math
 import random
+import sys
 from typing import Any, get_args
 
 import matplotlib.pyplot as plt
@@ -17,6 +18,8 @@ from mathterpiece.compiler import ARITHMETIC, AXES, COMPARISONS, PROPERTIES
 from mathterpiece.compiler import _fold as fold
 from mathterpiece.matrix import IDENTITY, Matrix, compose
 from mathterpiece.model import (
+    PYTHON_FRAMES,
+    RECURSION_LIMIT,
     Bound,
     Canvas,
     Circle,
@@ -77,6 +80,8 @@ class Evaluator:
         self.parent: dict[int, Group | Motif | None] = {}
         self.locals: dict[int, dict[str, Obj]] = {}
         self.frames: dict[int, Matrix] = {}
+        self.depth = 0
+        sys.setrecursionlimit(max(sys.getrecursionlimit(), PYTHON_FRAMES))
         stack: list[tuple[Obj, Motif | None, Group | Motif | None]] = [
             (o, None, None) for o in model.objects
         ]
@@ -187,28 +192,31 @@ class Evaluator:
             return v("x") + mid[0], v("y") + mid[1]
         return math.dist(mid, corners[0])
 
-    def eval(self, node: Node, owner: Obj) -> Any:
+    # env holds the parameters and let names of the function body being evaluated, if any.
+    def eval(self, node: Node, owner: Obj, env: dict | None = None) -> Any:
+        env = env or {}
         if isinstance(node, LITERALS):
             return node.value
         if isinstance(node, InterpStrLit):
-            return "".join(self.text(part, owner) for part in node.parts)
+            return "".join(self.text(part, owner, env) for part in node.parts)
         if isinstance(node, Name):
-            return self.name(node, owner)
+            return self.name(node, owner, env)
         if isinstance(node, ListLit):
-            return tuple(float(self.eval(item, owner)) for item in node.items)
+            return tuple(float(self.eval(item, owner, env)) for item in node.items)
         assert isinstance(node, Form)
-        return self.call(node, owner)
+        return self.call(node, owner, env)
 
-    def text(self, part: str | Name, owner: Obj) -> str:
+    def text(self, part: str | Name, owner: Obj, env: dict) -> str:
         if isinstance(part, str):
             return part
-        value = self.name(part, owner)
+        value = self.name(part, owner, env)
         return " ".join(show(v) for v in value) if isinstance(value, list) else show(value)
 
     # A part of a list value: x, y, z, or an index.
-    def take(self, value: Any, parts: list, owner: Obj) -> Any:
+    def take(self, value: Any, parts: list, owner: Obj, env: dict) -> Any:
         for part in parts:
-            value = value[AXES[part] if isinstance(part, str) else int(self.eval(part, owner))]
+            i = AXES[part] if isinstance(part, str) else int(self.eval(part, owner, env))
+            value = value[i]
         return value
 
     # Who self is for an expression owned by obj, and which motif body its names resolve in. A let
@@ -224,15 +232,19 @@ class Evaluator:
             return None, owner
         return owner, self.enclosing.get(id(owner))
 
-    def name(self, node: Name, owner: Obj) -> Any:
+    def name(self, node: Name, owner: Obj, env: dict) -> Any:
         first, *rest = node.parts
         assert isinstance(first, str)
         me, around = self.context(owner)
-        if first == "self":
+        if first in env and not isinstance(env[first], Obj):
+            return self.take(env[first], rest, owner, env)
+        if first in env:
+            obj = env[first]
+        elif first == "self":
             assert me is not None
             obj = me
         elif around is not None and first in around.params:
-            return self.take(self.value(around, first), rest, owner)
+            return self.take(self.value(around, first), rest, owner, env)
         elif around is not None and first in self.locals[id(around)]:
             obj = self.locals[id(around)][first]
         elif first in self.model:
@@ -241,41 +253,68 @@ class Evaluator:
             raise EvalError(f"undefined name {first!r}")
         for i, part in enumerate(rest):
             if isinstance(obj, (Real, Local)):
-                return self.take(self.value(obj, "value"), rest[i:], owner)
+                return self.take(self.value(obj, "value"), rest[i:], owner, env)
             if isinstance(part, str):
                 if isinstance(obj, Motif) and part in obj.params:
-                    return self.take(self.value(obj, part), rest[i + 1 :], owner)
+                    return self.take(self.value(obj, part), rest[i + 1 :], owner, env)
                 if isinstance(obj, Motif) and part in self.locals[id(obj)]:
                     obj = self.locals[id(obj)][part]
                     continue
                 if isinstance(obj, Group) and part not in attributes(type(obj)):
                     return [self.read(member, part, owner) for member in obj.members]
-                return self.take(self.read(obj, part, owner), rest[i + 1 :], owner)
+                return self.take(self.read(obj, part, owner), rest[i + 1 :], owner, env)
             assert isinstance(obj, Group)
-            obj = obj.members[self.eval(part, owner)]
+            obj = obj.members[self.eval(part, owner, env)]
         return self.value(obj, "value") if isinstance(obj, (Real, Local)) else obj
 
-    def call(self, node: Form, owner: Obj) -> Any:
+    def call(self, node: Form, owner: Obj, env: dict) -> Any:
         head = node.items[0]
         assert isinstance(head, Name)
         op = head.parts[0]
         if op == "if":
             test, then, other = node.items[1:]
-            return self.eval(then if self.eval(test, owner) else other, owner)
+            return self.eval(then if self.eval(test, owner, env) else other, owner, env)
         if op == "cond":
             for clause in node.items[1:]:
                 assert isinstance(clause, Form)
                 test, result = clause.items
-                if (isinstance(test, Name) and test.parts == ("else",)) or self.eval(test, owner):
-                    return self.eval(result, owner)
+                is_else = isinstance(test, Name) and test.parts == ("else",)
+                if is_else or self.eval(test, owner, env):
+                    return self.eval(result, owner, env)
+        if op == "let":
+            inner = dict(env)
+            pairs = node.items[1]
+            assert isinstance(pairs, Form)
+            for pair in pairs.items:
+                assert isinstance(pair, Form)
+                key, expr = pair.items
+                assert isinstance(key, Name) and isinstance(key.parts[0], str)
+                inner[key.parts[0]] = self.eval(expr, owner, inner)
+            return self.eval(node.items[2], owner, inner)
         args: list[Any] = []
         for arg in node.items[1:]:
-            value = self.eval(arg, owner)
+            value = self.eval(arg, owner, env)
             args.extend(value if isinstance(value, list) else [value])
+        if op in self.model.functions:
+            return self.call_function(op, args, owner)
         try:
             return self.apply(op, args)
         except (ZeroDivisionError, ValueError) as e:
             raise EvalError(str(e) or "division by zero") from None
+
+    def call_function(self, key: str, args: list[Any], owner: Obj) -> Any:
+        if self.depth >= RECURSION_LIMIT:
+            raise EvalError(f"recursion is deeper than {RECURSION_LIMIT} calls")
+        fn = self.model.functions[key]
+        env = {
+            name: args[i] if i < len(args) else default
+            for i, (name, default) in enumerate(fn.params)
+        }
+        self.depth += 1
+        try:
+            return self.eval(fn.body, owner, env)
+        finally:
+            self.depth -= 1
 
     def point(self, obj: Obj) -> tuple[Any, Any]:
         return self.frame(self.parent.get(id(obj))).apply(
@@ -304,6 +343,8 @@ class Evaluator:
             return result
         if op in COMPARISONS:
             return COMPARISONS[op](*args)
+        if op == "abs":
+            return abs(args[0])
         if op == "mod":
             if args[1] == 0:
                 raise EvalError("mod by zero")
