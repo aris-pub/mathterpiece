@@ -35,16 +35,16 @@ def test_parse_error_exits_with_position(tmp_path, capsys):
 
 def test_compile_error_exits_with_position(tmp_path, capsys):
     src = tmp_path / "bad.mtp"
-    src.write_text("(circle 'a'\n  (r 'x'))")
+    src.write_text("(scene _\n  (circle 'a'\n    (r 'x')))")
     with pytest.raises(SystemExit) as exc:
         main([str(src)])
     assert exc.value.code == 1
-    assert capsys.readouterr().err.startswith(f"{src}:2:")
+    assert capsys.readouterr().err.startswith(f"{src}:3:")
 
 
 def test_valid_file_is_compiled_and_shown(tmp_path, capsys, shown):
     src = tmp_path / "ok.mtp"
-    src.write_text("(circle 'a') (canvas 'cnv' a)")
+    src.write_text("(scene 'world' (circle 'a')) (canvas 'cnv' world)")
     main([str(src), "-v"])
     assert f"compiled {src}" in capsys.readouterr().err
     assert shown == [True]

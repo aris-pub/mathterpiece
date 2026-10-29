@@ -1,12 +1,12 @@
 import random
 
 import pytest
+from helpers import user_objects, with_scene
 from matplotlib.colors import to_rgba
 
 from mathterpiece.backends.mpl import Evaluator, render
 from mathterpiece.compiler import CompileError, compile_scene
 from mathterpiece.nodes import Name
-from mathterpiece.parse import parse
 from mathterpiece.scene import (
     Bound,
     Circle,
@@ -25,7 +25,7 @@ BUILTINS = {"pi", "π", "tau", "τ", "euler", "infty", "∞"}
 
 
 def scene(src):
-    return compile_scene(parse(src))
+    return compile_scene(with_scene(src))
 
 
 def error(src, match=None):
@@ -47,10 +47,6 @@ def member[T](motif, name, cls: type[T]) -> T:
     obj = local_names(motif)[name]
     assert isinstance(obj, cls)
     return obj
-
-
-def user_objects(scn):
-    return [obj for obj in scn.objects if obj.name not in BUILTINS]
 
 
 class TestSceneModel:
@@ -125,10 +121,9 @@ class TestLibraryForms:
         c = get(scene("(motif 'circle' (text 't' 'hi')) (circle 'c')"), "c", Motif)
         assert c.kind == "circle"
 
-    def test_library_form_is_used_before_the_motif(self):
-        scn = scene("(circle 'a') (motif 'circle' (text 't' 'hi')) (circle 'b')")
+    def test_a_motif_after_the_scene_does_not_change_it(self):
+        scn = scene("(scene _ (circle 'a')) (motif 'circle' (text 't' 'hi'))")
         assert isinstance(scn["a"], Circle)
-        assert isinstance(scn["b"], Motif)
 
     def test_body_of_the_motif_uses_the_library_form(self):
         d = get(scene("(motif 'circle' (circle 'c' (r 2))) (circle 'd')"), "d", Motif)
@@ -336,17 +331,11 @@ class TestEvaluation:
         scn, ev = ev_of(src)
         assert (ev.value(scn["v"], "value"), ev.value(scn["w"], "value")) == (111.0, 110.0)
 
-    def test_global_read_inside_the_body_is_in_local_coordinates(self):
-        src = "(circle 'g0' (x 10)) (motif 'dot' (circle 'e' (x g0.x))) (dot 'd' (x 3))"
-        scn, ev = ev_of(src)
-        e = member(get(scn, "d", Motif), "e", Circle)
-        assert ev.value(e, "x") == 7.0
-        assert ev.point(e) == (10.0, 0.0)
-
     def test_dist_uses_scene_coordinates(self):
-        src = "(circle 'g0' (x 10)) (motif 'dot' (circle 'e' (r (dist self g0)))) (dot 'd' (x 3))"
-        scn, ev = ev_of(src)
-        assert ev.value(member(get(scn, "d", Motif), "e", Circle), "r") == 7.0
+        src = "(motif 'dot' (circle 'e' (x 1))) (circle 'g0' (x 10)) (dot 'd' (x 3))"
+        scn, ev = ev_of(src + " (real 'v' (dist d.e g0))")
+        assert ev.value(scn["v"], "value") == 6.0
+        assert ev.point(member(get(scn, "d", Motif), "e", Circle)) == (4.0, 0.0)
 
     def test_style_is_inherited(self):
         src = "(motif 'dot' (circle 'c') (circle 'e' (fill 'blue'))) (dot 'd' (fill 'red'))"

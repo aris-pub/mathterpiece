@@ -4,6 +4,7 @@ from fractions import Fraction
 from pathlib import Path
 
 import pytest
+from helpers import with_scene
 
 from mathterpiece.backends.mpl import EvalError, Evaluator, render
 from mathterpiece.compiler import compile_scene
@@ -15,7 +16,7 @@ EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
 def scene(src):
-    return compile_scene(parse(src))
+    return compile_scene(with_scene(src))
 
 
 def value(src, name, attr, seed=0):
@@ -206,7 +207,7 @@ class TestRender:
         assert ax.get_xlabel() == ax.get_ylabel() == ""
 
     def test_text_is_clipped_at_the_view_like_circles(self):
-        ((_, ax),) = render(scene("(canvas 'cnv' (text 't' 'hi') (circle 'c'))"))
+        ((_, ax),) = render(scene("(text 't' 'hi') (circle 'c') (canvas 'cnv' t c)"))
         (text,) = ax.texts
         (circle,) = ax.patches
         assert text.get_clip_on() and circle.get_clip_on()
@@ -223,8 +224,9 @@ class TestRender:
 VIEW = "(view-x 0) (view-y 0) (view-width 10) (view-height 10)"
 
 
-def drawn(transform, member="(circle 'c' (x 6) (y 5))"):
-    ((_, ax),) = render(scene(f"(real 'k' 90) (canvas 'cnv' {VIEW} {transform} {member})"))
+def drawn(transform, member="(circle 'c' (x 6) (y 5))", name="c"):
+    src = f"(real 'k' 90) {member} (canvas 'cnv' {VIEW} {transform} {name})"
+    ((_, ax),) = render(scene(src))
     return ax
 
 
@@ -265,7 +267,7 @@ class TestTransform:
         assert data_position(circle, ax, (0, 0)) == pytest.approx((7, 4))
 
     def test_text_positions_are_transformed(self):
-        ax = drawn("(transform (rotate k))", "(text 't' 'hi' (x 6) (y 5))")
+        ax = drawn("(transform (rotate k))", "(text 't' 'hi' (x 6) (y 5))", "t")
         (text,) = ax.texts
         assert data_position(text, ax, text.get_position()) == pytest.approx((5, 6))
 

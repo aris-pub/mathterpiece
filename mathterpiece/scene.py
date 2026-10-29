@@ -71,6 +71,12 @@ class Group(Visual):
     members: list[Visual] = _members()
 
 
+# The (scene ...) form: the one root of the visual tree.
+@dataclass(kw_only=True)
+class Root(Group):
+    pass
+
+
 @dataclass(kw_only=True)
 class Motif(Styled):
     kind: str = field(default="", metadata={"internal": True})
@@ -188,6 +194,10 @@ class Scene:
 
     def __len__(self) -> int:
         return len(self._items)
+
+    @property
+    def root(self) -> Root | None:
+        return next((obj for obj in self._items if isinstance(obj, Root)), None)
 
     @property
     def views(self) -> list[View]:

@@ -30,6 +30,7 @@ from mathterpiece.scene import (
     Motif,
     Obj,
     Real,
+    Root,
     Scene,
     Styled,
     Text,
@@ -235,6 +236,7 @@ class _Compiler:
         # Keyed by id, holding the object too: ids of freed objects get reused.
         self.parents: dict[int, tuple[Obj, str]] = {}
         self.motifs: dict[str, MotifSpec] = {}
+        self.root: Root | None = None
         self.scopes: list[Scope] = []
         # Where a definition lands before anything adopts it: the top level, or a motif body.
         self.pools: list[list[Obj]] = [self.toplevel]
@@ -243,13 +245,16 @@ class _Compiler:
         self.add_builtins()
         for form in self.forms:
             self.toplevel.extend(self.toplevel_item(form, {}))
+        if self.root is None:
+            raise CompileError(
+                "a file needs exactly one scene, even an empty one: (scene _)", Pos(1, 1)
+            )
         scene = Scene()
         for obj, names in self.builtins:
             scene.add(obj)
             for alias in names[1:]:
                 scene.alias(alias, names[0])
-        # Views come last because a view may show an object that a later form moves into a group.
-        for obj in sorted(self.toplevel, key=lambda o: isinstance(o, View)):
+        for obj in self.toplevel:
             scene.add(obj)
         return scene
 
@@ -289,7 +294,11 @@ class _Compiler:
         if head == "motif":
             self.define_motif(form)
             return []
-        if head in FORMS or head in self.motifs:
+        if head == "scene":
+            return [self.scene_form(form, env)]
+        if head in self.motifs or (head in FORMS and issubclass(FORMS[head].cls, Visual)):
+            raise CompileError(f"{head} is a visual object, so it goes inside the scene", form.pos)
+        if head in FORMS:
             return [self.definition(form, env)]
         if head is None:
             raise CompileError("expected a definition", form.pos)
@@ -336,6 +345,42 @@ class _Compiler:
                 return str(value.value)
             raise CompileError("a name must be known at compile time", node.pos)
         raise CompileError("expected a name: a string, an interpolated string, or _", node.pos)
+
+    def scene_form(self, form: Form, env: Env) -> Root:
+        if self.root is not None:
+            raise CompileError("a file has exactly one scene", form.pos)
+        name = self.object_name(form, env)
+        pool: list[Obj] = []
+        self.pools.append(pool)
+        try:
+            for node in form.items[2:]:
+                pool.extend(self.scene_item(node, env))
+        finally:
+            self.pools.pop()
+        label = repr(name) if name is not None else "the scene"
+        members: list[Visual] = []
+        for obj in pool:
+            assert isinstance(obj, Visual)
+            self.parents[id(obj)] = (obj, label)
+            members.append(obj)
+        root = Root(name=name, members=members)
+        self.register(root, form.pos)
+        self.root = root
+        return root
+
+    def scene_item(self, node: Node, env: Env) -> list[Obj]:
+        head = _head(node)
+        if isinstance(node, Form) and head == "repeat":
+            return self.repeat(node, env, self.scene_item)
+        if isinstance(node, Form) and (head in FORMS or head in self.motifs):
+            if head in FORMS and not issubclass(FORMS[head].cls, Visual):
+                raise CompileError(f"{head} goes outside the scene", node.pos)
+            return [self.definition(node, env)]
+        if head == "motif":
+            raise CompileError("motifs are defined at the top level", node.pos)
+        if head == "scene":
+            raise CompileError("a file has exactly one scene", node.pos)
+        raise CompileError("the scene holds only visual objects", node.pos)
 
     def define_motif(self, form: Form):
         if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
@@ -548,9 +593,11 @@ class _Compiler:
             if not isinstance(obj, Visual):
                 raise CompileError(f"{head} cannot be a member of {container}", node.pos)
             if issubclass(FORMS[container].cls, View):
-                self.toplevel.append(obj)
-            else:
-                self.adopt(obj, container, owner, node.pos)
+                raise CompileError(
+                    "visual objects are defined inside the scene; a canvas only shows them",
+                    node.pos,
+                )
+            self.adopt(obj, container, owner, node.pos)
             return [obj]
         if isinstance(node, Form):
             if head in settable:

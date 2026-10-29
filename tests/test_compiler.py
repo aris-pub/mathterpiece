@@ -2,6 +2,7 @@ import math
 from pathlib import Path
 
 import pytest
+from helpers import user_objects, with_scene
 
 from mathterpiece.compiler import CompileError, compile_scene
 from mathterpiece.matrix import IDENTITY
@@ -13,7 +14,7 @@ EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
 def scene(src):
-    return compile_scene(parse(src))
+    return compile_scene(with_scene(src))
 
 
 def error(src, match=None):
@@ -35,10 +36,6 @@ def get[T](scn, name, cls: type[T]) -> T:
 BUILTINS = {"pi", "π", "tau", "τ", "euler", "infty", "∞"}
 
 
-def user_objects(scn):
-    return [obj for obj in scn.objects if obj.name not in BUILTINS]
-
-
 class TestBuiltins:
     @pytest.mark.parametrize(
         "name, value",
@@ -58,8 +55,8 @@ class TestBuiltins:
         assert "inf" not in scene("")
 
     def test_builtins_come_first_in_order(self):
-        scn = scene("(circle 'a')")
-        assert [obj.name for obj in scn.objects] == ["pi", "tau", "euler", "infty", "a"]
+        scn = scene("(scene 'world' (circle 'a'))")
+        assert [obj.name for obj in scn.objects] == ["pi", "tau", "euler", "infty", "world"]
 
     def test_user_definition_replaces_builtin(self):
         scn = scene("(real 'pi' 3)")
@@ -399,7 +396,7 @@ class TestCanvas:
         assert scene("(canvas 'cnv')")["cnv"] == Canvas(name="cnv")
 
     def test_attributes_then_members(self):
-        scn = scene("(circle 'a') (canvas 'cnv' (view-x 0) (view-width 5) a (circle 'b'))")
+        scn = scene("(circle 'a') (circle 'b') (canvas 'cnv' (view-x 0) (view-width 5) a b)")
         cnv = scn["cnv"]
         assert isinstance(cnv, Canvas)
         assert (cnv.view_x, cnv.view_width) == (Free(0.0), Free(5.0))
@@ -430,17 +427,6 @@ class TestCanvas:
     def test_two_canvases_show_the_same_object(self):
         scn = scene("(circle 'a') (canvas 'c1' a) (canvas 'c2' a)")
         assert get(scn, "c2", Canvas).members == [scn["a"]]
-
-    def test_objects_defined_in_a_canvas_are_toplevel(self):
-        scn = scene("(canvas 'cnv' (circle 'a') (circle _))")
-        cnv = get(scn, "cnv", Canvas)
-        assert user_objects(scn) == cnv.members
-        assert scn.views == [cnv]
-
-    def test_object_defined_in_a_canvas_can_move_into_a_group(self):
-        scn = scene("(canvas 'cnv' (circle 'a')) (group 'g' a)")
-        assert user_objects(scn) == [scn["g"]]
-        assert get(scn, "cnv", Canvas).members == [scn["a"]]
 
     @pytest.mark.parametrize("member", ["k", "other", "2"])
     def test_invalid_member(self, member):
@@ -563,7 +549,7 @@ class TestRepeat:
         assert [m.name for m in get(scn, "g", Group).members] == ["c0", "c1"]
 
     def test_repeat_in_canvas(self):
-        scn = scene("(canvas 'cnv' (repeat i 2 (circle $'c{i}')))")
+        scn = scene("(circle 'c0') (circle 'c1') (canvas 'cnv' (repeat i 2 (ref $'c{i}')))")
         assert [m.name for m in get(scn, "cnv", Canvas).members] == ["c0", "c1"]
 
     def test_repeat_next_to_other_members(self):
@@ -699,12 +685,14 @@ class TestSelf:
         assert t.value == Bound(InterpStrLit(("at ", n("self", "x"))))
 
     def test_rebound_by_nested_definition(self):
-        scn = scene("(canvas 'cnv' (view-height self.view-width) (circle 'c' (r self.x)))")
+        scn = scene(
+            "(group 'g' (circle 'c' (r self.x))) (canvas 'cnv' (view-height self.view-width))"
+        )
         assert get(scn, "cnv", Canvas).view_height == Bound(n("self", "view-width"))
         assert get(scn, "c", Circle).r == Bound(n("self", "x"))
 
     def test_nested_self_is_not_the_container(self):
-        error("(canvas 'cnv' (circle 'c' (r self.view-x)))", match="view-x")
+        error("(motif 'dot' (params (k 1)) (circle 'c' (r self.k)))", match="k")
 
     def test_shadows_a_global_named_self(self):
         c = get(scene("(real 'self' 2) (circle 'c' (r self.x))"), "c", Circle)
