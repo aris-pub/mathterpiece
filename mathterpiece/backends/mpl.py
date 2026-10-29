@@ -26,9 +26,9 @@ from mathterpiece.scene import (
     Bound,
     Canvas,
     Circle,
-    Compound,
     Group,
     Inherit,
+    Motif,
     Obj,
     Real,
     Scene,
@@ -53,14 +53,14 @@ class Evaluator:
         self.rng = rng or random.Random()
         self.cache: dict[tuple[int, str], Any] = {}
         self.active: set[tuple[int, str]] = set()
-        # The innermost compound around each object, whose body the object's expressions live in.
-        self.enclosing: dict[int, Compound | None] = {}
+        # The innermost motif around each object, whose body the object's expressions live in.
+        self.enclosing: dict[int, Motif | None] = {}
         self.locals: dict[int, dict[str, Obj]] = {}
-        stack: list[tuple[Obj, Compound | None]] = [(o, None) for o in scene.objects]
+        stack: list[tuple[Obj, Motif | None]] = [(o, None) for o in scene.objects]
         while stack:
             obj, around = stack.pop()
             self.enclosing[id(obj)] = around
-            if isinstance(obj, Compound):
+            if isinstance(obj, Motif):
                 self.locals[id(obj)] = local_names(obj)
                 stack.extend((m, obj) for m in obj.members)
             elif isinstance(obj, Group):
@@ -72,8 +72,8 @@ class Evaluator:
             return self.cache[key]
         if key in self.active:
             raise EvalError(f"cycle through {obj.name or 'an anonymous object'}.{attr}")
-        is_param = isinstance(obj, Compound) and attr in obj.params
-        if isinstance(obj, Compound) and is_param:
+        is_param = isinstance(obj, Motif) and attr in obj.params
+        if isinstance(obj, Motif) and is_param:
             param = obj.params[attr]
         else:
             param = getattr(obj, attributes(type(obj))[attr].name)
@@ -96,7 +96,7 @@ class Evaluator:
         return result
 
     # Where the coordinate system an object's x and y are given in sits, in scene coordinates.
-    def origin(self, around: Compound | None) -> tuple[float, float]:
+    def origin(self, around: Motif | None) -> tuple[float, float]:
         if around is None:
             return 0.0, 0.0
         x, y = self.origin(self.enclosing.get(id(around)))
@@ -144,9 +144,9 @@ class Evaluator:
             raise EvalError(f"undefined name {first!r}")
         for part in rest:
             if isinstance(part, str):
-                if isinstance(obj, Compound) and part in obj.params:
+                if isinstance(obj, Motif) and part in obj.params:
                     return self.value(obj, part)
-                if isinstance(obj, Compound) and part in self.locals[id(obj)]:
+                if isinstance(obj, Motif) and part in self.locals[id(obj)]:
                     obj = self.locals[id(obj)][part]
                     continue
                 if isinstance(obj, Group) and part != "members":
@@ -245,7 +245,7 @@ def render(scene: Scene, rng: random.Random | None = None) -> list[tuple[Figure,
 
 
 def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
-    if isinstance(obj, (Group, Compound)):
+    if isinstance(obj, (Group, Motif)):
         for member in obj.members:
             _draw(member, ax, ev, to_view)
     elif isinstance(obj, Circle):
@@ -264,6 +264,7 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
             ev.value(obj, "value"),
             color=_paint(ev, obj, "fill"),
             transform=to_view,
+            clip_on=True,
         )
 
 

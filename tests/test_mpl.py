@@ -205,6 +205,13 @@ class TestRender:
         assert list(ax.get_xticks()) == list(ax.get_yticks()) == []
         assert ax.get_xlabel() == ax.get_ylabel() == ""
 
+    def test_text_is_clipped_at_the_view_like_circles(self):
+        ((_, ax),) = render(scene("(canvas 'cnv' (text 't' 'hi') (circle 'c'))"))
+        (text,) = ax.texts
+        (circle,) = ax.patches
+        assert text.get_clip_on() and circle.get_clip_on()
+        assert text.get_clip_box() is not None
+
     def test_no_frame(self):
         ((_, ax),) = render(scene("(canvas 'cnv')"))
         assert not ax.get_frame_on()

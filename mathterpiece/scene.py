@@ -16,7 +16,7 @@ class Bound:
     expr: Node
 
 
-# A style attribute of an object inside a compound, left unset so it comes from the compound.
+# A style attribute of an object inside a motif, left unset so it comes from the motif.
 @dataclass(frozen=True, slots=True)
 class Inherit:
     pass
@@ -72,7 +72,7 @@ class Group(Visual):
 
 
 @dataclass(kw_only=True)
-class Compound(Styled):
+class Motif(Styled):
     kind: str = field(default="", metadata={"internal": True})
     params: dict[str, Attr[object]] = field(default_factory=dict, metadata={"internal": True})
     members: list[Visual] = _members()
@@ -114,11 +114,11 @@ def variadic(cls: type[Obj]) -> Field | None:
     return next((f for f in fields(cls) if f.metadata.get("variadic")), None)
 
 
-# Names that a compound's body can use for its members: those inside groups count, but not those
-# inside a nested compound, which has its own.
-def local_names(compound: Compound) -> dict[str, Obj]:
+# Names that a motif's body can use for its members: those inside groups count, but not those
+# inside a nested motif, which has its own.
+def local_names(motif: Motif) -> dict[str, Obj]:
     names: dict[str, Obj] = {}
-    stack: list[Obj] = list(reversed(compound.members))
+    stack: list[Obj] = list(reversed(motif.members))
     while stack:
         obj = stack.pop()
         if obj.name is not None:
@@ -150,7 +150,7 @@ class Scene:
     def add(self, obj: Obj):
         new: dict[str, Obj] = {}
         seen: set[int] = set()
-        # The flag says whether the name is global; names inside a compound are local to it.
+        # The flag says whether the name is global; names inside a motif are local to it.
         stack: list[tuple[Obj, bool]] = [(obj, True)]
         while stack:
             thing, is_global = stack.pop()
@@ -162,7 +162,7 @@ class Scene:
                     raise DuplicateNameError(f"name {thing.name!r} is already defined")
                 new[thing.name] = thing
             if isinstance(thing, Container) and not isinstance(thing, View):
-                inner = is_global and not isinstance(thing, Compound)
+                inner = is_global and not isinstance(thing, Motif)
                 stack.extend((m, inner) for m in reversed(thing.members))
         if isinstance(obj, Container) and isinstance(obj, View):
             for member in obj.members:

@@ -654,8 +654,8 @@ class TestCycles:
             ("(text 't' $'at {self.value}')", "t.value -> t.value"),
             ("(circle 'c' (fill (if (< self.r 1) self.fill 'red')))", "c.fill -> c.fill"),
             ("(canvas 'v' (view-x self.view-width) (view-width self.view-x))", "v.view-x"),
-            ("(compound 'dot' (circle 'c')) (dot 'd' (x self.y) (y self.x))", "d.x -> d.y"),
-            ("(compound 'dot' (circle 'c' (r self.r)))", "c.r -> c.r"),
+            ("(motif 'dot' (circle 'c')) (dot 'd' (x self.y) (y self.x))", "d.x -> d.y"),
+            ("(motif 'dot' (circle 'c' (r self.r)))", "c.r -> c.r"),
             ("(group 'g' (circle _ (r self.r)))", "r -> r"),
         ],
     )

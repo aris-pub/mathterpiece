@@ -1,5 +1,5 @@
 ; Seeds on a golden-angle spiral: seed i sits at radius (sqrt i), turned i times 137.508 degrees.
-(compound 'sunflower' (params (n 400) (spread 0.3) (size 0.11))
+(motif 'sunflower' (params (n 400) (spread 0.3) (size 0.11))
   (repeat i n
     (circle _
       (x (* spread (sqrt i) (cosd (* i 137.508))))
@@ -15,11 +15,11 @@
           (else '#fff1b8'))))))
 
 ; Stacked translucent disks read as a soft glow that fades outward.
-(compound 'glow' (params (layers 14) (radius 8.0))
+(motif 'glow' (params (layers 14) (radius 8.0))
   (repeat k layers
     (circle _ (r (* radius (/ (+ k 1) layers))) (fill-opacity 0.035))))
 
-(compound 'orbit' (params (count 12) (radius 5.0) (size 0.3))
+(motif 'orbit' (params (count 12) (radius 5.0) (size 0.3))
   (repeat k count
     (circle _
       (x (* radius (cosd (/ (* 360 k) count))))

@@ -1,8 +1,8 @@
-(compound 'labeled-disk' (params (r 1.0) (label 'A'))
+(motif 'labeled-disk' (params (r 1.0) (label 'A'))
   (circle 'crc' (r r) (fill-opacity 0.3))
   (text 'txt' label (x -0.3) (y (+ crc.r 0.5))))
 
-(compound 'pair' (params (gap 4.0))
+(motif 'pair' (params (gap 4.0))
   (labeled-disk 'left' (x (- gap)) (label 'L'))
   (labeled-disk 'right' (x gap) (r 2) (label 'R') (fill 'teal')))
 

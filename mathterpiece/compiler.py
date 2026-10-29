@@ -24,10 +24,10 @@ from mathterpiece.scene import (
     Bound,
     Canvas,
     Circle,
-    Compound,
     Free,
     Group,
     Inherit,
+    Motif,
     Obj,
     Real,
     Scene,
@@ -68,7 +68,7 @@ class FormSpec:
     positional: tuple[str, ...] = ()
 
 
-# Style attributes that an object inside a compound takes from the compound when it leaves them
+# Style attributes that an object inside a motif takes from the motif when it leaves them
 # unset. Opacity is not among them because it multiplies down the tree instead.
 INHERITED = ("fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity")
 LITERAL_NODES: dict[str, Callable[..., Node]] = {
@@ -81,7 +81,7 @@ LITERAL_NODES: dict[str, Callable[..., Node]] = {
 }
 
 # Heads the compiler reads specially. Everything else, like circle or dist, is standard library.
-SYNTAX = {"compound", "params", "repeat", "ref", "if", "cond", "else", "transform"}
+SYNTAX = {"motif", "params", "repeat", "ref", "if", "cond", "else", "transform"}
 
 FORMS = {
     "circle": FormSpec(Circle),
@@ -126,16 +126,16 @@ class SelfRef:
 
 
 @dataclass(frozen=True)
-class CompoundSpec:
+class MotifSpec:
     params: dict[str, Const]
     body: tuple[Node, ...]
-    # The compounds defined before this one, which is what its body's heads refer to.
-    compounds: dict[str, "CompoundSpec"]
+    # The motifs defined before this one, which is what its body's heads refer to.
+    motifs: dict[str, "MotifSpec"]
 
 
 Value = Const | Dyn | Spread | ObjRef | SelfRef
 Env = dict[str, "int | SelfRef"]
-# The names a compound body can see besides globals: its parameters and its members so far.
+# The names a motif body can see besides globals: its parameters and its members so far.
 Scope = dict[str, Value]
 
 
@@ -234,9 +234,9 @@ class _Compiler:
         self.toplevel: list[Obj] = []
         # Keyed by id, holding the object too: ids of freed objects get reused.
         self.parents: dict[int, tuple[Obj, str]] = {}
-        self.compounds: dict[str, CompoundSpec] = {}
+        self.motifs: dict[str, MotifSpec] = {}
         self.scopes: list[Scope] = []
-        # Where a definition lands before anything adopts it: the top level, or a compound body.
+        # Where a definition lands before anything adopts it: the top level, or a motif body.
         self.pools: list[list[Obj]] = [self.toplevel]
 
     def compile(self) -> Scene:
@@ -254,12 +254,12 @@ class _Compiler:
         return scene
 
     def add_builtins(self):
-        compounds = {
+        motifs = {
             f.items[1].value
             for f in self.forms
-            if _head(f) == "compound" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
+            if _head(f) == "motif" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
         }
-        taken = _defined_names(self.forms, FORMS.keys() | compounds)
+        taken = _defined_names(self.forms, FORMS.keys() | motifs)
         for names, value in BUILTINS:
             available = tuple(name for name in names if name not in taken)
             if not available:
@@ -286,10 +286,10 @@ class _Compiler:
         head = _head(form)
         if head == "repeat":
             return self.repeat(form, env, self.toplevel_item)
-        if head == "compound":
-            self.define_compound(form)
+        if head == "motif":
+            self.define_motif(form)
             return []
-        if head in FORMS or head in self.compounds:
+        if head in FORMS or head in self.motifs:
             return [self.definition(form, env)]
         if head is None:
             raise CompileError("expected a definition", form.pos)
@@ -337,22 +337,22 @@ class _Compiler:
             raise CompileError("a name must be known at compile time", node.pos)
         raise CompileError("expected a name: a string, an interpolated string, or _", node.pos)
 
-    def define_compound(self, form: Form):
+    def define_motif(self, form: Form):
         if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
-            raise CompileError("a compound needs a name given as a string", form.pos)
+            raise CompileError("a motif needs a name given as a string", form.pos)
         kind = form.items[1].value
         _check_not_syntax(kind, form.items[1].pos)
-        if kind in self.compounds:
-            raise CompileError(f"compound {kind!r} is already defined", form.items[1].pos)
+        if kind in self.motifs:
+            raise CompileError(f"motif {kind!r} is already defined", form.items[1].pos)
         rest = form.items[2:]
         params: dict[str, Const] = {}
         if rest and _head(rest[0]) == "params":
             params = self.params(rest[0])
             rest = rest[1:]
-        spec = CompoundSpec(params, tuple(rest), dict(self.compounds))
+        spec = MotifSpec(params, tuple(rest), dict(self.motifs))
         # Compiling the body once with the defaults reports its errors even if it is never used.
         self.body(spec, dict(params), None)
-        self.compounds[kind] = spec
+        self.motifs[kind] = spec
 
     def params(self, node: Node) -> dict[str, Const]:
         assert isinstance(node, Form)
@@ -362,8 +362,8 @@ class _Compiler:
             if name is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError("a parameter is (name default)", item.pos)
             _check_not_syntax(name, item.pos)
-            if name in attributes(Compound):
-                raise CompileError(f"every compound already has {name!r}", item.pos)
+            if name in attributes(Motif):
+                raise CompileError(f"every motif already has {name!r}", item.pos)
             if name in params:
                 raise CompileError(f"parameter {name!r} is given twice", item.pos)
             default = self.expr(item.items[1], {})
@@ -375,19 +375,19 @@ class _Compiler:
             params[name] = default
         return params
 
-    def body(self, spec: CompoundSpec, scope: Scope, owner: str | None) -> list[Visual]:
+    def body(self, spec: MotifSpec, scope: Scope, owner: str | None) -> list[Visual]:
         pool: list[Obj] = []
         self.scopes.append(scope)
         self.pools.append(pool)
-        outer, self.compounds = self.compounds, spec.compounds
+        outer, self.motifs = self.motifs, spec.motifs
         try:
             for node in spec.body:
                 pool.extend(self.body_item(node))
         finally:
-            self.compounds = outer
+            self.motifs = outer
             self.scopes.pop()
             self.pools.pop()
-        label = repr(owner) if owner is not None else "an anonymous compound"
+        label = repr(owner) if owner is not None else "an anonymous motif"
         members: list[Visual] = []
         for obj in pool:
             assert isinstance(obj, Visual)
@@ -400,30 +400,30 @@ class _Compiler:
         head = _head(node)
         if isinstance(node, Form) and head == "repeat":
             return self.repeat(node, env, self.body_item)
-        if isinstance(node, Form) and (head in FORMS or head in self.compounds):
+        if isinstance(node, Form) and (head in FORMS or head in self.motifs):
             obj = self.definition(node, env)
             if not isinstance(obj, Visual):
-                raise CompileError(f"{head} cannot be in the body of a compound", node.pos)
+                raise CompileError(f"{head} cannot be in the body of a motif", node.pos)
             return [obj]
         if head == "params":
-            raise CompileError("params must come right after the compound's name", node.pos)
-        if head == "compound":
-            raise CompileError("compounds are defined at the top level", node.pos)
-        raise CompileError("the body of a compound holds only definitions", node.pos)
+            raise CompileError("params must come right after the motif's name", node.pos)
+        if head == "motif":
+            raise CompileError("motifs are defined at the top level", node.pos)
+        raise CompileError("the body of a motif holds only definitions", node.pos)
 
-    def instance(self, form: Form, env: Env) -> Compound:
+    def instance(self, form: Form, env: Env) -> Motif:
         kind = _head(form)
         assert kind is not None
-        spec = self.compounds[kind]
+        spec = self.motifs[kind]
         name = self.object_name(form, env)
-        outer = env | {"self": SelfRef(Compound)}
-        attrs = attributes(Compound)
+        outer = env | {"self": SelfRef(Motif)}
+        attrs = attributes(Motif)
         values: dict[str, Any] = {}
         params: dict[str, Free | Bound] = {}
         written: dict[str, tuple[Free | Bound, Pos]] = {}
         for node in form.items[2:]:
             head = _head(node)
-            if head in FORMS or head in self.compounds or head == "repeat":
+            if head in FORMS or head in self.motifs or head == "repeat":
                 raise CompileError(f"an instance of {kind} takes no members", node.pos)
             if head is None or not isinstance(node, Form) or head == "members":
                 raise CompileError(f"unexpected value in {kind}", node.pos)
@@ -434,7 +434,7 @@ class _Compiler:
             if len(node.items) != 2:
                 raise CompileError(f"attribute {head!r} takes exactly one value", node.pos)
             if head in attrs:
-                values[attrs[head].name] = self.attr_value(Compound, head, node.items[1], outer)
+                values[attrs[head].name] = self.attr_value(Motif, head, node.items[1], outer)
                 written[head] = (values[attrs[head].name], node.pos)
             else:
                 params[head] = self.param_value(spec.params[head].type, node.items[1], outer)
@@ -450,7 +450,7 @@ class _Compiler:
                 Const(given.value, default.type) if isinstance(given, Free) else Dyn(default.type)
             )
         members = self.body(spec, scope, name)
-        obj = Compound(name=name, kind=kind, params=dict(params), members=members, **values)
+        obj = Motif(name=name, kind=kind, params=dict(params), members=members, **values)
         self.register(obj, form.pos)
         return obj
 
@@ -473,7 +473,7 @@ class _Compiler:
     def definition(self, form: Form, env: Env) -> Obj:
         head = _head(form)
         assert head is not None
-        if head in self.compounds:
+        if head in self.motifs:
             return self.instance(form, env)
         spec = FORMS[head]
         name = self.object_name(form, env)
@@ -543,7 +543,7 @@ class _Compiler:
             )
         if isinstance(node, Form) and head == "ref":
             node = self.ref_name(node, env)
-        elif isinstance(node, Form) and (head in FORMS or head in self.compounds):
+        elif isinstance(node, Form) and (head in FORMS or head in self.motifs):
             obj = self.definition(node, env)
             if not isinstance(obj, Visual):
                 raise CompileError(f"{head} cannot be a member of {container}", node.pos)
@@ -565,7 +565,7 @@ class _Compiler:
                     v.obj is value.obj for v in self.scopes[-1].values() if isinstance(v, ObjRef)
                 ):
                     raise CompileError(
-                        "a member in a compound body must be defined in that body", node.pos
+                        "a member in a motif body must be defined in that body", node.pos
                     )
                 if not issubclass(FORMS[container].cls, View):
                     self.adopt(value.obj, container, owner, node.pos)
@@ -675,8 +675,8 @@ class _Compiler:
         obj = current.obj
         if not isinstance(part, str):
             return self.index(obj, part, env)
-        if isinstance(obj, Compound):
-            params = self.compounds[obj.kind].params
+        if isinstance(obj, Motif):
+            params = self.motifs[obj.kind].params
             if part in params:
                 return Dyn(params[part].type)
             names = local_names(obj)
@@ -730,7 +730,7 @@ class _Compiler:
             return self.name(self.ref_name(node, env), env)
         if head == "transform":
             return self.transform(node, env)
-        if head in FORMS or head in self.compounds or head in ("repeat", "compound"):
+        if head in FORMS or head in self.motifs or head in ("repeat", "motif"):
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
         raise CompileError(f"unknown function {head!r}", node.pos)
 
