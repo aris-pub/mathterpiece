@@ -13,6 +13,7 @@ from mathterpiece.model import (
     Free,
     Group,
     Inherit,
+    Local,
     Model,
     Motif,
     Obj,
@@ -82,7 +83,7 @@ LITERAL_NODES: dict[str, Callable[..., Node]] = {
 }
 
 # Heads the compiler reads specially. Everything else, like circle or dist, is standard library.
-SYNTAX = {"motif", "params", "repeat", "ref", "if", "cond", "else", "transform"}
+SYNTAX = {"motif", "params", "repeat", "ref", "if", "cond", "else", "transform", "let"}
 
 FORMS = {
     "circle": FormSpec(Circle),
@@ -135,7 +136,23 @@ class MotifSpec:
 
 
 Value = Const | Dyn | Spread | ObjRef | SelfRef
-Env = dict[str, "int | SelfRef"]
+
+
+# A let name whose value is only known when drawing; stored expressions read the hidden value.
+@dataclass(frozen=True)
+class LetRef:
+    hidden: str
+    type: str
+
+
+# The let values created while one object is being defined, which that object will own.
+@dataclass
+class Frame:
+    locals: list[Local]
+    inside: bool = False
+
+
+Env = dict[str, "int | SelfRef | Const | LetRef"]
 # The names a motif body can see besides globals: its parameters and its members so far.
 Scope = dict[str, Value]
 
@@ -164,27 +181,32 @@ def _defined_names(nodes, heads) -> set[str]:
 
 # The attributes of its own object that an expression reads. A bare self is a point, as in
 # (dist self a), so it reads x and y.
-def _self_reads(node: Node | str) -> set[str]:
+# A let value read by name brings along what its own expression reads.
+def _self_reads(node: Node | str, lets: dict[str, set[str]]) -> set[str]:
     if isinstance(node, Name):
-        reads: set[str] = set()
+        reads: set[str] = set(lets.get(node.parts[0], set()) if len(node.parts) == 1 else ())
         if node.parts[0] == "self":
             second = node.parts[1] if len(node.parts) > 1 else None
             reads |= {second} if isinstance(second, str) else {"x", "y"}
         for part in node.parts[1:]:
             if not isinstance(part, str):
-                reads |= _self_reads(part)
+                reads |= _self_reads(part, lets)
         return reads
     if isinstance(node, (Form, InterpStrLit)):
         parts = node.items if isinstance(node, Form) else node.parts
-        return set().union(*(_self_reads(p) for p in parts))
+        return set().union(*(_self_reads(p, lets) for p in parts))
     return set()
 
 
 # Without forward references, objects cannot depend on each other in a loop, so a cycle can only
 # run through self, inside one object.
-def _check_cycles(name: str | None, given: dict[str, tuple[Any, Pos]]):
+def _check_cycles(name: str | None, given: dict[str, tuple[Any, Pos]], owned: list[Local]):
+    lets: dict[str, set[str]] = {}
+    for local in owned:
+        assert isinstance(local.value, Bound) and local.name is not None
+        lets[local.name] = _self_reads(local.value.expr, lets)
     reads = {
-        attr: _self_reads(value.expr) if isinstance(value, Bound) else set()
+        attr: _self_reads(value.expr, lets) if isinstance(value, Bound) else set()
         for attr, (value, _) in given.items()
     }
     done: set[str] = set()
@@ -240,6 +262,12 @@ class _Compiler:
         self.scopes: list[Scope] = []
         # Where a definition lands before anything adopts it: the top level, or a motif body.
         self.pools: list[list[Obj]] = [self.toplevel]
+        self.frames: list[Frame] = [Frame([])]
+        self.locals: list[Local] = []
+        # The bindings of each expression let, by node id, for writing its body into stored
+        # expressions. A let inside a repeat is overwritten each iteration, which is fine because
+        # each iteration stores its expressions before the next one starts.
+        self.lets: dict[int, dict] = {}
 
     def compile(self) -> Model:
         self.add_builtins()
@@ -254,9 +282,51 @@ class _Compiler:
             model.add(obj)
             for alias in names[1:]:
                 model.alias(alias, names[0])
-        for obj in self.toplevel:
+        self.settle(self.frames[0], None)
+        for obj in [*self.toplevel, *self.locals]:
             model.add(obj)
         return model
+
+    def settle(self, frame: Frame, owner: Obj | None):
+        for local in frame.locals:
+            local.owner = owner
+            local.inside = frame.inside
+            self.locals.append(local)
+
+    def bindings(self, node: Form, env: Env) -> Env:
+        if len(node.items) < 2 or not isinstance(node.items[1], Form):
+            raise CompileError("let takes a list of (name value) pairs", node.pos)
+        inner = dict(env)
+        for pair in node.items[1].items:
+            if not (isinstance(pair, Form) and len(pair.items) == 2):
+                raise CompileError("a let binding is (name value)", pair.pos)
+            key, expr = pair.items
+            if not (
+                isinstance(key, Name) and len(key.parts) == 1 and isinstance(key.parts[0], str)
+            ):
+                raise CompileError("a let binding needs a plain name", key.pos)
+            name = key.parts[0]
+            _check_not_syntax(name, key.pos)
+            value = self.value_arg(expr, inner)
+            if isinstance(value, Const):
+                inner[name] = value
+                continue
+            hidden = f"let:{len(self.names)}:{name}"
+            stored = self.resolve_refs(_substitute(expr, self.constants(inner), self.lets), inner)
+            local = Local(name=hidden, value=Bound(stored), type=value.type)
+            self.names[hidden] = local
+            self.frames[-1].locals.append(local)
+            inner[name] = LetRef(hidden, value.type)
+        return inner
+
+    def let_items[T](self, node: Form, env: Env, item: Callable[[Form, Env], list[T]]) -> list[T]:
+        inner = self.bindings(node, env)
+        out: list[T] = []
+        for child in node.items[2:]:
+            if not isinstance(child, Form):
+                raise CompileError("expected a form in the let body", child.pos)
+            out.extend(item(child, inner))
+        return out
 
     def add_builtins(self):
         motifs = {
@@ -291,6 +361,8 @@ class _Compiler:
         head = _head(form)
         if head == "repeat":
             return self.repeat(form, env, self.toplevel_item)
+        if head == "let":
+            return self.let_items(form, env, self.toplevel_item)
         if head == "motif":
             self.define_motif(form)
             return []
@@ -352,11 +424,14 @@ class _Compiler:
         name = self.object_name(form, env)
         pool: list[Obj] = []
         self.pools.append(pool)
+        frame = Frame([])
+        self.frames.append(frame)
         try:
             for node in form.items[2:]:
                 pool.extend(self.scene_item(node, env))
         finally:
             self.pools.pop()
+            self.frames.pop()
         label = repr(name) if name is not None else "the scene"
         members: list[Visual] = []
         for obj in pool:
@@ -364,6 +439,7 @@ class _Compiler:
             self.parents[id(obj)] = (obj, label)
             members.append(obj)
         root = Root(name=name, members=members)
+        self.settle(frame, root)
         self.register(root, form.pos)
         self.root = root
         return root
@@ -372,6 +448,8 @@ class _Compiler:
         head = _head(node)
         if isinstance(node, Form) and head == "repeat":
             return self.repeat(node, env, self.scene_item)
+        if isinstance(node, Form) and head == "let":
+            return self.let_items(node, env, self.scene_item)
         if isinstance(node, Form) and (head in FORMS or head in self.motifs):
             if head in FORMS and not issubclass(FORMS[head].cls, Visual):
                 raise CompileError(f"{head} goes outside the scene", node.pos)
@@ -396,7 +474,11 @@ class _Compiler:
             rest = rest[1:]
         spec = MotifSpec(params, tuple(rest), dict(self.motifs))
         # Compiling the body once with the defaults reports its errors even if it is never used.
-        self.body(spec, dict(params), None)
+        self.frames.append(Frame([], inside=True))
+        try:
+            self.body(spec, dict(params), None)
+        finally:
+            self.frames.pop()
         self.motifs[kind] = spec
 
     def params(self, node: Node) -> dict[str, Const]:
@@ -445,6 +527,8 @@ class _Compiler:
         head = _head(node)
         if isinstance(node, Form) and head == "repeat":
             return self.repeat(node, env, self.body_item)
+        if isinstance(node, Form) and head == "let":
+            return self.let_items(node, env, self.body_item)
         if isinstance(node, Form) and (head in FORMS or head in self.motifs):
             obj = self.definition(node, env)
             if not isinstance(obj, Visual):
@@ -466,6 +550,8 @@ class _Compiler:
         values: dict[str, Any] = {}
         params: dict[str, Free | Bound] = {}
         written: dict[str, tuple[Free | Bound, Pos]] = {}
+        attr_frame = Frame([])
+        self.frames.append(attr_frame)
         for node in form.items[2:]:
             head = _head(node)
             if head in FORMS or head in self.motifs or head == "repeat":
@@ -484,7 +570,8 @@ class _Compiler:
             else:
                 params[head] = self.param_value(spec.params[head].type, node.items[1], outer)
                 written[head] = (params[head], node.pos)
-        _check_cycles(name, written)
+        self.frames.pop()
+        _check_cycles(name, written, attr_frame.locals)
         if self.scopes:
             for attr in INHERITED:
                 values.setdefault(attrs[attr].name, Inherit())
@@ -494,8 +581,15 @@ class _Compiler:
             scope[pname] = (
                 Const(given.value, default.type) if isinstance(given, Free) else Dyn(default.type)
             )
-        members = self.body(spec, scope, name)
+        body_frame = Frame([], inside=True)
+        self.frames.append(body_frame)
+        try:
+            members = self.body(spec, scope, name)
+        finally:
+            self.frames.pop()
         obj = Motif(name=name, kind=kind, params=dict(params), members=members, **values)
+        self.settle(attr_frame, obj)
+        self.settle(body_frame, obj)
         self.register(obj, form.pos)
         return obj
 
@@ -505,12 +599,12 @@ class _Compiler:
             raise CompileError(f"expected {expected}, got {value.type}", node.pos)
         if isinstance(value, Const):
             return Free(_convert(value.value, expected))
-        return Bound(self.resolve_refs(_substitute(node, self.constants(env)), env))
+        return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
 
     # Loop variables and parameters known at compile time are written into stored expressions.
-    def constants(self, env: Env) -> dict[str, "int | SelfRef | Const"]:
+    def constants(self, env: Env) -> dict[str, "int | SelfRef | Const | LetRef"]:
         scope = self.scopes[-1] if self.scopes else {}
-        consts: dict[str, int | SelfRef | Const] = {
+        consts: dict[str, int | SelfRef | Const | LetRef] = {
             k: v for k, v in scope.items() if isinstance(v, Const)
         }
         return consts | env
@@ -522,6 +616,18 @@ class _Compiler:
             return self.instance(form, env)
         spec = FORMS[head]
         name = self.object_name(form, env)
+        frame = Frame([])
+        self.frames.append(frame)
+        try:
+            obj = self.library_definition(form, env, head, spec, name, frame)
+        finally:
+            self.frames.pop()
+        self.settle(frame, obj)
+        return obj
+
+    def library_definition(
+        self, form: Form, env: Env, head: str, spec: FormSpec, name: str | None, frame: Frame
+    ) -> Obj:
         env = env | {"self": SelfRef(spec.cls)}
         attrs = attributes(spec.cls)
         var = variadic(spec.cls)
@@ -557,7 +663,7 @@ class _Compiler:
                 raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
             values[attr] = self.attr_value(spec.cls, attr, node.items[1], env)
 
-        _check_cycles(name, {attr: (values[attr], positions[attr]) for attr in values})
+        _check_cycles(name, {a: (values[a], positions[a]) for a in values}, frame.locals)
         kwargs: dict[str, Any] = {attrs[attr].name: value for attr, value in values.items()}
         if self.scopes and issubclass(spec.cls, Styled):
             for attr in INHERITED:
@@ -584,6 +690,10 @@ class _Compiler:
         head = _head(node)
         if isinstance(node, Form) and head == "repeat":
             return self.repeat(
+                node, env, lambda n, e: self.member(n, e, container, settable, owner)
+            )
+        if isinstance(node, Form) and head == "let":
+            return self.let_items(
                 node, env, lambda n, e: self.member(n, e, container, settable, owner)
             )
         if isinstance(node, Form) and head == "ref":
@@ -643,7 +753,7 @@ class _Compiler:
             raise CompileError(f"expected {expected}, got {value.type}", node.pos)
         if isinstance(value, Const):
             return Free(_convert(value.value, expected))
-        return Bound(self.resolve_refs(_substitute(node, self.constants(env)), env))
+        return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
 
     def resolve_refs(self, node: Node, env: Env) -> Node:
         if isinstance(node, Form) and _head(node) == "ref":
@@ -697,6 +807,10 @@ class _Compiler:
             if rest:
                 raise CompileError(f"{first!r} is a number and has no attributes", node.pos)
             return Const(local, "int")
+        if isinstance(local, (Const, LetRef)):
+            if rest:
+                raise CompileError(f"{first!r} is a let value and has no attributes", node.pos)
+            return local if isinstance(local, Const) else Dyn(local.type)
         scope = self.scopes[-1] if self.scopes else {}
         if local is None and first in scope:
             current: Value = scope[first]
@@ -712,6 +826,8 @@ class _Compiler:
             current = self.access(current, part, env, node.pos)
         if isinstance(current, ObjRef) and isinstance(current.obj, Real):
             return Dyn("real")
+        if isinstance(current, ObjRef) and isinstance(current.obj, Local):
+            return Dyn(current.obj.type)
         return current
 
     def access(self, current: Value, part: str | Node, env: Env, pos: Pos) -> Value:
@@ -777,6 +893,12 @@ class _Compiler:
             return self.name(self.ref_name(node, env), env)
         if head == "transform":
             return self.transform(node, env)
+        if head == "let":
+            if len(node.items) != 3:
+                raise CompileError("let in an expression takes bindings and one value", node.pos)
+            inner = self.bindings(node, env)
+            self.lets[id(node)] = inner
+            return self.expr(node.items[2], inner)
         if head in FORMS or head in self.motifs or head in ("repeat", "motif"):
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
         raise CompileError(f"unknown function {head!r}", node.pos)
@@ -954,22 +1076,26 @@ class _Compiler:
 
 # Loop variables and known parameters do not exist after compiling, so bound expressions get
 # their values instead.
-def _substitute(node: Node, env: dict) -> Node:
+def _substitute(node: Node, env: dict, lets: dict[int, dict]) -> Node:
+    if isinstance(node, Form) and id(node) in lets:
+        return _substitute(node.items[2], env | lets[id(node)], lets)
     if isinstance(node, Name):
         first = node.parts[0]
         local = env.get(first) if isinstance(first, str) and len(node.parts) == 1 else None
         if isinstance(local, Const):
             return LITERAL_NODES[local.type](local.value, node.pos)
+        if isinstance(local, LetRef):
+            return Name((local.hidden,), node.pos)
         if isinstance(local, int):
             return IntLit(local, node.pos)
-        parts = tuple(p if isinstance(p, str) else _substitute(p, env) for p in node.parts)
+        parts = tuple(p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts)
         return Name(parts, node.pos)
     if isinstance(node, Form):
-        return Form(tuple(_substitute(item, env) for item in node.items), node.pos)
+        return Form(tuple(_substitute(item, env, lets) for item in node.items), node.pos)
     if isinstance(node, InterpStrLit):
         out: list[str | Name] = []
         for part in node.parts:
-            sub = part if isinstance(part, str) else _substitute(part, env)
+            sub = part if isinstance(part, str) else _substitute(part, env, lets)
             if isinstance(sub, (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)):
                 sub = str(sub.value)
             if isinstance(sub, str) and out and isinstance(out[-1], str):

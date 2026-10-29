@@ -1,18 +1,19 @@
 ; Seeds on a golden-angle spiral: seed i sits at radius (sqrt i), turned i times 137.508 degrees.
 (motif 'sunflower' (params (n 400) (spread 0.3) (size 0.11))
   (repeat i n
-    (circle _
-      (x (* spread (sqrt i) (cosd (* i 137.508))))
-      (y (* spread (sqrt i) (sind (* i 137.508))))
-      (r (* size (sqrt (+ 1 (/ i 80)))))
-      (opacity (+ 0.8 (* 0.2 (/ i n))))
-      (fill
-        (cond
-          ((< i (* 0.15 n)) '#9a4f16')
-          ((< i (* 0.4 n)) '#cf7424')
-          ((< i (* 0.7 n)) '#e89b2a')
-          ((< i (* 0.9 n)) '#f6c453')
-          (else '#fff1b8'))))))
+    (let ((a (* i 137.508)) (d (* spread (sqrt i))) (t (/ i n)))
+      (circle _
+        (x (* d (cosd a)))
+        (y (* d (sind a)))
+        (r (* size (sqrt (+ 1 (/ i 80)))))
+        (opacity (+ 0.8 (* 0.2 t)))
+        (fill
+          (cond
+            ((< t 0.15) '#9a4f16')
+            ((< t 0.4) '#cf7424')
+            ((< t 0.7) '#e89b2a')
+            ((< t 0.9) '#f6c453')
+            (else '#fff1b8')))))))
 
 ; Stacked translucent disks read as a soft glow that fades outward.
 (motif 'glow' (params (layers 14) (radius 8.0))
@@ -21,11 +22,12 @@
 
 (motif 'orbit' (params (count 12) (radius 5.0) (size 0.3))
   (repeat k count
-    (circle _
-      (x (* radius (cosd (/ (* 360 k) count))))
-      (y (* radius (sind (/ (* 360 k) count))))
-      (r (* size (+ 0.55 (* 0.45 (cosd (/ (* 1080 k) count))))))
-      (opacity (+ 0.4 (* 0.6 (sind (/ (* 180 k) count))))))))
+    (let ((a (/ (* 360 k) count)))
+      (circle _
+        (x (* radius (cosd a)))
+        (y (* radius (sind a)))
+        (r (* size (+ 0.55 (* 0.45 (cosd (* 3 a))))))
+        (opacity (+ 0.4 (* 0.6 (sind (/ a 2)))))))))
 
 ; A flower with its glow and an optional ring of moons, all centered on the flower.
 (motif 'bloom' (params (n 400) (spread 0.3) (size 0.11) (halo 8.5) (moons 0) (moon-radius 7.0))

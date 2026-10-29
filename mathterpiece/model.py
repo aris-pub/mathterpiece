@@ -39,6 +39,17 @@ class Real(Obj):
     value: Attr[float] = Free(0.0)
 
 
+# A let binding whose value is only known when drawing. It is computed once and every use reads
+# it. self in its expression is the owner; names resolve in the owner's motif body if inside is
+# set (the let sits directly in that body), and around the owner otherwise.
+@dataclass(kw_only=True)
+class Local(Obj):
+    value: Attr[object] = Free(None)
+    type: str = field(default="real", metadata={"internal": True})
+    owner: Obj | None = field(default=None, metadata={"internal": True})
+    inside: bool = field(default=False, metadata={"internal": True})
+
+
 @dataclass(kw_only=True)
 class Visual(Obj):
     pass

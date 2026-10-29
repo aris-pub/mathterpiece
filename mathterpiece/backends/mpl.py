@@ -16,6 +16,7 @@ from mathterpiece.model import (
     Circle,
     Group,
     Inherit,
+    Local,
     Model,
     Motif,
     Obj,
@@ -104,11 +105,12 @@ class Evaluator:
 
     # x and y read by an expression are given in the coordinates of the body the reader is in.
     def read(self, obj: Obj, attr: str, reader: Obj) -> Any:
+        _, around = self.context(reader)
         result = self.value(obj, attr)
         if attr in ("x", "y"):
             i = 0 if attr == "x" else 1
             here = self.origin(self.enclosing.get(id(obj)))[i]
-            there = self.origin(self.enclosing.get(id(reader)))[i]
+            there = self.origin(around)[i]
             result = result + here - there
         return result
 
@@ -128,12 +130,26 @@ class Evaluator:
         value = self.name(part, owner)
         return " ".join(str(v) for v in value) if isinstance(value, list) else str(value)
 
+    # Who self is for an expression owned by obj, and which motif body its names resolve in. A let
+    # value borrows both from the object that owns it.
+    def context(self, obj: Obj) -> tuple[Obj | None, Motif | None]:
+        if not isinstance(obj, Local):
+            return obj, self.enclosing.get(id(obj))
+        owner = obj.owner
+        if owner is None:
+            return None, None
+        if obj.inside:
+            assert isinstance(owner, Motif)
+            return None, owner
+        return owner, self.enclosing.get(id(owner))
+
     def name(self, node: Name, owner: Obj) -> Any:
         first, *rest = node.parts
         assert isinstance(first, str)
-        around = self.enclosing.get(id(owner))
+        me, around = self.context(owner)
         if first == "self":
-            obj = owner
+            assert me is not None
+            obj = me
         elif around is not None and first in around.params:
             return self.value(around, first)
         elif around is not None and first in self.locals[id(around)]:
@@ -154,7 +170,7 @@ class Evaluator:
                 return self.read(obj, part, owner)
             assert isinstance(obj, Group)
             obj = obj.members[self.eval(part, owner)]
-        return self.value(obj, "value") if isinstance(obj, Real) else obj
+        return self.value(obj, "value") if isinstance(obj, (Real, Local)) else obj
 
     def call(self, node: Form, owner: Obj) -> Any:
         head = node.items[0]

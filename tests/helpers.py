@@ -23,6 +23,8 @@ def with_scene(src: str) -> tuple[Form, ...]:
         head = _head(node)
         if head == "repeat" and isinstance(node, Form):
             return any(visual(item) for item in node.items[3:])
+        if head == "let" and isinstance(node, Form):
+            return any(visual(item) for item in node.items[2:])
         return head in VISUAL_FORMS or head in motifs
 
     inside = [f for f in forms if visual(f)]
