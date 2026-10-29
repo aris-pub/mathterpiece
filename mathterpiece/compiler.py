@@ -80,6 +80,9 @@ LITERAL_NODES: dict[str, Callable[..., Node]] = {
     "str": StrLit,
 }
 
+# Heads the compiler reads specially. Everything else, like circle or dist, is standard library.
+SYNTAX = {"compound", "params", "repeat", "ref", "if", "cond", "else", "transform"}
+
 FORMS = {
     "circle": FormSpec(Circle),
     "text": FormSpec(Text, ("value",)),
@@ -126,6 +129,8 @@ class SelfRef:
 class CompoundSpec:
     params: dict[str, Const]
     body: tuple[Node, ...]
+    # The compounds defined before this one, which is what its body's heads refer to.
+    compounds: dict[str, "CompoundSpec"]
 
 
 Value = Const | Dyn | Spread | ObjRef | SelfRef
@@ -154,6 +159,11 @@ def _defined_names(nodes, heads) -> set[str]:
                 names.add(node.items[1].value)
             names |= _defined_names(node.items, heads)
     return names
+
+
+def _check_not_syntax(name: str, pos: Pos):
+    if name in SYNTAX:
+        raise CompileError(f"{name!r} is part of the language and cannot be used as a name", pos)
 
 
 def _widens_to(src: str, dst: str) -> bool:
@@ -251,6 +261,7 @@ class _Compiler:
         var, count_node, *body = form.items[1:]
         if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
             raise CompileError("the repeat variable must be a name", var.pos)
+        _check_not_syntax(var.parts[0], var.pos)
         count = self.expr(count_node, env)
         if not (isinstance(count, Const) and isinstance(count.value, int) and count.type == "int"):
             raise CompileError(
@@ -272,12 +283,14 @@ class _Compiler:
             raise CompileError(f"{_head(form)} needs a name", form.pos)
         node = form.items[1]
         if isinstance(node, StrLit):
+            _check_not_syntax(node.value, node.pos)
             return node.value
         if isinstance(node, Name) and node.parts == ("_",):
             return None
         if isinstance(node, InterpStrLit):
             value = self.expr(node, env)
             if isinstance(value, Const):
+                _check_not_syntax(str(value.value), node.pos)
                 return str(value.value)
             raise CompileError("a name must be known at compile time", node.pos)
         raise CompileError("expected a name: a string, an interpolated string, or _", node.pos)
@@ -286,8 +299,7 @@ class _Compiler:
         if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
             raise CompileError("a compound needs a name given as a string", form.pos)
         kind = form.items[1].value
-        if kind in FORMS or kind in ("repeat", "ref", "compound", "params", "transform"):
-            raise CompileError(f"{kind!r} is already a form", form.items[1].pos)
+        _check_not_syntax(kind, form.items[1].pos)
         if kind in self.compounds:
             raise CompileError(f"compound {kind!r} is already defined", form.items[1].pos)
         rest = form.items[2:]
@@ -295,7 +307,7 @@ class _Compiler:
         if rest and _head(rest[0]) == "params":
             params = self.params(rest[0])
             rest = rest[1:]
-        spec = CompoundSpec(params, tuple(rest))
+        spec = CompoundSpec(params, tuple(rest), dict(self.compounds))
         # Compiling the body once with the defaults reports its errors even if it is never used.
         self.body(spec, dict(params), None)
         self.compounds[kind] = spec
@@ -307,6 +319,7 @@ class _Compiler:
             name = _head(item)
             if name is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError("a parameter is (name default)", item.pos)
+            _check_not_syntax(name, item.pos)
             if name in attributes(Compound):
                 raise CompileError(f"every compound already has {name!r}", item.pos)
             if name in params:
@@ -324,10 +337,12 @@ class _Compiler:
         pool: list[Obj] = []
         self.scopes.append(scope)
         self.pools.append(pool)
+        outer, self.compounds = self.compounds, spec.compounds
         try:
             for node in spec.body:
                 pool.extend(self.body_item(node))
         finally:
+            self.compounds = outer
             self.scopes.pop()
             self.pools.pop()
         label = repr(owner) if owner is not None else "an anonymous compound"

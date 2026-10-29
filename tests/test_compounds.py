@@ -103,7 +103,6 @@ class TestDefinition:
             ("(compound 'dot' (params r) (circle 'c'))", None),
             ("(compound 'dot' (circle 'c') (params (r 1)))", "params"),
             ("(compound 'dot' (params (r 1)) (params (s 1)))", "params"),
-            ("(compound 'circle' (circle 'c'))", "circle"),
             ("(compound 'dot' (circle 'c')) (compound 'dot' (circle 'c'))", "dot"),
             ("(compound dot (circle 'c'))", None),
             ("(compound 'dot' (circle 'c') (circle 'c'))", "'c'"),
@@ -116,6 +115,44 @@ class TestDefinition:
     )
     def test_invalid(self, src, match):
         error(src, match)
+
+
+SYNTAX = ["compound", "params", "repeat", "ref", "if", "cond", "else", "transform"]
+
+
+class TestLibraryForms:
+    def test_compound_hides_a_library_form(self):
+        c = get(scene("(compound 'circle' (text 't' 'hi')) (circle 'c')"), "c", Compound)
+        assert c.kind == "circle"
+
+    def test_library_form_is_used_before_the_compound(self):
+        scn = scene("(circle 'a') (compound 'circle' (text 't' 'hi')) (circle 'b')")
+        assert isinstance(scn["a"], Circle)
+        assert isinstance(scn["b"], Compound)
+
+    def test_body_of_the_compound_uses_the_library_form(self):
+        d = get(scene("(compound 'circle' (circle 'c' (r 2))) (circle 'd')"), "d", Compound)
+        assert member(d, "c", Circle).r == Free(2.0)
+
+    @pytest.mark.parametrize("name", SYNTAX)
+    def test_syntax_names_are_not_compound_names(self, name):
+        error(f"(compound '{name}' (circle 'c'))", match=name)
+
+    @pytest.mark.parametrize("name", SYNTAX)
+    def test_syntax_names_are_not_object_names(self, name):
+        error(f"(circle '{name}')", match=name)
+
+    @pytest.mark.parametrize("name", SYNTAX)
+    def test_syntax_names_are_not_interpolated_object_names(self, name):
+        error(f"(circle $'{name}')", match=name)
+
+    @pytest.mark.parametrize("name", SYNTAX)
+    def test_syntax_names_are_not_parameter_names(self, name):
+        error(f"(compound 'dot' (params ({name} 1)) (circle 'c'))", match=name)
+
+    @pytest.mark.parametrize("name", SYNTAX)
+    def test_syntax_names_are_not_loop_variables(self, name):
+        error(f"(repeat {name} 2 (circle _))", match=name)
 
 
 class TestInstance:
