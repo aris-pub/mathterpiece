@@ -3,16 +3,15 @@ import dataclasses
 import pytest
 
 from mathterpiece.matrix import IDENTITY
-from mathterpiece.nodes import Form, Name
-from mathterpiece.scene import (
+from mathterpiece.model import (
     Bound,
     Canvas,
     Circle,
     DuplicateNameError,
     Free,
     Group,
+    Model,
     Real,
-    Scene,
     Styled,
     Text,
     TreeError,
@@ -21,6 +20,7 @@ from mathterpiece.scene import (
     attributes,
     variadic,
 )
+from mathterpiece.nodes import Form, Name
 
 TWICE_DISK_R = Form((Name(("*",)), Name(("disk", "r"))))
 
@@ -175,9 +175,9 @@ def sample():
     return teal, red, circles, k, cnv
 
 
-class TestSceneAdd:
+class TestModelAdd:
     def test_lookup_by_name(self):
-        scn = Scene()
+        scn = Model()
         disk = Circle(name="disk")
         scn.add(disk)
         assert scn["disk"] is disk
@@ -185,13 +185,13 @@ class TestSceneAdd:
 
     def test_missing_name_raises_key_error(self):
         with pytest.raises(KeyError):
-            Scene()["nope"]
+            Model()["nope"]
 
     def test_missing_name_is_not_contained(self):
-        assert "nope" not in Scene()
+        assert "nope" not in Model()
 
     def test_iterates_in_addition_order(self):
-        scn = Scene()
+        scn = Model()
         a, b, c = Circle(name="a"), Real(name="b"), Canvas(name="c")
         for obj in (b, c, a):
             scn.add(obj)
@@ -199,14 +199,14 @@ class TestSceneAdd:
 
     def test_len_counts_toplevel_items(self):
         teal, red, circles, k, cnv = sample()
-        scn = Scene()
+        scn = Model()
         scn.add(circles)
         scn.add(k)
         assert len(scn) == 2
 
     def test_nested_members_are_indexed(self):
         teal, red, circles, k, cnv = sample()
-        scn = Scene()
+        scn = Model()
         scn.add(circles)
         assert scn["teal_c"] is teal
         assert scn["red_c"] is red
@@ -214,28 +214,28 @@ class TestSceneAdd:
     def test_deeply_nested_members_are_indexed(self):
         inner = Circle(name="inner")
         g = Group(name="g", members=[Group(name="h", members=[inner])])
-        scn = Scene()
+        scn = Model()
         scn.add(g)
         assert scn["inner"] is inner
         assert scn["h"] is g.members[0]
 
     def test_nested_members_are_not_toplevel(self):
         teal, red, circles, k, cnv = sample()
-        scn = Scene()
+        scn = Model()
         scn.add(circles)
         assert list(scn) == [circles]
 
     def test_canvas_members_come_from_the_scene(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(disk)
         scn.add(Canvas(name="cnv", members=[disk]))
         assert scn["disk"] is disk
 
 
-class TestSceneViewsAndObjects:
+class TestModelViewsAndObjects:
     def test_views_and_objects_filter_in_order(self):
-        scn = Scene()
+        scn = Model()
         a, cnv1, b, cnv2 = Circle(name="a"), Canvas(name="c1"), Real(name="b"), Canvas(name="c2")
         for obj in (a, cnv1, b, cnv2):
             scn.add(obj)
@@ -243,34 +243,34 @@ class TestSceneViewsAndObjects:
         assert scn.objects == [a, b]
 
     def test_views_are_in_the_index(self):
-        scn = Scene()
+        scn = Model()
         cnv = Canvas(name="cnv")
         scn.add(cnv)
         assert scn["cnv"] is cnv
 
     def test_views_and_objects_are_read_only(self):
-        scn = Scene()
+        scn = Model()
         with pytest.raises(AttributeError):
             scn.views = []  # ty: ignore[invalid-assignment]
         with pytest.raises(AttributeError):
             scn.objects = []  # ty: ignore[invalid-assignment]
 
     def test_changing_the_returned_list_does_not_change_the_scene(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Circle(name="a"))
         scn.objects.clear()
         assert len(scn.objects) == 1
 
 
-class TestSceneDuplicates:
+class TestModelDuplicates:
     def test_duplicate_toplevel_name(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Circle(name="a"))
         with pytest.raises(DuplicateNameError):
             scn.add(Real(name="a"))
 
     def test_duplicate_with_nested_name(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Group(name="g", members=[Circle(name="a")]))
         with pytest.raises(DuplicateNameError):
             scn.add(Circle(name="a"))
@@ -278,10 +278,10 @@ class TestSceneDuplicates:
     def test_duplicate_inside_one_tree(self):
         g = Group(name="g", members=[Circle(name="a"), Circle(name="a")])
         with pytest.raises(DuplicateNameError):
-            Scene().add(g)
+            Model().add(g)
 
     def test_failed_add_changes_nothing(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Circle(name="a"))
         with pytest.raises(DuplicateNameError):
             scn.add(Group(name="g", members=[Circle(name="b"), Circle(name="a")]))
@@ -291,7 +291,7 @@ class TestSceneDuplicates:
 
     def test_same_object_in_canvas_and_toplevel(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(disk)
         scn.add(Canvas(name="cnv", members=[disk]))
         assert scn["disk"] is disk
@@ -299,36 +299,36 @@ class TestSceneDuplicates:
 
     def test_same_object_in_a_group_and_a_canvas(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(Group(name="g", members=[disk]))
         scn.add(Canvas(name="cnv", members=[disk]))
         assert scn["disk"] is disk
 
     def test_adding_the_same_toplevel_object_twice(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(disk)
         with pytest.raises(TreeError):
             scn.add(disk)
 
     def test_error_names_the_duplicate(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Circle(name="teal_c"))
         with pytest.raises(DuplicateNameError, match="teal_c"):
             scn.add(Circle(name="teal_c"))
 
 
-class TestSceneTree:
+class TestModelTree:
     def test_object_in_two_groups(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(Group(name="g", members=[disk]))
         with pytest.raises(TreeError, match="disk"):
             scn.add(Group(name="h", members=[disk]))
 
     def test_toplevel_object_in_a_group(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(disk)
         with pytest.raises(TreeError, match="disk"):
             scn.add(Group(name="g", members=[disk]))
@@ -336,18 +336,18 @@ class TestSceneTree:
     def test_object_twice_in_one_group(self):
         disk = Circle(name="disk")
         with pytest.raises(TreeError):
-            Scene().add(Group(name="g", members=[disk, disk]))
+            Model().add(Group(name="g", members=[disk, disk]))
 
     def test_anonymous_object_in_two_groups(self):
         dot = Circle(name=None)
-        scn = Scene()
+        scn = Model()
         scn.add(Group(name="g", members=[dot]))
         with pytest.raises(TreeError):
             scn.add(Group(name="h", members=[dot]))
 
     def test_two_canvases_show_the_same_object(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(disk)
         scn.add(Canvas(name="a", members=[disk]))
         scn.add(Canvas(name="b", members=[disk]))
@@ -356,7 +356,7 @@ class TestSceneTree:
     def test_canvas_shows_an_object_and_its_group(self):
         disk = Circle(name="disk")
         g = Group(name="g", members=[disk])
-        scn = Scene()
+        scn = Model()
         scn.add(g)
         scn.add(Canvas(name="cnv", members=[disk, g]))
         assert len(scn) == 2
@@ -364,11 +364,11 @@ class TestSceneTree:
     @pytest.mark.parametrize("name", ["disk", None])
     def test_canvas_cannot_show_an_object_outside_the_scene(self, name):
         with pytest.raises(TreeError):
-            Scene().add(Canvas(name="cnv", members=[Circle(name=name)]))
+            Model().add(Canvas(name="cnv", members=[Circle(name=name)]))
 
     def test_failed_add_changes_nothing(self):
         disk = Circle(name="disk")
-        scn = Scene()
+        scn = Model()
         scn.add(Group(name="g", members=[disk]))
         with pytest.raises(TreeError):
             scn.add(Group(name="h", members=[Circle(name="other"), disk]))
@@ -376,9 +376,9 @@ class TestSceneTree:
         assert "other" not in scn
 
 
-class TestSceneAlias:
+class TestModelAlias:
     def test_alias_points_to_the_same_object(self):
-        scn = Scene()
+        scn = Model()
         pi = Real(name="pi", value=Free(3.141592653589793))
         scn.add(pi)
         scn.alias("π", "pi")
@@ -386,31 +386,31 @@ class TestSceneAlias:
         assert "π" in scn
 
     def test_alias_does_not_add_a_toplevel_item(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Real(name="pi"))
         scn.alias("π", "pi")
         assert len(scn) == 1
         assert scn.objects == [scn["pi"]]
 
     def test_alias_of_a_nested_object(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Group(name="g", members=[Circle(name="a")]))
         scn.alias("b", "a")
         assert scn["b"] is scn["a"]
 
     def test_alias_to_missing_name(self):
         with pytest.raises(KeyError):
-            Scene().alias("π", "pi")
+            Model().alias("π", "pi")
 
     def test_alias_name_already_taken(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Real(name="pi"))
         scn.add(Real(name="tau"))
         with pytest.raises(DuplicateNameError):
             scn.alias("tau", "pi")
 
     def test_adding_an_object_with_an_alias_name(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Real(name="pi"))
         scn.alias("π", "pi")
         with pytest.raises(DuplicateNameError):
@@ -422,14 +422,14 @@ class TestAnonymous:
         assert Circle(name=None).name is None
 
     def test_anonymous_toplevel_object_is_kept_in_order(self):
-        scn = Scene()
+        scn = Model()
         anon = Circle(name=None)
         scn.add(Circle(name="a"))
         scn.add(anon)
         assert list(scn)[1] is anon
 
     def test_anonymous_objects_are_not_indexed(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Circle(name=None))
         scn.add(Circle(name=None))
         assert len(scn) == 2
@@ -437,7 +437,7 @@ class TestAnonymous:
     def test_anonymous_member_reachable_by_position(self):
         anon = Circle(name=None)
         g = Group(name="g", members=[anon, Circle(name="b")])
-        scn = Scene()
+        scn = Model()
         scn.add(g)
         group = scn["g"]
         assert isinstance(group, Group)
@@ -446,6 +446,6 @@ class TestAnonymous:
 
     def test_named_members_of_anonymous_group_are_indexed(self):
         a = Circle(name="a")
-        scn = Scene()
+        scn = Model()
         scn.add(Group(name=None, members=[a]))
         assert scn["a"] is a

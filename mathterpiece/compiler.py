@@ -6,6 +6,26 @@ from fractions import Fraction
 from typing import Any, get_args
 
 from mathterpiece.matrix import Matrix, compose
+from mathterpiece.model import (
+    Bound,
+    Canvas,
+    Circle,
+    Free,
+    Group,
+    Inherit,
+    Model,
+    Motif,
+    Obj,
+    Real,
+    Root,
+    Styled,
+    Text,
+    View,
+    Visual,
+    attributes,
+    local_names,
+    variadic,
+)
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
@@ -20,26 +40,6 @@ from mathterpiece.nodes import (
     StrLit,
 )
 from mathterpiece.parse import ParseError, parse_name
-from mathterpiece.scene import (
-    Bound,
-    Canvas,
-    Circle,
-    Free,
-    Group,
-    Inherit,
-    Motif,
-    Obj,
-    Real,
-    Root,
-    Scene,
-    Styled,
-    Text,
-    View,
-    Visual,
-    attributes,
-    local_names,
-    variadic,
-)
 from mathterpiece.stdlib import STDLIB, divide, power
 from mathterpiece.stdlib import call as stdlib_call
 
@@ -140,7 +140,7 @@ Env = dict[str, "int | SelfRef"]
 Scope = dict[str, Value]
 
 
-def compile_scene(forms: tuple[Form, ...]) -> Scene:
+def compile_model(forms: tuple[Form, ...]) -> Model:
     return _Compiler(forms).compile()
 
 
@@ -241,7 +241,7 @@ class _Compiler:
         # Where a definition lands before anything adopts it: the top level, or a motif body.
         self.pools: list[list[Obj]] = [self.toplevel]
 
-    def compile(self) -> Scene:
+    def compile(self) -> Model:
         self.add_builtins()
         for form in self.forms:
             self.toplevel.extend(self.toplevel_item(form, {}))
@@ -249,14 +249,14 @@ class _Compiler:
             raise CompileError(
                 "a file needs exactly one scene, even an empty one: (scene _)", Pos(1, 1)
             )
-        scene = Scene()
+        model = Model()
         for obj, names in self.builtins:
-            scene.add(obj)
+            model.add(obj)
             for alias in names[1:]:
-                scene.alias(alias, names[0])
+                model.alias(alias, names[0])
         for obj in self.toplevel:
-            scene.add(obj)
-        return scene
+            model.add(obj)
+        return model
 
     def add_builtins(self):
         motifs = {

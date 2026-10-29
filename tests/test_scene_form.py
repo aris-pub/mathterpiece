@@ -1,13 +1,13 @@
 import pytest
 
-from mathterpiece.compiler import CompileError, compile_scene
+from mathterpiece.compiler import CompileError, compile_model
+from mathterpiece.model import Canvas, Circle, Group, Real, Root
 from mathterpiece.nodes import Pos
 from mathterpiece.parse import parse
-from mathterpiece.scene import Canvas, Circle, Group, Real, Root
 
 
 def compiled(src):
-    return compile_scene(parse(src))
+    return compile_model(parse(src))
 
 
 def error(src, match=None):

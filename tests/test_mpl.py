@@ -7,16 +7,16 @@ import pytest
 from helpers import with_scene
 
 from mathterpiece.backends.mpl import EvalError, Evaluator, render
-from mathterpiece.compiler import compile_scene
+from mathterpiece.compiler import compile_model
+from mathterpiece.model import Bound, Circle, Model
 from mathterpiece.nodes import Name
 from mathterpiece.parse import parse
-from mathterpiece.scene import Bound, Circle, Scene
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
 def scene(src):
-    return compile_scene(with_scene(src))
+    return compile_model(with_scene(src))
 
 
 def value(src, name, attr, seed=0):
@@ -101,7 +101,7 @@ class TestSelf:
         assert Evaluator(scn, random.Random(0)).value(anon, "y") == 3.0
 
     def test_cycle_in_a_scene_built_without_the_compiler(self):
-        scn = Scene()
+        scn = Model()
         scn.add(Circle(name="c", x=Bound(Name(("self", "y"))), y=Bound(Name(("self", "x")))))
         with pytest.raises(EvalError, match="cycle"):
             Evaluator(scn, random.Random(0)).value(scn["c"], "x")
@@ -170,13 +170,13 @@ class TestText:
 
 class TestUnevaluatedExpression:
     def test_ratio_arithmetic_stays_exact_until_stored(self):
-        scn = Scene()
+        scn = Model()
         c = Circle(name="c", r=Bound(parse("(f (/ 1 3))")[0].items[1]))
         scn.add(c)
         assert Evaluator(scn, random.Random(0)).value(c, "r") == float(Fraction(1, 3))
 
     def test_unknown_name_at_evaluation(self):
-        scn = Scene()
+        scn = Model()
         c = Circle(name="c", r=Bound(Name(("nope",))))
         scn.add(c)
         with pytest.raises(EvalError, match="nope"):
@@ -186,7 +186,7 @@ class TestUnevaluatedExpression:
 class TestRender:
     @pytest.mark.parametrize("example", sorted(EXAMPLES.glob("*.mtp")), ids=lambda p: p.name)
     def test_examples_render(self, example):
-        figures = render(compile_scene(parse(example.read_text())), random.Random(0))
+        figures = render(compile_model(parse(example.read_text())), random.Random(0))
         assert len(figures) == 1
 
     def test_view_box_sets_the_axes_limits_with_y_up(self):
@@ -371,7 +371,7 @@ class TestDist:
 
 class TestDotsExample:
     def test_each_dot_is_colored_by_the_circle_it_touches(self):
-        scn = compile_scene(parse((EXAMPLES / "dots.mtp").read_text()))
+        scn = compile_model(parse((EXAMPLES / "dots.mtp").read_text()))
         ev = Evaluator(scn, random.Random(0))
         teal, red = scn["teal_c"], scn["red_c"]
         colors = set()

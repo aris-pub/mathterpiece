@@ -4,17 +4,17 @@ from pathlib import Path
 import pytest
 from helpers import user_objects, with_scene
 
-from mathterpiece.compiler import CompileError, compile_scene
+from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.matrix import IDENTITY
+from mathterpiece.model import Bound, Canvas, Circle, Free, Group, Real, Text
 from mathterpiece.nodes import Form, InterpStrLit, IntLit, Name, Pos, StrLit
 from mathterpiece.parse import parse
-from mathterpiece.scene import Bound, Canvas, Circle, Free, Group, Real, Text
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
 def scene(src):
-    return compile_scene(with_scene(src))
+    return compile_model(with_scene(src))
 
 
 def error(src, match=None):
@@ -607,7 +607,7 @@ class TestRepeat:
 
 class TestExamples:
     def test_dots(self):
-        scn = compile_scene(parse((EXAMPLES / "dots.mtp").read_text()))
+        scn = compile_model(parse((EXAMPLES / "dots.mtp").read_text()))
         teal, red = get(scn, "circles", Group).members
         assert isinstance(teal, Circle) and isinstance(red, Circle)
         assert (teal.name, teal.r, teal.fill) == ("teal_c", Free(3.5), Free("none"))
@@ -624,7 +624,7 @@ class TestExamples:
 
     @pytest.mark.parametrize("example", sorted(EXAMPLES.glob("*.mtp")), ids=lambda p: p.name)
     def test_examples_compile(self, example):
-        compile_scene(parse(example.read_text()))
+        compile_model(parse(example.read_text()))
 
 
 class TestCycles:

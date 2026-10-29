@@ -10,6 +10,21 @@ from matplotlib.transforms import Affine2D, Transform
 
 from mathterpiece.compiler import COMPARISONS
 from mathterpiece.matrix import compose
+from mathterpiece.model import (
+    Bound,
+    Canvas,
+    Circle,
+    Group,
+    Inherit,
+    Model,
+    Motif,
+    Obj,
+    Real,
+    Text,
+    Visual,
+    attributes,
+    local_names,
+)
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
@@ -22,21 +37,6 @@ from mathterpiece.nodes import (
     RealLit,
     StrLit,
 )
-from mathterpiece.scene import (
-    Bound,
-    Canvas,
-    Circle,
-    Group,
-    Inherit,
-    Motif,
-    Obj,
-    Real,
-    Scene,
-    Text,
-    Visual,
-    attributes,
-    local_names,
-)
 from mathterpiece.stdlib import STDLIB, divide, power, translate
 from mathterpiece.stdlib import call as stdlib_call
 
@@ -48,15 +48,15 @@ class EvalError(Exception):
 
 
 class Evaluator:
-    def __init__(self, scene: Scene, rng: random.Random | None = None):
-        self.scene = scene
+    def __init__(self, model: Model, rng: random.Random | None = None):
+        self.model = model
         self.rng = rng or random.Random()
         self.cache: dict[tuple[int, str], Any] = {}
         self.active: set[tuple[int, str]] = set()
         # The innermost motif around each object, whose body the object's expressions live in.
         self.enclosing: dict[int, Motif | None] = {}
         self.locals: dict[int, dict[str, Obj]] = {}
-        stack: list[tuple[Obj, Motif | None]] = [(o, None) for o in scene.objects]
+        stack: list[tuple[Obj, Motif | None]] = [(o, None) for o in model.objects]
         while stack:
             obj, around = stack.pop()
             self.enclosing[id(obj)] = around
@@ -138,8 +138,8 @@ class Evaluator:
             return self.value(around, first)
         elif around is not None and first in self.locals[id(around)]:
             obj = self.locals[id(around)][first]
-        elif first in self.scene:
-            obj = self.scene[first]
+        elif first in self.model:
+            obj = self.model[first]
         else:
             raise EvalError(f"undefined name {first!r}")
         for part in rest:
@@ -219,10 +219,10 @@ class Evaluator:
         raise EvalError(f"unknown function {op!r}")
 
 
-def render(scene: Scene, rng: random.Random | None = None) -> list[tuple[Figure, Axes]]:
-    ev = Evaluator(scene, rng)
+def render(model: Model, rng: random.Random | None = None) -> list[tuple[Figure, Axes]]:
+    ev = Evaluator(model, rng)
     figures = []
-    for view in scene.views:
+    for view in model.views:
         assert isinstance(view, Canvas)
         fig, ax = plt.subplots()
         x, y = ev.value(view, "view-x"), ev.value(view, "view-y")

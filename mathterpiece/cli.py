@@ -5,7 +5,7 @@ import sys
 import matplotlib.pyplot as plt
 
 from mathterpiece.backends.mpl import EvalError, render
-from mathterpiece.compiler import CompileError, compile_scene
+from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.log import setup
 from mathterpiece.parse import ParseError, parse
 
@@ -24,9 +24,9 @@ def main(argv: list[str] | None = None):
     with open(args.file) as f:
         src: str = f.read()
     try:
-        scene = compile_scene(parse(src))
+        model = compile_model(parse(src))
         logger.info("compiled %s", args.file)
-        render(scene)
+        render(model)
     except (ParseError, CompileError) as e:
         print(f"{args.file}:{e}", file=sys.stderr)
         sys.exit(1)

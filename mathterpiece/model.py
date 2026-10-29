@@ -146,7 +146,7 @@ def _label(obj: Obj) -> str:
     return repr(obj.name) if obj.name is not None else "an anonymous object"
 
 
-class Scene:
+class Model:
     def __init__(self):
         self._items: list[Obj] = []
         self._index: dict[str, Obj] = {}
@@ -161,7 +161,7 @@ class Scene:
         while stack:
             thing, is_global = stack.pop()
             if id(thing) in self._tree or id(thing) in seen:
-                raise TreeError(f"{_label(thing)} already belongs to the scene")
+                raise TreeError(f"{_label(thing)} already belongs to the model")
             seen.add(id(thing))
             if thing.name is not None and is_global:
                 if thing.name in self._index or thing.name in new:
@@ -173,7 +173,7 @@ class Scene:
         if isinstance(obj, Container) and isinstance(obj, View):
             for member in obj.members:
                 if id(member) not in self._tree:
-                    raise TreeError(f"{_label(member)} is shown but not in the scene")
+                    raise TreeError(f"{_label(member)} is shown but not in the model")
         self._index.update(new)
         self._tree |= seen
         self._items.append(obj)

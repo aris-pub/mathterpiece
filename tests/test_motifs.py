@@ -5,27 +5,27 @@ from helpers import user_objects, with_scene
 from matplotlib.colors import to_rgba
 
 from mathterpiece.backends.mpl import Evaluator, render
-from mathterpiece.compiler import CompileError, compile_scene
-from mathterpiece.nodes import Name
-from mathterpiece.scene import (
+from mathterpiece.compiler import CompileError, compile_model
+from mathterpiece.model import (
     Bound,
     Circle,
     Free,
     Group,
     Inherit,
+    Model,
     Motif,
-    Scene,
     Styled,
     attributes,
     local_names,
 )
+from mathterpiece.nodes import Name
 
 DOT = "(motif 'dot' (params (r 1.0)) (circle 'c' (r r)))"
 BUILTINS = {"pi", "π", "tau", "τ", "euler", "infty", "∞"}
 
 
 def scene(src):
-    return compile_scene(with_scene(src))
+    return compile_model(with_scene(src))
 
 
 def error(src, match=None):
@@ -56,7 +56,7 @@ class TestSceneModel:
     def test_member_names_are_not_global(self):
         a = Motif(name="a", kind="dot", members=[Circle(name="c")])
         b = Motif(name="b", kind="dot", members=[Circle(name="c")])
-        scn = Scene()
+        scn = Model()
         scn.add(a)
         scn.add(b)
         assert "a" in scn
@@ -70,7 +70,7 @@ class TestSceneModel:
 
     def test_one_parent_inside_motifs(self):
         c = Circle(name="c")
-        scn = Scene()
+        scn = Model()
         scn.add(Motif(name="a", kind="dot", members=[c]))
         with pytest.raises(ValueError):
             scn.add(Group(name="g", members=[c]))

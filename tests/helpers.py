@@ -1,7 +1,7 @@
 from mathterpiece.compiler import _head
+from mathterpiece.model import Root
 from mathterpiece.nodes import Form, Name
 from mathterpiece.parse import parse
-from mathterpiece.scene import Root
 
 VISUAL_FORMS = {"circle", "text", "group"}
 
