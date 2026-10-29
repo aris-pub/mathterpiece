@@ -83,7 +83,19 @@ LITERAL_NODES: dict[str, Callable[..., Node]] = {
 }
 
 # Heads the compiler reads specially. Everything else, like circle or dist, is standard library.
-SYNTAX = {"motif", "params", "repeat", "ref", "if", "cond", "else", "transform", "let", "const"}
+SYNTAX = {
+    "motif",
+    "params",
+    "repeat",
+    "ref",
+    "if",
+    "cond",
+    "else",
+    "transform",
+    "let",
+    "const",
+    "func",
+}
 
 FORMS = {
     "circle": FormSpec(Circle),
@@ -145,6 +157,23 @@ class LetRef:
     type: str
 
 
+# An object passed to a function, and the call site's name for it, written in for the parameter.
+@dataclass(frozen=True)
+class ArgRef:
+    value: "ObjRef | SelfRef"
+    node: Name
+
+
+@dataclass(frozen=True)
+class FuncSpec:
+    # A parameter without a default takes an object.
+    params: dict[str, "Const | None"]
+    body: Node
+    # The functions and consts defined before this one, which is what its body sees.
+    funcs: dict[str, "FuncSpec"]
+    consts: dict[str, "Const"]
+
+
 # The let values created while one object is being defined, which that object will own.
 @dataclass
 class Frame:
@@ -152,7 +181,7 @@ class Frame:
     inside: bool = False
 
 
-Env = dict[str, "int | SelfRef | Const | LetRef"]
+Env = dict[str, "int | SelfRef | Const | Dyn | LetRef | ArgRef"]
 # The names a motif body can see besides globals: its parameters and its members so far.
 Scope = dict[str, Value]
 
@@ -260,15 +289,19 @@ class _Compiler:
         self.motifs: dict[str, MotifSpec] = {}
         self.root: Root | None = None
         self.consts: dict[str, Const] = {}
+        self.funcs: dict[str, FuncSpec] = {}
+        self.builtin_names: set[str] = set()
+        # How many function bodies are being compiled; inside one, values and objects are hidden.
+        self.in_func = 0
         self.scopes: list[Scope] = []
         # Where a definition lands before anything adopts it: the top level, or a motif body.
         self.pools: list[list[Obj]] = [self.toplevel]
         self.frames: list[Frame] = [Frame([])]
         self.locals: list[Local] = []
-        # The bindings of each expression let, by node id, for writing its body into stored
-        # expressions. A let inside a repeat is overwritten each iteration, which is fine because
-        # each iteration stores its expressions before the next one starts.
-        self.lets: dict[int, dict] = {}
+        # By node id: the bindings of each expression let, or the written-in body of each function
+        # call, for writing them into stored expressions. A node inside a repeat is overwritten
+        # each iteration, which is fine because each iteration stores its expressions first.
+        self.lets: dict[int, dict | Node] = {}
 
     def compile(self) -> Model:
         self.add_builtins()
@@ -342,6 +375,7 @@ class _Compiler:
                 continue
             obj = Real(name=available[0], value=Free(value))
             self.builtins.append((obj, available))
+            self.builtin_names |= set(available)
             for name in available:
                 self.names[name] = obj
 
@@ -369,6 +403,9 @@ class _Compiler:
             return []
         if head == "const":
             self.define_const(form, env)
+            return []
+        if head == "func":
+            self.define_func(form)
             return []
         if head == "scene":
             return [self.scene_form(form, env)]
@@ -481,13 +518,117 @@ class _Compiler:
             )
         self.consts[name] = value
 
+    def define_func(self, form: Form):
+        if len(form.items) < 3 or not isinstance(form.items[1], StrLit):
+            raise CompileError("func takes a name given as a string and a body", form.pos)
+        name = form.items[1].value
+        _check_not_syntax(name, form.items[1].pos)
+        if name in FORMS:
+            raise CompileError(f"{name!r} is already a form", form.items[1].pos)
+        if name in self.motifs or name in self.funcs:
+            raise CompileError(f"{name!r} is already defined", form.items[1].pos)
+        rest = form.items[2:]
+        params: dict[str, Const | None] = {}
+        if _head(rest[0]) == "params":
+            params = self.func_params(rest[0])
+            rest = rest[1:]
+        if len(rest) != 1:
+            raise CompileError("a function body is exactly one expression", form.pos)
+        spec = FuncSpec(params, rest[0], dict(self.funcs), dict(self.consts))
+        # With only value parameters the body can be checked now, before any call.
+        if all(default is not None for default in params.values()):
+            check: Env = {k: Dyn(v.type) for k, v in params.items() if v is not None}
+            self.frames.append(Frame([]))
+            try:
+                self.func_body(spec, check)
+            finally:
+                self.frames.pop()
+        self.funcs[name] = spec
+
+    def func_params(self, node: Node) -> dict[str, Const | None]:
+        assert isinstance(node, Form)
+        params: dict[str, Const | None] = {}
+        for item in node.items[1:]:
+            name = _head(item)
+            if name is None or not isinstance(item, Form) or len(item.items) > 2:
+                raise CompileError("a parameter is (name) or (name default)", item.pos)
+            _check_not_syntax(name, item.pos)
+            if name in params:
+                raise CompileError(f"parameter {name!r} is given twice", item.pos)
+            if len(item.items) == 1:
+                params[name] = None
+                continue
+            default = self.expr(item.items[1], {})
+            if not isinstance(default, Const) or default.type not in LITERAL_NODES:
+                raise CompileError(
+                    "a parameter default must be a number, string, or bool known at compile time",
+                    item.items[1].pos,
+                )
+            params[name] = default
+        return params
+
+    def func_body(self, spec: FuncSpec, env: Env) -> Value:
+        saved = self.funcs, self.consts
+        self.funcs, self.consts = spec.funcs, spec.consts
+        self.in_func += 1
+        # An empty scope hides the names of a motif body the call may sit in.
+        self.scopes.append({})
+        try:
+            return self.expr(spec.body, env)
+        finally:
+            self.scopes.pop()
+            self.in_func -= 1
+            self.funcs, self.consts = saved
+
+    def func_call(self, name: str, node: Form, env: Env) -> Value:
+        spec = self.funcs[name]
+        args = node.items[1:]
+        if len(args) > len(spec.params):
+            raise CompileError(f"{name} takes at most {len(spec.params)} arguments", node.pos)
+        outer = self.constants(env)
+        inner: Env = {}
+        for i, (pname, default) in enumerate(spec.params.items()):
+            if i >= len(args):
+                if default is None:
+                    raise CompileError(f"{name} needs an object for {pname!r}", node.pos)
+                inner[pname] = default
+                continue
+            arg = args[i]
+            value = self.expr(arg, env)
+            if default is None:
+                if not isinstance(value, (ObjRef, SelfRef)):
+                    raise CompileError(f"{pname!r} takes an object", arg.pos)
+                written = self.resolve_refs(_substitute(arg, outer, self.lets), env)
+                assert isinstance(written, Name)
+                inner[pname] = ArgRef(value, written)
+                continue
+            if isinstance(value, (ObjRef, SelfRef, Spread)):
+                raise CompileError(f"{pname!r} takes a value", arg.pos)
+            if not _widens_to(value.type, default.type):
+                raise CompileError(f"expected {default.type}, got {value.type}", arg.pos)
+            if isinstance(value, Const):
+                inner[pname] = Const(_convert(value.value, default.type), default.type)
+                continue
+            # Computed once and shared by every use in the body, like a let value.
+            hidden = f"let:{len(self.names)}:{pname}"
+            stored = self.resolve_refs(_substitute(arg, outer, self.lets), env)
+            local = Local(name=hidden, value=Bound(stored), type=default.type)
+            self.names[hidden] = local
+            self.frames[-1].locals.append(local)
+            inner[pname] = LetRef(hidden, default.type)
+        result = self.func_body(spec, inner)
+        # The body is written into the caller's stored expression right away, because compiling
+        # the same body for another call replaces the bindings of the lets inside it.
+        self.lets[id(node)] = _substitute(spec.body, {**spec.consts, **inner}, self.lets)
+        return result
+
     def define_motif(self, form: Form):
         if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
             raise CompileError("a motif needs a name given as a string", form.pos)
         kind = form.items[1].value
         _check_not_syntax(kind, form.items[1].pos)
-        if kind in self.motifs:
-            raise CompileError(f"motif {kind!r} is already defined", form.items[1].pos)
+        if kind in self.motifs or kind in self.funcs:
+            raise CompileError(f"{kind!r} is already defined", form.items[1].pos)
         rest = form.items[2:]
         params: dict[str, Const] = {}
         if rest and _head(rest[0]) == "params":
@@ -623,11 +764,9 @@ class _Compiler:
         return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
 
     # Loop variables and parameters known at compile time are written into stored expressions.
-    def constants(self, env: Env) -> dict[str, "int | SelfRef | Const | LetRef"]:
+    def constants(self, env: Env) -> Env:
         scope = self.scopes[-1] if self.scopes else {}
-        consts: dict[str, int | SelfRef | Const | LetRef] = {
-            k: v for k, v in self.consts.items() if k not in scope
-        }
+        consts: Env = {k: v for k, v in self.consts.items() if k not in scope}
         consts |= {k: v for k, v in scope.items() if isinstance(v, Const)}
         return consts | env
 
@@ -829,10 +968,10 @@ class _Compiler:
             if rest:
                 raise CompileError(f"{first!r} is a number and has no attributes", node.pos)
             return Const(local, "int")
-        if isinstance(local, (Const, LetRef)):
+        if isinstance(local, (Const, Dyn, LetRef)):
             if rest:
-                raise CompileError(f"{first!r} is a let value and has no attributes", node.pos)
-            return local if isinstance(local, Const) else Dyn(local.type)
+                raise CompileError(f"{first!r} is a value and has no attributes", node.pos)
+            return Dyn(local.type) if isinstance(local, LetRef) else local
         scope = self.scopes[-1] if self.scopes else {}
         if local is None and first in scope:
             current: Value = scope[first]
@@ -846,6 +985,14 @@ class _Compiler:
             return self.consts[first]
         elif local is None and first not in self.names:
             raise CompileError(f"undefined name {first!r}", node.pos)
+        elif local is None and self.in_func and first not in self.builtin_names:
+            raise CompileError(
+                f"undefined name {first!r}: a function sees only its parameters, consts, "
+                "and functions",
+                node.pos,
+            )
+        elif isinstance(local, ArgRef):
+            current = local.value
         else:
             current = local if local is not None else ObjRef(self.names[first])
         for part in rest:
@@ -903,6 +1050,8 @@ class _Compiler:
 
     def call(self, node: Form, env: Env) -> Value:
         head = _head(node)
+        if head in self.funcs:
+            return self.func_call(head, node, env)
         if head in ARITHMETIC:
             return self.arithmetic(head, node, env)
         if head in COMPARISONS:
@@ -1102,9 +1251,12 @@ class _Compiler:
 
 # Loop variables and known parameters do not exist after compiling, so bound expressions get
 # their values instead.
-def _substitute(node: Node, env: dict, lets: dict[int, dict]) -> Node:
+def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
     if isinstance(node, Form) and id(node) in lets:
-        return _substitute(node.items[2], env | lets[id(node)], lets)
+        entry = lets[id(node)]
+        if not isinstance(entry, dict):
+            return entry
+        return _substitute(node.items[2], env | entry, lets)
     if isinstance(node, Name):
         first = node.parts[0]
         local = env.get(first) if isinstance(first, str) and len(node.parts) == 1 else None
@@ -1112,6 +1264,12 @@ def _substitute(node: Node, env: dict, lets: dict[int, dict]) -> Node:
             return LITERAL_NODES[local.type](local.value, node.pos)
         if isinstance(local, LetRef):
             return Name((local.hidden,), node.pos)
+        argument = env.get(first) if isinstance(first, str) else None
+        if isinstance(argument, ArgRef):
+            rest = tuple(
+                p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts[1:]
+            )
+            return Name((*argument.node.parts, *rest), node.pos)
         if isinstance(local, int):
             return IntLit(local, node.pos)
         parts = tuple(p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts)

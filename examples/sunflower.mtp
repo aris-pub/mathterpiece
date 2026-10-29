@@ -2,6 +2,15 @@
 (const 'gold' '#f6c453')
 (const 'starlight' '#c9d6ff')
 
+; Seed color by how far out the seed is, from 0 at the center to 1 at the edge.
+(func 'seed-color' (params (t 0.0))
+  (cond
+    ((< t 0.15) '#9a4f16')
+    ((< t 0.4) '#cf7424')
+    ((< t 0.7) '#e89b2a')
+    ((< t 0.9) gold)
+    (else '#fff1b8')))
+
 ; Seeds on a golden-angle spiral: seed i sits at radius (sqrt i), turned i golden angles.
 (motif 'sunflower' (params (n 400) (spread 0.3) (size 0.11))
   (repeat i n
@@ -11,13 +20,7 @@
         (y (* d (sind a)))
         (r (* size (sqrt (+ 1 (/ i 80)))))
         (opacity (lerp 0.8 1 t))
-        (fill
-          (cond
-            ((< t 0.15) '#9a4f16')
-            ((< t 0.4) '#cf7424')
-            ((< t 0.7) '#e89b2a')
-            ((< t 0.9) gold)
-            (else '#fff1b8')))))))
+        (fill (seed-color t))))))
 
 ; Stacked translucent disks read as a soft glow that fades outward.
 (motif 'glow' (params (layers 14) (radius 8.0))

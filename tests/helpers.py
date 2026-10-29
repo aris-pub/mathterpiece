@@ -30,8 +30,8 @@ def with_scene(src: str) -> tuple[Form, ...]:
     inside = [f for f in forms if visual(f)]
     outside = [f for f in forms if not visual(f)]
     first = next((i for i, f in enumerate(forms) if visual(f)), 0)
-    # The scene must come after every motif it uses, wherever the test defined them.
-    at = max([first, *(i + 1 for i, f in enumerate(outside) if _head(f) == "motif")])
+    # The scene must come after every motif and function it uses, wherever the test defined them.
+    at = max([first, *(i + 1 for i, f in enumerate(outside) if _head(f) in ("motif", "func"))])
     scene = Form((Name(("scene",)), Name(("_",)), *inside))
     return (*outside[:at], scene, *outside[at:])
 
