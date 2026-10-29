@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from mathterpiece.compiler import CompileError, compile_scene
+from mathterpiece.matrix import IDENTITY
 from mathterpiece.nodes import Form, InterpStrLit, IntLit, Name, Pos, StrLit
 from mathterpiece.parse import parse
 from mathterpiece.scene import Bound, Canvas, Circle, Free, Group, Real, Text
@@ -374,11 +375,11 @@ class TestCanvas:
         assert scene("(canvas 'cnv')")["cnv"] == Canvas(name="cnv")
 
     def test_attributes_then_members(self):
-        scn = scene("(circle 'a') (canvas 'cnv' (min-x 0) (width 5) a (circle 'b'))")
+        scn = scene("(circle 'a') (canvas 'cnv' (view-x 0) (view-width 5) a (circle 'b'))")
         cnv = scn["cnv"]
         assert isinstance(cnv, Canvas)
-        assert (cnv.min_x, cnv.width) == (Free(0.0), Free(5.0))
-        assert (cnv.min_y, cnv.height) == (Free(-10.0), Free(20.0))
+        assert (cnv.view_x, cnv.view_width) == (Free(0.0), Free(5.0))
+        assert (cnv.view_y, cnv.view_height) == (Free(-10.0), Free(20.0))
         assert cnv.members == [scn["a"], scn["b"]]
 
     def test_canvas_is_a_view(self):
@@ -386,7 +387,7 @@ class TestCanvas:
         assert scn.views == [scn["cnv"]]
 
     def test_attribute_after_members(self):
-        error("(circle 'a') (canvas 'cnv' a (min-x 0))")
+        error("(circle 'a') (canvas 'cnv' a (view-x 0))")
 
     def test_unknown_child(self):
         error(
@@ -401,6 +402,97 @@ class TestCanvas:
     @pytest.mark.parametrize("member", ["k", "other", "2"])
     def test_invalid_member(self, member):
         error(f"(real 'k') (canvas 'other') (canvas 'cnv' {member})")
+
+
+def transform_of(src, name="cnv"):
+    return get(scene(src), name, Canvas).transform
+
+
+def applied(attr, x, y):
+    assert isinstance(attr, Free)
+    return pytest.approx(attr.value.apply(x, y))
+
+
+class TestTransform:
+    def test_default_is_identity(self):
+        assert transform_of("(canvas 'cnv')") == Free(IDENTITY)
+
+    def test_empty_is_identity(self):
+        assert transform_of("(canvas 'cnv' (transform))") == Free(IDENTITY)
+
+    def test_rotate_in_degrees_counterclockwise(self):
+        attr = transform_of("(canvas 'cnv' (transform (rotate 90)))")
+        assert isinstance(attr, Free)
+        assert attr.value.apply(1, 0) == (0, 1)
+
+    def test_rotate_takes_angle_conversions(self):
+        attr = transform_of("(canvas 'cnv' (transform (rotate (turn 1/2))))")
+        assert applied(attr, 1, 0) == (-1, 0)
+
+    @pytest.mark.parametrize(
+        "op, point", [("(scale 2)", (2, 2)), ("(scale 2 3)", (2, 3)), ("(scale -1 1)", (-1, 1))]
+    )
+    def test_scale(self, op, point):
+        assert applied(transform_of(f"(canvas 'cnv' (transform {op}))"), 1, 1) == point
+
+    def test_translate(self):
+        assert applied(transform_of("(canvas 'cnv' (transform (translate 2 -1)))"), 1, 1) == (3, 0)
+
+    def test_operations_run_left_to_right(self):
+        rotate_first = transform_of("(canvas 'cnv' (transform (rotate 90) (translate 1 0)))")
+        translate_first = transform_of("(canvas 'cnv' (transform (translate 1 0) (rotate 90)))")
+        assert applied(rotate_first, 1, 0) == (1, 1)
+        assert applied(translate_first, 1, 0) == (0, 2)
+
+    def test_bound_keeps_the_whole_composition(self):
+        attr = transform_of("(real 'k' 30) (canvas 'cnv' (transform (rotate k) (scale 2)))")
+        expected = Form(
+            (n("transform"), Form((n("rotate"), n("k"))), Form((n("scale"), IntLit(2))))
+        )
+        assert attr == Bound(expected)
+
+    def test_another_transform_as_an_argument(self):
+        src = (
+            "(canvas 'a' (transform (rotate 10))) (canvas 'cnv' (transform a.transform (scale 2)))"
+        )
+        expected = Form((n("transform"), n("a", "transform"), Form((n("scale"), IntLit(2)))))
+        assert transform_of(src) == Bound(expected)
+
+    def test_loop_variable_is_free(self):
+        attr = transform_of("(repeat i 2 (canvas $'c{i}' (transform (rotate (* 90 i)))))", "c1")
+        assert applied(attr, 1, 0) == (0, 1)
+
+    @pytest.mark.parametrize(
+        "attr",
+        [
+            "(transform 30)",
+            "(transform (rotate 'a'))",
+            "(transform (rotate 1 2))",
+            "(transform (rotate))",
+            "(transform (scale))",
+            "(transform (scale 1 2 3))",
+            "(transform (translate 1))",
+            "(transform k)",
+            "(transform (rotate disk))",
+        ],
+    )
+    def test_invalid(self, attr):
+        error(f"(real 'k') (circle 'disk') (canvas 'cnv' {attr})")
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(circle 'c' (r (rotate 30)))",
+            "(real 'v' (transform))",
+            "(canvas 'cnv') (real 'v' cnv.transform)",
+            "(real 'v' (+ 1 (scale 2)))",
+        ],
+    )
+    def test_a_transform_is_not_a_number(self, src):
+        error(src)
+
+    def test_circles_have_no_transform(self):
+        error("(circle 'c' (transform (rotate 30)))")
 
 
 class TestToplevel:
@@ -522,12 +614,12 @@ class TestSelf:
         assert t.value == Bound(InterpStrLit(("at ", n("self", "x"))))
 
     def test_rebound_by_nested_definition(self):
-        scn = scene("(canvas 'cnv' (height self.width) (circle 'c' (r self.x)))")
-        assert get(scn, "cnv", Canvas).height == Bound(n("self", "width"))
+        scn = scene("(canvas 'cnv' (view-height self.view-width) (circle 'c' (r self.x)))")
+        assert get(scn, "cnv", Canvas).view_height == Bound(n("self", "view-width"))
         assert get(scn, "c", Circle).r == Bound(n("self", "x"))
 
     def test_nested_self_is_not_the_container(self):
-        error("(canvas 'cnv' (circle 'c' (r self.min-x)))", match="min-x")
+        error("(canvas 'cnv' (circle 'c' (r self.view-x)))", match="view-x")
 
     def test_shadows_a_global_named_self(self):
         c = get(scene("(real 'self' 2) (circle 'c' (r self.x))"), "c", Circle)
@@ -707,6 +799,59 @@ class TestSqrt:
 
     @pytest.mark.parametrize(
         "expr", ["(sqrt -1)", "(sqrt)", "(sqrt 1 2)", "(sqrt 'a')", "(sqrt 2i)"]
+    )
+    def test_invalid(self, expr):
+        error(f"(real 'v' {expr})")
+
+
+class TestAngles:
+    @pytest.mark.parametrize(
+        "expr, value",
+        [
+            (f"(rad {math.pi})", 180.0),
+            ("(deg 45)", 45.0),
+            ("(turn 1/4)", 90.0),
+            ("(to-rad 180)", math.pi),
+            ("(to-turn 90)", 0.25),
+            ("(to-rad (rad 1))", 1.0),
+        ],
+    )
+    def test_conversions(self, expr, value):
+        assert real_of(expr) == Free(pytest.approx(value))
+
+    @pytest.mark.parametrize(
+        "expr, value",
+        [
+            (f"(sin {math.pi / 2})", 1.0),
+            ("(cos 0)", 1.0),
+            (f"(tan {math.pi / 4})", 1.0),
+            ("(asin 1)", math.pi / 2),
+            ("(acos 1)", 0.0),
+            ("(atan 1)", math.pi / 4),
+            ("(sind 30)", 0.5),
+            ("(cosd 60)", 0.5),
+            ("(tand 45)", 1.0),
+            ("(asind 1)", 90.0),
+            ("(acosd 0)", 90.0),
+            ("(atand 1)", 45.0),
+        ],
+    )
+    def test_trig(self, expr, value):
+        assert real_of(expr) == Free(pytest.approx(value))
+
+    @pytest.mark.parametrize(
+        "expr, value",
+        [("(sind 180)", 0.0), ("(cosd 90)", 0.0), ("(sind -90)", -1.0), ("(cosd 540)", -1.0)],
+    )
+    def test_degrees_are_exact_at_right_angles(self, expr, value):
+        assert real_of(expr) == Free(value)
+
+    def test_bound(self):
+        assert bound_of("(sind k)") == Bound(Form((n("sind"), n("k"))))
+
+    @pytest.mark.parametrize(
+        "expr",
+        ["(asin 2)", "(acosd -2)", "(tand 90)", "(tand -270)", "(sin)", "(sin 1 2)", "(rad 'a')"],
     )
     def test_invalid(self, expr):
         error(f"(real 'v' {expr})")

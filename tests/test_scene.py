@@ -2,6 +2,7 @@ import dataclasses
 
 import pytest
 
+from mathterpiece.matrix import IDENTITY
 from mathterpiece.nodes import Form, Name
 from mathterpiece.scene import (
     Bound,
@@ -64,8 +65,9 @@ class TestDefaults:
     def test_canvas(self):
         cnv = Canvas(name="cnv")
         assert cnv.members == []
-        bounds = (cnv.min_x, cnv.min_y, cnv.width, cnv.height)
-        assert bounds == (Free(-10.0), Free(-10.0), Free(20.0), Free(20.0))
+        view = (cnv.view_x, cnv.view_y, cnv.view_width, cnv.view_height)
+        assert view == (Free(-10.0), Free(-10.0), Free(20.0), Free(20.0))
+        assert cnv.transform == Free(IDENTITY)
 
     def test_defaults_are_not_shared_between_instances(self):
         a, b = Group(name="a"), Group(name="b")
@@ -139,7 +141,14 @@ class TestAttributeTable:
         )
 
     def test_canvas_attributes(self):
-        assert list(attributes(Canvas)) == ["min-x", "min-y", "width", "height", "members"]
+        assert list(attributes(Canvas)) == [
+            "view-x",
+            "view-y",
+            "view-width",
+            "view-height",
+            "transform",
+            "members",
+        ]
 
     def test_text_and_real_attributes(self):
         assert "value" in attributes(Text)

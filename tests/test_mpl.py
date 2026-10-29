@@ -188,12 +188,68 @@ class TestRender:
         assert len(figures) == 1
 
     def test_view_box_sets_the_axes_limits_with_y_up(self):
-        ((_, ax),) = render(scene("(canvas 'cnv' (min-x 1) (min-y -2) (width 4) (height 3))"))
+        ((_, ax),) = render(
+            scene("(canvas 'cnv' (view-x 1) (view-y -2) (view-width 4) (view-height 3))")
+        )
         assert ax.get_xlim() == (1.0, 5.0)
         assert ax.get_ylim() == (-2.0, 1.0)
 
     def test_one_figure_per_canvas(self):
         assert len(render(scene("(canvas 'a') (canvas 'b')"))) == 2
+
+
+VIEW = "(view-x 0) (view-y 0) (view-width 10) (view-height 10)"
+
+
+def drawn(transform, member="(circle 'c' (x 6) (y 5))"):
+    ((_, ax),) = render(scene(f"(real 'k' 90) (canvas 'cnv' {VIEW} {transform} {member})"))
+    return ax
+
+
+def data_position(artist, ax, point):
+    return tuple((artist.get_transform() - ax.transData).transform(point))
+
+
+class TestTransform:
+    def test_value_of_a_bound_transform(self):
+        m = value("(real 'k' 90) (canvas 'cnv' (transform (rotate k)))", "cnv", "transform")
+        assert m.apply(1, 0) == pytest.approx((0, 1))
+
+    def test_another_transform_as_an_argument(self):
+        src = (
+            "(real 'k' 90) (canvas 'a' (transform (rotate k)))"
+            " (canvas 'cnv' (transform a.transform (translate 1 0)))"
+        )
+        assert value(src, "cnv", "transform").apply(1, 0) == pytest.approx((1, 1))
+
+    def test_bad_argument_at_run_time(self):
+        with pytest.raises(EvalError):
+            value("(real 'k' 0) (canvas 'cnv' (transform (scale (/ 1 k))))", "cnv", "transform")
+
+    def test_rotate_turns_around_the_view_center(self):
+        ax = drawn("(transform (rotate k))")
+        (circle,) = ax.patches
+        assert data_position(circle, ax, (0, 0)) == pytest.approx((5, 6))
+
+    def test_scale_grows_around_the_view_center(self):
+        ax = drawn("(transform (scale 2))")
+        (circle,) = ax.patches
+        assert data_position(circle, ax, (0, 0)) == pytest.approx((7, 5))
+        assert data_position(circle, ax, (1, 0)) == pytest.approx((9, 5))
+
+    def test_translate_moves_the_picture(self):
+        ax = drawn("(transform (translate 1 -1))")
+        (circle,) = ax.patches
+        assert data_position(circle, ax, (0, 0)) == pytest.approx((7, 4))
+
+    def test_text_positions_are_transformed(self):
+        ax = drawn("(transform (rotate k))", "(text 't' 'hi' (x 6) (y 5))")
+        (text,) = ax.texts
+        assert data_position(text, ax, text.get_position()) == pytest.approx((5, 6))
+
+    def test_view_box_is_unchanged_by_the_transform(self):
+        ax = drawn("(transform (rotate k) (scale 2))")
+        assert (ax.get_xlim(), ax.get_ylim()) == ((0, 10), (0, 10))
 
 
 def k_value(expr, k=2):
@@ -253,6 +309,17 @@ class TestPowerAndSqrt:
 
     def test_sqrt(self):
         assert k_value("(sqrt k)", k=9) == 3.0
+
+    @pytest.mark.parametrize(
+        "expr, k, result",
+        [("(sind k)", 30, 0.5), ("(cosd k)", 90, 0.0), ("(to-rad k)", 180, math.pi)],
+    )
+    def test_angles(self, expr, k, result):
+        assert k_value(expr, k=k) == pytest.approx(result)
+
+    def test_tand_at_a_right_angle(self):
+        with pytest.raises(EvalError):
+            k_value("(tand k)", k=90)
 
     def test_sqrt_of_negative(self):
         with pytest.raises(EvalError):

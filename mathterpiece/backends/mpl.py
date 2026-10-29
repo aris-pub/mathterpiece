@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
+from matplotlib.transforms import Affine2D, Transform
 
 from mathterpiece.compiler import COMPARISONS
+from mathterpiece.matrix import compose
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
@@ -32,7 +34,7 @@ from mathterpiece.scene import (
     Visual,
     attributes,
 )
-from mathterpiece.stdlib import STDLIB, divide, power
+from mathterpiece.stdlib import STDLIB, divide, power, translate
 from mathterpiece.stdlib import call as stdlib_call
 
 LITERALS = (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)
@@ -147,6 +149,8 @@ class Evaluator:
             return result
         if op in COMPARISONS:
             return COMPARISONS[op](*args)
+        if op == "transform":
+            return compose(*args)
         if op in STDLIB:
             fn = STDLIB[op]
             kinds = ["point" if isinstance(a, Obj) else "real" for a in args]
@@ -163,19 +167,25 @@ def render(scene: Scene, rng: random.Random | None = None) -> list[tuple[Figure,
     for view in scene.views:
         assert isinstance(view, Canvas)
         fig, ax = plt.subplots()
-        min_x, min_y = ev.value(view, "min-x"), ev.value(view, "min-y")
-        ax.set_xlim(min_x, min_x + ev.value(view, "width"))
-        ax.set_ylim(min_y, min_y + ev.value(view, "height"))
+        x, y = ev.value(view, "view-x"), ev.value(view, "view-y")
+        width, height = ev.value(view, "view-width"), ev.value(view, "view-height")
+        ax.set_xlim(x, x + width)
+        ax.set_ylim(y, y + height)
+        center = translate(x + width / 2, y + height / 2)
+        to_center = translate(-(x + width / 2), -(y + height / 2))
+        matrix = compose(to_center, ev.value(view, "transform"), center)
+        (a, b, c), (d, e, f), _ = matrix.rows
+        to_view = Affine2D.from_values(a, d, b, e, c, f) + ax.transData
         for member in view.members:
-            _draw(member, ax, ev)
+            _draw(member, ax, ev, to_view)
         figures.append((fig, ax))
     return figures
 
 
-def _draw(obj: Visual, ax: Axes, ev: Evaluator):
+def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
     if isinstance(obj, Group):
         for member in obj.members:
-            _draw(member, ax, ev)
+            _draw(member, ax, ev, to_view)
     elif isinstance(obj, Circle):
         circle = plt.Circle(
             (ev.value(obj, "x"), ev.value(obj, "y")),
@@ -183,6 +193,7 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator):
             facecolor=_paint(ev, obj, "fill"),
             edgecolor=_paint(ev, obj, "stroke"),
             linewidth=ev.value(obj, "stroke-width"),
+            transform=to_view,
         )
         ax.add_artist(circle)
     elif isinstance(obj, Text):
@@ -191,6 +202,7 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator):
             ev.value(obj, "y"),
             ev.value(obj, "value"),
             color=_paint(ev, obj, "fill"),
+            transform=to_view,
         )
 
 

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, get_args
 
+from mathterpiece.matrix import Matrix, compose
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
@@ -44,7 +45,7 @@ BUILTINS = [
 ]
 
 NUMERIC = ["int", "ratio", "real", "complex"]
-PY_TYPES = {float: "real", str: "str", bool: "bool"}
+PY_TYPES = {float: "real", str: "str", bool: "bool", Matrix: "transform"}
 ARITHMETIC = {"+", "-", "*", "/"}
 COMPARISONS: dict[str, Callable[[Any, Any], bool]] = {
     "<": operator.lt,
@@ -263,6 +264,11 @@ class _Compiler:
             assert attr is not None
             if attr in values:
                 raise CompileError(f"attribute {attr!r} is given twice", node.pos)
+            if _expected_type(spec.cls, attr) == "transform":
+                head_name = Name(("transform",), node.items[0].pos)
+                composed = Form((head_name, *node.items[1:]), node.pos)
+                values[attr] = self.attr_value(spec.cls, attr, composed, env)
+                continue
             if len(node.items) != 2:
                 raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
             values[attr] = self.attr_value(spec.cls, attr, node.items[1], env)
@@ -437,6 +443,8 @@ class _Compiler:
             return self.library(head, node, env)
         if head == "ref":
             return self.name(self.ref_name(node, env), env)
+        if head == "transform":
+            return self.transform(node, env)
         if head in FORMS or head == "repeat":
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
         raise CompileError(f"unknown function {head!r}", node.pos)
@@ -567,6 +575,16 @@ class _Compiler:
             except (ValueError, ZeroDivisionError) as e:
                 raise CompileError(str(e) or "invalid argument", node.pos) from None
         return Dyn(sig.result)
+
+    def transform(self, node: Form, env: Env) -> Value:
+        values = [self.value_arg(arg, env) for arg in node.items[1:]]
+        for arg, value in zip(node.items[1:], values, strict=True):
+            if value.type != "transform":
+                raise CompileError(f"expected a transform, got {value.type}", arg.pos)
+        matrices = [v.value for v in values if isinstance(v, Const) and isinstance(v.value, Matrix)]
+        if len(matrices) == len(values):
+            return Const(compose(*matrices), "transform")
+        return Dyn("transform")
 
     def arithmetic(self, op: str, node: Form, env: Env) -> Value:
         types: list[str] = []

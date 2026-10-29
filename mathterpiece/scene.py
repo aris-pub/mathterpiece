@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from dataclasses import Field, dataclass, field, fields
 from typing import Protocol, runtime_checkable
 
+from mathterpiece.matrix import IDENTITY, Matrix
 from mathterpiece.nodes import Node
 
 
@@ -71,11 +72,13 @@ class View(Obj):
 
 @dataclass(kw_only=True)
 class Canvas(View):
-    # SVG viewBox, except that y points up, so min-y is the bottom edge.
-    min_x: Attr[float] = Free(-10.0)
-    min_y: Attr[float] = Free(-10.0)
-    width: Attr[float] = Free(20.0)
-    height: Attr[float] = Free(20.0)
+    # SVG viewBox, except that y points up, so view-y is the bottom edge.
+    view_x: Attr[float] = Free(-10.0)
+    view_y: Attr[float] = Free(-10.0)
+    view_width: Attr[float] = Free(20.0)
+    view_height: Attr[float] = Free(20.0)
+    # Maps scene coordinates to view coordinates, with the view center as the origin.
+    transform: Attr[Matrix] = Free(IDENTITY)
     members: list[Visual] = _members()
 
 
