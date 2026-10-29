@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Web runtime
+web/node_modules/
+web/dist/
+# The runtime bundle copied for mtp build; not committed for now
+mathterpiece/web/

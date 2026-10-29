@@ -1,0 +1,17 @@
+{
+  "name": "mathterpiece-web",
+  "private": true,
+  "type": "module",
+  "description": "The mathterpiece web runtime: plays the JSON the compiler writes.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
