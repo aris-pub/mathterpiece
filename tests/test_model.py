@@ -107,8 +107,8 @@ class TestHierarchy:
         assert issubclass(Group, Visual)
         assert not issubclass(Group, Styled)
 
-    def test_group_has_no_stored_visual_attributes(self):
-        assert set(attributes(Group)) == {"members"}
+    def test_group_has_only_a_transform_and_members(self):
+        assert set(attributes(Group)) == {"transform", "members"}
 
     def test_canvas_is_a_view(self):
         assert issubclass(Canvas, View)
@@ -122,6 +122,7 @@ class TestHierarchy:
 class TestAttributeTable:
     def test_circle_attributes_in_order(self):
         assert list(attributes(Circle)) == [
+            "transform",
             "x",
             "y",
             "fill",

@@ -4,7 +4,7 @@ import random
 import pytest
 from helpers import with_scene
 
-from mathterpiece.backends.mpl import Evaluator, render
+from mathterpiece.backends.mpl import EvalError, Evaluator, render
 from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.model import Bound, Circle, Free, Motif, Text, local_names
 
@@ -54,6 +54,11 @@ class TestListValues:
             ("(let ((p (polar 2 90))) p.y)", 2.0),
             ("(let ((p (polar 2 90))) p.x)", 0.0),
             ("(let ((p (polar 2 180))) p.x)", -2.0),
+            ("(let ((p (to-polar [0 2]))) p.x)", 2.0),
+            ("(let ((p (to-polar [0 2]))) p.y)", 90.0),
+            ("(let ((p (to-polar [-1 0]))) p.y)", 180.0),
+            ("(let ((p (to-polar [0 -3]))) p.y)", -90.0),
+            ("(let ((p (to-polar (polar 2 30)))) p.y)", 30.0),
         ],
     )
     def test_folded(self, expr, value):
@@ -103,6 +108,9 @@ class TestListValues:
             "(dist [0 0] [0 0 0])",
             "(let ((p (lerp [0 0] [1 1] [1 1]))) p.x)",
             "(let ((p [1 2])) p.w)",
+            "(let ((p (to-polar [0 0]))) p.x)",
+            "(let ((p (to-polar [1 2 3]))) p.x)",
+            "(let ((p (to-polar 1))) p.x)",
         ],
     )
     def test_invalid(self, expr):
@@ -205,6 +213,13 @@ class TestEvaluation:
         (circle,) = ax.patches
         center = (circle.get_transform() - ax.transData).transform((0, 0))
         assert tuple(center) == pytest.approx((0, 2))
+
+    def test_to_polar_at_the_origin_while_drawing(self):
+        with pytest.raises(EvalError, match="origin"):
+            evaluated("(real 'k' 0) (real 'v' (let ((p (to-polar [k k]))) p.x))")
+
+    def test_to_polar_of_an_object(self):
+        assert evaluated("(circle 'a' (x 3) (y 4)) (real 'v' (let ((p (to-polar a))) p.x))") == 5.0
 
     def test_real_value_from_a_list(self):
         assert evaluated("(real 'v' (let ((p [1 2])) p.y))") == 2.0

@@ -20,6 +20,14 @@ class Matrix:
         r0, r1, r2 = self.rows
         return Matrix((row(r0), row(r1), row(r2)))
 
+    def inverse(self) -> "Matrix":
+        (a, b, c), (d, e, f), _ = self.rows
+        det = a * e - b * d
+        if det == 0:
+            raise ValueError("this transform has no inverse")
+        ia, ib, id_, ie = e / det, -b / det, -d / det, a / det
+        return Matrix(((ia, ib, -(ia * c + ib * f)), (id_, ie, -(id_ * c + ie * f)), (0, 0, 1)))
+
     def apply(self, x: float, y: float) -> tuple[float, float]:
         (a, b, c), (d, e, f), _ = self.rows
         return a * x + b * y + c, d * x + e * y + f

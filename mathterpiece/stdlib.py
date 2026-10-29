@@ -102,6 +102,15 @@ def _polar(r: float, deg: float) -> tuple[float, float]:
     return r * _cosd(deg), r * _sind(deg)
 
 
+def _to_polar(p: tuple[float, ...]) -> tuple[float, float]:
+    if len(p) != 2:
+        raise ValueError("to-polar takes a point of two numbers")
+    x, y = p
+    if x == 0 and y == 0:
+        raise ValueError("to-polar has no angle at the origin")
+    return math.hypot(x, y), math.degrees(math.atan2(y, x))
+
+
 def _real(fn: Callable[[float], float]) -> "Function":
     return Function((Signature(("real",), "real", fn),))
 
@@ -161,6 +170,7 @@ STDLIB: dict[str, Function] = {
         )
     ),
     "polar": Function((Signature(("real", "real"), "list2", _polar),)),
+    "to-polar": Function((Signature(("point",), "list2", _to_polar),)),
     "rotate": Function((Signature(("real",), "transform", _rotate),)),
     "scale": Function(
         (

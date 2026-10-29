@@ -520,9 +520,6 @@ class TestTransform:
     def test_a_transform_is_not_a_number(self, src):
         error(src)
 
-    def test_circles_have_no_transform(self):
-        error("(circle 'c' (transform (rotate 30)))")
-
 
 class TestToplevel:
     @pytest.mark.parametrize("src", ["(+ 1 2)", "(r 2)", "(rand)"])

@@ -12,7 +12,7 @@ from matplotlib.transforms import Affine2D, Transform
 
 from mathterpiece.compiler import ARITHMETIC, AXES, COMPARISONS
 from mathterpiece.compiler import _fold as fold
-from mathterpiece.matrix import compose
+from mathterpiece.matrix import IDENTITY, Matrix, compose
 from mathterpiece.model import (
     Bound,
     Canvas,
@@ -60,16 +60,22 @@ class Evaluator:
         self.active: set[tuple[int, str]] = set()
         # The innermost motif around each object, whose body the object's expressions live in.
         self.enclosing: dict[int, Motif | None] = {}
+        # The group or motif each object sits in, whose coordinates its x and y are given in.
+        self.parent: dict[int, Group | Motif | None] = {}
         self.locals: dict[int, dict[str, Obj]] = {}
-        stack: list[tuple[Obj, Motif | None]] = [(o, None) for o in model.objects]
+        self.frames: dict[int, Matrix] = {}
+        stack: list[tuple[Obj, Motif | None, Group | Motif | None]] = [
+            (o, None, None) for o in model.objects
+        ]
         while stack:
-            obj, around = stack.pop()
+            obj, around, parent = stack.pop()
             self.enclosing[id(obj)] = around
+            self.parent[id(obj)] = parent
             if isinstance(obj, Motif):
                 self.locals[id(obj)] = local_names(obj)
-                stack.extend((m, obj) for m in obj.members)
+                stack.extend((m, obj, obj) for m in obj.members)
             elif isinstance(obj, Group):
-                stack.extend((m, around) for m in obj.members)
+                stack.extend((m, around, obj) for m in obj.members)
 
     def value(self, obj: Obj, attr: str) -> Any:
         key = (id(obj), attr)
@@ -100,25 +106,41 @@ class Evaluator:
         self.cache[key] = result
         return result
 
-    # Where the coordinate system an object's x and y are given in sits, in scene coordinates.
-    def origin(self, around: Motif | None) -> tuple[float, float]:
-        if around is None:
-            return 0.0, 0.0
-        x, y = self.origin(self.enclosing.get(id(around)))
-        return x + self.value(around, "x"), y + self.value(around, "y")
+    # Maps the coordinates of a container's members to scene coordinates. A motif's own x and y
+    # sit outside its transform, as in Unity or Godot.
+    def frame(self, container: Obj | None) -> Matrix:
+        if container is None:
+            return IDENTITY
+        if id(container) not in self.frames:
+            local = self.value(container, "transform")
+            if isinstance(container, Motif):
+                local = translate(self.value(container, "x"), self.value(container, "y")) @ local
+            self.frames[id(container)] = self.frame(self.parent.get(id(container))) @ local
+        return self.frames[id(container)]
 
-    # x and y read by an expression are given in the coordinates of the body the reader is in.
+    # The container whose coordinates an expression owned by obj reads x and y in.
+    def reading_frame(self, obj: Obj) -> Obj | None:
+        if not isinstance(obj, Local):
+            return self.parent.get(id(obj))
+        if obj.owner is None:
+            return None
+        return obj.owner if obj.inside else self.parent.get(id(obj.owner))
+
+    # x and y read by an expression are given in the coordinates the reader itself is placed in.
     def read(self, obj: Obj, attr: str, reader: Obj) -> Any:
         if attr == "pos":
             return self.read(obj, "x", reader), self.read(obj, "y", reader)
-        _, around = self.context(reader)
-        result = self.value(obj, attr)
-        if attr in ("x", "y"):
-            i = 0 if attr == "x" else 1
-            here = self.origin(self.enclosing.get(id(obj)))[i]
-            there = self.origin(around)[i]
-            result = result + here - there
-        return result
+        if attr not in ("x", "y"):
+            return self.value(obj, attr)
+        here, there = self.parent.get(id(obj)), self.reading_frame(reader)
+        if here is there:
+            return self.value(obj, attr)
+        scene = self.frame(here).apply(self.value(obj, "x"), self.value(obj, "y"))
+        try:
+            local = self.frame(there).inverse().apply(*scene)
+        except ValueError as e:
+            raise EvalError(str(e)) from None
+        return local[0] if attr == "x" else local[1]
 
     def eval(self, node: Node, owner: Obj) -> Any:
         if isinstance(node, LITERALS):
@@ -181,7 +203,7 @@ class Evaluator:
                 if isinstance(obj, Motif) and part in self.locals[id(obj)]:
                     obj = self.locals[id(obj)][part]
                     continue
-                if isinstance(obj, Group) and part != "members":
+                if isinstance(obj, Group) and part not in attributes(type(obj)):
                     return [self.read(member, part, owner) for member in obj.members]
                 return self.take(self.read(obj, part, owner), rest[i + 1 :], owner)
             assert isinstance(obj, Group)
@@ -211,8 +233,15 @@ class Evaluator:
             raise EvalError(str(e) or "division by zero") from None
 
     def point(self, obj: Obj) -> tuple[Any, Any]:
-        x, y = self.origin(self.enclosing.get(id(obj)))
-        return x + self.value(obj, "x"), y + self.value(obj, "y")
+        return self.frame(self.parent.get(id(obj))).apply(
+            self.value(obj, "x"), self.value(obj, "y")
+        )
+
+    # Places a shape drawn around the origin: its own transform, then its x and y, then the
+    # transforms of everything it sits in.
+    def shape(self, obj: Obj) -> Matrix:
+        at = translate(self.value(obj, "x"), self.value(obj, "y"))
+        return self.frame(self.parent.get(id(obj))) @ at @ self.value(obj, "transform")
 
     # Opacity multiplies down the tree, unlike the other style attributes.
     def opacity(self, obj: Obj) -> float:
@@ -259,12 +288,11 @@ def render(model: Model, rng: random.Random | None = None) -> list[tuple[Figure,
         center = translate(x + width / 2, y + height / 2)
         to_center = translate(-(x + width / 2), -(y + height / 2))
         matrix = compose(to_center, ev.value(view, "transform"), center)
-        (a, b, c), (d, e, f), _ = matrix.rows
-        to_view = Affine2D.from_values(a, d, b, e, c, f) + ax.transData
+        to_view = _affine(matrix) + ax.transData
         strokes: list[tuple[Patch, float]] = []
         for member in view.members:
             _draw(member, ax, ev, to_view, strokes)
-        _stroke_in_scene_units(fig, ax, strokes, math.sqrt(abs(a * e - b * d)))
+        _stroke_in_scene_units(fig, ax, strokes, _scale(matrix))
         figures.append((fig, ax))
     return figures
 
@@ -289,29 +317,42 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform, strokes: lis
         for member in obj.members:
             _draw(member, ax, ev, to_view, strokes)
     elif isinstance(obj, Circle):
+        shape = ev.shape(obj)
         circle = plt.Circle(
-            ev.point(obj),
+            (0, 0),
             ev.value(obj, "r"),
             facecolor=_paint(ev, obj, "fill"),
             edgecolor=_paint(ev, obj, "stroke"),
-            transform=to_view,
+            transform=_affine(shape) + to_view,
         )
-        strokes.append((circle, ev.value(obj, "stroke-width")))
+        strokes.append((circle, ev.value(obj, "stroke-width") * _scale(shape)))
         ax.add_artist(circle)
     elif isinstance(obj, Text):
         # Glyph outlines in scene units, so the canvas transform turns and scales the letters
         # the way an SVG transform does.
         value = ev.value(obj, "value")
         glyphs = TextPath((0, 0), value, size=ev.value(obj, "font-size"))
+        shape = ev.shape(obj)
         text = PathPatch(
             glyphs,
             facecolor=_paint(ev, obj, "fill"),
             edgecolor=_paint(ev, obj, "stroke"),
-            transform=Affine2D().translate(*ev.point(obj)) + to_view,
+            transform=_affine(shape) + to_view,
             label=value,
         )
-        strokes.append((text, ev.value(obj, "stroke-width")))
+        strokes.append((text, ev.value(obj, "stroke-width") * _scale(shape)))
         ax.add_patch(text)
+
+
+def _affine(matrix: Matrix) -> Affine2D:
+    (a, b, c), (d, e, f), _ = matrix.rows
+    return Affine2D.from_values(a, d, b, e, c, f)
+
+
+# How much a matrix scales lengths; for a stretch that differs by direction, an average.
+def _scale(matrix: Matrix) -> float:
+    (a, b, _), (d, e, _), _ = matrix.rows
+    return math.sqrt(abs(a * e - b * d))
 
 
 def _paint(ev: Evaluator, obj: Obj, attr: str):

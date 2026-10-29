@@ -52,7 +52,9 @@ class Local(Obj):
 
 @dataclass(kw_only=True)
 class Visual(Obj):
-    pass
+    # Applied around the object's own x and y (which stay in the parent's coordinates), to its
+    # shape and to its members, as in Unity or Godot.
+    transform: Attr[Matrix] = Free(IDENTITY)
 
 
 @dataclass(kw_only=True)

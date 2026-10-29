@@ -156,6 +156,8 @@ class MotifSpec:
     body: tuple[Node, ...]
     # The motifs defined before this one, which is what its body's heads refer to.
     motifs: dict[str, "MotifSpec"]
+    # The default (transform ...) of each instance, compiled in the body so it sees the params.
+    transform: Form | None = None
 
 
 Value = Const | Dyn | Spread | ObjRef | SelfRef
@@ -682,7 +684,10 @@ class _Compiler:
         if rest and _head(rest[0]) == "params":
             params = self.params(rest[0])
             rest = rest[1:]
-        spec = MotifSpec(params, tuple(rest), dict(self.motifs))
+        transform = None
+        if rest and isinstance(rest[0], Form) and _head(rest[0]) == "transform":
+            transform, rest = rest[0], rest[1:]
+        spec = MotifSpec(params, tuple(rest), dict(self.motifs), transform)
         # Compiling the body once with the defaults reports its errors even if it is never used.
         self.frames.append(Frame([], inside=True))
         try:
@@ -713,12 +718,17 @@ class _Compiler:
             params[name] = default
         return params
 
-    def body(self, spec: MotifSpec, scope: Scope, owner: str | None) -> list[Visual]:
+    def body(
+        self, spec: MotifSpec, scope: Scope, owner: str | None
+    ) -> tuple[list[Visual], Free | Bound | None]:
         pool: list[Obj] = []
         self.scopes.append(scope)
         self.pools.append(pool)
         outer, self.motifs = self.motifs, spec.motifs
+        transform = None
         try:
+            if spec.transform is not None:
+                transform = self.default_transform(spec.transform)
             for node in spec.body:
                 pool.extend(self.body_item(node))
         finally:
@@ -731,7 +741,14 @@ class _Compiler:
             assert isinstance(obj, Visual)
             self.parents[id(obj)] = (obj, label)
             members.append(obj)
-        return members
+        return members, transform
+
+    def default_transform(self, node: Form) -> Free | Bound:
+        composed = Form((Name(("transform",), node.pos), *node.items[1:]), node.pos)
+        value = self.value_arg(composed, {})
+        if isinstance(value, Const):
+            return Free(value.value)
+        return Bound(Name((self.hidden_value("transform", composed, {}, "transform"),), node.pos))
 
     def body_item(self, node: Node, env: Env | None = None) -> list[Obj]:
         env = env or {}
@@ -747,6 +764,8 @@ class _Compiler:
             return [obj]
         if head == "params":
             raise CompileError("params must come right after the motif's name", node.pos)
+        if head == "transform":
+            raise CompileError("a motif's transform must come before its members", node.pos)
         if head == "motif":
             raise CompileError("motifs are defined at the top level", node.pos)
         raise CompileError("the body of a motif holds only definitions", node.pos)
@@ -774,6 +793,13 @@ class _Compiler:
             _check_pos(head, {a: p for a, (_, p) in written.items()}, node.pos)
             if head in written:
                 raise CompileError(f"attribute {head!r} is given twice", node.pos)
+            if head == "transform":
+                composed = Form(
+                    (Name(("transform",), node.items[0].pos), *node.items[1:]), node.pos
+                )
+                values["transform"] = self.attr_value(Motif, head, composed, outer)
+                written[head] = (values["transform"], node.pos)
+                continue
             if len(node.items) != 2:
                 raise CompileError(f"attribute {head!r} takes exactly one value", node.pos)
             if head == "pos":
@@ -801,9 +827,11 @@ class _Compiler:
         body_frame = Frame([], inside=True)
         self.frames.append(body_frame)
         try:
-            members = self.body(spec, scope, name)
+            members, default = self.body(spec, scope, name)
         finally:
             self.frames.pop()
+        if default is not None and "transform" not in values:
+            values["transform"] = default
         obj = Motif(name=name, kind=kind, params=dict(params), members=members, **values)
         self.settle(attr_frame, obj)
         self.settle(body_frame, obj)
@@ -1128,7 +1156,7 @@ class _Compiler:
             names = local_names(obj)
             if part in names:
                 return ObjRef(names[part])
-        if isinstance(obj, Group) and part != "members":
+        if isinstance(obj, Group) and part not in attributes(type(obj)):
             types = []
             for member in obj.members:
                 if part not in attributes(type(member)):

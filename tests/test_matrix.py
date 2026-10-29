@@ -40,3 +40,16 @@ class TestCompose:
 
     def test_one_argument(self):
         assert compose(SWAP) == SWAP
+
+
+class TestInverse:
+    def test_undoes_the_matrix(self):
+        m = Matrix(((0, -2, 3), (2, 0, -1), (0, 0, 1)))
+        assert m.inverse().apply(*m.apply(5, 7)) == pytest.approx((5, 7))
+
+    def test_identity(self):
+        assert IDENTITY.inverse() == IDENTITY
+
+    def test_singular(self):
+        with pytest.raises(ValueError, match="inverse"):
+            Matrix(((0, 0, 1), (0, 0, 1), (0, 0, 1))).inverse()
