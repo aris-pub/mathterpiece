@@ -860,6 +860,37 @@ class TestPower:
         assert bound_of("(^ k 2)") == Bound(Form((n("^"), n("k"), IntLit(2))))
 
 
+class TestMod:
+    @pytest.mark.parametrize(
+        "expr, value",
+        [("(mod 7 3)", 1.0), ("(mod -1 3)", 2.0), ("(mod 1 -3)", -2.0), ("(mod 7.5 2)", 1.5)],
+    )
+    def test_folded(self, expr, value):
+        assert real_of(expr) == Free(value)
+
+    def test_ratio(self):
+        assert real_of("(mod 1/2 1/3)") == Free(pytest.approx(1 / 6))
+
+    def test_two_ints_give_an_int(self):
+        scn = scene("(group 'g' (repeat i (mod 7 3) (circle _)))")
+        assert len(get(scn, "g", Group).members) == 1
+
+    def test_bound(self):
+        assert bound_of("(mod k 3)") == Bound(Form((n("mod"), n("k"), IntLit(3))))
+
+    @pytest.mark.parametrize(
+        "expr",
+        ["(mod 1 0)", "(mod 1.0 0.0)", "(mod 1)", "(mod 1 2 3)", "(mod 'a' 1)", "(mod 2i 1)"],
+    )
+    def test_invalid(self, expr):
+        error(f"(real 'v' {expr})")
+
+    def test_a_function_can_hide_it(self):
+        assert real_of("(let ((x 1)) x)") == Free(1.0)
+        scn = scene("(func 'mod' (params (a 0.0)) (* 2 a)) (real 'v' (mod 3))")
+        assert get(scn, "v", Real).value == Free(6.0)
+
+
 class TestSqrt:
     def test_folded(self):
         assert real_of("(sqrt 9)") == Free(3.0)

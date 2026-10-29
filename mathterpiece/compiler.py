@@ -1374,6 +1374,8 @@ class _Compiler:
             return self.compare(head, node, env)
         if head == "^":
             return self.power(node, env)
+        if head == "mod":
+            return self.modulo(node, env)
         if head == "if":
             return self.if_(node, env)
         if head == "cond":
@@ -1432,6 +1434,20 @@ class _Compiler:
         if isinstance(a, Const) and isinstance(b, Const):
             return Const(COMPARISONS[op](a.value, b.value), "bool")
         return Dyn("bool")
+
+    # The remainder with the sign of the divisor, as in mathematics and Python's %.
+    def modulo(self, node: Form, env: Env) -> Value:
+        a, b = self.args(node, 2, env)
+        if not {a.type, b.type} <= {"int", "ratio", "real"}:
+            raise CompileError("mod takes real numbers", node.pos)
+        result = NUMERIC[max(NUMERIC.index(a.type), NUMERIC.index(b.type))]
+        if not (isinstance(a, Const) and isinstance(b, Const)):
+            return Dyn(result)
+        x, y = a.value, b.value
+        assert isinstance(x, (int, Fraction, float)) and isinstance(y, (int, Fraction, float))
+        if y == 0:
+            raise CompileError("mod by zero", node.pos)
+        return Const(_convert(x % y, result), result)
 
     def power(self, node: Form, env: Env) -> Value:
         base, exp = self.args(node, 2, env)

@@ -386,6 +386,14 @@ class TestPowerAndSqrt:
         with pytest.raises(EvalError):
             k_value("(^ k -1)", k=0)
 
+    def test_mod(self):
+        assert k_value("(mod k 3)", k=7) == 1.0
+        assert k_value("(mod k 3)", k=-1) == 2.0
+
+    def test_mod_by_zero(self):
+        with pytest.raises(EvalError):
+            k_value("(mod 1 k)", k=0)
+
     def test_sqrt(self):
         assert k_value("(sqrt k)", k=9) == 3.0
 

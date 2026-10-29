@@ -304,6 +304,10 @@ class Evaluator:
             return result
         if op in COMPARISONS:
             return COMPARISONS[op](*args)
+        if op == "mod":
+            if args[1] == 0:
+                raise EvalError("mod by zero")
+            return args[0] % args[1]
         if op == "transform":
             return compose(*args)
         if op in STDLIB:
