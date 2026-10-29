@@ -5,6 +5,7 @@ Every reference is resolved here, so backends never look up names: expressions r
 position from another coordinate frame says which frame to convert into.
 """
 
+import math
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any
@@ -443,15 +444,34 @@ def _plain(value: Any) -> Any:
     if value is None or isinstance(value, (bool, str)):
         return value
     if isinstance(value, (int, float, Fraction)):
-        return float(value)
+        return _number(value)
     if isinstance(value, complex):
-        return ["complex", value.real, value.imag]
+        return ["complex", _finite(value.real), _finite(value.imag)]
     if isinstance(value, tuple):
-        return [float(v) for v in value]
+        if all(math.isfinite(v) for v in value):
+            return [float(v) for v in value]
+        return ["list", *(_number(v) for v in value)]
     if isinstance(value, Matrix):
         (a, b, c), (d, e, f), _ = value.rows
-        return [float(v) for v in (a, b, c, d, e, f)]
+        return [_finite(v) for v in (a, b, c, d, e, f)]
     raise ValueError(f"cannot write the value {value!r}")
+
+
+# JSON has no infinity, so it is written as an expression.
+def _number(value: Any) -> Any:
+    value = float(value)
+    if value == math.inf:
+        return ["inf"]
+    if value == -math.inf:
+        return ["-inf"]
+    return _finite(value)
+
+
+def _finite(value: Any) -> float:
+    value = float(value)
+    if not math.isfinite(value):
+        raise ExportError(f"cannot write {value} here")
+    return value
 
 
 # For each value, the values computed from it. A position read from another frame, and an

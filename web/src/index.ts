@@ -1,7 +1,7 @@
-/** The version of the JSON format this runtime reads. */
-export const FORMAT_VERSION = 1;
+import { define } from "./elements.ts";
 
-/** Whether this runtime can play a document. */
-export function supports(doc: { mtp?: unknown }): boolean {
-  return doc.mtp === FORMAT_VERSION;
-}
+export { FORMAT_VERSION, MtpCanvas, MtpModel, define } from "./elements.ts";
+export { Runtime } from "./runtime.ts";
+export { draw } from "./svg.ts";
+
+define();

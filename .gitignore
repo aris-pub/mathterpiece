@@ -14,3 +14,5 @@ web/node_modules/
 web/dist/
 # The runtime bundle copied for mtp build; not committed for now
 mathterpiece/web/
+# Built from examples/ by just web-examples
+web/test/data/examples/

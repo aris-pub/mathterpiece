@@ -45,7 +45,7 @@ def main(argv: list[str] | None = None):
         if args.command == "build":
             out = Path(args.output) if args.output else path.with_suffix(".json")
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(json.dumps(doc))
+            out.write_text(json.dumps(doc, allow_nan=False))
             logger.info("wrote %s", out)
             return
         render_json(doc)

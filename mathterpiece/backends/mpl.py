@@ -150,6 +150,10 @@ class Runtime:
             return tuple(float(self.eval(a, frame, env)) for a in args)
         if op == "complex":
             return complex(args[0], args[1])
+        if op == "inf":
+            return math.inf
+        if op == "-inf":
+            return -math.inf
         if op == "str":
             return "".join(a if isinstance(a, str) else self.eval(a, frame, env) for a in args)
         if op == "show":

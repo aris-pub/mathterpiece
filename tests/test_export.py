@@ -1,11 +1,12 @@
 import json
+import math
 from pathlib import Path
 
 import pytest
 from helpers import with_scene
 
 from mathterpiece.compiler import compile_model
-from mathterpiece.export import to_json
+from mathterpiece.export import ExportError, _plain, to_json
 from mathterpiece.parse import parse
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
@@ -21,6 +22,34 @@ def obj(doc, name):
 
 def ref(doc, name):
     return doc["names"][name]
+
+
+class TestInfinity:
+    def test_library_constant(self):
+        doc = exported("(real 'k' infty)")
+        assert obj(doc, "infty")["attrs"]["value"] == ["inf"]
+
+    @pytest.mark.parametrize(
+        "value, written",
+        [
+            (math.inf, ["inf"]),
+            (-math.inf, ["-inf"]),
+            ((math.inf, 1.0), ["list", ["inf"], 1.0]),
+            ((2.0, 1.0), [2.0, 1.0]),
+        ],
+    )
+    def test_plain(self, value, written):
+        assert _plain(value) == written
+
+    @pytest.mark.parametrize("value", [math.nan, complex(math.inf, 0)])
+    def test_unwritable(self, value):
+        with pytest.raises(ExportError):
+            _plain(value)
+
+    @pytest.mark.parametrize("path", sorted(EXAMPLES.glob("*.mtp")), ids=lambda p: p.name)
+    def test_every_example_is_valid_json(self, path):
+        doc = to_json(compile_model(parse(path.read_text())))
+        json.loads(json.dumps(doc, allow_nan=False))
 
 
 class TestShape:

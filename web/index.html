@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mathterpiece examples</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      mtp-canvas { display: block; width: min(90vw, 640px); }
+      mtp-canvas svg { width: 100%; height: auto; }
+    </style>
+  </head>
+  <body>
+    <!-- For trying the runtime by hand: just web-dev, then pick an example. -->
+    <select id="pick"></select>
+    <mtp-model id="m"></mtp-model>
+    <mtp-canvas model="m"></mtp-canvas>
+    <script type="module">
+      import "/src/index.ts";
+      const examples = Object.keys(import.meta.glob("/test/data/examples/*.json"));
+      const pick = document.getElementById("pick");
+      const name = (path) => path.split("/").pop().replace(".json", "");
+      for (const path of examples) pick.add(new Option(name(path), path));
+      const chosen = new URLSearchParams(location.search).get("example");
+      pick.value = examples.find((p) => name(p) === chosen) ?? examples[0];
+      const load = async () => {
+        document.getElementById("m").doc = await (await fetch(pick.value)).json();
+        history.replaceState(null, "", `?example=${name(pick.value)}`);
+      };
+      pick.onchange = load;
+      load();
+    </script>
+  </body>
+</html>

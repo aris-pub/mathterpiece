@@ -19,9 +19,18 @@ fmt:
 typecheck:
     uv run ty check
 
+# build every example to JSON for the web runtime's tests
+web-examples:
+    mkdir -p web/test/data/examples
+    for f in examples/*.mtp; do uv run mtp build "$f" -o "web/test/data/examples/$(basename "$f" .mtp).json"; done
+
 # run the web runtime's tests
-web-test *args:
+web-test *args: web-examples
     cd web && pnpm test {{args}}
+
+# serve a page that draws any example with the web runtime
+web-dev: web-examples
+    cd web && pnpm exec vite
 
 # type check the web runtime
 web-typecheck:

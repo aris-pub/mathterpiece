@@ -469,3 +469,11 @@ class TestDotsExample:
 class TestRef:
     def test_reads_through_ref(self):
         assert value("(circle 'a' (r 2)) (circle 'b' (r (ref 'a.r')))", "b", "r") == 2.0
+
+
+class TestInfinity:
+    def test_reads_infinity(self):
+        m = scene("(real 'k' infty) (real 'j' (- infty))")
+        ev = Evaluator(m, random.Random(0))
+        assert ev.value(m["k"], "value") == math.inf
+        assert ev.value(m["j"], "value") == -math.inf
