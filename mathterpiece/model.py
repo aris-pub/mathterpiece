@@ -140,6 +140,7 @@ class Root(Group):
 class Motif(Styled):
     kind: str = field(default="", metadata={"internal": True})
     params: dict[str, Attr[object]] = field(default_factory=dict, metadata={"internal": True})
+    param_types: dict[str, str] = field(default_factory=dict, metadata={"internal": True})
     members: list[Visual] = _members()
 
 

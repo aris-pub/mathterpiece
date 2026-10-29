@@ -1273,7 +1273,10 @@ class _Compiler:
             self.frames.pop()
         if default is not None and "transform" not in values:
             values["transform"] = default
-        obj = Motif(name=name, kind=kind, params=dict(params), members=members, **values)
+        types = {pname: default.type for pname, default in spec.params.items()}
+        obj = Motif(
+            name=name, kind=kind, params=dict(params), param_types=types, members=members, **values
+        )
         self.settle(attr_frame, obj)
         self.settle(body_frame, obj)
         self.register(obj, form.pos)
