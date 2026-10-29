@@ -153,6 +153,7 @@ class TestAttributeTable:
 
     def test_text_and_real_attributes(self):
         assert "value" in attributes(Text)
+        assert Text(name="t").font_size == Free(1.0)
         assert list(attributes(Real)) == ["value"]
 
     @pytest.mark.parametrize("cls", [Group, Canvas])

@@ -75,6 +75,8 @@ class Circle(Styled):
 @dataclass(kw_only=True)
 class Text(Styled):
     value: Attr[str] = Free("")
+    # In scene units, like r. Text starts at (x, y) on its baseline, as in SVG.
+    font_size: Attr[float] = Free(1.0)
 
 
 @dataclass(kw_only=True)

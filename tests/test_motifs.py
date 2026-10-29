@@ -389,8 +389,6 @@ class TestDrawing:
 
     def test_text_member(self):
         ax = drawn("(motif 'lbl' (text 't' 'hi' (x 1))) (lbl 'l' (x 2)) (canvas 'cnv' l)")
-        (text,) = ax.texts
-        assert text.get_text() == "hi"
-        assert tuple((text.get_transform() - ax.transData).transform(text.get_position())) == (
-            pytest.approx((3, 0))
-        )
+        (text,) = ax.patches
+        assert text.get_label() == "hi"
+        assert center(text, ax) == pytest.approx((3, 0))

@@ -55,7 +55,7 @@
             ((< (dist self small) small.halo) small.fill)
             (else starlight))))))
 
-  (text 'title' 'the golden angle' (x 1.5) (y 8.9) (fill gold))
-  (text 'subtitle' $'{golden}°' (x 1.6) (y 8.1) (fill starlight) (opacity 0.55)))
+  (text 'title' 'the golden angle' (x 2.3) (y 9.3) (font-size 0.6) (fill gold))
+  (text 'subtitle' $'{golden}°' (x 2.4) (y 8.5) (font-size 0.5) (fill starlight) (opacity 0.55)))
 
 (canvas 'cnv' (transform (rotate -8)) night)

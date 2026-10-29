@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from helpers import with_scene
+from matplotlib.colors import to_rgba
 
 from mathterpiece.backends.mpl import EvalError, Evaluator, render
 from mathterpiece.compiler import compile_model
@@ -208,8 +209,7 @@ class TestRender:
 
     def test_text_is_clipped_at_the_view_like_circles(self):
         ((_, ax),) = render(scene("(text 't' 'hi') (circle 'c') (canvas 'cnv' t c)"))
-        (text,) = ax.texts
-        (circle,) = ax.patches
+        text, circle = ax.patches
         assert text.get_clip_on() and circle.get_clip_on()
         assert text.get_clip_box() is not None
 
@@ -268,8 +268,41 @@ class TestTransform:
 
     def test_text_positions_are_transformed(self):
         ax = drawn("(transform (rotate k))", "(text 't' 'hi' (x 6) (y 5))", "t")
-        (text,) = ax.texts
-        assert data_position(text, ax, text.get_position()) == pytest.approx((5, 6))
+        (text,) = ax.patches
+        assert data_position(text, ax, (0, 0)) == pytest.approx((5, 6))
+
+    def test_letters_turn_with_the_transform(self):
+        def size(transform):
+            ((_, ax),) = render(scene(f"(text 't' 'hhhhhhhh') (canvas 'cnv' {transform} t)"))
+            (text,) = ax.patches
+            box = text.get_path().transformed(text.get_transform() - ax.transData).get_extents()
+            return box.width, box.height
+
+        width, height = size("")
+        turned_width, turned_height = size("(transform (rotate 90))")
+        assert width > height
+        assert turned_height == pytest.approx(width) and turned_width == pytest.approx(height)
+
+    def test_letters_scale_with_the_transform(self):
+        def height(transform, font_size=1):
+            src = f"(text 't' 'H' (font-size {font_size})) (canvas 'cnv' {transform} t)"
+            ((_, ax),) = render(scene(src))
+            (text,) = ax.patches
+            return (
+                text.get_path()
+                .transformed(text.get_transform() - ax.transData)
+                .get_extents()
+                .height
+            )
+
+        assert height("(transform (scale 2))") == pytest.approx(2 * height(""))
+        assert height("", font_size=3) == pytest.approx(3 * height(""))
+
+    def test_text_is_drawn_with_its_fill(self):
+        ((_, ax),) = render(scene("(text 't' 'hi' (fill 'red')) (canvas 'cnv' t)"))
+        (text,) = ax.patches
+        assert text.get_facecolor() == to_rgba("red")
+        assert text.get_label() == "hi"
 
     def test_view_box_is_unchanged_by_the_transform(self):
         ax = drawn("(transform (rotate k) (scale 2))")

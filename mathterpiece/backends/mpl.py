@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
+from matplotlib.patches import PathPatch
+from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
 
 from mathterpiece.compiler import COMPARISONS
@@ -275,13 +277,19 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
         )
         ax.add_artist(circle)
     elif isinstance(obj, Text):
-        ax.text(
-            *ev.point(obj),
-            ev.value(obj, "value"),
-            color=_paint(ev, obj, "fill"),
-            transform=to_view,
-            clip_on=True,
+        # Glyph outlines in scene units, so the canvas transform turns and scales the letters
+        # the way an SVG transform does.
+        value = ev.value(obj, "value")
+        glyphs = TextPath((0, 0), value, size=ev.value(obj, "font-size"))
+        text = PathPatch(
+            glyphs,
+            facecolor=_paint(ev, obj, "fill"),
+            edgecolor=_paint(ev, obj, "stroke"),
+            linewidth=ev.value(obj, "stroke-width"),
+            transform=Affine2D().translate(*ev.point(obj)) + to_view,
+            label=value,
         )
+        ax.add_patch(text)
 
 
 def _paint(ev: Evaluator, obj: Obj, attr: str):
