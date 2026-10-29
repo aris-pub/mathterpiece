@@ -27,14 +27,16 @@
       (r (* size (+ 0.55 (* 0.45 (cosd (/ (* 1080 k) count))))))
       (opacity (+ 0.4 (* 0.6 (sind (/ (* 180 k) count))))))))
 
+; A flower with its glow and an optional ring of moons, all centered on the flower.
+(motif 'bloom' (params (n 400) (spread 0.3) (size 0.11) (halo 8.5) (moons 0) (moon-radius 7.0))
+  (glow 'aura' (radius halo))
+  (sunflower 'seeds' (n n) (spread spread) (size size))
+  (orbit 'ring' (count moons) (radius moon-radius) (size 0.16) (fill '#5fd3c6')))
+
 (circle 'sky' (r 15) (fill '#0b1026'))
 
-(glow 'big-glow' (x -2.8) (y 2.2) (fill '#f6c453') (radius 8.5))
-(sunflower 'big' (x -2.8) (y 2.2))
-(orbit 'ring' (x -2.8) (y 2.2) (radius 7.0) (count 60) (size 0.16) (fill '#5fd3c6'))
-
-(glow 'small-glow' (x 6.3) (y -5.9) (fill '#ff8c42') (radius 4.4) (layers 10))
-(sunflower 'small' (x 6.3) (y -5.9) (n 160) (spread 0.25) (size 0.08))
+(bloom 'big' (x -2.8) (y 2.2) (fill '#f6c453') (moons 60))
+(bloom 'small' (x 6.3) (y -5.9) (fill '#ff8c42') (n 160) (spread 0.25) (size 0.08) (halo 4.4))
 
 ; Stars take the color of whichever flower they drift near.
 (group 'stars'
@@ -42,12 +44,12 @@
     (circle _ (x (rand -10 10)) (y (rand -10 10)) (r (rand 0.015 0.07)) (opacity (rand 0.25 1))
       (fill
         (cond
-          ((< (dist self big) 7.6) '#f6c453')
-          ((< (dist self small) 3.8) '#ff8c42')
+          ((< (dist self big) big.moon-radius) big.fill)
+          ((< (dist self small) small.halo) small.fill)
           (else '#c9d6ff'))))))
 
 (text 'title' 'the golden angle' (x 1.5) (y 8.9) (fill '#f6c453'))
 (text 'subtitle' '137.508°' (x 1.6) (y 8.1) (fill '#c9d6ff') (opacity 0.55))
 
 (canvas 'cnv' (transform (rotate -8))
-  sky big-glow small-glow stars ring big small title subtitle)
+  sky stars big small title subtitle)
