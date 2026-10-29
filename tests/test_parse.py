@@ -5,6 +5,7 @@ import pytest
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
+    Field,
     Form,
     InterpStrLit,
     IntLit,
@@ -597,3 +598,28 @@ class TestListLiteral:
     def test_not_at_the_top_level(self):
         with pytest.raises(ParseError):
             parse("[1 2]")
+
+
+class TestFormatSpecs:
+    @pytest.mark.parametrize(
+        "text, field",
+        [
+            ("$'{x:.2f}'", Field(n("x"), ".2f")),
+            ("$'{g[0].r:>8.3f}'", Field(n("g", IntLit(0), "r"), ">8.3f")),
+            ("$'{x: >5}'", Field(n("x"), " >5")),
+            ("$'{ x :.1%}'", Field(n("x"), ".1%")),
+        ],
+    )
+    def test_field(self, text, field):
+        assert atom(text) == InterpStrLit((field,))
+
+    def test_with_text_around(self):
+        assert atom("$'area {a:.2f} m'") == InterpStrLit(("area ", Field(n("a"), ".2f"), " m"))
+
+    def test_no_spec_stays_a_name(self):
+        assert atom("$'{x}'") == InterpStrLit((n("x"),))
+
+    @pytest.mark.parametrize("text", ["$'{x:{y}}'", "$'{x:.2f'", "$'{:.2f}'"])
+    def test_invalid(self, text):
+        with pytest.raises(ParseError):
+            atom(text)

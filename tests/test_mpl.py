@@ -432,6 +432,23 @@ class TestDist:
         assert value(src, "d", "value") == 5.0
 
 
+class TestFormatSpecs:
+    def test_real(self):
+        assert k_text("$'{k:.1f}'", k=2) == "2.0"
+        assert k_text("$'{k:.3e}'", k=1234.5) == "1.234e+03"
+
+    def test_int_while_drawing(self):
+        src = (
+            "(motif 'm' (params (n 7)) (circle 'c')) (m 'd') (slider 's' d.n)"
+            " (text 't' $'{d.n:03d}')"
+        )
+        m = scene(src)
+        ev = Evaluator(m, random.Random(0))
+        assert ev.value(m["t"], "value") == "007"
+        ev.write(m["d"], "n", 42)
+        assert ev.value(m["t"], "value") == "042"
+
+
 class TestDotsExample:
     def test_each_dot_is_colored_by_the_circle_it_touches(self):
         scn = compile_model(parse((EXAMPLES / "dots.mtp").read_text()))

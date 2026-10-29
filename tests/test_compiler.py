@@ -891,6 +891,38 @@ class TestMod:
         assert get(scn, "v", Real).value == Free(6.0)
 
 
+class TestFormatSpecs:
+    @pytest.mark.parametrize(
+        "consts, text, value",
+        [
+            ("(const 'g' 3.14159)", "$'{g:.2f}'", "3.14"),
+            ("(const 'n' 7)", "$'{n:03d}'", "007"),
+            ("(const 'n' 7)", "$'[{n:>4}]'", "[   7]"),
+            ("(const 's' 'ab')", "$'{s:*^6}'", "**ab**"),
+            ("(const 'p' 0.25)", "$'{p:.0%}'", "25%"),
+            ("(const 'g' 2.0)", "$'{g:}'", "2.0"),
+        ],
+    )
+    def test_folded(self, consts, text, value):
+        assert get(scene(f"{consts} (text 't' {text})"), "t", Text).value == Free(value)
+
+    def test_bound(self):
+        t = get(scene("(real 'k' 2) (text 't' $'{k:.1f}')"), "t", Text)
+        assert isinstance(t.value, Bound)
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(real 'k') (text 't' $'{k:q}')",
+            "(real 'k') (text 't' $'{k:d}')",
+            "(const 's' 'ab') (text 't' $'{s:.2f}')",
+            "(const 'p' [1 2]) (text 't' $'{p:.2f}')",
+        ],
+    )
+    def test_invalid(self, src):
+        error(src)
+
+
 class TestSqrt:
     def test_folded(self):
         assert real_of("(sqrt 9)") == Free(3.0)

@@ -6,6 +6,7 @@
 (const 'night' '#0b1026')
 (const 'gold' '#f6c453')
 (const 'chalk' '#e8e4d8')
+(const 'golden-angle' (* 180 (- 3 (sqrt 5))))
 
 (func 'seed-color' (params (t 0.0))
   (cond ((< t 0.3) '#9a4f16') ((< t 0.6) '#cf7424') ((< t 0.85) '#e89b2a') (else gold)))
@@ -24,12 +25,12 @@
   (circle 'halo' (r 9.2) (fill 'none') (fill-opacity 0.12) (stroke 'none'))
   (flower 'sunflower')
   (text 'name' 'a quarter turn' (pos [-9.3 9]) (font-size 0.6) (fill chalk))
-  (text 'degrees' $'{sunflower.angle}°' (pos [-9.3 8.2]) (font-size 0.45) (fill chalk) (opacity 0.6)))
+  (text 'degrees' $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font-size 0.45) (fill chalk) (opacity 0.6)))
 
 (state 'quarter' (= sunflower.angle 90) (= name.value 'a quarter turn') (= halo.fill 'none'))
 (state 'third' (= sunflower.angle 120) (= name.value 'a third of a turn') (= halo.fill 'none'))
 (state 'two-fifths' (= sunflower.angle 144) (= name.value 'two fifths of a turn') (= halo.fill 'none'))
-(state 'golden' (= sunflower.angle 137.508) (= name.value 'the golden angle') (= halo.fill gold))
+(state 'golden' (= sunflower.angle golden-angle) (= name.value 'the golden angle') (= halo.fill gold))
 
 (canvas 'view' garden)
 (play 'tour'

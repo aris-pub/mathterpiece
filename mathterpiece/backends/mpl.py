@@ -154,9 +154,10 @@ class Runtime:
             return "".join(a if isinstance(a, str) else self.eval(a, frame, env) for a in args)
         if op == "show":
             value = self.eval(args[0], frame, env)
+            spec = args[2] if len(args) > 2 else None
             if isinstance(value, _Splice):
-                return " ".join(_show(v, args[1]) for v in value.values)
-            return _show(value, args[1])
+                return " ".join(_show(v, args[1], spec) for v in value.values)
+            return _show(value, args[1], spec)
         if op == "if":
             test, then, other = args
             return self.eval(then if self.eval(test, frame, env) else other, frame, env)
@@ -372,12 +373,19 @@ def _all_objects(model: Model) -> list[Obj]:
     return out
 
 
-def _show(value: Any, kind: str) -> str:
+# Numbers are floats while drawing, so the type from the compiler says how to show them: by the
+# format spec, as in Python's f-strings, or Python's default without one.
+def _show(value: Any, kind: str, spec: str | None = None) -> str:
     number = isinstance(value, (int, float)) and not isinstance(value, bool)
     if kind == "int" and number:
-        return str(int(round(value)))
-    if kind == "real" and number:
-        return str(float(value))
+        value = int(round(value))
+    elif kind in ("real", "ratio") and number:
+        value = float(value)
+    if spec:
+        try:
+            return format(value, spec)
+        except (ValueError, TypeError) as err:
+            raise EvalError(str(err)) from None
     return show(value)
 
 

@@ -43,6 +43,7 @@ from mathterpiece.model import (
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
+    Field,
     Form,
     InterpStrLit,
     IntLit,
@@ -262,8 +263,12 @@ class _Writer:
             for part in node.parts:
                 if isinstance(part, str):
                     parts.append(part)
-                else:
-                    parts.append(["show", self.name(part, ctx), self.type_of(part, ctx)])
+                    continue
+                name = part.name if isinstance(part, Field) else part
+                shown = ["show", self.name(name, ctx), self.type_of(name, ctx)]
+                if isinstance(part, Field) and part.spec:
+                    shown.append(part.spec)
+                parts.append(shown)
             return parts
         if isinstance(node, Name):
             return self.name(node, ctx)

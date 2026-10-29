@@ -125,6 +125,11 @@ class TestExpressions:
             ["show", ["param", ref(doc, "d"), "s"], "real"],
         ]
 
+    def test_format_specs(self):
+        doc = exported("(real 'k') (text 't' $'{k:.1f}')")
+        k = ["read", ref(doc, "k"), "value"]
+        assert obj(doc, "t")["attrs"]["value"] == ["str", ["show", k, "real", ".1f"]]
+
     def test_conditionals(self):
         doc = exported("(real 'k') (text 't' (if (< k 1) 'a' 'b'))")
         k = ["read", ref(doc, "k"), "value"]

@@ -1,4 +1,4 @@
-(const 'golden' 137.508)
+(const 'golden' (* 180 (- 3 (sqrt 5))))
 (const 'gold' '#f6c453')
 (const 'starlight' '#c9d6ff')
 
@@ -57,6 +57,6 @@
             (else starlight))))))
 
   (text 'title' 'the golden angle' (x 2.3) (y 9.3) (font-size 0.6) (fill gold))
-  (text 'subtitle' $'{golden}°' (x 2.4) (y 8.5) (font-size 0.5) (fill starlight) (opacity 0.55)))
+  (text 'subtitle' $'{golden:.3f}°' (x 2.4) (y 8.5) (font-size 0.5) (fill starlight) (opacity 0.55)))
 
 (canvas 'cnv' (transform (rotate -8)) night)

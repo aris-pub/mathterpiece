@@ -28,7 +28,7 @@ class StrLit:
 
 @dataclass(frozen=True, slots=True)
 class InterpStrLit:
-    parts: tuple[str | Name, ...]
+    parts: tuple["str | Name | Field", ...]
     pos: Pos = field(default=NOPOS, compare=False)
 
 
@@ -59,6 +59,14 @@ class ComplexLit:
 @dataclass(frozen=True, slots=True)
 class BoolLit:
     value: bool
+    pos: Pos = field(default=NOPOS, compare=False)
+
+
+# {name:spec} in an interpolated string: the name shown with a Python format spec.
+@dataclass(frozen=True, slots=True)
+class Field:
+    name: "Name"
+    spec: str
     pos: Pos = field(default=NOPOS, compare=False)
 
 

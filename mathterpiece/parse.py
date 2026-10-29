@@ -5,6 +5,7 @@ from fractions import Fraction
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
+    Field,
     Form,
     InterpStrLit,
     IntLit,
@@ -109,6 +110,7 @@ class _Parser:
         self.i = 0
         self.line = 1
         self.col = 1
+        self.in_braces = False
 
     def pos(self) -> Pos:
         return Pos(self.line, self.col)
@@ -209,7 +211,10 @@ class _Parser:
 
     def run(self) -> str:
         start = self.i
+        # Inside braces, ':' starts a format spec, so it ends the name.
         while self.peek() and not _ends_run(self.peek()):
+            if self.in_braces and self.peek() == ":":
+                break
             self.advance()
         return self.src[start : self.i]
 
@@ -249,7 +254,8 @@ class _Parser:
                 self.advance()
                 part_pos = self.pos()
                 parts.extend(_name_parts(self.run(), part_pos))
-        if self.peek() and not _ends_run(self.peek()):
+        ends = _ends_run(self.peek()) or (self.in_braces and self.peek() == ":")
+        if self.peek() and not ends:
             raise ParseError(f"unexpected {self.peek()!r} after index", self.pos())
         return Name(tuple(parts), pos)
 
@@ -287,7 +293,7 @@ class _Parser:
         pos = self.pos()
         self.advance()
         self.advance()
-        parts: list[str | Name] = []
+        parts: list[str | Name | Field] = []
         text: list[str] = []
 
         def flush():
@@ -323,21 +329,34 @@ class _Parser:
         self.expect_delimiter()
         return InterpStrLit(tuple(parts), pos)
 
-    def interp_name(self) -> Name:
+    def interp_name(self) -> Name | Field:
         brace = self.pos()
         self.advance()
         while self.peek().isspace():
             self.advance()
         pos = self.pos()
-        text = self.run()
-        if not text:
-            raise ParseError("expected a name inside braces", brace)
-        if text in OPERATORS or text in ("true", "false") or LOOKS_NUMERIC_RE.match(text):
-            raise ParseError(f"only names are allowed inside braces, got {text!r}", pos)
-        name = self.access(text, pos)
+        self.in_braces = True
+        try:
+            text = self.run()
+            if not text:
+                raise ParseError("expected a name inside braces", brace)
+            if text in OPERATORS or text in ("true", "false") or LOOKS_NUMERIC_RE.match(text):
+                raise ParseError(f"only names are allowed inside braces, got {text!r}", pos)
+            name = self.access(text, pos)
+        finally:
+            self.in_braces = False
         while self.peek().isspace():
             self.advance()
+        spec = None
+        if self.peek() == ":":
+            self.advance()
+            start = self.i
+            while self.peek() and self.peek() not in "{}'":
+                self.advance()
+            spec = self.src[start : self.i]
+            if self.peek() == "{":
+                raise ParseError("a format spec cannot hold braces", self.pos())
         if self.peek() != "}":
             raise ParseError("expected a single name and '}' inside braces", brace)
         self.advance()
-        return name
+        return name if spec is None else Field(name, spec, pos)

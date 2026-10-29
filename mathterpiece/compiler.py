@@ -45,6 +45,7 @@ from mathterpiece.model import (
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
+    Field,
     Form,
     InterpStrLit,
     IntLit,
@@ -250,7 +251,9 @@ def _defined_names(nodes, heads) -> set[str]:
 # (dist self a), so it reads x and y.
 # A let value read by name brings along what its own expression reads.
 def _self_reads(
-    node: Node | str, lets: dict[str, set[str]], props: dict[str, set[str]] | None = None
+    node: Node | Field | str,
+    lets: dict[str, set[str]],
+    props: dict[str, set[str]] | None = None,
 ) -> set[str]:
     props = props or {}
     if isinstance(node, Name):
@@ -266,6 +269,8 @@ def _self_reads(
             if not isinstance(part, str):
                 reads |= _self_reads(part, lets, props)
         return reads
+    if isinstance(node, Field):
+        return _self_reads(node.name, lets, props)
     if isinstance(node, (Form, ListLit, InterpStrLit)):
         parts = node.parts if isinstance(node, InterpStrLit) else node.items
         return set().union(*(_self_reads(p, lets, props) for p in parts))
@@ -402,8 +407,37 @@ def _names_in(node: Node) -> list[Name]:
     if isinstance(node, (Form, ListLit)):
         return [n for item in node.items for n in _names_in(item)]
     if isinstance(node, InterpStrLit):
-        return [p for p in node.parts if isinstance(p, Name)]
+        return [p.name if isinstance(p, Field) else p for p in node.parts if not isinstance(p, str)]
     return []
+
+
+# A value shown in a string: Python's format() with the spec, as in f-strings, or Python's
+# default without one.
+def _format(value: Any, kind: str, spec: str | None) -> str:
+    if not spec:
+        return show(value)
+    return format(int(value) if kind == "int" else value, spec)
+
+
+# A sample of each type, to check a format spec at compile time.
+SAMPLES: dict[str, Any] = {
+    "int": 1,
+    "ratio": Fraction(1, 2),
+    "real": 1.5,
+    "complex": 1 + 2j,
+    "str": "a",
+    "bool": True,
+}
+
+
+def _check_spec(spec: str, kind: str, pos: Pos):
+    sample = SAMPLES.get(kind)
+    try:
+        if sample is None:
+            raise ValueError
+        format(sample, spec)
+    except (ValueError, TypeError):
+        raise CompileError(f"{spec!r} is not a format for a {kind}", pos) from None
 
 
 def _check_not_syntax(name: str, pos: Pos):
@@ -1652,11 +1686,20 @@ class _Compiler:
             if isinstance(part, str):
                 text.append(part)
                 continue
-            value = self.name(part, env)
+            name = part.name if isinstance(part, Field) else part
+            value = self.name(name, env)
             if isinstance(value, (ObjRef, SelfRef)):
                 raise CompileError("cannot put an object in a string", part.pos)
+            if isinstance(value, Spread):
+                if isinstance(part, Field):
+                    raise CompileError("a group attribute cannot take a format spec", part.pos)
+                constant = False
+                continue
+            spec = part.spec if isinstance(part, Field) else None
+            if spec:
+                _check_spec(spec, value.type, part.pos)
             if isinstance(value, Const):
-                text.append(show(value.value))
+                text.append(_format(value.value, value.type, spec))
             else:
                 constant = False
         return Const("".join(text), "str") if constant else Dyn("str")
@@ -2130,16 +2173,21 @@ def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
     if isinstance(node, ListLit):
         return ListLit(tuple(_substitute(item, env, lets) for item in node.items), node.pos)
     if isinstance(node, InterpStrLit):
-        out: list[str | Name] = []
+        out: list[str | Name | Field] = []
         for part in node.parts:
-            sub = part if isinstance(part, str) else _substitute(part, env, lets)
+            spec = part.spec if isinstance(part, Field) else None
+            name = part.name if isinstance(part, Field) else part
+            sub = name if isinstance(name, str) else _substitute(name, env, lets)
             if isinstance(sub, (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)):
-                sub = str(sub.value)
+                kind = "int" if isinstance(sub, IntLit) else "real"
+                sub = _format(sub.value, kind, spec) if spec else str(sub.value)
             elif isinstance(sub, ListLit):
                 sub = show(tuple(item.value for item in sub.items if isinstance(item, RealLit)))
+            elif isinstance(sub, Name) and spec:
+                sub = Field(sub, spec, part.pos if isinstance(part, Field) else sub.pos)
             if isinstance(sub, str) and out and isinstance(out[-1], str):
                 out[-1] += sub
-            elif isinstance(sub, (str, Name)):
+            elif isinstance(sub, (str, Name, Field)):
                 out.append(sub)
         return InterpStrLit(tuple(out), node.pos)
     return node
