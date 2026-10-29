@@ -6,25 +6,32 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
-from matplotlib.patches import Patch, PathPatch
+from matplotlib.patches import Circle as MplCircle
+from matplotlib.patches import Ellipse as MplEllipse
+from matplotlib.patches import Patch, PathPatch, Polygon, Rectangle
+from matplotlib.path import Path
 from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
 
-from mathterpiece.compiler import ARITHMETIC, AXES, COMPARISONS
+from mathterpiece.compiler import ARITHMETIC, AXES, COMPARISONS, PROPERTIES
 from mathterpiece.compiler import _fold as fold
 from mathterpiece.matrix import IDENTITY, Matrix, compose
 from mathterpiece.model import (
     Bound,
     Canvas,
     Circle,
+    Ellipse,
     Group,
     Inherit,
+    Line,
     Local,
     Model,
     Motif,
     Obj,
     Real,
+    Rect,
     Text,
+    Triangle,
     Visual,
     attributes,
     local_names,
@@ -46,6 +53,12 @@ from mathterpiece.stdlib import STDLIB, power, show, translate
 from mathterpiece.stdlib import call as stdlib_call
 
 LITERALS = (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)
+
+
+# Properties that are positions, so reading them from another frame converts them like x and y.
+POINT_PROPERTIES = {
+    cls: {n for n in props if n != "size"} - {"r"} for cls, props in PROPERTIES.items()
+}
 
 
 class EvalError(Exception):
@@ -128,19 +141,51 @@ class Evaluator:
 
     # x and y read by an expression are given in the coordinates the reader itself is placed in.
     def read(self, obj: Obj, attr: str, reader: Obj) -> Any:
-        if attr == "pos":
-            return self.read(obj, "x", reader), self.read(obj, "y", reader)
-        if attr not in ("x", "y"):
+        same_frame = self.parent.get(id(obj)) is self.reading_frame(reader)
+        if attr in ("x", "y") and same_frame:
             return self.value(obj, attr)
-        here, there = self.parent.get(id(obj)), self.reading_frame(reader)
+        if attr in ("x", "y", "pos") or attr in POINT_PROPERTIES.get(type(obj), ()):
+            if attr in ("x", "y", "pos"):
+                point = self.value(obj, "x"), self.value(obj, "y")
+            else:
+                point = self.property(obj, attr)
+            point = self.convert(point, self.parent.get(id(obj)), self.reading_frame(reader))
+            return point if attr not in ("x", "y") else point[0 if attr == "x" else 1]
+        if attr in PROPERTIES.get(type(obj), {}):
+            return self.property(obj, attr)
+        return self.value(obj, attr)
+
+    # A point given in the coordinates of one container, in the coordinates of another.
+    def convert(self, point: tuple, here: Obj | None, there: Obj | None) -> tuple:
         if here is there:
-            return self.value(obj, attr)
-        scene = self.frame(here).apply(self.value(obj, "x"), self.value(obj, "y"))
+            return tuple(point)
+        scene = self.frame(here).apply(*point)
         try:
-            local = self.frame(there).inverse().apply(*scene)
+            return self.frame(there).inverse().apply(*scene)
         except ValueError as e:
             raise EvalError(str(e)) from None
-        return local[0] if attr == "x" else local[1]
+
+    # The other ways of reading a shape, computed from what it stores, in its parent's coordinates.
+    def property(self, obj: Obj, name: str) -> Any:
+        v = lambda attr: self.value(obj, attr)  # noqa: E731
+        if isinstance(obj, Rect):
+            if name == "from":
+                return v("x"), v("y")
+            if name == "size":
+                return v("width"), v("height")
+            share = 0.5 if name == "center" else 1
+            return v("x") + share * v("width"), v("y") + share * v("height")
+        if isinstance(obj, Ellipse):
+            return (v("x"), v("y")) if name == "center" else (2 * v("rx"), 2 * v("ry"))
+        if isinstance(obj, Line):
+            end = (v("x1"), v("y1")) if name == "from" else (v("x2"), v("y2"))
+            return v("x") + end[0], v("y") + end[1]
+        assert isinstance(obj, Triangle)
+        corners = [v("a"), v("b"), v("c")]
+        mid = (sum(p[0] for p in corners) / 3, sum(p[1] for p in corners) / 3)
+        if name == "center":
+            return v("x") + mid[0], v("y") + mid[1]
+        return math.dist(mid, corners[0])
 
     def eval(self, node: Node, owner: Obj) -> Any:
         if isinstance(node, LITERALS):
@@ -316,17 +361,14 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform, strokes: lis
     if isinstance(obj, (Group, Motif)):
         for member in obj.members:
             _draw(member, ax, ev, to_view, strokes)
-    elif isinstance(obj, Circle):
+    elif isinstance(obj, (Circle, Rect, Ellipse, Line, Triangle)):
         shape = ev.shape(obj)
-        circle = plt.Circle(
-            (0, 0),
-            ev.value(obj, "r"),
-            facecolor=_paint(ev, obj, "fill"),
-            edgecolor=_paint(ev, obj, "stroke"),
-            transform=_affine(shape) + to_view,
-        )
-        strokes.append((circle, ev.value(obj, "stroke-width") * _scale(shape)))
-        ax.add_artist(circle)
+        patch = _outline(obj, ev)
+        patch.set_facecolor("none" if isinstance(obj, Line) else _paint(ev, obj, "fill"))
+        patch.set_edgecolor(_paint(ev, obj, "stroke"))
+        patch.set_transform(_affine(shape) + to_view)
+        strokes.append((patch, ev.value(obj, "stroke-width") * _scale(shape)))
+        ax.add_patch(patch)
     elif isinstance(obj, Text):
         # Glyph outlines in scene units, so the canvas transform turns and scales the letters
         # the way an SVG transform does.
@@ -342,6 +384,20 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform, strokes: lis
         )
         strokes.append((text, ev.value(obj, "stroke-width") * _scale(shape)))
         ax.add_patch(text)
+
+
+# Each shape drawn around its own origin; ev.shape places it.
+def _outline(obj: Obj, ev: Evaluator) -> Patch:
+    v = lambda attr: ev.value(obj, attr)  # noqa: E731
+    if isinstance(obj, Circle):
+        return MplCircle((0, 0), v("r"))
+    if isinstance(obj, Rect):
+        return Rectangle((0, 0), v("width"), v("height"))
+    if isinstance(obj, Ellipse):
+        return MplEllipse((0, 0), 2 * v("rx"), 2 * v("ry"))
+    if isinstance(obj, Line):
+        return PathPatch(Path([(v("x1"), v("y1")), (v("x2"), v("y2"))]))
+    return Polygon([v("a"), v("b"), v("c")], closed=True)
 
 
 def _affine(matrix: Matrix) -> Affine2D:

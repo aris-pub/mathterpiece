@@ -74,6 +74,35 @@ class Circle(Styled):
     r: Attr[float] = Free(1.0)
 
 
+# Shapes store SVG's attributes, with x and y where SVG has cx and cy. Line and triangle points
+# are measured from x and y, which default to 0, so by default they match SVG.
+@dataclass(kw_only=True)
+class Rect(Styled):
+    width: Attr[float] = Free(1.0)
+    height: Attr[float] = Free(1.0)
+
+
+@dataclass(kw_only=True)
+class Ellipse(Styled):
+    rx: Attr[float] = Free(1.0)
+    ry: Attr[float] = Free(1.0)
+
+
+@dataclass(kw_only=True)
+class Line(Styled):
+    x1: Attr[float] = Free(0.0)
+    y1: Attr[float] = Free(0.0)
+    x2: Attr[float] = Free(1.0)
+    y2: Attr[float] = Free(0.0)
+
+
+@dataclass(kw_only=True)
+class Triangle(Styled):
+    a: Attr[tuple[float, float]] = Free((0.0, 0.0))
+    b: Attr[tuple[float, float]] = Free((1.0, 0.0))
+    c: Attr[tuple[float, float]] = Free((0.0, 1.0))
+
+
 @dataclass(kw_only=True)
 class Text(Styled):
     value: Attr[str] = Free("")

@@ -1,0 +1,21 @@
+(const 'ink' '#1f2a44')
+
+(scene 'world'
+  (rect 'paper' (center [0 0]) (size [20 20]) (fill '#f7f3ea'))
+
+  ; Axes through the origin.
+  (line _ (from [-9 0]) (to [9 0]) (stroke ink) (stroke-width 0.05))
+  (line _ (from [0 -9]) (to [0 9]) (stroke ink) (stroke-width 0.05))
+
+  ; A circle with an inscribed equilateral triangle and a square around it.
+  (rect 'square' (center [0 0]) (size [12 12]) (fill 'none') (stroke ink) (stroke-width 0.08))
+  (circle 'disk' (r 6) (fill '#cfe3f2') (stroke ink) (stroke-width 0.08))
+  (triangle 'tri' (center [0 0]) (r 6) (fill '#f2b8a0') (stroke ink) (stroke-width 0.08))
+
+  ; An ellipse turned 30 degrees around its center, and a rect turned around its corner.
+  (ellipse 'oval' (center [6 -6]) (size [5 2]) (transform (rotate 30)) (fill '#b9d8b0'))
+  (rect 'card' (x -8) (y -8) (width 3) (height 2) (transform (rotate 20)) (fill '#e9c46a'))
+
+  (text 'label' $'tri.r = {tri.r}' (pos [-9 8.5]) (font-size 0.7) (fill ink)))
+
+(canvas 'cnv' world)

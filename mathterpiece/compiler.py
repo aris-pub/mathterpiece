@@ -4,24 +4,28 @@ import operator
 from collections.abc import Callable
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, get_args
+from typing import Any, get_args, get_origin
 
 from mathterpiece.matrix import Matrix, compose
 from mathterpiece.model import (
     Bound,
     Canvas,
     Circle,
+    Ellipse,
     Free,
     Group,
     Inherit,
+    Line,
     Local,
     Model,
     Motif,
     Obj,
     Real,
+    Rect,
     Root,
     Styled,
     Text,
+    Triangle,
     View,
     Visual,
     attributes,
@@ -110,6 +114,10 @@ SYNTAX = {
 
 FORMS = {
     "circle": FormSpec(Circle),
+    "rect": FormSpec(Rect),
+    "ellipse": FormSpec(Ellipse),
+    "line": FormSpec(Line),
+    "triangle": FormSpec(Triangle),
     "text": FormSpec(Text, ("value",)),
     "real": FormSpec(Real, ("value",)),
     "group": FormSpec(Group),
@@ -224,32 +232,43 @@ def _defined_names(nodes, heads) -> set[str]:
 # The attributes of its own object that an expression reads. A bare self is a point, as in
 # (dist self a), so it reads x and y.
 # A let value read by name brings along what its own expression reads.
-def _self_reads(node: Node | str, lets: dict[str, set[str]]) -> set[str]:
+def _self_reads(
+    node: Node | str, lets: dict[str, set[str]], props: dict[str, set[str]] | None = None
+) -> set[str]:
+    props = props or {}
     if isinstance(node, Name):
         first = node.parts[0]
         reads: set[str] = set(lets.get(first, set()) if isinstance(first, str) else ())
         if node.parts[0] == "self":
             second = node.parts[1] if len(node.parts) > 1 else None
-            reads |= {second} if isinstance(second, str) and second != "pos" else {"x", "y"}
+            if not isinstance(second, str) or second == "pos":
+                reads |= {"x", "y"}
+            else:
+                reads |= props.get(second, {second})
         for part in node.parts[1:]:
             if not isinstance(part, str):
-                reads |= _self_reads(part, lets)
+                reads |= _self_reads(part, lets, props)
         return reads
     if isinstance(node, (Form, ListLit, InterpStrLit)):
         parts = node.parts if isinstance(node, InterpStrLit) else node.items
-        return set().union(*(_self_reads(p, lets) for p in parts))
+        return set().union(*(_self_reads(p, lets, props) for p in parts))
     return set()
 
 
 # Without forward references, objects cannot depend on each other in a loop, so a cycle can only
 # run through self, inside one object.
-def _check_cycles(name: str | None, given: dict[str, tuple[Any, Pos]], owned: list[Local]):
+def _check_cycles(
+    name: str | None,
+    given: dict[str, tuple[Any, Pos]],
+    owned: list[Local],
+    props: dict[str, set[str]] | None = None,
+):
     lets: dict[str, set[str]] = {}
     for local in owned:
         assert isinstance(local.value, Bound) and local.name is not None
-        lets[local.name] = _self_reads(local.value.expr, lets)
+        lets[local.name] = _self_reads(local.value.expr, lets, props)
     reads = {
-        attr: _self_reads(value.expr, lets) if isinstance(value, Bound) else set()
+        attr: _self_reads(value.expr, lets, props) if isinstance(value, Bound) else set()
         for attr, (value, _) in given.items()
     }
     done: set[str] = set()
@@ -315,7 +334,31 @@ def _convert(value, dst: str):
 
 def _expected_type(cls: type[Obj], attr: str) -> str:
     (arg,) = get_args(attributes(cls)[attr].type)
+    if get_origin(arg) is tuple:
+        return f"list{len(get_args(arg))}"
     return PY_TYPES[arg]
+
+
+# Other ways to write a shape, besides its stored attributes, and their types. Each can also be
+# read back, computed from the stored attributes like a Python property.
+PROPERTIES: dict[type[Obj], dict[str, str]] = {
+    Rect: {"center": "list2", "size": "list2", "from": "list2", "to": "list2"},
+    Ellipse: {"center": "list2", "size": "list2"},
+    Line: {"from": "list2", "to": "list2"},
+    Triangle: {"center": "list2", "r": "real"},
+}
+# The stored attributes each property is computed from, for finding cycles through self.
+PROPERTY_READS: dict[type[Obj], dict[str, set[str]]] = {
+    Rect: {
+        "center": {"x", "y", "width", "height"},
+        "size": {"width", "height"},
+        "from": {"x", "y"},
+        "to": {"x", "y", "width", "height"},
+    },
+    Ellipse: {"center": {"x", "y"}, "size": {"rx", "ry"}},
+    Line: {"from": {"x", "y", "x1", "y1"}, "to": {"x", "y", "x2", "y2"}},
+    Triangle: {"center": {"x", "y", "a", "b", "c"}, "r": {"a", "b", "c"}},
+}
 
 
 class _Compiler:
@@ -878,6 +921,9 @@ class _Compiler:
         settable = {a for a in attrs if a not in spec.positional and (var is None or a != var.name)}
         if {"x", "y"} <= attrs.keys():
             settable.add("pos")
+        shapes = PROPERTIES.get(spec.cls, {})
+        settable |= shapes.keys()
+        extra: dict[str, tuple[Const | Dyn, Node]] = {}
         rest = list(form.items[2:])
         values: dict[str, Free | Bound] = {}
         positions: dict[str, Pos] = {}
@@ -907,6 +953,16 @@ class _Compiler:
                 values["x"], values["y"] = self.pos_value(node.items[1], env)
                 positions["x"] = positions["y"] = node.pos
                 continue
+            if attr in shapes:
+                if len(node.items) != 2:
+                    raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
+                value = self.value_arg(node.items[1], env)
+                if not _widens_to(value.type, shapes[attr]):
+                    raise CompileError(
+                        f"{attr} takes a {shapes[attr]}, got {value.type}", node.items[1].pos
+                    )
+                extra[attr] = (value, node.items[1])
+                continue
             if _expected_type(spec.cls, attr) == "transform":
                 head_name = Name(("transform",), node.items[0].pos)
                 composed = Form((head_name, *node.items[1:]), node.pos)
@@ -916,7 +972,14 @@ class _Compiler:
                 raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
             values[attr] = self.attr_value(spec.cls, attr, node.items[1], env)
 
-        _check_cycles(name, {a: (values[a], positions[a]) for a in values}, frame.locals)
+        if extra:
+            self.construct(spec.cls, extra, values, positions, env)
+        _check_cycles(
+            name,
+            {a: (values[a], positions[a]) for a in values},
+            frame.locals,
+            PROPERTY_READS.get(spec.cls, {}),
+        )
         kwargs: dict[str, Any] = {attrs[attr].name: value for attr, value in values.items()}
         if self.scopes and issubclass(spec.cls, Styled):
             for attr in INHERITED:
@@ -936,6 +999,111 @@ class _Compiler:
         obj = spec.cls(name=name, **kwargs)
         self.register(obj, form.pos)
         return obj
+
+    # Fills a shape's stored attributes from its other constructors, such as a rect's center and
+    # size. Giving a stored attribute that a constructor also fills is an error.
+    def construct(
+        self,
+        cls: type[Obj],
+        extra: dict[str, tuple[Const | Dyn, Node]],
+        values: dict[str, Free | Bound],
+        positions: dict[str, Pos],
+        env: Env,
+    ):
+        hidden: dict[str, str] = {}
+
+        def part(name: str, i: int | None = None) -> Node:
+            value, node = extra[name]
+            if isinstance(value, Const):
+                v = value.value
+                if i is not None:
+                    assert isinstance(v, tuple)
+                    v = v[i]
+                assert isinstance(v, (int, float, Fraction))
+                return RealLit(float(v), node.pos)
+            if name not in hidden:
+                hidden[name] = self.hidden_value(name, node, env, value.type)
+            axis = () if i is None else ("xyz"[i],)
+            return Name((hidden[name], *axis), node.pos)
+
+        def stored(attr: str) -> Node:
+            value = values.get(attr, attributes(cls)[attr].default)
+            if isinstance(value, Free):
+                assert isinstance(value.value, (int, float))
+                return RealLit(float(value.value))
+            return Name(("self", attr))
+
+        def call(op: str, *args: Node) -> Form:
+            return Form((Name((op,)), *args))
+
+        def conflict(name: str, *attrs: str):
+            for attr in attrs:
+                if attr in positions and attr != name:
+                    raise CompileError(
+                        f"{name} cannot be given together with {attr}", extra[name][1].pos
+                    )
+
+        def put(attr: str, node: Node, source: str):
+            values[attr] = self.attr_value(cls, attr, node, env)
+            positions[attr] = extra[source][1].pos
+
+        def need(*names: str):
+            for name in names:
+                if name not in extra:
+                    given = next(n for n in names if n in extra)
+                    raise CompileError(f"{given} needs {name}", extra[given][1].pos)
+
+        if cls is Rect and ("from" in extra or "to" in extra):
+            need("from", "to")
+            for name in ("from", "to"):
+                conflict(name, "x", "y", "pos", "width", "height", "size", "center")
+            put("x", part("from", 0), "from")
+            put("y", part("from", 1), "from")
+            put("width", call("-", part("to", 0), part("from", 0)), "to")
+            put("height", call("-", part("to", 1), part("from", 1)), "to")
+            return
+        if cls is Line:
+            need("from", "to")
+            for name in ("from", "to"):
+                conflict(name, "x1", "y1", "x2", "y2", "x", "y", "pos")
+            put("x1", part("from", 0), "from")
+            put("y1", part("from", 1), "from")
+            put("x2", part("to", 0), "to")
+            put("y2", part("to", 1), "to")
+            return
+        if cls is Triangle:
+            if "center" in extra:
+                conflict("center", "x", "y", "pos")
+                put("x", part("center", 0), "center")
+                put("y", part("center", 1), "center")
+            source = "r" if "r" in extra else "center"
+            conflict(source, "a", "b", "c")
+            radius = part("r") if "r" in extra else RealLit(1.0)
+            for corner, angle in (("a", 90.0), ("b", 210.0), ("c", 330.0)):
+                put(corner, call("polar", radius, RealLit(angle)), source)
+            return
+        sizes = ("width", "height") if cls is Rect else ("rx", "ry")
+        if "size" in extra:
+            conflict("size", *sizes)
+            halve = (lambda n: n) if cls is Rect else (lambda n: call("/", n, RealLit(2.0)))
+            put(sizes[0], halve(part("size", 0)), "size")
+            put(sizes[1], halve(part("size", 1)), "size")
+        if "center" in extra:
+            conflict("center", "x", "y", "pos")
+            if cls is Rect:
+                put(
+                    "x",
+                    call("-", part("center", 0), call("/", stored("width"), RealLit(2.0))),
+                    "center",
+                )
+                put(
+                    "y",
+                    call("-", part("center", 1), call("/", stored("height"), RealLit(2.0))),
+                    "center",
+                )
+            else:
+                put("x", part("center", 0), "center")
+                put("y", part("center", 1), "center")
 
     def member(
         self, node: Node, env: Env, container: str, settable, owner: str | None
@@ -1166,6 +1334,10 @@ class _Compiler:
         attrs = attributes(type(obj))
         if part == "pos" and {"x", "y"} <= attrs.keys():
             return Dyn("list2")
+        if isinstance(obj, Local):
+            return self.list_part(Dyn(obj.type), part, env, pos)
+        if part in PROPERTIES.get(type(obj), {}):
+            return Dyn(PROPERTIES[type(obj)][part])
         if part not in attrs or variadic(type(obj)) is attrs[part]:
             raise CompileError(f"{obj.name!r} has no attribute {part!r}", pos)
         return Dyn(_expected_type(type(obj), part))
@@ -1174,6 +1346,8 @@ class _Compiler:
         attrs = attributes(cls)
         if part == "pos" and {"x", "y"} <= attrs.keys():
             return Dyn("list2")
+        if isinstance(part, str) and part in PROPERTIES.get(cls, {}):
+            return Dyn(PROPERTIES[cls][part])
         if not isinstance(part, str) or part not in attrs or variadic(cls) is attrs[part]:
             raise CompileError(f"self ({cls.__name__.lower()}) has no attribute {part!r}", pos)
         return Dyn(_expected_type(cls, part))

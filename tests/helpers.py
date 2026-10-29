@@ -3,7 +3,7 @@ from mathterpiece.model import Root
 from mathterpiece.nodes import Form, Name
 from mathterpiece.parse import parse
 
-VISUAL_FORMS = {"circle", "text", "group"}
+VISUAL_FORMS = {"circle", "text", "group", "rect", "ellipse", "line", "triangle"}
 
 
 # Most tests are about one object, so they write visual objects at the top level for brevity.
