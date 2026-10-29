@@ -1,0 +1,37 @@
+; Put n points on a circle and join point k to point m*k with a chord. Together the chords
+; trace a curve: times m gives a curve with m - 1 cusps, a cardioid for 2, a nephroid for 3.
+
+(const 'slate' '#0e1726')
+(const 'chalk' '#e8e4d8')
+
+; Point k of n, evenly spaced around a circle. Angles past 360 wrap around on their own.
+(func 'on-circle' (params (radius 1.0) (k 0) (n 1))
+  (polar radius (turn (/ k n))))
+
+(motif 'times-table' (params (n 200) (m 2) (radius 3.8) (turn 0.0) (label ''))
+  (group 'figure' (transform (rotate turn))
+    (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
+    (repeat k n
+      (line _
+        (from (on-circle radius k n))
+        (to (on-circle radius (* m k) n))
+        (stroke-width 0.02)
+        (stroke-opacity (lerp 0.2 0.85 (/ k n)))))
+    (repeat k n
+      (circle _ (pos (on-circle radius k n)) (r 0.045) (stroke 'none'))))
+  (text 'caption' label (pos [(- radius) (- (+ radius 0.8))]) (font-size 0.5)
+    (fill chalk) (stroke 'none')))
+
+(scene 'board'
+  (rect 'backdrop' (center [0 0]) (size [20 20]) (fill slate))
+
+  (times-table 'two' (pos [-5 5]) (m 2) (turn -90)
+    (stroke '#ffb703') (fill '#ffb703') (label '× 2   cardioid'))
+  (times-table 'three' (pos [5 5]) (m 3) (turn -90)
+    (stroke '#8ecae6') (fill '#8ecae6') (label '× 3   nephroid'))
+  (times-table 'nine' (pos [0 -4.6]) (n 240) (m 9) (radius 4.2) (turn 90)
+    (stroke '#f4978e') (fill '#f4978e') (label '× 9   eight cusps'))
+
+  (text 'title' 'modular times tables' (pos [-9.4 9.3]) (font-size 0.55) (fill chalk) (opacity 0.7)))
+
+(canvas 'cnv' board)
