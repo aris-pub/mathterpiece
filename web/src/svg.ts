@@ -31,12 +31,27 @@ function drawObject(rt: Runtime, i: number, into: Element): void {
     for (const member of rt.obj(i).members ?? []) drawObject(rt, member, into);
     return;
   }
+  if (kind === "text") {
+    // A text in the middle of changing is drawn twice: the old one fading out, the new one in.
+    const morph = rt.morphs.get(i);
+    if (morph) into.appendChild(text(rt, i, morph[0], 1 - morph[1]));
+    into.appendChild(text(rt, i, String(rt.value(i, "value")), morph ? morph[1] : 1));
+    return;
+  }
   const el = outline(rt, i);
   if (!el) return;
-  const placed = kind === "text" ? rt.shape(i).times(FLIP) : rt.shape(i);
-  el.setAttribute("transform", placed.svg());
-  paint(rt, i, el, kind === "line");
+  el.setAttribute("transform", rt.shape(i).svg());
+  paint(rt, i, el, kind === "line", 1);
   into.appendChild(el);
+}
+
+function text(rt: Runtime, i: number, value: string, fade: number): Element {
+  const el = document.createElementNS(NS, "text");
+  el.setAttribute("font-size", String(rt.value(i, "font-size")));
+  el.textContent = value;
+  el.setAttribute("transform", rt.shape(i).times(FLIP).svg());
+  paint(rt, i, el, false, fade);
+  return el;
 }
 
 // Each shape drawn around its own origin; rt.shape places it.
@@ -60,19 +75,14 @@ function outline(rt: Runtime, i: number): Element | null {
       const corners = [v("a"), v("b"), v("c")] as number[][];
       return el("polygon", { points: corners.map((p) => p.join(",")).join(" ") });
     }
-    case "text": {
-      const t = el("text", { "font-size": v("font-size") });
-      t.textContent = String(v("value"));
-      return t;
-    }
     default:
       return null;
   }
 }
 
 // Opacity multiplies down the motifs and into each paint's own opacity, as in matplotlib.
-function paint(rt: Runtime, i: number, el: Element, noFill: boolean): void {
-  const opacity = rt.opacity(i);
+function paint(rt: Runtime, i: number, el: Element, noFill: boolean, fade: number): void {
+  const opacity = rt.opacity(i) * fade;
   const fill = noFill ? "none" : String(rt.value(i, "fill"));
   el.setAttribute("fill", fill);
   if (fill !== "none") el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity") * opacity));

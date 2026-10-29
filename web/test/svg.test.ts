@@ -124,6 +124,18 @@ describe("shapes", () => {
   });
 });
 
+describe("text in the middle of changing", () => {
+  it("draws the old text fading out and the new one fading in", () => {
+    const rt = scene([shape("text", { value: "new", "font-size": 1, "fill-opacity": 0.8 })]);
+    rt.morphs.set(2, ["old", 0.25]);
+    const texts = [...draw(rt, 0).querySelectorAll("text")];
+    expect(texts.map((t) => t.textContent)).toEqual(["old", "new"]);
+    const [old, current] = texts.map((t) => Number(t.getAttribute("fill-opacity")));
+    expect(old).toBeCloseTo(0.6);
+    expect(current).toBeCloseTo(0.2);
+  });
+});
+
 describe("every example", () => {
   // Vitest runs from web/; under happy-dom, import.meta.url is not a file URL.
   const dir = join(process.cwd(), "test", "data", "examples");

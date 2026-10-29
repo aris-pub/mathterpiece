@@ -8,6 +8,8 @@
       body { font-family: system-ui, sans-serif; margin: 2rem; }
       mtp-canvas { display: block; width: min(90vw, 640px); }
       mtp-canvas svg { width: 100%; height: auto; }
+      #controls > * { display: block; margin: 0.5rem 0; }
+      [aria-pressed="true"] { font-weight: bold; }
     </style>
   </head>
   <body>
@@ -15,6 +17,7 @@
     <select id="pick"></select>
     <mtp-model id="m"></mtp-model>
     <mtp-canvas model="m"></mtp-canvas>
+    <div id="controls"></div>
     <script type="module">
       import "/src/index.ts";
       const examples = Object.keys(import.meta.glob("/test/data/examples/*.json"));
@@ -24,7 +27,17 @@
       const chosen = new URLSearchParams(location.search).get("example");
       pick.value = examples.find((p) => name(p) === chosen) ?? examples[0];
       const load = async () => {
-        document.getElementById("m").doc = await (await fetch(pick.value)).json();
+        const doc = await (await fetch(pick.value)).json();
+        const controls = document.getElementById("controls");
+        controls.replaceChildren();
+        document.getElementById("m").doc = doc;
+        for (const o of doc.objects) {
+          if (!["slider", "button", "steps", "play"].includes(o.kind)) continue;
+          const el = document.createElement(`mtp-${o.kind}`);
+          el.setAttribute("model", "m");
+          el.setAttribute("name", o.name);
+          controls.append(el);
+        }
         history.replaceState(null, "", `?example=${name(pick.value)}`);
       };
       pick.onchange = load;
