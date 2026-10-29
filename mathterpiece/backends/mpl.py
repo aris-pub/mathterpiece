@@ -10,7 +10,8 @@ from matplotlib.patches import Patch, PathPatch
 from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
 
-from mathterpiece.compiler import COMPARISONS
+from mathterpiece.compiler import ARITHMETIC, AXES, COMPARISONS
+from mathterpiece.compiler import _fold as fold
 from mathterpiece.matrix import compose
 from mathterpiece.model import (
     Bound,
@@ -34,13 +35,14 @@ from mathterpiece.nodes import (
     Form,
     InterpStrLit,
     IntLit,
+    ListLit,
     Name,
     Node,
     RatioLit,
     RealLit,
     StrLit,
 )
-from mathterpiece.stdlib import STDLIB, divide, power, translate
+from mathterpiece.stdlib import STDLIB, power, show, translate
 from mathterpiece.stdlib import call as stdlib_call
 
 LITERALS = (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)
@@ -107,6 +109,8 @@ class Evaluator:
 
     # x and y read by an expression are given in the coordinates of the body the reader is in.
     def read(self, obj: Obj, attr: str, reader: Obj) -> Any:
+        if attr == "pos":
+            return self.read(obj, "x", reader), self.read(obj, "y", reader)
         _, around = self.context(reader)
         result = self.value(obj, attr)
         if attr in ("x", "y"):
@@ -123,6 +127,8 @@ class Evaluator:
             return "".join(self.text(part, owner) for part in node.parts)
         if isinstance(node, Name):
             return self.name(node, owner)
+        if isinstance(node, ListLit):
+            return tuple(float(self.eval(item, owner)) for item in node.items)
         assert isinstance(node, Form)
         return self.call(node, owner)
 
@@ -130,7 +136,13 @@ class Evaluator:
         if isinstance(part, str):
             return part
         value = self.name(part, owner)
-        return " ".join(str(v) for v in value) if isinstance(value, list) else str(value)
+        return " ".join(show(v) for v in value) if isinstance(value, list) else show(value)
+
+    # A part of a list value: x, y, z, or an index.
+    def take(self, value: Any, parts: list, owner: Obj) -> Any:
+        for part in parts:
+            value = value[AXES[part] if isinstance(part, str) else int(self.eval(part, owner))]
+        return value
 
     # Who self is for an expression owned by obj, and which motif body its names resolve in. A let
     # value borrows both from the object that owns it.
@@ -153,23 +165,25 @@ class Evaluator:
             assert me is not None
             obj = me
         elif around is not None and first in around.params:
-            return self.value(around, first)
+            return self.take(self.value(around, first), rest, owner)
         elif around is not None and first in self.locals[id(around)]:
             obj = self.locals[id(around)][first]
         elif first in self.model:
             obj = self.model[first]
         else:
             raise EvalError(f"undefined name {first!r}")
-        for part in rest:
+        for i, part in enumerate(rest):
+            if isinstance(obj, (Real, Local)):
+                return self.take(self.value(obj, "value"), rest[i:], owner)
             if isinstance(part, str):
                 if isinstance(obj, Motif) and part in obj.params:
-                    return self.value(obj, part)
+                    return self.take(self.value(obj, part), rest[i + 1 :], owner)
                 if isinstance(obj, Motif) and part in self.locals[id(obj)]:
                     obj = self.locals[id(obj)][part]
                     continue
                 if isinstance(obj, Group) and part != "members":
                     return [self.read(member, part, owner) for member in obj.members]
-                return self.read(obj, part, owner)
+                return self.take(self.read(obj, part, owner), rest[i + 1 :], owner)
             assert isinstance(obj, Group)
             obj = obj.members[self.eval(part, owner)]
         return self.value(obj, "value") if isinstance(obj, (Real, Local)) else obj
@@ -207,17 +221,8 @@ class Evaluator:
         return outer * self.value(obj, "opacity")
 
     def apply(self, op: Any, args: list[Any]) -> Any:
-        if op == "+":
-            return sum(args)
-        if op == "*":
-            return math.prod(args)
-        if op == "-":
-            return -args[0] if len(args) == 1 else args[0] - sum(args[1:])
-        if op == "/":
-            result = args[0]
-            for arg in args[1:]:
-                result = divide(result, arg)
-            return result
+        if op in ARITHMETIC:
+            return fold(op, args)
         if op == "^":
             result = power(*args)
             if isinstance(result, complex):
@@ -229,7 +234,7 @@ class Evaluator:
             return compose(*args)
         if op in STDLIB:
             fn = STDLIB[op]
-            kinds = ["point" if isinstance(a, Obj) else "real" for a in args]
+            kinds = ["point" if isinstance(a, (Obj, tuple)) else "real" for a in args]
             sig = fn.find(kinds)
             assert sig is not None
             values = [self.point(a) if isinstance(a, Obj) else a for a in args]

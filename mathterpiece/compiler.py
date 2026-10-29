@@ -1,3 +1,4 @@
+import functools
 import math
 import operator
 from collections.abc import Callable
@@ -33,6 +34,7 @@ from mathterpiece.nodes import (
     Form,
     InterpStrLit,
     IntLit,
+    ListLit,
     Name,
     Node,
     Pos,
@@ -41,7 +43,16 @@ from mathterpiece.nodes import (
     StrLit,
 )
 from mathterpiece.parse import ParseError, parse_name
-from mathterpiece.stdlib import STDLIB, divide, power
+from mathterpiece.stdlib import (
+    STDLIB,
+    add,
+    divide_any,
+    multiply,
+    negate,
+    power,
+    show,
+    subtract,
+)
 from mathterpiece.stdlib import call as stdlib_call
 
 BUILTINS = [
@@ -213,16 +224,17 @@ def _defined_names(nodes, heads) -> set[str]:
 # A let value read by name brings along what its own expression reads.
 def _self_reads(node: Node | str, lets: dict[str, set[str]]) -> set[str]:
     if isinstance(node, Name):
-        reads: set[str] = set(lets.get(node.parts[0], set()) if len(node.parts) == 1 else ())
+        first = node.parts[0]
+        reads: set[str] = set(lets.get(first, set()) if isinstance(first, str) else ())
         if node.parts[0] == "self":
             second = node.parts[1] if len(node.parts) > 1 else None
-            reads |= {second} if isinstance(second, str) else {"x", "y"}
+            reads |= {second} if isinstance(second, str) and second != "pos" else {"x", "y"}
         for part in node.parts[1:]:
             if not isinstance(part, str):
                 reads |= _self_reads(part, lets)
         return reads
-    if isinstance(node, (Form, InterpStrLit)):
-        parts = node.items if isinstance(node, Form) else node.parts
+    if isinstance(node, (Form, ListLit, InterpStrLit)):
+        parts = node.parts if isinstance(node, InterpStrLit) else node.items
         return set().union(*(_self_reads(p, lets) for p in parts))
     return set()
 
@@ -253,6 +265,32 @@ def _check_cycles(name: str | None, given: dict[str, tuple[Any, Pos]], owned: li
 
     for attr in reads:
         visit(attr, [])
+
+
+# A list of n numbers has the type "list{n}". Its parts are read as x, y, z or by index.
+AXES = {"x": 0, "y": 1, "z": 2}
+
+
+def _list_len(t: str) -> int | None:
+    return int(t[4:]) if t.startswith("list") and t[4:].isdigit() else None
+
+
+def _is_literal_type(t: str) -> bool:
+    return t in LITERAL_NODES or _list_len(t) is not None
+
+
+def _literal(value: "Const", pos: Pos) -> Node:
+    if _list_len(value.type) is not None:
+        assert isinstance(value.value, tuple)
+        return ListLit(tuple(RealLit(float(v), pos) for v in value.value), pos)
+    return LITERAL_NODES[value.type](value.value, pos)
+
+
+def _check_pos(attr: str, given, pos: Pos):
+    if (attr == "pos" and {"x", "y", "pos"} & given.keys()) or (
+        attr in ("x", "y") and "pos" in given
+    ):
+        raise CompileError("pos sets both x and y, so give pos or x and y, not both", pos)
 
 
 def _check_not_syntax(name: str, pos: Pos):
@@ -345,13 +383,27 @@ class _Compiler:
             if isinstance(value, Const):
                 inner[name] = value
                 continue
-            hidden = f"let:{len(self.names)}:{name}"
-            stored = self.resolve_refs(_substitute(expr, self.constants(inner), self.lets), inner)
-            local = Local(name=hidden, value=Bound(stored), type=value.type)
-            self.names[hidden] = local
-            self.frames[-1].locals.append(local)
-            inner[name] = LetRef(hidden, value.type)
+            inner[name] = LetRef(self.hidden_value(name, expr, inner, value.type), value.type)
         return inner
+
+    # A value only known when drawing, stored once in the model and read by every use.
+    def hidden_value(self, label: str, node: Node, env: Env, kind: str) -> str:
+        hidden = f"let:{len(self.names)}:{label}"
+        stored = self.resolve_refs(_substitute(node, self.constants(env), self.lets), env)
+        local = Local(name=hidden, value=Bound(stored), type=kind)
+        self.names[hidden] = local
+        self.frames[-1].locals.append(local)
+        return hidden
+
+    def pos_value(self, node: Node, env: Env) -> tuple[Free | Bound, Free | Bound]:
+        value = self.value_arg(node, env)
+        if value.type != "list2":
+            raise CompileError(f"pos takes a point of two numbers, got {value.type}", node.pos)
+        if isinstance(value, Const):
+            assert isinstance(value.value, tuple)
+            return Free(float(value.value[0])), Free(float(value.value[1]))
+        hidden = self.hidden_value("pos", node, env, "list2")
+        return Bound(Name((hidden, "x"), node.pos)), Bound(Name((hidden, "y"), node.pos))
 
     def let_items[T](self, node: Form, env: Env, item: Callable[[Form, Env], list[T]]) -> list[T]:
         inner = self.bindings(node, env)
@@ -511,9 +563,9 @@ class _Compiler:
         if name in self.names or name in self.consts:
             raise CompileError(f"name {name!r} is already defined", form.items[1].pos)
         value = self.value_arg(form.items[2], env)
-        if not isinstance(value, Const) or value.type not in LITERAL_NODES:
+        if not isinstance(value, Const) or not _is_literal_type(value.type):
             raise CompileError(
-                "a const must be a number, string, or bool known at compile time",
+                "a const must be a number, string, bool, or list known at compile time",
                 form.items[2].pos,
             )
         self.consts[name] = value
@@ -559,9 +611,10 @@ class _Compiler:
                 params[name] = None
                 continue
             default = self.expr(item.items[1], {})
-            if not isinstance(default, Const) or default.type not in LITERAL_NODES:
+            if not isinstance(default, Const) or not _is_literal_type(default.type):
                 raise CompileError(
-                    "a parameter default must be a number, string, or bool known at compile time",
+                    "a parameter default must be a number, string, bool, or list known at "
+                    "compile time",
                     item.items[1].pos,
                 )
             params[name] = default
@@ -610,12 +663,7 @@ class _Compiler:
                 inner[pname] = Const(_convert(value.value, default.type), default.type)
                 continue
             # Computed once and shared by every use in the body, like a let value.
-            hidden = f"let:{len(self.names)}:{pname}"
-            stored = self.resolve_refs(_substitute(arg, outer, self.lets), env)
-            local = Local(name=hidden, value=Bound(stored), type=default.type)
-            self.names[hidden] = local
-            self.frames[-1].locals.append(local)
-            inner[pname] = LetRef(hidden, default.type)
+            inner[pname] = LetRef(self.hidden_value(pname, arg, env, default.type), default.type)
         result = self.func_body(spec, inner)
         # The body is written into the caller's stored expression right away, because compiling
         # the same body for another call replaces the bindings of the lets inside it.
@@ -656,9 +704,10 @@ class _Compiler:
             if name in params:
                 raise CompileError(f"parameter {name!r} is given twice", item.pos)
             default = self.expr(item.items[1], {})
-            if not isinstance(default, Const) or default.type not in LITERAL_NODES:
+            if not isinstance(default, Const) or not _is_literal_type(default.type):
                 raise CompileError(
-                    "a parameter default must be a number, string, or bool known at compile time",
+                    "a parameter default must be a number, string, bool, or list known at "
+                    "compile time",
                     item.items[1].pos,
                 )
             params[name] = default
@@ -720,13 +769,19 @@ class _Compiler:
                 raise CompileError(f"an instance of {kind} takes no members", node.pos)
             if head is None or not isinstance(node, Form) or head == "members":
                 raise CompileError(f"unexpected value in {kind}", node.pos)
-            if head not in attrs and head not in spec.params:
+            if head not in attrs and head not in spec.params and head != "pos":
                 raise CompileError(f"{head!r} is not an attribute of {kind}", node.pos)
-            if head in values or head in params:
+            _check_pos(head, {a: p for a, (_, p) in written.items()}, node.pos)
+            if head in written:
                 raise CompileError(f"attribute {head!r} is given twice", node.pos)
             if len(node.items) != 2:
                 raise CompileError(f"attribute {head!r} takes exactly one value", node.pos)
-            if head in attrs:
+            if head == "pos":
+                values["x"], values["y"] = self.pos_value(node.items[1], outer)
+                written["x"] = (values["x"], node.pos)
+                written["y"] = (values["y"], node.pos)
+                written["pos"] = (Free(None), node.pos)
+            elif head in attrs:
                 values[attrs[head].name] = self.attr_value(Motif, head, node.items[1], outer)
                 written[head] = (values[attrs[head].name], node.pos)
             else:
@@ -793,6 +848,8 @@ class _Compiler:
         attrs = attributes(spec.cls)
         var = variadic(spec.cls)
         settable = {a for a in attrs if a not in spec.positional and (var is None or a != var.name)}
+        if {"x", "y"} <= attrs.keys():
+            settable.add("pos")
         rest = list(form.items[2:])
         values: dict[str, Free | Bound] = {}
         positions: dict[str, Pos] = {}
@@ -812,9 +869,16 @@ class _Compiler:
             assert isinstance(node, Form)
             attr = _head(node)
             assert attr is not None
-            if attr in values:
+            _check_pos(attr, positions, node.pos)
+            if attr in positions:
                 raise CompileError(f"attribute {attr!r} is given twice", node.pos)
             positions[attr] = node.pos
+            if attr == "pos":
+                if len(node.items) != 2:
+                    raise CompileError("attribute 'pos' takes exactly one value", node.pos)
+                values["x"], values["y"] = self.pos_value(node.items[1], env)
+                positions["x"] = positions["y"] = node.pos
+                continue
             if _expected_type(spec.cls, attr) == "transform":
                 head_name = Name(("transform",), node.items[0].pos)
                 composed = Form((head_name, *node.items[1:]), node.pos)
@@ -921,6 +985,8 @@ class _Compiler:
             return self.ref_name(node, env)
         if isinstance(node, Form):
             return Form(tuple(self.resolve_refs(item, env) for item in node.items), node.pos)
+        if isinstance(node, ListLit):
+            return ListLit(tuple(self.resolve_refs(item, env) for item in node.items), node.pos)
         return node
 
     def expr(self, node: Node, env: Env) -> Value:
@@ -939,10 +1005,48 @@ class _Compiler:
                 return Const(v, "str")
             case InterpStrLit():
                 return self.interp(node, env)
+            case ListLit():
+                return self.list_value(node, env)
             case Name():
                 return self.name(node, env)
             case Form():
                 return self.call(node, env)
+
+    def list_value(self, node: ListLit, env: Env) -> Value:
+        if not node.items:
+            raise CompileError("a list needs at least one number", node.pos)
+        known: list[float] = []
+        for item in node.items:
+            value = self.value_arg(item, env)
+            if value.type not in ("int", "ratio", "real"):
+                raise CompileError(f"a list holds only real numbers, got {value.type}", item.pos)
+            if isinstance(value, Const):
+                assert isinstance(value.value, (int, Fraction, float))
+                known.append(float(value.value))
+        kind = f"list{len(node.items)}"
+        return Const(tuple(known), kind) if len(known) == len(node.items) else Dyn(kind)
+
+    def list_part(self, value: Value, part: str | Node, env: Env, pos: Pos) -> Value:
+        assert isinstance(value, (Const, Dyn))
+        n = _list_len(value.type)
+        if n is None:
+            raise CompileError(f"a {value.type} has no parts", pos)
+        if isinstance(part, str):
+            if part not in AXES:
+                raise CompileError(f"a list has no part {part!r}; use x, y, z, or an index", pos)
+            i = AXES[part]
+        else:
+            index = self.expr(part, env)
+            if not (isinstance(index, Const) and index.type == "int"):
+                raise CompileError("an index must be an int known at compile time", part.pos)
+            assert isinstance(index.value, int)
+            i = index.value + n if index.value < 0 else index.value
+        if not 0 <= i < n:
+            raise CompileError(f"a list of {n} numbers has no part {part!r}", pos)
+        if isinstance(value, Const):
+            assert isinstance(value.value, tuple)
+            return Const(value.value[i], "real")
+        return Dyn("real")
 
     def interp(self, node: InterpStrLit, env: Env) -> Value:
         text: list[str] = []
@@ -955,7 +1059,7 @@ class _Compiler:
             if isinstance(value, (ObjRef, SelfRef)):
                 raise CompileError("cannot put an object in a string", part.pos)
             if isinstance(value, Const):
-                text.append(str(value.value))
+                text.append(show(value.value))
             else:
                 constant = False
         return Const("".join(text), "str") if constant else Dyn("str")
@@ -969,20 +1073,24 @@ class _Compiler:
                 raise CompileError(f"{first!r} is a number and has no attributes", node.pos)
             return Const(local, "int")
         if isinstance(local, (Const, Dyn, LetRef)):
-            if rest:
-                raise CompileError(f"{first!r} is a value and has no attributes", node.pos)
-            return Dyn(local.type) if isinstance(local, LetRef) else local
+            value: Value = Dyn(local.type) if isinstance(local, LetRef) else local
+            for part in rest:
+                value = self.list_part(value, part, env, node.pos)
+            return value
         scope = self.scopes[-1] if self.scopes else {}
         if local is None and first in scope:
             current: Value = scope[first]
             if isinstance(current, (Const, Dyn)):
-                if rest:
-                    raise CompileError(f"{first!r} is a parameter and has no attributes", node.pos)
+                for part in rest:
+                    current = self.list_part(current, part, env, node.pos)
                 return current
         elif local is None and first in self.consts:
-            if rest:
-                raise CompileError(f"{first!r} is a const and has no attributes", node.pos)
-            return self.consts[first]
+            value = self.consts[first]
+            if rest and _list_len(value.type) is None:
+                raise CompileError(f"{first!r} is a const {value.type} and has no parts", node.pos)
+            for part in rest:
+                value = self.list_part(value, part, env, node.pos)
+            return value
         elif local is None and first not in self.names:
             raise CompileError(f"undefined name {first!r}", node.pos)
         elif local is None and self.in_func and first not in self.builtin_names:
@@ -1006,8 +1114,10 @@ class _Compiler:
     def access(self, current: Value, part: str | Node, env: Env, pos: Pos) -> Value:
         if isinstance(current, SelfRef):
             return self.self_access(current.cls, part, pos)
+        if isinstance(current, (Const, Dyn)) and _list_len(current.type) is not None:
+            return self.list_part(current, part, env, pos)
         if not isinstance(current, ObjRef):
-            raise CompileError("only objects have attributes or members", pos)
+            raise CompileError("only objects and lists have parts", pos)
         obj = current.obj
         if not isinstance(part, str):
             return self.index(obj, part, env)
@@ -1026,12 +1136,16 @@ class _Compiler:
                 types.append(_expected_type(type(member), part))
             return Spread(tuple(types))
         attrs = attributes(type(obj))
+        if part == "pos" and {"x", "y"} <= attrs.keys():
+            return Dyn("list2")
         if part not in attrs or variadic(type(obj)) is attrs[part]:
             raise CompileError(f"{obj.name!r} has no attribute {part!r}", pos)
         return Dyn(_expected_type(type(obj), part))
 
     def self_access(self, cls: type[Obj], part: str | Node, pos: Pos) -> Value:
         attrs = attributes(cls)
+        if part == "pos" and {"x", "y"} <= attrs.keys():
+            return Dyn("list2")
         if not isinstance(part, str) or part not in attrs or variadic(cls) is attrs[part]:
             raise CompileError(f"self ({cls.__name__.lower()}) has no attribute {part!r}", pos)
         return Dyn(_expected_type(cls, part))
@@ -1187,6 +1301,8 @@ class _Compiler:
                 point = {"x", "y"} <= attributes(type(value.obj)).keys()
             else:
                 point = None
+            if isinstance(value, (Const, Dyn)) and _list_len(value.type) is not None:
+                point = True
             if point is None and isinstance(value, (Const, Dyn)) and _widens_to(value.type, "real"):
                 kinds.append("real")
             elif point:
@@ -1197,13 +1313,21 @@ class _Compiler:
         sig = fn.find(kinds)
         if sig is None:
             raise CompileError(f"no form of {name} takes these arguments", node.pos)
+        sizes = {
+            _list_len(v.type) if isinstance(v, (Const, Dyn)) else 2
+            for v, kind in zip(values, kinds, strict=True)
+            if kind == "point"
+        }
+        if len(sizes) > 1:
+            raise CompileError(f"the points given to {name} have different sizes", node.pos)
+        result = f"list{sizes.pop()}" if sig.result == "point" else sig.result
         consts = [v.value for v in values if isinstance(v, Const)]
         if fn.pure and len(consts) == len(values):
             try:
-                return Const(stdlib_call(fn, sig, consts), sig.result)
+                return Const(stdlib_call(fn, sig, consts), result)
             except (ValueError, ZeroDivisionError) as e:
                 raise CompileError(str(e) or "invalid argument", node.pos) from None
-        return Dyn(sig.result)
+        return Dyn(result)
 
     def transform(self, node: Form, env: Env) -> Value:
         values = [self.value_arg(arg, env) for arg in node.items[1:]]
@@ -1225,7 +1349,7 @@ class _Compiler:
                 raise CompileError("expected a number, got an object", arg.pos)
             arg_types = value.types if isinstance(value, Spread) else (value.type,)
             for t in arg_types:
-                if t not in NUMERIC:
+                if t not in NUMERIC and _list_len(t) is None:
                     raise CompileError(f"expected a number, got {t}", arg.pos)
             types.extend(arg_types)
             if isinstance(value, Const):
@@ -1236,6 +1360,8 @@ class _Compiler:
             raise CompileError(f"{op} needs at least one argument", node.pos)
         if op == "/" and len(types) < 2:
             raise CompileError("/ needs at least two arguments", node.pos)
+        if any(_list_len(t) is not None for t in types):
+            return self.list_arithmetic(op, node, types, consts, dynamic)
         rank = max((NUMERIC.index(t) for t in types), default=0)
         if op == "/":
             rank = max(rank, NUMERIC.index("ratio"))
@@ -1245,6 +1371,26 @@ class _Compiler:
         values = [_convert(c.value, result) for c in consts]
         try:
             return Const(_fold(op, values), result)
+        except ZeroDivisionError:
+            raise CompileError("division by zero", node.pos) from None
+
+    def list_arithmetic(
+        self, op: str, node: Form, types: list[str], consts: list[Const], dynamic: bool
+    ) -> Value:
+        lists = [i for i, t in enumerate(types) if _list_len(t) is not None]
+        if "complex" in types:
+            raise CompileError("lists hold only real numbers", node.pos)
+        if op in "+-" and len(set(types)) != 1:
+            raise CompileError(f"{op} takes lists of the same size, or only numbers", node.pos)
+        if op == "*" and len(lists) != 1:
+            raise CompileError("* scales one list by numbers", node.pos)
+        if op == "/" and lists != [0]:
+            raise CompileError("/ divides one list by numbers", node.pos)
+        result = types[lists[0]]
+        if dynamic:
+            return Dyn(result)
+        try:
+            return Const(_fold(op, [c.value for c in consts]), result)
         except ZeroDivisionError:
             raise CompileError("division by zero", node.pos) from None
 
@@ -1261,9 +1407,17 @@ def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
         first = node.parts[0]
         local = env.get(first) if isinstance(first, str) and len(node.parts) == 1 else None
         if isinstance(local, Const):
-            return LITERAL_NODES[local.type](local.value, node.pos)
+            return _literal(local, node.pos)
         if isinstance(local, LetRef):
             return Name((local.hidden,), node.pos)
+        whole = env.get(first) if isinstance(first, str) and len(node.parts) > 1 else None
+        if isinstance(whole, (Const, LetRef)):
+            rest = tuple(
+                p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts[1:]
+            )
+            if isinstance(whole, LetRef):
+                return Name((whole.hidden, *rest), node.pos)
+            return RealLit(_take(whole.value, rest), node.pos)
         argument = env.get(first) if isinstance(first, str) else None
         if isinstance(argument, ArgRef):
             rest = tuple(
@@ -1276,12 +1430,16 @@ def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
         return Name(parts, node.pos)
     if isinstance(node, Form):
         return Form(tuple(_substitute(item, env, lets) for item in node.items), node.pos)
+    if isinstance(node, ListLit):
+        return ListLit(tuple(_substitute(item, env, lets) for item in node.items), node.pos)
     if isinstance(node, InterpStrLit):
         out: list[str | Name] = []
         for part in node.parts:
             sub = part if isinstance(part, str) else _substitute(part, env, lets)
             if isinstance(sub, (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)):
                 sub = str(sub.value)
+            elif isinstance(sub, ListLit):
+                sub = show(tuple(item.value for item in sub.items if isinstance(item, RealLit)))
             if isinstance(sub, str) and out and isinstance(out[-1], str):
                 out[-1] += sub
             elif isinstance(sub, (str, Name)):
@@ -1303,13 +1461,20 @@ def _retype(value: Const | Dyn, result: str) -> Value:
 
 
 def _fold(op: str, values: list):
-    if op == "+":
-        return sum(values)
-    if op == "*":
-        return math.prod(values)
-    if op == "-":
-        return -values[0] if len(values) == 1 else values[0] - sum(values[1:])
-    result = values[0]
-    for v in values[1:]:
-        result = divide(result, v)
-    return result
+    if op == "-" and len(values) == 1:
+        return negate(values[0])
+    if not values:
+        return 0 if op == "+" else 1
+    step = {"+": add, "-": subtract, "*": multiply, "/": divide_any}[op]
+    return functools.reduce(step, values)
+
+
+# A part of a known list, from parts that are x, y, z, or index literals.
+def _take(value, parts) -> float:
+    for part in parts:
+        if isinstance(part, IntLit):
+            value = value[part.value]
+        else:
+            assert isinstance(part, str)
+            value = value[AXES[part]]
+    return value

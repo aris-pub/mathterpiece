@@ -16,8 +16,7 @@
   (repeat i n
     (let ((a (* i golden)) (d (* spread (sqrt i))) (t (/ i n)))
       (circle _
-        (x (* d (cosd a)))
-        (y (* d (sind a)))
+        (pos (polar d a))
         (r (* size (sqrt (+ 1 (/ i 80)))))
         (opacity (lerp 0.8 1 t))
         (fill (seed-color t))))))
@@ -31,8 +30,7 @@
   (repeat k count
     (let ((a (turn (/ k count))))
       (circle _
-        (x (* radius (cosd a)))
-        (y (* radius (sind a)))
+        (pos (polar radius a))
         (r (* size (lerp 0.55 1 (cosd (* 3 a)))))
         (opacity (lerp 0.4 1 (sind (/ a 2))))))))
 

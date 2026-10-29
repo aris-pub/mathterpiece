@@ -8,6 +8,7 @@ from mathterpiece.nodes import (
     Form,
     InterpStrLit,
     IntLit,
+    ListLit,
     Name,
     Node,
     Pos,
@@ -163,6 +164,10 @@ class _Parser:
             return self.interp_string()
         if ch == '"':
             raise ParseError("double quotes are not allowed; use single quotes", pos)
+        if ch == "[":
+            return self.list_literal()
+        if ch == "]":
+            raise ParseError("unexpected ']'", pos)
         if ch in RESERVED:
             raise ParseError(f"{ch!r} is reserved", pos)
         return self.atom()
@@ -182,6 +187,25 @@ class _Parser:
         if not items:
             raise ParseError("empty form", pos)
         return Form(tuple(items), pos)
+
+    # A [ that starts a value opens a list; one right after a name indexes it (see access).
+    def list_literal(self) -> ListLit:
+        pos = self.pos()
+        self.advance()
+        items: list[Node] = []
+        while True:
+            self.skip_blank()
+            if not self.peek():
+                raise ParseError("unclosed '['", pos)
+            if self.peek() == "]":
+                self.advance()
+                break
+            if self.peek() == ")":
+                raise ParseError("expected ']' to close the list", self.pos())
+            items.append(self.node())
+        if self.peek() and not (_is_delimiter(self.peek()) or self.peek() == "]"):
+            raise ParseError(f"unexpected {self.peek()!r} after a list", self.pos())
+        return ListLit(tuple(items), pos)
 
     def run(self) -> str:
         start = self.i

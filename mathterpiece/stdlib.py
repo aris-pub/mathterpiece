@@ -18,6 +18,43 @@ def divide(a, b):
     return Fraction(a) / b if exact(a) and exact(b) else a / b
 
 
+# Lists are points (or any run of numbers): arithmetic on them works element by element.
+def add(a, b):
+    if isinstance(a, tuple):
+        return tuple(x + y for x, y in zip(a, b, strict=True))
+    return a + b
+
+
+def subtract(a, b):
+    if isinstance(a, tuple):
+        return tuple(x - y for x, y in zip(a, b, strict=True))
+    return a - b
+
+
+def negate(a):
+    return tuple(-x for x in a) if isinstance(a, tuple) else -a
+
+
+def multiply(a, b):
+    if isinstance(a, tuple):
+        return tuple(x * b for x in a)
+    if isinstance(b, tuple):
+        return tuple(a * y for y in b)
+    return a * b
+
+
+def divide_any(a, b):
+    if isinstance(a, tuple):
+        return tuple(divide(x, b) for x in a)
+    return divide(a, b)
+
+
+def show(value) -> str:
+    if isinstance(value, tuple):
+        return "(" + ", ".join(str(x) for x in value) + ")"
+    return str(value)
+
+
 def power(base, exp):
     if isinstance(exp, int) and exact(base):
         return Fraction(base) ** exp if exp < 0 else base**exp
@@ -61,13 +98,18 @@ def translate(dx: float, dy: float) -> Matrix:
     return Matrix(((1, 0, dx), (0, 1, dy), (0, 0, 1)))
 
 
+def _polar(r: float, deg: float) -> tuple[float, float]:
+    return r * _cosd(deg), r * _sind(deg)
+
+
 def _real(fn: Callable[[float], float]) -> "Function":
     return Function((Signature(("real",), "real", fn),))
 
 
 @dataclass(frozen=True)
 class Signature:
-    # Each parameter is "real" (a number that widens to real) or "point" (an object with x, y).
+    # Each parameter is "real" (a number that widens to real) or "point" (an object with x, y, or a
+    # list of numbers). A "point" result has as many numbers as the point arguments.
     params: tuple[str, ...]
     result: str
     impl: Callable[..., Any]
@@ -108,7 +150,17 @@ STDLIB: dict[str, Function] = {
     "asind": _real(lambda x: math.degrees(math.asin(x))),
     "acosd": _real(lambda x: math.degrees(math.acos(x))),
     "atand": _real(lambda x: math.degrees(math.atan(x))),
-    "lerp": Function((Signature(("real",) * 3, "real", lambda a, b, t: a + (b - a) * t),)),
+    "lerp": Function(
+        (
+            Signature(("real",) * 3, "real", lambda a, b, t: a + (b - a) * t),
+            Signature(
+                ("point", "point", "real"),
+                "point",
+                lambda a, b, t: tuple(x + (y - x) * t for x, y in zip(a, b, strict=True)),
+            ),
+        )
+    ),
+    "polar": Function((Signature(("real", "real"), "list2", _polar),)),
     "rotate": Function((Signature(("real",), "transform", _rotate),)),
     "scale": Function(
         (

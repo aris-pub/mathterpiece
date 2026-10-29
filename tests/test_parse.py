@@ -8,6 +8,7 @@ from mathterpiece.nodes import (
     Form,
     InterpStrLit,
     IntLit,
+    ListLit,
     Name,
     Pos,
     RatioLit,
@@ -284,7 +285,7 @@ class TestNames:
             atom(f"a{ch}b")
 
     @pytest.mark.parametrize("ch", ["[", "]", "{", "}"])
-    def test_brackets_outside_strings_are_errors(self, ch):
+    def test_unmatched_brackets_outside_strings_are_errors(self, ch):
         with pytest.raises(ParseError):
             parse(f"(a {ch})")
 
@@ -458,7 +459,6 @@ class TestIndexing:
     @pytest.mark.parametrize(
         "text",
         [
-            "g [0]",
             "g[]",
             "g[ ]",
             "g[0 1]",
@@ -473,7 +473,6 @@ class TestIndexing:
             "1.5[0]",
             "true[0]",
             "+[0]",
-            "[0]",
             "g]",
             "g[0]'a'",
         ],
@@ -561,3 +560,40 @@ class TestNodes:
         node = IntLit(1)
         with pytest.raises(AttributeError):
             node.value = 2  # ty: ignore[invalid-assignment]
+
+
+class TestListLiteral:
+    @pytest.mark.parametrize(
+        "text, items",
+        [
+            ("[1 2]", (IntLit(1), IntLit(2))),
+            ("[1 2 3]", (IntLit(1), IntLit(2), IntLit(3))),
+            ("[]", ()),
+            ("[ 1.5\n -2 ]", (RealLit(1.5), IntLit(-2))),
+            ("[k (* 2 k)]", (n("k"), Form((n("*"), IntLit(2), n("k"))))),
+            ("[a.x g[0].r]", (n("a", "x"), n("g", IntLit(0), "r"))),
+            ("[[1 2] 3]", (ListLit((IntLit(1), IntLit(2))), IntLit(3))),
+        ],
+    )
+    def test_items(self, text, items):
+        assert atom(text) == ListLit(items)
+
+    def test_a_space_separates_a_name_from_a_list(self):
+        (form,) = parse("(f g [0])")
+        assert form.items[1:] == (n("g"), ListLit((IntLit(0),)))
+
+    def test_no_space_indexes(self):
+        assert atom("g[0]") == n("g", IntLit(0))
+
+    def test_position(self):
+        (form,) = parse("(f\n  [1 2])")
+        assert form.items[1].pos == Pos(2, 3)
+
+    @pytest.mark.parametrize("src", ["(f [1 2)", "(f [1", "(f ])", "(f [1]x)"])
+    def test_invalid(self, src):
+        with pytest.raises(ParseError):
+            parse(src)
+
+    def test_not_at_the_top_level(self):
+        with pytest.raises(ParseError):
+            parse("[1 2]")

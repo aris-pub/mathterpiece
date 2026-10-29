@@ -62,10 +62,28 @@ class BoolLit:
     pos: Pos = field(default=NOPOS, compare=False)
 
 
+# [a b c]: a list of values, such as a point.
+@dataclass(frozen=True, slots=True)
+class ListLit:
+    items: tuple["Node", ...]
+    pos: Pos = field(default=NOPOS, compare=False)
+
+
 @dataclass(frozen=True, slots=True)
 class Form:
     items: tuple["Node", ...]
     pos: Pos = field(default=NOPOS, compare=False)
 
 
-Node = Form | StrLit | InterpStrLit | IntLit | RatioLit | RealLit | ComplexLit | BoolLit | Name
+Node = (
+    Form
+    | ListLit
+    | StrLit
+    | InterpStrLit
+    | IntLit
+    | RatioLit
+    | RealLit
+    | ComplexLit
+    | BoolLit
+    | Name
+)
