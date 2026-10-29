@@ -15,6 +15,7 @@ from mathterpiece.scene import (
     Scene,
     Styled,
     Text,
+    TreeError,
     View,
     Visual,
     attributes,
@@ -224,9 +225,10 @@ class TestSceneAdd:
         scn.add(circles)
         assert list(scn) == [circles]
 
-    def test_canvas_members_are_indexed(self):
+    def test_canvas_members_come_from_the_scene(self):
         disk = Circle(name="disk")
         scn = Scene()
+        scn.add(disk)
         scn.add(Canvas(name="cnv", members=[disk]))
         assert scn["disk"] is disk
 
@@ -295,7 +297,7 @@ class TestSceneDuplicates:
         assert scn["disk"] is disk
         assert list(scn) == [disk, scn["cnv"]]
 
-    def test_same_object_in_two_containers(self):
+    def test_same_object_in_a_group_and_a_canvas(self):
         disk = Circle(name="disk")
         scn = Scene()
         scn.add(Group(name="g", members=[disk]))
@@ -306,7 +308,7 @@ class TestSceneDuplicates:
         disk = Circle(name="disk")
         scn = Scene()
         scn.add(disk)
-        with pytest.raises(DuplicateNameError):
+        with pytest.raises(TreeError):
             scn.add(disk)
 
     def test_error_names_the_duplicate(self):
@@ -314,6 +316,64 @@ class TestSceneDuplicates:
         scn.add(Circle(name="teal_c"))
         with pytest.raises(DuplicateNameError, match="teal_c"):
             scn.add(Circle(name="teal_c"))
+
+
+class TestSceneTree:
+    def test_object_in_two_groups(self):
+        disk = Circle(name="disk")
+        scn = Scene()
+        scn.add(Group(name="g", members=[disk]))
+        with pytest.raises(TreeError, match="disk"):
+            scn.add(Group(name="h", members=[disk]))
+
+    def test_toplevel_object_in_a_group(self):
+        disk = Circle(name="disk")
+        scn = Scene()
+        scn.add(disk)
+        with pytest.raises(TreeError, match="disk"):
+            scn.add(Group(name="g", members=[disk]))
+
+    def test_object_twice_in_one_group(self):
+        disk = Circle(name="disk")
+        with pytest.raises(TreeError):
+            Scene().add(Group(name="g", members=[disk, disk]))
+
+    def test_anonymous_object_in_two_groups(self):
+        dot = Circle(name=None)
+        scn = Scene()
+        scn.add(Group(name="g", members=[dot]))
+        with pytest.raises(TreeError):
+            scn.add(Group(name="h", members=[dot]))
+
+    def test_two_canvases_show_the_same_object(self):
+        disk = Circle(name="disk")
+        scn = Scene()
+        scn.add(disk)
+        scn.add(Canvas(name="a", members=[disk]))
+        scn.add(Canvas(name="b", members=[disk]))
+        assert scn.views == [scn["a"], scn["b"]]
+
+    def test_canvas_shows_an_object_and_its_group(self):
+        disk = Circle(name="disk")
+        g = Group(name="g", members=[disk])
+        scn = Scene()
+        scn.add(g)
+        scn.add(Canvas(name="cnv", members=[disk, g]))
+        assert len(scn) == 2
+
+    @pytest.mark.parametrize("name", ["disk", None])
+    def test_canvas_cannot_show_an_object_outside_the_scene(self, name):
+        with pytest.raises(TreeError):
+            Scene().add(Canvas(name="cnv", members=[Circle(name=name)]))
+
+    def test_failed_add_changes_nothing(self):
+        disk = Circle(name="disk")
+        scn = Scene()
+        scn.add(Group(name="g", members=[disk]))
+        with pytest.raises(TreeError):
+            scn.add(Group(name="h", members=[Circle(name="other"), disk]))
+        assert "h" not in scn
+        assert "other" not in scn
 
 
 class TestSceneAlias:

@@ -16,7 +16,13 @@ class Bound:
     expr: Node
 
 
-type Attr[T] = Free[T] | Bound
+# A style attribute of an object inside a compound, left unset so it comes from the compound.
+@dataclass(frozen=True, slots=True)
+class Inherit:
+    pass
+
+
+type Attr[T] = Free[T] | Bound | Inherit
 
 
 def _members():
@@ -66,6 +72,13 @@ class Group(Visual):
 
 
 @dataclass(kw_only=True)
+class Compound(Styled):
+    kind: str = field(default="", metadata={"internal": True})
+    params: dict[str, Attr[object]] = field(default_factory=dict, metadata={"internal": True})
+    members: list[Visual] = _members()
+
+
+@dataclass(kw_only=True)
 class View(Obj):
     pass
 
@@ -90,39 +103,73 @@ class Container(Protocol):
 
 # Keys are DSL names, which use hyphens where the Python field names use underscores.
 def attributes(cls: type[Obj]) -> dict[str, Field]:
-    return {f.name.replace("_", "-"): f for f in fields(cls) if f.name != "name"}
+    return {
+        f.name.replace("_", "-"): f
+        for f in fields(cls)
+        if f.name != "name" and not f.metadata.get("internal")
+    }
 
 
 def variadic(cls: type[Obj]) -> Field | None:
     return next((f for f in fields(cls) if f.metadata.get("variadic")), None)
 
 
+# Names that a compound's body can use for its members: those inside groups count, but not those
+# inside a nested compound, which has its own.
+def local_names(compound: Compound) -> dict[str, Obj]:
+    names: dict[str, Obj] = {}
+    stack: list[Obj] = list(reversed(compound.members))
+    while stack:
+        obj = stack.pop()
+        if obj.name is not None:
+            names[obj.name] = obj
+        if isinstance(obj, Group):
+            stack.extend(reversed(obj.members))
+    return names
+
+
 class DuplicateNameError(ValueError):
     pass
+
+
+class TreeError(ValueError):
+    pass
+
+
+def _label(obj: Obj) -> str:
+    return repr(obj.name) if obj.name is not None else "an anonymous object"
 
 
 class Scene:
     def __init__(self):
         self._items: list[Obj] = []
         self._index: dict[str, Obj] = {}
+        self._tree: set[int] = set()
 
+    # Each object has one parent. A view is not a parent: it shows objects already in the tree.
     def add(self, obj: Obj):
-        if obj.name is not None and obj.name in self._index:
-            raise DuplicateNameError(f"name {obj.name!r} is already defined")
         new: dict[str, Obj] = {}
-        stack: list[Obj] = [obj]
+        seen: set[int] = set()
+        # The flag says whether the name is global; names inside a compound are local to it.
+        stack: list[tuple[Obj, bool]] = [(obj, True)]
         while stack:
-            thing = stack.pop()
-            if thing.name is not None:
-                known = self._index.get(thing.name, new.get(thing.name))
-                if known is thing:
-                    continue
-                if known is not None:
+            thing, is_global = stack.pop()
+            if id(thing) in self._tree or id(thing) in seen:
+                raise TreeError(f"{_label(thing)} already belongs to the scene")
+            seen.add(id(thing))
+            if thing.name is not None and is_global:
+                if thing.name in self._index or thing.name in new:
                     raise DuplicateNameError(f"name {thing.name!r} is already defined")
                 new[thing.name] = thing
-            if isinstance(thing, Container):
-                stack.extend(reversed(thing.members))
+            if isinstance(thing, Container) and not isinstance(thing, View):
+                inner = is_global and not isinstance(thing, Compound)
+                stack.extend((m, inner) for m in reversed(thing.members))
+        if isinstance(obj, Container) and isinstance(obj, View):
+            for member in obj.members:
+                if id(member) not in self._tree:
+                    raise TreeError(f"{_label(member)} is shown but not in the scene")
         self._index.update(new)
+        self._tree |= seen
         self._items.append(obj)
 
     def alias(self, name: str, target: str):

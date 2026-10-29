@@ -319,6 +319,30 @@ class TestGroup:
         scn = scene("(circle 'a') (group 'g' a)")
         assert get(scn, "g", Group).members == [scn["a"]]
 
+    def test_reference_moves_a_toplevel_object_into_the_group(self):
+        scn = scene("(circle 'a') (circle 'b') (group 'g' a)")
+        assert user_objects(scn) == [scn["b"], scn["g"]]
+
+    def test_reference_moves_a_group_into_a_group(self):
+        scn = scene("(group 'g' (circle 'a')) (group 'h' g)")
+        assert user_objects(scn) == [scn["h"]]
+        assert get(scn, "h", Group).members == [scn["g"]]
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(circle 'a') (group 'g' a) (group 'h' a)",
+            "(group 'g' (circle 'a')) (group 'h' a)",
+            "(group 'g' (circle 'a') a)",
+            "(circle 'a') (group 'g' a a)",
+            "(group 'g' (group 'h' (circle 'a'))) (group 'k' a)",
+            "(circle 'a') (repeat i 2 (group $'g{i}' a))",
+            "(group 'g' (circle 'a')) (group 'h' g[0])",
+        ],
+    )
+    def test_an_object_has_one_parent(self, src):
+        error(src, match="'a' already belongs to")
+
     def test_nested_group(self):
         scn = scene("(group 'g' (group 'h' (circle 'a')))")
         assert get(scn, "h", Group).members == [scn["a"]]
@@ -398,6 +422,25 @@ class TestCanvas:
     def test_same_object_in_group_and_canvas(self):
         scn = scene("(circle 'a') (group 'g' a) (canvas 'cnv' a g)")
         assert get(scn, "cnv", Canvas).members == [scn["a"], scn["g"]]
+
+    def test_showing_an_object_does_not_move_it(self):
+        scn = scene("(circle 'a') (canvas 'cnv' a)")
+        assert user_objects(scn) == [scn["a"]]
+
+    def test_two_canvases_show_the_same_object(self):
+        scn = scene("(circle 'a') (canvas 'c1' a) (canvas 'c2' a)")
+        assert get(scn, "c2", Canvas).members == [scn["a"]]
+
+    def test_objects_defined_in_a_canvas_are_toplevel(self):
+        scn = scene("(canvas 'cnv' (circle 'a') (circle _))")
+        cnv = get(scn, "cnv", Canvas)
+        assert user_objects(scn) == cnv.members
+        assert scn.views == [cnv]
+
+    def test_object_defined_in_a_canvas_can_move_into_a_group(self):
+        scn = scene("(canvas 'cnv' (circle 'a')) (group 'g' a)")
+        assert user_objects(scn) == [scn["g"]]
+        assert get(scn, "cnv", Canvas).members == [scn["a"]]
 
     @pytest.mark.parametrize("member", ["k", "other", "2"])
     def test_invalid_member(self, member):

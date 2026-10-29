@@ -24,14 +24,19 @@ from mathterpiece.scene import (
     Bound,
     Canvas,
     Circle,
+    Compound,
     Free,
     Group,
+    Inherit,
     Obj,
     Real,
     Scene,
+    Styled,
     Text,
+    View,
     Visual,
     attributes,
+    local_names,
     variadic,
 )
 from mathterpiece.stdlib import STDLIB, divide, power
@@ -62,6 +67,18 @@ class FormSpec:
     cls: type[Obj]
     positional: tuple[str, ...] = ()
 
+
+# Style attributes that an object inside a compound takes from the compound when it leaves them
+# unset. Opacity is not among them because it multiplies down the tree instead.
+INHERITED = ("fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity")
+LITERAL_NODES: dict[str, Callable[..., Node]] = {
+    "int": IntLit,
+    "ratio": RatioLit,
+    "real": RealLit,
+    "complex": ComplexLit,
+    "bool": BoolLit,
+    "str": StrLit,
+}
 
 FORMS = {
     "circle": FormSpec(Circle),
@@ -105,8 +122,16 @@ class SelfRef:
     cls: type[Obj]
 
 
+@dataclass(frozen=True)
+class CompoundSpec:
+    params: dict[str, Const]
+    body: tuple[Node, ...]
+
+
 Value = Const | Dyn | Spread | ObjRef | SelfRef
 Env = dict[str, "int | SelfRef"]
+# The names a compound body can see besides globals: its parameters and its members so far.
+Scope = dict[str, Value]
 
 
 def compile_scene(forms: tuple[Form, ...]) -> Scene:
@@ -121,13 +146,13 @@ def _head(node: Node) -> str | None:
     return None
 
 
-def _defined_names(nodes) -> set[str]:
+def _defined_names(nodes, heads) -> set[str]:
     names: set[str] = set()
     for node in nodes:
         if isinstance(node, Form):
-            if _head(node) in FORMS and len(node.items) > 1 and isinstance(node.items[1], StrLit):
+            if _head(node) in heads and len(node.items) > 1 and isinstance(node.items[1], StrLit):
                 names.add(node.items[1].value)
-            names |= _defined_names(node.items)
+            names |= _defined_names(node.items, heads)
     return names
 
 
@@ -155,6 +180,12 @@ class _Compiler:
         self.names: dict[str, Obj] = {}
         self.builtins: list[tuple[Obj, tuple[str, ...]]] = []
         self.toplevel: list[Obj] = []
+        # Keyed by id, holding the object too: ids of freed objects get reused.
+        self.parents: dict[int, tuple[Obj, str]] = {}
+        self.compounds: dict[str, CompoundSpec] = {}
+        self.scopes: list[Scope] = []
+        # Where a definition lands before anything adopts it: the top level, or a compound body.
+        self.pools: list[list[Obj]] = [self.toplevel]
 
     def compile(self) -> Scene:
         self.add_builtins()
@@ -165,12 +196,18 @@ class _Compiler:
             scene.add(obj)
             for alias in names[1:]:
                 scene.alias(alias, names[0])
-        for obj in self.toplevel:
+        # Views come last because a view may show an object that a later form moves into a group.
+        for obj in sorted(self.toplevel, key=lambda o: isinstance(o, View)):
             scene.add(obj)
         return scene
 
     def add_builtins(self):
-        taken = _defined_names(self.forms)
+        compounds = {
+            f.items[1].value
+            for f in self.forms
+            if _head(f) == "compound" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
+        }
+        taken = _defined_names(self.forms, FORMS.keys() | compounds)
         for names, value in BUILTINS:
             available = tuple(name for name in names if name not in taken)
             if not available:
@@ -183,6 +220,12 @@ class _Compiler:
     def register(self, obj: Obj, pos: Pos):
         if obj.name is None:
             return
+        if self.scopes:
+            scope = self.scopes[-1]
+            if obj.name in scope:
+                raise CompileError(f"name {obj.name!r} is already defined", pos)
+            scope[obj.name] = ObjRef(obj)
+            return
         if obj.name in self.names:
             raise CompileError(f"name {obj.name!r} is already defined", pos)
         self.names[obj.name] = obj
@@ -191,7 +234,10 @@ class _Compiler:
         head = _head(form)
         if head == "repeat":
             return self.repeat(form, env, self.toplevel_item)
-        if head in FORMS:
+        if head == "compound":
+            self.define_compound(form)
+            return []
+        if head in FORMS or head in self.compounds:
             return [self.definition(form, env)]
         if head is None:
             raise CompileError("expected a definition", form.pos)
@@ -236,9 +282,138 @@ class _Compiler:
             raise CompileError("a name must be known at compile time", node.pos)
         raise CompileError("expected a name: a string, an interpolated string, or _", node.pos)
 
+    def define_compound(self, form: Form):
+        if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
+            raise CompileError("a compound needs a name given as a string", form.pos)
+        kind = form.items[1].value
+        if kind in FORMS or kind in ("repeat", "ref", "compound", "params", "transform"):
+            raise CompileError(f"{kind!r} is already a form", form.items[1].pos)
+        if kind in self.compounds:
+            raise CompileError(f"compound {kind!r} is already defined", form.items[1].pos)
+        rest = form.items[2:]
+        params: dict[str, Const] = {}
+        if rest and _head(rest[0]) == "params":
+            params = self.params(rest[0])
+            rest = rest[1:]
+        spec = CompoundSpec(params, tuple(rest))
+        # Compiling the body once with the defaults reports its errors even if it is never used.
+        self.body(spec, dict(params), None)
+        self.compounds[kind] = spec
+
+    def params(self, node: Node) -> dict[str, Const]:
+        assert isinstance(node, Form)
+        params: dict[str, Const] = {}
+        for item in node.items[1:]:
+            name = _head(item)
+            if name is None or not isinstance(item, Form) or len(item.items) != 2:
+                raise CompileError("a parameter is (name default)", item.pos)
+            if name in attributes(Compound):
+                raise CompileError(f"every compound already has {name!r}", item.pos)
+            if name in params:
+                raise CompileError(f"parameter {name!r} is given twice", item.pos)
+            default = self.expr(item.items[1], {})
+            if not isinstance(default, Const) or default.type not in LITERAL_NODES:
+                raise CompileError(
+                    "a parameter default must be a number, string, or bool known at compile time",
+                    item.items[1].pos,
+                )
+            params[name] = default
+        return params
+
+    def body(self, spec: CompoundSpec, scope: Scope, owner: str | None) -> list[Visual]:
+        pool: list[Obj] = []
+        self.scopes.append(scope)
+        self.pools.append(pool)
+        try:
+            for node in spec.body:
+                pool.extend(self.body_item(node))
+        finally:
+            self.scopes.pop()
+            self.pools.pop()
+        label = repr(owner) if owner is not None else "an anonymous compound"
+        members: list[Visual] = []
+        for obj in pool:
+            assert isinstance(obj, Visual)
+            self.parents[id(obj)] = (obj, label)
+            members.append(obj)
+        return members
+
+    def body_item(self, node: Node, env: Env | None = None) -> list[Obj]:
+        env = env or {}
+        head = _head(node)
+        if isinstance(node, Form) and head == "repeat":
+            return self.repeat(node, env, self.body_item)
+        if isinstance(node, Form) and (head in FORMS or head in self.compounds):
+            obj = self.definition(node, env)
+            if not isinstance(obj, Visual):
+                raise CompileError(f"{head} cannot be in the body of a compound", node.pos)
+            return [obj]
+        if head == "params":
+            raise CompileError("params must come right after the compound's name", node.pos)
+        if head == "compound":
+            raise CompileError("compounds are defined at the top level", node.pos)
+        raise CompileError("the body of a compound holds only definitions", node.pos)
+
+    def instance(self, form: Form, env: Env) -> Compound:
+        kind = _head(form)
+        assert kind is not None
+        spec = self.compounds[kind]
+        name = self.object_name(form, env)
+        outer = env | {"self": SelfRef(Compound)}
+        attrs = attributes(Compound)
+        values: dict[str, Any] = {}
+        params: dict[str, Free | Bound] = {}
+        for node in form.items[2:]:
+            head = _head(node)
+            if head in FORMS or head in self.compounds or head == "repeat":
+                raise CompileError(f"an instance of {kind} takes no members", node.pos)
+            if head is None or not isinstance(node, Form) or head == "members":
+                raise CompileError(f"unexpected value in {kind}", node.pos)
+            if head not in attrs and head not in spec.params:
+                raise CompileError(f"{head!r} is not an attribute of {kind}", node.pos)
+            if head in values or head in params:
+                raise CompileError(f"attribute {head!r} is given twice", node.pos)
+            if len(node.items) != 2:
+                raise CompileError(f"attribute {head!r} takes exactly one value", node.pos)
+            if head in attrs:
+                values[attrs[head].name] = self.attr_value(Compound, head, node.items[1], outer)
+            else:
+                params[head] = self.param_value(spec.params[head].type, node.items[1], outer)
+        if self.scopes:
+            for attr in INHERITED:
+                values.setdefault(attrs[attr].name, Inherit())
+        scope: Scope = {}
+        for pname, default in spec.params.items():
+            given = params.setdefault(pname, Free(default.value))
+            scope[pname] = (
+                Const(given.value, default.type) if isinstance(given, Free) else Dyn(default.type)
+            )
+        members = self.body(spec, scope, name)
+        obj = Compound(name=name, kind=kind, params=dict(params), members=members, **values)
+        self.register(obj, form.pos)
+        return obj
+
+    def param_value(self, expected: str, node: Node, env: Env) -> Free | Bound:
+        value = self.value_arg(node, env)
+        if not _widens_to(value.type, expected):
+            raise CompileError(f"expected {expected}, got {value.type}", node.pos)
+        if isinstance(value, Const):
+            return Free(_convert(value.value, expected))
+        return Bound(self.resolve_refs(_substitute(node, self.constants(env)), env))
+
+    # Loop variables and parameters known at compile time are written into stored expressions.
+    def constants(self, env: Env) -> dict[str, "int | SelfRef | Const"]:
+        scope = self.scopes[-1] if self.scopes else {}
+        consts: dict[str, int | SelfRef | Const] = {
+            k: v for k, v in scope.items() if isinstance(v, Const)
+        }
+        return consts | env
+
     def definition(self, form: Form, env: Env) -> Obj:
         head = _head(form)
         assert head is not None
+        if head in self.compounds:
+            return self.instance(form, env)
         spec = FORMS[head]
         name = self.object_name(form, env)
         env = env | {"self": SelfRef(spec.cls)}
@@ -274,10 +449,13 @@ class _Compiler:
             values[attr] = self.attr_value(spec.cls, attr, node.items[1], env)
 
         kwargs: dict[str, Any] = {attrs[attr].name: value for attr, value in values.items()}
+        if self.scopes and issubclass(spec.cls, Styled):
+            for attr in INHERITED:
+                kwargs.setdefault(attrs[attr].name, Inherit())
         if var is not None:
             members: list[Visual] = []
             for node in rest:
-                members.extend(self.member(node, env, head, settable))
+                members.extend(self.member(node, env, head, settable, name))
             kwargs[var.name] = members
         elif rest:
             node = rest[0]
@@ -290,16 +468,24 @@ class _Compiler:
         self.register(obj, form.pos)
         return obj
 
-    def member(self, node: Node, env: Env, container: str, settable) -> list[Visual]:
+    def member(
+        self, node: Node, env: Env, container: str, settable, owner: str | None
+    ) -> list[Visual]:
         head = _head(node)
         if isinstance(node, Form) and head == "repeat":
-            return self.repeat(node, env, lambda n, e: self.member(n, e, container, settable))
+            return self.repeat(
+                node, env, lambda n, e: self.member(n, e, container, settable, owner)
+            )
         if isinstance(node, Form) and head == "ref":
             node = self.ref_name(node, env)
-        elif isinstance(node, Form) and head in FORMS:
+        elif isinstance(node, Form) and (head in FORMS or head in self.compounds):
             obj = self.definition(node, env)
             if not isinstance(obj, Visual):
                 raise CompileError(f"{head} cannot be a member of {container}", node.pos)
+            if issubclass(FORMS[container].cls, View):
+                self.toplevel.append(obj)
+            else:
+                self.adopt(obj, container, owner, node.pos)
             return [obj]
         if isinstance(node, Form):
             if head in settable:
@@ -310,8 +496,27 @@ class _Compiler:
         if isinstance(node, Name):
             value = self.name(node, env)
             if isinstance(value, ObjRef) and isinstance(value.obj, Visual):
+                if self.scopes and not any(
+                    v.obj is value.obj for v in self.scopes[-1].values() if isinstance(v, ObjRef)
+                ):
+                    raise CompileError(
+                        "a member in a compound body must be defined in that body", node.pos
+                    )
+                if not issubclass(FORMS[container].cls, View):
+                    self.adopt(value.obj, container, owner, node.pos)
                 return [value.obj]
         raise CompileError(f"not a valid member of {container}", node.pos)
+
+    # A view only shows objects, but any other container becomes the object's one parent.
+    def adopt(self, obj: Obj, container: str, owner: str | None, pos: Pos):
+        label = repr(obj.name) if obj.name is not None else "an anonymous object"
+        known = self.parents.get(id(obj))
+        if known is not None and known[0] is obj:
+            raise CompileError(f"{label} already belongs to {known[1]}", pos)
+        parent = repr(owner) if owner is not None else f"an anonymous {container}"
+        self.parents[id(obj)] = (obj, parent)
+        pool = self.pools[-1]
+        pool[:] = [item for item in pool if item is not obj]
 
     def attr_value(self, cls: type[Obj], attr: str, node: Node, env: Env):
         expected = _expected_type(cls, attr)
@@ -326,7 +531,7 @@ class _Compiler:
             raise CompileError(f"expected {expected}, got {value.type}", node.pos)
         if isinstance(value, Const):
             return Free(_convert(value.value, expected))
-        return Bound(self.resolve_refs(_substitute(node, env), env))
+        return Bound(self.resolve_refs(_substitute(node, self.constants(env)), env))
 
     def resolve_refs(self, node: Node, env: Env) -> Node:
         if isinstance(node, Form) and _head(node) == "ref":
@@ -380,9 +585,17 @@ class _Compiler:
             if rest:
                 raise CompileError(f"{first!r} is a number and has no attributes", node.pos)
             return Const(local, "int")
-        if local is None and first not in self.names:
+        scope = self.scopes[-1] if self.scopes else {}
+        if local is None and first in scope:
+            current: Value = scope[first]
+            if isinstance(current, (Const, Dyn)):
+                if rest:
+                    raise CompileError(f"{first!r} is a parameter and has no attributes", node.pos)
+                return current
+        elif local is None and first not in self.names:
             raise CompileError(f"undefined name {first!r}", node.pos)
-        current: Value = local if local is not None else ObjRef(self.names[first])
+        else:
+            current = local if local is not None else ObjRef(self.names[first])
         for part in rest:
             current = self.access(current, part, env, node.pos)
         if isinstance(current, ObjRef) and isinstance(current.obj, Real):
@@ -397,6 +610,13 @@ class _Compiler:
         obj = current.obj
         if not isinstance(part, str):
             return self.index(obj, part, env)
+        if isinstance(obj, Compound):
+            params = self.compounds[obj.kind].params
+            if part in params:
+                return Dyn(params[part].type)
+            names = local_names(obj)
+            if part in names:
+                return ObjRef(names[part])
         if isinstance(obj, Group) and part != "members":
             types = []
             for member in obj.members:
@@ -445,7 +665,7 @@ class _Compiler:
             return self.name(self.ref_name(node, env), env)
         if head == "transform":
             return self.transform(node, env)
-        if head in FORMS or head == "repeat":
+        if head in FORMS or head in self.compounds or head in ("repeat", "compound"):
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
         raise CompileError(f"unknown function {head!r}", node.pos)
 
@@ -620,11 +840,14 @@ class _Compiler:
             raise CompileError("division by zero", node.pos) from None
 
 
-# Loop variables do not exist after compiling, so bound expressions get their values instead.
-def _substitute(node: Node, env: Env) -> Node:
+# Loop variables and known parameters do not exist after compiling, so bound expressions get
+# their values instead.
+def _substitute(node: Node, env: dict) -> Node:
     if isinstance(node, Name):
         first = node.parts[0]
         local = env.get(first) if isinstance(first, str) and len(node.parts) == 1 else None
+        if isinstance(local, Const):
+            return LITERAL_NODES[local.type](local.value, node.pos)
         if isinstance(local, int):
             return IntLit(local, node.pos)
         parts = tuple(p if isinstance(p, str) else _substitute(p, env) for p in node.parts)
@@ -635,7 +858,7 @@ def _substitute(node: Node, env: Env) -> Node:
         out: list[str | Name] = []
         for part in node.parts:
             sub = part if isinstance(part, str) else _substitute(part, env)
-            if isinstance(sub, IntLit):
+            if isinstance(sub, (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)):
                 sub = str(sub.value)
             if isinstance(sub, str) and out and isinstance(out[-1], str):
                 out[-1] += sub

@@ -26,13 +26,16 @@ from mathterpiece.scene import (
     Bound,
     Canvas,
     Circle,
+    Compound,
     Group,
+    Inherit,
     Obj,
     Real,
     Scene,
     Text,
     Visual,
     attributes,
+    local_names,
 )
 from mathterpiece.stdlib import STDLIB, divide, power, translate
 from mathterpiece.stdlib import call as stdlib_call
@@ -50,6 +53,18 @@ class Evaluator:
         self.rng = rng or random.Random()
         self.cache: dict[tuple[int, str], Any] = {}
         self.active: set[tuple[int, str]] = set()
+        # The innermost compound around each object, whose body the object's expressions live in.
+        self.enclosing: dict[int, Compound | None] = {}
+        self.locals: dict[int, dict[str, Obj]] = {}
+        stack: list[tuple[Obj, Compound | None]] = [(o, None) for o in scene.objects]
+        while stack:
+            obj, around = stack.pop()
+            self.enclosing[id(obj)] = around
+            if isinstance(obj, Compound):
+                self.locals[id(obj)] = local_names(obj)
+                stack.extend((m, obj) for m in obj.members)
+            elif isinstance(obj, Group):
+                stack.extend((m, around) for m in obj.members)
 
     def value(self, obj: Obj, attr: str) -> Any:
         key = (id(obj), attr)
@@ -57,18 +72,44 @@ class Evaluator:
             return self.cache[key]
         if key in self.active:
             raise EvalError(f"cycle through {obj.name or 'an anonymous object'}.{attr}")
-        param = getattr(obj, attributes(type(obj))[attr].name)
+        is_param = isinstance(obj, Compound) and attr in obj.params
+        if isinstance(obj, Compound) and is_param:
+            param = obj.params[attr]
+        else:
+            param = getattr(obj, attributes(type(obj))[attr].name)
         if isinstance(param, Bound):
             self.active.add(key)
             try:
                 result = self.eval(param.expr, obj)
             finally:
                 self.active.discard(key)
-            (declared,) = get_args(attributes(type(obj))[attr].type)
-            result = float(result) if declared is float else result
+            if not is_param:
+                (declared,) = get_args(attributes(type(obj))[attr].type)
+                result = float(result) if declared is float else result
+        elif isinstance(param, Inherit):
+            around = self.enclosing.get(id(obj))
+            field = attributes(type(obj))[attr]
+            result = self.value(around, attr) if around is not None else field.default.value
         else:
             result = param.value
         self.cache[key] = result
+        return result
+
+    # Where the coordinate system an object's x and y are given in sits, in scene coordinates.
+    def origin(self, around: Compound | None) -> tuple[float, float]:
+        if around is None:
+            return 0.0, 0.0
+        x, y = self.origin(self.enclosing.get(id(around)))
+        return x + self.value(around, "x"), y + self.value(around, "y")
+
+    # x and y read by an expression are given in the coordinates of the body the reader is in.
+    def read(self, obj: Obj, attr: str, reader: Obj) -> Any:
+        result = self.value(obj, attr)
+        if attr in ("x", "y"):
+            i = 0 if attr == "x" else 1
+            here = self.origin(self.enclosing.get(id(obj)))[i]
+            there = self.origin(self.enclosing.get(id(reader)))[i]
+            result = result + here - there
         return result
 
     def eval(self, node: Node, owner: Obj) -> Any:
@@ -90,17 +131,27 @@ class Evaluator:
     def name(self, node: Name, owner: Obj) -> Any:
         first, *rest = node.parts
         assert isinstance(first, str)
+        around = self.enclosing.get(id(owner))
         if first == "self":
             obj = owner
+        elif around is not None and first in around.params:
+            return self.value(around, first)
+        elif around is not None and first in self.locals[id(around)]:
+            obj = self.locals[id(around)][first]
         elif first in self.scene:
             obj = self.scene[first]
         else:
             raise EvalError(f"undefined name {first!r}")
         for part in rest:
             if isinstance(part, str):
+                if isinstance(obj, Compound) and part in obj.params:
+                    return self.value(obj, part)
+                if isinstance(obj, Compound) and part in self.locals[id(obj)]:
+                    obj = self.locals[id(obj)][part]
+                    continue
                 if isinstance(obj, Group) and part != "members":
-                    return [self.value(member, part) for member in obj.members]
-                return self.value(obj, part)
+                    return [self.read(member, part, owner) for member in obj.members]
+                return self.read(obj, part, owner)
             assert isinstance(obj, Group)
             obj = obj.members[self.eval(part, owner)]
         return self.value(obj, "value") if isinstance(obj, Real) else obj
@@ -128,7 +179,14 @@ class Evaluator:
             raise EvalError(str(e) or "division by zero") from None
 
     def point(self, obj: Obj) -> tuple[Any, Any]:
-        return self.value(obj, "x"), self.value(obj, "y")
+        x, y = self.origin(self.enclosing.get(id(obj)))
+        return x + self.value(obj, "x"), y + self.value(obj, "y")
+
+    # Opacity multiplies down the tree, unlike the other style attributes.
+    def opacity(self, obj: Obj) -> float:
+        around = self.enclosing.get(id(obj))
+        outer = self.opacity(around) if around is not None else 1.0
+        return outer * self.value(obj, "opacity")
 
     def apply(self, op: Any, args: list[Any]) -> Any:
         if op == "+":
@@ -183,12 +241,12 @@ def render(scene: Scene, rng: random.Random | None = None) -> list[tuple[Figure,
 
 
 def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
-    if isinstance(obj, Group):
+    if isinstance(obj, (Group, Compound)):
         for member in obj.members:
             _draw(member, ax, ev, to_view)
     elif isinstance(obj, Circle):
         circle = plt.Circle(
-            (ev.value(obj, "x"), ev.value(obj, "y")),
+            ev.point(obj),
             ev.value(obj, "r"),
             facecolor=_paint(ev, obj, "fill"),
             edgecolor=_paint(ev, obj, "stroke"),
@@ -198,8 +256,7 @@ def _draw(obj: Visual, ax: Axes, ev: Evaluator, to_view: Transform):
         ax.add_artist(circle)
     elif isinstance(obj, Text):
         ax.text(
-            ev.value(obj, "x"),
-            ev.value(obj, "y"),
+            *ev.point(obj),
             ev.value(obj, "value"),
             color=_paint(ev, obj, "fill"),
             transform=to_view,
@@ -210,4 +267,4 @@ def _paint(ev: Evaluator, obj: Obj, attr: str):
     color = ev.value(obj, attr)
     if color == "none":
         return "none"
-    return to_rgba(color, ev.value(obj, f"{attr}-opacity") * ev.value(obj, "opacity"))
+    return to_rgba(color, ev.value(obj, f"{attr}-opacity") * ev.opacity(obj))
