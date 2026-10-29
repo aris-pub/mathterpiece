@@ -79,8 +79,18 @@ KINDS: dict[type[Obj], str] = {
 OPERATORS = ARITHMETIC | set(COMPARISONS) | {"^", "mod", "abs", "transform"}
 
 
+class ExportError(ValueError):
+    """A model the compiler would not produce, such as one built by hand with a missing name."""
+
+
 def to_json(model: Model) -> dict:
-    return _Writer(model).write()
+    return export(model)[0]
+
+
+def export(model: Model) -> tuple[dict, dict[int, int]]:
+    """The JSON, and which id each model object got (keyed by the object's Python id)."""
+    writer = _Writer(model)
+    return writer.write(), dict(writer.ids)
 
 
 # Where an expression is evaluated: who self is, which motif body its names resolve in, which
@@ -195,6 +205,7 @@ class _Writer:
             out["params"] = {p: self.attr(obj, p, v, ctx) for p, v in obj.params.items()}
         if isinstance(obj, Local):
             out["type"] = obj.type
+            out["frame"] = None if ctx.frame is None else self.id(ctx.frame)
         if isinstance(obj, Canvas):
             out["shows"] = [self.id(m) for m in obj.members]
         if isinstance(obj, State):
@@ -298,7 +309,7 @@ class _Writer:
             return [op, *resolved]
         if op in self.model.functions or op in STDLIB:
             return ["call", op, *resolved]
-        raise ValueError(f"cannot write the operation {op!r}")
+        raise ExportError(f"cannot write the operation {op!r}")
 
     # A name, resolved the way the evaluator would look it up.
     def name(self, node: Name, ctx: _Context) -> Any:
@@ -315,8 +326,10 @@ class _Writer:
             return self.list_parts(["param", self.id(ctx.around), first], rest, ctx)
         elif ctx.around is not None and first in local_names(ctx.around):
             obj = local_names(ctx.around)[first]
-        else:
+        elif first in self.model:
             obj = self.model[first]
+        else:
+            raise ExportError(f"undefined name {first!r}")
         return self.parts_of(obj, rest, ctx)
 
     def parts_of(self, obj: Any, rest: list, ctx: _Context, dynamic: bool = False) -> Any:
