@@ -195,6 +195,20 @@ class TestRender:
         assert ax.get_xlim() == (1.0, 5.0)
         assert ax.get_ylim() == (-2.0, 1.0)
 
+    def test_x_and_y_have_the_same_scale_like_an_svg_view_box(self):
+        ((_, ax),) = render(scene("(canvas 'cnv' (view-width 40) (view-height 10))"))
+        assert ax.get_aspect() == 1.0
+        assert ax.get_xlim() == (-10.0, 30.0)
+
+    def test_no_ticks_or_labels(self):
+        ((_, ax),) = render(scene("(canvas 'cnv')"))
+        assert list(ax.get_xticks()) == list(ax.get_yticks()) == []
+        assert ax.get_xlabel() == ax.get_ylabel() == ""
+
+    def test_no_frame(self):
+        ((_, ax),) = render(scene("(canvas 'cnv')"))
+        assert not ax.get_frame_on()
+
     def test_one_figure_per_canvas(self):
         assert len(render(scene("(canvas 'a') (canvas 'b')"))) == 2
 
