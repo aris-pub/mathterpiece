@@ -26,7 +26,7 @@
 
 (motif 'orbit' (params (count 12) (radius 5.0) (size 0.3))
   (repeat k count
-    (let ((a (/ (* 360 k) count)))
+    (let ((a (turn (/ k count))))
       (circle _
         (x (* radius (cosd a)))
         (y (* radius (sind a)))
