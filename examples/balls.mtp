@@ -1,0 +1,132 @@
+; Balls around a pair x, y, from the Bourgain notes (Lemma 5.1). ρⱼ is the smallest radius at
+; which the balls around x and around y both hold at least 2ʲ points, capped at δ/2, where δ is
+; the distance from x to y. The bar below cuts [0, δ/2] at the ρⱼ; it fills up to the common
+; radius r of the two balls. Click a point to make it x or y (the older of the two is replaced),
+; move the slider to change r, or press play to grow the balls from 0 to δ/2.
+; Coordinates are the original SVG's, with y pointing up. The 32 points are the ones the
+; original draws from its fixed seed.
+
+(color 'fg' '#1f2328')
+(color 'muted' '#6b7280')
+(color 'bg' '#faf7f0')
+(color 'env' '#f2ede2')
+(color 'x-color' '#1a6f66')
+(color 'y-color' '#a65a3a')
+(color 's1' '#4a6584')
+(color 's2' '#a07a2c')
+(color 's3' '#7e5a86')
+(color 's4' '#6f7f45')
+(color 's5' '#7f8da0')
+(font 'label' (style 'italic') (size 17))
+(font 'tick-label' (size 13))
+(font 'segment' (size 12))
+
+; The 32 points, as their x's and their y's.
+(const 'xs'
+ [230.5 160.9 176.1 165.0 150.0 201.3 169.5 215.2
+  194.8 405.3 425.6 351.6 378.9 426.5 352.6 410.2
+  411.4 265.1 275.9 261.6 206.1 255.5 207.2 356.5
+  274.5 434.8 428.3 450.0 404.5 423.6 423.1 404.9])
+(const 'ys'
+ [-132.6 -135.0 -148.8 -113.9 -159.0 -152.2 -135.1 -120.9
+  -147.7 -91.9 -127.4 -150.4 -98.0 -116.5 -156.9 -134.0
+  -70.0 -239.5 -225.9 -215.6 -260.0 -206.2 -238.7 -240.3
+  -206.3 -246.1 -233.4 -216.0 -235.8 -238.4 -224.7 -232.7])
+
+; The common radius of the two balls, and which of x and y the next click replaces.
+(real 'r' 97.585)
+(bool 'replace-x' true)
+
+; The bar runs from 40 to 560 and stands for [0, δ/2].
+(const 'bar-left' 40)
+(const 'bar-width' 520)
+(const 'bar-y' -338)
+
+(scene 'balls'
+  (circle 'x' (pos [230.5 -132.6]) (r 6.5) (fill x-color))
+  (circle 'y' (pos [425.6 -127.4]) (r 6.5) (fill y-color))
+
+  ; A point in x's ball takes x's color, else one in y's ball takes y's.
+  (group 'space'
+    (repeat 32 i
+      (circle _ (pos [xs[i] ys[i]]) (r 4.5)
+        (fill (cond ((<= (dist x self) (+ r 1e-9)) x-color)
+                    ((<= (dist y self) (+ r 1e-9)) y-color)
+                    (else fg)))
+        (opacity (if (<= (min (dist x self) (dist y self)) (+ r 1e-9)) 1 0.45)))))
+
+  (let ((h (/ (dist x y) 2))
+        (dx (sort (map space p (dist x p))))
+        (dy (sort (map space p (dist y p))))
+        ; ρ₁ to ρ₅: the 2ʲ-th nearest distance (index 2ʲ - 1), for x or y, whichever is larger.
+        (rho (map [1 3 7 15 31] m (min (max dx[m] dy[m]) h)))
+        ; The first j with ρⱼ = δ/2.
+        (k (+ 1 (count rho q (< q (- h 1e-9)))))
+        (at (/ bar-width h)))
+
+    ; Faint rings at ρ₁ to ρₖ around both points.
+    (group 'rings'
+      (repeat 5 j
+        (let ((ring (if (< j k) 0.3 0)))
+          (circle _ (pos x.pos) (r rho[j]) (fill 'none') (stroke muted) (opacity ring))
+          (circle _ (pos y.pos) (r rho[j]) (fill 'none') (stroke muted) (opacity ring)))))
+
+    (group 'pair'
+      (line _ (from x.pos) (to y.pos) (stroke muted) (stroke-width 1) (opacity 0.6))
+      (circle _ (pos x.pos) (r r) (fill x-color) (fill-opacity 0.1) (stroke x-color)
+        (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
+      (circle _ (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
+        (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
+      (text _ 'x' (pos (+ x.pos [9 9])) (font label) (fill fg))
+      (text _ 'y' (pos (+ y.pos [9 9])) (font label) (fill fg)))
+
+    ; Segment j covers [ρⱼ₋₁, ρⱼ], filled up to r. Past k the ρⱼ all equal δ/2, so those
+    ; segments are empty.
+    (group 'bar'
+      (rect _ (x bar-left) (y (- bar-y 9)) (width bar-width) (height 18) (rx 3) (fill env))
+      (repeat 5 j
+        (let ((lo (if (= j 0) 0 rho[(- j 1)]))
+              (hi (min rho[j] r))
+              (width (max 0 (* at (- hi lo)))))
+          (rect _ (x (+ bar-left (* at lo))) (y (- bar-y 9)) (width width) (height 18)
+            (fill (cond ((= j 0) s1) ((= j 1) s2) ((= j 2) s3) ((= j 3) s4) (else s5))))
+          (let ((n (+ j 1)))
+            (text _ $'j = {n}' (pos [(+ bar-left (* at (/ (+ lo hi) 2))) (- bar-y 4.5)])
+              (halign 'middle') (font segment) (fill bg)
+              (opacity (if (>= hi (- rho[j] 1e-9)) (if (> width 26) 1 0) 0))))))
+      ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
+      (repeat 6 j
+        (let ((v (if (= j 0) 0 rho[(- j 1)]))
+              (tick (+ bar-left (* at v)))
+              (shown (if (<= j k) 1 0)))
+          (line _ (from [tick (+ bar-y 14)]) (to [tick (- bar-y 9)]) (stroke fg)
+            (stroke-width 1.2) (opacity shown))
+          (text _ (cond ((= j 0) '0') ((= j k) 'δ/2') ((= j 1) 'ρ₁') ((= j 2) 'ρ₂') ((= j 3) 'ρ₃')
+                        (else 'ρ₄'))
+            (pos [tick (+ bar-y 18)]) (halign 'middle') (font tick-label) (fill fg) (opacity shown)))))))
+
+; Clicking a point makes it x or y, replacing the older of the two, and sets r to the new δ/2.
+(repeat 32 i
+  (on-click space[i]
+    (animation
+      (at-once
+        (x.pos (transition (to (if replace-x space[i].pos x.pos)) (duration 0.4)))
+        (y.pos (transition (to (if replace-x y.pos space[i].pos)) (duration 0.4)))
+        (r (transition (to (/ (dist space[i].pos (if replace-x y.pos x.pos)) 2)) (duration 0.4)))
+        (replace-x (transition (to (= replace-x false)) (duration 0)))))))
+
+(slider 'radius' (animation (r (transition (from 0) (to (/ (dist x y) 2))))) (label 'r'))
+
+(play 'grow' (animation (r (transition (from 0) (to (/ (dist x y) 2)) (duration 3.6) (ease 'linear')))))
+
+(readout 'note'
+  (let ((h (/ (dist x y) 2))
+        (cx (count space p (<= (dist x p) (+ r 1e-9))))
+        (cy (count space p (<= (dist y p) (+ r 1e-9)))))
+    (cond ((<= r 1e-9) 'At radius 0 each ball holds only its center.')
+          ((>= r (- h 1e-6)) 'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
+          (else $'The balls hold {cx} and {cy} points.'))))
+
+(canvas 'the-space' (view-x 0) (view-y -318) (view-width 600) (view-height 318)
+  rings pair space x y)
+(canvas 'the-bar' (view-x 0) (view-y -356) (view-width 600) (view-height 56) bar)

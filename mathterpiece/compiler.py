@@ -649,12 +649,15 @@ def _check_transition_durations(t: Any, default: float | None, pos: Pos):
 # node with every use of name replaced by item: a bare name by item itself, and name.x by
 # item's x.
 def _rename(node: Node, name: str, item: Node) -> Node:
-    if isinstance(node, Name) and node.parts[0] == name:
-        if len(node.parts) == 1:
+    if isinstance(node, Name):
+        rest = tuple(p if isinstance(p, str) else _rename(p, name, item) for p in node.parts[1:])
+        if node.parts[0] != name:
+            return Name((node.parts[0], *rest), node.pos)
+        if not rest:
             return item
         if not isinstance(item, Name):
             raise CompileError(f"{name} is a number here, so it has no parts", node.pos)
-        return Name((*item.parts, *node.parts[1:]), node.pos)
+        return Name((*item.parts, *rest), node.pos)
     if isinstance(node, Form):
         return Form(tuple(_rename(i, name, item) for i in node.items), node.pos)
     if isinstance(node, ListLit):
@@ -2702,6 +2705,9 @@ class _Compiler:
         return Dyn(_expected_type(cls, part))
 
     def index(self, obj: Obj, node: Node, env: Env) -> Value:
+        # A let's list, once its let is stored as a hidden object.
+        if isinstance(obj, Local):
+            return self.list_part(Dyn(obj.type), node, env, node.pos)
         if not isinstance(obj, Group):
             raise CompileError("only groups can be indexed", node.pos)
         value = self.expr(node, env)

@@ -28,7 +28,7 @@
     <button id="theme" type="button">dark page</button>
     <button id="fonts" type="button">page fonts</button>
     <mtp-model id="m"></mtp-model>
-    <mtp-canvas model="m"></mtp-canvas>
+    <div id="canvases"></div>
     <div id="controls"></div>
     <script type="module">
       import "/src/index.ts";
@@ -42,6 +42,14 @@
         const doc = await (await fetch(pick.value)).json();
         const controls = document.getElementById("controls");
         controls.replaceChildren();
+        const canvases = document.getElementById("canvases");
+        canvases.replaceChildren();
+        for (const o of doc.objects.filter((o) => o.kind === "canvas")) {
+          const el = document.createElement("mtp-canvas");
+          el.setAttribute("model", "m");
+          el.setAttribute("name", o.name);
+          canvases.append(el);
+        }
         document.getElementById("m").doc = doc;
         for (const o of doc.objects) {
           if (o.kind === "readout") {

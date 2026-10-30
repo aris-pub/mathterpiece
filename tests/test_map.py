@@ -82,6 +82,19 @@ class TestOverAList:
         )["v"].value == Free(2.0)  # ty: ignore[unresolved-attribute]
 
 
+class TestNamesInsideIndexes:
+    def test_an_item_used_as_an_index(self):
+        src = f"{POINTS} (real 'v' (let ((xs (map points p p.x)) (ys (map [2 0] m xs[m]))) ys[0]))"
+        assert value(src) == 1
+
+    def test_a_member_used_inside_an_index(self):
+        src = (
+            f"{POINTS} (real 'v' (let ((xs (map points p p.x))"
+            " (ys (map [0 1] m xs[(+ m 1)]))) ys[1]))"
+        )
+        assert value(src) == 1
+
+
 class TestExport:
     def test_unrolls_into_a_list_of_reads(self):
         doc = to_json(

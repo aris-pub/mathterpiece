@@ -112,6 +112,12 @@ class TestSumAndCount:
         src = "(real 'total' 100) (real 'v' (sum points p (+ p.r total)))"
         assert value(src) == 306
 
+    @pytest.mark.parametrize("form", ["sum", "count"])
+    def test_over_a_lets_list(self, form):
+        body = "d" if form == "sum" else "(> d 4)"
+        src = f"(real 'v' (let ((ds (map points p (dist x p)))) ({form} ds d {body})))"
+        assert value(src) == pytest.approx(16 if form == "sum" else 2)
+
     def test_an_empty_group(self):
         m = compile_model(parse("(scene 's' (group 'empty')) (real 'v' (count empty p (> p.r 0)))"))
         assert m["v"].value == Free(0)  # ty: ignore[unresolved-attribute]
