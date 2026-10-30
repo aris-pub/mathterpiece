@@ -33,6 +33,13 @@ export class Drags {
     return this.held !== null;
   }
 
+  /** What the held drag writes, as "id.attr". */
+  get targets(): string[] {
+    if (!this.held) return [];
+    const [id, attr] = this.held.target;
+    return [`${id}.${attr}`];
+  }
+
   /** Whether pressing object i would drag something. */
   draggable(i: number): boolean {
     return this.find(i) !== null;

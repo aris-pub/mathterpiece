@@ -20,13 +20,11 @@ export interface Obj {
   shows?: number[];
   // state
   conditions?: Expr[];
-  moves?: [number, string, Expr][] | null;
   // controls; a toggle with no target (null) holds its own value
   target?: [number, string] | null;
-  state?: number;
-  states?: number[];
-  start?: number | null;
-  steps?: unknown[][];
+  // controls: the animation they set off; animation: its body
+  animation?: number;
+  body?: unknown;
   // on-drag
   node?: number;
   // on-drag: when it is attached; canvas: when each thing it shows is shown (null: always)

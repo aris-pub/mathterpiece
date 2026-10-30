@@ -78,8 +78,7 @@ class TestColorTokens:
     def test_compares_with_strings(self):
         m = scene("(color 'ink' '#1f2a44') (state 's' (= ink '#d62828'))")
         state = m["s"]
-        assert isinstance(state, State) and state.problem is None
-        assert [(o.name, a) for o, a, _ in state.moves] == [("ink", "value")]
+        assert isinstance(state, State) and len(state.conditions) == 1
 
     def test_shows_in_text(self):
         m = scene("(color 'ink' '#1f2a44') (text 't' $'ink is {ink}')")
@@ -90,8 +89,11 @@ class TestColorTokens:
         error("(color 'ink' '#1f2a44') (text 't' (if (> 1 0) ink 'a'))")
 
     def test_a_control_can_write_it(self):
-        m = scene("(color 'ink' '#1f2a44') (button 'b' ink 'red')")
-        assert m["b"].state.moves[0][1] == "value"
+        m = scene(
+            "(color 'ink' '#1f2a44')"
+            " (button 'b' (animation (ink (transition (to 'red') (duration 1)))))"
+        )
+        assert m["b"].animation.body.targets == ((m["ink"], "value"),)
 
 
 class TestExport:
@@ -201,9 +203,10 @@ class TestBackground:
 
     def test_a_state_can_move_it(self):
         m = self.compile(
-            "(scene 'w' (background 'white') (circle 'c')) (button 'b' w.background 'black')"
+            "(scene 'w' (background 'white') (circle 'c'))"
+            " (button 'b' (animation (w.background (transition (to 'black') (duration 1)))))"
         )
-        assert m["b"].state.moves[0][1] == "background"
+        assert m["b"].animation.body.targets[0][1] == "background"
 
     @pytest.mark.parametrize(
         "src, match",
@@ -224,5 +227,10 @@ class TestBackground:
 
 def test_a_bound_background_cannot_be_written():
     src = "(color 'paper' '#f7f3ea') (scene 'plane' (background paper) (circle 'c'))"
-    with pytest.raises(CompileError, match="cannot animate to this state: plane.background is"):
-        compile_model(parse(f"{src} (button 'b' plane.background 'black')"))
+    with pytest.raises(CompileError, match="'plane.background' is computed"):
+        compile_model(
+            parse(
+                f"{src} (button 'b'"
+                " (animation (plane.background (transition (to 'black') (duration 1)))))"
+            )
+        )

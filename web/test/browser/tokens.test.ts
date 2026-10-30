@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { Doc, Obj } from "../../src/doc.ts";
 import { define, frames, type MtpModel } from "../../src/elements.ts";
+import { Player } from "../../src/player.ts";
 
 define();
 frames.request = () => {};
@@ -17,7 +18,8 @@ const objects: Omit<Obj, "id">[] = [
   { kind: "circle", name: "d", parent: 1, attrs: { ...style, r: 1, fill: ["call", "lighten", ["read", 2, "value"], 0.5] } },
   { kind: "readout", name: "r", attrs: { value: ["str", ["show", ["read", 2, "value"], "color"]] } },
   { kind: "readout", name: "lighter", attrs: { value: ["str", ["show", ["call", "lighten", ["read", 2, "value"], 0.5], "paint"]] } },
-  { kind: "state", name: "red", attrs: {}, conditions: [["color=", ["read", 2, "value"], "#ff0000ff"]], moves: [[2, "value", "#ff0000ff"]] },
+  { kind: "state", name: "red", attrs: {}, conditions: [["color=", ["read", 2, "value"], "#ff0000ff"]] },
+  { kind: "animation", name: "to-red", attrs: {}, body: ["pair", [[2, "value"]], "color", ["transition", { to: "#ff0000ff", duration: 2 }]] },
 ];
 const doc: Doc = {
   mtp: 1,
@@ -75,8 +77,8 @@ describe("color tokens in a real page", () => {
 
   it("are mixed by CSS while animating", async () => {
     const { model, drawn } = await page(":root { --mtp-ink: #000000; }");
-    model.animator!.go(7, 2, "linear");
-    model.animator!.tick(1);
+    new Player(model.runtime!, 8).seek(1);
+    model.changed();
     expect(drawn(3)).toBe("color(srgb 0.5 0 0)");
   });
 

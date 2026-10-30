@@ -25,9 +25,9 @@ class TestBool:
     def test_defaults_to_false(self):
         assert compile("(bool 'show')")["show"].value == Free(False)
 
-    def test_states_read_and_move_it(self):
+    def test_states_read_it(self):
         m = compile("(bool 'show' true) (state 'hidden' (= show false))")
-        assert m["hidden"].problem is None
+        assert len(m["hidden"].conditions) == 1
 
     def test_not_a_bool(self):
         error("(bool 'show' 3)", "expected bool")
@@ -105,3 +105,47 @@ class TestExport:
         assert objs[names["b"]]["kind"] == "bool"
         assert v["shows"] == [names["base"], names["extra"]]
         assert v["when"] == [None, ["read", names["more"], "value"]]
+
+
+class TestShowingAndHiding:
+    def test_a_canvas_wide_transition_and_one_per_when(self):
+        m = compile(
+            f"{SCENE} (toggle 'more' self) (toggle 'base-on' self)"
+            " (canvas 'v' (transition (duration 0.3) (path fade))"
+            " (when base-on base)"
+            " (when more extra (transition (duration 1) (ease 'ease-out') (path fade))))"
+        )
+        v = m["v"]
+        assert [t.duration for t in v.transitions] == [0.3, 1.0]
+        assert v.transitions[1].ease == "ease-out"
+
+    def test_none_without_one(self):
+        m = compile(f"{SCENE} (toggle 'more' self) (canvas 'v' base (when more extra))")
+        assert m["v"].transitions == [None, None]
+
+    @pytest.mark.parametrize(
+        "src, match",
+        [
+            ("(canvas 'v' (transition (duration 1)) (when t base))", "names its kind with a path"),
+            ("(canvas 'v' (transition (path fade)) (when t base))", "needs a duration"),
+            (
+                "(canvas 'v' (when t base (transition (to 1) (duration 1) (path fade))))",
+                "no from or to",
+            ),
+            ("(canvas 'v' (when t base (transition (duration 1) (path lerp))))", "fade"),
+            ("(real 'k') (animation 'a' (k (transition (to 1) (path fade))))", "only for showing"),
+        ],
+    )
+    def test_invalid(self, src, match):
+        error(f"{SCENE} (toggle 't' self) {src}", match)
+
+    def test_export(self):
+        doc = to_json(
+            compile(
+                f"{SCENE} (toggle 'more' self)"
+                " (canvas 'v' (transition (duration 0.3) (path fade)) base (when more extra))"
+            )
+        )
+        v = doc["objects"][doc["names"]["v"]]
+        fade = ["transition", {"duration": 0.3, "path": ["view", "fade"]}]
+        assert v["transitions"] == [fade, fade]

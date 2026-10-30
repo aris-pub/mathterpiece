@@ -21,7 +21,16 @@ export function viewOf(rt: Runtime, canvas: number): { box: [number, number, num
   return { box: [x, -(y + height), width, height], toUser: FLIP.times(view) };
 }
 
-export function draw(rt: Runtime, canvas: number, svg?: SVGSVGElement): SVGSVGElement {
+/**
+ * Draws a canvas. visible says how visible each thing the canvas lists is, from 0 (not drawn) to
+ * 1; by default, 1 while its condition holds and 0 otherwise.
+ */
+export function draw(
+  rt: Runtime,
+  canvas: number,
+  svg?: SVGSVGElement,
+  visible: (k: number) => number = (k) => (shownNow(rt, canvas, k) ? 1 : 0),
+): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
   out.replaceChildren();
   const { box, toUser } = viewOf(rt, canvas);
@@ -31,8 +40,16 @@ export function draw(rt: Runtime, canvas: number, svg?: SVGSVGElement): SVGSVGEl
   top.setAttribute("transform", toUser.svg());
   const view = rt.obj(canvas);
   (view.shows ?? []).forEach((member, k) => {
-    const when = (view.when as (Expr | null)[] | undefined)?.[k];
-    if (when === null || when === undefined || rt.eval(when, null, {})) drawObject(rt, member, top);
+    const v = visible(k);
+    if (v <= 0) return;
+    if (v >= 1) {
+      drawObject(rt, member, top);
+      return;
+    }
+    const group = document.createElementNS(NS, "g");
+    group.setAttribute("opacity", String(v));
+    drawObject(rt, member, group);
+    top.appendChild(group);
   });
   out.appendChild(top);
   return out;
@@ -130,4 +147,10 @@ function drawBackground(rt: Runtime, canvas: number, svg: SVGSVGElement): void {
   const background = root === undefined ? undefined : rt.value(root, "background");
   if (background === undefined || background === "none") svg.style.removeProperty("background-color");
   else svg.style.setProperty("background-color", cssColor(background));
+}
+
+/** Whether the k-th thing a canvas lists is shown now, by its condition. */
+export function shownNow(rt: Runtime, canvas: number, k: number): boolean {
+  const when = (rt.obj(canvas).when as (Expr | null)[] | undefined)?.[k];
+  return when === null || when === undefined || Boolean(rt.eval(when, null, {}));
 }

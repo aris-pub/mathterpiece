@@ -43,11 +43,9 @@ from mathterpiece.model import (
     Root,
     Slider,
     State,
-    Steps,
     Styled,
     Text,
     Toggle,
-    TourStep,
     Triangle,
     View,
     Visual,
@@ -387,30 +385,15 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
     def visit(node):
         if not isinstance(node, Form):
             return
-        if _head(node) == "state":
-            for cond in node.items[2:]:
-                if isinstance(cond, Form) and _head(cond) == "=" and len(cond.items) == 3:
-                    for side in cond.items[1:]:
-                        if isinstance(side, Name) and all(isinstance(p, str) for p in side.parts):
-                            paths.add(tuple(p for p in side.parts if isinstance(p, str)))
-        if _head(node) == "animation" and len(node.items) > 2:
-            animation_targets(node.items[2])
+        # Named, (animation 'name' body), or written in a control, (animation body).
+        if _head(node) == "animation" and len(node.items) > 1:
+            animation_targets(node.items[-1])
         if _head(node) == "on-drag" and len(node.items) > 2:
             target = node.items[2]
             if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
                 *path, last = [p for p in target.parts if isinstance(p, str)]
                 coords = ("x", "y") if last == "pos" else (last,)
                 paths.update((*path, c) for c in coords)
-        if _head(node) in ("slider", "button") and len(node.items) > 2:
-            target = node.items[2]
-            if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
-                paths.add(tuple(p for p in target.parts if isinstance(p, str)))
-            elif isinstance(target, Name) and isinstance(target.parts[-1], str):
-                anywhere.add(target.parts[-1])
-            elif isinstance(target, Form) and _head(target) == "ref":
-                arg = target.items[1] if len(target.items) > 1 else None
-                if isinstance(arg, StrLit):
-                    anywhere.add(arg.value.rsplit(".", 1)[-1])
         for item in node.items:
             visit(item)
 
@@ -419,16 +402,10 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
     return paths, anywhere
 
 
-# The values a moved attribute stands for: a position is its x and y.
-def _covers(attr: str) -> set[str]:
-    return {"x", "y"} if attr == "pos" else {attr}
-
-
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
 CONTROLS: dict[str, type[Obj]] = {
     "slider": Slider,
     "button": Button,
-    "steps": Steps,
     "play": Play,
     "toggle": Toggle,
 }
@@ -447,12 +424,6 @@ def _ease(value: "Value", pos: Pos) -> str:
         raise CompileError(f"ease is one of {', '.join(EASES)}", pos)
     assert isinstance(value.value, str)
     return value.value
-
-
-def _check_reachable(state: "State", pos: Pos):
-    if state.problem is not None:
-        label = f"state {state.name!r}" if state.name is not None else "this state"
-        raise CompileError(f"cannot animate to {label}: {state.problem}", pos)
 
 
 def _text(node: Node) -> str:
@@ -535,6 +506,18 @@ def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
 
 
 TRANSITION_FORMS = ("transition", "in-order", "wait")
+# Paths through how a thing is drawn, which canvases show and hide things along.
+VIEW_PATHS = ("fade",)
+
+
+def _view_path(t: Any) -> bool:
+    if isinstance(t, Single):
+        return t.path is not None and t.path[0] == "view"
+    if isinstance(t, Sequence):
+        return any(_view_path(p) for p in t.parts)
+    return False
+
+
 TRANSITION_PARTS = ("from", "to", "duration", "ease", "path")
 
 
@@ -555,6 +538,8 @@ def _transition_value(value: "Value") -> Any:
 
 # How a target's value moves when its transition gives no path.
 def _value_kind(t: str) -> str:
+    if t == "int":
+        return "int"
     if t in NUMERIC:
         return "number"
     if _list_len(t) is not None:
@@ -575,15 +560,15 @@ def _has_end(t: Any) -> bool:
 
 
 # Strings given as colors are checked and written as #rrggbbaa, as for fill.
-def _colors_checked(t: Any, pos: Pos) -> Any:
+def _colors_checked(t: Any, pos: Pos, none: bool) -> Any:
     if isinstance(t, Single):
         ends = {
-            k: _color_const(v, pos, none=False) if isinstance(v, str) else v
+            k: _color_const(v, pos, none=none) if isinstance(v, str) else v
             for k, v in (("frm", t.frm), ("to", t.to))
         }
         return dataclasses.replace(t, **ends)
     if isinstance(t, Sequence):
-        return dataclasses.replace(t, parts=tuple(_colors_checked(p, pos) for p in t.parts))
+        return dataclasses.replace(t, parts=tuple(_colors_checked(p, pos, none) for p in t.parts))
     return t
 
 
@@ -595,6 +580,57 @@ def _animation_targets(body: Any) -> list[tuple[Obj, str]]:
     if isinstance(body, (AtOnce, InOrder)):
         return [t for p in body.parts for t in _animation_targets(p)]
     return []
+
+
+# A slider has no start of its own, so each target's first transition must say where it starts.
+def _check_starts(body: Any, seen: set[tuple[int, str]], pos: Pos) -> set[tuple[int, str]]:
+    if isinstance(body, Animation):
+        return _check_starts(body.body, seen, pos)
+    if isinstance(body, (AtOnce, InOrder)):
+        for part in body.parts:
+            seen = _check_starts(part, seen, pos)
+        return seen
+    if isinstance(body, Pair):
+        for obj, attr in body.targets:
+            key = (id(obj), attr)
+            if key not in seen and _first_from(body.transition) is None:
+                label = obj.name if attr == "value" else f"{obj.name}.{attr}"
+                raise CompileError(f"{label} needs a from: a slider has no start of its own", pos)
+            seen = seen | {key}
+    return seen
+
+
+def _first_from(t: Any) -> Any:
+    if isinstance(t, Single):
+        return t.frm
+    if isinstance(t, Sequence):
+        for part in t.parts:
+            if not isinstance(part, Wait):
+                return _first_from(part)
+    return None
+
+
+# A button or a play runs on a clock, so every transition needs a duration, its own or a default.
+def _check_durations(body: Any, default: float | None, pos: Pos):
+    if isinstance(body, Animation):
+        _check_durations(body.body, default, pos)
+    elif isinstance(body, (AtOnce, InOrder)):
+        inner = body.default_duration if body.default_duration is not None else default
+        for part in body.parts:
+            _check_durations(part, inner, pos)
+    elif isinstance(body, Pair):
+        _check_transition_durations(body.transition, default, pos)
+
+
+def _check_transition_durations(t: Any, default: float | None, pos: Pos):
+    if isinstance(t, Single) and t.duration is None and default is None:
+        raise CompileError(
+            "this transition needs a duration (or a default-duration around it)", pos
+        )
+    if isinstance(t, Sequence):
+        inner = t.default_duration if t.default_duration is not None else default
+        for part in t.parts:
+            _check_transition_durations(part, inner, pos)
 
 
 def _check_not_syntax(name: str, pos: Pos):
@@ -689,7 +725,10 @@ class _Compiler:
 
     def compile(self) -> Model:
         self.add_builtins()
+        # Animations written inside controls, which have no name.
+        self.anonymous: list[Animation] = []
         self.views_reading = False
+        self.shown_with: dict[int, Any] = {}
         self.shown_when: dict[int, Node] = {}
         self.written, self.written_anywhere = _control_targets(self.forms)
         for form in self.forms:
@@ -704,7 +743,7 @@ class _Compiler:
             for alias in names[1:]:
                 model.alias(alias, names[0])
         self.settle(self.frames[0], None)
-        for obj in [*self.toplevel, *self.locals]:
+        for obj in [*self.toplevel, *self.anonymous, *self.locals]:
             model.add(obj)
         model.functions.update(self.functions)
         return model
@@ -980,44 +1019,18 @@ class _Compiler:
         rest = list(form.items[2:])
         values: dict[str, Any] = {}
         fields: dict[str, Any] = {}
-        if head == "slider":
+        if head in ("slider", "button", "play"):
             if not rest:
-                raise CompileError("slider needs a target, like disk.r", form.pos)
-            target, attr, kind, text = self.control_target(rest.pop(0), env)
-            if kind not in ("int", "real"):
-                raise CompileError(
-                    f"a slider writes a number, but {text} is a {kind}", form.items[2].pos
-                )
-            fields = {"target": target, "attr": attr, "kind": kind}
-            values["label"] = Free(text)
-        elif head == "button":
-            if not rest:
-                raise CompileError("button needs a state, or a target and a value", form.pos)
-            state = self.state_named(rest[0])
-            if state is not None:
-                rest.pop(0)
-                values["label"] = Free(state.name)
+                raise CompileError(f"{head} needs an animation", form.pos)
+            given = rest.pop(0)
+            animation = self.control_animation(given, env)
+            fields = {"animation": animation}
+            label = animation.name if animation.name is not None else name
+            values["label"] = Free("play" if head == "play" else label or "")
+            if head == "slider":
+                _check_starts(animation.body, set(), given.pos)
             else:
-                state = self.one_condition_state(rest, env, form.pos)
-                values["label"] = Free(_text(form.items[2]))
-            _check_reachable(state, form.items[2].pos)
-            fields = {"state": state}
-        elif head == "steps":
-            if not rest or _head(rest[0]) != "states":
-                raise CompileError("steps needs (states a b ...)", form.pos)
-            listed = rest.pop(0)
-            assert isinstance(listed, Form)
-            states = []
-            for item in listed.items[1:]:
-                state = self.state_named(item)
-                if state is None:
-                    raise CompileError("steps lists states by name", item.pos)
-                _check_reachable(state, item.pos)
-                states.append(state)
-            if not states:
-                raise CompileError("steps needs at least one state", listed.pos)
-            fields = {"states": states}
-            values["label"] = Free(name or "")
+                _check_durations(animation.body, None, given.pos)
         elif head == "toggle":
             if not rest:
                 raise CompileError("toggle needs a target: a bool, or self", form.pos)
@@ -1039,10 +1052,6 @@ class _Compiler:
                     )
                 fields = {"target": target, "attr": attr}
                 values["label"] = Free(text)
-        elif head == "play":
-            fields = self.tour(rest, form.pos)
-            rest = [node for node in rest if _head(node) == "label"]
-            values["label"] = Free("play")
         cls = CONTROLS[head]
         allowed = set(attributes(cls)) - {"label"} | {"label"}
         given: set[str] = set()
@@ -1121,15 +1130,11 @@ class _Compiler:
     def control_attr(self, attr: str, node: Node, env: Env, cls: type[Obj]) -> Free | Bound:
         if attr == "step":
             step = self.value_arg(node, env)
-            if isinstance(step, Const) and step.value == "none":
-                return Free(None)
-            if isinstance(step, Const) and isinstance(step.value, (int, Fraction, float)):
-                return Free(float(step.value))
-            raise CompileError("step is a number known at compile time, or 'none'", node.pos)
-        if attr == "duration":
-            return Free(_duration(self.value_arg(node, env), node.pos))
-        if attr == "ease":
-            return Free(_ease(self.value_arg(node, env), node.pos))
+            if not (isinstance(step, Const) and step.type == "int" and step.value >= 1):  # ty: ignore[unsupported-operator]
+                raise CompileError(
+                    "step is a whole number of steps, at least 1, known at compile time", node.pos
+                )
+            return Free(step.value)
         value = self.attr_value(cls, attr, node, env)
         assert isinstance(value, (Free, Bound))
         return value
@@ -1140,124 +1145,34 @@ class _Compiler:
             return found if isinstance(found, State) else None
         return None
 
-    # The shorthand (button 'b' target value): the state where target equals value.
-    def one_condition_state(self, rest: list[Node], env: Env, pos: Pos) -> State:
-        target = rest.pop(0)
-        if not rest or _head(rest[0]) in ("label", "duration", "ease"):
-            raise CompileError("a button needs the value it writes", pos)
-        value_node = rest.pop(0)
-        condition = Form((Name(("=",), target.pos), target, value_node), target.pos)
-        return self.make_state(None, (condition,), env, pos)
-
     def state(self, form: Form, env: Env) -> State:
         name = self.object_name(form, env)
         conditions = tuple(form.items[2:])
         if not conditions:
             raise CompileError("a state needs at least one condition", form.pos)
-        state = self.make_state(name, conditions, env, form.pos)
-        self.register(state, form.pos)
-        return state
-
-    def make_state(
-        self, name: str | None, conditions: tuple[Node, ...], env: Env, pos: Pos
-    ) -> State:
         stored = []
         for cond in conditions:
             value = self.value_arg(cond, env)
             if value.type not in ("bool", PENDING):
                 raise CompileError("a state's conditions must be true or false", cond.pos)
             stored.append(self.resolve_refs(_substitute(cond, self.constants(env), self.lets), env))
-        moves: list[tuple[Obj, str, Node]] = []
-        problem = None
-        for cond in conditions:
-            problem = problem or self.add_move(cond, env, moves)
-        if problem is None:
-            problem = self.check_reads(moves, env)
-        return State(name=name, conditions=tuple(stored), moves=tuple(moves), problem=problem)
+        state = State(name=name, conditions=tuple(stored))
+        self.register(state, form.pos)
+        return state
 
-    # How one condition is reached: the free side of (= a b) moves to the other side (the left
-    # side when both are free). Returns why it cannot be animated to, if it cannot.
-    def add_move(self, cond: Node, env: Env, moves: list) -> str | None:
-        if not (isinstance(cond, Form) and _head(cond) == "=" and len(cond.items) == 3):
-            return "only conditions of the form (= free-value expression) can be animated to"
-        left, right = cond.items[1], cond.items[2]
-        for side, other in ((left, right), (right, left)):
-            found = self.free_value(side, env)
-            if isinstance(found, str):
-                continue
-            obj, attr, kind, text = found
-            if any(o is obj and _covers(a) & _covers(attr) for o, a, _ in moves):
-                return f"it moves {text} twice"
-            value = self.value_arg(other, env)
-            if not _widens_to(value.type, kind):
-                raise CompileError(f"{text} takes a {kind}, got {value.type}", other.pos)
-            stored = self.resolve_refs(_substitute(other, self.constants(env), self.lets), env)
-            if kind in ("color", "paint") and isinstance(value, Const):
-                stored = StrLit(_color_const(value.value, other.pos, kind == "paint"), other.pos)
-            moves.append((obj, attr, stored))
-            return None
-        return f"{_text(left)} is computed, so reaching it would mean solving an equation"
-
-    # Targets are worked out once, when a move starts, so a condition may read the value it moves
-    # itself ((= r (* 2 r)) doubles r). Reading a value another condition moves would leave the
-    # state not holding once both have arrived.
-    def check_reads(self, moves: list, env: Env) -> str | None:
-        for obj, attr, expr in moves:
-            others = {
-                (id(o), c) for o, a, _ in moves if not (o is obj and a == attr) for c in _covers(a)
-            }
-            for name in _names_in(expr):
-                found = self.free_value(name, env)
-                if isinstance(found, str):
-                    continue
-                if any((id(found[0]), c) in others for c in _covers(found[1])):
-                    return f"one condition reads {found[3]}, which another condition moves"
-        return None
-
-    def tour(self, rest: list[Node], pos: Pos) -> dict[str, Any]:
-        start = None
-        steps: list[TourStep] = []
-        for i, node in enumerate(rest):
-            head = _head(node)
-            if head == "label":
-                continue
-            if not isinstance(node, Form):
-                raise CompileError("a tour step is (wait seconds) or (to state ...)", node.pos)
-            if head == "from":
-                if i != 0 or len(node.items) != 2:
-                    raise CompileError("(from state) comes first, once", node.pos)
-                start = self.state_named(node.items[1])
-                if start is None:
-                    raise CompileError("from names a state", node.pos)
-                _check_reachable(start, node.pos)
-            elif head == "wait":
-                if len(node.items) != 2:
-                    raise CompileError("wait takes a number of seconds", node.pos)
-                seconds = _duration(self.value_arg(node.items[1], {}), node.items[1].pos)
-                steps.append(TourStep("wait", None, Free(seconds)))
-            elif head == "to":
-                state = self.state_named(node.items[1]) if len(node.items) > 1 else None
-                if state is None:
-                    raise CompileError("to names a state", node.pos)
-                _check_reachable(state, node.pos)
-                options = {"duration": Free(0.0), "ease": Free("linear")}
-                for option in node.items[2:]:
-                    key = _head(option)
-                    if key not in options or not isinstance(option, Form) or len(option.items) != 2:
-                        raise CompileError(
-                            "to takes (duration seconds) and (ease name)", option.pos
-                        )
-                    value = self.value_arg(option.items[1], {})
-                    item = option.items[1].pos
-                    options[key] = Free(
-                        _duration(value, item) if key == "duration" else _ease(value, item)
-                    )
-                steps.append(TourStep("to", state, options["duration"], options["ease"]))
-            else:
-                raise CompileError("a tour step is (wait seconds) or (to state ...)", node.pos)
-        if not steps:
-            raise CompileError("a tour needs at least one step", pos)
-        return {"start": start, "steps": tuple(steps)}
+    # A control's animation: one named at the top level, or (animation x) written in place.
+    def control_animation(self, node: Node, env: Env) -> Animation:
+        if isinstance(node, Form) and _head(node) == "animation":
+            if len(node.items) != 2:
+                raise CompileError("an animation written in a control takes one body", node.pos)
+            animation = Animation(name=None, body=self.animation_body(node.items[1], env))
+            self.anonymous.append(animation)
+            return animation
+        if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
+            found = self.names.get(node.parts[0])
+            if isinstance(found, Animation):
+                return found
+        raise CompileError(f"{_text(node)!r} is not an animation", node.pos)
 
     def define_const(self, form: Form, env: Env):
         if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
@@ -1380,6 +1295,29 @@ class _Compiler:
         assert all(isinstance(p, (Single, Wait, Sequence)) for p in parts)
         return Const(Sequence(parts, elem=elem, **settings), kind)  # ty: ignore[invalid-argument-type]
 
+    # How a canvas shows and hides a thing: a transition with a duration and a path through how
+    # the thing is drawn (such as fade), and no ends, since hidden and shown are the ends.
+    def view_transition(self, node: Node, env: Env) -> Single:
+        value = self.value_arg(node, env)
+        t = value.value if isinstance(value, Const) else None
+        if not isinstance(t, Single):
+            raise CompileError("a canvas shows and hides things with a (transition ...)", node.pos)
+        if t.frm is not None or t.to is not None:
+            raise CompileError(
+                "showing and hiding have no from or to: hidden and shown are its ends", node.pos
+            )
+        if t.path is None:
+            raise CompileError(
+                "a canvas's transition names its kind with a path, such as (path fade)", node.pos
+            )
+        if t.path[0] != "view":
+            raise CompileError(
+                f"showing and hiding take one of these paths: {', '.join(VIEW_PATHS)}", node.pos
+            )
+        if t.duration is None:
+            raise CompileError("a canvas's transition needs a duration", node.pos)
+        return t
+
     def animation(self, form: Form, env: Env) -> Animation:
         if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
             raise CompileError("animation takes a name and one animation", form.pos)
@@ -1454,6 +1392,7 @@ class _Compiler:
         elem = value.type.split(":", 1)[1]
         target_type = targets[0][2]
         fits = {
+            "int": ("real",),
             "number": ("real",),
             "point": ("list2",),
             "color": ("str", "color", "paint"),
@@ -1464,10 +1403,14 @@ class _Compiler:
             raise CompileError(
                 f"{text} is a {target_type}, but this transition moves a {elem}", given.pos
             )
+        if _view_path(spec):
+            raise CompileError(
+                "that path is only for showing and hiding things in a canvas", given.pos
+            )
         if not _has_end(spec):
             raise CompileError("a pair needs an end: give its transition a to", given.pos)
         if kind_name == "color":
-            spec = _colors_checked(spec, given.pos)
+            spec = _colors_checked(spec, given.pos, none=target_type == "paint")
         return Pair(tuple((obj, attr) for obj, attr, _ in targets), kind_name, spec)
 
     # The free values a pair writes: one, or each member's for a group attribute.
@@ -1526,6 +1469,8 @@ class _Compiler:
 
     # The name of a function of the start, the end and the eased progress.
     def path(self, node: Node) -> Path:
+        if isinstance(node, Name) and node.parts in tuple((v,) for v in VIEW_PATHS):
+            return ("view", str(node.parts[0]))
         name = self.function_name(node)
         if self.arity(name) != 3:
             raise CompileError(
@@ -1914,6 +1859,9 @@ class _Compiler:
         if spec.cls in FONT_PARTS:
             settable.add("font")
         font: Name | None = None
+        if spec.cls is Canvas:
+            settable.add("transition")
+        shown_with: Any = None
         extra: dict[str, tuple[Const | Dyn, Node]] = {}
         rest = list(form.items[2:])
         values: dict[str, Free | Bound] = {}
@@ -1940,6 +1888,9 @@ class _Compiler:
             positions[attr] = node.pos
             if attr == "font":
                 font = self.font_token(node, env)
+                continue
+            if attr == "transition":
+                shown_with = self.view_transition(node, env)
                 continue
             if attr == "pos":
                 if len(node.items) != 2:
@@ -1994,6 +1945,7 @@ class _Compiler:
             kwargs[var.name] = members
             if spec.cls is Canvas:
                 kwargs["conditions"] = [self.shown_when.pop(id(m), None) for m in members]
+                kwargs["transitions"] = [self.shown_with.pop(id(m), shown_with) for m in members]
         elif rest:
             node = rest[0]
             attr = _head(node)
@@ -2123,7 +2075,7 @@ class _Compiler:
                 node, env, lambda n, e: self.member(n, e, container, settable, owner)
             )
         if isinstance(node, Form) and head == "when" and issubclass(FORMS[container].cls, View):
-            if len(node.items) != 3:
+            if len(node.items) not in (3, 4):
                 raise CompileError("when takes a condition and what it shows", node.pos)
             value = self.value_arg(node.items[1], env)
             if value.type not in ("bool", PENDING):
@@ -2132,8 +2084,11 @@ class _Compiler:
                 _substitute(node.items[1], self.constants(env), self.lets), env
             )
             shown = self.member(node.items[2], env, container, settable, owner)
+            transition = self.view_transition(node.items[3], env) if len(node.items) == 4 else None
             for obj in shown:
                 self.shown_when[id(obj)] = condition
+                if transition is not None:
+                    self.shown_with[id(obj)] = transition
             return shown
         if isinstance(node, Form) and head == "ref":
             node = self.ref_name(node, env)

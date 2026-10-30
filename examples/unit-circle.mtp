@@ -104,8 +104,10 @@
 (toggle 'show-cot' self (label 'cot'))
 (toggle 'show-csc' self (label 'csc'))
 
-; Drawn in this order: the point last, on top, so the pointer always reaches it.
+; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
+; function on or off fades its line, name and value in or out.
 (canvas 'view' (view-x -10) (view-y -7.5) (view-width 20) (view-height 15)
+  (transition (duration 0.4) (ease 'ease-in-out') (path fade))
   frame
   (when show-sec secant)
   (when show-csc cosecant)
@@ -117,7 +119,7 @@
 
 ; Dragging the point changes theta, so the point slides along the circle under the pointer.
 (on-drag p theta)
-(slider 'turn' theta (min 0) (max 360) (label 'θ'))
+(slider 'turn' (animation (theta (transition (from 0) (to 360)))) (label 'θ'))
 
 ; For the prose around the figure: the same numbers, set in the number font.
 (readout 'x-now' (let ((x (cosd theta))) $'{x:+z.3f}') (font number))

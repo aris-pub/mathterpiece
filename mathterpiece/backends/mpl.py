@@ -4,13 +4,12 @@ other backend, and evaluates its resolved operations."""
 import math
 import random
 import sys
-import time
 from dataclasses import dataclass
 from typing import Any
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import is_color_like, to_hex, to_rgba
+from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle as MplCircle
 from matplotlib.patches import Ellipse as MplEllipse
@@ -18,8 +17,6 @@ from matplotlib.patches import Patch, PathPatch, Polygon, Rectangle
 from matplotlib.path import Path
 from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
-from matplotlib.widgets import Button as MplButton
-from matplotlib.widgets import Slider as MplSlider
 
 from mathterpiece.colors import same
 from mathterpiece.compiler import ARITHMETIC, COMPARISONS
@@ -41,7 +38,8 @@ PROPERTIES = {
 POINTS = {"center", "from", "to"}
 SHAPES = {"circle", "rect", "ellipse", "line", "triangle"}
 CONTAINERS = {"root", "group", "motif"}
-CONTROLS = {"slider", "button", "steps", "play"}
+# Objects whose expressions read positions in scene coordinates.
+CONTROLS = {"slider", "button", "play", "toggle", "animation", "on-drag"}
 
 
 class EvalError(Exception):
@@ -72,8 +70,6 @@ class Runtime:
         self.written: dict[tuple[int, str], Any] = {}
         self.frames: dict[int, Matrix] = {}
         self.depth = 0
-        # Texts in the middle of changing: the old text, and how far the change has gone (0 to 1).
-        self.morphs: dict[int, tuple[str, float]] = {}
         sys.setrecursionlimit(max(sys.getrecursionlimit(), PYTHON_FRAMES))
 
     def kind(self, i: int) -> str:
@@ -335,11 +331,6 @@ class Runtime:
                 return False
         return True
 
-    # Where reaching a state leads from here: each moved value and what it moves to now.
-    def targets(self, state: int) -> list[tuple[int, str, Any]]:
-        moves = self.objects[state]["moves"] or []
-        return [(i, attr, self.eval(expr, None, {})) for i, attr, expr in moves]
-
 
 class Evaluator:
     """A Runtime for a compiled model, addressed by the model's objects instead of ids."""
@@ -367,9 +358,6 @@ class Evaluator:
 
     def holds(self, state: Obj) -> bool:
         return self.runtime.holds(self.id(state))
-
-    def targets(self, state: Obj) -> list[tuple[Obj, str, Any]]:
-        return [(self.objects[i], a, v) for i, a, v in self.runtime.targets(self.id(state))]
 
 
 def _all_objects(model: Model) -> list[Obj]:
@@ -426,40 +414,7 @@ def render_json(doc: dict, rng: random.Random | None = None) -> list[tuple[Figur
         _draw_canvas(obj["id"], ax, rt, strokes)
         _stroke_in_scene_units(fig, ax, strokes)
         figures.append((fig, ax))
-        _canvases.setdefault(fig, []).append((obj["id"], ax, strokes))
-    controls_ = [o for o in doc["objects"] if o["kind"] in CONTROLS]
-    if controls_:
-        if not figures:
-            fig = plt.figure()
-            figures.append((fig, fig.add_axes((0, 0, 1, 1), frame_on=False)))
-        _add_controls(controls_, rt, [f for f, _ in figures])
     return figures
-
-
-# The canvases each figure shows, for redrawing them after a control writes.
-_canvases: dict[Figure, list[tuple[int, Axes, list]]] = {}
-_widgets: dict[Figure, dict[str, Any]] = {}
-_presses: dict[Figure, dict[Any, Any]] = {}
-
-
-def controls(fig: Figure) -> dict[str, Any]:
-    """The matplotlib widgets for a figure's controls, by name."""
-    return _widgets.get(fig, {})
-
-
-def press(fig: Figure, name: str):
-    """Does what clicking a button or a play button does."""
-    _presses[fig][name]()
-
-
-def choose(fig: Figure, name: str, index: int):
-    """Does what clicking a step does."""
-    _presses[fig][(name, index)]()
-
-
-def advance(fig: Figure, seconds: float):
-    """Moves a figure's animations forward, as if that much time had passed."""
-    _animators[fig].tick(seconds)
 
 
 def _draw_canvas(view: int, ax: Axes, rt: Runtime, strokes: list):
@@ -479,251 +434,6 @@ def _draw_canvas(view: int, ax: Axes, rt: Runtime, strokes: list):
     to_view = _affine(matrix) + ax.transData
     for member in rt.objects[view]["shows"]:
         _draw(member, ax, rt, to_view, strokes, _scale(matrix))
-
-
-# Controls go along the bottom of the first figure, one row each, and redraw every canvas when
-# they write.
-def _add_controls(objects: list[dict], rt: Runtime, figures: list[Figure]):
-    host = figures[0]
-    rows = len(objects)
-    host.subplots_adjust(bottom=0.08 + 0.06 * rows)
-    widgets: dict[str, Any] = {}
-    presses: dict[Any, Any] = {}
-    sliders: list[tuple[Any, dict]] = []
-    steps: list[tuple[list[Any], dict]] = []
-
-    def redraw():
-        for fig in figures:
-            for view, ax, strokes in _canvases.get(fig, []):
-                _draw_canvas(view, ax, rt, strokes)
-                _update_strokes(fig, ax, strokes)
-        # Sliders follow values that something else moved, without counting as user input.
-        for slider, control in sliders:
-            target, attr = control["target"]
-            slider.eventson = False
-            slider.set_val(rt.value(target, attr))
-            slider.eventson = True
-        for buttons, control in steps:
-            for button, state in zip(buttons, control["states"], strict=True):
-                button.color = LIT if rt.holds(state) else UNLIT
-                button.ax.set_facecolor(button.color)
-        for fig in figures:
-            fig.canvas.draw_idle()
-
-    animator = _Animator(rt, redraw, host)
-    for row, control in enumerate(objects):
-        name, i = control["name"], control["id"]
-        box = (0.25, 0.02 + 0.06 * (rows - 1 - row), 0.5, 0.04)
-        label = rt.value(i, "label")
-        if control["kind"] == "slider":
-            target, attr = control["target"]
-            whole = control["type"] == "int"
-            slider = MplSlider(
-                host.add_axes(box),
-                label,
-                rt.value(i, "min"),
-                rt.value(i, "max"),
-                valinit=rt.value(target, attr),
-                valstep=1 if whole else rt.value(i, "step"),
-            )
-            slider.valtext.set_visible(False)
-
-            def moved(value, target=target, attr=attr, whole=whole):
-                animator.cancel()
-                rt.write(target, attr, int(round(value)) if whole else float(value))
-                redraw()
-
-            slider.on_changed(moved)
-            widgets[name] = slider
-            sliders.append((slider, control))
-        elif control["kind"] == "steps":
-            n = len(control["states"])
-            buttons = []
-            for k, state in enumerate(control["states"]):
-                x, y, w, h = box
-                cell = host.add_axes((x + w * k / n, y, w / n, h))
-                button = MplButton(cell, rt.objects[state]["name"] or str(k))
-
-                def chosen(i=i, state=state):
-                    animator.cancel()
-                    animator.go(state, rt.value(i, "duration"), rt.value(i, "ease"))
-
-                button.on_clicked(lambda _event, chosen=chosen: chosen())
-                buttons.append(button)
-                presses[(name, k)] = chosen
-            widgets[name] = buttons
-            steps.append((buttons, control))
-        else:
-            button = MplButton(host.add_axes(box), label)
-            if control["kind"] == "button":
-
-                def pressed(i=i, state=control["state"]):
-                    animator.cancel()
-                    animator.go(state, rt.value(i, "duration"), rt.value(i, "ease"))
-
-            else:
-
-                def pressed(control=control):
-                    animator.play(control)
-
-            button.on_clicked(lambda _event, pressed=pressed: pressed())
-            widgets[name] = button
-            presses[name] = pressed
-    _widgets[host] = widgets
-    _presses[host] = presses
-    _animators[host] = animator
-    redraw()
-
-
-LIT, UNLIT = "#9ecae1", "0.85"
-EASES = {
-    "linear": lambda t: t,
-    "ease-in": lambda t: t * t * t,
-    "ease-out": lambda t: 1 - (1 - t) ** 3,
-    "ease-in-out": lambda t: 4 * t**3 if t < 0.5 else 1 - (-2 * t + 2) ** 3 / 2,
-}
-_animators: dict[Figure, "_Animator"] = {}
-
-
-# One value moving toward a state, from where it was to the target worked out when the move
-# started.
-@dataclass
-class _Track:
-    obj: int
-    attr: str
-    begin: Any
-    target: Any
-    start: float
-    duration: float
-    ease: str
-
-
-# Runs the animations of buttons, steps and tours. Time is in seconds since the figure opened;
-# a matplotlib timer moves it forward while something is moving.
-class _Animator:
-    def __init__(self, rt: Runtime, redraw, fig: Figure):
-        self.rt = rt
-        self.redraw = redraw
-        self.now = 0.0
-        self.tracks: list[_Track] = []
-        self.tour: dict | None = None
-        self.step = 0
-        self.step_start = 0.0
-        # When the current text morphs started and end.
-        self.morph_start = self.morph_end = 0.0
-        self.timer = fig.canvas.new_timer(interval=16)
-        self.timer.add_callback(self.frame)
-        self.last = time.monotonic()
-
-    def cancel(self):
-        self.tracks.clear()
-        self.tour = None
-        self.rt.morphs.clear()
-
-    def go(self, state: int, duration: float, ease: str, start: float | None = None):
-        start = self.now if start is None else start
-        for i, attr, target in self.rt.targets(state):
-            begin = self.rt.value(i, attr)
-            if duration > 0 and self.rt.kind(i) == "text" and attr == "value" and begin != target:
-                self.rt.morphs[i] = (begin, 0.0)
-                self.morph_start, self.morph_end = start, start + duration
-            if duration > 0 and _blendable(begin, target):
-                self.tracks.append(_Track(i, attr, begin, target, start, duration, ease))
-            else:
-                self.rt.write(i, attr, target)
-        self.redraw()
-        self.wake()
-
-    def play(self, tour: dict):
-        self.cancel()
-        if tour["start"] is not None:
-            for i, attr, target in self.rt.targets(tour["start"]):
-                self.rt.write(i, attr, target)
-        self.tour = tour
-        self.step = 0
-        self.step_start = self.now
-        self.begin_step()
-        self.redraw()
-        self.wake()
-
-    def begin_step(self):
-        assert self.tour is not None
-        step = self.tour["steps"][self.step]
-        if step[0] == "to":
-            _, state, duration, ease = step
-            self.go(state, duration, ease, start=self.step_start)
-
-    def tick(self, seconds: float):
-        self.now += seconds
-        while self.tour is not None:
-            step = self.tour["steps"][self.step]
-            end = self.step_start + step[1 if step[0] == "wait" else 2]
-            if self.now < end:
-                break
-            self.update(end)
-            self.step += 1
-            self.step_start = end
-            if self.step == len(self.tour["steps"]):
-                self.tour = None
-            else:
-                self.begin_step()
-        self.update(self.now)
-        self.redraw()
-
-    # Writes every moving value for the given moment, and drops the ones that have arrived.
-    def update(self, now: float):
-        for track in list(self.tracks):
-            t = 1.0 if track.duration == 0 else min(1.0, (now - track.start) / track.duration)
-            value = _blend(track.begin, track.target, EASES[track.ease](t))
-            self.rt.write(track.obj, track.attr, track.target if t >= 1 else value)
-            if t >= 1:
-                self.tracks.remove(track)
-        if self.rt.morphs:
-            span = max(self.morph_end - self.morph_start, 1e-12)
-            t = min(1.0, (now - self.morph_start) / span)
-            self.rt.morphs = {k: (old, t) for k, (old, _) in self.rt.morphs.items()}
-            if t >= 1:
-                self.rt.morphs.clear()
-
-    def wake(self):
-        self.last = time.monotonic()
-        self.timer.start()
-
-    def frame(self):
-        now = time.monotonic()
-        self.tick(now - self.last)
-        self.last = now
-        if not self.tracks and self.tour is None and not self.rt.morphs:
-            self.timer.stop()
-
-
-def _is_color(value: Any) -> bool:
-    if not isinstance(value, str):
-        return False
-    return value == "none" or is_color_like(value)
-
-
-def _blendable(a: Any, b: Any) -> bool:
-    if isinstance(a, bool) or isinstance(b, bool):
-        return False
-    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
-        return True
-    if isinstance(a, tuple) and isinstance(b, tuple):
-        return len(a) == len(b)
-    return _is_color(a) and _is_color(b) and a != b
-
-
-# Partway from a to b. Colors blend in RGB, and 'none' counts as the other color, transparent.
-def _blend(a: Any, b: Any, t: float) -> Any:
-    if isinstance(a, tuple):
-        return tuple(x + (y - x) * t for x, y in zip(a, b, strict=True))
-    if isinstance(a, str):
-        ca = to_rgba(b if a == "none" else a, 0 if a == "none" else None)
-        cb = to_rgba(a if b == "none" else b, 0 if b == "none" else None)
-        mixed = tuple(x + (y - x) * t for x, y in zip(ca, cb, strict=True))
-        return to_hex(mixed, keep_alpha=True)  # ty: ignore[invalid-argument-type]
-    result = a + (b - a) * t
-    return int(round(result)) if isinstance(a, int) and isinstance(b, int) else result
 
 
 # matplotlib line widths are in points, but stroke-width is in scene units as in SVG, so widths
@@ -758,24 +468,19 @@ def _draw(i: int, ax: Axes, rt: Runtime, to_view: Transform, strokes: list, view
         ax.add_patch(patch)
     elif kind == "text":
         # Glyph outlines in scene units, so the canvas transform turns and scales the letters
-        # the way an SVG transform does. A text in the middle of changing is drawn twice: the old
-        # one fading out, the new one in. That is the best matplotlib can do for morphing.
+        # the way an SVG transform does.
         shape = rt.shape(i)
-        old, progress = rt.morphs.get(i, (None, 1.0))
-        shown = [(rt.value(i, "value"), progress)]
-        if old is not None:
-            shown.append((old, 1 - progress))
-        for value, fade in shown:
-            glyphs = TextPath((0, 0), value, size=rt.value(i, "font-size"))
-            text = PathPatch(
-                glyphs,
-                facecolor=_paint(rt, i, "fill", fade),
-                edgecolor=_paint(rt, i, "stroke", fade),
-                transform=_affine(shape) + to_view,
-                label=value,
-            )
-            strokes.append((text, rt.value(i, "stroke-width") * _scale(shape) * view_scale))
-            ax.add_patch(text)
+        value = rt.value(i, "value")
+        glyphs = TextPath((0, 0), value, size=rt.value(i, "font-size"))
+        text = PathPatch(
+            glyphs,
+            facecolor=_paint(rt, i, "fill"),
+            edgecolor=_paint(rt, i, "stroke"),
+            transform=_affine(shape) + to_view,
+            label=value,
+        )
+        strokes.append((text, rt.value(i, "stroke-width") * _scale(shape) * view_scale))
+        ax.add_patch(text)
 
 
 # Each shape drawn around its own origin; rt.shape places it.

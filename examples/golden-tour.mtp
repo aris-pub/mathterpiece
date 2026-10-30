@@ -29,19 +29,29 @@
   (text 'name' 'a quarter turn' (pos [-9.3 9]) (font heading) (fill chalk))
   (text 'degrees' $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font small) (fill chalk) (opacity 0.6)))
 
-(state 'quarter' (= sunflower.angle 90) (= name.value 'a quarter turn') (= halo.fill 'none'))
-(state 'third' (= sunflower.angle 120) (= name.value 'a third of a turn') (= halo.fill 'none'))
-(state 'two-fifths' (= sunflower.angle 144) (= name.value 'two fifths of a turn') (= halo.fill 'none'))
-(state 'golden' (= sunflower.angle golden-angle) (= name.value 'the golden angle') (= halo.fill gold))
+; Each stop of the tour: the angle, its name, and whether the halo glows.
+(animation 'quarter'
+  (at-once (default-duration 1.5) (default-ease 'ease-in-out')
+    (sunflower.angle (transition (to 90)))
+    (name.value (transition (to 'a quarter turn')))
+    (halo.fill (transition (to 'none')))))
+(animation 'third'
+  (at-once (default-duration 2.5) (default-ease 'ease-in-out')
+    (sunflower.angle (transition (to 120)))
+    (name.value (transition (to 'a third of a turn')))
+    (halo.fill (transition (to 'none')))))
+(animation 'two-fifths'
+  (at-once (default-duration 2.5) (default-ease 'ease-in-out')
+    (sunflower.angle (transition (to 144)))
+    (name.value (transition (to 'two fifths of a turn')))
+    (halo.fill (transition (to 'none')))))
+(animation 'golden'
+  (at-once (default-duration 3) (default-ease 'ease-out')
+    (sunflower.angle (transition (to golden-angle)))
+    (name.value (transition (to 'the golden angle')))
+    (halo.fill (transition (to gold)))))
+(animation 'angles' (in-order quarter (wait 1.5) third (wait 1.5) two-fifths (wait 1.5) golden))
 
 (canvas 'view' garden)
-(play 'tour'
-  (from quarter)
-  (wait 1.5)
-  (to third (duration 2.5) (ease 'ease-in-out'))
-  (wait 1.5)
-  (to two-fifths (duration 2.5) (ease 'ease-in-out'))
-  (wait 1.5)
-  (to golden (duration 3) (ease 'ease-out')))
-(steps 'jump' (states quarter third two-fifths golden) (duration 1.5) (ease 'ease-in-out'))
-(slider 'angle' sunflower.angle (min 80) (max 180) (label 'angle'))
+(play 'tour' angles (buttons true))
+(slider 'angle' (animation (sunflower.angle (transition (from 80) (to 180)))) (label 'angle'))

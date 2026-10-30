@@ -203,18 +203,16 @@ class Canvas(View):
     # Maps scene coordinates to view coordinates, with the view center as the origin.
     transform: Attr[Matrix] = Free(IDENTITY)
     members: list[Visual] = _members()
-    # For each member, the condition under which it is shown (None: always).
+    # For each member, the condition under which it is shown (None: always), and the transition it
+    # is shown and hidden with (None: at once).
     conditions: list[Node | None] = field(default_factory=list, metadata={"internal": True})
+    transitions: list[Any] = field(default_factory=list, metadata={"internal": True})
 
 
-# A condition on the scene: active whenever all its conditions hold. moves says how to reach it:
-# each free value (object, attribute) and the expression it moves to. problem says why it cannot
-# be animated to, if it cannot.
+# A flag on the scene: active whenever all its conditions hold. Nothing goes to a state.
 @dataclass(kw_only=True)
 class State(Obj):
     conditions: tuple[Node, ...] = field(default=(), metadata={"internal": True})
-    moves: tuple[tuple[Obj, str, Node], ...] = field(default=(), metadata={"internal": True})
-    problem: str | None = field(default=None, metadata={"internal": True})
 
 
 @dataclass(kw_only=True)
@@ -222,42 +220,18 @@ class Control(Obj):
     label: Attr[str] = Free("")
 
 
-# Writes one free value while dragged: an attribute, a motif parameter, or a real's value. kind is
-# that value's type, which the slider adapts to.
+# Scrubs an animation by hand: the knob's place on the track is the animation's progress, and
+# durations only share out the track. step snaps the knob to that many evenly spaced places.
 @dataclass(kw_only=True)
 class Slider(Control):
-    target: Obj | None = field(default=None, metadata={"internal": True})
-    attr: str = field(default="value", metadata={"internal": True})
-    kind: str = field(default="real", metadata={"internal": True})
-    min: Attr[float] = Free(0.0)
-    max: Attr[float] = Free(1.0)
-    # None means continuous.
+    animation: Obj | None = field(default=None, metadata={"internal": True})
     step: Attr[object] = Free(None)
 
 
-# Goes to its state when pressed, over duration seconds (0 is instant).
+# Sets off an animation when pressed.
 @dataclass(kw_only=True)
 class Button(Control):
-    state: State | None = field(default=None, metadata={"internal": True})
-    duration: Attr[float] = Free(0.0)
-    ease: Attr[str] = Free("linear")
-
-
-# One button per state, in order.
-@dataclass(kw_only=True)
-class Steps(Control):
-    states: list[State] = field(default_factory=list, metadata={"internal": True})
-    duration: Attr[float] = Free(0.0)
-    ease: Attr[str] = Free("linear")
-
-
-# One step of a tour: wait for duration seconds, or go to state over duration seconds.
-@dataclass(frozen=True)
-class TourStep:
-    kind: str
-    state: State | None
-    duration: Free[float]
-    ease: Free[str] = Free("linear")
+    animation: Obj | None = field(default=None, metadata={"internal": True})
 
 
 # Switches a true/false value: a scene bool, or (target None) its own value, which lives outside
@@ -269,11 +243,12 @@ class Toggle(Control):
     value: Attr[bool] = Free(False)
 
 
-# A guided tour: jumps to start (if any) when pressed, then runs its steps in order.
+# Plays and pauses an animation. With buttons, it also shows one button per step of the
+# animation's top-level in-order.
 @dataclass(kw_only=True)
 class Play(Control):
-    start: State | None = field(default=None, metadata={"internal": True})
-    steps: tuple[TourStep, ...] = field(default=(), metadata={"internal": True})
+    animation: Obj | None = field(default=None, metadata={"internal": True})
+    buttons: Attr[bool] = Free(False)
 
 
 # Moves node's target (part of its position) with the pointer while it is dragged, if every

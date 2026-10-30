@@ -17,7 +17,7 @@ const PROPERTIES: Record<string, Set<string>> = {
 };
 const POINTS = new Set(["center", "from", "to"]);
 // Objects whose expressions read positions in scene coordinates.
-const CONTROLS = new Set(["slider", "button", "steps", "play", "on-drag"]);
+const CONTROLS = new Set(["slider", "button", "play", "toggle", "animation", "on-drag"]);
 const ARITHMETIC = new Set(["+", "-", "*", "/"]);
 
 /** An object passed as a value, as in (dist a b). */
@@ -344,11 +344,6 @@ export class Runtime {
       }
     }
     return true;
-  }
-
-  /** Where reaching a state leads from here: each moved value and what it moves to now. */
-  targets(state: number): [number, string, unknown][] {
-    return (this.obj(state).moves ?? []).map(([i, attr, expr]) => [i, attr, this.eval(expr, null, {})]);
   }
 }
 

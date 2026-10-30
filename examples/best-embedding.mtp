@@ -50,10 +50,18 @@
 (on-drag v v.pos)
 (on-drag w w.pos)
 
-(state 'optimum'
-  (= c.pos [0 0]) (= u.pos (polar unit 90)) (= v.pos (polar unit 210)) (= w.pos (polar unit 330)))
-(state 'on-a-line'
-  (= c.pos [0 0]) (= u.pos [(- unit) 0]) (= v.pos [unit 0]) (= w.pos [(* 2 unit) 0]))
+(animation 'optimum'
+  (at-once (default-duration 0.8) (default-ease 'ease-in-out')
+    (c.pos (transition (to [0 0])))
+    (u.pos (transition (to (polar unit 90))))
+    (v.pos (transition (to (polar unit 210))))
+    (w.pos (transition (to (polar unit 330))))))
+(animation 'on-a-line'
+  (at-once (default-duration 0.8) (default-ease 'ease-in-out')
+    (c.pos (transition (to [0 0])))
+    (u.pos (transition (to [(- unit) 0])))
+    (v.pos (transition (to [unit 0])))
+    (w.pos (transition (to [(* 2 unit) 0])))))
 
-(button 'best' optimum (label 'show the optimum') (duration 0.8) (ease 'ease-in-out'))
-(button 'line' on-a-line (label 'collapse onto a line') (duration 0.8) (ease 'ease-in-out'))
+(button 'best' optimum (label 'show the optimum'))
+(button 'line' on-a-line (label 'collapse onto a line'))

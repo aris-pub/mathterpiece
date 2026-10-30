@@ -1,11 +1,13 @@
 // The page elements: <mtp-model> holds a figure's JSON and its runtime, and views and controls
 // placed anywhere in the page find it by id, so an author can put each one where it fits.
-import { Animator } from "./animate.ts";
+import { Scheduler } from "./animate.ts";
 import { fontCss, hex, parseComputed } from "./colors.ts";
 import { Drags } from "./drag.ts";
 import type { Doc, Obj } from "./doc.ts";
 import { Runtime } from "./runtime.ts";
-import { draw, viewOf } from "./svg.ts";
+import { Player, toSpec } from "./player.ts";
+import { draw, shownNow, viewOf } from "./svg.ts";
+import { type Ease, applyEase } from "./transitions.ts";
 
 export const FORMAT_VERSION = 1;
 const READY = "mtp-ready";
@@ -20,7 +22,7 @@ export const frames = {
 
 export class MtpModel extends HTMLElement {
   runtime: Runtime | null = null;
-  animator: Animator | null = null;
+  animator: Scheduler | null = null;
   drags: Drags | null = null;
   error: string | null = null;
   private running = false;
@@ -50,7 +52,7 @@ export class MtpModel extends HTMLElement {
     const rt = new Runtime(doc, Math.random, (css, property) => this.resolve(css, property));
     this.runtime = rt;
     if (doc.objects.some((o) => o.kind === "color" || o.kind === "font")) this.watchStyles();
-    this.animator = new Animator(rt, () => this.changed(), () => this.wake());
+    this.animator = new Scheduler(rt, () => this.changed(), () => this.wake());
     this.drags = new Drags(rt);
     this.error = null;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
@@ -179,7 +181,7 @@ abstract class MtpPart extends HTMLElement {
     return obj;
   }
 
-  protected abstract setup(model: MtpModel, rt: Runtime, animator: Animator): void;
+  protected abstract setup(model: MtpModel, rt: Runtime, animator: Scheduler): void;
   protected abstract update(): void;
 }
 
@@ -187,15 +189,17 @@ export class MtpCanvas extends MtpPart {
   private svg: SVGSVGElement | null = null;
   private redraw: () => void = () => {};
 
-  protected setup(model: MtpModel, rt: Runtime, animator: Animator): void {
+  protected setup(model: MtpModel, rt: Runtime, animator: Scheduler): void {
     const name = this.getAttribute("name");
     const canvas = rt.objects.find((o) => o.kind === "canvas" && (name === null || o.name === name));
     if (!canvas) throw new Error(name === null ? "the figure has no canvas" : `no canvas named ${name}`);
     const drags = model.drags as Drags;
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
     this.svg = svg;
+    const fades = new Fades(rt, canvas.id, animator);
     this.redraw = () => {
-      draw(rt, canvas.id, svg);
+      fades.follow();
+      draw(rt, canvas.id, svg, (k) => fades.visible(k));
       markDraggable(svg, drags);
     };
     this.redraw();
@@ -204,7 +208,7 @@ export class MtpCanvas extends MtpPart {
     svg.addEventListener("pointerdown", (event) => {
       const hit = (event.target as Element).closest?.("[data-mtp-id]");
       if (!hit || !drags.grab(Number(hit.getAttribute("data-mtp-id")), toScene(event))) return;
-      animator.cancel();
+      animator.claim(drags.targets, drags);
       event.preventDefault();
       svg.setPointerCapture?.(event.pointerId);
     });
@@ -219,6 +223,81 @@ export class MtpCanvas extends MtpPart {
   protected update(): void {
     this.redraw();
   }
+}
+
+// How visible each thing a canvas lists is: the canvas's own state, which it moves along a
+// transition when the thing's condition changes. Turning back midway takes the share of the
+// duration that is left to cover, so it moves at the same speed.
+class Fades {
+  private level: number[];
+  private wanted: boolean[];
+  private moving = false;
+
+  constructor(
+    private rt: Runtime,
+    private canvas: number,
+    private animator: Scheduler,
+  ) {
+    const count = rt.obj(canvas).shows?.length ?? 0;
+    this.wanted = Array.from({ length: count }, (_, k) => shownNow(rt, canvas, k));
+    this.level = this.wanted.map((w) => (w ? 1 : 0));
+  }
+
+  visible(k: number): number {
+    return this.level[k] ?? 0;
+  }
+
+  // Notices conditions that changed since the last drawing.
+  follow(): void {
+    const transitions = (this.rt.obj(this.canvas) as { transitions?: unknown[] }).transitions ?? [];
+    this.wanted.forEach((was, k) => {
+      const now = shownNow(this.rt, this.canvas, k);
+      if (now === was) return;
+      this.wanted[k] = now;
+      if (!transitions[k]) this.level[k] = now ? 1 : 0;
+    });
+    const moving = this.wanted.some((w, k) => this.level[k] !== (w ? 1 : 0));
+    if (moving && !this.moving) {
+      this.moving = true;
+      this.animator.addTicker((seconds) => this.step(seconds, transitions));
+    }
+  }
+
+  private step(seconds: number, transitions: unknown[]): boolean {
+    let more = false;
+    this.wanted.forEach((w, k) => {
+      const goal = w ? 1 : 0;
+      const level = this.level[k] ?? 0;
+      if (level === goal) return;
+      const spec = toSpec(transitions[k], (e) => e);
+      const duration = spec.kind === "single" ? (spec.duration ?? 0) : 0;
+      const ease = spec.kind === "single" ? spec.ease : undefined;
+      // Progress along the fade from hidden (0) to shown (1), eased, then back to a level.
+      const progress = unease(level, ease) + (goal > level ? 1 : -1) * (duration > 0 ? seconds / duration : 1);
+      const clamped = Math.min(Math.max(progress, 0), 1);
+      this.level[k] = goal > level ? Math.min(easeOf(clamped, ease), 1) : Math.max(easeOf(clamped, ease), 0);
+      if ((goal > level && clamped >= 1) || (goal < level && clamped <= 0)) this.level[k] = goal;
+      if (this.level[k] !== goal) more = true;
+    });
+    this.moving = more;
+    return more;
+  }
+}
+
+function easeOf(p: number, ease: Ease | undefined): number {
+  return applyEase(ease, p, () => p);
+}
+
+// The progress at which an ease reaches level, so a fade can carry on from where it is.
+function unease(level: number, ease: Ease | undefined): number {
+  let lo = 0;
+  let hi = 1;
+  for (let k = 0; k < 40; k++) {
+    const mid = (lo + hi) / 2;
+    if (easeOf(mid, ease) < level) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
 }
 
 // Shapes that a press would drag take the pointer, so touch screens drag them instead of scrolling.
@@ -281,31 +360,42 @@ function readoutFont(rt: Runtime, id: number): string {
     .join(" ");
 }
 
+// A transition scrubbed by hand: the knob's place on the track is the animation's progress. With
+// one target, the knob follows the target when something else moves it.
 export class MtpSlider extends MtpPart {
   private sync: () => void = () => {};
 
-  protected setup(model: MtpModel, rt: Runtime, animator: Animator): void {
+  protected setup(model: MtpModel, rt: Runtime, animator: Scheduler): void {
     const control = this.find(rt, "slider");
-    const [target, attr] = control.target as [number, string];
-    const whole = control.type === "int";
-    const step = rt.value(control.id, "step");
+    const player = new Player(rt, control.animation as number);
+    const steps = rt.value(control.id, "step");
     const input = document.createElement("input");
     input.type = "range";
-    input.min = String(rt.value(control.id, "min"));
-    input.max = String(rt.value(control.id, "max"));
-    input.step = whole ? "1" : step === null ? "any" : String(step);
-    input.value = String(rt.value(target, attr));
+    input.min = "0";
+    input.max = "1";
+    input.step = typeof steps === "number" ? String(1 / steps) : "any";
+    const knob = player.knob();
+    input.value = String(knob ?? 0);
+    let holding = false;
     input.addEventListener("input", () => {
-      animator.cancel();
-      const value = Number(input.value);
-      rt.write(target, attr, whole ? Math.round(value) : value);
+      if (!holding) {
+        holding = true;
+        player.release();
+      }
+      animator.claim(player.targets, this);
+      player.scrub(Number(input.value));
       model.changed();
+    });
+    input.addEventListener("change", () => {
+      holding = false;
     });
     const label = document.createElement("label");
     label.append(String(rt.value(control.id, "label")), " ", input);
     this.replaceChildren(label);
     this.sync = () => {
-      input.value = String(rt.value(target, attr));
+      if (holding) return;
+      const place = player.knob();
+      if (place !== null) input.value = String(place);
     };
   }
 
@@ -318,13 +408,13 @@ export class MtpSlider extends MtpPart {
 export class MtpToggle extends MtpPart {
   private sync: () => void = () => {};
 
-  protected setup(model: MtpModel, rt: Runtime, animator: Animator): void {
+  protected setup(model: MtpModel, rt: Runtime, animator: Scheduler): void {
     const control = this.find(rt, "toggle");
     const [id, attr] = control.target ?? [control.id, "value"];
     const input = document.createElement("input");
     input.type = "checkbox";
     input.addEventListener("change", () => {
-      animator.cancel();
+      if (control.target) animator.claim([`${id}.${attr}`], this);
       rt.write(id, attr, input.checked);
       model.changed();
     });
@@ -342,45 +432,69 @@ export class MtpToggle extends MtpPart {
   }
 }
 
+// Sets off an animation when pressed.
 export class MtpButton extends MtpPart {
-  protected setup(_model: MtpModel, rt: Runtime, animator: Animator): void {
+  protected setup(_model: MtpModel, rt: Runtime, animator: Scheduler): void {
     const control = this.find(rt, "button");
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = String(rt.value(control.id, "label"));
-    button.addEventListener("click", () => {
-      animator.cancel();
-      animator.go(control.state as number, rt.value(control.id, "duration"), rt.value(control.id, "ease"));
-    });
+    button.addEventListener("click", () => animator.start(new Player(rt, control.animation as number), this));
     this.replaceChildren(button);
   }
 
   protected update(): void {}
 }
 
-export class MtpSteps extends MtpPart {
+// Plays and pauses an animation; with buttons, one more button per step of it. A step clicked
+// while playing makes the tour jump there and go on; clicked while stopped, it runs that step
+// alone, from wherever things are. A step's button is lit while the step holds.
+export class MtpPlay extends MtpPart {
   private sync: () => void = () => {};
 
-  protected setup(_model: MtpModel, rt: Runtime, animator: Animator): void {
-    const control = this.find(rt, "steps");
-    const states = control.states ?? [];
-    const buttons = states.map((state, k) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = rt.obj(state).name ?? String(k + 1);
-      button.addEventListener("click", () => {
-        animator.cancel();
-        animator.go(state, rt.value(control.id, "duration"), rt.value(control.id, "ease"));
-      });
-      return button;
+  protected setup(_model: MtpModel, rt: Runtime, animator: Scheduler): void {
+    const control = this.find(rt, "play");
+    const animation = control.animation as number;
+    const label = String(rt.value(control.id, "label"));
+    const play = document.createElement("button");
+    play.type = "button";
+    const tour = { kind: "tour" };
+    const oneStep = { kind: "one step" };
+    play.addEventListener("click", () => {
+      const player = animator.playerOf(tour);
+      if (animator.running(tour)) animator.pause(tour);
+      else if (player && !player.done) animator.resume(tour);
+      else animator.start(new Player(rt, animation), tour);
+      this.sync();
     });
+    const lights = new Player(rt, animation);
+    const buttons = rt.value(control.id, "buttons")
+      ? lights.steps.map((_, k) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = stepLabel(rt, animation, k);
+          button.addEventListener("click", () => {
+            const player = animator.playerOf(tour);
+            if (player && animator.running(tour)) {
+              player.jump(k);
+              animator.jumped(tour, player.steps[k]?.start ?? 0);
+            } else {
+              const single = new Player(rt, animation);
+              single.only(k);
+              animator.start(single, oneStep);
+              animator.jumped(oneStep, single.steps[k]?.start ?? 0);
+            }
+          });
+          return button;
+        })
+      : [];
     const group = document.createElement("div");
     group.setAttribute("role", "group");
-    group.setAttribute("aria-label", String(rt.value(control.id, "label")));
-    group.append(...buttons);
+    group.append(play, ...buttons);
     this.replaceChildren(group);
     this.sync = () => {
-      states.forEach((state, k) => buttons[k]?.setAttribute("aria-pressed", String(rt.holds(state))));
+      play.textContent = animator.running(tour) ? "pause" : label;
+      buttons.forEach((b, k) => b.setAttribute("aria-pressed", String(lights.holds(k))));
     };
     this.sync();
   }
@@ -390,17 +504,13 @@ export class MtpSteps extends MtpPart {
   }
 }
 
-export class MtpPlay extends MtpPart {
-  protected setup(_model: MtpModel, rt: Runtime, animator: Animator): void {
-    const control = this.find(rt, "play");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = String(rt.value(control.id, "label"));
-    button.addEventListener("click", () => animator.play(control.id));
-    this.replaceChildren(button);
-  }
-
-  protected update(): void {}
+// A step's button says the name of the animation it plays, or its number.
+function stepLabel(rt: Runtime, animation: number, k: number): string {
+  const body = rt.obj(animation).body;
+  const parts = Array.isArray(body) && body[0] === "in-order" ? (body.slice(2) as unknown[]) : [body];
+  const step = parts.filter((p) => !(Array.isArray(p) && p[0] === "wait"))[k];
+  if (Array.isArray(step) && step[0] === "animation") return rt.obj(step[1] as number).name ?? String(k + 1);
+  return String(k + 1);
 }
 
 const ELEMENTS: Record<string, CustomElementConstructor> = {
@@ -410,7 +520,6 @@ const ELEMENTS: Record<string, CustomElementConstructor> = {
   "mtp-slider": MtpSlider,
   "mtp-toggle": MtpToggle,
   "mtp-button": MtpButton,
-  "mtp-steps": MtpSteps,
   "mtp-play": MtpPlay,
 };
 

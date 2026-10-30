@@ -42,7 +42,6 @@ from mathterpiece.model import (
     Root,
     Slider,
     State,
-    Steps,
     Text,
     Toggle,
     Triangle,
@@ -87,7 +86,6 @@ KINDS: dict[type[Obj], str] = {
     Readout: "readout",
     Slider: "slider",
     Button: "button",
-    Steps: "steps",
     Play: "play",
     Color: "color",
     Bool: "bool",
@@ -138,9 +136,6 @@ class _Writer:
         self.paths: dict[int, str] = {}
         for obj in model:
             self.collect(obj, None, None, None)
-        for obj in list(self.order):
-            if isinstance(obj, Button) and obj.state is not None:
-                self.collect(obj.state, None, None, None)
 
     def collect(self, obj: Obj, parent: Obj | None, around: Motif | None, prefix: str | None):
         if id(obj) in self.ids:
@@ -233,17 +228,15 @@ class _Writer:
         if isinstance(obj, Canvas):
             out["shows"] = [self.id(m) for m in obj.members]
             out["when"] = [None if c is None else self.expr(c, ctx) for c in obj.conditions]
+            out["transitions"] = [
+                None if t is None else self.transition(t, ctx) for t in obj.transitions
+            ]
         if isinstance(obj, Animation):
             out["body"] = self.animation(obj.body, ctx)
         if isinstance(obj, Toggle):
             out["target"] = None if obj.target is None else [self.id(obj.target), obj.attr]
         if isinstance(obj, State):
             out["conditions"] = [self.expr(c, ctx) for c in obj.conditions]
-            out["moves"] = (
-                None
-                if obj.problem is not None
-                else [[self.id(o), a, self.expr(e, ctx)] for o, a, e in obj.moves]
-            )
         if isinstance(obj, Drag):
             assert obj.node is not None
             assert obj.target_obj is not None
@@ -255,24 +248,9 @@ class _Writer:
                 out["when"] = ["holds", self.id(obj.when)]
             else:
                 out["when"] = None if obj.when is None else self.expr(obj.when, ctx)
-        if isinstance(obj, Slider):
-            assert obj.target is not None
-            out["target"] = [self.id(obj.target), obj.attr]
-            out["type"] = obj.kind
-        if isinstance(obj, Button):
-            assert obj.state is not None
-            out["state"] = self.id(obj.state)
-        if isinstance(obj, Steps):
-            out["states"] = [self.id(s) for s in obj.states]
-        if isinstance(obj, Play):
-            out["start"] = None if obj.start is None else self.id(obj.start)
-            out["steps"] = []
-            for step in obj.steps:
-                if step.state is None:
-                    out["steps"].append(["wait", step.duration.value])
-                else:
-                    to = ["to", self.id(step.state), step.duration.value, step.ease.value]
-                    out["steps"].append(to)
+        if isinstance(obj, (Slider, Button, Play)):
+            assert obj.animation is not None
+            out["animation"] = self.id(obj.animation)
         return out
 
     def animation(self, body: Any, ctx: _Context) -> Any:
@@ -304,7 +282,7 @@ class _Writer:
         if t.ease is not None:
             out["ease"] = _ease(t.ease)
         if t.path is not None:
-            out["path"] = ["fn", t.path[1]]
+            out["path"] = ["view" if t.path[0] == "view" else "fn", t.path[1]]
         return ["transition", out]
 
     def attr(self, obj: Obj, attr: str, value: Any, ctx: _Context) -> Any:

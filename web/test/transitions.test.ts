@@ -114,3 +114,9 @@ describe("scrubbed by progress, as a slider does", () => {
     expect(valueAtProgress(t, 0, 0.75, "number", call)).toBe(15);
   });
 });
+
+describe("ints", () => {
+  it("stay whole numbers all the way", () => {
+    expect(at(single({ to: 9, duration: 2 }), 2, 1, "int")).toBe(6);
+  });
+});

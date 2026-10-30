@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Animator } from "../src/animate.ts";
+import { Player } from "../src/player.ts";
 import type { Doc, Obj } from "../src/doc.ts";
 import { Runtime } from "../src/runtime.ts";
 import { draw } from "../src/svg.ts";
@@ -14,12 +14,15 @@ function world(resolve?: (css: string) => string | null) {
     { kind: "root", name: "s", attrs: { transform: ID }, members: [3] },
     { kind: "color", name: "ink", attrs: { value: "#1f2a44ff" } },
     { kind: "circle", name: "c", parent: 1, attrs: { ...style, r: 1, fill: ["read", 2, "value"] } },
-    { kind: "state", name: "red", attrs: {}, conditions: [["color=", ["read", 2, "value"], "#ff0000ff"]], moves: [[2, "value", "#ff0000ff"]] },
+    { kind: "state", name: "red", attrs: {}, conditions: [["color=", ["read", 2, "value"], "#ff0000ff"]] },
     { kind: "readout", name: "r", attrs: { value: ["str", "ink is ", ["show", ["read", 2, "value"], "color"]] } },
+    { kind: "animation", name: "now", attrs: {}, body: ["pair", [[2, "value"]], "color", ["transition", { to: "#ff0000ff", duration: 0 }]] },
+    { kind: "animation", name: "unused", attrs: {}, body: ["wait", 0] },
+    { kind: "animation", name: "slow", attrs: {}, body: ["pair", [[2, "value"]], "color", ["transition", { to: "#ff0000ff", duration: 2 }]] },
   ];
   const doc: Doc = { mtp: 1, objects: objects.map((o, id) => ({ ...o, id }) as Obj), functions: {}, names: {}, depends: {} };
   const rt = new Runtime(doc, Math.random, resolve);
-  return { rt, anim: new Animator(rt, () => {}, () => {}) };
+  return { rt, toRed: (duration: number) => new Player(rt, 6 + duration) };
 }
 
 const fill = (rt: Runtime) => (draw(rt, 0).querySelector("circle") as SVGElement).style.getPropertyValue("fill");
@@ -45,18 +48,18 @@ describe("color tokens", () => {
   });
 
   it("can be written, and then draw what was written", () => {
-    const { rt, anim } = world();
-    anim.go(4, 0, "linear");
+    const { rt, toRed } = world();
+    toRed(0).seek(0);
     expect(fill(rt)).toBe("#ff0000ff");
     expect(rt.holds(4)).toBe(true);
   });
 
   it("blend through CSS while animating", () => {
-    const { rt, anim } = world();
-    anim.go(4, 2, "linear");
-    anim.tick(1);
+    const { rt, toRed } = world();
+    const p = toRed(2);
+    p.seek(1);
     expect(fill(rt)).toBe("color-mix(in srgb, var(--mtp-ink, #1f2a44ff), #ff0000ff 50%)");
-    anim.tick(1);
+    p.seek(2);
     expect(fill(rt)).toBe("#ff0000ff");
   });
 });

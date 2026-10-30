@@ -164,3 +164,18 @@ def test_a_motif_parameter_an_animation_writes_stays_reactive():
     d = m["d"]
     assert isinstance(d, Motif)
     assert isinstance(local_names(d)["c"].r, Bound)  # ty: ignore[unresolved-attribute]
+
+
+def test_a_fill_may_move_to_none():
+    a = compile("(animation 'a' (c.fill (transition (to 'none'))))")["a"]
+    assert a.body.transition.to == "none"
+
+
+def test_an_int_target_moves_in_whole_numbers():
+    m = compile_model(
+        parse(
+            "(motif 'm' (params (n 3)) (circle 'c')) (scene 's' (m 'd'))"
+            " (animation 'a' (d.n (transition (to 9))))"
+        )
+    )
+    assert m["a"].body.kind == "int"  # ty: ignore[unresolved-attribute]

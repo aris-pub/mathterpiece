@@ -50,8 +50,10 @@ class TestFontToken:
         error(src, match)
 
     def test_a_control_can_write_a_part(self):
-        m = scene(f"{LABEL} (slider 's' label.weight (min 100) (max 900))")
-        assert m["s"].attr == "weight"
+        m = scene(
+            f"{LABEL} (slider 's' (animation (label.weight (transition (from 100) (to 900)))))"
+        )
+        assert m["s"].animation.body.targets[0][1] == "weight"
 
 
 class TestTextWithAFont:

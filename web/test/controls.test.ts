@@ -33,46 +33,47 @@ const text = (name: string) =>
 afterEach(() => document.body.replaceChildren());
 
 describe("<mtp-slider>", () => {
-  it("shows its label and range, and writes its target while dragged", async () => {
+  it("scrubs its animation: the knob's place is the progress", async () => {
     const { read } = await page("golden-tour", `<mtp-slider model="m" name="angle"></mtp-slider>`);
     const input = document.querySelector("mtp-slider input") as HTMLInputElement;
     expect(document.querySelector("mtp-slider")?.textContent).toContain("angle");
-    expect([input.min, input.max, input.step]).toEqual(["80", "180", "any"]);
-    input.value = "120";
+    expect([input.min, input.max, input.step]).toEqual(["0", "1", "any"]);
+    input.value = "0.4";
     input.dispatchEvent(new Event("input"));
-    expect(read("sunflower.angle")).toBe(120);
+    expect(read("sunflower.angle")).toBeCloseTo(120);
     expect(text("°")).toBe("120.0°");
   });
 
-  it("steps by whole numbers for an int target", async () => {
+  it("keeps an int target whole", async () => {
     const { read } = await page("interactive", `<mtp-slider model="m" name="multiplier"></mtp-slider>`);
     const input = document.querySelector("mtp-slider input") as HTMLInputElement;
-    expect(input.step).toBe("1");
-    input.value = "7";
+    input.value = "0.1";
     input.dispatchEvent(new Event("input"));
-    expect(read("table.m")).toBe(7);
+    expect(read("table.m")).toBe(6);
   });
 
-  it("follows values that something else moved", async () => {
+  it("follows its one target when something else moves it", async () => {
     const { anim } = await page(
       "golden-tour",
-      `<mtp-slider model="m" name="angle"></mtp-slider><mtp-steps model="m" name="jump"></mtp-steps>`,
+      `<mtp-slider model="m" name="angle"></mtp-slider><mtp-play model="m" name="tour"></mtp-play>`,
     );
-    (document.querySelectorAll("mtp-steps button")[2] as HTMLButtonElement).click();
+    const steps = [...document.querySelectorAll("mtp-play button")] as HTMLButtonElement[];
+    steps[3]!.click();
     anim.tick(5);
-    expect((document.querySelector("mtp-slider input") as HTMLInputElement).value).toBe("144");
+    expect(Number((document.querySelector("mtp-slider input") as HTMLInputElement).value)).toBeCloseTo(0.64, 3);
   });
 });
 
 describe("<mtp-button>", () => {
-  it("goes to its state", async () => {
+  it("sets off its animation", async () => {
     const { read } = await page(
       "interactive",
       `<mtp-slider model="m" name="multiplier"></mtp-slider><mtp-button model="m" name="reset"></mtp-button>`,
     );
     const input = document.querySelector("mtp-slider input") as HTMLInputElement;
-    input.value = "9";
+    input.value = "0.5";
     input.dispatchEvent(new Event("input"));
+    expect(read("table.m")).toBe(21);
     const button = document.querySelector("mtp-button button") as HTMLButtonElement;
     expect(button.textContent).toBe("back to 2");
     button.click();
@@ -80,36 +81,75 @@ describe("<mtp-button>", () => {
   });
 });
 
-describe("<mtp-steps>", () => {
-  it("has a button per state, pressed while its state holds", async () => {
-    const { anim } = await page("golden-tour", `<mtp-steps model="m" name="jump"></mtp-steps>`);
-    const buttons = [...document.querySelectorAll("mtp-steps button")] as HTMLButtonElement[];
-    expect(buttons.map((b) => b.textContent)).toEqual(["quarter", "third", "two-fifths", "golden"]);
-    expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["true", "false", "false", "false"]);
-    buttons[3]!.click();
-    anim.tick(0.75);
-    expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "false", "false", "false"]);
-    anim.tick(1);
-    expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "false", "false", "true"]);
-  });
-});
-
 describe("<mtp-play>", () => {
-  it("plays the tour, and any other input cancels it", async () => {
-    const { read, anim } = await page(
-      "golden-tour",
-      `<mtp-play model="m" name="tour"></mtp-play><mtp-slider model="m" name="angle"></mtp-slider>`,
-    );
-    const play = document.querySelector("mtp-play button") as HTMLButtonElement;
+  async function tour() {
+    const w = await page("golden-tour", `<mtp-play model="m" name="tour"></mtp-play><mtp-slider model="m" name="angle"></mtp-slider>`);
+    const [play, ...steps] = [...document.querySelectorAll("mtp-play button")] as HTMLButtonElement[];
+    return { ...w, play: play!, steps };
+  }
+
+  it("has a play button and one button per step, named after the step", async () => {
+    const { play, steps } = await tour();
     expect(play.textContent).toBe("play");
+    expect(steps.map((b) => b.textContent)).toEqual(["quarter", "third", "two-fifths", "golden"]);
+  });
+
+  it("plays the tour step after step, waiting in between", async () => {
+    const { play, anim, read } = await tour();
     play.click();
-    anim.tick(1.5 + 2.5);
+    expect(play.textContent).toBe("pause");
+    anim.tick(1.5 + 1.5 + 2.5);
     expect(read("sunflower.angle")).toBeCloseTo(120);
+  });
+
+  it("pauses where it is, and goes on from there", async () => {
+    const { play, anim, read } = await tour();
+    play.click();
+    anim.tick(1.5 + 1.5 + 1);
+    play.click();
+    const paused = read("sunflower.angle");
+    anim.tick(5);
+    expect(read("sunflower.angle")).toBe(paused);
+    play.click();
+    anim.tick(1.5);
+    expect(read("sunflower.angle")).toBeCloseTo(120);
+  });
+
+  it("lights the step whose values hold", async () => {
+    const { play, steps, anim } = await tour();
+    play.click();
+    anim.tick(1.5);
+    expect(steps.map((b) => b.getAttribute("aria-pressed"))).toEqual(["true", "false", "false", "false"]);
+  });
+
+  it("jumps to a step clicked while playing, and keeps playing", async () => {
+    const { play, steps, anim, read } = await tour();
+    play.click();
+    anim.tick(1);
+    steps[3]!.click();
+    anim.tick(3);
+    expect(read("sunflower.angle")).toBeCloseTo(137.5077640500378);
+    expect(read("name.value")).toBe("the golden angle");
+  });
+
+  it("runs a step clicked while stopped on its own", async () => {
+    const { steps, anim, read } = await tour();
+    steps[2]!.click();
+    anim.tick(2.5);
+    expect(read("sunflower.angle")).toBeCloseTo(144);
+    expect(anim.busy()).toBe(false);
+  });
+
+  it("is cancelled by any other input that writes what it writes", async () => {
+    const { play, anim, read } = await tour();
+    play.click();
+    anim.tick(4);
     const input = document.querySelector("mtp-slider input") as HTMLInputElement;
-    input.value = "100";
+    input.value = "0.2";
     input.dispatchEvent(new Event("input"));
     anim.tick(10);
-    expect(read("sunflower.angle")).toBe(100);
+    expect(read("sunflower.angle")).toBeCloseTo(100);
+    expect(play.textContent).toBe("play");
   });
 });
 
@@ -232,21 +272,30 @@ describe("the unit-circle example", () => {
     drags.move([0, 6]);
     model.changed();
     expect(rt.value(names.theta!, "value")).toBeCloseTo(90, 2);
-    expect((document.querySelector("mtp-slider input") as HTMLInputElement).value).toMatch(/^(89\.9|90)/);
+    expect(Number((document.querySelector("mtp-slider input") as HTMLInputElement).value)).toBeCloseTo(0.25, 3);
     expect(document.querySelector("mtp-readout")?.textContent).toBe("+0.000");
   });
 });
 
 describe("the unit-circle toggles", () => {
-  it("show and hide each function's line, name and value", async () => {
-    await page("unit-circle", `<mtp-toggle model="m" name="show-sec"></mtp-toggle><mtp-toggle model="m" name="show-tan"></mtp-toggle>`);
+  it("fade each function's line, name and value in and out", async () => {
+    const { anim } = await page(
+      "unit-circle",
+      `<mtp-toggle model="m" name="show-sec"></mtp-toggle><mtp-toggle model="m" name="show-tan"></mtp-toggle>`,
+    );
     const shown = () => [...document.querySelectorAll("mtp-canvas text")].map((t) => t.textContent?.split(" ")[0]);
     expect(shown()).not.toContain("sec");
     expect(shown()).toContain("tan");
     const [sec, tan] = [...document.querySelectorAll("mtp-toggle input")] as HTMLInputElement[];
     sec!.click();
     tan!.click();
+    anim.tick(0.2);
+    expect(shown()).toContain("sec");
+    expect(shown()).toContain("tan");
+    expect(document.querySelectorAll("mtp-canvas g[opacity]").length).toBe(2);
+    anim.tick(0.2);
     expect(shown()).toContain("sec");
     expect(shown()).not.toContain("tan");
+    expect(document.querySelectorAll("mtp-canvas g[opacity]").length).toBe(0);
   });
 });

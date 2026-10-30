@@ -439,7 +439,8 @@ class TestFormatSpecs:
 
     def test_int_while_drawing(self):
         src = (
-            "(motif 'm' (params (n 7)) (circle 'c')) (m 'd') (slider 's' d.n)"
+            "(motif 'm' (params (n 7)) (circle 'c')) (m 'd')"
+            " (slider 's' (animation (d.n (transition (from 0) (to 99)))))"
             " (text 't' $'{d.n:03d}')"
         )
         m = scene(src)

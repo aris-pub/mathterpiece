@@ -161,7 +161,7 @@ describe("states", () => {
     new Runtime(
       doc([
         real("k", 2.0000000001),
-        { kind: "state", name: "s", attrs: {}, conditions: [["=", ["read", 0, "value"], 2]], moves: [[0, "value", 2]] },
+        { kind: "state", name: "s", attrs: {}, conditions: [["=", ["read", 0, "value"], 2]] },
       ]),
     );
 
@@ -169,9 +169,6 @@ describe("states", () => {
     expect(states().holds(1)).toBe(true);
   });
 
-  it("knows its targets", () => {
-    expect(states().targets(1)).toEqual([[0, "value", 2]]);
-  });
 });
 
 describe("stdlib", () => {

@@ -2,10 +2,17 @@
 // end along a path, with an ease deciding how time (or a slider's knob) runs through it. Its
 // value at progress p in [0, 1] is path(start, end, ease(p)). Sequences glue their parts end to
 // end, each part starting where the one before ended.
-import { EASES } from "./animate.ts";
 import { mixCss } from "./colors.ts";
 
 export type Ease = string | ["step", number] | ["fn", string];
+
+/** The built-in eases, by name. */
+export const EASES: Record<string, (t: number) => number> = {
+  linear: (t) => t,
+  "ease-in": (t) => t * t * t,
+  "ease-out": (t) => 1 - (1 - t) ** 3,
+  "ease-in-out": (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2),
+};
 
 export type Spec =
   | { kind: "single"; from?: unknown; to?: unknown; duration?: number; ease?: Ease; path?: ["fn", string] }
@@ -13,7 +20,7 @@ export type Spec =
   | { kind: "in-order"; parts: Spec[]; ease?: Ease; defaultDuration?: number; defaultEase?: Ease };
 
 /** How a kind of value moves when no path is given. */
-export type ValueKind = "number" | "point" | "color" | "text" | "bool";
+export type ValueKind = "number" | "int" | "point" | "color" | "text" | "bool";
 
 /** Calls one of the figure's functions (or the library's) by name. */
 export type Call = (name: string, args: unknown[]) => unknown;
@@ -53,7 +60,8 @@ function clockWeight(spec: Spec): number {
   return spec.duration;
 }
 
-function trackWeight(spec: Spec): number {
+/** A transition's share of a slider's track: its duration, or 1 for a part without one. */
+export function trackWeight(spec: Spec): number {
   if (spec.kind === "in-order") return spec.parts.reduce((sum, part) => sum + trackWeight(part), 0);
   return spec.duration ?? 1;
 }
@@ -104,13 +112,14 @@ function evaluate(spec: Spec, start: unknown, p: number, kind: ValueKind, call: 
 }
 
 // Where a part leaves the value, so the next part starts there.
-function endOf(spec: Spec, start: unknown): unknown {
+/** Where a transition leaves a value that starts at start. */
+export function endOf(spec: Spec, start: unknown): unknown {
   if (spec.kind === "wait") return start;
   if (spec.kind === "single") return spec.to ?? start;
   return spec.parts.reduce((value, part) => endOf(part, value), start);
 }
 
-function applyEase(ease: Ease | undefined, p: number, call: Call): number {
+export function applyEase(ease: Ease | undefined, p: number, call: Call): number {
   if (ease === undefined) return p;
   if (typeof ease === "string") return (EASES[ease] ?? EASES.linear!)(p);
   if (ease[0] === "step") return p >= ease[1] ? 1 : 0;
@@ -124,5 +133,7 @@ function along(from: unknown, to: unknown, u: number, kind: ValueKind): unknown 
   if (kind === "text") return u <= 0 ? from : ({ from: String(from), to: String(to), progress: u } satisfies Crossfade);
   if (kind === "color") return u <= 0 ? from : mixCss(from, to, Math.min(u, 1));
   if (kind === "point") return (from as number[]).map((x, i) => x + (((to as number[])[i] ?? x) - x) * u);
-  return (from as number) + ((to as number) - (from as number)) * u;
+  const value = (from as number) + ((to as number) - (from as number)) * u;
+  // An int stays a whole number all the way.
+  return kind === "int" ? Math.round(value) : value;
 }

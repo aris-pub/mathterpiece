@@ -144,7 +144,9 @@ class TestExpressions:
     def test_strings_show_types(self):
         doc = exported(
             "(motif 'm' (params (n 3) (s 1.0)) (circle 'c')) (m 'd')"
-            " (text 't' $'n={d.n} s={d.s}') (slider 'p' d.n) (slider 'q' d.s)"
+            " (text 't' $'n={d.n} s={d.s}')"
+            " (slider 'p' (animation (d.n (transition (from 0) (to 9)))))"
+            " (slider 'q' (animation (d.s (transition (from 0) (to 9)))))"
         )
         assert obj(doc, "t")["attrs"]["value"] == [
             "str",
@@ -194,44 +196,6 @@ class TestFunctions:
         assert set(doc["functions"]) == {"dist (user)"}
 
 
-class TestControlsAndStates:
-    def test_slider(self):
-        doc = exported("(circle 'c') (slider 's' c.r (min 0) (max 5))")
-        s = obj(doc, "s")
-        assert (s["kind"], s["target"], s["type"]) == ("slider", [ref(doc, "c"), "r"], "real")
-        assert (s["attrs"]["min"], s["attrs"]["max"], s["attrs"]["step"]) == (0.0, 5.0, None)
-
-    def test_state_and_button(self):
-        doc = exported("(real 'k' 1) (state 'big' (= k 3)) (button 'b' big (duration 2))")
-        big = obj(doc, "big")
-        assert big["moves"] == [[ref(doc, "k"), "value", 3.0]]
-        assert big["conditions"] == [["=", ["read", ref(doc, "k"), "value"], 3.0]]
-        b = obj(doc, "b")
-        assert (b["state"], b["attrs"]["duration"], b["attrs"]["ease"]) == (
-            ref(doc, "big"),
-            2.0,
-            "linear",
-        )
-
-    def test_unreachable_state_has_no_moves(self):
-        big = obj(exported("(real 'k' 1) (state 'big' (< k 3))"), "big")
-        assert big["moves"] is None
-
-    def test_button_shorthand_has_an_anonymous_state(self):
-        doc = exported("(circle 'c') (button 'b' c.fill 'red')")
-        state = doc["objects"][obj(doc, "b")["state"]]
-        assert (state["kind"], state["name"]) == ("state", None)
-
-    def test_play(self):
-        doc = exported(
-            "(real 'k' 1) (state 'a' (= k 1)) (state 'z' (= k 3))"
-            " (play 'p' (from a) (wait 1) (to z (duration 2) (ease 'ease-in')))"
-        )
-        p = obj(doc, "p")
-        assert p["start"] == ref(doc, "a")
-        assert p["steps"] == [["wait", 1.0], ["to", ref(doc, "z"), 2.0, "ease-in"]]
-
-
 class TestDepends:
     def test_dependents(self):
         doc = exported("(real 'k' 1) (circle 'a' (r k)) (circle 'b' (r (* 2 a.r)))")
@@ -251,11 +215,3 @@ class TestDepends:
 def test_examples_export(example):
     doc = to_json(compile_model(parse(example.read_text())))
     assert json.loads(json.dumps(doc)) == doc
-
-
-class TestPointStates:
-    def test_moves_a_point(self):
-        doc = exported("(circle 'c') (state 's' (= c.pos [1 2]))")
-        s, c = obj(doc, "s"), ref(doc, "c")
-        assert s["moves"] == [[c, "pos", [1.0, 2.0]]]
-        assert s["conditions"] == [["=", ["read", c, "pos", None], [1.0, 2.0]]]

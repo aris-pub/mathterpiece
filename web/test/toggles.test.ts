@@ -98,3 +98,68 @@ describe("<mtp-toggle>", () => {
     expect(canvas()).toEqual([]);
   });
 });
+
+describe("fading in and out", () => {
+  async function fading() {
+    const doc = figure();
+    const canvas = doc.objects[8]!;
+    (canvas as { transitions?: unknown }).transitions = [null, ["transition", { duration: 2, path: ["view", "fade"] }]];
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="v"></mtp-canvas>
+      <mtp-toggle model="m" name="more"></mtp-toggle>`;
+    const model = document.querySelector("mtp-model") as MtpModel;
+    model.doc = doc;
+    await new Promise((r) => setTimeout(r, 0));
+    const more = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    // How visible the circle of radius 2 is: 0 when it is not drawn at all.
+    const shown = () => {
+      const circle = [...document.querySelectorAll("mtp-canvas circle")].find((c) => c.getAttribute("r") === "2");
+      if (!circle) return 0;
+      const group = circle.closest("g[opacity]");
+      return group ? Number(group.getAttribute("opacity")) : 1;
+    };
+    return { model, more, shown, tick: (s: number) => model.animator!.tick(s) };
+  }
+
+  it("starts as its condition says, without fading", async () => {
+    const { shown } = await fading();
+    expect(shown()).toBe(0);
+  });
+
+  it("fades in over its transition when its condition becomes true", async () => {
+    const { more, shown, tick } = await fading();
+    more.click();
+    expect(shown()).toBe(0);
+    tick(1);
+    expect(shown()).toBeCloseTo(0.5);
+    tick(1);
+    expect(shown()).toBe(1);
+  });
+
+  it("fades out, and then is not drawn at all", async () => {
+    const { more, shown, tick } = await fading();
+    more.click();
+    tick(2);
+    more.click();
+    tick(1);
+    expect(shown()).toBeCloseTo(0.5);
+    tick(1);
+    expect(shown()).toBe(0);
+  });
+
+  it("turns back from where it is when the condition flips midway", async () => {
+    const { more, shown, tick } = await fading();
+    more.click();
+    tick(1);
+    more.click();
+    tick(0.5);
+    expect(shown()).toBeCloseTo(0.25);
+  });
+
+  it("leaves a thing without a transition to appear at once", async () => {
+    const { model, tick } = await fading();
+    model.runtime!.write(6, "value", false);
+    model.changed();
+    tick(0);
+    expect(document.querySelectorAll("mtp-canvas circle").length).toBe(0);
+  });
+});

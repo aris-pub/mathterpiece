@@ -23,6 +23,6 @@
   (text 'caption' $'times {table.m}' (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
 (canvas 'cnv' board)
-(slider 'multiplier' table.m (min 2) (max 40) (label 'times'))
-(slider 'spin' table.turn (min -180) (max 180) (label 'rotate'))
-(button 'reset' table.m 2 (label 'back to 2'))
+(slider 'multiplier' (animation (table.m (transition (from 2) (to 40)))) (label 'times'))
+(slider 'spin' (animation (table.turn (transition (from -180) (to 180)))) (label 'rotate'))
+(button 'reset' (animation (table.m (transition (to 2) (duration 0)))) (label 'back to 2'))

@@ -1,39 +1,23 @@
-// Moves values toward states over time, for buttons, steps and play. A port of the Python
-// backend's animator. Time is in seconds; the page moves it forward on each animation frame.
-import { isPaint, mixCss } from "./colors.ts";
+// Runs the animations controls set off. Each running source (a button press, a play) owns the
+// targets its animation writes. When a new source starts, or a slider, drag or toggle claims
+// targets, any running source that writes one of them is cancelled as a whole: the reader's newest
+// action wins. Sources that share no target run together. Time is in seconds; the page moves it
+// forward on each animation frame.
+import type { Player } from "./player.ts";
 import type { Runtime } from "./runtime.ts";
 
-export { parseColor } from "./colors.ts";
-
-export const EASES: Record<string, (t: number) => number> = {
-  linear: (t) => t,
-  "ease-in": (t) => t * t * t,
-  "ease-out": (t) => 1 - (1 - t) ** 3,
-  "ease-in-out": (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2),
-};
-
-// One value moving toward a state, from where it was to the target worked out when the move
-// started.
-interface Track {
-  obj: number;
-  attr: string;
-  begin: unknown;
-  target: unknown;
-  start: number;
-  duration: number;
-  ease: string;
+interface Running {
+  source: object;
+  player: Player;
+  time: number;
+  paused: boolean;
 }
 
-type Step = ["wait", number] | ["to", number, number, string];
-
-export class Animator {
-  private now = 0;
-  private tracks: Track[] = [];
-  private tour: { steps: Step[] } | null = null;
-  private step = 0;
-  private stepStart = 0;
-  private morphStart = 0;
-  private morphEnd = 0;
+export class Scheduler {
+  private sources: Running[] = [];
+  // Things that move only a view's own state, such as a canvas fading something in: they write
+  // nothing in the scene, so they never collide with anything.
+  private tickers: ((seconds: number) => boolean)[] = [];
 
   /** wake is called whenever something starts moving, so the page can ask for frames. */
   constructor(
@@ -42,100 +26,88 @@ export class Animator {
     private wake: () => void,
   ) {}
 
+  /** Whether anything is running. */
   busy(): boolean {
-    return this.tracks.length > 0 || this.tour !== null || this.rt.morphs.size > 0;
+    return this.tickers.length > 0 || this.sources.some((s) => !s.paused);
   }
 
-  cancel(): void {
-    this.tracks = [];
-    this.tour = null;
-    this.rt.morphs.clear();
+  /** Moves view state with the clock; tick returns whether it still has more to do. */
+  addTicker(tick: (seconds: number) => boolean): void {
+    this.tickers.push(tick);
+    this.wake();
   }
 
-  go(state: number, duration: number, ease: string, start: number = this.now): void {
-    for (const [i, attr, target] of this.rt.targets(state)) {
-      const begin = this.rt.value(i, attr);
-      if (duration > 0 && this.rt.kind(i) === "text" && attr === "value" && begin !== target) {
-        this.rt.morphs.set(i, [String(begin), 0]);
-        this.morphStart = start;
-        this.morphEnd = start + duration;
-      }
-      if (duration > 0 && blendable(begin, target)) {
-        this.tracks.push({ obj: i, attr, begin, target, start, duration, ease });
-      } else {
-        this.rt.write(i, attr, target);
-      }
-    }
+  /** Whether a source is running, rather than paused, done or cancelled. */
+  running(source: object): boolean {
+    return this.sources.some((s) => s.source === source && !s.paused);
+  }
+
+  /** The player a source is running or has paused, if any. */
+  playerOf(source: object): Player | null {
+    return this.sources.find((s) => s.source === source)?.player ?? null;
+  }
+
+  /** Starts a player for a source, from the beginning. */
+  start(player: Player, source: object): void {
+    this.forget(source);
+    this.claim(player.targets, source);
+    this.sources.push({ source, player, time: 0, paused: false });
+    player.seek(0);
     this.redraw();
     this.wake();
   }
 
-  play(id: number): void {
-    this.cancel();
-    const control = this.rt.obj(id);
-    if (control.start !== null && control.start !== undefined) {
-      for (const [i, attr, target] of this.rt.targets(control.start)) this.rt.write(i, attr, target);
+  /** Cancels every other source that writes any of these targets ("id.attr"). */
+  claim(targets: string[], source: object): void {
+    const wanted = new Set(targets.flatMap(covers));
+    for (const s of [...this.sources]) {
+      if (s.source !== source && s.player.targets.flatMap(covers).some((t) => wanted.has(t))) this.cancel(s);
     }
-    this.tour = { steps: (control.steps ?? []) as Step[] };
-    this.step = 0;
-    this.stepStart = this.now;
-    if (this.tour.steps.length === 0) this.tour = null;
-    else this.beginStep();
-    this.redraw();
+  }
+
+  pause(source: object): void {
+    for (const s of this.sources) if (s.source === source) s.paused = true;
+  }
+
+  resume(source: object): void {
+    const s = this.sources.find((r) => r.source === source);
+    if (!s) return;
+    this.claim(s.player.targets, source);
+    s.paused = false;
     this.wake();
   }
 
-  private beginStep(): void {
-    const step = this.tour?.steps[this.step];
-    if (step?.[0] === "to") this.go(step[1], step[2], step[3], this.stepStart);
+  /** Moves a running source to where its player has jumped. */
+  jumped(source: object, time: number): void {
+    const s = this.sources.find((r) => r.source === source);
+    if (s) s.time = time;
+    this.redraw();
+    this.wake();
   }
 
   tick(seconds: number): void {
-    this.now += seconds;
-    while (this.tour) {
-      const step = this.tour.steps[this.step] as Step;
-      const end = this.stepStart + (step[0] === "wait" ? step[1] : step[2]);
-      if (this.now < end) break;
-      this.update(end);
-      this.step += 1;
-      this.stepStart = end;
-      if (this.step === this.tour.steps.length) this.tour = null;
-      else this.beginStep();
+    this.tickers = this.tickers.filter((t) => t(seconds));
+    for (const s of [...this.sources]) {
+      if (s.paused) continue;
+      s.time += seconds;
+      s.player.seek(s.time);
+      if (s.player.done) this.forget(s.source);
     }
-    this.update(this.now);
     this.redraw();
   }
 
-  // Writes every moving value for the given moment, and drops the ones that have arrived.
-  private update(now: number): void {
-    for (const track of [...this.tracks]) {
-      const t = track.duration === 0 ? 1 : Math.min(1, (now - track.start) / track.duration);
-      const ease = EASES[track.ease] ?? EASES.linear!;
-      this.rt.write(track.obj, track.attr, t >= 1 ? track.target : blend(track.begin, track.target, ease(t)));
-      if (t >= 1) this.tracks.splice(this.tracks.indexOf(track), 1);
-    }
-    if (this.rt.morphs.size > 0) {
-      const t = Math.min(1, (now - this.morphStart) / Math.max(this.morphEnd - this.morphStart, 1e-12));
-      for (const [k, [old]] of this.rt.morphs) this.rt.morphs.set(k, [old, t]);
-      if (t >= 1) this.rt.morphs.clear();
-    }
+  private cancel(s: Running): void {
+    for (const t of s.player.targets) this.rt.morphs.delete(Number(t.split(".")[0]));
+    this.forget(s.source);
+  }
+
+  private forget(source: object): void {
+    this.sources = this.sources.filter((s) => s.source !== source);
   }
 }
 
-function blendable(a: unknown, b: unknown): boolean {
-  if (typeof a === "boolean" || typeof b === "boolean") return false;
-  if (typeof a === "number" && typeof b === "number") return true;
-  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length;
-  if (a === b) return false;
-  return isPaint(a) && isPaint(b);
-}
-
-/**
- * Partway from a to b. Numbers and points move in JavaScript; colors are mixed by CSS, in sRGB,
- * with 'none' as transparent, so color tokens blend with whatever the page made of them.
- */
-export function blend(a: unknown, b: unknown, t: number): unknown {
-  if (Array.isArray(a) && Array.isArray(b)) return a.map((x, i) => x + ((b[i] as number) - x) * t);
-  if (isPaint(a) && isPaint(b)) return mixCss(a, b, t);
-  return (a as number) + ((b as number) - (a as number)) * t;
+// A position is its x and its y, so writing one collides with writing the other.
+function covers(target: string): string[] {
+  const [id, attr] = target.split(".");
+  return attr === "pos" ? [`${id}.x`, `${id}.y`] : [target];
 }
