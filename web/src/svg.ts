@@ -25,6 +25,7 @@ export function draw(rt: Runtime, canvas: number, svg?: SVGSVGElement): SVGSVGEl
   out.replaceChildren();
   const { box, toUser } = viewOf(rt, canvas);
   out.setAttribute("viewBox", box.join(" "));
+  drawBackground(rt, canvas, out);
   const top = document.createElementNS(NS, "g");
   top.setAttribute("transform", toUser.svg());
   for (const member of rt.obj(canvas).shows ?? []) drawObject(rt, member, top);
@@ -106,4 +107,14 @@ function paint(rt: Runtime, i: number, el: Element, noFill: boolean, fade: numbe
 // Through style rather than attributes, since only CSS reads var() and color-mix().
 function setPaint(el: Element, property: string, value: unknown): void {
   (el as SVGElement).style.setProperty(property, value === "none" ? "none" : cssColor(value));
+}
+
+// SVG has no background of its own, so the scene's background is the SVG element's CSS
+// background: it fills the whole element, including any bands the page leaves around the view
+// box, and the canvas transform does not move it.
+function drawBackground(rt: Runtime, canvas: number, svg: SVGSVGElement): void {
+  const root = (rt.obj(canvas).shows ?? []).find((i) => rt.kind(i) === "root");
+  const background = root === undefined ? undefined : rt.value(root, "background");
+  if (background === undefined || background === "none") svg.style.removeProperty("background-color");
+  else svg.style.setProperty("background-color", cssColor(background));
 }

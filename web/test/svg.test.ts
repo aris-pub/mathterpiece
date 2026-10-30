@@ -77,6 +77,31 @@ describe("the canvas", () => {
   });
 });
 
+describe("the scene's background", () => {
+  function withBackground(background: unknown, view: Record<string, unknown> = {}) {
+    const rt = scene([shape("circle", { r: 1 })], view);
+    (rt.obj(1).attrs as Record<string, unknown>).background = background;
+    return draw(rt, 0);
+  }
+
+  it("is the SVG's CSS background, so it fills the whole element and nothing is drawn for it", () => {
+    const svg = withBackground("#f7f3eaff");
+    expect(svg.style.getPropertyValue("background-color")).toBe("#f7f3eaff");
+    expect(svg.querySelector("rect")).toBeNull();
+  });
+
+  it("is cleared when it is none", () => {
+    const rt = scene([shape("circle", { r: 1 })]);
+    const attrs = rt.obj(1).attrs as Record<string, unknown>;
+    attrs.background = "#000000ff";
+    const svg = draw(rt, 0);
+    attrs.background = "none";
+    rt.refresh();
+    draw(rt, 0, svg);
+    expect(svg.style.getPropertyValue("background-color")).toBe("");
+  });
+});
+
 describe("shapes", () => {
   it("draws a circle around its own origin, placed by its transform", () => {
     const c = draw(scene([shape("circle", { r: 2, fill: "#00ff00", "fill-opacity": 0.5, opacity: 0.5 })]), 0)

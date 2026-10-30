@@ -144,7 +144,8 @@ class Group(Visual):
 # The (scene ...) form: the one root of the visual tree.
 @dataclass(kw_only=True)
 class Root(Group):
-    pass
+    # The color of the plane every object sits on; views show it wherever there is nothing else.
+    background: Attr[Paint] = Free(Paint("none"))
 
 
 @dataclass(kw_only=True)

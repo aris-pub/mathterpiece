@@ -17,7 +17,7 @@
     (if (> least 0) (/ most least) infty)))
 
 (scene 'plane'
-  (rect 'backdrop' (center [0 0]) (size [20 14]) (fill paper))
+  (background paper)
   ; Edges come after the points they join, so they are drawn on top (see mtp-jez).
   (circle 'c' (pos [0 0]) (r 0.3) (fill '#e76f51'))
   (circle 'u' (pos (polar unit 90)) (r 0.3) (fill ink))

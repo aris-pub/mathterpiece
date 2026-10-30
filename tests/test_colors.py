@@ -5,6 +5,7 @@ from mathterpiece.colors import parse_color
 from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.export import to_json
 from mathterpiece.model import Bound, Color, Free, State
+from mathterpiece.parse import parse
 
 
 def scene(src):
@@ -168,3 +169,54 @@ class TestMix:
     )
     def test_invalid(self, expr, match):
         error(f"(circle 'c' (fill {expr}))", match=match)
+
+
+class TestBackground:
+    def compile(self, src):
+        return compile_model(parse(src))
+
+    def test_default_is_none(self):
+        assert self.compile("(scene 'w' (circle 'c'))")["w"].background == Free("none")
+
+    def test_known_color(self):
+        assert self.compile("(scene 'w' (background 'linen') (circle 'c'))")[
+            "w"
+        ].background == Free("#faf0e6ff")
+
+    def test_checked_and_written_as_rgba(self):
+        m = self.compile("(scene 'w' (background 'ivory') (circle 'c'))")
+        assert m["w"].background == Free("#fffff0ff")
+
+    def test_token(self):
+        m = self.compile("(color 'paper' '#f7f3ea') (scene 'w' (background paper) (circle 'c'))")
+        assert isinstance(m["w"].background, Bound)
+
+    def test_cannot_read_its_members(self):
+        with pytest.raises(CompileError, match="undefined name 'c'"):
+            self.compile("(scene 'w' (background (if (> c.r 1) 'black' 'white')) (circle 'c'))")
+
+    def test_reads_values_defined_before(self):
+        m = self.compile("(real 'k' 1) (scene 'w' (background (if (> k 0) 'black' 'white')))")
+        assert isinstance(m["w"].background, Bound)
+
+    def test_a_state_can_move_it(self):
+        m = self.compile(
+            "(scene 'w' (background 'white') (circle 'c')) (button 'b' w.background 'black')"
+        )
+        assert m["b"].state.moves[0][1] == "background"
+
+    @pytest.mark.parametrize(
+        "src, match",
+        [
+            ("(scene 'w' (background 'paperish') (circle 'c'))", "not a color"),
+            ("(scene 'w' (circle 'c') (background 'white'))", "before the members"),
+            ("(scene 'w' (background 'white') (background 'black'))", "twice"),
+        ],
+    )
+    def test_invalid(self, src, match):
+        with pytest.raises(CompileError, match=match):
+            self.compile(src)
+
+    def test_export(self):
+        doc = to_json(self.compile("(scene 'w' (background 'white') (circle 'c'))"))
+        assert doc["objects"][doc["names"]["w"]]["attrs"]["background"] == "#ffffffff"

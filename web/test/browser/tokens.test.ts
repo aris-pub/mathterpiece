@@ -11,7 +11,7 @@ const style = { transform: ID, x: 0, y: 0, stroke: "none", "stroke-width": 1, op
 // ink (2) is a color token; circle c (3) is filled with it; d (4) with a mix of ink and white.
 const objects: Omit<Obj, "id">[] = [
   { kind: "canvas", name: "view", attrs: { "view-x": 0, "view-y": 0, "view-width": 10, "view-height": 10, transform: ID }, shows: [1] },
-  { kind: "root", name: "s", attrs: { transform: ID }, members: [3, 4] },
+  { kind: "root", name: "s", attrs: { transform: ID, background: ["read", 2, "value"] }, members: [3, 4] },
   { kind: "color", name: "ink", attrs: { value: "#1f2a44ff" } },
   { kind: "circle", name: "c", parent: 1, attrs: { ...style, r: 1, fill: ["read", 2, "value"] } },
   { kind: "circle", name: "d", parent: 1, attrs: { ...style, r: 1, fill: ["call", "lighten", ["read", 2, "value"], 0.5] } },
@@ -85,6 +85,11 @@ describe("color tokens in a real page", () => {
     expect(drawn(4)).toBe("color(srgb 0.5 0.5 0.5)");
     document.body.insertAdjacentHTML("beforeend", `<mtp-readout model="m" name="lighter"></mtp-readout>`);
     expect(document.querySelectorAll("mtp-readout")[1]!.textContent).toBe("#808080ff");
+  });
+
+  it("can be the scene's background", async () => {
+    await page(":root { --mtp-ink: #e8e4d8; }");
+    expect(getComputedStyle(document.querySelector("mtp-canvas svg")!).backgroundColor).toBe("rgb(232, 228, 216)");
   });
 
   it("compare with strings by their color on the page", async () => {

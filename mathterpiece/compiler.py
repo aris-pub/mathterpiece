@@ -744,8 +744,20 @@ class _Compiler:
         self.pools.append(pool)
         frame = Frame([])
         self.frames.append(frame)
+        attrs: dict[str, Free | Bound] = {}
         try:
             for node in form.items[2:]:
+                if _head(node) == "background" and isinstance(node, Form):
+                    if pool:
+                        raise CompileError(
+                            "attribute 'background' must come before the members", node.pos
+                        )
+                    if "background" in attrs:
+                        raise CompileError("attribute 'background' is given twice", node.pos)
+                    if len(node.items) != 2:
+                        raise CompileError("background takes one color", node.pos)
+                    attrs["background"] = self.attr_value(Root, "background", node.items[1], env)
+                    continue
                 pool.extend(self.scene_item(node, env))
         finally:
             self.pools.pop()
@@ -756,7 +768,7 @@ class _Compiler:
             assert isinstance(obj, Visual)
             self.parents[id(obj)] = (obj, label)
             members.append(obj)
-        root = Root(name=name, members=members)
+        root = Root(name=name, members=members, **attrs)
         self.settle(frame, root)
         self.register(root, form.pos)
         self.root = root
