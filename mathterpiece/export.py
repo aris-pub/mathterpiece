@@ -13,6 +13,8 @@ from typing import Any
 from mathterpiece.compiler import ARITHMETIC, COMPARISONS, PROPERTIES, _expected_type
 from mathterpiece.matrix import Matrix
 from mathterpiece.model import (
+    Animation,
+    AtOnce,
     Bool,
     Bound,
     Button,
@@ -26,11 +28,13 @@ from mathterpiece.model import (
     Free,
     Group,
     Inherit,
+    InOrder,
     Line,
     Local,
     Model,
     Motif,
     Obj,
+    Pair,
     Play,
     Readout,
     Real,
@@ -43,6 +47,7 @@ from mathterpiece.model import (
     Toggle,
     Triangle,
     View,
+    WaitStep,
     attributes,
     local_names,
     variadic,
@@ -62,6 +67,7 @@ from mathterpiece.nodes import (
     StrLit,
 )
 from mathterpiece.stdlib import STDLIB
+from mathterpiece.transitions import Expr, Sequence, Single, Wait
 
 FORMAT_VERSION = 1
 AXES = {"x": 0, "y": 1, "z": 2}
@@ -86,6 +92,7 @@ KINDS: dict[type[Obj], str] = {
     Color: "color",
     Bool: "bool",
     Toggle: "toggle",
+    Animation: "animation",
     Font: "font",
     Drag: "on-drag",
     State: "state",
@@ -200,7 +207,7 @@ class _Writer:
                 assert isinstance(owner, Motif)
                 return _Context(around=owner, frame=owner)
             return _Context(owner, self.enclosing.get(id(owner)), self.parent.get(id(owner)))
-        if isinstance(obj, (State, Control, Drag)):
+        if isinstance(obj, (State, Control, Drag, Animation)):
             return _Context()
         return _Context(obj, self.enclosing.get(id(obj)), self.parent.get(id(obj)))
 
@@ -226,6 +233,8 @@ class _Writer:
         if isinstance(obj, Canvas):
             out["shows"] = [self.id(m) for m in obj.members]
             out["when"] = [None if c is None else self.expr(c, ctx) for c in obj.conditions]
+        if isinstance(obj, Animation):
+            out["body"] = self.animation(obj.body, ctx)
         if isinstance(obj, Toggle):
             out["target"] = None if obj.target is None else [self.id(obj.target), obj.attr]
         if isinstance(obj, State):
@@ -265,6 +274,38 @@ class _Writer:
                     to = ["to", self.id(step.state), step.duration.value, step.ease.value]
                     out["steps"].append(to)
         return out
+
+    def animation(self, body: Any, ctx: _Context) -> Any:
+        if isinstance(body, Animation):
+            return ["animation", self.id(body)]
+        if isinstance(body, WaitStep):
+            return ["wait", body.duration]
+        if isinstance(body, Pair):
+            targets = [[self.id(obj), attr] for obj, attr in body.targets]
+            return ["pair", targets, body.kind, self.transition(body.transition, ctx)]
+        assert isinstance(body, (AtOnce, InOrder))
+        head = "at-once" if isinstance(body, AtOnce) else "in-order"
+        return [head, _settings(body), *(self.animation(p, ctx) for p in body.parts)]
+
+    def transition(self, t: Any, ctx: _Context) -> Any:
+        if isinstance(t, Wait):
+            return ["wait", t.duration]
+        if isinstance(t, Sequence):
+            return ["in-order", _settings(t), *(self.transition(p, ctx) for p in t.parts)]
+        assert isinstance(t, Single)
+        out: dict[str, Any] = {}
+        for key, value in (("from", t.frm), ("to", t.to)):
+            if isinstance(value, Expr):
+                out[key] = self.expr(value.node, ctx)
+            elif value is not None:
+                out[key] = _plain(value)
+        if t.duration is not None:
+            out["duration"] = t.duration
+        if t.ease is not None:
+            out["ease"] = _ease(t.ease)
+        if t.path is not None:
+            out["path"] = ["fn", t.path[1]]
+        return ["transition", out]
 
     def attr(self, obj: Obj, attr: str, value: Any, ctx: _Context) -> Any:
         if isinstance(value, Free):
@@ -526,6 +567,25 @@ def _finite(value: Any) -> float:
 
 # For each value, the values computed from it. A position read from another frame, and an
 # object passed as a point, also depend on the frames involved.
+def _ease(ease: Any) -> Any:
+    if isinstance(ease, str):
+        return ease
+    kind, value = ease
+    return ["step", value] if kind == "step" else ["fn", value]
+
+
+# The settings an at-once or in-order was given, by their names in the language.
+def _settings(body: Any) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    if body.ease is not None:
+        out["ease"] = _ease(body.ease)
+    if body.default_duration is not None:
+        out["default-duration"] = body.default_duration
+    if body.default_ease is not None:
+        out["default-ease"] = _ease(body.default_ease)
+    return out
+
+
 def _depends(doc: dict) -> dict[str, list[str]]:
     objects = doc["objects"]
 

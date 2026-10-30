@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from dataclasses import Field, dataclass, field, fields
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from mathterpiece.matrix import IDENTITY, Matrix
 from mathterpiece.nodes import Node
@@ -289,6 +289,42 @@ class Drag(Obj):
     kind: str = field(default="list2", metadata={"internal": True})
     conditions: tuple[Node, ...] = field(default=(), metadata={"internal": True})
     when: "Node | State | None" = field(default=None, metadata={"internal": True})
+
+
+# An animation's body: one target (or every member of a group, for a group attribute) paired
+# with one transition; or animations composed at once or in order; or a pause in a sequence.
+# kind is how the targets' values move by default: number, point, color, text or bool.
+@dataclass(frozen=True)
+class Pair:
+    targets: tuple[tuple[Obj, str], ...]
+    kind: str
+    transition: Any
+
+
+@dataclass(frozen=True)
+class AtOnce:
+    parts: tuple[Any, ...]
+    ease: Any = None
+    default_duration: float | None = None
+    default_ease: Any = None
+
+
+@dataclass(frozen=True)
+class InOrder:
+    parts: tuple[Any, ...]
+    ease: Any = None
+    default_duration: float | None = None
+    default_ease: Any = None
+
+
+@dataclass(frozen=True)
+class WaitStep:
+    duration: float
+
+
+@dataclass(kw_only=True)
+class Animation(Obj):
+    body: Any = field(default=None, metadata={"internal": True})
 
 
 @runtime_checkable

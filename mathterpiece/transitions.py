@@ -8,10 +8,18 @@ fills in what it can and the compiler reports what is still missing where it is 
 from dataclasses import dataclass
 from typing import Any
 
+from mathterpiece.nodes import Node
+
 # An ease is a built-in name ('linear', 'ease-in', ...), ("step", c), or ("func", name).
 type Ease = str | tuple[str, Any]
 # A path is ("func", name): a function of the start, the end and the eased progress.
 type Path = tuple[str, str]
+
+
+# An end that reads the scene: evaluated once, when the transition starts.
+@dataclass(frozen=True)
+class Expr:
+    node: Node
 
 
 @dataclass(frozen=True)
@@ -43,3 +51,11 @@ class Sequence:
 
 
 type Transition = Single | Wait | Sequence
+
+
+def reads_scene(t: Transition) -> bool:
+    if isinstance(t, Single):
+        return isinstance(t.frm, Expr) or isinstance(t.to, Expr)
+    if isinstance(t, Sequence):
+        return any(reads_scene(p) for p in t.parts)
+    return False

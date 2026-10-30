@@ -1,3 +1,4 @@
+import dataclasses
 import functools
 import math
 import operator
@@ -12,6 +13,8 @@ from mathterpiece.matrix import Matrix, compose
 from mathterpiece.model import (
     PYTHON_FRAMES,
     RECURSION_LIMIT,
+    Animation,
+    AtOnce,
     Bool,
     Bound,
     Button,
@@ -25,12 +28,14 @@ from mathterpiece.model import (
     Function,
     Group,
     Inherit,
+    InOrder,
     Line,
     Local,
     Model,
     Motif,
     Obj,
     Paint,
+    Pair,
     Play,
     Readout,
     Real,
@@ -46,6 +51,7 @@ from mathterpiece.model import (
     Triangle,
     View,
     Visual,
+    WaitStep,
     attributes,
     local_names,
     variadic,
@@ -77,7 +83,7 @@ from mathterpiece.stdlib import (
     subtract,
 )
 from mathterpiece.stdlib import call as stdlib_call
-from mathterpiece.transitions import Ease, Path, Sequence, Single, Wait
+from mathterpiece.transitions import Ease, Expr, Path, Sequence, Single, Wait, reads_scene
 
 BUILTINS = [
     (("pi", "π"), math.pi),
@@ -359,6 +365,25 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
     paths: set[tuple[str, ...]] = set()
     anywhere: set[str] = set()
 
+    # The targets of an animation's pairs, through its at-once and in-order.
+    def animation_targets(node):
+        if not isinstance(node, Form):
+            return
+        if _head(node) in ("at-once", "in-order"):
+            for item in node.items[1:]:
+                animation_targets(item)
+            return
+        target = node.items[0]
+        if (
+            len(node.items) == 2
+            and isinstance(target, Name)
+            and _head(node) not in TRANSITION_FORMS
+        ):
+            if all(isinstance(p, str) for p in target.parts):
+                paths.add(tuple(p for p in target.parts if isinstance(p, str)))
+            elif isinstance(target.parts[-1], str):
+                anywhere.add(target.parts[-1])
+
     def visit(node):
         if not isinstance(node, Form):
             return
@@ -368,6 +393,8 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
                     for side in cond.items[1:]:
                         if isinstance(side, Name) and all(isinstance(p, str) for p in side.parts):
                             paths.add(tuple(p for p in side.parts if isinstance(p, str)))
+        if _head(node) == "animation" and len(node.items) > 2:
+            animation_targets(node.items[2])
         if _head(node) == "on-drag" and len(node.items) > 2:
             target = node.items[2]
             if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
@@ -524,6 +551,50 @@ def _transition_value(value: "Value") -> Any:
     if value.type in ("int", "ratio"):
         return float(value.value)  # ty: ignore[invalid-argument-type]
     return value.value
+
+
+# How a target's value moves when its transition gives no path.
+def _value_kind(t: str) -> str:
+    if t in NUMERIC:
+        return "number"
+    if _list_len(t) is not None:
+        return "point"
+    if t in ("paint", "color"):
+        return "color"
+    if t == "str":
+        return "text"
+    return "bool"
+
+
+def _has_end(t: Any) -> bool:
+    if isinstance(t, Single):
+        return t.to is not None
+    if isinstance(t, Sequence):
+        return all(_has_end(p) for p in t.parts)
+    return True
+
+
+# Strings given as colors are checked and written as #rrggbbaa, as for fill.
+def _colors_checked(t: Any, pos: Pos) -> Any:
+    if isinstance(t, Single):
+        ends = {
+            k: _color_const(v, pos, none=False) if isinstance(v, str) else v
+            for k, v in (("frm", t.frm), ("to", t.to))
+        }
+        return dataclasses.replace(t, **ends)
+    if isinstance(t, Sequence):
+        return dataclasses.replace(t, parts=tuple(_colors_checked(p, pos) for p in t.parts))
+    return t
+
+
+def _animation_targets(body: Any) -> list[tuple[Obj, str]]:
+    if isinstance(body, Pair):
+        return list(body.targets)
+    if isinstance(body, Animation):
+        return _animation_targets(body.body)
+    if isinstance(body, (AtOnce, InOrder)):
+        return [t for p in body.parts for t in _animation_targets(p)]
+    return []
 
 
 def _check_not_syntax(name: str, pos: Pos):
@@ -744,6 +815,8 @@ class _Compiler:
             return [self.reading_views(lambda: self.control(form, env, head))]
         if head == "on-drag":
             return [self.on_drag(form, env)]
+        if head == "animation":
+            return [self.reading_views(lambda: self.animation(form, env))]
         if head == "scene":
             return [self.scene_form(form, env)]
         if head in self.motifs or (head in FORMS and issubclass(FORMS[head].cls, Visual)):
@@ -1194,7 +1267,9 @@ class _Compiler:
         if name in self.names or name in self.consts:
             raise CompileError(f"name {name!r} is already defined", form.items[1].pos)
         value = self.value_arg(form.items[2], env)
-        if value.type.startswith("transition") and not isinstance(value, Const):
+        if value.type.startswith("transition") and (
+            not isinstance(value, Const) or reads_scene(value.value)  # ty: ignore[invalid-argument-type]
+        ):
             raise CompileError(
                 "a const transition cannot read the scene; to reuse one that does, write a func"
                 " that takes the scene value as a parameter",
@@ -1227,6 +1302,7 @@ class _Compiler:
     def single_transition(self, node: Form, env: Env) -> Const | Dyn:
         parts: dict[str, Any] = {}
         ends: dict[str, Const | Dyn] = {}
+        node_of: dict[str, Node] = {}
         for item in node.items[1:]:
             part = _head(item)
             if not isinstance(item, Form) or part not in TRANSITION_PARTS:
@@ -1241,6 +1317,7 @@ class _Compiler:
                 if not isinstance(value, (Const, Dyn)):
                     raise CompileError("a transition's ends are values", arg.pos)
                 ends[part] = value
+                node_of[part] = arg
             elif part == "duration":
                 parts["duration"] = _duration(self.value_arg(arg, env), arg.pos)
             elif part == "ease":
@@ -1253,10 +1330,25 @@ class _Compiler:
             if len(set(types.values())) > 1:
                 raise CompileError(f"from is a {types['from']} but to is a {types['to']}", node.pos)
             elem = next(iter(types.values()))
-        if not all(isinstance(v, Const) for v in ends.values()):
-            return Dyn(f"transition:{elem or 'any'}")
-        values = {("frm" if p == "from" else p): _transition_value(v) for p, v in ends.items()}
-        return Const(Single(**values, **parts, elem=elem), f"transition:{elem or 'any'}")
+        values = {
+            ("frm" if p == "from" else p): (
+                _transition_value(v)
+                if isinstance(v, Const)
+                else Expr(
+                    self.resolve_refs(_substitute(node_of[p], self.constants(env), self.lets), env)
+                )
+            )
+            for p, v in ends.items()
+        }
+        single = Single(
+            frm=values.get("frm"),
+            to=values.get("to"),
+            duration=parts.get("duration"),
+            ease=parts.get("ease"),
+            path=parts.get("path"),
+            elem=elem,
+        )
+        return Const(single, f"transition:{elem or 'any'}")
 
     def transition_sequence(self, node: Form, env: Env) -> Const | Dyn:
         settings: dict[str, Any] = {}
@@ -1284,11 +1376,130 @@ class _Compiler:
             raise CompileError("the steps of an in-order move different types", node.pos)
         elem = next(iter(elems), None)
         kind = f"transition:{elem or 'any'}"
-        if not all(isinstance(v, Const) for v in values):
-            return Dyn(kind)
         parts = tuple(v.value for v in values if isinstance(v, Const))
         assert all(isinstance(p, (Single, Wait, Sequence)) for p in parts)
         return Const(Sequence(parts, elem=elem, **settings), kind)  # ty: ignore[invalid-argument-type]
+
+    def animation(self, form: Form, env: Env) -> Animation:
+        if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
+            raise CompileError("animation takes a name and one animation", form.pos)
+        name = self.object_name(form, env)
+        obj = Animation(name=name, body=self.animation_body(form.items[2], env))
+        self.register(obj, form.pos)
+        return obj
+
+    # A pair (target transition), (at-once ...), (in-order ...), (wait d), or an animation's name.
+    def animation_body(self, node: Node, env: Env, within: str = "an animation") -> Any:
+        head = _head(node)
+        if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
+            found = self.names.get(node.parts[0])
+            if isinstance(found, Animation):
+                return found
+        if isinstance(node, Form) and head in ("at-once", "in-order"):
+            return self.composed_animation(node, env, head)
+        if isinstance(node, Form) and head == "wait":
+            if len(node.items) != 2:
+                raise CompileError("wait takes a number of seconds", node.pos)
+            return WaitStep(_duration(self.value_arg(node.items[1], env), node.items[1].pos))
+        if (
+            isinstance(node, Form)
+            and len(node.items) == 2
+            and isinstance(node.items[0], Name)
+            and head not in TRANSITION_FORMS
+        ):
+            return self.pair(node, env)
+        raise CompileError(
+            f"{within} holds animations: pairs (target transition), at-once, in-order", node.pos
+        )
+
+    def composed_animation(self, node: Form, env: Env, head: str) -> AtOnce | InOrder:
+        settings: dict[str, Any] = {}
+        rest = list(node.items[1:])
+        while rest and _head(rest[0]) in ("ease", "default-duration", "default-ease"):
+            item = rest.pop(0)
+            assert isinstance(item, Form)
+            setting = _head(item)
+            if len(item.items) != 2:
+                raise CompileError(f"{setting} takes one value", item.pos)
+            if setting == "default-duration":
+                settings["default_duration"] = _duration(
+                    self.value_arg(item.items[1], env), item.pos
+                )
+            elif setting == "default-ease":
+                settings["default_ease"] = self.ease(item.items[1], env)
+            else:
+                settings["ease"] = self.ease(item.items[1], env)
+        parts = tuple(self.animation_body(item, env, head) for item in rest)
+        if head == "in-order":
+            return InOrder(parts, **settings)
+        seen: dict[tuple[int, str], str] = {}
+        for part in parts:
+            for obj, attr in _animation_targets(part):
+                key = (id(obj), attr)
+                label = f"{obj.name}.{attr}" if attr != "value" else str(obj.name)
+                if key in seen:
+                    raise CompileError(f"{label} is moved twice at once", node.pos)
+                seen[key] = label
+        return AtOnce(parts, **settings)
+
+    def pair(self, node: Form, env: Env) -> Pair:
+        target, given = node.items
+        targets = self.pair_targets(target, env)
+        kind_name = _value_kind(targets[0][2])
+        value = self.value_arg(given, env)
+        if not value.type.startswith("transition") or not isinstance(value, Const):
+            raise CompileError("the second part of a pair is a transition", given.pos)
+        spec = value.value
+        text = _text(target)
+        elem = value.type.split(":", 1)[1]
+        target_type = targets[0][2]
+        fits = {
+            "number": ("real",),
+            "point": ("list2",),
+            "color": ("str", "color", "paint"),
+            "text": ("str",),
+            "bool": ("bool",),
+        }[kind_name]
+        if elem != "any" and elem not in fits:
+            raise CompileError(
+                f"{text} is a {target_type}, but this transition moves a {elem}", given.pos
+            )
+        if not _has_end(spec):
+            raise CompileError("a pair needs an end: give its transition a to", given.pos)
+        if kind_name == "color":
+            spec = _colors_checked(spec, given.pos)
+        return Pair(tuple((obj, attr) for obj, attr, _ in targets), kind_name, spec)
+
+    # The free values a pair writes: one, or each member's for a group attribute.
+    def pair_targets(self, node: Node, env: Env) -> list[tuple[Obj, str, str]]:
+        if isinstance(node, Name) and len(node.parts) > 1 and isinstance(node.parts[-1], str):
+            holder = self.name(Name(node.parts[:-1], node.pos), env)
+            attr = node.parts[-1]
+            if (
+                isinstance(holder, ObjRef)
+                and isinstance(holder.obj, Group)
+                and attr not in attributes(type(holder.obj))
+            ):
+                out = []
+                for member in holder.obj.members:
+                    attrs = attributes(type(member))
+                    if attr not in attrs:
+                        raise CompileError(
+                            f"a member of {holder.obj.name!r} has no {attr}", node.pos
+                        )
+                    if isinstance(getattr(member, attrs[attr].name), Bound):
+                        raise CompileError(
+                            f"a member of {holder.obj.name!r} computes its {attr}, so it cannot be"
+                            " written",
+                            node.pos,
+                        )
+                    out.append((member, attr, _expected_type(type(member), attr)))
+                return out
+        found = self.free_value(node, env)
+        if isinstance(found, str):
+            raise CompileError(found, node.pos)
+        obj, attr, kind, _ = found
+        return [(obj, attr, kind)]
 
     # A built-in ease by name, (step c), or the name of a function of one number.
     def ease(self, node: Node, env: Env) -> Ease:
@@ -1311,7 +1522,7 @@ class _Compiler:
         name = self.function_name(node)
         if self.arity(name) != 1:
             raise CompileError("an ease takes one parameter: the progress, from 0 to 1", node.pos)
-        return ("func", name)
+        return ("func", self.function_key(name))
 
     # The name of a function of the start, the end and the eased progress.
     def path(self, node: Node) -> Path:
@@ -1320,7 +1531,12 @@ class _Compiler:
             raise CompileError(
                 "a path takes three parameters: the start, the end, and the progress", node.pos
             )
-        return ("func", name)
+        return ("func", self.function_key(name))
+
+    # What the model and the JSON call a function: an author's own may differ from its name when
+    # it hides a library function.
+    def function_key(self, name: str) -> str:
+        return self.funcs[name].key if name in self.funcs else name
 
     def function_name(self, node: Node) -> str:
         if not (isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str)):
