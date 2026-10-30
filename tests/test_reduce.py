@@ -159,3 +159,11 @@ class TestNested:
         src = "(real 'v' (sum points p (count points q (< q.r p.r))))"
         for _ in range(60):
             assert value(src) == 3
+
+
+class TestCollectionsInPlace:
+    def test_errors_point_at_the_collection(self):
+        src = f"{POINTS} (real 'v' (sum (+ 1 2) v v))"
+        col = src.index("(+ 1 2)") + 1
+        with pytest.raises(CompileError, match=f"^1:{col}: sum walks a group or a list"):
+            compile_model(parse(src))

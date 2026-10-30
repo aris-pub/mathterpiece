@@ -277,7 +277,8 @@ def _name_collections(node: Node, authors: set[str]) -> Node:
     if loops.get(str(head)) != len(node.items) or isinstance(node.items[1], (Name, ListLit)):
         return node
     pos = node.pos
-    name = Name(("loop list",), pos)
+    # The name stands where the collection was written, so errors about it point there.
+    name = Name(("loop list",), node.items[1].pos)
     bound = Form((Form((name, node.items[1]), pos),), pos)
     loop = Form((node.items[0], name, *node.items[2:]), pos)
     return Form((Name(("let",), pos), bound, loop), pos)
