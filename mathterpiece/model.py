@@ -372,6 +372,8 @@ class Model:
         self.functions: dict[str, Function] = {}
         # The type of each name bound inside a function body, by the id of the name's node.
         self.bound_types: dict[int, str] = {}
+        # The type every call of a user function gave, by its key, when all calls agreed.
+        self.result_types: dict[str, str] = {}
 
     # Each object has one parent. A view is not a parent: it shows objects already in the tree.
     def add(self, obj: Obj):

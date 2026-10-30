@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, get_args, get_origin
 
-from mathterpiece.colors import parse_color
+from mathterpiece.colors import parse_color, same
 from mathterpiece.matrix import Matrix, compose
 from mathterpiece.model import (
     PYTHON_FRAMES,
@@ -799,6 +799,9 @@ class _Compiler:
         # when the body was checked, by the id of the name's node; the writer shows values with
         # them. The nodes live in the stored bodies, so their ids stay unique.
         self.bound_types: dict[int, set[str]] = {}
+        # The types each user function's calls gave, by its key; the writer uses them to see
+        # that a call gives a color.
+        self.result_types: dict[str, set[str]] = {}
 
     def compile(self) -> Model:
         self.add_builtins()
@@ -823,6 +826,9 @@ class _Compiler:
         for obj in [*self.toplevel, *self.anonymous, *self.locals]:
             model.add(obj)
         model.functions.update(self.functions)
+        model.result_types = {
+            key: next(iter(types)) for key, types in self.result_types.items() if len(types) == 1
+        }
         # A name whose type differed between calls is shown as a real, as before.
         model.bound_types = {
             key: next(iter(types)) if len(types) == 1 else "real"
@@ -1987,7 +1993,10 @@ class _Compiler:
             return Dyn(self.active[id(spec)])
         if known:
             return self.func_body(spec, inner, self.active.get(id(spec), PENDING), node.pos)
-        return self.infer(spec, inner, node.pos)
+        result = self.infer(spec, inner, node.pos)
+        if isinstance(result, (Const, Dyn)):
+            self.result_types.setdefault(spec.key, set()).add(result.type)
+        return result
 
     def define_motif(self, form: Form):
         if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
@@ -2924,6 +2933,8 @@ class _Compiler:
                 if isinstance(value, Const) and value.type == "str":
                     _color_const(value.value, arg.pos)
         if isinstance(a, Const) and isinstance(b, Const):
+            if colors and op in ("=", "!="):
+                return Const(same(a.value, b.value) == (op == "="), "bool")
             return Const(COMPARISONS[op](a.value, b.value), "bool")
         return Dyn("bool")
 
@@ -3124,6 +3135,10 @@ class _Compiler:
         sig = fn.find(kinds)
         if sig is None:
             raise CompileError(f"no form of {name} takes these arguments", node.pos)
+        # A known string given as a color must name one, wherever the call is written.
+        for value, kind, arg in zip(values, kinds, node.items[1:], strict=True):
+            if kind == "color" and isinstance(value, Const) and value.type == "str":
+                _color_const(value.value, arg.pos)
         sizes = {
             _list_len(v.type)
             if isinstance(v, (Const, Dyn)) and not v.type.startswith("obj:")

@@ -10,7 +10,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 from typing import Any
 
-from mathterpiece.compiler import ARITHMETIC, COMPARISONS, PROPERTIES, WALKS, _expected_type
+from mathterpiece.compiler import ARITHMETIC, COMPARISONS, FORMS, PROPERTIES, WALKS, _expected_type
 from mathterpiece.matrix import Matrix
 from mathterpiece.model import (
     Animation,
@@ -518,6 +518,8 @@ class _Writer:
             head = node.items[0].parts[0]
             if head in COLOR_FUNCTIONS:
                 return True
+            if head in self.model.functions:
+                return self.model.result_types.get(str(head)) in ("color", "paint")
             if head in ("if", "cond", "let"):
                 return any(self.colorish(item, ctx) for item in node.items[1:])
         if isinstance(node, Form):
@@ -529,7 +531,11 @@ class _Writer:
         assert isinstance(first, str)
         known = dict(ctx.types)
         if first in ctx.env:
-            return known.get(first, "real") if not rest else "real"
+            if not rest:
+                return known.get(first, "real")
+            if first in ctx.objects and len(rest) == 1 and isinstance(rest[0], str):
+                return _attribute_type(rest[0])
+            return "real"
         if ctx.around is not None and first in ctx.around.params and not rest:
             return ctx.around.param_types.get(first, "real")
         if first == "self":
@@ -561,6 +567,15 @@ class _Writer:
         if isinstance(obj, Color):
             return "color"
         return "real"
+
+
+# The type an attribute has on any object that has it, for an object known only at a call: one
+# type when every kind of object agrees (fill and stroke are always paint), else real.
+def _attribute_type(attr: str) -> str:
+    types = {
+        _expected_type(spec.cls, attr) for spec in FORMS.values() if attr in attributes(spec.cls)
+    }
+    return types.pop() if len(types) == 1 else "real"
 
 
 # Whether a let's value is a list of objects: members sorted by a key, or such a list reversed.
