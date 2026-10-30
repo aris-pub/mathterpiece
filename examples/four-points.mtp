@@ -3,9 +3,11 @@
 ; Right: drawn on a line, an isometry puts F(c) at the midpoint twice, so v and w collide.
 ; Coordinates are the original SVG's, with y pointing up; the two panels are two canvases.
 
+; Colors and type as tokens, so the Bourgain page can map them onto its own variables
+; (--mtp-fg: var(--fg) and so on) and follow its light and dark mode.
 (color 'fg' '#1f2328')
 (color 'muted' '#6b7280')
-(color 'warn' '#c2410c')
+(color 'warn' '#a07a2c')
 (font 'label' (style 'italic') (size 14))
 (font 'note' (size 13))
 
