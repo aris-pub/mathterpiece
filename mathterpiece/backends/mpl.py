@@ -19,7 +19,7 @@ from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
 
 from mathterpiece.colors import same
-from mathterpiece.compiler import ARITHMETIC, COMPARISONS
+from mathterpiece.compiler import ARITHMETIC, COMPARISONS, WALKS
 from mathterpiece.compiler import _fold as fold
 from mathterpiece.export import ExportError, export
 from mathterpiece.matrix import IDENTITY, Matrix, compose
@@ -115,6 +115,39 @@ class Runtime:
         self.cache[key] = result
         return result
 
+    # The items a loop walks: a group's members, or a list's items.
+    def items(self, value: Any) -> list:
+        if isinstance(value, _Ref):
+            members = self.objects[value.id].get("members")
+            if members is None:
+                raise EvalError("a loop walks a group or a list")
+            return [_Ref(m) for m in members]
+        return list(value)
+
+    def walk(self, op: str, args: list, frame: int | None, env: dict) -> Any:
+        if op == "walk-sort":
+            direction, collection, name, key = args
+            items = self.items(self.eval(collection, frame, env))
+            keys = [self.eval(key, frame, env | {name: item}) for item in items]
+            pairs = sorted(
+                zip(items, keys, strict=True), key=lambda p: p[1], reverse=direction == "desc"
+            )
+            return tuple(item for item, _ in pairs)
+        if op == "walk-reduce":
+            collection, name, running, start, body = args
+            value = self.eval(start, frame, env)
+            for item in self.items(self.eval(collection, frame, env)):
+                value = self.eval(body, frame, env | {name: item, running: value})
+            return value
+        collection, name, body = args
+        items = self.items(self.eval(collection, frame, env))
+        each = (self.eval(body, frame, env | {name: item}) for item in items)
+        if op == "walk-any":
+            return any(each)
+        if op == "walk-all":
+            return all(each)
+        return tuple(v if isinstance(v, bool) else float(v) for v in each)
+
     def eval(self, e: Any, frame: int | None, env: dict) -> Any:
         if not isinstance(e, list):
             return e
@@ -135,8 +168,12 @@ class Runtime:
             return self.value(args[0], args[1])
         if op == "arg":
             return env[args[0]]
+        if op in WALKS:
+            return self.walk(op, args, frame, env)
         if op == "part":
             base = self.eval(args[0], frame, env)
+            if isinstance(base, _Ref):
+                base = self.items(base)
             index = args[1] if isinstance(args[1], int) else int(self.eval(args[1], frame, env))
             return base[index]
         if op == "obj":

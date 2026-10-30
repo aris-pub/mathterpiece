@@ -286,3 +286,49 @@ describe("lists of bools", () => {
     expect(rt().eval([op, ["list", ...items]], null, {})).toBe(expected);
   });
 });
+
+describe("walks: loops run while drawing", () => {
+  // A group g (0) of circles with r 1, 2, 3 (ids 1 to 3), and n (4) holding 0.
+  const rt = () =>
+    new Runtime(
+      doc([
+        { kind: "group", name: "g", attrs: { transform: [1, 0, 0, 0, 1, 0] }, members: [1, 2, 3] },
+        circle(null, { r: 1, x: 3 }, 0),
+        circle(null, { r: 2, x: 1 }, 0),
+        circle(null, { r: 3, x: 2 }, 0),
+        real("n", 0),
+      ]),
+    );
+  const g = ["obj", 0];
+  const r = ["read", ["arg", "p"], "r"];
+  const run = (e: unknown) => rt().eval(e, null, {});
+
+  it("maps over a group's members", () => {
+    expect(run(["walk-map", g, "p", ["*", 2, r]])).toEqual([2, 4, 6]);
+  });
+
+  it("reduces", () => {
+    expect(run(["walk-reduce", g, "p", "t", 0, ["+", ["arg", "t"], r]])).toBe(6);
+  });
+
+  it("sorts members by a key", () => {
+    const x = ["read", ["arg", "p"], "x"];
+    const sorted = ["walk-sort", "asc", g, "p", x];
+    expect(run(["read", ["part", sorted, 0], "r"])).toBe(2);
+    expect(run(["read", ["part", ["walk-sort", "desc", g, "p", x], 0], "r"])).toBe(1);
+  });
+
+  it("stops any and all at the first deciding item", () => {
+    const risky = [">", ["/", 1, ["read", 4, "value"]], 0];
+    expect(run(["walk-any", g, "p", ["or", [">", r, 0], risky]])).toBe(true);
+    expect(run(["walk-all", g, "p", ["and", [">", r, 5], risky]])).toBe(false);
+  });
+
+  it("indexes a group reference", () => {
+    expect(run(["read", ["part", g, 1], "r"])).toBe(2);
+  });
+
+  it("walks a list too", () => {
+    expect(run(["walk-map", ["list", 1, 2], "v", ["+", ["arg", "v"], 1]])).toEqual([2, 3]);
+  });
+});

@@ -370,6 +370,8 @@ class Model:
         self._index: dict[str, Obj] = {}
         self._tree: set[int] = set()
         self.functions: dict[str, Function] = {}
+        # The type of each name bound inside a function body, by the id of the name's node.
+        self.bound_types: dict[int, str] = {}
 
     # Each object has one parent. A view is not a parent: it shows objects already in the tree.
     def add(self, obj: Obj):

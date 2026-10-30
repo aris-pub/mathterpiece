@@ -6,11 +6,11 @@ position from another coordinate frame says which frame to convert into.
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from typing import Any
 
-from mathterpiece.compiler import ARITHMETIC, COMPARISONS, PROPERTIES, _expected_type
+from mathterpiece.compiler import ARITHMETIC, COMPARISONS, PROPERTIES, WALKS, _expected_type
 from mathterpiece.matrix import Matrix
 from mathterpiece.model import (
     Animation,
@@ -127,6 +127,8 @@ class _Context:
     env: frozenset[str] = frozenset()
     objects: frozenset[str] = frozenset()
     types: tuple[tuple[str, str], ...] = ()
+    # Names of lists of objects (sorted members), whose items are read like objects.
+    object_lists: frozenset[str] = frozenset()
 
 
 class _Writer:
@@ -358,15 +360,18 @@ class _Writer:
                 key, value = pair.items
                 assert isinstance(key, Name) and isinstance(key.parts[0], str)
                 out.append([key.parts[0], self.expr(value, inner)])
-                inner = _Context(
-                    inner.me,
-                    inner.around,
-                    inner.frame,
-                    inner.env | {key.parts[0]},
-                    inner.objects - {key.parts[0]},
-                    inner.types,
+                name = key.parts[0]
+                lists = inner.object_lists - {name}
+                inner = replace(
+                    inner,
+                    env=inner.env | {name},
+                    objects=inner.objects - {name},
+                    object_lists=lists | ({name} if _object_list(value, inner) else set()),
+                    types=self.bind_type(inner.types, key),
                 )
             return ["let", out, self.expr(body, inner)]
+        if op in WALKS:
+            return self.walk_form(op, args, ctx)
         resolved = [self.expr(a, ctx) for a in args]
         if op == "if":
             return ["if", *resolved]
@@ -378,6 +383,55 @@ class _Writer:
             return ["call", op, *resolved]
         raise ExportError(f"cannot write the operation {op!r}")
 
+    # A loop the runtimes run while drawing: [op, collection, name, ..., body], with the item's
+    # name bound in the body (as an object when the collection holds members).
+    def walk_form(self, op: str, args: tuple[Node, ...], ctx: _Context) -> list:
+        kind, *rest = args
+        assert isinstance(kind, StrLit)
+        if op == "walk-sort":
+            direction, collection, var, key = rest
+            assert isinstance(direction, StrLit)
+            out: list = [op, direction.value, self.expr(collection, ctx)]
+            bodies = [key]
+        elif op == "walk-reduce":
+            collection, var, running, start, body = rest
+            assert isinstance(running, Name) and isinstance(running.parts[0], str)
+            out = [op, self.expr(collection, ctx)]
+            bodies = [body]
+        else:
+            collection, var, body = rest
+            out = [op, self.expr(collection, ctx)]
+            bodies = [body]
+        assert isinstance(var, Name) and isinstance(var.parts[0], str)
+        name = var.parts[0]
+        objects = kind.value == "objects"
+        inner = replace(
+            ctx,
+            env=ctx.env | {name},
+            objects=(ctx.objects | {name}) if objects else (ctx.objects - {name}),
+            object_lists=ctx.object_lists - {name},
+        )
+        out.append(name)
+        inner = replace(inner, types=self.bind_type(inner.types, var))
+        if op == "walk-reduce":
+            assert isinstance(running.parts[0], str)
+            out += [running.parts[0], self.expr(start, ctx)]
+            inner = replace(
+                inner,
+                env=inner.env | {running.parts[0]},
+                objects=inner.objects - {running.parts[0]},
+                types=self.bind_type(inner.types, running),
+            )
+        return [*out, self.expr(bodies[0], inner)]
+
+    # Types with name's newest binding: the type the compiler found for it, or none (shown as a
+    # real) when it found none.
+    def bind_type(self, types: tuple, name: Name) -> tuple:
+        first = name.parts[0]
+        kept = tuple((n, t) for n, t in types if n != first)
+        found = self.model.bound_types.get(id(name))
+        return kept if found is None else (*kept, (first, found))
+
     # A name, resolved the way the evaluator would look it up.
     def name(self, node: Name, ctx: _Context) -> Any:
         first, *rest = node.parts
@@ -385,7 +439,8 @@ class _Writer:
         if first in ctx.env:
             if first in ctx.objects:
                 return self.parts_of(["arg", first], rest, ctx, dynamic=True)
-            return self.list_parts(["arg", first], rest, ctx)
+            objects = first in ctx.object_lists
+            return self.list_parts(["arg", first], rest, ctx, objects)
         if first == "self":
             assert ctx.me is not None
             obj: Obj = ctx.me
@@ -401,11 +456,15 @@ class _Writer:
 
     def parts_of(self, obj: Any, rest: list, ctx: _Context, dynamic: bool = False) -> Any:
         if dynamic:
+            # An object known only while drawing: a group's member is picked by index, then an
+            # attribute is read from whichever object it is.
+            while rest and not isinstance(rest[0], str):
+                index = rest[0]
+                k = index.value if isinstance(index, IntLit) else self.expr(index, ctx)
+                obj, rest = ["part", obj, k], rest[1:]
             if not rest:
                 return obj
-            part = rest[0]
-            assert isinstance(part, str)
-            return self.list_parts(["read", obj, part], rest[1:], ctx)
+            return self.list_parts(["read", obj, rest[0]], rest[1:], ctx)
         for i, part in enumerate(rest):
             if isinstance(obj, (Real, Local, Color, Bool, Toggle)):
                 objects = isinstance(obj, Local) and obj.type.startswith("objs")
@@ -502,6 +561,17 @@ class _Writer:
         if isinstance(obj, Color):
             return "color"
         return "real"
+
+
+# Whether a let's value is a list of objects: members sorted by a key, or such a list reversed.
+def _object_list(node: Node, ctx: _Context) -> bool:
+    if isinstance(node, Name):
+        return len(node.parts) == 1 and node.parts[0] in ctx.object_lists
+    head = node.items[0] if isinstance(node, Form) and node.items else None
+    op = head.parts[0] if isinstance(head, Name) else None
+    if op == "walk-sort":
+        return True
+    return op == "reverse" and isinstance(node, Form) and _object_list(node.items[1], ctx)
 
 
 def _function_context(fn) -> _Context:

@@ -137,10 +137,49 @@ export class Runtime {
     return result;
   }
 
+  /** The items a loop walks: a group's members, or a list's items. */
+  private items(value: unknown): unknown[] {
+    if (value instanceof Ref) {
+      const members = this.obj(value.id).members;
+      if (!members) throw new MtpError("a loop walks a group or a list");
+      return members.map((m) => new Ref(m));
+    }
+    return [...(value as unknown[])];
+  }
+
+  // Loops over a collection known only while drawing (a group passed to a function).
+  private walk(op: string, args: Expr[], frame: number | null, env: Env): unknown {
+    if (op === "walk-sort") {
+      const [direction, collection, name, key] = args as [string, Expr, string, Expr];
+      const items = this.items(this.eval(collection, frame, env));
+      const keyed = items.map((item) => [item, this.eval(key, frame, { ...env, [name]: item }) as number] as const);
+      const sign = direction === "desc" ? -1 : 1;
+      return keyed.sort((a, b) => sign * (a[1] - b[1])).map(([item]) => item);
+    }
+    if (op === "walk-reduce") {
+      const [collection, name, running, start, body] = args as [Expr, string, string, Expr, Expr];
+      let value = this.eval(start, frame, env);
+      for (const item of this.items(this.eval(collection, frame, env))) {
+        value = this.eval(body, frame, { ...env, [name]: item, [running]: value });
+      }
+      return value;
+    }
+    const [collection, name, body] = args as [Expr, string, Expr];
+    const items = this.items(this.eval(collection, frame, env));
+    const each = (item: unknown) => this.eval(body, frame, { ...env, [name]: item });
+    if (op === "walk-any") return items.some((item) => Boolean(each(item)));
+    if (op === "walk-all") return items.every((item) => Boolean(each(item)));
+    return items.map((item) => {
+      const v = each(item);
+      return typeof v === "boolean" ? v : Number(v);
+    });
+  }
+
   eval(e: Expr, frame: number | null, env: Env): unknown {
     if (!Array.isArray(e)) return e;
     if (e.length === 0 || typeof e[0] !== "string") return e;
     const [op, ...args] = e as [string, ...Expr[]];
+    if (op.startsWith("walk-")) return this.walk(op, args, frame, env);
     switch (op) {
       case "read": {
         let target = args[0];
@@ -159,7 +198,8 @@ export class Runtime {
       case "arg":
         return env[args[0] as string];
       case "part": {
-        const base = this.eval(args[0], frame, env) as unknown[];
+        const found = this.eval(args[0], frame, env);
+        const base = found instanceof Ref ? this.items(found) : (found as unknown[]);
         const index = typeof args[1] === "number" ? args[1] : Number(this.eval(args[1], frame, env));
         return base[index];
       }

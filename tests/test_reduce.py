@@ -150,3 +150,12 @@ class TestSumAndCount:
             parse("(motif 'm' (params (count 3)) (circle 'c' (r count))) (scene _ (m 'd'))")
         )
         assert m is not None
+
+
+class TestNested:
+    # Unrolled forms are temporary; this once failed now and then, when a freed form's id was
+    # reused by a new one and picked up the wrong let.
+    def test_nested_tallies_compile_every_time(self):
+        src = "(real 'v' (sum points p (count points q (< q.r p.r))))"
+        for _ in range(60):
+            assert value(src) == 3

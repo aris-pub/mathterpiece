@@ -663,18 +663,31 @@ def _rename(node: Node, name: str, item: Node) -> Node:
     if isinstance(node, Name):
         rest = tuple(p if isinstance(p, str) else _rename(p, name, item) for p in node.parts[1:])
         if node.parts[0] != name:
-            return Name((node.parts[0], *rest), node.pos)
+            unchanged = all(a is b for a, b in zip(rest, node.parts[1:], strict=True))
+            return node if unchanged else Name((node.parts[0], *rest), node.pos)
         if not rest:
             return item
         if not isinstance(item, Name):
             raise CompileError(f"{name} is a number here, so it has no parts", node.pos)
         return Name((*item.parts, *rest), node.pos)
     if isinstance(node, Form):
-        return Form(tuple(_rename(i, name, item) for i in node.items), node.pos)
+        items = tuple(_rename(i, name, item) for i in node.items)
+        return (
+            node
+            if all(a is b for a, b in zip(items, node.items, strict=True))
+            else Form(items, node.pos)
+        )
     if isinstance(node, ListLit):
-        return ListLit(tuple(_rename(i, name, item) for i in node.items), node.pos)
+        items = tuple(_rename(i, name, item) for i in node.items)
+        return (
+            node
+            if all(a is b for a, b in zip(items, node.items, strict=True))
+            else ListLit(items, node.pos)
+        )
     if isinstance(node, InterpStrLit):
-        return InterpStrLit(tuple(_rename_part(p, name, item) for p in node.parts), node.pos)
+        parts = tuple(_rename_part(p, name, item) for p in node.parts)
+        same = all(a is b for a, b in zip(parts, node.parts, strict=True))
+        return node if same else InterpStrLit(parts, node.pos)
     return node
 
 
@@ -779,6 +792,13 @@ class _Compiler:
         # call, for writing them into stored expressions. A node inside a repeat is overwritten
         # each iteration, which is fine because each iteration stores its expressions first.
         self.lets: dict[int, dict | Node] = {}
+        # lets is keyed by id(node), and unrolled forms are temporary: keeping each keyed node
+        # alive stops Python from giving a new node the id of a freed one.
+        self.keyed: list[Node] = []
+        # The types a name bound in a function body (a let, a loop's item, a running value) had
+        # when the body was checked, by the id of the name's node; the writer shows values with
+        # them. The nodes live in the stored bodies, so their ids stay unique.
+        self.bound_types: dict[int, set[str]] = {}
 
     def compile(self) -> Model:
         self.add_builtins()
@@ -803,6 +823,11 @@ class _Compiler:
         for obj in [*self.toplevel, *self.anonymous, *self.locals]:
             model.add(obj)
         model.functions.update(self.functions)
+        # A name whose type differed between calls is shown as a real, as before.
+        model.bound_types = {
+            key: next(iter(types)) if len(types) == 1 else "real"
+            for key, types in self.bound_types.items()
+        }
         return model
 
     def settle(self, frame: Frame, owner: Obj | None):
@@ -826,11 +851,16 @@ class _Compiler:
             name = key.parts[0]
             _check_not_syntax(name, key.pos)
             value = self.value_arg(expr, inner)
+            self.record_type(key, value)
             if isinstance(value, Const):
                 inner[name] = value
                 continue
             inner[name] = LetRef(self.hidden_value(name, expr, inner, value.type), value.type)
         return inner
+
+    def record_type(self, key: Node, value: Value):
+        if self.in_func and isinstance(value, (Const, Dyn)):
+            self.bound_types.setdefault(id(key), set()).add(value.type)
 
     # A value only known when drawing, stored once in the model and read by every use.
     def hidden_value(self, label: str, node: Node, env: Env, kind: str) -> str:
@@ -1555,6 +1585,17 @@ class _Compiler:
 
     # One copy of body per item of collection, with var standing for the item.
     def walk(self, collection: Node, var: Node, body: Node, env: Env, form: str) -> list[Node]:
+        items = self.walk_items(collection, var, body, env, form)
+        if items and self.in_func:
+            first = self.expr(items[0][1], env)
+            if not isinstance(first, (ObjRef, Spread)):
+                self.record_type(var, first)
+        return [renamed for renamed, _ in items]
+
+    # Each item's copy of body, with the item itself.
+    def walk_items(
+        self, collection: Node, var: Node, body: Node, env: Env, form: str
+    ) -> list[tuple[Node, Node]]:
         if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
             raise CompileError(
                 f"the name after a {form}'s collection must be a plain name", var.pos
@@ -1562,7 +1603,7 @@ class _Compiler:
         name = var.parts[0]
         _check_not_syntax(name, var.pos)
         if isinstance(collection, ListLit):
-            return [_rename(body, name, item) for item in collection.items]
+            return [(_rename(body, name, item), item) for item in collection.items]
         found = self.expr(collection, env) if isinstance(collection, Name) else None
         if isinstance(found, ObjRef) and isinstance(found.obj, Group):
             count = len(found.obj.members)
@@ -1575,12 +1616,11 @@ class _Compiler:
         else:
             raise CompileError(f"{form} walks a group or a list", collection.pos)
         assert isinstance(collection, Name)
-        return [
-            _rename(
-                body, name, Name((*collection.parts, IntLit(k, collection.pos)), collection.pos)
-            )
+        items = [
+            Name((*collection.parts, IntLit(k, collection.pos)), collection.pos)
             for k in range(count)
         ]
+        return [(_rename(body, name, item), item) for item in items]
 
     # (sort list), (sort-asc list), (sort-desc list), (reverse list), and (sort group name key):
     # the members of a group ordered by a key, as a list of objects. Which comes first is only
@@ -1668,6 +1708,9 @@ class _Compiler:
     def reduce_form(self, node: Form, env: Env) -> Value:
         running, start = self.reduce_parts(node)
         first = self.expr(start, env)
+        pair = node.items[3]
+        assert isinstance(pair, Form)
+        self.record_type(pair.items[0], first)
         bodies = self.walk(node.items[1], node.items[2], node.items[4], env, "reduce")
         if bodies and isinstance(first, (Const, Dyn)):
             step = self.expr(bodies[0], env | {running: Dyn(first.type)})
@@ -1819,7 +1862,13 @@ class _Compiler:
         spec = FuncSpec(params, rest[0], dict(self.funcs), dict(self.consts), name, key)
         spec.funcs[name] = spec
         keys = {n: f.key for n, f in spec.funcs.items()}
-        body = _store_body(spec.body, spec.consts, keys, set(params))
+        known = {c: _shape_of_type(v.type) for c, v in spec.consts.items() if c not in params}
+        known |= {
+            p: (None, True) if d is None else _shape_of_type(d.type) for p, d in params.items()
+        }
+        shapes = {name: shape for name, shape in known.items() if shape is not None}
+        loops = _FuncLoops(set(spec.funcs) & {"sum", "count", "any", "all", *LIST_OPS})
+        body = _store_body(loops.walk(spec.body, shapes), spec.consts, keys, set(params))
         self.functions[key] = Function(
             tuple((p, None if d is None else d.value) for p, d in params.items()), body
         )
@@ -1931,6 +1980,7 @@ class _Compiler:
                 known = False
         stored = tuple(self.resolve_refs(_substitute(a, outer, self.lets), env) for a in args)
         self.lets[id(node)] = Form((Name((spec.key,), node.items[0].pos), *stored), node.pos)
+        self.keyed.append(node)
         # A call inside its own body that cannot be folded, or that sits in a branch never taken,
         # stands for whatever the function turns out to return.
         if id(spec) in self.active and (not known or self.speculative):
@@ -2824,6 +2874,7 @@ class _Compiler:
                 raise CompileError("let in an expression takes bindings and one value", node.pos)
             inner = self.bindings(node, env)
             self.lets[id(node)] = inner
+            self.keyed.append(node)
             return self.expr(node.items[2], inner)
         if head in FORMS or head in self.motifs or head in ("repeat", "motif"):
             raise CompileError(f"{head} cannot be used in an expression", node.pos)
@@ -3161,6 +3212,220 @@ class _Compiler:
             raise CompileError("division by zero", node.pos) from None
 
 
+# What is known of a collection in a function body when the function is defined: its size (None
+# when it depends on a group parameter, so only each call knows it), and whether its items are
+# objects (members of a group) rather than values.
+Shape = tuple[int | None, bool]
+WALKS = ("walk-map", "walk-reduce", "walk-sort", "walk-any", "walk-all")
+
+
+def _shape_of_type(t: str) -> "Shape | None":
+    n = _list_len(t) if _list_len(t) is not None else _bools_len(t)
+    return None if n is None else (n, False)
+
+
+# Loops in a function body (map, reduce, sum, count, sort by key, any and all over a map). Those
+# whose size is known when the function is defined unroll as in the scene; the rest, over a group
+# parameter or something computed from one, become walk forms that the runtimes run while
+# drawing. ref is resolved here too, since it needs no call.
+class _FuncLoops:
+    def __init__(self, hidden: set[str]):
+        # Library loop forms an author's function of the same name replaces.
+        self.hidden = hidden
+
+    def walk(self, node: Node, shapes: dict[str, Shape]) -> Node:
+        if isinstance(node, ListLit):
+            return ListLit(tuple(self.walk(i, shapes) for i in node.items), node.pos)
+        if not isinstance(node, Form):
+            return node
+        head = _head(node)
+        items = node.items
+        if head == "ref" and len(items) == 2 and isinstance(items[1], StrLit):
+            try:
+                return parse_name(items[1].value, items[1].pos)
+            except ParseError as e:
+                raise CompileError(e.msg, e.pos) from None
+        if head == "let" and len(items) == 3 and isinstance(items[1], Form):
+            inner = dict(shapes)
+            pairs = []
+            for pair in items[1].items:
+                assert isinstance(pair, Form)
+                key, value = pair.items
+                value = self.walk(value, inner)
+                pairs.append(Form((key, value), pair.pos))
+                if isinstance(key, Name) and isinstance(key.parts[0], str):
+                    found = self.shape(value, inner)
+                    if found is None:
+                        inner.pop(key.parts[0], None)
+                    else:
+                        inner[key.parts[0]] = found
+            body = self.walk(items[2], inner)
+            return Form((items[0], Form(tuple(pairs), items[1].pos), body), node.pos)
+        if head == "map" and len(items) == 4:
+            return self.map(node, shapes)
+        if head == "reduce" and len(items) == 5:
+            return self.reduce(node, shapes)
+        if head in ("sum", "count") and head not in self.hidden and len(items) == 4:
+            return self.reduce(_tally_form(node), shapes)
+        if head in ("any", "all") and head not in self.hidden and len(items) == 2:
+            return self.any_all(node, shapes)
+        if head in LIST_OPS and head not in self.hidden and len(items) == 4:
+            return self.sort_by_key(node, shapes)
+        if head == "sort" and head not in self.hidden and len(items) == 2:
+            return Form((Name(("sort-asc",), node.pos), self.walk(items[1], shapes)), node.pos)
+        return Form(tuple(self.walk(i, shapes) for i in items), node.pos)
+
+    # The size and kind of items of a collection, if it is one.
+    def shape(self, node: Node, shapes: dict[str, Shape]) -> Shape | None:
+        if isinstance(node, ListLit):
+            return (len(node.items), False)
+        if isinstance(node, Name):
+            return shapes.get(node.parts[0]) if len(node.parts) == 1 else None
+        head = _head(node)
+        if head in ("sort-asc", "sort-desc", "reverse") and isinstance(node, Form):
+            return self.shape(node.items[1], shapes) if len(node.items) == 2 else None
+        if head == "walk-map":
+            return (None, False)
+        if head == "walk-sort":
+            return (None, True)
+        return None
+
+    # Items of a collection of known size, as expressions: its literal items, or name[k]. Any
+    # other collection is bound to a name first, by bind.
+    def items(self, collection: Node, size: int) -> list[Node]:
+        if isinstance(collection, ListLit):
+            return list(collection.items)
+        assert isinstance(collection, Name)
+        pos = collection.pos
+        return [Name((*collection.parts, IntLit(k, pos)), pos) for k in range(size)]
+
+    def bind(self, collection: Node, build) -> Node:
+        if isinstance(collection, (Name, ListLit)):
+            return build(collection)
+        pos = collection.pos
+        name = Name(("loop list",), pos)
+        bindings = Form((Form((name, collection), pos),), pos)
+        return Form((Name(("let",), pos), bindings, build(name)), pos)
+
+    def unknown(self, op: str, node: Form, collection: Node, shape: Shape | None, *rest) -> Form:
+        kind = "objects" if shape is None or shape[1] else "values"
+        pos = node.pos
+        return Form((Name((op,), pos), StrLit(kind, pos), collection, *rest), pos)
+
+    def map(self, node: Form, shapes: dict[str, Shape]) -> Node:
+        _, collection, var, body = node.items
+        collection = self.walk(collection, shapes)
+        shape = self.shape(collection, shapes)
+        name = _loop_var(var, "map")
+        if shape is not None and shape[0] is not None:
+            size = shape[0]
+
+            def build(c: Node) -> Node:
+                bodies = [self.walk(_rename(body, name, i), shapes) for i in self.items(c, size)]
+                return ListLit(tuple(bodies), node.pos)
+
+            return self.bind(collection, build)
+        inner = {k: v for k, v in shapes.items() if k != name}
+        return self.unknown("walk-map", node, collection, shape, var, self.walk(body, inner))
+
+    def reduce(self, node: Form, shapes: dict[str, Shape]) -> Node:
+        _, collection, var, pair, body = node.items
+        if not (
+            isinstance(pair, Form) and len(pair.items) == 2 and isinstance(pair.items[0], Name)
+        ):
+            raise CompileError(
+                "the running value is written (name start), like (total 0)", pair.pos
+            )
+        running, start = pair.items
+        assert isinstance(running, Name) and isinstance(running.parts[0], str)
+        collection = self.walk(collection, shapes)
+        shape = self.shape(collection, shapes)
+        name = _loop_var(var, str(_head(node)))
+        start = self.walk(start, shapes)
+        if shape is not None and shape[0] is not None:
+            size = shape[0]
+
+            def build(c: Node) -> Node:
+                pos = node.pos
+                result: Node = running
+                bodies = [_rename(body, name, i) for i in self.items(c, size)]
+                for step in [start, *bodies][::-1]:
+                    result = Form(
+                        (Name(("let",), pos), Form((Form((running, step), pos),), pos), result), pos
+                    )
+                return self.walk(result, shapes)
+
+            return self.bind(collection, build)
+        bound = {name, running.parts[0]}
+        inner = {k: v for k, v in shapes.items() if k not in bound}
+        rest = (var, running, start, self.walk(body, inner))
+        return self.unknown("walk-reduce", node, collection, shape, *rest)
+
+    def any_all(self, node: Form, shapes: dict[str, Shape]) -> Node:
+        head = str(_head(node))
+        arg = node.items[1]
+        op = "or" if head == "any" else "and"
+        if _head(arg) == "map" and isinstance(arg, Form) and len(arg.items) == 4:
+            _, collection, var, cond = arg.items
+            walked = self.walk(collection, shapes)
+            shape = self.shape(walked, shapes)
+            if shape is None or shape[0] is None:
+                name = _loop_var(var, "map")
+                inner = {k: v for k, v in shapes.items() if k != name}
+                return self.unknown(
+                    f"walk-{head}", node, walked, shape, var, self.walk(cond, inner)
+                )
+        arg = self.walk(arg, shapes)
+        if isinstance(arg, ListLit):
+            if len(arg.items) == 1:
+                return arg.items[0]
+            return Form((Name((op,), node.pos), *arg.items), node.pos)
+        return Form((node.items[0], arg), node.pos)
+
+    # Sorting members by a key is always a walk: in a function body the group is a parameter.
+    def sort_by_key(self, node: Form, shapes: dict[str, Shape]) -> Node:
+        head, collection, var, key = node.items
+        collection = self.walk(collection, shapes)
+        shape = self.shape(collection, shapes)
+        name = _loop_var(var, "sort")
+        inner = {k: v for k, v in shapes.items() if k != name}
+        direction = StrLit("desc" if _head(node) == "sort-desc" else "asc", node.pos)
+        pos = node.pos
+        walk = self.unknown("walk-sort", node, collection, shape, var, self.walk(key, inner))
+        return Form((walk.items[0], walk.items[1], direction, *walk.items[2:]), pos)
+
+
+# The names a walk form binds: its item's name, and for reduce the running value's.
+def _walk_names(node: Form) -> list[Name]:
+    head = _head(node)
+    at = {"walk-sort": [4], "walk-reduce": [3, 4]}.get(str(head), [3])
+    return [n for i in at if isinstance(n := node.items[i], Name)]
+
+
+def _loop_var(var: Node, form: str) -> str:
+    if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
+        raise CompileError(f"the name after a {form}'s collection must be a plain name", var.pos)
+    return var.parts[0]
+
+
+# (sum c v body) as (reduce c v (running 0) (+ running body)), and count with an if; the running
+# value's name has a space, which no author's name can have.
+def _tally_form(node: Form) -> Form:
+    head, collection, var, body = node.items
+    pos = node.pos
+    running = Name(("running total",), pos)
+
+    def form(*items: Node) -> Form:
+        return Form(items, pos)
+
+    step = (
+        form(Name(("if",), pos), body, form(Name(("+",), pos), running, IntLit(1, pos)), running)
+        if _head(node) == "count"
+        else form(Name(("+",), pos), running, body)
+    )
+    return form(Name(("reduce",), pos), collection, var, form(running, IntLit(0, pos)), step)
+
+
 # The heads the standard library already uses; a user function with one of these names gets its
 # own key in the model.
 LIBRARY_HEADS = set(STDLIB) | {"mod", "abs"}
@@ -3188,6 +3453,19 @@ def _store_body(node: Node, consts: dict, keys: dict[str, str], bound: set[str])
                 inner.add(key.parts[0])
         body = _store_body(node.items[2], consts, keys, inner)
         return Form((node.items[0], Form(tuple(pairs), node.items[1].pos), body), node.pos)
+    if isinstance(node, Form) and _head(node) in WALKS:
+        # Each walk binds its item's name (and reduce its running value) inside its body.
+        names = _walk_names(node)
+        inner = bound | {n.parts[0] for n in names if isinstance(n.parts[0], str)}
+        return Form(
+            tuple(
+                item
+                if item in names
+                else _store_body(item, consts, keys, inner if i > 2 else bound)
+                for i, item in enumerate(node.items)
+            ),
+            node.pos,
+        )
     if isinstance(node, Form):
         items = [_store_body(item, consts, keys, bound) for item in node.items]
         head = _head(node)
