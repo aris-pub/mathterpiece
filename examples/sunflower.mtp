@@ -16,7 +16,7 @@
 
 ; Seeds on a golden-angle spiral: seed i sits at radius (sqrt i), turned i golden angles.
 (motif 'sunflower' (params (n 400) (spread 0.3) (size 0.11))
-  (repeat i n
+  (repeat n i
     (let ((a (* i golden)) (d (* spread (sqrt i))) (t (/ i n)))
       (circle _
         (pos (polar d a))
@@ -26,11 +26,11 @@
 
 ; Stacked translucent disks read as a soft glow that fades outward.
 (motif 'glow' (params (layers 14) (radius 8.0))
-  (repeat k layers
+  (repeat layers k
     (circle _ (r (* radius (/ (+ k 1) layers))) (fill-opacity 0.035))))
 
 (motif 'orbit' (params (count 12) (radius 5.0) (size 0.3))
-  (repeat k count
+  (repeat count k
     (let ((a (turn (/ k count))))
       (circle _
         (pos (polar radius a))
@@ -51,7 +51,7 @@
 
   ; Stars take the color of whichever flower they drift near.
   (group 'stars'
-    (repeat i 320
+    (repeat 320 i
       (circle _ (pos [(rand -10 10) (rand -10 10)]) (r (rand 0.015 0.07)) (opacity (rand 0.25 1))
         (fill
           (cond

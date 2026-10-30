@@ -111,14 +111,14 @@ class TestSelf:
 
 class TestRand:
     def test_range(self):
-        scn = scene("(group 'g' (repeat i 200 (circle _ (r (rand 2 3)))))")
+        scn = scene("(group 'g' (repeat 200 i (circle _ (r (rand 2 3)))))")
         ev = Evaluator(scn, random.Random(0))
         rs = [ev.value(m, "r") for m in scn["g"].members]
         assert all(2 <= r <= 3 for r in rs)
         assert len(set(rs)) > 1
 
     def test_default_range(self):
-        scn = scene("(group 'g' (repeat i 200 (circle _ (r (rand)))))")
+        scn = scene("(group 'g' (repeat 200 i (circle _ (r (rand)))))")
         ev = Evaluator(scn, random.Random(0))
         assert all(0 <= ev.value(m, "r") < 1 for m in scn["g"].members)
 

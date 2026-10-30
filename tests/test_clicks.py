@@ -29,7 +29,7 @@ class TestOnClick:
 
     def test_one_per_member_with_repeat(self):
         m = compile(
-            "(repeat i 2 (on-click points[i] (animation (k (transition (to i) (duration 1))))))"
+            "(repeat 2 i (on-click points[i] (animation (k (transition (to i) (duration 1))))))"
         )
         assert len(clicks(m)) == 2
 

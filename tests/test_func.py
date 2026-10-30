@@ -78,7 +78,7 @@ class TestCalls:
 
     def test_with_a_loop_variable(self):
         assert get(
-            scene(f"{SQ} (repeat i 3 (circle $'c{{i}}' (r (sq i))))"), "c2", Circle
+            scene(f"{SQ} (repeat 3 i (circle $'c{{i}}' (r (sq i))))"), "c2", Circle
         ).r == Free(4.0)
 
 
@@ -98,7 +98,7 @@ class TestBoundArguments:
     def test_indexed_object_argument(self):
         src = (
             "(func 'radius-of' (params (o)) o.r) (group 'g' (circle _ (r 1)) (circle _ (r 2)))"
-            " (repeat i 2 (circle $'c{i}' (x (radius-of g[i]))))"
+            " (repeat 2 i (circle $'c{i}' (x (radius-of g[i]))))"
         )
         x = get(scene(src), "c1", Circle).x
         assert x == Bound(Form((n("radius-of"), Name(("g", IntLit(1))))))

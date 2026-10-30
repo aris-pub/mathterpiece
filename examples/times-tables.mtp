@@ -13,13 +13,13 @@
 (motif 'times-table' (params (n 200) (m 2) (radius 3.8) (turn 0.0) (label ''))
   (group 'figure' (transform (rotate turn))
     (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
-    (repeat k n
+    (repeat n k
       (line _
         (from (on-circle radius k n))
         (to (on-circle radius (* m k) n))
         (stroke-width 0.02)
         (stroke-opacity (lerp 0.2 0.85 (/ k n)))))
-    (repeat k n
+    (repeat n k
       (circle _ (pos (on-circle radius k n)) (r 0.045) (stroke 'none'))))
   (text 'caption' label (pos [(- radius) (- (+ radius 0.8))]) (font small)
     (fill chalk) (stroke 'none')))

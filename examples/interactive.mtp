@@ -10,7 +10,7 @@
 (motif 'times-table' (params (n 200) (m 2) (radius 8.0) (turn 0.0))
   (group 'figure' (transform (rotate turn))
     (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
-    (repeat k n
+    (repeat n k
       (line _
         (from (on-circle radius k n))
         (to (on-circle radius (* m k) n))

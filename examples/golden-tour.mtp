@@ -14,7 +14,7 @@
   (cond ((< t 0.3) '#9a4f16') ((< t 0.6) '#cf7424') ((< t 0.85) '#e89b2a') (else gold)))
 
 (motif 'flower' (params (n 300) (angle 90.0) (spread 0.5) (size 0.17))
-  (repeat i n
+  (repeat n i
     (let ((d (* spread (sqrt i))) (t (/ i n)))
       (circle _
         (pos (polar d (* i angle)))

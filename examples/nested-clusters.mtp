@@ -22,23 +22,23 @@
 (scene 'clusters'
   (group 'tree'
     ; Level 1: point 2k with point 2k+1.
-    (repeat k 4
+    (repeat 4 k
       (bracket _ (left (point-x (* 2 k))) (right (point-x (+ (* 2 k) 1))) (from top) (to (depth 1))
         (stroke fg) (stroke-width 1.5)))
     ; Level 2: the middles of pairs 2j and 2j+1, which are 60 apart.
-    (repeat j 2
+    (repeat 2 j
       (bracket _ (left (+ 85 (* 120 j))) (right (+ 145 (* 120 j))) (from (depth 1)) (to (depth 2))
         (stroke fg) (stroke-width 1.5)))
     ; Level 3: the middles of the two halves.
     (bracket _ (left 115) (right 235) (from (depth 2)) (to (depth 3)) (stroke fg) (stroke-width 1.5))
-    (repeat i 8
+    (repeat 8 i
       (circle _ (pos [(point-x i) top]) (r 5) (fill fg))))
 
   ; The depth axis on the left, and the level names on the right.
   (group 'axis'
     (line _ (from [40 top]) (to [40 (depth 3)]) (stroke muted) (stroke-width 1))
     (text _ '0' (pos [33 (- top 4)]) (halign 'end') (font note) (fill muted))
-    (repeat h 3
+    (repeat 3 h
       (let ((y (depth (+ h 1))))
         (line _ (from [36 y]) (to [40 y]) (stroke muted) (stroke-width 1))
         (text _ (cond ((= h 0) 'b') ((= h 1) 'b²') (else 'b³')) (pos [33 (- y 4)])

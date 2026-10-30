@@ -60,7 +60,7 @@ class TestSceneForm:
         assert g.members == [scn["a"]]
 
     def test_repeat_inside(self):
-        scn = compiled("(scene _ (repeat i 3 (circle $'c{i}')))")
+        scn = compiled("(scene _ (repeat 3 i (circle $'c{i}')))")
         assert len(scn.root.members) == 3
 
     def test_motif_instances_inside(self):
@@ -90,7 +90,7 @@ class TestSceneFormErrors:
             "(scene _) (text 't' 'hi')",
             "(scene _) (group 'g')",
             "(motif 'dot' (circle 'c')) (dot 'd') (scene _)",
-            "(scene _) (repeat i 2 (circle _))",
+            "(scene _) (repeat 2 i (circle _))",
         ],
     )
     def test_visual_objects_go_inside_the_scene(self, src):

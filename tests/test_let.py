@@ -78,11 +78,11 @@ class TestAroundMembers:
         assert get(m, "c", Circle).r == Free(3.0)
 
     def test_per_iteration_in_a_repeat(self):
-        m = scene("(repeat i 3 (let ((a (* i 10))) (circle $'c{i}' (x a))))")
+        m = scene("(repeat 3 i (let ((a (* i 10))) (circle $'c{i}' (x a))))")
         assert get(m, "c2", Circle).x == Free(20.0)
 
     def test_in_an_object_name(self):
-        m = scene("(repeat i 2 (let ((j (+ i 1))) (circle $'c{j}')))")
+        m = scene("(repeat 2 i (let ((j (+ i 1))) (circle $'c{j}')))")
         assert "c1" in m and "c2" in m
 
     def test_in_a_motif_body(self):
@@ -152,7 +152,7 @@ class TestEvaluation:
         assert ev.value(c, "x") == ev.value(c, "y") == ev.value(d, "r")
 
     def test_rand_is_new_in_each_iteration(self):
-        m, ev = ev_of("(repeat i 2 (let ((a (rand))) (circle $'c{i}' (x a))))")
+        m, ev = ev_of("(repeat 2 i (let ((a (rand))) (circle $'c{i}' (x a))))")
         assert ev.value(m["c0"], "x") != ev.value(m["c1"], "x")
 
     def test_rand_in_an_expression(self):

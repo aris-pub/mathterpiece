@@ -643,6 +643,36 @@ def _check_transition_durations(t: Any, default: float | None, pos: Pos):
             _check_transition_durations(part, inner, pos)
 
 
+# node with every use of name replaced by item: a bare name by item itself, and name.x by
+# item's x.
+def _rename(node: Node, name: str, item: Node) -> Node:
+    if isinstance(node, Name) and node.parts[0] == name:
+        if len(node.parts) == 1:
+            return item
+        if not isinstance(item, Name):
+            raise CompileError(f"{name} is a number here, so it has no parts", node.pos)
+        return Name((*item.parts, *node.parts[1:]), node.pos)
+    if isinstance(node, Form):
+        return Form(tuple(_rename(i, name, item) for i in node.items), node.pos)
+    if isinstance(node, ListLit):
+        return ListLit(tuple(_rename(i, name, item) for i in node.items), node.pos)
+    if isinstance(node, InterpStrLit):
+        return InterpStrLit(tuple(_rename_part(p, name, item) for p in node.parts), node.pos)
+    return node
+
+
+# A part of an interpolated string: text stays, and a name or {name:spec} is renamed. An item that
+# is not a name (a number from a list literal) cannot stand inside braces.
+def _rename_part(part: "str | Name | Field", name: str, item: Node) -> "str | Name | Field":
+    if isinstance(part, str):
+        return part
+    target = part.name if isinstance(part, Field) else part
+    renamed = _rename(target, name, item)
+    if not isinstance(renamed, Name):
+        raise CompileError(f"{name} is a number here, so it cannot go inside braces", target.pos)
+    return Field(renamed, part.spec, part.pos) if isinstance(part, Field) else renamed
+
+
 def _check_not_syntax(name: str, pos: Pos):
     if name in SYNTAX:
         raise CompileError(f"{name!r} is part of the language and cannot be used as a name", pos)
@@ -884,10 +914,10 @@ class _Compiler:
 
     def repeat[T](self, form: Form, env: Env, item: Callable[[Form, Env], list[T]]) -> list[T]:
         if len(form.items) < 3:
-            raise CompileError("repeat takes a variable, a count, and a body", form.pos)
-        var, count_node, *body = form.items[1:]
+            raise CompileError("repeat takes a count, a name for each step, and a body", form.pos)
+        count_node, var, *body = form.items[1:]
         if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
-            raise CompileError("the repeat variable must be a name", var.pos)
+            raise CompileError("the name after a repeat's count must be a plain name", var.pos)
         _check_not_syntax(var.parts[0], var.pos)
         count = self.expr(count_node, env)
         if not (isinstance(count, Const) and isinstance(count.value, int) and count.type == "int"):
@@ -1475,6 +1505,105 @@ class _Compiler:
             raise CompileError(found, node.pos)
         obj, attr, kind, _ = found
         return [(obj, attr, kind)]
+
+    # (map collection name body): one value per member of a group, or per item of a list. Group
+    # sizes and list lengths are known at compile time, so it unrolls into a list, with the name
+    # standing for collection[k] in the k-th copy of the body.
+    def map_form(self, node: Form, env: Env) -> Const | Dyn:
+        bodies = self.map_bodies(node, env)
+        values = [self.expr(b, env) for b in bodies]
+        for value in values:
+            if not isinstance(value, (Const, Dyn)) or not (
+                value.type in NUMERIC[:3] or value.type == PENDING
+            ):
+                raise CompileError("a map's body must be a number", node.items[3].pos)
+        kind = f"list{len(bodies)}"
+        if all(isinstance(v, Const) for v in values):
+            return Const(tuple(float(v.value) for v in values if isinstance(v, Const)), kind)  # ty: ignore[invalid-argument-type]
+        return Dyn(kind)
+
+    def map_bodies(self, node: Form, env: Env) -> list[Node]:
+        if len(node.items) != 4:
+            raise CompileError("map takes a collection, a name for each item, and a body", node.pos)
+        collection, var, body = node.items[1:]
+        return self.walk(collection, var, body, env, "map")
+
+    # One copy of body per item of collection, with var standing for the item.
+    def walk(self, collection: Node, var: Node, body: Node, env: Env, form: str) -> list[Node]:
+        if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
+            raise CompileError(
+                f"the name after a {form}'s collection must be a plain name", var.pos
+            )
+        name = var.parts[0]
+        _check_not_syntax(name, var.pos)
+        if isinstance(collection, ListLit):
+            return [_rename(body, name, item) for item in collection.items]
+        found = self.expr(collection, env) if isinstance(collection, Name) else None
+        if isinstance(found, ObjRef) and isinstance(found.obj, Group):
+            count = len(found.obj.members)
+        elif isinstance(found, (Const, Dyn)) and _list_len(found.type) is not None:
+            count = _list_len(found.type) or 0
+        else:
+            raise CompileError(f"{form} walks a group or a list", collection.pos)
+        assert isinstance(collection, Name)
+        return [
+            _rename(
+                body, name, Name((*collection.parts, IntLit(k, collection.pos)), collection.pos)
+            )
+            for k in range(count)
+        ]
+
+    # (reduce collection name (running start) body): the running value starts at start, and each
+    # item's copy of body gives the next one. It unrolls into nested lets, so the running value is
+    # computed once per step however often body uses it.
+    def reduce_form(self, node: Form, env: Env) -> Value:
+        running, start = self.reduce_parts(node)
+        first = self.expr(start, env)
+        bodies = self.walk(node.items[1], node.items[2], node.items[4], env, "reduce")
+        if bodies and isinstance(first, (Const, Dyn)):
+            step = self.expr(bodies[0], env | {running: Dyn(first.type)})
+            fits = isinstance(step, (Const, Dyn)) and (
+                _widens_to(step.type, first.type)
+                or (step.type in NUMERIC and first.type in NUMERIC)
+                or PENDING in (step.type, first.type)
+            )
+            if not fits:
+                raise CompileError(
+                    "a reduce's body must give the same type as its start", node.items[4].pos
+                )
+        return self.expr(self.reduce_unrolled(node, env), env)
+
+    def reduce_parts(self, node: Form) -> tuple[str, Node]:
+        if len(node.items) != 5:
+            raise CompileError(
+                "reduce takes a collection, a name for each item, the running value"
+                " (name start), and a body",
+                node.pos,
+            )
+        pair = node.items[3]
+        if not (
+            isinstance(pair, Form)
+            and len(pair.items) == 2
+            and isinstance(pair.items[0], Name)
+            and len(pair.items[0].parts) == 1
+            and isinstance(pair.items[0].parts[0], str)
+        ):
+            raise CompileError(
+                "the running value is written (name start), like (total 0)", pair.pos
+            )
+        name = pair.items[0].parts[0]
+        _check_not_syntax(name, pair.pos)
+        return name, pair.items[1]
+
+    def reduce_unrolled(self, node: Form, env: Env) -> Node:
+        running, start = self.reduce_parts(node)
+        bodies = self.walk(node.items[1], node.items[2], node.items[4], env, "reduce")
+        pos = node.pos
+        result: Node = Name((running,), pos)
+        for body in [start, *bodies][::-1]:
+            binding = Form((Form((Name((running,), pos), body), pos),), pos)
+            result = Form((Name(("let",), pos), binding, result), pos)
+        return result
 
     # A built-in ease by name, (step c), or the name of a function of one number.
     def ease(self, node: Node, env: Env) -> Ease:
@@ -2204,6 +2333,12 @@ class _Compiler:
     def resolve_refs(self, node: Node, env: Env) -> Node:
         if isinstance(node, Form) and _head(node) == "ref":
             return self.ref_name(node, env)
+        # A map is stored as the list it unrolls into, so backends never see it.
+        if isinstance(node, Form) and _head(node) == "map":
+            items = tuple(self.resolve_refs(b, env) for b in self.map_bodies(node, env))
+            return ListLit(items, node.pos)
+        if isinstance(node, Form) and _head(node) == "reduce":
+            return self.resolve_refs(self.reduce_unrolled(node, env), env)
         # Colors given to color functions are written as #rrggbbaa, so backends read one form.
         if isinstance(node, Form) and _head(node) in ("mix", "lighten", "darken"):
             items = tuple(
@@ -2424,6 +2559,10 @@ class _Compiler:
 
     def call(self, node: Form, env: Env) -> Value:
         head = _head(node)
+        if head == "map":
+            return self.map_form(node, env)
+        if head == "reduce":
+            return self.reduce_form(node, env)
         if head in TRANSITION_FORMS:
             return self.transition_form(head, node, env)
         if head in self.funcs:

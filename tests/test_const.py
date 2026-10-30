@@ -63,7 +63,7 @@ class TestConst:
         assert get(scene("(const 'g' 2) (text 't' $'g={g}')"), "t", Text).value == Free("g=2")
 
     def test_as_a_repeat_count(self):
-        m = scene("(const 'n' 3) (group 'g' (repeat i n (circle _)))")
+        m = scene("(const 'n' 3) (group 'g' (repeat n i (circle _)))")
         assert len(get(m, "g", Group).members) == 3
 
     def test_in_an_object_name(self):

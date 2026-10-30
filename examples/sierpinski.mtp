@@ -38,7 +38,7 @@
 
   (group 'gasket' (transform (translate 0 -2.2))
     (triangle 'outline' (center [0 0]) (r radius) (fill 'none') (stroke ink) (stroke-width 0.05))
-    (repeat i (^ 3 depth)
+    (repeat (^ 3 depth) i
       (let ((top (mod i 3)))
         (triangle _
           (center (spot i))

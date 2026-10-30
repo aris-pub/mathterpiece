@@ -337,7 +337,7 @@ class TestGroup:
             "(group 'g' (circle 'a') a)",
             "(circle 'a') (group 'g' a a)",
             "(group 'g' (group 'h' (circle 'a'))) (group 'k' a)",
-            "(circle 'a') (repeat i 2 (group $'g{i}' a))",
+            "(circle 'a') (repeat 2 i (group $'g{i}' a))",
             "(group 'g' (circle 'a')) (group 'h' g[0])",
         ],
     )
@@ -492,7 +492,7 @@ class TestTransform:
         assert transform_of(src) == Bound(expected)
 
     def test_loop_variable_is_free(self):
-        attr = transform_of("(repeat i 2 (canvas $'c{i}' (transform (rotate (* 90 i)))))", "c1")
+        attr = transform_of("(repeat 2 i (canvas $'c{i}' (transform (rotate (* 90 i)))))", "c1")
         assert applied(attr, 1, 0) == (0, 1)
 
     @pytest.mark.parametrize(
@@ -541,66 +541,66 @@ class TestToplevel:
 
 class TestRepeat:
     def test_toplevel_repeat_splices(self):
-        scn = scene("(repeat i 3 (circle $'c{i}' (x i)))")
+        scn = scene("(repeat 3 i (circle $'c{i}' (x i)))")
         assert [obj.name for obj in user_objects(scn)] == ["c0", "c1", "c2"]
         assert [get(scn, f"c{i}", Circle).x for i in range(3)] == [Free(0.0), Free(1.0), Free(2.0)]
 
     def test_repeat_in_group(self):
-        scn = scene("(group 'g' (repeat i 2 (circle $'c{i}')))")
+        scn = scene("(group 'g' (repeat 2 i (circle $'c{i}')))")
         assert [m.name for m in get(scn, "g", Group).members] == ["c0", "c1"]
 
     def test_repeat_in_canvas(self):
-        scn = scene("(circle 'c0') (circle 'c1') (canvas 'cnv' (repeat i 2 (ref $'c{i}')))")
+        scn = scene("(circle 'c0') (circle 'c1') (canvas 'cnv' (repeat 2 i (ref $'c{i}')))")
         assert [m.name for m in get(scn, "cnv", Canvas).members] == ["c0", "c1"]
 
     def test_repeat_next_to_other_members(self):
-        scn = scene("(group 'g' (circle 'a') (repeat i 2 (circle $'c{i}')) (circle 'b'))")
+        scn = scene("(group 'g' (circle 'a') (repeat 2 i (circle $'c{i}')) (circle 'b'))")
         assert [m.name for m in get(scn, "g", Group).members] == ["a", "c0", "c1", "b"]
 
     def test_several_body_forms_by_iteration(self):
-        scn = scene("(repeat i 2 (circle $'c{i}') (text $'t{i}' 'x'))")
+        scn = scene("(repeat 2 i (circle $'c{i}') (text $'t{i}' 'x'))")
         assert [obj.name for obj in user_objects(scn)] == ["c0", "t0", "c1", "t1"]
 
     def test_zero_times(self):
-        assert user_objects(scene("(repeat i 0 (circle $'c{i}'))")) == []
+        assert user_objects(scene("(repeat 0 i (circle $'c{i}'))")) == []
 
     def test_count_from_constant_expression(self):
-        assert len(user_objects(scene("(repeat i (+ 1 2) (circle $'c{i}'))"))) == 3
+        assert len(user_objects(scene("(repeat (+ 1 2) i (circle $'c{i}'))"))) == 3
 
     def test_loop_variable_in_constant_expression(self):
-        scn = scene("(repeat i 2 (circle $'c{i}' (x (* i 2))))")
+        scn = scene("(repeat 2 i (circle $'c{i}' (x (* i 2))))")
         assert get(scn, "c1", Circle).x == Free(2.0)
 
     def test_count_from_outer_loop_variable(self):
-        scn = scene("(repeat i 3 (repeat j i (circle $'c{i}{j}')))")
+        scn = scene("(repeat 3 i (repeat i j (circle $'c{i}{j}')))")
         assert [obj.name for obj in user_objects(scn)] == ["c10", "c20", "c21"]
 
     def test_nested_repeat(self):
-        scn = scene("(repeat i 2 (repeat j 2 (circle $'c{i}{j}' (x j) (y i))))")
+        scn = scene("(repeat 2 i (repeat 2 j (circle $'c{i}{j}' (x j) (y i))))")
         assert [obj.name for obj in user_objects(scn)] == ["c00", "c01", "c10", "c11"]
         c10 = get(scn, "c10", Circle)
         assert (c10.x, c10.y) == (Free(0.0), Free(1.0))
 
     def test_inner_loop_variable_shadows_and_restores_outer(self):
         scn = scene(
-            "(repeat i 2 (group $'g{i}' (repeat i 3 (circle _ (x i)))) (circle $'b{i}' (x i)))"
+            "(repeat 2 i (group $'g{i}' (repeat 3 i (circle _ (x i)))) (circle $'b{i}' (x i)))"
         )
         assert [get(scn, f"b{i}", Circle).x for i in range(2)] == [Free(0.0), Free(1.0)]
         members = get(scn, "g1", Group).members
         assert [m.x for m in members if isinstance(m, Circle)] == [Free(0.0), Free(1.0), Free(2.0)]
 
     def test_loop_variable_is_not_in_the_scene(self):
-        error("(repeat i 2 (circle $'c{i}')) (real 'k' i)", match="i")
+        error("(repeat 2 i (circle $'c{i}')) (real 'k' i)", match="i")
 
     def test_same_name_each_iteration_is_duplicate(self):
-        error("(repeat i 2 (circle 'a'))", match="'a'")
+        error("(repeat 2 i (circle 'a'))", match="'a'")
 
     def test_loop_variable_must_be_a_name(self):
-        error("(repeat 'i' 2 (circle $'c{i}'))")
+        error("(repeat 2 'i' (circle $'c{i}'))")
 
     @pytest.mark.parametrize("count", ["2.5", "-1", "1/2", "'x'", "true", "k", "(rand)"])
     def test_invalid_count(self, count):
-        error(f"(real 'k') (repeat i {count} (circle _))")
+        error(f"(real 'k') (repeat {count} i (circle _))")
 
     def test_missing_count(self):
         error("(repeat i)")
@@ -650,7 +650,7 @@ class TestCycles:
         error(src, match=f"circular.*{path}")
 
     def test_cycle_in_a_repeat(self):
-        error("(repeat i 2 (circle $'c{i}' (x (+ i self.x))))", match="c0.x")
+        error("(repeat 2 i (circle $'c{i}' (x (+ i self.x))))", match="c0.x")
 
     def test_position_is_the_first_attribute_in_the_cycle(self):
         err = error("(circle 'c'\n  (r 1)\n  (x self.y)\n  (y self.x))")
@@ -709,24 +709,24 @@ class TestSelf:
         error("(group 'g' self)")
 
     def test_undefined_outside_definitions(self):
-        error("(repeat i self.x (circle _))", match="self")
+        error("(repeat self.x i (circle _))", match="self")
 
 
 class TestLoopVariablesInBoundExpressions:
     def test_replaced_by_their_value(self):
-        scn = scene("(real 'k') (repeat i 2 (circle $'c{i}' (x (* i k))))")
+        scn = scene("(real 'k') (repeat 2 i (circle $'c{i}' (x (* i k))))")
         assert get(scn, "c1", Circle).x == Bound(Form((n("*"), IntLit(1), n("k"))))
 
     def test_replaced_inside_an_index(self):
-        scn = scene("(group 'g' (circle 'a') (circle 'b')) (repeat i 2 (real $'k{i}' g[i].r))")
+        scn = scene("(group 'g' (circle 'a') (circle 'b')) (repeat 2 i (real $'k{i}' g[i].r))")
         assert get(scn, "k1", Real).value == Bound(n("g", IntLit(1), "r"))
 
     def test_replaced_inside_interpolated_text(self):
-        scn = scene("(real 'k') (repeat i 2 (text $'t{i}' $'{i}: {k}'))")
+        scn = scene("(real 'k') (repeat 2 i (text $'t{i}' $'{i}: {k}'))")
         assert get(scn, "t1", Text).value == Bound(InterpStrLit(("1: ", n("k"))))
 
     def test_inner_variable_wins(self):
-        scn = scene("(real 'k') (repeat i 1 (repeat i 3 (circle $'c{i}x' (x (* i k)))))")
+        scn = scene("(real 'k') (repeat 1 i (repeat 3 i (circle $'c{i}x' (x (* i k)))))")
         assert get(scn, "c2x", Circle).x == Bound(Form((n("*"), IntLit(2), n("k"))))
 
 
@@ -876,7 +876,7 @@ class TestMod:
         assert real_of("(mod 1/2 1/3)") == Free(pytest.approx(1 / 6))
 
     def test_two_ints_give_an_int(self):
-        scn = scene("(group 'g' (repeat i (mod 7 3) (circle _)))")
+        scn = scene("(group 'g' (repeat (mod 7 3) i (circle _)))")
         assert len(get(scn, "g", Group).members) == 1
 
     def test_bound(self):
@@ -1064,13 +1064,13 @@ class TestRef:
 
     def test_generated_name_in_repeat(self):
         scn = scene(
-            "(repeat i 2 (circle $'c{i}')) (repeat i 2 (circle $'d{i}' (x (ref $'c{i}.x'))))"
+            "(repeat 2 i (circle $'c{i}')) (repeat 2 i (circle $'d{i}' (x (ref $'c{i}.x'))))"
         )
         assert get(scn, "d1", Circle).x == Bound(n("c1", "x"))
 
     def test_indexing_in_the_path(self):
         scn = scene(
-            "(group 'g' (circle _ (r 3)) (circle _)) (repeat i 2 (real $'k{i}' (ref $'g[{i}].r')))"
+            "(group 'g' (circle _ (r 3)) (circle _)) (repeat 2 i (real $'k{i}' (ref $'g[{i}].r')))"
         )
         assert get(scn, "k0", Real).value == Bound(n("g", IntLit(0), "r"))
 
@@ -1090,7 +1090,7 @@ class TestRef:
         assert get(scn, "cnv", Canvas).members == [scn["a"]]
 
     def test_members_from_repeat(self):
-        scn = scene("(repeat i 2 (circle $'c{i}')) (canvas 'cnv' (repeat i 2 (ref $'c{i}')))")
+        scn = scene("(repeat 2 i (circle $'c{i}')) (canvas 'cnv' (repeat 2 i (ref $'c{i}')))")
         assert get(scn, "cnv", Canvas).members == [scn["c0"], scn["c1"]]
 
     def test_type_is_checked(self):

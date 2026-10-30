@@ -172,7 +172,7 @@ class TestPos:
 
 class TestInStoredExpressions:
     def test_loop_variable_in_a_list(self):
-        m = scene("(real 'k') (repeat i 2 (circle $'c{i}' (pos [i k])))")
+        m = scene("(real 'k') (repeat 2 i (circle $'c{i}' (pos [i k])))")
         c = get(m, "c1", Circle)
         assert isinstance(c.x, Bound)
         assert Evaluator(m, random.Random(0)).value(c, "x") == 1.0

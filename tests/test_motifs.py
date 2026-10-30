@@ -147,7 +147,7 @@ class TestLibraryForms:
 
     @pytest.mark.parametrize("name", SYNTAX)
     def test_syntax_names_are_not_loop_variables(self, name):
-        error(f"(repeat {name} 2 (circle _))", match=name)
+        error(f"(repeat 2 {name} (circle _))", match=name)
 
 
 class TestInstance:
@@ -205,7 +205,7 @@ class TestInstance:
         assert all(isinstance(m, Motif) for m in get(scn, "g", Group).members)
 
     def test_instances_in_repeat(self):
-        scn = scene(f"{DOT} (repeat i 3 (dot $'d{{i}}' (x i) (r (+ i 1))))")
+        scn = scene(f"{DOT} (repeat 3 i (dot $'d{{i}}' (x i) (r (+ i 1))))")
         assert member(get(scn, "d2", Motif), "c", Circle).r == Free(3.0)
 
     @pytest.mark.parametrize(

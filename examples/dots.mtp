@@ -3,7 +3,7 @@
     (circle 'teal_c' (r 3.5) (x -5.0) (y 4.0) (stroke 'teal') (stroke-width 0.1) (fill 'none'))
     (circle 'red_c' (r 1.2) (x 3.5) (y -2.0) (stroke 'red') (stroke-width 0.1) (fill 'none')))
   (group 'dots'
-    (repeat i 150
+    (repeat 150 i
       (circle $'dot{i}'
         (r (rand 0 0.25)) (pos [(rand -10 10) (rand -10 10)]) (opacity 0.25)
         (fill
