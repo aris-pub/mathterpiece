@@ -518,6 +518,7 @@ def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
 
 
 TRANSITION_FORMS = ("transition", "in-order", "wait")
+LIST_OPS = ("sort", "sort-asc", "sort-desc", "reverse")
 # Paths through how a thing is drawn, which canvases show and hide things along.
 VIEW_PATHS = ("fade",)
 
@@ -1543,6 +1544,8 @@ class _Compiler:
         found = self.expr(collection, env) if isinstance(collection, Name) else None
         if isinstance(found, ObjRef) and isinstance(found.obj, Group):
             count = len(found.obj.members)
+        elif isinstance(found, Dyn) and found.type.startswith("objs"):
+            count = int(found.type[4:].split(":")[0])
         elif isinstance(found, (Const, Dyn)) and _list_len(found.type) is not None:
             count = _list_len(found.type) or 0
         else:
@@ -1554,6 +1557,81 @@ class _Compiler:
             )
             for k in range(count)
         ]
+
+    # (sort list), (sort-asc list), (sort-desc list), (reverse list), and (sort group name key):
+    # the members of a group ordered by a key, as a list of objects. Which comes first is only
+    # known while drawing, so these run then, and fold when their input is known.
+    def list_op(self, head: str, node: Form, env: Env) -> Const | Dyn:
+        args = node.items[1:]
+        sorts = head != "reverse"
+        if sorts and len(args) == 3:
+            group, kind = self.sort_group(node, env)
+            keys = self.walk(args[0], args[1], args[2], env, "sort")
+            for key in keys:
+                value = self.expr(key, env)
+                if not (isinstance(value, (Const, Dyn)) and value.type in (*NUMERIC[:3], PENDING)):
+                    raise CompileError("the key of a sort must be a number", args[2].pos)
+            return Dyn(f"objs{len(group.members)}:{kind}")
+        what = (
+            f"{head} sorts a list of numbers, or the members of a group by a key"
+            if sorts
+            else "reverse reverses a list"
+        )
+        if len(args) != 1:
+            raise CompileError(what, node.pos)
+        value = self.expr(args[0], env)
+        if not sorts and isinstance(value, Dyn) and value.type.startswith("objs"):
+            return value
+        if not isinstance(value, (Const, Dyn)) or _list_len(value.type) is None:
+            raise CompileError(what, args[0].pos)
+        if isinstance(value, Const):
+            items = list(value.value)  # ty: ignore[invalid-argument-type]
+            if head == "reverse":
+                items.reverse()
+            else:
+                items.sort(reverse=head == "sort-desc")
+            return Const(tuple(items), value.type)
+        return value
+
+    def sort_group(self, node: Form, env: Env) -> tuple[Group, str]:
+        collection = node.items[1]
+        found = self.expr(collection, env) if isinstance(collection, Name) else None
+        if not (isinstance(found, ObjRef) and isinstance(found.obj, Group)):
+            raise CompileError(
+                f"{_head(node)} sorts a list of numbers, or the members of a group by a key",
+                collection.pos,
+            )
+        kinds = {self.kind_of(m) for m in found.obj.members}
+        if len(kinds) > 1:
+            raise CompileError(
+                "the members of a group sorted by key must all be the same kind of shape",
+                collection.pos,
+            )
+        return found.obj, next(iter(kinds), "circle")
+
+    # The form name of an object's kind: circle, rect, ..., or its motif's name.
+    def kind_of(self, obj: Obj) -> str:
+        if isinstance(obj, Motif):
+            return obj.kind
+        return next(name for name, spec in FORMS.items() if spec.cls is type(obj))
+
+    # A list operation as stored: sort is written sort-asc, and sorting by key becomes
+    # (sort-by direction member key member key ...).
+    def list_op_node(self, node: Form, env: Env) -> Node:
+        head = str(_head(node))
+        pos = node.pos
+        if len(node.items) == 4:
+            collection = node.items[1]
+            assert isinstance(collection, Name)
+            self.sort_group(node, env)
+            keys = self.walk(collection, node.items[2], node.items[3], env, "sort")
+            pairs: list[Node] = []
+            for k, key in enumerate(keys):
+                pairs += [Name((*collection.parts, IntLit(k, pos)), pos), key]
+            direction = StrLit("desc" if head == "sort-desc" else "asc", pos)
+            return Form((Name(("sort-by",), pos), direction, *pairs), pos)
+        op = "sort-asc" if head == "sort" else head
+        return Form((Name((op,), pos), *node.items[1:]), pos)
 
     # (reduce collection name (running start) body): the running value starts at start, and each
     # item's copy of body gives the next one. It unrolls into nested lets, so the running value is
@@ -2372,6 +2450,11 @@ class _Compiler:
             return ListLit(items, node.pos)
         if isinstance(node, Form) and _head(node) == "reduce":
             return self.resolve_refs(self.reduce_unrolled(node, env), env)
+        if isinstance(node, Form) and _head(node) in LIST_OPS and _head(node) not in self.funcs:
+            stored = self.list_op_node(node, env)
+            assert isinstance(stored, Form)
+            args = tuple(self.resolve_refs(item, env) for item in stored.items[1:])
+            return Form((stored.items[0], *args), node.pos)
         if (
             isinstance(node, Form)
             and _head(node) in ("sum", "count")
@@ -2437,6 +2520,8 @@ class _Compiler:
 
     def list_part(self, value: Value, part: str | Node, env: Env, pos: Pos) -> Value:
         assert isinstance(value, (Const, Dyn))
+        if isinstance(value, Dyn) and value.type.startswith(("objs", "obj:")):
+            return self.object_list_part(value, part, env, pos)
         n = _list_len(value.type)
         if n is None:
             raise CompileError(f"a {value.type} has no parts", pos)
@@ -2544,6 +2629,8 @@ class _Compiler:
             return self.self_access(current.cls, part, pos)
         if isinstance(current, (Const, Dyn)) and _list_len(current.type) is not None:
             return self.list_part(current, part, env, pos)
+        if isinstance(current, Dyn) and current.type.startswith(("objs", "obj:")):
+            return self.list_part(current, part, env, pos)
         if not isinstance(current, ObjRef):
             raise CompileError("only objects and lists have parts", pos)
         obj = current.obj
@@ -2573,6 +2660,36 @@ class _Compiler:
         if part not in attrs or variadic(type(obj)) is attrs[part]:
             raise CompileError(f"{obj.name!r} has no attribute {part!r}", pos)
         return Dyn(_expected_type(type(obj), part))
+
+    # A part of a list of objects (an index gives one of them, known only while drawing), or an
+    # attribute of such an object, typed by the kind of shape all of them are.
+    def object_list_part(self, current: Dyn, part: str | Node, env: Env, pos: Pos) -> Value:
+        if current.type.startswith("objs"):
+            count, kind = current.type[4:].split(":")
+            if isinstance(part, str):
+                raise CompileError("a list of objects is indexed by number", pos)
+            index = self.expr(part, env)
+            if not (isinstance(index, Const) and index.type == "int"):
+                raise CompileError("an index must be an int known at compile time", part.pos)
+            i = index.value
+            assert isinstance(i, int)
+            if not -int(count) <= i < int(count):
+                raise CompileError(f"a list of {count} objects has no part {i}", pos)
+            return Dyn(f"obj:{kind}")
+        kind = current.type[4:]
+        if not isinstance(part, str):
+            raise CompileError("only lists and groups can be indexed", pos)
+        if kind in self.motifs and part in self.motifs[kind].params:
+            return Dyn(self.motifs[kind].params[part].type)
+        cls = Motif if kind in self.motifs else FORMS[kind].cls
+        attrs = attributes(cls)
+        if part == "pos" and {"x", "y"} <= attrs.keys():
+            return Dyn("list2")
+        if part in PROPERTIES.get(cls, {}):
+            return Dyn(PROPERTIES[cls][part])
+        if part not in attrs or variadic(cls) is attrs[part]:
+            raise CompileError(f"a {kind} has no attribute {part!r}", pos)
+        return Dyn(_expected_type(cls, part))
 
     def self_access(self, cls: type[Obj], part: str | Node, pos: Pos) -> Value:
         attrs = attributes(cls)
@@ -2609,6 +2726,8 @@ class _Compiler:
             return self.transition_form(head, node, env)
         if head in self.funcs:
             return self.func_call(head, node, env)
+        if head in LIST_OPS:
+            return self.list_op(head, node, env)
         if head in ARITHMETIC:
             return self.arithmetic(head, node, env)
         if head in COMPARISONS:
@@ -2806,6 +2925,8 @@ class _Compiler:
                 point = {"x", "y"} <= attributes(value.cls).keys()
             elif isinstance(value, ObjRef):
                 point = {"x", "y"} <= attributes(type(value.obj)).keys()
+            elif isinstance(value, Dyn) and value.type.startswith("obj:"):
+                point = True
             else:
                 point = None
             if isinstance(value, (Const, Dyn)) and _list_len(value.type) is not None:
@@ -2825,7 +2946,9 @@ class _Compiler:
         if sig is None:
             raise CompileError(f"no form of {name} takes these arguments", node.pos)
         sizes = {
-            _list_len(v.type) if isinstance(v, (Const, Dyn)) else 2
+            _list_len(v.type)
+            if isinstance(v, (Const, Dyn)) and not v.type.startswith("obj:")
+            else 2
             for v, kind in zip(values, kinds, strict=True)
             if kind == "point"
         }

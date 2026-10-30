@@ -240,6 +240,15 @@ export class Runtime {
     if (op === "mix") return mixCss(args[0], args[1], args[2] as number);
     if (op === "lighten") return mixCss(args[0], "white", args[1] as number);
     if (op === "darken") return mixCss(args[0], "black", args[1] as number);
+    if (op === "sort-asc") return [...(args[0] as number[])].sort((a, b) => a - b);
+    if (op === "sort-desc") return [...(args[0] as number[])].sort((a, b) => b - a);
+    if (op === "reverse") return [...(args[0] as unknown[])].reverse();
+    if (op === "sort-by") {
+      const pairs: [unknown, number][] = [];
+      for (let k = 1; k < args.length; k += 2) pairs.push([args[k], args[k + 1] as number]);
+      const sign = args[0] === "desc" ? -1 : 1;
+      return pairs.sort((a, b) => sign * (a[1] - b[1])).map(([member]) => member);
+    }
     const fn = STDLIB[op];
     if (fn) return fn(this.rng, ...args.map((a) => (a instanceof Ref ? this.point(a.id) : a)));
     throw new MtpError(`unknown function ${op}`);

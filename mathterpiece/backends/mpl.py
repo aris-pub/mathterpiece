@@ -220,6 +220,14 @@ class Runtime:
             return same(*args) == (op == "color=")
         if op == "transform":
             return compose(*args)
+        if op in ("sort-asc", "sort-desc"):
+            return tuple(sorted(args[0], reverse=op == "sort-desc"))
+        if op == "reverse":
+            return tuple(reversed(args[0]))
+        if op == "sort-by":
+            pairs = list(zip(args[1::2], args[2::2], strict=True))
+            pairs.sort(key=lambda pair: pair[1], reverse=args[0] == "desc")
+            return tuple(member for member, _ in pairs)
         if op in STDLIB:
             fn = STDLIB[op]
             kinds = [

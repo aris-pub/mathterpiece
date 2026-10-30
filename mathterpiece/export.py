@@ -98,6 +98,7 @@ KINDS: dict[type[Obj], str] = {
     State: "state",
 }
 OPERATORS = ARITHMETIC | set(COMPARISONS) | {"^", "mod", "abs", "transform"}
+OPERATORS |= {"sort-asc", "sort-desc", "reverse", "sort-by"}
 COLOR_FUNCTIONS = {"mix", "lighten", "darken"}
 
 
@@ -407,7 +408,8 @@ class _Writer:
             return self.list_parts(["read", obj, part], rest[1:], ctx)
         for i, part in enumerate(rest):
             if isinstance(obj, (Real, Local, Color, Bool, Toggle)):
-                return self.list_parts(["read", self.id(obj), "value"], rest[i:], ctx)
+                objects = isinstance(obj, Local) and obj.type.startswith("objs")
+                return self.list_parts(["read", self.id(obj), "value"], rest[i:], ctx, objects)
             if isinstance(part, str):
                 if isinstance(obj, Motif) and part in obj.params:
                     return self.list_parts(["param", self.id(obj), part], rest[i + 1 :], ctx)
@@ -433,9 +435,13 @@ class _Writer:
             out.append(None if ctx.frame is None else self.id(ctx.frame))
         return out
 
-    def list_parts(self, base: Any, rest: list, ctx: _Context) -> Any:
-        for part in rest:
-            if isinstance(part, str):
+    # Parts of a list. In a list of objects, a name after the index is an attribute of whichever
+    # object is there while drawing.
+    def list_parts(self, base: Any, rest: list, ctx: _Context, objects: bool = False) -> Any:
+        for k, part in enumerate(rest):
+            if objects and k > 0 and isinstance(part, str):
+                base = ["read", base, part]
+            elif isinstance(part, str):
                 base = ["part", base, AXES[part]]
             elif isinstance(part, IntLit):
                 base = ["part", base, part.value]
@@ -584,6 +590,17 @@ def _depends(doc: dict) -> dict[str, list[str]]:
             i = objects[i].get("parent")
         return out
 
+    # The objects a computed read target can be: every object referred to inside it, following
+    # the values of hidden lets (a sorted list of members is one).
+    def candidates(expr: Any) -> set[int]:
+        if not isinstance(expr, list):
+            return set()
+        if expr[:1] == ["obj"]:
+            return {expr[1]}
+        if expr[:1] == ["read"] and isinstance(expr[1], int) and expr[2] == "value":
+            return candidates(objects[expr[1]].get("attrs", {}).get("value"))
+        return set().union(*(candidates(item) for item in expr[1:])) if expr else set()
+
     def reads(expr: Any, seen: frozenset[str] = frozenset()) -> set[tuple[int, str]]:
         found: set[tuple[int, str]] = set()
         if not isinstance(expr, list) or not expr or not isinstance(expr[0], str):
@@ -597,6 +614,9 @@ def _depends(doc: dict) -> dict[str, list[str]]:
             if len(expr) == 4:
                 found |= {(expr[1], "x"), (expr[1], "y")}
                 found |= set(chain(objects[expr[1]].get("parent"))) | set(chain(expr[3]))
+        elif op == "read":
+            for i in candidates(expr[1]):
+                found |= {(i, expr[2]), (i, "x"), (i, "y")} | set(chain(objects[i].get("parent")))
         elif op == "param":
             found.add((expr[1], expr[2]))
         elif op == "obj":

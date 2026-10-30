@@ -191,3 +191,57 @@ describe("stdlib", () => {
     expect(() => STDLIB.tand?.(rng, 90)).toThrow();
   });
 });
+
+describe("sorting", () => {
+  const list = (...xs: unknown[]) => ["list", ...xs];
+
+  it.each([
+    ["sort-asc", [1, 2, 3]],
+    ["sort-desc", [3, 2, 1]],
+    ["reverse", [2, 1, 3]],
+  ])("%s", (op, expected) => {
+    const rt = new Runtime(doc([real("v", [op, list(3, 1, 2)])]));
+    expect([0, 1, 2].map((k) => rt.eval(["part", ["read", 0, "value"], k], null, {}))).toEqual(expected);
+  });
+
+  // Circles a (r 3, x 1), b (r 1, x 2), c (r 2, x 3); v holds them by r, w reads the first one's x.
+  function members(direction: string) {
+    const d = doc([
+      circle("a", { r: 3, x: 1 }),
+      circle("b", { r: 1, x: 2 }),
+      circle("c", { r: 2, x: 3 }),
+      {
+        kind: "value",
+        name: "v",
+        attrs: {
+          value: ["sort-by", direction, ...[0, 1, 2].flatMap((i) => [["obj", i], ["read", i, "r"]])],
+        },
+      },
+      real("w", ["read", ["part", ["read", 3, "value"], 0], "x"]),
+    ]);
+    d.depends = Object.fromEntries(
+      [0, 1, 2].flatMap((i) => [
+        [`${i}.r`, ["3.value", "4.value"]],
+        [`${i}.x`, ["3.value", "4.value"]],
+      ]),
+    );
+    return new Runtime(d);
+  }
+
+  it("orders members by their key", () => {
+    expect(members("asc").value(4, "value")).toBe(2);
+    expect(members("desc").value(4, "value")).toBe(1);
+  });
+
+  it("follows the scene", () => {
+    const rt = members("asc");
+    expect(rt.value(4, "value")).toBe(2);
+    rt.write(2, "r", 0.5);
+    expect(rt.value(4, "value")).toBe(3);
+  });
+
+  it("reverses a list of members", () => {
+    const rt = members("asc");
+    expect(rt.eval(["read", ["part", ["reverse", ["read", 3, "value"]], 0], "x"], null, {})).toBe(1);
+  });
+});
