@@ -201,3 +201,21 @@ describe("the best-embedding example", () => {
     expect(rt.value(names.u!, "y")).toBeCloseTo(3);
   });
 });
+
+describe("<mtp-readout>", () => {
+  it("shows a string from the scene inline, and follows changes", async () => {
+    const { model, rt } = await page("best-embedding", `<p>The <mtp-readout model="m" name="distortion"></mtp-readout> so far.</p>`);
+    const el = document.querySelector("mtp-readout")!;
+    expect(el.textContent).toBe("1.155");
+    const names = example("best-embedding").names;
+    rt.write(names.u!, "y", 4.5);
+    model.changed();
+    expect(el.textContent).toBe("1.732");
+    expect(el.closest("p")?.textContent).toBe("The 1.732 so far.");
+  });
+
+  it("says when there is no such readout", async () => {
+    await page("best-embedding", `<mtp-readout model="m" name="readout"></mtp-readout>`);
+    expect(document.querySelector("mtp-readout")?.textContent).toMatch(/readout is a text, not a readout/);
+  });
+});

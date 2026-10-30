@@ -27,6 +27,7 @@ from mathterpiece.model import (
     Motif,
     Obj,
     Play,
+    Readout,
     Real,
     Rect,
     Root,
@@ -137,6 +138,7 @@ FORMS = {
     "real": FormSpec(Real, ("value",)),
     "group": FormSpec(Group),
     "canvas": FormSpec(Canvas),
+    "readout": FormSpec(Readout, ("value",)),
 }
 
 

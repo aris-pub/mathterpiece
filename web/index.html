@@ -32,6 +32,16 @@
         controls.replaceChildren();
         document.getElementById("m").doc = doc;
         for (const o of doc.objects) {
+          if (o.kind === "readout") {
+            const p = document.createElement("p");
+            p.append(`A sentence with the readout ${o.name} in it: `);
+            const el = document.createElement("mtp-readout");
+            el.setAttribute("model", "m");
+            el.setAttribute("name", o.name);
+            p.append(el, ", and then the sentence goes on.");
+            controls.append(p);
+            continue;
+          }
           if (!["slider", "button", "steps", "play"].includes(o.kind)) continue;
           const el = document.createElement(`mtp-${o.kind}`);
           el.setAttribute("model", "m");

@@ -149,6 +149,12 @@ class View(Obj):
     pass
 
 
+# Shows a string from the scene in the page, inline in prose, as the scene changes.
+@dataclass(kw_only=True)
+class Readout(View):
+    value: Attr[str] = Free("")
+
+
 @dataclass(kw_only=True)
 class Canvas(View):
     # SVG viewBox, except that y points up, so view-y is the bottom edge.

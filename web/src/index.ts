@@ -6,6 +6,7 @@ export {
   MtpCanvas,
   MtpModel,
   MtpPlay,
+  MtpReadout,
   MtpSlider,
   MtpSteps,
   define,

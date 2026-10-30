@@ -7,6 +7,15 @@
 (const 'ink' '#1f2a44')
 (const 'unit' 3)
 
+; How much a drawing stretches each pair, against its distance in the space: the most stretched
+; pair divided by the least stretched. Two points drawn on top of each other give infinity.
+(func 'distortion' (params (c [0.0 0.0]) (u [0.0 0.0]) (v [0.0 0.0]) (w [0.0 0.0]))
+  (let ((cu (/ (dist c u) unit)) (cv (/ (dist c v) unit)) (cw (/ (dist c w) unit))
+        (uv (/ (dist u v) (* 2 unit))) (vw (/ (dist v w) (* 2 unit))) (wu (/ (dist w u) (* 2 unit)))
+        (most (max cu cv cw uv vw wu))
+        (least (min cu cv cw uv vw wu)))
+    (if (> least 0) (/ most least) infty)))
+
 (scene 'plane'
   (rect 'backdrop' (center [0 0]) (size [20 14]) (fill paper))
   ; Edges come after the points they join, so they are drawn on top (see mtp-jez).
@@ -24,16 +33,13 @@
   (text _ 'u' (pos (+ u.pos [0.4 0.4])) (font-size 0.6) (fill ink))
   (text _ 'v' (pos (+ v.pos [0.4 0.4])) (font-size 0.6) (fill ink))
   (text _ 'w' (pos (+ w.pos [0.4 0.4])) (font-size 0.6) (fill ink))
-  ; How much the drawing stretches each pair, against its distance in the space.
   (text 'readout'
-    (let ((cu (/ (dist c u) unit)) (cv (/ (dist c v) unit)) (cw (/ (dist c w) unit))
-          (uv (/ (dist u v) (* 2 unit))) (vw (/ (dist v w) (* 2 unit))) (wu (/ (dist w u) (* 2 unit)))
-          (most (max cu cv cw uv vw wu))
-          (least (min cu cv cw uv vw wu))
-          (distortion (if (> least 0) (/ most least) infty)))
-      $'distortion {distortion:.3f}')
+    (let ((d (distortion c.pos u.pos v.pos w.pos))) $'distortion {d:.3f}')
     (pos [-9.5 5.8]) (font-size 0.7) (fill ink))
   (text _ 'best possible 1.155' (pos [3.5 5.8]) (font-size 0.5) (fill ink) (opacity 0.6)))
+
+(readout 'distortion'
+  (let ((d (distortion c.pos u.pos v.pos w.pos))) $'{d:.3f}'))
 
 (canvas 'view' (view-x -10) (view-y -7) (view-width 20) (view-height 14) plane)
 

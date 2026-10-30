@@ -206,6 +206,23 @@ function scenePoint(rt: Runtime, canvas: number, svg: SVGSVGElement, event: Poin
   return toUser.inverse().apply(ux, uy);
 }
 
+// A string from the scene, inline in the page's prose; the page's CSS styles it.
+export class MtpReadout extends MtpPart {
+  private sync: () => void = () => {};
+
+  protected setup(_model: MtpModel, rt: Runtime): void {
+    const readout = this.find(rt, "readout");
+    this.sync = () => {
+      this.textContent = String(rt.value(readout.id, "value"));
+    };
+    this.sync();
+  }
+
+  protected update(): void {
+    this.sync();
+  }
+}
+
 export class MtpSlider extends MtpPart {
   private sync: () => void = () => {};
 
@@ -303,6 +320,7 @@ export class MtpPlay extends MtpPart {
 const ELEMENTS: Record<string, CustomElementConstructor> = {
   "mtp-model": MtpModel,
   "mtp-canvas": MtpCanvas,
+  "mtp-readout": MtpReadout,
   "mtp-slider": MtpSlider,
   "mtp-button": MtpButton,
   "mtp-steps": MtpSteps,
