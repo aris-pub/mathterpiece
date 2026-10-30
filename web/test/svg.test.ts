@@ -118,6 +118,11 @@ describe("shapes", () => {
     expect([r.getAttribute("x"), r.getAttribute("y")]).toEqual(["0", "0"]);
   });
 
+  it("rounds a rect's corners", () => {
+    const r = draw(scene([shape("rect", { width: 3, height: 2, rx: 0.5, ry: 0.25 })]), 0).querySelector("rect")!;
+    expect([r.getAttribute("rx"), r.getAttribute("ry")]).toEqual(["0.5", "0.25"]);
+  });
+
   it("draws ellipses, lines and triangles", () => {
     const svg = draw(
       scene([

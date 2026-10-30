@@ -5,6 +5,7 @@ from helpers import with_scene
 
 from mathterpiece.backends.mpl import Evaluator, render
 from mathterpiece.compiler import CompileError, compile_model
+from mathterpiece.export import to_json
 from mathterpiece.model import Bound, Ellipse, Free, Line, Rect, Triangle, attributes
 
 
@@ -213,3 +214,23 @@ class TestDrawing:
     def test_in_a_motif_with_inherited_fill(self):
         patch, _ = drawn("(motif 'm' (rect 'r')) (m 'd' (fill 'red')) (canvas 'cnv' d)")
         assert patch.get_facecolor()[:3] == (1, 0, 0)
+
+
+class TestRoundedRects:
+    def test_square_corners_by_default(self):
+        r = scene("(rect 'r')")["r"]
+        assert (r.rx, r.ry) == (Free(0.0), Free(0.0))
+
+    def test_ry_copies_rx(self):
+        r = scene("(rect 'r' (size [2 1]) (rx 0.2))")["r"]
+        assert r.rx == Free(0.2)
+        assert isinstance(r.ry, Bound)
+
+    def test_both(self):
+        r = scene("(rect 'r' (rx 0.2) (ry 0.1))")["r"]
+        assert (r.rx, r.ry) == (Free(0.2), Free(0.1))
+
+    def test_export(self):
+        doc = to_json(scene("(rect 'r' (rx 0.2))"))
+        r = doc["names"]["r"]
+        assert doc["objects"][r]["attrs"]["ry"] == ["read", r, "rx"]

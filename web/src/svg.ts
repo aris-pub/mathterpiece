@@ -76,7 +76,7 @@ function outline(rt: Runtime, i: number): Element | null {
     case "circle":
       return el("circle", { r: v("r") });
     case "rect":
-      return el("rect", { x: 0, y: 0, width: v("width"), height: v("height") });
+      return el("rect", { x: 0, y: 0, width: v("width"), height: v("height"), rx: v("rx") ?? 0, ry: v("ry") ?? 0 });
     case "ellipse":
       return el("ellipse", { rx: v("rx"), ry: v("ry") });
     case "line":

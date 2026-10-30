@@ -14,7 +14,7 @@
 
   ; An ellipse turned 30 degrees around its center, and a rect turned around its corner.
   (ellipse 'oval' (center [6 -6]) (size [5 2]) (transform (rotate 30)) (fill '#b9d8b0'))
-  (rect 'card' (x -8) (y -8) (width 3) (height 2) (transform (rotate 20)) (fill '#e9c46a'))
+  (rect 'card' (x -8) (y -8) (width 3) (height 2) (rx 0.3) (transform (rotate 20)) (fill '#e9c46a'))
 
   (text 'label' $'tri.r = {tri.r}' (pos [-9 8.5]) (font-size 0.7) (fill ink)))
 

@@ -106,6 +106,9 @@ class Circle(Styled):
 class Rect(Styled):
     width: Attr[float] = Free(1.0)
     height: Attr[float] = Free(1.0)
+    # Rounded corners, as in SVG: every corner's radius across and up; ry copies rx unless given.
+    rx: Attr[float] = Free(0.0)
+    ry: Attr[float] = Free(0.0)
 
 
 @dataclass(kw_only=True)

@@ -1513,6 +1513,9 @@ class _Compiler:
 
         if extra:
             self.construct(spec.cls, extra, values, positions, env)
+        if spec.cls is Rect and "rx" in values and "ry" not in values:
+            values["ry"] = Bound(Name(("self", "rx"), positions["rx"]))
+            positions["ry"] = positions["rx"]
         _check_cycles(
             name,
             {a: (values[a], positions[a]) for a in values},
