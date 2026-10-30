@@ -67,6 +67,19 @@ export class Runtime {
     return value;
   }
 
+  // A token's value, which may be computed, as the default its CSS variable falls back to: another
+  // token falls back through that token's own variable.
+  private fallback(i: number, attr: string): string {
+    const key = `${i}.${attr}`;
+    this.active.add(key);
+    try {
+      const value = this.eval(this.obj(i).attrs[attr], null, {});
+      return value instanceof Token ? value.css : String(value);
+    } finally {
+      this.active.delete(key);
+    }
+  }
+
   obj(i: number): Obj {
     const o = this.objects[i];
     if (!o) throw new MtpError(`no object ${i}`);
@@ -115,12 +128,12 @@ export class Runtime {
     // A toggle on a scene value is that value; a toggle with no target holds its own.
     if (o.kind === "toggle" && attr === "value" && o.target) return this.value(o.target[0], o.target[1]);
     if (o.kind === "color" && attr === "value") {
-      const token = new Token(o.name ?? String(i), String(o.attrs.value));
+      const token = new Token(o.name ?? String(i), this.fallback(i, attr));
       this.cache.set(key, token);
       return token;
     }
     if (o.kind === "font" && (attr === "family" || attr === "style" || attr === "weight")) {
-      const token = new Token(`${o.name ?? i}-${attr}`, String(o.attrs[attr]), `font-${attr}`);
+      const token = new Token(`${o.name ?? i}-${attr}`, this.fallback(i, attr), `font-${attr}`);
       this.cache.set(key, token);
       return token;
     }
@@ -201,7 +214,10 @@ export class Runtime {
         const found = this.eval(args[0], frame, env);
         const base = found instanceof Ref ? this.items(found) : (found as unknown[]);
         const index = typeof args[1] === "number" ? args[1] : Number(this.eval(args[1], frame, env));
-        return base[index];
+        // Negative indexes count from the end, as in the language (and Python).
+        const at = index < 0 ? base.length + index : index;
+        if (at < 0 || at >= base.length) throw new MtpError(`a list of ${base.length} has no part ${index}`);
+        return base[at];
       }
       case "obj":
         return new Ref(args[0] as number);
@@ -258,6 +274,11 @@ export class Runtime {
     }
     if (call && name in this.doc.functions) return this.callFunction(name, values, frame);
     return this.apply(name, values);
+  }
+
+  /** Calls an author's function or a built-in one by name, as eases and paths do. */
+  invoke(name: string, args: unknown[]): unknown {
+    return name in this.doc.functions ? this.callFunction(name, args, null) : this.apply(name, args);
   }
 
   callFunction(key: string, args: unknown[], frame: number | null): unknown {

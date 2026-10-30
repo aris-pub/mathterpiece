@@ -332,3 +332,65 @@ describe("walks: loops run while drawing", () => {
     expect(run(["walk-map", ["list", 1, 2], "v", ["+", ["arg", "v"], 1]])).toEqual([2, 3]);
   });
 });
+
+describe("negative indexes", () => {
+  const rt = () =>
+    new Runtime(
+      doc([
+        { kind: "group", name: "g", attrs: { transform: [1, 0, 0, 0, 1, 0] }, members: [1, 2] },
+        circle(null, { r: 1 }, 0),
+        circle(null, { r: 2 }, 0),
+      ]),
+    );
+
+  it("count from the end of a list", () => {
+    expect(rt().eval(["part", ["list", 4, 5, 6], -1], null, {})).toBe(6);
+    expect(rt().eval(["part", ["list", 4, 5, 6], -3], null, {})).toBe(4);
+  });
+
+  it("count from the end of a group's members and of a sorted list", () => {
+    expect(rt().eval(["read", ["part", ["obj", 0], -1], "r"], null, {})).toBe(2);
+    const sorted = ["sort-by", "desc", ["obj", 1], 1, ["obj", 2], 2];
+    expect(rt().eval(["read", ["part", sorted, -1], "r"], null, {})).toBe(1);
+  });
+
+  it("is an error past either end", () => {
+    expect(() => rt().eval(["part", ["list", 4, 5], 2], null, {})).toThrow("no part 2");
+    expect(() => rt().eval(["part", ["list", 4, 5], -3], null, {})).toThrow("no part -3");
+  });
+});
+
+describe("tokens with computed values", () => {
+  // on (0) is a bool, w (1) a real; ink (2) is a plain color token.
+  const rt = (value: unknown, weight: unknown = 400) =>
+    new Runtime(
+      doc([
+        { kind: "bool", name: "on", attrs: { value: true } },
+        real("w", 700),
+        { kind: "color", name: "ink", attrs: { value: "#1f2a44ff" } },
+        { kind: "color", name: "c", attrs: { value } },
+        { kind: "font", name: "f", attrs: { family: "serif", style: "normal", weight, size: 1 } },
+      ]),
+    );
+  const css = (r: Runtime, i: number, attr = "value") => (r.value(i, attr) as { css: string }).css;
+
+  it("evaluates the value before making the token", () => {
+    expect(css(rt(["if", ["read", 0, "value"], "#ff0000ff", "#0000ffff"]), 3)).toBe(
+      "var(--mtp-c, #ff0000ff)",
+    );
+  });
+
+  it("follows the value when it changes", () => {
+    const r = rt(["if", ["read", 0, "value"], "#ff0000ff", "#0000ffff"]);
+    r.write(0, "value", false);
+    expect(css(r, 3)).toBe("var(--mtp-c, #0000ffff)");
+  });
+
+  it("falls back to another token", () => {
+    expect(css(rt(["read", 2, "value"]), 3)).toBe("var(--mtp-c, var(--mtp-ink, #1f2a44ff))");
+  });
+
+  it("evaluates a font part", () => {
+    expect(css(rt("#000000ff", ["read", 1, "value"]), 4, "weight")).toBe("var(--mtp-f-weight, 700)");
+  });
+});

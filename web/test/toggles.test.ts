@@ -100,10 +100,12 @@ describe("<mtp-toggle>", () => {
 });
 
 describe("fading in and out", () => {
-  async function fading() {
+  async function fading(ease?: unknown) {
     const doc = figure();
     const canvas = doc.objects[8]!;
-    (canvas as { transitions?: unknown }).transitions = [null, ["transition", { duration: 2, path: ["view", "fade"] }]];
+    const spec = { duration: 2, path: ["view", "fade"], ...(ease ? { ease } : {}) };
+    (canvas as { transitions?: unknown }).transitions = [null, ["transition", spec]];
+    doc.functions = { sq: { params: [["p", 0]], body: ["*", ["arg", "p"], ["arg", "p"]] } } as never;
     document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="v"></mtp-canvas>
       <mtp-toggle model="m" name="more"></mtp-toggle>`;
     const model = document.querySelector("mtp-model") as MtpModel;
@@ -131,6 +133,15 @@ describe("fading in and out", () => {
     expect(shown()).toBe(0);
     tick(1);
     expect(shown()).toBeCloseTo(0.5);
+    tick(1);
+    expect(shown()).toBe(1);
+  });
+
+  it("eases by a function of the author's", async () => {
+    const { more, shown, tick } = await fading(["fn", "sq"]);
+    more.click();
+    tick(1);
+    expect(shown()).toBeCloseTo(0.25);
     tick(1);
     expect(shown()).toBe(1);
   });

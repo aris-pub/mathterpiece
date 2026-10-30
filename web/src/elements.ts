@@ -8,7 +8,7 @@ import type { Doc, Obj } from "./doc.ts";
 import { Runtime } from "./runtime.ts";
 import { Player, toSpec } from "./player.ts";
 import { draw, shownNow, viewOf } from "./svg.ts";
-import { type Ease, applyEase } from "./transitions.ts";
+import { type Call, type Ease, applyEase } from "./transitions.ts";
 
 export const FORMAT_VERSION = 1;
 const READY = "mtp-ready";
@@ -253,12 +253,15 @@ class Fades {
   private level: number[];
   private wanted: boolean[];
   private moving = false;
+  // An author's ease function, called through the runtime as the player calls it.
+  private call: Call;
 
   constructor(
     private rt: Runtime,
     private canvas: number,
     private animator: Scheduler,
   ) {
+    this.call = (name, args) => rt.invoke(name, args);
     const count = rt.obj(canvas).shows?.length ?? 0;
     this.wanted = Array.from({ length: count }, (_, k) => shownNow(rt, canvas, k));
     this.level = this.wanted.map((w) => (w ? 1 : 0));
@@ -294,9 +297,10 @@ class Fades {
       const duration = spec.kind === "single" ? (spec.duration ?? 0) : 0;
       const ease = spec.kind === "single" ? spec.ease : undefined;
       // Progress along the fade from hidden (0) to shown (1), eased, then back to a level.
-      const progress = unease(level, ease) + (goal > level ? 1 : -1) * (duration > 0 ? seconds / duration : 1);
+      const progress = unease(level, ease, this.call) + (goal > level ? 1 : -1) * (duration > 0 ? seconds / duration : 1);
       const clamped = Math.min(Math.max(progress, 0), 1);
-      this.level[k] = goal > level ? Math.min(easeOf(clamped, ease), 1) : Math.max(easeOf(clamped, ease), 0);
+      const eased = easeOf(clamped, ease, this.call);
+      this.level[k] = goal > level ? Math.min(eased, 1) : Math.max(eased, 0);
       if ((goal > level && clamped >= 1) || (goal < level && clamped <= 0)) this.level[k] = goal;
       if (this.level[k] !== goal) more = true;
     });
@@ -305,17 +309,17 @@ class Fades {
   }
 }
 
-function easeOf(p: number, ease: Ease | undefined): number {
-  return applyEase(ease, p, () => p);
+function easeOf(p: number, ease: Ease | undefined, call: Call): number {
+  return applyEase(ease, p, call);
 }
 
 // The progress at which an ease reaches level, so a fade can carry on from where it is.
-function unease(level: number, ease: Ease | undefined): number {
+function unease(level: number, ease: Ease | undefined, call: Call): number {
   let lo = 0;
   let hi = 1;
   for (let k = 0; k < 40; k++) {
     const mid = (lo + hi) / 2;
-    if (easeOf(mid, ease) < level) lo = mid;
+    if (easeOf(mid, ease, call) < level) lo = mid;
     else hi = mid;
   }
   return (lo + hi) / 2;

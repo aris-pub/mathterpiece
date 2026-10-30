@@ -261,8 +261,7 @@ export class Player {
     this.rt.write(id, attr, value);
   }
 
-  private call: Call = (name, args) =>
-    name in this.rt.doc.functions ? this.rt.callFunction(name, args, null) : this.rt.apply(name, args);
+  private call: Call = (name, args) => this.rt.invoke(name, args);
 
   // Lays out part, starting at clock and track, and returns how long it takes on each.
   private layout(
