@@ -179,3 +179,21 @@ def test_an_int_target_moves_in_whole_numbers():
         )
     )
     assert m["a"].body.kind == "int"  # ty: ignore[unresolved-attribute]
+
+
+class TestStoredWaits:
+    # A wait is the transition that changes nothing, so it may stand where an animation is
+    # expected, written in place or stored in a const.
+    def test_a_const_holding_a_wait(self):
+        src = (
+            "(real 'k' 0) (const 'pause' (wait 1.5)) (scene _)"
+            " (animation 'a' (in-order (k (transition (to 1) (duration 1))) pause))"
+        )
+        body = compile_model(parse(src))["a"].body  # ty: ignore[unresolved-attribute]
+        assert isinstance(body, InOrder)
+        assert body.parts[1] == WaitStep(1.5)
+
+    def test_the_error_names_every_kind_of_part(self):
+        src = "(real 'k' 0) (scene _) (animation 'a' (in-order (k (transition (to 1))) 3))"
+        with pytest.raises(CompileError, match="at-once, in-order, wait, or another animation"):
+            compile_model(parse(src))

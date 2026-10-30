@@ -402,6 +402,13 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
         # Named, (animation 'name' body), or written in a control, (animation body).
         if _head(node) == "animation" and len(node.items) > 1:
             animation_targets(node.items[-1])
+        if _head(node) == "toggle" and len(node.items) > 2:
+            target = node.items[2]
+            if isinstance(target, Name) and target.parts != ("self",):
+                if all(isinstance(p, str) for p in target.parts):
+                    paths.add(tuple(p for p in target.parts if isinstance(p, str)))
+                elif isinstance(target.parts[-1], str):
+                    anywhere.add(target.parts[-1])
         if _head(node) == "on-drag" and len(node.items) > 2:
             target = node.items[2]
             if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
@@ -795,6 +802,8 @@ class _Compiler:
         # lets is keyed by id(node), and unrolled forms are temporary: keeping each keyed node
         # alive stops Python from giving a new node the id of a freed one.
         self.keyed: list[Node] = []
+        # Where each on-drag was written, for errors found once the whole model is known.
+        self.drag_positions: dict[int, Pos] = {}
         # The types a name bound in a function body (a let, a loop's item, a running value) had
         # when the body was checked, by the id of the name's node; the writer shows values with
         # them. The nodes live in the stored bodies, so their ids stay unique.
@@ -826,6 +835,7 @@ class _Compiler:
         for obj in [*self.toplevel, *self.anonymous, *self.locals]:
             model.add(obj)
         model.functions.update(self.functions)
+        _check_drag_targets(model, self.drag_positions)
         model.result_types = {
             key: next(iter(types)) for key, types in self.result_types.items() if len(types) == 1
         }
@@ -946,7 +956,7 @@ class _Compiler:
         if head in CONTROLS:
             return [self.reading_views(lambda: self.control(form, env, head))]
         if head == "on-drag":
-            return [self.on_drag(form, env)]
+            return [self.reading_views(lambda: self.on_drag(form, env))]
         if head == "on-click":
             return [self.reading_views(lambda: self.on_click(form, env))]
         if head == "animation":
@@ -1079,7 +1089,11 @@ class _Compiler:
             return f"{text!r} is a const, so a control cannot write it"
         if len(name.parts) == 1:
             obj = self.names.get(first) if isinstance(first, str) else None
-            if not isinstance(obj, (Real, Color, Bool)):
+            # A toggle with a target is that value; only a self toggle holds its own.
+            if isinstance(obj, Toggle) and obj.target is not None:
+                held = f"{obj.target.name}" + ("" if obj.attr == "value" else f".{obj.attr}")
+                return f"{text!r} shows {held}, so write {held} instead"
+            if not isinstance(obj, (Real, Color, Bool, Toggle)):
                 return f"{text!r} is not a value a control can write"
             attr = "value"
         else:
@@ -1197,7 +1211,7 @@ class _Compiler:
                 raise CompileError("unexpected value in on-drag", item.pos)
             else:
                 conditions.append(self.condition(item, env))
-        return Drag(
+        drag = Drag(
             name=None,
             node=node,
             target_obj=moved[0],
@@ -1206,6 +1220,8 @@ class _Compiler:
             conditions=tuple(conditions),
             when=when,
         )
+        self.drag_positions[id(drag)] = target_node.pos
+        return drag
 
     # Views and controls may read controls; the scene may not.
     def reading_views[T](self, work: Callable[[], T]) -> T:
@@ -1448,6 +1464,9 @@ class _Compiler:
             found = self.names.get(node.parts[0])
             if isinstance(found, Animation):
                 return found
+            stored = self.consts.get(node.parts[0])
+            if stored is not None and isinstance(stored.value, Wait):
+                return WaitStep(stored.value.duration)
         if isinstance(node, Form) and head in ("at-once", "in-order"):
             return self.composed_animation(node, env, head)
         if isinstance(node, Form) and head == "wait":
@@ -1462,7 +1481,9 @@ class _Compiler:
         ):
             return self.pair(node, env)
         raise CompileError(
-            f"{within} holds animations: pairs (target transition), at-once, in-order", node.pos
+            f"{within} holds animations: pairs (target transition), at-once, in-order, wait,"
+            " or another animation",
+            node.pos,
         )
 
     def composed_animation(self, node: Form, env: Env, head: str) -> AtOnce | InOrder:
@@ -3439,6 +3460,126 @@ def _tally_form(node: Form) -> Form:
         else form(Name(("+",), pos), running, body)
     )
     return form(Name(("reduce",), pos), collection, var, form(running, IntLit(0, pos)), step)
+
+
+# A drag's target that is not the node's own position must be something the node's position
+# depends on, or dragging would move nothing. Checked once the whole model is known.
+def _check_drag_targets(model: Model, positions: dict[int, Pos]):
+    parent: dict[int, Obj] = {}
+    stack: list[Obj] = list(model)
+    while stack:
+        obj = stack.pop()
+        for member in getattr(obj, "members", None) or []:
+            parent[id(member)] = obj
+            stack.append(member)
+
+    # The motif whose names obj's expressions read: a hidden let belongs to where it was written.
+    def scope(obj: Obj) -> Motif | None:
+        if isinstance(obj, Local):
+            if obj.owner is None:
+                return None
+            if obj.inside and isinstance(obj.owner, Motif):
+                return obj.owner
+            return scope(obj.owner)
+        up = parent.get(id(obj))
+        while up is not None and not isinstance(up, Motif):
+            up = parent.get(id(up))
+        return up
+
+    # The (object, attribute) pairs a value depends on, through every name its expression reads.
+    def reads(obj: Obj, attr: str, seen: set[tuple[int, str]]) -> None:
+        if (id(obj), attr) in seen:
+            return
+        seen.add((id(obj), attr))
+        if attr == "pos":
+            reads(obj, "x", seen)
+            reads(obj, "y", seen)
+            return
+        if isinstance(obj, Motif) and attr in obj.params:
+            value = obj.params[attr]
+            where = scope(obj)
+        else:
+            value = getattr(obj, attr, None)
+            where = scope(obj)
+        if not isinstance(value, Bound):
+            return
+        for name in _names_in(value.expr):
+            for found, part in _resolve_read(name, obj, where, model):
+                reads(found, part, seen)
+
+    for drag in [o for o in model if isinstance(o, Drag)]:
+        node, target = drag.node, drag.target_obj
+        assert node is not None and target is not None
+        if target is node and drag.target in ("x", "y", "pos"):
+            continue
+        seen: set[tuple[int, str]] = set()
+        chain: Obj | None = node
+        while chain is not None:
+            for attr in ("x", "y", "transform"):
+                reads(chain, attr, seen)
+            chain = parent.get(id(chain))
+        wanted = {(id(target), drag.target)}
+        if drag.target == "pos":
+            wanted = {(id(target), "x"), (id(target), "y")}
+        if not wanted & seen:
+            what = target.name if drag.target == "value" else f"{target.name}.{drag.target}"
+            raise CompileError(
+                f"{node.name} does not move when {what} changes,"
+                f" so dragging it cannot write {what}",
+                positions.get(id(drag), Pos(1, 1)),
+            )
+
+
+def _names_in(node: Node) -> list[Name]:
+    if isinstance(node, Name):
+        return [node, *(n for p in node.parts if not isinstance(p, str) for n in _names_in(p))]
+    if isinstance(node, (Form, ListLit)):
+        return [n for item in node.items for n in _names_in(item)]
+    if isinstance(node, InterpStrLit):
+        return [
+            n
+            for p in node.parts
+            if not isinstance(p, str)
+            for n in _names_in(p.name if isinstance(p, Field) else p)
+        ]
+    return []
+
+
+# What a name read in obj's expression refers to: (object, attribute) pairs, with a group's
+# attribute standing for each member's.
+def _resolve_read(name: Name, obj: Obj, where: Motif | None, model: Model) -> list[tuple[Obj, str]]:
+    first, *rest = name.parts
+    if not isinstance(first, str):
+        return []
+    if first == "self":
+        # In a hidden let, self is the object the let was written in.
+        found: Obj | None = obj.owner if isinstance(obj, Local) else obj
+    elif where is not None and first in where.params:
+        return [(where, first)]
+    elif where is not None and first in local_names(where):
+        found = local_names(where)[first]
+    elif first in model:
+        found = model[first]
+    else:
+        return []
+    for part in rest:
+        # A value's parts (x of a point, [k] of a list) are parts of its one value.
+        if isinstance(found, (Real, Local, Color, Bool, Toggle)):
+            return [(found, "value")]
+        if isinstance(part, IntLit) and isinstance(found, Group):
+            found = found.members[part.value]
+            continue
+        if not isinstance(part, str):
+            return [(found, "value")] if found is not None else []
+        if isinstance(found, Motif) and part in found.params:
+            return [(found, part)]
+        if isinstance(found, Motif) and part in local_names(found):
+            found = local_names(found)[part]
+            continue
+        if isinstance(found, Group) and part not in attributes(Group):
+            return [(m, part) for m in found.members]
+        return [(found, part)] if found is not None else []
+    return [(found, "value")] if found is not None else []
 
 
 # The heads the standard library already uses; a user function with one of these names gets its

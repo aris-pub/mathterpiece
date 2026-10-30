@@ -299,3 +299,14 @@ describe("the unit-circle toggles", () => {
     expect(document.querySelectorAll("mtp-canvas g[opacity]").length).toBe(0);
   });
 });
+
+describe("<mtp-play> over an animation that names another", () => {
+  it("has the named animation's steps, with their names", async () => {
+    const doc = (await import("./data/fixtures/wrapped-play.json")).default as unknown as Doc;
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-play model="m" name="p"></mtp-play>`;
+    (document.querySelector("mtp-model") as MtpModel).doc = doc;
+    await new Promise((r) => setTimeout(r, 0));
+    const [, ...steps] = [...document.querySelectorAll("mtp-play button")];
+    expect(steps.map((b) => b.textContent)).toEqual(["small", "big"]);
+  });
+});

@@ -6,7 +6,7 @@ import { Clicks } from "./click.ts";
 import { Drags } from "./drag.ts";
 import type { Doc, Obj } from "./doc.ts";
 import { Runtime } from "./runtime.ts";
-import { Player, toSpec } from "./player.ts";
+import { Player, toSpec, topBody } from "./player.ts";
 import { draw, shownNow, viewOf } from "./svg.ts";
 import { type Call, type Ease, applyEase } from "./transitions.ts";
 
@@ -535,7 +535,7 @@ export class MtpPlay extends MtpPart {
 
 // A step's button says the name of the animation it plays, or its number.
 function stepLabel(rt: Runtime, animation: number, k: number): string {
-  const body = rt.obj(animation).body;
+  const body = topBody(rt, animation);
   const parts = Array.isArray(body) && body[0] === "in-order" ? (body.slice(2) as unknown[]) : [body];
   const step = parts.filter((p) => !(Array.isArray(p) && p[0] === "wait"))[k];
   if (Array.isArray(step) && step[0] === "animation") return rt.obj(step[1] as number).name ?? String(k + 1);

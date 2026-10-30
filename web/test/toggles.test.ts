@@ -174,3 +174,21 @@ describe("fading in and out", () => {
     expect(document.querySelectorAll("mtp-canvas circle").length).toBe(0);
   });
 });
+
+describe("a control writing a self toggle", () => {
+  it("turns the toggle on, and the canvas follows", async () => {
+    const doc = (await import("./data/fixtures/button-writes-toggle.json")).default as unknown as Doc;
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="v"></mtp-canvas>
+      <mtp-toggle model="m" name="show"></mtp-toggle><mtp-button model="m" name="on"></mtp-button>`;
+    const model = document.querySelector("mtp-model") as MtpModel;
+    model.doc = doc;
+    await new Promise((r) => setTimeout(r, 0));
+    const box = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    expect(document.querySelectorAll("mtp-canvas circle").length).toBe(0);
+    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
+    model.animator!.tick(0.01);
+    expect(box.checked).toBe(true);
+    expect(document.querySelectorAll("mtp-canvas circle").length).toBe(1);
+  });
+});

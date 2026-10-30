@@ -4,6 +4,7 @@ from helpers import with_scene
 from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.export import to_json
 from mathterpiece.model import Bound, Drag, State, local_names
+from mathterpiece.parse import parse
 
 
 def scene(src):
@@ -125,3 +126,53 @@ def test_export_a_number_target():
     assert d["node"] == doc["names"]["p"]
     assert d["target"] == [doc["names"]["theta"], "value"]
     assert d["type"] == "real"
+
+
+class TestReadingControls:
+    # Listeners are controls, and controls read each other: on-drag as on-click does.
+    def test_when_reads_a_toggle(self):
+        src = "(scene 's' (circle 'a')) (toggle 'show' self) (on-drag a a.pos (when show))"
+        assert compile_model(parse(src))
+
+    def test_on_click_does_the_same(self):
+        src = (
+            "(real 'k' 0) (scene 's' (circle 'a')) (toggle 'show' self)"
+            " (on-click a (animation (k (transition (to 1) (duration 0)))) (when show))"
+        )
+        assert compile_model(parse(src))
+
+
+class TestDragTargetsMoveTheNode:
+    # A drag's target is the node's own position, or a number its position depends on.
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(scene 's' (circle 'a')) (on-drag a a.r)",
+            "(real 'k' 1) (scene 's' (circle 'a' (r k))) (on-drag a k)",
+            "(scene 's' (circle 'a') (circle 'd')) (on-drag a d.x)",
+        ],
+    )
+    def test_rejected(self, src):
+        with pytest.raises(CompileError, match="does not move when"):
+            compile_model(parse(src))
+
+    def test_the_error_points_at_the_target(self):
+        with pytest.raises(CompileError, match="^1:37: a does not move when a.r changes"):
+            compile_model(parse("(scene 's' (circle 'a')) (on-drag a a.r)"))
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(real 'k' 1) (scene 's' (circle 'q' (pos (polar 1 k))) (circle 'a' (pos q.pos)))"
+            " (on-drag a k)",
+            "(real 'k' 1) (scene 's' (group 'g' (transform (rotate k)) (circle 'a' (pos [1 0]))))"
+            " (on-drag a k)",
+            "(real 'k' 1) (motif 'm' (params (t 0.0)) (circle 'tip' (pos (polar 1 t))))"
+            " (scene 's' (m 'i' (t k))) (on-drag i.tip k)",
+            "(real 'k' 1) (scene 's' (circle 'a' (pos (let ((h (* 2 k))) [h 0])))) (on-drag a k)",
+            "(real 'k' 1) (scene 's' (circle 'a' (r k) (x (let ((h (* 2 self.r))) h))))"
+            " (on-drag a k)",
+        ],
+    )
+    def test_accepted_through_other_objects(self, src):
+        assert compile_model(parse(src))

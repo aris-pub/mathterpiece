@@ -176,3 +176,40 @@ describe("scrubbed by progress", () => {
     expect(player().targets).toEqual(["0.value", "2.pos"]);
   });
 });
+
+describe("parts that start together", () => {
+  // j's end reads k: 99 if k is already 1, else 5. k's part writes 1 at once.
+  const setK = pair(K, "number", { to: 1, duration: 0 });
+  const setJ = pair(J, "number", { to: ["if", ["=", ["read", 0, "value"], 1], 99, 5], duration: 0 });
+
+  it.each([
+    ["k first", [setK, setJ]],
+    ["j first", [setJ, setK]],
+  ])("read the scene as it was when they started (%s)", (_, parts) => {
+    const { rt, player } = world(["at-once", {}, ...parts]);
+    player().seek(0);
+    expect(rt.value(1, "value")).toBe(5);
+    expect(rt.value(0, "value")).toBe(1);
+  });
+
+  it("while a later step of an in-order sees what the step before wrote, even at the same instant", () => {
+    const { rt, player } = world(["in-order", {}, setK, setJ]);
+    player().seek(0);
+    expect(rt.value(1, "value")).toBe(99);
+  });
+
+  it("and so does a step after an at-once", () => {
+    const { rt, player } = world(["in-order", {}, ["at-once", {}, setK, pair(J, "number", { to: 3, duration: 0 })], setJ]);
+    player().seek(0);
+    expect(rt.value(1, "value")).toBe(99);
+  });
+});
+
+describe("an animation that is another animation's name", () => {
+  it("has the steps of the one it names", () => {
+    const steps = ["in-order", {}, pair(K, "number", { to: 1, duration: 1 }), pair(J, "number", { to: 2, duration: 1 })];
+    const { player } = world(steps, ["animation", 4]);
+    expect(player(0).steps.length).toBe(2);
+    expect(player(1).steps.length).toBe(2);
+  });
+});

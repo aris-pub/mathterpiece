@@ -19,11 +19,12 @@ fmt:
 typecheck:
     uv run ty check
 
-# build every example, and every case both runtimes must agree on, to JSON for the web's tests
+# build the examples, the cases both runtimes must agree on, and the web's own test fixtures to JSON
 web-examples:
-    mkdir -p web/test/data/examples web/test/data/shared
+    mkdir -p web/test/data/examples web/test/data/shared web/test/data/fixtures
     for f in examples/*.mtp; do uv run mtp build "$f" -o "web/test/data/examples/$(basename "$f" .mtp).json"; done
     for f in tests/shared/*.mtp; do uv run mtp build "$f" -o "web/test/data/shared/$(basename "$f" .mtp).json"; cp "$f" web/test/data/shared/; done
+    for f in web/test/fixtures/*.mtp; do uv run mtp build "$f" -o "web/test/data/fixtures/$(basename "$f" .mtp).json"; done
 
 # run the web runtime's tests
 web-test *args: web-examples

@@ -1,0 +1,5 @@
+; A button that turns a self toggle on, and a canvas showing a circle while the toggle is on.
+(scene 's' (circle 'a' (r 1)))
+(toggle 'show' self)
+(button 'on' (animation (show (transition (to true) (duration 0)))))
+(canvas 'v' (view-x 0) (view-y 0) (view-width 4) (view-height 4) (when show a))

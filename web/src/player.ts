@@ -40,6 +40,9 @@ interface Segment {
   warps: Warp[];
   trackWarps: Warp[];
   step: number;
+  // Its place in order among parts that start at the same instant: an in-order's later steps get
+  // higher numbers, while the parts of an at-once share one, so they read the scene together.
+  seq: number;
   // While running by the clock: whether it has started, its start values and its ends, and
   // whether it is finished (or skipped by a jump).
   started: boolean;
@@ -66,7 +69,7 @@ export class Player {
     private rt: Runtime,
     animation: number,
   ) {
-    const body = rt.obj(animation).body;
+    const body = topBody(rt, animation);
     const top = Array.isArray(body) && body[0] === "in-order" ? (body.slice(2) as unknown[]) : [body];
     const settings = Array.isArray(body) && body[0] === "in-order" ? (body[1] as Settings) : {};
     // The steps of a play are the parts of its top-level in-order, without its waits.
@@ -75,16 +78,19 @@ export class Player {
     const warps = settings.ease === undefined ? [] : [{ start: 0, length: 0, ease: settings.ease }];
     const trackWarps = settings.ease === undefined ? [] : [{ start: 0, length: 0, ease: settings.ease }];
     const defaults = defaultsOf(settings, {});
+    let seq = 0;
     for (const part of top) {
       const isWait = Array.isArray(part) && part[0] === "wait";
       const before = this.segments.length;
-      const [length, weight] = this.layout(part, clock, track, defaults, warps, trackWarps, this.steps.length);
+      const [length, weight, last] = this.layout(part, clock, track, defaults, warps, trackWarps, this.steps.length, seq);
+      seq = last + 1;
       if (!isWait) this.steps.push({ start: clock, segments: this.segments.slice(before) });
       clock += length;
       track += weight;
     }
     for (const w of warps) w.length = clock;
     for (const w of trackWarps) w.length = track;
+    this.segments.sort((a, b) => a.start - b.start || a.seq - b.seq);
     this.duration = clock;
     this.trackTotal = track;
   }
@@ -115,16 +121,25 @@ export class Player {
   /** Runs by the clock to t seconds after the start. */
   seek(t: number): void {
     this.time = t;
-    for (const s of this.segments) {
-      if (s.finished) continue;
-      const local = warped(t, s.warps, this.call) - s.start;
-      if (local < 0) continue;
-      if (!s.started) this.begin(s);
-      const at = Math.min(local, s.length);
-      s.targets.forEach(([id, attr], k) => this.write(id, attr, valueAt(s.spec as Spec, s.starts[k], at, s.kind, this.call)));
-      if (local >= s.length) {
-        s.finished = true;
-        for (const [id] of s.targets) this.rt.morphs.delete(id);
+    // Segments are in order of start and seq. Those that begin together all read their start
+    // values before any of them writes.
+    let k = 0;
+    while (k < this.segments.length) {
+      const first = this.segments[k]!;
+      let end = k + 1;
+      while (end < this.segments.length && this.segments[end]!.start === first.start && this.segments[end]!.seq === first.seq) end += 1;
+      const group = this.segments.slice(k, end);
+      k = end;
+      const live = group.filter((s) => !s.finished && warped(t, s.warps, this.call) - s.start >= 0);
+      for (const s of live) if (!s.started) this.begin(s);
+      for (const s of live) {
+        const local = warped(t, s.warps, this.call) - s.start;
+        const at = Math.min(local, s.length);
+        s.targets.forEach(([id, attr], i) => this.write(id, attr, valueAt(s.spec as Spec, s.starts[i], at, s.kind, this.call)));
+        if (local >= s.length) {
+          s.finished = true;
+          for (const [id] of s.targets) this.rt.morphs.delete(id);
+        }
       }
     }
   }
@@ -272,11 +287,12 @@ export class Player {
     warps: Warp[],
     trackWarps: Warp[],
     step: number,
-  ): [number, number] {
+    seq: number,
+  ): [number, number, number] {
     const [head, ...rest] = part as [string, ...unknown[]];
-    if (head === "wait") return [rest[0] as number, rest[0] as number];
+    if (head === "wait") return [rest[0] as number, rest[0] as number, seq];
     if (head === "animation") {
-      return this.layout(this.rt.obj(rest[0] as number).body, clock, track, defaults, warps, trackWarps, step);
+      return this.layout(this.rt.obj(rest[0] as number).body, clock, track, defaults, warps, trackWarps, step, seq);
     }
     if (head === "pair") {
       const [targets, kind, json] = rest as [Target[], ValueKind, unknown];
@@ -285,9 +301,9 @@ export class Player {
       const weight = trackWeight(shape);
       this.segments.push({
         targets, kind, json, defaults, start: clock, length, trackStart: track, trackLength: weight,
-        warps, trackWarps, step, started: false, finished: false, starts: [], spec: null,
+        warps, trackWarps, step, seq, started: false, finished: false, starts: [], spec: null,
       });
-      return [length, weight];
+      return [length, weight, seq];
     }
     const settings = rest[0] as Settings;
     const inner = defaultsOf(settings, defaults);
@@ -298,18 +314,27 @@ export class Player {
     const innerTrackWarps = ownTrack ? [...trackWarps, ownTrack] : trackWarps;
     let length = 0;
     let weight = 0;
-    for (const p of parts) {
-      const [l, w] =
+    let last = seq;
+    for (const [i, p] of parts.entries()) {
+      const [l, w, end] =
         head === "in-order"
-          ? this.layout(p, clock + length, track + weight, inner, innerWarps, innerTrackWarps, step)
-          : this.layout(p, clock, track, inner, innerWarps, innerTrackWarps, step);
+          ? this.layout(p, clock + length, track + weight, inner, innerWarps, innerTrackWarps, step, i === 0 ? seq : last + 1)
+          : this.layout(p, clock, track, inner, innerWarps, innerTrackWarps, step, seq);
       length = head === "in-order" ? length + l : Math.max(length, l);
       weight = head === "in-order" ? weight + w : Math.max(weight, w);
+      last = Math.max(last, end);
     }
     if (own) own.length = length;
     if (ownTrack) ownTrack.length = weight;
-    return [length, weight];
+    return [length, weight, last];
   }
+}
+
+/** An animation's body, through animations that only name another one, so their steps are its. */
+export function topBody(rt: Runtime, animation: number): unknown {
+  let body = rt.obj(animation).body;
+  while (Array.isArray(body) && body[0] === "animation") body = rt.obj(body[1] as number).body;
+  return body;
 }
 
 type Settings = { ease?: Ease; "default-duration"?: number; "default-ease"?: Ease };

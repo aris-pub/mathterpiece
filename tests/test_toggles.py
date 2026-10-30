@@ -2,7 +2,7 @@ import pytest
 
 from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.export import to_json
-from mathterpiece.model import Bool, Canvas, Free, Toggle
+from mathterpiece.model import Bool, Bound, Canvas, Free, Toggle
 from mathterpiece.parse import parse
 
 SCENE = "(scene 'w' (group 'base' (circle 'c')) (group 'extra' (circle 'd')))"
@@ -149,3 +149,52 @@ class TestShowingAndHiding:
         v = doc["objects"][doc["names"]["v"]]
         fade = ["transition", {"duration": 0.3, "path": ["view", "fade"]}]
         assert v["transitions"] == [fade, fade]
+
+
+class TestToggleTargetsStayLive:
+    # A value a toggle writes cannot be folded at compile time, like one a slider writes.
+    def test_a_motif_parameter(self):
+        src = (
+            "(motif 'm' (params (on false)) (circle 'c' (r (if on 2 1))))"
+            " (scene 's' (m 'd')) (toggle 't' d.on)"
+        )
+        doc = to_json(compile_model(parse(src)))
+        (circle,) = [o for o in doc["objects"] if o["kind"] == "circle"]
+        assert isinstance(circle["attrs"]["r"], list)
+
+    def test_a_scene_bool(self):
+        m = compile_model(
+            parse("(bool 'b' false) (scene 's' (circle 'c' (r (if b 2 1)))) (toggle 't' b)")
+        )
+        assert isinstance(m["c"].r, Bound)  # ty: ignore[unresolved-attribute]
+
+
+class TestWritingASelfToggle:
+    # Controls write each other: a button (or a play) may turn a toggle on.
+    def test_a_button_writes_a_self_toggle(self):
+        src = (
+            "(scene 's' (circle 'a')) (toggle 'show' self)"
+            " (button 'on' (animation (show (transition (to true) (duration 0)))))"
+        )
+        doc = to_json(compile_model(parse(src)))
+        button = doc["objects"][doc["names"]["on"]]
+        animation = doc["objects"][button["animation"]]
+        pair = animation["body"]
+        assert pair[1] == [[doc["names"]["show"], "value"]]
+        assert pair[2] == "bool"
+
+    def test_the_value_written_must_be_a_bool(self):
+        src = (
+            "(scene 's' (circle 'a')) (toggle 'show' self)"
+            " (button 'on' (animation (show (transition (to 3) (duration 0)))))"
+        )
+        with pytest.raises(CompileError, match="bool"):
+            compile_model(parse(src))
+
+    def test_a_toggle_with_a_target_is_written_through_its_target(self):
+        src = (
+            "(bool 'b' false) (scene 's' (circle 'a')) (toggle 'show' b)"
+            " (button 'on' (animation (show (transition (to true) (duration 0)))))"
+        )
+        with pytest.raises(CompileError, match="write b instead"):
+            compile_model(parse(src))
