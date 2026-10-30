@@ -220,3 +220,9 @@ class TestBackground:
     def test_export(self):
         doc = to_json(self.compile("(scene 'w' (background 'white') (circle 'c'))"))
         assert doc["objects"][doc["names"]["w"]]["attrs"]["background"] == "#ffffffff"
+
+
+def test_a_bound_background_cannot_be_written():
+    src = "(color 'paper' '#f7f3ea') (scene 'plane' (background paper) (circle 'c'))"
+    with pytest.raises(CompileError, match="cannot animate to this state: plane.background is"):
+        compile_model(parse(f"{src} (button 'b' plane.background 'black')"))

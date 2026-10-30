@@ -412,8 +412,8 @@ def _ease(value: "Value", pos: Pos) -> str:
 
 def _check_reachable(state: "State", pos: Pos):
     if state.problem is not None:
-        label = repr(state.name) if state.name is not None else "this state"
-        raise CompileError(f"cannot animate to state {label}: {state.problem}", pos)
+        label = f"state {state.name!r}" if state.name is not None else "this state"
+        raise CompileError(f"cannot animate to {label}: {state.problem}", pos)
 
 
 def _text(node: Node) -> str:
