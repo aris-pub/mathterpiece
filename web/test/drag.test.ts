@@ -24,7 +24,12 @@ function world(listeners: Omit<Obj, "id" | "name" | "attrs">[], extra: Omit<Obj,
   return { rt, drags: new Drags(rt) };
 }
 
-const on = (node: number, conditions: unknown[] = [], when: unknown = null) => ({ kind: "on-drag", node, conditions, when });
+const on = (node: number, conditions: unknown[] = [], when: unknown = null, attr = "pos") => ({
+  kind: "on-drag",
+  target: [node, attr] as [number, string],
+  conditions,
+  when,
+});
 const pos = (rt: Runtime, i: number) => [rt.value(i, "x"), rt.value(i, "y")];
 
 describe("dragging", () => {
@@ -62,6 +67,13 @@ describe("dragging", () => {
     const [x, y] = pos(rt, 4);
     expect(x).toBeCloseTo(1);
     expect(y).toBeCloseTo(0);
+  });
+
+  it("moves only its target", () => {
+    const { rt, drags } = world([on(2, [], null, "x")]);
+    drags.grab(2, [0, 1]);
+    drags.move([2, 5]);
+    expect(pos(rt, 2)).toEqual([2, 1]);
   });
 
   it("grabs nothing without a listener", () => {

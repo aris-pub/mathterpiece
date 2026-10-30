@@ -43,10 +43,10 @@
 
 (canvas 'view' (view-x -10) (view-y -7) (view-width 20) (view-height 14) plane)
 
-(on-drag c)
-(on-drag u)
-(on-drag v)
-(on-drag w)
+(on-drag c c.pos)
+(on-drag u u.pos)
+(on-drag v v.pos)
+(on-drag w w.pos)
 
 (state 'optimum'
   (= c.pos [0 0]) (= u.pos (polar unit 90)) (= v.pos (polar unit 210)) (= w.pos (polar unit 330)))

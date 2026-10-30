@@ -132,7 +132,7 @@ describe("dragging on a canvas", () => {
       { id: 1, kind: "root", name: "s", attrs: { transform: ID }, members: [2, 3] },
       { id: 2, kind: "circle", name: "u", parent: 1, attrs: { ...style, x: 1, y: 1, r: 0.5 } },
       { id: 3, kind: "circle", name: "still", parent: 1, attrs: { ...style, x: 5, y: 5, r: 0.5 } },
-      { id: 4, kind: "on-drag", name: null, attrs: {}, node: 2, conditions: [], when: null },
+      { id: 4, kind: "on-drag", name: null, attrs: {}, target: [2, "pos"], conditions: [], when: null },
     ],
     functions: {},
     names: { u: 2, still: 3 },

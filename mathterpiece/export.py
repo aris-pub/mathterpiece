@@ -223,7 +223,7 @@ class _Writer:
             )
         if isinstance(obj, Drag):
             assert obj.node is not None
-            out["node"] = self.id(obj.node)
+            out["target"] = [self.id(obj.node), obj.target]
             out["conditions"] = [self.expr(c, ctx) for c in obj.conditions]
             if isinstance(obj.when, State):
                 out["when"] = ["holds", self.id(obj.when)]

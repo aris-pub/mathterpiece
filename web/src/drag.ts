@@ -1,5 +1,6 @@
 // Dragging: a press goes up the tree from the shape hit to the nearest node with an attached
-// on-drag listener, and that node then moves with the pointer, in its parent's coordinates. A
+// on-drag listener, and that node's target (x, y or both) then moves with the pointer, in its
+// parent's coordinates. A
 // move where any of the listener's conditions fails is rejected.
 import type { Obj } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
@@ -12,8 +13,9 @@ export class Drags {
 
   constructor(private rt: Runtime) {
     for (const o of rt.objects) {
-      if (o.kind !== "on-drag" || o.node === undefined) continue;
-      this.byNode.set(o.node, [...(this.byNode.get(o.node) ?? []), o]);
+      if (o.kind !== "on-drag" || !o.target) continue;
+      const [node] = o.target;
+      this.byNode.set(node, [...(this.byNode.get(node) ?? []), o]);
     }
   }
 
@@ -57,8 +59,9 @@ export class Drags {
     const held = this.held;
     if (!held) return false;
     const [px, py] = this.local(held.node, scene);
-    const x = held.start[0] + px - held.grab[0];
-    const y = held.start[1] + py - held.grab[1];
+    const target = held.listener.target?.[1] ?? "pos";
+    const x = target === "y" ? held.start[0] : held.start[0] + px - held.grab[0];
+    const y = target === "x" ? held.start[1] : held.start[1] + py - held.grab[1];
     const before: Point = [this.rt.value(held.node, "x"), this.rt.value(held.node, "y")];
     this.rt.write(held.node, "x", x);
     this.rt.write(held.node, "y", y);
