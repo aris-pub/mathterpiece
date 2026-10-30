@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any
 
+from mathterpiece import colors
 from mathterpiece.matrix import Matrix
 
 
@@ -117,8 +118,9 @@ def _real(fn: Callable[[float], float]) -> "Function":
 
 @dataclass(frozen=True)
 class Signature:
-    # Each parameter is "real" (a number that widens to real) or "point" (an object with x, y, or a
-    # list of numbers). A "point" result has as many numbers as the point arguments.
+    # Each parameter is "real" (a number that widens to real), "point" (an object with x, y, or a
+    # list of numbers) or "color" (a color, or a string naming one). A "point" result has as many
+    # numbers as the point arguments.
     params: tuple[str, ...]
     result: str
     impl: Callable[..., Any]
@@ -147,6 +149,13 @@ STDLIB: dict[str, Function] = {
         )
     ),
     "sqrt": _real(_sqrt),
+    "mix": Function((Signature(("color", "color", "real"), "paint", colors.mix),)),
+    "lighten": Function(
+        (Signature(("color", "real"), "paint", lambda c, t: colors.mix(c, "white", t)),)
+    ),
+    "darken": Function(
+        (Signature(("color", "real"), "paint", lambda c, t: colors.mix(c, "black", t)),)
+    ),
     "max": Function((Signature(("real",), "real", lambda *xs: float(max(xs))),), variadic=True),
     "min": Function((Signature(("real",), "real", lambda *xs: float(min(xs))),), variadic=True),
     "rad": _real(math.degrees),
@@ -198,7 +207,7 @@ STDLIB: dict[str, Function] = {
 
 def call(fn: Function, sig: Signature, args: list, rng: random.Random | None = None):
     values = [
-        tuple(map(float, a)) if kind == "point" else float(a)
+        tuple(map(float, a)) if kind == "point" else a if kind == "color" else float(a)
         for kind, a in zip(sig.params * len(args) if fn.variadic else sig.params, args, strict=True)
     ]
     return sig.impl(rng, *values) if not fn.pure else sig.impl(*values)

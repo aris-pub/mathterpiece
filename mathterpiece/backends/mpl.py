@@ -21,6 +21,7 @@ from matplotlib.transforms import Affine2D, Transform
 from matplotlib.widgets import Button as MplButton
 from matplotlib.widgets import Slider as MplSlider
 
+from mathterpiece.colors import same
 from mathterpiece.compiler import ARITHMETIC, COMPARISONS
 from mathterpiece.compiler import _fold as fold
 from mathterpiece.export import ExportError, export
@@ -219,11 +220,20 @@ class Runtime:
             return args[0] % args[1]
         if op in COMPARISONS:
             return COMPARISONS[op](*args)
+        if op in ("color=", "color!="):
+            return same(*args) == (op == "color=")
         if op == "transform":
             return compose(*args)
         if op in STDLIB:
             fn = STDLIB[op]
-            kinds = ["point" if isinstance(a, (_Ref, tuple)) else "real" for a in args]
+            kinds = [
+                "point"
+                if isinstance(a, (_Ref, tuple))
+                else "color"
+                if isinstance(a, str)
+                else "real"
+                for a in args
+            ]
             sig = fn.find(kinds)
             assert sig is not None
             values = [self.point(a.id) if isinstance(a, _Ref) else a for a in args]

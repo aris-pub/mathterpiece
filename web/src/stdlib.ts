@@ -1,4 +1,5 @@
 // The standard library and arithmetic, following the Python backend's semantics.
+import { sameColor } from "./colors.ts";
 import { Matrix } from "./matrix.ts";
 
 export class Complex {
@@ -110,6 +111,9 @@ export const COMPARISONS: Record<string, (a: unknown, b: unknown) => boolean> = 
   ">=": (a, b) => (a as number) >= (b as number),
   "=": equal,
   "!=": (a, b) => !equal(a, b),
+  // The compiler writes these when a side is a color, so strings are compared as colors.
+  "color=": (a, b) => sameColor(String(a), String(b)),
+  "color!=": (a, b) => !sameColor(String(a), String(b)),
 };
 
 // math.sin(math.pi) is 1.2e-16, not 0, so right angles in degrees are looked up instead.

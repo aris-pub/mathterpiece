@@ -88,7 +88,11 @@ class TestCircle:
         )["c"]
         assert isinstance(c, Circle)
         assert (c.r, c.x, c.y) == (Free(3.5), Free(-5.0), Free(4.0))
-        assert (c.stroke, c.fill, c.stroke_width) == (Free("teal"), Free("red"), Free(1.5))
+        assert (c.stroke, c.fill, c.stroke_width) == (
+            Free("#008080ff"),
+            Free("#ff0000ff"),
+            Free(1.5),
+        )
         assert (c.opacity, c.fill_opacity, c.stroke_opacity) == (Free(0.25), Free(0.5), Free(0.75))
 
     @pytest.mark.parametrize("text", ["2", "1/2", "2.0", "(* 2 3)", "(/ 1 2)"])
@@ -608,7 +612,7 @@ class TestExamples:
         teal, red = get(scn, "circles", Group).members
         assert isinstance(teal, Circle) and isinstance(red, Circle)
         assert (teal.name, teal.r, teal.fill) == ("teal_c", Free(3.5), Free("none"))
-        assert (red.name, red.stroke, red.stroke_width) == ("red_c", Free("red"), Free(0.1))
+        assert (red.name, red.stroke, red.stroke_width) == ("red_c", Free("#ff0000ff"), Free(0.1))
         dots = [d for d in get(scn, "dots", Group).members if isinstance(d, Circle)]
         assert len(dots) == 150
         assert [d.name for d in dots] == [f"dot{i}" for i in range(150)]

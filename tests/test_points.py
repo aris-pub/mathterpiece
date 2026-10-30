@@ -118,7 +118,7 @@ class TestListValues:
 
     def test_equality(self):
         c = get(scene("(circle 'c' (fill (if (= [1 2] [1 2]) 'red' 'blue')))"), "c", Circle)
-        assert c.fill == Free("red")
+        assert c.fill == Free("#ff0000ff")
 
 
 class TestPos:

@@ -56,7 +56,7 @@ class TestShape:
     def test_top_level(self):
         doc = exported("(circle 'c')")
         assert doc["mtp"] == 1
-        assert set(doc) == {"mtp", "objects", "functions", "names", "depends"}
+        assert set(doc) == {"mtp", "colors", "objects", "functions", "names", "depends"}
 
     def test_ids_are_list_positions(self):
         doc = exported("(circle 'c')")
@@ -80,7 +80,7 @@ class TestShape:
 class TestValues:
     def test_plain_values(self):
         c = obj(exported("(circle 'c' (r 2) (fill 'red') (pos [1 2]))"), "c")
-        assert (c["attrs"]["r"], c["attrs"]["fill"], c["attrs"]["x"]) == (2.0, "red", 1.0)
+        assert (c["attrs"]["r"], c["attrs"]["fill"], c["attrs"]["x"]) == (2.0, "#ff0000ff", 1.0)
 
     def test_transform_as_six_numbers(self):
         g = obj(exported("(group 'g' (transform (translate 3 4)))"), "g")

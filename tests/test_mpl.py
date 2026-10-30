@@ -31,7 +31,7 @@ class TestFree:
         assert value("(circle 'c' (r 2))", "c", "r") == 2.0
 
     def test_default(self):
-        assert value("(circle 'c')", "c", "fill") == "black"
+        assert value("(circle 'c')", "c", "fill") == "#000000ff"
 
     def test_builtin(self):
         assert value("(circle 'c' (r pi))", "c", "r") == math.pi
@@ -50,7 +50,7 @@ class TestBound:
 
     def test_string_attribute(self):
         src = "(circle 't' (stroke 'teal')) (circle 'c' (fill t.stroke))"
-        assert value(src, "c", "fill") == "teal"
+        assert value(src, "c", "fill") == "#008080ff"
 
     def test_hyphenated_attribute(self):
         src = "(circle 't' (stroke-width 3)) (circle 'c' (r t.stroke-width))"
@@ -460,10 +460,14 @@ class TestDotsExample:
             return math.dist(ev.point(dot), ev.point(c)) < ev.value(dot, "r") + ev.value(c, "r")
 
         for dot in scn["dots"].members:  # ty: ignore[unresolved-attribute]
-            expected = "teal" if touches(dot, teal) else "red" if touches(dot, red) else "gray"
+            # The strokes are checked colors (#rrggbbaa); 'gray' is chosen while drawing, so it
+            # stays as written.
+            expected = (
+                "#008080ff" if touches(dot, teal) else "#ff0000ff" if touches(dot, red) else "gray"
+            )
             assert ev.value(dot, "fill") == expected
             colors.add(expected)
-        assert colors == {"teal", "red", "gray"}
+        assert colors == {"#008080ff", "#ff0000ff", "gray"}
 
 
 class TestRef:

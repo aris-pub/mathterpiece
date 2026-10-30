@@ -1,6 +1,7 @@
 // The page elements: <mtp-model> holds a figure's JSON and its runtime, and views and controls
 // placed anywhere in the page find it by id, so an author can put each one where it fits.
 import { Animator } from "./animate.ts";
+import { hex, parseComputed } from "./colors.ts";
 import { Drags } from "./drag.ts";
 import type { Doc, Obj } from "./doc.ts";
 import { Runtime } from "./runtime.ts";
@@ -24,6 +25,7 @@ export class MtpModel extends HTMLElement {
   error: string | null = null;
   private running = false;
   private last = 0;
+  private watching = false;
 
   connectedCallback(): void {
     const src = this.getAttribute("src");
@@ -45,12 +47,44 @@ export class MtpModel extends HTMLElement {
       this.fail(`this runtime reads format version ${FORMAT_VERSION}, but the figure is version ${String(doc.mtp)}`);
       return;
     }
-    const rt = new Runtime(doc);
+    const rt = new Runtime(doc, Math.random, (css) => this.resolve(css));
     this.runtime = rt;
+    if (doc.objects.some((o) => o.kind === "color")) this.watchStyles();
     this.animator = new Animator(rt, () => this.changed(), () => this.wake());
     this.drags = new Drags(rt);
     this.error = null;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
+  }
+
+  // The color the page makes of a CSS color: CSS works it out on a hidden element inside this
+  // one, so page rules on any ancestor (such as :root) apply.
+  private resolve(css: string): string | null {
+    let probe = this.querySelector<HTMLElement>(":scope > .mtp-probe");
+    if (!probe) {
+      probe = document.createElement("span");
+      probe.className = "mtp-probe";
+      probe.hidden = true;
+      this.append(probe);
+    }
+    probe.style.color = css;
+    const color = parseComputed(getComputedStyle(probe).color);
+    return color ? hex(color) : null;
+  }
+
+  // Browsers do not say when a CSS variable changes. Pages restyle by switching light and dark
+  // mode, or by changing classes and styles on their root elements, so those are watched.
+  private watchStyles(): void {
+    if (this.watching) return;
+    this.watching = true;
+    const restyled = () => {
+      this.runtime?.refresh();
+      this.changed();
+    };
+    matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change", restyled);
+    const observer = new MutationObserver(restyled);
+    for (const root of [document.documentElement, document.body]) {
+      if (root) observer.observe(root, { attributes: true, attributeFilter: ["class", "style", "data-theme"] });
+    }
   }
 
   /** Tells every view and control of this model to show the current values. */

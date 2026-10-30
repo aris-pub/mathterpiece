@@ -17,6 +17,7 @@ from mathterpiece.model import (
     Button,
     Canvas,
     Circle,
+    Color,
     Control,
     Drag,
     Ellipse,
@@ -79,10 +80,12 @@ KINDS: dict[type[Obj], str] = {
     Button: "button",
     Steps: "steps",
     Play: "play",
+    Color: "color",
     Drag: "on-drag",
     State: "state",
 }
 OPERATORS = ARITHMETIC | set(COMPARISONS) | {"^", "mod", "abs", "transform"}
+COLOR_FUNCTIONS = {"mix", "lighten", "darken"}
 
 
 class ExportError(ValueError):
@@ -172,6 +175,8 @@ class _Writer:
                 names[self.paths[id(obj)]] = self.id(obj)
         doc = {
             "mtp": FORMAT_VERSION,
+            # How colors are written and mixed. Only RGBA (#rrggbbaa, mixed in sRGB) for now.
+            "colors": "rgba",
             "objects": objects,
             "functions": functions,
             "names": names,
@@ -323,6 +328,8 @@ class _Writer:
         resolved = [self.expr(a, ctx) for a in args]
         if op == "if":
             return ["if", *resolved]
+        if op in ("=", "!=") and any(self.colorish(a, ctx) for a in args):
+            return [f"color{op}", *resolved]
         if op in OPERATORS:
             return [op, *resolved]
         if op in self.model.functions or op in STDLIB:
@@ -358,7 +365,7 @@ class _Writer:
             assert isinstance(part, str)
             return self.list_parts(["read", obj, part], rest[1:], ctx)
         for i, part in enumerate(rest):
-            if isinstance(obj, (Real, Local)):
+            if isinstance(obj, (Real, Local, Color)):
                 return self.list_parts(["read", self.id(obj), "value"], rest[i:], ctx)
             if isinstance(part, str):
                 if isinstance(obj, Motif) and part in obj.params:
@@ -371,7 +378,7 @@ class _Writer:
                 return self.list_parts(self.read(obj, part, ctx), rest[i + 1 :], ctx)
             assert isinstance(obj, Group) and isinstance(part, IntLit)
             obj = obj.members[part.value]
-        if isinstance(obj, (Real, Local)):
+        if isinstance(obj, (Real, Local, Color)):
             return ["read", self.id(obj), "value"]
         return ["obj", self.id(obj)]
 
@@ -396,6 +403,21 @@ class _Writer:
         return base
 
     # The type a name shows as in a string, from what it refers to.
+    # Whether an expression is a color the compiler knows of: a color token, what fill or stroke
+    # holds, or a color function. Comparisons with one compare colors, not strings.
+    def colorish(self, node: Node, ctx: _Context) -> bool:
+        if isinstance(node, Name):
+            return self.type_of(node, ctx) in ("color", "paint")
+        if isinstance(node, Form) and isinstance(node.items[0], Name):
+            head = node.items[0].parts[0]
+            if head in COLOR_FUNCTIONS:
+                return True
+            if head in ("if", "cond", "let"):
+                return any(self.colorish(item, ctx) for item in node.items[1:])
+        if isinstance(node, Form):
+            return any(self.colorish(item, ctx) for item in node.items if isinstance(item, Form))
+        return False
+
     def type_of(self, node: Name, ctx: _Context) -> str:
         first, *rest = node.parts
         assert isinstance(first, str)
@@ -416,6 +438,8 @@ class _Writer:
             if isinstance(obj, Motif) and isinstance(part, str) and part in local_names(obj):
                 obj = local_names(obj)[part]
                 continue
+            if isinstance(obj, Color):
+                return "color"
             if isinstance(obj, (Real, Local)):
                 return "real"
             if isinstance(part, str) and obj is not None:
@@ -428,6 +452,8 @@ class _Writer:
             return "real"
         if isinstance(obj, Local):
             return obj.type
+        if isinstance(obj, Color):
+            return "color"
         return "real"
 
 

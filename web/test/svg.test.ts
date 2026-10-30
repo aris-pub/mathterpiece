@@ -82,9 +82,9 @@ describe("shapes", () => {
     const c = draw(scene([shape("circle", { r: 2, fill: "#00ff00", "fill-opacity": 0.5, opacity: 0.5 })]), 0)
       .querySelector("circle")!;
     expect(c.getAttribute("r")).toBe("2");
-    expect(c.getAttribute("fill")).toBe("#00ff00");
+    expect(c.style.getPropertyValue("fill")).toBe("#00ff00");
     expect(c.getAttribute("fill-opacity")).toBe("0.25");
-    expect(c.getAttribute("stroke")).toBe("none");
+    expect(c.style.getPropertyValue("stroke")).toBe("none");
   });
 
   it("draws rects from their corner", () => {

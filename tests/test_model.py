@@ -49,13 +49,13 @@ class TestDefaults:
         c = Circle(name="disk")
         assert c.name == "disk"
         assert (c.x, c.y, c.r) == (Free(0.0), Free(0.0), Free(1.0))
-        assert (c.fill, c.stroke, c.stroke_width) == (Free("black"), Free("none"), Free(1.0))
+        assert (c.fill, c.stroke, c.stroke_width) == (Free("#000000ff"), Free("none"), Free(1.0))
         assert (c.opacity, c.fill_opacity, c.stroke_opacity) == (Free(1.0), Free(1.0), Free(1.0))
 
     def test_text_has_the_shared_visual_attributes(self):
         t = Text(name="lbl")
         assert t.value == Free("")
-        assert (t.x, t.y, t.fill, t.opacity) == (Free(0.0), Free(0.0), Free("black"), Free(1.0))
+        assert (t.x, t.y, t.fill, t.opacity) == (Free(0.0), Free(0.0), Free("#000000ff"), Free(1.0))
 
     def test_real(self):
         assert Real(name="k").value == Free(0.0)

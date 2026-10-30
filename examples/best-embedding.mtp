@@ -3,8 +3,8 @@
 ; stretched pair, divided by how much it stretches the least stretched pair. No drawing in the
 ; plane does better than 2/sqrt(3), the three leaves at 120 degrees around c.
 
-(const 'paper' '#f7f3ea')
-(const 'ink' '#1f2a44')
+(color 'paper' '#f7f3ea')
+(color 'ink' '#1f2a44')
 (const 'unit' 3)
 
 ; How much a drawing stretches each pair, against its distance in the space: the most stretched

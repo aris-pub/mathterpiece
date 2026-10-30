@@ -45,7 +45,7 @@ class TestConst:
 
     def test_strings_and_bools(self):
         src = "(const 'gold' '#f6c453') (const 'on' true) (circle 'c' (fill (if on gold 'red')))"
-        assert get(scene(src), "c", Circle).fill == Free("#f6c453")
+        assert get(scene(src), "c", Circle).fill == Free("#f6c453ff")
 
     def test_visible_in_a_motif_body(self):
         m = scene("(const 'g' 137.5) (motif 'dot' (circle 'c' (x g))) (dot 'd')")

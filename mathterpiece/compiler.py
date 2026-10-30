@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, get_args, get_origin
 
+from mathterpiece.colors import parse_color
 from mathterpiece.matrix import Matrix, compose
 from mathterpiece.model import (
     PYTHON_FRAMES,
@@ -15,6 +16,7 @@ from mathterpiece.model import (
     Button,
     Canvas,
     Circle,
+    Color,
     Drag,
     Ellipse,
     Free,
@@ -26,6 +28,7 @@ from mathterpiece.model import (
     Model,
     Motif,
     Obj,
+    Paint,
     Play,
     Readout,
     Real,
@@ -83,7 +86,10 @@ NUMERIC = ["int", "ratio", "real", "complex"]
 # The type of a recursive call while its function's result type is still being worked out. It
 # fits wherever a value is expected.
 PENDING = "pending"
-PY_TYPES = {float: "real", str: "str", bool: "bool", Matrix: "transform"}
+PY_TYPES = {float: "real", str: "str", bool: "bool", Matrix: "transform", Paint: "paint"}
+# Values that may be drawn as a color: a color token, a string naming a color, or what fill and
+# stroke hold (paint, either of those).
+COLORISH = {"color", "str", "paint"}
 ARITHMETIC = {"+", "-", "*", "/"}
 COMPARISONS: dict[str, Callable[[Any, Any], bool]] = {
     "<": operator.lt,
@@ -136,6 +142,7 @@ FORMS = {
     "triangle": FormSpec(Triangle),
     "text": FormSpec(Text, ("value",)),
     "real": FormSpec(Real, ("value",)),
+    "color": FormSpec(Color, ("value",)),
     "group": FormSpec(Group),
     "canvas": FormSpec(Canvas),
     "readout": FormSpec(Readout, ("value",)),
@@ -454,6 +461,15 @@ def _check_spec(spec: str, kind: str, pos: Pos):
         raise CompileError(f"{spec!r} is not a format for a {kind}", pos) from None
 
 
+def _color_const(text: Any, pos: Pos, none: bool = True) -> str:
+    if none and text == "none":
+        return "none"
+    color = parse_color(str(text))
+    if color is None:
+        raise CompileError(f"{text!r} is not a color", pos)
+    return color
+
+
 def _check_not_syntax(name: str, pos: Pos):
     if name in SYNTAX:
         raise CompileError(f"{name!r} is part of the language and cannot be used as a name", pos)
@@ -464,6 +480,8 @@ def _widens_to(src: str, dst: str) -> bool:
         return True
     if src in NUMERIC and dst in NUMERIC:
         return NUMERIC.index(src) <= NUMERIC.index(dst)
+    if dst in ("paint", "color"):
+        return src in COLORISH
     return src == dst
 
 
@@ -475,6 +493,8 @@ def _convert(value, dst: str):
 
 
 def _expected_type(cls: type[Obj], attr: str) -> str:
+    if cls is Color and attr == "value":
+        return "color"
     (arg,) = get_args(attributes(cls)[attr].type)
     if get_origin(arg) is tuple:
         return f"list{len(get_args(arg))}"
@@ -778,7 +798,7 @@ class _Compiler:
             return f"{text!r} is a const, so a control cannot write it"
         if len(name.parts) == 1:
             obj = self.names.get(first) if isinstance(first, str) else None
-            if not isinstance(obj, Real):
+            if not isinstance(obj, (Real, Color)):
                 return f"{text!r} is not a value a control can write"
             attr = "value"
         else:
@@ -787,7 +807,9 @@ class _Compiler:
             if not isinstance(holder, ObjRef) or not isinstance(last, str):
                 return f"{text!r} is not a value a control can write"
             obj, attr = holder.obj, last
-        if isinstance(obj, Motif) and attr in obj.params:
+        if isinstance(obj, Color) and attr == "value":
+            current, kind = obj.value, "color"
+        elif isinstance(obj, Motif) and attr in obj.params:
             current = obj.params[attr]
             kind = self.motifs[obj.kind].params[attr].type
         elif attr == "pos" and {"x", "y"} <= attributes(type(obj)).keys():
@@ -986,6 +1008,8 @@ class _Compiler:
             if not _widens_to(value.type, kind):
                 raise CompileError(f"{text} takes a {kind}, got {value.type}", other.pos)
             stored = self.resolve_refs(_substitute(other, self.constants(env), self.lets), env)
+            if kind in ("color", "paint") and isinstance(value, Const):
+                stored = StrLit(_color_const(value.value, other.pos, kind == "paint"), other.pos)
             moves.append((obj, attr, stored))
             return None
         return f"{_text(left)} is computed, so reaching it would mean solving an equation"
@@ -1673,15 +1697,40 @@ class _Compiler:
             raise CompileError(
                 "a group attribute gives several values where one is expected", node.pos
             )
+        if expected in ("paint", "color"):
+            return self.paint(value, node, env, none=expected == "paint")
         if not _widens_to(value.type, expected):
             raise CompileError(f"expected {expected}, got {value.type}", node.pos)
         if isinstance(value, Const):
             return Free(_convert(value.value, expected))
         return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
 
+    # A color, or a string naming one: a known string is checked now and written as #rrggbbaa;
+    # one computed while drawing is checked when drawn.
+    def paint(self, value: Const | Dyn, node: Node, env: Env, none: bool) -> Free | Bound:
+        if value.type not in COLORISH and value.type != PENDING:
+            raise CompileError(f"expected a color, got {value.type}", node.pos)
+        if isinstance(value, Const):
+            return Free(_color_const(value.value, node.pos, none))
+        return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
+
     def resolve_refs(self, node: Node, env: Env) -> Node:
         if isinstance(node, Form) and _head(node) == "ref":
             return self.ref_name(node, env)
+        # Colors given to color functions are written as #rrggbbaa, so backends read one form.
+        if isinstance(node, Form) and _head(node) in ("mix", "lighten", "darken"):
+            items = tuple(
+                StrLit(
+                    _color_const(item.value, item.pos, none=False)
+                    if item.value != "none"
+                    else "#00000000",
+                    item.pos,
+                )
+                if isinstance(item, StrLit)
+                else self.resolve_refs(item, env)
+                for item in node.items
+            )
+            return Form(items, node.pos)
         if isinstance(node, Form):
             return Form(tuple(self.resolve_refs(item, env) for item in node.items), node.pos)
         if isinstance(node, ListLit):
@@ -1815,6 +1864,8 @@ class _Compiler:
             current = self.access(current, part, env, node.pos)
         if isinstance(current, ObjRef) and isinstance(current.obj, Real):
             return Dyn("real")
+        if isinstance(current, ObjRef) and isinstance(current.obj, Color):
+            return Dyn("color")
         if isinstance(current, ObjRef) and isinstance(current.obj, Local):
             return Dyn(current.obj.type)
         return current
@@ -1945,8 +1996,14 @@ class _Compiler:
         numeric = a.type in NUMERIC and b.type in NUMERIC
         if ordered and not (numeric and "complex" not in (a.type, b.type)):
             raise CompileError(f"{op} compares real numbers", node.pos)
-        if not ordered and not numeric and a.type != b.type:
+        colors = {a.type, b.type} <= COLORISH and {a.type, b.type} != {"str"}
+        if not ordered and not numeric and not colors and a.type != b.type:
             raise CompileError(f"cannot compare {a.type} with {b.type}", node.pos)
+        # Compared with a color, a known string must name one.
+        if colors:
+            for value, arg in ((a, node.items[1]), (b, node.items[2])):
+                if isinstance(value, Const) and value.type == "str":
+                    _color_const(value.value, arg.pos)
         if isinstance(a, Const) and isinstance(b, Const):
             return Const(COMPARISONS[op](a.value, b.value), "bool")
         return Dyn("bool")
@@ -2075,7 +2132,11 @@ class _Compiler:
                 point = None
             if isinstance(value, (Const, Dyn)) and _list_len(value.type) is not None:
                 point = True
-            if point is None and isinstance(value, (Const, Dyn)) and _widens_to(value.type, "real"):
+            if isinstance(value, (Const, Dyn)) and value.type in COLORISH:
+                kinds.append("color")
+            elif (
+                point is None and isinstance(value, (Const, Dyn)) and _widens_to(value.type, "real")
+            ):
                 kinds.append("real")
             elif point:
                 kinds.append("point")
@@ -2266,6 +2327,8 @@ def _unify(a: str, b: str, pos: Pos) -> str:
         return b if a == PENDING else a
     if a in NUMERIC and b in NUMERIC:
         return NUMERIC[max(NUMERIC.index(a), NUMERIC.index(b))]
+    if a != b and {a, b} <= COLORISH:
+        return "paint"
     if a != b:
         raise CompileError(f"the branches have different types: {a} and {b}", pos)
     return a

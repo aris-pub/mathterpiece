@@ -10,11 +10,14 @@
       mtp-canvas svg { width: 100%; height: auto; }
       #controls > * { display: block; margin: 0.5rem 0; }
       [aria-pressed="true"] { font-weight: bold; }
+      /* A page restyling a figure's color tokens: no mtp involved, only CSS. */
+      :root.dark { background: #14161c; color: #e8e4d8; --mtp-ink: #e8e4d8; --mtp-paper: #14161c; }
     </style>
   </head>
   <body>
     <!-- For trying the runtime by hand: just web-dev, then pick an example. -->
     <select id="pick"></select>
+    <button id="theme" type="button">dark page</button>
     <mtp-model id="m"></mtp-model>
     <mtp-canvas model="m"></mtp-canvas>
     <div id="controls"></div>
@@ -51,6 +54,7 @@
         history.replaceState(null, "", `?example=${name(pick.value)}`);
       };
       pick.onchange = load;
+      document.getElementById("theme").onclick = () => document.documentElement.classList.toggle("dark");
       load();
     </script>
   </body>

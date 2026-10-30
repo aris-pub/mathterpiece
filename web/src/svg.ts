@@ -1,6 +1,7 @@
 // Draws a canvas as SVG. Scenes have y pointing up and SVG has y pointing down, so the whole
 // scene is flipped once at the top, and text is flipped back so its letters stay upright.
 import { Matrix, compose, translate } from "./matrix.ts";
+import { cssColor } from "./colors.ts";
 import type { Runtime } from "./runtime.ts";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -91,13 +92,18 @@ function outline(rt: Runtime, i: number): Element | null {
 // Opacity multiplies down the motifs and into each paint's own opacity, as in matplotlib.
 function paint(rt: Runtime, i: number, el: Element, noFill: boolean, fade: number): void {
   const opacity = rt.opacity(i) * fade;
-  const fill = noFill ? "none" : String(rt.value(i, "fill"));
-  el.setAttribute("fill", fill);
+  const fill = noFill ? "none" : rt.value(i, "fill");
+  setPaint(el, "fill", fill);
   if (fill !== "none") el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity") * opacity));
-  const stroke = String(rt.value(i, "stroke"));
-  el.setAttribute("stroke", stroke);
+  const stroke = rt.value(i, "stroke");
+  setPaint(el, "stroke", stroke);
   if (stroke !== "none") {
     el.setAttribute("stroke-width", String(rt.value(i, "stroke-width")));
     el.setAttribute("stroke-opacity", String(rt.value(i, "stroke-opacity") * opacity));
   }
+}
+
+// Through style rather than attributes, since only CSS reads var() and color-mix().
+function setPaint(el: Element, property: string, value: unknown): void {
+  (el as SVGElement).style.setProperty(property, value === "none" ? "none" : cssColor(value));
 }

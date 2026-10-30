@@ -177,12 +177,12 @@ class TestInstance:
 
     def test_position_and_style(self):
         d = get(scene(f"{DOT} (dot 'd' (x 3) (fill 'red') (opacity 0.5))"), "d", Motif)
-        assert (d.x, d.y, d.fill, d.opacity) == (Free(3.0), Free(0.0), Free("red"), Free(0.5))
+        assert (d.x, d.y, d.fill, d.opacity) == (Free(3.0), Free(0.0), Free("#ff0000ff"), Free(0.5))
 
     def test_members_inherit_unset_style(self):
         d = get(scene("(motif 'dot' (circle 'c' (stroke 'teal'))) (dot 'd')"), "d", Motif)
         c = member(d, "c", Circle)
-        assert (c.fill, c.stroke, c.stroke_width) == (Inherit(), Free("teal"), Inherit())
+        assert (c.fill, c.stroke, c.stroke_width) == (Inherit(), Free("#008080ff"), Inherit())
         assert (c.fill_opacity, c.stroke_opacity) == (Inherit(), Inherit())
 
     def test_opacity_and_position_are_not_inherited(self):
@@ -191,7 +191,7 @@ class TestInstance:
         assert (c.x, c.y, c.opacity) == (Free(0.0), Free(0.0), Free(1.0))
 
     def test_objects_outside_motifs_do_not_inherit(self):
-        assert get(scene("(circle 'c')"), "c", Circle).fill == Free("black")
+        assert get(scene("(circle 'c')"), "c", Circle).fill == Free("#000000ff")
 
     def test_members_are_local_to_each_instance(self):
         scn = scene(f"{DOT} (dot 'a') (dot 'b' (r 3))")
@@ -341,8 +341,8 @@ class TestEvaluation:
         src = "(motif 'dot' (circle 'c') (circle 'e' (fill 'blue'))) (dot 'd' (fill 'red'))"
         scn, ev = ev_of(src)
         d = get(scn, "d", Motif)
-        assert ev.value(member(d, "c", Circle), "fill") == "red"
-        assert ev.value(member(d, "e", Circle), "fill") == "blue"
+        assert ev.value(member(d, "c", Circle), "fill") == "#ff0000ff"
+        assert ev.value(member(d, "e", Circle), "fill") == "#0000ffff"
 
     def test_style_is_inherited_through_nesting_and_defaults_at_the_top(self):
         src = (
@@ -353,7 +353,7 @@ class TestEvaluation:
         scn, ev = ev_of(src)
         ca = member(member(get(scn, "a", Motif), "i", Motif), "c", Circle)
         cb = member(member(get(scn, "b", Motif), "i", Motif), "c", Circle)
-        assert ev.value(ca, "stroke") == "teal"
+        assert ev.value(ca, "stroke") == "#008080ff"
         assert ev.value(cb, "stroke") == "none"
 
 

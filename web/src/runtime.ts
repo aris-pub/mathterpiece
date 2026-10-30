@@ -1,6 +1,7 @@
 // Evaluates a JSON document: values by object id and attribute, and what writes change. A port
 // of the Python backend's Runtime, which reads the same JSON.
 import type { Doc, Expr, Obj } from "./doc.ts";
+import { Token, mixCss, needsCss } from "./colors.ts";
 import { format, pyStr } from "./format.ts";
 import { IDENTITY, Matrix, compose, translate } from "./matrix.ts";
 import { COMPARISONS, Complex, MtpError, STDLIB, abs, fold, mod, power } from "./stdlib.ts";
@@ -41,11 +42,29 @@ export class Runtime {
   /** Texts in the middle of changing: the old text, and how far the change has gone (0 to 1). */
   morphs = new Map<number, [string, number]>();
 
+  /**
+   * resolve gives the color the page makes of a CSS color (a token, or a mix), as #rrggbbaa, or
+   * null without a page; a token then is its default.
+   */
   constructor(
     readonly doc: Doc,
     private rng: () => number = Math.random,
+    private resolve: (css: string) => string | null = () => null,
   ) {
     this.objects = doc.objects;
+  }
+
+  /** Forgets everything computed, for when the page may have restyled the color tokens. */
+  refresh(): void {
+    this.cache.clear();
+    this.frames.clear();
+  }
+
+  /** A token's or a mix's color as the page makes it; any other value as it is. */
+  resolved(value: unknown): unknown {
+    if (value instanceof Token) return this.resolve(value.css) ?? value.fallback;
+    if (needsCss(value)) return this.resolve(value) ?? value;
+    return value;
   }
 
   obj(i: number): Obj {
@@ -93,6 +112,11 @@ export class Runtime {
       throw new MtpError(`cycle through ${this.obj(i).name ?? "an anonymous object"}.${attr}`);
     }
     const o = this.obj(i);
+    if (o.kind === "color" && attr === "value") {
+      const token = new Token(o.name ?? String(i), String(o.attrs.value));
+      this.cache.set(key, token);
+      return token;
+    }
     const raw = o.params && attr in o.params ? o.params[attr] : o.attrs[attr];
     this.active.add(key);
     let result: unknown;
@@ -149,7 +173,7 @@ export class Runtime {
       case "str":
         return args.map((a) => (typeof a === "string" ? a : this.eval(a, frame, env))).join("");
       case "show": {
-        const value = this.eval(args[0], frame, env);
+        const value = this.resolved(this.eval(args[0], frame, env));
         const kind = args[1] as string;
         const spec = args[2] as string | undefined;
         if (value instanceof Splice) return value.values.map((v) => show(v, kind, spec)).join(" ");
@@ -204,8 +228,11 @@ export class Runtime {
     if (op === "abs") return abs(args[0]);
     if (op === "mod") return mod(args[0] as number, args[1] as number);
     const compare = COMPARISONS[op];
-    if (compare) return compare(args[0], args[1]);
+    if (compare) return compare(this.resolved(args[0]), this.resolved(args[1]));
     if (op === "transform") return compose(...(args as Matrix[]));
+    if (op === "mix") return mixCss(args[0], args[1], args[2] as number);
+    if (op === "lighten") return mixCss(args[0], "white", args[1] as number);
+    if (op === "darken") return mixCss(args[0], "black", args[1] as number);
     const fn = STDLIB[op];
     if (fn) return fn(this.rng, ...args.map((a) => (a instanceof Ref ? this.point(a.id) : a)));
     throw new MtpError(`unknown function ${op}`);
@@ -302,7 +329,9 @@ export class Runtime {
   holds(state: number): boolean {
     for (const cond of this.obj(state).conditions ?? []) {
       if (Array.isArray(cond) && cond[0] === "=" && cond.length === 3) {
-        if (!close(this.eval(cond[1], null, {}), this.eval(cond[2], null, {}))) return false;
+        const a = this.resolved(this.eval(cond[1], null, {}));
+        const b = this.resolved(this.eval(cond[2], null, {}));
+        if (!close(a, b)) return false;
       } else if (!this.eval(cond, null, {})) {
         return false;
       }

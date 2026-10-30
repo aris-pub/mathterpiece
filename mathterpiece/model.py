@@ -54,6 +54,17 @@ class Real(Obj):
     value: Attr[float] = Free(0.0)
 
 
+# What fill and stroke take: a color, or a string that names one (checked when it is known).
+class Paint(str):
+    pass
+
+
+# A color token: a reactive color with a default, which a web page may restyle.
+@dataclass(kw_only=True)
+class Color(Obj):
+    value: Attr[Paint] = Free(Paint("#000000ff"))
+
+
 # A let binding whose value is only known when drawing. It is computed once and every use reads
 # it. self in its expression is the owner; names resolve in the owner's motif body if inside is
 # set (the let sits directly in that body), and around the owner otherwise.
@@ -76,8 +87,8 @@ class Visual(Obj):
 class Styled(Visual):
     x: Attr[float] = Free(0.0)
     y: Attr[float] = Free(0.0)
-    fill: Attr[str] = Free("black")
-    stroke: Attr[str] = Free("none")
+    fill: Attr[Paint] = Free(Paint("#000000ff"))
+    stroke: Attr[Paint] = Free(Paint("none"))
     stroke_width: Attr[float] = Free(1.0)
     opacity: Attr[float] = Free(1.0)
     fill_opacity: Attr[float] = Free(1.0)

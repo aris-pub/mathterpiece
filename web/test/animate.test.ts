@@ -46,7 +46,7 @@ describe("going to a state", () => {
     anim.go(3, 2, "linear");
     anim.tick(1);
     expect(rt.value(0, "value")).toBeCloseTo(5);
-    expect(rt.value(2, "fill")).toBe("#808080");
+    expect(rt.value(2, "fill")).toBe("color-mix(in srgb, #000000, #ffffff 50%)");
     anim.tick(1);
     expect(rt.value(0, "value")).toBe(10);
     expect(anim.busy()).toBe(false);
@@ -123,9 +123,9 @@ describe("colors", () => {
     expect(parseColor(text)).toEqual(rgba);
   });
 
-  it("blends with none as the other color, transparent", () => {
-    expect(blend("none", "#ff0000", 0.5)).toBe("#ff000080");
-    expect(blend("#000000", "#ffffff", 0.5)).toBe("#808080");
+  it("leaves mixing colors to CSS, with none as transparent", () => {
+    expect(blend("none", "#ff0000", 0.5)).toBe("color-mix(in srgb, transparent, #ff0000 50%)");
+    expect(blend("#000000", "#ffffff", 0.25)).toBe("color-mix(in srgb, #000000, #ffffff 25%)");
   });
 
   it("does not blend what it cannot read", () => {
