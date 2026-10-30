@@ -168,7 +168,10 @@ export class Runtime {
       case "splice":
         return new Splice(args.map((a) => this.eval(a, frame, env)));
       case "list":
-        return args.map((a) => Number(this.eval(a, frame, env)));
+        return args.map((a) => {
+          const v = this.eval(a, frame, env);
+          return typeof v === "boolean" ? v : Number(v);
+        });
       case "complex":
         return new Complex(args[0] as number, args[1] as number);
       case "holds":
@@ -249,6 +252,8 @@ export class Runtime {
     if (op === "sort-asc") return [...(args[0] as number[])].sort((a, b) => a - b);
     if (op === "sort-desc") return [...(args[0] as number[])].sort((a, b) => b - a);
     if (op === "reverse") return [...(args[0] as unknown[])].reverse();
+    if (op === "any") return (args[0] as boolean[]).some(Boolean);
+    if (op === "all") return (args[0] as boolean[]).every(Boolean);
     if (op === "sort-by") {
       const pairs: [unknown, number][] = [];
       for (let k = 1; k < args.length; k += 2) pairs.push([args[k], args[k + 1] as number]);

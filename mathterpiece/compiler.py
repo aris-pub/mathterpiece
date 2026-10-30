@@ -344,11 +344,19 @@ def _list_len(t: str) -> int | None:
     return int(t[4:]) if t.startswith("list") and t[4:].isdigit() else None
 
 
+# A list of bools has a type of its own, so it is never taken for a point.
+def _bools_len(t: str) -> int | None:
+    return int(t[5:]) if t.startswith("bools") and t[5:].isdigit() else None
+
+
 def _is_literal_type(t: str) -> bool:
-    return t in LITERAL_NODES or _list_len(t) is not None
+    return t in LITERAL_NODES or _list_len(t) is not None or _bools_len(t) is not None
 
 
 def _literal(value: "Const", pos: Pos) -> Node:
+    if _bools_len(value.type) is not None:
+        assert isinstance(value.value, tuple)
+        return ListLit(tuple(BoolLit(bool(v), pos) for v in value.value), pos)
     if _list_len(value.type) is not None:
         assert isinstance(value.value, tuple)
         return ListLit(tuple(RealLit(float(v), pos) for v in value.value), pos)
@@ -1521,11 +1529,19 @@ class _Compiler:
     def map_form(self, node: Form, env: Env) -> Const | Dyn:
         bodies = self.map_bodies(node, env)
         values = [self.expr(b, env) for b in bodies]
+        bools = any(isinstance(v, (Const, Dyn)) and v.type == "bool" for v in values)
         for value in values:
             if not isinstance(value, (Const, Dyn)) or not (
-                value.type in NUMERIC[:3] or value.type == PENDING
+                value.type in (("bool",) if bools else NUMERIC[:3]) or value.type == PENDING
             ):
-                raise CompileError("a map's body must be a number", node.items[3].pos)
+                raise CompileError("a map's body must be a number or a bool", node.items[3].pos)
+        if bools:
+            if all(isinstance(v, Const) for v in values):
+                return Const(
+                    tuple(bool(v.value) for v in values if isinstance(v, Const)),
+                    f"bools{len(bodies)}",
+                )
+            return Dyn(f"bools{len(bodies)}")
         kind = f"list{len(bodies)}"
         if all(isinstance(v, Const) for v in values):
             return Const(tuple(float(v.value) for v in values if isinstance(v, Const)), kind)  # ty: ignore[invalid-argument-type]
@@ -1554,6 +1570,8 @@ class _Compiler:
             count = int(found.type[4:].split(":")[0])
         elif isinstance(found, (Const, Dyn)) and _list_len(found.type) is not None:
             count = _list_len(found.type) or 0
+        elif isinstance(found, (Const, Dyn)) and _bools_len(found.type) is not None:
+            count = _bools_len(found.type) or 0
         else:
             raise CompileError(f"{form} walks a group or a list", collection.pos)
         assert isinstance(collection, Name)
@@ -1587,6 +1605,11 @@ class _Compiler:
             raise CompileError(what, node.pos)
         value = self.expr(args[0], env)
         if not sorts and isinstance(value, Dyn) and value.type.startswith("objs"):
+            return value
+        if not sorts and isinstance(value, (Const, Dyn)) and _bools_len(value.type) is not None:
+            if isinstance(value, Const):
+                assert isinstance(value.value, tuple)
+                return Const(value.value[::-1], value.type)
             return value
         if not isinstance(value, (Const, Dyn)) or _list_len(value.type) is None:
             raise CompileError(what, args[0].pos)
@@ -2456,6 +2479,12 @@ class _Compiler:
             return ListLit(items, node.pos)
         if isinstance(node, Form) and _head(node) == "reduce":
             return self.resolve_refs(self.reduce_unrolled(node, env), env)
+        if (
+            isinstance(node, Form)
+            and _head(node) in ("any", "all")
+            and _head(node) not in self.funcs
+        ):
+            return self.any_all_node(node, env)
         if isinstance(node, Form) and _head(node) in LIST_OPS and _head(node) not in self.funcs:
             stored = self.list_op_node(node, env)
             assert isinstance(stored, Form)
@@ -2513,11 +2542,20 @@ class _Compiler:
     def list_value(self, node: ListLit, env: Env) -> Value:
         if not node.items:
             raise CompileError("a list needs at least one number", node.pos)
+        values = [self.value_arg(item, env) for item in node.items]
+        if any(v.type == "bool" for v in values):
+            if not all(v.type in ("bool", PENDING) for v in values):
+                raise CompileError("a list holds numbers or bools, not both", node.pos)
+            kind = f"bools{len(values)}"
+            if all(isinstance(v, Const) for v in values):
+                return Const(tuple(bool(v.value) for v in values if isinstance(v, Const)), kind)
+            return Dyn(kind)
         known: list[float] = []
-        for item in node.items:
-            value = self.value_arg(item, env)
+        for item, value in zip(node.items, values, strict=True):
             if value.type not in ("int", "ratio", "real", PENDING):
-                raise CompileError(f"a list holds only real numbers, got {value.type}", item.pos)
+                raise CompileError(
+                    f"a list holds real numbers or bools, got {value.type}", item.pos
+                )
             if isinstance(value, Const):
                 assert isinstance(value.value, (int, Fraction, float))
                 known.append(float(value.value))
@@ -2528,6 +2566,8 @@ class _Compiler:
         assert isinstance(value, (Const, Dyn))
         if isinstance(value, Dyn) and value.type.startswith(("objs", "obj:")):
             return self.object_list_part(value, part, env, pos)
+        if _bools_len(value.type) is not None:
+            return self.bools_part(value, part, env, pos)
         n = _list_len(value.type)
         if n is None:
             raise CompileError(f"a {value.type} has no parts", pos)
@@ -2547,6 +2587,22 @@ class _Compiler:
             assert isinstance(value.value, tuple)
             return Const(value.value[i], "real")
         return Dyn("real")
+
+    def bools_part(self, value: Const | Dyn, part: str | Node, env: Env, pos: Pos) -> Value:
+        n = _bools_len(value.type) or 0
+        if isinstance(part, str):
+            raise CompileError("a list of bools is indexed by number", pos)
+        index = self.expr(part, env)
+        if not (isinstance(index, Const) and index.type == "int"):
+            raise CompileError("an index must be an int known at compile time", part.pos)
+        assert isinstance(index.value, int)
+        i = index.value + n if index.value < 0 else index.value
+        if not 0 <= i < n:
+            raise CompileError(f"a list of {n} bools has no part {index.value}", pos)
+        if isinstance(value, Const):
+            assert isinstance(value.value, tuple)
+            return Const(value.value[i], "bool")
+        return Dyn("bool")
 
     def interp(self, node: InterpStrLit, env: Env) -> Value:
         text: list[str] = []
@@ -2595,7 +2651,7 @@ class _Compiler:
                 return current
         elif local is None and first in self.consts:
             value = self.consts[first]
-            if rest and _list_len(value.type) is None:
+            if rest and _list_len(value.type) is None and _bools_len(value.type) is None:
                 raise CompileError(f"{first!r} is a const {value.type} and has no parts", node.pos)
             for part in rest:
                 value = self.list_part(value, part, env, node.pos)
@@ -2751,6 +2807,8 @@ class _Compiler:
             return self.if_(node, env)
         if head in ("and", "or"):
             return self.and_or(head, node, env)
+        if head in ("any", "all") and head not in self.funcs:
+            return self.any_all(head, node, env)
         if head == "not":
             return self.not_(node, env)
         if head == "cond":
@@ -2917,6 +2975,28 @@ class _Compiler:
         if decided and not dynamic:
             return Const(decisive, "bool")
         return Dyn("bool") if dynamic else Const(not decisive, "bool")
+
+    # (any list) and (all list): or and and over a list of bools. A list written in place (a
+    # literal or a map) is stored as or / and, so it stops early too.
+    def any_all(self, head: str, node: Form, env: Env) -> Value:
+        if len(node.items) != 2:
+            raise CompileError(f"{head} takes one list", node.pos)
+        value = self.expr(node.items[1], env)
+        if not isinstance(value, (Const, Dyn)) or _bools_len(value.type) is None:
+            raise CompileError(f"{head} takes a list of bools", node.items[1].pos)
+        if isinstance(value, Const):
+            assert isinstance(value.value, tuple)
+            return Const((any if head == "any" else all)(value.value), "bool")
+        return Dyn("bool")
+
+    def any_all_node(self, node: Form, env: Env) -> Node:
+        arg = self.resolve_refs(node.items[1], env)
+        if not isinstance(arg, ListLit):
+            return Form((node.items[0], arg), node.pos)
+        if len(arg.items) == 1:
+            return arg.items[0]
+        op = "or" if _head(node) == "any" else "and"
+        return Form((Name((op,), node.pos), *arg.items), node.pos)
 
     def not_(self, node: Form, env: Env) -> Value:
         if len(node.items) != 2:

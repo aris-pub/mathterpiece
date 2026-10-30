@@ -268,3 +268,21 @@ describe("and, or, not", () => {
     expect(rt().eval(["or", ["=", n, 0], risky], null, {})).toBe(true);
   });
 });
+
+describe("lists of bools", () => {
+  const rt = () => new Runtime(doc([real("k", 2)]));
+  const k = ["read", 0, "value"];
+
+  it("keeps bools in a list", () => {
+    expect(rt().eval(["list", [">", k, 1], ["<", k, 1]], null, {})).toEqual([true, false]);
+  });
+
+  it.each([
+    ["any", [false, true], true],
+    ["any", [false, false], false],
+    ["all", [true, true], true],
+    ["all", [true, false], false],
+  ])("%s of %j", (op, items, expected) => {
+    expect(rt().eval([op, ["list", ...items]], null, {})).toBe(expected);
+  });
+});

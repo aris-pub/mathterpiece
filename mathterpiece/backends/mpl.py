@@ -144,7 +144,8 @@ class Runtime:
         if op == "splice":
             return _Splice(tuple(self.eval(a, frame, env) for a in args))
         if op == "list":
-            return tuple(float(self.eval(a, frame, env)) for a in args)
+            items = (self.eval(a, frame, env) for a in args)
+            return tuple(v if isinstance(v, bool) else float(v) for v in items)
         if op == "complex":
             return complex(args[0], args[1])
         if op == "inf":
@@ -230,6 +231,10 @@ class Runtime:
             return tuple(sorted(args[0], reverse=op == "sort-desc"))
         if op == "reverse":
             return tuple(reversed(args[0]))
+        if op == "any":
+            return any(args[0])
+        if op == "all":
+            return all(args[0])
         if op == "sort-by":
             pairs = list(zip(args[1::2], args[2::2], strict=True))
             pairs.sort(key=lambda pair: pair[1], reverse=args[0] == "desc")

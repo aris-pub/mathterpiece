@@ -98,7 +98,7 @@ KINDS: dict[type[Obj], str] = {
     State: "state",
 }
 OPERATORS = ARITHMETIC | set(COMPARISONS) | {"^", "mod", "abs", "transform"}
-OPERATORS |= {"sort-asc", "sort-desc", "reverse", "sort-by", "and", "or", "not"}
+OPERATORS |= {"sort-asc", "sort-desc", "reverse", "sort-by", "and", "or", "not", "any", "all"}
 COLOR_FUNCTIONS = {"mix", "lighten", "darken"}
 
 

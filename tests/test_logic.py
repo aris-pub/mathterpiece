@@ -4,7 +4,6 @@ import pytest
 
 from mathterpiece.backends.mpl import Evaluator
 from mathterpiece.compiler import CompileError, compile_model
-from mathterpiece.export import to_json
 from mathterpiece.model import Free
 from mathterpiece.parse import parse
 
