@@ -7,6 +7,7 @@ from mathterpiece.backends.mpl import Evaluator
 from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.export import to_json
 from mathterpiece.model import State
+from mathterpiece.parse import parse
 
 BASE = "(real 'k' 1) (circle 'disk' (r 1) (fill 'teal')) (circle 'other' (r 2))"
 STATES = (
@@ -72,3 +73,17 @@ class TestEvaluation:
         m, ev = ev_of(f"{BASE} {STATES}")
         ev.write(m["k"], "value", 4.0)
         assert ev.holds(get(m, "big"))
+
+
+class TestStatesAsBools:
+    def test_the_scene_reads_a_state_of_scene_values(self):
+        src = "(real 'k' 2) (state 'big' (> k 1)) (scene 's' (circle 'c' (r (if big 2 1))))"
+        assert compile_model(parse(src))
+
+    def test_the_scene_cannot_read_a_state_that_reads_a_control(self):
+        src = (
+            "(toggle 'show' self) (state 'on' (= show true))"
+            " (scene 's' (circle 'c' (r (if on 2 1))))"
+        )
+        with pytest.raises(CompileError, match="the scene cannot read the state 'on'"):
+            compile_model(parse(src))

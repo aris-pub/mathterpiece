@@ -217,6 +217,8 @@ class Canvas(View):
 @dataclass(kw_only=True)
 class State(Obj):
     conditions: tuple[Node, ...] = field(default=(), metadata={"internal": True})
+    # Whether a condition reads a control, so that only views and controls may read the state.
+    reads_controls: bool = field(default=False, metadata={"internal": True})
 
 
 @dataclass(kw_only=True)

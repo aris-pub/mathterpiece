@@ -166,6 +166,8 @@ class Runtime:
             return self.read(target, args[1], into, convert)
         if op == "param":
             return self.value(args[0], args[1])
+        if op == "holds":
+            return self.holds(args[0])
         if op == "arg":
             return env[args[0]]
         if op in WALKS:

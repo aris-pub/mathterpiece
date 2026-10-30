@@ -82,7 +82,6 @@ class TestWhen:
                 "(toggle 't' self) (scene 'w' (circle 'c' (r (if t 1 2))))",
                 "the scene cannot read the control 't'",
             ),
-            ("(toggle 't' self) (state 's' (= t true))", "the scene cannot read the control 't'"),
         ],
     )
     def test_invalid(self, src, match):

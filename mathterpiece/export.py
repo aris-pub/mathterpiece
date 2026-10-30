@@ -487,6 +487,8 @@ class _Writer:
             obj = obj.members[part.value]
         if isinstance(obj, (Real, Local, Color, Bool, Toggle)):
             return ["read", self.id(obj), "value"]
+        if isinstance(obj, State):
+            return ["holds", self.id(obj)]
         return ["obj", self.id(obj)]
 
     def read(self, obj: Obj, attr: str, ctx: _Context) -> list:

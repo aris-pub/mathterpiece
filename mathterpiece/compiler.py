@@ -845,6 +845,9 @@ class _Compiler:
         # lets is keyed by id(node), and unrolled forms are temporary: keeping each keyed node
         # alive stops Python from giving a new node the id of a freed one.
         self.keyed: list[Node] = []
+        # How many times a control (or a state reading one) has been read, so a state can tell
+        # whether its conditions read one.
+        self.controls_read = 0
         # Where each on-drag was written, for errors found once the whole model is known.
         self.drag_positions: dict[int, Pos] = {}
         # The types a name bound in a function body (a let, a loop's item, a running value) had
@@ -1332,12 +1335,21 @@ class _Compiler:
         if not conditions:
             raise CompileError("a state needs at least one condition", form.pos)
         stored = []
+        # A state may read controls, as views and controls do; it remembers whether it did.
+        before = self.controls_read
         for cond in conditions:
-            value = self.value_arg(cond, env)
+            value = self.reading_views(lambda cond=cond: self.value_arg(cond, env))
             if value.type not in ("bool", PENDING):
                 raise CompileError("a state's conditions must be true or false", cond.pos)
-            stored.append(self.resolve_refs(_substitute(cond, self.constants(env), self.lets), env))
-        state = State(name=name, conditions=tuple(stored))
+            stored.append(
+                self.reading_views(
+                    lambda cond=cond: self.resolve_refs(
+                        _substitute(cond, self.constants(env), self.lets), env
+                    )
+                )
+            )
+        reads = self.controls_read > before
+        state = State(name=name, conditions=tuple(stored), reads_controls=reads)
         self.register(state, form.pos)
         return state
 
@@ -2822,7 +2834,18 @@ class _Compiler:
             return Dyn("color")
         if isinstance(current, ObjRef) and isinstance(current.obj, Bool):
             return Dyn("bool")
+        # A state reads as a bool; one that reads a control is read like a control.
+        if isinstance(current, ObjRef) and isinstance(current.obj, State):
+            if current.obj.reads_controls:
+                if not self.views_reading:
+                    raise CompileError(
+                        f"the scene cannot read the state {current.obj.name!r}: it reads a control",
+                        node.pos,
+                    )
+                self.controls_read += 1
+            return Dyn("bool")
         if isinstance(current, ObjRef) and isinstance(current.obj, Toggle):
+            self.controls_read += 1
             if not self.views_reading:
                 raise CompileError(
                     f"the scene cannot read the control {current.obj.name!r}", node.pos
