@@ -476,7 +476,7 @@ class _Writer:
                     obj = local_names(obj)[part]
                     continue
                 if isinstance(obj, Group) and part not in attributes(type(obj)):
-                    return ["splice", *(self.read(m, part, ctx) for m in obj.members)]
+                    return ["splice", *(self.parts_of(m, [part], ctx) for m in obj.members)]
                 return self.list_parts(self.read(obj, part, ctx), rest[i + 1 :], ctx)
             assert isinstance(obj, Group) and isinstance(part, IntLit)
             obj = obj.members[part.value]

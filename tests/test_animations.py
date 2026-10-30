@@ -197,3 +197,28 @@ class TestStoredWaits:
         src = "(real 'k' 0) (scene _) (animation 'a' (in-order (k (transition (to 1))) 3))"
         with pytest.raises(CompileError, match="at-once, in-order, wait, or another animation"):
             compile_model(parse(src))
+
+
+class TestGroupTargets:
+    # A group's attribute as a target is written to each member, as that member's would be.
+    @pytest.mark.parametrize(
+        "target, value, attr",
+        [("dots.k", "1", "k"), ("circles.pos", "[1 1]", "pos")],
+    )
+    def test_each_member(self, target, value, attr):
+        src = (
+            "(motif 'dot' (params (k 0.0)) (circle 'c' (r k)))"
+            " (scene 's' (group 'dots' (dot _) (dot _)) (group 'circles' (circle _) (circle _)))"
+            f" (button 'b' (animation ({target} (transition (to {value}) (duration 0)))))"
+        )
+        doc = to_json(compile_model(parse(src)))
+        anim = doc["objects"][doc["objects"][doc["names"]["b"]]["animation"]]
+        assert [t[1] for t in anim["body"][1]] == [attr, attr]
+
+    def test_a_member_that_computes_it(self):
+        src = (
+            "(real 'k' 1) (scene 's' (group 'g' (circle _) (circle _ (r k))))"
+            " (button 'b' (animation (g.r (transition (to 1) (duration 0)))))"
+        )
+        with pytest.raises(CompileError, match="a member of 'g' computes its r"):
+            compile_model(parse(src))

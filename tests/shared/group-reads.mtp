@@ -1,0 +1,24 @@
+; A group's attribute spreads into its surroundings, for anything a member's attribute can be:
+; a stored attribute, a motif parameter, pos, or a shape's property.
+; expect radii 3
+; expect ks 30
+; expect xs 4
+; expect centers-x 7
+; expect biggest 2
+; expect smallest 1
+; expect far 4
+; write dots[1].k 5
+; expect ks 15
+(motif 'dot' (params (k 0.0)) (circle 'c' (r k)))
+(scene 's'
+  (group 'circles' (circle _ (r 1)) (circle _ (pos [4 0]) (r 2)))
+  (group 'dots' (dot _ (k 10)) (dot _ (k 20)))
+  (group 'boxes' (rect _ (x 0) (width 2) (height 2)) (rect _ (x 4) (width 4) (height 2))))
+(button 'b' (animation (dots[1].k (transition (to 20) (duration 0)))))
+(real 'radii' (+ circles.r))
+(real 'ks' (+ dots.k))
+(real 'xs' (let ((s (+ circles.pos))) s.x))
+(real 'centers-x' (let ((s (+ boxes.center))) s.x))
+(real 'biggest' (max circles.r))
+(real 'smallest' (min circles.r 5))
+(real 'far' (max (dist [0 0] circles[1]) circles.r))

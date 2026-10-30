@@ -252,7 +252,35 @@ Scope = dict[str, Value]
 
 def compile_model(forms: tuple[Form, ...]) -> Model:
     sys.setrecursionlimit(max(sys.getrecursionlimit(), PYTHON_FRAMES))
-    return _Compiler(forms).compile()
+    authors = {
+        f.items[1].value
+        for f in forms
+        if _head(f) == "func" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
+    }
+    named = tuple(_name_collections(f, authors) for f in forms)
+    return _Compiler(tuple(f for f in named if isinstance(f, Form))).compile()
+
+
+# A loop whose collection is written in place, (sum (map ...) v v), becomes the same loop over a
+# let that names the collection, since loops walk names and list literals. This is done once, on
+# the source, so every later pass sees an ordinary let. The name has a space, which no author's
+# name can have. A head the author defined as a function is left alone.
+def _name_collections(node: Node, authors: set[str]) -> Node:
+    if isinstance(node, ListLit):
+        return ListLit(tuple(_name_collections(i, authors) for i in node.items), node.pos)
+    if not isinstance(node, Form):
+        return node
+    node = Form(tuple(_name_collections(i, authors) for i in node.items), node.pos)
+    head = _head(node)
+    loops = {"map": 4, "reduce": 5}
+    loops |= {h: 4 for h in ("sum", "count", "sort", "sort-asc", "sort-desc") if h not in authors}
+    if loops.get(str(head)) != len(node.items) or isinstance(node.items[1], (Name, ListLit)):
+        return node
+    pos = node.pos
+    name = Name(("loop list",), pos)
+    bound = Form((Form((name, node.items[1]), pos),), pos)
+    loop = Form((node.items[0], name, *node.items[2:]), pos)
+    return Form((Name(("let",), pos), bound, loop), pos)
 
 
 def _head(node: Node) -> str | None:
@@ -1102,6 +1130,10 @@ class _Compiler:
             if not isinstance(holder, ObjRef) or not isinstance(last, str):
                 return f"{text!r} is not a value a control can write"
             obj, attr = holder.obj, last
+        return self.writable(obj, attr, text, node.pos)
+
+    # Whether a control can write attr of obj (text names it in errors): its target, or why not.
+    def writable(self, obj: Obj, attr: str, text: str, pos: Pos) -> tuple[Obj, str, str, str] | str:
         if isinstance(obj, Color) and attr == "value":
             current, kind = obj.value, "color"
         elif isinstance(obj, Motif) and attr in obj.params:
@@ -1114,7 +1146,7 @@ class _Compiler:
         else:
             attrs = attributes(type(obj))
             if attr not in attrs or variadic(type(obj)) is attrs[attr]:
-                raise CompileError(f"{obj.name!r} has no attribute {attr!r}", node.pos)
+                raise CompileError(f"{obj.name!r} has no attribute {attr!r}", pos)
             current = getattr(obj, attrs[attr].name)
             kind = _expected_type(type(obj), attr)
         if isinstance(current, Bound):
@@ -1559,20 +1591,22 @@ class _Compiler:
                 and isinstance(holder.obj, Group)
                 and attr not in attributes(type(holder.obj))
             ):
+                # A group's attribute is written to each member, as that member's would be.
                 out = []
+                group = holder.obj.name
                 for member in holder.obj.members:
-                    attrs = attributes(type(member))
-                    if attr not in attrs:
+                    try:
+                        found = self.writable(member, attr, f"{group}.{attr}", node.pos)
+                    except CompileError:
                         raise CompileError(
-                            f"a member of {holder.obj.name!r} has no {attr}", node.pos
-                        )
-                    if isinstance(getattr(member, attrs[attr].name), Bound):
+                            f"a member of {group!r} has no {attr}", node.pos
+                        ) from None
+                    if isinstance(found, str):
                         raise CompileError(
-                            f"a member of {holder.obj.name!r} computes its {attr}, so it cannot be"
-                            " written",
+                            f"a member of {group!r} computes its {attr}, so it cannot be written",
                             node.pos,
                         )
-                    out.append((member, attr, _expected_type(type(member), attr)))
+                    out.append(found[:3])
                 return out
         found = self.free_value(node, env)
         if isinstance(found, str):
@@ -2553,6 +2587,17 @@ class _Compiler:
     def resolve_refs(self, node: Node, env: Env) -> Node:
         if isinstance(node, Form) and _head(node) == "ref":
             return self.ref_name(node, env)
+        # An index is an int known at compile time, so a computed one is stored as that int.
+        if isinstance(node, Name) and any(isinstance(p, Form) for p in node.parts[1:]):
+            parts: list = [node.parts[0]]
+            for part in node.parts[1:]:
+                if isinstance(part, Form):
+                    value = self.expr(part, env)
+                    if isinstance(value, Const) and value.type == "int":
+                        assert isinstance(value.value, int)
+                        part = IntLit(value.value, part.pos)
+                parts.append(part)
+            return Name(tuple(parts), node.pos)
         # A map is stored as the list it unrolls into, so backends never see it.
         if isinstance(node, Form) and _head(node) == "map":
             items = tuple(self.resolve_refs(b, env) for b in self.map_bodies(node, env))
@@ -2785,12 +2830,19 @@ class _Compiler:
             names = local_names(obj)
             if part in names:
                 return ObjRef(names[part])
+        # A group's attribute is each member's, read as that member's would be.
         if isinstance(obj, Group) and part not in attributes(type(obj)):
             types = []
             for member in obj.members:
-                if part not in attributes(type(member)):
-                    raise CompileError(f"a member of {obj.name!r} has no attribute {part!r}", pos)
-                types.append(_expected_type(type(member), part))
+                try:
+                    value = self.access(ObjRef(member), part, env, pos)
+                except CompileError:
+                    raise CompileError(
+                        f"a member of {obj.name!r} has no attribute {part!r}", pos
+                    ) from None
+                if not isinstance(value, (Const, Dyn)):
+                    raise CompileError(f"{obj.name}.{part} is not a value of each member", pos)
+                types.append(value.type)
             return Spread(tuple(types))
         attrs = attributes(type(obj))
         if part == "pos" and {"x", "y"} <= attrs.keys():
@@ -3130,8 +3182,17 @@ class _Compiler:
         fn = STDLIB[name]
         kinds: list[str] = []
         values: list[Value] = []
+        # A group attribute spreads into the call, one argument per member, as it does while
+        # drawing.
+        given: list[tuple[Value, Node]] = []
         for arg in node.items[1:]:
             value = self.expr(arg, env)
+            if isinstance(value, Spread):
+                given.extend((Dyn(t), arg) for t in value.types)
+            else:
+                given.append((value, arg))
+        args = [arg for _, arg in given]
+        for value, _ in given:
             if isinstance(value, SelfRef):
                 point = {"x", "y"} <= attributes(value.cls).keys()
             elif isinstance(value, ObjRef):
@@ -3157,7 +3218,7 @@ class _Compiler:
         if sig is None:
             raise CompileError(f"no form of {name} takes these arguments", node.pos)
         # A known string given as a color must name one, wherever the call is written.
-        for value, kind, arg in zip(values, kinds, node.items[1:], strict=True):
+        for value, kind, arg in zip(values, kinds, args, strict=True):
             if kind == "color" and isinstance(value, Const) and value.type == "str":
                 _color_const(value.value, arg.pos)
         sizes = {
@@ -3326,22 +3387,14 @@ class _FuncLoops:
             return (None, True)
         return None
 
-    # Items of a collection of known size, as expressions: its literal items, or name[k]. Any
-    # other collection is bound to a name first, by bind.
+    # Items of a collection of known size, as expressions: its literal items, or name[k]. A
+    # collection written in place was already named by a let (see _name_collections).
     def items(self, collection: Node, size: int) -> list[Node]:
         if isinstance(collection, ListLit):
             return list(collection.items)
         assert isinstance(collection, Name)
         pos = collection.pos
         return [Name((*collection.parts, IntLit(k, pos)), pos) for k in range(size)]
-
-    def bind(self, collection: Node, build) -> Node:
-        if isinstance(collection, (Name, ListLit)):
-            return build(collection)
-        pos = collection.pos
-        name = Name(("loop list",), pos)
-        bindings = Form((Form((name, collection), pos),), pos)
-        return Form((Name(("let",), pos), bindings, build(name)), pos)
 
     def unknown(self, op: str, node: Form, collection: Node, shape: Shape | None, *rest) -> Form:
         kind = "objects" if shape is None or shape[1] else "values"
@@ -3360,7 +3413,7 @@ class _FuncLoops:
                 bodies = [self.walk(_rename(body, name, i), shapes) for i in self.items(c, size)]
                 return ListLit(tuple(bodies), node.pos)
 
-            return self.bind(collection, build)
+            return build(collection)
         inner = {k: v for k, v in shapes.items() if k != name}
         return self.unknown("walk-map", node, collection, shape, var, self.walk(body, inner))
 
@@ -3391,7 +3444,7 @@ class _FuncLoops:
                     )
                 return self.walk(result, shapes)
 
-            return self.bind(collection, build)
+            return build(collection)
         bound = {name, running.parts[0]}
         inner = {k: v for k, v in shapes.items() if k not in bound}
         rest = (var, running, start, self.walk(body, inner))
