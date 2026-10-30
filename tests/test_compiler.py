@@ -1108,3 +1108,29 @@ class TestRef:
 
     def test_non_visual_member(self):
         error("(real 'k') (canvas 'cnv' (ref 'k'))")
+
+
+class TestDefinitionsReplaceBuiltins:
+    # A definition of the author's with a built-in's name replaces the built-in, whatever it is.
+    @pytest.mark.parametrize(
+        "definition",
+        [
+            "(toggle 'pi' self)",
+            "(color 'pi' '#ff0000')",
+            "(font 'pi' (size 1))",
+            "(bool 'pi' true)",
+            "(animation 'pi' (k (transition (to 1) (duration 1))))",
+            "(slider 'pi' (animation (k (transition (from 0) (to 1)))))",
+            "(button 'pi' (animation (k (transition (to 1) (duration 1)))))",
+            "(play 'pi' (animation (k (transition (to 1) (duration 1)))))",
+            "(state 'pi' (> k 0))",
+            "(readout 'pi' 'hello')",
+            "(canvas 'pi' (view-x 0) (view-y 0) (view-width 1) (view-height 1))",
+        ],
+    )
+    def test_any_definition(self, definition):
+        m = compile_model(parse(f"(real 'k' 0) (scene _) {definition}"))
+        assert m["pi"] is not m["π"]
+
+    def test_the_scene(self):
+        assert compile_model(parse("(scene 'pi')"))["pi"] is not None

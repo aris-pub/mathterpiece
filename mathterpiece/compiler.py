@@ -128,7 +128,11 @@ LITERAL_NODES: dict[str, Callable[..., Node]] = {
     "str": StrLit,
 }
 
-# Heads the compiler reads specially. Everything else, like circle or dist, is standard library.
+# Heads the compiler reads specially, which cannot be used as names. Forms like circle and
+# library functions like dist or sum are not here: an author's definition of the same name
+# replaces them. The transition and animation forms (transition, in-order, at-once, wait,
+# animation), when, scene and state are not here either, yet are not replaced: a function given
+# one of their names is accepted but never called. Which way they should go is open (mtp-5io.11).
 SYNTAX = {
     "motif",
     "params",
@@ -196,6 +200,8 @@ class ObjRef:
 @dataclass(frozen=True)
 class SelfRef:
     cls: type[Obj]
+    # A motif instance's parameters and their types, which self reads like attributes.
+    params: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -565,6 +571,14 @@ def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
 
 
 TRANSITION_FORMS = ("transition", "in-order", "wait")
+# The operations the writer emits as themselves (not as calls). An author's function with one of
+# these names gets its own key, so its calls are never taken for the operation.
+OPERATOR_HEADS = (
+    ARITHMETIC
+    | set(COMPARISONS)
+    | {"^", "mod", "abs", "transform", "and", "or", "not", "any", "all"}
+    | {"sort-asc", "sort-desc", "reverse", "sort-by"}
+)
 LIST_OPS = ("sort", "sort-asc", "sort-desc", "reverse")
 # Paths through how a thing is drawn, which canvases show and hide things along.
 VIEW_PATHS = ("fade",)
@@ -941,7 +955,10 @@ class _Compiler:
             for f in self.forms
             if _head(f) == "motif" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
         }
-        taken = _defined_names(self.forms, FORMS.keys() | motifs | {"const"})
+        # Any definition of the author's replaces a built-in of the same name.
+        definers = FORMS.keys() | CONTROLS.keys() | motifs
+        definers |= {"const", "animation", "state", "readout", "canvas", "scene"}
+        taken = _defined_names(self.forms, definers)
         for names, value in BUILTINS:
             available = tuple(name for name in names if name not in taken)
             if not available:
@@ -2086,7 +2103,7 @@ class _Compiler:
             if name is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError("a parameter is (name default)", item.pos)
             _check_not_syntax(name, item.pos)
-            if name in attributes(Motif):
+            if name in attributes(Motif) or name == "pos":
                 raise CompileError(f"every motif already has {name!r}", item.pos)
             if name in params:
                 raise CompileError(f"parameter {name!r} is given twice", item.pos)
@@ -2157,7 +2174,8 @@ class _Compiler:
         assert kind is not None
         spec = self.motifs[kind]
         name = self.object_name(form, env)
-        outer = env | {"self": SelfRef(Motif)}
+        own = tuple((p, spec.params[p].type) for p in spec.params)
+        outer = env | {"self": SelfRef(Motif, own)}
         attrs = attributes(Motif)
         values: dict[str, Any] = {}
         params: dict[str, Free | Bound] = {}
@@ -2166,7 +2184,9 @@ class _Compiler:
         self.frames.append(attr_frame)
         for node in form.items[2:]:
             head = _head(node)
-            if head in FORMS or head in self.motifs or head == "repeat":
+            # A parameter is set by its name, even one that is also a form's.
+            member = head in FORMS or head in self.motifs or head == "repeat"
+            if member and head not in spec.params:
                 raise CompileError(f"an instance of {kind} takes no members", node.pos)
             if head is None or not isinstance(node, Form) or head == "members":
                 raise CompileError(f"unexpected value in {kind}", node.pos)
@@ -2814,6 +2834,8 @@ class _Compiler:
 
     def access(self, current: Value, part: str | Node, env: Env, pos: Pos) -> Value:
         if isinstance(current, SelfRef):
+            if isinstance(part, str) and part in dict(current.params):
+                return Dyn(dict(current.params)[part])
             return self.self_access(current.cls, part, pos)
         if isinstance(current, (Const, Dyn)) and _list_len(current.type) is not None:
             return self.list_part(current, part, env, pos)
@@ -3638,7 +3660,7 @@ def _resolve_read(name: Name, obj: Obj, where: Motif | None, model: Model) -> li
 
 # The heads the standard library already uses; a user function with one of these names gets its
 # own key in the model.
-LIBRARY_HEADS = set(STDLIB) | {"mod", "abs"}
+LIBRARY_HEADS = set(STDLIB) | OPERATOR_HEADS
 
 
 # A function body as the model stores it: consts written in, and calls to user functions named

@@ -19,6 +19,7 @@ from mathterpiece.model import (
     local_names,
 )
 from mathterpiece.nodes import Name
+from mathterpiece.parse import parse
 
 DOT = "(motif 'dot' (params (r 1.0)) (circle 'c' (r r)))"
 BUILTINS = {"pi", "π", "tau", "τ", "euler", "infty", "∞"}
@@ -392,3 +393,28 @@ class TestDrawing:
         (text,) = ax.patches
         assert text.get_label() == "hi"
         assert center(text, ax) == pytest.approx((3, 0))
+
+
+class TestParameterNames:
+    # A parameter is set on an instance by its name, even when that name is also a form's.
+    @pytest.mark.parametrize(
+        "param, default, value, expected",
+        [("text", "'A'", "'B'", "B"), ("color", "'A'", "'red'", "red"), ("circle", "1", "2", 2)],
+    )
+    def test_a_parameter_named_like_a_form(self, param, default, value, expected):
+        src = (
+            f"(motif 'm' (params ({param} {default})) (circle 'c'))"
+            f" (scene 's' (m 'q' ({param} {value})))"
+        )
+        q = compile_model(parse(src))["q"]
+        assert q.params[param] == Free(expected)  # ty: ignore[unresolved-attribute]
+
+    def test_pos_is_every_motifs_already(self):
+        with pytest.raises(CompileError, match="every motif already has 'pos'"):
+            compile_model(parse("(motif 'm' (params (pos [0 0])) (circle 'c')) (scene _)"))
+
+    def test_self_reading_its_own_parameter_in_a_parameter(self):
+        with pytest.raises(CompileError, match="circular dependency: a.k -> a.k"):
+            compile_model(
+                parse("(motif 'm' (params (k 0.0)) (circle 'c')) (scene 's' (m 'a' (k self.k)))")
+            )

@@ -10,7 +10,13 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 from typing import Any
 
-from mathterpiece.compiler import ARITHMETIC, COMPARISONS, FORMS, PROPERTIES, WALKS, _expected_type
+from mathterpiece.compiler import (
+    FORMS,
+    OPERATOR_HEADS,
+    PROPERTIES,
+    WALKS,
+    _expected_type,
+)
 from mathterpiece.matrix import Matrix
 from mathterpiece.model import (
     Animation,
@@ -97,8 +103,7 @@ KINDS: dict[type[Obj], str] = {
     Drag: "on-drag",
     State: "state",
 }
-OPERATORS = ARITHMETIC | set(COMPARISONS) | {"^", "mod", "abs", "transform"}
-OPERATORS |= {"sort-asc", "sort-desc", "reverse", "sort-by", "and", "or", "not", "any", "all"}
+OPERATORS = OPERATOR_HEADS
 COLOR_FUNCTIONS = {"mix", "lighten", "darken"}
 
 

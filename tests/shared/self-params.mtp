@@ -1,0 +1,7 @@
+; self on a motif instance reads its parameters, as its attributes are.
+; expect a.x 4
+; write a.k 5
+; expect a.x 10
+(motif 'm' (params (k 0.0)) (circle 'c'))
+(scene 's' (m 'a' (k 2) (x (* 2 self.k))))
+(button 'b' (animation (a.k (transition (to 2) (duration 0)))))
