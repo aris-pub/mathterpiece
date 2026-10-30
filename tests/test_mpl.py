@@ -10,7 +10,7 @@ from matplotlib.colors import to_rgba
 
 from mathterpiece.backends.mpl import EvalError, Evaluator, render
 from mathterpiece.compiler import compile_model
-from mathterpiece.model import Bound, Circle, Model
+from mathterpiece.model import Bound, Canvas, Circle, Model
 from mathterpiece.nodes import Name
 from mathterpiece.parse import parse
 
@@ -188,8 +188,9 @@ class TestUnevaluatedExpression:
 class TestRender:
     @pytest.mark.parametrize("example", sorted(EXAMPLES.glob("*.mtp")), ids=lambda p: p.name)
     def test_examples_render(self, example):
-        figures = render(compile_model(parse(example.read_text())), random.Random(0))
-        assert len(figures) == 1
+        model = compile_model(parse(example.read_text()))
+        figures = render(model, random.Random(0))
+        assert len(figures) == len([v for v in model.views if isinstance(v, Canvas)])
 
     def test_view_box_sets_the_axes_limits_with_y_up(self):
         ((_, ax),) = render(
@@ -482,3 +483,26 @@ class TestInfinity:
         ev = Evaluator(m, random.Random(0))
         assert ev.value(m["k"], "value") == math.inf
         assert ev.value(m["j"], "value") == -math.inf
+
+
+class TestTextAlignment:
+    def extents(self, align):
+        m = scene(f"(text 't' 'Hello' (pos [0 0]) (font-size 2) {align}) (canvas 'cnv' t)")
+        ((fig, ax),) = render(m, random.Random(0))
+        (patch,) = ax.patches
+        return patch.get_path().transformed(patch.get_transform() - ax.transData).get_extents()
+
+    def test_start_and_baseline_by_default(self):
+        box = self.extents("")
+        assert box.x0 == pytest.approx(0, abs=0.2)
+        assert box.y0 == pytest.approx(0, abs=0.1)
+
+    def test_middle(self):
+        box = self.extents("(halign 'middle') (valign 'middle')")
+        assert (box.x0 + box.x1) / 2 == pytest.approx(0, abs=1e-6)
+        assert (box.y0 + box.y1) / 2 == pytest.approx(0, abs=1e-6)
+
+    def test_end_and_top(self):
+        box = self.extents("(halign 'end') (valign 'top')")
+        assert box.x1 == pytest.approx(0, abs=1e-6)
+        assert box.y1 == pytest.approx(0, abs=1e-6)

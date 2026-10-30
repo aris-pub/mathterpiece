@@ -493,7 +493,16 @@ FONT_PARTS: dict[type[Obj], dict[str, str]] = {
 FONT_STYLES = ("normal", "italic", "oblique")
 
 
+ALIGNMENTS = {"halign": ("start", "middle", "end"), "valign": ("top", "middle", "bottom")}
+
+
 def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
+    if cls is Text:
+        for attr, allowed in ALIGNMENTS.items():
+            found = values.get(attr)
+            if isinstance(found, Free) and found.value not in allowed:
+                names = ", ".join(repr(a) for a in allowed[:-1])
+                raise CompileError(f"{attr} is {names} or {allowed[-1]!r}", positions[attr])
     style, weight = ("style", "weight") if cls is Font else ("font-style", "font-weight")
     if cls not in FONT_PARTS and cls is not Font:
         return

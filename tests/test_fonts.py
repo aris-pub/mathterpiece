@@ -113,3 +113,28 @@ class TestExport:
         attrs = doc["objects"][t]["attrs"]
         assert attrs["font-family"] == ["read", f, "family"]
         assert attrs["font-size"] == ["read", f, "size"]
+
+
+class TestAlignment:
+    def test_defaults(self):
+        t = scene("(text 't' 'x')")["t"]
+        assert (t.halign, t.valign) == (Free("start"), Free("bottom"))
+
+    def test_given(self):
+        t = scene("(text 't' 'x' (halign 'middle') (valign 'top'))")["t"]
+        assert (t.halign, t.valign) == (Free("middle"), Free("top"))
+
+    @pytest.mark.parametrize(
+        "src, match",
+        [
+            ("(text 't' 'x' (halign 'center'))", "halign is 'start', 'middle' or 'end'"),
+            ("(text 't' 'x' (valign 'baseline'))", "valign is 'top', 'middle' or 'bottom'"),
+        ],
+    )
+    def test_invalid(self, src, match):
+        error(src, match)
+
+    def test_export(self):
+        doc = to_json(scene("(text 't' 'x' (halign 'end'))"))
+        attrs = doc["objects"][doc["names"]["t"]]["attrs"]
+        assert (attrs["halign"], attrs["valign"]) == ("end", "bottom")

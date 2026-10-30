@@ -156,6 +156,10 @@ class Text(Styled):
     font_family: Attr[str] = Free("")
     font_style: Attr[str] = Free("normal")
     font_weight: Attr[float] = Free(400.0)
+    # Where (x, y) sits on the text: its start, middle or end, and its top, middle or bottom
+    # (the baseline).
+    halign: Attr[str] = Free("start")
+    valign: Attr[str] = Free("bottom")
 
 
 @dataclass(kw_only=True)

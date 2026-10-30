@@ -472,11 +472,18 @@ def _draw(i: int, ax: Axes, rt: Runtime, to_view: Transform, strokes: list, view
         shape = rt.shape(i)
         value = rt.value(i, "value")
         glyphs = TextPath((0, 0), value, size=rt.value(i, "font-size"))
+        # matplotlib has no alignment for glyph outlines, so the text is moved by its own box,
+        # which is close to what a browser does (it aligns by the font's metrics instead).
+        box = glyphs.get_extents()
+        dx = {"start": 0.0, "middle": -(box.x0 + box.x1) / 2, "end": -box.x1}[rt.value(i, "halign")]
+        dy = {"bottom": 0.0, "middle": -(box.y0 + box.y1) / 2, "top": -box.y1}[
+            rt.value(i, "valign")
+        ]
         text = PathPatch(
             glyphs,
             facecolor=_paint(rt, i, "fill"),
             edgecolor=_paint(rt, i, "stroke"),
-            transform=_affine(shape) + to_view,
+            transform=Affine2D().translate(dx, dy) + _affine(shape) + to_view,
             label=value,
         )
         strokes.append((text, rt.value(i, "stroke-width") * _scale(shape) * view_scale))

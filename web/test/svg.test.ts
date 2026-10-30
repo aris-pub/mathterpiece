@@ -144,6 +144,17 @@ describe("shapes", () => {
     expect([...svg.querySelectorAll("rect, circle")].map((e) => e.tagName)).toEqual(["rect", "circle"]);
   });
 
+  it.each([
+    [{}, null, null],
+    [{ halign: "middle" }, "middle", null],
+    [{ halign: "end", valign: "top" }, "end", "hanging"],
+    [{ valign: "middle" }, null, "central"],
+  ])("aligns text %j", (align, anchor, baseline) => {
+    const t = draw(scene([shape("text", { value: "hi", "font-size": 1, halign: "start", valign: "bottom", ...align })]), 0)
+      .querySelector("text")!;
+    expect([t.getAttribute("text-anchor"), t.getAttribute("dominant-baseline")]).toEqual([anchor, baseline]);
+  });
+
   it("draws text upright", () => {
     const t = draw(scene([shape("text", { x: 1, y: 2, value: "hi", "font-size": 0.5 })]), 0).querySelector("text")!;
     expect(t.textContent).toBe("hi");

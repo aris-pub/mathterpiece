@@ -80,6 +80,11 @@ function text(rt: Runtime, i: number, value: string, fade: number): Element {
   const el = document.createElementNS(NS, "text") as SVGElement;
   el.setAttribute("font-size", String(rt.value(i, "font-size")));
   setFont(rt, i, el);
+  // The baseline (bottom) and the start are SVG's own defaults.
+  const anchor = rt.value(i, "halign");
+  if (anchor === "middle" || anchor === "end") el.setAttribute("text-anchor", anchor);
+  const baseline = { top: "hanging", middle: "central" }[rt.value(i, "valign") as string];
+  if (baseline) el.setAttribute("dominant-baseline", baseline);
   el.textContent = value;
   el.setAttribute("transform", rt.shape(i).times(FLIP).svg());
   el.setAttribute("data-mtp-id", String(i));
