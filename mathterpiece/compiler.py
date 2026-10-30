@@ -77,6 +77,7 @@ from mathterpiece.stdlib import (
     subtract,
 )
 from mathterpiece.stdlib import call as stdlib_call
+from mathterpiece.transitions import Ease, Path, Sequence, Single, Wait
 
 BUILTINS = [
     (("pi", "π"), math.pi),
@@ -504,6 +505,25 @@ def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
     found = values.get(weight)
     if isinstance(found, Free) and not 1 <= found.value <= 1000:
         raise CompileError(f"{weight} is between 1 and 1000", positions[weight])
+
+
+TRANSITION_FORMS = ("transition", "in-order", "wait")
+TRANSITION_PARTS = ("from", "to", "duration", "ease", "path")
+
+
+# The type a transition's values move through: numbers all as reals, colors and strings naming
+# colors as one kind.
+def _transition_elem(t: str) -> str:
+    if t in NUMERIC:
+        return "real"
+    return t
+
+
+def _transition_value(value: "Value") -> Any:
+    assert isinstance(value, Const)
+    if value.type in ("int", "ratio"):
+        return float(value.value)  # ty: ignore[invalid-argument-type]
+    return value.value
 
 
 def _check_not_syntax(name: str, pos: Pos):
@@ -1174,12 +1194,146 @@ class _Compiler:
         if name in self.names or name in self.consts:
             raise CompileError(f"name {name!r} is already defined", form.items[1].pos)
         value = self.value_arg(form.items[2], env)
+        if value.type.startswith("transition") and not isinstance(value, Const):
+            raise CompileError(
+                "a const transition cannot read the scene; to reuse one that does, write a func"
+                " that takes the scene value as a parameter",
+                form.items[2].pos,
+            )
+        if value.type.startswith("transition") and isinstance(value, Const):
+            self.consts[name] = value
+            return
         if not isinstance(value, Const) or not _is_literal_type(value.type):
             raise CompileError(
                 "a const must be a number, string, bool, or list known at compile time",
                 form.items[2].pos,
             )
         self.consts[name] = value
+
+    # (transition ...), (in-order ...) of transitions, and (wait d). Known in full, a transition
+    # is a Const holding a Single, Sequence or Wait; one whose ends read the scene is a Dyn.
+    def transition_form(self, head: str, node: Form, env: Env) -> Const | Dyn:
+        if head == "wait":
+            if len(node.items) != 2:
+                raise CompileError("wait takes a number of seconds", node.pos)
+            return Const(
+                Wait(_duration(self.value_arg(node.items[1], env), node.items[1].pos)),
+                "transition:any",
+            )
+        if head == "transition":
+            return self.single_transition(node, env)
+        return self.transition_sequence(node, env)
+
+    def single_transition(self, node: Form, env: Env) -> Const | Dyn:
+        parts: dict[str, Any] = {}
+        ends: dict[str, Const | Dyn] = {}
+        for item in node.items[1:]:
+            part = _head(item)
+            if not isinstance(item, Form) or part not in TRANSITION_PARTS:
+                raise CompileError(f"transition has no part {part or _text(item)!r}", item.pos)
+            if part in parts or part in ends:
+                raise CompileError(f"{part!r} is given twice", item.pos)
+            if len(item.items) != 2:
+                raise CompileError(f"{part} takes one value", item.pos)
+            arg = item.items[1]
+            if part in ("from", "to"):
+                value = self.value_arg(arg, env)
+                if not isinstance(value, (Const, Dyn)):
+                    raise CompileError("a transition's ends are values", arg.pos)
+                ends[part] = value
+            elif part == "duration":
+                parts["duration"] = _duration(self.value_arg(arg, env), arg.pos)
+            elif part == "ease":
+                parts["ease"] = self.ease(arg, env)
+            else:
+                parts["path"] = self.path(arg)
+        elem = None
+        if ends:
+            types = {p: _transition_elem(v.type) for p, v in ends.items()}
+            if len(set(types.values())) > 1:
+                raise CompileError(f"from is a {types['from']} but to is a {types['to']}", node.pos)
+            elem = next(iter(types.values()))
+        if not all(isinstance(v, Const) for v in ends.values()):
+            return Dyn(f"transition:{elem or 'any'}")
+        values = {("frm" if p == "from" else p): _transition_value(v) for p, v in ends.items()}
+        return Const(Single(**values, **parts, elem=elem), f"transition:{elem or 'any'}")
+
+    def transition_sequence(self, node: Form, env: Env) -> Const | Dyn:
+        settings: dict[str, Any] = {}
+        rest = list(node.items[1:])
+        while rest and _head(rest[0]) in ("ease", "default-duration", "default-ease"):
+            item = rest.pop(0)
+            assert isinstance(item, Form)
+            setting = _head(item)
+            if len(item.items) != 2:
+                raise CompileError(f"{setting} takes one value", item.pos)
+            if setting == "default-duration":
+                settings["default_duration"] = _duration(
+                    self.value_arg(item.items[1], env), item.pos
+                )
+            elif setting == "default-ease":
+                settings["default_ease"] = self.ease(item.items[1], env)
+            else:
+                settings["ease"] = self.ease(item.items[1], env)
+        values = [self.value_arg(item, env) for item in rest]
+        for item, value in zip(rest, values, strict=True):
+            if not value.type.startswith("transition"):
+                raise CompileError("in-order holds transitions", item.pos)
+        elems = {t.split(":", 1)[1] for t in (v.type for v in values)} - {"any"}
+        if len(elems) > 1:
+            raise CompileError("the steps of an in-order move different types", node.pos)
+        elem = next(iter(elems), None)
+        kind = f"transition:{elem or 'any'}"
+        if not all(isinstance(v, Const) for v in values):
+            return Dyn(kind)
+        parts = tuple(v.value for v in values if isinstance(v, Const))
+        assert all(isinstance(p, (Single, Wait, Sequence)) for p in parts)
+        return Const(Sequence(parts, elem=elem, **settings), kind)  # ty: ignore[invalid-argument-type]
+
+    # A built-in ease by name, (step c), or the name of a function of one number.
+    def ease(self, node: Node, env: Env) -> Ease:
+        if isinstance(node, StrLit):
+            if node.value not in EASES:
+                raise CompileError(
+                    f"ease is one of {', '.join(repr(e) for e in EASES)}, (step c), or a function",
+                    node.pos,
+                )
+            return node.value
+        if isinstance(node, Form) and _head(node) == "step":
+            value = self.value_arg(node.items[1], env) if len(node.items) == 2 else None
+            if not (
+                isinstance(value, Const)
+                and value.type in ("int", "ratio", "real")
+                and 0 <= value.value <= 1  # ty: ignore[unsupported-operator]
+            ):
+                raise CompileError("step takes a number from 0 to 1", node.pos)
+            return ("step", float(value.value))  # ty: ignore[invalid-argument-type]
+        name = self.function_name(node)
+        if self.arity(name) != 1:
+            raise CompileError("an ease takes one parameter: the progress, from 0 to 1", node.pos)
+        return ("func", name)
+
+    # The name of a function of the start, the end and the eased progress.
+    def path(self, node: Node) -> Path:
+        name = self.function_name(node)
+        if self.arity(name) != 3:
+            raise CompileError(
+                "a path takes three parameters: the start, the end, and the progress", node.pos
+            )
+        return ("func", name)
+
+    def function_name(self, node: Node) -> str:
+        if not (isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str)):
+            raise CompileError("expected the name of a function", node.pos)
+        name = node.parts[0]
+        if name not in self.funcs and name not in STDLIB:
+            raise CompileError(f"no function named {name!r}", node.pos)
+        return name
+
+    def arity(self, name: str) -> int:
+        if name in self.funcs:
+            return len(self.funcs[name].params)
+        return max(len(s.params) for s in STDLIB[name].signatures)
 
     def define_func(self, form: Form):
         if len(form.items) < 3 or not isinstance(form.items[1], StrLit):
@@ -2067,6 +2221,8 @@ class _Compiler:
 
     def call(self, node: Form, env: Env) -> Value:
         head = _head(node)
+        if head in TRANSITION_FORMS:
+            return self.transition_form(head, node, env)
         if head in self.funcs:
             return self.func_call(head, node, env)
         if head in ARITHMETIC:
