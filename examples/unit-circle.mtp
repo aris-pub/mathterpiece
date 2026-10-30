@@ -1,0 +1,50 @@
+; The unit circle. A point at angle theta sits at (cos theta, sin theta): drag the point around
+; the circle, or the slider, and watch both coordinates change. The text uses three type tokens,
+; one per role, and a page can restyle each of them with CSS, as it can restyle the color tokens.
+
+(real 'theta' 40)
+
+(color 'paper' '#fbf8f1')
+(color 'ink' '#1f2a44')
+(color 'accent' '#e76f51')
+(color 'cool' '#2a9d8f')
+
+; Headings: the page's font, heavier.
+(font 'heading' (weight 600) (size 0.75))
+; Math variables are italic, in a serif, as in typeset math.
+(font 'variable' (family 'Georgia, serif') (style 'italic') (size 0.65))
+; Numbers that change, in a monospace font, so the digits do not jump around as they change.
+(font 'number' (family 'ui-monospace, Menlo, monospace') (size 0.5))
+
+(const 'unit' 6)
+
+(scene 'plane'
+  (background paper)
+
+  (line _ (from [-8 0]) (to [8 0]) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.5))
+  (line _ (from [0 -7]) (to [0 7]) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.5))
+  (circle 'rim' (r unit) (fill 'none') (stroke ink) (stroke-width 0.05))
+
+  (circle 'p' (pos (polar unit theta)) (r 0.25) (fill ink))
+  (line 'radius' (from [0 0]) (to p.pos) (stroke ink) (stroke-width 0.06))
+  (line 'across' (from [0 0]) (to [p.x 0]) (stroke accent) (stroke-width 0.12))
+  (line 'up' (from [p.x 0]) (to p.pos) (stroke cool) (stroke-width 0.12))
+
+  (text _ 'θ' (pos (polar 1.1 (/ theta 2))) (font variable) (fill ink))
+  (text _ 'x' (pos [(/ p.x 2) -0.8]) (font variable) (fill accent))
+  (text _ 'y' (pos [(+ p.x 0.3) (/ p.y 2)]) (font variable) (fill cool))
+
+  (text 'title' 'the unit circle' (pos [-9.5 6.3]) (font heading) (fill ink))
+  (text 'angle' $'θ = {theta:5.1f}°' (pos [-9.5 5.4]) (font number) (fill ink))
+  (text 'xs' (let ((x (cosd theta))) $'x = {x:+z.3f}') (pos [-9.5 4.7]) (font number) (fill accent))
+  (text 'ys' (let ((y (sind theta))) $'y = {y:+z.3f}') (pos [-9.5 4.0]) (font number) (fill cool)))
+
+(canvas 'view' (view-x -10) (view-y -7.5) (view-width 20) (view-height 15) plane)
+
+; Dragging the point changes theta, so the point slides along the circle under the pointer.
+(on-drag p theta)
+(slider 'turn' theta (min 0) (max 360) (label 'θ'))
+
+; For the prose around the figure: the same numbers, set in the number font.
+(readout 'x-now' (let ((x (cosd theta))) $'{x:+z.3f}') (font number))
+(readout 'y-now' (let ((y (sind theta))) $'{y:+z.3f}') (font number))

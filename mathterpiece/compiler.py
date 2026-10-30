@@ -19,6 +19,7 @@ from mathterpiece.model import (
     Color,
     Drag,
     Ellipse,
+    Font,
     Free,
     Function,
     Group,
@@ -143,6 +144,7 @@ FORMS = {
     "text": FormSpec(Text, ("value",)),
     "real": FormSpec(Real, ("value",)),
     "color": FormSpec(Color, ("value",)),
+    "font": FormSpec(Font),
     "group": FormSpec(Group),
     "canvas": FormSpec(Canvas),
     "readout": FormSpec(Readout, ("value",)),
@@ -468,6 +470,31 @@ def _color_const(text: Any, pos: Pos, none: bool = True) -> str:
     if color is None:
         raise CompileError(f"{text!r} is not a color", pos)
     return color
+
+
+# What a font token gives each kind of object: its attribute, and the token's part it reads.
+FONT_PARTS: dict[type[Obj], dict[str, str]] = {
+    Text: {
+        "font-family": "family",
+        "font-style": "style",
+        "font-weight": "weight",
+        "font-size": "size",
+    },
+    Readout: {"font-family": "family", "font-style": "style", "font-weight": "weight"},
+}
+FONT_STYLES = ("normal", "italic", "oblique")
+
+
+def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
+    style, weight = ("style", "weight") if cls is Font else ("font-style", "font-weight")
+    if cls not in FONT_PARTS and cls is not Font:
+        return
+    found = values.get(style)
+    if isinstance(found, Free) and found.value not in FONT_STYLES:
+        raise CompileError(f"{style} is 'normal', 'italic' or 'oblique'", positions[style])
+    found = values.get(weight)
+    if isinstance(found, Free) and not 1 <= found.value <= 1000:
+        raise CompileError(f"{weight} is between 1 and 1000", positions[weight])
 
 
 def _check_not_syntax(name: str, pos: Pos):
@@ -918,10 +945,10 @@ class _Compiler:
         moved = self.free_value(target_node, env)
         if isinstance(moved, str):
             raise CompileError(moved, target_node.pos)
-        if moved[0] is not node or moved[1] not in ("x", "y", "pos"):
+        position = moved[0] is node and moved[1] in ("x", "y", "pos")
+        if not position and moved[2] not in ("int", "real"):
             raise CompileError(
-                f"the target must be part of {text}'s position: {text}.x, {text}.y or {text}.pos",
-                target_node.pos,
+                f"a drag's target is {text}.x, {text}.y, {text}.pos, or a number", target_node.pos
             )
         conditions: list[Node] = []
         when: Node | State | None = None
@@ -937,7 +964,15 @@ class _Compiler:
                 raise CompileError("unexpected value in on-drag", item.pos)
             else:
                 conditions.append(self.condition(item, env))
-        return Drag(name=None, node=node, target=moved[1], conditions=tuple(conditions), when=when)
+        return Drag(
+            name=None,
+            node=node,
+            target_obj=moved[0],
+            target=moved[1],
+            kind=moved[2],
+            conditions=tuple(conditions),
+            when=when,
+        )
 
     # A condition stored for drawing time; it must be true or false.
     def condition(self, node: Node, env: Env) -> Node:
@@ -1462,6 +1497,9 @@ class _Compiler:
             settable.add("pos")
         shapes = PROPERTIES.get(spec.cls, {})
         settable |= shapes.keys()
+        if spec.cls in FONT_PARTS:
+            settable.add("font")
+        font: Name | None = None
         extra: dict[str, tuple[Const | Dyn, Node]] = {}
         rest = list(form.items[2:])
         values: dict[str, Free | Bound] = {}
@@ -1486,6 +1524,9 @@ class _Compiler:
             if attr in positions:
                 raise CompileError(f"attribute {attr!r} is given twice", node.pos)
             positions[attr] = node.pos
+            if attr == "font":
+                font = self.font_token(node, env)
+                continue
             if attr == "pos":
                 if len(node.items) != 2:
                     raise CompileError("attribute 'pos' takes exactly one value", node.pos)
@@ -1513,6 +1554,12 @@ class _Compiler:
 
         if extra:
             self.construct(spec.cls, extra, values, positions, env)
+        if font is not None:
+            for attr, part in FONT_PARTS[spec.cls].items():
+                if attr not in values:
+                    values[attr] = Bound(Name((*font.parts, part), font.pos))
+                    positions[attr] = font.pos
+        _check_font_values(spec.cls, values, positions)
         if spec.cls is Rect and "rx" in values and "ry" not in values:
             values["ry"] = Bound(Name(("self", "rx"), positions["rx"]))
             positions["ry"] = positions["rx"]
@@ -1719,6 +1766,15 @@ class _Compiler:
         if isinstance(value, Const):
             return Free(_convert(value.value, expected))
         return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
+
+    def font_token(self, node: Form, env: Env) -> Name:
+        if len(node.items) != 2 or not isinstance(node.items[1], Name):
+            raise CompileError("font takes the name of a font token", node.pos)
+        target = node.items[1]
+        found = self.name(target, env)
+        if not (isinstance(found, ObjRef) and isinstance(found.obj, Font)):
+            raise CompileError(f"{_text(target)!r} is not a font", target.pos)
+        return target
 
     # A color, or a string naming one: a known string is checked now and written as #rrggbbaa;
     # one computed while drawing is checked when drawn.

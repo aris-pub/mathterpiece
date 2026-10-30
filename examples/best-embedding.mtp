@@ -6,6 +6,8 @@
 (color 'paper' '#f7f3ea')
 (color 'ink' '#1f2a44')
 (const 'unit' 3)
+; Point names are math variables, so they are italic.
+(font 'variable' (style 'italic') (size 0.6))
 
 ; How much a drawing stretches each pair, against its distance in the space: the most stretched
 ; pair divided by the least stretched. Two points drawn on top of each other give infinity.
@@ -29,10 +31,10 @@
   (line _ (from u.pos) (to v.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
   (line _ (from v.pos) (to w.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
   (line _ (from w.pos) (to u.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
-  (text _ 'c' (pos (+ c.pos [0.4 0.4])) (font-size 0.6) (fill ink))
-  (text _ 'u' (pos (+ u.pos [0.4 0.4])) (font-size 0.6) (fill ink))
-  (text _ 'v' (pos (+ v.pos [0.4 0.4])) (font-size 0.6) (fill ink))
-  (text _ 'w' (pos (+ w.pos [0.4 0.4])) (font-size 0.6) (fill ink))
+  (text _ 'c' (pos (+ c.pos [0.4 0.4])) (font variable) (fill ink))
+  (text _ 'u' (pos (+ u.pos [0.4 0.4])) (font variable) (fill ink))
+  (text _ 'v' (pos (+ v.pos [0.4 0.4])) (font variable) (fill ink))
+  (text _ 'w' (pos (+ w.pos [0.4 0.4])) (font variable) (fill ink))
   (text 'readout'
     (let ((d (distortion c.pos u.pos v.pos w.pos))) $'distortion {d:.3f}')
     (pos [-9.5 5.8]) (font-size 0.7) (fill ink))

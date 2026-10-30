@@ -5,8 +5,10 @@
 
 (const 'radius' 9.0)
 (const 'depth' 6)
-(const 'paper' '#f4efe3')
-(const 'ink' '#1d2433')
+(color 'paper' '#f4efe3')
+(color 'ink' '#1d2433')
+(font 'heading' (weight 600) (size 0.6))
+(font 'small' (size 0.45))
 
 ; The offset towards corner digit (0, 1, or 2) at a level, from the center of the triangle above.
 (func 'corner' (params (digit 0.0) (level 1))
@@ -32,7 +34,7 @@
     (else '#f1a208')))
 
 (scene 'page'
-  (rect 'backdrop' (center [0 0]) (size [20 20]) (fill paper))
+  (background paper)
 
   (group 'gasket' (transform (translate 0 -2.2))
     (triangle 'outline' (center [0 0]) (r radius) (fill 'none') (stroke ink) (stroke-width 0.05))
@@ -44,7 +46,7 @@
           (fill (shade top))
           (fill-opacity (lerp 0.35 1 (/ (mod (- (digit-sum i) top) 3) 2)))))))
 
-  (text 'title' 'sierpiński triangle' (pos [-9.3 9]) (font-size 0.6) (fill ink))
-  (text 'count' $'3^{depth} triangles' (pos [-9.3 8.2]) (font-size 0.45) (fill ink) (opacity 0.6)))
+  (text 'title' 'sierpiński triangle' (pos [-9.3 9]) (font heading) (fill ink))
+  (text 'count' $'3^{depth} triangles' (pos [-9.3 8.2]) (font small) (fill ink) (opacity 0.6)))
 
 (canvas 'cnv' page)

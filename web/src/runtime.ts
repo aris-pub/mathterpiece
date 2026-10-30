@@ -43,13 +43,13 @@ export class Runtime {
   morphs = new Map<number, [string, number]>();
 
   /**
-   * resolve gives the color the page makes of a CSS color (a token, or a mix), as #rrggbbaa, or
-   * null without a page; a token then is its default.
+   * resolve gives what the page makes of a CSS value for a property (a token, or a mix; colors
+   * as #rrggbbaa), or null without a page; a token then is its default.
    */
   constructor(
     readonly doc: Doc,
     private rng: () => number = Math.random,
-    private resolve: (css: string) => string | null = () => null,
+    private resolve: (css: string, property: string) => string | null = () => null,
   ) {
     this.objects = doc.objects;
   }
@@ -62,8 +62,8 @@ export class Runtime {
 
   /** A token's or a mix's color as the page makes it; any other value as it is. */
   resolved(value: unknown): unknown {
-    if (value instanceof Token) return this.resolve(value.css) ?? value.fallback;
-    if (needsCss(value)) return this.resolve(value) ?? value;
+    if (value instanceof Token) return this.resolve(value.css, value.property) ?? value.fallback;
+    if (needsCss(value)) return this.resolve(value, "color") ?? value;
     return value;
   }
 
@@ -114,6 +114,11 @@ export class Runtime {
     const o = this.obj(i);
     if (o.kind === "color" && attr === "value") {
       const token = new Token(o.name ?? String(i), String(o.attrs.value));
+      this.cache.set(key, token);
+      return token;
+    }
+    if (o.kind === "font" && (attr === "family" || attr === "style" || attr === "weight")) {
+      const token = new Token(`${o.name ?? i}-${attr}`, String(o.attrs[attr]), `font-${attr}`);
       this.cache.set(key, token);
       return token;
     }

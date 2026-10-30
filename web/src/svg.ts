@@ -1,7 +1,7 @@
 // Draws a canvas as SVG. Scenes have y pointing up and SVG has y pointing down, so the whole
 // scene is flipped once at the top, and text is flipped back so its letters stay upright.
 import { Matrix, compose, translate } from "./matrix.ts";
-import { cssColor } from "./colors.ts";
+import { cssColor, fontCss } from "./colors.ts";
 import type { Runtime } from "./runtime.ts";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -55,8 +55,9 @@ function drawObject(rt: Runtime, i: number, into: Element): void {
 }
 
 function text(rt: Runtime, i: number, value: string, fade: number): Element {
-  const el = document.createElementNS(NS, "text");
+  const el = document.createElementNS(NS, "text") as SVGElement;
   el.setAttribute("font-size", String(rt.value(i, "font-size")));
+  setFont(rt, i, el);
   el.textContent = value;
   el.setAttribute("transform", rt.shape(i).times(FLIP).svg());
   el.setAttribute("data-mtp-id", String(i));
@@ -102,6 +103,11 @@ function paint(rt: Runtime, i: number, el: Element, noFill: boolean, fade: numbe
     el.setAttribute("stroke-width", String(rt.value(i, "stroke-width")));
     el.setAttribute("stroke-opacity", String(rt.value(i, "stroke-opacity") * opacity));
   }
+}
+
+// Through style, since the parts may be tokens (var()).
+function setFont(rt: Runtime, i: number, el: SVGElement): void {
+  for (const [property, css] of fontCss((attr) => rt.value(i, attr))) el.style.setProperty(property, css);
 }
 
 // Through style rather than attributes, since only CSS reads var() and color-mix().

@@ -3,9 +3,11 @@
 ; the most irrational turn there is, packs them evenly. Press play for the tour, pick a step,
 ; or drag the angle yourself.
 
-(const 'night' '#0b1026')
+(color 'night' '#0b1026')
 (const 'gold' '#f6c453')
-(const 'chalk' '#e8e4d8')
+(color 'chalk' '#e8e4d8')
+(font 'heading' (weight 600) (size 0.6))
+(font 'small' (size 0.45))
 (const 'golden-angle' (* 180 (- 3 (sqrt 5))))
 
 (func 'seed-color' (params (t 0.0))
@@ -21,11 +23,11 @@
         (stroke 'none')))))
 
 (scene 'garden'
-  (rect 'sky' (center [0 0]) (size [20 20]) (fill night))
+  (background night)
   (circle 'halo' (r 9.2) (fill 'none') (fill-opacity 0.12) (stroke 'none'))
   (flower 'sunflower')
-  (text 'name' 'a quarter turn' (pos [-9.3 9]) (font-size 0.6) (fill chalk))
-  (text 'degrees' $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font-size 0.45) (fill chalk) (opacity 0.6)))
+  (text 'name' 'a quarter turn' (pos [-9.3 9]) (font heading) (fill chalk))
+  (text 'degrees' $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font small) (fill chalk) (opacity 0.6)))
 
 (state 'quarter' (= sunflower.angle 90) (= name.value 'a quarter turn') (= halo.fill 'none'))
 (state 'third' (= sunflower.angle 120) (= name.value 'a third of a turn') (= halo.fill 'none'))

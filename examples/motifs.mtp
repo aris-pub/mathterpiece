@@ -9,6 +9,6 @@
 (scene 'world'
   (pair 'p1' (y 4) (fill 'red'))
   (pair 'p2' (y -4) (gap 6) (fill 'purple') (opacity 0.5))
-  (text 'info' $'right disk of p1 is at x = {p1.right.crc.x}' (x -9) (y -9)))
+  (text 'info' $'right disk of p1 is at x = {p1.right.crc.x:.1f}' (x -9) (y -9)))
 
 (canvas 'cnv' world)

@@ -1,7 +1,8 @@
-(const 'ink' '#1f2a44')
+(color 'ink' '#1f2a44')
+(font 'small' (size 0.7))
 
 (scene 'world'
-  (rect 'paper' (center [0 0]) (size [20 20]) (fill '#f7f3ea'))
+  (background '#f7f3ea')
 
   ; Axes through the origin.
   (line _ (from [-9 0]) (to [9 0]) (stroke ink) (stroke-width 0.05))
@@ -16,6 +17,6 @@
   (ellipse 'oval' (center [6 -6]) (size [5 2]) (transform (rotate 30)) (fill '#b9d8b0'))
   (rect 'card' (x -8) (y -8) (width 3) (height 2) (rx 0.3) (transform (rotate 20)) (fill '#e9c46a'))
 
-  (text 'label' $'tri.r = {tri.r}' (pos [-9 8.5]) (font-size 0.7) (fill ink)))
+  (text 'label' $'tri.r = {tri.r:.2f}' (pos [-9 8.5]) (font small) (fill ink)))
 
 (canvas 'cnv' world)

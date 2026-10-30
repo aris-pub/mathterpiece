@@ -68,6 +68,18 @@ describe("format, Python's format mini-language", () => {
     expect(format(x, spec, kind)).toBe(text);
   });
 
+  it.each([
+    [-0.0001, "+z.3f", "+0.000"],
+    [-0.0001, "z.1%", "0.0%"],
+    [-0.4, "z.0f", "0"],
+    [-1.2, "z.1f", "-1.2"],
+    [-0.0, "z.2f", "0.00"],
+    [-1e-05, "z.2e", "-1.00e-05"],
+    [0.0001, "+z.3f", "+0.000"],
+  ])("%s with %j turns negative zero into zero, as z does in Python", (x, spec, text) => {
+    expect(format(x, spec, "real")).toBe(text);
+  });
+
   it("formats strings", () => {
     expect(format("ab", "*^6", "str")).toBe("**ab**");
     expect(format("ab", ">4", "str")).toBe("  ab");

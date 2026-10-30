@@ -1,6 +1,9 @@
 (const 'golden' (* 180 (- 3 (sqrt 5))))
 (const 'gold' '#f6c453')
-(const 'starlight' '#c9d6ff')
+(color 'starlight' '#c9d6ff')
+(color 'night' '#0b1026')
+(font 'heading' (weight 600) (size 0.6))
+(font 'note' (size 0.5))
 
 ; Seed color by how far out the seed is, from 0 at the center to 1 at the edge.
 (func 'seed-color' (params (t 0.0))
@@ -40,8 +43,8 @@
   (sunflower 'seeds' (n n) (spread spread) (size size))
   (orbit 'ring' (count moons) (radius moon-radius) (size 0.16) (fill '#5fd3c6')))
 
-(scene 'night'
-  (circle 'sky' (r 15) (fill '#0b1026'))
+(scene 'sky'
+  (background night)
 
   (bloom 'big' (x -2.8) (y 2.2) (fill gold) (moons 60))
   (bloom 'small' (x 6.3) (y -5.9) (fill '#ff8c42') (n 160) (spread 0.25) (size 0.08) (halo 4.4))
@@ -56,7 +59,7 @@
             ((< (dist self small) small.halo) small.fill)
             (else starlight))))))
 
-  (text 'title' 'the golden angle' (x 2.3) (y 9.3) (font-size 0.6) (fill gold))
-  (text 'subtitle' $'{golden:.3f}°' (x 2.4) (y 8.5) (font-size 0.5) (fill starlight) (opacity 0.55)))
+  (text 'title' 'the golden angle' (x 2.3) (y 9.3) (font heading) (fill gold))
+  (text 'subtitle' $'{golden:.3f}°' (x 2.4) (y 8.5) (font note) (fill starlight) (opacity 0.55)))
 
-(canvas 'cnv' (transform (rotate -8)) night)
+(canvas 'cnv' (transform (rotate -8)) sky)

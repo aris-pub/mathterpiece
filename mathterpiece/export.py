@@ -21,6 +21,7 @@ from mathterpiece.model import (
     Control,
     Drag,
     Ellipse,
+    Font,
     Free,
     Group,
     Inherit,
@@ -81,6 +82,7 @@ KINDS: dict[type[Obj], str] = {
     Steps: "steps",
     Play: "play",
     Color: "color",
+    Font: "font",
     Drag: "on-drag",
     State: "state",
 }
@@ -228,7 +230,10 @@ class _Writer:
             )
         if isinstance(obj, Drag):
             assert obj.node is not None
-            out["target"] = [self.id(obj.node), obj.target]
+            assert obj.target_obj is not None
+            out["node"] = self.id(obj.node)
+            out["target"] = [self.id(obj.target_obj), obj.target]
+            out["type"] = obj.kind
             out["conditions"] = [self.expr(c, ctx) for c in obj.conditions]
             if isinstance(obj.when, State):
                 out["when"] = ["holds", self.id(obj.when)]

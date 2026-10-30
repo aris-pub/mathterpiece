@@ -45,4 +45,4 @@ class TestReadout:
         r = doc["objects"][doc["names"]["r"]]
         k = doc["names"]["k"]
         assert r["kind"] == "readout"
-        assert r["attrs"] == {"value": ["str", ["show", ["read", k, "value"], "real", ".1f"]]}
+        assert r["attrs"]["value"] == ["str", ["show", ["read", k, "value"], "real", ".1f"]]

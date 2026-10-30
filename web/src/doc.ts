@@ -28,6 +28,8 @@ export interface Obj {
   start?: number | null;
   steps?: unknown[][];
   // on-drag
+  node?: number;
+  // on-drag
   when?: Expr;
 }
 

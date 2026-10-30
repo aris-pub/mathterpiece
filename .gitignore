@@ -16,3 +16,5 @@ web/dist/
 mathterpiece/web/
 # Built from examples/ by just web-examples
 web/test/data/examples/
+# Screenshots Vitest saves when a browser test fails
+web/.vitest/

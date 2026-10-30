@@ -59,6 +59,16 @@ class Paint(str):
     pass
 
 
+# A type token: family, style and weight are published so a web page may restyle them; size is
+# in scene units, so it stays the figure's.
+@dataclass(kw_only=True)
+class Font(Obj):
+    family: Attr[str] = Free("")
+    style: Attr[str] = Free("normal")
+    weight: Attr[float] = Free(400.0)
+    size: Attr[float] = Free(1.0)
+
+
 # A color token: a reactive color with a default, which a web page may restyle.
 @dataclass(kw_only=True)
 class Color(Obj):
@@ -137,6 +147,10 @@ class Text(Styled):
     value: Attr[str] = Free("")
     # In scene units, like r. Text starts at (x, y) on its baseline, as in SVG.
     font_size: Attr[float] = Free(1.0)
+    # As in CSS; an empty family means the page's.
+    font_family: Attr[str] = Free("")
+    font_style: Attr[str] = Free("normal")
+    font_weight: Attr[float] = Free(400.0)
 
 
 @dataclass(kw_only=True)
@@ -168,6 +182,10 @@ class View(Obj):
 @dataclass(kw_only=True)
 class Readout(View):
     value: Attr[str] = Free("")
+    # From a font token; size is the paragraph's, since scene units mean nothing in prose.
+    font_family: Attr[str] = Free("")
+    font_style: Attr[str] = Free("normal")
+    font_weight: Attr[float] = Free(400.0)
 
 
 @dataclass(kw_only=True)
@@ -248,8 +266,11 @@ class Play(Control):
 @dataclass(kw_only=True)
 class Drag(Obj):
     node: Obj | None = field(default=None, metadata={"internal": True})
-    # What the drag moves: "x", "y" or "pos" (both).
+    # What the drag writes: the node's x, y or pos (both), or a number the node's position depends
+    # on, which the runtime sets so the node comes as close to the pointer as it can.
+    target_obj: Obj | None = field(default=None, metadata={"internal": True})
     target: str = field(default="pos", metadata={"internal": True})
+    kind: str = field(default="list2", metadata={"internal": True})
     conditions: tuple[Node, ...] = field(default=(), metadata={"internal": True})
     when: "Node | State | None" = field(default=None, metadata={"internal": True})
 

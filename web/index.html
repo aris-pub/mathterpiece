@@ -12,12 +12,21 @@
       [aria-pressed="true"] { font-weight: bold; }
       /* A page restyling a figure's color tokens: no mtp involved, only CSS. */
       :root.dark { background: #14161c; color: #e8e4d8; --mtp-ink: #e8e4d8; --mtp-paper: #14161c; }
+      /* A page restyling a figure's type tokens, also only with CSS. */
+      :root.fonts {
+        --mtp-heading-family: Palatino, "Book Antiqua", serif;
+        --mtp-heading-style: italic;
+        --mtp-variable-family: "Times New Roman", serif;
+        --mtp-number-family: "Courier New", monospace;
+        --mtp-number-weight: 700;
+      }
     </style>
   </head>
   <body>
     <!-- For trying the runtime by hand: just web-dev, then pick an example. -->
     <select id="pick"></select>
     <button id="theme" type="button">dark page</button>
+    <button id="fonts" type="button">page fonts</button>
     <mtp-model id="m"></mtp-model>
     <mtp-canvas model="m"></mtp-canvas>
     <div id="controls"></div>
@@ -55,6 +64,7 @@
       };
       pick.onchange = load;
       document.getElementById("theme").onclick = () => document.documentElement.classList.toggle("dark");
+      document.getElementById("fonts").onclick = () => document.documentElement.classList.toggle("fonts");
       load();
     </script>
   </body>

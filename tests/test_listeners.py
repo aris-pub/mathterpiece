@@ -48,6 +48,18 @@ class TestOnDrag:
         m = scene("(circle 'bar') (circle 'h' (x 0) (y bar.y)) (on-drag h h.x (>= h.x 0))")
         assert drag(m).target == "x"
 
+    def test_a_number_the_position_depends_on(self):
+        m = scene("(real 'theta' 40) (circle 'p' (pos (polar 6 theta))) (on-drag p theta)")
+        d = drag(m)
+        assert (d.node, d.target_obj, d.target) == (m["p"], m["theta"], "value")
+
+    def test_a_motif_parameter(self):
+        m = scene(
+            "(motif 'arm' (params (angle 0.0)) (circle 'tip' (pos (polar 3 angle))))"
+            " (arm 'a') (on-drag a.tip a.angle)"
+        )
+        assert drag(m).target == "angle"
+
     def test_conditions(self):
         m = scene(
             "(circle 'c') (circle 'u' (pos [0 1])) (on-drag u u.pos (<= (dist u c) 3) (>= u.y 0))"
@@ -75,8 +87,8 @@ class TestOnDrag:
             ("(real 'k') (on-drag k k.value)", "cannot be dragged"),
             ("(circle 'c') (circle 'u' (x c.x)) (on-drag u u.pos)", "computed"),
             ("(circle 'c') (circle 'u' (x c.x)) (on-drag u u.x)", "computed"),
-            ("(circle 'c') (circle 'u') (on-drag u c.pos)", "part of u's position"),
-            ("(circle 'u') (on-drag u u.r)", "part of u's position"),
+            ("(circle 'c') (circle 'u') (on-drag u c.pos)", "u.x, u.y, u.pos, or a number"),
+            ("(circle 'u') (on-drag u u.fill)", "u.x, u.y, u.pos, or a number"),
             ("(circle 'u') (on-drag u u.pos 3)", "true or false"),
             ("(circle 'u') (on-drag u u.pos (when 3))", "true or false"),
             ("(circle 'u') (on-drag u u.pos (when (> 1 0)) (when (> 1 0)))", "twice"),
@@ -105,3 +117,11 @@ class TestExport:
         doc = to_json(scene("(circle 'u') (on-drag u u.pos)"))
         (d,) = [o for o in doc["objects"] if o["kind"] == "on-drag"]
         assert d["when"] is None
+
+
+def test_export_a_number_target():
+    doc = to_json(scene("(real 'theta' 40) (circle 'p' (pos (polar 6 theta))) (on-drag p theta)"))
+    (d,) = [o for o in doc["objects"] if o["kind"] == "on-drag"]
+    assert d["node"] == doc["names"]["p"]
+    assert d["target"] == [doc["names"]["theta"], "value"]
+    assert d["type"] == "real"

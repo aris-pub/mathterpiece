@@ -1,21 +1,25 @@
 // Colors. For now every color is RGBA: written as #rrggbbaa, mixed in sRGB. Mixing is done by
 // CSS (color-mix), never here, so color tokens mix with whatever the page made of them.
 
-/** A color token: drawn as a CSS variable the page may set, with the figure's default. */
+/**
+ * A token: a color, or part of a font, drawn as a CSS variable the page may set, with the
+ * figure's default. An empty default leaves it to the page.
+ */
 export class Token {
   constructor(
     readonly name: string,
     readonly fallback: string,
+    readonly property: "color" | "font-family" | "font-style" | "font-weight" = "color",
   ) {}
 
   get css(): string {
-    return `var(--mtp-${this.name}, ${this.fallback})`;
+    return this.fallback === "" ? `var(--mtp-${this.name})` : `var(--mtp-${this.name}, ${this.fallback})`;
   }
 }
 
 /** Whether a value can be drawn as a color: a token, 'none', a known color or a CSS color function. */
 export function isPaint(value: unknown): boolean {
-  if (value instanceof Token) return true;
+  if (value instanceof Token) return value.property === "color";
   if (typeof value !== "string") return false;
   return value === "none" || isCssColorFunction(value) || parseColor(value) !== null;
 }
@@ -30,6 +34,23 @@ export function cssColor(value: unknown): string {
   if (value === "none") return "transparent";
   if (typeof value === "string" && isPaint(value)) return value;
   throw new Error(`${JSON.stringify(value)} is not a color`);
+}
+
+/**
+ * The CSS for an object's font-family, font-style and font-weight. With a font token, every part
+ * is written, so a part the object sets itself overrides the token's; without one, only the
+ * parts that say something are, and the rest is left to the page.
+ */
+export function fontCss(value: (attr: string) => unknown): [string, string][] {
+  const parts: [string, unknown, unknown][] = [
+    ["font-family", value("font-family"), ""],
+    ["font-style", value("font-style"), "normal"],
+    ["font-weight", value("font-weight"), 400],
+  ];
+  const token = parts.some(([, v]) => v instanceof Token);
+  return parts
+    .filter(([, v, unset]) => v !== undefined && v !== "" && (token || v !== unset))
+    .map(([property, v]) => [property, v instanceof Token ? v.css : String(v)]);
 }
 
 /** t of the way from a to b, left to CSS: color-mix in sRGB. */

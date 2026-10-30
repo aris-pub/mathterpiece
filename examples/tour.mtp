@@ -1,8 +1,9 @@
 ; A guided tour through the times tables. Press play to watch the cardioid turn into a nephroid
 ; and then into a curve with eight cusps, or pick a step, or drag the slider at any time.
 
-(const 'slate' '#0e1726')
-(const 'chalk' '#e8e4d8')
+(color 'slate' '#0e1726')
+(color 'chalk' '#e8e4d8')
+(font 'small' (size 0.6))
 
 (func 'on-circle' (params (radius 1.0) (k 0.0) (n 1))
   (polar radius (turn (/ k n))))
@@ -18,9 +19,9 @@
         (stroke-opacity (lerp 0.2 0.85 (/ k n)))))))
 
 (scene 'board'
-  (rect 'backdrop' (center [0 0]) (size [20 20]) (fill slate))
+  (background slate)
   (times-table 'table' (stroke '#ffb703'))
-  (text 'caption' 'cardioid' (pos [-9.4 -9.4]) (font-size 0.6) (fill chalk)))
+  (text 'caption' 'cardioid' (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
 (state 'cardioid' (= table.m 2) (= table.stroke '#ffb703') (= caption.value 'cardioid'))
 (state 'nephroid' (= table.m 3) (= table.stroke '#8ecae6') (= caption.value 'nephroid'))

@@ -192,7 +192,6 @@ export function format(value: unknown, spec: string, kind: Kind): string {
     throw new Error("an int cannot take a precision");
   }
   const negative = value < 0 || Object.is(value, -0);
-  const sign = negative ? "-" : g.sign === "+" ? "+" : g.sign === " " ? " " : "";
   const abs = Math.abs(value);
   let body: string;
   let prefix = "";
@@ -226,6 +225,9 @@ export function format(value: unknown, spec: string, kind: Kind): string {
       if (/^\d+$/.test(whole)) body = [groupDigits(whole, g.group, 3), ...rest].join(".");
     }
   }
+  // z: a number that rounds to zero is shown without its minus sign.
+  const zero = Boolean(g.z) && !/[1-9]/.test(body.replace(/[eE][+-]?\d+$/, ""));
+  const sign = negative && !zero ? "-" : g.sign === "+" ? "+" : g.sign === " " ? " " : "";
   return pad(body, sign + prefix, width, fill, align || ">");
 }
 

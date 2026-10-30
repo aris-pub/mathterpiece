@@ -132,7 +132,7 @@ describe("dragging on a canvas", () => {
       { id: 1, kind: "root", name: "s", attrs: { transform: ID }, members: [2, 3] },
       { id: 2, kind: "circle", name: "u", parent: 1, attrs: { ...style, x: 1, y: 1, r: 0.5 } },
       { id: 3, kind: "circle", name: "still", parent: 1, attrs: { ...style, x: 5, y: 5, r: 0.5 } },
-      { id: 4, kind: "on-drag", name: null, attrs: {}, target: [2, "pos"], conditions: [], when: null },
+      { id: 4, kind: "on-drag", name: null, attrs: {}, node: 2, target: [2, "pos"], conditions: [], when: null },
     ],
     functions: {},
     names: { u: 2, still: 3 },
@@ -217,5 +217,22 @@ describe("<mtp-readout>", () => {
   it("says when there is no such readout", async () => {
     await page("best-embedding", `<mtp-readout model="m" name="readout"></mtp-readout>`);
     expect(document.querySelector("mtp-readout")?.textContent).toMatch(/readout is a text, not a readout/);
+  });
+});
+
+describe("the unit-circle example", () => {
+  it("drags the point along the circle, and the slider and readouts follow", async () => {
+    const { model, rt } = await page(
+      "unit-circle",
+      `<mtp-slider model="m" name="turn"></mtp-slider><p>x is <mtp-readout model="m" name="x-now"></mtp-readout></p>`,
+    );
+    const names = example("unit-circle").names;
+    const drags = model.drags!;
+    expect(drags.grab(names.p!, [6 * Math.cos((40 * Math.PI) / 180), 6 * Math.sin((40 * Math.PI) / 180)])).toBe(true);
+    drags.move([0, 6]);
+    model.changed();
+    expect(rt.value(names.theta!, "value")).toBeCloseTo(90, 2);
+    expect((document.querySelector("mtp-slider input") as HTMLInputElement).value).toMatch(/^(89\.9|90)/);
+    expect(document.querySelector("mtp-readout")?.textContent).toBe("+0.000");
   });
 });

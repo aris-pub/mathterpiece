@@ -1,7 +1,7 @@
 // The page elements: <mtp-model> holds a figure's JSON and its runtime, and views and controls
 // placed anywhere in the page find it by id, so an author can put each one where it fits.
 import { Animator } from "./animate.ts";
-import { hex, parseComputed } from "./colors.ts";
+import { fontCss, hex, parseComputed } from "./colors.ts";
 import { Drags } from "./drag.ts";
 import type { Doc, Obj } from "./doc.ts";
 import { Runtime } from "./runtime.ts";
@@ -47,18 +47,18 @@ export class MtpModel extends HTMLElement {
       this.fail(`this runtime reads format version ${FORMAT_VERSION}, but the figure is version ${String(doc.mtp)}`);
       return;
     }
-    const rt = new Runtime(doc, Math.random, (css) => this.resolve(css));
+    const rt = new Runtime(doc, Math.random, (css, property) => this.resolve(css, property));
     this.runtime = rt;
-    if (doc.objects.some((o) => o.kind === "color")) this.watchStyles();
+    if (doc.objects.some((o) => o.kind === "color" || o.kind === "font")) this.watchStyles();
     this.animator = new Animator(rt, () => this.changed(), () => this.wake());
     this.drags = new Drags(rt);
     this.error = null;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
 
-  // The color the page makes of a CSS color: CSS works it out on a hidden element inside this
-  // one, so page rules on any ancestor (such as :root) apply.
-  private resolve(css: string): string | null {
+  // What the page makes of a CSS value: CSS works it out on a hidden element inside this one, so
+  // page rules on any ancestor (such as :root) apply. Colors come back as #rrggbbaa.
+  private resolve(css: string, property: string): string | null {
     let probe = this.querySelector<HTMLElement>(":scope > .mtp-probe");
     if (!probe) {
       probe = document.createElement("span");
@@ -66,8 +66,10 @@ export class MtpModel extends HTMLElement {
       probe.hidden = true;
       this.append(probe);
     }
-    probe.style.color = css;
-    const color = parseComputed(getComputedStyle(probe).color);
+    probe.style.setProperty(property, css);
+    const computed = getComputedStyle(probe).getPropertyValue(property);
+    if (property !== "color") return computed || null;
+    const color = parseComputed(computed);
     return color ? hex(color) : null;
   }
 
@@ -240,21 +242,43 @@ function scenePoint(rt: Runtime, canvas: number, svg: SVGSVGElement, event: Poin
   return toUser.inverse().apply(ux, uy);
 }
 
-// A string from the scene, inline in the page's prose; the page's CSS styles it.
+// A string from the scene, inline in the page's prose. Its font, if it has one, goes in a rule
+// with the lowest priority, so it beats only inheritance: the page's own rules still win.
 export class MtpReadout extends MtpPart {
   private sync: () => void = () => {};
+  private rule: HTMLStyleElement | null = null;
 
-  protected setup(_model: MtpModel, rt: Runtime): void {
+  protected setup(model: MtpModel, rt: Runtime): void {
     const readout = this.find(rt, "readout");
+    const selector = `:where(mtp-readout[model="${model.id}"][name="${readout.name}"])`;
     this.sync = () => {
       this.textContent = String(rt.value(readout.id, "value"));
+      const declarations = readoutFont(rt, readout.id);
+      if (!declarations && !this.rule) return;
+      if (!this.rule) {
+        this.rule = document.createElement("style");
+        document.head.append(this.rule);
+      }
+      this.rule.textContent = declarations ? `${selector} { ${declarations} }` : "";
     };
     this.sync();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.rule?.remove();
+    this.rule = null;
   }
 
   protected update(): void {
     this.sync();
   }
+}
+
+function readoutFont(rt: Runtime, id: number): string {
+  return fontCss((attr) => rt.value(id, attr))
+    .map(([property, css]) => `${property}: ${css};`)
+    .join(" ");
 }
 
 export class MtpSlider extends MtpPart {

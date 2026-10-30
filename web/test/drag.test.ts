@@ -26,6 +26,7 @@ function world(listeners: Omit<Obj, "id" | "name" | "attrs">[], extra: Omit<Obj,
 
 const on = (node: number, conditions: unknown[] = [], when: unknown = null, attr = "pos") => ({
   kind: "on-drag",
+  node,
   target: [node, attr] as [number, string],
   conditions,
   when,
@@ -110,5 +111,62 @@ describe("dragging", () => {
     const state = { kind: "state", name: "on", attrs: {}, conditions: [[">", ["read", 2, "x"], 0]], moves: null };
     const { drags } = world([on(2, [], ["holds", 7])], [state]);
     expect(drags.grab(2, [0, 1])).toBe(false);
+  });
+});
+
+describe("dragging by a number the position depends on", () => {
+  // theta (0) is a real; p (3) sits on a circle of radius 6 at angle theta; the drag writes theta.
+  function circle(conditions: unknown[] = []) {
+    const objects: Omit<Obj, "id">[] = [
+      { kind: "real", name: "theta", attrs: { value: 0 } },
+      { kind: "canvas", name: "view", attrs: { "view-x": -10, "view-y": -10, "view-width": 20, "view-height": 20, transform: ID }, shows: [2] },
+      { kind: "root", name: "s", attrs: { transform: ID }, members: [3] },
+      { kind: "circle", name: "p", parent: 2, attrs: { ...style, x: ["part", ["call", "polar", 6, ["read", 0, "value"]], 0], y: ["part", ["call", "polar", 6, ["read", 0, "value"]], 1], r: 0.2 } },
+      { kind: "on-drag", name: null, attrs: {}, node: 3, target: [0, "value"], type: "real", conditions, when: null },
+    ];
+    const doc: Doc = { mtp: 1, objects: objects.map((o, id) => ({ ...o, id }) as Obj), functions: {}, names: {}, depends: {} };
+    const rt = new Runtime(doc);
+    return { rt, drags: new Drags(rt), theta: () => rt.value(0, "value") as number };
+  }
+
+  it("moves the number so the node follows the pointer around", () => {
+    const { drags, theta } = circle();
+    drags.grab(3, [6, 0]);
+    drags.move([6 * Math.cos(0.2), 6 * Math.sin(0.2)]);
+    expect(theta()).toBeCloseTo((0.2 * 180) / Math.PI, 3);
+    drags.move([0, 6]);
+    expect(theta()).toBeCloseTo(90, 3);
+  });
+
+  it("keeps the node where the number allows when the pointer leaves the path", () => {
+    const { drags, theta } = circle();
+    drags.grab(3, [6, 0]);
+    drags.move([0, 6]);
+    drags.move([0, 11]);
+    expect(theta()).toBeCloseTo(90, 3);
+  });
+
+  it("follows the pointer's motion, not its place, so grabbing off center does not jump", () => {
+    const { drags, theta } = circle();
+    drags.grab(3, [6.1, 0.1]);
+    drags.move([6.1, 0.1]);
+    expect(theta()).toBeCloseTo(0, 6);
+  });
+
+  it("goes the short way, from where it is, past a full turn", () => {
+    const { rt, drags, theta } = circle();
+    rt.write(0, "value", 350);
+    drags.grab(3, rt.point(3) as [number, number]);
+    drags.move([6 * Math.cos((10 * Math.PI) / 180), 6 * Math.sin((10 * Math.PI) / 180)]);
+    expect(theta()).toBeCloseTo(370, 2);
+  });
+
+  it("rejects a move where a condition fails", () => {
+    const { drags, theta } = circle([["<=", ["read", 0, "value"], 45]]);
+    drags.grab(3, [6, 0]);
+    drags.move([6 * Math.cos(0.5), 6 * Math.sin(0.5)]);
+    const accepted = theta();
+    drags.move([0, 6]);
+    expect(theta()).toBe(accepted);
   });
 });
