@@ -133,6 +133,8 @@ SYNTAX = {
     "motif",
     "params",
     "repeat",
+    "map",
+    "reduce",
     "ref",
     "if",
     "cond",
@@ -1573,6 +1575,37 @@ class _Compiler:
                 )
         return self.expr(self.reduce_unrolled(node, env), env)
 
+    # (sum collection name body) and (count collection name condition) are written as reduces.
+    # Their running value has a name with a space, which no author's name can have.
+    def tally(self, node: Form, env: Env) -> Form:
+        head = _head(node)
+        if len(node.items) != 4:
+            raise CompileError(
+                f"{head} takes a collection, a name for each item, and a body", node.pos
+            )
+        collection, var, body = node.items[1:]
+        pos = node.pos
+        running = Name(("running total",), pos)
+        for each in self.walk(collection, var, body, env, str(head))[:1]:
+            value = self.expr(each, env)
+            wanted = ("bool",) if head == "count" else ("int", "ratio", "real")
+            if isinstance(value, (Const, Dyn)) and value.type not in (*wanted, PENDING):
+                what = "true or false" if head == "count" else "a number"
+                raise CompileError(f"a {head}'s body must be {what}", body.pos)
+
+        def form(*items: Node) -> Form:
+            return Form(items, pos)
+
+        def name(text: str) -> Name:
+            return Name((text,), pos)
+
+        step = (
+            form(name("if"), body, form(name("+"), running, IntLit(1, pos)), running)
+            if head == "count"
+            else form(name("+"), running, body)
+        )
+        return form(name("reduce"), collection, var, form(running, IntLit(0, pos)), step)
+
     def reduce_parts(self, node: Form) -> tuple[str, Node]:
         if len(node.items) != 5:
             raise CompileError(
@@ -2339,6 +2372,12 @@ class _Compiler:
             return ListLit(items, node.pos)
         if isinstance(node, Form) and _head(node) == "reduce":
             return self.resolve_refs(self.reduce_unrolled(node, env), env)
+        if (
+            isinstance(node, Form)
+            and _head(node) in ("sum", "count")
+            and _head(node) not in self.funcs
+        ):
+            return self.resolve_refs(self.reduce_unrolled(self.tally(node, env), env), env)
         # Colors given to color functions are written as #rrggbbaa, so backends read one form.
         if isinstance(node, Form) and _head(node) in ("mix", "lighten", "darken"):
             items = tuple(
@@ -2563,6 +2602,9 @@ class _Compiler:
             return self.map_form(node, env)
         if head == "reduce":
             return self.reduce_form(node, env)
+        # Like library functions, sum and count are hidden by an author's own of the same name.
+        if head in ("sum", "count") and head not in self.funcs:
+            return self.reduce_form(self.tally(node, env), env)
         if head in TRANSITION_FORMS:
             return self.transition_form(head, node, env)
         if head in self.funcs:

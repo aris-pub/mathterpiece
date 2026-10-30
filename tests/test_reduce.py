@@ -95,3 +95,52 @@ class TestErrors:
     def test_invalid(self, body, match):
         with pytest.raises(CompileError, match=match):
             compile_model(parse(f"{POINTS} (real 'v' {body})"))
+
+
+class TestSumAndCount:
+    def test_sum(self):
+        assert value("(real 'v' (sum points p p.r))") == 6
+
+    def test_count(self):
+        assert value("(real 'v' (count points p (<= (dist x p) 5)))") == 2
+
+    def test_they_unroll_like_reduce(self):
+        m = compile_model(parse("(const 'xs' [1 2 3 4]) (real 'v' (sum xs a (* a a))) (scene _)"))
+        assert m["v"].value == Free(30.0)  # ty: ignore[unresolved-attribute]
+
+    def test_names_inside_do_not_clash_with_the_running_value(self):
+        src = "(real 'total' 100) (real 'v' (sum points p (+ p.r total)))"
+        assert value(src) == 306
+
+    def test_an_empty_group(self):
+        m = compile_model(parse("(scene 's' (group 'empty')) (real 'v' (count empty p (> p.r 0)))"))
+        assert m["v"].value == Free(0)  # ty: ignore[unresolved-attribute]
+
+    @pytest.mark.parametrize(
+        "body, match",
+        [
+            ("(sum points p 'a')", "a sum's body must be a number"),
+            ("(count points p p.r)", "a count's body must be true or false"),
+            ("(count points p)", "count takes a collection, a name for each item, and a body"),
+        ],
+    )
+    def test_invalid(self, body, match):
+        with pytest.raises(CompileError, match=match):
+            compile_model(parse(f"{POINTS} (real 'v' {body})"))
+
+    @pytest.mark.parametrize("form", ["map", "reduce"])
+    def test_map_and_reduce_are_part_of_the_language(self, form):
+        with pytest.raises(CompileError, match="part of the language"):
+            compile_model(parse(f"(func '{form}' (params (a 0.0)) a) (scene _)"))
+
+    def test_an_authors_own_count_hides_the_librarys(self):
+        m = compile_model(
+            parse("(func 'count' (params (a 0.0)) (* a 10)) (real 'v' (count 2)) (scene _)")
+        )
+        assert m["v"].value == Free(20.0)  # ty: ignore[unresolved-attribute]
+
+    def test_count_is_still_an_ordinary_name(self):
+        m = compile_model(
+            parse("(motif 'm' (params (count 3)) (circle 'c' (r count))) (scene _ (m 'd'))")
+        )
+        assert m is not None
