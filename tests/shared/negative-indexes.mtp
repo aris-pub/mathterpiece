@@ -1,0 +1,14 @@
+; Negative indexes count from the end: a let's list, sorted members, a list made in a function
+; over a group parameter, and a position.
+; expect v1 3
+; expect v2 3
+; expect v3 2
+; expect v4 2
+(real 'k' 1)
+(func 'last-r' (params (g)) (let ((rs (map g p p.r))) rs[-1]))
+(scene 's' (circle 'a' (pos [1 2]) (r k)) (group 'g' (circle _ (r 1)) (circle _ (r 3)) (circle _ (r 2))))
+(button 'b' (animation (k (transition (to 1) (duration 0)))))
+(real 'v1' (let ((ds (sort (map g p (* p.r k))))) ds[-1]))
+(real 'v2' (let ((ns (sort g p (* p.r k)))) ns[-1].r))
+(real 'v3' (last-r g))
+(real 'v4' a.pos[-1])

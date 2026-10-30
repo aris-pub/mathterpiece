@@ -1,0 +1,18 @@
+; and, or, not, lists of bools, any and all.
+; expect some true
+; expect every false
+; expect n 1
+; expect both true
+; expect safe true
+; write k 0
+; expect some true
+; expect every true
+; expect n 3
+(real 'k' 2)
+(real 'zero' 0)
+(scene 's' (group 'g' (circle _ (r 1)) (circle _ (r 2)) (circle _ (r 3))))
+(bool 'some' (let ((big (map g p (> p.r k)))) (any big)))
+(bool 'every' (all (map g p (> p.r k))))
+(real 'n' (let ((big (map g p (> p.r k)))) (count big b b)))
+(bool 'both' (and (> k 1) (not (> k 5))))
+(bool 'safe' (or (= zero 0) (> (/ 1 zero) 2)))
