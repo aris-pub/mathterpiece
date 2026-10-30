@@ -188,6 +188,12 @@ export class Runtime {
       }
       case "if":
         return this.eval(this.eval(args[0], frame, env) ? args[1] : args[2], frame, env);
+      case "and":
+        return args.every((a) => Boolean(this.eval(a, frame, env)));
+      case "or":
+        return args.some((a) => Boolean(this.eval(a, frame, env)));
+      case "not":
+        return !this.eval(args[0], frame, env);
       case "cond":
         for (const clause of args as [Expr, Expr][]) {
           if (clause[0] === true || this.eval(clause[0], frame, env)) return this.eval(clause[1], frame, env);

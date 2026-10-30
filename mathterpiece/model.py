@@ -239,7 +239,9 @@ class Button(Control):
 
 
 # Switches a true/false value: a scene bool, or (target None) its own value, which lives outside
-# the scene, where only views and controls read it.
+# the scene, where only views and controls read it. Unlike sliders and buttons it takes no
+# animation: the new value is always the flipped one, and a bool has no path, so no part of a
+# transition would be used. A fade when the value changes belongs to the canvas that reads it.
 @dataclass(kw_only=True)
 class Toggle(Control):
     target: Obj | None = field(default=None, metadata={"internal": True})
@@ -257,7 +259,9 @@ class Play(Control):
 
 # Moves node's target (part of its position) with the pointer while it is dragged, if every
 # condition holds where the node would land; when (a condition or a state) attaches the listener
-# only while it holds.
+# only while it holds. Unlike sliders and buttons it takes no animation: the pointer decides the
+# value, at once, so no part of a transition would be used. A drag along a fixed range is a
+# slider.
 @dataclass(kw_only=True)
 class Drag(Obj):
     node: Obj | None = field(default=None, metadata={"internal": True})

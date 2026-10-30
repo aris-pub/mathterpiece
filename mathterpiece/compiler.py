@@ -135,6 +135,9 @@ SYNTAX = {
     "repeat",
     "map",
     "reduce",
+    "and",
+    "or",
+    "not",
     "ref",
     "if",
     "cond",
@@ -2746,6 +2749,10 @@ class _Compiler:
             return self.absolute(node, env)
         if head == "if":
             return self.if_(node, env)
+        if head in ("and", "or"):
+            return self.and_or(head, node, env)
+        if head == "not":
+            return self.not_(node, env)
         if head == "cond":
             return self.cond(node, env)
         if head in STDLIB:
@@ -2883,6 +2890,41 @@ class _Compiler:
         if isinstance(test, Const):
             return _retype(then if test.value else other, result)
         return Dyn(result)
+
+    # (and a b ...) and (or a b ...) stop at the first argument that decides the result, so the
+    # arguments after it are not evaluated (they are checked, but may not fold without error).
+    def and_or(self, head: str, node: Form, env: Env) -> Value:
+        args = node.items[1:]
+        if len(args) < 2:
+            raise CompileError(f"{head} takes two or more conditions", node.pos)
+        decisive = head == "or"
+        decided = False
+        dynamic = False
+        for arg in args:
+            self.speculative += 1 if decided else 0
+            try:
+                value = self.value_arg(arg, env)
+            finally:
+                self.speculative -= 1 if decided else 0
+            if value.type not in ("bool", PENDING):
+                raise CompileError(f"the arguments of {head} must be bools", arg.pos)
+            if decided:
+                continue
+            if isinstance(value, Const) and bool(value.value) == decisive:
+                decided = True
+            elif not isinstance(value, Const):
+                dynamic = True
+        if decided and not dynamic:
+            return Const(decisive, "bool")
+        return Dyn("bool") if dynamic else Const(not decisive, "bool")
+
+    def not_(self, node: Form, env: Env) -> Value:
+        if len(node.items) != 2:
+            raise CompileError("not takes one condition", node.pos)
+        value = self.value_arg(node.items[1], env)
+        if value.type not in ("bool", PENDING):
+            raise CompileError("the argument of not must be a bool", node.items[1].pos)
+        return Const(not value.value, "bool") if isinstance(value, Const) else Dyn("bool")
 
     def cond(self, node: Form, env: Env) -> Value:
         clauses = node.items[1:]

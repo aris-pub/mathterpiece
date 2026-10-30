@@ -245,3 +245,26 @@ describe("sorting", () => {
     expect(rt.eval(["read", ["part", ["reverse", ["read", 3, "value"]], 0], "x"], null, {})).toBe(1);
   });
 });
+
+describe("and, or, not", () => {
+  // k is 2 and n is 0; reading (/ 1 n) would be a division by zero.
+  const rt = () => new Runtime(doc([real("k", 2), real("n", 0)]));
+  const k = ["read", 0, "value"];
+  const n = ["read", 1, "value"];
+  const risky = [">", ["/", 1, n], 2];
+
+  it.each([
+    [["and", [">", k, 1], ["<", k, 3]], true],
+    [["and", [">", k, 1], [">", k, 0], ["<", k, 2]], false],
+    [["or", [">", k, 5], ["<", k, 3]], true],
+    [["or", [">", k, 5], ["<", k, 0]], false],
+    [["not", [">", k, 1]], false],
+  ])("evaluates %j", (expr, expected) => {
+    expect(rt().eval(expr, null, {})).toBe(expected);
+  });
+
+  it("stops at the first argument that decides", () => {
+    expect(rt().eval(["and", ["!=", n, 0], risky], null, {})).toBe(false);
+    expect(rt().eval(["or", ["=", n, 0], risky], null, {})).toBe(true);
+  });
+});

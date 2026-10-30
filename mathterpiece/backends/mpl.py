@@ -159,9 +159,15 @@ class Runtime:
             if isinstance(value, _Splice):
                 return " ".join(_show(v, args[1], spec) for v in value.values)
             return _show(value, args[1], spec)
+        if op == "and":
+            return all(self.eval(a, frame, env) for a in args)
+        if op == "or":
+            return any(self.eval(a, frame, env) for a in args)
         if op == "if":
             test, then, other = args
             return self.eval(then if self.eval(test, frame, env) else other, frame, env)
+        if op == "not":
+            return not self.eval(args[0], frame, env)
         if op == "cond":
             for test, result in args:
                 if test is True or self.eval(test, frame, env):

@@ -93,7 +93,7 @@
           (let ((n (+ j 1)))
             (text _ $'j = {n}' (pos [(+ bar-left (* at (/ (+ lo hi) 2))) (- bar-y 4.5)])
               (halign 'middle') (font segment) (fill bg)
-              (opacity (if (>= hi (- rho[j] 1e-9)) (if (> width 26) 1 0) 0))))))
+              (opacity (if (and (>= hi (- rho[j] 1e-9)) (> width 26)) 1 0))))))
       ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
       (repeat 6 j
         (let ((v (if (= j 0) 0 rho[(- j 1)]))
@@ -113,7 +113,7 @@
         (x.pos (transition (to (if replace-x space[i].pos x.pos)) (duration 0.4)))
         (y.pos (transition (to (if replace-x y.pos space[i].pos)) (duration 0.4)))
         (r (transition (to (/ (dist space[i].pos (if replace-x y.pos x.pos)) 2)) (duration 0.4)))
-        (replace-x (transition (to (= replace-x false)) (duration 0)))))))
+        (replace-x (transition (to (not replace-x)) (duration 0)))))))
 
 (slider 'radius' (animation (r (transition (from 0) (to (/ (dist x y) 2))))) (label 'r'))
 
