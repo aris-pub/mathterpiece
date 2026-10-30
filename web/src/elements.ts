@@ -2,6 +2,7 @@
 // placed anywhere in the page find it by id, so an author can put each one where it fits.
 import { Scheduler } from "./animate.ts";
 import { fontCss, hex, parseComputed } from "./colors.ts";
+import { Clicks } from "./click.ts";
 import { Drags } from "./drag.ts";
 import type { Doc, Obj } from "./doc.ts";
 import { Runtime } from "./runtime.ts";
@@ -24,6 +25,7 @@ export class MtpModel extends HTMLElement {
   runtime: Runtime | null = null;
   animator: Scheduler | null = null;
   drags: Drags | null = null;
+  clicks: Clicks | null = null;
   error: string | null = null;
   private running = false;
   private last = 0;
@@ -54,6 +56,7 @@ export class MtpModel extends HTMLElement {
     if (doc.objects.some((o) => o.kind === "color" || o.kind === "font")) this.watchStyles();
     this.animator = new Scheduler(rt, () => this.changed(), () => this.wake());
     this.drags = new Drags(rt);
+    this.clicks = new Clicks(rt);
     this.error = null;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
@@ -197,14 +200,32 @@ export class MtpCanvas extends MtpPart {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
     this.svg = svg;
     const fades = new Fades(rt, canvas.id, animator);
+    const clicks = model.clicks as Clicks;
     this.redraw = () => {
       fades.follow();
       draw(rt, canvas.id, svg, (k) => fades.visible(k));
-      markDraggable(svg, drags);
+      markDraggable(svg, drags, clicks);
     };
     this.redraw();
     this.replaceChildren(svg);
     const toScene = (event: PointerEvent): [number, number] => scenePoint(rt, canvas.id, svg, event);
+    // A click is a press and a release on the same object. Drawing replaces the elements, so
+    // objects are compared by id.
+    let pressed: number | null = null;
+    const hitOf = (event: PointerEvent): number | null => {
+      const direct = (event.target as Element).closest?.("[data-mtp-id]");
+      const under = direct ?? document.elementFromPoint?.(event.clientX, event.clientY)?.closest("[data-mtp-id]");
+      return under ? Number(under.getAttribute("data-mtp-id")) : null;
+    };
+    svg.addEventListener("pointerdown", (event) => {
+      pressed = hitOf(event);
+    });
+    svg.addEventListener("pointerup", (event) => {
+      const released = hitOf(event);
+      const listener = pressed !== null && pressed === released ? clicks.find(pressed) : null;
+      pressed = null;
+      if (listener) animator.start(new Player(rt, listener.animation as number), listener);
+    });
     svg.addEventListener("pointerdown", (event) => {
       const hit = (event.target as Element).closest?.("[data-mtp-id]");
       if (!hit || !drags.grab(Number(hit.getAttribute("data-mtp-id")), toScene(event))) return;
@@ -301,11 +322,15 @@ function unease(level: number, ease: Ease | undefined): number {
 }
 
 // Shapes that a press would drag take the pointer, so touch screens drag them instead of scrolling.
-function markDraggable(svg: SVGSVGElement, drags: Drags): void {
+function markDraggable(svg: SVGSVGElement, drags: Drags, clicks: Clicks): void {
   for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
-    if (!drags.draggable(Number(el.getAttribute("data-mtp-id")))) continue;
-    el.style.touchAction = "none";
-    el.style.cursor = "grab";
+    const id = Number(el.getAttribute("data-mtp-id"));
+    if (drags.draggable(id)) {
+      el.style.touchAction = "none";
+      el.style.cursor = "grab";
+    } else if (clicks.find(id)) {
+      el.style.cursor = "pointer";
+    }
   }
 }
 

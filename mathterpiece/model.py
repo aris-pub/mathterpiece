@@ -306,6 +306,15 @@ class Animation(Obj):
     body: Any = field(default=None, metadata={"internal": True})
 
 
+# Sets off an animation when node is clicked: pressed and released on the same shape. when (a
+# condition or a state) attaches the listener only while it holds.
+@dataclass(kw_only=True)
+class Click(Obj):
+    node: Obj | None = field(default=None, metadata={"internal": True})
+    animation: Obj | None = field(default=None, metadata={"internal": True})
+    when: "Node | State | None" = field(default=None, metadata={"internal": True})
+
+
 @runtime_checkable
 class Container(Protocol):
     name: str | None

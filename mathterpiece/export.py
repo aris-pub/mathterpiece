@@ -20,6 +20,7 @@ from mathterpiece.model import (
     Button,
     Canvas,
     Circle,
+    Click,
     Color,
     Control,
     Drag,
@@ -91,6 +92,7 @@ KINDS: dict[type[Obj], str] = {
     Bool: "bool",
     Toggle: "toggle",
     Animation: "animation",
+    Click: "on-click",
     Font: "font",
     Drag: "on-drag",
     State: "state",
@@ -202,7 +204,7 @@ class _Writer:
                 assert isinstance(owner, Motif)
                 return _Context(around=owner, frame=owner)
             return _Context(owner, self.enclosing.get(id(owner)), self.parent.get(id(owner)))
-        if isinstance(obj, (State, Control, Drag, Animation)):
+        if isinstance(obj, (State, Control, Drag, Animation, Click)):
             return _Context()
         return _Context(obj, self.enclosing.get(id(obj)), self.parent.get(id(obj)))
 
@@ -244,6 +246,14 @@ class _Writer:
             out["target"] = [self.id(obj.target_obj), obj.target]
             out["type"] = obj.kind
             out["conditions"] = [self.expr(c, ctx) for c in obj.conditions]
+            if isinstance(obj.when, State):
+                out["when"] = ["holds", self.id(obj.when)]
+            else:
+                out["when"] = None if obj.when is None else self.expr(obj.when, ctx)
+        if isinstance(obj, Click):
+            assert obj.node is not None and obj.animation is not None
+            out["node"] = self.id(obj.node)
+            out["animation"] = self.id(obj.animation)
             if isinstance(obj.when, State):
                 out["when"] = ["holds", self.id(obj.when)]
             else:

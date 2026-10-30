@@ -55,3 +55,6 @@
 (canvas 'view' garden)
 (play 'tour' angles (buttons true))
 (slider 'angle' (animation (sunflower.angle (transition (from 80) (to 180)))) (label 'angle'))
+
+; Clicking the flower takes it to the golden angle.
+(on-click sunflower golden)

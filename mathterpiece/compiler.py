@@ -20,6 +20,7 @@ from mathterpiece.model import (
     Button,
     Canvas,
     Circle,
+    Click,
     Color,
     Drag,
     Ellipse,
@@ -863,6 +864,8 @@ class _Compiler:
             return [self.reading_views(lambda: self.control(form, env, head))]
         if head == "on-drag":
             return [self.on_drag(form, env)]
+        if head == "on-click":
+            return [self.reading_views(lambda: self.on_click(form, env))]
         if head == "animation":
             return [self.reading_views(lambda: self.animation(form, env))]
         if head == "scene":
@@ -1128,6 +1131,26 @@ class _Compiler:
             return work()
         finally:
             self.views_reading = before
+
+    def on_click(self, form: Form, env: Env) -> Click:
+        if len(form.items) < 3:
+            raise CompileError("on-click needs the object clicked and an animation", form.pos)
+        clicked = form.items[1]
+        found = self.name(clicked, env) if isinstance(clicked, Name) else None
+        if not isinstance(found, ObjRef) or not isinstance(found.obj, Visual):
+            raise CompileError(
+                f"{_text(clicked)} cannot be clicked: it is not a visual object", clicked.pos
+            )
+        animation = self.control_animation(form.items[2], env)
+        _check_durations(animation.body, None, form.items[2].pos)
+        when: Node | State | None = None
+        for item in form.items[3:]:
+            if _head(item) != "when" or not isinstance(item, Form) or when is not None:
+                raise CompileError("unexpected value in on-click", item.pos)
+            if len(item.items) != 2:
+                raise CompileError("when takes one condition or state", item.pos)
+            when = self.state_named(item.items[1]) or self.condition(item.items[1], env)
+        return Click(name=None, node=found.obj, animation=animation, when=when)
 
     # A condition stored for drawing time; it must be true or false.
     def condition(self, node: Node, env: Env) -> Node:
