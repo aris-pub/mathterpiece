@@ -112,6 +112,8 @@ export class Runtime {
       throw new MtpError(`cycle through ${this.obj(i).name ?? "an anonymous object"}.${attr}`);
     }
     const o = this.obj(i);
+    // A toggle on a scene value is that value; a toggle with no target holds its own.
+    if (o.kind === "toggle" && attr === "value" && o.target) return this.value(o.target[0], o.target[1]);
     if (o.kind === "color" && attr === "value") {
       const token = new Token(o.name ?? String(i), String(o.attrs.value));
       this.cache.set(key, token);

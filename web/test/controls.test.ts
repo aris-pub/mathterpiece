@@ -236,3 +236,17 @@ describe("the unit-circle example", () => {
     expect(document.querySelector("mtp-readout")?.textContent).toBe("+0.000");
   });
 });
+
+describe("the unit-circle toggles", () => {
+  it("show and hide each function's line, name and value", async () => {
+    await page("unit-circle", `<mtp-toggle model="m" name="show-sec"></mtp-toggle><mtp-toggle model="m" name="show-tan"></mtp-toggle>`);
+    const shown = () => [...document.querySelectorAll("mtp-canvas text")].map((t) => t.textContent?.split(" ")[0]);
+    expect(shown()).not.toContain("sec");
+    expect(shown()).toContain("tan");
+    const [sec, tan] = [...document.querySelectorAll("mtp-toggle input")] as HTMLInputElement[];
+    sec!.click();
+    tan!.click();
+    expect(shown()).toContain("sec");
+    expect(shown()).not.toContain("tan");
+  });
+});

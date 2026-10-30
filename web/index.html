@@ -54,7 +54,7 @@
             controls.append(p);
             continue;
           }
-          if (!["slider", "button", "steps", "play"].includes(o.kind)) continue;
+          if (!["slider", "toggle", "button", "steps", "play"].includes(o.kind)) continue;
           const el = document.createElement(`mtp-${o.kind}`);
           el.setAttribute("model", "m");
           el.setAttribute("name", o.name);

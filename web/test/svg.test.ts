@@ -176,9 +176,9 @@ describe("every example", () => {
     const rt = new Runtime(doc, () => 0.5);
     for (const canvas of doc.objects.filter((o) => o.kind === "canvas")) {
       const svg = draw(rt, canvas.id);
-      expect(svg.querySelectorAll("circle, rect, ellipse, line, polygon, text").length).toBe(
-        countShapes(doc, canvas.shows ?? []),
-      );
+      const when = (canvas.when ?? []) as unknown[];
+      const shown = (canvas.shows ?? []).filter((_, k) => when[k] == null || rt.eval(when[k], null, {}));
+      expect(svg.querySelectorAll("circle, rect, ellipse, line, polygon, text").length).toBe(countShapes(doc, shown));
     }
   });
 });

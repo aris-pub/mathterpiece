@@ -54,6 +54,11 @@ class Real(Obj):
     value: Attr[float] = Free(0.0)
 
 
+@dataclass(kw_only=True)
+class Bool(Obj):
+    value: Attr[bool] = Free(False)
+
+
 # What fill and stroke take: a color, or a string that names one (checked when it is known).
 class Paint(str):
     pass
@@ -198,6 +203,8 @@ class Canvas(View):
     # Maps scene coordinates to view coordinates, with the view center as the origin.
     transform: Attr[Matrix] = Free(IDENTITY)
     members: list[Visual] = _members()
+    # For each member, the condition under which it is shown (None: always).
+    conditions: list[Node | None] = field(default_factory=list, metadata={"internal": True})
 
 
 # A condition on the scene: active whenever all its conditions hold. moves says how to reach it:
@@ -251,6 +258,15 @@ class TourStep:
     state: State | None
     duration: Free[float]
     ease: Free[str] = Free("linear")
+
+
+# Switches a true/false value: a scene bool, or (target None) its own value, which lives outside
+# the scene, where only views and controls read it.
+@dataclass(kw_only=True)
+class Toggle(Control):
+    target: Obj | None = field(default=None, metadata={"internal": True})
+    attr: str = field(default="value", metadata={"internal": True})
+    value: Attr[bool] = Free(False)
 
 
 # A guided tour: jumps to start (if any) when pressed, then runs its steps in order.

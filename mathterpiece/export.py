@@ -13,6 +13,7 @@ from typing import Any
 from mathterpiece.compiler import ARITHMETIC, COMPARISONS, PROPERTIES, _expected_type
 from mathterpiece.matrix import Matrix
 from mathterpiece.model import (
+    Bool,
     Bound,
     Button,
     Canvas,
@@ -39,6 +40,7 @@ from mathterpiece.model import (
     State,
     Steps,
     Text,
+    Toggle,
     Triangle,
     View,
     attributes,
@@ -82,6 +84,8 @@ KINDS: dict[type[Obj], str] = {
     Steps: "steps",
     Play: "play",
     Color: "color",
+    Bool: "bool",
+    Toggle: "toggle",
     Font: "font",
     Drag: "on-drag",
     State: "state",
@@ -221,6 +225,9 @@ class _Writer:
             out["frame"] = None if ctx.frame is None else self.id(ctx.frame)
         if isinstance(obj, Canvas):
             out["shows"] = [self.id(m) for m in obj.members]
+            out["when"] = [None if c is None else self.expr(c, ctx) for c in obj.conditions]
+        if isinstance(obj, Toggle):
+            out["target"] = None if obj.target is None else [self.id(obj.target), obj.attr]
         if isinstance(obj, State):
             out["conditions"] = [self.expr(c, ctx) for c in obj.conditions]
             out["moves"] = (
@@ -370,7 +377,7 @@ class _Writer:
             assert isinstance(part, str)
             return self.list_parts(["read", obj, part], rest[1:], ctx)
         for i, part in enumerate(rest):
-            if isinstance(obj, (Real, Local, Color)):
+            if isinstance(obj, (Real, Local, Color, Bool, Toggle)):
                 return self.list_parts(["read", self.id(obj), "value"], rest[i:], ctx)
             if isinstance(part, str):
                 if isinstance(obj, Motif) and part in obj.params:
@@ -383,7 +390,7 @@ class _Writer:
                 return self.list_parts(self.read(obj, part, ctx), rest[i + 1 :], ctx)
             assert isinstance(obj, Group) and isinstance(part, IntLit)
             obj = obj.members[part.value]
-        if isinstance(obj, (Real, Local, Color)):
+        if isinstance(obj, (Real, Local, Color, Bool, Toggle)):
             return ["read", self.id(obj), "value"]
         return ["obj", self.id(obj)]
 

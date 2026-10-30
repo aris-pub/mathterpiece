@@ -9,6 +9,7 @@ export {
   MtpReadout,
   MtpSlider,
   MtpSteps,
+  MtpToggle,
   define,
 } from "./elements.ts";
 export { Runtime } from "./runtime.ts";

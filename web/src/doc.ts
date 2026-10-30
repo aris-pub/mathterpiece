@@ -16,20 +16,20 @@ export interface Obj {
   // hidden value
   type?: string;
   frame?: number | null;
-  // canvas
+  // canvas: what it shows, in drawing order
   shows?: number[];
   // state
   conditions?: Expr[];
   moves?: [number, string, Expr][] | null;
-  // controls
-  target?: [number, string];
+  // controls; a toggle with no target (null) holds its own value
+  target?: [number, string] | null;
   state?: number;
   states?: number[];
   start?: number | null;
   steps?: unknown[][];
   // on-drag
   node?: number;
-  // on-drag
+  // on-drag: when it is attached; canvas: when each thing it shows is shown (null: always)
   when?: Expr;
 }
 

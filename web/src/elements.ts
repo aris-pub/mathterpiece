@@ -314,6 +314,34 @@ export class MtpSlider extends MtpPart {
   }
 }
 
+// A labeled checkbox. Its value is a scene bool, or its own (outside the scene).
+export class MtpToggle extends MtpPart {
+  private sync: () => void = () => {};
+
+  protected setup(model: MtpModel, rt: Runtime, animator: Animator): void {
+    const control = this.find(rt, "toggle");
+    const [id, attr] = control.target ?? [control.id, "value"];
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.addEventListener("change", () => {
+      animator.cancel();
+      rt.write(id, attr, input.checked);
+      model.changed();
+    });
+    const label = document.createElement("label");
+    label.append(input, " ", String(rt.value(control.id, "label")));
+    this.replaceChildren(label);
+    this.sync = () => {
+      input.checked = Boolean(rt.value(control.id, "value"));
+    };
+    this.sync();
+  }
+
+  protected update(): void {
+    this.sync();
+  }
+}
+
 export class MtpButton extends MtpPart {
   protected setup(_model: MtpModel, rt: Runtime, animator: Animator): void {
     const control = this.find(rt, "button");
@@ -380,6 +408,7 @@ const ELEMENTS: Record<string, CustomElementConstructor> = {
   "mtp-canvas": MtpCanvas,
   "mtp-readout": MtpReadout,
   "mtp-slider": MtpSlider,
+  "mtp-toggle": MtpToggle,
   "mtp-button": MtpButton,
   "mtp-steps": MtpSteps,
   "mtp-play": MtpPlay,

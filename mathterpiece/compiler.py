@@ -12,6 +12,7 @@ from mathterpiece.matrix import Matrix, compose
 from mathterpiece.model import (
     PYTHON_FRAMES,
     RECURSION_LIMIT,
+    Bool,
     Bound,
     Button,
     Canvas,
@@ -40,6 +41,7 @@ from mathterpiece.model import (
     Steps,
     Styled,
     Text,
+    Toggle,
     TourStep,
     Triangle,
     View,
@@ -144,6 +146,7 @@ FORMS = {
     "text": FormSpec(Text, ("value",)),
     "real": FormSpec(Real, ("value",)),
     "color": FormSpec(Color, ("value",)),
+    "bool": FormSpec(Bool, ("value",)),
     "font": FormSpec(Font),
     "group": FormSpec(Group),
     "canvas": FormSpec(Canvas),
@@ -394,7 +397,13 @@ def _covers(attr: str) -> set[str]:
 
 
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
-CONTROLS: dict[str, type[Obj]] = {"slider": Slider, "button": Button, "steps": Steps, "play": Play}
+CONTROLS: dict[str, type[Obj]] = {
+    "slider": Slider,
+    "button": Button,
+    "steps": Steps,
+    "play": Play,
+    "toggle": Toggle,
+}
 
 
 def _duration(value: "Value", pos: Pos) -> float:
@@ -589,6 +598,8 @@ class _Compiler:
 
     def compile(self) -> Model:
         self.add_builtins()
+        self.views_reading = False
+        self.shown_when: dict[int, Node] = {}
         self.written, self.written_anywhere = _control_targets(self.forms)
         for form in self.forms:
             self.toplevel.extend(self.toplevel_item(form, {}))
@@ -707,14 +718,18 @@ class _Compiler:
         if head == "func":
             self.define_func(form)
             return []
-        if head in CONTROLS or head == "state":
+        if head == "state":
             return [self.control(form, env, head)]
+        if head in CONTROLS:
+            return [self.reading_views(lambda: self.control(form, env, head))]
         if head == "on-drag":
             return [self.on_drag(form, env)]
         if head == "scene":
             return [self.scene_form(form, env)]
         if head in self.motifs or (head in FORMS and issubclass(FORMS[head].cls, Visual)):
             raise CompileError(f"{head} is a visual object, so it goes inside the scene", form.pos)
+        if head in FORMS and issubclass(FORMS[head].cls, View):
+            return [self.reading_views(lambda: self.definition(form, env))]
         if head in FORMS:
             return [self.definition(form, env)]
         if head is None:
@@ -837,7 +852,7 @@ class _Compiler:
             return f"{text!r} is a const, so a control cannot write it"
         if len(name.parts) == 1:
             obj = self.names.get(first) if isinstance(first, str) else None
-            if not isinstance(obj, (Real, Color)):
+            if not isinstance(obj, (Real, Color, Bool)):
                 return f"{text!r} is not a value a control can write"
             attr = "value"
         else:
@@ -910,6 +925,27 @@ class _Compiler:
                 raise CompileError("steps needs at least one state", listed.pos)
             fields = {"states": states}
             values["label"] = Free(name or "")
+        elif head == "toggle":
+            if not rest:
+                raise CompileError("toggle needs a target: a bool, or self", form.pos)
+            target_node = rest.pop(0)
+            if isinstance(target_node, Name) and target_node.parts == ("self",):
+                fields = {"target": None}
+                values["label"] = Free(name or "")
+            else:
+                target, attr, kind, text = self.control_target(target_node, env)
+                if kind != "bool":
+                    raise CompileError(
+                        f"a toggle writes a bool, but {text} is a {kind}", target_node.pos
+                    )
+                if any(_head(n) == "value" for n in rest):
+                    raise CompileError(
+                        "value is for only a toggle whose target is self; this one starts as"
+                        f" {text} does",
+                        target_node.pos,
+                    )
+                fields = {"target": target, "attr": attr}
+                values["label"] = Free(text)
         elif head == "play":
             fields = self.tour(rest, form.pos)
             rest = [node for node in rest if _head(node) == "label"]
@@ -973,6 +1009,14 @@ class _Compiler:
             conditions=tuple(conditions),
             when=when,
         )
+
+    # Views and controls may read controls; the scene may not.
+    def reading_views[T](self, work: Callable[[], T]) -> T:
+        before, self.views_reading = self.views_reading, True
+        try:
+            return work()
+        finally:
+            self.views_reading = before
 
     # A condition stored for drawing time; it must be true or false.
     def condition(self, node: Node, env: Env) -> Node:
@@ -1578,6 +1622,8 @@ class _Compiler:
             for node in rest:
                 members.extend(self.member(node, env, head, settable, name))
             kwargs[var.name] = members
+            if spec.cls is Canvas:
+                kwargs["conditions"] = [self.shown_when.pop(id(m), None) for m in members]
         elif rest:
             node = rest[0]
             attr = _head(node)
@@ -1706,6 +1752,19 @@ class _Compiler:
             return self.let_items(
                 node, env, lambda n, e: self.member(n, e, container, settable, owner)
             )
+        if isinstance(node, Form) and head == "when" and issubclass(FORMS[container].cls, View):
+            if len(node.items) != 3:
+                raise CompileError("when takes a condition and what it shows", node.pos)
+            value = self.value_arg(node.items[1], env)
+            if value.type not in ("bool", PENDING):
+                raise CompileError("a when's condition must be true or false", node.items[1].pos)
+            condition = self.resolve_refs(
+                _substitute(node.items[1], self.constants(env), self.lets), env
+            )
+            shown = self.member(node.items[2], env, container, settable, owner)
+            for obj in shown:
+                self.shown_when[id(obj)] = condition
+            return shown
         if isinstance(node, Form) and head == "ref":
             node = self.ref_name(node, env)
         elif isinstance(node, Form) and (head in FORMS or head in self.motifs):
@@ -1937,6 +1996,14 @@ class _Compiler:
             return Dyn("real")
         if isinstance(current, ObjRef) and isinstance(current.obj, Color):
             return Dyn("color")
+        if isinstance(current, ObjRef) and isinstance(current.obj, Bool):
+            return Dyn("bool")
+        if isinstance(current, ObjRef) and isinstance(current.obj, Toggle):
+            if not self.views_reading:
+                raise CompileError(
+                    f"the scene cannot read the control {current.obj.name!r}", node.pos
+                )
+            return Dyn("bool")
         if isinstance(current, ObjRef) and isinstance(current.obj, Local):
             return Dyn(current.obj.type)
         return current
