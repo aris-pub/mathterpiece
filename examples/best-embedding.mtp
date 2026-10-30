@@ -43,12 +43,9 @@
 (on-drag w)
 
 (state 'optimum'
-  (= c.x 0) (= c.y 0)
-  (= u.x 0) (= u.y unit)
-  (= v.x (* unit (cosd 210))) (= v.y (* unit (sind 210)))
-  (= w.x (* unit (cosd 330))) (= w.y (* unit (sind 330))))
+  (= c.pos [0 0]) (= u.pos (polar unit 90)) (= v.pos (polar unit 210)) (= w.pos (polar unit 330)))
 (state 'on-a-line'
-  (= c.x 0) (= c.y 0) (= u.x (- unit)) (= u.y 0) (= v.x unit) (= v.y 0) (= w.x (* 2 unit)) (= w.y 0))
+  (= c.pos [0 0]) (= u.pos [(- unit) 0]) (= v.pos [unit 0]) (= w.pos [(* 2 unit) 0]))
 
 (button 'best' optimum (label 'show the optimum') (duration 0.8) (ease 'ease-in-out'))
 (button 'line' on-a-line (label 'collapse onto a line') (duration 0.8) (ease 'ease-in-out'))

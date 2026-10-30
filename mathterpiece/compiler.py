@@ -376,6 +376,11 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
     return paths, anywhere
 
 
+# The values a moved attribute stands for: a position is its x and y.
+def _covers(attr: str) -> set[str]:
+    return {"x", "y"} if attr == "pos" else {attr}
+
+
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
 CONTROLS: dict[str, type[Obj]] = {"slider": Slider, "button": Button, "steps": Steps, "play": Play}
 
@@ -782,6 +787,10 @@ class _Compiler:
         if isinstance(obj, Motif) and attr in obj.params:
             current = obj.params[attr]
             kind = self.motifs[obj.kind].params[attr].type
+        elif attr == "pos" and {"x", "y"} <= attributes(type(obj)).keys():
+            if any(isinstance(getattr(obj, c), Bound) for c in ("x", "y")):
+                return f"{text!r} is computed, so a control cannot write it"
+            return obj, "pos", "list2", text
         else:
             attrs = attributes(type(obj))
             if attr not in attrs or variadic(type(obj)) is attrs[attr]:
@@ -962,7 +971,7 @@ class _Compiler:
             if isinstance(found, str):
                 continue
             obj, attr, kind, text = found
-            if any(o is obj and a == attr for o, a, _ in moves):
+            if any(o is obj and _covers(a) & _covers(attr) for o, a, _ in moves):
                 return f"it moves {text} twice"
             value = self.value_arg(other, env)
             if not _widens_to(value.type, kind):
@@ -977,10 +986,14 @@ class _Compiler:
     # state not holding once both have arrived.
     def check_reads(self, moves: list, env: Env) -> str | None:
         for obj, attr, expr in moves:
-            others = {(id(o), a) for o, a, _ in moves if not (o is obj and a == attr)}
+            others = {
+                (id(o), c) for o, a, _ in moves if not (o is obj and a == attr) for c in _covers(a)
+            }
             for name in _names_in(expr):
                 found = self.free_value(name, env)
-                if not isinstance(found, str) and (id(found[0]), found[1]) in others:
+                if isinstance(found, str):
+                    continue
+                if any((id(found[0]), c) in others for c in _covers(found[1])):
                     return f"one condition reads {found[3]}, which another condition moves"
         return None
 

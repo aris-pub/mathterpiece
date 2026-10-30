@@ -72,6 +72,12 @@ export class Runtime {
 
   /** A control's write. Everything computed is dropped, since anything might depend on it. */
   write(i: number, attr: string, value: unknown): void {
+    if (attr === "pos") {
+      const [x, y] = value as number[];
+      this.write(i, "x", x);
+      this.write(i, "y", y);
+      return;
+    }
     this.written.set(`${i}.${attr}`, value);
     this.cache.clear();
     this.frames.clear();
@@ -79,6 +85,7 @@ export class Runtime {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value(i: number, attr: string): any {
+    if (attr === "pos") return [this.value(i, "x"), this.value(i, "y")];
     const key = `${i}.${attr}`;
     if (this.written.has(key)) return this.written.get(key);
     if (this.cache.has(key)) return this.cache.get(key);

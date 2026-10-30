@@ -132,3 +132,21 @@ describe("colors", () => {
     expect(parseColor("tab:blue")).toBeNull();
   });
 });
+
+describe("moving a whole position", () => {
+  it("moves x and y together, as one point", () => {
+    const objects: Obj[] = [
+      { id: 0, kind: "circle", name: "c", attrs: { x: 0, y: 0, transform: [1, 0, 0, 0, 1, 0] } },
+      { id: 1, kind: "state", name: "s", attrs: {}, conditions: [["=", ["read", 0, "pos", null], [4, 2]]], moves: [[0, "pos", [4, 2]]] },
+    ];
+    const rt = new Runtime({ mtp: 1, objects, functions: {}, names: {}, depends: {} });
+    const anim = new Animator(rt, () => {}, () => {});
+    expect(rt.holds(1)).toBe(false);
+    anim.go(1, 2, "linear");
+    anim.tick(1);
+    expect([rt.value(0, "x"), rt.value(0, "y")]).toEqual([2, 1]);
+    anim.tick(1);
+    expect(rt.value(0, "pos")).toEqual([4, 2]);
+    expect(rt.holds(1)).toBe(true);
+  });
+});

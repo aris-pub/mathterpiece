@@ -251,3 +251,11 @@ class TestDepends:
 def test_examples_export(example):
     doc = to_json(compile_model(parse(example.read_text())))
     assert json.loads(json.dumps(doc)) == doc
+
+
+class TestPointStates:
+    def test_moves_a_point(self):
+        doc = exported("(circle 'c') (state 's' (= c.pos [1 2]))")
+        s, c = obj(doc, "s"), ref(doc, "c")
+        assert s["moves"] == [[c, "pos", [1.0, 2.0]]]
+        assert s["conditions"] == [["=", ["read", c, "pos", None], [1.0, 2.0]]]

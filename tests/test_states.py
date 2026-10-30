@@ -299,3 +299,41 @@ class TestAnimation:
         assert sorted(str(p.get_label()) for p in texts) == ["large", "small"]
         alphas = [to_rgba(p.get_facecolor())[3] for p in texts]
         assert alphas == pytest.approx([0.5, 0.5], abs=0.01)
+
+
+class TestPoints:
+    def moves(self, model, name):
+        state = get(model, name, State)
+        return state.problem, [(obj.name, attr) for obj, attr, _ in state.moves]
+
+    @pytest.mark.parametrize("value", ["[1 2]", "(polar 1 90)", "other.pos"])
+    def test_condition_on_a_point(self, value):
+        m = scene(f"{BASE} (state 's' (= disk.pos {value}))")
+        assert self.moves(m, "s") == (None, [("disk", "pos")])
+
+    def test_button_shorthand(self):
+        m = scene(f"{BASE} (button 'b' disk.pos [1 2])")
+        b = get(m, "b", Button)
+        assert b.state is not None
+        assert [(o.name, a) for o, a, _ in b.state.moves] == [("disk", "pos")]
+
+    def test_wrong_type(self):
+        error(f"{BASE} (state 's' (= disk.pos 3))", match="list2")
+
+    @pytest.mark.parametrize(
+        "conditions, why",
+        [
+            ("(= disk.pos [1 2]) (= disk.x 3)", "twice"),
+            ("(= disk.pos [1 2]) (= other.r disk.x)", "another condition moves"),
+            ("(= disk.x 3) (= other.pos disk.pos)", "another condition moves"),
+        ],
+    )
+    def test_problems(self, conditions, why):
+        problem, _ = self.moves(scene(f"{BASE} (state 's' {conditions})"), "s")
+        assert problem is not None and why in problem
+
+    def test_computed_position(self):
+        problem, _ = self.moves(
+            scene(f"{BASE} (circle 'e' (x disk.x)) (state 's' (= e.pos [1 2]))"), "s"
+        )
+        assert problem is not None and "computed" in problem
