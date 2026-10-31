@@ -126,7 +126,12 @@ export class Runtime {
     }
     const o = this.obj(i);
     // A toggle on a scene value is that value; a toggle with no target holds its own.
-    if (o.kind === "toggle" && attr === "value" && o.target) return this.value(o.target[0], o.target[1]);
+    if (o.kind === "toggle" && attr === "value" && o.target) {
+      const [target, part] = o.target;
+      // On a group's attribute, it holds only when every member's does.
+      if (this.kind(target) === "group") return (this.obj(target).members ?? []).every((m) => Boolean(this.value(m, part)));
+      return this.value(target, part);
+    }
     if (o.kind === "color" && attr === "value") {
       const token = new Token(o.name ?? String(i), this.fallback(i, attr));
       this.cache.set(key, token);

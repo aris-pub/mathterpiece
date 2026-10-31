@@ -1,0 +1,7 @@
+; A toggle on a group's attribute reads true only when every member's is true.
+; expect t false
+; write lamps[0].on true
+; expect t true
+(motif 'lamp' (params (on false)) (circle 'c' (r (if on 2 1))))
+(scene 's' (group 'lamps' (lamp _) (lamp _ (on true))))
+(toggle 't' lamps.on)

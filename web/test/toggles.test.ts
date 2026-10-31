@@ -192,3 +192,22 @@ describe("a control writing a self toggle", () => {
     expect(document.querySelectorAll("mtp-canvas circle").length).toBe(1);
   });
 });
+
+describe("a toggle on a group's attribute", () => {
+  it("shows a mixed state, and writes one value to every member", async () => {
+    const doc = (await import("./data/fixtures/group-toggle.json")).default as unknown as Doc;
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-toggle model="m" name="t"></mtp-toggle>`;
+    const model = document.querySelector("mtp-model") as MtpModel;
+    model.doc = doc;
+    await new Promise((r) => setTimeout(r, 0));
+    const box = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    const lamps = () => [doc.names.a!, doc.names.b!].map((i) => model.runtime!.value(i, "on"));
+    expect([box.indeterminate, box.checked]).toEqual([true, false]);
+    box.click();
+    expect(lamps()).toEqual([true, true]);
+    expect([box.indeterminate, box.checked]).toEqual([false, true]);
+    box.click();
+    expect(lamps()).toEqual([false, false]);
+    expect(model.runtime!.value(doc.names.t!, "value")).toBe(false);
+  });
+});

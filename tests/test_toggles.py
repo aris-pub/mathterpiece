@@ -202,3 +202,19 @@ class TestWritingASelfToggle:
 def test_a_toggle_with_a_target_stores_no_value_of_its_own():
     doc = to_json(compile_model(parse("(bool 'b' true) (scene _) (toggle 't' b)")))
     assert "value" not in doc["objects"][doc["names"]["t"]]["attrs"]
+
+
+class TestToggleOnAGroup:
+    SRC = (
+        "(motif 'lamp' (params (on false)) (circle 'c' (r (if on 2 1))))"
+        " (scene 's' (group 'lamps' (lamp _) (lamp _ (on true))))"
+    )
+
+    def test_its_target_is_the_group(self):
+        doc = to_json(compile_model(parse(f"{self.SRC} (toggle 't' lamps.on)")))
+        assert doc["objects"][doc["names"]["t"]]["target"] == [doc["names"]["lamps"], "on"]
+
+    def test_every_member_must_hold_a_bool(self):
+        src = "(scene 's' (group 'g' (circle _))) (toggle 't' g.r)"
+        with pytest.raises(CompileError, match="a toggle writes a bool"):
+            compile_model(parse(src))

@@ -444,11 +444,13 @@ export class MtpToggle extends MtpPart {
   protected setup(model: MtpModel, rt: Runtime, animator: Scheduler): void {
     const control = this.find(rt, "toggle");
     const [id, attr] = control.target ?? [control.id, "value"];
+    // On a group's attribute, it writes one value to every member.
+    const written: number[] = rt.kind(id) === "group" ? (rt.obj(id).members ?? []) : [id];
     const input = document.createElement("input");
     input.type = "checkbox";
     input.addEventListener("change", () => {
-      if (control.target) animator.claim([`${id}.${attr}`], this);
-      rt.write(id, attr, input.checked);
+      if (control.target) animator.claim(written.map((w) => `${w}.${attr}`), this);
+      for (const w of written) rt.write(w, attr, input.checked);
       model.changed();
     });
     const label = document.createElement("label");
@@ -456,7 +458,10 @@ export class MtpToggle extends MtpPart {
     label.append(input, " ", text);
     this.replaceChildren(label);
     this.sync = () => {
-      input.checked = Boolean(rt.value(control.id, "value"));
+      const values = written.map((w) => Boolean(rt.value(w, attr)));
+      // A group whose members differ shows the box's mixed state.
+      input.indeterminate = values.some(Boolean) && !values.every(Boolean);
+      input.checked = values.every(Boolean);
       text.data = labelOf(rt, control.id);
     };
     this.sync();

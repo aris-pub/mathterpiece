@@ -455,6 +455,12 @@ def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
 
     for form in forms:
         visit(form)
+    # A target through a group (dots.k) is written to every member, and members are often
+    # anonymous, so such a name stays live wherever it is a parameter.
+    groups = _defined_names(forms, {"group"})
+    for path in paths:
+        if any(part in groups for part in path[:-1]):
+            anywhere.add(path[-1])
     return paths, anywhere
 
 
@@ -1244,7 +1250,7 @@ class _Compiler:
             if isinstance(target_node, Name) and target_node.parts == ("self",):
                 fields = {"target": None}
             else:
-                target, attr, kind, text = self.control_target(target_node, env)
+                target, attr, kind, text = self.toggle_target(target_node, env)
                 if kind != "bool":
                     raise CompileError(
                         f"a toggle writes a bool, but {text} is a {kind}", target_node.pos
@@ -1322,6 +1328,18 @@ class _Compiler:
         )
         self.drag_positions[id(drag)] = target_node.pos
         return drag
+
+    # A toggle's target: a bool, or a group's attribute, which it writes to every member (the
+    # members must all hold bools).
+    def toggle_target(self, node: Node, env: Env) -> tuple[Obj, str, str, str]:
+        if isinstance(node, Name) and len(node.parts) > 1 and isinstance(node.parts[-1], str):
+            holder = self.name(Name(node.parts[:-1], node.pos), env)
+            attr = node.parts[-1]
+            if isinstance(holder, ObjRef) and isinstance(holder.obj, Group):
+                kinds = {kind for _, _, kind in self.pair_targets(node, env)}
+                kind = kinds.pop() if len(kinds) == 1 else "mixed values"
+                return holder.obj, attr, kind, _text(node)
+        return self.control_target(node, env)
 
     # Dragging a group moves each member's position by the same amount, so its target is its own
     # pos, x or y, and every member's must be one a control can write.

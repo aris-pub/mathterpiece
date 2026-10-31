@@ -112,6 +112,10 @@ class Runtime:
         # A toggle with a target is that value.
         if obj["kind"] == "toggle" and attr == "value" and obj.get("target"):
             target, part = obj["target"]
+            # On a group's attribute, it holds only when every member's does.
+            members = self.objects[target].get("members") if self.kind(target) == "group" else None
+            if members is not None:
+                return all(self.value(m, part) for m in members)
             return self.value(target, part)
         raw = obj["params"][attr] if attr in obj.get("params", {}) else obj["attrs"][attr]
         self.active.add(key)

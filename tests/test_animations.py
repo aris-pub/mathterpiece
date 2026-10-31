@@ -231,6 +231,17 @@ class TestGroupTargets:
         anim = doc["objects"][doc["objects"][doc["names"]["b"]]["animation"]]
         assert [t[1] for t in anim["body"][1]] == [attr, attr]
 
+    def test_what_reads_the_members_values_follows_them(self):
+        # The members' parameter is written, so a shape reading it must not be folded.
+        src = (
+            "(motif 'dot' (params (k 0.0)) (circle 'c' (r k)))"
+            " (scene 's' (group 'dots' (dot _) (dot 'named')))"
+            " (button 'b' (animation (dots.k (transition (to 3) (duration 0)))))"
+        )
+        doc = to_json(compile_model(parse(src)))
+        radii = [o["attrs"]["r"] for o in doc["objects"] if o["kind"] == "circle"]
+        assert all(isinstance(r, list) for r in radii)
+
     def test_a_member_that_computes_it(self):
         src = (
             "(real 'k' 1) (scene 's' (group 'g' (circle _) (circle _ (r k))))"
