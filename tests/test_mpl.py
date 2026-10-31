@@ -3,6 +3,7 @@ import random
 from fractions import Fraction
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pytest
 from helpers import with_scene
 from matplotlib.backend_bases import ResizeEvent
@@ -583,3 +584,23 @@ class TestStaticFeatures:
         plain = width("(size 1)")
         assert width("(size 1) (weight 700)") != pytest.approx(plain)
         assert width("(size 1) (family 'monospace')") != pytest.approx(plain)
+
+
+@pytest.mark.parametrize(
+    "attr, value, match",
+    [
+        ("halign", "bogus", "halign is 'start', 'middle' or 'end'"),
+        ("valign", "bogus", "valign is 'top', 'middle' or 'bottom'"),
+        ("font-style", "slanted", "font-style is 'normal', 'italic' or 'oblique'"),
+        ("font-weight", 5000, "font-weight is between 1 and 1000"),
+    ],
+)
+def test_a_bad_text_value_while_drawing_is_an_evalerror(attr, value, match):
+    from mathterpiece.backends.mpl import _draw_canvas
+
+    m = compile_model(parse("(scene 's' (text 't' 'hi')) (canvas 'v' t)"))
+    ev = Evaluator(m, random.Random(0))
+    ev.write(m["t"], attr, value)
+    _, ax = plt.subplots()
+    with pytest.raises(EvalError, match=match):
+        _draw_canvas(ev.id(m["v"]), ax, ev.runtime, [])

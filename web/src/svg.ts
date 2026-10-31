@@ -1,9 +1,10 @@
 // Draws a canvas as SVG. Scenes have y pointing up and SVG has y pointing down, so the whole
 // scene is flipped once at the top, and text is flipped back so its letters stay upright.
 import { Matrix, compose, translate } from "./matrix.ts";
-import { cssColor, fontCss } from "./colors.ts";
+import { Token, cssColor, fontCss } from "./colors.ts";
 import type { Expr } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
+import { MtpError } from "./stdlib.ts";
 
 const NS = "http://www.w3.org/2000/svg";
 const CONTAINERS = new Set(["root", "group", "motif"]);
@@ -79,6 +80,7 @@ function drawObject(rt: Runtime, i: number, into: Element): void {
 function text(rt: Runtime, i: number, value: string, fade: number): Element {
   const el = document.createElementNS(NS, "text") as SVGElement;
   el.setAttribute("font-size", String(rt.value(i, "font-size")));
+  checkText(rt, i);
   setFont(rt, i, el);
   // The baseline (bottom) and the start are SVG's own defaults.
   const anchor = rt.value(i, "halign");
@@ -90,6 +92,29 @@ function text(rt: Runtime, i: number, value: string, fade: number): Element {
   el.setAttribute("data-mtp-id", String(i));
   paint(rt, i, el, false, fade);
   return el;
+}
+
+// Values computed while drawing are checked here, as known ones were when compiling. A font
+// token's own value is checked; what a page makes of it is the page's.
+function checkText(rt: Runtime, i: number): void {
+  const own = (attr: string) => {
+    const v = rt.value(i, attr);
+    return v instanceof Token ? v.fallback : v;
+  };
+  const one = (attr: string, allowed: string[]) => {
+    const v = own(attr);
+    if (v !== undefined && !allowed.includes(String(v))) {
+      const names = allowed.slice(0, -1).map((a) => `'${a}'`).join(", ");
+      throw new MtpError(`${attr} is ${names} or '${allowed.at(-1)}'`);
+    }
+  };
+  one("halign", ["start", "middle", "end"]);
+  one("valign", ["top", "middle", "bottom"]);
+  one("font-style", ["normal", "italic", "oblique"]);
+  const weight = own("font-weight");
+  if (weight !== undefined && !(Number(weight) >= 1 && Number(weight) <= 1000)) {
+    throw new MtpError("font-weight is between 1 and 1000");
+  }
 }
 
 // Each shape drawn around its own origin; rt.shape places it.

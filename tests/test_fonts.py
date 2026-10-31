@@ -4,6 +4,7 @@ from helpers import with_scene
 from mathterpiece.compiler import CompileError, compile_model
 from mathterpiece.export import to_json
 from mathterpiece.model import Bound, Font, Free, Readout, Text
+from mathterpiece.parse import parse
 
 LABEL = "(font 'label' (family 'Georgia, serif') (style 'italic') (weight 600) (size 0.6))"
 
@@ -138,3 +139,35 @@ class TestAlignment:
         doc = to_json(scene("(text 't' 'x' (halign 'end'))"))
         attrs = doc["objects"][doc["names"]["t"]]["attrs"]
         assert (attrs["halign"], attrs["valign"]) == ("end", "bottom")
+
+
+class TestValuesCheckedEverywhere:
+    # halign, valign, font style and weight are checked wherever a known value is written.
+    @pytest.mark.parametrize(
+        "src, match",
+        [
+            (
+                "(bool 'b' true) (scene 's' (text 't' 'hi' (halign (if b 'end' 'bogus'))))"
+                " (toggle 'x' b)",
+                "halign is 'start', 'middle' or 'end'",
+            ),
+            (
+                "(scene 's' (text 't' 'hi'))"
+                " (button 'go' (animation (t.halign (transition (to 'bogus') (duration 0)))))",
+                "halign is 'start', 'middle' or 'end'",
+            ),
+            (
+                "(font 'f' (weight 400)) (scene _)"
+                " (button 'go' (animation (f.weight (transition (to 5000) (duration 0)))))",
+                "weight is between 1 and 1000",
+            ),
+            (
+                "(font 'f') (scene _)"
+                " (button 'go' (animation (f.style (transition (to 'slanted') (duration 0)))))",
+                "style is 'normal', 'italic' or 'oblique'",
+            ),
+        ],
+    )
+    def test_rejected(self, src, match):
+        with pytest.raises(CompileError, match=match):
+            compile_model(parse(src))

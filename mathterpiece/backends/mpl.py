@@ -20,11 +20,11 @@ from matplotlib.textpath import TextPath
 from matplotlib.transforms import Affine2D, Transform
 
 from mathterpiece.colors import same
-from mathterpiece.compiler import ARITHMETIC, COMPARISONS, WALKS
+from mathterpiece.compiler import ARITHMETIC, COMPARISONS, WALKS, _value_problem
 from mathterpiece.compiler import _fold as fold
 from mathterpiece.export import ExportError, export
 from mathterpiece.matrix import IDENTITY, Matrix, compose
-from mathterpiece.model import PYTHON_FRAMES, RECURSION_LIMIT, Model, Obj
+from mathterpiece.model import PYTHON_FRAMES, RECURSION_LIMIT, Model, Obj, Text
 from mathterpiece.stdlib import STDLIB, power, show, translate
 from mathterpiece.stdlib import call as stdlib_call
 
@@ -551,6 +551,11 @@ def _draw(i: int, ax: Axes, rt: Runtime, to_view: Transform, strokes: list, view
         # the way an SVG transform does.
         shape = rt.shape(i)
         value = rt.value(i, "value")
+        # Values computed while drawing are checked here, as known ones were when compiling.
+        for attr in ("halign", "valign", "font-style", "font-weight"):
+            problem = _value_problem(Text, attr, rt.value(i, attr))
+            if problem:
+                raise EvalError(problem)
         family = rt.value(i, "font-family")
         font = FontProperties(
             family=family or None,

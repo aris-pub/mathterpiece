@@ -155,6 +155,17 @@ describe("shapes", () => {
     expect([t.getAttribute("text-anchor"), t.getAttribute("dominant-baseline")]).toEqual([anchor, baseline]);
   });
 
+  // Values computed while drawing are checked as known ones are when compiling.
+  it.each([
+    [{ halign: "bogus" }, "halign is 'start', 'middle' or 'end'"],
+    [{ valign: "bogus" }, "valign is 'top', 'middle' or 'bottom'"],
+    [{ "font-style": "slanted" }, "font-style is 'normal', 'italic' or 'oblique'"],
+    [{ "font-weight": 5000 }, "font-weight is between 1 and 1000"],
+  ])("rejects a bad text value %j", (bad, message) => {
+    const text = shape("text", { value: "hi", "font-size": 1, halign: "start", valign: "bottom", ...bad });
+    expect(() => draw(scene([text]), 0)).toThrow(message);
+  });
+
   it("draws text upright", () => {
     const t = draw(scene([shape("text", { x: 1, y: 2, value: "hi", "font-size": 0.5 })]), 0).querySelector("text")!;
     expect(t.textContent).toBe("hi");

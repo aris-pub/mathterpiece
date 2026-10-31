@@ -552,22 +552,68 @@ FONT_STYLES = ("normal", "italic", "oblique")
 ALIGNMENTS = {"halign": ("start", "middle", "end"), "valign": ("top", "middle", "bottom")}
 
 
-def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
-    if cls is Text:
-        for attr, allowed in ALIGNMENTS.items():
-            found = values.get(attr)
-            if isinstance(found, Free) and found.value not in allowed:
-                names = ", ".join(repr(a) for a in allowed[:-1])
-                raise CompileError(f"{attr} is {names} or {allowed[-1]!r}", positions[attr])
+# What is wrong with a known value of attr on cls (alignment, font style or weight), if anything.
+def _value_problem(cls: type, attr: str, value: Any) -> str | None:
+    if cls is Text and attr in ALIGNMENTS and value not in ALIGNMENTS[attr]:
+        allowed = ALIGNMENTS[attr]
+        names = ", ".join(repr(a) for a in allowed[:-1])
+        return f"{attr} is {names} or {allowed[-1]!r}"
+    if cls is not Font and cls not in FONT_PARTS:
+        return None
     style, weight = ("style", "weight") if cls is Font else ("font-style", "font-weight")
-    if cls not in FONT_PARTS and cls is not Font:
-        return
-    found = values.get(style)
-    if isinstance(found, Free) and found.value not in FONT_STYLES:
-        raise CompileError(f"{style} is 'normal', 'italic' or 'oblique'", positions[style])
-    found = values.get(weight)
-    if isinstance(found, Free) and not 1 <= found.value <= 1000:
-        raise CompileError(f"{weight} is between 1 and 1000", positions[weight])
+    if attr == style and value not in FONT_STYLES:
+        return f"{style} is 'normal', 'italic' or 'oblique'"
+    if attr == weight and isinstance(value, (int, float)) and not 1 <= value <= 1000:
+        return f"{weight} is between 1 and 1000"
+    return None
+
+
+# Checks each known value given to an attribute: written directly, or one an if, a cond or a
+# let's body can give.
+def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
+    for attr, found in values.items():
+        if attr not in positions:
+            continue
+        known = [found.value] if isinstance(found, Free) else []
+        if isinstance(found, Bound):
+            known = [
+                r.value for r in _results(found.expr) if isinstance(r, (StrLit, IntLit, RealLit))
+            ]
+        for value in known:
+            problem = _value_problem(cls, attr, value)
+            if problem:
+                raise CompileError(problem, positions[attr])
+
+
+# The expressions a value can result in: through an if's or a cond's branches and a let's body.
+def _results(node: Node) -> list[Node]:
+    head = _head(node)
+    if isinstance(node, Form) and head == "if" and len(node.items) == 4:
+        return [*_results(node.items[2]), *_results(node.items[3])]
+    if isinstance(node, Form) and head == "cond":
+        return [
+            r
+            for c in node.items[1:]
+            if isinstance(c, Form) and len(c.items) == 2
+            for r in _results(c.items[1])
+        ]
+    if isinstance(node, Form) and head == "let" and len(node.items) == 3:
+        return _results(node.items[2])
+    return [node]
+
+
+# The known ends of a transition written to attr of obj must be values attr can take.
+def _check_ends(t: Any, cls: type, attr: str, pos: Pos):
+    if isinstance(t, Single):
+        for end in (t.frm, t.to):
+            problem = (
+                None if end is None or isinstance(end, Node) else _value_problem(cls, attr, end)
+            )
+            if problem:
+                raise CompileError(problem, pos)
+    if isinstance(t, Sequence):
+        for part in t.parts:
+            _check_ends(part, cls, attr, pos)
 
 
 TRANSITION_FORMS = ("transition", "in-order", "wait")
@@ -1607,6 +1653,8 @@ class _Compiler:
             raise CompileError("a pair needs an end: give its transition a to", given.pos)
         if kind_name == "color":
             spec = _colors_checked(spec, given.pos, none=target_type == "paint")
+        for obj, attr, _ in targets:
+            _check_ends(spec, type(obj), attr, given.pos)
         return Pair(tuple((obj, attr) for obj, attr, _ in targets), kind_name, spec)
 
     # The free values a pair writes: one, or each member's for a group attribute.
