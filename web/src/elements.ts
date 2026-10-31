@@ -419,13 +419,16 @@ export class MtpSlider extends MtpPart {
       holding = false;
     });
     const label = document.createElement("label");
-    label.append(String(rt.value(control.id, "label")), " ", input);
+    const text = document.createTextNode("");
+    label.append(text, " ", input);
     this.replaceChildren(label);
     this.sync = () => {
+      text.data = labelOf(rt, control.id);
       if (holding) return;
       const place = player.knob();
       if (place !== null) input.value = String(place);
     };
+    this.sync();
   }
 
   protected update(): void {
@@ -448,10 +451,12 @@ export class MtpToggle extends MtpPart {
       model.changed();
     });
     const label = document.createElement("label");
-    label.append(input, " ", String(rt.value(control.id, "label")));
+    const text = document.createTextNode("");
+    label.append(input, " ", text);
     this.replaceChildren(label);
     this.sync = () => {
       input.checked = Boolean(rt.value(control.id, "value"));
+      text.data = labelOf(rt, control.id);
     };
     this.sync();
   }
@@ -463,16 +468,23 @@ export class MtpToggle extends MtpPart {
 
 // Sets off an animation when pressed.
 export class MtpButton extends MtpPart {
+  private sync: () => void = () => {};
+
   protected setup(_model: MtpModel, rt: Runtime, animator: Scheduler): void {
     const control = this.find(rt, "button");
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = String(rt.value(control.id, "label"));
     button.addEventListener("click", () => animator.start(new Player(rt, control.animation as number), this));
     this.replaceChildren(button);
+    this.sync = () => {
+      button.textContent = labelOf(rt, control.id);
+    };
+    this.sync();
   }
 
-  protected update(): void {}
+  protected update(): void {
+    this.sync();
+  }
 }
 
 // Plays and pauses an animation; with buttons, one more button per step of it. A step clicked
@@ -484,7 +496,6 @@ export class MtpPlay extends MtpPart {
   protected setup(_model: MtpModel, rt: Runtime, animator: Scheduler): void {
     const control = this.find(rt, "play");
     const animation = control.animation as number;
-    const label = String(rt.value(control.id, "label"));
     const play = document.createElement("button");
     play.type = "button";
     const tour = { kind: "tour" };
@@ -522,7 +533,7 @@ export class MtpPlay extends MtpPart {
     group.append(play, ...buttons);
     this.replaceChildren(group);
     this.sync = () => {
-      play.textContent = animator.running(tour) ? "pause" : label;
+      play.textContent = animator.running(tour) ? "pause" : labelOf(rt, control.id);
       buttons.forEach((b, k) => b.setAttribute("aria-pressed", String(lights.holds(k))));
     };
     this.sync();
@@ -531,6 +542,11 @@ export class MtpPlay extends MtpPart {
   protected update(): void {
     this.sync();
   }
+}
+
+// A control's label, which may follow values like any text, so it is read on every update.
+function labelOf(rt: Runtime, control: number): string {
+  return String(rt.value(control, "label"));
 }
 
 // A step's button says the name of the animation it plays, or its number.

@@ -30,7 +30,7 @@ class TestButton:
         m = scene(f"{BASE} {GROW} (button 'b' grow)")
         b = get(m, "b", Button)
         assert b.animation is m["grow"]
-        assert b.label == Free("grow")
+        assert b.label == Free("b")
 
     def test_an_animation_written_in_place(self):
         m = scene(
@@ -57,7 +57,7 @@ class TestSlider:
         s = get(m, "s", Slider)
         assert s.animation is m["grow"]
         assert s.step == Free(4)
-        assert s.label == Free("grow")
+        assert s.label == Free("s")
 
     def test_durations_are_not_needed(self):
         assert (
@@ -88,7 +88,7 @@ class TestPlay:
         p = get(m, "p", Play)
         assert p.animation is m["tour"]
         assert p.buttons == Free(True)
-        assert p.label == Free("play")
+        assert p.label == Free("p")
 
     def test_needs_durations(self):
         error(f"{BASE} (play 'p' (animation (k (transition (to 3)))))", "needs a duration")

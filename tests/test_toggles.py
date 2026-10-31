@@ -48,7 +48,7 @@ class TestToggle:
     def test_a_scene_bool(self):
         m = compile("(bool 'show' true) (toggle 't' show)")
         t = m["t"]
-        assert (t.target, t.attr, t.label) == (m["show"], "value", Free("show"))
+        assert (t.target, t.attr, t.label) == (m["show"], "value", Free("t"))
 
     @pytest.mark.parametrize(
         "src, match",

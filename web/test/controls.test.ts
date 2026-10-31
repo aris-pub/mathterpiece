@@ -90,7 +90,7 @@ describe("<mtp-play>", () => {
 
   it("has a play button and one button per step, named after the step", async () => {
     const { play, steps } = await tour();
-    expect(play.textContent).toBe("play");
+    expect(play.textContent).toBe("tour");
     expect(steps.map((b) => b.textContent)).toEqual(["quarter", "third", "two-fifths", "golden"]);
   });
 
@@ -149,7 +149,7 @@ describe("<mtp-play>", () => {
     input.dispatchEvent(new Event("input"));
     anim.tick(10);
     expect(read("sunflower.angle")).toBeCloseTo(100);
-    expect(play.textContent).toBe("play");
+    expect(play.textContent).toBe("tour");
   });
 });
 
@@ -308,5 +308,22 @@ describe("<mtp-play> over an animation that names another", () => {
     await new Promise((r) => setTimeout(r, 0));
     const [, ...steps] = [...document.querySelectorAll("mtp-play button")];
     expect(steps.map((b) => b.textContent)).toEqual(["small", "big"]);
+  });
+});
+
+describe("labels", () => {
+  it("follow the values they show", async () => {
+    const doc = (await import("./data/fixtures/live-labels.json")).default as unknown as Doc;
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-button model="m" name="b"></mtp-button>
+      <mtp-slider model="m" name="s2"></mtp-slider><mtp-toggle model="m" name="t"></mtp-toggle>
+      <mtp-play model="m" name="p"></mtp-play>`;
+    const model = document.querySelector("mtp-model") as MtpModel;
+    model.doc = doc;
+    await new Promise((r) => setTimeout(r, 0));
+    const texts = () => ["mtp-button", "mtp-slider", "mtp-toggle", "mtp-play"].map((t) => document.querySelector(t)!.textContent!.trim());
+    expect(texts()).toEqual(["b1", "s1", "t1", "p1"]);
+    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
+    model.animator!.tick(0.01);
+    expect(texts()).toEqual(["b2", "s2", "t2", "p2"]);
   });
 });

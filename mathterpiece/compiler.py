@@ -1187,8 +1187,6 @@ class _Compiler:
             given = rest.pop(0)
             animation = self.control_animation(given, env)
             fields = {"animation": animation}
-            label = animation.name if animation.name is not None else name
-            values["label"] = Free("play" if head == "play" else label or "")
             if head == "slider":
                 _check_starts(animation.body, set(), given.pos)
             else:
@@ -1199,7 +1197,6 @@ class _Compiler:
             target_node = rest.pop(0)
             if isinstance(target_node, Name) and target_node.parts == ("self",):
                 fields = {"target": None}
-                values["label"] = Free(name or "")
             else:
                 target, attr, kind, text = self.control_target(target_node, env)
                 if kind != "bool":
@@ -1213,9 +1210,10 @@ class _Compiler:
                         target_node.pos,
                     )
                 fields = {"target": target, "attr": attr}
-                values["label"] = Free(text)
+        # Unless given one, a control is labeled with its own name.
+        values["label"] = Free(name or "")
         cls = CONTROLS[head]
-        allowed = set(attributes(cls)) - {"label"} | {"label"}
+        allowed = set(attributes(cls))
         given: set[str] = set()
         for node in rest:
             attr_name = _head(node)

@@ -1,0 +1,8 @@
+; Controls whose labels show a value, so they change when it does.
+(real 'k' 1)
+(scene 's' (circle 'c' (r k)))
+(animation 'grow' (k (transition (from 1) (to 2) (duration 0))))
+(button 'b' grow (label $'b{k:.0f}'))
+(slider 's2' grow (label $'s{k:.0f}'))
+(toggle 't' self (label $'t{k:.0f}'))
+(play 'p' grow (label $'p{k:.0f}'))
