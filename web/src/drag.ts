@@ -16,6 +16,9 @@ interface Held {
   // position target, in scene coordinates for a number.
   grab: Point;
   start: Point;
+  // Dragging a group moves each member: where each one was at the press, in the group's own
+  // coordinates.
+  members?: [number, Point][];
 }
 
 export class Drags {
@@ -36,6 +39,7 @@ export class Drags {
   /** What the held drag writes, as "id.attr". */
   get targets(): string[] {
     if (!this.held) return [];
+    if (this.held.members) return this.held.members.map(([m]) => `${m}.pos`);
     const [id, attr] = this.held.target;
     return [`${id}.${attr}`];
   }
@@ -64,6 +68,13 @@ export class Drags {
     if (!found) return false;
     const { listener, node } = found;
     const target = listener.target ?? [node, "pos"];
+    if (this.rt.kind(node) === "group") {
+      const members = (this.rt.obj(node).members ?? []).map(
+        (m) => [m, [this.rt.value(m, "x") as number, this.rt.value(m, "y") as number]] as [number, Point],
+      );
+      this.held = { listener, node, target, grab: this.inside(node, scene), start: [0, 0], members };
+      return true;
+    }
     const position = target[0] === node && ["x", "y", "pos"].includes(target[1]);
     this.held = {
       listener,
@@ -80,6 +91,7 @@ export class Drags {
     const held = this.held;
     if (!held) return false;
     const [id, attr] = held.target;
+    if (held.members) return this.moveMembers(held, attr, scene);
     const before = this.rt.value(id, attr === "pos" ? "pos" : attr);
     if (id === held.node && ["x", "y", "pos"].includes(attr)) {
       const [px, py] = this.local(held.node, scene);
@@ -94,6 +106,24 @@ export class Drags {
     const conditions = held.listener.conditions ?? [];
     if (conditions.every((c) => Boolean(this.rt.eval(c, null, {})))) return true;
     this.rt.write(id, attr, before);
+    return false;
+  }
+
+  private moveMembers(held: Held, attr: string, scene: Point): boolean {
+    const members = held.members ?? [];
+    const before = members.map(([m]) => [this.rt.value(m, "x"), this.rt.value(m, "y")]);
+    const [px, py] = this.inside(held.node, scene);
+    const [dx, dy] = [px - held.grab[0], py - held.grab[1]];
+    for (const [m, [x, y]] of members) {
+      if (attr !== "y") this.rt.write(m, "x", x + dx);
+      if (attr !== "x") this.rt.write(m, "y", y + dy);
+    }
+    const conditions = held.listener.conditions ?? [];
+    if (conditions.every((c) => Boolean(this.rt.eval(c, null, {})))) return true;
+    members.forEach(([m], k) => {
+      this.rt.write(m, "x", before[k]![0]);
+      this.rt.write(m, "y", before[k]![1]);
+    });
     return false;
   }
 
@@ -141,6 +171,11 @@ export class Drags {
   private where(node: number): Point {
     const [x = 0, y = 0] = this.rt.point(node);
     return [x, y];
+  }
+
+  // A scene point in a container's own coordinates, where its members' x and y live.
+  private inside(container: number, [x, y]: Point): Point {
+    return this.rt.frame(container).inverse().apply(x, y);
   }
 
   // A scene point in the coordinates the node's x and y live in.

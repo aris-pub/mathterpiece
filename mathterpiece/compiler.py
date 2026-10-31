@@ -1285,10 +1285,11 @@ class _Compiler:
         if not isinstance(found, ObjRef) or not isinstance(found.obj, Visual):
             raise CompileError(f"{text} cannot be dragged: it is not a visual object", dragged.pos)
         node = found.obj
-        if isinstance(node, Group):
-            raise CompileError(f"{text} is a group, and a group cannot be dragged", dragged.pos)
         target_node = form.items[2]
-        moved = self.free_value(target_node, env)
+        if isinstance(node, Group):
+            moved = self.group_drag(node, target_node, env)
+        else:
+            moved = self.free_value(target_node, env)
         if isinstance(moved, str):
             raise CompileError(moved, target_node.pos)
         position = moved[0] is node and moved[1] in ("x", "y", "pos")
@@ -1321,6 +1322,27 @@ class _Compiler:
         )
         self.drag_positions[id(drag)] = target_node.pos
         return drag
+
+    # Dragging a group moves each member's position by the same amount, so its target is its own
+    # pos, x or y, and every member's must be one a control can write.
+    def group_drag(self, group: Group, node: Node, env: Env) -> tuple[Obj, str, str, str] | str:
+        parts = node.parts if isinstance(node, Name) else ()
+        if len(parts) != 2 or self.name(Name(parts[:1], node.pos), env) != ObjRef(group):
+            return "a group is dragged by its own pos, x or y"
+        attr = parts[1]
+        if attr not in ("pos", "x", "y"):
+            return "a group is dragged by its own pos, x or y"
+        for member in group.members:
+            try:
+                found = self.writable(member, attr, f"{group.name}.{attr}", node.pos)
+            except CompileError:
+                return f"a member of {group.name!r} has no {attr}"
+            if isinstance(found, str):
+                return (
+                    f"a member of {group.name!r} computes its {attr},"
+                    " so the group cannot be dragged"
+                )
+        return group, str(attr), "list2" if attr == "pos" else "real", f"{group.name}.{attr}"
 
     # Views and controls may read controls; the scene may not.
     def reading_views[T](self, work: Callable[[], T]) -> T:

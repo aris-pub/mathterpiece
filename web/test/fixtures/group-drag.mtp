@@ -1,0 +1,4 @@
+; A group turned a quarter turn, holding two circles, dragged as one.
+(scene 's' (group 'g' (transform (rotate 90)) (circle 'a' (pos [1 0])) (circle 'b' (pos [2 0]))))
+(on-drag g g.pos)
+(canvas 'v' (view-x -5) (view-y -5) (view-width 10) (view-height 10) g)

@@ -170,3 +170,25 @@ describe("dragging by a number the position depends on", () => {
     expect(theta()).toBe(accepted);
   });
 });
+
+describe("dragging a group", () => {
+  it("moves each member by the pointer's motion, in the group's own coordinates", async () => {
+    const doc = (await import("./data/fixtures/group-drag.json")).default as unknown as Doc;
+    const rt = new Runtime(doc);
+    const drags = new Drags(rt);
+    const [a, b] = [doc.names.a!, doc.names.b!];
+    // a sits at (0, 1) in the scene: the group turns its (1, 0) a quarter turn.
+    expect(drags.grab(a, [0, 1])).toBe(true);
+    // Up by 1 in the scene is +1 along the group's own x.
+    drags.move([0, 2]);
+    expect(pos(rt, a)).toEqual([2, 0]);
+    expect(pos(rt, b)).toEqual([3, 0]);
+  });
+
+  it("claims each member's position from anything else writing it", async () => {
+    const doc = (await import("./data/fixtures/group-drag.json")).default as unknown as Doc;
+    const drags = new Drags(new Runtime(doc));
+    drags.grab(doc.names.a!, [0, 1]);
+    expect(drags.targets).toEqual([`${doc.names.a}.pos`, `${doc.names.b}.pos`]);
+  });
+});

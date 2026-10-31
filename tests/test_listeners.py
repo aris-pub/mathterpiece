@@ -178,9 +178,29 @@ class TestDragTargetsMoveTheNode:
         assert compile_model(parse(src))
 
 
-class TestGroupsAreNotDragged:
-    @pytest.mark.parametrize("target", ["g.pos", "k"])
-    def test_rejected_plainly(self, target):
-        src = f"(real 'k' 0) (scene 's' (group 'g' (circle _ (r k)))) (on-drag g {target})"
-        with pytest.raises(CompileError, match="g is a group, and a group cannot be dragged"):
+class TestDraggingAGroup:
+    # Dragging a group moves each member's position by the same amount.
+    @pytest.mark.parametrize("target", ["pos", "x", "y"])
+    def test_accepted(self, target):
+        m = compile_model(
+            parse(
+                f"(scene 's' (group 'g' (circle _) (circle _ (pos [2 0])))) (on-drag g g.{target})"
+            )
+        )
+        d = drag(m)
+        assert (d.node, d.target_obj, d.target) == (m["g"], m["g"], target)
+
+    def test_written_as_a_drag_of_the_groups_position(self):
+        doc = to_json(compile_model(parse("(scene 's' (group 'g' (circle _))) (on-drag g g.pos)")))
+        (d,) = [o for o in doc["objects"] if o["kind"] == "on-drag"]
+        assert d["target"] == [doc["names"]["g"], "pos"]
+
+    def test_a_member_whose_position_is_computed(self):
+        src = "(real 'k' 0) (scene 's' (group 'g' (circle _) (circle _ (x k)))) (on-drag g g.pos)"
+        with pytest.raises(CompileError, match="a member of 'g' computes its"):
+            compile_model(parse(src))
+
+    def test_only_the_groups_own_position(self):
+        src = "(real 'k' 0) (scene 's' (group 'g' (circle _ (r k)))) (on-drag g k)"
+        with pytest.raises(CompileError, match="a group is dragged by its own pos, x or y"):
             compile_model(parse(src))
