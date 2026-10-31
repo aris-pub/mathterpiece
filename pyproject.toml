@@ -30,6 +30,9 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# A test that runs this long prints every thread's stack: a hang once seen in the full suite
+# could not be reproduced, so the next one should say where it is.
+faulthandler_timeout = 120
 
 [tool.ruff]
 line-length = 100
