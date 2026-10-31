@@ -1,0 +1,11 @@
+; A toggle with a target reads as that target. Writing pos writes x and y.
+; expect t true
+; write b false
+; expect t false
+; write c.pos [3, 4]
+; expect c.x 3
+; expect c.y 4
+(bool 'b' true)
+(scene 's' (circle 'c'))
+(toggle 't' b)
+(button 'move' (animation (c.pos (transition (to [1 1]) (duration 0)))))

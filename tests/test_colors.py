@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from helpers import with_scene
 
@@ -234,3 +236,26 @@ def test_a_bound_background_cannot_be_written():
                 " (animation (plane.background (transition (to 'black') (duration 1)))))"
             )
         )
+
+
+class TestColorsInBranches:
+    # A color written in a branch is checked at compile time and written as #rrggbbaa.
+    SRC = "(bool 'b' true) (scene 's' (circle 'c' (fill {fill}))) (toggle 't' b)"
+
+    def test_checked(self):
+        with pytest.raises(CompileError, match="'notacolor' is not a color"):
+            compile_model(parse(self.SRC.format(fill="(if b 'red' 'notacolor')")))
+
+    @pytest.mark.parametrize(
+        "fill, expected",
+        [
+            ("(if b 'red' 'transparent')", ["#ff0000ff", "#00000000"]),
+            ("(cond (b 'blue') (else 'red'))", ["#0000ffff", "#ff0000ff"]),
+            ("(let ((x 1)) (if b 'red' 'blue'))", ["#ff0000ff", "#0000ffff"]),
+        ],
+    )
+    def test_written_as_rgba(self, fill, expected):
+        doc = to_json(compile_model(parse(self.SRC.format(fill=fill))))
+        (circle,) = [o for o in doc["objects"] if o["kind"] == "circle"]
+        found = json.dumps(circle["attrs"]["fill"])
+        assert all(f'"{e}"' in found for e in expected)

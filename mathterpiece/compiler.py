@@ -2613,7 +2613,8 @@ class _Compiler:
             raise CompileError(f"expected a color, got {value.type}", node.pos)
         if isinstance(value, Const):
             return Free(_color_const(value.value, node.pos, none))
-        return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
+        stored = self.resolve_refs(_substitute(node, self.constants(env), self.lets), env)
+        return Bound(_color_results(stored, none))
 
     def resolve_refs(self, node: Node, env: Env) -> Node:
         if isinstance(node, Form) and _head(node) == "ref":
@@ -3533,6 +3534,32 @@ def _walk_names(node: Form) -> list[Name]:
     head = _head(node)
     at = {"walk-sort": [4], "walk-reduce": [3, 4]}.get(str(head), [3])
     return [n for i in at if isinstance(n := node.items[i], Name)]
+
+
+# A color computed while drawing: each string it can result in (an if's or a cond's branch, a
+# let's body) is checked now and written as #rrggbbaa, as a color given directly is.
+def _color_results(node: Node, none: bool) -> Node:
+    if isinstance(node, StrLit):
+        return StrLit(_color_const(node.value, node.pos, none), node.pos)
+    head = _head(node)
+    if not isinstance(node, Form):
+        return node
+    if head == "if" and len(node.items) == 4:
+        test, then, other = node.items[1:]
+        return Form(
+            (node.items[0], test, _color_results(then, none), _color_results(other, none)), node.pos
+        )
+    if head == "cond":
+        clauses = []
+        for clause in node.items[1:]:
+            if isinstance(clause, Form) and len(clause.items) == 2:
+                test, value = clause.items
+                clause = Form((test, _color_results(value, none)), clause.pos)
+            clauses.append(clause)
+        return Form((node.items[0], *clauses), node.pos)
+    if head == "let" and len(node.items) == 3:
+        return Form((*node.items[:2], _color_results(node.items[2], none)), node.pos)
+    return node
 
 
 # A transition that changes nothing may stand where an animation is expected: a wait, or an

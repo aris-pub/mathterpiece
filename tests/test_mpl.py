@@ -7,6 +7,7 @@ import pytest
 from helpers import with_scene
 from matplotlib.backend_bases import ResizeEvent
 from matplotlib.colors import to_rgba
+from matplotlib.path import Path as MplPath
 
 from mathterpiece.backends.mpl import EvalError, Evaluator, render
 from mathterpiece.compiler import compile_model
@@ -462,14 +463,18 @@ class TestDotsExample:
             return math.dist(ev.point(dot), ev.point(c)) < ev.value(dot, "r") + ev.value(c, "r")
 
         for dot in scn["dots"].members:  # ty: ignore[unresolved-attribute]
-            # The strokes are checked colors (#rrggbbaa); 'gray' is chosen while drawing, so it
-            # stays as written.
+            # Every color the fill can be, including the one chosen while drawing, is written as
+            # #rrggbbaa.
             expected = (
-                "#008080ff" if touches(dot, teal) else "#ff0000ff" if touches(dot, red) else "gray"
+                "#008080ff"
+                if touches(dot, teal)
+                else "#ff0000ff"
+                if touches(dot, red)
+                else "#808080ff"
             )
             assert ev.value(dot, "fill") == expected
             colors.add(expected)
-        assert colors == {"#008080ff", "#ff0000ff", "gray"}
+        assert colors == {"#008080ff", "#ff0000ff", "#808080ff"}
 
 
 class TestRef:
@@ -506,3 +511,75 @@ class TestTextAlignment:
         box = self.extents("(halign 'end') (valign 'top')")
         assert box.x1 == pytest.approx(0, abs=1e-6)
         assert box.y1 == pytest.approx(0, abs=1e-6)
+
+
+class TestIndexes:
+    def _eval(self, expr):
+        ev = Evaluator(compile_model(parse("(scene _)")), random.Random(0))
+        return ev.runtime.eval(expr, None, {})
+
+    def test_negative_indexes_count_from_the_end(self):
+        assert self._eval(["part", ["list", 4, 5, 6], -1]) == 6
+
+    @pytest.mark.parametrize("index", [2, -3])
+    def test_past_either_end_is_an_error_as_on_the_web(self, index):
+        with pytest.raises(EvalError, match=f"a list of 2 has no part {index}"):
+            self._eval(["part", ["list", 4, 5], index])
+
+
+def test_a_bad_color_while_drawing_is_an_evalerror():
+    # A string computed while drawing is checked when drawn, with mtp's error, not Python's.
+    from mathterpiece.backends.mpl import _paint
+
+    m = compile_model(parse("(scene 's' (circle 'c'))"))
+    ev = Evaluator(m, random.Random(0))
+    ev.write(m["c"], "fill", "notacolor")
+    with pytest.raises(EvalError, match="'notacolor' is not a color"):
+        _paint(ev.runtime, ev.id(m["c"]), "fill")
+
+
+class TestStaticFeatures:
+    # matplotlib is the static backend: it draws everything static that SVG draws.
+    def _figure(self, src):
+        ((fig, ax),) = render(compile_model(parse(src)), random.Random(0))
+        return fig, ax
+
+    def test_a_canvas_when_hides_what_does_not_hold(self):
+        src = (
+            "(bool 'b' false) (scene 's' (circle 'shown' (r 1)) (circle 'hidden' (r 2)))"
+            " (toggle 't' b) (canvas 'v' (view-x -3) (view-y -3) (view-width 6) (view-height 6)"
+            " shown (when b hidden))"
+        )
+        _, ax = self._figure(src)
+        assert [p.get_radius() for p in ax.patches] == [1]
+
+    def test_the_scene_background(self):
+        fig, ax = self._figure("(scene 's' (background '#336699') (circle 'c')) (canvas 'v' c)")
+        assert to_rgba(ax.get_facecolor()) == to_rgba("#336699")
+        assert to_rgba(fig.get_facecolor()) == to_rgba("#336699")
+
+    def test_rounded_corners(self):
+        _, ax = self._figure(
+            "(scene 's' (rect 'r' (width 4) (height 2) (rx 1) (ry 0.5)))"
+            " (canvas 'v' (view-x -1) (view-y -1) (view-width 6) (view-height 4) r)"
+        )
+        (patch,) = ax.patches
+        path = patch.get_path()
+        assert MplPath.CURVE4 in path.codes
+        assert path.get_extents().bounds == pytest.approx((0, 0, 4, 2))
+        # The rectangle's very corner is cut off; its middle and its sides' middles are not.
+        assert not path.contains_point((0.05, 0.05))
+        assert all(path.contains_point(p) for p in [(2, 1), (2, 0.01), (0.01, 1)])
+
+    def test_font_parts(self):
+        def width(font):
+            _, ax = self._figure(
+                f"(font 'f' {font}) (scene 's' (text 't' 'mmm' (font f)))"
+                " (canvas 'v' (view-x 0) (view-y -1) (view-width 10) (view-height 4) t)"
+            )
+            (patch,) = ax.patches
+            return patch.get_path().get_extents().width
+
+        plain = width("(size 1)")
+        assert width("(size 1) (weight 700)") != pytest.approx(plain)
+        assert width("(size 1) (family 'monospace')") != pytest.approx(plain)

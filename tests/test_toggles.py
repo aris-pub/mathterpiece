@@ -197,3 +197,8 @@ class TestWritingASelfToggle:
         )
         with pytest.raises(CompileError, match="write b instead"):
             compile_model(parse(src))
+
+
+def test_a_toggle_with_a_target_stores_no_value_of_its_own():
+    doc = to_json(compile_model(parse("(bool 'b' true) (scene _) (toggle 't' b)")))
+    assert "value" not in doc["objects"][doc["names"]["t"]]["attrs"]

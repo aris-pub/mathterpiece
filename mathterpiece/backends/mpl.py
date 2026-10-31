@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
+from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Circle as MplCircle
 from matplotlib.patches import Ellipse as MplEllipse
 from matplotlib.patches import Patch, PathPatch, Polygon, Rectangle
@@ -89,6 +90,11 @@ class Runtime:
 
     # A control's write. Everything computed is dropped, since anything might depend on it.
     def write(self, i: int, attr: str, value: Any):
+        # A position is its x and y, as on the web.
+        if attr == "pos":
+            self.write(i, "x", value[0])
+            self.write(i, "y", value[1])
+            return
         self.written[(i, attr)] = value
         self.cache.clear()
         self.frames.clear()
@@ -103,6 +109,10 @@ class Runtime:
             name = self.objects[i]["name"] or "an anonymous object"
             raise EvalError(f"cycle through {name}.{attr}")
         obj = self.objects[i]
+        # A toggle with a target is that value.
+        if obj["kind"] == "toggle" and attr == "value" and obj.get("target"):
+            target, part = obj["target"]
+            return self.value(target, part)
         raw = obj["params"][attr] if attr in obj.get("params", {}) else obj["attrs"][attr]
         self.active.add(key)
         try:
@@ -177,6 +187,8 @@ class Runtime:
             if isinstance(base, _Ref):
                 base = self.items(base)
             index = args[1] if isinstance(args[1], int) else int(self.eval(args[1], frame, env))
+            if not -len(base) <= index < len(base):
+                raise EvalError(f"a list of {len(base)} has no part {index}")
             return base[index]
         if op == "obj":
             return _Ref(args[0])
@@ -427,9 +439,6 @@ def _all_objects(model: Model) -> list[Obj]:
         members = getattr(obj, "members", None)
         if isinstance(members, list):
             stack.extend(members)
-        state = getattr(obj, "state", None)
-        if isinstance(state, Obj):
-            stack.append(state)
     return out
 
 
@@ -476,8 +485,6 @@ def render_json(doc: dict, rng: random.Random | None = None) -> list[tuple[Figur
 
 
 def _draw_canvas(view: int, ax: Axes, rt: Runtime, strokes: list):
-    ax.clear()
-    strokes.clear()
     x, y = rt.value(view, "view-x"), rt.value(view, "view-y")
     width, height = rt.value(view, "view-width"), rt.value(view, "view-height")
     ax.set_xlim(x, x + width)
@@ -490,7 +497,22 @@ def _draw_canvas(view: int, ax: Axes, rt: Runtime, strokes: list):
     to_center = translate(-(x + width / 2), -(y + height / 2))
     matrix = compose(to_center, rt.value(view, "transform"), center)
     to_view = _affine(matrix) + ax.transData
-    for member in rt.objects[view]["shows"]:
+    # The scene's background fills the figure, as it fills the SVG element on the web.
+    root = next((o["id"] for o in rt.objects if o["kind"] == "root"), None)
+    background = "none" if root is None else rt.value(root, "background")
+    if background != "none":
+        try:
+            fill = to_rgba(background)
+        except ValueError:
+            raise EvalError(f"{background!r} is not a color") from None
+        ax.set_facecolor(fill)
+        ax.figure.set_facecolor(fill)
+    # What the canvas shows only while its when holds is drawn as it stands when drawn.
+    whens = rt.objects[view].get("when") or []
+    for k, member in enumerate(rt.objects[view]["shows"]):
+        when = whens[k] if k < len(whens) else None
+        if when is not None and not rt.eval(when, None, {}):
+            continue
         _draw(member, ax, rt, to_view, strokes, _scale(matrix))
 
 
@@ -529,7 +551,13 @@ def _draw(i: int, ax: Axes, rt: Runtime, to_view: Transform, strokes: list, view
         # the way an SVG transform does.
         shape = rt.shape(i)
         value = rt.value(i, "value")
-        glyphs = TextPath((0, 0), value, size=rt.value(i, "font-size"))
+        family = rt.value(i, "font-family")
+        font = FontProperties(
+            family=family or None,
+            style=rt.value(i, "font-style"),
+            weight=rt.value(i, "font-weight"),
+        )
+        glyphs = TextPath((0, 0), value, size=rt.value(i, "font-size"), prop=font)
         # matplotlib has no alignment for glyph outlines, so the text is moved by its own box,
         # which is close to what a browser does (it aligns by the font's metrics instead).
         box = glyphs.get_extents()
@@ -558,12 +586,45 @@ def _outline(i: int, rt: Runtime) -> Patch:
     if kind == "circle":
         return MplCircle((0, 0), v("r"))
     if kind == "rect":
+        if v("rx") > 0 and v("ry") > 0:
+            return PathPatch(_rounded(v("width"), v("height"), v("rx"), v("ry")))
         return Rectangle((0, 0), v("width"), v("height"))
     if kind == "ellipse":
         return MplEllipse((0, 0), 2 * v("rx"), 2 * v("ry"))
     if kind == "line":
         return PathPatch(Path([(v("x1"), v("y1")), (v("x2"), v("y2"))]))
     return Polygon([v("a"), v("b"), v("c")], closed=True)
+
+
+# A rectangle with elliptical corners, as SVG draws rx and ry: each radius at most half the side.
+def _rounded(width: float, height: float, rx: float, ry: float) -> Path:
+    rx, ry = min(rx, width / 2), min(ry, height / 2)
+    # A quarter ellipse as one cubic Bezier curve, the usual close fit.
+    k = 0.5522847498
+    w, h = width, height
+    vertices = [
+        (rx, 0),
+        (w - rx, 0),
+        (w - rx + k * rx, 0),
+        (w, ry - k * ry),
+        (w, ry),
+        (w, h - ry),
+        (w, h - ry + k * ry),
+        (w - rx + k * rx, h),
+        (w - rx, h),
+        (rx, h),
+        (rx - k * rx, h),
+        (0, h - ry + k * ry),
+        (0, h - ry),
+        (0, ry),
+        (0, ry - k * ry),
+        (rx - k * rx, 0),
+        (rx, 0),
+        (rx, 0),
+    ]
+    codes = [Path.MOVETO, Path.LINETO, *[Path.CURVE4] * 3, Path.LINETO, *[Path.CURVE4] * 3]
+    codes += [Path.LINETO, *[Path.CURVE4] * 3, Path.LINETO, *[Path.CURVE4] * 3, Path.CLOSEPOLY]
+    return Path(vertices, codes)
 
 
 def _affine(matrix: Matrix) -> Affine2D:
@@ -577,9 +638,12 @@ def _scale(matrix: Matrix) -> float:
     return math.sqrt(abs(a * e - b * d))
 
 
-def _paint(rt: Runtime, i: int, attr: str, fade: float = 1.0):
+def _paint(rt: Runtime, i: int, attr: str):
     color = rt.value(i, attr)
     if color == "none":
         return "none"
-    r, g, b, a = to_rgba(color)
-    return r, g, b, a * rt.value(i, f"{attr}-opacity") * rt.opacity(i) * fade
+    try:
+        r, g, b, a = to_rgba(color)
+    except ValueError:
+        raise EvalError(f"{color!r} is not a color") from None
+    return r, g, b, a * rt.value(i, f"{attr}-opacity") * rt.opacity(i)

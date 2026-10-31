@@ -245,6 +245,9 @@ class _Writer:
             out["body"] = self.animation(obj.body, ctx)
         if isinstance(obj, Toggle):
             out["target"] = None if obj.target is None else [self.id(obj.target), obj.attr]
+            # A toggle with a target is that value, so it keeps none of its own.
+            if obj.target is not None:
+                out["attrs"].pop("value", None)
         if isinstance(obj, State):
             out["conditions"] = [self.expr(c, ctx) for c in obj.conditions]
         if isinstance(obj, Drag):
