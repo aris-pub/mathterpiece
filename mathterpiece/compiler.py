@@ -1285,6 +1285,8 @@ class _Compiler:
         if not isinstance(found, ObjRef) or not isinstance(found.obj, Visual):
             raise CompileError(f"{text} cannot be dragged: it is not a visual object", dragged.pos)
         node = found.obj
+        if isinstance(node, Group):
+            raise CompileError(f"{text} is a group, and a group cannot be dragged", dragged.pos)
         target_node = form.items[2]
         moved = self.free_value(target_node, env)
         if isinstance(moved, str):
@@ -1358,9 +1360,9 @@ class _Compiler:
     def control_attr(self, attr: str, node: Node, env: Env, cls: type[Obj]) -> Free | Bound:
         if attr == "step":
             step = self.value_arg(node, env)
-            if not (isinstance(step, Const) and step.type == "int" and step.value >= 1):  # ty: ignore[unsupported-operator]
+            if not (isinstance(step, Const) and step.type == "int" and step.value >= 2):  # ty: ignore[unsupported-operator]
                 raise CompileError(
-                    "step is a whole number of steps, at least 1, known at compile time", node.pos
+                    "step is a whole number of places, at least 2, known at compile time", node.pos
                 )
             return Free(step.value)
         value = self.attr_value(cls, attr, node, env)

@@ -327,3 +327,14 @@ describe("labels", () => {
     expect(texts()).toEqual(["b2", "s2", "t2", "p2"]);
   });
 });
+
+describe("<mtp-slider> with steps", () => {
+  it("has (step n) places, both ends included", async () => {
+    const doc = (await import("./data/fixtures/stepped-slider.json")).default as unknown as Doc;
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-slider model="m" name="four"></mtp-slider>`;
+    (document.querySelector("mtp-model") as MtpModel).doc = doc;
+    await new Promise((r) => setTimeout(r, 0));
+    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
+    expect(Number(input.step)).toBeCloseTo(1 / 3);
+  });
+});

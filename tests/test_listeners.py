@@ -176,3 +176,11 @@ class TestDragTargetsMoveTheNode:
     )
     def test_accepted_through_other_objects(self, src):
         assert compile_model(parse(src))
+
+
+class TestGroupsAreNotDragged:
+    @pytest.mark.parametrize("target", ["g.pos", "k"])
+    def test_rejected_plainly(self, target):
+        src = f"(real 'k' 0) (scene 's' (group 'g' (circle _ (r k)))) (on-drag g {target})"
+        with pytest.raises(CompileError, match="g is a group, and a group cannot be dragged"):
+            compile_model(parse(src))

@@ -74,9 +74,13 @@ class TestSlider:
         )
         assert scene(src) is not None
 
-    @pytest.mark.parametrize("step", ["0", "2.5", "'none'"])
-    def test_step_is_a_number_of_steps(self, step):
-        error(f"{BASE} {GROW} (slider 's' grow (step {step}))", "step is a whole number of steps")
+    # (step n) is n evenly spaced places, both ends included; a slider needs at least 2.
+    @pytest.mark.parametrize("step", ["0", "1", "2.5", "'none'"])
+    def test_step_is_a_number_of_places(self, step):
+        error(
+            f"{BASE} {GROW} (slider 's' grow (step {step}))",
+            "step is a whole number of places, at least 2",
+        )
 
 
 class TestPlay:

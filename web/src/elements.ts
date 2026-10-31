@@ -402,7 +402,8 @@ export class MtpSlider extends MtpPart {
     input.type = "range";
     input.min = "0";
     input.max = "1";
-    input.step = typeof steps === "number" ? String(1 / steps) : "any";
+    // (step n) is n places, both ends included, so n - 1 equal moves.
+    input.step = typeof steps === "number" ? String(1 / (steps - 1)) : "any";
     const knob = player.knob();
     input.value = String(knob ?? 0);
     let holding = false;
