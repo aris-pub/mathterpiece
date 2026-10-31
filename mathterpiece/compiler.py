@@ -1525,8 +1525,8 @@ class _Compiler:
             if isinstance(found, Animation):
                 return found
             stored = self.consts.get(node.parts[0])
-            if stored is not None and isinstance(stored.value, Wait):
-                return WaitStep(stored.value.duration)
+            if stored is not None and _only_waits(stored.value):
+                return _as_steps(stored.value)
         if isinstance(node, Form) and head in ("at-once", "in-order"):
             return self.composed_animation(node, env, head)
         if isinstance(node, Form) and head == "wait":
@@ -3533,6 +3533,21 @@ def _walk_names(node: Form) -> list[Name]:
     head = _head(node)
     at = {"walk-sort": [4], "walk-reduce": [3, 4]}.get(str(head), [3])
     return [n for i in at if isinstance(n := node.items[i], Name)]
+
+
+# A transition that changes nothing may stand where an animation is expected: a wait, or an
+# in-order made only of waits.
+def _only_waits(t: Any) -> bool:
+    if isinstance(t, Wait):
+        return True
+    return isinstance(t, Sequence) and all(_only_waits(p) for p in t.parts)
+
+
+def _as_steps(t: Any) -> "WaitStep | InOrder":
+    if isinstance(t, Wait):
+        return WaitStep(t.duration)
+    assert isinstance(t, Sequence)
+    return InOrder(parts=tuple(_as_steps(p) for p in t.parts))
 
 
 def _loop_var(var: Node, form: str) -> str:

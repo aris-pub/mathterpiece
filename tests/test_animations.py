@@ -193,6 +193,22 @@ class TestStoredWaits:
         assert isinstance(body, InOrder)
         assert body.parts[1] == WaitStep(1.5)
 
+    def test_a_const_holding_an_in_order_of_waits(self):
+        src = (
+            "(real 'k' 0) (const 'pause' (in-order (wait 1) (wait 0.5))) (scene _)"
+            " (animation 'a' (in-order (k (transition (to 1) (duration 1))) pause))"
+        )
+        body = compile_model(parse(src))["a"].body  # ty: ignore[unresolved-attribute]
+        assert body.parts[1] == InOrder(parts=(WaitStep(1.0), WaitStep(0.5)))
+
+    def test_a_transition_with_no_ends_does_not(self):
+        src = (
+            "(real 'k' 0) (const 'still' (transition (duration 1))) (scene _)"
+            " (animation 'a' (in-order (k (transition (to 1) (duration 1))) still))"
+        )
+        with pytest.raises(CompileError, match="holds animations"):
+            compile_model(parse(src))
+
     def test_the_error_names_every_kind_of_part(self):
         src = "(real 'k' 0) (scene _) (animation 'a' (in-order (k (transition (to 1))) 3))"
         with pytest.raises(CompileError, match="at-once, in-order, wait, or another animation"):
