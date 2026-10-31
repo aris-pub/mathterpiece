@@ -17,7 +17,7 @@ const PROPERTIES: Record<string, Set<string>> = {
 };
 const POINTS = new Set(["center", "from", "to"]);
 // Objects whose expressions read positions in scene coordinates.
-const CONTROLS = new Set(["slider", "button", "play", "toggle", "animation", "on-drag"]);
+const CONTROLS = new Set(["slider", "button", "play", "toggle", "animation", "on-drag", "on-click"]);
 const ARITHMETIC = new Set(["+", "-", "*", "/"]);
 
 /** An object passed as a value, as in (dist a b). */

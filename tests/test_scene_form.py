@@ -110,7 +110,7 @@ class TestSceneFormErrors:
     def test_not_allowed_inside(self, member, match):
         error(f"(scene _ {member})", match=match)
 
-    def test_scene_takes_no_attributes(self):
+    def test_scene_takes_only_a_background(self):
         error("(scene _ (x 2))")
 
     def test_name_is_a_string_or_underscore(self):

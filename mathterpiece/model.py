@@ -433,8 +433,8 @@ class Model:
         return [obj for obj in self._items if isinstance(obj, Control)]
 
     @property
-    def listeners(self) -> list[Drag]:
-        return [obj for obj in self._items if isinstance(obj, Drag)]
+    def listeners(self) -> list[Drag | Click]:
+        return [obj for obj in self._items if isinstance(obj, (Drag, Click))]
 
     @property
     def views(self) -> list[View]:

@@ -108,7 +108,7 @@ describe("dragging", () => {
   });
 
   it("reads when as a state", () => {
-    const state = { kind: "state", name: "on", attrs: {}, conditions: [[">", ["read", 2, "x"], 0]], moves: null };
+    const state = { kind: "state", name: "on", attrs: {}, conditions: [[">", ["read", 2, "x"], 0]] };
     const { drags } = world([on(2, [], ["holds", 7])], [state]);
     expect(drags.grab(2, [0, 1])).toBe(false);
   });

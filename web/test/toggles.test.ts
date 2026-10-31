@@ -104,7 +104,7 @@ describe("fading in and out", () => {
     const doc = figure();
     const canvas = doc.objects[8]!;
     const spec = { duration: 2, path: ["view", "fade"], ...(ease ? { ease } : {}) };
-    (canvas as { transitions?: unknown }).transitions = [null, ["transition", spec]];
+    canvas.transitions = [null, ["transition", spec]];
     doc.functions = { sq: { params: [["p", 0]], body: ["*", ["arg", "p"], ["arg", "p"]] } } as never;
     document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="v"></mtp-canvas>
       <mtp-toggle model="m" name="more"></mtp-toggle>`;

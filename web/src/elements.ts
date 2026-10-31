@@ -273,7 +273,7 @@ class Fades {
 
   // Notices conditions that changed since the last drawing.
   follow(): void {
-    const transitions = (this.rt.obj(this.canvas) as { transitions?: unknown[] }).transitions ?? [];
+    const transitions = this.rt.obj(this.canvas).transitions ?? [];
     this.wanted.forEach((was, k) => {
       const now = shownNow(this.rt, this.canvas, k);
       if (now === was) return;

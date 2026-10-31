@@ -40,7 +40,7 @@ POINTS = {"center", "from", "to"}
 SHAPES = {"circle", "rect", "ellipse", "line", "triangle"}
 CONTAINERS = {"root", "group", "motif"}
 # Objects whose expressions read positions in scene coordinates.
-CONTROLS = {"slider", "button", "play", "toggle", "animation", "on-drag"}
+CONTROLS = {"slider", "button", "play", "toggle", "animation", "on-drag", "on-click"}
 
 
 class EvalError(Exception):

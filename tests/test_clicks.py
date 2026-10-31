@@ -57,3 +57,8 @@ class TestOnClick:
         assert c["node"] == doc["names"]["points"]
         assert c["animation"] == doc["names"]["grow"]
         assert c["when"] == [">", ["read", doc["names"]["k"], "value"], 0.0]
+
+
+def test_clicks_are_listeners():
+    m = compile("(on-click points grow)")
+    assert m.listeners == clicks(m)
