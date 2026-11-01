@@ -48,7 +48,7 @@ Everything in a file is an expression: a literal, a name, or a form. Names may b
 
 ### Names
 
-A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`. These words are reserved and cannot be used as names: `scene`, `animation`, `transition`, `wait`, `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`.
+A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`. These words are reserved and cannot be used as names: `scene`, `animation`, `transition`, `wait`, `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`.
 
 ### Forms
 
@@ -135,6 +135,8 @@ A part of an object is read with a dot or with brackets.
     g.r                       ; on a group: each member's r
 
 A chain of parts always starts with a name. A dot is always followed by an attribute name, or, on a motif instance, the name of one of its members (`d1.face`). Brackets hold a position, a member's name given as a string (used as a key), or any expression that gives one. Group members are read with brackets or by their own name, never with a dot.
+
+Inside a motif's body, `self` is the instance being built: `self.t` is its parameter `t`, and `self.face.r` its member `face`'s radius. `self` is reserved, and is an error outside a motif's body.
 
 ### Parts of what an expression gives
 

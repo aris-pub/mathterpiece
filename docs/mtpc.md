@@ -76,13 +76,13 @@ A value is plain JSON, read according to the type that always accompanies it:
 
 ## Expressions
 
-An expression is an array: its operation first, then its type, then its parts. `frame` in a read is the id of the container the reading expression sits in (`null` at the top level and directly in the scene). The runtime converts the value read through every `translate` and `transform` that applies to the shape read but not to that container (reference, "Coordinates"), and `deps` include those `translate` and `transform` places. Types written here are what the compiler proved: a result that may be `none` has a `{"union": [T, "none"]}` type, and the runtime never checks for `none` anywhere else.
+An expression is an array: its operation first, then its type, then its parts. `frame` in a read is the id of the container the reading expression sits in (`null` at the top level and directly in the scene), or `"caller"` inside a function body, where the frame is the calling place's, passed along with each call. The runtime converts the value read through every `translate` and `transform` that applies to the shape read but not to that container (reference, "Coordinates"), and `deps` include those `translate` and `transform` places. Types written here are what the compiler proved: a result that may be `none` has a `{"union": [T, "none"]}` type, and the runtime never checks for `none` anywhere else.
 
 | Expression | Written |
 |---|---|
 | a literal | `["lit", T, value]` |
 | a list or point built from expressions | `["list", T, e…]` |
-| an interpolated string | `["format", "string", part…]`, each part a string, or `[e, spec]` with `spec` the format after the colon (`""` if none) |
+| an interpolated string | `["format", T, part…]`, `T` being `"string"`, or `{"union": ["string", "none"]}` when a part may be `none`;, each part a string, or `[e, spec]` with `spec` the format after the colon (`""` if none) |
 | a variable | `["read", T, id, null, frame]` |
 | an attribute | `["read", T, id, attr, frame]` |
 | an object itself (a group passed to `map`, a shape read as a value) | `["obj", T, id]` |
@@ -144,12 +144,12 @@ Motif and variant instances are written out in full: the runtime never builds an
 
 ### Steps
 
-    ["move", [id, attr], transitionId]
+    ["move", [id, attr], transitionId, duration, ease]
     ["wait", seconds]
     ["at-once", step, …]
     ["in-order", step, …]
 
-An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`.
+A move carries its own `duration` and `ease`, resolved from the transition and the nearest enclosing default, so one named transition can be used in animations with different defaults. An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`.
 
 ### Transitions
 
@@ -157,7 +157,7 @@ An animation's `"steps"` is one step; several steps written in a row in the sour
      "ease": "linear" | "ease-in" | "ease-out" | "ease-in-out" | ["step", n] | {"func": id},
      "path": null | "fade" | {"func": id}}
 
-`null` for `from` or `to` means the moved place's value when the move starts. `path` `null` is the straight line between the ends.
+A transition is a value: it never changes. Its `from` and `to` are places only so that they can hold expressions; each is read once, when a move along the transition starts, and never followed during the move. `null` for `from` or `to` means the moved place's value when the move starts. `path` `null` is the straight line between the ends.
 
 ## Functions
 

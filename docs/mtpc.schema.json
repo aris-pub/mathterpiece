@@ -603,7 +603,7 @@
               "const": "format"
             },
             {
-              "const": "string"
+              "$ref": "#/$defs/type"
             }
           ],
           "minItems": 2,
@@ -653,6 +653,9 @@
                 },
                 {
                   "type": "null"
+                },
+                {
+                  "const": "caller"
                 }
               ]
             }
@@ -1223,10 +1226,52 @@
             },
             {
               "$ref": "#/$defs/id"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "oneOf": [
+                {
+                  "enum": [
+                    "linear",
+                    "ease-in",
+                    "ease-out",
+                    "ease-in-out"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "const": "step"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "func"
+                  ],
+                  "properties": {
+                    "func": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
             }
           ],
-          "minItems": 3,
-          "maxItems": 3
+          "minItems": 5,
+          "maxItems": 5
         },
         {
           "type": "array",

@@ -12,7 +12,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **Stroke widths and font sizes are in screen units** (CSS pixels): a line keeps the same thickness on screen, and text the same size, whatever the view box and however the figure is scaled.
 - **Every shape has its own frame of reference.** It starts identical to the scene's; then the shape's `translate` and then its `transform` are applied (`translate` is the translation that comes first; `transform` is everything else, and may include further translations), and they apply to the shape and to everything below it in the scene tree. A group's `translate` and `transform` are its own: they move its members, and are not spread over them.
 - **A position is written before the transforms of the shape's containers are applied.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1, then the group's translation moves it: it is drawn at 6. The author never converts anything by hand: what is written is where the shape sits before its containers move it.
-- **Reading an attribute converts it through every transform that applies to the shape read but not to the place reading it.** Inside `g`, a sibling reads `p.x` as 1, so `(circle q (x p.x))` sits exactly on `p`; outside `g`, `p.x` reads 6, where `p` is drawn. The runtime stores the 1. A write converts the other way: a drag that puts `p` under the pointer writes the value that, after the group's transforms, lands there.
+- **Reading an attribute converts it through every transform that applies to the shape read but not to the place reading it.** Inside `g`, a sibling reads `p.x` as 1, so `(circle q (x p.x))` sits exactly on `p`; outside `g`, `p.x` reads 6, where `p` is drawn. The runtime stores the 1. A shape's own `translate` and `transform` count too: `(circle p (x 1) (translate [2 0]))` is drawn at 3, and a sibling reads `p.x` as 3. Inside a function, a read uses the frame of the place that called it. A drag's write converts the other way: it writes the value that, after every transform, lands under the pointer. Writes from animations and toggles are in the target's own frame and are not converted.
 
 ## Declarations
 
@@ -60,7 +60,7 @@ Shape arguments, taken by every shape except groups: `(x real)` `(y real)`, or `
 
 `halign` is one of `'start' 'middle' 'end'`; `valign` is one of `'top' 'middle' 'baseline' 'bottom'`, where `'baseline'` is the line the letters sit on and `'bottom'` is the bottom of the lowest letters.
 
-Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint and a triangle's its centroid; writing either moves the whole shape, ends or corners together, so it can only be written when every end or corner is free.
+Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint and a triangle's its centroid. They are computed from the ends or corners, so a line or triangle is declared by its ends or corners and never given `x`, `y` or `pos`; a writer that writes its position moves every end or corner together, and may only do so when they are all free.
 
 ### Tokens
 
@@ -187,9 +187,9 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 
 | Function | Takes | Gives | Undefined |
 |---|---|---|---|
-| `+` `-` `*` | numbers, any count (`-` with one argument negates); points and lists of numbers of equal known length, item by item | the broadest input type | never |
+| `+` `-` `*` | numbers, any count (`-` with one argument negates); points and lists of numbers of equal known length, item by item | the broadest input type | a result too large for a real |
 | `/` | two numbers | an int over an int gives a ratio; otherwise the broadest input type | dividing by 0 |
-| `^` | two numbers | an int to a non-negative int power gives an int, to a negative int power a ratio; otherwise a real | 0 to a negative power; a negative base to a power that is not an int; a result too large for a real |
+| `^` | two numbers | an int to a non-negative int power gives an int, to a negative int power a ratio; a complex input gives a complex; otherwise a real | 0 to a negative power; a negative base to a power that is not an int; a result too large for a real |
 | `mod` | two numbers | number, with the sign of the divisor: `(mod -1 360)` is 359 | by 0 |
 | `abs` | a number | the same type; a complex gives a real | never |
 | `=` `!=` | any two of one type | bool | never (`(= none none)` is true) |
@@ -205,7 +205,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `sqrt` | real | real | negative input |
 | `round` | real, and optionally a number of decimal places `n` (an int; negative rounds to tens, hundreds, …) | int without `n`, real with it | never |
 | `floor` `ceil` | real | int | never |
-| `exp` | real | real | never |
+| `exp` | real | real | a result too large for a real |
 | `log` | real, and optionally a base (e if left out) | real | input 0 or below; base 0 or below, or 1 |
 | `min` `max` | reals, any count | real | never |
 | `lerp` | `a`, `b`, `t` (reals or points) | the same type | never |
@@ -215,7 +215,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 
 Two full families: the trigonometric functions whose names end in `d` (`sind`, `asind`, …) take or give degrees; the others take or give radians. `polar`, `to-polar` and `rotate` use degrees.
 
-| Radians | Degrees | Takes | Gives | Undefined (degrees; in radians the same angles) |
+| Radians | Degrees | Takes | Gives | Undefined (in degrees; the radian versions compute numerically and give `none` only where the result is not a number, since π/2 cannot be hit exactly) |
 |---|---|---|---|---|
 | `sin` `cos` | `sind` `cosd` | an angle | real | never |
 | `tan` | `tand` | an angle | real | at 90 + 180k |
