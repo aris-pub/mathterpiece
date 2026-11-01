@@ -1,0 +1,2 @@
+; error 2:12 expected an expression inside braces
+(text t $'a{}b')

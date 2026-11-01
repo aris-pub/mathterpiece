@@ -1,0 +1,2 @@
+; error 2:14 a part cannot follow a form; use (. X Y)
+(real v (f x).r)

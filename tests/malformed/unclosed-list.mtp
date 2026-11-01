@@ -1,0 +1,2 @@
+; error 2:16 expected ']' to close the list
+(list xs [1 2 3)

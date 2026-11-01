@@ -1,0 +1,2 @@
+; error 2:9 empty form
+(real k ())

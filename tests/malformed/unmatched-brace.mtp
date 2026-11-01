@@ -1,0 +1,2 @@
+; error 2:12 unmatched '}'; write '}}' for a literal brace
+(text t $'a}b')

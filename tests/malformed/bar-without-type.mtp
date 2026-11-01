@@ -1,0 +1,2 @@
+; error 2:7 expected a type after '|'
+(real| x 1)

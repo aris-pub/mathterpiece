@@ -1,0 +1,2 @@
+; error 2:9 double quotes are not allowed; use single quotes
+(text t "hi")
