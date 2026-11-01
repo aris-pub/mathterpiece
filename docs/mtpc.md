@@ -82,7 +82,7 @@ An expression is an array: its operation first, then its type, then its parts. `
 |---|---|
 | a literal | `["lit", T, value]` |
 | a list or point built from expressions | `["list", T, e…]` |
-| an interpolated string | `["format", T, part…]`, `T` being `"string"`, or `{"union": ["string", "none"]}` when a part may be `none`;, each part a string, or `[e, spec]` with `spec` the format after the colon (`""` if none) |
+| an interpolated string | `["format", T, part…]`, `T` being `"string"`, or `{"union": ["string", "none"]}` when a part may be `none`; each part a string, or `[e, spec]` with `spec` the format after the colon (`""` if none) |
 | a variable | `["read", T, id, null, frame]` |
 | an attribute | `["read", T, id, attr, frame]` |
 | an object itself (a group passed to `map`, a shape read as a value) | `["obj", T, id]` |

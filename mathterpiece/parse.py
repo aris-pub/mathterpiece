@@ -12,6 +12,7 @@ from mathterpiece.nodes import (
     ListLit,
     Name,
     Node,
+    NoneLit,
     Pos,
     RatioLit,
     RealLit,
@@ -188,6 +189,8 @@ class _Parser:
             items.append(self.node())
         if not items:
             raise ParseError("empty form", pos)
+        if self.peek() in (".", "["):
+            raise ParseError("a part cannot follow a form; use (. X Y)", self.pos())
         return Form(tuple(items), pos)
 
     # A [ that starts a value opens a list; one right after a name indexes it (see access).
@@ -205,7 +208,9 @@ class _Parser:
             if self.peek() == ")":
                 raise ParseError("expected ']' to close the list", self.pos())
             items.append(self.node())
-        if self.peek() and not (_is_delimiter(self.peek()) or self.peek() == "]"):
+        if self.peek() and not (
+            _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
+        ):
             raise ParseError(f"unexpected {self.peek()!r} after a list", self.pos())
         return ListLit(tuple(items), pos)
 
@@ -223,10 +228,12 @@ class _Parser:
         text = self.run()
         if self.peek() == "[":
             return self.access(text, pos)
-        if text in OPERATORS:
+        if text in OPERATORS or text == ".":
             return Name((text,), pos)
         if text in ("true", "false"):
             return BoolLit(text == "true", pos)
+        if text == "none":
+            return NoneLit(pos)
         if (number := _number(text, pos)) is not None:
             return number
         if LOOKS_NUMERIC_RE.match(text):
@@ -259,8 +266,14 @@ class _Parser:
             raise ParseError(f"unexpected {self.peek()!r} after index", self.pos())
         return Name(tuple(parts), pos)
 
+    # Inside an interpolated string's braces, a value may end at the closing brace or a format spec.
+    def ends_braces(self) -> bool:
+        return self.in_braces and self.peek() in "}:"
+
     def expect_delimiter(self):
-        if self.peek() and not (_is_delimiter(self.peek()) or self.peek() == "]"):
+        if self.peek() and not (
+            _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
+        ):
             raise ParseError("expected whitespace, '(', ')' or ';' after a string", self.pos())
 
     def escape(self, start: Pos) -> str:
@@ -293,7 +306,7 @@ class _Parser:
         pos = self.pos()
         self.advance()
         self.advance()
-        parts: list[str | Name | Field] = []
+        parts: list[str | Node | Field] = []
         text: list[str] = []
 
         def flush():
@@ -322,31 +335,26 @@ class _Parser:
                 raise ParseError("unmatched '}'; write '}}' for a literal brace", self.pos())
             elif ch == "{":
                 flush()
-                parts.append(self.interp_name())
+                parts.append(self.interp_part())
             else:
                 text.append(self.advance())
         flush()
         self.expect_delimiter()
         return InterpStrLit(tuple(parts), pos)
 
-    def interp_name(self) -> Name | Field:
+    def interp_part(self) -> Node | Field:
         brace = self.pos()
         self.advance()
-        while self.peek().isspace():
-            self.advance()
-        pos = self.pos()
+        self.skip_blank()
+        if self.peek() in ("}", ":", ""):
+            raise ParseError("expected an expression inside braces", brace)
+        # Inside braces, ':' ends a name, so a format spec can follow it.
         self.in_braces = True
         try:
-            text = self.run()
-            if not text:
-                raise ParseError("expected a name inside braces", brace)
-            if text in OPERATORS or text in ("true", "false") or LOOKS_NUMERIC_RE.match(text):
-                raise ParseError(f"only names are allowed inside braces, got {text!r}", pos)
-            name = self.access(text, pos)
+            expr = self.node()
         finally:
             self.in_braces = False
-        while self.peek().isspace():
-            self.advance()
+        self.skip_blank()
         spec = None
         if self.peek() == ":":
             self.advance()
@@ -357,6 +365,6 @@ class _Parser:
             if self.peek() == "{":
                 raise ParseError("a format spec cannot hold braces", self.pos())
         if self.peek() != "}":
-            raise ParseError("expected a single name and '}' inside braces", brace)
+            raise ParseError("expected a single expression and '}' inside braces", brace)
         self.advance()
-        return name if spec is None else Field(name, spec, pos)
+        return expr if spec is None else Field(expr, spec)

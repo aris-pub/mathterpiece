@@ -28,7 +28,7 @@ class StrLit:
 
 @dataclass(frozen=True, slots=True)
 class InterpStrLit:
-    parts: tuple["str | Name | Field", ...]
+    parts: tuple["str | Node | Field", ...]
     pos: Pos = field(default=NOPOS, compare=False)
 
 
@@ -62,10 +62,15 @@ class BoolLit:
     pos: Pos = field(default=NOPOS, compare=False)
 
 
-# {name:spec} in an interpolated string: the name shown with a Python format spec.
+@dataclass(frozen=True, slots=True)
+class NoneLit:
+    pos: Pos = field(default=NOPOS, compare=False)
+
+
+# {expr:spec} in an interpolated string: the expression shown with a Python format spec.
 @dataclass(frozen=True, slots=True)
 class Field:
-    name: "Name"
+    expr: "Node"
     spec: str
     pos: Pos = field(default=NOPOS, compare=False)
 
@@ -93,5 +98,6 @@ Node = (
     | RealLit
     | ComplexLit
     | BoolLit
+    | NoneLit
     | Name
 )

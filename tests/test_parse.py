@@ -11,6 +11,7 @@ from mathterpiece.nodes import (
     IntLit,
     ListLit,
     Name,
+    NoneLit,
     Pos,
     RatioLit,
     RealLit,
@@ -396,13 +397,9 @@ class TestInterpStr:
             "$'{  }'",
             "$'a } b'",
             "$'a {b'",
-            "$'{1}'",
             "$'{a b}'",
-            "$'{+}'",
             "$'{-x}'",
             "$'{a.}'",
-            "$'{(f)}'",
-            "$'{'a'}'",
             r"$'\t'",
         ],
     )
@@ -424,6 +421,60 @@ class TestInterpStr:
     def test_followed_directly_by_token_is_error(self):
         with pytest.raises(ParseError):
             parse("(f $'a'b)")
+
+
+class TestNone:
+    def test_none(self):
+        assert atom("none") == NoneLit()
+
+    def test_lookalikes_are_names(self):
+        assert atom("none?") == n("none?")
+        assert atom("nonesuch") == n("nonesuch")
+
+    def test_in_a_list(self):
+        assert atom("[1 none]") == ListLit((IntLit(1), NoneLit()))
+
+
+class TestExpressionsInBraces:
+    # Each {…} in an interpolated string is an expression (syntax.md, section 2).
+    @pytest.mark.parametrize(
+        "text, part",
+        [
+            ("$'{1}'", IntLit(1)),
+            ("$'{(f x)}'", Form((n("f"), n("x")))),
+            ("$'{'a'}'", StrLit("a")),
+            ("$'{none}'", NoneLit()),
+            ("$'{+}'", n("+")),
+            ("$'{[0 1]}'", ListLit((IntLit(0), IntLit(1)))),
+            ("$'{(or? x 0):.2f}'", Field(Form((n("or?"), n("x"), IntLit(0))), ".2f")),
+            ("$'{ (f x) :>8}'", Field(Form((n("f"), n("x"))), ">8")),
+        ],
+    )
+    def test_any_expression(self, text, part):
+        assert atom(text) == InterpStrLit((part,))
+
+    def test_a_string_inside_braces_has_its_own_quotes(self):
+        assert atom("$'a {(or? x 'n/a')} b'") == InterpStrLit(
+            ("a ", Form((n("or?"), n("x"), StrLit("n/a"))), " b")
+        )
+
+
+class TestPartForm:
+    # (. X Y) reads a part of what any expression gives (syntax.md, section 7).
+    def test_dot_is_a_head(self):
+        (form,) = parse("(f (. (g x) r))")
+        assert form.items[1] == Form((n("."), Form((n("g"), n("x"))), n("r")))
+
+    def test_with_a_position(self):
+        assert atom("(. (g x) 0)") == Form((n("."), Form((n("g"), n("x"))), IntLit(0)))
+
+    def test_a_part_cannot_follow_a_form(self):
+        with pytest.raises(ParseError, match=r"use \(\. X Y\)"):
+            parse("(f (g x).r)")
+
+    def test_a_bracket_cannot_follow_a_form(self):
+        with pytest.raises(ParseError, match=r"use \(\. X Y\)"):
+            parse("(f (g x)[0])")
 
 
 class TestIndexing:
@@ -507,7 +558,7 @@ class TestIndexing:
     def test_inside_interpolated_string(self, text, parts):
         assert atom(text) == InterpStrLit(parts)
 
-    @pytest.mark.parametrize("text", ["$'{g [0]}'", "$'{g[0]x}'", "$'{g[0}'", "$'{[0]}'"])
+    @pytest.mark.parametrize("text", ["$'{g [0]}'", "$'{g[0]x}'", "$'{g[0}'"])
     def test_invalid_inside_interpolated_string(self, text):
         with pytest.raises(ParseError):
             atom(text)
