@@ -3,7 +3,9 @@ from fractions import Fraction
 import pytest
 
 from mathterpiece.nodes import (
+    Bar,
     BoolLit,
+    Brackets,
     ComplexLit,
     Field,
     Form,
@@ -513,7 +515,6 @@ class TestIndexing:
         [
             "g[]",
             "g[ ]",
-            "g[0 1]",
             "g[0",
             "g[0]x",
             "g[0].",
@@ -671,6 +672,48 @@ class TestFormatSpecs:
         assert atom("$'{x}'") == InterpStrLit((n("x"),))
 
     @pytest.mark.parametrize("text", ["$'{x:{y}}'", "$'{x:.2f'", "$'{:.2f}'"])
+    def test_invalid(self, text):
+        with pytest.raises(ParseError):
+            atom(text)
+
+
+class TestTypeNotation:
+    # The parser reads type notation as syntax only; the compiler decides from where it sits
+    # whether list[color] is a type or a part read (type-system.md, section 5.a).
+    @pytest.mark.parametrize(
+        "text, node",
+        [
+            ("real|none", Bar((n("real"), NoneLit()))),
+            ("list[real]|none", Bar((n("list", n("real")), NoneLit()))),
+            ("list[real|none]", n("list", Bar((n("real"), NoneLit())))),
+            ("func[real real]", n("func", Brackets((n("real"), n("real"))))),
+            ("func[real shape real]", n("func", Brackets((n("real"), n("shape"), n("real"))))),
+            ("list[list[real]]", n("list", n("list", n("real")))),
+            (
+                "list[(real (>= 0))]",
+                n("list", Form((n("real"), Form((n(">="), IntLit(0)))))),
+            ),
+            ("func[real list[real]]", n("func", Brackets((n("real"), n("list", n("real")))))),
+        ],
+    )
+    def test_types(self, text, node):
+        assert atom(text) == node
+
+    def test_a_type_form_heads_a_declaration(self):
+        (form,) = parse("((real (>= 0)) r 1)")
+        assert form.items[0] == Form((n("real"), Form((n(">="), IntLit(0)))))
+
+    def test_maybe_is_a_form(self):
+        assert atom("(maybe real)") == Form((n("maybe"), n("real")))
+
+    def test_several_items_in_a_part_read_parse(self):
+        # Only the compiler knows g[0 1] is not in a type position, so it rejects it there.
+        assert atom("g[0 1]") == n("g", Brackets((IntLit(0), IntLit(1))))
+
+    def test_a_part_read_is_unchanged(self):
+        assert atom("xs[0]") == n("xs", IntLit(0))
+
+    @pytest.mark.parametrize("text", ["real|", "|none", "real |none", "real| none", "a||b"])
     def test_invalid(self, text):
         with pytest.raises(ParseError):
             atom(text)

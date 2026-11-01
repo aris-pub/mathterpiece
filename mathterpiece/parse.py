@@ -3,7 +3,9 @@ from dataclasses import replace
 from fractions import Fraction
 
 from mathterpiece.nodes import (
+    Bar,
     BoolLit,
+    Brackets,
     ComplexLit,
     Field,
     Form,
@@ -22,7 +24,7 @@ from mathterpiece.nodes import (
 OPERATORS = frozenset({"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!="})
 ESCAPES = {"'": "'", "\\": "\\", "n": "\n"}
 RESERVED = frozenset("[]{}")
-NAME_EXCLUDED = frozenset("[]{}./;\"$^()'")
+NAME_EXCLUDED = frozenset("[]{}./;\"$^()'|")
 NAME_BAD_START = frozenset("+-*<>=")
 
 _UREAL = r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?"
@@ -73,7 +75,7 @@ def _is_delimiter(ch: str) -> bool:
 
 
 def _ends_run(ch: str) -> bool:
-    return _is_delimiter(ch) or ch in '[]{}"'
+    return _is_delimiter(ch) or ch in '[]{}"|'
 
 
 def _valid_name_part(part: str) -> bool:
@@ -225,7 +227,22 @@ class _Parser:
 
     def atom(self) -> Node:
         pos = self.pos()
+        node = self.operand()
+        if self.peek() != "|":
+            return node
+        items = [node]
+        while self.peek() == "|":
+            self.advance()
+            if not self.peek() or _is_delimiter(self.peek()) or self.peek() in "|]":
+                raise ParseError("expected a type after '|'", self.pos())
+            items.append(self.operand())
+        return Bar(tuple(items), pos)
+
+    def operand(self) -> Node:
+        pos = self.pos()
         text = self.run()
+        if not text:
+            raise ParseError(f"unexpected {self.peek()!r}", pos)
         if self.peek() == "[":
             return self.access(text, pos)
         if text in OPERATORS or text == ".":
@@ -252,11 +269,15 @@ class _Parser:
                 raise ParseError("empty index", bracket)
             if not self.peek():
                 raise ParseError("unclosed '['", bracket)
-            parts.append(self.node())
+            items = [self.node()]
             self.skip_blank()
+            while self.peek() and self.peek() not in "])":
+                items.append(self.node())
+                self.skip_blank()
             if self.peek() != "]":
-                raise ParseError("expected a single expression and ']' after '['", bracket)
+                raise ParseError("expected ']' after '['", bracket)
             self.advance()
+            parts.append(items[0] if len(items) == 1 else Brackets(tuple(items), bracket))
             if self.peek() == ".":
                 self.advance()
                 part_pos = self.pos()

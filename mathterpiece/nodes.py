@@ -82,6 +82,20 @@ class ListLit:
     pos: Pos = field(default=NOPOS, compare=False)
 
 
+# a|b: the bar of type notation, such as real|none. The compiler gives it meaning.
+@dataclass(frozen=True, slots=True)
+class Bar:
+    items: tuple["Node", ...]
+    pos: Pos = field(default=NOPOS, compare=False)
+
+
+# [a b] right after a name, with more than one item: the inputs and result of func[real real].
+@dataclass(frozen=True, slots=True)
+class Brackets:
+    items: tuple["Node", ...]
+    pos: Pos = field(default=NOPOS, compare=False)
+
+
 @dataclass(frozen=True, slots=True)
 class Form:
     items: tuple["Node", ...]
@@ -99,5 +113,7 @@ Node = (
     | ComplexLit
     | BoolLit
     | NoneLit
+    | Bar
+    | Brackets
     | Name
 )
