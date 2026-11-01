@@ -1,61 +1,17 @@
-import dataclasses
-import functools
-import math
-import operator
-import sys
-from collections.abc import Callable
-from dataclasses import dataclass
-from fractions import Fraction
-from typing import Any, get_args, get_origin
+"""The compiler: reads parsed forms into a world model (docs/syntax.md, docs/type-system.md,
+docs/reference.md). Every declaration follows one body rule, (head name? positional… item…), and
+every expression is typed, with what it reads, its range, and its value when it is known."""
 
-from mathterpiece.colors import parse_color, same
-from mathterpiece.matrix import Matrix, compose
-from mathterpiece.model import (
-    PYTHON_FRAMES,
-    RECURSION_LIMIT,
-    Animation,
-    AtOnce,
-    Bool,
-    Bound,
-    Button,
-    Canvas,
-    Circle,
-    Click,
-    Color,
-    Drag,
-    Ellipse,
-    Font,
-    Free,
-    Function,
-    Group,
-    Inherit,
-    InOrder,
-    Line,
-    Local,
-    Model,
-    Motif,
-    Obj,
-    Paint,
-    Pair,
-    Play,
-    Readout,
-    Real,
-    Rect,
-    Root,
-    Slider,
-    State,
-    Styled,
-    Text,
-    Toggle,
-    Triangle,
-    View,
-    Visual,
-    WaitStep,
-    attributes,
-    local_names,
-    variadic,
-)
+import math
+from collections.abc import Iterator
+from dataclasses import dataclass, replace
+from decimal import ROUND_HALF_UP, Decimal, localcontext
+from fractions import Fraction
+
+from mathterpiece.colors import parse_color
+from mathterpiece.model import Expr, Model, Obj, Place, Range
 from mathterpiece.nodes import (
+    Bar,
     BoolLit,
     ComplexLit,
     Field,
@@ -65,108 +21,106 @@ from mathterpiece.nodes import (
     ListLit,
     Name,
     Node,
+    NoneLit,
     Pos,
     RatioLit,
     RealLit,
     StrLit,
 )
-from mathterpiece.parse import ParseError, parse_name
-from mathterpiece.stdlib import (
-    STDLIB,
-    add,
-    divide_any,
-    multiply,
-    negate,
-    power,
-    show,
-    subtract,
+from mathterpiece.parse import parse
+from mathterpiece.types import (
+    BOOL,
+    COLOR,
+    COMPARE,
+    COMPLEX,
+    INT,
+    NUMBERS,
+    POINT,
+    RATIO,
+    REAL,
+    SCENE,
+    STRING,
+    TRANSFORM,
+    ListT,
+    Maybe,
+    Refine,
+    ShapeT,
+    Type,
+    TypeError_,
+    fits,
+    literal_type,
+    refine,
+    type_from_node,
 )
-from mathterpiece.stdlib import call as stdlib_call
-from mathterpiece.transitions import Ease, Expr, Path, Sequence, Single, Wait, reads_scene
 
-BUILTINS = [
-    (("pi", "π"), math.pi),
-    (("tau", "τ"), math.tau),
-    (("euler",), math.e),
-    (("infty", "∞"), math.inf),
-]
+RESERVED = frozenset(
+    "scene animation transition wait in-order at-once when else true false none const self".split()
+)
+CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
+# Every number lies within ±10^150 (type-system.md, "What the compiler proves").
+LIMIT = 1e150
+UNBOUNDED: Range = (-LIMIT, LIMIT)
+IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
-NUMERIC = ["int", "ratio", "real", "complex"]
-# The type of a recursive call while its function's result type is still being worked out. It
-# fits wherever a value is expected.
-PENDING = "pending"
-PY_TYPES = {float: "real", str: "str", bool: "bool", Matrix: "transform", Paint: "paint"}
-# Values that may be drawn as a color: a color token, a string naming a color, or what fill and
-# stroke hold (paint, either of those).
-COLORISH = {"color", "str", "paint"}
-ARITHMETIC = {"+", "-", "*", "/"}
-COMPARISONS: dict[str, Callable[[Any, Any], bool]] = {
-    "<": operator.lt,
-    "<=": operator.le,
-    ">": operator.gt,
-    ">=": operator.ge,
-    "=": operator.eq,
-    "!=": operator.ne,
-}
+UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
+NON_NEGATIVE = Refine(REAL, ((">=", 0),))
+PAINT = Maybe(COLOR)
+HALIGN = Refine(STRING, (("one-of", ("start", "middle", "end")),))
+VALIGN = Refine(STRING, (("one-of", ("top", "middle", "baseline", "bottom")),))
 
 
 @dataclass(frozen=True)
-class FormSpec:
-    cls: type[Obj]
-    positional: tuple[str, ...] = ()
+class Attr:
+    type: Type
+    default: object
 
 
-# Style attributes that an object inside a motif takes from the motif when it leaves them
-# unset. Opacity is not among them because it multiplies down the tree instead.
-INHERITED = ("fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity")
-LITERAL_NODES: dict[str, Callable[..., Node]] = {
-    "int": IntLit,
-    "ratio": RatioLit,
-    "real": RealLit,
-    "complex": ComplexLit,
-    "bool": BoolLit,
-    "str": StrLit,
+TRANSFORMS = {
+    "translate": Attr(POINT, (0, 0)),
+    "transform": Attr(TRANSFORM, IDENTITY),
 }
-
-# Heads the compiler reads specially, which cannot be used as names. Forms like circle and
-# library functions like dist or sum are not here: an author's definition of the same name
-# replaces them. The transition and animation forms (transition, in-order, at-once, wait,
-# animation), when, scene and state are not here either, yet are not replaced: a function given
-# one of their names is accepted but never called. Which way they should go is open (mtp-5io.11).
-SYNTAX = {
-    "motif",
-    "params",
-    "repeat",
-    "map",
-    "reduce",
-    "and",
-    "or",
-    "not",
-    "ref",
-    "if",
-    "cond",
-    "else",
-    "transform",
-    "let",
-    "const",
-    "func",
+PAINTED = {
+    "fill": Attr(PAINT, "#000000ff"),
+    "stroke": Attr(PAINT, None),
+    "stroke-width": Attr(NON_NEGATIVE, 1),
+    "opacity": Attr(UNIT, 1),
+    "fill-opacity": Attr(UNIT, 1),
+    "stroke-opacity": Attr(UNIT, 1),
 }
-
-FORMS = {
-    "circle": FormSpec(Circle),
-    "rect": FormSpec(Rect),
-    "ellipse": FormSpec(Ellipse),
-    "line": FormSpec(Line),
-    "triangle": FormSpec(Triangle),
-    "text": FormSpec(Text, ("value",)),
-    "real": FormSpec(Real, ("value",)),
-    "color": FormSpec(Color, ("value",)),
-    "bool": FormSpec(Bool, ("value",)),
-    "font": FormSpec(Font),
-    "group": FormSpec(Group),
-    "canvas": FormSpec(Canvas),
-    "readout": FormSpec(Readout, ("value",)),
+POSITIONED = {"x": Attr(REAL, 0), "y": Attr(REAL, 0)}
+# The attributes each built-in shape takes, with their defaults (reference.md).
+SHAPE_ATTRS: dict[str, dict[str, Attr]] = {
+    "circle": {**POSITIONED, **PAINTED, **TRANSFORMS, "r": Attr(NON_NEGATIVE, 1)},
+    "rect": {
+        **POSITIONED,
+        **PAINTED,
+        **TRANSFORMS,
+        "width": Attr(REAL, 1),
+        "height": Attr(REAL, 1),
+        "rx": Attr(REAL, 0),
+        "ry": Attr(REAL, 0),
+    },
+    "ellipse": {**POSITIONED, **PAINTED, **TRANSFORMS, "rx": Attr(REAL, 1), "ry": Attr(REAL, 1)},
+    "line": {**PAINTED, **TRANSFORMS, "from": Attr(POINT, (0, 0)), "to": Attr(POINT, (1, 0))},
+    "triangle": {
+        **PAINTED,
+        **TRANSFORMS,
+        "a": Attr(POINT, (0, 0)),
+        "b": Attr(POINT, (1, 0)),
+        "c": Attr(POINT, (0, 1)),
+    },
+    "text": {
+        **POSITIONED,
+        **PAINTED,
+        **TRANSFORMS,
+        "value": Attr(STRING, ""),
+        "halign": Attr(HALIGN, "start"),
+        "valign": Attr(VALIGN, "baseline"),
+    },
+    "group": dict(TRANSFORMS),
 }
+# The ones a shape is written with as its positional argument.
+POSITIONAL = {"text": ("value",)}
 
 
 class CompileError(Exception):
@@ -176,3775 +130,775 @@ class CompileError(Exception):
         self.pos = pos
 
 
-@dataclass(frozen=True)
-class Const:
-    value: object
-    type: str
-
-
-@dataclass(frozen=True)
-class Dyn:
-    type: str
-
-
-@dataclass(frozen=True)
-class Spread:
-    types: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class ObjRef:
-    obj: Obj
-
-
-@dataclass(frozen=True)
-class SelfRef:
-    cls: type[Obj]
-    # A motif instance's parameters and their types, which self reads like attributes.
-    params: tuple[tuple[str, str], ...] = ()
-
-
-@dataclass(frozen=True)
-class MotifSpec:
-    params: dict[str, Const]
-    body: tuple[Node, ...]
-    # The motifs defined before this one, which is what its body's heads refer to.
-    motifs: dict[str, "MotifSpec"]
-    # The default (transform ...) of each instance, compiled in the body so it sees the params.
-    transform: Form | None = None
-
-
-Value = Const | Dyn | Spread | ObjRef | SelfRef
-
-
-# A let name whose value is only known when drawing; stored expressions read the hidden value.
-@dataclass(frozen=True)
-class LetRef:
-    hidden: str
-    type: str
-
-
-# An object passed to a function, and the call site's name for it, written in for the parameter.
-@dataclass(frozen=True)
-class ArgRef:
-    value: "ObjRef | SelfRef"
-    node: Name
-
-
-@dataclass(frozen=True)
-class FuncSpec:
-    # A parameter without a default takes an object.
-    params: dict[str, "Const | None"]
-    body: Node
-    # The functions and consts defined before this one (and itself), which its body sees.
-    funcs: dict[str, "FuncSpec"]
-    consts: dict[str, "Const"]
-    name: str
-    # Its name in the model's functions.
-    key: str
-
-
-# The let values created while one object is being defined, which that object will own.
-@dataclass
-class Frame:
-    locals: list[Local]
-    inside: bool = False
-
-
-Env = dict[str, "int | SelfRef | Const | Dyn | LetRef | ArgRef"]
-# The names a motif body can see besides globals: its parameters and its members so far.
-Scope = dict[str, Value]
+def compile_source(src: str) -> Model:
+    return compile_model(parse(src))
 
 
 def compile_model(forms: tuple[Form, ...]) -> Model:
-    sys.setrecursionlimit(max(sys.getrecursionlimit(), PYTHON_FRAMES))
-    authors = {
-        f.items[1].value
-        for f in forms
-        if _head(f) == "func" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
-    }
-    named = tuple(_name_collections(f, authors) for f in forms)
-    return _Compiler(tuple(f for f in named if isinstance(f, Form))).compile()
-
-
-# A loop whose collection is written in place, (sum (map ...) v v), becomes the same loop over a
-# let that names the collection, since loops walk names and list literals. This is done once, on
-# the source, so every later pass sees an ordinary let. The name has a space, which no author's
-# name can have. A head the author defined as a function is left alone.
-def _name_collections(node: Node, authors: set[str]) -> Node:
-    if isinstance(node, ListLit):
-        return ListLit(tuple(_name_collections(i, authors) for i in node.items), node.pos)
-    if not isinstance(node, Form):
-        return node
-    node = Form(tuple(_name_collections(i, authors) for i in node.items), node.pos)
-    head = _head(node)
-    loops = {"map": 4, "reduce": 5}
-    loops |= {h: 4 for h in ("sum", "count", "sort", "sort-asc", "sort-desc") if h not in authors}
-    if loops.get(str(head)) != len(node.items) or isinstance(node.items[1], (Name, ListLit)):
-        return node
-    pos = node.pos
-    # The name stands where the collection was written, so errors about it point there.
-    name = Name(("loop list",), node.items[1].pos)
-    bound = Form((Form((name, node.items[1]), pos),), pos)
-    loop = Form((node.items[0], name, *node.items[2:]), pos)
-    return Form((Name(("let",), pos), bound, loop), pos)
+    return _Compiler().run(forms)
 
 
 def _head(node: Node) -> str | None:
     if isinstance(node, Form) and isinstance(node.items[0], Name):
-        parts = node.items[0].parts
-        if len(parts) == 1 and isinstance(parts[0], str):
-            return parts[0]
+        part = node.items[0].parts[0]
+        return part if len(node.items[0].parts) == 1 and isinstance(part, str) else None
     return None
 
 
-def _defined_names(nodes, heads) -> set[str]:
-    names: set[str] = set()
-    for node in nodes:
-        if isinstance(node, Form):
-            if _head(node) in heads and len(node.items) > 1 and isinstance(node.items[1], StrLit):
-                names.add(node.items[1].value)
-            names |= _defined_names(node.items, heads)
-    return names
-
-
-# The attributes of its own object that an expression reads. A bare self is a point, as in
-# (dist self a), so it reads x and y.
-# A let value read by name brings along what its own expression reads.
-def _self_reads(
-    node: Node | Field | str,
-    lets: dict[str, set[str]],
-    props: dict[str, set[str]] | None = None,
-) -> set[str]:
-    props = props or {}
-    if isinstance(node, Name):
-        first = node.parts[0]
-        reads: set[str] = set(lets.get(first, set()) if isinstance(first, str) else ())
-        if node.parts[0] == "self":
-            second = node.parts[1] if len(node.parts) > 1 else None
-            if not isinstance(second, str) or second == "pos":
-                reads |= {"x", "y"}
-            else:
-                reads |= props.get(second, {second})
-        for part in node.parts[1:]:
-            if not isinstance(part, str):
-                reads |= _self_reads(part, lets, props)
-        return reads
-    if isinstance(node, Field):
-        return _self_reads(node.name, lets, props)
-    if isinstance(node, (Form, ListLit, InterpStrLit)):
-        parts = node.parts if isinstance(node, InterpStrLit) else node.items
-        return set().union(*(_self_reads(p, lets, props) for p in parts))
-    return set()
-
-
-# Without forward references, objects cannot depend on each other in a loop, so a cycle can only
-# run through self, inside one object.
-def _check_cycles(
-    name: str | None,
-    given: dict[str, tuple[Any, Pos]],
-    owned: list[Local],
-    props: dict[str, set[str]] | None = None,
-):
-    lets: dict[str, set[str]] = {}
-    for local in owned:
-        assert isinstance(local.value, Bound) and local.name is not None
-        lets[local.name] = _self_reads(local.value.expr, lets, props)
-    reads = {
-        attr: _self_reads(value.expr, lets, props) if isinstance(value, Bound) else set()
-        for attr, (value, _) in given.items()
-    }
-    done: set[str] = set()
-
-    def visit(attr: str, path: list[str]):
-        if attr in path:
-            loop = [*path[path.index(attr) :], attr]
-            shown = " -> ".join(f"{name}.{a}" if name is not None else a for a in loop)
-            raise CompileError(f"circular dependency: {shown}", given[loop[0]][1])
-        if attr in done:
-            return
-        for dep in sorted(reads.get(attr, set())):
-            visit(dep, [*path, attr])
-        done.add(attr)
-
-    for attr in reads:
-        visit(attr, [])
-
-
-# A list of n numbers has the type "list{n}". Its parts are read as x, y, z or by index.
-AXES = {"x": 0, "y": 1, "z": 2}
-
-
-def _list_len(t: str) -> int | None:
-    return int(t[4:]) if t.startswith("list") and t[4:].isdigit() else None
-
-
-# A list of bools has a type of its own, so it is never taken for a point.
-def _bools_len(t: str) -> int | None:
-    return int(t[5:]) if t.startswith("bools") and t[5:].isdigit() else None
-
-
-def _is_literal_type(t: str) -> bool:
-    return t in LITERAL_NODES or _list_len(t) is not None or _bools_len(t) is not None
-
-
-def _literal(value: "Const", pos: Pos) -> Node:
-    if _bools_len(value.type) is not None:
-        assert isinstance(value.value, tuple)
-        return ListLit(tuple(BoolLit(bool(v), pos) for v in value.value), pos)
-    if _list_len(value.type) is not None:
-        assert isinstance(value.value, tuple)
-        return ListLit(tuple(RealLit(float(v), pos) for v in value.value), pos)
-    return LITERAL_NODES[value.type](value.value, pos)
-
-
-def _check_pos(attr: str, given, pos: Pos):
-    if (attr == "pos" and {"x", "y", "pos"} & given.keys()) or (
-        attr in ("x", "y") and "pos" in given
-    ):
-        raise CompileError("pos sets both x and y, so give pos or x and y, not both", pos)
-
-
-# The values controls write, read from the source before compiling so that the compiler does not
-# fold them. A target written as a plain path gives that path; any other target only gives its
-# last name, which then counts as written in every motif instance.
-def _control_targets(forms) -> tuple[set[tuple[str, ...]], set[str]]:
-    paths: set[tuple[str, ...]] = set()
-    anywhere: set[str] = set()
-
-    # The targets of an animation's pairs, through its at-once and in-order.
-    def animation_targets(node):
-        if not isinstance(node, Form):
-            return
-        if _head(node) in ("at-once", "in-order"):
-            for item in node.items[1:]:
-                animation_targets(item)
-            return
-        target = node.items[0]
-        if (
-            len(node.items) == 2
-            and isinstance(target, Name)
-            and _head(node) not in TRANSITION_FORMS
-        ):
-            if all(isinstance(p, str) for p in target.parts):
-                paths.add(tuple(p for p in target.parts if isinstance(p, str)))
-            elif isinstance(target.parts[-1], str):
-                anywhere.add(target.parts[-1])
-
-    def visit(node):
-        if not isinstance(node, Form):
-            return
-        # Named, (animation 'name' body), or written in a control, (animation body).
-        if _head(node) == "animation" and len(node.items) > 1:
-            animation_targets(node.items[-1])
-        if _head(node) == "toggle" and len(node.items) > 2:
-            target = node.items[2]
-            if isinstance(target, Name) and target.parts != ("self",):
-                if all(isinstance(p, str) for p in target.parts):
-                    paths.add(tuple(p for p in target.parts if isinstance(p, str)))
-                elif isinstance(target.parts[-1], str):
-                    anywhere.add(target.parts[-1])
-        if _head(node) == "on-drag" and len(node.items) > 2:
-            target = node.items[2]
-            if isinstance(target, Name) and all(isinstance(p, str) for p in target.parts):
-                *path, last = [p for p in target.parts if isinstance(p, str)]
-                coords = ("x", "y") if last == "pos" else (last,)
-                paths.update((*path, c) for c in coords)
-        for item in node.items:
-            visit(item)
-
-    for form in forms:
-        visit(form)
-    # A target through a group (dots.k) is written to every member, and members are often
-    # anonymous, so such a name stays live wherever it is a parameter.
-    groups = _defined_names(forms, {"group"})
-    for path in paths:
-        if any(part in groups for part in path[:-1]):
-            anywhere.add(path[-1])
-    return paths, anywhere
-
-
-EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
-CONTROLS: dict[str, type[Obj]] = {
-    "slider": Slider,
-    "button": Button,
-    "play": Play,
-    "toggle": Toggle,
-}
-
-
-def _duration(value: "Value", pos: Pos) -> float:
-    if not (isinstance(value, Const) and isinstance(value.value, (int, Fraction, float))):
-        raise CompileError("a duration is a number of seconds known at compile time", pos)
-    if isinstance(value.value, bool) or value.value < 0:
-        raise CompileError("a duration cannot be negative", pos)
-    return float(value.value)
-
-
-def _ease(value: "Value", pos: Pos) -> str:
-    if not (isinstance(value, Const) and value.value in EASES):
-        raise CompileError(f"ease is one of {', '.join(EASES)}", pos)
-    assert isinstance(value.value, str)
-    return value.value
-
-
-def _text(node: Node) -> str:
-    if isinstance(node, Name):
-        return ".".join(p if isinstance(p, str) else "[...]" for p in node.parts)
-    return "this value"
-
-
-def _names_in(node: Node) -> list[Name]:
-    if isinstance(node, Name):
-        return [node]
-    if isinstance(node, (Form, ListLit)):
-        return [n for item in node.items for n in _names_in(item)]
-    if isinstance(node, InterpStrLit):
-        return [p.name if isinstance(p, Field) else p for p in node.parts if not isinstance(p, str)]
-    return []
-
-
-# A value shown in a string: Python's format() with the spec, as in f-strings, or Python's
-# default without one.
-def _format(value: Any, kind: str, spec: str | None) -> str:
-    if not spec:
-        return show(value)
-    return format(int(value) if kind == "int" else value, spec)
-
-
-# A sample of each type, to check a format spec at compile time.
-SAMPLES: dict[str, Any] = {
-    "int": 1,
-    "ratio": Fraction(1, 2),
-    "real": 1.5,
-    "complex": 1 + 2j,
-    "str": "a",
-    "bool": True,
-}
-
-
-def _check_spec(spec: str, kind: str, pos: Pos):
-    sample = SAMPLES.get(kind)
-    try:
-        if sample is None:
-            raise ValueError
-        format(sample, spec)
-    except (ValueError, TypeError):
-        raise CompileError(f"{spec!r} is not a format for a {kind}", pos) from None
-
-
-def _color_const(text: Any, pos: Pos, none: bool = True) -> str:
-    if none and text == "none":
-        return "none"
-    color = parse_color(str(text))
-    if color is None:
-        raise CompileError(f"{text!r} is not a color", pos)
-    return color
-
-
-# What a font token gives each kind of object: its attribute, and the token's part it reads.
-FONT_PARTS: dict[type[Obj], dict[str, str]] = {
-    Text: {
-        "font-family": "family",
-        "font-style": "style",
-        "font-weight": "weight",
-        "font-size": "size",
-    },
-    Readout: {"font-family": "family", "font-style": "style", "font-weight": "weight"},
-}
-FONT_STYLES = ("normal", "italic", "oblique")
-
-
-ALIGNMENTS = {"halign": ("start", "middle", "end"), "valign": ("top", "middle", "bottom")}
-
-
-# What is wrong with a known value of attr on cls (alignment, font style or weight), if anything.
-def _value_problem(cls: type, attr: str, value: Any) -> str | None:
-    if cls is Text and attr in ALIGNMENTS and value not in ALIGNMENTS[attr]:
-        allowed = ALIGNMENTS[attr]
-        names = ", ".join(repr(a) for a in allowed[:-1])
-        return f"{attr} is {names} or {allowed[-1]!r}"
-    if cls is not Font and cls not in FONT_PARTS:
-        return None
-    style, weight = ("style", "weight") if cls is Font else ("font-style", "font-weight")
-    if attr == style and value not in FONT_STYLES:
-        return f"{style} is 'normal', 'italic' or 'oblique'"
-    if attr == weight and isinstance(value, (int, float)) and not 1 <= value <= 1000:
-        return f"{weight} is between 1 and 1000"
-    return None
-
-
-# Checks each known value given to an attribute: written directly, or one an if, a cond or a
-# let's body can give.
-def _check_font_values(cls: type[Obj], values: dict, positions: dict[str, Pos]):
-    for attr, found in values.items():
-        if attr not in positions:
-            continue
-        known = [found.value] if isinstance(found, Free) else []
-        if isinstance(found, Bound):
-            known = [
-                r.value for r in _results(found.expr) if isinstance(r, (StrLit, IntLit, RealLit))
-            ]
-        for value in known:
-            problem = _value_problem(cls, attr, value)
-            if problem:
-                raise CompileError(problem, positions[attr])
-
-
-# The expressions a value can result in: through an if's or a cond's branches and a let's body.
-def _results(node: Node) -> list[Node]:
+def _is_constraint(node: Node) -> bool:
     head = _head(node)
-    if isinstance(node, Form) and head == "if" and len(node.items) == 4:
-        return [*_results(node.items[2]), *_results(node.items[3])]
-    if isinstance(node, Form) and head == "cond":
-        return [
-            r
-            for c in node.items[1:]
-            if isinstance(c, Form) and len(c.items) == 2
-            for r in _results(c.items[1])
-        ]
-    if isinstance(node, Form) and head == "let" and len(node.items) == 3:
-        return _results(node.items[2])
-    return [node]
-
-
-# The known ends of a transition written to attr of obj must be values attr can take.
-def _check_ends(t: Any, cls: type, attr: str, pos: Pos):
-    if isinstance(t, Single):
-        for end in (t.frm, t.to):
-            problem = (
-                None if end is None or isinstance(end, Node) else _value_problem(cls, attr, end)
-            )
-            if problem:
-                raise CompileError(problem, pos)
-    if isinstance(t, Sequence):
-        for part in t.parts:
-            _check_ends(part, cls, attr, pos)
-
-
-TRANSITION_FORMS = ("transition", "in-order", "wait")
-# The operations the writer emits as themselves (not as calls). An author's function with one of
-# these names gets its own key, so its calls are never taken for the operation.
-OPERATOR_HEADS = (
-    ARITHMETIC
-    | set(COMPARISONS)
-    | {"^", "mod", "abs", "transform", "and", "or", "not", "any", "all"}
-    | {"sort-asc", "sort-desc", "reverse", "sort-by"}
-)
-LIST_OPS = ("sort", "sort-asc", "sort-desc", "reverse")
-# Paths through how a thing is drawn, which canvases show and hide things along.
-VIEW_PATHS = ("fade",)
-
-
-def _view_path(t: Any) -> bool:
-    if isinstance(t, Single):
-        return t.path is not None and t.path[0] == "view"
-    if isinstance(t, Sequence):
-        return any(_view_path(p) for p in t.parts)
-    return False
-
-
-TRANSITION_PARTS = ("from", "to", "duration", "ease", "path")
-
-
-# The type a transition's values move through: numbers all as reals, colors and strings naming
-# colors as one kind.
-def _transition_elem(t: str) -> str:
-    if t in NUMERIC:
-        return "real"
-    return t
-
-
-def _transition_value(value: "Value") -> Any:
-    assert isinstance(value, Const)
-    if value.type in ("int", "ratio"):
-        return float(value.value)  # ty: ignore[invalid-argument-type]
-    return value.value
-
-
-# How a target's value moves when its transition gives no path.
-def _value_kind(t: str) -> str:
-    if t == "int":
-        return "int"
-    if t in NUMERIC:
-        return "number"
-    if _list_len(t) is not None:
-        return "point"
-    if t in ("paint", "color"):
-        return "color"
-    if t == "str":
-        return "text"
-    return "bool"
-
-
-def _has_end(t: Any) -> bool:
-    if isinstance(t, Single):
-        return t.to is not None
-    if isinstance(t, Sequence):
-        return all(_has_end(p) for p in t.parts)
-    return True
-
-
-# Strings given as colors are checked and written as #rrggbbaa, as for fill.
-def _colors_checked(t: Any, pos: Pos, none: bool) -> Any:
-    if isinstance(t, Single):
-        ends = {
-            k: _color_const(v, pos, none=none) if isinstance(v, str) else v
-            for k, v in (("frm", t.frm), ("to", t.to))
-        }
-        return dataclasses.replace(t, **ends)
-    if isinstance(t, Sequence):
-        return dataclasses.replace(t, parts=tuple(_colors_checked(p, pos, none) for p in t.parts))
-    return t
-
-
-def _animation_targets(body: Any) -> list[tuple[Obj, str]]:
-    if isinstance(body, Pair):
-        return list(body.targets)
-    if isinstance(body, Animation):
-        return _animation_targets(body.body)
-    if isinstance(body, (AtOnce, InOrder)):
-        return [t for p in body.parts for t in _animation_targets(p)]
-    return []
-
-
-# A slider has no start of its own, so each target's first transition must say where it starts.
-def _check_starts(body: Any, seen: set[tuple[int, str]], pos: Pos) -> set[tuple[int, str]]:
-    if isinstance(body, Animation):
-        return _check_starts(body.body, seen, pos)
-    if isinstance(body, (AtOnce, InOrder)):
-        for part in body.parts:
-            seen = _check_starts(part, seen, pos)
-        return seen
-    if isinstance(body, Pair):
-        for obj, attr in body.targets:
-            key = (id(obj), attr)
-            if key not in seen and _first_from(body.transition) is None:
-                label = obj.name if attr == "value" else f"{obj.name}.{attr}"
-                raise CompileError(f"{label} needs a from: a slider has no start of its own", pos)
-            seen = seen | {key}
-    return seen
-
-
-def _first_from(t: Any) -> Any:
-    if isinstance(t, Single):
-        return t.frm
-    if isinstance(t, Sequence):
-        for part in t.parts:
-            if not isinstance(part, Wait):
-                return _first_from(part)
-    return None
-
-
-# A button or a play runs on a clock, so every transition needs a duration, its own or a default.
-def _check_durations(body: Any, default: float | None, pos: Pos):
-    if isinstance(body, Animation):
-        _check_durations(body.body, default, pos)
-    elif isinstance(body, (AtOnce, InOrder)):
-        inner = body.default_duration if body.default_duration is not None else default
-        for part in body.parts:
-            _check_durations(part, inner, pos)
-    elif isinstance(body, Pair):
-        _check_transition_durations(body.transition, default, pos)
-
-
-def _check_transition_durations(t: Any, default: float | None, pos: Pos):
-    if isinstance(t, Single) and t.duration is None and default is None:
-        raise CompileError(
-            "this transition needs a duration (or a default-duration around it)", pos
-        )
-    if isinstance(t, Sequence):
-        inner = t.default_duration if t.default_duration is not None else default
-        for part in t.parts:
-            _check_transition_durations(part, inner, pos)
-
-
-# node with every use of name replaced by item: a bare name by item itself, and name.x by
-# item's x.
-def _rename(node: Node, name: str, item: Node) -> Node:
-    if isinstance(node, Name):
-        rest = tuple(p if isinstance(p, str) else _rename(p, name, item) for p in node.parts[1:])
-        if node.parts[0] != name:
-            unchanged = all(a is b for a, b in zip(rest, node.parts[1:], strict=True))
-            return node if unchanged else Name((node.parts[0], *rest), node.pos)
-        if not rest:
-            return item
-        if not isinstance(item, Name):
-            raise CompileError(f"{name} is a number here, so it has no parts", node.pos)
-        return Name((*item.parts, *rest), node.pos)
-    if isinstance(node, Form):
-        items = tuple(_rename(i, name, item) for i in node.items)
-        return (
-            node
-            if all(a is b for a, b in zip(items, node.items, strict=True))
-            else Form(items, node.pos)
-        )
-    if isinstance(node, ListLit):
-        items = tuple(_rename(i, name, item) for i in node.items)
-        return (
-            node
-            if all(a is b for a, b in zip(items, node.items, strict=True))
-            else ListLit(items, node.pos)
-        )
-    if isinstance(node, InterpStrLit):
-        parts = tuple(_rename_part(p, name, item) for p in node.parts)
-        same = all(a is b for a, b in zip(parts, node.parts, strict=True))
-        return node if same else InterpStrLit(parts, node.pos)
-    return node
-
-
-# A part of an interpolated string: text stays, and a name or {name:spec} is renamed. An item that
-# is not a name (a number from a list literal) cannot stand inside braces.
-def _rename_part(part: "str | Name | Field", name: str, item: Node) -> "str | Name | Field":
-    if isinstance(part, str):
-        return part
-    target = part.name if isinstance(part, Field) else part
-    renamed = _rename(target, name, item)
-    if not isinstance(renamed, Name):
-        raise CompileError(f"{name} is a number here, so it cannot go inside braces", target.pos)
-    return Field(renamed, part.spec, part.pos) if isinstance(part, Field) else renamed
-
-
-def _check_not_syntax(name: str, pos: Pos):
-    if name in SYNTAX:
-        raise CompileError(f"{name!r} is part of the language and cannot be used as a name", pos)
-
-
-def _widens_to(src: str, dst: str) -> bool:
-    if src == PENDING:
-        return True
-    if src in NUMERIC and dst in NUMERIC:
-        return NUMERIC.index(src) <= NUMERIC.index(dst)
-    if dst in ("paint", "color"):
-        return src in COLORISH
-    return src == dst
-
-
-CONVERT = {"int": int, "ratio": Fraction, "real": float, "complex": complex}
-
-
-def _convert(value, dst: str):
-    return CONVERT[dst](value) if dst in CONVERT else value
-
-
-def _expected_type(cls: type[Obj], attr: str) -> str:
-    if cls is Color and attr == "value":
-        return "color"
-    (arg,) = get_args(attributes(cls)[attr].type)
-    if get_origin(arg) is tuple:
-        return f"list{len(get_args(arg))}"
-    return PY_TYPES[arg]
-
-
-# Other ways to write a shape, besides its stored attributes, and their types. Each can also be
-# read back, computed from the stored attributes like a Python property.
-PROPERTIES: dict[type[Obj], dict[str, str]] = {
-    Rect: {"center": "list2", "size": "list2", "from": "list2", "to": "list2"},
-    Ellipse: {"center": "list2", "size": "list2"},
-    Line: {"from": "list2", "to": "list2"},
-    Triangle: {"center": "list2", "r": "real"},
-}
-# The stored attributes each property is computed from, for finding cycles through self.
-PROPERTY_READS: dict[type[Obj], dict[str, set[str]]] = {
-    Rect: {
-        "center": {"x", "y", "width", "height"},
-        "size": {"width", "height"},
-        "from": {"x", "y"},
-        "to": {"x", "y", "width", "height"},
-    },
-    Ellipse: {"center": {"x", "y"}, "size": {"rx", "ry"}},
-    Line: {"from": {"x", "y", "x1", "y1"}, "to": {"x", "y", "x2", "y2"}},
-    Triangle: {"center": {"x", "y", "a", "b", "c"}, "r": {"a", "b", "c"}},
-}
+    if head not in CONSTRAINT_HEADS:
+        return False
+    # A comparison with two arguments is an expression; with one, a constraint.
+    return head not in COMPARE or len(node.items) == 2
 
 
 class _Compiler:
-    def __init__(self, forms: tuple[Form, ...]):
-        self.forms = forms
-        self.names: dict[str, Obj] = {}
-        self.builtins: list[tuple[Obj, tuple[str, ...]]] = []
-        self.toplevel: list[Obj] = []
-        # Keyed by id, holding the object too: ids of freed objects get reused.
-        self.parents: dict[int, tuple[Obj, str]] = {}
-        self.motifs: dict[str, MotifSpec] = {}
-        self.root: Root | None = None
-        self.consts: dict[str, Const] = {}
-        # Paths written by controls (such as ("d", "r")), and parameter names written somewhere
-        # the compiler cannot tell; these stay reactive instead of being folded.
-        self.written: set[tuple[str, ...]] = set()
-        self.written_anywhere: set[str] = set()
-        # The names of the motif instances whose bodies are being compiled, outermost first.
-        self.instance_path: list[str | None] = []
-        self.funcs: dict[str, FuncSpec] = {}
-        self.functions: dict[str, Function] = {}
-        # The functions being compiled, with the type their recursive calls stand for.
-        self.active: dict[int, str] = {}
-        self.depth = 0
-        # How many enclosing branches are never taken; calls there are checked but not folded.
-        self.speculative = 0
-        self.builtin_names: set[str] = set()
-        # How many function bodies are being compiled; inside one, values and objects are hidden.
-        self.in_func = 0
-        self.scopes: list[Scope] = []
-        # Where a definition lands before anything adopts it: the top level, or a motif body.
-        self.pools: list[list[Obj]] = [self.toplevel]
-        self.frames: list[Frame] = [Frame([])]
-        self.locals: list[Local] = []
-        # By node id: the bindings of each expression let, or the written-in body of each function
-        # call, for writing them into stored expressions. A node inside a repeat is overwritten
-        # each iteration, which is fine because each iteration stores its expressions first.
-        self.lets: dict[int, dict | Node] = {}
-        # lets is keyed by id(node), and unrolled forms are temporary: keeping each keyed node
-        # alive stops Python from giving a new node the id of a freed one.
-        self.keyed: list[Node] = []
-        # How many times a control (or a state reading one) has been read, so a state can tell
-        # whether its conditions read one.
-        self.controls_read = 0
-        # Where each on-drag was written, for errors found once the whole model is known.
-        self.drag_positions: dict[int, Pos] = {}
-        # The types a name bound in a function body (a let, a loop's item, a running value) had
-        # when the body was checked, by the id of the name's node; the writer shows values with
-        # them. The nodes live in the stored bodies, so their ids stay unique.
-        self.bound_types: dict[int, set[str]] = {}
-        # The types each user function's calls gave, by its key; the writer uses them to see
-        # that a call gives a color.
-        self.result_types: dict[str, set[str]] = {}
+    def __init__(self):
+        self.model = Model()
+        self.scene: int | None = None
 
-    def compile(self) -> Model:
-        self.add_builtins()
-        # Animations written inside controls, which have no name.
-        self.anonymous: list[Animation] = []
-        self.views_reading = False
-        self.shown_with: dict[int, Any] = {}
-        self.shown_when: dict[int, Node] = {}
-        self.written, self.written_anywhere = _control_targets(self.forms)
-        for form in self.forms:
-            self.toplevel.extend(self.toplevel_item(form, {}))
-        if self.root is None:
-            raise CompileError(
-                "a file needs exactly one scene, even an empty one: (scene _)", Pos(1, 1)
-            )
-        model = Model()
-        for obj, names in self.builtins:
-            model.add(obj)
-            for alias in names[1:]:
-                model.alias(alias, names[0])
-        self.settle(self.frames[0], None)
-        for obj in [*self.toplevel, *self.anonymous, *self.locals]:
-            model.add(obj)
-        model.functions.update(self.functions)
-        _check_drag_targets(model, self.drag_positions)
-        model.result_types = {
-            key: next(iter(types)) for key, types in self.result_types.items() if len(types) == 1
-        }
-        # A name whose type differed between calls is shown as a real, as before.
-        model.bound_types = {
-            key: next(iter(types)) if len(types) == 1 else "real"
-            for key, types in self.bound_types.items()
-        }
-        return model
+    def run(self, forms: tuple[Form, ...]) -> Model:
+        for form, scope in self.expand(forms, {}):
+            self.top(form, scope)
+        return self.model
 
-    def settle(self, frame: Frame, owner: Obj | None):
-        for local in frame.locals:
-            local.owner = owner
-            local.inside = frame.inside
-            self.locals.append(local)
-
-    def bindings(self, node: Form, env: Env) -> Env:
-        if len(node.items) < 2 or not isinstance(node.items[1], Form):
-            raise CompileError("let takes a list of (name value) pairs", node.pos)
-        inner = dict(env)
-        for pair in node.items[1].items:
-            if not (isinstance(pair, Form) and len(pair.items) == 2):
-                raise CompileError("a let binding is (name value)", pair.pos)
-            key, expr = pair.items
-            if not (
-                isinstance(key, Name) and len(key.parts) == 1 and isinstance(key.parts[0], str)
-            ):
-                raise CompileError("a let binding needs a plain name", key.pos)
-            name = key.parts[0]
-            _check_not_syntax(name, key.pos)
-            value = self.value_arg(expr, inner)
-            self.record_type(key, value)
-            if isinstance(value, Const):
-                inner[name] = value
+    def expand(self, items, scope: dict) -> Iterator[tuple[Node, dict]]:
+        """The items, with each (repeat n i decl…) replaced by its copies."""
+        for item in items:
+            if _head(item) != "repeat":
+                yield item, scope
                 continue
-            inner[name] = LetRef(self.hidden_value(name, expr, inner, value.type), value.type)
-        return inner
+            if len(item.items) < 3:
+                raise CompileError("repeat is (repeat n i declaration…)", item.pos)
+            n = self.expr(item.items[1], INT, scope)
+            if not n.known:
+                raise CompileError("the count of a repeat must be known when compiling", item.pos)
+            var = item.items[2]
+            if not isinstance(var, Name) or len(var.parts) != 1 or var.parts[0] in RESERVED:
+                raise CompileError("expected the name of the repeat's counter", var.pos)
+            for k in range(n.value):
+                yield from self.expand(item.items[3:], {**scope, var.parts[0]: _known(INT, k)})
 
-    def record_type(self, key: Node, value: Value):
-        if self.in_func and isinstance(value, (Const, Dyn)):
-            self.bound_types.setdefault(id(key), set()).add(value.type)
+    # Declarations ------------------------------------------------------------------------
 
-    # A value only known when drawing, stored once in the model and read by every use.
-    def hidden_value(self, label: str, node: Node, env: Env, kind: str) -> str:
-        hidden = f"let:{len(self.names)}:{label}"
-        stored = self.resolve_refs(_substitute(node, self.constants(env), self.lets), env)
-        local = Local(name=hidden, value=Bound(stored), type=kind)
-        self.names[hidden] = local
-        self.frames[-1].locals.append(local)
-        return hidden
-
-    def pos_value(self, node: Node, env: Env) -> tuple[Free | Bound, Free | Bound]:
-        value = self.value_arg(node, env)
-        if value.type != "list2":
-            raise CompileError(f"pos takes a point of two numbers, got {value.type}", node.pos)
-        if isinstance(value, Const):
-            assert isinstance(value.value, tuple)
-            return Free(float(value.value[0])), Free(float(value.value[1]))
-        hidden = self.hidden_value("pos", node, env, "list2")
-        return Bound(Name((hidden, "x"), node.pos)), Bound(Name((hidden, "y"), node.pos))
-
-    def let_items[T](self, node: Form, env: Env, item: Callable[[Form, Env], list[T]]) -> list[T]:
-        inner = self.bindings(node, env)
-        out: list[T] = []
-        for child in node.items[2:]:
-            if not isinstance(child, Form):
-                raise CompileError("expected a form in the let body", child.pos)
-            out.extend(item(child, inner))
-        return out
-
-    def add_builtins(self):
-        motifs = {
-            f.items[1].value
-            for f in self.forms
-            if _head(f) == "motif" and len(f.items) > 1 and isinstance(f.items[1], StrLit)
-        }
-        # Any definition of the author's replaces a built-in of the same name.
-        definers = FORMS.keys() | CONTROLS.keys() | motifs
-        definers |= {"const", "animation", "state", "readout", "canvas", "scene"}
-        taken = _defined_names(self.forms, definers)
-        for names, value in BUILTINS:
-            available = tuple(name for name in names if name not in taken)
-            if not available:
-                continue
-            obj = Real(name=available[0], value=Free(value))
-            self.builtins.append((obj, available))
-            self.builtin_names |= set(available)
-            for name in available:
-                self.names[name] = obj
-
-    def register(self, obj: Obj, pos: Pos):
-        if obj.name is None:
-            return
-        if self.scopes:
-            scope = self.scopes[-1]
-            if obj.name in scope:
-                raise CompileError(f"name {obj.name!r} is already defined", pos)
-            scope[obj.name] = ObjRef(obj)
-            return
-        if obj.name in self.names or obj.name in self.consts:
-            raise CompileError(f"name {obj.name!r} is already defined", pos)
-        self.names[obj.name] = obj
-
-    def toplevel_item(self, form: Form, env: Env) -> list[Obj]:
+    def top(self, form: Node, scope: dict) -> None:
         head = _head(form)
-        if head == "repeat":
-            return self.repeat(form, env, self.toplevel_item)
-        if head == "let":
-            return self.let_items(form, env, self.toplevel_item)
-        if head == "motif":
-            self.define_motif(form)
-            return []
-        if head == "const":
-            self.define_const(form, env)
-            return []
-        if head == "func":
-            self.define_func(form)
-            return []
-        if head == "state":
-            return [self.control(form, env, head)]
-        if head in CONTROLS:
-            return [self.reading_views(lambda: self.control(form, env, head))]
-        if head == "on-drag":
-            return [self.reading_views(lambda: self.on_drag(form, env))]
-        if head == "on-click":
-            return [self.reading_views(lambda: self.on_click(form, env))]
-        if head == "animation":
-            return [self.reading_views(lambda: self.animation(form, env))]
+        if not isinstance(form, Form):
+            raise CompileError("expected a declaration", form.pos)
+        if head == "type":
+            return self.type_decl(form)
         if head == "scene":
-            return [self.scene_form(form, env)]
-        if head in self.motifs or (head in FORMS and issubclass(FORMS[head].cls, Visual)):
-            raise CompileError(f"{head} is a visual object, so it goes inside the scene", form.pos)
-        if head in FORMS and issubclass(FORMS[head].cls, View):
-            return [self.reading_views(lambda: self.definition(form, env))]
-        if head in FORMS:
-            return [self.definition(form, env)]
-        if head is None:
-            raise CompileError("expected a definition", form.pos)
-        if head in ARITHMETIC or head == "rand" or head in self.names:
-            raise CompileError(f"{head!r} is not a definition", form.pos)
-        raise CompileError(f"unknown form {head!r}", form.pos)
+            return self.scene_decl(form)
+        if head in SHAPE_ATTRS:
+            raise CompileError("a shape is declared only inside the scene", form.pos)
+        self.variable(form, None, "scene", scope)
 
-    def repeat[T](self, form: Form, env: Env, item: Callable[[Form, Env], list[T]]) -> list[T]:
-        if len(form.items) < 3:
-            raise CompileError("repeat takes a count, a name for each step, and a body", form.pos)
-        count_node, var, *body = form.items[1:]
-        if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
-            raise CompileError("the name after a repeat's count must be a plain name", var.pos)
-        _check_not_syntax(var.parts[0], var.pos)
-        count = self.expr(count_node, env)
-        if not (isinstance(count, Const) and isinstance(count.value, int) and count.type == "int"):
-            raise CompileError(
-                "the repeat count must be an int known at compile time", count_node.pos
-            )
-        if count.value < 0:
-            raise CompileError("the repeat count cannot be negative", count_node.pos)
-        out: list[T] = []
-        for i in range(count.value):
-            inner = env | {var.parts[0]: i}
-            for node in body:
-                if not isinstance(node, Form):
-                    raise CompileError("expected a form in the repeat body", node.pos)
-                out.extend(item(node, inner))
-        return out
-
-    def object_name(self, form: Form, env: Env) -> str | None:
+    def name_of(self, form: Form, scope: dict | None = None) -> tuple[str | None, Pos]:
         if len(form.items) < 2:
-            raise CompileError(f"{_head(form)} needs a name", form.pos)
+            raise CompileError("a declaration needs a name", form.pos)
         node = form.items[1]
         if isinstance(node, StrLit):
-            _check_not_syntax(node.value, node.pos)
-            return node.value
-        if isinstance(node, Name) and node.parts == ("_",):
-            return None
-        if isinstance(node, InterpStrLit):
-            value = self.expr(node, env)
-            if isinstance(value, Const):
-                _check_not_syntax(str(value.value), node.pos)
-                return str(value.value)
-            raise CompileError("a name must be known at compile time", node.pos)
-        raise CompileError("expected a name: a string, an interpolated string, or _", node.pos)
+            raise CompileError("a name is written bare, not in quotes", node.pos)
+        if _head(node) == "name":
+            name = self.built_name(node, scope or {})
+        elif isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
+            name = node.parts[0]
+        else:
+            raise CompileError("expected a name", node.pos)
+        if name == "_":
+            return None, node.pos
+        if name in RESERVED:
+            raise CompileError(f"'{name}' is reserved", node.pos)
+        if name in self.model.names:
+            raise CompileError(f"'{name}' is already declared", node.pos)
+        return name, node.pos
 
-    def scene_form(self, form: Form, env: Env) -> Root:
-        if self.root is not None:
-            raise CompileError("a file has exactly one scene", form.pos)
-        name = self.object_name(form, env)
-        pool: list[Obj] = []
-        self.pools.append(pool)
-        frame = Frame([])
-        self.frames.append(frame)
-        attrs: dict[str, Free | Bound] = {}
+    def built_name(self, node: Form, scope: dict) -> str:
+        """The name (name s) stands for; s must be known when compiling."""
+        (arg,) = self.args(node, 1)
+        e = self.expr(arg, STRING, scope)
+        if not e.known:
+            raise CompileError("the string of (name s) must be known when compiling", node.pos)
+        return e.value
+
+    def add(self, obj: Obj) -> int:
+        self.model.objects.append(obj)
+        i = len(self.model.objects) - 1
+        if obj.name is not None:
+            self.model.names[obj.name] = i
+        if obj.parent is not None:
+            self.model.objects[obj.parent].members.append(i)
+        return i
+
+    def type_decl(self, form: Form) -> None:
+        name, pos = self.name_of(form)
+        if name is None or len(form.items) < 3:
+            raise CompileError("a type declaration is (type name base constraint…)", form.pos)
+        base = self.type_of(form.items[2])
         try:
-            for node in form.items[2:]:
-                if _head(node) == "background" and isinstance(node, Form):
-                    if pool:
-                        raise CompileError(
-                            "attribute 'background' must come before the members", node.pos
-                        )
-                    if "background" in attrs:
-                        raise CompileError("attribute 'background' is given twice", node.pos)
-                    if len(node.items) != 2:
-                        raise CompileError("background takes one color", node.pos)
-                    attrs["background"] = self.attr_value(Root, "background", node.items[1], env)
-                    continue
-                pool.extend(self.scene_item(node, env))
-        finally:
-            self.pools.pop()
-            self.frames.pop()
-        label = repr(name) if name is not None else "the scene"
-        members: list[Visual] = []
-        for obj in pool:
-            assert isinstance(obj, Visual)
-            self.parents[id(obj)] = (obj, label)
-            members.append(obj)
-        root = Root(name=name, members=members, **attrs)
-        self.settle(frame, root)
-        self.register(root, form.pos)
-        self.root = root
-        return root
+            t = refine(base, form.items[3:], name) if len(form.items) > 3 else base
+        except TypeError_ as e:
+            raise CompileError(str(e), form.pos) from None
+        if isinstance(t, Refine) and t.name is None:
+            t = replace(t, name=name)
+        self.model.types[name] = t
 
-    def scene_item(self, node: Node, env: Env) -> list[Obj]:
-        head = _head(node)
-        if isinstance(node, Form) and head == "repeat":
-            return self.repeat(node, env, self.scene_item)
-        if isinstance(node, Form) and head == "let":
-            return self.let_items(node, env, self.scene_item)
-        if isinstance(node, Form) and (head in FORMS or head in self.motifs):
-            if head in FORMS and not issubclass(FORMS[head].cls, Visual):
-                raise CompileError(f"{head} goes outside the scene", node.pos)
-            return [self.definition(node, env)]
-        if head == "motif":
-            raise CompileError("motifs are defined at the top level", node.pos)
-        if head == "const":
-            raise CompileError("const goes outside the scene", node.pos)
-        if head == "scene":
-            raise CompileError("a file has exactly one scene", node.pos)
-        raise CompileError("the scene holds only visual objects", node.pos)
+    def type_of(self, node: Node) -> Type:
+        try:
+            return type_from_node(node, self.model.types)
+        except TypeError_ as e:
+            raise CompileError(str(e), node.pos) from None
 
-    # Which free value a control writes: an attribute, a motif parameter, or a real's value.
-    def control_target(self, node: Node, env: Env) -> tuple[Obj, str, str, str]:
-        found = self.free_value(node, env)
-        if isinstance(found, str):
-            raise CompileError(found, node.pos)
-        return found
-
-    # The free value a name refers to, or why it is not one.
-    def free_value(self, node: Node, env: Env) -> tuple[Obj, str, str, str] | str:
-        name = self.resolve_refs(node, env)
-        if not isinstance(name, Name):
-            return "a control's target must be a name, like disk.r"
-        text = ".".join(p if isinstance(p, str) else "[...]" for p in name.parts)
-        first = name.parts[0]
-        if len(name.parts) == 1 and isinstance(first, str) and first in self.consts:
-            return f"{text!r} is a const, so a control cannot write it"
-        if len(name.parts) == 1:
-            obj = self.names.get(first) if isinstance(first, str) else None
-            # A toggle with a target is that value; only a self toggle holds its own.
-            if isinstance(obj, Toggle) and obj.target is not None:
-                held = f"{obj.target.name}" + ("" if obj.attr == "value" else f".{obj.attr}")
-                return f"{text!r} shows {held}, so write {held} instead"
-            if not isinstance(obj, (Real, Color, Bool, Toggle)):
-                return f"{text!r} is not a value a control can write"
-            attr = "value"
-        else:
-            holder = self.name(Name(name.parts[:-1], name.pos), env)
-            last = name.parts[-1]
-            if not isinstance(holder, ObjRef) or not isinstance(last, str):
-                return f"{text!r} is not a value a control can write"
-            obj, attr = holder.obj, last
-        return self.writable(obj, attr, text, node.pos)
-
-    # Whether a control can write attr of obj (text names it in errors): its target, or why not.
-    def writable(self, obj: Obj, attr: str, text: str, pos: Pos) -> tuple[Obj, str, str, str] | str:
-        if isinstance(obj, Color) and attr == "value":
-            current, kind = obj.value, "color"
-        elif isinstance(obj, Motif) and attr in obj.params:
-            current = obj.params[attr]
-            kind = self.motifs[obj.kind].params[attr].type
-        elif attr == "pos" and {"x", "y"} <= attributes(type(obj)).keys():
-            if any(isinstance(getattr(obj, c), Bound) for c in ("x", "y")):
-                return f"{text!r} is computed, so a control cannot write it"
-            return obj, "pos", "list2", text
-        else:
-            attrs = attributes(type(obj))
-            if attr not in attrs or variadic(type(obj)) is attrs[attr]:
-                raise CompileError(f"{obj.name!r} has no attribute {attr!r}", pos)
-            current = getattr(obj, attrs[attr].name)
-            kind = _expected_type(type(obj), attr)
-        if isinstance(current, Bound):
-            return f"{text!r} is computed, so a control cannot write it"
-        return obj, attr, kind, text
-
-    def control(self, form: Form, env: Env, head: str) -> Obj:
-        if head == "state":
-            return self.state(form, env)
-        name = self.object_name(form, env)
+    def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
+        head = form.items[0]
+        name, pos = self.name_of(form, scope)
         rest = list(form.items[2:])
-        values: dict[str, Any] = {}
-        fields: dict[str, Any] = {}
-        if head in ("slider", "button", "play"):
-            if not rest:
-                raise CompileError(f"{head} needs an animation", form.pos)
-            given = rest.pop(0)
-            animation = self.control_animation(given, env)
-            fields = {"animation": animation}
-            if head == "slider":
-                _check_starts(animation.body, set(), given.pos)
-            else:
-                _check_durations(animation.body, None, given.pos)
-        elif head == "toggle":
-            if not rest:
-                raise CompileError("toggle needs a target: a bool, or self", form.pos)
-            target_node = rest.pop(0)
-            if isinstance(target_node, Name) and target_node.parts == ("self",):
-                fields = {"target": None}
-            else:
-                target, attr, kind, text = self.toggle_target(target_node, env)
-                if kind != "bool":
-                    raise CompileError(
-                        f"a toggle writes a bool, but {text} is a {kind}", target_node.pos
-                    )
-                if any(_head(n) == "value" for n in rest):
-                    raise CompileError(
-                        "value is for only a toggle whose target is self; this one starts as"
-                        f" {text} does",
-                        target_node.pos,
-                    )
-                fields = {"target": target, "attr": attr}
-        # Unless given one, a control is labeled with its own name.
-        values["label"] = Free(name or "")
-        cls = CONTROLS[head]
-        allowed = set(attributes(cls))
-        given: set[str] = set()
-        for node in rest:
-            attr_name = _head(node)
-            if attr_name not in allowed or not isinstance(node, Form) or len(node.items) != 2:
-                raise CompileError(f"unexpected value in {head}", node.pos)
-            if attr_name in given:
-                raise CompileError(f"attribute {attr_name!r} is given twice", node.pos)
-            given.add(attr_name)
-            values[attr_name] = self.control_attr(attr_name, node.items[1], env, cls)
-        obj = cls(name=name, **fields, **values)
-        self.register(obj, form.pos)
-        return obj
-
-    def on_drag(self, form: Form, env: Env) -> Drag:
-        if len(form.items) < 3:
-            raise CompileError(
-                "on-drag needs the object to drag and what it moves, like (on-drag u u.pos)",
-                form.pos,
-            )
-        dragged = form.items[1]
-        text = _text(dragged)
-        found = self.name(dragged, env) if isinstance(dragged, Name) else None
-        if not isinstance(found, ObjRef) or not isinstance(found.obj, Visual):
-            raise CompileError(f"{text} cannot be dragged: it is not a visual object", dragged.pos)
-        node = found.obj
-        target_node = form.items[2]
-        if isinstance(node, Group):
-            moved = self.group_drag(node, target_node, env)
+        node = rest.pop(0) if rest and not _is_constraint(rest[0]) else None
+        # A plain list takes its item type from its value (type-system.md, section 4).
+        if isinstance(head, Name) and head.parts == ("list",):
+            if node is None:
+                raise CompileError("a plain list needs a value to take its item type from", pos)
+            t = self.expr(node, None, scope).type
         else:
-            moved = self.free_value(target_node, env)
-        if isinstance(moved, str):
-            raise CompileError(moved, target_node.pos)
-        position = moved[0] is node and moved[1] in ("x", "y", "pos")
-        if not position and moved[2] not in ("int", "real"):
-            raise CompileError(
-                f"a drag's target is {text}.x, {text}.y, {text}.pos, or a number", target_node.pos
-            )
-        conditions: list[Node] = []
-        when: Node | State | None = None
-        for item in form.items[3:]:
+            t = self.type_of(head)
+        try:
+            if rest:
+                t = refine(t, rest)
+        except TypeError_ as e:
+            raise CompileError(str(e), rest[0].pos) from None
+        place = self.place(t, node, form.pos, "the value", scope=scope)
+        self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
+
+    def scene_decl(self, form: Form) -> None:
+        if self.scene is not None:
+            raise CompileError("a file has exactly one scene", form.pos)
+        name, pos = self.name_of(form)
+        attrs = {"background": Place(PAINT, None)}
+        self.scene = self.add(Obj("scene", name, SCENE, attrs=attrs, pos=pos))
+        for item, scope in self.expand(form.items[2:], {}):
             head = _head(item)
-            if head == "when" and isinstance(item, Form):
-                if when is not None:
-                    raise CompileError("when is given twice", item.pos)
-                if len(item.items) != 2:
-                    raise CompileError("when takes one condition or state", item.pos)
-                when = self.state_named(item.items[1]) or self.condition(item.items[1], env)
-            elif isinstance(item, Form) and head not in COMPARISONS:
-                raise CompileError("unexpected value in on-drag", item.pos)
+            if head == "background":
+                attrs["background"] = self.place(
+                    PAINT, item.items[1], item.pos, "background", scope=scope
+                )
+            elif head in SHAPE_ATTRS:
+                self.shape(item, self.scene, scope)
+            elif isinstance(item, Form):
+                self.variable(item, self.scene, "scene", scope)
             else:
-                conditions.append(self.condition(item, env))
-        drag = Drag(
-            name=None,
-            node=node,
-            target_obj=moved[0],
-            target=moved[1],
-            kind=moved[2],
-            conditions=tuple(conditions),
-            when=when,
-        )
-        self.drag_positions[id(drag)] = target_node.pos
-        return drag
+                raise CompileError("the scene holds shapes and variables", item.pos)
 
-    # A toggle's target: a bool, or a group's attribute, which it writes to every member (the
-    # members must all hold bools).
-    def toggle_target(self, node: Node, env: Env) -> tuple[Obj, str, str, str]:
-        if isinstance(node, Name) and len(node.parts) > 1 and isinstance(node.parts[-1], str):
-            holder = self.name(Name(node.parts[:-1], node.pos), env)
-            attr = node.parts[-1]
-            if isinstance(holder, ObjRef) and isinstance(holder.obj, Group):
-                kinds = {kind for _, _, kind in self.pair_targets(node, env)}
-                kind = kinds.pop() if len(kinds) == 1 else "mixed values"
-                return holder.obj, attr, kind, _text(node)
-        return self.control_target(node, env)
-
-    # Dragging a group moves each member's position by the same amount, so its target is its own
-    # pos, x or y, and every member's must be one a control can write.
-    def group_drag(self, group: Group, node: Node, env: Env) -> tuple[Obj, str, str, str] | str:
-        parts = node.parts if isinstance(node, Name) else ()
-        if len(parts) != 2 or self.name(Name(parts[:1], node.pos), env) != ObjRef(group):
-            return "a group is dragged by its own pos, x or y"
-        attr = parts[1]
-        if attr not in ("pos", "x", "y"):
-            return "a group is dragged by its own pos, x or y"
-        for member in group.members:
-            try:
-                found = self.writable(member, attr, f"{group.name}.{attr}", node.pos)
-            except CompileError:
-                return f"a member of {group.name!r} has no {attr}"
-            if isinstance(found, str):
-                return (
-                    f"a member of {group.name!r} computes its {attr},"
-                    " so the group cannot be dragged"
-                )
-        return group, str(attr), "list2" if attr == "pos" else "real", f"{group.name}.{attr}"
-
-    # Views and controls may read controls; the scene may not.
-    def reading_views[T](self, work: Callable[[], T]) -> T:
-        before, self.views_reading = self.views_reading, True
-        try:
-            return work()
-        finally:
-            self.views_reading = before
-
-    def on_click(self, form: Form, env: Env) -> Click:
-        if len(form.items) < 3:
-            raise CompileError("on-click needs the object clicked and an animation", form.pos)
-        clicked = form.items[1]
-        found = self.name(clicked, env) if isinstance(clicked, Name) else None
-        if not isinstance(found, ObjRef) or not isinstance(found.obj, Visual):
-            raise CompileError(
-                f"{_text(clicked)} cannot be clicked: it is not a visual object", clicked.pos
-            )
-        animation = self.control_animation(form.items[2], env)
-        _check_durations(animation.body, None, form.items[2].pos)
-        when: Node | State | None = None
-        for item in form.items[3:]:
-            if _head(item) != "when" or not isinstance(item, Form) or when is not None:
-                raise CompileError("unexpected value in on-click", item.pos)
-            if len(item.items) != 2:
-                raise CompileError("when takes one condition or state", item.pos)
-            when = self.state_named(item.items[1]) or self.condition(item.items[1], env)
-        return Click(name=None, node=found.obj, animation=animation, when=when)
-
-    # A condition stored for drawing time; it must be true or false.
-    def condition(self, node: Node, env: Env) -> Node:
-        value = self.value_arg(node, env)
-        if value.type not in ("bool", PENDING):
-            raise CompileError("a listener's conditions must be true or false", node.pos)
-        return self.resolve_refs(_substitute(node, self.constants(env), self.lets), env)
-
-    def control_attr(self, attr: str, node: Node, env: Env, cls: type[Obj]) -> Free | Bound:
-        if attr == "step":
-            step = self.value_arg(node, env)
-            if not (isinstance(step, Const) and step.type == "int" and step.value >= 2):  # ty: ignore[unsupported-operator]
-                raise CompileError(
-                    "step is a whole number of places, at least 2, known at compile time", node.pos
-                )
-            return Free(step.value)
-        value = self.attr_value(cls, attr, node, env)
-        assert isinstance(value, (Free, Bound))
-        return value
-
-    def state_named(self, node: Node) -> State | None:
-        if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
-            found = self.names.get(node.parts[0])
-            return found if isinstance(found, State) else None
-        return None
-
-    def state(self, form: Form, env: Env) -> State:
-        name = self.object_name(form, env)
-        conditions = tuple(form.items[2:])
-        if not conditions:
-            raise CompileError("a state needs at least one condition", form.pos)
-        stored = []
-        # A state may read controls, as views and controls do; it remembers whether it did.
-        before = self.controls_read
-        for cond in conditions:
-            value = self.reading_views(lambda cond=cond: self.value_arg(cond, env))
-            if value.type not in ("bool", PENDING):
-                raise CompileError("a state's conditions must be true or false", cond.pos)
-            stored.append(
-                self.reading_views(
-                    lambda cond=cond: self.resolve_refs(
-                        _substitute(cond, self.constants(env), self.lets), env
-                    )
-                )
-            )
-        reads = self.controls_read > before
-        state = State(name=name, conditions=tuple(stored), reads_controls=reads)
-        self.register(state, form.pos)
-        return state
-
-    # A control's animation: one named at the top level, or (animation x) written in place.
-    def control_animation(self, node: Node, env: Env) -> Animation:
-        if isinstance(node, Form) and _head(node) == "animation":
-            if len(node.items) != 2:
-                raise CompileError("an animation written in a control takes one body", node.pos)
-            animation = Animation(name=None, body=self.animation_body(node.items[1], env))
-            self.anonymous.append(animation)
-            return animation
-        if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
-            found = self.names.get(node.parts[0])
-            if isinstance(found, Animation):
-                return found
-        raise CompileError(f"{_text(node)!r} is not an animation", node.pos)
-
-    def define_const(self, form: Form, env: Env):
-        if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
-            raise CompileError("const takes a name given as a string and a value", form.pos)
-        name = form.items[1].value
-        _check_not_syntax(name, form.items[1].pos)
-        if name in self.names or name in self.consts:
-            raise CompileError(f"name {name!r} is already defined", form.items[1].pos)
-        value = self.value_arg(form.items[2], env)
-        if value.type.startswith("transition") and (
-            not isinstance(value, Const) or reads_scene(value.value)  # ty: ignore[invalid-argument-type]
-        ):
-            raise CompileError(
-                "a const transition cannot read the scene; to reuse one that does, write a func"
-                " that takes the scene value as a parameter",
-                form.items[2].pos,
-            )
-        if value.type.startswith("transition") and isinstance(value, Const):
-            self.consts[name] = value
-            return
-        if not isinstance(value, Const) or not _is_literal_type(value.type):
-            raise CompileError(
-                "a const must be a number, string, bool, or list known at compile time",
-                form.items[2].pos,
-            )
-        self.consts[name] = value
-
-    # (transition ...), (in-order ...) of transitions, and (wait d). Known in full, a transition
-    # is a Const holding a Single, Sequence or Wait; one whose ends read the scene is a Dyn.
-    def transition_form(self, head: str, node: Form, env: Env) -> Const | Dyn:
-        if head == "wait":
-            if len(node.items) != 2:
-                raise CompileError("wait takes a number of seconds", node.pos)
-            return Const(
-                Wait(_duration(self.value_arg(node.items[1], env), node.items[1].pos)),
-                "transition:any",
-            )
-        if head == "transition":
-            return self.single_transition(node, env)
-        return self.transition_sequence(node, env)
-
-    def single_transition(self, node: Form, env: Env) -> Const | Dyn:
-        parts: dict[str, Any] = {}
-        ends: dict[str, Const | Dyn] = {}
-        node_of: dict[str, Node] = {}
-        for item in node.items[1:]:
-            part = _head(item)
-            if not isinstance(item, Form) or part not in TRANSITION_PARTS:
-                raise CompileError(f"transition has no part {part or _text(item)!r}", item.pos)
-            if part in parts or part in ends:
-                raise CompileError(f"{part!r} is given twice", item.pos)
-            if len(item.items) != 2:
-                raise CompileError(f"{part} takes one value", item.pos)
-            arg = item.items[1]
-            if part in ("from", "to"):
-                value = self.value_arg(arg, env)
-                if not isinstance(value, (Const, Dyn)):
-                    raise CompileError("a transition's ends are values", arg.pos)
-                ends[part] = value
-                node_of[part] = arg
-            elif part == "duration":
-                parts["duration"] = _duration(self.value_arg(arg, env), arg.pos)
-            elif part == "ease":
-                parts["ease"] = self.ease(arg, env)
-            else:
-                parts["path"] = self.path(arg)
-        elem = None
-        if ends:
-            types = {p: _transition_elem(v.type) for p, v in ends.items()}
-            if len(set(types.values())) > 1:
-                raise CompileError(f"from is a {types['from']} but to is a {types['to']}", node.pos)
-            elem = next(iter(types.values()))
-        values = {
-            ("frm" if p == "from" else p): (
-                _transition_value(v)
-                if isinstance(v, Const)
-                else Expr(
-                    self.resolve_refs(_substitute(node_of[p], self.constants(env), self.lets), env)
-                )
-            )
-            for p, v in ends.items()
-        }
-        single = Single(
-            frm=values.get("frm"),
-            to=values.get("to"),
-            duration=parts.get("duration"),
-            ease=parts.get("ease"),
-            path=parts.get("path"),
-            elem=elem,
-        )
-        return Const(single, f"transition:{elem or 'any'}")
-
-    def transition_sequence(self, node: Form, env: Env) -> Const | Dyn:
-        settings: dict[str, Any] = {}
-        rest = list(node.items[1:])
-        while rest and _head(rest[0]) in ("ease", "default-duration", "default-ease"):
-            item = rest.pop(0)
-            assert isinstance(item, Form)
-            setting = _head(item)
-            if len(item.items) != 2:
-                raise CompileError(f"{setting} takes one value", item.pos)
-            if setting == "default-duration":
-                settings["default_duration"] = _duration(
-                    self.value_arg(item.items[1], env), item.pos
-                )
-            elif setting == "default-ease":
-                settings["default_ease"] = self.ease(item.items[1], env)
-            else:
-                settings["ease"] = self.ease(item.items[1], env)
-        values = [self.value_arg(item, env) for item in rest]
-        for item, value in zip(rest, values, strict=True):
-            if not value.type.startswith("transition"):
-                raise CompileError("in-order holds transitions", item.pos)
-        elems = {t.split(":", 1)[1] for t in (v.type for v in values)} - {"any"}
-        if len(elems) > 1:
-            raise CompileError("the steps of an in-order move different types", node.pos)
-        elem = next(iter(elems), None)
-        kind = f"transition:{elem or 'any'}"
-        parts = tuple(v.value for v in values if isinstance(v, Const))
-        assert all(isinstance(p, (Single, Wait, Sequence)) for p in parts)
-        return Const(Sequence(parts, elem=elem, **settings), kind)  # ty: ignore[invalid-argument-type]
-
-    # How a canvas shows and hides a thing: a transition with a duration and a path through how
-    # the thing is drawn (such as fade), and no ends, since hidden and shown are the ends.
-    def view_transition(self, node: Node, env: Env) -> Single:
-        value = self.value_arg(node, env)
-        t = value.value if isinstance(value, Const) else None
-        if not isinstance(t, Single):
-            raise CompileError("a canvas shows and hides things with a (transition ...)", node.pos)
-        if t.frm is not None or t.to is not None:
-            raise CompileError(
-                "showing and hiding have no from or to: hidden and shown are its ends", node.pos
-            )
-        if t.path is None:
-            raise CompileError(
-                "a canvas's transition names its kind with a path, such as (path fade)", node.pos
-            )
-        if t.path[0] != "view":
-            raise CompileError(
-                f"showing and hiding take one of these paths: {', '.join(VIEW_PATHS)}", node.pos
-            )
-        if t.duration is None:
-            raise CompileError("a canvas's transition needs a duration", node.pos)
-        return t
-
-    def animation(self, form: Form, env: Env) -> Animation:
-        if len(form.items) != 3 or not isinstance(form.items[1], StrLit):
-            raise CompileError("animation takes a name and one animation", form.pos)
-        name = self.object_name(form, env)
-        obj = Animation(name=name, body=self.animation_body(form.items[2], env))
-        self.register(obj, form.pos)
-        return obj
-
-    # A pair (target transition), (at-once ...), (in-order ...), (wait d), or an animation's name.
-    def animation_body(self, node: Node, env: Env, within: str = "an animation") -> Any:
-        head = _head(node)
-        if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
-            found = self.names.get(node.parts[0])
-            if isinstance(found, Animation):
-                return found
-            stored = self.consts.get(node.parts[0])
-            if stored is not None and _only_waits(stored.value):
-                return _as_steps(stored.value)
-        if isinstance(node, Form) and head in ("at-once", "in-order"):
-            return self.composed_animation(node, env, head)
-        if isinstance(node, Form) and head == "wait":
-            if len(node.items) != 2:
-                raise CompileError("wait takes a number of seconds", node.pos)
-            return WaitStep(_duration(self.value_arg(node.items[1], env), node.items[1].pos))
-        if (
-            isinstance(node, Form)
-            and len(node.items) == 2
-            and isinstance(node.items[0], Name)
-            and head not in TRANSITION_FORMS
-        ):
-            return self.pair(node, env)
-        raise CompileError(
-            f"{within} holds animations: pairs (target transition), at-once, in-order, wait,"
-            " or another animation",
-            node.pos,
-        )
-
-    def composed_animation(self, node: Form, env: Env, head: str) -> AtOnce | InOrder:
-        settings: dict[str, Any] = {}
-        rest = list(node.items[1:])
-        while rest and _head(rest[0]) in ("ease", "default-duration", "default-ease"):
-            item = rest.pop(0)
-            assert isinstance(item, Form)
-            setting = _head(item)
-            if len(item.items) != 2:
-                raise CompileError(f"{setting} takes one value", item.pos)
-            if setting == "default-duration":
-                settings["default_duration"] = _duration(
-                    self.value_arg(item.items[1], env), item.pos
-                )
-            elif setting == "default-ease":
-                settings["default_ease"] = self.ease(item.items[1], env)
-            else:
-                settings["ease"] = self.ease(item.items[1], env)
-        parts = tuple(self.animation_body(item, env, head) for item in rest)
-        if head == "in-order":
-            return InOrder(parts, **settings)
-        seen: dict[tuple[int, str], str] = {}
-        for part in parts:
-            for obj, attr in _animation_targets(part):
-                key = (id(obj), attr)
-                label = f"{obj.name}.{attr}" if attr != "value" else str(obj.name)
-                if key in seen:
-                    raise CompileError(f"{label} is moved twice at once", node.pos)
-                seen[key] = label
-        return AtOnce(parts, **settings)
-
-    def pair(self, node: Form, env: Env) -> Pair:
-        target, given = node.items
-        targets = self.pair_targets(target, env)
-        kind_name = _value_kind(targets[0][2])
-        value = self.value_arg(given, env)
-        if not value.type.startswith("transition") or not isinstance(value, Const):
-            raise CompileError("the second part of a pair is a transition", given.pos)
-        spec = value.value
-        text = _text(target)
-        elem = value.type.split(":", 1)[1]
-        target_type = targets[0][2]
-        fits = {
-            "int": ("real",),
-            "number": ("real",),
-            "point": ("list2",),
-            "color": ("str", "color", "paint"),
-            "text": ("str",),
-            "bool": ("bool",),
-        }[kind_name]
-        if elem != "any" and elem not in fits:
-            raise CompileError(
-                f"{text} is a {target_type}, but this transition moves a {elem}", given.pos
-            )
-        if _view_path(spec):
-            raise CompileError(
-                "that path is only for showing and hiding things in a canvas", given.pos
-            )
-        if not _has_end(spec):
-            raise CompileError("a pair needs an end: give its transition a to", given.pos)
-        if kind_name == "color":
-            spec = _colors_checked(spec, given.pos, none=target_type == "paint")
-        for obj, attr, _ in targets:
-            _check_ends(spec, type(obj), attr, given.pos)
-        return Pair(tuple((obj, attr) for obj, attr, _ in targets), kind_name, spec)
-
-    # The free values a pair writes: one, or each member's for a group attribute.
-    def pair_targets(self, node: Node, env: Env) -> list[tuple[Obj, str, str]]:
-        if isinstance(node, Name) and len(node.parts) > 1 and isinstance(node.parts[-1], str):
-            holder = self.name(Name(node.parts[:-1], node.pos), env)
-            attr = node.parts[-1]
-            if (
-                isinstance(holder, ObjRef)
-                and isinstance(holder.obj, Group)
-                and attr not in attributes(type(holder.obj))
-            ):
-                # A group's attribute is written to each member, as that member's would be.
-                out = []
-                group = holder.obj.name
-                for member in holder.obj.members:
-                    try:
-                        found = self.writable(member, attr, f"{group}.{attr}", node.pos)
-                    except CompileError:
-                        raise CompileError(
-                            f"a member of {group!r} has no {attr}", node.pos
-                        ) from None
-                    if isinstance(found, str):
-                        raise CompileError(
-                            f"a member of {group!r} computes its {attr}, so it cannot be written",
-                            node.pos,
-                        )
-                    out.append(found[:3])
-                return out
-        found = self.free_value(node, env)
-        if isinstance(found, str):
-            raise CompileError(found, node.pos)
-        obj, attr, kind, _ = found
-        return [(obj, attr, kind)]
-
-    # (map collection name body): one value per member of a group, or per item of a list. Group
-    # sizes and list lengths are known at compile time, so it unrolls into a list, with the name
-    # standing for collection[k] in the k-th copy of the body.
-    def map_form(self, node: Form, env: Env) -> Const | Dyn:
-        bodies = self.map_bodies(node, env)
-        values = [self.expr(b, env) for b in bodies]
-        bools = any(isinstance(v, (Const, Dyn)) and v.type == "bool" for v in values)
-        for value in values:
-            if not isinstance(value, (Const, Dyn)) or not (
-                value.type in (("bool",) if bools else NUMERIC[:3]) or value.type == PENDING
-            ):
-                raise CompileError("a map's body must be a number or a bool", node.items[3].pos)
-        if bools:
-            if all(isinstance(v, Const) for v in values):
-                return Const(
-                    tuple(bool(v.value) for v in values if isinstance(v, Const)),
-                    f"bools{len(bodies)}",
-                )
-            return Dyn(f"bools{len(bodies)}")
-        kind = f"list{len(bodies)}"
-        if all(isinstance(v, Const) for v in values):
-            return Const(tuple(float(v.value) for v in values if isinstance(v, Const)), kind)  # ty: ignore[invalid-argument-type]
-        return Dyn(kind)
-
-    def map_bodies(self, node: Form, env: Env) -> list[Node]:
-        if len(node.items) != 4:
-            raise CompileError("map takes a collection, a name for each item, and a body", node.pos)
-        collection, var, body = node.items[1:]
-        return self.walk(collection, var, body, env, "map")
-
-    # One copy of body per item of collection, with var standing for the item.
-    def walk(self, collection: Node, var: Node, body: Node, env: Env, form: str) -> list[Node]:
-        items = self.walk_items(collection, var, body, env, form)
-        if items and self.in_func:
-            first = self.expr(items[0][1], env)
-            if not isinstance(first, (ObjRef, Spread)):
-                self.record_type(var, first)
-        return [renamed for renamed, _ in items]
-
-    # Each item's copy of body, with the item itself.
-    def walk_items(
-        self, collection: Node, var: Node, body: Node, env: Env, form: str
-    ) -> list[tuple[Node, Node]]:
-        if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
-            raise CompileError(
-                f"the name after a {form}'s collection must be a plain name", var.pos
-            )
-        name = var.parts[0]
-        _check_not_syntax(name, var.pos)
-        if isinstance(collection, ListLit):
-            return [(_rename(body, name, item), item) for item in collection.items]
-        found = self.expr(collection, env) if isinstance(collection, Name) else None
-        if isinstance(found, ObjRef) and isinstance(found.obj, Group):
-            count = len(found.obj.members)
-        elif isinstance(found, Dyn) and found.type.startswith("objs"):
-            count = int(found.type[4:].split(":")[0])
-        elif isinstance(found, (Const, Dyn)) and _list_len(found.type) is not None:
-            count = _list_len(found.type) or 0
-        elif isinstance(found, (Const, Dyn)) and _bools_len(found.type) is not None:
-            count = _bools_len(found.type) or 0
-        else:
-            raise CompileError(f"{form} walks a group or a list", collection.pos)
-        assert isinstance(collection, Name)
-        items = [
-            Name((*collection.parts, IntLit(k, collection.pos)), collection.pos)
-            for k in range(count)
-        ]
-        return [(_rename(body, name, item), item) for item in items]
-
-    # (sort list), (sort-asc list), (sort-desc list), (reverse list), and (sort group name key):
-    # the members of a group ordered by a key, as a list of objects. Which comes first is only
-    # known while drawing, so these run then, and fold when their input is known.
-    def list_op(self, head: str, node: Form, env: Env) -> Const | Dyn:
-        args = node.items[1:]
-        sorts = head != "reverse"
-        if sorts and len(args) == 3:
-            group, kind = self.sort_group(node, env)
-            keys = self.walk(args[0], args[1], args[2], env, "sort")
-            for key in keys:
-                value = self.expr(key, env)
-                if not (isinstance(value, (Const, Dyn)) and value.type in (*NUMERIC[:3], PENDING)):
-                    raise CompileError("the key of a sort must be a number", args[2].pos)
-            return Dyn(f"objs{len(group.members)}:{kind}")
-        what = (
-            f"{head} sorts a list of numbers, or the members of a group by a key"
-            if sorts
-            else "reverse reverses a list"
-        )
-        if len(args) != 1:
-            raise CompileError(what, node.pos)
-        value = self.expr(args[0], env)
-        if not sorts and isinstance(value, Dyn) and value.type.startswith("objs"):
-            return value
-        if not sorts and isinstance(value, (Const, Dyn)) and _bools_len(value.type) is not None:
-            if isinstance(value, Const):
-                assert isinstance(value.value, tuple)
-                return Const(value.value[::-1], value.type)
-            return value
-        if not isinstance(value, (Const, Dyn)) or _list_len(value.type) is None:
-            raise CompileError(what, args[0].pos)
-        if isinstance(value, Const):
-            items = list(value.value)  # ty: ignore[invalid-argument-type]
-            if head == "reverse":
-                items.reverse()
-            else:
-                items.sort(reverse=head == "sort-desc")
-            return Const(tuple(items), value.type)
-        return value
-
-    def sort_group(self, node: Form, env: Env) -> tuple[Group, str]:
-        collection = node.items[1]
-        found = self.expr(collection, env) if isinstance(collection, Name) else None
-        if not (isinstance(found, ObjRef) and isinstance(found.obj, Group)):
-            raise CompileError(
-                f"{_head(node)} sorts a list of numbers, or the members of a group by a key",
-                collection.pos,
-            )
-        kinds = {self.kind_of(m) for m in found.obj.members}
-        if len(kinds) > 1:
-            raise CompileError(
-                "the members of a group sorted by key must all be the same kind of shape",
-                collection.pos,
-            )
-        return found.obj, next(iter(kinds), "circle")
-
-    # The form name of an object's kind: circle, rect, ..., or its motif's name.
-    def kind_of(self, obj: Obj) -> str:
-        if isinstance(obj, Motif):
-            return obj.kind
-        return next(name for name, spec in FORMS.items() if spec.cls is type(obj))
-
-    # A list operation as stored: sort is written sort-asc, and sorting by key becomes
-    # (sort-by direction member key member key ...).
-    def list_op_node(self, node: Form, env: Env) -> Node:
-        head = str(_head(node))
-        pos = node.pos
-        if len(node.items) == 4:
-            collection = node.items[1]
-            assert isinstance(collection, Name)
-            self.sort_group(node, env)
-            keys = self.walk(collection, node.items[2], node.items[3], env, "sort")
-            pairs: list[Node] = []
-            for k, key in enumerate(keys):
-                pairs += [Name((*collection.parts, IntLit(k, pos)), pos), key]
-            direction = StrLit("desc" if head == "sort-desc" else "asc", pos)
-            return Form((Name(("sort-by",), pos), direction, *pairs), pos)
-        op = "sort-asc" if head == "sort" else head
-        return Form((Name((op,), pos), *node.items[1:]), pos)
-
-    # (reduce collection name (running start) body): the running value starts at start, and each
-    # item's copy of body gives the next one. It unrolls into nested lets, so the running value is
-    # computed once per step however often body uses it.
-    def reduce_form(self, node: Form, env: Env) -> Value:
-        running, start = self.reduce_parts(node)
-        first = self.expr(start, env)
-        pair = node.items[3]
-        assert isinstance(pair, Form)
-        self.record_type(pair.items[0], first)
-        bodies = self.walk(node.items[1], node.items[2], node.items[4], env, "reduce")
-        if bodies and isinstance(first, (Const, Dyn)):
-            step = self.expr(bodies[0], env | {running: Dyn(first.type)})
-            fits = isinstance(step, (Const, Dyn)) and (
-                _widens_to(step.type, first.type)
-                or (step.type in NUMERIC and first.type in NUMERIC)
-                or PENDING in (step.type, first.type)
-            )
-            if not fits:
-                raise CompileError(
-                    "a reduce's body must give the same type as its start", node.items[4].pos
-                )
-        return self.expr(self.reduce_unrolled(node, env), env)
-
-    # (sum collection name body) and (count collection name condition) are written as reduces.
-    # Their running value has a name with a space, which no author's name can have.
-    def tally(self, node: Form, env: Env) -> Form:
-        head = _head(node)
-        if len(node.items) != 4:
-            raise CompileError(
-                f"{head} takes a collection, a name for each item, and a body", node.pos
-            )
-        collection, var, body = node.items[1:]
-        pos = node.pos
-        running = Name(("running total",), pos)
-        for each in self.walk(collection, var, body, env, str(head))[:1]:
-            value = self.expr(each, env)
-            wanted = ("bool",) if head == "count" else ("int", "ratio", "real")
-            if isinstance(value, (Const, Dyn)) and value.type not in (*wanted, PENDING):
-                what = "true or false" if head == "count" else "a number"
-                raise CompileError(f"a {head}'s body must be {what}", body.pos)
-
-        def form(*items: Node) -> Form:
-            return Form(items, pos)
-
-        def name(text: str) -> Name:
-            return Name((text,), pos)
-
-        step = (
-            form(name("if"), body, form(name("+"), running, IntLit(1, pos)), running)
-            if head == "count"
-            else form(name("+"), running, body)
-        )
-        return form(name("reduce"), collection, var, form(running, IntLit(0, pos)), step)
-
-    def reduce_parts(self, node: Form) -> tuple[str, Node]:
-        if len(node.items) != 5:
-            raise CompileError(
-                "reduce takes a collection, a name for each item, the running value"
-                " (name start), and a body",
-                node.pos,
-            )
-        pair = node.items[3]
-        if not (
-            isinstance(pair, Form)
-            and len(pair.items) == 2
-            and isinstance(pair.items[0], Name)
-            and len(pair.items[0].parts) == 1
-            and isinstance(pair.items[0].parts[0], str)
-        ):
-            raise CompileError(
-                "the running value is written (name start), like (total 0)", pair.pos
-            )
-        name = pair.items[0].parts[0]
-        _check_not_syntax(name, pair.pos)
-        return name, pair.items[1]
-
-    def reduce_unrolled(self, node: Form, env: Env) -> Node:
-        running, start = self.reduce_parts(node)
-        bodies = self.walk(node.items[1], node.items[2], node.items[4], env, "reduce")
-        pos = node.pos
-        result: Node = Name((running,), pos)
-        for body in [start, *bodies][::-1]:
-            binding = Form((Form((Name((running,), pos), body), pos),), pos)
-            result = Form((Name(("let",), pos), binding, result), pos)
-        return result
-
-    # A built-in ease by name, (step c), or the name of a function of one number.
-    def ease(self, node: Node, env: Env) -> Ease:
-        if isinstance(node, StrLit):
-            if node.value not in EASES:
-                raise CompileError(
-                    f"ease is one of {', '.join(repr(e) for e in EASES)}, (step c), or a function",
-                    node.pos,
-                )
-            return node.value
-        if isinstance(node, Form) and _head(node) == "step":
-            value = self.value_arg(node.items[1], env) if len(node.items) == 2 else None
-            if not (
-                isinstance(value, Const)
-                and value.type in ("int", "ratio", "real")
-                and 0 <= value.value <= 1  # ty: ignore[unsupported-operator]
-            ):
-                raise CompileError("step takes a number from 0 to 1", node.pos)
-            return ("step", float(value.value))  # ty: ignore[invalid-argument-type]
-        name = self.function_name(node)
-        if self.arity(name) != 1:
-            raise CompileError("an ease takes one parameter: the progress, from 0 to 1", node.pos)
-        return ("func", self.function_key(name))
-
-    # The name of a function of the start, the end and the eased progress.
-    def path(self, node: Node) -> Path:
-        if isinstance(node, Name) and node.parts in tuple((v,) for v in VIEW_PATHS):
-            return ("view", str(node.parts[0]))
-        name = self.function_name(node)
-        if self.arity(name) != 3:
-            raise CompileError(
-                "a path takes three parameters: the start, the end, and the progress", node.pos
-            )
-        return ("func", self.function_key(name))
-
-    # What the model and the JSON call a function: an author's own may differ from its name when
-    # it hides a library function.
-    def function_key(self, name: str) -> str:
-        return self.funcs[name].key if name in self.funcs else name
-
-    def function_name(self, node: Node) -> str:
-        if not (isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str)):
-            raise CompileError("expected the name of a function", node.pos)
-        name = node.parts[0]
-        if name not in self.funcs and name not in STDLIB:
-            raise CompileError(f"no function named {name!r}", node.pos)
-        return name
-
-    def arity(self, name: str) -> int:
-        if name in self.funcs:
-            return len(self.funcs[name].params)
-        return max(len(s.params) for s in STDLIB[name].signatures)
-
-    def define_func(self, form: Form):
-        if len(form.items) < 3 or not isinstance(form.items[1], StrLit):
-            raise CompileError("func takes a name given as a string and a body", form.pos)
-        name = form.items[1].value
-        _check_not_syntax(name, form.items[1].pos)
-        if name in FORMS:
-            raise CompileError(f"{name!r} is already a form", form.items[1].pos)
-        if name in self.motifs or name in self.funcs:
-            raise CompileError(f"{name!r} is already defined", form.items[1].pos)
-        rest = form.items[2:]
-        params: dict[str, Const | None] = {}
-        if _head(rest[0]) == "params":
-            params = self.func_params(rest[0])
-            rest = rest[1:]
-        if len(rest) != 1:
-            raise CompileError("a function body is exactly one expression", form.pos)
-        # A function that hides a library function gets its own key in the model, so calls
-        # written before it still reach the library one.
-        key = f"{name} (user)" if name in LIBRARY_HEADS else name
-        spec = FuncSpec(params, rest[0], dict(self.funcs), dict(self.consts), name, key)
-        spec.funcs[name] = spec
-        keys = {n: f.key for n, f in spec.funcs.items()}
-        known = {c: _shape_of_type(v.type) for c, v in spec.consts.items() if c not in params}
-        known |= {
-            p: (None, True) if d is None else _shape_of_type(d.type) for p, d in params.items()
-        }
-        shapes = {name: shape for name, shape in known.items() if shape is not None}
-        loops = _FuncLoops(set(spec.funcs) & {"sum", "count", "any", "all", *LIST_OPS})
-        body = _store_body(loops.walk(spec.body, shapes), spec.consts, keys, set(params))
-        self.functions[key] = Function(
-            tuple((p, None if d is None else d.value) for p, d in params.items()), body
-        )
-        # With only value parameters the body can be checked now, before any call.
-        if all(default is not None for default in params.values()):
-            check: Env = {k: Dyn(v.type) for k, v in params.items() if v is not None}
-            self.frames.append(Frame([]))
-            try:
-                self.infer(spec, check, form.pos)
-            finally:
-                self.frames.pop()
-        self.funcs[name] = spec
-
-    def func_params(self, node: Node) -> dict[str, Const | None]:
-        assert isinstance(node, Form)
-        params: dict[str, Const | None] = {}
-        for item in node.items[1:]:
-            name = _head(item)
-            if name is None or not isinstance(item, Form) or len(item.items) > 2:
-                raise CompileError("a parameter is (name) or (name default)", item.pos)
-            _check_not_syntax(name, item.pos)
-            if name in params:
-                raise CompileError(f"parameter {name!r} is given twice", item.pos)
-            if len(item.items) == 1:
-                params[name] = None
-                continue
-            default = self.expr(item.items[1], {})
-            if not isinstance(default, Const) or not _is_literal_type(default.type):
-                raise CompileError(
-                    "a parameter default must be a number, string, bool, or list known at "
-                    "compile time",
-                    item.items[1].pos,
-                )
-            params[name] = default
-        return params
-
-    def func_body(self, spec: FuncSpec, env: Env, guess: str, pos: Pos) -> Value:
-        if self.depth >= RECURSION_LIMIT:
-            raise CompileError(f"recursion is deeper than {RECURSION_LIMIT} calls", pos)
-        saved = self.funcs, self.consts, self.active.get(id(spec))
-        self.funcs, self.consts = spec.funcs, spec.consts
-        self.active[id(spec)] = guess
-        self.in_func += 1
-        self.depth += 1
-        # An empty scope hides the names of a motif body the call may sit in.
-        self.scopes.append({})
-        frame = Frame([])
-        self.frames.append(frame)
-        try:
-            return self.expr(spec.body, env)
-        finally:
-            self.frames.pop()
-            self.scopes.pop()
-            self.depth -= 1
-            self.in_func -= 1
-            self.funcs, self.consts, previous = saved
-            if previous is None:
-                del self.active[id(spec)]
-            else:
-                self.active[id(spec)] = previous
-
-    # The type a call returns when its arguments are not all known. Recursive calls inside the
-    # body return the current guess, starting from "not known yet", until the guess settles.
-    def infer(self, spec: FuncSpec, env: Env, pos: Pos) -> Value:
-        guess = PENDING
-        for _ in range(4):
-            result = self.func_body(spec, env, guess, pos)
-            if not isinstance(result, (Const, Dyn)):
-                return result
-            if result.type == guess:
-                break
-            guess = result.type
-        if guess == PENDING:
-            raise CompileError(f"cannot work out what {spec.name!r} returns", pos)
-        return Dyn(guess)
-
-    def func_call(self, name: str, node: Form, env: Env) -> Value:
-        spec = self.funcs[name]
-        args = node.items[1:]
-        if len(args) > len(spec.params):
-            raise CompileError(f"{name} takes at most {len(spec.params)} arguments", node.pos)
-        outer = self.constants(env)
-        inner: Env = {}
-        known = True
-        for i, (pname, default) in enumerate(spec.params.items()):
-            if i >= len(args):
-                if default is None:
-                    raise CompileError(f"{name} needs an object for {pname!r}", node.pos)
-                inner[pname] = default
-                continue
-            arg = args[i]
-            value = self.expr(arg, env)
-            if default is None:
-                if not isinstance(value, (ObjRef, SelfRef)):
-                    raise CompileError(f"{pname!r} takes an object", arg.pos)
-                written = self.resolve_refs(_substitute(arg, outer, self.lets), env)
-                assert isinstance(written, Name)
-                inner[pname] = ArgRef(value, written)
-                known = False
-                continue
-            if isinstance(value, (ObjRef, SelfRef, Spread)):
-                raise CompileError(f"{pname!r} takes a value", arg.pos)
-            if not _widens_to(value.type, default.type):
-                raise CompileError(f"expected {default.type}, got {value.type}", arg.pos)
-            if isinstance(value, Const):
-                inner[pname] = Const(_convert(value.value, default.type), default.type)
-            else:
-                inner[pname] = Dyn(default.type)
-                known = False
-        stored = tuple(self.resolve_refs(_substitute(a, outer, self.lets), env) for a in args)
-        self.lets[id(node)] = Form((Name((spec.key,), node.items[0].pos), *stored), node.pos)
-        self.keyed.append(node)
-        # A call inside its own body that cannot be folded, or that sits in a branch never taken,
-        # stands for whatever the function turns out to return.
-        if id(spec) in self.active and (not known or self.speculative):
-            return Dyn(self.active[id(spec)])
-        if known:
-            return self.func_body(spec, inner, self.active.get(id(spec), PENDING), node.pos)
-        result = self.infer(spec, inner, node.pos)
-        if isinstance(result, (Const, Dyn)):
-            self.result_types.setdefault(spec.key, set()).add(result.type)
-        return result
-
-    def define_motif(self, form: Form):
-        if len(form.items) < 2 or not isinstance(form.items[1], StrLit):
-            raise CompileError("a motif needs a name given as a string", form.pos)
-        kind = form.items[1].value
-        _check_not_syntax(kind, form.items[1].pos)
-        if kind in self.motifs or kind in self.funcs:
-            raise CompileError(f"{kind!r} is already defined", form.items[1].pos)
-        rest = form.items[2:]
-        params: dict[str, Const] = {}
-        if rest and _head(rest[0]) == "params":
-            params = self.params(rest[0])
-            rest = rest[1:]
-        transform = None
-        if rest and isinstance(rest[0], Form) and _head(rest[0]) == "transform":
-            transform, rest = rest[0], rest[1:]
-        spec = MotifSpec(params, tuple(rest), dict(self.motifs), transform)
-        # Compiling the body once with the defaults reports its errors even if it is never used.
-        self.frames.append(Frame([], inside=True))
-        try:
-            self.body(spec, dict(params), None)
-        finally:
-            self.frames.pop()
-        self.motifs[kind] = spec
-
-    def params(self, node: Node) -> dict[str, Const]:
-        assert isinstance(node, Form)
-        params: dict[str, Const] = {}
-        for item in node.items[1:]:
-            name = _head(item)
-            if name is None or not isinstance(item, Form) or len(item.items) != 2:
-                raise CompileError("a parameter is (name default)", item.pos)
-            _check_not_syntax(name, item.pos)
-            if name in attributes(Motif) or name == "pos":
-                raise CompileError(f"every motif already has {name!r}", item.pos)
-            if name in params:
-                raise CompileError(f"parameter {name!r} is given twice", item.pos)
-            default = self.expr(item.items[1], {})
-            if not isinstance(default, Const) or not _is_literal_type(default.type):
-                raise CompileError(
-                    "a parameter default must be a number, string, bool, or list known at "
-                    "compile time",
-                    item.items[1].pos,
-                )
-            params[name] = default
-        return params
-
-    def body(
-        self, spec: MotifSpec, scope: Scope, owner: str | None
-    ) -> tuple[list[Visual], Free | Bound | None]:
-        pool: list[Obj] = []
-        self.scopes.append(scope)
-        self.pools.append(pool)
-        outer, self.motifs = self.motifs, spec.motifs
-        transform = None
-        try:
-            if spec.transform is not None:
-                transform = self.default_transform(spec.transform)
-            for node in spec.body:
-                pool.extend(self.body_item(node))
-        finally:
-            self.motifs = outer
-            self.scopes.pop()
-            self.pools.pop()
-        label = repr(owner) if owner is not None else "an anonymous motif"
-        members: list[Visual] = []
-        for obj in pool:
-            assert isinstance(obj, Visual)
-            self.parents[id(obj)] = (obj, label)
-            members.append(obj)
-        return members, transform
-
-    def default_transform(self, node: Form) -> Free | Bound:
-        composed = Form((Name(("transform",), node.pos), *node.items[1:]), node.pos)
-        value = self.value_arg(composed, {})
-        if isinstance(value, Const):
-            return Free(value.value)
-        return Bound(Name((self.hidden_value("transform", composed, {}, "transform"),), node.pos))
-
-    def body_item(self, node: Node, env: Env | None = None) -> list[Obj]:
-        env = env or {}
-        head = _head(node)
-        if isinstance(node, Form) and head == "repeat":
-            return self.repeat(node, env, self.body_item)
-        if isinstance(node, Form) and head == "let":
-            return self.let_items(node, env, self.body_item)
-        if isinstance(node, Form) and (head in FORMS or head in self.motifs):
-            obj = self.definition(node, env)
-            if not isinstance(obj, Visual):
-                raise CompileError(f"{head} cannot be in the body of a motif", node.pos)
-            return [obj]
-        if head == "params":
-            raise CompileError("params must come right after the motif's name", node.pos)
-        if head == "transform":
-            raise CompileError("a motif's transform must come before its members", node.pos)
-        if head == "motif":
-            raise CompileError("motifs are defined at the top level", node.pos)
-        raise CompileError("the body of a motif holds only definitions", node.pos)
-
-    def instance(self, form: Form, env: Env) -> Motif:
+    def shape(self, form: Form, parent: int, scope: dict) -> int:
         kind = _head(form)
         assert kind is not None
-        spec = self.motifs[kind]
-        name = self.object_name(form, env)
-        own = tuple((p, spec.params[p].type) for p in spec.params)
-        outer = env | {"self": SelfRef(Motif, own)}
-        attrs = attributes(Motif)
-        values: dict[str, Any] = {}
-        params: dict[str, Free | Bound] = {}
-        written: dict[str, tuple[Free | Bound, Pos]] = {}
-        attr_frame = Frame([])
-        self.frames.append(attr_frame)
-        for node in form.items[2:]:
-            head = _head(node)
-            # A parameter is set by its name, even one that is also a form's.
-            member = head in FORMS or head in self.motifs or head == "repeat"
-            if member and head not in spec.params:
-                raise CompileError(f"an instance of {kind} takes no members", node.pos)
-            if head is None or not isinstance(node, Form) or head == "members":
-                raise CompileError(f"unexpected value in {kind}", node.pos)
-            if head not in attrs and head not in spec.params and head != "pos":
-                raise CompileError(f"{head!r} is not an attribute of {kind}", node.pos)
-            _check_pos(head, {a: p for a, (_, p) in written.items()}, node.pos)
-            if head in written:
-                raise CompileError(f"attribute {head!r} is given twice", node.pos)
-            if head == "transform":
-                composed = Form(
-                    (Name(("transform",), node.items[0].pos), *node.items[1:]), node.pos
-                )
-                values["transform"] = self.attr_value(Motif, head, composed, outer)
-                written[head] = (values["transform"], node.pos)
+        name, pos = self.name_of(form, scope)
+        specs = SHAPE_ATTRS[kind]
+        obj = Obj(kind, name, ShapeT(kind), parent=parent, pos=pos)
+        i = self.add(obj)
+        given: dict[str, tuple[Node, dict]] = {}
+        items = list(form.items[2:])
+        for attr in POSITIONAL.get(kind, ()):
+            if items and _head(items[0]) is None:
+                given[attr] = (items.pop(0), scope)
+        for item, inner in self.expand(items, scope):
+            head = _head(item)
+            if kind == "group" and head in SHAPE_ATTRS:
+                self.shape(item, i, inner)
                 continue
-            if len(node.items) != 2:
-                raise CompileError(f"attribute {head!r} takes exactly one value", node.pos)
-            if head == "pos":
-                values["x"], values["y"] = self.pos_value(node.items[1], outer)
-                written["x"] = (values["x"], node.pos)
-                written["y"] = (values["y"], node.pos)
-                written["pos"] = (Free(None), node.pos)
-            elif head in attrs:
-                values[attrs[head].name] = self.attr_value(Motif, head, node.items[1], outer)
-                written[head] = (values[attrs[head].name], node.pos)
-            else:
-                params[head] = self.param_value(spec.params[head].type, node.items[1], outer)
-                written[head] = (params[head], node.pos)
-        self.frames.pop()
-        _check_cycles(name, written, attr_frame.locals)
-        if self.scopes:
-            for attr in INHERITED:
-                values.setdefault(attrs[attr].name, Inherit())
-        scope: Scope = {}
-        path: tuple[str, ...] | None = None
-        if name is not None and all(p is not None for p in self.instance_path):
-            path = (*(p for p in self.instance_path if p is not None), name)
-        for pname, default in spec.params.items():
-            given = params.setdefault(pname, Free(default.value))
-            controlled = pname in self.written_anywhere or (
-                path is not None and (*path, pname) in self.written
-            )
-            known = isinstance(given, Free) and not controlled
-            scope[pname] = Const(given.value, default.type) if known else Dyn(default.type)
-        body_frame = Frame([], inside=True)
-        self.frames.append(body_frame)
-        self.instance_path.append(name)
-        try:
-            members, default = self.body(spec, scope, name)
-        finally:
-            self.instance_path.pop()
-            self.frames.pop()
-        if default is not None and "transform" not in values:
-            values["transform"] = default
-        types = {pname: default.type for pname, default in spec.params.items()}
-        obj = Motif(
-            name=name, kind=kind, params=dict(params), param_types=types, members=members, **values
-        )
-        self.settle(attr_frame, obj)
-        self.settle(body_frame, obj)
-        self.register(obj, form.pos)
-        return obj
-
-    def param_value(self, expected: str, node: Node, env: Env) -> Free | Bound:
-        value = self.value_arg(node, env)
-        if not _widens_to(value.type, expected):
-            raise CompileError(f"expected {expected}, got {value.type}", node.pos)
-        if isinstance(value, Const):
-            return Free(_convert(value.value, expected))
-        return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
-
-    # Loop variables and parameters known at compile time are written into stored expressions.
-    def constants(self, env: Env) -> Env:
-        scope = self.scopes[-1] if self.scopes else {}
-        consts: Env = {k: v for k, v in self.consts.items() if k not in scope}
-        consts |= {k: v for k, v in scope.items() if isinstance(v, Const)}
-        return consts | env
-
-    def definition(self, form: Form, env: Env) -> Obj:
-        head = _head(form)
-        assert head is not None
-        if head in self.motifs:
-            return self.instance(form, env)
-        spec = FORMS[head]
-        name = self.object_name(form, env)
-        frame = Frame([])
-        self.frames.append(frame)
-        try:
-            obj = self.library_definition(form, env, head, spec, name, frame)
-        finally:
-            self.frames.pop()
-        self.settle(frame, obj)
-        return obj
-
-    def library_definition(
-        self, form: Form, env: Env, head: str, spec: FormSpec, name: str | None, frame: Frame
-    ) -> Obj:
-        env = env | {"self": SelfRef(spec.cls)}
-        attrs = attributes(spec.cls)
-        var = variadic(spec.cls)
-        settable = {a for a in attrs if a not in spec.positional and (var is None or a != var.name)}
-        if {"x", "y"} <= attrs.keys():
-            settable.add("pos")
-        shapes = PROPERTIES.get(spec.cls, {})
-        settable |= shapes.keys()
-        if spec.cls in FONT_PARTS:
-            settable.add("font")
-        font: Name | None = None
-        if spec.cls is Canvas:
-            settable.add("transition")
-        shown_with: Any = None
-        extra: dict[str, tuple[Const | Dyn, Node]] = {}
-        rest = list(form.items[2:])
-        values: dict[str, Free | Bound] = {}
-        positions: dict[str, Pos] = {}
-
-        for field_name in spec.positional:
-            if rest and _head(rest[0]) not in settable:
-                if _head(rest[0]) == field_name:
-                    raise CompileError(
-                        f"the {field_name} of {head} is given by position", rest[0].pos
-                    )
-                node = rest.pop(0)
-                values[field_name] = self.attr_value(spec.cls, field_name, node, env)
-                positions[field_name] = node.pos
-
-        while rest and _head(rest[0]) in settable:
-            node = rest.pop(0)
-            assert isinstance(node, Form)
-            attr = _head(node)
-            assert attr is not None
-            _check_pos(attr, positions, node.pos)
-            if attr in positions:
-                raise CompileError(f"attribute {attr!r} is given twice", node.pos)
-            positions[attr] = node.pos
-            if attr == "font":
-                font = self.font_token(node, env)
+            if head is None or not isinstance(item, Form) or len(item.items) != 2:
+                raise CompileError(f"expected an argument such as (r 1), got {item}", item.pos)
+            if head == "pos" and "x" in specs:
+                for attr in ("x", "y"):
+                    if attr in given:
+                        raise CompileError(f"'{attr}' is given twice", item.pos)
+                given["pos"] = (item.items[1], inner)
                 continue
-            if attr == "transition":
-                shown_with = self.view_transition(node, env)
+            if head not in specs:
+                raise CompileError(f"a {kind} takes no argument '{head}'", item.pos)
+            if head in given or ("pos" in given and head in ("x", "y")):
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            given[head] = (item.items[1], inner)
+        for attr, spec in specs.items():
+            if attr in ("x", "y") and "pos" in given:
                 continue
-            if attr == "pos":
-                if len(node.items) != 2:
-                    raise CompileError("attribute 'pos' takes exactly one value", node.pos)
-                values["x"], values["y"] = self.pos_value(node.items[1], env)
-                positions["x"] = positions["y"] = node.pos
-                continue
-            if attr in shapes:
-                if len(node.items) != 2:
-                    raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
-                value = self.value_arg(node.items[1], env)
-                if not _widens_to(value.type, shapes[attr]):
-                    raise CompileError(
-                        f"{attr} takes a {shapes[attr]}, got {value.type}", node.items[1].pos
-                    )
-                extra[attr] = (value, node.items[1])
-                continue
-            if _expected_type(spec.cls, attr) == "transform":
-                head_name = Name(("transform",), node.items[0].pos)
-                composed = Form((head_name, *node.items[1:]), node.pos)
-                values[attr] = self.attr_value(spec.cls, attr, composed, env)
-                continue
-            if len(node.items) != 2:
-                raise CompileError(f"attribute {attr!r} takes exactly one value", node.pos)
-            values[attr] = self.attr_value(spec.cls, attr, node.items[1], env)
+            node, inner = given.get(attr, (None, scope))
+            obj.attrs[attr] = self.place(spec.type, node, form.pos, attr, spec.default, inner)
+        if "pos" in given:
+            node, inner = given["pos"]
+            point = self.expr(node, POINT, inner)
+            for k, attr in enumerate(("x", "y")):
+                obj.attrs[attr] = self.settle(REAL, _part(point, k), attr, node.pos)
+        return i
 
-        if extra:
-            self.construct(spec.cls, extra, values, positions, env)
-        if font is not None:
-            for attr, part in FONT_PARTS[spec.cls].items():
-                if attr not in values:
-                    values[attr] = Bound(Name((*font.parts, part), font.pos))
-                    positions[attr] = font.pos
-        _check_font_values(spec.cls, values, positions)
-        if spec.cls is Rect and "rx" in values and "ry" not in values:
-            values["ry"] = Bound(Name(("self", "rx"), positions["rx"]))
-            positions["ry"] = positions["rx"]
-        _check_cycles(
-            name,
-            {a: (values[a], positions[a]) for a in values},
-            frame.locals,
-            PROPERTY_READS.get(spec.cls, {}),
-        )
-        kwargs: dict[str, Any] = {attrs[attr].name: value for attr, value in values.items()}
-        if self.scopes and issubclass(spec.cls, Styled):
-            for attr in INHERITED:
-                kwargs.setdefault(attrs[attr].name, Inherit())
-        if var is not None:
-            members: list[Visual] = []
-            for node in rest:
-                members.extend(self.member(node, env, head, settable, name))
-            kwargs[var.name] = members
-            if spec.cls is Canvas:
-                kwargs["conditions"] = [self.shown_when.pop(id(m), None) for m in members]
-                kwargs["transitions"] = [self.shown_with.pop(id(m), shown_with) for m in members]
-        elif rest:
-            node = rest[0]
-            attr = _head(node)
-            if attr is not None and attr not in FORMS:
-                raise CompileError(f"{attr!r} is not an attribute of {head}", node.pos)
-            raise CompileError(f"unexpected value in {head}", node.pos)
+    # Places ------------------------------------------------------------------------------
 
-        obj = spec.cls(name=name, **kwargs)
-        self.register(obj, form.pos)
-        return obj
-
-    # Fills a shape's stored attributes from its other constructors, such as a rect's center and
-    # size. Giving a stored attribute that a constructor also fills is an error.
-    def construct(
-        self,
-        cls: type[Obj],
-        extra: dict[str, tuple[Const | Dyn, Node]],
-        values: dict[str, Free | Bound],
-        positions: dict[str, Pos],
-        env: Env,
-    ):
-        hidden: dict[str, str] = {}
-
-        def part(name: str, i: int | None = None) -> Node:
-            value, node = extra[name]
-            if isinstance(value, Const):
-                v = value.value
-                if i is not None:
-                    assert isinstance(v, tuple)
-                    v = v[i]
-                assert isinstance(v, (int, float, Fraction))
-                return RealLit(float(v), node.pos)
-            if name not in hidden:
-                hidden[name] = self.hidden_value(name, node, env, value.type)
-            axis = () if i is None else ("xyz"[i],)
-            return Name((hidden[name], *axis), node.pos)
-
-        def stored(attr: str) -> Node:
-            value = values.get(attr, attributes(cls)[attr].default)
-            if isinstance(value, Free):
-                assert isinstance(value.value, (int, float))
-                return RealLit(float(value.value))
-            return Name(("self", attr))
-
-        def call(op: str, *args: Node) -> Form:
-            return Form((Name((op,)), *args))
-
-        def conflict(name: str, *attrs: str):
-            for attr in attrs:
-                if attr in positions and attr != name:
-                    raise CompileError(
-                        f"{name} cannot be given together with {attr}", extra[name][1].pos
-                    )
-
-        def put(attr: str, node: Node, source: str):
-            values[attr] = self.attr_value(cls, attr, node, env)
-            positions[attr] = extra[source][1].pos
-
-        def need(*names: str):
-            for name in names:
-                if name not in extra:
-                    given = next(n for n in names if n in extra)
-                    raise CompileError(f"{given} needs {name}", extra[given][1].pos)
-
-        if cls is Rect and ("from" in extra or "to" in extra):
-            need("from", "to")
-            for name in ("from", "to"):
-                conflict(name, "x", "y", "pos", "width", "height", "size", "center")
-            put("x", part("from", 0), "from")
-            put("y", part("from", 1), "from")
-            put("width", call("-", part("to", 0), part("from", 0)), "to")
-            put("height", call("-", part("to", 1), part("from", 1)), "to")
-            return
-        if cls is Line:
-            need("from", "to")
-            for name in ("from", "to"):
-                conflict(name, "x1", "y1", "x2", "y2", "x", "y", "pos")
-            put("x1", part("from", 0), "from")
-            put("y1", part("from", 1), "from")
-            put("x2", part("to", 0), "to")
-            put("y2", part("to", 1), "to")
-            return
-        if cls is Triangle:
-            if "center" in extra:
-                conflict("center", "x", "y", "pos")
-                put("x", part("center", 0), "center")
-                put("y", part("center", 1), "center")
-            source = "r" if "r" in extra else "center"
-            conflict(source, "a", "b", "c")
-            radius = part("r") if "r" in extra else RealLit(1.0)
-            for corner, angle in (("a", 90.0), ("b", 210.0), ("c", 330.0)):
-                put(corner, call("polar", radius, RealLit(angle)), source)
-            return
-        sizes = ("width", "height") if cls is Rect else ("rx", "ry")
-        if "size" in extra:
-            conflict("size", *sizes)
-            halve = (lambda n: n) if cls is Rect else (lambda n: call("/", n, RealLit(2.0)))
-            put(sizes[0], halve(part("size", 0)), "size")
-            put(sizes[1], halve(part("size", 1)), "size")
-        if "center" in extra:
-            conflict("center", "x", "y", "pos")
-            if cls is Rect:
-                put(
-                    "x",
-                    call("-", part("center", 0), call("/", stored("width"), RealLit(2.0))),
-                    "center",
-                )
-                put(
-                    "y",
-                    call("-", part("center", 1), call("/", stored("height"), RealLit(2.0))),
-                    "center",
-                )
-            else:
-                put("x", part("center", 0), "center")
-                put("y", part("center", 1), "center")
-
-    def member(
-        self, node: Node, env: Env, container: str, settable, owner: str | None
-    ) -> list[Visual]:
-        head = _head(node)
-        if isinstance(node, Form) and head == "repeat":
-            return self.repeat(
-                node, env, lambda n, e: self.member(n, e, container, settable, owner)
+    def place(
+        self, t: Type, node: Node | None, pos: Pos, what: str, default=None, scope=None
+    ) -> Place:
+        if node is None:
+            return Place(
+                t, self.default(t, pos) if default is None and t != Maybe(COLOR) else default
             )
-        if isinstance(node, Form) and head == "let":
-            return self.let_items(
-                node, env, lambda n, e: self.member(n, e, container, settable, owner)
-            )
-        if isinstance(node, Form) and head == "when" and issubclass(FORMS[container].cls, View):
-            if len(node.items) not in (3, 4):
-                raise CompileError("when takes a condition and what it shows", node.pos)
-            value = self.value_arg(node.items[1], env)
-            if value.type not in ("bool", PENDING):
-                raise CompileError("a when's condition must be true or false", node.items[1].pos)
-            condition = self.resolve_refs(
-                _substitute(node.items[1], self.constants(env), self.lets), env
-            )
-            shown = self.member(node.items[2], env, container, settable, owner)
-            transition = self.view_transition(node.items[3], env) if len(node.items) == 4 else None
-            for obj in shown:
-                self.shown_when[id(obj)] = condition
-                if transition is not None:
-                    self.shown_with[id(obj)] = transition
-            return shown
-        if isinstance(node, Form) and head == "ref":
-            node = self.ref_name(node, env)
-        elif isinstance(node, Form) and (head in FORMS or head in self.motifs):
-            obj = self.definition(node, env)
-            if not isinstance(obj, Visual):
-                raise CompileError(f"{head} cannot be a member of {container}", node.pos)
-            if issubclass(FORMS[container].cls, View):
-                raise CompileError(
-                    "visual objects are defined inside the scene; a canvas only shows them",
-                    node.pos,
-                )
-            self.adopt(obj, container, owner, node.pos)
-            return [obj]
-        if isinstance(node, Form):
-            if head in settable:
-                raise CompileError(f"attribute {head!r} must come before the members", node.pos)
-            raise CompileError(
-                f"{head!r} is not an attribute of {container} and not a recognized form", node.pos
-            )
-        if isinstance(node, Name):
-            value = self.name(node, env)
-            if isinstance(value, ObjRef) and isinstance(value.obj, Visual):
-                if self.scopes and not any(
-                    v.obj is value.obj for v in self.scopes[-1].values() if isinstance(v, ObjRef)
-                ):
-                    raise CompileError(
-                        "a member in a motif body must be defined in that body", node.pos
-                    )
-                if not issubclass(FORMS[container].cls, View):
-                    self.adopt(value.obj, container, owner, node.pos)
-                return [value.obj]
-        raise CompileError(f"not a valid member of {container}", node.pos)
+        return self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
 
-    # A view only shows objects, but any other container becomes the object's one parent.
-    def adopt(self, obj: Obj, container: str, owner: str | None, pos: Pos):
-        label = repr(obj.name) if obj.name is not None else "an anonymous object"
-        known = self.parents.get(id(obj))
-        if known is not None and known[0] is obj:
-            raise CompileError(f"{label} already belongs to {known[1]}", pos)
-        parent = repr(owner) if owner is not None else f"an anonymous {container}"
-        self.parents[id(obj)] = (obj, parent)
-        pool = self.pools[-1]
-        pool[:] = [item for item in pool if item is not obj]
+    def settle(self, t: Type, e: Expr, what: str, pos: Pos) -> Place:
+        """A place holding e: free when e is known, bound otherwise. A bound value must stay
+        within the place's constraints, or the compiler stops (type-system.md, 5.b and 5.c)."""
+        if e.known:
+            return Place(t, e.value)
+        if isinstance(t, Refine):
+            for c in t.constraints:
+                if c[0] in COMPARE and not _range_within(e.range, c):
+                    raise CompileError(f"{what} may break {_show(c)}", pos)
+        return Place(t, expr=e)
 
-    def attr_value(self, cls: type[Obj], attr: str, node: Node, env: Env):
-        expected = _expected_type(cls, attr)
-        value = self.expr(node, env)
-        if isinstance(value, (ObjRef, SelfRef)):
-            raise CompileError("expected a value, got an object", node.pos)
-        if isinstance(value, Spread):
-            raise CompileError(
-                "a group attribute gives several values where one is expected", node.pos
-            )
-        if expected in ("paint", "color"):
-            return self.paint(value, node, env, none=expected == "paint")
-        if not _widens_to(value.type, expected):
-            raise CompileError(f"expected {expected}, got {value.type}", node.pos)
-        if isinstance(value, Const):
-            return Free(_convert(value.value, expected))
-        return Bound(self.resolve_refs(_substitute(node, self.constants(env), self.lets), env))
+    def default(self, t: Type, pos: Pos) -> object:
+        """The value a type has when none is given (reference.md, "Defaults")."""
+        base, cons = (t.base, t.constraints) if isinstance(t, Refine) else (t, ())
+        if isinstance(base, Maybe):
+            return None
+        if base in NUMBERS:
+            value = 0
+            for c in cons:
+                if c[0] in COMPARE and not _satisfies(0, c):
+                    low = next((d for d in cons if d[0] == ">="), None)
+                    if low is None:
+                        raise CompileError(f"this {t} needs a value", pos)
+                    value = low[1]
+            return value
+        if base == BOOL:
+            return False
+        if base == STRING:
+            choices = next((c[1] for c in cons if c[0] == "one-of"), None)
+            return choices[0] if choices else ""
+        if base == COLOR:
+            return "#000000ff"
+        if base == POINT:
+            return (0, 0)
+        if base == TRANSFORM:
+            return IDENTITY
+        if isinstance(base, ListT):
+            n = next((c[1] for c in cons if c[0] == "length"), 0)
+            return [self.default(base.item, pos)] * n
+        raise CompileError(f"a {t} needs a value", pos)
 
-    def font_token(self, node: Form, env: Env) -> Name:
-        if len(node.items) != 2 or not isinstance(node.items[1], Name):
-            raise CompileError("font takes the name of a font token", node.pos)
-        target = node.items[1]
-        found = self.name(target, env)
-        if not (isinstance(found, ObjRef) and isinstance(found.obj, Font)):
-            raise CompileError(f"{_text(target)!r} is not a font", target.pos)
-        return target
+    # Expressions -------------------------------------------------------------------------
 
-    # A color, or a string naming one: a known string is checked now and written as #rrggbbaa;
-    # one computed while drawing is checked when drawn.
-    def paint(self, value: Const | Dyn, node: Node, env: Env, none: bool) -> Free | Bound:
-        if value.type not in COLORISH and value.type != PENDING:
-            raise CompileError(f"expected a color, got {value.type}", node.pos)
-        if isinstance(value, Const):
-            return Free(_color_const(value.value, node.pos, none))
-        stored = self.resolve_refs(_substitute(node, self.constants(env), self.lets), env)
-        return Bound(_color_results(stored, none))
+    def expr(self, node: Node, expected: Type | None, scope: dict) -> Expr:
+        e = self.typed(node, expected, scope)
+        # A constraint is checked on the value (known) or its range (settle), not on its type.
+        target = _base(expected) if isinstance(expected, Refine) else expected
+        if target is not None and not fits(e.type, target):
+            raise CompileError(f"expected {expected}, got {e.type}", node.pos)
+        if e.known and isinstance(expected, Refine):
+            for c in expected.constraints:
+                if c[0] != "const" and not _satisfies(e.value, c):
+                    raise CompileError(f"{_value_str(e.value)} breaks {_show(c)}", node.pos)
+        return e
 
-    def resolve_refs(self, node: Node, env: Env) -> Node:
-        if isinstance(node, Form) and _head(node) == "ref":
-            return self.ref_name(node, env)
-        # An index is an int known at compile time, so a computed one is stored as that int.
-        if isinstance(node, Name) and any(isinstance(p, Form) for p in node.parts[1:]):
-            parts: list = [node.parts[0]]
-            for part in node.parts[1:]:
-                if isinstance(part, Form):
-                    value = self.expr(part, env)
-                    if isinstance(value, Const) and value.type == "int":
-                        assert isinstance(value.value, int)
-                        part = IntLit(value.value, part.pos)
-                parts.append(part)
-            return Name(tuple(parts), node.pos)
-        # A map is stored as the list it unrolls into, so backends never see it.
-        if isinstance(node, Form) and _head(node) == "map":
-            items = tuple(self.resolve_refs(b, env) for b in self.map_bodies(node, env))
-            return ListLit(items, node.pos)
-        if isinstance(node, Form) and _head(node) == "reduce":
-            return self.resolve_refs(self.reduce_unrolled(node, env), env)
-        if (
-            isinstance(node, Form)
-            and _head(node) in ("any", "all")
-            and _head(node) not in self.funcs
-        ):
-            return self.any_all_node(node, env)
-        if isinstance(node, Form) and _head(node) in LIST_OPS and _head(node) not in self.funcs:
-            stored = self.list_op_node(node, env)
-            assert isinstance(stored, Form)
-            args = tuple(self.resolve_refs(item, env) for item in stored.items[1:])
-            return Form((stored.items[0], *args), node.pos)
-        if (
-            isinstance(node, Form)
-            and _head(node) in ("sum", "count")
-            and _head(node) not in self.funcs
-        ):
-            return self.resolve_refs(self.reduce_unrolled(self.tally(node, env), env), env)
-        # Colors given to color functions are written as #rrggbbaa, so backends read one form.
-        if isinstance(node, Form) and _head(node) in ("mix", "lighten", "darken"):
-            items = tuple(
-                StrLit(
-                    _color_const(item.value, item.pos, none=False)
-                    if item.value != "none"
-                    else "#00000000",
-                    item.pos,
-                )
-                if isinstance(item, StrLit)
-                else self.resolve_refs(item, env)
-                for item in node.items
-            )
-            return Form(items, node.pos)
-        if isinstance(node, Form):
-            return Form(tuple(self.resolve_refs(item, env) for item in node.items), node.pos)
+    def typed(self, node: Node, expected: Type | None, scope: dict) -> Expr:
+        if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, NoneLit)):
+            return self.literal(node, expected)
+        if isinstance(node, BoolLit):
+            return _known(BOOL, node.value)
         if isinstance(node, ListLit):
-            return ListLit(tuple(self.resolve_refs(item, env) for item in node.items), node.pos)
-        return node
+            return self.list_literal(node, expected, scope)
+        if isinstance(node, Name):
+            return self.name(node, scope)
+        if isinstance(node, InterpStrLit):
+            return self.interp(node, scope)
+        if isinstance(node, Bar):
+            raise CompileError("type notation is not a value", node.pos)
+        if isinstance(node, Form):
+            return self.form(node, expected, scope)
+        raise CompileError(f"unexpected {type(node).__name__}", node.pos)
 
-    def expr(self, node: Node, env: Env) -> Value:
-        match node:
-            case IntLit(value=v):
-                return Const(v, "int")
-            case RatioLit(value=v):
-                return Const(v, "ratio")
-            case RealLit(value=v):
-                return Const(v, "real")
-            case ComplexLit(value=v):
-                return Const(v, "complex")
-            case BoolLit(value=v):
-                return Const(v, "bool")
-            case StrLit(value=v):
-                return Const(v, "str")
-            case InterpStrLit():
-                return self.interp(node, env)
-            case ListLit():
-                return self.list_value(node, env)
-            case Name():
-                return self.name(node, env)
-            case Form():
-                return self.call(node, env)
+    def literal(self, node: Node, expected: Type | None) -> Expr:
+        place = expected if not isinstance(expected, Refine) else expected.base
+        try:
+            t = literal_type(node, place) if place is not None else literal_type(node, None)
+        except TypeError_ as e:
+            raise CompileError(str(e), node.pos) from None
+        if isinstance(node, NoneLit):
+            return _known(t, None)
+        value = node.value
+        if t == COLOR or (isinstance(t, Maybe) and t.inner == COLOR):
+            value = parse_color(node.value)
+        return _known(t, value)
 
-    def list_value(self, node: ListLit, env: Env) -> Value:
+    def list_literal(self, node: ListLit, expected: Type | None, scope: dict) -> Expr:
+        place = expected.base if isinstance(expected, Refine) else expected
+        if isinstance(place, Maybe):
+            place = place.inner
+        if place == POINT:
+            items = [self.expr(i, REAL, scope) for i in node.items]
+            if len(items) != 2:
+                raise CompileError("a point is two numbers, [x y]", node.pos)
+            return _gather(POINT, items)
+        item = place.item if isinstance(place, ListT) else None
         if not node.items:
-            raise CompileError("a list needs at least one number", node.pos)
-        values = [self.value_arg(item, env) for item in node.items]
-        if any(v.type == "bool" for v in values):
-            if not all(v.type in ("bool", PENDING) for v in values):
-                raise CompileError("a list holds numbers or bools, not both", node.pos)
-            kind = f"bools{len(values)}"
-            if all(isinstance(v, Const) for v in values):
-                return Const(tuple(bool(v.value) for v in values if isinstance(v, Const)), kind)
-            return Dyn(kind)
-        known: list[float] = []
-        for item, value in zip(node.items, values, strict=True):
-            if value.type not in ("int", "ratio", "real", PENDING):
-                raise CompileError(
-                    f"a list holds real numbers or bools, got {value.type}", item.pos
-                )
-            if isinstance(value, Const):
-                assert isinstance(value.value, (int, Fraction, float))
-                known.append(float(value.value))
-        kind = f"list{len(node.items)}"
-        return Const(tuple(known), kind) if len(known) == len(node.items) else Dyn(kind)
+            if item is None:
+                raise CompileError("an empty list needs its type: write list[T]", node.pos)
+            return _known(ListT(item), [])
+        items = [self.expr(i, item, scope) for i in node.items]
+        t = item
+        if t is None:
+            t = items[0].type
+            for e in items[1:]:
+                if fits(t, e.type):
+                    t = e.type
+                elif not fits(e.type, t):
+                    raise CompileError(f"a list holds one type, but has {t} and {e.type}", node.pos)
+        return _gather(ListT(t), items)
 
-    def list_part(self, value: Value, part: str | Node, env: Env, pos: Pos) -> Value:
-        assert isinstance(value, (Const, Dyn))
-        if isinstance(value, Dyn) and value.type.startswith(("objs", "obj:")):
-            return self.object_list_part(value, part, env, pos)
-        if _bools_len(value.type) is not None:
-            return self.bools_part(value, part, env, pos)
-        n = _list_len(value.type)
-        if n is None:
-            raise CompileError(f"a {value.type} has no parts", pos)
-        if isinstance(part, str):
-            if part not in AXES:
-                raise CompileError(f"a list has no part {part!r}; use x, y, z, or an index", pos)
-            i = AXES[part]
-        else:
-            index = self.expr(part, env)
-            if not (isinstance(index, Const) and index.type == "int"):
-                raise CompileError("an index must be an int known at compile time", part.pos)
-            assert isinstance(index.value, int)
-            i = index.value + n if index.value < 0 else index.value
-        if not 0 <= i < n:
-            raise CompileError(f"a list of {n} numbers has no part {part!r}", pos)
-        if isinstance(value, Const):
-            assert isinstance(value.value, tuple)
-            return Const(value.value[i], "real")
-        return Dyn("real")
-
-    def bools_part(self, value: Const | Dyn, part: str | Node, env: Env, pos: Pos) -> Value:
-        n = _bools_len(value.type) or 0
-        if isinstance(part, str):
-            raise CompileError("a list of bools is indexed by number", pos)
-        index = self.expr(part, env)
-        if not (isinstance(index, Const) and index.type == "int"):
-            raise CompileError("an index must be an int known at compile time", part.pos)
-        assert isinstance(index.value, int)
-        i = index.value + n if index.value < 0 else index.value
-        if not 0 <= i < n:
-            raise CompileError(f"a list of {n} bools has no part {index.value}", pos)
-        if isinstance(value, Const):
-            assert isinstance(value.value, tuple)
-            return Const(value.value[i], "bool")
-        return Dyn("bool")
-
-    def interp(self, node: InterpStrLit, env: Env) -> Value:
-        text: list[str] = []
-        constant = True
+    def interp(self, node: InterpStrLit, scope: dict) -> Expr:
+        parts: list = []
         for part in node.parts:
             if isinstance(part, str):
-                text.append(part)
+                parts.append(part)
                 continue
-            name = part.name if isinstance(part, Field) else part
-            value = self.name(name, env)
-            if isinstance(value, (ObjRef, SelfRef)):
-                raise CompileError("cannot put an object in a string", part.pos)
-            if isinstance(value, Spread):
-                if isinstance(part, Field):
-                    raise CompileError("a group attribute cannot take a format spec", part.pos)
-                constant = False
-                continue
-            spec = part.spec if isinstance(part, Field) else None
-            if spec:
-                _check_spec(spec, value.type, part.pos)
-            if isinstance(value, Const):
-                text.append(_format(value.value, value.type, spec))
+            inner, spec = (part.expr, part.spec) if isinstance(part, Field) else (part, "")
+            e = self.expr(inner, None, scope)
+            _check_spec(e.type, spec, part.pos)
+            if e.known:
+                parts.append(_show_value(e.type, e.value, spec))
             else:
-                constant = False
-        return Const("".join(text), "str") if constant else Dyn("str")
+                parts.append((e, spec))
+        merged: list = []
+        for p in parts:
+            if isinstance(p, str) and merged and isinstance(merged[-1], str):
+                merged[-1] += p
+            else:
+                merged.append(p)
+        if all(isinstance(p, str) for p in merged):
+            return _known(STRING, "".join(merged))
+        exprs = [p[0] for p in merged if not isinstance(p, str)]
+        t = Maybe(STRING) if any(isinstance(_base(e.type), Maybe) for e in exprs) else STRING
+        return Expr("format", t, tuple(merged), frozenset().union(*(e.deps for e in exprs)))
 
-    def name(self, node: Name, env: Env) -> Value:
-        first, *rest = node.parts
-        assert isinstance(first, str)
-        local = env.get(first)
-        if isinstance(local, int):
-            if rest:
-                raise CompileError(f"{first!r} is a number and has no attributes", node.pos)
-            return Const(local, "int")
-        if isinstance(local, (Const, Dyn, LetRef)):
-            value: Value = Dyn(local.type) if isinstance(local, LetRef) else local
-            for part in rest:
-                value = self.list_part(value, part, env, node.pos)
-            return value
-        scope = self.scopes[-1] if self.scopes else {}
-        if local is None and first in scope:
-            current: Value = scope[first]
-            if isinstance(current, (Const, Dyn)):
-                for part in rest:
-                    current = self.list_part(current, part, env, node.pos)
-                return current
-        elif local is None and first in self.consts:
-            value = self.consts[first]
-            if rest and _list_len(value.type) is None and _bools_len(value.type) is None:
-                raise CompileError(f"{first!r} is a const {value.type} and has no parts", node.pos)
-            for part in rest:
-                value = self.list_part(value, part, env, node.pos)
-            return value
-        elif local is None and first not in self.names:
-            raise CompileError(f"undefined name {first!r}", node.pos)
-        elif local is None and self.in_func and first not in self.builtin_names:
-            raise CompileError(
-                f"undefined name {first!r}: a function sees only its parameters, consts, "
-                "and functions",
-                node.pos,
-            )
-        elif isinstance(local, ArgRef):
-            current = local.value
+    def name(self, node: Name, scope: dict) -> Expr:
+        first = node.parts[0]
+        if not isinstance(first, str):
+            raise CompileError("expected a name", node.pos)
+        e = self.lookup(first, scope, node.pos)
+        for part in node.parts[1:]:
+            e = self.part(e, part, scope, node.pos)
+        return e
+
+    def lookup(self, name: str, scope: dict, pos: Pos) -> Expr:
+        if name in scope:
+            return scope[name]
+        if name in self.model.names:
+            return self.read(self.model.names[name], None)
+        raise CompileError(f"unknown name '{name}'", pos)
+
+    def read(self, i: int, attr: str | None) -> Expr:
+        obj = self.model.objects[i]
+        if obj.kind == "variable" and attr is None:
+            place = obj.value
         else:
-            current = local if local is not None else ObjRef(self.names[first])
-        for part in rest:
-            current = self.access(current, part, env, node.pos)
-        if isinstance(current, ObjRef) and isinstance(current.obj, Real):
-            return Dyn("real")
-        if isinstance(current, ObjRef) and isinstance(current.obj, Color):
-            return Dyn("color")
-        if isinstance(current, ObjRef) and isinstance(current.obj, Bool):
-            return Dyn("bool")
-        # A state reads as a bool; one that reads a control is read like a control.
-        if isinstance(current, ObjRef) and isinstance(current.obj, State):
-            if current.obj.reads_controls:
-                if not self.views_reading:
-                    raise CompileError(
-                        f"the scene cannot read the state {current.obj.name!r}: it reads a control",
-                        node.pos,
-                    )
-                self.controls_read += 1
-            return Dyn("bool")
-        if isinstance(current, ObjRef) and isinstance(current.obj, Toggle):
-            self.controls_read += 1
-            if not self.views_reading:
-                raise CompileError(
-                    f"the scene cannot read the control {current.obj.name!r}", node.pos
-                )
-            return Dyn("bool")
-        if isinstance(current, ObjRef) and isinstance(current.obj, Local):
-            return Dyn(current.obj.type)
-        return current
+            if attr is None:
+                return Expr("obj", obj.type, (i,))
+            if attr not in obj.attrs:
+                raise CompileError(f"a {obj.kind} has no attribute '{attr}'", obj.pos)
+            place = obj.attrs[attr]
+        if not place.bound and _is_const(place.type):
+            return _known(place.type, place.value)
+        return Expr("read", place.type, (i, attr), frozenset({(i, attr)}), _type_range(place.type))
 
-    def access(self, current: Value, part: str | Node, env: Env, pos: Pos) -> Value:
-        if isinstance(current, SelfRef):
-            if isinstance(part, str) and part in dict(current.params):
-                return Dyn(dict(current.params)[part])
-            return self.self_access(current.cls, part, pos)
-        if isinstance(current, (Const, Dyn)) and _list_len(current.type) is not None:
-            return self.list_part(current, part, env, pos)
-        if isinstance(current, Dyn) and current.type.startswith(("objs", "obj:")):
-            return self.list_part(current, part, env, pos)
-        if not isinstance(current, ObjRef):
-            raise CompileError("only objects and lists have parts", pos)
-        obj = current.obj
-        if not isinstance(part, str):
-            return self.index(obj, part, env)
-        if isinstance(obj, Motif):
-            params = self.motifs[obj.kind].params
-            if part in params:
-                return Dyn(params[part].type)
-            names = local_names(obj)
-            if part in names:
-                return ObjRef(names[part])
-        # A group's attribute is each member's, read as that member's would be.
-        if isinstance(obj, Group) and part not in attributes(type(obj)):
-            types = []
-            for member in obj.members:
-                try:
-                    value = self.access(ObjRef(member), part, env, pos)
-                except CompileError:
-                    raise CompileError(
-                        f"a member of {obj.name!r} has no attribute {part!r}", pos
-                    ) from None
-                if not isinstance(value, (Const, Dyn)):
-                    raise CompileError(f"{obj.name}.{part} is not a value of each member", pos)
-                types.append(value.type)
-            return Spread(tuple(types))
-        attrs = attributes(type(obj))
-        if part == "pos" and {"x", "y"} <= attrs.keys():
-            return Dyn("list2")
-        if isinstance(obj, Local):
-            return self.list_part(Dyn(obj.type), part, env, pos)
-        if part in PROPERTIES.get(type(obj), {}):
-            return Dyn(PROPERTIES[type(obj)][part])
-        if part not in attrs or variadic(type(obj)) is attrs[part]:
-            raise CompileError(f"{obj.name!r} has no attribute {part!r}", pos)
-        return Dyn(_expected_type(type(obj), part))
+    def part(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
+        if isinstance(part, str):
+            if e.op == "obj":
+                obj = self.model.objects[e.args[0]]
+                if part == "pos" and "x" in obj.attrs:
+                    return _gather(POINT, [self.read(e.args[0], "x"), self.read(e.args[0], "y")])
+                if part not in obj.attrs:
+                    raise CompileError(f"a {obj.kind} has no attribute '{part}'", pos)
+                return self.read(e.args[0], part)
+            if e.type == POINT and part in ("x", "y"):
+                return _part(e, 0 if part == "x" else 1)
+            raise CompileError(f"a {e.type} has no attribute '{part}'", pos)
+        index = self.expr(part, None, scope)
+        if e.op == "obj" and index.type == STRING:
+            obj = self.model.objects[e.args[0]]
+            if not index.known:
+                raise CompileError("a member's name must be known when compiling", pos)
+            for m in obj.members:
+                if self.model.objects[m].name == index.value:
+                    return self.read(m, None)
+            raise CompileError(f"a {obj.kind} has no member '{index.value}'", pos)
+        if not fits(index.type, INT):
+            raise CompileError(f"a position is an int, got {index.type}", pos)
+        whole = _base(e.type)
+        if isinstance(whole, ListT) or whole == POINT:
+            item = REAL if whole == POINT else whole.item
+            if e.known and index.known:
+                items = e.value
+                k = index.value
+                if not -len(items) <= k < len(items):
+                    raise CompileError(f"position {k} is out of range", pos)
+                return _known(item, items[k])
+            return Expr("part", item, (e, index), e.deps | index.deps, _type_range(item))
+        if e.op == "obj":
+            obj = self.model.objects[e.args[0]]
+            if obj.members and index.known:
+                k = index.value
+                if not -len(obj.members) <= k < len(obj.members):
+                    raise CompileError(f"position {k} is out of range", pos)
+                return self.read(obj.members[k], None)
+        raise CompileError(f"a {e.type} has no items", pos)
 
-    # A part of a list of objects (an index gives one of them, known only while drawing), or an
-    # attribute of such an object, typed by the kind of shape all of them are.
-    def object_list_part(self, current: Dyn, part: str | Node, env: Env, pos: Pos) -> Value:
-        if current.type.startswith("objs"):
-            count, kind = current.type[4:].split(":")
-            if isinstance(part, str):
-                raise CompileError("a list of objects is indexed by number", pos)
-            index = self.expr(part, env)
-            if not (isinstance(index, Const) and index.type == "int"):
-                raise CompileError("an index must be an int known at compile time", part.pos)
-            i = index.value
-            assert isinstance(i, int)
-            if not -int(count) <= i < int(count):
-                raise CompileError(f"a list of {count} objects has no part {i}", pos)
-            return Dyn(f"obj:{kind}")
-        kind = current.type[4:]
-        if not isinstance(part, str):
-            raise CompileError("only lists and groups can be indexed", pos)
-        if kind in self.motifs and part in self.motifs[kind].params:
-            return Dyn(self.motifs[kind].params[part].type)
-        cls = Motif if kind in self.motifs else FORMS[kind].cls
-        attrs = attributes(cls)
-        if part == "pos" and {"x", "y"} <= attrs.keys():
-            return Dyn("list2")
-        if part in PROPERTIES.get(cls, {}):
-            return Dyn(PROPERTIES[cls][part])
-        if part not in attrs or variadic(cls) is attrs[part]:
-            raise CompileError(f"a {kind} has no attribute {part!r}", pos)
-        return Dyn(_expected_type(cls, part))
-
-    def self_access(self, cls: type[Obj], part: str | Node, pos: Pos) -> Value:
-        attrs = attributes(cls)
-        if part == "pos" and {"x", "y"} <= attrs.keys():
-            return Dyn("list2")
-        if isinstance(part, str) and part in PROPERTIES.get(cls, {}):
-            return Dyn(PROPERTIES[cls][part])
-        if not isinstance(part, str) or part not in attrs or variadic(cls) is attrs[part]:
-            raise CompileError(f"self ({cls.__name__.lower()}) has no attribute {part!r}", pos)
-        return Dyn(_expected_type(cls, part))
-
-    def index(self, obj: Obj, node: Node, env: Env) -> Value:
-        # A let's list, once its let is stored as a hidden object.
-        if isinstance(obj, Local):
-            return self.list_part(Dyn(obj.type), node, env, node.pos)
-        if not isinstance(obj, Group):
-            raise CompileError("only groups can be indexed", node.pos)
-        value = self.expr(node, env)
-        if not (isinstance(value, Const) and value.type == "int"):
-            raise CompileError("an index must be an int known at compile time", node.pos)
-        i = value.value
-        assert isinstance(i, int)
-        if not -len(obj.members) <= i < len(obj.members):
-            raise CompileError(f"index {i} is out of range for {obj.name!r}", node.pos)
-        return ObjRef(obj.members[i])
-
-    def call(self, node: Form, env: Env) -> Value:
+    def form(self, node: Form, expected: Type | None, scope: dict) -> Expr:
         head = _head(node)
-        if head == "map":
-            return self.map_form(node, env)
-        if head == "reduce":
-            return self.reduce_form(node, env)
-        # Like library functions, sum and count are hidden by an author's own of the same name.
-        if head in ("sum", "count") and head not in self.funcs:
-            return self.reduce_form(self.tally(node, env), env)
-        if head in TRANSITION_FORMS:
-            return self.transition_form(head, node, env)
-        if head in self.funcs:
-            return self.func_call(head, node, env)
-        if head in LIST_OPS:
-            return self.list_op(head, node, env)
-        if head in ARITHMETIC:
-            return self.arithmetic(head, node, env)
-        if head in COMPARISONS:
-            return self.compare(head, node, env)
-        if head == "^":
-            return self.power(node, env)
-        if head == "mod":
-            return self.modulo(node, env)
-        if head == "abs":
-            return self.absolute(node, env)
+        args = node.items[1:]
         if head == "if":
-            return self.if_(node, env)
-        if head in ("and", "or"):
-            return self.and_or(head, node, env)
-        if head in ("any", "all") and head not in self.funcs:
-            return self.any_all(head, node, env)
-        if head == "not":
-            return self.not_(node, env)
+            if len(args) != 3:
+                raise CompileError("if takes a condition and two branches", node.pos)
+            c = self.expr(args[0], BOOL, scope)
+            a, b = (self.expr(x, expected, scope) for x in args[1:])
+            if c.known:
+                return a if c.value else b
+            return Expr(
+                "if",
+                _join(a.type, b.type, node.pos),
+                (c, a, b),
+                c.deps | a.deps | b.deps,
+                _union(a.range, b.range),
+            )
         if head == "cond":
-            return self.cond(node, env)
-        if head in STDLIB:
-            return self.library(head, node, env)
-        if head == "ref":
-            return self.name(self.ref_name(node, env), env)
-        if head == "transform":
-            return self.transform(node, env)
+            return self.cond(node, expected, scope)
+        if head in ("and", "or"):
+            parts = [self.expr(x, BOOL, scope) for x in args]
+            stop = head == "or"
+            kept = []
+            for p in parts:
+                if p.known:
+                    if bool(p.value) == stop:
+                        return _known(BOOL, stop)
+                    continue
+                kept.append(p)
+            if not kept:
+                return _known(BOOL, not stop)
+            return Expr(head, BOOL, tuple(kept), frozenset().union(*(p.deps for p in kept)))
+        if head == "not":
+            (a,) = self.args(node, 1)
+            e = self.expr(a, BOOL, scope)
+            return _known(BOOL, not e.value) if e.known else Expr("not", BOOL, (e,), e.deps)
         if head == "let":
-            if len(node.items) != 3:
-                raise CompileError("let in an expression takes bindings and one value", node.pos)
-            inner = self.bindings(node, env)
-            self.lets[id(node)] = inner
-            self.keyed.append(node)
-            return self.expr(node.items[2], inner)
-        if head in FORMS or head in self.motifs or head in ("repeat", "motif"):
-            raise CompileError(f"{head} cannot be used in an expression", node.pos)
-        raise CompileError(f"unknown function {head!r}", node.pos)
+            return self.let(node, expected, scope)
+        if head == "name":
+            return self.lookup(self.built_name(node, scope), scope, node.pos)
+        if head == ".":
+            x, y = self.args(node, 2)
+            whole = self.expr(x, None, scope)
+            if isinstance(y, Name) and len(y.parts) == 1 and isinstance(y.parts[0], str):
+                return self.part(whole, y.parts[0], scope, node.pos)
+            return self.part(whole, y, scope, node.pos)
+        if head == "abs":
+            (a,) = self.args(node, 1)
+            return self.abs(node, self.expr(a, None, scope))
+        if head in ARITH:
+            return self.arith(node, head, [self.expr(x, None, scope) for x in args])
+        if head in COMPARE or head in ("=", "!="):
+            a, b = self.args(node, 2)
+            ea = self.expr(a, None, scope)
+            eb = self.typed_like(b, ea.type, scope)
+            return self.compare(node, head, ea, eb)
+        raise CompileError(f"unknown function '{head}'", node.pos)
 
-    def ref_name(self, node: Form, env: Env) -> Name:
-        if len(node.items) != 2:
-            raise CompileError("ref takes one string", node.pos)
-        arg = node.items[1]
-        value = self.expr(arg, env)
-        if not (isinstance(value, Const) and value.type == "str"):
-            raise CompileError("ref takes a string known at compile time", arg.pos)
-        assert isinstance(value.value, str)
-        try:
-            return parse_name(value.value, arg.pos)
-        except ParseError as e:
-            raise CompileError(e.msg, e.pos) from None
+    def typed_like(self, node: Node, other: Type, scope: dict) -> Expr:
+        """In (= o.fill 'red'), the literal takes the other side's type."""
+        if isinstance(node, (StrLit, ListLit)):
+            return self.expr(node, other, scope)
+        return self.expr(node, None, scope)
 
-    def value_arg(self, node: Node, env: Env) -> Const | Dyn:
-        value = self.expr(node, env)
-        if isinstance(value, (ObjRef, SelfRef)):
-            raise CompileError("expected a value, got an object", node.pos)
-        if isinstance(value, Spread):
-            raise CompileError("a group attribute gives several values here", node.pos)
-        return value
+    def args(self, node: Form, n: int) -> tuple[Node, ...]:
+        if len(node.items) - 1 != n:
+            raise CompileError(f"{_head(node)} takes {n} argument{'s' * (n != 1)}", node.pos)
+        return node.items[1:]
 
-    def args(self, node: Form, count: int, env: Env) -> list[Const | Dyn]:
-        args = node.items[1:]
-        if len(args) != count:
-            raise CompileError(f"{_head(node)} takes {count} arguments", node.pos)
-        return [self.value_arg(arg, env) for arg in args]
-
-    def compare(self, op: str, node: Form, env: Env) -> Value:
-        a, b = self.args(node, 2, env)
-        ordered = op in ("<", "<=", ">", ">=")
-        if PENDING in (a.type, b.type):
-            return Dyn("bool")
-        numeric = a.type in NUMERIC and b.type in NUMERIC
-        if ordered and not (numeric and "complex" not in (a.type, b.type)):
-            raise CompileError(f"{op} compares real numbers", node.pos)
-        colors = {a.type, b.type} <= COLORISH and {a.type, b.type} != {"str"}
-        if not ordered and not numeric and not colors and a.type != b.type:
-            raise CompileError(f"cannot compare {a.type} with {b.type}", node.pos)
-        # Compared with a color, a known string must name one.
-        if colors:
-            for value, arg in ((a, node.items[1]), (b, node.items[2])):
-                if isinstance(value, Const) and value.type == "str":
-                    _color_const(value.value, arg.pos)
-        if isinstance(a, Const) and isinstance(b, Const):
-            if colors and op in ("=", "!="):
-                return Const(same(a.value, b.value) == (op == "="), "bool")
-            return Const(COMPARISONS[op](a.value, b.value), "bool")
-        return Dyn("bool")
-
-    # The remainder with the sign of the divisor, as in mathematics and Python's %.
-    def modulo(self, node: Form, env: Env) -> Value:
-        a, b = self.args(node, 2, env)
-        if PENDING in (a.type, b.type):
-            return Dyn(PENDING)
-        if not {a.type, b.type} <= {"int", "ratio", "real"}:
-            raise CompileError("mod takes real numbers", node.pos)
-        result = NUMERIC[max(NUMERIC.index(a.type), NUMERIC.index(b.type))]
-        if not (isinstance(a, Const) and isinstance(b, Const)):
-            return Dyn(result)
-        x, y = a.value, b.value
-        assert isinstance(x, (int, Fraction, float)) and isinstance(y, (int, Fraction, float))
-        if y == 0:
-            raise CompileError("mod by zero", node.pos)
-        return Const(_convert(x % y, result), result)
-
-    # The size of a number: |x| for reals, the modulus for complex numbers.
-    def absolute(self, node: Form, env: Env) -> Value:
-        (a,) = self.args(node, 1, env)
-        if a.type == PENDING:
-            return Dyn(PENDING)
-        if a.type not in NUMERIC:
-            raise CompileError("abs takes a number", node.pos)
-        result = "real" if a.type == "complex" else a.type
-        if isinstance(a, Const):
-            assert isinstance(a.value, (int, Fraction, float, complex))
-            return Const(_convert(abs(a.value), result), result)
-        return Dyn(result)
-
-    def power(self, node: Form, env: Env) -> Value:
-        base, exp = self.args(node, 2, env)
-        if PENDING in (base.type, exp.type):
-            return Dyn(PENDING)
-        if base.type not in NUMERIC or exp.type not in NUMERIC:
-            raise CompileError("^ takes numbers", node.pos)
-        if "complex" in (base.type, exp.type):
-            result = "complex"
-        elif exp.type == "int":
-            known = isinstance(exp, Const) and isinstance(exp.value, int)
-            negative = not (known and exp.value >= 0)
-            result = "ratio" if base.type == "int" and negative else base.type
-        else:
-            result = "real"
-        if not (isinstance(base, Const) and isinstance(exp, Const)):
-            return Dyn(result)
-        try:
-            value = power(base.value, exp.value)
-        except ZeroDivisionError:
-            raise CompileError("division by zero", node.pos) from None
-        if result != "complex" and isinstance(value, complex):
-            raise CompileError("the result is not a real number", node.pos)
-        return Const(_convert(value, result), result)
-
-    def if_(self, node: Form, env: Env) -> Value:
-        if len(node.items) != 4:
-            raise CompileError("if takes 3 arguments", node.pos)
-        test = self.value_arg(node.items[1], env)
-        if test.type not in ("bool", PENDING):
-            raise CompileError("the condition of if must be a bool", node.items[1].pos)
-        branches: list[Const | Dyn] = []
-        for i, branch in enumerate(node.items[2:]):
-            taken = not isinstance(test, Const) or bool(test.value) == (i == 0)
-            self.speculative += 0 if taken else 1
-            try:
-                branches.append(self.value_arg(branch, env))
-            finally:
-                self.speculative -= 0 if taken else 1
-        then, other = branches
-        result = _unify(then.type, other.type, node.pos)
-        if isinstance(test, Const):
-            return _retype(then if test.value else other, result)
-        return Dyn(result)
-
-    # (and a b ...) and (or a b ...) stop at the first argument that decides the result, so the
-    # arguments after it are not evaluated (they are checked, but may not fold without error).
-    def and_or(self, head: str, node: Form, env: Env) -> Value:
-        args = node.items[1:]
-        if len(args) < 2:
-            raise CompileError(f"{head} takes two or more conditions", node.pos)
-        decisive = head == "or"
-        decided = False
-        dynamic = False
-        for arg in args:
-            self.speculative += 1 if decided else 0
-            try:
-                value = self.value_arg(arg, env)
-            finally:
-                self.speculative -= 1 if decided else 0
-            if value.type not in ("bool", PENDING):
-                raise CompileError(f"the arguments of {head} must be bools", arg.pos)
-            if decided:
-                continue
-            if isinstance(value, Const) and bool(value.value) == decisive:
-                decided = True
-            elif not isinstance(value, Const):
-                dynamic = True
-        if decided and not dynamic:
-            return Const(decisive, "bool")
-        return Dyn("bool") if dynamic else Const(not decisive, "bool")
-
-    # (any list) and (all list): or and and over a list of bools. A list written in place (a
-    # literal or a map) is stored as or / and, so it stops early too.
-    def any_all(self, head: str, node: Form, env: Env) -> Value:
-        if len(node.items) != 2:
-            raise CompileError(f"{head} takes one list", node.pos)
-        value = self.expr(node.items[1], env)
-        if not isinstance(value, (Const, Dyn)) or _bools_len(value.type) is None:
-            raise CompileError(f"{head} takes a list of bools", node.items[1].pos)
-        if isinstance(value, Const):
-            assert isinstance(value.value, tuple)
-            return Const((any if head == "any" else all)(value.value), "bool")
-        return Dyn("bool")
-
-    def any_all_node(self, node: Form, env: Env) -> Node:
-        arg = self.resolve_refs(node.items[1], env)
-        if not isinstance(arg, ListLit):
-            return Form((node.items[0], arg), node.pos)
-        if len(arg.items) == 1:
-            return arg.items[0]
-        op = "or" if _head(node) == "any" else "and"
-        return Form((Name((op,), node.pos), *arg.items), node.pos)
-
-    def not_(self, node: Form, env: Env) -> Value:
-        if len(node.items) != 2:
-            raise CompileError("not takes one condition", node.pos)
-        value = self.value_arg(node.items[1], env)
-        if value.type not in ("bool", PENDING):
-            raise CompileError("the argument of not must be a bool", node.items[1].pos)
-        return Const(not value.value, "bool") if isinstance(value, Const) else Dyn("bool")
-
-    def cond(self, node: Form, env: Env) -> Value:
+    def cond(self, node: Form, expected: Type | None, scope: dict) -> Expr:
         clauses = node.items[1:]
-        result: str | None = None
-        chosen: Const | Dyn | None = None
-        dynamic = False
-        for i, clause in enumerate(clauses):
-            if not (isinstance(clause, Form) and len(clause.items) == 2):
-                raise CompileError("a cond clause is (condition value)", clause.pos)
-            test_node, value_node = clause.items
-            last = i == len(clauses) - 1
-            is_else = isinstance(test_node, Name) and test_node.parts == ("else",)
-            if is_else != last:
-                raise CompileError("cond must end with exactly one else clause", clause.pos)
-            settled = chosen is not None and not dynamic
-            self.speculative += settled
-            try:
-                test = Const(True, "bool") if is_else else self.value_arg(test_node, env)
-            finally:
-                self.speculative -= settled
-            if test.type not in ("bool", PENDING):
-                raise CompileError("a cond condition must be a bool", test_node.pos)
-            skipped = settled or (not dynamic and isinstance(test, Const) and not test.value)
-            self.speculative += skipped
-            try:
-                value = self.value_arg(value_node, env)
-            finally:
-                self.speculative -= skipped
-            result = value.type if result is None else _unify(result, value.type, clause.pos)
-            if chosen is None and not dynamic:
-                if isinstance(test, Dyn):
-                    dynamic = True
-                elif test.value:
-                    chosen = value
-        if result is None:
-            raise CompileError("cond needs an else clause", node.pos)
-        return _retype(chosen, result) if chosen is not None else Dyn(result)
-
-    def library(self, name: str, node: Form, env: Env) -> Value:
-        fn = STDLIB[name]
-        kinds: list[str] = []
-        values: list[Value] = []
-        # A group attribute spreads into the call, one argument per member, as it does while
-        # drawing.
-        given: list[tuple[Value, Node]] = []
-        for arg in node.items[1:]:
-            value = self.expr(arg, env)
-            if isinstance(value, Spread):
-                given.extend((Dyn(t), arg) for t in value.types)
-            else:
-                given.append((value, arg))
-        args = [arg for _, arg in given]
-        for value, _ in given:
-            if isinstance(value, SelfRef):
-                point = {"x", "y"} <= attributes(value.cls).keys()
-            elif isinstance(value, ObjRef):
-                point = {"x", "y"} <= attributes(type(value.obj)).keys()
-            elif isinstance(value, Dyn) and value.type.startswith("obj:"):
-                point = True
-            else:
-                point = None
-            if isinstance(value, (Const, Dyn)) and _list_len(value.type) is not None:
-                point = True
-            if isinstance(value, (Const, Dyn)) and value.type in COLORISH:
-                kinds.append("color")
-            elif (
-                point is None and isinstance(value, (Const, Dyn)) and _widens_to(value.type, "real")
-            ):
-                kinds.append("real")
-            elif point:
-                kinds.append("point")
-            else:
-                kinds.append("invalid")
-            values.append(value)
-        sig = fn.find(kinds)
-        if sig is None:
-            raise CompileError(f"no form of {name} takes these arguments", node.pos)
-        # A known string given as a color must name one, wherever the call is written.
-        for value, kind, arg in zip(values, kinds, args, strict=True):
-            if kind == "color" and isinstance(value, Const) and value.type == "str":
-                _color_const(value.value, arg.pos)
-        sizes = {
-            _list_len(v.type)
-            if isinstance(v, (Const, Dyn)) and not v.type.startswith("obj:")
-            else 2
-            for v, kind in zip(values, kinds, strict=True)
-            if kind == "point"
-        }
-        if len(sizes) > 1:
-            raise CompileError(f"the points given to {name} have different sizes", node.pos)
-        result = f"list{sizes.pop()}" if sig.result == "point" else sig.result
-        consts = [v.value for v in values if isinstance(v, Const)]
-        if fn.pure and len(consts) == len(values):
-            try:
-                return Const(stdlib_call(fn, sig, consts), result)
-            except (ValueError, ZeroDivisionError) as e:
-                raise CompileError(str(e) or "invalid argument", node.pos) from None
-        return Dyn(result)
-
-    def transform(self, node: Form, env: Env) -> Value:
-        values = [self.value_arg(arg, env) for arg in node.items[1:]]
-        for arg, value in zip(node.items[1:], values, strict=True):
-            if value.type != "transform":
-                raise CompileError(f"expected a transform, got {value.type}", arg.pos)
-        matrices = [v.value for v in values if isinstance(v, Const) and isinstance(v.value, Matrix)]
-        if len(matrices) == len(values):
-            return Const(compose(*matrices), "transform")
-        return Dyn("transform")
-
-    def arithmetic(self, op: str, node: Form, env: Env) -> Value:
-        types: list[str] = []
-        consts: list[Const] = []
-        dynamic = False
-        for arg in node.items[1:]:
-            value = self.expr(arg, env)
-            if isinstance(value, (ObjRef, SelfRef)):
-                raise CompileError("expected a number, got an object", arg.pos)
-            arg_types = value.types if isinstance(value, Spread) else (value.type,)
-            for t in arg_types:
-                if t not in NUMERIC and _list_len(t) is None and t != PENDING:
-                    raise CompileError(f"expected a number, got {t}", arg.pos)
-            types.extend(arg_types)
-            if isinstance(value, Const):
-                consts.append(value)
-            else:
-                dynamic = True
-        if op in "-/" and not types:
-            raise CompileError(f"{op} needs at least one argument", node.pos)
-        if op == "/" and len(types) < 2:
-            raise CompileError("/ needs at least two arguments", node.pos)
-        if any(_list_len(t) is not None for t in types):
-            return self.list_arithmetic(
-                op, node, [t for t in types if t != PENDING], consts, dynamic
+        if not clauses or _head(clauses[-1]) != "else":
+            raise CompileError("cond ends with an (else …) clause", node.pos)
+        result = None
+        for clause in reversed(clauses):
+            if not isinstance(clause, Form) or len(clause.items) != 2:
+                raise CompileError("a cond clause is (test value)", clause.pos)
+            v = self.expr(clause.items[1], expected, scope)
+            if _head(clause) == "else" and result is None:
+                result = v
+                continue
+            c = self.expr(clause.items[0], BOOL, scope)
+            if c.known:
+                result = v if c.value else result
+                continue
+            assert result is not None
+            result = Expr(
+                "if",
+                _join(v.type, result.type, clause.pos),
+                (c, v, result),
+                c.deps | v.deps | result.deps,
+                _union(v.range, result.range),
             )
-        if types and all(t == PENDING for t in types):
-            return Dyn(PENDING)
-        rank = max((NUMERIC.index(t) for t in types if t != PENDING), default=0)
-        if op == "/":
-            rank = max(rank, NUMERIC.index("ratio"))
-        result = NUMERIC[rank]
-        if dynamic:
-            return Dyn(result)
-        values = [_convert(c.value, result) for c in consts]
-        try:
-            return Const(_fold(op, values), result)
-        except ZeroDivisionError:
-            raise CompileError("division by zero", node.pos) from None
+        assert result is not None
+        return result
 
-    def list_arithmetic(
-        self, op: str, node: Form, types: list[str], consts: list[Const], dynamic: bool
-    ) -> Value:
-        lists = [i for i, t in enumerate(types) if _list_len(t) is not None]
-        if "complex" in types:
-            raise CompileError("lists hold only real numbers", node.pos)
-        if op in "+-" and len(set(types)) != 1:
-            raise CompileError(f"{op} takes lists of the same size, or only numbers", node.pos)
-        if op == "*" and len(lists) != 1:
-            raise CompileError("* scales one list by numbers", node.pos)
-        if op == "/" and lists != [0]:
-            raise CompileError("/ divides one list by numbers", node.pos)
-        result = types[lists[0]]
-        if dynamic:
-            return Dyn(result)
-        try:
-            return Const(_fold(op, [c.value for c in consts]), result)
-        except ZeroDivisionError:
-            raise CompileError("division by zero", node.pos) from None
+    def let(self, node: Form, expected: Type | None, scope: dict) -> Expr:
+        if len(node.items) != 3 or not isinstance(node.items[1], Form):
+            raise CompileError("let is (let ((name value) …) body)", node.pos)
+        inner = dict(scope)
+        for binding in node.items[1].items:
+            if not isinstance(binding, Form) or len(binding.items) != 2:
+                raise CompileError("a let binding is (name value)", binding.pos)
+            name = binding.items[0]
+            if not isinstance(name, Name) or len(name.parts) != 1:
+                raise CompileError("expected a name", binding.pos)
+            inner[name.parts[0]] = self.expr(binding.items[1], None, inner)
+        return self.expr(node.items[2], expected, inner)
 
-
-# What is known of a collection in a function body when the function is defined: its size (None
-# when it depends on a group parameter, so only each call knows it), and whether its items are
-# objects (members of a group) rather than values.
-Shape = tuple[int | None, bool]
-WALKS = ("walk-map", "walk-reduce", "walk-sort", "walk-any", "walk-all")
-
-
-def _shape_of_type(t: str) -> "Shape | None":
-    n = _list_len(t) if _list_len(t) is not None else _bools_len(t)
-    return None if n is None else (n, False)
-
-
-# Loops in a function body (map, reduce, sum, count, sort by key, any and all over a map). Those
-# whose size is known when the function is defined unroll as in the scene; the rest, over a group
-# parameter or something computed from one, become walk forms that the runtimes run while
-# drawing. ref is resolved here too, since it needs no call.
-class _FuncLoops:
-    def __init__(self, hidden: set[str]):
-        # Library loop forms an author's function of the same name replaces.
-        self.hidden = hidden
-
-    def walk(self, node: Node, shapes: dict[str, Shape]) -> Node:
-        if isinstance(node, ListLit):
-            return ListLit(tuple(self.walk(i, shapes) for i in node.items), node.pos)
-        if not isinstance(node, Form):
-            return node
-        head = _head(node)
-        items = node.items
-        if head == "ref" and len(items) == 2 and isinstance(items[1], StrLit):
-            try:
-                return parse_name(items[1].value, items[1].pos)
-            except ParseError as e:
-                raise CompileError(e.msg, e.pos) from None
-        if head == "let" and len(items) == 3 and isinstance(items[1], Form):
-            inner = dict(shapes)
-            pairs = []
-            for pair in items[1].items:
-                assert isinstance(pair, Form)
-                key, value = pair.items
-                value = self.walk(value, inner)
-                pairs.append(Form((key, value), pair.pos))
-                if isinstance(key, Name) and isinstance(key.parts[0], str):
-                    found = self.shape(value, inner)
-                    if found is None:
-                        inner.pop(key.parts[0], None)
-                    else:
-                        inner[key.parts[0]] = found
-            body = self.walk(items[2], inner)
-            return Form((items[0], Form(tuple(pairs), items[1].pos), body), node.pos)
-        if head == "map" and len(items) == 4:
-            return self.map(node, shapes)
-        if head == "reduce" and len(items) == 5:
-            return self.reduce(node, shapes)
-        if head in ("sum", "count") and head not in self.hidden and len(items) == 4:
-            return self.reduce(_tally_form(node), shapes)
-        if head in ("any", "all") and head not in self.hidden and len(items) == 2:
-            return self.any_all(node, shapes)
-        if head in LIST_OPS and head not in self.hidden and len(items) == 4:
-            return self.sort_by_key(node, shapes)
-        if head == "sort" and head not in self.hidden and len(items) == 2:
-            return Form((Name(("sort-asc",), node.pos), self.walk(items[1], shapes)), node.pos)
-        return Form(tuple(self.walk(i, shapes) for i in items), node.pos)
-
-    # The size and kind of items of a collection, if it is one.
-    def shape(self, node: Node, shapes: dict[str, Shape]) -> Shape | None:
-        if isinstance(node, ListLit):
-            return (len(node.items), False)
-        if isinstance(node, Name):
-            return shapes.get(node.parts[0]) if len(node.parts) == 1 else None
-        head = _head(node)
-        if head in ("sort-asc", "sort-desc", "reverse") and isinstance(node, Form):
-            return self.shape(node.items[1], shapes) if len(node.items) == 2 else None
-        if head == "walk-map":
-            return (None, False)
-        if head == "walk-sort":
-            return (None, True)
-        return None
-
-    # Items of a collection of known size, as expressions: its literal items, or name[k]. A
-    # collection written in place was already named by a let (see _name_collections).
-    def items(self, collection: Node, size: int) -> list[Node]:
-        if isinstance(collection, ListLit):
-            return list(collection.items)
-        assert isinstance(collection, Name)
-        pos = collection.pos
-        return [Name((*collection.parts, IntLit(k, pos)), pos) for k in range(size)]
-
-    def unknown(self, op: str, node: Form, collection: Node, shape: Shape | None, *rest) -> Form:
-        kind = "objects" if shape is None or shape[1] else "values"
-        pos = node.pos
-        return Form((Name((op,), pos), StrLit(kind, pos), collection, *rest), pos)
-
-    def map(self, node: Form, shapes: dict[str, Shape]) -> Node:
-        _, collection, var, body = node.items
-        collection = self.walk(collection, shapes)
-        shape = self.shape(collection, shapes)
-        name = _loop_var(var, "map")
-        if shape is not None and shape[0] is not None:
-            size = shape[0]
-
-            def build(c: Node) -> Node:
-                bodies = [self.walk(_rename(body, name, i), shapes) for i in self.items(c, size)]
-                return ListLit(tuple(bodies), node.pos)
-
-            return build(collection)
-        inner = {k: v for k, v in shapes.items() if k != name}
-        return self.unknown("walk-map", node, collection, shape, var, self.walk(body, inner))
-
-    def reduce(self, node: Form, shapes: dict[str, Shape]) -> Node:
-        _, collection, var, pair, body = node.items
-        if not (
-            isinstance(pair, Form) and len(pair.items) == 2 and isinstance(pair.items[0], Name)
-        ):
+    def arith(self, node: Form, op: str, args: list[Expr]) -> Expr:
+        if not args or (op in ("/", "^", "mod") and len(args) != 2):
             raise CompileError(
-                "the running value is written (name start), like (total 0)", pair.pos
+                f"{op} takes {'two' if op in ('/', '^', 'mod') else 'some'} numbers", node.pos
             )
-        running, start = pair.items
-        assert isinstance(running, Name) and isinstance(running.parts[0], str)
-        collection = self.walk(collection, shapes)
-        shape = self.shape(collection, shapes)
-        name = _loop_var(var, str(_head(node)))
-        start = self.walk(start, shapes)
-        if shape is not None and shape[0] is not None:
-            size = shape[0]
+        for a in args:
+            if a.type not in NUMBERS and _base(a.type) not in NUMBERS:
+                raise CompileError(f"{op} takes numbers, got {a.type}", node.pos)
+        t = max((_base(a.type) for a in args), key=NUMBERS.index)
+        if op == "/" and t == INT:
+            t = RATIO
+        if all(a.known for a in args):
+            try:
+                v = _fold(op, [a.value for a in args])
+            except ZeroDivisionError:
+                raise CompileError("division by zero", node.pos) from None
+            if t == RATIO and isinstance(v, Fraction) and v.denominator == 1:
+                v = Fraction(v)
+            return _known(t, v)
+        deps = frozenset().union(*(a.deps for a in args))
+        return Expr(op, t, tuple(args), deps, _range_of(op, [a.range for a in args]))
 
-            def build(c: Node) -> Node:
-                pos = node.pos
-                result: Node = running
-                bodies = [_rename(body, name, i) for i in self.items(c, size)]
-                for step in [start, *bodies][::-1]:
-                    result = Form(
-                        (Name(("let",), pos), Form((Form((running, step), pos),), pos), result), pos
-                    )
-                return self.walk(result, shapes)
+    def abs(self, node: Form, a: Expr) -> Expr:
+        base = _base(a.type)
+        if base not in NUMBERS:
+            raise CompileError(f"abs takes a number, got {a.type}", node.pos)
+        t = REAL if base == COMPLEX else base
+        if a.known:
+            return _known(t, abs(a.value))
+        r = a.range
+        if r is not None:
+            r = (
+                (0.0, max(-r[0], r[1]))
+                if r[0] <= 0 <= r[1]
+                else (min(map(abs, r)), max(map(abs, r)))
+            )
+        return Expr("abs", t, (a,), a.deps, r if r is not None else (0.0, LIMIT))
 
-            return build(collection)
-        bound = {name, running.parts[0]}
-        inner = {k: v for k, v in shapes.items() if k not in bound}
-        rest = (var, running, start, self.walk(body, inner))
-        return self.unknown("walk-reduce", node, collection, shape, *rest)
-
-    def any_all(self, node: Form, shapes: dict[str, Shape]) -> Node:
-        head = str(_head(node))
-        arg = node.items[1]
-        op = "or" if head == "any" else "and"
-        if _head(arg) == "map" and isinstance(arg, Form) and len(arg.items) == 4:
-            _, collection, var, cond = arg.items
-            walked = self.walk(collection, shapes)
-            shape = self.shape(walked, shapes)
-            if shape is None or shape[0] is None:
-                name = _loop_var(var, "map")
-                inner = {k: v for k, v in shapes.items() if k != name}
-                return self.unknown(
-                    f"walk-{head}", node, walked, shape, var, self.walk(cond, inner)
-                )
-        arg = self.walk(arg, shapes)
-        if isinstance(arg, ListLit):
-            if len(arg.items) == 1:
-                return arg.items[0]
-            return Form((Name((op,), node.pos), *arg.items), node.pos)
-        return Form((node.items[0], arg), node.pos)
-
-    # Sorting members by a key is always a walk: in a function body the group is a parameter.
-    def sort_by_key(self, node: Form, shapes: dict[str, Shape]) -> Node:
-        head, collection, var, key = node.items
-        collection = self.walk(collection, shapes)
-        shape = self.shape(collection, shapes)
-        name = _loop_var(var, "sort")
-        inner = {k: v for k, v in shapes.items() if k != name}
-        direction = StrLit("desc" if _head(node) == "sort-desc" else "asc", node.pos)
-        pos = node.pos
-        walk = self.unknown("walk-sort", node, collection, shape, var, self.walk(key, inner))
-        return Form((walk.items[0], walk.items[1], direction, *walk.items[2:]), pos)
+    def compare(self, node: Form, op: str, a: Expr, b: Expr) -> Expr:
+        if op in COMPARE:
+            for e in (a, b):
+                if _base(e.type) not in NUMBERS[:3]:
+                    raise CompileError(f"{op} compares numbers, got {e.type}", node.pos)
+        elif not (fits(a.type, b.type) or fits(b.type, a.type)):
+            raise CompileError(
+                f"{op} compares two of one type, got {a.type} and {b.type}", node.pos
+            )
+        if a.known and b.known:
+            return _known(BOOL, _fold(op, [a.value, b.value]))
+        return Expr(op, BOOL, (a, b), a.deps | b.deps)
 
 
-# The names a walk form binds: its item's name, and for reduce the running value's.
-def _walk_names(node: Form) -> list[Name]:
-    head = _head(node)
-    at = {"walk-sort": [4], "walk-reduce": [3, 4]}.get(str(head), [3])
-    return [n for i in at if isinstance(n := node.items[i], Name)]
+ARITH = {"+", "-", "*", "/", "^", "mod"}
 
 
-# A color computed while drawing: each string it can result in (an if's or a cond's branch, a
-# let's body) is checked now and written as #rrggbbaa, as a color given directly is.
-def _color_results(node: Node, none: bool) -> Node:
-    if isinstance(node, StrLit):
-        return StrLit(_color_const(node.value, node.pos, none), node.pos)
-    head = _head(node)
-    if not isinstance(node, Form):
-        return node
-    if head == "if" and len(node.items) == 4:
-        test, then, other = node.items[1:]
-        return Form(
-            (node.items[0], test, _color_results(then, none), _color_results(other, none)), node.pos
-        )
-    if head == "cond":
-        clauses = []
-        for clause in node.items[1:]:
-            if isinstance(clause, Form) and len(clause.items) == 2:
-                test, value = clause.items
-                clause = Form((test, _color_results(value, none)), clause.pos)
-            clauses.append(clause)
-        return Form((node.items[0], *clauses), node.pos)
-    if head == "let" and len(node.items) == 3:
-        return Form((*node.items[:2], _color_results(node.items[2], none)), node.pos)
-    return node
-
-
-# A transition that changes nothing may stand where an animation is expected: a wait, or an
-# in-order made only of waits.
-def _only_waits(t: Any) -> bool:
-    if isinstance(t, Wait):
-        return True
-    return isinstance(t, Sequence) and all(_only_waits(p) for p in t.parts)
-
-
-def _as_steps(t: Any) -> "WaitStep | InOrder":
-    if isinstance(t, Wait):
-        return WaitStep(t.duration)
-    assert isinstance(t, Sequence)
-    return InOrder(parts=tuple(_as_steps(p) for p in t.parts))
-
-
-def _loop_var(var: Node, form: str) -> str:
-    if not (isinstance(var, Name) and len(var.parts) == 1 and isinstance(var.parts[0], str)):
-        raise CompileError(f"the name after a {form}'s collection must be a plain name", var.pos)
-    return var.parts[0]
-
-
-# (sum c v body) as (reduce c v (running 0) (+ running body)), and count with an if; the running
-# value's name has a space, which no author's name can have.
-def _tally_form(node: Form) -> Form:
-    head, collection, var, body = node.items
-    pos = node.pos
-    running = Name(("running total",), pos)
-
-    def form(*items: Node) -> Form:
-        return Form(items, pos)
-
-    step = (
-        form(Name(("if",), pos), body, form(Name(("+",), pos), running, IntLit(1, pos)), running)
-        if _head(node) == "count"
-        else form(Name(("+",), pos), running, body)
+def _known(t: Type, value) -> Expr:
+    r = (
+        (float(value), float(value))
+        if isinstance(value, (int, float, Fraction)) and not isinstance(value, bool)
+        else None
     )
-    return form(Name(("reduce",), pos), collection, var, form(running, IntLit(0, pos)), step)
+    return Expr("lit", t, (value,), range=r, known=True, value=value)
 
 
-# A drag's target that is not the node's own position must be something the node's position
-# depends on, or dragging would move nothing. Checked once the whole model is known.
-def _check_drag_targets(model: Model, positions: dict[int, Pos]):
-    parent: dict[int, Obj] = {}
-    stack: list[Obj] = list(model)
-    while stack:
-        obj = stack.pop()
-        for member in getattr(obj, "members", None) or []:
-            parent[id(member)] = obj
-            stack.append(member)
-
-    # The motif whose names obj's expressions read: a hidden let belongs to where it was written.
-    def scope(obj: Obj) -> Motif | None:
-        if isinstance(obj, Local):
-            if obj.owner is None:
-                return None
-            if obj.inside and isinstance(obj.owner, Motif):
-                return obj.owner
-            return scope(obj.owner)
-        up = parent.get(id(obj))
-        while up is not None and not isinstance(up, Motif):
-            up = parent.get(id(up))
-        return up
-
-    # The (object, attribute) pairs a value depends on, through every name its expression reads.
-    def reads(obj: Obj, attr: str, seen: set[tuple[int, str]]) -> None:
-        if (id(obj), attr) in seen:
-            return
-        seen.add((id(obj), attr))
-        if attr == "pos":
-            reads(obj, "x", seen)
-            reads(obj, "y", seen)
-            return
-        if isinstance(obj, Motif) and attr in obj.params:
-            value = obj.params[attr]
-            where = scope(obj)
-        else:
-            value = getattr(obj, attr, None)
-            where = scope(obj)
-        if not isinstance(value, Bound):
-            return
-        for name in _names_in(value.expr):
-            for found, part in _resolve_read(name, obj, where, model):
-                reads(found, part, seen)
-
-    for drag in [o for o in model if isinstance(o, Drag)]:
-        node, target = drag.node, drag.target_obj
-        assert node is not None and target is not None
-        if target is node and drag.target in ("x", "y", "pos"):
-            continue
-        seen: set[tuple[int, str]] = set()
-        chain: Obj | None = node
-        while chain is not None:
-            for attr in ("x", "y", "transform"):
-                reads(chain, attr, seen)
-            chain = parent.get(id(chain))
-        wanted = {(id(target), drag.target)}
-        if drag.target == "pos":
-            wanted = {(id(target), "x"), (id(target), "y")}
-        if not wanted & seen:
-            what = target.name if drag.target == "value" else f"{target.name}.{drag.target}"
-            raise CompileError(
-                f"{node.name} does not move when {what} changes,"
-                f" so dragging it cannot write {what}",
-                positions.get(id(drag), Pos(1, 1)),
-            )
+def _gather(t: Type, items: list[Expr]) -> Expr:
+    if all(i.known for i in items):
+        v = [i.value for i in items]
+        return _known(t, tuple(v) if t == POINT else v)
+    return Expr("list", t, tuple(items), frozenset().union(*(i.deps for i in items)))
 
 
-def _names_in(node: Node) -> list[Name]:
-    if isinstance(node, Name):
-        return [node, *(n for p in node.parts if not isinstance(p, str) for n in _names_in(p))]
-    if isinstance(node, (Form, ListLit)):
-        return [n for item in node.items for n in _names_in(item)]
-    if isinstance(node, InterpStrLit):
-        return [
-            n
-            for p in node.parts
-            if not isinstance(p, str)
-            for n in _names_in(p.name if isinstance(p, Field) else p)
+def _part(e: Expr, k: int) -> Expr:
+    if e.known:
+        return _known(REAL, e.value[k])
+    if e.op == "list":
+        return e.args[k]
+    return Expr("part", REAL, (e, _known(INT, k)), e.deps, UNBOUNDED)
+
+
+def _base(t: Type) -> Type:
+    return t.base if isinstance(t, Refine) else t
+
+
+def _is_const(t: Type) -> bool:
+    return isinstance(t, Refine) and ("const",) in t.constraints
+
+
+def _type_range(t: Type) -> Range:
+    if isinstance(t, Refine) and t.base in NUMBERS[:3]:
+        lo, hi = UNBOUNDED
+        for c in t.constraints:
+            if c[0] in (">=", ">"):
+                lo = max(lo, float(c[1]))
+            elif c[0] in ("<=", "<"):
+                hi = min(hi, float(c[1]))
+        return (lo, hi)
+    if t in NUMBERS[:3]:
+        return UNBOUNDED
+    return None
+
+
+def _join(a: Type, b: Type, pos: Pos) -> Type:
+    if fits(a, b):
+        return b
+    if fits(b, a):
+        return a
+    raise CompileError(f"the branches give {a} and {b}", pos)
+
+
+def _union(a: Range, b: Range) -> Range:
+    if a is None or b is None:
+        return None
+    return (min(a[0], b[0]), max(a[1], b[1]))
+
+
+def _range_of(op: str, ranges: list[Range]) -> Range:
+    if any(r is None for r in ranges):
+        return None
+    if op == "+":
+        return (sum(r[0] for r in ranges), sum(r[1] for r in ranges))
+    if op == "-":
+        if len(ranges) == 1:
+            return (-ranges[0][1], -ranges[0][0])
+        lo, hi = ranges[0]
+        for r in ranges[1:]:
+            lo, hi = lo - r[1], hi - r[0]
+        return (lo, hi)
+    if op == "*":
+        lo, hi = ranges[0]
+        for r in ranges[1:]:
+            ends = [lo * r[0], lo * r[1], hi * r[0], hi * r[1]]
+            ends = [0.0 if math.isnan(x) else x for x in ends]
+            lo, hi = min(ends), max(ends)
+        return (lo, hi)
+    if op == "/":
+        a, b = ranges
+        if b[0] <= 0 <= b[1]:
+            return UNBOUNDED
+        ends = [a[0] / b[0], a[0] / b[1], a[1] / b[0], a[1] / b[1]]
+        return (min(ends), max(ends))
+    return UNBOUNDED
+
+
+def _range_within(r: Range, c) -> bool:
+    if r is None:
+        return False
+    lo, hi = r
+    bound = float(c[1])
+    return {">=": lo >= bound, ">": lo > bound, "<=": hi <= bound, "<": hi < bound}[c[0]]
+
+
+def _satisfies(value, c) -> bool:
+    kind = c[0]
+    if kind in COMPARE:
+        return {">=": value >= c[1], ">": value > c[1], "<=": value <= c[1], "<": value < c[1]}[
+            kind
         ]
-    return []
+    if kind == "one-of":
+        return value in c[1]
+    if kind == "length":
+        return len(value) == c[1]
+    return True
 
 
-# What a name read in obj's expression refers to: (object, attribute) pairs, with a group's
-# attribute standing for each member's.
-def _resolve_read(name: Name, obj: Obj, where: Motif | None, model: Model) -> list[tuple[Obj, str]]:
-    first, *rest = name.parts
-    if not isinstance(first, str):
-        return []
-    if first == "self":
-        # In a hidden let, self is the object the let was written in.
-        found: Obj | None = obj.owner if isinstance(obj, Local) else obj
-    elif where is not None and first in where.params:
-        return [(where, first)]
-    elif where is not None and first in local_names(where):
-        found = local_names(where)[first]
-    elif first in model:
-        found = model[first]
-    else:
-        return []
-    for part in rest:
-        # A value's parts (x of a point, [k] of a list) are parts of its one value.
-        if isinstance(found, (Real, Local, Color, Bool, Toggle)):
-            return [(found, "value")]
-        if isinstance(part, IntLit) and isinstance(found, Group):
-            found = found.members[part.value]
-            continue
-        if not isinstance(part, str):
-            return [(found, "value")] if found is not None else []
-        if isinstance(found, Motif) and part in found.params:
-            return [(found, part)]
-        if isinstance(found, Motif) and part in local_names(found):
-            found = local_names(found)[part]
-            continue
-        if isinstance(found, Group) and part not in attributes(Group):
-            return [(m, part) for m in found.members]
-        return [(found, part)] if found is not None else []
-    return [(found, "value")] if found is not None else []
+def _show(c) -> str:
+    return "(" + " ".join(str(p) for p in c) + ")"
 
 
-# The heads the standard library already uses; a user function with one of these names gets its
-# own key in the model.
-LIBRARY_HEADS = set(STDLIB) | OPERATOR_HEADS
+def _value_str(v) -> str:
+    return str(v)
 
 
-# A function body as the model stores it: consts written in, and calls to user functions named
-# by their key. Names bound by parameters or lets hide consts and functions of the same name.
-def _store_body(node: Node, consts: dict, keys: dict[str, str], bound: set[str]) -> Node:
-    if isinstance(node, Name):
-        first = node.parts[0]
-        value = consts.get(first) if isinstance(first, str) and first not in bound else None
-        if value is None:
-            return node
-        if len(node.parts) == 1:
-            return _literal(value, node.pos)
-        return RealLit(_take(value.value, node.parts[1:]), node.pos)
-    if isinstance(node, Form) and _head(node) == "let" and len(node.items) == 3:
-        pairs, inner = [], set(bound)
-        assert isinstance(node.items[1], Form)
-        for pair in node.items[1].items:
-            assert isinstance(pair, Form)
-            key, expr = pair.items
-            pairs.append(Form((key, _store_body(expr, consts, keys, inner)), pair.pos))
-            if isinstance(key, Name) and isinstance(key.parts[0], str):
-                inner.add(key.parts[0])
-        body = _store_body(node.items[2], consts, keys, inner)
-        return Form((node.items[0], Form(tuple(pairs), node.items[1].pos), body), node.pos)
-    if isinstance(node, Form) and _head(node) in WALKS:
-        # Each walk binds its item's name (and reduce its running value) inside its body.
-        names = _walk_names(node)
-        inner = bound | {n.parts[0] for n in names if isinstance(n.parts[0], str)}
-        return Form(
-            tuple(
-                item
-                if item in names
-                else _store_body(item, consts, keys, inner if i > 2 else bound)
-                for i, item in enumerate(node.items)
-            ),
-            node.pos,
-        )
-    if isinstance(node, Form):
-        items = [_store_body(item, consts, keys, bound) for item in node.items]
-        head = _head(node)
-        if head in keys and head not in bound:
-            items[0] = Name((keys[head],), node.items[0].pos)
-        return Form(tuple(items), node.pos)
-    if isinstance(node, ListLit):
-        return ListLit(tuple(_store_body(i, consts, keys, bound) for i in node.items), node.pos)
-    return node
+# What a format spec is tried on, to check it fits the type.
+_SAMPLES = {INT: 1, RATIO: Decimal("1.5"), REAL: Decimal("1.5"), STRING: "a"}
 
 
-# Loop variables and known parameters do not exist after compiling, so bound expressions get
-# their values instead.
-def _substitute(node: Node, env: dict, lets: dict[int, dict | Node]) -> Node:
-    if isinstance(node, Form) and id(node) in lets:
-        entry = lets[id(node)]
-        if not isinstance(entry, dict):
-            return entry
-        return _substitute(node.items[2], env | entry, lets)
-    if isinstance(node, Name):
-        first = node.parts[0]
-        local = env.get(first) if isinstance(first, str) and len(node.parts) == 1 else None
-        if isinstance(local, Const):
-            return _literal(local, node.pos)
-        if isinstance(local, LetRef):
-            return Name((local.hidden,), node.pos)
-        whole = env.get(first) if isinstance(first, str) and len(node.parts) > 1 else None
-        if isinstance(whole, (Const, LetRef)):
-            rest = tuple(
-                p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts[1:]
-            )
-            if isinstance(whole, LetRef):
-                return Name((whole.hidden, *rest), node.pos)
-            return RealLit(_take(whole.value, rest), node.pos)
-        if isinstance(local, int):
-            return IntLit(local, node.pos)
-        parts = tuple(p if isinstance(p, str) else _substitute(p, env, lets) for p in node.parts)
-        return Name(parts, node.pos)
-    if isinstance(node, Form):
-        return Form(tuple(_substitute(item, env, lets) for item in node.items), node.pos)
-    if isinstance(node, ListLit):
-        return ListLit(tuple(_substitute(item, env, lets) for item in node.items), node.pos)
-    if isinstance(node, InterpStrLit):
-        out: list[str | Name | Field] = []
-        for part in node.parts:
-            spec = part.spec if isinstance(part, Field) else None
-            name = part.name if isinstance(part, Field) else part
-            sub = name if isinstance(name, str) else _substitute(name, env, lets)
-            if isinstance(sub, (IntLit, RatioLit, RealLit, ComplexLit, BoolLit, StrLit)):
-                kind = "int" if isinstance(sub, IntLit) else "real"
-                sub = _format(sub.value, kind, spec) if spec else str(sub.value)
-            elif isinstance(sub, ListLit):
-                sub = show(tuple(item.value for item in sub.items if isinstance(item, RealLit)))
-            elif isinstance(sub, Name) and spec:
-                sub = Field(sub, spec, part.pos if isinstance(part, Field) else sub.pos)
-            if isinstance(sub, str) and out and isinstance(out[-1], str):
-                out[-1] += sub
-            elif isinstance(sub, (str, Name, Field)):
-                out.append(sub)
-        return InterpStrLit(tuple(out), node.pos)
-    return node
+def _check_spec(t: Type, spec: str, pos: Pos) -> None:
+    if not spec:
+        return
+    base = _base(t)
+    base = _base(base.inner) if isinstance(base, Maybe) else base
+    try:
+        format(_SAMPLES[base], spec)
+    except (KeyError, ValueError, TypeError):
+        raise CompileError(f"'{spec}' is not a format for a {t}", pos) from None
 
 
-def _unify(a: str, b: str, pos: Pos) -> str:
-    if PENDING in (a, b):
-        return b if a == PENDING else a
-    if a in NUMERIC and b in NUMERIC:
-        return NUMERIC[max(NUMERIC.index(a), NUMERIC.index(b))]
-    if a != b and {a, b} <= COLORISH:
-        return "paint"
-    if a != b:
-        raise CompileError(f"the branches have different types: {a} and {b}", pos)
-    return a
+def _show_value(t: Type, v, spec: str) -> str:
+    """A value shown in a string. Halves round away from zero on the number's shortest
+    decimal form (reference.md, "Numbers"), so 2.675 to two places is 2.68."""
+    base = _base(t)
+    if base == INT:
+        return format(int(v), spec)
+    if base in (RATIO, REAL):
+        if not spec:
+            return repr(float(v))
+        with localcontext() as ctx:
+            ctx.rounding = ROUND_HALF_UP
+            return format(Decimal(repr(float(v))), spec)
+    if base == BOOL:
+        return "True" if v else "False"
+    if base == POINT:
+        return "(" + ", ".join(repr(float(x)) for x in v) + ")"
+    return format(v, spec) if spec else str(v)
 
 
-def _retype(value: Const | Dyn, result: str) -> Value:
-    return Const(_convert(value.value, result), result) if isinstance(value, Const) else Dyn(result)
-
-
-def _fold(op: str, values: list):
-    if op == "-" and len(values) == 1:
-        return negate(values[0])
-    if not values:
-        return 0 if op == "+" else 1
-    step = {"+": add, "-": subtract, "*": multiply, "/": divide_any}[op]
-    return functools.reduce(step, values)
-
-
-# A part of a known list, from parts that are x, y, z, or index literals.
-def _take(value, parts) -> float:
-    for part in parts:
-        if isinstance(part, IntLit):
-            value = value[part.value]
-        else:
-            assert isinstance(part, str)
-            value = value[AXES[part]]
-    return value
+def _fold(op: str, vals: list):
+    if op == "+":
+        return sum(vals[1:], vals[0])
+    if op == "-":
+        if len(vals) == 1:
+            return -vals[0]
+        out = vals[0]
+        for v in vals[1:]:
+            out -= v
+        return out
+    if op == "*":
+        out = vals[0]
+        for v in vals[1:]:
+            out *= v
+        return out
+    if op == "/":
+        a, b = vals
+        if b == 0:
+            raise ZeroDivisionError
+        if isinstance(a, int) and isinstance(b, int):
+            return Fraction(a, b)
+        return a / b
+    if op == "^":
+        return vals[0] ** vals[1]
+    if op == "mod":
+        a, b = vals
+        if b == 0:
+            raise ZeroDivisionError
+        return a % b
+    a, b = vals
+    return {
+        "=": a == b,
+        "!=": a != b,
+        "<": a < b,
+        "<=": a <= b,
+        ">": a > b,
+        ">=": a >= b,
+    }[op]

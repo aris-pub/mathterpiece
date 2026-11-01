@@ -7,9 +7,7 @@ authors = [
     { name = "Leo Torres", email = "leo@leotrs.com" }
 ]
 requires-python = ">=3.13"
-dependencies = [
-    "matplotlib>=3.11.2",
-]
+dependencies = []
 
 [project.scripts]
 mtp = "mathterpiece.cli:main"
