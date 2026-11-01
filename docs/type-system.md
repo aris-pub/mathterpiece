@@ -8,22 +8,22 @@ Every object in a world model has a type, and the compiler knows every type befo
 
 This buys two things. Mistakes are caught when compiling, at the line that made them, instead of showing up as a broken drawing in a reader's browser. And the runtime does no type work while drawing: it never checks, converts or guesses a type, so every frame of a drag or an animation is spent on the mathematics alone. Neither depends on the author writing types everywhere; the compiler works most of them out. A type is written where it says something the compiler cannot guess.
 
-mtp has no classes, no objects with methods, and no inheritance. It has **refinement**: a type can be narrowed to some of its objects, and the narrower type is accepted wherever the wider one is.
+mtp has no classes, no methods attached to types, and no inheritance. It has **refinement**: a type can be narrowed to some of its objects, and the narrower type is accepted wherever the wider one is.
 
 ## 2. The types
 
-Objects are values, which never change, or mutable objects, which can. A type that refines another accepts only some of its objects: every circle is a shape.
+Objects are values, which never change, or mutable objects, which can. A type that refines another accepts only some of its objects: every `unit`, a real between 0 and 1 (section 5.b), is a real. Every circle satisfies the interface `shape` (section 6).
 
 - **object**
   - **value** (never changes)
     - numbers: `int`, `ratio`, `real`, `complex`
     - `bool`, `string`, `color`, `font`
-    - `point` (a list of two reals)
+    - `point` (two reals, `x` and `y`)
     - `list[T]`, `transform`
     - functions (eases, paths), `transition`, `animation`
     - `none`
   - **mutable object** (can change)
-    - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group`, motif instances (`dial`, …), variants; each refines `shape`
+    - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group`, motif instances (`dial`, …), variants; each satisfies `shape`
     - **`scene`**: holds the shapes
     - **component**
       - view: `canvas`, `readout`
@@ -31,16 +31,16 @@ Objects are values, which never change, or mutable objects, which can. A type th
       - listener: `on-drag`, `on-click`
 
 - **Numbers** come in four types: `int`, `ratio` (exact fractions such as `1/3`), `real` and `complex`.
-- **A point** is a list of two reals. **A list**, `list[T]`, holds items of one type T; like a Python tuple, the list itself never changes, though the objects it holds may.
-- **Functions, transitions and animations** are values too: an ease is a function from 0..1 to a real; a transition is a trajectory. A function's type lists its inputs, then its result: `func[real real]` takes a real and gives a real. Its result is never written in its declaration; the compiler works it out from the body.
+- **A point** is its own type: two reals, read as `x` and `y` or by position, `p[0]`. **A list**, `list[T]`, holds items of one type T; like a Python tuple, the list itself never changes, though the objects it holds may.
+- **Functions, transitions and animations** are values too: an ease is a function from 0..1 to a real, `func[real real]`; a path is a function of the two ends and the progress, `func[T T real T]`; a transition is a trajectory. A function's type lists its inputs, then its result: `func[real real]` takes a real and gives a real. Its result is never written in its declaration; the compiler works it out from the body.
 - **`none`** is the value that stands for one that does not exist (section 5.c).
 - **Types are objects themselves**: declaring a motif or a named type creates one. They cannot yet be passed or held in a variable.
 
 ## 3. Conversions
 
-Only two conversions ever happen without being asked for.
+Only two conversions ever happen without being asked for. Separately, a narrower type is accepted where a wider one is expected without any conversion: a refinement where its base is (a `unit` where a `real` is), and any `T` where `T|none` is.
 
-- **Numbers broaden**, never narrow: an `int` is accepted where a `ratio`, `real` or `complex` is expected, a `ratio` where a `real` or `complex` is, and a `real` where a `complex` is. Going the other way takes a function, such as `round`.
+- **Numbers broaden**, never narrow: an `int` is accepted where a `ratio`, `real` or `complex` is expected, a `ratio` where a `real` or `complex` is, and a `real` where a `complex` is. Going the other way takes a function, such as `round`. (The one exception is a write while drawing into an int, which is rounded: section 5.b.)
 - **A literal takes the type of its place.** `'red'` is a string, but written where a color is expected it is a color; `'middle'` written as a text's alignment is one of the allowed alignments.
 
 &nbsp;
@@ -52,7 +52,7 @@ Only two conversions ever happen without being asked for.
 
 ## 4. Using types
 
-Every declaration has the same shape: the type, the name, the value, then any constraints. A variable and a parameter are declared alike.
+A variable is declared with its type, its name, its value, then any constraints. A parameter is declared the same way, with its default as its value. (A font variable is the one exception: it is declared with items instead of a value; see the reference.)
 
     (real theta 40)                         ; a real variable
     (color ink 'navy')                      ; a color variable
@@ -68,7 +68,7 @@ Parameters of functions and motifs always write their type, and may give a defau
     (func double (real x) (* 2 x))
     (motif dial ((real t 0.5) (color tint 'red'))
       (circle face (r 1) (fill tint)))
-    (func area (circle o) (* pi o.r o.r))            ; circles, and any variant of circle (section 6)
+    (func area (circle o) (* pi o.r o.r))            ; circles, and any variant of circle (section 5.e)
 
 A small, complete use: a bar chart whose bars are declared with typed parameters.
 
@@ -118,7 +118,7 @@ A constraint narrows a type to some of its values. Constraints are written after
 - **`(one-of …)`** narrows a string to a few values, a choice type (section 5.d).
 - **`(const)`** forbids every write, so the variable is known when compiling and costs nothing while drawing.
 
-A value known when compiling that breaks a constraint is a compile error, and a bound value that breaks one while drawing is `none` (section 5.c). A write while drawing (from a slider, a drag or an animation) is brought into the constraint: a range is **clamped** to its nearest end, an `int` is **rounded**, and a fixed choice **holds** its last valid value. A write that changes nothing is skipped, so nothing downstream is recomputed.
+A value known when compiling that breaks a constraint is a compile error. A bound value that breaks one while drawing is `none` (section 5.c), so unless the compiler can prove the expression stays within the constraint, its type includes `none`. A write while drawing (from a slider, a drag or an animation) is brought into the constraint: a range is **clamped** to its nearest end, an `int` is **rounded**, and a fixed choice **holds** its last valid value. A write that changes nothing is skipped, so nothing downstream is recomputed.
 
     (real p 0.5 (>= 0) (<= 1))
     (slider s (animation (p (transition (to 1.4)))))   ; p stops at exactly 1
@@ -128,18 +128,18 @@ A value known when compiling that breaks a constraint is a compile error, and a 
 
 `none` stands for a value that does not exist. For now it is the only way to broaden a type: `real|none`, or `(maybe real)`, is a real or none.
 
-**Where it comes from.** A function where it is undefined: `(/ x 0)`, `(secd 90)`, `(tand 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)` on a real. When the inputs are known when compiling this is a compile error; while drawing it gives `none`, never an error and never infinity. A lookup by a key known only while drawing, `g[side]`, may also give none. And an author may write `none` on purpose.
+**Where it comes from.** A function where it is undefined: `(/ x 0)`, `(secd 90)`, `(tand 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)`. When the inputs are known when compiling this is a compile error; while drawing it gives `none`, never an error and never infinity. A lookup by a key known only while drawing, `g[side]`, may also give none. And an author may write `none` on purpose.
 
-**How it behaves.** Anything computed from `none` is `none`. `(= none none)` is true; so is a part of `none`: if `g[k]` is `none`, so is `g[k].pos`.
+**How it behaves.** Anything computed from `none` by a function is `none`, and so is a part of `none`: if `g[k]` is `none`, so is `g[k].pos`. The exceptions are the forms that deal with `none` (below) and equality: `(= none none)` is true and `(= none 3)` is false. Conditions (`if`, `cond`, `and`, `or`, and the `when` item of a canvas or listener), interpolated strings, and list operations over items that may be `none` never receive `none` silently: they are places that must handle it.
 
-**Handling it.** A `none` that can arrive unasked must be handled wherever it reaches the reader: a shape, a readout, a condition, a list operation, a write. Until it is, the compiler stops. The forms:
+**Handling it.** A `none` arrives unasked when it comes from a partial function or a lookup, or anything computed from them, rather than from `none` written by the author or a variable whose type the author declared as `T|none`. Shapes are the exception: whatever the source of a `none`, a plain shape must always be drawable (below), so a shape reading a `T|none` variable must itself be declared `T|none` or use `or?`. It must be handled wherever it reaches the reader: a shape, a readout, a condition, a list operation, a write. Handling means giving it a default with `or?`, filtering it out with `somes` or `where`, or declaring the place that receives it as `T|none`. Until it is, the compiler stops. The forms:
 
     (or? x d)                ; x, or d when x is none
     (none? x)  (some? x)     ; is x none, is it not
     (somes xs)               ; the items of xs that are not none
     (where g f)              ; the members of g for which the function f holds
 
-**Shapes.** A plain shape type must always be drawable. If any of its drawing-essential attributes may be `none`, compilation stops. Declaring the shape itself as `T|none` says it may be absent: then it is not drawn, and the shape is `none`, so whatever reads it must handle that in turn. An attribute accepts `none` only if its type says so: for built-in shapes, that is `fill` and `stroke`, typed `color|none`, where `none` means no paint.
+**Shapes.** A plain shape type must always be drawable. Every attribute of a built-in shape is drawing-essential except `fill` and `stroke`. If any drawing-essential attribute may be `none`, compilation stops. Declaring the shape itself as `T|none` says it may be absent: then it is not drawn, and the shape is `none`, so whatever reads it must handle that in turn. An attribute accepts `none` only if its type says so: for built-in shapes, that is `fill` and `stroke`, typed `color|none`, where `none` means no paint.
 
     (real|none crossing (secd theta))
     (line tan (from p.pos) (to [crossing 0]))           ; an error: the end may be none
@@ -151,7 +151,9 @@ A value known when compiling that breaks a constraint is a compile error, and a 
     (list[real|none] radii (map g (fn p (sqrt p.k))))        ; some square roots fail
     (real mean (/ (sum (somes radii)) (count (somes radii))))
 
-**Constraints.** A bound value that would break its constraint while drawing is `none`, like an undefined value: `(circle|none c (r (secd theta)))` is absent at 90° and wherever `secd` is negative. Constraints also let the compiler prove a value is defined: with `(real k 1 (>= 1))`, `(/ 1 k)` can never be `none`. Constraints on a type that allows `none` apply to its other values; `none` itself is always allowed.
+**Constraints.** A bound value that would break its constraint while drawing is `none`, like an undefined value: `(circle|none c (r (secd theta)))` is absent at 90° and wherever `secd` is negative. Constraints also let the compiler prove a value is defined: with `(real k 1 (>= 1))`, `(/ 1 k)` can never be `none`.
+
+**What the compiler proves.** It reasons only with ranges, never anything cleverer, so every implementation accepts the same programs. A variable's range comes from its constraints (`(real k 1 (>= 0) (<= 10))` is 0 to 10; a plain `real` is unbounded). Each operation and function has a range rule: a sum's range comes from its parts', `sind` lies between −1 and 1, `abs` and `sqrt` are never negative, and so on, following each function's mathematical range. A partial function is safe when its input's range avoids every point where it is undefined: `(/ 1 k)` when `k`'s range excludes 0, `(secd a)` when `a`'s range contains no 90 + 180n. A bound value is safe when its range lies inside its constraint. Anything else may be `none`. So `(circle c (r (* 2 k)))` with a plain `(real k 1)` is an error, because `r` may break its `(>= 0)`; declaring `k` with `(>= 0)` makes it compile. Constraints on a type that allows `none` apply to its other values; `none` itself is always allowed.
 
 ### 5.d Choice types
 
@@ -164,7 +166,7 @@ A choice type is a string narrowed to a fixed set of values, like an enumeration
     (motif arrow ((side towards 'left')) ...)
     (side t 'up')                            ; an error: 'up' is not a side
 
-A value of a choice type is still a string, so it can be shown in a readout or used in an interpolated string as is. Text alignment and font style are built-in choice types. A write while drawing that is not one of the choices holds the last valid value.
+A value of a choice type is still a string, so it can be shown in a readout or used in an interpolated string as is. Text alignment (`halign`, `valign`) and font style are built-in choice types. A write while drawing that is not one of the choices holds the last valid value.
 
 Choices also make lookups safe: when every choice is a key of a group, a lookup with a value of that type can never miss, so it is never `none`.
 
@@ -215,9 +217,9 @@ An interface names what several types have in common. A type satisfies an interf
 |----|----|----|
 | `positioned` | has real `x` and `y` | points, every shape |
 | `sequence[T]` | items by position, a `length` | lists, points, groups |
-| `shape` | positioned, and drawable by the backend | circle, rect, …, groups, motif instances, variants |
+| `shape` | positioned, and drawable by the runtime | circle, rect, …, groups, motif instances, variants |
 
-There is no `(shape s …)`: an interface has no instances of its own, only types that satisfy it. A parameter typed with an interface may read only what the interface lists, and is checked once, at the definition, like any other parameter.
+An interface cannot be instantiated: there is no `(shape s …)` declaring a shape that is not of some concrete type. An interface can type a parameter, as in `(shape o)`. A parameter typed with an interface may read only what the interface lists, and is checked once, at the definition, like any other parameter.
 
     (func label-at ((positioned o) (string s)) …)   ; accepts points and shapes alike
     (func area (circle o) (* pi o.r o.r))                   ; circles, and any variant of circle
@@ -230,7 +232,7 @@ Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed 
 - Unions of types other than `none`, such as a fill that is a color or a gradient.
 - Vectors: fixed-length numbers with arithmetic, separate from lists.
 - Container types an author defines, such as `pair[T]`.
-- Interfaces an author declares, and extra attributes on new types (which would let a point be a list with `x` and `y`).
+- Interfaces an author declares, and extra attributes on new types (which would let `point` become a refinement of `list[real]` instead of a type of its own).
 - Variables that hold functions.
 - Types passed or held as values.
 - Maps from keys to values.
@@ -238,7 +240,7 @@ Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed 
 
 ## 8. Appendix: attributes by type
 
-Every object has a `name`. Other attributes, read with a dot (`c.r`) or the part form:
+Every declared object with a name has a `name` attribute; anonymous ones (`_`) have none. Other attributes, read with a dot (`c.r`) or the part form:
 
 | Type | Attributes |
 |----|----|
@@ -247,15 +249,18 @@ Every object has a `name`. Other attributes, read with a dot (`c.r`) or the part
 | string | `length` |
 | list | `length`; items by position, `xs[0]` |
 | point | `x`, `y` |
-| transition | `duration`, `from`, `to` |
+| transition | `duration`, `from`, `to`, `ease`, `path` |
 | animation | `duration`, `steps` |
-| shapes | their parameters (a circle's `r`, `fill`, …) and their position, `pos`, `x`, `y` |
-| group, scene | `count`, `members`; members by position or key, `g[0]`, `g['disk-3']`; any member attribute, spread over the members, `g.r` |
+| shapes | the arguments they take (a circle's `r`, `fill`, …) and their position, `pos`, `x`, `y` |
+| group | `count`, `members`; members by position or name, `g[0]`, `g['disk-3']`; any member attribute, spread over the members, `g.r` |
+| scene | `background`, `count`, `members` (its shapes, not its variables); members by position or name; no spreading (`s.r` is an error) |
 | motif instances | their parameters and bound variables, `a.t`, `disk.area`; their members, `a.tip` |
+| variant instances | their parameters, and every attribute of their base, `b1.p`, `b1.x` |
 | font | `family`, `style`, `weight`, `size` |
-| slider | `label`, `position` (0 to 1) |
-| play | `label`, `step`, `playing` |
+| slider | `label`, `position` (0 to 1), `step` (the number of places, if given) |
+| play | `label`, `step` (the step of the animation now playing), `playing`, `buttons` |
 | button, toggle | `label`; a toggle's `value` |
-| canvas | its view box |
+| readout | `value` (its string), `font` |
+| canvas | `view-x`, `view-y`, `view-width`, `view-height` |
 
-Attributes of controls change as the reader acts. Only the page may read them; the scene may not.
+Attributes of controls change as the reader acts. Only components and globals may read them; the scene may not.

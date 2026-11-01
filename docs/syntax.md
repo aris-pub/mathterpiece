@@ -30,7 +30,7 @@ Everything below explains one piece of this file.
 
 ## 2. Expressions
 
-Everything in a file is an expression. There are three sorts.
+Everything in a file is an expression: a literal, a name, or a form. Names may be followed by parts (`p.r`, `xs[0]`, section 7), and types have a notation of their own (`list[color]`, `real|none`, section 10).
 
 ### Literals
 
@@ -48,7 +48,7 @@ Everything in a file is an expression. There are three sorts.
 
 ### Names
 
-A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`.
+A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`. These words are reserved and cannot be used as names: `scene`, `animation`, `transition`, `wait`, `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`.
 
 ### Forms
 
@@ -60,11 +60,11 @@ A `;` starts a comment, which runs to the end of the line. Line breaks and inden
 
 Every expression gives an object. Some objects are **values**, which never change: `3`, `'red'`, `[0 1]`. Others are **mutable objects**, which can: a circle whose position follows `theta`, a variable a slider writes. The data model describes both.
 
-A form either **computes** something, like `(+ theta 10)`, and has no other effect, or it **declares** something, like `(circle p …)`, and its only effect is that a new object exists. A few **special forms** do neither in the ordinary way (section 6).
+A form either **computes** something, like the function call `(+ theta 10)`, and has no other effect, or it **declares** something, like `(circle p …)`, and its only effect is that a new object exists. Components are declarations too. A few **special forms** do neither in the ordinary way (section 6).
 
 ## 4. Declarations
 
-A declaration creates an object and returns it. Its head is the type of what it creates, then its name:
+A declaration creates an object and returns it. Its head is usually the type of what it creates (`real`, `circle`, `list[color]`), then its name. A few heads instead say what is being declared: `func`, `type`, `motif`, `variant`, and the components.
 
     (real theta 40)                       ; a variable holding a real
     (color ink 'navy')
@@ -72,7 +72,8 @@ A declaration creates an object and returns it. Its head is the type of what it 
     (group marks (circle m0) (circle m1)) ; a group holding two circles
     (func double (real x) (* 2 x))
 
-- **Names** are bare. Each name in the scene is unique, and visible everywhere.
+- **Names** are bare. Each name in the scene is unique, and visible everywhere after its declaration (section 9). A function may call itself.
+- **Shapes** are declared only inside the scene, a group, a motif or a variant, never at the top level.
 - **`_`** declares something with no name: `(circle _ (r 1))`.
 - **`(name s)`** builds a name from a string, where it must be computed, as in a loop: `(circle (name $'dot-{i}') …)`. It also refers to such a name: `(name $'dot-{k}')`.
 - **Constraints** follow, and narrow what the object may be: `(real theta 40 (>= 0) (<= 360))`.
@@ -113,8 +114,13 @@ A special form looks like a call but does something a function cannot: it evalua
 | `(if c a b)` | evaluates only the branch taken |
 | `(cond (c1 a) (c2 b) (else d))` | takes clauses, each a test and a value; evaluates only the first clause whose test holds |
 | `(and …)` `(or …)` | stop at the first part that decides the answer |
-| `(let ((h (* 2 k))) (+ h 1))` | names values for use inside one expression, and returns its last expression |
+| `(let ((h (* 2 k))) (+ h 1))` | names values for use inside its body, a single expression, and gives that expression |
 | `(repeat 5 i (circle (name $'dot-{i}') …))` | stands for the expressions it produces, spliced in place when compiling; the count must be known then |
+| `(fn p (* 2 p.r))` | a function written in place: binds its parameters in its body (section 5) |
+| `(. X Y)` | a part of `X`; `Y` is not evaluated when it is an attribute name (section 7) |
+| `(name s)` | turns a string into a name (section 4) |
+
+`when`, inside a canvas or a listener, is an item recognized by its head, not a special form: its first part is a condition and the rest are names.
 
 ## 7. Reading parts
 
@@ -125,14 +131,14 @@ A part of an object is read with a dot or with brackets.
     xs[0]                     ; a list item by position
     xs[-1]                    ; counting from the end
     xs[(+ k 1)]               ; any expression in brackets
-    g[0]  g['m1']             ; a group member by position, or by name as a string
+    g[0]  g['m1']             ; a group member by position, or by its name given as a string
     g.r                       ; on a group: each member's r
 
-A dot is always followed by a name, the attribute. Brackets hold a position, a name as a string, or any expression that gives one.
+A chain of parts always starts with a name. A dot is always followed by an attribute name, or, on a motif instance, the name of one of its members (`d1.face`). Brackets hold a position, a member's name given as a string (used as a key), or any expression that gives one. Group members are read with brackets or by their own name, never with a dot.
 
 ### Parts of what an expression gives
 
-A dot or brackets can only follow a name: `(sort g (fn p p.r))[0]` is not mtp. To read a part of what a form gives, use the form behind both shorthands:
+A chain cannot start with a form: `(sort g (fn p p.r))[0]` is not mtp. To read a part of what a form gives, use the form behind both shorthands:
 
     (. X Y)
 
@@ -153,7 +159,7 @@ So the form is needed only where no shorthand fits, when `X` is itself a form:
 
 ## 8. How a form's body is read
 
-Every declaration, and every component, follows one rule:
+Every declaration, components included, follows one rule:
 
     (head name? positional… item…)
 
@@ -173,7 +179,7 @@ Every declaration, and every component, follows one rule:
 | `(canvas v a b (when show c))` | `v` | none | `a`, `b`, `(when show c)` |
 | `(on-drag p (target theta))` | none | `p` | `(target theta)`, required |
 
-Function calls and special forms are not declarations, and do not follow this rule: a call takes its arguments in order, and each special form has its own shape.
+Function calls and special forms are not declarations, and do not follow this rule: a call takes its arguments in order, and each special form has its own shape. Inside an animation, a step's head may be any writable place, including a path such as `p.r`; the reserved words `wait`, `in-order` and `at-once` are steps of their own.
 
 ## 9. Putting a file together
 
@@ -188,6 +194,6 @@ The data model shows how these relate: what reads what, and what writes what.
 
 ## 10. Types in brief
 
-A declaration's head is its type: `real`, `int`, `bool`, `string`, `color`, `point`, `list`, a shape such as `circle`, or a type the author declared. A function's or motif's parameters always write theirs: `((real t 0.5) (color tint 'red'))`. A type can be written in place: `list[color]` is a list of colors, `real|none` a real or `none`, `(real (>= 0))` a real no less than 0.
+A variable's or shape's head is its type: `real`, `int`, `bool`, `string`, `color`, `point`, `list`, a shape such as `circle`, or a type the author declared (section 4 lists the heads that are not types). A function's or motif's parameters always write theirs: `((real t 0.5) (color tint 'red'))`. A type can be written in place: `list[color]` is a list of colors, `real|none` (or `(maybe real)`) a real or `none`, `(real (>= 0))` a real no less than 0.
 
 A literal takes the type of its place: `'red'` is a string, but written as a fill it is a color. The type document covers all of this in full.

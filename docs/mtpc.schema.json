@@ -1,0 +1,1947 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mtpc.schema.json",
+  "title": "mtpc",
+  "description": "The .mtpc format, version 2. See mtpc.md for what each part means and the rules a schema cannot express.",
+  "type": "object",
+  "required": [
+    "mtpc",
+    "types",
+    "objects",
+    "functions",
+    "names"
+  ],
+  "properties": {
+    "mtpc": {
+      "const": 2
+    },
+    "types": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/declaredType"
+      }
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/object"
+      }
+    },
+    "functions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/function"
+      }
+    },
+    "names": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/id"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "oneOf": [
+        {
+          "enum": [
+            "int",
+            "ratio",
+            "real",
+            "complex",
+            "bool",
+            "string",
+            "color",
+            "font",
+            "point",
+            "transform",
+            "transition",
+            "animation",
+            "none",
+            "scene"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "shape"
+          ],
+          "properties": {
+            "shape": {
+              "enum": [
+                "circle",
+                "rect",
+                "ellipse",
+                "line",
+                "triangle",
+                "text",
+                "group"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "named"
+          ],
+          "properties": {
+            "named": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "component"
+          ],
+          "properties": {
+            "component": {
+              "enum": [
+                "canvas",
+                "readout",
+                "slider",
+                "button",
+                "play",
+                "toggle",
+                "on-drag",
+                "on-click"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "interface"
+              ],
+              "properties": {
+                "interface": {
+                  "enum": [
+                    "shape",
+                    "positioned"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "interface",
+                "of"
+              ],
+              "properties": {
+                "interface": {
+                  "const": "sequence"
+                },
+                "of": {
+                  "$ref": "#/$defs/type"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "list"
+          ],
+          "properties": {
+            "list": {
+              "$ref": "#/$defs/type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "func",
+            "result"
+          ],
+          "properties": {
+            "func": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/type"
+              }
+            },
+            "result": {
+              "$ref": "#/$defs/type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "union"
+          ],
+          "properties": {
+            "union": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "$ref": "#/$defs/type"
+                },
+                {
+                  "const": "none"
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "refine",
+            "constraints"
+          ],
+          "properties": {
+            "refine": {
+              "$ref": "#/$defs/type"
+            },
+            "constraints": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/constraint"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "constraint": {
+      "oneOf": [
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "enum": [
+                ">=",
+                ">",
+                "<=",
+                "<"
+              ]
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "length"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "one-of"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "const"
+            }
+          ],
+          "minItems": 1,
+          "maxItems": 1
+        }
+      ]
+    },
+    "param": {
+      "type": "object",
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "type": {
+          "$ref": "#/$defs/type"
+        },
+        "default": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "additionalProperties": false
+    },
+    "declaredType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "kind",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/name"
+            },
+            "kind": {
+              "const": "type"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "kind",
+            "params"
+          ],
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/name"
+            },
+            "kind": {
+              "const": "motif"
+            },
+            "params": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/param"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "kind",
+            "params",
+            "base",
+            "fixed"
+          ],
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/name"
+            },
+            "kind": {
+              "const": "variant"
+            },
+            "params": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/param"
+              }
+            },
+            "base": {
+              "$ref": "#/$defs/type"
+            },
+            "fixed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "value": {
+      "oneOf": [
+        {
+          "type": [
+            "number",
+            "string",
+            "boolean",
+            "null",
+            "array"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "ref"
+          ],
+          "properties": {
+            "ref": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "func"
+          ],
+          "properties": {
+            "func": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "builtin"
+          ],
+          "properties": {
+            "builtin": {
+              "enum": [
+                "+",
+                "-",
+                "*",
+                "/",
+                "^",
+                "mod",
+                "abs",
+                "=",
+                "!=",
+                "<",
+                "<=",
+                ">",
+                ">=",
+                "not",
+                "sqrt",
+                "round",
+                "floor",
+                "ceil",
+                "exp",
+                "log",
+                "min",
+                "max",
+                "lerp",
+                "sin",
+                "cos",
+                "tan",
+                "sec",
+                "csc",
+                "cot",
+                "asin",
+                "acos",
+                "atan",
+                "asec",
+                "acsc",
+                "acot",
+                "sind",
+                "cosd",
+                "tand",
+                "secd",
+                "cscd",
+                "cotd",
+                "asind",
+                "acosd",
+                "atand",
+                "asecd",
+                "acscd",
+                "acotd",
+                "rad",
+                "turn",
+                "deg",
+                "to-rad",
+                "to-turn",
+                "polar",
+                "to-polar",
+                "dist",
+                "rotate",
+                "scale",
+                "translate",
+                "transform",
+                "mix",
+                "lighten",
+                "darken",
+                "map",
+                "where",
+                "sort",
+                "reverse",
+                "reduce",
+                "sum",
+                "count",
+                "any",
+                "all",
+                "somes",
+                "or?",
+                "none?",
+                "some?"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "family",
+            "style",
+            "weight",
+            "size"
+          ],
+          "properties": {
+            "family": {
+              "type": "string"
+            },
+            "style": {
+              "type": "string"
+            },
+            "weight": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "size": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "placeRef": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/id"
+        },
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "expr": {
+      "oneOf": [
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "lit"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/value"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "list"
+            },
+            {
+              "$ref": "#/$defs/type"
+            }
+          ],
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/expr"
+          }
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "format"
+            },
+            {
+              "const": "string"
+            }
+          ],
+          "minItems": 2,
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/expr"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            ]
+          }
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "read"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "obj"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/id"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "local"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/name"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "builtin"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "enum": [
+                "+",
+                "-",
+                "*",
+                "/",
+                "^",
+                "mod",
+                "abs",
+                "=",
+                "!=",
+                "<",
+                "<=",
+                ">",
+                ">=",
+                "not",
+                "sqrt",
+                "round",
+                "floor",
+                "ceil",
+                "exp",
+                "log",
+                "min",
+                "max",
+                "lerp",
+                "sin",
+                "cos",
+                "tan",
+                "sec",
+                "csc",
+                "cot",
+                "asin",
+                "acos",
+                "atan",
+                "asec",
+                "acsc",
+                "acot",
+                "sind",
+                "cosd",
+                "tand",
+                "secd",
+                "cscd",
+                "cotd",
+                "asind",
+                "acosd",
+                "atand",
+                "asecd",
+                "acscd",
+                "acotd",
+                "rad",
+                "turn",
+                "deg",
+                "to-rad",
+                "to-turn",
+                "polar",
+                "to-polar",
+                "dist",
+                "rotate",
+                "scale",
+                "translate",
+                "transform",
+                "mix",
+                "lighten",
+                "darken",
+                "map",
+                "where",
+                "sort",
+                "reverse",
+                "reduce",
+                "sum",
+                "count",
+                "any",
+                "all",
+                "somes",
+                "or?",
+                "none?",
+                "some?"
+              ]
+            }
+          ],
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/expr"
+          }
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "call"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/id"
+            }
+          ],
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/expr"
+          }
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "apply"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/expr"
+            }
+          ],
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/expr"
+          }
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "func"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/name"
+              }
+            }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "builtinfunc"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "enum": [
+                "+",
+                "-",
+                "*",
+                "/",
+                "^",
+                "mod",
+                "abs",
+                "=",
+                "!=",
+                "<",
+                "<=",
+                ">",
+                ">=",
+                "not",
+                "sqrt",
+                "round",
+                "floor",
+                "ceil",
+                "exp",
+                "log",
+                "min",
+                "max",
+                "lerp",
+                "sin",
+                "cos",
+                "tan",
+                "sec",
+                "csc",
+                "cot",
+                "asin",
+                "acos",
+                "atan",
+                "asec",
+                "acsc",
+                "acot",
+                "sind",
+                "cosd",
+                "tand",
+                "secd",
+                "cscd",
+                "cotd",
+                "asind",
+                "acosd",
+                "atand",
+                "asecd",
+                "acscd",
+                "acotd",
+                "rad",
+                "turn",
+                "deg",
+                "to-rad",
+                "to-turn",
+                "polar",
+                "to-polar",
+                "dist",
+                "rotate",
+                "scale",
+                "translate",
+                "transform",
+                "mix",
+                "lighten",
+                "darken",
+                "map",
+                "where",
+                "sort",
+                "reverse",
+                "reduce",
+                "sum",
+                "count",
+                "any",
+                "all",
+                "somes",
+                "or?",
+                "none?",
+                "some?"
+              ]
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "part"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/expr"
+            },
+            {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/expr"
+                }
+              ]
+            }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "spread"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/expr"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "if"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/expr"
+            },
+            {
+              "$ref": "#/$defs/expr"
+            },
+            {
+              "$ref": "#/$defs/expr"
+            }
+          ],
+          "minItems": 5,
+          "maxItems": 5
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "cond"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/expr"
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            {
+              "$ref": "#/$defs/expr"
+            }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "enum": [
+                "and",
+                "or"
+              ]
+            },
+            {
+              "const": "bool"
+            }
+          ],
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/expr"
+          }
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "let"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/name"
+                  },
+                  {
+                    "$ref": "#/$defs/expr"
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            {
+              "$ref": "#/$defs/expr"
+            }
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "rand"
+            },
+            {
+              "const": "real"
+            },
+            {
+              "type": "integer",
+              "minimum": 0
+            }
+          ],
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/expr"
+          },
+          "maxItems": 5
+        }
+      ]
+    },
+    "place": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "free"
+          ],
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "free": {
+              "$ref": "#/$defs/value"
+            },
+            "fixed": {
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "bound",
+            "deps"
+          ],
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "bound": {
+              "$ref": "#/$defs/expr"
+            },
+            "deps": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "fixed": {
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "attrs": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/place"
+      }
+    },
+    "step": {
+      "oneOf": [
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "move"
+            },
+            {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            },
+            {
+              "$ref": "#/$defs/id"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "wait"
+            },
+            {
+              "type": "number",
+              "minimum": 0
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "enum": [
+                "at-once",
+                "in-order"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      ]
+    },
+    "function": {
+      "type": "object",
+      "required": [
+        "params",
+        "result",
+        "body"
+      ],
+      "properties": {
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/param"
+          }
+        },
+        "result": {
+          "$ref": "#/$defs/type"
+        },
+        "body": {
+          "$ref": "#/$defs/expr"
+        }
+      },
+      "additionalProperties": false
+    },
+    "object": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "value",
+            "token"
+          ],
+          "properties": {
+            "kind": {
+              "const": "variable"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "value": {
+              "$ref": "#/$defs/place"
+            },
+            "token": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "members",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "scene"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "circle",
+                "rect",
+                "ellipse",
+                "line",
+                "triangle",
+                "text"
+              ]
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            },
+            "of": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "members",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "group"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            },
+            "of": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "of",
+            "members",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "instance"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "of": {
+              "$ref": "#/$defs/name"
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "from",
+            "to",
+            "duration",
+            "ease",
+            "path"
+          ],
+          "properties": {
+            "kind": {
+              "const": "transition"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/place"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "to": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/place"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "duration": {
+              "type": "number",
+              "minimum": 0
+            },
+            "ease": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "linear",
+                    "ease-in",
+                    "ease-out",
+                    "ease-in-out"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "const": "step"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "func"
+                  ],
+                  "properties": {
+                    "func": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "path": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "const": "fade"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "func"
+                  ],
+                  "properties": {
+                    "func": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "steps"
+          ],
+          "properties": {
+            "kind": {
+              "const": "animation"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "steps": {
+              "$ref": "#/$defs/step"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "members",
+            "when",
+            "transition",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "canvas"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "when": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/place"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/id"
+                    }
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "transition": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "readout"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "animation",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "slider",
+                "button",
+                "play"
+              ]
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "animation": {
+              "$ref": "#/$defs/id"
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "target",
+            "attrs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "toggle"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "target": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/$defs/id"
+                    },
+                    {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  ],
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "attrs": {
+              "$ref": "#/$defs/attrs"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "shape",
+            "target",
+            "conditions",
+            "when"
+          ],
+          "properties": {
+            "kind": {
+              "const": "on-drag"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "shape": {
+              "$ref": "#/$defs/id"
+            },
+            "target": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/place"
+              }
+            },
+            "when": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/place"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "type",
+            "access",
+            "name",
+            "shape",
+            "animation",
+            "when"
+          ],
+          "properties": {
+            "kind": {
+              "const": "on-click"
+            },
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "access": {
+              "enum": [
+                "scene",
+                "page"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "shape": {
+              "$ref": "#/$defs/id"
+            },
+            "animation": {
+              "$ref": "#/$defs/id"
+            },
+            "when": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/place"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
