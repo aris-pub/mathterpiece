@@ -264,6 +264,10 @@ class TestParts:
         m = model("(scene s (group g (circle a) (circle b (r 3))) (circle d (r (. (. g 'b') r))))")
         assert m.get("d").attrs["r"].deps == {(m.id("b"), "r")}
 
+    def test_an_unknown_attribute_in_the_part_form(self):
+        src = "(scene s (circle c) (circle d (r (. c width))))"
+        error(src, "a circle has no attribute 'width'")
+
 
 class TestAbs:
     def test_abs(self):

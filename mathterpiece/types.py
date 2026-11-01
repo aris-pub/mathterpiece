@@ -134,13 +134,15 @@ def fits(actual: Type, expected: Type) -> bool:
     """Whether an object of type actual is accepted where expected is."""
     if actual == expected:
         return True
+    if isinstance(expected, Maybe):
+        inner = actual.inner if isinstance(actual, Maybe) else actual
+        return actual == NONE or fits(inner, expected.inner)
+    if isinstance(actual, Maybe):
+        return False
     if isinstance(actual, Refine) or isinstance(expected, Refine):
         return _fits_refined(actual, expected)
     if actual in NUMBERS and expected in NUMBERS:
         return NUMBERS.index(actual) <= NUMBERS.index(expected)
-    if isinstance(expected, Maybe):
-        inner = actual.inner if isinstance(actual, Maybe) else actual
-        return actual == NONE or fits(inner, expected.inner)
     if isinstance(actual, ListT) and isinstance(expected, ListT):
         # A list never changes, so a list of narrower items is a list of wider ones.
         return fits(actual.item, expected.item)
@@ -339,7 +341,10 @@ def type_from_node(node: Node, named: "dict[str, Type] | None" = None) -> Type:
 
 
 def refine(base: Type, nodes: "tuple[Node, ...] | list[Node]", name: str | None = None) -> Type:
-    """base narrowed by the constraint forms nodes; a Refine of a Refine is flattened."""
+    """base narrowed by the constraint forms nodes; a Refine of a Refine is flattened. On a type
+    that allows none, the constraints narrow its other values: (T (c…))|none."""
+    if isinstance(base, Maybe):
+        return Maybe(refine(base.inner, nodes, name))
     own: tuple[Constraint, ...] = ()
     if isinstance(base, Refine):
         own, base = base.constraints, base.base

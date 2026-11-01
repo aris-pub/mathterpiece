@@ -283,3 +283,17 @@ class TestNamedTypes:
     def test_its_name_shows_in_messages(self):
         assert str(Refine(REAL, ((">=", 0),), "positive")) == "positive"
         assert str(Refine(REAL, ((">=", 0),))) == "(real (>= 0))"
+
+
+class TestConstraintsOnNone:
+    # type-system.md 5.c: constraints on a type that allows none apply to its other values.
+    def test_they_narrow_the_other_values(self):
+        t = type_from_node(node("(real|none (>= 0))"))
+        assert t == Maybe(Refine(REAL, ((">=", 0),)))
+        assert str(t) == "(real (>= 0))|none"
+
+    def test_none_still_fits(self):
+        t = Maybe(Refine(REAL, ((">=", 0),)))
+        assert fits(NONE, t)
+        assert fits(Refine(REAL, ((">=", 1),)), t)
+        assert not fits(REAL, t)

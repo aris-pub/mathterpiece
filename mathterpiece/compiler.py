@@ -3,6 +3,7 @@ docs/reference.md). Every declaration follows one body rule, (head name? positio
 every expression is typed, with what it reads, its range, and its value when it is known."""
 
 import math
+import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Decimal, localcontext
@@ -34,6 +35,7 @@ from mathterpiece.types import (
     COMPARE,
     COMPLEX,
     INT,
+    NONE,
     NUMBERS,
     POINT,
     RATIO,
@@ -60,6 +62,9 @@ CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: Range = (-LIMIT, LIMIT)
+# A computed result beyond the largest real overflows, which is undefined.
+MAX_REAL = sys.float_info.max
+WHOLE: Range = (-MAX_REAL, MAX_REAL)
 IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
@@ -190,7 +195,7 @@ class _Compiler:
             return self.type_decl(form)
         if head == "scene":
             return self.scene_decl(form)
-        if head in SHAPE_ATTRS:
+        if _shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
 
@@ -282,7 +287,7 @@ class _Compiler:
                 attrs["background"] = self.place(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
-            elif head in SHAPE_ATTRS:
+            elif _shape_kind(item):
                 self.shape(item, self.scene, scope)
             elif isinstance(item, Form):
                 self.variable(item, self.scene, "scene", scope)
@@ -290,11 +295,12 @@ class _Compiler:
                 raise CompileError("the scene holds shapes and variables", item.pos)
 
     def shape(self, form: Form, parent: int, scope: dict) -> int:
-        kind = _head(form)
-        assert kind is not None
+        kind, absent = _shape_kind(form)
         name, pos = self.name_of(form, scope)
         specs = SHAPE_ATTRS[kind]
-        obj = Obj(kind, name, ShapeT(kind), parent=parent, pos=pos)
+        # A shape declared T|none may be absent, so its attributes may be none.
+        t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
+        obj = Obj(kind, name, t, parent=parent, pos=pos)
         i = self.add(obj)
         given: dict[str, tuple[Node, dict]] = {}
         items = list(form.items[2:])
@@ -303,7 +309,7 @@ class _Compiler:
                 given[attr] = (items.pop(0), scope)
         for item, inner in self.expand(items, scope):
             head = _head(item)
-            if kind == "group" and head in SHAPE_ATTRS:
+            if kind == "group" and _shape_kind(item):
                 self.shape(item, i, inner)
                 continue
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
@@ -323,12 +329,18 @@ class _Compiler:
             if attr in ("x", "y") and "pos" in given:
                 continue
             node, inner = given.get(attr, (None, scope))
-            obj.attrs[attr] = self.place(spec.type, node, form.pos, attr, spec.default, inner)
+            at = _maybe(spec.type) if absent else spec.type
+            obj.attrs[attr] = self.place(at, node, form.pos, attr, spec.default, inner)
         if "pos" in given:
             node, inner = given["pos"]
-            point = self.expr(node, POINT, inner)
+            point = self.expr(node, _maybe(POINT) if absent else POINT, inner)
             for k, attr in enumerate(("x", "y")):
-                obj.attrs[attr] = self.settle(REAL, _part(point, k), attr, node.pos)
+                at = _maybe(REAL) if absent else REAL
+                obj.attrs[attr] = self.settle(at, _part(point, k), attr, node.pos)
+        if absent:
+            for attr, place in obj.attrs.items():
+                if not _may_be_none(_value_type(place)):
+                    place.type = specs[attr].type
         return i
 
     # Places ------------------------------------------------------------------------------
@@ -347,17 +359,22 @@ class _Compiler:
         within the place's constraints, or the compiler stops (type-system.md, 5.b and 5.c)."""
         if e.known:
             return Place(t, e.value)
-        if isinstance(t, Refine):
-            for c in t.constraints:
-                if c[0] in COMPARE and not _range_within(e.range, c):
-                    raise CompileError(f"{what} may break {_show(c)}", pos)
+        inner = _inner(t)
+        if isinstance(inner, Refine):
+            broken = tuple(
+                c for c in inner.constraints if c[0] in COMPARE and not _range_within(e.range, c)
+            )
+            if broken and not _may_be_none(t):
+                raise CompileError(f"{what} may break {_show(broken[0])}", pos)
+            if broken:
+                e = Expr("check", _maybe(e.type), (e, broken), e.deps, e.range)
         return Place(t, expr=e)
 
     def default(self, t: Type, pos: Pos) -> object:
         """The value a type has when none is given (reference.md, "Defaults")."""
-        base, cons = (t.base, t.constraints) if isinstance(t, Refine) else (t, ())
-        if isinstance(base, Maybe):
+        if isinstance(t, Maybe):
             return None
+        base, cons = (t.base, t.constraints) if isinstance(t, Refine) else (t, ())
         if base in NUMBERS:
             value = 0
             for c in cons:
@@ -388,11 +405,16 @@ class _Compiler:
     def expr(self, node: Node, expected: Type | None, scope: dict) -> Expr:
         e = self.typed(node, expected, scope)
         # A constraint is checked on the value (known) or its range (settle), not on its type.
-        target = _base(expected) if isinstance(expected, Refine) else expected
-        if target is not None and not fits(e.type, target):
+        target = _loose(expected) if expected is not None else None
+        if target is not None and not fits(_loose(e.type), target):
+            if _may_be_none(e.type) and not _may_be_none(target):
+                raise CompileError(
+                    "this value may be none: give it a default with (or? value default)", node.pos
+                )
             raise CompileError(f"expected {expected}, got {e.type}", node.pos)
-        if e.known and isinstance(expected, Refine):
-            for c in expected.constraints:
+        narrowed = _inner(expected) if expected is not None else None
+        if e.known and e.value is not None and isinstance(narrowed, Refine):
+            for c in narrowed.constraints:
                 if c[0] != "const" and not _satisfies(e.value, c):
                     raise CompileError(f"{_value_str(e.value)} breaks {_show(c)}", node.pos)
         return e
@@ -415,14 +437,20 @@ class _Compiler:
         raise CompileError(f"unexpected {type(node).__name__}", node.pos)
 
     def literal(self, node: Node, expected: Type | None) -> Expr:
-        place = expected if not isinstance(expected, Refine) else expected.base
+        if isinstance(node, NoneLit) and expected is None:
+            return _known(NONE, None)
+        place = _loose(expected) if expected is not None else None
         try:
-            t = literal_type(node, place) if place is not None else literal_type(node, None)
+            t = literal_type(node, place)
         except TypeError_ as e:
             raise CompileError(str(e), node.pos) from None
         if isinstance(node, NoneLit):
             return _known(t, None)
+        # A literal that is not none has the type of its place's other values.
+        t = _inner(t)
         value = node.value
+        if isinstance(value, (int, float, Fraction)) and abs(value) > LIMIT:
+            raise CompileError(f"{value} is beyond ±10^150, the limit of every number", node.pos)
         if t == COLOR or (isinstance(t, Maybe) and t.inner == COLOR):
             value = parse_color(node.value)
         return _known(t, value)
@@ -432,7 +460,7 @@ class _Compiler:
         if isinstance(place, Maybe):
             place = place.inner
         if place == POINT:
-            items = [self.expr(i, REAL, scope) for i in node.items]
+            items = [self.expr(i, Maybe(REAL), scope) for i in node.items]
             if len(items) != 2:
                 raise CompileError("a point is two numbers, [x y]", node.pos)
             return _gather(POINT, items)
@@ -446,10 +474,12 @@ class _Compiler:
         if t is None:
             t = items[0].type
             for e in items[1:]:
-                if fits(t, e.type):
-                    t = e.type
-                elif not fits(e.type, t):
+                wider = _widen(t, e.type)
+                if wider is None:
                     raise CompileError(f"a list holds one type, but has {t} and {e.type}", node.pos)
+                t = wider
+            if t == NONE:
+                raise CompileError("a list of only none needs its type: write list[T]", node.pos)
         return _gather(ListT(t), items)
 
     def interp(self, node: InterpStrLit, scope: dict) -> Expr:
@@ -461,6 +491,8 @@ class _Compiler:
             inner, spec = (part.expr, part.spec) if isinstance(part, Field) else (part, "")
             e = self.expr(inner, None, scope)
             _check_spec(e.type, spec, part.pos)
+            if e.known and e.value is None:
+                return _known(Maybe(STRING), None)
             if e.known:
                 parts.append(_show_value(e.type, e.value, spec))
             else:
@@ -474,7 +506,7 @@ class _Compiler:
         if all(isinstance(p, str) for p in merged):
             return _known(STRING, "".join(merged))
         exprs = [p[0] for p in merged if not isinstance(p, str)]
-        t = Maybe(STRING) if any(isinstance(_base(e.type), Maybe) for e in exprs) else STRING
+        t = Maybe(STRING) if any(_may_be_none(e.type) for e in exprs) else STRING
         return Expr("format", t, tuple(merged), frozenset().union(*(e.deps for e in exprs)))
 
     def name(self, node: Name, scope: dict) -> Expr:
@@ -503,11 +535,26 @@ class _Compiler:
             if attr not in obj.attrs:
                 raise CompileError(f"a {obj.kind} has no attribute '{attr}'", obj.pos)
             place = obj.attrs[attr]
+        t = _maybe(place.type) if isinstance(obj.type, Maybe) else place.type
         if not place.bound and _is_const(place.type):
-            return _known(place.type, place.value)
-        return Expr("read", place.type, (i, attr), frozenset({(i, attr)}), _type_range(place.type))
+            return _known(t, place.value)
+        return Expr("read", t, (i, attr), frozenset({(i, attr)}), _type_range(t))
 
     def part(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
+        if e.known and e.value is None:
+            return e
+        r = self.part_of(e, part, scope, pos)
+        if _may_be_none(e.type) and not _may_be_none(r.type):
+            return replace(r, type=_maybe(r.type))
+        return r
+
+    def has_attr(self, e: Expr, name) -> bool:
+        if e.op == "obj":
+            obj = self.model.objects[e.args[0]]
+            return name in obj.attrs or (name == "pos" and "x" in obj.attrs)
+        return _base(_inner(e.type)) == POINT and name in ("x", "y")
+
+    def part_of(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
         if isinstance(part, str):
             if e.op == "obj":
                 obj = self.model.objects[e.args[0]]
@@ -516,7 +563,7 @@ class _Compiler:
                 if part not in obj.attrs:
                     raise CompileError(f"a {obj.kind} has no attribute '{part}'", pos)
                 return self.read(e.args[0], part)
-            if e.type == POINT and part in ("x", "y"):
+            if _base(_inner(e.type)) == POINT and part in ("x", "y"):
                 return _part(e, 0 if part == "x" else 1)
             raise CompileError(f"a {e.type} has no attribute '{part}'", pos)
         index = self.expr(part, None, scope)
@@ -530,15 +577,21 @@ class _Compiler:
             raise CompileError(f"a {obj.kind} has no member '{index.value}'", pos)
         if not fits(index.type, INT):
             raise CompileError(f"a position is an int, got {index.type}", pos)
-        whole = _base(e.type)
+        whole = _base(_inner(e.type))
         if isinstance(whole, ListT) or whole == POINT:
             item = REAL if whole == POINT else whole.item
-            if e.known and index.known:
-                items = e.value
+            n = _length(e)
+            # A fixed position on a list of known length never gives none.
+            if index.known and n is not None:
                 k = index.value
-                if not -len(items) <= k < len(items):
+                if not -n <= k < n:
                     raise CompileError(f"position {k} is out of range", pos)
-                return _known(item, items[k])
+                if e.known:
+                    return _known(item, e.value[k])
+                if e.op == "list":
+                    return e.args[k]
+            else:
+                item = _maybe(item)
             return Expr("part", item, (e, index), e.deps | index.deps, _type_range(item))
         if e.op == "obj":
             obj = self.model.objects[e.args[0]]
@@ -556,7 +609,9 @@ class _Compiler:
             if len(args) != 3:
                 raise CompileError("if takes a condition and two branches", node.pos)
             c = self.expr(args[0], BOOL, scope)
-            a, b = (self.expr(x, expected, scope) for x in args[1:])
+            # Branches may be none; the place the if reaches decides whether that is allowed.
+            branch = _maybe(expected) if expected is not None else None
+            a, b = (self.expr(x, branch, scope) for x in args[1:])
             if c.known:
                 return a if c.value else b
             return Expr(
@@ -592,12 +647,36 @@ class _Compiler:
         if head == ".":
             x, y = self.args(node, 2)
             whole = self.expr(x, None, scope)
-            if isinstance(y, Name) and len(y.parts) == 1 and isinstance(y.parts[0], str):
-                return self.part(whole, y.parts[0], scope, node.pos)
+            # A bare name is an attribute when whole has one by that name; else it is a value.
+            if isinstance(y, Name) and len(y.parts) == 1:
+                name = y.parts[0]
+                unknown = name not in scope and name not in self.model.names
+                if self.has_attr(whole, name) or (unknown and whole.op == "obj"):
+                    return self.part(whole, name, scope, node.pos)
             return self.part(whole, y, scope, node.pos)
         if head == "abs":
             (a,) = self.args(node, 1)
             return self.abs(node, self.expr(a, None, scope))
+        if head == "or?":
+            return self.or_default(node, expected, scope)
+        if head in ("none?", "some?"):
+            (a,) = self.args(node, 1)
+            e = self.expr(a, None, scope)
+            if e.known:
+                return _known(BOOL, (e.value is None) == (head == "none?"))
+            if not _may_be_none(e.type):
+                return _known(BOOL, head == "some?")
+            return Expr(head, BOOL, (e,), e.deps)
+        if head == "somes":
+            (a,) = self.args(node, 1)
+            e = self.expr(a, None, scope)
+            whole = _base(_inner(e.type))
+            if not isinstance(whole, ListT) or _may_be_none(e.type):
+                raise CompileError(f"somes takes a list, got {e.type}", node.pos)
+            t = ListT(_inner(whole.item))
+            if e.known:
+                return _known(t, [v for v in e.value if v is not None])
+            return Expr("somes", t, (e,), e.deps)
         if head in ARITH:
             return self.arith(node, head, [self.expr(x, None, scope) for x in args])
         if head in COMPARE or head in ("=", "!="):
@@ -623,10 +702,11 @@ class _Compiler:
         if not clauses or _head(clauses[-1]) != "else":
             raise CompileError("cond ends with an (else …) clause", node.pos)
         result = None
+        branch = _maybe(expected) if expected is not None else None
         for clause in reversed(clauses):
             if not isinstance(clause, Form) or len(clause.items) != 2:
                 raise CompileError("a cond clause is (test value)", clause.pos)
-            v = self.expr(clause.items[1], expected, scope)
+            v = self.expr(clause.items[1], branch, scope)
             if _head(clause) == "else" and result is None:
                 result = v
                 continue
@@ -663,28 +743,50 @@ class _Compiler:
             raise CompileError(
                 f"{op} takes {'two' if op in ('/', '^', 'mod') else 'some'} numbers", node.pos
             )
-        for a in args:
-            if a.type not in NUMBERS and _base(a.type) not in NUMBERS:
+        numbers = [a for a in args if a.type != NONE]
+        for a in numbers:
+            if _core(a.type) not in NUMBERS:
                 raise CompileError(f"{op} takes numbers, got {a.type}", node.pos)
-        t = max((_base(a.type) for a in args), key=NUMBERS.index)
+        if not numbers:
+            raise CompileError(f"{op} takes numbers, got none", node.pos)
+        t = max((_core(a.type) for a in numbers), key=NUMBERS.index)
         if op == "/" and t == INT:
             t = RATIO
+        if op == "^":
+            t = _power_type(*args)
+        if any(a.known and a.value is None for a in args):
+            return _known(Maybe(t), None)
         if all(a.known for a in args):
-            try:
-                v = _fold(op, [a.value for a in args])
-            except ZeroDivisionError:
-                raise CompileError("division by zero", node.pos) from None
-            if t == RATIO and isinstance(v, Fraction) and v.denominator == 1:
-                v = Fraction(v)
-            return _known(t, v)
+            return _known(t, _fold_number(op, [a.value for a in args], node.pos))
+        ranges = [a.range for a in args]
+        r = _range_of(op, ranges)
+        undefined = any(_may_be_none(a.type) for a in args) or _may_be_undefined(op, args)
+        if r is not None and (r[0] < -MAX_REAL or r[1] > MAX_REAL):
+            undefined = True
+            r = (max(r[0], -MAX_REAL), min(r[1], MAX_REAL))
         deps = frozenset().union(*(a.deps for a in args))
-        return Expr(op, t, tuple(args), deps, _range_of(op, [a.range for a in args]))
+        return Expr(op, Maybe(t) if undefined else t, tuple(args), deps, r)
+
+    def or_default(self, node: Form, expected: Type | None, scope: dict) -> Expr:
+        x, d = self.args(node, 2)
+        ex = self.expr(x, _maybe(expected) if expected is not None else None, scope)
+        ed = self.expr(d, expected if expected is not None else _inner(ex.type), scope)
+        if ex.known:
+            return ed if ex.value is None else ex
+        if not _may_be_none(ex.type):
+            return ex
+        t = _join(_inner(ex.type), ed.type, node.pos)
+        return Expr("or?", t, (ex, ed), ex.deps | ed.deps, _union(ex.range, ed.range))
 
     def abs(self, node: Form, a: Expr) -> Expr:
-        base = _base(a.type)
+        base = _core(a.type)
         if base not in NUMBERS:
             raise CompileError(f"abs takes a number, got {a.type}", node.pos)
         t = REAL if base == COMPLEX else base
+        if a.known and a.value is None:
+            return _known(Maybe(t), None)
+        if _may_be_none(a.type):
+            t = Maybe(t)
         if a.known:
             return _known(t, abs(a.value))
         r = a.range
@@ -699,15 +801,22 @@ class _Compiler:
     def compare(self, node: Form, op: str, a: Expr, b: Expr) -> Expr:
         if op in COMPARE:
             for e in (a, b):
-                if _base(e.type) not in NUMBERS[:3]:
+                if e.type != NONE and _core(e.type) not in NUMBERS[:3]:
                     raise CompileError(f"{op} compares numbers, got {e.type}", node.pos)
-        elif not (fits(a.type, b.type) or fits(b.type, a.type)):
-            raise CompileError(
-                f"{op} compares two of one type, got {a.type} and {b.type}", node.pos
-            )
+            if any(e.known and e.value is None for e in (a, b)):
+                return _known(Maybe(BOOL), None)
+            t = Maybe(BOOL) if _may_be_none(a.type) or _may_be_none(b.type) else BOOL
+        else:
+            # Equality decides with none too: (= none none) is true, (= none 3) is false.
+            ta, tb = _loose(_inner(a.type)), _loose(_inner(b.type))
+            if NONE not in (ta, tb) and not (fits(ta, tb) or fits(tb, ta)):
+                raise CompileError(
+                    f"{op} compares two of one type, got {a.type} and {b.type}", node.pos
+                )
+            t = BOOL
         if a.known and b.known:
-            return _known(BOOL, _fold(op, [a.value, b.value]))
-        return Expr(op, BOOL, (a, b), a.deps | b.deps)
+            return _known(t, _fold(op, [a.value, b.value]))
+        return Expr(op, t, (a, b), a.deps | b.deps)
 
 
 ARITH = {"+", "-", "*", "/", "^", "mod"}
@@ -722,7 +831,136 @@ def _known(t: Type, value) -> Expr:
     return Expr("lit", t, (value,), range=r, known=True, value=value)
 
 
+def _shape_kind(node: Node) -> tuple[str, bool] | None:
+    """The shape a form declares, and whether it is declared T|none."""
+    if not isinstance(node, Form):
+        return None
+    head = node.items[0]
+    absent = False
+    if isinstance(head, Bar) and len(head.items) == 2 and isinstance(head.items[1], NoneLit):
+        head, absent = head.items[0], True
+    if isinstance(head, Name) and len(head.parts) == 1 and head.parts[0] in SHAPE_ATTRS:
+        return head.parts[0], absent
+    return None
+
+
+def _inner(t: Type) -> Type:
+    return t.inner if isinstance(t, Maybe) else t
+
+
+def _may_be_none(t: Type) -> bool:
+    return isinstance(t, Maybe) or t == NONE
+
+
+def _maybe(t: Type) -> Type:
+    return t if _may_be_none(t) else Maybe(t)
+
+
+def _core(t: Type) -> Type:
+    """t without none and without constraints: what an operation checks its inputs against."""
+    return _base(_inner(t))
+
+
+def _loose(t: Type) -> Type:
+    """t without constraints, which are checked on values and ranges, not types."""
+    return Maybe(_base(t.inner)) if isinstance(t, Maybe) else _base(t)
+
+
+def _value_type(place: Place) -> Type:
+    return place.expr.type if place.bound else (NONE if place.value is None else place.type)
+
+
+def _length(e: Expr) -> int | None:
+    """A list's length when it is known when compiling (type-system.md, "Known lengths")."""
+    if e.known and e.value is not None:
+        return len(e.value)
+    if e.op == "list":
+        return len(e.args)
+    t = _inner(e.type)
+    if _base(t) == POINT:
+        return 2
+    if isinstance(t, Refine):
+        return next((c[1] for c in t.constraints if c[0] == "length"), None)
+    return None
+
+
+def _widen(a: Type, b: Type) -> Type | None:
+    """The narrowest type both a and b fit, or None."""
+    if fits(a, b):
+        return b
+    if fits(b, a):
+        return a
+    if a == NONE:
+        return _maybe(b)
+    if b == NONE:
+        return _maybe(a)
+    if _may_be_none(a) or _may_be_none(b):
+        inner = _widen(_inner(a), _inner(b))
+        return Maybe(inner) if inner is not None else None
+    return None
+
+
+def _power_type(base: Expr, exp: Expr) -> Type:
+    a, b = _core(base.type), _core(exp.type)
+    if COMPLEX in (a, b):
+        return COMPLEX
+    if a == INT and b == INT:
+        low = exp.value if exp.known else (exp.range[0] if exp.range else -1)
+        return INT if low is not None and low >= 0 else RATIO
+    return REAL
+
+
+def _may_be_undefined(op: str, args: list[Expr]) -> bool:
+    """Whether a partial operation's inputs' ranges reach a point where it is undefined."""
+    if op in ("/", "mod"):
+        r = args[1].range
+        return r is None or r[0] <= 0 <= r[1]
+    if op == "^":
+        base, exp = args
+        rb, re_ = base.range, exp.range
+        if rb is None or re_ is None:
+            return True
+        if rb[0] <= 0 <= rb[1] and re_[0] < 0:
+            return True
+        if rb[0] < 0 and _core(exp.type) != INT:
+            return True
+        for x in rb:
+            for y in re_:
+                try:
+                    if abs(math.pow(abs(x), y)) > MAX_REAL:
+                        return True
+                except (OverflowError, ZeroDivisionError, ValueError):
+                    return True
+    return False
+
+
+def _fold_number(op: str, vals: list, pos: Pos):
+    if op == "^":
+        a, b = vals
+        if a == 0 and b < 0:
+            raise CompileError("undefined: 0 to a negative power", pos)
+        if a < 0 and not float(b).is_integer():
+            raise CompileError("undefined: a negative number to a power that is not an int", pos)
+        if isinstance(a, (int, Fraction)) and isinstance(b, int) and b < 0:
+            a = Fraction(a)
+    try:
+        v = _fold(op, vals)
+    except ZeroDivisionError:
+        raise CompileError("division by zero", pos) from None
+    except OverflowError:
+        raise CompileError("the result is too large for a real", pos) from None
+    if isinstance(v, (int, float, Fraction)) and not math.isfinite(v):
+        raise CompileError("the result is too large for a real", pos)
+    if isinstance(v, (int, Fraction)) and abs(v) > MAX_REAL:
+        raise CompileError("the result is too large for a real", pos)
+    return v
+
+
 def _gather(t: Type, items: list[Expr]) -> Expr:
+    if any(_may_be_none(i.type) for i in items) and t == POINT:
+        t = Maybe(POINT)
+    if t == Maybe(POINT) and any(i.known and i.value is None for i in items):
+        return _known(t, None)
     if all(i.known for i in items):
         v = [i.value for i in items]
         return _known(t, tuple(v) if t == POINT else v)
@@ -730,11 +968,12 @@ def _gather(t: Type, items: list[Expr]) -> Expr:
 
 
 def _part(e: Expr, k: int) -> Expr:
+    t = _maybe(REAL) if _may_be_none(e.type) else REAL
     if e.known:
-        return _known(REAL, e.value[k])
+        return _known(t, None if e.value is None else e.value[k])
     if e.op == "list":
         return e.args[k]
-    return Expr("part", REAL, (e, _known(INT, k)), e.deps, UNBOUNDED)
+    return Expr("part", t, (e, _known(INT, k)), e.deps, UNBOUNDED)
 
 
 def _base(t: Type) -> Type:
@@ -742,10 +981,12 @@ def _base(t: Type) -> Type:
 
 
 def _is_const(t: Type) -> bool:
+    t = _inner(t)
     return isinstance(t, Refine) and ("const",) in t.constraints
 
 
 def _type_range(t: Type) -> Range:
+    t = _inner(t)
     if isinstance(t, Refine) and t.base in NUMBERS[:3]:
         lo, hi = UNBOUNDED
         for c in t.constraints:
@@ -760,16 +1001,17 @@ def _type_range(t: Type) -> Range:
 
 
 def _join(a: Type, b: Type, pos: Pos) -> Type:
-    if fits(a, b):
-        return b
-    if fits(b, a):
-        return a
-    raise CompileError(f"the branches give {a} and {b}", pos)
+    t = _widen(a, b)
+    if t is None:
+        raise CompileError(f"the branches give {a} and {b}", pos)
+    return t
 
 
 def _union(a: Range, b: Range) -> Range:
-    if a is None or b is None:
-        return None
+    if a is None:
+        return b
+    if b is None:
+        return a
     return (min(a[0], b[0]), max(a[1], b[1]))
 
 
@@ -798,7 +1040,12 @@ def _range_of(op: str, ranges: list[Range]) -> Range:
             return UNBOUNDED
         ends = [a[0] / b[0], a[0] / b[1], a[1] / b[0], a[1] / b[1]]
         return (min(ends), max(ends))
-    return UNBOUNDED
+    if op == "mod":
+        # mod takes the divisor's sign, so it lies between 0 and the divisor.
+        b = ranges[1]
+        return (min(0.0, b[0]), max(0.0, b[1]))
+    # Any other function gives its whole range (type-system.md, "What the compiler proves").
+    return WHOLE
 
 
 def _range_within(r: Range, c) -> bool:
@@ -894,11 +1141,8 @@ def _fold(op: str, vals: list):
             raise ZeroDivisionError
         return a % b
     a, b = vals
-    return {
-        "=": a == b,
-        "!=": a != b,
-        "<": a < b,
-        "<=": a <= b,
-        ">": a > b,
-        ">=": a >= b,
-    }[op]
+    if op == "=":
+        return a == b
+    if op == "!=":
+        return a != b
+    return {"<": a < b, "<=": a <= b, ">": a > b, ">=": a >= b}[op] if None not in vals else None
