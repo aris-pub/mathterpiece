@@ -16,6 +16,7 @@ from mathterpiece.types import (
     Interface,
     ListT,
     Maybe,
+    Refine,
     ShapeT,
     TypeError_,
     fits,
@@ -183,3 +184,102 @@ class TestTypeNotation:
             FuncT((REAL,), REAL)
         )
         assert type_from_node(Form((Name(("maybe",)), Name(("real",))))) == Maybe(REAL)
+
+
+class TestRefinement:
+    # type-system.md, section 5.b.
+    def test_a_narrowed_type_form(self):
+        t = type_from_node(node("(real (>= 0) (<= 1))"))
+        assert t == Refine(REAL, ((">=", 0), ("<=", 1)))
+
+    def test_constraints(self):
+        assert type_from_node(node("(list[real] (length 3))")) == Refine(
+            ListT(REAL), (("length", 3),)
+        )
+        assert type_from_node(node("(string (one-of 'left' 'right'))")) == Refine(
+            STRING, (("one-of", ("left", "right")),)
+        )
+        assert type_from_node(node("(int (const))")) == Refine(INT, (("const",),))
+
+    def test_a_narrowed_type_fits_its_base(self):
+        unit = Refine(REAL, ((">=", 0), ("<=", 1)))
+        assert fits(unit, REAL)
+        assert fits(unit, COMPLEX)
+        assert not fits(REAL, unit)
+
+    def test_a_narrower_range_fits_a_wider_one(self):
+        assert fits(Refine(REAL, ((">=", 1),)), Refine(REAL, ((">=", 0),)))
+        assert not fits(Refine(REAL, ((">=", 0),)), Refine(REAL, ((">=", 1),)))
+        assert fits(Refine(REAL, ((">", 0),)), Refine(REAL, ((">=", 0),)))
+        assert not fits(Refine(REAL, ((">=", 0),)), Refine(REAL, ((">", 0),)))
+
+    def test_fewer_choices_fit_more(self):
+        ab = Refine(STRING, (("one-of", ("a", "b")),))
+        abc = Refine(STRING, (("one-of", ("a", "b", "c")),))
+        assert fits(ab, abc)
+        assert not fits(abc, ab)
+
+    def test_const_does_not_change_what_fits(self):
+        assert fits(Refine(INT, (("const",),)), INT)
+        assert fits(INT, Refine(INT, (("const",),)))
+
+    @pytest.mark.parametrize(
+        "text, message",
+        [
+            ("(real (>= 'a'))", "a comparison takes a number"),
+            ("(real (>= 0 1))", "a comparison takes one number"),
+            ("(string (>= 0))", "only numbers can be compared"),
+            ("(real (length 3))", "only lists have a length"),
+            ("(real (one-of 'a'))", "only strings have choices"),
+            ("(string (one-of))", "one-of needs at least one choice"),
+            ("(real (foo))", "unknown constraint"),
+        ],
+    )
+    def test_invalid(self, text, message):
+        with pytest.raises(TypeError_, match=message):
+            type_from_node(node(text))
+
+
+class TestLiteralsAgainstConstraints:
+    unit = Refine(REAL, ((">=", 0), ("<=", 1)))
+
+    def test_a_known_value_inside(self):
+        assert literal_type(RealLit(0.5), self.unit) == self.unit
+
+    def test_a_known_value_outside_is_an_error(self):
+        with pytest.raises(TypeError_, match=r"1.5 breaks \(<= 1\)"):
+            literal_type(RealLit(1.5), self.unit)
+
+    def test_strict_bounds(self):
+        with pytest.raises(TypeError_, match=r"breaks \(> 0\)"):
+            literal_type(IntLit(0), Refine(REAL, ((">", 0),)))
+
+    def test_choices(self):
+        side = Refine(STRING, (("one-of", ("left", "right")),))
+        assert literal_type(StrLit("left"), side) == side
+        with pytest.raises(TypeError_, match="'up' is not one of 'left', 'right'"):
+            literal_type(StrLit("up"), side)
+
+    def test_length(self):
+        three = Refine(ListT(REAL), (("length", 3),))
+        assert literal_type(ListLit((IntLit(1), IntLit(2), IntLit(3))), three) == three
+        with pytest.raises(TypeError_, match="2 items, but its length is 3"):
+            literal_type(ListLit((IntLit(1), IntLit(2))), three)
+
+
+class TestNamedTypes:
+    def test_a_name_reads_the_types_declared_so_far(self):
+        unit = Refine(REAL, ((">=", 0), ("<=", 1)), "unit")
+        named = {"unit": unit}
+        assert type_from_node(node("unit"), named) == unit
+        assert type_from_node(node("list[unit]"), named) == ListT(unit)
+
+    def test_a_named_type_narrows_further(self):
+        named = {"unit": Refine(REAL, ((">=", 0), ("<=", 1)), "unit")}
+        t = type_from_node(node("(unit (<= 0.5))"), named)
+        assert fits(t, named["unit"])
+        assert t.base == REAL
+
+    def test_its_name_shows_in_messages(self):
+        assert str(Refine(REAL, ((">=", 0),), "positive")) == "positive"
+        assert str(Refine(REAL, ((">=", 0),))) == "(real (>= 0))"

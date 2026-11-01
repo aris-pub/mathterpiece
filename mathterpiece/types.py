@@ -73,7 +73,31 @@ class Interface:
         return self.name if self.of is None else f"{self.name}[{self.of}]"
 
 
-Type = Prim | ListT | FuncT | Maybe | ShapeT | Interface
+# A constraint: (">=", 0), ("length", 3), ("one-of", ("a", "b")) or ("const",).
+Constraint = tuple
+
+
+@dataclass(frozen=True)
+class Refine:
+    """A type narrowed by constraints (type-system.md, section 5.b); base is never a Refine."""
+
+    base: "Type"
+    constraints: tuple[Constraint, ...]
+    name: str | None = None
+
+    def __str__(self) -> str:
+        if self.name:
+            return self.name
+        return f"({self.base} {' '.join(_show(c) for c in self.constraints)})"
+
+
+def _show(c: Constraint) -> str:
+    if c[0] == "one-of":
+        return "(one-of " + " ".join(f"'{v}'" for v in c[1]) + ")"
+    return "(" + " ".join(str(p) for p in c) + ")"
+
+
+Type = Prim | ListT | FuncT | Maybe | ShapeT | Interface | Refine
 
 INT, RATIO, REAL, COMPLEX = Prim("int"), Prim("ratio"), Prim("real"), Prim("complex")
 BOOL, STRING, COLOR, FONT = Prim("bool"), Prim("string"), Prim("color"), Prim("font")
@@ -110,6 +134,8 @@ def fits(actual: Type, expected: Type) -> bool:
     """Whether an object of type actual is accepted where expected is."""
     if actual == expected:
         return True
+    if isinstance(actual, Refine) or isinstance(expected, Refine):
+        return _fits_refined(actual, expected)
     if actual in NUMBERS and expected in NUMBERS:
         return NUMBERS.index(actual) <= NUMBERS.index(expected)
     if isinstance(expected, Maybe):
@@ -126,6 +152,43 @@ def fits(actual: Type, expected: Type) -> bool:
         )
     if isinstance(expected, Interface):
         return _satisfies(actual, expected)
+    return False
+
+
+COMPARE = {">=", ">", "<=", "<"}
+
+
+def _narrowing(t: Type) -> tuple[Type, tuple[Constraint, ...]]:
+    # const forbids writes but narrows no value, so it never decides what fits.
+    if isinstance(t, Refine):
+        return t.base, tuple(c for c in t.constraints if c[0] != "const")
+    return t, ()
+
+
+def _fits_refined(actual: Type, expected: Type) -> bool:
+    a_base, a_cons = _narrowing(actual)
+    e_base, e_cons = _narrowing(expected)
+    return fits(a_base, e_base) and all(_implied(a_cons, c) for c in e_cons)
+
+
+def _implied(have: tuple[Constraint, ...], need: Constraint) -> bool:
+    """Whether the constraints have guarantee need."""
+    kind = need[0]
+    if kind in COMPARE:
+        low = kind in (">=", ">")
+        for c in have:
+            if c[0] not in COMPARE or (c[0] in (">=", ">")) != low:
+                continue
+            if c[1] == need[1]:
+                if c[0] == need[0] or c[0] in (">", "<"):
+                    return True
+            elif (c[1] > need[1]) if low else (c[1] < need[1]):
+                return True
+        return False
+    if kind == "length":
+        return need in have
+    if kind == "one-of":
+        return any(c[0] == "one-of" and set(c[1]) <= set(need[1]) for c in have)
     return False
 
 
@@ -155,6 +218,11 @@ def literal_type(node: Node, expected: Type | None) -> Type:
         raise TypeError_(
             f"none is not a {expected}" if expected else "none needs a place that allows it"
         )
+    if isinstance(expected, Refine):
+        literal_type(node, expected.base)
+        for c in expected.constraints:
+            _check(node, c)
+        return expected
     own = _own_type(node, expected)
     if expected is not None and not fits(own, expected):
         raise TypeError_(f"expected {expected}, got {own}")
@@ -190,6 +258,21 @@ def _own_type(node: Node, expected: Type | None) -> Type:
     raise TypeError_(f"{type(node).__name__} is not a literal")
 
 
+def _check(node: Node, c: Constraint) -> None:
+    """Raises if a literal breaks a constraint (a value known when compiling, section 5.b)."""
+    kind = c[0]
+    if kind in COMPARE:
+        value = node.value
+        ok = {">=": value >= c[1], ">": value > c[1], "<=": value <= c[1], "<": value < c[1]}[kind]
+        if not ok:
+            raise TypeError_(f"{value} breaks {_show(c)}")
+    elif kind == "one-of" and node.value not in c[1]:
+        choices = ", ".join(f"'{v}'" for v in c[1])
+        raise TypeError_(f"'{node.value}' is not one of {choices}")
+    elif kind == "length" and len(node.items) != c[1]:
+        raise TypeError_(f"the list has {len(node.items)} items, but its length is {c[1]}")
+
+
 def _common(types: list[Type]) -> Type:
     """The narrowest type every item fits: the broadest number among numbers."""
     best = types[0]
@@ -203,20 +286,22 @@ def _common(types: list[Type]) -> Type:
     return best
 
 
-def type_from_node(node: Node) -> Type:
-    """The type a piece of type notation names (type-system.md, section 5.a)."""
+def type_from_node(node: Node, named: "dict[str, Type] | None" = None) -> Type:
+    """The type a piece of type notation names (type-system.md, section 5.a). named holds the
+    types declared so far, by name."""
+    named = named or {}
     if isinstance(node, Bar):
         *types, last = node.items
         if len(types) != 1 or not isinstance(last, NoneLit):
             raise TypeError_("a type can be broadened only by none for now: write T|none")
-        return Maybe(type_from_node(types[0]))
+        return Maybe(type_from_node(types[0], named))
     if isinstance(node, Form):
         head = node.items[0]
         if isinstance(head, Name) and head.parts == ("maybe",):
             if len(node.items) != 2:
                 raise TypeError_("maybe takes one type")
-            return Maybe(type_from_node(node.items[1]))
-        raise TypeError_("narrowed types are not read yet")
+            return Maybe(type_from_node(node.items[1], named))
+        return refine(type_from_node(head, named), node.items[1:])
     if isinstance(node, NoneLit):
         return NONE
     if not isinstance(node, Name) or not isinstance(node.parts[0], str):
@@ -233,12 +318,12 @@ def type_from_node(node: Node) -> Type:
             raise TypeError_("list needs its item type: write list[T]")
         if len(items) != 1:
             raise TypeError_(f"{name} takes one item type")
-        item = type_from_node(items[0])
+        item = type_from_node(items[0], named)
         return ListT(item) if name == "list" else Interface("sequence", item)
     if name == "func":
         if not items:
             raise TypeError_("func needs at least its result type: write func[R]")
-        *params, result = (type_from_node(i) for i in items)
+        *params, result = (type_from_node(i, named) for i in items)
         return FuncT(tuple(params), result)
     if items:
         raise TypeError_(f"{name} takes no item type")
@@ -248,4 +333,50 @@ def type_from_node(node: Node) -> Type:
         return ShapeT(name)
     if name in INTERFACES:
         return Interface(name)
+    if name in named:
+        return named[name]
     raise TypeError_(f"unknown type {name!r}")
+
+
+def refine(base: Type, nodes: "tuple[Node, ...] | list[Node]", name: str | None = None) -> Type:
+    """base narrowed by the constraint forms nodes; a Refine of a Refine is flattened."""
+    own: tuple[Constraint, ...] = ()
+    if isinstance(base, Refine):
+        own, base = base.constraints, base.base
+    added = tuple(constraint(n, base) for n in nodes)
+    return Refine(base, own + added, name)
+
+
+def constraint(node: Node, base: Type) -> Constraint:
+    """Reads one constraint form and checks it can narrow base."""
+    if not isinstance(node, Form) or not isinstance(node.items[0], Name):
+        raise TypeError_("expected a constraint")
+    head = node.items[0].parts[0]
+    args = node.items[1:]
+    if head in COMPARE:
+        if len(args) != 1:
+            raise TypeError_("a comparison takes one number: (>= 0)")
+        if not isinstance(args[0], (IntLit, RatioLit, RealLit)):
+            raise TypeError_("a comparison takes a number")
+        if base not in NUMBERS[:3]:
+            raise TypeError_(f"only numbers can be compared, not {base}")
+        return (head, args[0].value)
+    if head == "length":
+        if not isinstance(base, ListT):
+            raise TypeError_(f"only lists have a length, not {base}")
+        if len(args) != 1 or not isinstance(args[0], IntLit) or args[0].value < 0:
+            raise TypeError_("length takes one whole number: (length 3)")
+        return ("length", args[0].value)
+    if head == "one-of":
+        if base != STRING:
+            raise TypeError_(f"only strings have choices, not {base}")
+        if not args:
+            raise TypeError_("one-of needs at least one choice")
+        if not all(isinstance(a, StrLit) for a in args):
+            raise TypeError_("one-of takes strings: (one-of 'left' 'right')")
+        return ("one-of", tuple(a.value for a in args))
+    if head == "const":
+        if args:
+            raise TypeError_("const takes nothing: (const)")
+        return ("const",)
+    raise TypeError_(f"unknown constraint {head!r}")
