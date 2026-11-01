@@ -12,7 +12,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 |---|---|---|---|
 | `(T name value)` for any type `T` | required | the value | constraints |
 
-`T` is any type or type expression: `(real k 1)`, `(color ink 'navy')`, `(list[color] palette ['red' 'gold'])`, `(real|none crossing (sec theta))`, `((real (>= 0)) r 1)`. A plain `list` infers its item type from the value.
+`T` is any type or type expression: `(real k 1)`, `(color ink 'navy')`, `(list[color] palette ['red' 'gold'])`, `(real|none crossing (secd theta))`, `((real (>= 0)) r 1)`. A plain `list` infers its item type from the value.
 
 ### Types
 
@@ -124,21 +124,19 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 
 ### Angles
 
-Two families: functions ending in `d` use degrees, the others radians. `polar` and `rotate` use degrees.
+Two full families: the functions ending in `d` take or give degrees, the others radians. `polar` and `rotate` use degrees.
 
-| Function | Takes | Gives | Undefined |
-|---|---|---|---|
-| `sind` `cosd` | degrees | real | never |
-| `tand` | degrees | real | at 90 + 180k |
-| `asind` `acosd` | real | degrees | outside −1..1 |
-| `atand` | real | degrees | never |
-| `sin` `cos` `tan` | radians | real | `tan` at π/2 + kπ |
-| `asin` `acos` `atan` | real | radians | `asin`, `acos` outside −1..1 |
-| `rad` | radians | degrees | never |
-| `turn` | turns | degrees | never |
-| `deg` | degrees | degrees | never |
-| `to-rad` | degrees | radians | never |
-| `to-turn` | degrees | turns | never |
+| Radians | Degrees | Takes | Gives | Undefined (degrees; in radians the same angles) |
+|---|---|---|---|---|
+| `sin` `cos` | `sind` `cosd` | an angle | real | never |
+| `tan` | `tand` | an angle | real | at 90 + 180k |
+| `sec` | `secd` | an angle | real | at 90 + 180k |
+| `csc` `cot` | `cscd` `cotd` | an angle | real | at 180k |
+| `asin` `acos` | `asind` `acosd` | real | an angle | outside −1..1 |
+| `atan` `acot` | `atand` `acotd` | real | an angle | never |
+| `asec` `acsc` | `asecd` `acscd` | real | an angle | strictly between −1 and 1 |
+
+Conversions: `rad` (radians to degrees), `turn` (turns to degrees), `deg` (degrees, unchanged), `to-rad` (degrees to radians), `to-turn` (degrees to turns). None is ever undefined.
 
 ### Points
 

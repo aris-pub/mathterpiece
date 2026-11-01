@@ -128,7 +128,7 @@ A value known when compiling that breaks a constraint is a compile error, and a 
 
 `none` stands for a value that does not exist. For now it is the only way to broaden a type: `real|none`, or `(maybe real)`, is a real or none.
 
-**Where it comes from.** A function where it is undefined: `(/ x 0)`, `(sec 90)`, `(tan 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)` on a real. When the inputs are known when compiling this is a compile error; while drawing it gives `none`, never an error and never infinity. A lookup by a key known only while drawing, `g[side]`, may also give none. And an author may write `none` on purpose.
+**Where it comes from.** A function where it is undefined: `(/ x 0)`, `(secd 90)`, `(tand 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)` on a real. When the inputs are known when compiling this is a compile error; while drawing it gives `none`, never an error and never infinity. A lookup by a key known only while drawing, `g[side]`, may also give none. And an author may write `none` on purpose.
 
 **How it behaves.** Anything computed from `none` is `none`. `(= none none)` is true; so is a part of `none`: if `g[k]` is `none`, so is `g[k].pos`.
 
@@ -141,7 +141,7 @@ A value known when compiling that breaks a constraint is a compile error, and a 
 
 **Shapes.** A plain shape type must always be drawable. If any of its drawing-essential attributes may be `none`, compilation stops. Declaring the shape itself as `T|none` says it may be absent: then it is not drawn, and the shape is `none`, so whatever reads it must handle that in turn. An attribute accepts `none` only if its type says so: for built-in shapes, that is `fill` and `stroke`, typed `color|none`, where `none` means no paint.
 
-    (real|none crossing (sec theta))
+    (real|none crossing (secd theta))
     (line tan (from p.pos) (to [crossing 0]))           ; an error: the end may be none
     (line|none tan (from p.pos) (to [crossing 0]))      ; at 90° the line is absent
     (line tan2 (from p.pos) (to [(or? crossing 0) 0]))  ; or: a stand-in end
@@ -151,7 +151,7 @@ A value known when compiling that breaks a constraint is a compile error, and a 
     (list[real|none] radii (map g (fn p (sqrt p.k))))        ; some square roots fail
     (real mean (/ (sum (somes radii)) (count (somes radii))))
 
-**Constraints.** A bound value that would break its constraint while drawing is `none`, like an undefined value: `(circle|none c (r (sec theta)))` is absent at 90° and wherever `sec` is negative. Constraints also let the compiler prove a value is defined: with `(real k 1 (>= 1))`, `(/ 1 k)` can never be `none`. Constraints on a type that allows `none` apply to its other values; `none` itself is always allowed.
+**Constraints.** A bound value that would break its constraint while drawing is `none`, like an undefined value: `(circle|none c (r (secd theta)))` is absent at 90° and wherever `secd` is negative. Constraints also let the compiler prove a value is defined: with `(real k 1 (>= 1))`, `(/ 1 k)` can never be `none`. Constraints on a type that allows `none` apply to its other values; `none` itself is always allowed.
 
 ### 5.d Choice types
 
