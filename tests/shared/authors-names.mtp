@@ -1,20 +1,19 @@
-; An author's function replaces a library function of the same name, including the list
-; operations the writer handles itself.
+; An author's function replaces a library function of the same name.
 ; expect r 20
 ; expect a 9
 ; expect d 8
 ; expect y 14
 ; expect z 16
-(func 'reverse' (params (x 0.0)) (* x 10))
-(func 'sort-asc' (params (x 0.0)) (* x 3))
-(func 'sort-desc' (params (x 0.0)) (* x 4))
-(func 'any' (params (x 0.0)) (* x 7))
-(func 'all' (params (x 0.0)) (* x 8))
-(real 'k' 2)
-(scene _)
-(button 'b' (animation (k (transition (to 2) (duration 0)))))
-(real 'r' (reverse k))
-(real 'a' (sort-asc 3))
-(real 'd' (sort-desc k))
-(real 'y' (any k))
-(real 'z' (all k))
+(func reverse (real x) (* x 10))
+(func sort (real x) (* x 3))
+(func sum (real x) (* x 4))
+(func any (real x) (* x 7))
+(func all (real x) (* x 8))
+(real k 2)
+(scene s)
+(button b (animation (k (transition (to 2) (duration 0)))))
+(real r (reverse k))
+(real a (sort 3))
+(real d (sum k))
+(real y (any k))
+(real z (all k))

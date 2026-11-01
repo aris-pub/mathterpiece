@@ -3,12 +3,12 @@
 ; expect t2 "3"
 ; expect t3 "4.0"
 ; expect t4 "2"
-(real 'a' 3)
-(motif 'counter' (params (i 2)) (circle 'c'))
-(func 'f' (params (n 0)) (let ((m (+ n 1))) $'{m}'))
-(func 'g' (params (n 0)) (let ((m (+ n 1))) $'{m:d}'))
-(func 'h' (params (x 0.0)) (let ((m (+ x 1))) $'{m}'))
-(func 'u' (params (gr)) (let ((n (count gr p (> p.r 0)))) $'{n}'))
-(scene 's' (counter 'q') (group 'pts' (circle _ (r 1)) (circle _ (r 2)))
-  (text 't1' (f q.i)) (text 't2' (g q.i)) (text 't3' (h a)) (text 't4' (u pts)))
-(button 'b' (animation (at-once (q.i (transition (to 2) (duration 0))) (a (transition (to 3) (duration 0))))))
+(real a 3)
+(motif counter (int i 2) (circle c))
+(func f (int n) (let ((m (+ n 1))) $'{m}'))
+(func g (int n) (let ((m (+ n 1))) $'{m:d}'))
+(func h (real x) (let ((m (+ x 1))) $'{m}'))
+(func u (sequence[circle] gr) (let ((n (count gr (fn p (> p.r 0))))) $'{n}'))
+(scene s (counter q) (group pts (circle _ (r 1)) (circle _ (r 2)))
+  (text t1 (f q.i)) (text t2 (g q.i)) (text t3 (h a)) (text t4 (u pts)))
+(button b (animation (at-once (q.i (transition (to 2) (duration 0))) (a (transition (to 3) (duration 0))))))

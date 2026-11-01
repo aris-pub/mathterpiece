@@ -8,11 +8,13 @@
 ; expect some true
 ; expect every true
 ; expect n 3
-(real 'k' 2)
-(real 'zero' 0)
-(scene 's' (group 'g' (circle _ (r 1)) (circle _ (r 2)) (circle _ (r 3))))
-(bool 'some' (let ((big (map g p (> p.r k)))) (any big)))
-(bool 'every' (all (map g p (> p.r k))))
-(real 'n' (let ((big (map g p (> p.r k)))) (count big b b)))
-(bool 'both' (and (> k 1) (not (> k 5))))
-(bool 'safe' (or (= zero 0) (> (/ 1 zero) 2)))
+(real k 2)
+(real zero 0)
+(scene s (group g (circle _ (r 1)) (circle _ (r 2)) (circle _ (r 3))))
+(bool some (any (map g (fn p (> p.r k)))))
+(bool every (all (map g (fn p (> p.r k)))))
+(int n (count (map g (fn p (> p.r k))) (fn b b)))
+(bool both (and (> k 1) (not (> k 5))))
+; zero has no limits, so (/ 1 zero) may be none, and a condition must receive a value that
+; cannot be: or? gives it one. or still stops at the first true part.
+(bool safe (or (= zero 0) (> (or? (/ 1 zero) 0) 2)))

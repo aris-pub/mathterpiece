@@ -2,6 +2,6 @@
 ; expect t false
 ; write lamps[0].on true
 ; expect t true
-(motif 'lamp' (params (on false)) (circle 'c' (r (if on 2 1))))
-(scene 's' (group 'lamps' (lamp _) (lamp _ (on true))))
-(toggle 't' lamps.on)
+(motif lamp (bool on false) (circle c (r (if on 2 1))))
+(scene s (group lamps (lamp _) (lamp _ (on true))))
+(toggle t (target lamps.on))

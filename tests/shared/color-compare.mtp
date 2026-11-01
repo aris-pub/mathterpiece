@@ -5,13 +5,13 @@
 ; expect b2 false
 ; expect c true
 ; expect d true
-(real 'k' 0)
-(func 'is-red' (params (o)) (= o.fill 'red'))
-(func 'tint' (params (t 0.0)) (mix 'red' 'red' t))
-(func 'f' (params (t 0.0)) (let ((c (mix 'red' 'red' t))) (= c 'red')))
-(scene 's' (circle 'dot' (fill 'red')) (circle 'blue-dot' (fill 'blue')))
-(button 'b' (animation (k (transition (to 0) (duration 0)))))
-(bool 'a' (is-red dot))
-(bool 'b2' (is-red blue-dot))
-(bool 'c' (= (tint k) 'red'))
-(bool 'd' (f k))
+(real k 0 (>= 0) (<= 1))
+(func is-red (circle o) (= o.fill 'red'))
+(func tint (real t (>= 0) (<= 1)) (mix 'red' 'red' t))
+(func f (real t (>= 0) (<= 1)) (let ((c (mix 'red' 'red' t))) (= c 'red')))
+(scene s (circle dot (fill 'red')) (circle blue-dot (fill 'blue')))
+(button b (animation (k (transition (to 0) (duration 0)))))
+(bool a (is-red dot))
+(bool b2 (is-red blue-dot))
+(bool c (= (tint k) 'red'))
+(bool d (f k))

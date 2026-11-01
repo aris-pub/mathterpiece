@@ -1,5 +1,5 @@
-; Loops in function bodies: unrolled when the size is known, walked while drawing over a group
-; parameter.
+; Functions that loop over a group parameter. A parameter's length is not known when compiling,
+; so reading a fixed position on it may be none, and the caller gives a default with or?.
 ; expect a 6
 ; expect b 12
 ; expect c 2
@@ -12,26 +12,26 @@
 ; expect j 7
 ; write two[0].r 10
 ; expect b 17
-(real 'n' 0)
-(func 'total' (params (g)) (sum g p p.r))
-(func 'big' (params (g) (k 0.0)) (count g p (> p.r k)))
-(func 'second' (params (g)) (let ((rs (map g p p.r))) rs[1]))
-(func 'nearest-r' (params (g) (o)) (let ((ns (sort g p (dist o p)))) ns[0].r))
-(func 'smallest-r' (params (g)) (let ((ns (reverse (sort-desc g p p.r)))) ns[0].r))
-(func 'safe' (params (g) (d 0.0)) (any (map g p (or (> p.r 2) (> (/ 1 d) 0)))))
-(func 'pairs' (params (g)) (sum g p (count g q (< q.r p.r))))
-(func 'listy' (params (xs [1 2 3])) (sum xs v v))
-(func 'second-r' (params (g)) g[1].r)
-(scene 's' (circle 'x' (pos [0 0]))
-  (group 'three' (circle _ (pos [3 4]) (r 1)) (circle _ (pos [6 8]) (r 2)) (circle _ (pos [1 0]) (r 3)))
-  (group 'two' (circle _ (r 5)) (circle _ (r 7))))
-(real 'a' (total three))
-(real 'b' (total two))
-(real 'c' (big three 1))
-(real 'd' (second three))
-(real 'e' (nearest-r three x))
-(real 'f' (smallest-r three))
-(bool 'g' (safe two n))
-(real 'h' (pairs three))
-(real 'i' (listy [4 5 6]))
-(real 'j' (second-r two))
+(real n 0)
+(func total (sequence[circle] g) (sum (map g (fn p p.r))))
+(func big ((sequence[circle] g) (real k 0)) (count g (fn p (> p.r k))))
+(func second (sequence[circle] g) (let ((rs (map g (fn p p.r)))) rs[1]))
+(func nearest-r ((sequence[circle] g) (circle o)) (let ((ns (sort g (fn p (dist o.pos p.pos))))) ns[0].r))
+(func smallest-r (sequence[circle] g) (let ((ns (reverse (sort g (fn p (- p.r)))))) ns[0].r))
+(func safe ((sequence[circle] g) (real d 0)) (any (map g (fn p (or (> p.r 2) (> (or? (/ 1 d) 0) 0))))))
+(func pairs (sequence[circle] g) (sum (map g (fn p (count g (fn q (< q.r p.r)))))))
+(func listy (list[real] xs [1 2 3]) (sum xs))
+(func second-r (sequence[circle] g) g[1].r)
+(scene s (circle x (pos [0 0]))
+  (group three (circle _ (pos [3 4]) (r 1)) (circle _ (pos [6 8]) (r 2)) (circle _ (pos [1 0]) (r 3)))
+  (group two (circle _ (r 5)) (circle _ (r 7))))
+(real a (total three))
+(real b (total two))
+(int c (big three 1))
+(real d (or? (second three) 0))
+(real e (or? (nearest-r three x) 0))
+(real f (or? (smallest-r three) 0))
+(bool g (safe two n))
+(int h (pairs three))
+(real i (listy [4 5 6]))
+(real j (or? (second-r two) 0))

@@ -1,0 +1,20 @@
+; A bound bool reads anywhere a bool is expected: in a variable, a readout, a canvas's when. A
+; bool that reads a toggle has page access, so only components and globals may read it.
+; expect v false
+; expect r "small"
+; expect r2 "hidden"
+; write k 2
+; expect v true
+; expect r "big"
+; write show true
+; expect r2 "shown"
+(real k 0 (>= 0))
+(scene s (circle c (r k)))
+(button b (animation (k (transition (to 0) (duration 0)))))
+(toggle show)
+(bool big (> k 1))
+(bool on (= show true))
+(bool v big)
+(readout r (if big 'big' 'small'))
+(readout r2 (if on 'shown' 'hidden'))
+(canvas view (view-x -3) (view-y -3) (view-width 6) (view-height 6) (when big c))
