@@ -76,16 +76,17 @@ A value is plain JSON, read according to the type that always accompanies it:
 
 ## Expressions
 
-An expression is an array: its operation first, then its type, then its parts. Types written here are what the compiler proved: a result that may be `none` has a `{"union": [T, "none"]}` type, and the runtime never checks for `none` anywhere else.
+An expression is an array: its operation first, then its type, then its parts. `frame` in a read is the id of the container the reading expression sits in (`null` at the top level and directly in the scene). The runtime converts the value read through every `translate` and `transform` that applies to the shape read but not to that container (reference, "Coordinates"), and `deps` include those `translate` and `transform` places. Types written here are what the compiler proved: a result that may be `none` has a `{"union": [T, "none"]}` type, and the runtime never checks for `none` anywhere else.
 
 | Expression | Written |
 |---|---|
 | a literal | `["lit", T, value]` |
 | a list or point built from expressions | `["list", T, e…]` |
 | an interpolated string | `["format", "string", part…]`, each part a string, or `[e, spec]` with `spec` the format after the colon (`""` if none) |
-| a variable | `["read", T, id, null]` |
-| an attribute | `["read", T, id, attr]` |
+| a variable | `["read", T, id, null, frame]` |
+| an attribute | `["read", T, id, attr, frame]` |
 | an object itself (a group passed to `map`, a shape read as a value) | `["obj", T, id]` |
+| a value checked against constraints | `["check", T, e, [C, …]]`: `e`, or `none` when it breaks one of the constraints; written by the compiler wherever a bound value's constraint cannot be proved (type system, "What the compiler proves"), so `T` always includes `none` |
 | a parameter or `let` name | `["local", T, name]` |
 | a built-in function or operator | `["builtin", T, name, arg…]`, `name` being its name in the reference: `"sind"`, `"+"`, `"or?"`, … |
 | a function from `functions` | `["call", T, functionId, arg…]`, always with every argument: the compiler fills in defaults |
@@ -97,7 +98,7 @@ An expression is an array: its operation first, then its type, then its parts. T
 | `cond` | `["cond", T, [[c, v], …], else]` |
 | `and`, `or` | `["and", "bool", e…]`, `["or", "bool", e…]` |
 | `let` | `["let", T, [[name, e], …], body]` |
-| `rand` | `["rand", "real", site, lo?, hi?]`, `site` numbering each call site in the source, starting at 0 |
+| `rand` | `["rand", "real", site, lo?, hi?]`, `site` numbering each copy of each `rand` after `repeat` and motif instances are expanded, starting at 0; each site draws its number once, when the page loads |
 
 ## Places
 
@@ -111,7 +112,7 @@ with `"fixed": true` on a variant instance's fixed attributes.
 - A **free** place holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
 - A **bound** place holds an expression. `deps` lists every place it can read: directly, through any function it calls, and through captured names. Where a read depends on a value known only while drawing, such as `g[side].pos`, `deps` lists every place it could read (the `pos` of every member). When any of them changes, this place is recomputed, and nothing else is. `[id, null]` is a variable.
 - A place known when compiling is written as free, with a `const` constraint in its type, whether the author wrote it that way or the compiler folded it.
-- Every attribute of a shape has a place, including those left at their default.
+- Every attribute of a shape has a place, including those left at their default. `pos` has none: it is `x` and `y` read or written together. A line's places are its `from` and `to`, a triangle's its corners; their `x` and `y` are computed (the midpoint, the centroid), and a write to them is split into writes to every end or corner.
 
 ## Objects
 
@@ -123,19 +124,21 @@ and then what its kind needs:
 
 | Kind | Further keys |
 |---|---|
-| `variable` | `"value"`: a place; `"token"`: `true` for color and font variables, written as the CSS property `--mtp-<name>` (font variables only through their parts: `--mtp-<name>-family` and so on) |
+| `variable` | `"value"`: a place; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded. The runtime draws with it through the CSS property `--mtp-<name>` (font variables through their parts: `--mtp-<name>-family` and so on), with its own value as the fallback, so the page's CSS restyles it; colors computed from tokens are passed to the browser as CSS color mixes. A token's own value is what expressions reading its channels or comparing it see. |
 | `scene` | `"members"`: the ids of its shapes; `"attrs"`: `background` |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group` | `"attrs"`: a place for every attribute; `group` also `"members"` |
 | a motif instance | kind `instance`; `"of"`: the motif's name; `"members"`; `"attrs"`: its parameters, its bound variables and the shape arguments it takes |
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |
 | `transition` | `"from"`, `"to"`, `"duration"`, `"ease"`, `"path"` (below) |
 | `animation` | `"steps"`: a step (below) |
-| `canvas` | `"members"`: ids of the shapes it shows; `"when"`: `[[place, [ids]], …]`, each place a bool; `"transition"`: an id or `null`; `"attrs"`: the view box |
+| `canvas` | `"members"`: ids of the shapes it shows; `"when"`: `[[place, [ids]], …]`, each place a bool; `"transition"`: an id or `null`; `"attrs"`: the view box and `transform` |
 | `readout` | `"attrs"`: `value` (the string), `font` |
-| `slider`, `button`, `play` | `"animation"`: an id; `"attrs"`: `label`, and `step` (slider), `buttons` (play), and the attributes the reader's actions change (`position`, `playing`) |
-| `toggle` | `"target"`: `[id, attr]` or `null`; `"attrs"`: `label`, `value` |
-| `on-drag` | `"shape"`: an id; `"target"`: `[id, attr]`; `"conditions"`: bool places; `"when"`: a bool place or `null` |
-| `on-click` | `"shape"`: an id; `"animation"`: an id; `"when"`: a bool place or `null` |
+| `slider`, `button`, `play` | `"animation"`: an id; `"conditions"`; `"attrs"`: `label`, and `step` (slider: the number of places), `buttons` (play), and the attributes the reader's actions change: `position` (slider), `playing` and `step` (play: the step now playing) |
+| `toggle` | `"target"`: `[id, attr]` or `null`; `"conditions"`; `"attrs"`: `label`, `value` |
+| `on-drag` | `"shape"`: an id; `"target"`: `[id, attr]`; `"conditions"`; `"when"`: a bool place or `null` |
+| `on-click` | `"shape"`: an id; `"animation"`: an id; `"conditions"`; `"when"`: a bool place or `null` |
+
+A writer's `"conditions"` is a list of clamps, one per condition, already in the form the reference requires (a comparison of the written place with a value not depending on it): `{"place": [id, attr], "op": ">=" | ">" | "<=" | "<", "limit": place}`. Before emitting a write to that place, the runtime clamps it to the limit.
 
 Motif and variant instances are written out in full: the runtime never builds an instance itself.
 

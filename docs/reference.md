@@ -10,8 +10,8 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **Angles** are counterclockwise from the positive x axis. `(polar 1 90)` is straight up; `rotate` turns counterclockwise.
 - **A canvas's view box** is given by its lower-left corner (`view-x`, `view-y`) and its size (`view-width`, `view-height`), in scene units. The default is −10 to 10 in both directions. The whole view box is shown, scaled to fit the element and centered in it. A canvas's `transform` applies about the center of its view box.
 - **Stroke widths and font sizes are in screen units** (CSS pixels): a line keeps the same thickness on screen, and text the same size, whatever the view box and however the figure is scaled.
-- **Every shape has its own frame of reference.** It starts identical to the scene's; then the shape's `translate` and `transform` are applied, and they apply to the shape and to everything below it in the scene tree. A group's `translate` and `transform` are its own: they move its members, and are not spread over them.
-- **The author always writes positions in global coordinates.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1 and then moves it with the group: it is drawn at 6.
+- **Every shape has its own frame of reference.** It starts identical to the scene's; then the shape's `translate` and then its `transform` are applied (`translate` is the translation that comes first; `transform` is everything else, and may include further translations), and they apply to the shape and to everything below it in the scene tree. A group's `translate` and `transform` are its own: they move its members, and are not spread over them.
+- **A position is written before the transforms of the shape's containers are applied.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1, then the group's translation moves it: it is drawn at 6. The author never converts anything by hand: what is written is where the shape sits before its containers move it.
 - **Reading an attribute converts it through every transform that applies to the shape read but not to the place reading it.** Inside `g`, a sibling reads `p.x` as 1, so `(circle q (x p.x))` sits exactly on `p`; outside `g`, `p.x` reads 6, where `p` is drawn. The runtime stores the 1. A write converts the other way: a drag that puts `p` under the pointer writes the value that, after the group's transforms, lands there.
 
 ## Declarations
@@ -56,11 +56,11 @@ A parameter list is one typed parameter `(real t 0.5)` or a list of them `((real
 | `(text name value)` | required | the string | shape arguments, `(font font)`, `(halign …)`, `(valign …)`; its font is only given as a declared font variable, never as separate size or family arguments |
 | `(dial name)`, any motif or variant | required | none | its parameters, and the arguments its base takes |
 
-Shape arguments, taken by every shape: `(x real)` `(y real)`, or `(pos point)`, which is the same two places written as one point (`c.pos` is `[c.x c.y]`); `(translate point)`, the translation part of its transform; `(fill color|none)`; `(stroke color|none)`; `(stroke-width (real (>= 0)))`; `(opacity (real (>= 0) (<= 1)))`, `(fill-opacity (real (>= 0) (<= 1)))`, `(stroke-opacity (real (>= 0) (<= 1)))`; `(transform transform)`. These mirror SVG on purpose: a color's alpha, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through an overlapping stroke.
+Shape arguments, taken by every shape except groups: `(x real)` `(y real)`, or `(pos point)`, which writes the same two places as one point (`c.pos` is `[c.x c.y]`; `pos` has no place of its own). Taken by every shape, groups included: `(translate point)`, the translation part of its transform, and `(transform transform)`. Taken by every shape except groups: `(fill color|none)`; `(stroke color|none)`; `(stroke-width (real (>= 0)))`; `(opacity (real (>= 0) (<= 1)))`, `(fill-opacity (real (>= 0) (<= 1)))`, `(stroke-opacity (real (>= 0) (<= 1)))`. On a group, any of these, and `x`, `y` and `pos`, are written and read on each member (they spread). These mirror SVG on purpose: a color's alpha, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through an overlapping stroke.
 
 `halign` is one of `'start' 'middle' 'end'`; `valign` is one of `'top' 'middle' 'baseline' 'bottom'`, where `'baseline'` is the line the letters sit on and `'bottom'` is the bottom of the lowest letters.
 
-Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint and a triangle's its centroid; writing either moves the whole shape, ends or corners together.
+Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint and a triangle's its centroid; writing either moves the whole shape, ends or corners together, so it can only be written when every end or corner is free.
 
 ### Tokens
 
@@ -86,7 +86,7 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 
 | Form | Name | Positional | Items |
 |---|---|---|---|
-| `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)` |
+| `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)` |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font |
 | `(slider name)` | required | none | `(animation …)`, `(label string)`, `(step int)` (number of places, at least 2), conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, conditions |
@@ -134,10 +134,10 @@ Every type has a value used when no value or default is given: in a variable dec
 | `color` | black |
 | `font` | the font defaults above |
 | `point` | `[0 0]` |
-| `list[T]` | `[]` |
+| `list[T]` | `[]`; with a `(length n)` constraint, n items each with T's value |
 | `transform` | the identity |
 | `T\|none` | `none` |
-| a narrowed number whose 0 breaks its constraints | its lower bound |
+| a narrowed number whose 0 breaks its constraints | its lower bound if that bound is allowed (`(>= 1)` gives 1); otherwise there is none, and leaving a value out is a compile error |
 | shapes, functions, transitions, animations | none: leaving one out is a compile error |
 
 ## Writes and conditions
@@ -188,10 +188,10 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | Function | Takes | Gives | Undefined |
 |---|---|---|---|
 | `+` `-` `*` | numbers, any count (`-` with one argument negates); points and lists of numbers of equal known length, item by item | the broadest input type | never |
-| `/` | two numbers; an int over an int gives a ratio | number | dividing by 0 |
-| `^` | two numbers | number | 0 to a negative power |
+| `/` | two numbers | an int over an int gives a ratio; otherwise the broadest input type | dividing by 0 |
+| `^` | two numbers | an int to a non-negative int power gives an int, to a negative int power a ratio; otherwise a real | 0 to a negative power; a negative base to a power that is not an int; a result too large for a real |
 | `mod` | two numbers | number, with the sign of the divisor: `(mod -1 360)` is 359 | by 0 |
-| `abs` | a number | number | never |
+| `abs` | a number | the same type; a complex gives a real | never |
 | `=` `!=` | any two of one type | bool | never (`(= none none)` is true) |
 | `<` `<=` `>` `>=` | two reals | bool | never |
 | `not` | a bool | bool | never |
@@ -209,7 +209,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `log` | real, and optionally a base (e if left out) | real | input 0 or below; base 0 or below, or 1 |
 | `min` `max` | reals, any count | real | never |
 | `lerp` | `a`, `b`, `t` (reals or points) | the same type | never |
-| `rand` | none, or `lo hi` | real, drawn once per page load | never |
+| `rand` | none (0 to 1), or `lo hi` | real, drawn once per page load and never again; each copy of a `rand` (in each `repeat` copy, each motif instance) draws its own; a `rand` inside a function is a compile error for now | never |
 
 ### Angles
 

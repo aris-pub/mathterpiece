@@ -645,10 +645,20 @@
                 "string",
                 "null"
               ]
+            },
+            {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           ],
-          "minItems": 4,
-          "maxItems": 4
+          "minItems": 5,
+          "maxItems": 5
         },
         {
           "type": "array",
@@ -665,6 +675,28 @@
           ],
           "minItems": 3,
           "maxItems": 3
+        },
+        {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            {
+              "const": "check"
+            },
+            {
+              "$ref": "#/$defs/type"
+            },
+            {
+              "$ref": "#/$defs/expr"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/constraint"
+              }
+            }
+          ]
         },
         {
           "type": "array",
@@ -1731,7 +1763,8 @@
             "access",
             "name",
             "animation",
-            "attrs"
+            "attrs",
+            "conditions"
           ],
           "properties": {
             "kind": {
@@ -1761,6 +1794,12 @@
             },
             "attrs": {
               "$ref": "#/$defs/attrs"
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/clamp"
+              }
             }
           },
           "additionalProperties": false
@@ -1773,7 +1812,8 @@
             "access",
             "name",
             "target",
-            "attrs"
+            "attrs",
+            "conditions"
           ],
           "properties": {
             "kind": {
@@ -1819,6 +1859,12 @@
             },
             "attrs": {
               "$ref": "#/$defs/attrs"
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/clamp"
+              }
             }
           },
           "additionalProperties": false
@@ -1876,7 +1922,7 @@
             "conditions": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/place"
+                "$ref": "#/$defs/clamp"
               }
             },
             "when": {
@@ -1901,7 +1947,8 @@
             "name",
             "shape",
             "animation",
-            "when"
+            "when",
+            "conditions"
           ],
           "properties": {
             "kind": {
@@ -1937,11 +1984,42 @@
                   "type": "null"
                 }
               ]
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/clamp"
+              }
             }
           },
           "additionalProperties": false
         }
       ]
+    },
+    "clamp": {
+      "type": "object",
+      "required": [
+        "place",
+        "op",
+        "limit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "place": {
+          "$ref": "#/$defs/placeRef"
+        },
+        "op": {
+          "enum": [
+            ">=",
+            ">",
+            "<=",
+            "<"
+          ]
+        },
+        "limit": {
+          "$ref": "#/$defs/place"
+        }
+      }
     }
   }
 }

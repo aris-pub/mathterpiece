@@ -32,7 +32,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
 
 - **Numbers** come in four types: `int`, `ratio` (exact fractions such as `1/3`), `real` and `complex`.
 - **A point** is its own type: two reals, read as `x` and `y` or by position, `p[0]`. **A list**, `list[T]`, holds items of one type T; like a Python tuple, the list itself never changes, though the objects it holds may.
-- **Functions, transitions and animations** are values too: an ease is a function from 0..1 to a real, `func[real real]`; a path is a function of the two ends and the progress, `func[T T real T]`; a transition is a trajectory. A function's type lists its inputs, then its result: `func[real real]` takes a real and gives a real. Its result is never written in its declaration; the compiler works it out from the body.
+- **Functions, transitions and animations** are values too: an ease is a function from 0..1 to a real, `func[real real]`; a path is a function of the two ends and the progress, `func[T T real T]`; a transition is a trajectory. A transition's ends may be expressions: the transition itself never changes, and its ends are read once, when a move along it starts. A function's type lists its inputs, then its result: `func[real real]` takes a real and gives a real. Its result is never written in its declaration; the compiler works it out from the body.
 - **`none`** is the value that stands for one that does not exist (section 5.c).
 - **Types are objects themselves**: declaring a motif or a named type creates one. They cannot yet be passed or held in a variable.
 
@@ -139,7 +139,7 @@ A value known when compiling that breaks a constraint is a compile error. A boun
     (somes xs)               ; the items of xs that are not none
     (where g f)              ; the members of g for which the function f holds
 
-**Shapes.** A plain shape type must always be drawable. Every attribute of a built-in shape is drawing-essential except `fill` and `stroke`. If any drawing-essential attribute may be `none`, compilation stops. Declaring the shape itself as `T|none` says it may be absent: then it is not drawn, and the shape is `none`, so whatever reads it must handle that in turn. An attribute accepts `none` only if its type says so: for built-in shapes, that is `fill` and `stroke`, typed `color|none`, where `none` means no paint.
+**Shapes.** A plain shape type must always be drawable. Every attribute of a built-in shape is drawing-essential except `fill` and `stroke`. If any drawing-essential attribute may be `none`, compilation stops. Declaring the shape itself as `T|none` says it may be absent: then it is not drawn, and the shape is `none`, so whatever reads it must handle that in turn. An attribute accepts `none` only if its type says so: for built-in shapes, that is `fill` and `stroke`, typed `color|none`, where `none` means no paint. So the rule above applies to drawing-essential attributes only: `(circle c (fill x))` with `x : color|none` is a plain circle, drawn without paint when `x` is `none`.
 
     (real|none crossing (secd theta))
     (line tan (from p.pos) (to [crossing 0]))           ; an error: the end may be none
@@ -153,7 +153,7 @@ A value known when compiling that breaks a constraint is a compile error. A boun
 
 **Constraints.** A bound value that would break its constraint while drawing is `none`, like an undefined value: `(circle|none c (r (secd theta)))` is absent at 90° and wherever `secd` is negative. Constraints also let the compiler prove a value is defined: with `(real k 1 (>= 1))`, `(/ 1 k)` can never be `none`.
 
-**What the compiler proves.** It reasons only with ranges, never anything cleverer, so every implementation accepts the same programs. A variable's range comes from its constraints (`(real k 1 (>= 0) (<= 10))` is 0 to 10; a plain `real` is unbounded). Each operation and function has a range rule: a sum's range comes from its parts', `sind` lies between −1 and 1, `abs` and `sqrt` are never negative, and so on, following each function's mathematical range. A partial function is safe when its input's range avoids every point where it is undefined: `(/ 1 k)` when `k`'s range excludes 0, `(secd a)` when `a`'s range contains no 90 + 180n. A bound value is safe when its range lies inside its constraint. Anything else may be `none`. So `(circle c (r (* 2 k)))` with a plain `(real k 1)` is an error, because `r` may break its `(>= 0)`; declaring `k` with `(>= 0)` makes it compile. Constraints on a type that allows `none` apply to its other values; `none` itself is always allowed.
+**What the compiler proves.** It reasons only with ranges, never anything cleverer, so every implementation accepts the same programs. A variable's range comes from its constraints (`(real k 1 (>= 0) (<= 10))` is 0 to 10; a plain `real` is unbounded). Each operation has a range rule. Only `+`, `-`, `*`, `/`, `abs`, `min`, `max` and `sqrt` compute their range from their inputs' ranges; every other function is taken to give its whole range whatever its input (`sind` always −1 to 1, `exp` always above 0). This is deliberately simple, so every implementation agrees; it can be refined later. A partial function is safe when its input's range avoids every point where it is undefined: `(/ 1 k)` when `k`'s range excludes 0, `(secd a)` when `a`'s range contains no 90 + 180n. A bound value is safe when its range lies inside its constraint. Anything else may be `none`. So `(circle c (r (* 2 k)))` with a plain `(real k 1)` is an error, because `r` may break its `(>= 0)`; declaring `k` with `(>= 0)` makes it compile. Constraints on a type that allows `none` apply to its other values; `none` itself is always allowed.
 
 ### 5.d Choice types
 
@@ -215,11 +215,11 @@ An interface names what several types have in common. A type satisfies an interf
 
 | Interface | Means | Satisfied by |
 |----|----|----|
-| `positioned` | has real `x` and `y` | points, every shape |
+| `positioned` | has real `x` and `y` | points, every shape except groups (on a group, `x` is a list) |
 | `sequence[T]` | items by position, a `length` | lists, points, groups |
-| `shape` | positioned, and drawable by the runtime | circle, rect, …, groups, motif instances, variants |
+| `shape` | has its own `translate` and `transform` | circle, rect, …, groups, motif instances, variants |
 
-An interface cannot be instantiated: there is no `(shape s …)` declaring a shape that is not of some concrete type. An interface can type a parameter, as in `(shape o)`. A parameter typed with an interface may read only what the interface lists, and is checked once, at the definition, like any other parameter.
+An interface cannot be instantiated: no shape is created whose type is only `shape`. An interface can type a parameter, as in `(shape o)`, or a variable that holds an existing shape: `(shape sel p)` declares `sel`, holding the shape `p`, and `(shape sel (circle c …))` declares the circle `c` and a variable holding it. A parameter typed with an interface may read only what the interface lists, and is checked once, at the definition, like any other parameter.
 
     (func label-at ((positioned o) (string s)) …)   ; accepts points and shapes alike
     (func area (circle o) (* pi o.r o.r))                   ; circles, and any variant of circle
