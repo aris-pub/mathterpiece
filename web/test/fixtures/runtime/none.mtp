@@ -1,2 +1,5 @@
+; none and its default. d is 1/k, or 0 when 1/k is none. With k at 1, d is 1. The runtime tests
+; write k = 0 and check that d becomes 0.
+
 (real k 1)
 (real d (or? (/ 1 k) 0))

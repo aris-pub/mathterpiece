@@ -1,3 +1,7 @@
+; Reads through a group's frame. Group g is translated by [5 0]. p.x is 1 inside the group;
+; outside, the scene reads it as 6. q.x reads p.x inside the group, so it is 1 there, and
+; inside, a global reading q.x, sees 6. The table shows the values.
+
 (scene s
   (group g (translate [5 0]) (circle p (x 1)) (circle q (x p.x)))
   (real outside p.x))

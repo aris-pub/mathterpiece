@@ -1,3 +1,7 @@
+; A chain of bound variables: a is twice k, b is a plus 1, other is three times j. The runtime
+; tests check that a write to k recomputes a and b and leaves other alone. There is nothing to
+; move here: the table shows the values.
+
 (real k 1)
 (real j 1)
 (real a (* 2 k))

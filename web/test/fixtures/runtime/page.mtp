@@ -1,3 +1,9 @@
+; The page the element tests use: one of each control on one variable, k from 0 to 10. Try:
+; move the slider; press the button (k moves to 5); press play (k moves to 2, then to 4), or
+; press 1 or 2 to run that top-level step alone; tick the toggles (the last one shows a mixed
+; state, because one lamp is lit); drag the points, the orbit (it writes k) and the limited
+; circle (its x stops at 2); click the orbit.
+
 (real k 0 (>= 0) (<= 10))
 (bool on false)
 (motif lamp (bool lit false) (circle c (r 1)))

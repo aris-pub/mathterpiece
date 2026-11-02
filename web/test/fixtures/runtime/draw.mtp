@@ -1,3 +1,7 @@
+; How shapes are drawn as SVG: a circle with a fill, a stroke and a stroke width, a rect inside
+; a translated group with a token color, a centered text, and a circle|none with r = 1/k. With
+; k at 0 that radius is none, so the last circle is absent and not drawn.
+
 (real k 0)
 (color ink 'navy')
 (scene s (background 'white')
