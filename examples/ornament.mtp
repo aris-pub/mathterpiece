@@ -1,0 +1,69 @@
+; The paper's ornament: a regular tetrahedron, seen a little from above, turning about a vertical
+; axis. Edges on the far side are faint, and corners shrink and fade as they turn away.
+; Coordinates are the original SVG's, with y pointing down, until the very end: a screen point
+; is [x (- y)].
+
+(color ink '#6b7280')
+
+; The base's circumradius, and the tetrahedron's height.
+(real radius 10.2 (const))
+(real height (* radius (sqrt 2)) (const))
+; How far it is tilted toward the viewer, in degrees.
+(real pitch -20.05 (const))
+
+; Corner k before turning: the apex on top, then the base's three corners.
+(func base-x ((int k)) (if (= k 0) 0 (* radius (cosd (* 120 (- k 1))))))
+(func base-y ((int k)) (if (= k 0) (* -0.75 height) (* 0.25 height)))
+(func base-z ((int k)) (if (= k 0) 0 (* radius (sind (* 120 (- k 1))))))
+
+; Corner k turned by yaw about the vertical axis, then tilted by pitch: its x, y and depth.
+(func turned-x ((int k) (real yaw)) (+ (* (base-x k) (cosd yaw)) (* (base-z k) (sind yaw))))
+(func turned-z ((int k) (real yaw)) (+ (* -1 (base-x k) (sind yaw)) (* (base-z k) (cosd yaw))))
+(func screen-y ((int k) (real yaw))
+  (- (* (base-y k) (cosd pitch)) (* (turned-z k yaw) (sind pitch))))
+(func depth ((int k) (real yaw))
+  (+ (* (base-y k) (sind pitch)) (* (turned-z k yaw) (cosd pitch))))
+
+; Whether face a, b, c faces the viewer: its corners run one way round on the screen.
+(func facing ((int a) (int b) (int c) (real yaw))
+  (> (- (* (- (turned-x b yaw) (turned-x a yaw)) (- (screen-y c yaw) (screen-y a yaw)))
+        (* (- (screen-y b yaw) (screen-y a yaw)) (- (turned-x c yaw) (turned-x a yaw))))
+     0))
+
+; Each edge, as its ends and the two faces it borders.
+(list[int] edge-from [0 0 0 1 2 3] (const))
+(list[int] edge-to [1 2 3 2 3 1] (const))
+(list[int] edge-face [0 0 1 0 1 2] (const))
+(list[int] edge-other-face [2 1 2 3 3 3] (const))
+
+(scene ornament
+  (real yaw 0)
+  ; Each corner's x and y on the screen. A list of points made by map would hold lists of reals:
+  ; inside the function, nothing tells [x y] it is a point.
+  (list cx (map [0 1 2 3] (fn k (turned-x k yaw))))
+  (list cy (map [0 1 2 3] (fn k (- (screen-y k yaw)))))
+  ; Whether each face faces the viewer. Written out, since inside a map the compiler cannot
+  ; tell that a list read at the function's argument is in range.
+  (list front [(facing 0 1 2 yaw) (facing 0 2 3 yaw) (facing 0 3 1 yaw) (facing 1 3 2 yaw)])
+  ; How near each corner is, from 0 (far) to 1 (near). Depth stays within the height, but the
+  ; compiler only knows a function's result as any real, so it is clamped to show it.
+  (list near (map [0 1 2 3] (fn k (max 0 (min 1 (/ (+ (depth k yaw) height) (* 2 height)))))))
+
+  ; An edge is drawn in full when either face it borders faces the viewer.
+  (group edges (stroke ink) (stroke-width 1.1)
+    (repeat 6 e
+      (line_ (from [cx[edge-from[e]] cy[edge-from[e]]]) (to [cx[edge-to[e]] cy[edge-to[e]]])
+        (opacity (if (or front[edge-face[e]] front[edge-other-face[e]]) 1 0.35)))))
+
+  ; A corner nearer the viewer is larger and darker.
+  (group corners (fill ink)
+    (repeat 4 k
+      (circle_ (pos [cx[k] cy[k]]) (r (+ 1.25 (* 0.6 near[k])))
+        (opacity (+ 0.55 (* 0.45 near[k])))))))
+
+(canvas view (view-x -12) (view-y -12) (view-width 24) (view-height 24) (pan false) (zoom false)
+  edges corners)
+
+; The original turns once every 14 seconds, for as long as it is on screen. mtp cannot start an
+; animation by itself or repeat one, so this turns it ten times when pressed.
+(play spin (animation (move yaw (from 0) (to 3600) (duration 140) (ease 'linear'))))

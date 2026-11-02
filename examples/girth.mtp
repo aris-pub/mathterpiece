@@ -1,0 +1,58 @@
+; A graph with no cycle of length at most 4 (the Petersen graph), and a subgraph whose removed
+; edge uv has endpoints joined only by a path of length 4, from the Bourgain notes. The removed
+; edges are dashed in the original; mtp has no dashed strokes yet, so they are solid and faint.
+; Coordinates are the original SVG's, with y pointing up; each panel is a group with its own
+; canvas.
+
+; Colors and type as tokens, so the Bourgain page can map them onto its own variables
+; (--mtp-fg: var(--fg) and so on) and follow its light and dark mode.
+(color fg '#1f2328')
+(color muted '#6b7280')
+(color teal '#1a6f66')
+(color coral '#a65a3a')
+(font label (style 'italic') (size 14))
+(font note (size 13))
+
+; Vertex v of the Petersen graph: 0 to 4 on the outer pentagon, 5 to 9 on the inner star, each
+; inner one below the outer one with the same number.
+(func vertex ((int v))
+  (+ [110 -100] (polar (if (< v 5) 78 36) (- 90 (* 72 (mod v 5))))))
+
+; The 15 edges: round the pentagon, the five spokes, and across the star.
+(list[int] edge-from [0 1 2 3 4 0 1 2 3 4 5 6 7 8 9] (const))
+(list[int] edge-to [1 2 3 4 0 5 6 7 8 9 7 8 9 5 6] (const))
+; How the subgraph draws each edge: 0 kept, 1 on the path from u to v, 2 removed, 3 the removed
+; edge uv itself.
+(list[int] in-subgraph [1 0 2 0 0 3 1 0 0 2 0 1 2 1 0] (const))
+
+; The Petersen graph, or, with subgraph, the subgraph H: its removed edges faint, uv in coral,
+; and the path of length 4 that joins u and v in teal.
+(motif petersen ((bool subgraph false (const)))
+  (repeat 15 e
+    (line_ (from (vertex edge-from[e])) (to (vertex edge-to[e]))
+      (stroke (cond ((not subgraph) fg) ((= in-subgraph[e] 1) teal) ((= in-subgraph[e] 2) muted)
+                    ((= in-subgraph[e] 3) coral) (else fg)))
+      (stroke-width (cond ((not subgraph) 1.5) ((= in-subgraph[e] 1) 3) ((= in-subgraph[e] 2) 1.2)
+                          ((= in-subgraph[e] 3) 2) (else 1.5)))
+      (opacity (if (and subgraph (= in-subgraph[e] 2)) 0.6 1))))
+  (repeat 10 v
+    (circle_ (pos (vertex v)) (r 4.5) (fill (if (and subgraph (or (= v 0) (= v 5))) coral fg)))))
+
+(scene girth
+  (group graph
+    (petersen_)
+    (group_ (fill muted)
+      (text_ '(a) G: no cycle of length' (pos [110 -204]) (halign 'middle') (font note))
+      (text_ 'at most ℓ = 4' (pos [110 -220]) (halign 'middle') (font note))))
+
+  (group subgraph
+    (petersen_ (subgraph true))
+    (group_ (fill fg)
+      (text_ 'u' (pos [118 -18]) (font label))
+      (text_ 'v' (pos [117 -78]) (font label)))
+    (group_ (fill muted)
+      (text_ '(b) a subgraph H; removed' (pos [110 -204]) (halign 'middle') (font note))
+      (text_ 'edges dashed' (pos [110 -220]) (halign 'middle') (font note)))))
+
+(canvas graph-view (view-x 0) (view-y -230) (view-width 220) (view-height 230) graph)
+(canvas subgraph-view (view-x 0) (view-y -230) (view-width 220) (view-height 230) subgraph)

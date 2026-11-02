@@ -1,0 +1,74 @@
+; The distance to a set A, on the star with four leaves, from the Bourgain notes: three choices
+; of A, each point labeled with its distance to A, and whether A separates the leaves u₁ and u₂.
+; Coordinates are the original SVG's, with y pointing up; each panel is a group with its own
+; canvas.
+
+; Colors and type as tokens, so the Bourgain page can map them onto its own variables
+; (--mtp-fg: var(--fg) and so on) and follow its light and dark mode.
+(color fg '#1f2328')
+(color muted '#6b7280')
+(color bg '#faf7f0')
+(color rule '#d8d3c4')
+(color coral '#a65a3a')
+(color accent '#4a6584')
+(font label (style 'italic') (size 14))
+(font note (size 13))
+(font value (size 14))
+
+; The points: c, then the leaves u₁ to u₄, placed around the center, and where each one's name
+; and the box holding its distance to A go.
+(list[string] names ['c' 'u₁' 'u₂' 'u₃' 'u₄'] (const))
+(list dx [0 0 60 0 -60] (const))
+(list dy [0 60 0 -60 0] (const))
+(list name-dx [10 10 6 10 -26] (const))
+(list name-dy [9 6 12 -16 12] (const))
+(list box-dx [-18 -18 20 -18 -20] (const))
+(list box-dy [-18 6 -12 2 -16] (const))
+
+; The distance between points i and j in the star.
+(func dist-in-star ((int i) (int j)) (cond ((= i j) 0) ((or (= i 0) (= j 0)) 1) (else 2)))
+
+; Point p's distance to A, the points whose flag is set.
+(func dist-to-set ((int p) (bool c) (bool u1) (bool u2) (bool u3) (bool u4))
+  (min (if c (dist-in-star p 0) 9) (if u1 (dist-in-star p 1) 9) (if u2 (dist-in-star p 2) 9)
+       (if u3 (dist-in-star p 3) 9) (if u4 (dist-in-star p 4) 9)))
+
+; One panel: the star centered at x = middle, the points of A larger and colored, each point's
+; distance to A in a box, and the two leaves' boxes marked when A separates them.
+(motif panel ((real middle 110) (string tag '(a)') (string set 'A = {u₁}')
+              (bool c false) (bool u1 false) (bool u2 false) (bool u3 false) (bool u4 false))
+  (list in [c u1 u2 u3 u4])
+  (list d (map [0 1 2 3 4] (fn p (dist-to-set p c u1 u2 u3 u4))))
+  (real gap (abs (- d[1] d[2])))
+  (group_ (stroke fg) (stroke-width 1.5)
+    (repeat 4 k
+      (line_ (from [middle -105]) (to [(+ middle dx[(+ k 1)]) (+ -105 dy[(+ k 1)])]))))
+  (repeat 5 p
+    (circle_ (pos [(+ middle dx[p]) (+ -105 dy[p])]) (r (if in[p] 7 5))
+      (fill (if in[p] accent fg)) (stroke (if in[p] accent none)))
+    (text_ names[p] (pos [(+ middle dx[p] name-dx[p]) (+ -105 dy[p] name-dy[p])])
+      (font label) (fill fg))
+    ; The leaves' boxes are marked in coral when A separates them, and in grey when not.
+    (rect_ (pos [(+ middle dx[p] box-dx[p]) (+ -105 dy[p] box-dy[p])])
+      (width 18) (height 18) (rx 4) (stroke-width 1)
+      (fill (cond ((or (= p 0) (> p 2)) bg) ((> gap 0) coral) (else muted)))
+      (fill-opacity (cond ((or (= p 0) (> p 2)) 1) ((> gap 0) 0.18) (else 0.12)))
+      (stroke (cond ((or (= p 0) (> p 2)) rule) ((> gap 0) coral) (else muted))))
+    (text_ $'{d[p]:g}' (pos [(+ middle dx[p] box-dx[p]) (+ -105 dy[p] box-dy[p] -5)])
+      (halign 'middle') (font value) (fill fg)))
+  (group_ (fill muted)
+    (text_ $'{tag} {set}' (pos [middle -215]) (halign 'middle') (font note))
+    (text_ (if (> gap 0) $'u₁, u₂ separated by {gap:g}' 'u₁, u₂ not separated')
+      (pos [middle -233]) (halign 'middle') (font note))))
+
+(scene star
+  (panel one-leaf (middle 110) (tag '(a)') (set 'A = {u₁}') (u1 true))
+  (panel center-and-two (middle 340) (tag '(b)') (set 'A = {c, u₂, u₃}')
+         (c true) (u2 true) (u3 true))
+  (panel two-leaves (middle 570) (tag '(c)') (set 'A = {u₃, u₄}') (u3 true) (u4 true)))
+
+(canvas one-leaf-view (view-x 0) (view-y -242) (view-width 226) (view-height 223) one-leaf)
+(canvas center-and-two-view (view-x 228) (view-y -242) (view-width 226) (view-height 223)
+  center-and-two)
+(canvas two-leaves-view (view-x 456) (view-y -242) (view-width 224) (view-height 223)
+  two-leaves)

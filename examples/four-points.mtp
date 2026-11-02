@@ -1,0 +1,51 @@
+; The four-point space that has no isometric drawing on a line, from the Bourgain notes. Left:
+; a center c joined to u, v and w by edges of length 1, so u, v and w are pairwise 2 apart.
+; Right: drawn on a line, an isometry puts F(c) at the midpoint twice, so v and w collide.
+; Coordinates are the original SVG's, with y pointing up; the two panels are two canvases.
+
+; Colors and type as tokens, so the Bourgain page can map them onto its own variables
+; (--mtp-fg: var(--fg) and so on) and follow its light and dark mode.
+(color fg '#1f2328')
+(color muted '#6b7280')
+(color warn '#a07a2c')
+(font label (style 'italic') (size 14))
+(font note (size 13))
+
+(variant dot () (circle_ (r 5) (fill fg)))
+
+(scene four
+  (group space
+    (group_ (stroke fg) (stroke-width 1.5)
+      (line_ (from [110 -105]) (to [110 -45]))
+      (line_ (from [110 -105]) (to [58 -135]))
+      (line_ (from [110 -105]) (to [162 -135])))
+    (dot_ (pos [110 -105])) (dot_ (pos [110 -45])) (dot_ (pos [58 -135])) (dot_ (pos [162 -135]))
+    (group_ (fill fg)
+      (text_ 'c' (pos [122 -102]) (font label))
+      (text_ 'u' (pos [118 -42]) (font label))
+      (text_ 'v' (pos [40 -150]) (font label))
+      (text_ 'w' (pos [170 -150]) (font label)))
+    (group_ (fill muted)
+      (text_ '1' (pos [100 -78]) (font note))
+      (text_ '1' (pos [74 -112]) (font note))
+      (text_ '1' (pos [140 -112]) (font note))
+      (text_ '(a) the space; u, v, w are' (pos [110 -200]) (halign 'middle') (font note))
+      (text_ 'pairwise at distance 2' (pos [110 -216]) (halign 'middle') (font note))))
+
+  (group line
+    (line_ (from [260 -105]) (to [420 -105]) (stroke fg) (stroke-width 1.5))
+    (dot_ (pos [260 -105])) (dot_ (pos [340 -105])) (dot_ (pos [420 -105]))
+    (circle collision (pos [420 -105]) (r 10) (fill none) (stroke warn) (stroke-width 2))
+    (group_ (fill fg)
+      (text_ 'F(u)' (pos [260 -88]) (halign 'middle') (font label))
+      (text_ 'F(c)' (pos [340 -88]) (halign 'middle') (font label))
+      (text_ 'F(v) = F(w)' (pos [420 -84]) (halign 'middle') (font label)))
+    (group_ (fill muted)
+      (text_ '1' (pos [300 -124]) (halign 'middle') (font note))
+      (text_ '1' (pos [380 -124]) (halign 'middle') (font note))
+      (text_ '(b) an isometry puts F(c) at the' (pos [340 -164]) (halign 'middle') (font note))
+      (text_ 'midpoint twice, so v and w collide' (pos [340 -180]) (halign 'middle')
+        (font note)))))
+
+(canvas the-space (view-x 0) (view-y -225) (view-width 222) (view-height 203) space)
+(canvas on-a-line (view-x 228) (view-y -189) (view-width 234) (view-height 125) line)
