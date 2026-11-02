@@ -41,10 +41,12 @@ from mathterpiece.nodes import (
 )
 from mathterpiece.parse import parse
 from mathterpiece.types import (
+    ANIMATION,
     BOOL,
     COLOR,
     COMPARE,
     COMPLEX,
+    FONT,
     INT,
     NONE,
     NUMBERS,
@@ -54,6 +56,8 @@ from mathterpiece.types import (
     SCENE,
     STRING,
     TRANSFORM,
+    TRANSITION,
+    ComponentT,
     FuncT,
     Interface,
     ListT,
@@ -81,6 +85,9 @@ UNBOUNDED: Range = (-LIMIT, LIMIT)
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat"}
+# The components (reference.md, "Components"), declared at the top level only.
+COMPONENTS = {"canvas", "readout", "slider", "button", "play", "toggle", "on-drag", "on-click"}
+EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
 # A computed result beyond the largest real overflows, which is undefined.
 MAX_REAL = sys.float_info.max
@@ -207,6 +214,10 @@ class _Compiler:
     def run(self, forms: tuple[Form, ...]) -> Model:
         for form, scope in self.expand(forms, {}):
             self.top(form, scope)
+        # A named transition no move ever used still needs its ends compiled.
+        for i, obj in enumerate(self.model.objects):
+            if obj.kind == "transition" and obj.data.get("end") is None:
+                self.type_ends(i, None, obj.pos)
         return self.model
 
     def expand(self, items, scope: dict) -> Iterator[tuple[Node, dict]]:
@@ -242,6 +253,14 @@ class _Compiler:
             return self.variant_decl(form)
         if head == "func":
             return self.func_decl(form)
+        if head == "transition":
+            self.transition(form, {}, named=True)
+            return
+        if head == "animation":
+            self.animation(form, {}, named=True)
+            return
+        if head == "button":
+            return self.button(form)
         if self.shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
@@ -761,6 +780,276 @@ class _Compiler:
             return Interface("shape"), None
         raise CompileError(f"{head} takes a list or a group, got {coll.type}", pos)
 
+    # Transitions, animations and writers ---------------------------------------------------
+
+    def transition(self, form: Form, scope: dict, named: bool) -> int:
+        """A transition: a trajectory with ends, a duration, an ease and a path. Its ends are
+        typed by the first place it moves (type_ends)."""
+        if named:
+            name, pos = self.name_of(form)
+            items = form.items[2:]
+        else:
+            if len(form.items) > 1 and not isinstance(form.items[1], Form):
+                raise CompileError("a transition written as an item has no name", form.pos)
+            name, pos, items = None, form.pos, form.items[1:]
+        obj = Obj("transition", name, TRANSITION, pos=pos)
+        ends = {}
+        for item in items:
+            head = _head(item)
+            if head is None or not isinstance(item, Form) or len(item.items) != 2:
+                raise CompileError(f"expected a part such as (to 1), got {item}", item.pos)
+            if head in obj.attrs or head in ends:
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            arg = item.items[1]
+            if head in ("from", "to"):
+                ends[head] = arg
+            elif head == "duration":
+                obj.attrs["duration"] = Place(REAL, self.seconds(arg, scope))
+            elif head == "ease":
+                obj.attrs["ease"] = self.ease(arg, scope)
+            elif head == "path":
+                obj.attrs["path"] = self.path(arg, scope)
+            else:
+                raise CompileError(f"a transition takes no part '{head}'", item.pos)
+        obj.data = {"ends": ends, "scope": scope, "end": None}
+        return self.add(obj)
+
+    def seconds(self, node: Node, scope: dict) -> float:
+        e = self.expr(node, REAL, scope)
+        if not e.known:
+            raise CompileError("a duration is a number of seconds known when compiling", node.pos)
+        if e.value < 0:
+            raise CompileError("a duration cannot be negative", node.pos)
+        return e.value
+
+    def ease(self, node: Node, scope: dict) -> Place:
+        """'linear', 'ease-in', 'ease-out', 'ease-in-out', (step n), or a func[real real]."""
+        if isinstance(node, StrLit):
+            if node.value not in EASES:
+                raise CompileError(
+                    f"'{node.value}' is not an ease: use one of {', '.join(EASES)}", node.pos
+                )
+            return Place(STRING, node.value)
+        if _head(node) == "step":
+            (arg,) = self.args(node, 1)
+            n = self.expr(arg, INT, scope)
+            if not n.known or n.value < 1:
+                raise CompileError(
+                    "(step n) takes a count of at least 1 known when compiling", node.pos
+                )
+            return Place(STRING, ("step", n.value))
+        e = self.expr(node, FuncT((REAL,), REAL), scope)
+        return Place(e.type, expr=e)
+
+    def path(self, node: Node, scope: dict) -> Place:
+        if isinstance(node, StrLit) and node.value == "fade":
+            return Place(STRING, "fade")
+        e = self.expr(node, None, scope)
+        ft = _core(e.type)
+        if not isinstance(ft, FuncT) or len(ft.params) != 3:
+            raise CompileError("a path is a function of the two ends and the progress", node.pos)
+        return Place(e.type, expr=e)
+
+    def type_ends(self, tid: int, t: Type | None, pos: Pos) -> None:
+        """Compile a transition's ends for a place of type t. An end that may be none must be
+        handled, except into a color|none place, where none is mixed as transparent."""
+        obj = self.model.objects[tid]
+        if obj.data["end"] is not None:
+            if t is not None and not fits(_loose(obj.data["end"]), _loose(t)):
+                raise CompileError(f"this transition already moves a {obj.data['end']}", pos)
+            return
+        target = _loose(t) if t is not None else None
+        for end, node in obj.data["ends"].items():
+            e = self.expr(node, _maybe(target) if target is not None else None, obj.data["scope"])
+            if _may_be_none(e.type) and target != Maybe(COLOR):
+                raise CompileError(
+                    "this end may be none: give it a default with (or? value default)", node.pos
+                )
+            obj.attrs[end] = Place(e.type, e.value) if e.known else Place(e.type, expr=e)
+        obj.data["end"] = target if target is not None else NONE
+        if "path" in obj.attrs and target is not None:
+            ft = _core(obj.attrs["path"].type)
+            want = FuncT((target, target, REAL), target)
+            if not fits(ft, want):
+                raise CompileError(f"this path is {ft}, but the move needs {want}", pos)
+
+    def animation(self, form: Form, scope: dict, named: bool) -> int:
+        if named:
+            name, pos = self.name_of(form)
+            items = form.items[2:]
+        else:
+            name, pos, items = None, form.pos, form.items[1:]
+            if len(items) == 1 and isinstance(items[0], Name):
+                return self.named(items[0], "animation")
+        steps = _in_order(self.steps(items, None, None, scope))
+        return self.add(Obj("animation", name, ANIMATION, pos=pos, data={"steps": steps}))
+
+    def named(self, node: Name, kind: str) -> int:
+        name = node.parts[0] if len(node.parts) == 1 else None
+        i = self.model.names.get(name) if isinstance(name, str) else None
+        if i is None or self.model.objects[i].kind != kind:
+            raise CompileError(f"expected the name of a {kind}", node.pos)
+        return i
+
+    def steps(self, items, duration, ease, scope: dict) -> list:
+        """The steps among items; the defaults among them apply to the moves inside."""
+        for item in items:
+            head = _head(item)
+            if head == "default-duration":
+                duration = self.seconds(self.args(item, 1)[0], scope)
+            elif head == "default-ease":
+                ease = _ease_value(self.ease(self.args(item, 1)[0], scope))
+        out = []
+        for item in items:
+            head = _head(item)
+            if head in ("default-duration", "default-ease"):
+                continue
+            if head == "wait":
+                out.append(("wait", self.seconds(self.args(item, 1)[0], scope)))
+            elif head in ("at-once", "in-order"):
+                out.append((head, *self.steps(item.items[1:], duration, ease, scope)))
+            else:
+                out.append(self.move(item, duration, ease, scope))
+        return out
+
+    def move(self, item: Node, duration, ease, scope: dict) -> tuple:
+        if (
+            not isinstance(item, Form)
+            or len(item.items) != 2
+            or not isinstance(item.items[0], Name)
+        ):
+            raise CompileError("expected a step such as (k (transition (to 1)))", item.pos)
+        i, attr, t = self.writable(item.items[0], scope)
+        node = item.items[1]
+        if _head(node) == "transition":
+            tid = self.transition(node, scope, named=False)
+        elif isinstance(node, Name):
+            tid = self.named(node, "transition")
+        else:
+            raise CompileError("a move takes a transition", node.pos)
+        self.type_ends(tid, t, node.pos)
+        tr = self.model.objects[tid]
+        d = tr.attrs["duration"].value if "duration" in tr.attrs else duration
+        if d is None:
+            raise CompileError(
+                "this transition needs a duration (or a default-duration around it)", node.pos
+            )
+        own = tr.attrs.get("ease")
+        e = _ease_value(own) if own is not None else ease
+        return ("move", (i, attr), tid, d, e if e is not None else "linear")
+
+    def writable(self, node: Name, scope: dict) -> tuple[int, str | None, Type]:
+        """The place a name such as k, p.r, g[1].r or d.c.pos denotes, which a writer may
+        write: free, not const, not a token and not fixed by a variant."""
+        label = _name_text(node)
+        first = node.parts[0]
+        if not isinstance(first, str) or first not in self.model.names:
+            raise CompileError(f"unknown name '{first}'", node.pos)
+        i, attr = self.model.names[first], None
+        for part in node.parts[1:]:
+            obj = self.model.objects[i]
+            if attr is not None:
+                raise CompileError(f"{label} is not a place", node.pos)
+            if isinstance(part, str):
+                members = {self.model.objects[m].name: m for m in obj.members}
+                if obj.kind == "instance" and part in members and part not in obj.attrs:
+                    i = members[part]
+                else:
+                    attr = part
+            else:
+                e = self.member(i, self.expr(part, None, scope), node.pos)
+                if e.op != "obj":
+                    raise CompileError("a place's position must be known when compiling", node.pos)
+                i = e.args[0]
+        obj = self.model.objects[i]
+        if attr is None:
+            if obj.kind != "variable":
+                raise CompileError(f"{label} is not a place: write one of its attributes", node.pos)
+            return i, None, self.check_writable(obj, obj.value, label, node.pos)
+        if obj.kind == "group" and attr not in obj.attrs:
+            types = [self.writable_attr(m, attr, label, node.pos) for m in obj.members]
+            if not types:
+                raise CompileError(f"{label} is not a place: the group is empty", node.pos)
+            return i, attr, _join_all(types, node.pos)
+        return i, attr, self.writable_attr(i, attr, label, node.pos)
+
+    def writable_attr(self, i: int, attr: str, label: str, pos: Pos) -> Type:
+        obj = self.model.objects[i]
+        if attr == "pos" and "x" in obj.attrs:
+            for a in ("x", "y"):
+                self.check_writable(obj, obj.attrs[a], label, pos)
+            return POINT
+        if obj.kind == "group" and attr not in obj.attrs:
+            return ListT(
+                _join_all([self.writable_attr(m, attr, label, pos) for m in obj.members], pos)
+            )
+        if attr not in obj.attrs:
+            raise CompileError(f"a {obj.kind} has no attribute '{attr}'", pos)
+        return self.check_writable(obj, obj.attrs[attr], label, pos)
+
+    def check_writable(self, obj: Obj, place: Place, label: str, pos: Pos) -> Type:
+        if place.bound:
+            raise CompileError(f"{label} is bound: only a free place can be written", pos)
+        if _is_const(place.type):
+            raise CompileError(f"{label} is const: it is never written", pos)
+        if obj.kind == "variable" and _core(place.type) in (COLOR, FONT):
+            raise CompileError(f"{label} is a token: no writer can write it", pos)
+        if place.fixed:
+            raise CompileError(f"{label} is fixed by its variant", pos)
+        return place.type
+
+    def button(self, form: Form) -> None:
+        name, pos = self.name_of(form)
+        label = Place(STRING, name)
+        animation, rest = None, []
+        for item in form.items[2:]:
+            head = _head(item)
+            if head == "animation":
+                animation = self.animation(item, {}, named=False)
+            elif head == "label":
+                label = self.place(STRING, self.args(item, 1)[0], item.pos, "label")
+            else:
+                rest.append(item)
+        written = self.written(animation)
+        conditions = [self.condition(c, written) for c in rest]
+        data = {"animation": animation, "conditions": conditions}
+        self.add(
+            Obj("button", name, ComponentT("button"), "page", {"label": label}, pos=pos, data=data)
+        )
+
+    def written(self, animation: int | None) -> set:
+        """The places an animation's moves write."""
+        if animation is None:
+            return set()
+
+        def walk(step) -> set:
+            if step[0] == "move":
+                return {step[1]}
+            if step[0] in ("at-once", "in-order"):
+                return set().union(*(walk(s) for s in step[1:]))
+            return set()
+
+        return walk(self.model.objects[animation].data["steps"])
+
+    def condition(self, node: Node, written: set) -> dict:
+        """A writer's condition, as a clamp: a comparison of a place it writes with a limit
+        that does not depend on that place (reference.md, "Writes and conditions")."""
+        flip = {"<": ">", "<=": ">=", ">": "<", ">=": "<="}
+        head = _head(node)
+        if head in COMPARE and len(node.items) == 3:
+            a, b = (self.expr(x, None, {}) for x in node.items[1:])
+            for op, side, limit in ((head, a, b), (flip[head], b, a)):
+                if side.op == "read":
+                    place = (side.args[0], side.args[1])
+                    if place in written and place not in limit.deps:
+                        lim = self.settle(limit.type, limit, "the limit", node.pos)
+                        return {"place": place, "op": op, "limit": lim}
+        raise CompileError(
+            "a condition compares a place this writer writes with a limit that does not depend"
+            " on it, such as (>= k 0)",
+            node.pos,
+        )
+
     def trial(self, name: str, pos: Pos) -> None:
         """Compile one instance and discard it, so a body's errors show without any instance."""
         objects, names = len(self.model.objects), dict(self.model.names)
@@ -970,7 +1259,9 @@ class _Compiler:
                 attrs["background"] = self.place(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
-            elif head in ("motif", "variant", "func"):
+            elif head in ("motif", "variant", "func", "transition", "animation") or (
+                head in COMPONENTS
+            ):
                 raise CompileError(f"a {head} is declared only at the top level", item.pos)
             elif self.shape_kind(item):
                 self.shape(item, self.scene, scope)
@@ -1764,6 +2055,26 @@ def _known(t: Type, value) -> Expr:
         else None
     )
     return Expr("lit", t, (value,), range=r, known=True, value=value)
+
+
+def _in_order(steps: list) -> tuple:
+    """An animation's one step: several in a row are one in-order."""
+    return steps[0] if len(steps) == 1 else ("in-order", *steps)
+
+
+def _ease_value(place: Place):
+    """An ease as a move carries it: its name, ("step", n), or ("func", id)."""
+    return ("func", place.expr.args[0]) if place.bound else place.value
+
+
+def _name_text(node: Name) -> str:
+    out = ""
+    for part in node.parts:
+        if isinstance(part, str):
+            out += f".{part}" if out else part
+        else:
+            out += f"[{getattr(part, 'value', '…')}]"
+    return out
 
 
 def _get(scope: dict, name: str) -> Expr:

@@ -58,6 +58,9 @@ class Obj:
     pos: Pos = NOPOS
     # The motif or variant an instance is of.
     of: str | None = None
+    # What its kind needs besides attributes: an animation's steps, a writer's animation and
+    # conditions, a transition's ends before they are typed.
+    data: dict = field(default_factory=dict)
 
     @property
     def value(self) -> Place:

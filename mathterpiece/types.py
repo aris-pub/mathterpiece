@@ -75,6 +75,16 @@ class Interface:
         return self.name if self.of is None else f"{self.name}[{self.of}]"
 
 
+@dataclass(frozen=True)
+class ComponentT:
+    """The type of a component: slider, toggle, canvas, …."""
+
+    name: str
+
+    def __str__(self) -> str:
+        return self.name
+
+
 # A constraint: (">=", 0), ("length", 3), ("one-of", ("a", "b")) or ("const",).
 Constraint = tuple
 
@@ -99,7 +109,7 @@ def _show(c: Constraint) -> str:
     return "(" + " ".join(str(p) for p in c) + ")"
 
 
-Type = Prim | ListT | FuncT | Maybe | ShapeT | Interface | Refine
+Type = Prim | ListT | FuncT | Maybe | ShapeT | Interface | Refine | ComponentT
 
 INT, RATIO, REAL, COMPLEX = Prim("int"), Prim("ratio"), Prim("real"), Prim("complex")
 BOOL, STRING, COLOR, FONT = Prim("bool"), Prim("string"), Prim("color"), Prim("font")
