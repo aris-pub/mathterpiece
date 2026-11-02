@@ -71,7 +71,7 @@ class TestGroupReads:
     def test_length_and_members(self):
         m = model("(scene s (group g (circle a) (circle b)) (int n g.length))")
         assert m.get("n").value.value == 2
-        assert m.get("n").value.type == INT
+        assert m.get("n").type == INT
 
     def test_a_spread_read(self):
         m = model("(scene s (group g (circle a) (circle b (r 2))) (list rs g.r))")

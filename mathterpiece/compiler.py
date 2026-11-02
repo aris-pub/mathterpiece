@@ -1621,7 +1621,15 @@ class _Compiler:
                 raise CompileError("a parameter needs a name", pos)
             if any(p.name == name for p in out):
                 raise CompileError(f"'{name}' is already declared", pos)
-            out.append(Param(name, t, default))
+            value = None
+            if default is not None:
+                e = self.expr(default, t, {})
+                if not e.known:
+                    raise CompileError(
+                        "a parameter's default must be known when compiling", default.pos
+                    )
+                value = e.value
+            out.append(Param(name, t, default, value))
         return tuple(out)
 
     def instance(
@@ -1841,7 +1849,12 @@ class _Compiler:
             return Place(
                 t, self.default(t, pos) if default is None and t != Maybe(COLOR) else default
             )
-        return self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
+        place = self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
+        # A place given by an expression is bound; folded, it is free but const, so no writer
+        # can write it (mtpc.md, "Places").
+        if not place.bound and not _is_literal(node):
+            place.type = _with_const(place.type)
+        return place
 
     def settle(self, t: Type, e: Expr, what: str, pos: Pos) -> Place:
         """A place holding e: free when e is known, bound otherwise. A bound value must stay
@@ -2690,6 +2703,22 @@ def _scale(sx, sy=None):
 def _in_order(steps: list) -> tuple:
     """An animation's one step: several in a row are one in-order."""
     return steps[0] if len(steps) == 1 else ("in-order", *steps)
+
+
+def _is_literal(node: Node) -> bool:
+    if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, BoolLit, NoneLit)):
+        return True
+    return isinstance(node, ListLit) and all(_is_literal(i) for i in node.items)
+
+
+def _with_const(t: Type) -> Type:
+    if isinstance(t, Maybe):
+        return Maybe(_with_const(t.inner))
+    if _is_const(t):
+        return t
+    if isinstance(t, Refine):
+        return replace(t, constraints=(*t.constraints, ("const",)))
+    return Refine(t, (("const",),))
 
 
 def _is_step_ease(ease) -> bool:

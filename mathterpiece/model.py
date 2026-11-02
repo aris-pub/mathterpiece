@@ -70,11 +70,13 @@ class Obj:
 
 @dataclass(frozen=True)
 class Param:
-    """A parameter: its default is the source it is compiled from, in each instance or call."""
+    """A parameter: its default is the source it is compiled from, in each instance or call,
+    and value is that default's value, which is always known when compiling."""
 
     name: str
     type: Type
     default: Node | None = None
+    value: object = None
 
 
 @dataclass(frozen=True)

@@ -73,3 +73,27 @@ class TestCollections:
 
     def test_a_captured_known_name(self):
         assert value("(list ys (let ((k 10)) (map [1 2] (fn x (* k x)))))", "ys") == [10, 20]
+
+
+class TestFoldedPlaces:
+    # docs/mtpc.md "Places": a place known when compiling is free with a const constraint,
+    # whether the author wrote (const) or the compiler folded it. A place given by an expression
+    # is bound, so nothing may write it (data-model.md, "What changes, and what follows").
+    def test_a_folded_expression_is_const(self):
+        from mathterpiece.compiler import _is_const
+
+        m = model("(real k 1) (real d (+ 1 2))")
+        assert not _is_const(m.get("k").value.type)
+        assert _is_const(m.get("d").value.type)
+
+    def test_so_no_writer_can_write_it(self):
+        error("(real d (+ 1 2)) (animation a (d (transition (to 1) (duration 1))))", "d is const")
+
+    def test_a_literal_list_is_still_free(self):
+        from mathterpiece.compiler import _is_const
+
+        assert not _is_const(model("(list xs [1 2])").get("xs").value.type)
+
+
+def test_a_parameters_default_is_known_when_compiling():
+    error("(real k) (func f (real x k) x)", "a parameter's default must be known when compiling")
