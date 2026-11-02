@@ -228,6 +228,9 @@ class _Compiler:
         self.frame: int | None = None
         # True while compiling the scene's contents, which may never read page access.
         self.in_scene = False
+        # The object and attribute whose place is being compiled, so a message can name them:
+        # (name, the shape's type or None for a variable, attribute or None).
+        self.where: tuple | None = None
         # The motif instances whose bodies are being compiled, innermost last: each with its
         # id, its members' names, its parameters and bound variables, and the path its
         # members are named by (None inside an anonymous instance).
@@ -387,7 +390,11 @@ class _Compiler:
             place = self.settle(t, self.expect(shape, t, node.pos), "the value", node.pos)
             self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
             return
-        place = self.place(t, node, form.pos, "the value", scope=scope)
+        saved, self.where = self.where, (name, None, None)
+        try:
+            place = self.place(t, node, form.pos, "the value", scope=scope)
+        finally:
+            self.where = saved
         access = self.access_of(place.deps)[0]
         self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
 
@@ -1674,7 +1681,11 @@ class _Compiler:
 
     def body_variable(self, form: Form, obj: Obj, scope: dict) -> None:
         name, pos, t, node = self.declared(form, scope)
-        place = self.place(t, node, form.pos, "the value", scope=scope)
+        saved, self.where = self.where, (name, None, None)
+        try:
+            place = self.place(t, node, form.pos, "the value", scope=scope)
+        finally:
+            self.where = saved
         if name is None:
             raise CompileError("a variable in a motif's body needs a name", pos)
         if not place.bound and not _is_const(t):
@@ -1787,7 +1798,11 @@ class _Compiler:
             if attr == "font" and node is not None:
                 obj.attrs[attr] = self.font_arg(node)
                 continue
-            obj.attrs[attr] = self.place(at, node, pos, attr, spec.default, inner)
+            saved, self.where = self.where, (obj.name, obj.of or obj.kind, attr)
+            try:
+                obj.attrs[attr] = self.place(at, node, pos, attr, spec.default, inner)
+            finally:
+                self.where = saved
         if "pos" in given:
             node, inner = given["pos"]
             point = self.expr(node, _maybe(POINT) if absent else POINT, inner)
@@ -1800,6 +1815,24 @@ class _Compiler:
                     place.type = specs[attr].type
 
     # Places ------------------------------------------------------------------------------
+
+    def may_be_none(self, expected: Type) -> str:
+        fix = "give it a default with (or? value default)"
+        if self.where and self.where[0] and self.where[2]:
+            name, kind, attr = self.where
+            return f"{name}'s {attr} may be none: {fix}, or declare {name} as {kind}|none"
+        if self.where and self.where[0]:
+            return f"{self.where[0]} may be none: {fix}, or declare it {_loose(expected)}|none"
+        return f"this value may be none: {fix}"
+
+    def may_break(self, what: str, c, t: Type) -> str:
+        fix = "constrain what it reads so this can be proved"
+        if self.where and self.where[0] and self.where[2]:
+            name, kind, attr = self.where
+            return f"{name}'s {attr} may break {_show(c)}: {fix}, or declare {name} as {kind}|none"
+        if self.where and self.where[0]:
+            return f"{self.where[0]} may break {_show(c)}: {fix}, or declare it {t}|none"
+        return f"{what} may break {_show(c)}"
 
     def place(
         self, t: Type, node: Node | None, pos: Pos, what: str, default=None, scope=None
@@ -1829,7 +1862,7 @@ class _Compiler:
                 c for c in inner.constraints if c[0] in COMPARE and not _range_within(e.range, c)
             )
             if broken and not _may_be_none(t):
-                raise CompileError(f"{what} may break {_show(broken[0])}", pos)
+                raise CompileError(self.may_break(what, broken[0], t), pos)
             if broken:
                 e = Expr("check", _maybe(e.type), (e, broken), e.deps, e.range)
         return Place(t, expr=e)
@@ -1845,7 +1878,12 @@ class _Compiler:
                 if c[0] in COMPARE and not _satisfies(0, c):
                     low = next((d for d in cons if d[0] == ">="), None)
                     if low is None:
-                        raise CompileError(f"this {t} needs a value", pos)
+                        who = self.where[0] if self.where and self.where[0] else "this value"
+                        raise CompileError(
+                            f"{who} needs a value: 0 breaks {_show(c)}, and there is no lower"
+                            " bound to use instead",
+                            pos,
+                        )
                     value = low[1]
             return value
         if base == BOOL:
@@ -1876,8 +1914,11 @@ class _Compiler:
         target = _loose(expected) if expected is not None else None
         if target is not None and not fits(_loose(e.type), target):
             if _may_be_none(e.type) and not _may_be_none(target):
+                raise CompileError(self.may_be_none(expected), node.pos)
+            if _core(e.type) == STRING and _core(target) == COLOR:
                 raise CompileError(
-                    "this value may be none: give it a default with (or? value default)", node.pos
+                    f"expected {expected}, got {e.type}: only a literal string becomes a color",
+                    node.pos,
                 )
             if e.type == ComponentT("toggle") and e.op == "obj":
                 name = self.model.objects[e.args[0]].name
@@ -1891,6 +1932,12 @@ class _Compiler:
                 if c[0] != "const" and not _satisfies(e.value, c):
                     if c[0] == "one-of":
                         choices = ", ".join(f"'{v}'" for v in c[1])
+                        if narrowed.name:
+                            raise CompileError(
+                                f"'{e.value}' is not a {narrowed.name}: a {narrowed.name} is one"
+                                f" of {choices}",
+                                node.pos,
+                            )
                         raise CompileError(f"'{e.value}' is not one of {choices}", node.pos)
                     raise CompileError(f"{_value_str(e.value)} breaks {_show(c)}", node.pos)
         return e
