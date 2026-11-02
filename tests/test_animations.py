@@ -164,12 +164,10 @@ class TestBoolMoves:
         src = f"{self.B} (animation a (default-ease 'ease-in') {move})"
         assert steps(src)[4] == ("step", 1)
 
-    def test_its_own_step_ease(self):
-        src = f"{self.B} (animation a (on (transition (to true) (duration 1) (ease (step 3)))))"
-        assert steps(src)[4] == ("step", 3)
-
-    def test_any_other_ease_is_an_error(self):
+    @pytest.mark.parametrize("ease", ["'linear'", "(step 3)"])
+    def test_an_ease_that_takes_values_other_than_0_and_1(self, ease):
+        # (step 3) jumps to 1/3 and 2/3, which mean nothing for a bool.
         error(
-            f"{self.B} (animation a (on (transition (to true) (duration 1) (ease 'linear'))))",
-            "a bool moves only by a step ease",
+            f"{self.B} (animation a (on (transition (to true) (duration 1) (ease {ease}))))",
+            "an ease for a bool takes only the values 0 and 1",
         )

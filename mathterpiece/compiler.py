@@ -940,16 +940,15 @@ class _Compiler:
         own = tr.attrs.get("ease")
         e = _ease_value(own) if own is not None else ease
         if _core(t) == BOOL:
-            # A bool changes at the start of its move and holds; only a step ease may change
-            # that, and an enclosing default that is not one does not apply.
-            if own is not None and not _is_step(e):
+            # A bool's ease must take only the values 0 and 1 (piecewise constant); none of the
+            # eases that exist so far does, except (step 1), the default: change at the start.
+            if own is not None and e != ("step", 1):
                 raise CompileError(
-                    "a bool moves only by a step ease, such as (step 2); by default it changes"
-                    " at the start",
+                    "an ease for a bool takes only the values 0 and 1; by default the bool"
+                    " changes at the start of its move and holds",
                     node.pos,
                 )
-            if not _is_step(e):
-                e = ("step", 1)
+            e = ("step", 1)
         return ("move", (i, attr), tid, d, e if e is not None else "linear")
 
     def writable(self, node: Name, scope: dict) -> tuple[int, str | None, Type]:
@@ -2284,10 +2283,6 @@ def _known(t: Type, value) -> Expr:
 def _in_order(steps: list) -> tuple:
     """An animation's one step: several in a row are one in-order."""
     return steps[0] if len(steps) == 1 else ("in-order", *steps)
-
-
-def _is_step(ease) -> bool:
-    return isinstance(ease, tuple) and ease[0] == "step"
 
 
 def _ease_value(place: Place):
