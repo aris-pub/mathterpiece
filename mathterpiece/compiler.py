@@ -9,6 +9,14 @@ from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 from fractions import Fraction
 
+from mathterpiece.builtins import (
+    BUILTINS,
+    CONSTANTS,
+    SPECIAL_BUILTINS,
+    Builtin,
+    Undefined,
+    compose,
+)
 from mathterpiece.colors import parse_color
 from mathterpiece.model import (
     Expr,
@@ -230,6 +238,8 @@ class _Compiler:
         self.shape_types: dict[str, dict[str, Type]] = {}
         # How many function bodies are being compiled again to fold a call.
         self.folding = 0
+        # Each rand drawn so far, after repeat and motif instances are expanded.
+        self.rand_sites = 0
 
     def run(self, forms: tuple[Form, ...]) -> Model:
         for form, scope in self.expand(forms, {}):
@@ -574,19 +584,173 @@ class _Compiler:
         args, deps, maybe = self.arguments(params, given, scope, node.pos)
         t = _maybe(ft.result) if maybe else ft.result
         if self.foldable(fexpr) and all(self.foldable(a) for a in args):
-            folded = self.fold_call(fexpr.args[0], args)
+            folded = self.call_value(fexpr, args)
             if folded is not None:
                 return _known(t, folded.value)
         return Expr("apply", t, (fexpr, *args), deps | fexpr.deps, _type_range(t))
 
     def foldable(self, e: Expr) -> bool:
         """Known when compiling: a value, or a function whose captured names are known."""
-        if e.known:
+        if e.known or e.op == "builtinfunc":
             return True
         if e.op != "func":
             return False
         f = self.model.functions[e.args[0]]
         return all(_get(f.scope, n).known for n in e.args[1])
+
+    def call_value(self, f: Expr, args: list) -> Expr | None:
+        """A function value called on known arguments, folded."""
+        if f.op == "builtinfunc":
+            b = BUILTINS[f.args[0]]
+            return self.apply_builtin(f.args[0], b, args, frozenset(), False, NOPOS)
+        return self.fold_call(f.args[0], args)
+
+    def builtin(self, node: Form, head: str, scope: dict) -> Expr:
+        """A call of a built-in function (reference.md, "Functions")."""
+        given = node.items[1:]
+        if head in SPECIAL_BUILTINS:
+            return self.special_builtin(node, head, given, scope)
+        b = BUILTINS[head]
+        self.count(head, given, len(b.params), len(b.params), node.pos)
+        params = tuple(Param(f"argument {k + 1} of {head}", t) for k, t in enumerate(b.params))
+        args, deps, maybe = self.arguments(params, given, scope, node.pos)
+        return self.apply_builtin(head, b, args, deps, maybe, node.pos)
+
+    def count(self, head: str, given, low: int, high: int, pos: Pos) -> None:
+        if not low <= len(given) <= high:
+            n = f"{low}" if low == high else f"{low} to {high}"
+            raise CompileError(f"{head} takes {n} argument{'s' * (high != 1)}", pos)
+
+    def apply_builtin(self, head: str, b: Builtin, args, deps, maybe: bool, pos: Pos) -> Expr:
+        if any(a.known and a.value is None for a in args):
+            return _known(Maybe(b.result), None)
+        if all(a.known for a in args):
+            return _known(b.result, self.fold_builtin(head, b.fold, [a.value for a in args], pos))
+        ranges = [a.range if a.range is not None else WHOLE for a in args]
+        undefined = b.undefined is not None and b.undefined(ranges)
+        r = b.range(ranges) if callable(b.range) else b.range
+        t = Maybe(b.result) if maybe or undefined else b.result
+        return Expr(head, t, tuple(args), deps, r)
+
+    def fold_builtin(self, head: str, fold, values: list, pos: Pos):
+        try:
+            return fold(*values)
+        except (Undefined, ValueError, ZeroDivisionError, OverflowError):
+            shown = ", ".join(_value_str(v) for v in values)
+            raise CompileError(f"{head} is undefined at {shown}", pos) from None
+
+    def special_builtin(self, node: Form, head: str, given, scope: dict) -> Expr:
+        """The built-ins whose arguments vary in number or type."""
+        pos = node.pos
+        if head == "rand":
+            self.count(head, given, 0, 2, pos)
+            if len(given) == 1:
+                raise CompileError("rand takes no arguments, or lo and hi", pos)
+            if self.reads:
+                raise CompileError("rand inside a function is a compile error for now", pos)
+            bounds = [self.expr(g, REAL, scope) for g in given]
+            site, self.rand_sites = self.rand_sites, self.rand_sites + 1
+            r = (0.0, 1.0)
+            if bounds and all(b.known for b in bounds):
+                r = (float(bounds[0].value), float(bounds[1].value))
+            elif bounds:
+                r = WHOLE
+            deps = frozenset().union(*(b.deps for b in bounds))
+            return Expr("rand", REAL, (site, *bounds), deps, r)
+        if head == "round":
+            self.count(head, given, 1, 2, pos)
+            params = (Param("x", REAL), Param("places", INT))[: len(given)]
+            b = Builtin(
+                tuple(p.type for p in params), INT if len(given) == 1 else REAL, _round, WHOLE
+            )
+        elif head == "log":
+            self.count(head, given, 1, 2, pos)
+            params = (Param("x", REAL), Param("base", REAL))[: len(given)]
+            b = Builtin(tuple(p.type for p in params), REAL, _log, WHOLE, _log_undefined)
+        elif head in ("min", "max"):
+            return self.extreme(node, head, given, scope)
+        elif head == "lerp":
+            self.count(head, given, 3, 3, pos)
+            first = self.expr(given[0], None, scope)
+            point = isinstance(given[0], ListLit) or _core(first.type) == POINT
+            t = POINT if point else REAL
+            params = (Param("a", t), Param("b", t), Param("t", REAL))
+            b = Builtin((t, t, REAL), t, _lerp, WHOLE if t == REAL else None)
+        elif head == "scale":
+            self.count(head, given, 1, 2, pos)
+            params = tuple(Param(n, REAL) for n in ("sx", "sy")[: len(given)])
+            b = Builtin(tuple(p.type for p in params), TRANSFORM, _scale, None)
+        else:  # transform: their composition
+            if not given:
+                raise CompileError("transform takes one transform or more", pos)
+            params = tuple(Param(f"transform {k + 1}", TRANSFORM) for k in range(len(given)))
+            b = Builtin(tuple(p.type for p in params), TRANSFORM, compose, None)
+        args, deps, maybe = self.arguments(params, given, scope, pos)
+        return self.apply_builtin(head, b, args, deps, maybe, pos)
+
+    def extreme(self, node: Form, head: str, given, scope: dict) -> Expr:
+        """min and max: of reals, any count, where a list of reals counts as its items (as the
+        old code spread a group's attribute into the call; mtp-b80)."""
+        pick = min if head == "min" else max
+        if not given:
+            raise CompileError(f"{head} takes one real or more", node.pos)
+        args, maybe, ranges, may_be_empty = [], False, [], True
+        for g in given:
+            e = self.expr(g, None, scope)
+            core = _core(e.type)
+            item = core.item if isinstance(core, ListT) else e.type
+            if _may_be_none(e.type) and not isinstance(core, ListT):
+                maybe = True
+            elif _may_be_none(item) or _core(item) not in NUMBERS[:3]:
+                raise CompileError(f"{head} takes reals or lists of reals, got {e.type}", g.pos)
+            if isinstance(core, ListT):
+                if _length(e) != 0 and _length(e) is not None:
+                    may_be_empty = False
+                ranges.append(_type_range(item) if not e.known or not e.value else e.range)
+            else:
+                may_be_empty = False
+                ranges.append(e.range)
+            args.append(e)
+        if all(a.known for a in args) and not maybe:
+            nums = [v for a in args for v in (a.value if isinstance(a.value, list) else [a.value])]
+            if not nums:
+                raise CompileError(f"{head} of an empty list is undefined", node.pos)
+            return _known(REAL, pick(nums))
+        rs = [r if r is not None else WHOLE for r in ranges]
+        for a in args:
+            if a.known and isinstance(a.value, list) and a.value:
+                rs.append((float(min(a.value)), float(max(a.value))))
+        r = (pick(x[0] for x in rs), pick(x[1] for x in rs))
+        t = Maybe(REAL) if maybe or may_be_empty else REAL
+        deps = frozenset().union(*(a.deps for a in args))
+        return Expr(head, t, tuple(args), deps, r)
+
+    def itemwise(self, pos: Pos, op: str, args: list) -> Expr:
+        """+ - * on points, or on lists of numbers of equal known length, item by item."""
+        if op not in ("+", "-", "*"):
+            raise CompileError(f"{op} takes numbers, not points or lists", pos)
+        kinds = {_core(a.type) == POINT for a in args}
+        if len(kinds) != 1 or not all(
+            _core(a.type) == POINT or isinstance(_core(a.type), ListT) for a in args
+        ):
+            raise CompileError(f"{op} takes all points or all lists, item by item", pos)
+        lengths = {_length(a) for a in args}
+        if len(lengths) != 1 or None in lengths:
+            raise CompileError(f"{op} takes lists of equal length, known when compiling", pos)
+        if kinds == {True}:
+            t = POINT
+        else:
+            items = [_core(_core(a.type).item) for a in args]
+            if not all(i in NUMBERS for i in items):
+                raise CompileError(f"{op} takes lists of numbers", pos)
+            t = ListT(max(items, key=NUMBERS.index))
+        maybe = any(_may_be_none(a.type) for a in args)
+        if all(a.known for a in args) and not maybe:
+            columns = zip(*(a.value for a in args), strict=True)
+            vals = [_fold_number(op, list(c), pos) for c in columns]
+            return _known(t, tuple(vals) if t == POINT else vals)
+        deps = frozenset().union(*(a.deps for a in args))
+        return Expr(op, Maybe(t) if maybe else t, tuple(args), deps)
 
     def fold_call(self, fid: int, args: list) -> Expr | None:
         """The call's value, compiling the body again with its known arguments, or None when
@@ -617,7 +781,7 @@ class _Compiler:
             return None
         out = []
         for v in values:
-            r = self.fold_call(f.args[0], [_known(item, v)])
+            r = self.call_value(f, [_known(item, v)])
             if r is None:
                 return None
             out.append(r.value)
@@ -734,7 +898,7 @@ class _Compiler:
             return Expr("reverse", sized(ListT(item)), (coll,), deps)
         if head == "reduce":
             self.arity(node, 3)
-            start = self.expr(rest[0], None, scope)
+            start = self.expr(rest[0], self.accumulator(rest[1]), scope)
             ft = _core(given(1, (start.type, item), None).type)
             acc = ft.params[0]
             if not fits(_loose(ft.result), _loose(acc)):
@@ -742,7 +906,7 @@ class _Compiler:
             if coll.known and start.known and self.foldable(f):
                 total = start
                 for v in coll.value:
-                    total = self.fold_call(f.args[0], [total, _known(item, v)])
+                    total = self.call_value(f, [total, _known(item, v)])
                     if total is None:
                         break
                 if total is not None:
@@ -782,6 +946,17 @@ class _Compiler:
         if hits is not None:
             return _known(BOOL, (any if head == "any" else all)(hits))
         return Expr(head, BOOL, (coll, f), deps)
+
+    def accumulator(self, node: Node) -> Type | None:
+        """The type reduce's function declares for its running value, so a literal start such
+        as [0 0] takes it."""
+        if _head(node) == "fn" and isinstance(node.items[1], Form) and node.items[1].items:
+            params = self.params(node.items[1])
+            return params[0].type if params else None
+        if isinstance(node, Name) and len(node.parts) == 1 and node.parts[0] in self.model.funcs:
+            f = self.model.functions[self.model.funcs[node.parts[0]]]
+            return f.params[0].type if f.params else None
+        return None
 
     def arity(self, node: Form, n: int) -> None:
         if len(node.items) - 1 != n:
@@ -1313,7 +1488,7 @@ class _Compiler:
 
     def trial(self, name: str, pos: Pos) -> None:
         """Compile one instance and discard it, so a body's errors show without any instance."""
-        objects, names = len(self.model.objects), dict(self.model.names)
+        objects, names, sites = len(self.model.objects), dict(self.model.names), self.rand_sites
         try:
             j = self.shape(Form((Name((name,), pos), Name(("_",), pos)), pos), None, {})
             obj = self.model.objects[j]
@@ -1325,6 +1500,7 @@ class _Compiler:
         finally:
             del self.model.objects[objects:]
             self.model.names = names
+            self.rand_sites = sites
 
     def variant_decl(self, form: Form) -> None:
         name, pos = self.name_of(form)
@@ -1849,6 +2025,11 @@ class _Compiler:
             return Expr("func", t, (fid, ()), f.deps)
         if name in self.model.names:
             return self.read(self.model.names[name], None)
+        if name in CONSTANTS:
+            return _known(REAL, CONSTANTS[name])
+        if name in BUILTINS:
+            b = BUILTINS[name]
+            return Expr("builtinfunc", FuncT(b.params, _result(b)), (name,))
         raise CompileError(f"unknown name '{name}'", pos)
 
     def read(self, i: int, attr: str | None) -> Expr:
@@ -2075,6 +2256,10 @@ class _Compiler:
             else:
                 item = _maybe(item)
             return Expr("part", item, (e, index), e.deps | index.deps, _type_range(item))
+        if isinstance(whole, Interface) and whole.name == "sequence" and whole.of is not None:
+            # A sequence parameter's length is not known, so a position on it may be none.
+            item = _maybe(whole.of)
+            return Expr("part", item, (e, index), e.deps | index.deps, _type_range(item))
         raise CompileError(f"a {e.type} has no items", pos)
 
     def held(self, e: Expr) -> tuple | None:
@@ -2129,6 +2314,8 @@ class _Compiler:
             return self.fn(node, scope)
         if head in COLLECTION:
             return self.collection(node, head, scope)
+        if head in BUILTINS or head in SPECIAL_BUILTINS:
+            return self.builtin(node, head, scope)
         if head == "if":
             if len(args) != 3:
                 raise CompileError("if takes a condition and two branches", node.pos)
@@ -2205,13 +2392,25 @@ class _Compiler:
                 return _known(t, [v for v in e.value if v is not None])
             return Expr("somes", t, (e,), e.deps)
         if head in ARITH:
-            return self.arith(node.pos, head, [self.expr(x, None, scope) for x in args])
+            return self.arith(node.pos, head, self.operands(args, expected, scope))
         if head in COMPARE or head in ("=", "!="):
             a, b = self.args(node, 2)
             ea = self.expr(a, None, scope)
             eb = self.typed_like(b, ea.type, scope)
             return self.compare(node, head, ea, eb)
         raise CompileError(f"unknown function '{head}'", node.pos)
+
+    def operands(self, nodes, expected: Type | None, scope: dict) -> list:
+        """An operator's operands. A literal list such as [1 2] is a point when the place or
+        another operand is one, as a literal takes its place's type."""
+        others = [None if isinstance(n, ListLit) else self.expr(n, None, scope) for n in nodes]
+        point = (expected is not None and _core(expected) == POINT) or any(
+            o is not None and _core(o.type) == POINT for o in others
+        )
+        return [
+            o if o is not None else self.expr(n, POINT if point else None, scope)
+            for n, o in zip(nodes, others, strict=True)
+        ]
 
     def typed_like(self, node: Node, other: Type, scope: dict) -> Expr:
         """In (= o.fill 'red'), the literal takes the other side's type."""
@@ -2283,6 +2482,8 @@ class _Compiler:
             )
         if any(a.type == RECURSING for a in args):
             return Expr(op, RECURSING, tuple(args))
+        if any(_core(a.type) == POINT or isinstance(_core(a.type), ListT) for a in args):
+            return self.itemwise(pos, op, args)
         numbers = [a for a in args if a.type != NONE]
         for a in numbers:
             if _core(a.type) not in NUMBERS:
@@ -2396,6 +2597,44 @@ def _duration(step) -> float:
     if step[0] == "in-order":
         return sum(parts)
     return max(parts, default=0)
+
+
+def _result(b: Builtin) -> Type:
+    return Maybe(b.result) if b.undefined is not None else b.result
+
+
+def _round(x, places=None):
+    """Halves away from zero, on the number's shortest decimal form (reference.md,
+    "Rounding"); a negative number of places rounds to tens, hundreds, …."""
+    step = Decimal(1).scaleb(-(places or 0))
+    v = Decimal(repr(float(x))).quantize(step, rounding=ROUND_HALF_UP)
+    return int(v) if places is None else float(v)
+
+
+def _log(x, base=None):
+    if x <= 0 or (base is not None and (base <= 0 or base == 1)):
+        raise Undefined
+    return math.log(x) if base is None else math.log(x, base)
+
+
+def _log_undefined(ranges) -> bool:
+    x = ranges[0]
+    if x[0] <= 0:
+        return True
+    if len(ranges) == 2:
+        b = ranges[1]
+        return b[0] <= 0 or b[0] <= 1 <= b[1]
+    return False
+
+
+def _lerp(a, b, t):
+    if isinstance(a, tuple):
+        return tuple(x + (y - x) * t for x, y in zip(a, b, strict=True))
+    return a + (b - a) * t
+
+
+def _scale(sx, sy=None):
+    return (sx, 0, 0, sx if sy is None else sy, 0, 0)
 
 
 def _in_order(steps: list) -> tuple:

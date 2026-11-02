@@ -4,7 +4,7 @@
 import pytest
 
 from mathterpiece.compiler import CompileError, compile_source
-from mathterpiece.types import BOOL, INT, REAL, ListT, Maybe, Refine
+from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe, Refine
 
 RADIUS = Refine(REAL, ((">=", 0),))
 G = "(group g (circle a (r 1)) (circle b (r 2)))"
@@ -113,3 +113,15 @@ class TestShapeParameters:
         m = model(f"{src} (scene s {G} (real k (total g)))")
         assert (m.id("a"), "r") in m.get("k").value.deps
         error(f"{src} (scene s (group h (rect r1)) (real k (total h)))", "sequence")
+
+
+def test_a_position_on_a_sequence_parameter_may_be_none():
+    m = model("(func second-r (sequence[circle] g) g[1].r)")
+    f = m.functions[m.funcs["second-r"]]
+    assert f.result == Maybe(RADIUS)
+    assert f.reads == {"g": frozenset({"[].r"})}
+
+
+def test_reduce_starts_from_a_literal_point():
+    src = f"(scene s {G} (point p (reduce g.pos [0 0] (fn ((point acc) (point q)) (+ acc q)))))"
+    assert model(src).get("p").value.expr.type == POINT
