@@ -41,14 +41,14 @@
 
   (real|none measured (distortion-of c.pos u.pos v.pos w.pos))
 
+  ; Each point's name, in the order the points are declared.
+  (list[string] names ['c' 'u' 'v' 'w'] (const))
+
   (group labels (fill ink)
-    (text _ 'c' (pos (+ c.pos [0.13 0.13])) (font variable))
-    (text _ 'u' (pos (+ u.pos [0.13 0.13])) (font variable))
-    (text _ 'v' (pos (+ v.pos [0.13 0.13])) (font variable))
-    (text _ 'w' (pos (+ w.pos [0.13 0.13])) (font variable))
+    (repeat 4 i
+      (text _ names[i] (pos (+ points[i].pos [0.13 0.13])) (font variable)))
     (text _ (or? $'distortion {measured:.3f}' 'distortion inf') (pos [-3.15 1.93]) (font big))
-    (text _ $'best possible {(/ 2 (sqrt 3)):.3f}' (pos [1.17 1.93]) (font small)
-      (opacity 0.6))))
+    (text _ $'best possible {(/ 2 (sqrt 3)):.3f}' (pos [1.17 1.93]) (font small) (opacity 0.6))))
 
 (readout distortion (or? $'{measured:.3f}' 'inf'))
 
