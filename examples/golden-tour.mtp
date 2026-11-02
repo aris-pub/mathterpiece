@@ -40,18 +40,21 @@
   (text degrees $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font small) (fill chalk) (opacity 0.6)))
 
 ; Each stop of the tour: the angle, its name, and whether the halo glows.
+; Each move turns the angle about 3 degrees a second on average (about 9 at its fastest, in the
+; middle of the ease): a small change of angle turns the outer seeds a long way, so faster than
+; that the flower blurs.
 (animation quarter
-  (at-once (default-duration 3) (default-ease 'ease-in-out')
+  (at-once (default-duration 16) (default-ease 'ease-in-out')
     (sunflower.angle (transition (to 90)))
     (stop-name (transition (to 'a quarter turn')))
     (halo.fill (transition (to none)))))
 (animation third
-  (at-once (default-duration 5) (default-ease 'ease-in-out')
+  (at-once (default-duration 10) (default-ease 'ease-in-out')
     (sunflower.angle (transition (to 120)))
     (stop-name (transition (to 'a third of a turn')))
     (halo.fill (transition (to none)))))
 (animation two-fifths
-  (at-once (default-duration 5) (default-ease 'ease-in-out')
+  (at-once (default-duration 8) (default-ease 'ease-in-out')
     (sunflower.angle (transition (to 144)))
     (stop-name (transition (to 'two fifths of a turn')))
     (halo.fill (transition (to none)))))

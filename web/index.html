@@ -39,11 +39,11 @@
     <script type="module">
       import "/src/index.ts";
       const figures = import.meta.glob(
-        ["/test/data/examples/*.mtpc", "/test/data/demo/*.mtpc", "/test/data/shared/*.mtpc", "/test/data/runtime/*.mtpc"],
+        ["/test/data/examples/*.mtpc", "/test/data/demo/*.mtpc", "/test/data/runtime/*.mtpc"],
         { query: "?raw", import: "default" },
       );
       const sources = import.meta.glob(
-        ["/test/data/examples/*.mtp", "/test/data/demo/*.mtp", "/test/data/shared/*.mtp", "/test/data/runtime/*.mtp"],
+        ["/test/data/examples/*.mtp", "/test/data/demo/*.mtp", "/test/data/runtime/*.mtp"],
         { query: "?raw", import: "default" },
       );
       const examples = Object.keys(figures);
@@ -64,7 +64,7 @@
           .filter((l) => l.startsWith(";") && !/^; (expect|write|page)\b/.test(l))
           .map((l) => l.replace(/^;+ ?/, ""));
         document.getElementById("about").textContent = about.join("\n");
-        // A figure with no canvas of its own, such as most shared cases, is shown in one that
+        // A figure with no canvas of its own, such as most runtime figures, is shown in one that
         // draws its whole scene, so there is always something to see.
         const scene = doc.objects.findIndex((o) => o.kind === "scene");
         if (scene >= 0 && !doc.objects.some((o) => o.kind === "canvas")) {
