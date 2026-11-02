@@ -121,7 +121,7 @@ What an attribute is when the author leaves it out:
 | canvas view box | −10 to 10 in both directions |
 | transition `ease` | `'linear'` |
 | transition `duration` | none: a move with no duration takes the `default-duration` of the nearest animation, `at-once` or `in-order` around it, and is a compile error if there is none |
-| control `label` | the control's name |
+| control `label` | the control's name, or empty for a control with no name |
 | toggle `value` | `false` |
 | slider `step` | none: the slider moves continuously |
 | play `buttons` | `false` |

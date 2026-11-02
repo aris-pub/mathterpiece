@@ -1392,12 +1392,13 @@ class _Compiler:
 
     def writer(self, obj: Obj, items: list, written: set) -> None:
         """What every writer has: a label (controls), conditions, and the items left over."""
-        if obj.name is not None:
+        if obj.kind not in ("on-drag", "on-click"):
             label = self.take(items, "label")
+            # By default a control's label is its name; one with no name has an empty label.
             obj.attrs["label"] = (
                 self.attribute(STRING, label, obj.pos, "label", scope=self.cscope)
                 if label is not None
-                else Attribute(STRING, obj.name)
+                else Attribute(STRING, obj.name or "")
             )
         for item in items:
             if not isinstance(item, Form):

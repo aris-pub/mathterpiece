@@ -167,3 +167,16 @@ class TestPositionalTargets:
     def test_a_toggle_names_its_target_or_none(self):
         error("(toggle t (label 'x'))", "a toggle is")
         assert model("(toggle t none)").get("t").data["target"] is None
+
+
+class TestUnnamedControls:
+    # A control with no name still takes a label; its label is then empty unless it gives one.
+    def test_a_control_with_no_name_takes_a_label(self):
+        m = model(f"{K} (button none {MOVE} (label 'go'))")
+        (b,) = [o for o in m.objects if o.kind == "button"]
+        assert b.attrs["label"].value == "go"
+
+    def test_its_label_is_empty_otherwise(self):
+        m = model(f"{K} (button_ {MOVE})")
+        (b,) = [o for o in m.objects if o.kind == "button"]
+        assert b.attrs["label"].value == ""
