@@ -28,6 +28,8 @@ export class Player {
   readonly spans: Span[];
   private moves: Move[] = [];
   private time = 0;
+  // The one top-level step it plays (only), or null for all of them.
+  private window: [number, number] | null = null;
 
   constructor(
     private rt: Runtime,
@@ -64,7 +66,13 @@ export class Player {
   }
 
   get done(): boolean {
-    return this.time >= this.duration;
+    return this.time >= (this.window ? this.window[1] : this.duration);
+  }
+
+  /** Plays only the k-th top-level step, from wherever things are. */
+  only(k: number): void {
+    const span = this.spans[k]!;
+    this.window = [span.start, span.end];
   }
 
   /** The places it writes, as "id:attr". */
@@ -76,6 +84,7 @@ export class Player {
   seek(t: number): void {
     this.time = t;
     for (const m of this.moves) {
+      if (this.window && (m.start < this.window[0] || m.start >= this.window[1])) continue;
       if (t < m.start && m.from === undefined) continue;
       const p = m.duration > 0 ? Math.min(Math.max((t - m.start) / m.duration, 0), 1) : t >= m.start ? 1 : 0;
       this.write(m, p);
@@ -93,6 +102,26 @@ export class Player {
       delete m.from;
       delete m.to;
     }
+  }
+
+  /**
+   * The value its one target has with a slider's knob at u, worked out without writing, for a
+   * slider following its target.
+   */
+  valueAt(u: number): unknown {
+    const t = Math.min(Math.max(u, 0), 1) * this.duration;
+    const rt = this.rt;
+    const first = this.moves[0]!;
+    let cur = rt.value(first.id, first.attr);
+    for (const m of this.moves) {
+      if (t < m.start) break;
+      const tr = rt.objects[m.transition]!;
+      const from = tr.from ? rt.placeValue(tr.from) : (m.from ?? cur);
+      const to = tr.to ? rt.placeValue(tr.to) : (m.to ?? cur);
+      const p = m.duration > 0 ? Math.min((t - m.start) / m.duration, 1) : 1;
+      cur = along(from, to, applyEase(m.ease, p, (id) => rt.fn(id)), this.movesAs(m));
+    }
+    return cur;
   }
 
   /** The top-level step running at the current time, or null when none is. */

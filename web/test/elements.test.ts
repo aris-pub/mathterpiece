@@ -94,6 +94,27 @@ describe("controls", () => {
     expect(v("k")).toBe(4);
   });
 
+  it("a step clicked while stopped runs that step alone", () => {
+    const [, rt, v] = page(`<mtp-play model="m" name="run"></mtp-play>`);
+    rt.write(rt.id("k"), null, 9);
+    const second = document.querySelectorAll("mtp-play button")[2] as HTMLButtonElement;
+    second.click();
+    pass(0.1);
+    pass(0.5);
+    // The second step moves k from 9, where it is, to 4; the first step does not run.
+    expect(v("k")).toBeCloseTo(6.5);
+    pass(1);
+    expect(v("k")).toBe(4);
+    expect(v("run", "playing")).toBe(false);
+  });
+
+  it("a slider follows its target when another writer changes it", () => {
+    const [, rt] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
+    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
+    rt.write(rt.id("k"), null, 7);
+    expect(Number(input.value) / Number(input.max)).toBeCloseTo(0.7, 2);
+  });
+
   it("a toggle holds its own value, or writes its target", () => {
     const [, , v] = page(`<mtp-toggle model="m" name="own"></mtp-toggle><mtp-toggle model="m" name="t"></mtp-toggle>`);
     const [own, t] = [...document.querySelectorAll("mtp-toggle input")] as HTMLInputElement[];

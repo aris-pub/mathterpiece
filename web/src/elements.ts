@@ -248,7 +248,7 @@ function labelOf(rt: Runtime, id: number): string {
 }
 
 export class MtpSlider extends MtpPart {
-  private input: HTMLInputElement | null = null;
+  private follow: () => void = () => {};
 
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "slider");
@@ -270,14 +270,45 @@ export class MtpSlider extends MtpPart {
       rt.write(id, "position", u);
     });
     input.addEventListener("change", () => player?.release());
-    this.input = input;
+    // A slider follows its target: when another writer changes the one place its animation
+    // moves, the knob goes to the position whose value is closest (reference.md, "Controls").
+    let scrubbing = false;
+    input.addEventListener("pointerdown", () => {
+      scrubbing = true;
+    });
+    input.addEventListener("pointerup", () => {
+      scrubbing = false;
+    });
+    this.follow = () => {
+      if (scrubbing || !player || player.targets.length !== 1) return;
+      const [tid, tattr] = player.targets[0]!.split(":");
+      const now = rt.value(Number(tid), tattr === "" ? null : tattr!);
+      const max = Number(input.max);
+      let best = Number(input.value);
+      let gap = Infinity;
+      for (let n = 0; n <= max; n++) {
+        const d = distance(player.valueAt(n / max), now);
+        if (d < gap) [best, gap] = [n, d];
+      }
+      input.value = String(best);
+      rt.write(id, "position", best / max);
+    };
+    this.follow();
     const label = document.createElement("label");
     label.textContent = labelOf(rt, id);
     label.append(input);
     this.replaceChildren(label);
   }
 
-  protected update(): void {}
+  protected update(): void {
+    this.follow();
+  }
+}
+
+function distance(a: unknown, b: unknown): number {
+  if (typeof a === "number" && typeof b === "number") return Math.abs(a - b);
+  if (Array.isArray(a) && Array.isArray(b)) return Math.hypot(...a.map((x: number, i) => x - (b[i] as number)));
+  return a === b ? 0 : 1;
 }
 
 export class MtpButton extends MtpPart {
@@ -321,8 +352,11 @@ export class MtpPlay extends MtpPart {
         // A step clicked while playing jumps there and carries on; while stopped, it runs from
         // there, from wherever things are.
         b.addEventListener("click", () => {
+          const running = scheduler.running(this);
           player = playerFor(rt, rt.objects[id]!);
-          if (player) scheduler.start(player, this, span.start);
+          if (!player) return;
+          if (!running) player.only(k);
+          scheduler.start(player, this, span.start);
           this.refresh();
         });
         steps.push(b);
