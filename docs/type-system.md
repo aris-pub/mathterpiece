@@ -244,7 +244,7 @@ Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed 
 
 ## 8. Appendix: attributes by type
 
-Every declared object with a name has a `name` attribute; anonymous ones (`_`) have none. Other attributes, read with a dot (`c.r`) or the part form:
+Every declared object has a `name` attribute, a string, or `none` for one declared with no name (`_`). Other attributes, read with a dot (`c.r`) or the part form:
 
 | Type | Attributes |
 |----|----|

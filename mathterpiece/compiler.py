@@ -322,6 +322,9 @@ class _Compiler:
         node = form.items[1]
         if isinstance(node, StrLit):
             raise CompileError("a name is written bare, not in quotes", node.pos)
+        # _ is shorthand for none: the object has no name.
+        if isinstance(node, NoneLit):
+            return None, node.pos
         if _head(node) == "name":
             assert isinstance(node, Form)
             name = self.built_name(node, scope or {})
@@ -2434,8 +2437,8 @@ class _Compiler:
 
     def obj_attr(self, i: int, name: str, pos: Pos) -> Expr:
         obj = self.model.objects[i]
-        if name == "name" and name not in obj.attrs and obj.name is not None:
-            return _known(STRING, obj.name)
+        if name == "name" and name not in obj.attrs:
+            return _known(STRING, obj.name) if obj.name is not None else _known(NONE, None)
         if obj.kind == "transition" and name in ("from", "to") and obj.data.get("end") is None:
             self.type_ends(i, None, pos)
         if obj.kind in ("group", "scene") and name == "length":

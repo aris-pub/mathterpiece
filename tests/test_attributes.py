@@ -33,8 +33,8 @@ class TestNames:
     def test_a_named_object_has_its_name(self):
         assert value("(scene s (circle c)) (string n c.name)", "n") == "c"
 
-    def test_an_anonymous_one_has_none(self):
-        error("(scene s (group g (circle _))) (string n g[0].name)", "no attribute 'name'")
+    def test_an_anonymous_ones_name_is_none(self):
+        assert value("(scene s (group g (circle _))) (string|none n g[0].name)", "n") is None
 
 
 class TestValues:
