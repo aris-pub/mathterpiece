@@ -1,186 +1,182 @@
-// Draws a canvas as SVG. Scenes have y pointing up and SVG has y pointing down, so the whole
-// scene is flipped once at the top, and text is flipped back so its letters stay upright.
-import { Matrix, compose, translate } from "./matrix.ts";
-import { Token, cssColor, fontCss } from "./colors.ts";
-import type { Expr } from "./doc.ts";
+// Draws a canvas as SVG. The scene has y pointing up and SVG has y pointing down, so the whole
+// scene is flipped once at the top, and text is flipped back so its letters stay upright. Each
+// group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
+import { compose } from "./builtins.ts";
+import type { Expr, Place } from "./doc.ts";
+import { isBound } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
-import { MtpError } from "./stdlib.ts";
 
 const NS = "http://www.w3.org/2000/svg";
-const CONTAINERS = new Set(["root", "group", "motif"]);
-const FLIP = new Matrix(1, 0, 0, 0, -1, 0);
+const FLIP = [1, 0, 0, -1, 0, 0];
 
-/** The SVG's view box, and the matrix from scene coordinates to the SVG's user coordinates. */
-export function viewOf(rt: Runtime, canvas: number): { box: [number, number, number, number]; toUser: Matrix } {
-  const x = rt.value(canvas, "view-x") as number;
-  const y = rt.value(canvas, "view-y") as number;
-  const width = rt.value(canvas, "view-width") as number;
-  const height = rt.value(canvas, "view-height") as number;
-  const cx = x + width / 2;
-  const cy = y + height / 2;
-  const view = compose(translate(-cx, -cy), rt.value(canvas, "transform") as Matrix, translate(cx, cy));
-  return { box: [x, -(y + height), width, height], toUser: FLIP.times(view) };
+function matrix(m: number[]): string {
+  return `matrix(${m.join(" ")})`;
 }
 
-/**
- * Draws a canvas. visible says how visible each thing the canvas lists is, from 0 (not drawn) to
- * 1; by default, 1 while its condition holds and 0 otherwise.
- */
-export function draw(
-  rt: Runtime,
-  canvas: number,
-  svg?: SVGSVGElement,
-  visible: (k: number) => number = (k) => (shownNow(rt, canvas, k) ? 1 : 0),
-): SVGSVGElement {
+/** The SVG's view box, and the transform from scene coordinates to the SVG's own. */
+export function viewOf(rt: Runtime, canvas: number): { box: number[]; toUser: number[] } {
+  const v = (a: string) => rt.value(canvas, a) as number;
+  const [x, y, width, height] = [v("view-x"), v("view-y"), v("view-width"), v("view-height")];
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+  // A canvas's transform applies about the center of its view box.
+  const t = rt.value(canvas, "transform") as number[];
+  const view = compose([1, 0, 0, 1, -cx, -cy], t, [1, 0, 0, 1, cx, cy]);
+  return { box: [x, -(y + height), width, height], toUser: compose(view, FLIP) };
+}
+
+/** Draws a canvas: what it shows, and what each of its when items shows while it holds. */
+export function draw(rt: Runtime, canvas: number, svg?: SVGSVGElement): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
   out.replaceChildren();
   const { box, toUser } = viewOf(rt, canvas);
   out.setAttribute("viewBox", box.join(" "));
-  drawBackground(rt, canvas, out);
+  const view = rt.objects[canvas]!;
+  const shown = [...(view.members ?? [])];
+  for (const [cond, ids] of (view.when ?? []) as [Place, number[]][]) {
+    if (rt.placeValue(cond)) shown.push(...ids);
+  }
+  background(rt, shown, out);
   const top = document.createElementNS(NS, "g");
-  top.setAttribute("transform", toUser.svg());
-  const view = rt.obj(canvas);
-  (view.shows ?? []).forEach((member, k) => {
-    const v = visible(k);
-    if (v <= 0) return;
-    if (v >= 1) {
-      drawObject(rt, member, top);
-      return;
-    }
-    const group = document.createElementNS(NS, "g");
-    group.setAttribute("opacity", String(v));
-    drawObject(rt, member, group);
-    top.appendChild(group);
-  });
+  top.setAttribute("transform", matrix(toUser));
+  for (const i of shown) drawObject(rt, i, top, box[2]! / Math.max(out.clientWidth || 0, 1));
   out.appendChild(top);
   return out;
 }
 
-function drawObject(rt: Runtime, i: number, into: Element): void {
-  const kind = rt.kind(i);
-  if (CONTAINERS.has(kind)) {
-    for (const member of rt.obj(i).members ?? []) drawObject(rt, member, into);
+// SVG has no background of its own, so the scene's background is the SVG element's.
+function background(rt: Runtime, shown: number[], svg: SVGSVGElement): void {
+  let root: number | undefined = shown[0];
+  while (root !== undefined && rt.parent(root) !== null) root = rt.parent(root)!;
+  const bg = root === undefined || rt.objects[root]!.kind !== "scene" ? null : rt.value(root, "background");
+  if (bg === null) svg.style.removeProperty("background-color");
+  else svg.style.setProperty("background-color", paintCss(rt, root!, "background"));
+}
+
+function drawObject(rt: Runtime, i: number, into: Element, unitsPerPx: number): void {
+  const o = rt.objects[i]!;
+  if (o.kind === "scene") {
+    for (const m of o.members ?? []) drawObject(rt, m, into, unitsPerPx);
     return;
   }
-  if (kind === "text") {
-    // A text in the middle of changing is drawn twice: the old one fading out, the new one in.
-    const morph = rt.morphs.get(i);
-    if (morph) into.appendChild(text(rt, i, morph[0], 1 - morph[1]));
-    into.appendChild(text(rt, i, String(rt.value(i, "value")), morph ? morph[1] : 1));
+  if (absent(rt, i)) return;
+  if (o.kind === "group" || o.kind === "instance") {
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("transform", matrix(rt.local(i, true)));
+    g.setAttribute("data-mtp-id", String(i));
+    if (o.kind === "instance") g.setAttribute("opacity", String(rt.value(i, "opacity")));
+    for (const m of o.members ?? []) drawObject(rt, m, g, unitsPerPx);
+    into.appendChild(g);
     return;
   }
-  const el = outline(rt, i);
-  if (!el) return;
-  el.setAttribute("transform", rt.shape(i).svg());
+  const el = shapeElement(rt, i, unitsPerPx);
   el.setAttribute("data-mtp-id", String(i));
-  paint(rt, i, el, kind === "line", 1);
+  const own = rt.local(i);
+  if (o.kind === "text") {
+    const [x, y] = rt.value(i, "pos") as number[];
+    // Text is placed at its anchor and flipped back upright there.
+    el.setAttribute("transform", matrix(compose(FLIP, [1, 0, 0, 1, x!, y!], own)));
+  } else if (!own.every((v, k) => v === [1, 0, 0, 1, 0, 0][k])) {
+    el.setAttribute("transform", matrix(own));
+  }
+  paint(rt, i, el);
   into.appendChild(el);
 }
 
-function text(rt: Runtime, i: number, value: string, fade: number): Element {
-  const el = document.createElementNS(NS, "text") as SVGElement;
-  el.setAttribute("font-size", String(rt.value(i, "font-size")));
-  checkText(rt, i);
-  setFont(rt, i, el);
-  // The baseline (bottom) and the start are SVG's own defaults.
-  const anchor = rt.value(i, "halign");
-  if (anchor === "middle" || anchor === "end") el.setAttribute("text-anchor", anchor);
-  const baseline = { top: "hanging", middle: "central" }[rt.value(i, "valign") as string];
-  if (baseline) el.setAttribute("dominant-baseline", baseline);
-  el.textContent = value;
-  el.setAttribute("transform", rt.shape(i).times(FLIP).svg());
-  el.setAttribute("data-mtp-id", String(i));
-  paint(rt, i, el, false, fade);
-  return el;
+// A shape declared T|none is not drawn when it is absent: when an attribute it needs is none.
+function absent(rt: Runtime, i: number): boolean {
+  const o = rt.objects[i]!;
+  return Object.entries(o.attrs ?? {}).some(
+    ([attr, p]) => attr !== "fill" && attr !== "stroke" && p.type && rt.value(i, attr) === null,
+  );
 }
 
-// Values computed while drawing are checked here, as known ones were when compiling. A font
-// token's own value is checked; what a page makes of it is the page's.
-function checkText(rt: Runtime, i: number): void {
-  const own = (attr: string) => {
-    const v = rt.value(i, attr);
-    return v instanceof Token ? v.fallback : v;
-  };
-  const one = (attr: string, allowed: string[]) => {
-    const v = own(attr);
-    if (v !== undefined && !allowed.includes(String(v))) {
-      const names = allowed.slice(0, -1).map((a) => `'${a}'`).join(", ");
-      throw new MtpError(`${attr} is ${names} or '${allowed.at(-1)}'`);
-    }
-  };
-  one("halign", ["start", "middle", "end"]);
-  one("valign", ["top", "middle", "bottom"]);
-  one("font-style", ["normal", "italic", "oblique"]);
-  const weight = own("font-weight");
-  if (weight !== undefined && !(Number(weight) >= 1 && Number(weight) <= 1000)) {
-    throw new MtpError("font-weight is between 1 and 1000");
-  }
-}
-
-// Each shape drawn around its own origin; rt.shape places it.
-function outline(rt: Runtime, i: number): Element | null {
-  const v = (attr: string) => rt.value(i, attr);
+function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
+  const v = (attr: string) => rt.value(i, attr) as number;
   const el = (tag: string, attrs: Record<string, unknown>) => {
     const e = document.createElementNS(NS, tag);
     for (const [k, value] of Object.entries(attrs)) e.setAttribute(k, String(value));
     return e;
   };
-  switch (rt.kind(i)) {
+  const o = rt.objects[i]!;
+  switch (o.kind) {
     case "circle":
-      return el("circle", { r: v("r") });
+      return el("circle", { cx: v("x"), cy: v("y"), r: v("r") });
     case "rect":
-      return el("rect", { x: 0, y: 0, width: v("width"), height: v("height"), rx: v("rx") ?? 0, ry: v("ry") ?? 0 });
+      // A rect's position is its center.
+      return el("rect", {
+        x: v("x") - v("width") / 2,
+        y: v("y") - v("height") / 2,
+        width: v("width"),
+        height: v("height"),
+        rx: v("rx"),
+        ry: v("ry"),
+      });
     case "ellipse":
-      return el("ellipse", { rx: v("rx"), ry: v("ry") });
-    case "line":
-      return el("line", { x1: v("x1"), y1: v("y1"), x2: v("x2"), y2: v("y2") });
-    case "triangle": {
-      const corners = [v("a"), v("b"), v("c")] as number[][];
-      return el("polygon", { points: corners.map((p) => p.join(",")).join(" ") });
+      return el("ellipse", { cx: v("x"), cy: v("y"), rx: v("rx"), ry: v("ry") });
+    case "line": {
+      const [x1, y1] = rt.value(i, "from") as number[];
+      const [x2, y2] = rt.value(i, "to") as number[];
+      return el("line", { x1, y1, x2, y2 });
     }
+    case "triangle": {
+      const corners = ["a", "b", "c"].map((c) => (rt.value(i, c) as number[]).join(","));
+      return el("polygon", { points: corners.join(" ") });
+    }
+    case "text":
+      return text(rt, i, unitsPerPx);
     default:
-      return null;
+      throw new Error(`cannot draw a ${o.kind}`);
   }
 }
 
-// Opacity multiplies down the motifs and into each paint's own opacity, as in matplotlib.
-function paint(rt: Runtime, i: number, el: Element, noFill: boolean, fade: number): void {
-  const opacity = rt.opacity(i) * fade;
-  const fill = noFill ? "none" : rt.value(i, "fill");
-  setPaint(el, "fill", fill);
-  if (fill !== "none") el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity") * opacity));
-  const stroke = rt.value(i, "stroke");
-  setPaint(el, "stroke", stroke);
-  if (stroke !== "none") {
-    el.setAttribute("stroke-width", String(rt.value(i, "stroke-width")));
-    el.setAttribute("stroke-opacity", String(rt.value(i, "stroke-opacity") * opacity));
+function text(rt: Runtime, i: number, unitsPerPx: number): Element {
+  const el = document.createElementNS(NS, "text") as SVGElement;
+  el.textContent = String(rt.value(i, "value"));
+  const anchor = rt.value(i, "halign");
+  if (anchor === "middle" || anchor === "end") el.setAttribute("text-anchor", anchor as string);
+  const baseline = { top: "hanging", middle: "central", bottom: "text-after-edge" }[rt.value(i, "valign") as string];
+  if (baseline) el.setAttribute("dominant-baseline", baseline);
+  const font = rt.value(i, "font") as Record<string, unknown>;
+  // Font sizes are in screen pixels, whatever the view box.
+  el.setAttribute("font-size", String((font.size as number) * unitsPerPx));
+  const variable = tokenOf(rt, i, "font");
+  for (const part of ["family", "style", "weight"]) {
+    const own = font[part];
+    const css = variable ? `var(--mtp-${variable}-${part}${own === null ? "" : `, ${String(own)}`})` : own;
+    if (css !== null && css !== undefined) el.style.setProperty(`font-${part}`, String(css));
   }
+  return el;
 }
 
-// Through style, since the parts may be tokens (var()).
-function setFont(rt: Runtime, i: number, el: SVGElement): void {
-  for (const [property, css] of fontCss((attr) => rt.value(i, attr))) el.style.setProperty(property, css);
+// Fill, stroke and their opacities mirror SVG: a color's alpha, fill-opacity and stroke-opacity
+// multiply, and opacity fades the drawn shape as a whole.
+function paint(rt: Runtime, i: number, el: Element): void {
+  const s = el as SVGElement;
+  s.style.setProperty("fill", rt.objects[i]!.kind === "line" ? "none" : paintCss(rt, i, "fill"));
+  s.style.setProperty("stroke", paintCss(rt, i, "stroke"));
+  el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity")));
+  el.setAttribute("stroke-opacity", String(rt.value(i, "stroke-opacity")));
+  el.setAttribute("opacity", String(rt.value(i, "opacity")));
+  el.setAttribute("stroke-width", String(rt.value(i, "stroke-width")));
+  // Stroke widths are in screen pixels, whatever the view box.
+  el.setAttribute("vector-effect", "non-scaling-stroke");
 }
 
-// Through style rather than attributes, since only CSS reads var() and color-mix().
-function setPaint(el: Element, property: string, value: unknown): void {
-  (el as SVGElement).style.setProperty(property, value === "none" ? "none" : cssColor(value));
+/** A paint as CSS: none, a color, or a token through its CSS variable (docs/mtpc.md). */
+export function paintCss(rt: Runtime, i: number, attr: string): string {
+  const v = rt.value(i, attr);
+  if (v === null) return "none";
+  const token = tokenOf(rt, i, attr);
+  return token ? `var(--mtp-${token}, ${String(v)})` : String(v);
 }
 
-// SVG has no background of its own, so the scene's background is the SVG element's CSS
-// background: it fills the whole element, including any bands the page leaves around the view
-// box, and the canvas transform does not move it.
-function drawBackground(rt: Runtime, canvas: number, svg: SVGSVGElement): void {
-  // The scene the canvas shows: the root above any of its members.
-  let root = rt.obj(canvas).shows?.[0];
-  while (root !== undefined && rt.parent(root) !== null) root = rt.parent(root) ?? undefined;
-  const background = root === undefined ? undefined : rt.value(root, "background");
-  if (background === undefined || background === "none") svg.style.removeProperty("background-color");
-  else svg.style.setProperty("background-color", cssColor(background));
-}
-
-/** Whether the k-th thing a canvas lists is shown now, by its condition. */
-export function shownNow(rt: Runtime, canvas: number, k: number): boolean {
-  const when = (rt.obj(canvas).when as (Expr | null)[] | undefined)?.[k];
-  return when === null || when === undefined || Boolean(rt.eval(when, null, {}));
+// The name of the token variable an attribute reads directly, if it does.
+function tokenOf(rt: Runtime, i: number, attr: string): string | null {
+  const p = rt.objects[i]!.attrs?.[attr];
+  if (!p || !isBound(p)) return null;
+  const e = p.bound as Expr;
+  if (e[0] !== "read" || e[3] !== null) return null;
+  const v = rt.objects[e[2] as number]!;
+  return v.kind === "variable" && v.token ? v.name : null;
 }

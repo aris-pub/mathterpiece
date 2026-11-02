@@ -1,215 +1,67 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+// Drawing a canvas as SVG (docs/reference.md, "Coordinates" and "The scene and shapes").
 import { describe, expect, it } from "vitest";
-import type { Doc, Obj } from "../src/doc.ts";
+import type { Doc } from "../src/doc.ts";
 import { Runtime } from "../src/runtime.ts";
-import { draw } from "../src/svg.ts";
+import { draw, paintCss } from "../src/svg.ts";
 
-const style = {
-  transform: [1, 0, 0, 0, 1, 0],
-  x: 0,
-  y: 0,
-  fill: "red",
-  stroke: "none",
-  "stroke-width": 1,
-  opacity: 1,
-  "fill-opacity": 1,
-  "stroke-opacity": 1,
-};
+const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
 
-// A canvas (id 0) showing a root (id 1) that holds the given shapes.
-function scene(shapes: Omit<Obj, "id" | "parent">[], view: Record<string, unknown> = {}): Runtime {
-  const members = shapes.map((_, k) => k + 2);
-  const objects: Obj[] = [
-    {
-      id: 0,
-      kind: "canvas",
-      name: "view",
-      attrs: { "view-x": 0, "view-y": 0, "view-width": 10, "view-height": 5, transform: style.transform, ...view },
-      shows: [1],
-    },
-    { id: 1, kind: "root", name: "s", attrs: { transform: style.transform }, members },
-    ...shapes.map((s, k) => ({ ...s, id: k + 2, parent: 1 }) as Obj),
-  ];
-  const doc: Doc = { mtp: 1, objects, functions: {}, names: {}, depends: {} };
-  return new Runtime(doc);
+function drawn(): [Runtime, SVGSVGElement] {
+  const rt = new Runtime(JSON.parse(docs["./data/runtime/draw.mtpc"] as string) as Doc);
+  return [rt, draw(rt, rt.id("v"))];
 }
 
-const shape = (kind: string, attrs: Record<string, unknown>) => ({
-  kind,
-  name: null,
-  attrs: { ...style, ...attrs },
-});
-
-// Where a point in an element's own coordinates lands in the SVG's user space.
-function place(el: Element, x: number, y: number): [number, number] {
-  const chain: string[] = [];
-  for (let e: Element | null = el; e && e.tagName !== "svg"; e = e.parentElement) {
-    const t = e.getAttribute("transform");
-    if (t) chain.unshift(t);
-  }
-  let p: [number, number] = [x, y];
-  for (const t of chain.reverse()) {
-    const n = (t.match(/-?[\d.e+-]+/g) ?? []).map(Number);
-    if (t.startsWith("scale")) p = [p[0] * (n[0] ?? 1), p[1] * (n[1] ?? n[0] ?? 1)];
-    else {
-      const [a = 1, b = 0, c = 0, d = 1, e = 0, f = 0] = n;
-      p = [a * p[0] + c * p[1] + e, b * p[0] + d * p[1] + f];
-    }
-  }
-  return p;
+function shape(svg: SVGSVGElement, rt: Runtime, name: string): Element {
+  const el = svg.querySelector(`[data-mtp-id="${rt.id(name)}"]`);
+  if (!el) throw new Error(`${name} is not drawn`);
+  return el;
 }
 
-describe("the canvas", () => {
-  it("shows the view's box, with y pointing up", () => {
-    const svg = draw(scene([shape("circle", { x: 2, y: 4, r: 1 })]), 0);
-    expect(svg.getAttribute("viewBox")).toBe("0 -5 10 5");
-    const [x, y] = place(svg.querySelector("circle")!, 0, 0);
-    expect(x).toBeCloseTo(2);
-    expect(y).toBeCloseTo(-4);
+describe("drawing", () => {
+  it("shows the view box, with y up", () => {
+    const [, svg] = drawn();
+    expect(svg.getAttribute("viewBox")).toBe("-3 -3 6 6");
   });
 
-  it("turns the view about its center", () => {
-    const svg = draw(scene([shape("circle", { x: 6, y: 2.5, r: 1 })], { transform: [0, -1, 0, 1, 0, 0] }), 0);
-    const [x, y] = place(svg.querySelector("circle")!, 0, 0);
-    expect(x).toBeCloseTo(5);
-    expect(y).toBeCloseTo(-3.5);
-  });
-});
-
-describe("the scene's background", () => {
-  function withBackground(background: unknown, view: Record<string, unknown> = {}) {
-    const rt = scene([shape("circle", { r: 1 })], view);
-    (rt.obj(1).attrs as Record<string, unknown>).background = background;
-    return draw(rt, 0);
-  }
-
-  it("is the SVG's CSS background, so it fills the whole element and nothing is drawn for it", () => {
-    const svg = withBackground("#f7f3eaff");
-    expect(svg.style.getPropertyValue("background-color")).toBe("#f7f3eaff");
-    expect(svg.querySelector("rect")).toBeNull();
+  it("paints the scene's background", () => {
+    // The SVG element's background-color; happy-dom rejects an 8-digit hex there, so the CSS
+    // value is checked directly.
+    const [rt] = drawn();
+    expect(paintCss(rt, rt.id("s"), "background")).toBe("#ffffffff");
   });
 
-  it("is cleared when it is none", () => {
-    const rt = scene([shape("circle", { r: 1 })]);
-    const attrs = rt.obj(1).attrs as Record<string, unknown>;
-    attrs.background = "#000000ff";
-    const svg = draw(rt, 0);
-    attrs.background = "none";
-    rt.refresh();
-    draw(rt, 0, svg);
-    expect(svg.style.getPropertyValue("background-color")).toBe("");
-  });
-});
-
-describe("shapes", () => {
-  it("draws a circle around its own origin, placed by its transform", () => {
-    const c = draw(scene([shape("circle", { r: 2, fill: "#00ff00", "fill-opacity": 0.5, opacity: 0.5 })]), 0)
-      .querySelector("circle")!;
-    expect(c.getAttribute("r")).toBe("2");
-    expect(c.style.getPropertyValue("fill")).toBe("#00ff00");
-    expect(c.getAttribute("fill-opacity")).toBe("0.25");
-    expect(c.style.getPropertyValue("stroke")).toBe("none");
+  it("draws a circle at its position with its paint", () => {
+    const [rt, svg] = drawn();
+    const c = shape(svg, rt, "c");
+    expect([c.getAttribute("cx"), c.getAttribute("cy"), c.getAttribute("r")]).toEqual(["1", "2", "3"]);
+    expect((c as SVGElement).style.getPropertyValue("fill")).toBe("#ff0000ff");
+    expect(c.getAttribute("stroke-width")).toBe("2");
+    expect(c.getAttribute("vector-effect")).toBe("non-scaling-stroke");
   });
 
-  it("draws rects from their corner", () => {
-    const r = draw(scene([shape("rect", { width: 3, height: 2 })]), 0).querySelector("rect")!;
-    expect([r.getAttribute("width"), r.getAttribute("height")]).toEqual(["3", "2"]);
-    expect([r.getAttribute("x"), r.getAttribute("y")]).toEqual(["0", "0"]);
+  it("draws a group's members inside its frame, and a rect around its center", () => {
+    const [rt, svg] = drawn();
+    const b = shape(svg, rt, "b");
+    expect(b.parentElement!.getAttribute("transform")).toBe("matrix(1 0 0 1 5 0)");
+    expect([b.getAttribute("x"), b.getAttribute("y")]).toEqual(["-1", "-2"]);
   });
 
-  it("rounds a rect's corners", () => {
-    const r = draw(scene([shape("rect", { width: 3, height: 2, rx: 0.5, ry: 0.25 })]), 0).querySelector("rect")!;
-    expect([r.getAttribute("rx"), r.getAttribute("ry")]).toEqual(["0.5", "0.25"]);
+  it("paints with a token through its CSS variable", () => {
+    const [rt, svg] = drawn();
+    expect((shape(svg, rt, "b") as SVGElement).style.getPropertyValue("fill")).toBe("var(--mtp-ink, #000080ff)");
   });
 
-  it("draws ellipses, lines and triangles", () => {
-    const svg = draw(
-      scene([
-        shape("ellipse", { rx: 2, ry: 1 }),
-        shape("line", { x1: 0, y1: 0, x2: 3, y2: 4, stroke: "blue", "stroke-width": 0.1 }),
-        shape("triangle", { a: [0, 0], b: [1, 0], c: [0, 1] }),
-      ]),
-      0,
-    );
-    expect(svg.querySelector("ellipse")?.getAttribute("rx")).toBe("2");
-    const line = svg.querySelector("line")!;
-    expect(line.getAttribute("x2")).toBe("3");
-    expect(line.getAttribute("stroke-width")).toBe("0.1");
-    expect(svg.querySelector("polygon")?.getAttribute("points")).toBe("0,0 1,0 0,1");
-  });
-
-  it("keeps draw order", () => {
-    const svg = draw(scene([shape("rect", { width: 1, height: 1 }), shape("circle", { r: 1 })]), 0);
-    expect([...svg.querySelectorAll("rect, circle")].map((e) => e.tagName)).toEqual(["rect", "circle"]);
-  });
-
-  it.each([
-    [{}, null, null],
-    [{ halign: "middle" }, "middle", null],
-    [{ halign: "end", valign: "top" }, "end", "hanging"],
-    [{ valign: "middle" }, null, "central"],
-  ])("aligns text %j", (align, anchor, baseline) => {
-    const t = draw(scene([shape("text", { value: "hi", "font-size": 1, halign: "start", valign: "bottom", ...align })]), 0)
-      .querySelector("text")!;
-    expect([t.getAttribute("text-anchor"), t.getAttribute("dominant-baseline")]).toEqual([anchor, baseline]);
-  });
-
-  // Values computed while drawing are checked as known ones are when compiling.
-  it.each([
-    [{ halign: "bogus" }, "halign is 'start', 'middle' or 'end'"],
-    [{ valign: "bogus" }, "valign is 'top', 'middle' or 'bottom'"],
-    [{ "font-style": "slanted" }, "font-style is 'normal', 'italic' or 'oblique'"],
-    [{ "font-weight": 5000 }, "font-weight is between 1 and 1000"],
-  ])("rejects a bad text value %j", (bad, message) => {
-    const text = shape("text", { value: "hi", "font-size": 1, halign: "start", valign: "bottom", ...bad });
-    expect(() => draw(scene([text]), 0)).toThrow(message);
-  });
-
-  it("draws text upright", () => {
-    const t = draw(scene([shape("text", { x: 1, y: 2, value: "hi", "font-size": 0.5 })]), 0).querySelector("text")!;
+  it("writes text upright, anchored by its alignment", () => {
+    const [rt, svg] = drawn();
+    const t = shape(svg, rt, "t");
     expect(t.textContent).toBe("hi");
-    expect(t.getAttribute("font-size")).toBe("0.5");
-    const [, top] = place(t, 0, -1);
-    const [, base] = place(t, 0, 0);
-    expect(top).toBeLessThan(base);
+    expect(t.getAttribute("text-anchor")).toBe("middle");
+  });
+
+  it("leaves out a shape that is absent", () => {
+    const [rt, svg] = drawn();
+    expect(svg.querySelector(`[data-mtp-id="${rt.id("gone")}"]`)).toBeNull();
+    rt.write(rt.id("k"), null, 2);
+    expect(draw(rt, rt.id("v")).querySelector(`[data-mtp-id="${rt.id("gone")}"]`)).not.toBeNull();
   });
 });
-
-describe("text in the middle of changing", () => {
-  it("draws the old text fading out and the new one fading in", () => {
-    const rt = scene([shape("text", { value: "new", "font-size": 1, "fill-opacity": 0.8 })]);
-    rt.morphs.set(2, ["old", 0.25]);
-    const texts = [...draw(rt, 0).querySelectorAll("text")];
-    expect(texts.map((t) => t.textContent)).toEqual(["old", "new"]);
-    const [old, current] = texts.map((t) => Number(t.getAttribute("fill-opacity")));
-    expect(old).toBeCloseTo(0.6);
-    expect(current).toBeCloseTo(0.2);
-  });
-});
-
-describe("every example", () => {
-  // Vitest runs from web/; under happy-dom, import.meta.url is not a file URL.
-  const dir = join(process.cwd(), "test", "data", "examples");
-  const examples = readdirSync(dir).filter((f) => f.endsWith(".json"));
-
-  it.each(examples)("%s draws every shape it shows", (file) => {
-    const doc = JSON.parse(readFileSync(join(dir, file), "utf8")) as Doc;
-    const rt = new Runtime(doc, () => 0.5);
-    for (const canvas of doc.objects.filter((o) => o.kind === "canvas")) {
-      const svg = draw(rt, canvas.id);
-      const when = (canvas.when ?? []) as unknown[];
-      const shown = (canvas.shows ?? []).filter((_, k) => when[k] == null || rt.eval(when[k], null, {}));
-      expect(svg.querySelectorAll("circle, rect, ellipse, line, polygon, text").length).toBe(countShapes(doc, shown));
-    }
-  });
-});
-
-function countShapes(doc: Doc, ids: number[]): number {
-  let n = 0;
-  for (const id of ids) {
-    const o = doc.objects[id]!;
-    n += o.members ? countShapes(doc, o.members) : 1;
-  }
-  return n;
-}
