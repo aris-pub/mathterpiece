@@ -116,6 +116,9 @@ describe("controls", () => {
     pass(0.5);
     expect(v("k")).toBeCloseTo(1);
     second!.click();
+    // The tour stops at once; the step animates on its own.
+    expect(v("run", "playing")).toBe(false);
+    expect(play!.textContent).not.toBe("pause");
     // The clock is already running, so no frame is needed to start it.
     pass(0.5);
     // From 1, where k was, towards 4: it does not jump to the second step's start.
@@ -125,6 +128,8 @@ describe("controls", () => {
     pass(2);
     expect(v("k")).toBe(4);
     expect(v("run", "playing")).toBe(false);
+    // Its button is lit only while the step runs.
+    expect(document.querySelectorAll("mtp-play button.mtp-lit").length).toBe(0);
   });
 
   it("a step clicked cancels any other writer moving what the play moves", () => {

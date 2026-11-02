@@ -475,18 +475,22 @@ export class MtpPlay extends MtpPart {
       this.refresh();
     });
     const steps: HTMLButtonElement[] = [];
+    // A step clicked runs on its own, apart from the play: the play stops, and the step
+    // animates from wherever things are. Starting it claims everything the play moves, not only
+    // what the step moves, so it cancels the play and every other writer moving any of it.
+    const alone = {};
+    let single: { player: Player; k: number } | null = null;
     if (rt.value(id, "buttons")) {
       const spans = playerFor(rt, rt.objects[id]!)?.spans ?? [];
       spans.forEach((span, k) => {
         const b = document.createElement("button");
         b.textContent = String(k + 1);
-        // Starting the step claims everything the play moves, not only what the step moves, so
-        // it cancels the play itself and every other writer moving any of it.
         b.addEventListener("click", () => {
-          player = playerFor(rt, rt.objects[id]!);
-          if (!player) return;
-          player.only(k);
-          scheduler.start(player, this, span.start);
+          const one = playerFor(rt, rt.objects[id]!);
+          if (!one) return;
+          one.only(k);
+          single = { player: one, k };
+          scheduler.start(one, alone, span.start);
           this.refresh();
         });
         steps.push(b);
@@ -495,8 +499,14 @@ export class MtpPlay extends MtpPart {
     this.refresh = () => {
       const running = scheduler.running(this);
       play.textContent = running ? "pause" : labelOf(rt, id);
-      const now = player?.stepNow() ?? null;
-      steps.forEach((b, k) => b.classList.toggle("mtp-lit", running && now === k));
+      const now = running
+        ? (player?.stepNow() ?? null)
+        : // The last frame of the step redraws before the scheduler drops it, so a step that is
+          // done counts as over.
+          single && scheduler.running(alone) && !single.player.done
+          ? single.k
+          : null;
+      steps.forEach((b, k) => b.classList.toggle("mtp-lit", now === k));
       if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
       if (now !== null && rt.value(id, "step") !== now) rt.write(id, "step", now);
     };
