@@ -36,6 +36,11 @@
   (group handle
     (circle p (pos (polar unit theta)) (r 0.25) (fill ink)))
 
+  ; Which side of each axis the point is on: names along an axis go on the other side, away
+  ; from the lines that reach the point.
+  (real above (if (>= (sind theta) 0) 1 -1))
+  (real right (if (>= (cosd theta) 0) 1 -1))
+
   (group frame
     (line _ (from [-8 0]) (to [8 0]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
     (line _ (from [0 -7]) (to [0 7]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
@@ -47,7 +52,7 @@
 
   (group cosine
     (line across (from [0 0]) (to [p.x 0]) (stroke accent) (stroke-width 3.84))
-    (text _ 'cos' (pos [(/ p.x 2) -0.8]) (font small) (fill accent))
+    (text _ 'cos' (pos [(/ p.x 2) (* -0.8 above)]) (font small) (fill accent))
     (text xs $'cos = {(cosd theta):+z.3f}' (pos [-9.5 4.7]) (font number) (fill accent)))
 
   (group sine
@@ -65,8 +70,8 @@
 
   (group secant
     (line|none sec (from [0 0]) (to [sec-x 0]) (stroke deep) (stroke-width 1.92))
-    ; Below the cos label, since both lie along the x axis.
-    (text|none _ 'sec' (pos [(/ sec-x 2) -1.5]) (font small) (fill deep))
+    ; Beyond the cos label, since both lie along the x axis.
+    (text|none _ 'sec' (pos [(/ sec-x 2) (* -1.5 above)]) (font small) (fill deep))
     (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
       (pos [-9.5 2.6]) (font number) (fill deep)))
 
@@ -79,7 +84,7 @@
 
   (group cosecant
     (line|none csc (from [0 0]) (to [0 csc-y]) (stroke warm) (stroke-width 1.92))
-    (text|none _ 'csc' (pos [-1 (/ csc-y 2)]) (font small) (fill warm))
+    (text|none _ 'csc' (pos [(if (> right 0) -1 0.3) (/ csc-y 2)]) (font small) (fill warm))
     (text cscs (or? $'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
       (pos [-9.5 1.2]) (font number) (fill warm))))
 

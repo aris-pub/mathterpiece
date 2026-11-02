@@ -30,30 +30,33 @@
 
 (scene garden
   (background night)
-  (stop stop-name 'a quarter turn')
-  (circle halo (r 9.2) (fill none) (fill-opacity 0.12) (stroke none))
-  (flower sunflower)
+  ; The figure opens at the tour's last stop, so playing the tour moves from the first moment.
+  (stop stop-name 'the golden angle')
+  ; '#f6c453' is gold, written out for the same reason.
+  (circle halo (r 9.2) (fill '#f6c453') (fill-opacity 0.12) (stroke none))
+  ; 137.50776405003785 is golden-angle: a free place starts from a literal, never a name.
+  (flower sunflower (angle 137.50776405003785))
   (text title stop-name (pos [-9.3 9]) (font heading) (fill chalk))
   (text degrees $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font small) (fill chalk) (opacity 0.6)))
 
 ; Each stop of the tour: the angle, its name, and whether the halo glows.
 (animation quarter
-  (at-once (default-duration 1.5) (default-ease 'ease-in-out')
+  (at-once (default-duration 3) (default-ease 'ease-in-out')
     (sunflower.angle (transition (to 90)))
     (stop-name (transition (to 'a quarter turn')))
     (halo.fill (transition (to none)))))
 (animation third
-  (at-once (default-duration 2.5) (default-ease 'ease-in-out')
+  (at-once (default-duration 5) (default-ease 'ease-in-out')
     (sunflower.angle (transition (to 120)))
     (stop-name (transition (to 'a third of a turn')))
     (halo.fill (transition (to none)))))
 (animation two-fifths
-  (at-once (default-duration 2.5) (default-ease 'ease-in-out')
+  (at-once (default-duration 5) (default-ease 'ease-in-out')
     (sunflower.angle (transition (to 144)))
     (stop-name (transition (to 'two fifths of a turn')))
     (halo.fill (transition (to none)))))
 (animation golden
-  (at-once (default-duration 3) (default-ease 'ease-out')
+  (at-once (default-duration 6) (default-ease 'ease-out')
     (sunflower.angle (transition (to golden-angle)))
     (stop-name (transition (to 'the golden angle')))
     (halo.fill (transition (to gold)))))
@@ -61,9 +64,9 @@
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
   (animation
-    (in-order quarter (wait 1.5))
-    (in-order third (wait 1.5))
-    (in-order two-fifths (wait 1.5))
+    (in-order quarter (wait 2.5))
+    (in-order third (wait 2.5))
+    (in-order two-fifths (wait 2.5))
     golden))
 
 (canvas view garden)
