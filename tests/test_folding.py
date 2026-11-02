@@ -20,9 +20,9 @@ def error(src, match):
 
 
 def value(src, name):
-    place = model(src).get(name).value
-    assert not place.bound, f"{name} is not known when compiling"
-    return place.value
+    attribute = model(src).get(name).value
+    assert not attribute.bound, f"{name} is not known when compiling"
+    return attribute.value
 
 
 class TestCalls:
@@ -75,10 +75,11 @@ class TestCollections:
         assert value("(list ys (let ((k 10)) (map [1 2] (fn x (* k x)))))", "ys") == [10, 20]
 
 
-class TestFoldedPlaces:
-    # docs/mtpc.md "Places": a place known when compiling is free with a const constraint,
-    # whether the author wrote (const) or the compiler folded it. A place given by an expression
-    # is bound, so nothing may write it (data-model.md, "What changes, and what follows").
+class TestFoldedValues:
+    # docs/mtpc.md "Free and bound values": a value known when compiling is free with a const
+    # constraint, whether the author wrote (const) or the compiler folded it. A variable or an
+    # attribute given by an expression is bound, so nothing may write it (data-model.md, "What
+    # changes, and what follows").
     def test_a_folded_expression_is_const(self):
         from mathterpiece.compiler import _is_const
 

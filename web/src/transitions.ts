@@ -1,4 +1,4 @@
-// How a place moves along a transition: the ease turns progress into how far along the move is,
+// How a variable or an attribute moves along a transition: the ease turns progress into how far along the move is,
 // and the path (a straight line by default) gives the value there (docs/reference.md,
 // "Transitions and animations").
 import { mix } from "./builtins.ts";
@@ -26,7 +26,7 @@ export function applyEase(ease: Ease, p: number, fn: (id: number) => FnValue): n
   return Number(fn(ease.func)([p], null));
 }
 
-/** What kind of value a place holds, for how it moves when no path is given. */
+/** What kind of value is moved, for how it moves when no path is given. */
 export type Moves = "number" | "point" | "color" | "jump";
 
 /** The value u of the way from a to b along a straight line. */

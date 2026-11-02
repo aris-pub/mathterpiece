@@ -40,7 +40,7 @@ Opens the page and uses what the author placed there: drags points, moves slider
 
 ## The language
 
-An `.mtp` file is written in the mtp language. It is Lisp-like: everything is a form in parentheses, with the head first, as in `(circle p (r 0.2))`. It is declarative: the author says what exists and what each thing is equal to, never what to do step by step, and it is reactive: anything given by an expression is bound to it, and follows it for as long as the page is open. When the reader moves a slider, everything that reads what the slider writes changes at once, with nothing written to make that happen. It is strongly and statically typed: every object's type is known when compiling, and nothing converts silently except a number broadening (an int where a real is expected) and a literal taking the type of its place. Names are bare. Nothing has a side effect except a declaration making its object exist.
+An `.mtp` file is written in the mtp language. It is Lisp-like: everything is a form in parentheses, with the head first, as in `(circle p (r 0.2))`. It is declarative: the author says what exists and what each thing is equal to, never what to do step by step, and it is reactive: anything given by an expression is bound to it, and follows it for as long as the page is open. When the reader moves a slider, everything that reads what the slider writes changes at once, with nothing written to make that happen. It is strongly and statically typed: every object's type is known when compiling, and nothing converts silently except a number broadening (an int where a real is expected) and a literal taking the type expected where it is written. Names are bare. Nothing has a side effect except a declaration making its object exist.
 
 Everything in a source file is an **expression**. Some expressions are **forms**: a head and its parts in parentheses. Some forms are **declarations**: their only effect is that a new object exists in the world model, and they return that object, as `(circle p (r 0.2))` returns the circle it declares. Components (views, controls and listeners) are declarations too. **Function calls** have no effect at all and matter only for what they return, as `(+ k 1)` does. A few **special forms** are exceptions, each documented on its own: `if`, `cond`, `and` and `or` evaluate only what they need; `let` and `fn` bind names; `repeat` stands for the expressions it produces, spliced in place when compiling; `(. X Y)` does not evaluate `Y` when it is an attribute name; `(name s)` turns a string into a name. Type expressions, such as `list[color]` or `(real (>= 0))`, are not evaluated at all: they describe a type.
 
@@ -99,7 +99,7 @@ Variables are declared inside the scene (then they belong to it), at the top lev
 
 Every variable, and every attribute of a mutable object, is either **free** or **bound**.
 
-- **Free**: it holds whatever was last written to it, starting with the object its declaration gives (a literal, or a default). While the reader uses the page, only writers (controls and listeners) and the animations they run may write it. Free places include a variable given a value, a shape attribute given a value, a motif parameter of an instance, and an attribute a variant leaves unset. A write to a group's attribute (`g.r`) writes each member's.
+- **Free**: it holds whatever was last written to it, starting with the object its declaration gives (a literal, or a default). While the reader uses the page, only writers (controls and listeners) and the animations they run may write it. Free ones include a variable given a value, a shape attribute given a value, a motif parameter of an instance, and an attribute a variant leaves unset. A write to a group's attribute (`g.r`) writes each member's.
 - **Bound**: it is given by an expression, and always equals that expression. Nothing may write it.
 
 &nbsp;
@@ -126,9 +126,9 @@ flowchart LR
   views -->|sees| reader
 ```
 
-- **Change only enters through writers.** When the reader acts, a control or a listener runs an animation, and the animation writes free places over time, frame by frame. A drag writes its target directly, and so does a toggle.
-- **Bound places follow at once.** The compiler knows what every expression reads, so after a write the runtime recomputes only what depends on it, and the views redraw. Nothing has to be told to update.
-- **Writes respect types.** A write that breaks a constraint is brought into it (clamped, rounded or held). This is the one place a real becomes an int without being asked: a write into an int is rounded. A `const` variable is never written at all.
+- **Change only enters through writers.** When the reader acts, a control or a listener runs an animation, and the animation writes free variables and attributes over time, frame by frame. A drag writes its target directly, and so does a toggle.
+- **Bound variables and attributes follow at once.** The compiler knows what every expression reads, so after a write the runtime recomputes only what depends on it, and the views redraw. Nothing has to be told to update.
+- **Writes respect types.** A write that breaks a constraint is brought into it (clamped, rounded or held). This is the one case where a real becomes an int without being asked: a write into an int is rounded. A `const` variable is never written at all.
 
 ### Why there is no assignment
 

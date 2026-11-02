@@ -4,7 +4,7 @@
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Clicks } from "./click.ts";
-import { type Doc, FORMAT_VERSION, type Obj, type Place } from "./doc.ts";
+import { type Doc, FORMAT_VERSION, type Obj, type Attribute } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
 import { Runtime } from "./runtime.ts";
@@ -260,8 +260,8 @@ class Fades {
   }
 
   private conditions(): boolean[] {
-    const when = (this.rt.objects[this.canvas]!.when ?? []) as [Place, number[]][];
-    return when.map(([cond]) => Boolean(this.rt.placeValue(cond)));
+    const when = (this.rt.objects[this.canvas]!.when ?? []) as [Attribute, number[]][];
+    return when.map(([cond]) => Boolean(this.rt.evaluate(cond)));
   }
 
   /** Starts moving toward what each condition says now. */
@@ -321,10 +321,10 @@ export class MtpSlider extends MtpPart {
     const player = playerFor(rt, rt.objects[id]!);
     const input = document.createElement("input");
     input.type = "range";
-    const places = rt.objects[id]!.attrs?.step ? (rt.value(id, "step") as number) : null;
-    // With (step n) the knob stops at n evenly spaced places.
+    const stops = rt.objects[id]!.attrs?.step ? (rt.value(id, "step") as number) : null;
+    // With (step n) the knob stops at n evenly spaced stops.
     input.min = "0";
-    input.max = places === null ? "1000" : String(places - 1);
+    input.max = stops === null ? "1000" : String(stops - 1);
     input.step = "1";
     input.value = String(Math.round((rt.value(id, "position") as number) * Number(input.max)));
     input.addEventListener("input", () => {
@@ -336,7 +336,7 @@ export class MtpSlider extends MtpPart {
       rt.write(id, "position", u);
     });
     input.addEventListener("change", () => player?.release());
-    // A slider follows its target: when another writer changes the one place its animation
+    // A slider follows its target: when another writer changes the one variable or attribute its animation
     // moves, the knob goes to the position whose value is closest (reference.md, "Controls").
     let scrubbing = false;
     input.addEventListener("pointerdown", () => {

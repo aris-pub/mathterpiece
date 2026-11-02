@@ -48,7 +48,7 @@ export class Drags {
   private find(hit: number): { listener: Obj; shape: number } | null {
     for (let i: number | null = hit; i !== null; i = this.rt.parent(i)) {
       const listener = (this.byShape.get(i) ?? []).find(
-        (l) => !l.when || Boolean(this.rt.placeValue(l.when as never)),
+        (l) => !l.when || Boolean(this.rt.evaluate(l.when as never)),
       );
       if (listener) return { listener, shape: i };
     }
@@ -115,14 +115,14 @@ export class Drags {
 
   private clamped(id: number, attr: string | null, v: number): number {
     for (const c of this.held!.listener.conditions ?? []) {
-      if (c.place[0] === id && c.place[1] === attr) v = this.rt.clamp(c, v);
+      if (c.target[0] === id && c.target[1] === attr) v = this.rt.clamp(c, v);
     }
     return v;
   }
 
   // Gauss-Newton on one number: from the current value, step along the direction in which the
   // shape moves, halving steps that do not bring it closer. Starting from where it is keeps the
-  // shape from jumping to another place that is as close (the far side of a circle).
+  // shape from jumping to another position that is as close (the far side of a circle).
   private closest(shape: number, id: number, attr: string | null, from: number, aim: Point): number {
     const at = (value: number): Point => {
       this.rt.write(id, attr, value);
@@ -130,22 +130,22 @@ export class Drags {
     };
     const far = (p: Point) => (p[0] - aim[0]) ** 2 + (p[1] - aim[1]) ** 2;
     let value = from;
-    let place = at(value);
-    let distance = far(place);
+    let where = at(value);
+    let distance = far(where);
     for (let k = 0; k < 30; k++) {
       const h = 1e-6 * Math.max(1, Math.abs(value));
       const ahead = at(value + h);
-      const along: Point = [(ahead[0] - place[0]) / h, (ahead[1] - place[1]) / h];
+      const along: Point = [(ahead[0] - where[0]) / h, (ahead[1] - where[1]) / h];
       const speed = along[0] ** 2 + along[1] ** 2;
       if (speed < 1e-20) break;
-      const step = (along[0] * (aim[0] - place[0]) + along[1] * (aim[1] - place[1])) / speed;
+      const step = (along[0] * (aim[0] - where[0]) + along[1] * (aim[1] - where[1])) / speed;
       let moved = false;
       for (let t = 1; t > 1e-3; t /= 2) {
         const next = at(value + t * step);
         const d = far(next);
         if (d < distance) {
           value += t * step;
-          place = next;
+          where = next;
           distance = d;
           moved = true;
           break;

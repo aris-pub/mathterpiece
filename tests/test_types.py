@@ -101,7 +101,7 @@ class TestShapes:
 
 
 class TestLiterals:
-    # A literal takes the type of its place (type-system.md, section 3).
+    # A literal takes the type of its attribute (type-system.md, section 3).
     def test_numbers(self):
         assert literal_type(IntLit(3), None) == INT
         assert literal_type(RealLit(2.5), None) == REAL

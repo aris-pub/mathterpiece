@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 // The shared cases (tests/shared/*.mtp, compiled by `just web-examples`): each file's comments
-// say what to write and what to expect, as "; write PLACE VALUE" and "; expect PLACE VALUE".
+// say what to write and what to expect, as "; write NAME VALUE" and "; expect NAME VALUE".
 import type { Doc } from "../src/doc.ts";
 import type { Runtime } from "../src/runtime.ts";
 

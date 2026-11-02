@@ -1,9 +1,9 @@
 // The live model: reads an .mtpc (docs/mtpc.md), turns each expression into a function once,
-// and holds every place's value. A write changes a free place and forgets only what depends on
-// it; a bound place is computed again the next time it is read (data-model.md, "How reactivity
+// and holds the value of every variable and attribute. A write changes a free one and forgets
+// only what depends on it; a bound one is computed again the next time it is read (data-model.md, "How reactivity
 // works"). The compiler has proved every type, so nothing here checks or converts one.
 import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, roundHalfAway } from "./builtins.ts";
-import type { Clamp, Doc, Expr, Obj, Place, Type } from "./doc.ts";
+import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
 import { isBound } from "./doc.ts";
 import { format, pyStr } from "./format.ts";
 
@@ -24,7 +24,7 @@ interface Ctx {
 }
 
 type Compiled = (ctx: Ctx) => unknown;
-/** A function value: its arguments, and the frame of the place calling it. */
+/** A function value: its arguments, and the frame of the expression calling it. */
 export type FnValue = (args: unknown[], frame: number | null) => unknown;
 
 const TOP: Ctx = { locals: {}, frame: null };
@@ -91,7 +91,7 @@ export class Runtime {
     return [...this.constraints(t.refine), ...t.constraints];
   }
 
-  private load(id: number, attr: string | null, p: Place): void {
+  private load(id: number, attr: string | null, p: Attribute): void {
     const k = key(id, attr);
     this.types.set(k, p.type);
     if (isBound(p)) {
@@ -106,7 +106,7 @@ export class Runtime {
     }
   }
 
-  /** Called with the places that may have changed after every write. */
+  /** Called with the variables and attributes that may have changed after every write. */
   onChange(listener: (changed: Set<string>) => void): void {
     this.listeners.push(listener);
   }
@@ -118,7 +118,7 @@ export class Runtime {
     return i;
   }
 
-  /** A place's value as stored, in its shape's own frame; pos is x and y together. */
+  /** A variable's or an attribute's value as stored, in its shape's own frame; pos is x and y. */
   value(id: number, attr: string | null = null): unknown {
     const o = this.objects[id]!;
     if (attr === null && o.kind !== "variable") return new Ref(id);
@@ -141,7 +141,7 @@ export class Runtime {
     if (this.free.has(k)) return this.free.get(k);
     if (this.cache.has(k)) return this.cache.get(k);
     const fn = this.bound.get(k);
-    if (!fn) throw new Error(`no place ${k}`);
+    if (!fn) throw new Error(`no variable or attribute ${k}`);
     this.evaluations++;
     const v = fn(TOP);
     this.cache.set(k, v);
@@ -181,14 +181,14 @@ export class Runtime {
     return compose(...steps);
   }
 
-  /** The type of a place. */
+  /** The type of a variable or an attribute. */
   typeOf(id: number, attr: string | null): Type | undefined {
     return this.types.get(key(id, attr));
   }
 
   /**
-   * Writes a free place (a shape's pos writes its x and y; a group's attribute each member's),
-   * brought into the place's constraints first (type-system.md 5.b). Gives whether anything
+   * Writes a free variable or attribute (a shape's pos writes its x and y; a group's attribute
+   * each member's), brought into its type's constraints first (type-system.md 5.b). Gives whether anything
    * changed.
    */
   write(id: number, attr: string | null, value: unknown): boolean {
@@ -225,7 +225,7 @@ export class Runtime {
   }
 
   private writePlace(k: string, value: unknown, changed: Set<string>): void {
-    if (!this.free.has(k)) throw new Error(`${k} is not a free place`);
+    if (!this.free.has(k)) throw new Error(`${k} is not a free variable or attribute`);
     const t = this.types.get(k)!;
     const old = this.free.get(k);
     const v = this.constrain(t, value, old);
@@ -273,13 +273,13 @@ export class Runtime {
 
   /** A writer's clamp: the value its condition allows for this write. */
   clamp(c: Clamp, value: number): number {
-    const lim = this.placeValue(c.limit) as number;
+    const lim = this.evaluate(c.limit) as number;
     if (c.op === ">=" || c.op === ">") return Math.max(value, lim);
     return Math.min(value, lim);
   }
 
-  /** The value of a place that belongs to no attribute: a condition, a limit, a when. */
-  placeValue(p: Place): unknown {
+  /** The value of a condition, a limit or a when, which belong to no attribute. */
+  evaluate(p: Attribute): unknown {
     if (!isBound(p)) return this.decode(p.type, p.free);
     this.evaluations++;
     return this.compile(p.bound)(TOP);
@@ -580,7 +580,7 @@ export class Runtime {
   // Reads and frames --------------------------------------------------------------------
 
   /**
-   * A place's value as read from a container: a shape's position converts through every
+   * A variable's or an attribute's value as read from a container: a shape's position converts through every
    * translate and transform that applies to the shape read but not to that container
    * (reference.md, "Coordinates").
    */

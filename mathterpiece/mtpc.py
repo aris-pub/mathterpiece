@@ -4,7 +4,7 @@ docs/mtpc.schema.json checks. The same model always gives the same bytes."""
 import json
 from fractions import Fraction
 
-from mathterpiece.model import Expr, FuncDef, Model, Obj, Param, Place
+from mathterpiece.model import Attribute, Expr, FuncDef, Model, Obj, Param
 from mathterpiece.types import (
     BOOL,
     COLOR,
@@ -142,9 +142,9 @@ class Writer:
             return v
         return v
 
-    # Places and expressions --------------------------------------------------------------
+    # Attributes and expressions --------------------------------------------------------------
 
-    def place(self, p: Place) -> dict:
+    def attribute(self, p: Attribute) -> dict:
         d: dict = {"type": self.type(p.type)}
         if p.bound:
             assert p.expr is not None
@@ -209,10 +209,10 @@ class Writer:
             "access": o.access,
             "name": o.name,
         }
-        attrs = {k: self.place(p) for k, p in o.attrs.items()}
+        attrs = {k: self.attribute(p) for k, p in o.attrs.items()}
         kind = o.kind
         if kind == "variable":
-            d["value"] = self.place(o.value)
+            d["value"] = self.attribute(o.value)
             d["token"] = _core(o.value.type) in (COLOR, FONT)
         elif kind in ("scene", "group"):
             d["members"] = list(o.members)
@@ -235,7 +235,7 @@ class Writer:
             d["steps"] = _step(o.data["steps"])
         elif kind == "canvas":
             d["members"] = list(o.data["members"])
-            d["when"] = [[self.place(c), list(ids)] for c, ids in o.data["when"]]
+            d["when"] = [[self.attribute(c), list(ids)] for c, ids in o.data["when"]]
             d["transition"] = o.data["transition"]
             d["attrs"] = attrs
         elif kind == "readout":
@@ -253,17 +253,17 @@ class Writer:
             d["shape"] = o.data["shape"]
             d["target"] = list(o.data["target"])
             d["conditions"] = self.conditions(o)
-            d["when"] = self.place(o.data["when"]) if o.data["when"] is not None else None
+            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
         elif kind == "on-click":
             d["shape"] = o.data["shape"]
             d["animation"] = o.data["animation"]
-            d["when"] = self.place(o.data["when"]) if o.data["when"] is not None else None
+            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
             d["conditions"] = self.conditions(o)
         return d
 
     def conditions(self, o: Obj) -> list:
         return [
-            {"place": list(c["place"]), "op": c["op"], "limit": self.place(c["limit"])}
+            {"target": list(c["target"]), "op": c["op"], "limit": self.attribute(c["limit"])}
             for c in o.data["conditions"]
         ]
 
@@ -306,8 +306,8 @@ def _deps(deps) -> list:
     return [list(d) for d in sorted(deps, key=lambda d: (d[0], d[1] or ""))]
 
 
-def _ease_of(place: Place):
-    return ("func", place.expr.args[0]) if place.expr is not None else place.value
+def _ease_of(attribute: Attribute):
+    return ("func", attribute.expr.args[0]) if attribute.expr is not None else attribute.value
 
 
 def _ease(e) -> object:
@@ -318,13 +318,13 @@ def _ease(e) -> object:
     return [e[0], _number(e[1])]
 
 
-def _path(place: Place | None) -> object:
-    if place is None:
+def _path(attribute: Attribute | None) -> object:
+    if attribute is None:
         return None
-    if not place.bound:
-        return place.value
-    assert place.expr is not None
-    return {"func": place.expr.args[0]}
+    if not attribute.bound:
+        return attribute.value
+    assert attribute.expr is not None
+    return {"func": attribute.expr.args[0]}
 
 
 def _step(step: tuple) -> list:

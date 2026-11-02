@@ -25,7 +25,7 @@ describe("recomputing only what changed", () => {
     expect(rt.evaluations).toBe(before + 1);
   });
 
-  it("recomputes nothing that does not read the written place", () => {
+  it("recomputes nothing that does not read what was written", () => {
     const rt = load("chain");
     for (const n of ["a", "b", "other"]) rt.value(rt.id(n));
     const before = rt.evaluations;

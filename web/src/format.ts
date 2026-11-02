@@ -80,38 +80,38 @@ function roundDigits(digits: string, keep: number): { digits: string; carry: boo
   return { digits: raised.padStart(keep, "0"), carry: false };
 }
 
-// |x| in fixed notation with `places` digits after the point.
-function fixed(x: number, places: number): string {
+// |x| in fixed notation with `decimals` digits after the point.
+function fixed(x: number, decimals: number): string {
   const { digits, point } = exactDigits(Math.abs(x));
   const whole = Math.max(digits.length - point, 0);
   const padded = whole === 0 ? "0".repeat(point - digits.length) + digits : digits;
   const wholeDigits = Math.max(padded.length - point, 0);
   const all = wholeDigits === 0 ? `0${padded}` : padded;
   const intLen = Math.max(wholeDigits, 1);
-  const { digits: result, carry } = roundDigits(all, intLen + places);
+  const { digits: result, carry } = roundDigits(all, intLen + decimals);
   const len = carry ? intLen + 1 : intLen;
   const intPart = result.slice(0, len).replace(/^0+(?=\d)/, "") || "0";
   const fracPart = result.slice(len);
-  return places > 0 ? `${intPart}.${fracPart}` : intPart;
+  return decimals > 0 ? `${intPart}.${fracPart}` : intPart;
 }
 
-// |x| in scientific notation with `places` digits after the point.
-function scientific(x: number, places: number, upper: boolean): string {
+// |x| in scientific notation with `decimals` digits after the point.
+function scientific(x: number, decimals: number, upper: boolean): string {
   const abs = Math.abs(x);
   let mantissa: string;
   let exp: number;
   if (abs === 0) {
-    mantissa = "0".repeat(places + 1);
+    mantissa = "0".repeat(decimals + 1);
     exp = 0;
   } else {
     const { digits, point } = exactDigits(abs);
     const lead = digits.replace(/^0+/, "");
     exp = digits.length - point - (digits.length - lead.length) - 1;
-    const { digits: kept, carry } = roundDigits(lead, places + 1);
-    mantissa = kept.slice(0, places + 1);
+    const { digits: kept, carry } = roundDigits(lead, decimals + 1);
+    mantissa = kept.slice(0, decimals + 1);
     if (carry) exp += 1;
   }
-  const head = places > 0 ? `${mantissa[0]}.${mantissa.slice(1)}` : `${mantissa[0]}`;
+  const head = decimals > 0 ? `${mantissa[0]}.${mantissa.slice(1)}` : `${mantissa[0]}`;
   const e = upper ? "E" : "e";
   return `${head}${e}${exp < 0 ? "-" : "+"}${String(Math.abs(exp)).padStart(2, "0")}`;
 }
@@ -168,13 +168,13 @@ function groupDigits(digits: string, sep: string, size: number): string {
 function preround(x: number, type: string, precision: number | undefined): number {
   if (x === 0 || !Number.isFinite(x)) return x;
   const exp = Number(Math.abs(x).toExponential().split("e")[1]);
-  let places: number;
-  if (type === "f" || type === "F" || type === "%") places = (precision ?? 6) + (type === "%" ? 2 : 0);
-  else if (type === "e" || type === "E") places = (precision ?? 6) - exp;
+  let decimals: number;
+  if (type === "f" || type === "F" || type === "%") decimals = (precision ?? 6) + (type === "%" ? 2 : 0);
+  else if (type === "e" || type === "E") decimals = (precision ?? 6) - exp;
   else if (type === "g" || type === "G" || type === "n" || precision !== undefined) {
-    places = Math.max(precision ?? 6, 1) - 1 - exp;
+    decimals = Math.max(precision ?? 6, 1) - 1 - exp;
   } else return x;
-  return roundHalfAway(x, places);
+  return roundHalfAway(x, decimals);
 }
 
 /** Python's format(value, spec), for a value of the given mtp type. */

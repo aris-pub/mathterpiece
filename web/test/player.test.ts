@@ -14,7 +14,7 @@ function setup(animation: string): [Runtime, Player, (name: string, attr?: strin
 }
 
 describe("a player", () => {
-  it("runs its moves in order, each from where its place is", () => {
+  it("runs its moves in order, each from the value of what it moves", () => {
     const [, p, v] = setup("a");
     expect(p.duration).toBe(4);
     p.seek(1);
@@ -81,7 +81,7 @@ describe("a player", () => {
     expect(v("k")).toBe(0);
   });
 
-  it("lists the places it writes", () => {
+  it("lists the variables and attributes it writes", () => {
     const [rt, p] = setup("both");
     expect(p.targets).toEqual([`${rt.id("k")}:`, `${rt.id("j")}:`]);
   });

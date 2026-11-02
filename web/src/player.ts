@@ -1,5 +1,5 @@
 // Plays an animation: its steps laid out in time (in-order one after another, at-once together,
-// each as long as its longest part), and each move written to its place as time passes or as a
+// each as long as its longest part), and each move written to its variable or attribute as time passes or as a
 // slider scrubs through it (docs/reference.md, "Transitions and animations" and "Controls").
 import type { Clamp, Step } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
@@ -75,7 +75,7 @@ export class Player {
     this.window = [span.start, span.end];
   }
 
-  /** The places it writes, as "id:attr". */
+  /** The variables and attributes it writes, as "id:attr". */
   get targets(): string[] {
     return [...new Set(this.moves.map((m) => `${m.id}:${m.attr ?? ""}`))];
   }
@@ -96,7 +96,7 @@ export class Player {
     this.seek(Math.min(Math.max(u, 0), 1) * this.duration);
   }
 
-  /** Forgets where each move started, so the next run starts from where the places are then. */
+  /** Forgets where each move started, so the next run starts from their values then. */
   release(): void {
     for (const m of this.moves) {
       delete m.from;
@@ -116,8 +116,8 @@ export class Player {
     for (const m of this.moves) {
       if (t < m.start) break;
       const tr = rt.objects[m.transition]!;
-      const from = tr.from ? rt.placeValue(tr.from) : (m.from ?? cur);
-      const to = tr.to ? rt.placeValue(tr.to) : (m.to ?? cur);
+      const from = tr.from ? rt.evaluate(tr.from) : (m.from ?? cur);
+      const to = tr.to ? rt.evaluate(tr.to) : (m.to ?? cur);
       const p = m.duration > 0 ? Math.min((t - m.start) / m.duration, 1) : 1;
       cur = along(from, to, applyEase(m.ease, p, (id) => rt.fn(id)), this.movesAs(m));
     }
@@ -135,21 +135,21 @@ export class Player {
     if (m.from === undefined) {
       const tr = rt.objects[m.transition]!;
       const here = rt.value(m.id, m.attr);
-      m.from = tr.from ? rt.placeValue(tr.from) : here;
-      m.to = tr.to ? rt.placeValue(tr.to) : here;
+      m.from = tr.from ? rt.evaluate(tr.from) : here;
+      m.to = tr.to ? rt.evaluate(tr.to) : here;
     }
     const e = applyEase(m.ease, p, (id) => rt.fn(id));
     const tr = rt.objects[m.transition]!;
     const path = tr.path && typeof tr.path === "object" ? (tr.path as { func: number }).func : null;
     let v = path === null ? along(m.from, m.to, e, this.movesAs(m)) : rt.fn(path)([m.from, m.to, e], null);
     for (const c of this.clamps) {
-      if (c.place[0] === m.id && c.place[1] === m.attr && typeof v === "number") v = rt.clamp(c, v);
+      if (c.target[0] === m.id && c.target[1] === m.attr && typeof v === "number") v = rt.clamp(c, v);
     }
     rt.write(m.id, m.attr, v);
   }
 
   private movesAs(m: Move): Moves {
-    // pos has no place of its own: it is x and y, a point.
+    // pos is not kept apart from x and y: it is the two of them, a point.
     if (m.attr === "pos") return "point";
     const t = this.rt.typeOf(m.id, m.attr) ?? this.memberType(m);
     const core = t === undefined ? "real" : this.rt.core(t);

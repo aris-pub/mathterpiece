@@ -1,4 +1,4 @@
-"""The world model the compiler builds: objects, their places, and typed expressions
+"""The world model the compiler builds: objects, their attributes, and typed expressions
 (docs/data-model.md; docs/mtpc.md describes how it is written out)."""
 
 from dataclasses import dataclass, field
@@ -7,7 +7,7 @@ from typing import Any
 from mathterpiece.nodes import NOPOS, Form, Node, Pos
 from mathterpiece.types import Type
 
-# What a place or an expression reads: (object id, attribute), with None for a variable.
+# What an attribute or an expression reads: (object id, attribute), with None for a variable.
 Dep = tuple[int, str | None]
 # A number's range, (low, high), both ends included; None when not a number.
 Range = tuple[float, float] | None
@@ -28,7 +28,7 @@ class Expr:
 
 
 @dataclass
-class Place:
+class Attribute:
     """A variable's value or an object's attribute: free (it holds value) or bound (it always
     equals expr, and is recomputed when anything in deps changes)."""
 
@@ -53,7 +53,7 @@ class Obj:
     name: str | None
     type: Type
     access: str = "scene"
-    attrs: dict[str, Place] = field(default_factory=dict)
+    attrs: dict[str, Attribute] = field(default_factory=dict)
     members: list[int] = field(default_factory=list)
     parent: int | None = None
     pos: Pos = NOPOS
@@ -64,8 +64,8 @@ class Obj:
     data: dict = field(default_factory=dict)
 
     @property
-    def value(self) -> Place:
-        """A variable's one place."""
+    def value(self) -> Attribute:
+        """A variable's one attribute."""
         return self.attrs["value"]
 
 
@@ -91,7 +91,7 @@ class MotifDef:
 @dataclass
 class FuncDef:
     """A function: declared with func (with a name) or written in place with fn. deps are the
-    places its body reads besides its parameters."""
+    attributes its body reads besides its parameters."""
 
     name: str | None
     params: tuple[Param, ...]

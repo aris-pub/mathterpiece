@@ -4,9 +4,9 @@ An `.mtpc` (mtp compiled) file is the static representation of one world model: 
 
 Three rules from the other documents shape everything here:
 
-- **The runtime never guesses a type.** Every place and every expression carries its type, so the runtime can turn each expression into one function specialized to its types when the file loads, and never checks or converts a type while drawing (type system, section 1).
-- **The runtime recomputes only what changed.** Every bound place lists every place it can read (data model, "How reactivity works").
-- **Everything known when compiling is already folded.** A place known when compiling holds a plain value, never an expression.
+- **The runtime never guesses a type.** Every variable, every attribute and every expression carries its type, so the runtime can turn each expression into one function specialized to its types when the file loads, and never checks or converts a type while drawing (type system, section 1).
+- **The runtime recomputes only what changed.** Every bound variable or attribute lists every variable and attribute it can read (data model, "How reactivity works").
+- **Everything known when compiling is already folded.** A variable or an attribute known when compiling holds a plain value, never an expression.
 
 ## Top level
 
@@ -76,7 +76,7 @@ A value is plain JSON, read according to the type that always accompanies it:
 
 ## Expressions
 
-An expression is an array: its operation first, then its type, then its parts. `frame` in a read is the id of the container the reading expression sits in (`null` at the top level and directly in the scene), or `"caller"` inside a function body, where the frame is the calling place's, passed along with each call. The runtime converts the value read through every `translate` and `transform` that applies to the shape read but not to that container (reference, "Coordinates"), and `deps` include those `translate` and `transform` places. Types written here are what the compiler proved: a result that may be `none` has a `{"union": [T, "none"]}` type, and the runtime never checks for `none` anywhere else.
+An expression is an array: its operation first, then its type, then its parts. `frame` in a read is the id of the container the reading expression sits in (`null` at the top level and directly in the scene), or `"caller"` inside a function body, where the frame is that of the expression making the call, passed along with each call. The runtime converts the value read through every `translate` and `transform` that applies to the shape read but not to that container (reference, "Coordinates"), and `deps` include those `translate` and `transform` attributes. Types written here are what the compiler proved: a result that may be `none` has a `{"union": [T, "none"]}` type, and the runtime never checks for `none` anywhere else.
 
 | Expression | Written |
 |---|---|
@@ -100,19 +100,19 @@ An expression is an array: its operation first, then its type, then its parts. `
 | `let` | `["let", T, [[name, e], …], body]` |
 | `rand` | `["rand", "real", site, lo?, hi?]`, `site` numbering each copy of each `rand` after `repeat` and motif instances are expanded, starting at 0; each site draws its number once, when the page loads |
 
-## Places
+## Free and bound values
 
-Every variable, every attribute of a mutable object, and every condition a component reads is a **place**:
+A variable's value, every attribute of a mutable object, and every condition a component reads is written free or bound:
 
     {"type": T, "free": value}
     {"type": T, "bound": expr, "deps": [[id, attr], …]}
 
 with `"fixed": true` on a variant instance's fixed attributes.
 
-- A **free** place holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
-- A **bound** place holds an expression. `deps` lists every place it can read: directly, through any function it calls, and through captured names. Where a read depends on a value known only while drawing, such as `g[side].pos`, `deps` lists every place it could read (the `pos` of every member). When any of them changes, this place is recomputed, and nothing else is. `[id, null]` is a variable.
-- A place known when compiling is written as free, with a `const` constraint in its type, whether the author wrote it that way or the compiler folded it.
-- Every attribute of a shape has a place, including those left at their default. `pos` has none: it is `x` and `y` read or written together. A line's places are its `from` and `to`, a triangle's its corners; their `x` and `y` are computed (the midpoint, the centroid), and a write to them is split into writes to every end or corner.
+- A **free** one holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
+- A **bound** one holds an expression. `deps` lists every variable and attribute it can read: directly, through any function it calls, and through captured names. Where a read depends on a value known only while drawing, such as `g[side].pos`, `deps` lists every one it could read (the `pos` of every member). When any of them changes, this one is recomputed, and nothing else is. `[id, null]` is a variable.
+- A variable or an attribute known when compiling is written as free, with a `const` constraint in its type, whether the author wrote it that way or the compiler folded it.
+- Every attribute of a shape is written, including those left at their default. `pos` is not: it is `x` and `y` read or written together. A line's attributes are its `from` and `to`, a triangle's its corners; their `x` and `y` are computed (the midpoint, the centroid), and a write to them is split into writes to every end or corner.
 
 ## Objects
 
@@ -124,21 +124,21 @@ and then what its kind needs:
 
 | Kind | Further keys |
 |---|---|
-| `variable` | `"value"`: a place; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded. The runtime draws with it through the CSS property `--mtp-<name>` (font variables through their parts: `--mtp-<name>-family` and so on), with its own value as the fallback, so the page's CSS restyles it; colors computed from tokens are passed to the browser as CSS color mixes. A token's own value is what expressions reading its channels or comparing it see. |
+| `variable` | `"value"`: its value, free or bound; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded. The runtime draws with it through the CSS property `--mtp-<name>` (font variables through their parts: `--mtp-<name>-family` and so on), with its own value as the fallback, so the page's CSS restyles it; colors computed from tokens are passed to the browser as CSS color mixes. A token's own value is what expressions reading its channels or comparing it see. |
 | `scene` | `"members"`: the ids of its shapes; `"attrs"`: `background` |
-| `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group` | `"attrs"`: a place for every attribute; `group` also `"members"` |
+| `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group` | `"attrs"`: every attribute, free or bound; `group` also `"members"` |
 | a motif instance | kind `instance`; `"of"`: the motif's name; `"members"`; `"attrs"`: its parameters, its bound variables and the shape arguments it takes |
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |
 | `transition` | `"from"`, `"to"`, `"duration"`, `"ease"`, `"path"` (below) |
 | `animation` | `"steps"`: a step (below) |
-| `canvas` | `"members"`: ids of the shapes it shows; `"when"`: `[[place, [ids]], …]`, each place a bool; `"transition"`: an id or `null`; `"attrs"`: the view box and `transform` |
+| `canvas` | `"members"`: ids of the shapes it shows; `"when"`: `[[condition, [ids]], …]`, each condition a bool, free or bound; `"transition"`: an id or `null`; `"attrs"`: the view box and `transform` |
 | `readout` | `"attrs"`: `value` (the string), `font` |
-| `slider`, `button`, `play` | `"animation"`: an id; `"conditions"`; `"attrs"`: `label`, and `step` (slider: the number of places), `buttons` (play), and the attributes the reader's actions change: `position` (slider), `playing` and `step` (play: the step now playing) |
+| `slider`, `button`, `play` | `"animation"`: an id; `"conditions"`; `"attrs"`: `label`, and `step` (slider: the number of positions its knob stops at), `buttons` (play), and the attributes the reader's actions change: `position` (slider), `playing` and `step` (play: the step now playing) |
 | `toggle` | `"target"`: `[id, attr]` or `null`; `"conditions"`; `"attrs"`: `label`, `value` |
-| `on-drag` | `"shape"`: an id; `"target"`: `[id, attr]`; `"conditions"`; `"when"`: a bool place or `null` |
-| `on-click` | `"shape"`: an id; `"animation"`: an id; `"conditions"`; `"when"`: a bool place or `null` |
+| `on-drag` | `"shape"`: an id; `"target"`: `[id, attr]`; `"conditions"`; `"when"`: a bool, free or bound, or `null` |
+| `on-click` | `"shape"`: an id; `"animation"`: an id; `"conditions"`; `"when"`: a bool, free or bound, or `null` |
 
-A writer's `"conditions"` is a list of clamps, one per condition, already in the form the reference requires (a comparison of the written place with a value not depending on it): `{"place": [id, attr], "op": ">=" | ">" | "<=" | "<", "limit": place}`. Before emitting a write to that place, the runtime clamps it to the limit.
+A writer's `"conditions"` is a list of clamps, one per condition, already in the form the reference requires (a comparison of the variable or attribute written with a value not depending on it): `{"target": [id, attr], "op": ">=" | ">" | "<=" | "<", "limit": L}`, `L` free or bound. Before emitting a write to that target, the runtime clamps it to the limit.
 
 Motif and variant instances are written out in full: the runtime never builds an instance itself.
 
@@ -153,12 +153,12 @@ A move carries its own `duration` and `ease`, resolved from the transition and t
 
 ### Transitions
 
-    {"from": place | null, "to": place | null, "duration": seconds | null,
+    {"from": V | null, "to": V | null, "duration": seconds | null,
      "ease": "linear" | "ease-in" | "ease-out" | "ease-in-out" | ["step", n] | ["step-ease", p]
              | {"func": id} | null,
      "path": null | "fade" | {"func": id}}
 
-A transition is a value: it never changes. Its `from` and `to` are places only so that they can hold expressions; each is read once, when a move along the transition starts, and never followed during the move. `null` for `from` or `to` means the moved place's value when the move starts. `null` for `duration` or `ease` means the transition gives none of its own: each move along it carries the one resolved from the defaults around it. `path` `null` is the straight line between the ends.
+A transition is a value: it never changes. Its `from` and `to` (`V`, free or bound) can be bound only so that they can hold expressions; each is read once, when a move along the transition starts, and never followed during the move. `null` for `from` or `to` means the value of what is moved when the move starts. `null` for `duration` or `ease` means the transition gives none of its own: each move along it carries the one resolved from the defaults around it. `path` `null` is the straight line between the ends.
 
 ## Functions
 

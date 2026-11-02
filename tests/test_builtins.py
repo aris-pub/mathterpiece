@@ -19,14 +19,14 @@ def error(src, match):
 
 
 def value(src, name="v"):
-    place = model(src).get(name).value
-    assert not place.bound, f"{name} is not known when compiling"
-    return place.value
+    attribute = model(src).get(name).value
+    assert not attribute.bound, f"{name} is not known when compiling"
+    return attribute.value
 
 
 def typ(src, name="v"):
-    place = model(src).get(name).value
-    return place.expr.type if place.bound else place.type
+    attribute = model(src).get(name).value
+    return attribute.expr.type if attribute.bound else attribute.type
 
 
 class TestNumbers:

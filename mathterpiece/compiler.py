@@ -21,13 +21,13 @@ from mathterpiece.builtins import (
 )
 from mathterpiece.colors import parse_color
 from mathterpiece.model import (
+    Attribute,
     Expr,
     FuncDef,
     Model,
     MotifDef,
     Obj,
     Param,
-    Place,
     Range,
     VariantDef,
 )
@@ -112,53 +112,64 @@ VALIGN = Refine(STRING, (("one-of", ("top", "middle", "baseline", "bottom")),))
 
 
 @dataclass(frozen=True)
-class Attr:
+class Argument:
     type: Type
     default: object
 
 
 TRANSFORMS = {
-    "translate": Attr(POINT, (0, 0)),
-    "transform": Attr(TRANSFORM, IDENTITY),
+    "translate": Argument(POINT, (0, 0)),
+    "transform": Argument(TRANSFORM, IDENTITY),
 }
 PAINTED = {
-    "fill": Attr(PAINT, "#000000ff"),
-    "stroke": Attr(PAINT, None),
-    "stroke-width": Attr(NON_NEGATIVE, 1),
-    "opacity": Attr(UNIT, 1),
-    "fill-opacity": Attr(UNIT, 1),
-    "stroke-opacity": Attr(UNIT, 1),
+    "fill": Argument(PAINT, "#000000ff"),
+    "stroke": Argument(PAINT, None),
+    "stroke-width": Argument(NON_NEGATIVE, 1),
+    "opacity": Argument(UNIT, 1),
+    "fill-opacity": Argument(UNIT, 1),
+    "stroke-opacity": Argument(UNIT, 1),
 }
-POSITIONED = {"x": Attr(REAL, 0), "y": Attr(REAL, 0)}
+POSITIONED = {"x": Argument(REAL, 0), "y": Argument(REAL, 0)}
 # The attributes each built-in shape takes, with their defaults (reference.md).
-SHAPE_ATTRS: dict[str, dict[str, Attr]] = {
-    "circle": {**POSITIONED, **PAINTED, **TRANSFORMS, "r": Attr(NON_NEGATIVE, 1)},
+SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
+    "circle": {**POSITIONED, **PAINTED, **TRANSFORMS, "r": Argument(NON_NEGATIVE, 1)},
     "rect": {
         **POSITIONED,
         **PAINTED,
         **TRANSFORMS,
-        "width": Attr(REAL, 1),
-        "height": Attr(REAL, 1),
-        "rx": Attr(REAL, 0),
-        "ry": Attr(REAL, 0),
+        "width": Argument(REAL, 1),
+        "height": Argument(REAL, 1),
+        "rx": Argument(REAL, 0),
+        "ry": Argument(REAL, 0),
     },
-    "ellipse": {**POSITIONED, **PAINTED, **TRANSFORMS, "rx": Attr(REAL, 1), "ry": Attr(REAL, 1)},
-    "line": {**PAINTED, **TRANSFORMS, "from": Attr(POINT, (0, 0)), "to": Attr(POINT, (1, 0))},
+    "ellipse": {
+        **POSITIONED,
+        **PAINTED,
+        **TRANSFORMS,
+        "rx": Argument(REAL, 1),
+        "ry": Argument(REAL, 1),
+    },
+    "line": {
+        **PAINTED,
+        **TRANSFORMS,
+        "from": Argument(POINT, (0, 0)),
+        "to": Argument(POINT, (1, 0)),
+    },
     "triangle": {
         **PAINTED,
         **TRANSFORMS,
-        "a": Attr(POINT, (0, 0)),
-        "b": Attr(POINT, (1, 0)),
-        "c": Attr(POINT, (0, 1)),
+        "a": Argument(POINT, (0, 0)),
+        "b": Argument(POINT, (1, 0)),
+        "c": Argument(POINT, (0, 1)),
     },
     "text": {
         **POSITIONED,
         **PAINTED,
         **TRANSFORMS,
-        "value": Attr(STRING, ""),
-        "halign": Attr(HALIGN, "start"),
-        "valign": Attr(VALIGN, "baseline"),
-        "font": Attr(FONT, None),
+        "value": Argument(STRING, ""),
+        "halign": Argument(HALIGN, "start"),
+        "valign": Argument(VALIGN, "baseline"),
+        "font": Argument(FONT, None),
     },
     "group": dict(TRANSFORMS),
 }
@@ -170,10 +181,10 @@ INHERITED = ("fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity")
 # family of None is the page's font. The style choices are the old code's (mtp-9mg).
 FONT_STYLE = Refine(STRING, (("one-of", ("normal", "italic", "oblique")),))
 FONT_PARTS = {
-    "family": Attr(Maybe(STRING), None),
-    "style": Attr(FONT_STYLE, "normal"),
-    "weight": Attr(Refine(REAL, ((">=", 1), ("<=", 1000))), 400),
-    "size": Attr(REAL, 16),
+    "family": Argument(Maybe(STRING), None),
+    "style": Argument(FONT_STYLE, "normal"),
+    "weight": Argument(Refine(REAL, ((">=", 1), ("<=", 1000))), 400),
+    "size": Argument(REAL, 16),
 }
 FONT_DEFAULT = {part: spec.default for part, spec in FONT_PARTS.items()}
 # The attributes of values that are not objects (type-system.md, section 8).
@@ -233,7 +244,7 @@ class _Compiler:
         self.cscope: dict = {}
         # True while compiling the scene's contents, which may never read page access.
         self.in_scene = False
-        # The object and attribute whose place is being compiled, so a message can name them:
+        # The object and attribute whose attribute is being compiled, so a message can name them:
         # (name, the shape's type or None for a variable, attribute or None).
         self.where: tuple | None = None
         # The motif instances whose bodies are being compiled, innermost last: each with its
@@ -394,24 +405,24 @@ class _Compiler:
             if parent is None:
                 raise CompileError("a shape is declared only inside the scene", node.pos)
             shape = self.read(self.shape(node, parent, scope), None)
-            place = self.settle(t, self.expect(shape, t, node.pos), "the value", node.pos)
-            self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
+            attribute = self.settle(t, self.expect(shape, t, node.pos), "the value", node.pos)
+            self.add(Obj("variable", name, t, access, {"value": attribute}, parent=parent, pos=pos))
             return
         saved, self.where = self.where, (name, None, None)
         try:
-            place = self.place(t, node, form.pos, "the value", scope=scope)
+            attribute = self.attribute(t, node, form.pos, "the value", scope=scope)
         finally:
             self.where = saved
         inner = _inner(t)
         has_length = isinstance(inner, Refine) and any(c[0] == "length" for c in inner.constraints)
-        if place.expr is not None and isinstance(_core(t), ListT) and not has_length:
+        if attribute.expr is not None and isinstance(_core(t), ListT) and not has_length:
             # A bound list always equals its expression, so it keeps that expression's length.
-            n = _length(place.expr)
+            n = _length(attribute.expr)
             if n is not None:
                 t = _with_length(t, n)
-                place.type = t
-        access = self.access_of(place.deps)[0]
-        self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
+                attribute.type = t
+        access = self.access_of(attribute.deps)[0]
+        self.add(Obj("variable", name, t, access, {"value": attribute}, parent=parent, pos=pos))
 
     def declared(self, form: Form, scope: dict) -> tuple[str | None, Pos, Type, Node | None]:
         """A (T name value? constraint…) form's name, its type with the constraints, and its
@@ -476,7 +487,7 @@ class _Compiler:
         scope = dict(outer or {})
         for p in params:
             scope[p.name] = Expr("local", p.type, (p.name,), range=_type_range(p.type))
-        # A read inside a function uses the frame of the place that called it.
+        # A read inside a function uses the frame of the attribute that called it.
         saved, self.frame = self.frame, "caller"
         self.reads.append({})
         try:
@@ -506,7 +517,7 @@ class _Compiler:
         return Expr("call", t, (fid, *args), deps | f.deps, r)
 
     def reads_through(self, e: Expr, path: str) -> frozenset:
-        """The places a function reads when it reads path through an argument e."""
+        """The attributes a function reads when it reads path through an argument e."""
         if path.startswith("[]."):
             items = self.items_of(e)
             if items is None:
@@ -811,7 +822,7 @@ class _Compiler:
         return out
 
     def fn(self, node: Form, scope: dict, hint=None, result=None) -> Expr:
-        """(fn params body). hint holds the parameter types its place gives, and result the
+        """(fn params body). hint holds the parameter types its attribute gives, and result the
         result type it expects, if any."""
         if len(node.items) != 3:
             raise CompileError("fn is (fn parameters body)", node.pos)
@@ -819,7 +830,8 @@ class _Compiler:
         if isinstance(pnode, Name):
             if hint is None or len(hint) != 1:
                 raise CompileError(
-                    "a bare parameter of fn needs its type from its place: write (fn (T name) …)",
+                    "a bare parameter of fn needs its type from where the function is used:"
+                    " write (fn (T name) …)",
                     pnode.pos,
                 )
             assert isinstance(pnode.parts[0], str)
@@ -1022,7 +1034,7 @@ class _Compiler:
 
     def transition(self, form: Form, scope: dict, named: bool) -> int:
         """A transition: a trajectory with ends, a duration, an ease and a path. Its ends are
-        typed by the first place it moves (type_ends)."""
+        typed by the first attribute it moves (type_ends)."""
         if named:
             name, pos = self.name_of(form)
             items = form.items[2:]
@@ -1042,7 +1054,7 @@ class _Compiler:
             if head in ("from", "to"):
                 ends[head] = arg
             elif head == "duration":
-                obj.attrs["duration"] = Place(REAL, self.seconds(arg, scope))
+                obj.attrs["duration"] = Attribute(REAL, self.seconds(arg, scope))
             elif head == "ease":
                 obj.attrs["ease"] = self.ease(arg, scope)
             elif head == "path":
@@ -1060,21 +1072,21 @@ class _Compiler:
             raise CompileError("a duration cannot be negative", node.pos)
         return e.value
 
-    def ease(self, node: Node, scope: dict) -> Place:
+    def ease(self, node: Node, scope: dict) -> Attribute:
         """'linear', 'ease-in', 'ease-out', 'ease-in-out', (step n), or a func[real real]."""
         if isinstance(node, StrLit):
             if node.value not in EASES:
                 raise CompileError(
                     f"'{node.value}' is not an ease: use one of {', '.join(EASES)}", node.pos
                 )
-            return Place(STRING, node.value)
+            return Attribute(STRING, node.value)
         if _head(node) == "step-ease":
             assert isinstance(node, Form)
             (arg,) = self.args(node, 1)
             at = self.expr(arg, UNIT, scope)
             if not at.known:
                 raise CompileError("step-ease takes a point known when compiling", node.pos)
-            return Place(STRING, ("step-ease", at.value))
+            return Attribute(STRING, ("step-ease", at.value))
         if _head(node) == "step":
             assert isinstance(node, Form)
             (arg,) = self.args(node, 1)
@@ -1083,22 +1095,22 @@ class _Compiler:
                 raise CompileError(
                     "(step n) takes a count of at least 1 known when compiling", node.pos
                 )
-            return Place(STRING, ("step", n.value))
+            return Attribute(STRING, ("step", n.value))
         e = self.expr(node, FuncT((REAL,), REAL), scope)
-        return Place(e.type, expr=e)
+        return Attribute(e.type, expr=e)
 
-    def path(self, node: Node, scope: dict) -> Place:
+    def path(self, node: Node, scope: dict) -> Attribute:
         if isinstance(node, Name) and node.parts == ("fade",):
-            return Place(STRING, "fade")
+            return Attribute(STRING, "fade")
         e = self.expr(node, None, scope)
         ft = _core(e.type)
         if not isinstance(ft, FuncT) or len(ft.params) != 3:
             raise CompileError("a path is a function of the two ends and the progress", node.pos)
-        return Place(e.type, expr=e)
+        return Attribute(e.type, expr=e)
 
     def type_ends(self, tid: int, t: Type | None, pos: Pos) -> None:
-        """Compile a transition's ends for a place of type t. An end that may be none must be
-        handled, except into a color|none place, where none is mixed as transparent."""
+        """Compile a transition's ends for an attribute of type t. An end that may be none must be
+        handled, except into a color|none attribute, where none is mixed as transparent."""
         obj = self.model.objects[tid]
         if obj.data["end"] is not None:
             if t is not None and not fits(_loose(obj.data["end"]), _loose(t)):
@@ -1111,7 +1123,7 @@ class _Compiler:
                 raise CompileError(
                     "this end may be none: give it a default with (or? value default)", node.pos
                 )
-            obj.attrs[end] = Place(e.type, e.value) if e.known else Place(e.type, expr=e)
+            obj.attrs[end] = Attribute(e.type, e.value) if e.known else Attribute(e.type, expr=e)
         obj.data["end"] = target if target is not None else NONE
         if "path" in obj.attrs and target is not None:
             ft = _core(obj.attrs["path"].type)
@@ -1128,7 +1140,7 @@ class _Compiler:
             if len(items) == 1 and isinstance(items[0], Name):
                 return self.named(items[0], "animation")
         steps = _in_order(self.steps(items, None, None, scope))
-        attrs = {"duration": Place(REAL, _duration(steps))}
+        attrs = {"duration": Attribute(REAL, _duration(steps))}
         obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data={"steps": steps})
         return self.add(obj)
 
@@ -1212,7 +1224,7 @@ class _Compiler:
         return ("move", (i, attr), tid, d, e if e is not None else "linear")
 
     def writable(self, node: Name, scope: dict) -> tuple[int, str | None, Type]:
-        """The place a name such as k, p.r, g[1].r or d.c.pos denotes, which a writer may
+        """The attribute a name such as k, p.r, g[1].r or d.c.pos denotes, which a writer may
         write: free, not const, not a token and not fixed by a variant."""
         label = _name_text(node)
         first = node.parts[0]
@@ -1222,7 +1234,7 @@ class _Compiler:
         for part in node.parts[1:]:
             obj = self.model.objects[i]
             if attr is not None:
-                raise CompileError(f"{label} is not a place", node.pos)
+                raise CompileError(f"{label} is not a variable or an attribute", node.pos)
             if isinstance(part, str):
                 members = {self.model.objects[m].name: m for m in obj.members}
                 if obj.kind == "instance" and part in members and part not in obj.attrs:
@@ -1232,17 +1244,21 @@ class _Compiler:
             else:
                 e = self.member(i, self.expr(part, None, scope), node.pos)
                 if e.op != "obj":
-                    raise CompileError("a place's position must be known when compiling", node.pos)
+                    raise CompileError(
+                        "the position of a member to write must be known when compiling", node.pos
+                    )
                 i = e.args[0]
         obj = self.model.objects[i]
         if attr is None:
             if obj.kind != "variable":
-                raise CompileError(f"{label} is not a place: write one of its attributes", node.pos)
+                raise CompileError(
+                    f"{label} is not a variable: write one of its attributes", node.pos
+                )
             return i, None, self.check_writable(obj, obj.value, label, node.pos)
         if obj.kind == "group" and attr not in obj.attrs:
             types = [self.writable_attr(m, attr, label, node.pos) for m in obj.members]
             if not types:
-                raise CompileError(f"{label} is not a place: the group is empty", node.pos)
+                raise CompileError(f"{label} cannot be written: the group is empty", node.pos)
             return i, attr, _join_all(types, node.pos)
         return i, attr, self.writable_attr(i, attr, label, node.pos)
 
@@ -1265,16 +1281,18 @@ class _Compiler:
             raise CompileError(f"a {obj.kind} has no attribute '{attr}'", pos)
         return self.check_writable(obj, obj.attrs[attr], label, pos)
 
-    def check_writable(self, obj: Obj, place: Place, label: str, pos: Pos) -> Type:
-        if place.bound:
-            raise CompileError(f"{label} is bound: only a free place can be written", pos)
-        if _is_const(place.type):
+    def check_writable(self, obj: Obj, attribute: Attribute, label: str, pos: Pos) -> Type:
+        if attribute.bound:
+            raise CompileError(
+                f"{label} is bound: only a free variable or attribute can be written", pos
+            )
+        if _is_const(attribute.type):
             raise CompileError(f"{label} is const: it is never written", pos)
-        if obj.kind == "variable" and _core(place.type) in (COLOR, FONT):
+        if obj.kind == "variable" and _core(attribute.type) in (COLOR, FONT):
             raise CompileError(f"{label} is a token: no writer can write it", pos)
-        if place.fixed:
+        if attribute.fixed:
             raise CompileError(f"{label} is fixed by its variant", pos)
-        return place.type
+        return attribute.type
 
     def component(self, form: Form, scope: dict) -> None:
         """A view, control or listener (reference.md, "Components")."""
@@ -1316,9 +1334,9 @@ class _Compiler:
         if obj.name is not None:
             label = self.take(items, "label")
             obj.attrs["label"] = (
-                self.place(STRING, label, obj.pos, "label", scope=self.cscope)
+                self.attribute(STRING, label, obj.pos, "label", scope=self.cscope)
                 if label is not None
-                else Place(STRING, obj.name)
+                else Attribute(STRING, obj.name)
             )
         for item in items:
             if not isinstance(item, Form):
@@ -1339,7 +1357,9 @@ class _Compiler:
     def when(self, obj: Obj, items: list) -> None:
         node = self.take(items, "when")
         obj.data["when"] = (
-            self.place(BOOL, node, obj.pos, "when", scope=self.cscope) if node is not None else None
+            self.attribute(BOOL, node, obj.pos, "when", scope=self.cscope)
+            if node is not None
+            else None
         )
 
     def build_button(self, obj: Obj, items: list, shape) -> None:
@@ -1349,18 +1369,18 @@ class _Compiler:
         written = self.animated(obj, items)
         step = self.take(items, "step")
         if step is not None:
-            obj.attrs["step"] = self.place(
+            obj.attrs["step"] = self.attribute(
                 Refine(INT, ((">=", 2),)), step, obj.pos, "step", scope=self.cscope
             )
-        obj.attrs["position"] = Place(UNIT, 0)
+        obj.attrs["position"] = Attribute(UNIT, 0)
         self.writer(obj, items, written)
 
     def build_play(self, obj: Obj, items: list, shape) -> None:
         written = self.animated(obj, items)
         buttons = self.take(items, "buttons")
-        obj.attrs["buttons"] = self.place(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
-        obj.attrs["playing"] = Place(BOOL, False)
-        obj.attrs["step"] = Place(INT, 0)
+        obj.attrs["buttons"] = self.attribute(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
+        obj.attrs["playing"] = Attribute(BOOL, False)
+        obj.attrs["step"] = Attribute(INT, 0)
         self.writer(obj, items, written)
 
     def build_toggle(self, obj: Obj, items: list, shape) -> None:
@@ -1369,12 +1389,14 @@ class _Compiler:
         written: set = set()
         if target is None:
             obj.data["target"] = None
-            obj.attrs["value"] = self.place(BOOL, value, obj.pos, "value", scope=self.cscope)
+            obj.attrs["value"] = self.attribute(BOOL, value, obj.pos, "value", scope=self.cscope)
         else:
             if value is not None:
                 raise CompileError("a toggle with a target shows its target's value", value.pos)
             if not isinstance(target, Name):
-                raise CompileError("a toggle's target is a place, such as b or g.on", target.pos)
+                raise CompileError(
+                    "a toggle's target is a variable or an attribute, such as b or g.on", target.pos
+                )
             i, attr, t = self.writable(target, self.cscope)
             if _core(t) != BOOL:
                 raise CompileError(f"a toggle's target is a bool, got {t}", target.pos)
@@ -1386,15 +1408,15 @@ class _Compiler:
                 e = replace(e, deps=e.args[0].deps)
             else:
                 e = self.read(i, attr)
-            obj.attrs["value"] = Place(BOOL, expr=e)
+            obj.attrs["value"] = Attribute(BOOL, expr=e)
         self.writer(obj, items, written)
 
     def build_on_drag(self, obj: Obj, items: list, shape: int) -> None:
         target = self.take(items, "target")
         if target is None:
-            raise CompileError("on-drag needs a (target place)", obj.pos)
+            raise CompileError("on-drag needs a (target …)", obj.pos)
         if not isinstance(target, Name):
-            raise CompileError("an on-drag's target is a place", target.pos)
+            raise CompileError("an on-drag's target is a variable or an attribute", target.pos)
         i, attr, _ = self.writable(target, self.cscope)
         own = i == shape and attr in ("x", "y", "pos")
         if not own and (i, attr) not in self.position_deps(shape):
@@ -1408,7 +1430,7 @@ class _Compiler:
         self.writer(obj, items, {(i, attr)})
 
     def position_deps(self, shape: int) -> set:
-        """Every place the shape's position depends on, through bound places too."""
+        """Every variable and attribute the shape's position depends on, through bound ones too."""
         if "pos" not in self.attr_names(shape):
             return set()
         seen: set = set()
@@ -1420,11 +1442,11 @@ class _Compiler:
             seen.add(dep)
             obj = self.model.objects[dep[0]]
             if dep[1] is None and obj.kind == "variable":
-                place = obj.value
+                attribute = obj.value
             else:
-                place = obj.attrs.get(dep[1])
-            if place is not None and place.bound:
-                todo.extend(place.deps)
+                attribute = obj.attrs.get(dep[1])
+            if attribute is not None and attribute.bound:
+                todo.extend(attribute.deps)
         return seen
 
     def build_on_click(self, obj: Obj, items: list, shape: int) -> None:
@@ -1438,13 +1460,15 @@ class _Compiler:
         for attr, d in defaults.items():
             node = self.take(items, attr)
             obj.attrs[attr] = (
-                self.place(REAL, node, obj.pos, attr, scope=self.cscope) if node else Place(REAL, d)
+                self.attribute(REAL, node, obj.pos, attr, scope=self.cscope)
+                if node
+                else Attribute(REAL, d)
             )
         node = self.take(items, "transform")
         obj.attrs["transform"] = (
-            self.place(TRANSFORM, node, obj.pos, "transform", scope=self.cscope)
+            self.attribute(TRANSFORM, node, obj.pos, "transform", scope=self.cscope)
             if node
-            else Place(TRANSFORM, IDENTITY)
+            else Attribute(TRANSFORM, IDENTITY)
         )
         obj.data.update({"members": [], "when": [], "transition": None})
         for item in items:
@@ -1452,7 +1476,7 @@ class _Compiler:
             if isinstance(item, Name):
                 obj.data["members"].append(self.shown(item))
             elif head == "when" and len(item.items) >= 3:
-                cond = self.place(BOOL, item.items[1], item.pos, "when", scope=self.cscope)
+                cond = self.attribute(BOOL, item.items[1], item.pos, "when", scope=self.cscope)
                 obj.data["when"].append((cond, [self.shown(n) for n in item.items[2:]]))
             elif head == "transition":
                 if obj.data["transition"] is not None:
@@ -1474,19 +1498,19 @@ class _Compiler:
         if not items:
             raise CompileError("a readout shows a string: (readout name value)", obj.pos)
         value = items.pop(0)
-        obj.attrs["value"] = self.place(STRING, value, obj.pos, "value", scope=self.cscope)
+        obj.attrs["value"] = self.attribute(STRING, value, obj.pos, "value", scope=self.cscope)
         font = self.take(items, "font")
         if font is not None:
             obj.attrs["font"] = self.font_arg(font)
         if items:
             raise CompileError("expected an item of a readout, such as (font f)", items[0].pos)
 
-    def font_arg(self, node: Node) -> Place:
+    def font_arg(self, node: Node) -> Attribute:
         """A text's or readout's font, which is only ever a declared font variable."""
         e = self.expr(node, None, self.cscope) if isinstance(node, Name) else None
         if e is None or e.op != "read" or _core(e.type) != FONT:
             raise CompileError("a font is given as a declared font variable", node.pos)
-        return Place(FONT, expr=e)
+        return Attribute(FONT, expr=e)
 
     def font_variable(self, form: Form, parent, access: str, scope: dict) -> None:
         """(font name (family …) (style …) (weight …) (size …)): declared with items, not a
@@ -1508,8 +1532,8 @@ class _Compiler:
         values = {
             p: parts[p].value if p in parts else spec.default for p, spec in FONT_PARTS.items()
         }
-        place = Place(FONT, values)
-        self.add(Obj("variable", name, FONT, access, {"value": place}, parent=parent, pos=pos))
+        attribute = Attribute(FONT, values)
+        self.add(Obj("variable", name, FONT, access, {"value": attribute}, parent=parent, pos=pos))
 
     def access_of(self, deps) -> tuple[str, int | None]:
         """page, and the object that gives it, when anything in deps has page access."""
@@ -1519,7 +1543,7 @@ class _Compiler:
         return "scene", None
 
     def written(self, animation: int | None) -> set:
-        """The places an animation's moves write."""
+        """The attributes an animation's moves write."""
         if animation is None:
             return set()
 
@@ -1533,20 +1557,20 @@ class _Compiler:
         return walk(self.model.objects[animation].data["steps"])
 
     def condition(self, node: Node, written: set) -> dict:
-        """A writer's condition, as a clamp: a comparison of a place it writes with a limit
-        that does not depend on that place (reference.md, "Writes and conditions")."""
+        """A writer's condition, as a clamp: a comparison of an attribute it writes with a limit
+        that does not depend on that attribute (reference.md, "Writes and conditions")."""
         flip = {"<": ">", "<=": ">=", ">": "<", ">=": "<="}
         head = _head(node)
         if head in COMPARE and isinstance(node, Form) and len(node.items) == 3:
             a, b = (self.expr(x, None, self.cscope) for x in node.items[1:])
             for op, side, limit in ((head, a, b), (flip[head], b, a)):
                 if side.op == "read":
-                    place = (side.args[0], side.args[1])
-                    if place in written and place not in limit.deps:
+                    attribute = (side.args[0], side.args[1])
+                    if attribute in written and attribute not in limit.deps:
                         lim = self.settle(limit.type, limit, "the limit", node.pos)
-                        return {"place": place, "op": op, "limit": lim}
+                        return {"target": attribute, "op": op, "limit": lim}
         raise CompileError(
-            "a condition compares a place this writer writes with a limit that does not depend"
+            "a condition compares an attribute this writer writes with a limit that does not depend"
             " on it, such as (>= k 0)",
             node.pos,
         )
@@ -1557,7 +1581,7 @@ class _Compiler:
         try:
             j = self.shape(Form((Name((name,), pos), Name(("_",), pos)), pos), None, {})
             obj = self.model.objects[j]
-            types = {a: place.type for a, place in obj.attrs.items()}
+            types = {a: attribute.type for a, attribute in obj.attrs.items()}
             for m in obj.members:
                 member = self.model.objects[m]
                 if member.name is not None:
@@ -1649,7 +1673,7 @@ class _Compiler:
         def place_params(obj: Obj) -> None:
             for p in v.params:
                 node, inner = mine.get(p.name, (p.default, {}))
-                obj.attrs[p.name] = self.place(p.type, node, form.pos, p.name, None, inner)
+                obj.attrs[p.name] = self.attribute(p.type, node, form.pos, p.name, None, inner)
 
         merged = _scoped(v.body.items[2:], body_scope) + rest
         head = Name((v.base,), form.pos)
@@ -1733,7 +1757,7 @@ class _Compiler:
             for p in motif.params:
                 node, inner = given.get(p.name, (p.default, {}))
                 at = _maybe(p.type) if absent else p.type
-                obj.attrs[p.name] = self.place(at, node, form.pos, p.name, None, inner)
+                obj.attrs[p.name] = self.attribute(at, node, form.pos, p.name, None, inner)
             self.shape_attrs(obj, given, absent, form.pos, scope, INSTANCE_ATTRS)
         finally:
             self.frame = saved
@@ -1760,23 +1784,23 @@ class _Compiler:
         name, pos, t, node = self.declared(form, scope)
         saved, self.where = self.where, (name, None, None)
         try:
-            place = self.place(t, node, form.pos, "the value", scope=scope)
+            attribute = self.attribute(t, node, form.pos, "the value", scope=scope)
         finally:
             self.where = saved
         if name is None:
             raise CompileError("a variable in a motif's body needs a name", pos)
-        if not place.bound and not _is_const(t):
+        if not attribute.bound and not _is_const(t):
             raise CompileError(
                 "a motif's body declares only bound variables; free state is a parameter", pos
             )
-        obj.attrs[name] = place
+        obj.attrs[name] = attribute
         self.bodies[-1]["attrs"].add(name)
 
     def scene_decl(self, form: Form) -> None:
         if self.scene is not None:
             raise CompileError("a file has exactly one scene", form.pos)
         name, pos = self.name_of(form)
-        attrs = {"background": Place(PAINT, None)}
+        attrs = {"background": Attribute(PAINT, None)}
         self.scene = self.add(Obj("scene", name, SCENE, attrs=attrs, pos=pos))
         self.in_scene = True
         try:
@@ -1789,7 +1813,7 @@ class _Compiler:
             head = _head(item)
             if head == "background":
                 assert isinstance(item, Form)
-                attrs["background"] = self.place(
+                attrs["background"] = self.attribute(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
             elif head in ("motif", "variant", "func", "transition", "animation") or (
@@ -1882,7 +1906,7 @@ class _Compiler:
                 continue
             saved, self.where = self.where, (obj.name, obj.of or obj.kind, attr)
             try:
-                obj.attrs[attr] = self.place(at, node, pos, attr, spec.default, inner)
+                obj.attrs[attr] = self.attribute(at, node, pos, attr, spec.default, inner)
             finally:
                 self.where = saved
         if "pos" in given:
@@ -1892,11 +1916,11 @@ class _Compiler:
                 at = _maybe(REAL) if absent else REAL
                 obj.attrs[attr] = self.settle(at, _part(point, k), attr, node.pos)
         if absent:
-            for attr, place in obj.attrs.items():
-                if not _may_be_none(_value_type(place)):
-                    place.type = specs[attr].type
+            for attr, attribute in obj.attrs.items():
+                if not _may_be_none(_value_type(attribute)):
+                    attribute.type = specs[attr].type
 
-    # Places ------------------------------------------------------------------------------
+    # Attributes ------------------------------------------------------------------------------
 
     def may_be_none(self, expected: Type) -> str:
         fix = "give it a default with (or? value default)"
@@ -1916,25 +1940,25 @@ class _Compiler:
             return f"{self.where[0]} may break {_show(c)}: {fix}, or declare it {t}|none"
         return f"{what} may break {_show(c)}"
 
-    def place(
+    def attribute(
         self, t: Type, node: Node | None, pos: Pos, what: str, default=None, scope=None
-    ) -> Place:
+    ) -> Attribute:
         if node is None:
-            return Place(
+            return Attribute(
                 t, self.default(t, pos) if default is None and t != Maybe(COLOR) else default
             )
-        place = self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
-        # A place given by an expression is bound; folded, it is free but const, so no writer
-        # can write it (mtpc.md, "Places").
-        if not place.bound and not _is_literal(node):
-            place.type = _with_const(place.type)
-        return place
+        attribute = self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
+        # An attribute given by an expression is bound; folded, it is free but const, so no writer
+        # can write it (mtpc.md, "Attributes").
+        if not attribute.bound and not _is_literal(node):
+            attribute.type = _with_const(attribute.type)
+        return attribute
 
-    def settle(self, t: Type, e: Expr, what: str, pos: Pos) -> Place:
-        """A place holding e: free when e is known, bound otherwise. A bound value must stay
-        within the place's constraints, or the compiler stops (type-system.md, 5.b and 5.c)."""
+    def settle(self, t: Type, e: Expr, what: str, pos: Pos) -> Attribute:
+        """An attribute holding e: free when e is known, bound otherwise. A bound value must stay
+        within the attribute's constraints, or the compiler stops (type-system.md, 5.b and 5.c)."""
         if e.known:
-            return Place(t, e.value)
+            return Attribute(t, e.value)
         access, source = self.access_of(e.deps)
         if access == "page" and (self.in_scene or self.bodies):
             assert source is not None
@@ -1953,7 +1977,7 @@ class _Compiler:
                 raise CompileError(self.may_break(what, broken[0], t), pos)
             if broken:
                 e = Expr("check", _maybe(e.type), (e, broken), e.deps, e.range)
-        return Place(t, expr=e)
+        return Attribute(t, expr=e)
 
     def default(self, t: Type, pos: Pos) -> object:
         """The value a type has when none is given (reference.md, "Defaults")."""
@@ -2059,14 +2083,14 @@ class _Compiler:
     ) -> Expr:
         if isinstance(node, NoneLit) and expected is None:
             return _known(NONE, None)
-        place = _loose(expected) if expected is not None else None
+        attribute = _loose(expected) if expected is not None else None
         try:
-            t = literal_type(node, place)
+            t = literal_type(node, attribute)
         except TypeError_ as e:
             raise CompileError(str(e), node.pos) from None
         if isinstance(node, NoneLit):
             return _known(t, None)
-        # A literal that is not none has the type of its place's other values.
+        # A literal that is not none has the type of its attribute's other values.
         t = _inner(t)
         value = node.value
         if isinstance(value, (int, float, Fraction)) and abs(value) > LIMIT:
@@ -2077,15 +2101,15 @@ class _Compiler:
         return _known(t, value)
 
     def list_literal(self, node: ListLit, expected: Type | None, scope: dict) -> Expr:
-        place = expected.base if isinstance(expected, Refine) else expected
-        if isinstance(place, Maybe):
-            place = place.inner
-        if place == POINT:
+        attribute = expected.base if isinstance(expected, Refine) else expected
+        if isinstance(attribute, Maybe):
+            attribute = attribute.inner
+        if attribute == POINT:
             items = [self.expr(i, Maybe(REAL), scope) for i in node.items]
             if len(items) != 2:
                 raise CompileError("a point is two numbers, [x y]", node.pos)
             return _gather(POINT, items)
-        item = place.item if isinstance(place, ListT) else None
+        item = attribute.item if isinstance(attribute, ListT) else None
         if not node.items:
             if item is None:
                 raise CompileError("an empty list needs its type: write list[T]", node.pos)
@@ -2185,27 +2209,27 @@ class _Compiler:
         obj = self.model.objects[i]
         moves: frozenset = frozenset()
         if obj.kind == "variable" and attr is None:
-            place = obj.value
+            attribute = obj.value
         else:
             if attr is None:
                 return Expr("obj", obj.type, (i,))
             if attr not in obj.attrs:
                 raise CompileError(f"a {obj.kind} has no attribute '{attr}'", obj.pos)
-            place = obj.attrs[attr]
+            attribute = obj.attrs[attr]
             if obj.kind in SHAPE_ATTRS or (obj.kind == "instance" and attr in INSTANCE_ATTRS):
                 moves = self.moves(i)
-        t = _maybe(place.type) if isinstance(obj.type, Maybe) else place.type
+        t = _maybe(attribute.type) if isinstance(obj.type, Maybe) else attribute.type
         # A token is never folded: the page may restyle it. A transition or an animation is a
         # value, so its free parts are known.
-        token = obj.kind == "variable" and _core(place.type) in (COLOR, FONT)
+        token = obj.kind == "variable" and _core(attribute.type) in (COLOR, FONT)
         fixed = obj.kind in ("transition", "animation")
-        if not place.bound and (fixed or (_is_const(place.type) and not token)):
-            return _known(t, place.value)
+        if not attribute.bound and (fixed or (_is_const(attribute.type) and not token)):
+            return _known(t, attribute.value)
         deps = frozenset({(i, attr)}) | moves
         return Expr("read", t, (i, attr, self.frame), deps, _type_range(t))
 
     def moves(self, i: int) -> frozenset:
-        """The translate and transform places a read of shape i converts through: its own and
+        """The translate and transform attributes a read of shape i converts through: its own and
         its containers', up to the one the reading expression sits in (reference.md,
         "Coordinates")."""
         shared = set()
@@ -2417,9 +2441,9 @@ class _Compiler:
             return None
         if not isinstance(_core(e.type), (ShapeT, Interface)):
             return None
-        place = self.model.objects[e.args[0]].value
-        if place.bound and place.expr.op == "obj":
-            return (place.expr.args[0],)
+        attribute = self.model.objects[e.args[0]].value
+        if attribute.bound and attribute.expr.op == "obj":
+            return (attribute.expr.args[0],)
         return None
 
     def member(self, i: int, index: Expr, pos: Pos) -> Expr:
@@ -2479,7 +2503,7 @@ class _Compiler:
             if len(args) != 3:
                 raise CompileError("if takes a condition and two branches", node.pos)
             c = self.expr(args[0], BOOL, scope)
-            # Branches may be none; the place the if reaches decides whether that is allowed.
+            # Branches may be none; what the if's value is given to decides whether that is allowed.
             branch = _maybe(expected) if expected is not None else None
             # Folding a call takes only the branch it needs, so recursion ends at its base case.
             if c.known and self.folding:
@@ -2560,8 +2584,8 @@ class _Compiler:
         raise CompileError(f"unknown function '{head}'", node.pos)
 
     def operands(self, nodes, expected: Type | None, scope: dict) -> list:
-        """An operator's operands. A literal list such as [1 2] is a point when the place or
-        another operand is one, as a literal takes its place's type."""
+        """An operator's operands. A literal list such as [1 2] is a point when the attribute or
+        another operand is one, as a literal takes its attribute's type."""
         others = [None if isinstance(n, ListLit) else self.expr(n, None, scope) for n in nodes]
         point = (expected is not None and _core(expected) == POINT) or any(
             o is not None and _core(o.type) == POINT for o in others
@@ -2762,12 +2786,12 @@ def _result(b: Builtin) -> Type:
     return Maybe(b.result) if b.undefined is not None else b.result
 
 
-def _round(x, places=None):
+def _round(x, attributes=None):
     """Halves away from zero, on the number's shortest decimal form (reference.md,
-    "Rounding"); a negative number of places rounds to tens, hundreds, …."""
-    step = Decimal(1).scaleb(-(places or 0))
+    "Rounding"); a negative number of attributes rounds to tens, hundreds, …."""
+    step = Decimal(1).scaleb(-(attributes or 0))
     v = Decimal(repr(float(x))).quantize(step, rounding=ROUND_HALF_UP)
-    return int(v) if places is None else float(v)
+    return int(v) if attributes is None else float(v)
 
 
 def _log(x, base=None):
@@ -2821,9 +2845,9 @@ def _is_step_ease(ease) -> bool:
     return isinstance(ease, tuple) and ease[0] == "step-ease"
 
 
-def _ease_value(place: Place):
+def _ease_value(attribute: Attribute):
     """An ease as a move carries it: its name, ("step", n), or ("func", id)."""
-    return ("func", place.expr.args[0]) if place.expr is not None else place.value
+    return ("func", attribute.expr.args[0]) if attribute.expr is not None else attribute.value
 
 
 def _name_text(node: Name) -> str:
@@ -2856,9 +2880,9 @@ def _scoped(nodes, scope: dict) -> list:
 
 
 def _overlaps(attr: str, given: dict) -> bool:
-    """Whether attr, or a place it writes (pos is x and y), is already in given."""
-    places = {"x", "y"} if attr == "pos" else {attr}
-    return any(a in given or (a in ("x", "y") and "pos" in given) for a in places)
+    """Whether attr, or an attribute it writes (pos is x and y), is already in given."""
+    attributes = {"x", "y"} if attr == "pos" else {attr}
+    return any(a in given or (a in ("x", "y") and "pos" in given) for a in attributes)
 
 
 def _dot(node: Node, attr: str) -> Form:
@@ -2867,7 +2891,7 @@ def _dot(node: Node, attr: str) -> Form:
 
 
 def _coordinates(attr: str, node: Node, scope: dict) -> dict:
-    """A group's argument as defaults by place: pos becomes its x and its y, so a member or an
+    """A group's argument as defaults by attribute: pos becomes its x and its y, so a member or an
     inner group that gives only one of them still takes the other."""
     if attr != "pos":
         return {attr: (node, scope)}
@@ -2913,9 +2937,11 @@ def _loose(t: Type) -> Type:
     return Maybe(_base(t.inner)) if isinstance(t, Maybe) else _base(t)
 
 
-def _value_type(place: Place) -> Type:
+def _value_type(attribute: Attribute) -> Type:
     return (
-        place.expr.type if place.expr is not None else (NONE if place.value is None else place.type)
+        attribute.expr.type
+        if attribute.expr is not None
+        else (NONE if attribute.value is None else attribute.type)
     )
 
 
@@ -3212,20 +3238,20 @@ def _preround(x: float, spec: str) -> float:
     p = int(precision) if precision is not None else None
     d = Decimal(repr(x))
     if kind in ("f", "F", "%"):
-        places = (6 if p is None else p) + (2 if kind == "%" else 0)
+        attributes = (6 if p is None else p) + (2 if kind == "%" else 0)
     elif kind in ("e", "E"):
-        places = (6 if p is None else p) - d.adjusted()
+        attributes = (6 if p is None else p) - d.adjusted()
     elif kind in ("g", "G", "n") or p is not None:
-        places = max(6 if p is None else p, 1) - 1 - d.adjusted()
+        attributes = max(6 if p is None else p, 1) - 1 - d.adjusted()
     else:
         return x
-    wide = Context(prec=max(d.adjusted() + places + 2, 1), rounding=ROUND_HALF_UP)
-    return float(d.quantize(Decimal(1).scaleb(-places), context=wide))
+    wide = Context(prec=max(d.adjusted() + attributes + 2, 1), rounding=ROUND_HALF_UP)
+    return float(d.quantize(Decimal(1).scaleb(-attributes), context=wide))
 
 
 def _show_value(t: Type, v, spec: str) -> str:
     """A value shown in a string. Halves round away from zero on the number's shortest
-    decimal form (reference.md, "Numbers"), so 2.675 to two places is 2.68."""
+    decimal form (reference.md, "Numbers"), so 2.675 to two attributes is 2.68."""
     base = _base(t)
     if base == INT:
         return format(int(v), spec)

@@ -226,14 +226,14 @@ def _satisfies(actual: Type, interface: Interface) -> bool:
 
 
 def literal_type(node: Node, expected: Type | None) -> Type:
-    """The type a literal takes in a place that expects expected (None: a place with no type)."""
+    """The type a literal takes where the type expected is expected (None: nothing is expected)."""
     if isinstance(expected, Maybe):
         if isinstance(node, NoneLit):
             return expected
         return Maybe(literal_type(node, expected.inner))
     if isinstance(node, NoneLit):
         raise TypeError_(
-            f"none is not a {expected}" if expected else "none needs a place that allows it"
+            f"none is not a {expected}" if expected else "none needs an attribute that allows it"
         )
     if isinstance(expected, Refine):
         literal_type(node, expected.base)

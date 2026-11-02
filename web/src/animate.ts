@@ -1,6 +1,6 @@
 // Runs the animations writers set off. Each running source (a button press, a play, a click)
-// owns the places its animation writes. When a source starts, or a slider, drag or toggle
-// writes, any running source that writes one of the same places is cancelled: the newest writer
+// owns the variables and attributes its animation writes. When a source starts, or a slider, drag or toggle
+// writes, any running source that writes one of the same ones is cancelled: the newest writer
 // wins, whatever its kind (docs/reference.md, "Controls"). Time is in seconds; the page moves it
 // forward on each animation frame.
 import type { Player } from "./player.ts";
@@ -53,7 +53,7 @@ export class Scheduler {
     this.wake();
   }
 
-  /** Cancels every other source that writes any of these places ("id:attr"). */
+  /** Cancels every other source that writes any of these ("id:attr"). */
   claim(targets: string[], source: object): void {
     const wanted = new Set(targets.flatMap(covers));
     for (const s of [...this.sources]) {

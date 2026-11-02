@@ -20,8 +20,8 @@ def error(src, match):
 
 
 def expr(src, name):
-    place = model(src).get(name).value
-    return place.expr if place.bound else place
+    attribute = model(src).get(name).value
+    return attribute.expr if attribute.bound else attribute
 
 
 class TestMap:

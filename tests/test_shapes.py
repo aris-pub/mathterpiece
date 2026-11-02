@@ -23,7 +23,7 @@ def attr(src, name, a):
 
 
 def moves(m, *names):
-    """The translate and transform places of the shapes named."""
+    """The translate and transform attributes of the shapes named."""
     return {(m.id(n), a) for n in names for a in ("translate", "transform")}
 
 
@@ -138,7 +138,7 @@ class TestPositions:
 
 class TestFrames:
     # reference.md "Coordinates": a read converts through every transform that applies to the
-    # shape read but not to the place reading it.
+    # shape read but not to the attribute reading it.
     def test_a_sibling_reads_in_the_groups_frame(self):
         m = model("(scene s (group g (translate [5 0]) (circle p (x 1)) (circle q (x p.x))))")
         e = m.get("q").attrs["x"].expr

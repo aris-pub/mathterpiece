@@ -18,15 +18,15 @@ def error(src, match):
 
 
 def value(src, name):
-    place = model(src).get(name).value
-    assert not place.bound, f"{name} is not known when compiling"
-    return place.value
+    attribute = model(src).get(name).value
+    assert not attribute.bound, f"{name} is not known when compiling"
+    return attribute.value
 
 
 def bound(src, name):
-    place = model(src).get(name).value
-    assert place.bound
-    return place.expr
+    attribute = model(src).get(name).value
+    assert attribute.bound
+    return attribute.expr
 
 
 class TestNames:

@@ -21,15 +21,15 @@ def typ(src, name):
 
 
 def bound(src, name):
-    place = model(src).get(name).value
-    assert place.bound
-    return place.expr
+    attribute = model(src).get(name).value
+    assert attribute.bound
+    return attribute.expr
 
 
 def value(src, name):
-    place = model(src).get(name).value
-    assert not place.bound
-    return place.value
+    attribute = model(src).get(name).value
+    assert not attribute.bound
+    return attribute.value
 
 
 class TestWhereItComesFrom:

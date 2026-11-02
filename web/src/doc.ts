@@ -16,25 +16,25 @@ export type Constraint = [string, ...unknown[]];
 
 export type Expr = [string, Type, ...unknown[]];
 
-export interface FreePlace {
+export interface FreeAttribute {
   type: Type;
   free: unknown;
   fixed?: true;
 }
 
-export interface BoundPlace {
+export interface BoundAttribute {
   type: Type;
   bound: Expr;
   deps: [number, string | null][];
   fixed?: true;
 }
 
-export type Place = FreePlace | BoundPlace;
+export type Attribute = FreeAttribute | BoundAttribute;
 
 export interface Clamp {
-  place: [number, string | null];
+  target: [number, string | null];
   op: ">=" | ">" | "<=" | "<";
-  limit: Place;
+  limit: Attribute;
 }
 
 export type Step =
@@ -47,14 +47,14 @@ export interface Obj {
   type: Type;
   access: "scene" | "page";
   name: string | null;
-  value?: Place;
+  value?: Attribute;
   token?: boolean;
-  attrs?: Record<string, Place>;
+  attrs?: Record<string, Attribute>;
   members?: number[];
   of?: string;
   // transitions
-  from?: Place | null;
-  to?: Place | null;
+  from?: Attribute | null;
+  to?: Attribute | null;
   duration?: number | null;
   ease?: unknown;
   path?: unknown;
@@ -65,7 +65,7 @@ export interface Obj {
   conditions?: Clamp[];
   target?: [number, string | null] | null;
   shape?: number;
-  when?: Place | null | [Place, number[]][];
+  when?: Attribute | null | [Attribute, number[]][];
   transition?: number | null;
 }
 
@@ -91,6 +91,6 @@ export interface Doc {
 
 export const FORMAT_VERSION = 2;
 
-export function isBound(p: Place): p is BoundPlace {
+export function isBound(p: Attribute): p is BoundAttribute {
   return "bound" in p;
 }

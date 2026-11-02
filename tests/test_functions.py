@@ -17,9 +17,9 @@ def error(src, match):
 
 
 def bound(src, name):
-    place = model(src).get(name).value
-    assert place.bound
-    return place.expr
+    attribute = model(src).get(name).value
+    assert attribute.bound
+    return attribute.expr
 
 
 class TestDeclaring:

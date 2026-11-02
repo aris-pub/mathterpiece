@@ -18,9 +18,9 @@ def error(src, match):
 
 def value(src, name):
     """The folded value of a variable known when compiling."""
-    place = model(src).get(name).value
-    assert not place.bound, f"{name} is not known when compiling"
-    return place.value
+    attribute = model(src).get(name).value
+    assert not attribute.bound, f"{name} is not known when compiling"
+    return attribute.value
 
 
 class TestVariables:

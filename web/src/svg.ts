@@ -2,7 +2,7 @@
 // scene is flipped once at the top, and text is flipped back so its letters stay upright. Each
 // group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
 import { compose } from "./builtins.ts";
-import type { Expr, Place } from "./doc.ts";
+import type { Expr, Attribute } from "./doc.ts";
 import { isBound } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
 
@@ -41,8 +41,8 @@ export function draw(
   const { box, toUser } = viewOf(rt, canvas);
   out.setAttribute("viewBox", box.join(" "));
   const view = rt.objects[canvas]!;
-  const when = (view.when ?? []) as [Place, number[]][];
-  const levels = when.map(([cond], k) => (visible ? visible(k) : rt.placeValue(cond) ? 1 : 0));
+  const when = (view.when ?? []) as [Attribute, number[]][];
+  const levels = when.map(([cond], k) => (visible ? visible(k) : rt.evaluate(cond) ? 1 : 0));
   background(rt, [...(view.members ?? []), ...when.flatMap(([, ids]) => ids)], out);
   const top = document.createElementNS(NS, "g");
   top.setAttribute("transform", matrix(toUser));

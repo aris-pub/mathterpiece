@@ -34,7 +34,8 @@
   (stop stop-name 'the golden angle')
   ; '#f6c453' is gold, written out for the same reason.
   (circle halo (r 9.2) (fill '#f6c453') (fill-opacity 0.12) (stroke none))
-  ; 137.50776405003785 is golden-angle: a free place starts from a literal, never a name.
+  ; 137.50776405003785 is golden-angle written out: given by its name, angle would be bound
+  ; to golden-angle, and the tour could never move it.
   (flower sunflower (angle 137.50776405003785))
   (text title stop-name (pos [-9.3 9]) (font heading) (fill chalk))
   (text degrees $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font small) (fill chalk) (opacity 0.6)))

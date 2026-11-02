@@ -138,7 +138,7 @@ class TestButtons:
             " (<= k lim) (> 1 k))"
         )
         c = m.get("b").data["conditions"]
-        assert [(x["place"], x["op"]) for x in c] == [
+        assert [(x["target"], x["op"]) for x in c] == [
             ((m.id("k"), None), "<="),
             ((m.id("k"), None), "<"),
         ]
@@ -146,8 +146,8 @@ class TestButtons:
 
     def test_a_condition_that_is_not_a_limit(self):
         src = f"{K} (real j) (button b (animation (k (transition (to 5) (duration 1))))"
-        error(f"{src} (> j 1))", "compares a place this writer writes")
-        error(f"{src} (> k (* 2 k)))", "compares a place this writer writes")
+        error(f"{src} (> j 1))", "compares an attribute this writer writes")
+        error(f"{src} (> k (* 2 k)))", "compares an attribute this writer writes")
 
 
 class TestBoolMoves:

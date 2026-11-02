@@ -119,7 +119,7 @@ A special form looks like a call but does something a function cannot: it evalua
 | `(fn p (* 2 p.r))` | a function written in place: binds its parameters in its body (section 5) |
 | `(. X Y)` | a part of `X`; `Y` is not evaluated when it is an attribute name (section 7) |
 | `(name s)` | turns a string into a name (section 4) |
-| `(as T literal)` | gives a literal the type `T` where it has no place to take one from: `(as color 'gold')`, `(as point [0 0])` |
+| `(as T literal)` | gives a literal the type `T` where nothing else gives it one: `(as color 'gold')`, `(as point [0 0])` |
 
 `when`, inside a canvas or a listener, is an item recognized by its head, not a special form: its first part is a condition and the rest are names.
 
@@ -182,7 +182,7 @@ Every declaration, components included, follows one rule:
 | `(canvas v a b (when show c))` | `v` | none | `a`, `b`, `(when show c)` |
 | `(on-drag p (target theta))` | none | `p` | `(target theta)`, required |
 
-Function calls and special forms are not declarations, and do not follow this rule: a call takes its arguments in order, and each special form has its own shape. Inside an animation, a step's head may be any writable place, including a path such as `p.r`; the reserved words `wait`, `in-order` and `at-once` are steps of their own.
+Function calls and special forms are not declarations, and do not follow this rule: a call takes its arguments in order, and each special form has its own shape. Inside an animation, a step's head may be any variable or attribute a writer may change, including a path such as `p.r`; the reserved words `wait`, `in-order` and `at-once` are steps of their own.
 
 ## 9. Putting a file together
 
@@ -199,4 +199,4 @@ The data model shows how these relate: what reads what, and what writes what.
 
 A variable's or shape's head is its type: `real`, `int`, `bool`, `string`, `color`, `point`, `list`, a shape such as `circle`, or a type the author declared (section 4 lists the heads that are not types). A function's or motif's parameters always write theirs: `((real t 0.5) (color tint 'red'))`. A type can be written in place: `list[color]` is a list of colors, `real|none` (or `(maybe real)`) a real or `none`, `(real (>= 0))` a real no less than 0.
 
-A literal takes the type of its place: `'red'` is a string, but written as a fill it is a color. The type document covers all of this in full.
+A literal takes the type expected where it is written: `'red'` is a string, but written as a fill it is a color. The type document covers all of this in full.

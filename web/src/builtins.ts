@@ -145,16 +145,16 @@ export function equal(a: unknown, b: unknown): boolean {
 }
 
 /** Halves away from zero, on the number's shortest decimal form (reference.md, "Rounding"). */
-export function roundHalfAway(x: number, places = 0): number {
+export function roundHalfAway(x: number, decimals = 0): number {
   const [mantissa = "0", exp = "0"] = Math.abs(x).toExponential().split("e");
   const digits = mantissa.replace(".", "");
-  // digits stand for 0.digits * 10^(e + 1); keep the ones before position e + 1 + places.
-  const keep = Number(exp) + 1 + places;
+  // digits stand for 0.digits * 10^(e + 1); keep the ones before position e + 1 + decimals.
+  const keep = Number(exp) + 1 + decimals;
   if (keep < 0) return x < 0 ? -0 : 0;
   const head = digits.slice(0, keep).padEnd(keep, "0");
   const up = (digits.charCodeAt(keep) || 48) - 48 >= 5;
   const n = BigInt(head || "0") + (up ? 1n : 0n);
-  const value = Number(`${n}e${-places}`);
+  const value = Number(`${n}e${-decimals}`);
   return x < 0 ? -value : value;
 }
 
@@ -242,7 +242,7 @@ export const BUILTINS: Record<string, Impl> = {
     check((x as number) >= 0);
     return Math.sqrt(x as number);
   },
-  round: (x, places) => roundHalfAway(x as number, (places as number | undefined) ?? 0),
+  round: (x, decimals) => roundHalfAway(x as number, (decimals as number | undefined) ?? 0),
   floor: n(Math.floor),
   ceil: n(Math.ceil),
   exp: n(Math.exp),

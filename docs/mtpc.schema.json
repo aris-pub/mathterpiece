@@ -550,22 +550,6 @@
         }
       ]
     },
-    "placeRef": {
-      "type": "array",
-      "prefixItems": [
-        {
-          "$ref": "#/$defs/id"
-        },
-        {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      ],
-      "minItems": 2,
-      "maxItems": 2
-    },
     "expr": {
       "allOf": [
         {
@@ -1358,72 +1342,10 @@
         }
       ]
     },
-    "place": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "type",
-            "free"
-          ],
-          "properties": {
-            "type": {
-              "$ref": "#/$defs/type"
-            },
-            "free": {
-              "$ref": "#/$defs/value"
-            },
-            "fixed": {
-              "const": true
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "type",
-            "bound",
-            "deps"
-          ],
-          "properties": {
-            "type": {
-              "$ref": "#/$defs/type"
-            },
-            "bound": {
-              "$ref": "#/$defs/expr"
-            },
-            "deps": {
-              "type": "array",
-              "items": {
-                "type": "array",
-                "prefixItems": [
-                  {
-                    "$ref": "#/$defs/id"
-                  },
-                  {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                ],
-                "minItems": 2,
-                "maxItems": 2
-              }
-            },
-            "fixed": {
-              "const": true
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
     "attrs": {
       "type": "object",
       "additionalProperties": {
-        "$ref": "#/$defs/place"
+        "$ref": "#/$defs/attribute"
       }
     },
     "step": {
@@ -1594,7 +1516,7 @@
                 ]
               },
               "value": {
-                "$ref": "#/$defs/place"
+                "$ref": "#/$defs/attribute"
               },
               "token": {
                 "type": "boolean"
@@ -1883,7 +1805,7 @@
               "from": {
                 "oneOf": [
                   {
-                    "$ref": "#/$defs/place"
+                    "$ref": "#/$defs/attribute"
                   },
                   {
                     "type": "null"
@@ -1893,7 +1815,7 @@
               "to": {
                 "oneOf": [
                   {
-                    "$ref": "#/$defs/place"
+                    "$ref": "#/$defs/attribute"
                   },
                   {
                     "type": "null"
@@ -2049,7 +1971,7 @@
                   "type": "array",
                   "prefixItems": [
                     {
-                      "$ref": "#/$defs/place"
+                      "$ref": "#/$defs/attribute"
                     },
                     {
                       "type": "array",
@@ -2341,7 +2263,7 @@
               "when": {
                 "oneOf": [
                   {
-                    "$ref": "#/$defs/place"
+                    "$ref": "#/$defs/attribute"
                   },
                   {
                     "type": "null"
@@ -2404,7 +2326,7 @@
               "when": {
                 "oneOf": [
                   {
-                    "$ref": "#/$defs/place"
+                    "$ref": "#/$defs/attribute"
                   },
                   {
                     "type": "null"
@@ -2426,14 +2348,14 @@
     "clamp": {
       "type": "object",
       "required": [
-        "place",
+        "target",
         "op",
         "limit"
       ],
       "additionalProperties": false,
       "properties": {
-        "place": {
-          "$ref": "#/$defs/placeRef"
+        "target": {
+          "$ref": "#/$defs/target"
         },
         "op": {
           "enum": [
@@ -2444,7 +2366,7 @@
           ]
         },
         "limit": {
-          "$ref": "#/$defs/place"
+          "$ref": "#/$defs/attribute"
         }
       }
     },
@@ -2500,6 +2422,84 @@
           "additionalProperties": false
         }
       ]
+    },
+    "attribute": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "free"
+          ],
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "free": {
+              "$ref": "#/$defs/value"
+            },
+            "fixed": {
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "bound",
+            "deps"
+          ],
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "bound": {
+              "$ref": "#/$defs/expr"
+            },
+            "deps": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "fixed": {
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "target": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/id"
+        },
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
     }
   }
 }

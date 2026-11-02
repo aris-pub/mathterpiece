@@ -38,10 +38,10 @@ Objects are values, which never change, or mutable objects, which can. A type th
 
 ## 3. Conversions
 
-Only two conversions ever happen without being asked for. (A list written in brackets, even of expressions such as `[k 0]`, is a literal, and takes the type of its place: it is a point where a point is expected.) Separately, a narrower type is accepted where a wider one is expected without any conversion: a refinement where its base is (a `unit` where a `real` is), and any `T` where `T|none` is.
+Only two conversions ever happen without being asked for. (A list written in brackets, even of expressions such as `[k 0]`, is a literal, and takes the type expected where it is written: it is a point where a point is expected.) Separately, a narrower type is accepted where a wider one is expected without any conversion: a refinement where its base is (a `unit` where a `real` is), and any `T` where `T|none` is.
 
 - **Numbers broaden**, never narrow: an `int` is accepted where a `ratio`, `real` or `complex` is expected, a `ratio` where a `real` or `complex` is, and a `real` where a `complex` is. Going the other way takes a function, such as `round`. (The one exception is a write while drawing into an int, which is rounded: section 5.b.)
-- **A literal takes the type of its place.** `'red'` is a string, but written where a color is expected it is a color; `'middle'` written as a text's alignment is one of the allowed alignments. Where a literal has no place to take a type from, such as a branch of a function's `cond`, `(as color 'red')` gives it one.
+- **A literal takes the type expected where it is written.** `'red'` is a string, but written where a color is expected it is a color; `'middle'` written as a text's alignment is one of the allowed alignments. Where nothing gives a literal its type, such as a branch of a function's `cond`, `(as color 'red')` gives it one.
 
 &nbsp;
 
@@ -132,7 +132,7 @@ A value known when compiling that breaks a constraint is a compile error. A boun
 
 **How it behaves.** Anything computed from `none` is `none`: a function's result, a part of `none` (if `g[k]` is `none`, so is `g[k].pos`), and an interpolated string with a part that is `none` (`$'sec θ = {crossing:.3f}'` is `none` when `crossing` is). The exceptions are the forms that deal with `none` (below), equality (`(= none none)` is true, `(= none 3)` is false), and a function whose parameter is declared `T|none`: it receives `none` and runs its body. A parameter that does not accept `none` makes the call `none`. Conditions (`if`, `cond`, `and`, `or`, and the `when` item of a canvas or listener) cannot decide anything with `none`, so they must always receive a value that cannot be `none`. Of the list operations, `sum`, `count`, `min`, `max`, `any`, `all` and `reduce` must not receive items that may be `none`; `map`, `reverse` and reading a position pass them through.
 
-**Handling it.** Every place where a value reaches the reader must handle a `none` that may arrive there, whatever its source: a shape, a readout, a condition, an interpolated string, a list operation, a write. Handling means giving it a default with `or?`, filtering it out of a list with `somes`, or, for a shape, declaring the shape itself `T|none`. A transition whose end may be `none` is a write and must be handled too, except into a `color|none` place, where `none` is mixed as transparent. Declaring a variable `T|none` is the author's choice that the variable may hold `none`; it does not exempt what reads it. A `none` arrives unasked when it comes from a partial function or a lookup, or anything computed from them; an unasked `none` may not even pass silently into a variable declared plain `T`. Until every `none` is handled, the compiler stops. The forms:
+**Handling it.** Everywhere a value reaches the reader must handle a `none` that may arrive there, whatever its source: a shape, a readout, a condition, an interpolated string, a list operation, a write. Handling means giving it a default with `or?`, filtering it out of a list with `somes`, or, for a shape, declaring the shape itself `T|none`. A transition whose end may be `none` is a write and must be handled too, except into a `color|none` variable or attribute, where `none` is mixed as transparent. Declaring a variable `T|none` is the author's choice that the variable may hold `none`; it does not exempt what reads it. A `none` arrives unasked when it comes from a partial function or a lookup, or anything computed from them; an unasked `none` may not even pass silently into a variable declared plain `T`. Until every `none` is handled, the compiler stops. The forms:
 
     (or? x d)                ; x, or d when x is none
     (none? x)  (some? x)     ; is x none, is it not
@@ -170,7 +170,7 @@ A value of a choice type is still a string, so it can be shown in a readout or u
 
 Where members of different types meet (a group of circles and rects, the branches of an `if`, `g[k]`), their common type is the most specific interface all of them satisfy: for circles and rects, `positioned`, so `p.x` may be read.
 
-**Known lengths.** A list's length is known when compiling when it comes from a literal list, a group (its `length`, the member count, which never changes: no member is ever removed, and an absent `T|none` member stays in its place as `none`), a spread such as `g.r`, `map`, `sort` or `reverse` of a list whose length is known, or a variable bound to any of these, which always equals it; a free list variable may be replaced by a move, so its length is known only with a `(length n)` constraint; `where` and `somes` give a list whose length is not known. Reading a fixed position on a list of known length is checked when compiling: it never gives `none`, and a position out of range is a compile error. A position only known while drawing, or a list of unknown length, may give `none`.
+**Known lengths.** A list's length is known when compiling when it comes from a literal list, a group (its `length`, the member count, which never changes: no member is ever removed, and an absent `T|none` member stays where it is as `none`), a spread such as `g.r`, `map`, `sort` or `reverse` of a list whose length is known, or a variable bound to any of these, which always equals it; a free list variable may be replaced by a move, so its length is known only with a `(length n)` constraint; `where` and `somes` give a list whose length is not known. Reading a fixed position on a list of known length is checked when compiling: it never gives `none`, and a position out of range is a compile error. A position only known while drawing, or a list of unknown length, may give `none`.
 
 Choices also make lookups safe: when every choice is a key of a group, a lookup with a value of that type can never miss, so it is never `none`.
 
@@ -261,7 +261,7 @@ Every declared object with a name has a `name` attribute; anonymous ones (`_`) h
 | motif instances | their parameters and bound variables, `a.t`, `disk.area`; their members, `a.tip`; their shape arguments, `a.x`, `a.fill`, … |
 | variant instances | their parameters, and every attribute of their base, `b1.p`, `b1.x` |
 | font | `family`, `style`, `weight`, `size` |
-| slider | `label`, `position` (0 to 1), `step` (the number of places, if given) |
+| slider | `label`, `position` (0 to 1), `step` (the number of positions its knob stops at, if given) |
 | play | `label`, `step` (the step of the animation now playing), `playing`, `buttons` |
 | button, toggle | `label`; a toggle's `value` |
 | readout | `value` (its string), `font` |
