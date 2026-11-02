@@ -122,29 +122,39 @@ export class Drags {
 
   // Gauss-Newton on one number: from the current value, step along the direction in which the
   // shape moves, halving steps that do not bring it closer. Starting from where it is keeps the
-  // shape from jumping to another position that is as close (the far side of a circle).
+  // shape from jumping to another position that is as close (the far side of a circle). Steps
+  // are measured by the value the write stores: at a limit a step up is undone, so it tries a
+  // step down, and an int rounds a small step away, so it tries a whole one.
   private closest(shape: number, id: number, attr: string | null, from: number, aim: Point): number {
-    const at = (value: number): Point => {
-      this.rt.write(id, attr, value);
-      return this.where(shape);
+    const rt = this.rt;
+    const set = (value: number): number => {
+      rt.write(id, attr, value);
+      return rt.value(id, attr) as number;
     };
     const far = (p: Point) => (p[0] - aim[0]) ** 2 + (p[1] - aim[1]) ** 2;
-    let value = from;
-    let where = at(value);
+    let value = set(from);
+    let where = this.where(shape);
     let distance = far(where);
     for (let k = 0; k < 30; k++) {
-      const h = 1e-6 * Math.max(1, Math.abs(value));
-      const ahead = at(value + h);
+      const small = 1e-6 * Math.max(1, Math.abs(value));
+      let h = 0;
+      for (const tried of [small, -small, 1, -1]) {
+        h = set(value + tried) - value;
+        if (h !== 0) break;
+      }
+      if (h === 0) break;
+      const ahead = this.where(shape);
       const along: Point = [(ahead[0] - where[0]) / h, (ahead[1] - where[1]) / h];
       const speed = along[0] ** 2 + along[1] ** 2;
       if (speed < 1e-20) break;
       const step = (along[0] * (aim[0] - where[0]) + along[1] * (aim[1] - where[1])) / speed;
       let moved = false;
       for (let t = 1; t > 1e-3; t /= 2) {
-        const next = at(value + t * step);
+        const stored = set(value + t * step);
+        const next = this.where(shape);
         const d = far(next);
         if (d < distance) {
-          value += t * step;
+          value = stored;
           where = next;
           distance = d;
           moved = true;

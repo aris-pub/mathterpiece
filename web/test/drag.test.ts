@@ -42,4 +42,20 @@ describe("a drag", () => {
     drags.move([5, 0]);
     expect(v("limited", "x")).toBe(2);
   });
+
+  it("moves an int target by whole steps", () => {
+    // mtp-q44: the search used to step by 1e-6, which the write into an int rounds away.
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("stepper"), [0, 0]);
+    drags.move([3.2, 0]);
+    expect(v("steps")).toBe(3);
+  });
+
+  it("moves a target that starts at its upper limit", () => {
+    // mtp-n8j: the search used to step only upward, which the limit undoes.
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("edge"), [10, 5]);
+    drags.move([7, 5]);
+    expect(v("top") as number).toBeCloseTo(7, 6);
+  });
 });

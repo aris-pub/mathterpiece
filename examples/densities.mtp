@@ -34,10 +34,6 @@
      171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194
      195 196 197 198 199 200] (const))
 
-; or? on a value folded when compiling keeps none in its type (a compiler bug), so a function with
-; a real|none parameter stands in for it wherever the value is known then.
-(func dflt ((real|none x) (real d)) (or? x d))
-
 (func P ((int h (>= 1) (<= 10)) (real p (>= 0) (<= 1)))
   (let ((r (^ (- 1 p) (^ 2 (- h 1))))) (* 2 r (- 1 r))))
 
@@ -54,7 +50,7 @@
 ; sqrt(max / min). A density far from every level leaves some level with P too close to 0 to
 ; divide by; the original shows that as a power of ten, and 10^150 is the largest number allowed.
 (func spread-of ((real mx) (real mn))
-  (if (> mn 1e-300) (dflt (sqrt (/ mx mn)) 1e150) 1e150))
+  (if (> mn 1e-300) (or? (sqrt (/ mx mn)) 1e150) 1e150))
 (func spread ((real LL) (real t (>= 0))) (spread-of (max (single LL t 0)) (min (single LL t 1))))
 (func spread-all (real LL) (spread-of (max (every-level LL 0)) (min (every-level LL 1))))
 
@@ -82,7 +78,7 @@
              (best-in LL (max 0 (+ a (* step half))) step (- n half))))))
 (func best (real LL)
   (let ((coarse (best-in LL 0.3 0.05 (+ 15 (* 20 (round LL))))))
-    (best-in LL (max 0 (- (dflt coarse[1] 1) 0.05)) 0.005 21)))
+    (best-in LL (max 0 (- (or? coarse[1] 1) 0.05)) 0.005 21)))
 ; Only the tour shows the best density, and only at 4, 6, 8 and 10 levels.
 (list bests [(best 4) (best 6) (best 8) (best 10)] (const))
 (func best-of (real LL)
@@ -117,12 +113,7 @@
 (scene figure
   ; The state: L levels, density 2^-t, mix from one density (0) to all (1); while the number of
   ; levels changes from Lp to L, g goes from 0 to 1.
-  ; A drag cannot move an int: the runtime finds the value by small steps, which rounding
-  ; undoes. So the drag moves reach, a real, and the number of levels is reach rounded. Those
-  ; steps only go up, so a drag starting at a bound of reach would never move: its range runs
-  ; half a level past each end.
-  (real reach 10 (>= 1.5) (<= 10.5))
-  (real L (max 2 (min 10 (round reach))) (>= 2) (<= 10))
+  (int L 10 (>= 2) (<= 10))
   (int Lp 10 (>= 2) (<= 10))
   (real g 1 (>= 0) (<= 1))
   (real t 1 (>= 0.5) (<= 10.5))
@@ -188,8 +179,8 @@
     (stroke-opacity (if n-on 0.7 0.45)))
   (handle n-handle (x (+ 54 (* lv 41.2))) (y -168)
           (edge (if n-on (if all every one) muted)) (weight (if n-on 1.5 1)))
-  ; What the reader grabs: it follows the pointer, while the handle above snaps to a level.
-  (rect n-grab (pos [(+ 54 (* reach 41.2)) -168]) (width 41.2) (height 24) (fill bg)
+  ; What the reader grabs: an area wider than the handle, as wide as a level.
+  (rect n-grab (pos [(+ 54 (* L 41.2)) -168]) (width 41.2) (height 24) (fill bg)
     (opacity 0))
 
   (real d-all (+ (* (spread-all Lp) (- 1 g)) (* (spread-all L) g)))
@@ -267,7 +258,7 @@
   (at-once
     (at-once (default-duration 0)
       (move chapter (to 0)) (move exploring (to false)) (move mix (to 0)) (move floor (to false))
-      (move reach (to 10)) (move Lp (to 10)) (move g (to 1)))
+      (move L (to 10)) (move Lp (to 10)) (move g (to 1)))
     (in-order
       (move t (from 1) (to 10) (duration 5.33) (ease sweep))
       (move t (to 1) (duration 5.33) (ease sweep))
@@ -278,19 +269,19 @@
 (animation floor-rises
   (at-once (default-duration 0)
     (move chapter (to 1)) (move exploring (to false)) (move mix (to 0)) (move floor (to true)))
-  (at-once (default-duration 0) (move reach (to 4)) (move Lp (to 10)) (move g (to 0)))
+  (at-once (default-duration 0) (move L (to 4)) (move Lp (to 10)) (move g (to 0)))
   (at-once (default-duration 0.9625) (default-ease quad)
     (move g (to 1)) (move t (from 4.5) (to bests[0][1])))
   (move none (duration 1.7875))
-  (at-once (default-duration 0) (move reach (to 6)) (move Lp (to 4)) (move g (to 0)))
+  (at-once (default-duration 0) (move L (to 6)) (move Lp (to 4)) (move g (to 0)))
   (at-once (default-duration 0.9625) (default-ease quad)
     (move g (to 1)) (move t (from bests[0][1]) (to bests[1][1])))
   (move none (duration 1.7875))
-  (at-once (default-duration 0) (move reach (to 8)) (move Lp (to 6)) (move g (to 0)))
+  (at-once (default-duration 0) (move L (to 8)) (move Lp (to 6)) (move g (to 0)))
   (at-once (default-duration 0.9625) (default-ease quad)
     (move g (to 1)) (move t (from bests[1][1]) (to bests[2][1])))
   (move none (duration 1.7875))
-  (at-once (default-duration 0) (move reach (to 10)) (move Lp (to 8)) (move g (to 0)))
+  (at-once (default-duration 0) (move L (to 10)) (move Lp (to 8)) (move g (to 0)))
   (at-once (default-duration 0.9625) (default-ease quad)
     (move g (to 1)) (move t (from bests[2][1]) (to bests[3][1])))
   (move none (duration 1.7875)))
@@ -298,24 +289,24 @@
 (animation all-densities
   (at-once (default-duration 0)
     (move chapter (to 2)) (move exploring (to false)) (move floor (to false)) (move mix (to 0))
-    (move reach (to 10)) (move Lp (to 10)) (move g (to 1)) (move t (to bests[3][1])))
+    (move L (to 10)) (move Lp (to 10)) (move g (to 1)) (move t (to bests[3][1])))
   (at-once
     (move mix (to 1) (duration 2.16) (ease quad))
     (in-order
       (move none (duration 3.6))
-      (at-once (default-duration 0) (move reach (to 4)) (move Lp (to 10)) (move g (to 0))
+      (at-once (default-duration 0) (move L (to 4)) (move Lp (to 10)) (move g (to 0))
         (move t (to bests[0][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365))
-      (at-once (default-duration 0) (move reach (to 6)) (move Lp (to 4)) (move g (to 0))
+      (at-once (default-duration 0) (move L (to 6)) (move Lp (to 4)) (move g (to 0))
         (move t (to bests[1][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365))
-      (at-once (default-duration 0) (move reach (to 8)) (move Lp (to 6)) (move g (to 0))
+      (at-once (default-duration 0) (move L (to 8)) (move Lp (to 6)) (move g (to 0))
         (move t (to bests[2][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365))
-      (at-once (default-duration 0) (move reach (to 10)) (move Lp (to 8)) (move g (to 0))
+      (at-once (default-duration 0) (move L (to 10)) (move Lp (to 8)) (move g (to 0))
         (move t (to bests[3][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365)))))
@@ -345,10 +336,10 @@
                (move floor (to false)) (move g (to 1))))
   (label 'all'))
 
-(on-drag n-grab reach)
+(on-drag n-grab L)
 (on-drag t-handle t (<= t (+ L 0.5)))
 
-(readout heading $'n = {(round (^ 2 L))} points, {(round L)} levels')
+(readout heading $'n = {(round (^ 2 L))} points, {L} levels')
 (readout caption
     (cond ((= chapter 0)
            'One density serves one scale. A random set of density p separates pairs well only at the levels where each half of their common cluster has about 1/p points. As the density sweeps from 1/2 to 2⁻¹⁰, the well-served levels travel down the hierarchy, and the distortion, set by the worst-served level, is enormous except near the bottom of the valley.')
