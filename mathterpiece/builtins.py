@@ -10,7 +10,9 @@ from mathterpiece import colors
 from mathterpiece.types import COLOR, INT, POINT, REAL, TRANSFORM, Refine, Type
 
 MAX_REAL = sys.float_info.max
-WHOLE = (-MAX_REAL, MAX_REAL)
+# A function's whole range, for a number with no limit of its own: every number lies within
+# ±10^150 (type-system.md, "What the compiler proves").
+WHOLE = (-1e150, 1e150)
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
 Range = tuple[float, float]
 

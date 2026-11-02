@@ -312,7 +312,6 @@ class TestAs:
         assert value("(point p (+ [1 1] (as point [0 0])))", "p") == (1, 1)
 
     def test_only_a_literal(self):
-        error("(real k 1) (point p (as point [k 0]))", "as gives a type only to a literal")
         error("(string s (as color 'blurple'))", "'blurple' is not a color")
 
 
@@ -359,3 +358,17 @@ class TestMixedNumbers:
 
     def test_an_int_and_a_narrowed_real_meet_as_reals(self):
         model("(real h 1 (>= 0)) (list xs [0 h])")
+
+
+class TestListLiterals:
+    # type-system.md section 3: a list written in brackets, even of expressions, is a literal,
+    # and takes the type expected where it is written.
+    def test_as_gives_a_type_to_a_list_of_expressions(self):
+        # mtp-kk0
+        m = model("(real k 1) (point q (as point [k 0]))")
+        assert m.get("q").value.bound
+
+    def test_a_branch_gives_its_type_to_a_list_literal_in_the_other(self):
+        # mtp-vsx: inside a function nothing outside expects a type, so the other branch does.
+        model("(real k 1) (func f ((real a)) (if (> a 0) [a 0] (polar 1 30))) (point q (f k))")
+        model("(real k 1) (func f ((real a)) (if (> a 0) (polar 1 30) [a 0])) (point q (f k))")

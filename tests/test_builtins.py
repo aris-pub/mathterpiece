@@ -124,3 +124,17 @@ class TestFunctionsAsValues:
 
     def test_a_declared_function_replaces_a_built_in(self):
         assert value("(func sqrt (real x) (* 2 x)) (real v (sqrt 3))") == 6
+
+
+def test_lerp_folds_points_known_when_compiling():
+    # mtp-7id: the compiler used to crash subtracting the two lists.
+    m = model(
+        "(func top ((real k)) (/ 6 k)) (func pt ((real a) (real b)) (lerp [a b] [(* 2 a) b] 0.5))"
+        " (point q (pt (or? (top 2) 0) 1))"
+    )
+    assert tuple(m.get("q").value.value) == (4.5, 1)
+
+
+def test_log_stays_within_the_number_bound():
+    # mtp-r0f: type-system.md 5.c, every number lies within ±10^150.
+    model("(real x 5 (>= 1) (<= 100)) (real y (* (log x 10) 2))")

@@ -667,7 +667,7 @@ class _Compiler:
             return _known(Maybe(b.result), None)
         if all(a.known for a in args):
             return _known(b.result, self.fold_builtin(head, b.fold, [a.value for a in args], pos))
-        ranges = [a.range if a.range is not None else WHOLE for a in args]
+        ranges = [a.range if a.range is not None else UNBOUNDED for a in args]
         undefined = b.undefined is not None and b.undefined(ranges)
         r = cast(Range, b.range(ranges) if callable(b.range) else b.range)
         t = Maybe(b.result) if maybe or undefined else b.result
@@ -702,12 +702,12 @@ class _Compiler:
             self.count(head, given, 1, 2, pos)
             params = (Param("x", REAL), Param("decimals", INT))[: len(given)]
             b = Builtin(
-                tuple(p.type for p in params), INT if len(given) == 1 else REAL, _round, WHOLE
+                tuple(p.type for p in params), INT if len(given) == 1 else REAL, _round, UNBOUNDED
             )
         elif head == "log":
             self.count(head, given, 1, 2, pos)
             params = (Param("x", REAL), Param("base", REAL))[: len(given)]
-            b = Builtin(tuple(p.type for p in params), REAL, _log, WHOLE, _log_undefined)
+            b = Builtin(tuple(p.type for p in params), REAL, _log, UNBOUNDED, _log_undefined)
         elif head in ("min", "max"):
             return self.extreme(node, head, given, scope)
         elif head == "lerp":
@@ -716,7 +716,7 @@ class _Compiler:
             point = isinstance(given[0], ListLit) or _core(first.type) == POINT
             t = POINT if point else REAL
             params = (Param("a", t), Param("b", t), Param("t", REAL))
-            b = Builtin((t, t, REAL), t, _lerp, WHOLE if t == REAL else None)
+            b = Builtin((t, t, REAL), t, _lerp, UNBOUNDED if t == REAL else None)
         elif head == "scale":
             self.count(head, given, 1, 2, pos)
             params = tuple(Param(n, REAL) for n in ("sx", "sy")[: len(given)])
@@ -757,7 +757,7 @@ class _Compiler:
             if not nums:
                 raise CompileError(f"{head} of an empty list is undefined", node.pos)
             return _known(REAL, pick(nums))
-        rs = [r if r is not None else WHOLE for r in ranges]
+        rs = [r if r is not None else UNBOUNDED for r in ranges]
         for a in args:
             if a.known and isinstance(a.value, list) and a.value:
                 rs.append((float(min(a.value)), float(max(a.value))))
@@ -2276,6 +2276,8 @@ class _Compiler:
                 raise CompileError("an empty list needs its type: write list[T]", node.pos)
             return _known(ListT(item), [])
         items = [self.expr(i, item, scope) for i in node.items]
+        if any(e.type == RECURSING for e in items):
+            return Expr("list", RECURSING, tuple(items))
         t = item
         if t is None:
             t = items[0].type
@@ -2549,6 +2551,9 @@ class _Compiler:
         raise CompileError(f"a {obj.kind} has no attribute '{name}'", pos)
 
     def part_of(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
+        if e.type == RECURSING:
+            index = part if isinstance(part, str) else self.expr(part, None, scope)
+            return Expr("part", RECURSING, (e, index))
         if isinstance(part, str):
             if e.op == "obj":
                 return self.obj_attr(e.args[0], part, pos)
@@ -2643,7 +2648,9 @@ class _Compiler:
                 return self.call(self.model.funcs[head], node, scope)
         if head == "as":
             type_node, lit = self.args(node, 2)
-            if not _is_literal(lit):
+            # A list in brackets is a literal even when it holds expressions (type-system.md,
+            # section 3).
+            if not (_is_literal(lit) or isinstance(lit, ListLit)):
                 raise CompileError(
                     "as gives a type only to a literal, such as (as color 'gold')", node.pos
                 )
@@ -2669,7 +2676,15 @@ class _Compiler:
             # Folding a call takes only the branch it needs, so recursion ends at its base case.
             if c.known and self.folding:
                 return self.expr(args[1] if c.value else args[2], branch, scope)
-            a, b = (self.expr(x, branch, scope) for x in args[1:])
+            if branch is None and isinstance(args[1], ListLit) != isinstance(args[2], ListLit):
+                # With nothing outside to give a type, a literal list takes the other branch's.
+                lit = 1 if isinstance(args[1], ListLit) else 2
+                other = self.expr(args[3 - lit], None, scope)
+                hint = None if other.type == RECURSING else _maybe(_inner(other.type))
+                given = self.expr(args[lit], hint, scope)
+                a, b = (given, other) if lit == 1 else (other, given)
+            else:
+                a, b = (self.expr(x, branch, scope) for x in args[1:])
             if c.known:
                 return a if c.value else b
             return Expr(
@@ -2784,10 +2799,26 @@ class _Compiler:
                     break
                 if c.value:
                     return self.expr(clause.items[1], branch, scope)
-        for clause in reversed(clauses):
+        for clause in clauses:
             if not isinstance(clause, Form) or len(clause.items) != 2:
                 raise CompileError("a cond clause is (test value)", clause.pos)
-            v = self.expr(clause.items[1], branch, scope)
+        clauses = cast("list[Form]", clauses)
+        # With nothing outside to give a type, a literal list takes the other values' type, so the
+        # values that are not literal lists are compiled first.
+        values: dict[int, Expr] = {}
+        if branch is None and any(isinstance(cl.items[1], ListLit) for cl in clauses):
+            for k in reversed(range(len(clauses))):
+                if not isinstance(clauses[k].items[1], ListLit):
+                    values[k] = self.expr(clauses[k].items[1], None, scope)
+            known = [v for v in values.values() if v.type != RECURSING]
+            if known:
+                given = _maybe(_inner(known[0].type))
+                for k, cl in enumerate(clauses):
+                    if k not in values:
+                        values[k] = self.expr(cl.items[1], given, scope)
+        for k in reversed(range(len(clauses))):
+            clause = clauses[k]
+            v = values[k] if k in values else self.expr(clause.items[1], branch, scope)
             if _head(clause) == "else" and result is None:
                 result = v
                 continue
@@ -2857,7 +2888,8 @@ class _Compiler:
         ex = self.expr(x, _maybe(expected) if expected is not None else None, scope)
         ed = self.expr(d, expected if expected is not None else _inner(ex.type), scope)
         if ex.known:
-            return ed if ex.value is None else ex
+            # A value known when compiling is none or not; if not, its type has no none.
+            return ed if ex.value is None else replace(ex, type=_inner(ex.type))
         if not _may_be_none(ex.type):
             return ex
         t = _join(_inner(ex.type), ed.type, node.pos)
@@ -2972,7 +3004,7 @@ def _log_undefined(ranges) -> bool:
 
 
 def _lerp(a, b, t):
-    if isinstance(a, tuple):
+    if isinstance(a, (tuple, list)):
         return tuple(x + (y - x) * t for x, y in zip(a, b, strict=True))
     return a + (b - a) * t
 
@@ -3290,8 +3322,9 @@ def _range_of(op: str, ranges: Sequence[Range]) -> Range:
         return (min(0.0, b[0]), max(0.0, b[1]))
     if op == "^":
         return _power_range(ranges[0], ranges[1])
-    # Any other function gives its whole range (type-system.md, "What the compiler proves").
-    return WHOLE
+    # Any other function gives its whole range (type-system.md, "What the compiler proves"),
+    # which for a number with no limit of its own is ±10^150.
+    return UNBOUNDED
 
 
 def _power_range(base: tuple[float, float], exp: tuple[float, float]) -> Range:

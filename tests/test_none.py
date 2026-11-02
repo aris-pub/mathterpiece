@@ -159,3 +159,9 @@ class TestShapes:
     def test_a_radius_that_may_break_its_constraint_makes_the_shape_absent(self):
         model("(scene s (real k 1) (circle|none o (r k)))")
         error("(scene s (real k 1) (circle o (r k)))", r"r may break \(>= 0\)")
+
+
+def test_or_on_a_value_known_when_compiling_is_not_none():
+    # mtp-62j: (top 2) is known when compiling, so or? gives it its default only if it is none.
+    m = model("(func top ((real k)) (/ 6 k)) (real z (or? (top 2) 0))")
+    assert m.get("z").value.value == 3

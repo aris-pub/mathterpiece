@@ -128,3 +128,15 @@ class TestFunctionsAsValues:
             "(func double (real x) (* 2 x)) (func[real real] f double)",
             "a variable cannot hold a function",
         )
+
+
+class TestRecursiveResults:
+    # mtp-1jo: inside a recursive function, its own call's result has the type of its other
+    # branches.
+    def test_reading_the_result_of_the_recursive_call(self):
+        m = model(
+            "(func f ((int n)) (if (<= n 0) (as point [0 0])"
+            " (let ((r (f (- n 1)))) (as point [(+ r.x 1) r[1]]))))"
+            " (point q (f 3))"
+        )
+        assert tuple(m.get("q").value.value) == (3, 0)
