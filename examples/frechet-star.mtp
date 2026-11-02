@@ -22,10 +22,8 @@
 (func dist-in-star ((int i) (int j)) (cond ((= i j) 0) ((or (= i 0) (= j 0)) 1) (else 2)))
 
 ; The Fréchet coordinates of points a and b, one row each, with a column per point. A cell where
-; the two rows differ is marked, in coral for two leaves and teal otherwise. The color is chosen
-; here, not passed in, so that it stays the page's token.
-(motif rows ((int a 0 (const)) (int b 1 (const)) (real left 250))
-  (color mark (if (and (> a 0) (> b 0)) coral teal))
+; the two rows differ is marked in the color mark.
+(motif rows ((int a 0 (const)) (int b 1 (const)) (real left 250) (color mark '#1a6f66'))
   (repeat 5 q
     (text_ names[q] (pos [(+ left 16 (* 32 q)) -60]) (halign 'middle') (font note) (fill muted)))
   (repeat 2 row
@@ -62,7 +60,7 @@
 
   ; F(c) = (0, 1, 1, 1, 1) and F(u₁) = (1, 0, 2, 2, 2): all five entries differ, by 1.
   (group center-and-leaf (fill muted)
-    (rows_ (a 0) (b 1) (left 250))
+    (rows_ (a 0) (b 1) (left 250) (mark teal))
     (text_ 'differ by 1 in all n coordinates:' (pos [302 -160]) (halign 'middle') (font note))
     (text_ '‖F(c) − F(u₁)‖ = √n' (pos [302 -178]) (halign 'middle') (font note))
     (text_ '(b) center and leaf, distance 1' (pos [302 -215]) (halign 'middle') (font note)))
@@ -70,7 +68,7 @@
   ; F(u₁) = (1, 0, 2, 2, 2) and F(u₂) = (1, 2, 0, 2, 2): they differ, by 2, in the u₁ and u₂
   ; entries, and agree elsewhere.
   (group two-leaves (fill muted)
-    (rows_ (a 1) (b 2) (left 500))
+    (rows_ (a 1) (b 2) (left 500) (mark coral))
     (text_ 'differ by 2 in two coordinates:' (pos [552 -160]) (halign 'middle') (font note))
     (text_ '‖F(u₁) − F(u₂)‖ = 2√2' (pos [552 -178]) (halign 'middle') (font note))
     (text_ '(c) two leaves, distance 2' (pos [552 -215]) (halign 'middle') (font note))))
