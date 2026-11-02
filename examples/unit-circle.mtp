@@ -26,12 +26,6 @@
   (background paper)
   (real theta 40)
 
-  ; Where the tangent line at the point meets the x axis (at sec theta) and the y axis (at csc
-  ; theta). At 90 and 270 degrees it never meets the x axis, and at 0 and 180 never the y axis:
-  ; there these are none, and the lines and names that need them are not drawn.
-  (real|none sec-x (secd theta))
-  (real|none csc-y (cscd theta))
-
   (circle handle (pos (polar 1 theta)) (r 0.04) (fill ink))
 
   ; Which side of each axis the point is on: names along an axis go on the other side, away
@@ -53,8 +47,7 @@
   ; The names sit beside their lines, centered on the spot given.
   (group cosine (stroke accent) (fill accent)
     (line across (from [0 0]) (to [handle.x 0]) (stroke-width 3.84))
-    (text _ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
-      (font small))
+    (text _ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle') (font small))
     (text xs $'cos = {(cosd theta):+z.3f}' (pos [-2.05 0.78]) (font number)))
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
@@ -65,6 +58,10 @@
       (pos [(+ handle.x (* 0.12 right (if (< (abs handle.x) 0.45) 1 -1))) (/ handle.y 2)])
       (halign 'middle') (valign 'middle') (font small))
     (text ys $'sin = {(sind theta):+z.3f}' (pos [-2.05 0.67]) (font number)))
+
+  ; Where the tangent line at the point meets the x axis: at sec theta. At 90 and 270 degrees it
+  ; never does: there this is none, and the lines and names that need it are not drawn.
+  (real|none sec-x (secd theta))
 
   ; The tangent line at the point, split where it touches the circle: from the point to the
   ; x axis is tan theta long, and along the x axis from the center, sec theta. The tangent is at
@@ -87,6 +84,9 @@
       (halign 'middle') (valign 'middle') (font small))
     (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
       (pos [-2.05 0.43]) (font number)))
+
+  ; Where the tangent line meets the y axis: at csc theta, none at 0 and 180 degrees.
+  (real|none csc-y (cscd theta))
 
   ; From the point to the y axis is cot theta long, and along the y axis, csc theta.
   (group cotangent (stroke warm) (fill warm)
