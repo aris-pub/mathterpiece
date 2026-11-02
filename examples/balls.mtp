@@ -4,7 +4,7 @@
 ; radius r of the two balls. Click a point to make it x or y (the older of the two is replaced),
 ; move the slider to change r, or press play to grow the balls from 0 to δ/2.
 ; Coordinates are the original SVG's, with y pointing up. The 32 points are drawn at random
-; each time the page loads, in the four clusters the original draws them in.
+; each time the page loads, uniformly over a square.
 
 (color fg '#1f2328')
 (color muted '#6b7280')
@@ -41,20 +41,11 @@
 (func in-ball ((point center) (real radius) (point p)) (<= (dist center p) (+ radius 1e-9)))
 
 (scene balls
-  ; The four clusters, as boxes: points 0 to 8 fall in the first, 9 to 16 in the second, 17 to
-  ; 24 in the third, and 25 to 31 in the fourth.
-  (list left [150 351 206 404] (const))
-  (list right [231 427 357 450] (const))
-  (list bottom [-160 -157 -260 -247] (const))
-  (list top [-113 -70 -206 -216] (const))
-
   ; Where the 32 points are. These are not drawn: the points in space sit on them, and x and y
   ; are read from them, so they come first.
   (group spots
     (repeat 32 i
-      (circle _
-        (pos (let ((c (cond ((< i 9) 0) ((< i 17) 1) ((< i 25) 2) (else 3))))
-               [(rand left[c] right[c]) (rand bottom[c] top[c])])))))
+      (circle _ (pos [(rand 170 430) (rand -290 -30)]))))
 
   ; x-from and the rest stay within 0 to 31, so these are never none, but the compiler cannot
   ; know that.
