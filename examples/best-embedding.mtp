@@ -58,16 +58,16 @@
 
 (animation optimum
   (at-once (default-duration 0.8) (default-ease 'ease-in-out')
-    (c.pos (to [0 0]))
-    (u.pos (to (polar 1 90)))
-    (v.pos (to (polar 1 210)))
-    (w.pos (to (polar 1 330)))))
+    (transit _ c.pos (to [0 0]))
+    (transit _ u.pos (to (polar 1 90)))
+    (transit _ v.pos (to (polar 1 210)))
+    (transit _ w.pos (to (polar 1 330)))))
 (animation on-a-line
   (at-once (default-duration 0.8) (default-ease 'ease-in-out')
-    (c.pos (to [0 0]))
-    (u.pos (to [-1 0]))
-    (v.pos (to [1 0]))
-    (w.pos (to [2 0]))))
+    (transit _ c.pos (to [0 0]))
+    (transit _ u.pos (to [-1 0]))
+    (transit _ v.pos (to [1 0]))
+    (transit _ w.pos (to [2 0]))))
 
 (button best (animation optimum) (label 'show the optimum'))
 (button line (animation on-a-line) (label 'collapse onto a line'))

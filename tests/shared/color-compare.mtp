@@ -10,7 +10,7 @@
 (func tint (real t (>= 0) (<= 1)) (mix 'red' 'red' t))
 (func f (real t (>= 0) (<= 1)) (let ((c (mix 'red' 'red' t))) (= c 'red')))
 (scene s (circle dot (fill 'red')) (circle blue-dot (fill 'blue')))
-(button b (animation (k (to 0) (duration 0))))
+(button b (animation (transit _ k (to 0) (duration 0))))
 (bool a (is-red dot))
 (bool b2 (is-red blue-dot))
 (bool c (= (tint k) 'red'))

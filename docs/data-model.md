@@ -68,7 +68,7 @@ flowchart LR
     vars["variables: (real …) (color …) (bool …)"]
     subgraph globals
       funcs["functions: (func …)"]
-      trans["transitions: (transition …)"]
+      trans["transitions: (transit …)"]
       anims["animations: (animation …)"]
     end
     subgraph page
@@ -108,7 +108,7 @@ Every variable, and every attribute of a mutable object, is either **free** or *
 
     (real k 1)                     ; free: a slider may write it
     (circle c (r (* 2 k)))         ; c.r is bound: it is always twice k
-    (slider s (animation (k (to 3))))
+    (slider s (transit _ k (from 0) (to 3)))
 
 So every change starts at something free, and spreads to everything bound to it: when the slider writes `k`, `c.r` follows at once, and so does anything that reads `c.r`. The runtime recomputes only what reads what changed. A free variable with the `const` constraint can never be written, so it is known when compiling and costs nothing while drawing.
 
@@ -129,7 +129,7 @@ flowchart LR
 ```
 
 - **Change only enters through writers.** When the reader acts, a control or a listener runs an animation, and the animation writes free variables and attributes over time, frame by frame. A drag writes its target directly, and so does a toggle.
-- **An animation is made of steps.** A step is one of the items an animation lists: a move (`(k (to 3) (duration 1))`, which moves `k` along a transition given by its items, or `(k slide)`, along the transition named `slide`), a `(wait seconds)`, an `(at-once step…)` or an `(in-order step…)`, which group steps, or the name of another animation, which runs its steps there. Steps written in a row run one after another. Its top-level steps are the steps it lists, or, when it lists a single `in-order`, that `in-order`'s steps; a play shows one button for each.
+- **An animation is made of transits.** A transition is a trajectory: where a value starts, where it ends, the way between, how long it takes and how it speeds up. The form `transit` makes one, and says what it moves, its target, a variable or an attribute, or `none` for a pure transition that keeps only the trajectory. An animation's body holds transits, `at-once` and `in-order` forms, which run what they hold together or one after another, and the names of animations and transits; items written in a row run one after another. A transit whose target is `none` writes nothing, so in an animation it only waits. A play shows one button per item of its animation's body (per item of the `in-order`, when the body is a single one).
 - **Bound variables and attributes follow at once.** The compiler knows what every expression reads, so after a write the runtime recomputes only what depends on it, and the views redraw. Nothing has to be told to update.
 - **Writes respect types.** A write that breaks a constraint is brought into it (clamped, rounded or held). This is the one case where a real becomes an int without being asked: a write into an int is rounded. A `const` variable is never written at all.
 

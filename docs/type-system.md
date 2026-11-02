@@ -21,6 +21,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
     - `point` (two reals, `x` and `y`)
     - `list[T]`, `transform`
     - functions (eases, paths), `transition`, `animation`
+    - `name`
     - `none`
   - **mutable object** (can change)
     - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group`, motif instances (`dial`, …), variants; each satisfies `shape`
@@ -30,6 +31,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
       - control: `slider`, `button`, `play`, `toggle`
       - listener: `on-drag`, `on-click`
 
+- **A name** holds a variable or an attribute without evaluating it: `k`, `p.r`, `g[1].r`, `d.c.pos`. A name is declared once and never changes, so it is always known when compiling. A transit's target is a `name|none`.
 - **Numbers** come in four types: `int`, `ratio` (exact fractions such as `1/3`), `real` and `complex`.
 - **A point** is its own type: two reals, read as `x` and `y` or by position, `p[0]`. **A list**, `list[T]`, holds items of one type T; like a Python tuple, the list itself never changes, though the objects it holds may.
 - **Functions, transitions and animations** are values too: an ease is a function from 0..1 to a real, `func[real real]`; a path is a function of the two ends and the progress, `func[T T real T]`; a transition is a trajectory. A transition's ends may be expressions: the transition itself never changes, and its ends are read once, when a move along it starts. A function's type lists its inputs, then its result: `func[real real]` takes a real and gives a real. Its result is never written in its declaration; the compiler works it out from the body.
@@ -121,7 +123,7 @@ A constraint narrows a type to some of its values. Constraints are written after
 A value known when compiling that breaks a constraint is a compile error. A bound value that breaks one while drawing is `none` (section 5.c), so unless the compiler can prove the expression stays within the constraint, the value may be `none` and must be handled like any other `none`: the variable declared `T|none`, or the expression given a default with `or?`. A write while drawing (from a slider, a drag or an animation) is brought into the constraint: a range is **clamped** to its nearest end (a strict bound such as `(> 0)` has no nearest allowed value, so a write that breaks it is skipped), an `int` is **rounded** (after clamping, to the nearest int inside the range), and a fixed choice **holds** its last valid value. An argument passed to a constrained parameter, and an item of a list with constrained items, follow the rule for bound values: unless the compiler can prove they fit, it is a compile error. A write that changes nothing is skipped, so nothing downstream is recomputed.
 
     (real p 0.5 (>= 0) (<= 1))
-    (slider s (animation (p (to 1.4))))   ; p stops at exactly 1
+    (slider s (transit _ p (from 0) (to 1.4)))   ; p stops at exactly 1
     (int n 8 (const))                                   ; known when compiling: usable as a repeat count
 
 ### 5.c Broadening (none, more later)
@@ -262,7 +264,7 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | variant instances | their parameters, and every attribute of their base, `b1.p`, `b1.x` |
 | font | `family`, `style`, `weight`, `size` |
 | slider | `label`, `position` (0 to 1), `step` (the number of positions its knob stops at, if given) |
-| play | `label`, `step` (the step of the animation now playing), `playing`, `buttons` |
+| play | `label`, `step` (which item of its animation's body is now playing), `playing`, `buttons` |
 | button, toggle | `label`; a toggle's `value` |
 | readout | `value` (its string), `font` |
 | canvas | `view-x`, `view-y`, `view-width`, `view-height`, `pan`, `zoom` |

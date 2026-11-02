@@ -1,6 +1,6 @@
 ; Why sunflowers use the golden angle. Seed i sits at radius (sqrt i), turned i times an angle.
 ; Simple fractions of a turn line the seeds up in spokes and leave gaps; the golden angle,
-; the most irrational turn there is, packs them evenly. Press play for the tour, pick a step,
+; the most irrational turn there is, packs them evenly. Press play for the tour, pick a stop,
 ; or drag the angle yourself.
 
 (color night '#0b1026')
@@ -45,36 +45,35 @@
 ; that the flower blurs.
 (animation quarter
   (at-once (default-duration 16) (default-ease 'ease-in-out')
-    (sunflower.angle (to 90))
-    (stop-name (to 'a quarter turn'))
-    (halo.fill (to none))))
+    (transit _ sunflower.angle (to 90))
+    (transit _ stop-name (to 'a quarter turn'))
+    (transit _ halo.fill (to none))))
 (animation third
   (at-once (default-duration 10) (default-ease 'ease-in-out')
-    (sunflower.angle (to 120))
-    (stop-name (to 'a third of a turn'))
-    (halo.fill (to none))))
+    (transit _ sunflower.angle (to 120))
+    (transit _ stop-name (to 'a third of a turn'))
+    (transit _ halo.fill (to none))))
 (animation two-fifths
   (at-once (default-duration 8) (default-ease 'ease-in-out')
-    (sunflower.angle (to 144))
-    (stop-name (to 'two fifths of a turn'))
-    (halo.fill (to none))))
+    (transit _ sunflower.angle (to 144))
+    (transit _ stop-name (to 'two fifths of a turn'))
+    (transit _ halo.fill (to none))))
 (animation golden
   (at-once (default-duration 6) (default-ease 'ease-out')
-    (sunflower.angle (to golden-angle))
-    (stop-name (to 'the golden angle'))
-    (halo.fill (to gold))))
+    (transit _ sunflower.angle (to golden-angle))
+    (transit _ stop-name (to 'the golden angle'))
+    (transit _ halo.fill (to gold))))
 
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
   (animation
-    (in-order quarter (wait 2.5))
-    (in-order third (wait 2.5))
-    (in-order two-fifths (wait 2.5))
+    (in-order quarter (transit _ none (duration 2.5)))
+    (in-order third (transit _ none (duration 2.5)))
+    (in-order two-fifths (transit _ none (duration 2.5)))
     golden))
 
 (canvas view garden)
-(slider angle (label 'angle')
-  (animation (sunflower.angle (from 80) (to 180) (duration 1))))
+(slider angle (transit _ sunflower.angle (from 80) (to 180)) (label 'angle'))
 
 ; Clicking the flower takes it to the golden angle, as the last stop of the tour does.
 (on-click sunflower (animation golden))

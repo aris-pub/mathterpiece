@@ -55,13 +55,14 @@ class TestValues:
 
 class TestTransitionsAndAnimations:
     def test_a_transitions_parts(self):
-        src = "(real k) (transition t (to 5) (duration 2)) (animation a (k t) (wait 1))"
+        src = "(real k) (transit t none (to 5) (duration 2))"
+        src += " (animation a (transit _ k (like t)) (transit _ none (duration 1)))"
         assert value(f"{src} (real d t.duration)", "d") == 2
         assert value(f"{src} (real d a.duration)", "d") == 3
 
     def test_at_once_takes_the_longest(self):
-        move = "(k (to 1) (duration 2))"
-        src = f"(real k) (animation a (at-once {move} (wait 3)))"
+        move = "(transit _ k (to 1) (duration 2))"
+        src = f"(real k) (animation a (at-once {move} (transit _ none (duration 3))))"
         assert value(f"{src} (real d a.duration)", "d") == 3
 
 

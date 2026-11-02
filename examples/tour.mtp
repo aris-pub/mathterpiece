@@ -1,5 +1,5 @@
 ; A guided tour through the times tables. Press play to watch the cardioid turn into a nephroid
-; and then into a curve with eight cusps, or pick a step, or drag the slider at any time.
+; and then into a curve with eight cusps, or pick a stop, or drag the slider at any time.
 
 (color slate '#0e1726')
 (color chalk '#e8e4d8')
@@ -29,26 +29,26 @@
 ; Each stop of the tour moves the multiplier, the color of the chords and the caption together.
 (animation cardioid
   (at-once (default-duration 3) (default-ease 'ease-in-out')
-    (table.m (to 2))
-    (table.stroke (to '#ffb703'))
-    (curve (to 'cardioid'))))
+    (transit _ table.m (to 2))
+    (transit _ table.stroke (to '#ffb703'))
+    (transit _ curve (to 'cardioid'))))
 (animation nephroid
   (at-once (default-duration 3) (default-ease 'ease-in-out')
-    (table.m (to 3))
-    (table.stroke (to '#8ecae6'))
-    (curve (to 'nephroid'))))
+    (transit _ table.m (to 3))
+    (transit _ table.stroke (to '#8ecae6'))
+    (transit _ curve (to 'nephroid'))))
 (animation eight-cusps
   (at-once (default-duration 4) (default-ease 'ease-in-out')
-    (table.m (to 9))
-    (table.stroke (to '#f4978e'))
-    (curve (to 'eight cusps'))))
+    (transit _ table.m (to 9))
+    (transit _ table.stroke (to '#f4978e'))
+    (transit _ curve (to 'eight cusps'))))
 
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
   (animation
-    (in-order cardioid (wait 1))
-    (in-order nephroid (wait 1))
+    (in-order cardioid (transit _ none (duration 1)))
+    (in-order nephroid (transit _ none (duration 1)))
     eight-cusps))
 
 (canvas cnv board)
-(slider times (label 'times') (animation (table.m (from 2) (to 12) (duration 1))))
+(slider times (transit _ table.m (from 2) (to 12)) (label 'times'))

@@ -1,5 +1,5 @@
 (bool show false)
 (scene s (circle c) (circle d))
-(canvas v (transition (duration 1)) c (when show d))
+(canvas v (transit _ none (duration 1)) c (when show d))
 (canvas still c (when show d))
 (canvas stack (when show d) c)

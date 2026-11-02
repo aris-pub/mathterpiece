@@ -8,7 +8,8 @@ from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, ComponentT
 
 K = "(real k 0 (>= 0) (<= 10))"
-MOVE = "(animation (k (to 5) (duration 1)))"
+MOVE = "(animation (transit _ k (to 5) (duration 1)))"
+SLIDE = "(transit _ k (from 0) (to 5))"
 
 
 def model(src):
@@ -22,13 +23,13 @@ def error(src, match):
 
 class TestControls:
     def test_a_slider(self):
-        s = model(f"{K} (slider s {MOVE} (step 5) (label 'size'))").get("s")
+        s = model(f"{K} (slider s {SLIDE} (step 5) (label 'size'))").get("s")
         assert (s.kind, s.type, s.access) == ("slider", ComponentT("slider"), "page")
         assert s.attrs["step"].value == 5 and s.attrs["label"].value == "size"
         assert s.attrs["position"].value == 0
 
     def test_a_slider_step_is_at_least_two(self):
-        error(f"{K} (slider s {MOVE} (step 1))", r"breaks \(>= 2\)")
+        error(f"{K} (slider s {SLIDE} (step 1))", r"breaks \(>= 2\)")
 
     def test_play(self):
         p = model(f"{K} (play p {MOVE} (buttons true))").get("p")
@@ -82,7 +83,7 @@ class TestListeners:
         "control",
         [
             f"(button b {MOVE} (when (> k 1)))",
-            f"(slider b {MOVE} (when (> k 1)))",
+            f"(slider b {SLIDE} (when (> k 1)))",
             f"(play b {MOVE} (when (> k 1)))",
             "(toggle b (when (> k 1)))",
         ],
@@ -139,16 +140,16 @@ class TestViews:
 
 class TestAccess:
     def test_reading_a_control_gives_page_access(self):
-        m = model(f"{K} (slider s {MOVE}) (real p s.position)")
+        m = model(f"{K} (slider s {SLIDE}) (real p s.position)")
         assert m.get("p").access == "page"
         assert m.get("k").access == "scene"
 
     def test_the_scene_never_reads_page_access(self):
         error(
-            f"{K} (slider s {MOVE}) (scene sc (circle c (r s.position)))", "the scene cannot read"
+            f"{K} (slider s {SLIDE}) (scene sc (circle c (r s.position)))", "the scene cannot read"
         )
         error(
-            f"{K} (slider s {MOVE}) (real p s.position) (scene sc (circle c (r p)))",
+            f"{K} (slider s {SLIDE}) (real p s.position) (scene sc (circle c (r p)))",
             "the scene cannot read",
         )
 

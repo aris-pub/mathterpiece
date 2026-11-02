@@ -10,7 +10,7 @@
 ; expect r2 "shown"
 (real k 0 (>= 0))
 (scene s (circle c (r k)))
-(button b (animation (k (to 0) (duration 0))))
+(button b (animation (transit _ k (to 0) (duration 0))))
 (toggle show)
 (bool big (> k 1))
 (bool on (= show.value true))

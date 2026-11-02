@@ -38,7 +38,8 @@
 
 ; Whether p is in the ball of the given radius around center. Distances are computed, so a point
 ; at exactly the radius is let in by a hair more.
-(func in-ball ((point center) (real radius) (point p)) (<= (dist center p) (+ radius 1e-9)))
+(func in-ball ((point center) (real radius) (point p))
+  (<= (dist center p) (+ radius 1e-9)))
 
 (scene balls
   ; Where the 32 points are. These are not drawn: the points in space sit on them, and x and y
@@ -133,18 +134,18 @@
 ; through the points in between.
 (repeat 32 i
   (on-click space[i] (animation (default-duration 0.4) (at-once
-    (x-from (to (if replace-x x-to x-from)) (ease (step 1)))
-    (y-from (to (if replace-x y-from y-to)) (ease (step 1)))
-    (x-to (to (if replace-x i x-to)) (ease (step 1)))
-    (y-to (to (if replace-x y-to i)) (ease (step 1)))
-    (x-t (from (if replace-x 0 x-t)) (to 1))
-    (y-t (from (if replace-x y-t 0)) (to 1))
-    (share (to 1))
-    (replace-x (to (not replace-x)) (duration 0))))))
+    (transit _ x-from (to (if replace-x x-to x-from)) (ease (step 1)))
+    (transit _ y-from (to (if replace-x y-from y-to)) (ease (step 1)))
+    (transit _ x-to (to (if replace-x i x-to)) (ease (step 1)))
+    (transit _ y-to (to (if replace-x y-to i)) (ease (step 1)))
+    (transit _ x-t (from (if replace-x 0 x-t)) (to 1))
+    (transit _ y-t (from (if replace-x y-t 0)) (to 1))
+    (transit _ share (to 1))
+    (transit _ replace-x (to (not replace-x)) (duration 0))))))
 
-(slider radius (animation (share (from 0) (to 1) (duration 1))) (label 'r'))
+(slider radius (transit _ share (from 0) (to 1)) (label 'r'))
 
-(play grow (animation (share (from 0) (to 1) (duration 3.6) (ease 'linear'))))
+(play grow (animation (transit _ share (from 0) (to 1) (duration 3.6) (ease 'linear'))))
 
 (readout note
   (let ((cx (count space (fn p (in-ball x.pos r p.pos))))

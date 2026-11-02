@@ -1,6 +1,6 @@
 ; A tour of what the runtime does.
 ; Try: move the angle slider; drag the red point around the circle (it changes the angle);
-; drag the blue square anywhere; press "grow the square"; press play, and its step buttons;
+; drag the blue square anywhere; press "grow the square"; press play, and its numbered buttons;
 ; untick "show the angle" (the label fades out); click the gold sun (the square shrinks).
 (real angle 30 (>= 0) (<= 360))
 (real size 1 (>= 0.2) (<= 3))
@@ -15,17 +15,17 @@
   (rect box (pos [-5 5]) (width size) (height size) (fill 'royalblue'))
   (circle sun (pos [5 5]) (r 0.7) (fill 'gold'))
   (text label $'{angle:.0f}°' (pos [0 -1]) (halign 'middle') (font label-font)))
-(slider turn (animation (angle (from 0) (to 360) (duration 1))) (label 'angle'))
+(slider turn (transit _ angle (from 0) (to 360)) (label 'angle'))
 (button grow
-  (animation (size (to 3) (duration 1) (ease 'ease-in-out'))
-             (size (to 1) (duration 1)))
+  (animation (transit _ size (to 3) (duration 1) (ease 'ease-in-out'))
+             (transit _ size (to 1) (duration 1)))
   (label 'grow the square'))
-(play spin (animation (default-duration 2) (angle (to 360)) (angle (to 0)))
+(play spin (animation (default-duration 2) (transit _ angle (to 360)) (transit _ angle (to 0)))
   (buttons true))
 (toggle show (target show-angle) (label 'show the angle'))
 (readout r $'angle = {angle:.1f}°')
-(canvas view (view-x -7) (view-y -7) (view-width 14) (view-height 14) (transition (duration 0.5))
+(canvas view (view-x -7) (view-y -7) (view-width 14) (view-height 14) (transit _ none (duration 0.5))
   track radius point box sun (when show-angle label))
 (on-drag point (target angle))
 (on-drag box (target box.pos))
-(on-click sun (animation (size (to 0.2) (duration 0.5))))
+(on-click sun (animation (transit _ size (to 0.2) (duration 0.5))))

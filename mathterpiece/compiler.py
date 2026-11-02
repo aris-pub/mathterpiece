@@ -84,7 +84,7 @@ from mathterpiece.types import (
 )
 
 RESERVED = frozenset(
-    "scene animation transition wait in-order at-once when else true false none const self".split()
+    "scene animation transit in-order at-once when else true false none const self".split()
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
@@ -304,8 +304,8 @@ class _Compiler:
             return self.variant_decl(form)
         if head == "func":
             return self.func_decl(form)
-        if head == "transition":
-            self.transition(form, {}, named=True)
+        if head == "transit":
+            self.transit(form, {}, top=True)
             return
         if head == "animation":
             self.animation(form, {}, named=True)
@@ -1037,27 +1037,52 @@ class _Compiler:
 
     # Transitions, animations and writers ---------------------------------------------------
 
-    def transition(self, form: Form, scope: dict, named: bool) -> int:
-        """A transition: a trajectory with ends, a duration, an ease and a path. Its ends are
-        typed by the first attribute it moves (type_ends)."""
-        if named:
-            name, pos = self.name_of(form)
-            items = form.items[2:]
+    def transit(self, form: Form, scope: dict, top: bool) -> int:
+        """(transit name target item…): a transition, with what it moves, or none for a pure one
+        that keeps only the trajectory (reference.md, "Transitions and animations")."""
+        if len(form.items) < 3:
+            raise CompileError("a transit is (transit name target item…)", form.pos)
+        if top:
+            name, pos = self.name_of(form, scope)
         else:
-            if len(form.items) > 1 and not isinstance(form.items[1], Form):
-                raise CompileError("a transition written as an item has no name", form.pos)
-            name, pos, items = None, form.pos, form.items[1:]
+            node = form.items[1]
+            if not (isinstance(node, NoneLit) or (isinstance(node, Name) and node.parts == ("_",))):
+                raise CompileError(
+                    "a transit written inside another form has no name: write _", node.pos
+                )
+            name, pos = None, form.pos
+        tnode = form.items[2]
+        target = None
+        if not isinstance(tnode, NoneLit):
+            if not isinstance(tnode, Name):
+                raise CompileError(
+                    "a transit's target is a variable or an attribute, or none", tnode.pos
+                )
+            target = self.writable(tnode, scope)
         obj = Obj("transition", name, TRANSITION, pos=pos)
-        ends = {}
-        for item in items:
+        ends: dict = {}
+        given: set[str] = set()
+        for item in form.items[3:]:
             head = _head(item)
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
-                raise CompileError(f"expected a part such as (to 1), got {item}", item.pos)
-            if head in obj.attrs or head in ends:
-                raise CompileError(f"'{head}' is given twice", item.pos)
+                raise CompileError(f"expected an argument such as (to 1), got {item}", item.pos)
             arg = item.items[1]
+            if head == "like":
+                # The named transit's arguments, under the ones this transit gives itself: they
+                # fill only what is not given, wherever (like …) is written.
+                if not isinstance(arg, Name):
+                    raise CompileError("like takes the name of a transit", arg.pos)
+                base = self.model.objects[self.named(arg, "transition")]
+                for k, v in base.attrs.items():
+                    obj.attrs.setdefault(k, v)
+                for k, v in base.data["ends"].items():
+                    ends.setdefault(k, v)
+                continue
+            if head in given:
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            given.add(head)
             if head in ("from", "to"):
-                ends[head] = arg
+                ends[head] = (arg, scope)
             elif head == "duration":
                 obj.attrs["duration"] = Attribute(REAL, self.seconds(arg, scope))
             elif head == "ease":
@@ -1065,9 +1090,12 @@ class _Compiler:
             elif head == "path":
                 obj.attrs["path"] = self.path(arg, scope)
             else:
-                raise CompileError(f"a transition takes no part '{head}'", item.pos)
-        obj.data = {"ends": ends, "scope": scope, "end": None}
-        return self.add(obj)
+                raise CompileError(f"a transit takes no argument '{head}'", item.pos)
+        obj.data.update({"ends": ends, "end": None, "target": target})
+        i = self.add(obj)
+        if target is not None:
+            self.type_ends(i, target[2], tnode.pos)
+        return i
 
     def seconds(self, node: Node, scope: dict) -> float:
         e = self.expr(node, REAL, scope)
@@ -1122,8 +1150,8 @@ class _Compiler:
                 raise CompileError(f"this transition already moves a {obj.data['end']}", pos)
             return
         target = _loose(t) if t is not None else None
-        for end, node in obj.data["ends"].items():
-            e = self.expr(node, _maybe(target) if target is not None else None, obj.data["scope"])
+        for end, (node, scope) in obj.data["ends"].items():
+            e = self.expr(node, _maybe(target) if target is not None else None, scope)
             if _may_be_none(e.type) and target != Maybe(COLOR):
                 raise CompileError(
                     "this end may be none: give it a default with (or? value default)", node.pos
@@ -1173,40 +1201,46 @@ class _Compiler:
             if head in ("default-duration", "default-ease"):
                 continue
             if isinstance(item, Name):
-                # A named animation runs its steps in place.
-                out.append(self.model.objects[self.named(item, "animation")].data["steps"])
-            elif head == "wait":
-                out.append(("wait", self.seconds(self.args(item, 1)[0], scope)))
+                # A name stands for the animation or transit it names.
+                name = item.parts[0] if len(item.parts) == 1 else None
+                i = self.model.names.get(name) if isinstance(name, str) else None
+                if i is None or self.model.objects[i].kind not in ("animation", "transition"):
+                    raise CompileError("expected the name of an animation or a transit", item.pos)
+                if self.model.objects[i].kind == "animation":
+                    out.append(self.model.objects[i].data["steps"])
+                else:
+                    out.append(self.move(i, duration, ease, item.pos))
+            elif head == "transit":
+                assert isinstance(item, Form)
+                out.append(
+                    self.move(self.transit(item, scope, top=False), duration, ease, item.pos)
+                )
             elif head in ("at-once", "in-order"):
+                assert isinstance(item, Form)
                 out.append((head, *self.steps(item.items[1:], duration, ease, scope)))
             else:
-                out.append(self.move(item, duration, ease, scope))
+                raise CompileError("an animation holds transits, at-once and in-order", item.pos)
         return out
 
-    def move(self, item: Node, duration, ease, scope: dict) -> tuple:
-        if not isinstance(item, Form) or len(item.items) < 2 or not isinstance(item.items[0], Name):
-            raise CompileError("expected a step such as (k (to 1))", item.pos)
-        i, attr, t = self.writable(item.items[0], scope)
-        parts = item.items[1:]
-        node = parts[0]
-        # Inside a step the transition is implied: the step gives its items, or names one.
-        if len(parts) == 1 and isinstance(node, Name):
-            tid = self.named(node, "transition")
-        elif _head(node) == "transition":
-            raise CompileError(
-                "a step's transition is implied: write its items directly, as in (k (to 1))",
-                node.pos,
-            )
-        else:
-            tid = self.transition(
-                Form((Name(("transition",), item.pos), *parts), item.pos), scope, named=False
-            )
-        self.type_ends(tid, t, node.pos)
+    def move(self, tid: int, duration, ease, pos: Pos) -> tuple:
+        """What a transit does inside an animation: it moves its target, or, with none, waits."""
         tr = self.model.objects[tid]
+        target = tr.data["target"]
         d = tr.attrs["duration"].value if "duration" in tr.attrs else duration
+        if target is None:
+            if tr.data["ends"] or "ease" in tr.attrs or "path" in tr.attrs:
+                raise CompileError(
+                    "a transit with no target waits, so it takes only a duration", pos
+                )
+            if d is None:
+                raise CompileError(
+                    "this wait needs a duration (or a default-duration around it)", pos
+                )
+            return ("wait", d)
+        i, attr, t = target
         if d is None:
             raise CompileError(
-                "this transition needs a duration (or a default-duration around it)", node.pos
+                "this transit needs a duration (or a default-duration around it)", pos
             )
         own = tr.attrs.get("ease")
         e = _ease_value(own) if own is not None else ease
@@ -1227,7 +1261,7 @@ class _Compiler:
                 raise CompileError(
                     f"an ease for a {discrete} takes only the values 0 and 1; by default it"
                     " changes at the start of its move and holds",
-                    node.pos,
+                    pos,
                 )
             if not _is_step_ease(e):
                 e = ("step", 1)
@@ -1325,7 +1359,9 @@ class _Compiler:
                 items, lambda it: not isinstance(it, Name) and _head(it) != "when", kind
             )
         elif kind != "readout":
-            self.options_first(items, lambda it: _head(it) in WRITER_OPTIONS, kind)
+            # A slider's first item is its transit, a positional argument.
+            body = items[1:] if kind == "slider" else items
+            self.options_first(body, lambda it: _head(it) in WRITER_OPTIONS, kind)
         build = getattr(self, "build_" + kind.replace("-", "_"))
         build(obj, list(items), shape)
         self.add(obj)
@@ -1398,7 +1434,39 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_slider(self, obj: Obj, items: list, shape) -> None:
-        written = self.animated(obj, items)
+        # A slider's transit is the path its knob scrubs: the reader gives the speed, so it has
+        # no duration and no ease, and both ends are fixed (reference.md, "Controls").
+        if not items or not (_head(items[0]) == "transit" or isinstance(items[0], Name)):
+            raise CompileError("a slider is (slider name transit item…)", obj.pos)
+        node = items.pop(0)
+        if isinstance(node, Name):
+            tid = self.named(node, "transition")
+        else:
+            assert isinstance(node, Form)
+            tid = self.transit(node, self.cscope, top=False)
+        tr = self.model.objects[tid]
+        if tr.data["target"] is None:
+            raise CompileError("a slider's transit needs a target", node.pos)
+        for part in ("duration", "ease"):
+            if part in tr.attrs:
+                raise CompileError(
+                    f"a slider's transit takes no {part}: the reader moves the knob", node.pos
+                )
+        if "from" not in tr.data["ends"] or "to" not in tr.data["ends"]:
+            raise CompileError("a slider's transit needs both (from …) and (to …)", node.pos)
+        steps = self.move(tid, 1, None, node.pos)
+        animation = self.add(
+            Obj(
+                "animation",
+                None,
+                ANIMATION,
+                attrs={"duration": Attribute(REAL, 1)},
+                pos=node.pos,
+                data={"steps": steps},
+            )
+        )
+        obj.data["animation"] = animation
+        written = self.written(animation)
         step = self.take(items, "step")
         if step is not None:
             obj.attrs["step"] = self.attribute(
@@ -1522,13 +1590,16 @@ class _Compiler:
             elif head == "when" and len(item.items) >= 3:
                 cond = self.attribute(BOOL, item.items[1], item.pos, "when", scope=self.cscope)
                 obj.data["shows"].append((cond, [self.shown(n) for n in item.items[2:]]))
-            elif head == "transition":
+            elif head == "transit":
+                assert isinstance(item, Form)
                 if obj.data["transition"] is not None:
-                    raise CompileError("'transition' is given twice", item.pos)
-                if len(item.items) == 2 and isinstance(item.items[1], Name):
-                    obj.data["transition"] = self.named(item.items[1], "transition")
-                else:
-                    obj.data["transition"] = self.transition(item, self.cscope, named=False)
+                    raise CompileError("'transit' is given twice", item.pos)
+                tid = self.transit(item, self.cscope, top=False)
+                if self.model.objects[tid].data["target"] is not None:
+                    raise CompileError(
+                        "a canvas's transit fades what it shows, so its target is none", item.pos
+                    )
+                obj.data["transition"] = tid
             else:
                 raise CompileError("expected an item of a canvas", item.pos)
 
@@ -1861,7 +1932,7 @@ class _Compiler:
                 attrs["background"] = self.attribute(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
-            elif head in ("motif", "variant", "func", "transition", "animation") or (
+            elif head in ("motif", "variant", "func", "transit", "animation") or (
                 head in COMPONENTS
             ):
                 raise CompileError(f"a {head} is declared only at the top level", item.pos)
