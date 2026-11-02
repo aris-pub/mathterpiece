@@ -278,6 +278,7 @@ class TestNamedTypes:
         named = {"unit": Refine(REAL, ((">=", 0), ("<=", 1)), "unit")}
         t = type_from_node(node("(unit (<= 0.5))"), named)
         assert fits(t, named["unit"])
+        assert isinstance(t, Refine)
         assert t.base == REAL
 
     def test_its_name_shows_in_messages(self):

@@ -1,5 +1,6 @@
 """Types as objects, and the one rule for what fits where (docs/type-system.md)."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from mathterpiece.colors import parse_color
@@ -278,15 +279,20 @@ def _check(node: Node, c: Constraint) -> None:
     """Raises if a literal breaks a constraint (a value known when compiling, section 5.b)."""
     kind = c[0]
     if kind in COMPARE:
+        assert isinstance(node, (IntLit, RatioLit, RealLit))
         value = node.value
         ok = {">=": value >= c[1], ">": value > c[1], "<=": value <= c[1], "<": value < c[1]}[kind]
         if not ok:
             raise TypeError_(f"{value} breaks {_show(c)}")
-    elif kind == "one-of" and node.value not in c[1]:
-        choices = ", ".join(f"'{v}'" for v in c[1])
-        raise TypeError_(f"'{node.value}' is not one of {choices}")
-    elif kind == "length" and len(node.items) != c[1]:
-        raise TypeError_(f"the list has {len(node.items)} items, but its length is {c[1]}")
+    elif kind == "one-of":
+        assert isinstance(node, StrLit)
+        if node.value not in c[1]:
+            choices = ", ".join(f"'{v}'" for v in c[1])
+            raise TypeError_(f"'{node.value}' is not one of {choices}")
+    elif kind == "length":
+        assert isinstance(node, ListLit)
+        if len(node.items) != c[1]:
+            raise TypeError_(f"the list has {len(node.items)} items, but its length is {c[1]}")
 
 
 def _common(types: list[Type]) -> Type:
@@ -302,7 +308,7 @@ def _common(types: list[Type]) -> Type:
     return best
 
 
-def type_from_node(node: Node, named: "dict[str, Type] | None" = None) -> Type:
+def type_from_node(node: "Node | str", named: "Mapping[str, Type] | None" = None) -> Type:
     """The type a piece of type notation names (type-system.md, section 5.a). named holds the
     types declared so far, by name."""
     named = named or {}
@@ -325,6 +331,7 @@ def type_from_node(node: Node, named: "dict[str, Type] | None" = None) -> Type:
     if not isinstance(node, Name) or not isinstance(node.parts[0], str):
         raise TypeError_("expected a type")
     name, *args = node.parts
+    assert isinstance(name, str)
     if len(args) > 1:
         raise TypeError_(f"{name} takes its types in one pair of brackets")
     inner = args[0] if args else None
@@ -395,7 +402,7 @@ def constraint(node: Node, base: Type) -> Constraint:
             raise TypeError_("one-of needs at least one choice")
         if not all(isinstance(a, StrLit) for a in args):
             raise TypeError_("one-of takes strings: (one-of 'left' 'right')")
-        return ("one-of", tuple(a.value for a in args))
+        return ("one-of", tuple(a.value for a in args if isinstance(a, StrLit)))
     if head == "const":
         if args:
             raise TypeError_("const takes nothing: (const)")

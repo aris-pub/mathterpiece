@@ -5,10 +5,11 @@ every expression is typed, with what it reads, its range, and its value when it 
 import math
 import re
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Context, Decimal
 from fractions import Fraction
+from typing import Literal, cast
 
 from mathterpiece.builtins import (
     BUILTINS,
@@ -88,7 +89,7 @@ RESERVED = frozenset(
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
-UNBOUNDED: Range = (-LIMIT, LIMIT)
+UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 # The result of a function whose body is being compiled for the first time: a recursive call
 # has it, and the branch that does not recurse decides the real one.
 RECURSING = Prim("recursing")
@@ -100,7 +101,7 @@ EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
 # A computed result beyond the largest real overflows, which is undefined.
 MAX_REAL = sys.float_info.max
-WHOLE: Range = (-MAX_REAL, MAX_REAL)
+WHOLE: tuple[float, float] = (-MAX_REAL, MAX_REAL)
 IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
@@ -216,6 +217,7 @@ def _is_constraint(node: Node) -> bool:
     head = _head(node)
     if head not in CONSTRAINT_HEADS:
         return False
+    assert isinstance(node, Form)
     # A comparison with two arguments is an expression; with one, a constraint.
     return head not in COMPARE or len(node.items) == 2
 
@@ -226,7 +228,7 @@ class _Compiler:
         self.scene: int | None = None
         # The container the expression being compiled sits in: a group, or None for the scene
         # and the top level. Reads convert through the transforms not shared with it.
-        self.frame: int | None = None
+        self.frame: int | Literal["caller"] | None = None
         # True while compiling the scene's contents, which may never read page access.
         self.in_scene = False
         # The object and attribute whose place is being compiled, so a message can name them:
@@ -306,6 +308,7 @@ class _Compiler:
         if isinstance(node, StrLit):
             raise CompileError("a name is written bare, not in quotes", node.pos)
         if _head(node) == "name":
+            assert isinstance(node, Form)
             name = self.built_name(node, scope or {})
         elif isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
             name = node.parts[0]
@@ -385,6 +388,7 @@ class _Compiler:
             raise CompileError("a variable cannot hold a function", pos)
         if node is not None and self.shape_kind(node):
             # (shape sel (circle c …)) declares the circle where the variable is, and holds it.
+            assert isinstance(node, Form)
             if parent is None:
                 raise CompileError("a shape is declared only inside the scene", node.pos)
             shape = self.read(self.shape(node, parent, scope), None)
@@ -543,7 +547,7 @@ class _Compiler:
             return tuple(self.model.objects[e.args[0]].members)
         if e.op == "list":
             parts = [self.objects_in(a) for a in e.args]
-            return None if any(p is None for p in parts) else sum(parts, ())
+            return None if any(p is None for p in parts) else sum(cast("list[tuple]", parts), ())
         if e.op in ("where", "sort", "reverse", "somes"):
             return self.items_of(e.args[0])
         return None
@@ -584,6 +588,7 @@ class _Compiler:
 
     def apply(self, fexpr: Expr, node: Form, scope: dict) -> Expr:
         ft = _core(fexpr.type)
+        assert isinstance(ft, FuncT)
         given = node.items[1:]
         if len(given) != len(ft.params):
             n = len(ft.params)
@@ -636,7 +641,7 @@ class _Compiler:
             return _known(b.result, self.fold_builtin(head, b.fold, [a.value for a in args], pos))
         ranges = [a.range if a.range is not None else WHOLE for a in args]
         undefined = b.undefined is not None and b.undefined(ranges)
-        r = b.range(ranges) if callable(b.range) else b.range
+        r = cast(Range, b.range(ranges) if callable(b.range) else b.range)
         t = Maybe(b.result) if maybe or undefined else b.result
         return Expr(head, t, tuple(args), deps, r)
 
@@ -748,7 +753,7 @@ class _Compiler:
         if kinds == {True}:
             t = POINT
         else:
-            items = [_core(_core(a.type).item) for a in args]
+            items = [_core(cast(ListT, _core(a.type)).item) for a in args]
             if not all(i in NUMBERS for i in items):
                 raise CompileError(f"{op} takes lists of numbers", pos)
             t = ListT(max(items, key=NUMBERS.index))
@@ -807,6 +812,7 @@ class _Compiler:
                     "a bare parameter of fn needs its type from its place: write (fn (T name) …)",
                     pnode.pos,
                 )
+            assert isinstance(pnode.parts[0], str)
             params = (Param(pnode.parts[0], hint[0]),)
         else:
             params = self.params(pnode)
@@ -827,6 +833,7 @@ class _Compiler:
     def function_arg(self, node: Node, params: tuple, result, scope: dict) -> Expr:
         """A function given to a collection function, which calls it with params."""
         if _head(node) == "fn":
+            assert isinstance(node, Form)
             e = self.fn(node, scope, params, result)
         else:
             e = self.expr(node, None, scope)
@@ -875,6 +882,7 @@ class _Compiler:
         if head == "map":
             self.arity(node, 2)
             ft = _core(given(0, (item,), None).type)
+            assert isinstance(ft, FuncT) and f is not None
             out = ft.result
             if _may_be_none(item) and not _may_be_none(ft.params[0]):
                 out = _maybe(out)
@@ -885,6 +893,7 @@ class _Compiler:
         if head == "where":
             self.arity(node, 2)
             given(0, (item,), BOOL)
+            assert f is not None
             keep = self.fold_each(f, item, coll.value) if coll.known else None
             if keep is not None:
                 return _known(ListT(item), [v for v, k in zip(coll.value, keep, strict=True) if k])
@@ -892,6 +901,7 @@ class _Compiler:
         if head == "sort":
             self.arity(node, 2)
             given(0, (item,), REAL)
+            assert f is not None
             keys = self.fold_each(f, item, coll.value) if coll.known else None
             if keys is not None:
                 order = sorted(range(len(keys)), key=keys.__getitem__)
@@ -908,6 +918,7 @@ class _Compiler:
             self.arity(node, 3)
             start = self.expr(rest[0], self.accumulator(rest[1]), scope)
             ft = _core(given(1, (start.type, item), None).type)
+            assert isinstance(ft, FuncT) and f is not None
             acc = ft.params[0]
             if not fits(_loose(ft.result), _loose(acc)):
                 raise CompileError(f"reduce's function gives {ft.result}, not {acc}", node.pos)
@@ -936,6 +947,7 @@ class _Compiler:
                     return _known(INT, n)
                 return Expr("count", INT, (coll,), deps, (0.0, MAX_REAL))
             given(0, (item,), BOOL)
+            assert f is not None
             hits = self.fold_each(f, item, coll.value) if coll.known else None
             if hits is not None:
                 return _known(INT, sum(1 for h in hits if h))
@@ -950,6 +962,7 @@ class _Compiler:
                 return _known(BOOL, (any if head == "any" else all)(coll.value))
             return Expr(head, BOOL, (coll,), deps)
         given(0, (item,), BOOL)
+        assert f is not None
         hits = self.fold_each(f, item, coll.value) if coll.known else None
         if hits is not None:
             return _known(BOOL, (any if head == "any" else all)(hits))
@@ -958,7 +971,12 @@ class _Compiler:
     def accumulator(self, node: Node) -> Type | None:
         """The type reduce's function declares for its running value, so a literal start such
         as [0 0] takes it."""
-        if _head(node) == "fn" and isinstance(node.items[1], Form) and node.items[1].items:
+        if (
+            _head(node) == "fn"
+            and isinstance(node, Form)
+            and isinstance(node.items[1], Form)
+            and node.items[1].items
+        ):
             params = self.params(node.items[1])
             return params[0].type if params else None
         if isinstance(node, Name) and len(node.parts) == 1 and node.parts[0] in self.model.funcs:
@@ -1037,12 +1055,14 @@ class _Compiler:
                 )
             return Place(STRING, node.value)
         if _head(node) == "step-ease":
+            assert isinstance(node, Form)
             (arg,) = self.args(node, 1)
             at = self.expr(arg, UNIT, scope)
             if not at.known:
                 raise CompileError("step-ease takes a point known when compiling", node.pos)
             return Place(STRING, ("step-ease", at.value))
         if _head(node) == "step":
+            assert isinstance(node, Form)
             (arg,) = self.args(node, 1)
             n = self.expr(arg, INT, scope)
             if not n.known or n.value < 1:
@@ -1136,6 +1156,7 @@ class _Compiler:
         i, attr, t = self.writable(item.items[0], scope)
         node = item.items[1]
         if _head(node) == "transition":
+            assert isinstance(node, Form)
             tid = self.transition(node, scope, named=False)
         elif isinstance(node, Name):
             tid = self.named(node, "transition")
@@ -1232,6 +1253,7 @@ class _Compiler:
     def component(self, form: Form) -> None:
         """A view, control or listener (reference.md, "Components")."""
         kind = _head(form)
+        assert kind is not None
         if kind in ("on-drag", "on-click"):
             if len(form.items) < 2:
                 raise CompileError(f"{kind} takes the shape it listens to", form.pos)
@@ -1481,7 +1503,7 @@ class _Compiler:
         that does not depend on that place (reference.md, "Writes and conditions")."""
         flip = {"<": ">", "<=": ">=", ">": "<", ">=": "<="}
         head = _head(node)
-        if head in COMPARE and len(node.items) == 3:
+        if head in COMPARE and isinstance(node, Form) and len(node.items) == 3:
             a, b = (self.expr(x, None, {}) for x in node.items[1:])
             for op, side, limit in ((head, a, b), (flip[head], b, a)):
                 if side.op == "read":
@@ -1503,8 +1525,9 @@ class _Compiler:
             obj = self.model.objects[j]
             types = {a: place.type for a, place in obj.attrs.items()}
             for m in obj.members:
-                if self.model.objects[m].name is not None:
-                    types[self.model.objects[m].name] = self.model.objects[m].type
+                member = self.model.objects[m]
+                if member.name is not None:
+                    types[member.name] = member.type
             self.shape_types[name] = types
         finally:
             del self.model.objects[objects:]
@@ -1520,7 +1543,10 @@ class _Compiler:
         if name in SHAPE_ATTRS or name in self.model.types:
             raise CompileError(f"'{name}' is already declared", pos)
         body = form.items[3]
-        base = self.shape_kind(body)[0]
+        assert isinstance(body, Form)
+        found = self.shape_kind(body)
+        assert found is not None
+        base = found[0]
         if base == "group":
             raise CompileError("a group has no variants", body.pos)
         params = self.params(form.items[2])
@@ -1538,7 +1564,9 @@ class _Compiler:
             elif head is not None:
                 fixed.add(head)
         self.model.variants[name] = VariantDef(name, params, base, body, frozenset(fixed), pos)
-        self.model.types[name] = ShapeT(name, self.model.types.get(base, ShapeT(base)))
+        base_type = self.model.types.get(base, ShapeT(base))
+        assert isinstance(base_type, ShapeT)
+        self.model.types[name] = ShapeT(name, base_type)
         self.trial(name, form.pos)
 
     def attrs_of(self, kind: str) -> set:
@@ -1561,7 +1589,9 @@ class _Compiler:
     ) -> int:
         """An instance of a variant: its base shape, given the body's arguments, which are fixed,
         and the instance's own; the variant's parameters are attributes of it too."""
-        kind, absent = self.shape_kind(form)
+        found = self.shape_kind(form)
+        assert found is not None
+        kind, absent = found
         v = self.model.variants[kind]
         outer = outer or kind
         fixed = self.fixed_of(kind)
@@ -1637,7 +1667,9 @@ class _Compiler:
     def instance(
         self, form: Form, parent, scope: dict, spread=None, absent=False, items=None, pre=()
     ) -> int:
-        kind = self.shape_kind(form)[0]
+        found = self.shape_kind(form)
+        assert found is not None
+        kind = found[0]
         motif = self.model.motifs[kind]
         name, pos = self.name_of(form, scope)
         t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
@@ -1679,6 +1711,7 @@ class _Compiler:
         try:
             for item, inner in self.expand(motif.body, {}):
                 if self.shape_kind(item):
+                    assert isinstance(item, Form)
                     self.shape(item, i, inner, down)
                 elif isinstance(item, Form) and _head(item) not in ("motif", "scene"):
                     self.body_variable(item, obj, inner)
@@ -1721,6 +1754,7 @@ class _Compiler:
         for item, scope in self.expand(form.items[2:], {}):
             head = _head(item)
             if head == "background":
+                assert isinstance(item, Form)
                 attrs["background"] = self.place(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
@@ -1729,6 +1763,7 @@ class _Compiler:
             ):
                 raise CompileError(f"a {head} is declared only at the top level", item.pos)
             elif self.shape_kind(item):
+                assert isinstance(item, Form)
                 self.shape(item, self.scene, scope)
             elif isinstance(item, Form):
                 self.variable(item, self.scene, "scene", scope)
@@ -1739,7 +1774,9 @@ class _Compiler:
         """A shape declaration. items, when given, replaces the form's own items, each with its
         scope, and pre runs on the new object before its attributes are compiled (a variant
         uses both)."""
-        kind, absent = self.shape_kind(form)
+        found = self.shape_kind(form)
+        assert found is not None
+        kind, absent = found
         if kind in self.model.variants:
             return self.variant_instance(form, parent, scope, spread)
         if kind in self.model.motifs:
@@ -1794,6 +1831,7 @@ class _Compiler:
         finally:
             self.frame = saved
         for item, inner in members:
+            assert isinstance(item, Form)
             self.shape(item, i, inner, down)
         return i
 
@@ -1865,6 +1903,7 @@ class _Compiler:
             return Place(t, e.value)
         access, source = self.access_of(e.deps)
         if access == "page" and (self.in_scene or self.bodies):
+            assert source is not None
             label = self.model.objects[source].name
             raise CompileError(
                 f"the scene cannot read {label}: it has page access, so only components and"
@@ -1928,6 +1967,7 @@ class _Compiler:
         # A constraint is checked on the value (known) or its range (settle), not on its type.
         target = _loose(expected) if expected is not None else None
         if target is not None and not fits(_loose(e.type), target):
+            assert expected is not None
             if _may_be_none(e.type) and not _may_be_none(target):
                 raise CompileError(self.may_be_none(expected), node.pos)
             if _core(e.type) == STRING and _core(target) == COLOR:
@@ -1978,7 +2018,11 @@ class _Compiler:
             return self.form(node, expected, scope)
         raise CompileError(f"unexpected {type(node).__name__}", node.pos)
 
-    def literal(self, node: Node, expected: Type | None) -> Expr:
+    def literal(
+        self,
+        node: IntLit | RatioLit | RealLit | ComplexLit | StrLit | NoneLit,
+        expected: Type | None,
+    ) -> Expr:
         if isinstance(node, NoneLit) and expected is None:
             return _known(NONE, None)
         place = _loose(expected) if expected is not None else None
@@ -1994,6 +2038,7 @@ class _Compiler:
         if isinstance(value, (int, float, Fraction)) and abs(value) > LIMIT:
             raise CompileError(f"{value} is beyond ±10^150, the limit of every number", node.pos)
         if t == COLOR or (isinstance(t, Maybe) and t.inner == COLOR):
+            assert isinstance(node, StrLit)
             value = parse_color(node.value)
         return _known(t, value)
 
@@ -2217,7 +2262,7 @@ class _Compiler:
         if "x" in obj.attrs or obj.kind in CORNERS:
             names |= {"x", "y", "pos"}
         if obj.kind == "instance":
-            names |= {self.model.objects[m].name for m in obj.members} - {None}
+            names |= cast("set[str]", {self.model.objects[m].name for m in obj.members} - {None})
         if obj.kind == "group" and obj.members:
             names |= set.intersection(*(self.attr_names(m) for m in obj.members)) - {"members"}
         return names
@@ -2304,7 +2349,7 @@ class _Compiler:
             raise CompileError(f"a position is an int, got {index.type}", pos)
         whole = _base(_inner(e.type))
         if isinstance(whole, ListT) or whole == POINT:
-            item = REAL if whole == POINT else whole.item
+            item = whole.item if isinstance(whole, ListT) else REAL
             n = _length(e)
             # A fixed position on a list of known length never gives none.
             if index.known and n is not None:
@@ -2729,7 +2774,7 @@ def _is_step_ease(ease) -> bool:
 
 def _ease_value(place: Place):
     """An ease as a move carries it: its name, ("step", n), or ("func", id)."""
-    return ("func", place.expr.args[0]) if place.bound else place.value
+    return ("func", place.expr.args[0]) if place.expr is not None else place.value
 
 
 def _name_text(node: Name) -> str:
@@ -2820,7 +2865,9 @@ def _loose(t: Type) -> Type:
 
 
 def _value_type(place: Place) -> Type:
-    return place.expr.type if place.bound else (NONE if place.value is None else place.type)
+    return (
+        place.expr.type if place.expr is not None else (NONE if place.value is None else place.type)
+    )
 
 
 def _length(e: Expr) -> int | None:
@@ -2972,9 +3019,10 @@ def _union(a: Range, b: Range) -> Range:
     return (min(a[0], b[0]), max(a[1], b[1]))
 
 
-def _range_of(op: str, ranges: list[Range]) -> Range:
+def _range_of(op: str, ranges: Sequence[Range]) -> Range:
     if any(r is None for r in ranges):
         return None
+    ranges = cast("Sequence[tuple[float, float]]", ranges)
     if op == "+":
         return (sum(r[0] for r in ranges), sum(r[1] for r in ranges))
     if op == "-":
@@ -3035,7 +3083,7 @@ def _value_str(v) -> str:
 
 
 # What a format spec is tried on, to check it fits the type.
-_SAMPLES = {INT: 1, RATIO: 1.5, REAL: 1.5, STRING: "a"}
+_SAMPLES: dict[Type, object] = {INT: 1, RATIO: 1.5, REAL: 1.5, STRING: "a"}
 
 
 def _check_spec(t: Type, spec: str, pos: Pos) -> None:

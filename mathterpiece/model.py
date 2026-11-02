@@ -2,6 +2,7 @@
 (docs/data-model.md; docs/mtpc.md describes how it is written out)."""
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from mathterpiece.nodes import NOPOS, Form, Node, Pos
 from mathterpiece.types import Type
@@ -23,7 +24,7 @@ class Expr:
     deps: frozenset[Dep] = frozenset()
     range: Range = None
     known: bool = False
-    value: object = None
+    value: Any = None
 
 
 @dataclass

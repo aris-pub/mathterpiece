@@ -25,7 +25,7 @@ class Builtin:
     result: Type
     fold: Callable
     # The result's range: a function of the inputs' ranges, or a fixed range.
-    range: Callable | Range = WHOLE
+    range: Callable | Range | None = WHOLE
     # Whether inputs within these ranges may reach a point where it is undefined.
     undefined: Callable | None = None
 

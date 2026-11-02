@@ -147,6 +147,7 @@ class Writer:
     def place(self, p: Place) -> dict:
         d: dict = {"type": self.type(p.type)}
         if p.bound:
+            assert p.expr is not None
             d["bound"] = self.expr(p.expr)
             d["deps"] = _deps(p.deps)
         else:
@@ -267,6 +268,7 @@ class Writer:
         ]
 
     def function(self, f: FuncDef) -> dict:
+        assert f.body is not None
         return {
             "params": self.params(f.params),
             "result": self.type(f.result),
@@ -305,7 +307,7 @@ def _deps(deps) -> list:
 
 
 def _ease_of(place: Place):
-    return ("func", place.expr.args[0]) if place.bound else place.value
+    return ("func", place.expr.args[0]) if place.expr is not None else place.value
 
 
 def _ease(e) -> object:
@@ -321,6 +323,7 @@ def _path(place: Place | None) -> object:
         return None
     if not place.bound:
         return place.value
+    assert place.expr is not None
     return {"func": place.expr.args[0]}
 
 
