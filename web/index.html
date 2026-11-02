@@ -39,11 +39,11 @@
     <script type="module">
       import "/src/index.ts";
       const figures = import.meta.glob(
-        ["/test/data/examples/*.mtpc", "/test/data/demo/*.mtpc", "/test/data/runtime/*.mtpc"],
+        ["/test/data/examples/*.mtpc", "/test/data/demo/*.mtpc"],
         { query: "?raw", import: "default" },
       );
       const sources = import.meta.glob(
-        ["/test/data/examples/*.mtp", "/test/data/demo/*.mtp", "/test/data/runtime/*.mtp"],
+        ["/test/data/examples/*.mtp", "/test/data/demo/*.mtp"],
         { query: "?raw", import: "default" },
       );
       const examples = Object.keys(figures);
@@ -61,24 +61,9 @@
         const end = lines.findIndex((l) => l.trim() !== "" && !l.startsWith(";"));
         const about = lines
           .slice(0, end < 0 ? lines.length : end)
-          .filter((l) => l.startsWith(";") && !/^; (expect|write|page)\b/.test(l))
+          .filter((l) => l.startsWith(";"))
           .map((l) => l.replace(/^;+ ?/, ""));
         document.getElementById("about").textContent = about.join("\n");
-        // A figure with no canvas of its own, such as most runtime figures, is shown in one that
-        // draws its whole scene, so there is always something to see.
-        const scene = doc.objects.findIndex((o) => o.kind === "scene");
-        if (scene >= 0 && !doc.objects.some((o) => o.kind === "canvas")) {
-          const free = (v) => ({ type: "real", free: v });
-          doc.names["whole scene"] = doc.objects.length;
-          doc.objects.push({
-            kind: "canvas", type: { component: "canvas" }, access: "page", name: "whole scene",
-            members: [scene], when: [], transition: null,
-            attrs: {
-              "view-x": free(-10), "view-y": free(-10), "view-width": free(20), "view-height": free(20),
-              transform: { type: "transform", free: [1, 0, 0, 1, 0, 0] },
-            },
-          });
-        }
         const controls = document.getElementById("controls");
         controls.replaceChildren();
         const canvases = document.getElementById("canvases");

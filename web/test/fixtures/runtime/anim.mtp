@@ -1,7 +1,3 @@
-; The animations the runtime tests play: a move with a wait between two moves, a bool that
-; changes at the start or at the end, a (step 4) ease, a color, two moves at once, and a
-; position. Nothing on the page runs them: the table shows the values they start from.
-
 (real k 0 (>= 0) (<= 10))
 (real j 0)
 (bool on false)

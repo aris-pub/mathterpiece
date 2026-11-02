@@ -1,7 +1,3 @@
-; A canvas fading a when item in and out. Both canvases show circle c, and circle d while show
-; is true. The first fades d over 1 s; the second shows and hides it at once. show starts false
-; and nothing here writes it, so both show only c.
-
 (bool show false)
 (scene s (circle c) (circle d))
 (canvas v c (when show d) (transition (duration 1)))

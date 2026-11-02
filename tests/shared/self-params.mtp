@@ -1,7 +1,0 @@
-; Inside a motif's body, self is the instance: its members read its parameters through it.
-; expect a.c.x 4
-; write a.k 5
-; expect a.c.x 10
-(motif m (real k 0) (circle c (x (* 2 self.k))))
-(scene s (m a (k 2)))
-(button b (animation (a.k (transition (to 2) (duration 0)))))

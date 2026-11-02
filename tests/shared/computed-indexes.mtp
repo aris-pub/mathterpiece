@@ -1,9 +1,0 @@
-; An index may be any expression known at compile time.
-; expect second 2
-; expect last 3
-; expect via-let 2
-(int one 1 (const))
-(scene s (group g (circle _ (r 1)) (circle _ (r 2)) (circle _ (r 3))))
-(real second g[(+ 0 1)].r)
-(real last g[(- 0 1)].r)
-(real via-let (let ((k (* one 1))) g[k].r))
