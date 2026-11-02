@@ -146,3 +146,20 @@ class TestNoParameters:
     def test_a_variant_with_no_parameters(self):
         m = model("(variant unit () (circle_ (r 1))) (scene s (unit u))")
         assert m.get("u").attrs["r"].fixed
+
+
+class TestBodyLists:
+    # type-system.md "Known lengths": a variable bound to a list keeps its length, in a motif's
+    # body as in the scene.
+    def test_a_bound_list_in_a_body_keeps_its_length(self):
+        compile_source(
+            "(motif m ((real a 1)) (list v [a a]) (repeat 2 i (circle_ (r (+ 1 (abs v[i]))))))"
+            " (scene s (m m1))"
+        )
+
+    def test_a_folded_value_in_a_body_is_allowed(self):
+        # Known when compiling, it is free with a const constraint, which no writer may write.
+        compile_source(
+            "(motif m ((real a 1 (const))) (real twice (* 2 a)) (circle_ (r twice)))"
+            " (scene s (m m1))"
+        )

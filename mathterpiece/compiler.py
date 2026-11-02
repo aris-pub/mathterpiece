@@ -416,16 +416,20 @@ class _Compiler:
             attribute = self.attribute(t, node, form.pos, "the value", scope=scope)
         finally:
             self.where = saved
+        t = self.keep_length(t, attribute)
+        access = self.access_of(attribute.deps)[0]
+        self.add(Obj("variable", name, t, access, {"value": attribute}, parent=parent, pos=pos))
+
+    def keep_length(self, t: Type, attribute: Attribute) -> Type:
+        """A bound list always equals its expression, so it keeps that expression's length."""
         inner = _inner(t)
         has_length = isinstance(inner, Refine) and any(c[0] == "length" for c in inner.constraints)
         if attribute.expr is not None and isinstance(_core(t), ListT) and not has_length:
-            # A bound list always equals its expression, so it keeps that expression's length.
             n = _length(attribute.expr)
             if n is not None:
                 t = _with_length(t, n)
                 attribute.type = t
-        access = self.access_of(attribute.deps)[0]
-        self.add(Obj("variable", name, t, access, {"value": attribute}, parent=parent, pos=pos))
+        return t
 
     def declared(self, form: Form, scope: dict) -> tuple[str | None, Pos, Type, Node | None]:
         """A (T name value? constraint…) form's name, its type with the constraints, and its
@@ -1907,7 +1911,9 @@ class _Compiler:
             self.where = saved
         if name is None:
             raise CompileError("a variable in a motif's body needs a name", pos)
-        if not attribute.bound and not _is_const(t):
+        self.keep_length(t, attribute)
+        # A value known when compiling is free, but const, so no writer can change it.
+        if not attribute.bound and not _is_const(attribute.type):
             raise CompileError(
                 "a motif's body declares only bound variables; free state is a parameter", pos
             )
