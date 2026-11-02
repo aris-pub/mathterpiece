@@ -159,7 +159,7 @@ Every control and listener emits writes to its target (or, through its animation
 ### Panning and zooming
 
 - **Pan:** dragging where no draggable shape is moves what the canvas shows with the pointer.
-- **Zoom:** a pinch, on a trackpad or with two fingers, or the wheel with ctrl or cmd held, zooms about the pointer. A plain wheel scrolls the page.
+- **Zoom:** the wheel, or a pinch on a trackpad or with two fingers, zooms about the pointer. While the pointer is over a canvas that zooms, the wheel does not scroll the page.
 - **A double click** goes back to the view box the author gave.
 - **Neither writes anything:** they are the canvas's own state, like its fades, so stroke widths and font sizes stay the same on screen. `(pan false)` or `(zoom false)` turns either off.
 

@@ -221,9 +221,9 @@ export class MtpCanvas extends MtpPart {
       look.scale *= factor;
       this.redraw();
     };
-    // A pinch on a trackpad comes as a wheel with ctrl held; a plain wheel scrolls the page.
+    // The wheel zooms, and so does a pinch on a trackpad, which comes as a wheel with ctrl held.
     svg.addEventListener("wheel", (event) => {
-      if (!allows("zoom") || !(event.ctrlKey || event.metaKey)) return;
+      if (!allows("zoom")) return;
       event.preventDefault();
       zoomAbout(toUser(event), Math.exp(-event.deltaY * 0.002));
     });

@@ -226,7 +226,7 @@ describe("panning and zooming a canvas", () => {
     target.dispatchEvent(event);
   };
 
-  it("zooms about the pointer on a pinch or a wheel with ctrl held", () => {
+  it("zooms about the pointer on a pinch, which comes as a wheel with ctrl held", () => {
     page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
     expect(box()).toEqual([-10, -10, 20, 20]);
     // Without a canvas on screen the pointer's SVG coordinates are its page coordinates.
@@ -234,10 +234,10 @@ describe("panning and zooming a canvas", () => {
     expect(box().map((n) => Math.round(n * 1e6) / 1e6)).toEqual([-5, -5, 10, 10]);
   });
 
-  it("leaves a plain wheel to scroll the page", () => {
+  it("zooms on a plain wheel too", () => {
     page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
-    wheel(-50, false);
-    expect(box()).toEqual([-10, -10, 20, 20]);
+    wheel(-500 * Math.log(2), false);
+    expect(box().map((n) => Math.round(n * 1e6) / 1e6)).toEqual([-5, -5, 10, 10]);
   });
 
   it("pans when the reader drags where nothing is draggable", () => {
