@@ -96,6 +96,10 @@ class FuncDef:
     # What the body reads through each parameter that holds shapes: attribute names, with
     # "[]." before one read on each item of a collection ("[].r").
     reads: dict[str, frozenset[str]] = field(default_factory=dict)
+    # Its body's source and the names around it, so a call with known arguments can be folded
+    # by compiling the body again with them.
+    source: Node | None = None
+    scope: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

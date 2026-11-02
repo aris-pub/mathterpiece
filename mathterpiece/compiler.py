@@ -201,6 +201,8 @@ class _Compiler:
         self.reads: list[dict[str, set]] = []
         # The attributes of each motif and variant, by type, taken from its trial instance.
         self.shape_types: dict[str, dict[str, Type]] = {}
+        # How many function bodies are being compiled again to fold a call.
+        self.folding = 0
 
     def run(self, forms: tuple[Form, ...]) -> Model:
         for form, scope in self.expand(forms, {}):
@@ -380,7 +382,7 @@ class _Compiler:
             raise CompileError("a function is (func name parameters body)", form.pos)
         params = self.params(form.items[2])
         fid = len(self.model.functions)
-        f = FuncDef(name, params, RECURSING, pos=pos)
+        f = FuncDef(name, params, RECURSING, pos=pos, source=form.items[3])
         self.model.functions.append(f)
         self.model.funcs[name] = fid
         # A recursive call gives RECURSING until the body's type is known; compile again with
@@ -419,6 +421,10 @@ class _Compiler:
         t = f.result
         if maybe and t != RECURSING:
             t = _maybe(t)
+        if f.body is not None and all(self.foldable(a) for a in args):
+            folded = self.fold_call(fid, args)
+            if folded is not None:
+                return _known(t, folded.value)
         r = f.body.range if f.body is not None else _type_range(t)
         for p, a in zip(f.params, args, strict=True):
             for path in f.reads.get(p.name, ()):
@@ -525,7 +531,55 @@ class _Compiler:
         params = tuple(Param(f"argument {k + 1}", t) for k, t in enumerate(ft.params))
         args, deps, maybe = self.arguments(params, given, scope, node.pos)
         t = _maybe(ft.result) if maybe else ft.result
+        if self.foldable(fexpr) and all(self.foldable(a) for a in args):
+            folded = self.fold_call(fexpr.args[0], args)
+            if folded is not None:
+                return _known(t, folded.value)
         return Expr("apply", t, (fexpr, *args), deps | fexpr.deps, _type_range(t))
+
+    def foldable(self, e: Expr) -> bool:
+        """Known when compiling: a value, or a function whose captured names are known."""
+        if e.known:
+            return True
+        if e.op != "func":
+            return False
+        f = self.model.functions[e.args[0]]
+        return all(_get(f.scope, n).known for n in e.args[1])
+
+    def fold_call(self, fid: int, args: list) -> Expr | None:
+        """The call's value, compiling the body again with its known arguments, or None when
+        the body still needs something known only while drawing."""
+        f = self.model.functions[fid]
+        if f.source is None:
+            return None
+        scope = dict(f.scope)
+        scope.update({p.name: a for p, a in zip(f.params, args, strict=True)})
+        functions = len(self.model.functions)
+        saved, self.frame = self.frame, "caller"
+        self.folding += 1
+        self.reads.append({})
+        try:
+            e = self.expr(f.source, None, scope)
+        except RecursionError:
+            return None
+        finally:
+            self.frame = saved
+            self.folding -= 1
+            self.reads.pop()
+            del self.model.functions[functions:]
+        return e if e.known else None
+
+    def fold_each(self, f: Expr, item: Type, values: list) -> list | None:
+        """f called on each value, when f and every result are known when compiling."""
+        if not self.foldable(f):
+            return None
+        out = []
+        for v in values:
+            r = self.fold_call(f.args[0], [_known(item, v)])
+            if r is None:
+                return None
+            out.append(r.value)
+        return out
 
     def fn(self, node: Form, scope: dict, hint=None, result=None) -> Expr:
         """(fn params body). hint holds the parameter types its place gives, and result the
@@ -545,7 +599,8 @@ class _Compiler:
         body, reads = self.function_body(params, node.items[2], result, scope)
         fid = len(self.model.functions)
         own = {p.name for p in params}
-        f = FuncDef(None, params, body.type, body, body.deps, node.pos)
+        f = FuncDef(None, params, body.type, body, body.deps, node.pos, source=node.items[2])
+        f.scope = dict(scope)
         f.reads = {n: frozenset(r) for n, r in reads.items() if n in own}
         self.model.functions.append(f)
         captured = tuple(sorted(_locals(body) - own))
@@ -609,14 +664,24 @@ class _Compiler:
             out = ft.result
             if _may_be_none(item) and not _may_be_none(ft.params[0]):
                 out = _maybe(out)
+            vals = self.fold_each(f, item, coll.value) if coll.known else None
+            if vals is not None:
+                return _known(sized(ListT(out)), vals)
             return Expr("map", sized(ListT(out)), (coll, f), deps)
         if head == "where":
             self.arity(node, 2)
             given(0, (item,), BOOL)
+            keep = self.fold_each(f, item, coll.value) if coll.known else None
+            if keep is not None:
+                return _known(ListT(item), [v for v, k in zip(coll.value, keep, strict=True) if k])
             return Expr("where", ListT(item), (coll, f), deps)
         if head == "sort":
             self.arity(node, 2)
             given(0, (item,), REAL)
+            keys = self.fold_each(f, item, coll.value) if coll.known else None
+            if keys is not None:
+                order = sorted(range(len(keys)), key=keys.__getitem__)
+                return _known(sized(ListT(item)), [coll.value[k] for k in order])
             return Expr("sort", sized(ListT(item)), (coll, f), deps)
         if head == "reverse":
             self.arity(node, 1)
@@ -632,6 +697,14 @@ class _Compiler:
             acc = ft.params[0]
             if not fits(_loose(ft.result), _loose(acc)):
                 raise CompileError(f"reduce's function gives {ft.result}, not {acc}", node.pos)
+            if coll.known and start.known and self.foldable(f):
+                total = start
+                for v in coll.value:
+                    total = self.fold_call(f.args[0], [total, _known(item, v)])
+                    if total is None:
+                        break
+                if total is not None:
+                    return _known(acc, total.value)
             return Expr("reduce", acc, (coll, start, f), deps | start.deps, _type_range(acc))
         if head == "sum":
             self.arity(node, 1)
@@ -649,6 +722,9 @@ class _Compiler:
                     return _known(INT, n)
                 return Expr("count", INT, (coll,), deps, (0.0, MAX_REAL))
             given(0, (item,), BOOL)
+            hits = self.fold_each(f, item, coll.value) if coll.known else None
+            if hits is not None:
+                return _known(INT, sum(1 for h in hits if h))
             return Expr("count", INT, (coll, f), deps, (0.0, MAX_REAL))
         # any, all
         if len(rest) > 1:
@@ -660,6 +736,9 @@ class _Compiler:
                 return _known(BOOL, (any if head == "any" else all)(coll.value))
             return Expr(head, BOOL, (coll,), deps)
         given(0, (item,), BOOL)
+        hits = self.fold_each(f, item, coll.value) if coll.known else None
+        if hits is not None:
+            return _known(BOOL, (any if head == "any" else all)(hits))
         return Expr(head, BOOL, (coll, f), deps)
 
     def arity(self, node: Form, n: int) -> None:
@@ -1447,6 +1526,9 @@ class _Compiler:
             c = self.expr(args[0], BOOL, scope)
             # Branches may be none; the place the if reaches decides whether that is allowed.
             branch = _maybe(expected) if expected is not None else None
+            # Folding a call takes only the branch it needs, so recursion ends at its base case.
+            if c.known and self.folding:
+                return self.expr(args[1] if c.value else args[2], branch, scope)
             a, b = (self.expr(x, branch, scope) for x in args[1:])
             if c.known:
                 return a if c.value else b
@@ -1539,6 +1621,17 @@ class _Compiler:
             raise CompileError("cond ends with an (else …) clause", node.pos)
         result = None
         branch = _maybe(expected) if expected is not None else None
+        if self.folding:
+            for clause in clauses:
+                if not isinstance(clause, Form) or len(clause.items) != 2:
+                    break
+                if _head(clause) == "else":
+                    return self.expr(clause.items[1], branch, scope)
+                c = self.expr(clause.items[0], BOOL, scope)
+                if not c.known:
+                    break
+                if c.value:
+                    return self.expr(clause.items[1], branch, scope)
         for clause in reversed(clauses):
             if not isinstance(clause, Form) or len(clause.items) != 2:
                 raise CompileError("a cond clause is (test value)", clause.pos)
@@ -1671,6 +1764,11 @@ def _known(t: Type, value) -> Expr:
         else None
     )
     return Expr("lit", t, (value,), range=r, known=True, value=value)
+
+
+def _get(scope: dict, name: str) -> Expr:
+    v = scope[name]
+    return v() if callable(v) else v
 
 
 def _locals(e) -> set:

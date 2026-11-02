@@ -62,8 +62,8 @@ class TestCalls:
 
     def test_one_left_out_takes_its_types_value(self):
         # reference.md "Defaults": a parameter without a default that a call leaves out.
-        m = model("(func f ((real a) (real b)) a) (real d (f))")
-        assert m.get("d").value.expr.args[1:] == (m.get("d").value.expr.args[1],) * 2
+        m = model("(func f ((real a) (real b)) (+ a b)) (real d (f))")
+        assert m.get("d").value.value == 0
 
     def test_argument_types(self):
         error("(func f (real a) a) (real d (f 'x'))", "expected real, got string")
