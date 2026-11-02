@@ -92,7 +92,7 @@ UNBOUNDED: Range = (-LIMIT, LIMIT)
 # has it, and the branch that does not recurse decides the real one.
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
-SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat"}
+SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat", "type-of"}
 # The components (reference.md, "Components"), declared at the top level only.
 COMPONENTS = {"canvas", "readout", "slider", "button", "play", "toggle", "on-drag", "on-click"}
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
@@ -2307,6 +2307,9 @@ class _Compiler:
                     return self.apply(local, node, scope)
             elif head in self.model.funcs:
                 return self.call(self.model.funcs[head], node, scope)
+        if head == "type-of":
+            (a,) = self.args(node, 1)
+            return _known(STRING, str(self.expr(a, None, scope).type))
         if head == "fn":
             ft = _core(expected) if expected is not None else None
             if isinstance(ft, FuncT):

@@ -284,3 +284,10 @@ class TestEmptyForm:
 
     def test_not_a_value(self):
         error("(real k ())", r"\(\) is an empty list of parameters or bindings, not a value")
+
+
+class TestTypeOf:
+    # mtp-agp: (type-of x) gives x's type as a string, for debugging.
+    def test_it_is_known_when_compiling(self):
+        assert value("(real k 1 (>= 0)) (string s (type-of k))", "s") == "(real (>= 0))"
+        assert value("(real|none c) (string s (type-of (+ c 1)))", "s") == "real|none"
