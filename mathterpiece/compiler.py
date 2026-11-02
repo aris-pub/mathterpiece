@@ -3,10 +3,11 @@ docs/reference.md). Every declaration follows one body rule, (head name? positio
 every expression is typed, with what it reads, its range, and its value when it is known."""
 
 import math
+import re
 import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from decimal import ROUND_HALF_UP, Decimal, localcontext
+from decimal import ROUND_HALF_UP, Context, Decimal
 from fractions import Fraction
 
 from mathterpiece.builtins import (
@@ -3034,7 +3035,7 @@ def _value_str(v) -> str:
 
 
 # What a format spec is tried on, to check it fits the type.
-_SAMPLES = {INT: 1, RATIO: Decimal("1.5"), REAL: Decimal("1.5"), STRING: "a"}
+_SAMPLES = {INT: 1, RATIO: 1.5, REAL: 1.5, STRING: "a"}
 
 
 def _check_spec(t: Type, spec: str, pos: Pos) -> None:
@@ -3048,6 +3049,31 @@ def _check_spec(t: Type, spec: str, pos: Pos) -> None:
         raise CompileError(f"'{spec}' is not a format for a {t}", pos) from None
 
 
+_SPEC = re.compile(r"(?:.?[<>=^])?[-+ ]?z?#?0?\d*[,_]?(?:\.(\d+))?([eEfFgGn%]?)$")
+
+
+def _preround(x: float, spec: str) -> float:
+    """x rounded, halves away from zero on its shortest decimal form, to the digits spec keeps,
+    so that formatting the result, which rounds halves to even on its binary value, changes
+    nothing more (reference.md, "Rounding")."""
+    m = _SPEC.match(spec)
+    if m is None or x == 0 or not math.isfinite(x):
+        return x
+    precision, kind = m.group(1), m.group(2)
+    p = int(precision) if precision is not None else None
+    d = Decimal(repr(x))
+    if kind in ("f", "F", "%"):
+        places = (6 if p is None else p) + (2 if kind == "%" else 0)
+    elif kind in ("e", "E"):
+        places = (6 if p is None else p) - d.adjusted()
+    elif kind in ("g", "G", "n") or p is not None:
+        places = max(6 if p is None else p, 1) - 1 - d.adjusted()
+    else:
+        return x
+    wide = Context(prec=max(d.adjusted() + places + 2, 1), rounding=ROUND_HALF_UP)
+    return float(d.quantize(Decimal(1).scaleb(-places), context=wide))
+
+
 def _show_value(t: Type, v, spec: str) -> str:
     """A value shown in a string. Halves round away from zero on the number's shortest
     decimal form (reference.md, "Numbers"), so 2.675 to two places is 2.68."""
@@ -3057,9 +3083,7 @@ def _show_value(t: Type, v, spec: str) -> str:
     if base in (RATIO, REAL):
         if not spec:
             return repr(float(v))
-        with localcontext() as ctx:
-            ctx.rounding = ROUND_HALF_UP
-            return format(Decimal(repr(float(v))), spec)
+        return format(_preround(float(v), spec), spec)
     if base == BOOL:
         return "True" if v else "False"
     if base == POINT:

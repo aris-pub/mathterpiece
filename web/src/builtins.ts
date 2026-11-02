@@ -150,7 +150,7 @@ export function roundHalfAway(x: number, places = 0): number {
   const digits = mantissa.replace(".", "");
   // digits stand for 0.digits * 10^(e + 1); keep the ones before position e + 1 + places.
   const keep = Number(exp) + 1 + places;
-  if (keep < 0) return 0;
+  if (keep < 0) return x < 0 ? -0 : 0;
   const head = digits.slice(0, keep).padEnd(keep, "0");
   const up = (digits.charCodeAt(keep) || 48) - 48 >= 5;
   const n = BigInt(head || "0") + (up ? 1n : 0n);

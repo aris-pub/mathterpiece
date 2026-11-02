@@ -1,6 +1,8 @@
+import { roundHalfAway } from "./builtins.ts";
+
 // Shows values the way Python does: str() of a float, and the format mini-language of
-// f-strings. mtp strings follow Python in every backend, so this must match it exactly,
-// including rounding half to even on the exact binary value of a float.
+// f-strings, except that a format rounds halves away from zero on the shortest decimal form, as
+// the compiler does (reference.md, "Rounding").
 
 export type Kind = "int" | "ratio" | "real" | "complex" | "str" | "bool" | string;
 
@@ -158,6 +160,23 @@ function groupDigits(digits: string, sep: string, size: number): string {
   return out;
 }
 
+/**
+ * x rounded, halves away from zero on its shortest decimal form, to the digits a format keeps,
+ * so the formatting below, which rounds halves to even on the exact binary value, changes nothing
+ * more (reference.md, "Rounding"; the compiler does the same).
+ */
+function preround(x: number, type: string, precision: number | undefined): number {
+  if (x === 0 || !Number.isFinite(x)) return x;
+  const exp = Number(Math.abs(x).toExponential().split("e")[1]);
+  let places: number;
+  if (type === "f" || type === "F" || type === "%") places = (precision ?? 6) + (type === "%" ? 2 : 0);
+  else if (type === "e" || type === "E") places = (precision ?? 6) - exp;
+  else if (type === "g" || type === "G" || type === "n" || precision !== undefined) {
+    places = Math.max(precision ?? 6, 1) - 1 - exp;
+  } else return x;
+  return roundHalfAway(x, places);
+}
+
 /** Python's format(value, spec), for a value of the given mtp type. */
 export function format(value: unknown, spec: string, kind: Kind): string {
   const m = SPEC.exec(spec);
@@ -185,6 +204,7 @@ export function format(value: unknown, spec: string, kind: Kind): string {
 
   if (typeof value !== "number") throw new Error(`cannot format ${String(value)}`);
   const isInt = kind === "int";
+  if (!isInt) value = preround(value, type, precision);
   if (!isInt && "bcdoxXn".includes(type) && type !== "") {
     throw new Error(`format spec ${JSON.stringify(spec)} needs an int`);
   }

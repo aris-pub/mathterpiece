@@ -291,3 +291,10 @@ class TestTypeOf:
     def test_it_is_known_when_compiling(self):
         assert value("(real k 1 (>= 0)) (string s (type-of k))", "s") == "(real (>= 0))"
         assert value("(real|none c) (string s (type-of (+ c 1)))", "s") == "real|none"
+
+
+class TestFormatExponents:
+    # A format's exponent has at least two digits, as Python writes a float's: 1.235e+04.
+    def test_padded(self):
+        assert value("(string s $'{12345.5:.3e}')", "s") == "1.235e+04"
+        assert value("(string s $'{0.00001:g}')", "s") == "1e-05"

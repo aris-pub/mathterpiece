@@ -28,7 +28,7 @@ describe("pyStr, Python's str() of a float", () => {
 describe("format, Python's format mini-language", () => {
   it.each([
     [3.14159, ".2f", "real", "3.14"],
-    [2.5, ".0f", "real", "2"],
+    [2.5, ".0f", "real", "3"],
     [3.5, ".0f", "real", "4"],
     [7, "03d", "int", "007"],
     [7, ">4", "int", "   7"],
@@ -43,7 +43,7 @@ describe("format, Python's format mini-language", () => {
     [1234567, "_d", "int", "1_234_567"],
     [0.25, ".0%", "real", "25%"],
     [0.12345, ".1%", "real", "12.3%"],
-    [1234.5, ".3e", "real", "1.234e+03"],
+    [1234.5, ".3e", "real", "1.235e+03"],
     [1234.5, "E", "real", "1.234500E+03"],
     [0.000123, ".2e", "real", "1.23e-04"],
     [1234.5, "g", "real", "1234.5"],
@@ -91,10 +91,10 @@ describe("format, Python's format mini-language", () => {
   });
 });
 
-// Values and specs generated with Python's own format() and str(); see the data file.
+// Values and specs with the text the compiler gives them (test/format_cases.py writes the file).
 import cases from "./data/format-cases.json";
 
-describe("format agrees with Python on a large sample", () => {
+describe("format agrees with the compiler on a large sample", () => {
   it("matches every case", () => {
     const wrong: string[] = [];
     for (const [x, spec, kind, text] of cases as [number, string, string, string][]) {
