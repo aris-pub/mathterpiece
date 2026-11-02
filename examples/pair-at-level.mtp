@@ -2,6 +2,8 @@
 ; the points of a random set A ringed. Each button highlights the part of the tree one piece of
 ; the bounds explains; pressing it again clears it. In the paper, the reader picks these by
 ; clicking the pieces of the equation in the text.
+; Each highlight is a group of its own, drawn over the tree while its piece is picked, so the
+; canvas fades it in and out.
 ; Coordinates are the original SVG's, with y pointing down, negated.
 
 (color fg '#2a2724')
@@ -12,115 +14,114 @@
 (font tick (size 13))
 (font name (style 'italic') (size 15))
 
-; Which piece of the bounds is explained: none, the gap (1 - 1/b), p, the inner depth, p², the
-; term 1/b², or the second inequality.
-(type piece string (one-of 'none' 'gap' 'p' 'mid' 'p2' 'b2' 'hi'))
+; Which piece of the bounds is explained: none, the factor (1 − 1/b)², the term 1/b², or the
+; second inequality (the first one explains the same as the factor).
+(type piece string (one-of 'none' 'gap' 'b2' 'hi'))
 
-; Point i's x.
+; Point i's x, and the depths of the points, of each pair's root, of each half's and of the
+; whole cluster's.
 (func px ((int i)) (+ 70 (* 30 i)))
+(real top -50 (const))
+(real level1 -78 (const))
+(real level2 -106 (const))
+(real level3 -162 (const))
+(real axis 40 (const))
+(list depths [level1 level2 level3] (const))
+; The middles of the four pairs, and of the two halves.
+(list mid [85 145 205 265] (const))
+(list half [115 235] (const))
+
+; A join: down from two clusters at left and right, and across at the depth where they merge.
+(motif bracket ((real left 0) (real right 0) (real from 0) (real to 0))
+  (line_ (from [left from]) (to [left to]))
+  (line_ (from [left to]) (to [right to]))
+  (line_ (from [right to]) (to [right from])))
+
+; The part of the tree outside x's and y's cluster, which fades while a piece is picked.
+(motif outside ()
+  (group_ (stroke fg) (stroke-width 1.5)
+    (bracket_ (left (px 4)) (right (px 5)) (from top) (to level1))
+    (bracket_ (left (px 6)) (right (px 7)) (from top) (to level1))
+    (bracket_ (left mid[2]) (right mid[3]) (from level1) (to level2))
+    (bracket_ (left half[0]) (right half[1]) (from level2) (to level3)))
+  (group_ (fill fg)
+    (repeat 4 i
+      (circle_ (pos [(px (+ i 4)) top]) (r 5)))))
 
 (scene tree
   (piece shown 'none')
-  ; A meets one half (x's) in most pieces, and both halves for 1/b² and the second inequality.
-  (bool both (or (= shown 'b2') (= shown 'hi')))
-  (bool quiet (!= shown 'none'))
 
-  ; The depths of the points, of each pair's root, of each half's, and of the whole cluster's.
-  (real top -50 (const))
-  (real level1 -78 (const))
-  (real level2 -106 (const))
-  (real level3 -162 (const))
-  (real axis 40 (const))
-  (list depths [level1 level2 level3] (const))
-
-  ; The midpoints of the four pairs, and of the two halves of the cluster.
-  (list mid [85 145 205 265] (const))
-  (list half [115 235] (const))
-
-  (group axes (stroke muted) (stroke-width 1)
+  (group axes (stroke muted) (stroke-width 1) (fill muted)
     (line_ (from [axis top]) (to [axis level3]))
     (repeat 3 h
-      (line_ (from [(- axis 4) depths[h]]) (to [axis depths[h]]))))
-  (group ticks (fill muted)
+      (line_ (from [(- axis 4) depths[h]]) (to [axis depths[h]])))
     (text_ '0' (pos [(- axis 7) (- top 4)]) (halign 'end') (font tick))
     (text_ 'b' (pos [(- axis 7) (- level1 4)]) (halign 'end') (font tick))
     (text_ 'b²' (pos [(- axis 7) (- level2 4)]) (halign 'end') (font tick))
     (text_ 'b³' (pos [(- axis 7) (- level3 4)]) (halign 'end') (font tick)))
 
-  ; The stretches of the depth axis a piece points to, shown only for that piece.
-  (group stretches (stroke-width 5)
-    (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1])
-      (stroke (if (= shown 'gap') muted coral))
-      (opacity (if (or (= shown 'gap') (= shown 'b2') (= shown 'hi')) 1 0)))
-    (line_ (from [(+ axis 6) level1]) (to [(+ axis 6) level2]) (stroke teal)
-      (opacity (if (= shown 'gap') 1 0)))
-    (line_ (from [(+ axis 13) top]) (to [(+ axis 13) level2]) (stroke fg)
-      (opacity (if (or (= shown 'mid') (= shown 'p2') (= shown 'b2') (= shown 'hi')) 1 0))))
+  ; x's half in teal and y's in coral, joined where x meets y, at depth b².
+  (group cluster (stroke-width 2.5)
+    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (stroke teal))
+    (line_ (from [mid[0] level1]) (to [mid[0] level2]) (stroke teal))
+    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (stroke coral))
+    (line_ (from [mid[1] level1]) (to [mid[1] level2]) (stroke coral))
+    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke fg))
+    (repeat 4 i
+      (circle_ (pos [(px i) top]) (r 5) (fill (if (< i 2) teal coral)))))
 
-  ; Faint guides from the axis to the branches a piece is about.
-  (group guides (stroke accent) (stroke-width 1)
-    (line_ (from [axis level1]) (to [(px 0) level1])
-      (opacity (if (or (= shown 'gap') (= shown 'b2') (= shown 'hi')) 1 0)))
-    (line_ (from [axis level2]) (to [mid[0] level2])
-      (opacity (if (or (= shown 'mid') (= shown 'p2')) 1 0))))
+  (outside whole)
+  (outside faint (opacity 0.2))
 
-  ; The tree. A branch is drawn as its three lines: down from each point, and across.
-  (group branches (stroke fg) (stroke-width 1.5)
-    ; The pairs at level 1: x's pair, y's pair, and the two outside the cluster.
-    (repeat 4 k
-      (group_
-        (stroke (cond ((= k 0) (if both coral teal))
-                      ((= k 1) coral)
-                      (else fg)))
-        (stroke-width (cond ((and (= k 0) (or (= shown 'gap') (= shown 'b2') (= shown 'hi'))) 3.5)
-                            ((and (= k 1) (or (= shown 'b2') (= shown 'hi'))) 3.5)
-                            ((and (< k 2) (or (= shown 'p') (= shown 'p2'))) 3.5)
-                            ((< k 2) 2.5)
-                            (else 1.5)))
-        (opacity (if (and quiet (>= k 2)) 0.2 1))
-        (line_ (from [(px (* 2 k)) top]) (to [(px (* 2 k)) level1]))
-        (line_ (from [(px (* 2 k)) level1]) (to [(px (+ 1 (* 2 k))) level1]))
-        (line_ (from [(px (+ 1 (* 2 k))) level1]) (to [(px (+ 1 (* 2 k))) top]))))
-    ; From each half's pair down to where x's and y's halves join.
-    (line_ (from [mid[0] level1]) (to [mid[0] level2]) (stroke teal) (stroke-width 2.5))
-    (line_ (from [mid[1] level1]) (to [mid[1] level2]) (stroke coral) (stroke-width 2.5))
-    ; Where x meets y, at depth b².
-    (line_ (from [mid[0] level2]) (to [mid[1] level2])
-      (stroke (if (= shown 'gap') teal fg))
-      (stroke-width
-       (if (or (= shown 'gap') (= shown 'mid') (= shown 'p2') (= shown 'hi')) 3.5 2.5)))
-    ; The other cluster, and the root.
-    (group_ (opacity (if quiet 0.2 1))
-      (line_ (from [mid[2] level1]) (to [mid[2] level2]))
-      (line_ (from [mid[2] level2]) (to [mid[3] level2]))
-      (line_ (from [mid[3] level2]) (to [mid[3] level1]))
-      (line_ (from [half[0] level2]) (to [half[0] level3]))
-      (line_ (from [half[0] level3]) (to [half[1] level3]))
-      (line_ (from [half[1] level3]) (to [half[1] level2]))))
-
-  ; q, the chance that A misses a half, under each of x's and y's halves.
-  (group qs (fill muted) (opacity (if (or (= shown 'p') (= shown 'p2')) 1 0))
-    (text_ 'q' (pos [mid[0] (- level1 14)]) (halign 'middle') (font name))
-    (text_ 'q' (pos [mid[1] (- level1 14)]) (halign 'middle') (font name)))
-
-  (group points
-    (repeat 8 i
-      (circle_ (pos [(px i) top]) (r 5)
-        (fill (cond ((< i 2) teal) ((< i 4) coral) (else fg)))
-        (opacity (if (and quiet (>= i 4)) 0.2 1)))))
-
-  ; The points of A: x's first neighbour and a point outside the cluster, or one in each half.
+  ; The points of A: x's first neighbour, and a point outside the cluster or, for the pieces where
+  ; A meets both halves, one in y's half.
   (group rings (fill none) (stroke accent) (stroke-width 2)
-    (repeat 8 i
-      (circle_ (pos [(px i) top]) (r 10)
-        (opacity (if (or (= i 0) (if both (= i 2) (= i 6))) 1 0)))))
+    (circle_ (pos [(px 0) top]) (r 10)))
+  (group ring-outside (fill none) (stroke accent) (stroke-width 2)
+    (circle_ (pos [(px 6) top]) (r 10)))
+  (group ring-in-y (fill none) (stroke accent) (stroke-width 2)
+    (circle_ (pos [(px 2) top]) (r 10)))
 
   (group names (fill fg)
     (text_ 'x' (pos [(px 1) (+ top 14)]) (halign 'middle') (font name))
-    (text_ 'y' (pos [(px 2) (+ top 14)]) (halign 'middle') (font name))))
+    (text_ 'y' (pos [(px 2) (+ top 14)]) (halign 'middle') (font name)))
+
+  ; The factor (1 − 1/b)²: from b, where each half merges, to b², where x meets y. A meets only
+  ; x's half.
+  (group gap-highlight
+    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (stroke teal)
+              (stroke-width 3.5))
+    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke teal) (stroke-width 3.5))
+    (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke muted) (stroke-width 5))
+    (line_ (from [(+ axis 6) level1]) (to [(+ axis 6) level2]) (stroke teal) (stroke-width 5))
+    (line_ (from [axis level1]) (to [(px 0) level1]) (stroke accent) (stroke-width 1)))
+
+  ; Where A meets both halves, both distances are at most the inner depth b: the term 1/b², and
+  ; the second inequality, which also counts the gap across x and y's join.
+  (group both-highlight
+    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (stroke coral)
+              (stroke-width 3.5))
+    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (stroke coral)
+              (stroke-width 3.5))
+    (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke coral) (stroke-width 5))
+    (line_ (from [(+ axis 13) top]) (to [(+ axis 13) level2]) (stroke fg) (stroke-width 5))
+    (line_ (from [axis level1]) (to [(px 0) level1]) (stroke accent) (stroke-width 1)))
+  (group join-highlight
+    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke fg) (stroke-width 3.5))))
 
 (canvas view (view-x 0) (view-y -182) (view-width 300) (view-height 162) (pan false) (zoom false)
-  axes ticks guides branches stretches qs points rings names)
+  (move none (duration 0.25))
+  axes
+  (when (= shown 'none') whole)
+  (when (!= shown 'none') faint)
+  cluster
+  (when (= shown 'gap') gap-highlight)
+  (when (or (= shown 'b2') (= shown 'hi')) both-highlight)
+  (when (= shown 'hi') join-highlight)
+  rings
+  (when (not (or (= shown 'b2') (= shown 'hi'))) ring-outside)
+  (when (or (= shown 'b2') (= shown 'hi')) ring-in-y)
+  names)
 
 ; One button per piece of the bounds. Pressing the piece shown clears it.
 (button gap (animation (move shown (to (if (= shown 'gap') 'none' 'gap')) (duration 0.25)))
