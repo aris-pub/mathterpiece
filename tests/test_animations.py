@@ -192,3 +192,16 @@ class TestChoiceMoves:
             f"{self.SIDE} (animation a {move})",
             "an ease for a choice takes only the values 0 and 1",
         )
+
+
+class TestStepEase:
+    # reference.md: (step-ease p) is 0 before progress p and 1 from p on.
+    B = "(bool on false)"
+
+    def test_a_bool_may_take_it(self):
+        move = "(on (transition (to true) (duration 1) (ease (step-ease 0.5))))"
+        assert steps(f"{self.B} (animation a {move})")[4] == ("step-ease", 0.5)
+
+    def test_its_point_is_from_0_to_1_known_when_compiling(self):
+        move = "(on (transition (to true) (duration 1) (ease (step-ease 2))))"
+        error(f"{self.B} (animation a {move})", r"2 breaks \(<= 1\)")

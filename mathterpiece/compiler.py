@@ -833,6 +833,12 @@ class _Compiler:
                     f"'{node.value}' is not an ease: use one of {', '.join(EASES)}", node.pos
                 )
             return Place(STRING, node.value)
+        if _head(node) == "step-ease":
+            (arg,) = self.args(node, 1)
+            at = self.expr(arg, UNIT, scope)
+            if not at.known:
+                raise CompileError("step-ease takes a point known when compiling", node.pos)
+            return Place(STRING, ("step-ease", at.value))
         if _head(node) == "step":
             (arg,) = self.args(node, 1)
             n = self.expr(arg, INT, scope)
@@ -942,15 +948,15 @@ class _Compiler:
         discrete = "bool" if _core(t) == BOOL else "choice" if _choices(t) else None
         if discrete:
             # A bool's or a choice's ease must take only the values 0 and 1 (piecewise
-            # constant), and only the standard library gives such eases; none exists yet
-            # besides (step 1), the default: change at the start of the move.
-            if own is not None and e != ("step", 1):
+            # constant): (step 1), the default, or step-ease.
+            if own is not None and e != ("step", 1) and not _is_step_ease(e):
                 raise CompileError(
                     f"an ease for a {discrete} takes only the values 0 and 1; by default it"
                     " changes at the start of its move and holds",
                     node.pos,
                 )
-            e = ("step", 1)
+            if not _is_step_ease(e):
+                e = ("step", 1)
         return ("move", (i, attr), tid, d, e if e is not None else "linear")
 
     def writable(self, node: Name, scope: dict) -> tuple[int, str | None, Type]:
@@ -2285,6 +2291,10 @@ def _known(t: Type, value) -> Expr:
 def _in_order(steps: list) -> tuple:
     """An animation's one step: several in a row are one in-order."""
     return steps[0] if len(steps) == 1 else ("in-order", *steps)
+
+
+def _is_step_ease(ease) -> bool:
+    return isinstance(ease, tuple) and ease[0] == "step-ease"
 
 
 def _ease_value(place: Place):
