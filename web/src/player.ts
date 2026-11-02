@@ -149,12 +149,13 @@ export class Player {
   }
 
   private movesAs(m: Move): Moves {
+    // pos has no place of its own: it is x and y, a point.
+    if (m.attr === "pos") return "point";
     const t = this.rt.typeOf(m.id, m.attr) ?? this.memberType(m);
     const core = t === undefined ? "real" : this.rt.core(t);
     if (core === "real" || core === "int" || core === "ratio") return "number";
     if (core === "point" || core === "transform") return "point";
     if (core === "color") return "color";
-    if (m.attr === "pos") return "point";
     return "jump";
   }
 

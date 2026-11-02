@@ -67,6 +67,12 @@ describe("a player", () => {
     expect(v("dot", "fill")).toBe("#808080ff");
   });
 
+  it("moves a position along a straight line", () => {
+    const [, p, v] = setup("slide");
+    p.seek(0.5);
+    expect(v("dot", "pos")).toEqual([1.5, 0.5]);
+  });
+
   it("scrubs by a slider's position, each part taking a share equal to its duration", () => {
     const [, p, v] = setup("a");
     p.scrub(0.25);

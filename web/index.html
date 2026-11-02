@@ -56,7 +56,13 @@
         const doc = JSON.parse(await figures[pick.value]());
         // What the figure is and what to try: its leading comments.
         const source = await sources[pick.value.replace(/\.mtpc$/, ".mtp")]?.();
-        const about = (source ?? "").split("\n").filter((l) => l.startsWith(";") && !/^; (expect|write|page)\b/.test(l)).map((l) => l.replace(/^;+ ?/, ""));
+        // Only the comments the file starts with; the rest explain the code.
+        const lines = (source ?? "").split("\n");
+        const end = lines.findIndex((l) => l.trim() !== "" && !l.startsWith(";"));
+        const about = lines
+          .slice(0, end < 0 ? lines.length : end)
+          .filter((l) => l.startsWith(";") && !/^; (expect|write|page)\b/.test(l))
+          .map((l) => l.replace(/^;+ ?/, ""));
         document.getElementById("about").textContent = about.join("\n");
         // A figure with no canvas of its own, such as most shared cases, is shown in one that
         // draws its whole scene, so there is always something to see.

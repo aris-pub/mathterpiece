@@ -11,3 +11,4 @@
 (animation jumps (k (transition (to 4) (duration 1) (ease (step 4)))))
 (animation fade (dot.fill (transition (to 'white') (duration 1))))
 (animation both (at-once (k (transition (to 10) (duration 2))) (j (transition (to 5) (duration 1)))))
+(animation slide (dot.pos (transition (to [3 1]) (duration 1))))
