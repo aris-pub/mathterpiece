@@ -258,7 +258,7 @@ Every declared object with a name has a `name` attribute; anonymous ones (`_`) h
 | shapes | the arguments they take (a circle's `r`, `fill`, …) and their position, `pos`, `x`, `y` |
 | group | `length` (its member count), `members`; members by position or name, `g[0]`, `g['disk-3']`; any member attribute, spread over the members, `g.r` |
 | scene | `background`, `length` (its member count), `members` (its shapes, not its variables); members by position or name; no spreading (`s.r` is an error) |
-| motif instances | their parameters and bound variables, `a.t`, `disk.area`; their members, `a.tip` |
+| motif instances | their parameters and bound variables, `a.t`, `disk.area`; their members, `a.tip`; their shape arguments, `a.x`, `a.fill`, … |
 | variant instances | their parameters, and every attribute of their base, `b1.p`, `b1.x` |
 | font | `family`, `style`, `weight`, `size` |
 | slider | `label`, `position` (0 to 1), `step` (the number of places, if given) |

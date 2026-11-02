@@ -43,6 +43,7 @@ from mathterpiece.types import (
     SCENE,
     STRING,
     TRANSFORM,
+    Interface,
     ListT,
     Maybe,
     Refine,
@@ -124,6 +125,10 @@ SHAPE_ATTRS: dict[str, dict[str, Attr]] = {
     },
     "group": dict(TRANSFORMS),
 }
+# Arguments a group takes only to write them on each of its members.
+SPREAD = frozenset(POSITIONED) | frozenset(PAINTED) | {"pos"}
+# The ends or corners whose mean is a line's or a triangle's position.
+CORNERS = {"line": ("from", "to"), "triangle": ("a", "b", "c")}
 # The ones a shape is written with as its positional argument.
 POSITIONAL = {"text": ("value",)}
 
@@ -162,6 +167,9 @@ class _Compiler:
     def __init__(self):
         self.model = Model()
         self.scene: int | None = None
+        # The container the expression being compiled sits in: a group, or None for the scene
+        # and the top level. Reads convert through the transforms not shared with it.
+        self.frame: int | None = None
 
     def run(self, forms: tuple[Form, ...]) -> Model:
         for form, scope in self.expand(forms, {}):
@@ -232,7 +240,7 @@ class _Compiler:
         i = len(self.model.objects) - 1
         if obj.name is not None:
             self.model.names[obj.name] = i
-        if obj.parent is not None:
+        if obj.parent is not None and obj.kind != "variable":
             self.model.objects[obj.parent].members.append(i)
         return i
 
@@ -294,7 +302,7 @@ class _Compiler:
             else:
                 raise CompileError("the scene holds shapes and variables", item.pos)
 
-    def shape(self, form: Form, parent: int, scope: dict) -> int:
+    def shape(self, form: Form, parent: int, scope: dict, spread: dict | None = None) -> int:
         kind, absent = _shape_kind(form)
         name, pos = self.name_of(form, scope)
         specs = SHAPE_ATTRS[kind]
@@ -302,35 +310,58 @@ class _Compiler:
         t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
         obj = Obj(kind, name, t, parent=parent, pos=pos)
         i = self.add(obj)
+        takes = specs.keys() | SPREAD if kind == "group" else specs.keys()
         given: dict[str, tuple[Node, dict]] = {}
+        members: list[tuple[Node, dict]] = []
         items = list(form.items[2:])
         for attr in POSITIONAL.get(kind, ()):
             if items and _head(items[0]) is None:
                 given[attr] = (items.pop(0), scope)
         for item, inner in self.expand(items, scope):
-            head = _head(item)
             if kind == "group" and _shape_kind(item):
-                self.shape(item, i, inner)
+                members.append((item, inner))
                 continue
+            head = _head(item)
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(f"expected an argument such as (r 1), got {item}", item.pos)
-            if head == "pos" and "x" in specs:
+            if head == "pos" and "x" in takes:
                 for attr in ("x", "y"):
                     if attr in given:
                         raise CompileError(f"'{attr}' is given twice", item.pos)
-                given["pos"] = (item.items[1], inner)
-                continue
-            if head not in specs:
+            elif head not in takes:
                 raise CompileError(f"a {kind} takes no argument '{head}'", item.pos)
             if head in given or ("pos" in given and head in ("x", "y")):
                 raise CompileError(f"'{head}' is given twice", item.pos)
             given[head] = (item.items[1], inner)
+        # A group's arguments are defaults for its members: a member's own value wins, and the
+        # nearest group's wins over one further out (reference.md, "The scene and shapes").
+        down = dict(spread or {})
+        if kind == "group":
+            for attr in [a for a in given if a in SPREAD]:
+                down.update(_coordinates(attr, *given.pop(attr)))
+        else:
+            for attr, (node, inner) in down.items():
+                if attr not in specs:
+                    raise CompileError(f"a {kind} takes no argument '{attr}'", node.pos)
+                if attr not in given and not (attr in ("x", "y") and "pos" in given):
+                    given[attr] = (node, inner)
+        saved, self.frame = self.frame, (parent if parent != self.scene else None)
+        try:
+            self.shape_attrs(obj, given, absent, form.pos, scope)
+        finally:
+            self.frame = saved
+        for item, inner in members:
+            self.shape(item, i, inner, down)
+        return i
+
+    def shape_attrs(self, obj: Obj, given: dict, absent: bool, pos: Pos, scope: dict) -> None:
+        specs = SHAPE_ATTRS[obj.kind]
         for attr, spec in specs.items():
             if attr in ("x", "y") and "pos" in given:
                 continue
             node, inner = given.get(attr, (None, scope))
             at = _maybe(spec.type) if absent else spec.type
-            obj.attrs[attr] = self.place(at, node, form.pos, attr, spec.default, inner)
+            obj.attrs[attr] = self.place(at, node, pos, attr, spec.default, inner)
         if "pos" in given:
             node, inner = given["pos"]
             point = self.expr(node, _maybe(POINT) if absent else POINT, inner)
@@ -341,7 +372,6 @@ class _Compiler:
             for attr, place in obj.attrs.items():
                 if not _may_be_none(_value_type(place)):
                     place.type = specs[attr].type
-        return i
 
     # Places ------------------------------------------------------------------------------
 
@@ -527,6 +557,7 @@ class _Compiler:
 
     def read(self, i: int, attr: str | None) -> Expr:
         obj = self.model.objects[i]
+        moves: frozenset = frozenset()
         if obj.kind == "variable" and attr is None:
             place = obj.value
         else:
@@ -535,10 +566,29 @@ class _Compiler:
             if attr not in obj.attrs:
                 raise CompileError(f"a {obj.kind} has no attribute '{attr}'", obj.pos)
             place = obj.attrs[attr]
+            if obj.kind in SHAPE_ATTRS:
+                moves = self.moves(i)
         t = _maybe(place.type) if isinstance(obj.type, Maybe) else place.type
         if not place.bound and _is_const(place.type):
             return _known(t, place.value)
-        return Expr("read", t, (i, attr), frozenset({(i, attr)}), _type_range(t))
+        deps = frozenset({(i, attr)}) | moves
+        return Expr("read", t, (i, attr, self.frame), deps, _type_range(t))
+
+    def moves(self, i: int) -> frozenset:
+        """The translate and transform places a read of shape i converts through: its own and
+        its containers', up to the one the reading expression sits in (reference.md,
+        "Coordinates")."""
+        shared = set()
+        j = self.frame
+        while j is not None and j != self.scene:
+            shared.add(j)
+            j = self.model.objects[j].parent
+        out = set()
+        j = i
+        while j is not None and j != self.scene and j not in shared:
+            out |= {(j, "translate"), (j, "transform")}
+            j = self.model.objects[j].parent
+        return frozenset(out)
 
     def part(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
         if e.known and e.value is None:
@@ -550,32 +600,87 @@ class _Compiler:
 
     def has_attr(self, e: Expr, name) -> bool:
         if e.op == "obj":
-            obj = self.model.objects[e.args[0]]
-            return name in obj.attrs or (name == "pos" and "x" in obj.attrs)
+            return name in self.attr_names(e.args[0])
+        if e.op == "member":
+            return name in self.type_attrs(_inner(e.type), e.args[2])
         return _base(_inner(e.type)) == POINT and name in ("x", "y")
+
+    def attr_names(self, i: int) -> set:
+        obj = self.model.objects[i]
+        names = set(obj.attrs)
+        if obj.kind in ("group", "scene"):
+            names |= {"length", "members"}
+        if "x" in obj.attrs or obj.kind in CORNERS:
+            names |= {"x", "y", "pos"}
+        if obj.kind == "group" and obj.members:
+            names |= set.intersection(*(self.attr_names(m) for m in obj.members)) - {"members"}
+        return names
+
+    def type_attrs(self, t: Type, candidates: tuple) -> set:
+        """What a member of type t, one of candidates, may be read for (type-system.md, 6)."""
+        if t == Interface("positioned"):
+            return {"x", "y", "pos"}
+        if t == Interface("shape"):
+            return {"translate", "transform"}
+        return self.attr_names(candidates[0]) if candidates else set()
+
+    def common(self, ids: list[int]) -> Type:
+        """The type where members meet: theirs when they share it, or else the most specific
+        interface all of them satisfy."""
+        types = [self.model.objects[m].type for m in ids]
+        inner = [_inner(t) for t in types]
+        if inner and all(t == inner[0] for t in inner):
+            c = inner[0]
+        elif inner and all(fits(t, Interface("positioned")) for t in inner):
+            c = Interface("positioned")
+        else:
+            c = Interface("shape")
+        return Maybe(c) if any(isinstance(t, Maybe) for t in types) else c
+
+    def obj_attr(self, i: int, name: str, pos: Pos) -> Expr:
+        obj = self.model.objects[i]
+        if obj.kind in ("group", "scene") and name == "length":
+            return _known(INT, len(obj.members))
+        if obj.kind in ("group", "scene") and name == "members":
+            items = tuple(self.read(m, None) for m in obj.members)
+            return Expr("list", ListT(self.common(obj.members)), items)
+        if name == "pos" and "pos" in self.attr_names(i):
+            return _gather(POINT, [self.obj_attr(i, "x", pos), self.obj_attr(i, "y", pos)])
+        if obj.kind in CORNERS and name in ("x", "y"):
+            k = 0 if name == "x" else 1
+            ends = [_part(self.read(i, c), k) for c in CORNERS[obj.kind]]
+            return self.arith(pos, "/", [self.arith(pos, "+", ends), _known(INT, len(ends))])
+        if name in obj.attrs:
+            return self.read(i, name)
+        if obj.kind == "group":
+            if not obj.members or name not in self.attr_names(i):
+                raise CompileError(f"every member of {obj.name} must have '{name}'", pos)
+            reads = [self.obj_attr(m, name, pos) for m in obj.members]
+            t = _join_all([r.type for r in reads], pos)
+            deps = frozenset().union(*(r.deps for r in reads))
+            return Expr("spread", ListT(t), (Expr("obj", obj.type, (i,)), name), deps)
+        raise CompileError(f"a {obj.kind} has no attribute '{name}'", pos)
 
     def part_of(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
         if isinstance(part, str):
             if e.op == "obj":
-                obj = self.model.objects[e.args[0]]
-                if part == "pos" and "x" in obj.attrs:
-                    return _gather(POINT, [self.read(e.args[0], "x"), self.read(e.args[0], "y")])
-                if part not in obj.attrs:
-                    raise CompileError(f"a {obj.kind} has no attribute '{part}'", pos)
-                return self.read(e.args[0], part)
+                return self.obj_attr(e.args[0], part, pos)
+            if e.op == "member":
+                candidates = e.args[2]
+                common = _inner(e.type)
+                if part not in self.type_attrs(common, candidates):
+                    raise CompileError(f"a {common} has no attribute '{part}'", pos)
+                reads = [self.obj_attr(m, part, pos) for m in candidates]
+                t = _join_all([r.type for r in reads], pos)
+                deps = e.deps.union(*(r.deps for r in reads))
+                return Expr("part", t, (e, part), deps, _type_range(t))
             if _base(_inner(e.type)) == POINT and part in ("x", "y"):
                 return _part(e, 0 if part == "x" else 1)
             raise CompileError(f"a {e.type} has no attribute '{part}'", pos)
         index = self.expr(part, None, scope)
-        if e.op == "obj" and index.type == STRING:
-            obj = self.model.objects[e.args[0]]
-            if not index.known:
-                raise CompileError("a member's name must be known when compiling", pos)
-            for m in obj.members:
-                if self.model.objects[m].name == index.value:
-                    return self.read(m, None)
-            raise CompileError(f"a {obj.kind} has no member '{index.value}'", pos)
-        if not fits(index.type, INT):
+        if e.op == "obj" and self.model.objects[e.args[0]].kind in ("group", "scene"):
+            return self.member(e.args[0], index, pos)
+        if not fits(_loose(index.type), INT):
             raise CompileError(f"a position is an int, got {index.type}", pos)
         whole = _base(_inner(e.type))
         if isinstance(whole, ListT) or whole == POINT:
@@ -593,14 +698,31 @@ class _Compiler:
             else:
                 item = _maybe(item)
             return Expr("part", item, (e, index), e.deps | index.deps, _type_range(item))
-        if e.op == "obj":
-            obj = self.model.objects[e.args[0]]
-            if obj.members and index.known:
-                k = index.value
-                if not -len(obj.members) <= k < len(obj.members):
-                    raise CompileError(f"position {k} is out of range", pos)
-                return self.read(obj.members[k], None)
         raise CompileError(f"a {e.type} has no items", pos)
+
+    def member(self, i: int, index: Expr, pos: Pos) -> Expr:
+        """A member of a group or the scene, by position or name."""
+        obj = self.model.objects[i]
+        ids = obj.members
+        names = [self.model.objects[m].name for m in ids]
+        key = _core(index.type)
+        if key not in (INT, STRING):
+            raise CompileError(f"a member is found by an int or a string, got {index.type}", pos)
+        if index.known:
+            k = index.value
+            if key == STRING:
+                if k not in names:
+                    raise CompileError(f"a {obj.kind} has no member '{k}'", pos)
+                return self.read(ids[names.index(k)], None)
+            if not -len(ids) <= k < len(ids):
+                raise CompileError(f"position {k} is out of range", pos)
+            return self.read(ids[k], None)
+        # A key known only while drawing may miss, unless every choice of its type is a name.
+        choices = _choices(index.type)
+        safe = choices is not None and all(c in names for c in choices)
+        t = self.common(ids)
+        e = Expr("obj", obj.type, (i,))
+        return Expr("member", t if safe else _maybe(t), (e, index, tuple(ids)), index.deps)
 
     def form(self, node: Form, expected: Type | None, scope: dict) -> Expr:
         head = _head(node)
@@ -678,7 +800,7 @@ class _Compiler:
                 return _known(t, [v for v in e.value if v is not None])
             return Expr("somes", t, (e,), e.deps)
         if head in ARITH:
-            return self.arith(node, head, [self.expr(x, None, scope) for x in args])
+            return self.arith(node.pos, head, [self.expr(x, None, scope) for x in args])
         if head in COMPARE or head in ("=", "!="):
             a, b = self.args(node, 2)
             ea = self.expr(a, None, scope)
@@ -738,17 +860,17 @@ class _Compiler:
             inner[name.parts[0]] = self.expr(binding.items[1], None, inner)
         return self.expr(node.items[2], expected, inner)
 
-    def arith(self, node: Form, op: str, args: list[Expr]) -> Expr:
+    def arith(self, pos: Pos, op: str, args: list[Expr]) -> Expr:
         if not args or (op in ("/", "^", "mod") and len(args) != 2):
             raise CompileError(
-                f"{op} takes {'two' if op in ('/', '^', 'mod') else 'some'} numbers", node.pos
+                f"{op} takes {'two' if op in ('/', '^', 'mod') else 'some'} numbers", pos
             )
         numbers = [a for a in args if a.type != NONE]
         for a in numbers:
             if _core(a.type) not in NUMBERS:
-                raise CompileError(f"{op} takes numbers, got {a.type}", node.pos)
+                raise CompileError(f"{op} takes numbers, got {a.type}", pos)
         if not numbers:
-            raise CompileError(f"{op} takes numbers, got none", node.pos)
+            raise CompileError(f"{op} takes numbers, got none", pos)
         t = max((_core(a.type) for a in numbers), key=NUMBERS.index)
         if op == "/" and t == INT:
             t = RATIO
@@ -757,7 +879,7 @@ class _Compiler:
         if any(a.known and a.value is None for a in args):
             return _known(Maybe(t), None)
         if all(a.known for a in args):
-            return _known(t, _fold_number(op, [a.value for a in args], node.pos))
+            return _known(t, _fold_number(op, [a.value for a in args], pos))
         ranges = [a.range for a in args]
         r = _range_of(op, ranges)
         undefined = any(_may_be_none(a.type) for a in args) or _may_be_undefined(op, args)
@@ -842,6 +964,31 @@ def _shape_kind(node: Node) -> tuple[str, bool] | None:
     if isinstance(head, Name) and len(head.parts) == 1 and head.parts[0] in SHAPE_ATTRS:
         return head.parts[0], absent
     return None
+
+
+def _coordinates(attr: str, node: Node, scope: dict) -> dict:
+    """A group's argument as defaults by place: pos becomes its x and its y, so a member or an
+    inner group that gives only one of them still takes the other."""
+    if attr != "pos":
+        return {attr: (node, scope)}
+    dot = Name((".",), node.pos)
+    return {
+        a: (Form((dot, node, IntLit(k, node.pos)), node.pos), scope) for k, a in enumerate("xy")
+    }
+
+
+def _choices(t: Type) -> tuple | None:
+    t = _inner(t)
+    if isinstance(t, Refine):
+        return next((c[1] for c in t.constraints if c[0] == "one-of"), None)
+    return None
+
+
+def _join_all(types: list[Type], pos: Pos) -> Type:
+    t = types[0]
+    for u in types[1:]:
+        t = _join(t, u, pos)
+    return t
 
 
 def _inner(t: Type) -> Type:
