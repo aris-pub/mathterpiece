@@ -87,7 +87,7 @@ A call is `(function argument …)`, with the arguments in order. Built-in funct
     (dist p q)
     (double 4)                ; a function declared with func
 
-A function is declared with `func`: its name, its parameters, and its body. Every parameter is typed, and may have a default, so a call may leave it out. One parameter is written alone; several, as a list:
+A function is declared with `func`: its name, its parameters, and its body. Every parameter is typed, and may have a default, so a call may leave it out. One parameter is written alone; several, as a list; none, as `()`:
 
     (func double (real x) (* 2 x))
     (func hyp ((real a) (real b 0)) (sqrt (+ (* a a) (* b b))))

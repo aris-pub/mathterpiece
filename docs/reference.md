@@ -32,7 +32,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 | `(motif name params)` | required | the parameter list | member declarations, bound variable declarations |
 | `(variant name params shape)` | required | the parameter list; one shape declaration | none |
 
-A parameter list is one typed parameter `(real t 0.5)` or a list of them `((real t 0.5) (color tint 'red'))`; each may have a default.
+A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t 0.5) (color tint 'red'))`, or `()` for none; each may have a default. `()` is also an empty list of `let` bindings, and is never a value.
 
 ### Functions
 

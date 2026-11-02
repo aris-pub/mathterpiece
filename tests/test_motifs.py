@@ -135,3 +135,14 @@ class TestTypes:
     def test_reading_x(self):
         m = model(f"{DIAL} (scene s (dial d1 (x 2)) (real k d1.x))")
         assert m.get("k").value.expr.type == REAL
+
+
+class TestNoParameters:
+    def test_a_motif_with_no_parameters(self):
+        m = model("(motif dot () (circle c (r 2))) (scene s (dot d))")
+        assert m.motifs["dot"].params == ()
+        assert m.get("d.c").attrs["r"].value == 2
+
+    def test_a_variant_with_no_parameters(self):
+        m = model("(variant unit () (circle _ (r 1))) (scene s (unit u))")
+        assert m.get("u").attrs["r"].fixed

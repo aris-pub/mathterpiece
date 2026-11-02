@@ -276,3 +276,11 @@ class TestAbs:
 
     def test_its_range_is_non_negative(self):
         model("(scene s (real k 1) (circle c (r (abs k))))")
+
+
+class TestEmptyForm:
+    def test_an_empty_list_of_bindings(self):
+        assert value("(real k (let () 3))", "k") == 3
+
+    def test_not_a_value(self):
+        error("(real k ())", r"\(\) is an empty list of parameters or bindings, not a value")

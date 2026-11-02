@@ -189,8 +189,6 @@ class _Parser:
                 self.advance()
                 break
             items.append(self.node())
-        if not items:
-            raise ParseError("empty form", pos)
         if self.peek() in (".", "["):
             raise ParseError("a part cannot follow a form; use (. X Y)", self.pos())
         return Form(tuple(items), pos)

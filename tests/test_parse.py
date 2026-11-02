@@ -63,14 +63,6 @@ class TestForms:
     def test_adjacent_forms(self):
         assert parse("(a (b)(c))") == (Form((n("a"), Form((n("b"),)), Form((n("c"),)))),)
 
-    def test_empty_form_is_error(self):
-        with pytest.raises(ParseError):
-            parse("()")
-
-    def test_nested_empty_form_is_error(self):
-        with pytest.raises(ParseError):
-            parse("(a ())")
-
     def test_unclosed_form_reports_opening_paren(self):
         assert error_at("(a\n  (b c)") == Pos(1, 1)
 
@@ -717,3 +709,9 @@ class TestTypeNotation:
     def test_invalid(self, text):
         with pytest.raises(ParseError):
             atom(text)
+
+
+def test_an_empty_form():
+    # () is an empty list of parameters or bindings; the compiler decides where it may go.
+    (form,) = parse("(motif m () (circle c))")
+    assert form.items[2] == Form(())

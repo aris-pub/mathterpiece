@@ -153,7 +153,7 @@ def compile_model(forms: tuple[Form, ...]) -> Model:
 
 
 def _head(node: Node) -> str | None:
-    if isinstance(node, Form) and isinstance(node.items[0], Name):
+    if isinstance(node, Form) and node.items and isinstance(node.items[0], Name):
         part = node.items[0].parts[0]
         return part if len(node.items[0].parts) == 1 and isinstance(part, str) else None
     return None
@@ -244,7 +244,7 @@ class _Compiler:
 
     def shape_kind(self, node: Node) -> tuple[str, bool] | None:
         """The shape a form declares, and whether it is declared T|none."""
-        if not isinstance(node, Form):
+        if not isinstance(node, Form) or not node.items:
             return None
         head = node.items[0]
         absent = False
@@ -313,6 +313,8 @@ class _Compiler:
     def declared(self, form: Form, scope: dict) -> tuple[str | None, Pos, Type, Node | None]:
         """A (T name value? constraint…) form's name, its type with the constraints, and its
         value's source."""
+        if not form.items:
+            raise CompileError("expected a declaration, got ()", form.pos)
         head = form.items[0]
         name, pos = self.name_of(form, scope)
         rest = list(form.items[2:])
@@ -454,6 +456,8 @@ class _Compiler:
         """One parameter (real t 0.5), or a list of them ((real t 0.5) (color c 'red'))."""
         if not isinstance(node, Form):
             raise CompileError("expected a parameter such as (real t 0.5)", node.pos)
+        if not node.items:
+            return ()
         forms = node.items if isinstance(node.items[0], Form) else (node,)
         out = []
         for f in forms:
@@ -725,6 +729,10 @@ class _Compiler:
             return self.interp(node, scope)
         if isinstance(node, Bar):
             raise CompileError("type notation is not a value", node.pos)
+        if isinstance(node, Form) and not node.items:
+            raise CompileError(
+                "() is an empty list of parameters or bindings, not a value", node.pos
+            )
         if isinstance(node, Form):
             return self.form(node, expected, scope)
         raise CompileError(f"unexpected {type(node).__name__}", node.pos)

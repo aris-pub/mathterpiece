@@ -302,6 +302,8 @@ def type_from_node(node: Node, named: "dict[str, Type] | None" = None) -> Type:
             raise TypeError_("a type can be broadened only by none for now: write T|none")
         return Maybe(type_from_node(types[0], named))
     if isinstance(node, Form):
+        if not node.items:
+            raise TypeError_("() is not a type")
         head = node.items[0]
         if isinstance(head, Name) and head.parts == ("maybe",):
             if len(node.items) != 2:
@@ -358,7 +360,7 @@ def refine(base: Type, nodes: "tuple[Node, ...] | list[Node]", name: str | None 
 
 def constraint(node: Node, base: Type) -> Constraint:
     """Reads one constraint form and checks it can narrow base."""
-    if not isinstance(node, Form) or not isinstance(node.items[0], Name):
+    if not isinstance(node, Form) or not node.items or not isinstance(node.items[0], Name):
         raise TypeError_("expected a constraint")
     head = node.items[0].parts[0]
     args = node.items[1:]
