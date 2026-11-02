@@ -1,424 +1,144 @@
-// Plays one animation from the JSON. Its pairs are laid out on a timeline: in-order puts them one
-// after another, at-once side by side. A pair starts from wherever its targets are when its moment
-// comes, and its ends that read the scene are read then too. The same timeline can be run by a
-// clock (seek) or scrubbed by a slider (scrub), where durations only share out the track.
-import type { Expr } from "./doc.ts";
+// Plays an animation: its steps laid out in time (in-order one after another, at-once together,
+// each as long as its longest part), and each move written to its place as time passes or as a
+// slider scrubs through it (docs/reference.md, "Transitions and animations" and "Controls").
+import type { Clamp, Step } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
-import {
-  type Call,
-  type Crossfade,
-  type Ease,
-  type Spec,
-  type ValueKind,
-  applyEase,
-  endOf,
-  totalDuration,
-  trackWeight,
-  valueAt,
-  valueAtProgress,
-} from "./transitions.ts";
+import { type Ease, type Moves, along, applyEase } from "./transitions.ts";
 
-type Target = [number, string];
-
-// A composite's own ease, which warps time across everything inside it.
-interface Warp {
+interface Move {
+  id: number;
+  attr: string | null;
+  transition: number;
   start: number;
-  length: number;
+  duration: number;
   ease: Ease;
+  // Read once, when the move starts (docs/mtpc.md, "Transitions").
+  from?: unknown;
+  to?: unknown;
 }
 
-interface Segment {
-  targets: Target[];
-  kind: ValueKind;
-  json: unknown;
-  defaults: { duration?: number; ease?: Ease };
-  // Where it sits by the clock (seconds) and on a slider's track (shares).
+/** A top-level step's span in time, for play's step buttons. */
+export interface Span {
   start: number;
-  length: number;
-  trackStart: number;
-  trackLength: number;
-  warps: Warp[];
-  trackWarps: Warp[];
-  step: number;
-  // Its place in order among parts that start at the same instant: an in-order's later steps get
-  // higher numbers, while the parts of an at-once share one, so they read the scene together.
-  seq: number;
-  // While running by the clock: whether it has started, its start values and its ends, and
-  // whether it is finished (or skipped by a jump).
-  started: boolean;
-  finished: boolean;
-  starts: unknown[];
-  spec: Spec | null;
-}
-
-export interface Step {
-  start: number;
-  segments: Segment[];
+  end: number;
 }
 
 export class Player {
   readonly duration: number;
-  readonly steps: Step[] = [];
-  private segments: Segment[] = [];
-  private trackTotal: number;
+  readonly spans: Span[];
+  private moves: Move[] = [];
   private time = 0;
-  // A slider's start values and ends, read when the reader takes hold of the knob.
-  private scrubbing: { starts: Map<Segment, unknown[]>; specs: Map<Segment, Spec> } | null = null;
 
   constructor(
     private rt: Runtime,
     animation: number,
+    private clamps: Clamp[] = [],
   ) {
-    const body = topBody(rt, animation);
-    const top = Array.isArray(body) && body[0] === "in-order" ? (body.slice(2) as unknown[]) : [body];
-    const settings = Array.isArray(body) && body[0] === "in-order" ? (body[1] as Settings) : {};
-    // The steps of a play are the parts of its top-level in-order, without its waits.
-    let clock = 0;
-    let track = 0;
-    const warps = settings.ease === undefined ? [] : [{ start: 0, length: 0, ease: settings.ease }];
-    const trackWarps = settings.ease === undefined ? [] : [{ start: 0, length: 0, ease: settings.ease }];
-    const defaults = defaultsOf(settings, {});
-    let seq = 0;
-    for (const part of top) {
-      const isWait = Array.isArray(part) && part[0] === "wait";
-      const before = this.segments.length;
-      const [length, weight, last] = this.layout(part, clock, track, defaults, warps, trackWarps, this.steps.length, seq);
-      seq = last + 1;
-      if (!isWait) this.steps.push({ start: clock, segments: this.segments.slice(before) });
-      clock += length;
-      track += weight;
-    }
-    for (const w of warps) w.length = clock;
-    for (const w of trackWarps) w.length = track;
-    this.segments.sort((a, b) => a.start - b.start || a.seq - b.seq);
-    this.duration = clock;
-    this.trackTotal = track;
-  }
-
-  /** Where running by the clock stops: the end, unless a single step was asked for. */
-  stopAt = Number.POSITIVE_INFINITY;
-
-  get done(): boolean {
-    return this.time >= Math.min(this.duration, this.stopAt);
-  }
-
-  /** Runs only step k from now on: it starts from wherever things are and stops at its end. */
-  only(k: number): void {
-    const step = this.steps[k];
-    if (!step) return;
-    this.jump(k);
-    for (const s of this.segments) if (s.step > k) s.finished = true;
-    this.stopAt = Math.max(step.start, ...step.segments.map((s) => s.start + s.length));
-  }
-
-  /** Every target this animation writes, as "id.attr". */
-  get targets(): string[] {
-    const out: string[] = [];
-    for (const s of this.segments) for (const [id, attr] of s.targets) if (!out.includes(`${id}.${attr}`)) out.push(`${id}.${attr}`);
-    return out;
-  }
-
-  /** Runs by the clock to t seconds after the start. */
-  seek(t: number): void {
-    this.time = t;
-    // Segments are in order of start and seq. Those that begin together all read their start
-    // values before any of them writes.
-    let k = 0;
-    while (k < this.segments.length) {
-      const first = this.segments[k]!;
-      let end = k + 1;
-      while (end < this.segments.length && this.segments[end]!.start === first.start && this.segments[end]!.seq === first.seq) end += 1;
-      const group = this.segments.slice(k, end);
-      k = end;
-      const live = group.filter((s) => !s.finished && warped(t, s.warps, this.call) - s.start >= 0);
-      for (const s of live) if (!s.started) this.begin(s);
-      for (const s of live) {
-        const local = warped(t, s.warps, this.call) - s.start;
-        const at = Math.min(local, s.length);
-        s.targets.forEach(([id, attr], i) => this.write(id, attr, valueAt(s.spec as Spec, s.starts[i], at, s.kind, this.call)));
-        if (local >= s.length) {
-          s.finished = true;
-          for (const [id] of s.targets) this.rt.morphs.delete(id);
-        }
-      }
-    }
-  }
-
-  /** Jumps to step k, which then starts from wherever things are; earlier steps are skipped. */
-  jump(k: number): void {
-    const step = this.steps[k];
-    if (!step) return;
-    for (const s of this.segments) {
-      s.started = false;
-      s.finished = s.step < k;
-    }
-    this.seek(step.start);
-  }
-
-  /** Whether every target of step k has the value the step would leave it at. */
-  holds(k: number): boolean {
-    const step = this.steps[k];
-    if (!step) return false;
-    return step.segments.every((s) => {
-      const spec = this.specOf(s);
-      return s.targets.every(([id, attr]) => {
-        const now = this.rt.resolved(this.rt.value(id, attr));
-        return same(now, this.rt.resolved(endOf(spec, now)));
-      });
+    const root = rt.objects[animation]!.steps!;
+    this.duration = this.layout(root, 0);
+    const top = root[0] === "in-order" ? (root.slice(1) as Step[]) : [root];
+    let t = 0;
+    this.spans = top.map((s) => {
+      const d = length(s);
+      const span = { start: t, end: t + d };
+      t += d;
+      return span;
     });
   }
 
-  /** Writes the values for a slider's knob at u in [0, 1]. */
+  private layout(step: Step, start: number): number {
+    if (step[0] === "move") {
+      const [, [id, attr], transition, duration, ease] = step;
+      this.moves.push({ id, attr, transition, start, duration, ease: ease as Ease });
+      return duration;
+    }
+    if (step[0] === "wait") return step[1];
+    let longest = 0;
+    let t = start;
+    for (const s of step.slice(1) as Step[]) {
+      const d = this.layout(s, step[0] === "in-order" ? t : start);
+      if (step[0] === "in-order") t += d;
+      longest = Math.max(longest, d);
+    }
+    return step[0] === "in-order" ? t - start : longest;
+  }
+
+  get done(): boolean {
+    return this.time >= this.duration;
+  }
+
+  /** The places it writes, as "id:attr". */
+  get targets(): string[] {
+    return [...new Set(this.moves.map((m) => `${m.id}:${m.attr ?? ""}`))];
+  }
+
+  /** Writes every move as it stands t seconds in. */
+  seek(t: number): void {
+    this.time = t;
+    for (const m of this.moves) {
+      if (t < m.start && m.from === undefined) continue;
+      const p = m.duration > 0 ? Math.min(Math.max((t - m.start) / m.duration, 0), 1) : t >= m.start ? 1 : 0;
+      this.write(m, p);
+    }
+  }
+
+  /** A slider's knob at u in [0, 1]: each part takes a share of the track equal to its duration. */
   scrub(u: number): void {
-    const values = this.valuesAt(u);
-    for (const [key, value] of values) {
-      const [id, attr] = key;
-      this.write(id, attr, value);
-    }
+    this.seek(Math.min(Math.max(u, 0), 1) * this.duration);
   }
 
-  /** Lets the next scrub read start values and ends afresh, as when the knob is taken hold of. */
+  /** Forgets where each move started, so the next run starts from where the places are then. */
   release(): void {
-    this.scrubbing = null;
-  }
-
-  /** Where the knob belongs for the current value of a one-target animation; null otherwise. */
-  knob(): number | null {
-    if (this.targets.length !== 1) return null;
-    const [id, attr] = this.segments[0]?.targets[0] as Target;
-    const now = this.rt.value(id, attr);
-    const off = (u: number) => distance(this.valuesAt(u)[0]?.[1], now);
-    const samples = 256;
-    let best = 0;
-    for (let k = 1; k <= samples; k++) if (off(k / samples) < off(best / samples)) best = k;
-    // Narrow down between the neighbors of the best sample.
-    let lo = Math.max(best - 1, 0) / samples;
-    let hi = Math.min(best + 1, samples) / samples;
-    for (let k = 0; k < 40; k++) {
-      const a = lo + (hi - lo) / 3;
-      const b = hi - (hi - lo) / 3;
-      if (off(a) < off(b)) hi = b;
-      else lo = a;
+    for (const m of this.moves) {
+      delete m.from;
+      delete m.to;
     }
-    this.release();
-    return (lo + hi) / 2;
   }
 
-  private valuesAt(u: number): [Target, unknown][] {
-    if (!this.scrubbing) this.prepareScrub();
-    const scrub = this.scrubbing as NonNullable<Player["scrubbing"]>;
-    const place = Math.min(Math.max(u, 0), 1) * this.trackTotal;
-    const latest = new Map<string, [Segment, number]>();
-    const first = new Map<string, [Segment, number]>();
-    for (const s of this.segments) {
-      const local = warped(place, s.trackWarps, this.call) - s.trackStart;
-      s.targets.forEach(([id, attr], k) => {
-        const key = `${id}.${attr}`;
-        if (!first.has(key)) first.set(key, [s, k]);
-        if (local >= 0) latest.set(key, [s, k]);
-      });
+  /** The top-level step running at the current time, or null when none is. */
+  stepNow(): number | null {
+    const k = this.spans.findIndex((s) => this.time >= s.start && this.time < s.end);
+    return k < 0 ? null : k;
+  }
+
+  private write(m: Move, p: number): void {
+    const rt = this.rt;
+    if (m.from === undefined) {
+      const tr = rt.objects[m.transition]!;
+      const here = rt.value(m.id, m.attr);
+      m.from = tr.from ? rt.placeValue(tr.from) : here;
+      m.to = tr.to ? rt.placeValue(tr.to) : here;
     }
-    const out: [Target, unknown][] = [];
-    for (const [key, [s0, k0]] of first) {
-      const [s, k] = latest.get(key) ?? [s0, k0];
-      const local = warped(place, s.trackWarps, this.call) - s.trackStart;
-      const p = s.trackLength > 0 ? Math.min(Math.max(local / s.trackLength, 0), 1) : 1;
-      const spec = scrub.specs.get(s) as Spec;
-      const start = (scrub.starts.get(s) as unknown[])[k];
-      out.push([s.targets[k] as Target, valueAtProgress(spec, start, p, s.kind, this.call)]);
+    const e = applyEase(m.ease, p, (id) => rt.fn(id));
+    const tr = rt.objects[m.transition]!;
+    const path = tr.path && typeof tr.path === "object" ? (tr.path as { func: number }).func : null;
+    let v = path === null ? along(m.from, m.to, e, this.movesAs(m)) : rt.fn(path)([m.from, m.to, e], null);
+    for (const c of this.clamps) {
+      if (c.place[0] === m.id && c.place[1] === m.attr && typeof v === "number") v = rt.clamp(c, v);
     }
-    return out;
+    rt.write(m.id, m.attr, v);
   }
 
-  // Ends are read now; each target's later segments start where its earlier ones leave it.
-  private prepareScrub(): void {
-    const starts = new Map<Segment, unknown[]>();
-    const specs = new Map<Segment, Spec>();
-    const last = new Map<string, unknown>();
-    for (const s of [...this.segments].sort((a, b) => a.trackStart - b.trackStart)) {
-      const spec = this.specOf(s);
-      specs.set(s, spec);
-      const begins = s.targets.map(([id, attr]) => {
-        const key = `${id}.${attr}`;
-        return last.has(key) ? last.get(key) : this.rt.value(id, attr);
-      });
-      starts.set(s, begins);
-      s.targets.forEach(([id, attr], k) => last.set(`${id}.${attr}`, endOf(spec, begins[k])));
-    }
-    this.scrubbing = { starts, specs };
+  private movesAs(m: Move): Moves {
+    const t = this.rt.typeOf(m.id, m.attr) ?? this.memberType(m);
+    const core = t === undefined ? "real" : this.rt.core(t);
+    if (core === "real" || core === "int" || core === "ratio") return "number";
+    if (core === "point" || core === "transform") return "point";
+    if (core === "color") return "color";
+    if (m.attr === "pos") return "point";
+    return "jump";
   }
 
-  private begin(s: Segment): void {
-    s.started = true;
-    s.starts = s.targets.map(([id, attr]) => this.rt.value(id, attr));
-    s.spec = this.specOf(s);
-  }
-
-  // The segment's transition, with its ends read now and its composite's defaults around it.
-  private specOf(s: Segment): Spec {
-    const spec = toSpec(s.json, (e) => this.rt.eval(e, null, {}));
-    if (s.defaults.duration === undefined && s.defaults.ease === undefined) return spec;
-    return {
-      kind: "in-order",
-      parts: [spec],
-      ...(s.defaults.duration === undefined ? {} : { defaultDuration: s.defaults.duration }),
-      ...(s.defaults.ease === undefined ? {} : { defaultEase: s.defaults.ease }),
-    };
-  }
-
-  private write(id: number, attr: string, value: unknown): void {
-    if (isCrossfade(value)) {
-      this.rt.write(id, attr, value.to);
-      this.rt.morphs.set(id, [value.from, value.progress]);
-      return;
-    }
-    if (typeof value === "string" && this.rt.kind(id) === "text") this.rt.morphs.delete(id);
-    this.rt.write(id, attr, value);
-  }
-
-  private call: Call = (name, args) => this.rt.invoke(name, args);
-
-  // Lays out part, starting at clock and track, and returns how long it takes on each.
-  private layout(
-    part: unknown,
-    clock: number,
-    track: number,
-    defaults: Segment["defaults"],
-    warps: Warp[],
-    trackWarps: Warp[],
-    step: number,
-    seq: number,
-  ): [number, number, number] {
-    const [head, ...rest] = part as [string, ...unknown[]];
-    if (head === "wait") return [rest[0] as number, rest[0] as number, seq];
-    if (head === "animation") {
-      return this.layout(this.rt.obj(rest[0] as number).body, clock, track, defaults, warps, trackWarps, step, seq);
-    }
-    if (head === "pair") {
-      const [targets, kind, json] = rest as [Target[], ValueKind, unknown];
-      const shape = withDefaults(toSpec(json, () => 0), defaults);
-      const length = shape.kind === "single" && shape.duration === undefined ? 0 : safeDuration(shape);
-      const weight = trackWeight(shape);
-      this.segments.push({
-        targets, kind, json, defaults, start: clock, length, trackStart: track, trackLength: weight,
-        warps, trackWarps, step, seq, started: false, finished: false, starts: [], spec: null,
-      });
-      return [length, weight, seq];
-    }
-    const settings = rest[0] as Settings;
-    const inner = defaultsOf(settings, defaults);
-    const parts = rest.slice(1);
-    const own = settings.ease === undefined ? null : { start: clock, length: 0, ease: settings.ease };
-    const ownTrack = settings.ease === undefined ? null : { start: track, length: 0, ease: settings.ease };
-    const innerWarps = own ? [...warps, own] : warps;
-    const innerTrackWarps = ownTrack ? [...trackWarps, ownTrack] : trackWarps;
-    let length = 0;
-    let weight = 0;
-    let last = seq;
-    for (const [i, p] of parts.entries()) {
-      const [l, w, end] =
-        head === "in-order"
-          ? this.layout(p, clock + length, track + weight, inner, innerWarps, innerTrackWarps, step, i === 0 ? seq : last + 1)
-          : this.layout(p, clock, track, inner, innerWarps, innerTrackWarps, step, seq);
-      length = head === "in-order" ? length + l : Math.max(length, l);
-      weight = head === "in-order" ? weight + w : Math.max(weight, w);
-      last = Math.max(last, end);
-    }
-    if (own) own.length = length;
-    if (ownTrack) ownTrack.length = weight;
-    return [length, weight, last];
+  // A group's attribute is each member's, so its type is a member's.
+  private memberType(m: Move) {
+    const first = this.rt.objects[m.id]!.members?.[0];
+    return first === undefined ? undefined : this.rt.typeOf(first, m.attr);
   }
 }
 
-/** An animation's body, through animations that only name another one, so their steps are its. */
-export function topBody(rt: Runtime, animation: number): unknown {
-  let body = rt.obj(animation).body;
-  while (Array.isArray(body) && body[0] === "animation") body = rt.obj(body[1] as number).body;
-  return body;
-}
-
-type Settings = { ease?: Ease; "default-duration"?: number; "default-ease"?: Ease };
-
-function defaultsOf(settings: Settings, outer: Segment["defaults"]): Segment["defaults"] {
-  const out: Segment["defaults"] = { ...outer };
-  if (settings["default-duration"] !== undefined) out.duration = settings["default-duration"];
-  if (settings["default-ease"] !== undefined) out.ease = settings["default-ease"];
-  return out;
-}
-
-function withDefaults(spec: Spec, defaults: Segment["defaults"]): Spec {
-  if (defaults.duration === undefined && defaults.ease === undefined) return spec;
-  return {
-    kind: "in-order",
-    parts: [spec],
-    ...(defaults.duration === undefined ? {} : { defaultDuration: defaults.duration }),
-    ...(defaults.ease === undefined ? {} : { defaultEase: defaults.ease }),
-  };
-}
-
-// A slider's transitions may lack durations; by the clock they count as instant.
-function safeDuration(spec: Spec): number {
-  try {
-    return totalDuration(spec);
-  } catch {
-    return 0;
-  }
-}
-
-// Time t, as the composites around a segment warp it, outermost first.
-function warped(t: number, warps: Warp[], call: Call): number {
-  let out = t;
-  for (const w of warps) {
-    if (w.length <= 0) continue;
-    const p = Math.min(Math.max((out - w.start) / w.length, 0), 1);
-    out = w.start + applyEase(w.ease, p, call) * w.length;
-  }
-  return out;
-}
-
-/** A transition from the JSON, with its ends read by readEnd. */
-export function toSpec(json: unknown, readEnd: (e: Expr) => unknown): Spec {
-  const [head, ...rest] = json as [string, ...unknown[]];
-  if (head === "wait") return { kind: "wait", duration: rest[0] as number };
-  if (head === "in-order") {
-    const settings = rest[0] as Settings;
-    return {
-      kind: "in-order",
-      parts: rest.slice(1).map((p) => toSpec(p, readEnd)),
-      ...(settings.ease === undefined ? {} : { ease: settings.ease }),
-      ...(settings["default-duration"] === undefined ? {} : { defaultDuration: settings["default-duration"] }),
-      ...(settings["default-ease"] === undefined ? {} : { defaultEase: settings["default-ease"] }),
-    };
-  }
-  const parts = rest[0] as { from?: Expr; to?: Expr; duration?: number; ease?: Ease; path?: ["fn", string] };
-  return {
-    kind: "single",
-    ...("from" in parts ? { from: readEnd(parts.from) } : {}),
-    ...("to" in parts ? { to: readEnd(parts.to) } : {}),
-    ...(parts.duration === undefined ? {} : { duration: parts.duration }),
-    ...(parts.ease === undefined ? {} : { ease: parts.ease }),
-    ...(parts.path === undefined ? {} : { path: parts.path }),
-  };
-}
-
-function isCrossfade(value: unknown): value is Crossfade {
-  return typeof value === "object" && value !== null && "progress" in value && "from" in value;
-}
-
-function same(a: unknown, b: unknown): boolean {
-  return distance(a, b) <= 1e-9 * Math.max(1, magnitude(a));
-}
-
-function magnitude(a: unknown): number {
-  if (typeof a === "number") return Math.abs(a);
-  if (Array.isArray(a)) return Math.max(...a.map((x) => Math.abs(Number(x))), 0);
-  return 0;
-}
-
-// How far apart two values are: for numbers and points, the usual distance; otherwise 0 or 1.
-function distance(a: unknown, b: unknown): number {
-  if (typeof a === "number" && typeof b === "number") return Math.abs(a - b);
-  if (Array.isArray(a) && Array.isArray(b)) return Math.hypot(...a.map((x, i) => Number(x) - Number(b[i])));
-  if (isCrossfade(a)) return distance(a.to, b);
-  return a === b ? 0 : 1;
+function length(step: Step): number {
+  if (step[0] === "move") return step[3];
+  if (step[0] === "wait") return step[1];
+  const parts = (step.slice(1) as Step[]).map(length);
+  return step[0] === "in-order" ? parts.reduce((a, b) => a + b, 0) : Math.max(0, ...parts);
 }

@@ -148,6 +148,29 @@ export class Runtime {
     return v;
   }
 
+  /** The container an object sits in: a group, an instance or the scene; null for globals. */
+  parent(id: number): number | null {
+    return this.parents[id] ?? null;
+  }
+
+  /**
+   * The transform from a shape's frame to its container's: an instance's x and y (when
+   * members), then its translate, then its transform (reference.md, "Coordinates").
+   */
+  local(id: number, members = false): number[] {
+    const o = this.objects[id]!;
+    const steps: number[][] = [];
+    if (o.kind === "instance" && members) {
+      steps.push([1, 0, 0, 1, this.value(id, "x") as number, this.value(id, "y") as number]);
+    }
+    if (this.has(id, "translate")) {
+      const [tx, ty] = this.value(id, "translate") as number[];
+      steps.push([1, 0, 0, 1, tx!, ty!]);
+    }
+    if (this.has(id, "transform")) steps.push(this.value(id, "transform") as number[]);
+    return compose(...steps);
+  }
+
   /** The type of a place. */
   typeOf(id: number, attr: string | null): Type | undefined {
     return this.types.get(key(id, attr));
@@ -517,6 +540,11 @@ export class Runtime {
     return v as unknown[];
   }
 
+  /** A function of the file, by id, as a value. */
+  fn(fid: number): FnValue {
+    return this.functionValue(fid, {});
+  }
+
   private functionValue(fid: number, around: Record<string, unknown>): FnValue {
     const params = this.doc.functions[fid]!.params;
     return (args, frame) => this.call(fid, params, args, frame, around);
@@ -566,20 +594,11 @@ export class Runtime {
     for (let j: number | null = frame; j !== null; j = this.parents[j]!) shared.add(j);
     const steps: number[][] = [];
     for (let j: number | null = id; j !== null && !shared.has(j); j = this.parents[j]!) {
-      const o = this.objects[j]!;
-      if (o.kind === "scene") break;
-      // An instance's x and y move its frame, and so its members, before its translate.
-      if (o.kind === "instance" && j !== id) {
-        steps.push([1, 0, 0, 1, this.value(j, "x") as number, this.value(j, "y") as number]);
-      }
-      if (this.has(j, "translate")) {
-        const [tx, ty] = this.value(j, "translate") as number[];
-        steps.push([1, 0, 0, 1, tx!, ty!]);
-      }
-      if (this.has(j, "transform")) steps.push(this.value(j, "transform") as number[]);
+      if (this.objects[j]!.kind === "scene") break;
+      steps.push(this.local(j, j !== id));
     }
-    const identity = steps.every((s) => s.every((x, i) => x === [1, 0, 0, 1, 0, 0][i]));
-    return identity ? null : compose(...steps);
+    const m = compose(...steps);
+    return m.every((x, i) => x === [1, 0, 0, 1, 0, 0][i]) ? null : m;
   }
 
   /** An attribute of a shape known only while drawing, read from a frame. */

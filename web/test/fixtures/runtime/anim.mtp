@@ -1,0 +1,13 @@
+(real k 0 (>= 0) (<= 10))
+(real j 0)
+(bool on false)
+(scene s (circle dot (fill 'black')))
+(animation a
+  (k (transition (to 10) (duration 2)))
+  (wait 1)
+  (j (transition (from 1) (to 3) (duration 1) (ease 'ease-in'))))
+(animation flip (on (transition (to true) (duration 1))))
+(animation late (on (transition (to true) (duration 1) (ease (step-ease 1)))))
+(animation jumps (k (transition (to 4) (duration 1) (ease (step 4)))))
+(animation fade (dot.fill (transition (to 'white') (duration 1))))
+(animation both (at-once (k (transition (to 10) (duration 2))) (j (transition (to 5) (duration 1)))))
