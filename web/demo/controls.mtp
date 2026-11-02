@@ -18,7 +18,7 @@
 (slider turn (move angle (from 0) (to 360)) (label 'angle'))
 (button grow
   (animation (move size (to 3) (duration 1) (ease 'ease-in-out'))
-             (move size (to 1) (duration 1)))
+    (move size (to 1) (duration 1)))
   (label 'grow the square'))
 (play spin (animation (default-duration 2) (move angle (to 360)) (move angle (to 0)))
   (buttons true))

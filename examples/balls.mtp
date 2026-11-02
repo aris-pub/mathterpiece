@@ -132,28 +132,31 @@
 ; grows r to the new δ/2. The point it slides from is where it was going: from-moves come before
 ; to-moves, so they read the old to.
 (repeat 32 i
-  (on-click space[i] (animation (default-duration 0.4) (at-once
-    ; Which point x and y sit on: an int jumps at the start, never passing the points between.
-    (at-once (default-ease (step 1))
-      (move x-from (to (if replace-x x-to x-from)))
-      (move y-from (to (if replace-x y-from y-to)))
-      (move x-to (to (if replace-x i x-to)))
-      (move y-to (to (if replace-x y-to i))))
-    (move x-t (from (if replace-x 0 x-t)) (to 1))
-    (move y-t (from (if replace-x y-t 0)) (to 1))
-    (move share (to 1))
-    (move replace-x (to (not replace-x)) (duration 0))))))
+  (on-click space[i]
+    (animation (default-duration 0.4)
+      (at-once
+        ; Which point x and y sit on: an int jumps at the start, never passing the points between.
+        (at-once (default-ease (step 1))
+          (move x-from (to (if replace-x x-to x-from)))
+          (move y-from (to (if replace-x y-from y-to)))
+          (move x-to (to (if replace-x i x-to)))
+          (move y-to (to (if replace-x y-to i))))
+        (move x-t (from (if replace-x 0 x-t)) (to 1))
+        (move y-t (from (if replace-x y-t 0)) (to 1))
+        (move share (to 1))
+        (move replace-x (to (not replace-x)) (duration 0))))))
 
 (slider radius (move share (from 0) (to 1)) (label 'r'))
 
 (play grow (animation (move share (from 0) (to 1) (duration 3.6) (ease 'linear'))))
 
 (readout note
-  (let ((cx (count space (fn p (in-ball x.pos r p.pos))))
-        (cy (count space (fn p (in-ball y.pos r p.pos)))))
-    (cond ((<= r 1e-9) 'At radius 0 each ball holds only its center.')
-          ((>= r (- h 1e-6)) 'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
-          (else $'The balls hold {cx} and {cy} points.'))))
+    (let ((cx (count space (fn p (in-ball x.pos r p.pos))))
+          (cy (count space (fn p (in-ball y.pos r p.pos)))))
+      (cond ((<= r 1e-9) 'At radius 0 each ball holds only its center.')
+            ((>= r (- h 1e-6))
+             'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
+            (else $'The balls hold {cx} and {cy} points.'))))
 
 (canvas the-space (view-x 0) (view-y -318) (view-width 600) (view-height 318)
   rings pair space x y)

@@ -47,7 +47,8 @@
   ; The names sit beside their lines, centered on the spot given.
   (group cosine (stroke accent) (fill accent)
     (line across (from [0 0]) (to [handle.x 0]) (stroke-width 4))
-    (text_ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle') (font small))
+    (text_ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
+      (font small))
     (text xs $'cos = {(cosd theta):+z.3f}' (pos [-2.05 0.78]) (font number)))
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
