@@ -99,6 +99,12 @@ class TestFoldedValues:
             assert not attribute.bound and not _is_const(attribute.type)
         assert m.get("a").value.value == 137.5
 
+    def test_a_const_attribute_is_a_constant(self):
+        model(
+            "(scene s (circle c (r (+ 1 1))) (circle d (r c.r)))"
+            " (animation a (d.r (transition (to 1) (duration 1))))"
+        )
+
     def test_so_a_writer_may_write_it(self):
         model(
             "(real g (* 180 (- 3 (sqrt 5))) (const))"

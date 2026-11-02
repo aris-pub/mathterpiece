@@ -1956,18 +1956,30 @@ class _Compiler:
 
     def is_constant(self, node: Node, scope) -> bool:
         """Whether node is a constant: the bare name of a const variable or of a built-in
-        constant. Given one, an attribute is free, as if given its value (mtpc.md, "Attributes")."""
-        if not (isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str)):
+        constant, or a read of a const attribute such as c.r. Given one, an attribute is free, as
+        if given its value (mtpc.md, "Attributes")."""
+        if not isinstance(node, Name):
             return False
-        name = node.parts[0]
-        if name in (scope or {}) or (self.bodies and name == "self"):
+        parts = [p for p in node.parts if isinstance(p, str)]
+        if len(parts) != len(node.parts):
             return False
-        if self.bodies and (name in self.bodies[-1]["names"] or name in self.bodies[-1]["attrs"]):
+        first, rest = parts[0], parts[1:]
+        if first in (scope or {}) or (self.bodies and first == "self"):
             return False
-        if name in self.model.names:
-            obj = self.model.objects[self.model.names[name]]
-            return obj.kind == "variable" and _is_const(obj.value.type)
-        return name in CONSTANTS
+        if self.bodies and (first in self.bodies[-1]["names"] or first in self.bodies[-1]["attrs"]):
+            return False
+        if first not in self.model.names:
+            return not rest and first in CONSTANTS
+        obj = self.model.objects[self.model.names[first]]
+        for k, part in enumerate(rest):
+            members = {self.model.objects[m].name: m for m in obj.members}
+            if part in obj.attrs and k == len(rest) - 1:
+                attribute = obj.attrs[part]
+                return not attribute.bound and _is_const(attribute.type)
+            if part not in members:
+                return False
+            obj = self.model.objects[members[part]]
+        return obj.kind == "variable" and _is_const(obj.value.type)
 
     def settle(self, t: Type, e: Expr, what: str, pos: Pos) -> Attribute:
         """An attribute holding e: free when e is known, bound otherwise. A bound value must stay

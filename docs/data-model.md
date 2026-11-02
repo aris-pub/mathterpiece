@@ -99,7 +99,7 @@ Variables are declared inside the scene (then they belong to it), at the top lev
 
 Every variable, and every attribute of a mutable object, is either **free** or **bound**.
 
-- **Free**: it holds whatever was last written to it, starting with the object its declaration gives (a literal, a constant, or a default). A constant is the bare name of a `const` variable or of a built-in constant such as `pi`: `(angle golden-angle)` is free, starting at golden-angle's value, as if that value were written. While the reader uses the page, only writers (controls and listeners) and the animations they run may write it. Free ones include a variable given a value, a shape attribute given a value, a motif parameter of an instance, and an attribute a variant leaves unset. A write to a group's attribute (`g.r`) writes each member's.
+- **Free**: it holds whatever was last written to it, starting with the object its declaration gives (a literal, a constant, or a default). A constant is the bare name of a `const` variable or of a built-in constant such as `pi`, or a read of a `const` attribute such as `c.r`: `(angle golden-angle)` is free, starting at golden-angle's value, as if that value were written. While the reader uses the page, only writers (controls and listeners) and the animations they run may write it. Free ones include a variable given a value, a shape attribute given a value, a motif parameter of an instance, and an attribute a variant leaves unset. A write to a group's attribute (`g.r`) writes each member's.
 - **Bound**: it is given by any other expression, and always equals that expression. Nothing may write it.
 
 &nbsp;
