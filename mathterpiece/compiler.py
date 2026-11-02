@@ -148,6 +148,7 @@ SHAPE_ATTRS: dict[str, dict[str, Attr]] = {
         "value": Attr(STRING, ""),
         "halign": Attr(HALIGN, "start"),
         "valign": Attr(VALIGN, "baseline"),
+        "font": Attr(FONT, None),
     },
     "group": dict(TRANSFORMS),
 }
@@ -155,6 +156,23 @@ SHAPE_ATTRS: dict[str, dict[str, Attr]] = {
 INSTANCE_ATTRS = {**POSITIONED, **PAINTED, **TRANSFORMS}
 # The paint arguments a motif instance gives its members as defaults; opacity is its own.
 INHERITED = ("fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity")
+# A font's parts, their types and their defaults (reference.md, "Tokens" and "Defaults"); a
+# family of None is the page's font. The style choices are the old code's (mtp-9mg).
+FONT_STYLE = Refine(STRING, (("one-of", ("normal", "italic", "oblique")),))
+FONT_PARTS = {
+    "family": Attr(Maybe(STRING), None),
+    "style": Attr(FONT_STYLE, "normal"),
+    "weight": Attr(Refine(REAL, ((">=", 1), ("<=", 1000))), 400),
+    "size": Attr(REAL, 16),
+}
+FONT_DEFAULT = {part: spec.default for part, spec in FONT_PARTS.items()}
+# The attributes of values that are not objects (type-system.md, section 8).
+VALUE_ATTRS = {
+    COMPLEX: {"re": REAL, "im": REAL},
+    COLOR: {"r": UNIT, "g": UNIT, "b": UNIT, "a": UNIT},
+    STRING: {"length": INT},
+    FONT: {part: spec.type for part, spec in FONT_PARTS.items()},
+}
 # Arguments a group takes only to write them on each of its members.
 SPREAD = frozenset(POSITIONED) | frozenset(PAINTED) | {"pos"}
 # The ends or corners whose mean is a line's or a triangle's position.
@@ -346,6 +364,8 @@ class _Compiler:
             raise CompileError(str(e), node.pos) from None
 
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
+        if isinstance(form.items[0], Name) and form.items[0].parts == ("font",):
+            return self.font_variable(form, parent, access, scope)
         name, pos, t, node = self.declared(form, scope)
         if isinstance(_core(t), FuncT):
             raise CompileError("a variable cannot hold a function", pos)
@@ -891,7 +911,9 @@ class _Compiler:
             if len(items) == 1 and isinstance(items[0], Name):
                 return self.named(items[0], "animation")
         steps = _in_order(self.steps(items, None, None, scope))
-        return self.add(Obj("animation", name, ANIMATION, pos=pos, data={"steps": steps}))
+        attrs = {"duration": Place(REAL, _duration(steps))}
+        obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data={"steps": steps})
+        return self.add(obj)
 
     def named(self, node: Name, kind: str) -> int:
         name = node.parts[0] if len(node.parts) == 1 else None
@@ -1216,10 +1238,38 @@ class _Compiler:
         obj.attrs["value"] = self.place(STRING, value, obj.pos, "value")
         font = self.take(items, "font")
         if font is not None:
-            e = self.expr(font, FONT, {})
-            obj.attrs["font"] = Place(FONT, expr=e)
+            obj.attrs["font"] = self.font_arg(font)
         if items:
             raise CompileError("expected an item of a readout, such as (font f)", items[0].pos)
+
+    def font_arg(self, node: Node) -> Place:
+        """A text's or readout's font, which is only ever a declared font variable."""
+        e = self.expr(node, None, {}) if isinstance(node, Name) else None
+        if e is None or e.op != "read" or _core(e.type) != FONT:
+            raise CompileError("a font is given as a declared font variable", node.pos)
+        return Place(FONT, expr=e)
+
+    def font_variable(self, form: Form, parent, access: str, scope: dict) -> None:
+        """(font name (family …) (style …) (weight …) (size …)): declared with items, not a
+        value (type-system.md, section 4)."""
+        name, pos = self.name_of(form, scope)
+        parts = {}
+        for item in form.items[2:]:
+            head = _head(item)
+            if head not in FONT_PARTS or not isinstance(item, Form) or len(item.items) != 2:
+                raise CompileError(
+                    "a font takes (family …), (style …), (weight …), (size …)", item.pos
+                )
+            if head in parts:
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            parts[head] = self.expr(item.items[1], FONT_PARTS[head].type, scope)
+        exprs = [parts.get(p) or _known(spec.type, spec.default) for p, spec in FONT_PARTS.items()]
+        if all(e.known for e in exprs):
+            place = Place(FONT, dict(zip(FONT_PARTS, (e.value for e in exprs), strict=True)))
+        else:
+            deps = frozenset().union(*(e.deps for e in exprs))
+            place = Place(FONT, expr=Expr("font", FONT, tuple(exprs), deps))
+        self.add(Obj("variable", name, FONT, access, {"value": place}, parent=parent, pos=pos))
 
     def access_of(self, deps) -> tuple[str, int | None]:
         """page, and the object that gives it, when anything in deps has page access."""
@@ -1558,6 +1608,9 @@ class _Compiler:
                 continue
             node, inner = given.get(attr, (None, scope))
             at = _maybe(spec.type) if absent else spec.type
+            if attr == "font" and node is not None:
+                obj.attrs[attr] = self.font_arg(node)
+                continue
             obj.attrs[attr] = self.place(at, node, pos, attr, spec.default, inner)
         if "pos" in given:
             node, inner = given["pos"]
@@ -1628,6 +1681,8 @@ class _Compiler:
             return "#000000ff"
         if base == POINT:
             return (0, 0)
+        if base == FONT:
+            return dict(FONT_DEFAULT)
         if base == TRANSFORM:
             return IDENTITY
         if isinstance(base, ListT):
@@ -1658,6 +1713,9 @@ class _Compiler:
         if e.known and e.value is not None and isinstance(narrowed, Refine):
             for c in narrowed.constraints:
                 if c[0] != "const" and not _satisfies(e.value, c):
+                    if c[0] == "one-of":
+                        choices = ", ".join(f"'{v}'" for v in c[1])
+                        raise CompileError(f"'{e.value}' is not one of {choices}", node.pos)
                     raise CompileError(f"{_value_str(e.value)} breaks {_show(c)}", node.pos)
         return e
 
@@ -1807,7 +1865,11 @@ class _Compiler:
             if obj.kind in SHAPE_ATTRS or (obj.kind == "instance" and attr in INSTANCE_ATTRS):
                 moves = self.moves(i)
         t = _maybe(place.type) if isinstance(obj.type, Maybe) else place.type
-        if not place.bound and _is_const(place.type):
+        # A token is never folded: the page may restyle it. A transition or an animation is a
+        # value, so its free parts are known.
+        token = obj.kind == "variable" and _core(place.type) in (COLOR, FONT)
+        fixed = obj.kind in ("transition", "animation")
+        if not place.bound and (fixed or (_is_const(place.type) and not token)):
             return _known(t, place.value)
         deps = frozenset({(i, attr)}) | moves
         return Expr("read", t, (i, attr, self.frame), deps, _type_range(t))
@@ -1881,11 +1943,32 @@ class _Compiler:
             if held is not None:
                 return name in self.type_attrs(_core(e.type), held)
             return name in self.type_attr_types(_core(e.type))
-        return _base(_inner(e.type)) == POINT and name in ("x", "y")
+        if _base(_inner(e.type)) == POINT and name in ("x", "y"):
+            return True
+        core = _core(e.type)
+        return name in VALUE_ATTRS.get(core, {}) or (isinstance(core, ListT) and name == "length")
+
+    def value_attr(self, e: Expr, name: str, pos: Pos) -> Expr:
+        """An attribute of a value: a complex's re and im, a color's channels, a string's or a
+        list's length, a font's parts."""
+        core = _core(e.type)
+        if isinstance(core, ListT) and name == "length":
+            n = _length(e)
+            if n is not None:
+                return _known(INT, n)
+            return Expr("part", INT, (e, name), e.deps, (0.0, MAX_REAL))
+        t = VALUE_ATTRS.get(core, {}).get(name)
+        if t is None:
+            raise CompileError(f"a {e.type} has no attribute '{name}'", pos)
+        if e.known:
+            return _known(t, _value_part(core, e.value, name))
+        return Expr("part", t, (e, name), e.deps, _type_range(t))
 
     def attr_names(self, i: int) -> set:
         obj = self.model.objects[i]
         names = set(obj.attrs)
+        if obj.name is not None and obj.kind != "variable":
+            names.add("name")
         if obj.kind in ("group", "scene"):
             names |= {"length", "members"}
         if "x" in obj.attrs or obj.kind in CORNERS:
@@ -1919,6 +2002,10 @@ class _Compiler:
 
     def obj_attr(self, i: int, name: str, pos: Pos) -> Expr:
         obj = self.model.objects[i]
+        if name == "name" and name not in obj.attrs and obj.name is not None:
+            return _known(STRING, obj.name)
+        if obj.kind == "transition" and name in ("from", "to") and obj.data.get("end") is None:
+            self.type_ends(i, None, pos)
         if obj.kind in ("group", "scene") and name == "length":
             return _known(INT, len(obj.members))
         if obj.kind in ("group", "scene") and name == "members":
@@ -1966,7 +2053,7 @@ class _Compiler:
                 return Expr("part", t, (e, part), deps, _type_range(t))
             if _base(_inner(e.type)) == POINT and part in ("x", "y"):
                 return _part(e, 0 if part == "x" else 1)
-            raise CompileError(f"a {e.type} has no attribute '{part}'", pos)
+            return self.value_attr(e, part, pos)
         index = self.expr(part, None, scope)
         if e.op == "obj" and self.model.objects[e.args[0]].kind in ("group", "scene"):
             return self.member(e.args[0], index, pos)
@@ -2286,6 +2373,29 @@ def _known(t: Type, value) -> Expr:
         else None
     )
     return Expr("lit", t, (value,), range=r, known=True, value=value)
+
+
+def _value_part(core: Type, v, name: str):
+    if core == COMPLEX:
+        return complex(v).real if name == "re" else complex(v).imag
+    if core == COLOR:
+        k = "rgba".index(name)
+        return int(v[1 + 2 * k : 3 + 2 * k], 16) / 255
+    if core == STRING:
+        return len(v)
+    return v[name]
+
+
+def _duration(step) -> float:
+    """How long a step takes: a move its duration, in-order the sum, at-once the longest."""
+    if step[0] == "move":
+        return step[3]
+    if step[0] == "wait":
+        return step[1]
+    parts = [_duration(s) for s in step[1:]]
+    if step[0] == "in-order":
+        return sum(parts)
+    return max(parts, default=0)
 
 
 def _in_order(steps: list) -> tuple:
