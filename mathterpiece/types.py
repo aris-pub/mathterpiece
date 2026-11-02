@@ -59,6 +59,8 @@ class Maybe:
 @dataclass(frozen=True)
 class ShapeT:
     name: str
+    # The shape type a variant refines.
+    base: "ShapeT | None" = None
 
     def __str__(self) -> str:
         return self.name
@@ -139,6 +141,8 @@ def fits(actual: Type, expected: Type) -> bool:
         return actual == NONE or fits(inner, expected.inner)
     if isinstance(actual, Maybe):
         return False
+    if isinstance(actual, ShapeT) and isinstance(expected, ShapeT):
+        return actual.base is not None and fits(actual.base, expected)
     if isinstance(actual, Refine) or isinstance(expected, Refine):
         return _fits_refined(actual, expected)
     if actual in NUMBERS and expected in NUMBERS:

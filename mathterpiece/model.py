@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass, field
 
-from mathterpiece.nodes import NOPOS, Node, Pos
+from mathterpiece.nodes import NOPOS, Form, Node, Pos
 from mathterpiece.types import Type
 
 # What a place or an expression reads: (object id, attribute), with None for a variable.
@@ -34,6 +34,8 @@ class Place:
     type: Type
     value: object = None
     expr: Expr | None = None
+    # Set by a variant's body: no instance and no writer may change it.
+    fixed: bool = False
 
     @property
     def bound(self) -> bool:
@@ -80,12 +82,24 @@ class MotifDef:
     pos: Pos = NOPOS
 
 
+@dataclass(frozen=True)
+class VariantDef:
+    name: str
+    params: tuple[Param, ...]
+    base: str
+    body: Form
+    # The attributes its body sets, x and y for pos.
+    fixed: frozenset[str]
+    pos: Pos = NOPOS
+
+
 @dataclass
 class Model:
     objects: list[Obj] = field(default_factory=list)
     names: dict[str, int] = field(default_factory=dict)
     types: dict[str, Type] = field(default_factory=dict)
     motifs: dict[str, MotifDef] = field(default_factory=dict)
+    variants: dict[str, VariantDef] = field(default_factory=dict)
 
     def id(self, name: str) -> int:
         return self.names[name]

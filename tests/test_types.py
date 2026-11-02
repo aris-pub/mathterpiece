@@ -297,3 +297,13 @@ class TestConstraintsOnNone:
         assert fits(NONE, t)
         assert fits(Refine(REAL, ((">=", 1),)), t)
         assert not fits(REAL, t)
+
+
+class TestVariantTypes:
+    def test_a_variant_fits_its_base_and_the_bases_base(self):
+        bar = ShapeT("bar", ShapeT("rect"))
+        wide = ShapeT("wide", bar)
+        assert fits(bar, ShapeT("rect"))
+        assert fits(wide, bar) and fits(wide, ShapeT("rect"))
+        assert not fits(ShapeT("rect"), bar)
+        assert fits(wide, Interface("positioned"))

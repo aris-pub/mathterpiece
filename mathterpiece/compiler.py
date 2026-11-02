@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal, localcontext
 from fractions import Fraction
 
 from mathterpiece.colors import parse_color
-from mathterpiece.model import Expr, Model, MotifDef, Obj, Param, Place, Range
+from mathterpiece.model import Expr, Model, MotifDef, Obj, Param, Place, Range, VariantDef
 from mathterpiece.nodes import (
     Bar,
     BoolLit,
@@ -213,6 +213,8 @@ class _Compiler:
             return self.scene_decl(form)
         if head == "motif":
             return self.motif_decl(form)
+        if head == "variant":
+            return self.variant_decl(form)
         if self.shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
@@ -250,7 +252,7 @@ class _Compiler:
             head, absent = head.items[0], True
         if isinstance(head, Name) and len(head.parts) == 1:
             kind = head.parts[0]
-            if kind in SHAPE_ATTRS or kind in self.model.motifs:
+            if kind in SHAPE_ATTRS or kind in self.model.motifs or kind in self.model.variants:
                 return kind, absent
         return None
 
@@ -297,6 +299,14 @@ class _Compiler:
 
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
         name, pos, t, node = self.declared(form, scope)
+        if node is not None and self.shape_kind(node):
+            # (shape sel (circle c …)) declares the circle where the variable is, and holds it.
+            if parent is None:
+                raise CompileError("a shape is declared only inside the scene", node.pos)
+            shape = self.read(self.shape(node, parent, scope), None)
+            place = self.settle(t, self.expect(shape, t, node.pos), "the value", node.pos)
+            self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
+            return
         place = self.place(t, node, form.pos, "the value", scope=scope)
         self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
 
@@ -333,13 +343,112 @@ class _Compiler:
                 raise CompileError(f"every motif instance already has '{p.name}'", form.pos)
         self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos)
         self.model.types[name] = ShapeT(name)
-        # Compile one instance and discard it, so a body's errors show without any instance.
+        self.trial(name, form.pos)
+
+    def trial(self, name: str, pos: Pos) -> None:
+        """Compile one instance and discard it, so a body's errors show without any instance."""
         objects, names = len(self.model.objects), dict(self.model.names)
         try:
-            self.instance(Form((Name((name,), pos), Name(("_",), pos)), form.pos), None, {})
+            self.shape(Form((Name((name,), pos), Name(("_",), pos)), pos), None, {})
         finally:
             del self.model.objects[objects:]
             self.model.names = names
+
+    def variant_decl(self, form: Form) -> None:
+        name, pos = self.name_of(form)
+        if name is None or len(form.items) < 4:
+            raise CompileError("a variant is (variant name parameters shape)", form.pos)
+        if len(form.items) != 4 or not self.shape_kind(form.items[3]):
+            raise CompileError("a variant's body is one shape", form.pos)
+        if name in SHAPE_ATTRS or name in self.model.types:
+            raise CompileError(f"'{name}' is already declared", pos)
+        body = form.items[3]
+        base = self.shape_kind(body)[0]
+        if base == "group":
+            raise CompileError("a group has no variants", body.pos)
+        params = self.params(form.items[2])
+        taken = self.attrs_of(base)
+        for p in params:
+            if p.name in taken:
+                raise CompileError(f"a {base} already has '{p.name}'", form.pos)
+        fixed = set()
+        for k, item in enumerate(body.items[2:]):
+            head = _head(item)
+            if head is None and k < len(POSITIONAL.get(base, ())):
+                fixed.add(POSITIONAL[base][k])
+            elif head == "pos":
+                fixed |= {"x", "y"}
+            elif head is not None:
+                fixed.add(head)
+        self.model.variants[name] = VariantDef(name, params, base, body, frozenset(fixed), pos)
+        self.model.types[name] = ShapeT(name, self.model.types.get(base, ShapeT(base)))
+        self.trial(name, form.pos)
+
+    def attrs_of(self, kind: str) -> set:
+        """What an instance of a shape type is given by name: arguments and parameters."""
+        if kind in self.model.variants:
+            v = self.model.variants[kind]
+            return self.attrs_of(v.base) | {p.name for p in v.params}
+        if kind in self.model.motifs:
+            return set(INSTANCE_ATTRS) | {"pos"} | {p.name for p in self.model.motifs[kind].params}
+        return set(SHAPE_ATTRS[kind]) | ({"pos"} if "x" in SHAPE_ATTRS[kind] else set())
+
+    def fixed_of(self, kind: str) -> frozenset:
+        if kind not in self.model.variants:
+            return frozenset()
+        v = self.model.variants[kind]
+        return v.fixed | self.fixed_of(v.base)
+
+    def variant_instance(
+        self, form: Form, parent, scope: dict, spread=None, items=None, pre=(), outer=None
+    ) -> int:
+        """An instance of a variant: its base shape, given the body's arguments, which are fixed,
+        and the instance's own; the variant's parameters are attributes of it too."""
+        kind, absent = self.shape_kind(form)
+        v = self.model.variants[kind]
+        outer = outer or kind
+        fixed = self.fixed_of(kind)
+        params = {p.name for p in v.params}
+        own = list(items) if items is not None else _scoped(form.items[2:], scope)
+        mine, rest = {}, []
+        for item, inner in self.expand_scoped(own):
+            head = _head(item)
+            if head in params:
+                if head in mine or not isinstance(item, Form) or len(item.items) != 2:
+                    raise CompileError(f"'{head}' is given twice", item.pos)
+                mine[head] = (item.items[1], inner)
+                continue
+            hit = sorted(fixed & ({"x", "y"} if head == "pos" else {head}))
+            if hit:
+                raise CompileError(f"a {kind}'s {hit[0]} is fixed", item.pos)
+            rest.append((item, inner))
+        i = len(self.model.objects)
+        body_scope = {p: (lambda p=p: self.read(i, p)) for p in params}
+
+        def place_params(obj: Obj) -> None:
+            for p in v.params:
+                node, inner = mine.get(p.name, (p.default, {}))
+                obj.attrs[p.name] = self.place(p.type, node, form.pos, p.name, None, inner)
+
+        merged = _scoped(v.body.items[2:], body_scope) + rest
+        head = Name((v.base,), form.pos)
+        if absent:
+            head = Bar((head, NoneLit(form.pos)), form.pos)
+        base_form = Form((head, form.items[1]), form.pos)
+        pre = (*pre, place_params)
+        if v.base in self.model.variants:
+            return self.variant_instance(base_form, parent, scope, spread, merged, pre, outer)
+        j = self.shape(base_form, parent, scope, spread, merged, pre)
+        obj = self.model.objects[j]
+        obj.of = outer
+        obj.type = Maybe(self.model.types[outer]) if absent else self.model.types[outer]
+        for attr in self.fixed_of(outer):
+            obj.attrs[attr].fixed = True
+        return j
+
+    def expand_scoped(self, scoped: list) -> Iterator[tuple[Node, dict]]:
+        for node, scope in scoped:
+            yield from self.expand([node], scope)
 
     def params(self, node: Node) -> tuple[Param, ...]:
         """One parameter (real t 0.5), or a list of them ((real t 0.5) (color c 'red'))."""
@@ -359,7 +468,7 @@ class _Compiler:
         return tuple(out)
 
     def instance(
-        self, form: Form, parent: int | None, scope: dict, spread=None, absent=False
+        self, form: Form, parent, scope: dict, spread=None, absent=False, items=None, pre=()
     ) -> int:
         kind = self.shape_kind(form)[0]
         motif = self.model.motifs[kind]
@@ -369,7 +478,8 @@ class _Compiler:
         i = self.add(obj)
         params = {p.name: p for p in motif.params}
         given: dict[str, tuple[Node, dict]] = {}
-        for item, inner in self.expand(form.items[2:], scope):
+        scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
+        for item, inner in self.expand_scoped(scoped):
             head = _head(item)
             if self.shape_kind(item) and head not in params:
                 raise CompileError(f"an instance of {kind} takes no members", item.pos)
@@ -385,6 +495,8 @@ class _Compiler:
                 given[attr] = (node, inner)
         saved, self.frame = self.frame, (parent if parent != self.scene else None)
         try:
+            for f in pre:
+                f(obj)
             for p in motif.params:
                 node, inner = given.get(p.name, (p.default, {}))
                 at = _maybe(p.type) if absent else p.type
@@ -434,8 +546,8 @@ class _Compiler:
                 attrs["background"] = self.place(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
-            elif head == "motif":
-                raise CompileError("a motif is declared only at the top level", item.pos)
+            elif head in ("motif", "variant"):
+                raise CompileError(f"a {head} is declared only at the top level", item.pos)
             elif self.shape_kind(item):
                 self.shape(item, self.scene, scope)
             elif isinstance(item, Form):
@@ -443,10 +555,15 @@ class _Compiler:
             else:
                 raise CompileError("the scene holds shapes and variables", item.pos)
 
-    def shape(self, form: Form, parent: int, scope: dict, spread: dict | None = None) -> int:
+    def shape(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
+        """A shape declaration. items, when given, replaces the form's own items, each with its
+        scope, and pre runs on the new object before its attributes are compiled (a variant
+        uses both)."""
         kind, absent = self.shape_kind(form)
+        if kind in self.model.variants:
+            return self.variant_instance(form, parent, scope, spread)
         if kind in self.model.motifs:
-            return self.instance(form, parent, scope, spread, absent)
+            return self.instance(form, parent, scope, spread, absent, items, pre)
         name, pos = self.name_of(form, scope)
         specs = SHAPE_ATTRS[kind]
         # A shape declared T|none may be absent, so its attributes may be none.
@@ -456,11 +573,11 @@ class _Compiler:
         takes = specs.keys() | SPREAD if kind == "group" else specs.keys()
         given: dict[str, tuple[Node, dict]] = {}
         members: list[tuple[Node, dict]] = []
-        items = list(form.items[2:])
+        scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
         for attr in POSITIONAL.get(kind, ()):
-            if items and _head(items[0]) is None:
-                given[attr] = (items.pop(0), scope)
-        for item, inner in self.expand(items, scope):
+            if scoped and _head(scoped[0][0]) is None:
+                given[attr] = scoped.pop(0)
+        for item, inner in self.expand_scoped(scoped):
             if kind == "group" and self.shape_kind(item):
                 members.append((item, inner))
                 continue
@@ -490,6 +607,8 @@ class _Compiler:
                     given[attr] = (node, inner)
         saved, self.frame = self.frame, (parent if parent != self.scene else None)
         try:
+            for f in pre:
+                f(obj)
             self.shape_attrs(obj, given, absent, form.pos, scope, specs)
         finally:
             self.frame = saved
@@ -692,9 +811,16 @@ class _Compiler:
             e = self.part(e, part, scope, node.pos)
         return e
 
+    def expect(self, e: Expr, t: Type, pos: Pos) -> Expr:
+        if not fits(_loose(e.type), _loose(t)):
+            raise CompileError(f"expected {t}, got {e.type}", pos)
+        return e
+
     def lookup(self, name: str, scope: dict, pos: Pos) -> Expr:
         if name in scope:
-            return scope[name]
+            v = scope[name]
+            # A variant's body reads its parameters from an object made after its scope.
+            return v() if callable(v) else v
         if self.bodies:
             body = self.bodies[-1]
             if name == "self":
@@ -828,6 +954,9 @@ class _Compiler:
         if isinstance(part, str):
             if e.op == "obj":
                 return self.obj_attr(e.args[0], part, pos)
+            held = self.held(e)
+            if held is not None:
+                e = Expr("member", e.type, (e, None, held), e.deps)
             if e.op == "member":
                 candidates = e.args[2]
                 common = _inner(e.type)
@@ -862,6 +991,17 @@ class _Compiler:
                 item = _maybe(item)
             return Expr("part", item, (e, index), e.deps | index.deps, _type_range(item))
         raise CompileError(f"a {e.type} has no items", pos)
+
+    def held(self, e: Expr) -> tuple | None:
+        """The shapes a variable typed with a shape or an interface may hold."""
+        if e.op != "read" or e.args[1] is not None:
+            return None
+        if not isinstance(_core(e.type), (ShapeT, Interface)):
+            return None
+        place = self.model.objects[e.args[0]].value
+        if place.bound and place.expr.op == "obj":
+            return (place.expr.args[0],)
+        return None
 
     def member(self, i: int, index: Expr, pos: Pos) -> Expr:
         """A member of a group or the scene, by position or name."""
@@ -1114,6 +1254,10 @@ def _known(t: Type, value) -> Expr:
         else None
     )
     return Expr("lit", t, (value,), range=r, known=True, value=value)
+
+
+def _scoped(nodes, scope: dict) -> list:
+    return [(n, scope) for n in nodes]
 
 
 def _overlaps(attr: str, given: dict) -> bool:
