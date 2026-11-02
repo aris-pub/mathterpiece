@@ -215,7 +215,6 @@ class TestNames:
         [
             "disk",
             "show-label",
-            "teal_c",
             "visible?",
             "set!",
             "a->b",
@@ -269,6 +268,8 @@ class TestNames:
             "a.1",
             "a.-b",
             "2.x",
+            "teal_c",
+            "_",
         ],
     )
     def test_invalid_name(self, text):
@@ -715,3 +716,19 @@ def test_an_empty_form():
     # () is an empty list of parameters or bindings; the compiler decides where it may go.
     (form,) = parse("(motif m () (circle c))")
     assert form.items[2] == Form(())
+
+
+class TestNoName:
+    # syntax.md "Names": (head_ …) is (head none …), for any form that takes a name; _ is not a
+    # name.
+    def test_a_head_ending_in_an_underscore_has_no_name(self):
+        assert parse("(circle_ (r 1))") == parse("(circle none (r 1))")
+        assert parse("(line|none_ (to [1 0]))") == parse("(line|none none (to [1 0]))")
+
+    def test_an_underscore_alone_is_not_a_name(self):
+        with pytest.raises(ParseError, match="write none"):
+            parse("(circle _ (r 1))")
+
+    def test_a_name_holds_no_underscore(self):
+        with pytest.raises(ParseError, match="name"):
+            parse("(real a_b 1)")

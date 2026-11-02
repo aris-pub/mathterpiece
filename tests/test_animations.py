@@ -137,7 +137,7 @@ class TestSteps:
         error(f"{src} (animation a (move k (to 1) (duration 1)))", message)
 
     def test_a_fixed_attribute(self):
-        src = "(variant bar () (rect _ (width 1))) (scene s (bar b))"
+        src = "(variant bar () (rect_ (width 1))) (scene s (bar b))"
         error(f"{src} (animation a (move b.width (to 2) (duration 1)))", "fixed")
 
 

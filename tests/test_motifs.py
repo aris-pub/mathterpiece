@@ -80,7 +80,7 @@ class TestInstances:
         error(f"{DIAL} (scene s (dial d1 (circle c)))", "takes no members")
 
     def test_anonymous_instances_still_work(self):
-        m = model(f"{DIAL} (scene s (dial _) (dial _))")
+        m = model(f"{DIAL} (scene s (dial_) (dial_))")
         assert len([o for o in m.objects if o.kind == "instance"]) == 2
 
     def test_self(self):
@@ -144,5 +144,5 @@ class TestNoParameters:
         assert m.get("d.c").attrs["r"].value == 2
 
     def test_a_variant_with_no_parameters(self):
-        m = model("(variant unit () (circle _ (r 1))) (scene s (unit u))")
+        m = model("(variant unit () (circle_ (r 1))) (scene s (unit u))")
         assert m.get("u").attrs["r"].fixed

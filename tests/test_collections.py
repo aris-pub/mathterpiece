@@ -101,7 +101,7 @@ class TestShapeParameters:
         model("(func left (positioned o) (- o.x 1)) (scene s (rect b) (real k (left b)))")
 
     def test_a_variant_is_accepted_where_its_base_is(self):
-        src = "(variant big () (circle _ (r 5))) (func area (circle o) o.r)"
+        src = "(variant big () (circle_ (r 5))) (func area (circle o) o.r)"
         m = model(f"{src} (scene s (big b) (real k (area b)))")
         assert (m.id("b"), "r") in m.get("k").value.deps
 

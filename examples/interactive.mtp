@@ -12,7 +12,7 @@
   (group figure (transform (rotate turn))
     (circle rim (r radius) (fill none) (stroke-width 1.25) (stroke-opacity 0.6))
     (repeat n k
-      (line _
+      (line_
         (from (on-circle radius k n))
         (to (on-circle radius (* m k) n))
         (stroke-width 1)

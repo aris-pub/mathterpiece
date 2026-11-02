@@ -4,7 +4,7 @@
 (scene s
   (circle dot (pos [1 1]) (r 1))
   (circle orbit (pos (polar 2 k)))
-  (group lamps (lamp _) (lamp _ (lit true)))
+  (group lamps (lamp_) (lamp_ (lit true)))
   (group pair (circle p1 (pos [0 0])) (circle p2 (pos [1 0])))
   (circle limited (pos [0 0])))
 (slider sl (move k (from 0) (to 10)) (label 'k'))

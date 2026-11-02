@@ -205,13 +205,13 @@ Shapes get the same three mechanisms as values, with forms of their own.
 **A variant** declares a type of shape that refines exactly one existing shape type: a built-in shape, a motif or another variant. Its body is a single shape of that type with some attributes set. Those are fixed: an instance cannot change them, which is what makes every bar a rect of width 0.8 and not just any rect. The rest are set by the instance. The base's attributes pass through, so a bar is read like a rect, and a bar is accepted wherever a rect is.
 
     (variant bar ((prob p 0))
-      (rect _ (width 0.8) (y 0) (height (* 5 p))))
+      (rect_ (width 0.8) (y 0) (height (* 5 p))))
     (bar b1 (x 2) (p 0.4))
     b1.x  b1.height  b1.p                    ; all read directly
     (bar b2 (width 2))                       ; an error: a bar's width is fixed
 
     (variant big-dial ((real level 0.8))
-      (dial _ (t level) (tint 'gold')))      ; a variant of a motif
+      (dial_ (t level) (tint 'gold')))      ; a variant of a motif
 
 Motifs and variants are declared at the top level, once, like named types.
 
@@ -246,7 +246,7 @@ Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed 
 
 ## 8. Appendix: attributes by type
 
-Every declared object has a `name` attribute, a string, or `none` for one declared with no name (`_`). Other attributes, read with a dot (`c.r`) or the part form:
+Every declared object has a `name` attribute, a string, or `none` for one declared with no name, `(circle none …)` or `(circle_ …)`. Other attributes, read with a dot (`c.r`) or the part form:
 
 | Type | Attributes |
 |----|----|

@@ -9,6 +9,6 @@
 (func g (int n) (let ((m (+ n 1))) $'{m:d}'))
 (func h (real x) (let ((m (+ x 1))) $'{m}'))
 (func u (sequence[circle] gr) (let ((n (count gr (fn p (> p.r 0))))) $'{n}'))
-(scene s (counter q) (group pts (circle _ (r 1)) (circle _ (r 2)))
+(scene s (counter q) (group pts (circle_ (r 1)) (circle_ (r 2)))
   (text t1 (f q.i)) (text t2 (g q.i)) (text t3 (h a)) (text t4 (u pts)))
 (button b (animation (at-once (move q.i (to 2) (duration 0)) (move a (to 3) (duration 0)))))

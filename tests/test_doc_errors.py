@@ -42,7 +42,7 @@ CASES = [
     ),
     # type-system.md 5.e: a variant's fixed attribute.
     (
-        "(variant bar ((real p 0)) (rect _ (width 0.8)))\n(scene sc (bar b2 (width 2)))",
+        "(variant bar ((real p 0)) (rect_ (width 0.8)))\n(scene sc (bar b2 (width 2)))",
         "2:19",
         "a bar's width is fixed",
     ),

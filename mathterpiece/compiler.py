@@ -322,7 +322,7 @@ class _Compiler:
         node = form.items[1]
         if isinstance(node, StrLit):
             raise CompileError("a name is written bare, not in quotes", node.pos)
-        # _ is shorthand for none: the object has no name.
+        # A form given none as its name, or written (head_ …), has no name.
         if isinstance(node, NoneLit):
             return None, node.pos
         if _head(node) == "name":
@@ -332,8 +332,6 @@ class _Compiler:
             name = node.parts[0]
         else:
             raise CompileError("expected a name", node.pos)
-        if name == "_":
-            return None, node.pos
         if name in RESERVED:
             raise CompileError(f"'{name}' is reserved", node.pos)
         taken = self.model.names.keys() | self.model.funcs.keys() | self.model.types.keys()
@@ -1698,7 +1696,7 @@ class _Compiler:
         """Compile one instance and discard it, so a body's errors show without any instance."""
         objects, names, sites = len(self.model.objects), dict(self.model.names), self.rand_sites
         try:
-            j = self.shape(Form((Name((name,), pos), Name(("_",), pos)), pos), None, {})
+            j = self.shape(Form((Name((name,), pos), NoneLit(pos)), pos), None, {})
             obj = self.model.objects[j]
             types = {a: attribute.type for a, attribute in obj.attrs.items()}
             for m in obj.members:

@@ -22,7 +22,7 @@
 
 (motif flower ((int n 300 (const)) (real angle 90) (real spread 0.5) (real size 0.17 (>= 0)))
   (repeat n i
-    (circle _
+    (circle_
       (pos (polar (* spread (sqrt i)) (* i angle)))
       (r (* size (sqrt (+ 1 (* 3 (/ i n))))))
       (fill (seed-color (/ i n))))))

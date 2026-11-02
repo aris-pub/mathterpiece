@@ -34,7 +34,7 @@ class TestNames:
         assert value("(scene s (circle c)) (string n c.name)", "n") == "c"
 
     def test_an_anonymous_ones_name_is_none(self):
-        assert value("(scene s (group g (circle _))) (string|none n g[0].name)", "n") is None
+        assert value("(scene s (group g (circle_))) (string|none n g[0].name)", "n") is None
 
 
 class TestValues:

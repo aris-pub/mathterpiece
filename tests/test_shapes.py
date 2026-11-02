@@ -187,16 +187,16 @@ def test_a_groups_pos_spreads():
 
 
 class TestNoName:
-    # syntax.md "Names": _ is shorthand for none; an object given none as its name has a name
+    # syntax.md "Names": (head_ …) is (head none …); an object given none as its name has a name
     # attribute that is none.
     def test_none_declares_something_with_no_name(self):
-        m = compile_source("(scene s (circle none (r 2)) (circle _ (r 3)))")
+        m = compile_source("(scene s (circle none (r 2)) (circle_ (r 3)))")
         circles = [o for o in m.objects if o.kind == "circle"]
         assert [c.name for c in circles] == [None, None]
 
     def test_an_unnamed_objects_name_is_none(self):
         m = compile_source(
-            "(scene s (group g (circle _) (circle b)) (string|none n g[0].name)"
+            "(scene s (group g (circle_) (circle b)) (string|none n g[0].name)"
             " (string|none nb g[1].name))"
         )
         assert m.get("n").value.value is None

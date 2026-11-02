@@ -102,7 +102,7 @@ class TestScene:
         assert [m.objects[i].name for i in m.get("g").members] == ["a", "b"]
 
     def test_anonymous(self):
-        m = model("(scene s (circle _ (r 1)))")
+        m = model("(scene s (circle_ (r 1)))")
         (c,) = [o for o in m.objects if o.kind == "circle"]
         assert c.name is None
 

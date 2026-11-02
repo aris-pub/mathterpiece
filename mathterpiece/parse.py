@@ -81,7 +81,22 @@ def _ends_run(ch: str) -> bool:
 def _valid_name_part(part: str) -> bool:
     if not part or part[0].isdigit() or part[0] in NAME_BAD_START or part[0] == "'":
         return False
+    # An underscore may only end a form's head, as in (circle_ …), which form() takes apart.
+    if "_" in part[:-1]:
+        return False
     return not any(ch in NAME_EXCLUDED and ch != "'" for ch in part)
+
+
+def _unnamed(head: Node) -> Node | None:
+    """The head of (head_ …) without its underscore, or None if it has none."""
+    if isinstance(head, Bar):
+        last = _unnamed(head.items[-1])
+        return None if last is None else Bar((*head.items[:-1], last), head.pos)
+    if isinstance(head, Name) and len(head.parts) == 1 and isinstance(head.parts[0], str):
+        text = head.parts[0]
+        if len(text) > 1 and text.endswith("_"):
+            return NoneLit(head.pos) if text == "none_" else Name((text[:-1],), head.pos)
+    return None
 
 
 def _name_parts(text: str, pos: Pos) -> list[str | Node]:
@@ -191,6 +206,9 @@ class _Parser:
             items.append(self.node())
         if self.peek() in (".", "["):
             raise ParseError("a part cannot follow a form; use (. X Y)", self.pos())
+        # (head_ …) is (head none …): the form has no name.
+        if items and (head := _unnamed(items[0])) is not None:
+            items = [head, NoneLit(items[0].pos), *items[1:]]
         return Form(tuple(items), pos)
 
     # A [ that starts a value opens a list; one right after a name indexes it (see access).
@@ -249,6 +267,8 @@ class _Parser:
             return BoolLit(text == "true", pos)
         if text == "none":
             return NoneLit(pos)
+        if text == "_":
+            raise ParseError("_ is not a name: write none, or head_ for a form with no name", pos)
         if (number := _number(text, pos)) is not None:
             return number
         if LOOKS_NUMERIC_RE.match(text):
