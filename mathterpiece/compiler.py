@@ -22,6 +22,7 @@ from mathterpiece.model import (
     VariantDef,
 )
 from mathterpiece.nodes import (
+    NOPOS,
     Bar,
     BoolLit,
     ComplexLit,
@@ -80,6 +81,7 @@ UNBOUNDED: Range = (-LIMIT, LIMIT)
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat"}
+COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
 # A computed result beyond the largest real overflows, which is undefined.
 MAX_REAL = sys.float_info.max
 WHOLE: Range = (-MAX_REAL, MAX_REAL)
@@ -195,6 +197,10 @@ class _Compiler:
         # id, its members' names, its parameters and bound variables, and the path its
         # members are named by (None inside an anonymous instance).
         self.bodies: list[dict] = []
+        # For each function body being compiled, what it reads through its parameters.
+        self.reads: list[dict[str, set]] = []
+        # The attributes of each motif and variant, by type, taken from its trial instance.
+        self.shape_types: dict[str, dict[str, Type]] = {}
 
     def run(self, forms: tuple[Form, ...]) -> Model:
         for form, scope in self.expand(forms, {}):
@@ -380,24 +386,28 @@ class _Compiler:
         # A recursive call gives RECURSING until the body's type is known; compile again with
         # that type until it no longer changes, since it may broaden (int, then ratio).
         for _ in range(len(NUMBERS) + 2):
-            body = self.function_body(params, form.items[3])
+            body, reads = self.function_body(params, form.items[3])
             if _inner(body.type) == RECURSING:
                 raise CompileError(f"{name} has no base case: every branch calls {name}", pos)
             if body.type == f.result:
                 break
             f.result = body.type
         f.body, f.deps = body, body.deps
+        f.reads = {p.name: frozenset(reads[p.name]) for p in params if p.name in reads}
 
-    def function_body(self, params, node: Node, expected=None, outer=None) -> Expr:
+    def function_body(self, params, node: Node, expected=None, outer=None):
+        """The body, and what it reads through each name it does not declare itself."""
         scope = dict(outer or {})
         for p in params:
             scope[p.name] = Expr("local", p.type, (p.name,), range=_type_range(p.type))
         # A read inside a function uses the frame of the place that called it.
         saved, self.frame = self.frame, "caller"
+        self.reads.append({})
         try:
-            return self.expr(node, expected, scope)
+            return self.expr(node, expected, scope), self.reads[-1]
         finally:
             self.frame = saved
+            self.reads.pop()
 
     def call(self, fid: int, node: Form, scope: dict) -> Expr:
         f = self.model.functions[fid]
@@ -410,7 +420,67 @@ class _Compiler:
         if maybe and t != RECURSING:
             t = _maybe(t)
         r = f.body.range if f.body is not None else _type_range(t)
+        for p, a in zip(f.params, args, strict=True):
+            for path in f.reads.get(p.name, ()):
+                deps |= self.reads_through(a, path)
         return Expr("call", t, (fid, *args), deps | f.deps, r)
+
+    def reads_through(self, e: Expr, path: str) -> frozenset:
+        """The places a function reads when it reads path through an argument e."""
+        if path.startswith("[]."):
+            items = self.items_of(e)
+            if items is None:
+                self.note(e, path)
+                return frozenset()
+            objs = [Expr("obj", self.model.objects[m].type, (m,)) for m in items]
+            return frozenset().union(*(self.reads_through(o, path[3:]) for o in objs))
+        objs = self.objects_in(e)
+        if objs is None:
+            self.note(e, path)
+            return frozenset()
+        out: set = set()
+        for m in objs:
+            if path in self.attr_names(m):
+                out |= self.obj_attr(m, path, NOPOS).deps
+        return frozenset(out)
+
+    def note(self, e: Expr, path: str) -> None:
+        """Record, for the function being compiled, a read of path through a parameter."""
+        if not self.reads:
+            return
+        if e.op == "local":
+            self.reads[-1].setdefault(e.args[0], set()).add(path)
+        elif e.op == "part" and not isinstance(e.args[1], str):
+            self.note(e.args[0], "[]." + path)
+        elif e.op in ("where", "sort", "reverse", "somes"):
+            self.note(e.args[0], path)
+        elif e.op == "if":
+            self.note(e.args[1], path)
+            self.note(e.args[2], path)
+
+    def objects_in(self, e: Expr) -> tuple | None:
+        """The shapes e may be, when they are known when compiling."""
+        if e.op == "obj":
+            return (e.args[0],)
+        if e.op == "member":
+            return e.args[2]
+        if e.op == "if":
+            a, b = self.objects_in(e.args[1]), self.objects_in(e.args[2])
+            return None if a is None or b is None else a + b
+        if e.op == "part" and not isinstance(e.args[1], str):
+            return self.items_of(e.args[0])
+        return self.held(e)
+
+    def items_of(self, e: Expr) -> tuple | None:
+        """The shapes a collection may hold, when they are known when compiling."""
+        if e.op == "obj" and self.model.objects[e.args[0]].kind in ("group", "scene"):
+            return tuple(self.model.objects[e.args[0]].members)
+        if e.op == "list":
+            parts = [self.objects_in(a) for a in e.args]
+            return None if any(p is None for p in parts) else sum(parts, ())
+        if e.op in ("where", "sort", "reverse", "somes"):
+            return self.items_of(e.args[0])
+        return None
 
     def arguments(self, params, given, scope: dict, pos: Pos) -> tuple[list, frozenset, bool]:
         """Each argument, or what a left-out parameter takes. An argument that may be none
@@ -421,6 +491,7 @@ class _Compiler:
             if k < len(given):
                 accepts = _may_be_none(p.type)
                 e = self.expr(given[k], p.type if accepts else _maybe(p.type), scope)
+                self.check_sequence(e, p.type, given[k].pos)
                 maybe |= not accepts and _may_be_none(e.type)
                 inner = _inner(p.type)
                 if not e.known and isinstance(inner, Refine):
@@ -434,6 +505,17 @@ class _Compiler:
             args.append(e)
         return args, frozenset().union(*(a.deps for a in args)), maybe
 
+    def check_sequence(self, e: Expr, t: Type, pos: Pos) -> None:
+        """A group given as sequence[T]: its members' common type must fit T (type-system 6)."""
+        t = _inner(t)
+        if not (isinstance(t, Interface) and t.name == "sequence" and t.of is not None):
+            return
+        items = self.items_of(e)
+        if items is not None and e.op == "obj":
+            common = self.common(list(items))
+            if not fits(_loose(common), _loose(t.of)):
+                raise CompileError(f"expected {t}, got a group of {common}", pos)
+
     def apply(self, fexpr: Expr, node: Form, scope: dict) -> Expr:
         ft = _core(fexpr.type)
         given = node.items[1:]
@@ -445,33 +527,172 @@ class _Compiler:
         t = _maybe(ft.result) if maybe else ft.result
         return Expr("apply", t, (fexpr, *args), deps | fexpr.deps, _type_range(t))
 
-    def fn(self, node: Form, expected: Type | None, scope: dict) -> Expr:
+    def fn(self, node: Form, scope: dict, hint=None, result=None) -> Expr:
+        """(fn params body). hint holds the parameter types its place gives, and result the
+        result type it expects, if any."""
         if len(node.items) != 3:
             raise CompileError("fn is (fn parameters body)", node.pos)
-        ft = _core(expected) if expected is not None else None
-        ft = ft if isinstance(ft, FuncT) else None
         pnode = node.items[1]
         if isinstance(pnode, Name):
-            if ft is None or len(ft.params) != 1:
+            if hint is None or len(hint) != 1:
                 raise CompileError(
                     "a bare parameter of fn needs its type from its place: write (fn (T name) …)",
                     pnode.pos,
                 )
-            params = (Param(pnode.parts[0], ft.params[0]),)
+            params = (Param(pnode.parts[0], hint[0]),)
         else:
             params = self.params(pnode)
-        body = self.function_body(params, node.items[2], ft.result if ft else None, scope)
+        body, reads = self.function_body(params, node.items[2], result, scope)
         fid = len(self.model.functions)
-        self.model.functions.append(FuncDef(None, params, body.type, body, body.deps, node.pos))
-        captured = tuple(sorted(_locals(body) - {p.name for p in params}))
+        own = {p.name for p in params}
+        f = FuncDef(None, params, body.type, body, body.deps, node.pos)
+        f.reads = {n: frozenset(r) for n, r in reads.items() if n in own}
+        self.model.functions.append(f)
+        captured = tuple(sorted(_locals(body) - own))
+        if self.reads:
+            for name in captured:
+                self.reads[-1].setdefault(name, set()).update(reads.get(name, ()))
         t = FuncT(tuple(p.type for p in params), body.type)
         return Expr("func", t, (fid, captured), body.deps)
+
+    def function_arg(self, node: Node, params: tuple, result, scope: dict) -> Expr:
+        """A function given to a collection function, which calls it with params."""
+        if _head(node) == "fn":
+            e = self.fn(node, scope, params, result)
+        else:
+            e = self.expr(node, None, scope)
+        ft = _core(e.type)
+        ok = (
+            isinstance(ft, FuncT)
+            and len(ft.params) == len(params)
+            and all(
+                fits(_loose(_inner(a)), _loose(b)) for a, b in zip(params, ft.params, strict=True)
+            )
+            and (result is None or fits(_loose(ft.result), _loose(result)))
+        )
+        if not ok:
+            want = " ".join(str(t) for t in (*params, result if result is not None else "…"))
+            raise CompileError(f"expected func[{want}], got {e.type}", node.pos)
+        return e
+
+    def collection(self, node: Form, head: str, scope: dict) -> Expr:
+        """map, where, sort, reverse, reduce, sum, count, any and all (reference.md,
+        "Collections"): a collection first, then what they need."""
+        args = node.items[1:]
+        if not args:
+            raise CompileError(f"{head} takes a collection first", node.pos)
+        coll = self.expr(args[0], None, scope)
+        item, n = self.collection_items(coll, head, node.pos)
+        rest = args[1:]
+        if head in ("sum", "count", "reduce", "any", "all") and _may_be_none(item):
+            raise CompileError(
+                f"the items of {head} may be none: filter them out with (somes xs)", node.pos
+            )
+        f, deps = None, coll.deps
+
+        def given(k: int, params: tuple, result) -> Expr:
+            nonlocal f, deps
+            f = self.function_arg(rest[k], params, result, scope)
+            deps |= f.deps
+            if f.op == "func":
+                fdef = self.model.functions[f.args[0]]
+                for path in fdef.reads.get(fdef.params[len(params) - 1].name, ()):
+                    deps |= self.reads_through(coll, "[]." + path)
+            return f
+
+        def sized(t: Type) -> Type:
+            return Refine(t, (("length", n),)) if n is not None else t
+
+        if head == "map":
+            self.arity(node, 2)
+            ft = _core(given(0, (item,), None).type)
+            out = ft.result
+            if _may_be_none(item) and not _may_be_none(ft.params[0]):
+                out = _maybe(out)
+            return Expr("map", sized(ListT(out)), (coll, f), deps)
+        if head == "where":
+            self.arity(node, 2)
+            given(0, (item,), BOOL)
+            return Expr("where", ListT(item), (coll, f), deps)
+        if head == "sort":
+            self.arity(node, 2)
+            given(0, (item,), REAL)
+            return Expr("sort", sized(ListT(item)), (coll, f), deps)
+        if head == "reverse":
+            self.arity(node, 1)
+            if not isinstance(_core(coll.type), ListT):
+                raise CompileError(f"reverse takes a list, got {coll.type}", node.pos)
+            if coll.known:
+                return _known(coll.type, list(reversed(coll.value)))
+            return Expr("reverse", sized(ListT(item)), (coll,), deps)
+        if head == "reduce":
+            self.arity(node, 3)
+            start = self.expr(rest[0], None, scope)
+            ft = _core(given(1, (start.type, item), None).type)
+            acc = ft.params[0]
+            if not fits(_loose(ft.result), _loose(acc)):
+                raise CompileError(f"reduce's function gives {ft.result}, not {acc}", node.pos)
+            return Expr("reduce", acc, (coll, start, f), deps | start.deps, _type_range(acc))
+        if head == "sum":
+            self.arity(node, 1)
+            t = _core(item)
+            if t not in NUMBERS:
+                raise CompileError(f"sum takes numbers, got {item}", node.pos)
+            if coll.known:
+                return _known(t, sum(coll.value))
+            return Expr("sum", t, (coll,), deps, WHOLE)
+        if head == "count":
+            if len(rest) > 1:
+                raise CompileError("count takes a collection and, optionally, a function", node.pos)
+            if not rest:
+                if n is not None:
+                    return _known(INT, n)
+                return Expr("count", INT, (coll,), deps, (0.0, MAX_REAL))
+            given(0, (item,), BOOL)
+            return Expr("count", INT, (coll, f), deps, (0.0, MAX_REAL))
+        # any, all
+        if len(rest) > 1:
+            raise CompileError(f"{head} takes a collection and, optionally, a function", node.pos)
+        if not rest:
+            if _core(item) != BOOL:
+                raise CompileError(f"{head} takes bools, or a function giving them", node.pos)
+            if coll.known:
+                return _known(BOOL, (any if head == "any" else all)(coll.value))
+            return Expr(head, BOOL, (coll,), deps)
+        given(0, (item,), BOOL)
+        return Expr(head, BOOL, (coll, f), deps)
+
+    def arity(self, node: Form, n: int) -> None:
+        if len(node.items) - 1 != n:
+            raise CompileError(f"{_head(node)} takes {n} argument{'s' * (n != 1)}", node.pos)
+
+    def collection_items(self, coll: Expr, head: str, pos: Pos) -> tuple[Type, int | None]:
+        """The type of a collection's items, and its length when it is known."""
+        if _may_be_none(coll.type):
+            raise CompileError(f"the collection given to {head} may be none", pos)
+        items = self.items_of(coll) if coll.op == "obj" else None
+        if items is not None:
+            return self.common(list(items)), len(items)
+        t = _core(coll.type)
+        if isinstance(t, ListT):
+            return t.item, _length(coll)
+        if isinstance(t, Interface) and t.name == "sequence" and t.of is not None:
+            return t.of, None
+        if t == ShapeT("group"):
+            return Interface("shape"), None
+        raise CompileError(f"{head} takes a list or a group, got {coll.type}", pos)
 
     def trial(self, name: str, pos: Pos) -> None:
         """Compile one instance and discard it, so a body's errors show without any instance."""
         objects, names = len(self.model.objects), dict(self.model.names)
         try:
-            self.shape(Form((Name((name,), pos), Name(("_",), pos)), pos), None, {})
+            j = self.shape(Form((Name((name,), pos), Name(("_",), pos)), pos), None, {})
+            obj = self.model.objects[j]
+            types = {a: place.type for a, place in obj.attrs.items()}
+            for m in obj.members:
+                if self.model.objects[m].name is not None:
+                    types[self.model.objects[m].name] = self.model.objects[m].type
+            self.shape_types[name] = types
         finally:
             del self.model.objects[objects:]
             self.model.names = names
@@ -496,7 +717,7 @@ class _Compiler:
         fixed = set()
         for k, item in enumerate(body.items[2:]):
             head = _head(item)
-            if head is None and k < len(POSITIONAL.get(base, ())):
+            if k < len(POSITIONAL.get(base, ())) and head not in taken:
                 fixed.add(POSITIONAL[base][k])
             elif head == "pos":
                 fixed |= {"x", "y"}
@@ -699,7 +920,8 @@ class _Compiler:
         members: list[tuple[Node, dict]] = []
         scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
         for attr in POSITIONAL.get(kind, ()):
-            if scoped and _head(scoped[0][0]) is None:
+            # The first item is the positional unless it names one of the shape's arguments.
+            if scoped and _head(scoped[0][0]) not in takes | {"pos"}:
                 given[attr] = scoped.pop(0)
         for item, inner in self.expand_scoped(scoped):
             if kind == "group" and self.shape_kind(item):
@@ -1016,11 +1238,48 @@ class _Compiler:
             return replace(r, type=_maybe(r.type))
         return r
 
+    def shape_part(self, e: Expr, name: str, pos: Pos) -> Expr:
+        """An attribute of a shape known only by its type, such as a parameter's: only what
+        the type lists can be read (type-system.md, section 6)."""
+        t = _core(e.type)
+        attrs = self.type_attr_types(t)
+        if name not in attrs:
+            raise CompileError(f"a {t} has no attribute '{name}'", pos)
+        self.note(e, name)
+        return Expr("part", attrs[name], (e, name), e.deps, _type_range(attrs[name]))
+
+    def type_attr_types(self, t: Type) -> dict[str, Type]:
+        if t == Interface("positioned"):
+            return {"x": REAL, "y": REAL, "pos": POINT}
+        if t == Interface("shape"):
+            return {"translate": POINT, "transform": TRANSFORM}
+        if not isinstance(t, ShapeT):
+            return {}
+        kind = t
+        while kind.base is not None:
+            kind = kind.base
+        if t.name in self.shape_types:
+            out = dict(self.shape_types[t.name])
+        elif t.name in SHAPE_ATTRS:
+            out = {a: spec.type for a, spec in SHAPE_ATTRS[t.name].items()}
+        else:
+            return {}
+        if "x" in out or kind.name in CORNERS:
+            out |= {"x": REAL, "y": REAL, "pos": POINT}
+        if kind.name == "group":
+            out["length"] = INT
+        return out
+
     def has_attr(self, e: Expr, name) -> bool:
         if e.op == "obj":
             return name in self.attr_names(e.args[0])
         if e.op == "member":
             return name in self.type_attrs(_inner(e.type), e.args[2])
+        if isinstance(_core(e.type), (ShapeT, Interface)):
+            held = self.objects_in(e)
+            if held is not None:
+                return name in self.type_attrs(_core(e.type), held)
+            return name in self.type_attr_types(_core(e.type))
         return _base(_inner(e.type)) == POINT and name in ("x", "y")
 
     def attr_names(self, i: int) -> set:
@@ -1082,15 +1341,18 @@ class _Compiler:
             reads = [self.obj_attr(m, name, pos) for m in obj.members]
             t = _join_all([r.type for r in reads], pos)
             deps = frozenset().union(*(r.deps for r in reads))
-            return Expr("spread", ListT(t), (Expr("obj", obj.type, (i,)), name), deps)
+            t = Refine(ListT(t), (("length", len(obj.members)),))
+            return Expr("spread", t, (Expr("obj", obj.type, (i,)), name), deps)
         raise CompileError(f"a {obj.kind} has no attribute '{name}'", pos)
 
     def part_of(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
         if isinstance(part, str):
             if e.op == "obj":
                 return self.obj_attr(e.args[0], part, pos)
-            held = self.held(e)
-            if held is not None:
+            if isinstance(_core(e.type), (ShapeT, Interface)) and e.op != "member":
+                held = self.objects_in(e)
+                if held is None:
+                    return self.shape_part(e, part, pos)
                 e = Expr("member", e.type, (e, None, held), e.deps)
             if e.op == "member":
                 candidates = e.args[2]
@@ -1173,7 +1435,12 @@ class _Compiler:
             elif head in self.model.funcs:
                 return self.call(self.model.funcs[head], node, scope)
         if head == "fn":
-            return self.fn(node, expected, scope)
+            ft = _core(expected) if expected is not None else None
+            if isinstance(ft, FuncT):
+                return self.fn(node, scope, ft.params, ft.result)
+            return self.fn(node, scope)
+        if head in COLLECTION:
+            return self.collection(node, head, scope)
         if head == "if":
             if len(args) != 3:
                 raise CompileError("if takes a condition and two branches", node.pos)

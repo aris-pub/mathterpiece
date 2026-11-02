@@ -93,6 +93,9 @@ class FuncDef:
     body: Expr | None = None
     deps: frozenset[Dep] = frozenset()
     pos: Pos = NOPOS
+    # What the body reads through each parameter that holds shapes: attribute names, with
+    # "[]." before one read on each item of a collection ("[].r").
+    reads: dict[str, frozenset[str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

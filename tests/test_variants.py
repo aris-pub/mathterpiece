@@ -88,3 +88,8 @@ class TestShapeVariables:
     def test_it_reads_only_what_its_type_lists(self):
         error("(scene s (circle p) (shape sel p) (real k sel.r))", "a shape has no attribute 'r'")
         model("(scene s (circle p) (positioned sel p) (real k sel.x))")
+
+
+def test_a_variants_positional_value_is_fixed():
+    m = model("(func f (int n) $'{n}') (variant label () (text _ (f 1))) (scene s (label l))")
+    assert m.get("l").attrs["value"].fixed

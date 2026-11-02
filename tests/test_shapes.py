@@ -77,7 +77,7 @@ class TestGroupReads:
         m = model("(scene s (group g (circle a) (circle b (r 2))) (list rs g.r))")
         e = m.get("rs").value.expr
         assert e.op == "spread"
-        assert e.type == ListT(RADIUS)
+        assert e.type == Refine(ListT(RADIUS), (("length", 2),))
         assert {(m.id("a"), "r"), (m.id("b"), "r")} <= e.deps
 
     def test_a_spread_read_needs_every_member_to_have_it(self):
@@ -154,3 +154,14 @@ class TestFrames:
     def test_a_variable_is_never_converted(self):
         m = model("(scene s (real k 1) (group g (circle p (x k))))")
         assert m.get("p").attrs["x"].expr.deps == {(m.id("k"), None)}
+
+
+class TestPositional:
+    # syntax.md section 8: a positional argument is recognized by where it is.
+    def test_a_texts_value_may_be_a_call(self):
+        m = model("(func f (int n) $'{n}') (int k) (scene s (text t (f k)))")
+        assert m.get("t").attrs["value"].expr.op == "call"
+
+    def test_an_argument_first_is_still_an_argument(self):
+        m = model("(scene s (text t (x 1)))")
+        assert (m.get("t").attrs["x"].value, m.get("t").attrs["value"].value) == (1, "")
