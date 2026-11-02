@@ -32,7 +32,7 @@
   (real|none sec-x (secd theta))
   (real|none csc-y (cscd theta))
 
-  (circle p (pos (polar 1 theta)) (r 0.04) (fill ink))
+  (circle handle (pos (polar 1 theta)) (r 0.04) (fill ink))
 
   ; Which side of each axis the point is on: names along an axis go on the other side, away
   ; from the lines that reach the point.
@@ -43,24 +43,25 @@
     (line _ (from [-1.35 0]) (to [1.35 0]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
     (line _ (from [0 -1.15]) (to [0 1.15]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
     (circle rim (r 1) (fill none) (stroke ink) (stroke-width 1.6))
-    (line radius (from [0 0]) (to p.pos) (stroke ink) (stroke-width 1.92))
+    (line radius (from [0 0]) (to handle.pos) (stroke ink) (stroke-width 1.92))
     (text _ 'θ' (pos (polar 0.18 (/ theta 2))) (font variable) (fill ink))
     (text title 'the unit circle' (pos [-2.05 1.05]) (font heading) (fill ink))
     (text angle $'θ = {theta:5.1f}°' (pos [-2.05 0.9]) (font number) (fill ink)))
 
   ; The names sit beside their lines, centered on the spot given.
   (group cosine
-    (line across (from [0 0]) (to [p.x 0]) (stroke accent) (stroke-width 3.84))
-    (text _ 'cos' (pos [(/ p.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
+    (line across (from [0 0]) (to [handle.x 0]) (stroke accent) (stroke-width 3.84))
+    (text _ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
       (font small) (fill accent))
     (text xs $'cos = {(cosd theta):+z.3f}' (pos [-2.05 0.78]) (font number) (fill accent)))
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
   ; triangle is too thin for it.
   (group sine
-    (line up (from [p.x 0]) (to p.pos) (stroke cool) (stroke-width 3.84))
-    (text _ 'sin' (pos [(+ p.x (* 0.12 right (if (< (abs p.x) 0.45) 1 -1))) (/ p.y 2)]) (halign 'middle') (valign 'middle')
-      (font small) (fill cool))
+    (line up (from [handle.x 0]) (to handle.pos) (stroke cool) (stroke-width 3.84))
+    (text _ 'sin'
+      (pos [(+ handle.x (* 0.12 right (if (< (abs handle.x) 0.45) 1 -1))) (/ handle.y 2)])
+      (halign 'middle') (valign 'middle') (font small) (fill cool))
     (text ys $'sin = {(sind theta):+z.3f}' (pos [-2.05 0.67]) (font number) (fill cool)))
 
   ; The tangent line at the point, split where it touches the circle: from the point to the
@@ -68,9 +69,10 @@
   ; right angles to the radius, so its name moves out along the radius to clear the line, and
   ; it stays near the point, since the line's far end may be off the canvas.
   (group tangent
-    (line|none tan (from p.pos) (to [sec-x 0]) (stroke deep) (stroke-width 3.84))
+    (line|none tan (from handle.pos) (to [sec-x 0]) (stroke deep) (stroke-width 3.84))
     (text|none _ 'tan'
-      (pos (+ (lerp p.pos [sec-x 0] (min 0.5 (/ 0.3 (dist p.pos [sec-x 0])))) (polar 0.1 theta)))
+      (pos (+ (lerp handle.pos [sec-x 0] (min 0.5 (/ 0.3 (dist handle.pos [sec-x 0]))))
+              (polar 0.1 theta)))
       (halign 'middle') (valign 'middle') (font small) (fill deep))
     (text tans (or? $'tan = {(tand theta):+z.3f}' 'tan = ±∞')
       (pos [-2.05 0.55]) (font number) (fill deep)))
@@ -79,16 +81,17 @@
   ; kept on the canvas.
   (group secant
     (line|none sec (from [0 0]) (to [sec-x 0]) (stroke deep) (stroke-width 1.92))
-    (text|none _ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ p.x sec-x) 2))) (* -0.1 above)])
+    (text|none _ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ handle.x sec-x) 2))) (* -0.1 above)])
       (halign 'middle') (valign 'middle') (font small) (fill deep))
     (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
       (pos [-2.05 0.43]) (font number) (fill deep)))
 
   ; From the point to the y axis is cot theta long, and along the y axis, csc theta.
   (group cotangent
-    (line|none cot (from p.pos) (to [0 csc-y]) (stroke warm) (stroke-width 3.84))
+    (line|none cot (from handle.pos) (to [0 csc-y]) (stroke warm) (stroke-width 3.84))
     (text|none _ 'cot'
-      (pos (+ (lerp p.pos [0 csc-y] (min 0.5 (/ 0.3 (dist p.pos [0 csc-y])))) (polar 0.1 theta)))
+      (pos (+ (lerp handle.pos [0 csc-y] (min 0.5 (/ 0.3 (dist handle.pos [0 csc-y]))))
+              (polar 0.1 theta)))
       (halign 'middle') (valign 'middle') (font small) (fill warm))
     (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
       (pos [-2.05 0.32]) (font number) (fill warm)))
@@ -120,10 +123,10 @@
   (when show-sin.value sine)
   (when show-tan.value tangent)
   (when show-cot.value cotangent)
-  p)
+  handle)
 
 ; Dragging the point changes theta, so the point slides along the circle under the pointer.
-(on-drag p (target theta))
+(on-drag handle (target theta))
 (slider turn (animation (theta (transition (from 0) (to 360) (duration 1)))) (label 'θ'))
 
 ; For the prose around the figure: the same numbers, set in the number font.

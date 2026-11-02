@@ -86,7 +86,7 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 
 | Form | Name | Positional | Items |
 |---|---|---|---|
-| `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)` |
+| `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, drawn in the order written, each on top of those before it; `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)` |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font |
 | `(slider name)` | required | none | `(animation …)`, `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, conditions |

@@ -93,13 +93,19 @@ class TestViews:
             "(bool on true) (scene s (circle c) (circle d)) (canvas v c (when on d) (view-x -3))"
         )
         v = m.get("v")
-        assert v.data["members"] == [m.id("c")]
-        assert v.data["when"][0][1] == [m.id("d")]
+        shows = v.data["shows"]
+        assert shows[0] == m.id("c")
+        assert shows[1][1] == [m.id("d")]
         assert v.attrs["view-x"].value == -3 and v.attrs["view-width"].value == 20
+
+    def test_a_canvas_keeps_the_order_its_items_are_written_in(self):
+        m = model("(bool on true) (scene s (circle c) (circle d)) (canvas v (when on d) c)")
+        shows = m.get("v").data["shows"]
+        assert shows[0][1] == [m.id("d")] and shows[1] == m.id("c")
 
     def test_the_whole_scene(self):
         m = model("(scene s (circle c)) (canvas v s)")
-        assert m.get("v").data["members"] == [m.id("s")]
+        assert m.get("v").data["shows"] == [m.id("s")]
 
     def test_a_readout(self):
         m = model(f"{K} (readout r $'{{k:.2f}}')")

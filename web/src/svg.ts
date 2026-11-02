@@ -2,8 +2,8 @@
 // scene is flipped once at the top, and text is flipped back so its letters stay upright. Each
 // group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
 import { compose } from "./builtins.ts";
-import type { Expr, Attribute } from "./doc.ts";
-import { isBound } from "./doc.ts";
+import type { Expr } from "./doc.ts";
+import { isBound, whenItems } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -41,18 +41,24 @@ export function draw(
   const { box, toUser } = viewOf(rt, canvas);
   out.setAttribute("viewBox", box.join(" "));
   const view = rt.objects[canvas]!;
-  const when = (view.when ?? []) as [Attribute, number[]][];
+  const shows = view.shows ?? [];
+  const when = whenItems(view);
   const levels = when.map(([cond], k) => (visible ? visible(k) : rt.evaluate(cond) ? 1 : 0));
-  background(rt, [...(view.members ?? []), ...when.flatMap(([, ids]) => ids)], out);
+  background(rt, shows.flatMap((s) => (typeof s === "number" ? [s] : s[1])), out);
   const top = document.createElementNS(NS, "g");
   top.setAttribute("transform", matrix(toUser));
   // Until the SVG is on the page its width is 0; a canvas redraws once it has one.
   const width = out.getBoundingClientRect?.().width || 640;
   const unitsPerPx = box[2]! / width;
-  for (const i of view.members ?? []) drawObject(rt, i, top, unitsPerPx);
-  when.forEach(([, ids], k) => {
-    const level = levels[k]!;
-    if (level <= 0) return;
+  let k = 0;
+  for (const shown of shows) {
+    if (typeof shown === "number") {
+      drawObject(rt, shown, top, unitsPerPx);
+      continue;
+    }
+    const ids = shown[1];
+    const level = levels[k++]!;
+    if (level <= 0) continue;
     let into: Element = top;
     if (level < 1) {
       // A canvas's showing and hiding takes the path fade (reference.md).
@@ -62,7 +68,7 @@ export function draw(
       top.appendChild(into);
     }
     for (const i of ids) drawObject(rt, i, into, unitsPerPx);
-  });
+  }
   out.appendChild(top);
   return out;
 }

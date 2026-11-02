@@ -131,7 +131,7 @@ and then what its kind needs:
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |
 | `transition` | `"from"`, `"to"`, `"duration"`, `"ease"`, `"path"` (below) |
 | `animation` | `"steps"`: a step (below) |
-| `canvas` | `"members"`: ids of the shapes it shows; `"when"`: `[[condition, [ids]], …]`, each condition a bool, free or bound; `"transition"`: an id or `null`; `"attrs"`: the view box and `transform` |
+| `canvas` | `"shows"`: what it shows, in the order written, which is the order it draws them in (later ones on top): each entry the id of a shape, or `[condition, [ids]]` for a `when` item, its condition a bool, free or bound; `"transition"`: an id or `null`; `"attrs"`: the view box and `transform` |
 | `readout` | `"attrs"`: `value` (the string), `font` |
 | `slider`, `button`, `play` | `"animation"`: an id; `"conditions"`; `"attrs"`: `label`, and `step` (slider: the number of positions its knob stops at), `buttons` (play), and the attributes the reader's actions change: `position` (slider), `playing` and `step` (play: the step now playing) |
 | `toggle` | `"target"`: `[id, attr]` or `null`; `"conditions"`; `"attrs"`: `label`, `value` |

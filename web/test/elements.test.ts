@@ -198,6 +198,13 @@ describe("a canvas's showing and hiding", () => {
     expect(opacityOf(rt, "d")).toBe(1);
   });
 
+  it("draws its items in the order they are written", () => {
+    const [, rt] = page(`<mtp-canvas model="m" name="stack"></mtp-canvas>`, JSON.parse(FADE) as Doc);
+    rt.write(rt.id("show"), null, true);
+    const drawn = [...document.querySelectorAll(`mtp-canvas [data-mtp-id]`)].map((el) => Number(el.getAttribute("data-mtp-id")));
+    expect(drawn).toEqual([rt.id("d"), rt.id("c")]);
+  });
+
   it("shows and hides at once with no transition", () => {
     const [, rt] = page(`<mtp-canvas model="m" name="still"></mtp-canvas>`, JSON.parse(FADE) as Doc);
     rt.write(rt.id("show"), null, true);

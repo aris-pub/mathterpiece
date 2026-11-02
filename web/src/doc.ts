@@ -65,8 +65,18 @@ export interface Obj {
   conditions?: Clamp[];
   target?: [number, string | null] | null;
   shape?: number;
-  when?: Attribute | null | [Attribute, number[]][];
+  when?: Attribute | null;
+  // canvases: what each shows, in drawing order
+  shows?: Shown[];
   transition?: number | null;
+}
+
+/** What a canvas shows: a shape's id, or a when item's condition and shapes. */
+export type Shown = number | [Attribute, number[]];
+
+/** A canvas's when items, in order: the k-th is what visible(k) is about. */
+export function whenItems(view: Obj): [Attribute, number[]][] {
+  return (view.shows ?? []).filter((s): s is [Attribute, number[]] => typeof s !== "number");
 }
 
 export interface Param {

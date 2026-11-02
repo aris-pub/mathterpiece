@@ -4,7 +4,7 @@
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Clicks } from "./click.ts";
-import { type Doc, FORMAT_VERSION, type Obj, type Attribute } from "./doc.ts";
+import { type Doc, FORMAT_VERSION, type Obj, whenItems } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
 import { Runtime } from "./runtime.ts";
@@ -260,8 +260,7 @@ class Fades {
   }
 
   private conditions(): boolean[] {
-    const when = (this.rt.objects[this.canvas]!.when ?? []) as [Attribute, number[]][];
-    return when.map(([cond]) => Boolean(this.rt.evaluate(cond)));
+    return whenItems(this.rt.objects[this.canvas]!).map(([cond]) => Boolean(this.rt.evaluate(cond)));
   }
 
   /** Starts moving toward what each condition says now. */

@@ -1935,8 +1935,7 @@
               "type",
               "access",
               "name",
-              "members",
-              "when",
+              "shows",
               "transition",
               "attrs"
             ],
@@ -1959,29 +1958,30 @@
                   "null"
                 ]
               },
-              "members": {
+              "shows": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/id"
-                }
-              },
-              "when": {
-                "type": "array",
-                "items": {
-                  "type": "array",
-                  "prefixItems": [
+                  "oneOf": [
                     {
-                      "$ref": "#/$defs/attribute"
+                      "$ref": "#/$defs/id"
                     },
                     {
                       "type": "array",
-                      "items": {
-                        "$ref": "#/$defs/id"
-                      }
+                      "prefixItems": [
+                        {
+                          "$ref": "#/$defs/attribute"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/id"
+                          }
+                        }
+                      ],
+                      "minItems": 2,
+                      "maxItems": 2
                     }
-                  ],
-                  "minItems": 2,
-                  "maxItems": 2
+                  ]
                 }
               },
               "transition": {

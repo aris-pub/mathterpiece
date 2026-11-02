@@ -1470,14 +1470,15 @@ class _Compiler:
             if node
             else Attribute(TRANSFORM, IDENTITY)
         )
-        obj.data.update({"members": [], "when": [], "transition": None})
+        # What it shows, in the order written, which is the order it draws them in.
+        obj.data.update({"shows": [], "transition": None})
         for item in items:
             head = _head(item)
             if isinstance(item, Name):
-                obj.data["members"].append(self.shown(item))
+                obj.data["shows"].append(self.shown(item))
             elif head == "when" and len(item.items) >= 3:
                 cond = self.attribute(BOOL, item.items[1], item.pos, "when", scope=self.cscope)
-                obj.data["when"].append((cond, [self.shown(n) for n in item.items[2:]]))
+                obj.data["shows"].append((cond, [self.shown(n) for n in item.items[2:]]))
             elif head == "transition":
                 if obj.data["transition"] is not None:
                     raise CompileError("'transition' is given twice", item.pos)
