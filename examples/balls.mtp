@@ -24,6 +24,10 @@
 ; Which of x and y the next click replaces.
 (bool replace-x true)
 
+; Whether p is in the ball of the given radius around center. Distances are computed, so a point
+; at exactly the radius is let in by a hair more.
+(func in-ball ((point center) (real radius) (point p)) (<= (dist center p) (+ radius 1e-9)))
+
 (scene balls
   (list[point] points
    [[230.5 -132.6] [160.9 -135.0] [176.1 -148.8] [165.0 -113.9]
@@ -51,10 +55,10 @@
   (group space
     (repeat 32 i
       (circle _ (pos points[i]) (r 4.5)
-        (fill (cond ((<= (dist x.pos points[i]) (+ r 1e-9)) x-color)
-                    ((<= (dist y.pos points[i]) (+ r 1e-9)) y-color)
+        (fill (cond ((in-ball x.pos r points[i]) x-color)
+                    ((in-ball y.pos r points[i]) y-color)
                     (else fg)))
-        (opacity (if (<= (min (dist x.pos points[i]) (dist y.pos points[i])) (+ r 1e-9)) 1 0.45)))))
+        (opacity (if (or (in-ball x.pos r points[i]) (in-ball y.pos r points[i])) 1 0.45)))))
 
   (real h (/ (dist x.pos y.pos) 2) (>= 0))
   (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
@@ -71,12 +75,10 @@
   (real at (or? (/ bar-width h) 0))
 
   ; Faint rings at ρ₁ to ρₖ around both points.
-  (group rings
+  (group rings (fill none) (stroke muted)
     (repeat 5 j
-      (circle _ (pos x.pos) (r rho[j]) (fill none) (stroke muted)
-        (opacity (if (< j k) 0.3 0)))
-      (circle _ (pos y.pos) (r rho[j]) (fill none) (stroke muted)
-        (opacity (if (< j k) 0.3 0)))))
+      (circle _ (pos x.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))
+      (circle _ (pos y.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))))
 
   (group pair
     (line _ (from x.pos) (to y.pos) (stroke muted) (stroke-width 1) (opacity 0.6))
@@ -84,8 +86,12 @@
       (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
     (circle _ (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
       (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
-    (text _ 'x' (pos (+ x.pos [9 9])) (font label) (fill fg))
-    (text _ 'y' (pos (+ y.pos [9 9])) (font label) (fill fg)))
+    (group names (fill fg)
+      (text _ 'x' (pos (+ x.pos [9 9])) (font label))
+      (text _ 'y' (pos (+ y.pos [9 9])) (font label))))
+
+  (list[color] segment-colors [s1 s2 s3 s4 s5])
+  (list[string] tick-names ['0' 'ρ₁' 'ρ₂' 'ρ₃' 'ρ₄' 'ρ₅'] (const))
 
   ; Segment j covers [ρⱼ₋₁, ρⱼ], filled up to r. Past k the ρⱼ all equal δ/2, so those
   ; segments are empty. A rect's position is its center.
@@ -96,20 +102,20 @@
       (rect _
         (pos [(+ bar-left (* at (/ (+ edges[j] (max edges[j] (min rho[j] r))) 2))) bar-y])
         (width (max 0 (* at (- (min rho[j] r) edges[j])))) (height 18)
-        (fill (cond ((= j 0) s1) ((= j 1) s2) ((= j 2) s3) ((= j 3) s4) (else s5))))
+        (fill segment-colors[j]))
       (text _ $'j = {(+ j 1)}'
         (pos [(+ bar-left (* at (/ (+ edges[j] (min rho[j] r)) 2))) (- bar-y 4.5)])
         (halign 'middle') (font segment) (fill bg)
         (opacity (if (and (>= r (- rho[j] 1e-9)) (> (* at (- (min rho[j] r) edges[j])) 26)) 1 0))))
     ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
-    (repeat 6 j
-      (line _ (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
-        (to [(+ bar-left (* at edges[j])) (- bar-y 9)])
-        (stroke fg) (stroke-width 1.2) (opacity (if (<= j k) 1 0)))
-      (text _ (cond ((= j 0) '0') ((= j k) 'δ/2') ((= j 1) 'ρ₁') ((= j 2) 'ρ₂') ((= j 3) 'ρ₃')
-                    (else 'ρ₄'))
-        (pos [(+ bar-left (* at edges[j])) (+ bar-y 18)]) (halign 'middle') (font tick-label)
-        (fill fg) (opacity (if (<= j k) 1 0))))))
+    (group ticks (stroke fg) (stroke-width 1.2) (fill fg)
+      (repeat 6 j
+        (line _ (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
+          (to [(+ bar-left (* at edges[j])) (- bar-y 9)])
+          (opacity (if (<= j k) 1 0)))
+        (text _ (if (= j k) 'δ/2' tick-names[j])
+          (pos [(+ bar-left (* at edges[j])) (+ bar-y 18)]) (halign 'middle') (font tick-label)
+          (opacity (if (<= j k) 1 0)))))))
 
 ; Clicking a point makes it x or y, replacing the older of the two, and sets r to the new δ/2.
 (repeat 32 i
@@ -124,8 +130,8 @@
 (play grow (animation (r (transition (from 0) (to h) (duration 3.6) (ease 'linear')))))
 
 (readout note
-  (let ((cx (count space (fn p (<= (dist x.pos p.pos) (+ r 1e-9)))))
-        (cy (count space (fn p (<= (dist y.pos p.pos) (+ r 1e-9))))))
+  (let ((cx (count space (fn p (in-ball x.pos r p.pos))))
+        (cy (count space (fn p (in-ball y.pos r p.pos)))))
     (cond ((<= r 1e-9) 'At radius 0 each ball holds only its center.')
           ((>= r (- h 1e-6)) 'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
           (else $'The balls hold {cx} and {cy} points.'))))
