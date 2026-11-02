@@ -51,6 +51,19 @@ class TestGroupArguments:
         m = model("(scene s (group g (fill 'red') (group h (fill 'blue') (circle a))))")
         assert m.get("a").attrs["fill"].value == "#0000ffff"
 
+    def test_a_text_takes_no_stroke_from_a_group(self):
+        # A stroke would outline a text's letters (reference.md, "The scene and shapes").
+        src = "(group g (stroke 'red') (stroke-width 3) (fill 'blue') (text t 'hi') (circle c))"
+        m = model(f"(scene s {src})")
+        t = m.get("t").attrs
+        assert t["stroke"].value is None and t["stroke-width"].value == 1
+        assert t["fill"].value == "#0000ffff"
+        assert m.get("c").attrs["stroke"].value == "#ff0000ff"
+
+    def test_a_text_keeps_its_own_stroke(self):
+        m = model("(scene s (group g (stroke 'red') (text t 'hi' (stroke 'blue'))))")
+        assert m.get("t").attrs["stroke"].value == "#0000ffff"
+
     def test_pos_and_x_meet_coordinate_by_coordinate(self):
         m = model("(scene s (group g (pos [5 6]) (circle a (x 1)) (circle b (pos [1 2]))))")
         assert (m.get("a").attrs["x"].value, m.get("a").attrs["y"].value) == (1, 6)

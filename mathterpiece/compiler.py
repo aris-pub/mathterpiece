@@ -1886,6 +1886,9 @@ class _Compiler:
                 down.update(_coordinates(attr, *given.pop(attr)))
         else:
             for attr, (node, inner) in down.items():
+                # A stroke would outline a text's letters, so a text takes none from a group.
+                if kind == "text" and attr in ("stroke", "stroke-width"):
+                    continue
                 if attr not in specs:
                     raise CompileError(f"a {kind} takes no argument '{attr}'", node.pos)
                 if attr not in given and not (attr in ("x", "y") and "pos" in given):

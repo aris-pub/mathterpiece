@@ -39,29 +39,28 @@
   (real above (if (>= (sind theta) 0) 1 -1))
   (real right (if (>= (cosd theta) 0) 1 -1))
 
-  ; Paint given on a group is the default for its members. Only fill is given on the groups that
-  ; hold texts, since a stroke would outline the texts.
-  (group frame (fill ink)
-    (group axes (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5)
+  ; Paint given on a group is the default for its members. A text takes only the fill.
+  (group frame (stroke ink) (fill ink)
+    (group axes (stroke-width 0.96) (stroke-opacity 0.5)
       (line _ (from [-1.35 0]) (to [1.35 0]))
       (line _ (from [0 -1.15]) (to [0 1.15])))
-    (circle rim (r 1) (fill none) (stroke ink) (stroke-width 1.6))
-    (line radius (from [0 0]) (to handle.pos) (stroke ink) (stroke-width 1.92))
+    (circle rim (r 1) (fill none) (stroke-width 1.6))
+    (line radius (from [0 0]) (to handle.pos) (stroke-width 1.92))
     (text _ 'θ' (pos (polar 0.18 (/ theta 2))) (font variable))
     (text title 'the unit circle' (pos [-2.05 1.05]) (font heading))
     (text angle $'θ = {theta:5.1f}°' (pos [-2.05 0.9]) (font number)))
 
   ; The names sit beside their lines, centered on the spot given.
-  (group cosine (fill accent)
-    (line across (from [0 0]) (to [handle.x 0]) (stroke accent) (stroke-width 3.84))
+  (group cosine (stroke accent) (fill accent)
+    (line across (from [0 0]) (to [handle.x 0]) (stroke-width 3.84))
     (text _ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
       (font small))
     (text xs $'cos = {(cosd theta):+z.3f}' (pos [-2.05 0.78]) (font number)))
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
   ; triangle is too thin for it.
-  (group sine (fill cool)
-    (line up (from [handle.x 0]) (to handle.pos) (stroke cool) (stroke-width 3.84))
+  (group sine (stroke cool) (fill cool)
+    (line up (from [handle.x 0]) (to handle.pos) (stroke-width 3.84))
     (text _ 'sin'
       (pos [(+ handle.x (* 0.12 right (if (< (abs handle.x) 0.45) 1 -1))) (/ handle.y 2)])
       (halign 'middle') (valign 'middle') (font small))
@@ -71,8 +70,8 @@
   ; x axis is tan theta long, and along the x axis from the center, sec theta. The tangent is at
   ; right angles to the radius, so its name moves out along the radius to clear the line, and
   ; it stays near the point, since the line's far end may be off the canvas.
-  (group tangent (fill deep)
-    (line|none tan (from handle.pos) (to [sec-x 0]) (stroke deep) (stroke-width 3.84))
+  (group tangent (stroke deep) (fill deep)
+    (line|none tan (from handle.pos) (to [sec-x 0]) (stroke-width 3.84))
     (text|none _ 'tan'
       (pos (+ (lerp handle.pos [sec-x 0] (min 0.5 (/ 0.3 (dist handle.pos [sec-x 0]))))
               (polar 0.1 theta)))
@@ -82,16 +81,16 @@
 
   ; sec runs along the x axis past cos, so its name goes on the part of the line beyond cos,
   ; kept on the canvas.
-  (group secant (fill deep)
-    (line|none sec (from [0 0]) (to [sec-x 0]) (stroke deep) (stroke-width 1.92))
+  (group secant (stroke deep) (fill deep)
+    (line|none sec (from [0 0]) (to [sec-x 0]) (stroke-width 1.92))
     (text|none _ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ handle.x sec-x) 2))) (* -0.1 above)])
       (halign 'middle') (valign 'middle') (font small))
     (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
       (pos [-2.05 0.43]) (font number)))
 
   ; From the point to the y axis is cot theta long, and along the y axis, csc theta.
-  (group cotangent (fill warm)
-    (line|none cot (from handle.pos) (to [0 csc-y]) (stroke warm) (stroke-width 3.84))
+  (group cotangent (stroke warm) (fill warm)
+    (line|none cot (from handle.pos) (to [0 csc-y]) (stroke-width 3.84))
     (text|none _ 'cot'
       (pos (+ (lerp handle.pos [0 csc-y] (min 0.5 (/ 0.3 (dist handle.pos [0 csc-y]))))
               (polar 0.1 theta)))
@@ -99,8 +98,8 @@
     (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
       (pos [-2.05 0.32]) (font number)))
 
-  (group cosecant (fill warm)
-    (line|none csc (from [0 0]) (to [0 csc-y]) (stroke warm) (stroke-width 1.92))
+  (group cosecant (stroke warm) (fill warm)
+    (line|none csc (from [0 0]) (to [0 csc-y]) (stroke-width 1.92))
     (text|none _ 'csc' (pos [(* -0.12 right) (max -1.1 (min 1.1 (/ csc-y 2)))])
       (halign 'middle') (valign 'middle') (font small))
     (text cscs (or? $'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
