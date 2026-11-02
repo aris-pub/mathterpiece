@@ -1,68 +1,126 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+// The page elements (docs/data-model.md, "On the page"; docs/reference.md, "Components" and
+// "Controls").
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Doc } from "../src/doc.ts";
-import { define } from "../src/elements.ts";
+import { type MtpModel, define, frames } from "../src/elements.ts";
+import type { Runtime } from "../src/runtime.ts";
+
+const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
+const PAGE = docs["./data/runtime/page.mtpc"] as string;
 
 define();
 
-const doc: Doc = {
-  mtp: 1,
-  objects: [
-    { id: 0, kind: "canvas", name: "a", attrs: { "view-x": 0, "view-y": 0, "view-width": 4, "view-height": 4, transform: [1, 0, 0, 0, 1, 0] }, shows: [2] },
-    { id: 1, kind: "canvas", name: "b", attrs: { "view-x": 0, "view-y": 0, "view-width": 8, "view-height": 8, transform: [1, 0, 0, 0, 1, 0] }, shows: [2] },
-    { id: 2, kind: "root", name: "s", attrs: { transform: [1, 0, 0, 0, 1, 0] }, members: [3] },
-    {
-      id: 3, kind: "circle", name: "c", parent: 2,
-      attrs: { transform: [1, 0, 0, 0, 1, 0], x: 1, y: 1, r: 1, fill: "red", stroke: "none", "stroke-width": 1, opacity: 1, "fill-opacity": 1, "stroke-opacity": 1 },
-    },
-  ],
-  functions: {},
-  names: { a: 0, b: 1, s: 2, c: 3 },
-  depends: {},
+let queued: ((ms: number) => void)[] = [];
+let clock = 0;
+frames.request = (callback) => {
+  queued.push(callback);
 };
 
-const settle = () => new Promise((r) => setTimeout(r, 0));
+/** Moves time forward by seconds, one animation frame at a time. */
+function pass(seconds: number, step = 0.1): void {
+  for (let t = 0; t < seconds - 1e-9; t += step) {
+    clock += step * 1000;
+    const now = queued;
+    queued = [];
+    for (const f of now) f(clock);
+  }
+}
 
-afterEach(() => {
-  document.body.replaceChildren();
-  vi.unstubAllGlobals();
+function page(body: string, doc: Doc = JSON.parse(PAGE) as Doc): [MtpModel, Runtime, (name: string, attr?: string) => unknown] {
+  document.body.innerHTML = `<mtp-model id="m"></mtp-model>${body}`;
+  const model = document.querySelector("mtp-model") as MtpModel;
+  model.doc = doc;
+  const rt = model.runtime!;
+  return [model, rt, (name, attr) => rt.value(rt.id(name), attr ?? null)];
+}
+
+beforeEach(() => {
+  queued = [];
+  clock = 0;
 });
 
-describe("<mtp-model> and <mtp-canvas>", () => {
-  it("loads the JSON from src and draws the named canvas", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(doc))));
-    document.body.innerHTML = `<mtp-canvas model="m" name="b"></mtp-canvas><mtp-model id="m" src="fig.json"></mtp-model>`;
-    await settle();
-    expect(fetch).toHaveBeenCalledWith("fig.json");
-    const svg = document.querySelector("mtp-canvas svg");
-    expect(svg?.getAttribute("viewBox")).toBe("0 -8 8 8");
-    expect(svg?.querySelectorAll("circle").length).toBe(1);
+describe("the model", () => {
+  it("tells its views when anything changes", () => {
+    const [, rt] = page(`<mtp-readout model="m" name="r"></mtp-readout>`);
+    const readout = document.querySelector("mtp-readout")!;
+    expect(readout.textContent).toBe("k = 0.0");
+    rt.write(rt.id("k"), null, 5);
+    expect(readout.textContent).toBe("k = 5.0");
   });
 
-  it("draws the first canvas when none is named", async () => {
-    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m"></mtp-canvas>`;
-    (document.querySelector("mtp-model") as HTMLElement & { doc: Doc }).doc = doc;
-    await settle();
-    expect(document.querySelector("mtp-canvas svg")?.getAttribute("viewBox")).toBe("0 -4 4 4");
+  it("refuses a file of another version", () => {
+    page(`<mtp-readout model="m" name="r"></mtp-readout>`, { ...(JSON.parse(PAGE) as Doc), mtpc: 1 });
+    expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("version 2");
+  });
+});
+
+describe("controls", () => {
+  it("a slider sets how far along its animation is", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
+    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
+    expect(document.querySelector("mtp-slider label")!.textContent).toBe("k");
+    input.value = "500";
+    input.dispatchEvent(new Event("input"));
+    expect(v("k")).toBe(5);
+    expect(v("sl", "position")).toBe(0.5);
   });
 
-  it("puts each canvas anywhere in the page", async () => {
-    document.body.innerHTML = `<p><mtp-canvas model="m" name="a"></mtp-canvas></p><mtp-model id="m"></mtp-model><div><mtp-canvas model="m" name="b"></mtp-canvas></div>`;
-    (document.querySelector("mtp-model") as HTMLElement & { doc: Doc }).doc = doc;
-    await settle();
-    expect(document.querySelectorAll("mtp-canvas svg").length).toBe(2);
+  it("a button plays its animation over time", () => {
+    const [, , v] = page(`<mtp-button model="m" name="go"></mtp-button>`);
+    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
+    // The first frame starts the clock: the model times frames from when it woke.
+    pass(0.1);
+    pass(0.5);
+    expect(v("k")).toBeCloseTo(2.5);
+    pass(1);
+    expect(v("k")).toBe(5);
   });
 
-  it("says what went wrong inside the canvas", async () => {
-    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="nope"></mtp-canvas>`;
-    (document.querySelector("mtp-model") as HTMLElement & { doc: Doc }).doc = doc;
-    await settle();
-    expect(document.querySelector("mtp-canvas")?.textContent).toMatch(/no canvas named nope/);
+  it("play pauses and resumes, and shows a button per step", () => {
+    const [, , v] = page(`<mtp-play model="m" name="run"></mtp-play>`);
+    const buttons = document.querySelectorAll("mtp-play button");
+    expect(buttons.length).toBe(3);
+    const play = buttons[0] as HTMLButtonElement;
+    play.click();
+    expect(play.textContent).toBe("pause");
+    expect(v("run", "playing")).toBe(true);
+    pass(0.5);
+    play.click();
+    const paused = v("k");
+    pass(1);
+    expect(v("k")).toBe(paused);
+    play.click();
+    pass(2);
+    expect(v("k")).toBe(4);
   });
 
-  it("refuses other format versions", async () => {
-    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m"></mtp-canvas>`;
-    (document.querySelector("mtp-model") as HTMLElement & { doc: Doc }).doc = { ...doc, mtp: 2 };
-    await settle();
-    expect(document.querySelector("mtp-canvas")?.textContent).toMatch(/version 2/);
+  it("a toggle holds its own value, or writes its target", () => {
+    const [, , v] = page(`<mtp-toggle model="m" name="own"></mtp-toggle><mtp-toggle model="m" name="t"></mtp-toggle>`);
+    const [own, t] = [...document.querySelectorAll("mtp-toggle input")] as HTMLInputElement[];
+    own!.click();
+    expect(v("own", "value")).toBe(true);
+    t!.click();
+    expect(v("on")).toBe(true);
+  });
+
+  it("a toggle on a group's attribute shows a mixed state, and a click sets every member", () => {
+    const [, rt] = page(`<mtp-toggle model="m" name="all"></mtp-toggle>`);
+    const input = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    expect(input.indeterminate).toBe(true);
+    input.dispatchEvent(new Event("change"));
+    const lamps = rt.objects[rt.id("lamps")]!.members!;
+    expect(lamps.map((m) => rt.value(m, "lit"))).toEqual([true, true]);
+  });
+});
+
+describe("a canvas", () => {
+  it("draws its scene and plays an on-click on a click", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`);
+    const orbit = document.querySelector(`mtp-canvas [data-mtp-id="${rt.id("orbit")}"]`)!;
+    expect(orbit).not.toBeNull();
+    orbit.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    orbit.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    pass(0.1);
+    expect(v("on")).toBe(true);
   });
 });

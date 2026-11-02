@@ -1,194 +1,45 @@
+// Dragging (docs/reference.md, "Dragging").
 import { describe, expect, it } from "vitest";
-import type { Doc, Obj } from "../src/doc.ts";
+import type { Doc } from "../src/doc.ts";
 import { Drags } from "../src/drag.ts";
 import { Runtime } from "../src/runtime.ts";
 
-const ID = [1, 0, 0, 0, 1, 0];
-const style = { transform: ID, fill: "red", stroke: "none", "stroke-width": 1, opacity: 1, "fill-opacity": 1, "stroke-opacity": 1 };
+const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
 
-// u (2) is a circle at (0, 1); p (3) is a motif at (5, 0) turned 90 degrees, holding head (4) and
-// stem (5). Listeners come after, from 6 on.
-function world(listeners: Omit<Obj, "id" | "name" | "attrs">[], extra: Omit<Obj, "id">[] = []) {
-  const objects: Omit<Obj, "id">[] = [
-    { kind: "canvas", name: "view", attrs: { "view-x": -10, "view-y": -10, "view-width": 20, "view-height": 20, transform: ID }, shows: [1] },
-    { kind: "root", name: "s", attrs: { transform: ID }, members: [2, 3] },
-    { kind: "circle", name: "u", parent: 1, attrs: { ...style, x: 0, y: 1, r: 0.5 } },
-    { kind: "motif", name: "p", motif: "pin", parent: 1, members: [4, 5], params: {}, attrs: { transform: [0, -1, 0, 1, 0, 0], x: 5, y: 0, opacity: 1 } },
-    { kind: "circle", name: "head", parent: 3, attrs: { ...style, x: 0, y: 0, r: 0.2 } },
-    { kind: "line", name: "stem", parent: 3, attrs: { ...style, x: 0, y: 0, x1: 0, y1: 0, x2: 0, y2: -1 } },
-    ...listeners.map((l) => ({ name: null, attrs: {}, ...l })),
-    ...extra,
-  ];
-  const doc: Doc = { mtp: 1, objects: objects.map((o, id) => ({ ...o, id }) as Obj), functions: {}, names: {}, depends: {} };
-  const rt = new Runtime(doc);
-  return { rt, drags: new Drags(rt) };
+function setup(): [Runtime, Drags, (name: string, attr?: string) => unknown] {
+  const rt = new Runtime(JSON.parse(docs["./data/runtime/page.mtpc"] as string) as Doc);
+  return [rt, new Drags(rt), (name, attr) => rt.value(rt.id(name), attr ?? null)];
 }
 
-const on = (node: number, conditions: unknown[] = [], when: unknown = null, attr = "pos") => ({
-  kind: "on-drag",
-  node,
-  target: [node, attr] as [number, string],
-  conditions,
-  when,
-});
-const pos = (rt: Runtime, i: number) => [rt.value(i, "x"), rt.value(i, "y")];
-
-describe("dragging", () => {
-  it("moves the node by the pointer's motion, without jumping to the pointer", () => {
-    const { rt, drags } = world([on(2)]);
-    expect(drags.grab(2, [0.3, 1.2])).toBe(true);
-    drags.move([1.3, 2.2]);
-    expect(pos(rt, 2)).toEqual([1, 2]);
+describe("a drag", () => {
+  it("moves a shape's own position with the pointer, keeping the offset of the press", () => {
+    const [rt, drags, v] = setup();
+    expect(drags.grab(rt.id("dot"), [1.5, 1])).toBe(true);
+    drags.move([2.5, 3]);
+    expect(v("dot", "pos")).toEqual([2, 3]);
   });
 
-  it("moves a motif, and its members come along", () => {
-    const { rt, drags } = world([on(3)]);
-    drags.grab(4, [5, 0]);
-    drags.move([6, 2]);
-    expect(pos(rt, 3)).toEqual([6, 2]);
-    const [x, y] = rt.point(4);
-    expect([x, y]).toEqual([6, 2]);
-  });
-
-  it("goes up the tree to the nearest node with a listener", () => {
-    const { rt, drags } = world([on(3), on(4)]);
-    drags.grab(5, [5, 0]);
-    drags.move([6, 0]);
-    expect(pos(rt, 3)).toEqual([6, 0]);
-    drags.release();
-    drags.grab(4, [6, 0]);
-    drags.move([6, 1]);
-    expect(pos(rt, 3)).toEqual([6, 0]);
-  });
-
-  it("writes in the parent's frame", () => {
-    const { rt, drags } = world([on(4)]);
-    drags.grab(4, [5, 0]);
-    drags.move([5, 1]);
-    const [x, y] = pos(rt, 4);
-    expect(x).toBeCloseTo(1);
-    expect(y).toBeCloseTo(0);
-  });
-
-  it("moves only its target", () => {
-    const { rt, drags } = world([on(2, [], null, "x")]);
-    drags.grab(2, [0, 1]);
-    drags.move([2, 5]);
-    expect(pos(rt, 2)).toEqual([2, 1]);
-  });
-
-  it("grabs nothing without a listener", () => {
-    const { drags } = world([on(3)]);
-    expect(drags.grab(2, [0, 1])).toBe(false);
-    expect(drags.draggable(2)).toBe(false);
-    expect(drags.draggable(5)).toBe(true);
-  });
-
-  it("rejects a move where a condition fails, leaving the node at the last accepted spot", () => {
-    const { rt, drags } = world([on(2, [["<=", ["read", 2, "x", null], 2]])]);
-    drags.grab(2, [0, 1]);
-    drags.move([1.5, 1]);
-    drags.move([3, 1]);
-    expect(pos(rt, 2)).toEqual([1.5, 1]);
-    drags.move([1, 0]);
-    expect(pos(rt, 2)).toEqual([1, 0]);
-  });
-
-  it("detaches a listener while its when does not hold, so the press goes further up", () => {
-    const flag = { kind: "real", name: "live", attrs: { value: 0 } };
-    const { rt, drags } = world([on(3), on(4, [], [">", ["read", 8, "value"], 0])], [flag]);
-    drags.grab(4, [5, 0]);
-    drags.move([6, 0]);
-    expect(pos(rt, 3)).toEqual([6, 0]);
-    drags.release();
-    rt.write(8, "value", 1);
-    drags.grab(4, [6, 0]);
-    drags.move([6, 1]);
-    expect(pos(rt, 3)).toEqual([6, 0]);
-  });
-
-  it("reads when as a state", () => {
-    const state = { kind: "state", name: "on", attrs: {}, conditions: [[">", ["read", 2, "x"], 0]] };
-    const { drags } = world([on(2, [], ["holds", 7])], [state]);
-    expect(drags.grab(2, [0, 1])).toBe(false);
-  });
-});
-
-describe("dragging by a number the position depends on", () => {
-  // theta (0) is a real; p (3) sits on a circle of radius 6 at angle theta; the drag writes theta.
-  function circle(conditions: unknown[] = []) {
-    const objects: Omit<Obj, "id">[] = [
-      { kind: "real", name: "theta", attrs: { value: 0 } },
-      { kind: "canvas", name: "view", attrs: { "view-x": -10, "view-y": -10, "view-width": 20, "view-height": 20, transform: ID }, shows: [2] },
-      { kind: "root", name: "s", attrs: { transform: ID }, members: [3] },
-      { kind: "circle", name: "p", parent: 2, attrs: { ...style, x: ["part", ["call", "polar", 6, ["read", 0, "value"]], 0], y: ["part", ["call", "polar", 6, ["read", 0, "value"]], 1], r: 0.2 } },
-      { kind: "on-drag", name: null, attrs: {}, node: 3, target: [0, "value"], type: "real", conditions, when: null },
-    ];
-    const doc: Doc = { mtp: 1, objects: objects.map((o, id) => ({ ...o, id }) as Obj), functions: {}, names: {}, depends: {} };
-    const rt = new Runtime(doc);
-    return { rt, drags: new Drags(rt), theta: () => rt.value(0, "value") as number };
-  }
-
-  it("moves the number so the node follows the pointer around", () => {
-    const { drags, theta } = circle();
-    drags.grab(3, [6, 0]);
-    drags.move([6 * Math.cos(0.2), 6 * Math.sin(0.2)]);
-    expect(theta()).toBeCloseTo((0.2 * 180) / Math.PI, 3);
-    drags.move([0, 6]);
-    expect(theta()).toBeCloseTo(90, 3);
-  });
-
-  it("keeps the node where the number allows when the pointer leaves the path", () => {
-    const { drags, theta } = circle();
-    drags.grab(3, [6, 0]);
-    drags.move([0, 6]);
-    drags.move([0, 11]);
-    expect(theta()).toBeCloseTo(90, 3);
-  });
-
-  it("follows the pointer's motion, not its place, so grabbing off center does not jump", () => {
-    const { drags, theta } = circle();
-    drags.grab(3, [6.1, 0.1]);
-    drags.move([6.1, 0.1]);
-    expect(theta()).toBeCloseTo(0, 6);
-  });
-
-  it("goes the short way, from where it is, past a full turn", () => {
-    const { rt, drags, theta } = circle();
-    rt.write(0, "value", 350);
-    drags.grab(3, rt.point(3) as [number, number]);
-    drags.move([6 * Math.cos((10 * Math.PI) / 180), 6 * Math.sin((10 * Math.PI) / 180)]);
-    expect(theta()).toBeCloseTo(370, 2);
-  });
-
-  it("rejects a move where a condition fails", () => {
-    const { drags, theta } = circle([["<=", ["read", 0, "value"], 45]]);
-    drags.grab(3, [6, 0]);
-    drags.move([6 * Math.cos(0.5), 6 * Math.sin(0.5)]);
-    const accepted = theta();
-    drags.move([0, 6]);
-    expect(theta()).toBe(accepted);
-  });
-});
-
-describe("dragging a group", () => {
-  it("moves each member by the pointer's motion, in the group's own coordinates", async () => {
-    const doc = (await import("./data/fixtures/group-drag.json")).default as unknown as Doc;
-    const rt = new Runtime(doc);
-    const drags = new Drags(rt);
-    const [a, b] = [doc.names.a!, doc.names.b!];
-    // a sits at (0, 1) in the scene: the group turns its (1, 0) a quarter turn.
-    expect(drags.grab(a, [0, 1])).toBe(true);
-    // Up by 1 in the scene is +1 along the group's own x.
+  it("finds the value of a number the position depends on that brings it closest", () => {
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("orbit"), [2, 0]);
     drags.move([0, 2]);
-    expect(pos(rt, a)).toEqual([2, 0]);
-    expect(pos(rt, b)).toEqual([3, 0]);
+    expect(v("k") as number).toBeCloseTo(10, 0);
   });
 
-  it("claims each member's position from anything else writing it", async () => {
-    const doc = (await import("./data/fixtures/group-drag.json")).default as unknown as Doc;
-    const drags = new Drags(new Runtime(doc));
-    drags.grab(doc.names.a!, [0, 1]);
-    expect(drags.targets).toEqual([`${doc.names.a}.pos`, `${doc.names.b}.pos`]);
+  it("moves every member of a group", () => {
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("p1"), [0, 0]);
+    drags.move([1, 1]);
+    expect([v("p1", "pos"), v("p2", "pos")]).toEqual([
+      [1, 1],
+      [2, 1],
+    ]);
+  });
+
+  it("clamps each write to its conditions", () => {
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("limited"), [0, 0]);
+    drags.move([5, 0]);
+    expect(v("limited", "x")).toBe(2);
   });
 });

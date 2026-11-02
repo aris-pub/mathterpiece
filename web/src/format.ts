@@ -204,15 +204,15 @@ export function format(value: unknown, spec: string, kind: Kind): string {
 
   if (typeof value !== "number") throw new Error(`cannot format ${String(value)}`);
   const isInt = kind === "int";
-  if (!isInt) value = preround(value, type, precision);
+  const x = isInt ? value : preround(value, type, precision);
   if (!isInt && "bcdoxXn".includes(type) && type !== "") {
     throw new Error(`format spec ${JSON.stringify(spec)} needs an int`);
   }
   if (isInt && precision !== undefined && (type === "" || "bcdoxXn".includes(type))) {
     throw new Error("an int cannot take a precision");
   }
-  const negative = value < 0 || Object.is(value, -0);
-  const abs = Math.abs(value);
+  const negative = x < 0 || Object.is(x, -0);
+  const abs = Math.abs(x);
   let body: string;
   let prefix = "";
 

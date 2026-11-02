@@ -1,8 +1,0 @@
-; A play over an animation written in place that only names another, whose steps are named.
-(real 'k' 0)
-(scene 's' (circle 'c' (r k)))
-(animation 'small' (k (transition (to 1) (duration 1))))
-(animation 'big' (k (transition (to 3) (duration 1))))
-(animation 'tour' (in-order small big))
-(play 'p' (animation tour) (buttons true))
-(canvas 'v' (view-x -4) (view-y -4) (view-width 8) (view-height 8) c)

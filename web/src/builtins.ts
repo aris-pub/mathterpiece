@@ -179,6 +179,12 @@ export function compose(...ts: Transform[]): Transform {
   return [a, b, c, d, e, f];
 }
 
+export function invert(t: Transform): Transform {
+  const [a, b, c, d, e, f] = t as [number, number, number, number, number, number];
+  const det = a * d - b * c;
+  return [d / det, -b / det, -c / det, a / det, (c * f - d * e) / det, (b * e - a * f) / det];
+}
+
 export function apply(t: Transform, [x, y]: Point): Point {
   const [a, b, c, d, e, f] = t as [number, number, number, number, number, number];
   return [a * x! + c * y! + e, b * x! + d * y! + f];

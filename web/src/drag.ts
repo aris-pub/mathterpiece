@@ -1,8 +1,9 @@
-// Dragging: a press goes up the tree from the shape hit to the nearest node with an attached
-// on-drag listener. That listener's target then changes so the node follows the pointer's motion:
-// the node's own x, y or both directly, in its parent's coordinates, or any number its position
-// depends on, by searching for the value that brings the node closest to where the pointer has
-// moved it. A move where any of the listener's conditions fails is rejected.
+// Dragging (docs/reference.md, "Dragging"): a press goes up the scene tree from the shape hit to
+// the nearest shape with an on-drag whose when holds. A target that is the shape's own x, y or
+// pos follows the pointer, keeping the offset it had at the press; a group moves every member; a
+// number the shape's position depends on takes the value that brings the shape closest to where
+// the pointer has moved it. The listener's conditions clamp each write.
+import { apply, compose, invert } from "./builtins.ts";
 import type { Obj } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
 
@@ -10,25 +11,21 @@ type Point = [number, number];
 
 interface Held {
   listener: Obj;
-  node: number;
-  target: [number, string];
-  // Where the pointer and the node were at the press: in the node's parent's coordinates for a
-  // position target, in scene coordinates for a number.
+  shape: number;
+  target: [number, string | null];
+  // Where the pointer and the shape were at the press, in the frame the target lives in.
   grab: Point;
   start: Point;
-  // Dragging a group moves each member: where each one was at the press, in the group's own
-  // coordinates.
   members?: [number, Point][];
 }
 
 export class Drags {
-  private byNode = new Map<number, Obj[]>();
+  private byShape = new Map<number, Obj[]>();
   private held: Held | null = null;
 
   constructor(private rt: Runtime) {
     for (const o of rt.objects) {
-      if (o.kind !== "on-drag" || o.node === undefined) continue;
-      this.byNode.set(o.node, [...(this.byNode.get(o.node) ?? []), o]);
+      if (o.kind === "on-drag") this.byShape.set(o.shape!, [...(this.byShape.get(o.shape!) ?? []), o]);
     }
   }
 
@@ -36,108 +33,100 @@ export class Drags {
     return this.held !== null;
   }
 
-  /** What the held drag writes, as "id.attr". */
+  /** What the held drag writes, as "id:attr". */
   get targets(): string[] {
     if (!this.held) return [];
-    if (this.held.members) return this.held.members.map(([m]) => `${m}.pos`);
+    if (this.held.members) return this.held.members.map(([m]) => `${m}:pos`);
     const [id, attr] = this.held.target;
-    return [`${id}.${attr}`];
+    return [`${id}:${attr ?? ""}`];
   }
 
-  /** Whether pressing object i would drag something. */
-  draggable(i: number): boolean {
-    return this.find(i) !== null;
+  draggable(hit: number): boolean {
+    return this.find(hit) !== null;
   }
 
-  private find(hit: number): { listener: Obj; node: number } | null {
+  private find(hit: number): { listener: Obj; shape: number } | null {
     for (let i: number | null = hit; i !== null; i = this.rt.parent(i)) {
-      const listener = (this.byNode.get(i) ?? []).find((l) => this.attached(l));
-      if (listener) return { listener, node: i };
+      const listener = (this.byShape.get(i) ?? []).find(
+        (l) => !l.when || Boolean(this.rt.placeValue(l.when as never)),
+      );
+      if (listener) return { listener, shape: i };
     }
     return null;
   }
 
-  private attached(listener: Obj): boolean {
-    const when = listener.when;
-    return when === null || when === undefined || Boolean(this.rt.eval(when, null, {}));
-  }
-
-  /** Starts dragging whatever a press on object i at a point in scene coordinates grabs. */
+  /** Starts dragging whatever a press on shape hit, at a point in scene coordinates, grabs. */
   grab(hit: number, scene: Point): boolean {
     const found = this.find(hit);
     if (!found) return false;
-    const { listener, node } = found;
-    const target = listener.target ?? [node, "pos"];
-    if (this.rt.kind(node) === "group") {
-      const members = (this.rt.obj(node).members ?? []).map(
-        (m) => [m, [this.rt.value(m, "x") as number, this.rt.value(m, "y") as number]] as [number, Point],
+    const { listener, shape } = found;
+    const target = listener.target!;
+    const own = target[0] === shape && ["x", "y", "pos"].includes(target[1] ?? "");
+    const rt = this.rt;
+    if (rt.objects[shape]!.kind === "group" && own) {
+      const members = (rt.objects[shape]!.members ?? []).map(
+        (m) => [m, rt.value(m, "pos") as Point] as [number, Point],
       );
-      this.held = { listener, node, target, grab: this.inside(node, scene), start: [0, 0], members };
+      this.held = { listener, shape, target, grab: this.inFrame(shape, scene), start: [0, 0], members };
       return true;
     }
-    const position = target[0] === node && ["x", "y", "pos"].includes(target[1]);
     this.held = {
       listener,
-      node,
+      shape,
       target,
-      grab: position ? this.local(node, scene) : scene,
-      start: position ? [this.rt.value(node, "x"), this.rt.value(node, "y")] : this.where(node),
+      grab: own ? this.ownFrame(shape, scene) : scene,
+      start: own ? (rt.value(shape, "pos") as Point) : this.where(shape),
     };
     return true;
   }
 
-  /** Moves the held node with the pointer; returns whether anything moved. */
+  /** Moves the held shape with the pointer; gives whether anything changed. */
   move(scene: Point): boolean {
     const held = this.held;
     if (!held) return false;
     const [id, attr] = held.target;
-    if (held.members) return this.moveMembers(held, attr, scene);
-    const before = this.rt.value(id, attr === "pos" ? "pos" : attr);
-    if (id === held.node && ["x", "y", "pos"].includes(attr)) {
-      const [px, py] = this.local(held.node, scene);
-      if (attr !== "y") this.rt.write(id, "x", held.start[0] + px - held.grab[0]);
-      if (attr !== "x") this.rt.write(id, "y", held.start[1] + py - held.grab[1]);
-    } else {
-      const aim: Point = [held.start[0] + scene[0] - held.grab[0], held.start[1] + scene[1] - held.grab[1]];
-      let value = this.closest(held.node, id, attr, before as number, aim);
-      if (held.listener.type === "int") value = Math.round(value);
-      this.rt.write(id, attr, value);
+    const rt = this.rt;
+    let changed = false;
+    if (held.members) {
+      const [px, py] = this.inFrame(held.shape, scene);
+      const [dx, dy] = [px - held.grab[0], py - held.grab[1]];
+      for (const [m, [x, y]] of held.members) {
+        if (attr !== "y") changed = rt.write(m, "x", x + dx) || changed;
+        if (attr !== "x") changed = rt.write(m, "y", y + dy) || changed;
+      }
+      return changed;
     }
-    const conditions = held.listener.conditions ?? [];
-    if (conditions.every((c) => Boolean(this.rt.eval(c, null, {})))) return true;
-    this.rt.write(id, attr, before);
-    return false;
-  }
-
-  private moveMembers(held: Held, attr: string, scene: Point): boolean {
-    const members = held.members ?? [];
-    const before = members.map(([m]) => [this.rt.value(m, "x"), this.rt.value(m, "y")]);
-    const [px, py] = this.inside(held.node, scene);
-    const [dx, dy] = [px - held.grab[0], py - held.grab[1]];
-    for (const [m, [x, y]] of members) {
-      if (attr !== "y") this.rt.write(m, "x", x + dx);
-      if (attr !== "x") this.rt.write(m, "y", y + dy);
+    if (id === held.shape && ["x", "y", "pos"].includes(attr ?? "")) {
+      const [px, py] = this.ownFrame(held.shape, scene);
+      if (attr !== "y") changed = rt.write(id, "x", this.clamped(id, "x", held.start[0] + px - held.grab[0])) || changed;
+      if (attr !== "x") changed = rt.write(id, "y", this.clamped(id, "y", held.start[1] + py - held.grab[1])) || changed;
+      return changed;
     }
-    const conditions = held.listener.conditions ?? [];
-    if (conditions.every((c) => Boolean(this.rt.eval(c, null, {})))) return true;
-    members.forEach(([m], k) => {
-      this.rt.write(m, "x", before[k]![0]);
-      this.rt.write(m, "y", before[k]![1]);
-    });
-    return false;
+    const aim: Point = [held.start[0] + scene[0] - held.grab[0], held.start[1] + scene[1] - held.grab[1]];
+    const before = rt.value(id, attr) as number;
+    const best = this.closest(held.shape, id, attr, before, aim);
+    rt.write(id, attr, before);
+    return rt.write(id, attr, this.clamped(id, attr, best));
   }
 
   release(): void {
     this.held = null;
   }
 
+  private clamped(id: number, attr: string | null, v: number): number {
+    for (const c of this.held!.listener.conditions ?? []) {
+      if (c.place[0] === id && c.place[1] === attr) v = this.rt.clamp(c, v);
+    }
+    return v;
+  }
+
   // Gauss-Newton on one number: from the current value, step along the direction in which the
-  // node moves, halving steps that do not bring it closer. Starting from where it is keeps the
-  // node from jumping to another place that is as close (the far side of a circle, say).
-  private closest(node: number, id: number, attr: string, from: number, aim: Point): number {
+  // shape moves, halving steps that do not bring it closer. Starting from where it is keeps the
+  // shape from jumping to another place that is as close (the far side of a circle).
+  private closest(shape: number, id: number, attr: string | null, from: number, aim: Point): number {
     const at = (value: number): Point => {
       this.rt.write(id, attr, value);
-      return this.where(node);
+      return this.where(shape);
     };
     const far = (p: Point) => (p[0] - aim[0]) ** 2 + (p[1] - aim[1]) ** 2;
     let value = from;
@@ -167,19 +156,20 @@ export class Drags {
     return value;
   }
 
-  // The node's position in scene coordinates.
-  private where(node: number): Point {
-    const [x = 0, y = 0] = this.rt.point(node);
-    return [x, y];
+  // The shape's position as drawn, in scene coordinates.
+  private where(shape: number): Point {
+    return this.rt.read(shape, "pos", null) as Point;
   }
 
-  // A scene point in a container's own coordinates, where its members' x and y live.
-  private inside(container: number, [x, y]: Point): Point {
-    return this.rt.frame(container).inverse().apply(x, y);
+  // A scene point in the frame a container's members live in.
+  private inFrame(container: number, scene: Point): Point {
+    return apply(invert(this.rt.toScene(container)), scene) as Point;
   }
 
-  // A scene point in the coordinates the node's x and y live in.
-  private local(node: number, [x, y]: Point): Point {
-    return this.rt.frame(this.rt.parent(node)).inverse().apply(x, y);
+  // A scene point where a shape's own x and y live: what, after its own translate and transform
+  // and its containers', lands at the point.
+  private ownFrame(shape: number, scene: Point): Point {
+    const m = compose(this.rt.local(shape), this.rt.toScene(this.rt.parent(shape)));
+    return apply(invert(m), scene) as Point;
   }
 }

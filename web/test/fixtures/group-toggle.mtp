@@ -1,4 +1,0 @@
-; A toggle on a group of lamps, one on and one off.
-(motif 'lamp' (params (on false)) (circle 'c' (r (if on 2 1))))
-(scene 's' (group 'lamps' (lamp 'a') (lamp 'b' (on true))))
-(toggle 't' lamps.on)

@@ -171,6 +171,16 @@ export class Runtime {
     return compose(...steps);
   }
 
+  /** The transform from the frame a container's members live in to the scene's. */
+  toScene(container: number | null): number[] {
+    const steps: number[][] = [];
+    for (let j = container; j !== null; j = this.parents[j]!) {
+      if (this.objects[j]!.kind === "scene") break;
+      steps.push(this.local(j, true));
+    }
+    return compose(...steps);
+  }
+
   /** The type of a place. */
   typeOf(id: number, attr: string | null): Type | undefined {
     return this.types.get(key(id, attr));

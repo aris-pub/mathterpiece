@@ -1,0 +1,43 @@
+// What only a real browser does: CSS variables restyling a token, and the pointer's screen
+// position converted into the scene (docs/data-model.md, "On the page"; docs/reference.md,
+// "Dragging").
+import { describe, expect, it } from "vitest";
+import type { Doc } from "../../src/doc.ts";
+import { type MtpModel, define } from "../../src/elements.ts";
+
+const docs = import.meta.glob("../data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
+
+define();
+
+function page(name: string, body: string): MtpModel {
+  document.body.innerHTML = `<mtp-model id="m"></mtp-model>${body}`;
+  const model = document.querySelector("mtp-model") as MtpModel;
+  model.doc = JSON.parse(docs[`../data/runtime/${name}.mtpc`] as string) as Doc;
+  return model;
+}
+
+describe("on a page", () => {
+  it("restyles a token through its CSS variable", () => {
+    const model = page("draw", `<mtp-canvas model="m" name="v" style="--mtp-ink: rgb(255, 0, 0)"></mtp-canvas>`);
+    const rt = model.runtime!;
+    const b = document.querySelector(`[data-mtp-id="${rt.id("b")}"]`)!;
+    expect(getComputedStyle(b).fill).toBe("rgb(255, 0, 0)");
+  });
+
+  it("drags a shape to where the pointer is in the scene", () => {
+    const model = page("page", `<mtp-canvas model="m" name="v" style="display: block; width: 400px"></mtp-canvas>`);
+    const rt = model.runtime!;
+    const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+    svg.style.width = "400px";
+    svg.style.height = "400px";
+    const dot = () => document.querySelector(`[data-mtp-id="${rt.id("dot")}"]`)!;
+    const box = dot().getBoundingClientRect();
+    const [x, y] = [box.left + box.width / 2, box.top + box.height / 2];
+    dot().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
+    // The view box is 20 units across 400 pixels: 20 pixels a unit, with y up.
+    svg.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x + 40, clientY: y - 20, pointerId: 1 }));
+    const [px, py] = rt.value(rt.id("dot"), "pos") as number[];
+    expect(px).toBeCloseTo(3);
+    expect(py).toBeCloseTo(2);
+  });
+});
