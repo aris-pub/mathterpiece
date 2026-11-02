@@ -1,0 +1,5 @@
+(type side string (one-of 'left' 'right'))
+(real unit 0.5 (>= 0) (<= 1))
+(int n 0)
+(side way 'left')
+(real pos 1 (> 0))

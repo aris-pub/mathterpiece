@@ -1,0 +1,2 @@
+(real k 1)
+(real d (or? (/ 1 k) 0))

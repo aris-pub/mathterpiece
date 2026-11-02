@@ -1,50 +1,96 @@
-// The JSON the compiler writes (format version 1). Expressions are arrays whose first element is
-// an operation name; a plain array of numbers is a point; anything else is a plain value.
+// The .mtpc the compiler writes (format version 2; docs/mtpc.md, checked against
+// docs/mtpc.schema.json). Expressions are arrays: their operation, their type, then their parts.
 
-export type Expr = unknown;
+export type Type =
+  | string
+  | { shape: string }
+  | { named: string }
+  | { component: string }
+  | { interface: string; of?: Type }
+  | { list: Type }
+  | { func: Type[]; result: Type }
+  | { union: [Type, "none"] }
+  | { refine: Type; constraints: Constraint[] };
+
+export type Constraint = [string, ...unknown[]];
+
+export type Expr = [string, Type, ...unknown[]];
+
+export interface FreePlace {
+  type: Type;
+  free: unknown;
+  fixed?: true;
+}
+
+export interface BoundPlace {
+  type: Type;
+  bound: Expr;
+  deps: [number, string | null][];
+  fixed?: true;
+}
+
+export type Place = FreePlace | BoundPlace;
+
+export interface Clamp {
+  place: [number, string | null];
+  op: ">=" | ">" | "<=" | "<";
+  limit: Place;
+}
+
+export type Step =
+  | ["move", [number, string | null], number, number, unknown]
+  | ["wait", number]
+  | ["at-once" | "in-order", ...Step[]];
 
 export interface Obj {
-  id: number;
   kind: string;
+  type: Type;
+  access: "scene" | "page";
   name: string | null;
-  parent?: number;
-  attrs: Record<string, Expr>;
+  value?: Place;
+  token?: boolean;
+  attrs?: Record<string, Place>;
   members?: number[];
-  // motif
-  motif?: string;
-  params?: Record<string, Expr>;
-  // hidden value
-  type?: string;
-  frame?: number | null;
-  // canvas: what it shows, in drawing order, and the transition each is shown and hidden with
-  // (null: at once)
-  shows?: number[];
-  transitions?: unknown[];
-  // state
-  conditions?: Expr[];
-  // controls; a toggle with no target (null) holds its own value
-  target?: [number, string] | null;
-  // controls: the animation they set off; animation: its body
-  animation?: number;
-  body?: unknown;
-  // on-drag and on-click: the node they listen on
-  node?: number;
-  // on-drag and on-click: when they are attached; canvas: when each thing it shows is shown
-  // (null: always)
-  when?: Expr;
+  of?: string;
+  // transitions
+  from?: Place | null;
+  to?: Place | null;
+  duration?: number | null;
+  ease?: unknown;
+  path?: unknown;
+  // animations
+  steps?: Step;
+  // components
+  animation?: number | null;
+  conditions?: Clamp[];
+  target?: [number, string | null] | null;
+  shape?: number;
+  when?: Place | null | [Place, number[]][];
+  transition?: number | null;
+}
+
+export interface Param {
+  name: string;
+  type: Type;
+  default?: unknown;
 }
 
 export interface Fn {
-  params: [string, unknown][];
+  params: Param[];
+  result: Type;
   body: Expr;
 }
 
 export interface Doc {
-  mtp: number;
-  // How colors are written: "rgba" (#rrggbbaa) for now.
-  colors?: string;
+  mtpc: number;
+  types: unknown[];
   objects: Obj[];
-  functions: Record<string, Fn>;
+  functions: Fn[];
   names: Record<string, number>;
-  depends: Record<string, string[]>;
+}
+
+export const FORMAT_VERSION = 2;
+
+export function isBound(p: Place): p is BoundPlace {
+  return "bound" in p;
 }

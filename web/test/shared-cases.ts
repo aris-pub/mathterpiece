@@ -1,13 +1,12 @@
 /// <reference types="vite/client" />
-// The cases both runtimes must agree on (tests/shared/*.mtp, compiled by `just web-examples`).
-// tests/test_shared.py runs the same cases with matplotlib's evaluator; its docstring describes
-// the steps.
+// The shared cases (tests/shared/*.mtp, compiled by `just web-examples`): each file's comments
+// say what to write and what to expect, as "; write PLACE VALUE" and "; expect PLACE VALUE".
 import type { Doc } from "../src/doc.ts";
 import type { Runtime } from "../src/runtime.ts";
 
 // just web-examples copies each case's source next to its JSON, inside the web project.
 const sources = import.meta.glob("./data/shared/*.mtp", { query: "?raw", import: "default", eager: true });
-const docs = import.meta.glob("./data/shared/*.json", { import: "default", eager: true });
+const docs = import.meta.glob("./data/shared/*.mtpc", { query: "?raw", import: "default", eager: true });
 
 export interface Case {
   name: string;
@@ -19,27 +18,36 @@ export interface Case {
 export function cases(): Case[] {
   return Object.entries(sources).map(([path, text]) => {
     const name = path.split("/").pop()!.replace(/\.mtp$/, "");
-    const doc = docs[`./data/shared/${name}.json`] as Doc | undefined;
-    if (!doc) throw new Error(`${name} is not compiled; run just web-examples`);
+    const raw = docs[`./data/shared/${name}.mtpc`] as string | undefined;
+    if (!raw) throw new Error(`${name} is not compiled; run just web-examples`);
+    const doc = JSON.parse(raw) as Doc;
     const lines = (text as string).split("\n");
     const steps = lines.flatMap((line) => {
       const m = /^; (expect|write) (\S+) (.+)$/.exec(line);
-      return m ? [[m[1] as "expect" | "write", m[2]!, JSON.parse(m[3]!)] as Case["steps"][number]] : [];
+      return m ? [[m[1] as "expect" | "write", m[2]!, parseValue(m[3]!)] as Case["steps"][number]] : [];
     });
     return { name, doc, page: lines.includes("; page"), steps };
   });
 }
 
-function target(doc: Doc, path: string): [number, string] {
-  const m = /^([\w-]+)(?:\[(-?\d+)\])?(?:\.([\w-]+))?$/.exec(path);
-  if (!m) throw new Error(`bad target ${path}`);
-  let id = doc.names[m[1]!];
-  if (id === undefined) throw new Error(`no object named ${m[1]}`);
-  if (m[2] !== undefined) {
-    const members = doc.objects[id]!.members!;
-    id = members.at(Number(m[2]))!;
-  }
-  return [id, m[3] ?? "value"];
+// A value as the case writes it: JSON, except that a list's items are separated by spaces, as in
+// mtp: [3 4].
+function parseValue(text: string): unknown {
+  return JSON.parse(/^\[.*\]$/.test(text) ? text.trim().replace(/\s+/g, ",") : text);
+}
+
+// A variable by its name alone is its value; any other object, its value attribute.
+function target(doc: Doc, path: string): [number, string | null] {
+  // A name may hold dots itself (d1.face), so the attribute is what follows the longest name.
+  const dot = path in doc.names || /\]$/.test(path) ? -1 : path.lastIndexOf(".");
+  const base = dot < 0 ? path : path.slice(0, dot);
+  const attr = dot < 0 ? undefined : path.slice(dot + 1);
+  const m = /^(.+?)(?:\[(-?\d+)\])?$/.exec(base);
+  let id = doc.names[m![1]!];
+  if (id === undefined) throw new Error(`no object named ${m![1]}`);
+  if (m![2] !== undefined) id = doc.objects[id]!.members!.at(Number(m![2]))!;
+  if (attr !== undefined) return [id, attr];
+  return [id, doc.objects[id]!.kind === "variable" ? null : "value"];
 }
 
 // Numbers agree to rounding; a bool only matches a bool, and a string only the same string.

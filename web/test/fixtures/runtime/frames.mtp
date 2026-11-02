@@ -1,0 +1,4 @@
+(scene s
+  (group g (translate [5 0]) (circle p (x 1)) (circle q (x p.x)))
+  (real outside p.x))
+(real inside q.x)

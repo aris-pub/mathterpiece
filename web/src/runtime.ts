@@ -1,462 +1,659 @@
-// Evaluates a JSON document: values by object id and attribute, and what writes change. A port
-// of the Python backend's Runtime, which reads the same JSON.
-import type { Doc, Expr, Obj } from "./doc.ts";
-import { Token, mixCss, needsCss } from "./colors.ts";
+// The live model: reads an .mtpc (docs/mtpc.md), turns each expression into a function once,
+// and holds every place's value. A write changes a free place and forgets only what depends on
+// it; a bound place is computed again the next time it is read (data-model.md, "How reactivity
+// works"). The compiler has proved every type, so nothing here checks or converts one.
+import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, roundHalfAway } from "./builtins.ts";
+import type { Clamp, Doc, Expr, Obj, Place, Type } from "./doc.ts";
+import { isBound } from "./doc.ts";
 import { format, pyStr } from "./format.ts";
-import { IDENTITY, Matrix, compose, translate } from "./matrix.ts";
-import { COMPARISONS, Complex, MtpError, STDLIB, abs, fold, mod, power } from "./stdlib.ts";
 
-export const RECURSION_LIMIT = 1000;
+const LIMIT = 1e150;
+const SHAPES = new Set(["circle", "rect", "ellipse", "line", "triangle", "text", "group", "instance"]);
+const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
+// Attributes that are points in their shape's frame, which a read converts.
+const POINT_ATTRS = new Set(["from", "to", "a", "b", "c"]);
+// The built-ins that decide something with none themselves; every other one gives none when an
+// argument is none (type-system.md 5.c).
+const NONE_AWARE = new Set(["or?", "none?", "some?", "somes", "=", "!="]);
+const COLLECTIONS = new Set(["map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"]);
 
-// The other ways of reading a shape, and which of them are positions.
-const PROPERTIES: Record<string, Set<string>> = {
-  rect: new Set(["center", "size", "from", "to"]),
-  ellipse: new Set(["center", "size"]),
-  line: new Set(["from", "to"]),
-  triangle: new Set(["center", "r"]),
-};
-const POINTS = new Set(["center", "from", "to"]);
-// Objects whose expressions read positions in scene coordinates.
-const CONTROLS = new Set(["slider", "button", "play", "toggle", "animation", "on-drag", "on-click"]);
-const ARITHMETIC = new Set(["+", "-", "*", "/"]);
-
-/** An object passed as a value, as in (dist a b). */
-class Ref {
-  constructor(readonly id: number) {}
+/** What an expression needs to run: the names around it, and the frame of its caller. */
+interface Ctx {
+  locals: Record<string, unknown>;
+  frame: number | null;
 }
 
-/** Several values from a group attribute, spread into the call around them. */
-class Splice {
-  constructor(readonly values: unknown[]) {}
-}
+type Compiled = (ctx: Ctx) => unknown;
+/** A function value: its arguments, and the frame of the place calling it. */
+export type FnValue = (args: unknown[], frame: number | null) => unknown;
 
-type Env = Record<string, unknown>;
+const TOP: Ctx = { locals: {}, frame: null };
+
+function key(id: number, attr: string | null): string {
+  return `${id}:${attr ?? ""}`;
+}
 
 export class Runtime {
+  readonly doc: Doc;
   readonly objects: Obj[];
+  /** How many bound values have been computed, so a test can see what a write recomputes. */
+  evaluations = 0;
+  private parents: (number | null)[];
+  private free = new Map<string, unknown>();
+  private bound = new Map<string, Compiled>();
+  private types = new Map<string, Type>();
   private cache = new Map<string, unknown>();
-  private active = new Set<string>();
-  private written = new Map<string, unknown>();
-  private frames = new Map<number, Matrix>();
-  private depth = 0;
-  /** Texts in the middle of changing: the old text, and how far the change has gone (0 to 1). */
-  morphs = new Map<number, [string, number]>();
+  private dependents = new Map<string, Set<string>>();
+  private functions: Compiled[] = [];
+  private rands = new Map<number, number>();
+  private listeners: ((changed: Set<string>) => void)[] = [];
+  // The named types the file declares (type-system.md 5.a), by name.
+  private named = new Map<string, Type>();
+
+  constructor(
+    doc: Doc,
+    private rng: () => number = Math.random,
+  ) {
+    this.doc = doc;
+    this.objects = doc.objects;
+    for (const d of doc.types as { name: string; kind: string; type?: Type }[]) {
+      if (d.kind === "type") this.named.set(d.name, d.type!);
+    }
+    this.parents = doc.objects.map(() => null);
+    doc.objects.forEach((o, i) => {
+      for (const m of o.members ?? []) this.parents[m] = i;
+    });
+    this.functions = doc.functions.map((f) => this.compile(f.body));
+    doc.objects.forEach((o, i) => {
+      if (o.value) this.load(i, null, o.value);
+      for (const [attr, p] of Object.entries(o.attrs ?? {})) this.load(i, attr, p);
+    });
+  }
+
+  private resolve(t: Type): Type {
+    while (typeof t === "object" && "named" in t && this.named.has(t.named)) t = this.named.get(t.named)!;
+    return t;
+  }
+
+  /** A type with its name, broadening and narrowing taken off: what its values are. */
+  core(t: Type): Type {
+    t = this.resolve(t);
+    while (typeof t === "object" && ("union" in t || "refine" in t)) {
+      t = this.resolve("union" in t ? t.union[0] : t.refine);
+    }
+    return t;
+  }
+
+  private constraints(t: Type): [string, ...unknown[]][] {
+    t = this.resolve(t);
+    while (typeof t === "object" && "union" in t) t = this.resolve(t.union[0]);
+    if (typeof t !== "object" || !("refine" in t)) return [];
+    return [...this.constraints(t.refine), ...t.constraints];
+  }
+
+  private load(id: number, attr: string | null, p: Place): void {
+    const k = key(id, attr);
+    this.types.set(k, p.type);
+    if (isBound(p)) {
+      this.bound.set(k, this.compile(p.bound));
+      for (const [d, a] of p.deps) {
+        const dk = key(d, a);
+        if (!this.dependents.has(dk)) this.dependents.set(dk, new Set());
+        this.dependents.get(dk)!.add(k);
+      }
+    } else {
+      this.free.set(k, this.decode(p.type, p.free));
+    }
+  }
+
+  /** Called with the places that may have changed after every write. */
+  onChange(listener: (changed: Set<string>) => void): void {
+    this.listeners.push(listener);
+  }
+
+  /** The id of a named object. */
+  id(name: string): number {
+    const i = this.doc.names[name];
+    if (i === undefined) throw new Error(`no object named ${name}`);
+    return i;
+  }
+
+  /** A place's value as stored, in its shape's own frame; pos is x and y together. */
+  value(id: number, attr: string | null = null): unknown {
+    const o = this.objects[id]!;
+    if (attr === null && o.kind !== "variable") return new Ref(id);
+    if (attr === "pos" && !this.has(id, "pos")) {
+      if (CORNERS[o.kind]) return this.mean(id, null);
+      return [this.value(id, "x"), this.value(id, "y")];
+    }
+    if ((attr === "x" || attr === "y") && CORNERS[o.kind] && !this.has(id, attr)) {
+      return (this.mean(id, null) as number[])[attr === "x" ? 0 : 1];
+    }
+    return this.get(key(id, attr));
+  }
+
+  private has(id: number, attr: string | null): boolean {
+    const k = key(id, attr);
+    return this.free.has(k) || this.bound.has(k);
+  }
+
+  private get(k: string): unknown {
+    if (this.free.has(k)) return this.free.get(k);
+    if (this.cache.has(k)) return this.cache.get(k);
+    const fn = this.bound.get(k);
+    if (!fn) throw new Error(`no place ${k}`);
+    this.evaluations++;
+    const v = fn(TOP);
+    this.cache.set(k, v);
+    return v;
+  }
+
+  /** The type of a place. */
+  typeOf(id: number, attr: string | null): Type | undefined {
+    return this.types.get(key(id, attr));
+  }
 
   /**
-   * resolve gives what the page makes of a CSS value for a property (a token, or a mix; colors
-   * as #rrggbbaa), or null without a page; a token then is its default.
+   * Writes a free place (a shape's pos writes its x and y; a group's attribute each member's),
+   * brought into the place's constraints first (type-system.md 5.b). Gives whether anything
+   * changed.
    */
-  constructor(
-    readonly doc: Doc,
-    private rng: () => number = Math.random,
-    private resolve: (css: string, property: string) => string | null = () => null,
-  ) {
-    this.objects = doc.objects;
-  }
-
-  /** Forgets everything computed, for when the page may have restyled the color tokens. */
-  refresh(): void {
-    this.cache.clear();
-    this.frames.clear();
-  }
-
-  /** A token's or a mix's color as the page makes it; any other value as it is. */
-  resolved(value: unknown): unknown {
-    if (value instanceof Token) return this.resolve(value.css, value.property) ?? value.fallback;
-    if (needsCss(value)) return this.resolve(value, "color") ?? value;
-    return value;
-  }
-
-  // A token's value, which may be computed, as the default its CSS variable falls back to: another
-  // token falls back through that token's own variable.
-  private fallback(i: number, attr: string): string {
-    const key = `${i}.${attr}`;
-    this.active.add(key);
-    try {
-      const value = this.eval(this.obj(i).attrs[attr], null, {});
-      return value instanceof Token ? value.css : String(value);
-    } finally {
-      this.active.delete(key);
+  write(id: number, attr: string | null, value: unknown): boolean {
+    const o = this.objects[id]!;
+    const changed = new Set<string>();
+    if (o.kind === "group" && attr !== null && !this.has(id, attr)) {
+      for (const m of o.members ?? []) this.writeInto(m, attr, value, changed);
+    } else {
+      this.writeInto(id, attr, value, changed);
     }
-  }
-
-  obj(i: number): Obj {
-    const o = this.objects[i];
-    if (!o) throw new MtpError(`no object ${i}`);
-    return o;
-  }
-
-  kind(i: number): string {
-    return this.obj(i).kind;
-  }
-
-  parent(i: number): number | null {
-    return this.obj(i).parent ?? null;
-  }
-
-  /** The container whose coordinates object i's expressions read positions in. */
-  readingFrame(i: number): number | null {
-    const o = this.obj(i);
-    if (o.kind === "value") return o.frame ?? null;
-    if (o.kind === "state" || CONTROLS.has(o.kind)) return null;
-    return o.parent ?? null;
-  }
-
-  /** A control's write. Everything computed is dropped, since anything might depend on it. */
-  write(i: number, attr: string, value: unknown): void {
-    if (attr === "pos") {
-      const [x, y] = value as number[];
-      this.write(i, "x", x);
-      this.write(i, "y", y);
-      return;
-    }
-    this.written.set(`${i}.${attr}`, value);
-    this.cache.clear();
-    this.frames.clear();
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  value(i: number, attr: string): any {
-    if (attr === "pos") return [this.value(i, "x"), this.value(i, "y")];
-    const key = `${i}.${attr}`;
-    if (this.written.has(key)) return this.written.get(key);
-    if (this.cache.has(key)) return this.cache.get(key);
-    if (this.active.has(key)) {
-      throw new MtpError(`cycle through ${this.obj(i).name ?? "an anonymous object"}.${attr}`);
-    }
-    const o = this.obj(i);
-    // A toggle on a scene value is that value; a toggle with no target holds its own.
-    if (o.kind === "toggle" && attr === "value" && o.target) {
-      const [target, part] = o.target;
-      // On a group's attribute, it holds only when every member's does.
-      if (this.kind(target) === "group") return (this.obj(target).members ?? []).every((m) => Boolean(this.value(m, part)));
-      return this.value(target, part);
-    }
-    if (o.kind === "color" && attr === "value") {
-      const token = new Token(o.name ?? String(i), this.fallback(i, attr));
-      this.cache.set(key, token);
-      return token;
-    }
-    if (o.kind === "font" && (attr === "family" || attr === "style" || attr === "weight")) {
-      const token = new Token(`${o.name ?? i}-${attr}`, this.fallback(i, attr), `font-${attr}`);
-      this.cache.set(key, token);
-      return token;
-    }
-    const raw = o.params && attr in o.params ? o.params[attr] : o.attrs[attr];
-    this.active.add(key);
-    let result: unknown;
-    try {
-      result = this.eval(raw, this.readingFrame(i), {});
-    } finally {
-      this.active.delete(key);
-    }
-    if (attr === "transform" && Array.isArray(result)) result = Matrix.of(result as number[]);
-    this.cache.set(key, result);
-    return result;
-  }
-
-  /** The items a loop walks: a group's members, or a list's items. */
-  private items(value: unknown): unknown[] {
-    if (value instanceof Ref) {
-      const members = this.obj(value.id).members;
-      if (!members) throw new MtpError("a loop walks a group or a list");
-      return members.map((m) => new Ref(m));
-    }
-    return [...(value as unknown[])];
-  }
-
-  // Loops over a collection known only while drawing (a group passed to a function).
-  private walk(op: string, args: Expr[], frame: number | null, env: Env): unknown {
-    if (op === "walk-sort") {
-      const [direction, collection, name, key] = args as [string, Expr, string, Expr];
-      const items = this.items(this.eval(collection, frame, env));
-      const keyed = items.map((item) => [item, this.eval(key, frame, { ...env, [name]: item }) as number] as const);
-      const sign = direction === "desc" ? -1 : 1;
-      return keyed.sort((a, b) => sign * (a[1] - b[1])).map(([item]) => item);
-    }
-    if (op === "walk-reduce") {
-      const [collection, name, running, start, body] = args as [Expr, string, string, Expr, Expr];
-      let value = this.eval(start, frame, env);
-      for (const item of this.items(this.eval(collection, frame, env))) {
-        value = this.eval(body, frame, { ...env, [name]: item, [running]: value });
-      }
-      return value;
-    }
-    const [collection, name, body] = args as [Expr, string, Expr];
-    const items = this.items(this.eval(collection, frame, env));
-    const each = (item: unknown) => this.eval(body, frame, { ...env, [name]: item });
-    if (op === "walk-any") return items.some((item) => Boolean(each(item)));
-    if (op === "walk-all") return items.every((item) => Boolean(each(item)));
-    return items.map((item) => {
-      const v = each(item);
-      return typeof v === "boolean" ? v : Number(v);
-    });
-  }
-
-  eval(e: Expr, frame: number | null, env: Env): unknown {
-    if (!Array.isArray(e)) return e;
-    if (e.length === 0 || typeof e[0] !== "string") return e;
-    const [op, ...args] = e as [string, ...Expr[]];
-    if (op.startsWith("walk-")) return this.walk(op, args, frame, env);
-    switch (op) {
-      case "read": {
-        let target = args[0];
-        const dynamic = typeof target !== "number";
-        if (dynamic) {
-          const ref = this.eval(target, frame, env);
-          if (!(ref instanceof Ref)) throw new MtpError("expected an object");
-          target = ref.id;
-        }
-        const convert = args.length === 3 || dynamic;
-        const into = args.length === 3 ? (args[2] as number | null) : frame;
-        return this.read(target as number, args[1] as string, into, convert);
-      }
-      case "param":
-        return this.value(args[0] as number, args[1] as string);
-      case "arg":
-        return env[args[0] as string];
-      case "part": {
-        const found = this.eval(args[0], frame, env);
-        const base = found instanceof Ref ? this.items(found) : (found as unknown[]);
-        const index = typeof args[1] === "number" ? args[1] : Number(this.eval(args[1], frame, env));
-        // Negative indexes count from the end, as in the language (and Python).
-        const at = index < 0 ? base.length + index : index;
-        if (at < 0 || at >= base.length) throw new MtpError(`a list of ${base.length} has no part ${index}`);
-        return base[at];
-      }
-      case "obj":
-        return new Ref(args[0] as number);
-      case "splice":
-        return new Splice(args.map((a) => this.eval(a, frame, env)));
-      case "list":
-        return args.map((a) => {
-          const v = this.eval(a, frame, env);
-          return typeof v === "boolean" ? v : Number(v);
-        });
-      case "complex":
-        return new Complex(args[0] as number, args[1] as number);
-      case "holds":
-        return this.holds(args[0] as number);
-      case "inf":
-        return Infinity;
-      case "-inf":
-        return -Infinity;
-      case "str":
-        return args.map((a) => (typeof a === "string" ? a : this.eval(a, frame, env))).join("");
-      case "show": {
-        const value = this.resolved(this.eval(args[0], frame, env));
-        const kind = args[1] as string;
-        const spec = args[2] as string | undefined;
-        if (value instanceof Splice) return value.values.map((v) => show(v, kind, spec)).join(" ");
-        return show(value, kind, spec);
-      }
-      case "if":
-        return this.eval(this.eval(args[0], frame, env) ? args[1] : args[2], frame, env);
-      case "and":
-        return args.every((a) => Boolean(this.eval(a, frame, env)));
-      case "or":
-        return args.some((a) => Boolean(this.eval(a, frame, env)));
-      case "not":
-        return !this.eval(args[0], frame, env);
-      case "cond":
-        for (const clause of args as [Expr, Expr][]) {
-          if (clause[0] === true || this.eval(clause[0], frame, env)) return this.eval(clause[1], frame, env);
-        }
-        throw new MtpError("no cond clause held");
-      case "let": {
-        const inner: Env = { ...env };
-        for (const [name, value] of args[0] as [string, Expr][]) inner[name] = this.eval(value, frame, inner);
-        return this.eval(args[1], frame, inner);
-      }
-    }
-    const call = op === "call";
-    const name = call ? (args[0] as string) : op;
-    const values: unknown[] = [];
-    for (const a of call ? args.slice(1) : args) {
-      const v = this.eval(a, frame, env);
-      if (v instanceof Splice) values.push(...v.values);
-      else values.push(v);
-    }
-    if (call && name in this.doc.functions) return this.callFunction(name, values, frame);
-    return this.apply(name, values);
-  }
-
-  /** Calls an author's function or a built-in one by name, as eases and paths do. */
-  invoke(name: string, args: unknown[]): unknown {
-    return name in this.doc.functions ? this.callFunction(name, args, null) : this.apply(name, args);
-  }
-
-  callFunction(key: string, args: unknown[], frame: number | null): unknown {
-    if (this.depth >= RECURSION_LIMIT) {
-      throw new MtpError(`recursion is deeper than ${RECURSION_LIMIT} calls`);
-    }
-    const fn = this.doc.functions[key];
-    if (!fn) throw new MtpError(`unknown function ${key}`);
-    const env: Env = {};
-    fn.params.forEach(([name, fallback], i) => {
-      env[name] = i < args.length ? args[i] : fallback;
-    });
-    this.depth += 1;
-    try {
-      return this.eval(fn.body, frame, env);
-    } finally {
-      this.depth -= 1;
-    }
-  }
-
-  apply(op: string, args: unknown[]): unknown {
-    if (ARITHMETIC.has(op)) return fold(op, args);
-    if (op === "^") return power(args[0], args[1]);
-    if (op === "abs") return abs(args[0]);
-    if (op === "mod") return mod(args[0] as number, args[1] as number);
-    const compare = COMPARISONS[op];
-    if (compare) return compare(this.resolved(args[0]), this.resolved(args[1]));
-    if (op === "transform") return compose(...(args as Matrix[]));
-    if (op === "mix") return mixCss(args[0], args[1], args[2] as number);
-    if (op === "lighten") return mixCss(args[0], "white", args[1] as number);
-    if (op === "darken") return mixCss(args[0], "black", args[1] as number);
-    if (op === "sort-asc") return [...(args[0] as number[])].sort((a, b) => a - b);
-    if (op === "sort-desc") return [...(args[0] as number[])].sort((a, b) => b - a);
-    if (op === "reverse") return [...(args[0] as unknown[])].reverse();
-    if (op === "any") return (args[0] as boolean[]).some(Boolean);
-    if (op === "all") return (args[0] as boolean[]).every(Boolean);
-    if (op === "sort-by") {
-      const pairs: [unknown, number][] = [];
-      for (let k = 1; k < args.length; k += 2) pairs.push([args[k], args[k + 1] as number]);
-      const sign = args[0] === "desc" ? -1 : 1;
-      return pairs.sort((a, b) => sign * (a[1] - b[1])).map(([member]) => member);
-    }
-    const fn = STDLIB[op];
-    if (fn) return fn(this.rng, ...args.map((a) => (a instanceof Ref ? this.point(a.id) : a)));
-    throw new MtpError(`unknown function ${op}`);
-  }
-
-  /** attr of object i, in the coordinates of container `into` when converting a position. */
-  read(i: number, attr: string, into: number | null, convert: boolean): unknown {
-    const here = this.parent(i);
-    if ((attr === "x" || attr === "y") && (!convert || here === into)) return this.value(i, attr);
-    const properties = PROPERTIES[this.kind(i)] ?? new Set<string>();
-    const positional = attr === "x" || attr === "y" || attr === "pos" || (POINTS.has(attr) && properties.has(attr));
-    if (!positional) return properties.has(attr) ? this.property(i, attr) : this.value(i, attr);
-    let point =
-      attr === "x" || attr === "y" || attr === "pos"
-        ? [this.value(i, "x"), this.value(i, "y")]
-        : (this.property(i, attr) as number[]);
-    if (convert) point = this.convert(point, here, into);
-    if (attr === "x") return point[0];
-    if (attr === "y") return point[1];
-    return point;
-  }
-
-  convert(point: number[], here: number | null, there: number | null): number[] {
-    if (here === there) return point;
-    const scene = this.frame(here).apply(point[0] ?? 0, point[1] ?? 0);
-    try {
-      return this.frame(there).inverse().apply(scene[0], scene[1]);
-    } catch (err) {
-      throw new MtpError((err as Error).message);
-    }
-  }
-
-  /** The other ways of reading a shape, computed from what it stores, in its parent's coordinates. */
-  property(i: number, name: string): unknown {
-    const v = (attr: string) => this.value(i, attr);
-    switch (this.kind(i)) {
-      case "rect": {
-        if (name === "from") return [v("x"), v("y")];
-        if (name === "size") return [v("width"), v("height")];
-        const share = name === "center" ? 0.5 : 1;
-        return [v("x") + share * v("width"), v("y") + share * v("height")];
-      }
-      case "ellipse":
-        return name === "center" ? [v("x"), v("y")] : [2 * v("rx"), 2 * v("ry")];
-      case "line": {
-        const end = name === "from" ? [v("x1"), v("y1")] : [v("x2"), v("y2")];
-        return [v("x") + end[0], v("y") + end[1]];
-      }
-      default: {
-        const corners = [v("a"), v("b"), v("c")] as number[][];
-        const mid = [0, 1].map((k) => corners.reduce((s, p) => s + (p[k] ?? 0), 0) / 3) as [number, number];
-        if (name === "center") return [v("x") + mid[0], v("y") + mid[1]];
-        const a = corners[0] ?? [0, 0];
-        return Math.hypot((a[0] ?? 0) - mid[0], (a[1] ?? 0) - mid[1]);
-      }
-    }
-  }
-
-  /** Maps a container's members' coordinates to scene coordinates. */
-  frame(container: number | null): Matrix {
-    if (container === null) return IDENTITY;
-    let m = this.frames.get(container);
-    if (!m) {
-      let local = this.value(container, "transform") as Matrix;
-      if (this.kind(container) === "motif") {
-        local = translate(this.value(container, "x"), this.value(container, "y")).times(local);
-      }
-      m = this.frame(this.parent(container)).times(local);
-      this.frames.set(container, m);
-    }
-    return m;
-  }
-
-  point(i: number): number[] {
-    return this.frame(this.parent(i)).apply(this.value(i, "x"), this.value(i, "y"));
-  }
-
-  /** Places a shape drawn around the origin: its transform, its x and y, then its parents. */
-  shape(i: number): Matrix {
-    const at = translate(this.value(i, "x"), this.value(i, "y"));
-    return this.frame(this.parent(i)).times(at).times(this.value(i, "transform") as Matrix);
-  }
-
-  /** Opacity multiplies down the tree of motifs, unlike the other style attributes. */
-  opacity(i: number): number {
-    let result = this.value(i, "opacity") as number;
-    for (let p = this.parent(i); p !== null; p = this.parent(p)) {
-      if (this.kind(p) === "motif") result *= this.value(p, "opacity") as number;
-    }
-    return result;
-  }
-
-  /** Whether all of a state's conditions hold; = on numbers allows a small tolerance. */
-  holds(state: number): boolean {
-    for (const cond of this.obj(state).conditions ?? []) {
-      if (Array.isArray(cond) && cond[0] === "=" && cond.length === 3) {
-        const a = this.resolved(this.eval(cond[1], null, {}));
-        const b = this.resolved(this.eval(cond[2], null, {}));
-        if (!close(a, b)) return false;
-      } else if (!this.eval(cond, null, {})) {
-        return false;
-      }
-    }
+    if (changed.size === 0) return false;
+    for (const l of this.listeners) l(changed);
     return true;
   }
-}
 
-function close(a: unknown, b: unknown): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((x, i) => close(x, b[i]));
-  if (typeof a === "number" && typeof b === "number") {
-    return Math.abs(a - b) <= Math.max(1e-9 * Math.max(Math.abs(a), Math.abs(b)), 1e-12);
+  private writeInto(id: number, attr: string | null, value: unknown, changed: Set<string>): void {
+    const o = this.objects[id]!;
+    if (attr === "pos" && !this.has(id, "pos")) {
+      const [x, y] = value as number[];
+      if (CORNERS[o.kind]) {
+        // A line's or triangle's position moves every end or corner together.
+        const [mx, my] = this.mean(id, null) as number[];
+        for (const c of CORNERS[o.kind]!) {
+          const [cx, cy] = this.value(id, c) as number[];
+          this.writePlace(key(id, c), [cx! + x! - mx!, cy! + y! - my!], changed);
+        }
+        return;
+      }
+      this.writePlace(key(id, "x"), x, changed);
+      this.writePlace(key(id, "y"), y, changed);
+      return;
+    }
+    this.writePlace(key(id, attr), value, changed);
   }
-  return a === b;
-}
 
-/** A value shown in a string: by its format spec, or Python's default. */
-export function show(value: unknown, kind: string, spec?: string): string {
-  if (spec) {
-    if (typeof value === "number" && kind === "int") return format(Math.round(value), spec, "int");
-    return format(value, spec, typeof value === "string" ? "str" : kind === "int" ? "int" : "real");
+  private writePlace(k: string, value: unknown, changed: Set<string>): void {
+    if (!this.free.has(k)) throw new Error(`${k} is not a free place`);
+    const t = this.types.get(k)!;
+    const old = this.free.get(k);
+    const v = this.constrain(t, value, old);
+    // A write that changes nothing is skipped, so nothing downstream is computed again.
+    if (v === undefined || equal(v, old)) return;
+    this.free.set(k, v);
+    changed.add(k);
+    this.forget(k, changed);
   }
-  if (typeof value === "number") return kind === "int" ? String(Math.round(value)) : pyStr(value);
-  if (typeof value === "boolean") return value ? "True" : "False";
-  if (Array.isArray(value)) return `(${value.map((v) => pyStr(Number(v))).join(", ")})`;
-  if (value instanceof Complex) return complexStr(value);
-  return String(value);
+
+  private forget(k: string, changed: Set<string>): void {
+    for (const d of this.dependents.get(k) ?? []) {
+      if (!this.cache.has(d) && changed.has(d)) continue;
+      this.cache.delete(d);
+      changed.add(d);
+      this.forget(d, changed);
+    }
+  }
+
+  /**
+   * A write brought into a type: a range clamps (a strict bound that is broken skips the
+   * write), an int rounds, a choice holds its last valid value, and every number stays within
+   * ±10^150. undefined means the write is skipped.
+   */
+  private constrain(t: Type, value: unknown, old: unknown): unknown {
+    if (value === null) return value;
+    const base = this.core(t);
+    let v = value;
+    if (typeof v === "number") {
+      v = Math.min(Math.max(v, -LIMIT), LIMIT);
+      for (const [op, limit] of this.constraints(t)) {
+        const lim = limit as number;
+        if (op === ">=" && (v as number) < lim) v = lim;
+        if (op === "<=" && (v as number) > lim) v = lim;
+        if ((op === ">" && (v as number) <= lim) || (op === "<" && (v as number) >= lim)) return undefined;
+      }
+      if (base === "int") v = roundHalfAway(v as number);
+    }
+    for (const [op, choices] of this.constraints(t)) {
+      if (op === "one-of" && !(choices as unknown[]).includes(v)) return old;
+      if (op === "const") return undefined;
+    }
+    return v;
+  }
+
+  /** A writer's clamp: the value its condition allows for this write. */
+  clamp(c: Clamp, value: number): number {
+    const lim = this.placeValue(c.limit) as number;
+    if (c.op === ">=" || c.op === ">") return Math.max(value, lim);
+    return Math.min(value, lim);
+  }
+
+  /** The value of a place that belongs to no attribute: a condition, a limit, a when. */
+  placeValue(p: Place): unknown {
+    if (!isBound(p)) return this.decode(p.type, p.free);
+    this.evaluations++;
+    return this.compile(p.bound)(TOP);
+  }
+
+  // Values ------------------------------------------------------------------------------
+
+  /** A value as the .mtpc writes it, read by its type (mtpc.md, "Values"). */
+  decode(t: Type, v: unknown): unknown {
+    if (v === null || v === undefined) return null;
+    const c = this.core(t);
+    if (c === "ratio") {
+      const [num, den] = v as [number, number];
+      return num / den;
+    }
+    if (c === "complex") {
+      const [re, im] = v as [number, number];
+      return new Complex(re, im);
+    }
+    if (typeof c === "object" && "list" in c) return (v as unknown[]).map((x) => this.decode(c.list, x));
+    if (typeof v === "object" && !Array.isArray(v)) {
+      const o = v as Record<string, unknown>;
+      if ("ref" in o) return new Ref(o.ref as number);
+      if ("func" in o) return this.functionValue(o.func as number, {});
+      if ("builtin" in o) return builtinValue(o.builtin as string);
+    }
+    return v;
+  }
+
+  // Expressions -------------------------------------------------------------------------
+
+  /** An expression as one function, made once, when the file loads. */
+  compile(e: Expr): Compiled {
+    const [op, t] = e;
+    const parts = e.slice(2);
+    switch (op) {
+      case "lit": {
+        const v = this.decode(t, parts[0]);
+        return () => v;
+      }
+      case "list": {
+        const items = (parts as Expr[]).map((p) => this.compile(p));
+        return (ctx) => items.map((f) => f(ctx));
+      }
+      case "format":
+        return this.compileFormat(parts);
+      case "read": {
+        const [id, attr, frame] = parts as [number, string | null, number | null | "caller"];
+        return (ctx) => this.read(id, attr, frame === "caller" ? ctx.frame : frame);
+      }
+      case "obj": {
+        const ref = new Ref(parts[0] as number);
+        return () => ref;
+      }
+      case "check": {
+        const inner = this.compile(parts[0] as Expr);
+        const cs = parts[1] as [string, number][];
+        return (ctx) => {
+          const v = inner(ctx);
+          return v === null || cs.every(([o, lim]) => holds(o, v as number, lim)) ? v : null;
+        };
+      }
+      case "local": {
+        const name = parts[0] as string;
+        return (ctx) => ctx.locals[name];
+      }
+      case "call": {
+        const fid = parts[0] as number;
+        const args = (parts.slice(1) as Expr[]).map((p) => this.compile(p));
+        const params = this.doc.functions[fid]!.params;
+        return (ctx) => this.call(fid, params, args.map((f) => f(ctx)), ctx.frame);
+      }
+      case "apply": {
+        const f = this.compile(parts[0] as Expr);
+        const args = (parts.slice(1) as Expr[]).map((p) => this.compile(p));
+        return (ctx) => (f(ctx) as FnValue)(args.map((a) => a(ctx)), ctx.frame);
+      }
+      case "func": {
+        const fid = parts[0] as number;
+        const captured = parts[1] as string[];
+        return (ctx) => {
+          const around: Record<string, unknown> = {};
+          for (const name of captured) around[name] = ctx.locals[name];
+          return this.functionValue(fid, around);
+        };
+      }
+      case "builtinfunc": {
+        const f = builtinValue(parts[0] as string);
+        return () => f;
+      }
+      case "part":
+        return this.compilePart(parts);
+      case "spread": {
+        const whole = this.compile(parts[0] as Expr);
+        const attr = parts[1] as string;
+        return (ctx) => {
+          const g = whole(ctx) as Ref;
+          return (this.objects[g.id]!.members ?? []).map((m) => this.attrOf(m, attr, ctx.frame));
+        };
+      }
+      case "if": {
+        const [c, a, b] = (parts as Expr[]).map((p) => this.compile(p)) as [Compiled, Compiled, Compiled];
+        return (ctx) => (c(ctx) ? a(ctx) : b(ctx));
+      }
+      case "cond": {
+        const clauses = (parts[0] as [Expr, Expr][]).map(([c, v]) => [this.compile(c), this.compile(v)]);
+        const otherwise = this.compile(parts[1] as Expr);
+        return (ctx) => {
+          for (const [c, v] of clauses) if (c!(ctx)) return v!(ctx);
+          return otherwise(ctx);
+        };
+      }
+      case "and":
+      case "or": {
+        const items = (parts as Expr[]).map((p) => this.compile(p));
+        const stop = op === "or";
+        return (ctx) => {
+          for (const f of items) if (Boolean(f(ctx)) === stop) return stop;
+          return !stop;
+        };
+      }
+      case "let": {
+        const bindings = (parts[0] as [string, Expr][]).map(([n, x]) => [n, this.compile(x)] as const);
+        const body = this.compile(parts[1] as Expr);
+        return (ctx) => {
+          const locals = { ...ctx.locals };
+          for (const [n, f] of bindings) locals[n] = f({ ...ctx, locals });
+          return body({ ...ctx, locals });
+        };
+      }
+      case "rand": {
+        const site = parts[0] as number;
+        const bounds = (parts.slice(1) as Expr[]).map((p) => this.compile(p));
+        // Each site draws its number once, when the page loads.
+        return (ctx) => {
+          if (!this.rands.has(site)) {
+            const [lo, hi] = bounds.length ? bounds.map((f) => f(ctx) as number) : [0, 1];
+            this.rands.set(site, lo! + this.rng() * (hi! - lo!));
+          }
+          return this.rands.get(site);
+        };
+      }
+      case "builtin":
+        return this.compileBuiltin(t, parts);
+      default:
+        throw new Error(`unknown expression ${op}`);
+    }
+  }
+
+  private compileFormat(parts: unknown[]): Compiled {
+    const pieces = parts.map((p) => {
+      if (typeof p === "string") return () => p;
+      const [e, spec] = p as [Expr, string];
+      const f = this.compile(e);
+      const t = this.core(e[1]);
+      return (ctx: Ctx) => {
+        const v = f(ctx);
+        return v === null ? null : show(v, t, spec);
+      };
+    });
+    return (ctx) => {
+      let out = "";
+      for (const piece of pieces) {
+        const s = piece(ctx);
+        // A string with a part that is none is none.
+        if (s === null) return null;
+        out += s;
+      }
+      return out;
+    };
+  }
+
+  private compilePart(parts: unknown[]): Compiled {
+    const whole = this.compile(parts[0] as Expr);
+    const k = parts[1];
+    if (typeof k === "string") return (ctx) => this.partOf(whole(ctx), k, ctx.frame);
+    const index = this.compile(k as Expr);
+    return (ctx) => {
+      const w = whole(ctx);
+      const i = index(ctx);
+      if (w === null) return null;
+      if (w instanceof Ref) {
+        const members = this.objects[w.id]!.members ?? [];
+        if (typeof i === "string") {
+          const m = members.find((x) => this.objects[x]!.name === i);
+          return m === undefined ? null : new Ref(m);
+        }
+        const m = members.at(i as number);
+        return m === undefined ? null : new Ref(m);
+      }
+      const items = w as unknown[];
+      const n = i as number;
+      return n >= -items.length && n < items.length ? items.at(n) : null;
+    };
+  }
+
+  private compileBuiltin(t: Type, parts: unknown[]): Compiled {
+    const name = parts[0] as string;
+    const args = (parts.slice(1) as Expr[]).map((p) => this.compile(p));
+    if (COLLECTIONS.has(name) || name === "somes") return this.compileCollection(name, args);
+    if (name === "or?") {
+      const [x, d] = args as [Compiled, Compiled];
+      return (ctx) => {
+        const v = x(ctx);
+        return v === null ? d(ctx) : v;
+      };
+    }
+    if (name === "none?" || name === "some?") {
+      const [x] = args as [Compiled];
+      return (ctx) => (x(ctx) === null) === (name === "none?");
+    }
+    const impl = BUILTINS[name];
+    if (!impl) throw new Error(`unknown built-in ${name}`);
+    const aware = NONE_AWARE.has(name);
+    const isInt = this.core(t) === "int";
+    return (ctx) => {
+      const vs = args.map((f) => f(ctx));
+      if (!aware && vs.some((v) => v === null)) return null;
+      try {
+        const v = impl(...vs);
+        return isInt && typeof v === "number" ? Math.round(v) : v;
+      } catch (err) {
+        if (err instanceof Undefined) return null;
+        throw err;
+      }
+    };
+  }
+
+  private compileCollection(name: string, args: Compiled[]): Compiled {
+    return (ctx) => {
+      const vs = args.map((f) => f(ctx));
+      if (vs[0] === null) return null;
+      const items = this.items(vs[0]);
+      const f = vs[vs.length - 1] as FnValue;
+      const call = (...a: unknown[]) => f(a, ctx.frame);
+      switch (name) {
+        case "map":
+          return items.map((x) => call(x));
+        case "where":
+          return items.filter((x) => call(x));
+        case "sort": {
+          const keys = items.map((x) => call(x) as number);
+          return items.map((x, i) => [x, keys[i]!] as const).sort((a, b) => a[1] - b[1]).map(([x]) => x);
+        }
+        case "reverse":
+          return [...items].reverse();
+        case "reduce":
+          return items.reduce((acc, x) => (f as FnValue)([acc, x], ctx.frame), vs[1]);
+        case "sum":
+          return items.length === 0 ? 0 : (BUILTINS["+"]!(...items) as number);
+        case "count":
+          return vs.length === 1 ? items.length : items.filter((x) => call(x)).length;
+        case "any":
+          return vs.length === 1 ? items.some(Boolean) : items.some((x) => call(x));
+        case "all":
+          return vs.length === 1 ? items.every(Boolean) : items.every((x) => call(x));
+        case "somes":
+          return items.filter((x) => x !== null);
+        default:
+          throw new Error(`unknown collection function ${name}`);
+      }
+    };
+  }
+
+  /** A collection's items: a list's, or a group's or the scene's members. */
+  private items(v: unknown): unknown[] {
+    if (v instanceof Ref) return (this.objects[v.id]!.members ?? []).map((m) => new Ref(m));
+    return v as unknown[];
+  }
+
+  private functionValue(fid: number, around: Record<string, unknown>): FnValue {
+    const params = this.doc.functions[fid]!.params;
+    return (args, frame) => this.call(fid, params, args, frame, around);
+  }
+
+  private call(
+    fid: number,
+    params: { name: string; type: Type }[],
+    args: unknown[],
+    frame: number | null,
+    around: Record<string, unknown> = {},
+  ): unknown {
+    const locals: Record<string, unknown> = { ...around };
+    for (let i = 0; i < params.length; i++) {
+      const p = params[i]!;
+      // A parameter that does not accept none makes the call none (type-system.md 5.c).
+      if (args[i] === null && !acceptsNone(p.type)) return null;
+      locals[p.name] = args[i];
+    }
+    return this.functions[fid]!({ locals, frame });
+  }
+
+  // Reads and frames --------------------------------------------------------------------
+
+  /**
+   * A place's value as read from a container: a shape's position converts through every
+   * translate and transform that applies to the shape read but not to that container
+   * (reference.md, "Coordinates").
+   */
+  read(id: number, attr: string | null, frame: number | null): unknown {
+    const v = this.value(id, attr);
+    const o = this.objects[id]!;
+    if (attr === null || !SHAPES.has(o.kind) || v === null) return v;
+    const isPoint = attr === "pos" || POINT_ATTRS.has(attr);
+    const isCoord = attr === "x" || attr === "y";
+    if (!isPoint && !isCoord) return v;
+    const m = this.frameOf(id, frame);
+    if (m === null) return v;
+    if (isPoint) return apply(m, v as number[]);
+    const p = apply(m, this.value(id, "pos") as number[]);
+    return p[attr === "x" ? 0 : 1];
+  }
+
+  /** The transform from a shape's frame to its container frame's, or null when there is none. */
+  private frameOf(id: number, frame: number | null): number[] | null {
+    const shared = new Set<number>();
+    for (let j: number | null = frame; j !== null; j = this.parents[j]!) shared.add(j);
+    const steps: number[][] = [];
+    for (let j: number | null = id; j !== null && !shared.has(j); j = this.parents[j]!) {
+      const o = this.objects[j]!;
+      if (o.kind === "scene") break;
+      // An instance's x and y move its frame, and so its members, before its translate.
+      if (o.kind === "instance" && j !== id) {
+        steps.push([1, 0, 0, 1, this.value(j, "x") as number, this.value(j, "y") as number]);
+      }
+      if (this.has(j, "translate")) {
+        const [tx, ty] = this.value(j, "translate") as number[];
+        steps.push([1, 0, 0, 1, tx!, ty!]);
+      }
+      if (this.has(j, "transform")) steps.push(this.value(j, "transform") as number[]);
+    }
+    const identity = steps.every((s) => s.every((x, i) => x === [1, 0, 0, 1, 0, 0][i]));
+    return identity ? null : compose(...steps);
+  }
+
+  /** An attribute of a shape known only while drawing, read from a frame. */
+  private attrOf(id: number, attr: string, frame: number | null): unknown {
+    const o = this.objects[id]!;
+    if (attr === "name") return o.name;
+    if (o.kind === "group" && !this.has(id, attr) && attr !== "length" && attr !== "members") {
+      return (o.members ?? []).map((m) => this.attrOf(m, attr, frame));
+    }
+    if (attr === "length" && o.members) return o.members.length;
+    if (attr === "members") return (o.members ?? []).map((m) => new Ref(m));
+    if (o.kind === "instance" && !this.has(id, attr)) {
+      const m = (o.members ?? []).find((x) => this.objects[x]!.name === attr);
+      if (m !== undefined) return new Ref(m);
+    }
+    if (CORNERS[o.kind] && (attr === "x" || attr === "y" || attr === "pos")) {
+      const p = this.mean(id, frame) as number[];
+      return attr === "pos" ? p : p[attr === "x" ? 0 : 1];
+    }
+    return this.read(id, attr, frame);
+  }
+
+  /** The mean of a line's ends or a triangle's corners: its position. */
+  private mean(id: number, frame: number | null): number[] {
+    const kind = this.objects[id]!.kind;
+    const pts = CORNERS[kind]!.map((c) => (frame === null ? this.value(id, c) : this.read(id, c, frame)) as number[]);
+    return [0, 1].map((k) => pts.reduce((s, p) => s + p[k]!, 0) / pts.length);
+  }
+
+  private partOf(w: unknown, k: string, frame: number | null): unknown {
+    if (w === null) return null;
+    if (w instanceof Ref) return this.attrOf(w.id, k, frame);
+    if (w instanceof Complex) return k === "re" ? w.re : w.im;
+    if (Array.isArray(w)) {
+      if (k === "length") return w.length;
+      return w[k === "x" ? 0 : 1];
+    }
+    if (typeof w === "string") {
+      if (k === "length") return [...w].length;
+      const i = "rgba".indexOf(k);
+      return Number.parseInt(w.slice(1 + 2 * i, 3 + 2 * i), 16) / 255;
+    }
+    return (w as Record<string, unknown>)[k];
+  }
 }
 
-function complexStr(z: Complex): string {
-  const part = (x: number) => (Number.isInteger(x) ? String(x) : pyStr(x));
-  if (z.re === 0 && !Object.is(z.re, -0)) return `${part(z.im)}j`;
-  const sign = z.im < 0 || Object.is(z.im, -0) ? "-" : "+";
-  return `(${part(z.re)}${sign}${part(Math.abs(z.im))}j)`;
+function holds(op: string, v: number, lim: number): boolean {
+  return op === ">=" ? v >= lim : op === ">" ? v > lim : op === "<=" ? v <= lim : v < lim;
+}
+
+function acceptsNone(t: Type): boolean {
+  return typeof t === "object" && "union" in t;
+}
+
+function builtinValue(name: string): FnValue {
+  const impl = BUILTINS[name]!;
+  return (args) => {
+    if (args.some((a) => a === null)) return null;
+    try {
+      return impl(...args);
+    } catch (err) {
+      if (err instanceof Undefined) return null;
+      throw err;
+    }
+  };
+}
+
+/** A value shown in a string: by its format spec, or as Python shows it with none. */
+export function show(v: unknown, t: Type, spec: string): string {
+  const kind = typeof t === "string" ? t : "real";
+  if (spec) return format(v, spec, kind === "string" || typeof v === "string" ? "str" : kind);
+  if (typeof v === "number") return kind === "int" ? String(Math.round(v)) : pyStr(v);
+  if (typeof v === "boolean") return v ? "True" : "False";
+  if (Array.isArray(v)) return `(${v.map((x) => pyStr(Number(x))).join(", ")})`;
+  if (v instanceof Complex) return `(${pyStr(v.re)}${v.im < 0 ? "-" : "+"}${pyStr(Math.abs(v.im))}j)`;
+  return String(v);
 }

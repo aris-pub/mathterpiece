@@ -1,0 +1,5 @@
+(real k 1)
+(real j 1)
+(real a (* 2 k))
+(real b (+ a 1))
+(real other (* 3 j))
