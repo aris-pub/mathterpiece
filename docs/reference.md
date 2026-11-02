@@ -93,8 +93,8 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 | `(slider name transit)` | required | a transit, written in place or by name, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(when bool)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, `(when bool)` | conditions |
 | `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(when bool)` | conditions |
-| `(toggle name)` | required | none | `(target t)` (without one it holds its own bool), `(label string)`, `(value bool)`, `(when bool)` | conditions |
-| `(on-drag shape)` | none | the shape | `(target t)` (required), `(when bool)` | conditions |
+| `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(when bool)` | conditions |
+| `(on-drag shape target)` | none | the shape; the target, a `name`, the variable or attribute the drag writes | `(when bool)` | conditions |
 | `(on-click shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
 
 ## Defaults
@@ -171,7 +171,7 @@ Every control and listener emits writes to its target (or, through its animation
 - **A slider follows its target:** when another writer changes the variable or attribute its transit moves, the knob goes to the position whose value is closest to its new value. Its starting position is found the same way.
 - **Button:** a press plays its animation from the start, over time; a press while it runs starts it again.
 - **Play:** a press plays the animation, and its label reads "pause" while it runs. A press while it runs pauses it, and the next resumes it; after the end, a press plays it again from the start. With `(buttons true)` it also shows one button per item of its animation's body (or, when the body is a single `in-order`, per item of that), lit while that item runs: clicking one, whatever the state, first cancels every writer moving any variable or attribute the play moves, the play itself included, so a play that was playing stops; then that item runs alone, over time, from wherever things are, and its button is lit while it runs. The play's next press plays from the start.
-- **Toggle:** a checkbox writing its target bool, or holding its own value when it has no target; `(value bool)` sets that own value's start, and is an error with a target. On a group's attribute it writes every member, reads true only when every member's is true, and shows a mixed state when the members differ; a click on a mixed toggle sets every member to true. A toggle is read through its value, `show.value`, like any other attribute.
+- **Toggle:** a checkbox writing its target bool, or holding its own value when its target is `none`; `(value bool)` sets that own value's start, and is an error with a target. On a group's attribute it writes every member, reads true only when every member's is true, and shows a mixed state when the members differ; a click on a mixed toggle sets every member to true. A toggle is read through its value, `show.value`, like any other attribute.
 - **On-click:** a click on the shape plays its animation, as a button does.
 - **Two writers on one target:** a writer that starts moving a variable or an attribute cancels any other writer moving it. The newest wins, whatever its kind.
 

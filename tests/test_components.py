@@ -37,45 +37,45 @@ class TestControls:
         assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, 0)
 
     def test_a_toggle_holding_its_own_value(self):
-        t = model("(toggle t (value true))").get("t")
+        t = model("(toggle t none (value true))").get("t")
         assert t.attrs["value"].value is True and t.data["target"] is None
 
     def test_a_toggle_with_a_target(self):
-        m = model("(bool b true) (toggle t (target b))")
+        m = model("(bool b true) (toggle t b)")
         t = m.get("t")
         assert t.data["target"] == (m.id("b"), None)
         assert t.attrs["value"].deps == {(m.id("b"), None)}
 
     def test_a_toggle_target_is_a_bool(self):
-        error(f"{K} (toggle t (target k))", "a toggle's target is a bool")
+        error(f"{K} (toggle t k)", "a toggle's target is a bool")
 
     def test_a_toggle_on_a_groups_attribute(self):
         src = "(motif lamp (bool on false) (circle c)) (scene s (group g (lamp a) (lamp b)))"
-        m = model(f"{src} (toggle t (target g.on))")
+        m = model(f"{src} (toggle t g.on)")
         assert m.get("t").attrs["value"].expr.op == "all"
 
     def test_a_toggle_is_read_through_its_value(self):
-        m = model("(toggle show) (bool on (= show.value true))")
+        m = model("(toggle show none) (bool on (= show.value true))")
         assert m.get("on").value.deps == {(m.id("show"), "value")}
-        error("(toggle show) (bool on show)", "write show.value")
+        error("(toggle show none) (bool on show)", "write show.value")
 
 
 class TestListeners:
     def test_dragging_a_position(self):
-        m = model("(scene s (circle c)) (on-drag c (target c.pos))")
+        m = model("(scene s (circle c)) (on-drag c c.pos)")
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert (d.name, d.data["shape"], d.data["target"]) == (None, m.id("c"), (m.id("c"), "pos"))
 
     def test_dragging_a_number_the_position_depends_on(self):
-        m = model(f"{K} (scene s (circle c (x k))) (on-drag c (target k) (<= k 8))")
+        m = model(f"{K} (scene s (circle c (x k))) (on-drag c k (<= k 8))")
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert d.data["conditions"][0]["op"] == "<="
 
     def test_a_target_the_position_does_not_depend_on(self):
-        error(f"{K} (scene s (circle c)) (on-drag c (target k))", "position does not depend on")
+        error(f"{K} (scene s (circle c)) (on-drag c k)", "position does not depend on")
 
     def test_when(self):
-        m = model("(bool on true) (scene s (circle c)) (on-drag c (target c.x) (when on))")
+        m = model("(bool on true) (scene s (circle c)) (on-drag c c.x (when on))")
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert d.data["when"].deps == {(m.id("on"), None)}
 
@@ -85,7 +85,7 @@ class TestListeners:
             f"(button b {MOVE} (when (> k 1)))",
             f"(slider b {SLIDE} (when (> k 1)))",
             f"(play b {MOVE} (when (> k 1)))",
-            "(toggle b (when (> k 1)))",
+            "(toggle b none (when (> k 1)))",
         ],
     )
     def test_a_control_is_active_while_its_when_holds(self, control):
@@ -154,4 +154,16 @@ class TestAccess:
         )
 
     def test_a_bool_reading_a_toggle(self):
-        assert model("(toggle show) (bool on show.value)").get("on").value.type == BOOL
+        assert model("(toggle show none) (bool on show.value)").get("on").value.type == BOOL
+
+
+class TestPositionalTargets:
+    # reference.md "Components": on-drag's target and toggle's are positional; a toggle's may be
+    # none, and then it holds its own bool.
+    def test_on_drag_needs_its_target_after_the_shape(self):
+        error("(scene s (circle c)) (on-drag c)", "on-drag is")
+        error("(scene s (circle c)) (on-drag c (target c.pos))", "on-drag is")
+
+    def test_a_toggle_names_its_target_or_none(self):
+        error("(toggle t (label 'x'))", "a toggle is")
+        assert model("(toggle t none)").get("t").data["target"] is None

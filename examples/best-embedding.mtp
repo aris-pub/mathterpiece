@@ -54,7 +54,7 @@
 (canvas view (view-x -3.3) (view-y -2.3) (view-width 6.6) (view-height 4.6) edges points labels)
 
 (repeat 4 i
-  (on-drag points[i] (target points[i].pos)))
+  (on-drag points[i] points[i].pos))
 
 (animation optimum
   (at-once (default-duration 0.8) (default-ease 'ease-in-out')

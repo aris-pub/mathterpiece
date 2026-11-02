@@ -75,7 +75,7 @@ CASES = [
         " it, such as (>= k 0)",
     ),
     # reference.md "Controls": a toggle's value with a target.
-    ("(bool b)\n(toggle t (target b) (value true))", "2:29", "a toggle with a target shows its"),
+    ("(bool b)\n(toggle t b (value true))", "2:20", "a toggle with a target shows its"),
     # reference.md "Numbers": rand inside a function.
     ("(func f (real x) (+ x (rand)))", "1:23", "rand inside a function is a compile error"),
 ]

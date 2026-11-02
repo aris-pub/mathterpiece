@@ -14,7 +14,7 @@ A point on a circle, a slider and a drag that move it, and a number in the prose
       (line radius (from [0 0]) (to p.pos) (stroke 'crimson')))
 
     (slider spin (transit _ theta (from 0) (to 360)) (label 'angle'))
-    (on-drag p (target theta))
+    (on-drag p theta)
 
     (canvas v s)
     (readout r $'θ = {theta:.0f}°')
@@ -171,7 +171,7 @@ Every form follows one template:
 - **Optional arguments** come next, in any order. Each is a form recognized by its head, such as `(r 1)`, `(fill 'red')` or `(when on)`, and is given at most once.
 - **The body** comes last: any number of items, or none. What it holds depends on the form: member declarations, a variable's constraints, the shapes a canvas shows, a writer's conditions, the transits of an animation.
 
-Each form decides whether it has a name, which positional arguments it takes and which of them may be left out, which optional arguments it takes, and what its body holds. An optional argument written after the body is a compile error. `on-drag`'s `(target …)` is written as an optional argument but is required.
+Each form decides whether it has a name, which positional arguments it takes and which of them may be left out, which optional arguments it takes, and what its body holds. An optional argument written after the body is a compile error.
 
 | Form | Name | Positional | Optional arguments | Body |
 |----|----|----|----|----|
@@ -185,7 +185,7 @@ Each form decides whether it has a name, which positional arguments it takes and
 | `(animation grow (default-duration 1) (transit _ theta (like slide)) (transit _ none (duration 0.5)))` | `grow` | none | `(default-duration 1)` | a transit that moves `theta` along `slide`, then one that waits half a second |
 | `(slider spin (transit _ theta (from 0) (to 360)) (label 'angle'))` | `spin` | the transit | `(label 'angle')` | none |
 | `(canvas v (view-x -5) a b (when show c))` | `v` | none | `(view-x -5)` | `a`, `b`, `(when show c)` |
-| `(on-drag p (target theta))` | none | `p` | `(target theta)`, required | none |
+| `(on-drag p theta)` | none | `p`, `theta` | none | none |
 
 Function calls and special forms follow the template too. A call's head is the function, it has no name, and its arguments are positional, some of which may be left out, as in `(round x)` and `(round x 2)`; a function that takes any number of arguments takes them as its body, as in `(+ a b c)`. Each special form has its own positional arguments and body: `(if c a b)` has three positional arguments, and `(cond …)` a body of clauses.
 

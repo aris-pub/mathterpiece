@@ -107,12 +107,12 @@
 
 ; Which functions are shown. These toggles hold their own value: whether a line is shown is about
 ; this view, not about the circle, so the scene does not need to know.
-(toggle show-cos (label 'cos') (value true))
-(toggle show-sin (label 'sin') (value true))
-(toggle show-tan (label 'tan') (value true))
-(toggle show-sec (label 'sec'))
-(toggle show-cot (label 'cot'))
-(toggle show-csc (label 'csc'))
+(toggle show-cos none (label 'cos') (value true))
+(toggle show-sin none (label 'sin') (value true))
+(toggle show-tan none (label 'tan') (value true))
+(toggle show-sec none (label 'sec'))
+(toggle show-cot none (label 'cot'))
+(toggle show-csc none (label 'csc'))
 
 ; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
 ; function on or off fades its line, name and value in or out.
@@ -128,7 +128,7 @@
   handle)
 
 ; Dragging the point changes theta, so the point slides along the circle under the pointer.
-(on-drag handle (target theta))
+(on-drag handle theta)
 (slider turn (transit _ theta (from 0) (to 360)) (label 'θ'))
 
 ; For the prose around the figure: the same numbers, set in the number font.

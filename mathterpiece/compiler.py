@@ -88,7 +88,7 @@ RESERVED = frozenset(
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
-WRITER_OPTIONS = {"animation", "label", "step", "buttons", "target", "value", "when"}
+WRITER_OPTIONS = {"animation", "label", "step", "buttons", "value", "when"}
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
@@ -1359,8 +1359,9 @@ class _Compiler:
                 items, lambda it: not isinstance(it, Name) and _head(it) != "when", kind
             )
         elif kind != "readout":
-            # A slider's first item is its transit, a positional argument.
-            body = items[1:] if kind == "slider" else items
+            # A slider's first item is its transit, and on-drag's and toggle's their target:
+            # positional arguments.
+            body = items[1:] if kind in ("slider", "on-drag", "toggle") else items
             self.options_first(body, lambda it: _head(it) in WRITER_OPTIONS, kind)
         build = getattr(self, "build_" + kind.replace("-", "_"))
         build(obj, list(items), shape)
@@ -1486,7 +1487,13 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_toggle(self, obj: Obj, items: list, shape) -> None:
-        target = self.take(items, "target")
+        # Its target is positional: the bool it writes, or none to hold its own.
+        if not items or not (isinstance(items[0], (Name, NoneLit))):
+            raise CompileError(
+                "a toggle is (toggle name target item…), its target none or a bool", obj.pos
+            )
+        first = items.pop(0)
+        target = None if isinstance(first, NoneLit) else first
         value = self.take(items, "value")
         written: set = set()
         if target is None:
@@ -1515,11 +1522,12 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_on_drag(self, obj: Obj, items: list, shape: int) -> None:
-        target = self.take(items, "target")
-        if target is None:
-            raise CompileError("on-drag needs a (target …)", obj.pos)
-        if not isinstance(target, Name):
-            raise CompileError("an on-drag's target is a variable or an attribute", target.pos)
+        if not items or not isinstance(items[0], Name):
+            raise CompileError(
+                "on-drag is (on-drag shape target item…), its target a variable or an attribute",
+                obj.pos,
+            )
+        target = items.pop(0)
         i, attr, _ = self.writable(target, self.cscope)
         own = i == shape and attr in ("x", "y", "pos")
         if not own and (i, attr) not in self.position_deps(shape):
