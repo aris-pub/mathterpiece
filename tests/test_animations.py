@@ -148,3 +148,28 @@ class TestButtons:
         src = f"{K} (real j) (button b (animation (k (transition (to 5) (duration 1))))"
         error(f"{src} (> j 1))", "compares a place this writer writes")
         error(f"{src} (> k (* 2 k)))", "compares a place this writer writes")
+
+
+class TestBoolMoves:
+    # reference.md "Transitions and animations": a bool changes at the start of its move and
+    # holds, unless its own ease is a step ease.
+    B = "(bool on false)"
+
+    def test_the_default_is_one_jump_at_the_start(self):
+        s = steps(f"{self.B} (animation a (on (transition (to true) (duration 1))))")
+        assert s[4] == ("step", 1)
+
+    def test_an_enclosing_default_ease_that_is_not_a_step_does_not_apply(self):
+        move = "(on (transition (to true) (duration 1)))"
+        src = f"{self.B} (animation a (default-ease 'ease-in') {move})"
+        assert steps(src)[4] == ("step", 1)
+
+    def test_its_own_step_ease(self):
+        src = f"{self.B} (animation a (on (transition (to true) (duration 1) (ease (step 3)))))"
+        assert steps(src)[4] == ("step", 3)
+
+    def test_any_other_ease_is_an_error(self):
+        error(
+            f"{self.B} (animation a (on (transition (to true) (duration 1) (ease 'linear'))))",
+            "a bool moves only by a step ease",
+        )
