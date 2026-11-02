@@ -50,7 +50,7 @@ def test_free_and_bound_values():
         ["read", "real", d["names"]["k"], None, None],
     ]
     assert j["deps"] == [[d["names"]["k"], None]]
-    assert c == {"type": "real", "free": 3}
+    assert c == {"type": {"refine": "real", "constraints": [["const"]]}, "free": 3}
 
 
 def test_values_by_type():

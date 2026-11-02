@@ -76,29 +76,39 @@ class TestCollections:
 
 
 class TestFoldedValues:
-    # docs/mtpc.md "Free and bound values": a variable or an attribute given an expression known
-    # when compiling is free, starting at the expression's value. It is const only when the
-    # author writes (const) (data-model.md, "What changes, and what follows").
-    def test_a_folded_expression_is_free_and_not_const(self):
+    # docs/mtpc.md "Free and bound values": a variable or an attribute given a constant (the bare
+    # name of a const variable or of a built-in constant) is free, starting at its value, as if
+    # the author had written that value. Any other expression known when compiling is folded and
+    # free with a const constraint, so no writer can write it.
+    def test_a_folded_expression_is_const(self):
         from mathterpiece.compiler import _is_const
 
         m = model("(real k 1) (real d (+ 1 2))")
         assert not _is_const(m.get("k").value.type)
-        assert not _is_const(m.get("d").value.type)
-        assert not m.get("d").value.bound
+        assert _is_const(m.get("d").value.type)
+
+    def test_so_no_writer_can_write_it(self):
+        error("(real d (+ 1 2)) (animation a (d (transition (to 1) (duration 1))))", "d is const")
+
+    def test_a_constant_gives_a_free_value(self):
+        from mathterpiece.compiler import _is_const
+
+        m = model("(real g 137.5 (const)) (real a g) (real b pi)")
+        for name in "ab":
+            attribute = m.get(name).value
+            assert not attribute.bound and not _is_const(attribute.type)
+        assert m.get("a").value.value == 137.5
 
     def test_so_a_writer_may_write_it(self):
-        model("(real d (+ 1 2)) (animation a (d (transition (to 1) (duration 1))))")
-
-    def test_a_const_name_gives_a_free_start(self):
         model(
-            "(real golden (* 180 (- 3 (sqrt 5))) (const))"
-            " (scene s (circle c (r golden)))"
+            "(real g (* 180 (- 3 (sqrt 5))) (const))"
+            " (scene s (circle c (r g)))"
             " (animation a (c.r (transition (to 1) (duration 1))))"
         )
 
-    def test_const_written_by_the_author_still_forbids_writes(self):
-        src = "(real d (+ 1 2) (const)) (animation a (d (transition (to 1) (duration 1))))"
+    def test_an_expression_of_a_constant_is_still_const(self):
+        src = "(real g 2 (const)) (real d (* 2 g))"
+        src += " (animation a (d (transition (to 1) (duration 1))))"
         error(src, "d is const")
 
     def test_a_literal_list_is_still_free(self):
