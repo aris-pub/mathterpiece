@@ -10,7 +10,17 @@ from decimal import ROUND_HALF_UP, Decimal, localcontext
 from fractions import Fraction
 
 from mathterpiece.colors import parse_color
-from mathterpiece.model import Expr, Model, MotifDef, Obj, Param, Place, Range, VariantDef
+from mathterpiece.model import (
+    Expr,
+    FuncDef,
+    Model,
+    MotifDef,
+    Obj,
+    Param,
+    Place,
+    Range,
+    VariantDef,
+)
 from mathterpiece.nodes import (
     Bar,
     BoolLit,
@@ -43,9 +53,11 @@ from mathterpiece.types import (
     SCENE,
     STRING,
     TRANSFORM,
+    FuncT,
     Interface,
     ListT,
     Maybe,
+    Prim,
     Refine,
     ShapeT,
     Type,
@@ -63,6 +75,11 @@ CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: Range = (-LIMIT, LIMIT)
+# The result of a function whose body is being compiled for the first time: a recursive call
+# has it, and the branch that does not recurse decides the real one.
+RECURSING = Prim("recursing")
+# Forms that are not calls, so a function of the same name never replaces them.
+SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat"}
 # A computed result beyond the largest real overflows, which is undefined.
 MAX_REAL = sys.float_info.max
 WHOLE: Range = (-MAX_REAL, MAX_REAL)
@@ -215,6 +232,8 @@ class _Compiler:
             return self.motif_decl(form)
         if head == "variant":
             return self.variant_decl(form)
+        if head == "func":
+            return self.func_decl(form)
         if self.shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
@@ -235,7 +254,7 @@ class _Compiler:
             return None, node.pos
         if name in RESERVED:
             raise CompileError(f"'{name}' is reserved", node.pos)
-        taken = self.model.names
+        taken = self.model.names.keys() | self.model.funcs.keys() | self.model.types.keys()
         if self.bodies:
             taken = self.bodies[-1]["names"].keys() | self.bodies[-1]["attrs"]
         if name in taken:
@@ -299,6 +318,8 @@ class _Compiler:
 
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
         name, pos, t, node = self.declared(form, scope)
+        if isinstance(_core(t), FuncT):
+            raise CompileError("a variable cannot hold a function", pos)
         if node is not None and self.shape_kind(node):
             # (shape sel (circle c …)) declares the circle where the variable is, and holds it.
             if parent is None:
@@ -346,6 +367,105 @@ class _Compiler:
         self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos)
         self.model.types[name] = ShapeT(name)
         self.trial(name, form.pos)
+
+    def func_decl(self, form: Form) -> None:
+        name, pos = self.name_of(form)
+        if name is None or len(form.items) != 4:
+            raise CompileError("a function is (func name parameters body)", form.pos)
+        params = self.params(form.items[2])
+        fid = len(self.model.functions)
+        f = FuncDef(name, params, RECURSING, pos=pos)
+        self.model.functions.append(f)
+        self.model.funcs[name] = fid
+        # A recursive call gives RECURSING until the body's type is known; compile again with
+        # that type until it no longer changes, since it may broaden (int, then ratio).
+        for _ in range(len(NUMBERS) + 2):
+            body = self.function_body(params, form.items[3])
+            if _inner(body.type) == RECURSING:
+                raise CompileError(f"{name} has no base case: every branch calls {name}", pos)
+            if body.type == f.result:
+                break
+            f.result = body.type
+        f.body, f.deps = body, body.deps
+
+    def function_body(self, params, node: Node, expected=None, outer=None) -> Expr:
+        scope = dict(outer or {})
+        for p in params:
+            scope[p.name] = Expr("local", p.type, (p.name,), range=_type_range(p.type))
+        # A read inside a function uses the frame of the place that called it.
+        saved, self.frame = self.frame, "caller"
+        try:
+            return self.expr(node, expected, scope)
+        finally:
+            self.frame = saved
+
+    def call(self, fid: int, node: Form, scope: dict) -> Expr:
+        f = self.model.functions[fid]
+        given = node.items[1:]
+        n = len(f.params)
+        if len(given) > n:
+            raise CompileError(f"{f.name} takes {n} argument{'s' * (n != 1)}", node.pos)
+        args, deps, maybe = self.arguments(f.params, given, scope, node.pos)
+        t = f.result
+        if maybe and t != RECURSING:
+            t = _maybe(t)
+        r = f.body.range if f.body is not None else _type_range(t)
+        return Expr("call", t, (fid, *args), deps | f.deps, r)
+
+    def arguments(self, params, given, scope: dict, pos: Pos) -> tuple[list, frozenset, bool]:
+        """Each argument, or what a left-out parameter takes. An argument that may be none
+        given to a parameter that does not accept it makes the call none (type-system.md 5.c);
+        one given to a constrained parameter must be proved to fit (5.b)."""
+        args, maybe = [], False
+        for k, p in enumerate(params):
+            if k < len(given):
+                accepts = _may_be_none(p.type)
+                e = self.expr(given[k], p.type if accepts else _maybe(p.type), scope)
+                maybe |= not accepts and _may_be_none(e.type)
+                inner = _inner(p.type)
+                if not e.known and isinstance(inner, Refine):
+                    for c in inner.constraints:
+                        if c[0] in COMPARE and not _range_within(e.range, c):
+                            raise CompileError(f"{p.name} may break {_show(c)}", given[k].pos)
+            elif p.default is not None:
+                e = self.expr(p.default, p.type, {})
+            else:
+                e = _known(p.type, self.default(p.type, pos))
+            args.append(e)
+        return args, frozenset().union(*(a.deps for a in args)), maybe
+
+    def apply(self, fexpr: Expr, node: Form, scope: dict) -> Expr:
+        ft = _core(fexpr.type)
+        given = node.items[1:]
+        if len(given) != len(ft.params):
+            n = len(ft.params)
+            raise CompileError(f"this function takes {n} argument{'s' * (n != 1)}", node.pos)
+        params = tuple(Param(f"argument {k + 1}", t) for k, t in enumerate(ft.params))
+        args, deps, maybe = self.arguments(params, given, scope, node.pos)
+        t = _maybe(ft.result) if maybe else ft.result
+        return Expr("apply", t, (fexpr, *args), deps | fexpr.deps, _type_range(t))
+
+    def fn(self, node: Form, expected: Type | None, scope: dict) -> Expr:
+        if len(node.items) != 3:
+            raise CompileError("fn is (fn parameters body)", node.pos)
+        ft = _core(expected) if expected is not None else None
+        ft = ft if isinstance(ft, FuncT) else None
+        pnode = node.items[1]
+        if isinstance(pnode, Name):
+            if ft is None or len(ft.params) != 1:
+                raise CompileError(
+                    "a bare parameter of fn needs its type from its place: write (fn (T name) …)",
+                    pnode.pos,
+                )
+            params = (Param(pnode.parts[0], ft.params[0]),)
+        else:
+            params = self.params(pnode)
+        body = self.function_body(params, node.items[2], ft.result if ft else None, scope)
+        fid = len(self.model.functions)
+        self.model.functions.append(FuncDef(None, params, body.type, body, body.deps, node.pos))
+        captured = tuple(sorted(_locals(body) - {p.name for p in params}))
+        t = FuncT(tuple(p.type for p in params), body.type)
+        return Expr("func", t, (fid, captured), body.deps)
 
     def trial(self, name: str, pos: Pos) -> None:
         """Compile one instance and discard it, so a body's errors show without any instance."""
@@ -461,7 +581,7 @@ class _Compiler:
         forms = node.items if isinstance(node.items[0], Form) else (node,)
         out = []
         for f in forms:
-            if not isinstance(f, Form):
+            if not isinstance(f, Form) or len(f.items) < 2:
                 raise CompileError("expected a parameter such as (real t 0.5)", f.pos)
             name, pos, t, default = self.declared(f, {})
             if name is None:
@@ -550,7 +670,7 @@ class _Compiler:
                 attrs["background"] = self.place(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
-            elif head in ("motif", "variant"):
+            elif head in ("motif", "variant", "func"):
                 raise CompileError(f"a {head} is declared only at the top level", item.pos)
             elif self.shape_kind(item):
                 self.shape(item, self.scene, scope)
@@ -701,6 +821,8 @@ class _Compiler:
 
     def expr(self, node: Node, expected: Type | None, scope: dict) -> Expr:
         e = self.typed(node, expected, scope)
+        if e.type == RECURSING:
+            return e
         # A constraint is checked on the value (known) or its range (settle), not on its type.
         target = _loose(expected) if expected is not None else None
         if target is not None and not fits(_loose(e.type), target):
@@ -839,6 +961,11 @@ class _Compiler:
                 return self.read(body["id"], name)
         if name == "self":
             raise CompileError("self is used only in a motif's body", pos)
+        if name in self.model.funcs:
+            fid = self.model.funcs[name]
+            f = self.model.functions[fid]
+            t = FuncT(tuple(p.type for p in f.params), f.result)
+            return Expr("func", t, (fid, ()), f.deps)
         if name in self.model.names:
             return self.read(self.model.names[name], None)
         raise CompileError(f"unknown name '{name}'", pos)
@@ -867,7 +994,7 @@ class _Compiler:
         its containers', up to the one the reading expression sits in (reference.md,
         "Coordinates")."""
         shared = set()
-        j = self.frame
+        j = None if self.frame == "caller" else self.frame
         while j is not None and j != self.scene:
             shared.add(j)
             j = self.model.objects[j].parent
@@ -1038,6 +1165,15 @@ class _Compiler:
     def form(self, node: Form, expected: Type | None, scope: dict) -> Expr:
         head = _head(node)
         args = node.items[1:]
+        if head is not None and head not in SPECIAL:
+            if head in scope:
+                local = self.lookup(head, scope, node.pos)
+                if isinstance(_core(local.type), FuncT):
+                    return self.apply(local, node, scope)
+            elif head in self.model.funcs:
+                return self.call(self.model.funcs[head], node, scope)
+        if head == "fn":
+            return self.fn(node, expected, scope)
         if head == "if":
             if len(args) != 3:
                 raise CompileError("if takes a condition and two branches", node.pos)
@@ -1176,6 +1312,8 @@ class _Compiler:
             raise CompileError(
                 f"{op} takes {'two' if op in ('/', '^', 'mod') else 'some'} numbers", pos
             )
+        if any(a.type == RECURSING for a in args):
+            return Expr(op, RECURSING, tuple(args))
         numbers = [a for a in args if a.type != NONE]
         for a in numbers:
             if _core(a.type) not in NUMBERS:
@@ -1212,6 +1350,8 @@ class _Compiler:
         return Expr("or?", t, (ex, ed), ex.deps | ed.deps, _union(ex.range, ed.range))
 
     def abs(self, node: Form, a: Expr) -> Expr:
+        if a.type == RECURSING:
+            return Expr("abs", RECURSING, (a,))
         base = _core(a.type)
         if base not in NUMBERS:
             raise CompileError(f"abs takes a number, got {a.type}", node.pos)
@@ -1232,6 +1372,8 @@ class _Compiler:
         return Expr("abs", t, (a,), a.deps, r if r is not None else (0.0, LIMIT))
 
     def compare(self, node: Form, op: str, a: Expr, b: Expr) -> Expr:
+        if RECURSING in (a.type, b.type):
+            return Expr(op, BOOL, (a, b))
         if op in COMPARE:
             for e in (a, b):
                 if e.type != NONE and _core(e.type) not in NUMBERS[:3]:
@@ -1262,6 +1404,16 @@ def _known(t: Type, value) -> Expr:
         else None
     )
     return Expr("lit", t, (value,), range=r, known=True, value=value)
+
+
+def _locals(e) -> set:
+    """The parameter names an expression reads."""
+    if isinstance(e, Expr):
+        own = {e.args[0]} if e.op == "local" else set()
+        return own.union(*(_locals(a) for a in e.args))
+    if isinstance(e, tuple):
+        return set().union(*(_locals(a) for a in e))
+    return set()
 
 
 def _scoped(nodes, scope: dict) -> list:
@@ -1346,6 +1498,10 @@ def _length(e: Expr) -> int | None:
 
 def _widen(a: Type, b: Type) -> Type | None:
     """The narrowest type both a and b fit, or None."""
+    if _inner(a) == RECURSING:
+        return b
+    if _inner(b) == RECURSING:
+        return a
     if fits(a, b):
         return b
     if fits(b, a):

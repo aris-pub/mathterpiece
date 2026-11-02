@@ -82,6 +82,19 @@ class MotifDef:
     pos: Pos = NOPOS
 
 
+@dataclass
+class FuncDef:
+    """A function: declared with func (with a name) or written in place with fn. deps are the
+    places its body reads besides its parameters."""
+
+    name: str | None
+    params: tuple[Param, ...]
+    result: Type
+    body: Expr | None = None
+    deps: frozenset[Dep] = frozenset()
+    pos: Pos = NOPOS
+
+
 @dataclass(frozen=True)
 class VariantDef:
     name: str
@@ -100,6 +113,8 @@ class Model:
     types: dict[str, Type] = field(default_factory=dict)
     motifs: dict[str, MotifDef] = field(default_factory=dict)
     variants: dict[str, VariantDef] = field(default_factory=dict)
+    functions: list[FuncDef] = field(default_factory=list)
+    funcs: dict[str, int] = field(default_factory=dict)
 
     def id(self, name: str) -> int:
         return self.names[name]
