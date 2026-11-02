@@ -108,6 +108,37 @@ describe("controls", () => {
     expect(v("run", "playing")).toBe(false);
   });
 
+  it("a step clicked while playing stops the play and animates that step alone", () => {
+    const [, , v] = page(`<mtp-play model="m" name="run"></mtp-play>`);
+    const [play, , second] = document.querySelectorAll("mtp-play button") as NodeListOf<HTMLButtonElement>;
+    play!.click();
+    pass(0.1);
+    pass(0.5);
+    expect(v("k")).toBeCloseTo(1);
+    second!.click();
+    // The clock is already running, so no frame is needed to start it.
+    pass(0.5);
+    // From 1, where k was, towards 4: it does not jump to the second step's start.
+    expect(v("k")).toBeCloseTo(2.5);
+    pass(1);
+    expect(v("k")).toBe(4);
+    pass(2);
+    expect(v("k")).toBe(4);
+    expect(v("run", "playing")).toBe(false);
+  });
+
+  it("a step clicked cancels any other writer moving what the play moves", () => {
+    const [, , v] = page(`<mtp-button model="m" name="go"></mtp-button><mtp-play model="m" name="run"></mtp-play>`);
+    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
+    pass(0.1);
+    pass(0.5);
+    expect(v("k")).toBeCloseTo(2.5);
+    (document.querySelectorAll("mtp-play button")[2] as HTMLButtonElement).click();
+    pass(0.1);
+    pass(2);
+    expect(v("k")).toBe(4);
+  });
+
   it("a slider follows its target when another writer changes it", () => {
     const [, rt] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
     const input = document.querySelector("mtp-slider input") as HTMLInputElement;

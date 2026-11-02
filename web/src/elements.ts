@@ -415,13 +415,12 @@ export class MtpPlay extends MtpPart {
       spans.forEach((span, k) => {
         const b = document.createElement("button");
         b.textContent = String(k + 1);
-        // A step clicked while playing jumps there and carries on; while stopped, it runs from
-        // there, from wherever things are.
+        // Starting the step claims everything the play moves, not only what the step moves, so
+        // it cancels the play itself and every other writer moving any of it.
         b.addEventListener("click", () => {
-          const running = scheduler.running(this);
           player = playerFor(rt, rt.objects[id]!);
           if (!player) return;
-          if (!running) player.only(k);
+          player.only(k);
           scheduler.start(player, this, span.start);
           this.refresh();
         });
