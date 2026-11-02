@@ -171,3 +171,24 @@ class TestBoolMoves:
             f"{self.B} (animation a (on (transition (to true) (duration 1) (ease {ease}))))",
             "an ease for a bool takes only the values 0 and 1",
         )
+
+
+class TestChoiceMoves:
+    # A choice string moves like a bool: it changes at the start unless a discrete ease says
+    # otherwise.
+    SIDE = "(type side string (one-of 'left' 'right')) (side s 'left')"
+
+    def test_the_default(self):
+        assert steps(f"{self.SIDE} (animation a (s (transition (to 'right') (duration 1))))")[
+            4
+        ] == (
+            "step",
+            1,
+        )
+
+    def test_a_continuous_ease_is_an_error(self):
+        move = "(s (transition (to 'right') (duration 1) (ease 'linear')))"
+        error(
+            f"{self.SIDE} (animation a {move})",
+            "an ease for a choice takes only the values 0 and 1",
+        )

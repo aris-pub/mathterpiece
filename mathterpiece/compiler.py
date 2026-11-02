@@ -939,12 +939,14 @@ class _Compiler:
             )
         own = tr.attrs.get("ease")
         e = _ease_value(own) if own is not None else ease
-        if _core(t) == BOOL:
-            # A bool's ease must take only the values 0 and 1 (piecewise constant); none of the
-            # eases that exist so far does, except (step 1), the default: change at the start.
+        discrete = "bool" if _core(t) == BOOL else "choice" if _choices(t) else None
+        if discrete:
+            # A bool's or a choice's ease must take only the values 0 and 1 (piecewise
+            # constant), and only the standard library gives such eases; none exists yet
+            # besides (step 1), the default: change at the start of the move.
             if own is not None and e != ("step", 1):
                 raise CompileError(
-                    "an ease for a bool takes only the values 0 and 1; by default the bool"
+                    f"an ease for a {discrete} takes only the values 0 and 1; by default it"
                     " changes at the start of its move and holds",
                     node.pos,
                 )
