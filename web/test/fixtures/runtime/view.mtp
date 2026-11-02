@@ -1,0 +1,4 @@
+(scene s (circle c (r 1)) (circle dot (pos [5 5]) (r 1)))
+(canvas v s)
+(canvas fixed s (pan false) (zoom false))
+(on-drag dot (target dot.pos))

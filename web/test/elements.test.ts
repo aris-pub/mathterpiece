@@ -211,3 +211,80 @@ describe("a canvas's showing and hiding", () => {
     expect(opacityOf(rt, "d", "still")).toBe(1);
   });
 });
+
+describe("panning and zooming a canvas", () => {
+  const VIEW = docs["./data/runtime/view.mtpc"] as string;
+  const box = (name = "v") =>
+    document.querySelector(`mtp-canvas[name="${name}"] svg`)!.getAttribute("viewBox")!.split(" ").map(Number);
+  const svg = (name = "v") => document.querySelector(`mtp-canvas[name="${name}"] svg`)!;
+  const pointer = (type: string, x: number, y: number, id = 1, target: Element = svg()) =>
+    target.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: id, bubbles: true }));
+  // happy-dom's WheelEvent keeps only the deltas, so the rest is set on the event itself.
+  const wheel = (deltaY: number, ctrlKey: boolean, target: Element = svg()) => {
+    const event = new WheelEvent("wheel", { deltaY, cancelable: true });
+    Object.defineProperties(event, { ctrlKey: { value: ctrlKey }, clientX: { value: 0 }, clientY: { value: 0 } });
+    target.dispatchEvent(event);
+  };
+
+  it("zooms about the pointer on a pinch or a wheel with ctrl held", () => {
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    expect(box()).toEqual([-10, -10, 20, 20]);
+    // Without a canvas on screen the pointer's SVG coordinates are its page coordinates.
+    wheel(-500 * Math.log(2), true);
+    expect(box().map((n) => Math.round(n * 1e6) / 1e6)).toEqual([-5, -5, 10, 10]);
+  });
+
+  it("leaves a plain wheel to scroll the page", () => {
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    wheel(-50, false);
+    expect(box()).toEqual([-10, -10, 20, 20]);
+  });
+
+  it("pans when the reader drags where nothing is draggable", () => {
+    const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    pointer("pointerdown", 100, 100);
+    pointer("pointermove", 164, 132);
+    pointer("pointerup", 164, 132);
+    // 20 units over 640 pixels: the drawing follows the pointer, 2 units right and 1 down.
+    expect(box()).toEqual([-12, -11, 20, 20]);
+    expect(v("c", "x")).toBe(0);
+  });
+
+  it("drags a draggable shape instead of panning", () => {
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    const dot = document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]:last-child`)!;
+    pointer("pointerdown", 100, 100, 1, dot);
+    pointer("pointermove", 164, 132, 1, dot);
+    pointer("pointerup", 164, 132, 1, dot);
+    expect(box()).toEqual([-10, -10, 20, 20]);
+  });
+
+  it("zooms on a two-finger pinch", () => {
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    pointer("pointerdown", -10, 0, 1);
+    pointer("pointerdown", 10, 0, 2);
+    pointer("pointermove", -20, 0, 1);
+    pointer("pointermove", 20, 0, 2);
+    pointer("pointerup", -20, 0, 1);
+    pointer("pointerup", 20, 0, 2);
+    // The fingers go from 20 pixels apart to 40, so the view shows half as much.
+    expect(box()[2]).toBeCloseTo(10);
+  });
+
+  it("goes back to the author's view on a double click", () => {
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    pointer("pointerdown", 100, 100);
+    pointer("pointermove", 164, 132);
+    pointer("pointerup", 164, 132);
+    svg().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(box()).toEqual([-10, -10, 20, 20]);
+  });
+
+  it("does neither when the author turns them off", () => {
+    page(`<mtp-canvas model="m" name="fixed"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    wheel(-100, true, svg("fixed"));
+    pointer("pointerdown", 100, 100, 1, svg("fixed"));
+    pointer("pointermove", 164, 132, 1, svg("fixed"));
+    expect(box("fixed")).toEqual([-10, -10, 20, 20]);
+  });
+});

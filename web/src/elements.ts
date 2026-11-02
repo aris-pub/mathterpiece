@@ -8,7 +8,7 @@ import { type Doc, FORMAT_VERSION, type Obj, whenItems } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
 import { Runtime } from "./runtime.ts";
-import { draw, viewOf } from "./svg.ts";
+import { type Look, draw, lookBox, viewOf } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
@@ -173,9 +173,10 @@ export class MtpCanvas extends MtpPart {
     const drags = model.drags!;
     const clicks = model.clicks!;
     const fades = new Fades(rt, canvas, scheduler, () => this.redraw());
+    const look: Look = { scale: 1, dx: 0, dy: 0 };
     this.redraw = () => {
       fades.follow();
-      draw(rt, canvas, svg, (k) => fades.visible(k));
+      draw(rt, canvas, svg, (k) => fades.visible(k), look);
       for (const el of svg.querySelectorAll("[data-mtp-id]")) {
         const id = Number(el.getAttribute("data-mtp-id"));
         if (drags.draggable(id) || clicks.find(id)) (el as SVGElement).style.cursor = "pointer";
@@ -196,30 +197,83 @@ export class MtpCanvas extends MtpPart {
       const under = (event.target as Element).closest?.("[data-mtp-id]");
       return under ? Number(under.getAttribute("data-mtp-id")) : null;
     };
-    // The pointer in scene coordinates: through the SVG's own coordinates, then the canvas's view.
-    const toScene = (event: PointerEvent): [number, number] => {
+    // The pointer in the SVG's own coordinates, and in scene coordinates through the canvas's view.
+    const toUser = (event: { clientX: number; clientY: number }): [number, number] => {
       const ctm = svg.getScreenCTM?.();
-      let user: [number, number] = [event.clientX, event.clientY];
-      if (ctm) {
-        const m = [ctm.a, ctm.b, ctm.c, ctm.d, ctm.e, ctm.f];
-        user = apply(invert(m), user) as [number, number];
-      }
-      return apply(invert(viewOf(rt, canvas).toUser), user) as [number, number];
+      const at: [number, number] = [event.clientX, event.clientY];
+      if (!ctm) return at;
+      return apply(invert([ctm.a, ctm.b, ctm.c, ctm.d, ctm.e, ctm.f]), at) as [number, number];
+    };
+    const toScene = (event: PointerEvent): [number, number] =>
+      apply(invert(viewOf(rt, canvas).toUser), toUser(event)) as [number, number];
+    const allows = (attr: "pan" | "zoom") => Boolean(rt.value(canvas, attr));
+    if (allows("pan") || allows("zoom")) svg.style.touchAction = "none";
+    const zoomAbout = (at: [number, number], factor: number) => {
+      const [x, y, w, h] = viewOf(rt, canvas).box as [number, number, number, number];
+      const [cx, cy] = [x + w / 2, y + h / 2];
+      // The point under the pointer stays where it is.
+      look.dx = at[0] + (cx + look.dx - at[0]) / factor - cx;
+      look.dy = at[1] + (cy + look.dy - at[1]) / factor - cy;
+      look.scale *= factor;
+      this.redraw();
+    };
+    // A pinch on a trackpad comes as a wheel with ctrl held; a plain wheel scrolls the page.
+    svg.addEventListener("wheel", (event) => {
+      if (!allows("zoom") || !(event.ctrlKey || event.metaKey)) return;
+      event.preventDefault();
+      zoomAbout(toUser(event), Math.exp(-event.deltaY * 0.002));
+    });
+    svg.addEventListener("dblclick", () => {
+      Object.assign(look, { scale: 1, dx: 0, dy: 0 });
+      this.redraw();
+    });
+    // The pointers pressed where nothing is dragged, and where each is: one pans, two pinch.
+    const touches = new Map<number, [number, number]>();
+    const unitsPerPx = () =>
+      lookBox(viewOf(rt, canvas).box, look)[2]! / (svg.getBoundingClientRect?.().width || 640);
+    const spread = () => {
+      const [a, b] = [...touches.values()] as [[number, number], [number, number]];
+      return { gap: Math.hypot(a[0] - b[0], a[1] - b[1]), mid: { clientX: (a[0] + b[0]) / 2, clientY: (a[1] + b[1]) / 2 } };
     };
     // A click is a press and a release on the same shape; drawing replaces the elements, so
     // shapes are compared by id.
     let pressed: number | null = null;
     svg.addEventListener("pointerdown", (event) => {
       pressed = hitOf(event);
-      if (pressed === null || !drags.grab(pressed, toScene(event))) return;
-      scheduler.claim(drags.targets, drags);
+      if (pressed !== null && drags.grab(pressed, toScene(event))) {
+        scheduler.claim(drags.targets, drags);
+      } else if (allows("pan") || allows("zoom")) {
+        touches.set(event.pointerId, [event.clientX, event.clientY]);
+      } else {
+        return;
+      }
       event.preventDefault();
       svg.setPointerCapture?.(event.pointerId);
     });
     svg.addEventListener("pointermove", (event) => {
-      if (drags.dragging) drags.move(toScene(event));
+      if (drags.dragging) {
+        drags.move(toScene(event));
+        return;
+      }
+      const was = touches.get(event.pointerId);
+      if (!was) return;
+      if (touches.size === 1) {
+        if (!allows("pan")) return;
+        touches.set(event.pointerId, [event.clientX, event.clientY]);
+        const upp = unitsPerPx();
+        look.dx -= (event.clientX - was[0]) * upp;
+        look.dy -= (event.clientY - was[1]) * upp;
+        this.redraw();
+      } else if (touches.size === 2) {
+        const before = spread();
+        touches.set(event.pointerId, [event.clientX, event.clientY]);
+        const after = spread();
+        if (allows("zoom") && before.gap > 0) zoomAbout(toUser(after.mid), after.gap / before.gap);
+      }
     });
+    const lift = (event: PointerEvent) => touches.delete(event.pointerId);
     svg.addEventListener("pointerup", (event) => {
+      lift(event);
       drags.release();
       const released = hitOf(event);
       const listener = pressed !== null && pressed === released ? clicks.find(pressed) : null;
@@ -227,7 +281,10 @@ export class MtpCanvas extends MtpPart {
       const player = listener ? playerFor(rt, listener) : null;
       if (listener && player) scheduler.start(player, listener);
     });
-    svg.addEventListener("pointercancel", () => drags.release());
+    svg.addEventListener("pointercancel", (event) => {
+      lift(event);
+      drags.release();
+    });
   }
 
   protected update(): void {

@@ -1470,6 +1470,14 @@ class _Compiler:
             if node
             else Attribute(TRANSFORM, IDENTITY)
         )
+        # The reader may pan and zoom a canvas unless the author says not (reference.md).
+        for attr in ("pan", "zoom"):
+            node = self.take(items, attr)
+            obj.attrs[attr] = (
+                self.attribute(BOOL, node, obj.pos, attr, scope=self.cscope)
+                if node
+                else Attribute(BOOL, True)
+            )
         # What it shows, in the order written, which is the order it draws them in.
         obj.data.update({"shows": [], "transition": None})
         for item in items:

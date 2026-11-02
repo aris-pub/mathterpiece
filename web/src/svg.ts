@@ -26,6 +26,24 @@ export function viewOf(rt: Runtime, canvas: number): { box: number[]; toUser: nu
 }
 
 /**
+ * How far the reader has zoomed (scale) and panned (dx, dy, in the SVG's own units) a canvas:
+ * the canvas's own state, which writes nothing in the model.
+ */
+export interface Look {
+  scale: number;
+  dx: number;
+  dy: number;
+}
+
+/** The view box the reader sees: the author's, zoomed about its center and moved. */
+export function lookBox(box: number[], look?: Look): number[] {
+  if (!look) return box;
+  const [x, y, w, h] = box as [number, number, number, number];
+  const [width, height] = [w / look.scale, h / look.scale];
+  return [x + w / 2 + look.dx - width / 2, y + h / 2 + look.dy - height / 2, width, height];
+}
+
+/**
  * Draws a canvas: what it shows, and what each of its when items shows while it holds. visible
  * says how visible the k-th when item's shapes are, from 0 (not drawn) to 1, for a canvas fading
  * them in or out; by default, 1 while its condition holds and 0 otherwise.
@@ -35,10 +53,12 @@ export function draw(
   canvas: number,
   svg?: SVGSVGElement,
   visible?: (k: number) => number,
+  look?: Look,
 ): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
   out.replaceChildren();
-  const { box, toUser } = viewOf(rt, canvas);
+  const { box: authors, toUser } = viewOf(rt, canvas);
+  const box = lookBox(authors, look);
   out.setAttribute("viewBox", box.join(" "));
   const view = rt.objects[canvas]!;
   const shows = view.shows ?? [];

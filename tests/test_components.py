@@ -98,6 +98,11 @@ class TestViews:
         assert shows[1][1] == [m.id("d")]
         assert v.attrs["view-x"].value == -3 and v.attrs["view-width"].value == 20
 
+    def test_a_canvas_pans_and_zooms_unless_told_not_to(self):
+        m = model("(scene s (circle c)) (canvas v s) (canvas w s (pan false) (zoom false))")
+        assert m.get("v").attrs["pan"].value is True and m.get("v").attrs["zoom"].value is True
+        assert m.get("w").attrs["pan"].value is False and m.get("w").attrs["zoom"].value is False
+
     def test_a_canvas_keeps_the_order_its_items_are_written_in(self):
         m = model("(bool on true) (scene s (circle c) (circle d)) (canvas v (when on d) c)")
         shows = m.get("v").data["shows"]

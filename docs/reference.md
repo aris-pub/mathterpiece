@@ -8,7 +8,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 - **y points up** and x to the right, as in mathematics.
 - **Angles** are counterclockwise from the positive x axis. `(polar 1 90)` is straight up; `rotate` turns counterclockwise.
-- **A canvas's view box** is given by its lower-left corner (`view-x`, `view-y`) and its size (`view-width`, `view-height`), in scene units. The default is −10 to 10 in both directions. The whole view box is shown, scaled to fit the element and centered in it. A canvas's `transform` applies about the center of its view box.
+- **A canvas's view box** is given by its lower-left corner (`view-x`, `view-y`) and its size (`view-width`, `view-height`), in scene units. The default is −10 to 10 in both directions. The whole view box is shown, scaled to fit the element and centered in it. A canvas's `transform` applies about the center of its view box. The reader may pan and zoom what the view box shows (see "Panning and zooming"), which changes only what the canvas shows, never the view box's attributes.
 - **Stroke widths and font sizes are in screen units** (CSS pixels): a line keeps the same thickness on screen, and text the same size, whatever the view box and however the figure is scaled.
 - **Every shape has its own frame of reference.** It starts identical to the scene's; then the shape's `translate` and then its `transform` are applied (`translate` is the translation that comes first; `transform` is everything else, and may include further translations), and they apply to the shape and to everything below it in the scene tree. Both act about the origin of the container's frame, so `(rotate 30)` turns a shape around that origin, not around its own position; to turn a shape in place, put its offset inside the transform, after the rotation: `(transform (transform (rotate 30) (translate 6 -6)))`. A group's `translate` and `transform` are its own: they move its members, and are not spread over them.
 - **A position is written before the transforms of the shape's containers are applied.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1, then the group's translation moves it: it is drawn at 6. The author never converts anything by hand: what is written is where the shape sits before its containers move it.
@@ -86,7 +86,7 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 
 | Form | Name | Positional | Items |
 |---|---|---|---|
-| `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, drawn in the order written, each on top of those before it; `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)` |
+| `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, drawn in the order written, each on top of those before it; `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font |
 | `(slider name)` | required | none | `(animation …)`, `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, conditions |
@@ -122,6 +122,7 @@ What an attribute is when the author leaves it out:
 | toggle `value` | `false` |
 | slider `step` | none: the slider moves continuously |
 | play `buttons` | `false` |
+| canvas `pan`, `zoom` | `true`: the reader may pan and zoom it |
 
 Every type has a value used when no value or default is given: in a variable declared without one, `(real k)`, and in a parameter without a default that an instance or call leaves out.
 
@@ -154,6 +155,13 @@ Every control and listener emits writes to its target (or, through its animation
 - **A target that is a number the shape's position depends on** (`theta` in `(polar 1 theta)`) takes the value that brings the shape closest to where the pointer has moved it. The search starts from the current value and stays near it, so the shape never jumps to another position equally close (the far side of a circle). When no value reaches the pointer exactly, the closest is taken.
 - **A group** moves every member by the pointer's motion.
 - **A target** is the shape's own position or a number its position depends on.
+
+### Panning and zooming
+
+- **Pan:** dragging where no draggable shape is moves what the canvas shows with the pointer.
+- **Zoom:** a pinch, on a trackpad or with two fingers, or the wheel with ctrl or cmd held, zooms about the pointer. A plain wheel scrolls the page.
+- **A double click** goes back to the view box the author gave.
+- **Neither writes anything:** they are the canvas's own state, like its fades, so stroke widths and font sizes stay the same on screen. `(pan false)` or `(zoom false)` turns either off.
 
 ### Controls
 
