@@ -69,7 +69,7 @@ Where each shape is placed by its position: a circle's and an ellipse's center, 
 | `(color name value)` | required | a color | none | constraints |
 | `(font name)` | required | none | `(family string)`, `(style …)`, `(weight (real (>= 1) (<= 1000)))`, `(size real)` | none |
 
-Color and font variables are tokens: the page may restyle them through CSS custom properties (`--mtp-ink`), and no writer (control or listener) can write them.
+Color and font variables are tokens: the page may restyle them through CSS custom properties (`--mtp-ink`), so a token effectively acts as a bound variable, bound to the page's value (see the data model, "What changes, and what follows"), and no writer (control or listener) can write them.
 
 ### Transitions and animations
 

@@ -124,7 +124,7 @@ and then what its kind needs:
 
 | Kind | Further keys |
 |---|---|
-| `variable` | `"value"`: its value, free or bound; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded. The runtime draws with it through the CSS property `--mtp-<name>` (font variables through their parts: `--mtp-<name>-family` and so on), with its own value as the fallback, so the page's CSS restyles it; colors computed from tokens are passed to the browser as CSS color mixes. A token's own value is what expressions reading its channels or comparing it see. |
+| `variable` | `"value"`: its value, free or bound; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded: it effectively acts as a bound variable, bound to the page's value for its CSS property, which is not in the world model, so it is written with its declared value as the fallback. The runtime draws with it through the CSS property `--mtp-<name>` (font variables through their parts: `--mtp-<name>-family` and so on), with its own value as the fallback, so the page's CSS restyles it; colors computed from tokens are passed to the browser as CSS color mixes. A token's own value is what expressions reading its channels or comparing it see. |
 | `scene` | `"members"`: the ids of its shapes; `"attrs"`: `background` |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group` | `"attrs"`: every attribute, free or bound; `group` also `"members"` |
 | a motif instance | kind `instance`; `"of"`: the motif's name; `"members"`; `"attrs"`: its parameters, its bound variables and the shape arguments it takes |

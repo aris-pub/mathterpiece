@@ -103,6 +103,7 @@ Every variable, and every attribute of a mutable object, is either **free** or *
 
 - **Free**: it holds whatever was last written to it, starting with the object its declaration gives (a literal, a constant, or a default). A constant is the bare name of a `const` variable or of a built-in constant such as `pi`, or a read of a `const` attribute such as `c.r`: `(angle golden-angle)` is free, starting at golden-angle's value, as if that value were written. While the reader uses the page, only writers (controls and listeners) and the animations they run may write it. Free ones include a variable given a value, a shape attribute given a value, a motif parameter of an instance, and an attribute a variant leaves unset. A write to a group's attribute (`g.r`) writes each member's.
 - **Bound**: it is given by any other expression, and always equals that expression. Nothing may write it.
+- **A token**, a color or font variable, effectively acts as a bound variable: it is bound to something not declared in the world model, the page's value for its CSS custom property (`--mtp-ink`), with its declared value as the fallback. So it is never known when compiling, and nothing in the figure may write it.
 
 &nbsp;
 
