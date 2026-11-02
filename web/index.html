@@ -9,6 +9,8 @@
       mtp-canvas { display: block; width: min(90vw, 640px); }
       mtp-canvas svg { width: 100%; height: auto; }
       #controls > * { display: block; margin: 0.5rem 0; }
+      #values { border-collapse: collapse; font-family: ui-monospace, monospace; margin-top: 1rem; }
+      #values td { padding: 0.1rem 0.8rem 0.1rem 0; }
       [aria-pressed="true"] { font-weight: bold; }
       /* A page restyling a figure's color tokens: no mtp involved, only CSS. */
       :root.dark { background: #14161c; color: #e8e4d8; --mtp-ink: #e8e4d8; --mtp-paper: #14161c; }
@@ -31,6 +33,7 @@
     <mtp-model id="m"></mtp-model>
     <div id="canvases"></div>
     <div id="controls"></div>
+    <table id="values"></table>
     <script type="module">
       import "/src/index.ts";
       const figures = import.meta.glob(["/test/data/shared/*.mtpc", "/test/data/runtime/*.mtpc"], {
@@ -45,6 +48,21 @@
       pick.value = examples.find((p) => name(p) === chosen) ?? examples[0];
       const load = async () => {
         const doc = JSON.parse(await figures[pick.value]());
+        // A figure with no canvas of its own, such as most shared cases, is shown in one that
+        // draws its whole scene, so there is always something to see.
+        const scene = doc.objects.findIndex((o) => o.kind === "scene");
+        if (scene >= 0 && !doc.objects.some((o) => o.kind === "canvas")) {
+          const free = (v) => ({ type: "real", free: v });
+          doc.names["whole scene"] = doc.objects.length;
+          doc.objects.push({
+            kind: "canvas", type: { component: "canvas" }, access: "page", name: "whole scene",
+            members: [scene], when: [], transition: null,
+            attrs: {
+              "view-x": free(-10), "view-y": free(-10), "view-width": free(20), "view-height": free(20),
+              transform: { type: "transform", free: [1, 0, 0, 1, 0, 0] },
+            },
+          });
+        }
         const controls = document.getElementById("controls");
         controls.replaceChildren();
         const canvases = document.getElementById("canvases");
@@ -73,6 +91,26 @@
           el.setAttribute("name", o.name);
           controls.append(el);
         }
+        // Every variable and its value, kept current, for figures that are mostly values.
+        const model = document.getElementById("m");
+        const table = document.getElementById("values");
+        const rows = doc.objects.flatMap((o, i) => (o.kind === "variable" ? [[o.name ?? `#${i}`, i]] : []));
+        const show = () => {
+          table.replaceChildren(
+            ...rows.map(([n, i]) => {
+              const tr = document.createElement("tr");
+              const v = model.runtime?.value(i);
+              for (const text of [n, JSON.stringify(v)]) {
+                const td = document.createElement("td");
+                td.textContent = text;
+                tr.append(td);
+              }
+              return tr;
+            }),
+          );
+        };
+        model.addEventListener("mtp-change", show);
+        show();
         history.replaceState(null, "", `?example=${name(pick.value)}`);
       };
       pick.onchange = load;
