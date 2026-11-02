@@ -337,3 +337,14 @@ class TestPowerRange:
         e = model(src).get("d").value.expr
         assert e.type == INT
         assert e.range == (14, 112)
+
+
+class TestBoundListLength:
+    # A list declared from an expression always equals it, so it keeps that expression's length;
+    # a free list may be replaced by a move, so it needs (length n) (type-system.md, "Known
+    # lengths").
+    def test_a_bound_list_keeps_its_length(self):
+        model("(real k 1) (list xs [k (* 2 k)]) (real d (. xs 1))")
+
+    def test_a_free_list_does_not(self):
+        error("(list[real] xs [1 2]) (real d (. xs 1))", "may be none")

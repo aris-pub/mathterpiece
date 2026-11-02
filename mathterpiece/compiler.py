@@ -402,6 +402,14 @@ class _Compiler:
             place = self.place(t, node, form.pos, "the value", scope=scope)
         finally:
             self.where = saved
+        inner = _inner(t)
+        has_length = isinstance(inner, Refine) and any(c[0] == "length" for c in inner.constraints)
+        if place.expr is not None and isinstance(_core(t), ListT) and not has_length:
+            # A bound list always equals its expression, so it keeps that expression's length.
+            n = _length(place.expr)
+            if n is not None:
+                t = _with_length(t, n)
+                place.type = t
         access = self.access_of(place.deps)[0]
         self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
 
@@ -3116,6 +3124,14 @@ def _power_range(base: tuple[float, float], exp: tuple[float, float]) -> Range:
             ends.append(at(0.0, n) if n > 0 else 1.0)
         return (min(ends), max(ends))
     return WHOLE
+
+
+def _with_length(t: Type, n: int) -> Type:
+    if isinstance(t, Maybe):
+        return Maybe(_with_length(t.inner, n))
+    if isinstance(t, Refine):
+        return replace(t, constraints=(*t.constraints, ("length", n)))
+    return Refine(t, (("length", n),))
 
 
 def _with_range(t: Type, r: Range) -> Type:
