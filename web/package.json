@@ -2,7 +2,7 @@
   "name": "mathterpiece-web",
   "private": true,
   "type": "module",
-  "description": "The mathterpiece web runtime: plays the JSON the compiler writes.",
+  "description": "The mathterpiece web runtime: plays the .mtpc the compiler writes.",
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

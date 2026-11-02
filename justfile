@@ -39,11 +39,9 @@ web-dev: web-examples
 web-typecheck:
     cd web && pnpm typecheck
 
-# build the web runtime and copy it where mtp build looks for it
+# build the web runtime bundle (web/dist/mathterpiece.js)
 build-web:
     cd web && pnpm build
-    mkdir -p mathterpiece/web
-    cp web/dist/mathterpiece.js mathterpiece/web/mathterpiece.js
 
 # run lint, type check, and tests, for Python and the web runtime
 check: lint typecheck test web-typecheck web-test

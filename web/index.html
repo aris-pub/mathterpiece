@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>mathterpiece examples</title>
+    <title>mathterpiece figures</title>
     <style>
       body { font-family: system-ui, sans-serif; margin: 2rem; }
       mtp-canvas { display: block; width: min(90vw, 640px); }
@@ -23,7 +23,8 @@
     </style>
   </head>
   <body>
-    <!-- For trying the runtime by hand: just web-dev, then pick an example. -->
+    <!-- For trying the runtime by hand: just web-dev, then pick a figure (the shared cases and
+         the runtime's test fixtures, built to .mtpc by just web-examples). -->
     <select id="pick"></select>
     <button id="theme" type="button">dark page</button>
     <button id="fonts" type="button">page fonts</button>
@@ -32,14 +33,18 @@
     <div id="controls"></div>
     <script type="module">
       import "/src/index.ts";
-      const examples = Object.keys(import.meta.glob("/test/data/examples/*.json"));
+      const figures = import.meta.glob(["/test/data/shared/*.mtpc", "/test/data/runtime/*.mtpc"], {
+        query: "?raw",
+        import: "default",
+      });
+      const examples = Object.keys(figures);
       const pick = document.getElementById("pick");
-      const name = (path) => path.split("/").pop().replace(".json", "");
+      const name = (path) => path.split("/").pop().replace(".mtpc", "");
       for (const path of examples) pick.add(new Option(name(path), path));
       const chosen = new URLSearchParams(location.search).get("example");
       pick.value = examples.find((p) => name(p) === chosen) ?? examples[0];
       const load = async () => {
-        const doc = await (await fetch(pick.value)).json();
+        const doc = JSON.parse(await figures[pick.value]());
         const controls = document.getElementById("controls");
         controls.replaceChildren();
         const canvases = document.getElementById("canvases");

@@ -12,12 +12,8 @@ wheels/
 # Web runtime
 web/node_modules/
 web/dist/
-# The runtime bundle copied for mtp build; not committed for now
-mathterpiece/web/
-# Built from examples/ by just web-examples
-web/test/data/examples/
+# Built by just web-examples
 web/test/data/shared/
 web/test/data/runtime/
-web/test/data/fixtures/
 # Screenshots Vitest saves when a browser test fails
 web/.vitest/
