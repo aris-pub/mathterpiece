@@ -8,8 +8,8 @@ from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, ComponentT
 
 K = "(real k 0 (>= 0) (<= 10))"
-MOVE = "(animation (transit _ k (to 5) (duration 1)))"
-SLIDE = "(transit _ k (from 0) (to 5))"
+MOVE = "(animation (move k (to 5) (duration 1)))"
+SLIDE = "(move k (from 0) (to 5))"
 
 
 def model(src):

@@ -135,18 +135,18 @@
   (on-click space[i] (animation (default-duration 0.4) (at-once
     ; Which point x and y sit on: an int jumps at the start, never passing the points between.
     (at-once (default-ease (step 1))
-      (transit _ x-from (to (if replace-x x-to x-from)))
-      (transit _ y-from (to (if replace-x y-from y-to)))
-      (transit _ x-to (to (if replace-x i x-to)))
-      (transit _ y-to (to (if replace-x y-to i))))
-    (transit _ x-t (from (if replace-x 0 x-t)) (to 1))
-    (transit _ y-t (from (if replace-x y-t 0)) (to 1))
-    (transit _ share (to 1))
-    (transit _ replace-x (to (not replace-x)) (duration 0))))))
+      (move x-from (to (if replace-x x-to x-from)))
+      (move y-from (to (if replace-x y-from y-to)))
+      (move x-to (to (if replace-x i x-to)))
+      (move y-to (to (if replace-x y-to i))))
+    (move x-t (from (if replace-x 0 x-t)) (to 1))
+    (move y-t (from (if replace-x y-t 0)) (to 1))
+    (move share (to 1))
+    (move replace-x (to (not replace-x)) (duration 0))))))
 
-(slider radius (transit _ share (from 0) (to 1)) (label 'r'))
+(slider radius (move share (from 0) (to 1)) (label 'r'))
 
-(play grow (animation (transit _ share (from 0) (to 1) (duration 3.6) (ease 'linear'))))
+(play grow (animation (move share (from 0) (to 1) (duration 3.6) (ease 'linear'))))
 
 (readout note
   (let ((cx (count space (fn p (in-ball x.pos r p.pos))))

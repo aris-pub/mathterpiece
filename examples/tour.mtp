@@ -29,26 +29,26 @@
 ; Each stop of the tour moves the multiplier, the color of the chords and the caption together.
 (animation cardioid
   (at-once (default-duration 3) (default-ease 'ease-in-out')
-    (transit _ table.m (to 2))
-    (transit _ table.stroke (to '#ffb703'))
-    (transit _ curve (to 'cardioid'))))
+    (move table.m (to 2))
+    (move table.stroke (to '#ffb703'))
+    (move curve (to 'cardioid'))))
 (animation nephroid
   (at-once (default-duration 3) (default-ease 'ease-in-out')
-    (transit _ table.m (to 3))
-    (transit _ table.stroke (to '#8ecae6'))
-    (transit _ curve (to 'nephroid'))))
+    (move table.m (to 3))
+    (move table.stroke (to '#8ecae6'))
+    (move curve (to 'nephroid'))))
 (animation eight-cusps
   (at-once (default-duration 4) (default-ease 'ease-in-out')
-    (transit _ table.m (to 9))
-    (transit _ table.stroke (to '#f4978e'))
-    (transit _ curve (to 'eight cusps'))))
+    (move table.m (to 9))
+    (move table.stroke (to '#f4978e'))
+    (move curve (to 'eight cusps'))))
 
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
   (animation
-    (in-order cardioid (transit _ none (duration 1)))
-    (in-order nephroid (transit _ none (duration 1)))
+    (in-order cardioid (move none (duration 1)))
+    (in-order nephroid (move none (duration 1)))
     eight-cusps))
 
 (canvas cnv board)
-(slider times (transit _ table.m (from 2) (to 12)) (label 'times'))
+(slider times (move table.m (from 2) (to 12)) (label 'times'))

@@ -13,7 +13,7 @@ A point on a circle, a slider and a drag that move it, and a number in the prose
       (circle p (pos (polar 1 theta)) (r 0.08) (fill 'crimson'))
       (line radius (from [0 0]) (to p.pos) (stroke 'crimson')))
 
-    (slider spin (transit _ theta (from 0) (to 360)) (label 'angle'))
+    (slider spin (move theta (from 0) (to 360)) (label 'angle'))
     (on-drag p theta)
 
     (canvas v s)
@@ -47,7 +47,7 @@ Everything in a file is an expression: a literal, a name, or a form. Names may b
 
 ### Names
 
-A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`. These words are reserved and cannot be used as names: `scene`, `animation`, `transit`, `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`.
+A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`. These words are reserved and cannot be used as names: `scene`, `animation`, `transition`, `move`, `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`.
 
 ### Forms
 
@@ -166,10 +166,10 @@ Every form follows one template:
     (head name? positional… option… body…)
 
 - **The head** says what the form is.
-- **The name** comes next, for a form that has one. Some forms have none: listeners (`on-drag`, `on-click`), and an animation written inside a control. A transit written inside another form gives `_` (`none`) as its name.
+- **The name** comes next, for a form that has one. Some forms have none: listeners (`on-drag`, `on-click`), an animation written inside a control, and `move`, which writes a transition in place.
 - **Positional arguments** come next, recognized by where they are. Each form fixes how many it takes, and some take none. A positional argument may be left out when the form allows it: a variable's value, as in `(real k (>= 0))`.
 - **Optional arguments** come next, in any order. Each is a form recognized by its head, such as `(r 1)`, `(fill 'red')` or `(when on)`, and is given at most once.
-- **The body** comes last: any number of items, or none. What it holds depends on the form: member declarations, a variable's constraints, the shapes a canvas shows, a writer's conditions, the transits of an animation.
+- **The body** comes last: any number of items, or none. What it holds depends on the form: member declarations, a variable's constraints, the shapes a canvas shows, a writer's conditions, the moves of an animation.
 
 Each form decides whether it has a name, which positional arguments it takes and which of them may be left out, which optional arguments it takes, and what its body holds. An optional argument written after the body is a compile error.
 
@@ -181,9 +181,9 @@ Each form decides whether it has a name, which positional arguments it takes and
 | `(group marks (fill 'red') (circle m0) (circle m1))` | `marks` | none | `(fill 'red')` | two member declarations |
 | `(func double (real x) (* 2 x))` | `double` | `(real x)`, `(* 2 x)` | none | none |
 | `(motif dial ((real t 0.5)) (circle face …) …)` | `dial` | its parameters, `((real t 0.5))` | none | member declarations |
-| `(transit slide none (to 5) (duration 1))` | `slide` | the target, here `none` | `(to 5)`, `(duration 1)` | none |
-| `(animation grow (default-duration 1) (transit _ theta (like slide)) (transit _ none (duration 0.5)))` | `grow` | none | `(default-duration 1)` | a transit that moves `theta` along `slide`, then one that waits half a second |
-| `(slider spin (transit _ theta (from 0) (to 360)) (label 'angle'))` | `spin` | the transit | `(label 'angle')` | none |
+| `(transition slide none (to 5) (duration 1))` | `slide` | the target, here `none` | `(to 5)`, `(duration 1)` | none |
+| `(animation grow (default-duration 1) (move theta (like slide)) (move none (duration 0.5)))` | `grow` | none | `(default-duration 1)` | a move of `theta` along `slide`, then one that waits half a second |
+| `(slider spin (move theta (from 0) (to 360)) (label 'angle'))` | `spin` | the move | `(label 'angle')` | none |
 | `(canvas v (view-x -5) a b (when show c))` | `v` | none | `(view-x -5)` | `a`, `b`, `(when show c)` |
 | `(on-drag p theta)` | none | `p`, `theta` | none | none |
 

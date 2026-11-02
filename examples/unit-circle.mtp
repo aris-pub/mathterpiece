@@ -117,7 +117,7 @@
 ; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
 ; function on or off fades its line, name and value in or out.
 (canvas view (view-x -2.1) (view-y -1.35) (view-width 3.6) (view-height 2.7)
-  (transit _ none (duration 0.4) (ease 'ease-in-out'))
+  (move none (duration 0.4) (ease 'ease-in-out'))
   frame
   (when show-sec.value secant)
   (when show-csc.value cosecant)
@@ -129,7 +129,7 @@
 
 ; Dragging the point changes theta, so the point slides along the circle under the pointer.
 (on-drag handle theta)
-(slider turn (transit _ theta (from 0) (to 360)) (label 'θ'))
+(slider turn (move theta (from 0) (to 360)) (label 'θ'))
 
 ; For the prose around the figure: the same numbers, set in the number font.
 (readout x-now $'{(cosd theta):+z.3f}' (font number))

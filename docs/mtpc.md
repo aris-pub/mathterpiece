@@ -149,7 +149,7 @@ Motif and variant instances are written out in full: the runtime never builds an
     ["at-once", step, …]
     ["in-order", step, …]
 
-A move carries its own `duration` and `ease`, resolved from the transition and the nearest enclosing default, so one named transition can be used in animations with different defaults. An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`. A transit with a target, in an animation's body, is written as a move; a transit whose target is `none`, as a wait. A slider's transit is written as an animation of one move, with duration 1, which the compiler adds.
+A move carries its own `duration` and `ease`, resolved from the transition and the nearest enclosing default, so one named transition can be used in animations with different defaults. An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`. A `(move …)` with a target, or the name of a transition, in an animation's body, is written as a move; a `(move none …)`, as a wait. A slider's move is written as an animation of one move, with duration 1, which the compiler adds.
 
 ### Transitions
 

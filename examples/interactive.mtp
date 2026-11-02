@@ -24,10 +24,10 @@
   (text caption $'times {table.m:g}' (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
 (canvas cnv board)
-(slider multiplier (transit _ table.m (from 2) (to 40)) (label 'times'))
-(slider spin (transit _ table.turn (from -180) (to 180)) (label 'rotate'))
+(slider multiplier (move table.m (from 2) (to 40)) (label 'times'))
+(slider spin (move table.turn (from -180) (to 180)) (label 'rotate'))
 ; Going back to 2 means nothing when times is already 2.
 (button reset
-  (animation (transit _ table.m (to 2) (duration 2) (ease 'ease-in-out')))
+  (animation (move table.m (to 2) (duration 2) (ease 'ease-in-out')))
   (label 'back to 2')
   (when (!= table.m 2)))

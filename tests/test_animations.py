@@ -24,60 +24,55 @@ K = "(real k 0 (>= 0) (<= 10))"
 
 class TestTransitions:
     def test_a_named_transition(self):
-        m = model(
-            f"{K} (transit up none (to 5) (duration 1)) (animation a (transit _ k (like up)))"
-        )
+        m = model(f"{K} (transition up none (to 5) (duration 1)) (animation a (move k (like up)))")
         t = m.get("up")
         assert t.kind == "transition"
         assert t.attrs["to"].value == 5
         assert "from" not in t.attrs
-        # (like up) makes the step a transit of its own, with up's arguments.
+        # (like up) makes the move a transition of its own, with up's arguments.
         move = m.get("a").data["steps"]
         assert (move[0], move[1], move[3:]) == ("move", (m.id("k"), None), (1, "linear"))
         assert m.objects[move[2]].attrs["to"].value == 5
 
     def test_an_inline_transition_comes_before_its_holder(self):
-        m = model(f"{K} (animation a (transit _ k (to 5) (duration 1)))")
+        m = model(f"{K} (animation a (move k (to 5) (duration 1)))")
         (tid,) = [i for i, o in enumerate(m.objects) if o.kind == "transition"]
         assert tid == m.id("a") - 1
 
     def test_the_end_must_fit_what_it_moves(self):
-        error(f"{K} (animation a (transit _ k (to 'x') (duration 1)))", "expected real")
+        error(f"{K} (animation a (move k (to 'x') (duration 1)))", "expected real")
 
     def test_a_string_end_becomes_a_color(self):
-        m = model("(scene s (circle c)) (animation a (transit _ c.fill (to 'red') (duration 1)))")
+        m = model("(scene s (circle c)) (animation a (move c.fill (to 'red') (duration 1)))")
         (t,) = [o for o in m.objects if o.kind == "transition"]
         assert t.attrs["to"].value == "#ff0000ff"
 
     def test_an_end_that_may_be_none(self):
         src = "(real|none e) (scene s (circle c))"
-        error(f"{K} {src} (animation a (transit _ k (to e) (duration 1)))", "may be none")
-        model(
-            "(color|none e) (scene s (circle c))"
-            "(animation a (transit _ c.fill (to e) (duration 1)))"
-        )
+        error(f"{K} {src} (animation a (move k (to e) (duration 1)))", "may be none")
+        model("(color|none e) (scene s (circle c))(animation a (move c.fill (to e) (duration 1)))")
 
     def test_eases_and_paths(self):
         m = model(
             f"{K} (func half ((real a) (real b) (real t)) (+ a (* t (- b a))))"
-            "(animation a (transit _ k (to 5) (duration 1) (ease (step 4)) (path half)))"
+            "(animation a (move k (to 5) (duration 1) (ease (step 4)) (path half)))"
         )
         (t,) = [o for o in m.objects if o.kind == "transition"]
         assert t.attrs["ease"].value == ("step", 4)
         assert t.attrs["path"].expr.op == "func"
-        error(f"{K} (animation a (transit _ k (to 5) (duration 1) (ease 'wobbly')))", "ease")
+        error(f"{K} (animation a (move k (to 5) (duration 1) (ease 'wobbly')))", "ease")
 
     def test_a_negative_duration(self):
-        error(f"{K} (animation a (transit _ k (to 5) (duration -1)))", "cannot be negative")
+        error(f"{K} (animation a (move k (to 5) (duration -1)))", "cannot be negative")
 
 
 class TestSteps:
     def test_defaults_and_nesting(self):
         s = steps(
             f"{K} (real j 0) (animation a (default-duration 2) (default-ease 'ease-in')"
-            " (transit _ k (to 5)) (transit _ none (duration 1))"
-            " (at-once (default-duration 3) (transit _ j (to 1))"
-            " (transit _ k (to 1) (duration 4))))"
+            " (move k (to 5)) (move none (duration 1))"
+            " (at-once (default-duration 3) (move j (to 1))"
+            " (move k (to 1) (duration 4))))"
         )
         assert s[0] == "in-order"
         assert s[1][3:] == (2, "ease-in")
@@ -85,42 +80,42 @@ class TestSteps:
         assert s[3][0] == "at-once"
         assert s[3][1][3] == 3 and s[3][2][3] == 4
 
-    def test_a_step_takes_a_transitions_items_directly(self):
+    def test_a_move_takes_a_transitions_items(self):
         # reference.md "Transitions and animations": inside a step, the transition is implied.
-        s = steps(f"{K} (animation a (transit _ k (from 1) (to 5) (duration 2) (ease 'ease-in')))")
+        s = steps(f"{K} (animation a (move k (from 1) (to 5) (duration 2) (ease 'ease-in')))")
         assert s[3:] == (2, "ease-in")
 
-    def test_a_step_takes_a_named_transition(self):
+    def test_a_move_takes_a_named_transition(self):
         steps(
-            f"{K} (transit slide none (to 5) (duration 1)) (animation a (transit _ k (like slide)))"
+            f"{K} (transition slide none (to 5) (duration 1)) (animation a (move k (like slide)))"
         )
 
-    def test_an_animation_holds_only_transits_at_once_and_in_order(self):
-        error(f"{K} (animation a (k (to 5) (duration 1)))", "holds transits, at-once and in-order")
+    def test_an_animation_holds_only_moves_at_once_and_in_order(self):
+        error(f"{K} (animation a (k (to 5) (duration 1)))", "holds moves, at-once and in-order")
 
-    def test_a_transit_with_no_target_only_waits(self):
-        assert steps(f"{K} (animation a (transit _ none (duration 2)))") == ("wait", 2)
-        error(f"{K} (animation a (transit _ none (to 1) (duration 2)))", "takes only a duration")
+    def test_a_move_with_no_target_only_waits(self):
+        assert steps(f"{K} (animation a (move none (duration 2)))") == ("wait", 2)
+        error(f"{K} (animation a (move none (to 1) (duration 2)))", "takes only a duration")
 
-    def test_a_named_transit_with_a_target_is_a_move(self):
-        s = steps(f"{K} (transit grow k (to 5) (duration 1)) (animation a grow)")
+    def test_a_named_transition_with_a_target_is_a_move(self):
+        s = steps(f"{K} (transition grow k (to 5) (duration 1)) (animation a grow)")
         assert s[0] == "move" and s[3] == 1
 
-    def test_like_copies_a_named_transit_under_its_own_arguments(self):
-        src = f"{K} (transit slide none (to 5) (duration 1))"
-        src += " (animation a (transit _ k (like slide) (duration 3)))"
+    def test_like_copies_a_named_transition_under_its_own_arguments(self):
+        src = f"{K} (transition slide none (to 5) (duration 1))"
+        src += " (animation a (move k (like slide) (duration 3)))"
         assert steps(src)[3] == 3
 
     def test_a_transition_needs_a_duration(self):
-        error(f"{K} (animation a (transit _ k (to 5)))", "needs a duration")
+        error(f"{K} (animation a (move k (to 5)))", "needs a duration")
 
     def test_what_can_be_moved(self):
         m = model(
             "(motif dot (real k 0) (circle c)) (scene s (dot d) (group g (circle a) (circle b)))"
-            "(animation an (transit _ d.k (to 1) (duration 1))"
-            " (transit _ g[1].r (to 2) (duration 1))"
-            " (transit _ g.r (to 3) (duration 1))"
-            " (transit _ d.c.pos (to [1 1]) (duration 1)))"
+            "(animation an (move d.k (to 1) (duration 1))"
+            " (move g[1].r (to 2) (duration 1))"
+            " (move g.r (to 3) (duration 1))"
+            " (move d.c.pos (to [1 1]) (duration 1)))"
         )
         s = m.get("an").data["steps"]
         assert [x[1] for x in s[1:]] == [
@@ -139,16 +134,16 @@ class TestSteps:
         ],
     )
     def test_what_cannot_be_moved(self, src, message):
-        error(f"{src} (animation a (transit _ k (to 1) (duration 1)))", message)
+        error(f"{src} (animation a (move k (to 1) (duration 1)))", message)
 
     def test_a_fixed_attribute(self):
         src = "(variant bar () (rect _ (width 1))) (scene s (bar b))"
-        error(f"{src} (animation a (transit _ b.width (to 2) (duration 1)))", "fixed")
+        error(f"{src} (animation a (move b.width (to 2) (duration 1)))", "fixed")
 
 
 class TestButtons:
     def test_a_button(self):
-        m = model(f"{K} (button b (animation (transit _ k (to 5) (duration 1))))")
+        m = model(f"{K} (button b (animation (move k (to 5) (duration 1))))")
         b = m.get("b")
         assert b.kind == "button"
         assert m.objects[b.data["animation"]].kind == "animation"
@@ -156,12 +151,12 @@ class TestButtons:
         assert b.access == "page"
 
     def test_a_named_animation(self):
-        m = model(f"{K} (animation a (transit _ k (to 5) (duration 1))) (button b (animation a))")
+        m = model(f"{K} (animation a (move k (to 5) (duration 1))) (button b (animation a))")
         assert m.get("b").data["animation"] == m.id("a")
 
     def test_conditions_clamp_what_is_written(self):
         m = model(
-            f"{K} (real lim 3) (button b (animation (transit _ k (to 5) (duration 1)))"
+            f"{K} (real lim 3) (button b (animation (move k (to 5) (duration 1)))"
             " (<= k lim) (> 1 k))"
         )
         c = m.get("b").data["conditions"]
@@ -172,7 +167,7 @@ class TestButtons:
         assert (m.id("lim"), None) in c[0]["limit"].deps
 
     def test_a_condition_that_is_not_a_limit(self):
-        src = f"{K} (real j) (button b (animation (transit _ k (to 5) (duration 1)))"
+        src = f"{K} (real j) (button b (animation (move k (to 5) (duration 1)))"
         error(f"{src} (> j 1))", "compares an attribute this writer writes")
         error(f"{src} (> k (* 2 k)))", "compares an attribute this writer writes")
 
@@ -183,11 +178,11 @@ class TestBoolMoves:
     B = "(bool on false)"
 
     def test_the_default_is_one_jump_at_the_start(self):
-        s = steps(f"{self.B} (animation a (transit _ on (to true) (duration 1)))")
+        s = steps(f"{self.B} (animation a (move on (to true) (duration 1)))")
         assert s[4] == ("step", 1)
 
     def test_an_enclosing_default_ease_that_is_not_a_step_does_not_apply(self):
-        move = "(transit _ on (to true) (duration 1))"
+        move = "(move on (to true) (duration 1))"
         src = f"{self.B} (animation a (default-ease 'ease-in') {move})"
         assert steps(src)[4] == ("step", 1)
 
@@ -195,7 +190,7 @@ class TestBoolMoves:
     def test_an_ease_that_takes_values_other_than_0_and_1(self, ease):
         # (step 3) jumps to 1/3 and 2/3, which mean nothing for a bool.
         error(
-            f"{self.B} (animation a (transit _ on (to true) (duration 1) (ease {ease})))",
+            f"{self.B} (animation a (move on (to true) (duration 1) (ease {ease})))",
             "an ease for a bool takes only the values 0 and 1",
         )
 
@@ -206,13 +201,13 @@ class TestChoiceMoves:
     SIDE = "(type side string (one-of 'left' 'right')) (side s 'left')"
 
     def test_the_default(self):
-        assert steps(f"{self.SIDE} (animation a (transit _ s (to 'right') (duration 1)))")[4] == (
+        assert steps(f"{self.SIDE} (animation a (move s (to 'right') (duration 1)))")[4] == (
             "step",
             1,
         )
 
     def test_a_continuous_ease_is_an_error(self):
-        move = "(transit _ s (to 'right') (duration 1) (ease 'linear'))"
+        move = "(move s (to 'right') (duration 1) (ease 'linear'))"
         error(
             f"{self.SIDE} (animation a {move})",
             "an ease for a choice takes only the values 0 and 1",
@@ -224,26 +219,26 @@ class TestStepEase:
     B = "(bool on false)"
 
     def test_a_bool_may_take_it(self):
-        move = "(transit _ on (to true) (duration 1) (ease (step-ease 0.5)))"
+        move = "(move on (to true) (duration 1) (ease (step-ease 0.5)))"
         assert steps(f"{self.B} (animation a {move})")[4] == ("step-ease", 0.5)
 
     def test_its_point_is_from_0_to_1_known_when_compiling(self):
-        move = "(transit _ on (to true) (duration 1) (ease (step-ease 2)))"
+        move = "(move on (to true) (duration 1) (ease (step-ease 2)))"
         error(f"{self.B} (animation a {move})", r"2 breaks \(<= 1\)")
 
 
 class TestStringMoves:
     # A string, like a bool or a choice, changes at the start of its move by default.
     def test_the_default(self):
-        src = "(string s 'a') (animation a (transit _ s (to 'b') (duration 1)))"
+        src = "(string s 'a') (animation a (move s (to 'b') (duration 1)))"
         assert steps(src)[4] == ("step", 1)
 
 
 class TestNamedAnimationsAsSteps:
     def test_a_named_animation_runs_its_steps_in_place(self):
         src = (
-            f"{K} (real j 0) (animation one (transit _ k (to 5) (duration 1)))"
-            "(animation a one (transit _ none (duration 1)) (transit _ j (to 2) (duration 1)))"
+            f"{K} (real j 0) (animation one (move k (to 5) (duration 1)))"
+            "(animation a one (move none (duration 1)) (move j (to 2) (duration 1)))"
         )
         m = model(src)
         s = m.get("a").data["steps"]
@@ -258,7 +253,7 @@ class TestRepeatedListeners:
             "(real k 0)"
             "(scene s (repeat 3 i (circle (name $'c{i}'))))"
             "(repeat 3 i (on-click (name $'c{i}')"
-            " (animation (transit _ k (to i) (duration 0)))))"
+            " (animation (move k (to i) (duration 0)))))"
         )
         m = model(src)
         clicks = [o for o in m.objects if o.kind == "on-click"]
@@ -266,12 +261,12 @@ class TestRepeatedListeners:
 
 
 class TestCanvasFades:
-    # reference.md "Transitions and animations": a canvas's pure transit is how its when items
+    # reference.md "Transitions and animations": a canvas's pure move is how its when items
     # fade in and out; fade is not a path.
-    def test_a_canvas_takes_a_pure_transit(self):
-        m = model("(scene s (circle c)) (canvas v (transit _ none (duration 1)) c)")
+    def test_a_canvas_takes_a_pure_move(self):
+        m = model("(scene s (circle c)) (canvas v (move none (duration 1)) c)")
         (t,) = [o for o in m.objects if o.kind == "transition"]
         assert m.get("v").data["transition"] == m.objects.index(t)
 
     def test_fade_is_not_a_path(self):
-        error("(scene s (circle c)) (canvas v (transit _ none (duration 1) (path fade)) c)", "fade")
+        error("(scene s (circle c)) (canvas v (move none (duration 1) (path fade)) c)", "fade")

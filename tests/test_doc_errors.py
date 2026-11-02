@@ -63,14 +63,14 @@ CASES = [
     ),
     # reference.md "Defaults": a transition with no duration.
     (
-        "(real k)\n(animation a (transit _ k (to 1)))",
+        "(real k)\n(animation a (move k (to 1)))",
         "2:14",
-        "this transit needs a duration (or a default-duration around it)",
+        "this move needs a duration (or a default-duration around it)",
     ),
     # reference.md "Writes and conditions": a condition that is not a limit.
     (
-        "(real k)\n(real j)\n(button b (animation (transit _ k (to 1) (duration 1))) (> j 1))",
-        "3:57",
+        "(real k)\n(real j)\n(button b (animation (move k (to 1) (duration 1))) (> j 1))",
+        "3:52",
         "a condition compares an attribute this writer writes with a limit that does not depend on"
         " it, such as (>= k 0)",
     ),

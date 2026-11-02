@@ -69,7 +69,9 @@ class TestNames:
     def test_unique(self):
         error("(real k 1) (real k 2)", "'k' is already declared")
 
-    @pytest.mark.parametrize("word", ["scene", "when", "else", "self", "const", "transit"])
+    @pytest.mark.parametrize(
+        "word", ["scene", "when", "else", "self", "const", "move", "transition"]
+    )
     def test_reserved_words(self, word):
         error(f"(real {word} 1)", f"'{word}' is reserved")
 
