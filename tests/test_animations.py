@@ -243,6 +243,6 @@ class TestRepeatedListeners:
 
 class TestFadePath:
     def test_fade_is_written_bare(self):
-        m = model("(scene s (circle c)) (canvas v c (transition (duration 1) (path fade)))")
+        m = model("(scene s (circle c)) (canvas v (transition (duration 1) (path fade)) c)")
         (t,) = [o for o in m.objects if o.kind == "transition"]
         assert t.attrs["path"].value == "fade"

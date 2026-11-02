@@ -107,7 +107,7 @@ class TestListeners:
 class TestViews:
     def test_a_canvas(self):
         m = model(
-            "(bool on true) (scene s (circle c) (circle d)) (canvas v c (when on d) (view-x -3))"
+            "(bool on true) (scene s (circle c) (circle d)) (canvas v (view-x -3) c (when on d))"
         )
         v = m.get("v")
         shows = v.data["shows"]
@@ -116,7 +116,7 @@ class TestViews:
         assert v.attrs["view-x"].value == -3 and v.attrs["view-width"].value == 20
 
     def test_a_canvas_pans_and_zooms_unless_told_not_to(self):
-        m = model("(scene s (circle c)) (canvas v s) (canvas w s (pan false) (zoom false))")
+        m = model("(scene s (circle c)) (canvas v s) (canvas w (pan false) (zoom false) s)")
         assert m.get("v").attrs["pan"].value is True and m.get("v").attrs["zoom"].value is True
         assert m.get("w").attrs["pan"].value is False and m.get("w").attrs["zoom"].value is False
 

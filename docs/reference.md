@@ -1,6 +1,6 @@
 # Reference
 
-Every form, built-in function and constant in mtp. Each entry says exactly which parts are the name, the positional arguments and the items (see the syntax document, section 8), the types it takes and gives, and where it is undefined.
+Every form, built-in function and constant in mtp. Each entry says exactly which parts are the name, the positional arguments, the optional arguments and the body (see the syntax document, section 8, "The form template"), the types it takes and gives, and where it is undefined.
 
 "Undefined" means: a compile error when the inputs are known when compiling, and `none` while drawing (see the type system document, section 5.c). Constraint names, types and the declaration rule are as in the other documents.
 
@@ -18,43 +18,43 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ### Values and variables
 
-| Form | Name | Positional | Items |
-|---|---|---|---|
-| `(T name value)` for any type `T` | required | the value | constraints |
+| Form | Name | Positional | Optional arguments | Body |
+|---|---|---|---|---|
+| `(T name value)` for any type `T` | required | the value, which may be left out | none | constraints |
 
 `T` is any type or type expression: `(real k 1)`, `(color ink 'navy')`, `(list[color] palette ['red' 'gold'])`, `(real|none crossing (secd theta))`, `((real (>= 0)) r 1)`. A plain `list` infers its item type from the value.
 
 ### Types
 
-| Form | Name | Positional | Items |
-|---|---|---|---|
-| `(type name base)` | required | the base type | constraints |
-| `(motif name params)` | required | the parameter list | member declarations, bound variable declarations |
-| `(variant name params shape)` | required | the parameter list; one shape declaration | none |
+| Form | Name | Positional | Optional arguments | Body |
+|---|---|---|---|---|
+| `(type name base)` | required | the base type | none | constraints |
+| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations |
+| `(variant name params shape)` | required | the parameter list; one shape declaration | none | none |
 
 A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t 0.5) (color tint 'red'))`, or `()` for none; each may have a default. `()` is also an empty list of `let` bindings, and is never a value.
 
 ### Functions
 
-| Form | Name | Positional | Items |
-|---|---|---|---|
-| `(func name params body)` | required | the parameter list; the body | none |
+| Form | Name | Positional | Optional arguments | Body |
+|---|---|---|---|---|
+| `(func name params body)` | required | the parameter list; the body, one expression | none | none |
 
 `func`'s parameters are always typed. Results are never written. A function may call itself. `fn`, a function written in place, is a special form (below).
 
 ### The scene and shapes
 
-| Form | Name | Positional | Items |
-|---|---|---|---|
-| `(scene name)` | required | none | shape declarations, variable declarations, `repeat`, `(background color)` |
-| `(group name)` | required | none | shape declarations, shape arguments |
-| `(circle name)` | required | none | shape arguments, `(r (real (>= 0)))` |
-| `(rect name)` | required | none | shape arguments, `(width real)`, `(height real)`, `(rx real)`, `(ry real)` (rounded corners) |
-| `(ellipse name)` | required | none | shape arguments, `(rx real)`, `(ry real)` |
-| `(line name)` | required | none | shape arguments, `(from point)`, `(to point)` |
-| `(triangle name)` | required | none | shape arguments, `(a point)`, `(b point)`, `(c point)` |
-| `(text name value)` | required | the string | shape arguments, `(font font)`, `(halign …)`, `(valign …)`; its font is only given as a declared font variable, never as separate size or family arguments |
-| `(dial name)`, any motif or variant | required | none | its parameters, and the arguments its base takes |
+| Form | Name | Positional | Optional arguments | Body |
+|---|---|---|---|---|
+| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `repeat` |
+| `(group name)` | required | none | shape arguments | shape declarations, `repeat` |
+| `(circle name)` | required | none | shape arguments, `(r (real (>= 0)))` | none |
+| `(rect name)` | required | none | shape arguments, `(width real)`, `(height real)`, `(rx real)`, `(ry real)` (rounded corners) | none |
+| `(ellipse name)` | required | none | shape arguments, `(rx real)`, `(ry real)` | none |
+| `(line name)` | required | none | shape arguments, `(from point)`, `(to point)` | none |
+| `(triangle name)` | required | none | shape arguments, `(a point)`, `(b point)`, `(c point)` | none |
+| `(text name value)` | required | the string | shape arguments, `(font font)`, `(halign …)`, `(valign …)`; its font is only given as a declared font variable, never as separate size or family arguments | none |
+| `(dial name)`, any motif or variant | required | none | its parameters, and the arguments its base takes | none |
 
 Shape arguments, taken by every shape except groups: `(x real)` `(y real)`, or `(pos point)`, which writes `x` and `y` together, as one point (`c.pos` is `[c.x c.y]`; `pos` is not kept apart from them). Taken by every shape, groups included: `(translate point)`, the translation part of its transform, and `(transform transform)`. Taken by every shape except groups: `(fill color|none)`; `(stroke color|none)`; `(stroke-width (real (>= 0)))`; `(opacity (real (>= 0) (<= 1)))`, `(fill-opacity (real (>= 0) (<= 1)))`, `(stroke-opacity (real (>= 0) (<= 1)))`. On a group, any of these, and `x`, `y` and `pos`, are read and written on each member (they spread). Given in a group's declaration, they are defaults for its members: a member that gives its own value keeps it, as a transition's own `ease` wins over the `default-ease` around it, and the nearest group's value wins over one further out. A text takes no `stroke` or `stroke-width` from a group, since a stroke would outline its letters; it keeps its own. A motif instance takes them too: its `x` and `y` move its frame, and so its members, before its `translate` and `transform`; its paint arguments are defaults for its members, as on a group, except `opacity`, which fades the instance as a whole and multiplies with its members' own. These mirror SVG on purpose: a color's alpha, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through an overlapping stroke.
 
@@ -64,17 +64,17 @@ Where each shape is placed by its position: a circle's and an ellipse's center, 
 
 ### Tokens
 
-| Form | Name | Positional | Items |
-|---|---|---|---|
-| `(color name value)` | required | a color | constraints |
-| `(font name)` | required | none | `(family string)`, `(style …)`, `(weight (real (>= 1) (<= 1000)))`, `(size real)` |
+| Form | Name | Positional | Optional arguments | Body |
+|---|---|---|---|---|
+| `(color name value)` | required | a color | none | constraints |
+| `(font name)` | required | none | `(family string)`, `(style …)`, `(weight (real (>= 1) (<= 1000)))`, `(size real)` | none |
 
 Color and font variables are tokens: the page may restyle them through CSS custom properties (`--mtp-ink`), and no writer (control or listener) can write them.
 
 ### Transitions and animations
 
-| Form | Name | Positional | Items |
-|---|---|---|---|
+| Form | Name | Positional | Optional arguments | Body |
+|---|---|---|---|---|
 | `(transition name?)` | optional: a transition written inline as a canvas's item has none (in a step, the transition is implied: see Steps) | none | `(from v)`, `(to v)`, `(duration real)`, `(ease …)`, `(path …)` |
 | `(animation name)` | required, except when written inline as an item of a control or listener | none | steps |
 
@@ -84,16 +84,16 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 
 ### Components
 
-| Form | Name | Positional | Items |
-|---|---|---|---|
-| `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, drawn in the order written, each on top of those before it; `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` |
-| `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font |
+| Form | Name | Positional | Optional arguments | Body |
+|---|---|---|---|---|
+| `(canvas name)` | required | none | `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
+| `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
 | `(slider name)` | required | none | `(animation …)`, `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), conditions, `(when bool)` |
-| `(button name)` | required | none | `(animation …)`, `(label string)`, conditions, `(when bool)` |
-| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, conditions, `(when bool)` |
-| `(toggle name)` | required | none | `(target t)` or none (holds its own bool), `(label string)`, `(value bool)`, conditions, `(when bool)` |
-| `(on-drag shape)` | none | the shape | `(target t)` (required), conditions, `(when bool)` |
-| `(on-click shape)` | none | the shape | `(animation …)`, conditions, `(when bool)` |
+| `(button name)` | required | none | `(animation …)`, `(label string)`, `(when bool)` | conditions |
+| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(when bool)` | conditions |
+| `(toggle name)` | required | none | `(target t)` (without one it holds its own bool), `(label string)`, `(value bool)`, `(when bool)` | conditions |
+| `(on-drag shape)` | none | the shape | `(target t)` (required), `(when bool)` | conditions |
+| `(on-click shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
 
 ## Defaults
 

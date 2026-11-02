@@ -5,4 +5,4 @@
   (group g (translate [5 0]) (rect b (width 2) (height 4) (fill ink)))
   (text t 'hi' (halign 'middle'))
   (circle|none gone (r (/ 1 k))))
-(canvas v s (view-x -3) (view-y -3) (view-width 6) (view-height 6))
+(canvas v (view-x -3) (view-y -3) (view-width 6) (view-height 6) s)

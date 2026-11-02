@@ -87,6 +87,8 @@ RESERVED = frozenset(
     "scene animation transition wait in-order at-once when else true false none const self".split()
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
+# The optional arguments of controls and listeners; the rest of their items are conditions.
+WRITER_OPTIONS = {"animation", "label", "step", "buttons", "target", "value", "when"}
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
@@ -1153,6 +1155,9 @@ class _Compiler:
 
     def steps(self, items, duration, ease, scope: dict) -> list:
         """The steps among items; the defaults among them apply to the moves inside."""
+        self.options_first(
+            items, lambda it: _head(it) in ("default-duration", "default-ease"), "animation"
+        )
         for item in items:
             head = _head(item)
             if head == "default-duration":
@@ -1311,9 +1316,29 @@ class _Compiler:
             name, pos = self.name_of(form)
             items, shape = form.items[2:], None
         obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
+        # A canvas's body is what it shows; a writer's is its conditions.
+        if kind == "canvas":
+            self.options_first(
+                items, lambda it: not isinstance(it, Name) and _head(it) != "when", kind
+            )
+        elif kind != "readout":
+            self.options_first(items, lambda it: _head(it) in WRITER_OPTIONS, kind)
         build = getattr(self, "build_" + kind.replace("-", "_"))
         build(obj, list(items), shape)
         self.add(obj)
+
+    def options_first(self, items, is_option, what: str) -> None:
+        """Optional arguments come before a form's body (syntax.md, section 8)."""
+        body = False
+        for item in items:
+            if not is_option(item):
+                body = True
+            elif body:
+                raise CompileError(
+                    f"({_head(item)} …) is an optional argument, so it comes before the {what}'s"
+                    " body",
+                    item.pos,
+                )
 
     def read_shape(self, node: Node) -> int:
         e = self.expr(node, None, self.cscope)
@@ -1825,6 +1850,7 @@ class _Compiler:
             self.in_scene = False
 
     def scene_items(self, form: Form, attrs: dict) -> None:
+        self.options_first(form.items[2:], lambda it: _head(it) == "background", "scene")
         for item, scope in self.expand(form.items[2:], {}):
             head = _head(item)
             if head == "background":
@@ -1873,6 +1899,12 @@ class _Compiler:
             if kind == "group" and self.shape_kind(item):
                 members.append((item, inner))
                 continue
+            if members:
+                raise CompileError(
+                    f"({_head(item)} …) is an optional argument, so it comes before the group's"
+                    " body",
+                    item.pos,
+                )
             head = _head(item)
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(f"expected an argument such as (r 1), got {item}", item.pos)

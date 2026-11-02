@@ -160,29 +160,33 @@ So the form is needed only where no shorthand fits, when `X` is itself a form:
     (. (polar 1 theta) x)         ; the x of a point computed in place
     (. (. (sort g (fn p p.r)) 0) pos)  ; that member's position
 
-## 8. How a form's body is read
+## 8. The form template
 
-Every declaration, components included, follows one rule:
+Every form follows one template:
 
-    (head name? positional… item…)
+    (head name? positional… option… body…)
 
-- **The name** comes first, when the form declares something with a name. Listeners (`on-drag`, `on-click`) have none.
-- **Positional arguments** come next. Each form has a fixed number of them, recognized by where they are, and some forms have none.
-- **Items** come last, any number, in any order. Each is recognized by its head (an argument such as `(r 1)`, a constraint such as `(>= 0)`, a member declaration, or a part like `(when …)`), or is a bare name referring to an object.
+- **The head** says what the form is.
+- **The name** comes next, for a form that has one. Some forms have none: listeners (`on-drag`, `on-click`), and an animation written inside a control.
+- **Positional arguments** come next, recognized by where they are. Each form fixes how many it takes, and some take none. A positional argument may be left out when the form allows it: a variable's value, as in `(real k (>= 0))`.
+- **Optional arguments** come next, in any order. Each is a form recognized by its head, such as `(r 1)`, `(fill 'red')` or `(when on)`, and is given at most once.
+- **The body** comes last: any number of items, or none. What it holds depends on the form: member declarations, a variable's constraints, the shapes a canvas shows, a writer's conditions, the moves of an animation.
 
-| Form | Name | Positional | Items |
-|----|----|----|----|
-| `(real theta 40 (>= 0))` | `theta` | `40` | `(>= 0)` |
-| `(circle p (r 1) (fill 'red'))` | `p` | none | `(r 1)`, `(fill 'red')` |
-| `(text t 'hi' (pos [0 1]))` | `t` | `'hi'` | `(pos [0 1])` |
-| `(group marks (circle m0) (circle m1))` | `marks` | none | two member declarations |
-| `(func double (real x) (* 2 x))` | `double` | `(real x)`, `(* 2 x)` | none |
-| `(motif dial ((real t 0.5)) (circle face …) …)` | `dial` | its parameters, `((real t 0.5))` | member declarations |
-| `(animation grow (theta tr) (wait 0.5))` | `grow` | none | steps; `(theta tr)` moves `theta` along `tr` |
-| `(canvas v a b (when show c))` | `v` | none | `a`, `b`, `(when show c)` |
-| `(on-drag p (target theta))` | none | `p` | `(target theta)`, required |
+Each form decides whether it has a name, which positional arguments it takes and which of them may be left out, which optional arguments it takes, and what its body holds. An optional argument written after the body is a compile error. `on-drag`'s `(target …)` is written as an optional argument but is required.
 
-Function calls and special forms are not declarations, and do not follow this rule: a call takes its arguments in order, and each special form has its own shape. Inside an animation, a step's head may be any variable or attribute a writer may change, including a path such as `p.r`, followed by a transition's items, as in `(p.r (to 2) (duration 1))`, or the name of a transition; the reserved words `wait`, `in-order` and `at-once` are steps of their own.
+| Form | Name | Positional | Optional arguments | Body |
+|----|----|----|----|----|
+| `(real theta 40 (>= 0))` | `theta` | `40` | none | `(>= 0)` |
+| `(circle p (r 1) (fill 'red'))` | `p` | none | `(r 1)`, `(fill 'red')` | none |
+| `(text t 'hi' (pos [0 1]))` | `t` | `'hi'` | `(pos [0 1])` | none |
+| `(group marks (fill 'red') (circle m0) (circle m1))` | `marks` | none | `(fill 'red')` | two member declarations |
+| `(func double (real x) (* 2 x))` | `double` | `(real x)`, `(* 2 x)` | none | none |
+| `(motif dial ((real t 0.5)) (circle face …) …)` | `dial` | its parameters, `((real t 0.5))` | none | member declarations |
+| `(animation grow (default-duration 1) (theta tr) (wait 0.5))` | `grow` | none | `(default-duration 1)` | `(theta tr)`, which moves `theta` along `tr`, and `(wait 0.5)` |
+| `(canvas v (view-x -5) a b (when show c))` | `v` | none | `(view-x -5)` | `a`, `b`, `(when show c)` |
+| `(on-drag p (target theta))` | none | `p` | `(target theta)`, required | none |
+
+Function calls and special forms follow the template too. A call's head is the function, it has no name, and its arguments are positional, some of which may be left out, as in `(round x)` and `(round x 2)`; a function that takes any number of arguments takes them as its body, as in `(+ a b c)`. Each special form has its own positional arguments and body: `(if c a b)` has three positional arguments, and `(cond …)` a body of clauses. Inside an animation, a move's head may be any variable or attribute a writer may change, including a path such as `p.r`, followed by a transition's optional arguments, as in `(p.r (to 2) (duration 1))`, or the name of a transition; the reserved words `wait`, `in-order` and `at-once` head items of their own.
 
 ## 9. Putting a file together
 
