@@ -200,6 +200,8 @@ class _Compiler:
         # The container the expression being compiled sits in: a group, or None for the scene
         # and the top level. Reads convert through the transforms not shared with it.
         self.frame: int | None = None
+        # True while compiling the scene's contents, which may never read page access.
+        self.in_scene = False
         # The motif instances whose bodies are being compiled, innermost last: each with its
         # id, its members' names, its parameters and bound variables, and the path its
         # members are named by (None inside an anonymous instance).
@@ -259,8 +261,8 @@ class _Compiler:
         if head == "animation":
             self.animation(form, {}, named=True)
             return
-        if head == "button":
-            return self.button(form)
+        if head in COMPONENTS:
+            return self.component(form)
         if self.shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
@@ -356,6 +358,7 @@ class _Compiler:
             self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
             return
         place = self.place(t, node, form.pos, "the value", scope=scope)
+        access = self.access_of(place.deps)[0]
         self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
 
     def declared(self, form: Form, scope: dict) -> tuple[str | None, Pos, Type, Node | None]:
@@ -975,6 +978,11 @@ class _Compiler:
 
     def writable_attr(self, i: int, attr: str, label: str, pos: Pos) -> Type:
         obj = self.model.objects[i]
+        if attr in ("x", "y", "pos") and obj.kind in CORNERS:
+            # A write to a line's or triangle's position moves every end or corner.
+            for c in CORNERS[obj.kind]:
+                self.check_writable(obj, obj.attrs[c], label, pos)
+            return POINT if attr == "pos" else REAL
         if attr == "pos" and "x" in obj.attrs:
             for a in ("x", "y"):
                 self.check_writable(obj, obj.attrs[a], label, pos)
@@ -998,24 +1006,209 @@ class _Compiler:
             raise CompileError(f"{label} is fixed by its variant", pos)
         return place.type
 
-    def button(self, form: Form) -> None:
-        name, pos = self.name_of(form)
-        label = Place(STRING, name)
-        animation, rest = None, []
-        for item in form.items[2:]:
-            head = _head(item)
-            if head == "animation":
-                animation = self.animation(item, {}, named=False)
-            elif head == "label":
-                label = self.place(STRING, self.args(item, 1)[0], item.pos, "label")
+    def component(self, form: Form) -> None:
+        """A view, control or listener (reference.md, "Components")."""
+        kind = _head(form)
+        if kind in ("on-drag", "on-click"):
+            if len(form.items) < 2:
+                raise CompileError(f"{kind} takes the shape it listens to", form.pos)
+            name, pos, items = None, form.pos, form.items[2:]
+            shape = self.read_shape(form.items[1])
+        else:
+            name, pos = self.name_of(form)
+            items, shape = form.items[2:], None
+        obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
+        build = getattr(self, "build_" + kind.replace("-", "_"))
+        build(obj, list(items), shape)
+        self.add(obj)
+
+    def read_shape(self, node: Node) -> int:
+        e = self.expr(node, None, {})
+        if e.op != "obj" or not isinstance(_core(e.type), ShapeT):
+            raise CompileError("expected the name of a shape", node.pos)
+        return e.args[0]
+
+    def take(self, items: list, head: str) -> Node | None:
+        """Remove the (head value) item from items and give its value."""
+        found = [it for it in items if _head(it) == head]
+        if len(found) > 1:
+            raise CompileError(f"'{head}' is given twice", found[1].pos)
+        if not found:
+            return None
+        items.remove(found[0])
+        return self.args(found[0], 1)[0]
+
+    def writer(self, obj: Obj, items: list, written: set) -> None:
+        """What every writer has: a label (controls), conditions, and the items left over."""
+        if obj.name is not None:
+            label = self.take(items, "label")
+            obj.attrs["label"] = (
+                self.place(STRING, label, obj.pos, "label")
+                if label is not None
+                else Place(STRING, obj.name)
+            )
+        for item in items:
+            if not isinstance(item, Form):
+                raise CompileError(f"expected an item of a {obj.kind}, got a name", item.pos)
+        obj.data["conditions"] = [self.condition(c, written) for c in items]
+
+    def animated(self, obj: Obj, items: list) -> set:
+        anims = [it for it in items if _head(it) == "animation"]
+        if len(anims) > 1:
+            raise CompileError("'animation' is given twice", anims[1].pos)
+        animation = None
+        if anims:
+            items.remove(anims[0])
+            animation = self.animation(anims[0], {}, named=False)
+        obj.data["animation"] = animation
+        return self.written(animation)
+
+    def when(self, obj: Obj, items: list) -> None:
+        node = self.take(items, "when")
+        obj.data["when"] = self.place(BOOL, node, obj.pos, "when") if node is not None else None
+
+    def build_button(self, obj: Obj, items: list, shape) -> None:
+        self.writer(obj, items, self.animated(obj, items))
+
+    def build_slider(self, obj: Obj, items: list, shape) -> None:
+        written = self.animated(obj, items)
+        step = self.take(items, "step")
+        if step is not None:
+            obj.attrs["step"] = self.place(Refine(INT, ((">=", 2),)), step, obj.pos, "step")
+        obj.attrs["position"] = Place(UNIT, 0)
+        self.writer(obj, items, written)
+
+    def build_play(self, obj: Obj, items: list, shape) -> None:
+        written = self.animated(obj, items)
+        buttons = self.take(items, "buttons")
+        obj.attrs["buttons"] = self.place(BOOL, buttons, obj.pos, "buttons")
+        obj.attrs["playing"] = Place(BOOL, False)
+        obj.attrs["step"] = Place(INT, 0)
+        self.writer(obj, items, written)
+
+    def build_toggle(self, obj: Obj, items: list, shape) -> None:
+        target = self.take(items, "target")
+        value = self.take(items, "value")
+        written: set = set()
+        if target is None:
+            obj.data["target"] = None
+            obj.attrs["value"] = self.place(BOOL, value, obj.pos, "value")
+        else:
+            if value is not None:
+                raise CompileError("a toggle with a target shows its target's value", value.pos)
+            if not isinstance(target, Name):
+                raise CompileError("a toggle's target is a place, such as b or g.on", target.pos)
+            i, attr, t = self.writable(target, {})
+            if _core(t) != BOOL:
+                raise CompileError(f"a toggle's target is a bool, got {t}", target.pos)
+            obj.data["target"] = (i, attr)
+            written = {(i, attr)}
+            # On a group's attribute it reads true only when every member's is true.
+            if attr is not None and attr not in self.model.objects[i].attrs:
+                e = Expr("all", BOOL, (self.obj_attr(i, attr, target.pos),))
+                e = replace(e, deps=e.args[0].deps)
             else:
-                rest.append(item)
-        written = self.written(animation)
-        conditions = [self.condition(c, written) for c in rest]
-        data = {"animation": animation, "conditions": conditions}
-        self.add(
-            Obj("button", name, ComponentT("button"), "page", {"label": label}, pos=pos, data=data)
+                e = self.read(i, attr)
+            obj.attrs["value"] = Place(BOOL, expr=e)
+        self.writer(obj, items, written)
+
+    def build_on_drag(self, obj: Obj, items: list, shape: int) -> None:
+        target = self.take(items, "target")
+        if target is None:
+            raise CompileError("on-drag needs a (target place)", obj.pos)
+        if not isinstance(target, Name):
+            raise CompileError("an on-drag's target is a place", target.pos)
+        i, attr, _ = self.writable(target, {})
+        own = i == shape and attr in ("x", "y", "pos")
+        if not own and (i, attr) not in self.position_deps(shape):
+            raise CompileError(
+                f"{_name_text(target)} is not the shape's position, and its position does not"
+                " depend on it",
+                target.pos,
+            )
+        obj.data["shape"], obj.data["target"] = shape, (i, attr)
+        self.when(obj, items)
+        self.writer(obj, items, {(i, attr)})
+
+    def position_deps(self, shape: int) -> set:
+        """Every place the shape's position depends on, through bound places too."""
+        if "pos" not in self.attr_names(shape):
+            return set()
+        seen: set = set()
+        todo = list(self.obj_attr(shape, "pos", NOPOS).deps)
+        while todo:
+            dep = todo.pop()
+            if dep in seen:
+                continue
+            seen.add(dep)
+            obj = self.model.objects[dep[0]]
+            if dep[1] is None and obj.kind == "variable":
+                place = obj.value
+            else:
+                place = obj.attrs.get(dep[1])
+            if place is not None and place.bound:
+                todo.extend(place.deps)
+        return seen
+
+    def build_on_click(self, obj: Obj, items: list, shape: int) -> None:
+        obj.data["shape"] = shape
+        written = self.animated(obj, items)
+        self.when(obj, items)
+        self.writer(obj, items, written)
+
+    def build_canvas(self, obj: Obj, items: list, shape) -> None:
+        defaults = {"view-x": -10, "view-y": -10, "view-width": 20, "view-height": 20}
+        for attr, d in defaults.items():
+            node = self.take(items, attr)
+            obj.attrs[attr] = self.place(REAL, node, obj.pos, attr) if node else Place(REAL, d)
+        node = self.take(items, "transform")
+        obj.attrs["transform"] = (
+            self.place(TRANSFORM, node, obj.pos, "transform")
+            if node
+            else Place(TRANSFORM, IDENTITY)
         )
+        obj.data.update({"members": [], "when": [], "transition": None})
+        for item in items:
+            head = _head(item)
+            if isinstance(item, Name):
+                obj.data["members"].append(self.shown(item))
+            elif head == "when" and len(item.items) >= 3:
+                cond = self.place(BOOL, item.items[1], item.pos, "when")
+                obj.data["when"].append((cond, [self.shown(n) for n in item.items[2:]]))
+            elif head == "transition":
+                if obj.data["transition"] is not None:
+                    raise CompileError("'transition' is given twice", item.pos)
+                if len(item.items) == 2 and isinstance(item.items[1], Name):
+                    obj.data["transition"] = self.named(item.items[1], "transition")
+                else:
+                    obj.data["transition"] = self.transition(item, {}, named=False)
+            else:
+                raise CompileError("expected an item of a canvas", item.pos)
+
+    def shown(self, node: Node) -> int:
+        e = self.expr(node, None, {})
+        if e.op != "obj" or self.model.objects[e.args[0]].kind == "variable":
+            raise CompileError("a canvas shows shapes or the scene, by name", node.pos)
+        return e.args[0]
+
+    def build_readout(self, obj: Obj, items: list, shape) -> None:
+        if not items:
+            raise CompileError("a readout shows a string: (readout name value)", obj.pos)
+        value = items.pop(0)
+        obj.attrs["value"] = self.place(STRING, value, obj.pos, "value")
+        font = self.take(items, "font")
+        if font is not None:
+            e = self.expr(font, FONT, {})
+            obj.attrs["font"] = Place(FONT, expr=e)
+        if items:
+            raise CompileError("expected an item of a readout, such as (font f)", items[0].pos)
+
+    def access_of(self, deps) -> tuple[str, int | None]:
+        """page, and the object that gives it, when anything in deps has page access."""
+        for i, _ in deps:
+            if self.model.objects[i].access == "page":
+                return "page", i
+        return "scene", None
 
     def written(self, animation: int | None) -> set:
         """The places an animation's moves write."""
@@ -1253,6 +1446,13 @@ class _Compiler:
         name, pos = self.name_of(form)
         attrs = {"background": Place(PAINT, None)}
         self.scene = self.add(Obj("scene", name, SCENE, attrs=attrs, pos=pos))
+        self.in_scene = True
+        try:
+            self.scene_items(form, attrs)
+        finally:
+            self.in_scene = False
+
+    def scene_items(self, form: Form, attrs: dict) -> None:
         for item, scope in self.expand(form.items[2:], {}):
             head = _head(item)
             if head == "background":
@@ -1368,6 +1568,14 @@ class _Compiler:
         within the place's constraints, or the compiler stops (type-system.md, 5.b and 5.c)."""
         if e.known:
             return Place(t, e.value)
+        access, source = self.access_of(e.deps)
+        if access == "page" and (self.in_scene or self.bodies):
+            label = self.model.objects[source].name
+            raise CompileError(
+                f"the scene cannot read {label}: it has page access, so only components and"
+                " globals may read it",
+                pos,
+            )
         inner = _inner(t)
         if isinstance(inner, Refine):
             broken = tuple(
@@ -1567,6 +1775,9 @@ class _Compiler:
         moves: frozenset = frozenset()
         if obj.kind == "variable" and attr is None:
             place = obj.value
+        elif obj.kind == "toggle" and attr is None:
+            # A toggle read by its name is its value (the old behavior; mtp-gvx).
+            return self.read(i, "value")
         else:
             if attr is None:
                 return Expr("obj", obj.type, (i,))
@@ -1693,7 +1904,7 @@ class _Compiler:
         if obj.kind in ("group", "scene") and name == "members":
             items = tuple(self.read(m, None) for m in obj.members)
             return Expr("list", ListT(self.common(obj.members)), items)
-        if name == "pos" and "pos" in self.attr_names(i):
+        if name == "pos" and obj.kind != "group" and "pos" in self.attr_names(i):
             return _gather(POINT, [self.obj_attr(i, "x", pos), self.obj_attr(i, "y", pos)])
         if obj.kind in CORNERS and name in ("x", "y"):
             k = 0 if name == "x" else 1

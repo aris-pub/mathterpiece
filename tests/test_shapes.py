@@ -4,7 +4,7 @@
 import pytest
 
 from mathterpiece.compiler import CompileError, compile_source
-from mathterpiece.types import INT, REAL, ListT, Maybe, Refine
+from mathterpiece.types import INT, POINT, REAL, ListT, Maybe, Refine
 
 RADIUS = Refine(REAL, ((">=", 0),))
 
@@ -165,3 +165,9 @@ class TestPositional:
     def test_an_argument_first_is_still_an_argument(self):
         m = model("(scene s (text t (x 1)))")
         assert (m.get("t").attrs["x"].value, m.get("t").attrs["value"].value) == (1, "")
+
+
+def test_a_groups_pos_spreads():
+    m = model("(scene s (group g (circle a) (circle b)) (list ps g.pos))")
+    e = m.get("ps").value.expr
+    assert e.op == "spread" and e.type.base == ListT(POINT)
