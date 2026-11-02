@@ -1,0 +1,365 @@
+; One density versus all densities, from the Bourgain notes (Figure 7). The space has L levels,
+; n = 2^L points. A random set of density p = 2^-t stretches a pair at level h in proportion to
+; P_h(p) = 2r(1 - r), with r = (1 - p)^(2^(h - 1)). Top: the relative stretch at each level,
+; sqrt(x / max). Bottom: the distortion, sqrt(max / min) over the levels, against the density,
+; on a log scale; the flat line is the distortion when all densities 2^-1 to 2^-L are used
+; together. Drag the handle under the top chart to change the number of levels, and the one under
+; the bottom chart to change the density; "one" and "all" switch between one density and all of
+; them. Press play for a tour in three steps.
+; Coordinates are the original SVG's at a width of 480, with y pointing up.
+
+(color fg '#1f2328')
+(color muted '#6b7280')
+(color bg '#faf7f0')
+(color rule '#d8d3c4')
+(color grid '#e8e5dc')
+(color one '#7f8da0')
+(color every '#1a6f66')
+(font plain (size 13))
+(font tick (size 12))
+(font strong (size 13) (weight 600))
+(font var (size 13) (style 'italic'))
+
+(list[(int (>= 1) (<= 10))] levels [1 2 3 4 5 6 7 8 9 10] (const))
+
+; The samples of the curve: the original steps the density's exponent by 0.05 over a span of L,
+; which is 20 L + 1 points; 201 samples spread over the span give the same curve at L = 10.
+(list[(int (>= 0) (<= 200))] samples
+  [0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34
+     35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66
+     67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98
+     99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122
+     123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146
+     147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170
+     171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 189 190 191 192 193 194
+     195 196 197 198 199 200] (const))
+
+; or? on a value folded when compiling keeps none in its type (a compiler bug), so a function with
+; a real|none parameter stands in for it wherever the value is known then.
+(func dflt ((real|none x) (real d)) (or? x d))
+
+(func P ((int h (>= 1) (<= 10)) (real p (>= 0) (<= 1)))
+  (let ((r (^ (- 1 p) (^ 2 (- h 1))))) (* 2 r (- 1 r))))
+
+; P at each level for density 2^-t, and pad past level LL, so max and min can skip those levels.
+(func single ((real LL) (real t (>= 0)) (real pad))
+  (map levels (fn h (if (<= h LL) (P h (^ 2 (- t))) pad))))
+
+; With all densities: level h gets the sum over j = 1 to LL of P_h(2^-j).
+(func all-at ((real LL) (int h (>= 1) (<= 10)))
+  (sum (map levels (fn j (if (<= j LL) (P h (^ 2 (- j))) 0)))))
+(func every-level ((real LL) (real pad))
+  (map levels (fn h (if (<= h LL) (all-at LL h) pad))))
+
+; sqrt(max / min). A density far from every level leaves some level with P too close to 0 to
+; divide by; the original shows that as a power of ten, and 10^150 is the largest number allowed.
+(func spread-of ((real mx) (real mn))
+  (if (> mn 1e-300) (dflt (sqrt (/ mx mn)) 1e150) 1e150))
+(func spread ((real LL) (real t (>= 0))) (spread-of (max (single LL t 0)) (min (single LL t 1))))
+(func spread-all (real LL) (spread-of (max (every-level LL 0)) (min (every-level LL 1))))
+
+; The relative stretch at each level, sqrt(x / max), mixed between one density (mx = 0) and all
+; densities (mx = 1).
+(func stretch ((real LL) (real t (>= 0)) (real mx) (real pad))
+  (let ((s (single LL t 0)) (a (every-level LL 0)) (ms (max s)) (ma (max a)))
+    (map levels
+         (fn h (if (<= h LL)
+                   (+ (* (- 1 mx) (or? (sqrt (/ (P h (^ 2 (- t))) ms)) 0))
+                      (* mx (or? (sqrt (/ (all-at LL h) ma)) 0)))
+                 pad)))))
+
+; The best single density for LL levels: the original searches the exponent from 0.3 to LL + 1
+; in steps of 0.005. Here a search in steps of 0.05, then one in steps of 0.005 around the best
+; of those, splitting each range in halves so the recursion stays shallow. Each result is
+; [distortion exponent].
+(type pair list[real] (length 2))
+(func lower ((pair l) (pair r)) (if (<= l[0] r[0]) l r))
+(func best-in ((real LL) (real a (>= 0)) (real step (>= 0) (<= 1)) (int n))
+  (if (<= n 1)
+      (lower [(spread LL a) a] [(spread LL a) a])
+    (let ((half (floor (/ n 2))))
+      (lower (best-in LL a step half)
+             (best-in LL (max 0 (+ a (* step half))) step (- n half))))))
+(func best (real LL)
+  (let ((coarse (best-in LL 0.3 0.05 (+ 15 (* 20 (round LL))))))
+    (best-in LL (max 0 (- (dflt coarse[1] 1) 0.05)) 0.005 21)))
+; Only the tour shows the best density, and only at 4, 6, 8 and 10 levels.
+(list bests [(best 4) (best 6) (best 8) (best 10)] (const))
+(func best-of (real LL)
+  (cond ((= LL 4) bests[0]) ((= LL 6) bests[1]) ((= LL 8) bests[2]) (else bests[3])))
+
+; Numbers as the original shows them: from 1000 up as a power of ten.
+(func sup-digit (int d)
+  (cond ((= d 0) '⁰') ((= d 1) '¹') ((= d 2) '²') ((= d 3) '³') ((= d 4) '⁴')
+        ((= d 5) '⁵') ((= d 6) '⁶') ((= d 7) '⁷') ((= d 8) '⁸') (else '⁹')))
+(func sup (int k)
+  (cond ((>= k 100) $'{(sup-digit (floor (/ k 100)))}{(sup-digit (mod (floor (/ k 10)) 10))}{(sup-digit (mod k 10))}')
+        ((>= k 10) $'{(sup-digit (floor (/ k 10)))}{(sup-digit (mod k 10))}')
+        (else (sup-digit k))))
+(func fmt (real x)
+  (cond ((>= x 1000) $'≈ 10{(sup (round (log (max 1 (min x 1e150)) 10)))}')
+        ((>= x 10) $'{x:.1f}')
+        (else $'{x:.2f}')))
+
+; The vertical position, in the bottom chart, of a distortion v.
+(list[real] ticks [1 2 5 10 100 1000] (const))
+(list[string] tick-names ['1' '2' '5' '10' '100' '1000'] (const))
+(func cy (real v) (+ -114 (* (max 0 (min 1 (/ (log (max v 1) 10) 3))) 106)))
+
+; The handle on a track: a pill with three grip lines.
+(motif handle ((color edge '#7f8da0') (real weight 1.5 (>= 0)))
+  (rect body (width 22) (height 12) (rx 6) (ry 6) (fill bg) (stroke edge) (stroke-width weight))
+  (group grip (stroke edge) (stroke-width 1)
+    (line_ (from [-3 -3]) (to [-3 3]))
+    (line_ (from [0 -3]) (to [0 3]))
+    (line_ (from [3 -3]) (to [3 3]))))
+
+(scene figure
+  ; The state: L levels, density 2^-t, mix from one density (0) to all (1); while the number of
+  ; levels changes from Lp to L, g goes from 0 to 1.
+  ; A drag cannot move an int: the runtime finds the value by small steps, which rounding
+  ; undoes. So the drag moves reach, a real, and the number of levels is reach rounded. Those
+  ; steps only go up, so a drag starting at a bound of reach would never move: its range runs
+  ; half a level past each end.
+  (real reach 10 (>= 1.5) (<= 10.5))
+  (real L (max 2 (min 10 (round reach))) (>= 2) (<= 10))
+  (int Lp 10 (>= 2) (<= 10))
+  (real g 1 (>= 0) (<= 1))
+  (real t 1 (>= 0.5) (<= 10.5))
+  (real mix 0 (>= 0) (<= 1))
+  (bool floor false)
+  ; The tour step now shown (0 to 2), and whether the reader has left the tour.
+  (int chapter 0 (>= 0) (<= 2))
+  (bool exploring false)
+
+  ; The original lowers t to L + 1/2 whenever the reader lowers L; a drag writes only L, so the
+  ; limit is applied where t is read.
+  (real te (min t (+ L 0.5)) (>= 0.5) (<= 10.5))
+  (real lv (max 2 (+ Lp (* (- L Lp) g))) (>= 2))
+  (bool all (> mix 0.5))
+  ; A control the current tour step does not move is drawn grey.
+  (bool n-on (or exploring (>= chapter 1)))
+  (bool t-on (or exploring (<= chapter 1)))
+
+  (list now (stretch L te mix 0))
+  (list before (stretch Lp te mix 0))
+  (real worst (+ (* (min (stretch Lp te mix 2)) (- 1 g)) (* (min (stretch L te mix 2)) g)))
+
+  (group bars-chart
+    (group gridlines (stroke grid) (stroke-width 1)
+      (line_ (from [54 -134]) (to [466 -134]))
+      (line_ (from [54 -71]) (to [466 -71]))
+      (line_ (from [54 -8]) (to [466 -8])))
+    (group values (fill muted)
+      (text_ '0' (pos [48 -138]) (halign 'end') (font plain))
+      (text_ '0.5' (pos [48 -75]) (halign 'end') (font plain))
+      (text_ '1' (pos [48 -12]) (halign 'end') (font plain)))
+    ; Dashed in the original: mtp has no dash pattern for a stroke.
+    (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
+      (stroke muted) (stroke-width 1) (stroke-opacity 0.8))
+    ; Level i + 1, blended from the stretch with Lp levels to the one with L levels.
+    (group bars (fill (if all every one))
+      (repeat 10 i
+        (rect_
+          (pos [(+ 54 (* i 41.2) 20.6)
+                (+ -134 (/ (max 0.5 (* 126 (+ (* before[i] (- 1 g)) (* now[i] g)))) 2))])
+          (width 26.368)
+          (height (max 0.5 (* 126 (+ (* before[i] (- 1 g)) (* now[i] g)))))
+          (rx 2) (ry 2)
+          (opacity (if (< (+ (* before[i] (- 1 g)) (* now[i] g)) 0.002) 0 1)))))
+    (group level-names (fill muted)
+      (repeat 10 i
+        (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
+          (opacity
+           (cond ((< (+ (* before[i] (- 1 g)) (* now[i] g)) 0.002) 0)
+                 ((< i (min L Lp)) 1)
+                 ((< i L) g)
+                 (else (- 1 g)))))))
+    (line_ (from [54 -134]) (to [466 -134]) (stroke muted) (stroke-width 1))
+    ; Round line ends in the original: mtp has no line cap.
+    (line_ (from [54 -168]) (to [466 -168]) (stroke rule) (stroke-width 3))
+    (text_ 'level' (pos [260 -194]) (halign 'middle') (font plain) (fill fg))
+    (text_ 'relative stretch' (halign 'middle') (font plain) (fill fg)
+      (transform (transform (rotate 90) (translate 13 -71)))))
+
+  ; The end of the hierarchy, and its handle. Dashed in the original.
+  (line n-guide (from [(+ 54 (* lv 41.2)) -8]) (to [(+ 54 (* lv 41.2)) -162])
+    (stroke (if n-on (if all every one) muted)) (stroke-width 1)
+    (stroke-opacity (if n-on 0.7 0.45)))
+  (handle n-handle (x (+ 54 (* lv 41.2))) (y -168)
+          (edge (if n-on (if all every one) muted)) (weight (if n-on 1.5 1)))
+  ; What the reader grabs: it follows the pointer, while the handle above snaps to a level.
+  (rect n-grab (pos [(+ 54 (* reach 41.2)) -168]) (width 41.2) (height 24) (fill bg)
+    (opacity 0))
+
+  (real d-all (+ (* (spread-all Lp) (- 1 g)) (* (spread-all L) g)))
+  (real d-now (spread L te))
+  (pair best-now (best-of L))
+  ; The distortion of one density, over the densities 2^-0.5 to 2^-(L + 0.5).
+  (list ds (map samples (fn k (spread L (+ 0.5 (* L (/ k 200)))))))
+
+  (group curve-chart
+    (group curve-grid (stroke grid) (stroke-width 1)
+      (repeat 6 k
+        (line_ (from [54 (cy ticks[k])]) (to [466 (cy ticks[k])]))))
+    (group curve-values (fill muted)
+      (repeat 6 k
+        (text_ tick-names[k] (pos [48 (- (cy ticks[k]) 4)])
+          (halign 'end') (font plain))))
+    ; A label every density up to 2^-L, every other one past 6 levels.
+    (group densities (fill muted)
+      (repeat 10 k
+        (text_ $'1/{(^ 2 (+ k 1))}' (pos [(+ 54 (* (/ (+ k 0.5) lv) 412)) -147])
+          (halign 'middle') (font tick)
+          (opacity (if (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0))
+                            (<= (+ 54 (* (/ (+ k 0.5) lv) 412)) 467))
+                       1 0)))))
+    (line_ (from [54 -8]) (to [54 -130]) (stroke muted) (stroke-width 1))
+    (line_ (from [54 -130]) (to [466 -130]) (stroke muted) (stroke-width 1))
+    ; One text in the original, with p in italics; mtp gives a text one font, so three texts
+    ; placed by hand, since a text's width cannot be measured.
+    (text_ 'density' (pos [(if all 266 238) -192]) (halign 'end') (font plain) (fill fg))
+    (text_ 'p' (pos [(if all 270 242) -192]) (font var) (fill fg))
+    (text_ $' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill fg)
+      (opacity (if all 0 1)))
+    (text_ 'distortion' (halign 'middle') (font plain) (fill fg)
+      (transform (transform (rotate 90) (translate 13 -69))))
+    ; A group's opacity is only a default for members that give none, so the fade with all
+    ; densities is written on each segment. Segments past the right edge are hidden, as the
+    ; original clips them.
+    (group curve (stroke one) (stroke-width 2.2)
+      (repeat 200 k
+        (line_
+          (from [(+ 54 (* (/ (* L (/ k 200)) lv) 412)) (cy ds[k])])
+          (to [(+ 54 (* (/ (* L (/ (+ k 1) 200)) lv) 412)) (cy ds[(+ k 1)])])
+          (opacity (if (<= (+ 54 (* (/ (* L (/ (+ k 1) 200)) lv) 412)) 467) (- 1 (* 0.78 mix)) 0)))))
+    (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke every)
+      (stroke-width (if all 3.5 2.4)))
+    (text_ $'all densities: {(fmt d-all)}, for every p' (pos [466 (- (cy d-all) (if all 19 17))])
+      (halign 'end') (font plain) (fill every) (opacity (if all 0 1)))
+    (text_ $'all densities: {(fmt d-all)}, for every p' (pos [466 (- (cy d-all) (if all 19 17))])
+      (halign 'end') (font strong) (fill every) (opacity (if all 1 0)))
+    (text_ $'best: {(fmt best-now[0])}'
+      (pos [(+ 54 (* (/ (- best-now[1] 0.5) lv) 412)) (+ (cy best-now[0]) 12)])
+      (halign 'middle') (font strong) (fill one) (opacity (if floor 1 0)))
+    (line_ (from [54 -166]) (to [466 -166]) (stroke rule) (stroke-width 3)))
+
+  ; The current density: a marker on the curve, a guide down to the track, and its value. With
+  ; all densities, only the handle is left, grey.
+  (real mx (+ 54 (* (/ (- te 0.5) lv) 412)))
+  (group marker (opacity (if all 0 1))
+    (line_ (from [mx (- (cy d-now) 7)]) (to [mx -160]) (stroke (if t-on one muted))
+      (stroke-width 1) (stroke-opacity 0.7))
+    (circle_ (pos [mx (cy d-now)]) (r 7) (fill one))
+    (text_ (fmt d-now) (pos [(if (< mx 406) (+ mx 11) (- mx 11)) (+ (cy d-now) 9)])
+      (halign (if (< mx 406) 'start' 'end')) (font strong) (fill one)
+      (opacity (if (or all (and floor (< (abs (- te best-now[1])) 0.2))) 0 1))))
+  (handle t-handle (x mx) (y -166)
+          (edge (if (and t-on (not all)) one muted)) (weight (if (and t-on (not all)) 1.5 1))))
+
+(func quad (real x) (if (< x 0.5) (* 2 x x) (- 1 (/ (* (- 2 (* 2 x)) (- 2 (* 2 x))) 2))))
+; The first step sweeps t with 5.5 - 4.5 cos(2 pi k / 0.82): there and back, as two halves.
+(func sweep (real x) (/ (- 1 (cos (* pi x))) 2))
+
+; Steps 2 and 3 change the number of levels four times; each change blends the bars from the
+; old number to the new one over the first 35% of its quarter.
+(animation one-density
+  (at-once
+    (at-once (default-duration 0)
+      (move chapter (to 0)) (move exploring (to false)) (move mix (to 0)) (move floor (to false))
+      (move reach (to 10)) (move Lp (to 10)) (move g (to 1)))
+    (in-order
+      (move t (from 1) (to 10) (duration 5.33) (ease sweep))
+      (move t (to 1) (duration 5.33) (ease sweep))
+      (at-once
+        (move t (to bests[3][1]) (duration 2.34) (ease quad))
+        (move floor (to true) (duration 2.34) (ease (step-ease 0.72)))))))
+
+(animation floor-rises
+  (at-once (default-duration 0)
+    (move chapter (to 1)) (move exploring (to false)) (move mix (to 0)) (move floor (to true)))
+  (at-once (default-duration 0) (move reach (to 4)) (move Lp (to 10)) (move g (to 0)))
+  (at-once (default-duration 0.9625) (default-ease quad)
+    (move g (to 1)) (move t (from 4.5) (to bests[0][1])))
+  (move none (duration 1.7875))
+  (at-once (default-duration 0) (move reach (to 6)) (move Lp (to 4)) (move g (to 0)))
+  (at-once (default-duration 0.9625) (default-ease quad)
+    (move g (to 1)) (move t (from bests[0][1]) (to bests[1][1])))
+  (move none (duration 1.7875))
+  (at-once (default-duration 0) (move reach (to 8)) (move Lp (to 6)) (move g (to 0)))
+  (at-once (default-duration 0.9625) (default-ease quad)
+    (move g (to 1)) (move t (from bests[1][1]) (to bests[2][1])))
+  (move none (duration 1.7875))
+  (at-once (default-duration 0) (move reach (to 10)) (move Lp (to 8)) (move g (to 0)))
+  (at-once (default-duration 0.9625) (default-ease quad)
+    (move g (to 1)) (move t (from bests[2][1]) (to bests[3][1])))
+  (move none (duration 1.7875)))
+
+(animation all-densities
+  (at-once (default-duration 0)
+    (move chapter (to 2)) (move exploring (to false)) (move floor (to false)) (move mix (to 0))
+    (move reach (to 10)) (move Lp (to 10)) (move g (to 1)) (move t (to bests[3][1])))
+  (at-once
+    (move mix (to 1) (duration 2.16) (ease quad))
+    (in-order
+      (move none (duration 3.6))
+      (at-once (default-duration 0) (move reach (to 4)) (move Lp (to 10)) (move g (to 0))
+        (move t (to bests[0][1])))
+      (move g (to 1) (duration 0.735) (ease quad))
+      (move none (duration 1.365))
+      (at-once (default-duration 0) (move reach (to 6)) (move Lp (to 4)) (move g (to 0))
+        (move t (to bests[1][1])))
+      (move g (to 1) (duration 0.735) (ease quad))
+      (move none (duration 1.365))
+      (at-once (default-duration 0) (move reach (to 8)) (move Lp (to 6)) (move g (to 0))
+        (move t (to bests[2][1])))
+      (move g (to 1) (duration 0.735) (ease quad))
+      (move none (duration 1.365))
+      (at-once (default-duration 0) (move reach (to 10)) (move Lp (to 8)) (move g (to 0))
+        (move t (to bests[3][1])))
+      (move g (to 1) (duration 0.735) (ease quad))
+      (move none (duration 1.365)))))
+
+; Leaving the tour keeps the state, snapped to one density or all, and finishes any change of
+; the number of levels.
+(animation to-explore
+  (at-once (default-duration 0)
+    (move exploring (to true)) (move floor (to false)) (move mix (to (round mix)))
+    (move g (to 1) (duration 0.42) (ease quad))))
+
+; The original holds 8 seconds after steps 1 and 2 with a countdown on the play button, and
+; enters Explore after step 3.
+(play tour (buttons true)
+  (animation
+    (in-order one-density (move none (duration 8)))
+    (in-order floor-rises (move none (duration 8)))
+    (in-order all-densities to-explore)))
+
+(button explore (animation to-explore) (label 'Explore'))
+(button single-density
+  (animation (at-once (default-duration 0) (move mix (to 0)) (move exploring (to true))
+               (move floor (to false)) (move g (to 1))))
+  (label 'one'))
+(button all-of-them
+  (animation (at-once (default-duration 0) (move mix (to 1)) (move exploring (to true))
+               (move floor (to false)) (move g (to 1))))
+  (label 'all'))
+
+(on-drag n-grab reach)
+(on-drag t-handle t (<= t (+ L 0.5)))
+
+(readout heading $'n = {(round (^ 2 L))} points, {(round L)} levels')
+(readout caption
+    (cond ((= chapter 0)
+           'One density serves one scale. A random set of density p separates pairs well only at the levels where each half of their common cluster has about 1/p points. As the density sweeps from 1/2 to 2⁻¹⁰, the well-served levels travel down the hierarchy, and the distortion, set by the worst-served level, is enormous except near the bottom of the valley.')
+          ((= chapter 1)
+           'The floor rises with n. Even the best single density leaves the levels at both ends of the hierarchy poorly served. More points mean more levels to cover, and the lowest distortion a single density can reach climbs from about 1.3 at n = 16 to about 5.2 at n = 1024.')
+          (else
+           'All densities at once. Using every density 2⁻¹, …, 2⁻ᴸ together, each level is served by its own density and the bars even out. The distortion drops to between 1.1 and 1.3 and stays below 1.3 for every n shown.')))
+
+(canvas stretch-chart (view-x 0) (view-y -200) (view-width 480) (view-height 200) (pan false)
+  (zoom false)
+  bars-chart n-guide n-handle n-grab)
+(canvas distortion-chart (view-x 0) (view-y -206) (view-width 480) (view-height 206) (pan false)
+  (zoom false)
+  curve-chart marker t-handle)
