@@ -3,8 +3,8 @@
 ; the distance from x to y. The bar below cuts [0, δ/2] at the ρⱼ; it fills up to the common
 ; radius r of the two balls. Click a point to make it x or y (the older of the two is replaced),
 ; move the slider to change r, or press play to grow the balls from 0 to δ/2.
-; Coordinates are the original SVG's, with y pointing up. The 32 points are the ones the
-; original draws from its fixed seed.
+; Coordinates are the original SVG's, with y pointing up. The 32 points are drawn at random
+; each time the page loads, in the four clusters the original draws them in.
 
 (color fg '#1f2328')
 (color muted '#6b7280')
@@ -24,43 +24,62 @@
 ; Which of x and y the next click replaces.
 (bool replace-x true)
 
+; Where x and y are: each slides from one point to another, x-t (or y-t) of the way along. The
+; points are numbered 0 to 31.
+(int x-from 0 (>= 0) (<= 31))
+(int x-to 0 (>= 0) (<= 31))
+(real x-t 1 (>= 0) (<= 1))
+(int y-from 10 (>= 0) (<= 31))
+(int y-to 10 (>= 0) (<= 31))
+(real y-t 1 (>= 0) (<= 1))
+
+; The common radius of the two balls, as a share of δ/2.
+(real share 1 (>= 0) (<= 1))
+
 ; Whether p is in the ball of the given radius around center. Distances are computed, so a point
 ; at exactly the radius is let in by a hair more.
 (func in-ball ((point center) (real radius) (point p)) (<= (dist center p) (+ radius 1e-9)))
 
 (scene balls
-  (list[point] points
-   [[230.5 -132.6] [160.9 -135.0] [176.1 -148.8] [165.0 -113.9]
-    [150.0 -159.0] [201.3 -152.2] [169.5 -135.1] [215.2 -120.9]
-    [194.8 -147.7] [405.3 -91.9] [425.6 -127.4] [351.6 -150.4]
-    [378.9 -98.0] [426.5 -116.5] [352.6 -156.9] [410.2 -134.0]
-    [411.4 -70.0] [265.1 -239.5] [275.9 -225.9] [261.6 -215.6]
-    [206.1 -260.0] [255.5 -206.2] [207.2 -238.7] [356.5 -240.3]
-    [274.5 -206.3] [434.8 -246.1] [428.3 -233.4] [450.0 -216.0]
-    [404.5 -235.8] [423.6 -238.4] [423.1 -224.7] [404.9 -232.7]]
-   (const))
+  ; The four clusters, as boxes: points 0 to 8 fall in the first, 9 to 16 in the second, 17 to
+  ; 24 in the third, and 25 to 31 in the fourth.
+  (list left [150 351 206 404] (const))
+  (list right [231 427 357 450] (const))
+  (list bottom [-160 -157 -260 -247] (const))
+  (list top [-113 -70 -206 -216] (const))
 
-  ; The common radius of the two balls.
-  (real r 97.585 (>= 0))
+  ; Where the 32 points are. These are not drawn: the points in space sit on them, and x and y
+  ; are read from them, so they come first.
+  (group spots
+    (repeat 32 i
+      (circle _
+        (pos (let ((c (cond ((< i 9) 0) ((< i 17) 1) ((< i 25) 2) (else 3))))
+               [(rand left[c] right[c]) (rand bottom[c] top[c])])))))
+
+  ; x-from and the rest stay within 0 to 31, so these are never none, but the compiler cannot
+  ; know that.
+  (point x-at (lerp (or? spots[x-from].pos [0 0]) (or? spots[x-to].pos [0 0]) x-t))
+  (point y-at (lerp (or? spots[y-from].pos [0 0]) (or? spots[y-to].pos [0 0]) y-t))
+  (real h (/ (dist x-at y-at) 2) (>= 0))
+  (real r (* share h) (>= 0))
 
   ; The bar runs from 40 to 560 and stands for [0, δ/2].
   (real bar-left 40 (const))
   (real bar-width 520 (const))
   (real bar-y -338 (const))
 
-  (circle x (pos [230.5 -132.6]) (r 6.5) (fill x-color))
-  (circle y (pos [425.6 -127.4]) (r 6.5) (fill y-color))
+  (circle x (pos x-at) (r 6.5) (fill x-color))
+  (circle y (pos y-at) (r 6.5) (fill y-color))
 
   ; A point in x's ball takes x's color, else one in y's ball takes y's.
   (group space
     (repeat 32 i
-      (circle _ (pos points[i]) (r 4.5)
-        (fill (cond ((in-ball x.pos r points[i]) x-color)
-                    ((in-ball y.pos r points[i]) y-color)
+      (circle _ (pos spots[i].pos) (r 4.5)
+        (fill (cond ((in-ball x.pos r spots[i].pos) x-color)
+                    ((in-ball y.pos r spots[i].pos) y-color)
                     (else fg)))
-        (opacity (if (or (in-ball x.pos r points[i]) (in-ball y.pos r points[i])) 1 0.45)))))
+        (opacity (if (or (in-ball x.pos r spots[i].pos) (in-ball y.pos r spots[i].pos)) 1 0.45)))))
 
-  (real h (/ (dist x.pos y.pos) 2) (>= 0))
   (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
   (list dy (sort (map space (fn p (dist y.pos p.pos))) (fn d d)))
   ; ρ₁ to ρ₅: the 2ʲ-th nearest distance (index 2ʲ - 1), for x or y, whichever is larger.
@@ -117,17 +136,24 @@
           (pos [(+ bar-left (* at edges[j])) (+ bar-y 18)]) (halign 'middle') (font tick-label)
           (opacity (if (<= j k) 1 0)))))))
 
-; Clicking a point makes it x or y, replacing the older of the two, and sets r to the new δ/2.
+; Clicking a point makes it x or y, replacing the older of the two, which slides there, and
+; grows r to the new δ/2. The point it slides from is where it was going: from-moves come before
+; to-moves, so they read the old to. (step 1) makes each int jump at the start, never passing
+; through the points in between.
 (repeat 32 i
   (on-click space[i] (animation (default-duration 0.4) (at-once
-    (x.pos (to (if replace-x space[i].pos x.pos)))
-    (y.pos (to (if replace-x y.pos space[i].pos)))
-    (r (to (/ (dist space[i].pos (if replace-x y.pos x.pos)) 2)))
+    (x-from (to (if replace-x x-to x-from)) (ease (step 1)))
+    (y-from (to (if replace-x y-from y-to)) (ease (step 1)))
+    (x-to (to (if replace-x i x-to)) (ease (step 1)))
+    (y-to (to (if replace-x y-to i)) (ease (step 1)))
+    (x-t (from (if replace-x 0 x-t)) (to 1))
+    (y-t (from (if replace-x y-t 0)) (to 1))
+    (share (to 1))
     (replace-x (to (not replace-x)) (duration 0))))))
 
-(slider radius (animation (r (from 0) (to h) (duration 1))) (label 'r'))
+(slider radius (animation (share (from 0) (to 1) (duration 1))) (label 'r'))
 
-(play grow (animation (r (from 0) (to h) (duration 3.6) (ease 'linear'))))
+(play grow (animation (share (from 0) (to 1) (duration 3.6) (ease 'linear'))))
 
 (readout note
   (let ((cx (count space (fn p (in-ball x.pos r p.pos))))
