@@ -10,8 +10,7 @@
 (color warm '#e9c46a')
 (color deep '#6d597a')
 
-; Font sizes and stroke widths are in screen pixels. They are those of the scene units used
-; before, on a canvas 640 pixels wide, which shows 32 pixels per unit.
+; Font sizes and stroke widths are in screen pixels.
 ; Headings: the page's font, heavier.
 (font heading (weight 600) (size 24))
 ; Math variables are italic, in a serif, as in typeset math.
@@ -22,19 +21,18 @@
 (font number (family 'ui-monospace, Menlo, monospace') (size 16))
 
 ; One group per function: its line, its name, and its value, so a toggle shows or hides all three.
+; The circle has radius 1, and the canvas's view box makes it large.
 (scene plane
   (background paper)
   (real theta 40)
-  (real unit 6 (const))
 
   ; Where the tangent line at the point meets the x axis (at sec theta) and the y axis (at csc
   ; theta). At 90 and 270 degrees it never meets the x axis, and at 0 and 180 never the y axis:
   ; there these are none, and the lines and names that need them are not drawn.
-  (real|none sec-x (* unit (secd theta)))
-  (real|none csc-y (* unit (cscd theta)))
+  (real|none sec-x (secd theta))
+  (real|none csc-y (cscd theta))
 
-  (group handle
-    (circle p (pos (polar unit theta)) (r 0.25) (fill ink)))
+  (circle p (pos (polar 1 theta)) (r 0.04) (fill ink))
 
   ; Which side of each axis the point is on: names along an axis go on the other side, away
   ; from the lines that reach the point.
@@ -42,51 +40,65 @@
   (real right (if (>= (cosd theta) 0) 1 -1))
 
   (group frame
-    (line _ (from [-8 0]) (to [8 0]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
-    (line _ (from [0 -7]) (to [0 7]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
-    (circle rim (r unit) (fill none) (stroke ink) (stroke-width 1.6))
+    (line _ (from [-1.35 0]) (to [1.35 0]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
+    (line _ (from [0 -1.15]) (to [0 1.15]) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.5))
+    (circle rim (r 1) (fill none) (stroke ink) (stroke-width 1.6))
     (line radius (from [0 0]) (to p.pos) (stroke ink) (stroke-width 1.92))
-    (text _ 'θ' (pos (polar 1.1 (/ theta 2))) (font variable) (fill ink))
-    (text title 'the unit circle' (pos [-9.5 6.3]) (font heading) (fill ink))
-    (text angle $'θ = {theta:5.1f}°' (pos [-9.5 5.4]) (font number) (fill ink)))
+    (text _ 'θ' (pos (polar 0.18 (/ theta 2))) (font variable) (fill ink))
+    (text title 'the unit circle' (pos [-2.05 1.05]) (font heading) (fill ink))
+    (text angle $'θ = {theta:5.1f}°' (pos [-2.05 0.9]) (font number) (fill ink)))
 
+  ; The names sit beside their lines, centered on the spot given.
   (group cosine
     (line across (from [0 0]) (to [p.x 0]) (stroke accent) (stroke-width 3.84))
-    (text _ 'cos' (pos [(/ p.x 2) (* -0.8 above)]) (font small) (fill accent))
-    (text xs $'cos = {(cosd theta):+z.3f}' (pos [-9.5 4.7]) (font number) (fill accent)))
+    (text _ 'cos' (pos [(/ p.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
+      (font small) (fill accent))
+    (text xs $'cos = {(cosd theta):+z.3f}' (pos [-2.05 0.78]) (font number) (fill accent)))
 
+  ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
+  ; triangle is too thin for it.
   (group sine
     (line up (from [p.x 0]) (to p.pos) (stroke cool) (stroke-width 3.84))
-    (text _ 'sin' (pos [(+ p.x 0.3) (/ p.y 2)]) (font small) (fill cool))
-    (text ys $'sin = {(sind theta):+z.3f}' (pos [-9.5 4.0]) (font number) (fill cool)))
+    (text _ 'sin' (pos [(+ p.x (* 0.12 right (if (< (abs p.x) 0.45) 1 -1))) (/ p.y 2)]) (halign 'middle') (valign 'middle')
+      (font small) (fill cool))
+    (text ys $'sin = {(sind theta):+z.3f}' (pos [-2.05 0.67]) (font number) (fill cool)))
 
   ; The tangent line at the point, split where it touches the circle: from the point to the
-  ; x axis is tan theta long, and along the x axis from the center, sec theta.
+  ; x axis is tan theta long, and along the x axis from the center, sec theta. The tangent is at
+  ; right angles to the radius, so its name moves out along the radius to clear the line, and
+  ; it stays near the point, since the line's far end may be off the canvas.
   (group tangent
     (line|none tan (from p.pos) (to [sec-x 0]) (stroke deep) (stroke-width 3.84))
-    (text|none _ 'tan' (pos (+ (lerp p.pos [sec-x 0] 0.5) [0.3 0.3])) (font small) (fill deep))
+    (text|none _ 'tan'
+      (pos (+ (lerp p.pos [sec-x 0] (min 0.5 (/ 0.3 (dist p.pos [sec-x 0])))) (polar 0.1 theta)))
+      (halign 'middle') (valign 'middle') (font small) (fill deep))
     (text tans (or? $'tan = {(tand theta):+z.3f}' 'tan = ±∞')
-      (pos [-9.5 3.3]) (font number) (fill deep)))
+      (pos [-2.05 0.55]) (font number) (fill deep)))
 
+  ; sec runs along the x axis past cos, so its name goes on the part of the line beyond cos,
+  ; kept on the canvas.
   (group secant
     (line|none sec (from [0 0]) (to [sec-x 0]) (stroke deep) (stroke-width 1.92))
-    ; Beyond the cos label, since both lie along the x axis.
-    (text|none _ 'sec' (pos [(/ sec-x 2) (* -1.5 above)]) (font small) (fill deep))
+    (text|none _ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ p.x sec-x) 2))) (* -0.1 above)])
+      (halign 'middle') (valign 'middle') (font small) (fill deep))
     (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
-      (pos [-9.5 2.6]) (font number) (fill deep)))
+      (pos [-2.05 0.43]) (font number) (fill deep)))
 
   ; From the point to the y axis is cot theta long, and along the y axis, csc theta.
   (group cotangent
     (line|none cot (from p.pos) (to [0 csc-y]) (stroke warm) (stroke-width 3.84))
-    (text|none _ 'cot' (pos (+ (lerp p.pos [0 csc-y] 0.5) [0.3 0.3])) (font small) (fill warm))
+    (text|none _ 'cot'
+      (pos (+ (lerp p.pos [0 csc-y] (min 0.5 (/ 0.3 (dist p.pos [0 csc-y])))) (polar 0.1 theta)))
+      (halign 'middle') (valign 'middle') (font small) (fill warm))
     (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
-      (pos [-9.5 1.9]) (font number) (fill warm)))
+      (pos [-2.05 0.32]) (font number) (fill warm)))
 
   (group cosecant
     (line|none csc (from [0 0]) (to [0 csc-y]) (stroke warm) (stroke-width 1.92))
-    (text|none _ 'csc' (pos [(if (> right 0) -1 0.3) (/ csc-y 2)]) (font small) (fill warm))
+    (text|none _ 'csc' (pos [(* -0.12 right) (max -1.1 (min 1.1 (/ csc-y 2)))])
+      (halign 'middle') (valign 'middle') (font small) (fill warm))
     (text cscs (or? $'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
-      (pos [-9.5 1.2]) (font number) (fill warm))))
+      (pos [-2.05 0.2]) (font number) (fill warm))))
 
 ; Which functions are shown. These toggles hold their own value: whether a line is shown is about
 ; this view, not about the circle, so the scene does not need to know.
@@ -99,7 +111,7 @@
 
 ; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
 ; function on or off fades its line, name and value in or out.
-(canvas view (view-x -10) (view-y -7.5) (view-width 20) (view-height 15)
+(canvas view (view-x -2.1) (view-y -1.35) (view-width 3.6) (view-height 2.7)
   (transition (duration 0.4) (ease 'ease-in-out') (path fade))
   frame
   (when show-sec.value secant)
@@ -108,7 +120,7 @@
   (when show-sin.value sine)
   (when show-tan.value tangent)
   (when show-cot.value cotangent)
-  handle)
+  p)
 
 ; Dragging the point changes theta, so the point slides along the circle under the pointer.
 (on-drag p (target theta))
