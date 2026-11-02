@@ -1,39 +1,38 @@
 ; Put n points on a circle and join point k to point m*k with a chord. Together the chords
 ; trace a curve: times m gives a curve with m - 1 cusps, a cardioid for 2, a nephroid for 3.
 
-(color 'slate' '#0e1726')
-(color 'chalk' '#e8e4d8')
-(font 'heading' (weight 600) (size 0.55))
-(font 'small' (size 0.5))
+(color slate '#0e1726')
+(color chalk '#e8e4d8')
+(font heading (weight 600) (size 17.6))
+(font small (size 16))
 
 ; Point k of n, evenly spaced around a circle. Angles past 360 wrap around on their own.
-(func 'on-circle' (params (radius 1.0) (k 0) (n 1))
-  (polar radius (turn (/ k n))))
+(func on-circle ((real radius 1) (real k 0) (int n 1 (>= 1))) (polar radius (turn (/ k n))))
 
-(motif 'times-table' (params (n 200) (m 2) (radius 3.8) (turn 0.0) (label ''))
-  (group 'figure' (transform (rotate turn))
-    (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
+(motif times-table ((int n 200 (const)) (int m 2) (real radius 3.8 (>= 0)) (real turn 0) (string label ''))
+  (group figure (transform (rotate turn))
+    (circle rim (r radius) (fill none) (stroke-width 1.28) (stroke-opacity 0.6))
     (repeat n k
       (line _
         (from (on-circle radius k n))
         (to (on-circle radius (* m k) n))
-        (stroke-width 0.02)
+        (stroke-width 0.64)
         (stroke-opacity (lerp 0.2 0.85 (/ k n)))))
     (repeat n k
-      (circle _ (pos (on-circle radius k n)) (r 0.045) (stroke 'none'))))
-  (text 'caption' label (pos [(- radius) (- (+ radius 0.8))]) (font small)
-    (fill chalk) (stroke 'none')))
+      (circle _ (pos (on-circle radius k n)) (r 0.045) (stroke none))))
+  (text caption label (pos [(- radius) (- (+ radius 0.8))]) (font small)
+    (fill chalk) (stroke none)))
 
-(scene 'board'
+(scene board
   (background slate)
 
-  (times-table 'two' (pos [-5 5]) (m 2) (turn -90)
+  (times-table two (pos [-5 5]) (m 2) (turn -90)
     (stroke '#ffb703') (fill '#ffb703') (label '× 2   cardioid'))
-  (times-table 'three' (pos [5 5]) (m 3) (turn -90)
+  (times-table three (pos [5 5]) (m 3) (turn -90)
     (stroke '#8ecae6') (fill '#8ecae6') (label '× 3   nephroid'))
-  (times-table 'nine' (pos [0 -4.6]) (n 240) (m 9) (radius 4.2) (turn 90)
+  (times-table nine (pos [0 -4.6]) (n 240) (m 9) (radius 4.2) (turn 90)
     (stroke '#f4978e') (fill '#f4978e') (label '× 9   eight cusps'))
 
-  (text 'title' 'modular times tables' (pos [-9.4 9.3]) (font heading) (fill chalk) (opacity 0.7)))
+  (text title 'modular times tables' (pos [-9.4 9.3]) (font heading) (fill chalk) (opacity 0.7)))
 
-(canvas 'cnv' board)
+(canvas cnv board)

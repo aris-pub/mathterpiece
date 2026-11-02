@@ -6,127 +6,226 @@
 ; Coordinates are the original SVG's, with y pointing up. The 32 points are the ones the
 ; original draws from its fixed seed.
 
-(color 'fg' '#1f2328')
-(color 'muted' '#6b7280')
-(color 'bg' '#faf7f0')
-(color 'env' '#f2ede2')
-(color 'x-color' '#1a6f66')
-(color 'y-color' '#a65a3a')
-(color 's1' '#4a6584')
-(color 's2' '#a07a2c')
-(color 's3' '#7e5a86')
-(color 's4' '#6f7f45')
-(color 's5' '#7f8da0')
-(font 'label' (style 'italic') (size 17))
-(font 'tick-label' (size 13))
-(font 'segment' (size 12))
+(color fg '#1f2328')
+(color muted '#6b7280')
+(color bg '#faf7f0')
+(color env '#f2ede2')
+(color x-color '#1a6f66')
+(color y-color '#a65a3a')
+(color s1 '#4a6584')
+(color s2 '#a07a2c')
+(color s3 '#7e5a86')
+(color s4 '#6f7f45')
+(color s5 '#7f8da0')
+(font label (style 'italic') (size 17))
+(font tick-label (size 13))
+(font segment (size 12))
 
-; The 32 points, as their x's and their y's.
-(const 'xs'
- [230.5 160.9 176.1 165.0 150.0 201.3 169.5 215.2
-  194.8 405.3 425.6 351.6 378.9 426.5 352.6 410.2
-  411.4 265.1 275.9 261.6 206.1 255.5 207.2 356.5
-  274.5 434.8 428.3 450.0 404.5 423.6 423.1 404.9])
-(const 'ys'
- [-132.6 -135.0 -148.8 -113.9 -159.0 -152.2 -135.1 -120.9
-  -147.7 -91.9 -127.4 -150.4 -98.0 -116.5 -156.9 -134.0
-  -70.0 -239.5 -225.9 -215.6 -260.0 -206.2 -238.7 -240.3
-  -206.3 -246.1 -233.4 -216.0 -235.8 -238.4 -224.7 -232.7])
+; Which of x and y the next click replaces.
+(bool replace-x true)
 
-; The common radius of the two balls, and which of x and y the next click replaces.
-(real 'r' 97.585)
-(bool 'replace-x' true)
+(scene balls
+  (list[point] points
+   [[230.5 -132.6] [160.9 -135.0] [176.1 -148.8] [165.0 -113.9]
+    [150.0 -159.0] [201.3 -152.2] [169.5 -135.1] [215.2 -120.9]
+    [194.8 -147.7] [405.3 -91.9] [425.6 -127.4] [351.6 -150.4]
+    [378.9 -98.0] [426.5 -116.5] [352.6 -156.9] [410.2 -134.0]
+    [411.4 -70.0] [265.1 -239.5] [275.9 -225.9] [261.6 -215.6]
+    [206.1 -260.0] [255.5 -206.2] [207.2 -238.7] [356.5 -240.3]
+    [274.5 -206.3] [434.8 -246.1] [428.3 -233.4] [450.0 -216.0]
+    [404.5 -235.8] [423.6 -238.4] [423.1 -224.7] [404.9 -232.7]]
+   (const))
 
-; The bar runs from 40 to 560 and stands for [0, δ/2].
-(const 'bar-left' 40)
-(const 'bar-width' 520)
-(const 'bar-y' -338)
+  ; The common radius of the two balls.
+  (real r 97.585 (>= 0))
 
-(scene 'balls'
-  (circle 'x' (pos [230.5 -132.6]) (r 6.5) (fill x-color))
-  (circle 'y' (pos [425.6 -127.4]) (r 6.5) (fill y-color))
+  ; The bar runs from 40 to 560 and stands for [0, δ/2].
+  (real bar-left 40 (const))
+  (real bar-width 520 (const))
+  (real bar-y -338 (const))
+
+  (circle x (pos [230.5 -132.6]) (r 6.5) (fill x-color))
+  (circle y (pos [425.6 -127.4]) (r 6.5) (fill y-color))
 
   ; A point in x's ball takes x's color, else one in y's ball takes y's.
-  (group 'space'
+  (group space
     (repeat 32 i
-      (circle _ (pos [xs[i] ys[i]]) (r 4.5)
-        (fill (cond ((<= (dist x self) (+ r 1e-9)) x-color)
-                    ((<= (dist y self) (+ r 1e-9)) y-color)
+      (circle _ (pos points[i]) (r 4.5)
+        (fill (cond ((<= (dist x.pos points[i]) (+ r 1e-9)) x-color)
+                    ((<= (dist y.pos points[i]) (+ r 1e-9)) y-color)
                     (else fg)))
-        (opacity (if (<= (min (dist x self) (dist y self)) (+ r 1e-9)) 1 0.45)))))
+        (opacity (if (<= (min (dist x.pos points[i]) (dist y.pos points[i])) (+ r 1e-9)) 1 0.45)))))
 
-  (let ((h (/ (dist x y) 2))
-        (dx (sort (map space p (dist x p))))
-        (dy (sort (map space p (dist y p))))
-        ; ρ₁ to ρ₅: the 2ʲ-th nearest distance (index 2ʲ - 1), for x or y, whichever is larger.
-        (rho (map [1 3 7 15 31] m (min (max dx[m] dy[m]) h)))
-        ; The first j with ρⱼ = δ/2.
-        (k (+ 1 (count rho q (< q (- h 1e-9)))))
-        (at (/ bar-width h)))
+  (real h (/ (dist x.pos y.pos) 2))
+  (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
+  (list dy (sort (map space (fn p (dist y.pos p.pos))) (fn d d)))
+  ; ρ₁ to ρ₅: the 2ʲ-th nearest distance (index 2ʲ - 1), for x or y, whichever is larger.
+  (list rho [(min (max dx[1] dy[1]) h) (min (max dx[3] dy[3]) h) (min (max dx[7] dy[7]) h)
+             (min (max dx[15] dy[15]) h) (min (max dx[31] dy[31]) h)] (length 5))
+  ; 0, then ρ₁ to ρ₅: segment j of the bar covers [edges[j], edges[j + 1]].
+  (list edges [0 rho[0] rho[1] rho[2] rho[3] rho[4]] (length 6))
+  ; The first j with ρⱼ = δ/2.
+  (int k (+ 1 (count rho (fn q (< q (- h 1e-9))))))
+  ; Scene units per unit of distance along the bar. x and y are never the same point, so h is
+  ; never 0, but the compiler cannot know that.
+  (real at (or? (/ bar-width h) 0))
 
-    ; Faint rings at ρ₁ to ρₖ around both points.
-    (group 'rings'
-      (repeat 5 j
-        (let ((ring (if (< j k) 0.3 0)))
-          (circle _ (pos x.pos) (r rho[j]) (fill 'none') (stroke muted) (opacity ring))
-          (circle _ (pos y.pos) (r rho[j]) (fill 'none') (stroke muted) (opacity ring)))))
+  ; Faint rings at ρ₁ to ρₖ around both points.
+  (group rings
+    (repeat 5 j
+      (circle _ (pos x.pos) (r (max 0 rho[j])) (fill none) (stroke muted)
+        (opacity (if (< j k) 0.3 0)))
+      (circle _ (pos y.pos) (r (max 0 rho[j])) (fill none) (stroke muted)
+        (opacity (if (< j k) 0.3 0)))))
 
-    (group 'pair'
-      (line _ (from x.pos) (to y.pos) (stroke muted) (stroke-width 1) (opacity 0.6))
-      (circle _ (pos x.pos) (r r) (fill x-color) (fill-opacity 0.1) (stroke x-color)
-        (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
-      (circle _ (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
-        (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
-      (text _ 'x' (pos (+ x.pos [9 9])) (font label) (fill fg))
-      (text _ 'y' (pos (+ y.pos [9 9])) (font label) (fill fg)))
+  (group pair
+    (line _ (from x.pos) (to y.pos) (stroke muted) (stroke-width 1) (opacity 0.6))
+    (circle _ (pos x.pos) (r r) (fill x-color) (fill-opacity 0.1) (stroke x-color)
+      (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
+    (circle _ (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
+      (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
+    (text _ 'x' (pos (+ x.pos [9 9])) (font label) (fill fg))
+    (text _ 'y' (pos (+ y.pos [9 9])) (font label) (fill fg)))
 
-    ; Segment j covers [ρⱼ₋₁, ρⱼ], filled up to r. Past k the ρⱼ all equal δ/2, so those
-    ; segments are empty.
-    (group 'bar'
-      (rect _ (x bar-left) (y (- bar-y 9)) (width bar-width) (height 18) (rx 3) (fill env))
-      (repeat 5 j
-        (let ((lo (if (= j 0) 0 rho[(- j 1)]))
-              (hi (min rho[j] r))
-              (width (max 0 (* at (- hi lo)))))
-          (rect _ (x (+ bar-left (* at lo))) (y (- bar-y 9)) (width width) (height 18)
-            (fill (cond ((= j 0) s1) ((= j 1) s2) ((= j 2) s3) ((= j 3) s4) (else s5))))
-          (let ((n (+ j 1)))
-            (text _ $'j = {n}' (pos [(+ bar-left (* at (/ (+ lo hi) 2))) (- bar-y 4.5)])
-              (halign 'middle') (font segment) (fill bg)
-              (opacity (if (and (>= hi (- rho[j] 1e-9)) (> width 26)) 1 0))))))
-      ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
-      (repeat 6 j
-        (let ((v (if (= j 0) 0 rho[(- j 1)]))
-              (tick (+ bar-left (* at v)))
-              (shown (if (<= j k) 1 0)))
-          (line _ (from [tick (+ bar-y 14)]) (to [tick (- bar-y 9)]) (stroke fg)
-            (stroke-width 1.2) (opacity shown))
-          (text _ (cond ((= j 0) '0') ((= j k) 'δ/2') ((= j 1) 'ρ₁') ((= j 2) 'ρ₂') ((= j 3) 'ρ₃')
-                        (else 'ρ₄'))
-            (pos [tick (+ bar-y 18)]) (halign 'middle') (font tick-label) (fill fg) (opacity shown)))))))
+  ; Segment j covers [ρⱼ₋₁, ρⱼ], filled up to r. Past k the ρⱼ all equal δ/2, so those
+  ; segments are empty. A rect's position is its center.
+  (group bar
+    (rect _ (pos [(+ bar-left (/ bar-width 2)) bar-y]) (width bar-width) (height 18) (rx 3)
+      (fill env))
+    (repeat 5 j
+      (rect _
+        (pos [(+ bar-left (* at (/ (+ edges[j] (max edges[j] (min rho[j] r))) 2))) bar-y])
+        (width (max 0 (* at (- (min rho[j] r) edges[j])))) (height 18)
+        (fill (cond ((= j 0) s1) ((= j 1) s2) ((= j 2) s3) ((= j 3) s4) (else s5))))
+      (text _ $'j = {(+ j 1)}'
+        (pos [(+ bar-left (* at (/ (+ edges[j] (min rho[j] r)) 2))) (- bar-y 4.5)])
+        (halign 'middle') (font segment) (fill bg)
+        (opacity (if (and (>= r (- rho[j] 1e-9)) (> (* at (- (min rho[j] r) edges[j])) 26)) 1 0))))
+    ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
+    (repeat 6 j
+      (line _ (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
+        (to [(+ bar-left (* at edges[j])) (- bar-y 9)])
+        (stroke fg) (stroke-width 1.2) (opacity (if (<= j k) 1 0)))
+      (text _ (cond ((= j 0) '0') ((= j k) 'δ/2') ((= j 1) 'ρ₁') ((= j 2) 'ρ₂') ((= j 3) 'ρ₃')
+                    (else 'ρ₄'))
+        (pos [(+ bar-left (* at edges[j])) (+ bar-y 18)]) (halign 'middle') (font tick-label)
+        (fill fg) (opacity (if (<= j k) 1 0))))))
 
 ; Clicking a point makes it x or y, replacing the older of the two, and sets r to the new δ/2.
-(repeat 32 i
-  (on-click space[i]
-    (animation
-      (at-once
-        (x.pos (transition (to (if replace-x space[i].pos x.pos)) (duration 0.4)))
-        (y.pos (transition (to (if replace-x y.pos space[i].pos)) (duration 0.4)))
-        (r (transition (to (/ (dist space[i].pos (if replace-x y.pos x.pos)) 2)) (duration 0.4)))
-        (replace-x (transition (to (not replace-x)) (duration 0)))))))
+; Where x, y and r go when the point at q is clicked.
+(func next-x (point q) (if replace-x q x.pos))
+(func next-y (point q) (if replace-x y.pos q))
+(func next-r (point q) (/ (dist q (if replace-x y.pos x.pos)) 2))
+(transition flip (to (not replace-x)) (duration 0))
+; The compiler does not yet allow a listener inside a repeat, so the 32 are written out.
+(on-click space[0] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[0].pos)))) (y.pos (transition (to (next-y space[0].pos))))
+  (r (transition (to (next-r space[0].pos)))) (replace-x flip))))
+(on-click space[1] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[1].pos)))) (y.pos (transition (to (next-y space[1].pos))))
+  (r (transition (to (next-r space[1].pos)))) (replace-x flip))))
+(on-click space[2] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[2].pos)))) (y.pos (transition (to (next-y space[2].pos))))
+  (r (transition (to (next-r space[2].pos)))) (replace-x flip))))
+(on-click space[3] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[3].pos)))) (y.pos (transition (to (next-y space[3].pos))))
+  (r (transition (to (next-r space[3].pos)))) (replace-x flip))))
+(on-click space[4] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[4].pos)))) (y.pos (transition (to (next-y space[4].pos))))
+  (r (transition (to (next-r space[4].pos)))) (replace-x flip))))
+(on-click space[5] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[5].pos)))) (y.pos (transition (to (next-y space[5].pos))))
+  (r (transition (to (next-r space[5].pos)))) (replace-x flip))))
+(on-click space[6] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[6].pos)))) (y.pos (transition (to (next-y space[6].pos))))
+  (r (transition (to (next-r space[6].pos)))) (replace-x flip))))
+(on-click space[7] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[7].pos)))) (y.pos (transition (to (next-y space[7].pos))))
+  (r (transition (to (next-r space[7].pos)))) (replace-x flip))))
+(on-click space[8] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[8].pos)))) (y.pos (transition (to (next-y space[8].pos))))
+  (r (transition (to (next-r space[8].pos)))) (replace-x flip))))
+(on-click space[9] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[9].pos)))) (y.pos (transition (to (next-y space[9].pos))))
+  (r (transition (to (next-r space[9].pos)))) (replace-x flip))))
+(on-click space[10] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[10].pos)))) (y.pos (transition (to (next-y space[10].pos))))
+  (r (transition (to (next-r space[10].pos)))) (replace-x flip))))
+(on-click space[11] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[11].pos)))) (y.pos (transition (to (next-y space[11].pos))))
+  (r (transition (to (next-r space[11].pos)))) (replace-x flip))))
+(on-click space[12] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[12].pos)))) (y.pos (transition (to (next-y space[12].pos))))
+  (r (transition (to (next-r space[12].pos)))) (replace-x flip))))
+(on-click space[13] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[13].pos)))) (y.pos (transition (to (next-y space[13].pos))))
+  (r (transition (to (next-r space[13].pos)))) (replace-x flip))))
+(on-click space[14] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[14].pos)))) (y.pos (transition (to (next-y space[14].pos))))
+  (r (transition (to (next-r space[14].pos)))) (replace-x flip))))
+(on-click space[15] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[15].pos)))) (y.pos (transition (to (next-y space[15].pos))))
+  (r (transition (to (next-r space[15].pos)))) (replace-x flip))))
+(on-click space[16] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[16].pos)))) (y.pos (transition (to (next-y space[16].pos))))
+  (r (transition (to (next-r space[16].pos)))) (replace-x flip))))
+(on-click space[17] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[17].pos)))) (y.pos (transition (to (next-y space[17].pos))))
+  (r (transition (to (next-r space[17].pos)))) (replace-x flip))))
+(on-click space[18] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[18].pos)))) (y.pos (transition (to (next-y space[18].pos))))
+  (r (transition (to (next-r space[18].pos)))) (replace-x flip))))
+(on-click space[19] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[19].pos)))) (y.pos (transition (to (next-y space[19].pos))))
+  (r (transition (to (next-r space[19].pos)))) (replace-x flip))))
+(on-click space[20] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[20].pos)))) (y.pos (transition (to (next-y space[20].pos))))
+  (r (transition (to (next-r space[20].pos)))) (replace-x flip))))
+(on-click space[21] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[21].pos)))) (y.pos (transition (to (next-y space[21].pos))))
+  (r (transition (to (next-r space[21].pos)))) (replace-x flip))))
+(on-click space[22] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[22].pos)))) (y.pos (transition (to (next-y space[22].pos))))
+  (r (transition (to (next-r space[22].pos)))) (replace-x flip))))
+(on-click space[23] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[23].pos)))) (y.pos (transition (to (next-y space[23].pos))))
+  (r (transition (to (next-r space[23].pos)))) (replace-x flip))))
+(on-click space[24] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[24].pos)))) (y.pos (transition (to (next-y space[24].pos))))
+  (r (transition (to (next-r space[24].pos)))) (replace-x flip))))
+(on-click space[25] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[25].pos)))) (y.pos (transition (to (next-y space[25].pos))))
+  (r (transition (to (next-r space[25].pos)))) (replace-x flip))))
+(on-click space[26] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[26].pos)))) (y.pos (transition (to (next-y space[26].pos))))
+  (r (transition (to (next-r space[26].pos)))) (replace-x flip))))
+(on-click space[27] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[27].pos)))) (y.pos (transition (to (next-y space[27].pos))))
+  (r (transition (to (next-r space[27].pos)))) (replace-x flip))))
+(on-click space[28] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[28].pos)))) (y.pos (transition (to (next-y space[28].pos))))
+  (r (transition (to (next-r space[28].pos)))) (replace-x flip))))
+(on-click space[29] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[29].pos)))) (y.pos (transition (to (next-y space[29].pos))))
+  (r (transition (to (next-r space[29].pos)))) (replace-x flip))))
+(on-click space[30] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[30].pos)))) (y.pos (transition (to (next-y space[30].pos))))
+  (r (transition (to (next-r space[30].pos)))) (replace-x flip))))
+(on-click space[31] (animation (default-duration 0.4) (at-once
+  (x.pos (transition (to (next-x space[31].pos)))) (y.pos (transition (to (next-y space[31].pos))))
+  (r (transition (to (next-r space[31].pos)))) (replace-x flip))))
 
-(slider 'radius' (animation (r (transition (from 0) (to (/ (dist x y) 2))))) (label 'r'))
+(slider radius (animation (r (transition (from 0) (to h) (duration 1)))) (label 'r'))
 
-(play 'grow' (animation (r (transition (from 0) (to (/ (dist x y) 2)) (duration 3.6) (ease 'linear')))))
+(play grow (animation (r (transition (from 0) (to h) (duration 3.6) (ease 'linear')))))
 
-(readout 'note'
-  (let ((h (/ (dist x y) 2))
-        (cx (count space p (<= (dist x p) (+ r 1e-9))))
-        (cy (count space p (<= (dist y p) (+ r 1e-9)))))
+(readout note
+  (let ((cx (count space (fn p (<= (dist x.pos p.pos) (+ r 1e-9)))))
+        (cy (count space (fn p (<= (dist y.pos p.pos) (+ r 1e-9))))))
     (cond ((<= r 1e-9) 'At radius 0 each ball holds only its center.')
           ((>= r (- h 1e-6)) 'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
           (else $'The balls hold {cx} and {cy} points.'))))
 
-(canvas 'the-space' (view-x 0) (view-y -318) (view-width 600) (view-height 318)
+(canvas the-space (view-x 0) (view-y -318) (view-width 600) (view-height 318)
   rings pair space x y)
-(canvas 'the-bar' (view-x 0) (view-y -356) (view-width 600) (view-height 56) bar)
+(canvas the-bar (view-x 0) (view-y -356) (view-width 600) (view-height 56) bar)

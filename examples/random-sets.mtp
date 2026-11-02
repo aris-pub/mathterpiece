@@ -4,21 +4,21 @@
 
 ; Colors and type as tokens, so the Bourgain page can map them onto its own variables
 ; (--mtp-fg: var(--fg) and so on) and follow its light and dark mode.
-(color 'fg' '#1f2328')
-(color 'muted' '#6b7280')
-(color 'bg' '#faf7f0')
-(color 'rule' '#d8d3c4')
-(color 'teal' '#1a6f66')
-(color 'coral' '#a65a3a')
-(color 'accent' '#4a6584')
-(color 'warn' '#a07a2c')
-(font 'label' (style 'italic') (size 14))
-(font 'note' (size 13))
-(font 'value' (size 14))
+(color fg '#1f2328')
+(color muted '#6b7280')
+(color bg '#faf7f0')
+(color rule '#d8d3c4')
+(color teal '#1a6f66')
+(color coral '#a65a3a')
+(color accent '#4a6584')
+(color warn '#a07a2c')
+(font label (style 'italic') (size 14))
+(font note (size 13))
+(font value (size 14))
 
-(scene 'star'
+(scene star
   ; A = {u1}. Distances to A: u1 0, c 1, u2 2, u3 2, u4 2. The leaves u1 and u2 differ by 2.
-  (group 'one-leaf'
+  (group one-leaf
     (line _ (from [110 -105]) (to [110 -45]) (stroke fg) (stroke-width 1.5))
     (line _ (from [110 -105]) (to [170 -105]) (stroke fg) (stroke-width 1.5))
     (line _ (from [110 -105]) (to [110 -165]) (stroke fg) (stroke-width 1.5))
@@ -47,7 +47,7 @@
     (text _ 'u₁, u₂ separated by 2' (pos [110 -233]) (halign 'middle') (font note) (fill muted)))
 
   ; A = {c, u2, u3}. Distances to A: u1 1, c 0, u2 0, u3 0, u4 1. The leaves u1 and u2 differ by 1.
-  (group 'center-and-two'
+  (group center-and-two
     (line _ (from [340 -105]) (to [340 -45]) (stroke fg) (stroke-width 1.5))
     (line _ (from [340 -105]) (to [400 -105]) (stroke fg) (stroke-width 1.5))
     (line _ (from [340 -105]) (to [340 -165]) (stroke fg) (stroke-width 1.5))
@@ -76,7 +76,7 @@
     (text _ 'u₁, u₂ separated by 1' (pos [340 -233]) (halign 'middle') (font note) (fill muted)))
 
   ; A = {u3, u4}. Distances to A: u1 2, c 1, u2 2, u3 0, u4 0. The leaves u1 and u2 are not separated.
-  (group 'two-leaves'
+  (group two-leaves
     (line _ (from [570 -105]) (to [570 -45]) (stroke fg) (stroke-width 1.5))
     (line _ (from [570 -105]) (to [630 -105]) (stroke fg) (stroke-width 1.5))
     (line _ (from [570 -105]) (to [570 -165]) (stroke fg) (stroke-width 1.5))
@@ -104,9 +104,9 @@
     (text _ '(c) A = {u₃, u₄}' (pos [570 -215]) (halign 'middle') (font note) (fill muted))
     (text _ 'u₁, u₂ not separated' (pos [570 -233]) (halign 'middle') (font note) (fill muted))))
 
-(canvas 'one-leaf-view' (view-x 0) (view-y -242)
+(canvas one-leaf-view (view-x 0) (view-y -242)
   (view-width 226) (view-height 223) one-leaf)
-(canvas 'center-and-two-view' (view-x 228) (view-y -242)
+(canvas center-and-two-view (view-x 228) (view-y -242)
   (view-width 226) (view-height 223) center-and-two)
-(canvas 'two-leaves-view' (view-x 456) (view-y -242)
+(canvas two-leaves-view (view-x 456) (view-y -242)
   (view-width 224) (view-height 223) two-leaves)

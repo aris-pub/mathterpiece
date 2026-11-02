@@ -5,21 +5,21 @@
 
 ; Colors and type as tokens, so the Bourgain page can map them onto its own variables
 ; (--mtp-fg: var(--fg) and so on) and follow its light and dark mode.
-(color 'fg' '#1f2328')
-(color 'muted' '#6b7280')
-(color 'bg' '#faf7f0')
-(color 'rule' '#d8d3c4')
-(color 'teal' '#1a6f66')
-(color 'coral' '#a65a3a')
-(color 'accent' '#4a6584')
-(color 'warn' '#a07a2c')
-(font 'label' (style 'italic') (size 14))
-(font 'note' (size 13))
-(font 'value' (size 14))
+(color fg '#1f2328')
+(color muted '#6b7280')
+(color bg '#faf7f0')
+(color rule '#d8d3c4')
+(color teal '#1a6f66')
+(color coral '#a65a3a')
+(color accent '#4a6584')
+(color warn '#a07a2c')
+(font label (style 'italic') (size 14))
+(font note (size 13))
+(font value (size 14))
 
-(scene 'girth'
+(scene girth
   ; The Petersen graph: an outer pentagon, an inner five-pointed star, and five spokes joining them.
-  (group 'petersen'
+  (group petersen
     (line _ (from [110 -22]) (to [184.2 -75.9]) (stroke fg) (stroke-width 1.5))
     (line _ (from [184.2 -75.9]) (to [155.8 -163.1]) (stroke fg) (stroke-width 1.5))
     (line _ (from [155.8 -163.1]) (to [64.2 -163.1]) (stroke fg) (stroke-width 1.5))
@@ -49,7 +49,7 @@
     (text _ 'at most ℓ = 4' (pos [110 -220]) (halign 'middle') (font note) (fill muted)))
 
   ; A subgraph H of the Petersen graph. Removed edges are dashed, among them the spoke from u to v; a path of length 4 from u to v that stays in H is highlighted.
-  (group 'subgraph'
+  (group subgraph
     (line _ (from [110 -22]) (to [184.2 -75.9]) (stroke teal) (stroke-width 3))
     (line _ (from [184.2 -75.9]) (to [155.8 -163.1]) (stroke fg) (stroke-width 1.5))
     (line _ (from [155.8 -163.1]) (to [64.2 -163.1]) (stroke muted) (stroke-width 1.2) (opacity 0.6))  ; dashed in the original
@@ -80,7 +80,7 @@
     (text _ '(b) a subgraph H; removed' (pos [110 -204]) (halign 'middle') (font note) (fill muted))
     (text _ 'edges dashed' (pos [110 -220]) (halign 'middle') (font note) (fill muted))))
 
-(canvas 'petersen-view' (view-x 0) (view-y -230)
+(canvas petersen-view (view-x 0) (view-y -230)
   (view-width 220) (view-height 230) petersen)
-(canvas 'subgraph-view' (view-x 0) (view-y -230)
+(canvas subgraph-view (view-x 0) (view-y -230)
   (view-width 220) (view-height 230) subgraph)

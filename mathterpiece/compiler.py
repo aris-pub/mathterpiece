@@ -229,6 +229,8 @@ class _Compiler:
         # The container the expression being compiled sits in: a group, or None for the scene
         # and the top level. Reads convert through the transforms not shared with it.
         self.frame: int | Literal["caller"] | None = None
+        # The names a repeat around the component being compiled gives it.
+        self.cscope: dict = {}
         # True while compiling the scene's contents, which may never read page access.
         self.in_scene = False
         # The object and attribute whose place is being compiled, so a message can name them:
@@ -296,7 +298,7 @@ class _Compiler:
             self.animation(form, {}, named=True)
             return
         if head in COMPONENTS:
-            return self.component(form)
+            return self.component(form, scope)
         if self.shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
@@ -1074,7 +1076,7 @@ class _Compiler:
         return Place(e.type, expr=e)
 
     def path(self, node: Node, scope: dict) -> Place:
-        if isinstance(node, StrLit) and node.value == "fade":
+        if isinstance(node, Name) and node.parts == ("fade",):
             return Place(STRING, "fade")
         e = self.expr(node, None, scope)
         ft = _core(e.type)
@@ -1138,7 +1140,10 @@ class _Compiler:
             head = _head(item)
             if head in ("default-duration", "default-ease"):
                 continue
-            if head == "wait":
+            if isinstance(item, Name):
+                # A named animation runs its steps in place.
+                out.append(self.model.objects[self.named(item, "animation")].data["steps"])
+            elif head == "wait":
                 out.append(("wait", self.seconds(self.args(item, 1)[0], scope)))
             elif head in ("at-once", "in-order"):
                 out.append((head, *self.steps(item.items[1:], duration, ease, scope)))
@@ -1171,7 +1176,16 @@ class _Compiler:
             )
         own = tr.attrs.get("ease")
         e = _ease_value(own) if own is not None else ease
-        discrete = "bool" if _core(t) == BOOL else "choice" if _choices(t) else None
+        core = _core(t)
+        discrete = (
+            "bool"
+            if core == BOOL
+            else "choice"
+            if _choices(t)
+            else "string"
+            if core == STRING
+            else None
+        )
         if discrete:
             # A bool's or a choice's ease must take only the values 0 and 1 (piecewise
             # constant): (step 1), the default, or step-ease.
@@ -1250,8 +1264,10 @@ class _Compiler:
             raise CompileError(f"{label} is fixed by its variant", pos)
         return place.type
 
-    def component(self, form: Form) -> None:
+    def component(self, form: Form, scope: dict) -> None:
         """A view, control or listener (reference.md, "Components")."""
+        # The names a repeat around the component gives it.
+        self.cscope = scope
         kind = _head(form)
         assert kind is not None
         if kind in ("on-drag", "on-click"):
@@ -1268,7 +1284,7 @@ class _Compiler:
         self.add(obj)
 
     def read_shape(self, node: Node) -> int:
-        e = self.expr(node, None, {})
+        e = self.expr(node, None, self.cscope)
         if e.op != "obj" or not isinstance(_core(e.type), ShapeT):
             raise CompileError("expected the name of a shape", node.pos)
         return e.args[0]
@@ -1288,7 +1304,7 @@ class _Compiler:
         if obj.name is not None:
             label = self.take(items, "label")
             obj.attrs["label"] = (
-                self.place(STRING, label, obj.pos, "label")
+                self.place(STRING, label, obj.pos, "label", scope=self.cscope)
                 if label is not None
                 else Place(STRING, obj.name)
             )
@@ -1304,13 +1320,15 @@ class _Compiler:
         animation = None
         if anims:
             items.remove(anims[0])
-            animation = self.animation(anims[0], {}, named=False)
+            animation = self.animation(anims[0], self.cscope, named=False)
         obj.data["animation"] = animation
         return self.written(animation)
 
     def when(self, obj: Obj, items: list) -> None:
         node = self.take(items, "when")
-        obj.data["when"] = self.place(BOOL, node, obj.pos, "when") if node is not None else None
+        obj.data["when"] = (
+            self.place(BOOL, node, obj.pos, "when", scope=self.cscope) if node is not None else None
+        )
 
     def build_button(self, obj: Obj, items: list, shape) -> None:
         self.writer(obj, items, self.animated(obj, items))
@@ -1319,14 +1337,16 @@ class _Compiler:
         written = self.animated(obj, items)
         step = self.take(items, "step")
         if step is not None:
-            obj.attrs["step"] = self.place(Refine(INT, ((">=", 2),)), step, obj.pos, "step")
+            obj.attrs["step"] = self.place(
+                Refine(INT, ((">=", 2),)), step, obj.pos, "step", scope=self.cscope
+            )
         obj.attrs["position"] = Place(UNIT, 0)
         self.writer(obj, items, written)
 
     def build_play(self, obj: Obj, items: list, shape) -> None:
         written = self.animated(obj, items)
         buttons = self.take(items, "buttons")
-        obj.attrs["buttons"] = self.place(BOOL, buttons, obj.pos, "buttons")
+        obj.attrs["buttons"] = self.place(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
         obj.attrs["playing"] = Place(BOOL, False)
         obj.attrs["step"] = Place(INT, 0)
         self.writer(obj, items, written)
@@ -1337,13 +1357,13 @@ class _Compiler:
         written: set = set()
         if target is None:
             obj.data["target"] = None
-            obj.attrs["value"] = self.place(BOOL, value, obj.pos, "value")
+            obj.attrs["value"] = self.place(BOOL, value, obj.pos, "value", scope=self.cscope)
         else:
             if value is not None:
                 raise CompileError("a toggle with a target shows its target's value", value.pos)
             if not isinstance(target, Name):
                 raise CompileError("a toggle's target is a place, such as b or g.on", target.pos)
-            i, attr, t = self.writable(target, {})
+            i, attr, t = self.writable(target, self.cscope)
             if _core(t) != BOOL:
                 raise CompileError(f"a toggle's target is a bool, got {t}", target.pos)
             obj.data["target"] = (i, attr)
@@ -1363,7 +1383,7 @@ class _Compiler:
             raise CompileError("on-drag needs a (target place)", obj.pos)
         if not isinstance(target, Name):
             raise CompileError("an on-drag's target is a place", target.pos)
-        i, attr, _ = self.writable(target, {})
+        i, attr, _ = self.writable(target, self.cscope)
         own = i == shape and attr in ("x", "y", "pos")
         if not own and (i, attr) not in self.position_deps(shape):
             raise CompileError(
@@ -1405,10 +1425,12 @@ class _Compiler:
         defaults = {"view-x": -10, "view-y": -10, "view-width": 20, "view-height": 20}
         for attr, d in defaults.items():
             node = self.take(items, attr)
-            obj.attrs[attr] = self.place(REAL, node, obj.pos, attr) if node else Place(REAL, d)
+            obj.attrs[attr] = (
+                self.place(REAL, node, obj.pos, attr, scope=self.cscope) if node else Place(REAL, d)
+            )
         node = self.take(items, "transform")
         obj.attrs["transform"] = (
-            self.place(TRANSFORM, node, obj.pos, "transform")
+            self.place(TRANSFORM, node, obj.pos, "transform", scope=self.cscope)
             if node
             else Place(TRANSFORM, IDENTITY)
         )
@@ -1418,7 +1440,7 @@ class _Compiler:
             if isinstance(item, Name):
                 obj.data["members"].append(self.shown(item))
             elif head == "when" and len(item.items) >= 3:
-                cond = self.place(BOOL, item.items[1], item.pos, "when")
+                cond = self.place(BOOL, item.items[1], item.pos, "when", scope=self.cscope)
                 obj.data["when"].append((cond, [self.shown(n) for n in item.items[2:]]))
             elif head == "transition":
                 if obj.data["transition"] is not None:
@@ -1426,12 +1448,12 @@ class _Compiler:
                 if len(item.items) == 2 and isinstance(item.items[1], Name):
                     obj.data["transition"] = self.named(item.items[1], "transition")
                 else:
-                    obj.data["transition"] = self.transition(item, {}, named=False)
+                    obj.data["transition"] = self.transition(item, self.cscope, named=False)
             else:
                 raise CompileError("expected an item of a canvas", item.pos)
 
     def shown(self, node: Node) -> int:
-        e = self.expr(node, None, {})
+        e = self.expr(node, None, self.cscope)
         if e.op != "obj" or self.model.objects[e.args[0]].kind == "variable":
             raise CompileError("a canvas shows shapes or the scene, by name", node.pos)
         return e.args[0]
@@ -1440,7 +1462,7 @@ class _Compiler:
         if not items:
             raise CompileError("a readout shows a string: (readout name value)", obj.pos)
         value = items.pop(0)
-        obj.attrs["value"] = self.place(STRING, value, obj.pos, "value")
+        obj.attrs["value"] = self.place(STRING, value, obj.pos, "value", scope=self.cscope)
         font = self.take(items, "font")
         if font is not None:
             obj.attrs["font"] = self.font_arg(font)
@@ -1449,7 +1471,7 @@ class _Compiler:
 
     def font_arg(self, node: Node) -> Place:
         """A text's or readout's font, which is only ever a declared font variable."""
-        e = self.expr(node, None, {}) if isinstance(node, Name) else None
+        e = self.expr(node, None, self.cscope) if isinstance(node, Name) else None
         if e is None or e.op != "read" or _core(e.type) != FONT:
             raise CompileError("a font is given as a declared font variable", node.pos)
         return Place(FONT, expr=e)
@@ -1504,7 +1526,7 @@ class _Compiler:
         flip = {"<": ">", "<=": ">=", ">": "<", ">=": "<="}
         head = _head(node)
         if head in COMPARE and isinstance(node, Form) and len(node.items) == 3:
-            a, b = (self.expr(x, None, {}) for x in node.items[1:])
+            a, b = (self.expr(x, None, self.cscope) for x in node.items[1:])
             for op, side, limit in ((head, a, b), (flip[head], b, a)):
                 if side.op == "read":
                     place = (side.args[0], side.args[1])

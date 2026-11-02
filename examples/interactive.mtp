@@ -1,28 +1,29 @@
 ; Drag the sliders: chords join point k to point m*k, and the curve they trace changes with m.
+; Stroke widths and font sizes are in screen pixels, chosen for a canvas 640 pixels wide.
 
-(color 'slate' '#0e1726')
-(color 'chalk' '#e8e4d8')
-(font 'small' (size 0.6))
+(color slate '#0e1726')
+(color chalk '#e8e4d8')
+(font small (size 19.2))
 
-(func 'on-circle' (params (radius 1.0) (k 0) (n 1))
+(func on-circle ((real radius 1) (real k 0) (int n 1 (>= 1)))
   (polar radius (turn (/ k n))))
 
-(motif 'times-table' (params (n 200) (m 2) (radius 8.0) (turn 0.0))
-  (group 'figure' (transform (rotate turn))
-    (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
+(motif times-table ((int n 200 (>= 1) (const)) (real m 2) (real radius 8 (>= 0)) (real turn 0))
+  (group figure (transform (rotate turn))
+    (circle rim (r radius) (fill none) (stroke-width 1.28) (stroke-opacity 0.6))
     (repeat n k
       (line _
         (from (on-circle radius k n))
         (to (on-circle radius (* m k) n))
-        (stroke-width 0.03)
+        (stroke-width 0.96)
         (stroke-opacity (lerp 0.2 0.85 (/ k n)))))))
 
-(scene 'board'
+(scene board
   (background slate)
-  (times-table 'table' (m 2) (turn -90) (stroke '#ffb703'))
-  (text 'caption' $'times {table.m}' (pos [-9.4 -9.4]) (font small) (fill chalk)))
+  (times-table table (m 2) (turn -90) (stroke '#ffb703'))
+  (text caption $'times {table.m:g}' (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
-(canvas 'cnv' board)
-(slider 'multiplier' (animation (table.m (transition (from 2) (to 40)))) (label 'times'))
-(slider 'spin' (animation (table.turn (transition (from -180) (to 180)))) (label 'rotate'))
-(button 'reset' (animation (table.m (transition (to 2) (duration 0)))) (label 'back to 2'))
+(canvas cnv board)
+(slider multiplier (animation (table.m (transition (from 2) (to 40) (duration 1)))) (label 'times'))
+(slider spin (animation (table.turn (transition (from -180) (to 180) (duration 1)))) (label 'rotate'))
+(button reset (animation (table.m (transition (to 2) (duration 0)))) (label 'back to 2'))

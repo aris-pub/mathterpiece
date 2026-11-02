@@ -1,65 +1,78 @@
-(const 'golden' (* 180 (- 3 (sqrt 5))))
-(const 'gold' '#f6c453')
-(color 'starlight' '#c9d6ff')
-(color 'night' '#0b1026')
-(font 'heading' (weight 600) (size 0.6))
-(font 'note' (size 0.5))
+; Two sunflowers whose seeds sit on golden-angle spirals, each with a soft glow, the larger with
+; a ring of moons, in a field of stars that take the color of the flower they drift near.
+; Font sizes are in screen pixels, chosen for a canvas 640 pixels wide.
+
+(real golden (* 180 (- 3 (sqrt 5))) (const))
+(color gold '#f6c453')
+; The other seed shades. They are declared as colors because a literal in a function's body is
+; a string: nothing there says the function gives a color.
+(color umber '#9a4f16')
+(color rust '#cf7424')
+(color amber '#e89b2a')
+(color cream '#fff1b8')
+(color starlight '#c9d6ff')
+(color night '#0b1026')
+(font heading (weight 600) (size 19.2))
+(font note (size 16))
 
 ; Seed color by how far out the seed is, from 0 at the center to 1 at the edge.
-(func 'seed-color' (params (t 0.0))
+(func seed-color (real t 0)
   (cond
-    ((< t 0.15) '#9a4f16')
-    ((< t 0.4) '#cf7424')
-    ((< t 0.7) '#e89b2a')
+    ((< t 0.15) umber)
+    ((< t 0.4) rust)
+    ((< t 0.7) amber)
     ((< t 0.9) gold)
-    (else '#fff1b8')))
+    (else cream)))
 
 ; Seeds on a golden-angle spiral: seed i sits at radius (sqrt i), turned i golden angles.
-(motif 'sunflower' (params (n 400) (spread 0.3) (size 0.11))
+(motif sunflower ((int n 400 (>= 1) (const)) (real spread 0.3) (real size 0.11 (>= 0)))
   (repeat n i
-    (let ((a (* i golden)) (d (* spread (sqrt i))) (t (/ i n)))
-      (circle _
-        (pos (polar d a))
-        (r (* size (sqrt (+ 1 (/ i 80)))))
-        (opacity (lerp 0.8 1 t))
-        (fill (seed-color t))))))
+    (circle _
+      (pos (polar (* spread (sqrt i)) (* i golden)))
+      (r (* size (sqrt (+ 1 (/ i 80)))))
+      (opacity (lerp 0.8 1 (/ i n)))
+      (fill (seed-color (/ i n))))))
 
 ; Stacked translucent disks read as a soft glow that fades outward.
-(motif 'glow' (params (layers 14) (radius 8.0))
+(motif glow ((int layers 14 (>= 1) (const)) (real radius 8 (>= 0)))
   (repeat layers k
     (circle _ (r (* radius (/ (+ k 1) layers))) (fill-opacity 0.035))))
 
-(motif 'orbit' (params (count 12) (radius 5.0) (size 0.3))
+(motif orbit ((int count 12 (>= 0) (const)) (real radius 5) (real size 0.3 (>= 0)))
   (repeat count k
-    (let ((a (turn (/ k count))))
-      (circle _
-        (pos (polar radius a))
-        (r (* size (lerp 0.55 1 (cosd (* 3 a)))))
-        (opacity (lerp 0.4 1 (sind (/ a 2))))))))
+    (circle _
+      (pos (polar radius (turn (/ k count))))
+      (r (* size (lerp 0.55 1 (cosd (* 3 (turn (/ k count)))))))
+      (opacity (lerp 0.4 1 (sind (/ (turn (/ k count)) 2)))))))
 
 ; A flower with its glow and an optional ring of moons, all centered on the flower.
-(motif 'bloom' (params (n 400) (spread 0.3) (size 0.11) (halo 8.5) (moons 0) (moon-radius 7.0))
-  (glow 'aura' (radius halo))
-  (sunflower 'seeds' (n n) (spread spread) (size size))
-  (orbit 'ring' (count moons) (radius moon-radius) (size 0.16) (fill '#5fd3c6')))
+(motif bloom ((int n 400 (>= 1) (const)) (real spread 0.3) (real size 0.11 (>= 0)) (real halo 8.5 (>= 0))
+              (int moons 0 (>= 0) (const)) (real moon-radius 7))
+  (glow aura (radius halo))
+  (sunflower seeds (n n) (spread spread) (size size))
+  (orbit ring (count moons) (radius moon-radius) (size 0.16) (fill '#5fd3c6')))
 
-(scene 'sky'
+(scene sky
   (background night)
 
-  (bloom 'big' (x -2.8) (y 2.2) (fill gold) (moons 60))
-  (bloom 'small' (x 6.3) (y -5.9) (fill '#ff8c42') (n 160) (spread 0.25) (size 0.08) (halo 4.4))
+  (bloom big (x -2.8) (y 2.2) (fill gold) (moons 60))
+  (bloom small (x 6.3) (y -5.9) (fill '#ff8c42') (n 160) (spread 0.25) (size 0.08) (halo 4.4))
 
-  ; Stars take the color of whichever flower they drift near.
-  (group 'stars'
+  ; Stars take the color of whichever flower they drift near. A shape cannot read its own
+  ; position while it is declared, so each star's position is a variable of its own.
+  (repeat 320 i
+    (point (name $'star-at-{i}') [(rand -10 10) (rand -10 10)]))
+  (group stars
     (repeat 320 i
-      (circle _ (pos [(rand -10 10) (rand -10 10)]) (r (rand 0.015 0.07)) (opacity (rand 0.25 1))
+      (circle _
+        (pos (name $'star-at-{i}')) (r (rand 0.015 0.07)) (opacity (rand 0.25 1))
         (fill
           (cond
-            ((< (dist self big) big.moon-radius) big.fill)
-            ((< (dist self small) small.halo) small.fill)
+            ((< (dist (name $'star-at-{i}') big.pos) big.moon-radius) big.fill)
+            ((< (dist (name $'star-at-{i}') small.pos) small.halo) small.fill)
             (else starlight))))))
 
-  (text 'title' 'the golden angle' (x 2.3) (y 9.3) (font heading) (fill gold))
-  (text 'subtitle' $'{golden:.3f}°' (x 2.4) (y 8.5) (font note) (fill starlight) (opacity 0.55)))
+  (text title 'the golden angle' (x 2.3) (y 9.3) (font heading) (fill gold))
+  (text subtitle $'{golden:.3f}°' (x 2.4) (y 8.5) (font note) (fill starlight) (opacity 0.55)))
 
-(canvas 'cnv' (transform (rotate -8)) sky)
+(canvas cnv (transform (rotate -8)) sky)

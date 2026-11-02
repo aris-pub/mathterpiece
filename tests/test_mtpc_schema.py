@@ -45,3 +45,26 @@ def test_a_font_value():
         "token": True,
     }
     assert errors(doc(variable)) == []
+
+
+def variable(value):
+    return {
+        "kind": "variable",
+        "type": "real",
+        "access": "scene",
+        "name": "k",
+        "value": value,
+        "token": False,
+    }
+
+
+def test_it_still_rejects_what_is_wrong():
+    # The schema checks each expression, object and step only against the form its operation or
+    # kind names; this checks that anything else is still caught.
+    good = {"type": "real", "bound": ["lit", "real", 1], "deps": []}
+    assert errors(doc(variable(good))) == []
+    assert errors(doc(variable({**good, "bound": ["nope", "real", 1]}))) != []
+    assert errors(doc(variable({**good, "bound": ["lit", "real"]}))) != []
+    assert errors(doc(variable({**good, "bound": ["read", "real", "x", None, None]}))) != []
+    assert errors(doc({**variable(good), "kind": "nope"})) != []
+    assert errors(doc({**variable(good), "token": "yes"})) != []

@@ -26,8 +26,8 @@
     </style>
   </head>
   <body>
-    <!-- For trying the runtime by hand: just web-dev, then pick a figure: the demo, the shared
-         cases or the runtime's test fixtures, built to .mtpc by just web-examples. -->
+    <!-- For trying the runtime by hand: just web-dev, then pick a figure: the examples, the demo,
+         the shared cases or the runtime's test fixtures, built to .mtpc by just web-examples. -->
     <select id="pick"></select>
     <button id="theme" type="button">dark page</button>
     <button id="fonts" type="button">page fonts</button>
@@ -39,11 +39,11 @@
     <script type="module">
       import "/src/index.ts";
       const figures = import.meta.glob(
-        ["/test/data/demo/*.mtpc", "/test/data/shared/*.mtpc", "/test/data/runtime/*.mtpc"],
+        ["/test/data/examples/*.mtpc", "/test/data/demo/*.mtpc", "/test/data/shared/*.mtpc", "/test/data/runtime/*.mtpc"],
         { query: "?raw", import: "default" },
       );
       const sources = import.meta.glob(
-        ["/test/data/demo/*.mtp", "/test/data/shared/*.mtp", "/test/data/runtime/*.mtp"],
+        ["/test/data/examples/*.mtp", "/test/data/demo/*.mtp", "/test/data/shared/*.mtp", "/test/data/runtime/*.mtp"],
         { query: "?raw", import: "default" },
       );
       const examples = Object.keys(figures);
@@ -51,7 +51,7 @@
       const name = (path) => path.split("/").pop().replace(".mtpc", "");
       for (const path of examples) pick.add(new Option(name(path), path));
       const chosen = new URLSearchParams(location.search).get("example");
-      pick.value = examples.find((p) => name(p) === (chosen ?? "tour")) ?? examples[0];
+      pick.value = examples.find((p) => name(p) === (chosen ?? "controls")) ?? examples[0];
       const load = async () => {
         const doc = JSON.parse(await figures[pick.value]());
         // What the figure is and what to try: its leading comments.

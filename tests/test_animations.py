@@ -205,3 +205,43 @@ class TestStepEase:
     def test_its_point_is_from_0_to_1_known_when_compiling(self):
         move = "(on (transition (to true) (duration 1) (ease (step-ease 2))))"
         error(f"{self.B} (animation a {move})", r"2 breaks \(<= 1\)")
+
+
+class TestStringMoves:
+    # A string, like a bool or a choice, changes at the start of its move by default.
+    def test_the_default(self):
+        src = "(string s 'a') (animation a (s (transition (to 'b') (duration 1))))"
+        assert steps(src)[4] == ("step", 1)
+
+
+class TestNamedAnimationsAsSteps:
+    def test_a_named_animation_runs_its_steps_in_place(self):
+        src = (
+            f"{K} (real j 0) (animation one (k (transition (to 5) (duration 1))))"
+            "(animation a one (wait 1) (j (transition (to 2) (duration 1))))"
+        )
+        m = model(src)
+        s = m.get("a").data["steps"]
+        assert s[0] == "in-order"
+        assert s[1] == m.get("one").data["steps"]
+        assert s[2] == ("wait", 1)
+
+
+class TestRepeatedListeners:
+    def test_repeat_produces_listeners(self):
+        src = (
+            "(real k 0)"
+            "(scene s (repeat 3 i (circle (name $'c{i}'))))"
+            "(repeat 3 i (on-click (name $'c{i}')"
+            "  (animation (k (transition (to i) (duration 0))))))"
+        )
+        m = model(src)
+        clicks = [o for o in m.objects if o.kind == "on-click"]
+        assert [o.data["shape"] for o in clicks] == [m.id(f"c{i}") for i in range(3)]
+
+
+class TestFadePath:
+    def test_fade_is_written_bare(self):
+        m = model("(scene s (circle c)) (canvas v c (transition (duration 1) (path fade)))")
+        (t,) = [o for o in m.objects if o.kind == "transition"]
+        assert t.attrs["path"].value == "fade"

@@ -1,46 +1,50 @@
 ; A guided tour through the times tables. Press play to watch the cardioid turn into a nephroid
 ; and then into a curve with eight cusps, or pick a step, or drag the slider at any time.
 
-(color 'slate' '#0e1726')
-(color 'chalk' '#e8e4d8')
-(font 'small' (size 0.6))
+(color slate '#0e1726')
+(color chalk '#e8e4d8')
+(font small (size 19.2))
 
-(func 'on-circle' (params (radius 1.0) (k 0.0) (n 1))
-  (polar radius (turn (/ k n))))
+(type stop string (one-of 'cardioid' 'nephroid' 'eight cusps'))
 
-(motif 'times-table' (params (n 240) (m 2.0) (radius 8.0))
-  (group 'figure' (transform (rotate -90))
-    (circle 'rim' (r radius) (fill 'none') (stroke-width 0.04) (stroke-opacity 0.6))
+(func on-circle ((real radius 1) (real k 0) (int n 1 (>= 1))) (polar radius (turn (/ k n))))
+
+(motif times-table ((int n 240 (const)) (real m 2) (real radius 8 (>= 0)))
+  (group figure (transform (rotate -90))
+    (circle rim (r radius) (fill none) (stroke-width 1.28) (stroke-opacity 0.6))
     (repeat n k
       (line _
         (from (on-circle radius k n))
         (to (on-circle radius (* m k) n))
-        (stroke-width 0.03)
+        (stroke-width 0.96)
         (stroke-opacity (lerp 0.2 0.85 (/ k n)))))))
 
-(scene 'board'
+(scene board
   (background slate)
-  (times-table 'table' (stroke '#ffb703'))
-  (text 'caption' 'cardioid' (pos [-9.4 -9.4]) (font small) (fill chalk)))
+  (stop curve 'cardioid')
+  (times-table table (stroke '#ffb703'))
+  (text caption curve (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
-; Each stop of the tour: the multiplier, the color of the chords, and the caption, together.
-(animation 'cardioid'
-  (at-once (default-duration 1.5) (default-ease 'ease-in-out')
-    (table.m (transition (to 2)))
-    (table.stroke (transition (to '#ffb703')))
-    (caption.value (transition (to 'cardioid')))))
-(animation 'nephroid'
-  (at-once (default-duration 3) (default-ease 'ease-in-out')
-    (table.m (transition (to 3)))
-    (table.stroke (transition (to '#8ecae6')))
-    (caption.value (transition (to 'nephroid')))))
-(animation 'eight'
-  (at-once (default-duration 4) (default-ease 'ease-in-out')
-    (table.m (transition (to 9)))
-    (table.stroke (transition (to '#f4978e')))
-    (caption.value (transition (to 'eight cusps')))))
-(animation 'times-tour' (in-order cardioid (wait 1) nephroid (wait 1) eight))
+; Each stop of the tour moves the multiplier, the color of the chords and the caption together,
+; then rests a moment.
+(play tour (buttons true)
+  (animation
+    (in-order
+      (at-once (default-duration 1.5) (default-ease 'ease-in-out')
+        (table.m (transition (to 2)))
+        (table.stroke (transition (to '#ffb703')))
+        (curve (transition (to 'cardioid'))))
+      (wait 1))
+    (in-order
+      (at-once (default-duration 3) (default-ease 'ease-in-out')
+        (table.m (transition (to 3)))
+        (table.stroke (transition (to '#8ecae6')))
+        (curve (transition (to 'nephroid'))))
+      (wait 1))
+    (at-once (default-duration 4) (default-ease 'ease-in-out')
+      (table.m (transition (to 9)))
+      (table.stroke (transition (to '#f4978e')))
+      (curve (transition (to 'eight cusps'))))))
 
-(canvas 'cnv' board)
-(play 'tour' times-tour (buttons true))
-(slider 'times' (animation (table.m (transition (from 2) (to 12)))) (label 'times'))
+(canvas cnv board)
+(slider times (label 'times') (animation (table.m (transition (from 2) (to 12) (duration 1)))))

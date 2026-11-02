@@ -2,66 +2,70 @@
 ; distance 2 from each other. The distortion of a drawing is how much it stretches the most
 ; stretched pair, divided by how much it stretches the least stretched pair. No drawing in the
 ; plane does better than 2/sqrt(3), the three leaves at 120 degrees around c.
+; Stroke widths and font sizes are in screen pixels, chosen for a canvas 640 pixels wide.
 
-(color 'paper' '#f7f3ea')
-(color 'ink' '#1f2a44')
-(const 'unit' 3)
+(color paper '#f7f3ea')
+(color ink '#1f2a44')
+(int unit 3 (const))
 ; Point names are math variables, so they are italic.
-(font 'variable' (style 'italic') (size 0.6))
+(font variable (style 'italic') (size 19.2))
+(font big (size 22.4))
+(font small (size 16))
 
 ; How much a drawing stretches each pair, against its distance in the space: the most stretched
-; pair divided by the least stretched. Two points drawn on top of each other give infinity.
-(func 'distortion' (params (c [0.0 0.0]) (u [0.0 0.0]) (v [0.0 0.0]) (w [0.0 0.0]))
+; pair divided by the least stretched. Two points drawn on top of each other give none.
+(func distortion-of ((point c [0 0]) (point u [0 0]) (point v [0 0]) (point w [0 0]))
   (let ((cu (/ (dist c u) unit)) (cv (/ (dist c v) unit)) (cw (/ (dist c w) unit))
         (uv (/ (dist u v) (* 2 unit))) (vw (/ (dist v w) (* 2 unit))) (wu (/ (dist w u) (* 2 unit)))
         (most (max cu cv cw uv vw wu))
         (least (min cu cv cw uv vw wu)))
-    (if (> least 0) (/ most least) infty)))
+    (/ most least)))
 
-(scene 'plane'
+(scene plane
   (background paper)
   ; Edges come after the points they join, so they are drawn on top (see mtp-jez).
-  (circle 'c' (pos [0 0]) (r 0.3) (fill '#e76f51'))
-  (circle 'u' (pos (polar unit 90)) (r 0.3) (fill ink))
-  (circle 'v' (pos (polar unit 210)) (r 0.3) (fill ink))
-  (circle 'w' (pos (polar unit 330)) (r 0.3) (fill ink))
-  (line _ (from c.pos) (to u.pos) (stroke ink) (stroke-width 0.06))
-  (line _ (from c.pos) (to v.pos) (stroke ink) (stroke-width 0.06))
-  (line _ (from c.pos) (to w.pos) (stroke ink) (stroke-width 0.06))
-  (line _ (from u.pos) (to v.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
-  (line _ (from v.pos) (to w.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
-  (line _ (from w.pos) (to u.pos) (stroke ink) (stroke-width 0.03) (stroke-opacity 0.4))
+  (circle c (pos [0 0]) (r 0.3) (fill '#e76f51'))
+  (circle u (pos (polar unit 90)) (r 0.3) (fill ink))
+  (circle v (pos (polar unit 210)) (r 0.3) (fill ink))
+  (circle w (pos (polar unit 330)) (r 0.3) (fill ink))
+  (line _ (from c.pos) (to u.pos) (stroke ink) (stroke-width 1.92))
+  (line _ (from c.pos) (to v.pos) (stroke ink) (stroke-width 1.92))
+  (line _ (from c.pos) (to w.pos) (stroke ink) (stroke-width 1.92))
+  (line _ (from u.pos) (to v.pos) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.4))
+  (line _ (from v.pos) (to w.pos) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.4))
+  (line _ (from w.pos) (to u.pos) (stroke ink) (stroke-width 0.96) (stroke-opacity 0.4))
   (text _ 'c' (pos (+ c.pos [0.4 0.4])) (font variable) (fill ink))
   (text _ 'u' (pos (+ u.pos [0.4 0.4])) (font variable) (fill ink))
   (text _ 'v' (pos (+ v.pos [0.4 0.4])) (font variable) (fill ink))
   (text _ 'w' (pos (+ w.pos [0.4 0.4])) (font variable) (fill ink))
-  (text 'readout'
-    (let ((d (distortion c.pos u.pos v.pos w.pos))) $'distortion {d:.3f}')
-    (pos [-9.5 5.8]) (font-size 0.7) (fill ink))
-  (text _ 'best possible 1.155' (pos [3.5 5.8]) (font-size 0.5) (fill ink) (opacity 0.6)))
+  (text readout
+    (let ((d (distortion-of c.pos u.pos v.pos w.pos)))
+      (or? $'distortion {d:.3f}' 'distortion inf'))
+    (pos [-9.5 5.8]) (font big) (fill ink))
+  (text _ 'best possible 1.155' (pos [3.5 5.8]) (font small) (fill ink) (opacity 0.6)))
 
-(readout 'distortion'
-  (let ((d (distortion c.pos u.pos v.pos w.pos))) $'{d:.3f}'))
+(readout distortion
+  (let ((d (distortion-of c.pos u.pos v.pos w.pos))) (or? $'{d:.3f}' 'inf')))
 
-(canvas 'view' (view-x -10) (view-y -7) (view-width 20) (view-height 14) plane)
+(canvas view (view-x -10) (view-y -7) (view-width 20) (view-height 14) plane)
 
-(on-drag c c.pos)
-(on-drag u u.pos)
-(on-drag v v.pos)
-(on-drag w w.pos)
+(on-drag c (target c.pos))
+(on-drag u (target u.pos))
+(on-drag v (target v.pos))
+(on-drag w (target w.pos))
 
-(animation 'optimum'
+(animation optimum
   (at-once (default-duration 0.8) (default-ease 'ease-in-out')
     (c.pos (transition (to [0 0])))
     (u.pos (transition (to (polar unit 90))))
     (v.pos (transition (to (polar unit 210))))
     (w.pos (transition (to (polar unit 330))))))
-(animation 'on-a-line'
+(animation on-a-line
   (at-once (default-duration 0.8) (default-ease 'ease-in-out')
     (c.pos (transition (to [0 0])))
     (u.pos (transition (to [(- unit) 0])))
     (v.pos (transition (to [unit 0])))
     (w.pos (transition (to [(* 2 unit) 0])))))
 
-(button 'best' optimum (label 'show the optimum'))
-(button 'line' on-a-line (label 'collapse onto a line'))
+(button best (animation optimum) (label 'show the optimum'))
+(button line (animation on-a-line) (label 'collapse onto a line'))

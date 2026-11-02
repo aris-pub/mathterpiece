@@ -3,50 +3,50 @@
 ; half as long as the one before. Triangle i picks its corners from the base-3 digits of i,
 ; so 3^depth triangles fill the gasket and depth sets how deep it goes.
 
-(const 'radius' 9.0)
-(const 'depth' 6)
-(color 'paper' '#f4efe3')
-(color 'ink' '#1d2433')
-(font 'heading' (weight 600) (size 0.6))
-(font 'small' (size 0.45))
+(real radius 9 (const))
+(int depth 6 (const))
+(color paper '#f4efe3')
+(color ink '#1d2433')
+(font heading (weight 600) (size 19.2))
+(font small (size 14.4))
+(list[color] shades ['#e63946' '#1d3557' '#f1a208'])
 
-; The offset towards corner digit (0, 1, or 2) at a level, from the center of the triangle above.
-(func 'corner' (params (digit 0.0) (level 1))
-  (polar (/ radius (^ 2 level)) (+ 90 (* 120 digit))))
+; An equilateral triangle pointing up, given by its center and the distance to its corners.
+(variant equilateral ((point center [0 0]) (real r 1))
+  (triangle _
+    (a (+ center (polar r 90)))
+    (b (+ center (polar r 210)))
+    (c (+ center (polar r 330)))))
+
+; The offset towards corner digit (0, 1, or 2), size away from the center of the triangle above.
+(func corner ((int digit) (real size)) (polar size (+ 90 (* 120 digit))))
 
 ; Drops the last base-3 digit.
-(func 'shift' (params (code 0.0))
-  (/ (- code (mod code 3)) 3))
+(func shift (int code) (floor (/ code 3)))
 
-; Where triangle code sits: its last digit picks the corner at this level, the rest go deeper.
-(func 'spot' (params (code 0.0) (level 1))
-  (if (> level depth)
-      [0 0]
-      (+ (corner (mod code 3) level) (spot (shift code) (+ level 1)))))
+; Where triangle code sits: its last digit picks the corner at this level, the rest go deeper,
+; each level's offset half the one before.
+(func spot ((int code) (int level 1) (real size (/ radius 2)))
+  (if (>= level depth)
+      (corner (mod code 3) size)
+      (+ (corner (mod code 3) size) (spot (shift code) (+ level 1) (/ size 2)))))
 
-(func 'digit-sum' (params (code 0.0))
+(func digit-sum (int code)
   (if (< code 1) 0 (+ (mod code 3) (digit-sum (shift code)))))
 
-(func 'shade' (params (digit 0.0))
-  (cond
-    ((= digit 0) '#e63946')
-    ((= digit 1) '#1d3557')
-    (else '#f1a208')))
-
-(scene 'page'
+(scene page
   (background paper)
 
-  (group 'gasket' (transform (translate 0 -2.2))
-    (triangle 'outline' (center [0 0]) (r radius) (fill 'none') (stroke ink) (stroke-width 0.05))
+  (group gasket (translate [0 -2.2])
+    (equilateral outline (center [0 0]) (r radius) (fill none) (stroke ink) (stroke-width 1.6))
     (repeat (^ 3 depth) i
-      (let ((top (mod i 3)))
-        (triangle _
-          (center (spot i))
-          (r (/ radius (^ 2 depth)))
-          (fill (shade top))
-          (fill-opacity (lerp 0.35 1 (/ (mod (- (digit-sum i) top) 3) 2)))))))
+      (equilateral _
+        (center (spot i))
+        (r (/ radius (^ 2 depth)))
+        (fill shades[(mod i 3)])
+        (fill-opacity (lerp 0.35 1 (/ (mod (- (digit-sum i) (mod i 3)) 3) 2))))))
 
-  (text 'title' 'sierpiński triangle' (pos [-9.3 9]) (font heading) (fill ink))
-  (text 'count' $'3^{depth} triangles' (pos [-9.3 8.2]) (font small) (fill ink) (opacity 0.6)))
+  (text title 'sierpiński triangle' (pos [-9.3 9]) (font heading) (fill ink))
+  (text count $'3^{depth} triangles' (pos [-9.3 8.2]) (font small) (fill ink) (opacity 0.6)))
 
-(canvas 'cnv' page)
+(canvas cnv page)
