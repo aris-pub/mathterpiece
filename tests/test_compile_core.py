@@ -348,3 +348,12 @@ class TestBoundListLength:
 
     def test_a_free_list_does_not(self):
         error("(list[real] xs [1 2]) (real d (. xs 1))", "may be none")
+
+
+class TestMixedNumbers:
+    def test_a_ratio_compared_with_a_real_is_compared_as_a_real(self):
+        # As the runtime compares it: 2/5 is the real 0.4, which is not below 0.4.
+        assert value("(bool b (< 2/5 0.4))", "b") is False
+
+    def test_an_int_and_a_narrowed_real_meet_as_reals(self):
+        model("(real h 1 (>= 0)) (list xs [0 h])")

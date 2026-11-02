@@ -9,7 +9,6 @@
 (color ink '#1d2433')
 (font heading (weight 600) (size 19.2))
 (font small (size 14.4))
-(list[color] shades ['#e63946' '#1d3557' '#f1a208'])
 
 ; An equilateral triangle pointing up, given by its center and the distance to its corners.
 (variant equilateral ((point center [0 0]) (real r 1))
@@ -18,21 +17,28 @@
     (b (+ center (polar r 210)))
     (c (+ center (polar r 330)))))
 
-; The offset towards corner digit (0, 1, or 2), size away from the center of the triangle above.
-(func corner ((int digit) (real size)) (polar size (+ 90 (* 120 digit))))
+; The offset towards corner digit (0, 1, or 2) at this level, from the center of the triangle
+; above. Each level's offset is half the one before.
+(func corner ((int digit) (int level (>= 1)))
+  (polar (* radius (^ 0.5 level)) (+ 90 (* 120 digit))))
 
 ; Drops the last base-3 digit.
 (func shift (int code) (floor (/ code 3)))
 
-; Where triangle code sits: its last digit picks the corner at this level, the rest go deeper,
-; each level's offset half the one before.
-(func spot ((int code) (int level 1) (real size (/ radius 2)))
-  (if (>= level depth)
-      (corner (mod code 3) size)
-      (+ (corner (mod code 3) size) (spot (shift code) (+ level 1) (/ size 2)))))
+; Where triangle code sits: its last digit picks the corner at this level, the rest go deeper.
+(func spot ((int code) (int level 1 (>= 1)))
+  (if (> level depth)
+      (as point [0 0])
+      (+ (corner (mod code 3) level) (spot (shift code) (+ level 1)))))
 
 (func digit-sum (int code)
   (if (< code 1) 0 (+ (mod code 3) (digit-sum (shift code)))))
+
+(func shade (int digit)
+  (cond
+    ((= digit 0) (as color '#e63946'))
+    ((= digit 1) (as color '#1d3557'))
+    (else (as color '#f1a208'))))
 
 (scene page
   (background paper)
@@ -43,7 +49,7 @@
       (equilateral _
         (center (spot i))
         (r (/ radius (^ 2 depth)))
-        (fill shades[(mod i 3)])
+        (fill (shade (mod i 3)))
         (fill-opacity (lerp 0.35 1 (/ (mod (- (digit-sum i) (mod i 3)) 3) 2))))))
 
   (text title 'sierpiński triangle' (pos [-9.3 9]) (font heading) (fill ink))

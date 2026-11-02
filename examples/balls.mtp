@@ -56,14 +56,14 @@
                     (else fg)))
         (opacity (if (<= (min (dist x.pos points[i]) (dist y.pos points[i])) (+ r 1e-9)) 1 0.45)))))
 
-  (real h (/ (dist x.pos y.pos) 2))
+  (real h (/ (dist x.pos y.pos) 2) (>= 0))
   (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
   (list dy (sort (map space (fn p (dist y.pos p.pos))) (fn d d)))
   ; ρ₁ to ρ₅: the 2ʲ-th nearest distance (index 2ʲ - 1), for x or y, whichever is larger.
   (list rho [(min (max dx[1] dy[1]) h) (min (max dx[3] dy[3]) h) (min (max dx[7] dy[7]) h)
-             (min (max dx[15] dy[15]) h) (min (max dx[31] dy[31]) h)] (length 5))
+             (min (max dx[15] dy[15]) h) (min (max dx[31] dy[31]) h)])
   ; 0, then ρ₁ to ρ₅: segment j of the bar covers [edges[j], edges[j + 1]].
-  (list edges [0 rho[0] rho[1] rho[2] rho[3] rho[4]] (length 6))
+  (list edges [0 rho[0] rho[1] rho[2] rho[3] rho[4]])
   ; The first j with ρⱼ = δ/2.
   (int k (+ 1 (count rho (fn q (< q (- h 1e-9))))))
   ; Scene units per unit of distance along the bar. x and y are never the same point, so h is
@@ -73,9 +73,9 @@
   ; Faint rings at ρ₁ to ρₖ around both points.
   (group rings
     (repeat 5 j
-      (circle _ (pos x.pos) (r (max 0 rho[j])) (fill none) (stroke muted)
+      (circle _ (pos x.pos) (r rho[j]) (fill none) (stroke muted)
         (opacity (if (< j k) 0.3 0)))
-      (circle _ (pos y.pos) (r (max 0 rho[j])) (fill none) (stroke muted)
+      (circle _ (pos y.pos) (r rho[j]) (fill none) (stroke muted)
         (opacity (if (< j k) 0.3 0)))))
 
   (group pair
@@ -112,108 +112,12 @@
         (fill fg) (opacity (if (<= j k) 1 0))))))
 
 ; Clicking a point makes it x or y, replacing the older of the two, and sets r to the new δ/2.
-; Where x, y and r go when the point at q is clicked.
-(func next-x (point q) (if replace-x q x.pos))
-(func next-y (point q) (if replace-x y.pos q))
-(func next-r (point q) (/ (dist q (if replace-x y.pos x.pos)) 2))
-(transition flip (to (not replace-x)) (duration 0))
-; The compiler does not yet allow a listener inside a repeat, so the 32 are written out.
-(on-click space[0] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[0].pos)))) (y.pos (transition (to (next-y space[0].pos))))
-  (r (transition (to (next-r space[0].pos)))) (replace-x flip))))
-(on-click space[1] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[1].pos)))) (y.pos (transition (to (next-y space[1].pos))))
-  (r (transition (to (next-r space[1].pos)))) (replace-x flip))))
-(on-click space[2] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[2].pos)))) (y.pos (transition (to (next-y space[2].pos))))
-  (r (transition (to (next-r space[2].pos)))) (replace-x flip))))
-(on-click space[3] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[3].pos)))) (y.pos (transition (to (next-y space[3].pos))))
-  (r (transition (to (next-r space[3].pos)))) (replace-x flip))))
-(on-click space[4] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[4].pos)))) (y.pos (transition (to (next-y space[4].pos))))
-  (r (transition (to (next-r space[4].pos)))) (replace-x flip))))
-(on-click space[5] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[5].pos)))) (y.pos (transition (to (next-y space[5].pos))))
-  (r (transition (to (next-r space[5].pos)))) (replace-x flip))))
-(on-click space[6] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[6].pos)))) (y.pos (transition (to (next-y space[6].pos))))
-  (r (transition (to (next-r space[6].pos)))) (replace-x flip))))
-(on-click space[7] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[7].pos)))) (y.pos (transition (to (next-y space[7].pos))))
-  (r (transition (to (next-r space[7].pos)))) (replace-x flip))))
-(on-click space[8] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[8].pos)))) (y.pos (transition (to (next-y space[8].pos))))
-  (r (transition (to (next-r space[8].pos)))) (replace-x flip))))
-(on-click space[9] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[9].pos)))) (y.pos (transition (to (next-y space[9].pos))))
-  (r (transition (to (next-r space[9].pos)))) (replace-x flip))))
-(on-click space[10] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[10].pos)))) (y.pos (transition (to (next-y space[10].pos))))
-  (r (transition (to (next-r space[10].pos)))) (replace-x flip))))
-(on-click space[11] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[11].pos)))) (y.pos (transition (to (next-y space[11].pos))))
-  (r (transition (to (next-r space[11].pos)))) (replace-x flip))))
-(on-click space[12] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[12].pos)))) (y.pos (transition (to (next-y space[12].pos))))
-  (r (transition (to (next-r space[12].pos)))) (replace-x flip))))
-(on-click space[13] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[13].pos)))) (y.pos (transition (to (next-y space[13].pos))))
-  (r (transition (to (next-r space[13].pos)))) (replace-x flip))))
-(on-click space[14] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[14].pos)))) (y.pos (transition (to (next-y space[14].pos))))
-  (r (transition (to (next-r space[14].pos)))) (replace-x flip))))
-(on-click space[15] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[15].pos)))) (y.pos (transition (to (next-y space[15].pos))))
-  (r (transition (to (next-r space[15].pos)))) (replace-x flip))))
-(on-click space[16] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[16].pos)))) (y.pos (transition (to (next-y space[16].pos))))
-  (r (transition (to (next-r space[16].pos)))) (replace-x flip))))
-(on-click space[17] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[17].pos)))) (y.pos (transition (to (next-y space[17].pos))))
-  (r (transition (to (next-r space[17].pos)))) (replace-x flip))))
-(on-click space[18] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[18].pos)))) (y.pos (transition (to (next-y space[18].pos))))
-  (r (transition (to (next-r space[18].pos)))) (replace-x flip))))
-(on-click space[19] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[19].pos)))) (y.pos (transition (to (next-y space[19].pos))))
-  (r (transition (to (next-r space[19].pos)))) (replace-x flip))))
-(on-click space[20] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[20].pos)))) (y.pos (transition (to (next-y space[20].pos))))
-  (r (transition (to (next-r space[20].pos)))) (replace-x flip))))
-(on-click space[21] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[21].pos)))) (y.pos (transition (to (next-y space[21].pos))))
-  (r (transition (to (next-r space[21].pos)))) (replace-x flip))))
-(on-click space[22] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[22].pos)))) (y.pos (transition (to (next-y space[22].pos))))
-  (r (transition (to (next-r space[22].pos)))) (replace-x flip))))
-(on-click space[23] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[23].pos)))) (y.pos (transition (to (next-y space[23].pos))))
-  (r (transition (to (next-r space[23].pos)))) (replace-x flip))))
-(on-click space[24] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[24].pos)))) (y.pos (transition (to (next-y space[24].pos))))
-  (r (transition (to (next-r space[24].pos)))) (replace-x flip))))
-(on-click space[25] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[25].pos)))) (y.pos (transition (to (next-y space[25].pos))))
-  (r (transition (to (next-r space[25].pos)))) (replace-x flip))))
-(on-click space[26] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[26].pos)))) (y.pos (transition (to (next-y space[26].pos))))
-  (r (transition (to (next-r space[26].pos)))) (replace-x flip))))
-(on-click space[27] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[27].pos)))) (y.pos (transition (to (next-y space[27].pos))))
-  (r (transition (to (next-r space[27].pos)))) (replace-x flip))))
-(on-click space[28] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[28].pos)))) (y.pos (transition (to (next-y space[28].pos))))
-  (r (transition (to (next-r space[28].pos)))) (replace-x flip))))
-(on-click space[29] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[29].pos)))) (y.pos (transition (to (next-y space[29].pos))))
-  (r (transition (to (next-r space[29].pos)))) (replace-x flip))))
-(on-click space[30] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[30].pos)))) (y.pos (transition (to (next-y space[30].pos))))
-  (r (transition (to (next-r space[30].pos)))) (replace-x flip))))
-(on-click space[31] (animation (default-duration 0.4) (at-once
-  (x.pos (transition (to (next-x space[31].pos)))) (y.pos (transition (to (next-y space[31].pos))))
-  (r (transition (to (next-r space[31].pos)))) (replace-x flip))))
+(repeat 32 i
+  (on-click space[i] (animation (default-duration 0.4) (at-once
+    (x.pos (transition (to (if replace-x space[i].pos x.pos))))
+    (y.pos (transition (to (if replace-x y.pos space[i].pos))))
+    (r (transition (to (/ (dist space[i].pos (if replace-x y.pos x.pos)) 2))))
+    (replace-x (transition (to (not replace-x)) (duration 0)))))))
 
 (slider radius (animation (r (transition (from 0) (to h) (duration 1)))) (label 'r'))
 

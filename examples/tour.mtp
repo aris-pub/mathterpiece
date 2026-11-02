@@ -25,26 +25,29 @@
   (times-table table (stroke '#ffb703'))
   (text caption curve (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
-; Each stop of the tour moves the multiplier, the color of the chords and the caption together,
-; then rests a moment.
+; Each stop of the tour moves the multiplier, the color of the chords and the caption together.
+(animation cardioid
+  (at-once (default-duration 1.5) (default-ease 'ease-in-out')
+    (table.m (transition (to 2)))
+    (table.stroke (transition (to '#ffb703')))
+    (curve (transition (to 'cardioid')))))
+(animation nephroid
+  (at-once (default-duration 3) (default-ease 'ease-in-out')
+    (table.m (transition (to 3)))
+    (table.stroke (transition (to '#8ecae6')))
+    (curve (transition (to 'nephroid')))))
+(animation eight-cusps
+  (at-once (default-duration 4) (default-ease 'ease-in-out')
+    (table.m (transition (to 9)))
+    (table.stroke (transition (to '#f4978e')))
+    (curve (transition (to 'eight cusps')))))
+
+; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
   (animation
-    (in-order
-      (at-once (default-duration 1.5) (default-ease 'ease-in-out')
-        (table.m (transition (to 2)))
-        (table.stroke (transition (to '#ffb703')))
-        (curve (transition (to 'cardioid'))))
-      (wait 1))
-    (in-order
-      (at-once (default-duration 3) (default-ease 'ease-in-out')
-        (table.m (transition (to 3)))
-        (table.stroke (transition (to '#8ecae6')))
-        (curve (transition (to 'nephroid'))))
-      (wait 1))
-    (at-once (default-duration 4) (default-ease 'ease-in-out')
-      (table.m (transition (to 9)))
-      (table.stroke (transition (to '#f4978e')))
-      (curve (transition (to 'eight cusps'))))))
+    (in-order cardioid (wait 1))
+    (in-order nephroid (wait 1))
+    eight-cusps))
 
 (canvas cnv board)
 (slider times (label 'times') (animation (table.m (transition (from 2) (to 12) (duration 1)))))

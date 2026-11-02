@@ -2950,6 +2950,9 @@ def _widen(a: Type, b: Type) -> Type | None:
     if _may_be_none(a) or _may_be_none(b):
         inner = _widen(_inner(a), _inner(b))
         return Maybe(inner) if inner is not None else None
+    # Numbers broaden, so two numbers meet at the broader of their types, without narrowing.
+    if _core(a) in NUMBERS and _core(b) in NUMBERS:
+        return max(_core(a), _core(b), key=NUMBERS.index)
     return None
 
 
@@ -3238,6 +3241,9 @@ def _show_value(t: Type, v, spec: str) -> str:
 
 
 def _fold(op: str, vals: list):
+    # A ratio meeting a real broadens to a real first, as the runtime computes it.
+    if any(isinstance(v, float) for v in vals):
+        vals = [float(v) if isinstance(v, Fraction) else v for v in vals]
     if op == "+":
         return sum(vals[1:], vals[0])
     if op == "-":
