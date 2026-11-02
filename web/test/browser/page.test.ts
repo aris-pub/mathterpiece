@@ -2,6 +2,7 @@
 // position converted into the scene (docs/data-model.md, "On the page"; docs/reference.md,
 // "Dragging").
 import { describe, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
 import type { Doc } from "../../src/doc.ts";
 import { type MtpModel, define } from "../../src/elements.ts";
 
@@ -50,5 +51,21 @@ describe("on a page", () => {
     const [px, py] = rt.value(rt.id("dot"), "pos") as number[];
     expect(px).toBeCloseTo(3);
     expect(py).toBeCloseTo(2);
+  });
+
+  it("plays an on-click on a real click, though the canvas holds the pointer to pan", async () => {
+    const model = page("page", `<mtp-canvas model="m" name="v" style="display: block; width: 400px"></mtp-canvas>`);
+    const rt = model.runtime!;
+    const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+    svg.style.width = "400px";
+    svg.style.height = "400px";
+    // Drawing replaces the shapes' elements, so the click is aimed at the SVG, where the orbit is.
+    const at = document.querySelector(`[data-mtp-id="${rt.id("orbit")}"]`)!.getBoundingClientRect();
+    const frame = svg.getBoundingClientRect();
+    // Other circles cover the orbit's center, but not its right side.
+    const position = { x: at.left + at.width * 0.85 - frame.left, y: at.top + at.height / 2 - frame.top };
+    await userEvent.click(svg, { position });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(rt.value(rt.id("on"), null)).toBe(true);
   });
 });

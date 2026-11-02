@@ -193,9 +193,13 @@ export class MtpCanvas extends MtpPart {
         this.redraw();
       }
     }).observe(svg);
+    // The shape under the pointer. While the canvas holds the pointer, to pan or drag, every
+    // event's target is the SVG itself, so the shape is found from where the pointer is.
     const hitOf = (event: PointerEvent): number | null => {
-      const under = (event.target as Element).closest?.("[data-mtp-id]");
-      return under ? Number(under.getAttribute("data-mtp-id")) : null;
+      let at = event.target as Element | null;
+      if (at === svg) at = document.elementFromPoint?.(event.clientX, event.clientY) ?? at;
+      const under = at?.closest?.("[data-mtp-id]");
+      return under && svg.contains(under) ? Number(under.getAttribute("data-mtp-id")) : null;
     };
     // The pointer in the SVG's own coordinates, and in scene coordinates through the canvas's view.
     const toUser = (event: { clientX: number; clientY: number }): [number, number] => {
@@ -235,11 +239,13 @@ export class MtpCanvas extends MtpPart {
       const [a, b] = [...touches.values()] as [[number, number], [number, number]];
       return { gap: Math.hypot(a[0] - b[0], a[1] - b[1]), mid: { clientX: (a[0] + b[0]) / 2, clientY: (a[1] + b[1]) / 2 } };
     };
-    // A click is a press and a release on the same shape; drawing replaces the elements, so
-    // shapes are compared by id.
+    // A click is a press and a release on the same shape, with no pan between; drawing replaces
+    // the elements, so shapes are compared by id.
     let pressed: number | null = null;
+    let pressedAt: [number, number] = [0, 0];
     svg.addEventListener("pointerdown", (event) => {
       pressed = hitOf(event);
+      pressedAt = [event.clientX, event.clientY];
       if (pressed !== null && drags.grab(pressed, toScene(event))) {
         scheduler.claim(drags.targets, drags);
       } else if (allows("pan") || allows("zoom")) {
@@ -273,10 +279,13 @@ export class MtpCanvas extends MtpPart {
     });
     const lift = (event: PointerEvent) => touches.delete(event.pointerId);
     svg.addEventListener("pointerup", (event) => {
+      const panned =
+        touches.has(event.pointerId) &&
+        Math.hypot(event.clientX - pressedAt[0], event.clientY - pressedAt[1]) > 4;
       lift(event);
       drags.release();
       const released = hitOf(event);
-      const listener = pressed !== null && pressed === released ? clicks.find(pressed) : null;
+      const listener = pressed !== null && pressed === released && !panned ? clicks.find(pressed) : null;
       pressed = null;
       const player = listener ? playerFor(rt, listener) : null;
       if (listener && player) scheduler.start(player, listener);
