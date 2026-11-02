@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass, field
 
-from mathterpiece.nodes import NOPOS, Pos
+from mathterpiece.nodes import NOPOS, Node, Pos
 from mathterpiece.types import Type
 
 # What a place or an expression reads: (object id, attribute), with None for a variable.
@@ -54,6 +54,8 @@ class Obj:
     members: list[int] = field(default_factory=list)
     parent: int | None = None
     pos: Pos = NOPOS
+    # The motif or variant an instance is of.
+    of: str | None = None
 
     @property
     def value(self) -> Place:
@@ -61,11 +63,29 @@ class Obj:
         return self.attrs["value"]
 
 
+@dataclass(frozen=True)
+class Param:
+    """A parameter: its default is the source it is compiled from, in each instance or call."""
+
+    name: str
+    type: Type
+    default: Node | None = None
+
+
+@dataclass(frozen=True)
+class MotifDef:
+    name: str
+    params: tuple[Param, ...]
+    body: tuple[Node, ...]
+    pos: Pos = NOPOS
+
+
 @dataclass
 class Model:
     objects: list[Obj] = field(default_factory=list)
     names: dict[str, int] = field(default_factory=dict)
     types: dict[str, Type] = field(default_factory=dict)
+    motifs: dict[str, MotifDef] = field(default_factory=dict)
 
     def id(self, name: str) -> int:
         return self.names[name]

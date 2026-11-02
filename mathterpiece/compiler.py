@@ -10,7 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal, localcontext
 from fractions import Fraction
 
 from mathterpiece.colors import parse_color
-from mathterpiece.model import Expr, Model, Obj, Place, Range
+from mathterpiece.model import Expr, Model, MotifDef, Obj, Param, Place, Range
 from mathterpiece.nodes import (
     Bar,
     BoolLit,
@@ -125,6 +125,10 @@ SHAPE_ATTRS: dict[str, dict[str, Attr]] = {
     },
     "group": dict(TRANSFORMS),
 }
+# What a motif instance takes besides its parameters (reference.md, "The scene and shapes").
+INSTANCE_ATTRS = {**POSITIONED, **PAINTED, **TRANSFORMS}
+# The paint arguments a motif instance gives its members as defaults; opacity is its own.
+INHERITED = ("fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity")
 # Arguments a group takes only to write them on each of its members.
 SPREAD = frozenset(POSITIONED) | frozenset(PAINTED) | {"pos"}
 # The ends or corners whose mean is a line's or a triangle's position.
@@ -170,6 +174,10 @@ class _Compiler:
         # The container the expression being compiled sits in: a group, or None for the scene
         # and the top level. Reads convert through the transforms not shared with it.
         self.frame: int | None = None
+        # The motif instances whose bodies are being compiled, innermost last: each with its
+        # id, its members' names, its parameters and bound variables, and the path its
+        # members are named by (None inside an anonymous instance).
+        self.bodies: list[dict] = []
 
     def run(self, forms: tuple[Form, ...]) -> Model:
         for form, scope in self.expand(forms, {}):
@@ -203,7 +211,9 @@ class _Compiler:
             return self.type_decl(form)
         if head == "scene":
             return self.scene_decl(form)
-        if _shape_kind(form):
+        if head == "motif":
+            return self.motif_decl(form)
+        if self.shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
 
@@ -223,9 +233,26 @@ class _Compiler:
             return None, node.pos
         if name in RESERVED:
             raise CompileError(f"'{name}' is reserved", node.pos)
-        if name in self.model.names:
+        taken = self.model.names
+        if self.bodies:
+            taken = self.bodies[-1]["names"].keys() | self.bodies[-1]["attrs"]
+        if name in taken:
             raise CompileError(f"'{name}' is already declared", node.pos)
         return name, node.pos
+
+    def shape_kind(self, node: Node) -> tuple[str, bool] | None:
+        """The shape a form declares, and whether it is declared T|none."""
+        if not isinstance(node, Form):
+            return None
+        head = node.items[0]
+        absent = False
+        if isinstance(head, Bar) and len(head.items) == 2 and isinstance(head.items[1], NoneLit):
+            head, absent = head.items[0], True
+        if isinstance(head, Name) and len(head.parts) == 1:
+            kind = head.parts[0]
+            if kind in SHAPE_ATTRS or kind in self.model.motifs:
+                return kind, absent
+        return None
 
     def built_name(self, node: Form, scope: dict) -> str:
         """The name (name s) stands for; s must be known when compiling."""
@@ -238,7 +265,12 @@ class _Compiler:
     def add(self, obj: Obj) -> int:
         self.model.objects.append(obj)
         i = len(self.model.objects) - 1
-        if obj.name is not None:
+        if obj.name is not None and self.bodies:
+            body = self.bodies[-1]
+            body["names"][obj.name] = i
+            if body["path"] is not None:
+                self.model.names[f"{body['path']}.{obj.name}"] = i
+        elif obj.name is not None:
             self.model.names[obj.name] = i
         if obj.parent is not None and obj.kind != "variable":
             self.model.objects[obj.parent].members.append(i)
@@ -264,6 +296,13 @@ class _Compiler:
             raise CompileError(str(e), node.pos) from None
 
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
+        name, pos, t, node = self.declared(form, scope)
+        place = self.place(t, node, form.pos, "the value", scope=scope)
+        self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
+
+    def declared(self, form: Form, scope: dict) -> tuple[str | None, Pos, Type, Node | None]:
+        """A (T name value? constraint…) form's name, its type with the constraints, and its
+        value's source."""
         head = form.items[0]
         name, pos = self.name_of(form, scope)
         rest = list(form.items[2:])
@@ -280,8 +319,108 @@ class _Compiler:
                 t = refine(t, rest)
         except TypeError_ as e:
             raise CompileError(str(e), rest[0].pos) from None
+        return name, pos, t, node
+
+    def motif_decl(self, form: Form) -> None:
+        name, pos = self.name_of(form)
+        if name is None or len(form.items) < 3:
+            raise CompileError("a motif is (motif name parameters member…)", form.pos)
+        if name in SHAPE_ATTRS or name in self.model.types:
+            raise CompileError(f"'{name}' is already declared", pos)
+        params = self.params(form.items[2])
+        for p in params:
+            if p.name in INSTANCE_ATTRS or p.name == "pos":
+                raise CompileError(f"every motif instance already has '{p.name}'", form.pos)
+        self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos)
+        self.model.types[name] = ShapeT(name)
+        # Compile one instance and discard it, so a body's errors show without any instance.
+        objects, names = len(self.model.objects), dict(self.model.names)
+        try:
+            self.instance(Form((Name((name,), pos), Name(("_",), pos)), form.pos), None, {})
+        finally:
+            del self.model.objects[objects:]
+            self.model.names = names
+
+    def params(self, node: Node) -> tuple[Param, ...]:
+        """One parameter (real t 0.5), or a list of them ((real t 0.5) (color c 'red'))."""
+        if not isinstance(node, Form):
+            raise CompileError("expected a parameter such as (real t 0.5)", node.pos)
+        forms = node.items if isinstance(node.items[0], Form) else (node,)
+        out = []
+        for f in forms:
+            if not isinstance(f, Form):
+                raise CompileError("expected a parameter such as (real t 0.5)", f.pos)
+            name, pos, t, default = self.declared(f, {})
+            if name is None:
+                raise CompileError("a parameter needs a name", pos)
+            if any(p.name == name for p in out):
+                raise CompileError(f"'{name}' is already declared", pos)
+            out.append(Param(name, t, default))
+        return tuple(out)
+
+    def instance(
+        self, form: Form, parent: int | None, scope: dict, spread=None, absent=False
+    ) -> int:
+        kind = self.shape_kind(form)[0]
+        motif = self.model.motifs[kind]
+        name, pos = self.name_of(form, scope)
+        t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
+        obj = Obj("instance", name, t, parent=parent, pos=pos, of=kind)
+        i = self.add(obj)
+        params = {p.name: p for p in motif.params}
+        given: dict[str, tuple[Node, dict]] = {}
+        for item, inner in self.expand(form.items[2:], scope):
+            head = _head(item)
+            if self.shape_kind(item) and head not in params:
+                raise CompileError(f"an instance of {kind} takes no members", item.pos)
+            if head is None or not isinstance(item, Form) or len(item.items) != 2:
+                raise CompileError(f"expected an argument such as (r 1), got {item}", item.pos)
+            if head not in params and head not in INSTANCE_ATTRS and head != "pos":
+                raise CompileError(f"a {kind} takes no argument '{head}'", item.pos)
+            if head in given or _overlaps(head, given):
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            given[head] = (item.items[1], inner)
+        for attr, (node, inner) in (spread or {}).items():
+            if not _overlaps(attr, given):
+                given[attr] = (node, inner)
+        saved, self.frame = self.frame, (parent if parent != self.scene else None)
+        try:
+            for p in motif.params:
+                node, inner = given.get(p.name, (p.default, {}))
+                at = _maybe(p.type) if absent else p.type
+                obj.attrs[p.name] = self.place(at, node, form.pos, p.name, None, inner)
+            self.shape_attrs(obj, given, absent, form.pos, scope, INSTANCE_ATTRS)
+        finally:
+            self.frame = saved
+        outer = self.bodies[-1]["path"] if self.bodies else ""
+        path = None if name is None or outer is None else (f"{outer}.{name}" if outer else name)
+        self.bodies.append({"id": i, "names": {}, "attrs": set(params), "path": path})
+        saved, self.frame = self.frame, i
+        down = {a: (_dot(Name(("self",), form.pos), a), {}) for a in INHERITED}
+        try:
+            for item, inner in self.expand(motif.body, {}):
+                if self.shape_kind(item):
+                    self.shape(item, i, inner, down)
+                elif isinstance(item, Form) and _head(item) not in ("motif", "scene"):
+                    self.body_variable(item, obj, inner)
+                else:
+                    raise CompileError("a motif's body holds shapes and bound variables", item.pos)
+        finally:
+            self.bodies.pop()
+            self.frame = saved
+        return i
+
+    def body_variable(self, form: Form, obj: Obj, scope: dict) -> None:
+        name, pos, t, node = self.declared(form, scope)
         place = self.place(t, node, form.pos, "the value", scope=scope)
-        self.add(Obj("variable", name, t, access, {"value": place}, parent=parent, pos=pos))
+        if name is None:
+            raise CompileError("a variable in a motif's body needs a name", pos)
+        if not place.bound and not _is_const(t):
+            raise CompileError(
+                "a motif's body declares only bound variables; free state is a parameter", pos
+            )
+        obj.attrs[name] = place
+        self.bodies[-1]["attrs"].add(name)
 
     def scene_decl(self, form: Form) -> None:
         if self.scene is not None:
@@ -295,7 +434,9 @@ class _Compiler:
                 attrs["background"] = self.place(
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
-            elif _shape_kind(item):
+            elif head == "motif":
+                raise CompileError("a motif is declared only at the top level", item.pos)
+            elif self.shape_kind(item):
                 self.shape(item, self.scene, scope)
             elif isinstance(item, Form):
                 self.variable(item, self.scene, "scene", scope)
@@ -303,7 +444,9 @@ class _Compiler:
                 raise CompileError("the scene holds shapes and variables", item.pos)
 
     def shape(self, form: Form, parent: int, scope: dict, spread: dict | None = None) -> int:
-        kind, absent = _shape_kind(form)
+        kind, absent = self.shape_kind(form)
+        if kind in self.model.motifs:
+            return self.instance(form, parent, scope, spread, absent)
         name, pos = self.name_of(form, scope)
         specs = SHAPE_ATTRS[kind]
         # A shape declared T|none may be absent, so its attributes may be none.
@@ -318,7 +461,7 @@ class _Compiler:
             if items and _head(items[0]) is None:
                 given[attr] = (items.pop(0), scope)
         for item, inner in self.expand(items, scope):
-            if kind == "group" and _shape_kind(item):
+            if kind == "group" and self.shape_kind(item):
                 members.append((item, inner))
                 continue
             head = _head(item)
@@ -347,15 +490,16 @@ class _Compiler:
                     given[attr] = (node, inner)
         saved, self.frame = self.frame, (parent if parent != self.scene else None)
         try:
-            self.shape_attrs(obj, given, absent, form.pos, scope)
+            self.shape_attrs(obj, given, absent, form.pos, scope, specs)
         finally:
             self.frame = saved
         for item, inner in members:
             self.shape(item, i, inner, down)
         return i
 
-    def shape_attrs(self, obj: Obj, given: dict, absent: bool, pos: Pos, scope: dict) -> None:
-        specs = SHAPE_ATTRS[obj.kind]
+    def shape_attrs(
+        self, obj: Obj, given: dict, absent: bool, pos: Pos, scope: dict, specs: dict
+    ) -> None:
         for attr, spec in specs.items():
             if attr in ("x", "y") and "pos" in given:
                 continue
@@ -551,6 +695,16 @@ class _Compiler:
     def lookup(self, name: str, scope: dict, pos: Pos) -> Expr:
         if name in scope:
             return scope[name]
+        if self.bodies:
+            body = self.bodies[-1]
+            if name == "self":
+                return self.read(body["id"], None)
+            if name in body["names"]:
+                return self.read(body["names"][name], None)
+            if name in body["attrs"]:
+                return self.read(body["id"], name)
+        if name == "self":
+            raise CompileError("self is used only in a motif's body", pos)
         if name in self.model.names:
             return self.read(self.model.names[name], None)
         raise CompileError(f"unknown name '{name}'", pos)
@@ -566,7 +720,7 @@ class _Compiler:
             if attr not in obj.attrs:
                 raise CompileError(f"a {obj.kind} has no attribute '{attr}'", obj.pos)
             place = obj.attrs[attr]
-            if obj.kind in SHAPE_ATTRS:
+            if obj.kind in SHAPE_ATTRS or (obj.kind == "instance" and attr in INSTANCE_ATTRS):
                 moves = self.moves(i)
         t = _maybe(place.type) if isinstance(obj.type, Maybe) else place.type
         if not place.bound and _is_const(place.type):
@@ -587,6 +741,9 @@ class _Compiler:
         j = i
         while j is not None and j != self.scene and j not in shared:
             out |= {(j, "translate"), (j, "transform")}
+            # An instance's x and y move its frame, before its translate.
+            if self.model.objects[j].kind == "instance":
+                out |= {(j, "x"), (j, "y")}
             j = self.model.objects[j].parent
         return frozenset(out)
 
@@ -612,6 +769,8 @@ class _Compiler:
             names |= {"length", "members"}
         if "x" in obj.attrs or obj.kind in CORNERS:
             names |= {"x", "y", "pos"}
+        if obj.kind == "instance":
+            names |= {self.model.objects[m].name for m in obj.members} - {None}
         if obj.kind == "group" and obj.members:
             names |= set.intersection(*(self.attr_names(m) for m in obj.members)) - {"members"}
         return names
@@ -652,6 +811,10 @@ class _Compiler:
             return self.arith(pos, "/", [self.arith(pos, "+", ends), _known(INT, len(ends))])
         if name in obj.attrs:
             return self.read(i, name)
+        if obj.kind == "instance":
+            for m in obj.members:
+                if self.model.objects[m].name == name:
+                    return self.read(m, None)
         if obj.kind == "group":
             if not obj.members or name not in self.attr_names(i):
                 raise CompileError(f"every member of {obj.name} must have '{name}'", pos)
@@ -953,17 +1116,15 @@ def _known(t: Type, value) -> Expr:
     return Expr("lit", t, (value,), range=r, known=True, value=value)
 
 
-def _shape_kind(node: Node) -> tuple[str, bool] | None:
-    """The shape a form declares, and whether it is declared T|none."""
-    if not isinstance(node, Form):
-        return None
-    head = node.items[0]
-    absent = False
-    if isinstance(head, Bar) and len(head.items) == 2 and isinstance(head.items[1], NoneLit):
-        head, absent = head.items[0], True
-    if isinstance(head, Name) and len(head.parts) == 1 and head.parts[0] in SHAPE_ATTRS:
-        return head.parts[0], absent
-    return None
+def _overlaps(attr: str, given: dict) -> bool:
+    """Whether attr, or a place it writes (pos is x and y), is already in given."""
+    places = {"x", "y"} if attr == "pos" else {attr}
+    return any(a in given or (a in ("x", "y") and "pos" in given) for a in places)
+
+
+def _dot(node: Node, attr: str) -> Form:
+    """(. node attr), built by the compiler."""
+    return Form((Name((".",), node.pos), node, Name((attr,), node.pos)), node.pos)
 
 
 def _coordinates(attr: str, node: Node, scope: dict) -> dict:
