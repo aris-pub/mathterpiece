@@ -25,21 +25,42 @@ export function viewOf(rt: Runtime, canvas: number): { box: number[]; toUser: nu
   return { box: [x, -(y + height), width, height], toUser: compose(view, FLIP) };
 }
 
-/** Draws a canvas: what it shows, and what each of its when items shows while it holds. */
-export function draw(rt: Runtime, canvas: number, svg?: SVGSVGElement): SVGSVGElement {
+/**
+ * Draws a canvas: what it shows, and what each of its when items shows while it holds. visible
+ * says how visible the k-th when item's shapes are, from 0 (not drawn) to 1, for a canvas fading
+ * them in or out; by default, 1 while its condition holds and 0 otherwise.
+ */
+export function draw(
+  rt: Runtime,
+  canvas: number,
+  svg?: SVGSVGElement,
+  visible?: (k: number) => number,
+): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
   out.replaceChildren();
   const { box, toUser } = viewOf(rt, canvas);
   out.setAttribute("viewBox", box.join(" "));
   const view = rt.objects[canvas]!;
-  const shown = [...(view.members ?? [])];
-  for (const [cond, ids] of (view.when ?? []) as [Place, number[]][]) {
-    if (rt.placeValue(cond)) shown.push(...ids);
-  }
-  background(rt, shown, out);
+  const when = (view.when ?? []) as [Place, number[]][];
+  const levels = when.map(([cond], k) => (visible ? visible(k) : rt.placeValue(cond) ? 1 : 0));
+  background(rt, [...(view.members ?? []), ...when.flatMap(([, ids]) => ids)], out);
   const top = document.createElementNS(NS, "g");
   top.setAttribute("transform", matrix(toUser));
-  for (const i of shown) drawObject(rt, i, top, box[2]! / Math.max(out.clientWidth || 0, 1));
+  const unitsPerPx = box[2]! / Math.max(out.clientWidth || 0, 1);
+  for (const i of view.members ?? []) drawObject(rt, i, top, unitsPerPx);
+  when.forEach(([, ids], k) => {
+    const level = levels[k]!;
+    if (level <= 0) return;
+    let into: Element = top;
+    if (level < 1) {
+      // A canvas's showing and hiding takes the path fade (reference.md).
+      into = document.createElementNS(NS, "g");
+      into.setAttribute("data-mtp-fade", "");
+      into.setAttribute("opacity", String(level));
+      top.appendChild(into);
+    }
+    for (const i of ids) drawObject(rt, i, into, unitsPerPx);
+  });
   out.appendChild(top);
   return out;
 }

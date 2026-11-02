@@ -14,6 +14,9 @@ interface Running {
 
 export class Scheduler {
   private sources: Running[] = [];
+  // What moves a view's own state, such as a canvas fading something in: it writes nothing in
+  // the model, so it never collides with a writer.
+  private tickers: ((seconds: number) => boolean)[] = [];
 
   /** wake is called whenever something starts moving, so the page can ask for frames. */
   constructor(
@@ -22,7 +25,13 @@ export class Scheduler {
   ) {}
 
   busy(): boolean {
-    return this.sources.some((s) => !s.paused);
+    return this.tickers.length > 0 || this.sources.some((s) => !s.paused);
+  }
+
+  /** Moves view state with the clock; tick gives whether it has more to do. */
+  addTicker(tick: (seconds: number) => boolean): void {
+    this.tickers.push(tick);
+    this.wake();
   }
 
   running(source: object): boolean {
@@ -67,6 +76,7 @@ export class Scheduler {
   }
 
   tick(seconds: number): void {
+    this.tickers = this.tickers.filter((t) => t(seconds));
     for (const s of [...this.sources]) {
       if (s.paused) continue;
       s.time += seconds;

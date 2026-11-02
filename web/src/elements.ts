@@ -4,11 +4,12 @@
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Clicks } from "./click.ts";
-import { type Doc, FORMAT_VERSION, type Obj } from "./doc.ts";
+import { type Doc, FORMAT_VERSION, type Obj, type Place } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
 import { Runtime } from "./runtime.ts";
 import { draw, viewOf } from "./svg.ts";
+import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
 const READY = "mtp-ready";
@@ -171,8 +172,10 @@ export class MtpCanvas extends MtpPart {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
     const drags = model.drags!;
     const clicks = model.clicks!;
+    const fades = new Fades(rt, canvas, scheduler, () => this.redraw());
     this.redraw = () => {
-      draw(rt, canvas, svg);
+      fades.follow();
+      draw(rt, canvas, svg, (k) => fades.visible(k));
       for (const el of svg.querySelectorAll("[data-mtp-id]")) {
         const id = Number(el.getAttribute("data-mtp-id"));
         if (drags.draggable(id) || clicks.find(id)) (el as SVGElement).style.cursor = "pointer";
@@ -220,6 +223,60 @@ export class MtpCanvas extends MtpPart {
 
   protected update(): void {
     this.redraw();
+  }
+}
+
+// How visible each when item of a canvas is: the canvas's own state, moved along its transition
+// when the item's condition changes. Turning back midway covers only what is left, at the same
+// speed.
+class Fades {
+  private levels: number[];
+  private wanted: boolean[];
+  private moving = false;
+  private duration: number;
+  private ease: Ease;
+
+  constructor(
+    private rt: Runtime,
+    private canvas: number,
+    private scheduler: Scheduler,
+    private redraw: () => void,
+  ) {
+    const view = rt.objects[canvas]!;
+    const tr = view.transition === null || view.transition === undefined ? null : rt.objects[view.transition]!;
+    this.duration = tr?.duration ?? 0;
+    this.ease = (tr?.ease as Ease | null) ?? "linear";
+    this.wanted = this.conditions();
+    this.levels = this.wanted.map((w) => (w ? 1 : 0));
+  }
+
+  private conditions(): boolean[] {
+    const when = (this.rt.objects[this.canvas]!.when ?? []) as [Place, number[]][];
+    return when.map(([cond]) => Boolean(this.rt.placeValue(cond)));
+  }
+
+  /** Starts moving toward what each condition says now. */
+  follow(): void {
+    const now = this.conditions();
+    if (now.every((w, k) => w === this.wanted[k])) return;
+    this.wanted = now;
+    if (this.duration <= 0) {
+      this.levels = now.map((w) => (w ? 1 : 0));
+      return;
+    }
+    if (this.moving) return;
+    this.moving = true;
+    this.scheduler.addTicker((seconds) => {
+      const step = seconds / this.duration;
+      this.levels = this.levels.map((l, k) => (this.wanted[k] ? Math.min(l + step, 1) : Math.max(l - step, 0)));
+      this.moving = this.levels.some((l, k) => l !== (this.wanted[k] ? 1 : 0));
+      this.redraw();
+      return this.moving;
+    });
+  }
+
+  visible(k: number): number {
+    return applyEase(this.ease, this.levels[k] ?? 0, (id) => this.rt.fn(id));
   }
 }
 

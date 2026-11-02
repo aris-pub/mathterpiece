@@ -1,0 +1,4 @@
+(bool show false)
+(scene s (circle c) (circle d))
+(canvas v c (when show d) (transition (duration 1)))
+(canvas still c (when show d))

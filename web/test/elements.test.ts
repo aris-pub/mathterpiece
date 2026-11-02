@@ -145,3 +145,31 @@ describe("a canvas", () => {
     expect(v("on")).toBe(true);
   });
 });
+
+describe("a canvas's showing and hiding", () => {
+  const FADE = docs["./data/runtime/fade.mtpc"] as string;
+
+  function opacityOf(rt: Runtime, name: string, canvas = "v"): number | null {
+    const el = document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`);
+    if (!el) return null;
+    const g = el.closest("[data-mtp-fade]");
+    return g ? Number(g.getAttribute("opacity")) : 1;
+  }
+
+  it("fades what a when item shows along the canvas's transition", () => {
+    const [, rt] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(FADE) as Doc);
+    expect(opacityOf(rt, "d")).toBeNull();
+    rt.write(rt.id("show"), null, true);
+    pass(0.1);
+    pass(0.5);
+    expect(opacityOf(rt, "d")).toBeCloseTo(0.5);
+    pass(1);
+    expect(opacityOf(rt, "d")).toBe(1);
+  });
+
+  it("shows and hides at once with no transition", () => {
+    const [, rt] = page(`<mtp-canvas model="m" name="still"></mtp-canvas>`, JSON.parse(FADE) as Doc);
+    rt.write(rt.id("show"), null, true);
+    expect(opacityOf(rt, "d", "still")).toBe(1);
+  });
+});
