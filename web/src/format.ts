@@ -21,11 +21,11 @@ export function pyStr(x: number): string {
     const head = rest ? `${digits[0]}.${rest}` : `${digits[0]}`;
     return `${sign}${head}e${exp < 0 ? "-" : "+"}${String(Math.abs(exp)).padStart(2, "0")}`;
   }
-  return sign + placePoint(digits, exp + 1, true);
+  return sign + withPoint(digits, exp + 1, true);
 }
 
 // Digits with the decimal point after `point` of them (point may be negative or past the end).
-function placePoint(digits: string, point: number, keepZero: boolean): string {
+function withPoint(digits: string, point: number, keepZero: boolean): string {
   let whole: string;
   let frac: string;
   if (point <= 0) {

@@ -121,7 +121,7 @@ A constraint narrows a type to some of its values. Constraints are written after
 A value known when compiling that breaks a constraint is a compile error. A bound value that breaks one while drawing is `none` (section 5.c), so unless the compiler can prove the expression stays within the constraint, the value may be `none` and must be handled like any other `none`: the variable declared `T|none`, or the expression given a default with `or?`. A write while drawing (from a slider, a drag or an animation) is brought into the constraint: a range is **clamped** to its nearest end (a strict bound such as `(> 0)` has no nearest allowed value, so a write that breaks it is skipped), an `int` is **rounded** (after clamping, to the nearest int inside the range), and a fixed choice **holds** its last valid value. An argument passed to a constrained parameter, and an item of a list with constrained items, follow the rule for bound values: unless the compiler can prove they fit, it is a compile error. A write that changes nothing is skipped, so nothing downstream is recomputed.
 
     (real p 0.5 (>= 0) (<= 1))
-    (slider s (animation (p (transition (to 1.4)))))   ; p stops at exactly 1
+    (slider s (animation (p (to 1.4))))   ; p stops at exactly 1
     (int n 8 (const))                                   ; known when compiling: usable as a repeat count
 
 ### 5.c Broadening (none, more later)

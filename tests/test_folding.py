@@ -88,7 +88,7 @@ class TestFoldedValues:
         assert _is_const(m.get("d").value.type)
 
     def test_so_no_writer_can_write_it(self):
-        error("(real d (+ 1 2)) (animation a (d (transition (to 1) (duration 1))))", "d is const")
+        error("(real d (+ 1 2)) (animation a (d (to 1) (duration 1)))", "d is const")
 
     def test_a_constant_gives_a_free_value(self):
         from mathterpiece.compiler import _is_const
@@ -102,19 +102,19 @@ class TestFoldedValues:
     def test_a_const_attribute_is_a_constant(self):
         model(
             "(scene s (circle c (r (+ 1 1))) (circle d (r c.r)))"
-            " (animation a (d.r (transition (to 1) (duration 1))))"
+            " (animation a (d.r (to 1) (duration 1)))"
         )
 
     def test_so_a_writer_may_write_it(self):
         model(
             "(real g (* 180 (- 3 (sqrt 5))) (const))"
             " (scene s (circle c (r g)))"
-            " (animation a (c.r (transition (to 1) (duration 1))))"
+            " (animation a (c.r (to 1) (duration 1)))"
         )
 
     def test_an_expression_of_a_constant_is_still_const(self):
         src = "(real g 2 (const)) (real d (* 2 g))"
-        src += " (animation a (d (transition (to 1) (duration 1))))"
+        src += " (animation a (d (to 1) (duration 1)))"
         error(src, "d is const")
 
     def test_a_literal_list_is_still_free(self):

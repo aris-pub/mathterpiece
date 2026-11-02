@@ -693,7 +693,7 @@ class _Compiler:
             return Expr("rand", REAL, (site, *bounds), deps, r)
         if head == "round":
             self.count(head, given, 1, 2, pos)
-            params = (Param("x", REAL), Param("places", INT))[: len(given)]
+            params = (Param("x", REAL), Param("decimals", INT))[: len(given)]
             b = Builtin(
                 tuple(p.type for p in params), INT if len(given) == 1 else REAL, _round, WHOLE
             )
@@ -1176,21 +1176,23 @@ class _Compiler:
         return out
 
     def move(self, item: Node, duration, ease, scope: dict) -> tuple:
-        if (
-            not isinstance(item, Form)
-            or len(item.items) != 2
-            or not isinstance(item.items[0], Name)
-        ):
-            raise CompileError("expected a step such as (k (transition (to 1)))", item.pos)
+        if not isinstance(item, Form) or len(item.items) < 2 or not isinstance(item.items[0], Name):
+            raise CompileError("expected a step such as (k (to 1))", item.pos)
         i, attr, t = self.writable(item.items[0], scope)
-        node = item.items[1]
-        if _head(node) == "transition":
-            assert isinstance(node, Form)
-            tid = self.transition(node, scope, named=False)
-        elif isinstance(node, Name):
+        parts = item.items[1:]
+        node = parts[0]
+        # Inside a step the transition is implied: the step gives its items, or names one.
+        if len(parts) == 1 and isinstance(node, Name):
             tid = self.named(node, "transition")
+        elif _head(node) == "transition":
+            raise CompileError(
+                "a step's transition is implied: write its items directly, as in (k (to 1))",
+                node.pos,
+            )
         else:
-            raise CompileError("a move takes a transition", node.pos)
+            tid = self.transition(
+                Form((Name(("transition",), item.pos), *parts), item.pos), scope, named=False
+            )
         self.type_ends(tid, t, node.pos)
         tr = self.model.objects[tid]
         d = tr.attrs["duration"].value if "duration" in tr.attrs else duration
@@ -1679,7 +1681,7 @@ class _Compiler:
         i = len(self.model.objects)
         body_scope = {p: (lambda p=p: self.read(i, p)) for p in params}
 
-        def place_params(obj: Obj) -> None:
+        def set_params(obj: Obj) -> None:
             for p in v.params:
                 node, inner = mine.get(p.name, (p.default, {}))
                 obj.attrs[p.name] = self.attribute(p.type, node, form.pos, p.name, None, inner)
@@ -1689,7 +1691,7 @@ class _Compiler:
         if absent:
             head = Bar((head, NoneLit(form.pos)), form.pos)
         base_form = Form((head, form.items[1]), form.pos)
-        pre = (*pre, place_params)
+        pre = (*pre, set_params)
         if v.base in self.model.variants:
             return self.variant_instance(base_form, parent, scope, spread, merged, pre, outer)
         j = self.shape(base_form, parent, scope, spread, merged, pre)

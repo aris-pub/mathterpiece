@@ -11,7 +11,7 @@ FILES = sorted((Path(__file__).parent / "malformed").glob("*.mtp"))
 
 
 @pytest.mark.parametrize("path", FILES, ids=[f.stem for f in FILES])
-def test_one_error_at_its_place(path):
+def test_one_error_where_it_is(path):
     src = path.read_text()
     m = re.match(r"; error (\d+):(\d+) (.*)\n", src)
     assert m, f"{path.name} does not say its error"

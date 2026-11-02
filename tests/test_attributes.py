@@ -60,7 +60,7 @@ class TestTransitionsAndAnimations:
         assert value(f"{src} (real d a.duration)", "d") == 3
 
     def test_at_once_takes_the_longest(self):
-        move = "(k (transition (to 1) (duration 2)))"
+        move = "(k (to 1) (duration 2))"
         src = f"(real k) (animation a (at-once {move} (wait 3)))"
         assert value(f"{src} (real d a.duration)", "d") == 3
 

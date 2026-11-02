@@ -120,7 +120,7 @@ class TestFunctionsAsValues:
         e = bound(f"{src} (real d (twice (fn y (* k y)) 1))", "d")
         assert e.args[1].op == "func"
 
-    def test_fn_needs_its_place_to_type_a_bare_parameter(self):
+    def test_fn_needs_where_it_is_used_to_type_a_bare_parameter(self):
         error("(real k (let ((f (fn y y))) 1))", "needs its type")
 
     def test_variables_never_hold_functions(self):

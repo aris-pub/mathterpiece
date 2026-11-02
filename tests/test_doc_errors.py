@@ -63,14 +63,14 @@ CASES = [
     ),
     # reference.md "Defaults": a transition with no duration.
     (
-        "(real k)\n(animation a (k (transition (to 1))))",
+        "(real k)\n(animation a (k (to 1)))",
         "2:17",
         "this transition needs a duration (or a default-duration around it)",
     ),
     # reference.md "Writes and conditions": a condition that is not a limit.
     (
-        "(real k)\n(real j)\n(button b (animation (k (transition (to 1) (duration 1)))) (> j 1))",
-        "3:60",
+        "(real k)\n(real j)\n(button b (animation (k (to 1) (duration 1))) (> j 1))",
+        "3:47",
         "a condition compares an attribute this writer writes with a limit that does not depend on"
         " it, such as (>= k 0)",
     ),
@@ -82,7 +82,7 @@ CASES = [
 
 
 @pytest.mark.parametrize("src, attribute, message", CASES, ids=[c[2][:40] for c in CASES])
-def test_the_error_and_its_place(src, attribute, message):
+def test_the_error_and_where_it_is(src, attribute, message):
     with pytest.raises(CompileError) as exc:
         compile_source(src)
     assert message in exc.value.msg

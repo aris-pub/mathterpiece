@@ -106,7 +106,7 @@ Every variable, and every attribute of a mutable object, is either **free** or *
 
     (real k 1)                     ; free: a slider may write it
     (circle c (r (* 2 k)))         ; c.r is bound: it is always twice k
-    (slider s (animation (k (transition (to 3)))))
+    (slider s (animation (k (to 3))))
 
 So every change starts at something free, and spreads to everything bound to it: when the slider writes `k`, `c.r` follows at once, and so does anything that reads `c.r`. The runtime recomputes only what reads what changed. A free variable with the `const` constraint can never be written, so it is known when compiling and costs nothing while drawing.
 
@@ -127,7 +127,7 @@ flowchart LR
 ```
 
 - **Change only enters through writers.** When the reader acts, a control or a listener runs an animation, and the animation writes free variables and attributes over time, frame by frame. A drag writes its target directly, and so does a toggle.
-- **An animation is made of steps.** A step is one of the items an animation lists: a move (`(k (transition …))`, which moves `k` along a transition), a `(wait seconds)`, an `(at-once step…)` or an `(in-order step…)`, which group steps, or the name of another animation, which runs its steps there. Steps written in a row run one after another. Its top-level steps are the steps it lists, or, when it lists a single `in-order`, that `in-order`'s steps; a play shows one button for each.
+- **An animation is made of steps.** A step is one of the items an animation lists: a move (`(k (to 3) (duration 1))`, which moves `k` along a transition given by its items, or `(k slide)`, along the transition named `slide`), a `(wait seconds)`, an `(at-once step…)` or an `(in-order step…)`, which group steps, or the name of another animation, which runs its steps there. Steps written in a row run one after another. Its top-level steps are the steps it lists, or, when it lists a single `in-order`, that `in-order`'s steps; a play shows one button for each.
 - **Bound variables and attributes follow at once.** The compiler knows what every expression reads, so after a write the runtime recomputes only what depends on it, and the views redraw. Nothing has to be told to update.
 - **Writes respect types.** A write that breaks a constraint is brought into it (clamped, rounded or held). This is the one case where a real becomes an int without being asked: a write into an int is rounded. A `const` variable is never written at all.
 

@@ -129,7 +129,7 @@
 
 ; Dragging the point changes theta, so the point slides along the circle under the pointer.
 (on-drag handle (target theta))
-(slider turn (animation (theta (transition (from 0) (to 360) (duration 1)))) (label 'θ'))
+(slider turn (animation (theta (from 0) (to 360) (duration 1))) (label 'θ'))
 
 ; For the prose around the figure: the same numbers, set in the number font.
 (readout x-now $'{(cosd theta):+z.3f}' (font number))

@@ -45,24 +45,24 @@
 ; that the flower blurs.
 (animation quarter
   (at-once (default-duration 16) (default-ease 'ease-in-out')
-    (sunflower.angle (transition (to 90)))
-    (stop-name (transition (to 'a quarter turn')))
-    (halo.fill (transition (to none)))))
+    (sunflower.angle (to 90))
+    (stop-name (to 'a quarter turn'))
+    (halo.fill (to none))))
 (animation third
   (at-once (default-duration 10) (default-ease 'ease-in-out')
-    (sunflower.angle (transition (to 120)))
-    (stop-name (transition (to 'a third of a turn')))
-    (halo.fill (transition (to none)))))
+    (sunflower.angle (to 120))
+    (stop-name (to 'a third of a turn'))
+    (halo.fill (to none))))
 (animation two-fifths
   (at-once (default-duration 8) (default-ease 'ease-in-out')
-    (sunflower.angle (transition (to 144)))
-    (stop-name (transition (to 'two fifths of a turn')))
-    (halo.fill (transition (to none)))))
+    (sunflower.angle (to 144))
+    (stop-name (to 'two fifths of a turn'))
+    (halo.fill (to none))))
 (animation golden
   (at-once (default-duration 6) (default-ease 'ease-out')
-    (sunflower.angle (transition (to golden-angle)))
-    (stop-name (transition (to 'the golden angle')))
-    (halo.fill (transition (to gold)))))
+    (sunflower.angle (to golden-angle))
+    (stop-name (to 'the golden angle'))
+    (halo.fill (to gold))))
 
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
@@ -74,7 +74,7 @@
 
 (canvas view garden)
 (slider angle (label 'angle')
-  (animation (sunflower.angle (transition (from 80) (to 180) (duration 1)))))
+  (animation (sunflower.angle (from 80) (to 180) (duration 1))))
 
 ; Clicking the flower takes it to the golden angle, as the last stop of the tour does.
 (on-click sunflower (animation golden))

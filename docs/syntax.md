@@ -14,7 +14,7 @@ A point on a circle, a slider and a drag that move it, and a number in the prose
       (line radius (from [0 0]) (to p.pos) (stroke 'crimson')))
 
     (slider spin (label 'angle')
-      (animation (theta (transition (from 0) (to 360)))))
+      (animation (theta (from 0) (to 360))))
     (on-drag p (target theta))
 
     (canvas v s)
@@ -182,7 +182,7 @@ Every declaration, components included, follows one rule:
 | `(canvas v a b (when show c))` | `v` | none | `a`, `b`, `(when show c)` |
 | `(on-drag p (target theta))` | none | `p` | `(target theta)`, required |
 
-Function calls and special forms are not declarations, and do not follow this rule: a call takes its arguments in order, and each special form has its own shape. Inside an animation, a step's head may be any variable or attribute a writer may change, including a path such as `p.r`; the reserved words `wait`, `in-order` and `at-once` are steps of their own.
+Function calls and special forms are not declarations, and do not follow this rule: a call takes its arguments in order, and each special form has its own shape. Inside an animation, a step's head may be any variable or attribute a writer may change, including a path such as `p.r`, followed by a transition's items, as in `(p.r (to 2) (duration 1))`, or the name of a transition; the reserved words `wait`, `in-order` and `at-once` are steps of their own.
 
 ## 9. Putting a file together
 

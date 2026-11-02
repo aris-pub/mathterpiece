@@ -10,7 +10,7 @@ def test_build_compiles_a_file(tmp_path, capsys):
     assert capsys.readouterr().err == ""
 
 
-def test_build_reports_the_first_error_with_its_place(tmp_path, capsys):
+def test_build_reports_the_first_error_with_its_position(tmp_path, capsys):
     src = tmp_path / "f.mtp"
     src.write_text("(real k 1)\n(real d (* 2 j))\n")
     with pytest.raises(SystemExit) as exc:

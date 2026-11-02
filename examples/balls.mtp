@@ -120,14 +120,14 @@
 ; Clicking a point makes it x or y, replacing the older of the two, and sets r to the new δ/2.
 (repeat 32 i
   (on-click space[i] (animation (default-duration 0.4) (at-once
-    (x.pos (transition (to (if replace-x space[i].pos x.pos))))
-    (y.pos (transition (to (if replace-x y.pos space[i].pos))))
-    (r (transition (to (/ (dist space[i].pos (if replace-x y.pos x.pos)) 2))))
-    (replace-x (transition (to (not replace-x)) (duration 0)))))))
+    (x.pos (to (if replace-x space[i].pos x.pos)))
+    (y.pos (to (if replace-x y.pos space[i].pos)))
+    (r (to (/ (dist space[i].pos (if replace-x y.pos x.pos)) 2)))
+    (replace-x (to (not replace-x)) (duration 0))))))
 
-(slider radius (animation (r (transition (from 0) (to h) (duration 1)))) (label 'r'))
+(slider radius (animation (r (from 0) (to h) (duration 1))) (label 'r'))
 
-(play grow (animation (r (transition (from 0) (to h) (duration 3.6) (ease 'linear')))))
+(play grow (animation (r (from 0) (to h) (duration 3.6) (ease 'linear'))))
 
 (readout note
   (let ((cx (count space (fn p (in-ball x.pos r p.pos))))

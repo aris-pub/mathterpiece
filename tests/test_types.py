@@ -126,7 +126,7 @@ class TestLiterals:
         assert literal_type(ListLit((IntLit(1), RealLit(2.5))), None) == ListT(REAL)
         assert literal_type(ListLit((StrLit("red"),)), None) == ListT(STRING)
 
-    def test_a_list_takes_its_place_type(self):
+    def test_a_list_takes_the_type_expected_where_it_is(self):
         assert literal_type(ListLit((StrLit("red"),)), ListT(COLOR)) == ListT(COLOR)
         assert literal_type(ListLit((IntLit(1), IntLit(2))), POINT) == POINT
 
@@ -134,7 +134,7 @@ class TestLiterals:
         with pytest.raises(TypeError_, match="point"):
             literal_type(ListLit((IntLit(1),)), POINT)
 
-    def test_an_empty_list_needs_its_place(self):
+    def test_an_empty_list_needs_an_expected_type(self):
         assert literal_type(ListLit(()), ListT(REAL)) == ListT(REAL)
         with pytest.raises(TypeError_, match="empty list"):
             literal_type(ListLit(()), None)

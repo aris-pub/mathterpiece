@@ -213,18 +213,18 @@ export class Runtime {
         const [mx, my] = this.mean(id, null) as number[];
         for (const c of CORNERS[o.kind]!) {
           const [cx, cy] = this.value(id, c) as number[];
-          this.writePlace(key(id, c), [cx! + x! - mx!, cy! + y! - my!], changed);
+          this.writeKey(key(id, c), [cx! + x! - mx!, cy! + y! - my!], changed);
         }
         return;
       }
-      this.writePlace(key(id, "x"), x, changed);
-      this.writePlace(key(id, "y"), y, changed);
+      this.writeKey(key(id, "x"), x, changed);
+      this.writeKey(key(id, "y"), y, changed);
       return;
     }
-    this.writePlace(key(id, attr), value, changed);
+    this.writeKey(key(id, attr), value, changed);
   }
 
-  private writePlace(k: string, value: unknown, changed: Set<string>): void {
+  private writeKey(k: string, value: unknown, changed: Set<string>): void {
     if (!this.free.has(k)) throw new Error(`${k} is not a free variable or attribute`);
     const t = this.types.get(k)!;
     const old = this.free.get(k);
