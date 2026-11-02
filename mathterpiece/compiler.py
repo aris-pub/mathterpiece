@@ -1630,6 +1630,11 @@ class _Compiler:
                 raise CompileError(
                     "this value may be none: give it a default with (or? value default)", node.pos
                 )
+            if e.type == ComponentT("toggle") and e.op == "obj":
+                name = self.model.objects[e.args[0]].name
+                raise CompileError(
+                    f"a toggle is read through its value: write {name}.value", node.pos
+                )
             raise CompileError(f"expected {expected}, got {e.type}", node.pos)
         narrowed = _inner(expected) if expected is not None else None
         if e.known and e.value is not None and isinstance(narrowed, Refine):
@@ -1775,9 +1780,6 @@ class _Compiler:
         moves: frozenset = frozenset()
         if obj.kind == "variable" and attr is None:
             place = obj.value
-        elif obj.kind == "toggle" and attr is None:
-            # A toggle read by its name is its value (the old behavior; mtp-gvx).
-            return self.read(i, "value")
         else:
             if attr is None:
                 return Expr("obj", obj.type, (i,))

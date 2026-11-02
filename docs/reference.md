@@ -161,7 +161,7 @@ Every control and listener emits writes to its target (or, through its animation
 - **A slider follows its target:** when another writer changes the place its animation moves, the knob goes to the position whose value is closest to the place's new value. This holds when the animation moves exactly one place; otherwise the knob stays put. Its starting position is found the same way.
 - **Button:** a press plays its animation from the start, over time; a press while it runs starts it again.
 - **Play:** a press plays the animation, and its label reads "pause" while it runs. A press while it runs pauses it, and the next resumes it; after the end, a press plays it again from the start. With `(buttons true)` it also shows one button per top-level step, lit while that step holds: clicking a step while playing jumps there and carries on; clicking one while stopped runs that step alone, from wherever things are.
-- **Toggle:** a checkbox writing its target bool, or holding its own value when it has no target. On a group's attribute it writes every member, and shows a mixed state when the members differ.
+- **Toggle:** a checkbox writing its target bool, or holding its own value when it has no target; `(value bool)` sets that own value's start, and is an error with a target. On a group's attribute it writes every member, reads true only when every member's is true, and shows a mixed state when the members differ; a click on a mixed toggle sets every member to true. A toggle is read through its value, `show.value`, like any other attribute.
 - **On-click:** a click on the shape plays its animation, as a button does.
 - **Two writers on one place:** a writer that starts moving a place cancels any other writer moving it. The newest wins, whatever its kind.
 

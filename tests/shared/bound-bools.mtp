@@ -13,7 +13,7 @@
 (button b (animation (k (transition (to 0) (duration 0)))))
 (toggle show)
 (bool big (> k 1))
-(bool on (= show true))
+(bool on (= show.value true))
 (bool v big)
 (readout r (if big 'big' 'small'))
 (readout r2 (if on 'shown' 'hidden'))

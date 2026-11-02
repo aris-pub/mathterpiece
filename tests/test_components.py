@@ -53,9 +53,10 @@ class TestControls:
         m = model(f"{src} (toggle t (target g.on))")
         assert m.get("t").attrs["value"].expr.op == "all"
 
-    def test_a_toggle_reads_as_its_value(self):
-        m = model("(toggle show) (bool on (= show true))")
+    def test_a_toggle_is_read_through_its_value(self):
+        m = model("(toggle show) (bool on (= show.value true))")
         assert m.get("on").value.deps == {(m.id("show"), "value")}
+        error("(toggle show) (bool on show)", "write show.value")
 
 
 class TestListeners:
@@ -124,4 +125,4 @@ class TestAccess:
         )
 
     def test_a_bool_reading_a_toggle(self):
-        assert model("(toggle show) (bool on show)").get("on").value.type == BOOL
+        assert model("(toggle show) (bool on show.value)").get("on").value.type == BOOL
