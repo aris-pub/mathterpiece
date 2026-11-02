@@ -9,6 +9,7 @@
       mtp-canvas { display: block; width: min(90vw, 640px); }
       mtp-canvas svg { width: 100%; height: auto; }
       #controls > * { display: block; margin: 0.5rem 0; }
+      #about { white-space: pre-wrap; font-family: system-ui, sans-serif; color: #555; max-width: 640px; }
       #values { border-collapse: collapse; font-family: ui-monospace, monospace; margin-top: 1rem; }
       #values td { padding: 0.1rem 0.8rem 0.1rem 0; }
       [aria-pressed="true"] { font-weight: bold; }
@@ -25,29 +26,38 @@
     </style>
   </head>
   <body>
-    <!-- For trying the runtime by hand: just web-dev, then pick a figure (the shared cases and
-         the runtime's test fixtures, built to .mtpc by just web-examples). -->
+    <!-- For trying the runtime by hand: just web-dev, then pick a figure: the demo, the shared
+         cases or the runtime's test fixtures, built to .mtpc by just web-examples. -->
     <select id="pick"></select>
     <button id="theme" type="button">dark page</button>
     <button id="fonts" type="button">page fonts</button>
+    <pre id="about"></pre>
     <mtp-model id="m"></mtp-model>
     <div id="canvases"></div>
     <div id="controls"></div>
     <table id="values"></table>
     <script type="module">
       import "/src/index.ts";
-      const figures = import.meta.glob(["/test/data/shared/*.mtpc", "/test/data/runtime/*.mtpc"], {
-        query: "?raw",
-        import: "default",
-      });
+      const figures = import.meta.glob(
+        ["/test/data/demo/*.mtpc", "/test/data/shared/*.mtpc", "/test/data/runtime/*.mtpc"],
+        { query: "?raw", import: "default" },
+      );
+      const sources = import.meta.glob(
+        ["/test/data/demo/*.mtp", "/test/data/shared/*.mtp", "/test/data/runtime/*.mtp"],
+        { query: "?raw", import: "default" },
+      );
       const examples = Object.keys(figures);
       const pick = document.getElementById("pick");
       const name = (path) => path.split("/").pop().replace(".mtpc", "");
       for (const path of examples) pick.add(new Option(name(path), path));
       const chosen = new URLSearchParams(location.search).get("example");
-      pick.value = examples.find((p) => name(p) === chosen) ?? examples[0];
+      pick.value = examples.find((p) => name(p) === (chosen ?? "tour")) ?? examples[0];
       const load = async () => {
         const doc = JSON.parse(await figures[pick.value]());
+        // What the figure is and what to try: its leading comments.
+        const source = await sources[pick.value.replace(/\.mtpc$/, ".mtp")]?.();
+        const about = (source ?? "").split("\n").filter((l) => l.startsWith(";") && !/^; (expect|write|page)\b/.test(l)).map((l) => l.replace(/^;+ ?/, ""));
+        document.getElementById("about").textContent = about.join("\n");
         // A figure with no canvas of its own, such as most shared cases, is shown in one that
         // draws its whole scene, so there is always something to see.
         const scene = doc.objects.findIndex((o) => o.kind === "scene");

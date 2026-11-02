@@ -181,8 +181,17 @@ export class MtpCanvas extends MtpPart {
         if (drags.draggable(id) || clicks.find(id)) (el as SVGElement).style.cursor = "pointer";
       }
     };
-    this.redraw();
     this.replaceChildren(svg);
+    this.redraw();
+    // Font sizes are in screen pixels, so the drawing depends on the canvas's size on screen.
+    let width = 0;
+    new ResizeObserver(() => {
+      const now = svg.getBoundingClientRect().width;
+      if (now !== width) {
+        width = now;
+        this.redraw();
+      }
+    }).observe(svg);
     const hitOf = (event: PointerEvent): number | null => {
       const under = (event.target as Element).closest?.("[data-mtp-id]");
       return under ? Number(under.getAttribute("data-mtp-id")) : null;

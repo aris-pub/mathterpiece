@@ -15,5 +15,6 @@ web/dist/
 # Built by just web-examples
 web/test/data/shared/
 web/test/data/runtime/
+web/test/data/demo/
 # Screenshots Vitest saves when a browser test fails
 web/.vitest/

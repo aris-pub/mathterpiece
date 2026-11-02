@@ -1,0 +1,29 @@
+; A tour of what the runtime does.
+; Try: move the angle slider; drag the red point around the circle (it changes the angle);
+; drag the blue square anywhere; press "grow the square"; press play, and its step buttons;
+; untick "show the angle" (the label fades out); click the gold sun (the square shrinks).
+(real angle 30 (>= 0) (<= 360))
+(real size 1 (>= 0.2) (<= 3))
+(bool show-angle true)
+(font label-font (size 16))
+(scene s (background '#fbf8f1')
+  (circle track (r 4) (fill none) (stroke '#999999'))
+  (line radius (from [0 0]) (to (polar 4 angle)) (stroke 'crimson') (stroke-width 2))
+  (circle point (pos (polar 4 angle)) (r 0.4) (fill 'crimson'))
+  (rect box (pos [-5 5]) (width size) (height size) (fill 'royalblue'))
+  (circle sun (pos [5 5]) (r 0.7) (fill 'gold'))
+  (text label $'{angle:.0f}°' (pos [0 -1]) (halign 'middle') (font label-font)))
+(slider turn (animation (angle (transition (from 0) (to 360) (duration 1)))) (label 'angle'))
+(button grow
+  (animation (size (transition (to 3) (duration 1) (ease 'ease-in-out')))
+             (size (transition (to 1) (duration 1))))
+  (label 'grow the square'))
+(play spin (animation (default-duration 2) (angle (transition (to 360))) (angle (transition (to 0))))
+  (buttons true))
+(toggle show (target show-angle) (label 'show the angle'))
+(readout r $'angle = {angle:.1f}°')
+(canvas view track radius point box sun (when show-angle label) (transition (duration 0.5))
+  (view-x -7) (view-y -7) (view-width 14) (view-height 14))
+(on-drag point (target angle))
+(on-drag box (target box.pos))
+(on-click sun (animation (size (transition (to 0.2) (duration 0.5)))))

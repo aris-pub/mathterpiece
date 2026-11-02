@@ -24,6 +24,17 @@ describe("on a page", () => {
     expect(getComputedStyle(b).fill).toBe("rgb(255, 0, 0)");
   });
 
+  it("draws text at its font size in screen pixels, whatever the view box", async () => {
+    const model = page("draw", `<mtp-canvas model="m" name="v" style="display: block; width: 400px"></mtp-canvas>`);
+    const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+    svg.style.width = "400px";
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const t = document.querySelector(`[data-mtp-id="${model.runtime!.id("t")}"]`)!;
+    // The default font size is 16 screen pixels.
+    expect(t.getBoundingClientRect().height).toBeGreaterThan(10);
+    expect(t.getBoundingClientRect().height).toBeLessThan(30);
+  });
+
   it("drags a shape to where the pointer is in the scene", () => {
     const model = page("page", `<mtp-canvas model="m" name="v" style="display: block; width: 400px"></mtp-canvas>`);
     const rt = model.runtime!;

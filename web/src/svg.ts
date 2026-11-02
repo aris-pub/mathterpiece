@@ -46,7 +46,9 @@ export function draw(
   background(rt, [...(view.members ?? []), ...when.flatMap(([, ids]) => ids)], out);
   const top = document.createElementNS(NS, "g");
   top.setAttribute("transform", matrix(toUser));
-  const unitsPerPx = box[2]! / Math.max(out.clientWidth || 0, 1);
+  // Until the SVG is on the page its width is 0; a canvas redraws once it has one.
+  const width = out.getBoundingClientRect?.().width || 640;
+  const unitsPerPx = box[2]! / width;
   for (const i of view.members ?? []) drawObject(rt, i, top, unitsPerPx);
   when.forEach(([, ids], k) => {
     const level = levels[k]!;
