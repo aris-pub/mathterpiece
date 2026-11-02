@@ -25,3 +25,21 @@ def test_a_parse_error_too(tmp_path, capsys):
     with pytest.raises(SystemExit):
         main(["build", str(src)])
     assert "unclosed '('" in capsys.readouterr().err
+
+
+def test_build_writes_the_mtpc_next_to_the_source(tmp_path):
+    from mathterpiece.compiler import compile_source
+    from mathterpiece.mtpc import write
+
+    src = tmp_path / "fig.mtp"
+    src.write_text("(real k 1)\n")
+    main(["build", str(src)])
+    assert (tmp_path / "fig.mtpc").read_text() == write(compile_source("(real k 1)\n"))
+
+
+def test_build_writes_where_it_is_told(tmp_path):
+    src = tmp_path / "fig.mtp"
+    src.write_text("(real k 1)\n")
+    out = tmp_path / "out" / "x.mtpc"
+    main(["build", str(src), "-o", str(out)])
+    assert out.exists()

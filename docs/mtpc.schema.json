@@ -544,6 +544,35 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "family",
+            "style",
+            "weight",
+            "size"
+          ],
+          "properties": {
+            "family": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": {
+              "type": "string"
+            },
+            "weight": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "size": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },

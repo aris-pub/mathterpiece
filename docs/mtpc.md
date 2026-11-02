@@ -66,7 +66,7 @@ A value is plain JSON, read according to the type that always accompanies it:
 | `bool` | `true`, `false` |
 | `string`, a choice | a string |
 | `color` | a string, `"#rrggbbaa"`, always in this form |
-| `font` | `{"family": …, "style": …, "weight": …, "size": …}` |
+| `font` | `{"family": …, "style": …, "weight": …, "size": …}`, `family` `null` for the page's font |
 | `point` | `[x, y]` |
 | `list[T]` | an array of values of type T |
 | `transform` | `[a, b, c, d, e, f]`, the affine matrix |

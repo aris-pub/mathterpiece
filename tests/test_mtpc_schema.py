@@ -32,3 +32,16 @@ def test_a_transition_with_no_duration_or_ease_of_its_own():
 def test_step_ease():
     assert errors(doc({**TRANSITION, "ease": ["step-ease", 0.5]})) == []
     assert errors(doc({**TRANSITION, "ease": ["step-ease", 2]})) != []
+
+
+def test_a_font_value():
+    font = {"family": None, "style": "normal", "weight": 400, "size": 16}
+    variable = {
+        "kind": "variable",
+        "type": "font",
+        "access": "scene",
+        "name": "f",
+        "value": {"type": "font", "free": font},
+        "token": True,
+    }
+    assert errors(doc(variable)) == []
