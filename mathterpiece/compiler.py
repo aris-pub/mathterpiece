@@ -1445,12 +1445,13 @@ class _Compiler:
             if head in parts:
                 raise CompileError(f"'{head}' is given twice", item.pos)
             parts[head] = self.expr(item.items[1], FONT_PARTS[head].type, scope)
-        exprs = [parts.get(p) or _known(spec.type, spec.default) for p, spec in FONT_PARTS.items()]
-        if all(e.known for e in exprs):
-            place = Place(FONT, dict(zip(FONT_PARTS, (e.value for e in exprs), strict=True)))
-        else:
-            deps = frozenset().union(*(e.deps for e in exprs))
-            place = Place(FONT, expr=Expr("font", FONT, tuple(exprs), deps))
+        for e in parts.values():
+            if not e.known:
+                raise CompileError("a font's parts must be known when compiling", pos)
+        values = {
+            p: parts[p].value if p in parts else spec.default for p, spec in FONT_PARTS.items()
+        }
+        place = Place(FONT, values)
         self.add(Obj("variable", name, FONT, access, {"value": place}, parent=parent, pos=pos))
 
     def access_of(self, deps) -> tuple[str, int | None]:

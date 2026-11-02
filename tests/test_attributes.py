@@ -84,3 +84,8 @@ class TestFonts:
         m = model("(font f (size 20)) (scene s (text t 'hi' (font f))) (readout r 'x' (font f))")
         assert (m.id("f"), None) in m.get("t").attrs["font"].deps
         error("(scene s (text t 'hi' (font 3)))", "a declared font variable")
+
+
+def test_a_fonts_parts_are_known_when_compiling():
+    # The .mtpc writes a font as a plain value (docs/mtpc.md, "Values").
+    error("(real k 1) (font f (size k))", "a font's parts must be known when compiling")
