@@ -34,7 +34,7 @@ class TestMap:
         m = model(f"(scene s {G} (list rs (map g (fn p (* 2 p.r)))))")
         e = m.get("rs").value.expr
         assert {(m.id("a"), "r"), (m.id("b"), "r")} <= e.deps
-        assert e.type == Refine(ListT(REAL), (("length", 2),))
+        assert e.type == Refine(ListT(RADIUS), (("length", 2),))
 
     def test_a_named_function(self):
         m = model("(func double (real x) (* 2 x)) (real k) (list ys (map [k] double))")

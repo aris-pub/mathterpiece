@@ -181,6 +181,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(fn params body)` | nothing until called; binds its parameters in its body. A single parameter may be a bare name, typed by its place; several must all be typed |
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name |
+| `(as T literal)` | nothing: the literal, with the type `T`; anything but a literal is a compile error |
 | `(repeat n i decl…)` | when compiling: the declarations, `n` times, with `i` from 0 to n−1; `n` must be known when compiling |
 
 ## Operators

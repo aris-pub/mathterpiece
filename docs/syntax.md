@@ -119,6 +119,7 @@ A special form looks like a call but does something a function cannot: it evalua
 | `(fn p (* 2 p.r))` | a function written in place: binds its parameters in its body (section 5) |
 | `(. X Y)` | a part of `X`; `Y` is not evaluated when it is an attribute name (section 7) |
 | `(name s)` | turns a string into a name (section 4) |
+| `(as T literal)` | gives a literal the type `T` where it has no place to take one from: `(as color 'gold')`, `(as point [0 0])` |
 
 `when`, inside a canvas or a listener, is an item recognized by its head, not a special form: its first part is a condition and the rest are names.
 

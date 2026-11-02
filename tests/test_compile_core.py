@@ -298,3 +298,42 @@ class TestFormatExponents:
     def test_padded(self):
         assert value("(string s $'{12345.5:.3e}')", "s") == "1.235e+04"
         assert value("(string s $'{0.00001:g}')", "s") == "1e-05"
+
+
+class TestAs:
+    # (as T literal) gives a literal its type in place.
+    def test_a_color_and_a_point(self):
+        m = model(
+            "(func shade (bool b) (if b (as color 'gold') (as color 'navy')))(color c (shade true))"
+        )
+        assert m.functions[m.funcs["shade"]].result == COLOR
+        assert value("(point p (+ [1 1] (as point [0 0])))", "p") == (1, 1)
+
+    def test_only_a_literal(self):
+        error("(real k 1) (point p (as point [k 0]))", "as gives a type only to a literal")
+        error("(string s (as color 'blurple'))", "'blurple' is not a color")
+
+
+class TestListRanges:
+    # A list whose items all share a range carries it in its item type (type-system.md, "What
+    # the compiler proves").
+    def test_map_keeps_its_functions_range(self):
+        src = (
+            "(scene s (group g (circle a) (circle b)) (list rs (map g (fn p (dist [0 0] p.pos)))))"
+        )
+        t = model(src).get("rs").value.expr.type
+        assert t.base.item == Refine(REAL, ((">=", 0),))
+
+    def test_so_an_item_reaches_a_radius(self):
+        model(
+            "(scene s (group g (circle a) (circle b)) (list rs (map g (fn p (dist [0 0] p.pos))))"
+            " (circle c (r (. rs 0))))"
+        )
+
+
+class TestPowerRange:
+    def test_power_takes_its_range_from_its_inputs(self):
+        src = "(int h 0 (>= 0) (<= 3)) (real d (* 14 (^ 2 h)))"
+        e = model(src).get("d").value.expr
+        assert e.type == INT
+        assert e.range == (14, 112)

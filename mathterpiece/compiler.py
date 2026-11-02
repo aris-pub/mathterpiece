@@ -94,7 +94,7 @@ UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 # has it, and the branch that does not recurse decides the real one.
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
-SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat", "type-of"}
+SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat", "type-of", "as"}
 # The components (reference.md, "Components"), declared at the top level only.
 COMPONENTS = {"canvas", "readout", "slider", "button", "play", "toggle", "on-drag", "on-click"}
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
@@ -891,6 +891,10 @@ class _Compiler:
             vals = self.fold_each(f, item, coll.value) if coll.known else None
             if vals is not None:
                 return _known(sized(ListT(out)), vals)
+            # Items that share a range give the list's item type that range.
+            if f.op == "func":
+                body = self.model.functions[f.args[0]].body
+                out = _with_range(out, body.range if body is not None else None)
             return Expr("map", sized(ListT(out)), (coll, f), deps)
         if head == "where":
             self.arity(node, 2)
@@ -2089,6 +2093,14 @@ class _Compiler:
                 t = wider
             if t == NONE:
                 raise CompileError("a list of only none needs its type: write list[T]", node.pos)
+            # Items computed while drawing that share a range give the list's item type that
+            # range; a list of literals keeps its plain type, so a writer may replace it.
+            if not all(e.known for e in items):
+                ranges = [e.range for e in items]
+                if all(r is not None for r in ranges):
+                    lo = min(r[0] for r in ranges if r is not None)
+                    hi = max(r[1] for r in ranges if r is not None)
+                    t = _with_range(t, (lo, hi))
         return _gather(ListT(t), items)
 
     def interp(self, node: InterpStrLit, scope: dict) -> Expr:
@@ -2436,6 +2448,13 @@ class _Compiler:
                     return self.apply(local, node, scope)
             elif head in self.model.funcs:
                 return self.call(self.model.funcs[head], node, scope)
+        if head == "as":
+            type_node, lit = self.args(node, 2)
+            if not _is_literal(lit):
+                raise CompileError(
+                    "as gives a type only to a literal, such as (as color 'gold')", node.pos
+                )
+            return self.expr(lit, self.type_of(type_node), scope)
         if head == "type-of":
             (a,) = self.args(node, 1)
             return _known(STRING, str(self.expr(a, None, scope).type))
@@ -3071,8 +3090,49 @@ def _range_of(op: str, ranges: Sequence[Range]) -> Range:
         # mod takes the divisor's sign, so it lies between 0 and the divisor.
         b = ranges[1]
         return (min(0.0, b[0]), max(0.0, b[1]))
+    if op == "^":
+        return _power_range(ranges[0], ranges[1])
     # Any other function gives its whole range (type-system.md, "What the compiler proves").
     return WHOLE
+
+
+def _power_range(base: tuple[float, float], exp: tuple[float, float]) -> Range:
+    """x^y over its inputs' ranges. For x >= 0, log(x^y) = y log x, so its extremes are at the
+    corners; a negative base only has a value at a whole exponent known when compiling."""
+
+    def at(x: float, y: float) -> float:
+        try:
+            return math.pow(x, y)
+        except (OverflowError, ValueError, ZeroDivisionError):
+            return math.copysign(MAX_REAL, x) if x != 0 else MAX_REAL
+
+    if base[0] >= 0:
+        ends = [at(x, y) for x in base for y in exp]
+        return (min(ends), max(ends))
+    if exp[0] == exp[1] and float(exp[0]).is_integer():
+        n = exp[0]
+        ends = [at(base[0], n), at(base[1], n)]
+        if base[0] < 0 < base[1]:
+            ends.append(at(0.0, n) if n > 0 else 1.0)
+        return (min(ends), max(ends))
+    return WHOLE
+
+
+def _with_range(t: Type, r: Range) -> Type:
+    """t narrowed to the range r, where r tells more than t's own range."""
+    if r is None or _core(t) not in NUMBERS[:3] or _may_be_none(t):
+        return t
+    have = _type_range(t) or WHOLE
+    cs = []
+    if r[0] > max(have[0], -LIMIT):
+        cs.append((">=", r[0]))
+    if r[1] < min(have[1], LIMIT):
+        cs.append(("<=", r[1]))
+    if not cs:
+        return t
+    if isinstance(t, Refine):
+        return replace(t, constraints=(*t.constraints, *cs))
+    return Refine(t, tuple(cs))
 
 
 def _range_within(r: Range, c) -> bool:
