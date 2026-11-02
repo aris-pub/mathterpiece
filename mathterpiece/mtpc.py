@@ -246,11 +246,13 @@ class Writer:
             d["animation"] = o.data["animation"]
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
+            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
         elif kind == "toggle":
             target = o.data["target"]
             d["target"] = list(target) if target is not None else None
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
+            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
         elif kind == "on-drag":
             d["shape"] = o.data["shape"]
             d["target"] = list(o.data["target"])

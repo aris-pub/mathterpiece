@@ -293,3 +293,25 @@ describe("panning and zooming a canvas", () => {
     expect(box("fixed")).toEqual([-10, -10, 20, 20]);
   });
 });
+
+describe("a control's when", () => {
+  const ACTIVE = docs["./data/runtime/active.mtpc"] as string;
+  const all = `<mtp-button model="m" name="go"></mtp-button><mtp-slider model="m" name="sl"></mtp-slider>
+    <mtp-play model="m" name="run"></mtp-play><mtp-toggle model="m" name="t"></mtp-toggle>`;
+  const inputs = () => [...document.querySelectorAll("mtp-button button, mtp-slider input, mtp-play button, mtp-toggle input")] as (HTMLButtonElement | HTMLInputElement)[];
+
+  it("lets a control be triggered only while it holds, and shows it disabled otherwise", () => {
+    const [, rt, v] = page(all, JSON.parse(ACTIVE) as Doc);
+    expect(inputs().every((el) => !el.disabled)).toBe(true);
+    rt.write(rt.id("k"), null, 4);
+    expect(inputs().every((el) => el.disabled)).toBe(true);
+    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
+    (document.querySelector("mtp-toggle input") as HTMLInputElement).click();
+    pass(0.1);
+    pass(1);
+    expect(v("k")).toBe(4);
+    expect(v("on")).toBe(false);
+    rt.write(rt.id("k"), null, 1);
+    expect(inputs().every((el) => !el.disabled)).toBe(true);
+  });
+});

@@ -2073,7 +2073,8 @@
               "name",
               "animation",
               "attrs",
-              "conditions"
+              "conditions",
+              "when"
             ],
             "properties": {
               "kind": {
@@ -2109,6 +2110,16 @@
                 "items": {
                   "$ref": "#/$defs/clamp"
                 }
+              },
+              "when": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -2135,7 +2146,8 @@
               "name",
               "target",
               "attrs",
-              "conditions"
+              "conditions",
+              "when"
             ],
             "properties": {
               "kind": {
@@ -2187,6 +2199,16 @@
                 "items": {
                   "$ref": "#/$defs/clamp"
                 }
+              },
+              "when": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false

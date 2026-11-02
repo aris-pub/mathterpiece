@@ -1365,7 +1365,9 @@ class _Compiler:
         )
 
     def build_button(self, obj: Obj, items: list, shape) -> None:
-        self.writer(obj, items, self.animated(obj, items))
+        written = self.animated(obj, items)
+        self.when(obj, items)
+        self.writer(obj, items, written)
 
     def build_slider(self, obj: Obj, items: list, shape) -> None:
         written = self.animated(obj, items)
@@ -1375,6 +1377,7 @@ class _Compiler:
                 Refine(INT, ((">=", 2),)), step, obj.pos, "step", scope=self.cscope
             )
         obj.attrs["position"] = Attribute(UNIT, 0)
+        self.when(obj, items)
         self.writer(obj, items, written)
 
     def build_play(self, obj: Obj, items: list, shape) -> None:
@@ -1383,6 +1386,7 @@ class _Compiler:
         obj.attrs["buttons"] = self.attribute(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
         obj.attrs["playing"] = Attribute(BOOL, False)
         obj.attrs["step"] = Attribute(INT, 0)
+        self.when(obj, items)
         self.writer(obj, items, written)
 
     def build_toggle(self, obj: Obj, items: list, shape) -> None:
@@ -1411,6 +1415,7 @@ class _Compiler:
             else:
                 e = self.read(i, attr)
             obj.attrs["value"] = Attribute(BOOL, expr=e)
+        self.when(obj, items)
         self.writer(obj, items, written)
 
     def build_on_drag(self, obj: Obj, items: list, shape: int) -> None:

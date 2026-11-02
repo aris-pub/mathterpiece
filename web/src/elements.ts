@@ -378,8 +378,15 @@ function labelOf(rt: Runtime, id: number): string {
   return String(rt.value(id, "label"));
 }
 
+/** Whether a writer is active, so it can be triggered: always, unless its when is false. */
+function activeOf(rt: Runtime, id: number): boolean {
+  const when = rt.objects[id]!.when;
+  return when === null || when === undefined || Boolean(rt.evaluate(when));
+}
+
 export class MtpSlider extends MtpPart {
   private follow: () => void = () => {};
+  private gate: () => void = () => {};
 
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "slider");
@@ -393,6 +400,7 @@ export class MtpSlider extends MtpPart {
     input.step = "1";
     input.value = String(Math.round((rt.value(id, "position") as number) * Number(input.max)));
     input.addEventListener("input", () => {
+      if (!activeOf(rt, id)) return;
       const u = Number(input.value) / Number(input.max);
       if (player) {
         scheduler.claim(player.targets, this);
@@ -425,6 +433,10 @@ export class MtpSlider extends MtpPart {
       rt.write(id, "position", best / max);
     };
     this.follow();
+    this.gate = () => {
+      input.disabled = !activeOf(rt, id);
+    };
+    this.gate();
     const label = document.createElement("label");
     label.textContent = labelOf(rt, id);
     label.append(input);
@@ -433,6 +445,7 @@ export class MtpSlider extends MtpPart {
 
   protected update(): void {
     this.follow();
+    this.gate();
   }
 }
 
@@ -443,19 +456,28 @@ function distance(a: unknown, b: unknown): number {
 }
 
 export class MtpButton extends MtpPart {
+  private gate: () => void = () => {};
+
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "button");
     const button = document.createElement("button");
     button.textContent = labelOf(rt, id);
     // A press plays the animation from the start; a press while it runs starts it again.
     button.addEventListener("click", () => {
+      if (!activeOf(rt, id)) return;
       const player = playerFor(rt, rt.objects[id]!);
       if (player) scheduler.start(player, this);
     });
+    this.gate = () => {
+      button.disabled = !activeOf(rt, id);
+    };
+    this.gate();
     this.replaceChildren(button);
   }
 
-  protected update(): void {}
+  protected update(): void {
+    this.gate();
+  }
 }
 
 export class MtpPlay extends MtpPart {
@@ -466,6 +488,7 @@ export class MtpPlay extends MtpPart {
     const play = document.createElement("button");
     let player: Player | null = null;
     play.addEventListener("click", () => {
+      if (!activeOf(rt, id)) return;
       if (scheduler.running(this)) scheduler.pause(this);
       else if (player && !player.done && scheduler.playerOf(this)) scheduler.resume(this);
       else {
@@ -486,6 +509,7 @@ export class MtpPlay extends MtpPart {
         const b = document.createElement("button");
         b.textContent = String(k + 1);
         b.addEventListener("click", () => {
+          if (!activeOf(rt, id)) return;
           const one = playerFor(rt, rt.objects[id]!);
           if (!one) return;
           one.only(k);
@@ -507,6 +531,8 @@ export class MtpPlay extends MtpPart {
           ? single.k
           : null;
       steps.forEach((b, k) => b.classList.toggle("mtp-lit", now === k));
+      const active = activeOf(rt, id);
+      for (const b of [play, ...steps]) b.disabled = !active;
       if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
       if (now !== null && rt.value(id, "step") !== now) rt.write(id, "step", now);
     };
@@ -530,6 +556,7 @@ export class MtpToggle extends MtpPart {
     input.type = "checkbox";
     const members = target && rt.objects[target[0]]!.kind === "group" ? rt.objects[target[0]]!.members! : null;
     this.show = () => {
+      input.disabled = !activeOf(rt, id);
       if (members && target) {
         const values = members.map((m) => Boolean(rt.value(m, target[1])));
         // A mixed state when the members differ.
@@ -540,6 +567,10 @@ export class MtpToggle extends MtpPart {
       }
     };
     input.addEventListener("change", () => {
+      if (!activeOf(rt, id)) {
+        this.show();
+        return;
+      }
       // A click on a mixed toggle sets every member to true.
       const v = input.indeterminate ? true : input.checked;
       if (target) {

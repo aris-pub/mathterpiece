@@ -26,5 +26,8 @@
 (canvas cnv board)
 (slider multiplier (animation (table.m (from 2) (to 40) (duration 1))) (label 'times'))
 (slider spin (animation (table.turn (from -180) (to 180) (duration 1))) (label 'rotate'))
-(button reset (animation (table.m (to 2) (duration 2) (ease 'ease-in-out')))
-  (label 'back to 2'))
+; Going back to 2 means nothing when times is already 2.
+(button reset
+  (animation (table.m (to 2) (duration 2) (ease 'ease-in-out')))
+  (label 'back to 2')
+  (when (!= table.m 2)))

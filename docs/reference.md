@@ -88,10 +88,10 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 |---|---|---|---|
 | `(canvas name)` | required | none | bare names of shapes to show (the scene's name shows the whole scene), `(when bool name…)`, drawn in the order written, each on top of those before it; `(transition …)` for showing and hiding, `(view-x real)` `(view-y real)` `(view-width real)` `(view-height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font |
-| `(slider name)` | required | none | `(animation …)`, `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), conditions |
-| `(button name)` | required | none | `(animation …)`, `(label string)`, conditions |
-| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, conditions |
-| `(toggle name)` | required | none | `(target t)` or none (holds its own bool), `(label string)`, `(value bool)`, conditions |
+| `(slider name)` | required | none | `(animation …)`, `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), conditions, `(when bool)` |
+| `(button name)` | required | none | `(animation …)`, `(label string)`, conditions, `(when bool)` |
+| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, conditions, `(when bool)` |
+| `(toggle name)` | required | none | `(target t)` or none (holds its own bool), `(label string)`, `(value bool)`, conditions, `(when bool)` |
 | `(on-drag shape)` | none | the shape | `(target t)` (required), conditions, `(when bool)` |
 | `(on-click shape)` | none | the shape | `(animation …)`, conditions, `(when bool)` |
 
@@ -145,7 +145,7 @@ Every type has a value used when no value or default is given: in a variable dec
 
 Every control and listener emits writes to its target (or, through its animation, to the variables and attributes the animation moves).
 
-- **Conditions** are items of a control or listener: any bool expression, recognized as an item because its head is a comparison or another function giving a bool, such as `(>= theta 0)` or `(<= u.x 5)`. They belong to that writer only. Before a write is emitted it is brought into every condition: a condition that compares the variable or attribute written with a value not depending on it, `(>= theta 0)`, `(< theta (* 2 k))`, clamps the write to that limit. Any other condition is a compile error: the compiler must see a direct limit on what is written, and never searches for a value. `(when bool)` is different: it decides whether the writer is active at all.
+- **Conditions** are items of a control or listener: any bool expression, recognized as an item because its head is a comparison or another function giving a bool, such as `(>= theta 0)` or `(<= u.x 5)`. They belong to that writer only. Before a write is emitted it is brought into every condition: a condition that compares the variable or attribute written with a value not depending on it, `(>= theta 0)`, `(< theta (* 2 k))`, clamps the write to that limit. Any other condition is a compile error: the compiler must see a direct limit on what is written, and never searches for a value. `(when bool)` is different: it decides whether the writer is active (see the data model, "Writers"). An inactive control is shown disabled.
 - **Constraints on the target** (on its type) then apply to every write it receives, from any writer: a range clamps, an int rounds, a choice holds its last valid value. A write that changes nothing is skipped.
 
 ### Dragging

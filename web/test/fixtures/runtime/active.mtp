@@ -1,0 +1,6 @@
+(real k 0 (>= 0) (<= 10))
+(bool on false)
+(button go (animation (k (to 5) (duration 1))) (when (< k 3)))
+(slider sl (animation (k (from 0) (to 10) (duration 1))) (when (< k 3)))
+(play run (animation (k (to 2) (duration 1)) (k (to 4) (duration 1))) (buttons true) (when (< k 3)))
+(toggle t (target on) (when (< k 3)))

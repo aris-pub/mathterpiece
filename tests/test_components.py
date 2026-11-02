@@ -78,6 +78,23 @@ class TestListeners:
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert d.data["when"].deps == {(m.id("on"), None)}
 
+    @pytest.mark.parametrize(
+        "control",
+        [
+            f"(button b {MOVE} (when (> k 1)))",
+            f"(slider b {MOVE} (when (> k 1)))",
+            f"(play b {MOVE} (when (> k 1)))",
+            "(toggle b (when (> k 1)))",
+        ],
+    )
+    def test_a_control_is_active_while_its_when_holds(self, control):
+        # data-model.md "Writers": a writer with (when bool) can be triggered only while it holds.
+        m = model(f"{K} {control}")
+        assert m.get("b").data["when"].deps == {(m.id("k"), None)}
+
+    def test_a_control_without_when_is_always_active(self):
+        assert model(f"{K} (button b {MOVE})").get("b").data["when"] is None
+
     def test_on_click(self):
         m = model(f"{K} (scene s (circle c)) (on-click c {MOVE})")
         (o,) = [o for o in m.objects if o.kind == "on-click"]

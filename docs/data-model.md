@@ -93,6 +93,7 @@ Variables are declared inside the scene (then they belong to it), at the top lev
 
 - **The scene** is the mathematical content: the shapes, and the variables declared with them. It is a subset of the model and knows nothing of how it is shown or changed. The model includes the scene; the scene never includes the rest of the model.
 - **Components** are what the author places or attaches on the page. They come in two sorts, by the direction information flows: **writers** (controls and listeners) carry the reader's actions into the model; **views** carry the model to the reader. ("Reader" on its own always means the person.) Basic components come from the standard library, and authors will be able to make their own from them.
+- **Writers are active or not.** A writer that is **active** accepts triggers: a press of a button, a move of a slider's knob, a click on a toggle, a drag, a click on a shape. Once **triggered**, it writes what it targets, directly or through its animation. An inactive writer cannot be triggered; what it already set off goes on. The author says when a writer is active with `(when bool)`; a writer without one is always active.
 - **Other ways of showing the model** are possible later: scripts on the page reading the model (the page may read it; whether it may write is open), descriptions for screen readers, sound, and export to an image or data.
 
 ## What changes, and what follows
