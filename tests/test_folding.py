@@ -76,19 +76,30 @@ class TestCollections:
 
 
 class TestFoldedValues:
-    # docs/mtpc.md "Free and bound values": a value known when compiling is free with a const
-    # constraint, whether the author wrote (const) or the compiler folded it. A variable or an
-    # attribute given by an expression is bound, so nothing may write it (data-model.md, "What
-    # changes, and what follows").
-    def test_a_folded_expression_is_const(self):
+    # docs/mtpc.md "Free and bound values": a variable or an attribute given an expression known
+    # when compiling is free, starting at the expression's value. It is const only when the
+    # author writes (const) (data-model.md, "What changes, and what follows").
+    def test_a_folded_expression_is_free_and_not_const(self):
         from mathterpiece.compiler import _is_const
 
         m = model("(real k 1) (real d (+ 1 2))")
         assert not _is_const(m.get("k").value.type)
-        assert _is_const(m.get("d").value.type)
+        assert not _is_const(m.get("d").value.type)
+        assert not m.get("d").value.bound
 
-    def test_so_no_writer_can_write_it(self):
-        error("(real d (+ 1 2)) (animation a (d (transition (to 1) (duration 1))))", "d is const")
+    def test_so_a_writer_may_write_it(self):
+        model("(real d (+ 1 2)) (animation a (d (transition (to 1) (duration 1))))")
+
+    def test_a_const_name_gives_a_free_start(self):
+        model(
+            "(real golden (* 180 (- 3 (sqrt 5))) (const))"
+            " (scene s (circle c (r golden)))"
+            " (animation a (c.r (transition (to 1) (duration 1))))"
+        )
+
+    def test_const_written_by_the_author_still_forbids_writes(self):
+        src = "(real d (+ 1 2) (const)) (animation a (d (transition (to 1) (duration 1))))"
+        error(src, "d is const")
 
     def test_a_literal_list_is_still_free(self):
         from mathterpiece.compiler import _is_const

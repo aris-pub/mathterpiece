@@ -38,7 +38,7 @@ def test_the_byte_form():
     )
 
 
-def test_places():
+def test_free_and_bound_values():
     d = doc("(real k 1) (real j (* 2 k)) (real c (+ 1 2))")
     k, j, c = (d["objects"][d["names"][n]]["value"] for n in "kjc")
     assert k == {"type": "real", "free": 1}
@@ -50,7 +50,7 @@ def test_places():
         ["read", "real", d["names"]["k"], None, None],
     ]
     assert j["deps"] == [[d["names"]["k"], None]]
-    assert c == {"type": {"refine": "real", "constraints": [["const"]]}, "free": 3}
+    assert c == {"type": "real", "free": 3}
 
 
 def test_values_by_type():

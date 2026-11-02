@@ -40,7 +40,7 @@ Opens the page and uses what the author placed there: drags points, moves slider
 
 ## The language
 
-An `.mtp` file is written in the mtp language. It is Lisp-like: everything is a form in parentheses, with the head first, as in `(circle p (r 0.2))`. It is declarative: the author says what exists and what each thing is equal to, never what to do step by step, and it is reactive: anything given by an expression is bound to it, and follows it for as long as the page is open. When the reader moves a slider, everything that reads what the slider writes changes at once, with nothing written to make that happen. It is strongly and statically typed: every object's type is known when compiling, and nothing converts silently except a number broadening (an int where a real is expected) and a literal taking the type expected where it is written. Names are bare. Nothing has a side effect except a declaration making its object exist.
+An `.mtp` file is written in the mtp language. It is Lisp-like: everything is a form in parentheses, with the head first, as in `(circle p (r 0.2))`. It is declarative: the author says what exists and what each thing is equal to, never what to do step by step, and it is reactive: anything given by an expression that reads what may change is bound to it, and follows it for as long as the page is open. When the reader moves a slider, everything that reads what the slider writes changes at once, with nothing written to make that happen. It is strongly and statically typed: every object's type is known when compiling, and nothing converts silently except a number broadening (an int where a real is expected) and a literal taking the type expected where it is written. Names are bare. Nothing has a side effect except a declaration making its object exist.
 
 Everything in a source file is an **expression**. Some expressions are **forms**: a head and its parts in parentheses. Some forms are **declarations**: their only effect is that a new object exists in the world model, and they return that object, as `(circle p (r 0.2))` returns the circle it declares. Components (views, controls and listeners) are declarations too. **Function calls** have no effect at all and matter only for what they return, as `(+ k 1)` does. A few **special forms** are exceptions, each documented on its own: `if`, `cond`, `and` and `or` evaluate only what they need; `let` and `fn` bind names; `repeat` stands for the expressions it produces, spliced in place when compiling; `(. X Y)` does not evaluate `Y` when it is an attribute name; `(name s)` turns a string into a name. Type expressions, such as `list[color]` or `(real (>= 0))`, are not evaluated at all: they describe a type.
 
@@ -99,13 +99,14 @@ Variables are declared inside the scene (then they belong to it), at the top lev
 
 Every variable, and every attribute of a mutable object, is either **free** or **bound**.
 
-- **Free**: it holds whatever was last written to it, starting with the object its declaration gives (a literal, or a default). While the reader uses the page, only writers (controls and listeners) and the animations they run may write it. Free ones include a variable given a value, a shape attribute given a value, a motif parameter of an instance, and an attribute a variant leaves unset. A write to a group's attribute (`g.r`) writes each member's.
-- **Bound**: it is given by an expression, and always equals that expression. Nothing may write it.
+- **Free**: it holds whatever was last written to it, starting with the object its declaration gives (a literal, an expression known when compiling, or a default). While the reader uses the page, only writers (controls and listeners) and the animations they run may write it. Free ones include a variable given a value, a shape attribute given a value, a motif parameter of an instance, and an attribute a variant leaves unset. A write to a group's attribute (`g.r`) writes each member's.
+- **Bound**: it is given by an expression not known when compiling, and always equals that expression. Nothing may write it.
 
 &nbsp;
 
     (real k 1)                     ; free: a slider may write it
     (circle c (r (* 2 k)))         ; c.r is bound: it is always twice k
+    (circle d (r (/ 1 2)))         ; d.r is free: (/ 1 2) is known when compiling
     (slider s (animation (k (transition (to 3)))))
 
 So every change starts at something free, and spreads to everything bound to it: when the slider writes `k`, `c.r` follows at once, and so does anything that reads `c.r`. The runtime recomputes only what reads what changed. A free variable with the `const` constraint can never be written, so it is known when compiling and costs nothing while drawing.
@@ -154,7 +155,7 @@ The author connects a world model to a web page with HTML elements.
 
 ## Two properties of every expression
 
-- **Binding time** (or just time): whether what an expression gives is known when compiling, and then folded into the .mtpc as a plain value, or only while the reader uses the page. A bound variable or attribute takes the time of its expression. `rand` counts as known only while the reader uses the page, though its number is drawn once, when the page loads.
+- **Binding time** (or just time): whether what an expression gives is known when compiling, and then folded into the .mtpc as a plain value, or only while the reader uses the page. A variable or attribute given an expression known when compiling is free, starting at the expression's value, as if the author had written that value; it is `const` only when declared so. One given any other expression is bound. `rand` counts as known only while the reader uses the page, though its number is drawn once, when the page loads.
 - **Access**: who may read an expression. It takes the access of what it reads: an expression that reads only the scene (or nothing, like a literal or a function of its arguments) has scene access and may be read by anything; one that reads a component has page access and may be read only by components and by globals (variables, functions, transitions and animations declared outside the scene). The scene may never read anything with page access. Globals take the access of what they read; being written by a slider does not give a variable page access, reading one does.
 
 ## Open

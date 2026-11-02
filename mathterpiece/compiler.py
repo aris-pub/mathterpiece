@@ -1947,12 +1947,7 @@ class _Compiler:
             return Attribute(
                 t, self.default(t, pos) if default is None and t != Maybe(COLOR) else default
             )
-        attribute = self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
-        # An attribute given by an expression is bound; folded, it is free but const, so no writer
-        # can write it (mtpc.md, "Attributes").
-        if not attribute.bound and not _is_literal(node):
-            attribute.type = _with_const(attribute.type)
-        return attribute
+        return self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
 
     def settle(self, t: Type, e: Expr, what: str, pos: Pos) -> Attribute:
         """An attribute holding e: free when e is known, bound otherwise. A bound value must stay
@@ -2829,16 +2824,6 @@ def _is_literal(node: Node) -> bool:
     if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, BoolLit, NoneLit)):
         return True
     return isinstance(node, ListLit) and all(_is_literal(i) for i in node.items)
-
-
-def _with_const(t: Type) -> Type:
-    if isinstance(t, Maybe):
-        return Maybe(_with_const(t.inner))
-    if _is_const(t):
-        return t
-    if isinstance(t, Refine):
-        return replace(t, constraints=(*t.constraints, ("const",)))
-    return Refine(t, (("const",),))
 
 
 def _is_step_ease(ease) -> bool:

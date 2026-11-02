@@ -111,7 +111,7 @@ with `"fixed": true` on a variant instance's fixed attributes.
 
 - A **free** one holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
 - A **bound** one holds an expression. `deps` lists every variable and attribute it can read: directly, through any function it calls, and through captured names. Where a read depends on a value known only while drawing, such as `g[side].pos`, `deps` lists every one it could read (the `pos` of every member). When any of them changes, this one is recomputed, and nothing else is. `[id, null]` is a variable.
-- A variable or an attribute known when compiling is written as free, with a `const` constraint in its type, whether the author wrote it that way or the compiler folded it.
+- A variable or an attribute given an expression known when compiling is written as free, holding the expression's value. Its type has a `const` constraint only when the author wrote one.
 - Every attribute of a shape is written, including those left at their default. `pos` is not: it is `x` and `y` read or written together. A line's attributes are its `from` and `to`, a triangle's its corners; their `x` and `y` are computed (the midpoint, the centroid), and a write to them is split into writes to every end or corner.
 
 ## Objects
