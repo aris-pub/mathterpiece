@@ -127,12 +127,13 @@ flowchart LR
 ```
 
 - **Change only enters through writers.** When the reader acts, a control or a listener runs an animation, and the animation writes free variables and attributes over time, frame by frame. A drag writes its target directly, and so does a toggle.
+- **An animation is made of steps.** A step is one of the items an animation lists: a move (`(k (transition …))`, which moves `k` along a transition), a `(wait seconds)`, an `(at-once step…)` or an `(in-order step…)`, which group steps, or the name of another animation, which runs its steps there. Steps written in a row run one after another. Its top-level steps are the steps it lists, or, when it lists a single `in-order`, that `in-order`'s steps; a play shows one button for each.
 - **Bound variables and attributes follow at once.** The compiler knows what every expression reads, so after a write the runtime recomputes only what depends on it, and the views redraw. Nothing has to be told to update.
 - **Writes respect types.** A write that breaks a constraint is brought into it (clamped, rounded or held). This is the one case where a real becomes an int without being asked: a write into an int is rounded. A `const` variable is never written at all.
 
 ### Why there is no assignment
 
-In a programming language, `k = 3` is an instruction: at this step, change `k`. Its effect depends on when it runs and what ran before. mtp has no steps. If an expression could assign, `c.r = 2k` could be true before it and false after it, and the drawing would depend on the order the runtime happened to evaluate things in. Instead, the only writes are the reader's actions, carried by writers, and they reach only free values. Every bound relation the author wrote holds in every frame the reader sees.
+In a programming language, `k = 3` is an instruction: at this point in the program, change `k`. Its effect depends on when it runs and what ran before. mtp has no instructions. If an expression could assign, `c.r = 2k` could be true before it and false after it, and the drawing would depend on the order the runtime happened to evaluate things in. Instead, the only writes are the reader's actions, carried by writers, and they reach only free values. Every bound relation the author wrote holds in every frame the reader sees.
 
 ## On the page
 
