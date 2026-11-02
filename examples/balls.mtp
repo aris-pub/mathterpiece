@@ -130,14 +130,15 @@
 
 ; Clicking a point makes it x or y, replacing the older of the two, which slides there, and
 ; grows r to the new δ/2. The point it slides from is where it was going: from-moves come before
-; to-moves, so they read the old to. (step 1) makes each int jump at the start, never passing
-; through the points in between.
+; to-moves, so they read the old to.
 (repeat 32 i
   (on-click space[i] (animation (default-duration 0.4) (at-once
-    (transit _ x-from (to (if replace-x x-to x-from)) (ease (step 1)))
-    (transit _ y-from (to (if replace-x y-from y-to)) (ease (step 1)))
-    (transit _ x-to (to (if replace-x i x-to)) (ease (step 1)))
-    (transit _ y-to (to (if replace-x y-to i)) (ease (step 1)))
+    ; Which point x and y sit on: an int jumps at the start, never passing the points between.
+    (at-once (default-ease (step 1))
+      (transit _ x-from (to (if replace-x x-to x-from)))
+      (transit _ y-from (to (if replace-x y-from y-to)))
+      (transit _ x-to (to (if replace-x i x-to)))
+      (transit _ y-to (to (if replace-x y-to i))))
     (transit _ x-t (from (if replace-x 0 x-t)) (to 1))
     (transit _ y-t (from (if replace-x y-t 0)) (to 1))
     (transit _ share (to 1))
