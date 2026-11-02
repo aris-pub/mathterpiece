@@ -1133,8 +1133,6 @@ class _Compiler:
         return Attribute(e.type, expr=e)
 
     def path(self, node: Node, scope: dict) -> Attribute:
-        if isinstance(node, Name) and node.parts == ("fade",):
-            return Attribute(STRING, "fade")
         e = self.expr(node, None, scope)
         ft = _core(e.type)
         if not isinstance(ft, FuncT) or len(ft.params) != 3:

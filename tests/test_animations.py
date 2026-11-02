@@ -265,8 +265,13 @@ class TestRepeatedListeners:
         assert [o.data["shape"] for o in clicks] == [m.id(f"c{i}") for i in range(3)]
 
 
-class TestFadePath:
-    def test_fade_is_written_bare(self):
-        m = model("(scene s (circle c)) (canvas v (transit _ none (duration 1) (path fade)) c)")
+class TestCanvasFades:
+    # reference.md "Transitions and animations": a canvas's pure transit is how its when items
+    # fade in and out; fade is not a path.
+    def test_a_canvas_takes_a_pure_transit(self):
+        m = model("(scene s (circle c)) (canvas v (transit _ none (duration 1)) c)")
         (t,) = [o for o in m.objects if o.kind == "transition"]
-        assert t.attrs["path"].value == "fade"
+        assert m.get("v").data["transition"] == m.objects.index(t)
+
+    def test_fade_is_not_a_path(self):
+        error("(scene s (circle c)) (canvas v (transit _ none (duration 1) (path fade)) c)", "fade")

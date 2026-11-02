@@ -156,7 +156,7 @@ A move carries its own `duration` and `ease`, resolved from the transition and t
     {"from": V | null, "to": V | null, "duration": seconds | null,
      "ease": "linear" | "ease-in" | "ease-out" | "ease-in-out" | ["step", n] | ["step-ease", p]
              | {"func": id} | null,
-     "path": null | "fade" | {"func": id}}
+     "path": null | {"func": id}}
 
 A transition is a value: it never changes. Its `from` and `to` (`V`, free or bound) can be bound only so that they can hold expressions; each is read once, when a move along the transition starts, and never followed during the move. `null` for `from` or `to` means the value of what is moved when the move starts. `null` for `duration` or `ease` means the transition gives none of its own: each move along it carries the one resolved from the defaults around it. `path` `null` is the straight line between the ends.
 

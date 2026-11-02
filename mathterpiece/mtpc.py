@@ -325,8 +325,6 @@ def _ease(e) -> object:
 def _path(attribute: Attribute | None) -> object:
     if attribute is None:
         return None
-    if not attribute.bound:
-        return attribute.value
     assert attribute.expr is not None
     return {"func": attribute.expr.args[0]}
 

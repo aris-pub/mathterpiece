@@ -81,7 +81,7 @@ export function draw(
     if (level <= 0) continue;
     let into: Element = top;
     if (level < 1) {
-      // A canvas's showing and hiding takes the path fade (reference.md).
+      // A canvas fades what its when items show and hide along its transit (reference.md).
       into = document.createElementNS(NS, "g");
       into.setAttribute("data-mtp-fade", "");
       into.setAttribute("opacity", String(level));

@@ -1849,9 +1849,6 @@
                     "type": "null"
                   },
                   {
-                    "const": "fade"
-                  },
-                  {
                     "type": "object",
                     "required": [
                       "func"
