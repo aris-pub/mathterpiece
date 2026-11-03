@@ -97,8 +97,8 @@ class TestInstances:
 
 
 class TestShapeArguments:
-    # reference.md: x and y move the instance's frame; paint arguments are defaults for its
-    # members, except opacity, which fades the instance as a whole.
+    # reference.md: x and y move the instance's frame; like a group, it gives its members
+    # defaults in (defaults …).
     def test_position_and_transforms(self):
         m = model(f"{DIAL} (scene s (dial d1 (pos [2 3]) (translate [1 0])))")
         d = m.get("d1")
@@ -113,18 +113,45 @@ class TestShapeArguments:
         d = m.id("d1")
         assert {(d, "x"), (d, "y"), (d, "translate"), (d, "transform")} <= m.get("k").value.deps
 
-    def test_paint_is_a_default_for_members(self):
+    def test_defaults_for_the_members(self):
+        # mtp-4cw5: an instance behaves like a group: its members take its defaults, and a
+        # member that gives its own value keeps it.
         m = model(
             "(motif m (real u 0) (circle a) (circle b (stroke 'blue')))"
-            "(scene s (m i (stroke 'red')))"
+            "(scene s (m i (defaults (stroke 'red'))))"
         )
-        assert (m.id("i"), "stroke") in m.get("i.a").attrs["stroke"].deps
+        assert m.get("i.a").attrs["stroke"].value == "#ff0000ff"
         assert m.get("i.b").attrs["stroke"].value == "#0000ffff"
+        assert "stroke" not in m.get("i").attrs
 
-    def test_opacity_is_the_instances_own(self):
-        m = model("(motif m (real u 0) (circle a)) (scene s (m i (opacity 0.5)))")
-        assert m.get("i").attrs["opacity"].value == 0.5
-        assert m.get("i.a").attrs["opacity"].value == 1
+    def test_opacity_is_each_members(self):
+        m = model("(motif m (real u 0) (circle a)) (scene s (m i (defaults (opacity 0.5))))")
+        assert m.get("i.a").attrs["opacity"].value == 0.5
+
+    def test_no_fill_of_its_own(self):
+        error(
+            "(motif m (real u 0) (circle a)) (scene s (m i (fill 'red')))", "give it in \\(defaults"
+        )
+
+    def test_reading_and_writing_go_to_every_member(self):
+        m = model(
+            "(motif m (real u 0) (circle a) (circle b)) (scene s (m i))"
+            " (list fs i.fill) (button go (animation (move i.fill (to 'red') (duration 1))))"
+        )
+        deps = m.get("fs").value.expr.deps
+        assert {(m.id("i.a"), "fill"), (m.id("i.b"), "fill")} <= deps
+
+    def test_a_write_reaches_members_inside_a_group(self):
+        model(
+            "(motif m (real u 0) (group inner (circle a) (circle b))) (scene s (m i))"
+            " (button go (animation (move i.fill (to 'red') (duration 1))))"
+        )
+
+    def test_a_groups_defaults_reach_an_instances_members(self):
+        m = model(
+            "(motif m (real u 0) (circle a)) (scene s (group g (defaults (fill 'red')) (m i)))"
+        )
+        assert m.get("i.a").attrs["fill"].value == "#ff0000ff"
 
 
 class TestTypes:

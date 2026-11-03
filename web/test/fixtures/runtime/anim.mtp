@@ -1,7 +1,8 @@
 (real k 0 (>= 0) (<= 10))
 (real j 0)
 (bool on false)
-(scene s (circle dot (fill 'black')))
+(motif pair ((real u 0)) (group inner (circle p (fill 'black')) (circle q (fill 'black'))))
+(scene s (circle dot (fill 'black')) (pair duo))
 (animation a
   (move k (to 10) (duration 2))
   (move none (duration 1))
@@ -15,3 +16,4 @@
 (animation thrice (loop 3) (move k (from 0) (to 10) (duration 1)))
 (animation forever (loop) (move j (to (+ j 1)) (duration 1)))
 (animation rounds (loop) (move k (from 0) (to 2) (duration 1)) (move k (to 4) (duration 1)))
+(animation recolor (move duo.fill (to 'white') (duration 1)))

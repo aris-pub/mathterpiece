@@ -23,7 +23,7 @@
   (background slate)
   ; The figure opens at the tour's last stop, so playing the tour moves from the first moment.
   (stop curve 'eight cusps')
-  (times-table table (m 9) (stroke '#f4978e'))
+  (times-table table (m 9) (defaults (stroke '#f4978e')))
   (text caption curve (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
 ; Each stop of the tour moves the multiplier, the color of the chords and the caption together.

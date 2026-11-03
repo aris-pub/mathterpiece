@@ -8,6 +8,8 @@ import { isBound } from "./doc.ts";
 import { format, pyStr } from "./format.ts";
 
 const LIMIT = 1e150;
+// What an instance gives its members and reads from them, as a group does.
+const SPREAD = new Set(["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"]);
 const SHAPES = new Set(["circle", "rect", "ellipse", "line", "triangle", "text", "group", "instance"]);
 const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
 // Attributes that are points in their shape's frame, which a read converts.
@@ -189,18 +191,13 @@ export class Runtime {
   }
 
   /**
-   * Writes a free variable or attribute (a shape's pos writes its x and y; a group's attribute
-   * each member's), brought into its type's constraints first (type-system.md 5.b). Gives whether anything
-   * changed.
+   * Writes a free variable or attribute (a shape's pos writes its x and y; a group's attribute,
+   * and an instance's fill, stroke and so on, each member's), brought into its type's constraints
+   * first (type-system.md 5.b). Gives whether anything changed.
    */
   write(id: number, attr: string | null, value: unknown): boolean {
-    const o = this.objects[id]!;
     const changed = new Set<string>();
-    if (o.kind === "group" && attr !== null && !this.has(id, attr)) {
-      for (const m of o.members ?? []) this.writeInto(m, attr, value, changed);
-    } else {
-      this.writeInto(id, attr, value, changed);
-    }
+    this.writeInto(id, attr, value, changed);
     if (changed.size === 0) return false;
     for (const l of this.listeners) l(changed);
     return true;
@@ -208,6 +205,13 @@ export class Runtime {
 
   private writeInto(id: number, attr: string | null, value: unknown, changed: Set<string>): void {
     const o = this.objects[id]!;
+    // A group's or an instance's attribute that is not its own is each member's (mtp-4cw5).
+    if ((o.kind === "group" || o.kind === "instance") && attr !== null && !this.has(id, attr)) {
+      if (attr !== "pos" || o.kind === "group") {
+        for (const m of o.members ?? []) this.writeInto(m, attr, value, changed);
+        return;
+      }
+    }
     if (attr === "pos" && !this.has(id, "pos")) {
       const [x, y] = value as number[];
       if (CORNERS[o.kind]) {
@@ -714,6 +718,9 @@ export class Runtime {
     const o = this.objects[id]!;
     if (attr === "name") return o.name;
     if (o.kind === "group" && !this.has(id, attr) && attr !== "length" && attr !== "members") {
+      return (o.members ?? []).map((m) => this.attrOf(m, attr, frame));
+    }
+    if (o.kind === "instance" && !this.has(id, attr) && SPREAD.has(attr)) {
       return (o.members ?? []).map((m) => this.attrOf(m, attr, frame));
     }
     if (attr === "length" && o.members) return o.members.length;

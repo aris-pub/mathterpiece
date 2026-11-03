@@ -128,5 +128,13 @@ describe("a player", () => {
     p.seek(4.5);
     expect(p.stepNow()).toBe(0);
   });
+
+  it("moves an instance's fill as every member's, through a group inside it", () => {
+    // mtp-4cw5: the colors mix, not counted as numbers.
+    const [rt, p] = setup("recolor");
+    p.seek(0.5);
+    expect(rt.value(rt.id("duo.p"), "fill")).toBe("#808080ff");
+    expect(rt.value(rt.id("duo.q"), "fill")).toBe("#808080ff");
+  });
 });
 

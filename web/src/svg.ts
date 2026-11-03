@@ -113,7 +113,6 @@ function drawObject(rt: Runtime, i: number, into: Element, unitsPerPx: number): 
     const g = document.createElementNS(NS, "g");
     g.setAttribute("transform", matrix(rt.local(i, true)));
     g.setAttribute("data-mtp-id", String(i));
-    if (o.kind === "instance") g.setAttribute("opacity", String(rt.value(i, "opacity")));
     for (const m of o.members ?? []) drawObject(rt, m, g, unitsPerPx);
     into.appendChild(g);
     return;

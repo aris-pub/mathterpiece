@@ -139,7 +139,7 @@ export class Player {
     const t = Math.min(Math.max(u, 0), 1) * this.duration;
     const rt = this.rt;
     const first = this.moves[0]!;
-    let cur = rt.value(first.id, first.attr);
+    let cur = rt.value(this.holder(first), first.attr);
     for (const m of this.moves) {
       if (t < m.start) break;
       const tr = rt.objects[m.transition]!;
@@ -162,7 +162,7 @@ export class Player {
     const rt = this.rt;
     if (m.from === undefined) {
       const tr = rt.objects[m.transition]!;
-      const here = rt.value(m.id, m.attr);
+      const here = rt.value(this.holder(m), m.attr);
       m.from = tr.from ? rt.evaluate(tr.from) : here;
       m.to = tr.to ? rt.evaluate(tr.to) : here;
     }
@@ -187,10 +187,19 @@ export class Player {
     return "jump";
   }
 
-  // A group's attribute is each member's, so its type is a member's.
+  // A group's or an instance's attribute is each member's, so a move starts from, and has the
+  // type of, the first member that holds it, looking into a container inside it when the first
+  // member is one.
+  private holder(m: Move): number {
+    let id: number | undefined = m.id;
+    while (id !== undefined && m.attr !== null && m.attr !== "pos" && this.rt.typeOf(id, m.attr) === undefined) {
+      id = this.rt.objects[id]!.members?.[0];
+    }
+    return id ?? m.id;
+  }
+
   private memberType(m: Move) {
-    const first = this.rt.objects[m.id]!.members?.[0];
-    return first === undefined ? undefined : this.rt.typeOf(first, m.attr);
+    return this.rt.typeOf(this.holder(m), m.attr);
   }
 }
 

@@ -61,16 +61,16 @@
 
   ; x's half in teal and y's in coral, joined where x meets y, at depth b².
   (group cluster (defaults (stroke-width 2.5))
-    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (stroke teal))
+    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (defaults (stroke teal)))
     (line_ (from [mid[0] level1]) (to [mid[0] level2]) (stroke teal))
-    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (stroke coral))
+    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (defaults (stroke coral)))
     (line_ (from [mid[1] level1]) (to [mid[1] level2]) (stroke coral))
     (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke fg))
     (foreach i 4
       (circle_ (pos [(px i) top]) (r 5) (fill (if (< i 2) teal coral)))))
 
   (outside whole)
-  (outside faint (opacity 0.2))
+  (outside faint (defaults (opacity 0.2)))
 
   ; The points of A: x's first neighbour, and a point outside the cluster or, for the pieces where
   ; A meets both halves, one in y's half.
@@ -88,8 +88,8 @@
   ; The factor (1 − 1/b)²: from b, where each half merges, to b², where x meets y. A meets only
   ; x's half.
   (group gap-highlight
-    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (stroke teal)
-              (stroke-width 3.5))
+    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1)
+              (defaults (stroke teal) (stroke-width 3.5)))
     (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke teal) (stroke-width 3.5))
     (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke muted) (stroke-width 5))
     (line_ (from [(+ axis 6) level1]) (to [(+ axis 6) level2]) (stroke teal) (stroke-width 5))
@@ -98,10 +98,10 @@
   ; Where A meets both halves, both distances are at most the inner depth b: the term 1/b², and
   ; the second inequality, which also counts the gap across x and y's join.
   (group both-highlight
-    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (stroke coral)
-              (stroke-width 3.5))
-    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (stroke coral)
-              (stroke-width 3.5))
+    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1)
+              (defaults (stroke coral) (stroke-width 3.5)))
+    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1)
+              (defaults (stroke coral) (stroke-width 3.5)))
     (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke coral) (stroke-width 5))
     (line_ (from [(+ axis 13) top]) (to [(+ axis 13) level2]) (stroke fg) (stroke-width 5))
     (line_ (from [axis level1]) (to [(px 0) level1]) (stroke accent) (stroke-width 1)))

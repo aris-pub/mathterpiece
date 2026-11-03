@@ -1,0 +1,9 @@
+; mtp-4cw5: a motif instance behaves like a group: a write to its fill writes every member's,
+; through a group inside it too, and a read gives every member's.
+; expect i.a.fill "#ff0000ff"
+; expect i.b.fill "#ff0000ff"
+; write i.fill "#0000ffff"
+; expect i.a.fill "#0000ffff"
+; expect i.b.fill "#0000ffff"
+(motif m ((real u 0)) (circle a) (group inner (circle b)))
+(scene s (m i (defaults (fill 'red'))))

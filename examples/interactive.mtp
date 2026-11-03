@@ -20,7 +20,7 @@
 
 (scene board
   (background slate)
-  (times-table table (m 2) (turn -90) (stroke '#ffb703'))
+  (times-table table (m 2) (turn -90) (defaults (stroke '#ffb703')))
   (text caption $'times {table.m:g}' (pos [-9.4 -9.4]) (font small) (fill chalk)))
 
 (canvas cnv board)

@@ -193,9 +193,9 @@ SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
     "group": dict(TRANSFORMS),
 }
 # What a motif instance takes besides its parameters (reference.md, "The scene and shapes").
-INSTANCE_ATTRS = {**POSITIONED, **PAINTED, **TRANSFORMS}
-# The paint arguments a motif instance gives its members as defaults; opacity is its own.
-INHERITED = ("fill", "stroke", "stroke-width", "fill-opacity", "stroke-opacity")
+# Like a group, an instance has no fill, stroke and so on of its own: it gives them to its members
+# in (defaults …), and a read or write of them goes to every member (mtp-4cw5).
+INSTANCE_ATTRS = {**POSITIONED, **TRANSFORMS}
 # A font's parts, their types and their defaults (reference.md, "Tokens" and "Defaults"); a
 # family of None is the page's font. The style choices are the old code's (mtp-9mg).
 FONT_STYLE = Refine(STRING, (("one-of", ("normal", "italic", "oblique")),))
@@ -237,6 +237,14 @@ def compile_source(src: str) -> Model:
 
 def compile_model(forms: tuple[Form, ...]) -> Model:
     return _Compiler().run(forms)
+
+
+def _spreads(obj: Obj, attr: str) -> bool:
+    """Whether a read or write of attr on obj goes to each of its members: a group's attribute,
+    or one of an instance's that it gives its members, such as fill."""
+    if attr in obj.attrs:
+        return False
+    return obj.kind == "group" or (obj.kind == "instance" and attr in GROUP_DEFAULTS)
 
 
 def _typed_func(node: Node) -> Node | None:
@@ -1542,10 +1550,10 @@ class _Compiler:
                     f"{label} is not a variable: write one of its attributes", node.pos
                 )
             return i, None, self.check_writable(obj, obj.value, label, node.pos)
-        if obj.kind == "group" and attr not in obj.attrs:
+        if _spreads(obj, attr):
             types = [self.writable_attr(m, attr, label, node.pos) for m in obj.members]
             if not types:
-                raise CompileError(f"{label} cannot be written: the group is empty", node.pos)
+                raise CompileError(f"{label} cannot be written: the {obj.kind} is empty", node.pos)
             return i, attr, _join_all(types, node.pos)
         return i, attr, self.writable_attr(i, attr, label, node.pos)
 
@@ -1560,10 +1568,9 @@ class _Compiler:
             for a in ("x", "y"):
                 self.check_writable(obj, obj.attrs[a], label, pos)
             return POINT
-        if obj.kind == "group" and attr not in obj.attrs:
-            return ListT(
-                _join_all([self.writable_attr(m, attr, label, pos) for m in obj.members], pos)
-            )
+        if _spreads(obj, attr):
+            # One value is written to every member, at any depth, so it has their own type.
+            return _join_all([self.writable_attr(m, attr, label, pos) for m in obj.members], pos)
         if attr not in obj.attrs:
             raise CompileError(f"a {obj.kind} has no attribute '{attr}'", pos)
         return self.check_writable(obj, obj.attrs[attr], label, pos)
@@ -2146,10 +2153,26 @@ class _Compiler:
         params = {p.name: p for p in motif.params}
         given: dict[str, tuple[Node, dict]] = {}
         scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
+        defaults: dict[str, tuple[Node, dict]] = {}
         for item, inner in self.expand_scoped(scoped):
             head = _head(item)
             if self.shape_kind(item) and head not in params:
                 raise CompileError(f"an instance of {kind} takes no members", item.pos)
+            if head == "defaults" and head not in params:
+                assert isinstance(item, Form)
+                self.group_defaults(item, inner, defaults)
+                continue
+            if (
+                head in GROUP_DEFAULTS
+                and head not in params
+                and head not in INSTANCE_ATTRS
+                and head != "pos"
+            ):
+                raise CompileError(
+                    f"an instance has no {head} of its own: give it in (defaults ({head} …)), for"
+                    " its members",
+                    item.pos,
+                )
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
                     f"expected an argument such as (r 1), got {_shown(item)}", item.pos
@@ -2159,9 +2182,17 @@ class _Compiler:
             if head in given or _overlaps(head, given):
                 raise CompileError(f"'{head}' is given twice", item.pos)
             given[head] = (item.items[1], inner)
+        # From a group around it: a position moves the instance's frame; the rest are for its
+        # members, under its own defaults.
+        down = {}
         for attr, (node, inner) in (spread or {}).items():
-            if not _overlaps(attr, given):
-                given[attr] = (node, inner)
+            if attr in INSTANCE_ATTRS or attr == "pos":
+                if not _overlaps(attr, given):
+                    given[attr] = (node, inner)
+            else:
+                down[attr] = (node, inner)
+        for attr, (node, inner) in defaults.items():
+            down.update(_coordinates(attr, node, inner))
         saved, self.frame = self.frame, (parent if parent != self.scene else None)
         try:
             for f in pre:
@@ -2177,7 +2208,6 @@ class _Compiler:
         path = None if name is None or outer is None else (f"{outer}.{name}" if outer else name)
         self.bodies.append({"id": i, "names": {}, "attrs": set(params), "path": path})
         saved, self.frame = self.frame, i
-        down = {a: (_dot(Name(("self",), form.pos), a), {}) for a in INHERITED}
         try:
             for item, inner in self.expand(motif.body, {}):
                 if self.shape_kind(item):
@@ -2343,7 +2373,8 @@ class _Compiler:
             head = _head(item)
             if head not in GROUP_DEFAULTS or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
-                    f"a group's defaults are paint, position and a text's settings, got"
+                    f"a group's defaults are fill, stroke and the like, position, and a text's"
+                    f" settings, got"
                     f" {_shown(item)}",
                     item.pos,
                 )
@@ -2840,6 +2871,9 @@ class _Compiler:
             names |= cast("set[str]", {self.model.objects[m].name for m in obj.members} - {None})
         if obj.kind == "group" and obj.members:
             names |= set.intersection(*(self.attr_names(m) for m in obj.members)) - {"members"}
+        if obj.kind == "instance" and obj.members:
+            common = set.intersection(*(self.attr_names(m) for m in obj.members))
+            names |= common & GROUP_DEFAULTS
         return names
 
     def type_attrs(self, t: Type, candidates: tuple) -> set:
@@ -2886,7 +2920,7 @@ class _Compiler:
             for m in obj.members:
                 if self.model.objects[m].name == name:
                     return self.read(m, None)
-        if obj.kind == "group":
+        if obj.kind == "group" or (obj.kind == "instance" and name in GROUP_DEFAULTS):
             if not obj.members or name not in self.attr_names(i):
                 raise CompileError(f"every member of {obj.name} must have '{name}'", pos)
             reads = [self.obj_attr(m, name, pos) for m in obj.members]
