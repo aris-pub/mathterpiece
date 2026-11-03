@@ -1,0 +1,72 @@
+; Line styles: how a stroke ends, how it turns a corner, and how it is dashed. The buttons pick
+; the ends (line-cap) and the corners (line-join), and the slider sets the stroke's width. The
+; thin lines show where each shape ends: a 'round' or 'square' end reaches past it by half the
+; width. The dashed line takes its dash and gap from the sliders, and with the 'round' end and
+; no dash, each dash is a dot. Round the circle, the dashes march: the animation moves the
+; outline's dash-offset.
+
+(color paper '#f7f4ee')
+(color ink '#23303f')
+(color soft '#9aa3ad')
+(color warm '#d1603d')
+(color cool '#2f7f86')
+(font small (size 13))
+(font mono (family 'ui-monospace, monospace') (size 13))
+
+(type cap string (one-of 'butt' 'round' 'square'))
+(type join string (one-of 'miter' 'round' 'bevel'))
+
+(scene styles
+  (background paper)
+  (cap ends 'round')
+  (join corners 'miter')
+  (real width 18 (>= 2) (<= 32))
+  (real dash-length 14 (>= 0) (<= 30))
+  (real gap-length 10 (>= 2) (<= 30))
+
+  ; How a stroke ends: a thick line, with thin ones where it ends and along its middle.
+  (group ends-panel
+    (line thick (from [-6.5 2.6]) (to [-1.5 2.6]) (stroke warm) (stroke-width width)
+      (line-cap ends))
+    (group guides (defaults (stroke ink) (stroke-width 1))
+      (line_ (from [-6.5 1.8]) (to [-6.5 3.4]))
+      (line_ (from [-1.5 1.8]) (to [-1.5 3.4]))
+      (line_ (from [-6.5 2.6]) (to [-1.5 2.6]))))
+
+  ; How it turns a corner: a sharp triangle's outline, with a thin one along its middle.
+  (group corners-panel
+    (triangle outline (a [1.4 1.6]) (b [6.6 1.6]) (c [3.2 3.6]) (fill none) (stroke cool)
+      (stroke-width width) (line-join corners))
+    (triangle_ (a [1.4 1.6]) (b [6.6 1.6]) (c [3.2 3.6]) (fill none) (stroke ink)
+      (stroke-width 1)))
+
+  ; A dash pattern from the sliders, with the ends the buttons pick.
+  (line pattern (from [-6.5 -2]) (to [-1.5 -2]) (stroke ink) (stroke-width (/ width 2))
+    (dash [dash-length gap-length]) (line-cap ends))
+
+  ; Marching dashes: the animation moves the outline's dash-offset by two patterns.
+  (circle dot (pos [4 -2]) (r 0.5) (fill warm) (stroke none))
+  (circle ring (pos [4 -2]) (r 1.6) (fill none) (stroke cool) (stroke-width 3) (dash [9 6])
+    (line-cap 'round'))
+
+  (group captions (defaults (fill soft) (font mono) (halign 'middle') (valign 'top'))
+    (text_ $'(line-cap \'{ends}\')' (pos [-4 0.9]))
+    (text_ $'(line-join \'{corners}\')' (pos [4 0.9]))
+    (text_ $'(dash [{dash-length:.0f} {gap-length:.0f}])' (pos [-4 -3.3]))
+    (text_ '(move ring.dash-offset …)' (pos [4 -4]))))
+
+(canvas view (view-x -8) (view-y -4.8) (view-width 16) (view-height 9) (pan false) (zoom false)
+  ends-panel corners-panel pattern dot ring captions)
+
+(play march (autoplay view)
+  (animation (loop) (move ring.dash-offset (from 0) (to -30) (duration 1.5) (ease 'linear'))))
+
+(button butt (animation (move ends (to 'butt') (duration 0))) (label 'butt'))
+(button round-ends (animation (move ends (to 'round') (duration 0))) (label 'round'))
+(button square (animation (move ends (to 'square') (duration 0))) (label 'square'))
+(button miter (animation (move corners (to 'miter') (duration 0))) (label 'miter'))
+(button round-corners (animation (move corners (to 'round') (duration 0))) (label 'round'))
+(button bevel (animation (move corners (to 'bevel') (duration 0))) (label 'bevel'))
+(slider thickness (move width (from 2) (to 32)) (label 'width'))
+(slider dash-slider (move dash-length (from 0) (to 30)) (label 'dash'))
+(slider gap-slider (move gap-length (from 2) (to 30)) (label 'gap'))

@@ -360,3 +360,23 @@ class TestLineEnds:
     def test_a_container_gives_them_to_its_members(self):
         m = model("(scene s (group g (defaults (line-cap 'round')) (line a)))")
         assert m.get("a").attrs["line-cap"].value == "round"
+
+
+class TestDashOffset:
+    # The author, 2026-11-03: the offset is an attribute of its own, dash-offset, which a figure
+    # may read and an animation may move.
+    def test_read(self):
+        m = model("(scene s (line l (dash [4 2] 3)) (real v l.dash-offset))")
+        e = m.get("v").value.expr
+        assert e.op == "read" and e.type == REAL
+
+    def test_moved_by_an_animation(self):
+        model(
+            "(scene s (line l (dash [4 2]))) (animation a (move l.dash-offset (to 6) (duration 1)))"
+        )
+
+    def test_a_containers_offset_is_every_members(self):
+        m = model(
+            "(scene s (group g (defaults (dash [4 2] 1)) (line a) (line b)) (list v g.dash-offset))"
+        )
+        assert m.get("v").value.expr.type.base == ListT(REAL)
