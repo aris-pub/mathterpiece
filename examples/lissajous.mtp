@@ -1,0 +1,50 @@
+; A Lissajous curve: the point (sin(a t + phase), sin(b t)) as t goes once around. The curve is
+; one polyline through 721 points, and its points are a map over a range, so it is drawn again
+; whenever a slider moves a, b or the phase. Try the frequencies 1 and 2, then 3 and 2, then
+; press 'turn the phase'.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color teal '#2a9d8f')
+(font variable (family 'Georgia, serif') (style 'italic') (size 18))
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+(scene board
+  (background paper)
+  ; Whole frequencies close the curve after one turn of t, so the ratio a:b is what it shows.
+  (int a 3 (>= 1) (<= 7))
+  (int b 2 (>= 1) (<= 7))
+  (real phase 90 (>= 0) (<= 360))
+
+  (group axes (defaults (stroke soft) (stroke-width 1) (stroke-opacity 0.6))
+    (line_ (from [-1.28 0]) (to [1.28 0]))
+    (line_ (from [0 -1.17]) (to [0 1.17])))
+
+  (polyline curve
+    (points (map (range 0 360 (num 721))
+              (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
+    (stroke teal) (stroke-width 3) (line-join 'round') (line-cap 'round'))
+
+  (text ratio $'a : b = {a} : {b}' (pos [0 1.28]) (halign 'middle') (valign 'bottom')
+    (font variable) (fill ink))
+
+  (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
+    (text_ '(polyline curve (points (map (range 0 360 (num 721))' (pos [-1.28 -1.28]))
+    (text_ $'(fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
+      (pos [-1.19 -1.42]))))
+
+(canvas view (view-x -1.78) (view-y -1.67) (view-width 3.56) (view-height 3.17) (pan false)
+  (zoom false)
+  axes curve ratio forms)
+
+(slider freq-a (move a (from 1) (to 7)) (step 7) (label 'frequency a, across'))
+(slider freq-b (move b (from 1) (to 7)) (step 7) (label 'frequency b, up'))
+(slider turn (move phase (from 0) (to 360)) (label 'phase'))
+
+; The phase turns once in eight seconds: slowly enough that each frame is still a curve the eye
+; can follow.
+(play spin (label 'turn the phase')
+  (animation (loop) (move phase (from 0) (to 360) (duration 8) (ease 'linear'))))
+
+(readout ratio-now $'{a}:{b}' (font variable))
