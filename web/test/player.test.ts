@@ -126,6 +126,16 @@ describe("a player", () => {
     expect(seen.map((x) => Math.round(x * 10) / 10)).toEqual([5, 5]);
   });
 
+  it("plays any one step alone, however its start rounds", () => {
+    // Seen in examples/times-tables.mtp: the fourth step's span began at 10.600000000000001 and
+    // its move at 10.6, so playing that step alone left its move out.
+    const [, p, v] = setup("stops");
+    p.only(3);
+    const span = p.spans[3]!;
+    for (let t = span.start; t <= span.end + 0.01; t += 0.05) p.seek(t);
+    expect(v("k")).toBe(9);
+  });
+
   it("gives a looping body's items as its steps, and the one running in any round", () => {
     const [, p] = setup("rounds");
     expect(p.spans).toEqual([

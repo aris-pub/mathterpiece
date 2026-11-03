@@ -88,6 +88,14 @@ export class Player {
     return this.time >= (this.window ? this.window[1] : this.duration);
   }
 
+  // Whether a move starting at t belongs to the step being played alone. Spans and moves sum
+  // their durations in different orders, so a start may differ from its span's by rounding.
+  private inWindow(t: number): boolean {
+    if (!this.window) return true;
+    const eps = 1e-9 * Math.max(1, Math.abs(this.window[1]));
+    return t >= this.window[0] - eps && t < this.window[1] - eps;
+  }
+
   /** Plays only the k-th top-level step, from wherever things are. */
   only(k: number): void {
     const span = this.spans[k]!;
@@ -102,7 +110,7 @@ export class Player {
   /** Writes every move as it stands t seconds in. */
   seek(time: number): void {
     this.time = time;
-    const shown = this.moves.filter((m) => !this.window || (m.start >= this.window[0] && m.start < this.window[1]));
+    const shown = this.moves.filter((m) => this.inWindow(m.start));
     // A new round: the last one ends first, every move in the order it ends, so a later move's
     // end is not undone by an earlier one's; then each reads its ends again.
     const ending = shown.filter((m) => m.rounds !== undefined && m.from !== undefined && inRound(m.loops, time)[1] !== m.rounds);
