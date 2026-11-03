@@ -64,11 +64,15 @@
   ; never does: there this is none, and the lines and names that need it are not drawn.
   (real|none sec-x (secd theta))
 
-  ; The tangent line at the point, split where it touches the circle: from the point to the
-  ; x axis is tan theta long, and along the x axis from the center, sec theta. The tangent is at
-  ; right angles to the radius, so its name moves out along the radius to clear the line, and
-  ; it stays near the point, since the line's far end may be off the canvas.
+  ; The tangent segment, from the point to where the tangent line meets the x axis, is tan theta
+  ; long, and along the x axis from the center, sec theta. The tangent is at right angles to the
+  ; radius, so its name moves out along the radius to clear the line, and it stays near the
+  ; point, since the segment's far end may be off the canvas.
   (group tangent (stroke deep) (fill deep)
+    ; The tangent line itself, at right angles to the radius: it exists at every angle, even
+    ; where the segment does not.
+    (line along (from (+ handle.pos (* 3 (polar 1 (+ theta 90)))))
+                (to (- handle.pos (* 3 (polar 1 (+ theta 90))))) (stroke-width 1.5))
     (line|none tan (from handle.pos) (to [sec-x 0]) (stroke-width 4))
     (text|none_ 'tan'
       (pos (+ (lerp handle.pos [sec-x 0] (min 0.5 (/ 0.3 (dist handle.pos [sec-x 0]))))
