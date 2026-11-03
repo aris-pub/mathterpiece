@@ -26,7 +26,6 @@
 (real level2 -106 (const))
 (real level3 -162 (const))
 (real axis 40 (const))
-(list depths [level1 level2 level3] (const))
 ; The middles of the four pairs, and of the two halves.
 (list mid [85 145 205 265] (const))
 (list half [115 235] (const))
@@ -54,7 +53,7 @@
   (group axes (stroke muted) (stroke-width 1) (fill muted)
     (line_ (from [axis top]) (to [axis level3]))
     (repeat 3 h
-      (line_ (from [(- axis 4) depths[h]]) (to [axis depths[h]])))
+      (line_ (from [(- axis 4) [level1 level2 level3][h]]) (to [axis [level1 level2 level3][h]])))
     (text_ '0' (pos [(- axis 7) (- top 4)]) (halign 'end') (font tick))
     (text_ 'b' (pos [(- axis 7) (- level1 4)]) (halign 'end') (font tick))
     (text_ 'b²' (pos [(- axis 7) (- level2 4)]) (halign 'end') (font tick))

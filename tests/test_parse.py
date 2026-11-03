@@ -732,3 +732,26 @@ class TestNoName:
     def test_a_name_holds_no_underscore(self):
         with pytest.raises(ParseError, match="name"):
             parse("(real a_b 1)")
+
+
+class TestIndexingAListWrittenInPlace:
+    # mtp-4vx: [a b c][h] is (. [a b c] h).
+    def test_a_list_then_a_position(self):
+        e = atom("[a b c][h]")
+        assert isinstance(e, Form)
+        assert e.items[0] == Name((".",))
+        assert isinstance(e.items[1], ListLit) and e.items[2] == Name(("h",))
+
+    def test_positions_one_after_another(self):
+        e = atom("[[1 2] [3 4]][1][0]")
+        assert e.items[0] == Name((".",)) and e.items[2] == IntLit(0)
+        inner = e.items[1]
+        assert isinstance(inner, Form) and inner.items[2] == IntLit(1)
+
+    def test_one_expression_in_the_brackets(self):
+        with pytest.raises(ParseError, match="one position"):
+            parse("(f [a b][0 1])")
+
+    def test_a_form_still_takes_no_part(self):
+        with pytest.raises(ParseError, match="a part cannot follow a form"):
+            parse("(f (g x)[0])")

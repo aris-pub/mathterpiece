@@ -372,3 +372,13 @@ class TestListLiterals:
         # mtp-vsx: inside a function nothing outside expects a type, so the other branch does.
         model("(real k 1) (func f ((real a)) (if (> a 0) [a 0] (polar 1 30))) (point q (f k))")
         model("(real k 1) (func f ((real a)) (if (> a 0) (polar 1 30) [a 0])) (point q (f k))")
+
+
+class TestIndexingAListWrittenInPlace:
+    # mtp-4vx: [a b c][h] reads item h of the list, as (. [a b c] h) does.
+    def test_a_position_known_when_compiling(self):
+        assert value("(real v [10 20 30][1])", "v") == 20
+
+    def test_a_position_known_only_while_drawing(self):
+        m = compile_source("(int h 0 (>= 0) (<= 2)) (real v [10 20 30][h])")
+        assert m.get("v").value.bound

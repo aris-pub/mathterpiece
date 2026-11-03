@@ -211,8 +211,23 @@ class _Parser:
             items = [head, NoneLit(items[0].pos), *items[1:]]
         return Form(tuple(items), pos)
 
-    # A [ that starts a value opens a list; one right after a name indexes it (see access).
-    def list_literal(self) -> ListLit:
+    # A [ that starts a value opens a list; one right after a name indexes it (see access), and
+    # one right after a list too: [a b c][h] is (. [a b c] h).
+    def list_literal(self) -> Node:
+        whole: Node = self.list_items()
+        while self.peek() == "[":
+            bracket = self.pos()
+            index = self.list_items()
+            if len(index.items) != 1:
+                raise ParseError("brackets after a list hold one position", bracket)
+            whole = Form((Name((".",), bracket), whole, index.items[0]), whole.pos)
+        if self.peek() and not (
+            _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
+        ):
+            raise ParseError(f"unexpected {self.peek()!r} after a list", self.pos())
+        return whole
+
+    def list_items(self) -> ListLit:
         pos = self.pos()
         self.advance()
         items: list[Node] = []
@@ -226,10 +241,6 @@ class _Parser:
             if self.peek() == ")":
                 raise ParseError("expected ']' to close the list", self.pos())
             items.append(self.node())
-        if self.peek() and not (
-            _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
-        ):
-            raise ParseError(f"unexpected {self.peek()!r} after a list", self.pos())
         return ListLit(tuple(items), pos)
 
     def run(self) -> str:
