@@ -45,5 +45,9 @@ web-typecheck:
 build-web:
     cd web && pnpm build
 
+# run the Emacs mode's tests
+emacs-test:
+    emacs --batch -L editors -l editors/mtp-mode.el -l editors/mtp-mode-test.el -f ert-run-tests-batch-and-exit
+
 # run lint, type check, and tests, for Python and the web runtime
 check: lint typecheck test web-typecheck web-test

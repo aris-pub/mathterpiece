@@ -19,6 +19,22 @@
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
   "Heads of mtp's forms. Any of them may end in an underscore, as in (circle_ …).")
 
+(defconst mtp-mode--arguments
+  '("a" "align" "autoplay" "b" "background" "buttons" "c" "clip" "dash" "dash-offset"
+    "duration" "ease" "family" "fill" "fill-opacity" "font" "from" "gap" "halign" "height"
+    "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points" "pos" "r" "rx"
+    "ry" "size" "step" "stroke" "stroke-opacity" "stroke-width" "style" "to" "transform"
+    "translate" "valign" "value" "view-height" "view-width" "view-x" "view-y" "weight" "width"
+    "x" "y" "zoom")
+  "Keyword arguments: the heads of the forms a form takes as its optional arguments,
+such as (view-x -8), (duration 0.8) and (fill teal).")
+
+(defface mtp-mode-argument-face
+  `((t :inherit ,(if (facep 'font-lock-property-name-face)
+                     'font-lock-property-name-face
+                   'font-lock-variable-name-face)))
+  "Face for mtp's keyword arguments, such as view-x in (view-x -8).")
+
 (defconst mtp-mode--indent
   '(;; Forms with a name: the name, then their positional arguments, then their body.
     ("scene" . 1) ("group" . 1) ("row" . 1) ("column" . 1) ("circle" . 1) ("rect" . 1) ("ellipse" . 1) ("line" . 1)
@@ -96,8 +112,10 @@ to `comment-column'."
 (defconst mtp-mode--font-lock
   `((,(concat "(\\(" (regexp-opt mtp-mode--heads) "\\)\\(?:|none\\)?_?\\_>")
      1 font-lock-keyword-face)
+    (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 'mtp-mode-argument-face)
     (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face))
-  "What mtp-mode highlights: the heads of forms, and none, true, false and self.")
+  "What mtp-mode highlights: the heads of forms, keyword arguments, and none, true, false and
+self.")
 
 (defvar mtp-mode-syntax-table
   (let ((table (make-syntax-table lisp-data-mode-syntax-table)))
