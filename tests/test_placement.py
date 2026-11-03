@@ -66,3 +66,39 @@ def test_the_compiled_file():
     d = json.loads(write(model("(scene s (circle c (r 1)) (point p (top-right c 0.5)))")))
     assert errors(d) == []
     assert d["objects"][d["names"]["p"]]["value"]["bound"][0] == "anchor"
+
+
+class TestRowsAndColumns:
+    # mtp-50n: a row or column is a group whose members after the first are each placed a gap
+    # after the box of the one before, lined up by an edge (the middle by default).
+    def test_a_row_is_a_group_with_a_layout(self):
+        m = model("(scene s (row r (gap 0.5) (align 'bottom') (circle a) (circle b)))")
+        r = m.get("r")
+        assert r.kind == "group"
+        assert r.data["layout"]["axis"] == "row"
+        assert r.data["layout"]["gap"].value == 0.5
+        assert r.data["layout"]["align"].value == "bottom"
+
+    def test_defaults(self):
+        layout = model("(scene s (column c (circle a) (circle b)))").get("c").data["layout"]
+        assert (layout["axis"], layout["gap"].value, layout["align"].value) == (
+            "column",
+            0,
+            "middle",
+        )
+
+    def test_align_by_axis(self):
+        error("(scene s (row r (align 'left') (circle a)))", "'left' is not one of")
+        error("(scene s (column c (align 'top') (circle a)))", "'top' is not one of")
+
+    def test_a_members_place_follows_the_ones_before(self):
+        m = model("(scene s (row r (circle a (r 1)) (circle b)) (point p b.pos))")
+        assert (m.id("a"), "r") in m.get("p").value.expr.deps
+
+    def test_no_text_yet(self):
+        error("(scene s (row r (circle a) (text t 'hi')))", "a text's box")
+
+    def test_the_compiled_file(self):
+        d = json.loads(write(model("(scene s (row r (gap 1) (circle a) (circle b)))")))
+        assert errors(d) == []
+        assert d["objects"][d["names"]["r"]]["layout"]["axis"] == "row"

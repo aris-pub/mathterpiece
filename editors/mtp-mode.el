@@ -9,7 +9,7 @@
 (require 'lisp-mode)
 
 (defconst mtp-mode--heads
-  '("scene" "group" "motif" "variant" "type" "func"
+  '("scene" "group" "row" "column" "motif" "variant" "type" "func"
     "circle" "rect" "ellipse" "line" "triangle" "text"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font"
@@ -21,7 +21,7 @@
 
 (defconst mtp-mode--indent
   '(;; Forms with a name: the name, then their positional arguments, then their body.
-    ("scene" . 1) ("group" . 1) ("circle" . 1) ("rect" . 1) ("ellipse" . 1) ("line" . 1)
+    ("scene" . 1) ("group" . 1) ("row" . 1) ("column" . 1) ("circle" . 1) ("rect" . 1) ("ellipse" . 1) ("line" . 1)
     ("triangle" . 1) ("text" . 2) ("font" . 1)
     ("real" . 2) ("int" . 2) ("ratio" . 2) ("complex" . 2) ("bool" . 2) ("string" . 2)
     ("point" . 2) ("list" . 2) ("transform" . 2) ("color" . 2)
@@ -37,7 +37,7 @@
 Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
 
 (defconst mtp-mode--named
-  '("scene" "group" "circle" "rect" "ellipse" "line" "triangle" "text" "font"
+  '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "text" "font"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform" "color"
     "type" "motif" "variant" "func" "transition" "animation"
     "canvas" "readout" "slider" "button" "play" "toggle")

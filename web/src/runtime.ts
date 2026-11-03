@@ -45,6 +45,8 @@ export class Runtime {
   private free = new Map<string, unknown>();
   private bound = new Map<string, Compiled>();
   private css_ = new Map<string, CompiledCss | null>();
+  // The rows and columns whose members are being measured, so are not moved to their places.
+  private unplaced = new Set<number>();
   private types = new Map<string, Type>();
   private cache = new Map<string, unknown>();
   private dependents = new Map<string, Set<string>>();
@@ -196,7 +198,54 @@ export class Runtime {
       steps.push([1, 0, 0, 1, tx!, ty!]);
     }
     if (this.has(id, "transform")) steps.push(this.value(id, "transform") as number[]);
+    // A member of a row or a column is moved last to its place after the members before it.
+    const row = this.parents[id];
+    if (row !== null && row !== undefined && this.objects[row]!.layout && !this.unplaced.has(row)) {
+      const [dx, dy] = this.placesIn(row).get(id) ?? [0, 0];
+      steps.push([1, 0, 0, 1, dx!, dy!]);
+    }
     return compose(...steps);
+  }
+
+  /**
+   * Where a row's or a column's members are moved to (mtp-50n): the first that exists stays
+   * where it is; each next one goes a gap after the box of the one before, along the row (or down
+   * the column), lined up with the first by the edge align names. A member that does not exist
+   * takes no space.
+   */
+  private placesIn(row: number): Map<number, number[]> {
+    const o = this.objects[row]!;
+    const layout = o.layout!;
+    const gap = this.evaluate(layout.gap) as number;
+    const align = this.evaluate(layout.align) as string;
+    const out = new Map<number, number[]>();
+    // The members' boxes as they would be with no place given yet.
+    this.unplaced.add(row);
+    try {
+      let first: number[] | null = null;
+      let last: number[] | null = null;
+      for (const m of o.members ?? []) {
+        const b = this.box(m, row);
+        if (b === null) continue;
+        if (first === null || last === null) {
+          first = last = b;
+          continue;
+        }
+        const across = (lo: number, hi: number) =>
+          align === "middle"
+            ? (first![lo]! + first![hi]!) / 2 - (b[lo]! + b[hi]!) / 2
+            : align === "bottom" || align === "left"
+              ? first![lo]! - b[lo]!
+              : first![hi]! - b[hi]!;
+        const dx: number = layout.axis === "row" ? last[2]! + gap - b[0]! : across(0, 2);
+        const dy: number = layout.axis === "row" ? across(1, 3) : last[1]! - gap - b[3]!;
+        out.set(m, [dx, dy]);
+        last = [b[0]! + dx, b[1]! + dy, b[2]! + dx, b[3]! + dy];
+      }
+    } finally {
+      this.unplaced.delete(row);
+    }
+    return out;
   }
 
   /** The transform from the frame a container's members live in to the scene's. */

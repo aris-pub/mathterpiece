@@ -1,0 +1,27 @@
+; mtp-50n: a row places each member after the box of the one before, a gap apart, lined up by
+; an edge; a member that does not exist takes no space; a column does the same downward, and a
+; member's own translate composes with its place.
+; expect pa [0,0]
+; expect pb [2.5,-0.5]
+; expect pc [5,0]
+; expect pd [8,0]
+; expect pf [0,-11.5]
+; write k 0
+; expect pc null
+; expect pd [5,0]
+(scene s
+  (real k 1)
+  (row r (gap 1) (align 'bottom')
+    (circle a (r 1))
+    (circle b (r 0.5))
+    (circle|none c (r 1))
+    (circle d (r 1)))
+  (exists-when c (> k 0))
+  (column cc (translate [0 -10])
+    (rect e (width 2) (height 2))
+    (rect f (width 4) (height 1) (translate [0.3 0])))
+  (point pa a.pos)
+  (point pb b.pos)
+  (point|none pc c.pos)
+  (point pd d.pos)
+  (point pf f.pos))

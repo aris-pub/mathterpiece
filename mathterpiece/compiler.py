@@ -103,6 +103,11 @@ SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type
 ANCHORS = frozenset(
     {"top", "bottom", "left", "right", "top-left", "top-right", "bottom-left", "bottom-right"}
 )
+# Groups that place their members one after another, and how their members may line up.
+LAYOUTS = {
+    "row": Refine(STRING, (("one-of", ("top", "middle", "bottom")),)),
+    "column": Refine(STRING, (("one-of", ("left", "middle", "right")),)),
+}
 # The components (reference.md, "Components"), declared at the top level only.
 COMPONENTS = {
     "canvas",
@@ -245,6 +250,16 @@ def compile_source(src: str) -> Model:
 
 def compile_model(forms: tuple[Form, ...]) -> Model:
     return _Compiler().run(forms)
+
+
+def _layout_axis(form: Form) -> str | None:
+    """row or column, when form declares one."""
+    head = form.items[0] if form.items else None
+    if isinstance(head, Bar):
+        head = head.items[0]
+    if isinstance(head, Name) and len(head.parts) == 1 and head.parts[0] in LAYOUTS:
+        return head.parts[0]
+    return None
 
 
 def _spreads(obj: Obj, attr: str) -> bool:
@@ -450,6 +465,9 @@ class _Compiler:
             head, absent = head.items[0], True
         if isinstance(head, Name) and len(head.parts) == 1:
             kind = head.parts[0]
+            # A row or a column is a group that places its members (mtp-50n).
+            if kind in LAYOUTS:
+                return "group", absent
             if kind in SHAPE_ATTRS or kind in self.model.motifs or kind in self.model.variants:
                 return kind, absent
         return None
@@ -2310,7 +2328,10 @@ class _Compiler:
         t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
         obj = Obj(kind, name, t, parent=parent, pos=pos)
         i = self.add(obj)
+        axis = _layout_axis(form)
         takes = specs.keys() | {"defaults"} if kind == "group" else specs.keys()
+        if axis is not None:
+            takes = takes | {"gap", "align"}
         given: dict[str, tuple[Node, dict]] = {}
         defaults: dict[str, tuple[Node, dict]] = {}
         members: list[tuple[Node, dict]] = []
@@ -2384,6 +2405,8 @@ class _Compiler:
         try:
             for f in pre:
                 f(obj)
+            if axis is not None:
+                obj.data["layout"] = self.layout(axis, given, form.pos, scope)
             self.shape_attrs(obj, given, absent, form.pos, scope, specs)
         finally:
             self.frame = saved
@@ -2392,7 +2415,28 @@ class _Compiler:
             self.shape(item, i, inner, down)
         for item, inner in existence:
             self.exists_when(item, inner)
+        if axis is not None:
+            self.no_text_in(i, form.pos)
         return i
+
+    def layout(self, axis: str, given: dict, pos: Pos, scope: dict) -> dict:
+        """A row's or a column's gap between its members' boxes, and the edge they line up by."""
+        gap, align = given.pop("gap", (None, scope)), given.pop("align", (None, scope))
+        return {
+            "axis": axis,
+            "gap": self.attribute(REAL, gap[0], pos, "gap", 0, gap[1]),
+            "align": self.attribute(LAYOUTS[axis], align[0], pos, "align", "middle", align[1]),
+        }
+
+    def no_text_in(self, i: int, pos: Pos) -> None:
+        for m in self.model.objects[i].members:
+            if self.model.objects[m].kind == "text":
+                raise CompileError(
+                    "a text's box is not known when compiling, so a row or a column cannot hold"
+                    " one yet",
+                    pos,
+                )
+            self.no_text_in(m, pos)
 
     def anchor(self, node: Form, side: str, scope: dict) -> Expr:
         """(side shape gap?): a point on the shape's box, as the reading expression sees it, the
@@ -2870,6 +2914,17 @@ class _Compiler:
                 r = e if r is None else (max(r[0], e[0]), min(r[1], e[1]))
         return Expr("read", t, (i, attr, self.frame), deps, r)
 
+    def layout_deps(self, row: int) -> set:
+        obj = self.model.objects[row]
+        deps: set = set()
+        for m in obj.members:
+            member = self.model.objects[m]
+            deps |= {(m, a) for a in member.attrs}
+            if member.kind in ("group", "instance"):
+                deps |= self.layout_deps(m)
+        layout = obj.data["layout"]
+        return deps | layout["gap"].deps | layout["align"].deps
+
     def moves(self, i: int) -> frozenset:
         """The translate and transform attributes a read of shape i converts through: its own and
         its containers', up to the one the reading expression sits in (reference.md,
@@ -2883,6 +2938,10 @@ class _Compiler:
         j = i
         while j is not None and j != self.scene and j not in shared:
             out |= {(j, "translate"), (j, "transform")}
+            # In a row or a column, where a member is depends on the members before it.
+            row = self.model.objects[j].parent
+            if row is not None and "layout" in self.model.objects[row].data:
+                out |= self.layout_deps(row)
             # An instance's x and y move its frame, before its translate.
             if self.model.objects[j].kind == "instance":
                 out |= {(j, "x"), (j, "y")}

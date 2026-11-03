@@ -1776,6 +1776,29 @@
               },
               "of": {
                 "$ref": "#/$defs/name"
+              },
+              "layout": {
+                "type": "object",
+                "required": [
+                  "axis",
+                  "gap",
+                  "align"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "axis": {
+                    "enum": [
+                      "row",
+                      "column"
+                    ]
+                  },
+                  "gap": {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  "align": {
+                    "$ref": "#/$defs/attribute"
+                  }
+                }
               }
             },
             "additionalProperties": false

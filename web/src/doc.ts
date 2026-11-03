@@ -69,6 +69,8 @@ export interface Obj {
   // on-view: the canvas it listens to; play: "load", or the view or control it waits for.
   view?: number;
   autoplay?: "load" | number | null;
+  // A row or a column: how it places its members (mtp-50n).
+  layout?: { axis: "row" | "column"; gap: Attribute; align: Attribute } | null;
   when?: Attribute | null;
   // canvases: what each shows, in drawing order
   shows?: Shown[];

@@ -32,9 +32,10 @@
                   (from (depth 1)) (to (depth 2))))
       ; Level 3: the middles of the two halves.
       (bracket_ (left 115) (right 235) (from (depth 2)) (to (depth 3))))
-    (group_ (defaults (fill fg))
+    ; The points, 30 apart: a row with 20 between circles 10 across.
+    (row_ (defaults (fill fg)) (translate [(point-x 0) top]) (gap 20)
       (foreach i 8
-        (circle_ (pos [(point-x i) top]) (r 5)))))
+        (circle_ (r 5)))))
 
   ; The depth axis on the left, and the level names on the right.
   (group axis (defaults (stroke muted) (stroke-width 1) (fill muted) (font note))

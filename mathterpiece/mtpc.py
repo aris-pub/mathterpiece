@@ -222,6 +222,13 @@ class Writer:
         elif kind in ("scene", "group"):
             d["members"] = list(o.members)
             d["attrs"] = attrs
+            if "layout" in o.data:
+                layout = o.data["layout"]
+                d["layout"] = {
+                    "axis": layout["axis"],
+                    "gap": self.attribute(layout["gap"]),
+                    "align": self.attribute(layout["align"]),
+                }
         elif kind == "instance":
             d["of"] = o.of
             d["members"] = list(o.members)

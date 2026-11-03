@@ -153,13 +153,14 @@
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
       (stroke muted) (stroke-width 1) (stroke-opacity 0.8))
     ; Level i + 1.
-    (group bars (defaults (fill (if all every one)))
+    ; The bars stand on the axis, 41.2 apart. A bar too short to see is transparent: in a row,
+    ; one that did not exist would let the bars after it slide out of their levels.
+    (row bars (defaults (fill (if all every one))) (translate [74.6 -134]) (gap 14.832)
+      (align 'bottom')
       (foreach i 10
-        ; A bar too short to see does not exist.
         (let ((height (max 0.5 (* 126 shown[i]))))
-          (rect|none (name $'bar-{i}') (pos [(+ 54 (* i 41.2) 20.6) (+ -134 (/ height 2))])
-            (width 26.368) (height height) (rx 2) (ry 2))
-          (exists-when (name $'bar-{i}') (>= shown[i] 0.002)))))
+          (rect_ (pos [0 (/ height 2)]) (width 26.368) (height height) (rx 2) (ry 2)
+            (opacity (if (< shown[i] 0.002) 0 1))))))
     (group level-names (defaults (fill muted))
       (foreach i 10
         (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)

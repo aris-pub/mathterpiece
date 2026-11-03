@@ -26,15 +26,21 @@
 (motif rows ((int a 0 (const)) (int b 1 (const)) (real left 250) (color mark '#1a6f66'))
   (foreach q 5
     (text_ names[q] (pos [(+ left 16 (* 32 q)) -60]) (halign 'middle') (font note) (fill muted)))
+  ; The cells: a column of two rows of five, edge to edge.
+  (column_ (translate [(+ left 16) -83])
+    (foreach row 2
+      (row_
+        (foreach q 5
+          (rect (name $'cell-{row}-{q}') (width 32) (height 26)
+            (fill (if (= (dist-in-star a q) (dist-in-star b q)) none mark)) (fill-opacity 0.18)
+            (stroke (if (= (dist-in-star a q) (dist-in-star b q)) rule mark)) (stroke-width 1))))))
+  ; Each row's name, and each cell's number, a little below its middle.
   (foreach row 2
     (text_ $'F({names[(if (= row 0) a b)]})' (pos [(- left 8) (- -88 (* 26 row))]) (halign 'end')
       (font label) (fill fg))
     (foreach q 5
-      (rect_ (pos [(+ left 16 (* 32 q)) (- -83 (* 26 row))]) (width 32) (height 26)
-        (fill (if (= (dist-in-star a q) (dist-in-star b q)) none mark)) (fill-opacity 0.18)
-        (stroke (if (= (dist-in-star a q) (dist-in-star b q)) rule mark)) (stroke-width 1))
       (text_ $'{(dist-in-star (if (= row 0) a b) q)}'
-        (pos [(+ left 16 (* 32 q)) (- -88 (* 26 row))]) (halign 'middle') (font value)
+        (pos (+ (. (name $'cell-{row}-{q}') pos) [0 -5])) (halign 'middle') (font value)
         (fill fg)))))
 
 (scene star
