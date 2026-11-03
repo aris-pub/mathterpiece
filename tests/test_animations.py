@@ -86,11 +86,23 @@ class TestSteps:
         assert t.kind == "transition" and t.attrs["to"].value == 5
 
     def test_an_animation_holds_only_moves_at_once_and_in_order(self):
-        error(f"{K} (animation a (k (to 5) (duration 1)))", "holds moves, at-once and in-order")
+        error(
+            f"{K} (animation a (k (to 5) (duration 1)))", "holds moves, waits, at-once and in-order"
+        )
 
     def test_a_move_with_no_target_only_waits(self):
         assert steps(f"{K} (animation a (move none (duration 2)))") == ("wait", 2)
         error(f"{K} (animation a (move none (to 1) (duration 2)))", "takes only a duration")
+
+    def test_wait_is_a_move_with_no_target(self):
+        # The author, 2026-11-03: (wait t) stands for (move none (duration t)).
+        assert steps(f"{K} (animation a (wait 2))") == ("wait", 2)
+        assert steps(f"{K} (animation a (defaults (duration 3)) (wait))") == ("wait", 3)
+        assert steps(f"{K} (animation a (move k (to 5) (duration 1)) (wait 0.5))") == (
+            steps(f"{K} (animation a (move k (to 5) (duration 1)) (move none (duration 0.5)))")
+        )
+        error(f"{K} (animation a (wait))", "this wait needs a duration")
+        error(f"{K} (animation a (wait 1 2))", r"wait is \(wait seconds\)")
 
     def test_a_named_transition_with_a_target_is_a_move(self):
         s = steps(f"{K} (transition grow k (to 5) (duration 1)) (animation a grow)")

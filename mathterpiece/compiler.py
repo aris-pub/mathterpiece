@@ -1577,11 +1577,27 @@ class _Compiler:
                 out.append(
                     self.played(self.transition(item, scope, top=False), duration, ease, item.pos)
                 )
+            elif head == "wait":
+                # (wait t) stands for (move none (duration t)) (the author, 2026-11-03).
+                assert isinstance(item, Form)
+                if len(item.items) > 2:
+                    raise CompileError(
+                        "wait is (wait seconds), or (wait) for the default", item.pos
+                    )
+                d = self.seconds(item.items[1], scope) if len(item.items) == 2 else duration
+                if d is None:
+                    raise CompileError(
+                        "this wait needs a duration (or (defaults (duration …)) around it)",
+                        item.pos,
+                    )
+                out.append(("wait", d))
             elif head in ("at-once", "in-order"):
                 assert isinstance(item, Form)
                 out.append((head, *self.steps(item.items[1:], duration, ease, scope)))
             else:
-                raise CompileError("an animation holds moves, at-once and in-order", item.pos)
+                raise CompileError(
+                    "an animation holds moves, waits, at-once and in-order", item.pos
+                )
         return out
 
     def played(self, tid: int, duration, ease, pos: Pos) -> tuple:

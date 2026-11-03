@@ -181,7 +181,7 @@ Each form decides whether it has a name, which positional arguments it takes and
 | `(func double (real x) (* 2 x))` | `double` | `(real x)`, `(* 2 x)` | none | none |
 | `(motif dial ((real t 0.5)) (circle face …) …)` | `dial` | its parameters, `((real t 0.5))` | none | member declarations |
 | `(transition slide none (to 5) (duration 1))` | `slide` | the target, here `none` | `(to 5)`, `(duration 1)` | none |
-| `(animation grow (defaults (duration 1)) (move theta (like slide)) (move none (duration 0.5)))` | `grow` | none | `(defaults (duration 1))` | a move of `theta` along `slide`, then one that waits half a second |
+| `(animation grow (defaults (duration 1)) (move theta (like slide)) (wait 0.5))` | `grow` | none | `(defaults (duration 1))` | a move of `theta` along `slide`, then a wait of half a second |
 | `(slider spin (move theta (from 0) (to 360)) (label 'angle'))` | `spin` | the move | `(label 'angle')` | none |
 | `(canvas v (view-x -5) a b (when show c))` | `v` | none | `(view-x -5)` | `a`, `b`, `(when show c)` |
 | `(on-drag p theta)` | none | `p`, `theta` | none | none |

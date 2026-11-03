@@ -267,19 +267,19 @@
   (at-once (defaults (duration 0)) (move L (to 4)) (move Lp (to 10)) (move g (to 0)))
   (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from 4.5) (to bests[0][1])))
-  (move none (duration 1.7875))
+  (wait 1.7875)
   (at-once (defaults (duration 0)) (move L (to 6)) (move Lp (to 4)) (move g (to 0)))
   (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from bests[0][1]) (to bests[1][1])))
-  (move none (duration 1.7875))
+  (wait 1.7875)
   (at-once (defaults (duration 0)) (move L (to 8)) (move Lp (to 6)) (move g (to 0)))
   (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from bests[1][1]) (to bests[2][1])))
-  (move none (duration 1.7875))
+  (wait 1.7875)
   (at-once (defaults (duration 0)) (move L (to 10)) (move Lp (to 8)) (move g (to 0)))
   (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from bests[2][1]) (to bests[3][1])))
-  (move none (duration 1.7875)))
+  (wait 1.7875))
 
 (animation all-densities
   (at-once (defaults (duration 0))
@@ -288,23 +288,23 @@
   (at-once
     (move mix (to 1) (duration 2.16) (ease quad))
     (in-order
-      (move none (duration 3.6))
+      (wait 3.6)
       (at-once (defaults (duration 0)) (move L (to 4)) (move Lp (to 10)) (move g (to 0))
         (move t (to bests[0][1])))
       (move g (to 1) (duration 0.735) (ease quad))
-      (move none (duration 1.365))
+      (wait 1.365)
       (at-once (defaults (duration 0)) (move L (to 6)) (move Lp (to 4)) (move g (to 0))
         (move t (to bests[1][1])))
       (move g (to 1) (duration 0.735) (ease quad))
-      (move none (duration 1.365))
+      (wait 1.365)
       (at-once (defaults (duration 0)) (move L (to 8)) (move Lp (to 6)) (move g (to 0))
         (move t (to bests[2][1])))
       (move g (to 1) (duration 0.735) (ease quad))
-      (move none (duration 1.365))
+      (wait 1.365)
       (at-once (defaults (duration 0)) (move L (to 10)) (move Lp (to 8)) (move g (to 0))
         (move t (to bests[3][1])))
       (move g (to 1) (duration 0.735) (ease quad))
-      (move none (duration 1.365)))))
+      (wait 1.365))))
 
 ; Leaving the tour keeps the state, snapped to one density or all, and finishes any change of
 ; the number of levels.
@@ -317,8 +317,8 @@
 ; enters Explore after step 3.
 (play tour (buttons true)
   (animation
-    (in-order one-density (move none (duration 8)))
-    (in-order floor-rises (move none (duration 8)))
+    (in-order one-density (wait 8))
+    (in-order floor-rises (wait 8))
     (in-order all-densities to-explore)))
 
 (button explore (animation to-explore) (label 'Explore'))

@@ -56,9 +56,9 @@
 ; Each stop but the last rests a moment before the next.
 (play tour (label 'play the tour') (buttons true)
   (animation
-    (in-order cardioid (move none (duration 1.2)))
-    (in-order nephroid (move none (duration 1.2)))
-    (in-order four-cusps (move none (duration 1.2)))
+    (in-order cardioid (wait 1.2))
+    (in-order nephroid (wait 1.2))
+    (in-order four-cusps (wait 1.2))
     eight-cusps))
 
 (slider times (move m (from 1) (to 12)) (label 'multiplier m'))

@@ -67,9 +67,9 @@
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
   (animation
-    (in-order quarter (move none (duration 2.5)))
-    (in-order third (move none (duration 2.5)))
-    (in-order two-fifths (move none (duration 2.5)))
+    (in-order quarter (wait 2.5))
+    (in-order third (wait 2.5))
+    (in-order two-fifths (wait 2.5))
     golden))
 
 (canvas view garden)

@@ -13,7 +13,7 @@
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "text"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font"
-    "transition" "move" "animation" "at-once" "in-order"
+    "transition" "move" "wait" "animation" "at-once" "in-order"
     "canvas" "readout" "slider" "button" "play" "toggle" "on-drag" "on-click"
     "on-release" "on-dragend" "on-view" "defaults" "clip" "loop" "autoplay" "exists-when"
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
