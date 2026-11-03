@@ -40,7 +40,7 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 |---|---|---|---|---|
 | `(func name params body)`, `(func[T] name params body)` | required | the parameter list; the body, one expression | none | none |
 
-`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself.
+`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself. A function may take the name of a built-in function, such as `sind` or `map`: from its declaration on, that name calls the author's function, and above it, the built-in.
 
     (func[point] ahead ((real d)) [d 0])                     ; [d 0] is a point
     (func[(real (>= 0) (<= 1))] nearness ((real x)) (/ (+ (sind x) 1) 2))
@@ -273,7 +273,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `floor` `ceil` | real | int | never |
 | `exp` | real | real | a result too large for a real |
 | `log` | real, and optionally a base (e if left out) | real | input 0 or below; base 0 or below, or 1 |
-| `min` `max` | reals, any count | real | never |
+| `min` `max` | reals and lists of reals, any count: a list counts as its items, so `(max g.r)` is the largest radius in a group `g` | real | no items at all, as from a list that may be empty |
 | `lerp` | `a`, `b`, `t` (reals or points) | the same type | never |
 | `rand` | none (0 to 1), or `lo hi` | real, drawn once per page load and never again; each copy of a `rand` (in each `foreach` copy, each motif instance) draws its own; a `rand` inside a function is a compile error for now | never |
 
