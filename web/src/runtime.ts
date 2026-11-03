@@ -9,7 +9,18 @@ import { format, pyStr } from "./format.ts";
 
 const LIMIT = 1e150;
 // What an instance gives its members and reads from them, as a group does.
-const SPREAD = new Set(["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity"]);
+const SPREAD = new Set([
+  "fill",
+  "stroke",
+  "stroke-width",
+  "opacity",
+  "fill-opacity",
+  "stroke-opacity",
+  "dash",
+  "dash-offset",
+  "line-cap",
+  "line-join",
+]);
 const SHAPES = new Set(["circle", "rect", "ellipse", "line", "triangle", "text", "group", "instance"]);
 const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
 // Attributes that are points in their shape's frame, which a read converts.

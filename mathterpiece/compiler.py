@@ -138,6 +138,8 @@ NON_NEGATIVE = Refine(REAL, ((">=", 0),))
 PAINT = Maybe(COLOR)
 HALIGN = Refine(STRING, (("one-of", ("start", "middle", "end")),))
 VALIGN = Refine(STRING, (("one-of", ("top", "middle", "baseline", "bottom")),))
+LINE_CAP = Refine(STRING, (("one-of", ("butt", "round", "square")),))
+LINE_JOIN = Refine(STRING, (("one-of", ("miter", "round", "bevel")),))
 
 
 @dataclass(frozen=True)
@@ -157,7 +159,15 @@ PAINTED = {
     "opacity": Argument(UNIT, 1),
     "fill-opacity": Argument(UNIT, 1),
     "stroke-opacity": Argument(UNIT, 1),
+    # Written together as (dash [lengths…] offset), the offset optional (mtp-5of).
+    "dash": Argument(ListT(NON_NEGATIVE), []),
+    "dash-offset": Argument(REAL, 0),
+    "line-cap": Argument(LINE_CAP, "butt"),
+    "line-join": Argument(LINE_JOIN, "miter"),
 }
+# What only a stroke uses, which a text takes from no group, since a stroke would outline its
+# letters.
+STROKE_ONLY = frozenset({"stroke", "stroke-width", "dash", "dash-offset", "line-cap", "line-join"})
 POSITIONED = {"x": Argument(REAL, 0), "y": Argument(REAL, 0)}
 # The attributes each built-in shape takes, with their defaults (reference.md).
 SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
@@ -2379,6 +2389,12 @@ class _Compiler:
                     " members",
                     item.pos,
                 )
+            if head in ("dash", "dash-offset") and "dash" in takes:
+                for attr, node in _dash(item).items():
+                    if attr in given:
+                        raise CompileError(f"'{head}' is given twice", item.pos)
+                    given[attr] = (node, inner)
+                continue
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
                     f"expected an argument such as (r 1), got {_shown(item)}", item.pos
@@ -2401,7 +2417,7 @@ class _Compiler:
         else:
             for attr, (node, inner) in down.items():
                 # A stroke would outline a text's letters, so a text takes none from a group.
-                if kind == "text" and attr in ("stroke", "stroke-width"):
+                if kind == "text" and attr in STROKE_ONLY:
                     continue
                 # A text's settings are for the texts only.
                 if attr in TEXT_DEFAULTS and attr not in specs:
@@ -2526,6 +2542,12 @@ class _Compiler:
                     "a container's defaults are not x, y or pos: move it with (translate …)",
                     item.pos,
                 )
+            if head in ("dash", "dash-offset"):
+                for attr, node in _dash(item).items():
+                    if attr in defaults:
+                        raise CompileError(f"'{head}' is given twice", item.pos)
+                    defaults[attr] = (node, scope)
+                continue
             if head not in GROUP_DEFAULTS or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
                     f"a container's defaults are fill, stroke and the like, and a text's settings,"
@@ -3654,6 +3676,24 @@ def _overlaps(attr: str, given: dict) -> bool:
 def _dot(node: Node, attr: str) -> Form:
     """(. node attr), built by the compiler."""
     return Form((Name((".",), node.pos), node, Name((attr,), node.pos)), node.pos)
+
+
+def _dash(item: Node) -> dict[str, Node]:
+    """(dash [lengths…] offset) as its two attributes."""
+    if _head(item) == "dash-offset":
+        raise CompileError(
+            "the offset is dash's second argument, after the lengths: (dash [4 2] 1)", item.pos
+        )
+    assert isinstance(item, Form)
+    if len(item.items) not in (2, 3):
+        raise CompileError(
+            f"dash takes a list of lengths and an offset, such as (dash [4 2] 1), got"
+            f" {_shown(item)}",
+            item.pos,
+        )
+    # A dash given with no offset has offset 0, not one from a container around it.
+    offset = item.items[2] if len(item.items) == 3 else IntLit(0, item.pos)
+    return {"dash": item.items[1], "dash-offset": offset}
 
 
 def _coordinates(attr: str, node: Node, scope: dict) -> dict:

@@ -149,9 +149,8 @@
       (text_ '0' (pos [48 -138]))
       (text_ '0.5' (pos [48 -75]))
       (text_ '1' (pos [48 -12])))
-    ; Dashed in the original: mtp has no dash pattern for a stroke.
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
-      (stroke muted) (stroke-width 1) (stroke-opacity 0.8))
+      (stroke muted) (stroke-width 1) (stroke-opacity 0.8) (dash [4 3]))
     ; Level i + 1.
     ; The bars stand on the axis, 41.2 apart. A bar too short to see is transparent: in a row,
     ; one that did not exist would let the bars after it slide out of their levels.
@@ -170,18 +169,17 @@
                  ((< i L) g)
                  (else (- 1 g)))))))
     (line_ (from [54 -134]) (to [466 -134]) (stroke muted) (stroke-width 1))
-    ; Round line ends in the original: mtp has no line cap.
-    (line_ (from [54 -168]) (to [466 -168]) (stroke rule) (stroke-width 3))
+    (line_ (from [54 -168]) (to [466 -168]) (stroke rule) (stroke-width 3) (line-cap 'round'))
     (text_ 'level' (pos [260 -194]) (fill fg))
     (text_ 'relative stretch' (fill fg)
       (transform (transform (rotate 90) (translate 13 -71)))))
 
-  ; The end of the hierarchy, and its handle, with a guide down to it. Dashed in the original.
+  ; The end of the hierarchy, and its handle, with a dashed guide down to it.
   (handle n-handle (x (+ 54 (* lv 41.2))) (y -168)
           (edge (if n-on (if all every one) muted)) (weight (if n-on 1.5 1)))
   (line n-guide (from [(+ 54 (* lv 41.2)) -8]) (to n-handle.tip.pos)
     (stroke (if n-on (if all every one) muted)) (stroke-width 1)
-    (stroke-opacity (if n-on 0.7 0.45)))
+    (stroke-opacity (if n-on 0.7 0.45)) (dash [4 3]))
   ; What the reader grabs: an area wider than the handle, as wide as a level.
   (rect n-grab (pos [(+ 54 (* L 41.2)) -168]) (width 41.2) (height 24) (fill bg)
     (opacity 0))
@@ -240,7 +238,7 @@
       (pos [(+ 54 (* (/ (- best-now[1] 0.5) lv) 412)) (+ (cy best-now[0]) 12)])
       (halign 'middle') (font strong) (fill one))
     (exists-when best-label floor)
-    (line_ (from [54 -166]) (to [466 -166]) (stroke rule) (stroke-width 3)))
+    (line_ (from [54 -166]) (to [466 -166]) (stroke rule) (stroke-width 3) (line-cap 'round')))
 
   ; The current density: a marker on the curve, a guide down to the track, and its value, which
   ; gives way to the best one's name near it. With all densities, only the handle is left, grey.

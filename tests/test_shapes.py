@@ -300,3 +300,63 @@ class TestSceneTransform:
 
     def test_by_default_none(self):
         assert model("(scene s (circle c))").get("s").attrs["transform"].value == (1, 0, 0, 1, 0, 0)
+
+
+class TestDash:
+    # mtp-5of, the author 2026-11-03: (dash [lengths…] offset), the lengths in screen pixels like
+    # stroke-width, the offset optional.
+    def test_solid_by_default(self):
+        a = model("(scene s (circle c))").get("c").attrs
+        assert a["dash"].value == [] and a["dash-offset"].value == 0
+
+    def test_lengths_and_offset(self):
+        a = model("(scene s (line l (dash [4 2 1 2] 3)))").get("l").attrs
+        assert a["dash"].value == [4, 2, 1, 2] and a["dash-offset"].value == 3
+
+    def test_the_offset_is_optional(self):
+        a = model("(scene s (line l (dash [4 2])))").get("l").attrs
+        assert a["dash"].value == [4, 2] and a["dash-offset"].value == 0
+
+    def test_the_offset_may_follow_a_variable(self):
+        m = model("(real phase 0) (scene s (line l (dash [4 2] phase)))")
+        assert m.get("l").attrs["dash-offset"].bound
+
+    def test_lengths_are_not_negative(self):
+        error("(scene s (line l (dash [4 -2])))", "breaks")
+
+    def test_lengths_come_in_a_list(self):
+        error("(scene s (line l (dash 4 2)))", "expected list")
+        error("(scene s (line l (dash [4 2] 1 2)))", "a list of lengths and an offset")
+        error("(scene s (line l (dash-offset 1)))", "the offset is dash's second argument")
+
+    def test_a_container_gives_it_to_its_members(self):
+        m = model("(scene s (group g (defaults (dash [4 2] 1)) (line a) (line b (dash [1 1]))))")
+        a, b = m.get("a").attrs, m.get("b").attrs
+        assert a["dash"].value == [4, 2] and a["dash-offset"].value == 1
+        assert b["dash"].value == [1, 1] and b["dash-offset"].value == 0
+
+    def test_a_text_takes_none_from_a_container(self):
+        m = model("(scene s (group g (defaults (dash [4 2])) (text t 'hi')))")
+        assert m.get("t").attrs["dash"].value == []
+
+    def test_given_twice(self):
+        error("(scene s (line l (dash [4 2]) (dash [1 1])))", "given twice")
+
+
+class TestLineEnds:
+    # mtp-9d5, the author 2026-11-03: line-cap and line-join, with SVG's values.
+    def test_defaults_are_svgs(self):
+        a = model("(scene s (line l))").get("l").attrs
+        assert a["line-cap"].value == "butt" and a["line-join"].value == "miter"
+
+    def test_given(self):
+        a = model("(scene s (triangle t (line-cap 'round') (line-join 'bevel')))").get("t").attrs
+        assert a["line-cap"].value == "round" and a["line-join"].value == "bevel"
+
+    def test_only_svgs_values(self):
+        error("(scene s (line l (line-cap 'pointy')))", "not one of")
+        error("(scene s (line l (line-join 'square')))", "not one of")
+
+    def test_a_container_gives_them_to_its_members(self):
+        m = model("(scene s (group g (defaults (line-cap 'round')) (line a)))")
+        assert m.get("a").attrs["line-cap"].value == "round"

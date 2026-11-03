@@ -227,7 +227,12 @@ function paint(rt: Runtime, i: number, el: Element): void {
   el.setAttribute("stroke-opacity", String(rt.value(i, "stroke-opacity")));
   el.setAttribute("opacity", String(rt.value(i, "opacity")));
   el.setAttribute("stroke-width", String(rt.value(i, "stroke-width")));
-  // Stroke widths are in screen pixels, whatever the view box.
+  const dash = rt.value(i, "dash") as number[];
+  el.setAttribute("stroke-dasharray", dash.length ? dash.join(" ") : "none");
+  el.setAttribute("stroke-dashoffset", String(rt.value(i, "dash-offset")));
+  el.setAttribute("stroke-linecap", String(rt.value(i, "line-cap")));
+  el.setAttribute("stroke-linejoin", String(rt.value(i, "line-join")));
+  // Stroke widths and dashes are in screen pixels, whatever the view box.
   el.setAttribute("vector-effect", "non-scaling-stroke");
 }
 

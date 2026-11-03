@@ -4,6 +4,7 @@
   (circle c (x 1) (y 2) (r 3) (fill 'red') (stroke 'blue') (stroke-width 2))
   (group g (translate [5 0]) (rect b (width 2) (height 4) (fill ink)))
   (text t 'hi' (halign 'middle'))
+  (line dashed (stroke 'black') (dash [4 2 1 2] 3) (line-cap 'round') (line-join 'bevel'))
   (circle|none gone (r (/ 1 k)))
   (bool shown true)
   (circle|none maybe (r 1))

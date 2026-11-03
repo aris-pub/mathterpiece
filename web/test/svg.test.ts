@@ -40,6 +40,18 @@ describe("drawing", () => {
     expect(c.getAttribute("vector-effect")).toBe("non-scaling-stroke");
   });
 
+  it("draws dashes and line ends as SVG does, solid by default", () => {
+    const [rt, svg] = drawn();
+    const l = shape(svg, rt, "dashed");
+    expect(l.getAttribute("stroke-dasharray")).toBe("4 2 1 2");
+    expect(l.getAttribute("stroke-dashoffset")).toBe("3");
+    expect(l.getAttribute("stroke-linecap")).toBe("round");
+    expect(l.getAttribute("stroke-linejoin")).toBe("bevel");
+    const c = shape(svg, rt, "c");
+    expect(c.getAttribute("stroke-dasharray")).toBe("none");
+    expect(c.getAttribute("stroke-linecap")).toBe("butt");
+  });
+
   it("draws a group's members inside its frame, and a rect around its center", () => {
     const [rt, svg] = drawn();
     const b = shape(svg, rt, "b");
