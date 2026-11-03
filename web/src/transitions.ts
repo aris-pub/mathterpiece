@@ -31,11 +31,14 @@ export type Moves = "number" | "point" | "color" | "jump";
 
 /** The value u of the way from a to b along a straight line. */
 export function along(from: unknown, to: unknown, u: number, moves: Moves): unknown {
-  if (u >= 1) return to;
+  // Exactly the end at 1, whatever rounding would give. A number or a point goes past its ends
+  // when the ease does, as a spring overshoots; a color or a jump stops at them.
+  if (u === 1) return to;
   if (moves === "jump") return u >= 1 ? to : from;
   if (moves === "color") {
+    if (u >= 1) return to;
     // none is mixed as transparent (type-system.md 5.c).
-    return mix((from as string | null) ?? "#00000000", (to as string | null) ?? "#00000000", u);
+    return mix((from as string | null) ?? "#00000000", (to as string | null) ?? "#00000000", Math.max(u, 0));
   }
   if (moves === "point") return (from as number[]).map((x, i) => x + ((to as number[])[i]! - x) * u);
   return (from as number) + ((to as number) - (from as number)) * u;
