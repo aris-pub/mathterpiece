@@ -971,9 +971,14 @@ class _Compiler:
         return self.apply_builtin(head, b, args, deps, maybe, pos)
 
     def range_list(self, node: Form, given, scope: dict) -> Expr:
-        """(range start stop (gap g)) and (range start stop (num n)) (mtp-966). Known when
-        compiling, the list itself; otherwise its length is known only while drawing."""
-        form = "range is (range start stop (gap g)) or (range start stop (num n))"
+        """(range n), (range start stop (gap g)) and (range start stop (num n)) (mtp-966).
+        Known when compiling, the list itself; otherwise its length is known only while
+        drawing."""
+        form = "range is (range n), (range start stop (gap g)) or (range start stop (num n))"
+        if len(given) == 1 and _head(given[0]) not in ("gap", "num"):
+            # (range n) stands for (range 0 n (gap 1)) (the author, 2026-11-03).
+            pos = given[0].pos
+            given = (IntLit(0, pos), given[0], Form((Name(("gap",), pos), IntLit(1, pos)), pos))
         by = _head(given[2]) if len(given) == 3 else None
         if by not in ("gap", "num") or not isinstance(given[2], Form) or len(given[2].items) != 2:
             raise CompileError(form, node.pos)
@@ -1200,9 +1205,7 @@ class _Compiler:
         coll = self.expr(args[0], None, scope)
         if head == "map" and _core(coll.type) == INT:
             # (map n f) stands for (map (range 0 n (gap 1)) f) (the author, 2026-11-03).
-            zero, one = IntLit(0, node.pos), IntLit(1, node.pos)
-            gap = Form((Name(("gap",), node.pos), one), node.pos)
-            coll = self.range_list(node, (zero, args[0], gap), scope)
+            coll = self.range_list(node, (args[0],), scope)
         item, n = self.collection_items(coll, head, node.pos)
         rest = args[1:]
         if head in ("sum", "count", "reduce", "any", "all") and _may_be_none(item):

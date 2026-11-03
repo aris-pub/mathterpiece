@@ -3,9 +3,11 @@
 
 import json
 
+import pytest
 from helpers import bound, doc, error, model, typ, value
 from mtpc_check import errors
 
+from mathterpiece.builtins import Undefined, range_by_count, range_by_gap
 from mathterpiece.compiler import _core, _type_range
 from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe, Refine
 
@@ -220,7 +222,7 @@ class TestRange:
             "(range 0 (gap 1))",
             "(range 0 5 (gap 1) (num 2))",
         ):
-            error(f"(list v {src})", r"range is \(range start stop \(gap g\)\)")
+            error(f"(list v {src})", r"range is \(range n\), \(range start stop \(gap g\)\)")
 
     def test_map_over_a_count(self):
         assert value("(list v (map 4 (fn (int i) (* i i))))") == [0, 1, 4, 9]
@@ -235,3 +237,92 @@ class TestRange:
         d = doc("(int n 3 (>= 0) (<= 10)) (list v (range 0 n (gap 1)))")
         assert errors(d) == []
         assert json.dumps(d).count('"range"') == 1
+
+
+class TestRangeOfACount:
+    # The author, 2026-11-03: (range n) stands for (range 0 n (gap 1)).
+    def test_known(self):
+        assert value("(list v (range 5))") == [0, 1, 2, 3, 4]
+        assert value("(list[int] v (range 0))") == []
+        assert value("(list[int] v (range -3))") == []
+        assert _core(typ("(list v (range 5))").base.item) == INT
+
+    def test_a_real_count(self):
+        assert value("(list v (range 2.5))") == [0, 1, 2]
+        assert _core(typ("(list v (range 2.5))").base.item) == REAL
+
+    def test_while_drawing(self):
+        e = bound("(int n 3 (>= 0) (<= 10)) (list v (range n))")
+        assert e.op == "range" and _core(e.type.item) == INT and not isinstance(e.type, Maybe)
+
+    def test_the_forms_it_takes(self):
+        for src in ("(range)", "(range 1 2)", "(range 1 (gap 1))", "(range (gap 1))"):
+            error(f"(list v {src})", r"range is \(range n\), \(range start stop \(gap g\)\)")
+
+
+class TestRangeEdges:
+    def test_floating_gaps_stop_before_stop(self):
+        assert value("(list v (range 0 0.3 (gap 0.1)))") == pytest.approx([0, 0.1, 0.2])
+        assert len(value("(list v (range 0 1 (gap 0.1)))")) == 10
+        assert len(value("(list v (range 0 1 (gap (/ 1 3))))")) == 3
+
+    def test_items_do_not_drift(self):
+        # Item k is start + k gap, not the gap added k times.
+        assert value("(list v (range 0 100 (gap 0.1)))")[999] == pytest.approx(99.9, abs=1e-12)
+
+    def test_the_same_start_and_stop(self):
+        assert value("(list[int] v (range 3 3 (gap 1)))") == []
+        assert value("(list v (range 3 3 (num 2)))") == [3, 3]
+
+    def test_num_ends_exactly_at_stop(self):
+        assert value("(list v (range 0 0.3 (num 4)))")[-1] == 0.3
+        assert value("(list v (range 1 0 (num 3)))") == [1, 0.5, 0]
+        assert value("(list v (range 2 9 (num 2)))") == [2, 9]
+
+    def test_whole_items_from_num_are_ints_only_when_all_are_whole(self):
+        assert _core(typ("(list v (range 0 10 (num 6)))").base.item) == INT
+        assert _core(typ("(list v (range 0 10 (num 5)))").base.item) == REAL
+
+    def test_more_than_a_million_items_is_undefined(self):
+        error("(list v (range 0 10000000 (gap 1)))", "undefined")
+        error("(list v (range 0 1 (num 2000000)))", "undefined")
+
+    def test_argument_types(self):
+        error("(list v (range 'a' 5 (gap 1)))", "range's start is a real")
+        error("(list v (range 0 true (gap 1)))", "range's stop is a real")
+        error("(list v (range 0 5 (gap 'x')))", "range's gap is a real")
+        error("(list v (range 0 5 (num 1.5)))", "range's num is an int")
+        error("(real|none k) (list v (range k 5 (gap 1)))", "range's start is a real")
+
+    def test_a_num_that_may_be_negative_may_give_none(self):
+        assert isinstance(typ("(int n 1 (>= -1)) (list[real]|none v (range 0 1 (num n)))"), Maybe)
+        assert not isinstance(typ("(int n 1 (>= 0)) (list v (range 0 1 (num n)))"), Maybe)
+
+    def test_foreach_needs_a_range_known_when_compiling(self):
+        error(
+            "(int n 3 (>= 0) (<= 9)) (scene s (foreach i (range n) (circle_)))",
+            "known when compiling",
+        )
+
+    def test_map_over_a_count_that_is_not_an_int(self):
+        error("(list v (map 2.5 (fn (real x) x)))", "map")
+
+
+class TestRangeFolding:
+    # The functions the compiler folds with, which the runtime mirrors (web/src/builtins.ts).
+    def test_by_gap(self):
+        assert range_by_gap(0, 5, 1) == [0, 1, 2, 3, 4]
+        assert range_by_gap(5, 0, -1) == [5, 4, 3, 2, 1]
+        assert range_by_gap(0, 5, -1) == []
+        assert range_by_gap(0, -5, 1) == []
+        with pytest.raises(Undefined):
+            range_by_gap(0, 5, 0)
+        with pytest.raises(Undefined):
+            range_by_gap(0, 1e9, 1)
+
+    def test_by_count(self):
+        assert range_by_count(0, 1, 0) == []
+        assert range_by_count(0, 1, 1) == [0]
+        assert range_by_count(0, 1, 3) == [0, 0.5, 1]
+        with pytest.raises(Undefined):
+            range_by_count(0, 1, -1)
