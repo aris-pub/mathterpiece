@@ -138,15 +138,15 @@
   (list shown (+ (* before (- 1 g)) (* now g)))
   (real worst (+ (* (min (stretch Lp te mix 2)) (- 1 g)) (* (min (stretch L te mix 2)) g)))
 
-  (group bars-chart
+  (group bars-chart (defaults (halign 'middle') (font plain))
     (group gridlines (defaults (stroke grid) (stroke-width 1))
       (line_ (from [54 -134]) (to [466 -134]))
       (line_ (from [54 -71]) (to [466 -71]))
       (line_ (from [54 -8]) (to [466 -8])))
-    (group values (defaults (fill muted))
-      (text_ '0' (pos [48 -138]) (halign 'end') (font plain))
-      (text_ '0.5' (pos [48 -75]) (halign 'end') (font plain))
-      (text_ '1' (pos [48 -12]) (halign 'end') (font plain)))
+    (group values (defaults (fill muted) (halign 'end') (font plain))
+      (text_ '0' (pos [48 -138]))
+      (text_ '0.5' (pos [48 -75]))
+      (text_ '1' (pos [48 -12])))
     ; Dashed in the original: mtp has no dash pattern for a stroke.
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
       (stroke muted) (stroke-width 1) (stroke-opacity 0.8))
@@ -169,8 +169,8 @@
     (line_ (from [54 -134]) (to [466 -134]) (stroke muted) (stroke-width 1))
     ; Round line ends in the original: mtp has no line cap.
     (line_ (from [54 -168]) (to [466 -168]) (stroke rule) (stroke-width 3))
-    (text_ 'level' (pos [260 -194]) (halign 'middle') (font plain) (fill fg))
-    (text_ 'relative stretch' (halign 'middle') (font plain) (fill fg)
+    (text_ 'level' (pos [260 -194]) (fill fg))
+    (text_ 'relative stretch' (fill fg)
       (transform (transform (rotate 90) (translate 13 -71)))))
 
   ; The end of the hierarchy, and its handle. Dashed in the original.

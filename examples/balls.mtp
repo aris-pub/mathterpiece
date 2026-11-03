@@ -63,9 +63,9 @@
 
   ; A point in x's ball takes x's color, else one in y's ball takes y's.
   (group space
-    (foreach i 32
-      (let ((in-x (in-ball x.pos r spots[i].pos)) (in-y (in-ball y.pos r spots[i].pos)))
-        (circle_ (pos spots[i].pos) (r 4.5)
+    (foreach spot spots
+      (let ((in-x (in-ball x.pos r spot.pos)) (in-y (in-ball y.pos r spot.pos)))
+        (circle_ (pos spot.pos) (r 4.5)
           (fill (cond (in-x x-color) (in-y y-color) (else fg)))
           (opacity (if (or in-x in-y) 1 0.45))))))
 
@@ -99,9 +99,9 @@
       (stroke-width 1.5))
     (exists-when x-ball (> r 0))
     (exists-when y-ball (> r 0))
-    (group names (defaults (fill fg))
-      (text_ 'x' (pos (+ x.pos [9 9])) (font label))
-      (text_ 'y' (pos (+ y.pos [9 9])) (font label))))
+    (group names (defaults (fill fg) (font label))
+      (text_ 'x' (pos (+ x.pos [9 9])))
+      (text_ 'y' (pos (+ y.pos [9 9])))))
 
   (list[color] segment-colors [s1 s2 s3 s4 s5])
   (list[string] tick-names ['0' 'ρ₁' 'ρ₂' 'ρ₃' 'ρ₄' 'ρ₅'] (const))

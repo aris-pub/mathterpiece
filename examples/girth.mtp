@@ -41,18 +41,18 @@
 (scene girth
   (group graph
     (petersen_)
-    (group_ (defaults (fill muted))
-      (text_ '(a) G: no cycle of length' (pos [110 -204]) (halign 'middle') (font note))
-      (text_ 'at most ℓ = 4' (pos [110 -220]) (halign 'middle') (font note))))
+    (group_ (defaults (fill muted) (halign 'middle') (font note))
+      (text_ '(a) G: no cycle of length' (pos [110 -204]))
+      (text_ 'at most ℓ = 4' (pos [110 -220]))))
 
   (group subgraph
     (petersen_ (subgraph true))
-    (group_ (defaults (fill fg))
-      (text_ 'u' (pos [118 -18]) (font label))
-      (text_ 'v' (pos [117 -78]) (font label)))
-    (group_ (defaults (fill muted))
-      (text_ '(b) a subgraph H; removed' (pos [110 -204]) (halign 'middle') (font note))
-      (text_ 'edges dashed' (pos [110 -220]) (halign 'middle') (font note)))))
+    (group_ (defaults (fill fg) (font label))
+      (text_ 'u' (pos [118 -18]))
+      (text_ 'v' (pos [117 -78])))
+    (group_ (defaults (fill muted) (halign 'middle') (font note))
+      (text_ '(b) a subgraph H; removed' (pos [110 -204]))
+      (text_ 'edges dashed' (pos [110 -220])))))
 
 (canvas graph-view (view-x 0) (view-y -230) (view-width 220) (view-height 230) graph)
 (canvas subgraph-view (view-x 0) (view-y -230) (view-width 220) (view-height 230) subgraph)

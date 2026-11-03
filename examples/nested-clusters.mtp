@@ -37,13 +37,13 @@
         (circle_ (pos [(point-x i) top]) (r 5)))))
 
   ; The depth axis on the left, and the level names on the right.
-  (group axis (defaults (stroke muted) (stroke-width 1) (fill muted))
+  (group axis (defaults (stroke muted) (stroke-width 1) (fill muted) (font note))
     (line_ (from [40 top]) (to [40 (depth 3)]))
-    (text_ '0' (pos [33 (- top 4)]) (halign 'end') (font note))
+    (text_ '0' (pos [33 (- top 4)]) (halign 'end'))
     (foreach h 3
       (line_ (from [36 (depth (+ h 1))]) (to [40 (depth (+ h 1))]))
       (text_ (cond ((= h 0) 'b') ((= h 1) 'b²') (else 'b³')) (pos [33 (- (depth (+ h 1)) 4)])
-        (halign 'end') (font note))
-      (text_ $'level {(+ h 1)}' (pos [(+ (point-x 7) 22) (- (depth (+ h 1)) 4)]) (font note)))))
+        (halign 'end'))
+      (text_ $'level {(+ h 1)}' (pos [(+ (point-x 7) 22) (- (depth (+ h 1)) 4)])))))
 
 (canvas view (view-x 0) (view-y -182) (view-width 350) (view-height 162) clusters)

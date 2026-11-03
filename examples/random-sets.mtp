@@ -16,14 +16,11 @@
 (font value (size 14))
 
 ; The points: c, then the leaves u₁ to u₄, placed around the center, and where each one's name
-; and the box holding its distance to A go.
+; and the box holding its distance to A go, from the point.
 (list[string] names ['c' 'u₁' 'u₂' 'u₃' 'u₄'] (const))
-(list dx [0 0 60 0 -60] (const))
-(list dy [0 60 0 -60 0] (const))
-(list name-dx [10 10 6 10 -26] (const))
-(list name-dy [9 6 12 -16 12] (const))
-(list box-dx [-18 -18 20 -18 -20] (const))
-(list box-dy [-18 6 -12 2 -16] (const))
+(list[point] spots [[0 0] [0 60] [60 0] [0 -60] [-60 0]] (const))
+(list[point] name-offsets [[10 9] [10 6] [6 12] [10 -16] [-26 12]] (const))
+(list[point] box-offsets [[-18 -18] [-18 6] [20 -12] [-18 2] [-20 -16]] (const))
 
 ; The distance between points i and j in the star.
 (func dist-in-star ((int i) (int j)) (cond ((= i j) 0) ((or (= i 0) (= j 0)) 1) (else 2)))
@@ -40,26 +37,25 @@
   (list in [c u1 u2 u3 u4])
   (list d (map [0 1 2 3 4] (fn p (dist-to-set p c u1 u2 u3 u4))))
   (real gap (abs (- d[1] d[2])))
-  (group_ (defaults (stroke fg) (stroke-width 1.5))
-    (foreach k 4
-      (line_ (from [middle -105]) (to [(+ middle dx[(+ k 1)]) (+ -105 dy[(+ k 1)])]))))
-  (foreach p 5
-    (circle_ (pos [(+ middle dx[p]) (+ -105 dy[p])]) (r (if in[p] 7 5))
-      (fill (if in[p] accent fg)) (stroke (if in[p] accent none)))
-    (text_ names[p] (pos [(+ middle dx[p] name-dx[p]) (+ -105 dy[p] name-dy[p])])
-      (font label) (fill fg))
-    ; The leaves' boxes are marked in coral when A separates them, and in grey when not.
-    (rect_ (pos [(+ middle dx[p] box-dx[p]) (+ -105 dy[p] box-dy[p])])
-      (width 18) (height 18) (rx 4) (stroke-width 1)
-      (fill (cond ((or (= p 0) (> p 2)) bg) ((> gap 0) coral) (else muted)))
-      (fill-opacity (cond ((or (= p 0) (> p 2)) 1) ((> gap 0) 0.18) (else 0.12)))
-      (stroke (cond ((or (= p 0) (> p 2)) rule) ((> gap 0) coral) (else muted))))
-    (text_ $'{d[p]:g}' (pos [(+ middle dx[p] box-dx[p]) (+ -105 dy[p] box-dy[p] -5)])
-      (halign 'middle') (font value) (fill fg)))
-  (group_ (defaults (fill muted))
-    (text_ $'{tag} {set}' (pos [middle -215]) (halign 'middle') (font note))
+  (let ((center (as point [middle -105])))
+    (group_ (defaults (stroke fg) (stroke-width 1.5))
+      (foreach k 4
+        (line_ (from center) (to (+ center spots[(+ k 1)])))))
+    (foreach p 5
+      (let ((spot (+ center spots[p])) (box (+ spot box-offsets[p])))
+        (circle_ (pos spot) (r (if in[p] 7 5))
+          (fill (if in[p] accent fg)) (stroke (if in[p] accent none)))
+        (text_ names[p] (pos (+ spot name-offsets[p])) (font label) (fill fg))
+        ; The leaves' boxes are marked in coral when A separates them, and in grey when not.
+        (rect_ (pos box) (width 18) (height 18) (rx 4) (stroke-width 1)
+          (fill (cond ((or (= p 0) (> p 2)) bg) ((> gap 0) coral) (else muted)))
+          (fill-opacity (cond ((or (= p 0) (> p 2)) 1) ((> gap 0) 0.18) (else 0.12)))
+          (stroke (cond ((or (= p 0) (> p 2)) rule) ((> gap 0) coral) (else muted))))
+        (text_ $'{d[p]:g}' (pos (+ box [0 -5])) (halign 'middle') (font value) (fill fg)))))
+  (group_ (defaults (fill muted) (halign 'middle') (font note))
+    (text_ $'{tag} {set}' (pos [middle -215]))
     (text_ (if (> gap 0) $'u₁, u₂ separated by {gap:g}' 'u₁, u₂ not separated')
-      (pos [middle -233]) (halign 'middle') (font note))))
+      (pos [middle -233]))))
 
 (scene star
   (panel one-leaf (middle 110) (tag '(a)') (set 'A = {u₁}') (u1 true))

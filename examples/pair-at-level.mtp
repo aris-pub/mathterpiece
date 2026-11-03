@@ -50,14 +50,14 @@
 (scene tree
   (piece shown 'none')
 
-  (group axes (defaults (stroke muted) (stroke-width 1) (fill muted))
+  (group axes (defaults (stroke muted) (stroke-width 1) (fill muted) (halign 'end') (font tick))
     (line_ (from [axis top]) (to [axis level3]))
-    (foreach h 3
-      (line_ (from [(- axis 4) [level1 level2 level3][h]]) (to [axis [level1 level2 level3][h]])))
-    (text_ '0' (pos [(- axis 7) (- top 4)]) (halign 'end') (font tick))
-    (text_ 'b' (pos [(- axis 7) (- level1 4)]) (halign 'end') (font tick))
-    (text_ 'b²' (pos [(- axis 7) (- level2 4)]) (halign 'end') (font tick))
-    (text_ 'b³' (pos [(- axis 7) (- level3 4)]) (halign 'end') (font tick)))
+    (foreach depth [level1 level2 level3]
+      (line_ (from [(- axis 4) depth]) (to [axis depth])))
+    (text_ '0' (pos [(- axis 7) (- top 4)]))
+    (text_ 'b' (pos [(- axis 7) (- level1 4)]))
+    (text_ 'b²' (pos [(- axis 7) (- level2 4)]))
+    (text_ 'b³' (pos [(- axis 7) (- level3 4)])))
 
   ; x's half in teal and y's in coral, joined where x meets y, at depth b².
   (group cluster (defaults (stroke-width 2.5))
@@ -81,9 +81,9 @@
   (group ring-in-y (defaults (fill none) (stroke accent) (stroke-width 2))
     (circle_ (pos [(px 2) top]) (r 10)))
 
-  (group names (defaults (fill fg))
-    (text_ 'x' (pos [(px 1) (+ top 14)]) (halign 'middle') (font name))
-    (text_ 'y' (pos [(px 2) (+ top 14)]) (halign 'middle') (font name)))
+  (group names (defaults (fill fg) (halign 'middle') (font name))
+    (text_ 'x' (pos [(px 1) (+ top 14)]))
+    (text_ 'y' (pos [(px 2) (+ top 14)])))
 
   ; The factor (1 − 1/b)²: from b, where each half merges, to b², where x meets y. A meets only
   ; x's half.
