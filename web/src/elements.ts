@@ -291,13 +291,11 @@ export class MtpCanvas extends MtpPart {
       const [a, b] = [...touches.values()] as [[number, number], [number, number]];
       return { gap: Math.hypot(a[0] - b[0], a[1] - b[1]), mid: { clientX: (a[0] + b[0]) / 2, clientY: (a[1] + b[1]) / 2 } };
     };
-    // A click is a press and a release on the same shape, with no pan between; drawing replaces
-    // the elements, so shapes are compared by id.
+    // The shape pressed, for the click on release; drawing replaces the elements, so shapes are
+    // compared by id.
     let pressed: number | null = null;
-    let pressedAt: [number, number] = [0, 0];
     svg.addEventListener("pointerdown", (event) => {
       pressed = hitOf(event);
-      pressedAt = [event.clientX, event.clientY];
       if (pressed !== null && drags.grab(pressed, toScene(event))) {
         scheduler.claim(drags.targets, drags);
       } else if (allows("pan") || allows("zoom")) {
@@ -331,16 +329,16 @@ export class MtpCanvas extends MtpPart {
     });
     const lift = (event: PointerEvent) => touches.delete(event.pointerId);
     svg.addEventListener("pointerup", (event) => {
-      const panned =
-        touches.has(event.pointerId) &&
-        Math.hypot(event.clientX - pressedAt[0], event.clientY - pressedAt[1]) > 4;
       lift(event);
       // As JS's dragend, only a drag that moved ends.
       const ended = drags.moved ? drags.shape : null;
       drags.release();
       const released = hitOf(event);
       // pointerup comes before click, as in JS; the end of a drag comes between them.
-      const click = pressed !== null && pressed === released && !panned ? clicks.find(pressed) : null;
+      // As JS's click: on the nearest shape holding both the pressed and the released one,
+      // whatever the pointer did between.
+      const both = pressed !== null && released !== null ? holding(rt, pressed, released) : null;
+      const click = both !== null ? clicks.find(both) : null;
       for (const listener of [
         released !== null ? releases.find(released) : null,
         ended !== null ? dragends.find(ended) : null,
@@ -678,4 +676,12 @@ export function define(): void {
   for (const [tag, element] of ELEMENTS) {
     if (!customElements.get(tag)) customElements.define(tag, element);
   }
+}
+
+// The nearest shape that is a or b or holds them both, or null when none does.
+function holding(rt: Runtime, a: number, b: number): number | null {
+  const around = new Set<number>();
+  for (let i: number | null = a; i !== null; i = rt.parent(i)) around.add(i);
+  for (let i: number | null = b; i !== null; i = rt.parent(i)) if (around.has(i)) return i;
+  return null;
 }

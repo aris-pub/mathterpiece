@@ -367,7 +367,7 @@ describe("releases", () => {
     at(shape(rt, "b"), "pointerup");
     pass(0.1);
     expect(v("r")).toBe(1);
-    // A press on one shape and a release on another is not a click on either.
+    // A click goes to the nearest shape holding both, here the scene, which has no on-click.
     expect(v("k")).toBe(0);
   });
 
@@ -390,4 +390,31 @@ describe("releases", () => {
     pass(0.1);
     expect(v("e")).toBe(0);
   });
+
+  it("clicks the nearest shape holding both the pressed and the released one, as JS's click", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    at(shape(rt, "p1"), "pointerdown");
+    at(shape(rt, "p2"), "pointerup");
+    pass(0.1);
+    expect(v("g")).toBe(1);
+  });
+
+  it("clicks after the pointer moved, as JS's click", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    at(shape(rt, "d"), "pointerdown", 0);
+    at(document.querySelector("mtp-canvas svg")!, "pointermove", 30);
+    at(shape(rt, "d"), "pointerup", 30);
+    pass(0.1);
+    expect(v("c")).toBe(1);
+  });
+
+  it("clicks after a pan too, as JS's click", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    at(shape(rt, "a"), "pointerdown", 0);
+    at(document.querySelector("mtp-canvas svg")!, "pointermove", 30);
+    at(shape(rt, "a"), "pointerup", 30);
+    pass(0.1);
+    expect(v("k")).toBe(1);
+  });
 });
+
