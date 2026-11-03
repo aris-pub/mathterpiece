@@ -1,14 +1,12 @@
 // Drawing a canvas as SVG (docs/reference.md, "Coordinates" and "The scene and shapes").
 import { describe, expect, it } from "vitest";
-import type { Doc } from "../src/doc.ts";
-import { Runtime } from "../src/runtime.ts";
+import type { Runtime } from "../src/runtime.ts";
+import { load } from "./helpers.ts";
 import { apply, invert } from "../src/builtins.ts";
 import { draw, paintCss, viewOf } from "../src/svg.ts";
 
-const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
-
 function drawn(): [Runtime, SVGSVGElement] {
-  const rt = new Runtime(JSON.parse(docs["./data/runtime/draw.mtpc"] as string) as Doc);
+  const rt = load("draw");
   return [rt, draw(rt, rt.id("v"))];
 }
 
@@ -24,14 +22,14 @@ describe("drawing", () => {
     expect(svg.getAttribute("viewBox")).toBe("-3 -3 6 6");
   });
 
-  it("paints the scene's background", () => {
+  it("draws the scene's background", () => {
     // The SVG element's background-color; happy-dom rejects an 8-digit hex there, so the CSS
     // value is checked directly.
     const [rt] = drawn();
     expect(paintCss(rt, rt.id("s"), "background")).toBe("#ffffffff");
   });
 
-  it("draws a circle at its position with its paint", () => {
+  it("draws a circle at its position with its fill and stroke", () => {
     const [rt, svg] = drawn();
     const c = shape(svg, rt, "c");
     expect([c.getAttribute("cx"), c.getAttribute("cy"), c.getAttribute("r")]).toEqual(["1", "2", "3"]);
@@ -59,7 +57,7 @@ describe("drawing", () => {
     expect([b.getAttribute("x"), b.getAttribute("y")]).toEqual(["-1", "-2"]);
   });
 
-  it("paints with a token through its CSS variable", () => {
+  it("fills with a token through its CSS variable", () => {
     const [rt, svg] = drawn();
     expect((shape(svg, rt, "b") as SVGElement).style.getPropertyValue("fill")).toBe("var(--mtp-ink, #000080ff)");
   });
@@ -75,13 +73,17 @@ describe("drawing", () => {
     const [rt, svg] = drawn();
     expect(svg.querySelector(`[data-mtp-id="${rt.id("gone")}"]`)).toBeNull();
     rt.write(rt.id("k"), null, 2);
-    expect(draw(rt, rt.id("v")).querySelector(`[data-mtp-id="${rt.id("gone")}"]`)).not.toBeNull();
+    const gone = draw(rt, rt.id("v")).querySelector(`[data-mtp-id="${rt.id("gone")}"]`);
+    expect(gone?.tagName).toBe("circle");
+    expect(gone?.getAttribute("r")).toBe("0.5");
   });
 
   it("draws a shape only while its exists-when holds", () => {
     // mtp-b9g0
     const [rt, svg] = drawn();
-    expect(svg.querySelector(`[data-mtp-id="${rt.id("maybe")}"]`)).not.toBeNull();
+    const maybe = svg.querySelector(`[data-mtp-id="${rt.id("maybe")}"]`);
+    expect(maybe?.tagName).toBe("circle");
+    expect(maybe?.getAttribute("r")).toBe("1");
     rt.write(rt.id("shown"), null, false);
     const again = draw(rt, rt.id("v"));
     expect(again.querySelector(`[data-mtp-id="${rt.id("maybe")}"]`)).toBeNull();
@@ -89,7 +91,7 @@ describe("drawing", () => {
 
   it("draws a scene through its own transform, its view box in the scene's own coordinates", () => {
     // mtp-y0gh: with (scale 1 -1), y points down, as in an SVG.
-    const rt = new Runtime(JSON.parse(docs["./data/runtime/flipped.mtpc"] as string) as Doc);
+    const rt = load("flipped");
     const svg = draw(rt, rt.id("v"));
     expect(svg.getAttribute("viewBox")).toBe("0 0 4 2");
     const c = svg.querySelector(`[data-mtp-id="${rt.id("c")}"]`)!;

@@ -1,13 +1,11 @@
 // Dragging (docs/reference.md, "Dragging").
 import { describe, expect, it } from "vitest";
-import type { Doc } from "../src/doc.ts";
 import { Drags } from "../src/drag.ts";
-import { Runtime } from "../src/runtime.ts";
-
-const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
+import type { Runtime } from "../src/runtime.ts";
+import { load } from "./helpers.ts";
 
 function setup(): [Runtime, Drags, (name: string, attr?: string) => unknown] {
-  const rt = new Runtime(JSON.parse(docs["./data/runtime/page.mtpc"] as string) as Doc);
+  const rt = load("page");
   return [rt, new Drags(rt), (name, attr) => rt.value(rt.id(name), attr ?? null)];
 }
 

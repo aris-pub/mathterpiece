@@ -86,8 +86,8 @@ describe("format, Python's format mini-language", () => {
   });
 
   it("rejects specs that do not fit the type", () => {
-    expect(() => format("ab", ".2f", "str")).toThrow();
-    expect(() => format(1.5, "d", "real")).toThrow();
+    expect(() => format("ab", ".2f", "str")).toThrow('format spec ".2f" is not for text');
+    expect(() => format(1.5, "d", "real")).toThrow('format spec "d" needs an int');
   });
 });
 

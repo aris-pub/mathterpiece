@@ -3,17 +3,15 @@
 // "Dragging").
 import { describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
-import type { Doc } from "../../src/doc.ts";
 import { type MtpModel, define } from "../../src/elements.ts";
-
-const docs = import.meta.glob("../data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
+import { doc } from "../helpers.ts";
 
 define();
 
 function page(name: string, body: string): MtpModel {
   document.body.innerHTML = `<mtp-model id="m"></mtp-model>${body}`;
   const model = document.querySelector("mtp-model") as MtpModel;
-  model.doc = JSON.parse(docs[`../data/runtime/${name}.mtpc`] as string) as Doc;
+  model.doc = doc(name);
   return model;
 }
 

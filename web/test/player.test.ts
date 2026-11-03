@@ -1,14 +1,12 @@
 // Animations run over time or scrubbed by a slider (docs/reference.md, "Transitions and
 // animations" and "Controls").
 import { describe, expect, it } from "vitest";
-import type { Doc } from "../src/doc.ts";
 import { Player } from "../src/player.ts";
-import { Runtime } from "../src/runtime.ts";
-
-const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
+import type { Runtime } from "../src/runtime.ts";
+import { load } from "./helpers.ts";
 
 function setup(animation: string): [Runtime, Player, (name: string, attr?: string) => unknown] {
-  const rt = new Runtime(JSON.parse(docs["./data/runtime/anim.mtpc"] as string) as Doc);
+  const rt = load("anim");
   const value = (name: string, attr?: string) => rt.value(rt.id(name), attr ?? null);
   return [rt, new Player(rt, rt.id(animation)), value];
 }

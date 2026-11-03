@@ -1,16 +1,7 @@
 // The live model on .mtpc files the compiler writes (built by `just web-examples` from
 // test/fixtures/runtime/*.mtp).
 import { describe, expect, it } from "vitest";
-import type { Doc } from "../src/doc.ts";
-import { Runtime } from "../src/runtime.ts";
-
-const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
-
-function load(name: string): Runtime {
-  const raw = docs[`./data/runtime/${name}.mtpc`] as string | undefined;
-  if (!raw) throw new Error(`${name} is not compiled; run just web-examples`);
-  return new Runtime(JSON.parse(raw) as Doc);
-}
+import { load } from "./helpers.ts";
 
 describe("recomputing only what changed", () => {
   it("computes a bound value once until something it reads is written", () => {

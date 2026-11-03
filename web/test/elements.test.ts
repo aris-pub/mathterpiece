@@ -4,9 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Doc } from "../src/doc.ts";
 import { type MtpModel, define, frames } from "../src/elements.ts";
 import type { Runtime } from "../src/runtime.ts";
-
-const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
-const PAGE = docs["./data/runtime/page.mtpc"] as string;
+import { doc } from "./helpers.ts";
 
 define();
 
@@ -26,10 +24,10 @@ function pass(seconds: number, step = 0.1): void {
   }
 }
 
-function page(body: string, doc: Doc = JSON.parse(PAGE) as Doc): [MtpModel, Runtime, (name: string, attr?: string) => unknown] {
+function page(body: string, file: Doc = doc("page")): [MtpModel, Runtime, (name: string, attr?: string) => unknown] {
   document.body.innerHTML = `<mtp-model id="m"></mtp-model>${body}`;
   const model = document.querySelector("mtp-model") as MtpModel;
-  model.doc = doc;
+  model.doc = file;
   const rt = model.runtime!;
   return [model, rt, (name, attr) => rt.value(rt.id(name), attr ?? null)];
 }
@@ -49,7 +47,7 @@ describe("the model", () => {
   });
 
   it("refuses a file of another version", () => {
-    page(`<mtp-readout model="m" name="r"></mtp-readout>`, { ...(JSON.parse(PAGE) as Doc), mtpc: 1 });
+    page(`<mtp-readout model="m" name="r"></mtp-readout>`, { ...doc("page"), mtpc: 1 });
     expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("version 2");
   });
 });
@@ -174,7 +172,7 @@ describe("a canvas", () => {
   it("draws its scene and plays an on-click on a click", () => {
     const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`);
     const orbit = document.querySelector(`mtp-canvas [data-mtp-id="${rt.id("orbit")}"]`)!;
-    expect(orbit).not.toBeNull();
+    expect(orbit.tagName).toBe("circle");
     orbit.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
     orbit.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
     pass(0.1);
@@ -183,7 +181,6 @@ describe("a canvas", () => {
 });
 
 describe("a canvas's showing and hiding", () => {
-  const FADE = docs["./data/runtime/fade.mtpc"] as string;
 
   function opacityOf(rt: Runtime, name: string, canvas = "v"): number | null {
     const el = document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`);
@@ -193,7 +190,7 @@ describe("a canvas's showing and hiding", () => {
   }
 
   it("fades what a when item shows along the canvas's transition", () => {
-    const [, rt] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(FADE) as Doc);
+    const [, rt] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("fade"));
     expect(opacityOf(rt, "d")).toBeNull();
     rt.write(rt.id("show"), null, true);
     pass(0.1);
@@ -204,21 +201,20 @@ describe("a canvas's showing and hiding", () => {
   });
 
   it("draws its items in the order they are written", () => {
-    const [, rt] = page(`<mtp-canvas model="m" name="stack"></mtp-canvas>`, JSON.parse(FADE) as Doc);
+    const [, rt] = page(`<mtp-canvas model="m" name="stack"></mtp-canvas>`, doc("fade"));
     rt.write(rt.id("show"), null, true);
     const drawn = [...document.querySelectorAll(`mtp-canvas [data-mtp-id]`)].map((el) => Number(el.getAttribute("data-mtp-id")));
     expect(drawn).toEqual([rt.id("d"), rt.id("c")]);
   });
 
   it("shows and hides at once with no transition", () => {
-    const [, rt] = page(`<mtp-canvas model="m" name="still"></mtp-canvas>`, JSON.parse(FADE) as Doc);
+    const [, rt] = page(`<mtp-canvas model="m" name="still"></mtp-canvas>`, doc("fade"));
     rt.write(rt.id("show"), null, true);
     expect(opacityOf(rt, "d", "still")).toBe(1);
   });
 });
 
 describe("panning and zooming a canvas", () => {
-  const VIEW = docs["./data/runtime/view.mtpc"] as string;
   const box = (name = "v") =>
     document.querySelector(`mtp-canvas[name="${name}"] svg`)!.getAttribute("viewBox")!.split(" ").map(Number);
   const svg = (name = "v") => document.querySelector(`mtp-canvas[name="${name}"] svg`)!;
@@ -232,7 +228,7 @@ describe("panning and zooming a canvas", () => {
   };
 
   it("zooms about the pointer on a pinch, which comes as a wheel with ctrl held", () => {
-    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     expect(box()).toEqual([-10, -10, 20, 20]);
     // Without a canvas on screen the pointer's SVG coordinates are its page coordinates.
     wheel(-500 * Math.log(2), true);
@@ -240,13 +236,13 @@ describe("panning and zooming a canvas", () => {
   });
 
   it("zooms on a plain wheel too", () => {
-    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     wheel(-500 * Math.log(2), false);
     expect(box().map((n) => Math.round(n * 1e6) / 1e6)).toEqual([-5, -5, 10, 10]);
   });
 
   it("pans when the reader drags where nothing is draggable", () => {
-    const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     pointer("pointerdown", 100, 100);
     pointer("pointermove", 164, 132);
     pointer("pointerup", 164, 132);
@@ -256,7 +252,7 @@ describe("panning and zooming a canvas", () => {
   });
 
   it("drags a draggable shape instead of panning", () => {
-    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     const dot = document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]:last-child`)!;
     pointer("pointerdown", 100, 100, 1, dot);
     pointer("pointermove", 164, 132, 1, dot);
@@ -265,7 +261,7 @@ describe("panning and zooming a canvas", () => {
   });
 
   it("zooms on a two-finger pinch", () => {
-    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     pointer("pointerdown", -10, 0, 1);
     pointer("pointerdown", 10, 0, 2);
     pointer("pointermove", -20, 0, 1);
@@ -277,7 +273,7 @@ describe("panning and zooming a canvas", () => {
   });
 
   it("goes back to the author's view on a double click", () => {
-    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     pointer("pointerdown", 100, 100);
     pointer("pointermove", 164, 132);
     pointer("pointerup", 164, 132);
@@ -286,7 +282,7 @@ describe("panning and zooming a canvas", () => {
   });
 
   it("does neither when the author turns them off", () => {
-    page(`<mtp-canvas model="m" name="fixed"></mtp-canvas>`, JSON.parse(VIEW) as Doc);
+    page(`<mtp-canvas model="m" name="fixed"></mtp-canvas>`, doc("view"));
     wheel(-100, true, svg("fixed"));
     pointer("pointerdown", 100, 100, 1, svg("fixed"));
     pointer("pointermove", 164, 132, 1, svg("fixed"));
@@ -295,13 +291,12 @@ describe("panning and zooming a canvas", () => {
 });
 
 describe("a control's when", () => {
-  const ACTIVE = docs["./data/runtime/active.mtpc"] as string;
   const all = `<mtp-button model="m" name="go"></mtp-button><mtp-slider model="m" name="sl"></mtp-slider>
     <mtp-play model="m" name="run"></mtp-play><mtp-toggle model="m" name="t"></mtp-toggle>`;
   const inputs = () => [...document.querySelectorAll("mtp-button button, mtp-slider input, mtp-play button, mtp-toggle input")] as (HTMLButtonElement | HTMLInputElement)[];
 
   it("lets a control be triggered only while it holds, and shows it disabled otherwise", () => {
-    const [, rt, v] = page(all, JSON.parse(ACTIVE) as Doc);
+    const [, rt, v] = page(all, doc("active"));
     expect(inputs().every((el) => !el.disabled)).toBe(true);
     rt.write(rt.id("k"), null, 4);
     expect(inputs().every((el) => el.disabled)).toBe(true);
@@ -318,10 +313,9 @@ describe("a control's when", () => {
 
 describe("starting without the reader", () => {
   // mtp-9wm: on-view, and a play's autoplay.
-  const SEEN = docs["./data/runtime/seen.mtpc"] as string;
 
   it("plays an on-view's animation the first time its canvas comes into view", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(SEEN) as Doc);
+    const [model, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("seen"));
     pass(0.5);
     expect(v("k")).toBe(0);
     model.markSeen(rt.id("v"));
@@ -334,7 +328,7 @@ describe("starting without the reader", () => {
   });
 
   it("starts a play with (autoplay) when the page loads", () => {
-    const [, rt, v] = page(`<mtp-play model="m" name="now"></mtp-play>`, JSON.parse(SEEN) as Doc);
+    const [, rt, v] = page(`<mtp-play model="m" name="now"></mtp-play>`, doc("seen"));
     expect(v("now", "playing")).toBe(true);
     pass(1.3);
     expect(v("j")).toBeCloseTo(5);
@@ -344,7 +338,7 @@ describe("starting without the reader", () => {
   it("starts a play with (autoplay w) the first time w comes into view", () => {
     const [model, rt, v] = page(
       `<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="later"></mtp-play>`,
-      JSON.parse(SEEN) as Doc,
+      doc("seen"),
     );
     pass(0.5);
     expect(v("m")).toBe(0);
@@ -356,13 +350,12 @@ describe("starting without the reader", () => {
 
 describe("releases", () => {
   // mtp-jpj: on-release follows JS's pointerup, and on-dragend its dragend.
-  const RELEASE = docs["./data/runtime/release.mtpc"] as string;
   const shape = (rt: Runtime, name: string) => document.querySelector(`mtp-canvas [data-mtp-id="${rt.id(name)}"]`)!;
   const at = (el: Element, type: string, x = 0) =>
     el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: 0, pointerId: 1 }));
 
   it("runs an on-release when the pointer is released over the shape, wherever the press began", () => {
-    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("release"));
     at(shape(rt, "a"), "pointerdown");
     at(shape(rt, "b"), "pointerup");
     pass(0.1);
@@ -372,7 +365,7 @@ describe("releases", () => {
   });
 
   it("runs an on-dragend when a drag of the shape ends", () => {
-    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("release"));
     // The canvas holds the pointer from the press on, so the move and the release reach its svg.
     const svg = document.querySelector("mtp-canvas svg")!;
     at(shape(rt, "d"), "pointerdown", 0);
@@ -383,7 +376,7 @@ describe("releases", () => {
   });
 
   it("runs no on-dragend for a press and release with no drag between", () => {
-    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("release"));
     const d = shape(rt, "d");
     at(d, "pointerdown");
     at(d, "pointerup");
@@ -392,7 +385,7 @@ describe("releases", () => {
   });
 
   it("clicks the nearest shape holding both the pressed and the released one, as JS's click", () => {
-    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("release"));
     at(shape(rt, "p1"), "pointerdown");
     at(shape(rt, "p2"), "pointerup");
     pass(0.1);
@@ -400,7 +393,7 @@ describe("releases", () => {
   });
 
   it("clicks after the pointer moved, as JS's click", () => {
-    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("release"));
     at(shape(rt, "d"), "pointerdown", 0);
     at(document.querySelector("mtp-canvas svg")!, "pointermove", 30);
     at(shape(rt, "d"), "pointerup", 30);
@@ -409,7 +402,7 @@ describe("releases", () => {
   });
 
   it("clicks after a pan too, as JS's click", () => {
-    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("release"));
     at(shape(rt, "a"), "pointerdown", 0);
     at(document.querySelector("mtp-canvas svg")!, "pointermove", 30);
     at(shape(rt, "a"), "pointerup", 30);

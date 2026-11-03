@@ -1,14 +1,12 @@
 // Colors computed from tokens reach the browser as CSS, so the page's CSS restyles them too
 // (docs/mtpc.md, "Objects": variable).
 import { describe, expect, it } from "vitest";
-import type { Doc } from "../src/doc.ts";
-import { Runtime } from "../src/runtime.ts";
+import type { Runtime } from "../src/runtime.ts";
+import { load } from "./helpers.ts";
 import { paintCss } from "../src/svg.ts";
 
-const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
-
 function setup(): [Runtime, (name: string) => string] {
-  const rt = new Runtime(JSON.parse(docs["./data/runtime/tokens.mtpc"] as string) as Doc);
+  const rt = load("tokens");
   return [rt, (name) => paintCss(rt, rt.id(name), "fill")];
 }
 
