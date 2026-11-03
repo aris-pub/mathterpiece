@@ -66,4 +66,21 @@ describe("none", () => {
     rt.write(rt.id("k"), null, 0);
     expect(rt.value(rt.id("d"))).toBe(0);
   });
+
+  it("tells its listeners once for writes made together, with every change", () => {
+    const rt = load("page");
+    const seen: Set<string>[] = [];
+    rt.onChange((changed) => seen.push(new Set(changed)));
+    rt.together(() => {
+      rt.write(rt.id("k"), null, 3);
+      rt.write(rt.id("steps"), null, 2);
+      rt.write(rt.id("k"), null, 4);
+    });
+    expect(seen).toHaveLength(1);
+    // The written variables, and what is bound to them.
+    for (const name of ["k", "steps"]) expect([...seen[0]!].some((c) => c === `${rt.id(name)}:`)).toBe(true);
+    expect(rt.value(rt.id("k"))).toBe(4);
+    rt.together(() => rt.write(rt.id("k"), null, 4));
+    expect(seen).toHaveLength(1);
+  });
 });

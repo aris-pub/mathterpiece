@@ -66,6 +66,8 @@ export class Runtime {
   private functions: Compiled[] = [];
   private rands = new Map<number, number>();
   private listeners: ((changed: Set<string>) => void)[] = [];
+  // While writes are made together, what they changed, told to the listeners once at the end.
+  private pending: Set<string> | null = null;
   // The named types the file declares (type-system.md 5.a), by name.
   private named = new Map<string, Type>();
 
@@ -286,8 +288,24 @@ export class Runtime {
     const changed = new Set<string>();
     this.writeInto(id, attr, value, changed);
     if (changed.size === 0) return false;
-    for (const l of this.listeners) l(changed);
+    if (this.pending) for (const k of changed) this.pending.add(k);
+    else for (const l of this.listeners) l(changed);
     return true;
+  }
+
+  /**
+   * Runs work whose writes the listeners hear of once, at the end, as one change: a drag that
+   * tries many values must not redraw the page for each.
+   */
+  together<T>(work: () => T): T {
+    if (this.pending) return work();
+    const changed = (this.pending = new Set<string>());
+    try {
+      return work();
+    } finally {
+      this.pending = null;
+      if (changed.size > 0) for (const l of this.listeners) l(changed);
+    }
   }
 
   private writeInto(id: number, attr: string | null, value: unknown, changed: Set<string>): void {

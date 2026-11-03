@@ -93,6 +93,10 @@ export class Drags {
 
   /** Moves the held shape with the pointer; gives whether anything changed. */
   move(scene: Point): boolean {
+    return this.rt.together(() => this.moveTo(scene));
+  }
+
+  private moveTo(scene: Point): boolean {
     const held = this.held;
     if (!held) return false;
     held.moved = true;

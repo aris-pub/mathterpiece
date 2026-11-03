@@ -24,6 +24,17 @@ describe("a drag", () => {
     expect(v("k") as number).toBeCloseTo(10, 0);
   });
 
+  it("tells the page once per pointer move, however many values it tries", () => {
+    // Each change redraws every canvas, so the search's own writes must not each tell the page.
+    const [rt, drags, v] = setup();
+    let told = 0;
+    rt.onChange(() => told++);
+    drags.grab(rt.id("orbit"), [2, 0]);
+    drags.move([0, 2]);
+    expect(told).toBe(1);
+    expect(v("k") as number).toBeCloseTo(10, 0);
+  });
+
   it("moves every member of a group", () => {
     const [rt, drags, v] = setup();
     drags.grab(rt.id("p1"), [0, 0]);
