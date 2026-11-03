@@ -17,22 +17,28 @@
   (int b 2 (>= 1) (<= 7))
   (real phase 90 (>= 0) (<= 360))
 
+  ; The curve fills the square from -1 to 1; the axes run a little past it, and the texts
+  ; are placed against the axes, which stay put while the curve changes.
+  (real reach 1.2 (const))
+  (real gap 0.08 (const))
   (group axes (defaults (stroke soft) (stroke-width 1) (stroke-opacity 0.6))
-    (line_ (from [-1.28 0]) (to [1.28 0]))
-    (line_ (from [0 -1.17]) (to [0 1.17])))
+    (line_ (from [(- reach) 0]) (to [reach 0]))
+    (line_ (from [0 (- reach)]) (to [0 reach])))
 
   (polyline curve
     (points (map (range 0 360 (num 721))
               (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
     (stroke teal) (stroke-width 3) (line-join 'round') (line-cap 'round'))
 
-  (text ratio $'a : b = {a} : {b}' (pos [0 1.28]) (halign 'middle') (valign 'bottom')
+  (text ratio $'a : b = {a} : {b}' (pos (top axes gap)) (halign 'middle') (valign 'bottom')
     (font variable) (fill ink))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
-    (text_ '(polyline curve (points (map (range 0 360 (num 721))' (pos [-1.28 -1.28]))
-    (text_ $'(fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
-      (pos [-1.19 -1.42]))))
+    (let ((under (bottom-left axes gap)))
+      (text_ '(polyline curve (points (map (range 0 360 (num 721))' (pos under))
+      ; The second line is indented, as code that goes on would be.
+      (text_ $'(fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
+        (pos (+ under [0.09 -0.14]))))))
 
 (canvas view (view-x -1.78) (view-y -1.67) (view-width 3.56) (view-height 3.17) (pan false)
   (zoom false)

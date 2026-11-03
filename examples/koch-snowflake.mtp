@@ -12,6 +12,11 @@
 
 (real radius 4 (const))
 
+; No depth reaches lower than radius below the center, the tip of the bottom side's first bump,
+; so the code sits under that rather than under the flake, and stays still as the depth changes.
+; It starts left of the flake so that its longest line fits.
+(point code-at [(- -0.9 radius) (- -0.4 radius)] (const))
+
 ; Point j, from 0 to 4, of one step from a to b: a, a third of the way, the raised point, two
 ; thirds of the way, b. The raised point is to the left of a to b, so a side walked clockwise
 ; bends outward.
@@ -48,15 +53,15 @@
               (fn k (koch k depth))))
     (fill saffron) (stroke ink) (stroke-width 1.5) (line-join 'round'))
 
-  (text caption $'depth {depth}' (pos [0 4.5]) (halign 'middle') (valign 'bottom')
+  (text caption $'depth {depth}' (pos (top flake 0.5)) (halign 'middle') (valign 'bottom')
     (font variable) (fill ink))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
     (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {depth})))))'
-      (pos [-4.9 -4.4]))
+      (pos code-at))
     (text_ (if (= depth 0) '(koch k 0) is (corner k)'
                $'(koch k {depth}) calls (koch (floor (/ k 4)) {(- depth 1)})')
-      (pos [-4.9 -4.95]))))
+      (pos (+ code-at [0 -0.55])))))
 
 (canvas view (view-x -5.6) (view-y -5.6) (view-width 11.2) (view-height 10.8) (pan false)
   (zoom false)

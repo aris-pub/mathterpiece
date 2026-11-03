@@ -50,9 +50,9 @@
         (fill (if (or (prime? (+ i 1)) (= i 0)) paper soft)))))
 
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
-    (text_ 'the 3245 primes below 30000' (pos [0 -89.5]))
+    (text_ 'the 3245 primes below 30000' (pos (bottom dots 2)))
     (text_ '(canvas view (view-x -90) (view-y -98) (view-width 180) (view-height 188))'
-      (pos [0 -93.5]))))
+      (pos (bottom dots 6)))))
 
 (toggle show-labels none (label 'numbers'))
 

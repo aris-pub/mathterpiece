@@ -35,9 +35,11 @@
   ; would be bound to it, and the tour could never move the fill.
   (circle halo (r 9.2) (fill '#f6c453') (fill-opacity 0.12))
   (flower sunflower (angle golden-angle))
-  (group captions (defaults (fill chalk))
-    (text title stop-name (pos [-9.3 9]) (font heading))
-    (text degrees $'{sunflower.angle:.1f}°' (pos [-9.3 8.2]) (font small) (opacity 0.6))))
+  ; The stop's name in the halo's top-left corner, and the angle just under it.
+  (group captions (defaults (fill chalk) (valign 'top'))
+    (text title stop-name (pos (top-left halo 0.25)) (font heading))
+    (text degrees $'{sunflower.angle:.1f}°' (pos (+ title.pos [0 -0.9])) (font small)
+      (opacity 0.6))))
 
 ; Each stop of the tour: the angle, its name, and whether the halo glows.
 ; Each move turns the angle about 3 degrees a second on average (about 9 at its fastest, in the

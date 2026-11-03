@@ -20,6 +20,10 @@
 ; Numbers that change, in a monospace font, so the digits do not jump around as they change.
 (font number (family 'ui-monospace, Menlo, monospace') (size 16))
 
+; Where line k of the readings on the left sits: the angle is line 0, and the six functions
+; follow it down, one line apiece.
+(func[point] line-at ((int k)) [-2.05 (- 0.9 (* 0.117 k))])
+
 ; One group per function: its line, its name, and its value, so a toggle shows or hides all three.
 ; The circle has radius 1, and the canvas's view box makes it large.
 (scene plane
@@ -36,30 +40,30 @@
   ; Colors and strokes given in a group's defaults are its members' defaults. A text takes the
   ; fill but none of the stroke attributes.
   (group frame (defaults (stroke ink) (fill ink))
-    (group axes (defaults (stroke-width 1) (stroke-opacity 0.5))
-      (line_ (from [-1.35 0]) (to [1.35 0]))
-      (line_ (from [0 -1.15]) (to [0 1.15])))
     (circle rim (r 1) (fill none) (stroke-width 1.6))
+    (group axes (defaults (stroke-width 1) (stroke-opacity 0.5))
+      (line_ (from (left rim 0.35)) (to (right rim 0.35)))
+      (line_ (from (bottom rim 0.15)) (to (top rim 0.15))))
     (line radius (from [0 0]) (to handle.pos) (stroke-width 2))
     (text_ 'θ' (pos (polar 0.18 (/ theta 2))) (font variable))
-    (text title 'the unit circle' (pos [-2.05 1.05]) (font heading))
-    (text angle $'θ = {theta:5.1f}°' (pos [-2.05 0.9]) (font number)))
+    (text title 'the unit circle' (pos (+ (line-at 0) [0 0.15])) (font heading))
+    (text angle $'θ = {theta:5.1f}°' (pos (line-at 0)) (font number)))
 
   ; The names sit beside their lines, centered on the spot given.
   (group cosine (defaults (stroke accent) (fill accent))
     (line across (from [0 0]) (to [handle.x 0]) (stroke-width 4))
-    (text_ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
+    (text_ 'cos' (pos (+ across.pos [0 (* -0.1 above)])) (halign 'middle') (valign 'middle')
       (font small))
-    (text xs $'cos = {(cosd theta):+z.3f}' (pos [-2.05 0.78]) (font number)))
+    (text xs $'cos = {(cosd theta):+z.3f}' (pos (line-at 1)) (font number)))
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
   ; triangle is too thin for it.
   (group sine (defaults (stroke cool) (fill cool))
     (line up (from [handle.x 0]) (to handle.pos) (stroke-width 4))
     (text_ 'sin'
-      (pos [(+ handle.x (* 0.12 right (if (< (abs handle.x) 0.45) 1 -1))) (/ handle.y 2)])
+      (pos (+ up.pos [(* 0.12 right (if (< (abs handle.x) 0.45) 1 -1)) 0]))
       (halign 'middle') (valign 'middle') (font small))
-    (text ys $'sin = {(sind theta):+z.3f}' (pos [-2.05 0.67]) (font number)))
+    (text ys $'sin = {(sind theta):+z.3f}' (pos (line-at 2)) (font number)))
 
   ; Where the tangent line at the point meets the x axis: at sec theta. At 90 and 270 degrees it
   ; never does: there this is none, and the lines and names that need it are not drawn.
@@ -80,7 +84,7 @@
               (polar 0.1 theta)))
       (halign 'middle') (valign 'middle') (font small))
     (text tans (or? $'tan = {(tand theta):+z.3f}' 'tan = ±∞')
-      (pos [-2.05 0.55]) (font number)))
+      (pos (line-at 3)) (font number)))
 
   ; sec runs along the x axis past cos, so its name goes on the part of the line beyond cos,
   ; kept on the canvas.
@@ -89,7 +93,7 @@
     (text|none_ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ handle.x sec-x) 2))) (* -0.1 above)])
       (halign 'middle') (valign 'middle') (font small))
     (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
-      (pos [-2.05 0.43]) (font number)))
+      (pos (line-at 4)) (font number)))
 
   ; Where the tangent line meets the y axis: at csc theta, none at 0 and 180 degrees.
   (real|none csc-y (cscd theta))
@@ -102,14 +106,14 @@
               (polar 0.1 theta)))
       (halign 'middle') (valign 'middle') (font small))
     (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
-      (pos [-2.05 0.32]) (font number)))
+      (pos (line-at 5)) (font number)))
 
   (group cosecant (defaults (stroke warm) (fill warm))
     (line|none csc (from [0 0]) (to [0 csc-y]) (stroke-width 2))
     (text|none_ 'csc' (pos [(* -0.12 right) (max -1.1 (min 1.1 (/ csc-y 2)))])
       (halign 'middle') (valign 'middle') (font small))
     (text cscs (or? $'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
-      (pos [-2.05 0.2]) (font number))))
+      (pos (line-at 6)) (font number))))
 
 ; Which functions are shown. These toggles hold their own value: whether a line is shown is about
 ; this view, not about the circle, so the scene does not need to know.

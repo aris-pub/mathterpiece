@@ -37,12 +37,15 @@
         (circle_ (pos p) (r 0.04)))))
 
   (group captions (defaults (font variable) (fill ink) (valign 'bottom'))
-    (text_ $'m = {m:.2f}' (pos [-8.6 8.7]))
-    (text_ curve-name (pos [8.6 8.7]) (halign 'end')))
+    (text_ $'m = {m:.2f}' (pos (top-left table 0.7)))
+    (text_ curve-name (pos (top-right table 0.7)) (halign 'end')))
 
+  ; The second line is indented, as the code would be in a file.
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
-    (text_ '(foreach k (range 200)' (pos [-7.4 -7.6]))
-    (text_ $'(line_ (from (spot k)) (to (spot (* {m:.2f} k)))))' (pos [-6.9 -8.4]))))
+    (let ((line 0.8) (first (+ (bottom-left table) [0 (- line)])))
+      (text_ '(foreach k (range 200)' (pos first))
+      (text_ $'(line_ (from (spot k)) (to (spot (* {m:.2f} k)))))'
+        (pos (+ first [0.5 (- line)]))))))
 
 (canvas view (view-x -9) (view-y -9.6) (view-width 18) (view-height 19) (pan false) (zoom false)
   table captions forms)

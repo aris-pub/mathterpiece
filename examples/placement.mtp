@@ -30,25 +30,22 @@
       (stroke-width 1.5))
     (circle ball (pos [4.5 -1.5]) (r 0.35) (fill calm) (stroke none)))
 
-  ; A dot at each point of the card's box, and the point's name just outside it.
+  ; A dot at each point of the card's box, and the point's name just outside it. A corner's name
+  ; is pushed out on two sides, so it takes a smaller gap to look as far away as a side's.
   (group marks (defaults (fill accent) (stroke none))
-    (circle_ (pos (top card)) (r 0.07))
-    (circle_ (pos (bottom card)) (r 0.07))
-    (circle_ (pos (left card)) (r 0.07))
-    (circle_ (pos (right card)) (r 0.07))
-    (circle_ (pos (top-left card)) (r 0.07))
-    (circle_ (pos (top-right card)) (r 0.07))
-    (circle_ (pos (bottom-left card)) (r 0.07))
-    (circle_ (pos (bottom-right card)) (r 0.07)))
+    (foreach p [(top card) (bottom card) (left card) (right card)
+                (top-left card) (top-right card) (bottom-left card) (bottom-right card)]
+      (circle_ (pos p) (r 0.07))))
   (group names (defaults (fill soft) (font small))
-    (text_ 'top' (pos (top card 0.15)) (halign 'middle') (valign 'bottom'))
-    (text_ 'bottom' (pos (bottom card 0.15)) (halign 'middle') (valign 'top'))
-    (text_ 'left' (pos (left card 0.15)) (halign 'end') (valign 'middle'))
-    (text_ 'right' (pos (right card 0.15)) (halign 'start') (valign 'middle'))
-    (text_ 'top-left' (pos (top-left card 0.1)) (halign 'end') (valign 'bottom'))
-    (text_ 'top-right' (pos (top-right card 0.1)) (halign 'start') (valign 'bottom'))
-    (text_ 'bottom-left' (pos (bottom-left card 0.1)) (halign 'end') (valign 'top'))
-    (text_ 'bottom-right' (pos (bottom-right card 0.1)) (halign 'start') (valign 'top')))
+    (let ((side 0.15) (corner 0.1))
+      (text_ 'top' (pos (top card side)) (halign 'middle') (valign 'bottom'))
+      (text_ 'bottom' (pos (bottom card side)) (halign 'middle') (valign 'top'))
+      (text_ 'left' (pos (left card side)) (halign 'end') (valign 'middle'))
+      (text_ 'right' (pos (right card side)) (halign 'start') (valign 'middle'))
+      (text_ 'top-left' (pos (top-left card corner)) (halign 'end') (valign 'bottom'))
+      (text_ 'top-right' (pos (top-right card corner)) (halign 'start') (valign 'bottom'))
+      (text_ 'bottom-left' (pos (bottom-left card corner)) (halign 'end') (valign 'top'))
+      (text_ 'bottom-right' (pos (bottom-right card corner)) (halign 'start') (valign 'top'))))
 
   ; The ball's name, a line from the card to the ball, and a caption under both.
   (text ball-name 'ball' (pos (top-right ball 0.05)) (valign 'bottom') (font name) (fill ink))

@@ -23,6 +23,8 @@
 (real start -2.6 (const))
 (real finish 7 (const))
 (real lane-gap 1.2 (const))
+; How far the lane edges run past the start and finish lines.
+(real overhang 0.6 (const))
 ; Lane i's middle, from the top lane down.
 (func lane ((int i)) (- 3 (* lane-gap i)))
 (list[string] ease-names ['\'linear\'' '\'ease-in\'' '\'ease-out\'' '\'ease-in-out\'' '(step 5)' 'bounce'] (const))
@@ -33,23 +35,23 @@
   ; Lane edges, and the start and finish lines.
   (group lanes (defaults (stroke soft) (stroke-width 1))
     (foreach i 7
-      (line_ (from [(- start 0.6) (+ (lane i) (/ lane-gap 2))])
-        (to [(+ finish 0.6) (+ (lane i) (/ lane-gap 2))]) (stroke-opacity 0.5)))
+      (line_ (from [(- start overhang) (+ (lane i) (/ lane-gap 2))])
+        (to [(+ finish overhang) (+ (lane i) (/ lane-gap 2))]) (stroke-opacity 0.5)))
     (line_ (from [start (+ (lane 0) (/ lane-gap 2))]) (to [start (- (lane 5) (/ lane-gap 2))]))
     (line_ (from [finish (+ (lane 0) (/ lane-gap 2))]) (to [finish (- (lane 5) (/ lane-gap 2))])))
 
   (group names (defaults (fill ink) (font code) (halign 'end') (valign 'middle'))
     (foreach i 6
-      (text_ ease-names[i] (pos [(- start 0.8) (lane i)]))))
+      (text_ ease-names[i] (pos [(- start overhang 0.2) (lane i)]))))
 
   (group balls (defaults (stroke none))
     (foreach i 6
       (circle (name $'ball-{i}') (x start) (y (lane i)) (r 0.34)
         (fill [terracotta teal saffron plum][(mod i 4)]))))
 
-  (group captions (defaults (fill soft) (font code) (halign 'middle'))
-    (text_ '(animation (loop) (at-once …) (in-order …))' (pos [2.2 -4.5]))
-    (text_ '(func bounce (real t) …), an ease of the figure\'s own' (pos [2.2 -5.2]))))
+  (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
+    (text_ '(animation (loop) (at-once …) (in-order …))' (pos (bottom lanes 0.6)))
+    (text_ '(func bounce (real t) …), an ease of the figure\'s own' (pos (bottom lanes 1.3)))))
 
 (canvas view (view-x -6.7) (view-y -5.8) (view-width 15) (view-height 10.2) (pan false)
   (zoom false)

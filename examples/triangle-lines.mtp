@@ -33,13 +33,21 @@
 (func[point|none] reach-to ((point v) (point f) (point|none h))
   (let ((s (/ (dot (- h v) (- f v)) (dot (- f v) (- f v))))) (lerp v f (max 1 s))))
 
+; The height of the rail the lower corners slide along. Each family of lines is cut off at a
+; window that ends 1 under the rail, above the captions, so lines that run far past the
+; triangle, as altitudes and the Euler line do when it is obtuse, do not cross them.
+(real rail-y -3 (const))
+(list[point] window [[-8 6.5] [8 6.5] [8 (- rail-y 1)] [-8 (- rail-y 1)]] (const))
+; The gap between a point and its name.
+(real gap 0.1 (const))
+
 (scene plane
   (background paper)
 
-  (line rail (from [-7.5 -3]) (to [7.5 -3]) (stroke soft) (stroke-width 1))
+  (line rail (from [-7.5 rail-y]) (to [7.5 rail-y]) (stroke soft) (stroke-width 1))
 
-  (circle ca (x -4) (y -3) (r 0.22) (fill ink))
-  (circle cb (x 4) (y -3) (r 0.22) (fill ink))
+  (circle ca (x -4) (y rail-y) (r 0.22) (fill ink))
+  (circle cb (x 4) (y rail-y) (r 0.22) (fill ink))
   (circle cc (pos [-1 3.5]) (r 0.22) (fill ink))
 
   (let ((A ca.pos) (B cb.pos) (C cc.pos)
@@ -57,18 +65,16 @@
     (triangle shape (a A) (b B) (c C) (fill none) (stroke ink) (stroke-width 3)
       (line-join 'round'))
 
-    ; Each family is cut off above the captions, so lines that run far past the triangle, as
-    ; altitudes and the Euler line do when it is obtuse, do not cross them.
     (group medians (defaults (stroke terracotta) (fill terracotta) (stroke-width 2))
-      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (clip (polygon_ (points window)))
       (line_ (from A) (to (lerp B C 0.5)))
       (line_ (from B) (to (lerp C A 0.5)))
       (line_ (from C) (to (lerp A B 0.5)))
-      (circle_ (pos G) (r 0.14) (stroke none))
-      (text_ 'G' (pos (+ G [0.25 0.2])) (font variable)))
+      (circle g-dot (pos G) (r 0.14) (stroke none))
+      (text_ 'G' (pos (top-right g-dot gap)) (valign 'bottom') (font variable)))
 
     (group altitudes (defaults (stroke teal) (fill teal) (stroke-width 2))
-      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (clip (polygon_ (points window)))
       (line|none_ (from (reach-from A FA H)) (to (reach-to A FA H)))
       (line|none_ (from (reach-from B FB H)) (to (reach-to B FB H)))
       (line|none_ (from (reach-from C FC H)) (to (reach-to C FC H)))
@@ -79,37 +85,37 @@
         (stroke-width 1) (dash [4 4]))
       (line|none_ (from FC) (to (lerp A B (max 0 (min 1 (/ (dot (- FC A) (- B A)) (* c c))))))
         (stroke-width 1) (dash [4 4]))
-      (circle|none_ (pos H) (r 0.14) (stroke none))
-      (text|none_ 'H' (pos (+ H [0.25 0.2])) (font variable)))
+      (circle|none h-dot (pos H) (r 0.14) (stroke none))
+      (text|none_ 'H' (pos (top-right h-dot gap)) (valign 'bottom') (font variable)))
 
     (group bisectors (defaults (stroke saffron) (fill saffron) (stroke-width 2))
-      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (clip (polygon_ (points window)))
       (line|none_ (from A) (to (* (/ 1 (+ b c)) (+ (* b B) (* c C)))))
       (line|none_ (from B) (to (* (/ 1 (+ c a)) (+ (* c C) (* a A)))))
       (line|none_ (from C) (to (* (/ 1 (+ a b)) (+ (* a A) (* b B)))))
       (circle|none_ (pos I) (r inradius) (fill none))
-      (circle|none_ (pos I) (r 0.14) (stroke none))
-      (text|none_ 'I' (pos (+ I [0.25 0.2])) (font variable)))
+      (circle|none i-dot (pos I) (r 0.14) (stroke none))
+      (text|none_ 'I' (pos (top-right i-dot gap)) (valign 'bottom') (font variable)))
 
     ; The line runs well past the canvas both ways: 30 units from O along O to H.
     (group euler (defaults (stroke plum) (fill plum) (stroke-width 2))
-      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (clip (polygon_ (points window)))
       (line|none_ (from (- O (* (/ 30 (dist O H)) (- H O))))
                   (to (+ O (* (/ 30 (dist O H)) (- H O)))))
       (circle|none_ (pos O) (r (dist O cc.pos)) (fill none) (stroke-width 1))
-      (circle|none_ (pos O) (r 0.14) (stroke none))
-      (text|none_ 'O' (pos (+ O [0.25 0.2])) (font variable))
+      (circle|none o-dot (pos O) (r 0.14) (stroke none))
+      (text|none_ 'O' (pos (top-right o-dot gap)) (valign 'bottom') (font variable))
       (circle_ (pos G) (r 0.14) (stroke none))
       (circle|none_ (pos H) (r 0.14) (stroke none))))
 
   (group names (defaults (fill ink) (font variable) (halign 'middle'))
-    (text_ 'A' (pos (+ ca.pos [0 -0.45])) (valign 'top'))
-    (text_ 'B' (pos (+ cb.pos [0 -0.45])) (valign 'top'))
-    (text_ 'C' (pos (+ cc.pos [0 0.45])) (valign 'bottom')))
+    (text_ 'A' (pos (bottom ca (* 2 gap))) (valign 'top'))
+    (text_ 'B' (pos (bottom cb (* 2 gap))) (valign 'top'))
+    (text_ 'C' (pos (top cc (* 2 gap))) (valign 'bottom')))
 
-  (group captions (defaults (fill soft) (font code) (halign 'middle'))
-    (text_ '(on-drag ca ca.x (>= ca.x -7) (<= ca.x (- cb.x 1.5)))' (pos [0 -4.6]))
-    (text_ '(on-drag cb cb.x (>= cb.x (+ ca.x 1.5)) (<= cb.x 7))' (pos [0 -5.3]))))
+  (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
+    (text_ '(on-drag ca ca.x (>= ca.x -7) (<= ca.x (- cb.x 1.5)))' (pos (bottom rail 1.3)))
+    (text_ '(on-drag cb cb.x (>= cb.x (+ ca.x 1.5)) (<= cb.x 7))' (pos (bottom rail 2)))))
 
 (toggle show-medians none (label 'medians'))
 (toggle show-altitudes none (label 'altitudes'))

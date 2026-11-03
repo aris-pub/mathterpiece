@@ -36,16 +36,22 @@
   ; 1 while the bubbles wait below the figure, 0 once they have risen into place.
   (real rise 1 (>= 0) (<= 1))
 
-  (group bubbles
-    (foreach i 8
-      (bubble (name $'b{i}')
-        (pos [(rand -6.4 6.4) (- (rand -2.6 3.4) (* rise (rand 9 13)))])
-        (size (rand 0.55 1.25))
-        (tint [terracotta teal saffron plum][(mod i 4)]))))
+  ; The bubbles' centers fall anywhere in water, which is not drawn. The caption sits under it,
+  ; far enough down to clear the largest bubble.
+  (real largest 1.25 (const))
+  (rect water (pos [0 0.4]) (width 12.8) (height 6) (fill none) (stroke none))
+  (let ((low (bottom-left water)) (high (top-right water)))
+    (group bubbles
+      (foreach i 8
+        (bubble (name $'b{i}')
+          (pos [(rand low[0] high[0]) (- (rand low[1] high[1]) (* rise (rand 9 13)))])
+          (size (rand 0.55 largest))
+          (tint [terracotta teal saffron plum][(mod i 4)])))))
 
   (int popped-count (count bubbles (fn b b.popped)))
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'middle'))
-    (text_ $'(exists-when body (not popped)), popped: {popped-count} of 8' (pos [0 -4.5]))))
+    (text_ $'(exists-when body (not popped)), popped: {popped-count} of 8'
+      (pos (bottom water (+ largest 0.65))))))
 
 (canvas view (view-x -8) (view-y -5) (view-width 16) (view-height 10) (pan false) (zoom false)
   pond)

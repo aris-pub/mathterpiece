@@ -13,6 +13,12 @@
 (font small (size 13))
 (font mono (family 'ui-monospace, monospace') (size 13))
 
+; The four panels sit on a two by two grid: cell (col, row) is the center of one, row 0 on top.
+(func[point] cell ((int col) (int row)) [(* 8 (- col 0.5)) (- 2.6 (* 4.6 row))])
+; Half the length of the two lines, and where a caption sits from its panel's center.
+(real half 2.5 (const))
+(point under [0 -1.9] (const))
+
 (type cap string (one-of 'butt' 'round' 'square'))
 (type join string (one-of 'miter' 'round' 'bevel'))
 
@@ -25,38 +31,40 @@
   (real gap-length 10 (>= 2) (<= 30))
 
   ; How a stroke ends: a thick line, with thin ones where it ends and along its middle.
-  (group ends-panel
-    (line thick (from [-6.5 2.6]) (to [-1.5 2.6]) (stroke warm) (stroke-width width)
+  (group ends-panel (translate (cell 0 0))
+    (line thick (from [(- half) 0]) (to [half 0]) (stroke warm) (stroke-width width)
       (line-cap ends))
     (group guides (defaults (stroke ink) (stroke-width 1))
-      (line_ (from [-6.5 1.8]) (to [-6.5 3.4]))
-      (line_ (from [-1.5 1.8]) (to [-1.5 3.4]))
-      (line_ (from [-6.5 2.6]) (to [-1.5 2.6]))))
+      (line_ (from (+ (left thick) [0 -0.8])) (to (+ (left thick) [0 0.8])))
+      (line_ (from (+ (right thick) [0 -0.8])) (to (+ (right thick) [0 0.8])))
+      (line_ (from (left thick)) (to (right thick)))))
 
   ; How it turns a corner: a sharp triangle's outline, with a thin one along its middle.
-  (group corners-panel
-    (triangle outline (a [1.4 1.6]) (b [6.6 1.6]) (c [3.2 3.6]) (fill none) (stroke cool)
+  (group corners-panel (translate (cell 1 0))
+    (triangle outline (a [-2.6 -1]) (b [2.6 -1]) (c [-0.8 1]) (fill none) (stroke cool)
       (stroke-width width) (line-join corners))
-    (triangle_ (a [1.4 1.6]) (b [6.6 1.6]) (c [3.2 3.6]) (fill none) (stroke ink)
+    (triangle_ (a outline.a) (b outline.b) (c outline.c) (fill none) (stroke ink)
       (stroke-width 1)))
 
   ; A dash pattern from the sliders, with the ends the buttons pick.
-  (line pattern (from [-6.5 -2]) (to [-1.5 -2]) (stroke ink) (stroke-width (/ width 2))
-    (dash [dash-length gap-length]) (line-cap ends))
+  (line pattern (translate (cell 0 1)) (from [(- half) 0]) (to [half 0]) (stroke ink)
+    (stroke-width (/ width 2)) (dash [dash-length gap-length]) (line-cap ends))
 
-  ; Marching dashes: the animation moves the outline's dash-offset by two patterns.
-  (circle dot (pos [4 -2]) (r 0.5) (fill warm) (stroke none))
-  (circle ring (pos [4 -2]) (r 1.6) (fill none) (stroke cool) (stroke-width 3) (dash [9 6])
-    (line-cap 'round'))
+  ; Marching dashes: the animation moves the ring's dash-offset by two patterns.
+  (group march-panel (translate (cell 1 1))
+    (circle dot (r 0.5) (fill warm) (stroke none))
+    (circle ring (r 1.4) (fill none) (stroke cool) (stroke-width 3) (dash [9 6])
+      (line-cap 'round')))
 
+  ; Each caption sits the same way under its panel's center, so the two in a row line up.
   (group captions (defaults (fill soft) (font mono) (halign 'middle') (valign 'top'))
-    (text_ $'(line-cap \'{ends}\')' (pos [-4 0.9]))
-    (text_ $'(line-join \'{corners}\')' (pos [4 0.9]))
-    (text_ $'(dash [{dash-length:.0f} {gap-length:.0f}])' (pos [-4 -3.3]))
-    (text_ '(move ring.dash-offset …)' (pos [4 -4]))))
+    (text_ $'(line-cap \'{ends}\')' (pos (+ (cell 0 0) under)))
+    (text_ $'(line-join \'{corners}\')' (pos (+ (cell 1 0) under)))
+    (text_ $'(dash [{dash-length:.0f} {gap-length:.0f}])' (pos (+ (cell 0 1) under)))
+    (text_ '(move ring.dash-offset …)' (pos (+ (cell 1 1) under)))))
 
 (canvas view (view-x -8) (view-y -4.8) (view-width 16) (view-height 9) (pan false) (zoom false)
-  ends-panel corners-panel pattern dot ring captions)
+  ends-panel corners-panel pattern march-panel captions)
 
 (play march (autoplay view)
   (animation (loop) (move ring.dash-offset (from 0) (to -30) (duration 1.5) (ease 'linear'))))
