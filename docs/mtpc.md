@@ -136,7 +136,7 @@ and then what its kind needs:
 | `slider`, `button`, `play` | `"animation"`: an id; `"autoplay"` (play only): `null`, `"load"`, or the id of the view or control whose first coming into view starts it; `"conditions"`; `"when"`: a bool, free or bound, or `null`; `"attrs"`: `label`, and `step` (slider: the number of positions its knob stops at), `buttons` (play), and the attributes the reader's actions change: `position` (slider), `playing` and `step` (play: the step now playing) |
 | `toggle` | `"target"`: `[id, attr]` or `null`; `"conditions"`; `"when"`: a bool, free or bound, or `null`; `"attrs"`: `label`, `value` |
 | `on-drag` | `"shape"`: an id; `"target"`: `[id, attr]`; `"conditions"`; `"when"`: a bool, free or bound, or `null` |
-| `on-click` | `"shape"`: an id; `"animation"`: an id; `"conditions"`; `"when"`: a bool, free or bound, or `null` |
+| `on-click`, `on-release`, `on-dragend` | `"shape"`: an id; `"animation"`: an id; `"conditions"`; `"when"`: a bool, free or bound, or `null` |
 | `on-view` | `"view"`: the canvas's id; `"animation"`: an id; `"conditions"`; `"when"`: a bool, free or bound, or `null` |
 
 A writer's `"conditions"` is a list of clamps, one per condition, already in the form the reference requires (a comparison of the variable or attribute written with a value not depending on it): `{"target": [id, attr], "op": ">=" | ">" | "<=" | "<", "limit": L}`, `L` free or bound. Before emitting a write to that target, the runtime clamps it to the limit.

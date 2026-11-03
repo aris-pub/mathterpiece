@@ -3,7 +3,7 @@
 // put each one where it fits. Every writer emits writes to the model; views redraw on each change.
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
-import { Clicks } from "./click.ts";
+import { Listeners } from "./click.ts";
 import { type Doc, FORMAT_VERSION, type Obj, whenItems } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
@@ -26,7 +26,9 @@ export class MtpModel extends HTMLElement {
   runtime: Runtime | null = null;
   scheduler: Scheduler | null = null;
   drags: Drags | null = null;
-  clicks: Clicks | null = null;
+  clicks: Listeners | null = null;
+  releases: Listeners | null = null;
+  dragends: Listeners | null = null;
   error: string | null = null;
   // The views and controls that have come into view, and what waits for one to.
   private seen = new Set<number>();
@@ -61,7 +63,9 @@ export class MtpModel extends HTMLElement {
       () => this.wake(),
     );
     this.drags = new Drags(rt);
-    this.clicks = new Clicks(rt);
+    this.clicks = new Listeners(rt, "on-click");
+    this.releases = new Listeners(rt, "on-release");
+    this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
     this.seen.clear();
     this.waiting.clear();
@@ -218,6 +222,8 @@ export class MtpCanvas extends MtpPart {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
     const drags = model.drags!;
     const clicks = model.clicks!;
+    const releases = model.releases!;
+    const dragends = model.dragends!;
     const fades = new Fades(rt, canvas, scheduler, () => this.redraw());
     const look: Look = { scale: 1, dx: 0, dy: 0 };
     this.redraw = () => {
@@ -329,12 +335,21 @@ export class MtpCanvas extends MtpPart {
         touches.has(event.pointerId) &&
         Math.hypot(event.clientX - pressedAt[0], event.clientY - pressedAt[1]) > 4;
       lift(event);
+      // As JS's dragend, only a drag that moved ends.
+      const ended = drags.moved ? drags.shape : null;
       drags.release();
       const released = hitOf(event);
-      const listener = pressed !== null && pressed === released && !panned ? clicks.find(pressed) : null;
+      // pointerup comes before click, as in JS; the end of a drag comes between them.
+      const click = pressed !== null && pressed === released && !panned ? clicks.find(pressed) : null;
+      for (const listener of [
+        released !== null ? releases.find(released) : null,
+        ended !== null ? dragends.find(ended) : null,
+        click,
+      ]) {
+        const player = listener ? playerFor(rt, listener) : null;
+        if (listener && player) scheduler.start(player, listener);
+      }
       pressed = null;
-      const player = listener ? playerFor(rt, listener) : null;
-      if (listener && player) scheduler.start(player, listener);
     });
     svg.addEventListener("pointercancel", (event) => {
       lift(event);

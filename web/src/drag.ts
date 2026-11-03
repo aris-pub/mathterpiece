@@ -17,6 +17,8 @@ interface Held {
   grab: Point;
   start: Point;
   members?: [number, Point][];
+  // Whether the pointer has moved since the press.
+  moved?: boolean;
 }
 
 export class Drags {
@@ -31,6 +33,15 @@ export class Drags {
 
   get dragging(): boolean {
     return this.held !== null;
+  }
+
+  /** The shape the held drag listens on, and whether the pointer has moved it since the press. */
+  get shape(): number | null {
+    return this.held?.shape ?? null;
+  }
+
+  get moved(): boolean {
+    return this.held?.moved ?? false;
   }
 
   /** What the held drag writes, as "id:attr". */
@@ -84,6 +95,7 @@ export class Drags {
   move(scene: Point): boolean {
     const held = this.held;
     if (!held) return false;
+    held.moved = true;
     const [id, attr] = held.target;
     const rt = this.rt;
     let changed = false;

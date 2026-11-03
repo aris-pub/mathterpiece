@@ -118,7 +118,9 @@
                 "toggle",
                 "on-drag",
                 "on-click",
-                "on-view"
+                "on-view",
+                "on-release",
+                "on-dragend"
               ]
             }
           },
@@ -1491,7 +1493,9 @@
                 "toggle",
                 "on-drag",
                 "on-click",
-                "on-view"
+                "on-view",
+                "on-release",
+                "on-dragend"
               ]
             }
           }
@@ -2333,7 +2337,11 @@
             "type": "object",
             "properties": {
               "kind": {
-                "const": "on-click"
+                "enum": [
+                  "on-click",
+                  "on-release",
+                  "on-dragend"
+                ]
               }
             },
             "required": [
@@ -2354,7 +2362,11 @@
             ],
             "properties": {
               "kind": {
-                "const": "on-click"
+                "enum": [
+                  "on-click",
+                  "on-release",
+                  "on-dragend"
+                ]
               },
               "type": {
                 "$ref": "#/$defs/type"

@@ -109,7 +109,11 @@ COMPONENTS = {
     "on-drag",
     "on-click",
     "on-view",
+    "on-release",
+    "on-dragend",
 }
+# Listeners on a shape: their positional argument is the shape they listen to.
+ON_SHAPE = ("on-drag", "on-click", "on-release", "on-dragend")
 # The views and controls a play's autoplay may wait for.
 SEEN = {"canvas", "readout", "slider", "button", "play", "toggle"}
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
@@ -1518,8 +1522,8 @@ class _Compiler:
         self.cscope = scope
         kind = _head(form)
         assert kind is not None
-        if kind in ("on-drag", "on-click"):
-            if len(form.items) < 2:
+        if kind in ON_SHAPE:
+            if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
                 raise CompileError(f"{kind} takes the shape it listens to", form.pos)
             name, pos, items = None, form.pos, form.items[2:]
             shape = self.read_shape(form.items[1])
@@ -1585,7 +1589,7 @@ class _Compiler:
 
     def writer(self, obj: Obj, items: list, written: set) -> None:
         """What every writer has: a label (controls), conditions, and the items left over."""
-        if obj.kind not in ("on-drag", "on-click", "on-view"):
+        if obj.kind not in (*ON_SHAPE, "on-view"):
             label = self.take(items, "label")
             # By default a control's label is its name; one with no name has an empty label.
             obj.attrs["label"] = (
@@ -1778,6 +1782,9 @@ class _Compiler:
         written = self.animated(obj, items)
         self.when(obj, items)
         self.writer(obj, items, written)
+
+    build_on_release = build_on_click
+    build_on_dragend = build_on_click
 
     def build_canvas(self, obj: Obj, items: list, shape) -> None:
         defaults = {"view-x": -10, "view-y": -10, "view-width": 20, "view-height": 20}

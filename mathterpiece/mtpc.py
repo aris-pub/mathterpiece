@@ -267,7 +267,7 @@ class Writer:
             d["animation"] = o.data["animation"]
             d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
             d["conditions"] = self.conditions(o)
-        elif kind == "on-click":
+        elif kind in ("on-click", "on-release", "on-dragend"):
             d["shape"] = o.data["shape"]
             d["animation"] = o.data["animation"]
             d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None

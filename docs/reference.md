@@ -99,6 +99,8 @@ Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equ
 | `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(when bool)` | conditions |
 | `(on-drag shape target)` | none | the shape; the target, a `name`, the variable or attribute the drag writes | `(when bool)` | conditions |
 | `(on-click shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
+| `(on-release shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
+| `(on-dragend shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
 | `(on-view canvas)` | none | the canvas | `(animation …)`, `(when bool)` | conditions |
 
 ## Defaults
@@ -176,7 +178,10 @@ Every control and listener emits writes to its target (or, through its animation
 - **Button:** a press plays its animation from the start, over time; a press while it runs starts it again.
 - **Play:** a press plays the animation, and its label reads "pause" while it runs. A press while it runs pauses it, and the next resumes it; after the end, a press plays it again from the start. With `(buttons true)` it also shows one button per item of its animation's body (or, when the body is a single `in-order`, per item of that), lit while that item runs: clicking one, whatever the state, first cancels every writer moving any variable or attribute the play moves, the play itself included, so a play that was playing stops; then that item runs alone, over time, from wherever things are, and its button is lit while it runs. The play's next press plays from the start. With `(autoplay)` it starts by itself when the page loads, in view or not; with `(autoplay name)`, `name` a view or a control declared before it, it starts the first time that comes into view on the page.
 - **Toggle:** a checkbox writing its target bool, or holding its own value when its target is `none`; `(value bool)` sets that own value's start, and is an error with a target. On a group's attribute it writes every member, reads true only when every member's is true, and shows a mixed state when the members differ; a click on a mixed toggle sets every member to true. A toggle is read through its value, `show.value`, like any other attribute.
-- **On-click:** a click on the shape plays its animation, as a button does.
+- **On-click:** a click on the shape plays its animation, as a button does. A click is a press and a release on the same shape, with no pan between.
+- **On-release:** like JavaScript's `pointerup`, the pointer released over the shape plays its animation, wherever the press began.
+- **On-dragend:** like JavaScript's `dragend`, a drag of the shape that ends plays its animation. A drag starts only once the pointer moves, so a press and release with no move between ends none. The shape is the one whose `on-drag` the drag follows.
+- **Order:** a release sets off, in this order, the `on-release` of the shape under the pointer, the `on-dragend` of the shape dragged, and the `on-click`: JavaScript sends `pointerup` before `click`, and `on-dragend` comes between them. Each listener is the nearest of its kind up the scene tree from its shape whose `when` holds.
 - **On-view:** the first time the canvas comes into view on the page, it plays its animation, as a button does; it never plays again.
 - **Two writers on one target:** a writer that starts moving a variable or an attribute cancels any other writer moving it. The newest wins, whatever its kind.
 

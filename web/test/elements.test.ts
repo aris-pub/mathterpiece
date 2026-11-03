@@ -353,3 +353,41 @@ describe("starting without the reader", () => {
     expect(v("m")).toBeCloseTo(7);
   });
 });
+
+describe("releases", () => {
+  // mtp-jpj: on-release follows JS's pointerup, and on-dragend its dragend.
+  const RELEASE = docs["./data/runtime/release.mtpc"] as string;
+  const shape = (rt: Runtime, name: string) => document.querySelector(`mtp-canvas [data-mtp-id="${rt.id(name)}"]`)!;
+  const at = (el: Element, type: string, x = 0) =>
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: 0, pointerId: 1 }));
+
+  it("runs an on-release when the pointer is released over the shape, wherever the press began", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    at(shape(rt, "a"), "pointerdown");
+    at(shape(rt, "b"), "pointerup");
+    pass(0.1);
+    expect(v("r")).toBe(1);
+    // A press on one shape and a release on another is not a click on either.
+    expect(v("k")).toBe(0);
+  });
+
+  it("runs an on-dragend when a drag of the shape ends", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    // The canvas holds the pointer from the press on, so the move and the release reach its svg.
+    const svg = document.querySelector("mtp-canvas svg")!;
+    at(shape(rt, "d"), "pointerdown", 0);
+    at(svg, "pointermove", 30);
+    at(svg, "pointerup", 30);
+    pass(0.1);
+    expect(v("e")).toBe(1);
+  });
+
+  it("runs no on-dragend for a press and release with no drag between", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(RELEASE) as Doc);
+    const d = shape(rt, "d");
+    at(d, "pointerdown");
+    at(d, "pointerup");
+    pass(0.1);
+    expect(v("e")).toBe(0);
+  });
+});

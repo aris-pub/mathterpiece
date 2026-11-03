@@ -233,3 +233,34 @@ class TestStartingWithoutTheReader:
         assert o["view"] == m.id("v")
         assert d["objects"][m.id("p")]["autoplay"] == "load"
         assert d["objects"][m.id("q")]["autoplay"] == m.id("v")
+
+
+class TestReleaseListeners:
+    # mtp-jpj: on-release runs when the pointer is released over the shape, as JS's pointerup;
+    # on-dragend when a drag of the shape ends, as JS's dragend.
+    S = f"{K} (scene s (circle c))"
+
+    @pytest.mark.parametrize("kind", ["on-release", "on-dragend"])
+    def test_a_listener_on_a_shape(self, kind):
+        m = model(f"{self.S} ({kind} c {MOVE})")
+        (o,) = [o for o in m.objects if o.kind == kind]
+        assert o.data["shape"] == m.id("c")
+        assert m.objects[o.data["animation"]].kind == "animation"
+        assert o.name is None and "label" not in o.attrs
+
+    @pytest.mark.parametrize("kind", ["on-release", "on-dragend"])
+    def test_it_takes_a_shape(self, kind):
+        error(f"{K} ({kind} {MOVE})", f"{kind} takes the shape it listens to")
+
+    def test_the_compiled_file(self):
+        import json
+
+        from mtpc_check import errors
+
+        from mathterpiece.mtpc import write
+
+        m = model(f"{self.S} (on-release c {MOVE}) (on-dragend c (when true) {MOVE})")
+        d = json.loads(write(m))
+        assert errors(d) == []
+        kinds = [o["kind"] for o in d["objects"]]
+        assert "on-release" in kinds and "on-dragend" in kinds
