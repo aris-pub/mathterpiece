@@ -1,0 +1,118 @@
+; One motif, the gauge, placed six times: the top three with different ranges, the bottom three
+; as variants that fix some of its parameters. Drag a needle or use a slider. A face button writes
+; the fill of the group that holds every dial, and the write reaches each dial's members.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color terracotta '#e76f51')
+(color teal '#2a9d8f')
+(color saffron '#e9c46a')
+(color plum '#6d597a')
+(font number (family 'ui-monospace, Menlo, monospace') (size 14))
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+; A needle over a scale from lo to hi, swept through sweep degrees and centered on straight up.
+; The count of ticks decides how many lines are made, so it must be known when compiling.
+(motif gauge ((real value 0) (real lo 0) (real hi 1) (color accent) (real sweep 270)
+              (real weight 6 (>= 0)) (int ticks 10 (const)))
+  (real start (+ 90 (/ sweep 2)))
+  ; How far the value is from lo to hi; a range of no size puts the needle at its start.
+  (real share (or? (/ (- value lo) (- hi lo)) 0))
+  (real turn (- start (* sweep share)))
+  ; The face's fill starts as none, so the face buttons can write it: a fill given by a color
+  ; token would be bound to the token, and nothing could write it.
+  (group frame (defaults (stroke ink) (fill none))
+    (circle face (r 1.3) (fill-opacity 0.22) (stroke-width 2))
+    (foreach i (+ ticks 1)
+      (line_ (from (polar 1.02 (- start (* sweep (/ i ticks)))))
+             (to (polar 1.18 (- start (* sweep (/ i ticks))))) (stroke-width 1.5))))
+  (polyline track (points (map (range 0 1 (num 49)) (fn t (polar 1.55 (- start (* sweep t))))))
+    (stroke soft) (stroke-width 1))
+  (polyline reach
+    (points (map (range 0 1 (num 49)) (fn t (polar 1.55 (- start (* sweep share t))))))
+    (stroke accent) (stroke-width weight) (line-cap 'round'))
+  (line needle (from [0 0]) (to (polar 0.95 turn)) (stroke accent) (stroke-width 3)
+    (line-cap 'round'))
+  ; The hub and the knob are rings: their color is their stroke, so writing the faces' fill
+  ; only fills them in.
+  (circle hub (r 0.06) (fill none) (stroke ink) (stroke-width 4))
+  (circle knob (pos needle.to) (r 0.1) (fill none) (stroke accent) (stroke-width 6)))
+
+; Variants fix some of a gauge's parameters, so each one is a style of dial.
+(variant thin-gauge () (gauge_ (lo 0) (hi 100) (accent plum) (weight 2) (ticks 20)))
+(variant bold-gauge () (gauge_ (lo 0) (hi 100) (accent terracotta) (weight 12) (ticks 4)))
+(variant half-gauge () (gauge_ (lo 0) (hi 100) (accent saffron) (sweep 180) (ticks 6)))
+
+(scene board
+  (background paper)
+
+  (group panel
+    (gauge speed (pos [-4.7 2]) (value 72) (lo 0) (hi 120) (accent teal))
+    (gauge heat (pos [0 2]) (value 18) (lo -20) (hi 40) (accent teal))
+    (gauge pressure (pos [4.7 2]) (value 2.4) (lo 0) (hi 6) (accent teal))
+    (thin-gauge thin (pos [-4.7 -2.8]) (value 35))
+    (bold-gauge bold (pos [0 -2.8]) (value 60))
+    (half-gauge half (pos [4.7 -2.8]) (value 80)))
+
+  (group readings (defaults (fill ink) (font number) (halign 'middle') (valign 'middle'))
+    (text_ $'{speed.value:.0f}' (pos (+ speed.pos [0 -0.55])))
+    (text_ $'{heat.value:.0f}' (pos (+ heat.pos [0 -0.55])))
+    (text_ $'{pressure.value:.1f}' (pos (+ pressure.pos [0 -0.55])))
+    (text_ $'{thin.value:.0f}' (pos (+ thin.pos [0 -0.55])))
+    (text_ $'{bold.value:.0f}' (pos (+ bold.pos [0 -0.55])))
+    (text_ $'{half.value:.0f}' (pos (+ half.pos [0 -0.55]))))
+
+  ; Under each dial, the declaration that makes it, with its value as it is now.
+  (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
+    (text_ '(gauge (lo 0) (hi 120)' (pos (bottom speed 0.25)))
+    (text_ $'(value {speed.value:.0f}))' (pos (bottom speed 0.62)))
+    (text_ '(gauge (lo -20) (hi 40)' (pos (bottom heat 0.25)))
+    (text_ $'(value {heat.value:.0f}))' (pos (bottom heat 0.62)))
+    (text_ '(gauge (lo 0) (hi 6)' (pos (bottom pressure 0.25)))
+    (text_ $'(value {pressure.value:.1f}))' (pos (bottom pressure 0.62)))
+    (text_ '(thin-gauge' (pos (bottom thin 0.25)))
+    (text_ $'(value {thin.value:.0f}))' (pos (bottom thin 0.62)))
+    (text_ '(bold-gauge' (pos (bottom bold 0.25)))
+    (text_ $'(value {bold.value:.0f}))' (pos (bottom bold 0.62)))
+    (text_ '(half-gauge' (pos (bottom half 0.25)))
+    (text_ $'(value {half.value:.0f}))' (pos (bottom half 0.62))))
+
+  (text fill-form '(move panel.fill (to …))' (pos [0 4.55]) (halign 'middle') (valign 'middle')
+    (font code) (fill soft)))
+
+(canvas view (view-x -7.6) (view-y -5.4) (view-width 15.2) (view-height 10.4) (pan false)
+  (zoom false)
+  board)
+
+; The knob is a ring, and its middle is not part of it, so a press there reaches the needle
+; under it: the needle can be dragged too.
+(on-drag speed.knob speed.value (>= speed.value 0) (<= speed.value 120))
+(on-drag speed.needle speed.value (>= speed.value 0) (<= speed.value 120))
+(on-drag heat.knob heat.value (>= heat.value -20) (<= heat.value 40))
+(on-drag heat.needle heat.value (>= heat.value -20) (<= heat.value 40))
+(on-drag pressure.knob pressure.value (>= pressure.value 0) (<= pressure.value 6))
+(on-drag pressure.needle pressure.value (>= pressure.value 0) (<= pressure.value 6))
+(on-drag thin.knob thin.value (>= thin.value 0) (<= thin.value 100))
+(on-drag thin.needle thin.value (>= thin.value 0) (<= thin.value 100))
+(on-drag bold.knob bold.value (>= bold.value 0) (<= bold.value 100))
+(on-drag bold.needle bold.value (>= bold.value 0) (<= bold.value 100))
+(on-drag half.knob half.value (>= half.value 0) (<= half.value 100))
+(on-drag half.needle half.value (>= half.value 0) (<= half.value 100))
+
+(slider speed-slider (move speed.value (from 0) (to 120)) (label 'speed'))
+(slider heat-slider (move heat.value (from -20) (to 40)) (label 'temperature'))
+(slider pressure-slider (move pressure.value (from 0) (to 6)) (label 'pressure'))
+(slider thin-slider (move thin.value (from 0) (to 100)) (label 'thin dial'))
+(slider bold-slider (move bold.value (from 0) (to 100)) (label 'bold dial'))
+(slider half-slider (move half.value (from 0) (to 100)) (label 'half dial'))
+
+(button teal-faces (animation (move panel.fill (to teal) (duration 0.5) (ease 'ease-in-out')))
+  (label 'teal faces'))
+(button saffron-faces
+  (animation (move panel.fill (to saffron) (duration 0.5) (ease 'ease-in-out')))
+  (label 'saffron faces'))
+(button plum-faces (animation (move panel.fill (to plum) (duration 0.5) (ease 'ease-in-out')))
+  (label 'plum faces'))
+(button clear-faces (animation (move panel.fill (to none) (duration 0.5) (ease 'ease-in-out')))
+  (label 'no faces'))
