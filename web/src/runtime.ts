@@ -71,13 +71,20 @@ export class Runtime {
     doc.objects.forEach((o, i) => {
       if (o.value) this.load(i, null, o.value);
       for (const [attr, p] of Object.entries(o.attrs ?? {})) this.load(i, attr, p);
-      // While a shape does not exist every read of it is none, so each of its attributes
-      // follows its exists-when (mtp-b9g0).
-      if (o.attrs?.exists) {
-        const ek = key(i, "exists");
-        if (!this.dependents.has(ek)) this.dependents.set(ek, new Set());
-        for (const attr of Object.keys(o.attrs)) if (attr !== "exists") this.dependents.get(ek)!.add(key(i, attr));
-      }
+    });
+    // While a shape does not exist every read of it, and of its members when it is a container,
+    // is none, so each of their attributes follows its exists-when (mtp-b9g0).
+    doc.objects.forEach((o, i) => {
+      if (!o.attrs?.exists) return;
+      const ek = key(i, "exists");
+      if (!this.dependents.has(ek)) this.dependents.set(ek, new Set());
+      const follow = (j: number) => {
+        for (const attr of Object.keys(this.objects[j]!.attrs ?? {})) {
+          if (j !== i || attr !== "exists") this.dependents.get(ek)!.add(key(j, attr));
+        }
+        for (const m of this.objects[j]!.members ?? []) follow(m);
+      };
+      follow(i);
     });
   }
 
@@ -122,9 +129,13 @@ export class Runtime {
     this.listeners.push(listener);
   }
 
-  /** Whether a shape exists now: false only while its exists-when does not hold. */
+  /** Whether a shape exists now: not while its exists-when, or a container's around it, does
+   * not hold. */
   exists(id: number): boolean {
-    return !this.has(id, "exists") || Boolean(this.get(key(id, "exists")));
+    for (let i: number | null = id; i !== null; i = this.parent(i)) {
+      if (this.has(i, "exists") && !this.get(key(i, "exists"))) return false;
+    }
+    return true;
   }
 
   /** The id of a named object. */

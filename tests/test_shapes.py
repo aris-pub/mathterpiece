@@ -244,41 +244,53 @@ class TestDefaults:
 
 
 class TestExistsWhen:
-    # mtp-b9g0: (exists-when bool name…), after the shapes it names, says when they exist in the
+    # mtp-b9g0: (exists-when name bool), after the shape it names, says when it exists in the
     # scene; each must be declared T|none, so whatever reads it handles none.
     def test_a_condition_for_a_shape(self):
-        m = model("(scene s (real k 0) (circle|none c (r 1)) (exists-when (> k 0) c))")
+        m = model("(scene s (real k 0) (circle|none c (r 1)) (exists-when c (> k 0)))")
         exists = m.get("c").attrs["exists"]
         assert exists.bound and (m.id("k"), None) in exists.deps
 
     def test_in_a_group_and_a_foreach(self):
         m = model(
             "(scene s (real k 0) (group g (foreach i 3 (circle|none (name $'c{i}') (r 1))"
-            " (exists-when (< i k) (name $'c{i}')))))"
+            " (exists-when (name $'c{i}') (< i k)))))"
         )
         assert m.get("c2").attrs["exists"].bound
 
     def test_in_a_motif(self):
         m = model(
-            "(motif dot ((real t 1)) (circle|none face (r 1)) (exists-when (> t 0) face))"
+            "(motif dot ((real t 1)) (circle|none face (r 1)) (exists-when face (> t 0)))"
             " (scene s (dot d))"
         )
         assert (m.id("d"), "t") in m.get("d.face").attrs["exists"].deps
 
     def test_the_shape_must_be_declared_t_or_none(self):
-        error("(scene s (real k 0) (circle c (r 1)) (exists-when (> k 0) c))", "circle\\|none")
+        error("(scene s (real k 0) (circle c (r 1)) (exists-when c (> k 0)))", "circle\\|none")
 
     def test_it_comes_after_the_shape(self):
         error(
-            "(scene s (real k 0) (exists-when (> k 0) c) (circle|none c (r 1)))", "unknown name 'c'"
+            "(scene s (real k 0) (exists-when c (> k 0)) (circle|none c (r 1)))", "unknown name 'c'"
         )
 
     def test_once_per_shape(self):
         error(
-            "(scene s (real k 0) (circle|none c (r 1)) (exists-when (> k 0) c)"
-            " (exists-when (> k 1) c))",
+            "(scene s (real k 0) (circle|none c (r 1)) (exists-when c (> k 0))"
+            " (exists-when c (> k 1)))",
             "given twice",
         )
+
+    def test_one_shape_then_its_condition(self):
+        error(
+            "(scene s (real k 0) (circle|none a) (circle|none b) (exists-when a b (> k 0)))",
+            "exists-when is \\(exists-when shape condition\\)",
+        )
+
+    def test_the_members_of_a_container_that_may_not_exist_may_not_either(self):
+        # Non-existence cascades from a container to its members.
+        src = "(scene s (real k 0) (group|none g (circle a (r 1))) (exists-when g (> k 0)) {})"
+        assert isinstance(model(src.format("(real|none r a.r)")).get("a").type, Maybe)
+        error(src.format("(real r a.r)"), "may be none")
 
     def test_the_compiled_file(self):
         import json
@@ -288,7 +300,7 @@ class TestExistsWhen:
         from mathterpiece.mtpc import write
 
         d = json.loads(
-            write(model("(scene s (real k 0) (circle|none c (r 1)) (exists-when (> k 0) c))"))
+            write(model("(scene s (real k 0) (circle|none c (r 1)) (exists-when c (> k 0)))"))
         )
         assert errors(d) == []
         assert d["objects"][d["names"]["c"]]["attrs"]["exists"]["bound"][0] == "builtin"

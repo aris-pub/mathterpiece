@@ -202,7 +202,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name |
 | `(as T literal)` | nothing: the literal, with the type `T`; anything but a literal is a compile error |
-| `(exists-when bool name…)` | in a scene, group, `foreach` or motif body, after the shapes it names, each declared `T|none`: while `bool` does not hold they do not exist in the scene, so no canvas draws them, the pointer does not reach them, and every read of them or of their attributes is `none`; a shape takes one `exists-when` at most. A canvas's `when` is different: it shows or hides what exists |
+| `(exists-when name bool)` | in a scene, group, `foreach` or motif body, after the shape it names, which is declared `T|none`: while `bool` does not hold the shape does not exist in the scene, so no canvas draws it, the pointer does not reach it, and every read of it or of its attributes is `none`. When it is a container, its members do not exist either, so every member of a container declared `T|none` is `T|none` too. A shape takes one `exists-when` at most. A canvas's `when` is different: it shows or hides what exists |
 | `(foreach i n decl…)`, `(foreach x xs decl…)` | when compiling: the declarations once for each `i` from 0 to n−1, or once for each item `x` of the list `xs` (`g.pos`, the list of every member's position, too), or each member of a group `g`; the count, or the list's length, must be known when compiling, while the items may be known only while drawing |
 
 ## Operators

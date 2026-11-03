@@ -7,5 +7,5 @@
   (circle|none gone (r (/ 1 k)))
   (bool shown true)
   (circle|none maybe (r 1))
-  (exists-when shown maybe))
+  (exists-when maybe shown))
 (canvas v (view-x -3) (view-y -3) (view-width 6) (view-height 6) s)

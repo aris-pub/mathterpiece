@@ -2067,6 +2067,7 @@ class _Compiler:
         found = self.shape_kind(form)
         assert found is not None
         kind, absent = found
+        absent = absent or self.may_be_absent(parent)
         v = self.model.variants[kind]
         outer = outer or kind
         fixed = self.fixed_of(kind)
@@ -2145,6 +2146,7 @@ class _Compiler:
         found = self.shape_kind(form)
         assert found is not None
         kind = found[0]
+        absent = absent or self.may_be_absent(parent)
         motif = self.model.motifs[kind]
         name, pos = self.name_of(form, scope)
         t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
@@ -2288,6 +2290,8 @@ class _Compiler:
         found = self.shape_kind(form)
         assert found is not None
         kind, absent = found
+        # A member of a container that may not exist may not exist either.
+        absent = absent or self.may_be_absent(parent)
         if kind in self.model.variants:
             return self.variant_instance(form, parent, scope, spread)
         if kind in self.model.motifs:
@@ -2378,14 +2382,19 @@ class _Compiler:
             self.exists_when(item, inner)
         return i
 
+    def may_be_absent(self, parent) -> bool:
+        if parent is None or parent == self.scene:
+            return False
+        return isinstance(self.model.objects[parent].type, Maybe)
+
     def exists_when(self, form: Form, scope: dict) -> None:
-        """(exists-when bool name…): the shapes named, declared before it as T|none, exist in the
-        scene only while bool holds (mtp-b9g0); while they do not, they are not drawn and every
-        read of them is none."""
-        if len(form.items) < 3:
-            raise CompileError("exists-when is (exists-when bool shape…)", form.pos)
-        condition = self.attribute(BOOL, form.items[1], form.pos, "exists", scope=scope)
-        for node in form.items[2:]:
+        """(exists-when name bool): the shape named, declared before it as T|none, exists in the
+        scene only while bool holds (mtp-b9g0); while it does not, it is not drawn, and every
+        read of it, or of a member when it is a container, is none."""
+        if len(form.items) != 3:
+            raise CompileError("exists-when is (exists-when shape condition)", form.pos)
+        condition = self.attribute(BOOL, form.items[2], form.pos, "exists", scope=scope)
+        for node in form.items[1:2]:
             e = self.expr(node, None, scope)
             if e.op != "obj" or not isinstance(_core(e.type), ShapeT):
                 raise CompileError("exists-when names shapes declared before it", node.pos)

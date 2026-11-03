@@ -11,4 +11,4 @@
   (circle|none c (x 3) (r 2))
   (real|none r c.r)
   (real|none cx c.x)
-  (exists-when (> k 0) c))
+  (exists-when c (> k 0)))

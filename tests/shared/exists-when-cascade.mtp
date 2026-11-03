@@ -1,0 +1,9 @@
+; mtp-b9g0: a member of a container that does not exist does not exist either.
+; expect r 1
+; write k 0
+; expect r null
+(scene s
+  (real k 1)
+  (group|none g (circle a (r 1)))
+  (real|none r a.r)
+  (exists-when g (> k 0)))
