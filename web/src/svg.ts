@@ -212,12 +212,11 @@ function paint(rt: Runtime, i: number, el: Element): void {
   el.setAttribute("vector-effect", "non-scaling-stroke");
 }
 
-/** A paint as CSS: none, a color, or a token through its CSS variable (docs/mtpc.md). */
+/** A paint as CSS: none, a color, or one computed from tokens through their CSS variables (docs/mtpc.md). */
 export function paintCss(rt: Runtime, i: number, attr: string): string {
   const v = rt.value(i, attr);
   if (v === null) return "none";
-  const token = tokenOf(rt, i, attr);
-  return token ? `var(--mtp-${token}, ${String(v)})` : String(v);
+  return rt.css(i, attr) ?? String(v);
 }
 
 // The name of the token variable an attribute reads directly, if it does.

@@ -24,6 +24,7 @@ interface Ctx {
 }
 
 type Compiled = (ctx: Ctx) => unknown;
+type CompiledCss = (ctx: Ctx) => string | null;
 /** A function value: its arguments, and the frame of the expression calling it. */
 export type FnValue = (args: unknown[], frame: number | null) => unknown;
 
@@ -41,6 +42,7 @@ export class Runtime {
   private parents: (number | null)[];
   private free = new Map<string, unknown>();
   private bound = new Map<string, Compiled>();
+  private css_ = new Map<string, CompiledCss | null>();
   private types = new Map<string, Type>();
   private cache = new Map<string, unknown>();
   private dependents = new Map<string, Set<string>>();
@@ -276,6 +278,92 @@ export class Runtime {
     const lim = this.evaluate(c.limit) as number;
     if (c.op === ">=" || c.op === ">") return Math.max(value, lim);
     return Math.min(value, lim);
+  }
+
+  /**
+   * A color variable or attribute as CSS, when it is computed from tokens: through each token's
+   * CSS variable, so the page's CSS restyles it too (docs/mtpc.md, "Objects"). null when it reads
+   * no token, or reads one only where this does not follow it (inside a function's body or a
+   * let), and is then drawn with its value.
+   */
+  css(id: number, attr: string | null): string | null {
+    const f = this.cssOf(id, attr);
+    return f ? f(TOP) : null;
+  }
+
+  private cssOf(id: number, attr: string | null): CompiledCss | null {
+    const k = key(id, attr);
+    if (this.css_.has(k)) return this.css_.get(k)!;
+    const o = this.objects[id]!;
+    let f: CompiledCss | null = null;
+    if (attr === null && o.kind === "variable" && o.token) {
+      f = () => {
+        const v = this.value(id, null);
+        return v === null ? null : `var(--mtp-${o.name}, ${String(v)})`;
+      };
+    } else {
+      const p = attr === null ? o.value : o.attrs?.[attr];
+      if (p && isBound(p)) f = this.compileCss(p.bound as Expr);
+    }
+    this.css_.set(k, f);
+    return f;
+  }
+
+  // A color expression as CSS, or null when no token reaches it through the parts followed.
+  private compileCss(e: Expr): CompiledCss | null {
+    const [op] = e;
+    const parts = e.slice(2);
+    // A part that reads no token is drawn with its value.
+    const either = (part: Expr): CompiledCss => {
+      const css = this.compileCss(part);
+      if (css) return css;
+      const f = this.compile(part);
+      return (ctx) => {
+        const v = f(ctx);
+        return v === null ? null : String(v);
+      };
+    };
+    switch (op) {
+      case "read":
+        return this.cssOf(parts[0] as number, parts[1] as string | null);
+      case "check":
+        return this.compileCss(parts[0] as Expr);
+      case "if": {
+        const [c, a, b] = parts as Expr[];
+        if (!this.compileCss(a!) && !this.compileCss(b!)) return null;
+        const [test, fa, fb] = [this.compile(c!), either(a!), either(b!)];
+        return (ctx) => (test(ctx) ? fa(ctx) : fb(ctx));
+      }
+      case "cond": {
+        const clauses = parts[0] as [Expr, Expr][];
+        const otherwise = parts[1] as Expr;
+        if (!clauses.some(([, v]) => this.compileCss(v)) && !this.compileCss(otherwise)) return null;
+        const tests = clauses.map(([c, v]) => [this.compile(c), either(v)] as const);
+        const last = either(otherwise);
+        return (ctx) => {
+          for (const [c, v] of tests) if (c(ctx)) return v(ctx);
+          return last(ctx);
+        };
+      }
+      case "builtin": {
+        const [name, ...args] = parts as [string, ...Expr[]];
+        const toward: Record<string, Expr> = {
+          lighten: ["lit", "color", "#ffffffff"],
+          darken: ["lit", "color", "#000000ff"],
+        };
+        if (name !== "mix" && !(name in toward)) return null;
+        const [a, b, t] = name === "mix" ? args : [args[0]!, toward[name]!, args[1]!];
+        if (!this.compileCss(a!) && !this.compileCss(b!)) return null;
+        const [fa, fb, ft] = [either(a!), either(b!), this.compile(t!)];
+        return (ctx) => {
+          const [ca, cb, w] = [fa(ctx), fb(ctx), ft(ctx) as number];
+          if (ca === null || cb === null || w === null) return null;
+          return `color-mix(in srgb, ${ca} ${percent(1 - w)}, ${cb} ${percent(w)})`;
+        };
+      }
+      default:
+        return null;
+    }
   }
 
   /** The value of a condition, a limit or a when, which belong to no attribute. */
@@ -685,4 +773,8 @@ export function show(v: unknown, t: Type, spec: string): string {
   if (Array.isArray(v)) return `(${v.map((x) => pyStr(Number(x))).join(", ")})`;
   if (v instanceof Complex) return `(${pyStr(v.re)}${v.im < 0 ? "-" : "+"}${pyStr(Math.abs(v.im))}j)`;
   return String(v);
+}
+
+function percent(x: number): string {
+  return `${Number((100 * x).toFixed(6))}%`;
 }
