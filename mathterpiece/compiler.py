@@ -520,8 +520,41 @@ class _Compiler:
         r = f.body.range if f.body is not None else _type_range(t)
         for p, a in zip(f.params, args, strict=True):
             for path in f.reads.get(p.name, ()):
-                deps |= self.reads_through(a, path)
+                for each in self.through_function(path, f, args):
+                    deps |= self.reads_through(a, each)
         return Expr("call", t, (fid, *args), deps | f.deps, r)
+
+    def through_function(self, path: str, f: FuncDef, args: list) -> list[str]:
+        """A path read through a parameter of f, with "@g/k" in it, which stands for what the
+        function in f's parameter g reads through its own parameter k, replaced by those reads
+        of the function given here."""
+        if "@" not in path:
+            return [path]
+        prefix, ref = path.split("@", 1)
+        name, k = ref.rsplit("/", 1)
+        given = next((a for q, a in zip(f.params, args, strict=True) if q.name == name), None)
+        if given is not None and given.op == "local":
+            # Passed on from a parameter of the function being compiled: recorded for its calls.
+            return [f"{prefix}@{given.args[0]}/{k}"]
+        if given is None or given.op != "func":
+            return []
+        g = self.model.functions[given.args[0]]
+        reads = g.reads.get(g.params[int(k)].name, ())
+        return [prefix + r for r in reads if "@" not in r]
+
+    def applied(self, fexpr: Expr, args: list) -> frozenset:
+        """What a function value reads through the shapes it is given here. When it is a
+        parameter, the reads are recorded for each call, which knows the function given."""
+        out: set = set()
+        if fexpr.op == "func":
+            g = self.model.functions[fexpr.args[0]]
+            for q, a in zip(g.params, args, strict=True):
+                for path in g.reads.get(q.name, ()):
+                    out |= self.reads_through(a, path)
+        elif fexpr.op == "local":
+            for k, a in enumerate(args):
+                self.note(a, f"@{fexpr.args[0]}/{k}")
+        return frozenset(out)
 
     def reads_through(self, e: Expr, path: str) -> frozenset:
         """The attributes a function reads when it reads path through an argument e."""
@@ -628,6 +661,7 @@ class _Compiler:
             folded = self.call_value(fexpr, args)
             if folded is not None:
                 return _known(t, folded.value)
+        deps |= self.applied(fexpr, args)
         return Expr("apply", t, (fexpr, *args), deps | fexpr.deps, _type_range(t))
 
     def foldable(self, e: Expr) -> bool:

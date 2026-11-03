@@ -1,0 +1,13 @@
+; mtp-59e: a function passed as a value reads through the shape it is given, so the call follows
+; that shape's attributes.
+; expect v 2
+; expect w 4
+; write c.r 5
+; expect v 5
+; write e.r 1
+; expect w 2
+(func app ((func[circle real] f) (circle s)) (f s))
+(func total ((func[circle real] f) (sequence[circle] s)) (sum (map s (fn q (f q)))))
+(scene sc (circle c (r 2)) (group g (circle d (r 1)) (circle e (r 3))))
+(real v (app (fn p p.r) c))
+(real w (total (fn p p.r) g))

@@ -140,3 +140,37 @@ class TestRecursiveResults:
             " (point q (f 3))"
         )
         assert tuple(m.get("q").value.value) == (3, 0)
+
+
+class TestReadsThroughFunctionValues:
+    # mtp-59e: what a function passed as a value reads through a shape it is given counts as a
+    # read of the call, so the call is recomputed when it changes.
+    C = "(scene sc (circle c (r 2)) (group g (circle d (r 1)) (circle e (r 3))))"
+
+    def deps(self, src):
+        m = model(f"{self.C} {src}")
+        return m, bound(f"{self.C} {src}", "v").deps
+
+    def test_a_fn_given_to_a_function_that_applies_it(self):
+        m, deps = self.deps(
+            "(func app ((func[circle real] f) (circle s)) (f s)) (real v (app (fn p p.r) c))"
+        )
+        assert (m.id("c"), "r") in deps
+
+    def test_a_named_function_given_as_a_value(self):
+        m, deps = self.deps(
+            "(func rad ((circle p)) p.r)"
+            " (func app ((func[circle real] f) (circle s)) (f s)) (real v (app rad c))"
+        )
+        assert (m.id("c"), "r") in deps
+
+    def test_a_function_bound_with_let(self):
+        m, deps = self.deps("(real k 1) (real v (let ((f (fn ((circle p)) (* k p.r)))) (f c)))")
+        assert {(m.id("c"), "r"), (m.id("k"), None)} <= deps
+
+    def test_items_of_a_group_given_with_the_function(self):
+        m, deps = self.deps(
+            "(func app ((func[circle real] f) (sequence[circle] s)) (sum (map s (fn q (f q)))))"
+            " (real v (app (fn p p.r) g))"
+        )
+        assert {(m.id("d"), "r"), (m.id("e"), "r")} <= deps
