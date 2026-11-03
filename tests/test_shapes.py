@@ -30,17 +30,17 @@ def moves(m, *names):
 class TestGroupArguments:
     # reference.md: on a group, x, y, pos and the paint arguments are written on each member.
     def test_they_reach_every_member(self):
-        m = model("(scene s (group g (defaults (fill 'red') (x 2)) (circle a) (rect b)))")
+        m = model("(scene s (group g (defaults (fill 'red')) (circle a) (rect b)))")
         assert m.get("a").attrs["fill"].value == m.get("b").attrs["fill"].value == "#ff0000ff"
-        assert m.get("a").attrs["x"].value == m.get("b").attrs["x"].value == 2
 
     def test_through_nested_groups(self):
         m = model("(scene s (group g (defaults (opacity 0.5)) (group h (circle a))))")
         assert m.get("a").attrs["opacity"].value == 0.5
 
-    def test_pos(self):
-        m = model("(scene s (group g (defaults (pos [1 2])) (circle a)))")
-        assert (m.get("a").attrs["x"].value, m.get("a").attrs["y"].value) == (1, 2)
+    def test_no_position_in_defaults(self):
+        # The author, 2026-11-03: x, y and pos are not defaults; a group is moved by translate.
+        for attr in ("(x 1)", "(y 1)", "(pos [1 2])"):
+            error(f"(scene s (group g (defaults {attr}) (circle a)))", "not x, y or pos")
 
     def test_a_member_that_gives_its_own_value_keeps_it(self):
         m = model("(scene s (group g (defaults (fill 'red')) (circle a (fill 'blue')) (circle b)))")
@@ -69,20 +69,6 @@ class TestGroupArguments:
     def test_a_text_keeps_its_own_stroke(self):
         m = model("(scene s (group g (defaults (stroke 'red')) (text t 'hi' (stroke 'blue'))))")
         assert m.get("t").attrs["stroke"].value == "#0000ffff"
-
-    def test_pos_and_x_meet_coordinate_by_coordinate(self):
-        m = model(
-            "(scene s (group g (defaults (pos [5 6])) (circle a (x 1)) (circle b (pos [1 2]))))"
-        )
-        assert (m.get("a").attrs["x"].value, m.get("a").attrs["y"].value) == (1, 6)
-        assert (m.get("b").attrs["x"].value, m.get("b").attrs["y"].value) == (1, 2)
-        m = model(
-            "(scene s (group g (defaults (pos [5 6])) (group h (defaults (x 0)) (circle a))))"
-        )
-        assert (m.get("a").attrs["x"].value, m.get("a").attrs["y"].value) == (0, 6)
-
-    def test_a_member_without_the_attribute(self):
-        error("(scene s (group g (defaults (x 1)) (line l)))", "a line takes no argument 'x'")
 
     def test_translate_is_the_groups_own(self):
         m = model("(scene s (group g (translate [5 0]) (circle a)))")

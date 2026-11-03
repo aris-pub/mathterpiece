@@ -215,9 +215,12 @@ VALUE_ATTRS = {
 }
 # Arguments a group takes only to write them on each of its members.
 SPREAD = frozenset(POSITIONED) | frozenset(PAINTED) | {"pos"}
-# What a group's (defaults …) may give its members: what spreads, and a text's settings.
+# What a container's (defaults …) may give its members: what spreads but a position, and a
+# text's settings. A container is moved by its translate, never given a position (the author,
+# 2026-11-03).
 TEXT_DEFAULTS = frozenset({"font", "halign", "valign"})
-GROUP_DEFAULTS = SPREAD | TEXT_DEFAULTS
+POSITIONS = frozenset({"x", "y", "pos"})
+GROUP_DEFAULTS = (SPREAD - POSITIONS) | TEXT_DEFAULTS
 # The ends or corners whose mean is a line's or a triangle's position.
 CORNERS = {"line": ("from", "to"), "triangle": ("a", "b", "c")}
 # The ones a shape is written with as its positional argument.
@@ -2331,6 +2334,10 @@ class _Compiler:
                 assert isinstance(item, Form)
                 self.group_defaults(item, inner, defaults)
                 continue
+            if kind == "group" and head in POSITIONS:
+                raise CompileError(
+                    f"a group has no {head} of its own: move it with (translate …)", item.pos
+                )
             if kind == "group" and head in GROUP_DEFAULTS:
                 raise CompileError(
                     f"a group has no {head} of its own: give it in (defaults ({head} …)), for its"
@@ -2416,10 +2423,15 @@ class _Compiler:
             raise CompileError("'defaults' is given twice", form.pos)
         for item in form.items[1:]:
             head = _head(item)
+            if head in POSITIONS:
+                raise CompileError(
+                    "a container's defaults are not x, y or pos: move it with (translate …)",
+                    item.pos,
+                )
             if head not in GROUP_DEFAULTS or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
-                    f"a group's defaults are fill, stroke and the like, position, and a text's"
-                    f" settings, got"
+                    f"a container's defaults are fill, stroke and the like, and a text's settings,"
+                    f" got"
                     f" {_shown(item)}",
                     item.pos,
                 )
