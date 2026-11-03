@@ -17,3 +17,4 @@
 (animation forever (loop) (move j (to (+ j 1)) (duration 1)))
 (animation rounds (loop) (move k (from 0) (to 2) (duration 1)) (move k (to 4) (duration 1)))
 (animation recolor (move duo.fill (to 'white') (duration 1)))
+(animation outback (loop) (at-once (move k (to 10) (duration 1))) (in-order (move k (to 0) (duration 1))))

@@ -115,6 +115,17 @@ describe("a player", () => {
     expect(p.done).toBe(false);
   });
 
+  it("plays an at-once group again in every round of a loop, stepped as a play steps", () => {
+    // Seen in examples/ease-race.mtp: from the second round on, the balls jumped out.
+    const [, p, v] = setup("outback");
+    const seen: number[] = [];
+    for (let t = 0; t <= 4.5; t += 0.05) {
+      p.seek(t);
+      if (Math.abs(t - 2.5) < 0.026 || Math.abs(t - 4.5) < 0.026) seen.push(v("k") as number);
+    }
+    expect(seen.map((x) => Math.round(x * 10) / 10)).toEqual([5, 5]);
+  });
+
   it("gives a looping body's items as its steps, and the one running in any round", () => {
     const [, p] = setup("rounds");
     expect(p.spans).toEqual([

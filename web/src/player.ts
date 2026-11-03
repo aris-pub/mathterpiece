@@ -102,15 +102,17 @@ export class Player {
   /** Writes every move as it stands t seconds in. */
   seek(time: number): void {
     this.time = time;
-    for (const m of this.moves) {
-      if (this.window && (m.start < this.window[0] || m.start >= this.window[1])) continue;
+    const shown = this.moves.filter((m) => !this.window || (m.start >= this.window[0] && m.start < this.window[1]));
+    // A new round: the last one ends first, every move in the order it ends, so a later move's
+    // end is not undone by an earlier one's; then each reads its ends again.
+    const ending = shown.filter((m) => m.rounds !== undefined && m.from !== undefined && inRound(m.loops, time)[1] !== m.rounds);
+    for (const m of ending.sort((a, b) => a.start + a.duration - (b.start + b.duration))) this.write(m, 1);
+    for (const m of ending) {
+      delete m.from;
+      delete m.to;
+    }
+    for (const m of shown) {
       const [t, rounds] = inRound(m.loops, time);
-      if (m.rounds !== undefined && rounds !== m.rounds && m.from !== undefined) {
-        // A new round: the last one ends first, then this one reads its ends again.
-        this.write(m, 1);
-        delete m.from;
-        delete m.to;
-      }
       m.rounds = rounds;
       if (t < m.start && m.from === undefined) continue;
       const p = m.duration > 0 ? Math.min(Math.max((t - m.start) / m.duration, 0), 1) : t >= m.start ? 1 : 0;
