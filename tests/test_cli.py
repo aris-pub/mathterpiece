@@ -43,3 +43,19 @@ def test_build_writes_where_it_is_told(tmp_path):
     out = tmp_path / "out" / "x.mtpc"
     main(["build", str(src), "-o", str(out)])
     assert out.exists()
+
+
+def test_a_file_that_cannot_be_read(tmp_path, capsys):
+    # mtp-o135: a missing file printed a Python traceback.
+    src = tmp_path / "missing.mtp"
+    with pytest.raises(SystemExit) as exc:
+        main(["build", str(src)])
+    assert exc.value.code == 1
+    assert capsys.readouterr().err == f"{src}: no such file\n"
+
+
+def test_a_folder_is_not_a_file(tmp_path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        main(["build", str(tmp_path)])
+    assert exc.value.code == 1
+    assert capsys.readouterr().err == f"{tmp_path}: cannot be read: it is a folder\n"
