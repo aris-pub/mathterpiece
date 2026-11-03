@@ -2,7 +2,7 @@
 // and holds the value of every variable and attribute. A write changes a free one and forgets
 // only what depends on it; a bound one is computed again the next time it is read (data-model.md, "How reactivity
 // works"). The compiler has proved every type, so nothing here checks or converts one.
-import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, roundHalfAway } from "./builtins.ts";
+import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, pointsMean, roundHalfAway } from "./builtins.ts";
 import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
 import { isBound } from "./doc.ts";
 import { format, pyStr } from "./format.ts";
@@ -21,7 +21,9 @@ const SPREAD = new Set([
   "line-cap",
   "line-join",
 ]);
-const SHAPES = new Set(["circle", "rect", "ellipse", "line", "triangle", "text", "group", "instance"]);
+const SHAPES = new Set(["circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "text", "group", "instance"]);
+// The shapes whose position is the mean of their list of points (mtp-4nt).
+const THROUGH_POINTS = new Set(["polyline", "polygon"]);
 const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
 // Attributes that are points in their shape's frame, which a read converts.
 const POINT_ATTRS = new Set(["from", "to", "a", "b", "c"]);
@@ -165,10 +167,10 @@ export class Runtime {
     if (attr !== "exists" && !this.exists(id)) return null;
     if (attr === null && o.kind !== "variable") return new Ref(id);
     if (attr === "pos" && !this.has(id, "pos")) {
-      if (CORNERS[o.kind]) return this.mean(id, null);
+      if (CORNERS[o.kind] || THROUGH_POINTS.has(o.kind)) return this.mean(id, null);
       return [this.value(id, "x"), this.value(id, "y")];
     }
-    if ((attr === "x" || attr === "y") && CORNERS[o.kind] && !this.has(id, attr)) {
+    if ((attr === "x" || attr === "y") && (CORNERS[o.kind] || THROUGH_POINTS.has(o.kind)) && !this.has(id, attr)) {
       return (this.mean(id, null) as number[])[attr === "x" ? 0 : 1];
     }
     return this.get(key(id, attr));
@@ -297,8 +299,19 @@ export class Runtime {
         return;
       }
     }
+    if (THROUGH_POINTS.has(o.kind) && (attr === "x" || attr === "y")) {
+      const [mx, my] = this.mean(id, null) as number[];
+      return this.writeInto(id, "pos", attr === "x" ? [value, my] : [mx, value], changed);
+    }
     if (attr === "pos" && !this.has(id, "pos")) {
       const [x, y] = value as number[];
+      if (THROUGH_POINTS.has(o.kind)) {
+        // A polyline's position moves every point together.
+        const [mx, my] = this.mean(id, null) as number[];
+        const points = this.value(id, "points") as number[][];
+        this.writeKey(key(id, "points"), points.map(([px, py]) => [px! + x! - mx!, py! + y! - my!]), changed);
+        return;
+      }
       if (CORNERS[o.kind]) {
         // A line's or triangle's position moves every end or corner together.
         const [mx, my] = this.mean(id, null) as number[];
@@ -818,6 +831,9 @@ export class Runtime {
     let corners: number[][];
     if (o.kind === "line" || o.kind === "triangle") {
       corners = CORNERS[o.kind]!.map((c) => this.value(id, c) as number[]);
+    } else if (THROUGH_POINTS.has(o.kind)) {
+      corners = this.value(id, "points") as number[][];
+      if (corners.length === 0) return null;
     } else {
       const [x, y] = [v("x"), v("y")];
       const [hw, hh] =
@@ -866,16 +882,22 @@ export class Runtime {
       const m = (o.members ?? []).find((x) => this.objects[x]!.name === attr);
       if (m !== undefined) return new Ref(m);
     }
-    if (CORNERS[o.kind] && (attr === "x" || attr === "y" || attr === "pos")) {
+    if ((CORNERS[o.kind] || THROUGH_POINTS.has(o.kind)) && (attr === "x" || attr === "y" || attr === "pos")) {
       const p = this.mean(id, frame) as number[];
       return attr === "pos" ? p : p[attr === "x" ? 0 : 1];
     }
     return this.read(id, attr, frame);
   }
 
-  /** The mean of a line's ends or a triangle's corners: its position. */
+  /** The mean of a line's ends, a triangle's corners or a polyline's points: its position. */
   private mean(id: number, frame: number | null): number[] {
     const kind = this.objects[id]!.kind;
+    if (THROUGH_POINTS.has(kind)) {
+      const own = pointsMean(this.value(id, "points") as number[][]);
+      // The mean of the points seen from a frame is their mean, moved to that frame.
+      const m = frame === null ? null : this.frameOf(id, frame);
+      return m === null ? own : (apply(m, own) as number[]);
+    }
     const pts = CORNERS[kind]!.map((c) => (frame === null ? this.value(id, c) : this.read(id, c, frame)) as number[]);
     return [0, 1].map((k) => pts.reduce((s, p) => s + p[k]!, 0) / pts.length);
   }

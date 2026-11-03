@@ -24,7 +24,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
     - `name`
     - `none`
   - **mutable object** (can change)
-    - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group` (a row or a column is a group), motif instances (`dial`, …), variants; each satisfies `shape`
+    - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `text`, `group` (a row or a column is a group), motif instances (`dial`, …), variants; each satisfies `shape`
     - **`scene`**: holds the shapes
     - **component**
       - view: `canvas`, `readout`

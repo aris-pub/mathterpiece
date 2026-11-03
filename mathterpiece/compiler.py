@@ -104,7 +104,7 @@ RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
 # The shapes a container may be clipped to: ones with an inside.
-CLIPS = ("circle", "rect", "ellipse", "triangle")
+CLIPS = ("circle", "rect", "ellipse", "triangle", "polygon")
 # The points on a shape's box that placement gives: the middle of each side and each corner
 # (reference.md, "Placing").
 ANCHORS = frozenset(
@@ -214,6 +214,9 @@ SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
         "b": Argument(POINT, (1, 0)),
         "c": Argument(POINT, (0, 1)),
     },
+    # A path through its points, and a closed region through them (mtp-4nt).
+    "polyline": {**PAINTED, **TRANSFORMS, "points": Argument(ListT(POINT), [])},
+    "polygon": {**PAINTED, **TRANSFORMS, "points": Argument(ListT(POINT), [])},
     "text": {
         **POSITIONED,
         **PAINTED,
@@ -256,6 +259,8 @@ POSITIONS = frozenset({"x", "y", "pos"})
 GROUP_DEFAULTS = (SPREAD - POSITIONS) | TEXT_DEFAULTS
 # The ends or corners whose mean is a line's or a triangle's position.
 CORNERS = {"line": ("from", "to"), "triangle": ("a", "b", "c")}
+# The shapes whose position is the mean of their list of points.
+THROUGH_POINTS = ("polyline", "polygon")
 # The ones a shape is written with as its positional argument.
 POSITIONAL = {"text": ("value",)}
 
@@ -1669,9 +1674,9 @@ class _Compiler:
 
     def writable_attr(self, i: int, attr: str, label: str, pos: Pos) -> Type:
         obj = self.model.objects[i]
-        if attr in ("x", "y", "pos") and obj.kind in CORNERS:
-            # A write to a line's or triangle's position moves every end or corner.
-            for c in CORNERS[obj.kind]:
+        if attr in ("x", "y", "pos") and (obj.kind in CORNERS or obj.kind in THROUGH_POINTS):
+            # A write to a line's, a triangle's or a polyline's position moves every point.
+            for c in CORNERS.get(obj.kind, ("points",)):
                 self.check_writable(obj, obj.attrs[c], label, pos)
             return POINT if attr == "pos" else REAL
         if attr == "pos" and "x" in obj.attrs:
@@ -3131,7 +3136,7 @@ class _Compiler:
             out = {a: spec.type for a, spec in SHAPE_ATTRS[t.name].items()}
         else:
             return {}
-        if "x" in out or kind.name in CORNERS:
+        if "x" in out or kind.name in CORNERS or kind.name in THROUGH_POINTS:
             out |= {"x": REAL, "y": REAL, "pos": POINT}
         if kind.name == "group":
             out["length"] = INT
@@ -3175,7 +3180,7 @@ class _Compiler:
             names.add("name")
         if obj.kind in ("group", "scene"):
             names |= {"length", "members"}
-        if "x" in obj.attrs or obj.kind in CORNERS:
+        if "x" in obj.attrs or obj.kind in CORNERS or obj.kind in THROUGH_POINTS:
             names |= {"x", "y", "pos"}
         if obj.kind == "instance":
             names |= cast("set[str]", {self.model.objects[m].name for m in obj.members} - {None})
@@ -3224,6 +3229,8 @@ class _Compiler:
             k = 0 if name == "x" else 1
             ends = [_part(self.read(i, c), k) for c in CORNERS[obj.kind]]
             return self.arith(pos, "/", [self.arith(pos, "+", ends), _known(INT, len(ends))])
+        if obj.kind in THROUGH_POINTS and name in ("x", "y"):
+            return _part(_points_mean(self.read(i, "points")), 0 if name == "x" else 1)
         if name in obj.attrs:
             return self.read(i, name)
         if obj.kind == "instance":
@@ -3823,6 +3830,15 @@ def _overlaps(attr: str, given: dict) -> bool:
 def _dot(node: Node, attr: str) -> Form:
     """(. node attr), built by the compiler."""
     return Form((Name((".",), node.pos), node, Name((attr,), node.pos)), node.pos)
+
+
+def _points_mean(points: Expr) -> Expr:
+    """The mean of a list of points, [0 0] for none: a polyline's position (mtp-4nt)."""
+    if points.known:
+        ps = points.value or []
+        n = max(len(ps), 1)
+        return _known(POINT, (sum(p[0] for p in ps) / n, sum(p[1] for p in ps) / n))
+    return Expr("points-mean", POINT, (points,), points.deps)
 
 
 def _dash(item: Node) -> dict[str, Node]:

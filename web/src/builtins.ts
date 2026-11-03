@@ -248,7 +248,14 @@ function range(start: number, stop: number, by: string, step: number): number[] 
   return Array.from({ length: n }, (_, k) => start + k * step);
 }
 
+/** The mean of a list of points, [0, 0] for none: a polyline's position (mtp-4nt). */
+export function pointsMean(points: number[][]): number[] {
+  const n = Math.max(points.length, 1);
+  return [0, 1].map((k) => points.reduce((s, p) => s + p[k]!, 0) / n);
+}
+
 export const BUILTINS: Record<string, Impl> = {
+  "points-mean": (ps) => pointsMean(ps as number[][]),
   range: (start, stop, by, step) => range(start as number, stop as number, by as string, step as number),
   "+": (...xs) => (xs.length === 1 ? xs[0] : xs.reduce(add)),
   "-": (...xs) => (xs.length === 1 ? negate(xs[0]) : xs.reduce((a, b) => add(a, negate(b)))),

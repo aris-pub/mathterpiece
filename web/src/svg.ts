@@ -210,6 +210,11 @@ function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
       const corners = ["a", "b", "c"].map((c) => (rt.value(i, c) as number[]).join(","));
       return el("polygon", { points: corners.join(" ") });
     }
+    case "polyline":
+    case "polygon": {
+      const points = (rt.value(i, "points") as number[][]).map((p) => p.join(","));
+      return el(o.kind, { points: points.join(" ") });
+    }
     case "text":
       return text(rt, i, unitsPerPx);
     default:
@@ -240,7 +245,9 @@ function text(rt: Runtime, i: number, unitsPerPx: number): Element {
 // multiply, and opacity fades the drawn shape as a whole.
 function paint(rt: Runtime, i: number, el: Element): void {
   const s = el as SVGElement;
-  s.style.setProperty("fill", rt.objects[i]!.kind === "line" ? "none" : paintCss(rt, i, "fill"));
+  // A line and a polyline are paths with no inside, so their fill is never drawn.
+  const open = ["line", "polyline"].includes(rt.objects[i]!.kind);
+  s.style.setProperty("fill", open ? "none" : paintCss(rt, i, "fill"));
   s.style.setProperty("stroke", paintCss(rt, i, "stroke"));
   el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity")));
   el.setAttribute("stroke-opacity", String(rt.value(i, "stroke-opacity")));

@@ -1,0 +1,9 @@
+(real k 1)
+(scene s
+  (polyline p (points [[0 0] [4 0] [4 2]]) (stroke 'black'))
+  (polygon q (points [[0 0] [4 0] [4 2]]) (fill 'red'))
+  (polyline bendy (points [[0 0] [k 1]]))
+  (polyline empty)
+  (circle c (pos (top-right q)) (r 0.1))
+  (group g (clip (polygon_ (points [[0 0] [2 0] [0 2]]))) (circle a (r 3))))
+(canvas v (view-x -5) (view-y -5) (view-width 10) (view-height 10) s)

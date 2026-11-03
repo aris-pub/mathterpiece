@@ -58,6 +58,8 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 | `(ellipse name)` | required | none | shape arguments, `(rx real)`, `(ry real)` | none |
 | `(line name)` | required | none | shape arguments, `(from point)`, `(to point)` | none |
 | `(triangle name)` | required | none | shape arguments, `(a point)`, `(b point)`, `(c point)` | none |
+| `(polyline name)` | required | none | shape arguments, `(points list[point])`: a path through the points in order, open at both ends, so `line-cap` shapes its ends; its fill is never drawn, as a line's | none |
+| `(polygon name)` | required | none | shape arguments, `(points list[point])`: a closed region through the points, the last joined to the first, with a fill; it may be a clip | none |
 | `(text name value)` | required | the string | shape arguments, `(font font)`, `(halign …)`, `(valign …)`; its font is only given as a declared font variable, never as separate size or family arguments | none |
 | `(M name)`, for a motif or variant `M`, such as `(dial d1)` for a motif `dial` | required | none | its parameters, and the arguments its base takes | none |
 
@@ -74,7 +76,7 @@ These mirror SVG on purpose (`dash` is its `stroke-dasharray` and `stroke-dashof
 
 `halign` is one of `'start' 'middle' 'end'`; `valign` is one of `'top' 'middle' 'baseline' 'bottom'`, where `'baseline'` is the line the letters sit on and `'bottom'` is the bottom of the lowest letters.
 
-Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint and a triangle's its centroid. They are computed from the ends or corners, so a line or triangle is declared by its ends or corners and never given `x`, `y` or `pos`; a writer that writes its position moves every end or corner together, and may only do so when they are all free.
+Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint, a triangle's its centroid, and a polyline's or a polygon's the mean of its points (`[0 0]` with none). They are computed from the ends, corners or points, so these shapes are declared by them and never given `x`, `y` or `pos`; a writer that writes the position moves every end, corner or point together, and may only do so when they are free.
 
 A scene's `transform` says how its own coordinates are drawn: `(scene s (transform (scale 1 -1)) …)` has y pointing down, as in an SVG. Everything in the scene is written, read and written to in the scene's own coordinates, a canvas's view box is given in them, and the pointer is converted back into them for drags and clicks. Everything follows the transform as drawn, texts included, and the anchor names `top` and `bottom` stay with y: `top` is toward larger y.
 
@@ -87,7 +89,7 @@ A group (a row and a column included) and a motif instance are **containers** (s
 - **They spread.** On a container, these attributes are read and written on each member, and on a group so are `x`, `y` and `pos`: reading one gives every member's, and writing one writes every member's, a member that gave its own value included. A container's `translate` and `transform` are its own, and are not spread (see "Coordinates").
 - **Defaults.** A container's declaration gives these attributes to its members in `(defaults …)`: `(group labels (defaults (fill ink) (font note) (halign 'middle')) …)`. The defaults may also give the texts inside it their `font`, `halign` and `valign`; never `x`, `y` or `pos`, since a container is moved by its `translate`. A member that gives its own value keeps it, as a move's own `ease` wins over the defaults around it, and the nearest container's default wins over one further out.
 - **A text** takes no `stroke`, `stroke-width`, `dash`, `line-cap` or `line-join` from a container's defaults, since a stroke would outline its letters; it keeps its own.
-- **A clip.** A container may take `(clip shape)`, an optional argument, with a circle, rect, ellipse or triangle declared inside it: `(group plot (clip (rect window (pos [260 -71]) (width 412) (height 126))) …)`. Its members are drawn only inside that shape, and what lies outside it is cut off. The shape is in the container's own frame, as its members are, but it is not one of them: it is never drawn (no canvas may show it), it is not counted, spread over or placed by a row, and it always exists. Like any shape it may be bound, read and moved, so `(move window.width (to 0))` hides the members, closing in on them from both sides. The container's box is its members' box cut to the clip's (see "Placing"), and the pointer does not reach what the clip cuts off: a click or drag there does nothing.
+- **A clip.** A container may take `(clip shape)`, an optional argument, with a circle, rect, ellipse, triangle or polygon declared inside it: `(group plot (clip (rect window (pos [260 -71]) (width 412) (height 126))) …)`. Its members are drawn only inside that shape, and what lies outside it is cut off. The shape is in the container's own frame, as its members are, but it is not one of them: it is never drawn (no canvas may show it), it is not counted, spread over or placed by a row, and it always exists. Like any shape it may be bound, read and moved, so `(move window.width (to 0))` hides the members, closing in on them from both sides. The container's box is its members' box cut to the clip's (see "Placing"), and the pointer does not reach what the clip cuts off: a click or drag there does nothing.
 - **A motif instance** also has a frame of its own, and its parameters. It takes `x`, `y` and `pos`, which move its frame, and so its members, before its `translate` and `transform`.
 
 ### Tokens
@@ -162,6 +164,7 @@ What an attribute is when the author leaves it out:
 | ellipse `rx`, `ry` | 1 |
 | line | from `[0 0]` to `[1 0]` |
 | triangle | corners `[0 0]`, `[1 0]`, `[0 1]` |
+| polyline, polygon | `points` `[]`: no points, so nothing is drawn |
 | row and column `gap`, `align` | 0, `'middle'` |
 | text | `halign` `'start'`, `valign` `'baseline'` |
 | a font's parts | family: the page's font; style `'normal'`; weight 400; size 16 (screen pixels) |
@@ -314,7 +317,7 @@ The point says where the placed shape is anchored, and the placed shape's own al
 
 A shape's **box** is:
 
-- for a circle, a rect, an ellipse, a line and a triangle, the smallest rectangle, with sides along the axes, around its geometry, in scene units; strokes are left out, since their widths are in screen pixels;
+- for a circle, a rect, an ellipse, a line, a triangle, a polyline and a polygon (with at least one point; with none, `none`), the smallest rectangle, with sides along the axes, around its geometry, in scene units; strokes are left out, since their widths are in screen pixels;
 - for a shape that is rotated or scaled, the smallest such rectangle around its own box's four corners after its `transform`, which is exact for rects and lines and a little larger than the shape for a rotated circle or ellipse;
 - for a container, the smallest such rectangle around its members' boxes, of the members that exist; `none` when none do; with a clip, that rectangle cut to the clip's box, or, when they do not overlap, a rectangle of no size at the edge of the clip's box nearest the members;
 - for a text, not known when compiling, since its size can only be measured in the browser: placing against a text, or a container holding one, is a compile error for now.

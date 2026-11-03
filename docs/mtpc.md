@@ -35,7 +35,7 @@ Every type is written as JSON:
 | Type | Written |
 |---|---|
 | built-in | `"int"`, `"ratio"`, `"real"`, `"complex"`, `"bool"`, `"string"`, `"color"`, `"font"`, `"point"`, `"transform"`, `"transition"`, `"animation"`, `"none"`, `"scene"` |
-| a built-in shape type | `{"shape": "circle"}`, likewise `rect`, `ellipse`, `line`, `triangle`, `text`, `group` |
+| a built-in shape type | `{"shape": "circle"}`, likewise `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `text`, `group` |
 | a declared type | `{"named": "unit"}`, `{"named": "dial"}`, `{"named": "bar"}`: an entry of `types` |
 | a component | `{"component": "slider"}`, likewise for each component |
 | an interface | `{"interface": "shape"}`, `{"interface": "positioned"}`, `{"interface": "sequence", "of": T}` |
@@ -113,7 +113,7 @@ with `"fixed": true` on a variant instance's fixed attributes.
 - A **free** one holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
 - A **bound** one holds an expression. `deps` lists every variable and attribute it can read: directly, through any function it calls, and through captured names. Where a read depends on a value known only while drawing, such as `g[side].pos`, `deps` lists every one it could read (the `pos` of every member). When any of them changes, this one is recomputed, and nothing else is. `[id, null]` is a variable.
 - A variable or an attribute known when compiling is written as free, with a `const` constraint in its type, whether the author wrote it that way or the compiler folded it. One exception: one given a constant (the bare name of a `const` variable or of a built-in constant, or a read of a `const` attribute) is free with no `const` constraint, as if given its value.
-- Every attribute of a shape is written, including those left at their default. `pos` is not: it is `x` and `y` read or written together. A line's attributes are its `from` and `to`, a triangle's its corners; their `x` and `y` are computed (the midpoint, the centroid), and a write to them is split into writes to every end or corner.
+- Every attribute of a shape is written, including those left at their default. `pos` is not: it is `x` and `y` read or written together. A line's attributes are its `from` and `to`, a triangle's its corners, a polyline's and a polygon's its `points`; their `x` and `y` are computed (the midpoint, the centroid, the mean of the points), and a write to them is split into writes to every end or corner, or moves every point.
 
 ## Objects
 
@@ -128,7 +128,7 @@ and then what its kind needs:
 | `variable` | `"value"`: its value, free or bound; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded: it is written with its declared value, which the runtime draws with where the page's CSS gives none (data model, "On the page"). |
 | `scene` | `"members"`: the ids of its shapes; `"attrs"`: `background`, and `transform`, how the scene's own coordinates are drawn |
 | a row or a column | kind `group`, with `"layout"`: `{"axis": "row" or "column", "gap": a real, "align": a string}`, each free or bound; the runtime moves each member after the box of the one before (reference, "Placing") |
-| `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group` | `"attrs"`: every attribute, free or bound, and `exists`, a bool, when an `exists-when` names the shape (while it is false the shape is absent, and so are its members when it is a container, and every read of them is none); `group` also `"members"`, and `"clip"`, the id of its clip shape, when it has one (that shape is an object of its own, in the group's frame, and not among the members) |
+| `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `text`, `group` | `"attrs"`: every attribute, free or bound, and `exists`, a bool, when an `exists-when` names the shape (while it is false the shape is absent, and so are its members when it is a container, and every read of them is none); `group` also `"members"`, and `"clip"`, the id of its clip shape, when it has one (that shape is an object of its own, in the group's frame, and not among the members) |
 | a motif instance | kind `instance`; `"of"`: the motif's name; `"members"`; `"attrs"`: its parameters, its bound variables, and `x`, `y`, `translate` and `transform` (its `fill` and the like are its members'); `"clip"`, as for a group |
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |
 | `transition` | `"from"`, `"to"`, `"duration"`, `"ease"`, `"path"` (below) |
