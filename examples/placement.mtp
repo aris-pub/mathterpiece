@@ -1,0 +1,70 @@
+; Placing shapes against others. Turn and resize the card with the sliders: a dot marks each of
+; the eight points on its box, (top card), (top-right card) and so on, and each point's name
+; sits just outside it. Drag the ball: its name rides at its top-right, a line runs from the
+; card's right side to the ball's left, and the caption stays under both. Drag the flag: its
+; label sits at its tip, a point the flag's motif marks with a transparent circle.
+
+(color paper '#f7f3ea')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color accent '#e76f51')
+(color calm '#2a9d8f')
+(font small (size 13))
+(font name (style 'italic') (size 16))
+
+; A flag on a pole. Its tip, the top of the pole, is a transparent circle, so whatever is placed
+; there follows the flag wherever it is moved.
+(motif flag ()
+  (line pole (from [0 0]) (to [0 2]) (stroke ink) (stroke-width 2))
+  (triangle banner (a [0 2]) (b [1.2 1.6]) (c [0 1.2]) (fill accent) (stroke none))
+  (circle tip (pos [0 2]) (r 0) (fill none) (stroke none)))
+
+(scene board
+  (background paper)
+  (real w 3 (>= 0.5) (<= 5))
+  (real h 1.6 (>= 0.5) (<= 3))
+  (real turn 0)
+
+  (group both
+    (rect card (width w) (height h) (transform (rotate turn)) (fill none) (stroke ink)
+      (stroke-width 1.5))
+    (circle ball (pos [4.5 -1.5]) (r 0.35) (fill calm) (stroke none)))
+
+  ; A dot at each point of the card's box, and the point's name just outside it.
+  (group marks (defaults (fill accent) (stroke none))
+    (circle_ (pos (top card)) (r 0.07))
+    (circle_ (pos (bottom card)) (r 0.07))
+    (circle_ (pos (left card)) (r 0.07))
+    (circle_ (pos (right card)) (r 0.07))
+    (circle_ (pos (top-left card)) (r 0.07))
+    (circle_ (pos (top-right card)) (r 0.07))
+    (circle_ (pos (bottom-left card)) (r 0.07))
+    (circle_ (pos (bottom-right card)) (r 0.07)))
+  (group names (defaults (fill soft) (font small))
+    (text_ 'top' (pos (top card 0.15)) (halign 'middle') (valign 'bottom'))
+    (text_ 'bottom' (pos (bottom card 0.15)) (halign 'middle') (valign 'top'))
+    (text_ 'left' (pos (left card 0.15)) (halign 'end') (valign 'middle'))
+    (text_ 'right' (pos (right card 0.15)) (halign 'start') (valign 'middle'))
+    (text_ 'top-left' (pos (top-left card 0.1)) (halign 'end') (valign 'bottom'))
+    (text_ 'top-right' (pos (top-right card 0.1)) (halign 'start') (valign 'bottom'))
+    (text_ 'bottom-left' (pos (bottom-left card 0.1)) (halign 'end') (valign 'top'))
+    (text_ 'bottom-right' (pos (bottom-right card 0.1)) (halign 'start') (valign 'top')))
+
+  ; The ball's name, a line from the card to the ball, and a caption under both.
+  (text ball-name 'ball' (pos (top-right ball 0.05)) (valign 'bottom') (font name) (fill ink))
+  (line tether (from (right card)) (to (left ball)) (stroke calm) (stroke-width 1))
+  (text caption 'the card and the ball' (pos (bottom both 0.6)) (halign 'middle') (valign 'top')
+    (font small) (fill ink))
+
+  (flag pennant (pos [-5 -3.5]))
+  (text pennant-name 'flag' (pos pennant.tip.pos) (halign 'middle') (valign 'bottom')
+    (font name) (fill ink)))
+
+(canvas view (view-x -7) (view-y -4.5) (view-width 14) (view-height 9) (pan false) (zoom false)
+  both marks names ball-name tether caption pennant pennant-name)
+
+(slider width (move w (from 0.5) (to 5)) (label 'width'))
+(slider height (move h (from 0.5) (to 3)) (label 'height'))
+(slider spin (move turn (from 0) (to 90)) (label 'turn'))
+(on-drag ball ball.pos)
+(on-drag pennant pennant.pos)
