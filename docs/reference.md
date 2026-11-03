@@ -248,7 +248,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(name s)` | `s`, a string, which becomes a name |
 | `(as T literal)` | nothing: the literal, with the type `T`, for a literal where nothing else gives it one, as in `(as color 'gold')` or `(as point [0 0])`; anything but a literal is a compile error |
 | `(type-of x)` | nothing while drawing: `x`, any one expression, is compiled only for its type, and the form gives that type as a string, for debugging. The string is known when compiling, even when `x` is not, and is the type as a type expression writes it: `'int'`, `'ratio'`, `'real'`, `'real\|none'`, `'list[int]'`, `'func[real real]'`, `'circle'`, `'group'`, `'slider'`; a named type, motif or variant by its name (`'unit'`, `'dial'`); a narrowed type with the constraints it was declared with, `'(real (>= 0))'` for `(real k 1 (>= 0))`. A range the compiler proves is not shown: `(type-of (sind k))` is `'real'`. A compile error in `x` is still an error, and a type is not an expression, so `(type-of int)` is an error |
-| `(foreach i n decl…)`, `(foreach x xs decl…)` | when compiling: the declarations once for each `i` from 0 to n−1, or once for each item `x` of the list `xs` (`g.pos`, the list of every member's position, too), or each member of a group `g`; the count, or the list's length, must be known when compiling, while the items may be known only while drawing |
+| `(foreach i n decl…)`, `(foreach x xs decl…)` | when compiling: the declarations once for each `i` from 0 to n−1, or once for each item `x` of the list `xs` (`g.pos`, the list of every member's position, too; `(foreach i n …)` is `(foreach i (range 0 n (gap 1)) …)`), or each member of a group `g`; the count, or the list's length, must be known when compiling, while the items may be known only while drawing |
 
 ## Operators
 
@@ -349,7 +349,7 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 
 | Function | Takes | Gives | Undefined |
 |---|---|---|---|
-| `map` | a collection, `func[T U]` | `list[U]` | never |
+| `map` | a collection, or an int `n`, which stands for `(range 0 n (gap 1))`, and `func[T U]` | `list[U]` | never |
 | `where` | a collection, `func[T bool]` | the members for which it holds | never |
 | `sort` | a collection, `func[T real]` | the members, by key, smallest first | never |
 | `reverse` | a list | the list reversed | never |
@@ -358,6 +358,7 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 | `count` | a collection, optionally `func[T bool]` | int | never |
 | `any` `all` | a list of bools, or a collection and `func[T bool]` | bool | never |
 | `somes` | `list[T\|none]` | `list[T]` | never |
+| `range` | `start stop (gap g)`: from `start`, `g` apart, up to `stop` but not including it, so `(range 0 5 (gap 1))` is `[0 1 2 3 4]` and `(range 5 0 (gap -2))` is `[5 3 1]`; or `start stop (num n)`: `n` items evenly apart from `start` to `stop`, both included, so `(range 0 1 (num 5))` is `[0 0.25 0.5 0.75 1]` | a list of ints when the ends and the gap are ints (with `num`, when the ends are ints known when compiling and every item is whole), of reals otherwise; with every argument known when compiling, a list of known length, and otherwise one whose length is known only while drawing | a gap of 0, a negative `num`, more than a million items |
 | `xs[i]`, `g[k]` | a position or key | an item | a position out of range, a missing key |
 
 ### none

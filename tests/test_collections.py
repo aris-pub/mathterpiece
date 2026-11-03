@@ -1,8 +1,12 @@
 """Collection functions and parameters typed with shapes or interfaces (docs/syntax.md
 "Functions as arguments"; docs/reference.md "Collections"; docs/type-system.md 5.c and 6)."""
 
-from helpers import error, model
+import json
 
+from helpers import bound, doc, error, model, typ, value
+from mtpc_check import errors
+
+from mathterpiece.compiler import _core, _type_range
 from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe, Refine
 
 RADIUS = Refine(REAL, ((">=", 0),))
@@ -155,3 +159,79 @@ class TestMapTypedByItsList:
             " (real x (first-x (map [1 2] (fn k [(* s k) 0]))))"
         )
         assert m.get("x").value.bound
+
+
+class TestRange:
+    # mtp-966, the author 2026-11-03: (range start stop (gap g)) steps by g and leaves stop out;
+    # (range start stop (num n)) gives n items from start to stop, both included. (map n f) and
+    # (foreach i n …) stand for (map (range 0 n (gap 1)) f) and the same for foreach.
+    def test_by_a_gap(self):
+        assert value("(list v (range 0 5 (gap 1)))") == [0, 1, 2, 3, 4]
+        assert value("(list v (range 1 2 (gap 0.25)))") == [1, 1.25, 1.5, 1.75]
+        assert value("(list v (range 5 0 (gap -2)))") == [5, 3, 1]
+
+    def test_a_gap_that_points_away_gives_no_items(self):
+        assert value("(list[int] v (range 0 5 (gap -1)))") == []
+
+    def test_a_gap_of_0_is_undefined(self):
+        error("(list v (range 0 5 (gap 0)))", "undefined")
+
+    def test_by_a_number_of_items(self):
+        assert value("(list v (range 0 1 (num 5)))") == [0, 0.25, 0.5, 0.75, 1]
+        assert value("(list v (range 0 200 (num 201)))")[-3:] == [198, 199, 200]
+        assert value("(list v (range 3 7 (num 1)))") == [3]
+        assert value("(list[real] v (range 3 7 (num 0)))") == []
+        error("(list v (range 0 1 (num -1)))", "undefined")
+
+    def test_the_item_type(self):
+        def item(src):
+            return _core(typ(f"(list v {src})").base.item)
+
+        assert item("(range 0 5 (gap 1))") == INT
+        assert item("(range 0 1 (gap 0.5))") == REAL
+        assert item("(range 0 1 (num 3))") == REAL
+        # Whole items from whole ends are ints, so a declared list of ints takes them.
+        model("(list[(int (>= 0) (<= 200))] v (range 0 200 (num 201)))")
+
+    def test_known_when_compiling_it_has_a_length(self):
+        assert ("length", 5) in typ("(list v (range 0 5 (gap 1)))").constraints
+        assert _core(typ("(list xs (range 0 5 (gap 1))) (int v xs[4])")) == INT
+
+    def test_while_drawing_its_length_is_not_known(self):
+        e = bound("(int n 3 (>= 0) (<= 10)) (list v (range 0 n (gap 1)))")
+        assert e.op == "range" and _core(e.type.item) == INT
+        assert typ("(int n 3 (>= 0) (<= 10)) (list xs (range 0 n (gap 1))) (int|none v xs[0])")
+
+    def test_its_items_lie_between_its_ends(self):
+        e = bound("(real a 1 (>= 0) (<= 4)) (list v (range a 10 (gap 1)))")
+        assert _type_range(e.type.item) == (0, 10)
+
+    def test_a_gap_that_may_be_0_may_give_none(self):
+        assert isinstance(
+            typ("(real g 1 (>= -1) (<= 1)) (list[real]|none v (range 0 5 (gap g)))"), Maybe
+        )
+        assert not isinstance(typ("(real g 1 (>= 0.5) (<= 1)) (list v (range 0 5 (gap g)))"), Maybe)
+
+    def test_it_takes_a_gap_or_a_number(self):
+        for src in (
+            "(range 0 5)",
+            "(range 0 5 1)",
+            "(range 0 5 (step 1))",
+            "(range 0 (gap 1))",
+            "(range 0 5 (gap 1) (num 2))",
+        ):
+            error(f"(list v {src})", r"range is \(range start stop \(gap g\)\)")
+
+    def test_map_over_a_count(self):
+        assert value("(list v (map 4 (fn (int i) (* i i))))") == [0, 1, 4, 9]
+        e = bound("(int n 3 (>= 0) (<= 10)) (list v (map n (fn (int i) (* 2 i))))")
+        assert e.op == "map" and e.args[0].op == "range"
+
+    def test_foreach_over_a_range(self):
+        m = model("(scene s (foreach x (range 0 1 (num 3)) (circle_ (pos [x 0]))))")
+        assert [m.objects[c].attrs["x"].value for c in m.get("s").members] == [0, 0.5, 1]
+
+    def test_the_compiled_file(self):
+        d = doc("(int n 3 (>= 0) (<= 10)) (list v (range 0 n (gap 1)))")
+        assert errors(d) == []
+        assert json.dumps(d).count('"range"') == 1

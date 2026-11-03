@@ -18,6 +18,8 @@ from mathterpiece.builtins import (
     Builtin,
     Undefined,
     compose,
+    range_by_count,
+    range_by_gap,
 )
 from mathterpiece.colors import parse_color
 from mathterpiece.model import (
@@ -932,6 +934,8 @@ class _Compiler:
                 r = WHOLE
             deps = frozenset().union(*(b.deps for b in bounds))
             return Expr("rand", REAL, (site, *bounds), deps, r)
+        if head == "range":
+            return self.range_list(node, given, scope)
         if head == "round":
             self.count(head, given, 1, 2, pos)
             params = (Param("x", REAL), Param("decimals", INT))[: len(given)]
@@ -965,6 +969,47 @@ class _Compiler:
             b = Builtin(tuple(p.type for p in params), TRANSFORM, compose, None)
         args, deps, maybe = self.arguments(params, given, scope, pos)
         return self.apply_builtin(head, b, args, deps, maybe, pos)
+
+    def range_list(self, node: Form, given, scope: dict) -> Expr:
+        """(range start stop (gap g)) and (range start stop (num n)) (mtp-966). Known when
+        compiling, the list itself; otherwise its length is known only while drawing."""
+        form = "range is (range start stop (gap g)) or (range start stop (num n))"
+        by = _head(given[2]) if len(given) == 3 else None
+        if by not in ("gap", "num") or not isinstance(given[2], Form) or len(given[2].items) != 2:
+            raise CompileError(form, node.pos)
+        # Compiled for their own types, so that whole ends and a whole gap give ints.
+        nodes = (*given[:2], given[2].items[1])
+        args = tuple(self.expr(g, None, scope) for g in nodes)
+        for a, what, g in zip(args, ("start", "stop", by), nodes, strict=True):
+            ok = (INT,) if what == "num" else NUMBERS[:3]
+            if _core(a.type) not in ok or _may_be_none(a.type):
+                raise CompileError(
+                    f"range's {what} is {'an int' if what == 'num' else 'a real'}", g.pos
+                )
+        start, stop, step = args
+        deps = frozenset().union(*(a.deps for a in args))
+        whole = all(_core(a.type) == INT for a in args)
+        if all(a.known for a in args):
+            fold = range_by_gap if by == "gap" else range_by_count
+            items = self.fold_builtin("range", fold, [a.value for a in args], node.pos)
+            # Whole items from whole ends are ints, as are a whole gap's.
+            if (whole or by == "num" and _core(start.type) == _core(stop.type) == INT) and all(
+                float(v).is_integer() for v in items
+            ):
+                item, items = INT, [int(v) for v in items]
+            else:
+                item = REAL
+            if items:
+                item = _with_range(item, (min(items), max(items)))
+            return _known(Refine(ListT(item), (("length", len(items)),)), items)
+        ends = [a.range if a.range is not None else UNBOUNDED for a in (start, stop)]
+        r = (min(e[0] for e in ends), max(e[1] for e in ends))
+        item = _with_range(INT if whole and by == "gap" else REAL, r)
+        lo, hi = step.range if step.range is not None else UNBOUNDED
+        undefined = lo <= 0 <= hi if by == "gap" else lo < 0
+        t = ListT(item)
+        kind = _known(STRING, by)
+        return Expr("range", _maybe(t) if undefined else t, (start, stop, kind, step), deps)
 
     def extreme(self, node: Form, head: str, given, scope: dict) -> Expr:
         """min and max: of reals, any count, where a list of reals counts as its items (as the
@@ -1153,6 +1198,11 @@ class _Compiler:
         if not args:
             raise CompileError(f"{head} takes a collection first", node.pos)
         coll = self.expr(args[0], None, scope)
+        if head == "map" and _core(coll.type) == INT:
+            # (map n f) stands for (map (range 0 n (gap 1)) f) (the author, 2026-11-03).
+            zero, one = IntLit(0, node.pos), IntLit(1, node.pos)
+            gap = Form((Name(("gap",), node.pos), one), node.pos)
+            coll = self.range_list(node, (zero, args[0], gap), scope)
         item, n = self.collection_items(coll, head, node.pos)
         rest = args[1:]
         if head in ("sum", "count", "reduce", "any", "all") and _may_be_none(item):

@@ -226,7 +226,30 @@ type Impl = (...args: unknown[]) => unknown;
 const n = (f: (x: number) => number): Impl => (x) => finite(f(x as number));
 
 /** Each built-in by its name in the reference. Collections are handled by the runtime. */
+// More items than this is undefined: a figure has no use for them, and a page would hang.
+const RANGE_LIMIT = 1_000_000;
+
+/**
+ * (range start stop (gap g)), stop left out, or (range start stop (num n)), both ends included
+ * (mtp-966), as the compiler folds it. Item k is start + k gap, so rounding does not add up.
+ */
+function range(start: number, stop: number, by: string, step: number): number[] {
+  if (by === "num") {
+    check(Number.isInteger(step) && step >= 0 && step <= RANGE_LIMIT);
+    if (step === 1) return [start];
+    return Array.from({ length: step }, (_, k) => (k === step - 1 ? stop : start + (k * (stop - start)) / (step - 1)));
+  }
+  check(step !== 0);
+  const before = (x: number) => (step > 0 ? x < stop : x > stop);
+  let n = Math.max(0, Math.ceil((stop - start) / step));
+  check(n <= RANGE_LIMIT);
+  while (n > 0 && !before(start + (n - 1) * step)) n--;
+  while (before(start + n * step)) n++;
+  return Array.from({ length: n }, (_, k) => start + k * step);
+}
+
 export const BUILTINS: Record<string, Impl> = {
+  range: (start, stop, by, step) => range(start as number, stop as number, by as string, step as number),
   "+": (...xs) => (xs.length === 1 ? xs[0] : xs.reduce(add)),
   "-": (...xs) => (xs.length === 1 ? negate(xs[0]) : xs.reduce((a, b) => add(a, negate(b)))),
   "*": (...xs) => xs.reduce(multiply),

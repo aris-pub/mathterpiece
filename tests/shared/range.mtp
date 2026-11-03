@@ -1,0 +1,28 @@
+; mtp-966: range by a gap, leaving stop out, and by a number of items, from start to stop; and
+; (map n f) over 0 to n - 1. Free variables keep them from folding, so the runtime makes them.
+; expect a [0,1,2]
+; expect b [1,1.5]
+; expect c [0,0.25,0.5,0.75,1]
+; expect d [5,3,1]
+; expect e [0,1,4]
+; expect f [0,0.5]
+; write n 5
+; expect a [0,1,2,3,4]
+; expect e [0,1,4,9,16]
+; write k 1
+; expect c [0]
+; write k 0
+; expect c []
+; write z 0
+; expect f null
+(int n 3 (>= 0) (<= 10))
+(real g 0.5 (>= 0.1) (<= 2))
+(int k 5 (>= 0) (<= 20))
+(real neg -2 (>= -3) (<= -1))
+(real z 0.5 (>= 0) (<= 1))
+(list a (range 0 n (gap 1)))
+(list b (range 1 2 (gap g)))
+(list c (range 0 1 (num k)))
+(list d (range 5 0 (gap neg)))
+(list e (map n (fn (int i) (* i i))))
+(list[real]|none f (range 0 1 (gap z)))

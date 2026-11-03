@@ -136,6 +136,35 @@ def compose(*ts) -> tuple:
     return (a, b, c, d, e, f)
 
 
+# More items than this is undefined: a figure has no use for them, and a page would hang.
+RANGE_LIMIT = 1_000_000
+
+
+def range_by_gap(start, stop, gap) -> list:
+    """From start, a gap apart, up to stop and not including it (mtp-966). Item k is computed as
+    start + k gap, so rounding does not add up along the list."""
+    _check(gap != 0)
+
+    def before(x) -> bool:
+        return x < stop if gap > 0 else x > stop
+
+    n = max(0, math.ceil((stop - start) / gap))
+    _check(n <= RANGE_LIMIT)
+    while n > 0 and not before(start + (n - 1) * gap):
+        n -= 1
+    while before(start + n * gap):
+        n += 1
+    return [start + k * gap for k in range(n)]
+
+
+def range_by_count(start, stop, n) -> list:
+    """n items from start to stop, both included, evenly apart (mtp-966)."""
+    _check(0 <= n <= RANGE_LIMIT)
+    if n == 1:
+        return [start]
+    return [stop if k == n - 1 else start + k * (stop - start) / (n - 1) for k in range(n)]
+
+
 BUILTINS: dict[str, Builtin] = {
     "sqrt": _unary(_sqrt, _sqrt_range, lambda rs: rs[0][0] < 0),
     "floor": _unary(
@@ -193,7 +222,7 @@ BUILTINS: dict[str, Builtin] = {
 }
 
 # Built-ins whose arguments vary in number or type, handled by the compiler itself.
-SPECIAL_BUILTINS = {"round", "log", "min", "max", "lerp", "rand", "scale", "transform"}
+SPECIAL_BUILTINS = {"round", "log", "min", "max", "lerp", "rand", "scale", "transform", "range"}
 CONSTANTS = {
     "pi": math.pi,
     "π": math.pi,
