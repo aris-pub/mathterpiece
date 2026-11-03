@@ -7,7 +7,7 @@ from helpers import bound, doc, error, model
 from mtpc_check import errors
 
 from mathterpiece.compiler import _core
-from mathterpiece.types import POINT, REAL
+from mathterpiece.types import POINT, REAL, ListT
 
 PTS = "(points [[0 0] [4 0] [4 2]])"
 
@@ -41,7 +41,8 @@ class TestDeclaring:
     def test_points_from_a_map(self):
         m = model("(real k 1) (scene s (polyline p (points (map 5 (fn (int i) [i (* k i)])))))")
         e = m.get("p").attrs["points"].expr
-        assert e.op == "map" and _core(_core(e.type).item) == POINT
+        t = _core(e.type)
+        assert e.op == "map" and isinstance(t, ListT) and _core(t.item) == POINT
 
 
 class TestPosition:
