@@ -104,6 +104,8 @@ A function can be passed to another, by name or written in place with `fn`, whic
 
 A function written in place may use the names around it: in `(map g (fn p (* k p.r)))`, the result follows `k` like anything else that reads it.
 
+A collection function's function takes its parameter's type from the items, and, when the list is known when compiling, their range too: in `(map [0 1 2 3] (fn f …))`, `f` is an int from 0 to 3. `map`'s function takes its result's type from the item type expected of the map, so in `(list[point] corners (map [0 1 2 3] (fn k [x y])))` each `[x y]` is a point.
+
 ## 6. Special forms
 
 A special form looks like a call but does something a function cannot: it evaluates only some of its parts, binds names, or stands for other expressions. Each is its own exception, documented with exactly what it evaluates and when.

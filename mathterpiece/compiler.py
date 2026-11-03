@@ -880,9 +880,11 @@ class _Compiler:
             raise CompileError(f"expected func[{want}], got {e.type}", node.pos)
         return e
 
-    def collection(self, node: Form, head: str, scope: dict) -> Expr:
+    def collection(self, node: Form, head: str, scope: dict, expected=None) -> Expr:
         """map, where, sort, reverse, reduce, sum, count, any and all (reference.md,
-        "Collections"): a collection first, then what they need."""
+        "Collections"): a collection first, then what they need. A function given to them takes
+        its parameter's type from the items, with their range when the list is known, and map's
+        its result's type from the item type expected of the map."""
         args = node.items[1:]
         if not args:
             raise CompileError(f"{head} takes a collection first", node.pos)
@@ -894,6 +896,10 @@ class _Compiler:
                 f"the items of {head} may be none: filter them out with (somes xs)", node.pos
             )
         f, deps = None, coll.deps
+        # Only the function's parameter is narrowed: a list made from the items keeps their type.
+        each = item
+        if coll.known and _core(item) in NUMBERS[:3] and coll.value:
+            each = _with_range(item, (min(coll.value), max(coll.value)))
 
         def given(k: int, params: tuple, result) -> Expr:
             nonlocal f, deps
@@ -910,13 +916,16 @@ class _Compiler:
 
         if head == "map":
             self.arity(node, 2)
-            ft = _core(given(0, (item,), None).type)
+            want = _core(_inner(expected)) if expected is not None else None
+            ft = _core(given(0, (each,), want.item if isinstance(want, ListT) else None).type)
             assert isinstance(ft, FuncT) and f is not None
             out = ft.result
             if _may_be_none(item) and not _may_be_none(ft.params[0]):
                 out = _maybe(out)
             vals = self.fold_each(f, item, coll.value) if coll.known else None
             if vals is not None:
+                if _core(out) == POINT:
+                    vals = [None if v is None else tuple(v) for v in vals]
                 return _known(sized(ListT(out)), vals)
             # Items that share a range give the list's item type that range.
             if f.op == "func":
@@ -925,7 +934,7 @@ class _Compiler:
             return Expr("map", sized(ListT(out)), (coll, f), deps)
         if head == "where":
             self.arity(node, 2)
-            given(0, (item,), BOOL)
+            given(0, (each,), BOOL)
             assert f is not None
             keep = self.fold_each(f, item, coll.value) if coll.known else None
             if keep is not None:
@@ -933,7 +942,7 @@ class _Compiler:
             return Expr("where", ListT(item), (coll, f), deps)
         if head == "sort":
             self.arity(node, 2)
-            given(0, (item,), REAL)
+            given(0, (each,), REAL)
             assert f is not None
             keys = self.fold_each(f, item, coll.value) if coll.known else None
             if keys is not None:
@@ -950,7 +959,7 @@ class _Compiler:
         if head == "reduce":
             self.arity(node, 3)
             start = self.expr(rest[0], self.accumulator(rest[1]), scope)
-            ft = _core(given(1, (start.type, item), None).type)
+            ft = _core(given(1, (start.type, each), None).type)
             assert isinstance(ft, FuncT) and f is not None
             acc = ft.params[0]
             if not fits(_loose(ft.result), _loose(acc)):
@@ -979,7 +988,7 @@ class _Compiler:
                 if n is not None:
                     return _known(INT, n)
                 return Expr("count", INT, (coll,), deps, (0.0, MAX_REAL))
-            given(0, (item,), BOOL)
+            given(0, (each,), BOOL)
             assert f is not None
             hits = self.fold_each(f, item, coll.value) if coll.known else None
             if hits is not None:
@@ -994,7 +1003,7 @@ class _Compiler:
             if coll.known:
                 return _known(BOOL, (any if head == "any" else all)(coll.value))
             return Expr(head, BOOL, (coll,), deps)
-        given(0, (item,), BOOL)
+        given(0, (each,), BOOL)
         assert f is not None
         hits = self.fold_each(f, item, coll.value) if coll.known else None
         if hits is not None:
@@ -2627,7 +2636,12 @@ class _Compiler:
                     return _known(item, e.value[k])
                 if e.op == "list":
                     return e.args[k]
-            else:
+            elif not (
+                n is not None
+                and index.range is not None
+                and -n <= index.range[0]
+                and index.range[1] < n
+            ):
                 item = _maybe(item)
             return Expr("part", item, (e, index), e.deps | index.deps, _type_range(item))
         if isinstance(whole, Interface) and whole.name == "sequence" and whole.of is not None:
@@ -2699,7 +2713,7 @@ class _Compiler:
                 return self.fn(node, scope, ft.params, ft.result)
             return self.fn(node, scope)
         if head in COLLECTION:
-            return self.collection(node, head, scope)
+            return self.collection(node, head, scope, expected)
         if head in BUILTINS or head in SPECIAL_BUILTINS:
             return self.builtin(node, head, scope)
         if head == "if":

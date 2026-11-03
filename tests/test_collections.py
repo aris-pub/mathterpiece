@@ -125,3 +125,41 @@ def test_a_position_on_a_sequence_parameter_may_be_none():
 def test_reduce_starts_from_a_literal_point():
     src = f"(scene s {G} (point p (reduce g.pos [0 0] (fn ((point acc) (point q)) (+ acc q)))))"
     assert model(src).get("p").value.expr.type == POINT
+
+
+class TestMapTypedByItsList:
+    # mtp-dqj: map's function takes its parameter's type and range from the list's items, and its
+    # result's type from the type expected of the map.
+    def test_the_declared_item_type_reaches_a_literal_in_the_function(self):
+        m = model("(real s) (list[point] corners (map [0 1 2 3] (fn k [(* s k) 0])))")
+        t = m.get("corners").value.expr.type
+        assert t.base == ListT(POINT)
+
+    def test_a_folded_map_takes_the_declared_item_type(self):
+        m = model("(list[point] corners (map [0 1] (fn k [k 0])))")
+        assert m.get("corners").value.value == [(0, 0), (1, 0)]
+
+    def test_the_parameter_takes_the_range_of_a_known_lists_items(self):
+        # face[f] on a four-item list is proved in range, so it is never none.
+        m = model(
+            "(real s) (list[int] face [3 1 2 0] (const))"
+            " (list[int] picks (map [0 1 2 3] (fn f (+ face[f] (floor s)))))"
+        )
+        assert m.get("picks").value.expr.type.base == ListT(INT)
+
+    def test_a_position_proved_in_range_is_never_none(self):
+        m = model("(list[int] face [3 1 2 0] (const)) (int f 0 (>= 0) (<= 3)) (int k face[f])")
+        assert m.get("k").value.expr.type == INT
+
+    def test_a_position_that_may_be_out_of_range_may_be_none(self):
+        error(
+            "(list[int] face [3 1 2 0] (const)) (int f 0 (>= 0) (<= 4)) (int k face[f])",
+            "may be none",
+        )
+
+    def test_the_type_expected_of_an_argument_reaches_the_function(self):
+        m = model(
+            "(func first-x ((list[point] ps)) (or? ps[0].x 0)) (real s)"
+            " (real x (first-x (map [1 2] (fn k [(* s k) 0]))))"
+        )
+        assert m.get("x").value.bound

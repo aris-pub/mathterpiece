@@ -30,6 +30,11 @@
         (* (- (screen-y b yaw) (screen-y a yaw)) (- (turned-x c yaw) (turned-x a yaw))))
      0))
 
+; Each face, as its corners in the order that runs one way round from outside.
+(list[int] face-a [0 0 0 1] (const))
+(list[int] face-b [1 2 3 3] (const))
+(list[int] face-c [2 3 1 2] (const))
+
 ; Each edge, as its ends and the two faces it borders.
 (list[int] edge-from [0 0 0 1 2 3] (const))
 (list[int] edge-to [1 2 3 2 3 1] (const))
@@ -38,13 +43,10 @@
 
 (scene ornament
   (real yaw 0)
-  ; Each corner's x and y on the screen. A list of points made by map would hold lists of reals:
-  ; inside the function, nothing tells [x y] it is a point.
-  (list cx (map [0 1 2 3] (fn k (turned-x k yaw))))
-  (list cy (map [0 1 2 3] (fn k (- (screen-y k yaw)))))
-  ; Whether each face faces the viewer. Written out, since inside a map the compiler cannot
-  ; tell that a list read at the function's argument is in range.
-  (list front [(facing 0 1 2 yaw) (facing 0 2 3 yaw) (facing 0 3 1 yaw) (facing 1 3 2 yaw)])
+  ; Each corner on the screen.
+  (list[point] on-screen (map [0 1 2 3] (fn k [(turned-x k yaw) (- (screen-y k yaw))])))
+  ; Whether each face faces the viewer.
+  (list front (map [0 1 2 3] (fn f (facing face-a[f] face-b[f] face-c[f] yaw))))
   ; How near each corner is, from 0 (far) to 1 (near). Depth stays within the height, but the
   ; compiler only knows a function's result as any real, so it is clamped to show it.
   (list near (map [0 1 2 3] (fn k (max 0 (min 1 (/ (+ (depth k yaw) height) (* 2 height)))))))
@@ -52,13 +54,13 @@
   ; An edge is drawn in full when either face it borders faces the viewer.
   (group edges (stroke ink) (stroke-width 1.1)
     (repeat 6 e
-      (line_ (from [cx[edge-from[e]] cy[edge-from[e]]]) (to [cx[edge-to[e]] cy[edge-to[e]]])
+      (line_ (from on-screen[edge-from[e]]) (to on-screen[edge-to[e]])
         (opacity (if (or front[edge-face[e]] front[edge-other-face[e]]) 1 0.35)))))
 
   ; A corner nearer the viewer is larger and darker.
   (group corners (fill ink)
     (repeat 4 k
-      (circle_ (pos [cx[k] cy[k]]) (r (+ 1.25 (* 0.6 near[k])))
+      (circle_ (pos on-screen[k]) (r (+ 1.25 (* 0.6 near[k])))
         (opacity (+ 0.55 (* 0.45 near[k])))))))
 
 (canvas view (view-x -12) (view-y -12) (view-width 24) (view-height 24) (pan false) (zoom false)
