@@ -100,7 +100,7 @@ The compiler proves the body gives that type and stays within its constraints, a
 
 ### Functions as arguments
 
-A function can be passed to another, by name or written in place with `fn`, which is `func` without a name. A single parameter of `fn` may leave out its type when the place gives it:
+A function can be passed to another, by name or written in place with `fn`, which is `func` without a name. A single parameter of `fn` may leave out its type when the function it is passed to gives that type, as `map`, `where`, `sort` and `count` do:
 
     (map xs double)                               ; each item doubled
     (map g (fn p (* 2 p.r)))                      ; p is a member of g
@@ -129,7 +129,7 @@ A special form looks like a call but does something a function cannot: it evalua
 | `(name s)` | turns a string into a name (section 4) |
 | `(as T literal)` | gives a literal the type `T` where nothing else gives it one: `(as color 'gold')`, `(as point [0 0])` |
 
-`when`, inside a canvas or a listener, is an item recognized by its head, not a special form: its first part is a condition and the rest are names.
+Two items are recognized by their head and are not special forms: `(when c name…)` in a canvas's body, a condition and the names of what it shows, and `(exists-when name c)` in a scene, group, `foreach` or motif body, which says when a shape exists (see the reference, "The scene and shapes"). In a control or a listener, `(when c)` is an optional argument.
 
 ## 7. Reading parts
 

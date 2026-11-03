@@ -18,7 +18,7 @@ Three rules from the other documents shape everything here:
       "names": { "theta": 3, "p": 5, "d1.face": 9, … }
     }
 
-- **`mtpc`**: the format version, 2. (Version 1 was the old JSON format.)
+- **`mtpc`**: the format version, 2.
 - **`types`**: every type the author declared that the objects use, directly or through other types or functions: named types, motifs and variants. One nothing uses is left out.
 - **`objects`**: every object in the world model (variables, shapes, transitions, animations, components). An object's **id** is its position in this list. Objects appear in the order their declarations are reached in the source, depth first: a container comes before its members, a motif instance's members follow the instance, and a transition or animation written inline as an item comes right before the object that holds it.
 - **`functions`**: every function the model calls while drawing, declared with `func` or written in place with `fn`, in source order. A function only called where the compiler worked out the result, or never called, is left out. A function's id is its position in this list.
