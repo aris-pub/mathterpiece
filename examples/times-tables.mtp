@@ -19,8 +19,8 @@
 
 (scene board
   (background paper)
-  ; The figure opens at the tour's last stop, so playing the tour moves from the first moment.
-  (real m 9 (>= 1) (<= 12))
+  ; The figure opens at the tour's first stop, the cardioid, so every other stop moves it.
+  (real m 2 (>= 1) (<= 12))
   (string curve-name
     (cond ((= m 2) 'a cardioid')
           ((= m 3) 'a nephroid')
