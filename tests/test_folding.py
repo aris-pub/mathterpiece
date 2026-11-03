@@ -2,6 +2,7 @@
 "Two properties of every expression"; docs/mtpc.md "Everything known when compiling is
 already folded")."""
 
+import pytest
 from helpers import error, model, value
 
 DOUBLE = "(func double (real x) (* 2 x))"
@@ -83,17 +84,24 @@ class TestFoldedValues:
         assert m.get("a").value.value == 137.5
 
     def test_a_const_attribute_is_a_constant(self):
-        model(
+        # c.r is const, so d.r folds to a plain 2 that the move may write.
+        m = model(
             "(scene s (circle c (r (+ 1 1))) (circle d (r c.r)))"
             " (animation a (move d.r (to 1) (duration 1)))"
         )
+        r = m.get("d").attrs["r"]
+        assert not r.bound and r.value == 2
+        assert m.get("a").data["steps"][1] == (m.id("d"), "r")
 
     def test_so_a_writer_may_write_it(self):
-        model(
+        m = model(
             "(real g (* 180 (- 3 (sqrt 5))) (const))"
             " (scene s (circle c (r g)))"
             " (animation a (move c.r (to 1) (duration 1)))"
         )
+        r = m.get("c").attrs["r"]
+        assert not r.bound and r.value == pytest.approx(180 * (3 - 5**0.5))
+        assert m.get("a").data["steps"][1] == (m.id("c"), "r")
 
     def test_an_expression_of_a_constant_is_still_const(self):
         src = "(real g 2 (const)) (real d (* 2 g))"

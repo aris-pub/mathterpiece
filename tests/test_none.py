@@ -15,8 +15,8 @@ class TestWhereItComesFrom:
         error("(real k 1) (real d (/ 1 k))", "may be none")
 
     def test_a_division_proven_safe(self):
-        model("(real k 1 (>= 1)) (real d (/ 1 k))")
-        model("(real k -3 (< -2)) (real d (/ 1 k))")
+        assert bound("(real k 1 (>= 1)) (real d (/ 1 k))", "d").type == REAL
+        assert bound("(real k -3 (< -2)) (real d (/ 1 k))", "d").type == REAL
 
     def test_mod_by_a_divisor_that_may_be_zero(self):
         error("(int k 1) (int d (mod 7 k))", "may be none")
@@ -83,7 +83,8 @@ class TestHandling:
         assert value("(real|none c none (const)) (real d (or? c 5))", "d") == 5
 
     def test_or_default_range(self):
-        model("(scene s (real k 1 (>= 1)) (real|none c 1 (>= 0)) (circle o (r (or? c k))))")
+        m = model("(scene s (real k 1 (>= 1)) (real|none c 1 (>= 0)) (circle o (r (or? c k))))")
+        assert m.get("o").attrs["r"].expr.type == Refine(REAL, ((">=", 0),))
 
     def test_none_and_some(self):
         assert typ("(real|none c) (bool b (none? c))", "b") == BOOL
@@ -128,7 +129,8 @@ class TestShapes:
         error("(scene s (real k 1) (circle|none o (r (/ 1 k))) (circle p (r o.r)))", "may be none")
 
     def test_fill_and_stroke_accept_none(self):
-        model("(scene s (color|none ink) (circle o (fill ink) (stroke none)))")
+        a = model("(scene s (color|none ink) (circle o (fill ink) (stroke none)))").get("o").attrs
+        assert a["fill"].bound and a["stroke"].value is None
 
     def test_a_radius_that_may_break_its_constraint_makes_the_shape_absent(self):
         model("(scene s (real k 1) (circle|none o (r k)))")

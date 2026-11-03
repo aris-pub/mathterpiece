@@ -5,7 +5,18 @@ import pytest
 from helpers import error, model, value
 
 from mathterpiece.compiler import compile_source
-from mathterpiece.types import BOOL, COLOR, INT, RATIO, REAL, STRING, ListT, Maybe, Refine
+from mathterpiece.types import (
+    BOOL,
+    COLOR,
+    INT,
+    POINT,
+    RATIO,
+    REAL,
+    STRING,
+    ListT,
+    Maybe,
+    Refine,
+)
 
 
 class TestVariables:
@@ -159,7 +170,8 @@ class TestRanges:
         assert m.get("d").value.expr.range == (0, 20)
 
     def test_a_radius_proven_non_negative(self):
-        model("(scene s (real k 1 (>= 0)) (circle c (r (* 2 k))))")
+        r = model("(scene s (real k 1 (>= 0)) (circle c (r (* 2 k))))").get("c").attrs["r"]
+        assert r.expr.range[0] == 0
 
     def test_a_radius_not_proven(self):
         error("(scene s (real k 1) (circle c (r (* 2 k))))", r"r may break \(>= 0\)")
@@ -239,7 +251,8 @@ class TestAbs:
         assert value("(int n (abs -2))", "n") == 2
 
     def test_its_range_is_non_negative(self):
-        model("(scene s (real k 1) (circle c (r (abs k))))")
+        r = model("(scene s (real k 1) (circle c (r (abs k))))").get("c").attrs["r"]
+        assert r.expr.range[0] == 0
 
 
 class TestEmptyForm:
@@ -288,10 +301,11 @@ class TestListRanges:
         assert t.base.item == Refine(REAL, ((">=", 0),))
 
     def test_so_an_item_reaches_a_radius(self):
-        model(
+        m = model(
             "(scene s (group g (circle a) (circle b)) (list rs (map g (fn p (dist [0 0] p.pos))))"
             " (circle c (r (. rs 0))))"
         )
+        assert m.get("c").attrs["r"].expr.type == Refine(REAL, ((">=", 0),))
 
 
 class TestPowerRange:
@@ -307,7 +321,8 @@ class TestBoundListLength:
     # a free list may be replaced by a move, so it needs (length n) (type-system.md, "Known
     # lengths").
     def test_a_bound_list_keeps_its_length(self):
-        model("(real k 1) (list xs [k (* 2 k)]) (real d (. xs 1))")
+        # So reading item 1 gives a real, never none.
+        assert model("(real k 1) (list xs [k (* 2 k)]) (real d (. xs 1))").get("d").type == REAL
 
     def test_a_free_list_does_not(self):
         error("(list[real] xs [1 2]) (real d (. xs 1))", "may be none")
@@ -319,7 +334,8 @@ class TestMixedNumbers:
         assert value("(bool b (< 2/5 0.4))", "b") is False
 
     def test_an_int_and_a_narrowed_real_meet_as_reals(self):
-        model("(real h 1 (>= 0)) (list xs [0 h])")
+        xs = model("(real h 1 (>= 0)) (list xs [0 h])").get("xs").value
+        assert xs.expr.type == ListT(Refine(REAL, ((">=", 0),)))
 
 
 class TestListLiterals:
@@ -332,8 +348,12 @@ class TestListLiterals:
 
     def test_a_branch_gives_its_type_to_a_list_literal_in_the_other(self):
         # mtp-vsx: inside a function nothing outside expects a type, so the other branch does.
-        model("(real k 1) (func f ((real a)) (if (> a 0) [a 0] (polar 1 30))) (point q (f k))")
-        model("(real k 1) (func f ((real a)) (if (> a 0) (polar 1 30) [a 0])) (point q (f k))")
+        for src in (
+            "(real k 1) (func f ((real a)) (if (> a 0) [a 0] (polar 1 30))) (point q (f k))",
+            "(real k 1) (func f ((real a)) (if (> a 0) (polar 1 30) [a 0])) (point q (f k))",
+        ):
+            m = model(src)
+            assert m.functions[m.funcs["f"]].result == POINT
 
 
 class TestIndexingAListWrittenInPlace:
@@ -350,13 +370,15 @@ class TestBoundReadsKeepTheirRange:
     # mtp-2ixy: a bound variable always equals its expression, so a read of it has the
     # expression's range, not only its type's.
     def test_a_bound_variable_passed_to_a_constrained_parameter(self):
-        model(
+        m = model(
             "(real t 1 (>= 0.5) (<= 10.5)) (real L 2 (>= 2) (<= 10)) (real te (min t (+ L 0.5)))"
             " (func f ((real x (>= 0))) x) (real v (f te))"
         )
+        assert m.get("te").value.expr.range == (0.5, 10.5)
 
     def test_a_bound_variable_as_a_radius(self):
-        model("(point a) (point b) (real h (/ (dist a b) 2)) (scene s (circle c (r h)))")
+        m = model("(point a) (point b) (real h (/ (dist a b) 2)) (scene s (circle c (r h)))")
+        assert m.get("c").attrs["r"].expr.range[0] == 0
 
     def test_a_bound_variable_as_a_divisor(self):
         m = model("(real g 0 (>= 0) (<= 1)) (real lv (max 2 (* 10 g))) (real v (/ 1 lv))")

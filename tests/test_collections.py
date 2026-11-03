@@ -34,7 +34,9 @@ class TestMap:
         error("(list ys (map ['a'] (fn (real x) x)))", "expected func")
 
     def test_the_result_has_a_known_length(self):
-        model(f"(scene s {G} (real k (. (map g (fn p p.r)) 1)))")
+        # So reading item 1 gives a real, never none.
+        k = model(f"(scene s {G} (real k (. (map g (fn p p.r)) 1)))").get("k").value
+        assert k.expr.type == RADIUS
 
 
 class TestWhereSortReverse:

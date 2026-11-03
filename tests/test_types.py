@@ -118,7 +118,7 @@ class TestLiterals:
 
     def test_none(self):
         assert literal_type(NoneLit(), Maybe(REAL)) == Maybe(REAL)
-        with pytest.raises(TypeError_):
+        with pytest.raises(TypeError_, match="none is not a real"):
             literal_type(NoneLit(), REAL)
 
     def test_lists_infer_their_item_type(self):
@@ -131,7 +131,7 @@ class TestLiterals:
         assert literal_type(ListLit((IntLit(1), IntLit(2))), POINT) == POINT
 
     def test_a_point_needs_two_numbers(self):
-        with pytest.raises(TypeError_, match="point"):
+        with pytest.raises(TypeError_, match=r"^a point is two numbers, \[x y\]$"):
             literal_type(ListLit((IntLit(1),)), POINT)
 
     def test_an_empty_list_needs_an_expected_type(self):

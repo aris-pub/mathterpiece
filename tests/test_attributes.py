@@ -140,9 +140,10 @@ class TestDashOffset:
         assert e.op == "read" and e.type == REAL
 
     def test_moved_by_an_animation(self):
-        model(
+        m = model(
             "(scene s (line l (dash [4 2]))) (animation a (move l.dash-offset (to 6) (duration 1)))"
         )
+        assert m.get("a").data["steps"][1] == (m.id("l"), "dash-offset")
 
     def test_a_containers_offset_is_every_members(self):
         m = model(

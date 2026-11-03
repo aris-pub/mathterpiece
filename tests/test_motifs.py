@@ -133,10 +133,12 @@ class TestShapeArguments:
         assert {(m.id("i.a"), "fill"), (m.id("i.b"), "fill")} <= deps
 
     def test_a_write_reaches_members_inside_a_group(self):
-        model(
+        m = model(
             "(motif m (real u 0) (group inner (circle a) (circle b))) (scene s (m i))"
             " (button go (animation (move i.fill (to 'red') (duration 1))))"
         )
+        animation = m.objects[m.get("go").data["animation"]]
+        assert animation.data["steps"][1] == (m.id("i"), "fill")
 
     def test_a_groups_defaults_reach_an_instances_members(self):
         m = model(
@@ -170,14 +172,22 @@ class TestBodyLists:
     # type-system.md "Known lengths": a variable bound to a list keeps its length, in a motif's
     # body as in the scene.
     def test_a_bound_list_in_a_body_keeps_its_length(self):
-        compile_source(
+        # So v[i] is never none, and each radius is a real.
+        m = compile_source(
             "(motif m ((real a 1)) (list v [a a]) (foreach i 2 (circle_ (r (+ 1 (abs v[i]))))))"
             " (scene s (m m1))"
         )
+        circles = [o for o in m.objects if o.kind == "circle"]
+        assert len(circles) == 2
+        for c in circles:
+            r = c.attrs["r"].expr
+            assert r is not None and r.type == REAL
 
     def test_a_folded_value_in_a_body_is_allowed(self):
         # Known when compiling, it is free with a const constraint, which no writer may write.
-        compile_source(
+        m = compile_source(
             "(motif m ((real a 1 (const))) (real twice (* 2 a)) (circle_ (r twice)))"
             " (scene s (m m1))"
         )
+        (c,) = [o for o in m.objects if o.kind == "circle"]
+        assert not c.attrs["r"].bound and c.attrs["r"].value == 2

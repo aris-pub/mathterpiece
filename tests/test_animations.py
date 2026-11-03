@@ -77,9 +77,13 @@ class TestSteps:
         assert s[3:] == (2, "ease-in")
 
     def test_a_move_takes_a_named_transition(self):
-        steps(
+        m = model(
             f"{K} (transition slide none (to 5) (duration 1)) (animation a (move k (like slide)))"
         )
+        move = m.get("a").data["steps"]
+        assert move[:2] == ("move", (m.id("k"), None))
+        t = m.objects[move[2]]
+        assert t.kind == "transition" and t.attrs["to"].value == 5
 
     def test_an_animation_holds_only_moves_at_once_and_in_order(self):
         error(f"{K} (animation a (k (to 5) (duration 1)))", "holds moves, at-once and in-order")

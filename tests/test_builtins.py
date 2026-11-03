@@ -67,7 +67,8 @@ class TestAngles:
         assert typ("(real a 0 (>= 0) (<= 80)) (real v (secd a))") == REAL
 
     def test_ranges(self):
-        model("(real a) (scene s (circle c (r (+ 1 (sind a)))))")
+        r = model("(real a) (scene s (circle c (r (+ 1 (sind a)))))").get("c").attrs["r"]
+        assert r.expr.range == (0, 2)
 
     def test_conversions(self):
         assert value("(real v (turn 0.5))") == 180
@@ -164,7 +165,8 @@ def test_lerp_folds_points_known_when_compiling():
 
 def test_log_stays_within_the_number_bound():
     # mtp-r0f: type-system.md 5.c, every number lies within ±10^150.
-    model("(real x 5 (>= 1) (<= 100)) (real y (* (log x 10) 2))")
+    e = model("(real x 5 (>= 1) (<= 100)) (real y (* (log x 10) 2))").get("y").value.expr
+    assert e.type == REAL
 
 
 class TestNumberTimesList:
