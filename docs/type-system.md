@@ -169,7 +169,7 @@ Infinity, `infty` (or `∞`), and `(- infty)` lie beyond the bound, and appear o
 
 Each operation has a range rule:
 
-- Only `+`, `-`, `*`, `/`, `^`, `abs`, `min`, `max`, `sqrt`, `log`, `round`, `floor` and `ceil` compute their range from their inputs' ranges. Every other function is taken to give its whole range whatever its input, which is its mathematical range (`sind` −1 to 1, `exp` above 0, `mod` from 0 up to its divisor, `dist` 0 and above, and so on).
+- Only `+`, `-`, `*`, `/`, `^`, `abs`, `min`, `max`, `sqrt`, `log`, `exp`, `round`, `floor` and `ceil` compute their range from their inputs' ranges. Every other function is taken to give its whole range whatever its input, which is its mathematical range (`sind` −1 to 1, `exp` above 0, `mod` from 0 up to its divisor, `dist` 0 and above, and so on).
 - `if`, `cond` and `or?` give the union of their branches' ranges.
 - A list built from expressions, and the result of `map`, give their item type the range all their items share, so `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]`.
 - A parameter, a read of a free variable or attribute (a writer may change it) and a recursive call give their type's range.

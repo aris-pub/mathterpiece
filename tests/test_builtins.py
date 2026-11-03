@@ -233,6 +233,23 @@ class TestRangesFollowTheInput:
         assert bound(self.K + "(int v (ceil k))").range == (-2, 11)
         assert bound(self.K + "(real v (round k 1))").range == pytest.approx((-2.5, 10.5))
 
+    def test_exp(self):
+        # The author, 2026-11-03: exp too follows its input.
+        e = bound("(real x 0 (>= -5) (<= 0)) (real v (exp x))")
+        assert e.range == pytest.approx((math.exp(-5), 1))
+        # So a damped spring is proved a real: exp's range no longer reaches the largest real.
+        assert (
+            value(
+                "(func f ((real t 0 (>= 0) (<= 1)))"
+                " (* (exp (* -5 t)) (+ (cos (* 9 t)) (* 0.5 (sin (* 9 t))))))"
+                " (string v (type-of (f 0.5)))"
+            )
+            == "real"
+        )
+
+    def test_exp_of_an_unlimited_input_may_still_overflow(self):
+        assert isinstance(typ("(real x) (real|none v (exp x))"), Maybe)
+
     def test_rounding_a_very_large_range(self):
         # A product of two unlimited values may reach 10^300; it has no decimals left to round.
         assert bound("(real k) (int v (round (* k k)))").range[1] == pytest.approx(1e300)

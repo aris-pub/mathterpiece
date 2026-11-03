@@ -104,6 +104,14 @@ def _exp(x: float) -> float:
         raise Undefined from None
 
 
+def _exp_range(rs):
+    """exp grows with its input, so the ends of the input's range give the result's (the
+    author, 2026-11-03); past the largest real it is undefined, so the range stops there."""
+    top = math.log(MAX_REAL)
+    lo, hi = rs[0]
+    return (math.exp(min(lo, top)), math.exp(min(hi, top)))
+
+
 def _sqrt(x: float) -> float:
     _check(x >= 0)
     return math.sqrt(x)
@@ -171,7 +179,7 @@ BUILTINS: dict[str, Builtin] = {
         math.floor, lambda rs: (math.floor(rs[0][0]), math.floor(rs[0][1])), result=INT
     ),
     "ceil": _unary(math.ceil, lambda rs: (math.ceil(rs[0][0]), math.ceil(rs[0][1])), result=INT),
-    "exp": _unary(_exp, (0.0, MAX_REAL), lambda rs: rs[0][1] > math.log(MAX_REAL)),
+    "exp": _unary(_exp, _exp_range, lambda rs: rs[0][1] > math.log(MAX_REAL)),
     "sin": _unary(math.sin, (-1.0, 1.0)),
     "cos": _unary(math.cos, (-1.0, 1.0)),
     "tan": _unary(math.tan),
