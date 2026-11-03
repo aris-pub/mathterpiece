@@ -128,6 +128,7 @@ A special form looks like a call but does something a function cannot: it evalua
 | `(. X Y)` | a part of `X`; `Y` is not evaluated when it is an attribute name (section 7) |
 | `(name s)` | turns a string into a name (section 4) |
 | `(as T literal)` | gives a literal the type `T` where nothing else gives it one: `(as color 'gold')`, `(as point [0 0])` |
+| `(type-of x)` | gives `x`'s type as a string, such as `'real'`, known when compiling; `x` is never evaluated while drawing |
 
 Two items are recognized by their head and are not special forms: `(when c name…)` in a canvas's body, a condition and the names of what it shows, and `(exists-when name c)` in a scene, group, `foreach` or motif body, which says when a shape exists (see the reference, "The scene and shapes"). In a control or a listener, `(when c)` is an optional argument.
 
