@@ -48,13 +48,15 @@ class Writer:
 
     def doc(self) -> dict:
         m = self.model
-        return {
-            "mtpc": VERSION,
-            "types": [self.declared(name, t) for name, t in m.types.items()],
-            "objects": [self.obj(o) for o in m.objects],
-            "functions": [self.function(f) for f in m.functions],
-            "names": dict(m.names),
-        }
+        return _only_used(
+            {
+                "mtpc": VERSION,
+                "types": [self.declared(name, t) for name, t in m.types.items()],
+                "objects": [self.obj(o) for o in m.objects],
+                "functions": [self.function(f) for f in m.functions],
+                "names": dict(m.names),
+            }
+        )
 
     # Types -------------------------------------------------------------------------------
 
@@ -278,6 +280,64 @@ class Writer:
             "result": self.type(f.result),
             "body": self.expr(f.body),
         }
+
+
+def _function_id(x) -> int | None:
+    """The function a part of the document refers to: a call or a function value, written
+    ["call", T, id, …] or ["func", T, id, …], or {"func": id} (a value, an ease or a path)."""
+    if isinstance(x, list) and len(x) > 2 and x[0] in ("call", "func"):
+        f = x[2]
+    elif isinstance(x, dict):
+        f = x.get("func")
+    else:
+        return None
+    return f if isinstance(f, int) and not isinstance(f, bool) else None
+
+
+def _only_used(doc: dict) -> dict:
+    """The document with only the functions and declared types its objects reach, directly or
+    through other functions and types, the functions numbered again in their order (mtpc.md,
+    "Top level")."""
+    functions, types = doc["functions"], {t["name"]: t for t in doc["types"]}
+    used_f: set[int] = set()
+    used_t: set[str] = set()
+    todo: list = [doc["objects"]]
+    while todo:
+        x = todo.pop()
+        f = _function_id(x)
+        if f is not None and f not in used_f:
+            used_f.add(f)
+            todo.append(functions[f])
+        if isinstance(x, dict):
+            for key in ("named", "of"):
+                n = x.get(key)
+                if isinstance(n, str) and n in types and n not in used_t:
+                    used_t.add(n)
+                    todo.append(types[n])
+            todo.extend(x.values())
+        elif isinstance(x, list):
+            todo.extend(x)
+    new = {old: k for k, old in enumerate(sorted(used_f))}
+
+    def renumber(x):
+        if isinstance(x, list):
+            out = [renumber(y) for y in x]
+            if _function_id(x) is not None:
+                out[2] = new[x[2]]
+            return out
+        if isinstance(x, dict):
+            out = {k: renumber(v) for k, v in x.items()}
+            if _function_id(x) is not None:
+                out["func"] = new[x["func"]]
+            return out
+        return x
+
+    return {
+        **doc,
+        "types": [t for t in doc["types"] if t["name"] in used_t],
+        "objects": renumber(doc["objects"]),
+        "functions": [renumber(functions[old]) for old in sorted(used_f)],
+    }
 
 
 def _core(t: Type) -> Type:

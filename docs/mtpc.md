@@ -19,10 +19,10 @@ Three rules from the other documents shape everything here:
     }
 
 - **`mtpc`**: the format version, 2. (Version 1 was the old JSON format.)
-- **`types`**: every type the author declared: named types, motifs and variants.
+- **`types`**: every type the author declared that the objects use, directly or through other types or functions: named types, motifs and variants. One nothing uses is left out.
 - **`objects`**: every object in the world model (variables, shapes, transitions, animations, components). An object's **id** is its position in this list. Objects appear in the order their declarations are reached in the source, depth first: a container comes before its members, a motif instance's members follow the instance, and a transition or animation written inline as an item comes right before the object that holds it.
-- **`functions`**: every function the model calls while drawing, declared with `func` or written in place with `fn`, in source order. A function's id is its position in this list.
-- **`names`**: each named object's name, mapped to its id, as an author or a page refers to it: `theta`, `m0` (group members are named like any scene object), `d1.face` (names inside a motif instance are written through the instance). Anonymous objects (`_`) have no entry. The `"name"` field of an object holds its own name only: `face`, not `d1.face`.
+- **`functions`**: every function the model calls while drawing, declared with `func` or written in place with `fn`, in source order. A function only called where the compiler worked out the result, or never called, is left out. A function's id is its position in this list.
+- **`names`**: each named object's name, mapped to its id, as an author or a page refers to it: `theta`, `m0` (group members are named like any scene object), `d1.face` (names inside a motif instance are written through the instance). Unnamed objects (`head_`, or `none` as the name) have no entry. The `"name"` field of an object holds its own name only: `face`, not `d1.face`.
 
 Every reference to an object is resolved to its id. Two things stay names: a parameter or `let` name inside an expression (`["local", …]`), and a declared type (`"of": "dial"`), which is looked up in `types`.
 

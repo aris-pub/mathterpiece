@@ -65,6 +65,7 @@ def test_values_by_type():
 def test_types_and_functions():
     d = doc(
         "(type unit real (>= 0) (<= 1)) (motif dot ((unit t 0.5)) (circle c)) (func f (real x) x)"
+        " (scene s (dot d)) (real k) (real v (f k))"
     )
     assert d["types"][0] == {
         "name": "unit",
@@ -81,3 +82,42 @@ def test_types_and_functions():
         "result": "real",
         "body": ["local", "real", "x"],
     }
+
+
+class TestOnlyWhatIsUsed:
+    # mtp-j2o: the .mtpc holds only the functions and types the figure uses (mtpc.md, "Top level").
+    def test_a_function_never_called_while_drawing_is_left_out(self):
+        d = doc(
+            "(func twice (real x) (* 2 x)) (func unused (real x) x) (real k) (real v (twice k))"
+        )
+        assert len(d["functions"]) == 1
+        v = d["objects"][d["names"]["v"]]["value"]["bound"]
+        assert v[0] == "call" and v[2] == 0
+
+    def test_a_function_only_folded_is_left_out(self):
+        d = doc("(func twice (real x) (* 2 x)) (real v (twice 3))")
+        assert d["functions"] == []
+
+    def test_functions_reached_through_others_are_kept_and_renumbered(self):
+        d = doc(
+            "(func unused (real x) x) (func inner (real x) (+ x 1)) (func outer (real x) (inner x))"
+            " (real k) (real v (outer k))"
+        )
+        assert len(d["functions"]) == 2
+        v = d["objects"][d["names"]["v"]]["value"]["bound"]
+        outer = d["functions"][v[2]]
+        assert (
+            outer["body"][0] == "call" and d["functions"][outer["body"][2]]["body"][0] == "builtin"
+        )
+
+    def test_a_function_used_as_an_ease_is_kept(self):
+        d = doc(
+            "(func unused (real x) x) (func sq (real x) (* x x)) (real k)"
+            " (animation a (move k (to 1) (duration 1) (ease sq)))"
+        )
+        assert len(d["functions"]) == 1
+        assert errors(d) == []
+
+    def test_a_type_never_used_is_left_out(self):
+        d = doc("(type side string (one-of 'l' 'r')) (type unused int (>= 0)) (side s 'l')")
+        assert [t["name"] for t in d["types"]] == ["side"]
