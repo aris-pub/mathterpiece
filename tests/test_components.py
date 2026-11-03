@@ -243,3 +243,59 @@ class TestReleaseListeners:
         assert errors(d) == []
         kinds = [o["kind"] for o in d["objects"]]
         assert "on-release" in kinds and "on-dragend" in kinds
+
+
+class TestButtons:
+    def test_a_button(self):
+        m = model(f"{K} (button b (animation (move k (to 5) (duration 1))))")
+        b = m.get("b")
+        assert b.kind == "button"
+        assert m.objects[b.data["animation"]].kind == "animation"
+        assert b.attrs["label"].value == "b"
+        assert b.access == "page"
+
+    def test_a_named_animation(self):
+        m = model(f"{K} (animation a (move k (to 5) (duration 1))) (button b (animation a))")
+        assert m.get("b").data["animation"] == m.id("a")
+
+    def test_conditions_clamp_what_is_written(self):
+        m = model(
+            f"{K} (real lim 3) (button b (animation (move k (to 5) (duration 1)))"
+            " (<= k lim) (> 1 k))"
+        )
+        c = m.get("b").data["conditions"]
+        assert [(x["target"], x["op"]) for x in c] == [
+            ((m.id("k"), None), "<="),
+            ((m.id("k"), None), "<"),
+        ]
+        assert (m.id("lim"), None) in c[0]["limit"].deps
+
+    def test_a_condition_that_is_not_a_limit(self):
+        src = f"{K} (real j) (button b (animation (move k (to 5) (duration 1)))"
+        error(f"{src} (> j 1))", "compares an attribute this writer writes")
+        error(f"{src} (> k (* 2 k)))", "compares an attribute this writer writes")
+
+
+class TestListenersInAForeach:
+    def test_a_foreach_gives_a_listener_for_each_shape(self):
+        src = (
+            "(real k 0)"
+            "(scene s (foreach i 3 (circle (name $'c{i}'))))"
+            "(foreach i 3 (on-click (name $'c{i}')"
+            " (animation (move k (to i) (duration 0)))))"
+        )
+        m = model(src)
+        clicks = [o for o in m.objects if o.kind == "on-click"]
+        assert [o.data["shape"] for o in clicks] == [m.id(f"c{i}") for i in range(3)]
+
+
+class TestCanvasFades:
+    # reference.md "Transitions and animations": a canvas's pure move is how its when items
+    # fade in and out; fade is not a path.
+    def test_a_canvas_takes_a_pure_move(self):
+        m = model("(scene s (circle c)) (canvas v (move none (duration 1)) c)")
+        (t,) = [o for o in m.objects if o.kind == "transition"]
+        assert m.get("v").data["transition"] == m.objects.index(t)
+
+    def test_fade_is_not_a_path(self):
+        error("(scene s (circle c)) (canvas v (move none (duration 1) (path fade)) c)", "fade")

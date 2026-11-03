@@ -91,7 +91,7 @@ describe("format, Python's format mini-language", () => {
   });
 });
 
-// Values and specs with the text the compiler gives them (test/format_cases.py writes the file).
+// Values and specs with the text the compiler gives them (scripts/format_cases.py writes the file).
 import cases from "./data/format-cases.json";
 
 describe("format agrees with the compiler on a large sample", () => {

@@ -1,4 +1,10 @@
+"""The parser (docs/syntax.md): forms, atoms, names, strings, lists, type notation, and the
+errors it gives, with their positions. Each file in tests/malformed holds one mistake, and its
+first line says the one error it must give: "; error LINE:COL MESSAGE"."""
+
+import re
 from fractions import Fraction
+from pathlib import Path
 
 import pytest
 
@@ -21,6 +27,9 @@ from mathterpiece.nodes import (
 )
 from mathterpiece.parse import ParseError, parse
 
+NO_NAME = "_ is not a name: write none, or head_ for a form with no name"
+MALFORMED = sorted((Path(__file__).parent / "malformed").glob("*.mtp"))
+
 
 def atom(text):
     """Parse a single atom by wrapping it in a form."""
@@ -33,10 +42,17 @@ def n(*parts):
     return Name(tuple(parts))
 
 
-def error_at(src):
+def error_at(src, msg):
+    """The position of the error parsing src gives, after checking its message is msg."""
     with pytest.raises(ParseError) as exc:
         parse(src)
+    assert exc.value.msg == msg
     return exc.value.pos
+
+
+def atom_error(text, msg):
+    """As error_at, for an atom written inside a form."""
+    return error_at(f"(f {text})", msg)
 
 
 class TestForms:
@@ -64,18 +80,17 @@ class TestForms:
         assert parse("(a (b)(c))") == (Form((n("a"), Form((n("b"),)), Form((n("c"),)))),)
 
     def test_unclosed_form_reports_opening_paren(self):
-        assert error_at("(a\n  (b c)") == Pos(1, 1)
+        assert error_at("(a\n  (b c)", "unclosed '('") == Pos(1, 1)
 
     def test_unclosed_nested_form_reports_its_opening_paren(self):
-        assert error_at("(a\n  (b c") == Pos(2, 3)
+        assert error_at("(a\n  (b c", "unclosed '('") == Pos(2, 3)
 
     def test_stray_close_paren(self):
-        assert error_at("(a) )") == Pos(1, 5)
+        assert error_at("(a) )", "unexpected ')'") == Pos(1, 5)
 
     @pytest.mark.parametrize("src", ["a", "'a'", "1", "true", "$'a'"])
     def test_toplevel_atom_is_error(self, src):
-        with pytest.raises(ParseError):
-            parse(src)
+        error_at(src, "expected a form at the top level")
 
 
 class TestComments:
@@ -120,13 +135,14 @@ class TestRatio:
         assert atom("4/2") == RatioLit(Fraction(2))
 
     def test_zero_denominator_is_error(self):
-        with pytest.raises(ParseError):
-            atom("1/0")
+        atom_error("1/0", "zero denominator in '1/0'")
 
-    @pytest.mark.parametrize("text", ["3/-4", "3/+4", "1.5/2", "1/2.5", "1/", "/2", "1/2/3"])
+    @pytest.mark.parametrize("text", ["3/-4", "3/+4", "1.5/2", "1/2.5", "1/", "1/2/3"])
     def test_invalid_ratio(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+        atom_error(text, f"invalid number '{text}'")
+
+    def test_a_slash_first_is_not_a_number(self):
+        atom_error("/2", "invalid name '/2'")
 
 
 class TestReal:
@@ -172,15 +188,13 @@ class TestComplex:
 
     @pytest.mark.parametrize("text", ["3+i", "3+4", "3+4j", "2ii", "1/2i", "3+4i5"])
     def test_invalid_complex(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+        atom_error(text, f"invalid number '{text}'")
 
 
 class TestInvalidNumbers:
     @pytest.mark.parametrize("text", ["2x", "1/2x", "1_000", "0x10", "1.2.3", "1e", "1e+", "3.5f"])
     def test_number_followed_by_other_chars(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+        atom_error(text, f"invalid number '{text}'")
 
 
 class TestBool:
@@ -205,8 +219,7 @@ class TestOperators:
 
     @pytest.mark.parametrize("text", ["--", "->", "++", "<>", "==", "=>", "**", "+-", "<=="])
     def test_unknown_operator_like_token_is_error(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+        atom_error(text, f"invalid name '{text}'")
 
 
 class TestNames:
@@ -267,28 +280,44 @@ class TestNames:
             "a..b",
             "a.1",
             "a.-b",
-            "2.x",
             "teal_c",
-            "_",
         ],
     )
     def test_invalid_name(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+        atom_error(text, f"invalid name '{text}'")
 
-    @pytest.mark.parametrize("ch", ["[", "]", "{", "}"])
-    def test_brackets_not_allowed_in_names(self, ch):
-        with pytest.raises(ParseError):
-            atom(f"a{ch}b")
+    def test_a_digit_first_is_read_as_a_number(self):
+        atom_error("2.x", "invalid number '2.x'")
 
-    @pytest.mark.parametrize("ch", ["[", "]", "{", "}"])
-    def test_unmatched_brackets_outside_strings_are_errors(self, ch):
-        with pytest.raises(ParseError):
-            parse(f"(a {ch})")
+    def test_an_underscore_alone(self):
+        atom_error("_", NO_NAME)
+
+    @pytest.mark.parametrize(
+        "ch, msg",
+        [
+            ("[", "expected ']' after '['"),
+            ("]", "unexpected ']'"),
+            ("{", "'{' is reserved"),
+            ("}", "'}' is reserved"),
+        ],
+    )
+    def test_brackets_not_allowed_in_names(self, ch, msg):
+        atom_error(f"a{ch}b", msg)
+
+    @pytest.mark.parametrize(
+        "ch, msg",
+        [
+            ("[", "expected ']' to close the list"),
+            ("]", "unexpected ']'"),
+            ("{", "'{' is reserved"),
+            ("}", "'}' is reserved"),
+        ],
+    )
+    def test_unmatched_brackets_outside_strings_are_errors(self, ch, msg):
+        error_at(f"(a {ch})", msg)
 
     def test_double_quote_in_name_is_error(self):
-        with pytest.raises(ParseError):
-            atom('a"b')
+        atom_error('a"b', "double quotes are not allowed; use single quotes")
 
 
 class TestStr:
@@ -316,23 +345,19 @@ class TestStr:
 
     @pytest.mark.parametrize("esc", [r"\t", r"\r", r"\0", r"\"", r"\q", "\\" + "u0041", r"\x41"])
     def test_other_escapes_are_errors(self, esc):
-        with pytest.raises(ParseError):
-            atom(f"'a{esc}b'")
+        atom_error(f"'a{esc}b'", f"invalid escape '{esc[:2]}'")
 
     def test_unterminated_reports_opening_quote(self):
-        assert error_at("(f 'abc") == Pos(1, 4)
+        assert error_at("(f 'abc", "unterminated string") == Pos(1, 4)
 
     def test_trailing_backslash_is_unterminated(self):
-        with pytest.raises(ParseError):
-            parse("(f 'abc\\')")
+        error_at("(f 'abc\\')", "unterminated string")
 
     def test_followed_directly_by_token_is_error(self):
-        with pytest.raises(ParseError):
-            parse("(f 'a'b)")
+        error_at("(f 'a'b)", "expected whitespace, '(', ')' or ';' after a string")
 
     def test_followed_directly_by_string_is_error(self):
-        with pytest.raises(ParseError):
-            parse("(f 'a''b')")
+        error_at("(f 'a''b')", "expected whitespace, '(', ')' or ';' after a string")
 
     def test_followed_by_close_paren(self):
         assert parse("(f 'a')") == (Form((n("f"), StrLit("a"))),)
@@ -344,8 +369,7 @@ class TestStr:
         assert parse("(f 'a';c\n)") == (Form((n("f"), StrLit("a"))),)
 
     def test_double_quotes_are_errors(self):
-        with pytest.raises(ParseError):
-            parse('(f "a")')
+        error_at('(f "a")', "double quotes are not allowed; use single quotes")
 
 
 class TestInterpStr:
@@ -386,36 +410,32 @@ class TestInterpStr:
         assert atom("$'{α₁}'") == InterpStrLit((n("α₁"),))
 
     @pytest.mark.parametrize(
-        "text",
+        "text, msg",
         [
-            "$'{}'",
-            "$'{  }'",
-            "$'a } b'",
-            "$'a {b'",
-            "$'{a b}'",
-            "$'{-x}'",
-            "$'{a.}'",
-            r"$'\t'",
+            ("$'{}'", "expected an expression inside braces"),
+            ("$'{  }'", "expected an expression inside braces"),
+            ("$'a } b'", "unmatched '}'; write '}}' for a literal brace"),
+            ("$'a {b'", "expected a single expression and '}' inside braces"),
+            ("$'{a b}'", "expected a single expression and '}' inside braces"),
+            ("$'{-x}'", "invalid name '-x'"),
+            ("$'{a.}'", "invalid name 'a.'"),
+            (r"$'\t'", r"invalid escape '\t'"),
         ],
     )
-    def test_invalid(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+    def test_invalid(self, text, msg):
+        atom_error(text, msg)
 
     def test_dollar_without_quote_is_error(self):
-        with pytest.raises(ParseError):
-            atom("$x")
+        atom_error("$x", "'$' must be followed by a quote")
 
     def test_lone_dollar_is_error(self):
-        with pytest.raises(ParseError):
-            atom("$")
+        atom_error("$", "'$' must be followed by a quote")
 
     def test_unterminated_reports_dollar(self):
-        assert error_at("(f $'abc") == Pos(1, 4)
+        assert error_at("(f $'abc", "unterminated string") == Pos(1, 4)
 
     def test_followed_directly_by_token_is_error(self):
-        with pytest.raises(ParseError):
-            parse("(f $'a'b)")
+        error_at("(f $'a'b)", "expected whitespace, '(', ')' or ';' after a string")
 
 
 class TestNone:
@@ -464,12 +484,10 @@ class TestPartForm:
         assert atom("(. (g x) 0)") == Form((n("."), Form((n("g"), n("x"))), IntLit(0)))
 
     def test_a_part_cannot_follow_a_form(self):
-        with pytest.raises(ParseError, match=r"use \(\. X Y\)"):
-            parse("(f (g x).r)")
+        error_at("(f (g x).r)", "a part cannot follow a form; use (. X Y)")
 
     def test_a_bracket_cannot_follow_a_form(self):
-        with pytest.raises(ParseError, match=r"use \(\. X Y\)"):
-            parse("(f (g x)[0])")
+        error_at("(f (g x)[0])", "a part cannot follow a form; use (. X Y)")
 
 
 class TestIndexing:
@@ -504,31 +522,30 @@ class TestIndexing:
         assert parse("(f g[0])") == (Form((n("f"), n("g", IntLit(0)))),)
 
     @pytest.mark.parametrize(
-        "text",
+        "text, msg",
         [
-            "g[]",
-            "g[ ]",
-            "g[0",
-            "g[0]x",
-            "g[0].",
-            "g[0]..r",
-            "g[0].1",
-            "g[0]]",
-            "g.[0]",
-            "1[0]",
-            "1.5[0]",
-            "true[0]",
-            "+[0]",
-            "g]",
-            "g[0]'a'",
+            ("g[]", "empty index"),
+            ("g[ ]", "empty index"),
+            ("g[0", "expected ']' after '['"),
+            ("g[0]x", "unexpected 'x' after index"),
+            ("g[0].", "invalid name ''"),
+            ("g[0]..r", "invalid name '.r'"),
+            ("g[0].1", "invalid name '1'"),
+            ("g[0]]", "unexpected ']'"),
+            ("g.[0]", "invalid name 'g.'"),
+            ("1[0]", "only names can be indexed, got '1'"),
+            ("1.5[0]", "only names can be indexed, got '1.5'"),
+            ("true[0]", "only names can be indexed, got 'true'"),
+            ("+[0]", "only names can be indexed, got '+'"),
+            ("g]", "unexpected ']'"),
+            ("g[0]'a'", 'unexpected "\'" after index'),
         ],
     )
-    def test_invalid(self, text):
-        with pytest.raises(ParseError):
-            parse(f"(f {text})")
+    def test_invalid(self, text, msg):
+        atom_error(text, msg)
 
     def test_unclosed_reports_opening_bracket(self):
-        assert error_at("(f g[0\n  h)") == Pos(1, 5)
+        assert error_at("(f g[0\n  h)", "expected ']' after '['") == Pos(1, 5)
 
     def test_index_position(self):
         (form,) = parse("(f g[ 12 ])")
@@ -552,10 +569,16 @@ class TestIndexing:
     def test_inside_interpolated_string(self, text, parts):
         assert atom(text) == InterpStrLit(parts)
 
-    @pytest.mark.parametrize("text", ["$'{g [0]}'", "$'{g[0]x}'", "$'{g[0}'"])
-    def test_invalid_inside_interpolated_string(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+    @pytest.mark.parametrize(
+        "text, msg",
+        [
+            ("$'{g [0]}'", "expected a single expression and '}' inside braces"),
+            ("$'{g[0]x}'", "unexpected 'x' after index"),
+            ("$'{g[0}'", "'}' is reserved"),
+        ],
+    )
+    def test_invalid_inside_interpolated_string(self, text, msg):
+        atom_error(text, msg)
 
 
 class TestPositions:
@@ -635,14 +658,20 @@ class TestListLiteral:
         (form,) = parse("(f\n  [1 2])")
         assert form.items[1].pos == Pos(2, 3)
 
-    @pytest.mark.parametrize("src", ["(f [1 2)", "(f [1", "(f ])", "(f [1]x)"])
-    def test_invalid(self, src):
-        with pytest.raises(ParseError):
-            parse(src)
+    @pytest.mark.parametrize(
+        "src, msg",
+        [
+            ("(f [1 2)", "expected ']' to close the list"),
+            ("(f [1", "unclosed '['"),
+            ("(f ])", "unexpected ']'"),
+            ("(f [1]x)", "unexpected 'x' after a list"),
+        ],
+    )
+    def test_invalid(self, src, msg):
+        error_at(src, msg)
 
     def test_not_at_the_top_level(self):
-        with pytest.raises(ParseError):
-            parse("[1 2]")
+        error_at("[1 2]", "expected a form at the top level")
 
 
 class TestFormatSpecs:
@@ -664,10 +693,16 @@ class TestFormatSpecs:
     def test_no_spec_stays_a_name(self):
         assert atom("$'{x}'") == InterpStrLit((n("x"),))
 
-    @pytest.mark.parametrize("text", ["$'{x:{y}}'", "$'{x:.2f'", "$'{:.2f}'"])
-    def test_invalid(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+    @pytest.mark.parametrize(
+        "text, msg",
+        [
+            ("$'{x:{y}}'", "a format spec cannot hold braces"),
+            ("$'{x:.2f'", "expected a single expression and '}' inside braces"),
+            ("$'{:.2f}'", "expected an expression inside braces"),
+        ],
+    )
+    def test_invalid(self, text, msg):
+        atom_error(text, msg)
 
 
 class TestTypeNotation:
@@ -706,10 +741,18 @@ class TestTypeNotation:
     def test_a_part_read_is_unchanged(self):
         assert atom("xs[0]") == n("xs", IntLit(0))
 
-    @pytest.mark.parametrize("text", ["real|", "|none", "real |none", "real| none", "a||b"])
-    def test_invalid(self, text):
-        with pytest.raises(ParseError):
-            atom(text)
+    @pytest.mark.parametrize(
+        "text, msg",
+        [
+            ("real|", "expected a type after '|'"),
+            ("|none", "unexpected '|'"),
+            ("real |none", "unexpected '|'"),
+            ("real| none", "expected a type after '|'"),
+            ("a||b", "expected a type after '|'"),
+        ],
+    )
+    def test_invalid(self, text, msg):
+        atom_error(text, msg)
 
 
 def test_an_empty_form():
@@ -718,24 +761,25 @@ def test_an_empty_form():
     assert form.items[2] == Form(())
 
 
-class TestNoName:
+class TestParsingNoName:
     # syntax.md "Names": (head_ …) is (head none …), for any form that takes a name; _ is not a
-    # name.
+    # name. test_shapes.py has what the compiler makes of it.
     def test_a_head_ending_in_an_underscore_has_no_name(self):
         assert parse("(circle_ (r 1))") == parse("(circle none (r 1))")
         assert parse("(line|none_ (to [1 0]))") == parse("(line|none none (to [1 0]))")
 
     def test_an_underscore_alone_is_not_a_name(self):
-        with pytest.raises(ParseError, match="write none"):
-            parse("(circle _ (r 1))")
+        error_at(
+            "(circle _ (r 1))", "_ is not a name: write none, or head_ for a form with no name"
+        )
 
     def test_a_name_holds_no_underscore(self):
-        with pytest.raises(ParseError, match="name"):
-            parse("(real a_b 1)")
+        error_at("(real a_b 1)", "invalid name 'a_b'")
 
 
-class TestIndexingAListWrittenInPlace:
-    # mtp-4vx: [a b c][h] is (. [a b c] h).
+class TestParsingIndexingAListWrittenInPlace:
+    # mtp-4vx: [a b c][h] is (. [a b c] h). test_compile_core.py has what the compiler makes of it;
+    # TestPartForm has (f (g x)[0]), which is an error.
     def test_a_list_then_a_position(self):
         e = atom("[a b c][h]")
         assert isinstance(e, Form)
@@ -749,9 +793,12 @@ class TestIndexingAListWrittenInPlace:
         assert isinstance(inner, Form) and inner.items[2] == IntLit(1)
 
     def test_one_expression_in_the_brackets(self):
-        with pytest.raises(ParseError, match="one position"):
-            parse("(f [a b][0 1])")
+        error_at("(f [a b][0 1])", "brackets after a list hold one position")
 
-    def test_a_form_still_takes_no_part(self):
-        with pytest.raises(ParseError, match="a part cannot follow a form"):
-            parse("(f (g x)[0])")
+
+@pytest.mark.parametrize("path", MALFORMED, ids=[f.stem for f in MALFORMED])
+def test_a_malformed_file_gives_one_error_where_it_is(path):
+    src = path.read_text()
+    m = re.match(r"; error (\d+):(\d+) (.*)\n", src)
+    assert m, f"{path.name} does not say its error"
+    assert error_at(src, m[3]) == Pos(int(m[1]), int(m[2]))

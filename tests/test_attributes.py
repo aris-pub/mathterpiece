@@ -1,8 +1,9 @@
-"""Attributes by type (docs/type-system.md, section 8)."""
+"""Attributes by type (docs/type-system.md, section 8), and the stroke attributes: dash,
+dash-offset, line-cap and line-join (docs/reference.md "The scene and shapes")."""
 
 from helpers import bound, error, model, value
 
-from mathterpiece.types import FONT, INT, REAL, Refine
+from mathterpiece.types import FONT, INT, REAL, ListT, Refine
 
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
 
@@ -68,3 +69,83 @@ class TestFonts:
 def test_a_fonts_parts_are_known_when_compiling():
     # The .mtpc writes a font as a plain value (docs/mtpc.md, "Values").
     error("(real k 1) (font f (size k))", "a font's parts must be known when compiling")
+
+
+class TestDash:
+    # mtp-5of, the author 2026-11-03: (dash [lengths…] offset), the lengths in screen pixels like
+    # stroke-width, the offset optional.
+    def test_solid_by_default(self):
+        a = model("(scene s (circle c))").get("c").attrs
+        assert a["dash"].value == [] and a["dash-offset"].value == 0
+
+    def test_lengths_and_offset(self):
+        a = model("(scene s (line l (dash [4 2 1 2] 3)))").get("l").attrs
+        assert a["dash"].value == [4, 2, 1, 2] and a["dash-offset"].value == 3
+
+    def test_the_offset_is_optional(self):
+        a = model("(scene s (line l (dash [4 2])))").get("l").attrs
+        assert a["dash"].value == [4, 2] and a["dash-offset"].value == 0
+
+    def test_the_offset_may_follow_a_variable(self):
+        m = model("(real phase 0) (scene s (line l (dash [4 2] phase)))")
+        assert m.get("l").attrs["dash-offset"].bound
+
+    def test_lengths_are_not_negative(self):
+        error("(scene s (line l (dash [4 -2])))", "breaks")
+
+    def test_lengths_come_in_a_list(self):
+        error("(scene s (line l (dash 4 2)))", "expected list")
+        error("(scene s (line l (dash [4 2] 1 2)))", "a list of lengths and an offset")
+        error("(scene s (line l (dash-offset 1)))", "the offset is dash's second argument")
+
+    def test_a_container_gives_it_to_its_members(self):
+        m = model("(scene s (group g (defaults (dash [4 2] 1)) (line a) (line b (dash [1 1]))))")
+        a, b = m.get("a").attrs, m.get("b").attrs
+        assert a["dash"].value == [4, 2] and a["dash-offset"].value == 1
+        assert b["dash"].value == [1, 1] and b["dash-offset"].value == 0
+
+    def test_a_text_takes_none_from_a_container(self):
+        m = model("(scene s (group g (defaults (dash [4 2])) (text t 'hi')))")
+        assert m.get("t").attrs["dash"].value == []
+
+    def test_given_twice(self):
+        error("(scene s (line l (dash [4 2]) (dash [1 1])))", "given twice")
+
+
+class TestLineEnds:
+    # mtp-9d5, the author 2026-11-03: line-cap and line-join, with SVG's values.
+    def test_defaults_are_svgs(self):
+        a = model("(scene s (line l))").get("l").attrs
+        assert a["line-cap"].value == "butt" and a["line-join"].value == "miter"
+
+    def test_given(self):
+        a = model("(scene s (triangle t (line-cap 'round') (line-join 'bevel')))").get("t").attrs
+        assert a["line-cap"].value == "round" and a["line-join"].value == "bevel"
+
+    def test_only_svgs_values(self):
+        error("(scene s (line l (line-cap 'pointy')))", "not one of")
+        error("(scene s (line l (line-join 'square')))", "not one of")
+
+    def test_a_container_gives_them_to_its_members(self):
+        m = model("(scene s (group g (defaults (line-cap 'round')) (line a)))")
+        assert m.get("a").attrs["line-cap"].value == "round"
+
+
+class TestDashOffset:
+    # The author, 2026-11-03: the offset is an attribute of its own, dash-offset, which a figure
+    # may read and an animation may move.
+    def test_read(self):
+        m = model("(scene s (line l (dash [4 2] 3)) (real v l.dash-offset))")
+        e = m.get("v").value.expr
+        assert e.op == "read" and e.type == REAL
+
+    def test_moved_by_an_animation(self):
+        model(
+            "(scene s (line l (dash [4 2]))) (animation a (move l.dash-offset (to 6) (duration 1)))"
+        )
+
+    def test_a_containers_offset_is_every_members(self):
+        m = model(
+            "(scene s (group g (defaults (dash [4 2] 1)) (line a) (line b)) (list v g.dash-offset))"
+        )
+        assert m.get("v").value.expr.type.base == ListT(REAL)

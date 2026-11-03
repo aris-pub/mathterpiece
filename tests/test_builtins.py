@@ -1,5 +1,5 @@
-"""Built-in functions and constants (docs/reference.md "Operators", "Functions" and
-"Constants"; docs/type-system.md 5.c for where they are undefined)."""
+"""Built-in functions and constants, and the color strings (docs/reference.md "Operators",
+"Functions", "Constants" and "Colors"; docs/type-system.md 5.c for where they are undefined)."""
 
 import json
 import math
@@ -8,6 +8,7 @@ import pytest
 from helpers import doc, error, model, typ, value
 from mtpc_check import errors
 
+from mathterpiece.colors import parse_color
 from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe
 
 
@@ -94,13 +95,53 @@ class TestPointsTransformsColors:
 
 
 class TestConstants:
+    # mtp-asl: pi, π, tau, τ and euler; infinity is in TestInfinity below.
     def test_pi_and_tau(self):
-        assert value("(real v pi)") == math.pi
-        assert value("(real v τ)") == math.tau
+        assert value("(real v pi)") == value("(real v π)") == math.pi
+        assert value("(real v tau)") == value("(real v τ)") == math.tau
 
     def test_euler(self):
-        # mtp-asl: decided 2026-10-28, lost in the rebuild.
+        # Decided 2026-10-28, lost in the rebuild.
         assert value("(real v euler)") == math.e
+
+
+class TestInfinity:
+    # mtp-asl: infty and ∞ are the float infinity, above the ±10^150 bound. It appears only in
+    # values known when compiling; while drawing a result that is ∞ is none.
+    def test_the_constants(self):
+        assert value("(real v infty (const))") == math.inf
+        assert value("(real v ∞ (const))") == math.inf
+        assert value("(real v (- infty) (const))") == -math.inf
+
+    def test_arithmetic(self):
+        assert value("(real v (+ infty 1))") == math.inf
+        assert value("(real v (* 2 infty))") == math.inf
+        assert value("(real v (/ 1 infty))") == 0
+        assert value("(bool v (< 1e150 infty))") is True
+        assert value("(real v (sqrt infty))") == math.inf
+
+    def test_undefined_forms(self):
+        error("(real v (- infty infty))", "undefined")
+        error("(real v (* 0 infty))", "undefined")
+        error("(real v (sind infty))", "undefined at infty")
+
+    def test_only_a_variable_that_never_changes_holds_it(self):
+        error("(real k infty)", "k would hold infty")
+        error("(scene s (circle c (r infty)))", "c's r would be infty")
+
+    def test_a_result_that_may_be_infinite_while_drawing_may_be_none(self):
+        error("(real x 1) (real v (+ x infty))", "may be none")
+        model("(real x 1) (real|none v (+ x infty))")
+        assert typ("(real x 1) (bool v (< x infty))") == BOOL
+
+    def test_shown_in_a_string(self):
+        assert value("(string v $'{infty}')") == "∞"
+
+    def test_the_compiled_file(self):
+        d = doc("(real x 1) (bool b (< x infty))")
+        assert errors(d) == []
+        bound = d["objects"][d["names"]["b"]]["value"]["bound"]
+        assert "infty" in json.dumps(bound)
 
 
 class TestFunctionsAsValues:
@@ -146,40 +187,24 @@ class TestNumberTimesList:
         error("(list v (+ 1 [1 2]))", "all points or all lists")
 
 
-class TestInfinity:
-    # mtp-asl: infty and ∞ are the float infinity, above the ±10^150 bound. It appears only in
-    # values known when compiling; while drawing a result that is ∞ is none.
-    def test_the_constants(self):
-        assert value("(real v infty (const))") == math.inf
-        assert value("(real v ∞ (const))") == math.inf
-        assert value("(real v (- infty) (const))") == -math.inf
+class TestColorStrings:
+    # reference.md "Colors": a color literal is a CSS color name or a hex code.
+    @pytest.mark.parametrize(
+        "text, rgba",
+        [
+            ("#1f2a44", "#1f2a44ff"),
+            ("#1F2A44", "#1f2a44ff"),
+            ("#1f2a4480", "#1f2a4480"),
+            ("#f80", "#ff8800ff"),
+            ("#f808", "#ff880088"),
+            ("gold", "#ffd700ff"),
+            ("Gold", "#ffd700ff"),
+            ("transparent", "#00000000"),
+        ],
+    )
+    def test_reads(self, text, rgba):
+        assert parse_color(text) == rgba
 
-    def test_arithmetic(self):
-        assert value("(real v (+ infty 1))") == math.inf
-        assert value("(real v (* 2 infty))") == math.inf
-        assert value("(real v (/ 1 infty))") == 0
-        assert value("(bool v (< 1e150 infty))") is True
-        assert value("(real v (sqrt infty))") == math.inf
-
-    def test_undefined_forms(self):
-        error("(real v (- infty infty))", "undefined")
-        error("(real v (* 0 infty))", "undefined")
-        error("(real v (sind infty))", "undefined at infty")
-
-    def test_only_a_variable_that_never_changes_holds_it(self):
-        error("(real k infty)", "k would hold infty")
-        error("(scene s (circle c (r infty)))", "c's r would be infty")
-
-    def test_a_result_that_may_be_infinite_while_drawing_may_be_none(self):
-        error("(real x 1) (real v (+ x infty))", "may be none")
-        model("(real x 1) (real|none v (+ x infty))")
-        assert typ("(real x 1) (bool v (< x infty))") == BOOL
-
-    def test_shown_in_a_string(self):
-        assert value("(string v $'{infty}')") == "∞"
-
-    def test_the_compiled_file(self):
-        d = doc("(real x 1) (bool b (< x infty))")
-        assert errors(d) == []
-        bound = d["objects"][d["names"]["b"]]["value"]["bound"]
-        assert "infty" in json.dumps(bound)
+    @pytest.mark.parametrize("text", ["", "#12", "#gggggg", "golden", "rgb(1, 2, 3)", "none"])
+    def test_rejects(self, text):
+        assert parse_color(text) is None

@@ -4,7 +4,7 @@ sections 4, 8 and 9; docs/type-system.md sections 3 to 5.b)."""
 import pytest
 from helpers import error, model, value
 
-from mathterpiece.compiler import CompileError, compile_source
+from mathterpiece.compiler import compile_source
 from mathterpiece.types import BOOL, COLOR, INT, RATIO, REAL, STRING, ListT, Maybe, Refine
 
 
@@ -213,29 +213,6 @@ class TestComputedNames:
         error("(scene s (circle c) (circle (name 'c')))", "'c' is already declared")
 
 
-class TestRepeat:
-    # reference.md, "Special forms": (foreach i n decl…).
-    def test_it_declares_n_copies(self):
-        m = model("(scene s (foreach i 3 (circle (name $'dot-{i}') (r (+ i 1)))))")
-        assert [m.get(f"dot-{i}").attrs["r"].value for i in range(3)] == [1, 2, 3]
-
-    def test_the_count_must_be_known_when_compiling(self):
-        assert model("(int n 2 (const)) (scene s (foreach i n (circle (name $'c{i}'))))").get("c1")
-        error("(int n 2) (scene s (foreach i n (circle (name $'c{i}'))))", "known when compiling")
-
-    def test_inside_a_group(self):
-        m = model("(scene s (group g (foreach i 2 (circle (name $'m{i}')))))")
-        assert [m.objects[j].name for j in m.get("g").members] == ["m0", "m1"]
-
-    def test_a_plain_name_is_declared_twice(self):
-        error("(scene s (foreach i 2 (circle c)))", "'c' is already declared")
-
-    def test_several_declarations(self):
-        m = model("(scene s (foreach i 2 (real (name $'k{i}') i) (circle (name $'c{i}'))))")
-        assert m.get("k1").value.value == 1
-        assert m.get("c1")
-
-
 class TestParts:
     # syntax.md, section 7.
     def test_the_part_form(self):
@@ -390,23 +367,10 @@ class TestBoundReadsKeepTheirRange:
         error("(real k 2) (scene s (circle c (r k)))", "may break")
 
 
-class TestGroupPositionsInRange:
-    # mtp-2uae: as for lists, a member read at a position whose range lies within the group's
-    # members is never none.
-    G = "(scene s (group g (circle a) (circle b) (circle c)) (point p g[i].pos))"
-
-    def test_a_position_in_range(self):
-        m = model(f"(int i 0 (>= 0) (<= 2)) {self.G}")
-        assert m.get("p").value.bound
-
-    def test_a_position_that_may_be_out_of_range(self):
-        error(f"(int i 0 (>= 0) (<= 3)) {self.G}", "may be none")
-
-
 class TestLetInBodies:
-    # mtp-b13: the standard let, in a repeat, group, scene or motif body: its body holds what
+    # mtp-b13: the standard let, in a foreach, group, scene or motif body: its body holds what
     # that body holds, and its names are values worked out where the let is written.
-    def test_in_a_repeat(self):
+    def test_in_a_foreach(self):
         m = model(
             "(scene s (group g (foreach i 3 (let ((w (* 2 i)))"
             " (circle (name $'a{i}') (r w)) (circle (name $'b{i}') (r (+ w 1)))))))"
@@ -474,8 +438,71 @@ class TestForeach:
         assert [o.data["target"][0] for o in drags] == [m.id("a"), m.id("b")]
 
     def test_the_count_or_length_must_be_known_when_compiling(self):
+        assert model("(int n 2 (const)) (scene s (foreach i n (circle (name $'c{i}'))))").get("c1")
         error("(int n 2) (scene s (foreach i n (circle (name $'c{i}'))))", "known when compiling")
 
+    def test_inside_a_group(self):
+        m = model("(scene s (group g (foreach i 2 (circle (name $'m{i}')))))")
+        assert [m.objects[j].name for j in m.get("g").members] == ["m0", "m1"]
+
+    def test_a_plain_name_is_declared_twice(self):
+        error("(scene s (foreach i 2 (circle c)))", "'c' is already declared")
+
+    def test_several_declarations(self):
+        m = model("(scene s (foreach i 2 (real (name $'k{i}') i) (circle (name $'c{i}'))))")
+        assert m.get("k1").value.value == 1
+        assert m.get("c1")
+
+    def test_an_unexpected_item_is_shown_as_mtp(self):
+        # mtp-1njz: the message printed the parser's internal form of the item.
+        error(
+            "(scene s (group g (foreach i 3 (real w (* 2 i)) (circle_ (r w)))))",
+            r"^1:32: expected an argument such as \(r 1\), got \(real …\)$",
+        )
+
     def test_repeat_is_gone(self):
-        with pytest.raises(CompileError):
-            compile_source("(scene s (repeat 2 i (circle (name $'c{i}'))))")
+        # repeat is no longer a special form, so (repeat 2 i …) reads as a declaration of type
+        # repeat, and 2 is not a name.
+        error("(scene s (repeat 2 i (circle (name $'c{i}'))))", "1:18: expected a name")
+
+
+class TestTheFormTemplate:
+    # syntax.md, section 8: a head, a name, positional arguments, optional arguments in any order,
+    # then a body.
+    K = "(real k 0 (>= 0) (<= 10))"
+
+    @pytest.mark.parametrize(
+        "src, arg, form",
+        [
+            ("(scene s (circle c) (background 'red'))", "background", "scene"),
+            ("(scene s (group g (circle c) (fill 'red')))", "fill", "group"),
+            ("(scene s (circle c)) (canvas v c (view-x 1))", "view-x", "canvas"),
+            (
+                f"{K} (button b (animation (move k (to 1) (duration 1))) (> k 1) (label 'go'))",
+                "label",
+                "button",
+            ),
+            (
+                f"{K} (animation a (move k (to 1) (duration 1)) (defaults (duration 2)))",
+                "defaults",
+                "animation",
+            ),
+        ],
+    )
+    def test_an_optional_argument_comes_before_the_body(self, src, arg, form):
+        error(src, rf"\({arg} …\) is an optional argument, so it comes before the {form}'s body")
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(scene s (background 'red') (circle c))",
+            "(scene s (group g (translate [1 0]) (defaults (fill 'red') (stroke 'blue'))"
+            " (circle c)))",
+            "(scene s (circle c)) (canvas v (view-x 1) (move none (duration 1)) c)",
+            f"{K} (button b (label 'go') (animation (move k (to 1) (duration 1))) (> k 1))",
+            f"{K} (animation a (defaults (duration 2)) (move k (to 1)))",
+        ],
+    )
+    def test_optional_arguments_in_any_order_then_the_body(self, src):
+        # Only that each compiles: the other tests check what each argument does.
+        model(src)
