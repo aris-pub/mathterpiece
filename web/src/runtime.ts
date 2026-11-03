@@ -66,6 +66,8 @@ export class Runtime {
   private functions: Compiled[] = [];
   private rands = new Map<number, number>();
   private listeners: ((changed: Set<string>) => void)[] = [];
+  // Each row's and column's places, as placesIn last worked them out.
+  private places = new Map<number, Map<number, number[]>>();
   // While writes are made together, what they changed, told to the listeners once at the end.
   private pending: Set<string> | null = null;
   // The named types the file declares (type-system.md 5.a), by name.
@@ -230,6 +232,10 @@ export class Runtime {
    * takes no space.
    */
   private placesIn(row: number): Map<number, number[]> {
+    // Each box below reads the places of the rows inside it, so with layouts inside layouts the
+    // work multiplies; places stay as they are until something is written.
+    const known = this.places.get(row);
+    if (known) return known;
     const o = this.objects[row]!;
     const layout = o.layout!;
     const gap = this.evaluate(layout.gap) as number;
@@ -261,6 +267,7 @@ export class Runtime {
     } finally {
       this.unplaced.delete(row);
     }
+    this.places.set(row, out);
     return out;
   }
 
@@ -355,6 +362,7 @@ export class Runtime {
     if (v === undefined || equal(v, old)) return;
     this.free.set(k, v);
     changed.add(k);
+    this.places.clear();
     this.forget(k, changed);
   }
 

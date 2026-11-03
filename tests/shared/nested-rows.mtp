@@ -1,0 +1,17 @@
+; Rows inside a column: each row places its members, then the column places the rows, and both
+; follow a write to the gap they share.
+; expect pb [3,0]
+; expect pc [0,-3]
+; expect pd [3,-3]
+; write g 2
+; expect pb [4,0]
+; expect pc [0,-4]
+; expect pd [4,-4]
+(scene s
+  (real g 1 (>= 0) (<= 5))
+  (column col (gap g) (align 'left')
+    (row upper (gap g) (circle a (r 1)) (circle b (r 1)))
+    (row lower (gap g) (circle c (r 1)) (circle d (r 1))))
+  (point pb b.pos)
+  (point pc c.pos)
+  (point pd d.pos))
