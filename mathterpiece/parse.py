@@ -300,7 +300,11 @@ class _Parser:
                 raise ParseError("unclosed '['", bracket)
             items = [self.node()]
             self.skip_blank()
-            while self.peek() and self.peek() not in "])":
+            while (
+                self.peek()
+                and self.peek() not in "])"
+                and not (self.in_braces and self.peek() == "}")
+            ):
                 items.append(self.node())
                 self.skip_blank()
             if self.peek() != "]":
@@ -310,7 +314,10 @@ class _Parser:
             if self.peek() == ".":
                 self.advance()
                 part_pos = self.pos()
-                parts.extend(_name_parts(self.run(), part_pos))
+                part = self.run()
+                if not part:
+                    raise ParseError("expected a name after '.'", part_pos)
+                parts.extend(_name_parts(part, part_pos))
         ends = _ends_run(self.peek()) or (self.in_braces and self.peek() == ":")
         if self.peek() and not ends:
             raise ParseError(f"unexpected {self.peek()!r} after index", self.pos())

@@ -483,9 +483,10 @@ class TestForeach:
         )
 
     def test_repeat_is_gone(self):
-        # repeat is no longer a special form, so (repeat 2 i …) reads as a declaration of type
-        # repeat, and 2 is not a name.
-        error("(scene s (repeat 2 i (circle (name $'c{i}'))))", "1:18: expected a name")
+        # mtp-091h: (repeat 2 i …) reads as a declaration of type repeat, which is not a type;
+        # that is the error, rather than that 2 is not a name.
+        error("(scene s (repeat 2 i (circle (name $'c{i}'))))", "1:11: unknown type 'repeat'")
+        error("(blah 2 i)", "1:2: unknown type 'blah'")
 
 
 class TestTheFormTemplate:

@@ -564,16 +564,18 @@ class _Compiler:
         if not form.items:
             raise CompileError("expected a declaration, got ()", form.pos)
         head = form.items[0]
+        plain_list = isinstance(head, Name) and head.parts == ("list",)
+        # The type first: in (repeat 2 i …), that repeat is not a type is the error, not that 2 is
+        # not a name.
+        t = None if plain_list else self.type_of(head)
         name, pos = self.name_of(form, scope)
         rest = list(form.items[2:])
         node = rest.pop(0) if rest and not _is_constraint(rest[0]) else None
         # A plain list takes its item type from its value (type-system.md, section 4).
-        if isinstance(head, Name) and head.parts == ("list",):
+        if t is None:
             if node is None:
                 raise CompileError("a plain list needs a value to take its item type from", pos)
             t = self.expr(node, None, scope).type
-        else:
-            t = self.type_of(head)
         try:
             if rest:
                 t = refine(t, rest)

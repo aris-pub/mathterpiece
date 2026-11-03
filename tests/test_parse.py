@@ -528,7 +528,7 @@ class TestIndexing:
             ("g[ ]", "empty index"),
             ("g[0", "expected ']' after '['"),
             ("g[0]x", "unexpected 'x' after index"),
-            ("g[0].", "invalid name ''"),
+            ("g[0].", "expected a name after '.'"),
             ("g[0]..r", "invalid name '.r'"),
             ("g[0].1", "invalid name '1'"),
             ("g[0]]", "unexpected ']'"),
@@ -574,7 +574,7 @@ class TestIndexing:
         [
             ("$'{g [0]}'", "expected a single expression and '}' inside braces"),
             ("$'{g[0]x}'", "unexpected 'x' after index"),
-            ("$'{g[0}'", "'}' is reserved"),
+            ("$'{g[0}'", "expected ']' after '['"),
         ],
     )
     def test_invalid_inside_interpolated_string(self, text, msg):
