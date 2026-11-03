@@ -89,6 +89,9 @@ function negate(a: unknown): unknown {
 }
 
 function multiply(a: unknown, b: unknown): unknown {
+  // A number times a point or a list multiplies each item.
+  if (Array.isArray(a) && !Array.isArray(b)) return a.map((x) => multiply(x, b));
+  if (Array.isArray(b) && !Array.isArray(a)) return b.map((x) => multiply(a, x));
   if (Array.isArray(a)) return a.map((x, i) => multiply(x, (b as unknown[])[i]));
   if (isComplex(a, b)) {
     const x = complex(a);

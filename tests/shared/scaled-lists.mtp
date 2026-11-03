@@ -1,0 +1,13 @@
+; mtp-y4x: a number times a point or a list multiplies each item; a free k keeps it from folding.
+; expect p [2,4]
+; expect q [3,6]
+; expect xs [2,4,6]
+; expect mixed [0.5,1,1.5]
+; write k 3
+; expect p [3,6]
+; expect xs [3,6,9]
+(real k 2)
+(point p (* k [1 2]))
+(point q (* [1 2] 3))
+(list xs (* k [1 2 3]))
+(list mixed (* 0.5 [1 2 3] 1))

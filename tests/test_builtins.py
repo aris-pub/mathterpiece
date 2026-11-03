@@ -6,7 +6,7 @@ import math
 import pytest
 
 from mathterpiece.compiler import CompileError, compile_source
-from mathterpiece.types import POINT, REAL, Maybe
+from mathterpiece.types import INT, POINT, REAL, ListT, Maybe
 
 
 def model(src):
@@ -138,3 +138,23 @@ def test_lerp_folds_points_known_when_compiling():
 def test_log_stays_within_the_number_bound():
     # mtp-r0f: type-system.md 5.c, every number lies within ±10^150.
     model("(real x 5 (>= 1) (<= 100)) (real y (* (log x 10) 2))")
+
+
+class TestNumberTimesList:
+    # mtp-y4x: a number times a point or a list multiplies each item.
+    def test_folds(self):
+        assert value("(point v (* 2 [1 2]))") == (2, 4)
+        assert value("(list v (* [1 2 3] 2))") == [2, 4, 6]
+        assert value("(list v (* 0.5 [1 2] 2))") == [1, 2]
+
+    def test_the_item_type_widens_with_the_number(self):
+        assert typ("(real k) (list v (* k [1 2]))").base == ListT(REAL)
+        assert typ("(int k) (list v (* k [1 2]))").base == ListT(INT)
+
+    def test_the_result_keeps_the_length(self):
+        # So a fixed position on it never gives none.
+        assert typ("(real k) (list xs (* k [1 2])) (real v xs[1])") == REAL
+        assert typ("(real k) (list xs (+ [k 1] [1 2])) (real v xs[1])") == REAL
+
+    def test_only_multiplication_takes_a_number_with_a_list(self):
+        error("(list v (+ 1 [1 2]))", "all points or all lists")

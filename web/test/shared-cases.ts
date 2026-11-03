@@ -50,8 +50,12 @@ function target(doc: Doc, path: string): [number, string | null] {
   return [id, doc.objects[id]!.kind === "variable" ? null : "value"];
 }
 
-// Numbers agree to rounding; a bool only matches a bool, and a string only the same string.
+// Numbers agree to rounding; a bool only matches a bool, and a string only the same string; a
+// list, item by item.
 function agrees(got: unknown, want: unknown): boolean {
+  if (Array.isArray(want)) {
+    return Array.isArray(got) && got.length === want.length && want.every((w, i) => agrees(got[i], w));
+  }
   if (typeof want === "number") return typeof got === "number" && Math.abs(got - want) <= 1e-9 * Math.max(1, Math.abs(want));
   return got === want;
 }

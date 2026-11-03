@@ -767,9 +767,15 @@ class _Compiler:
         return Expr(head, t, tuple(args), deps, r)
 
     def itemwise(self, pos: Pos, op: str, args: list) -> Expr:
-        """+ - * on points, or on lists of numbers of equal known length, item by item."""
+        """+ - * on points, or on lists of numbers of equal known length, item by item; * also
+        multiplies each item by any real numbers among them."""
         if op not in ("+", "-", "*"):
             raise CompileError(f"{op} takes numbers, not points or lists", pos)
+        scalars = [a for a in args if _core(a.type) in NUMBERS[:3]] if op == "*" else []
+        whole = [a for a in args if all(a is not b for b in scalars)]
+        if scalars:
+            first = self.itemwise(pos, op, whole) if len(whole) > 1 else whole[0]
+            return self.scaled(first, scalars, pos)
         kinds = {_core(a.type) == POINT for a in args}
         if len(kinds) != 1 or not all(
             _core(a.type) == POINT or isinstance(_core(a.type), ListT) for a in args
@@ -791,7 +797,28 @@ class _Compiler:
             vals = [_fold_number(op, list(c), pos) for c in columns]
             return _known(t, tuple(vals) if t == POINT else vals)
         deps = frozenset().union(*(a.deps for a in args))
+        if t != POINT:
+            t = Refine(t, (("length", lengths.pop()),))
         return Expr(op, Maybe(t) if maybe else t, tuple(args), deps)
+
+    def scaled(self, e: Expr, scalars: list, pos: Pos) -> Expr:
+        """A point or a list of numbers with each item multiplied by the numbers."""
+        core = _core(e.type)
+        item = REAL if core == POINT else _core(cast(ListT, core).item)
+        if item not in NUMBERS[:3]:
+            raise CompileError(f"* takes a list of numbers, got {e.type}", pos)
+        widest = max([item, *(_core(a.type) for a in scalars)], key=NUMBERS.index)
+        t = POINT if core == POINT else ListT(widest)
+        args = (e, *scalars)
+        maybe = any(_may_be_none(a.type) for a in args)
+        if all(a.known for a in args) and not maybe:
+            factor = [a.value for a in scalars]
+            vals = [_fold_number("*", [v, *factor], pos) for v in e.value]
+            return _known(t, tuple(vals) if t == POINT else vals)
+        deps = frozenset().union(*(a.deps for a in args))
+        if core != POINT and _length(e) is not None:
+            t = Refine(t, (("length", _length(e)),))
+        return Expr("*", Maybe(t) if maybe else t, args, deps)
 
     def fold_call(self, fid: int, args: list) -> Expr | None:
         """The call's value, compiling the body again with its known arguments, or None when

@@ -199,7 +199,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 
 | Function | Takes | Gives | Undefined |
 |---|---|---|---|
-| `+` `-` `*` | numbers, any count (`-` with one argument negates); points and lists of numbers of equal known length, item by item | the broadest input type | a result too large for a real |
+| `+` `-` `*` | numbers, any count (`-` with one argument negates); points and lists of numbers of equal known length, item by item; `*` also takes real numbers among them, which multiply each item | the broadest input type | a result too large for a real |
 | `/` | two numbers | an int over an int gives a ratio; otherwise the broadest input type | dividing by 0 |
 | `^` | two numbers | an int to a non-negative int power gives an int, to a negative int power a ratio; a complex input gives a complex; otherwise a real | 0 to a negative power; a negative base to a power that is not an int; a result too large for a real |
 | `mod` | two numbers | number, with the sign of the divisor: `(mod -1 360)` is 359 | by 0 |

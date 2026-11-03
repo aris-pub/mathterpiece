@@ -134,6 +134,8 @@
 
   (list now (stretch L te mix 0))
   (list before (stretch Lp te mix 0))
+  ; Each bar's height, blended from the stretch with Lp levels to the one with L levels.
+  (list shown (+ (* before (- 1 g)) (* now g)))
   (real worst (+ (* (min (stretch Lp te mix 2)) (- 1 g)) (* (min (stretch L te mix 2)) g)))
 
   (group bars-chart
@@ -148,21 +150,21 @@
     ; Dashed in the original: mtp has no dash pattern for a stroke.
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
       (stroke muted) (stroke-width 1) (stroke-opacity 0.8))
-    ; Level i + 1, blended from the stretch with Lp levels to the one with L levels.
+    ; Level i + 1.
     (group bars (fill (if all every one))
       (repeat 10 i
         (rect_
           (pos [(+ 54 (* i 41.2) 20.6)
-                (+ -134 (/ (max 0.5 (* 126 (+ (* before[i] (- 1 g)) (* now[i] g)))) 2))])
+                (+ -134 (/ (max 0.5 (* 126 shown[i])) 2))])
           (width 26.368)
-          (height (max 0.5 (* 126 (+ (* before[i] (- 1 g)) (* now[i] g)))))
+          (height (max 0.5 (* 126 shown[i])))
           (rx 2) (ry 2)
-          (opacity (if (< (+ (* before[i] (- 1 g)) (* now[i] g)) 0.002) 0 1)))))
+          (opacity (if (< shown[i] 0.002) 0 1)))))
     (group level-names (fill muted)
       (repeat 10 i
         (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
           (opacity
-           (cond ((< (+ (* before[i] (- 1 g)) (* now[i] g)) 0.002) 0)
+           (cond ((< shown[i] 0.002) 0)
                  ((< i (min L Lp)) 1)
                  ((< i L) g)
                  (else (- 1 g)))))))
