@@ -5,7 +5,7 @@ import json
 import math
 
 import pytest
-from helpers import doc, error, model, typ, value
+from helpers import bound, doc, error, model, typ, value
 from mtpc_check import errors
 
 from mathterpiece.colors import parse_color
@@ -210,3 +210,33 @@ class TestColorStrings:
     @pytest.mark.parametrize("text", ["", "#12", "#gggggg", "golden", "rgb(1, 2, 3)", "none"])
     def test_rejects(self, text):
         assert parse_color(text) is None
+
+
+class TestRangesFollowTheInput:
+    # mtp-8n9z: log, round, floor and ceil gave a range of ±10^150 whatever their input, so a
+    # range that holds could not be proved.
+    X = "(real x 5 (>= 1) (<= 100)) "
+    K = "(real k 1 (>= -2.5) (<= 10.5)) "
+
+    def test_log(self):
+        assert bound(self.X + "(real v (log x 10))").range == pytest.approx((0, 2))
+        assert bound(self.X + "(real v (log x))").range == pytest.approx((0, math.log(100)))
+        assert bound(self.X + "(real v (log x 0.1))").range == pytest.approx((-2, 0))
+
+    def test_log_with_a_base_not_known_when_compiling(self):
+        e = bound(self.X + "(real b 10 (>= 2) (<= 10)) (real v (log x b))")
+        assert e.range[1] >= 6.6
+
+    def test_round_floor_ceil(self):
+        assert bound(self.K + "(int v (round k))").range == (-3, 11)
+        assert bound(self.K + "(int v (floor k))").range == (-3, 10)
+        assert bound(self.K + "(int v (ceil k))").range == (-2, 11)
+        assert bound(self.K + "(real v (round k 1))").range == pytest.approx((-2.5, 10.5))
+
+    def test_rounding_a_very_large_range(self):
+        # A product of two unlimited values may reach 10^300; it has no decimals left to round.
+        assert bound("(real k) (int v (round (* k k)))").range[1] == pytest.approx(1e300)
+
+    def test_a_range_that_holds_is_proved(self):
+        model(self.X + "(scene s (circle c (r (* (log x 10) 2))))")
+        model(self.K + "(scene s (circle c (r (+ 3 (floor k)))))")

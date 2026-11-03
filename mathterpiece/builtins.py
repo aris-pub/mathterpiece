@@ -138,8 +138,10 @@ def compose(*ts) -> tuple:
 
 BUILTINS: dict[str, Builtin] = {
     "sqrt": _unary(_sqrt, _sqrt_range, lambda rs: rs[0][0] < 0),
-    "floor": _unary(math.floor, WHOLE, result=INT),
-    "ceil": _unary(math.ceil, WHOLE, result=INT),
+    "floor": _unary(
+        math.floor, lambda rs: (math.floor(rs[0][0]), math.floor(rs[0][1])), result=INT
+    ),
+    "ceil": _unary(math.ceil, lambda rs: (math.ceil(rs[0][0]), math.ceil(rs[0][1])), result=INT),
     "exp": _unary(_exp, (0.0, MAX_REAL), lambda rs: rs[0][1] > math.log(MAX_REAL)),
     "sin": _unary(math.sin, (-1.0, 1.0)),
     "cos": _unary(math.cos, (-1.0, 1.0)),

@@ -920,12 +920,15 @@ class _Compiler:
             self.count(head, given, 1, 2, pos)
             params = (Param("x", REAL), Param("decimals", INT))[: len(given)]
             b = Builtin(
-                tuple(p.type for p in params), INT if len(given) == 1 else REAL, _round, UNBOUNDED
+                tuple(p.type for p in params),
+                INT if len(given) == 1 else REAL,
+                _round,
+                _round_range,
             )
         elif head == "log":
             self.count(head, given, 1, 2, pos)
             params = (Param("x", REAL), Param("base", REAL))[: len(given)]
-            b = Builtin(tuple(p.type for p in params), REAL, _log, UNBOUNDED, _log_undefined)
+            b = Builtin(tuple(p.type for p in params), REAL, _log, _log_range, _log_undefined)
         elif head in ("min", "max"):
             return self.extreme(node, head, given, scope)
         elif head == "lerp":
@@ -3566,12 +3569,30 @@ def _result(b: Builtin) -> Type:
     return Maybe(b.result) if b.undefined is not None else b.result
 
 
-def _round(x, attributes=None):
+def _round(x, decimals=None):
     """Halves away from zero, on the number's shortest decimal form (reference.md,
-    "Rounding"); a negative number of attributes rounds to tens, hundreds, …."""
-    step = Decimal(1).scaleb(-(attributes or 0))
+    "Rounding"); a negative number of decimals rounds to tens, hundreds, …."""
+    step = Decimal(1).scaleb(-(decimals or 0))
     v = Decimal(repr(float(x))).quantize(step, rounding=ROUND_HALF_UP)
-    return int(v) if attributes is None else float(v)
+    return int(v) if decimals is None else float(v)
+
+
+def _round_range(ranges) -> Range:
+    """Rounding never decreases as x grows, so the ends of x's range round to the ends of the
+    result's, for each number of decimals it may be given."""
+    (lo, hi), *rest = ranges
+    if not rest:
+        return (_rounded_end(lo, None), _rounded_end(hi, None))
+    d0, d1 = math.ceil(rest[0][0]), math.floor(rest[0][1])
+    if d1 - d0 > 20 or (d0 < 0 and max(abs(lo), abs(hi)) >= 1e15):
+        return UNBOUNDED
+    ends = [(_rounded_end(lo, d), _rounded_end(hi, d)) for d in range(d0, d1 + 1)]
+    return (min(e[0] for e in ends), max(e[1] for e in ends))
+
+
+def _rounded_end(x: float, decimals: int | None) -> float:
+    # A float this large is already a whole number, and Decimal cannot quantize it.
+    return x if abs(x) >= 1e15 else _round(x, decimals)
 
 
 def _log(x, base=None):
@@ -3588,6 +3609,17 @@ def _log_undefined(ranges) -> bool:
         b = ranges[1]
         return b[0] <= 0 or b[0] <= 1 <= b[1]
     return False
+
+
+def _log_range(ranges) -> Range:
+    """log x / log base, from the ends of each range: neither log changes sign where log is
+    defined, so the quotient is largest and smallest at the ends."""
+    if _log_undefined(ranges):
+        return UNBOUNDED
+    xs = (math.log(ranges[0][0]), math.log(ranges[0][1]))
+    bs = (1.0,) if len(ranges) == 1 else (math.log(ranges[1][0]), math.log(ranges[1][1]))
+    ends = [x / b for x in xs for b in bs]
+    return (min(ends), max(ends))
 
 
 def _lerp(a, b, t):
