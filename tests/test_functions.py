@@ -1,7 +1,7 @@
 """Functions: func, calls, recursion, functions as values and fn (docs/syntax.md section 5;
 docs/type-system.md sections 2 and 5.a; docs/mtpc.md "Functions")."""
 
-from helpers import bound, error, model
+from helpers import bound, error, model, value
 
 from mathterpiece.types import INT, REAL, FuncT, Maybe
 
@@ -213,3 +213,22 @@ class TestDeclaredResults:
 
     def test_only_at_the_top_level(self):
         error("(scene s (func[real] f ((real x)) x))", "declared only at the top level")
+
+
+class TestNamesAFunctionCannotTake:
+    # mtp-28vw, the author 2026-11-03: a function named like a special form, a type or a
+    # constant could never be called, or broke every read of the constant, so it is an error.
+    def test_a_special_form(self):
+        for word in ("if", "let", "foreach", "fn"):
+            error(f"(func {word} (real x) x)", f"'{word}' is a special form")
+
+    def test_a_type(self):
+        for word in ("real", "point", "circle", "slider", "list", "row"):
+            error(f"(func {word} (real x) x)", f"'{word}' is a type")
+
+    def test_a_constant(self):
+        for word in ("pi", "τ", "infty"):
+            error(f"(func {word} (real x) x)", f"'{word}' is a constant")
+
+    def test_a_built_in_function_is_still_replaced(self):
+        assert value("(func sind (real x) (* 2 x)) (real v (sind 3))") == 6

@@ -59,12 +59,15 @@ from mathterpiece.types import (
     COMPLEX,
     FONT,
     INT,
+    INTERFACES,
     NONE,
     NUMBERS,
     POINT,
+    PRIMS,
     RATIO,
     REAL,
     SCENE,
+    SHAPES,
     STRING,
     TRANSFORM,
     TRANSITION,
@@ -128,6 +131,12 @@ ON_SHAPE = ("on-drag", "on-click", "on-release", "on-dragend")
 SEEN = {"canvas", "readout", "slider", "button", "play", "toggle"}
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
+# Names a function may not take; a built-in function's it may (reference.md, "Functions").
+NOT_FUNCTION_NAMES = (
+    ("a special form", SPECIAL),
+    ("a type", {*PRIMS, *SHAPES, *INTERFACES, "list", "sequence", "func", *LAYOUTS, *COMPONENTS}),
+    ("a constant", CONSTANTS),
+)
 # A computed result beyond the largest real overflows, which is undefined.
 MAX_REAL = sys.float_info.max
 WHOLE: tuple[float, float] = (-MAX_REAL, MAX_REAL)
@@ -608,6 +617,11 @@ class _Compiler:
         name, pos = self.name_of(form)
         if name is None or len(form.items) != 4:
             raise CompileError("a function is (func name parameters body)", form.pos)
+        # A call by that name would never reach the function, or a read of the constant would
+        # get the function (the author, 2026-11-03).
+        taken = next((what for what, names in NOT_FUNCTION_NAMES if name in names), None)
+        if taken is not None:
+            raise CompileError(f"'{name}' is {taken}, so no function may take its name", pos)
         params = self.params(form.items[2])
         fid = len(self.model.functions)
         declared = self.type_of(written) if written is not None else None
