@@ -66,6 +66,6 @@
 (canvas view (view-x -12) (view-y -12) (view-width 24) (view-height 24) (pan false) (zoom false)
   edges corners)
 
-; The original turns once every 14 seconds, for as long as it is on screen. mtp cannot start an
-; animation by itself yet, so this turns it when pressed.
-(play spin (animation (loop) (move yaw (from 0) (to 360) (duration 14) (ease 'linear'))))
+; It turns once every 14 seconds, starting the first time it comes into view.
+(play spin (autoplay view)
+  (animation (loop) (move yaw (from 0) (to 360) (duration 14) (ease 'linear'))))

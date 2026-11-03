@@ -66,6 +66,9 @@ export interface Obj {
   conditions?: Clamp[];
   target?: [number, string | null] | null;
   shape?: number;
+  // on-view: the canvas it listens to; play: "load", or the view or control it waits for.
+  view?: number;
+  autoplay?: "load" | number | null;
   when?: Attribute | null;
   // canvases: what each shows, in drawing order
   shows?: Shown[];

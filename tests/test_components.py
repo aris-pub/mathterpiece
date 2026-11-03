@@ -180,3 +180,56 @@ class TestUnnamedControls:
         m = model(f"{K} (button_ {MOVE})")
         (b,) = [o for o in m.objects if o.kind == "button"]
         assert b.attrs["label"].value == ""
+
+
+class TestStartingWithoutTheReader:
+    # mtp-9wm: (on-view view (animation …)) plays the first time the canvas comes into view, and
+    # a play with (autoplay) starts when the page loads, or with (autoplay view-or-control) the
+    # first time that comes into view.
+    S = f"{K} (scene s (circle c)) (canvas v s)"
+
+    def test_on_view(self):
+        m = model(f"{self.S} (on-view v {MOVE})")
+        (o,) = [o for o in m.objects if o.kind == "on-view"]
+        assert o.data["view"] == m.id("v")
+        assert m.objects[o.data["animation"]].kind == "animation"
+        assert o.name is None and o.access == "page"
+
+    def test_on_view_takes_a_canvas(self):
+        error(f"{self.S} (on-view c {MOVE})", "expected the name of a canvas")
+        error(f"{K} (on-view {MOVE})", "on-view takes the canvas it listens to")
+
+    def test_autoplay_when_the_page_loads(self):
+        m = model(f"{self.S} (play p (autoplay) {MOVE})")
+        assert m.get("p").data["autoplay"] == "load"
+
+    def test_autoplay_when_a_view_or_a_control_comes_into_view(self):
+        m = model(
+            f"{self.S} (button b {MOVE}) (play p (autoplay v) {MOVE}) (play q (autoplay b) {MOVE})"
+        )
+        assert m.get("p").data["autoplay"] == m.id("v")
+        assert m.get("q").data["autoplay"] == m.id("b")
+
+    def test_no_autoplay(self):
+        assert model(f"{self.S} (play p {MOVE})").get("p").data["autoplay"] is None
+
+    def test_autoplay_takes_a_view_or_a_control(self):
+        error(f"{self.S} (play p (autoplay c) {MOVE})", "autoplay takes a view or a control")
+        error(f"{self.S} (play p (autoplay v v) {MOVE})", "autoplay takes")
+
+    def test_the_compiled_file(self):
+        import json
+
+        from mtpc_check import errors
+
+        from mathterpiece.mtpc import write
+
+        m = model(
+            f"{self.S} (on-view v {MOVE}) (play p (autoplay) {MOVE}) (play q (autoplay v) {MOVE})"
+        )
+        d = json.loads(write(m))
+        assert errors(d) == []
+        (o,) = [o for o in d["objects"] if o["kind"] == "on-view"]
+        assert o["view"] == m.id("v")
+        assert d["objects"][m.id("p")]["autoplay"] == "load"
+        assert d["objects"][m.id("q")]["autoplay"] == m.id("v")

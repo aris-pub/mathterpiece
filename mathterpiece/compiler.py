@@ -89,7 +89,7 @@ RESERVED = frozenset(
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
-WRITER_OPTIONS = {"animation", "label", "step", "buttons", "value", "when"}
+WRITER_OPTIONS = {"animation", "label", "step", "buttons", "value", "when", "autoplay"}
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
@@ -99,7 +99,19 @@ RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat", "type-of", "as"}
 # The components (reference.md, "Components"), declared at the top level only.
-COMPONENTS = {"canvas", "readout", "slider", "button", "play", "toggle", "on-drag", "on-click"}
+COMPONENTS = {
+    "canvas",
+    "readout",
+    "slider",
+    "button",
+    "play",
+    "toggle",
+    "on-drag",
+    "on-click",
+    "on-view",
+}
+# The views and controls a play's autoplay may wait for.
+SEEN = {"canvas", "readout", "slider", "button", "play", "toggle"}
 EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
 # A computed result beyond the largest real overflows, which is undefined.
@@ -1511,6 +1523,11 @@ class _Compiler:
                 raise CompileError(f"{kind} takes the shape it listens to", form.pos)
             name, pos, items = None, form.pos, form.items[2:]
             shape = self.read_shape(form.items[1])
+        elif kind == "on-view":
+            if len(form.items) < 2 or _head(form.items[1]) == "animation":
+                raise CompileError("on-view takes the canvas it listens to", form.pos)
+            name, pos, items = None, form.pos, form.items[2:]
+            shape = self.component_named(form.items[1], {"canvas"}, "expected the name of a canvas")
         else:
             name, pos = self.name_of(form)
             items, shape = form.items[2:], None
@@ -1542,6 +1559,14 @@ class _Compiler:
                     item.pos,
                 )
 
+    def component_named(self, node: Node, kinds: set, message: str) -> int:
+        """The id of a view or control declared earlier, of one of kinds."""
+        name = node.parts[0] if isinstance(node, Name) and len(node.parts) == 1 else None
+        i = self.model.names.get(name) if isinstance(name, str) else None
+        if i is None or self.model.objects[i].kind not in kinds:
+            raise CompileError(message, node.pos)
+        return i
+
     def read_shape(self, node: Node) -> int:
         e = self.expr(node, None, self.cscope)
         if e.op != "obj" or not isinstance(_core(e.type), ShapeT):
@@ -1560,7 +1585,7 @@ class _Compiler:
 
     def writer(self, obj: Obj, items: list, written: set) -> None:
         """What every writer has: a label (controls), conditions, and the items left over."""
-        if obj.kind not in ("on-drag", "on-click"):
+        if obj.kind not in ("on-drag", "on-click", "on-view"):
             label = self.take(items, "label")
             # By default a control's label is its name; one with no name has an empty label.
             obj.attrs["label"] = (
@@ -1644,6 +1669,7 @@ class _Compiler:
         written = self.animated(obj, items)
         buttons = self.take(items, "buttons")
         obj.attrs["buttons"] = self.attribute(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
+        obj.data["autoplay"] = self.autoplay(items)
         obj.attrs["playing"] = Attribute(BOOL, False)
         obj.attrs["step"] = Attribute(INT, 0)
         self.when(obj, items)
@@ -1722,6 +1748,30 @@ class _Compiler:
             if attribute is not None and attribute.bound:
                 todo.extend(attribute.deps)
         return seen
+
+    def autoplay(self, items: list):
+        """A play's (autoplay): "load" to start when the page loads, the id of the view or
+        control whose first coming into view starts it, or None."""
+        found = [it for it in items if _head(it) == "autoplay"]
+        if not found:
+            return None
+        if len(found) > 1:
+            raise CompileError("'autoplay' is given twice", found[1].pos)
+        item = found[0]
+        items.remove(item)
+        assert isinstance(item, Form)
+        if len(item.items) == 1:
+            return "load"
+        message = "autoplay takes a view or a control, or nothing to start when the page loads"
+        if len(item.items) != 2:
+            raise CompileError(message, item.pos)
+        return self.component_named(item.items[1], SEEN, message)
+
+    def build_on_view(self, obj: Obj, items: list, view: int) -> None:
+        obj.data["view"] = view
+        written = self.animated(obj, items)
+        self.when(obj, items)
+        self.writer(obj, items, written)
 
     def build_on_click(self, obj: Obj, items: list, shape: int) -> None:
         obj.data["shape"] = shape

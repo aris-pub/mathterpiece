@@ -117,7 +117,8 @@
                 "play",
                 "toggle",
                 "on-drag",
-                "on-click"
+                "on-click",
+                "on-view"
               ]
             }
           },
@@ -1489,7 +1490,8 @@
                 "play",
                 "toggle",
                 "on-drag",
-                "on-click"
+                "on-click",
+                "on-view"
               ]
             }
           }
@@ -2137,6 +2139,19 @@
                     "type": "null"
                   }
                 ]
+              },
+              "autoplay": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "const": "load"
+                  },
+                  {
+                    "$ref": "#/$defs/id"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -2357,6 +2372,75 @@
                 ]
               },
               "shape": {
+                "$ref": "#/$defs/id"
+              },
+              "animation": {
+                "$ref": "#/$defs/id"
+              },
+              "when": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clamp"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "on-view"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "view",
+              "animation",
+              "when",
+              "conditions"
+            ],
+            "properties": {
+              "kind": {
+                "const": "on-view"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "view": {
                 "$ref": "#/$defs/id"
               },
               "animation": {

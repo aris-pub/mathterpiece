@@ -315,3 +315,41 @@ describe("a control's when", () => {
     expect(inputs().every((el) => !el.disabled)).toBe(true);
   });
 });
+
+describe("starting without the reader", () => {
+  // mtp-9wm: on-view, and a play's autoplay.
+  const SEEN = docs["./data/runtime/seen.mtpc"] as string;
+
+  it("plays an on-view's animation the first time its canvas comes into view", () => {
+    const [model, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, JSON.parse(SEEN) as Doc);
+    pass(0.5);
+    expect(v("k")).toBe(0);
+    model.markSeen(rt.id("v"));
+    pass(1.3);
+    expect(v("k")).toBeCloseTo(10);
+    rt.write(rt.id("k"), null, 0);
+    model.markSeen(rt.id("v"));
+    pass(1.3);
+    expect(v("k")).toBe(0);
+  });
+
+  it("starts a play with (autoplay) when the page loads", () => {
+    const [, rt, v] = page(`<mtp-play model="m" name="now"></mtp-play>`, JSON.parse(SEEN) as Doc);
+    expect(v("now", "playing")).toBe(true);
+    pass(1.3);
+    expect(v("j")).toBeCloseTo(5);
+    expect(rt.value(rt.id("now"), "playing")).toBe(false);
+  });
+
+  it("starts a play with (autoplay w) the first time w comes into view", () => {
+    const [model, rt, v] = page(
+      `<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="later"></mtp-play>`,
+      JSON.parse(SEEN) as Doc,
+    );
+    pass(0.5);
+    expect(v("m")).toBe(0);
+    model.markSeen(rt.id("w"));
+    pass(1.3);
+    expect(v("m")).toBeCloseTo(7);
+  });
+});

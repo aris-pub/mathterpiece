@@ -69,3 +69,19 @@ describe("on a page", () => {
     expect(rt.value(rt.id("on"), null)).toBe(true);
   });
 });
+
+describe("coming into view", () => {
+  // mtp-9wm: an on-view plays the first time its canvas scrolls onto the screen.
+  it("plays an on-view's animation once the canvas is scrolled into view", async () => {
+    const model = page(
+      "seen",
+      `<div style="height: 3000px"></div><mtp-canvas model="m" name="v" style="display: block; width: 200px; height: 100px"></mtp-canvas>`,
+    );
+    const rt = model.runtime!;
+    await new Promise((r) => setTimeout(r, 300));
+    expect(rt.value(rt.id("k"), null)).toBe(0);
+    document.querySelector("mtp-canvas")!.scrollIntoView();
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(rt.value(rt.id("k"), null)).toBe(10);
+  });
+});

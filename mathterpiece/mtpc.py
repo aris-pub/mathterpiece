@@ -245,6 +245,8 @@ class Writer:
         elif kind == "readout":
             d["attrs"] = attrs
         elif kind in ("slider", "button", "play"):
+            if kind == "play":
+                d["autoplay"] = o.data["autoplay"]
             d["animation"] = o.data["animation"]
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
@@ -260,6 +262,11 @@ class Writer:
             d["target"] = list(o.data["target"])
             d["conditions"] = self.conditions(o)
             d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
+        elif kind == "on-view":
+            d["view"] = o.data["view"]
+            d["animation"] = o.data["animation"]
+            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
+            d["conditions"] = self.conditions(o)
         elif kind == "on-click":
             d["shape"] = o.data["shape"]
             d["animation"] = o.data["animation"]

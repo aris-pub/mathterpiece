@@ -28,6 +28,9 @@ export class MtpModel extends HTMLElement {
   drags: Drags | null = null;
   clicks: Clicks | null = null;
   error: string | null = null;
+  // The views and controls that have come into view, and what waits for one to.
+  private seen = new Set<number>();
+  private waiting = new Map<number, (() => void)[]>();
   private running = false;
   private last = 0;
 
@@ -60,8 +63,32 @@ export class MtpModel extends HTMLElement {
     this.drags = new Drags(rt);
     this.clicks = new Clicks(rt);
     this.error = null;
+    this.seen.clear();
+    this.waiting.clear();
     rt.onChange(() => this.changed());
+    const scheduler = this.scheduler;
+    rt.objects.forEach((o, i) => {
+      if (o.kind !== "on-view") return;
+      this.whenSeen(o.view!, () => {
+        const player = activeOf(rt, i) ? playerFor(rt, o) : null;
+        if (player) scheduler.start(player, o);
+      });
+    });
     this.dispatchEvent(new Event(READY, { bubbles: true }));
+  }
+
+  /** Runs work the first time the view or control id comes into view, or now if it has. */
+  whenSeen(id: number, work: () => void): void {
+    if (this.seen.has(id)) work();
+    else this.waiting.set(id, [...(this.waiting.get(id) ?? []), work]);
+  }
+
+  /** Called by a view or control when it comes into view; only the first time counts. */
+  markSeen(id: number): void {
+    if (this.seen.has(id)) return;
+    this.seen.add(id);
+    for (const work of this.waiting.get(id) ?? []) work();
+    this.waiting.delete(id);
   }
 
   /** Tells every view and control of this model to show the current values. */
@@ -129,8 +156,23 @@ abstract class MtpPart extends HTMLElement {
     this.guard(() => {
       const model = this.model();
       if (model?.error) throw new Error(model.error);
-      if (model?.runtime && model.scheduler) this.setup(model, model.runtime, model.scheduler);
+      if (model?.runtime && model.scheduler) {
+        this.setup(model, model.runtime, model.scheduler);
+        this.watch(model);
+      }
     });
+  }
+
+  // Tells the model when this element first comes into view (on-view, autoplay).
+  private watch(model: MtpModel): void {
+    const id = this.shown;
+    if (id === null || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      observer.disconnect();
+      model.markSeen(id);
+    });
+    observer.observe(this);
   }
 
   private guard(work: () => void): void {
@@ -144,6 +186,9 @@ abstract class MtpPart extends HTMLElement {
     }
   }
 
+  // The object this element shows, once found.
+  private shown: number | null = null;
+
   /** The id of the object this element shows, by its name attribute and kind. */
   protected find(rt: Runtime, kind: string): number {
     const name = this.getAttribute("name");
@@ -151,6 +196,7 @@ abstract class MtpPart extends HTMLElement {
     const obj = id === undefined ? undefined : rt.objects[id];
     if (!obj) throw new Error(`no ${kind} named ${String(name)}`);
     if (obj.kind !== kind) throw new Error(`${String(name)} is a ${obj.kind}, not a ${kind}`);
+    this.shown = id!;
     return id!;
   }
 
@@ -483,7 +529,7 @@ export class MtpButton extends MtpPart {
 export class MtpPlay extends MtpPart {
   private refresh: () => void = () => {};
 
-  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+  protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "play");
     const play = document.createElement("button");
     let player: Player | null = null;
@@ -538,6 +584,16 @@ export class MtpPlay extends MtpPart {
     };
     this.refresh();
     this.replaceChildren(play, ...steps);
+    // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
+    const start = () => {
+      if (!activeOf(rt, id) || scheduler.running(this)) return;
+      player = playerFor(rt, rt.objects[id]!);
+      if (player) scheduler.start(player, this);
+      this.refresh();
+    };
+    const auto = rt.objects[id]!.autoplay;
+    if (auto === "load") start();
+    else if (typeof auto === "number") model.whenSeen(auto, start);
   }
 
   protected update(): void {
