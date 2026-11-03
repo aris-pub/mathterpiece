@@ -34,8 +34,8 @@
   (real right (if (>= (cosd theta) 0) 1 -1))
 
   ; Paint given on a group is the default for its members. A text takes only the fill.
-  (group frame (stroke ink) (fill ink)
-    (group axes (stroke-width 1) (stroke-opacity 0.5)
+  (group frame (defaults (stroke ink) (fill ink))
+    (group axes (defaults (stroke-width 1) (stroke-opacity 0.5))
       (line_ (from [-1.35 0]) (to [1.35 0]))
       (line_ (from [0 -1.15]) (to [0 1.15])))
     (circle rim (r 1) (fill none) (stroke-width 1.6))
@@ -45,7 +45,7 @@
     (text angle $'θ = {theta:5.1f}°' (pos [-2.05 0.9]) (font number)))
 
   ; The names sit beside their lines, centered on the spot given.
-  (group cosine (stroke accent) (fill accent)
+  (group cosine (defaults (stroke accent) (fill accent))
     (line across (from [0 0]) (to [handle.x 0]) (stroke-width 4))
     (text_ 'cos' (pos [(/ handle.x 2) (* -0.1 above)]) (halign 'middle') (valign 'middle')
       (font small))
@@ -53,7 +53,7 @@
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
   ; triangle is too thin for it.
-  (group sine (stroke cool) (fill cool)
+  (group sine (defaults (stroke cool) (fill cool))
     (line up (from [handle.x 0]) (to handle.pos) (stroke-width 4))
     (text_ 'sin'
       (pos [(+ handle.x (* 0.12 right (if (< (abs handle.x) 0.45) 1 -1))) (/ handle.y 2)])
@@ -68,7 +68,7 @@
   ; long, and along the x axis from the center, sec theta. The tangent is at right angles to the
   ; radius, so its name moves out along the radius to clear the line, and it stays near the
   ; point, since the segment's far end may be off the canvas.
-  (group tangent (stroke deep) (fill deep)
+  (group tangent (defaults (stroke deep) (fill deep))
     ; The tangent line itself, at right angles to the radius: it exists at every angle, even
     ; where the segment does not.
     (line along (from (+ handle.pos (* 3 (polar 1 (+ theta 90)))))
@@ -83,7 +83,7 @@
 
   ; sec runs along the x axis past cos, so its name goes on the part of the line beyond cos,
   ; kept on the canvas.
-  (group secant (stroke deep) (fill deep)
+  (group secant (defaults (stroke deep) (fill deep))
     (line|none sec (from [0 0]) (to [sec-x 0]) (stroke-width 2))
     (text|none_ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ handle.x sec-x) 2))) (* -0.1 above)])
       (halign 'middle') (valign 'middle') (font small))
@@ -94,7 +94,7 @@
   (real|none csc-y (cscd theta))
 
   ; From the point to the y axis is cot theta long, and along the y axis, csc theta.
-  (group cotangent (stroke warm) (fill warm)
+  (group cotangent (defaults (stroke warm) (fill warm))
     (line|none cot (from handle.pos) (to [0 csc-y]) (stroke-width 4))
     (text|none_ 'cot'
       (pos (+ (lerp handle.pos [0 csc-y] (min 0.5 (/ 0.3 (dist handle.pos [0 csc-y]))))
@@ -103,7 +103,7 @@
     (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
       (pos [-2.05 0.32]) (font number)))
 
-  (group cosecant (stroke warm) (fill warm)
+  (group cosecant (defaults (stroke warm) (fill warm))
     (line|none csc (from [0 0]) (to [0 csc-y]) (stroke-width 2))
     (text|none_ 'csc' (pos [(* -0.12 right) (max -1.1 (min 1.1 (/ csc-y 2)))])
       (halign 'middle') (valign 'middle') (font small))

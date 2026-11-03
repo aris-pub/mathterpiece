@@ -40,12 +40,12 @@
 (scene star
   ; A star with center c and four leaves u₁, u₂, u₃, u₄.
   (group a-star
-    (group_ (stroke fg) (stroke-width 1.5)
+    (group_ (defaults (stroke fg) (stroke-width 1.5))
       (line_ (from [90 -110]) (to [90 -50]))
       (line_ (from [90 -110]) (to [150 -110]))
       (line_ (from [90 -110]) (to [90 -170]))
       (line_ (from [90 -110]) (to [30 -110])))
-    (group_ (fill fg)
+    (group_ (defaults (fill fg))
       (circle_ (pos [90 -110]) (r 5))
       (circle_ (pos [90 -50]) (r 5))
       (circle_ (pos [150 -110]) (r 5))
@@ -59,7 +59,7 @@
     (text_ '(a) the star, n = 5' (pos [90 -215]) (halign 'middle') (font note) (fill muted)))
 
   ; F(c) = (0, 1, 1, 1, 1) and F(u₁) = (1, 0, 2, 2, 2): all five entries differ, by 1.
-  (group center-and-leaf (fill muted)
+  (group center-and-leaf (defaults (fill muted))
     (rows_ (a 0) (b 1) (left 250) (mark teal))
     (text_ 'differ by 1 in all n coordinates:' (pos [302 -160]) (halign 'middle') (font note))
     (text_ '‖F(c) − F(u₁)‖ = √n' (pos [302 -178]) (halign 'middle') (font note))
@@ -67,7 +67,7 @@
 
   ; F(u₁) = (1, 0, 2, 2, 2) and F(u₂) = (1, 2, 0, 2, 2): they differ, by 2, in the u₁ and u₂
   ; entries, and agree elsewhere.
-  (group two-leaves (fill muted)
+  (group two-leaves (defaults (fill muted))
     (rows_ (a 1) (b 2) (left 500) (mark coral))
     (text_ 'differ by 2 in two coordinates:' (pos [552 -160]) (halign 'middle') (font note))
     (text_ '‖F(u₁) − F(u₂)‖ = 2√2' (pos [552 -178]) (halign 'middle') (font note))

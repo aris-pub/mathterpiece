@@ -21,7 +21,7 @@
 
 (scene clusters
   (group tree
-    (group_ (stroke fg) (stroke-width 1.5)
+    (group_ (defaults (stroke fg) (stroke-width 1.5))
       ; Level 1: point 2k with point 2k+1.
       (repeat 4 k
         (bracket_ (left (point-x (* 2 k))) (right (point-x (+ (* 2 k) 1)))
@@ -32,12 +32,12 @@
                   (from (depth 1)) (to (depth 2))))
       ; Level 3: the middles of the two halves.
       (bracket_ (left 115) (right 235) (from (depth 2)) (to (depth 3))))
-    (group_ (fill fg)
+    (group_ (defaults (fill fg))
       (repeat 8 i
         (circle_ (pos [(point-x i) top]) (r 5)))))
 
   ; The depth axis on the left, and the level names on the right.
-  (group axis (stroke muted) (stroke-width 1) (fill muted)
+  (group axis (defaults (stroke muted) (stroke-width 1) (fill muted))
     (line_ (from [40 top]) (to [40 (depth 3)]))
     (text_ '0' (pos [33 (- top 4)]) (halign 'end') (font note))
     (repeat 3 h

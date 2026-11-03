@@ -23,25 +23,25 @@
 
 (scene plane
   (background paper)
-  (group points (fill ink)
+  (group points (defaults (fill ink))
     (circle c (pos [0 0]) (r 0.1) (fill accent))
     (circle u (pos (polar 1 90)) (r 0.1))
     (circle v (pos (polar 1 210)) (r 0.1))
     (circle w (pos (polar 1 330)) (r 0.1)))
 
-  (group edges (stroke ink)
-    (group spokes (stroke-width 2)
+  (group edges (defaults (stroke ink))
+    (group spokes (defaults (stroke-width 2))
       (line_ (from c.pos) (to u.pos))
       (line_ (from c.pos) (to v.pos))
       (line_ (from c.pos) (to w.pos)))
-    (group rim (stroke-width 1) (stroke-opacity 0.4)
+    (group rim (defaults (stroke-width 1) (stroke-opacity 0.4))
       (line_ (from u.pos) (to v.pos))
       (line_ (from v.pos) (to w.pos))
       (line_ (from w.pos) (to u.pos))))
 
   (real|none measured (distortion-of c.pos u.pos v.pos w.pos))
 
-  (group labels (fill ink)
+  (group labels (defaults (fill ink))
     (repeat 4 i
       (text_ points[i].name (pos (+ points[i].pos [0.13 0.13])) (font variable)))
     (text_ (or? $'distortion {measured:.3f}' 'distortion inf') (pos [-3.15 1.93]) (font big))
@@ -57,13 +57,13 @@
   (on-drag points[i] points[i].pos))
 
 (animation optimum
-  (at-once (default-duration 0.8) (default-ease 'ease-in-out')
+  (at-once (defaults (duration 0.8) (ease 'ease-in-out'))
     (move c.pos (to [0 0]))
     (move u.pos (to (polar 1 90)))
     (move v.pos (to (polar 1 210)))
     (move w.pos (to (polar 1 330)))))
 (animation on-a-line
-  (at-once (default-duration 0.8) (default-ease 'ease-in-out')
+  (at-once (defaults (duration 0.8) (ease 'ease-in-out'))
     (move c.pos (to [0 0]))
     (move u.pos (to [-1 0]))
     (move v.pos (to [1 0]))

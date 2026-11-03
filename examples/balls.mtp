@@ -83,7 +83,7 @@
   (real at (or? (/ bar-width h) 0))
 
   ; Faint rings at ρ₁ to ρₖ around both points.
-  (group rings (fill none) (stroke muted)
+  (group rings (defaults (fill none) (stroke muted))
     (repeat 5 j
       (circle_ (pos x.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))
       (circle_ (pos y.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))))
@@ -94,7 +94,7 @@
       (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
     (circle_ (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
       (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
-    (group names (fill fg)
+    (group names (defaults (fill fg))
       (text_ 'x' (pos (+ x.pos [9 9])) (font label))
       (text_ 'y' (pos (+ y.pos [9 9])) (font label))))
 
@@ -116,7 +116,7 @@
           (halign 'middle') (font segment) (fill bg)
           (opacity (if (and (>= r (- rho[j] 1e-9)) (> width 26)) 1 0)))))
     ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
-    (group ticks (stroke fg) (stroke-width 1.2) (fill fg)
+    (group ticks (defaults (stroke fg) (stroke-width 1.2) (fill fg))
       (repeat 6 j
         (line_ (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
           (to [(+ bar-left (* at edges[j])) (- bar-y 9)])
@@ -130,10 +130,10 @@
 ; to-moves, so they read the old to.
 (repeat 32 i
   (on-click space[i]
-    (animation (default-duration 0.4)
+    (animation (defaults (duration 0.4))
       (at-once
         ; Which point x and y sit on: an int jumps at the start, never passing the points between.
-        (at-once (default-ease (step 1))
+        (at-once (defaults (ease (step 1)))
           (move x-from (to (if replace-x x-to x-from)))
           (move y-from (to (if replace-x y-from y-to)))
           (move x-to (to (if replace-x i x-to)))

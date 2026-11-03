@@ -69,9 +69,9 @@ class TestTransitions:
 class TestSteps:
     def test_defaults_and_nesting(self):
         s = steps(
-            f"{K} (real j 0) (animation a (default-duration 2) (default-ease 'ease-in')"
+            f"{K} (real j 0) (animation a (defaults (duration 2) (ease 'ease-in'))"
             " (move k (to 5)) (move none (duration 1))"
-            " (at-once (default-duration 3) (move j (to 1))"
+            " (at-once (defaults (duration 3)) (move j (to 1))"
             " (move k (to 1) (duration 4))))"
         )
         assert s[0] == "in-order"
@@ -183,7 +183,7 @@ class TestBoolMoves:
 
     def test_an_enclosing_default_ease_that_is_not_a_step_does_not_apply(self):
         move = "(move on (to true) (duration 1))"
-        src = f"{self.B} (animation a (default-ease 'ease-in') {move})"
+        src = f"{self.B} (animation a (defaults (ease 'ease-in')) {move})"
         assert steps(src)[4] == ("step", 1)
 
     @pytest.mark.parametrize("ease", ["'linear'", "(step 3)"])
@@ -338,3 +338,17 @@ class TestForeverDuration:
             f"{K} (animation a (loop) (move k (to 1) (duration 2))) (real d a.duration (const))"
         )
         assert m.get("d").value.value == float("inf")
+
+
+class TestAnimationDefaults:
+    # mtp-xj5b: (defaults (duration t) (ease e)) on an animation, at-once or in-order.
+    def test_on_an_animation(self):
+        s = steps(f"{K} (animation a (defaults (duration 2) (ease 'linear')) (move k (to 1)))")
+        assert s[3:] == (2, "linear")
+
+    def test_on_at_once(self):
+        s = steps(f"{K} (animation a (at-once (defaults (duration 3)) (move k (to 1))))")
+        assert s[1][3] == 3
+
+    def test_the_old_forms_are_gone(self):
+        error(f"{K} (animation a (default-duration 2) (move k (to 1)))", "an animation holds moves")

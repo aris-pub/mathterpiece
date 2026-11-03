@@ -20,7 +20,7 @@
   (animation (move size (to 3) (duration 1) (ease 'ease-in-out'))
     (move size (to 1) (duration 1)))
   (label 'grow the square'))
-(play spin (animation (default-duration 2) (move angle (to 360)) (move angle (to 0)))
+(play spin (animation (defaults (duration 2)) (move angle (to 360)) (move angle (to 0)))
   (buttons true))
 (toggle show show-angle (label 'show the angle'))
 (readout r $'angle = {angle:.1f}°')

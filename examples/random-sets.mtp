@@ -40,7 +40,7 @@
   (list in [c u1 u2 u3 u4])
   (list d (map [0 1 2 3 4] (fn p (dist-to-set p c u1 u2 u3 u4))))
   (real gap (abs (- d[1] d[2])))
-  (group_ (stroke fg) (stroke-width 1.5)
+  (group_ (defaults (stroke fg) (stroke-width 1.5))
     (repeat 4 k
       (line_ (from [middle -105]) (to [(+ middle dx[(+ k 1)]) (+ -105 dy[(+ k 1)])]))))
   (repeat 5 p
@@ -56,7 +56,7 @@
       (stroke (cond ((or (= p 0) (> p 2)) rule) ((> gap 0) coral) (else muted))))
     (text_ $'{d[p]:g}' (pos [(+ middle dx[p] box-dx[p]) (+ -105 dy[p] box-dy[p] -5)])
       (halign 'middle') (font value) (fill fg)))
-  (group_ (fill muted)
+  (group_ (defaults (fill muted))
     (text_ $'{tag} {set}' (pos [middle -215]) (halign 'middle') (font note))
     (text_ (if (> gap 0) $'u₁, u₂ separated by {gap:g}' 'u₁, u₂ not separated')
       (pos [middle -233]) (halign 'middle') (font note))))

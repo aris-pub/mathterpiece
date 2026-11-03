@@ -52,13 +52,13 @@
   (list near (map [0 1 2 3] (fn k (max 0 (min 1 (/ (+ (depth k yaw) height) (* 2 height)))))))
 
   ; An edge is drawn in full when either face it borders faces the viewer.
-  (group edges (stroke ink) (stroke-width 1.1)
+  (group edges (defaults (stroke ink) (stroke-width 1.1))
     (repeat 6 e
       (line_ (from on-screen[edge-from[e]]) (to on-screen[edge-to[e]])
         (opacity (if (or front[edge-face[e]] front[edge-other-face[e]]) 1 0.35)))))
 
   ; A corner nearer the viewer is larger and darker.
-  (group corners (fill ink)
+  (group corners (defaults (fill ink))
     (repeat 4 k
       (circle_ (pos on-screen[k]) (r (+ 1.25 (* 0.6 near[k])))
         (opacity (+ 0.55 (* 0.45 near[k])))))))

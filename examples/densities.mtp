@@ -105,7 +105,7 @@
 ; The handle on a track: a pill with three grip lines.
 (motif handle ((color edge '#7f8da0') (real weight 1.5 (>= 0)))
   (rect body (width 22) (height 12) (rx 6) (ry 6) (fill bg) (stroke edge) (stroke-width weight))
-  (group grip (stroke edge) (stroke-width 1)
+  (group grip (defaults (stroke edge) (stroke-width 1))
     (line_ (from [-3 -3]) (to [-3 3]))
     (line_ (from [0 -3]) (to [0 3]))
     (line_ (from [3 -3]) (to [3 3]))))
@@ -139,11 +139,11 @@
   (real worst (+ (* (min (stretch Lp te mix 2)) (- 1 g)) (* (min (stretch L te mix 2)) g)))
 
   (group bars-chart
-    (group gridlines (stroke grid) (stroke-width 1)
+    (group gridlines (defaults (stroke grid) (stroke-width 1))
       (line_ (from [54 -134]) (to [466 -134]))
       (line_ (from [54 -71]) (to [466 -71]))
       (line_ (from [54 -8]) (to [466 -8])))
-    (group values (fill muted)
+    (group values (defaults (fill muted))
       (text_ '0' (pos [48 -138]) (halign 'end') (font plain))
       (text_ '0.5' (pos [48 -75]) (halign 'end') (font plain))
       (text_ '1' (pos [48 -12]) (halign 'end') (font plain)))
@@ -151,12 +151,12 @@
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
       (stroke muted) (stroke-width 1) (stroke-opacity 0.8))
     ; Level i + 1.
-    (group bars (fill (if all every one))
+    (group bars (defaults (fill (if all every one)))
       (repeat 10 i
         (let ((height (max 0.5 (* 126 shown[i]))))
           (rect_ (pos [(+ 54 (* i 41.2) 20.6) (+ -134 (/ height 2))]) (width 26.368)
             (height height) (rx 2) (ry 2) (opacity (if (< shown[i] 0.002) 0 1))))))
-    (group level-names (fill muted)
+    (group level-names (defaults (fill muted))
       (repeat 10 i
         (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
           (opacity
@@ -188,15 +188,15 @@
   (list ds (map samples (fn k (spread L (+ 0.5 (* L (/ k 200)))))))
 
   (group curve-chart
-    (group curve-grid (stroke grid) (stroke-width 1)
+    (group curve-grid (defaults (stroke grid) (stroke-width 1))
       (repeat 6 k
         (line_ (from [54 (cy ticks[k])]) (to [466 (cy ticks[k])]))))
-    (group curve-values (fill muted)
+    (group curve-values (defaults (fill muted))
       (repeat 6 k
         (text_ tick-names[k] (pos [48 (- (cy ticks[k]) 4)])
           (halign 'end') (font plain))))
     ; A label every density up to 2^-L, every other one past 6 levels.
-    (group densities (fill muted)
+    (group densities (defaults (fill muted))
       (repeat 10 k
         (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
           (text_ $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle') (font tick)
@@ -214,7 +214,7 @@
     ; A group's opacity is only a default for members that give none, so the fade with all
     ; densities is written on each segment. Segments past the right edge are hidden, as the
     ; original clips them.
-    (group curve (stroke one) (stroke-width 2.2)
+    (group curve (defaults (stroke one) (stroke-width 2.2))
       (repeat 200 k
         ; Where the segment starts and ends across the chart.
         (let ((x0 (+ 54 (* (/ (* L (/ k 200)) lv) 412)))
@@ -235,7 +235,7 @@
   ; The current density: a marker on the curve, a guide down to the track, and its value. With
   ; all densities, only the handle is left, grey.
   (real mx (+ 54 (* (/ (- te 0.5) lv) 412)))
-  (group marker (opacity (if all 0 1))
+  (group marker (defaults (opacity (if all 0 1)))
     (line_ (from [mx (- (cy d-now) 7)]) (to [mx -160]) (stroke (if t-on one muted))
       (stroke-width 1) (stroke-opacity 0.7))
     (circle_ (pos [mx (cy d-now)]) (r 7) (fill one))
@@ -253,7 +253,7 @@
 ; old number to the new one over the first 35% of its quarter.
 (animation one-density
   (at-once
-    (at-once (default-duration 0)
+    (at-once (defaults (duration 0))
       (move chapter (to 0)) (move exploring (to false)) (move mix (to 0)) (move floor (to false))
       (move L (to 10)) (move Lp (to 10)) (move g (to 1)))
     (in-order
@@ -264,46 +264,46 @@
         (move floor (to true) (duration 2.34) (ease (step-ease 0.72)))))))
 
 (animation floor-rises
-  (at-once (default-duration 0)
+  (at-once (defaults (duration 0))
     (move chapter (to 1)) (move exploring (to false)) (move mix (to 0)) (move floor (to true)))
-  (at-once (default-duration 0) (move L (to 4)) (move Lp (to 10)) (move g (to 0)))
-  (at-once (default-duration 0.9625) (default-ease quad)
+  (at-once (defaults (duration 0)) (move L (to 4)) (move Lp (to 10)) (move g (to 0)))
+  (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from 4.5) (to bests[0][1])))
   (move none (duration 1.7875))
-  (at-once (default-duration 0) (move L (to 6)) (move Lp (to 4)) (move g (to 0)))
-  (at-once (default-duration 0.9625) (default-ease quad)
+  (at-once (defaults (duration 0)) (move L (to 6)) (move Lp (to 4)) (move g (to 0)))
+  (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from bests[0][1]) (to bests[1][1])))
   (move none (duration 1.7875))
-  (at-once (default-duration 0) (move L (to 8)) (move Lp (to 6)) (move g (to 0)))
-  (at-once (default-duration 0.9625) (default-ease quad)
+  (at-once (defaults (duration 0)) (move L (to 8)) (move Lp (to 6)) (move g (to 0)))
+  (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from bests[1][1]) (to bests[2][1])))
   (move none (duration 1.7875))
-  (at-once (default-duration 0) (move L (to 10)) (move Lp (to 8)) (move g (to 0)))
-  (at-once (default-duration 0.9625) (default-ease quad)
+  (at-once (defaults (duration 0)) (move L (to 10)) (move Lp (to 8)) (move g (to 0)))
+  (at-once (defaults (duration 0.9625) (ease quad))
     (move g (to 1)) (move t (from bests[2][1]) (to bests[3][1])))
   (move none (duration 1.7875)))
 
 (animation all-densities
-  (at-once (default-duration 0)
+  (at-once (defaults (duration 0))
     (move chapter (to 2)) (move exploring (to false)) (move floor (to false)) (move mix (to 0))
     (move L (to 10)) (move Lp (to 10)) (move g (to 1)) (move t (to bests[3][1])))
   (at-once
     (move mix (to 1) (duration 2.16) (ease quad))
     (in-order
       (move none (duration 3.6))
-      (at-once (default-duration 0) (move L (to 4)) (move Lp (to 10)) (move g (to 0))
+      (at-once (defaults (duration 0)) (move L (to 4)) (move Lp (to 10)) (move g (to 0))
         (move t (to bests[0][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365))
-      (at-once (default-duration 0) (move L (to 6)) (move Lp (to 4)) (move g (to 0))
+      (at-once (defaults (duration 0)) (move L (to 6)) (move Lp (to 4)) (move g (to 0))
         (move t (to bests[1][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365))
-      (at-once (default-duration 0) (move L (to 8)) (move Lp (to 6)) (move g (to 0))
+      (at-once (defaults (duration 0)) (move L (to 8)) (move Lp (to 6)) (move g (to 0))
         (move t (to bests[2][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365))
-      (at-once (default-duration 0) (move L (to 10)) (move Lp (to 8)) (move g (to 0))
+      (at-once (defaults (duration 0)) (move L (to 10)) (move Lp (to 8)) (move g (to 0))
         (move t (to bests[3][1])))
       (move g (to 1) (duration 0.735) (ease quad))
       (move none (duration 1.365)))))
@@ -311,7 +311,7 @@
 ; Leaving the tour keeps the state, snapped to one density or all, and finishes any change of
 ; the number of levels.
 (animation to-explore
-  (at-once (default-duration 0)
+  (at-once (defaults (duration 0))
     (move exploring (to true)) (move floor (to false)) (move mix (to (round mix)))
     (move g (to 1) (duration 0.42) (ease quad))))
 
@@ -325,11 +325,11 @@
 
 (button explore (animation to-explore) (label 'Explore'))
 (button single-density
-  (animation (at-once (default-duration 0) (move mix (to 0)) (move exploring (to true))
+  (animation (at-once (defaults (duration 0)) (move mix (to 0)) (move exploring (to true))
                (move floor (to false)) (move g (to 1))))
   (label 'one'))
 (button all-of-them
-  (animation (at-once (default-duration 0) (move mix (to 1)) (move exploring (to true))
+  (animation (at-once (defaults (duration 0)) (move mix (to 1)) (move exploring (to true))
                (move floor (to false)) (move g (to 1))))
   (label 'all'))
 

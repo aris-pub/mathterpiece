@@ -65,7 +65,7 @@ CASES = [
     (
         "(real k)\n(animation a (move k (to 1)))",
         "2:14",
-        "this move needs a duration (or a default-duration around it)",
+        "this move needs a duration (or (defaults (duration …)) around it)",
     ),
     # reference.md "Writes and conditions": a condition that is not a limit.
     (

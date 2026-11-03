@@ -28,17 +28,17 @@
 
 ; Each stop of the tour moves the multiplier, the color of the chords and the caption together.
 (animation cardioid
-  (at-once (default-duration 3) (default-ease 'ease-in-out')
+  (at-once (defaults (duration 3) (ease 'ease-in-out'))
     (move table.m (to 2))
     (move table.stroke (to '#ffb703'))
     (move curve (to 'cardioid'))))
 (animation nephroid
-  (at-once (default-duration 3) (default-ease 'ease-in-out')
+  (at-once (defaults (duration 3) (ease 'ease-in-out'))
     (move table.m (to 3))
     (move table.stroke (to '#8ecae6'))
     (move curve (to 'nephroid'))))
 (animation eight-cusps
-  (at-once (default-duration 4) (default-ease 'ease-in-out')
+  (at-once (defaults (duration 4) (ease 'ease-in-out'))
     (move table.m (to 9))
     (move table.stroke (to '#f4978e'))
     (move curve (to 'eight cusps'))))

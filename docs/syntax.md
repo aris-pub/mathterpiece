@@ -187,11 +187,11 @@ Each form decides whether it has a name, which positional arguments it takes and
 | `(real theta 40 (>= 0))` | `theta` | `40` | none | `(>= 0)` |
 | `(circle p (r 1) (fill 'red'))` | `p` | none | `(r 1)`, `(fill 'red')` | none |
 | `(text t 'hi' (pos [0 1]))` | `t` | `'hi'` | `(pos [0 1])` | none |
-| `(group marks (fill 'red') (circle m0) (circle m1))` | `marks` | none | `(fill 'red')` | two member declarations |
+| `(group marks (defaults (fill 'red')) (circle m0) (circle m1))` | `marks` | none | `(defaults (fill 'red'))` | two member declarations |
 | `(func double (real x) (* 2 x))` | `double` | `(real x)`, `(* 2 x)` | none | none |
 | `(motif dial ((real t 0.5)) (circle face …) …)` | `dial` | its parameters, `((real t 0.5))` | none | member declarations |
 | `(transition slide none (to 5) (duration 1))` | `slide` | the target, here `none` | `(to 5)`, `(duration 1)` | none |
-| `(animation grow (default-duration 1) (move theta (like slide)) (move none (duration 0.5)))` | `grow` | none | `(default-duration 1)` | a move of `theta` along `slide`, then one that waits half a second |
+| `(animation grow (defaults (duration 1)) (move theta (like slide)) (move none (duration 0.5)))` | `grow` | none | `(defaults (duration 1))` | a move of `theta` along `slide`, then one that waits half a second |
 | `(slider spin (move theta (from 0) (to 360)) (label 'angle'))` | `spin` | the move | `(label 'angle')` | none |
 | `(canvas v (view-x -5) a b (when show c))` | `v` | none | `(view-x -5)` | `a`, `b`, `(when show c)` |
 | `(on-drag p theta)` | none | `p`, `theta` | none | none |

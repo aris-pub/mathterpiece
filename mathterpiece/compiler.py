@@ -215,6 +215,9 @@ VALUE_ATTRS = {
 }
 # Arguments a group takes only to write them on each of its members.
 SPREAD = frozenset(POSITIONED) | frozenset(PAINTED) | {"pos"}
+# What a group's (defaults …) may give its members: what spreads, and a text's settings.
+TEXT_DEFAULTS = frozenset({"font", "halign", "valign"})
+GROUP_DEFAULTS = SPREAD | TEXT_DEFAULTS
 # The ends or corners whose mean is a line's or a triangle's position.
 CORNERS = {"line": ("from", "to"), "triangle": ("a", "b", "c")}
 # The ones a shape is written with as its positional argument.
@@ -1348,9 +1351,7 @@ class _Compiler:
             name, pos, items = None, form.pos, form.items[1:]
             if len(items) == 1 and isinstance(items[0], Name):
                 return self.named(items[0], "animation")
-        self.options_first(
-            items, lambda it: _head(it) in ("default-duration", "default-ease", "loop"), "animation"
-        )
+        self.options_first(items, lambda it: _head(it) in ("defaults", "loop"), "animation")
         loops = [it for it in items if _head(it) == "loop"]
         if len(loops) > 1:
             raise CompileError("an animation takes one (loop …)", loops[1].pos)
@@ -1387,19 +1388,24 @@ class _Compiler:
 
     def steps(self, items, duration, ease, scope: dict) -> list:
         """The steps among items; the defaults among them apply to the moves inside."""
-        self.options_first(
-            items, lambda it: _head(it) in ("default-duration", "default-ease"), "animation"
-        )
-        for item in items:
+        self.options_first(items, lambda it: _head(it) == "defaults", "animation")
+        found = [it for it in items if _head(it) == "defaults"]
+        if len(found) > 1:
+            raise CompileError("'defaults' is given twice", found[1].pos)
+        for item in found[0].items[1:] if found else ():
             head = _head(item)
-            if head == "default-duration":
+            if head == "duration":
                 duration = self.seconds(self.args(item, 1)[0], scope)
-            elif head == "default-ease":
+            elif head == "ease":
                 ease = _ease_value(self.ease(self.args(item, 1)[0], scope))
+            else:
+                raise CompileError(
+                    f"an animation's defaults are duration and ease, got {_shown(item)}", item.pos
+                )
         out = []
         for item in items:
             head = _head(item)
-            if head in ("default-duration", "default-ease"):
+            if head == "defaults":
                 continue
             if isinstance(item, Name):
                 # A name stands for the animation or transition it names.
@@ -1436,12 +1442,14 @@ class _Compiler:
                 raise CompileError("a move with no target waits, so it takes only a duration", pos)
             if d is None:
                 raise CompileError(
-                    "this wait needs a duration (or a default-duration around it)", pos
+                    "this wait needs a duration (or (defaults (duration …)) around it)", pos
                 )
             return ("wait", d)
         i, attr, t = target
         if d is None:
-            raise CompileError("this move needs a duration (or a default-duration around it)", pos)
+            raise CompileError(
+                "this move needs a duration (or (defaults (duration …)) around it)", pos
+            )
         own = tr.attrs.get("ease")
         e = _ease_value(own) if own is not None else ease
         core = _core(t)
@@ -2219,8 +2227,9 @@ class _Compiler:
         t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
         obj = Obj(kind, name, t, parent=parent, pos=pos)
         i = self.add(obj)
-        takes = specs.keys() | SPREAD if kind == "group" else specs.keys()
+        takes = specs.keys() | {"defaults"} if kind == "group" else specs.keys()
         given: dict[str, tuple[Node, dict]] = {}
+        defaults: dict[str, tuple[Node, dict]] = {}
         members: list[tuple[Node, dict]] = []
         scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
         for attr in POSITIONAL.get(kind, ()):
@@ -2238,6 +2247,16 @@ class _Compiler:
                     item.pos,
                 )
             head = _head(item)
+            if kind == "group" and head == "defaults":
+                assert isinstance(item, Form)
+                self.group_defaults(item, inner, defaults)
+                continue
+            if kind == "group" and head in GROUP_DEFAULTS:
+                raise CompileError(
+                    f"a group has no {head} of its own: give it in (defaults ({head} …)), for its"
+                    " members",
+                    item.pos,
+                )
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
                     f"expected an argument such as (r 1), got {_shown(item)}", item.pos
@@ -2255,12 +2274,15 @@ class _Compiler:
         # nearest group's wins over one further out (reference.md, "The scene and shapes").
         down = dict(spread or {})
         if kind == "group":
-            for attr in [a for a in given if a in SPREAD]:
-                down.update(_coordinates(attr, *given.pop(attr)))
+            for attr, (node, inner) in defaults.items():
+                down.update(_coordinates(attr, node, inner))
         else:
             for attr, (node, inner) in down.items():
                 # A stroke would outline a text's letters, so a text takes none from a group.
                 if kind == "text" and attr in ("stroke", "stroke-width"):
+                    continue
+                # A text's settings are for the texts only.
+                if attr in TEXT_DEFAULTS and attr not in specs:
                     continue
                 if attr not in specs:
                     raise CompileError(f"a {kind} takes no argument '{attr}'", node.pos)
@@ -2277,6 +2299,22 @@ class _Compiler:
             assert isinstance(item, Form)
             self.shape(item, i, inner, down)
         return i
+
+    def group_defaults(self, form: Form, scope: dict, defaults: dict) -> None:
+        """A group's (defaults (attr value) …): what its members take when they give none."""
+        if defaults:
+            raise CompileError("'defaults' is given twice", form.pos)
+        for item in form.items[1:]:
+            head = _head(item)
+            if head not in GROUP_DEFAULTS or not isinstance(item, Form) or len(item.items) != 2:
+                raise CompileError(
+                    f"a group's defaults are paint, position and a text's settings, got"
+                    f" {_shown(item)}",
+                    item.pos,
+                )
+            if head in defaults or ("pos" in defaults and head in ("x", "y")):
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            defaults[head] = (item.items[1], scope)
 
     def shape_attrs(
         self, obj: Obj, given: dict, absent: bool, pos: Pos, scope: dict, specs: dict
