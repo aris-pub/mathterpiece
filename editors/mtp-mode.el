@@ -16,7 +16,7 @@
     "transition" "move" "animation" "at-once" "in-order"
     "canvas" "readout" "slider" "button" "play" "toggle" "on-drag" "on-click"
     "on-release" "on-dragend" "on-view" "defaults" "loop" "autoplay"
-    "repeat" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
+    "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
   "Heads of mtp's forms. Any of them may end in an underscore, as in (circle_ …).")
 
 (defconst mtp-mode--indent
@@ -31,7 +31,7 @@
     ;; Forms with no name.
     ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("on-drag" . 2) ("on-click" . 1)
     ("on-release" . 1) ("on-dragend" . 1) ("on-view" . 1) ("defaults" . 0)
-    ("when" . 1) ("repeat" . 2) ("let" . 1) ("fn" . 1) ("if" . 2))
+    ("when" . 1) ("foreach" . 2) ("let" . 1) ("fn" . 1) ("if" . 2))
   "How many positional arguments each form takes before its body, counting its name.
 Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
 

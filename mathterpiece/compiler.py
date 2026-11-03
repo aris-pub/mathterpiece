@@ -97,7 +97,7 @@ UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 # has it, and the branch that does not recurse decides the real one.
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
-SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "repeat", "type-of", "as"}
+SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
 # The components (reference.md, "Components"), declared at the top level only.
 COMPONENTS = {
     "canvas",
@@ -271,7 +271,7 @@ class _Compiler:
         # The container the expression being compiled sits in: a group, or None for the scene
         # and the top level. Reads convert through the transforms not shared with it.
         self.frame: int | Literal["caller"] | None = None
-        # The names a repeat around the component being compiled gives it.
+        # The names a foreach around the component being compiled gives it.
         self.cscope: dict = {}
         # True while compiling the scene's contents, which may never read page access.
         self.in_scene = False
@@ -288,7 +288,7 @@ class _Compiler:
         self.shape_types: dict[str, dict[str, Type]] = {}
         # How many function bodies are being compiled again to fold a call.
         self.folding = 0
-        # Each rand drawn so far, after repeat and motif instances are expanded.
+        # Each rand drawn so far, after foreach and motif instances are expanded.
         self.rand_sites = 0
 
     def run(self, forms: tuple[Form, ...]) -> Model:
@@ -301,31 +301,61 @@ class _Compiler:
         return self.model
 
     def expand(self, items, scope: dict, top: bool = False) -> Iterator[tuple[Node, dict]]:
-        """The items, with each (repeat n i decl…) replaced by its copies, and each
+        """The items, with each (foreach i n decl…) replaced by its copies, and each
         (let ((name value) …) decl…) by what it holds, its names in their scope."""
         for item in items:
             if _head(item) == "let":
                 yield from self.body_let(item, scope, top)
                 continue
-            if _head(item) != "repeat":
+            if _head(item) != "foreach":
                 yield item, scope
                 continue
             if len(item.items) < 3:
-                raise CompileError("repeat is (repeat n i declaration…)", item.pos)
-            n = self.expr(item.items[1], INT, scope)
-            if not n.known:
-                raise CompileError("the count of a repeat must be known when compiling", item.pos)
-            var = item.items[2]
+                raise CompileError(
+                    "foreach is (foreach i n declaration…) or (foreach x list declaration…)",
+                    item.pos,
+                )
+            var = item.items[1]
             if not isinstance(var, Name) or len(var.parts) != 1 or var.parts[0] in RESERVED:
-                raise CompileError("expected the name of the repeat's counter", var.pos)
-            for k in range(n.value):
-                yield from self.expand(item.items[3:], {**scope, var.parts[0]: _known(INT, k)}, top)
+                raise CompileError("expected the name foreach gives each item", var.pos)
+            for value in self.each_of(item.items[2], scope):
+                yield from self.expand(item.items[3:], {**scope, var.parts[0]: value}, top)
+
+    def each_of(self, node, scope: dict) -> list[Expr]:
+        """What foreach goes through: 0 to n - 1 for a count, each item of a list, each member
+        of a group. The copies are made when compiling, so the count or length is known then."""
+        e = self.expr(node, None, scope)
+        if e.op == "obj" and self.model.objects[e.args[0]].kind in ("group", "scene"):
+            return [self.read(m, None) for m in self.model.objects[e.args[0]].members]
+        core = _core(e.type)
+        if core == INT:
+            if not e.known:
+                raise CompileError("the count of a foreach must be known when compiling", node.pos)
+            return [_known(INT, k) for k in range(e.value)]
+        if isinstance(core, ListT):
+            n = _length(e)
+            if n is None:
+                raise CompileError(
+                    "the length of the list a foreach goes through must be known when compiling",
+                    node.pos,
+                )
+            item = core.item
+            if e.known:
+                return [_known(item, v) for v in e.value]
+            if e.op == "list":
+                return list(e.args)
+            return [
+                Expr("part", item, (e, _known(INT, k)), e.deps, _type_range(item)) for k in range(n)
+            ]
+        raise CompileError(
+            f"foreach goes through a count, a list or a group, got {e.type}", node.pos
+        )
 
     def body_let(self, node, scope: dict, top: bool) -> Iterator[tuple[Node, dict]]:
         """A let in a body (mtp-b13): its values are worked out where it is written."""
         if top:
             raise CompileError(
-                "a let holding declarations is written in a scene, group, repeat or motif body,"
+                "a let holding declarations is written in a scene, group, foreach or motif body,"
                 " not at the top level",
                 node.pos,
             )
@@ -1480,9 +1510,14 @@ class _Compiler:
         write: free, not const, not a token and not fixed by a variant."""
         label = _name_text(node)
         first = node.parts[0]
-        if not isinstance(first, str) or first not in self.model.names:
+        # A name foreach gives that stands for an object, (foreach p points (on-drag p p.pos)).
+        local = scope.get(first) if isinstance(first, str) else None
+        if isinstance(local, Expr) and local.op == "obj":
+            i, attr = local.args[0], None
+        elif not isinstance(first, str) or first not in self.model.names:
             raise CompileError(f"unknown name '{first}'", node.pos)
-        i, attr = self.model.names[first], None
+        else:
+            i, attr = self.model.names[first], None
         for part in node.parts[1:]:
             obj = self.model.objects[i]
             if attr is not None:
@@ -1548,7 +1583,7 @@ class _Compiler:
 
     def component(self, form: Form, scope: dict) -> None:
         """A view, control or listener (reference.md, "Components")."""
-        # The names a repeat around the component gives it.
+        # The names a foreach around the component gives it.
         self.cscope = scope
         kind = _head(form)
         assert kind is not None

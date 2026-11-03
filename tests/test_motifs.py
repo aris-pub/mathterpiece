@@ -153,7 +153,7 @@ class TestBodyLists:
     # body as in the scene.
     def test_a_bound_list_in_a_body_keeps_its_length(self):
         compile_source(
-            "(motif m ((real a 1)) (list v [a a]) (repeat 2 i (circle_ (r (+ 1 (abs v[i]))))))"
+            "(motif m ((real a 1)) (list v [a a]) (foreach i 2 (circle_ (r (+ 1 (abs v[i]))))))"
             " (scene s (m m1))"
         )
 

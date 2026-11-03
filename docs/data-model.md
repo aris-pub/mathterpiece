@@ -42,7 +42,7 @@ Opens the page and uses what the author placed there: drags points, moves slider
 
 An `.mtp` file is written in the mtp language. It is Lisp-like: everything is a form in parentheses, with the head first, as in `(circle p (r 0.2))`. It is declarative: the author says what exists and what each thing is equal to, never what to do step by step, and it is reactive: anything given by an expression is bound to it, and follows it for as long as the page is open. When the reader moves a slider, everything that reads what the slider writes changes at once, with nothing written to make that happen. It is strongly and statically typed: every object's type is known when compiling, and nothing converts silently except a number broadening (an int where a real is expected) and a literal taking the type expected where it is written. Names are bare. Nothing has a side effect except a declaration making its object exist.
 
-Everything in a source file is an **expression**. Some expressions are **forms**: a head and its parts in parentheses. Some forms are **declarations**: their only effect is that a new object exists in the world model, and they return that object, as `(circle p (r 0.2))` returns the circle it declares. Components (views, controls and listeners) are declarations too. **Function calls** have no effect at all and matter only for what they return, as `(+ k 1)` does. A few **special forms** are exceptions, each documented on its own: `if`, `cond`, `and` and `or` evaluate only what they need; `let` and `fn` bind names; `repeat` stands for the expressions it produces, spliced in place when compiling; `(. X Y)` does not evaluate `Y` when it is an attribute name; `(name s)` turns a string into a name. Type expressions, such as `list[color]` or `(real (>= 0))`, are not evaluated at all: they describe a type.
+Everything in a source file is an **expression**. Some expressions are **forms**: a head and its parts in parentheses. Some forms are **declarations**: their only effect is that a new object exists in the world model, and they return that object, as `(circle p (r 0.2))` returns the circle it declares. Components (views, controls and listeners) are declarations too. **Function calls** have no effect at all and matter only for what they return, as `(+ k 1)` does. A few **special forms** are exceptions, each documented on its own: `if`, `cond`, `and` and `or` evaluate only what they need; `let` and `fn` bind names; `foreach` stands for the expressions it produces, spliced in place when compiling; `(. X Y)` does not evaluate `Y` when it is an attribute name; `(name s)` turns a string into a name. Type expressions, such as `list[color]` or `(real (>= 0))`, are not evaluated at all: they describe a type.
 
 The whole purpose of an `.mtp` file is to define one **world model** (the **model** for short), as a sequence of declarations.
 
@@ -60,7 +60,7 @@ Every box below has a title and examples of the forms that declare what it holds
 flowchart LR
   subgraph wm [world model]
     types["types: (motif …) (type …) (variant …)"]
-    special["special forms: (repeat …) (let …) …"]
+    special["special forms: (foreach …) (let …) …"]
     subgraph scene
       sc["the scene: (scene …)"]
       shapes["shapes: (circle …) (group …) (dial …)"]

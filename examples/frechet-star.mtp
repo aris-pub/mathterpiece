@@ -24,12 +24,12 @@
 ; The Fréchet coordinates of points a and b, one row each, with a column per point. A cell where
 ; the two rows differ is marked in the color mark.
 (motif rows ((int a 0 (const)) (int b 1 (const)) (real left 250) (color mark '#1a6f66'))
-  (repeat 5 q
+  (foreach q 5
     (text_ names[q] (pos [(+ left 16 (* 32 q)) -60]) (halign 'middle') (font note) (fill muted)))
-  (repeat 2 row
+  (foreach row 2
     (text_ $'F({names[(if (= row 0) a b)]})' (pos [(- left 8) (- -88 (* 26 row))]) (halign 'end')
       (font label) (fill fg))
-    (repeat 5 q
+    (foreach q 5
       (rect_ (pos [(+ left 16 (* 32 q)) (- -83 (* 26 row))]) (width 32) (height 26)
         (fill (if (= (dist-in-star a q) (dist-in-star b q)) none mark)) (fill-opacity 0.18)
         (stroke (if (= (dist-in-star a q) (dist-in-star b q)) rule mark)) (stroke-width 1))

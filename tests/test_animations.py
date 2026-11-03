@@ -251,8 +251,8 @@ class TestRepeatedListeners:
     def test_repeat_produces_listeners(self):
         src = (
             "(real k 0)"
-            "(scene s (repeat 3 i (circle (name $'c{i}'))))"
-            "(repeat 3 i (on-click (name $'c{i}')"
+            "(scene s (foreach i 3 (circle (name $'c{i}'))))"
+            "(foreach i 3 (on-click (name $'c{i}')"
             " (animation (move k (to i) (duration 0)))))"
         )
         m = model(src)

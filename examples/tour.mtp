@@ -12,7 +12,7 @@
 (motif times-table ((int n 240 (const)) (real m 2) (real radius 8 (>= 0)))
   (group figure (transform (rotate -90))
     (circle rim (r radius) (fill none) (stroke-width 1.25) (stroke-opacity 0.6))
-    (repeat n k
+    (foreach k n
       (line_
         (from (on-circle radius k n))
         (to (on-circle radius (* m k) n))

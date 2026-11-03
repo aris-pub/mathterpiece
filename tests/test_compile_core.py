@@ -229,24 +229,24 @@ class TestComputedNames:
 
 
 class TestRepeat:
-    # reference.md, "Special forms": (repeat n i decl…).
+    # reference.md, "Special forms": (foreach i n decl…).
     def test_it_declares_n_copies(self):
-        m = model("(scene s (repeat 3 i (circle (name $'dot-{i}') (r (+ i 1)))))")
+        m = model("(scene s (foreach i 3 (circle (name $'dot-{i}') (r (+ i 1)))))")
         assert [m.get(f"dot-{i}").attrs["r"].value for i in range(3)] == [1, 2, 3]
 
     def test_the_count_must_be_known_when_compiling(self):
-        assert model("(int n 2 (const)) (scene s (repeat n i (circle (name $'c{i}'))))").get("c1")
-        error("(int n 2) (scene s (repeat n i (circle (name $'c{i}'))))", "known when compiling")
+        assert model("(int n 2 (const)) (scene s (foreach i n (circle (name $'c{i}'))))").get("c1")
+        error("(int n 2) (scene s (foreach i n (circle (name $'c{i}'))))", "known when compiling")
 
     def test_inside_a_group(self):
-        m = model("(scene s (group g (repeat 2 i (circle (name $'m{i}')))))")
+        m = model("(scene s (group g (foreach i 2 (circle (name $'m{i}')))))")
         assert [m.objects[j].name for j in m.get("g").members] == ["m0", "m1"]
 
     def test_a_plain_name_is_declared_twice(self):
-        error("(scene s (repeat 2 i (circle c)))", "'c' is already declared")
+        error("(scene s (foreach i 2 (circle c)))", "'c' is already declared")
 
     def test_several_declarations(self):
-        m = model("(scene s (repeat 2 i (real (name $'k{i}') i) (circle (name $'c{i}'))))")
+        m = model("(scene s (foreach i 2 (real (name $'k{i}') i) (circle (name $'c{i}'))))")
         assert m.get("k1").value.value == 1
         assert m.get("c1")
 
@@ -423,7 +423,7 @@ class TestLetInBodies:
     # that body holds, and its names are values worked out where the let is written.
     def test_in_a_repeat(self):
         m = model(
-            "(scene s (group g (repeat 3 i (let ((w (* 2 i)))"
+            "(scene s (group g (foreach i 3 (let ((w (* 2 i)))"
             " (circle (name $'a{i}') (r w)) (circle (name $'b{i}') (r (+ w 1)))))))"
         )
         assert [m.get(f"a{i}").attrs["r"].value for i in range(3)] == [0, 2, 4]
@@ -432,7 +432,7 @@ class TestLetInBodies:
     def test_a_value_known_only_while_drawing(self):
         m = model(
             "(real k 1 (>= 0))"
-            " (scene s (repeat 2 i (let ((w (* k i))) (circle (name $'c{i}') (r w)))))"
+            " (scene s (foreach i 2 (let ((w (* k i))) (circle (name $'c{i}') (r w)))))"
         )
         assert m.get("c1").attrs["r"].deps >= {(m.id("k"), None)}
 
@@ -453,3 +453,44 @@ class TestLetInBodies:
 
     def test_its_names_are_not_seen_after_it(self):
         error("(scene s (let ((w 2)) (circle a (r w))) (circle b (r w)))", "unknown name 'w'")
+
+
+class TestForeach:
+    # mtp-2mvr: (foreach i 5 decl…) counts from 0 to 4; (foreach p xs decl…) takes each item of
+    # a list whose length is known when compiling, and (foreach m g decl…) each member of a group.
+    def test_over_a_count(self):
+        m = model("(scene s (foreach i 3 (circle (name $'c{i}') (r (+ i 1)))))")
+        assert [m.get(f"c{i}").attrs["r"].value for i in range(3)] == [1, 2, 3]
+
+    def test_over_a_list(self):
+        m = model(
+            "(list xs [4 5 6] (const)) (scene s (foreach x xs (circle (name $'c{x}') (r x))))"
+        )
+        assert m.get("c5").attrs["r"].value == 5
+
+    def test_over_a_group(self):
+        m = model(
+            "(scene s (group g (circle a (r 1)) (circle b (r 2)))"
+            " (foreach p g (circle (name $'ring-{p.name}') (r (* 2 p.r)))))"
+        )
+        assert m.get("ring-b").attrs["r"].deps >= {(m.id("b"), "r")}
+
+    def test_over_a_spread(self):
+        m = model(
+            "(scene s (group g (circle a (x 1)) (circle b (x 2)))"
+            " (foreach at g.pos (circle_ (pos at))))"
+        )
+        circles = [o for o in m.objects if o.kind == "circle"]
+        assert len(circles) == 4 and circles[3].attrs["x"].deps >= {(m.id("b"), "x")}
+
+    def test_a_writer_on_each_member(self):
+        m = model("(scene s (group g (circle a) (circle b))) (foreach p g (on-drag p p.pos))")
+        drags = [o for o in m.objects if o.kind == "on-drag"]
+        assert [o.data["target"][0] for o in drags] == [m.id("a"), m.id("b")]
+
+    def test_the_count_or_length_must_be_known_when_compiling(self):
+        error("(int n 2) (scene s (foreach i n (circle (name $'c{i}'))))", "known when compiling")
+
+    def test_repeat_is_gone(self):
+        with pytest.raises(CompileError):
+            compile_source("(scene s (repeat 2 i (circle (name $'c{i}'))))")

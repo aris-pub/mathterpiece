@@ -29,7 +29,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
 | `(type name base)` | required | the base type | none | constraints |
-| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `repeat`, `let` |
+| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `foreach`, `let` |
 | `(variant name params shape)` | required | the parameter list; one shape declaration | none | none |
 
 A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t 0.5) (color tint 'red'))`, or `()` for none; each may have a default. `()` is also an empty list of `let` bindings, and is never a value.
@@ -46,8 +46,8 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `repeat`, `let` |
-| `(group name)` | required | none | `(translate point)`, `(transform transform)`, `(defaults …)` | shape declarations, `repeat`, `let` |
+| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `foreach`, `let` |
+| `(group name)` | required | none | `(translate point)`, `(transform transform)`, `(defaults …)` | shape declarations, `foreach`, `let` |
 | `(circle name)` | required | none | shape arguments, `(r (real (>= 0)))` | none |
 | `(rect name)` | required | none | shape arguments, `(width real)`, `(height real)`, `(rx real)`, `(ry real)` (rounded corners) | none |
 | `(ellipse name)` | required | none | shape arguments, `(rx real)`, `(ry real)` | none |
@@ -197,12 +197,12 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(cond (c1 v1) (c2 v2) … (else v))` | the tests in order, then only the value of the first that holds |
 | `(and a b …)` | left to right, stopping at the first false |
 | `(or a b …)` | left to right, stopping at the first true |
-| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, repeat or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written |
+| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, foreach or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written |
 | `(fn params body)` | nothing until called; binds its parameters in its body. A single parameter may be a bare name, typed by where the function is used; several must all be typed |
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name |
 | `(as T literal)` | nothing: the literal, with the type `T`; anything but a literal is a compile error |
-| `(repeat n i decl…)` | when compiling: the declarations, `n` times, with `i` from 0 to n−1; `n` must be known when compiling |
+| `(foreach i n decl…)`, `(foreach x xs decl…)` | when compiling: the declarations once for each `i` from 0 to n−1, or once for each item `x` of the list `xs` (`g.pos`, the list of every member's position, too), or each member of a group `g`; the count, or the list's length, must be known when compiling, while the items may be known only while drawing |
 
 ## Operators
 
@@ -230,7 +230,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `log` | real, and optionally a base (e if left out) | real | input 0 or below; base 0 or below, or 1 |
 | `min` `max` | reals, any count | real | never |
 | `lerp` | `a`, `b`, `t` (reals or points) | the same type | never |
-| `rand` | none (0 to 1), or `lo hi` | real, drawn once per page load and never again; each copy of a `rand` (in each `repeat` copy, each motif instance) draws its own; a `rand` inside a function is a compile error for now | never |
+| `rand` | none (0 to 1), or `lo hi` | real, drawn once per page load and never again; each copy of a `rand` (in each `foreach` copy, each motif instance) draws its own; a `rand` inside a function is a compile error for now | never |
 
 ### Angles
 

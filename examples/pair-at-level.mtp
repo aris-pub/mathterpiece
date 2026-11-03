@@ -44,7 +44,7 @@
     (bracket_ (left mid[2]) (right mid[3]) (from level1) (to level2))
     (bracket_ (left half[0]) (right half[1]) (from level2) (to level3)))
   (group_ (defaults (fill fg))
-    (repeat 4 i
+    (foreach i 4
       (circle_ (pos [(px (+ i 4)) top]) (r 5)))))
 
 (scene tree
@@ -52,7 +52,7 @@
 
   (group axes (defaults (stroke muted) (stroke-width 1) (fill muted))
     (line_ (from [axis top]) (to [axis level3]))
-    (repeat 3 h
+    (foreach h 3
       (line_ (from [(- axis 4) [level1 level2 level3][h]]) (to [axis [level1 level2 level3][h]])))
     (text_ '0' (pos [(- axis 7) (- top 4)]) (halign 'end') (font tick))
     (text_ 'b' (pos [(- axis 7) (- level1 4)]) (halign 'end') (font tick))
@@ -66,7 +66,7 @@
     (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (stroke coral))
     (line_ (from [mid[1] level1]) (to [mid[1] level2]) (stroke coral))
     (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke fg))
-    (repeat 4 i
+    (foreach i 4
       (circle_ (pos [(px i) top]) (r 5) (fill (if (< i 2) teal coral)))))
 
   (outside whole)

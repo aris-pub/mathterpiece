@@ -98,7 +98,7 @@ An expression is an array: its operation first, then its type, then its parts. `
 | `cond` | `["cond", T, [[c, v], …], else]` |
 | `and`, `or` | `["and", "bool", e…]`, `["or", "bool", e…]` |
 | `let` | `["let", T, [[name, e], …], body]` |
-| `rand` | `["rand", "real", site, lo?, hi?]`, `site` numbering each copy of each `rand` after `repeat` and motif instances are expanded, starting at 0; each site draws its number once, when the page loads |
+| `rand` | `["rand", "real", site, lo?, hi?]`, `site` numbering each copy of each `rand` after `foreach` and motif instances are expanded, starting at 0; each site draws its number once, when the page loads |
 
 ## Free and bound values
 

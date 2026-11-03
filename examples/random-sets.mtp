@@ -41,9 +41,9 @@
   (list d (map [0 1 2 3 4] (fn p (dist-to-set p c u1 u2 u3 u4))))
   (real gap (abs (- d[1] d[2])))
   (group_ (defaults (stroke fg) (stroke-width 1.5))
-    (repeat 4 k
+    (foreach k 4
       (line_ (from [middle -105]) (to [(+ middle dx[(+ k 1)]) (+ -105 dy[(+ k 1)])]))))
-  (repeat 5 p
+  (foreach p 5
     (circle_ (pos [(+ middle dx[p]) (+ -105 dy[p])]) (r (if in[p] 7 5))
       (fill (if in[p] accent fg)) (stroke (if in[p] accent none)))
     (text_ names[p] (pos [(+ middle dx[p] name-dx[p]) (+ -105 dy[p] name-dy[p])])

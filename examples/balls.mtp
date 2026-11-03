@@ -45,7 +45,7 @@
   ; Where the 32 points are. These are not drawn: the points in space sit on them, and x and y
   ; are read from them, so they come first.
   (group spots
-    (repeat 32 i
+    (foreach i 32
       (circle_ (pos [(rand 170 430) (rand -290 -30)]))))
 
   (point x-at (lerp spots[x-from].pos spots[x-to].pos x-t))
@@ -63,7 +63,7 @@
 
   ; A point in x's ball takes x's color, else one in y's ball takes y's.
   (group space
-    (repeat 32 i
+    (foreach i 32
       (let ((in-x (in-ball x.pos r spots[i].pos)) (in-y (in-ball y.pos r spots[i].pos)))
         (circle_ (pos spots[i].pos) (r 4.5)
           (fill (cond (in-x x-color) (in-y y-color) (else fg)))
@@ -84,7 +84,7 @@
 
   ; Faint rings at ρ₁ to ρₖ around both points.
   (group rings (defaults (fill none) (stroke muted))
-    (repeat 5 j
+    (foreach j 5
       (circle_ (pos x.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))
       (circle_ (pos y.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))))
 
@@ -106,7 +106,7 @@
   (group bar
     (rect_ (pos [(+ bar-left (/ bar-width 2)) bar-y]) (width bar-width) (height 18) (rx 3)
       (fill env))
-    (repeat 5 j
+    (foreach j 5
       ; How far the segment is filled, and its width on the bar.
       (let ((filled (min rho[j] r)) (width (max 0 (* at (- filled edges[j])))))
         (rect_ (pos [(+ bar-left (* at edges[j]) (/ width 2)) bar-y]) (width width) (height 18)
@@ -117,7 +117,7 @@
           (opacity (if (and (>= r (- rho[j] 1e-9)) (> width 26)) 1 0)))))
     ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
     (group ticks (defaults (stroke fg) (stroke-width 1.2) (fill fg))
-      (repeat 6 j
+      (foreach j 6
         (line_ (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
           (to [(+ bar-left (* at edges[j])) (- bar-y 9)])
           (opacity (if (<= j k) 1 0)))
@@ -128,7 +128,7 @@
 ; Clicking a point makes it x or y, replacing the older of the two, which slides there, and
 ; grows r to the new δ/2. The point it slides from is where it was going: from-moves come before
 ; to-moves, so they read the old to.
-(repeat 32 i
+(foreach i 32
   (on-click space[i]
     (animation (defaults (duration 0.4))
       (at-once

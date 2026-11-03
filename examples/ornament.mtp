@@ -53,13 +53,13 @@
 
   ; An edge is drawn in full when either face it borders faces the viewer.
   (group edges (defaults (stroke ink) (stroke-width 1.1))
-    (repeat 6 e
+    (foreach e 6
       (line_ (from on-screen[edge-from[e]]) (to on-screen[edge-to[e]])
         (opacity (if (or front[edge-face[e]] front[edge-other-face[e]]) 1 0.35)))))
 
   ; A corner nearer the viewer is larger and darker.
   (group corners (defaults (fill ink))
-    (repeat 4 k
+    (foreach k 4
       (circle_ (pos on-screen[k]) (r (+ 1.25 (* 0.6 near[k])))
         (opacity (+ 0.55 (* 0.45 near[k])))))))
 

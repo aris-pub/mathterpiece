@@ -124,7 +124,7 @@ A value known when compiling that breaks a constraint is a compile error. A boun
 
     (real p 0.5 (>= 0) (<= 1))
     (slider s (move p (from 0) (to 1.4)))   ; p stops at exactly 1
-    (int n 8 (const))                                   ; known when compiling: usable as a repeat count
+    (int n 8 (const))                                   ; known when compiling: usable as a foreach count
 
 ### 5.c Broadening (none, more later)
 

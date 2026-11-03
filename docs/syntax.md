@@ -122,8 +122,8 @@ A special form looks like a call but does something a function cannot: it evalua
 | `(if c a b)` | evaluates only the branch taken |
 | `(cond (c1 a) (c2 b) (else d))` | takes clauses, each a test and a value; evaluates only the first clause whose test holds |
 | `(and …)` `(or …)` | stop at the first part that decides the answer |
-| `(let ((h (* 2 k))) (+ h 1))` | names values for use inside its body, a single expression, and gives that expression; in a scene, group, repeat or motif body, `(let ((w (* 2 i))) (circle …) (text …))` names them for the declarations it holds |
-| `(repeat 5 i (circle (name $'dot-{i}') …))` | stands for the expressions it produces, spliced in place when compiling; the count must be known then |
+| `(let ((h (* 2 k))) (+ h 1))` | names values for use inside its body, a single expression, and gives that expression; in a scene, group, foreach or motif body, `(let ((w (* 2 i))) (circle …) (text …))` names them for the declarations it holds |
+| `(foreach i 5 (circle (name $'dot-{i}') …))` | stands for the expressions it produces, spliced in place when compiling; the count must be known then |
 | `(fn p (* 2 p.r))` | a function written in place: binds its parameters in its body (section 5) |
 | `(. X Y)` | a part of `X`; `Y` is not evaluated when it is an attribute name (section 7) |
 | `(name s)` | turns a string into a name (section 4) |
