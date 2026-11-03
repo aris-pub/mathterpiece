@@ -251,6 +251,17 @@ describe("panning and zooming a canvas", () => {
     expect(v("c", "x")).toBe(0);
   });
 
+  it("pans by moving the view box alone, without drawing the shapes again", () => {
+    // Drawing every shape again on each pointer move made panning a large scene slow.
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
+    const before = document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]`);
+    pointer("pointerdown", 100, 100);
+    pointer("pointermove", 164, 132);
+    expect(box()).toEqual([-12, -11, 20, 20]);
+    expect(document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]`)).toBe(before);
+    pointer("pointerup", 164, 132);
+  });
+
   it("drags a draggable shape instead of panning", () => {
     page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     const dot = document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]:last-child`)!;

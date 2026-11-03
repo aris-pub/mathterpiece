@@ -1,7 +1,7 @@
 ; The Ulam spiral: the whole numbers laid out on a square spiral from 1 in the middle, with a
 ; dot on every prime. Many primes fall on diagonal lines. Drag to pan, scroll or pinch to zoom,
-; and double-click to go back to the view box; turn on the numbers and zoom into the middle to
-; see how the spiral runs.
+; and double-click to go back to the view box; turn on the path to see how the spiral runs
+; through every number, and zoom into the middle to read the first ones.
 
 (color paper '#f6f1e7')
 (color ink '#1f2a44')
@@ -40,9 +40,10 @@
     (foreach p (where (range 1 30000 (gap 1)) prime?) (circle_ (pos (spiral p)) (r 0.45))))
   (circle one (r 0.45) (fill terracotta) (stroke none))
 
-  ; The first 81 numbers, a 9 by 9 square, and the path the spiral takes through them. Their
-  ; text keeps its size on screen, so they are only readable zoomed in.
-  (polyline path (points (map 81 (fn i (spiral (+ i 1))))) (fill none) (stroke soft)
+  ; The path the spiral takes through every number, one shape, and the first 81 numbers, a 9 by
+  ; 9 square. Their text keeps its size on screen, so they are only readable zoomed in; 30000
+  ; texts would be slow to draw, where one polyline is not.
+  (polyline path (points (map (range 1 30000 (gap 1)) spiral)) (fill none) (stroke soft)
     (stroke-width 1) (stroke-opacity 0.5))
   (group labels (defaults (font number) (halign 'middle') (valign 'middle'))
     (foreach i 81
@@ -54,7 +55,7 @@
     (text_ '(canvas view (view-x -90) (view-y -98) (view-width 180) (view-height 188))'
       (pos (bottom dots 6)))))
 
-(toggle show-labels none (label 'numbers'))
+(toggle show-labels none (label 'the path and the first numbers'))
 
 ; The view box shows the whole spiral; panning and zooming are on by default.
 (canvas view (view-x -90) (view-y -98) (view-width 180) (view-height 188)

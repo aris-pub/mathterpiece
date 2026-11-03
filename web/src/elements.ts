@@ -319,7 +319,9 @@ export class MtpCanvas extends MtpPart {
         const upp = unitsPerPx();
         look.dx -= (event.clientX - was[0]) * upp;
         look.dy -= (event.clientY - was[1]) * upp;
-        this.redraw();
+        // A pan keeps the scale, so the shapes, whose text and dot sizes follow the scale, stay
+        // as drawn: only the view box moves. A zoom draws them again.
+        svg.setAttribute("viewBox", lookBox(viewOf(rt, canvas).box, look).join(" "));
       } else if (touches.size === 2) {
         const before = spread();
         touches.set(event.pointerId, [event.clientX, event.clientY]);
