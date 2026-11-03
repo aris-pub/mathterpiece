@@ -66,7 +66,8 @@ just check       # lint, type checks and both test suites
 - `mathterpiece/`: the compiler (`parse.py`, `compiler.py`, `mtpc.py`) and the `mtp` command.
 - `web/src/`: the runtime, which plays a `.mtpc` and defines the page's elements.
 - `docs/`: the language and the file format.
-- `examples/`: figures to read and try, several from the Bourgain notes.
+- `examples/`: one figure per feature to read and try, and the interactive figures from the
+  Bourgain notes (`bourgain-*.mtp`).
 - `tests/`: the compiler's tests; `tests/shared/` holds cases both the compiler and the runtime
   check.
 - `web/test/`: the runtime's tests.
