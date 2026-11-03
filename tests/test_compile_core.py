@@ -2,25 +2,10 @@
 sections 4, 8 and 9; docs/type-system.md sections 3 to 5.b)."""
 
 import pytest
+from helpers import error, model, value
 
 from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, COLOR, INT, RATIO, REAL, STRING, ListT, Maybe, Refine
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
-
-
-def value(src, name):
-    """The folded value of a variable known when compiling."""
-    attribute = model(src).get(name).value
-    assert not attribute.bound, f"{name} is not known when compiling"
-    return attribute.value
 
 
 class TestVariables:

@@ -1,9 +1,9 @@
 """Motifs: types of shape made of several shapes, with parameters (docs/type-system.md 5.e;
 docs/reference.md "Types" and "The scene and shapes"; docs/mtpc.md "Objects")."""
 
-import pytest
+from helpers import error, model
 
-from mathterpiece.compiler import CompileError, compile_source
+from mathterpiece.compiler import compile_source
 from mathterpiece.types import REAL, Interface, ShapeT, fits
 
 DIAL = (
@@ -12,15 +12,6 @@ DIAL = (
     "  (real angle (* 360 t))"
     "  (line hand (to [face.r 0])))"
 )
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
 
 
 class TestDeclaring:

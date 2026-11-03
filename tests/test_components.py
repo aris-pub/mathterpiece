@@ -3,22 +3,14 @@
 expression"; docs/mtpc.md "Objects")."""
 
 import pytest
+from helpers import doc, error, model
+from mtpc_check import errors
 
-from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, ComponentT
 
 K = "(real k 0 (>= 0) (<= 10))"
 MOVE = "(animation (move k (to 5) (duration 1)))"
 SLIDE = "(move k (from 0) (to 5))"
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
 
 
 class TestControls:
@@ -218,21 +210,15 @@ class TestStartingWithoutTheReader:
         error(f"{self.S} (play p (autoplay v v) {MOVE})", "autoplay takes")
 
     def test_the_compiled_file(self):
-        import json
-
-        from mtpc_check import errors
-
-        from mathterpiece.mtpc import write
-
-        m = model(
+        d = doc(
             f"{self.S} (on-view v {MOVE}) (play p (autoplay) {MOVE}) (play q (autoplay v) {MOVE})"
         )
-        d = json.loads(write(m))
         assert errors(d) == []
+        names = d["names"]
         (o,) = [o for o in d["objects"] if o["kind"] == "on-view"]
-        assert o["view"] == m.id("v")
-        assert d["objects"][m.id("p")]["autoplay"] == "load"
-        assert d["objects"][m.id("q")]["autoplay"] == m.id("v")
+        assert o["view"] == names["v"]
+        assert d["objects"][names["p"]]["autoplay"] == "load"
+        assert d["objects"][names["q"]]["autoplay"] == names["v"]
 
 
 class TestReleaseListeners:
@@ -253,14 +239,7 @@ class TestReleaseListeners:
         error(f"{K} ({kind} {MOVE})", f"{kind} takes the shape it listens to")
 
     def test_the_compiled_file(self):
-        import json
-
-        from mtpc_check import errors
-
-        from mathterpiece.mtpc import write
-
-        m = model(f"{self.S} (on-release c {MOVE}) (on-dragend c (when true) {MOVE})")
-        d = json.loads(write(m))
+        d = doc(f"{self.S} (on-release c {MOVE}) (on-dragend c (when true) {MOVE})")
         assert errors(d) == []
         kinds = [o["kind"] for o in d["objects"]]
         assert "on-release" in kinds and "on-dragend" in kinds

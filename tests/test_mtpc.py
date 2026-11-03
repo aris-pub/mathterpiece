@@ -1,25 +1,28 @@
-"""Writing the .mtpc (docs/mtpc.md): every shared case gives a document the schema accepts, the
-same bytes every time, and the parts the runtime needs."""
+"""Writing the .mtpc (docs/mtpc.md): every shared case and every example gives a document the
+schema accepts, the same bytes every time, and the parts the runtime needs."""
 
 import json
 from pathlib import Path
 
 import pytest
+from helpers import doc
 from mtpc_check import errors
 
 from mathterpiece.compiler import compile_source
 from mathterpiece.mtpc import write
 
 SHARED = sorted((Path(__file__).parent / "shared").glob("*.mtp"))
-
-
-def doc(src):
-    return json.loads(write(compile_source(src)))
+EXAMPLES = sorted((Path(__file__).parent.parent / "examples").glob("*.mtp"))
 
 
 @pytest.mark.parametrize("path", SHARED, ids=[p.stem for p in SHARED])
 def test_every_shared_case_passes_the_schema(path):
-    assert errors(json.loads(write(compile_source(path.read_text())))) == []
+    assert errors(doc(path.read_text())) == []
+
+
+@pytest.mark.parametrize("path", EXAMPLES, ids=[p.stem for p in EXAMPLES])
+def test_the_example_compiles_to_a_valid_mtpc(path):
+    assert errors(doc(path.read_text())) == []
 
 
 @pytest.mark.parametrize("path", SHARED, ids=[p.stem for p in SHARED])

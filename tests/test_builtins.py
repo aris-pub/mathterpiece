@@ -1,32 +1,14 @@
 """Built-in functions and constants (docs/reference.md "Operators", "Functions" and
 "Constants"; docs/type-system.md 5.c for where they are undefined)."""
 
+import json
 import math
 
 import pytest
+from helpers import doc, error, model, typ, value
+from mtpc_check import errors
 
-from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
-
-
-def value(src, name="v"):
-    attribute = model(src).get(name).value
-    assert not attribute.bound, f"{name} is not known when compiling"
-    return attribute.value
-
-
-def typ(src, name="v"):
-    attribute = model(src).get(name).value
-    return attribute.expr.type if attribute.bound else attribute.type
 
 
 class TestNumbers:
@@ -197,13 +179,7 @@ class TestInfinity:
         assert value("(string v $'{infty}')") == "∞"
 
     def test_the_compiled_file(self):
-        import json
-
-        from mtpc_check import errors
-
-        from mathterpiece.mtpc import write
-
-        d = json.loads(write(model("(real x 1) (bool b (< x infty))")))
+        d = doc("(real x 1) (bool b (< x infty))")
         assert errors(d) == []
         bound = d["objects"][d["names"]["b"]]["value"]["bound"]
         assert "infty" in json.dumps(bound)

@@ -1,22 +1,12 @@
 """Variants: a type of shape that refines one shape type (docs/type-system.md 5.e; docs/mtpc.md
 "Objects"), and variables that hold shapes (type-system.md 6)."""
 
-import pytest
+from helpers import error, model
 
-from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import Interface, ShapeT, fits
 
 BAR = "(variant bar ((real p 0 (>= 0))) (rect_ (width 0.8) (y 0) (height (* 5 p))))"
 DIAL = "(motif dial (real t 0.5) (circle face (r 1)))"
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
 
 
 class TestVariants:

@@ -2,27 +2,10 @@
 "Two properties of every expression"; docs/mtpc.md "Everything known when compiling is
 already folded")."""
 
-import pytest
-
-from mathterpiece.compiler import CompileError, compile_source
+from helpers import error, model, value
 
 DOUBLE = "(func double (real x) (* 2 x))"
 FACT = "(func fact (int n) (if (<= n 1) 1 (* n (fact (- n 1)))))"
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
-
-
-def value(src, name):
-    attribute = model(src).get(name).value
-    assert not attribute.bound, f"{name} is not known when compiling"
-    return attribute.value
 
 
 class TestCalls:

@@ -2,17 +2,8 @@
 "Components" and "Writes and conditions"; docs/mtpc.md "Steps" and "Transitions")."""
 
 import pytest
-
-from mathterpiece.compiler import CompileError, compile_source
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
+from helpers import doc, error, model
+from mtpc_check import errors
 
 
 def steps(src, name="a"):
@@ -318,17 +309,9 @@ class TestLoops:
         assert m.get("a").attrs["duration"].value == 3
 
     def test_the_compiled_file_writes_the_loop(self):
-        import json
-
-        from mathterpiece.mtpc import write
-
-        m = model(f"{K} (animation a (loop) (move k (to 1) (duration 1)))")
-        doc = json.loads(write(m))
-        a = doc["objects"][m.id("a")]
-        assert a["steps"][:2] == ["loop", None]
-        from mtpc_check import errors
-
-        assert errors(doc) == []
+        d = doc(f"{K} (animation a (loop) (move k (to 1) (duration 1)))")
+        assert d["objects"][d["names"]["a"]]["steps"][:2] == ["loop", None]
+        assert errors(d) == []
 
 
 class TestForeverDuration:

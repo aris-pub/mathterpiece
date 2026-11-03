@@ -1,25 +1,9 @@
 """Functions: func, calls, recursion, functions as values and fn (docs/syntax.md section 5;
 docs/type-system.md sections 2 and 5.a; docs/mtpc.md "Functions")."""
 
-import pytest
+from helpers import bound, error, model
 
-from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import INT, REAL, FuncT, Maybe
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
-
-
-def bound(src, name):
-    attribute = model(src).get(name).value
-    assert attribute.bound
-    return attribute.expr
 
 
 class TestDeclaring:

@@ -1,21 +1,13 @@
 """Groups, the scene, positions and frames (docs/type-system.md 5.e and 6; docs/reference.md
 "Coordinates" and "The scene and shapes")."""
 
-import pytest
+from helpers import doc, error, model
+from mtpc_check import errors
 
-from mathterpiece.compiler import CompileError, compile_source
+from mathterpiece.compiler import compile_source
 from mathterpiece.types import INT, POINT, REAL, ListT, Maybe, Refine
 
 RADIUS = Refine(REAL, ((">=", 0),))
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
 
 
 def attr(src, name, a):
@@ -279,15 +271,7 @@ class TestExistsWhen:
         error(src.format("(real r a.r)"), "may be none")
 
     def test_the_compiled_file(self):
-        import json
-
-        from mtpc_check import errors
-
-        from mathterpiece.mtpc import write
-
-        d = json.loads(
-            write(model("(scene s (real k 0) (circle|none c (r 1)) (exists-when c (> k 0)))"))
-        )
+        d = doc("(scene s (real k 0) (circle|none c (r 1)) (exists-when c (> k 0)))")
         assert errors(d) == []
         assert d["objects"][d["names"]["c"]]["attrs"]["exists"]["bound"][0] == "builtin"
 

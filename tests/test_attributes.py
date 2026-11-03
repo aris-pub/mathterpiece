@@ -1,32 +1,10 @@
 """Attributes by type (docs/type-system.md, section 8)."""
 
-import pytest
+from helpers import bound, error, model, value
 
-from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import FONT, INT, REAL, Refine
 
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
-
-
-def value(src, name):
-    attribute = model(src).get(name).value
-    assert not attribute.bound, f"{name} is not known when compiling"
-    return attribute.value
-
-
-def bound(src, name):
-    attribute = model(src).get(name).value
-    assert attribute.bound
-    return attribute.expr
 
 
 class TestNames:

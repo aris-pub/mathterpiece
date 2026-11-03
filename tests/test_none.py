@@ -1,35 +1,9 @@
 """none: where it comes from, how it spreads, and where it must be handled (docs/type-system.md,
 section 5.c; the Undefined column in docs/reference.md)."""
 
-import pytest
+from helpers import bound, error, model, typ, value
 
-from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, REAL, STRING, ListT, Maybe, Refine
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
-
-
-def typ(src, name):
-    return model(src).get(name).value.type
-
-
-def bound(src, name):
-    attribute = model(src).get(name).value
-    assert attribute.bound
-    return attribute.expr
-
-
-def value(src, name):
-    attribute = model(src).get(name).value
-    assert not attribute.bound
-    return attribute.value
 
 
 class TestWhereItComesFrom:

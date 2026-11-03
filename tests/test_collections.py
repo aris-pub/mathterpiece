@@ -1,22 +1,12 @@
 """Collection functions and parameters typed with shapes or interfaces (docs/syntax.md
 "Functions as arguments"; docs/reference.md "Collections"; docs/type-system.md 5.c and 6)."""
 
-import pytest
+from helpers import error, model
 
-from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe, Refine
 
 RADIUS = Refine(REAL, ((">=", 0),))
 G = "(group g (circle a (r 1)) (circle b (r 2)))"
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
 
 
 def expr(src, name):

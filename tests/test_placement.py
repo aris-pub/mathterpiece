@@ -1,25 +1,13 @@
 """Placing shapes relative to others (mtp-50n): eight functions give a point on a shape's box,
 the middle of a side or a corner, pushed out by an optional gap (docs/reference.md, "Placing")."""
 
-import json
-
 import pytest
+from helpers import doc, error, model
 from mtpc_check import errors
 
-from mathterpiece.compiler import CompileError, compile_source
-from mathterpiece.mtpc import write
 from mathterpiece.types import POINT, Maybe
 
 SIDES = ["top", "bottom", "left", "right", "top-left", "top-right", "bottom-left", "bottom-right"]
-
-
-def model(src):
-    return compile_source(src)
-
-
-def error(src, match):
-    with pytest.raises(CompileError, match=match):
-        compile_source(src)
 
 
 @pytest.mark.parametrize("side", SIDES)
@@ -63,7 +51,7 @@ def test_it_takes_a_shape():
 
 
 def test_the_compiled_file():
-    d = json.loads(write(model("(scene s (circle c (r 1)) (point p (top-right c 0.5)))")))
+    d = doc("(scene s (circle c (r 1)) (point p (top-right c 0.5)))")
     assert errors(d) == []
     assert d["objects"][d["names"]["p"]]["value"]["bound"][0] == "anchor"
 
@@ -99,6 +87,6 @@ class TestRowsAndColumns:
         error("(scene s (row r (circle a) (text t 'hi')))", "a text's box")
 
     def test_the_compiled_file(self):
-        d = json.loads(write(model("(scene s (row r (gap 1) (circle a) (circle b)))")))
+        d = doc("(scene s (row r (gap 1) (circle a) (circle b)))")
         assert errors(d) == []
         assert d["objects"][d["names"]["r"]]["layout"]["axis"] == "row"
