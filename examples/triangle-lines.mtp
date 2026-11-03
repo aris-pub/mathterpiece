@@ -1,0 +1,133 @@
+; The lines a triangle is known for, and where they meet. Drag the top corner anywhere, and
+; slide the two lower corners along their rail: the conditions under the rail keep them on it
+; and apart. Each toggle fades in one family of lines, and the Euler line passes through three
+; of the points they meet at.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color terracotta '#e76f51')
+(color teal '#2a9d8f')
+(color saffron '#e9c46a')
+(color plum '#6d597a')
+(font variable (family 'Georgia, serif') (style 'italic') (size 18))
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+(func[real] dot ((point p) (point q)) (+ (* p.x q.x) (* p.y q.y)))
+
+; The point on the line through p and q closest to v: the foot of the perpendicular from v.
+(func[point|none] foot ((point v) (point p) (point q))
+  (let ((d (- q p))) (+ p (* (/ (dot (- v p) d) (dot d d)) d))))
+
+; The center of the circle through the three corners, from the usual determinant formula.
+(func[point|none] circumcenter ((point p) (point q) (point r))
+  (let ((d (* 2 (+ (* p.x (- q.y r.y)) (* q.x (- r.y p.y)) (* r.x (- p.y q.y)))))
+        (pp (dot p p)) (qq (dot q q)) (rr (dot r r)))
+    [(/ (+ (* pp (- q.y r.y)) (* qq (- r.y p.y)) (* rr (- p.y q.y))) d)
+     (/ (+ (* pp (- r.x q.x)) (* qq (- p.x r.x)) (* rr (- q.x p.x))) d)]))
+
+; The segment of the line through v and f that reaches both f and h, so an altitude still
+; reaches the orthocenter when the triangle is obtuse and h lies outside it.
+(func[point|none] reach-from ((point v) (point f) (point|none h))
+  (let ((s (/ (dot (- h v) (- f v)) (dot (- f v) (- f v))))) (lerp v f (min 0 s))))
+(func[point|none] reach-to ((point v) (point f) (point|none h))
+  (let ((s (/ (dot (- h v) (- f v)) (dot (- f v) (- f v))))) (lerp v f (max 1 s))))
+
+(scene plane
+  (background paper)
+
+  (line rail (from [-7.5 -3]) (to [7.5 -3]) (stroke soft) (stroke-width 1))
+
+  (circle ca (x -4) (y -3) (r 0.22) (fill ink))
+  (circle cb (x 4) (y -3) (r 0.22) (fill ink))
+  (circle cc (pos [-1 3.5]) (r 0.22) (fill ink))
+
+  (let ((A ca.pos) (B cb.pos) (C cc.pos)
+        (a (dist B C)) (b (dist C A)) (c (dist A B)))
+    (point G (* (/ 1 3) (+ A B C)))
+    (point|none O (circumcenter A B C))
+    (point|none H [(- (+ A.x B.x C.x) (* 2 O.x)) (- (+ A.y B.y C.y) (* 2 O.y))])
+    (point|none I (* (/ 1 (+ a b c)) (+ (* a A) (* b B) (* c C))))
+    (real|none inradius (/ (abs (- (* (- B.x A.x) (- C.y A.y)) (* (- C.x A.x) (- B.y A.y))))
+                           (+ a b c)))
+    (point|none FA (foot A B C))
+    (point|none FB (foot B C A))
+    (point|none FC (foot C A B))
+
+    (triangle shape (a A) (b B) (c C) (fill none) (stroke ink) (stroke-width 3)
+      (line-join 'round'))
+
+    ; Each family is cut off above the captions, so lines that run far past the triangle, as
+    ; altitudes and the Euler line do when it is obtuse, do not cross them.
+    (group medians (defaults (stroke terracotta) (fill terracotta) (stroke-width 2))
+      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (line_ (from A) (to (lerp B C 0.5)))
+      (line_ (from B) (to (lerp C A 0.5)))
+      (line_ (from C) (to (lerp A B 0.5)))
+      (circle_ (pos G) (r 0.14) (stroke none))
+      (text_ 'G' (pos (+ G [0.25 0.2])) (font variable)))
+
+    (group altitudes (defaults (stroke teal) (fill teal) (stroke-width 2))
+      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (line|none_ (from (reach-from A FA H)) (to (reach-to A FA H)))
+      (line|none_ (from (reach-from B FB H)) (to (reach-to B FB H)))
+      (line|none_ (from (reach-from C FC H)) (to (reach-to C FC H)))
+      ; Where a foot lands beyond its side, the side is drawn on to it, thin and dashed.
+      (line|none_ (from FA) (to (lerp B C (max 0 (min 1 (/ (dot (- FA B) (- C B)) (* a a))))))
+        (stroke-width 1) (dash [4 4]))
+      (line|none_ (from FB) (to (lerp C A (max 0 (min 1 (/ (dot (- FB C) (- A C)) (* b b))))))
+        (stroke-width 1) (dash [4 4]))
+      (line|none_ (from FC) (to (lerp A B (max 0 (min 1 (/ (dot (- FC A) (- B A)) (* c c))))))
+        (stroke-width 1) (dash [4 4]))
+      (circle|none_ (pos H) (r 0.14) (stroke none))
+      (text|none_ 'H' (pos (+ H [0.25 0.2])) (font variable)))
+
+    (group bisectors (defaults (stroke saffron) (fill saffron) (stroke-width 2))
+      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (line|none_ (from A) (to (* (/ 1 (+ b c)) (+ (* b B) (* c C)))))
+      (line|none_ (from B) (to (* (/ 1 (+ c a)) (+ (* c C) (* a A)))))
+      (line|none_ (from C) (to (* (/ 1 (+ a b)) (+ (* a A) (* b B)))))
+      (circle|none_ (pos I) (r inradius) (fill none))
+      (circle|none_ (pos I) (r 0.14) (stroke none))
+      (text|none_ 'I' (pos (+ I [0.25 0.2])) (font variable)))
+
+    ; The line runs well past the canvas both ways: 30 units from O along O to H.
+    (group euler (defaults (stroke plum) (fill plum) (stroke-width 2))
+      (clip (rect_ (pos [0 1.25]) (width 16) (height 10.5)))
+      (line|none_ (from (- O (* (/ 30 (dist O H)) (- H O))))
+                  (to (+ O (* (/ 30 (dist O H)) (- H O)))))
+      (circle|none_ (pos O) (r (dist O cc.pos)) (fill none) (stroke-width 1))
+      (circle|none_ (pos O) (r 0.14) (stroke none))
+      (text|none_ 'O' (pos (+ O [0.25 0.2])) (font variable))
+      (circle_ (pos G) (r 0.14) (stroke none))
+      (circle|none_ (pos H) (r 0.14) (stroke none))))
+
+  (group names (defaults (fill ink) (font variable) (halign 'middle'))
+    (text_ 'A' (pos (+ ca.pos [0 -0.45])) (valign 'top'))
+    (text_ 'B' (pos (+ cb.pos [0 -0.45])) (valign 'top'))
+    (text_ 'C' (pos (+ cc.pos [0 0.45])) (valign 'bottom')))
+
+  (group captions (defaults (fill soft) (font code) (halign 'middle'))
+    (text_ '(on-drag ca ca.x (>= ca.x -7) (<= ca.x (- cb.x 1.5)))' (pos [0 -4.6]))
+    (text_ '(on-drag cb cb.x (>= cb.x (+ ca.x 1.5)) (<= cb.x 7))' (pos [0 -5.3]))))
+
+(toggle show-medians none (label 'medians'))
+(toggle show-altitudes none (label 'altitudes'))
+(toggle show-bisectors none (label 'angle bisectors'))
+(toggle show-euler none (label 'Euler line'))
+
+; Switching a family on or off fades it in or out over 0.4 s.
+(canvas view (view-x -8) (view-y -6) (view-width 16) (view-height 12.5) (pan false) (zoom false)
+  (move none (duration 0.4) (ease 'ease-in-out'))
+  rail
+  (when show-euler.value euler)
+  (when show-bisectors.value bisectors)
+  (when show-altitudes.value altitudes)
+  (when show-medians.value medians)
+  shape names captions ca cb cc)
+
+; The lower corners move only along the rail, so each drag writes x alone; the conditions keep
+; each one on the rail and at least 1.5 from the other, so the corners never swap sides.
+(on-drag ca ca.x (>= ca.x -7) (<= ca.x (- cb.x 1.5)))
+(on-drag cb cb.x (>= cb.x (+ ca.x 1.5)) (<= cb.x 7))
+(on-drag cc cc.pos)
