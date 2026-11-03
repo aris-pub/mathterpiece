@@ -1333,12 +1333,8 @@ class _Compiler:
             if _duration(steps) <= 0:
                 raise CompileError("this animation loops, but a round of it takes no time", pos)
             steps = ("loop", self.loop_count(loops[0], scope), steps)
-        # An animation that loops forever has no duration: reading it is a compile error.
-        attrs = (
-            {}
-            if _duration(steps) == float("inf")
-            else {"duration": Attribute(REAL, _duration(steps))}
-        )
+        # One that loops forever lasts ∞.
+        attrs = {"duration": Attribute(_with_const(REAL), _duration(steps))}
         obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data={"steps": steps})
         return self.add(obj)
 
@@ -2311,6 +2307,21 @@ class _Compiler:
         # can write it (mtpc.md, "Attributes").
         if not attribute.bound and not _is_literal(node) and not self.is_constant(node, scope):
             attribute.type = _with_const(attribute.type)
+        if not attribute.bound and _is_infinite(attribute.value):
+            # ∞ is only a value known when compiling: never drawn, never written (mtp-asl).
+            name, _, attr = self.where if self.where else (None, None, None)
+            if attr is not None:
+                raise CompileError(
+                    f"{name or 'this shape'}'s {attr} would be infty: only a const variable may be"
+                    " infty",
+                    node.pos,
+                )
+            if not _is_const(attribute.type):
+                raise CompileError(
+                    f"{name or 'this value'} would hold infty, which only a variable that never"
+                    " changes may: declare it (const)",
+                    node.pos,
+                )
         return attribute
 
     def is_constant(self, node: Node, scope) -> bool:
@@ -2761,10 +2772,6 @@ class _Compiler:
             return self.arith(pos, "/", [self.arith(pos, "+", ends), _known(INT, len(ends))])
         if name in obj.attrs:
             return self.read(i, name)
-        if obj.kind == "animation" and name == "duration":
-            raise CompileError(
-                f"{obj.name or 'this animation'} loops forever, so it has no duration", pos
-            )
         if obj.kind == "instance":
             for m in obj.members:
                 if self.model.objects[m].name == name:
@@ -3460,6 +3467,12 @@ def _fold_number(op: str, vals: list, pos: Pos):
         raise CompileError("division by zero", pos) from None
     except OverflowError:
         raise CompileError("the result is too large for a real", pos) from None
+    if isinstance(v, float) and math.isnan(v):
+        shown = ", ".join(_value_str(x) for x in vals)
+        raise CompileError(f"{op} is undefined at {shown}", pos)
+    # ∞ in gives ∞ out; ∞ from finite numbers is an overflow.
+    if _is_infinite(v) and any(_is_infinite(x) for x in vals):
+        return v
     if isinstance(v, (int, float, Fraction)) and not math.isfinite(v):
         raise CompileError("the result is too large for a real", pos)
     if isinstance(v, (int, Fraction)) and abs(v) > MAX_REAL:
@@ -3636,7 +3649,19 @@ def _show(c) -> str:
 
 
 def _value_str(v) -> str:
+    """A value as an error message shows it to the author."""
+    if _is_infinite(v):
+        return "infty" if v > 0 else "(- infty)"
     return str(v)
+
+
+def _is_infinite(v) -> bool:
+    return isinstance(v, float) and math.isinf(v)
+
+
+def _infinity(v: float) -> str:
+    """Infinity as a string shows it to the reader."""
+    return "∞" if v > 0 else "-∞"
 
 
 # What a format spec is tried on, to check it fits the type.
@@ -3683,6 +3708,8 @@ def _show_value(t: Type, v, spec: str) -> str:
     """A value shown in a string. Halves round away from zero on the number's shortest
     decimal form (reference.md, "Numbers"), so 2.675 to two attributes is 2.68."""
     base = _base(t)
+    if _is_infinite(v):
+        return _infinity(v)
     if base == INT:
         return format(int(v), spec)
     if base in (RATIO, REAL):

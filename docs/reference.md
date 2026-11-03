@@ -303,6 +303,7 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 | `pi`, `π` | 3.14159… |
 | `tau`, `τ` | 6.28318… |
 | `euler` | 2.71828… |
+| `infty`, `∞` | infinity, above every number; written `(- infty)` below them (see the type system, section 5.c) |
 
 ## Interpolated strings
 

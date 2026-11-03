@@ -379,6 +379,9 @@ export class Runtime {
   decode(t: Type, v: unknown): unknown {
     if (v === null || v === undefined) return null;
     const c = this.core(t);
+    // JSON has no infinity, so the .mtpc writes a real that is infinite as a name.
+    if (c === "real" && v === "infty") return Number.POSITIVE_INFINITY;
+    if (c === "real" && v === "-infty") return Number.NEGATIVE_INFINITY;
     if (c === "ratio") {
       const [num, den] = v as [number, number];
       return num / den;

@@ -6,7 +6,7 @@ import math
 import pytest
 
 from mathterpiece.compiler import CompileError, compile_source
-from mathterpiece.types import INT, POINT, REAL, ListT, Maybe
+from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe
 
 
 def model(src):
@@ -162,3 +162,48 @@ class TestNumberTimesList:
 
     def test_only_multiplication_takes_a_number_with_a_list(self):
         error("(list v (+ 1 [1 2]))", "all points or all lists")
+
+
+class TestInfinity:
+    # mtp-asl: infty and ∞ are the float infinity, above the ±10^150 bound. It appears only in
+    # values known when compiling; while drawing a result that is ∞ is none.
+    def test_the_constants(self):
+        assert value("(real v infty (const))") == math.inf
+        assert value("(real v ∞ (const))") == math.inf
+        assert value("(real v (- infty) (const))") == -math.inf
+
+    def test_arithmetic(self):
+        assert value("(real v (+ infty 1))") == math.inf
+        assert value("(real v (* 2 infty))") == math.inf
+        assert value("(real v (/ 1 infty))") == 0
+        assert value("(bool v (< 1e150 infty))") is True
+        assert value("(real v (sqrt infty))") == math.inf
+
+    def test_undefined_forms(self):
+        error("(real v (- infty infty))", "undefined")
+        error("(real v (* 0 infty))", "undefined")
+        error("(real v (sind infty))", "undefined at infty")
+
+    def test_only_a_variable_that_never_changes_holds_it(self):
+        error("(real k infty)", "k would hold infty")
+        error("(scene s (circle c (r infty)))", "c's r would be infty")
+
+    def test_a_result_that_may_be_infinite_while_drawing_may_be_none(self):
+        error("(real x 1) (real v (+ x infty))", "may be none")
+        model("(real x 1) (real|none v (+ x infty))")
+        assert typ("(real x 1) (bool v (< x infty))") == BOOL
+
+    def test_shown_in_a_string(self):
+        assert value("(string v $'{infty}')") == "∞"
+
+    def test_the_compiled_file(self):
+        import json
+
+        from mtpc_check import errors
+
+        from mathterpiece.mtpc import write
+
+        d = json.loads(write(model("(real x 1) (bool b (< x infty))")))
+        assert errors(d) == []
+        bound = d["objects"][d["names"]["b"]]["value"]["bound"]
+        assert "infty" in json.dumps(bound)

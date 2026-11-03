@@ -1,0 +1,14 @@
+; mtp-asl: infty is above every number; a result that is infty while drawing is none.
+; expect below true
+; expect above true
+; expect sum null
+; expect word "infty"
+; write x 1e300
+; expect below true
+; expect x 1e150
+(real x 3)
+(real big infty (const))
+(bool below (< x infty))
+(bool above (> big x))
+(real|none sum (+ x infty))
+(string word 'infty')

@@ -2,6 +2,7 @@
 docs/mtpc.schema.json checks. The same model always gives the same bytes."""
 
 import json
+import math
 from fractions import Fraction
 
 from mathterpiece.model import Attribute, Expr, FuncDef, Model, Obj, Param
@@ -360,6 +361,9 @@ def _number(v):
         return v
     if isinstance(v, Fraction):
         v = v.numerator if v.denominator == 1 else float(v)
+    if isinstance(v, float) and math.isinf(v):
+        # JSON has no infinity (mtpc.md, "Values").
+        return "infty" if v > 0 else "-infty"
     if isinstance(v, float) and v.is_integer() and abs(v) < 2**53:
         return int(v)
     return v

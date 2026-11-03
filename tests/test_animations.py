@@ -287,12 +287,6 @@ class TestLoops:
         loop = m.get("a").data["steps"]
         assert (loop[0], loop[1], loop[2][0]) == ("loop", None, "in-order")
 
-    def test_the_duration_of_a_loop_forever_cannot_be_read(self):
-        error(
-            f"{K} (animation a (loop) (move k (to 1) (duration 2))) (real d a.duration)",
-            "a loops forever, so it has no duration",
-        )
-
     def test_a_loop_takes_a_positive_int_known_when_compiling(self):
         error(f"{K} (animation a (loop 0) (move k (to 1) (duration 1)))", "at least 1")
         error(f"{K} (animation a (loop 1.5) (move k (to 1) (duration 1)))", "int")
@@ -335,3 +329,12 @@ class TestLoops:
         from mtpc_check import errors
 
         assert errors(doc) == []
+
+
+class TestForeverDuration:
+    # The author, 2026-11-03: an animation that loops forever lasts ∞.
+    def test_it_lasts_infinity(self):
+        m = model(
+            f"{K} (animation a (loop) (move k (to 1) (duration 2))) (real d a.duration (const))"
+        )
+        assert m.get("d").value.value == float("inf")
