@@ -29,11 +29,12 @@
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,
 such as (view-x -8), (duration 0.8) and (fill teal).")
 
-(defface mtp-mode-argument-face
+(defface mtp-mode-head-face
   `((t :inherit ,(if (facep 'font-lock-property-name-face)
                      'font-lock-property-name-face
                    'font-lock-variable-name-face)))
-  "Face for mtp's keyword arguments, such as view-x in (view-x -8).")
+  "Face for the heads of mtp's forms, such as canvas in (canvas view …). Keyword arguments
+take `font-lock-keyword-face', so the two stand apart.")
 
 (defconst mtp-mode--indent
   '(;; Forms with a name: the name, then their positional arguments, then their body.
@@ -111,8 +112,8 @@ to `comment-column'."
 
 (defconst mtp-mode--font-lock
   `((,(concat "(\\(" (regexp-opt mtp-mode--heads) "\\)\\(?:|none\\)?_?\\_>")
-     1 font-lock-keyword-face)
-    (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 'mtp-mode-argument-face)
+     1 'mtp-mode-head-face)
+    (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 font-lock-keyword-face)
     (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face))
   "What mtp-mode highlights: the heads of forms, keyword arguments, and none, true, false and
 self.")
