@@ -403,3 +403,16 @@ class TestBoundReadsKeepTheirRange:
     def test_a_free_variable_keeps_its_type_range(self):
         # A writer may change it, so its starting value says nothing.
         error("(real k 2) (scene s (circle c (r k)))", "may break")
+
+
+class TestGroupPositionsInRange:
+    # mtp-2uae: as for lists, a member read at a position whose range lies within the group's
+    # members is never none.
+    G = "(scene s (group g (circle a) (circle b) (circle c)) (point p g[i].pos))"
+
+    def test_a_position_in_range(self):
+        m = model(f"(int i 0 (>= 0) (<= 2)) {self.G}")
+        assert m.get("p").value.bound
+
+    def test_a_position_that_may_be_out_of_range(self):
+        error(f"(int i 0 (>= 0) (<= 3)) {self.G}", "may be none")

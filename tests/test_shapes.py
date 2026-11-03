@@ -113,7 +113,8 @@ class TestGroupReads:
         m = model(
             "(scene s (int k 0 (>= 0) (<= 1)) (group g (circle a) (rect b)) (real|none d g[k].x))"
         )
-        assert m.get("d").value.expr.type == Maybe(REAL)
+        # k stays within the two members, so the read is never none (mtp-2uae).
+        assert m.get("d").value.expr.type == REAL
         error(
             "(scene s (int k) (group g (circle a) (rect b)) (real|none d g[k].r))",
             "no attribute 'r'",

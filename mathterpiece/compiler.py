@@ -2880,6 +2880,10 @@ class _Compiler:
         # A key known only while drawing may miss, unless every choice of its type is a name.
         choices = _choices(index.type)
         safe = choices is not None and all(c in names for c in choices)
+        # A position whose range lies within the members always finds one, as for lists.
+        r = index.range
+        if key == INT and r is not None and -len(ids) <= r[0] and r[1] < len(ids):
+            safe = True
         t = self.common(ids)
         e = Expr("obj", obj.type, (i,))
         return Expr("member", t if safe else _maybe(t), (e, index, tuple(ids)), index.deps)

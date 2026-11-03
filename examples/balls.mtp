@@ -48,10 +48,8 @@
     (repeat 32 i
       (circle_ (pos [(rand 170 430) (rand -290 -30)]))))
 
-  ; x-from and the rest stay within 0 to 31, so these are never none, but the compiler cannot
-  ; know that.
-  (point x-at (lerp (or? spots[x-from].pos [0 0]) (or? spots[x-to].pos [0 0]) x-t))
-  (point y-at (lerp (or? spots[y-from].pos [0 0]) (or? spots[y-to].pos [0 0]) y-t))
+  (point x-at (lerp spots[x-from].pos spots[x-to].pos x-t))
+  (point y-at (lerp spots[y-from].pos spots[y-to].pos y-t))
   (real h (/ (dist x-at y-at) 2))
   (real r (* share h))
 
