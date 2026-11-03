@@ -1,0 +1,60 @@
+; Rows and columns: groups that place their members one after another. Change the gap and the
+; size with the sliders, line the row up by its top, middle or bottom with the buttons, and take
+; the circle out of the row with the toggle: the shapes after it close up. The tall rect is
+; nudged right by its own translate, and the ellipse follows it. Under the row, a second row
+; holds a column of rows, the grid, and a column of bars lined up on the left; it sits under the
+; first row wherever that row's bottom is. Each caption sits under what it names.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color one '#e76f51')
+(color two '#2a9d8f')
+(color three '#e9c46a')
+(color four '#6d597a')
+(font small (size 13))
+
+; How the row lines its members up: by their top edges, their middles or their bottom edges.
+(type edge string (one-of 'top' 'middle' 'bottom'))
+
+(scene board
+  (background paper)
+  (real gap 0.4 (>= 0) (<= 1))
+  (real grow 1 (>= 0.4) (<= 1.6))
+  (edge line-up 'middle')
+  (bool with-circle true)
+
+  (row shelf (translate [-5.6 2.4]) (gap gap) (align line-up) (defaults (stroke none))
+    (rect a (width 1) (height 1) (fill one))
+    (circle|none b (r (* 0.6 grow)) (fill two))
+    (rect c (width 1.2) (height (* 1.8 grow)) (fill three) (translate [0.3 0]))
+    (ellipse d (rx 0.9) (ry (* 0.5 grow)) (fill four)))
+  (exists-when b with-circle)
+
+  ; Under the first row, wherever its bottom is: the grid and the bars, side by side.
+  (row lower (translate (+ (bottom-left shelf) [0.3 -1.8])) (gap 2.5) (align 'top')
+    (column grid (gap (/ gap 2))
+      (foreach r 3
+        (row_ (gap (/ gap 2)) (defaults (stroke none))
+          (foreach k 3
+            (rect_ (width 0.6) (height 0.6)
+              (fill (cond ((= (mod (+ r k) 3) 0) one) ((= (mod (+ r k) 3) 1) three)
+                          (else four))))))))
+    (column bars (gap (/ gap 2)) (align 'left') (defaults (fill two) (stroke none))
+      (foreach i 4
+        (rect_ (width (+ 0.6 (* 0.5 grow i))) (height 0.35)))))
+
+  (group captions (defaults (fill soft) (font small) (halign 'middle') (valign 'top'))
+    (text_ $'a row, lined up by its {line-up}' (pos (bottom shelf 0.5)))
+    (text_ 'a column, lined up on the left' (pos (bottom bars 0.5)))
+    (text_ 'a column of rows' (pos (bottom grid 0.5)))))
+
+(canvas view (view-x -7) (view-y -5.2) (view-width 14) (view-height 9.8) (pan false) (zoom false)
+  shelf lower captions)
+
+(slider spacing (move gap (from 0) (to 1)) (label 'gap'))
+(slider size (move grow (from 0.4) (to 1.6)) (label 'size'))
+(button by-top (animation (move line-up (to 'top') (duration 0))) (label 'top'))
+(button by-middle (animation (move line-up (to 'middle') (duration 0))) (label 'middle'))
+(button by-bottom (animation (move line-up (to 'bottom') (duration 0))) (label 'bottom'))
+(toggle circle-in-row with-circle (label 'the circle'))
