@@ -116,6 +116,10 @@ class TestConstants:
         assert value("(real v pi)") == math.pi
         assert value("(real v τ)") == math.tau
 
+    def test_euler(self):
+        # mtp-asl: decided 2026-10-28, lost in the rebuild.
+        assert value("(real v euler)") == math.e
+
 
 class TestFunctionsAsValues:
     def test_a_built_in_passed_by_name(self):
