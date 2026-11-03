@@ -1,0 +1,65 @@
+; The Ulam spiral: the whole numbers laid out on a square spiral from 1 in the middle, with a
+; dot on every prime. Many primes fall on diagonal lines. Drag to pan, scroll or pinch to zoom,
+; and double-click to go back to the view box; turn on the numbers and zoom into the middle to
+; see how the spiral runs.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color terracotta '#e76f51')
+(font number (family 'ui-monospace, Menlo, monospace') (size 14))
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+; Trial division by 5, 7, 11, 13, 17, 19, …: every prime above 3 is one more or one less than a
+; multiple of 6, so only those divisors need trying, which keeps compiling fast.
+(func has-divisor ((int n) (int d))
+  (cond ((> (* d d) n) false)
+        ((= (mod n d) 0) true)
+        ((= (mod n (+ d 2)) 0) true)
+        (else (has-divisor n (+ d 6)))))
+(func prime? (int n)
+  (cond ((< n 2) false) ((< n 4) true) ((= (mod n 2) 0) false) ((= (mod n 3) 0) false)
+        (else (not (has-divisor n 5)))))
+
+; Where n sits on the spiral. Ring k holds the numbers after (2k - 1)² up to (2k + 1)², which
+; sits at its bottom-right corner; t is the length of a side, and the four branches are the
+; ring's bottom, left, top and right sides, counted back from that corner.
+(func[point] spiral (int n 1 (>= 1))
+  (let ((k (ceil (/ (- (sqrt n) 1) 2))) (t (* 2 k)) (m (* (+ t 1) (+ t 1))))
+    (cond ((>= n (- m t)) [(- k (- m n)) (- k)])
+          ((>= n (- m (* 2 t))) [(- k) (+ (- k) (- (- m t) n))])
+          ((>= n (- m (* 3 t))) [(+ (- k) (- (- m (* 2 t)) n)) k])
+          (else [k (- k (- (- m (* 3 t)) n))]))))
+
+(scene numbers
+  (background paper)
+  ; The primes are filtered in place, not bound to a list variable first: a bound list is
+  ; worked out again where it is read, which doubles the time to compile. For the same reason
+  ; the caption gives their count as a number, 3245, rather than counting them.
+  (group dots (defaults (fill ink) (stroke none))
+    (foreach p (where (range 1 30000 (gap 1)) prime?) (circle_ (pos (spiral p)) (r 0.45))))
+  (circle one (r 0.45) (fill terracotta) (stroke none))
+
+  ; The first 81 numbers, a 9 by 9 square, and the path the spiral takes through them. Their
+  ; text keeps its size on screen, so they are only readable zoomed in.
+  (polyline path (points (map 81 (fn i (spiral (+ i 1))))) (fill none) (stroke soft)
+    (stroke-width 1) (stroke-opacity 0.5))
+  (group labels (defaults (font number) (halign 'middle') (valign 'middle'))
+    (foreach i 81
+      (text_ $'{(+ i 1)}' (pos (spiral (+ i 1)))
+        (fill (if (or (prime? (+ i 1)) (= i 0)) paper soft)))))
+
+  (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
+    (text_ 'the 3245 primes below 30000' (pos [0 -89.5]))
+    (text_ '(canvas view (view-x -90) (view-y -98) (view-width 180) (view-height 188))'
+      (pos [0 -93.5]))))
+
+(toggle show-labels none (label 'numbers'))
+
+; The view box shows the whole spiral; panning and zooming are on by default.
+(canvas view (view-x -90) (view-y -98) (view-width 180) (view-height 188)
+  (move none (duration 0.4) (ease 'ease-in-out'))
+  (when show-labels.value path)
+  dots one
+  (when show-labels.value labels)
+  captions)
