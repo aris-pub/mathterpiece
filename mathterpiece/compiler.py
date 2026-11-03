@@ -148,6 +148,7 @@ IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
 NON_NEGATIVE = Refine(REAL, ((">=", 0),))
+EASE = FuncT((UNIT,), REAL)
 PAINT = Maybe(COLOR)
 HALIGN = Refine(STRING, (("one-of", ("start", "middle", "end")),))
 VALIGN = Refine(STRING, (("one-of", ("top", "middle", "baseline", "bottom")),))
@@ -1440,7 +1441,9 @@ class _Compiler:
         return e.value
 
     def ease(self, node: Node, scope: dict) -> Attribute:
-        """'linear', 'ease-in', 'ease-out', 'ease-in-out', (step n), or a func[real real]."""
+        """'linear', 'ease-in', 'ease-out', 'ease-in-out', (step n), or a function of a real from
+        0 to 1, giving a real: it is only called there, so one defined only there fits, and so
+        does one defined on every real (the author, 2026-11-03)."""
         if isinstance(node, StrLit):
             if node.value not in EASES:
                 raise CompileError(
@@ -1463,7 +1466,7 @@ class _Compiler:
                     "(step n) takes a count of at least 1 known when compiling", node.pos
                 )
             return Attribute(STRING, ("step", n.value))
-        e = self.expr(node, FuncT((REAL,), REAL), scope)
+        e = self.expr(node, EASE, scope)
         return Attribute(e.type, expr=e)
 
     def path(self, node: Node, scope: dict) -> Attribute:

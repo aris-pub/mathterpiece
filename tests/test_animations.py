@@ -295,3 +295,32 @@ class TestAnimationDefaults:
 
     def test_the_old_forms_are_gone(self):
         error(f"{K} (animation a (default-duration 2) (move k (to 1)))", "an animation holds moves")
+
+
+class TestTheTypeOfAnEase:
+    # The author, 2026-11-03: an ease is a function of a real from 0 to 1, so one defined only
+    # there is accepted, as is one defined on every real.
+    def test_one_defined_from_0_to_1(self):
+        model(
+            f"{K} (func spring ((real t 0 (>= 0) (<= 1))) (- 1 (^ (- 1 t) 3)))"
+            " (animation a (move k (to 5) (duration 1) (ease spring)))"
+        )
+
+    def test_one_defined_on_every_real(self):
+        model(
+            f"{K} (func half (real t) (* t t))"
+            " (animation a (move k (to 5) (duration 1) (ease half)))"
+        )
+
+    def test_its_value_may_go_past_1(self):
+        model(
+            f"{K} (func over ((real t 0 (>= 0) (<= 1))) (* 1.3 t))"
+            " (animation a (move k (to 5) (duration 1) (ease over)))"
+        )
+
+    def test_one_that_needs_more_than_0_to_1_is_refused(self):
+        error(
+            f"{K} (func picky ((real t 0.5 (>= 0.5) (<= 1))) t)"
+            " (animation a (move k (to 5) (duration 1) (ease picky)))",
+            "expected func",
+        )

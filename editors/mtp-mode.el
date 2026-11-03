@@ -32,7 +32,8 @@ such as (view-x -8), (duration 0.8) and (fill teal).")
 (defface mtp-mode-head-face
   `((t :inherit ,(if (facep 'font-lock-property-name-face)
                      'font-lock-property-name-face
-                   'font-lock-variable-name-face)))
+                   'font-lock-variable-name-face)
+       :weight normal))
   "Face for the heads of mtp's forms, such as canvas in (canvas view …). Keyword arguments
 take `font-lock-keyword-face', so the two stand apart.")
 

@@ -12,10 +12,8 @@
 
 ; A damped spring: it starts from rest, goes past its end once and settles, as a ball on a
 ; spring does, and ends at exactly 1.
-(func spring (real t)
-  ; An ease is only called from 0 to 1; saying so lets the compiler prove the power is a real.
-  (let ((u (max 0 (min 1 t))))
-    (- 1 (* (^ (- 1 u) 3) (+ (cos (* 8 u)) (* 0.375 (sin (* 8 u))))))))
+(func spring ((real t 0 (>= 0) (<= 1)))
+  (- 1 (* (^ (- 1 t) 3) (+ (cos (* 8 t)) (* 0.375 (sin (* 8 t)))))))
 
 ; burst runs from 0 to 1 as the bubble pops: it swells and fades, and drops fly out. Once it has
 ; popped, its body and the rest of it do not exist.
