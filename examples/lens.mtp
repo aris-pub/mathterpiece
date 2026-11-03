@@ -1,0 +1,85 @@
+; A landscape drawn twice: in greys, and above that in color, inside a group clipped to a circle
+; that follows the lens. Drag the lens to see the colors, each a mix, lighten or darken of the
+; page's color tokens, and change its size with the slider.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color terracotta '#e76f51')
+(color teal '#2a9d8f')
+(color saffron '#e9c46a')
+(color plum '#6d597a')
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+; The landscape and a swatch of each of its colors. With grey above 0, every color is mixed that
+; far toward soft.
+(motif landscape ((real grey 0 (>= 0) (<= 1)))
+  (group land (defaults (stroke none))
+    (clip (rect frame (pos [0 1.5]) (width 15) (height 6.4)))
+    (rect sky (pos [0 1.5]) (width 15) (height 6.4) (fill (mix (mix saffron paper 0.7) soft grey)))
+    (circle sun (pos [3.8 3.3]) (r 0.9) (fill (mix (lighten saffron 0.3) soft grey)))
+    (ellipse far-left (pos [-3 0.6]) (rx 6) (ry 2.6) (fill (mix (mix plum paper 0.45) soft grey)))
+    (ellipse far-right (pos [4.8 0.2]) (rx 5) (ry 2.3)
+      (fill (mix (mix plum paper 0.45) soft grey)))
+    (ellipse near (pos [2 -1.2]) (rx 7) (ry 2.3) (fill (mix (mix teal saffron 0.35) soft grey)))
+    (rect house (pos [1.6 1.3]) (width 1) (height 0.7)
+      (fill (mix (lighten terracotta 0.45) soft grey)))
+    (triangle roof (a [0.95 1.65]) (b [2.25 1.65]) (c [1.6 2.25])
+      (fill (mix (darken terracotta 0.15) soft grey)))
+    (ellipse field (pos [-4.5 -2]) (rx 6) (ry 1.9) (fill (mix (darken teal 0.25) soft grey)))
+    (foreach k 4
+      (triangle_ (a [(+ -6.2 (* 0.9 k)) -0.4]) (b [(+ -5.4 (* 0.9 k)) -0.4])
+        (c [(+ -5.8 (* 0.9 k)) (+ 0.7 (* 0.15 (mod k 2)))])
+        (fill (mix (darken teal 0.5) soft grey)))))
+  (group swatches (defaults (stroke none))
+    (rect_ (pos [-7 -2.9]) (width 0.4) (height 0.4)
+      (fill (mix (mix saffron paper 0.7) soft grey)))
+    (rect_ (pos [-7 -3.5]) (width 0.4) (height 0.4)
+      (fill (mix (lighten saffron 0.3) soft grey)))
+    (rect_ (pos [-7 -4.1]) (width 0.4) (height 0.4)
+      (fill (mix (mix plum paper 0.45) soft grey)))
+    (rect_ (pos [-7 -4.7]) (width 0.4) (height 0.4)
+      (fill (mix (mix teal saffron 0.35) soft grey)))
+    (rect_ (pos [0.6 -2.9]) (width 0.4) (height 0.4)
+      (fill (mix (darken teal 0.25) soft grey)))
+    (rect_ (pos [0.6 -3.5]) (width 0.4) (height 0.4)
+      (fill (mix (darken teal 0.5) soft grey)))
+    (rect_ (pos [0.6 -4.1]) (width 0.4) (height 0.4)
+      (fill (mix (lighten terracotta 0.45) soft grey)))
+    (rect_ (pos [0.6 -4.7]) (width 0.4) (height 0.4)
+      (fill (mix (darken terracotta 0.15) soft grey)))))
+
+(scene view-scene
+  (background paper)
+  (real size 1.8 (>= 0.8) (<= 3))
+
+  (landscape dull (grey 0.75))
+
+  ; The glass is what the reader drags: it has a fill, though one that cannot be seen, so the
+  ; pointer reaches it everywhere inside, not only on its rim.
+  (circle glass (pos [2.2 2]) (r size) (fill paper) (fill-opacity 0) (stroke ink)
+    (stroke-width 3))
+  (group lens (clip (circle window (pos glass.pos) (r size)))
+    (landscape bright))
+
+  (group forms (defaults (fill soft) (font code) (valign 'middle'))
+    (text_
+      $'(group lens (clip (circle window (pos [{glass.x:.1f} {glass.y:.1f}]) (r {size:.1f}))) …)'
+      (pos [0 -2.15]) (halign 'middle'))
+    (text_ '(mix saffron paper 0.7)' (pos [-6.6 -2.9]))
+    (text_ '(lighten saffron 0.3)' (pos [-6.6 -3.5]))
+    (text_ '(mix plum paper 0.45)' (pos [-6.6 -4.1]))
+    (text_ '(mix teal saffron 0.35)' (pos [-6.6 -4.7]))
+    (text_ '(darken teal 0.25)' (pos [1.0 -2.9]))
+    (text_ '(darken teal 0.5)' (pos [1.0 -3.5]))
+    (text_ '(lighten terracotta 0.45)' (pos [1.0 -4.1]))
+    (text_ '(darken terracotta 0.15)' (pos [1.0 -4.7]))
+    (text_ 'underneath, each color is mixed toward soft: (mix … soft 0.75)' (pos [0 -5.45])
+      (halign 'middle'))))
+
+(canvas view (view-x -8) (view-y -5.9) (view-width 16) (view-height 10.9) (pan false)
+  (zoom false)
+  dull lens glass forms)
+
+(on-drag glass glass.pos)
+(slider lens-size (move size (from 0.8) (to 3)) (label 'lens size'))
