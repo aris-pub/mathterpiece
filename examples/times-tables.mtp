@@ -1,0 +1,64 @@
+; Times tables on a circle. 200 points sit around the circle, and a chord joins point k to
+; point m times k. Where the thin chords crowd together, a curve shows: a cardioid for m = 2, a
+; nephroid for m = 3, and m - 1 cusps for every whole m. Press play for the tour, pick a stop by
+; its number, or drag the slider at any time.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color terracotta '#e76f51')
+(font variable (family 'Georgia, serif') (style 'italic') (size 18))
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+(int n 200 (const))
+(real radius 7.4 (const))
+
+; Point k of the n around the circle, counted from the left, counterclockwise. k need not be
+; whole, and past n it goes around again, so (spot (* m k)) is point m k, mod n.
+(func spot ((real k)) (polar radius (+ 180 (turn (/ k n)))))
+
+(scene board
+  (background paper)
+  ; The figure opens at the tour's last stop, so playing the tour moves from the first moment.
+  (real m 9 (>= 1) (<= 12))
+  (string curve-name
+    (cond ((= m 2) 'a cardioid')
+          ((= m 3) 'a nephroid')
+          ((= m (round m)) $'{(round (- m 1))} cusps')
+          (else '')))
+
+  (group table (translate [0 0.6])
+    (circle rim (r radius) (fill none) (stroke soft) (stroke-width 1))
+    (group chords (defaults (stroke terracotta) (stroke-width 1) (stroke-opacity 0.4))
+      (foreach k (range n)
+        (line_ (from (spot k)) (to (spot (* m k))))))
+    (group dots (defaults (fill ink) (stroke none))
+      (foreach p (map (range n) spot)
+        (circle_ (pos p) (r 0.04)))))
+
+  (group captions (defaults (font variable) (fill ink) (valign 'bottom'))
+    (text_ $'m = {m:.2f}' (pos [-8.6 8.7]))
+    (text_ curve-name (pos [8.6 8.7]) (halign 'end')))
+
+  (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
+    (text_ '(foreach k (range 200)' (pos [-7.4 -7.6]))
+    (text_ $'(line_ (from (spot k)) (to (spot (* {m:.2f} k)))))' (pos [-6.9 -8.4]))))
+
+(canvas view (view-x -9) (view-y -9.6) (view-width 18) (view-height 19) (pan false) (zoom false)
+  table captions forms)
+
+; Each stop moves m to a whole number, where the chords close up into a curve with m - 1 cusps.
+(animation cardioid (move m (to 2) (duration 2.5) (ease 'ease-in-out')))
+(animation nephroid (move m (to 3) (duration 2) (ease 'ease-in-out')))
+(animation four-cusps (move m (to 5) (duration 2.5) (ease 'ease-in-out')))
+(animation eight-cusps (move m (to 9) (duration 3) (ease 'ease-in-out')))
+
+; Each stop but the last rests a moment before the next.
+(play tour (label 'play the tour') (buttons true)
+  (animation
+    (in-order cardioid (move none (duration 1.2)))
+    (in-order nephroid (move none (duration 1.2)))
+    (in-order four-cusps (move none (duration 1.2)))
+    eight-cusps))
+
+(slider times (move m (from 1) (to 12)) (label 'multiplier m'))
