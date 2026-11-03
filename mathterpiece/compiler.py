@@ -1217,7 +1217,9 @@ class _Compiler:
         for item in items:
             head = _head(item)
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
-                raise CompileError(f"expected an argument such as (to 1), got {item}", item.pos)
+                raise CompileError(
+                    f"expected an argument such as (to 1), got {_shown(item)}", item.pos
+                )
             arg = item.items[1]
             if head == "like":
                 # The named transition's arguments, under the ones this one gives itself: they
@@ -2082,7 +2084,9 @@ class _Compiler:
             if self.shape_kind(item) and head not in params:
                 raise CompileError(f"an instance of {kind} takes no members", item.pos)
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
-                raise CompileError(f"expected an argument such as (r 1), got {item}", item.pos)
+                raise CompileError(
+                    f"expected an argument such as (r 1), got {_shown(item)}", item.pos
+                )
             if head not in params and head not in INSTANCE_ATTRS and head != "pos":
                 raise CompileError(f"a {kind} takes no argument '{head}'", item.pos)
             if head in given or _overlaps(head, given):
@@ -2211,7 +2215,9 @@ class _Compiler:
                 )
             head = _head(item)
             if head is None or not isinstance(item, Form) or len(item.items) != 2:
-                raise CompileError(f"expected an argument such as (r 1), got {item}", item.pos)
+                raise CompileError(
+                    f"expected an argument such as (r 1), got {_shown(item)}", item.pos
+                )
             if head == "pos" and "x" in takes:
                 for attr in ("x", "y"):
                     if attr in given:
@@ -3295,6 +3301,16 @@ def _is_step_ease(ease) -> bool:
 def _ease_value(attribute: Attribute):
     """An ease as a move carries it: its name, ("step", n), or ("func", id)."""
     return ("func", attribute.expr.args[0]) if attribute.expr is not None else attribute.value
+
+
+def _shown(node: Node) -> str:
+    """An item as an error message shows it: its head and an ellipsis for a form."""
+    if isinstance(node, Form):
+        head = node.items[0] if node.items else None
+        return f"({_name_text(head)} …)" if isinstance(head, Name) else "(…)"
+    if isinstance(node, Name):
+        return _name_text(node)
+    return repr(getattr(node, "value", "…"))
 
 
 def _name_text(node: Name) -> str:

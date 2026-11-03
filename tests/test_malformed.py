@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.parse import ParseError, parse
 
 FILES = sorted((Path(__file__).parent / "malformed").glob("*.mtp"))
@@ -19,3 +20,11 @@ def test_one_error_where_it_is(path):
         parse(src)
     assert (exc.value.pos.line, exc.value.pos.col) == (int(m[1]), int(m[2]))
     assert exc.value.msg == m[3]
+
+
+def test_an_unexpected_item_is_shown_as_mtp():
+    # mtp-1njz: the message printed the parser's internal form of the item.
+    with pytest.raises(CompileError) as e:
+        compile_source("(scene s (group g (repeat 3 i (real w (* 2 i)) (circle_ (r w)))))")
+    assert "Form(" not in str(e.value)
+    assert "got (real …)" in str(e.value)
