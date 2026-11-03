@@ -29,7 +29,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
 | `(type name base)` | required | the base type | none | constraints |
-| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `foreach`, `let` |
+| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `foreach`, `let`, `exists-when` |
 | `(variant name params shape)` | required | the parameter list; one shape declaration | none | none |
 
 A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t 0.5) (color tint 'red'))`, or `()` for none; each may have a default. `()` is also an empty list of `let` bindings, and is never a value.
@@ -46,8 +46,8 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `foreach`, `let` |
-| `(group name)` | required | none | `(translate point)`, `(transform transform)`, `(defaults …)` | shape declarations, `foreach`, `let` |
+| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `foreach`, `let`, `exists-when` |
+| `(group name)` | required | none | `(translate point)`, `(transform transform)`, `(defaults …)` | shape declarations, `foreach`, `let`, `exists-when` |
 | `(circle name)` | required | none | shape arguments, `(r (real (>= 0)))` | none |
 | `(rect name)` | required | none | shape arguments, `(width real)`, `(height real)`, `(rx real)`, `(ry real)` (rounded corners) | none |
 | `(ellipse name)` | required | none | shape arguments, `(rx real)`, `(ry real)` | none |
@@ -202,6 +202,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name |
 | `(as T literal)` | nothing: the literal, with the type `T`; anything but a literal is a compile error |
+| `(exists-when bool name…)` | in a scene, group, `foreach` or motif body, after the shapes it names, each declared `T|none`: while `bool` does not hold they do not exist in the scene, so no canvas draws them, the pointer does not reach them, and every read of them or of their attributes is `none`; a shape takes one `exists-when` at most. A canvas's `when` is different: it shows or hides what exists |
 | `(foreach i n decl…)`, `(foreach x xs decl…)` | when compiling: the declarations once for each `i` from 0 to n−1, or once for each item `x` of the list `xs` (`g.pos`, the list of every member's position, too), or each member of a group `g`; the count, or the list's length, must be known when compiling, while the items may be known only while drawing |
 
 ## Operators

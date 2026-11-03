@@ -2210,7 +2210,10 @@ class _Compiler:
         saved, self.frame = self.frame, i
         try:
             for item, inner in self.expand(motif.body, {}):
-                if self.shape_kind(item):
+                if _head(item) == "exists-when":
+                    assert isinstance(item, Form)
+                    self.exists_when(item, inner)
+                elif self.shape_kind(item):
                     assert isinstance(item, Form)
                     self.shape(item, i, inner, down)
                 elif isinstance(item, Form) and _head(item) not in ("motif", "scene"):
@@ -2267,6 +2270,9 @@ class _Compiler:
                 raise CompileError(
                     f"a {head or 'func'} is declared only at the top level", item.pos
                 )
+            elif head == "exists-when":
+                assert isinstance(item, Form)
+                self.exists_when(item, scope)
             elif self.shape_kind(item):
                 assert isinstance(item, Form)
                 self.shape(item, self.scene, scope)
@@ -2301,9 +2307,14 @@ class _Compiler:
             # The first item is the positional unless it names one of the shape's arguments.
             if scoped and _head(scoped[0][0]) not in takes | {"pos"}:
                 given[attr] = scoped.pop(0)
+        existence: list[tuple[Form, dict]] = []
         for item, inner in self.expand_scoped(scoped):
             if kind == "group" and self.shape_kind(item):
                 members.append((item, inner))
+                continue
+            if kind == "group" and _head(item) == "exists-when":
+                assert isinstance(item, Form)
+                existence.append((item, inner))
                 continue
             if members:
                 raise CompileError(
@@ -2363,7 +2374,32 @@ class _Compiler:
         for item, inner in members:
             assert isinstance(item, Form)
             self.shape(item, i, inner, down)
+        for item, inner in existence:
+            self.exists_when(item, inner)
         return i
+
+    def exists_when(self, form: Form, scope: dict) -> None:
+        """(exists-when bool name…): the shapes named, declared before it as T|none, exist in the
+        scene only while bool holds (mtp-b9g0); while they do not, they are not drawn and every
+        read of them is none."""
+        if len(form.items) < 3:
+            raise CompileError("exists-when is (exists-when bool shape…)", form.pos)
+        condition = self.attribute(BOOL, form.items[1], form.pos, "exists", scope=scope)
+        for node in form.items[2:]:
+            e = self.expr(node, None, scope)
+            if e.op != "obj" or not isinstance(_core(e.type), ShapeT):
+                raise CompileError("exists-when names shapes declared before it", node.pos)
+            obj = self.model.objects[e.args[0]]
+            if not isinstance(obj.type, Maybe):
+                kind = obj.of or obj.kind
+                raise CompileError(
+                    f"{obj.name or 'this shape'} must be declared {kind}|none to say when it"
+                    " exists, so every read of it handles none",
+                    node.pos,
+                )
+            if "exists" in obj.attrs:
+                raise CompileError(f"when {obj.name} exists is given twice", node.pos)
+            obj.attrs["exists"] = replace(condition)
 
     def group_defaults(self, form: Form, scope: dict, defaults: dict) -> None:
         """A group's (defaults (attr value) …): what its members take when they give none."""

@@ -241,3 +241,54 @@ class TestDefaults:
     def test_translate_stays_the_groups_own(self):
         m = model("(scene s (group g (translate [1 0]) (defaults (fill 'red')) (circle c)))")
         assert m.get("g").attrs["translate"].value == (1, 0)
+
+
+class TestExistsWhen:
+    # mtp-b9g0: (exists-when bool name…), after the shapes it names, says when they exist in the
+    # scene; each must be declared T|none, so whatever reads it handles none.
+    def test_a_condition_for_a_shape(self):
+        m = model("(scene s (real k 0) (circle|none c (r 1)) (exists-when (> k 0) c))")
+        exists = m.get("c").attrs["exists"]
+        assert exists.bound and (m.id("k"), None) in exists.deps
+
+    def test_in_a_group_and_a_foreach(self):
+        m = model(
+            "(scene s (real k 0) (group g (foreach i 3 (circle|none (name $'c{i}') (r 1))"
+            " (exists-when (< i k) (name $'c{i}')))))"
+        )
+        assert m.get("c2").attrs["exists"].bound
+
+    def test_in_a_motif(self):
+        m = model(
+            "(motif dot ((real t 1)) (circle|none face (r 1)) (exists-when (> t 0) face))"
+            " (scene s (dot d))"
+        )
+        assert (m.id("d"), "t") in m.get("d.face").attrs["exists"].deps
+
+    def test_the_shape_must_be_declared_t_or_none(self):
+        error("(scene s (real k 0) (circle c (r 1)) (exists-when (> k 0) c))", "circle\\|none")
+
+    def test_it_comes_after_the_shape(self):
+        error(
+            "(scene s (real k 0) (exists-when (> k 0) c) (circle|none c (r 1)))", "unknown name 'c'"
+        )
+
+    def test_once_per_shape(self):
+        error(
+            "(scene s (real k 0) (circle|none c (r 1)) (exists-when (> k 0) c)"
+            " (exists-when (> k 1) c))",
+            "given twice",
+        )
+
+    def test_the_compiled_file(self):
+        import json
+
+        from mtpc_check import errors
+
+        from mathterpiece.mtpc import write
+
+        d = json.loads(
+            write(model("(scene s (real k 0) (circle|none c (r 1)) (exists-when (> k 0) c))"))
+        )
+        assert errors(d) == []
+        assert d["objects"][d["names"]["c"]]["attrs"]["exists"]["bound"][0] == "builtin"

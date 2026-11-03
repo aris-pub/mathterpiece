@@ -64,4 +64,14 @@ describe("drawing", () => {
     rt.write(rt.id("k"), null, 2);
     expect(draw(rt, rt.id("v")).querySelector(`[data-mtp-id="${rt.id("gone")}"]`)).not.toBeNull();
   });
+
+  it("draws a shape only while its exists-when holds", () => {
+    // mtp-b9g0
+    const [rt, svg] = drawn();
+    expect(svg.querySelector(`[data-mtp-id="${rt.id("maybe")}"]`)).not.toBeNull();
+    rt.write(rt.id("shown"), null, false);
+    const again = draw(rt, rt.id("v"));
+    expect(again.querySelector(`[data-mtp-id="${rt.id("maybe")}"]`)).toBeNull();
+  });
 });
+

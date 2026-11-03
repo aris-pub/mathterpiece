@@ -71,6 +71,13 @@ export class Runtime {
     doc.objects.forEach((o, i) => {
       if (o.value) this.load(i, null, o.value);
       for (const [attr, p] of Object.entries(o.attrs ?? {})) this.load(i, attr, p);
+      // While a shape does not exist every read of it is none, so each of its attributes
+      // follows its exists-when (mtp-b9g0).
+      if (o.attrs?.exists) {
+        const ek = key(i, "exists");
+        if (!this.dependents.has(ek)) this.dependents.set(ek, new Set());
+        for (const attr of Object.keys(o.attrs)) if (attr !== "exists") this.dependents.get(ek)!.add(key(i, attr));
+      }
     });
   }
 
@@ -115,6 +122,11 @@ export class Runtime {
     this.listeners.push(listener);
   }
 
+  /** Whether a shape exists now: false only while its exists-when does not hold. */
+  exists(id: number): boolean {
+    return !this.has(id, "exists") || Boolean(this.get(key(id, "exists")));
+  }
+
   /** The id of a named object. */
   id(name: string): number {
     const i = this.doc.names[name];
@@ -125,6 +137,7 @@ export class Runtime {
   /** A variable's or an attribute's value as stored, in its shape's own frame; pos is x and y. */
   value(id: number, attr: string | null = null): unknown {
     const o = this.objects[id]!;
+    if (attr !== "exists" && !this.exists(id)) return null;
     if (attr === null && o.kind !== "variable") return new Ref(id);
     if (attr === "pos" && !this.has(id, "pos")) {
       if (CORNERS[o.kind]) return this.mean(id, null);

@@ -1,0 +1,14 @@
+; mtp-b9g0: a shape exists only while its exists-when holds; while it does not, every read of it is
+; none, also from an expression compiled before the exists-when.
+; expect r 2
+; write k 0
+; expect r null
+; expect cx null
+; write k 1
+; expect r 2
+(scene s
+  (real k 1)
+  (circle|none c (x 3) (r 2))
+  (real|none r c.r)
+  (real|none cx c.x)
+  (exists-when (> k 0) c))

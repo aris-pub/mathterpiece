@@ -131,11 +131,13 @@ function drawObject(rt: Runtime, i: number, into: Element, unitsPerPx: number): 
   into.appendChild(el);
 }
 
-// A shape declared T|none is not drawn when it is absent: when an attribute it needs is none.
+// A shape declared T|none is not drawn when it is absent: while its exists-when does not hold, or
+// when an attribute it needs is none.
 function absent(rt: Runtime, i: number): boolean {
+  if (!rt.exists(i)) return true;
   const o = rt.objects[i]!;
   return Object.entries(o.attrs ?? {}).some(
-    ([attr, p]) => attr !== "fill" && attr !== "stroke" && p.type && rt.value(i, attr) === null,
+    ([attr, p]) => attr !== "fill" && attr !== "stroke" && attr !== "exists" && p.type && rt.value(i, attr) === null,
   );
 }
 
