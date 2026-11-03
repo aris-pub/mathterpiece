@@ -153,9 +153,11 @@
     ; Level i + 1.
     (group bars (defaults (fill (if all every one)))
       (foreach i 10
+        ; A bar too short to see does not exist.
         (let ((height (max 0.5 (* 126 shown[i]))))
-          (rect_ (pos [(+ 54 (* i 41.2) 20.6) (+ -134 (/ height 2))]) (width 26.368)
-            (height height) (rx 2) (ry 2) (opacity (if (< shown[i] 0.002) 0 1))))))
+          (rect|none (name $'bar-{i}') (pos [(+ 54 (* i 41.2) 20.6) (+ -134 (/ height 2))])
+            (width 26.368) (height height) (rx 2) (ry 2))
+          (exists-when (name $'bar-{i}') (>= shown[i] 0.002)))))
     (group level-names (defaults (fill muted))
       (foreach i 10
         (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
@@ -199,49 +201,55 @@
     (group densities (defaults (fill muted))
       (foreach k 10
         (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
-          (text_ $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle') (font tick)
-            (opacity (if (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467)) 1 0))))))
+          (text|none (name $'density-{k}') $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
+            (font tick))
+          (exists-when (name $'density-{k}')
+            (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467))))))
     (line_ (from [54 -8]) (to [54 -130]) (stroke muted) (stroke-width 1))
     (line_ (from [54 -130]) (to [466 -130]) (stroke muted) (stroke-width 1))
     ; One text in the original, with p in italics; mtp gives a text one font, so three texts
     ; placed by hand, since a text's width cannot be measured.
     (text_ 'density' (pos [(if all 266 238) -192]) (halign 'end') (font plain) (fill fg))
     (text_ 'p' (pos [(if all 270 242) -192]) (font var) (fill fg))
-    (text_ $' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill fg)
-      (opacity (if all 0 1)))
+    (text|none equals-p $' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill fg))
+    (exists-when equals-p (not all))
     (text_ 'distortion' (halign 'middle') (font plain) (fill fg)
       (transform (transform (rotate 90) (translate 13 -69))))
-    ; A group's opacity is only a default for members that give none, so the fade with all
-    ; densities is written on each segment. Segments past the right edge are hidden, as the
+    ; The curve fades with all densities. Segments past the right edge do not exist, as the
     ; original clips them.
-    (group curve (defaults (stroke one) (stroke-width 2.2))
+    (group curve (defaults (stroke one) (stroke-width 2.2) (opacity (- 1 (* 0.78 mix))))
       (foreach k 200
         ; Where the segment starts and ends across the chart.
         (let ((x0 (+ 54 (* (/ (* L (/ k 200)) lv) 412)))
               (x1 (+ 54 (* (/ (* L (/ (+ k 1) 200)) lv) 412))))
-          (line_ (from [x0 (cy ds[k])]) (to [x1 (cy ds[(+ k 1)])])
-            (opacity (if (<= x1 467) (- 1 (* 0.78 mix)) 0))))))
+          (line|none (name $'segment-{k}') (from [x0 (cy ds[k])]) (to [x1 (cy ds[(+ k 1)])]))
+          (exists-when (name $'segment-{k}') (<= x1 467)))))
     (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke every)
       (stroke-width (if all 3.5 2.4)))
-    (text_ $'all densities: {(fmt d-all)}, for every p' (pos [466 (- (cy d-all) (if all 19 17))])
-      (halign 'end') (font plain) (fill every) (opacity (if all 0 1)))
-    (text_ $'all densities: {(fmt d-all)}, for every p' (pos [466 (- (cy d-all) (if all 19 17))])
-      (halign 'end') (font strong) (fill every) (opacity (if all 1 0)))
-    (text_ $'best: {(fmt best-now[0])}'
+    ; The line's name, set bold with all densities.
+    (text|none all-plain $'all densities: {(fmt d-all)}, for every p'
+      (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font plain) (fill every))
+    (text|none all-strong $'all densities: {(fmt d-all)}, for every p'
+      (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font strong) (fill every))
+    (exists-when all-plain (not all))
+    (exists-when all-strong all)
+    (text|none best-label $'best: {(fmt best-now[0])}'
       (pos [(+ 54 (* (/ (- best-now[1] 0.5) lv) 412)) (+ (cy best-now[0]) 12)])
-      (halign 'middle') (font strong) (fill one) (opacity (if floor 1 0)))
+      (halign 'middle') (font strong) (fill one))
+    (exists-when best-label floor)
     (line_ (from [54 -166]) (to [466 -166]) (stroke rule) (stroke-width 3)))
 
-  ; The current density: a marker on the curve, a guide down to the track, and its value. With
-  ; all densities, only the handle is left, grey.
+  ; The current density: a marker on the curve, a guide down to the track, and its value, which
+  ; gives way to the best one's name near it. With all densities, only the handle is left, grey.
   (real mx (+ 54 (* (/ (- te 0.5) lv) 412)))
-  (group marker (defaults (opacity (if all 0 1)))
+  (group|none marker
     (line_ (from [mx (- (cy d-now) 7)]) (to [mx -160]) (stroke (if t-on one muted))
       (stroke-width 1) (stroke-opacity 0.7))
     (circle_ (pos [mx (cy d-now)]) (r 7) (fill one))
-    (text_ (fmt d-now) (pos [(if (< mx 406) (+ mx 11) (- mx 11)) (+ (cy d-now) 9)])
-      (halign (if (< mx 406) 'start' 'end')) (font strong) (fill one)
-      (opacity (if (or all (and floor (< (abs (- te best-now[1])) 0.2))) 0 1))))
+    (text|none value-now (fmt d-now) (pos [(if (< mx 406) (+ mx 11) (- mx 11)) (+ (cy d-now) 9)])
+      (halign (if (< mx 406) 'start' 'end')) (font strong) (fill one))
+    (exists-when value-now (not (and floor (< (abs (- te best-now[1])) 0.2)))))
+  (exists-when marker (not all))
   (handle t-handle (x mx) (y -166)
           (edge (if (and t-on (not all)) one muted)) (weight (if (and t-on (not all)) 1.5 1))))
 

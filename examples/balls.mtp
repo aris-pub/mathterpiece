@@ -82,18 +82,23 @@
   ; never 0, but the compiler cannot know that.
   (real at (or? (/ bar-width h) 0))
 
-  ; Faint rings at ρ₁ to ρₖ around both points.
-  (group rings (defaults (fill none) (stroke muted))
+  ; Faint rings at ρ₁ to ρₖ around both points; the rest do not exist.
+  (group rings (defaults (fill none) (stroke muted) (opacity 0.3))
     (foreach j 5
-      (circle_ (pos x.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))
-      (circle_ (pos y.pos) (r rho[j]) (opacity (if (< j k) 0.3 0)))))
+      (circle|none (name $'x-ring-{j}') (pos x.pos) (r rho[j]))
+      (circle|none (name $'y-ring-{j}') (pos y.pos) (r rho[j]))
+      (exists-when (name $'x-ring-{j}') (< j k))
+      (exists-when (name $'y-ring-{j}') (< j k))))
 
   (group pair
     (line_ (from x.pos) (to y.pos) (stroke muted) (stroke-width 1) (opacity 0.6))
-    (circle_ (pos x.pos) (r r) (fill x-color) (fill-opacity 0.1) (stroke x-color)
-      (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
-    (circle_ (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
-      (stroke-width 1.5) (opacity (if (> r 0) 1 0)))
+    ; The balls, which do not exist at radius 0.
+    (circle|none x-ball (pos x.pos) (r r) (fill x-color) (fill-opacity 0.1) (stroke x-color)
+      (stroke-width 1.5))
+    (circle|none y-ball (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
+      (stroke-width 1.5))
+    (exists-when x-ball (> r 0))
+    (exists-when y-ball (> r 0))
     (group names (defaults (fill fg))
       (text_ 'x' (pos (+ x.pos [9 9])) (font label))
       (text_ 'y' (pos (+ y.pos [9 9])) (font label))))
@@ -111,19 +116,20 @@
       (let ((filled (min rho[j] r)) (width (max 0 (* at (- filled edges[j])))))
         (rect_ (pos [(+ bar-left (* at edges[j]) (/ width 2)) bar-y]) (width width) (height 18)
           (fill segment-colors[j]))
-        (text_ $'j = {(+ j 1)}'
+        ; A segment's name, only once it is full and wide enough to hold it.
+        (text|none (name $'segment-{j}') $'j = {(+ j 1)}'
           (pos [(+ bar-left (* at (/ (+ edges[j] filled) 2))) (- bar-y 4.5)])
-          (halign 'middle') (font segment) (fill bg)
-          (opacity (if (and (>= r (- rho[j] 1e-9)) (> width 26)) 1 0)))))
+          (halign 'middle') (font segment) (fill bg))
+        (exists-when (name $'segment-{j}') (and (>= r (- rho[j] 1e-9)) (> width 26)))))
     ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
     (group ticks (defaults (stroke fg) (stroke-width 1.2) (fill fg))
       (foreach j 6
-        (line_ (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
-          (to [(+ bar-left (* at edges[j])) (- bar-y 9)])
-          (opacity (if (<= j k) 1 0)))
-        (text_ (if (= j k) 'δ/2' tick-names[j])
-          (pos [(+ bar-left (* at edges[j])) (+ bar-y 18)]) (halign 'middle') (font tick-label)
-          (opacity (if (<= j k) 1 0)))))))
+        (line|none (name $'tick-{j}') (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
+          (to [(+ bar-left (* at edges[j])) (- bar-y 9)]))
+        (text|none (name $'tick-name-{j}') (if (= j k) 'δ/2' tick-names[j])
+          (pos [(+ bar-left (* at edges[j])) (+ bar-y 18)]) (halign 'middle') (font tick-label))
+        (exists-when (name $'tick-{j}') (<= j k))
+        (exists-when (name $'tick-name-{j}') (<= j k))))))
 
 ; Clicking a point makes it x or y, replacing the older of the two, which slides there, and
 ; grows r to the new δ/2. The point it slides from is where it was going: from-moves come before
