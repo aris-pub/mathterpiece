@@ -1171,10 +1171,39 @@ class _Compiler:
             name, pos, items = None, form.pos, form.items[1:]
             if len(items) == 1 and isinstance(items[0], Name):
                 return self.named(items[0], "animation")
-        steps = _in_order(self.steps(items, None, None, scope))
-        attrs = {"duration": Attribute(REAL, _duration(steps))}
+        self.options_first(
+            items, lambda it: _head(it) in ("default-duration", "default-ease", "loop"), "animation"
+        )
+        loops = [it for it in items if _head(it) == "loop"]
+        if len(loops) > 1:
+            raise CompileError("an animation takes one (loop …)", loops[1].pos)
+        steps = _in_order(self.steps([it for it in items if it not in loops], None, None, scope))
+        if loops:
+            if _duration(steps) <= 0:
+                raise CompileError("this animation loops, but a round of it takes no time", pos)
+            steps = ("loop", self.loop_count(loops[0], scope), steps)
+        # An animation that loops forever has no duration: reading it is a compile error.
+        attrs = (
+            {}
+            if _duration(steps) == float("inf")
+            else {"duration": Attribute(REAL, _duration(steps))}
+        )
         obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data={"steps": steps})
         return self.add(obj)
+
+    def loop_count(self, form, scope: dict) -> int | None:
+        """How many times (loop n) repeats an animation; None, with no n, for forever."""
+        if len(form.items) == 1:
+            return None
+        (node,) = self.args(form, 1)
+        e = self.expr(node, None, scope)
+        if not e.known:
+            raise CompileError("a loop's count must be known when compiling", node.pos)
+        if _core(e.type) != INT:
+            raise CompileError(f"a loop's count is an int, got {e.type}", node.pos)
+        if e.value < 1:
+            raise CompileError("a loop's count is at least 1", node.pos)
+        return e.value
 
     def named(self, node: Name, kind: str) -> int:
         name = node.parts[0] if len(node.parts) == 1 else None
@@ -1674,6 +1703,8 @@ class _Compiler:
                 return {step[1]}
             if step[0] in ("at-once", "in-order"):
                 return set().union(*(walk(s) for s in step[1:]))
+            if step[0] == "loop":
+                return walk(step[2])
             return set()
 
         return walk(self.model.objects[animation].data["steps"])
@@ -2536,6 +2567,10 @@ class _Compiler:
             return self.arith(pos, "/", [self.arith(pos, "+", ends), _known(INT, len(ends))])
         if name in obj.attrs:
             return self.read(i, name)
+        if obj.kind == "animation" and name == "duration":
+            raise CompileError(
+                f"{obj.name or 'this animation'} loops forever, so it has no duration", pos
+            )
         if obj.kind == "instance":
             for m in obj.members:
                 if self.model.objects[m].name == name:
@@ -2969,6 +3004,8 @@ def _duration(step) -> float:
         return step[3]
     if step[0] == "wait":
         return step[1]
+    if step[0] == "loop":
+        return float("inf") if step[1] is None else step[1] * _duration(step[2])
     parts = [_duration(s) for s in step[1:]]
     if step[0] == "in-order":
         return sum(parts)

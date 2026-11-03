@@ -40,7 +40,8 @@ export interface Clamp {
 export type Step =
   | ["move", [number, string | null], number, number, unknown]
   | ["wait", number]
-  | ["at-once" | "in-order", ...Step[]];
+  | ["at-once" | "in-order", ...Step[]]
+  | ["loop", number | null, Step];
 
 export interface Obj {
   kind: string;

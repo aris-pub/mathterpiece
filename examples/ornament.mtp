@@ -65,5 +65,5 @@
   edges corners)
 
 ; The original turns once every 14 seconds, for as long as it is on screen. mtp cannot start an
-; animation by itself or repeat one, so this turns it ten times when pressed.
-(play spin (animation (move yaw (from 0) (to 3600) (duration 140) (ease 'linear'))))
+; animation by itself yet, so this turns it when pressed.
+(play spin (animation (loop) (move yaw (from 0) (to 360) (duration 14) (ease 'linear'))))

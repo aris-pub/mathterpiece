@@ -15,6 +15,15 @@ interface Move {
   // Read once, when the move starts (docs/mtpc.md, "Transitions").
   from?: unknown;
   to?: unknown;
+  // The loops around it, outermost first, and the rounds it was last written in.
+  loops: Loop[];
+  rounds?: string;
+}
+
+interface Loop {
+  start: number;
+  round: number;
+  times: number;
 }
 
 /** A top-level step's span in time, for play's step buttons. */
@@ -30,6 +39,8 @@ export class Player {
   private time = 0;
   // The one top-level step it plays (only), or null for all of them.
   private window: [number, number] | null = null;
+  // A loop around the whole body: the step buttons are its body's items.
+  private outer: Loop | null = null;
 
   constructor(
     private rt: Runtime,
@@ -37,8 +48,10 @@ export class Player {
     private clamps: Clamp[] = [],
   ) {
     const root = rt.objects[animation]!.steps!;
-    this.duration = this.layout(root, 0);
-    const top = root[0] === "in-order" ? (root.slice(1) as Step[]) : [root];
+    this.duration = this.layout(root, 0, []);
+    const body = root[0] === "loop" ? root[2] : root;
+    if (root[0] === "loop") this.outer = { start: 0, round: length(body), times: root[1] ?? Number.POSITIVE_INFINITY };
+    const top = body[0] === "in-order" ? (body.slice(1) as Step[]) : [body];
     let t = 0;
     this.spans = top.map((s) => {
       const d = length(s);
@@ -48,17 +61,23 @@ export class Player {
     });
   }
 
-  private layout(step: Step, start: number): number {
+  // A loop's body is laid out once; seek maps the time into the round it falls in.
+  private layout(step: Step, start: number, loops: Loop[]): number {
     if (step[0] === "move") {
       const [, [id, attr], transition, duration, ease] = step;
-      this.moves.push({ id, attr, transition, start, duration, ease: ease as Ease });
+      this.moves.push({ id, attr, transition, start, duration, ease: ease as Ease, loops });
       return duration;
     }
     if (step[0] === "wait") return step[1];
+    if (step[0] === "loop") {
+      const loop = { start, round: length(step[2]), times: step[1] ?? Number.POSITIVE_INFINITY };
+      this.layout(step[2], start, [...loops, loop]);
+      return loop.round * loop.times;
+    }
     let longest = 0;
     let t = start;
     for (const s of step.slice(1) as Step[]) {
-      const d = this.layout(s, step[0] === "in-order" ? t : start);
+      const d = this.layout(s, step[0] === "in-order" ? t : start, loops);
       if (step[0] === "in-order") t += d;
       longest = Math.max(longest, d);
     }
@@ -81,10 +100,18 @@ export class Player {
   }
 
   /** Writes every move as it stands t seconds in. */
-  seek(t: number): void {
-    this.time = t;
+  seek(time: number): void {
+    this.time = time;
     for (const m of this.moves) {
       if (this.window && (m.start < this.window[0] || m.start >= this.window[1])) continue;
+      const [t, rounds] = inRound(m.loops, time);
+      if (m.rounds !== undefined && rounds !== m.rounds && m.from !== undefined) {
+        // A new round: the last one ends first, then this one reads its ends again.
+        this.write(m, 1);
+        delete m.from;
+        delete m.to;
+      }
+      m.rounds = rounds;
       if (t < m.start && m.from === undefined) continue;
       const p = m.duration > 0 ? Math.min(Math.max((t - m.start) / m.duration, 0), 1) : t >= m.start ? 1 : 0;
       this.write(m, p);
@@ -126,7 +153,8 @@ export class Player {
 
   /** The top-level step running at the current time, or null when none is. */
   stepNow(): number | null {
-    const k = this.spans.findIndex((s) => this.time >= s.start && this.time < s.end);
+    const [t] = inRound(this.outer ? [this.outer] : [], this.time);
+    const k = this.spans.findIndex((s) => t >= s.start && t < s.end);
     return k < 0 ? null : k;
   }
 
@@ -166,9 +194,23 @@ export class Player {
   }
 }
 
+// A time inside the loops given, as a time in their first round, and which round of each it is
+// in; past a loop's last round it stays at the end of that round.
+function inRound(loops: Loop[], t: number): [number, string] {
+  let rounds = "";
+  for (const l of loops) {
+    if (t < l.start) break;
+    const k = Math.min(Math.floor((t - l.start) / l.round), l.times - 1);
+    t -= k * l.round;
+    rounds += `${k},`;
+  }
+  return [t, rounds];
+}
+
 function length(step: Step): number {
   if (step[0] === "move") return step[3];
   if (step[0] === "wait") return step[1];
+  if (step[0] === "loop") return length(step[2]) * (step[1] ?? Number.POSITIVE_INFINITY);
   const parts = (step.slice(1) as Step[]).map(length);
   return step[0] === "in-order" ? parts.reduce((a, b) => a + b, 0) : Math.max(0, ...parts);
 }

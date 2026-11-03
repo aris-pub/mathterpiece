@@ -270,3 +270,68 @@ class TestCanvasFades:
 
     def test_fade_is_not_a_path(self):
         error("(scene s (circle c)) (canvas v (move none (duration 1) (path fade)) c)", "fade")
+
+
+class TestLoops:
+    # mtp-aql: (loop n) repeats an animation n times, (loop) forever; a round that ends somewhere
+    # other than where the next starts just jumps (docs/reference.md, "Transitions and
+    # animations"; docs/mtpc.md, "Steps").
+    def test_loop_n_repeats_the_body(self):
+        m = model(f"{K} (animation a (loop 3) (move k (from 0) (to 1) (duration 2)))")
+        loop = m.get("a").data["steps"]
+        assert (loop[0], loop[1], loop[2][0]) == ("loop", 3, "move")
+        assert m.get("a").attrs["duration"].value == 6
+
+    def test_loop_without_a_count_repeats_forever(self):
+        m = model(f"{K} (animation a (loop) (move k (to 1) (duration 2)) (move none (duration 1)))")
+        loop = m.get("a").data["steps"]
+        assert (loop[0], loop[1], loop[2][0]) == ("loop", None, "in-order")
+
+    def test_the_duration_of_a_loop_forever_cannot_be_read(self):
+        error(
+            f"{K} (animation a (loop) (move k (to 1) (duration 2))) (real d a.duration)",
+            "a loops forever, so it has no duration",
+        )
+
+    def test_a_loop_takes_a_positive_int_known_when_compiling(self):
+        error(f"{K} (animation a (loop 0) (move k (to 1) (duration 1)))", "at least 1")
+        error(f"{K} (animation a (loop 1.5) (move k (to 1) (duration 1)))", "int")
+        error(f"{K} (real n 2) (animation a (loop n) (move k (to 1) (duration 1)))", "known")
+
+    def test_a_round_takes_time(self):
+        error(f"{K} (animation a (loop) (move k (to 1) (duration 0)))", "takes no time")
+
+    def test_only_an_animation_loops(self):
+        error(
+            f"{K} (animation a (in-order (loop) (move k (to 1) (duration 1))))",
+            "an animation holds moves",
+        )
+
+    def test_loop_comes_before_the_body(self):
+        error(f"{K} (animation a (move k (to 1) (duration 1)) (loop))", "before")
+
+    def test_an_inline_animation_loops(self):
+        m = model(f"{K} (button b (animation (loop 2) (move k (to 1) (duration 1))))")
+        a = m.objects[m.get("b").data["animation"]]
+        assert a.data["steps"][0] == "loop"
+
+    def test_a_looping_animation_named_in_another_keeps_its_loop(self):
+        m = model(
+            f"{K} (animation spin (loop 2) (move k (to 1) (duration 1)))"
+            " (animation a spin (move none (duration 1)))"
+        )
+        assert m.get("a").data["steps"][1][0] == "loop"
+        assert m.get("a").attrs["duration"].value == 3
+
+    def test_the_compiled_file_writes_the_loop(self):
+        import json
+
+        from mathterpiece.mtpc import write
+
+        m = model(f"{K} (animation a (loop) (move k (to 1) (duration 1)))")
+        doc = json.loads(write(m))
+        a = doc["objects"][m.id("a")]
+        assert a["steps"][:2] == ["loop", None]
+        from mtpc_check import errors
+
+        assert errors(doc) == []

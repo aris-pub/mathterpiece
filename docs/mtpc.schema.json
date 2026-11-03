@@ -1404,6 +1404,26 @@
           "type": "array",
           "prefixItems": [
             {
+              "const": "loop"
+            },
+            {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            },
+            {
+              "$ref": "#/$defs/step"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
               "enum": [
                 "at-once",
                 "in-order"

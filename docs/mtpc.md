@@ -148,8 +148,9 @@ Motif and variant instances are written out in full: the runtime never builds an
     ["wait", seconds]
     ["at-once", step, …]
     ["in-order", step, …]
+    ["loop", n | null, step]
 
-A move carries its own `duration` and `ease`, resolved from the transition and the nearest enclosing default, so one named transition can be used in animations with different defaults. An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`. A `(move …)` with a target, or the name of a transition, in an animation's body, is written as a move; a `(move none …)`, as a wait. A slider's move is written as an animation of one move, with duration 1, which the compiler adds.
+A move carries its own `duration` and `ease`, resolved from the transition and the nearest enclosing default, so one named transition can be used in animations with different defaults. An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`. A `(move …)` with a target, or the name of a transition, in an animation's body, is written as a move; a `(move none …)`, as a wait. A slider's move is written as an animation of one move, with duration 1, which the compiler adds. An animation with `(loop n)` or `(loop)` has a `loop` step around its body, `n` being the number of rounds, or `null` for forever; each round starts again from the start of its step, reading every move's ends again.
 
 ### Transitions
 

@@ -12,3 +12,6 @@
 (animation fade (move dot.fill (to 'white') (duration 1)))
 (animation both (at-once (move k (to 10) (duration 2)) (move j (to 5) (duration 1))))
 (animation slide (move dot.pos (to [3 1]) (duration 1)))
+(animation thrice (loop 3) (move k (from 0) (to 10) (duration 1)))
+(animation forever (loop) (move j (to (+ j 1)) (duration 1)))
+(animation rounds (loop) (move k (from 0) (to 2) (duration 1)) (move k (to 4) (duration 1)))

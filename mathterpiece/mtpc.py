@@ -335,4 +335,6 @@ def _step(step: tuple) -> list:
         return ["move", [i, attr], tid, _number(duration), _ease(ease)]
     if step[0] == "wait":
         return ["wait", _number(step[1])]
+    if step[0] == "loop":
+        return ["loop", step[1], _step(step[2])]
     return [step[0], *(_step(s) for s in step[1:])]

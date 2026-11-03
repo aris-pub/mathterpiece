@@ -256,7 +256,7 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | list | `length`; items by position, `xs[0]` |
 | point | `x`, `y` |
 | transition | `duration`, `from`, `to`, `ease`, `path` |
-| animation | `duration`, `steps` |
+| animation | `duration` (except for one that loops forever), `steps` |
 | shapes | the arguments they take (a circle's `r`, `fill`, …) and their position, `pos`, `x`, `y` |
 | group | `length` (its member count), `members`; members by position or name, `g[0]`, `g['disk-3']`; any member attribute, spread over the members, `g.r` |
 | scene | `background`, `length` (its member count), `members` (its shapes, not its variables); members by position or name; no spreading (`s.r` is an error) |

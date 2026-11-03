@@ -85,4 +85,48 @@ describe("a player", () => {
     const [rt, p] = setup("both");
     expect(p.targets).toEqual([`${rt.id("k")}:`, `${rt.id("j")}:`]);
   });
+
+  it("plays a loop's body n times, each round from the start", () => {
+    // mtp-aql: (loop n); a move with from jumps back to it each round.
+    const [, p, v] = setup("thrice");
+    expect(p.duration).toBe(3);
+    p.seek(0.5);
+    expect(v("k")).toBe(5);
+    p.seek(1.25);
+    expect(v("k")).toBe(2.5);
+    p.seek(2.5);
+    expect(v("k")).toBe(5);
+    expect(p.done).toBe(false);
+    p.seek(3);
+    expect(v("k")).toBe(10);
+    expect(p.done).toBe(true);
+    p.seek(5);
+    expect(v("k")).toBe(10);
+  });
+
+  it("loops forever, reading a move's ends again each round", () => {
+    // A move with no from carries on from where the last round left it.
+    const [, p, v] = setup("forever");
+    expect(p.duration).toBe(Number.POSITIVE_INFINITY);
+    p.seek(0.5);
+    expect(v("j")).toBe(0.5);
+    p.seek(1.5);
+    expect(v("j")).toBe(1.5);
+    p.seek(2.25);
+    expect(v("j")).toBe(2.25);
+    expect(p.done).toBe(false);
+  });
+
+  it("gives a looping body's items as its steps, and the one running in any round", () => {
+    const [, p] = setup("rounds");
+    expect(p.spans).toEqual([
+      { start: 0, end: 1 },
+      { start: 1, end: 2 },
+    ]);
+    p.seek(3.5);
+    expect(p.stepNow()).toBe(1);
+    p.seek(4.5);
+    expect(p.stepNow()).toBe(0);
+  });
 });
+
