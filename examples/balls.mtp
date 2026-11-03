@@ -100,8 +100,8 @@
     (exists-when x-ball (> r 0))
     (exists-when y-ball (> r 0))
     (group names (defaults (fill fg) (font label))
-      (text_ 'x' (pos (+ x.pos [9 9])))
-      (text_ 'y' (pos (+ y.pos [9 9])))))
+      (text_ 'x' (pos (top-right x 2.5)))
+      (text_ 'y' (pos (top-right y 2.5)))))
 
   (list[color] segment-colors [s1 s2 s3 s4 s5])
   (list[string] tick-names ['0' 'ρ₁' 'ρ₂' 'ρ₃' 'ρ₄' 'ρ₅'] (const))

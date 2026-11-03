@@ -1,0 +1,26 @@
+; mtp-50n: the eight points on a shape's box, as the reading expression sees it, pushed out by a
+; gap; a container's box holds its members'; a rotated shape's box holds its corners turned.
+; expect top-c [1,3]
+; expect corner-c [2.5,3.5]
+; expect left-c [-0.25,2]
+; expect below-g [10,-2.5]
+; expect top-turned [0,1.4142135623730951]
+; expect at-anchor [12,0]
+; write c.r 2
+; expect top-c [1,4]
+; write g.translate [20,0]
+; expect below-g [20,-2.5]
+(motif tag ((real w 2 (>= 0)))
+  (rect box (width w) (height 1))
+  (circle anchor (pos [w 0]) (r 0) (fill none) (stroke none)))
+(scene s
+  (circle c (pos [1 2]) (r 1))
+  (group g (translate [10 0]) (rect b (width 2) (height 4)))
+  (rect turned (width 2) (height 2) (transform (rotate 45)))
+  (tag t (translate [10 0]))
+  (point top-c (top c))
+  (point corner-c (top-right c 0.5))
+  (point left-c (left c 0.25))
+  (point below-g (bottom g 0.5))
+  (point top-turned (top turned))
+  (point at-anchor t.anchor.pos))

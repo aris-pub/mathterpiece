@@ -580,7 +580,8 @@
                 "and",
                 "or",
                 "let",
-                "rand"
+                "rand",
+                "anchor"
               ]
             }
           ]
@@ -1341,6 +1342,60 @@
               "$ref": "#/$defs/expr"
             },
             "maxItems": 5
+          }
+        },
+        {
+          "if": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "anchor"
+              }
+            ]
+          },
+          "then": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "anchor"
+              },
+              {
+                "$ref": "#/$defs/type"
+              },
+              {
+                "enum": [
+                  "top",
+                  "bottom",
+                  "left",
+                  "right",
+                  "top-left",
+                  "top-right",
+                  "bottom-left",
+                  "bottom-right"
+                ]
+              },
+              {
+                "$ref": "#/$defs/expr"
+              },
+              {
+                "$ref": "#/$defs/expr"
+              },
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "const": "caller"
+                  }
+                ]
+              }
+            ],
+            "minItems": 6,
+            "maxItems": 6
           }
         }
       ]

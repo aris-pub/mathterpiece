@@ -43,7 +43,7 @@
 
   (group labels (defaults (fill ink))
     (foreach p points
-      (text_ p.name (pos (+ p.pos [0.13 0.13])) (font variable)))
+      (text_ p.name (pos (top-right p 0.03)) (font variable)))
     (text_ (or? $'distortion {measured:.3f}' 'distortion inf') (pos [-3.15 1.93]) (font big))
     (text_ $'best possible {(/ 2 (sqrt 3)):.3f}' (pos [1.17 1.93]) (font small) (opacity 0.6))))
 

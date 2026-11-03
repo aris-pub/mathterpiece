@@ -98,6 +98,7 @@ An expression is an array: its operation first, then its type, then its parts. `
 | `cond` | `["cond", T, [[c, v], …], else]` |
 | `and`, `or` | `["and", "bool", e…]`, `["or", "bool", e…]` |
 | `let` | `["let", T, [[name, e], …], body]` |
+| a point on a shape's box | `["anchor", T, side, e, gap, frame]`, `side` being one of the eight names (`"top"`, `"top-right"`, …), `e` the shape, `gap` an expression, and `frame` as in a read (reference, "Placing") |
 | `rand` | `["rand", "real", site, lo?, hi?]`, `site` numbering each copy of each `rand` after `foreach` and motif instances are expanded, starting at 0; each site draws its number once, when the page loads |
 
 ## Free and bound values

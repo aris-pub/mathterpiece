@@ -548,6 +548,16 @@ export class Runtime {
           return this.rands.get(site);
         };
       }
+      case "anchor": {
+        const [side, target, gap, frame] = parts as [string, Expr, Expr, number | null | "caller"];
+        const shape = this.compile(target);
+        const by = this.compile(gap);
+        return (ctx) => {
+          const ref = shape(ctx) as Ref | null;
+          const box = ref === null ? null : this.box(ref.id, frame === "caller" ? ctx.frame : frame);
+          return box === null ? null : anchorOf(side, box, by(ctx) as number);
+        };
+      }
       case "builtin":
         return this.compileBuiltin(t, parts);
       default:
@@ -724,6 +734,42 @@ export class Runtime {
     return p[attr === "x" ? 0 : 1];
   }
 
+  /**
+   * A shape's box as seen from a frame, [left, bottom, right, top], or null when it does not
+   * exist: the box around its own geometry's corners after every transform on the way, and a
+   * container's, the box around its members' that exist (reference.md, "Placing").
+   */
+  box(id: number, frame: number | null): number[] | null {
+    if (!this.exists(id)) return null;
+    const o = this.objects[id]!;
+    if (o.kind === "group" || o.kind === "instance") {
+      const boxes = (o.members ?? []).map((m) => this.box(m, frame)).filter((b) => b !== null);
+      if (boxes.length === 0) return null;
+      return [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...boxes.map((b) => b![k]!)));
+    }
+    const v = (attr: string) => this.value(id, attr) as number;
+    let corners: number[][];
+    if (o.kind === "line" || o.kind === "triangle") {
+      corners = CORNERS[o.kind]!.map((c) => this.value(id, c) as number[]);
+    } else {
+      const [x, y] = [v("x"), v("y")];
+      const [hw, hh] =
+        o.kind === "circle" ? [v("r"), v("r")] : o.kind === "rect" ? [v("width") / 2, v("height") / 2] : [v("rx"), v("ry")];
+      corners = [
+        [x - hw, y - hh],
+        [x + hw, y - hh],
+        [x + hw, y + hh],
+        [x - hw, y + hh],
+      ];
+    }
+    if (corners.some((c) => c === null || c.some((n) => n === null || n === undefined))) return null;
+    const m = this.frameOf(id, frame);
+    const seen = m === null ? corners : corners.map((c) => apply(m, c) as number[]);
+    const xs = seen.map((c) => c[0]!);
+    const ys = seen.map((c) => c[1]!);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  }
+
   /** The transform from a shape's frame to its container frame's, or null when there is none. */
   private frameOf(id: number, frame: number | null): number[] | null {
     const shared = new Set<number>();
@@ -818,4 +864,13 @@ export function show(v: unknown, t: Type, spec: string): string {
 
 function percent(x: number): string {
   return `${Number((100 * x).toFixed(6))}%`;
+}
+
+// A point on a box [left, bottom, right, top]: the middle of a side or a corner, pushed out by
+// gap on each side it names.
+function anchorOf(side: string, box: number[], gap: number): number[] {
+  const [l, b, r, t] = box as [number, number, number, number];
+  const x = side.includes("left") ? l - gap : side.includes("right") ? r + gap : (l + r) / 2;
+  const y = side.startsWith("top") ? t + gap : side.startsWith("bottom") ? b - gap : (b + t) / 2;
+  return [x, y];
 }

@@ -98,6 +98,11 @@ UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
+# The points on a shape's box that placement gives: the middle of each side and each corner
+# (reference.md, "Placing").
+ANCHORS = frozenset(
+    {"top", "bottom", "left", "right", "top-left", "top-right", "bottom-left", "bottom-right"}
+)
 # The components (reference.md, "Components"), declared at the top level only.
 COMPONENTS = {
     "canvas",
@@ -2389,6 +2394,46 @@ class _Compiler:
             self.exists_when(item, inner)
         return i
 
+    def anchor(self, node: Form, side: str, scope: dict) -> Expr:
+        """(side shape gap?): a point on the shape's box, as the reading expression sees it, the
+        middle of a side or a corner, pushed out by gap in scene units (mtp-50n)."""
+        args = node.items[1:]
+        if not 1 <= len(args) <= 2:
+            raise CompileError(f"{side} takes a shape, and a gap if any", node.pos)
+        target = self.expr(args[0], None, scope)
+        ids = (
+            self.objects_in(target) if isinstance(_core(target.type), (ShapeT, Interface)) else None
+        )
+        if ids is None:
+            raise CompileError(f"{side} takes a shape, got {target.type}", args[0].pos)
+        gap = self.expr(args[1], REAL, scope) if len(args) == 2 else _known(REAL, 0)
+        deps = set(target.deps) | set(gap.deps)
+        maybe = _may_be_none(target.type) or _may_be_none(gap.type)
+        for i in ids:
+            d, absent = self.box_of(i, args[0].pos)
+            deps |= d
+            maybe = maybe or absent
+        t = Maybe(POINT) if maybe else POINT
+        return Expr("anchor", t, (side, target, gap, self.frame), frozenset(deps))
+
+    def box_of(self, i: int, pos: Pos) -> tuple[set, bool]:
+        """What a shape's box reads, and whether it may be none: a container's is the box around
+        its members' that exist (reference.md, "Placing")."""
+        obj = self.model.objects[i]
+        if obj.kind == "text":
+            raise CompileError(
+                "a text's box is not known when compiling, so nothing is placed against it yet",
+                pos,
+            )
+        deps = {(i, a) for a in obj.attrs} | set(self.moves(i))
+        absent = isinstance(obj.type, Maybe)
+        if obj.kind in ("group", "instance"):
+            members = [self.box_of(m, pos) for m in obj.members]
+            for d, _ in members:
+                deps |= d
+            absent = absent or not members or all(a for _, a in members)
+        return deps, absent
+
     def may_be_absent(self, parent) -> bool:
         if parent is None or parent == self.scene:
             return False
@@ -3109,6 +3154,8 @@ class _Compiler:
             if isinstance(ft, FuncT):
                 return self.fn(node, scope, ft.params, ft.result)
             return self.fn(node, scope)
+        if head in ANCHORS:
+            return self.anchor(node, head, scope)
         if head in COLLECTION:
             return self.collection(node, head, scope, expected)
         if head in BUILTINS or head in SPECIAL_BUILTINS:

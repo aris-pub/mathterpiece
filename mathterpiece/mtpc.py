@@ -32,7 +32,7 @@ VERSION = 2
 # The operations written as ["builtin", T, name, arg…]; every other operation has its own form.
 OWN_FORM = {
     "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
-    "builtinfunc", "part", "member", "spread", "if", "and", "or", "rand",
+    "builtinfunc", "part", "member", "spread", "if", "and", "or", "rand", "anchor",
 }  # fmt: skip
 
 
@@ -199,6 +199,8 @@ class Writer:
             return ["if", t, *(self.expr(x) for x in a)]
         if op in ("and", "or"):
             return [op, "bool", *(self.expr(x) for x in a)]
+        if op == "anchor":
+            return ["anchor", t, a[0], self.expr(a[1]), self.expr(a[2]), a[3]]
         if op == "rand":
             return ["rand", "real", a[0], *(self.expr(x) for x in a[1:])]
         return ["builtin", t, op, *(self.expr(x) for x in a)]
