@@ -40,7 +40,11 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 |---|---|---|---|---|
 | `(func name params body)`, `(func[T] name params body)` | required | the parameter list; the body, one expression | none | none |
 
-`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A function may call itself. `fn`, a function written in place, is a special form (below).
+`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself.
+
+    (func[point] ahead ((real d)) [d 0])                     ; [d 0] is a point
+    (func[(real (>= 0) (<= 1))] nearness ((real x)) (/ (+ (sind x) 1) 2))
+ `fn`, a function written in place, is a special form (below).
 
 ### The scene and shapes
 
@@ -57,7 +61,16 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 | `(text name value)` | required | the string | shape arguments, `(font font)`, `(halign …)`, `(valign …)`; its font is only given as a declared font variable, never as separate size or family arguments | none |
 | `(M name)`, for a motif or variant `M`, such as `(dial d1)` for a motif `dial` | required | none | its parameters, and the arguments its base takes | none |
 
-Shape arguments, taken by every shape except groups: `(x real)` `(y real)`, or `(pos point)`, which writes `x` and `y` together, as one point (`c.pos` is `[c.x c.y]`; `pos` is not kept apart from them). Taken by every shape, groups included: `(translate point)`, the translation part of its transform, and `(transform transform)`. Taken by every shape except groups: `(fill color|none)`; `(stroke color|none)`; `(stroke-width (real (>= 0)))`; `(opacity (real (>= 0) (<= 1)))`, `(fill-opacity (real (>= 0) (<= 1)))`, `(stroke-opacity (real (>= 0) (<= 1)))`; `(dash lengths offset)`, a dashed stroke: `lengths`, a list of reals of at least 0, alternate dash and gap, in screen pixels like `stroke-width`, and the optional `offset`, a real (0 if left out), shifts where the pattern starts. The offset is an attribute of its own, `dash-offset`, which a figure reads as `l.dash-offset` and an animation moves, as in `(move l.dash-offset (to 12))`, so that the dashes march along the stroke; it is given only inside `dash`, never as `(dash-offset …)`; `(line-cap 'butt'|'round'|'square')`, the shape of a stroke's ends; `(line-join 'miter'|'round'|'bevel')`, the shape of its corners. On a group, any of these, and `x`, `y` and `pos`, are read and written on each member (they spread). A group has none of its own, so its declaration gives them to its members in `(defaults …)`: `(group labels (defaults (fill ink) (font note) (halign 'middle')) …)`. Besides `fill`, `stroke` and the like, a group's defaults may give the texts inside it their `font`, `halign` and `valign`; never `x`, `y` or `pos`, since a container is moved by its `translate`. A member that gives its own value keeps it, as a move's own `ease` wins over the defaults around it, and the nearest group's default wins over one further out. A text takes no `stroke`, `stroke-width`, `dash`, `line-cap` or `line-join` from a group, since a stroke would outline its letters; it keeps its own. A motif instance takes `x`, `y` and `pos`, which move its frame, and so its members, before its `translate` and `transform`. Like a group, it has no `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `dash`, `line-cap` or `line-join` of its own: it gives them to its members in `(defaults …)`, and reading or writing one on the instance reads or writes every member's (see the data model). These mirror SVG on purpose (`dash` is its `stroke-dasharray` and `stroke-dashoffset`, `line-cap` and `line-join` its `stroke-linecap` and `stroke-linejoin`): a color's alpha, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through an overlapping stroke.
+Shape arguments are the optional arguments the shapes share:
+
+- **Position**, taken by every shape except groups: `(x real)` `(y real)`, or `(pos point)`, which writes `x` and `y` together, as one point (`c.pos` is `[c.x c.y]`; `pos` is not kept apart from them).
+- **Transforms**, taken by every shape, groups included: `(translate point)`, the translation part of its transform, and `(transform transform)`.
+- **Fill and stroke**, taken by every shape except containers (below): `(fill color|none)`; `(stroke color|none)`; `(stroke-width (real (>= 0)))`; `(opacity (real (>= 0) (<= 1)))`, `(fill-opacity (real (>= 0) (<= 1)))`, `(stroke-opacity (real (>= 0) (<= 1)))`.
+- **Line styles**, taken by every shape except containers: `(dash lengths offset)`, `(line-cap …)` and `(line-join …)`.
+
+`(dash lengths offset)` gives a dashed stroke. `lengths`, a list of reals of at least 0, alternate dash and gap, in screen pixels like `stroke-width`, and the optional `offset`, a real (0 if left out), shifts where the pattern starts. The offset is an attribute of its own, `dash-offset`, which a figure reads as `l.dash-offset` and an animation moves, as in `(move l.dash-offset (to 12))`, so that the dashes march along the stroke. It is given only inside `dash`, never as `(dash-offset …)`. `(line-cap 'butt'|'round'|'square')` is the shape of a stroke's ends, and `(line-join 'miter'|'round'|'bevel')` the shape of its corners.
+
+These mirror SVG on purpose (`dash` is its `stroke-dasharray` and `stroke-dashoffset`, `line-cap` and `line-join` its `stroke-linecap` and `stroke-linejoin`): a color's alpha, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through an overlapping stroke.
 
 `halign` is one of `'start' 'middle' 'end'`; `valign` is one of `'top' 'middle' 'baseline' 'bottom'`, where `'baseline'` is the line the letters sit on and `'bottom'` is the bottom of the lowest letters.
 
@@ -66,6 +79,15 @@ Where each shape is placed by its position: a circle's and an ellipse's center, 
 A scene's `transform` says how its own coordinates are drawn: `(scene s (transform (scale 1 -1)) …)` has y pointing down, as in an SVG. Everything in the scene is written, read and written to in the scene's own coordinates, a canvas's view box is given in them, and the pointer is converted back into them for drags and clicks. Everything follows the transform as drawn, texts included, and the anchor names `top` and `bottom` stay with y: `top` is toward larger y.
 
 `(exists-when name bool)` is an item of a scene, group, `foreach` or motif body, recognized by its head; it is not a special form. It is written after the shape it names, which is declared `T|none`. While `bool` does not hold, the shape does not exist in the scene: no canvas draws it, the pointer does not reach it, and every read of it or of its attributes is `none`. When it is a container, its members do not exist either, so every member of a container declared `T|none` is `T|none` too. A shape takes one `exists-when` at most. A canvas's `when` is different: it shows or hides what exists.
+
+### Containers
+
+A group (a row and a column included) and a motif instance are **containers** (see the data model): they hold shapes and draw nothing themselves. So none has a `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `dash`, `line-cap` or `line-join` of its own.
+
+- **They spread.** On a container, these attributes are read and written on each member, and on a group so are `x`, `y` and `pos`: reading one gives every member's, and writing one writes every member's, a member that gave its own value included. A container's `translate` and `transform` are its own, and are not spread (see "Coordinates").
+- **Defaults.** A container's declaration gives these attributes to its members in `(defaults …)`: `(group labels (defaults (fill ink) (font note) (halign 'middle')) …)`. The defaults may also give the texts inside it their `font`, `halign` and `valign`; never `x`, `y` or `pos`, since a container is moved by its `translate`. A member that gives its own value keeps it, as a move's own `ease` wins over the defaults around it, and the nearest container's default wins over one further out.
+- **A text** takes no `stroke`, `stroke-width`, `dash`, `line-cap` or `line-join` from a container's defaults, since a stroke would outline its letters; it keeps its own.
+- **A motif instance** also has a frame of its own, and its parameters. It takes `x`, `y` and `pos`, which move its frame, and so its members, before its `translate` and `transform`.
 
 ### Tokens
 
@@ -76,7 +98,7 @@ A scene's `transform` says how its own coordinates are drawn: `(scene s (transfo
 
 A font's `style` is one of `'normal' 'italic' 'oblique'`.
 
-Color and font variables are tokens: the page may restyle them through CSS custom properties (`--mtp-ink`), so a token effectively acts as a bound variable, bound to the page's value (see the data model, "What changes, and what follows"), and no writer (control or listener) can write them.
+Color and font variables are tokens: the page may restyle them with CSS, so no writer (control or listener) can write them (see the data model, "What changes, and what follows" and "On the page").
 
 ### Transitions and animations
 
@@ -167,10 +189,10 @@ Every control and listener emits writes to its target (or, through its animation
 ### Dragging
 
 - **The press** hits the topmost shape under the pointer, then goes up the scene tree to the nearest shape with an `on-drag` whose `when` holds. That shape is dragged.
+- **The target** is the shape's own position or a number its position depends on.
 - **A target that is the shape's own `x`, `y` or `pos`** follows the pointer's motion, keeping the offset the pointer had from the shape at the press: the shape does not jump to center itself under the pointer. A target of `x` alone or `y` alone follows the pointer along that axis only.
 - **A target that is a number the shape's position depends on** (`theta` in `(polar 1 theta)`) takes the value that brings the shape closest to where the pointer has moved it. The search starts from the current value and stays near it, so the shape never jumps to another position equally close (the far side of a circle). When no value reaches the pointer exactly, the closest is taken.
 - **A group** moves every member by the pointer's motion.
-- **A target** is the shape's own position or a number its position depends on.
 
 ### Panning and zooming
 
@@ -209,7 +231,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(fn params body)` | nothing until called; binds its parameters in its body. A single parameter may be a bare name, typed by where the function is used; several must all be typed |
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name |
-| `(as T literal)` | nothing: the literal, with the type `T`; anything but a literal is a compile error |
+| `(as T literal)` | nothing: the literal, with the type `T`, for a literal where nothing else gives it one, as in `(as color 'gold')` or `(as point [0 0])`; anything but a literal is a compile error |
 | `(type-of x)` | nothing while drawing: `x`, any one expression, is compiled only for its type, and the form gives that type as a string, for debugging. The string is known when compiling, even when `x` is not, and is the type as a type expression writes it: `'int'`, `'ratio'`, `'real'`, `'real\|none'`, `'list[int]'`, `'func[real real]'`, `'circle'`, `'group'`, `'slider'`; a named type, motif or variant by its name (`'unit'`, `'dial'`); a narrowed type with the constraints it was declared with, `'(real (>= 0))'` for `(real k 1 (>= 0))`. A range the compiler proves is not shown: `(type-of (sind k))` is `'real'`. A compile error in `x` is still an error, and a type is not an expression, so `(type-of int)` is an error |
 | `(foreach i n decl…)`, `(foreach x xs decl…)` | when compiling: the declarations once for each `i` from 0 to n−1, or once for each item `x` of the list `xs` (`g.pos`, the list of every member's position, too), or each member of a group `g`; the count, or the list's length, must be known when compiling, while the items may be known only while drawing |
 

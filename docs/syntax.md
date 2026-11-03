@@ -94,9 +94,8 @@ A function is declared with `func`: its name, its parameters, and its body. Ever
 Its result's type is worked out from the body, or written on the head, as a list's item type is, with any constraints:
 
     (func[point] ahead ((real d)) [d 0])                     ; [d 0] is a point
-    (func[(real (>= 0) (<= 1))] nearness ((real x)) (/ (+ (sind x) 1) 2))
 
-The compiler proves the body gives that type and stays within its constraints, as for any bound value, and every call then has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`.
+The reference, "Functions", says what the compiler then proves.
 
 ### Functions as arguments
 
@@ -115,20 +114,10 @@ A collection function's function takes its parameter's type from the items, and,
 
 ## 6. Special forms
 
-A special form looks like a call but does something a function cannot: it evaluates only some of its parts, binds names, or stands for other expressions. Each is its own exception, documented with exactly what it evaluates and when.
+A special form looks like a call but does something a function cannot: it evaluates only some of its parts, binds names, or stands for other expressions. The special forms are `if`, `cond`, `and`, `or`, `let`, `fn` (section 5), `.` (section 7), `name` (section 4), `as`, `foreach` and `type-of`; the reference, "Special forms", says exactly what each evaluates and when. Two of them in use:
 
-| Form | What is special |
-|----|----|
-| `(if c a b)` | evaluates only the branch taken |
-| `(cond (c1 a) (c2 b) (else d))` | takes clauses, each a test and a value; evaluates only the first clause whose test holds |
-| `(and …)` `(or …)` | stop at the first part that decides the answer |
-| `(let ((h (* 2 k))) (+ h 1))` | names values for use inside its body, a single expression, and gives that expression; in a scene, group, foreach or motif body, `(let ((w (* 2 i))) (circle …) (text …))` names them for the declarations it holds |
-| `(foreach i 5 (circle (name $'dot-{i}') …))` | stands for the expressions it produces, spliced in place when compiling; the count must be known then |
-| `(fn p (* 2 p.r))` | a function written in place: binds its parameters in its body (section 5) |
-| `(. X Y)` | a part of `X`; `Y` is not evaluated when it is an attribute name (section 7) |
-| `(name s)` | turns a string into a name (section 4) |
-| `(as T literal)` | gives a literal the type `T` where nothing else gives it one: `(as color 'gold')`, `(as point [0 0])` |
-| `(type-of x)` | gives `x`'s type as a string, such as `'real'`, known when compiling; `x` is never evaluated while drawing |
+    (if (> k 0) 'up' 'down')                      ; evaluates only the branch taken
+    (foreach i 5 (circle (name $'dot-{i}') …))    ; five circles, made when compiling
 
 Two items are recognized by their head and are not special forms: `(when c name…)` in a canvas's body, a condition and the names of what it shows, and `(exists-when name c)` in a scene, group, `foreach` or motif body, which says when a shape exists (see the reference, "The scene and shapes"). In a control or a listener, `(when c)` is an optional argument.
 
