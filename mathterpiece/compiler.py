@@ -2625,7 +2625,14 @@ class _Compiler:
         if not attribute.bound and (fixed or (_is_const(attribute.type) and not token)):
             return _known(t, attribute.value)
         deps = frozenset({(i, attr)}) | moves
-        return Expr("read", t, (i, attr, self.frame), deps, _type_range(t))
+        r = _type_range(t)
+        # A bound value always equals its expression, so a read has that expression's range too,
+        # unless the read converts it through a translate or a transform.
+        if attribute.bound and attribute.expr is not None and not moves:
+            e = attribute.expr.range
+            if e is not None:
+                r = e if r is None else (max(r[0], e[0]), min(r[1], e[1]))
+        return Expr("read", t, (i, attr, self.frame), deps, r)
 
     def moves(self, i: int) -> frozenset:
         """The translate and transform attributes a read of shape i converts through: its own and

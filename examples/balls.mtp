@@ -52,8 +52,8 @@
   ; know that.
   (point x-at (lerp (or? spots[x-from].pos [0 0]) (or? spots[x-to].pos [0 0]) x-t))
   (point y-at (lerp (or? spots[y-from].pos [0 0]) (or? spots[y-to].pos [0 0]) y-t))
-  (real h (/ (dist x-at y-at) 2) (>= 0))
-  (real r (* share h) (>= 0))
+  (real h (/ (dist x-at y-at) 2))
+  (real r (* share h))
 
   ; The bar runs from 40 to 560 and stands for [0, δ/2].
   (real bar-left 40 (const))

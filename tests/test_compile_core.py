@@ -382,3 +382,24 @@ class TestIndexingAListWrittenInPlace:
     def test_a_position_known_only_while_drawing(self):
         m = compile_source("(int h 0 (>= 0) (<= 2)) (real v [10 20 30][h])")
         assert m.get("v").value.bound
+
+
+class TestBoundReadsKeepTheirRange:
+    # mtp-2ixy: a bound variable always equals its expression, so a read of it has the
+    # expression's range, not only its type's.
+    def test_a_bound_variable_passed_to_a_constrained_parameter(self):
+        model(
+            "(real t 1 (>= 0.5) (<= 10.5)) (real L 2 (>= 2) (<= 10)) (real te (min t (+ L 0.5)))"
+            " (func f ((real x (>= 0))) x) (real v (f te))"
+        )
+
+    def test_a_bound_variable_as_a_radius(self):
+        model("(point a) (point b) (real h (/ (dist a b) 2)) (scene s (circle c (r h)))")
+
+    def test_a_bound_variable_as_a_divisor(self):
+        m = model("(real g 0 (>= 0) (<= 1)) (real lv (max 2 (* 10 g))) (real v (/ 1 lv))")
+        assert m.get("v").value.expr.type == REAL
+
+    def test_a_free_variable_keeps_its_type_range(self):
+        # A writer may change it, so its starting value says nothing.
+        error("(real k 2) (scene s (circle c (r k)))", "may break")
