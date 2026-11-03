@@ -413,6 +413,13 @@ export class Runtime {
       }
       case "list": {
         const items = (parts as Expr[]).map((p) => this.compile(p));
+        // A point with a coordinate that is none is none (type-system.md, "Where it comes from").
+        if (this.core(t) === "point") {
+          return (ctx) => {
+            const xy = items.map((f) => f(ctx));
+            return xy.includes(null) ? null : xy;
+          };
+        }
         return (ctx) => items.map((f) => f(ctx));
       }
       case "format":

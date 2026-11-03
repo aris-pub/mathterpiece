@@ -1,0 +1,7 @@
+; A point built from a coordinate that is none is none, so a line|none ending there is not drawn.
+; expect end null
+; write k 1
+; expect end [1,0]
+(real k 0)
+(real|none inv (/ 1 k))
+(point|none end [inv 0])
