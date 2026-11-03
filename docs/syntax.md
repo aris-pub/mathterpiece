@@ -95,7 +95,7 @@ Its result's type is worked out from the body, or written on the head, as a list
 
     (func[point] ahead ((real d)) [d 0])                     ; [d 0] is a point
 
-The reference, "Functions", says what the compiler then proves.
+The `func` entry in the reference, under "Declarations", says what the compiler then proves.
 
 ### Functions as arguments
 
