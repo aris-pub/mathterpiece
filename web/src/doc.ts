@@ -52,6 +52,8 @@ export interface Obj {
   token?: boolean;
   attrs?: Record<string, Attribute>;
   members?: number[];
+  /** A container's clip: a shape in its frame, never drawn, that its members are drawn inside. */
+  clip?: number;
   of?: string;
   // transitions
   from?: Attribute | null;

@@ -1777,6 +1777,9 @@
               "of": {
                 "$ref": "#/$defs/name"
               },
+              "clip": {
+                "$ref": "#/$defs/id"
+              },
               "layout": {
                 "type": "object",
                 "required": [

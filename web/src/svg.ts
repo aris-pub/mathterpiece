@@ -131,6 +131,7 @@ function drawObject(rt: Runtime, i: number, into: Element, unitsPerPx: number): 
     const g = document.createElementNS(NS, "g");
     g.setAttribute("transform", matrix(rt.local(i, true)));
     g.setAttribute("data-mtp-id", String(i));
+    if (o.clip !== undefined) clipTo(rt, o.clip, g, unitsPerPx);
     for (const m of o.members ?? []) drawObject(rt, m, g, unitsPerPx);
     into.appendChild(g);
     return;
@@ -157,6 +158,24 @@ function absent(rt: Runtime, i: number): boolean {
   return Object.entries(o.attrs ?? {}).some(
     ([attr, p]) => attr !== "fill" && attr !== "stroke" && attr !== "exists" && p.type && rt.value(i, attr) === null,
   );
+}
+
+// Several canvases may draw the same container on one page, so each clip path gets its own id.
+let clips = 0;
+
+/**
+ * Clips a container's <g> to its clip shape (mtp-un2f). The clip path sits inside the <g>, in its
+ * frame; SVG then also keeps the pointer from what it cuts off.
+ */
+function clipTo(rt: Runtime, clip: number, g: Element, unitsPerPx: number): void {
+  const path = document.createElementNS(NS, "clipPath");
+  path.id = `mtp-clip-${++clips}`;
+  const el = shapeElement(rt, clip, unitsPerPx);
+  const own = rt.local(clip);
+  if (!own.every((v, k) => v === [1, 0, 0, 1, 0, 0][k])) el.setAttribute("transform", matrix(own));
+  path.appendChild(el);
+  g.appendChild(path);
+  g.setAttribute("clip-path", `url(#${path.id})`);
 }
 
 function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {

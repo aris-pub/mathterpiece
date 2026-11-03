@@ -1,7 +1,7 @@
 """Groups, the scene, positions and frames (docs/type-system.md 5.e and 6; docs/reference.md
 "Coordinates" and "The scene and shapes")."""
 
-from helpers import doc, error, model
+from helpers import bound, doc, error, model
 from mtpc_check import errors
 
 from mathterpiece.compiler import compile_source
@@ -297,3 +297,81 @@ class TestSceneTransform:
 
     def test_by_default_none(self):
         assert model("(scene s (circle c))").get("s").attrs["transform"].value == (1, 0, 0, 1, 0, 0)
+
+
+class TestClip:
+    # mtp-un2f, the author 2026-11-03: (clip shape) on a container draws its members only inside
+    # the shape, which is never drawn; it is bound like any shape, its box cuts the container's,
+    # and the pointer does not reach what it cuts off.
+    SRC = (
+        "(real w 4) (scene s (group g (clip (rect window (width w) (height 2)))"
+        " (circle a (r 3)) (circle b)))"
+    )
+
+    def test_the_clip_is_not_a_member(self):
+        m = model(self.SRC)
+        g = m.get("g")
+        assert g.data["clip"] == m.id("window")
+        assert m.id("window") not in g.members and len(g.members) == 2
+
+    def test_it_lives_in_the_containers_frame(self):
+        m = model(self.SRC)
+        assert m.get("window").parent == m.id("g")
+
+    def test_it_is_bound_read_and_moved_like_any_shape(self):
+        m = model(self.SRC + " (real v window.width)")
+        assert m.get("window").attrs["width"].bound
+        assert bound(self.SRC + " (real v window.width)").op == "read"
+        model(self.SRC + " (animation grow (move window.height (to 8) (duration 1)))")
+
+    def test_a_clip_with_no_name(self):
+        m = model("(scene s (group g (clip (circle_ (r 2))) (circle a (r 3))))")
+        assert m.get("g").data["clip"] not in m.get("g").members
+
+    def test_the_shapes_it_may_be(self):
+        for shape in ("(circle_)", "(ellipse_)", "(triangle_)", "(rect_)"):
+            model(f"(scene s (group g (clip {shape}) (circle a)))")
+        for shape in ("(text_ 'x')", "(group_ (circle_))", "(line_)"):
+            error(f"(scene s (group g (clip {shape}) (circle a)))", "a clip is a circle")
+        error("(scene s (group g (clip 3) (circle a)))", "a clip is a circle")
+
+    def test_it_always_exists(self):
+        error(
+            "(scene s (group g (clip (rect|none window)) (circle a)))",
+            "a clip always exists",
+        )
+
+    def test_once_and_before_the_body(self):
+        error("(scene s (group g (clip (rect_)) (clip (rect_)) (circle a)))", "given twice")
+        error("(scene s (group g (circle a) (clip (rect_))))", "before the group's body")
+
+    def test_a_row_lays_out_its_members_only(self):
+        m = model("(scene s (row r (clip (rect_ (width 3))) (circle a) (circle b)))")
+        assert len(m.get("r").members) == 2
+
+    def test_a_containers_box_reads_its_clip(self):
+        # So a shape placed against the container moves when the clip changes.
+        m = model(self.SRC.replace("(circle b)))", "(circle b))") + " (circle c (pos (top g))))")
+        deps = m.get("c").attrs["x"].expr.deps
+        assert (m.id("window"), "height") in deps
+
+    def test_a_motif_instance_too(self):
+        m = model(
+            "(motif dot () (circle c (r 3))) (scene s (dot d (clip (rect window (width 2)))))"
+            " (real v window.width)"
+        )
+        d = m.get("d")
+        assert d.data["clip"] == m.id("window") and m.id("window") not in d.members
+        assert m.get("window").parent == m.id("d")
+        d = doc("(motif dot () (circle c)) (scene s (dot d (clip (rect_))))")
+        assert "clip" in d["objects"][d["names"]["d"]]
+
+    def test_a_canvas_does_not_show_it(self):
+        error(self.SRC + " (canvas v window)", "never drawn")
+
+    def test_the_compiled_file(self):
+        d = doc(self.SRC)
+        assert errors(d) == []
+        g = d["objects"][d["names"]["g"]]
+        assert g["clip"] == d["names"]["window"]
+        assert d["names"]["window"] not in g["members"]

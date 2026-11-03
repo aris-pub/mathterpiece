@@ -101,6 +101,8 @@ UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
+# The shapes a container may be clipped to: ones with an inside.
+CLIPS = ("circle", "rect", "ellipse", "triangle")
 # The points on a shape's box that placement gives: the middle of each side and each corner
 # (reference.md, "Placing").
 ANCHORS = frozenset(
@@ -1962,6 +1964,8 @@ class _Compiler:
         e = self.expr(node, None, self.cscope)
         if e.op != "obj" or self.model.objects[e.args[0]].kind == "variable":
             raise CompileError("a canvas shows shapes or the scene, by name", node.pos)
+        if "clips" in self.model.objects[e.args[0]].data:
+            raise CompileError("a container's clip is never drawn, so no canvas shows it", node.pos)
         return e.args[0]
 
     def build_readout(self, obj: Obj, items: list, shape) -> None:
@@ -2211,10 +2215,17 @@ class _Compiler:
         given: dict[str, tuple[Node, dict]] = {}
         scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
         defaults: dict[str, tuple[Node, dict]] = {}
+        clip: tuple[Form, dict] | None = None
         for item, inner in self.expand_scoped(scoped):
             head = _head(item)
             if self.shape_kind(item) and head not in params:
                 raise CompileError(f"an instance of {kind} takes no members", item.pos)
+            if head == "clip" and head not in params:
+                assert isinstance(item, Form)
+                if clip is not None:
+                    raise CompileError("'clip' is given twice", item.pos)
+                clip = (item, inner)
+                continue
             if head == "defaults" and head not in params:
                 assert isinstance(item, Form)
                 self.group_defaults(item, inner, defaults)
@@ -2280,6 +2291,8 @@ class _Compiler:
         finally:
             self.bodies.pop()
             self.frame = saved
+        if clip is not None:
+            obj.data["clip"] = self.clip(clip[0], i, clip[1])
         return i
 
     def body_variable(self, form: Form, obj: Obj, scope: dict) -> None:
@@ -2379,6 +2392,7 @@ class _Compiler:
             if scoped and _head(scoped[0][0]) not in takes | {"pos"}:
                 given[attr] = scoped.pop(0)
         existence: list[tuple[Form, dict]] = []
+        clip: tuple[Form, dict] | None = None
         for item, inner in self.expand_scoped(scoped):
             if kind == "group" and self.shape_kind(item):
                 members.append((item, inner))
@@ -2394,6 +2408,12 @@ class _Compiler:
                     item.pos,
                 )
             head = _head(item)
+            if kind == "group" and head == "clip":
+                assert isinstance(item, Form)
+                if clip is not None:
+                    raise CompileError("'clip' is given twice", item.pos)
+                clip = (item, inner)
+                continue
             if kind == "group" and head == "defaults":
                 assert isinstance(item, Form)
                 self.group_defaults(item, inner, defaults)
@@ -2454,6 +2474,8 @@ class _Compiler:
             self.shape_attrs(obj, given, absent, form.pos, scope, specs)
         finally:
             self.frame = saved
+        if clip is not None:
+            obj.data["clip"] = self.clip(clip[0], i, clip[1])
         for item, inner in members:
             assert isinstance(item, Form)
             self.shape(item, i, inner, down)
@@ -2462,6 +2484,27 @@ class _Compiler:
         if axis is not None:
             self.no_text_in(i, form.pos)
         return i
+
+    def clip(self, form: Form, parent: int, scope: dict) -> int:
+        """A container's (clip shape): a shape in the container's frame, never drawn and not one
+        of its members, inside which the members are drawn (mtp-un2f)."""
+        node = form.items[1] if len(form.items) == 2 else None
+        found = self.shape_kind(node) if node is not None else None
+        if found is None or found[0] not in CLIPS:
+            raise CompileError(
+                "a clip is a circle, rect, ellipse or triangle, such as"
+                " (clip (rect_ (width 4) (height 2)))",
+                form.pos,
+            )
+        if found[1]:
+            raise CompileError(
+                f"a clip always exists, so it is not declared {found[0]}|none", form.pos
+            )
+        assert isinstance(node, Form)
+        c = self.shape(node, parent, scope)
+        self.model.objects[parent].members.remove(c)
+        self.model.objects[c].data["clips"] = parent
+        return c
 
     def layout(self, axis: str, given: dict, pos: Pos, scope: dict) -> dict:
         """A row's or a column's gap between its members' boxes, and the edge they line up by."""
@@ -2506,7 +2549,7 @@ class _Compiler:
 
     def box_of(self, i: int, pos: Pos) -> tuple[set, bool]:
         """What a shape's box reads, and whether it may be none: a container's is the box around
-        its members' that exist (reference.md, "Placing")."""
+        its members' that exist, cut to its clip's (reference.md, "Placing")."""
         obj = self.model.objects[i]
         if obj.kind == "text":
             raise CompileError(
@@ -2519,6 +2562,9 @@ class _Compiler:
             members = [self.box_of(m, pos) for m in obj.members]
             for d, _ in members:
                 deps |= d
+            # Its box is cut to its clip's (mtp-un2f).
+            if "clip" in obj.data:
+                deps |= self.box_of(obj.data["clip"], pos)[0]
             absent = absent or not members or all(a for _, a in members)
         return deps, absent
 

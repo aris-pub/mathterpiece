@@ -83,3 +83,22 @@ describe("coming into view", () => {
     expect(rt.value(rt.id("k"), null)).toBe(10);
   });
 });
+
+describe("a clipped container on a page", () => {
+  it("lets the pointer reach only what the clip keeps", async () => {
+    // mtp-un2f, the author 2026-11-03: what the clip cuts off does not take the pointer.
+    const model = page("clip", `<mtp-canvas model="m" name="v" style="display: block; width: 600px"></mtp-canvas>`);
+    const rt = model.runtime!;
+    const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+    svg.style.width = "600px";
+    svg.style.height = "400px";
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // The view box is 30 by 20 units from (-10, -10), at 20 pixels a unit, with y up.
+    const { left, top } = svg.getBoundingClientRect();
+    const at = (x: number, y: number) => document.elementFromPoint(left + (x + 10) * 20, top + (10 - y) * 20);
+    const a = document.querySelector(`[data-mtp-id="${rt.id("a")}"]`);
+    // Circle a has radius 3 around (1, 0); the clip keeps -1 to 3 across and -1 to 1 up.
+    expect(at(1, 0)).toBe(a);
+    expect(at(1, 2.5)).not.toBe(a);
+  });
+});

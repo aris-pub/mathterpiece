@@ -1,0 +1,8 @@
+(real h 2)
+(scene s
+  (group g (translate [1 0]) (clip (rect window (width 4) (height h)))
+    (circle a (r 3) (fill 'red'))
+    (circle b (pos [10 0]) (r 1)))
+  (circle under (pos (bottom g)) (r 0.5)))
+(canvas v (view-x -10) (view-y -10) (view-width 30) (view-height 20) s)
+(canvas w (view-x -10) (view-y -10) (view-width 30) (view-height 20) g)

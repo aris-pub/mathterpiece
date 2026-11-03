@@ -222,6 +222,8 @@ class Writer:
         elif kind in ("scene", "group"):
             d["members"] = list(o.members)
             d["attrs"] = attrs
+            if "clip" in o.data:
+                d["clip"] = o.data["clip"]
             if "layout" in o.data:
                 layout = o.data["layout"]
                 d["layout"] = {
@@ -233,6 +235,8 @@ class Writer:
             d["of"] = o.of
             d["members"] = list(o.members)
             d["attrs"] = attrs
+            if "clip" in o.data:
+                d["clip"] = o.data["clip"]
         elif kind in SHAPES:
             d["attrs"] = attrs
             if o.of is not None:

@@ -216,15 +216,15 @@
     (exists-when equals-p (not all))
     (text_ 'distortion' (halign 'middle') (font plain) (fill fg)
       (transform (transform (rotate 90) (translate 13 -69))))
-    ; The curve fades with all densities. Segments past the right edge do not exist, as the
-    ; original clips them.
+    ; The curve fades with all densities, and is cut off at the chart's right edge, as in the
+    ; original.
     (group curve (defaults (stroke one) (stroke-width 2.2) (opacity (- 1 (* 0.78 mix))))
+      (clip (rect_ (pos [260.5 -69]) (width 413) (height 150)))
       (foreach k 200
         ; Where the segment starts and ends across the chart.
         (let ((x0 (+ 54 (* (/ (* L (/ k 200)) lv) 412)))
               (x1 (+ 54 (* (/ (* L (/ (+ k 1) 200)) lv) 412))))
-          (line|none (name $'segment-{k}') (from [x0 (cy ds[k])]) (to [x1 (cy ds[(+ k 1)])]))
-          (exists-when (name $'segment-{k}') (<= x1 467)))))
+          (line_ (from [x0 (cy ds[k])]) (to [x1 (cy ds[(+ k 1)])])))))
     (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke every)
       (stroke-width (if all 3.5 2.4)))
     ; The line's name, set bold with all densities.

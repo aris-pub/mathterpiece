@@ -79,6 +79,7 @@ export class Runtime {
     this.parents = doc.objects.map(() => null);
     doc.objects.forEach((o, i) => {
       for (const m of o.members ?? []) this.parents[m] = i;
+      if (o.clip !== undefined) this.parents[o.clip] = i;
     });
     this.functions = doc.functions.map((f) => this.compile(f.body));
     doc.objects.forEach((o, i) => {
@@ -797,7 +798,8 @@ export class Runtime {
   /**
    * A shape's box as seen from a frame, [left, bottom, right, top], or null when it does not
    * exist: the box around its own geometry's corners after every transform on the way, and a
-   * container's, the box around its members' that exist (reference.md, "Placing").
+   * container's, the box around its members' that exist, cut to its clip's (reference.md,
+   * "Placing").
    */
   box(id: number, frame: number | null): number[] | null {
     if (!this.exists(id)) return null;
@@ -805,7 +807,12 @@ export class Runtime {
     if (o.kind === "group" || o.kind === "instance") {
       const boxes = (o.members ?? []).map((m) => this.box(m, frame)).filter((b) => b !== null);
       if (boxes.length === 0) return null;
-      return [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...boxes.map((b) => b![k]!)));
+      const around = [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...boxes.map((b) => b![k]!)));
+      const clip = o.clip === undefined ? null : this.box(o.clip, frame);
+      if (clip === null) return around;
+      // Each side moved into the clip's box: the two boxes' overlap, or, with none, a box of no
+      // size at the clip's edge nearest the members.
+      return around.map((n, k) => Math.min(Math.max(n, clip[k % 2]!), clip[(k % 2) + 2]!));
     }
     const v = (attr: string) => this.value(id, attr) as number;
     let corners: number[][];
