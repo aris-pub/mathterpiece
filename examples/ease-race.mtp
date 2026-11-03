@@ -1,0 +1,73 @@
+; Six balls race with six eases: each crosses the same distance in the same time, and only its
+; ease differs. They run out together (at-once), come back one at a time (in-order), and do it
+; again forever (loop). The last ease is a function the figure declares.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color terracotta '#e76f51')
+(color teal '#2a9d8f')
+(color saffron '#e9c46a')
+(color plum '#6d597a')
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+; An ease that lands and bounces three times, each bounce smaller: the usual bounce ease, four
+; parabolas joined end to end.
+(func bounce (real t)
+  (cond ((< t (/ 1 2.75)) (* 7.5625 t t))
+        ((< t (/ 2 2.75)) (+ (* 7.5625 (- t (/ 1.5 2.75)) (- t (/ 1.5 2.75))) 0.75))
+        ((< t (/ 2.5 2.75)) (+ (* 7.5625 (- t (/ 2.25 2.75)) (- t (/ 2.25 2.75))) 0.9375))
+        (else (+ (* 7.5625 (- t (/ 2.625 2.75)) (- t (/ 2.625 2.75))) 0.984375))))
+
+(scene track
+  (background paper)
+
+  ; Lane edges, and the start and finish lines.
+  (group lanes (defaults (stroke soft) (stroke-width 1))
+    (foreach i 7
+      (line_ (from [-3.2 (- 3.6 (* 1.2 i))]) (to [7.6 (- 3.6 (* 1.2 i))]) (stroke-opacity 0.5)))
+    (line_ (from [-2.6 3.6]) (to [-2.6 -3.6]))
+    (line_ (from [7 3.6]) (to [7 -3.6])))
+
+  (group names (defaults (fill ink) (font code) (halign 'end') (valign 'middle'))
+    (text_ '\'linear\'' (pos [-3.4 3]))
+    (text_ '\'ease-in\'' (pos [-3.4 1.8]))
+    (text_ '\'ease-out\'' (pos [-3.4 0.6]))
+    (text_ '\'ease-in-out\'' (pos [-3.4 -0.6]))
+    (text_ '(step 5)' (pos [-3.4 -1.8]))
+    (text_ 'bounce' (pos [-3.4 -3])))
+
+  (group balls (defaults (stroke none))
+    (circle linear-ball (x -2.6) (y 3) (r 0.34) (fill terracotta))
+    (circle in-ball (x -2.6) (y 1.8) (r 0.34) (fill teal))
+    (circle out-ball (x -2.6) (y 0.6) (r 0.34) (fill saffron))
+    (circle in-out-ball (x -2.6) (y -0.6) (r 0.34) (fill plum))
+    (circle step-ball (x -2.6) (y -1.8) (r 0.34) (fill terracotta))
+    (circle bounce-ball (x -2.6) (y -3) (r 0.34) (fill teal)))
+
+  (group captions (defaults (fill soft) (font code) (halign 'middle'))
+    (text_ '(animation (loop) (at-once …) (in-order …))' (pos [2.2 -4.5]))
+    (text_ '(func bounce (real t) …), an ease of the figure\'s own' (pos [2.2 -5.2]))))
+
+(canvas view (view-x -6.7) (view-y -5.8) (view-width 15) (view-height 10.2) (pan false)
+  (zoom false)
+  track)
+
+(play race (autoplay view) (label 'race')
+  (animation (loop)
+    (at-once (defaults (duration 1.6))
+      (move linear-ball.x (to 7) (ease 'linear'))
+      (move in-ball.x (to 7) (ease 'ease-in'))
+      (move out-ball.x (to 7) (ease 'ease-out'))
+      (move in-out-ball.x (to 7) (ease 'ease-in-out'))
+      (move step-ball.x (to 7) (ease (step 5)))
+      (move bounce-ball.x (to 7) (ease bounce)))
+    (move none (duration 0.8))
+    (in-order (defaults (duration 0.8))
+      (move linear-ball.x (to -2.6) (ease 'linear'))
+      (move in-ball.x (to -2.6) (ease 'ease-in'))
+      (move out-ball.x (to -2.6) (ease 'ease-out'))
+      (move in-out-ball.x (to -2.6) (ease 'ease-in-out'))
+      (move step-ball.x (to -2.6) (ease (step 5)))
+      (move bounce-ball.x (to -2.6) (ease bounce)))
+    (move none (duration 0.8))))
