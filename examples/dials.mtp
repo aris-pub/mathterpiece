@@ -86,19 +86,14 @@
   board)
 
 ; The knob is a ring, and its middle is not part of it, so a press there reaches the needle
-; under it: the needle can be dragged too.
-(on-drag speed.knob speed.value (>= speed.value 0) (<= speed.value 120))
-(on-drag speed.needle speed.value (>= speed.value 0) (<= speed.value 120))
-(on-drag heat.knob heat.value (>= heat.value -20) (<= heat.value 40))
-(on-drag heat.needle heat.value (>= heat.value -20) (<= heat.value 40))
-(on-drag pressure.knob pressure.value (>= pressure.value 0) (<= pressure.value 6))
-(on-drag pressure.needle pressure.value (>= pressure.value 0) (<= pressure.value 6))
-(on-drag thin.knob thin.value (>= thin.value 0) (<= thin.value 100))
-(on-drag thin.needle thin.value (>= thin.value 0) (<= thin.value 100))
-(on-drag bold.knob bold.value (>= bold.value 0) (<= bold.value 100))
-(on-drag bold.needle bold.value (>= bold.value 0) (<= bold.value 100))
-(on-drag half.knob half.value (>= half.value 0) (<= half.value 100))
-(on-drag half.needle half.value (>= half.value 0) (<= half.value 100))
+; under it: the needle can be dragged too. Each dial's own lo and hi limit its drag.
+(foreach d panel
+  (on-drag d.knob d.value (>= d.value d.lo) (<= d.value d.hi))
+  (on-drag d.needle d.value (>= d.value d.lo) (<= d.value d.hi)))
+
+; The faces start with no fill, so the buttons can write one (a fill given by a token would be
+; bound to it); they take their first color when the figure comes into view.
+(on-view view (animation (move panel.fill (to teal) (duration 0))))
 
 (slider speed-slider (move speed.value (from 0) (to 120)) (label 'speed'))
 (slider heat-slider (move heat.value (from -20) (to 40)) (label 'temperature'))

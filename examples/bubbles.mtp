@@ -10,9 +10,12 @@
 (color plum '#6d597a')
 (font code (family 'ui-monospace, Menlo, monospace') (size 13))
 
-; An ease that goes past its end and swings back, smaller each time, so the bubble wobbles as it
-; settles.
-(func spring (real t) (- 1 (* (cosd (* 540 t)) (^ (- 1 t) 2))))
+; A damped spring: it starts from rest, goes a little past its end once and settles, as a ball
+; on a spring does, and ends at exactly 1.
+(func spring (real t)
+  ; An ease is only called from 0 to 1; saying so lets the compiler prove the power is a real.
+  (let ((u (max 0 (min 1 t))))
+    (- 1 (* (^ (- 1 u) 4) (+ (cos (* 8 u)) (* 0.5 (sin (* 8 u))))))))
 
 ; burst runs from 0 to 1 as the bubble pops: it swells and fades, and drops fly out. Once it has
 ; popped, its body and the rest of it do not exist.
@@ -40,8 +43,7 @@
       (bubble (name $'b{i}')
         (pos [(rand -6.4 6.4) (- (rand -2.6 3.4) (* rise (rand 9 13)))])
         (size (rand 0.55 1.25))
-        (tint (cond ((= (mod i 4) 0) terracotta) ((= (mod i 4) 1) teal)
-                    ((= (mod i 4) 2) saffron) (else plum))))))
+        (tint [terracotta teal saffron plum][(mod i 4)]))))
 
   (int popped-count (count bubbles (fn b b.popped)))
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'middle'))
