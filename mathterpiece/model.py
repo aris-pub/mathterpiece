@@ -102,6 +102,8 @@ class FuncDef:
     # What the body reads through each parameter that holds shapes: attribute names, with
     # "[]." before one read on each item of a collection ("[].r").
     reads: dict[str, frozenset[str]] = field(default_factory=dict)
+    # The result type written on the head, (func[T] name …), or None when it is worked out.
+    declared: Type | None = None
     # Its body's source and the names around it, so a call with known arguments can be folded
     # by compiling the body again with them.
     source: Node | None = None

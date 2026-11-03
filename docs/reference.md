@@ -38,9 +38,9 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(func name params body)` | required | the parameter list; the body, one expression | none | none |
+| `(func name params body)`, `(func[T] name params body)` | required | the parameter list; the body, one expression | none | none |
 
-`func`'s parameters are always typed. Results are never written. A function may call itself. `fn`, a function written in place, is a special form (below).
+`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A function may call itself. `fn`, a function written in place, is a special form (below).
 
 ### The scene and shapes
 

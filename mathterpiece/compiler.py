@@ -35,6 +35,7 @@ from mathterpiece.nodes import (
     NOPOS,
     Bar,
     BoolLit,
+    Brackets,
     ComplexLit,
     Field,
     Form,
@@ -219,6 +220,15 @@ def compile_model(forms: tuple[Form, ...]) -> Model:
     return _Compiler().run(forms)
 
 
+def _typed_func(node: Node) -> Node | None:
+    """The result type written on a (func[T] name …) head, or None for any other form."""
+    if isinstance(node, Form) and node.items and isinstance(node.items[0], Name):
+        parts = node.items[0].parts
+        if len(parts) == 2 and parts[0] == "func" and not isinstance(parts[1], str):
+            return parts[1]
+    return None
+
+
 def _head(node: Node) -> str | None:
     if isinstance(node, Form) and node.items and isinstance(node.items[0], Name):
         part = node.items[0].parts[0]
@@ -302,7 +312,7 @@ class _Compiler:
             return self.motif_decl(form)
         if head == "variant":
             return self.variant_decl(form)
-        if head == "func":
+        if head == "func" or _typed_func(form) is not None:
             return self.func_decl(form)
         if head == "transition":
             self.transition(form, {}, top=True)
@@ -469,14 +479,30 @@ class _Compiler:
         self.trial(name, form.pos)
 
     def func_decl(self, form: Form) -> None:
+        written = _typed_func(form)
+        if isinstance(written, Brackets):
+            raise CompileError(
+                "a function's result is one type, as in (func[real] name parameters body); a"
+                " variable cannot hold a function",
+                form.pos,
+            )
         name, pos = self.name_of(form)
         if name is None or len(form.items) != 4:
             raise CompileError("a function is (func name parameters body)", form.pos)
         params = self.params(form.items[2])
         fid = len(self.model.functions)
-        f = FuncDef(name, params, RECURSING, pos=pos, source=form.items[3])
+        declared = self.type_of(written) if written is not None else None
+        f = FuncDef(name, params, declared or RECURSING, pos=pos, source=form.items[3])
+        f.declared = declared
         self.model.functions.append(f)
         self.model.funcs[name] = fid
+        if declared is not None:
+            # Every call, a recursive one too, has the declared type and range.
+            body, reads = self.function_body(params, form.items[3], declared)
+            body = self.within_result(name, declared, body, pos)
+            f.body, f.deps = body, body.deps
+            f.reads = {p.name: frozenset(reads[p.name]) for p in params if p.name in reads}
+            return
         # A recursive call gives RECURSING until the body's type is known; compile again with
         # that type until it no longer changes, since it may broaden (int, then ratio).
         for _ in range(len(NUMBERS) + 2):
@@ -488,6 +514,37 @@ class _Compiler:
             f.result = body.type
         f.body, f.deps = body, body.deps
         f.reads = {p.name: frozenset(reads[p.name]) for p in params if p.name in reads}
+
+    def within_result(self, name: str, t: Type, body: Expr, pos: Pos) -> Expr:
+        """The body of a function with a declared result, proved to stay within its constraints
+        (or checked, when the result may be none), with the declared range when narrower."""
+        inner = _inner(t)
+        if isinstance(inner, Refine):
+            if body.known:
+                broken = tuple(
+                    c
+                    for c in inner.constraints
+                    if c[0] in COMPARE and body.value is not None and not _satisfies(body.value, c)
+                )
+            else:
+                broken = tuple(
+                    c
+                    for c in inner.constraints
+                    if c[0] in COMPARE and not _range_within(body.range, c)
+                )
+            if broken and not _may_be_none(t):
+                raise CompileError(
+                    f"{name}'s result may break {_show(broken[0])}: constrain what it reads so this"
+                    f" can be proved, or declare it {_loose(t)}|none",
+                    pos,
+                )
+            if broken:
+                body = Expr("check", _maybe(body.type), (body, broken), body.deps, body.range)
+        declared = _type_range(t)
+        if declared is not None and not body.known:
+            r = body.range or declared
+            body = replace(body, range=(max(r[0], declared[0]), min(r[1], declared[1])))
+        return body
 
     def function_body(self, params, node: Node, expected=None, outer=None):
         """The body, and what it reads through each name it does not declare itself."""
@@ -516,6 +573,14 @@ class _Compiler:
         if f.body is not None and all(self.foldable(a) for a in args):
             folded = self.fold_call(fid, args)
             if folded is not None:
+                inner = _inner(f.declared) if f.declared is not None else None
+                if isinstance(inner, Refine) and folded.value is not None:
+                    # Only a result declared T|none can break its constraints (within_result).
+                    if any(
+                        c[0] in COMPARE and not _satisfies(folded.value, c)
+                        for c in inner.constraints
+                    ):
+                        return _known(t, None)
                 return _known(t, folded.value)
         r = f.body.range if f.body is not None else _type_range(t)
         for p, a in zip(f.params, args, strict=True):
@@ -867,7 +932,7 @@ class _Compiler:
         self.folding += 1
         self.reads.append({})
         try:
-            e = self.expr(f.source, None, scope)
+            e = self.expr(f.source, _loose(f.declared) if f.declared else None, scope)
         except RecursionError:
             return None
         finally:
@@ -2043,9 +2108,11 @@ class _Compiler:
                     PAINT, item.items[1], item.pos, "background", scope=scope
                 )
             elif head in ("motif", "variant", "func", "transition", "animation") or (
-                head in COMPONENTS
+                head in COMPONENTS or _typed_func(item) is not None
             ):
-                raise CompileError(f"a {head} is declared only at the top level", item.pos)
+                raise CompileError(
+                    f"a {head or 'func'} is declared only at the top level", item.pos
+                )
             elif self.shape_kind(item):
                 assert isinstance(item, Form)
                 self.shape(item, self.scene, scope)

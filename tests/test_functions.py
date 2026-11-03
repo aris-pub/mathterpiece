@@ -174,3 +174,58 @@ class TestReadsThroughFunctionValues:
             " (real v (app (fn p p.r) g))"
         )
         assert {(m.id("d"), "r"), (m.id("e"), "r")} <= deps
+
+
+class TestDeclaredResults:
+    # mtp-gn4: (func[T] name params body) declares the result's type; the compiler proves the body
+    # fits it, and every call has that type and range.
+    def test_a_call_has_the_declared_range(self):
+        m = model(
+            "(func[(real (>= 0) (<= 1))] near ((real x)) (/ (+ (sind x) 1) 2))"
+            " (real k) (scene s (circle c (opacity (near k))))"
+        )
+        f = m.functions[m.funcs["near"]]
+        assert f.result.constraints == ((">=", 0), ("<=", 1))
+
+    def test_without_it_the_call_may_break_a_constraint(self):
+        error(
+            "(func near ((real x)) (* 2 x)) (real k 0 (>= 0) (<= 1))"
+            " (scene s (circle c (opacity (near (/ k 2)))))",
+            "may break",
+        )
+
+    def test_the_body_must_be_proved_to_fit(self):
+        error(
+            "(func[(real (>= 0) (<= 1))] f ((real x)) (* 2 x))",
+            "f's result may break \\(>= 0\\)",
+        )
+
+    def test_the_body_must_have_the_type(self):
+        error("(func[bool] f ((real x)) (* 2 x))", "expected bool")
+
+    def test_the_declared_type_reaches_a_literal_in_the_body(self):
+        m = model("(func[point] f ((real x)) [x 0]) (real k) (point p (f k))")
+        assert m.get("p").value.bound
+
+    def test_a_folded_call_has_the_declared_type(self):
+        assert model("(func[point] f ((real x)) [x 0]) (point p (f 2))").get("p").value.value == (
+            2,
+            0,
+        )
+
+    def test_a_recursive_function_with_a_declared_result(self):
+        m = model(
+            "(func[point] f ((int n)) (if (<= n 0) [0 0] (let ((r (f (- n 1)))) [(+ r.x 1) r.y])))"
+            " (point q (f 3))"
+        )
+        assert tuple(m.get("q").value.value) == (3, 0)
+
+    def test_a_result_that_may_be_none_is_checked(self):
+        nn = "(type nonneg real (>= 0)) (func[nonneg|none] f ((real x)) x)"
+        m = model(f"{nn} (real|none a (f 2)) (real|none b (f -2))")
+        assert (m.get("a").value.value, m.get("b").value.value) == (2, None)
+        m = model(f"{nn} (real k) (real|none a (f k))")
+        assert m.functions[m.funcs["f"]].body.op == "check"
+
+    def test_only_at_the_top_level(self):
+        error("(scene s (func[real] f ((real x)) x))", "declared only at the top level")

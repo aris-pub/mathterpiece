@@ -91,6 +91,13 @@ A function is declared with `func`: its name, its parameters, and its body. Ever
     (func double (real x) (* 2 x))
     (func hyp ((real a) (real b 0)) (sqrt (+ (* a a) (* b b))))
 
+Its result's type is worked out from the body, or written on the head, as a list's item type is, with any constraints:
+
+    (func[point] ahead ((real d)) [d 0])                     ; [d 0] is a point
+    (func[(real (>= 0) (<= 1))] nearness ((real x)) (/ (+ (sind x) 1) 2))
+
+The compiler proves the body gives that type and stays within its constraints, as for any bound value, and every call then has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`.
+
 ### Functions as arguments
 
 A function can be passed to another, by name or written in place with `fn`, which is `func` without a name. A single parameter of `fn` may leave out its type when the place gives it:
