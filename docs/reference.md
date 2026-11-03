@@ -115,7 +115,7 @@ What an attribute is when the author leaves it out:
 | What | Default |
 |---|---|
 | `x`, `y`, `translate` | 0, so `[0 0]` |
-| `transform` | the identity |
+| `transform` (of a shape, the scene or a canvas) | the identity |
 | `fill` | black, `'#000000'` |
 | `stroke` | `none` |
 | `stroke-width` | 1 (a screen pixel) |
@@ -127,6 +127,7 @@ What an attribute is when the author leaves it out:
 | ellipse `rx`, `ry` | 1 |
 | line | from `[0 0]` to `[1 0]` |
 | triangle | corners `[0 0]`, `[1 0]`, `[0 1]` |
+| row and column `gap`, `align` | 0, `'middle'` |
 | text | `halign` `'start'`, `valign` `'baseline'` |
 | a font's parts | family: the page's font; style `'normal'`; weight 400; size 16 (screen pixels) |
 | scene `background` | `none` |

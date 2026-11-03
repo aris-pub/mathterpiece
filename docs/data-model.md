@@ -73,7 +73,7 @@ flowchart LR
     end
     subgraph page
       views["views: (canvas …) (readout …)"]
-      listeners["listeners: (on-drag …) (on-click …)"]
+      listeners["listeners: (on-drag …) (on-click …) (on-release …) (on-dragend …) (on-view …)"]
       controls["controls: (slider …) (button …) (play …) (toggle …)"]
     end
   end
@@ -84,6 +84,7 @@ flowchart LR
   anims -->|moves an attribute or variable| shapes
   controls -->|runs| anims
   listeners -->|attached to| shapes
+  listeners -->|on-view: attached to| views
   views -->|shows| sc
   views -->|read| vars
   listeners & controls <-->|read, write| vars
@@ -95,7 +96,7 @@ A group and a motif instance are both **containers**: collections of shapes, whi
 
 - **The scene** is the mathematical content: the shapes, and the variables declared with them. It is a subset of the model and knows nothing of how it is shown or changed. The model includes the scene; the scene never includes the rest of the model.
 - **Components** are what the author places or attaches on the page. They come in two sorts, by the direction information flows: **writers** (controls and listeners) carry the reader's actions into the model; **views** carry the model to the reader. ("Reader" on its own always means the person.) Basic components come from the standard library, and authors will be able to make their own from them.
-- **Writers are active or not.** A writer that is **active** accepts triggers: a press of a button, a move of a slider's knob, a click on a toggle, a drag, a click on a shape. Once **triggered**, it writes what it targets, directly or through its animation. An inactive writer cannot be triggered; what it already set off goes on. The author says when a writer is active with `(when bool)`; a writer without one is always active.
+- **Writers are active or not.** A writer that is **active** accepts triggers: a press of a button, a move of a slider's knob, a click on a toggle, a drag, a click on a shape, a release over one, the end of a drag, a canvas coming into view. Once **triggered**, it writes what it targets, directly or through its animation. An inactive writer cannot be triggered; what it already set off goes on. The author says when a writer is active with `(when bool)`; a writer without one is always active.
 - **A writer animates only toward a state it knows.** A triggered writer with an animation builds a path from the state at that moment (or from a transition's own `from`) to the state the animation ends at, then writes along it over the animation's duration. It can do so only if that end state is known when it is triggered. A writer whose end state is never known then, such as a drag, which goes wherever the reader takes the pointer, takes no animation. A writer whose end state is known only sometimes follows its animation whenever the end is known, and otherwise writes the end state at once. (A slider differs: its knob sets how far along its animation things are, not a path played over time; see the reference.)
 - **Other ways of showing the model** are possible later: scripts on the page reading the model (the page may read it; whether it may write is open), descriptions for screen readers, sound, and export to an image or data.
 
@@ -152,11 +153,20 @@ The author connects a world model to a web page with HTML elements.
     <mtp-canvas model="dial" name="v"></mtp-canvas>
 
 - **`<mtp-model>`** loads one .mtpc, once, and gives the live model an id.
-- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element: they act through the canvas that draws their shape.
+- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element: they act through the canvas that draws their shape, or, for `on-view`, the canvas they name.
 - **One live model feeds any number of components,** which share its state: the slider in one paragraph, the readout inside a sentence and the canvas below all change together.
 - **A page may load several world models.** Each has its own state; components of one never affect another.
 - **The page styles components with its own CSS.** Tokens, the color and font variables, appear as CSS custom properties (such as `--mtp-ink`) that the page may override.
 - **The page may read a live model.** Whether it may also write to one is open.
+
+The elements also give the page these names, for its scripts and its CSS:
+
+| Name | What it is |
+|---|---|
+| `mtp-ready` | an event an `<mtp-model>` sends, and which bubbles, when its .mtpc has loaded or failed to load |
+| `mtp-change` | an event an `<mtp-model>` sends, and which bubbles, whenever a value in its live model changes |
+| `mtp-error` | the class of the `<pre>` that takes the place of a component that cannot be shown, holding the error: the model did not load, or it has no view or control of that name |
+| `mtp-lit` | the class of a play's step button while its item runs |
 
 ## Two properties of every expression
 

@@ -24,12 +24,12 @@ Objects are values, which never change, or mutable objects, which can. A type th
     - `name`
     - `none`
   - **mutable object** (can change)
-    - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group`, motif instances (`dial`, …), variants; each satisfies `shape`
+    - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `text`, `group` (a row or a column is a group), motif instances (`dial`, …), variants; each satisfies `shape`
     - **`scene`**: holds the shapes
     - **component**
       - view: `canvas`, `readout`
       - control: `slider`, `button`, `play`, `toggle`
-      - listener: `on-drag`, `on-click`
+      - listener: `on-drag`, `on-click`, `on-release`, `on-dragend`, `on-view`
 
 - **A name** holds a variable or an attribute without evaluating it: `k`, `p.r`, `g[1].r`, `d.c.pos`. A name is declared once and never changes, so it is always known when compiling. A transition's target is a `name|none`.
 - **Numbers** come in four types: `int`, `ratio` (exact fractions such as `1/3`), `real` and `complex`.
@@ -259,7 +259,8 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | animation | `duration` (except for one that loops forever), `steps` |
 | shapes | the arguments they take (a circle's `r`, `fill`, …) and their position, `pos`, `x`, `y` |
 | group | `length` (its member count), `members`; members by position or name, `g[0]`, `g['disk-3']`; any member attribute, spread over the members, `g.r` |
-| scene | `background`, `length` (its member count), `members` (its shapes, not its variables); members by position or name; no spreading (`s.r` is an error) |
+| row, column | as a group; its `gap` and `align` cannot be read, so `cells.gap` reads each member's `gap` |
+| scene | `background`, `transform`, `length` (its member count), `members` (its shapes, not its variables); members by position or name; no spreading (`s.r` is an error) |
 | motif instances | their parameters and bound variables, `a.t`, `disk.area`; their members, `a.tip`; their shape arguments, `a.x`, `a.fill`, … |
 | variant instances | their parameters, and every attribute of their base, `b1.p`, `b1.x` |
 | font | `family`, `style`, `weight`, `size` |
@@ -267,6 +268,6 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | play | `label`, `step` (which item of its animation's body is now playing), `playing`, `buttons` |
 | button, toggle | `label`; a toggle's `value` |
 | readout | `value` (its string), `font` |
-| canvas | `view-x`, `view-y`, `view-width`, `view-height`, `pan`, `zoom` |
+| canvas | `view-x`, `view-y`, `view-width`, `view-height`, `transform`, `pan`, `zoom` |
 
 Attributes of controls change as the reader acts. Only components and globals may read them; the scene may not.
