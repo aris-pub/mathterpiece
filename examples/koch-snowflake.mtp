@@ -1,7 +1,8 @@
 ; The Koch snowflake. Each step cuts every side in three and raises a point on the middle third.
 ; The polygon's points come from koch, a function that calls itself: point 4 i at depth d is
 ; point i at depth d - 1, and the three points after it lie on the step from there to point
-; i + 1. Drag the depth from 0 to 5.
+; i + 1. The depth is a real, so between two depths the new points rise out of the sides. It
+; grows and shrinks on its own; drag the depth to take over, and click the flake to grow it again.
 
 (color paper '#f6f1e7')
 (color ink '#1f2a44')
@@ -18,53 +19,67 @@
 (point code-at [(- -0.9 radius) (- -0.4 radius)] (const))
 
 ; Point j, from 0 to 4, of one step from a to b: a, a third of the way, the raised point, two
-; thirds of the way, b. The raised point is to the left of a to b, so a side walked clockwise
-; bends outward.
-(func[point] step-point ((int j) (point a) (point b))
+; thirds of the way, b. The raised point stands h of its full height off the side, and is to
+; the left of a to b, so a side walked clockwise bends outward.
+(func[point] step-point ((int j) (point a) (point b) (real h))
   (cond ((= j 0) a)
         ((= j 1) (lerp a b 1/3))
-        ((= j 2) (let ((h (/ (sqrt 3) 6)) (m (lerp a b 0.5)))
-                   [(+ m.x (* h (- a.y b.y))) (+ m.y (* h (- b.x a.x)))]))
+        ((= j 2) (let ((up (* h (/ (sqrt 3) 6))) (m (lerp a b 0.5)))
+                   [(+ m.x (* up (- a.y b.y))) (+ m.y (* up (- b.x a.x)))]))
         ((= j 3) (lerp a b 2/3))
         (else b)))
 
 ; Corner s of the triangle, clockwise from the top; corner 3 is corner 0 again.
 (func[point] corner ((int s)) (polar radius (- 90 (* 120 s))))
 
-; Point k of the depth-d outline. Every fourth point, 4 i, is point i of depth d - 1, and the
-; three after it lie on the step from point i to point i + 1 of depth d - 1. So k's last base-4
-; digit picks the point on the step, and the digits before it are its place at depth d - 1.
-(func[point] koch ((int k) (int d))
+; Point k of the depth-d outline, its last step raised h of the way. Every fourth point, 4 i, is
+; point i of depth d - 1, and the three after it lie on the step from point i to point i + 1 of
+; depth d - 1, which is fully raised. So k's last base-4 digit picks the point on the step, and
+; the digits before it are its place at depth d - 1.
+(func[point] koch ((int k) (int d) (real h))
   (if (<= d 0)
       (corner k)
       (let ((i (floor (/ k 4)))
             (j (mod k 4)))
         (if (= j 0)
-            (koch i (- d 1))
-            (step-point j (koch i (- d 1)) (koch (+ i 1) (- d 1)))))))
+            (koch i (- d 1) 1)
+            (step-point j (koch i (- d 1) 1) (koch (+ i 1) (- d 1) 1) h)))))
 
 (scene board
   (background paper)
-  (int depth 2 (>= 0) (<= 5))
-  (int pieces (^ 4 depth))
+  (real depth 0 (>= 0) (<= 4))
+  ; The whole depth whose points are drawn, and how far its new points have risen.
+  (int level (ceil depth))
+  (real rise (- depth (- level 1)))
+  (int pieces (^ 4 level))
 
   (polygon flake
-    (points (map (range (* 3 pieces))
-              (fn k (koch k depth))))
+    (points (map (range (* 3 pieces)) (fn k (koch k level rise))))
     (fill saffron) (stroke ink) (stroke-width 1.5) (line-join 'round'))
 
-  (text caption $'depth {depth}' (pos (top flake 0.5)) (halign 'middle') (valign 'bottom')
+  (text caption $'depth {depth:.2f}' (pos (top flake 0.5)) (halign 'middle') (valign 'bottom')
     (font variable) (fill ink))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
-    (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {depth})))))'
+    (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {level} {rise:.2f})))))'
       (pos code-at))
-    (text_ (if (= depth 0) '(koch k 0) is (corner k)'
-               $'(koch k {depth}) calls (koch (floor (/ k 4)) {(- depth 1)})')
+    (text_ (if (= level 0) '(koch k 0 h) is (corner k)'
+               $'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
       (pos (+ code-at [0 -0.55])))))
 
 (canvas view (view-x -5.6) (view-y -5.6) (view-width 11.2) (view-height 10.8) (pan false)
   (zoom false)
   flake caption forms)
 
-(slider depth-slider (move depth (from 0) (to 5)) (step 6) (label 'depth'))
+(animation grow (move depth (from 0) (to 4) (duration 6) (ease 'ease-in-out')))
+
+; It grows, rests on the full snowflake, shrinks back to the triangle and rests, again and again.
+(play cycle (autoplay view) (label 'grow and shrink')
+  (animation (loop)
+    grow
+    (wait 1.5)
+    (move depth (to 0) (duration 3) (ease 'ease-in-out'))
+    (wait 0.8)))
+
+(slider depth-slider (move depth (from 0) (to 4)) (label 'depth'))
+(on-click flake (animation grow))
