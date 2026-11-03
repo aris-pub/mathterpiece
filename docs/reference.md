@@ -46,7 +46,7 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `foreach`, `let`, `exists-when` |
+| `(scene name)` | required | none | `(background color)`, `(transform transform)` | shape declarations, variable declarations, `foreach`, `let`, `exists-when` |
 | `(group name)` | required | none | `(translate point)`, `(transform transform)`, `(defaults …)` | shape declarations, `foreach`, `let`, `exists-when` |
 | `(row name)`, `(column name)` | required | none | those of a group, `(gap real)` (default 0), `(align …)` (a row: `'top' 'middle' 'bottom'`; a column: `'left' 'middle' 'right'`; default `'middle'`) | as a group's |
 | `(circle name)` | required | none | shape arguments, `(r (real (>= 0)))` | none |
@@ -62,6 +62,8 @@ Shape arguments, taken by every shape except groups: `(x real)` `(y real)`, or `
 `halign` is one of `'start' 'middle' 'end'`; `valign` is one of `'top' 'middle' 'baseline' 'bottom'`, where `'baseline'` is the line the letters sit on and `'bottom'` is the bottom of the lowest letters.
 
 Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint and a triangle's its centroid. They are computed from the ends or corners, so a line or triangle is declared by its ends or corners and never given `x`, `y` or `pos`; a writer that writes its position moves every end or corner together, and may only do so when they are all free.
+
+A scene's `transform` says how its own coordinates are drawn: `(scene s (transform (scale 1 -1)) …)` has y pointing down, as in an SVG. Everything in the scene is written, read and written to in the scene's own coordinates, a canvas's view box is given in them, and the pointer is converted back into them for drags and clicks. Everything follows the transform as drawn, texts included, and the anchor names `top` and `bottom` stay with y: `top` is toward larger y.
 
 ### Tokens
 

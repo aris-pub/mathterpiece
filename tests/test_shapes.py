@@ -290,3 +290,13 @@ class TestExistsWhen:
         )
         assert errors(d) == []
         assert d["objects"][d["names"]["c"]]["attrs"]["exists"]["bound"][0] == "builtin"
+
+
+class TestSceneTransform:
+    # mtp-y0gh: a scene takes a transform, such as (scale 1 -1) for y pointing down.
+    def test_a_scene_takes_a_transform(self):
+        m = model("(scene s (transform (scale 1 -1)) (circle c))")
+        assert m.get("s").attrs["transform"].value == (1, 0, 0, -1, 0, 0)
+
+    def test_by_default_none(self):
+        assert model("(scene s (circle c))").get("s").attrs["transform"].value == (1, 0, 0, 1, 0, 0)

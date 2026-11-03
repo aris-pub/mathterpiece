@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import type { Doc } from "../src/doc.ts";
 import { Runtime } from "../src/runtime.ts";
-import { draw, paintCss } from "../src/svg.ts";
+import { apply, invert } from "../src/builtins.ts";
+import { draw, paintCss, viewOf } from "../src/svg.ts";
 
 const docs = import.meta.glob("./data/runtime/*.mtpc", { query: "?raw", import: "default", eager: true });
 
@@ -72,6 +73,19 @@ describe("drawing", () => {
     rt.write(rt.id("shown"), null, false);
     const again = draw(rt, rt.id("v"));
     expect(again.querySelector(`[data-mtp-id="${rt.id("maybe")}"]`)).toBeNull();
+  });
+
+  it("draws a scene through its own transform, its view box in the scene's own coordinates", () => {
+    // mtp-y0gh: with (scale 1 -1), y points down, as in an SVG.
+    const rt = new Runtime(JSON.parse(docs["./data/runtime/flipped.mtpc"] as string) as Doc);
+    const svg = draw(rt, rt.id("v"));
+    expect(svg.getAttribute("viewBox")).toBe("0 0 4 2");
+    const c = svg.querySelector(`[data-mtp-id="${rt.id("c")}"]`)!;
+    expect(c.parentElement!.getAttribute("transform")).toBe("matrix(1 0 0 1 0 0)");
+    expect([c.getAttribute("cx"), c.getAttribute("cy")]).toEqual(["2", "1"]);
+    // A point the pointer is at, in the SVG's units, is read back in the scene's own coordinates.
+    const back = invert(viewOf(rt, rt.id("v")).toUser);
+    expect(apply(back, [2, 1])).toEqual([2, 1]);
   });
 });
 

@@ -1,7 +1,7 @@
 // Draws a canvas as SVG. The scene has y pointing up and SVG has y pointing down, so the whole
 // scene is flipped once at the top, and text is flipped back so its letters stay upright. Each
 // group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
-import { compose } from "./builtins.ts";
+import { apply, compose } from "./builtins.ts";
 import type { Expr } from "./doc.ts";
 import { isBound, whenItems } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
@@ -16,13 +16,31 @@ function matrix(m: number[]): string {
 /** The SVG's view box, and the transform from scene coordinates to the SVG's own. */
 export function viewOf(rt: Runtime, canvas: number): { box: number[]; toUser: number[] } {
   const v = (a: string) => rt.value(canvas, a) as number;
-  const [x, y, width, height] = [v("view-x"), v("view-y"), v("view-width"), v("view-height")];
+  // The view box is given in the scene's own coordinates, which the scene's transform takes to
+  // where they are drawn (mtp-y0gh): the region shown is the box around its corners there.
+  const own = sceneTransform(rt);
+  const [x0, y0, w0, h0] = [v("view-x"), v("view-y"), v("view-width"), v("view-height")];
+  const corners = [
+    [x0, y0],
+    [x0 + w0, y0],
+    [x0, y0 + h0],
+    [x0 + w0, y0 + h0],
+  ].map((c) => apply(own, c) as number[]);
+  const x = Math.min(...corners.map((c) => c[0]!));
+  const y = Math.min(...corners.map((c) => c[1]!));
+  const width = Math.max(...corners.map((c) => c[0]!)) - x;
+  const height = Math.max(...corners.map((c) => c[1]!)) - y;
   const cx = x + width / 2;
   const cy = y + height / 2;
   // A canvas's transform applies about the center of its view box.
   const t = rt.value(canvas, "transform") as number[];
   const view = compose([1, 0, 0, 1, -cx, -cy], t, [1, 0, 0, 1, cx, cy]);
-  return { box: [x, -(y + height), width, height], toUser: compose(view, FLIP) };
+  return { box: [x, -(y + height), width, height], toUser: compose(own, view, FLIP) };
+}
+
+function sceneTransform(rt: Runtime): number[] {
+  const scene = rt.objects.findIndex((o) => o.kind === "scene");
+  return scene >= 0 && rt.objects[scene]!.attrs?.transform ? (rt.value(scene, "transform") as number[]) : [1, 0, 0, 1, 0, 0];
 }
 
 /**

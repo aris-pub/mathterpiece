@@ -2275,7 +2275,7 @@ class _Compiler:
         if self.scene is not None:
             raise CompileError("a file has exactly one scene", form.pos)
         name, pos = self.name_of(form)
-        attrs = {"background": Attribute(PAINT, None)}
+        attrs = {"background": Attribute(PAINT, None), "transform": Attribute(TRANSFORM, IDENTITY)}
         self.scene = self.add(Obj("scene", name, SCENE, attrs=attrs, pos=pos))
         self.in_scene = True
         try:
@@ -2284,13 +2284,22 @@ class _Compiler:
             self.in_scene = False
 
     def scene_items(self, form: Form, attrs: dict) -> None:
-        self.options_first(form.items[2:], lambda it: _head(it) == "background", "scene")
+        self.options_first(
+            form.items[2:], lambda it: _head(it) in ("background", "transform"), "scene"
+        )
         for item, scope in self.expand(form.items[2:], {}):
             head = _head(item)
             if head == "background":
                 assert isinstance(item, Form)
                 attrs["background"] = self.attribute(
                     PAINT, item.items[1], item.pos, "background", scope=scope
+                )
+            elif head == "transform":
+                # How the scene's own coordinates are drawn, such as (scale 1 -1) for y pointing
+                # down; positions are still read in the scene's own coordinates (mtp-y0gh).
+                assert isinstance(item, Form)
+                attrs["transform"] = self.attribute(
+                    TRANSFORM, item.items[1], item.pos, "transform", scope=scope
                 )
             elif head in ("motif", "variant", "func", "transition", "animation") or (
                 head in COMPONENTS or _typed_func(item) is not None
