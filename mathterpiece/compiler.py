@@ -289,7 +289,7 @@ class _Compiler:
         self.rand_sites = 0
 
     def run(self, forms: tuple[Form, ...]) -> Model:
-        for form, scope in self.expand(forms, {}):
+        for form, scope in self.expand(forms, {}, top=True):
             self.top(form, scope)
         # A named transition no move ever used still needs its ends compiled.
         for i, obj in enumerate(self.model.objects):
@@ -297,9 +297,13 @@ class _Compiler:
                 self.type_ends(i, None, obj.pos)
         return self.model
 
-    def expand(self, items, scope: dict) -> Iterator[tuple[Node, dict]]:
-        """The items, with each (repeat n i decl…) replaced by its copies."""
+    def expand(self, items, scope: dict, top: bool = False) -> Iterator[tuple[Node, dict]]:
+        """The items, with each (repeat n i decl…) replaced by its copies, and each
+        (let ((name value) …) decl…) by what it holds, its names in their scope."""
         for item in items:
+            if _head(item) == "let":
+                yield from self.body_let(item, scope, top)
+                continue
             if _head(item) != "repeat":
                 yield item, scope
                 continue
@@ -312,7 +316,27 @@ class _Compiler:
             if not isinstance(var, Name) or len(var.parts) != 1 or var.parts[0] in RESERVED:
                 raise CompileError("expected the name of the repeat's counter", var.pos)
             for k in range(n.value):
-                yield from self.expand(item.items[3:], {**scope, var.parts[0]: _known(INT, k)})
+                yield from self.expand(item.items[3:], {**scope, var.parts[0]: _known(INT, k)}, top)
+
+    def body_let(self, node, scope: dict, top: bool) -> Iterator[tuple[Node, dict]]:
+        """A let in a body (mtp-b13): its values are worked out where it is written."""
+        if top:
+            raise CompileError(
+                "a let holding declarations is written in a scene, group, repeat or motif body,"
+                " not at the top level",
+                node.pos,
+            )
+        if len(node.items) < 2 or not isinstance(node.items[1], Form):
+            raise CompileError("let is (let ((name value) …) declaration…)", node.pos)
+        inner = dict(scope)
+        for binding in node.items[1].items:
+            if not isinstance(binding, Form) or len(binding.items) != 2:
+                raise CompileError("a let binding is (name value)", binding.pos)
+            name = binding.items[0]
+            if not isinstance(name, Name) or len(name.parts) != 1:
+                raise CompileError("expected a name", binding.pos)
+            inner[name.parts[0]] = self.expr(binding.items[1], None, inner)
+        yield from self.expand(node.items[2:], inner, top)
 
     # Declarations ------------------------------------------------------------------------
 

@@ -153,13 +153,9 @@
     ; Level i + 1.
     (group bars (fill (if all every one))
       (repeat 10 i
-        (rect_
-          (pos [(+ 54 (* i 41.2) 20.6)
-                (+ -134 (/ (max 0.5 (* 126 shown[i])) 2))])
-          (width 26.368)
-          (height (max 0.5 (* 126 shown[i])))
-          (rx 2) (ry 2)
-          (opacity (if (< shown[i] 0.002) 0 1)))))
+        (let ((height (max 0.5 (* 126 shown[i]))))
+          (rect_ (pos [(+ 54 (* i 41.2) 20.6) (+ -134 (/ height 2))]) (width 26.368)
+            (height height) (rx 2) (ry 2) (opacity (if (< shown[i] 0.002) 0 1))))))
     (group level-names (fill muted)
       (repeat 10 i
         (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
@@ -202,11 +198,9 @@
     ; A label every density up to 2^-L, every other one past 6 levels.
     (group densities (fill muted)
       (repeat 10 k
-        (text_ $'1/{(^ 2 (+ k 1))}' (pos [(+ 54 (* (/ (+ k 0.5) lv) 412)) -147])
-          (halign 'middle') (font tick)
-          (opacity (if (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0))
-                            (<= (+ 54 (* (/ (+ k 0.5) lv) 412)) 467))
-                       1 0)))))
+        (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
+          (text_ $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle') (font tick)
+            (opacity (if (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467)) 1 0))))))
     (line_ (from [54 -8]) (to [54 -130]) (stroke muted) (stroke-width 1))
     (line_ (from [54 -130]) (to [466 -130]) (stroke muted) (stroke-width 1))
     ; One text in the original, with p in italics; mtp gives a text one font, so three texts
@@ -222,10 +216,11 @@
     ; original clips them.
     (group curve (stroke one) (stroke-width 2.2)
       (repeat 200 k
-        (line_
-          (from [(+ 54 (* (/ (* L (/ k 200)) lv) 412)) (cy ds[k])])
-          (to [(+ 54 (* (/ (* L (/ (+ k 1) 200)) lv) 412)) (cy ds[(+ k 1)])])
-          (opacity (if (<= (+ 54 (* (/ (* L (/ (+ k 1) 200)) lv) 412)) 467) (- 1 (* 0.78 mix)) 0)))))
+        ; Where the segment starts and ends across the chart.
+        (let ((x0 (+ 54 (* (/ (* L (/ k 200)) lv) 412)))
+              (x1 (+ 54 (* (/ (* L (/ (+ k 1) 200)) lv) 412))))
+          (line_ (from [x0 (cy ds[k])]) (to [x1 (cy ds[(+ k 1)])])
+            (opacity (if (<= x1 467) (- 1 (* 0.78 mix)) 0))))))
     (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke every)
       (stroke-width (if all 3.5 2.4)))
     (text_ $'all densities: {(fmt d-all)}, for every p' (pos [466 (- (cy d-all) (if all 19 17))])

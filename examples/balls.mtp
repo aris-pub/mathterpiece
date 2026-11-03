@@ -64,11 +64,10 @@
   ; A point in x's ball takes x's color, else one in y's ball takes y's.
   (group space
     (repeat 32 i
-      (circle_ (pos spots[i].pos) (r 4.5)
-        (fill (cond ((in-ball x.pos r spots[i].pos) x-color)
-                    ((in-ball y.pos r spots[i].pos) y-color)
-                    (else fg)))
-        (opacity (if (or (in-ball x.pos r spots[i].pos) (in-ball y.pos r spots[i].pos)) 1 0.45)))))
+      (let ((in-x (in-ball x.pos r spots[i].pos)) (in-y (in-ball y.pos r spots[i].pos)))
+        (circle_ (pos spots[i].pos) (r 4.5)
+          (fill (cond (in-x x-color) (in-y y-color) (else fg)))
+          (opacity (if (or in-x in-y) 1 0.45))))))
 
   (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
   (list dy (sort (map space (fn p (dist y.pos p.pos))) (fn d d)))
@@ -108,14 +107,14 @@
     (rect_ (pos [(+ bar-left (/ bar-width 2)) bar-y]) (width bar-width) (height 18) (rx 3)
       (fill env))
     (repeat 5 j
-      (rect_
-        (pos [(+ bar-left (* at (/ (+ edges[j] (max edges[j] (min rho[j] r))) 2))) bar-y])
-        (width (max 0 (* at (- (min rho[j] r) edges[j])))) (height 18)
-        (fill segment-colors[j]))
-      (text_ $'j = {(+ j 1)}'
-        (pos [(+ bar-left (* at (/ (+ edges[j] (min rho[j] r)) 2))) (- bar-y 4.5)])
-        (halign 'middle') (font segment) (fill bg)
-        (opacity (if (and (>= r (- rho[j] 1e-9)) (> (* at (- (min rho[j] r) edges[j])) 26)) 1 0))))
+      ; How far the segment is filled, and its width on the bar.
+      (let ((filled (min rho[j] r)) (width (max 0 (* at (- filled edges[j])))))
+        (rect_ (pos [(+ bar-left (* at edges[j]) (/ width 2)) bar-y]) (width width) (height 18)
+          (fill segment-colors[j]))
+        (text_ $'j = {(+ j 1)}'
+          (pos [(+ bar-left (* at (/ (+ edges[j] filled) 2))) (- bar-y 4.5)])
+          (halign 'middle') (font segment) (fill bg)
+          (opacity (if (and (>= r (- rho[j] 1e-9)) (> width 26)) 1 0)))))
     ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
     (group ticks (stroke fg) (stroke-width 1.2) (fill fg)
       (repeat 6 j

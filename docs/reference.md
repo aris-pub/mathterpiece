@@ -29,7 +29,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
 | `(type name base)` | required | the base type | none | constraints |
-| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations |
+| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `repeat`, `let` |
 | `(variant name params shape)` | required | the parameter list; one shape declaration | none | none |
 
 A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t 0.5) (color tint 'red'))`, or `()` for none; each may have a default. `()` is also an empty list of `let` bindings, and is never a value.
@@ -46,8 +46,8 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `repeat` |
-| `(group name)` | required | none | shape arguments | shape declarations, `repeat` |
+| `(scene name)` | required | none | `(background color)` | shape declarations, variable declarations, `repeat`, `let` |
+| `(group name)` | required | none | shape arguments | shape declarations, `repeat`, `let` |
 | `(circle name)` | required | none | shape arguments, `(r (real (>= 0)))` | none |
 | `(rect name)` | required | none | shape arguments, `(width real)`, `(height real)`, `(rx real)`, `(ry real)` (rounded corners) | none |
 | `(ellipse name)` | required | none | shape arguments, `(rx real)`, `(ry real)` | none |
@@ -197,7 +197,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(cond (c1 v1) (c2 v2) … (else v))` | the tests in order, then only the value of the first that holds |
 | `(and a b …)` | left to right, stopping at the first false |
 | `(or a b …)` | left to right, stopping at the first true |
-| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression |
+| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, repeat or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written |
 | `(fn params body)` | nothing until called; binds its parameters in its body. A single parameter may be a bare name, typed by where the function is used; several must all be typed |
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name |

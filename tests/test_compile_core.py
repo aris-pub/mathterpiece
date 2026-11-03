@@ -416,3 +416,40 @@ class TestGroupPositionsInRange:
 
     def test_a_position_that_may_be_out_of_range(self):
         error(f"(int i 0 (>= 0) (<= 3)) {self.G}", "may be none")
+
+
+class TestLetInBodies:
+    # mtp-b13: the standard let, in a repeat, group, scene or motif body: its body holds what
+    # that body holds, and its names are values worked out where the let is written.
+    def test_in_a_repeat(self):
+        m = model(
+            "(scene s (group g (repeat 3 i (let ((w (* 2 i)))"
+            " (circle (name $'a{i}') (r w)) (circle (name $'b{i}') (r (+ w 1)))))))"
+        )
+        assert [m.get(f"a{i}").attrs["r"].value for i in range(3)] == [0, 2, 4]
+        assert [m.get(f"b{i}").attrs["r"].value for i in range(3)] == [1, 3, 5]
+
+    def test_a_value_known_only_while_drawing(self):
+        m = model(
+            "(real k 1 (>= 0))"
+            " (scene s (repeat 2 i (let ((w (* k i))) (circle (name $'c{i}') (r w)))))"
+        )
+        assert m.get("c1").attrs["r"].deps >= {(m.id("k"), None)}
+
+    def test_in_a_group_and_the_scene(self):
+        m = model("(scene s (let ((w 2)) (group g (let ((v (* w 3))) (circle c (r v))))))")
+        assert m.get("c").attrs["r"].value == 6
+
+    def test_in_a_motif(self):
+        m = model(
+            "(motif dot ((real t 1 (>= 0))) (let ((w (* 2 t))) (circle c (r w))))"
+            " (scene s (dot d (t 3)))"
+        )
+        # A motif's parameter is an attribute of the instance, so r follows d.t.
+        assert m.get("d.c").attrs["r"].deps >= {(m.id("d"), "t")}
+
+    def test_not_at_the_top_level(self):
+        error("(let ((w 2)) (real k w))", "top level")
+
+    def test_its_names_are_not_seen_after_it(self):
+        error("(scene s (let ((w 2)) (circle a (r w))) (circle b (r w)))", "unknown name 'w'")
