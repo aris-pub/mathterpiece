@@ -1,0 +1,65 @@
+; The Koch snowflake. Each step cuts every side in three and raises a point on the middle third.
+; The polygon's points come from koch, a function that calls itself: point 4 i at depth d is
+; point i at depth d - 1, and the three points after it lie on the step from there to point
+; i + 1. Drag the depth from 0 to 5.
+
+(color paper '#f6f1e7')
+(color ink '#1f2a44')
+(color soft '#8a93a6')
+(color saffron '#e9c46a')
+(font variable (family 'Georgia, serif') (style 'italic') (size 18))
+(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+
+(real radius 4 (const))
+
+; Point j, from 0 to 4, of one step from a to b: a, a third of the way, the raised point, two
+; thirds of the way, b. The raised point is to the left of a to b, so a side walked clockwise
+; bends outward.
+(func[point] step-point ((int j) (point a) (point b))
+  (cond ((= j 0) a)
+        ((= j 1) (lerp a b 1/3))
+        ((= j 2) (let ((h (/ (sqrt 3) 6)) (m (lerp a b 0.5)))
+                   [(+ m.x (* h (- a.y b.y))) (+ m.y (* h (- b.x a.x)))]))
+        ((= j 3) (lerp a b 2/3))
+        (else b)))
+
+; Corner s of the triangle, clockwise from the top; corner 3 is corner 0 again.
+(func[point] corner ((int s)) (polar radius (- 90 (* 120 s))))
+
+; Point k of the depth-d outline. Every fourth point, 4 i, is point i of depth d - 1, and the
+; three after it lie on the step from point i to point i + 1 of depth d - 1. So k's last base-4
+; digit picks the point on the step, and the digits before it are its place at depth d - 1.
+(func[point] koch ((int k) (int d))
+  (if (<= d 0)
+      (corner k)
+      (let ((i (floor (/ k 4)))
+            (j (mod k 4)))
+        (if (= j 0)
+            (koch i (- d 1))
+            (step-point j (koch i (- d 1)) (koch (+ i 1) (- d 1)))))))
+
+(scene board
+  (background paper)
+  (int depth 2 (>= 0) (<= 5))
+  (int pieces (^ 4 depth))
+
+  (polygon flake
+    (points (map (range (* 3 pieces))
+              (fn k (koch k depth))))
+    (fill saffron) (stroke ink) (stroke-width 1.5) (line-join 'round'))
+
+  (text caption $'depth {depth}' (pos [0 4.5]) (halign 'middle') (valign 'bottom')
+    (font variable) (fill ink))
+
+  (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
+    (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {depth})))))'
+      (pos [-4.9 -4.4]))
+    (text_ (if (= depth 0) '(koch k 0) is (corner k)'
+               $'(koch k {depth}) calls (koch (floor (/ k 4)) {(- depth 1)})')
+      (pos [-4.9 -4.95]))))
+
+(canvas view (view-x -5.6) (view-y -5.6) (view-width 11.2) (view-height 10.8) (pan false)
+  (zoom false)
+  flake caption forms)
+
+(slider depth-slider (move depth (from 0) (to 5)) (step 6) (label 'depth'))
