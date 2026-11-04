@@ -375,3 +375,11 @@ class TestClip:
         g = d["objects"][d["names"]["g"]]
         assert g["clip"] == d["names"]["window"]
         assert d["names"]["window"] not in g["members"]
+
+
+def test_error_messages_name_things_rightly():
+    # Found 2026-11-04 checking the docs against the code (mtp-pjzt).
+    error(
+        "(motif m () (circle c)) (scene s (m i)) (real v i.zz)", "an instance has no attribute 'zz'"
+    )
+    error("(scene s (group g (clip (line_)) (circle a)))", "rect, ellipse, triangle or polygon")

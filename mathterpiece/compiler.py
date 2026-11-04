@@ -1719,7 +1719,7 @@ class _Compiler:
             # One value is written to every member, at any depth, so it has their own type.
             return _join_all([self.writable_attr(m, attr, label, pos) for m in obj.members], pos)
         if attr not in obj.attrs:
-            raise CompileError(f"a {obj.kind} has no attribute '{attr}'", pos)
+            raise CompileError(f"{_a(obj.kind)} has no attribute '{attr}'", pos)
         return self.check_writable(obj, obj.attrs[attr], label, pos)
 
     def check_writable(self, obj: Obj, attribute: Attribute, label: str, pos: Pos) -> Type:
@@ -2593,7 +2593,7 @@ class _Compiler:
         found = self.shape_kind(node) if node is not None else None
         if found is None or found[0] not in CLIPS:
             raise CompileError(
-                "a clip is a circle, rect, ellipse or triangle, such as"
+                "a clip is a circle, rect, ellipse, triangle or polygon, such as"
                 " (clip (rect_ (width 4) (height 2)))",
                 form.pos,
             )
@@ -3102,7 +3102,7 @@ class _Compiler:
             if attr is None:
                 return Expr("obj", obj.type, (i,))
             if attr not in obj.attrs:
-                raise CompileError(f"a {obj.kind} has no attribute '{attr}'", obj.pos)
+                raise CompileError(f"{_a(obj.kind)} has no attribute '{attr}'", obj.pos)
             attribute = obj.attrs[attr]
             if obj.kind in SHAPE_ATTRS or (obj.kind == "instance" and attr in INSTANCE_ATTRS):
                 moves = self.moves(i)
@@ -3177,7 +3177,7 @@ class _Compiler:
         t = _core(e.type)
         attrs = self.type_attr_types(t)
         if name not in attrs:
-            raise CompileError(f"a {t} has no attribute '{name}'", pos)
+            raise CompileError(f"{_a(t)} has no attribute '{name}'", pos)
         self.note(e, name)
         return Expr("part", attrs[name], (e, name), e.deps, _type_range(attrs[name]))
 
@@ -3229,7 +3229,7 @@ class _Compiler:
             return Expr("part", INT, (e, name), e.deps, (0.0, MAX_REAL))
         t = VALUE_ATTRS.get(core, {}).get(name)
         if t is None:
-            raise CompileError(f"a {e.type} has no attribute '{name}'", pos)
+            raise CompileError(f"{_a(e.type)} has no attribute '{name}'", pos)
         if e.known:
             return _known(t, _value_part(core, e.value, name))
         return Expr("part", t, (e, name), e.deps, _type_range(t))
@@ -3306,7 +3306,7 @@ class _Compiler:
             deps = frozenset().union(*(r.deps for r in reads))
             t = Refine(ListT(t), (("length", len(obj.members)),))
             return Expr("spread", t, (Expr("obj", obj.type, (i,)), name), deps)
-        raise CompileError(f"a {obj.kind} has no attribute '{name}'", pos)
+        raise CompileError(f"{_a(obj.kind)} has no attribute '{name}'", pos)
 
     def part_of(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
         if e.type == RECURSING:
@@ -3893,6 +3893,12 @@ def _overlaps(attr: str, given: dict) -> bool:
 def _dot(node: Node, attr: str) -> Form:
     """(. node attr), built by the compiler."""
     return Form((Name((".",), node.pos), node, Name((attr,), node.pos)), node.pos)
+
+
+def _a(thing) -> str:
+    """thing with a or an before it, as its first letter is sounded."""
+    word = str(thing)
+    return f"{'an' if word[:1] in 'aeiou' else 'a'} {word}"
 
 
 def _holds_literal(node: Node) -> bool:
