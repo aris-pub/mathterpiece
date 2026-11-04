@@ -55,6 +55,7 @@ def test_the_examples_that_use_the_house_style_import_it():
     users = [p.stem for p in FIGURES if "(import house" in p.read_text()]
     assert sorted(users) == sorted(
         [
+            "arcs",
             "bubbles",
             "dials",
             "ease-race",

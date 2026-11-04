@@ -137,7 +137,10 @@ PRIMS = {
         SCENE,
     )
 }
-SHAPES = ("circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "text", "group")
+SHAPES = (
+    "circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "arc", "ring", "text",
+    "group",
+)  # fmt: skip
 INTERFACES = ("shape", "positioned", "sequence")
 # Each number type is accepted wherever a later one is expected (type-system.md, section 3).
 NUMBERS = (INT, RATIO, REAL, COMPLEX)

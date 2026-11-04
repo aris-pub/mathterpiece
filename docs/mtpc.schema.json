@@ -85,6 +85,8 @@
                 "triangle",
                 "polyline",
                 "polygon",
+                "arc",
+                "ring",
                 "text",
                 "group"
               ]
@@ -1545,6 +1547,8 @@
                 "triangle",
                 "polyline",
                 "polygon",
+                "arc",
+                "ring",
                 "text",
                 "group",
                 "instance",
@@ -1683,6 +1687,8 @@
                   "triangle",
                   "polyline",
                   "polygon",
+                  "arc",
+                  "ring",
                   "text"
                 ]
               }
@@ -1710,6 +1716,8 @@
                   "triangle",
                   "polyline",
                   "polygon",
+                  "arc",
+                  "ring",
                   "text"
                 ]
               },

@@ -1,6 +1,7 @@
 // Draws a canvas as SVG. The scene has y pointing up and SVG has y pointing down, so the whole
 // scene is flipped once at the top, and text is flipped back so its letters stay upright. Each
 // group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
+import { arcPath, ringPath } from "./arc.ts";
 import { Ref, apply, compose } from "./builtins.ts";
 import type { Expr } from "./doc.ts";
 import { isBound, itemsOf } from "./doc.ts";
@@ -247,6 +248,10 @@ function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
       const points = (rt.value(i, "points") as number[][]).map((p) => p.join(","));
       return el(o.kind, { points: points.join(" ") });
     }
+    case "arc":
+      return el("path", { d: arcPath(v("x"), v("y"), v("r"), v("from"), v("to")) });
+    case "ring":
+      return el("path", { d: ringPath(v("x"), v("y"), v("r"), v("width"), v("from"), v("to")) });
     case "text":
       return text(rt, i, unitsPerPx);
     default:
@@ -279,8 +284,8 @@ function text(rt: Runtime, i: number, unitsPerPx: number): Element {
 // multiply, and opacity fades the drawn shape as a whole.
 function paint(rt: Runtime, i: number, el: Element): void {
   const s = el as SVGElement;
-  // A line and a polyline are paths with no inside, so their fill is never drawn.
-  const open = ["line", "polyline"].includes(rt.objects[i]!.kind);
+  // A line, a polyline and an arc are paths with no inside, so their fill is never drawn.
+  const open = ["line", "polyline", "arc"].includes(rt.objects[i]!.kind);
   s.style.setProperty("fill", open ? "none" : paintCss(rt, i, "fill"));
   s.style.setProperty("stroke", paintCss(rt, i, "stroke"));
   el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity")));

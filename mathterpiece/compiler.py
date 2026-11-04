@@ -105,7 +105,7 @@ RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "when", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
 # The shapes a container may be clipped to: ones with an inside.
-CLIPS = ("circle", "rect", "ellipse", "triangle", "polygon")
+CLIPS = ("circle", "rect", "ellipse", "triangle", "polygon", "ring")
 # The points on a shape's box that placement gives: the middle of each side and each corner
 # (reference.md, "Placing").
 ANCHORS = frozenset(
@@ -184,6 +184,13 @@ PAINTED = {
 # letters.
 STROKE_ONLY = frozenset({"stroke", "stroke-width", "dash", "dash-offset", "line-cap", "line-join"})
 POSITIONED = {"x": Argument(REAL, 0), "y": Argument(REAL, 0)}
+ARC = {
+    **POSITIONED,
+    **PAINTED,
+    **TRANSFORMS,
+    "from": Argument(REAL, 0),
+    "to": Argument(REAL, 360),
+}
 # The attributes each built-in shape takes, with their defaults (reference.md).
 SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
     "circle": {**POSITIONED, **PAINTED, **TRANSFORMS, "r": Argument(NON_NEGATIVE, 1)},
@@ -219,6 +226,10 @@ SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
     # A path through its points, and a closed region through them (mtp-4nt).
     "polyline": {**PAINTED, **TRANSFORMS, "points": Argument(ListT(POINT), [])},
     "polygon": {**PAINTED, **TRANSFORMS, "points": Argument(ListT(POINT), [])},
+    # Part of a circle's outline, and the region between two circles, from one angle to another
+    # in degrees; whole by default (mtp-5zmn).
+    "arc": {**ARC, "r": Argument(NON_NEGATIVE, 1)},
+    "ring": {**ARC, "r": Argument(NON_NEGATIVE, 1), "width": Argument(NON_NEGATIVE, 0.5)},
     "text": {
         **POSITIONED,
         **PAINTED,

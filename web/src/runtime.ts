@@ -2,6 +2,7 @@
 // and holds the value of every variable and attribute. A write changes a free one and forgets
 // only what depends on it; a bound one is computed again the next time it is read (data-model.md, "How reactivity
 // works"). The compiler has proved every type, so nothing here checks or converts one.
+import { arcBox } from "./arc.ts";
 import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, pointsMean, roundHalfAway } from "./builtins.ts";
 import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
 import { isBound } from "./doc.ts";
@@ -21,7 +22,20 @@ const SPREAD = new Set([
   "line-cap",
   "line-join",
 ]);
-const SHAPES = new Set(["circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "text", "group", "instance"]);
+const SHAPES = new Set([
+  "circle",
+  "rect",
+  "ellipse",
+  "line",
+  "triangle",
+  "polyline",
+  "polygon",
+  "arc",
+  "ring",
+  "text",
+  "group",
+  "instance",
+]);
 // The shapes whose position is the mean of their list of points (mtp-4nt).
 const THROUGH_POINTS = new Set(["polyline", "polygon"]);
 const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
@@ -868,6 +882,16 @@ export class Runtime {
     } else if (THROUGH_POINTS.has(o.kind)) {
       corners = this.value(id, "points") as number[][];
       if (corners.length === 0) return null;
+    } else if (o.kind === "arc" || o.kind === "ring") {
+      const own = arcBox(v("x"), v("y"), v("r"), o.kind === "ring" ? v("width") : null, v("from"), v("to"));
+      if (own === null) return null;
+      const [x0, y0, x1, y1] = own as [number, number, number, number];
+      corners = [
+        [x0, y0],
+        [x1, y0],
+        [x1, y1],
+        [x0, y1],
+      ];
     } else {
       const [x, y] = [v("x"), v("y")];
       const [hw, hh] =

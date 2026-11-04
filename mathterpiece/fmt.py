@@ -11,7 +11,8 @@ INDENT = {
     **dict.fromkeys(
         ["scene", "group", "row", "column", "circle", "rect", "ellipse", "line", "triangle"], 1
     ),
-    **dict.fromkeys(["polyline", "polygon", "font", "animation", "canvas", "button", "play"], 1),
+    **dict.fromkeys(["polyline", "polygon", "arc", "ring", "font", "animation", "canvas"], 1),
+    **dict.fromkeys(["button", "play"], 1),
     "text": 2,
     **dict.fromkeys(
         ["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"], 2
@@ -32,7 +33,19 @@ INDENT = {
 # positional argument fewer before its body.
 NAMED = {
     *["scene", "group", "row", "column", "circle", "rect", "ellipse", "line", "triangle"],
-    *["polyline", "polygon", "text", "font", "real", "int", "ratio", "complex", "bool"],
+    *[
+        "polyline",
+        "polygon",
+        "arc",
+        "ring",
+        "text",
+        "font",
+        "real",
+        "int",
+        "ratio",
+        "complex",
+        "bool",
+    ],
     *["string", "point", "list", "transform", "color", "type", "motif", "variant", "func"],
     *["transition", "animation", "canvas", "readout", "slider", "button", "play", "toggle"],
 }

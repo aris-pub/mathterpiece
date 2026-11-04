@@ -1,0 +1,62 @@
+; Arcs and rings. Drag the point to open the angle: an arc marks it, and a ring of the same angle,
+; as wide as its radius, shades it as a pie slice. Slide the count to cut the ring on the right
+; into that many parts; between two whole numbers the last part grows out of the gap. The ring
+; sweeps into place when the figure first comes into view.
+
+(import house paper ink soft terracotta teal saffron plum variable code)
+
+(scene board
+  (background paper)
+  (real theta 60 (>= 10) (<= 350))
+  (real parts 5 (>= 1) (<= 8))
+  (real grow 0 (>= 0) (<= 1))
+
+  ; The angle: a ray along the x axis and one through the point the reader drags.
+  (real reach 3 (const))
+  (group angle (translate [-3.9 0])
+    ; The circle the point moves on, faint, so the reader sees where it can go.
+    (circle track (r reach) (fill none) (stroke soft) (stroke-opacity 0.5) (dash [2 5]))
+    (ring shade (r 1.7) (width 1.7) (to theta) (fill terracotta) (fill-opacity 0.15)
+      (stroke none))
+    (arc mark (r 1.1) (to theta) (stroke terracotta) (stroke-width 2.5) (line-cap 'round'))
+    (group rays (defaults (stroke ink) (stroke-width 2) (line-cap 'round'))
+      (line_ (from [0 0]) (to [reach 0]))
+      (line_ (from [0 0]) (to (polar reach theta))))
+    (text degrees $'{theta:.0f}°' (pos (polar 2.3 (/ theta 2))) (halign 'middle')
+      (valign 'middle') (font variable) (fill ink))
+    (circle tip (pos (polar reach theta)) (r 0.16) (fill terracotta) (stroke paper)
+      (stroke-width 2)))
+
+  ; The ring: eight parts, each from where the one before ends, less a gap; a part past the
+  ; count starts and ends at a full turn, so it draws nothing. Each starts at the top and goes
+  ; counterclockwise, and every angle is scaled by grow, so the ring sweeps in from the top.
+  (real gap 3 (const))
+  ; Eight colors, so that the first and the last part never share one: the house's four, then
+  ; each of them lighter.
+  (list[color] bright [terracotta teal saffron plum])
+  (real share (/ 360 parts))
+  (group cut (translate [4.1 0])
+    ; The ring's outer edge, which the code below is placed against, drawn as nothing: the
+    ; parts draw nothing before they sweep in, so their own box would move.
+    (circle edge (r reach) (fill none) (stroke none))
+    (foreach k 8
+      (let ((start (min 360 (* k share))))
+        (ring_ (r reach) (width 1.2)
+          (from (+ 90 (* grow start)))
+          (to (+ 90 (* grow (max start (- (min 360 (* (+ k 1) share)) gap)))))
+          (fill (mix bright[(mod k 4)] paper (if (< k 4) 0 0.45))) (stroke none)))))
+
+  (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
+    (text_ $'(arc mark (r 1.1) (to {theta:.0f}))' (pos (bottom track 0.5)))
+    (text_ $'(ring shade (r 1.7) (width 1.7) (to {theta:.0f}))'
+      (pos (+ (bottom track 0.5) [0 -0.45])))
+    (text_ '(ring_ (r 3) (width 1.2)' (pos (bottom edge 0.5)))
+    (text_ $'(from 90) (to {(+ 90 (- share gap)):.0f}))' (pos (+ (bottom edge 0.5) [0 -0.45])))
+    (text_ $'{parts:.2f} of 8 parts' (pos (+ (bottom edge 0.5) [0 -0.9])))))
+
+(canvas view (x -8.4) (y -5) (width 16.8) (height 8.6) (pan false) (zoom false)
+  angle cut forms)
+
+(on-drag tip theta)
+(slider count (move parts (from 1) (to 8)) (label 'parts'))
+(on-view view (animation (move grow (to 1) (duration 1.4) (ease 'ease-out'))))
