@@ -227,6 +227,7 @@ Every control and listener emits writes to its target (or, through its animation
 - **A target that is the shape's own `x`, `y` or `pos`** follows the pointer's motion, keeping the offset the pointer had from the shape at the press: the shape does not jump to center itself under the pointer. A target of `x` alone or `y` alone follows the pointer along that axis only.
 - **A target that is a number the shape's position depends on** (`theta` in `(polar 1 theta)`) takes the value that brings the shape closest to where the pointer has moved it. The search starts from the current value and stays near it, so the shape never jumps to another position equally close (the far side of a circle). When no value reaches the pointer exactly, the closest is taken.
 - **A group** moves every member by the pointer's motion.
+- **Any other target is a compile error**, such as an arc's `to`, a ring's `width` or a circle's `r`: the drag moves the shape's position, and these never move it, so no value brings the shape any closer to the pointer. To drag one, declare the number as a variable, have the shape read it, and drag a point whose position depends on it: `(real theta 60) (arc mark (r 1.1) (to theta)) (circle tip (pos (polar 1.1 theta)) (r 0.15)) (on-drag tip theta)`. examples/arcs.mtp does this.
 
 ### Panning and zooming
 
