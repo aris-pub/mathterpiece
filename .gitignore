@@ -19,3 +19,6 @@ web/test/data/demo/
 web/test/data/examples/
 # Screenshots Vitest saves when a browser test fails
 web/.vitest/
+
+# What mtp build writes next to a figure.
+build_*/

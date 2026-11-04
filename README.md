@@ -30,6 +30,8 @@ cd web && pnpm install
 ## Build a figure
 
 ```sh
+uv run mtp build figure.mtp              # writes build_figure/: the .mtpc and a page that shows it
+uv run mtp serve figure.mtp              # serves that page, building again on each save
 uv run mtp compile figure.mtp            # writes figure.mtpc next to it
 uv run mtp compile figure.mtp -o out.mtpc
 uv run mtp check figure.mtp              # reports the first error, writes nothing
@@ -39,6 +41,7 @@ uv run mtp fmt figure.mtp                # indents the file as the Emacs mode do
 
 A compile error names the line and column and says what is wrong. Building is four steps:
 parsing, compiling, writing the .mtpc and writing a page that shows it (see the data model).
+`mtp build` and `mtp serve` build the runtime with Node and pnpm.
 
 ## Put a figure on a page
 

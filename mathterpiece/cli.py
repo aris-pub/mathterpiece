@@ -21,6 +21,8 @@ COMMANDS = {
     "parse": "print the forms the parser reads",
     "check": "report the first error, if any, and write nothing",
     "compile": "write the .mtpc",
+    "build": "write the .mtpc and a page that shows it, in build_<name>/",
+    "serve": "serve the page, and build again and reload it on each save",
     "fmt": "rewrite the file in the house layout, keeping its comments",
 }
 
@@ -33,6 +35,8 @@ def main(argv: list[str] | None = None):
         sub.add_argument("file")
         if name == "compile":
             sub.add_argument("-o", "--output", help="where to write (default: next to the file)")
+        if name == "serve":
+            sub.add_argument("-p", "--port", type=int, default=8000, help="the port (default 8000)")
         sub.add_argument(
             "-v", "--verbose", action="count", default=0, help="-v info, -vv debug, -vvv trace"
         )
@@ -48,6 +52,8 @@ def main(argv: list[str] | None = None):
         if out != src:
             path.write_text(out, encoding="utf-8")
         return
+    if args.command in ("build", "serve"):
+        return _build(path, args)
     forms = _parsed(src, args.file)
     if args.command == "parse":
         for form in forms:
@@ -65,6 +71,31 @@ def main(argv: list[str] | None = None):
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(write(model))
     logger.info("wrote %s", out)
+
+
+def _build(path: Path, args) -> None:
+    from mathterpiece.build import BuildError, build
+    from mathterpiece.serve import Server
+
+    if args.command == "build":
+        try:
+            out = build(path)
+        except (ParseError, CompileError) as e:
+            _fail(f"{args.file}:{e}")
+        except BuildError as e:
+            _fail(f"{args.file}: {e}")
+        print(f"wrote {out / 'index.html'}")
+        return
+    server = Server(path, args.port)
+    server.start()
+    print(
+        f"serving {args.file} at http://127.0.0.1:{server.port}, building again on each save",
+        flush=True,
+    )
+    try:
+        server.stopped.wait()
+    except KeyboardInterrupt:
+        server.stop()
 
 
 def _read(path: Path, shown: str) -> str:
