@@ -324,3 +324,34 @@ class TestTheTypeOfAnEase:
             " (animation a (move k (to 5) (duration 1) (ease picky)))",
             "expected func",
         )
+
+
+class TestForeachInAnAnimation:
+    # mtp-6jt0, the author 2026-11-03: a foreach in an animation's body puts its moves where it
+    # is written: together inside at-once, one after another inside in-order or in a row.
+    G = "(scene s (group g (circle a) (circle b) (circle c)))"
+
+    def test_over_a_group_at_once(self):
+        body = "(at-once (defaults (duration 1)) (foreach d g (move d.r (to 2))))"
+        s = steps(f"{self.G} (animation an {body})", "an")
+        assert s[0] == "at-once" and len(s) == 4 and all(x[0] == "move" for x in s[1:])
+
+    def test_one_after_another(self):
+        m = model(f"{K} (animation an (foreach v [1 2 3] (move k (to v) (duration 1))))")
+        assert m.get("an").attrs["duration"].value == 3
+
+    def test_with_waits_and_a_count(self):
+        m = model(f"{K} (animation an (foreach i 2 (move k (to i) (duration 1)) (wait 0.5)))")
+        assert m.get("an").attrs["duration"].value == 3
+
+    def test_the_count_must_be_known_when_compiling(self):
+        error(
+            f"{K} (int n 2) (animation an (foreach i n (move k (to i) (duration 1))))",
+            "known when compiling",
+        )
+
+    def test_let_is_still_not_an_animation_item(self):
+        error(
+            f"{K} (animation an (let ((v 1)) (move k (to v) (duration 1))))",
+            "holds moves, waits, at-once and in-order",
+        )

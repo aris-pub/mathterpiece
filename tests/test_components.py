@@ -299,3 +299,13 @@ class TestCanvasFades:
 
     def test_fade_is_not_a_path(self):
         error("(scene s (circle c)) (canvas v (move none (duration 1) (path fade)) c)", "fade")
+
+
+def test_a_foreach_names_its_controls():
+    # Found 2026-11-03 in examples/rows.mtp: (name $'b{v}') on a control in a top-level foreach
+    # did not see v.
+    m = model(
+        "(real k 0) (foreach v [1 2] (button (name $'b{v}')"
+        " (animation (move k (to v) (duration 0))) (label $'{v}')))"
+    )
+    assert m.get("b1").kind == "button" and m.get("b2").kind == "button"

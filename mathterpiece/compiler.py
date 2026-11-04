@@ -1559,7 +1559,15 @@ class _Compiler:
                     f"an animation's defaults are duration and ease, got {_shown(item)}", item.pos
                 )
         out = []
-        for item in items:
+        # A foreach puts its moves where it is written (the author, 2026-11-03).
+        expanded = (
+            pair
+            for item in items
+            for pair in (
+                self.expand([item], scope) if _head(item) == "foreach" else [(item, scope)]
+            )
+        )
+        for item, scope in expanded:
             head = _head(item)
             if head == "defaults":
                 continue
@@ -1739,7 +1747,7 @@ class _Compiler:
             name, pos, items = None, form.pos, form.items[2:]
             shape = self.component_named(form.items[1], {"canvas"}, "expected the name of a canvas")
         else:
-            name, pos = self.name_of(form)
+            name, pos = self.name_of(form, scope)
             items, shape = form.items[2:], None
         obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
         # A canvas's body is what it shows; a writer's is its conditions.

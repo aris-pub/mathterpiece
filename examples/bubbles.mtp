@@ -75,12 +75,7 @@
 (button bring-back
   (animation
     (at-once (defaults (duration 0.5) (ease 'ease-out'))
-      (move b0.popped (to false) (duration 0)) (move b0.burst (to 0))
-      (move b1.popped (to false) (duration 0)) (move b1.burst (to 0))
-      (move b2.popped (to false) (duration 0)) (move b2.burst (to 0))
-      (move b3.popped (to false) (duration 0)) (move b3.burst (to 0))
-      (move b4.popped (to false) (duration 0)) (move b4.burst (to 0))
-      (move b5.popped (to false) (duration 0)) (move b5.burst (to 0))
-      (move b6.popped (to false) (duration 0)) (move b6.burst (to 0))
-      (move b7.popped (to false) (duration 0)) (move b7.burst (to 0))))
+      (foreach b bubbles
+        (move b.popped (to false) (duration 0))
+        (move b.burst (to 0)))))
   (label 'bring the bubbles back'))
