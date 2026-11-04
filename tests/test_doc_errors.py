@@ -87,3 +87,11 @@ def test_the_error_and_where_it_is(src, attribute, message):
         compile_source(src)
     assert message in exc.value.msg
     assert f"{exc.value.pos.line}:{exc.value.pos.col}" == attribute
+
+
+def test_a_drag_of_pos_may_limit_its_x_and_y():
+    # mtp-0814: a drag that writes pos writes x and y, and c.pos.x and c.pos[0] read c.x.
+    from mathterpiece.compiler import compile_source
+
+    for cond in ("(<= c.x 5)", "(<= c.pos.x 5)", "(>= c.pos[1] 0)"):
+        compile_source(f"(scene s (circle c)) (on-drag c c.pos {cond})")

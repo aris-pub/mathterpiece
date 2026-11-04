@@ -52,6 +52,16 @@ describe("a drag", () => {
     expect(v("limited", "x")).toBe(2);
   });
 
+  it("keeps a shape whose position is dragged inside the limits on its x and y", () => {
+    // mtp-0814: a drag that writes pos writes x and y, so a condition may limit either.
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("boxed"), [0, 0]);
+    drags.move([5, -4]);
+    expect([v("boxed", "x"), v("boxed", "y")]).toEqual([2, -1]);
+    drags.move([1, 7]);
+    expect([v("boxed", "x"), v("boxed", "y")]).toEqual([1, 3]);
+  });
+
   it("moves an int target by whole steps", () => {
     // mtp-q44: the search used to step by 1e-6, which the write into an int rounds away.
     const [rt, drags, v] = setup();

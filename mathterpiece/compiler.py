@@ -2168,7 +2168,10 @@ class _Compiler:
             )
         obj.data["shape"], obj.data["target"] = shape, (i, attr)
         self.active(obj, items)
-        self.writer(obj, items, {(i, attr)})
+        # The runtime writes a drag of pos as a write to x and one to y, and limits each by its
+        # own conditions, so a condition may limit either (mtp-0814).
+        written = {(i, attr)} | ({(i, "x"), (i, "y")} if own and attr == "pos" else set())
+        self.writer(obj, items, written)
 
     def position_deps(self, shape: int) -> set:
         """Every variable and attribute the shape's position depends on, through bound ones too."""
