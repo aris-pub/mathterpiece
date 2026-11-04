@@ -2051,6 +2051,13 @@ class _Compiler:
                     raise CompileError(
                         "a canvas's move fades what it shows, so its target is none", item.pos
                     )
+                fade = self.model.objects[tid]
+                if fade.data["ends"] or "path" in fade.attrs:
+                    raise CompileError(
+                        "a canvas's move takes only a duration and an ease: it fades what the"
+                        " canvas shows from hidden to shown",
+                        item.pos,
+                    )
                 obj.data["transition"] = tid
             elif isinstance(item, Form) and head is not None:
                 raise CompileError(f"a canvas takes no argument '{head}'", item.pos)

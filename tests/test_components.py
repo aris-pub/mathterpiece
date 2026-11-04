@@ -323,3 +323,13 @@ class TestEveryShownPartHasAName:
 
     def test_listeners_need_none(self):
         model(f"{self.K} (canvas v s) (on-click c (animation (move k (to 1) (duration 0))))")
+
+
+def test_a_canvas_move_takes_only_a_duration_and_an_ease():
+    # A canvas fades its when items: it reads a duration and an ease, and nothing else.
+    model("(scene s (circle c)) (canvas v (move none (duration 1) (ease 'ease-in')) c)")
+    for extra in ("(from 0)", "(to 1)", "(path (fn ((real a) (real b) (real t)) a))"):
+        error(
+            f"(scene s (circle c)) (canvas v (move none (duration 1) {extra}) c)",
+            "a canvas's move takes only a duration and an ease",
+        )

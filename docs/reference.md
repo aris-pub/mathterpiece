@@ -135,7 +135,7 @@ A view, a control and a readout must have a name: a page places each by its name
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(canvas name)` | required | none | `(move none …)` for showing and hiding, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
+| `(canvas name)` | required | none | `(move none (duration t) (ease e))` for showing and hiding, which takes only a duration and an ease, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
 | `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(when bool)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, `(when bool)` | conditions |
