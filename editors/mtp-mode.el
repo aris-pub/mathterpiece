@@ -66,7 +66,8 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
   "Indent an mtp form as Emacs Lisp indents a `defun'.
 Positional arguments on lines of their own go 4 in from the form's
 opening parenthesis, and every line of its body 2, whatever sits on the
-head's line. Forms mtp-mode does not know are indented as in Lisp."
+head's line. Forms mtp-mode does not know are indented as in Lisp, and a
+list's items under its first item."
   (let* ((start (nth 1 state))
          (head (save-excursion
                  (goto-char (1+ start))
@@ -76,8 +77,13 @@ head's line. Forms mtp-mode does not know are indented as in Lisp."
          ;; line|none is a line, and circle_ a circle with no name.
          (base (car (split-string (if unnamed (substring head 0 -1) head) "|")))
          (count (cdr (assoc base mtp-mode--indent))))
-    (if (not count)
-        (lisp-indent-function indent-point state)
+    (cond
+     ;; A list is data, not a call: its items line up under its first one.
+     ((eq (char-after start) ?\[)
+      (1+ (save-excursion (goto-char start) (current-column))))
+     ((not count)
+      (lisp-indent-function indent-point state))
+     (t
       ;; A form with no name: written head_, or, like an animation inside a control,
       ;; with a list where its name would be.
       (when (and (member base mtp-mode--named)
@@ -98,7 +104,7 @@ head's line. Forms mtp-mode does not know are indented as in Lisp."
                    (error nil))
             (setq before (1+ before))))
         (+ (save-excursion (goto-char start) (current-column))
-           (if (< before count) 4 2))))))
+           (if (< before count) 4 2)))))))
 
 (defun mtp-mode--indent-line ()
   "Indent the line as `lisp-indent-line' does, but indent a comment like code.

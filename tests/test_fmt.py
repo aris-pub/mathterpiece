@@ -73,14 +73,15 @@ def test_every_file_keeps_its_meaning_and_formats_once(path):
     assert layout(out) == out
 
 
-@pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)
-def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
+def _emacs(src: str, tmp_path: Path) -> str:
+    """src as the Emacs mode indents it."""
     import shutil
     import subprocess
 
     if shutil.which("emacs") is None:
         pytest.skip("emacs is not installed")
-    out = tmp_path / "out.mtp"
+    path, out = tmp_path / "in.mtp", tmp_path / "out.mtp"
+    path.write_text(src)
     code = (
         f'(progn (find-file "{path}") (mtp-mode) (indent-region (point-min) (point-max))'
         f' (delete-trailing-whitespace) (write-region (point-min) (point-max) "{out}"))'
@@ -90,10 +91,36 @@ def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
         check=True,
         capture_output=True,
     )
-    emacs = [line.rstrip() for line in out.read_text().split("\n")]
+    return out.read_text()
+
+
+@pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)
+def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
+    emacs = [line.rstrip() for line in _emacs(path.read_text(), tmp_path).split("\n")]
     ours = [line.rstrip() for line in layout(path.read_text()).split("\n")]
     # fmt also drops extra blank lines, which Emacs keeps; compare the lines with text.
     assert [x for x in ours if x] == [x for x in emacs if x]
+
+
+# A list is data, not a call: its later lines go under its first item, as do those of a form
+# whose head is not a name.
+@pytest.mark.parametrize(
+    "src, want",
+    [
+        (
+            "(list[color] hues [terracotta teal saffron plum\n(mix terracotta paper 0.45)])\n",
+            "(list[color] hues [terracotta teal saffron plum\n"
+            "                   (mix terracotta paper 0.45)])\n",
+        ),
+        ("(list xs [1 2\n3])\n", "(list xs [1 2\n          3])\n"),
+        ("(list xs [(f a) b\nc])\n", "(list xs [(f a) b\n          c])\n"),
+        ("(list xs [\na b\nc])\n", "(list xs [\n          a b\n          c])\n"),
+        ("(real v ((f a) b\nc))\n", "(real v ((f a) b\n         c))\n"),
+    ],
+)
+def test_a_list_lines_up_under_its_first_item_in_fmt_and_emacs(src, want, tmp_path):
+    assert layout(src) == want
+    assert _emacs(src, tmp_path) == want
 
 
 def test_the_table_is_the_emacs_modes():
