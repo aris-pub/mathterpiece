@@ -24,6 +24,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **Names:** the file reads its own declarations by their bare names, and a local name inside it, such as a `let` or a parameter, wins over them as anywhere. A name imported by name cannot also be declared in the importing file. A name a file imported can be imported from it in turn.
 - **Once:** a file imported more than once, directly or through other files, is compiled once. A file that imports itself, through the files it imports, is a compile error, as are two different files of the same name.
 - **Errors** inside an imported file name that file, as `house.mtp:3:5: …`.
+- **Only what is used:** an imported declaration is compiled into the figure only when the figure uses it, directly or through another imported declaration it uses, such as a function that reads a color. A declaration nothing uses is still checked, so an error in it is still an error.
 - **In the .mtpc** there are no imports: what the figure uses is written into it, each under the name it is kept by, `house.ink`. An imported token's CSS custom property is named by its file: `--mtp-house-ink`, however it is imported.
 
 ### Values and variables

@@ -366,6 +366,9 @@ class _Compiler:
         self.top_form: Node | None = None
         self.loaded: dict[Path, str] = {}
         self.loading: list[Path] = []
+        # The top-level forms of imported files that are compiled, by their positions: the
+        # others are not used (the author, 2026-11-04). None compiles all of them.
+        self.keep: set[Pos] | None = None
         self.scene: int | None = None
         # The container the expression being compiled sits in: a group, or None for the scene
         # and the top level. Reads convert through the transforms not shared with it.
@@ -399,6 +402,7 @@ class _Compiler:
         return k
 
     def run(self, forms: tuple[Form, ...]) -> Model:
+        self.keep = _used(forms, self.source)
         forms = self.imports(forms, None, self.source)
         for form, scope in self.expand(forms, {}, top=True):
             self.top(form, scope)
@@ -444,10 +448,7 @@ class _Compiler:
             raise CompileError(
                 "an import reads a file next to this one: compile it from a file", pos
             )
-        found = next(
-            (p for p in (importer.parent / f"{name}.mtp", STDLIB / f"{name}.mtp") if p.is_file()),
-            None,
-        )
+        found = _find(name, importer)
         if found is None:
             raise CompileError(
                 f"no {name}.mtp next to {importer.name} or in the standard library", pos
@@ -470,12 +471,27 @@ class _Compiler:
                 )
         self.loading.append(real)
         self.aliases[name] = {}
+        skipped = False
         try:
-            for form, scope in self.expand(self.imports(forms, name, found), {}, top=True):
-                self.top(form, scope)
+            items = self.imports(forms, name, found)
+            for item in items:
+                declared = _declared(item)
+                if self.keep is not None and declared is not None and item.pos not in self.keep:
+                    # Not compiled, but still a name the file declares, so it can be imported.
+                    self.aliases[name].setdefault(declared, f"{name}.{declared}")
+                    skipped = True
+                    continue
+                for form, scope in self.expand((item,), {}, top=True):
+                    self.top(form, scope)
         finally:
             self.loading.pop()
         self.loaded[real] = name
+        if skipped:
+            # A declaration nothing uses is still checked: the file is compiled on its own.
+            try:
+                _Compiler(found).run(parse(found.read_text(encoding="utf-8")))
+            except CompileError as e:
+                raise CompileError(e.msg, replace(e.pos, file=e.pos.file or name)) from None
         return self.aliases[name]
 
     def expand(self, items, scope: dict, top: bool = False) -> Iterator[tuple[Node, dict]]:
@@ -4137,6 +4153,88 @@ def _a(thing) -> str:
     """thing with a or an before it, as its first letter is sounded."""
     word = str(thing)
     return f"{'an' if word[:1] in 'aeiou' else 'a'} {word}"
+
+
+def _find(name: str, importer: Path) -> Path | None:
+    """The file (import name) reads: the importing file's folder first, then the standard
+    library."""
+    return next(
+        (p for p in (importer.parent / f"{name}.mtp", STDLIB / f"{name}.mtp") if p.is_file()),
+        None,
+    )
+
+
+def _declared(form: Node) -> str | None:
+    """The name a top-level declaration of an imported file declares, or None when that is not
+    plain to read, as for an import, a let or a foreach."""
+    if _head(form) in ("import", "let", "foreach") or not isinstance(form, Form):
+        return None
+    node = form.items[1] if len(form.items) > 1 else None
+    if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
+        return node.parts[0]
+    return None
+
+
+def _words(node, out: set[str]) -> set[str]:
+    """Every part of every name in node; a part written part_ counts as part too."""
+    if isinstance(node, Name):
+        for p in node.parts:
+            if isinstance(p, str):
+                out.add(p)
+                out.add(p.removesuffix("_"))
+            else:
+                _words(p, out)
+    elif isinstance(node, (Form, ListLit, Brackets, Bar)):
+        for i in node.items:
+            _words(i, out)
+    elif isinstance(node, InterpStrLit):
+        for p in node.parts:
+            if not isinstance(p, str):
+                _words(p, out)
+    elif isinstance(node, Field):
+        _words(node.expr, out)
+    return out
+
+
+def _used(forms, path: Path | None) -> set[Pos] | None:
+    """The top-level forms of the imported files whose names the file built uses, directly or
+    through other such forms, read from the source alone, before compiling: a name counts as used
+    when it is written anywhere, even where it means something else, so nothing used is left
+    out. A file that cannot be found or read is left for the compile to report."""
+    files: dict[Path, tuple] = {}
+
+    def read(forms, path):
+        for form in forms:
+            target = form.items[1] if _head(form) == "import" and len(form.items) > 1 else None
+            if not (isinstance(target, Name) and len(target.parts) == 1) or path is None:
+                continue
+            name = str(target.parts[0])
+            found = _find(name, path)
+            if found is None or found.resolve() in files:
+                continue
+            files[found.resolve()] = theirs = parse(found.read_text(encoding="utf-8"), file=name)
+            read(theirs, found)
+
+    read(forms, path)
+    if not files:
+        return None
+    words: set[str] = set()
+    for form in forms:
+        if _head(form) != "import":
+            _words(form, words)
+    pending = [
+        (f, _declared(f)) for theirs in files.values() for f in theirs if _head(f) != "import"
+    ]
+    keep: set[Pos] = set()
+    grew = True
+    while grew:
+        grew = False
+        for f, declared in pending:
+            if f.pos not in keep and (declared is None or declared in words):
+                keep.add(f.pos)
+                _words(f, words)
+                grew = True
+    return keep
 
 
 def _not_importable(form: Node) -> str | None:

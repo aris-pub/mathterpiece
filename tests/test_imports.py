@@ -124,7 +124,8 @@ def test_a_cycle(files):
 def test_a_file_imported_twice_is_read_once(files):
     base = "(color ink '#000000')"
     house = "(import base ink) (func darker ((color c)) (mix c ink 0.5))"
-    m = build(files(base=base, house=house, fig="(import base) (import house darker)"))
+    fig = "(import base) (import house darker) (color v (darker base.ink))"
+    m = build(files(base=base, house=house, fig=fig))
     assert list(m.names).count("base.ink") == 1
 
 
@@ -160,3 +161,53 @@ def test_the_compiled_file_names_the_token_by_its_file(files):
         write(build(files(house=HOUSE, fig="(import house ink) (scene s (circle c (fill ink)))")))
     )
     assert "house.ink" in d["names"]
+
+
+# The author, 2026-11-04: the compiled file keeps only the imported declarations something
+# uses, directly or through other imported declarations.
+def test_an_unused_import_is_dropped(files):
+    m = build(files(house=HOUSE, fig="(import house) (scene s (circle c (fill house.ink)))"))
+    assert "house.ink" in m.names
+    for gone in ("house.accent", "house.gap", "house.label"):
+        assert gone not in m.names
+    assert "house.unit" not in m.types and "house.dot" not in m.motifs
+    assert "house.darker" not in m.funcs
+
+
+def test_a_name_imported_by_name_but_never_used_is_dropped(files):
+    m = build(files(house=HOUSE, fig="(import house ink accent) (scene s (circle c (fill ink)))"))
+    assert "house.ink" in m.names and "house.accent" not in m.names
+
+
+def test_what_a_used_declaration_uses_is_kept(files):
+    m = build(files(house=HOUSE, fig="(import house darker) (color v (darker 'red'))"))
+    assert "house.ink" in m.names and "house.accent" not in m.names
+    m = build(files(house=HOUSE, fig="(import house dot) (scene s (dot d))"))
+    assert "house.dot" in m.motifs and "house.ink" in m.names and "house.accent" not in m.names
+
+
+def test_through_a_file_the_imported_file_imports(files):
+    base = "(color ink '#000000') (color paper '#ffffff')"
+    house = "(import base ink) (func darker ((color c)) (mix c ink 0.5)) (color loud 'red')"
+    m = build(files(base=base, house=house, fig="(import house darker) (color v (darker 'red'))"))
+    assert "base.ink" in m.names
+    assert "base.paper" not in m.names and "house.loud" not in m.names
+
+
+def test_the_written_file_has_no_unused_import(files):
+    import json
+
+    from mathterpiece.mtpc import write
+
+    d = json.loads(
+        write(build(files(house=HOUSE, fig="(import house ink) (scene s (circle c (fill ink)))")))
+    )
+    assert "house.accent" not in d["names"]
+    assert [o["name"] for o in d["objects"] if o["kind"] == "variable"] == ["house.ink"]
+
+
+def test_an_unused_declaration_with_an_error_is_still_an_error(files):
+    fails(
+        files(house="(color ink 'red') (color bad (mix 'red' nope 0.5))", fig="(import house ink)"),
+        "house.mtp:1:",
+    )

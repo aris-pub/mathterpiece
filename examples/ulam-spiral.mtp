@@ -3,7 +3,7 @@
 ; next to it is teal, a prime on its own is grey. Drag to pan, scroll or pinch to zoom, and
 ; double-click to go back; turn on the path to see how the spiral runs through every number.
 
-(import house paper ink soft terracotta teal number code)
+(import house paper soft terracotta teal number code)
 
 ; Trial division by 5, 7, 11, 13, 17, 19, …: every prime above 3 is one more or one less than a
 ; multiple of 6, so only those divisors need trying, which keeps compiling fast.

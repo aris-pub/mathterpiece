@@ -61,6 +61,8 @@ def test_the_examples_that_use_the_house_style_import_it():
             "koch-snowflake",
             "lens",
             "lissajous",
+            "placement",
+            "rows",
             "times-tables",
             "triangle-lines",
             "ulam-spiral",
