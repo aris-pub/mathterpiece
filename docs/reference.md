@@ -129,6 +129,8 @@ Paths: a straight line between the ends by default, or a function taking the two
 
 ### Components
 
+A view, a control and a readout must have a name: a page places each by its name (see the data model, "On the page"), so one with no name could never be shown, and is a compile error. A listener has no name.
+
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
 | `(canvas name)` | required | none | `(move none …)` for showing and hiding, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
@@ -172,7 +174,7 @@ What an attribute is when the author leaves it out:
 | canvas view box | −10 to 10 in both directions |
 | transition `ease` | `'linear'` |
 | transition `duration` | none: a move with no duration takes the default duration of the nearest animation, `at-once` or `in-order` around it, and is a compile error if there is none |
-| control `label` | the control's name, or empty for a control with no name |
+| control `label` | the control's name |
 | toggle `value` | `false` |
 | slider `step` | none: the slider moves continuously |
 | play `buttons` | `false` |

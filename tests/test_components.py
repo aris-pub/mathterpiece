@@ -159,19 +159,6 @@ class TestPositionalTargets:
         assert model("(toggle t none)").get("t").data["target"] is None
 
 
-class TestUnnamedControls:
-    # A control with no name still takes a label; its label is then empty unless it gives one.
-    def test_a_control_with_no_name_takes_a_label(self):
-        m = model(f"{K} (button none {MOVE} (label 'go'))")
-        (b,) = [o for o in m.objects if o.kind == "button"]
-        assert b.attrs["label"].value == "go"
-
-    def test_its_label_is_empty_otherwise(self):
-        m = model(f"{K} (button_ {MOVE})")
-        (b,) = [o for o in m.objects if o.kind == "button"]
-        assert b.attrs["label"].value == ""
-
-
 class TestStartingWithoutTheReader:
     # mtp-9wm: (on-view view (animation …)) plays the first time the canvas comes into view, and
     # a play with (autoplay) starts when the page loads, or with (autoplay view-or-control) the
@@ -315,3 +302,24 @@ def test_a_canvas_view_box_is_written_as_a_rect_is():
     a = m.get("v").attrs
     assert [a[k].value for k in ("x", "y", "width", "height")] == [-3, -2, 6, 4]
     error("(scene s) (canvas v (view-x -3) s)", "a canvas takes no argument 'view-x'")
+
+
+class TestEveryShownPartHasAName:
+    # The author, 2026-11-04: a page places a view or a control by its name, so one with no name
+    # could never be shown; it is a compile error.
+    K = "(real k 0 (>= 0) (<= 1)) (scene s (circle c))"
+
+    def test_controls_views_and_readouts(self):
+        for src in (
+            "(button_ (animation (move k (to 1) (duration 0))))",
+            "(button none (animation (move k (to 1) (duration 0))))",
+            "(slider_ (move k (from 0) (to 1)))",
+            "(play_ (animation (move k (to 1) (duration 1))))",
+            "(toggle_ none)",
+            "(readout_ $'{k}')",
+            "(canvas_ s)",
+        ):
+            error(f"{self.K} {src}", "is placed on the page by its name, so it needs one")
+
+    def test_listeners_need_none(self):
+        model(f"{self.K} (canvas v s) (on-click c (animation (move k (to 1) (duration 0))))")

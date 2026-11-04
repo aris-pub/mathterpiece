@@ -1748,6 +1748,11 @@ class _Compiler:
             shape = self.component_named(form.items[1], {"canvas"}, "expected the name of a canvas")
         else:
             name, pos = self.name_of(form, scope)
+            if name is None:
+                # A page element finds its view or control by name (the author, 2026-11-04).
+                raise CompileError(
+                    f"a {kind} is placed on the page by its name, so it needs one", pos
+                )
             items, shape = form.items[2:], None
         obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
         # A canvas's body is what it shows; a writer's is its conditions.
