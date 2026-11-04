@@ -84,3 +84,14 @@ describe("none", () => {
     expect(seen).toHaveLength(1);
   });
 });
+
+describe("a list of two numbers where a point is expected (mtp-vrf9)", () => {
+  it("is drawn as the point, and follows what it reads", () => {
+    const rt = load("point-conversion");
+    expect(rt.value(rt.id("from-let"), "pos")).toEqual([1, 3]);
+    expect(rt.value(rt.id("from-func"), "pos")).toEqual([1, 2]);
+    rt.write(rt.id("x"), null, 4);
+    expect(rt.value(rt.id("from-let"), "pos")).toEqual([4, 3]);
+    expect(rt.value(rt.id("from-func"), "pos")).toEqual([4, 2]);
+  });
+});

@@ -3165,6 +3165,8 @@ class _Compiler:
         # A constraint is checked on the value (known) or its range (settle), not on its type.
         target = _loose(expected) if expected is not None else None
         if target is not None and not fits(_loose(e.type), target):
+            e = self.as_point(e, expected) or e
+        if target is not None and not fits(_loose(e.type), target):
             assert expected is not None
             if _may_be_none(e.type) and not _may_be_none(target):
                 raise CompileError(self.may_be_none(expected), node.pos)
@@ -3315,8 +3317,43 @@ class _Compiler:
 
     def expect(self, e: Expr, t: Type, pos: Pos) -> Expr:
         if not fits(_loose(e.type), _loose(t)):
-            raise CompileError(f"expected {t}, got {e.type}", pos)
+            point = self.as_point(e, t)
+            if point is None:
+                raise CompileError(f"expected {t}, got {e.type}", pos)
+            return point
         return e
+
+    def as_point(self, e: Expr, t: Type) -> Expr | None:
+        """e as a point, where t is one and e is a list of two numbers whose length is known when
+        compiling (mtp-vrf9; type-system.md, section 3); otherwise None."""
+        lt = _core(e.type)
+        if _core(t) != POINT or isinstance(e.type, Maybe) or not isinstance(lt, ListT):
+            return None
+        if _core(lt.item) not in (INT, RATIO, REAL) or self.length_of(e, set()) != 2:
+            return None
+        if e.op == "list":
+            return _gather(POINT, list(e.args))
+        if e.known:
+            return _known(POINT, tuple(e.value))
+        return replace(e, type=POINT)
+
+    def length_of(self, e: Expr, seen: set) -> int | None:
+        """A list's length, when it is known when compiling."""
+        if isinstance(e.type, Refine):
+            for c in e.type.constraints:
+                if c[0] == "length":
+                    return c[1]
+        if e.known:
+            return len(e.value) if isinstance(e.value, (list, tuple)) else None
+        if e.op == "list":
+            return len(e.args)
+        if e.op == "if":
+            a, b = (self.length_of(x, seen) for x in e.args[1:3])
+            return a if a == b else None
+        if e.op == "call" and e.args[0] not in seen:
+            body = self.model.functions[e.args[0]].body
+            return None if body is None else self.length_of(body, seen | {e.args[0]})
+        return None
 
     def lookup(self, name: str, scope: dict, pos: Pos) -> Expr:
         if name in scope:

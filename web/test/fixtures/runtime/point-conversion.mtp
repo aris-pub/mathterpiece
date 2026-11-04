@@ -1,0 +1,6 @@
+(real x 1)
+(func f ((real a)) [a 2])
+(scene s
+  (let ((p [x 3])) (circle from-let (pos p)))
+  (circle from-func (pos (f x))))
+(canvas v s)
