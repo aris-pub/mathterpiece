@@ -79,6 +79,7 @@ from mathterpiece.types import (
     Interface,
     ListT,
     Maybe,
+    NamespaceT,
     Prim,
     Refine,
     ShapeT,
@@ -296,8 +297,13 @@ def compile_model(forms: tuple[Form, ...], path: Path | None = None) -> Model:
 
 # Where (import name) looks after the importing file's folder (the author, 2026-11-04).
 STDLIB = Path(__file__).parent / "stdlib"
+# What a namespace may not hold: it holds values only (the author, 2026-11-04).
+NOT_VALUES = {
+    "func", "type", "motif", "variant", "scene", "transition", "animation", "import", "let",
+    "foreach",
+}  # fmt: skip
 # What an imported file may declare at its top level, besides const variables.
-IMPORTABLE = {"color", "font", "func", "motif", "variant", "type", "import"}
+IMPORTABLE = {"color", "font", "func", "motif", "variant", "type", "import", "namespace"}
 
 
 class _Names(dict):
@@ -596,6 +602,9 @@ class _Compiler:
             raise CompileError("expected a declaration", form.pos)
         if head == "type":
             return self.type_decl(form)
+        if head == "namespace":
+            self.namespace_decl(form, scope)
+            return
         if head == "scene":
             return self.scene_decl(form)
         if head == "motif":
@@ -716,7 +725,62 @@ class _Compiler:
         finally:
             self.here = saved
 
+    def namespace_decl(self, form: Form, scope: dict, within: str | None = None) -> int:
+        """(namespace name member…): a mutable object that is not drawn, whose members are
+        variables and namespaces, read and written as its attributes (mtp-4rc). Each member is
+        kept as a variable named by the namespace, theme.ink, so it is a token, a constant or a
+        writer's target as any variable is, and its CSS variable is --mtp-theme-ink."""
+        if within is None:
+            key, pos = self.name_of(form)
+            if key is None:
+                raise CompileError("a namespace needs a name", form.pos)
+        else:
+            short, pos = self.member_name(form, {})
+            key = f"{within}.{short}"
+        i = self.add(Obj("namespace", key, NamespaceT(key), pos=pos, data={"members": {}}))
+        members: dict[str, int] = self.model.objects[i].data["members"]
+        inside = dict(scope)
+        for item in form.items[2:]:
+            if not isinstance(item, Form):
+                raise CompileError("a namespace holds values: variables and namespaces", item.pos)
+            head = _head(item)
+            if head == "namespace":
+                short, _ = self.member_name(item, members)
+                m = self.namespace_decl(item, inside, key)
+            elif (
+                head in NOT_VALUES
+                or head in COMPONENTS
+                or _typed_func(item) is not None
+                or self.shape_kind(item)
+            ):
+                raise CompileError("a namespace holds values: variables and namespaces", item.pos)
+            else:
+                short, at = self.member_name(item, members)
+                named = Form(
+                    (item.items[0], Name((f"{key}.{short}",), at), *item.items[2:]), item.pos
+                )
+                self.variable(named, None, "scene", inside)
+                m = self.model.names[f"{key}.{short}"]
+            members[short] = m
+            self.model.objects[i].members.append(m)
+            # Members after it read it by its bare name.
+            inside[short] = self.read(m, None)
+        return i
+
+    def member_name(self, form: Form, members: dict) -> tuple[str, Pos]:
+        node = form.items[1] if len(form.items) > 1 else None
+        if not (isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str)):
+            raise CompileError("a namespace's member needs a name", form.pos)
+        name = node.parts[0]
+        if name in RESERVED:
+            raise CompileError(f"'{name}' is reserved", node.pos)
+        if name in members:
+            raise CompileError(f"'{name}' is already declared", node.pos)
+        return name, node.pos
+
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
+        if _head(form) == "namespace":
+            raise CompileError("a namespace is declared at the top level", form.pos)
         if isinstance(form.items[0], Name) and form.items[0].parts == ("font",):
             return self.font_variable(form, parent, access, scope)
         name, pos, t, node, first = self.declared(form, scope)
@@ -1879,6 +1943,11 @@ class _Compiler:
             obj = self.model.objects[i]
             if attr is not None:
                 raise CompileError(f"{label} is not a variable or an attribute", node.pos)
+            if isinstance(part, str) and obj.kind == "namespace":
+                if part not in obj.data["members"]:
+                    raise CompileError(f"{obj.name} has no member '{part}'", node.pos)
+                i = obj.data["members"][part]
+                continue
             if isinstance(part, str):
                 members = {self.model.objects[m].name: m for m in obj.members}
                 if obj.kind == "instance" and part in members and part not in obj.attrs:
@@ -3601,6 +3670,10 @@ class _Compiler:
 
     def obj_attr(self, i: int, name: str, pos: Pos) -> Expr:
         obj = self.model.objects[i]
+        if obj.kind == "namespace":
+            if name not in obj.data["members"]:
+                raise CompileError(f"{obj.name} has no member '{name}'", pos)
+            return self.read(obj.data["members"][name], None)
         if name == "name" and name not in obj.attrs:
             return _known(STRING, obj.name) if obj.name is not None else _known(NONE, None)
         if obj.kind == "transition" and name in ("from", "to") and obj.data.get("end") is None:

@@ -1,0 +1,12 @@
+(namespace theme
+  (color ink '#1f2a44')
+  (color paper '#f6f1e7')
+  (color soft (mix ink paper 0.5))
+  (real gap 0.4 (>= 0) (<= 2))
+  (namespace accents (color warm '#e76f51')))
+(scene s
+  (circle c (r theme.gap) (fill theme.ink))
+  (circle d (fill theme.soft))
+  (circle e (fill theme.accents.warm)))
+(canvas v s)
+(slider sl (move theme.gap (from 0) (to 2)) (label 'gap'))

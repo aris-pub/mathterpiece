@@ -12,7 +12,7 @@
   '("scene" "group" "row" "column" "motif" "variant" "type" "func" "import"
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
-    "color" "font"
+    "color" "font" "namespace"
     "transition" "move" "wait" "animation" "at-once" "in-order"
     "canvas" "readout" "slider" "button" "play" "toggle" "on-drag" "on-click"
     "on-release" "on-dragend" "on-view" "defaults" "clip" "loop" "autoplay" "exists-when"
@@ -41,6 +41,7 @@ take `font-lock-keyword-face', so the two stand apart.")
   '(;; Forms with a name: the name, then their positional arguments, then their body.
     ("scene" . 1) ("group" . 1) ("row" . 1) ("column" . 1) ("circle" . 1) ("rect" . 1) ("ellipse" . 1) ("line" . 1)
     ("triangle" . 1) ("polyline" . 1) ("polygon" . 1) ("arc" . 1) ("ring" . 1) ("text" . 2) ("font" . 1)
+    ("namespace" . 1)
     ("real" . 2) ("int" . 2) ("ratio" . 2) ("complex" . 2) ("bool" . 2) ("string" . 2)
     ("point" . 2) ("list" . 2) ("transform" . 2) ("color" . 2)
     ("type" . 2) ("motif" . 2) ("variant" . 2) ("func" . 2)
@@ -56,7 +57,7 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
 
 (defconst mtp-mode--named
   '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring"
-    "text" "font"
+    "text" "font" "namespace"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform" "color"
     "type" "motif" "variant" "func" "transition" "animation"
     "canvas" "readout" "slider" "button" "play" "toggle")

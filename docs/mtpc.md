@@ -38,6 +38,7 @@ Every type is written as JSON:
 | a built-in shape type | `{"shape": "circle"}`, likewise `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `arc`, `ring`, `text`, `group` |
 | a declared type | `{"named": "unit"}`, `{"named": "dial"}`, `{"named": "bar"}`: an entry of `types` |
 | a component | `{"component": "slider"}`, likewise for each component |
+| a namespace | `{"namespace": "theme"}` |
 | an interface | `{"interface": "shape"}`, `{"interface": "positioned"}`, `{"interface": "sequence", "of": T}` |
 | a list | `{"list": T}` |
 | a function | `{"func": [T1, T2, …], "result": T}` |
@@ -128,6 +129,7 @@ and then what its kind needs:
 | `variable` | `"value"`: its value, free or bound; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded: it is written with its declared value, which the runtime draws with where the page's CSS gives none (data model, "On the page"). |
 | `scene` | `"members"`: the ids of its shapes; `"attrs"`: `background`, and `transform`, how the scene's own coordinates are drawn |
 | a row or a column | kind `group`, with `"layout"`: `{"axis": "row" or "column", "gap": a real, "align": a string}`, each free or bound; the runtime moves each member after the box of the one before (reference, "Placing") |
+| `namespace` | `"members"`: the ids of its members, variables and namespaces, in the order declared. Each member is an object of its own, named by the namespace: `theme.ink`, `colors.tab10.blue` |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `arc`, `ring`, `text`, `group` | `"attrs"`: every attribute, free or bound, and `exists`, a bool, when an `exists-when` names the shape (while it is false the shape is absent, and so are its members when it is a container, and every read of them is none); `group` also `"members"`, and `"clip"`, the id of its clip shape, when it has one (that shape is an object of its own, in the group's frame, and not among the members) |
 | a motif instance | kind `instance`; `"of"`: the motif's name; `"members"`; `"attrs"`: its parameters, its bound variables, and `x`, `y`, `translate` and `transform` (its `fill` and the like are its members'); `"clip"`, as for a group |
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |

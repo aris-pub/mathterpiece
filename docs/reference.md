@@ -27,6 +27,15 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **Only what is used:** an imported declaration is compiled into the figure only when the figure uses it, directly or through another imported declaration it uses, such as a function that reads a color. A declaration nothing uses is still checked, so an error in it is still an error.
 - **In the .mtpc** there are no imports: what the figure uses is written into it, each under the name it is kept by, `house.ink`. An imported token's CSS custom property is named by its file: `--mtp-house-ink`, however it is imported.
 
+### Namespaces
+
+`(namespace theme (color ink '#1f2a44') (color paper '#f6f1e7') (real gap 0.4 (>= 0)))` declares one name, `theme`: a mutable object that is not drawn, whose members are read and written as attributes are, `theme.ink` as `c.r` is. It is declared at the top level, here or in a file to import.
+
+- **What it holds:** variables of any type, free or bound, each declared as at the top level, and other namespaces: `(namespace colors (namespace tab10 (color blue '#1f77b4')))` gives `colors.tab10.blue`. A function, a type, a motif, a variant, a shape or a component in it is a compile error.
+- **Names:** inside it, a member reads the members declared before it by their bare names, and they win over names outside: `(color soft (mix ink paper 0.5))`. Outside it, they are read only through it, `theme.soft`. A member it does not have is a compile error.
+- **Writing:** a writer writes a free member by its full name, `(slider s (move theme.gap (from 0) (to 1)))`, under the same rules as any variable: not a bound one, not a `const` one, not a token. The namespace itself is never written.
+- **Tokens:** a color or font member is a token, and its CSS variable is named by the namespace: `--mtp-theme-ink`, `--mtp-colors-tab10-blue`. A namespace declared in an imported file adds the file's name, `--mtp-house-theme-ink`.
+
 ### Values and variables
 
 | Form | Name | Positional | Optional arguments | Body |

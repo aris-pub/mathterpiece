@@ -26,6 +26,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
   - **mutable object** (can change)
     - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `arc`, `ring`, `text`, `group` (a row or a column is a group), motif instances (`dial`, …), variants; each satisfies `shape`
     - **`scene`**: holds the shapes
+    - **namespace**: `(namespace theme …)`, members read and written as attributes, `theme.ink`; never drawn
     - **component**
       - view: `canvas`, `readout`
       - control: `slider`, `button`, `play`, `toggle`

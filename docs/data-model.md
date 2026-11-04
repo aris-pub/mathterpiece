@@ -116,6 +116,8 @@ flowchart LR
 
 Variables are declared inside the scene (then they belong to it), at the top level (then they are globals), or in a motif's body (then each instance holds them; only bound ones). They are not declared inside groups. The diagram draws them once.
 
+A **namespace**, `(namespace theme (color ink …) (real gap 0.4))`, is a global mutable object that is not drawn: its members are variables and other namespaces, read and written through it as attributes are, `theme.ink` as `c.r` is (see the reference, "Namespaces").
+
 A group (a row and a column included) and a motif instance are both **containers**: collections of shapes, which behave the same way. Neither draws anything itself, so an attribute such as `fill` or `stroke` is never a container's own: reading one gives every member's, and writing one writes every member's. What an instance has besides is a frame of its own, moved by its `x`, `y`, `translate` and `transform`, and its parameters. The reference, "Containers", gives the full rules, `(defaults …)` included.
 
 - **The scene** is the mathematical content: the shapes, and the variables declared with them. It is a subset of the model and knows nothing of how it is shown or changed. The model includes the scene; the scene never includes the rest of the model.

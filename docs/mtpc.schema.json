@@ -237,6 +237,18 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "namespace"
+          ],
+          "properties": {
+            "namespace": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -1552,6 +1564,7 @@
                 "text",
                 "group",
                 "instance",
+                "namespace",
                 "transition",
                 "animation",
                 "canvas",
@@ -2562,6 +2575,54 @@
                 "type": "array",
                 "items": {
                   "$ref": "#/$defs/clamp"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "namespace"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "members"
+            ],
+            "properties": {
+              "kind": {
+                "const": "namespace"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "$ref": "#/$defs/name"
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               }
             },

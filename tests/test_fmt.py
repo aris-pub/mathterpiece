@@ -2,6 +2,7 @@
 it, trailing spaces dropped, at most one blank line in a row, and nothing else changed."""
 
 import re
+import shutil
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,16 @@ def test_a_forms_positional_arguments_go_4_in_and_its_body_2():
 def test_the_body_of_a_shape():
     src = "(scene s\n(circle c (r 1)\n(fill 'red')))\n"
     assert layout(src) == "(scene s\n  (circle c (r 1)\n    (fill 'red')))\n"
+
+
+def test_the_members_of_a_namespace(tmp_path):
+    src = "(namespace theme\n(color ink 'navy')\n(namespace accents\n(color warm 'red')))\n"
+    want = (
+        "(namespace theme\n  (color ink 'navy')\n  (namespace accents\n    (color warm 'red')))\n"
+    )
+    assert layout(src) == want
+    if shutil.which("emacs") is not None:
+        assert _emacs(src, tmp_path) == want
 
 
 def test_a_form_with_no_name_has_one_positional_fewer():
