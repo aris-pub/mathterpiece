@@ -67,7 +67,8 @@
             "transition",
             "animation",
             "none",
-            "scene"
+            "scene",
+            "namespace"
           ]
         },
         {
@@ -241,18 +242,6 @@
                 "$ref": "#/$defs/constraint"
               },
               "minItems": 1
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "namespace"
-          ],
-          "properties": {
-            "namespace": {
-              "$ref": "#/$defs/name"
             }
           },
           "additionalProperties": false

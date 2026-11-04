@@ -252,7 +252,7 @@ An interface names what several types have in common. A type satisfies an interf
 | `sequence[T]` | items by position, a `length` | lists, points, groups |
 | `shape` | has its own `translate` and `transform` | circle, rect, …, groups, motif instances, variants |
 
-An interface cannot be instantiated: no shape is created whose type is only `shape`. An interface can type a parameter, as in `(shape o)`, or a variable that holds an existing shape: `(shape sel p)` declares `sel`, holding the shape `p`, and `(shape sel (circle c …))` declares the circle `c` and a variable holding it. A parameter typed with an interface may read only what the interface lists, and is checked once, at the definition, like any other parameter.
+An interface cannot be instantiated: no object's own type is ever an interface, and no shape is created whose type is only `shape`. A parameter or a variable may be declared with one, and then holds an object of any type that satisfies it: `(shape o)` is a parameter holding a circle, a group or any other object that satisfies `shape`, and `(shape sel p)` declares `sel`, holding the shape `p`, and `(shape sel (circle c …))` declares the circle `c` and a variable holding it. A parameter declared with an interface may read only what the interface lists, and is checked once, at the definition, like any other parameter.
 
     (func label-at ((positioned o) (string s)) …)   ; accepts points and shapes alike
     (func area (circle o) (* pi o.r o.r))                   ; circles, and any variant of circle

@@ -63,6 +63,7 @@ from mathterpiece.types import (
     FONT,
     INT,
     INTERFACES,
+    NAMESPACE,
     NONE,
     NUMBERS,
     POINT,
@@ -79,7 +80,6 @@ from mathterpiece.types import (
     Interface,
     ListT,
     Maybe,
-    NamespaceT,
     Prim,
     Refine,
     ShapeT,
@@ -409,6 +409,8 @@ class _Compiler:
         self.shape_types: dict[str, dict[str, Type]] = {}
         # How many function bodies are being compiled again to fold a call.
         self.folding = 0
+        # How many motifs' trial instances are being compiled.
+        self.trialing = 0
         # The values of folded calls of named functions, by fold_key, and the names written in
         # each such function's body.
         self.folded: dict[tuple, Expr] = {}
@@ -741,7 +743,7 @@ class _Compiler:
         else:
             short, pos = self.member_name(form, {})
             key = f"{within}.{short}"
-        i = self.add(Obj("namespace", key, NamespaceT(key), pos=pos, data={"members": {}}))
+        i = self.add(Obj("namespace", key, NAMESPACE, pos=pos, data={"members": {}}))
         members: dict[str, int] = self.model.objects[i].data["members"]
         inside = dict(scope)
         for item in form.items[2:]:
@@ -805,25 +807,39 @@ class _Compiler:
 
     def misfit(self, e: Expr, expected: Type) -> str | None:
         """Why e does not fit a declared interface expected is, or None when it fits or expected
-        is not one."""
-        want = _core(expected)
-        if not isinstance(want, Interface) or want.name not in self.model.interfaces:
+        is not one. The objects e may be are checked when they are known, as a namespace's type
+        does not say what members it has."""
+        want = self.declared_interface(expected)
+        if want is None:
             return None
-        who = self.model.objects[e.args[0]].name if e.op == "obj" else None
-        reason = self.why_not(e.type, want)
-        if reason is None:
-            return None
-        return f"{who or _a(e.type)} does not fit {want.name}: {reason}"
+        ids = self.objects_in(e)
+        if ids is None:
+            reason = self.why_not(self.attrs_of_type(e.type), want)
+            return None if reason is None else f"{_a(e.type)} does not fit {want.name}: {reason}"
+        for i in ids:
+            reason = self.why_not(self.attrs_of_object(i), want)
+            if reason is not None:
+                who = self.model.objects[i].name or _a(self.model.objects[i].type)
+                return f"{who} does not fit {want.name}: {reason}"
+        return None
 
-    def why_not(self, actual: Type, want: Interface) -> str | None:
-        have = self.fit_attrs(_core(actual))
+    def declared_interface(self, t: Type | None) -> Interface | None:
+        want = _core(t) if t is not None else None
+        if isinstance(want, Interface) and want.name in self.model.interfaces:
+            return want
+        return None
+
+    def why_not(self, have: dict[str, tuple[Type, int | None]], want: Interface) -> str | None:
+        """Why attributes, each a type and, for a namespace, its object, do not fit want."""
         for attr, t in self.model.interfaces[want.name].items():
             if attr not in have:
                 return f"it has no '{attr}'"
-            got = have[attr]
-            inner = _core(t)
-            if isinstance(inner, Interface) and inner.name in self.model.interfaces:
-                deeper = self.why_not(got, inner)
+            got, obj = have[attr]
+            inner = self.declared_interface(t)
+            if inner is not None:
+                deeper = self.why_not(
+                    self.attrs_of_type(got) if obj is None else self.attrs_of_object(obj), inner
+                )
                 if deeper is not None:
                     return f"its {attr}: {deeper}"
                 continue
@@ -841,35 +857,35 @@ class _Compiler:
 
     def join(self, a: Type, b: Type, expected: Type | None, pos: Pos) -> Type:
         """The type of two branches: what is expected, when that is a declared interface both
-        fit, as two namespaces with the same members do; otherwise their common type."""
+        types fit; otherwise their common type."""
+        want = self.declared_interface(expected)
         if (
-            expected is not None
-            and self.fits_declared(a, expected)
-            and self.fits_declared(b, expected)
+            want is not None
+            and expected is not None
+            and self.why_not(self.attrs_of_type(a), want) is None
+            and self.why_not(self.attrs_of_type(b), want) is None
         ):
             return _inner(expected)
         return _join(a, b, pos)
 
-    def fits_declared(self, actual: Type, expected: Type) -> bool:
-        want = _core(expected)
-        return (
-            isinstance(want, Interface)
-            and want.name in self.model.interfaces
-            and self.why_not(actual, want) is None
-        )
-
-    def fit_attrs(self, t: Type) -> dict[str, Type]:
-        """The attributes an object of type t has, and their types, for fitting an interface."""
-        if isinstance(t, NamespaceT):
-            obj = self.model.objects[self.model.names[t.name]]
-            out: dict[str, Type] = {}
+    def attrs_of_object(self, i: int) -> dict[str, tuple[Type, int | None]]:
+        obj = self.model.objects[i]
+        if obj.kind == "namespace":
+            out: dict[str, tuple[Type, int | None]] = {}
             for short, m in obj.data["members"].items():
                 member = self.model.objects[m]
-                out[short] = member.type if member.kind == "namespace" else member.value.type
+                if member.kind == "namespace":
+                    out[short] = (NAMESPACE, m)
+                else:
+                    out[short] = (member.value.type, None)
             return out
-        if isinstance(t, Interface) and t.name in self.model.interfaces:
-            return dict(self.model.interfaces[t.name])
-        return self.type_attr_types(t)
+        return self.attrs_of_type(obj.type)
+
+    def attrs_of_type(self, t: Type) -> dict[str, tuple[Type, int | None]]:
+        core = _core(t)
+        if isinstance(core, Interface) and core.name in self.model.interfaces:
+            return {a: (u, None) for a, u in self.model.interfaces[core.name].items()}
+        return {a: (u, None) for a, u in self.type_attr_types(core).items()}
 
     def member_name(self, form: Form, members: dict) -> tuple[str, Pos]:
         node = form.items[1] if len(form.items) > 1 else None
@@ -2597,6 +2613,7 @@ class _Compiler:
     def trial(self, name: str, pos: Pos) -> None:
         """Compile one instance and discard it, so a body's errors show without any instance."""
         objects, names, sites = len(self.model.objects), dict(self.model.names), self.rand_sites
+        self.trialing += 1
         try:
             j = self.shape(Form((Name((name,), pos), NoneLit(pos)), pos), None, {})
             obj = self.model.objects[j]
@@ -2607,6 +2624,7 @@ class _Compiler:
                     types[member.name] = member.type
             self.shape_types[name] = types
         finally:
+            self.trialing -= 1
             del self.model.objects[objects:]
             # The same table, which sees names as each file does, holding what it held before.
             self.model.names.clear()
@@ -2816,6 +2834,17 @@ class _Compiler:
             for p in motif.params:
                 node, inner = given.get(p.name, (p.default, {}))
                 at = _maybe(p.type) if absent else p.type
+                if node is None and (
+                    isinstance(_core(p.type), (Interface, ShapeT)) or _core(p.type) == NAMESPACE
+                ):
+                    # An object has no default. The trial compiles the body with none, its
+                    # reads going through what the type lists, as a function's parameter's do.
+                    if not self.trialing:
+                        raise CompileError(
+                            f"{p.name} needs a value: {p.type} has no default", form.pos
+                        )
+                    obj.attrs[p.name] = Attribute(at, None)
+                    continue
                 first = _known(p.type, p.value) if p.name not in given else None
                 obj.attrs[p.name] = self.attribute(at, node, form.pos, p.name, None, inner, first)
             self.shape_attrs(obj, given, absent, form.pos, scope, INSTANCE_ATTRS)
@@ -3379,7 +3408,7 @@ class _Compiler:
             reason = self.misfit(e, expected)
             if reason is not None:
                 raise CompileError(reason, node.pos)
-            if self.fits_declared(e.type, expected):
+            if self.declared_interface(expected) is not None:
                 return e
             if _may_be_none(e.type) and not _may_be_none(target):
                 raise CompileError(self.may_be_none(expected), node.pos)

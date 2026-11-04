@@ -3,7 +3,10 @@
 (namespace night (color ink '#e8e4d8') (color paper '#14161c') (real gap 1 (>= 0)))
 (bool dark false)
 (palette look (if dark night day))
+(motif card ((palette colors)) (circle face (fill colors.paper) (stroke colors.ink)))
 (scene s
-  (circle c (r look.gap) (fill look.ink)))
+  (circle c (r look.gap) (fill look.ink))
+  (card fixed (colors day))
+  (card follows (colors (if dark night day))))
 (canvas v s)
 (toggle t dark)

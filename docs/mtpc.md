@@ -34,11 +34,10 @@ Every type is written as JSON:
 
 | Type | Written |
 |---|---|
-| built-in | `"int"`, `"ratio"`, `"real"`, `"complex"`, `"bool"`, `"string"`, `"color"`, `"font"`, `"point"`, `"transform"`, `"transition"`, `"animation"`, `"none"`, `"scene"` |
+| built-in | `"int"`, `"ratio"`, `"real"`, `"complex"`, `"bool"`, `"string"`, `"color"`, `"font"`, `"point"`, `"transform"`, `"transition"`, `"animation"`, `"none"`, `"scene"`, `"namespace"` (every namespace, as every circle is `{"shape": "circle"}`) |
 | a built-in shape type | `{"shape": "circle"}`, likewise `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `arc`, `ring`, `text`, `group` |
 | a declared type | `{"named": "unit"}`, `{"named": "dial"}`, `{"named": "bar"}`: an entry of `types` |
 | a component | `{"component": "slider"}`, likewise for each component |
-| a namespace | `{"namespace": "theme"}` |
 | an interface | `{"interface": "shape"}`, `{"interface": "positioned"}`, `{"interface": "sequence", "of": T}` |
 | a list | `{"list": T}` |
 | a function | `{"func": [T1, T2, …], "result": T}` |

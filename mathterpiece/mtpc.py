@@ -22,7 +22,6 @@ from mathterpiece.types import (
     Interface,
     ListT,
     Maybe,
-    NamespaceT,
     Prim,
     Refine,
     ShapeT,
@@ -99,8 +98,6 @@ class Writer:
             return {"shape": t.name} if t.name in SHAPES else {"named": t.name}
         if isinstance(t, ComponentT):
             return {"component": t.name}
-        if isinstance(t, NamespaceT):
-            return {"namespace": t.name}
         if isinstance(t, Interface):
             if t.of is None:
                 return {"interface": t.name}

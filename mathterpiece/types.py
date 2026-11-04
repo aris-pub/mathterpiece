@@ -77,17 +77,6 @@ class Interface:
 
 
 @dataclass(frozen=True)
-class NamespaceT:
-    """The type of a namespace (mtp-4rc): a mutable object that is not drawn, whose members are
-    read and written as attributes are."""
-
-    name: str
-
-    def __str__(self) -> str:
-        return f"namespace {self.name}"
-
-
-@dataclass(frozen=True)
 class ComponentT:
     """The type of a component: slider, toggle, canvas, …."""
 
@@ -121,7 +110,7 @@ def _show(c: Constraint) -> str:
     return "(" + " ".join(str(p) for p in c) + ")"
 
 
-Type = Prim | ListT | FuncT | Maybe | ShapeT | Interface | Refine | ComponentT | NamespaceT
+Type = Prim | ListT | FuncT | Maybe | ShapeT | Interface | Refine | ComponentT
 
 INT, RATIO, REAL, COMPLEX = Prim("int"), Prim("ratio"), Prim("real"), Prim("complex")
 BOOL, STRING, COLOR, FONT = Prim("bool"), Prim("string"), Prim("color"), Prim("font")
@@ -148,6 +137,8 @@ PRIMS = {
         SCENE,
     )
 }
+# Every namespace has this type, as every circle has circle (the author, 2026-11-05).
+NAMESPACE = Prim("namespace")
 SHAPES = (
     "circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "arc", "ring", "text",
     "group",

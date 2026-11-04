@@ -38,7 +38,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ### Interfaces
 
-`(interface palette (color ink) (color paper) (real gap (>= 0)))` declares a type that lists attributes, each with its type and any constraints; any object that has them, of fitting types, satisfies it, shapes and namespaces alike (type-system.md, section 6). A parameter or a variable typed with it reads only what it lists. A variable holding an object is bound. A color read through it stays the token it reads, so `(circle c (fill look.ink))` with `look` holding `day` is drawn with `--mtp-day-ink`.
+`(interface palette (color ink) (color paper) (real gap (>= 0)))` declares an interface: a list of attributes, each with its type and any constraints. Any object that has them, of fitting types, satisfies it, shapes and namespaces alike, but no object's own type is ever an interface (type-system.md, section 6). A parameter or a variable declared with it, such as `(palette look day)`, holds an object of any type that satisfies it, and reads only what it lists. A variable holding an object is bound. A motif's parameter declared with an interface, as `(motif card ((palette colors)) …)`, must be given a value in every instance, `(card a (colors day))`, since an object has no default. A color read through it stays the token it reads, so `(circle c (fill look.ink))` with `look` holding `day` is drawn with `--mtp-day-ink`.
 
 ### Values and variables
 

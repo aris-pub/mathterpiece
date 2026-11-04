@@ -126,11 +126,54 @@ class TestDeclaring:
         compile_source(src, path=path)
 
 
+class TestMotifs:
+    CARD = "(motif card ((palette look)) (rect r (fill look.paper) (stroke look.ink)))"
+
+    def test_a_motif_takes_one(self):
+        m = model(
+            f"{PALETTE} {DAY} {NIGHT} {self.CARD}"
+            " (scene s (card a (look day)) (card b (look night)))"
+        )
+        assert m.get("a.r").attrs["fill"].bound and m.get("b.r").attrs["fill"].bound
+
+    def test_picked_by_an_if(self):
+        model(
+            f"{PALETTE} {DAY} {NIGHT} {self.CARD} (bool dark false)"
+            " (scene s (card a (look (if dark night day))))"
+        )
+
+    def test_an_instance_must_be_given_one(self):
+        error(f"{PALETTE} {DAY} {self.CARD} (scene s (card a))", "look needs a value")
+
+    def test_one_that_does_not_fit(self):
+        error(
+            f"{PALETTE} {self.CARD} (namespace n (color ink 'red')) (scene s (card a (look n)))",
+            "n does not fit palette: it has no 'paper'",
+        )
+
+    def test_only_what_the_interface_lists_is_read(self):
+        error(
+            f"{PALETTE} (motif card ((palette look)) (circle c (r look.gap)))",
+            "a palette has no attribute 'gap'",
+        )
+
+    def test_a_built_in_interface_too(self):
+        # Found while adding interfaces: no motif parameter typed with an interface worked, as
+        # the motif's trial compile needed a default for it.
+        model(
+            "(motif tag ((positioned o)) (circle c (pos o.pos) (r 0.1)))"
+            " (scene s (circle k (pos [1 2])) (tag t (o k)))"
+        )
+
+
 @pytest.mark.parametrize(
     "src",
     [
         f"{PALETTE} {DAY} {NIGHT} (bool dark false) (palette look (if dark night day))"
         " (scene s (circle c (fill look.ink)))",
+        f"{PALETTE} {DAY} {NIGHT} (bool dark false)"
+        " (motif card ((palette look)) (rect r (fill look.paper)))"
+        " (scene s (card a (look day)) (card b (look (if dark night day))))",
         "(interface round (real r (>= 0))) (func area ((round o)) (* pi o.r o.r))"
         " (scene s (circle k)) (real a (area k))",
     ],

@@ -20,3 +20,21 @@ describe("a namespace held by a variable typed with an interface", () => {
     expect(paintCss(rt, rt.id("c"), "fill")).toBe("var(--mtp-night-ink, #e8e4d8ff)");
   });
 });
+
+describe("a motif's parameter declared with an interface (mtp-4rc, step 3)", () => {
+  it("is read through, and follows when it holds another", () => {
+    const rt = load("interface");
+    expect(rt.value(rt.id("fixed.face"), "fill")).toBe("#f6f1e7ff");
+    expect(rt.value(rt.id("follows.face"), "fill")).toBe("#f6f1e7ff");
+    rt.write(rt.id("dark"), null, true);
+    expect(rt.value(rt.id("fixed.face"), "fill")).toBe("#f6f1e7ff");
+    expect(rt.value(rt.id("follows.face"), "fill")).toBe("#14161cff");
+  });
+
+  it("keeps a color read through it a token", () => {
+    const rt = load("interface");
+    expect(paintCss(rt, rt.id("fixed.face"), "fill")).toBe("var(--mtp-day-paper, #f6f1e7ff)");
+    rt.write(rt.id("dark"), null, true);
+    expect(paintCss(rt, rt.id("follows.face"), "fill")).toBe("var(--mtp-night-paper, #14161cff)");
+  });
+});
