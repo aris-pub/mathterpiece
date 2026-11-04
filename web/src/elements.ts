@@ -264,13 +264,24 @@ export class MtpCanvas extends MtpPart {
       apply(invert(viewOf(rt, canvas).toUser), toUser(event)) as [number, number];
     const allows = (attr: "pan" | "zoom") => Boolean(rt.value(canvas, attr));
     if (allows("pan") || allows("zoom")) svg.style.touchAction = "none";
-    const zoomAbout = (at: [number, number], factor: number) => {
+    // The reader zooms between the canvas's bounds and pans only inside its view box, so never
+    // sees past what the author framed (the author, 2026-11-04).
+    const inside = () => {
+      const [, , w, h] = viewOf(rt, canvas).box as [number, number, number, number];
+      const [mx, my] = [(w - w / look.scale) / 2, (h - h / look.scale) / 2];
+      look.dx = Math.min(Math.max(look.dx, -mx), mx);
+      look.dy = Math.min(Math.max(look.dy, -my), my);
+    };
+    const zoomAbout = (at: [number, number], by: number) => {
       const [x, y, w, h] = viewOf(rt, canvas).box as [number, number, number, number];
       const [cx, cy] = [x + w / 2, y + h / 2];
+      const [lo, hi] = [rt.value(canvas, "zoom-min") as number, rt.value(canvas, "zoom-max") as number];
+      const factor = Math.min(Math.max(look.scale * by, lo), hi) / look.scale;
       // The point under the pointer stays where it is.
       look.dx = at[0] + (cx + look.dx - at[0]) / factor - cx;
       look.dy = at[1] + (cy + look.dy - at[1]) / factor - cy;
       look.scale *= factor;
+      inside();
       zoom(rt, canvas, svg, look);
     };
     // The wheel zooms, and so does a pinch on a trackpad, which comes as a wheel with ctrl held.
@@ -319,6 +330,7 @@ export class MtpCanvas extends MtpPart {
         const upp = unitsPerPx();
         look.dx -= (event.clientX - was[0]) * upp;
         look.dy -= (event.clientY - was[1]) * upp;
+        inside();
         // A pan keeps the scale, so the shapes, whose text sizes follow the scale, stay as
         // drawn: only the view box moves.
         svg.setAttribute("viewBox", lookBox(viewOf(rt, canvas).box, look).join(" "));

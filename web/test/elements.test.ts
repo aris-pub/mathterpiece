@@ -241,25 +241,60 @@ describe("panning and zooming a canvas", () => {
     expect(box().map((n) => Math.round(n * 1e6) / 1e6)).toEqual([-5, -5, 10, 10]);
   });
 
+  const rounded = () => box().map((n) => Math.round(n * 1e6) / 1e6);
+
   it("pans when the reader drags where nothing is draggable", () => {
     const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
+    wheel(-500 * Math.log(2), false);
     pointer("pointerdown", 100, 100);
     pointer("pointermove", 164, 132);
     pointer("pointerup", 164, 132);
-    // 20 units over 640 pixels: the drawing follows the pointer, 2 units right and 1 down.
-    expect(box()).toEqual([-12, -11, 20, 20]);
+    // Zoomed in 2 times, 10 units over 640 pixels: the drawing follows the pointer, 1 unit right
+    // and half a unit down, which moves the view box half a unit down in y.
+    expect(rounded()).toEqual([-6, -5.5, 10, 10]);
     expect(v("c", "x")).toBe(0);
   });
 
   it("pans by moving the view box alone, without drawing the shapes again", () => {
     // Drawing every shape again on each pointer move made panning a large scene slow.
     page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
+    wheel(-500 * Math.log(2), false);
     const before = document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]`);
     pointer("pointerdown", 100, 100);
     pointer("pointermove", 164, 132);
-    expect(box()).toEqual([-12, -11, 20, 20]);
+    expect(rounded()).toEqual([-6, -5.5, 10, 10]);
     expect(document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]`)).toBe(before);
     pointer("pointerup", 164, 132);
+  });
+
+  it("pans only inside the view box", () => {
+    // The author, 2026-11-04: the reader never sees past what the author framed.
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
+    pointer("pointerdown", 100, 100);
+    pointer("pointermove", 164, 132);
+    expect(box()).toEqual([-10, -10, 20, 20]);
+    pointer("pointerup", 164, 132);
+    wheel(-500 * Math.log(2), false);
+    pointer("pointerdown", 0, 0);
+    // Far right and up: the view box stops at the left and top edges.
+    pointer("pointermove", 5000, -5000);
+    pointer("pointerup", 5000, -5000);
+    expect(rounded()).toEqual([-10, 0, 10, 10]);
+  });
+
+  it("zooms out no further than the view box, and in up to its bound", () => {
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
+    wheel(2000, false);
+    expect(rounded()).toEqual([-10, -10, 20, 20]);
+    for (let k = 0; k < 20; k++) wheel(-500, false);
+    // By default up to 10 times closer.
+    expect(rounded()[2]).toBe(2);
+  });
+
+  it("zooms up to the bound the canvas gives", () => {
+    page(`<mtp-canvas model="m" name="bounded"></mtp-canvas>`, doc("view"));
+    for (let k = 0; k < 20; k++) wheel(-500, false, svg("bounded"));
+    expect(box("bounded").map((n) => Math.round(n * 1e6) / 1e6)[2]).toBe(5);
   });
 
   it("zooms without drawing the shapes again, to what a full redraw would draw", () => {

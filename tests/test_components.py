@@ -333,3 +333,30 @@ def test_a_canvas_move_takes_only_a_duration_and_an_ease():
             f"(scene s (circle c)) (canvas v (move none (duration 1) {extra}) c)",
             "a canvas's move takes only a duration and an ease",
         )
+
+
+class TestZoomBounds:
+    # The author, 2026-11-04: the reader zooms between bounds, (zoom lo hi), from the view box (1)
+    # up to hi times closer, and pans only inside the view box.
+    S = "(scene s (circle c))"
+
+    def test_a_range(self):
+        a = model(f"{self.S} (canvas v (zoom 1 20) s)").get("v").attrs
+        assert a["zoom"].value is True
+        assert (a["zoom-min"].value, a["zoom-max"].value) == (1, 20)
+
+    def test_the_default_range(self):
+        a = model(f"{self.S} (canvas v s)").get("v").attrs
+        assert (a["zoom-min"].value, a["zoom-max"].value) == (1, 10)
+
+    def test_no_zoom(self):
+        assert model(f"{self.S} (canvas v (zoom false) s)").get("v").attrs["zoom"].value is False
+
+    def test_never_further_out_than_the_view_box(self):
+        error(f"{self.S} (canvas v (zoom 0.5 4) s)", "never shows more than its view box")
+
+    def test_the_bounds_in_order(self):
+        error(f"{self.S} (canvas v (zoom 4 2) s)", "from a lower bound to a higher one")
+
+    def test_known_when_compiling(self):
+        error(f"(real k 4) {self.S} (canvas v (zoom 1 k) s)", "known when compiling")

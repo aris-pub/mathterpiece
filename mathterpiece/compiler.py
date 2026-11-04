@@ -1801,6 +1801,43 @@ class _Compiler:
             raise CompileError("expected the name of a shape", node.pos)
         return e.args[0]
 
+    def zoom_range(self, obj: Obj, items: list) -> None:
+        """(zoom bool), or (zoom lo hi): the reader zooms from lo times closer than the view box to
+        hi times, both known when compiling, and never further out than the view box (the author,
+        2026-11-04)."""
+        found = [it for it in items if _head(it) == "zoom"]
+        if len(found) > 1:
+            raise CompileError("'zoom' is given twice", found[1].pos)
+        lo, hi = 1, 10
+        obj.attrs["zoom"] = Attribute(BOOL, True)
+        if found:
+            item = found[0]
+            items.remove(item)
+            assert isinstance(item, Form)
+            if len(item.items) == 2:
+                obj.attrs["zoom"] = self.attribute(
+                    BOOL, item.items[1], obj.pos, "zoom", scope=self.cscope
+                )
+            elif len(item.items) == 3:
+                ends = [self.expr(n, REAL, self.cscope) for n in item.items[1:]]
+                if not all(e.known for e in ends):
+                    raise CompileError("a canvas's zoom bounds are known when compiling", item.pos)
+                lo, hi = (e.value for e in ends)
+                if lo < 1:
+                    raise CompileError(
+                        "a canvas never shows more than its view box, so its zoom starts at 1 or"
+                        " more",
+                        item.pos,
+                    )
+                if hi < lo:
+                    raise CompileError(
+                        "a canvas zooms from a lower bound to a higher one: (zoom 1 20)", item.pos
+                    )
+            else:
+                raise CompileError("zoom is (zoom bool) or (zoom lo hi)", item.pos)
+        obj.attrs["zoom-min"] = Attribute(_with_const(REAL), lo)
+        obj.attrs["zoom-max"] = Attribute(_with_const(REAL), hi)
+
     def take(self, items: list, head: str) -> Node | None:
         """Remove the (head value) item from items and give its value."""
         found = [it for it in items if _head(it) == head]
@@ -2026,13 +2063,13 @@ class _Compiler:
             else Attribute(TRANSFORM, IDENTITY)
         )
         # The reader may pan and zoom a canvas unless the author says not (reference.md).
-        for attr in ("pan", "zoom"):
-            node = self.take(items, attr)
-            obj.attrs[attr] = (
-                self.attribute(BOOL, node, obj.pos, attr, scope=self.cscope)
-                if node
-                else Attribute(BOOL, True)
-            )
+        node = self.take(items, "pan")
+        obj.attrs["pan"] = (
+            self.attribute(BOOL, node, obj.pos, "pan", scope=self.cscope)
+            if node
+            else Attribute(BOOL, True)
+        )
+        self.zoom_range(obj, items)
         # What it shows, in the order written, which is the order it draws them in.
         obj.data.update({"shows": [], "transition": None})
         for item in items:
