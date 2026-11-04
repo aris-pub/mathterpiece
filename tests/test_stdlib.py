@@ -15,10 +15,13 @@ from mathterpiece.parse import parse
 
 NAMES = {
     "math": ["dot", "clamp", "smoothstep", "mean", "norm", "normalize", "cross", "midpoint"],
-    "eases": [
-        f"{kind}-{way}"
-        for kind in ("spring", "bounce", "elastic", "back")
-        for way in ("in", "out", "in-out")
+    "ease": [
+        "unit",
+        *(
+            f"{kind}-{way}"
+            for kind in ("spring", "bounce", "elastic", "back")
+            for way in ("in", "out", "in-out")
+        ),
     ],
 }
 
@@ -86,31 +89,45 @@ class TestMath:
         assert value(tmp_path, "(import math)", "(math.clamp 5 0 1)") == 1
 
 
+EASES = NAMES["ease"][1:]
+
+
 class TestEases:
-    @pytest.mark.parametrize("name", NAMES["eases"])
+    @pytest.mark.parametrize("name", EASES)
     def test_from_0_to_1(self, tmp_path, name):
-        ends = [value(tmp_path, f"(import eases {name})", f"({name} {t})") for t in (0, 1)]
+        ends = [value(tmp_path, f"(import ease {name})", f"({name} {t})") for t in (0, 1)]
         assert [round(e, 9) for e in ends] == [0, 1]
 
     @pytest.mark.parametrize("kind", ("spring", "bounce", "elastic", "back"))
     def test_in_is_out_turned_around(self, tmp_path, kind):
-        imports = f"(import eases {kind}-in {kind}-out)"
+        imports = f"(import ease {kind}-in {kind}-out)"
         a = value(tmp_path, imports, f"({kind}-in 0.3)")
         b = value(tmp_path, imports, f"({kind}-out 0.7)")
         assert py.isclose(a, 1 - b)
 
     @pytest.mark.parametrize("kind", ("spring", "bounce", "elastic", "back"))
     def test_in_out_is_half_way_at_the_middle(self, tmp_path, kind):
-        got = value(tmp_path, f"(import eases {kind}-in-out)", f"({kind}-in-out 0.5)")
+        got = value(tmp_path, f"(import ease {kind}-in-out)", f"({kind}-in-out 0.5)")
         assert py.isclose(got, 0.5)
 
     def test_back_and_spring_go_past_their_end(self, tmp_path):
-        assert value(tmp_path, "(import eases back-out)", "(back-out 0.6)") > 1
-        assert value(tmp_path, "(import eases spring-out)", "(spring-out 0.3)") > 1
+        assert value(tmp_path, "(import ease back-out)", "(back-out 0.6)") > 1
+        assert value(tmp_path, "(import ease spring-out)", "(spring-out 0.3)") > 1
+
+    def test_the_file_imported_whole(self, tmp_path):
+        # The file and a move's (ease …) share a name, and do not clash.
+        src = (
+            "(import ease) (real k 0) (scene s (circle c (x k)))"
+            " (button b (animation (move k (to 1) (duration 1) (ease ease.back-out))))"
+            " (ease.unit u 0.5)"
+        )
+        path = tmp_path / "fig.mtp"
+        path.write_text(src)
+        assert errors(doc(src, path)) == []
 
     def test_a_move_takes_one(self, tmp_path):
         src = (
-            "(import eases bounce-out) (real k 0) (scene s (circle c (x k)))"
+            "(import ease bounce-out) (real k 0) (scene s (circle c (x k)))"
             " (button b (animation (move k (to 1) (duration 1) (ease bounce-out))))"
         )
         path = tmp_path / "fig.mtp"

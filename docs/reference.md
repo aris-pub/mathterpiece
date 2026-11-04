@@ -136,7 +136,7 @@ An animation (not `at-once` or `in-order`) also takes `(loop n)`, which plays it
 
 Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equal jumps, each at the start of its interval: a 1 s `(step 4)` move from 0 to 4 shows 1 at once and reaches 4 at 0.75 s), or a function of a real from 0 to 1, `func[(real (>= 0) (<= 1)) real]`: an ease is only called there, so a function defined only there fits, and so does one defined on every real, such as a `func[real real]`. A function's value may go past 1 or below 0: a number or a point moved by it goes past its ends, as a spring overshoots, and is still brought into its type's constraints; a color or a bool stops at them.
 
-A bool, a string or a choice (section 5.d of the type system) cannot change smoothly, so its ease must be piecewise constant and take only the values 0 and 1: where it is 0 what moves holds its start value, where it is 1 its end value. Such eases come only from the standard library, which for now has one: `(step-ease p)`, with `p` from 0 to 1 known when compiling, which is 0 before progress `p` and 1 from `p` on (`(step-ease 0)` changes at the start, `(step-ease 1)` at the end). An author cannot write one, since the compiler could not check it.
+A bool, a string or a choice (section 5.d of the type system) cannot change smoothly, so its ease must be piecewise constant and take only the values 0 and 1: where it is 0 what moves holds its start value, where it is 1 its end value. Such eases are only built in, and for now there is one: `(step-ease p)`, with `p` from 0 to 1 known when compiling, which is 0 before progress `p` and 1 from `p` on (`(step-ease 0)` changes at the start, `(step-ease 1)` at the end). An author cannot write one, since the compiler could not check it.
 
 By default a bool, a string or a choice changes at the start of its move and holds its new value for the rest of the duration, so a move that is cancelled never leaves it in between. An enclosing default ease that is not such an ease does not apply to it.
 
@@ -410,9 +410,9 @@ Files of declarations in `mathterpiece/stdlib/`, imported by name like any other
 
 A result that may be none is held in a variable declared `T|none`, or given a default with `or?`.
 
-### eases
+### ease
 
-Functions to give a move as its ease, `(ease bounce-out)`: each takes the progress from 0 to 1 and gives how far along the move is, 0 at its start and 1 at its end. Four kinds, each in three forms: an `-out` ease does its effect at the end, an `-in` ease is the `-out` one turned around, and an `-in-out` ease runs the `-in` one over the first half and the `-out` one over the second.
+Functions to give a move as its ease, `(import ease bounce-out)` and `(ease bounce-out)`, or `(import ease)` and `(ease ease.bounce-out)`: each takes the progress from 0 to 1 and gives how far along the move is, 0 at its start and 1 at its end. Each takes a `unit`, a type the file declares, `(type unit real (>= 0) (<= 1))`, and gives a real. Four kinds, each in three forms: an `-out` ease does its effect at the end, an `-in` ease is the `-out` one turned around, and an `-in-out` ease runs the `-in` one over the first half and the `-out` one over the second.
 
 | Kind | What it does |
 |---|---|

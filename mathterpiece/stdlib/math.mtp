@@ -3,10 +3,13 @@
 
 ; The sum of the products of two lists' items, item by item; none when their lengths differ.
 (func dot ((list[real] a) (list[real] b))
-  (if (= (count a) (count b)) (sum (somes (map (count a) (fn i (* a[i] b[i]))))) none))
+  (if (= (count a) (count b))
+      (sum (somes (map (count a) (fn i (* a[i] b[i])))))
+    none))
 
 ; x, kept between lo and hi.
-(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))
+(func clamp ((real x) (real lo) (real hi))
+  (min hi (max lo x)))
 
 ; 0 up to a, 1 from b on, and a smooth S between them, flat at both ends; none when a is b.
 (func smoothstep ((real a) (real b) (real x))
@@ -14,15 +17,20 @@
     (* t t (- 3 (* 2 t)))))
 
 ; The mean of a list's items; none for an empty list.
-(func mean ((list[real] xs)) (/ (sum xs) (count xs)))
+(func mean ((list[real] xs))
+  (/ (sum xs) (count xs)))
 
 ; A point's distance from the origin, and the point in the same direction at distance 1; none
 ; for [0 0].
-(func norm ((point p)) (dist p [0 0]))
-(func normalize ((point p)) (* p (/ 1 (norm p))))
+(func norm ((point p))
+  (dist p [0 0]))
+(func normalize ((point p))
+  (* p (/ 1 (norm p))))
 
 ; The 2D cross product: positive when b is counterclockwise from a, and the signed area of the
 ; parallelogram they span.
-(func cross ((point a) (point b)) (- (* a[0] b[1]) (* a[1] b[0])))
+(func cross ((point a) (point b))
+  (- (* a[0] b[1]) (* a[1] b[0])))
 
-(func midpoint ((point a) (point b)) (* (+ a b) 0.5))
+(func midpoint ((point a) (point b))
+  (* (+ a b) 0.5))
