@@ -164,3 +164,56 @@ class TestWorkDoneOnce:
         src = f"{DOUBLE} (motif m (list ys (map [1 2 3] double)) (circle c (r 1)))"
         model(src + " (scene s (m a) (m b))")
         assert folds["double"] == 3
+
+
+class TestKeptFolds:
+    """A named function's folded calls are kept, so a call made again is not folded again
+    (mtp-pffq). A kept value is used only where the call would fold to that same value."""
+
+    @pytest.fixture
+    def bodies(self, monkeypatch):
+        """How many times each function's body is compiled to fold a call."""
+        from mathterpiece.compiler import _Compiler
+
+        counts: dict = {}
+        fold_key = _Compiler.fold_key
+
+        def counted(self, fid, f, args):
+            key = fold_key(self, fid, f, args)
+            if key is None or key not in self.folded:
+                counts[f.name] = counts.get(f.name, 0) + 1
+            return key
+
+        monkeypatch.setattr(_Compiler, "fold_key", counted)
+        return counts
+
+    def test_a_call_made_again_is_not_folded_again(self, bodies):
+        src = f"{DOUBLE} (real a (double 3)) (real b (double 3)) (real c (double 4))"
+        m = model(src)
+        assert [m.get(n).value.value for n in "abc"] == [6, 6, 8]
+        assert bodies["double"] == 2
+
+    def test_the_same_value_of_another_type(self):
+        src = "(func t (real x) (type-of x)) (int i 3 (const)) (real r 3 (const))"
+        m = model(f"{src} (string a (t i)) (string b (t r))")
+        assert m.get("a").value.value == "(int (const))"
+        assert m.get("b").value.value == "(real (const))"
+
+    def test_zero_and_minus_zero(self):
+        src = "(func f (real x) $'{x}') (real z 0.0 (const)) (real n (- 0.0) (const))"
+        m = model(f"{src} (string a (f z)) (string b (f n))")
+        assert (m.get("a").value.value, m.get("b").value.value) == ("0.0", "-0.0")
+
+    def test_a_name_a_motif_body_gives_another_meaning(self):
+        # Inside the motif, pi in f's body is the motif's parameter.
+        src = "(func f (real x) (* x pi)) (real a (f 2))"
+        src += " (motif m (real pi 5 (const)) (circle c (r (f 2)))) (scene s (m one))"
+        m = model(src)
+        assert m.get("a").value.value == pytest.approx(6.283185307179586)
+        circle = next(o for o in m.objects if o.name == "c")
+        assert circle.attrs["r"].value == 10
+
+    def test_a_fn_is_not_kept(self, bodies):
+        # Each fn gets a new id, and an id is used again once a fold deletes its fn.
+        model("(list ys (map [1 1 1] (fn x (* x 2))))")
+        assert bodies[None] == 3

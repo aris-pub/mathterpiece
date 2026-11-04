@@ -401,6 +401,10 @@ class _Compiler:
         self.shape_types: dict[str, dict[str, Type]] = {}
         # How many function bodies are being compiled again to fold a call.
         self.folding = 0
+        # The values of folded calls of named functions, by fold_key, and the names written in
+        # each such function's body.
+        self.folded: dict[tuple, Expr] = {}
+        self.fold_words: dict[int, set[str]] = {}
         # Each rand drawn so far, after foreach and motif instances are expanded.
         self.rand_sites = 0
 
@@ -1294,6 +1298,9 @@ class _Compiler:
         f = self.model.functions[fid]
         if f.source is None:
             return None
+        key = self.fold_key(fid, f, args)
+        if key is not None and key in self.folded:
+            return self.folded[key]
         scope = dict(f.scope)
         scope.update({p.name: a for p, a in zip(f.params, args, strict=True)})
         functions = len(self.model.functions)
@@ -1309,7 +1316,32 @@ class _Compiler:
             self.folding -= 1
             self.reads.pop()
             del self.model.functions[functions:]
-        return e if e.known else None
+        if not e.known:
+            return None
+        if key is not None:
+            self.folded[key] = e
+        return e
+
+    def fold_key(self, fid: int, f: FuncDef, args: list) -> tuple | None:
+        """What a folded call's value depends on, or None when it is not kept. Only named
+        functions are kept: a fn is made again each time it is compiled, and its id is reused
+        once a fold deletes it. A name in the body may mean a member or an attribute of the
+        motif instance being compiled, so a body that writes one of those names is not kept."""
+        if f.name is None or not all(a.known for a in args):
+            return None
+        if self.bodies:
+            words = self.fold_words.get(fid)
+            if words is None:
+                words = self.fold_words[fid] = _words(f.source, set())
+            body = self.bodies[-1]
+            if "self" in words or not words.isdisjoint(body["names"]) or words & body["attrs"]:
+                return None
+        key = (fid, self.here, tuple((a.type, a.range, _frozen(a.value)) for a in args))
+        try:
+            hash(key)
+        except TypeError:
+            return None
+        return key
 
     def fold_each(self, f: Expr, item: Type, values: list) -> list | None:
         """f called on each value, when f and every result are known when compiling."""
@@ -3152,6 +3184,9 @@ class _Compiler:
         return self.expr(node, expected, scope)
 
     def expr(self, node: Node, expected: Type | None, scope: dict) -> Expr:
+        if node.pos.file == self.here:
+            # Every change of here is undone on the way out, so there is nothing to restore.
+            return self.checked(self.typed(node, expected, scope), node, expected)
         saved, self.here = self.here, node.pos.file
         try:
             return self.checked(self.typed(node, expected, scope), node, expected)
@@ -3160,7 +3195,7 @@ class _Compiler:
 
     def checked(self, e: Expr, node: Node, expected: Type | None) -> Expr:
         """e, stopping the compiler unless it fits expected and its constraints."""
-        if e.type == RECURSING:
+        if expected is None or e.type == RECURSING:
             return e
         # A constraint is checked on the value (known) or its range (settle), not on its type.
         target = _loose(expected) if expected is not None else None
@@ -3198,6 +3233,8 @@ class _Compiler:
         return e
 
     def typed(self, node: Node, expected: Type | None, scope: dict) -> Expr:
+        if isinstance(node, Form) and node.items:
+            return self.form(node, expected, scope)
         if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, NoneLit)):
             return self.literal(node, expected)
         if isinstance(node, BoolLit):
@@ -3210,12 +3247,10 @@ class _Compiler:
             return self.interp(node, scope)
         if isinstance(node, Bar):
             raise CompileError("type notation is not a value", node.pos)
-        if isinstance(node, Form) and not node.items:
+        if isinstance(node, Form):
             raise CompileError(
                 "() is an empty list of parameters or bindings, not a value", node.pos
             )
-        if isinstance(node, Form):
-            return self.form(node, expected, scope)
         raise CompileError(f"unexpected {type(node).__name__}", node.pos)
 
     def literal(
@@ -3704,6 +3739,14 @@ class _Compiler:
                     return self.apply(local, node, scope)
             elif head in self.model.funcs:
                 return self.call(self.model.funcs[head], node, scope)
+        # The commonest heads, first: no head checked below is one of them.
+        if head in ARITH:
+            return self.arith(node.pos, head, self.operands(args, expected, scope))
+        if head in COMPARE or head in ("=", "!="):
+            a, b = self.args(node, 2)
+            ea = self.expr(a, None, scope)
+            eb = self.typed_like(b, ea.type, scope)
+            return self.compare(node, head, ea, eb)
         if head == "as":
             type_node, lit = self.args(node, 2)
             # A list in brackets is a literal even when it holds expressions (type-system.md,
@@ -3824,13 +3867,6 @@ class _Compiler:
             if e.known:
                 return _known(t, [v for v in e.value if v is not None])
             return Expr("somes", t, (e,), e.deps)
-        if head in ARITH:
-            return self.arith(node.pos, head, self.operands(args, expected, scope))
-        if head in COMPARE or head in ("=", "!="):
-            a, b = self.args(node, 2)
-            ea = self.expr(a, None, scope)
-            eb = self.typed_like(b, ea.type, scope)
-            return self.compare(node, head, ea, eb)
         raise CompileError(f"unknown function '{head}'", node.pos)
 
     def operands(self, nodes, expected: Type | None, scope: dict) -> list:
@@ -3931,6 +3967,17 @@ class _Compiler:
             raise CompileError(
                 f"{op} takes {'two' if op in ('/', '^', 'mod') else 'some'} numbers", pos
             )
+        if all(a.known and a.value is not None for a in args):
+            cores = [_core(a.type) for a in args]
+            if all(c in NUMBERS for c in cores):
+                # Known numbers pass every check below, so their value is worked out at once:
+                # folding a call does this for nearly every operator in the body.
+                t = max(cores, key=NUMBERS.index)
+                if op == "/" and t == INT:
+                    t = RATIO
+                if op == "^":
+                    t = _power_type(*args)
+                return _known(t, _fold_number(op, [a.value for a in args], pos))
         if any(a.type == RECURSING for a in args):
             return Expr(op, RECURSING, tuple(args))
         if any(_core(a.type) == POINT or isinstance(_core(a.type), ListT) for a in args):
@@ -4226,6 +4273,15 @@ def _declared(form: Node) -> str | None:
     return None
 
 
+def _frozen(v):
+    """A value as a key: 1, 1.0 and True stay apart, as do 0.0 and -0.0."""
+    if isinstance(v, (list, tuple)):
+        return (type(v), tuple(_frozen(x) for x in v))
+    if isinstance(v, (float, complex)):
+        return (type(v), repr(v))
+    return (type(v), v)
+
+
 def _words(node, out: set[str]) -> set[str]:
     """Every part of every name in node; a part written part_ counts as part too."""
     if isinstance(node, Name):
@@ -4404,7 +4460,10 @@ def _maybe(t: Type) -> Type:
 
 def _core(t: Type) -> Type:
     """t without none and without constraints: what an operation checks its inputs against."""
-    return _base(_inner(t))
+    # _base(_inner(t)), written out: it is called for nearly every expression compiled.
+    if isinstance(t, Maybe):
+        t = t.inner
+    return t.base if isinstance(t, Refine) else t
 
 
 def _loose(t: Type) -> Type:
