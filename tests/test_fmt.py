@@ -10,7 +10,13 @@ from mathterpiece.fmt import INDENT, NAMED, layout
 from mathterpiece.parse import parse
 
 ROOT = Path(__file__).parent.parent
-FILES = sorted([*ROOT.glob("examples/*.mtp"), *ROOT.glob("tests/shared/*.mtp")])
+FILES = sorted(
+    [
+        *ROOT.glob("examples/*.mtp"),
+        *ROOT.glob("tests/shared/*.mtp"),
+        *ROOT.glob("mathterpiece/stdlib/*.mtp"),
+    ]
+)
 
 
 def test_a_forms_positional_arguments_go_4_in_and_its_body_2():

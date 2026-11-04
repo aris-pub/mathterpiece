@@ -1,0 +1,40 @@
+; Eases to give a move, as (ease bounce-out): each takes the progress t, from 0 to 1, and gives
+; how far along the move is, 0 at the start and 1 at the end. t is declared from 0 to 1, as an
+; ease's type says, so each gives a real and never none. An -out ease does its effect at
+; the end, an -in ease is the same turned around, (- 1 (out (- 1 t))), and an -in-out ease runs
+; the -in one over the first half and the -out one over the second. (The min and max there change
+; nothing; they let the compiler see that each half's progress stays from 0 to 1.)
+
+; A spring released from rest: it goes past the end once and settles there.
+(func spring-out ((real t (>= 0) (<= 1)))
+  (- 1 (* (^ (- 1 t) 3) (+ (cos (* 8 t)) (* 0.375 (sin (* 8 t)))))))
+(func spring-in ((real t (>= 0) (<= 1))) (- 1 (spring-out (- 1 t))))
+(func spring-in-out ((real t (>= 0) (<= 1)))
+  (if (< t 0.5) (/ (spring-in (min 1 (* 2 t))) 2) (/ (+ 1 (spring-out (max 0 (- (* 2 t) 1)))) 2)))
+
+; A ball that lands and bounces three times, each bounce smaller: four parabolas end to end.
+(func bounce-out ((real t (>= 0) (<= 1)))
+  (cond ((< t (/ 1 2.75)) (* 7.5625 t t))
+        ((< t (/ 2 2.75)) (+ (* 7.5625 (- t (/ 1.5 2.75)) (- t (/ 1.5 2.75))) 0.75))
+        ((< t (/ 2.5 2.75)) (+ (* 7.5625 (- t (/ 2.25 2.75)) (- t (/ 2.25 2.75))) 0.9375))
+        (else (+ (* 7.5625 (- t (/ 2.625 2.75)) (- t (/ 2.625 2.75))) 0.984375))))
+(func bounce-in ((real t (>= 0) (<= 1))) (- 1 (bounce-out (- 1 t))))
+(func bounce-in-out ((real t (>= 0) (<= 1)))
+  (if (< t 0.5) (/ (bounce-in (min 1 (* 2 t))) 2) (/ (+ 1 (bounce-out (max 0 (- (* 2 t) 1)))) 2)))
+
+; A string plucked at the end: it overshoots and swings back and forth, each swing smaller.
+(func elastic-out ((real t (>= 0) (<= 1)))
+  (cond ((<= t 0) 0)
+        ((>= t 1) 1)
+        (else (+ 1 (* (^ 2 (* -10 t)) (sin (* (- (* 10 t) 0.75) (/ (* 2 pi) 3))))))))
+(func elastic-in ((real t (>= 0) (<= 1))) (- 1 (elastic-out (- 1 t))))
+(func elastic-in-out ((real t (>= 0) (<= 1)))
+  (if (< t 0.5) (/ (elastic-in (min 1 (* 2 t))) 2) (/ (+ 1 (elastic-out (max 0 (- (* 2 t) 1)))) 2)))
+
+; Past the end and back: 1.70158 is the usual amount, an overshoot of about 10%.
+(func back-out ((real t (>= 0) (<= 1)))
+  (let ((u (- t 1)))
+    (+ 1 (* 2.70158 u u u) (* 1.70158 u u))))
+(func back-in ((real t (>= 0) (<= 1))) (- 1 (back-out (- 1 t))))
+(func back-in-out ((real t (>= 0) (<= 1)))
+  (if (< t 0.5) (/ (back-in (min 1 (* 2 t))) 2) (/ (+ 1 (back-out (max 0 (- (* 2 t) 1)))) 2)))

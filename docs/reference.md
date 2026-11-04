@@ -391,6 +391,38 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 | `or?` | `x`, `d` | `x`, or `d` when `x` is none |
 | `none?` `some?` | any value | bool |
 
+## The standard library
+
+Files of declarations in `mathterpiece/stdlib/`, imported by name like any other file (see "Imports"): `(import math clamp)`, or `(import math)` and `math.clamp`. Nothing in them is seen without an import. Everything else in this reference is built in.
+
+### math
+
+| Function | Takes | Gives | None when |
+|---|---|---|---|
+| `dot` | two lists of reals | the sum of their products, item by item | their lengths differ |
+| `clamp` | `x`, `lo`, `hi` | `x` kept between `lo` and `hi` | never |
+| `smoothstep` | `a`, `b`, `x` | 0 up to `a`, 1 from `b` on, and an S between them, flat at both ends | `a` is `b` |
+| `mean` | a list of reals | the mean of its items | the list is empty |
+| `norm` | a point | its distance from the origin | never |
+| `normalize` | a point | the point in the same direction at distance 1 | the point is `[0 0]` |
+| `cross` | two points | the 2D cross product: positive when the second is counterclockwise from the first | never |
+| `midpoint` | two points | the point halfway between them | never |
+
+A result that may be none is held in a variable declared `T|none`, or given a default with `or?`.
+
+### eases
+
+Functions to give a move as its ease, `(ease bounce-out)`: each takes the progress from 0 to 1 and gives how far along the move is, 0 at its start and 1 at its end. Four kinds, each in three forms: an `-out` ease does its effect at the end, an `-in` ease is the `-out` one turned around, and an `-in-out` ease runs the `-in` one over the first half and the `-out` one over the second.
+
+| Kind | What it does |
+|---|---|
+| `spring-in`, `spring-out`, `spring-in-out` | a spring released from rest: past the end once, then it settles |
+| `bounce-in`, `bounce-out`, `bounce-in-out` | lands and bounces three times, each bounce smaller |
+| `elastic-in`, `elastic-out`, `elastic-in-out` | past the end and back and forth, each swing smaller |
+| `back-in`, `back-out`, `back-in-out` | about 10% past the end, and back |
+
+An ease that goes past 1 or below 0 takes what it moves past its ends (see "Transitions and animations").
+
 ## Constants
 
 | Name | Value |
