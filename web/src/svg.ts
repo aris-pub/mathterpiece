@@ -247,6 +247,9 @@ function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
 function text(rt: Runtime, i: number, unitsPerPx: number): Element {
   const el = document.createElementNS(NS, "text") as SVGElement;
   el.textContent = String(rt.value(i, "value"));
+  // SVG would otherwise drop leading spaces and run spaces together; this keeps each one, and
+  // shows a tab or a newline as a space.
+  el.setAttributeNS("http://www.w3.org/XML/1998/namespace", "xml:space", "preserve");
   const anchor = rt.value(i, "halign");
   if (anchor === "middle" || anchor === "end") el.setAttribute("text-anchor", anchor as string);
   const baseline = { top: "hanging", middle: "central", bottom: "text-after-edge" }[rt.value(i, "valign") as string];

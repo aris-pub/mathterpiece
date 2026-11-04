@@ -76,6 +76,8 @@ These mirror SVG on purpose (`dash` is its `stroke-dasharray` and `stroke-dashof
 
 `halign` is one of `'start' 'middle' 'end'`; `valign` is one of `'top' 'middle' 'baseline' 'bottom'`, where `'baseline'` is the line the letters sit on and `'bottom'` is the bottom of the lowest letters.
 
+A text shows its string as written, every space kept: `'   x'` is indented by three spaces, and `'a  b'` has two spaces between its letters. A text is one line, so a tab or a newline (`'\n'`) in its string is shown as one space.
+
 Where each shape is placed by its position: a circle's and an ellipse's center, a rect's center, a text's anchor point (chosen by `halign` and `valign`). A line's position is its midpoint, a triangle's its centroid, and a polyline's or a polygon's the mean of its points (`[0 0]` with none). They are computed from the ends, corners or points, so these shapes are declared by them and never given `x`, `y` or `pos`; a writer that writes the position moves every end, corner or point together, and may only do so when they are free.
 
 A scene's `transform` says how its own coordinates are drawn: `(scene s (transform (scale 1 -1)) …)` has y pointing down, as in an SVG. Everything in the scene is written, read and written to in the scene's own coordinates, a canvas's view box is given in them, and the pointer is converted back into them for drags and clicks. Everything follows the transform as drawn, texts included, and the anchor names `top` and `bottom` stay with y: `top` is toward larger y.

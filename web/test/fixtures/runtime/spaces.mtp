@@ -1,0 +1,8 @@
+(scene s (background 'white')
+  (text one 'x')
+  (text lead '   x')
+  (text single 'a b')
+  (text double 'a  b')
+  (text tab 'a	b')
+  (text newline 'a\nb'))
+(canvas v (x -10) (y -10) (width 20) (height 20) s)
