@@ -1,0 +1,13 @@
+; mtp-nl11: a row of motif instances that each hold a group places each instance a gap after
+; the box of the one before, the box being that of the group's members; (left b) reads it.
+; expect pb [2,0]
+; expect pc [5,0]
+; write k 2
+; expect pb [3,0]
+; expect pc [6,0]
+(motif m ((real size 1 (>= 0))) (group g (circle c (r size))))
+(scene s
+  (real k 1 (>= 0) (<= 3))
+  (row r (gap 1) (m a (size k)) (m b) (m c))
+  (point pb (left b))
+  (point pc (left c)))

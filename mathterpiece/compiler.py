@@ -3088,15 +3088,21 @@ class _Compiler:
         return Expr("read", t, (i, attr, self.frame), deps, r)
 
     def layout_deps(self, row: int) -> set:
+        """What the places a row or a column gives its members read: every attribute of its
+        members and of what is inside them, at any depth, a clip's included, and, for a row or
+        a column at any depth, its gap and its align (mtp-nl11)."""
         obj = self.model.objects[row]
         deps: set = set()
-        for m in obj.members:
+        inside = [*obj.members, *([obj.data["clip"]] if "clip" in obj.data else [])]
+        for m in inside:
             member = self.model.objects[m]
             deps |= {(m, a) for a in member.attrs}
             if member.kind in ("group", "instance"):
                 deps |= self.layout_deps(m)
-        layout = obj.data["layout"]
-        return deps | layout["gap"].deps | layout["align"].deps
+        layout = obj.data.get("layout")
+        if layout is not None:
+            deps |= layout["gap"].deps | layout["align"].deps
+        return deps
 
     def moves(self, i: int) -> frozenset:
         """The translate and transform attributes a read of shape i converts through: its own and

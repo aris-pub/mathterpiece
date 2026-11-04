@@ -44,21 +44,25 @@
 (variant bold-gauge () (gauge_ (lo 0) (hi 100) (accent terracotta) (weight 12) (ticks 4)))
 (variant half-gauge () (gauge_ (lo 0) (hi 100) (accent saffron) (sweep 180) (ticks 6)))
 
-; Where the dial in column col and row row sits: the columns 4.7 apart around the middle, the
-; rows 4.8 apart from the top.
-(func[point] cell ((int col) (int row)) [(* 4.7 (- col 1)) (- 2 (* 4.8 row))])
+; The space between two dials, along a row and down the column; the column has room under each
+; dial for its reading and its declaration.
+(real between 1.6 (const))
+(real under 1.7 (const))
 
 (scene board
   (background paper)
 
-  ; Placed by cell rather than by a column of rows, since a row cannot yet hold a gauge.
-  (group panel
-    (gauge speed (pos (cell 0 0)) (value 72) (lo 0) (hi 120) (accent teal))
-    (gauge heat (pos (cell 1 0)) (value 18) (lo -20) (hi 40) (accent teal))
-    (gauge pressure (pos (cell 2 0)) (value 2.4) (lo 0) (hi 6) (accent teal))
-    (thin-gauge thin (pos (cell 0 1)) (value 35))
-    (bold-gauge bold (pos (cell 1 1)) (value 60))
-    (half-gauge half (pos (cell 2 1)) (value 80)))
+  ; Two rows of dials in a column. The first dial stays where it is, so the panel is moved for
+  ; the middle dial to sit in the middle of the canvas.
+  (column panel (gap under) (translate [-4.7 2])
+    (row gauges (gap between) (align 'top')
+      (gauge speed (value 72) (lo 0) (hi 120) (accent teal))
+      (gauge heat (value 18) (lo -20) (hi 40) (accent teal))
+      (gauge pressure (value 2.4) (lo 0) (hi 6) (accent teal)))
+    (row styles (gap between) (align 'top')
+      (thin-gauge thin (value 35))
+      (bold-gauge bold (value 60))
+      (half-gauge half (value 80))))
 
   (group readings (defaults (fill ink) (font number) (halign 'middle') (valign 'middle'))
     (text_ $'{speed.value:.0f}' (pos (+ speed.pos [0 -0.55])))
@@ -92,7 +96,7 @@
 
 ; The knob is a ring, and its middle is not part of it, so a press there reaches the needle
 ; under it: the needle can be dragged too. Each dial's own lo and hi limit its drag.
-(foreach d panel
+(foreach d [speed heat pressure thin bold half]
   (on-drag d.knob d.value (>= d.value d.lo) (<= d.value d.hi))
   (on-drag d.needle d.value (>= d.value d.lo) (<= d.value d.hi)))
 

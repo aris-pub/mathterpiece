@@ -90,3 +90,23 @@ class TestRowsAndColumns:
         d = doc("(scene s (row r (gap 1) (circle a) (circle b)))")
         assert errors(d) == []
         assert d["objects"][d["names"]["r"]]["layout"]["axis"] == "row"
+
+
+class TestRowsOfContainers:
+    # mtp-nl11: a row of motif instances that hold a group crashed the compiler (KeyError:
+    # 'layout'), so examples/dials.mtp placed its dials by hand.
+    MOTIF = "(motif m ((real size 1 (>= 0))) (group g (circle c (r size))))"
+
+    def test_a_row_of_instances_that_hold_a_group(self):
+        m = model(f"{self.MOTIF} (scene s (row r (m a) (m b)) (point v b.pos))")
+        assert m.get("v").value.bound
+
+    def test_where_a_member_is_follows_what_is_inside_the_one_before(self):
+        # b's place in the row depends on the size of the circle inside a's group.
+        scene = "(scene s (row r (m a (size k)) (m b)) (point v b.pos))"
+        m = model(f"(real k 1 (>= 0)) {self.MOTIF} {scene}")
+        deps = m.get("v").value.expr.deps
+        assert (m.id("a.c"), "r") in deps
+
+    def test_a_group_in_a_row_with_groups_inside(self):
+        model("(scene s (row r (group g (group h (circle c (r 1)))) (circle d)) (point v d.pos))")
