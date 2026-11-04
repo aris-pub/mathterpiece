@@ -224,11 +224,11 @@ export class MtpCanvas extends MtpPart {
     const clicks = model.clicks!;
     const releases = model.releases!;
     const dragends = model.dragends!;
-    const fades = new Fades(rt, canvas, scheduler, () => this.redraw());
+    const toggles = new Toggles(rt, canvas, scheduler, () => this.redraw());
     const look: Look = { scale: 1, dx: 0, dy: 0 };
     this.redraw = () => {
-      fades.follow();
-      draw(rt, canvas, svg, (k) => fades.visible(k), look);
+      toggles.follow();
+      draw(rt, canvas, svg, (k) => toggles.visible(k), look);
       for (const el of svg.querySelectorAll("[data-mtp-id]")) {
         const id = Number(el.getAttribute("data-mtp-id"));
         if (drags.draggable(id) || clicks.find(id)) (el as SVGElement).style.cursor = "pointer";
@@ -374,10 +374,10 @@ export class MtpCanvas extends MtpPart {
   }
 }
 
-// How visible each when item of a canvas is: the canvas's own state, moved along its transition
-// when the item's condition changes. Turning back midway covers only what is left, at the same
+// How visible each when item of a canvas is: the canvas's own state, which a toggle moves over the
+// canvas's toggle-duration with its toggle-ease when the item's condition changes. Turning back midway covers only what is left, at the same
 // speed.
-class Fades {
+class Toggles {
   private levels: number[];
   private wanted: boolean[];
   private moving = false;

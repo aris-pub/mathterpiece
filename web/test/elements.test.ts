@@ -185,12 +185,12 @@ describe("a canvas's showing and hiding", () => {
   function opacityOf(rt: Runtime, name: string, canvas = "v"): number | null {
     const el = document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`);
     if (!el) return null;
-    const g = el.closest("[data-mtp-fade]");
+    const g = el.closest("[data-mtp-toggle]");
     return g ? Number(g.getAttribute("opacity")) : 1;
   }
 
-  it("fades what a when item shows along the canvas's transition", () => {
-    const [, rt] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("fade"));
+  it("toggles a when item over the canvas's toggle-duration", () => {
+    const [, rt] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("toggle"));
     expect(opacityOf(rt, "d")).toBeNull();
     rt.write(rt.id("show"), null, true);
     pass(0.1);
@@ -201,14 +201,14 @@ describe("a canvas's showing and hiding", () => {
   });
 
   it("draws its items in the order they are written", () => {
-    const [, rt] = page(`<mtp-canvas model="m" name="stack"></mtp-canvas>`, doc("fade"));
+    const [, rt] = page(`<mtp-canvas model="m" name="stack"></mtp-canvas>`, doc("toggle"));
     rt.write(rt.id("show"), null, true);
     const drawn = [...document.querySelectorAll(`mtp-canvas [data-mtp-id]`)].map((el) => Number(el.getAttribute("data-mtp-id")));
     expect(drawn).toEqual([rt.id("d"), rt.id("c")]);
   });
 
   it("shows and hides at once with no transition", () => {
-    const [, rt] = page(`<mtp-canvas model="m" name="still"></mtp-canvas>`, doc("fade"));
+    const [, rt] = page(`<mtp-canvas model="m" name="still"></mtp-canvas>`, doc("toggle"));
     rt.write(rt.id("show"), null, true);
     expect(opacityOf(rt, "d", "still")).toBe(1);
   });

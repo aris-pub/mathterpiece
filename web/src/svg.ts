@@ -97,9 +97,9 @@ export function draw(
     if (level <= 0) continue;
     let into: Element = top;
     if (level < 1) {
-      // A canvas fades what its when items show and hide along its move (reference.md).
+      // A canvas toggles its when items, showing or hiding them over its toggle-duration.
       into = document.createElementNS(NS, "g");
-      into.setAttribute("data-mtp-fade", "");
+      into.setAttribute("data-mtp-toggle", "");
       into.setAttribute("opacity", String(level));
       top.appendChild(into);
     }

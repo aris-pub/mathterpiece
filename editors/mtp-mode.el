@@ -23,7 +23,7 @@
   '("a" "align" "autoplay" "b" "background" "buttons" "c" "clip" "dash" "dash-offset"
     "duration" "ease" "family" "fill" "fill-opacity" "font" "from" "gap" "halign" "height"
     "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points" "pos" "r" "rx"
-    "ry" "size" "step" "stroke" "stroke-opacity" "stroke-width" "style" "to" "transform"
+    "ry" "size" "step" "stroke" "stroke-opacity" "stroke-width" "style" "to" "toggle-duration" "toggle-ease" "transform"
     "translate" "valign" "value" "weight" "width"
     "x" "y" "zoom")
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,

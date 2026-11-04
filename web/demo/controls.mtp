@@ -24,7 +24,7 @@
   (buttons true))
 (toggle show show-angle (label 'show the angle'))
 (readout r $'angle = {angle:.1f}°')
-(canvas view (x -7) (y -7) (width 14) (height 14) (move none (duration 0.5))
+(canvas view (x -7) (y -7) (width 14) (height 14) (toggle-duration 0.5)
   track radius point box sun (when show-angle label))
 (on-drag point angle)
 (on-drag box box.pos)

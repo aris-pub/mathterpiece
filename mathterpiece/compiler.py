@@ -2072,6 +2072,13 @@ class _Compiler:
         self.zoom_range(obj, items)
         # What it shows, in the order written, which is the order it draws them in.
         obj.data.update({"shows": [], "transition": None})
+        # How it toggles its when items, showing or hiding them (the author, 2026-11-04): kept as
+        # a move with no target, which is what the .mtpc holds.
+        toggle = [(a, n) for a in ("duration", "ease") if (n := self.take(items, f"toggle-{a}"))]
+        if toggle:
+            parts = [Form((Name((a,), n.pos), n), n.pos) for a, n in toggle]
+            move = Form((Name(("move",), obj.pos), NoneLit(obj.pos), *parts), obj.pos)
+            obj.data["transition"] = self.transition(move, self.cscope, top=False)
         for item in items:
             head = _head(item)
             if isinstance(item, Name):
@@ -2080,22 +2087,11 @@ class _Compiler:
                 cond = self.attribute(BOOL, item.items[1], item.pos, "when", scope=self.cscope)
                 obj.data["shows"].append((cond, [self.shown(n) for n in item.items[2:]]))
             elif head == "move":
-                assert isinstance(item, Form)
-                if obj.data["transition"] is not None:
-                    raise CompileError("'move' is given twice", item.pos)
-                tid = self.transition(item, self.cscope, top=False)
-                if self.model.objects[tid].data["target"] is not None:
-                    raise CompileError(
-                        "a canvas's move fades what it shows, so its target is none", item.pos
-                    )
-                fade = self.model.objects[tid]
-                if fade.data["ends"] or "path" in fade.attrs:
-                    raise CompileError(
-                        "a canvas's move takes only a duration and an ease: it fades what the"
-                        " canvas shows from hidden to shown",
-                        item.pos,
-                    )
-                obj.data["transition"] = tid
+                raise CompileError(
+                    "a canvas toggles its items over (toggle-duration t) with (toggle-ease e),"
+                    " and takes no move",
+                    item.pos,
+                )
             elif isinstance(item, Form) and head is not None:
                 raise CompileError(f"a canvas takes no argument '{head}'", item.pos)
             else:

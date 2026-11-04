@@ -135,7 +135,7 @@ A view, a control and a readout must have a name: a page places each by its name
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(canvas name)` | required | none | `(move none (duration t) (ease e))` for showing and hiding, which takes only a duration and an ease, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
+| `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling its `when` items, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
 | `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(when bool)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, `(when bool)` | conditions |
@@ -147,7 +147,7 @@ A view, a control and a readout must have a name: a page places each by its name
 | `(on-dragend shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
 | `(on-view canvas)` | none | the canvas | `(animation …)`, `(when bool)` | conditions |
 
-A canvas fades what its `when` items show and hide: their opacity, as the canvas shows them, moves from 0 to 1 or back along the canvas's pure move, `(move none …)`, with its duration and ease. The canvas never writes the scene: the opacity is its own.
+A canvas **toggles** what its `when` items show: it shows or hides them as their conditions change. A toggle takes the canvas's `(toggle-duration t)`, in seconds, 0 (at once) if left out, with its `(toggle-ease e)`, `'linear'` if left out, any ease an animation takes: over that time the items' opacity, as the canvas shows them, goes from 0 to 1 or back. A canvas takes no `move`. The canvas never writes the scene: the opacity is its own. "Toggle" is the word for a canvas showing or hiding one of its items.
 
 ## Defaults
 
@@ -219,7 +219,7 @@ Every control and listener emits writes to its target (or, through its animation
 - **Pan:** dragging where no draggable shape is moves what the canvas shows with the pointer, but only inside the view box: the reader never sees past what the author framed, so a pan moves something only once the reader has zoomed in.
 - **Zoom:** the wheel, or a pinch on a trackpad or with two fingers, zooms about the pointer. While the pointer is over a canvas that zooms, the wheel does not scroll the page. It zooms between bounds: `(zoom lo hi)`, two reals known when compiling with 1 ≤ lo ≤ hi, from lo times closer than the view box to hi times; by default from 1, the view box itself, to 10. A canvas never shows more than its view box.
 - **A double click** goes back to the view box the author gave.
-- **Neither writes anything:** they are the canvas's own state, like its fades, so stroke widths and font sizes stay the same on screen. `(pan false)` or `(zoom false)` turns either off.
+- **Neither writes anything:** they are the canvas's own state, like its toggles, so stroke widths and font sizes stay the same on screen. `(pan false)` or `(zoom false)` turns either off.
 
 ### Controls
 

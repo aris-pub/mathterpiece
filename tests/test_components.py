@@ -274,16 +274,35 @@ class TestListenersInAForeach:
         assert [o.data["shape"] for o in clicks] == [m.id(f"c{i}") for i in range(3)]
 
 
-class TestCanvasFades:
-    # reference.md "Transitions and animations": a canvas's pure move is how its when items
-    # fade in and out; fade is not a path.
-    def test_a_canvas_takes_a_pure_move(self):
-        m = model("(scene s (circle c)) (canvas v (move none (duration 1)) c)")
-        (t,) = [o for o in m.objects if o.kind == "transition"]
-        assert m.get("v").data["transition"] == m.objects.index(t)
+class TestCanvasToggles:
+    # The author, 2026-11-04: a canvas toggles its when items, showing or hiding them, over
+    # (toggle-duration t) with (toggle-ease e); it takes no move.
+    S = "(scene s (circle c))"
 
-    def test_fade_is_not_a_path(self):
-        error("(scene s (circle c)) (canvas v (move none (duration 1) (path fade)) c)", "fade")
+    def test_a_duration_and_an_ease(self):
+        m = model(f"{self.S} (canvas v (toggle-duration 0.4) (toggle-ease 'ease-in-out') c)")
+        t = m.objects[m.get("v").data["transition"]]
+        assert t.attrs["duration"].value == 0.4 and t.attrs["ease"].value == "ease-in-out"
+
+    def test_a_duration_alone_toggles_linearly(self):
+        m = model(f"{self.S} (canvas v (toggle-duration 1) c)")
+        t = m.objects[m.get("v").data["transition"]]
+        assert t.attrs["duration"].value == 1 and "ease" not in t.attrs
+
+    def test_with_neither_it_toggles_at_once(self):
+        assert model(f"{self.S} (canvas v c)").get("v").data["transition"] is None
+
+    def test_an_ease_of_the_figures_own(self):
+        model(
+            f"(func soft ((real t 0 (>= 0) (<= 1))) (* t t)) {self.S}"
+            " (canvas v (toggle-duration 1) (toggle-ease soft) c)"
+        )
+
+    def test_no_move(self):
+        error(
+            f"{self.S} (canvas v (move none (duration 1)) c)",
+            r"a canvas toggles its items over \(toggle-duration t\)",
+        )
 
 
 def test_a_foreach_names_its_controls():
@@ -323,16 +342,6 @@ class TestEveryShownPartHasAName:
 
     def test_listeners_need_none(self):
         model(f"{self.K} (canvas v s) (on-click c (animation (move k (to 1) (duration 0))))")
-
-
-def test_a_canvas_move_takes_only_a_duration_and_an_ease():
-    # A canvas fades its when items: it reads a duration and an ease, and nothing else.
-    model("(scene s (circle c)) (canvas v (move none (duration 1) (ease 'ease-in')) c)")
-    for extra in ("(from 0)", "(to 1)", "(path (fn ((real a) (real b) (real t)) a))"):
-        error(
-            f"(scene s (circle c)) (canvas v (move none (duration 1) {extra}) c)",
-            "a canvas's move takes only a duration and an ease",
-        )
 
 
 class TestZoomBounds:
