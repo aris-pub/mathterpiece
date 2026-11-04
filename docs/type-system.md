@@ -40,7 +40,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
 
 ## 3. Conversions
 
-Only two conversions ever happen without being asked for. (A list written in brackets, even of expressions such as `[k 0]`, is a literal, and takes the type expected where it is written: it is a point where a point is expected.) Separately, a narrower type is accepted where a wider one is expected without any conversion: a refinement where its base is (a `unit` where a `real` is), and any `T` where `T|none` is.
+Only two conversions ever happen without being asked for. (A list written in brackets, even of expressions such as `[k 0]`, is a literal, and takes the type expected where it is written: it is a point where a point is expected. In arithmetic, it is a point when another operand is one, also when it sits in arithmetic inside that operand: in `(+ (* r [1 0]) o)` with `o` a point, `[1 0]` is a point.) Separately, a narrower type is accepted where a wider one is expected without any conversion: a refinement where its base is (a `unit` where a `real` is), and any `T` where `T|none` is.
 
 - **Numbers broaden**, never narrow: an `int` is accepted where a `ratio`, `real` or `complex` is expected, a `ratio` where a `real` or `complex` is, and a `real` where a `complex` is. Going the other way takes a function, such as `round`. (The one exception is a write while drawing into an int, which is rounded: section 5.b.)
 - **A literal takes the type expected where it is written.** `'red'` is a string, but written where a color is expected it is a color; `'middle'` written as a text's alignment is one of the allowed alignments. Where nothing gives a literal its type, such as a branch of a function's `cond`, `(as color 'red')` gives it one.

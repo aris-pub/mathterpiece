@@ -3494,8 +3494,10 @@ class _Compiler:
 
     def operands(self, nodes, expected: Type | None, scope: dict) -> list:
         """An operator's operands. A literal list such as [1 2] is a point when the attribute or
-        another operand is one, as a literal takes its attribute's type."""
-        others = [None if isinstance(n, ListLit) else self.expr(n, None, scope) for n in nodes]
+        another operand is one, as a literal takes its attribute's type; so is one inside
+        arithmetic in an operand, as in (+ (* r [1 0]) o) (mtp-mlwj). Those operands are compiled
+        after the others, once it is known whether a point is wanted, so each is compiled once."""
+        others = [None if _holds_literal(n) else self.expr(n, None, scope) for n in nodes]
         point = (expected is not None and _core(expected) == POINT) or any(
             o is not None and _core(o.type) == POINT for o in others
         )
@@ -3855,6 +3857,17 @@ def _overlaps(attr: str, given: dict) -> bool:
 def _dot(node: Node, attr: str) -> Form:
     """(. node attr), built by the compiler."""
     return Form((Name((".",), node.pos), node, Name((attr,), node.pos)), node.pos)
+
+
+def _holds_literal(node: Node) -> bool:
+    """Whether node is a literal list, or arithmetic with one among its operands at any depth."""
+    if isinstance(node, ListLit):
+        return True
+    return (
+        isinstance(node, Form)
+        and _head(node) in ("+", "-", "*", "/")
+        and any(_holds_literal(n) for n in node.items[1:])
+    )
 
 
 def _points_mean(points: Expr) -> Expr:

@@ -257,3 +257,25 @@ class TestRangesFollowTheInput:
     def test_a_range_that_holds_is_proved(self):
         model(self.X + "(scene s (circle c (r (* (log x 10) 2))))")
         model(self.K + "(scene s (circle c (r (+ 3 (floor k)))))")
+
+
+class TestWrittenPointsInArithmetic:
+    # mtp-mlwj: a written [x y] is a point when another operand is one, also inside arithmetic
+    # nested in that operand.
+    def test_scaled_then_added(self):
+        assert typ("(real r 2) (point o [1 1]) (point v (+ (* r [1 0]) o))") == POINT
+        assert value("(point o [1 1] (const)) (point v (+ (* 2 [1 0]) o))") == (3, 1)
+
+    def test_deeper(self):
+        src = "(real r 2) (point o [1 1]) (point v (- o (* r (+ [1 0] [0 1]))))"
+        assert typ(src) == POINT
+
+    def test_with_the_point_first(self):
+        assert typ("(real r 2) (point o [1 1]) (point v (+ o (* r [1 0])))") == POINT
+
+    def test_lists_stay_lists(self):
+        assert typ("(real r 2) (list v (* r [1 0 2]))").base == ListT(REAL)
+
+    def test_rand_inside_is_drawn_once(self):
+        m = model("(point o [1 1]) (point v (+ (* (rand) [1 0]) o))")
+        assert m.get("v").value.bound
