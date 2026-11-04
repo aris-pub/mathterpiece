@@ -135,7 +135,7 @@ A view, a control and a readout must have a name: a page places each by its name
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling its `when` items, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
+| `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling the shapes its items give, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene), and expressions that give a shape, none, or a list of them, such as `(when bool name)`, `(when bool [a b])` or `(if bool a b)`, drawn in the order written, each on top of those before it |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
 | `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, `(active bool)` | conditions |
@@ -147,7 +147,7 @@ A view, a control and a readout must have a name: a page places each by its name
 | `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)` | conditions |
 | `(on-view canvas)` | none | the canvas | `(animation …)`, `(active bool)` | conditions |
 
-A canvas **toggles** what its `when` items show: it shows or hides them as their conditions change. A toggle takes the canvas's `(toggle-duration t)`, in seconds, 0 (at once) if left out, with its `(toggle-ease e)`, `'linear'` if left out, any ease an animation takes: over that time the items' opacity, as the canvas shows them, goes from 0 to 1 or back. A canvas takes no `move`. The canvas never writes the scene: the opacity is its own. "Toggle" is the word for a canvas showing or hiding one of its items.
+A canvas **toggles** the shapes its items give: when an item starts or stops giving a shape, as `(when show d)` does when `show` changes, or `(if show d c)` does by giving one shape for another, the canvas shows or hides that shape. A toggle takes the canvas's `(toggle-duration t)`, in seconds, 0 (at once) if left out, with its `(toggle-ease e)`, `'linear'` if left out, any ease an animation takes: over that time the items' opacity, as the canvas shows them, goes from 0 to 1 or back. A canvas takes no `move`. The canvas never writes the scene: the opacity is its own. "Toggle" is the word for a canvas showing or hiding one of its items.
 
 ## Defaults
 
@@ -246,6 +246,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | Form | Evaluates |
 |---|---|
 | `(if c a b)` | `c`, then only `a` or `b` |
+| `(when c x)` | `c`, then `x` while it holds; otherwise none. It is `(if c x none)`, and takes one value: several go in a list, `(when c [a b])` |
 | `(cond (c1 v1) (c2 v2) … (else v))` | the tests in order, then only the value of the first that holds |
 | `(and a b …)` | left to right, stopping at the first false |
 | `(or a b …)` | left to right, stopping at the first true |

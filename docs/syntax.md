@@ -119,7 +119,7 @@ A special form looks like a call but does something a function cannot: it evalua
     (if (> k 0) 'up' 'down')                      ; evaluates only the branch taken
     (foreach i 5 (circle (name $'dot-{i}') …))    ; five circles, made when compiling
 
-Two items are recognized by their head and are not special forms: `(when c name…)` in a canvas's body, a condition and the names of what it shows, and `(exists-when name c)` in a scene, group, `foreach` or motif body, which says when a shape exists (see the reference, "The scene and shapes"). In a control or a listener, `(active c)` is an optional argument.
+One item is recognized by its head and is not a special form: `(exists-when name c)` in a scene, group, `foreach` or motif body, which says when a shape exists (see the reference, "The scene and shapes"). `(when c x)` is a special form, an expression like `if`. In a control or a listener, `(active c)` is an optional argument.
 
 ## 7. Reading parts
 

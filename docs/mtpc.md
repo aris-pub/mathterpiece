@@ -133,7 +133,7 @@ and then what its kind needs:
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |
 | `transition` | `"from"`, `"to"`, `"duration"`, `"ease"`, `"path"` (below) |
 | `animation` | `"steps"`: a step (below) |
-| `canvas` | `"shows"`: what it shows, in the order written, which is the order it draws them in (later ones on top): each entry the id of a shape, or `[condition, [ids]]` for a `when` item, its condition a bool, free or bound; `"transition"`: an id or `null`; `"attrs"`: the view box, `transform`, `pan` and `zoom` |
+| `canvas` | `"shows"`: what it shows, in the order written, which is the order it draws them in (later ones on top): each entry the id of a shape, or an attribute, free or bound, for an item that gives a shape, none or a list of them, such as `(when show d)`; `"transition"`: an id or `null`; `"attrs"`: the view box, `transform`, `pan` and `zoom` |
 | `readout` | `"attrs"`: `value` (the string), `font` |
 | `slider`, `button`, `play` | `"animation"`: an id; `"autoplay"` (play only): `null`, `"load"`, or the id of the view or control whose first coming into view starts it; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"attrs"`: `label`, and `step` (slider: the number of positions its knob stops at), `buttons` (play), and the attributes the reader's actions change: `position` (slider), `playing` and `step` (play: the step now playing) |
 | `toggle` | `"target"`: `[id, attr]` or `null`; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"attrs"`: `label`, `value` |

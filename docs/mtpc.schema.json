@@ -2084,20 +2084,7 @@
                       "$ref": "#/$defs/id"
                     },
                     {
-                      "type": "array",
-                      "prefixItems": [
-                        {
-                          "$ref": "#/$defs/attribute"
-                        },
-                        {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/$defs/id"
-                          }
-                        }
-                      ],
-                      "minItems": 2,
-                      "maxItems": 2
+                      "$ref": "#/$defs/attribute"
                     }
                   ]
                 }

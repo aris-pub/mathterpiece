@@ -102,7 +102,7 @@ UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 # has it, and the branch that does not recurse decides the real one.
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
-SPECIAL = {"if", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
+SPECIAL = {"if", "when", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
 # The shapes a container may be clipped to: ones with an inside.
 CLIPS = ("circle", "rect", "ellipse", "triangle", "polygon")
 # The points on a shape's box that placement gives: the middle of each side and each corner
@@ -2089,9 +2089,8 @@ class _Compiler:
             head = _head(item)
             if isinstance(item, Name):
                 obj.data["shows"].append(self.shown(item))
-            elif head == "when" and len(item.items) >= 3:
-                cond = self.attribute(BOOL, item.items[1], item.pos, "when", scope=self.cscope)
-                obj.data["shows"].append((cond, [self.shown(n) for n in item.items[2:]]))
+            elif isinstance(item, ListLit) or self.is_expression(head):
+                obj.data["shows"].append(self.shown_by(item))
             elif head == "move":
                 raise CompileError(
                     "a canvas toggles its items over (toggle-duration t) with (toggle-ease e),"
@@ -2102,6 +2101,29 @@ class _Compiler:
                 raise CompileError(f"a canvas takes no argument '{head}'", item.pos)
             else:
                 raise CompileError("expected an item of a canvas", item.pos)
+
+    def is_expression(self, head) -> bool:
+        """Whether a form with this head is an expression rather than an argument."""
+        return head is not None and (
+            head in SPECIAL
+            or head in COLLECTION
+            or head in BUILTINS
+            or head in SPECIAL_BUILTINS
+            or head in self.model.funcs
+        )
+
+    def shown_by(self, node: Node) -> Attribute:
+        """A canvas item that gives what it shows: a shape, none, or a list of them, which the
+        canvas toggles as they change (the author, 2026-11-04)."""
+        e = self.expr(node, None, self.cscope)
+        core = _core(e.type)
+        item = _core(core.item) if isinstance(core, ListT) else core
+        if not isinstance(item, ShapeT):
+            raise CompileError(
+                f"a canvas shows shapes: this gives {e.type}, not a shape, none or a list of them",
+                node.pos,
+            )
+        return self.settle(e.type, e, "what the canvas shows", node.pos)
 
     def shown(self, node: Node) -> int:
         e = self.expr(node, None, self.cscope)
@@ -3482,6 +3504,15 @@ class _Compiler:
             return self.collection(node, head, scope, expected)
         if head in BUILTINS or head in SPECIAL_BUILTINS:
             return self.builtin(node, head, scope)
+        if head == "when":
+            # (when c x) is (if c x none) (the author, 2026-11-04).
+            if len(args) != 2:
+                raise CompileError(
+                    "when takes a condition and one value; give several in a list: (when c [a b])",
+                    node.pos,
+                )
+            ifs = Form((Name(("if",), node.pos), args[0], args[1], NoneLit(node.pos)), node.pos)
+            return self.form(ifs, expected, scope)
         if head == "if":
             if len(args) != 3:
                 raise CompileError("if takes a condition and two branches", node.pos)
@@ -3495,7 +3526,12 @@ class _Compiler:
                 # With nothing outside to give a type, a literal list takes the other branch's.
                 lit = 1 if isinstance(args[1], ListLit) else 2
                 other = self.expr(args[3 - lit], None, scope)
-                hint = None if other.type == RECURSING else _maybe(_inner(other.type))
+                # A none branch says nothing of the list's type.
+                hint = (
+                    None
+                    if other.type == RECURSING or _core(other.type) == NONE
+                    else _maybe(_inner(other.type))
+                )
                 given = self.expr(args[lit], hint, scope)
                 a, b = (given, other) if lit == 1 else (other, given)
             else:

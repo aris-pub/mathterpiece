@@ -250,10 +250,7 @@ class Writer:
         elif kind == "animation":
             d["steps"] = _step(o.data["steps"])
         elif kind == "canvas":
-            d["shows"] = [
-                s if isinstance(s, int) else [self.attribute(s[0]), list(s[1])]
-                for s in o.data["shows"]
-            ]
+            d["shows"] = [s if isinstance(s, int) else self.attribute(s) for s in o.data["shows"]]
             d["transition"] = o.data["transition"]
             d["attrs"] = attrs
         elif kind == "readout":

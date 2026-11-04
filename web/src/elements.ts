@@ -4,11 +4,11 @@
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Listeners } from "./click.ts";
-import { type Doc, FORMAT_VERSION, type Obj, whenItems } from "./doc.ts";
+import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
 import { Runtime } from "./runtime.ts";
-import { type Look, draw, lookBox, viewOf, zoom } from "./svg.ts";
+import { type Look, draw, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
@@ -228,7 +228,7 @@ export class MtpCanvas extends MtpPart {
     const look: Look = { scale: 1, dx: 0, dy: 0 };
     this.redraw = () => {
       toggles.follow();
-      draw(rt, canvas, svg, (k) => toggles.visible(k), look);
+      draw(rt, canvas, svg, (k) => toggles.shownBy(k), look);
       for (const el of svg.querySelectorAll("[data-mtp-id]")) {
         const id = Number(el.getAttribute("data-mtp-id"));
         if (drags.draggable(id) || clicks.find(id)) (el as SVGElement).style.cursor = "pointer";
@@ -374,12 +374,15 @@ export class MtpCanvas extends MtpPart {
   }
 }
 
-// How visible each when item of a canvas is: the canvas's own state, which a toggle moves over the
-// canvas's toggle-duration with its toggle-ease when the item's condition changes. Turning back midway covers only what is left, at the same
-// speed.
+// How visible each shape a canvas item gives is: the canvas's own state. When an item starts or
+// stops giving a shape, a toggle moves that shape's level over the canvas's toggle-duration with
+// its toggle-ease. Turning back midway covers only what is left, at the same speed.
 class Toggles {
-  private levels: number[];
-  private wanted: boolean[];
+  // Each item's shapes, by "k:id", and how far each is shown, from 0 to 1.
+  private levels = new Map<string, number>();
+  private wanted = new Set<string>();
+  // Each item's shapes in the order to draw them: those it gives now, then those leaving.
+  private order: number[][] = [];
   private moving = false;
   private duration: number;
   private ease: Ease;
@@ -394,36 +397,54 @@ class Toggles {
     const tr = view.transition === null || view.transition === undefined ? null : rt.objects[view.transition]!;
     this.duration = tr?.duration ?? 0;
     this.ease = (tr?.ease as Ease | null) ?? "linear";
-    this.wanted = this.conditions();
-    this.levels = this.wanted.map((w) => (w ? 1 : 0));
+    this.order = this.now();
+    this.wanted = this.keys(this.order);
+    for (const key of this.wanted) this.levels.set(key, 1);
   }
 
-  private conditions(): boolean[] {
-    return whenItems(this.rt.objects[this.canvas]!).map(([cond]) => Boolean(this.rt.evaluate(cond)));
+  private now(): number[][] {
+    return itemsOf(this.rt.objects[this.canvas]!).map((item) => shapesOf(this.rt.evaluate(item)));
   }
 
-  /** Starts moving toward what each condition says now. */
+  private keys(order: number[][]): Set<string> {
+    return new Set(order.flatMap((ids, k) => ids.map((id) => `${k}:${id}`)));
+  }
+
+  /** Starts moving each shape toward whether its item gives it now. */
   follow(): void {
-    const now = this.conditions();
-    if (now.every((w, k) => w === this.wanted[k])) return;
-    this.wanted = now;
+    const now = this.now();
+    const wanted = this.keys(now);
+    const same = wanted.size === this.wanted.size && [...wanted].every((key) => this.wanted.has(key));
+    // Leaving shapes keep their place after the ones the item gives now, until they are gone.
+    this.order = now.map((ids, k) => [...ids, ...(this.order[k] ?? []).filter((id) => !ids.includes(id))]);
+    if (same) return;
+    this.wanted = wanted;
+    for (const key of wanted) if (!this.levels.has(key)) this.levels.set(key, 0);
     if (this.duration <= 0) {
-      this.levels = now.map((w) => (w ? 1 : 0));
+      this.levels = new Map([...wanted].map((key) => [key, 1]));
       return;
     }
     if (this.moving) return;
     this.moving = true;
     this.scheduler.addTicker((seconds) => {
       const step = seconds / this.duration;
-      this.levels = this.levels.map((l, k) => (this.wanted[k] ? Math.min(l + step, 1) : Math.max(l - step, 0)));
-      this.moving = this.levels.some((l, k) => l !== (this.wanted[k] ? 1 : 0));
+      this.moving = false;
+      for (const [key, level] of this.levels) {
+        const next = this.wanted.has(key) ? Math.min(level + step, 1) : Math.max(level - step, 0);
+        if (next <= 0 && !this.wanted.has(key)) this.levels.delete(key);
+        else this.levels.set(key, next);
+        if (next !== (this.wanted.has(key) ? 1 : 0)) this.moving = true;
+      }
       this.redraw();
       return this.moving;
     });
   }
 
-  visible(k: number): number {
-    return applyEase(this.ease, this.levels[k] ?? 0, (id) => this.rt.fn(id));
+  /** The k-th item's shapes to draw, and how visible each is. */
+  shownBy(k: number): [number, number][] {
+    return (this.order[k] ?? [])
+      .filter((id) => this.levels.has(`${k}:${id}`))
+      .map((id) => [id, applyEase(this.ease, this.levels.get(`${k}:${id}`)!, (f) => this.rt.fn(f))]);
   }
 }
 

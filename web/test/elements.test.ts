@@ -207,6 +207,29 @@ describe("a canvas's showing and hiding", () => {
     expect(drawn).toEqual([rt.id("d"), rt.id("c")]);
   });
 
+  it("toggles one shape out and the other in when an item changes which shape it gives", () => {
+    // (if show d c): the author, 2026-11-04, a canvas shows what an item gives.
+    const [, rt] = page(`<mtp-canvas model="m" name="swap"></mtp-canvas>`, doc("toggle"));
+    expect(opacityOf(rt, "c", "swap")).toBe(1);
+    expect(opacityOf(rt, "d", "swap")).toBeNull();
+    rt.write(rt.id("show"), null, true);
+    pass(0.1);
+    pass(0.5);
+    expect(opacityOf(rt, "c", "swap")).toBeCloseTo(0.5);
+    expect(opacityOf(rt, "d", "swap")).toBeCloseTo(0.5);
+    pass(1);
+    expect(opacityOf(rt, "c", "swap")).toBeNull();
+    expect(opacityOf(rt, "d", "swap")).toBe(1);
+  });
+
+  it("shows every shape of a list an item gives", () => {
+    const [, rt] = page(`<mtp-canvas model="m" name="pair"></mtp-canvas>`, doc("toggle"));
+    expect(opacityOf(rt, "c", "pair")).toBeNull();
+    rt.write(rt.id("show"), null, true);
+    expect(opacityOf(rt, "c", "pair")).toBe(1);
+    expect(opacityOf(rt, "d", "pair")).toBe(1);
+  });
+
   it("shows and hides at once with no transition", () => {
     const [, rt] = page(`<mtp-canvas model="m" name="still"></mtp-canvas>`, doc("toggle"));
     rt.write(rt.id("show"), null, true);

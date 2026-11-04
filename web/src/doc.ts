@@ -79,12 +79,12 @@ export interface Obj {
   transition?: number | null;
 }
 
-/** What a canvas shows: a shape's id, or a when item's condition and shapes. */
-export type Shown = number | [Attribute, number[]];
+/** What a canvas shows: a shape's id, or an item that gives a shape, none or a list of them. */
+export type Shown = number | Attribute;
 
-/** A canvas's when items, in order: the k-th is what visible(k) is about. */
-export function whenItems(view: Obj): [Attribute, number[]][] {
-  return (view.shows ?? []).filter((s): s is [Attribute, number[]] => typeof s !== "number");
+/** A canvas's items that give what it shows, in order: the k-th is what shownBy(k) is about. */
+export function itemsOf(view: Obj): Attribute[] {
+  return (view.shows ?? []).filter((s): s is Attribute => typeof s !== "number");
 }
 
 export interface Param {

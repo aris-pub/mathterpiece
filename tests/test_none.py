@@ -141,3 +141,11 @@ def test_or_on_a_value_known_when_compiling_is_not_none():
     # mtp-62j: (top 2) is known when compiling, so or? gives it its default only if it is none.
     m = model("(func top ((real k)) (/ 6 k)) (real z (or? (top 2) 0))")
     assert m.get("z").value.value == 3
+
+
+def test_an_if_between_a_written_list_and_none():
+    # Found 2026-11-04 adding when: the list took its type from the none branch.
+    # With nothing outside to give the if a type.
+    for src in ("(if c [1 2] none)", "(if c none [1 2])"):
+        shown = value(f"(bool c true) (string v (type-of {src}))")
+        assert "list[int]" in shown and shown.endswith("|none")

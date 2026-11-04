@@ -3,10 +3,10 @@
 expression"; docs/mtpc.md "Objects")."""
 
 import pytest
-from helpers import doc, error, model
+from helpers import doc, error, model, typ, value
 from mtpc_check import errors
 
-from mathterpiece.types import BOOL, ComponentT
+from mathterpiece.types import BOOL, ComponentT, Maybe
 
 K = "(real k 0 (>= 0) (<= 10))"
 MOVE = "(animation (move k (to 5) (duration 1)))"
@@ -104,7 +104,7 @@ class TestViews:
         v = m.get("v")
         shows = v.data["shows"]
         assert shows[0] == m.id("c")
-        assert shows[1][1] == [m.id("d")]
+        assert shows[1].bound and (m.id("on"), None) in shows[1].expr.deps
         assert v.attrs["x"].value == -3 and v.attrs["width"].value == 20
 
     def test_a_canvas_pans_and_zooms_unless_told_not_to(self):
@@ -115,7 +115,7 @@ class TestViews:
     def test_a_canvas_keeps_the_order_its_items_are_written_in(self):
         m = model("(bool on true) (scene s (circle c) (circle d)) (canvas v (when on d) c)")
         shows = m.get("v").data["shows"]
-        assert shows[0][1] == [m.id("d")] and shows[1] == m.id("c")
+        assert shows[0].bound and shows[1] == m.id("c")
 
     def test_the_whole_scene(self):
         m = model("(scene s (circle c)) (canvas v s)")
@@ -377,3 +377,34 @@ def test_a_control_takes_no_when():
         "(real k 0 (>= 0) (<= 1)) (button b (animation (move k (to 1) (duration 0))) (when true))",
         "active",
     )
+
+
+class TestWhen:
+    # The author, 2026-11-04: (when c x) gives x while c holds and none otherwise, anywhere an
+    # expression may be; a canvas shows what an item gives, a shape, none or a list of them.
+    S = "(bool show true) (scene s (circle a) (circle b))"
+
+    def test_a_general_expression(self):
+        assert isinstance(typ("(bool on true) (real|none v (when on 1))"), Maybe)
+        error("(bool on true) (real v (when on 1))", "may be none")
+        assert value("(bool on false (const)) (real|none v (when on 1))") is None
+
+    def test_one_value(self):
+        error(
+            f"{self.S} (canvas v (when show a b))",
+            r"give several in a list: \(when c \[a b\]\)",
+        )
+
+    def test_a_canvas_shows_what_an_item_gives(self):
+        for item in ("(when show a)", "(when show [a b])", "(if show a b)", "[a b]"):
+            model(f"{self.S} (canvas v {item})")
+
+    def test_only_shapes(self):
+        error(f"{self.S} (canvas v (when show 3))", "a canvas shows shapes")
+        error(f"{self.S} (canvas v show)", "a canvas shows shapes")
+
+    def test_the_compiled_file(self):
+        d = doc(f"{self.S} (canvas v a (when show [a b]))")
+        assert errors(d) == []
+        shows = d["objects"][d["names"]["v"]]["shows"]
+        assert shows[0] == d["names"]["a"] and "bound" in shows[1]

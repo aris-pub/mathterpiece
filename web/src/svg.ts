@@ -1,9 +1,9 @@
 // Draws a canvas as SVG. The scene has y pointing up and SVG has y pointing down, so the whole
 // scene is flipped once at the top, and text is flipped back so its letters stay upright. Each
 // group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
-import { apply, compose } from "./builtins.ts";
+import { Ref, apply, compose } from "./builtins.ts";
 import type { Expr } from "./doc.ts";
-import { isBound, whenItems } from "./doc.ts";
+import { isBound, itemsOf } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -62,15 +62,15 @@ export function lookBox(box: number[], look?: Look): number[] {
 }
 
 /**
- * Draws a canvas: what it shows, and what each of its when items shows while it holds. visible
- * says how visible the k-th when item's shapes are, from 0 (not drawn) to 1, for a canvas fading
- * them in or out; by default, 1 while its condition holds and 0 otherwise.
+ * Draws a canvas: what it shows, and the shapes each of its items gives. shownBy gives the k-th
+ * item's shapes and how visible each is, from 0 (not drawn) to 1, for a canvas toggling them; by
+ * default, the shapes the item gives now, each fully visible.
  */
 export function draw(
   rt: Runtime,
   canvas: number,
   svg?: SVGSVGElement,
-  visible?: (k: number) => number,
+  shownBy?: (k: number) => [number, number][],
   look?: Look,
 ): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
@@ -80,9 +80,12 @@ export function draw(
   out.setAttribute("viewBox", box.join(" "));
   const view = rt.objects[canvas]!;
   const shows = view.shows ?? [];
-  const when = whenItems(view);
-  const levels = when.map(([cond], k) => (visible ? visible(k) : rt.evaluate(cond) ? 1 : 0));
-  background(rt, shows.flatMap((s) => (typeof s === "number" ? [s] : s[1])), out);
+  const items = itemsOf(view);
+  const shapes = items.map((item, k): [number, number][] =>
+    shownBy ? shownBy(k) : shapesOf(rt.evaluate(item)).map((id) => [id, 1]),
+  );
+  let j = 0;
+  background(rt, shows.flatMap((s) => (typeof s === "number" ? [s] : shapes[j++]!.map(([id]) => id))), out);
   const top = document.createElementNS(NS, "g");
   top.setAttribute("transform", matrix(toUser));
   const unitsPerPx = unitsPerPxOf(out, box);
@@ -92,21 +95,28 @@ export function draw(
       drawObject(rt, shown, top, unitsPerPx);
       continue;
     }
-    const ids = shown[1];
-    const level = levels[k++]!;
-    if (level <= 0) continue;
-    let into: Element = top;
-    if (level < 1) {
-      // A canvas toggles its when items, showing or hiding them over its toggle-duration.
-      into = document.createElementNS(NS, "g");
-      into.setAttribute("data-mtp-toggle", "");
-      into.setAttribute("opacity", String(level));
-      top.appendChild(into);
+    for (const [id, level] of shapes[k++]!) {
+      if (level <= 0) continue;
+      let into: Element = top;
+      if (level < 1) {
+        // A canvas toggles a shape, showing or hiding it, over its toggle-duration.
+        into = document.createElementNS(NS, "g");
+        into.setAttribute("data-mtp-toggle", "");
+        into.setAttribute("opacity", String(level));
+        top.appendChild(into);
+      }
+      drawObject(rt, id, into, unitsPerPx);
     }
-    for (const i of ids) drawObject(rt, i, into, unitsPerPx);
   }
   out.appendChild(top);
   return out;
+}
+
+/** The ids of the shapes a canvas item gives: one shape, none, or a list of them. */
+export function shapesOf(v: unknown): number[] {
+  if (v instanceof Ref) return [v.id];
+  if (Array.isArray(v)) return v.flatMap(shapesOf);
+  return [];
 }
 
 // Until the SVG is on the page its width is 0; a canvas redraws once it has one.
