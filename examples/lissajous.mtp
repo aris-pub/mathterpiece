@@ -27,7 +27,7 @@
 
   (polyline curve
     (points (map (range 0 360 (num 721))
-              (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
+                 (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
     (stroke teal) (stroke-width 3) (line-join 'round') (line-cap 'round'))
 
   (text ratio $'a : b = {a} : {b}' (pos (top axes gap)) (halign 'middle') (valign 'bottom')

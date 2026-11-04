@@ -22,10 +22,10 @@
   ; The figure opens at the tour's first stop, the cardioid, so every other stop moves it.
   (real m 2 (>= 1) (<= 12))
   (string curve-name
-    (cond ((= m 2) 'a cardioid')
-          ((= m 3) 'a nephroid')
-          ((= m (round m)) $'{(round (- m 1))} cusps')
-          (else '')))
+      (cond ((= m 2) 'a cardioid')
+            ((= m 3) 'a nephroid')
+            ((= m (round m)) $'{(round (- m 1))} cusps')
+            (else '')))
 
   (group table (translate [0 0.6])
     (circle rim (r radius) (fill none) (stroke soft) (stroke-width 1))

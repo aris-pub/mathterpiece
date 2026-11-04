@@ -39,11 +39,11 @@
 (func[point] koch ((int k) (int d) (real h))
   (if (<= d 0)
       (corner k)
-      (let ((i (floor (/ k 4)))
-            (j (mod k 4)))
-        (if (= j 0)
-            (koch i (- d 1) 1)
-            (step-point j (koch i (- d 1) 1) (koch (+ i 1) (- d 1) 1) h)))))
+    (let ((i (floor (/ k 4)))
+          (j (mod k 4)))
+      (if (= j 0)
+          (koch i (- d 1) 1)
+        (step-point j (koch i (- d 1) 1) (koch (+ i 1) (- d 1) 1) h)))))
 
 (scene board (background paper)
   (real depth 0 (>= 0) (<= 4))
@@ -65,7 +65,7 @@
     (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {level} {rise:.2f})))))'
       (pos (+ code-at [0 -0.7])))
     (text_ (if (= level 0) '(koch k 0 h) is (corner k)'
-               $'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
+             $'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
       (pos (+ code-at [0 -1.25])))))
 
 ; The flake's canvas is centered on the flake, and its transform applies about that center, so

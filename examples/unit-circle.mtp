@@ -77,7 +77,7 @@
     ; The tangent line itself, at right angles to the radius: it exists at every angle, even
     ; where the segment does not.
     (line along (from (+ handle.pos (* 3 (polar 1 (+ theta 90)))))
-                (to (- handle.pos (* 3 (polar 1 (+ theta 90))))) (stroke-width 1.5))
+      (to (- handle.pos (* 3 (polar 1 (+ theta 90))))) (stroke-width 1.5))
     (line|none tan (from handle.pos) (to [sec-x 0]) (stroke-width 4))
     (text|none_ 'tan'
       (pos (+ (lerp handle.pos [sec-x 0] (min 0.5 (/ 0.3 (dist handle.pos [sec-x 0]))))

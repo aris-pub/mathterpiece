@@ -66,7 +66,7 @@
   ; picture, below the swatches.
   (group forms (defaults (fill soft) (font code) (valign 'middle'))
     (text_
-      $'(group lens (clip (circle window (pos [{glass.x:.1f} {glass.y:.1f}]) (r {size:.1f}))) …)'
+        $'(group lens (clip (circle window (pos [{glass.x:.1f} {glass.y:.1f}]) (r {size:.1f}))) …)'
       (pos (bottom dull.land 0.45)) (halign 'middle'))
     (text_ '(mix saffron paper 0.7)' (pos (right dull.left-swatches[0] 0.2)))
     (text_ '(lighten saffron 0.3)' (pos (right dull.left-swatches[1] 0.2)))

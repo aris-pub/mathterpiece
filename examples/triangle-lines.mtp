@@ -101,7 +101,7 @@
     (group euler (defaults (stroke plum) (fill plum) (stroke-width 2))
       (clip (polygon_ (points window)))
       (line|none_ (from (- O (* (/ 30 (dist O H)) (- H O))))
-                  (to (+ O (* (/ 30 (dist O H)) (- H O)))))
+        (to (+ O (* (/ 30 (dist O H)) (- H O)))))
       (circle|none_ (pos O) (r (dist O cc.pos)) (fill none) (stroke-width 1))
       (circle|none o-dot (pos O) (r 0.14) (stroke none))
       (text|none_ 'O' (pos (top-right o-dot gap)) (valign 'bottom') (font variable))
