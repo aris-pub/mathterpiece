@@ -63,7 +63,7 @@
       (circle_ (pos on-screen[k]) (r (+ 1.25 (* 0.6 near[k])))
         (opacity (+ 0.55 (* 0.45 near[k])))))))
 
-(canvas view (view-x -12) (view-y -12) (view-width 24) (view-height 24) (pan false) (zoom false)
+(canvas view (x -12) (y -12) (width 24) (height 24) (pan false) (zoom false)
   edges corners)
 
 ; It turns once every 14 seconds, starting the first time it comes into view.

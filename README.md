@@ -8,7 +8,7 @@ A figure is written in a `.mtp` file, in a Lisp-like syntax. A compiler checks i
 (real k 1 (>= 0.2) (<= 3))
 (scene s
   (circle c (r k) (fill 'teal')))
-(canvas v (view-x -4) (view-y -4) (view-width 8) (view-height 8) s)
+(canvas v (x -4) (y -4) (width 8) (height 8) s)
 (slider radius (move k (from 0.2) (to 3)) (label 'radius'))
 (readout area $'area = {(* pi k k):.2f}')
 ```

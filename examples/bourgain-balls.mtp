@@ -161,6 +161,6 @@
              'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
             (else $'The balls hold {cx} and {cy} points.'))))
 
-(canvas the-space (view-x 0) (view-y -318) (view-width 600) (view-height 318)
+(canvas the-space (x 0) (y -318) (width 600) (height 318)
   rings pair space x y)
-(canvas the-bar (view-x 0) (view-y -356) (view-width 600) (view-height 56) bar)
+(canvas the-bar (x 0) (y -356) (width 600) (height 56) bar)

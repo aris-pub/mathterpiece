@@ -126,7 +126,7 @@
 
 ; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
 ; function on or off fades its line, name and value in or out.
-(canvas view (view-x -2.1) (view-y -1.35) (view-width 3.6) (view-height 2.7)
+(canvas view (x -2.1) (y -1.35) (width 3.6) (height 2.7)
   (move none (duration 0.4) (ease 'ease-in-out'))
   frame
   (when show-sec.value secant)

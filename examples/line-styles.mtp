@@ -63,7 +63,7 @@
     (text_ $'(dash [{dash-length:.0f} {gap-length:.0f}])' (pos (+ (cell 0 1) under)))
     (text_ '(move ring.dash-offset …)' (pos (+ (cell 1 1) under)))))
 
-(canvas view (view-x -8) (view-y -4.8) (view-width 16) (view-height 9) (pan false) (zoom false)
+(canvas view (x -8) (y -4.8) (width 16) (height 9) (pan false) (zoom false)
   ends-panel corners-panel pattern march-panel captions)
 
 (play march (autoplay view)

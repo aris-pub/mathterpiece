@@ -99,14 +99,12 @@ class TestListeners:
 
 class TestViews:
     def test_a_canvas(self):
-        m = model(
-            "(bool on true) (scene s (circle c) (circle d)) (canvas v (view-x -3) c (when on d))"
-        )
+        m = model("(bool on true) (scene s (circle c) (circle d)) (canvas v (x -3) c (when on d))")
         v = m.get("v")
         shows = v.data["shows"]
         assert shows[0] == m.id("c")
         assert shows[1][1] == [m.id("d")]
-        assert v.attrs["view-x"].value == -3 and v.attrs["view-width"].value == 20
+        assert v.attrs["x"].value == -3 and v.attrs["width"].value == 20
 
     def test_a_canvas_pans_and_zooms_unless_told_not_to(self):
         m = model("(scene s (circle c)) (canvas v s) (canvas w (pan false) (zoom false) s)")
@@ -309,3 +307,11 @@ def test_a_foreach_names_its_controls():
         " (animation (move k (to v) (duration 0))) (label $'{v}')))"
     )
     assert m.get("b1").kind == "button" and m.get("b2").kind == "button"
+
+
+def test_a_canvas_view_box_is_written_as_a_rect_is():
+    # The author, 2026-11-04: (x …) (y …) (width …) (height …), with no view- prefix.
+    m = model("(scene s) (canvas v (x -3) (y -2) (width 6) (height 4) s)")
+    a = m.get("v").attrs
+    assert [a[k].value for k in ("x", "y", "width", "height")] == [-3, -2, 6, 4]
+    error("(scene s) (canvas v (view-x -3) s)", "a canvas takes no argument 'view-x'")

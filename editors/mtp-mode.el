@@ -24,10 +24,10 @@
     "duration" "ease" "family" "fill" "fill-opacity" "font" "from" "gap" "halign" "height"
     "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points" "pos" "r" "rx"
     "ry" "size" "step" "stroke" "stroke-opacity" "stroke-width" "style" "to" "transform"
-    "translate" "valign" "value" "view-height" "view-width" "view-x" "view-y" "weight" "width"
+    "translate" "valign" "value" "weight" "width"
     "x" "y" "zoom")
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,
-such as (view-x -8), (duration 0.8) and (fill teal).")
+such as (x -8), (duration 0.8) and (fill teal).")
 
 (defface mtp-mode-head-face
   `((t :inherit ,(if (facep 'font-lock-property-name-face)

@@ -51,7 +51,7 @@
 
 ; The edges are declared after the points they join, but drawn under them, so the reader can
 ; always grab a point.
-(canvas view (view-x -3.3) (view-y -2.3) (view-width 6.6) (view-height 4.6) edges points labels)
+(canvas view (x -3.3) (y -2.3) (width 6.6) (height 4.6) edges points labels)
 
 (foreach p points
   (on-drag p p.pos))

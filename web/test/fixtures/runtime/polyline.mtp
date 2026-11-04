@@ -6,4 +6,4 @@
   (polyline empty)
   (circle c (pos (top-right q)) (r 0.1))
   (group g (clip (polygon_ (points [[0 0] [2 0] [0 2]]))) (circle a (r 3))))
-(canvas v (view-x -5) (view-y -5) (view-width 10) (view-height 10) s)
+(canvas v (x -5) (y -5) (width 10) (height 10) s)

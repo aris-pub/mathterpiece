@@ -53,7 +53,7 @@
     (text_ $'(exists-when body (not popped)), popped: {popped-count} of 8'
       (pos (bottom water (+ largest 0.65))))))
 
-(canvas view (view-x -8) (view-y -5) (view-width 16) (view-height 10) (pan false) (zoom false)
+(canvas view (x -8) (y -5) (width 16) (height 10) (pan false) (zoom false)
   pond)
 
 (on-view view (animation (move rise (to 0) (duration 0.8) (ease 'ease-out'))))

@@ -80,7 +80,7 @@
 (toggle show-labels none (label 'the path and the first numbers'))
 
 ; The view box shows the whole disc; panning and zooming are on by default.
-(canvas view (view-x -86) (view-y -98) (view-width 172) (view-height 184)
+(canvas view (x -86) (y -98) (width 172) (height 184)
   (move none (duration 0.4) (ease 'ease-in-out'))
   (when show-labels.value path)
   dots one

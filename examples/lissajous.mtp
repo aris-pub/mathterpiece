@@ -40,7 +40,7 @@
       (text_ $'(fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
         (pos (+ under [0.09 -0.14]))))))
 
-(canvas view (view-x -1.78) (view-y -1.67) (view-width 3.56) (view-height 3.17) (pan false)
+(canvas view (x -1.78) (y -1.67) (width 3.56) (height 3.17) (pan false)
   (zoom false)
   axes curve ratio forms)
 

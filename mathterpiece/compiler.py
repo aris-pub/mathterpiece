@@ -2001,7 +2001,7 @@ class _Compiler:
     build_on_dragend = build_on_click
 
     def build_canvas(self, obj: Obj, items: list, shape) -> None:
-        defaults = {"view-x": -10, "view-y": -10, "view-width": 20, "view-height": 20}
+        defaults = {"x": -10, "y": -10, "width": 20, "height": 20}
         for attr, d in defaults.items():
             node = self.take(items, attr)
             obj.attrs[attr] = (
@@ -2042,6 +2042,8 @@ class _Compiler:
                         "a canvas's move fades what it shows, so its target is none", item.pos
                     )
                 obj.data["transition"] = tid
+            elif isinstance(item, Form) and head is not None:
+                raise CompileError(f"a canvas takes no argument '{head}'", item.pos)
             else:
                 raise CompileError("expected an item of a canvas", item.pos)
 

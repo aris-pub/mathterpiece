@@ -79,7 +79,7 @@
     (text_ 'underneath, each color is mixed toward soft: (mix … soft 0.75)'
       (pos [(. (bottom dull.land) 0) (. (bottom dull.left-swatches 0.55) 1)]) (halign 'middle'))))
 
-(canvas view (view-x -8) (view-y -5.9) (view-width 16) (view-height 10.9) (pan false)
+(canvas view (x -8) (y -5.9) (width 16) (height 10.9) (pan false)
   (zoom false)
   dull lens glass forms)
 

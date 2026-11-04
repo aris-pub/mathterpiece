@@ -3,6 +3,8 @@
 ; point i at depth d - 1, and the three points after it lie on the step from there to point
 ; i + 1. The depth is a real, so between two depths the new points rise out of the sides. It
 ; grows and shrinks on its own; drag the depth to take over, and click the flake to grow it again.
+; The zoom slider magnifies the top tip by powers of 3, the snowflake's own scale: each power
+; shows the same shape again, as far as the depth goes. The wheel zooms too.
 
 (color paper '#f6f1e7')
 (color ink '#1f2a44')
@@ -13,9 +15,7 @@
 
 (real radius 4 (const))
 
-; No depth reaches lower than radius below the center, the tip of the bottom side's first bump,
-; so the code sits under that rather than under the flake, and stays still as the depth changes.
-; It starts left of the flake so that its longest line fits.
+; Where the text below the flake starts, in its own canvas, so zooming the flake leaves it be.
 (point code-at [(- -0.9 radius) (- -0.4 radius)] (const))
 
 ; Point j, from 0 to 4, of one step from a to b: a, a third of the way, the raised point, two
@@ -45,9 +45,11 @@
             (koch i (- d 1) 1)
             (step-point j (koch i (- d 1) 1) (koch (+ i 1) (- d 1) 1) h)))))
 
-(scene board
-  (background paper)
+(scene board (background paper)
   (real depth 0 (>= 0) (<= 4))
+  ; How many powers of 3 the top tip is magnified by.
+  (real zoom-power 0 (>= 0) (<= 3))
+
   ; The whole depth whose points are drawn, and how far its new points have risen.
   (int level (ceil depth))
   (real rise (- depth (- level 1)))
@@ -57,21 +59,26 @@
     (points (map (range (* 3 pieces)) (fn k (koch k level rise))))
     (fill saffron) (stroke ink) (stroke-width 1.5) (line-join 'round'))
 
-  (text caption $'depth {depth:.2f}' (pos (top flake 0.5)) (halign 'middle') (valign 'bottom')
-    (font variable) (fill ink))
-
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
+    (text caption $'depth {depth:.2f}, zoomed {(^ 3 zoom-power):.1f} times' (pos code-at)
+      (font variable) (fill ink))
     (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {level} {rise:.2f})))))'
-      (pos code-at))
+      (pos (+ code-at [0 -0.7])))
     (text_ (if (= level 0) '(koch k 0 h) is (corner k)'
                $'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
-      (pos (+ code-at [0 -0.55])))))
+      (pos (+ code-at [0 -1.25])))))
 
-(canvas view (view-x -5.6) (view-y -5.6) (view-width 11.2) (view-height 10.8) (pan false)
-  (zoom false)
-  flake caption forms)
+; The flake's canvas is centered on the flake, and its transform applies about that center, so
+; moving the tip to the center, scaling, and moving it back magnifies about the tip.
+(point tip (corner 0) (const))
+(canvas view (x -5.5) (y -5) (width 11) (height 10) (pan false)
+  (transform (transform (translate (- tip.x) (- tip.y)) (scale (^ 3 zoom-power)) (translate tip.x tip.y)))
+  flake)
+(canvas text-below (x -5.5) (y (- code-at.y 1.75)) (width 11) (height 2) (pan false) (zoom false)
+  forms)
 
-(animation grow (move depth (from 0) (to 4) (duration 6) (ease 'ease-in-out')))
+(animation grow
+  (move depth (from 0) (to 4) (duration 6) (ease 'ease-in-out')))
 
 ; It grows, rests on the full snowflake, shrinks back to the triangle and rests, again and again.
 (play cycle (autoplay view) (label 'grow and shrink')
@@ -82,4 +89,5 @@
     (wait 0.8)))
 
 (slider depth-slider (move depth (from 0) (to 4)) (label 'depth'))
+(slider zoom-slider (move zoom-power (from 0) (to 3)) (label 'zoom, in powers of 3'))
 (on-click flake (animation grow))

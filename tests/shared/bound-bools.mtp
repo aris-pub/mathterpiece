@@ -17,4 +17,4 @@
 (bool v big)
 (readout r (if big 'big' 'small'))
 (readout r2 (if on 'shown' 'hidden'))
-(canvas view (view-x -3) (view-y -3) (view-width 6) (view-height 6) (when big c))
+(canvas view (x -3) (y -3) (width 6) (height 6) (when big c))

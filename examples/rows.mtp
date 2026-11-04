@@ -18,8 +18,7 @@
 ; How the row lines its members up: by their top edges, their middles or their bottom edges.
 (type edge string (one-of 'top' 'middle' 'bottom'))
 
-(scene board
-  (background paper)
+(scene board (background paper)
   (real gap 0.4 (>= 0) (<= 1))
   (real grow 1 (>= 0.4) (<= 1.6))
   (edge line-up 'middle')
@@ -52,12 +51,13 @@
       (text_ 'a column, lined up on the left' (pos (bottom bars under)))
       (text_ 'a column of rows' (pos (bottom grid under))))))
 
-(canvas view (view-x -7) (view-y -5.2) (view-width 14) (view-height 9.8) (pan false) (zoom false)
+(canvas view (x -7) (y -5.2) (width 14) (height 9.8) (pan false) (zoom false)
   rows captions)
 
 (slider spacing (move gap (from 0) (to 1)) (label 'gap'))
 (slider size (move grow (from 0.4) (to 1.6)) (label 'size'))
-(button by-top (animation (move line-up (to 'top') (duration 0))) (label 'top'))
-(button by-middle (animation (move line-up (to 'middle') (duration 0))) (label 'middle'))
-(button by-bottom (animation (move line-up (to 'bottom') (duration 0))) (label 'bottom'))
+
+(foreach alignment ['top' 'middle' 'bottom']
+  (button (name $'my-{alignment}') (animation (move line-up (to alignment) (duration 0.5))) (label alignment)))
+
 (toggle circle-in-row with-circle (label 'the circle'))

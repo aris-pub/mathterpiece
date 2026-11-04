@@ -57,7 +57,7 @@
   (text pennant-name 'flag' (pos pennant.tip.pos) (halign 'middle') (valign 'bottom')
     (font name) (fill ink)))
 
-(canvas view (view-x -7) (view-y -4.5) (view-width 14) (view-height 9) (pan false) (zoom false)
+(canvas view (x -7) (y -4.5) (width 14) (height 9) (pan false) (zoom false)
   both marks names ball-name tether caption pennant pennant-name)
 
 (slider width (move w (from 0.5) (to 5)) (label 'width'))

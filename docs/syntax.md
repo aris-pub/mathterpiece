@@ -183,7 +183,7 @@ Each form decides whether it has a name, which positional arguments it takes and
 | `(transition slide none (to 5) (duration 1))` | `slide` | the target, here `none` | `(to 5)`, `(duration 1)` | none |
 | `(animation grow (defaults (duration 1)) (move theta (like slide)) (wait 0.5))` | `grow` | none | `(defaults (duration 1))` | a move of `theta` along `slide`, then a wait of half a second |
 | `(slider spin (move theta (from 0) (to 360)) (label 'angle'))` | `spin` | the move | `(label 'angle')` | none |
-| `(canvas v (view-x -5) a b (when show c))` | `v` | none | `(view-x -5)` | `a`, `b`, `(when show c)` |
+| `(canvas v (x -5) a b (when show c))` | `v` | none | `(x -5)` | `a`, `b`, `(when show c)` |
 | `(on-drag p theta)` | none | `p`, `theta` | none | none |
 
 Function calls and special forms follow the template too. A call's head is the function, it has no name, and its arguments are positional, some of which may be left out, as in `(round x)` and `(round x 2)`; a function that takes any number of arguments takes them as its body, as in `(+ a b c)`. Each special form has its own positional arguments and body: `(if c a b)` has three positional arguments, and `(cond …)` a body of clauses.

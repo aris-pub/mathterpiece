@@ -90,7 +90,7 @@
   (text fill-form '(move panel.fill (to …))' (pos (top panel 1)) (halign 'middle')
     (valign 'middle') (font code) (fill soft)))
 
-(canvas view (view-x -7.6) (view-y -5.4) (view-width 15.2) (view-height 10.4) (pan false)
+(canvas view (x -7.6) (y -5.4) (width 15.2) (height 10.4) (pan false)
   (zoom false)
   board)
 

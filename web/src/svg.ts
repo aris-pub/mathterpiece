@@ -19,7 +19,7 @@ export function viewOf(rt: Runtime, canvas: number): { box: number[]; toUser: nu
   // The view box is given in the scene's own coordinates, which the scene's transform takes to
   // where they are drawn (mtp-y0gh): the region shown is the box around its corners there.
   const own = sceneTransform(rt);
-  const [x0, y0, w0, h0] = [v("view-x"), v("view-y"), v("view-width"), v("view-height")];
+  const [x0, y0, w0, h0] = [v("x"), v("y"), v("width"), v("height")];
   const corners = [
     [x0, y0],
     [x0 + w0, y0],

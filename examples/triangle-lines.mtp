@@ -123,7 +123,7 @@
 (toggle show-euler none (label 'Euler line'))
 
 ; Switching a family on or off fades it in or out over 0.4 s.
-(canvas view (view-x -8) (view-y -6) (view-width 16) (view-height 12.5) (pan false) (zoom false)
+(canvas view (x -8) (y -6) (width 16) (height 12.5) (pan false) (zoom false)
   (move none (duration 0.4) (ease 'ease-in-out'))
   rail
   (when show-euler.value euler)

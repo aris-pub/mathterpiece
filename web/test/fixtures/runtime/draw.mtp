@@ -9,4 +9,4 @@
   (bool shown true)
   (circle|none maybe (r 1))
   (exists-when maybe shown))
-(canvas v (view-x -3) (view-y -3) (view-width 6) (view-height 6) s)
+(canvas v (x -3) (y -3) (width 6) (height 6) s)

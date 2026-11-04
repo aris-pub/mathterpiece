@@ -294,6 +294,6 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | play | `label`, `step` (which item of its animation's body is now playing), `playing`, `buttons` |
 | button, toggle | `label`; a toggle's `value` |
 | readout | `value` (its string), `font` |
-| canvas | `view-x`, `view-y`, `view-width`, `view-height`, `transform`, `pan`, `zoom` |
+| canvas | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom` |
 
 Attributes of controls change as the reader acts. Only components and globals may read them; the scene may not.
