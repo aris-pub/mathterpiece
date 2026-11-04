@@ -61,11 +61,11 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 | `(polyline name)` | required | none | shape arguments, `(points list[point])`: a path through the points in order, open at both ends, so `line-cap` shapes its ends; its fill is never drawn, as a line's | none |
 | `(polygon name)` | required | none | shape arguments, `(points list[point])`: a closed region through the points, the last joined to the first, with a fill; it may be a clip | none |
 | `(text name value)` | required | the string | shape arguments, `(font font)`, `(halign …)`, `(valign …)`; its font is only given as a declared font variable, never as separate size or family arguments | none |
-| `(M name)`, for a motif or variant `M`, such as `(dial d1)` for a motif `dial` | required | none | its parameters, and the arguments its base takes | none |
+| `(M name)`, for a motif or variant `M`, such as `(dial d1)` for a motif `dial` | required | none | its parameters; for a motif, those of an instance (see "Containers"); for a variant, the arguments its base takes | none |
 
 Shape arguments are the optional arguments the shapes share:
 
-- **Position**, taken by every shape except groups: `(x real)` `(y real)`, or `(pos point)`, which writes `x` and `y` together, as one point (`c.pos` is `[c.x c.y]`; `pos` is not kept apart from them).
+- **Position**, taken by a circle, a rect, an ellipse, a text and a motif instance: `(x real)` `(y real)`, or `(pos point)`, which writes `x` and `y` together, as one point (`c.pos` is `[c.x c.y]`; `pos` is not kept apart from them). A line, a triangle, a polyline and a polygon take none: their position is computed from their ends, corners or points, and may still be read and written (see below). A group takes none either: its `x`, `y` and `pos` are its members' (see "Containers").
 - **Transforms**, taken by every shape, groups included: `(translate point)`, the translation part of its transform, and `(transform transform)`.
 - **Fill and stroke**, taken by every shape except containers (below): `(fill color|none)`; `(stroke color|none)`; `(stroke-width (real (>= 0)))`; `(opacity (real (>= 0) (<= 1)))`, `(fill-opacity (real (>= 0) (<= 1)))`, `(stroke-opacity (real (>= 0) (<= 1)))`.
 - **Line styles**, taken by every shape except containers: `(dash lengths offset)`, `(line-cap …)` and `(line-join …)`.
