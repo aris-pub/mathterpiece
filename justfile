@@ -23,11 +23,11 @@ typecheck:
 web-examples:
     rm -rf web/test/data/shared
     mkdir -p web/test/data/shared
-    for f in tests/shared/*.mtp; do uv run mtp build "$f" -o "web/test/data/shared/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/shared/; done
+    for f in tests/shared/*.mtp; do uv run mtp compile "$f" -o "web/test/data/shared/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/shared/; done
     rm -rf web/test/data/runtime web/test/data/demo web/test/data/examples
-    for f in examples/*.mtp; do uv run mtp build "$f" -o "web/test/data/examples/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/examples/; done
-    for f in web/test/fixtures/runtime/*.mtp; do uv run mtp build "$f" -o "web/test/data/runtime/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/runtime/; done
-    for f in web/demo/*.mtp; do uv run mtp build "$f" -o "web/test/data/demo/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/demo/; done
+    for f in examples/*.mtp; do uv run mtp compile "$f" -o "web/test/data/examples/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/examples/; done
+    for f in web/test/fixtures/runtime/*.mtp; do uv run mtp compile "$f" -o "web/test/data/runtime/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/runtime/; done
+    for f in web/demo/*.mtp; do uv run mtp compile "$f" -o "web/test/data/demo/$(basename "$f" .mtp).mtpc"; cp "$f" web/test/data/demo/; done
 
 # run the web runtime's tests
 web-test *args: web-examples

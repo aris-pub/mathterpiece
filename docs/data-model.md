@@ -4,16 +4,18 @@ Who is involved, how a source file becomes something a reader can use, and what 
 
 ## Four actors and the static model
 
-Two actors sit on each side of one file. On the left, the **author** writes a source file and the **mtp command** compiles it. On the right, the **live model** is what that file becomes, and the **reader** uses it. In the middle is the **.mtpc**, the static model: the only thing that passes from one side to the other.
+Two actors sit on each side of one file. On the left, the **author** writes a source file and the **mtp command** builds it. On the right, the **live model** is what that file becomes, and the **reader** uses it. In the middle is the **.mtpc**, the static model: the only thing that passes from one side to the other.
 
 ```mermaid
 flowchart LR
   author([author]) -->|writes .mtp| parser
-  subgraph cmd [mtp command]
-    parser --> compiler --> writer
+  subgraph cmd [mtp command: building]
+    parser -->|forms| compiler -->|model| writer
   end
-  writer -->|mtp build| mtpc[(".mtpc: static model")]
+  writer --> mtpc[(".mtpc: static model")]
+  writer --> page["a minimal page"]
   mtpc --> runtime
+  page --> runtime
   subgraph live [live model, on a page]
     runtime["runtime: holds the model in memory"] --> components["components: views, controls"]
   end
@@ -26,7 +28,27 @@ Writes a mathematical figure as a `.mtp` source file: the shapes, the values the
 
 ### The mtp command
 
-Runs on the author's machine. The **parser** reads the text into forms and knows only the syntax. The **compiler** resolves every name, checks every type, works out everything that can be known in advance, and builds the model. The **writer** saves it as the .mtpc. Compiling should be fast, but the reader comes first: anything that can be decided here is, even when it makes compiling slower.
+Runs on the author's machine. **Building** a figure is four steps, and each has its own name; "compile" and "build" are not interchangeable:
+
+1. **Parsing.** The **parser** reads the text into forms and knows only the syntax.
+2. **Compiling.** The **compiler** resolves every name, checks every type, works out everything that can be known in advance, and makes the model, in memory.
+3. **Writing the .mtpc.** The **writer** saves the model as the .mtpc.
+4. **Writing the page.** It also writes a minimal web page that loads the runtime and the .mtpc and shows every view, control and readout, so the author sees the figure at once instead of a long file of JSON.
+
+Compiling should be fast, but the reader comes first: anything that can be decided here is, even when it makes compiling slower.
+
+The command's subcommands each take one source file, and each runs the steps up to a point:
+
+| Command | Steps | What it does |
+|---|---|---|
+| `mtp parse file` | 1 | prints the forms the parser reads, one per line, indented by depth |
+| `mtp check file` | 1, 2 | reports the first error, if any, and writes nothing |
+| `mtp compile file` | 1 to 3 | writes the .mtpc |
+| `mtp build file` | 1 to 4 | writes the .mtpc and the page |
+| `mtp serve file` | 1 to 4, again on each save | builds, serves the page on the author's machine, and builds again and reloads the page whenever the source file is saved |
+| `mtp fmt file` | 1 | rewrites the file in the house layout, keeping its comments |
+
+**What `mtp check` reports.** The first error in the file, with its line and column, and nothing after it: the parser and the compiler stop there. Errors are of two kinds. A **syntax error** comes from parsing: an unclosed parenthesis or string, a name that is not valid, a stray character. A **compile error** comes from compiling: a name that is not declared or is declared twice; a form that is not where it may be or is missing a part; a value of the wrong type; a constraint, or a range a value must stay in, that cannot be proved, such as a radius that might be negative; a value known when compiling that is undefined there, such as `(/ 1 0)`; and anything the reference calls a compile error. Whatever the compiler cannot decide is not an error: a value that may be none while drawing is typed `T|none`, and the author handles it.
 
 ### The live model
 
