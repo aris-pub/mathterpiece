@@ -133,7 +133,7 @@ A part of an object is read with a dot or with brackets.
     g[0]  g['m1']             ; a group member by position, or by its name given as a string
     g.r                       ; on a group: each member's r
 
-A chain of parts always starts with a name, or with a list written in brackets, which may be followed by positions only: `[a b c][h]` is item `h` of the list. A dot is always followed by an attribute name, or, on a motif instance, the name of one of its members (`d1.face`). Brackets hold a position, a member's name given as a string (used as a key), or any expression that gives one. Group members are read with brackets or by their own name, never with a dot.
+A chain of parts always starts with a name, or with a list written in brackets, which may be followed by positions only: `[a b c][h]` is item `h` of the list. A dot is always followed by an attribute name, or, on a motif instance, the name of one of its members (`d1.face`). Brackets hold a position, a member's name given as a string (used as a key), or any expression that gives one. Group members are read with brackets or by their own name, never with a dot, since a dot after a group reads an attribute of every member (`g.r`). Inside a motif instance a member has no name of its own outside it, so a member of a group inside an instance is read with brackets: in `(motif dial () (group g (circle c)))`, instance `a`'s circle is `a.g['c']`, while a member directly in the motif is `a.c`.
 
 Inside a motif's body, `self` is the instance being built: `self.t` is its parameter `t`, and `self.face.r` its member `face`'s radius. `self` is reserved, and is an error outside a motif's body.
 
