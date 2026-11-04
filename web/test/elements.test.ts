@@ -262,6 +262,38 @@ describe("panning and zooming a canvas", () => {
     pointer("pointerup", 164, 132);
   });
 
+  it("zooms without drawing the shapes again, to what a full redraw would draw", () => {
+    // Drawing every shape again on each wheel step made zooming a large scene slow.
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
+    const canvas = document.querySelector(`mtp-canvas[name="v"]`) as unknown as { update(): void };
+    const label = () => document.querySelector(`mtp-canvas[name="v"] text`)!;
+    const redrawn = () => {
+      const zoomed = svg().outerHTML;
+      canvas.update();
+      return [zoomed, svg().outerHTML];
+    };
+    const before = label();
+    expect(before.getAttribute("font-size")).toBe(String((16 * 20) / 640));
+    wheel(-500 * Math.log(2), false);
+    pointer("pointerdown", -10, 0, 1);
+    pointer("pointerdown", 10, 0, 2);
+    pointer("pointermove", -20, 0, 1);
+    pointer("pointerup", -20, 0, 1);
+    pointer("pointerup", 10, 0, 2);
+    expect(label()).toBe(before);
+    // Text sizes are in screen pixels. The wheel zooms in 2 times and the pinch 1.5 times, so in
+    // the view box's units the text is 3 times smaller.
+    expect(Number(label().getAttribute("font-size"))).toBeCloseTo((16 * 20) / 640 / 3);
+    const [zoomed, full] = redrawn();
+    expect(zoomed).toBe(full);
+    const again = label();
+    svg().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(label()).toBe(again);
+    const [back, fullBack] = redrawn();
+    expect(back).toBe(fullBack);
+    expect(label().getAttribute("font-size")).toBe(String((16 * 20) / 640));
+  });
+
   it("drags a draggable shape instead of panning", () => {
     page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     const dot = document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]:last-child`)!;

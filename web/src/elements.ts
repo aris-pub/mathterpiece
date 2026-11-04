@@ -8,7 +8,7 @@ import { type Doc, FORMAT_VERSION, type Obj, whenItems } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
 import { Runtime } from "./runtime.ts";
-import { type Look, draw, lookBox, viewOf } from "./svg.ts";
+import { type Look, draw, lookBox, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
@@ -271,7 +271,7 @@ export class MtpCanvas extends MtpPart {
       look.dx = at[0] + (cx + look.dx - at[0]) / factor - cx;
       look.dy = at[1] + (cy + look.dy - at[1]) / factor - cy;
       look.scale *= factor;
-      this.redraw();
+      zoom(rt, canvas, svg, look);
     };
     // The wheel zooms, and so does a pinch on a trackpad, which comes as a wheel with ctrl held.
     svg.addEventListener("wheel", (event) => {
@@ -281,7 +281,7 @@ export class MtpCanvas extends MtpPart {
     });
     svg.addEventListener("dblclick", () => {
       Object.assign(look, { scale: 1, dx: 0, dy: 0 });
-      this.redraw();
+      zoom(rt, canvas, svg, look);
     });
     // The pointers pressed where nothing is dragged, and where each is: one pans, two pinch.
     const touches = new Map<number, [number, number]>();
@@ -319,8 +319,8 @@ export class MtpCanvas extends MtpPart {
         const upp = unitsPerPx();
         look.dx -= (event.clientX - was[0]) * upp;
         look.dy -= (event.clientY - was[1]) * upp;
-        // A pan keeps the scale, so the shapes, whose text and dot sizes follow the scale, stay
-        // as drawn: only the view box moves. A zoom draws them again.
+        // A pan keeps the scale, so the shapes, whose text sizes follow the scale, stay as
+        // drawn: only the view box moves.
         svg.setAttribute("viewBox", lookBox(viewOf(rt, canvas).box, look).join(" "));
       } else if (touches.size === 2) {
         const before = spread();

@@ -85,9 +85,7 @@ export function draw(
   background(rt, shows.flatMap((s) => (typeof s === "number" ? [s] : s[1])), out);
   const top = document.createElementNS(NS, "g");
   top.setAttribute("transform", matrix(toUser));
-  // Until the SVG is on the page its width is 0; a canvas redraws once it has one.
-  const width = out.getBoundingClientRect?.().width || 640;
-  const unitsPerPx = box[2]! / width;
+  const unitsPerPx = unitsPerPxOf(out, box);
   let k = 0;
   for (const shown of shows) {
     if (typeof shown === "number") {
@@ -109,6 +107,30 @@ export function draw(
   }
   out.appendChild(top);
   return out;
+}
+
+// Until the SVG is on the page its width is 0; a canvas redraws once it has one.
+function unitsPerPxOf(svg: SVGSVGElement, box: number[]): number {
+  return box[2]! / (svg.getBoundingClientRect?.().width || 640);
+}
+
+/**
+ * Zooms a drawn canvas to a new look, as draw would draw it, without drawing its shapes again:
+ * only the view box and what is sized in screen pixels change. Strokes need nothing, since SVG
+ * keeps their widths on screen itself.
+ */
+export function zoom(rt: Runtime, canvas: number, svg: SVGSVGElement, look: Look): void {
+  const box = lookBox(viewOf(rt, canvas).box, look);
+  svg.setAttribute("viewBox", box.join(" "));
+  const unitsPerPx = unitsPerPxOf(svg, box);
+  for (const el of svg.querySelectorAll("text[data-mtp-id]")) {
+    el.setAttribute("font-size", fontSize(rt, Number(el.getAttribute("data-mtp-id")), unitsPerPx));
+  }
+}
+
+// Font sizes are in screen pixels, whatever the view box.
+function fontSize(rt: Runtime, i: number, unitsPerPx: number): string {
+  return String(((rt.value(i, "font") as Record<string, unknown>).size as number) * unitsPerPx);
 }
 
 // SVG has no background of its own, so the scene's background is the SVG element's.
@@ -230,8 +252,7 @@ function text(rt: Runtime, i: number, unitsPerPx: number): Element {
   const baseline = { top: "hanging", middle: "central", bottom: "text-after-edge" }[rt.value(i, "valign") as string];
   if (baseline) el.setAttribute("dominant-baseline", baseline);
   const font = rt.value(i, "font") as Record<string, unknown>;
-  // Font sizes are in screen pixels, whatever the view box.
-  el.setAttribute("font-size", String((font.size as number) * unitsPerPx));
+  el.setAttribute("font-size", fontSize(rt, i, unitsPerPx));
   const variable = tokenOf(rt, i, "font");
   for (const part of ["family", "style", "weight"]) {
     const own = font[part];
