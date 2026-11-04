@@ -124,3 +124,30 @@ def test_fmt_leaves_a_file_with_a_syntax_error_alone(tmp_path, capsys):
         main(["fmt", str(src)])
     assert src.read_text() == "(scene s\n(circle c)\n"
     assert "unclosed '('" in capsys.readouterr().err
+
+
+def test_compile_finds_imports_next_to_the_file(tmp_path):
+    (tmp_path / "house.mtp").write_text("(color ink '#1f2a44')\n")
+    src = tmp_path / "f.mtp"
+    src.write_text("(import house ink) (scene s (circle c (fill ink)))\n")
+    main(["compile", str(src)])
+    assert "house.ink" in (tmp_path / "f.mtpc").read_text()
+
+
+def test_an_error_in_an_imported_file_names_that_file(tmp_path, capsys):
+    (tmp_path / "house.mtp").write_text("(color ink (mix 'red' nope 0.5))\n")
+    src = tmp_path / "f.mtp"
+    src.write_text("(import house)\n")
+    with pytest.raises(SystemExit):
+        main(["check", str(src)])
+    assert capsys.readouterr().err.startswith("house.mtp:1:")
+
+
+def test_a_syntax_error_in_an_imported_file(tmp_path, capsys):
+    (tmp_path / "house.mtp").write_text("(color ink '#1f2a44'\n")
+    src = tmp_path / "f.mtp"
+    src.write_text("(import house)\n")
+    with pytest.raises(SystemExit) as exc:
+        main(["compile", str(src)])
+    assert exc.value.code == 1
+    assert capsys.readouterr().err.startswith("house.mtp:1:")

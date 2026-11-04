@@ -21,9 +21,10 @@ class BuildError(Exception):
     pass
 
 
-def compiled(src: str) -> str:
-    """The .mtpc of a source: parsing, compiling and writing. A parse or compile error is raised."""
-    return write(compile_model(parse(src)))
+def compiled(src: str, path: Path | None = None) -> str:
+    """The .mtpc of a source read from path: parsing, compiling and writing. A parse or compile
+    error is raised."""
+    return write(compile_model(parse(src), path))
 
 
 def runtime() -> str:
@@ -103,7 +104,7 @@ def build(path: Path) -> Path:
     """Builds the figure at path into build_<name>/ next to it, and gives that folder. Nothing is
     written when the source has an error."""
     src = path.read_text(encoding="utf-8")
-    mtpc = compiled(src)
+    mtpc = compiled(src, path)
     js = runtime()
     out = path.parent / f"build_{path.stem}"
     out.mkdir(exist_ok=True)

@@ -43,8 +43,9 @@ class ParseError(Exception):
         self.pos = pos
 
 
-def parse(src: str) -> tuple[Form, ...]:
-    return _Parser(src).parse()
+def parse(src: str, file: str | None = None) -> tuple[Form, ...]:
+    """The forms of a source; file, for one imported, is kept in every position."""
+    return _Parser(src, file).parse()
 
 
 def parse_name(text: str, pos: Pos) -> Name:
@@ -123,15 +124,16 @@ def _number(text: str, pos: Pos) -> Node | None:
 
 
 class _Parser:
-    def __init__(self, src: str):
+    def __init__(self, src: str, file: str | None = None):
         self.src = src
+        self.file = file
         self.i = 0
         self.line = 1
         self.col = 1
         self.in_braces = False
 
     def pos(self) -> Pos:
-        return Pos(self.line, self.col)
+        return Pos(self.line, self.col, self.file)
 
     def peek(self, offset: int = 0) -> str:
         j = self.i + offset

@@ -1,0 +1,3 @@
+(import house ink label)
+(scene s (circle c (fill ink)) (text t 'hi' (font label)))
+(canvas v s)

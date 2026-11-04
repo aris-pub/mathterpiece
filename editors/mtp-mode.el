@@ -9,7 +9,7 @@
 (require 'lisp-mode)
 
 (defconst mtp-mode--heads
-  '("scene" "group" "row" "column" "motif" "variant" "type" "func"
+  '("scene" "group" "row" "column" "motif" "variant" "type" "func" "import"
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "text"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font"

@@ -61,9 +61,9 @@ def main(argv: list[str] | None = None):
                 print(line)
         return
     try:
-        model = compile_model(forms)
-    except CompileError as e:
-        _fail(f"{args.file}:{e}")
+        model = compile_model(forms, path)
+    except (ParseError, CompileError) as e:
+        _fail(_where(args.file, e))
     if args.command == "check":
         print(f"{args.file}: no errors")
         return
@@ -81,7 +81,7 @@ def _build(path: Path, args) -> None:
         try:
             out = build(path)
         except (ParseError, CompileError) as e:
-            _fail(f"{args.file}:{e}")
+            _fail(_where(args.file, e))
         except BuildError as e:
             _fail(f"{args.file}: {e}")
         print(f"wrote {out / 'index.html'}")
@@ -158,6 +158,11 @@ def _tree(node, depth: int) -> Iterator[str]:
                 nodes.ComplexLit: "complex",
             }[type(node)]
             yield f"{pad}{node.pos} {kind} {node.value}"
+
+
+def _where(file: str, e: CompileError | ParseError) -> str:
+    """An error with its file: the file built, or the imported file it is in."""
+    return str(e) if e.pos.file else f"{file}:{e}"
 
 
 def _fail(msg: str) -> NoReturn:

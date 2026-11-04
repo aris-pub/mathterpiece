@@ -4,7 +4,7 @@
 import { Ref, apply, compose } from "./builtins.ts";
 import type { Expr } from "./doc.ts";
 import { isBound, itemsOf } from "./doc.ts";
-import type { Runtime } from "./runtime.ts";
+import { type Runtime, cssVariable } from "./runtime.ts";
 
 const NS = "http://www.w3.org/2000/svg";
 const FLIP = [1, 0, 0, -1, 0, 0];
@@ -269,7 +269,7 @@ function text(rt: Runtime, i: number, unitsPerPx: number): Element {
   const variable = tokenOf(rt, i, "font");
   for (const part of ["family", "style", "weight"]) {
     const own = font[part];
-    const css = variable ? `var(--mtp-${variable}-${part}${own === null ? "" : `, ${String(own)}`})` : own;
+    const css = variable ? `var(${cssVariable(variable)}-${part}${own === null ? "" : `, ${String(own)}`})` : own;
     if (css !== null && css !== undefined) el.style.setProperty(`font-${part}`, String(css));
   }
   return el;

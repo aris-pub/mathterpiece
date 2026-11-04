@@ -71,7 +71,9 @@ class Server:
                 text = about(self.path.read_text(encoding="utf-8"))
                 self.html = page(self.path.stem, mtpc, js, text, RELOAD)
             except (ParseError, CompileError, BuildError, OSError) as e:
-                self.html = _error_page(self.path.name, f"{self.path.name}:{e}")
+                pos = getattr(e, "pos", None)
+                where = str(e) if pos is not None and pos.file else f"{self.path.name}:{e}"
+                self.html = _error_page(self.path.name, where)
             self.version += 1
 
     def start(self) -> None:

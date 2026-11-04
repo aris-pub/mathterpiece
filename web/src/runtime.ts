@@ -45,6 +45,14 @@ export type FnValue = (args: unknown[], frame: number | null) => unknown;
 
 const TOP: Ctx = { locals: {}, frame: null };
 
+/**
+ * A token's CSS custom property. An imported token is kept as file.name, and a CSS name takes no
+ * dot, so house.ink is --mtp-house-ink (the author, 2026-11-04).
+ */
+export function cssVariable(name: string): string {
+  return `--mtp-${name.replace(/\./g, "-")}`;
+}
+
 function key(id: number, attr: string | null): string {
   return `${id}:${attr ?? ""}`;
 }
@@ -427,7 +435,7 @@ export class Runtime {
     if (attr === null && o.kind === "variable" && o.token) {
       f = () => {
         const v = this.value(id, null);
-        return v === null ? null : `var(--mtp-${o.name}, ${String(v)})`;
+        return v === null ? null : `var(${cssVariable(o.name!)}, ${String(v)})`;
       };
     } else {
       const p = attr === null ? o.value : o.attrs?.[attr];

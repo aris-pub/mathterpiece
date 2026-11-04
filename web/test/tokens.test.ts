@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import type { Runtime } from "../src/runtime.ts";
 import { load } from "./helpers.ts";
-import { paintCss } from "../src/svg.ts";
+import { draw, paintCss } from "../src/svg.ts";
 
 function setup(): [Runtime, (name: string) => string] {
   const rt = load("tokens");
@@ -51,4 +51,19 @@ describe("a color computed from tokens", () => {
     expect(fill("plain")).toBe("#ff0000ff");
   });
 
+});
+
+describe("an imported token", () => {
+  // mtp-1lq, the author 2026-11-04: a color's CSS variable is named by its file.
+  it("has its file's name in its CSS variable", () => {
+    const rt = load("imported");
+    expect(paintCss(rt, rt.id("c"), "fill")).toBe("var(--mtp-house-ink, #1f2a44ff)");
+  });
+
+  it("restyles an imported font through its file's name too", () => {
+    const rt = load("imported");
+    const svg = draw(rt, rt.id("v"));
+    const t = svg.querySelector(`[data-mtp-id="${rt.id("t")}"]`) as SVGElement;
+    expect(t.style.getPropertyValue("font-family")).toBe("var(--mtp-house-label-family, Georgia, serif)");
+  });
 });

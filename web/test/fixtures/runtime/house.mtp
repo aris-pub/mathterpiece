@@ -1,0 +1,3 @@
+; Declarations the runtime's tests import.
+(color ink '#1f2a44')
+(font label (family 'Georgia, serif') (size 14))

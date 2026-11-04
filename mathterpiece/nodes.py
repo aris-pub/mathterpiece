@@ -6,9 +6,12 @@ from fractions import Fraction
 class Pos:
     line: int
     col: int
+    # The file imported that the node is from, as (import file) names it; None for the file built.
+    file: str | None = None
 
     def __str__(self) -> str:
-        return f"{self.line}:{self.col}"
+        where = f"{self.line}:{self.col}"
+        return f"{self.file}.mtp:{where}" if self.file else where
 
 
 NOPOS = Pos(0, 0)

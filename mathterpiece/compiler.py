@@ -9,6 +9,7 @@ from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Context, Decimal
 from fractions import Fraction
+from pathlib import Path
 from typing import Literal, cast
 
 from mathterpiece.builtins import (
@@ -273,12 +274,38 @@ class CompileError(Exception):
         self.pos = pos
 
 
-def compile_source(src: str) -> Model:
-    return compile_model(parse(src))
+def compile_source(src: str, path: Path | None = None) -> Model:
+    """The model of a source; path, the file it is read from, is where its imports are found."""
+    return compile_model(parse(src), path)
 
 
-def compile_model(forms: tuple[Form, ...]) -> Model:
-    return _Compiler().run(forms)
+def compile_model(forms: tuple[Form, ...], path: Path | None = None) -> Model:
+    return _Compiler(path).run(forms)
+
+
+# Where (import name) looks after the importing file's folder (the author, 2026-11-04).
+STDLIB = Path(__file__).parent / "stdlib"
+# What an imported file may declare at its top level, besides const variables.
+IMPORTABLE = {"color", "font", "func", "motif", "variant", "type", "import"}
+
+
+class _Names(dict):
+    """A table of top-level names (variables, functions, types, motifs or variants) that sees a
+    name as the file being compiled does: in an imported file its own declarations, kept under
+    file.name, and in any file the names it imported by name (mtp-1lq)."""
+
+    def __init__(self, compiler: "_Compiler"):
+        super().__init__()
+        self.compiler = compiler
+
+    def __getitem__(self, k):
+        return super().__getitem__(self.compiler.alias(k))
+
+    def __contains__(self, k):
+        return super().__contains__(self.compiler.alias(k))
+
+    def get(self, k, default=None):  # type: ignore[override]
+        return super().get(self.compiler.alias(k), default)
 
 
 def _layout_axis(form: Form) -> str | None:
@@ -325,8 +352,20 @@ def _is_constraint(node: Node) -> bool:
 
 
 class _Compiler:
-    def __init__(self):
+    def __init__(self, path: Path | None = None):
         self.model = Model()
+        for table in ("names", "types", "motifs", "variants", "funcs"):
+            setattr(self.model, table, _Names(self))
+        # The file built, and what each file sees by a name of its own: None for the file built,
+        # an imported file by the name it is imported by. here is the file of the node being
+        # compiled, so a name is looked up as that file sees it.
+        self.source = path
+        self.aliases: dict[str | None, dict[str, str]] = {None: {}}
+        self.here: str | None = None
+        # The top-level form being compiled: only its own name is kept as file.name.
+        self.top_form: Node | None = None
+        self.loaded: dict[Path, str] = {}
+        self.loading: list[Path] = []
         self.scene: int | None = None
         # The container the expression being compiled sits in: a group, or None for the scene
         # and the top level. Reads convert through the transforms not shared with it.
@@ -351,7 +390,16 @@ class _Compiler:
         # Each rand drawn so far, after foreach and motif instances are expanded.
         self.rand_sites = 0
 
+    def alias(self, k):
+        """The key a name is kept under, as the file being compiled sees it."""
+        if isinstance(k, str):
+            table = self.aliases.get(self.here)
+            if table and k in table:
+                return table[k]
+        return k
+
     def run(self, forms: tuple[Form, ...]) -> Model:
+        forms = self.imports(forms, None, self.source)
         for form, scope in self.expand(forms, {}, top=True):
             self.top(form, scope)
         # A named transition no move ever used still needs its ends compiled.
@@ -359,6 +407,76 @@ class _Compiler:
             if obj.kind == "transition" and obj.data.get("end") is None:
                 self.type_ends(i, None, obj.pos)
         return self.model
+
+    def imports(self, forms, file: str | None, path: Path | None) -> tuple:
+        """Reads the (import name …) forms of a file, and gives its other forms, with each
+        name.part of a file it imported whole made into the key it is kept under."""
+        whole: dict[str, dict[str, str]] = {}
+        rest = []
+        for form in forms:
+            if _head(form) != "import":
+                rest.append(form)
+                continue
+            assert isinstance(form, Form)
+            target = form.items[1] if len(form.items) > 1 else None
+            if not (isinstance(target, Name) and len(target.parts) == 1):
+                raise CompileError("import is (import file name…)", form.pos)
+            name = str(target.parts[0])
+            exports = self.load(name, path, form.pos)
+            if len(form.items) == 2:
+                whole[name] = exports
+                continue
+            for n in form.items[2:]:
+                if not (isinstance(n, Name) and len(n.parts) == 1):
+                    raise CompileError("import is (import file name…)", n.pos)
+                part = str(n.parts[0])
+                if part not in exports:
+                    raise CompileError(f"{name}.mtp declares no '{part}'", n.pos)
+                if part in self.aliases[file]:
+                    raise CompileError(f"'{part}' is already declared", n.pos)
+                self.aliases[file][part] = exports[part]
+        return tuple(_through(f, whole) for f in rest) if whole else tuple(rest)
+
+    def load(self, name: str, importer: Path | None, pos: Pos) -> dict[str, str]:
+        """The names an imported file declares, by the keys they are kept under, compiling it
+        the first time it is imported."""
+        if importer is None:
+            raise CompileError(
+                "an import reads a file next to this one: compile it from a file", pos
+            )
+        found = next(
+            (p for p in (importer.parent / f"{name}.mtp", STDLIB / f"{name}.mtp") if p.is_file()),
+            None,
+        )
+        if found is None:
+            raise CompileError(
+                f"no {name}.mtp next to {importer.name} or in the standard library", pos
+            )
+        real = found.resolve()
+        if real in self.loading:
+            raise CompileError(f"{name}.mtp imports itself, through the files it imports", pos)
+        if real in self.loaded:
+            return self.aliases[self.loaded[real]]
+        if name in self.aliases:
+            raise CompileError(f"two different files named {name}.mtp are imported", pos)
+        forms = parse(found.read_text(encoding="utf-8"), file=name)
+        for form in forms:
+            what = _not_importable(form)
+            if what is not None:
+                raise CompileError(
+                    f"{name}.mtp holds {what}: a file to import holds only declarations of"
+                    " colors, fonts, functions, motifs, variants, types and const variables",
+                    form.pos,
+                )
+        self.loading.append(real)
+        self.aliases[name] = {}
+        try:
+            for form, scope in self.expand(self.imports(forms, name, found), {}, top=True):
+                self.top(form, scope)
+        finally:
+            self.loading.pop()
+        self.loaded[real] = name
+        return self.aliases[name]
 
     def expand(self, items, scope: dict, top: bool = False) -> Iterator[tuple[Node, dict]]:
         """The items, with each (foreach i n decl…) replaced by its copies, and each
@@ -434,6 +552,14 @@ class _Compiler:
     # Declarations ------------------------------------------------------------------------
 
     def top(self, form: Node, scope: dict) -> None:
+        saved, self.here = self.here, form.pos.file
+        outer, self.top_form = self.top_form, form
+        try:
+            self.top_here(form, scope)
+        finally:
+            self.here, self.top_form = saved, outer
+
+    def top_here(self, form: Node, scope: dict) -> None:
         head = _head(form)
         if not isinstance(form, Form):
             raise CompileError("expected a declaration", form.pos)
@@ -477,6 +603,13 @@ class _Compiler:
             raise CompileError("expected a name", node.pos)
         if name in RESERVED:
             raise CompileError(f"'{name}' is reserved", node.pos)
+        file = form.pos.file if form is self.top_form else None
+        if form is self.top_form and (name in self.aliases[form.pos.file] or name in self.aliases):
+            raise CompileError(f"'{name}' is already declared", node.pos)
+        if file is not None:
+            # A top-level declaration of an imported file is kept as file.name (mtp-1lq).
+            self.aliases[file][name] = f"{file}.{name}"
+            return f"{file}.{name}", node.pos
         taken = self.model.names.keys() | self.model.funcs.keys() | self.model.types.keys()
         if self.bodies:
             taken = self.bodies[-1]["names"].keys() | self.bodies[-1]["attrs"]
@@ -486,6 +619,13 @@ class _Compiler:
 
     def shape_kind(self, node: Node) -> tuple[str, bool] | None:
         """The shape a form declares, and whether it is declared T|none."""
+        saved, self.here = self.here, node.pos.file
+        try:
+            return self.shape_kind_here(node)
+        finally:
+            self.here = saved
+
+    def shape_kind_here(self, node: Node) -> tuple[str, bool] | None:
         if not isinstance(node, Form) or not node.items:
             return None
         head = node.items[0]
@@ -537,10 +677,13 @@ class _Compiler:
         self.model.types[name] = t
 
     def type_of(self, node: Node) -> Type:
+        saved, self.here = self.here, node.pos.file
         try:
             return type_from_node(node, self.model.types)
         except TypeError_ as e:
             raise CompileError(str(e), node.pos) from None
+        finally:
+            self.here = saved
 
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
         if isinstance(form.items[0], Name) and form.items[0].parts == ("font",):
@@ -2230,7 +2373,9 @@ class _Compiler:
             self.shape_types[name] = types
         finally:
             del self.model.objects[objects:]
-            self.model.names = names
+            # The same table, which sees names as each file does, holding what it held before.
+            self.model.names.clear()
+            dict.update(self.model.names, names)
             self.rand_sites = sites
 
     def variant_decl(self, form: Form) -> None:
@@ -2530,6 +2675,13 @@ class _Compiler:
                 raise CompileError("the scene holds shapes and variables", item.pos)
 
     def shape(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
+        saved, self.here = self.here, form.pos.file
+        try:
+            return self.shape_here(form, parent, scope, spread, items, pre)
+        finally:
+            self.here = saved
+
+    def shape_here(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
         """A shape declaration. items, when given, replaces the form's own items, each with its
         scope, and pre runs on the new object before its attributes are compiled (a variant
         uses both)."""
@@ -2970,7 +3122,11 @@ class _Compiler:
         return self.expr(node, expected, scope)
 
     def expr(self, node: Node, expected: Type | None, scope: dict) -> Expr:
-        return self.checked(self.typed(node, expected, scope), node, expected)
+        saved, self.here = self.here, node.pos.file
+        try:
+            return self.checked(self.typed(node, expected, scope), node, expected)
+        finally:
+            self.here = saved
 
     def checked(self, e: Expr, node: Node, expected: Type | None) -> Expr:
         """e, stopping the compiler unless it fits expected and its constraints."""
@@ -3981,6 +4137,45 @@ def _a(thing) -> str:
     """thing with a or an before it, as its first letter is sounded."""
     word = str(thing)
     return f"{'an' if word[:1] in 'aeiou' else 'a'} {word}"
+
+
+def _not_importable(form: Node) -> str | None:
+    """What a top-level form of a file to import is, when it may not be there; None when it may
+    (the author, 2026-11-04)."""
+    head = _head(form)
+    if not isinstance(form, Form) or head is None:
+        return "an item that is not a declaration"
+    if head in IMPORTABLE or _typed_func(form) is not None:
+        return None
+    if head in ("scene", "transition", "animation") or head in COMPONENTS:
+        return _a(head)
+    if not any(_head(item) == "const" for item in form.items[2:]):
+        return "a variable that is not const"
+    return None
+
+
+def _through(node, whole: dict):
+    """node with every name.part of a file imported whole, whole[name], made into the key part is
+    kept under; part may be written part_ for a form with no name."""
+    if isinstance(node, Name):
+        parts = tuple(_through(p, whole) if not isinstance(p, str) else p for p in node.parts)
+        if len(parts) >= 2 and parts[0] in whole and isinstance(parts[1], str):
+            exports, part = whole[parts[0]], parts[1]
+            bare = part[:-1] if part.endswith("_") and part[:-1] in exports else part
+            if bare not in exports:
+                raise CompileError(f"{parts[0]}.mtp declares no '{part}'", node.pos)
+            key = exports[bare] + ("_" if bare != part else "")
+            parts = (key, *parts[2:])
+        return replace(node, parts=parts)
+    if isinstance(node, (Form, ListLit, Brackets, Bar)):
+        return replace(node, items=tuple(_through(i, whole) for i in node.items))
+    if isinstance(node, InterpStrLit):
+        return replace(
+            node, parts=tuple(p if isinstance(p, str) else _through(p, whole) for p in node.parts)
+        )
+    if isinstance(node, Field):
+        return replace(node, expr=_through(node.expr, whole))
+    return node
 
 
 def _holds_literal(node: Node) -> bool:

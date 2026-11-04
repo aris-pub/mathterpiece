@@ -16,6 +16,16 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ## Declarations
 
+### Imports
+
+`(import house)` reads `house.mtp` from the folder of the file importing it, or, when there is none there, from the standard library. It gives one name, `house`, and what `house.mtp` declares is read through it: `house.ink`, `(house.dial d1)`, `(house.unit u 0.5)`. `(import house ink accent)` gives `ink` and `accent` as names of their own, and not `house`, as Python's `from house import ink, accent` does. There is no way to import every name at once: each name is written, or the file is imported whole.
+
+- **What a file to import holds:** only top-level declarations of colors, fonts, functions, motifs, variants, types, and variables that are `const`, and its own imports. Anything else, such as a scene, a view, a control, an animation or a variable that is not `const`, makes importing it a compile error. A file with no scene still compiles by itself.
+- **Names:** the file reads its own declarations by their bare names, and a local name inside it, such as a `let` or a parameter, wins over them as anywhere. A name imported by name cannot also be declared in the importing file. A name a file imported can be imported from it in turn.
+- **Once:** a file imported more than once, directly or through other files, is compiled once. A file that imports itself, through the files it imports, is a compile error, as are two different files of the same name.
+- **Errors** inside an imported file name that file, as `house.mtp:3:5: …`.
+- **In the .mtpc** there are no imports: what the figure uses is written into it, each under the name it is kept by, `house.ink`. An imported token's CSS custom property is named by its file: `--mtp-house-ink`, however it is imported.
+
 ### Values and variables
 
 | Form | Name | Positional | Optional arguments | Body |
