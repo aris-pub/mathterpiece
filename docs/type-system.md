@@ -258,14 +258,23 @@ An interface cannot be instantiated: no shape is created whose type is only `sha
     (func area (circle o) (* pi o.r o.r))                   ; circles, and any variant of circle
     (func area (shape o) (* pi o.r o.r))                    ; an error: not every shape has an r
 
-Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed when every member's type has one. Authors cannot declare interfaces of their own yet.
+Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed when every member's type has one.
+
+An author declares an interface by the attributes it lists, each with its type and any constraints: `(interface palette (color ink) (color paper))`, `(interface round (real r (>= 0)))`. Any object with those attributes, of fitting types, satisfies it, shapes and namespaces alike, with or without other attributes: a circle and a ring are both `round`, and so is `(namespace n (real r 1 (>= 0)))`. A constraint is met only when it is guaranteed: a namespace whose `r` is a plain `real` is not `round`, since it may be negative. A namespace is passed to a function, or held by a variable, through an interface it fits: `(func f ((palette p)) p.ink)`, `(palette look (if dark night day))`.
+
+    (interface palette (color ink) (color paper))
+    (namespace day (color ink '#1f2a44') (color paper '#f6f1e7'))
+    (namespace night (color ink '#e8e4d8') (color paper '#14161c'))
+    (bool dark false)
+    (palette look (if dark night day))      ; bound, as a variable holding an object always is
+    (circle c (fill look.ink))              ; day's ink, or night's
 
 ## 7. Not yet
 
 - Unions of types other than `none`, such as a fill that is a color or a gradient.
 - Vectors: fixed-length numbers with arithmetic, separate from lists.
 - Container types an author defines, such as `pair[T]`.
-- Interfaces an author declares, and extra attributes on new types (which would let `point` become a refinement of `list[real]` instead of a type of its own).
+- Extra attributes on new types (which would let `point` become a refinement of `list[real]` instead of a type of its own).
 - Variables that hold functions.
 - Types passed or held as values.
 - Maps from keys to values.

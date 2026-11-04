@@ -36,6 +36,10 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **Writing:** a writer writes a free member by its full name, `(slider s (move theme.gap (from 0) (to 1)))`, under the same rules as any variable: not a bound one, not a `const` one, not a token. The namespace itself is never written.
 - **Tokens:** a color or font member is a token, and its CSS variable is named by the namespace: `--mtp-theme-ink`, `--mtp-colors-tab10-blue`. A namespace declared in an imported file adds the file's name, `--mtp-house-theme-ink`.
 
+### Interfaces
+
+`(interface palette (color ink) (color paper) (real gap (>= 0)))` declares a type that lists attributes, each with its type and any constraints; any object that has them, of fitting types, satisfies it, shapes and namespaces alike (type-system.md, section 6). A parameter or a variable typed with it reads only what it lists. A variable holding an object is bound. A color read through it stays the token it reads, so `(circle c (fill look.ink))` with `look` holding `day` is drawn with `--mtp-day-ink`.
+
 ### Values and variables
 
 | Form | Name | Positional | Optional arguments | Body |

@@ -139,9 +139,16 @@
               ],
               "properties": {
                 "interface": {
-                  "enum": [
-                    "shape",
-                    "positioned"
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "shape",
+                        "positioned"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/name"
+                    }
                   ]
                 }
               },

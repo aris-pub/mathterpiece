@@ -476,6 +476,22 @@ export class Runtime {
     switch (op) {
       case "read":
         return this.cssOf(parts[0] as number, parts[1] as string | null);
+      case "part": {
+        // A member read through a variable or parameter that holds a namespace stays its
+        // token, as a read of it by its own name does (mtp-ateh).
+        const [whole, attr] = parts as [Expr, unknown];
+        if (typeof attr !== "string") return null;
+        const [of, plain] = [this.compile(whole), this.compile(e)];
+        return (ctx) => {
+          const g = of(ctx);
+          if (g instanceof Ref && this.objects[g.id]!.kind === "namespace") {
+            const css = this.cssOf(this.member(g.id, attr), null);
+            if (css) return css(ctx);
+          }
+          const v = plain(ctx);
+          return v === null ? null : String(v);
+        };
+      }
       case "check":
         return this.compileCss(parts[0] as Expr);
       case "if": {
@@ -934,6 +950,11 @@ export class Runtime {
     if (o.kind === "instance" && !this.has(id, attr) && SPREAD.has(attr)) {
       return (o.members ?? []).map((m) => this.attrOf(m, attr, frame));
     }
+    if (o.kind === "namespace") {
+      // A member is an object of its own, named by the namespace: theme.ink (mtp-4rc).
+      const m = this.member(id, attr);
+      return this.objects[m]!.kind === "namespace" ? new Ref(m) : this.value(m, null);
+    }
     if (attr === "length" && o.members) return o.members.length;
     if (attr === "members") return (o.members ?? []).map((m) => new Ref(m));
     if (o.kind === "instance" && !this.has(id, attr)) {
@@ -945,6 +966,14 @@ export class Runtime {
       return attr === "pos" ? p : p[attr === "x" ? 0 : 1];
     }
     return this.read(id, attr, frame);
+  }
+
+  /** The id of a namespace's member, by its own name. */
+  member(id: number, attr: string): number {
+    const o = this.objects[id]!;
+    const m = (o.members ?? []).find((x) => this.objects[x]!.name === `${o.name}.${attr}`);
+    if (m === undefined) throw new Error(`${o.name} has no member ${attr}`);
+    return m;
   }
 
   /** The mean of a line's ends, a triangle's corners or a polyline's points: its position. */

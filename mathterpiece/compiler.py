@@ -303,7 +303,9 @@ NOT_VALUES = {
     "foreach",
 }  # fmt: skip
 # What an imported file may declare at its top level, besides const variables.
-IMPORTABLE = {"color", "font", "func", "motif", "variant", "type", "import", "namespace"}
+IMPORTABLE = {
+    "color", "font", "func", "motif", "variant", "type", "import", "namespace", "interface",
+}  # fmt: skip
 
 
 class _Names(dict):
@@ -605,6 +607,8 @@ class _Compiler:
         if head == "namespace":
             self.namespace_decl(form, scope)
             return
+        if head == "interface":
+            return self.interface_decl(form)
         if head == "scene":
             return self.scene_decl(form)
         if head == "motif":
@@ -766,6 +770,106 @@ class _Compiler:
             # Members after it read it by its bare name.
             inside[short] = self.read(m, None)
         return i
+
+    def interface_decl(self, form: Form) -> None:
+        """(interface name (T attribute constraint…) …): what an object must have to fit it, as
+        the built-in interfaces do (mtp-ateh; type-system.md, section 6)."""
+        name, _ = self.name_of(form)
+        if name is None:
+            raise CompileError("an interface needs a name", form.pos)
+        members: dict[str, Type] = {}
+        for item in form.items[2:]:
+            ok = (
+                isinstance(item, Form)
+                and len(item.items) >= 2
+                and isinstance(item.items[1], Name)
+                and len(item.items[1].parts) == 1
+                and isinstance(item.items[1].parts[0], str)
+                and all(_is_constraint(c) for c in item.items[2:])
+            )
+            if not ok:
+                raise CompileError("an interface lists (T name constraint…)", item.pos)
+            assert isinstance(item, Form) and isinstance(item.items[1], Name)
+            attr = str(item.items[1].parts[0])
+            if attr in members:
+                raise CompileError(f"'{attr}' is already declared", item.items[1].pos)
+            t = self.type_of(item.items[0])
+            if len(item.items) > 2:
+                try:
+                    t = refine(t, item.items[2:])
+                except TypeError_ as e:
+                    raise CompileError(str(e), item.pos) from None
+            members[attr] = t
+        self.model.types[name] = Interface(name)
+        self.model.interfaces[name] = members
+
+    def misfit(self, e: Expr, expected: Type) -> str | None:
+        """Why e does not fit a declared interface expected is, or None when it fits or expected
+        is not one."""
+        want = _core(expected)
+        if not isinstance(want, Interface) or want.name not in self.model.interfaces:
+            return None
+        who = self.model.objects[e.args[0]].name if e.op == "obj" else None
+        reason = self.why_not(e.type, want)
+        if reason is None:
+            return None
+        return f"{who or _a(e.type)} does not fit {want.name}: {reason}"
+
+    def why_not(self, actual: Type, want: Interface) -> str | None:
+        have = self.fit_attrs(_core(actual))
+        for attr, t in self.model.interfaces[want.name].items():
+            if attr not in have:
+                return f"it has no '{attr}'"
+            got = have[attr]
+            inner = _core(t)
+            if isinstance(inner, Interface) and inner.name in self.model.interfaces:
+                deeper = self.why_not(got, inner)
+                if deeper is not None:
+                    return f"its {attr}: {deeper}"
+                continue
+            if fits(got, t):
+                continue
+            if not fits(_loose(got), _loose(t)):
+                return f"its {attr} is {_a(_loose(got))}, not {_a(_loose(t))}"
+            wanted = _inner(t)
+            assert isinstance(wanted, Refine)
+            for c in wanted.constraints:
+                if c[0] != "const" and not fits(got, Refine(_base(wanted), (c,))):
+                    return f"its {attr} may break {_show(c)}"
+            return f"its {attr} is {_a(got)}, not {_a(t)}"
+        return None
+
+    def join(self, a: Type, b: Type, expected: Type | None, pos: Pos) -> Type:
+        """The type of two branches: what is expected, when that is a declared interface both
+        fit, as two namespaces with the same members do; otherwise their common type."""
+        if (
+            expected is not None
+            and self.fits_declared(a, expected)
+            and self.fits_declared(b, expected)
+        ):
+            return _inner(expected)
+        return _join(a, b, pos)
+
+    def fits_declared(self, actual: Type, expected: Type) -> bool:
+        want = _core(expected)
+        return (
+            isinstance(want, Interface)
+            and want.name in self.model.interfaces
+            and self.why_not(actual, want) is None
+        )
+
+    def fit_attrs(self, t: Type) -> dict[str, Type]:
+        """The attributes an object of type t has, and their types, for fitting an interface."""
+        if isinstance(t, NamespaceT):
+            obj = self.model.objects[self.model.names[t.name]]
+            out: dict[str, Type] = {}
+            for short, m in obj.data["members"].items():
+                member = self.model.objects[m]
+                out[short] = member.type if member.kind == "namespace" else member.value.type
+            return out
+        if isinstance(t, Interface) and t.name in self.model.interfaces:
+            return dict(self.model.interfaces[t.name])
+        return self.type_attr_types(t)
 
     def member_name(self, form: Form, members: dict) -> tuple[str, Pos]:
         node = form.items[1] if len(form.items) > 1 else None
@@ -3272,6 +3376,11 @@ class _Compiler:
             e = self.as_point(e, expected) or e
         if target is not None and not fits(_loose(e.type), target):
             assert expected is not None
+            reason = self.misfit(e, expected)
+            if reason is not None:
+                raise CompileError(reason, node.pos)
+            if self.fits_declared(e.type, expected):
+                return e
             if _may_be_none(e.type) and not _may_be_none(target):
                 raise CompileError(self.may_be_none(expected), node.pos)
             if _core(e.type) == STRING and _core(target) == COLOR:
@@ -3577,6 +3686,8 @@ class _Compiler:
         return Expr("part", attrs[name], (e, name), e.deps, _type_range(attrs[name]))
 
     def type_attr_types(self, t: Type) -> dict[str, Type]:
+        if isinstance(t, Interface) and t.name in self.model.interfaces:
+            return dict(self.model.interfaces[t.name])
         if t == Interface("positioned"):
             return {"x": REAL, "y": REAL, "pos": POINT}
         if t == Interface("shape"):
@@ -3649,6 +3760,8 @@ class _Compiler:
 
     def type_attrs(self, t: Type, candidates: tuple) -> set:
         """What a member of type t, one of candidates, may be read for (type-system.md, 6)."""
+        if isinstance(t, Interface) and t.name in self.model.interfaces:
+            return set(self.model.interfaces[t.name])
         if t == Interface("positioned"):
             return {"x", "y", "pos"}
         if t == Interface("shape"):
@@ -3879,7 +3992,7 @@ class _Compiler:
                 return a if c.value else b
             return Expr(
                 "if",
-                _join(a.type, b.type, node.pos),
+                self.join(a.type, b.type, expected, node.pos),
                 (c, a, b),
                 c.deps | a.deps | b.deps,
                 _union(a.range, b.range),
@@ -4014,7 +4127,7 @@ class _Compiler:
             assert result is not None
             result = Expr(
                 "if",
-                _join(v.type, result.type, clause.pos),
+                self.join(v.type, result.type, expected, clause.pos),
                 (c, v, result),
                 c.deps | v.deps | result.deps,
                 _union(v.range, result.range),

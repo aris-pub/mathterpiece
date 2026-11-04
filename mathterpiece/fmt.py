@@ -14,7 +14,7 @@ INDENT = {
     **dict.fromkeys(
         ["polyline", "polygon", "arc", "ring", "font", "animation", "canvas", "namespace"], 1
     ),
-    **dict.fromkeys(["button", "play"], 1),
+    **dict.fromkeys(["button", "play", "interface"], 1),
     "text": 2,
     **dict.fromkeys(
         ["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"], 2
@@ -51,6 +51,7 @@ NAMED = {
     *["string", "point", "list", "transform", "color", "type", "motif", "variant", "func"],
     *["transition", "animation", "canvas", "readout", "slider", "button", "play", "toggle"],
     "namespace",
+    "interface",
 }
 OPEN, CLOSE = "([", ")]"
 

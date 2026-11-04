@@ -130,6 +130,9 @@ class Model:
     variants: dict[str, VariantDef] = field(default_factory=dict)
     functions: list[FuncDef] = field(default_factory=list)
     funcs: dict[str, int] = field(default_factory=dict)
+    # Each interface an author declares, by its name: the attributes it lists, with their types
+    # (mtp-ateh). Its type, Interface(name), is in types.
+    interfaces: dict[str, dict[str, Type]] = field(default_factory=dict)
 
     def id(self, name: str) -> int:
         return self.names[name]
