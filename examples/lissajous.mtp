@@ -3,12 +3,7 @@
 ; whenever a slider moves a, b or the phase. Try the frequencies 1 and 2, then 3 and 2, then
 ; press 'turn the phase'.
 
-(color paper '#f6f1e7')
-(color ink '#1f2a44')
-(color soft '#8a93a6')
-(color teal '#2a9d8f')
-(font variable (family 'Georgia, serif') (style 'italic') (size 18))
-(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+(import house paper ink soft teal variable code)
 
 (scene board
   (background paper)

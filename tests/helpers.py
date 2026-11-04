@@ -36,6 +36,6 @@ def typ(src, name="v"):
     return attribute.expr.type if attribute.bound else attribute.type
 
 
-def doc(src):
+def doc(src, path=None):
     """The .mtpc document written for a source, as JSON."""
-    return json.loads(write(compile_source(src)))
+    return json.loads(write(compile_source(src, path=path)))

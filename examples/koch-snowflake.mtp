@@ -6,12 +6,7 @@
 ; The zoom slider magnifies the top tip by powers of 3, the snowflake's own scale: each power
 ; shows the same shape again, as far as the depth goes. The wheel zooms too.
 
-(color paper '#f6f1e7')
-(color ink '#1f2a44')
-(color soft '#8a93a6')
-(color saffron '#e9c46a')
-(font variable (family 'Georgia, serif') (style 'italic') (size 18))
-(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+(import house paper ink soft saffron variable code)
 
 (real radius 4 (const))
 

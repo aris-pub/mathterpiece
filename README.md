@@ -74,7 +74,8 @@ just check       # lint, type checks and both test suites
 - `web/src/`: the runtime, which plays a `.mtpc` and defines the page's elements.
 - `docs/`: the language and the file format.
 - `examples/`: one figure per feature to read and try, and the interactive figures from the
-  Bourgain notes (`bourgain-*.mtp`).
+  Bourgain notes (`bourgain-*.mtp`). `house.mtp` is not a figure: it holds the colors and fonts
+  the examples share, and they import it.
 - `tests/`: the compiler's tests; `tests/shared/` holds cases both the compiler and the runtime
   check.
 - `web/test/`: the runtime's tests.

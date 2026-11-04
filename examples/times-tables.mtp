@@ -3,12 +3,7 @@
 ; nephroid for m = 3, and m - 1 cusps for every whole m. Press play for the tour, pick a stop by
 ; its number, or drag the slider at any time.
 
-(color paper '#f6f1e7')
-(color ink '#1f2a44')
-(color soft '#8a93a6')
-(color terracotta '#e76f51')
-(font variable (family 'Georgia, serif') (style 'italic') (size 18))
-(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+(import house paper ink soft terracotta variable code)
 
 (int n 200 (const))
 (real radius 7.4 (const))

@@ -2,15 +2,7 @@
 ; as variants that fix some of its parameters. Drag a needle or use a slider. A face button writes
 ; the fill of the group that holds every dial, and the write reaches each dial's members.
 
-(color paper '#f6f1e7')
-(color ink '#1f2a44')
-(color soft '#8a93a6')
-(color terracotta '#e76f51')
-(color teal '#2a9d8f')
-(color saffron '#e9c46a')
-(color plum '#6d597a')
-(font number (family 'ui-monospace, Menlo, monospace') (size 14))
-(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+(import house paper ink soft terracotta teal saffron plum number code)
 
 ; A needle over a scale from lo to hi, swept through sweep degrees and centered on straight up.
 ; The count of ticks decides how many lines are made, so it must be known when compiling.

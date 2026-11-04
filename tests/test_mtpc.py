@@ -13,6 +13,7 @@ from mathterpiece.mtpc import write
 
 SHARED = sorted((Path(__file__).parent / "shared").glob("*.mtp"))
 EXAMPLES = sorted((Path(__file__).parent.parent / "examples").glob("*.mtp"))
+FIGURES = [p for p in EXAMPLES if p.stem != "house"]
 
 
 @pytest.mark.parametrize("path", SHARED, ids=[p.stem for p in SHARED])
@@ -20,9 +21,51 @@ def test_every_shared_case_passes_the_schema(path):
     assert errors(doc(path.read_text())) == []
 
 
-@pytest.mark.parametrize("path", EXAMPLES, ids=[p.stem for p in EXAMPLES])
+@pytest.mark.parametrize("path", FIGURES, ids=[p.stem for p in FIGURES])
 def test_the_example_compiles_to_a_valid_mtpc(path):
-    assert errors(doc(path.read_text())) == []
+    assert errors(doc(path.read_text(), path)) == []
+
+
+# The author, 2026-11-04: the colors and fonts the examples share live in examples/house.mtp,
+# which each example imports; it is not a figure, so the dev page does not list it.
+HOUSE_COLORS = ["paper", "ink", "soft", "terracotta", "teal", "saffron", "plum"]
+HOUSE_FONTS = ["variable", "number", "code"]
+
+
+def test_the_house_file_holds_the_shared_colors_and_fonts():
+    src = (EXAMPLES[0].parent / "house.mtp").read_text()
+    assert "(scene" not in src
+    d = doc(src)
+    for n in HOUSE_COLORS + HOUSE_FONTS:
+        assert n in d["names"]
+
+
+@pytest.mark.parametrize("path", FIGURES, ids=[p.stem for p in FIGURES])
+def test_an_example_does_not_redeclare_a_house_token(path):
+    src = path.read_text()
+    if "(import house" not in src:
+        return
+    for n in HOUSE_COLORS:
+        assert f"(color {n} " not in src
+    for n in HOUSE_FONTS:
+        assert f"(font {n} " not in src
+
+
+def test_the_examples_that_use_the_house_style_import_it():
+    users = [p.stem for p in FIGURES if "(import house" in p.read_text()]
+    assert sorted(users) == sorted(
+        [
+            "bubbles",
+            "dials",
+            "ease-race",
+            "koch-snowflake",
+            "lens",
+            "lissajous",
+            "times-tables",
+            "triangle-lines",
+            "ulam-spiral",
+        ]
+    )
 
 
 @pytest.mark.parametrize("path", SHARED, ids=[p.stem for p in SHARED])
