@@ -116,3 +116,51 @@ class TestFoldedValues:
 
 def test_a_parameters_default_is_known_when_compiling():
     error("(real k) (func f (real x k) x)", "a parameter's default must be known when compiling")
+
+
+class TestWorkDoneOnce:
+    """A plain list takes its item type from its value, but that value is worked out once: before
+    mtp-9i9y it was folded a second time, which doubled the time to compile."""
+
+    @pytest.fixture
+    def folds(self, monkeypatch):
+        from mathterpiece.compiler import _Compiler
+
+        counts: dict = {}
+        fold_call = _Compiler.fold_call
+
+        def counted(self, fid, args):
+            name = self.model.functions[fid].name
+            counts[name] = counts.get(name, 0) + 1
+            return fold_call(self, fid, args)
+
+        monkeypatch.setattr(_Compiler, "fold_call", counted)
+        return counts
+
+    def test_a_plain_list(self, folds):
+        src = f"{DOUBLE} (list ys (map [1 2 3] double))"
+        src += " (scene s (foreach y ys (circle_ (r y))))"
+        assert value(src, "ys") == [2, 4, 6]
+        assert folds["double"] == 3
+
+    def test_a_plain_list_with_a_constraint(self, folds):
+        assert value(f"{DOUBLE} (list ys (map [1 2 3] double) (const))", "ys") == [2, 4, 6]
+        assert folds["double"] == 3
+        error(f"{DOUBLE} (list ys (map [1 2 3] double) (length 2))", "breaks")
+
+    def test_a_plain_list_in_a_motif_body(self, folds):
+        src = f"{DOUBLE} (motif m (real k 1) (list ys (map [1 2 3] double)) (circle c (r 1)))"
+        model(src + " (scene s (m a))")
+        one = folds.pop("double")
+        model(src + " (scene s (m a) (m b))")
+        # Each instance works out its body once, so another instance adds three calls.
+        assert folds["double"] - one == 3
+
+    def test_a_plain_list_as_a_default(self, folds):
+        model(f"{DOUBLE} (func f (list ys (map [1 2 3] double)) (count ys)) (int n (f))")
+        assert folds["double"] == 3
+
+    def test_a_motif_parameters_default(self, folds):
+        src = f"{DOUBLE} (motif m (list ys (map [1 2 3] double)) (circle c (r 1)))"
+        model(src + " (scene s (m a) (m b))")
+        assert folds["double"] == 3

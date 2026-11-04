@@ -545,7 +545,7 @@ class _Compiler:
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
         if isinstance(form.items[0], Name) and form.items[0].parts == ("font",):
             return self.font_variable(form, parent, access, scope)
-        name, pos, t, node = self.declared(form, scope)
+        name, pos, t, node, first = self.declared(form, scope)
         if isinstance(_core(t), FuncT):
             raise CompileError("a variable cannot hold a function", pos)
         if node is not None and self.shape_kind(node):
@@ -559,7 +559,7 @@ class _Compiler:
             return
         saved, self.where = self.where, (name, None, None)
         try:
-            attribute = self.attribute(t, node, form.pos, "the value", scope=scope)
+            attribute = self.attribute(t, node, form.pos, "the value", scope=scope, first=first)
         finally:
             self.where = saved
         t = self.keep_length(t, attribute)
@@ -577,9 +577,11 @@ class _Compiler:
                 attribute.type = t
         return t
 
-    def declared(self, form: Form, scope: dict) -> tuple[str | None, Pos, Type, Node | None]:
-        """A (T name value? constraint…) form's name, its type with the constraints, and its
-        value's source."""
+    def declared(
+        self, form: Form, scope: dict
+    ) -> tuple[str | None, Pos, Type, Node | None, Expr | None]:
+        """A (T name value? constraint…) form's name, its type with the constraints, its value's
+        source and, for a plain list, its value compiled without a type to take the type from."""
         if not form.items:
             raise CompileError("expected a declaration, got ()", form.pos)
         head = form.items[0]
@@ -591,16 +593,18 @@ class _Compiler:
         rest = list(form.items[2:])
         node = rest.pop(0) if rest and not _is_constraint(rest[0]) else None
         # A plain list takes its item type from its value (type-system.md, section 4).
+        first = None
         if t is None:
             if node is None:
                 raise CompileError("a plain list needs a value to take its item type from", pos)
-            t = self.expr(node, None, scope).type
+            first = self.expr(node, None, scope)
+            t = first.type
         try:
             if rest:
                 t = refine(t, rest)
         except TypeError_ as e:
             raise CompileError(str(e), rest[0].pos) from None
-        return name, pos, t, node
+        return name, pos, t, node, first
 
     def motif_decl(self, form: Form) -> None:
         name, pos = self.name_of(form)
@@ -838,7 +842,8 @@ class _Compiler:
                         if c[0] in COMPARE and not _range_within(e.range, c):
                             raise CompileError(f"{p.name} may break {_show(c)}", given[k].pos)
             elif p.default is not None:
-                e = self.expr(p.default, p.type, {})
+                # Known when the parameter was declared, so not worked out again for each call.
+                e = _known(p.type, p.value)
             else:
                 e = _known(p.type, self.default(p.type, pos))
             args.append(e)
@@ -2242,7 +2247,10 @@ class _Compiler:
         def set_params(obj: Obj) -> None:
             for p in v.params:
                 node, inner = mine.get(p.name, (p.default, {}))
-                obj.attrs[p.name] = self.attribute(p.type, node, form.pos, p.name, None, inner)
+                first = _known(p.type, p.value) if p.name not in mine else None
+                obj.attrs[p.name] = self.attribute(
+                    p.type, node, form.pos, p.name, None, inner, first
+                )
 
         merged = _scoped(v.body.items[2:], body_scope) + rest
         head = Name((v.base,), form.pos)
@@ -2275,14 +2283,14 @@ class _Compiler:
         for f in forms:
             if not isinstance(f, Form) or len(f.items) < 2:
                 raise CompileError("expected a parameter such as (real t 0.5)", f.pos)
-            name, pos, t, default = self.declared(f, {})
+            name, pos, t, default, first = self.declared(f, {})
             if name is None:
                 raise CompileError("a parameter needs a name", pos)
             if any(p.name == name for p in out):
                 raise CompileError(f"'{name}' is already declared", pos)
             value = None
             if default is not None:
-                e = self.expr(default, t, {})
+                e = self.again(first, default, t, {})
                 if not e.known:
                     raise CompileError(
                         "a parameter's default must be known when compiling", default.pos
@@ -2360,7 +2368,8 @@ class _Compiler:
             for p in motif.params:
                 node, inner = given.get(p.name, (p.default, {}))
                 at = _maybe(p.type) if absent else p.type
-                obj.attrs[p.name] = self.attribute(at, node, form.pos, p.name, None, inner)
+                first = _known(p.type, p.value) if p.name not in given else None
+                obj.attrs[p.name] = self.attribute(at, node, form.pos, p.name, None, inner, first)
             self.shape_attrs(obj, given, absent, form.pos, scope, INSTANCE_ATTRS)
         finally:
             self.frame = saved
@@ -2388,10 +2397,10 @@ class _Compiler:
         return i
 
     def body_variable(self, form: Form, obj: Obj, scope: dict) -> None:
-        name, pos, t, node = self.declared(form, scope)
+        name, pos, t, node, first = self.declared(form, scope)
         saved, self.where = self.where, (name, None, None)
         try:
-            attribute = self.attribute(t, node, form.pos, "the value", scope=scope)
+            attribute = self.attribute(t, node, form.pos, "the value", scope=scope, first=first)
         finally:
             self.where = saved
         if name is None:
@@ -2764,13 +2773,13 @@ class _Compiler:
         return f"{what} may break {_show(c)}"
 
     def attribute(
-        self, t: Type, node: Node | None, pos: Pos, what: str, default=None, scope=None
+        self, t: Type, node: Node | None, pos: Pos, what: str, default=None, scope=None, first=None
     ) -> Attribute:
         if node is None:
             return Attribute(
                 t, self.default(t, pos) if default is None and t != Maybe(COLOR) else default
             )
-        attribute = self.settle(t, self.expr(node, t, scope or {}), what, node.pos)
+        attribute = self.settle(t, self.again(first, node, t, scope or {}), what, node.pos)
         # An attribute given by an expression is bound; folded, it is free but const, so no writer
         # can write it (mtpc.md, "Attributes").
         if not attribute.bound and not _is_literal(node) and not self.is_constant(node, scope):
@@ -2883,8 +2892,20 @@ class _Compiler:
 
     # Expressions -------------------------------------------------------------------------
 
+    def again(self, first: Expr | None, node: Node, expected: Type, scope: dict) -> Expr:
+        """node compiled for expected, where first is node already compiled without a type.
+        A known value is the same either way, and folding it again may take as long as the
+        first time did (mtp-9i9y); otherwise expected may change how the parts compile, as a
+        literal 1 among reals is a real."""
+        if first is not None and first.known:
+            return self.checked(first, node, expected)
+        return self.expr(node, expected, scope)
+
     def expr(self, node: Node, expected: Type | None, scope: dict) -> Expr:
-        e = self.typed(node, expected, scope)
+        return self.checked(self.typed(node, expected, scope), node, expected)
+
+    def checked(self, e: Expr, node: Node, expected: Type | None) -> Expr:
+        """e, stopping the compiler unless it fits expected and its constraints."""
         if e.type == RECURSING:
             return e
         # A constraint is checked on the value (known) or its range (settle), not on its type.

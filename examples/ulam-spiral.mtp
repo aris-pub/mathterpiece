@@ -55,8 +55,6 @@
 
 (scene numbers
   (background paper)
-  ; The primes are filtered in place, not bound to a list variable first: a bound list is
-  ; worked out again where it is read, which doubles the time to compile.
   (group dots (defaults (stroke none))
     (foreach p (where (range 2 25000 (gap 1)) (fn n (and (prime? n) (<= (dist [0 0] (spiral n)) reach))))
       (let ((lined (on-a-line p)))
