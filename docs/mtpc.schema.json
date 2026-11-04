@@ -2192,7 +2192,7 @@
               "animation",
               "attrs",
               "conditions",
-              "when"
+              "active"
             ],
             "properties": {
               "kind": {
@@ -2229,7 +2229,7 @@
                   "$ref": "#/$defs/clamp"
                 }
               },
-              "when": {
+              "active": {
                 "oneOf": [
                   {
                     "$ref": "#/$defs/attribute"
@@ -2278,7 +2278,7 @@
               "target",
               "attrs",
               "conditions",
-              "when"
+              "active"
             ],
             "properties": {
               "kind": {
@@ -2331,7 +2331,7 @@
                   "$ref": "#/$defs/clamp"
                 }
               },
-              "when": {
+              "active": {
                 "oneOf": [
                   {
                     "$ref": "#/$defs/attribute"
@@ -2367,7 +2367,7 @@
               "shape",
               "target",
               "conditions",
-              "when"
+              "active"
             ],
             "properties": {
               "kind": {
@@ -2413,7 +2413,7 @@
                   "$ref": "#/$defs/clamp"
                 }
               },
-              "when": {
+              "active": {
                 "oneOf": [
                   {
                     "$ref": "#/$defs/attribute"
@@ -2452,7 +2452,7 @@
               "name",
               "shape",
               "animation",
-              "when",
+              "active",
               "conditions"
             ],
             "properties": {
@@ -2484,7 +2484,7 @@
               "animation": {
                 "$ref": "#/$defs/id"
               },
-              "when": {
+              "active": {
                 "oneOf": [
                   {
                     "$ref": "#/$defs/attribute"
@@ -2525,7 +2525,7 @@
               "name",
               "view",
               "animation",
-              "when",
+              "active",
               "conditions"
             ],
             "properties": {
@@ -2553,7 +2553,7 @@
               "animation": {
                 "$ref": "#/$defs/id"
               },
-              "when": {
+              "active": {
                 "oneOf": [
                   {
                     "$ref": "#/$defs/attribute"

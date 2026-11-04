@@ -451,10 +451,10 @@ function labelOf(rt: Runtime, id: number): string {
   return String(rt.value(id, "label"));
 }
 
-/** Whether a writer is active, so it can be triggered: always, unless its when is false. */
+/** Whether a writer is active, so it can be triggered: always, unless its active is false. */
 function activeOf(rt: Runtime, id: number): boolean {
-  const when = rt.objects[id]!.when;
-  return when === null || when === undefined || Boolean(rt.evaluate(when));
+  const active = rt.objects[id]!.active;
+  return active === null || active === undefined || Boolean(rt.evaluate(active));
 }
 
 export class MtpSlider extends MtpPart {

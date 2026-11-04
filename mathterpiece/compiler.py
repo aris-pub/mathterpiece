@@ -94,7 +94,7 @@ RESERVED = frozenset(
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
-WRITER_OPTIONS = {"animation", "label", "step", "buttons", "value", "when", "autoplay"}
+WRITER_OPTIONS = {"animation", "label", "step", "buttons", "value", "active", "autoplay"}
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
@@ -1874,17 +1874,23 @@ class _Compiler:
         obj.data["animation"] = animation
         return self.written(animation)
 
-    def when(self, obj: Obj, items: list) -> None:
-        node = self.take(items, "when")
-        obj.data["when"] = (
-            self.attribute(BOOL, node, obj.pos, "when", scope=self.cscope)
+    def active(self, obj: Obj, items: list) -> None:
+        """(active bool): the control or listener acts only while it holds (the author,
+        2026-11-04)."""
+        if any(_head(it) == "when" for it in items):
+            raise CompileError(
+                f"a {obj.kind} takes no 'when': (active bool) says when it acts", obj.pos
+            )
+        node = self.take(items, "active")
+        obj.data["active"] = (
+            self.attribute(BOOL, node, obj.pos, "active", scope=self.cscope)
             if node is not None
             else None
         )
 
     def build_button(self, obj: Obj, items: list, shape) -> None:
         written = self.animated(obj, items)
-        self.when(obj, items)
+        self.active(obj, items)
         self.writer(obj, items, written)
 
     def build_slider(self, obj: Obj, items: list, shape) -> None:
@@ -1927,7 +1933,7 @@ class _Compiler:
                 Refine(INT, ((">=", 2),)), step, obj.pos, "step", scope=self.cscope
             )
         obj.attrs["position"] = Attribute(UNIT, 0)
-        self.when(obj, items)
+        self.active(obj, items)
         self.writer(obj, items, written)
 
     def build_play(self, obj: Obj, items: list, shape) -> None:
@@ -1937,7 +1943,7 @@ class _Compiler:
         obj.data["autoplay"] = self.autoplay(items)
         obj.attrs["playing"] = Attribute(BOOL, False)
         obj.attrs["step"] = Attribute(INT, 0)
-        self.when(obj, items)
+        self.active(obj, items)
         self.writer(obj, items, written)
 
     def build_toggle(self, obj: Obj, items: list, shape) -> None:
@@ -1972,7 +1978,7 @@ class _Compiler:
             else:
                 e = self.read(i, attr)
             obj.attrs["value"] = Attribute(BOOL, expr=e)
-        self.when(obj, items)
+        self.active(obj, items)
         self.writer(obj, items, written)
 
     def build_on_drag(self, obj: Obj, items: list, shape: int) -> None:
@@ -1991,7 +1997,7 @@ class _Compiler:
                 target.pos,
             )
         obj.data["shape"], obj.data["target"] = shape, (i, attr)
-        self.when(obj, items)
+        self.active(obj, items)
         self.writer(obj, items, {(i, attr)})
 
     def position_deps(self, shape: int) -> set:
@@ -2035,13 +2041,13 @@ class _Compiler:
     def build_on_view(self, obj: Obj, items: list, view: int) -> None:
         obj.data["view"] = view
         written = self.animated(obj, items)
-        self.when(obj, items)
+        self.active(obj, items)
         self.writer(obj, items, written)
 
     def build_on_click(self, obj: Obj, items: list, shape: int) -> None:
         obj.data["shape"] = shape
         written = self.animated(obj, items)
-        self.when(obj, items)
+        self.active(obj, items)
         self.writer(obj, items, written)
 
     build_on_release = build_on_click

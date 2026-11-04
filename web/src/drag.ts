@@ -59,7 +59,7 @@ export class Drags {
   private find(hit: number): { listener: Obj; shape: number } | null {
     for (let i: number | null = hit; i !== null; i = this.rt.parent(i)) {
       const listener = (this.byShape.get(i) ?? []).find(
-        (l) => !l.when || Boolean(this.rt.evaluate(l.when as never)),
+        (l) => !l.active || Boolean(this.rt.evaluate(l.active as never)),
       );
       if (listener) return { listener, shape: i };
     }

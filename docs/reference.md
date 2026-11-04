@@ -137,15 +137,15 @@ A view, a control and a readout must have a name: a page places each by its name
 |---|---|---|---|---|
 | `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling its `when` items, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene) and `(when bool name…)`, drawn in the order written, each on top of those before it |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
-| `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(when bool)` | conditions |
-| `(button name)` | required | none | `(animation …)`, `(label string)`, `(when bool)` | conditions |
-| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(autoplay)`, `(autoplay name)`, `(when bool)` | conditions |
-| `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(when bool)` | conditions |
-| `(on-drag shape target)` | none | the shape; the target, a `name`, the variable or attribute the drag writes | `(when bool)` | conditions |
-| `(on-click shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
-| `(on-release shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
-| `(on-dragend shape)` | none | the shape | `(animation …)`, `(when bool)` | conditions |
-| `(on-view canvas)` | none | the canvas | `(animation …)`, `(when bool)` | conditions |
+| `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)` | conditions |
+| `(button name)` | required | none | `(animation …)`, `(label string)`, `(active bool)` | conditions |
+| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(autoplay)`, `(autoplay name)`, `(active bool)` | conditions |
+| `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(active bool)` | conditions |
+| `(on-drag shape target)` | none | the shape; the target, a `name`, the variable or attribute the drag writes | `(active bool)` | conditions |
+| `(on-click shape)` | none | the shape | `(animation …)`, `(active bool)` | conditions |
+| `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)` | conditions |
+| `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)` | conditions |
+| `(on-view canvas)` | none | the canvas | `(animation …)`, `(active bool)` | conditions |
 
 A canvas **toggles** what its `when` items show: it shows or hides them as their conditions change. A toggle takes the canvas's `(toggle-duration t)`, in seconds, 0 (at once) if left out, with its `(toggle-ease e)`, `'linear'` if left out, any ease an animation takes: over that time the items' opacity, as the canvas shows them, goes from 0 to 1 or back. A canvas takes no `move`. The canvas never writes the scene: the opacity is its own. "Toggle" is the word for a canvas showing or hiding one of its items.
 
@@ -208,7 +208,7 @@ Every control and listener emits writes to its target (or, through its animation
 
 ### Dragging
 
-- **The press** hits the topmost shape under the pointer, then goes up the scene tree to the nearest shape with an `on-drag` whose `when` holds. That shape is dragged.
+- **The press** hits the topmost shape under the pointer, then goes up the scene tree to the nearest shape with an `on-drag` that is active, its `(active bool)` holding. That shape is dragged.
 - **The target** is the shape's own position or a number its position depends on.
 - **A target that is the shape's own `x`, `y` or `pos`** follows the pointer's motion, keeping the offset the pointer had from the shape at the press: the shape does not jump to center itself under the pointer. A target of `x` alone or `y` alone follows the pointer along that axis only.
 - **A target that is a number the shape's position depends on** (`theta` in `(polar 1 theta)`) takes the value that brings the shape closest to where the pointer has moved it. The search starts from the current value and stays near it, so the shape never jumps to another position equally close (the far side of a circle). When no value reaches the pointer exactly, the closest is taken.

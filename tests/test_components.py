@@ -67,26 +67,27 @@ class TestListeners:
         error(f"{K} (scene s (circle c)) (on-drag c k)", "position does not depend on")
 
     def test_when(self):
-        m = model("(bool on true) (scene s (circle c)) (on-drag c c.x (when on))")
+        m = model("(bool on true) (scene s (circle c)) (on-drag c c.x (active on))")
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
-        assert d.data["when"].deps == {(m.id("on"), None)}
+        assert d.data["active"].deps == {(m.id("on"), None)}
 
     @pytest.mark.parametrize(
         "control",
         [
-            f"(button b {MOVE} (when (> k 1)))",
-            f"(slider b {SLIDE} (when (> k 1)))",
-            f"(play b {MOVE} (when (> k 1)))",
-            "(toggle b none (when (> k 1)))",
+            f"(button b {MOVE} (active (> k 1)))",
+            f"(slider b {SLIDE} (active (> k 1)))",
+            f"(play b {MOVE} (active (> k 1)))",
+            "(toggle b none (active (> k 1)))",
         ],
     )
-    def test_a_control_is_active_while_its_when_holds(self, control):
-        # data-model.md "Writers": a writer with (when bool) can be triggered only while it holds.
+    def test_a_control_is_active_while_its_active_holds(self, control):
+        # data-model.md "Writers": a writer with (active bool) can be triggered only while it holds
+        # (the author, 2026-11-04: active, not when).
         m = model(f"{K} {control}")
-        assert m.get("b").data["when"].deps == {(m.id("k"), None)}
+        assert m.get("b").data["active"].deps == {(m.id("k"), None)}
 
-    def test_a_control_without_when_is_always_active(self):
-        assert model(f"{K} (button b {MOVE})").get("b").data["when"] is None
+    def test_a_control_without_active_is_always_active(self):
+        assert model(f"{K} (button b {MOVE})").get("b").data["active"] is None
 
     def test_on_click(self):
         m = model(f"{K} (scene s (circle c)) (on-click c {MOVE})")
@@ -224,7 +225,7 @@ class TestReleaseListeners:
         error(f"{K} ({kind} {MOVE})", f"{kind} takes the shape it listens to")
 
     def test_the_compiled_file(self):
-        d = doc(f"{self.S} (on-release c {MOVE}) (on-dragend c (when true) {MOVE})")
+        d = doc(f"{self.S} (on-release c {MOVE}) (on-dragend c (active true) {MOVE})")
         assert errors(d) == []
         kinds = [o["kind"] for o in d["objects"]]
         assert "on-release" in kinds and "on-dragend" in kinds
@@ -369,3 +370,10 @@ class TestZoomBounds:
 
     def test_known_when_compiling(self):
         error(f"(real k 4) {self.S} (canvas v (zoom 1 k) s)", "known when compiling")
+
+
+def test_a_control_takes_no_when():
+    error(
+        "(real k 0 (>= 0) (<= 1)) (button b (animation (move k (to 1) (duration 0))) (when true))",
+        "active",
+    )

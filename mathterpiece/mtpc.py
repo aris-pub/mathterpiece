@@ -264,27 +264,27 @@ class Writer:
             d["animation"] = o.data["animation"]
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
-            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
+            d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
         elif kind == "toggle":
             target = o.data["target"]
             d["target"] = list(target) if target is not None else None
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
-            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
+            d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
         elif kind == "on-drag":
             d["shape"] = o.data["shape"]
             d["target"] = list(o.data["target"])
             d["conditions"] = self.conditions(o)
-            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
+            d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
         elif kind == "on-view":
             d["view"] = o.data["view"]
             d["animation"] = o.data["animation"]
-            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
+            d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["conditions"] = self.conditions(o)
         elif kind in ("on-click", "on-release", "on-dragend"):
             d["shape"] = o.data["shape"]
             d["animation"] = o.data["animation"]
-            d["when"] = self.attribute(o.data["when"]) if o.data["when"] is not None else None
+            d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["conditions"] = self.conditions(o)
         return d
 

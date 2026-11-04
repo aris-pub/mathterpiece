@@ -63,7 +63,7 @@
 ; back runs on on-dragend, which only the end of a drag sets off; on-release would also run on a
 ; plain click, and when a press that began elsewhere is let go over the bubble.
 (foreach b bubbles
-  (on-click b.body (when (< (or? (dist b.body.pos b.pos) 1) 0.1))
+  (on-click b.body (active (< (or? (dist b.body.pos b.pos) 1) 0.1))
     (animation
       (move b.burst (to 1) (duration 0.3) (ease 'ease-out'))
       (move b.popped (to true) (duration 0))))
