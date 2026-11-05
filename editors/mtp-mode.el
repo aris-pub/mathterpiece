@@ -21,7 +21,7 @@
 
 (defconst mtp-mode--arguments
   '("a" "align" "autoplay" "b" "background" "buttons" "c" "clip" "dash" "dash-offset"
-    "duration" "ease" "family" "fill" "fill-opacity" "font" "from" "gap" "halign" "height"
+    "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap" "halign" "height"
     "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points" "pos" "r" "rx"
     "ry" "size" "step" "stroke" "stroke-opacity" "stroke-width" "style" "to" "toggle-duration" "toggle-ease" "transform"
     "translate" "valign" "value" "weight" "width"
@@ -56,9 +56,9 @@ take `font-lock-keyword-face', so the two stand apart.")
 Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
 
 (defconst mtp-mode--keywords
-  (let ((group '("defaults" "clip" "translate" "transform" "gap" "align" "opacity" "fill" "stroke"
-                 "stroke-width" "fill-opacity" "stroke-opacity" "dash" "line-cap" "line-join"
-                 "x" "y" "pos"))
+  (let ((group '("defaults" "clip" "fixed-size" "translate" "transform" "gap" "align" "opacity"
+                 "fill" "stroke" "stroke-width" "fill-opacity" "stroke-opacity" "dash" "line-cap"
+                 "line-join" "x" "y" "pos"))
         (animation '("loop" "duration" "ease" "defaults")))
     `(("scene" "background" "transform")
       ("group" ,@group) ("row" ,@group) ("column" ,@group)

@@ -1,0 +1,48 @@
+; Pins on circles of radius 1, 0.5 and 0.1, each pin free to slide only around its own circle:
+; drag one, and its angle follows. Zoom in with the wheel or a pinch, up to 40 times: the
+; circles grow, since they are in the scene's units, and the pins do not, since each is a group
+; measured in screen pixels, a dot, a stem and a label together. Zoom in on the smallest circle,
+; and its pin stays the size of the others.
+
+(import house paper ink soft terracotta teal plum number)
+
+; A dot on its point, and a stem and a label pointing away from the center, at the angle toward,
+; all in pixels. The label grows away from the stem's end on whichever side that is.
+(motif pin ((string label '') (color tint) (real toward 90))
+  (group mark (fixed-size true)
+    (line_ (from (polar 6 toward)) (to (polar 22 toward)) (stroke ink) (stroke-width 1.5))
+    (circle_ (r 6) (fill tint) (stroke paper) (stroke-width 2))
+    (text_ label (pos (polar 27 toward)) (font number) (fill ink)
+        (halign (cond ((> (cosd toward) 0.4) 'start') ((< (cosd toward) -0.4) 'end')
+                      (else 'middle')))
+        (valign (cond ((> (sind toward) 0.4) 'bottom') ((< (sind toward) -0.4) 'top')
+                      (else 'middle'))))))
+
+(scene board (background paper)
+  (real a 50)
+  (real b 140)
+  (real c 320)
+
+  (group circles (defaults (fill none) (stroke-width 2))
+    (circle_ (r 1) (stroke terracotta))
+    (circle_ (r 0.5) (stroke teal))
+    (circle_ (r 0.1) (stroke plum)))
+  (group radii (defaults (stroke soft) (stroke-width 1) (dash [3 4]))
+    (line_ (from [0 0]) (to (polar 1 a)))
+    (line_ (from [0 0]) (to (polar 0.5 b)))
+    (line_ (from [0 0]) (to (polar 0.1 c))))
+
+  (pin large (pos (polar 1 a)) (toward a) (tint terracotta)
+       (label $'r = 1, {(mod a 360):.0f}°'))
+  (pin middle (pos (polar 0.5 b)) (toward b) (tint teal)
+       (label $'r = 0.5, {(mod b 360):.0f}°'))
+  (pin small (pos (polar 0.1 c)) (toward c) (tint plum)
+       (label $'r = 0.1, {(mod c 360):.0f}°')))
+
+(canvas view (x -2.4) (y -1.3) (width 4.8) (height 2.6) (zoom 1 40)
+  circles radii large middle small)
+
+; A pin's position is a point on its circle at its angle, so a drag moves the angle.
+(on-drag large a)
+(on-drag middle b)
+(on-drag small c)

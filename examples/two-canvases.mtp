@@ -1,6 +1,6 @@
 ; One triangle on two canvases: the one above shows the triangle and its corners, and the one
 ; below the same triangle and corners on a grid, with the circle through the corners. Drag a
-; corner on either canvas: it is one corner, drawn twice. The canvas below also zooms and pans.
+; corner on either canvas: it is one corner, drawn twice. Both canvases zoom and pan.
 ;
 ; Each canvas lists the shapes it shows.
 
@@ -26,10 +26,12 @@
       (line_ (from [-9 0]) (to [9 0]))
       (line_ (from [0 -4]) (to [0 3]))))
 
-  (group corners (defaults (fill ink) (stroke none))
-    (circle ca (pos [-2.5 -1.5]) (r 0.2))
-    (circle cb (pos [2.5 -1.5]) (r 0.2))
-    (circle cc (pos [-0.8 2]) (r 0.2)))
+  ; Each corner is measured in screen pixels, so it keeps its size on both canvases, and when
+  ; either zooms.
+  (group corners (defaults (fill ink) (stroke none) (fixed-size true))
+    (group ca (translate [-2.5 -1.5]) (circle_ (r 9)))
+    (group cb (translate [2.5 -1.5]) (circle_ (r 9)))
+    (group cc (translate [-0.8 2]) (circle_ (r 9))))
 
   (triangle shape (a ca.pos) (b cb.pos) (c cc.pos) (fill teal) (fill-opacity 0.12) (stroke ink)
       (stroke-width 3) (line-join 'round'))
@@ -44,14 +46,15 @@
         (line|none_ (from o) (to ca.pos))
         (line|none_ (from o) (to cb.pos))
         (line|none_ (from o) (to cc.pos)))
-      (circle|none center (pos o) (r 0.1) (fill terracotta) (stroke none))))
+      (group|none center (translate o) (fixed-size true)
+        (circle_ (r 4) (fill terracotta) (stroke none)))))
 
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
-    (text above-form '(canvas above … shape corners)' (pos [0 -2.3]))
+    (text above-form '(canvas above (zoom 1 4) … shape corners)' (pos [0 -2.3]))
     (text below-form '(canvas below (zoom 1 4) … grid around shape corners)' (pos [0 -3.35]))))
 
 ; The corners are listed last, so they are drawn on top and the reader can always grab them.
-(canvas above (x -7.3) (y -2.6) (width 14.6) (height 5) (pan false) (zoom false)
+(canvas above (x -7.3) (y -2.6) (width 14.6) (height 5) (zoom 1 4)
   shape above-form corners)
 (canvas below (x -8.7) (y -3.7) (width 17.4) (height 6) (zoom 1 4)
   grid around shape below-form corners)

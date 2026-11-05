@@ -2561,6 +2561,12 @@ class _Compiler:
                 obj.pos,
             )
         target = items.pop(0)
+        if self.inside_fixed(shape):
+            raise CompileError(
+                "this shape is inside a fixed-size group, whose members have no size in scene"
+                " units: drag the group instead",
+                obj.pos,
+            )
         i, attr, _ = self.writable(target, self.cscope)
         own = i == shape and attr in ("x", "y", "pos")
         if not own and (i, attr) not in self.position_deps(shape):
@@ -2574,6 +2580,18 @@ class _Compiler:
         # The runtime writes a drag of pos as a write to x and one to y, and limits each by its
         # own conditions, so a condition may limit either (mtp-0814).
         written = {(i, attr)} | ({(i, "x"), (i, "y")} if own and attr == "pos" else set())
+        # A fixed-size group is moved by its translate: its members are in screen pixels.
+        if own and self.fixed(shape):
+            group = self.model.objects[shape]
+            move = group.attrs["translate"]
+            if move.bound:
+                raise CompileError(
+                    f"a drag moves a fixed-size group by its translate, and {group.name}'s"
+                    " translate is bound: drag what it reads instead",
+                    target.pos,
+                )
+            self.check_writable(group, move, f"{group.name}.translate", target.pos)
+            written = {(shape, "translate")}
         self.writer(obj, items, written)
 
     def position_deps(self, shape: int) -> set:
@@ -3221,6 +3239,10 @@ class _Compiler:
                     assert isinstance(item, Form)
                     self.group_defaults(item, inner, defaults)
                     continue
+                if kind == "group" and head == "fixed-size":
+                    assert isinstance(item, Form)
+                    self.fixed_size(obj, item, parent)
+                    continue
                 if kind == "group" and head in POSITIONS:
                     raise CompileError(
                         f"a group has no {head} of its own: move it with (translate …)", item.pos
@@ -3254,10 +3276,27 @@ class _Compiler:
         # nearest group's wins over one further out (reference.md, "The scene and shapes").
         down = dict(spread or {})
         if kind == "group":
+            # A fixed-size from a container's defaults goes to the groups among its members, and
+            # no further down: their members are in pixels already.
+            taken = down.pop("fixed-size", None)
+            if taken is not None and "fixed-size" not in obj.data:
+                node = taken[0]
+                assert isinstance(node, Form)
+                obj.data["fixed-size"] = _fixed_size_value(node)
+                if obj.data["fixed-size"]:
+                    self.not_inside_fixed(parent, node.pos)
+            if taken is not None and not obj.data.get("fixed-size"):
+                down["fixed-size"] = taken
             for attr, (node, inner) in defaults.items():
+                if attr == "fixed-size":
+                    down[attr] = (node, inner)
+                    continue
                 down.update(_coordinates(attr, node, inner))
         else:
             for attr, (node, inner) in down.items():
+                # Only a group takes a fixed size.
+                if attr == "fixed-size":
+                    continue
                 # A stroke would outline a text's letters, so a text takes none from a group.
                 if kind == "text" and attr in STROKE_ONLY:
                     continue
@@ -3358,6 +3397,40 @@ class _Compiler:
         t = Maybe(POINT) if maybe else POINT
         return Expr("anchor", t, (side, target, gap, self.frame), frozenset(deps))
 
+    def fixed_size(self, obj: Obj, form: Form, parent) -> None:
+        """(fixed-size true): the group's members are measured in screen pixels around its
+        position, on every canvas and at every zoom (mtp-ggs). Known when compiling, since what
+        reads the group depends on it."""
+        if "fixed-size" in obj.data:
+            raise CompileError("'fixed-size' is given twice", form.pos)
+        obj.data["fixed-size"] = _fixed_size_value(form)
+        if obj.data["fixed-size"]:
+            self.not_inside_fixed(parent, form.pos)
+
+    def not_inside_fixed(self, parent, pos: Pos) -> None:
+        j = parent
+        while j is not None:
+            if self.model.objects[j].data.get("fixed-size"):
+                raise CompileError(
+                    "this group is inside a fixed-size group, whose members are already measured"
+                    " in screen pixels",
+                    pos,
+                )
+            j = self.model.objects[j].parent
+
+    def fixed(self, i: int) -> bool:
+        """Whether shape i is a fixed-size group."""
+        return bool(self.model.objects[i].data.get("fixed-size"))
+
+    def inside_fixed(self, i: int) -> bool:
+        """Whether shape i is inside a fixed-size group, at any depth."""
+        j = self.model.objects[i].parent
+        while j is not None:
+            if self.fixed(j):
+                return True
+            j = self.model.objects[j].parent
+        return False
+
     def box_of(self, i: int, pos: Pos) -> tuple[set, bool]:
         """What a shape's box reads, and whether it may be none: a container's is the box around
         its members' that exist, cut to its clip's (reference.md, "Placing")."""
@@ -3369,6 +3442,10 @@ class _Compiler:
             )
         deps = {(i, a) for a in obj.attrs} | set(self.moves(i))
         absent = isinstance(obj.type, Maybe)
+        # Its members are measured in screen pixels, which have no size in scene units, so its
+        # box is its position, of no size.
+        if self.fixed(i):
+            return deps, absent
         if obj.kind in ("group", "instance"):
             members = [self.box_of(m, pos) for m in obj.members]
             for d, _ in members:
@@ -3423,6 +3500,13 @@ class _Compiler:
                     if attr in defaults:
                         raise CompileError(f"'{head}' is given twice", item.pos)
                     defaults[attr] = (node, scope)
+                continue
+            if head == "fixed-size":
+                assert isinstance(item, Form)
+                if head in defaults:
+                    raise CompileError("'fixed-size' is given twice", item.pos)
+                _fixed_size_value(item)
+                defaults[head] = (item, scope)
                 continue
             if head not in GROUP_DEFAULTS or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
@@ -4051,6 +4135,9 @@ class _Compiler:
         if obj.kind in ("group", "scene") and name == "members":
             items = tuple(self.read(m, None) for m in obj.members)
             return Expr("list", ListT(self.common(obj.members)), items)
+        if self.fixed(i) and name in ("x", "y", "pos"):
+            where = Expr("read", POINT, (i, "pos", self.frame), frozenset(self.moves(i)))
+            return where if name == "pos" else _part(where, 0 if name == "x" else 1)
         if name == "pos" and obj.kind != "group" and "pos" in self.attr_names(i):
             return _gather(POINT, [self.obj_attr(i, "x", pos), self.obj_attr(i, "y", pos)])
         if obj.kind in CORNERS and name in ("x", "y"):
@@ -4842,6 +4929,13 @@ def _points_mean(points: Expr) -> Expr:
         n = max(len(ps), 1)
         return _known(POINT, (sum(p[0] for p in ps) / n, sum(p[1] for p in ps) / n))
     return Expr("points-mean", POINT, (points,), points.deps)
+
+
+def _fixed_size_value(form: Form) -> bool:
+    """The bool of (fixed-size true) or (fixed-size false), which is known when compiling."""
+    if len(form.items) != 2 or not isinstance(form.items[1], BoolLit):
+        raise CompileError("fixed-size is (fixed-size true) or (fixed-size false)", form.pos)
+    return form.items[1].value
 
 
 def _dash(item: Node) -> dict[str, Node]:

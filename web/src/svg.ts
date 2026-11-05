@@ -134,10 +134,17 @@ export function zoom(rt: Runtime, canvas: number, svg: SVGSVGElement, look: Look
   const box = lookBox(viewOf(rt, canvas).box, look);
   svg.setAttribute("viewBox", box.join(" "));
   const unitsPerPx = unitsPerPxOf(svg, box);
+  // What is inside a fixed-size group is already in pixels: only the group's scale changes.
+  const fixed = (el: Element) => el.closest("[data-mtp-fixed-size]") !== null;
+  for (const g of svg.querySelectorAll("g[data-mtp-fixed-size]")) {
+    g.setAttribute("transform", matrix(rt.local(Number(g.getAttribute("data-mtp-id")), true, unitsPerPx)));
+  }
   for (const el of svg.querySelectorAll("text[data-mtp-id]")) {
+    if (fixed(el)) continue;
     el.setAttribute("font-size", fontSize(rt, Number(el.getAttribute("data-mtp-id")), unitsPerPx));
   }
   for (const m of svg.querySelectorAll("marker[data-mtp-head-px]")) {
+    if (fixed(m)) continue;
     const size = String(Number(m.getAttribute("data-mtp-head-px")) * unitsPerPx);
     m.setAttribute("markerWidth", size);
     m.setAttribute("markerHeight", size);
@@ -167,10 +174,14 @@ function drawObject(rt: Runtime, i: number, into: Element, unitsPerPx: number): 
   if (absent(rt, i)) return;
   if (o.kind === "group" || o.kind === "instance") {
     const g = document.createElementNS(NS, "g");
-    g.setAttribute("transform", matrix(rt.local(i, true)));
+    g.setAttribute("transform", matrix(rt.local(i, true, unitsPerPx)));
     g.setAttribute("data-mtp-id", String(i));
-    if (o.clip !== undefined) clipTo(rt, o.clip, g, unitsPerPx);
-    for (const m of o.members ?? []) drawObject(rt, m, g, unitsPerPx);
+    // Inside a fixed-size group one unit is one screen pixel, so what is sized in pixels inside
+    // it needs no converting.
+    const inside = o["fixed-size"] ? 1 : unitsPerPx;
+    if (o["fixed-size"]) g.setAttribute("data-mtp-fixed-size", "");
+    if (o.clip !== undefined) clipTo(rt, o.clip, g, inside);
+    for (const m of o.members ?? []) drawObject(rt, m, g, inside);
     into.appendChild(g);
     return;
   }

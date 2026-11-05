@@ -1649,6 +1649,9 @@
               "clip": {
                 "$ref": "#/$defs/id"
               },
+              "fixed-size": {
+                "const": true
+              },
               "layout": {
                 "type": "object",
                 "required": [

@@ -31,7 +31,8 @@
 (scene plane (background paper)
   (real theta 40)
 
-  (circle handle (pos (polar 1 theta)) (r 0.04) (fill ink))
+  ; The point is measured in screen pixels, so it keeps its size when the canvas zooms.
+  (group handle (translate (polar 1 theta)) (fixed-size true) (circle_ (r 9) (fill ink)))
 
   ; Which side of each axis the point is on: names along an axis go on the other side, away
   ; from the lines that reach the point.

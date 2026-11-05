@@ -242,6 +242,8 @@ class Writer:
             d["attrs"] = attrs
             if "clip" in o.data:
                 d["clip"] = o.data["clip"]
+            if o.data.get("fixed-size"):
+                d["fixed-size"] = True
             if "layout" in o.data:
                 layout = o.data["layout"]
                 d["layout"] = {

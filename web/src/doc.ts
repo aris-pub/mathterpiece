@@ -56,6 +56,8 @@ export interface Obj {
   members?: number[];
   /** A container's clip: a shape in its frame, never drawn, that its members are drawn inside. */
   clip?: number;
+  /** A group whose members are measured in screen pixels around its position (mtp-ggs). */
+  "fixed-size"?: boolean;
   of?: string;
   // transitions
   from?: Attribute | null;

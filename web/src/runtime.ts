@@ -254,11 +254,15 @@ export class Runtime {
 
   /**
    * The transform from a shape's frame to its container's: an instance's x and y (when
-   * members), then its translate, then its transform (reference.md, "Coordinates").
+   * members), then its translate, then its transform (reference.md, "Coordinates"). The members
+   * of a fixed-size group are in screen pixels: pixel is how many scene units one pixel is on
+   * the canvas drawing them. Anything else that reads them, which no canvas sizes, sees them all
+   * at the group's position, its box of no size (mtp-ggs).
    */
-  local(id: number, members = false): number[] {
+  local(id: number, members = false, pixel = 0): number[] {
     const o = this.objects[id]!;
     const steps: number[][] = [];
+    if (members && o["fixed-size"]) steps.push([pixel, 0, 0, pixel, 0, 0]);
     if (o.kind === "instance" && members) {
       steps.push([1, 0, 0, 1, this.value(id, "x") as number, this.value(id, "y") as number]);
     }
@@ -888,8 +892,10 @@ export class Runtime {
    * (reference.md, "Coordinates").
    */
   read(id: number, attr: string | null, frame: number | null): unknown {
-    const v = this.value(id, attr);
     const o = this.objects[id]!;
+    // A fixed-size group has no position stored: it is where its frame puts its origin.
+    if (o["fixed-size"] && attr === "pos") return this.exists(id) ? this.attrOf(id, "pos", frame) : null;
+    const v = this.value(id, attr);
     if (attr === null || !SHAPES.has(o.kind) || v === null) return v;
     const isPoint = attr === "pos" || POINT_ATTRS.has(attr);
     const isCoord = attr === "x" || attr === "y";
@@ -910,6 +916,10 @@ export class Runtime {
   box(id: number, frame: number | null): number[] | null {
     if (!this.exists(id)) return null;
     const o = this.objects[id]!;
+    if (o["fixed-size"]) {
+      const [x, y] = this.attrOf(id, "pos", frame) as number[];
+      return [x!, y!, x!, y!];
+    }
     if (o.kind === "group" || o.kind === "instance") {
       const boxes = (o.members ?? []).map((m) => this.box(m, frame)).filter((b) => b !== null);
       if (boxes.length === 0) return null;
@@ -973,6 +983,10 @@ export class Runtime {
   private attrOf(id: number, attr: string, frame: number | null): unknown {
     const o = this.objects[id]!;
     if (attr === "name") return o.name;
+    if (o["fixed-size"] && attr === "pos") {
+      const m = this.frameOf(id, frame);
+      return m === null ? [0, 0] : apply(m, [0, 0]);
+    }
     if (o.kind === "group" && !this.has(id, attr) && attr !== "length" && attr !== "members") {
       return (o.members ?? []).map((m) => this.attrOf(m, attr, frame));
     }

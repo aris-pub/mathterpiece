@@ -62,7 +62,8 @@ NAMED = {
 # 4 in, like a positional argument, so it reads apart from the body at 2. The same table as the
 # Emacs mode's.
 _GROUP = {
-    *["defaults", "clip", "translate", "transform", "gap", "align", "opacity", "fill", "stroke"],
+    *["defaults", "clip", "fixed-size", "translate", "transform", "gap", "align", "opacity"],
+    *["fill", "stroke"],
     *["stroke-width", "fill-opacity", "stroke-opacity", "dash", "line-cap", "line-join"],
     *["x", "y", "pos"],
 }

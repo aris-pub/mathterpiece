@@ -1,6 +1,7 @@
 // Dragging (docs/reference.md, "Dragging"): a press goes up the scene tree from the shape hit to
 // the nearest shape with an on-drag whose when holds. A target that is the shape's own x, y or
-// pos follows the pointer, keeping the offset it had at the press; a group moves every member; a
+// pos follows the pointer, keeping the offset it had at the press; a group moves every member, and
+// a fixed-size group its translate, since its members are in screen pixels (mtp-ggs); a
 // number the shape's position depends on takes the value that brings the shape closest to where
 // the pointer has moved it. The listener's conditions clamp each write.
 import { apply, compose, invert } from "./builtins.ts";
@@ -17,6 +18,8 @@ interface Held {
   grab: Point;
   start: Point;
   members?: [number, Point][];
+  // A fixed-size group, moved by its translate.
+  fixed?: boolean;
   // Whether the pointer has moved since the press.
   moved?: boolean;
 }
@@ -48,6 +51,7 @@ export class Drags {
   get targets(): string[] {
     if (!this.held) return [];
     if (this.held.members) return this.held.members.map(([m]) => `${m}:pos`);
+    if (this.held.fixed) return [`${this.held.shape}:translate`];
     const [id, attr] = this.held.target;
     return [`${id}:${attr ?? ""}`];
   }
@@ -74,6 +78,11 @@ export class Drags {
     const target = listener.target!;
     const own = target[0] === shape && ["x", "y", "pos"].includes(target[1] ?? "");
     const rt = this.rt;
+    if (rt.objects[shape]!["fixed-size"] && own) {
+      const start = rt.value(shape, "translate") as Point;
+      this.held = { listener, shape, target, grab: this.inFrame(rt.parent(shape), scene), start, fixed: true };
+      return true;
+    }
     if (rt.objects[shape]!.kind === "group" && own) {
       const members = (rt.objects[shape]!.members ?? []).map(
         (m) => [m, rt.value(m, "pos") as Point] as [number, Point],
@@ -103,6 +112,12 @@ export class Drags {
     const [id, attr] = held.target;
     const rt = this.rt;
     let changed = false;
+    if (held.fixed) {
+      const [px, py] = this.inFrame(this.rt.parent(held.shape), scene);
+      const x = attr === "y" ? held.start[0] : held.start[0] + px - held.grab[0];
+      const y = attr === "x" ? held.start[1] : held.start[1] + py - held.grab[1];
+      return rt.write(held.shape, "translate", [x, y]);
+    }
     if (held.members) {
       const [px, py] = this.inFrame(held.shape, scene);
       const [dx, dy] = [px - held.grab[0], py - held.grab[1]];
@@ -188,7 +203,7 @@ export class Drags {
   }
 
   // A scene point in the frame a container's members live in.
-  private inFrame(container: number, scene: Point): Point {
+  private inFrame(container: number | null, scene: Point): Point {
     return apply(invert(this.rt.toScene(container)), scene) as Point;
   }
 

@@ -1,0 +1,6 @@
+(scene s
+  (group grip (translate [1 2]) (fixed-size true) (circle tip (r 6)) (text note 'a' (pos [10 0])))
+  (circle follower (pos grip.pos) (r 0.5))
+  (circle beside (pos (top-right grip 0.5)) (r 0.1)))
+(canvas v (x -10) (y -10) (width 20) (height 20) s)
+(on-drag grip grip.pos)
