@@ -1,0 +1,61 @@
+; One triangle on two canvases: the one above shows the triangle and its corners, and the one
+; below the same triangle and corners on a grid, with the circle through the corners. Drag a
+; corner on either canvas: it is one corner, drawn twice. The canvas below also zooms and pans.
+;
+; Each canvas lists the shapes it shows.
+
+(import house paper ink soft terracotta teal code)
+
+(func[real] dot ((point p) (point q)) (+ (* p.x q.x) (* p.y q.y)))
+
+; The center of the circle through the three corners, from the usual determinant formula: none
+; when the corners are on one line.
+(func[point|none] circumcenter ((point p) (point q) (point r))
+  (let ((d (* 2 (+ (* p.x (- q.y r.y)) (* q.x (- r.y p.y)) (* r.x (- p.y q.y)))))
+        (pp (dot p p)) (qq (dot q q)) (rr (dot r r)))
+    [(/ (+ (* pp (- q.y r.y)) (* qq (- r.y p.y)) (* rr (- p.y q.y))) d)
+     (/ (+ (* pp (- r.x q.x)) (* qq (- p.x r.x)) (* rr (- q.x p.x))) d)]))
+
+(scene plane (background paper)
+  ; A line at every whole number, and the two axes darker.
+  (group grid (defaults (stroke soft) (stroke-width 1))
+    (group lines (defaults (stroke-opacity 0.25))
+      (foreach k 19 (line_ (from [(- k 9) -4]) (to [(- k 9) 3])))
+      (foreach k 8 (line_ (from [-9 (- k 4)]) (to [9 (- k 4)]))))
+    (group axes (defaults (stroke-opacity 0.8))
+      (line_ (from [-9 0]) (to [9 0]))
+      (line_ (from [0 -4]) (to [0 3]))))
+
+  (group corners (defaults (fill ink) (stroke none))
+    (circle ca (pos [-2.5 -1.5]) (r 0.2))
+    (circle cb (pos [2.5 -1.5]) (r 0.2))
+    (circle cc (pos [-0.8 2]) (r 0.2)))
+
+  (triangle shape (a ca.pos) (b cb.pos) (c cc.pos) (fill teal) (fill-opacity 0.12) (stroke ink)
+      (stroke-width 3) (line-join 'round'))
+
+  ; The circle through the corners. When they are nearly on one line it grows past any canvas,
+  ; so it is cut off at a window around the triangle.
+  (group around (clip (rect_ (pos [0 0]) (width 16) (height 12)))
+    (let ((o (circumcenter ca.pos cb.pos cc.pos)))
+      (circle|none circle (pos o) (r (dist o ca.pos)) (fill none) (stroke terracotta)
+          (stroke-width 2))
+      (group radii (defaults (stroke terracotta) (stroke-width 1) (dash [4 4]))
+        (line|none_ (from o) (to ca.pos))
+        (line|none_ (from o) (to cb.pos))
+        (line|none_ (from o) (to cc.pos)))
+      (circle|none center (pos o) (r 0.1) (fill terracotta) (stroke none))))
+
+  (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
+    (text above-form '(canvas above … shape corners)' (pos [0 -2.3]))
+    (text below-form '(canvas below (zoom 1 4) … grid around shape corners)' (pos [0 -3.35]))))
+
+; The corners are listed last, so they are drawn on top and the reader can always grab them.
+(canvas above (x -7.3) (y -2.6) (width 14.6) (height 5) (pan false) (zoom false)
+  shape above-form corners)
+(canvas below (x -8.7) (y -3.7) (width 17.4) (height 6) (zoom 1 4)
+  grid around shape below-form corners)
+
+(on-drag ca ca.pos)
+(on-drag cb cb.pos)
+(on-drag cc cc.pos)

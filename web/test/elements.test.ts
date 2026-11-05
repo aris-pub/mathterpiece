@@ -352,6 +352,30 @@ describe("panning and zooming a canvas", () => {
     expect(label().getAttribute("font-size")).toBe(String((16 * 20) / 640));
   });
 
+  it("lets the reader drag a shape on every canvas that draws it", () => {
+    // A listener attaches to every element that draws its shape, so dot, drawn by v and by
+    // fixed, can be dragged on either, and both show where it went.
+    const [, , v] = page(
+      `<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="fixed"></mtp-canvas>`,
+      doc("view"),
+    );
+    const dotIn = (name: string) => document.querySelector(`mtp-canvas[name="${name}"] [data-mtp-id]:last-child`)!;
+    const drag = (name: string, dx: number) => {
+      const dot = dotIn(name);
+      pointer("pointerdown", 100, 100, 1, dot);
+      pointer("pointermove", 100 + dx, 100, 1, dot);
+      pointer("pointerup", 100 + dx, 100, 1, dot);
+    };
+    expect(v("dot", "x")).toBe(5);
+    drag("fixed", 64);
+    const afterFixed = v("dot", "x") as number;
+    expect(afterFixed).toBeGreaterThan(5);
+    drag("v", 64);
+    expect(v("dot", "x") as number).toBeGreaterThan(afterFixed);
+    expect(dotIn("v").getAttribute("cx")).not.toBeNull();
+    expect(dotIn("v").getAttribute("cx")).toBe(dotIn("fixed").getAttribute("cx"));
+  });
+
   it("drags a draggable shape instead of panning", () => {
     page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("view"));
     const dot = document.querySelector(`mtp-canvas[name="v"] [data-mtp-id]:last-child`)!;
