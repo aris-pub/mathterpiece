@@ -22,7 +22,7 @@
 
   (group both
     (rect card (width w) (height h) (transform (rotate turn)) (fill none) (stroke ink)
-      (stroke-width 1.5))
+        (stroke-width 1.5))
     (circle ball (pos [4.5 -1.5]) (r 0.35) (fill teal) (stroke none)))
 
   ; A dot at each point of the card's box, and the point's name just outside it. A corner's name
@@ -46,11 +46,11 @@
   (text ball-name 'ball' (pos (top-right ball 0.05)) (valign 'bottom') (font name) (fill ink))
   (line tether (from (right card)) (to (left ball)) (stroke teal) (stroke-width 1))
   (text caption 'the card and the ball' (pos (bottom both 0.6)) (halign 'middle') (valign 'top')
-    (font small) (fill ink))
+      (font small) (fill ink))
 
   (flag pennant (pos [-5 -3.5]))
   (text pennant-name 'flag' (pos pennant.tip.pos) (halign 'middle') (valign 'bottom')
-    (font name) (fill ink)))
+      (font name) (fill ink)))
 
 (canvas view (x -7) (y -4.5) (width 14) (height 9) (pan false) (zoom false)
   both marks names ball-name tether caption pennant pennant-name)

@@ -52,7 +52,7 @@
   (group cosine (defaults (stroke accent) (fill accent))
     (line across (from [0 0]) (to [handle.x 0]) (stroke-width 4))
     (text_ 'cos' (pos (+ across.pos [0 (* -0.1 above)])) (halign 'middle') (valign 'middle')
-      (font small))
+        (font small))
     (text xs $'cos = {(cosd theta):+z.3f}' (pos (line-at 1)) (font number)))
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
@@ -60,8 +60,8 @@
   (group sine (defaults (stroke cool) (fill cool))
     (line up (from [handle.x 0]) (to handle.pos) (stroke-width 4))
     (text_ 'sin'
-      (pos (+ up.pos [(* 0.12 right (if (< (abs handle.x) 0.45) 1 -1)) 0]))
-      (halign 'middle') (valign 'middle') (font small))
+        (pos (+ up.pos [(* 0.12 right (if (< (abs handle.x) 0.45) 1 -1)) 0]))
+        (halign 'middle') (valign 'middle') (font small))
     (text ys $'sin = {(sind theta):+z.3f}' (pos (line-at 2)) (font number)))
 
   ; Where the tangent line at the point meets the x axis: at sec theta. At 90 and 270 degrees it
@@ -76,23 +76,23 @@
     ; The tangent line itself, at right angles to the radius: it exists at every angle, even
     ; where the segment does not.
     (line along (from (+ handle.pos (* 3 (polar 1 (+ theta 90)))))
-      (to (- handle.pos (* 3 (polar 1 (+ theta 90))))) (stroke-width 1.5))
+        (to (- handle.pos (* 3 (polar 1 (+ theta 90))))) (stroke-width 1.5))
     (line|none tan (from handle.pos) (to [sec-x 0]) (stroke-width 4))
     (text|none_ 'tan'
-      (pos (+ (lerp handle.pos [sec-x 0] (min 0.5 (/ 0.3 (dist handle.pos [sec-x 0]))))
-              (polar 0.1 theta)))
-      (halign 'middle') (valign 'middle') (font small))
+        (pos (+ (lerp handle.pos [sec-x 0] (min 0.5 (/ 0.3 (dist handle.pos [sec-x 0]))))
+                (polar 0.1 theta)))
+        (halign 'middle') (valign 'middle') (font small))
     (text tans (or? $'tan = {(tand theta):+z.3f}' 'tan = ±∞')
-      (pos (line-at 3)) (font number)))
+        (pos (line-at 3)) (font number)))
 
   ; sec runs along the x axis past cos, so its name goes on the part of the line beyond cos,
   ; kept on the canvas.
   (group secant (defaults (stroke deep) (fill deep))
     (line|none sec (from [0 0]) (to [sec-x 0]) (stroke-width 2))
     (text|none_ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ handle.x sec-x) 2))) (* -0.1 above)])
-      (halign 'middle') (valign 'middle') (font small))
+        (halign 'middle') (valign 'middle') (font small))
     (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
-      (pos (line-at 4)) (font number)))
+        (pos (line-at 4)) (font number)))
 
   ; Where the tangent line meets the y axis: at csc theta, none at 0 and 180 degrees.
   (real|none csc-y (cscd theta))
@@ -101,18 +101,18 @@
   (group cotangent (defaults (stroke warm) (fill warm))
     (line|none cot (from handle.pos) (to [0 csc-y]) (stroke-width 4))
     (text|none_ 'cot'
-      (pos (+ (lerp handle.pos [0 csc-y] (min 0.5 (/ 0.3 (dist handle.pos [0 csc-y]))))
-              (polar 0.1 theta)))
-      (halign 'middle') (valign 'middle') (font small))
+        (pos (+ (lerp handle.pos [0 csc-y] (min 0.5 (/ 0.3 (dist handle.pos [0 csc-y]))))
+                (polar 0.1 theta)))
+        (halign 'middle') (valign 'middle') (font small))
     (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
-      (pos (line-at 5)) (font number)))
+        (pos (line-at 5)) (font number)))
 
   (group cosecant (defaults (stroke warm) (fill warm))
     (line|none csc (from [0 0]) (to [0 csc-y]) (stroke-width 2))
     (text|none_ 'csc' (pos [(* -0.12 right) (max -1.1 (min 1.1 (/ csc-y 2)))])
-      (halign 'middle') (valign 'middle') (font small))
+        (halign 'middle') (valign 'middle') (font small))
     (text cscs (or? $'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
-      (pos (line-at 6)) (font number))))
+        (pos (line-at 6)) (font number))))
 
 ; Which functions are shown. These toggles hold their own value: whether a line is shown is about
 ; this view, not about the circle, so the scene does not need to know.
@@ -126,7 +126,7 @@
 ; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
 ; function on or off fades its line, name and value in or out.
 (canvas view (x -2.1) (y -1.35) (width 3.6) (height 2.7) (toggle-duration 0.4)
-  (toggle-ease 'ease-in-out')
+    (toggle-ease 'ease-in-out')
   frame
   (when show-sec.value secant)
   (when show-csc.value cosecant)

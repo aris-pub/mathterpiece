@@ -142,39 +142,39 @@
       (text_ '0.5' (pos [48 -75]))
       (text_ '1' (pos [48 -12])))
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
-      (stroke muted) (stroke-width 1) (stroke-opacity 0.8) (dash [4 3]))
+        (stroke muted) (stroke-width 1) (stroke-opacity 0.8) (dash [4 3]))
     ; Level i + 1.
     ; The bars stand on the axis, 41.2 apart. A bar too short to see is transparent: in a row,
     ; one that did not exist would let the bars after it slide out of their levels.
     (row bars (defaults (fill (if all every one))) (translate [74.6 -134]) (gap 14.832)
-      (align 'bottom')
+        (align 'bottom')
       (foreach i 10
         (let ((height (max 0.5 (* 126 shown[i]))))
           (rect_ (pos [0 (/ height 2)]) (width 26.368) (height height) (rx 2) (ry 2)
-            (opacity (if (< shown[i] 0.002) 0 1))))))
+              (opacity (if (< shown[i] 0.002) 0 1))))))
     (group level-names (defaults (fill muted))
       (foreach i 10
         (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
-          (opacity
-           (cond ((< shown[i] 0.002) 0)
-                 ((< i (min L Lp)) 1)
-                 ((< i L) g)
-                 (else (- 1 g)))))))
+            (opacity
+             (cond ((< shown[i] 0.002) 0)
+                   ((< i (min L Lp)) 1)
+                   ((< i L) g)
+                   (else (- 1 g)))))))
     (line_ (from [54 -134]) (to [466 -134]) (stroke muted) (stroke-width 1))
     (line_ (from [54 -168]) (to [466 -168]) (stroke rule) (stroke-width 3) (line-cap 'round'))
     (text_ 'level' (pos [260 -194]) (fill fg))
     (text_ 'relative stretch' (fill fg)
-      (transform (transform (rotate 90) (translate 13 -71)))))
+        (transform (transform (rotate 90) (translate 13 -71)))))
 
   ; The end of the hierarchy, and its handle, with a dashed guide down to it.
   (handle n-handle (x (+ 54 (* lv 41.2))) (y -168)
           (edge (if n-on (if all every one) muted)) (weight (if n-on 1.5 1)))
   (line n-guide (from [(+ 54 (* lv 41.2)) -8]) (to n-handle.tip.pos)
-    (stroke (if n-on (if all every one) muted)) (stroke-width 1)
-    (stroke-opacity (if n-on 0.7 0.45)) (dash [4 3]))
+      (stroke (if n-on (if all every one) muted)) (stroke-width 1)
+      (stroke-opacity (if n-on 0.7 0.45)) (dash [4 3]))
   ; What the reader grabs: an area wider than the handle, as wide as a level.
   (rect n-grab (pos [(+ 54 (* L 41.2)) -168]) (width 41.2) (height 24) (fill bg)
-    (opacity 0))
+      (opacity 0))
 
   (real d-all (+ (* (spread-all Lp) (- 1 g)) (* (spread-all L) g)))
   (real d-now (spread L te))
@@ -189,13 +189,13 @@
     (group curve-values (defaults (fill muted))
       (foreach k 6
         (text_ tick-names[k] (pos [48 (- (cy ticks[k]) 4)])
-          (halign 'end') (font plain))))
+            (halign 'end') (font plain))))
     ; A label every density up to 2^-L, every other one past 6 levels.
     (group densities (defaults (fill muted))
       (foreach k 10
         (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
           (text|none (name $'density-{k}') $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
-            (font tick))
+              (font tick))
           (exists-when (name $'density-{k}')
             (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467))))))
     (line_ (from [54 -8]) (to [54 -130]) (stroke muted) (stroke-width 1))
@@ -207,25 +207,25 @@
     (text|none equals-p $' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill fg))
     (exists-when equals-p (not all))
     (text_ 'distortion' (halign 'middle') (font plain) (fill fg)
-      (transform (transform (rotate 90) (translate 13 -69))))
+        (transform (transform (rotate 90) (translate 13 -69))))
     ; The curve fades with all densities, and is cut off at the chart's right edge, as in the
     ; original.
     (group curve (defaults (stroke one) (stroke-width 2.2) (opacity (- 1 (* 0.78 mix))))
-      (clip (rect_ (pos [260.5 -69]) (width 413) (height 150)))
+        (clip (rect_ (pos [260.5 -69]) (width 413) (height 150)))
       ; Sample k across the chart, at its distortion's height.
       (polyline_ (points (map samples (fn k [(+ 54 (* (/ (* L (/ k 200)) lv) 412)) (cy ds[k])])))))
     (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke every)
-      (stroke-width (if all 3.5 2.4)))
+        (stroke-width (if all 3.5 2.4)))
     ; The line's name, set bold with all densities.
     (text|none all-plain $'all densities: {(fmt d-all)}, for every p'
-      (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font plain) (fill every))
+        (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font plain) (fill every))
     (text|none all-strong $'all densities: {(fmt d-all)}, for every p'
-      (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font strong) (fill every))
+        (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font strong) (fill every))
     (exists-when all-plain (not all))
     (exists-when all-strong all)
     (text|none best-label $'best: {(fmt best-now[0])}'
-      (pos [(+ 54 (* (/ (- best-now[1] 0.5) lv) 412)) (+ (cy best-now[0]) 12)])
-      (halign 'middle') (font strong) (fill one))
+        (pos [(+ 54 (* (/ (- best-now[1] 0.5) lv) 412)) (+ (cy best-now[0]) 12)])
+        (halign 'middle') (font strong) (fill one))
     (exists-when best-label floor)
     (line_ (from [54 -166]) (to [466 -166]) (stroke rule) (stroke-width 3) (line-cap 'round')))
 
@@ -236,10 +236,10 @@
           (edge (if (and t-on (not all)) one muted)) (weight (if (and t-on (not all)) 1.5 1)))
   (group|none marker
     (line_ (from [mx (- (cy d-now) 7)]) (to t-handle.tip.pos) (stroke (if t-on one muted))
-      (stroke-width 1) (stroke-opacity 0.7))
+        (stroke-width 1) (stroke-opacity 0.7))
     (circle_ (pos [mx (cy d-now)]) (r 7) (fill one))
     (text|none value-now (fmt d-now) (pos [(if (< mx 406) (+ mx 11) (- mx 11)) (+ (cy d-now) 9)])
-      (halign (if (< mx 406) 'start' 'end')) (font strong) (fill one))
+        (halign (if (< mx 406) 'start' 'end')) (font strong) (fill one))
     (exists-when value-now (not (and floor (< (abs (- te best-now[1])) 0.2)))))
   (exists-when marker (not all)))
 
@@ -316,20 +316,20 @@
 ; The original holds 8 seconds after steps 1 and 2 with a countdown on the play button, and
 ; enters Explore after step 3.
 (play tour (buttons true)
-  (animation
-    (in-order one-density (wait 8))
-    (in-order floor-rises (wait 8))
-    (in-order all-densities to-explore)))
+    (animation
+      (in-order one-density (wait 8))
+      (in-order floor-rises (wait 8))
+      (in-order all-densities to-explore)))
 
 (button explore (animation to-explore) (label 'Explore'))
 (button single-density
-  (animation (at-once (defaults (duration 0)) (move mix (to 0)) (move exploring (to true))
-               (move floor (to false)) (move g (to 1))))
-  (label 'one'))
+    (animation (at-once (defaults (duration 0)) (move mix (to 0)) (move exploring (to true))
+                 (move floor (to false)) (move g (to 1))))
+    (label 'one'))
 (button all-of-them
-  (animation (at-once (defaults (duration 0)) (move mix (to 1)) (move exploring (to true))
-               (move floor (to false)) (move g (to 1))))
-  (label 'all'))
+    (animation (at-once (defaults (duration 0)) (move mix (to 1)) (move exploring (to true))
+                 (move floor (to false)) (move g (to 1))))
+    (label 'all'))
 
 (on-drag n-grab L)
 (on-drag t-handle t (<= t (+ L 0.5)))

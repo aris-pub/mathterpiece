@@ -61,11 +61,11 @@
   ; 9 square. Their text keeps its size on screen, so they are only readable zoomed in; that
   ; many texts would be slow to draw, where one polyline is not.
   (polyline path (points (map (range 1 25000 (gap 1)) spiral)) (fill none) (stroke soft)
-    (stroke-width 1) (stroke-opacity 0.4))
+      (stroke-width 1) (stroke-opacity 0.4))
   (group labels (defaults (font number) (halign 'middle') (valign 'middle'))
     (foreach i 81
       (text_ $'{(+ i 1)}' (pos (spiral (+ i 1)))
-        (fill (if (or (prime? (+ i 1)) (= i 0)) paper soft)))))
+          (fill (if (or (prime? (+ i 1)) (= i 0)) paper soft)))))
 
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (text_ 'the primes below 25000 within 78 of 1' (pos (bottom dots 3)))
@@ -75,7 +75,7 @@
 
 ; The view box shows the whole disc; panning and zooming are on by default.
 (canvas view (x -86) (y -98) (width 172) (height 184) (toggle-duration 0.4)
-  (toggle-ease 'ease-in-out')
+    (toggle-ease 'ease-in-out')
   (when show-labels.value path)
   dots one
   (when show-labels.value labels)

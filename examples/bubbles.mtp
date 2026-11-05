@@ -15,14 +15,14 @@
   ; The body has no position of its own given, so its position is free: a drag writes it, and so
   ; does the spring back.
   (circle|none body (r (* size (+ 1 (* 0.5 burst)))) (fill tint) (fill-opacity 0.3) (stroke tint)
-    (stroke-width 2) (opacity (- 1 burst)))
+      (stroke-width 2) (opacity (- 1 burst)))
   (exists-when body (not popped))
   (group|none bits (defaults (stroke none))
     (circle shine (pos (+ body.pos [(* -0.4 size) (* 0.4 size)])) (r (* 0.16 size))
-      (fill (lighten tint 0.7)) (opacity (* 0.8 (- 1 burst))))
+        (fill (lighten tint 0.7)) (opacity (* 0.8 (- 1 burst))))
     (foreach k 8
       (circle_ (pos (+ body.pos (polar (* size (+ 1 (* 1.2 burst))) (* k 45))))
-        (r (* 0.08 size)) (fill tint) (opacity (min 1 (* 4 burst (- 1 burst)))))))
+          (r (* 0.08 size)) (fill tint) (opacity (min 1 (* 4 burst (- 1 burst)))))))
   (exists-when bits (not popped)))
 
 (scene pond (background paper)
@@ -44,7 +44,7 @@
   (int popped-count (count bubbles (fn b b.popped)))
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'middle'))
     (text_ $'(exists-when body (not popped)), popped: {popped-count} of 8'
-      (pos (bottom water (+ largest 0.65))))))
+        (pos (bottom water (+ largest 0.65))))))
 
 (canvas view (x -8) (y -5) (width 16) (height 10) (pan false) (zoom false)
   pond)
@@ -57,18 +57,18 @@
 ; plain click, and when a press that began elsewhere is let go over the bubble.
 (foreach b bubbles
   (on-click b.body (active (< (or? (dist b.body.pos b.pos) 1) 0.1))
-    (animation
-      (move b.burst (to 1) (duration 0.3) (ease 'ease-out'))
-      (move b.popped (to true) (duration 0))))
+      (animation
+        (move b.burst (to 1) (duration 0.3) (ease 'ease-out'))
+        (move b.popped (to true) (duration 0))))
   (on-drag b.body b.body.pos)
   (on-dragend b.body (animation (move b.body.pos (to [0 0]) (duration 0.8) (ease spring)))))
 
 ; A bubble brought back shrinks from its burst into place; one that never popped has a burst of
 ; 0 and does not change.
 (button bring-back
-  (animation
-    (at-once (defaults (duration 0.5) (ease 'ease-out'))
-      (foreach b bubbles
-        (move b.popped (to false) (duration 0))
-        (move b.burst (to 0)))))
-  (label 'bring the bubbles back'))
+    (animation
+      (at-once (defaults (duration 0.5) (ease 'ease-out'))
+        (foreach b bubbles
+          (move b.popped (to false) (duration 0))
+          (move b.burst (to 0)))))
+    (label 'bring the bubbles back'))

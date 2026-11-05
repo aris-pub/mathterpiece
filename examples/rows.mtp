@@ -33,8 +33,8 @@
           (row_ (gap (/ gap 2)) (defaults (stroke none))
             (foreach k 3
               (rect_ (width 0.6) (height 0.6)
-                (fill (cond ((= (mod (+ r k) 3) 0) terracotta) ((= (mod (+ r k) 3) 1) saffron)
-                            (else plum))))))))
+                  (fill (cond ((= (mod (+ r k) 3) 0) terracotta) ((= (mod (+ r k) 3) 1) saffron)
+                              (else plum))))))))
       (column bars (gap (/ gap 2)) (align 'left') (defaults (fill teal) (stroke none))
         (foreach i 4
           (rect_ (width (+ 0.6 (* 0.5 grow i))) (height 0.35))))))

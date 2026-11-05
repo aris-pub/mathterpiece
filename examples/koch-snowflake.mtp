@@ -51,23 +51,23 @@
   (int pieces (^ 4 level))
 
   (polygon flake
-    (points (map (range (* 3 pieces)) (fn k (koch k level rise))))
-    (fill saffron) (stroke ink) (stroke-width 1.5) (line-join 'round'))
+      (points (map (range (* 3 pieces)) (fn k (koch k level rise))))
+      (fill saffron) (stroke ink) (stroke-width 1.5) (line-join 'round'))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
     (text caption $'depth {depth:.2f}, zoomed {(^ 3 zoom-power):.1f} times' (pos code-at)
-      (font variable) (fill ink))
+        (font variable) (fill ink))
     (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {level} {rise:.2f})))))'
-      (pos (+ code-at [0 -0.7])))
+        (pos (+ code-at [0 -0.7])))
     (text_ (if (= level 0) '(koch k 0 h) is (corner k)'
              $'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
-      (pos (+ code-at [0 -1.25])))))
+        (pos (+ code-at [0 -1.25])))))
 
 ; The flake's canvas is centered on the flake, and its transform applies about that center, so
 ; moving the tip to the center, scaling, and moving it back magnifies about the tip.
 (point tip (corner 0) (const))
 (canvas view (x -5.5) (y -5) (width 11) (height 10) (pan false)
-  (transform (transform (translate (- tip.x) (- tip.y)) (scale (^ 3 zoom-power)) (translate tip.x tip.y)))
+    (transform (transform (translate (- tip.x) (- tip.y)) (scale (^ 3 zoom-power)) (translate tip.x tip.y)))
   flake)
 (canvas text-below (x -5.5) (y (- code-at.y 1.75)) (width 11) (height 2) (pan false) (zoom false)
   forms)
@@ -77,11 +77,11 @@
 
 ; It grows, rests on the full snowflake, shrinks back to the triangle and rests, again and again.
 (play cycle (autoplay view) (label 'grow and shrink')
-  (animation (loop)
-    grow
-    (wait 1.5)
-    (move depth (to 0) (duration 3) (ease 'ease-in-out'))
-    (wait 0.8)))
+    (animation (loop)
+      grow
+      (wait 1.5)
+      (move depth (to 0) (duration 3) (ease 'ease-in-out'))
+      (wait 0.8)))
 
 (slider depth-slider (move depth (from 0) (to 4)) (label 'depth'))
 (slider zoom-slider (move zoom-power (from 0) (to 3)) (label 'zoom, in powers of 3'))

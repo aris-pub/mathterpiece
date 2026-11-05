@@ -39,7 +39,7 @@
     (let ((line 0.8) (first (+ (bottom-left table) [0 (- line)])))
       (text_ '(foreach k (range 200)' (pos first))
       (text_ $'(line_ (from (spot k)) (to (spot (* {m:.2f} k)))))'
-        (pos (+ first [0.5 (- line)]))))))
+          (pos (+ first [0.5 (- line)]))))))
 
 (canvas view (x -9) (y -9.6) (width 18) (height 19) (pan false) (zoom false)
   table captions forms)
@@ -52,10 +52,10 @@
 
 ; Each stop but the last rests a moment before the next.
 (play tour (label 'play the tour') (buttons true)
-  (animation
-    (in-order cardioid (wait 1.2))
-    (in-order nephroid (wait 1.2))
-    (in-order four-cusps (wait 1.2))
-    eight-cusps))
+    (animation
+      (in-order cardioid (wait 1.2))
+      (in-order nephroid (wait 1.2))
+      (in-order four-cusps (wait 1.2))
+      eight-cusps))
 
 (slider times (move m (from 1) (to 12)) (label 'multiplier m'))

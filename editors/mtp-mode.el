@@ -55,6 +55,27 @@ take `font-lock-keyword-face', so the two stand apart.")
   "How many positional arguments each form takes before its body, counting its name.
 Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
 
+(defconst mtp-mode--keywords
+  (let ((group '("defaults" "clip" "translate" "transform" "gap" "align" "opacity" "fill" "stroke"
+                 "stroke-width" "fill-opacity" "stroke-opacity" "dash" "line-cap" "line-join"
+                 "x" "y" "pos"))
+        (animation '("loop" "duration" "ease" "defaults")))
+    `(("scene" "background" "transform")
+      ("group" ,@group) ("row" ,@group) ("column" ,@group)
+      ("canvas" "x" "y" "width" "height" "transform" "pan" "zoom" "toggle-duration" "toggle-ease")
+      ("animation" ,@animation) ("at-once" ,@animation) ("in-order" ,@animation)
+      ("motif") ("namespace")))
+  "Forms that take a body, and their keyword arguments. A keyword argument on a line of
+its own is indented 4, like a positional argument, so it reads apart from the body at 2.")
+
+(defconst mtp-mode--no-body
+  '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text"
+    "slider" "button" "play" "toggle" "readout" "on-drag" "on-click"
+    "on-release" "on-dragend" "on-view" "move" "transition" "font" "color"
+    "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
+    "colormap" "interface" "defaults")
+  "Forms that take no body: every item after their positional arguments is indented 4.")
+
 (defconst mtp-mode--named
   '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring"
     "text" "font" "namespace" "interface" "colormap"
@@ -65,9 +86,9 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
 
 (defun mtp-mode--indent-function (indent-point state)
   "Indent an mtp form as Emacs Lisp indents a `defun'.
-Positional arguments on lines of their own go 4 in from the form's
-opening parenthesis, and every line of its body 2, whatever sits on the
-head's line. Forms mtp-mode does not know are indented as in Lisp, and a
+Positional and keyword arguments on lines of their own go 4 in from the
+form's opening parenthesis, and every line of its body 2, whatever sits
+on the head's line. A form with no body has only arguments. Forms mtp-mode does not know are indented as in Lisp, and a
 list's items under its first item."
   (let* ((start (nth 1 state))
          (head (save-excursion
@@ -105,7 +126,15 @@ list's items under its first item."
                    (error nil))
             (setq before (1+ before))))
         (+ (save-excursion (goto-char start) (current-column))
-           (if (< before count) 4 2)))))))
+           (if (or (< before count)
+                   (member base mtp-mode--no-body)
+                   (member (save-excursion
+                             (goto-char indent-point)
+                             (skip-chars-forward " \t")
+                             (and (looking-at "(\\([^][() \t\n';]+\\)")
+                                  (match-string-no-properties 1)))
+                           (cdr (assoc base mtp-mode--keywords))))
+               4 2)))))))
 
 (defun mtp-mode--indent-line ()
   "Indent the line as `lisp-indent-line' does, but indent a comment like code.

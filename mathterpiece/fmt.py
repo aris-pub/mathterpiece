@@ -3,6 +3,7 @@ is indented as the Emacs mode (editors/mtp-mode.el) indents it, trailing spaces 
 most one blank line is kept in a row, and nothing else changes: it works on lines, not on parsed
 forms, so comments and how the author broke the lines stay as written."""
 
+import re
 from dataclasses import dataclass, field
 
 # How many positional arguments each form takes before its body, counting its name: their lines go
@@ -55,6 +56,35 @@ NAMED = {
     "interface",
     "colormap",
 }
+# Forms that take a body, and their keyword arguments. A keyword argument on a line of its own goes
+# 4 in, like a positional argument, so it reads apart from the body at 2. The same table as the
+# Emacs mode's.
+_GROUP = {
+    *["defaults", "clip", "translate", "transform", "gap", "align", "opacity", "fill", "stroke"],
+    *["stroke-width", "fill-opacity", "stroke-opacity", "dash", "line-cap", "line-join"],
+    *["x", "y", "pos"],
+}
+_CANVAS = {
+    *["x", "y", "width", "height", "transform", "pan", "zoom", "toggle-duration", "toggle-ease"]
+}
+_ANIMATION = {"loop", "duration", "ease", "defaults"}
+KEYWORDS = {
+    "scene": {"background", "transform"},
+    **{head: _GROUP for head in ["group", "row", "column"]},
+    "canvas": _CANVAS,
+    **{head: _ANIMATION for head in ["animation", "at-once", "in-order"]},
+    "motif": set(),
+    "namespace": set(),
+}
+# Forms that take no body: every item after their positional arguments goes 4 in. The same list
+# as the Emacs mode's.
+NO_BODY = {
+    *["circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "arc", "ring"],
+    *["text", "slider", "button", "play", "toggle", "readout", "on-drag", "on-click"],
+    *["on-release", "on-dragend", "on-view", "move", "transition", "font", "color"],
+    *["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"],
+    *["colormap", "interface", "defaults"],
+}
 OPEN, CLOSE = "([", ")]"
 
 
@@ -106,7 +136,12 @@ def _indent(stack: list[_Frame], text: str) -> int:
     if base in NAMED and (unnamed or (second != "" and second in OPEN)):
         count = max(0, count - 1)
     before = len(f.items) - 1
-    return f.col + (4 if before < count else 2)
+    if before < count or base in NO_BODY:
+        return f.col + 4
+    head = re.match(r"\(([^\s()\[\]';]+)", text)
+    if head is not None and head.group(1) in KEYWORDS.get(base, ()):
+        return f.col + 4
+    return f.col + 2
 
 
 def _scan(line: str, number: int, stack: list[_Frame], in_string: bool) -> bool:

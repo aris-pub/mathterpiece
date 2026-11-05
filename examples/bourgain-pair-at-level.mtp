@@ -123,10 +123,10 @@
 
 ; One button per piece of the bounds. Pressing the piece shown clears it.
 (button gap (animation (move shown (to (if (= shown 'gap') 'none' 'gap')) (duration 0.25)))
-  (label 'the factor (1 − 1/b)²'))
+    (label 'the factor (1 − 1/b)²'))
 (button b2 (animation (move shown (to (if (= shown 'b2') 'none' 'b2')) (duration 0.25)))
-  (label 'the term 1/b²'))
+    (label 'the term 1/b²'))
 (button lower (animation (move shown (to (if (= shown 'gap') 'none' 'gap')) (duration 0.25)))
-  (label 'the first ≤'))
+    (label 'the first ≤'))
 (button upper (animation (move shown (to (if (= shown 'hi') 'none' 'hi')) (duration 0.25)))
-  (label 'the second ≤'))
+    (label 'the second ≤'))

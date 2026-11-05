@@ -20,19 +20,19 @@
     (line_ (from [0 (- reach)]) (to [0 reach])))
 
   (polyline curve
-    (points (map (range 0 360 (num 721))
-                 (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
-    (stroke teal) (stroke-width 3) (line-join 'round') (line-cap 'round'))
+      (points (map (range 0 360 (num 721))
+                   (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
+      (stroke teal) (stroke-width 3) (line-join 'round') (line-cap 'round'))
 
   (text ratio $'a : b = {a} : {b}' (pos (top axes gap)) (halign 'middle') (valign 'bottom')
-    (font variable) (fill ink))
+      (font variable) (fill ink))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
     (let ((under (bottom-left axes gap)))
       (text_ '(polyline curve (points (map (range 0 360 (num 721))' (pos under))
       ; The second line is indented, as code that goes on would be.
       (text_ $'  (fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
-        (pos (+ under [0 -0.14]))))))
+          (pos (+ under [0 -0.14]))))))
 
 (canvas view (x -1.78) (y -1.67) (width 3.56) (height 3.17) (pan false) (zoom false)
   axes curve ratio forms)
@@ -44,6 +44,6 @@
 ; The phase turns once in eight seconds: slowly enough that each frame is still a curve the eye
 ; can follow.
 (play spin (label 'turn the phase')
-  (animation (loop) (move phase (from 0) (to 360) (duration 8) (ease 'linear'))))
+    (animation (loop) (move phase (from 0) (to 360) (duration 8) (ease 'linear'))))
 
 (readout ratio-now $'{a}:{b}' (font variable))

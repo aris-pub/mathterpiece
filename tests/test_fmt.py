@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from mathterpiece.fmt import INDENT, NAMED, layout
+from mathterpiece.fmt import INDENT, KEYWORDS, NAMED, NO_BODY, layout
 from mathterpiece.parse import parse
 
 ROOT = Path(__file__).parent.parent
@@ -20,14 +20,52 @@ FILES = sorted(
 )
 
 
-def test_a_forms_positional_arguments_go_4_in_and_its_body_2():
+def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
     src = "(canvas\nview\n(x 1)\ns)\n"
-    assert layout(src) == "(canvas\n    view\n  (x 1)\n  s)\n"
+    assert layout(src) == "(canvas\n    view\n    (x 1)\n  s)\n"
 
 
-def test_the_body_of_a_shape():
-    src = "(scene s\n(circle c (r 1)\n(fill 'red')))\n"
-    assert layout(src) == "(scene s\n  (circle c (r 1)\n    (fill 'red')))\n"
+# A keyword argument on a line of its own goes 4 in, like a positional argument, so it reads
+# apart from the body at 2. A form with no body has nothing but arguments, all at 4.
+@pytest.mark.parametrize(
+    "src, want",
+    [
+        (
+            "(scene s\n(background paper)\n(circle c))\n",
+            "(scene s\n    (background paper)\n  (circle c))\n",
+        ),
+        (
+            "(scene s\n(circle c (r 1)\n(fill 'red')))\n",
+            "(scene s\n  (circle c (r 1)\n      (fill 'red')))\n",
+        ),
+        (
+            "(group g\n(defaults (fill red)\n(stroke blue))\n(circle c))\n",
+            "(group g\n    (defaults (fill red)\n        (stroke blue))\n  (circle c))\n",
+        ),
+        (
+            "(canvas view\n(width 2)\n(zoom true)\n(when on s)\nt\n(pan true))\n",
+            "(canvas view\n    (width 2)\n    (zoom true)\n  (when on s)\n  t\n    (pan true))\n",
+        ),
+        (
+            "(animation a\n(loop)\n(move c.r 2\n(duration 1))\n(move c.r 1))\n",
+            "(animation a\n    (loop)\n  (move c.r 2\n      (duration 1))\n  (move c.r 1))\n",
+        ),
+        (
+            "(in-order\n(ease 'linear')\n(at-once (duration 2)\n(move a 1)))\n",
+            "(in-order\n    (ease 'linear')\n  (at-once (duration 2)\n    (move a 1)))\n",
+        ),
+        (
+            "(motif dial ((real v))\n(x 1)\n(circle c))\n",
+            "(motif dial ((real v))\n  (x 1)\n  (circle c))\n",
+        ),
+        ("(real v 1\n(>= 0))\n", "(real v 1\n    (>= 0))\n"),
+        ("(slider s v\n(from 0)\n(to 1))\n", "(slider s v\n    (from 0)\n    (to 1))\n"),
+        ("(if a\nb\nc)\n", "(if a\n    b\n  c)\n"),
+    ],
+)
+def test_keyword_arguments_go_4_in_in_fmt_and_emacs(src, want, tmp_path):
+    assert layout(src) == want
+    assert _emacs(src, tmp_path) == want
 
 
 def test_the_members_of_a_namespace(tmp_path):
@@ -41,13 +79,13 @@ def test_the_members_of_a_namespace(tmp_path):
 
 
 def test_a_form_with_no_name_has_one_positional_fewer():
-    assert layout("(scene s\n(circle_\n(r 1)))\n") == "(scene s\n  (circle_\n    (r 1)))\n"
+    assert layout("(scene s\n(circle_\n(r 1)))\n") == "(scene s\n  (circle_\n      (r 1)))\n"
 
 
 def test_a_form_with_a_list_where_its_name_would_be():
     # As an animation written inside a control: (animation (in-order …)) has no name.
     src = "(play p\n(animation\n(in-order a b)))\n"
-    assert layout(src) == "(play p\n  (animation\n    (in-order a b)))\n"
+    assert layout(src) == "(play p\n    (animation\n      (in-order a b)))\n"
 
 
 def test_a_call_lines_up_with_its_first_argument():
@@ -147,3 +185,24 @@ def test_the_table_is_the_emacs_modes():
     named = re.search(r"mtp-mode--named\s+'\((.*?)\)", el, re.S)
     assert named is not None
     assert set(re.findall(r'"([a-z-]+)"', named.group(1))) == NAMED
+
+
+def test_the_keyword_tables_are_the_emacs_modes(tmp_path):
+    if shutil.which("emacs") is None:
+        pytest.skip("emacs is not installed")
+    import subprocess
+
+    code = (
+        '(progn (dolist (e mtp-mode--keywords) (princ (string-join e " ")) (terpri))'
+        ' (princ "no-body ") (princ (string-join mtp-mode--no-body " ")) (terpri))'
+    )
+    out = subprocess.run(
+        ["emacs", "--batch", "-L", str(ROOT / "editors"), "-l", "mtp-mode.el", "--eval", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    lines = [line.split() for line in out.strip().split("\n")]
+    assert {words[0]: set(words[1:]) for words in lines[:-1]} == KEYWORDS
+    assert lines[-1][0] == "no-body"
+    assert set(lines[-1][1:]) == NO_BODY

@@ -32,7 +32,7 @@
   ; How a stroke ends: a thick line, with thin ones where it ends and along its middle.
   (group ends-panel (translate (cell 0 0))
     (line thick (from [(- half) 0]) (to [half 0]) (stroke warm) (stroke-width width)
-      (line-cap ends))
+        (line-cap ends))
     (group guides (defaults (stroke ink) (stroke-width 1))
       (line_ (from (+ (left thick) [0 -0.8])) (to (+ (left thick) [0 0.8])))
       (line_ (from (+ (right thick) [0 -0.8])) (to (+ (right thick) [0 0.8])))
@@ -41,19 +41,19 @@
   ; How it turns a corner: a sharp triangle's outline, with a thin one along its middle.
   (group corners-panel (translate (cell 1 0))
     (triangle outline (a [-2.6 -1]) (b [2.6 -1]) (c [-0.8 1]) (fill none) (stroke cool)
-      (stroke-width width) (line-join corners))
+        (stroke-width width) (line-join corners))
     (triangle_ (a outline.a) (b outline.b) (c outline.c) (fill none) (stroke ink)
-      (stroke-width 1)))
+        (stroke-width 1)))
 
   ; A dash pattern from the sliders, with the ends the buttons pick.
   (line pattern (translate (cell 0 1)) (from [(- half) 0]) (to [half 0]) (stroke ink)
-    (stroke-width (/ width 2)) (dash [dash-length gap-length]) (line-cap ends))
+      (stroke-width (/ width 2)) (dash [dash-length gap-length]) (line-cap ends))
 
   ; Marching dashes: the animation moves the ring's dash-offset by two patterns.
   (group march-panel (translate (cell 1 1))
     (circle dot (r 0.5) (fill warm) (stroke none))
     (circle ring (r 1.4) (fill none) (stroke cool) (stroke-width 3) (dash [9 6])
-      (line-cap 'round')))
+        (line-cap 'round')))
 
   ; Each caption sits the same way under its panel's center, so the two in a row line up.
   (group captions (defaults (fill soft) (font mono) (halign 'middle') (valign 'top'))
@@ -66,7 +66,7 @@
   ends-panel corners-panel pattern march-panel captions)
 
 (play march (autoplay view)
-  (animation (loop) (move ring.dash-offset (from 0) (to -30) (duration 1.5) (ease 'linear'))))
+    (animation (loop) (move ring.dash-offset (from 0) (to -30) (duration 1.5) (ease 'linear'))))
 
 (button butt (animation (move ends (to 'butt') (duration 0))) (label 'butt'))
 (button round-ends (animation (move ends (to 'round') (duration 0))) (label 'round'))
