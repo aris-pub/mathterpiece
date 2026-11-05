@@ -512,3 +512,28 @@ describe("releases", () => {
   });
 });
 
+
+describe("a compiled model given in the page", () => {
+  const inPage = (text: string, id = "m-data") =>
+    `<mtp-model id="m" src="#m-data"></mtp-model>` +
+    `<mtp-readout model="m" name="r"></mtp-readout>` +
+    `<script type="application/json" id="${id}">${text}</script>`;
+
+  it("is read from the JSON script the model names, even one after it", async () => {
+    document.body.innerHTML = inPage(JSON.stringify(doc("page")));
+    await Promise.resolve();
+    expect(document.querySelector("mtp-readout")!.textContent).toBe("k = 0.0");
+  });
+
+  it("shows an error when the JSON cannot be read", async () => {
+    document.body.innerHTML = inPage("{ not json");
+    await Promise.resolve();
+    expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("could not read the compiled model");
+  });
+
+  it("shows an error when the page has no such script", async () => {
+    document.body.innerHTML = inPage("{}", "other");
+    await Promise.resolve();
+    expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("no script with the id m-data");
+  });
+});

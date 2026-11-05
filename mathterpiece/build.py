@@ -1,6 +1,6 @@
-"""Building a figure (docs/data-model.md, "The mtp command"): parsing, compiling, writing the
-.mtpc, and writing a minimal page that shows the figure. mtp build figure.mtp writes the folder
-build_figure/: the .mtpc, the runtime, and index.html, which holds both, since a browser loads no
+"""Building an .mtp (docs/data-model.md, "The mtp command"): parsing, compiling, writing the
+.mtpc, and writing a minimal page that shows the live figure. mtp build dial.mtp writes the folder
+build_dial/: the .mtpc, the runtime, and index.html, which holds both, since a browser loads no
 module and fetches no file for a page opened as a file."""
 
 import html
@@ -60,18 +60,18 @@ def about(src: str) -> list[str]:
 
 
 def page(name: str, mtpc: str, js: str, text: list[str] | None = None, extra: str = "") -> str:
-    """A minimal page: the figure's opening comment, then every canvas, control and readout, in the
+    """A minimal page: the source's opening comment, then every canvas, control and readout, in the
     order the source declares them."""
     doc = json.loads(mtpc)
     parts = []
     for o in doc["objects"]:
         kind, n = o["kind"], html.escape(o.get("name") or "")
         if kind == "canvas":
-            parts.append(f'<mtp-canvas model="figure" name="{n}"></mtp-canvas>')
+            parts.append(f'<mtp-canvas model="model" name="{n}"></mtp-canvas>')
         elif kind in CONTROLS:
-            parts.append(f'<div><mtp-{kind} model="figure" name="{n}"></mtp-{kind}></div>')
+            parts.append(f'<div><mtp-{kind} model="model" name="{n}"></mtp-{kind}></div>')
         elif kind == "readout":
-            parts.append(f'<p><mtp-readout model="figure" name="{n}"></mtp-readout></p>')
+            parts.append(f'<p><mtp-readout model="model" name="{n}"></mtp-readout></p>')
     # Inside a script, only </ could end it early.
     data = mtpc.strip().replace("</", "<\\/")
     code = js.replace("</", "<\\/")
@@ -91,13 +91,11 @@ def page(name: str, mtpc: str, js: str, text: list[str] | None = None, extra: st
 <body>
 <h1>{html.escape(name)}</h1>
 {chr(10).join(f'<p class="about">{html.escape(p)}</p>' for p in text or [])}
-<mtp-model id="figure"></mtp-model>
+<mtp-model id="model" src="#model-data"></mtp-model>
 {chr(10).join(parts)}
-<script type="application/json" id="figure-data">{data}</script>
+<script type="application/json" id="model-data">{data}</script>
 <script type="module">
 {code}
-const data = document.getElementById("figure-data").textContent;
-document.getElementById("figure").doc = JSON.parse(data);
 </script>
 {extra}
 </body>
@@ -106,7 +104,7 @@ document.getElementById("figure").doc = JSON.parse(data);
 
 
 def build(path: Path) -> Path:
-    """Builds the figure at path into build_<name>/ next to it, and gives that folder. Nothing is
+    """Builds the .mtp at path into build_<name>/ next to it, and gives that folder. Nothing is
     written when the source has an error."""
     src = path.read_text(encoding="utf-8")
     mtpc = compiled(src, path)

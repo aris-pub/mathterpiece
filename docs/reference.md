@@ -9,7 +9,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **y points up** and x to the right, as in mathematics.
 - **Angles** are counterclockwise from the positive x axis. `(polar 1 90)` is straight up; `rotate` turns counterclockwise.
 - **A canvas's view box** is given by its lower-left corner (`x`, `y`) and its size (`width`, `height`), in scene units. The default is −10 to 10 in both directions. The whole view box is shown, scaled to fit the element and centered in it. A canvas's `transform` applies about the center of its view box. The reader may pan and zoom what the view box shows (see "Panning and zooming"), which changes only what the canvas shows, never the view box's attributes.
-- **Stroke widths and font sizes are in screen units** (CSS pixels): a line keeps the same thickness on screen, and text the same size, whatever the view box and however the figure is scaled.
+- **Stroke widths and font sizes are in screen units** (CSS pixels): a line keeps the same thickness on screen, and text the same size, whatever the view box and however the canvas is scaled.
 - **Every shape has its own frame of reference.** It starts identical to the scene's; then the shape's `translate` and then its `transform` are applied (`translate` is the translation that comes first; `transform` is everything else, and may include further translations), and they apply to the shape and to everything below it in the scene tree. Both act about the origin of the container's frame, so `(rotate 30)` turns a shape around that origin, not around its own position; to turn a shape in place, put its offset inside the transform, after the rotation: `(transform (transform (rotate 30) (translate 6 -6)))`. A group's `translate` and `transform` are its own: they move its members, and are not spread over them.
 - **A position is written before the transforms of the shape's containers are applied.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1, then the group's translation moves it: it is drawn at 6. The illustrator never converts anything by hand: what is written is where the shape sits before its containers move it.
 - **Reading an attribute converts it through every transform that applies to the shape read but not to the expression reading it.** Inside `g`, a sibling reads `p.x` as 1, so `(circle q (x p.x))` sits exactly on `p`; outside `g`, `p.x` reads 6, where `p` is drawn. The runtime stores the 1. A shape's own `translate` and `transform` count too: `(circle p (x 1) (translate [2 0]))` is drawn at 3, and a sibling reads `p.x` as 3. Inside a function, a read uses the frame of the expression that called it. A drag's write converts the other way: it writes the value that, after every transform, lands under the pointer. Writes from animations and toggles are in the target's own frame and are not converted.
@@ -24,8 +24,8 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **Names:** the file reads its own declarations by their bare names, and a local name inside it, such as a `let` or a parameter, wins over them as anywhere. A name imported by name cannot also be declared in the importing file. A name a file imported can be imported from it in turn.
 - **Once:** a file imported more than once, directly or through other files, is compiled once. A file that imports itself, through the files it imports, is a compile error, as are two different files of the same name.
 - **Errors** inside an imported file name that file, as `house.mtp:3:5: …`.
-- **Only what is used:** an imported declaration is compiled into the figure only when the figure uses it, directly or through another imported declaration it uses, such as a function that reads a color. A declaration nothing uses is still checked, so an error in it is still an error.
-- **In the .mtpc** there are no imports: what the figure uses is written into it, each under the name it is kept by, `house.ink`. An imported token's CSS custom property is named by its file: `--mtp-house-ink`, however it is imported.
+- **Only what is used:** an imported declaration is compiled into the compiled model only when the source uses it, directly or through another imported declaration it uses, such as a function that reads a color. A declaration nothing uses is still checked, so an error in it is still an error.
+- **In the .mtpc** there are no imports: what the source uses is written into it, each under the name it is kept by, `house.ink`. An imported token's CSS custom property is named by its file: `--mtp-house-ink`, however it is imported.
 
 ### Namespaces
 
@@ -46,10 +46,10 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ### Colormaps
 
-`(colormap heat [navy white crimson] (positions [-5 0 20]))` declares a function from a real to a color, of type `colormap`, an alias of `func[real color]`: a figure calls it as `(heat temp)`, and any function from a real to a color is a colormap. It is two functions composed, from the figure's own values to the interval from 0 to 1, then from that interval to the colors, both set by the one list of positions.
+`(colormap heat [navy white crimson] (positions [-5 0 20]))` declares a function from a real to a color, of type `colormap`, an alias of `func[real color]`: a world model calls it as `(heat temp)`, and any function from a real to a color is a colormap. It is two functions composed, from the world model's own values to the interval from 0 to 1, then from that interval to the colors, both set by the one list of positions.
 
 - **Colors:** a list of at least two, tokens or literals.
-- **`(positions …)`:** in the figure's own values, known when compiling, never decreasing: a start and an end, `[-5 20]`, with the colors evenly spaced between, or one per color, `[-5 0 20]`. Two may be equal, for a hard edge: `[-4000 0 0 4000]` jumps from the second color to the third at 0. Without it, the colors are evenly spaced from 0 to 1.
+- **`(positions …)`:** in the world model's own values, known when compiling, never decreasing: a start and an end, `[-5 20]`, with the colors evenly spaced between, or one per color, `[-5 0 20]`. Two may be equal, for a hard edge: `[-4000 0 0 4000]` jumps from the second color to the third at 0. Without it, the colors are evenly spaced from 0 to 1.
 - **`(discrete true)`:** each color is one solid step, the steps equal, between the start and the end; such a map takes positions only as `[start end]`. Without it, the colors mix in a straight line between neighbors, in sRGB, as `mix` does.
 - **`(wrap-at x)`:** the map goes round: from the last position it mixes from the last color back into the first, reaching it at x, read as positions are, and a value past x starts again from the first position. With `(positions [0 270]) (wrap-at 360)`, four colors sit at 0, 90, 180 and 270, the fourth mixes back into the first between 270 and 360, and 370 gets the color of 10. x comes after the last position. A discrete map keeps its last color from its end to x. Without it, a value past either end gets that end's color.
 
@@ -112,7 +112,7 @@ Shape arguments are the optional arguments the shapes share:
 - **Line styles**, taken by every shape except containers: `(dash lengths offset)`, `(line-cap …)` and `(line-join …)`.
 - **Heads**, taken by a line, a polyline and an arc, the shapes with ends: `(head-start kind)` and `(head-end kind)`, each `'none'` (the default), `'dart'`, `'curved'`, `'open'`, `'bar'` or `'dot'`, and `(head-size real)`, 1 by default. A head is drawn in the shape's stroke, turned along the shape at its end, the start's pointing back, away from the shape; it is five stroke widths long times `head-size`, in screen pixels, so it keeps its size when the reader zooms. A shape with no stroke has no heads. `(line v (to [3 1]) (stroke ink) (head-end 'dart'))` is a vector; `(head-start 'bar') (head-end 'bar')` marks a length.
 
-`(dash lengths offset)` gives a dashed stroke. `lengths`, a list of reals of at least 0, alternate dash and gap, in screen pixels like `stroke-width`, and the optional `offset`, a real (0 if left out), shifts where the pattern starts. The offset is an attribute of its own, `dash-offset`, which a figure reads as `l.dash-offset` and an animation moves, as in `(move l.dash-offset (to 12))`, so that the dashes march along the stroke. It is given only inside `dash`, never as `(dash-offset …)`. `(line-cap 'butt'|'round'|'square')` is the shape of a stroke's ends, and `(line-join 'miter'|'round'|'bevel')` the shape of its corners.
+`(dash lengths offset)` gives a dashed stroke. `lengths`, a list of reals of at least 0, alternate dash and gap, in screen pixels like `stroke-width`, and the optional `offset`, a real (0 if left out), shifts where the pattern starts. The offset is an attribute of its own, `dash-offset`, which a world model reads as `l.dash-offset` and an animation moves, as in `(move l.dash-offset (to 12))`, so that the dashes march along the stroke. It is given only inside `dash`, never as `(dash-offset …)`. `(line-cap 'butt'|'round'|'square')` is the shape of a stroke's ends, and `(line-join 'miter'|'round'|'bevel')` the shape of its corners.
 
 These mirror SVG on purpose (`dash` is its `stroke-dasharray` and `stroke-dashoffset`, `line-cap` and `line-join` its `stroke-linecap` and `stroke-linejoin`): a color's alpha, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through an overlapping stroke.
 
@@ -439,7 +439,7 @@ Palettes of named colors, read by name: `(import colors)` and `colors.okabe-ito-
 
 The same colors by number, as series and categories take them one after another: `(okabe-ito k)` is color k, counting from 0, and `(tab10 k)` likewise; after the last color they start again, so `(okabe-ito 8)` is orange. Each is a discrete colormap that reads its palette's own colors, so a page restyling one restyles both.
 
-Colormaps from 0 to 1, called as `(colors.viridis 0.3)`, or `(viridis 0.3)` after `(import colors viridis)`. A figure gives its own values its own way: `(viridis (/ depth 50))`, or a function of its own, `(func depth-color ((real m)) (viridis (/ m 50)))`, which is a colormap too.
+Colormaps from 0 to 1, called as `(colors.viridis 0.3)`, or `(viridis 0.3)` after `(import colors viridis)`. A world model gives its own values its own way: `(viridis (/ depth 50))`, or a function of its own, `(func depth-color ((real m)) (viridis (/ m 50)))`, which is a colormap too.
 
 | Colormap | Colors |
 |---|---|
@@ -479,7 +479,7 @@ A result that may be none is held in a variable declared `T|none`, or given a de
 
 ### types
 
-Types that other files and figures share: `(import types unit)`, or `(import types)` and `types.unit`.
+Types that other files share: `(import types unit)`, or `(import types)` and `types.unit`.
 
 | Type | Is |
 |---|---|

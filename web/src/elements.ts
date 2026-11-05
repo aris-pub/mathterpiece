@@ -37,8 +37,31 @@ export class MtpModel extends HTMLElement {
   private last = 0;
 
   connectedCallback(): void {
+    if (this.runtime || this.error) return;
     const src = this.getAttribute("src");
-    if (src && !this.runtime && !this.error) void this.load(src);
+    if (!src) return;
+    if (!src.startsWith("#")) void this.load(src);
+    // The block may come later in the page than the element, so it is looked for once the page,
+    // or the HTML being added with the element, is all there.
+    else if (document.readyState === "loading")
+      document.addEventListener("DOMContentLoaded", () => this.inline(src.slice(1)), { once: true });
+    else queueMicrotask(() => this.inline(src.slice(1)));
+  }
+
+  /** Reads the compiled model from the JSON script with the given id, which may be anywhere in the
+   * page: Markdown converters keep such a block intact only where it stands on its own. */
+  private inline(id: string): void {
+    if (this.runtime || this.error) return;
+    const block = document.getElementById(id);
+    if (!(block instanceof HTMLScriptElement)) {
+      this.fail(`the page has no script with the id ${id} to read the compiled model from`);
+      return;
+    }
+    try {
+      this.doc = JSON.parse(block.textContent ?? "") as Doc;
+    } catch (err) {
+      this.fail(`could not read the compiled model in #${id}: ${(err as Error).message}`);
+    }
   }
 
   private async load(src: string): Promise<void> {

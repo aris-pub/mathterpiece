@@ -4,13 +4,13 @@ Who is involved, how a source file becomes something a reader can use, and what 
 
 ## Three people, one command, three artifacts
 
-Three people take part, each with a job of their own. The **illustrator** writes a figure as an `.mtp` source file, and the **mtp command** compiles it into the **.mtpc**, the static model. The **author** writes a paper, a web page, and places the figure's pieces in it alongside the rest of its content. The **reader** opens the page and uses the **live figure**: the runtime and the page together, which hold the live model. The .mtpc is the only thing that passes from the illustrator's side to the author's and the reader's.
+Three people take part, each with a job of their own. The **illustrator** writes a world model as an `.mtp` source file, and the **mtp command** compiles it into the **.mtpc**, the static model. The **author** writes a paper, a web page, and places the world model's components in it alongside the rest of its content. The **reader** opens the page and uses the **live figure**: the runtime and the page together, which hold the live model. The .mtpc is the only thing that passes from the illustrator's side to the author's and the reader's.
 
 ```mermaid
 flowchart LR
   illustrator([illustrator]) -->|writes .mtp| cmd["mtp command"]
   cmd -->|compiles| mtpc[(".mtpc: static model")]
-  author([author]) -->|writes the page, places the figure's pieces| live
+  author([author]) -->|writes the page, places the components| live
   mtpc --> live
   subgraph live [live figure: the runtime and the page]
     runtime["runtime: holds the model in memory"] --> components["components: views, controls"]
@@ -18,24 +18,24 @@ flowchart LR
   components <-->|acts, sees| reader([reader])
 ```
 
-The two jobs may fall to one person, as when a researcher draws the figures of their own paper, or to two, as when a paper uses a figure someone else made. The page `mtp build` writes, which shows every view and control, is outside this picture: it is the illustrator's own copy of the live figure while they work.
+The two jobs may fall to one person, as when a researcher writes the world models of their own paper, or to two, as when a paper uses a world model someone else wrote. The page `mtp build` writes, which shows every view and control, is outside this picture: it is the illustrator's own copy of the live figure while they work.
 
 ### The illustrator
 
-Writes a mathematical figure as a `.mtp` source file: the shapes, the values they depend on, how they can move, and how a reader can act on them. The illustrator thinks about mathematics and how to show it, not about programming, so the language says what things are and leaves keeping them current to the software. The illustrator works only on the figures; the author decides where their pieces go.
+Writes a world model as a `.mtp` source file: the shapes, the values they depend on, how they can move, and how a reader can act on them. The illustrator thinks about mathematics and how to show it, not about programming, so the language says what things are and leaves keeping them current to the software. The illustrator works only on the world models; the author decides where their components go.
 
 ### The author
 
-Writes the paper, a web page, and places pieces of the figures in it alongside the rest of the scientific content: a drawing here, a slider there, a number inside a sentence (see "On the page"). The author styles them with the page's own CSS, and may restyle a figure's tokens through their CSS variables.
+Writes the paper, a web page, and places components of the world models in it alongside the rest of the scientific content: a drawing here, a slider there, a number inside a sentence (see "On the page"). The author styles them with the page's own CSS, and may restyle a world model's tokens through their CSS variables.
 
 ### The mtp command
 
-Runs on the illustrator's machine. **Building** a figure is four steps, and each has its own name; "compile" and "build" are not interchangeable:
+Runs on the illustrator's machine. **Building** an `.mtp` is four steps, and each has its own name; "compile" and "build" are not interchangeable:
 
 1. **Parsing.** The **parser** reads the text into forms and knows only the syntax.
 2. **Compiling.** The **compiler** resolves every name, checks every type, works out everything that can be known in advance, and makes the model, in memory.
 3. **Writing the .mtpc.** The **writer** saves the model as the .mtpc.
-4. **Writing the page.** It also writes a minimal web page that loads the runtime and the .mtpc and shows every view, control and readout, so the illustrator sees the figure at once instead of a long file of JSON.
+4. **Writing the page.** It also writes a minimal web page that loads the runtime and the .mtpc and shows every view, control and readout, so the illustrator sees the live figure at once instead of a long file of JSON.
 
 Compiling should be fast, but the reader comes first: anything that can be decided here is, even when it makes compiling slower.
 
@@ -180,12 +180,39 @@ The author connects a world model to a web page with HTML elements.
 
     <mtp-canvas model="dial" name="v"></mtp-canvas>
 
-- **`<mtp-model>`** loads one .mtpc, once, and gives the live model an id.
+- **`<mtp-model>`** loads one compiled model, once, and gives the live model an id. Its `src` says where the compiled model is, in one of two ways:
+  - **a file**, `src="dial.mtpc"`, which the page fetches, so the page must be served by a web server;
+  - **a block in the page**, `src="#dial-data"`, naming a `<script type="application/json" id="dial-data">` that holds the compiled model and may stand anywhere in the page, before or after the model. Inside it, every `</` is written `<\/`, so that nothing in the compiled model can end the script early. The page `mtp build` writes does this.
 - **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element: they act through the canvas that draws their shape, or, for `on-view`, the canvas they name.
 - **One live model feeds any number of components,** which share its state: the slider in one paragraph, the readout inside a sentence and the canvas below all change together.
 - **A page may load several world models.** Each has its own state; components of one never affect another.
-- **The page styles components with its own CSS.** Tokens, the color and font variables, appear as CSS custom properties that the page may override: a color variable `ink` as `--mtp-ink`, and a font variable `note` through its parts, `--mtp-note-family`, `--mtp-note-style` and `--mtp-note-weight`. A token imported from another file is named by that file: `ink` from `house.mtp` is `--mtp-house-ink`, however it is imported. The figure is drawn with the page's value, or with the token's declared value where the page gives none. Colors computed from tokens are passed to the browser as CSS color mixes, so they follow the page's values too. An expression that reads a token's channels (`ink.r`) or compares it sees its declared value.
+- **The page styles components with its own CSS.** Tokens, the color and font variables, appear as CSS custom properties that the page may override: a color variable `ink` as `--mtp-ink`, and a font variable `note` through its parts, `--mtp-note-family`, `--mtp-note-style` and `--mtp-note-weight`. A token imported from another file is named by that file: `ink` from `house.mtp` is `--mtp-house-ink`, however it is imported. Each shape is drawn with the page's value, or with the token's declared value where the page gives none. Colors computed from tokens are passed to the browser as CSS color mixes, so they follow the page's values too. An expression that reads a token's channels (`ink.r`) or compares it sees its declared value.
 - **The page may read a live model.** Whether it may also write to one is listed under "Open", below.
+
+### Pages the author writes in Markdown
+
+The author does not write the page's HTML by hand: a tool such as a Markdown converter writes it. The elements need nothing from that tool except that it lets raw HTML through, which most do. Tested with markdown-it, which follows CommonMark, and with Python-Markdown, this Markdown file gives a working live figure:
+
+    Some text before the canvas.
+
+    <script type="module" src="mathterpiece.js"></script>
+
+    <mtp-model id="board" src="#board-data"></mtp-model>
+
+    <mtp-canvas model="board" name="view"></mtp-canvas>
+
+    <mtp-slider model="board" name="head-size"></mtp-slider>
+
+    More text.
+
+    <script type="application/json" id="board-data">{"mtpc":4, …}</script>
+
+- **Each element stands on its own line, with a blank line around it.** Both converters then pass it through as it is. A converter may wrap an element in a `<p>`, which does no harm.
+- **The block goes on its own line, not inside `<mtp-model>`.** Python-Markdown closes `<mtp-model>` before a block placed inside it, and a converter escapes a block that shares a line with other text.
+- **The runtime is loaded once per page**, whichever and however many models the page holds.
+- **A page opened from disk, not served, works only when the runtime comes from a web address.** A browser does not load a module script from disk for such a page, so `src="mathterpiece.js"` fails there. The page `mtp build` writes holds the runtime itself, so it works opened from disk.
+- **A tool that strips raw HTML or scripts**, as many hosted sites do, cannot show a live figure.
+- **A canvas needs no CSS:** it fills the width of what holds it, and takes its height from its view box.
 
 The elements also give the page these names, for its scripts and its CSS:
 
@@ -204,4 +231,5 @@ The elements also give the page these names, for its scripts and its CSS:
 ## Open
 
 - Whether a page may write to a model, not only read it.
+- Where an author's page gets the runtime from: for now, a copy of `mathterpiece.js` next to the page. Later it may come from a public address (a CDN), once the runtime is published.
 - What the type system does not have yet, such as vectors: see the type system document, "Not yet".
