@@ -36,8 +36,7 @@
         (line bv (from o) (to b-tip.pos) (stroke teal))
         (line sum (from o) (to s) (stroke plum)))
       ; The angle from a to b, turning from a's direction to b's.
-      (let ((pa (to-polar a))
-            (pb (to-polar b)))
+      (let ((pa (to-polar a)) (pb (to-polar b)))
         (arc|none turn (pos o) (r 0.8) (from pa[1]) (to pb[1]) (stroke ink) (stroke-width 1.5)
             (head-end 'curved') (head-size size)))
       (group names (defaults (font variable) (halign 'middle') (valign 'middle') (fill ink))
