@@ -50,6 +50,8 @@ export interface Obj {
   name: string | null;
   value?: Attribute;
   token?: boolean;
+  // A font's parts read from another font: the part, and that font's id.
+  links?: Record<string, number>;
   attrs?: Record<string, Attribute>;
   members?: number[];
   /** A container's clip: a shape in its frame, never drawn, that its members are drawn inside. */

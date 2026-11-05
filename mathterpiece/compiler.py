@@ -2559,14 +2559,44 @@ class _Compiler:
             if head in parts:
                 raise CompileError(f"'{head}' is given twice", item.pos)
             parts[head] = self.expr(item.items[1], FONT_PARTS[head].type, scope)
-        for e in parts.values():
-            if not e.known:
-                raise CompileError("a font's parts must be known when compiling", pos)
+        # A part may read the same part of another font: it takes that font's value, and the
+        # page's CSS for it falls back to that font's, so restyling one restyles both.
+        linked: dict[str, int] = {}
+        for p, e in parts.items():
+            if e.known:
+                continue
+            whole = e.args[0] if e.op == "part" and len(e.args) == 2 else None
+            other = (
+                self.model.objects[whole.args[0]]
+                if isinstance(whole, Expr) and whole.op == "read" and whole.args[1] is None
+                else None
+            )
+            if other is None or other.type != FONT or e.args[1] != p:
+                raise CompileError(
+                    "a font's parts must be known when compiling, or read the same part of"
+                    " another font",
+                    pos,
+                )
+            assert isinstance(whole, Expr)
+            linked[p] = whole.args[0]
+            parts[p] = _known(e.type, other.value.value[p])
         values = {
             p: parts[p].value if p in parts else spec.default for p, spec in FONT_PARTS.items()
         }
         attribute = Attribute(FONT, values)
-        self.add(Obj("variable", name, FONT, access, {"value": attribute}, parent=parent, pos=pos))
+        data = {"links": linked} if linked else {}
+        self.add(
+            Obj(
+                "variable",
+                name,
+                FONT,
+                access,
+                {"value": attribute},
+                parent=parent,
+                pos=pos,
+                data=data,
+            )
+        )
 
     def access_of(self, deps) -> tuple[str, int | None]:
         """page, and the object that gives it, when anything in deps has page access."""

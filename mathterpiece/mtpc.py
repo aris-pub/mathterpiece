@@ -219,6 +219,8 @@ class Writer:
         if kind == "variable":
             d["value"] = self.attribute(o.value)
             d["token"] = _core(o.value.type) in (COLOR, FONT)
+            if o.data.get("links"):
+                d["links"] = dict(o.data["links"])
         elif kind in ("scene", "group"):
             d["members"] = list(o.members)
             d["attrs"] = attrs

@@ -33,9 +33,10 @@ HOUSE_FONTS = ["variable", "number", "code"]
 
 
 def test_the_house_file_holds_the_shared_colors_and_fonts():
-    src = (EXAMPLES[0].parent / "house.mtp").read_text()
+    path = EXAMPLES[0].parent / "house.mtp"
+    src = path.read_text()
     assert "(scene" not in src
-    d = doc(src)
+    d = doc(src, path)
     for n in HOUSE_COLORS + HOUSE_FONTS:
         assert n in d["names"]
 

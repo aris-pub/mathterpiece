@@ -129,6 +129,8 @@ A group (a row and a column included) and a motif instance are **containers** (s
 
 A font's `style` is one of `'normal' 'italic' 'oblique'`.
 
+Each part is known when compiling, or reads the same part of another font: `(font variable (family fonts.serif.family) (style 'italic') (size 18))`. Such a part takes the other font's value, and its CSS falls back to the other font's variable, `var(--mtp-variable-family, var(--mtp-fonts-serif-family, …))`, so a page restyling the family restyles this font too, unless it restyles this one itself.
+
 Color and font variables are tokens: the page may restyle them with CSS, so no writer (control or listener) can write them (see the data model, "What changes, and what follows" and "On the page").
 
 ### Transitions and animations

@@ -1,0 +1,4 @@
+(font serif (family 'Georgia, serif'))
+(font variable (family serif.family) (style 'italic') (size 18))
+(scene s (text t 'x' (font variable)))
+(canvas v s)

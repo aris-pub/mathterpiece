@@ -273,8 +273,7 @@ function text(rt: Runtime, i: number, unitsPerPx: number): Element {
   el.setAttribute("font-size", fontSize(rt, i, unitsPerPx));
   const variable = tokenOf(rt, i, "font");
   for (const part of ["family", "style", "weight"]) {
-    const own = font[part];
-    const css = variable ? `var(${cssVariable(variable)}-${part}${own === null ? "" : `, ${String(own)}`})` : own;
+    const css = variable === null ? font[part] : fontPartCss(rt, rt.id(variable), part);
     if (css !== null && css !== undefined) el.style.setProperty(`font-${part}`, String(css));
   }
   return el;
@@ -309,6 +308,16 @@ export function paintCss(rt: Runtime, i: number, attr: string): string {
 }
 
 // The name of the token variable an attribute reads directly, if it does.
+/** A font token's part as CSS: its own variable, falling back to the font it reads the part
+ * from, if any, and then to its value. */
+function fontPartCss(rt: Runtime, id: number, part: string): string {
+  const o = rt.objects[id]!;
+  const link = o.links?.[part];
+  const own = (rt.value(id, null) as Record<string, unknown>)[part];
+  const fallback = link !== undefined ? fontPartCss(rt, link, part) : own === null ? null : String(own);
+  return `var(${cssVariable(o.name!)}-${part}${fallback === null ? "" : `, ${fallback}`})`;
+}
+
 function tokenOf(rt: Runtime, i: number, attr: string): string | null {
   const p = rt.objects[i]!.attrs?.[attr];
   if (!p || !isBound(p)) return null;

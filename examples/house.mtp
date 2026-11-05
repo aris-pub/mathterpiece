@@ -8,6 +8,9 @@
 (color saffron '#e9c46a')
 (color plum '#6d597a')
 
-(font variable (family 'Georgia, serif') (style 'italic') (size 18))
-(font number (family 'ui-monospace, Menlo, monospace') (size 14))
-(font code (family 'ui-monospace, Menlo, monospace') (size 13))
+; The fonts by what they are for, each from a family of the standard library: restyling the
+; family (--mtp-fonts-serif-family) restyles every font built from it.
+(import fonts serif mono)
+(font variable (family serif.family) (style 'italic') (size 18))
+(font number (family mono.family) (size 14))
+(font code (family mono.family) (size 13))

@@ -1624,6 +1624,13 @@
               },
               "token": {
                 "type": "boolean"
+              },
+              "links": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
               }
             },
             "additionalProperties": false
