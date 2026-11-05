@@ -156,6 +156,8 @@ HALIGN = Refine(STRING, (("one-of", ("start", "middle", "end")),))
 VALIGN = Refine(STRING, (("one-of", ("top", "middle", "baseline", "bottom")),))
 LINE_CAP = Refine(STRING, (("one-of", ("butt", "round", "square")),))
 LINE_JOIN = Refine(STRING, (("one-of", ("miter", "round", "bevel")),))
+# The head drawn at an end of a line, a polyline or an arc (the author, 2026-11-05).
+HEAD = Refine(STRING, (("one-of", ("none", "dart", "curved", "open", "bar", "dot")),))
 
 
 @dataclass(frozen=True)
@@ -185,6 +187,12 @@ PAINTED = {
 # letters.
 STROKE_ONLY = frozenset({"stroke", "stroke-width", "dash", "dash-offset", "line-cap", "line-join"})
 POSITIONED = {"x": Argument(REAL, 0), "y": Argument(REAL, 0)}
+# A head at each end, scaling with the stroke width times head-size (the author, 2026-11-05).
+HEADS = {
+    "head-start": Argument(HEAD, "none"),
+    "head-end": Argument(HEAD, "none"),
+    "head-size": Argument(NON_NEGATIVE, 1),
+}
 ARC = {
     **POSITIONED,
     **PAINTED,
@@ -214,6 +222,7 @@ SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
     "line": {
         **PAINTED,
         **TRANSFORMS,
+        **HEADS,
         "from": Argument(POINT, (0, 0)),
         "to": Argument(POINT, (1, 0)),
     },
@@ -225,11 +234,11 @@ SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
         "c": Argument(POINT, (0, 1)),
     },
     # A path through its points, and a closed region through them (mtp-4nt).
-    "polyline": {**PAINTED, **TRANSFORMS, "points": Argument(ListT(POINT), [])},
+    "polyline": {**PAINTED, **TRANSFORMS, **HEADS, "points": Argument(ListT(POINT), [])},
     "polygon": {**PAINTED, **TRANSFORMS, "points": Argument(ListT(POINT), [])},
     # Part of a circle's outline, and the region between two circles, from one angle to another
     # in degrees; whole by default (mtp-5zmn).
-    "arc": {**ARC, "r": Argument(NON_NEGATIVE, 1)},
+    "arc": {**ARC, **HEADS, "r": Argument(NON_NEGATIVE, 1)},
     "ring": {**ARC, "r": Argument(NON_NEGATIVE, 1), "width": Argument(NON_NEGATIVE, 0.5)},
     "text": {
         **POSITIONED,

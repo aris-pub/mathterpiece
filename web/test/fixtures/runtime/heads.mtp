@@ -1,0 +1,11 @@
+(bool on true)
+(scene s
+  (line vec (to [4 0]) (stroke 'red') (stroke-width 2) (head-end 'dart') (head-start 'bar'))
+  (line big (from [0 1]) (to [4 1]) (stroke 'red') (stroke-width 2) (head-end 'dart')
+      (head-size 1.5))
+  (arc turn (r 2) (to 90) (stroke 'blue') (head-end 'curved'))
+  (polyline path (points [[0 -1] [2 -2] [4 -1]]) (stroke 'black') (head-end 'dot')
+      (head-start 'open'))
+  (line bare (from [0 3]) (to [4 3]) (head-end 'dart'))
+  (line maybe (from [0 4]) (to [4 4]) (stroke 'black') (head-end (if on 'dart' 'none'))))
+(canvas v (x -5) (y -5) (width 10) (height 10) s)

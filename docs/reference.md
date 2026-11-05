@@ -110,6 +110,7 @@ Shape arguments are the optional arguments the shapes share:
 - **Transforms**, taken by every shape, groups included: `(translate point)`, the translation part of its transform, and `(transform transform)`.
 - **Fill and stroke**, taken by every shape except containers (below): `(fill color|none)`; `(stroke color|none)`; `(stroke-width (real (>= 0)))`; `(opacity (real (>= 0) (<= 1)))`, `(fill-opacity (real (>= 0) (<= 1)))`, `(stroke-opacity (real (>= 0) (<= 1)))`.
 - **Line styles**, taken by every shape except containers: `(dash lengths offset)`, `(line-cap …)` and `(line-join …)`.
+- **Heads**, taken by a line, a polyline and an arc, the shapes with ends: `(head-start kind)` and `(head-end kind)`, each `'none'` (the default), `'dart'`, `'curved'`, `'open'`, `'bar'` or `'dot'`, and `(head-size real)`, 1 by default. A head is drawn in the shape's stroke, turned along the shape at its end, the start's pointing back, away from the shape; it is five stroke widths long times `head-size`, in screen pixels, so it keeps its size when the reader zooms. A shape with no stroke has no heads. `(line v (to [3 1]) (stroke ink) (head-end 'dart'))` is a vector; `(head-start 'bar') (head-end 'bar')` marks a length.
 
 `(dash lengths offset)` gives a dashed stroke. `lengths`, a list of reals of at least 0, alternate dash and gap, in screen pixels like `stroke-width`, and the optional `offset`, a real (0 if left out), shifts where the pattern starts. The offset is an attribute of its own, `dash-offset`, which a figure reads as `l.dash-offset` and an animation moves, as in `(move l.dash-offset (to 12))`, so that the dashes march along the stroke. It is given only inside `dash`, never as `(dash-offset …)`. `(line-cap 'butt'|'round'|'square')` is the shape of a stroke's ends, and `(line-join 'miter'|'round'|'bevel')` the shape of its corners.
 
@@ -213,6 +214,7 @@ What an attribute is when the author leaves it out:
 | triangle | corners `[0 0]`, `[1 0]`, `[0 1]` |
 | polyline, polygon | `points` `[]`: no points, so nothing is drawn |
 | arc, ring | `r` 1, `from` 0, `to` 360: whole; ring `width` 0.5 |
+| line, polyline and arc heads | `head-start` and `head-end` `'none'`, `head-size` 1 |
 | row and column `gap`, `align` | 0, `'middle'` |
 | text | `halign` `'start'`, `valign` `'baseline'` |
 | a font's parts | family: the page's font; style `'normal'`; weight 400; size 16 (screen pixels) |

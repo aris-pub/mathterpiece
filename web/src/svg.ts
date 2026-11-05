@@ -137,6 +137,11 @@ export function zoom(rt: Runtime, canvas: number, svg: SVGSVGElement, look: Look
   for (const el of svg.querySelectorAll("text[data-mtp-id]")) {
     el.setAttribute("font-size", fontSize(rt, Number(el.getAttribute("data-mtp-id")), unitsPerPx));
   }
+  for (const m of svg.querySelectorAll("marker[data-mtp-head-px]")) {
+    const size = String(Number(m.getAttribute("data-mtp-head-px")) * unitsPerPx);
+    m.setAttribute("markerWidth", size);
+    m.setAttribute("markerHeight", size);
+  }
 }
 
 // Font sizes are in screen pixels, whatever the view box.
@@ -180,7 +185,69 @@ function drawObject(rt: Runtime, i: number, into: Element, unitsPerPx: number): 
     el.setAttribute("transform", matrix(own));
   }
   paint(rt, i, el);
+  heads(rt, i, el, into, unitsPerPx);
   into.appendChild(el);
+}
+
+// A head is this many stroke widths long (mtp-brs), times the shape's head-size.
+const HEAD_LENGTH = 5;
+// Several canvases may draw the same shape on one page, so each head gets its own id.
+let headIds = 0;
+
+// Each kind, drawn in a 10 by 10 box with the line coming in from the left along y = 5. refX is
+// the point put at the line's end: a little short of the tip, so the head covers the line's end.
+const HEAD_SHAPES: Record<string, { refX: number; tag: string; attrs: Record<string, string>; stroked: boolean }> = {
+  dart: { refX: 7.5, tag: "path", attrs: { d: "M0,0 L10,5 L0,10 L3,5 Z" }, stroked: false },
+  curved: { refX: 7.5, tag: "path", attrs: { d: "M0,0 Q6,4.3 10,5 Q6,5.7 0,10 L2.5,5 Z" }, stroked: false },
+  open: { refX: 9, tag: "path", attrs: { d: "M1,1 L9,5 L1,9" }, stroked: true },
+  bar: { refX: 5, tag: "path", attrs: { d: "M5,0 L5,10" }, stroked: true },
+  dot: { refX: 5, tag: "circle", attrs: { cx: "5", cy: "5", r: "3.5" }, stroked: false },
+};
+
+/**
+ * The heads at a line's, a polyline's or an arc's ends, as SVG markers in its stroke (mtp-brs).
+ * Its stroke width is in screen pixels, which a marker does not follow, so each head is sized in
+ * the view's units from its length in pixels, and zoom sizes it again.
+ */
+function heads(rt: Runtime, i: number, el: Element, into: Element, unitsPerPx: number): void {
+  if (!["line", "polyline", "arc"].includes(rt.objects[i]!.kind)) return;
+  const stroke = paintCss(rt, i, "stroke");
+  if (stroke === "none") return;
+  const px = HEAD_LENGTH * (rt.value(i, "stroke-width") as number) * (rt.value(i, "head-size") as number);
+  for (const end of ["start", "end"] as const) {
+    const shape = HEAD_SHAPES[rt.value(i, `head-${end}`) as string];
+    if (!shape) continue;
+    const marker = document.createElementNS(NS, "marker");
+    marker.id = `mtp-head-${++headIds}`;
+    for (const [k, v] of Object.entries({
+      viewBox: "0 0 10 10",
+      markerUnits: "userSpaceOnUse",
+      markerWidth: String(px * unitsPerPx),
+      markerHeight: String(px * unitsPerPx),
+      refX: String(shape.refX),
+      refY: "5",
+      // The start's head points back, away from the line, as the end's points forward.
+      orient: end === "start" ? "auto-start-reverse" : "auto",
+      "data-mtp-head-px": String(px),
+    })) {
+      marker.setAttribute(k, v);
+    }
+    const mark = document.createElementNS(NS, shape.tag) as SVGElement;
+    for (const [k, v] of Object.entries(shape.attrs)) mark.setAttribute(k, v);
+    mark.style.setProperty("fill", shape.stroked ? "none" : stroke);
+    mark.style.setProperty("stroke", shape.stroked ? stroke : "none");
+    if (shape.stroked) {
+      // As wide as the line itself: the box is a tenth of the head's length on each side.
+      mark.setAttribute("stroke-width", String(10 / HEAD_LENGTH));
+      mark.setAttribute("stroke-linecap", "round");
+      mark.setAttribute("stroke-linejoin", "round");
+    }
+    const opacity = String(rt.value(i, "stroke-opacity"));
+    mark.setAttribute(shape.stroked ? "stroke-opacity" : "fill-opacity", opacity);
+    marker.appendChild(mark);
+    into.appendChild(marker);
+    el.setAttribute(`marker-${end}`, `url(#${marker.id})`);
+  }
 }
 
 // A shape declared T|none is not drawn when it is absent: while its exists-when does not hold, or
