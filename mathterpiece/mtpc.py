@@ -319,9 +319,10 @@ def _function_id(x) -> int | None:
 
 
 def _shared(doc: dict) -> dict:
-    """The document with each attribute value that every shape of one kind has written once, in
-    shared, and left out of those shapes; instances are grouped by their motif (mtpc.md,
-    "Shared attribute values"). The runtime puts each back when it loads the file."""
+    """The document with each attribute's most common value among the shapes of one kind written
+    once, in shared, and left out of the shapes that have it; the others keep their own.
+    Instances are grouped by their motif (mtpc.md, "Top level"). The runtime puts each back in
+    every shape of its kind that does not give it when it loads the file."""
     groups: dict[str, list[dict]] = {}
     for o in doc["objects"]:
         if "attrs" in o:
@@ -331,15 +332,25 @@ def _shared(doc: dict) -> dict:
     for key, objs in sorted(groups.items()):
         if len(objs) < 2:
             continue
-        table = {}
+        table: dict[str, object] = {}
+        common: dict[str, str] = {}
+        # Only an attribute every shape of the kind has: one that a shape lacks must stay lacking.
         for attr in sorted(set.intersection(*(set(o["attrs"]) for o in objs))):
-            texts = {json.dumps(o["attrs"][attr], sort_keys=True) for o in objs}
-            if len(texts) == 1:
-                table[attr] = objs[0]["attrs"][attr]
+            counts: dict[str, int] = {}
+            for o in objs:
+                text = json.dumps(o["attrs"][attr], sort_keys=True)
+                counts[text] = counts.get(text, 0) + 1
+            text, n = max(sorted(counts.items()), key=lambda kv: kv[1])
+            if n >= 2:
+                table[attr], common[attr] = json.loads(text), text
         if table:
             shared[key] = table
             for o in objs:
-                o["attrs"] = {k: v for k, v in o["attrs"].items() if k not in table}
+                o["attrs"] = {
+                    k: v
+                    for k, v in o["attrs"].items()
+                    if common.get(k) != json.dumps(v, sort_keys=True)
+                }
     return {**doc, "shared": shared} if shared else doc
 
 

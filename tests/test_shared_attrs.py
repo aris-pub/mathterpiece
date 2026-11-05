@@ -57,3 +57,20 @@ def test_the_file_passes_the_schema_and_has_the_new_version():
     d = raw(GRID)
     assert d["mtpc"] == VERSION == 3
     assert errors(d) == []
+
+
+def test_the_most_common_value_when_one_shape_differs():
+    # A frame around a grid of cells: its own size stays with it, and the cells share theirs.
+    src = (
+        "(scene s (rect frame (width 5) (height 5))"
+        " (foreach i 4 (rect_ (x i) (width 0.25) (height 0.25) (stroke none))))"
+    )
+    d = raw(src)
+    assert d["shared"]["rect"]["width"]["free"] == 0.25
+    rects = [o for o in d["objects"] if o["kind"] == "rect"]
+    assert rects[0]["attrs"]["width"]["free"] == 5
+    assert all("width" not in r["attrs"] for r in rects[1:])
+    whole = doc(src)
+    assert [o["attrs"]["width"]["free"] for o in whole["objects"] if o["kind"] == "rect"] == [
+        5, 0.25, 0.25, 0.25, 0.25,
+    ]  # fmt: skip
