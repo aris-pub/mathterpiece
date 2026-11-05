@@ -1,0 +1,27 @@
+; Palettes of named colors: (import colors) and colors.okabe-ito.orange, or
+; (import colors okabe-ito) and okabe-ito.orange. Each color is a token, so a page restyles it
+; through its CSS variable, --mtp-colors-okabe-ito-orange.
+
+; Okabe and Ito's eight colors, which stay apart for readers with any common color blindness.
+(namespace okabe-ito
+  (color orange '#e69f00')
+  (color sky-blue '#56b4e9')
+  (color bluish-green '#009e73')
+  (color yellow '#f0e442')
+  (color blue '#0072b2')
+  (color vermillion '#d55e00')
+  (color reddish-purple '#cc79a7')
+  (color black '#000000'))
+
+; Matplotlib's default ten, the colors its plots take one after another.
+(namespace tab10
+  (color blue '#1f77b4')
+  (color orange '#ff7f0e')
+  (color green '#2ca02c')
+  (color red '#d62728')
+  (color purple '#9467bd')
+  (color brown '#8c564b')
+  (color pink '#e377c2')
+  (color gray '#7f7f7f')
+  (color olive '#bcbd22')
+  (color cyan '#17becf'))

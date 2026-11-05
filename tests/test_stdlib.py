@@ -14,6 +14,7 @@ from mathterpiece.compiler import STDLIB, _declared, compile_source
 from mathterpiece.parse import parse
 
 NAMES = {
+    "colors": ["okabe-ito", "tab10"],
     "math": ["dot", "clamp", "smoothstep", "mean", "norm", "normalize", "cross", "midpoint"],
     "ease": [
         "unit",
@@ -133,3 +134,45 @@ class TestEases:
         path = tmp_path / "fig.mtp"
         path.write_text(src)
         assert errors(doc(src, path)) == []
+
+
+OKABE_ITO = {
+    "orange": "#e69f00ff",
+    "sky-blue": "#56b4e9ff",
+    "bluish-green": "#009e73ff",
+    "yellow": "#f0e442ff",
+    "blue": "#0072b2ff",
+    "vermillion": "#d55e00ff",
+    "reddish-purple": "#cc79a7ff",
+    "black": "#000000ff",
+}
+TAB10 = {
+    "blue": "#1f77b4ff",
+    "orange": "#ff7f0eff",
+    "green": "#2ca02cff",
+    "red": "#d62728ff",
+    "purple": "#9467bdff",
+    "brown": "#8c564bff",
+    "pink": "#e377c2ff",
+    "gray": "#7f7f7fff",
+    "olive": "#bcbd22ff",
+    "cyan": "#17becfff",
+}
+
+
+class TestColors:
+    @pytest.mark.parametrize("palette, colors", [("okabe-ito", OKABE_ITO), ("tab10", TAB10)])
+    def test_each_palette_is_a_namespace_of_its_colors(self, tmp_path, palette, colors):
+        m = figure(tmp_path, f"(import colors) (scene s (circle c (fill colors.{palette}.blue)))")
+        ns = m.objects[m.names[f"colors.{palette}"]]
+        assert ns.kind == "namespace"
+        got = {short: m.objects[i].value.value for short, i in ns.data["members"].items()}
+        assert got == colors
+
+    def test_imported_by_name(self, tmp_path):
+        m = figure(
+            tmp_path, "(import colors okabe-ito) (scene s (circle c (fill okabe-ito.orange)))"
+        )
+        e = m.get("c").attrs["fill"].expr
+        # A token, named by the file and the namespace: --mtp-colors-okabe-ito-orange.
+        assert m.objects[e.args[0]].name == "colors.okabe-ito.orange"

@@ -408,6 +408,15 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 
 Files of declarations in `mathterpiece/stdlib/`, imported by name like any other file (see "Imports"): `(import math clamp)`, or `(import math)` and `math.clamp`. Nothing in them is seen without an import. Everything else in this reference is built in.
 
+### colors
+
+Palettes, each a namespace of named colors: `(import colors)` and `colors.okabe-ito.orange`, or `(import colors okabe-ito)` and `okabe-ito.orange`. Each color is a token, restyled by a page through its CSS variable, `--mtp-colors-okabe-ito-orange`.
+
+| Palette | Colors |
+|---|---|
+| `okabe-ito` | Okabe and Ito's eight, which stay apart for readers with any common color blindness: `orange`, `sky-blue`, `bluish-green`, `yellow`, `blue`, `vermillion`, `reddish-purple`, `black` |
+| `tab10` | matplotlib's default ten: `blue`, `orange`, `green`, `red`, `purple`, `brown`, `pink`, `gray`, `olive`, `cyan` |
+
 ### math
 
 | Function | Takes | Gives | None when |
