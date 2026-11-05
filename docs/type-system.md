@@ -6,7 +6,7 @@ What types are for in mtp, which types there are, and how to use them, declare n
 
 Every object in a world model has a type, and the compiler knows every type before the page loads (see the data model's account of objects and binding time). mtp is statically and strongly typed: a value of one type is never quietly treated as another, and anything that does not fit is a compile error.
 
-This buys two things. Mistakes are caught when compiling, at the line that made them, instead of showing up as a broken drawing in a reader's browser. And the runtime does no type work while drawing: it never checks, converts or guesses a type, so every frame of a drag or an animation is spent on the mathematics alone. Neither depends on the author writing types everywhere; the compiler works most of them out. A type is written where it says something the compiler cannot guess.
+This buys two things. Mistakes are caught when compiling, at the line that made them, instead of showing up as a broken drawing in a reader's browser. And the runtime does no type work while drawing: it never checks, converts or guesses a type, so every frame of a drag or an animation is spent on the mathematics alone. Neither depends on the illustrator writing types everywhere; the compiler works most of them out. A type is written where it says something the compiler cannot guess.
 
 mtp has no classes, no methods attached to types, and no inheritance. It has **refinement**: a type can be narrowed to some of its objects, and the narrower type is accepted wherever the wider one is.
 
@@ -137,11 +137,11 @@ An argument passed to a constrained parameter, and an item of a list with constr
 
 `none` stands for a value that does not exist. For now it is the only way to broaden a type: `real|none`, or `(maybe real)`, is a real or none.
 
-**Where it comes from.** A function where it is undefined: `(/ x 0)`, `(secd 90)`, `(tand 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)`. When the inputs are known when compiling this is a compile error; while drawing it gives `none`, never an error and never infinity (`infty` is only a value known when compiling: see "What the compiler proves", below). A lookup by a key known only while drawing, `g[side]`, may also give none. A point built from two numbers, `[x y]`, is none when either is. And an author may write `none` on purpose.
+**Where it comes from.** A function where it is undefined: `(/ x 0)`, `(secd 90)`, `(tand 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)`. When the inputs are known when compiling this is a compile error; while drawing it gives `none`, never an error and never infinity (`infty` is only a value known when compiling: see "What the compiler proves", below). A lookup by a key known only while drawing, `g[side]`, may also give none. A point built from two numbers, `[x y]`, is none when either is. And an illustrator may write `none` on purpose.
 
 **How it behaves.** Anything computed from `none` is `none`: a function's result, a part of `none` (if `g[k]` is `none`, so is `g[k].pos`), and an interpolated string with a part that is `none` (`$'sec θ = {crossing:.3f}'` is `none` when `crossing` is). The exceptions are the forms that deal with `none` (below), equality (`(= none none)` is true, `(= none 3)` is false), and a function whose parameter is declared `T|none`: it receives `none` and runs its body. A parameter that does not accept `none` makes the call `none`. Conditions (`if`, `cond`, `and`, `or`, and the `when` of a canvas, control or listener) cannot decide anything with `none`, so they must always receive a value that cannot be `none`. Of the list operations, `sum`, `count`, `min`, `max`, `any`, `all` and `reduce` must not receive items that may be `none`; `map`, `reverse` and reading a position pass them through.
 
-**Handling it.** Everywhere a value reaches the reader must handle a `none` that may arrive there, whatever its source: a shape, a readout, a condition, an interpolated string, a list operation, a write. Handling means giving it a default with `or?`, filtering it out of a list with `somes`, or, for a shape, declaring the shape itself `T|none`. A transition whose end may be `none` is a write and must be handled too, except into a `color|none` variable or attribute, where `none` is mixed as transparent. Declaring a variable `T|none` is the author's choice that the variable may hold `none`; it does not exempt what reads it. A `none` arrives unasked when it comes from a partial function or a lookup, or anything computed from them; an unasked `none` may not even pass silently into a variable declared plain `T`. Until every `none` is handled, the compiler stops. The forms:
+**Handling it.** Everywhere a value reaches the reader must handle a `none` that may arrive there, whatever its source: a shape, a readout, a condition, an interpolated string, a list operation, a write. Handling means giving it a default with `or?`, filtering it out of a list with `somes`, or, for a shape, declaring the shape itself `T|none`. A transition whose end may be `none` is a write and must be handled too, except into a `color|none` variable or attribute, where `none` is mixed as transparent. Declaring a variable `T|none` is the illustrator's choice that the variable may hold `none`; it does not exempt what reads it. A `none` arrives unasked when it comes from a partial function or a lookup, or anything computed from them; an unasked `none` may not even pass silently into a variable declared plain `T`. Until every `none` is handled, the compiler stops. The forms:
 
     (or? x d)                ; x, or d when x is none
     (none? x)  (some? x)     ; is x none, is it not
@@ -261,7 +261,7 @@ An interface cannot be instantiated: no object's own type is ever an interface, 
 
 Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed when every member's type has one.
 
-An author declares an interface by the attributes it lists, each with its type and any constraints: `(interface inky (color ink) (color paper))`, `(interface round (real r (>= 0)))`. Any object with those attributes, of fitting types, satisfies it, shapes and namespaces alike, with or without other attributes: a circle and a ring are both `round`, and so is `(namespace n (real r 1 (>= 0)))`. A constraint is met only when it is guaranteed: a namespace whose `r` is a plain `real` is not `round`, since it may be negative. A namespace is passed to a function, or held by a variable, through an interface it fits: `(func f ((inky p)) p.ink)`, `(inky look (if dark night day))`.
+An illustrator declares an interface by the attributes it lists, each with its type and any constraints: `(interface inky (color ink) (color paper))`, `(interface round (real r (>= 0)))`. Any object with those attributes, of fitting types, satisfies it, shapes and namespaces alike, with or without other attributes: a circle and a ring are both `round`, and so is `(namespace n (real r 1 (>= 0)))`. A constraint is met only when it is guaranteed: a namespace whose `r` is a plain `real` is not `round`, since it may be negative. A namespace is passed to a function, or held by a variable, through an interface it fits: `(func f ((inky p)) p.ink)`, `(inky look (if dark night day))`.
 
     (interface inky (color ink) (color paper))
     (namespace day (color ink '#1f2a44') (color paper '#f6f1e7'))
@@ -274,7 +274,7 @@ An author declares an interface by the attributes it lists, each with its type a
 
 - Unions of types other than `none`, such as a fill that is a color or a gradient.
 - Vectors: fixed-length numbers with arithmetic, separate from lists.
-- Container types an author defines, such as `pair[T]`.
+- Container types an illustrator defines, such as `pair[T]`.
 - Extra attributes on new types (which would let `point` become a refinement of `list[real]` instead of a type of its own).
 - Variables that hold functions.
 - Types passed or held as values.

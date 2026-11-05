@@ -11,7 +11,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **A canvas's view box** is given by its lower-left corner (`x`, `y`) and its size (`width`, `height`), in scene units. The default is −10 to 10 in both directions. The whole view box is shown, scaled to fit the element and centered in it. A canvas's `transform` applies about the center of its view box. The reader may pan and zoom what the view box shows (see "Panning and zooming"), which changes only what the canvas shows, never the view box's attributes.
 - **Stroke widths and font sizes are in screen units** (CSS pixels): a line keeps the same thickness on screen, and text the same size, whatever the view box and however the figure is scaled.
 - **Every shape has its own frame of reference.** It starts identical to the scene's; then the shape's `translate` and then its `transform` are applied (`translate` is the translation that comes first; `transform` is everything else, and may include further translations), and they apply to the shape and to everything below it in the scene tree. Both act about the origin of the container's frame, so `(rotate 30)` turns a shape around that origin, not around its own position; to turn a shape in place, put its offset inside the transform, after the rotation: `(transform (transform (rotate 30) (translate 6 -6)))`. A group's `translate` and `transform` are its own: they move its members, and are not spread over them.
-- **A position is written before the transforms of the shape's containers are applied.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1, then the group's translation moves it: it is drawn at 6. The author never converts anything by hand: what is written is where the shape sits before its containers move it.
+- **A position is written before the transforms of the shape's containers are applied.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1, then the group's translation moves it: it is drawn at 6. The illustrator never converts anything by hand: what is written is where the shape sits before its containers move it.
 - **Reading an attribute converts it through every transform that applies to the shape read but not to the expression reading it.** Inside `g`, a sibling reads `p.x` as 1, so `(circle q (x p.x))` sits exactly on `p`; outside `g`, `p.x` reads 6, where `p` is drawn. The runtime stores the 1. A shape's own `translate` and `transform` count too: `(circle p (x 1) (translate [2 0]))` is drawn at 3, and a sibling reads `p.x` as 3. Inside a function, a read uses the frame of the expression that called it. A drag's write converts the other way: it writes the value that, after every transform, lands under the pointer. Writes from animations and toggles are in the target's own frame and are not converted.
 
 ## Declarations
@@ -79,7 +79,7 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 |---|---|---|---|---|
 | `(func name params body)`, `(func[T] name params body)` | required | the parameter list; the body, one expression | none | none |
 
-`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself. A function may take the name of a built-in function, such as `sind` or `map`: from its declaration on, that name calls the author's function, and above it, the built-in. It may not take the name of a special form (`if`, `let`, `foreach` …), a type (`real`, `circle`, `slider` …) or a constant (`pi`, `infty` …): that is a compile error.
+`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself. A function may take the name of a built-in function, such as `sind` or `map`: from its declaration on, that name calls the illustrator's function, and above it, the built-in. It may not take the name of a special form (`if`, `let`, `foreach` …), a type (`real`, `circle`, `slider` …) or a constant (`pi`, `infty` …): that is a compile error.
 
     (func[point] ahead ((real d)) [d 0])                     ; [d 0] is a point
     (func[(real (>= 0) (<= 1))] nearness ((real x)) (/ (+ (sind x) 1) 2))
@@ -168,7 +168,7 @@ An animation (not `at-once` or `in-order`) also takes `(loop n)`, which plays it
 
 Eases: a function of a real from 0 to 1, `func[(real (>= 0) (<= 1)) real]`, or `(step n)`, which is built in. The usual eases are functions in the standard library's `ease` file: `(import ease cubic-in-out)` and `(ease cubic-in-out)`; see "The standard library". An ease is only called from 0 to 1, so a function defined only there fits, and so does one defined on every real, such as a `func[real real]`. `(step n)` is n equal jumps, each at the start of its interval: a 1 s `(step 4)` move from 0 to 4 shows 1 at once and reaches 4 at 0.75 s. A function's value may go past 1 or below 0: a number or a point moved by it goes past its ends, as a spring overshoots, and is still brought into its type's constraints; a color or a bool stops at them. A move with no ease moves in a straight line.
 
-A bool, a string or a choice (section 5.d of the type system) cannot change smoothly, so its ease must be piecewise constant and take only the values 0 and 1: where it is 0 what moves holds its start value, where it is 1 its end value. Such eases are only built in, and for now there is one: `(step-ease p)`, with `p` from 0 to 1 known when compiling, which is 0 before progress `p` and 1 from `p` on (`(step-ease 0)` changes at the start, `(step-ease 1)` at the end). An author cannot write one, since the compiler could not check it.
+A bool, a string or a choice (section 5.d of the type system) cannot change smoothly, so its ease must be piecewise constant and take only the values 0 and 1: where it is 0 what moves holds its start value, where it is 1 its end value. Such eases are only built in, and for now there is one: `(step-ease p)`, with `p` from 0 to 1 known when compiling, which is 0 before progress `p` and 1 from `p` on (`(step-ease 0)` changes at the start, `(step-ease 1)` at the end). An illustrator cannot write one, since the compiler could not check it.
 
 By default a bool, a string or a choice changes at the start of its move and holds its new value for the rest of the duration, so a move that is cancelled never leaves it in between. An enclosing default ease that is not such an ease does not apply to it.
 
@@ -196,7 +196,7 @@ A canvas **toggles** the shapes its items give: when an item starts or stops giv
 
 ## Defaults
 
-What an attribute is when the author leaves it out:
+What an attribute is when the illustrator leaves it out:
 
 | What | Default |
 |---|---|
@@ -264,9 +264,9 @@ Every control and listener emits writes to its target (or, through its animation
 
 ### Panning and zooming
 
-- **Pan:** dragging where no draggable shape is moves what the canvas shows with the pointer, but only inside the view box: the reader never sees past what the author framed, so a pan moves something only once the reader has zoomed in.
+- **Pan:** dragging where no draggable shape is moves what the canvas shows with the pointer, but only inside the view box: the reader never sees past what the illustrator framed, so a pan moves something only once the reader has zoomed in.
 - **Zoom:** the wheel, or a pinch on a trackpad or with two fingers, zooms about the pointer. While the pointer is over a canvas that zooms, the wheel does not scroll the page. It zooms between bounds: `(zoom lo hi)`, two reals known when compiling with 1 ≤ lo ≤ hi, from lo times closer than the view box to hi times; by default from 1, the view box itself, to 10. A canvas never shows more than its view box.
-- **A double click** goes back to the view box the author gave.
+- **A double click** goes back to the view box the illustrator gave.
 - **Neither writes anything:** they are the canvas's own state, like its toggles, so stroke widths and font sizes stay the same on screen. `(pan false)` or `(zoom false)` turns either off.
 
 ### Controls

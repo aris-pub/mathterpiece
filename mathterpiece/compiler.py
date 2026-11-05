@@ -5188,7 +5188,7 @@ def _show(c) -> str:
 
 
 def _value_str(v) -> str:
-    """A value as an error message shows it to the author."""
+    """A value as an error message shows it to the illustrator."""
     if _is_infinite(v):
         return "infty" if v > 0 else "(- infty)"
     return str(v)

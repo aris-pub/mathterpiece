@@ -2,38 +2,40 @@
 
 Who is involved, how a source file becomes something a reader can use, and what the world model holds.
 
-## Four actors and the static model
+## Three people, one command, three artifacts
 
-Two actors sit on each side of one file. On the left, the **author** writes a source file and the **mtp command** builds it. On the right, the **live model** is what that file becomes, and the **reader** uses it. In the middle is the **.mtpc**, the static model: the only thing that passes from one side to the other.
+Three people take part, each with a job of their own. The **illustrator** writes a figure as an `.mtp` source file, and the **mtp command** compiles it into the **.mtpc**, the static model. The **author** writes a paper, a web page, and places the figure's pieces in it alongside the rest of its content. The **reader** opens the page and uses the **live figure**: the runtime and the page together, which hold the live model. The .mtpc is the only thing that passes from the illustrator's side to the author's and the reader's.
 
 ```mermaid
 flowchart LR
-  author([author]) -->|writes .mtp| parser
-  subgraph cmd [mtp command: building]
-    parser -->|forms| compiler -->|model| writer
-  end
-  writer --> mtpc[(".mtpc: static model")]
-  writer --> page["a minimal page"]
-  mtpc --> runtime
-  page --> runtime
-  subgraph live [live model, on a page]
+  illustrator([illustrator]) -->|writes .mtp| cmd["mtp command"]
+  cmd -->|compiles| mtpc[(".mtpc: static model")]
+  author([author]) -->|writes the page, places the figure's pieces| live
+  mtpc --> live
+  subgraph live [live figure: the runtime and the page]
     runtime["runtime: holds the model in memory"] --> components["components: views, controls"]
   end
   components <-->|acts, sees| reader([reader])
 ```
 
+The two jobs may fall to one person, as when a researcher draws the figures of their own paper, or to two, as when a paper uses a figure someone else made. The page `mtp build` writes, which shows every view and control, is outside this picture: it is the illustrator's own copy of the live figure while they work.
+
+### The illustrator
+
+Writes a mathematical figure as a `.mtp` source file: the shapes, the values they depend on, how they can move, and how a reader can act on them. The illustrator thinks about mathematics and how to show it, not about programming, so the language says what things are and leaves keeping them current to the software. The illustrator works only on the figures; the author decides where their pieces go.
+
 ### The author
 
-Writes a mathematical figure as a `.mtp` source file: the shapes, the values they depend on, how they can move, and how a reader can act on them. The author thinks about mathematics and how to show it, not about programming, so the language says what things are and leaves keeping them current to the software. The author then places pieces of the result on a web page (a drawing here, a slider there, a number inside a sentence) and styles them with the page's own CSS.
+Writes the paper, a web page, and places pieces of the figures in it alongside the rest of the scientific content: a drawing here, a slider there, a number inside a sentence (see "On the page"). The author styles them with the page's own CSS, and may restyle a figure's tokens through their CSS variables.
 
 ### The mtp command
 
-Runs on the author's machine. **Building** a figure is four steps, and each has its own name; "compile" and "build" are not interchangeable:
+Runs on the illustrator's machine. **Building** a figure is four steps, and each has its own name; "compile" and "build" are not interchangeable:
 
 1. **Parsing.** The **parser** reads the text into forms and knows only the syntax.
 2. **Compiling.** The **compiler** resolves every name, checks every type, works out everything that can be known in advance, and makes the model, in memory.
 3. **Writing the .mtpc.** The **writer** saves the model as the .mtpc.
-4. **Writing the page.** It also writes a minimal web page that loads the runtime and the .mtpc and shows every view, control and readout, so the author sees the figure at once instead of a long file of JSON.
+4. **Writing the page.** It also writes a minimal web page that loads the runtime and the .mtpc and shows every view, control and readout, so the illustrator sees the figure at once instead of a long file of JSON.
 
 Compiling should be fast, but the reader comes first: anything that can be decided here is, even when it makes compiling slower.
 
@@ -45,14 +47,14 @@ The command's subcommands each take one source file, and each runs the steps up 
 | `mtp check file` | 1, 2 | reports the first error, if any, and writes nothing |
 | `mtp compile file` | 1 to 3 | writes the .mtpc |
 | `mtp build file` | 1 to 4 | writes the .mtpc and the page |
-| `mtp serve file` | 1 to 4, again on each save | builds, serves the page on the author's machine, and builds again and reloads the page whenever the source file is saved |
+| `mtp serve file` | 1 to 4, again on each save | builds, serves the page on the illustrator's machine, and builds again and reloads the page whenever the source file is saved |
 | `mtp fmt file` | 1 | rewrites the file in the house layout, keeping its comments |
 
-**What `mtp check` reports.** The first error in the file, with its line and column, and nothing after it: the parser and the compiler stop there. Errors are of two kinds. A **syntax error** comes from parsing: an unclosed parenthesis or string, a name that is not valid, a stray character. A **compile error** comes from compiling: a name that is not declared or is declared twice; a form that is not where it may be or is missing a part; a value of the wrong type; a constraint, or a range a value must stay in, that cannot be proved, such as a radius that might be negative; a value known when compiling that is undefined there, such as `(/ 1 0)`; and anything the reference calls a compile error. Whatever the compiler cannot decide is not an error: a value that may be none while drawing is typed `T|none`, and the author handles it.
+**What `mtp check` reports.** The first error in the file, with its line and column, and nothing after it: the parser and the compiler stop there. Errors are of two kinds. A **syntax error** comes from parsing: an unclosed parenthesis or string, a name that is not valid, a stray character. A **compile error** comes from compiling: a name that is not declared or is declared twice; a form that is not where it may be or is missing a part; a value of the wrong type; a constraint, or a range a value must stay in, that cannot be proved, such as a radius that might be negative; a value known when compiling that is undefined there, such as `(/ 1 0)`; and anything the reference calls a compile error. Whatever the compiler cannot decide is not an error: a value that may be none while drawing is typed `T|none`, and the illustrator handles it.
 
-### The live model
+### The live figure
 
-What the .mtpc becomes on a page. The **runtime**, a library the page loads, rebuilds the model in memory, keeps it current as the reader acts, and serves the **components** the author placed on the page.
+What the .mtpc becomes on the author's page: the page and the **runtime**, a library the page loads, together. The runtime rebuilds the model in memory, keeps it current as the reader acts, and serves the **components** the author placed on the page.
 
 ### The reader
 
@@ -62,7 +64,7 @@ Opens the page and uses what the author placed there: drags points, moves slider
 
 ## The language
 
-An `.mtp` file is written in the mtp language. It is Lisp-like: everything is a form in parentheses, with the head first, as in `(circle p (r 0.2))`. It is declarative: the author says what exists and what each thing is equal to, never what to do step by step, and it is reactive: anything given by an expression is bound to it, and follows it for as long as the page is open. When the reader moves a slider, everything that reads what the slider writes changes at once, with nothing written to make that happen.
+An `.mtp` file is written in the mtp language. It is Lisp-like: everything is a form in parentheses, with the head first, as in `(circle p (r 0.2))`. It is declarative: the illustrator says what exists and what each thing is equal to, never what to do step by step, and it is reactive: anything given by an expression is bound to it, and follows it for as long as the page is open. When the reader moves a slider, everything that reads what the slider writes changes at once, with nothing written to make that happen.
 
 It is strongly and statically typed: every object's type is known when compiling, and nothing converts silently except a number broadening (an int where a real is expected) and a literal taking the type expected where it is written. Names are bare. Nothing has a side effect except a declaration making its object exist.
 
@@ -121,8 +123,8 @@ A **namespace**, `(namespace theme (color ink …) (real gap 0.4))`, is a global
 A group (a row and a column included) and a motif instance are both **containers**: collections of shapes, which behave the same way. Neither draws anything itself, so an attribute such as `fill` or `stroke` is never a container's own: reading one gives every member's, and writing one writes every member's. What an instance has besides is a frame of its own, moved by its `x`, `y`, `translate` and `transform`, and its parameters. The reference, "Containers", gives the full rules, `(defaults …)` included.
 
 - **The scene** is the mathematical content: the shapes, and the variables declared with them. It is a subset of the model and knows nothing of how it is shown or changed. The model includes the scene; the scene never includes the rest of the model.
-- **Components** are what the author places or attaches on the page. They come in two sorts, by the direction information flows: **writers** (controls and listeners) carry the reader's actions into the model; **views** carry the model to the reader. ("Reader" on its own always means the person.) Basic components come from the standard library, and authors will be able to make their own from them.
-- **Writers are active or not.** A writer that is **active** accepts triggers: a press of a button, a move of a slider's knob, a click on a toggle, a drag, a click on a shape, a release over one, the end of a drag, a canvas coming into view. Once **triggered**, it writes what it targets, directly or through its animation. An inactive writer cannot be triggered; what it already set off goes on. The author says when a writer is active with `(active bool)`; a writer without one is always active.
+- **Components** are what the illustrator declares and the author places on the page. They come in two sorts, by the direction information flows: **writers** (controls and listeners) carry the reader's actions into the model; **views** carry the model to the reader. ("Reader" on its own always means the person.) Basic components come from the standard library, and authors will be able to make their own from them.
+- **Writers are active or not.** A writer that is **active** accepts triggers: a press of a button, a move of a slider's knob, a click on a toggle, a drag, a click on a shape, a release over one, the end of a drag, a canvas coming into view. Once **triggered**, it writes what it targets, directly or through its animation. An inactive writer cannot be triggered; what it already set off goes on. The illustrator says when a writer is active with `(active bool)`; a writer without one is always active.
 - **A writer animates only toward a state it knows.** A triggered writer with an animation builds a path from the state at that moment (or from a transition's own `from`) to the state the animation ends at, then writes along it over the animation's duration. It can do so only if that end state is known when it is triggered. A writer whose end state is never known then, such as a drag, which goes wherever the reader takes the pointer, takes no animation. A writer whose end state is known only sometimes follows its animation whenever the end is known, and otherwise writes the end state at once. (A slider differs: its knob sets how far along its animation things are, not a path played over time; see the reference.)
 - **Other ways of showing the model** are possible later: scripts on the page reading the model (see "On the page" and "Open"), descriptions for screen readers, sound, and export to an image or data.
 
@@ -165,7 +167,7 @@ flowchart LR
 
 ### Why there is no assignment
 
-In a programming language, `k = 3` is an instruction: at this point in the program, change `k`. Its effect depends on when it runs and what ran before. mtp has no instructions. If an expression could assign, `c.r = 2k` could be true before it and false after it, and the drawing would depend on the order the runtime happened to evaluate things in. Instead, the only writes are the reader's actions, carried by writers, and they reach only free values. Every bound relation the author wrote holds in every frame the reader sees.
+In a programming language, `k = 3` is an instruction: at this point in the program, change `k`. Its effect depends on when it runs and what ran before. mtp has no instructions. If an expression could assign, `c.r = 2k` could be true before it and false after it, and the drawing would depend on the order the runtime happened to evaluate things in. Instead, the only writes are the reader's actions, carried by writers, and they reach only free values. Every bound relation the illustrator wrote holds in every frame the reader sees.
 
 ## On the page
 

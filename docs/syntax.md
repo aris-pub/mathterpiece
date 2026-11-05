@@ -201,6 +201,6 @@ The data model shows how these relate: what reads what, and what writes what.
 
 ## 10. Types in brief
 
-A variable's or shape's head is its type: `real`, `int`, `bool`, `string`, `color`, `point`, `list`, a shape such as `circle`, or a type the author declared (section 4 lists the heads that are not types). A function's or motif's parameters always write theirs: `((real t 0.5) (color tint 'red'))`. A type can be written in place: `list[color]` is a list of colors, `real|none` (or `(maybe real)`) a real or `none`, `(real (>= 0))` a real no less than 0.
+A variable's or shape's head is its type: `real`, `int`, `bool`, `string`, `color`, `point`, `list`, a shape such as `circle`, or a type the illustrator declared (section 4 lists the heads that are not types). A function's or motif's parameters always write theirs: `((real t 0.5) (color tint 'red'))`. A type can be written in place: `list[color]` is a list of colors, `real|none` (or `(maybe real)`) a real or `none`, `(real (>= 0))` a real no less than 0.
 
 A literal takes the type expected where it is written: `'red'` is a string, but written as a fill it is a color. The type document covers all of this in full.
