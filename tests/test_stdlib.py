@@ -15,6 +15,7 @@ from mathterpiece.parse import parse
 
 NAMES = {
     "colors": ["okabe-ito", "tab10"],
+    "fonts": ["serif", "sans", "mono", "math"],
     "math": ["dot", "clamp", "smoothstep", "mean", "norm", "normalize", "cross", "midpoint"],
     "ease": [
         "unit",
@@ -176,3 +177,17 @@ class TestColors:
         e = m.get("c").attrs["fill"].expr
         # A token, named by the file and the namespace: --mtp-colors-okabe-ito-orange.
         assert m.objects[e.args[0]].name == "colors.okabe-ito.orange"
+
+
+class TestFonts:
+    @pytest.mark.parametrize(
+        "name, last",
+        [("serif", "serif"), ("sans", "sans-serif"), ("mono", "monospace"), ("math", "serif")],
+    )
+    def test_each_is_a_family_ending_in_a_generic_one(self, tmp_path, name, last):
+        # A list of fonts to try in order, as CSS writes it, ending in CSS's own generic family
+        # so that something always draws.
+        m = figure(tmp_path, f"(import fonts {name}) (scene s (text t 'x' (font {name})))")
+        value = m.objects[m.names[f"fonts.{name}"]].value.value
+        assert value["family"].split(",")[-1].strip() == last
+        assert (value["style"], value["weight"], value["size"]) == ("normal", 400, 16)

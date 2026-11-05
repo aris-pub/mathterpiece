@@ -417,6 +417,17 @@ Palettes, each a namespace of named colors: `(import colors)` and `colors.okabe-
 | `okabe-ito` | Okabe and Ito's eight, which stay apart for readers with any common color blindness: `orange`, `sky-blue`, `bluish-green`, `yellow`, `blue`, `vermillion`, `reddish-purple`, `black` |
 | `tab10` | matplotlib's default ten: `blue`, `orange`, `green`, `red`, `purple`, `brown`, `pink`, `gray`, `olive`, `cyan` |
 
+### fonts
+
+Families of fonts: `(import fonts serif)`, or `(import fonts)` and `fonts.serif`. Each is a list of fonts to try in order, as CSS writes it, ending in a family every browser has, with the default style, weight and size. Each is a token, restyled by a page through `--mtp-fonts-serif-family` and the rest.
+
+| Font | Family |
+|---|---|
+| `serif` | Georgia, Times New Roman, then any serif |
+| `sans` | the system's own sans serif, Segoe UI, Helvetica, Arial, then any sans serif |
+| `mono` | the system's monospace, Menlo, Consolas, then any monospace |
+| `math` | Latin Modern Math, STIX Two Math, Cambria Math, then any serif: fonts made for mathematics |
+
 ### math
 
 | Function | Takes | Gives | None when |

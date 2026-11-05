@@ -1,0 +1,10 @@
+; Families of fonts: (import fonts serif mono), or (import fonts) and fonts.serif. Each is a list
+; of fonts to try in order, as CSS writes it, ending in a family every browser has; its style,
+; weight and size are the defaults. Each is a token, so a page restyles it through its CSS
+; variables, --mtp-fonts-serif-family.
+
+(font serif (family 'Georgia, "Times New Roman", serif'))
+(font sans (family 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif'))
+(font mono (family 'ui-monospace, Menlo, Consolas, monospace'))
+; For text that is mathematics: a font made for it where there is one.
+(font math (family '"Latin Modern Math", "STIX Two Math", "Cambria Math", serif'))
