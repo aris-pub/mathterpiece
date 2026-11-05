@@ -1,9 +1,16 @@
-; Colormaps at work. On the left, a heatmap of two bumps: pick the map it is drawn with, or show
-; it in bands, four solid colors with no mixing. On the right, a coast: a map with a hard edge at
-; sea level, where shallow water meets sand; move the sea and the coastline follows. Below on
-; the left, the Okabe and Ito colors by number, as a chart takes them one after another: after the
-; eighth they start again. Below on the right, a map that wraps around a wheel: drag the handle
-; past a full turn, and the disk keeps going round the colors.
+; Colormaps at work, in four parts.
+;
+; The heatmap of two bumps, on the left: pick the map it is drawn with, or show it in bands, four
+; solid colors with no mixing.
+;
+; The coast, on the right: a map with a hard edge at sea level, where shallow water meets sand.
+; Move the sea, and the coastline follows.
+;
+; The Okabe and Ito colors by number, below on the left, as a chart takes them one after another:
+; after the eighth they start again. Under them, the same colors read by name.
+;
+; The wheel, below on the right: a map that wraps around. Drag the handle past a full turn, and
+; the disk keeps going round the colors.
 
 (import house paper ink soft terracotta teal saffron plum code)
 (import colors okabe-ito okabe-ito-named viridis magma cividis blue-white-red)

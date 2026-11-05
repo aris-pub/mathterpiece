@@ -44,17 +44,22 @@ def runtime() -> str:
     return built.read_text(encoding="utf-8")
 
 
-def about(src: str) -> str:
-    """The comment the source starts with, as plain text."""
-    lines = []
+def about(src: str) -> list[str]:
+    """The comment the source starts with, as paragraphs: its lines run together, and an empty
+    comment line starts a new paragraph."""
+    paragraphs: list[list[str]] = [[]]
     for line in src.split("\n"):
         if not line.startswith(";"):
             break
-        lines.append(line.lstrip(";").strip())
-    return " ".join(lines).strip()
+        text = line.lstrip(";").strip()
+        if text:
+            paragraphs[-1].append(text)
+        elif paragraphs[-1]:
+            paragraphs.append([])
+    return [" ".join(p) for p in paragraphs if p]
 
 
-def page(name: str, mtpc: str, js: str, text: str = "", extra: str = "") -> str:
+def page(name: str, mtpc: str, js: str, text: list[str] | None = None, extra: str = "") -> str:
     """A minimal page: the figure's opening comment, then every canvas, control and readout, in the
     order the source declares them."""
     doc = json.loads(mtpc)
@@ -80,12 +85,12 @@ def page(name: str, mtpc: str, js: str, text: str = "", extra: str = "") -> str:
   body {{ font-family: system-ui, sans-serif; margin: 2rem; max-width: 680px; }}
   mtp-canvas {{ display: block; width: min(90vw, 640px); margin: 1rem 0; }}
   mtp-canvas svg {{ width: 100%; height: auto; }}
-  .about {{ color: #555; }}
+  .about {{ color: #555; font-size: 16px; line-height: 1.55; margin: 0 0 0.6em; }}
 </style>
 </head>
 <body>
 <h1>{html.escape(name)}</h1>
-{f'<p class="about">{html.escape(text)}</p>' if text else ""}
+{chr(10).join(f'<p class="about">{html.escape(p)}</p>' for p in text or [])}
 <mtp-model id="figure"></mtp-model>
 {chr(10).join(parts)}
 <script type="application/json" id="figure-data">{data}</script>

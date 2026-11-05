@@ -106,3 +106,13 @@ class TestServe:
             assert "unknown name" not in urllib.request.urlopen(url).read().decode()
         finally:
             server.stop()
+
+
+def test_the_opening_comment_becomes_paragraphs():
+    # The comment's line breaks are the source's: its lines run together, and an empty comment
+    # line starts a new paragraph (the author, 2026-11-05).
+    from mathterpiece.build import about
+
+    src = "; One line\n; and the next.\n;\n; A second paragraph.\n(real k 1)\n; Not this one.\n"
+    assert about(src) == ["One line and the next.", "A second paragraph."]
+    assert about("(real k 1)") == []

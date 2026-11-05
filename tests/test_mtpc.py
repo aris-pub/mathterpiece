@@ -58,7 +58,6 @@ def test_the_examples_that_use_the_house_style_import_it():
         [
             "arcs",
             "bubbles",
-            "colormap-gallery",
             "colormaps",
             "dials",
             "ease-race",
