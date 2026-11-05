@@ -37,7 +37,7 @@
         gap: 0.75rem;
       }
       .brand { font-weight: 600; letter-spacing: 0.01em; margin-right: auto; }
-      .bar select, .bar button, #controls button {
+      .bar select, .bar button {
         font: inherit;
         font-size: 14px;
         color: var(--page-fg);
@@ -47,7 +47,7 @@
         padding: 0.3rem 0.7rem;
         cursor: pointer;
       }
-      .bar button[aria-pressed="true"], #controls [aria-pressed="true"] {
+      .bar button[aria-pressed="true"] {
         border-color: var(--accent);
         color: var(--accent);
       }
@@ -59,26 +59,16 @@
         gap: 1.25rem;
       }
       h1 { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 600; }
-      #about { max-width: 68ch; color: var(--muted); }
+      #about { color: var(--muted); }
       #about p { margin: 0 0 0.6em; text-wrap: pretty; }
       #about p:last-child { margin-bottom: 0; }
       mtp-canvas { display: block; width: 100%; }
       mtp-canvas svg { display: block; width: 100%; height: auto; border-radius: 8px; }
       #canvases { display: grid; gap: 1rem; }
-      #controls {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.6rem 1.25rem;
-        padding: 0.9rem 1rem;
-        border: 1px solid var(--rule);
-        border-radius: 8px;
-        background: var(--panel);
-      }
+      /* The controls keep the runtime's own look: the page only lays them out side by side. */
+      #controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.25rem; }
       #controls:empty { display: none; }
       #controls > p { flex-basis: 100%; margin: 0; }
-      #controls input[type="range"] { accent-color: var(--accent); vertical-align: middle; }
-      #controls input[type="checkbox"] { accent-color: var(--accent); }
       details { color: var(--muted); font-size: 14px; }
       summary { cursor: pointer; }
       #values { border-collapse: collapse; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; margin-top: 0.5rem; }
