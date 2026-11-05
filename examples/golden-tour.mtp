@@ -27,8 +27,7 @@
       (r (* size (sqrt (+ 1 (* 3 (/ i n))))))
       (fill (seed-color (/ i n))))))
 
-(scene garden
-  (background night)
+(scene garden (background night)
   ; The figure opens at the tour's last stop, so playing the tour moves from the first moment.
   (stop stop-name 'the golden angle')
   ; '#f6c453' is gold written out. gold is a token, which the page may restyle, so (fill gold)

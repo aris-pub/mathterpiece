@@ -15,8 +15,7 @@
   (triangle banner (a [0 2]) (b [1.2 1.6]) (c [0 1.2]) (fill terracotta) (stroke none))
   (circle tip (pos [0 2]) (r 0) (fill none) (stroke none)))
 
-(scene board
-  (background paper)
+(scene board (background paper)
   (real w 3 (>= 0.5) (<= 5))
   (real h 1.6 (>= 0.5) (<= 3))
   (real turn 0)

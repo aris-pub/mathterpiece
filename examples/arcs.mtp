@@ -5,8 +5,7 @@
 
 (import house paper ink soft terracotta teal saffron plum variable code)
 
-(scene board
-  (background paper)
+(scene board (background paper)
   (real theta 60 (>= 10) (<= 350))
   (real parts 5 (>= 1) (<= 8))
   (real grow 0 (>= 0) (<= 1))

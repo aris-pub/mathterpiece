@@ -33,8 +33,7 @@
 ; The gap between a point and its name.
 (real gap 0.1 (const))
 
-(scene plane
-  (background paper)
+(scene plane (background paper)
 
   (line rail (from [-7.5 rail-y]) (to [7.5 rail-y]) (stroke soft) (stroke-width 1))
 
@@ -115,8 +114,8 @@
 (toggle show-euler none (label 'Euler line'))
 
 ; Switching a family on or off fades it in or out over 0.4 s.
-(canvas view (x -8) (y -6) (width 16) (height 12.5) (pan false) (zoom false)
-  (toggle-duration 0.4) (toggle-ease 'ease-in-out')
+(canvas view (x -8) (y -6) (width 16) (height 12.5) (pan false) (zoom false) (toggle-duration 0.4)
+  (toggle-ease 'ease-in-out')
   rail
   (when show-euler.value euler)
   (when show-bisectors.value bisectors)

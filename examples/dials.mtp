@@ -41,8 +41,7 @@
 (real between 1.6 (const))
 (real under 1.7 (const))
 
-(scene board
-  (background paper)
+(scene board (background paper)
 
   ; Two rows of dials in a column. The first dial stays where it is, so the panel is moved for
   ; the middle dial to sit in the middle of the canvas.
@@ -82,8 +81,7 @@
   (text fill-form '(move panel.fill (to …))' (pos (top panel 1)) (halign 'middle')
     (valign 'middle') (font code) (fill soft)))
 
-(canvas view (x -7.6) (y -5.4) (width 15.2) (height 10.4) (pan false)
-  (zoom false)
+(canvas view (x -7.6) (y -5.4) (width 15.2) (height 10.4) (pan false) (zoom false)
   board)
 
 ; The knob is a ring, and its middle is not part of it, so a press there reaches the needle

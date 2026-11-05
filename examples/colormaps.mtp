@@ -8,8 +8,7 @@
 (colormap heat [teal paper terracotta] (positions [-5 0 20]))
 (colormap wheel [terracotta saffron teal plum terracotta] (cyclic true) (positions [0 360]))
 
-(scene board
-  (background paper)
+(scene board (background paper)
   (real temp 8 (>= -5) (<= 20))
   (real angle 40)
 

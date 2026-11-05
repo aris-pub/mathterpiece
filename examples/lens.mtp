@@ -7,8 +7,7 @@
 ; The landscape and a swatch of each of its colors. With grey above 0, every color is mixed that
 ; far toward soft.
 (motif landscape ((real grey 0 (>= 0) (<= 1)))
-  (group land (defaults (stroke none))
-    (clip (rect frame (pos [0 1.5]) (width 15) (height 6.4)))
+  (group land (defaults (stroke none)) (clip (rect frame (pos [0 1.5]) (width 15) (height 6.4)))
     (rect sky (pos frame.pos) (width frame.width) (height frame.height)
       (fill (mix (mix saffron paper 0.7) soft grey)))
     (circle sun (pos [3.8 3.3]) (r 0.9) (fill (mix (lighten saffron 0.3) soft grey)))
@@ -35,15 +34,13 @@
     (rect_ (width side) (height side) (fill sun.fill))
     (rect_ (width side) (height side) (fill far-left.fill))
     (rect_ (width side) (height side) (fill near.fill)))
-  (column right-swatches (translate (+ (bottom land) [0.6 -1.2])) (gap 0.2)
-    (defaults (stroke none))
+  (column right-swatches (translate (+ (bottom land) [0.6 -1.2])) (gap 0.2) (defaults (stroke none))
     (rect_ (width side) (height side) (fill field.fill))
     (rect_ (width side) (height side) (fill tree-0.fill))
     (rect_ (width side) (height side) (fill house.fill))
     (rect_ (width side) (height side) (fill roof.fill))))
 
-(scene view-scene
-  (background paper)
+(scene view-scene (background paper)
   (real size 1.8 (>= 0.8) (<= 3))
 
   (landscape dull (grey 0.75))
@@ -72,8 +69,7 @@
     (text_ 'underneath, each color is mixed toward soft: (mix … soft 0.75)'
       (pos [(. (bottom dull.land) 0) (. (bottom dull.left-swatches 0.55) 1)]) (halign 'middle'))))
 
-(canvas view (x -8) (y -5.9) (width 16) (height 10.9) (pan false)
-  (zoom false)
+(canvas view (x -8) (y -5.9) (width 16) (height 10.9) (pan false) (zoom false)
   dull lens glass forms)
 
 (on-drag glass glass.pos)

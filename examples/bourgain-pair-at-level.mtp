@@ -108,8 +108,7 @@
   (group join-highlight
     (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke fg) (stroke-width 3.5))))
 
-(canvas view (x 0) (y -182) (width 300) (height 162) (pan false) (zoom false)
-  (toggle-duration 0.25)
+(canvas view (x 0) (y -182) (width 300) (height 162) (pan false) (zoom false) (toggle-duration 0.25)
   axes
   (when (= shown 'none') whole)
   (when (!= shown 'none') faint)

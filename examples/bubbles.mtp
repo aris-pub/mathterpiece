@@ -25,8 +25,7 @@
         (r (* 0.08 size)) (fill tint) (opacity (min 1 (* 4 burst (- 1 burst)))))))
   (exists-when bits (not popped)))
 
-(scene pond
-  (background paper)
+(scene pond (background paper)
   ; 1 while the bubbles wait below the figure, 0 once they have risen into place.
   (real rise 1 (>= 0) (<= 1))
 

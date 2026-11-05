@@ -22,8 +22,7 @@
 (func lane ((int i)) (- 3 (* lane-gap i)))
 (list[string] ease-names ['\'linear\'' '\'ease-in\'' '\'ease-out\'' '\'ease-in-out\'' '(step 5)' 'bounce'] (const))
 
-(scene track
-  (background paper)
+(scene track (background paper)
 
   ; Lane edges, and the start and finish lines.
   (group lanes (defaults (stroke soft) (stroke-width 1))
@@ -46,8 +45,7 @@
     (text_ '(animation (loop) (at-once …) (in-order …))' (pos (bottom lanes 0.6)))
     (text_ '(func bounce (real t) …), an ease of the figure\'s own' (pos (bottom lanes 1.3)))))
 
-(canvas view (x -6.7) (y -5.8) (width 15) (height 10.2) (pan false)
-  (zoom false)
+(canvas view (x -6.7) (y -5.8) (width 15) (height 10.2) (pan false) (zoom false)
   track)
 
 (play race (autoplay view) (label 'race')

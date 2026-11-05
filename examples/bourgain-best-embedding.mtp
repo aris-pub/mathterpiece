@@ -21,8 +21,7 @@
         (least (min cu cv cw uv vw wu)))
     (/ most least)))
 
-(scene plane
-  (background paper)
+(scene plane (background paper)
   (group points (defaults (fill ink))
     (circle c (pos [0 0]) (r 0.1) (fill accent))
     (circle u (pos (polar 1 90)) (r 0.1))

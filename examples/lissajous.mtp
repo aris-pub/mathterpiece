@@ -5,8 +5,7 @@
 
 (import house paper ink soft teal variable code)
 
-(scene board
-  (background paper)
+(scene board (background paper)
   ; Whole frequencies close the curve after one turn of t, so the ratio a:b is what it shows.
   (int a 3 (>= 1) (<= 7))
   (int b 2 (>= 1) (<= 7))
@@ -35,8 +34,7 @@
       (text_ $'  (fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
         (pos (+ under [0 -0.14]))))))
 
-(canvas view (x -1.78) (y -1.67) (width 3.56) (height 3.17) (pan false)
-  (zoom false)
+(canvas view (x -1.78) (y -1.67) (width 3.56) (height 3.17) (pan false) (zoom false)
   axes curve ratio forms)
 
 (slider freq-a (move a (from 1) (to 7)) (step 7) (label 'frequency a, across'))

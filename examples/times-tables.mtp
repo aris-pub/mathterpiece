@@ -12,8 +12,7 @@
 ; whole, and past n it goes around again, so (spot (* m k)) is point m k, mod n.
 (func spot ((real k)) (polar radius (+ 180 (turn (/ k n)))))
 
-(scene board
-  (background paper)
+(scene board (background paper)
   ; The figure opens at the tour's first stop, the cardioid, so every other stop moves it.
   (real m 2 (>= 1) (<= 12))
   (string curve-name

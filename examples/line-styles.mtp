@@ -22,8 +22,7 @@
 (type cap string (one-of 'butt' 'round' 'square'))
 (type join string (one-of 'miter' 'round' 'bevel'))
 
-(scene styles
-  (background paper)
+(scene styles (background paper)
   (cap ends 'round')
   (join corners 'miter')
   (real width 18 (>= 2) (<= 32))

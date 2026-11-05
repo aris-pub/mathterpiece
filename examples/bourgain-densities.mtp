@@ -343,9 +343,7 @@
           (else
            'All densities at once. Using every density 2⁻¹, …, 2⁻ᴸ together, each level is served by its own density and the bars even out. The distortion drops to between 1.1 and 1.3 and stays below 1.3 for every n shown.')))
 
-(canvas stretch-chart (x 0) (y -200) (width 480) (height 200) (pan false)
-  (zoom false)
+(canvas stretch-chart (x 0) (y -200) (width 480) (height 200) (pan false) (zoom false)
   bars-chart n-guide n-handle n-grab)
-(canvas distortion-chart (x 0) (y -206) (width 480) (height 206) (pan false)
-  (zoom false)
+(canvas distortion-chart (x 0) (y -206) (width 480) (height 206) (pan false) (zoom false)
   curve-chart marker t-handle)

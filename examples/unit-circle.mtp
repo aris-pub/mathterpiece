@@ -26,8 +26,7 @@
 
 ; One group per function: its line, its name, and its value, so a toggle shows or hides all three.
 ; The circle has radius 1, and the canvas's view box makes it large.
-(scene plane
-  (background paper)
+(scene plane (background paper)
   (real theta 40)
 
   (circle handle (pos (polar 1 theta)) (r 0.04) (fill ink))
@@ -126,8 +125,8 @@
 
 ; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
 ; function on or off fades its line, name and value in or out.
-(canvas view (x -2.1) (y -1.35) (width 3.6) (height 2.7)
-  (toggle-duration 0.4) (toggle-ease 'ease-in-out')
+(canvas view (x -2.1) (y -1.35) (width 3.6) (height 2.7) (toggle-duration 0.4)
+  (toggle-ease 'ease-in-out')
   frame
   (when show-sec.value secant)
   (when show-csc.value cosecant)
