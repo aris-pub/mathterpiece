@@ -1,54 +1,116 @@
-; Colormaps. On the left, a diverging map from teal through paper to terracotta, with paper at
-; 0 degrees although the strip runs from -5 to 20: drag the marker along the strip, and the disk
-; takes the color of that temperature. On the right, a map that wraps around a wheel: drag the handle
-; around, past a full turn if you like, and the disk takes the color of its angle, which wraps.
+; Colormaps at work. On the left, a heatmap of two bumps: pick the map it is drawn with, or show
+; it in bands, four solid colors with no mixing. On the right, a coast: a map with a hard edge at
+; sea level, where shallow water meets sand; move the sea and the coastline follows. Below on
+; the left, the Okabe and Ito colors by number, as a chart takes them one after another: after the
+; eighth they start again. Below on the right, a map that wraps around a wheel: drag the handle
+; past a full turn, and the disk keeps going round the colors.
 
-(import house paper ink soft terracotta teal saffron plum variable code)
+(import house paper ink soft terracotta teal saffron plum code)
+(import colors okabe-ito okabe-ito-named viridis magma cividis blue-white-red)
 
-(colormap heat [teal paper terracotta] (positions [-5 0 20]))
+; Round a wheel: four colors a quarter turn apart, the last mixing back into the first by 360.
 (colormap wheel [terracotta saffron teal plum] (positions [0 270]) (wrap-at 360))
 
-(scene board (background paper)
-  (real temp 8 (>= -5) (<= 20))
-  (real angle 40)
+; Bands: each of four colors one solid step.
+(colormap bands [plum teal saffron terracotta] (discrete true))
 
-  ; The strip: 50 cells from -5 to 20 degrees, 0.12 wide each, and a marker under the reading.
-  (real span 6 (const))
-  (group thermometer (translate [-4 0.6])
-    (foreach i 50
-      ; A little wider than its share, so that no seam shows between two cells.
-      (rect_ (pos [(+ (* -0.5 span) (* span (/ (+ i 0.5) 50))) 0]) (width (* 1.1 (/ span 50)))
-          (height 0.6) (stroke none) (fill (heat (+ -5 (* 25 (/ (+ i 0.5) 50)))))))
-    (circle marker (pos [(+ (* -0.5 span) (* span (/ (+ temp 5) 25))) -0.55]) (r 0.16)
-        (fill ink) (stroke paper) (stroke-width 2))
-    (circle swatch (pos [0 1.9]) (r 0.9) (fill (heat temp)) (stroke soft) (stroke-width 1))
-    (text reading $'{temp:.1f}°' (pos swatch.pos) (halign 'middle') (valign 'middle')
-        (font variable) (fill ink)))
+; Land and sea, by height above the sea: deep water up to 0, then sand at once, forest and snow.
+(palette terrain
+  (deep '#1d3557')
+  (shallow '#8ecae6')
+  (sand '#e9d8a6')
+  (forest '#52796f')
+  (snow '#f1faee'))
+(colormap land [terrain.deep terrain.shallow terrain.sand terrain.forest terrain.snow]
+    (positions [-1 0 0 0.5 1]))
+
+; Two bumps over the unit square, from 0 to about 1.
+(func bumps ((real u) (real w))
+  (min 1
+       (+ (* 0.95 (exp (- (/ (+ (^ (- u 0.32) 2) (^ (- w 0.64) 2)) 0.035))))
+          (* 0.7 (exp (- (/ (+ (^ (- u 0.72) 2) (^ (- w 0.3) 2)) 0.05)))))))
+
+; Hills and valleys over the unit square, from about -1 to 1.
+(func height ((real u) (real w))
+  (+ (* 0.6 (sin (+ (* 5 u) 1)) (cos (* 4 w))) (* 0.35 (cos (- (* 3 u) (* 2 w))))))
+
+(scene board (background paper)
+  (string scheme 'viridis' (one-of 'viridis' 'magma' 'cividis' 'blue-white-red'))
+  (real sea 0 (>= -0.6) (<= 0.6))
+  (bool banded false)
+  (real angle 40)
+  (real cell 0.25 (const))
+
+  ; The heatmap: 20 by 20 cells, each the color of its value under the map chosen.
+  (group heat (translate [-4.6 1])
+    (rect frame (width 5) (height 5) (fill none) (stroke soft) (stroke-width 1))
+    (foreach i 20
+      (foreach j 20
+        (let ((v (bumps (/ (+ i 0.5) 20) (/ (+ j 0.5) 20))))
+          ; A little wider than its share, so that no seam shows between two cells.
+          (rect_ (pos [(+ -2.5 (* cell (+ i 0.5))) (+ -2.5 (* cell (+ j 0.5)))])
+              (width (* 1.06 cell)) (height (* 1.06 cell)) (stroke none)
+              (fill
+               (cond (banded (bands v))
+                     ((= scheme 'magma') (magma v))
+                     ((= scheme 'cividis') (cividis v))
+                     ((= scheme 'blue-white-red') (blue-white-red v))
+                     (else (viridis v)))))))))
+
+  ; The coast: 24 by 20 cells, each the color of its height above the sea.
+  (group coast (translate [2.4 1])
+    (rect shore (width 6) (height 5) (fill none) (stroke soft) (stroke-width 1))
+    (foreach i 24
+      (foreach j 20
+        (let ((h (height (/ (+ i 0.5) 24) (/ (+ j 0.5) 20))))
+          (rect_ (pos [(+ -3 (* cell (+ i 0.5))) (+ -2.5 (* cell (+ j 0.5)))])
+              (width (* 1.06 cell)) (height (* 1.06 cell)) (stroke none)
+              (fill (land (- h sea))))))))
+
+  ; Okabe and Ito by number: twelve dots, so the last four repeat the first four. Under them,
+  ; the first eight again, each read by its name.
+  (group chart (translate [-4.6 -2.7])
+    (foreach k 12
+      (circle_ (pos [(* 0.48 (- k 5.5)) 0]) (r 0.19) (fill (okabe-ito k)) (stroke none))))
+  (group named (translate [-4.6 -4.05])
+    (foreach k 8
+      (let ((names [okabe-ito-named.orange okabe-ito-named.sky-blue okabe-ito-named.bluish-green
+                    okabe-ito-named.yellow okabe-ito-named.blue okabe-ito-named.vermillion
+                    okabe-ito-named.reddish-purple okabe-ito-named.black]))
+        (circle_ (pos [(* 0.48 (- k 3.5)) 0]) (r 0.19) (fill names[k]) (stroke none)))))
 
   ; The wheel: 36 parts of a ring, each the color of its middle angle, and a handle outside it.
-  (real reach 2.5 (const))
-  (group dial (translate [4.2 0.9])
+  (real reach 1.75 (const))
+  (group dial (translate [2.4 -3.6])
+    (circle edge (r reach) (fill none) (stroke none))
     (foreach k 36
       ; Half a degree past its share, so that no seam shows between two parts.
-      (ring_ (r 2) (width 0.7) (from (* 10 k)) (to (+ 0.5 (* 10 (+ k 1)))) (stroke none)
+      (ring_ (r 1.4) (width 0.5) (from (* 10 k)) (to (+ 0.5 (* 10 (+ k 1)))) (stroke none)
           (fill (wheel (+ (* 10 k) 5)))))
-    (circle center (r 0.95) (fill (wheel angle)) (stroke soft) (stroke-width 1))
-    (circle handle (pos (polar reach angle)) (r 0.16) (fill ink) (stroke paper)
+    (circle center (r 0.75) (fill (wheel angle)) (stroke soft) (stroke-width 1))
+    (circle handle (pos (polar reach angle)) (r 0.15) (fill ink) (stroke paper)
         (stroke-width 2))
-    (text turned $'{angle:.0f}°' (pos [0 0]) (halign 'middle') (valign 'middle')
-        (font variable) (fill ink)))
+    (text turned $'{angle:.0f}°' (pos [0 0]) (halign 'middle') (valign 'middle') (font code)
+        (fill ink)))
 
-  ; The code under each part, at the same height, just under the wheel's handle.
-  (real under (- (+ 0.9 (- reach)) 0.5) (const))
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
-    (text_ '(colormap heat [teal paper terracotta]' (pos [-4 under]))
-    (text_ '(positions [-5 0 20]))' (pos [-4 (- under 0.45)]))
-    (text_ '(colormap wheel' (pos [4.2 under]))
-    (text_ '[terracotta saffron teal plum]' (pos [4.2 (- under 0.45)]))
-    (text_ '(positions [0 270]) (wrap-at 360))' (pos [4.2 (- under 0.9)]))))
+    (text_ (if banded '(bands v), four solid steps' $'({scheme} v)')
+        (pos (bottom frame 0.25)))
+    (text_ $'(land (- height {sea:.2f}))' (pos (bottom shore 0.25)))
+    (text_ '(okabe-ito k), k from 0 to 11' (pos (bottom chart 0.2)))
+    (text_ 'okabe-ito-named.orange, .sky-blue, …' (pos (bottom named 0.2)))
+    (text_ '(colormap wheel [terracotta saffron teal plum]' (pos (bottom edge 0.25)))
+    (text_ '(positions [0 270]) (wrap-at 360))' (pos (+ (bottom edge 0.25) [0 -0.42])))))
 
-(canvas view (x -8.4) (y -3.6) (width 16.8) (height 7.6) (pan false) (zoom false)
-  thermometer dial forms)
+(canvas view (x -8.4) (y -6.4) (width 16.8) (height 10.6) (pan false) (zoom false)
+  heat coast chart named dial forms)
 
-(on-drag marker temp)
 (on-drag handle angle)
+
+(button pick-viridis (animation (move scheme (to 'viridis') (duration 0))) (label 'viridis'))
+(button pick-magma (animation (move scheme (to 'magma') (duration 0))) (label 'magma'))
+(button pick-cividis (animation (move scheme (to 'cividis') (duration 0))) (label 'cividis'))
+(button pick-diverging (animation (move scheme (to 'blue-white-red') (duration 0)))
+    (label 'blue-white-red'))
+(toggle in-bands banded (label 'in bands'))
+(slider sea-level (move sea (from -0.6) (to 0.6)) (label 'sea level'))
