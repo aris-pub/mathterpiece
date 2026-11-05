@@ -48,3 +48,17 @@ def test_the_compiled_file_passes_the_schema():
         " (arc a (head-end 'curved')) (polyline p (points [[0 0] [1 0]]) (head-end 'dot')))"
     )
     assert errors(d) == []
+
+
+def test_a_container_gives_heads_to_its_members_with_ends():
+    # The author, 2026-11-05: heads in a container's defaults go to the members that have ends,
+    # and a member's own head wins.
+    m = model(
+        "(scene s (group g (defaults (head-end 'dart') (head-size 2))"
+        " (line a (to [1 0])) (line b (to [0 1]) (head-end 'dot')) (circle c) (arc d)))"
+    )
+    assert m.get("a").attrs["head-end"].value == "dart"
+    assert m.get("a").attrs["head-size"].value == 2
+    assert m.get("b").attrs["head-end"].value == "dot"
+    assert m.get("d").attrs["head-end"].value == "dart"
+    assert "head-end" not in m.get("c").attrs

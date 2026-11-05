@@ -279,7 +279,9 @@ SPREAD = frozenset(POSITIONED) | frozenset(PAINTED) | {"pos"}
 # 2026-11-03).
 TEXT_DEFAULTS = frozenset({"font", "halign", "valign"})
 POSITIONS = frozenset({"x", "y", "pos"})
-GROUP_DEFAULTS = (SPREAD - POSITIONS) | TEXT_DEFAULTS
+# Heads, for the members that have ends (the author, 2026-11-05).
+HEAD_DEFAULTS = frozenset(HEADS)
+GROUP_DEFAULTS = (SPREAD - POSITIONS) | TEXT_DEFAULTS | HEAD_DEFAULTS
 # The ends or corners whose mean is a line's or a triangle's position.
 CORNERS = {"line": ("from", "to"), "triangle": ("a", "b", "c")}
 # The shapes whose position is the mean of their list of points.
@@ -3259,8 +3261,8 @@ class _Compiler:
                 # A stroke would outline a text's letters, so a text takes none from a group.
                 if kind == "text" and attr in STROKE_ONLY:
                     continue
-                # A text's settings are for the texts only.
-                if attr in TEXT_DEFAULTS and attr not in specs:
+                # A text's settings are for the texts only, and heads for the shapes with ends.
+                if (attr in TEXT_DEFAULTS or attr in HEAD_DEFAULTS) and attr not in specs:
                     continue
                 if attr not in specs:
                     raise CompileError(f"a {kind} takes no argument '{attr}'", node.pos)
