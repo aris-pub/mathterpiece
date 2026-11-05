@@ -1,0 +1,9 @@
+(color navy '#000080')
+(color paper '#ffffff')
+(real t 0.25 (>= 0) (<= 1))
+(colormap ice [navy paper])
+(colormap steps ['#000001' '#000002'] (discrete true))
+(scene s
+  (circle c (fill (ice t)))
+  (circle d (fill (steps t))))
+(canvas v s)

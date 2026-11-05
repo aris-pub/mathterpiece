@@ -40,6 +40,17 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 `(interface palette (color ink) (color paper) (real gap (>= 0)))` declares an interface: a list of attributes, each with its type and any constraints. Any object that has them, of fitting types, satisfies it, shapes and namespaces alike, but no object's own type is ever an interface (type-system.md, section 6). A parameter or a variable declared with it, such as `(palette look day)`, holds an object of any type that satisfies it, and reads only what it lists. A variable holding an object is bound. A motif's parameter declared with an interface, as `(motif card ((palette colors)) …)`, must be given a value in every instance, `(card a (colors day))`, since an object has no default. A color read through it stays the token it reads, so `(circle c (fill look.ink))` with `look` holding `day` is drawn with `--mtp-day-ink`.
 
+### Colormaps
+
+`(colormap heat [navy white crimson] (positions [-5 0 20]))` declares a function from a real to a color, of type `colormap`, an alias of `func[real color]`: a figure calls it as `(heat temp)`, and any function from a real to a color is a colormap. It is two functions composed, from the figure's own values to the interval from 0 to 1, then from that interval to the colors, both set by the one list of positions.
+
+- **Colors:** a list of at least two, tokens or literals.
+- **`(positions …)`:** in the figure's own values, known when compiling, never decreasing: a start and an end, `[-5 20]`, with the colors evenly spaced between, or one per color, `[-5 0 20]`. Two may be equal, for a hard edge: `[-4000 0 0 4000]` jumps from the second color to the third at 0. Without it, the colors are evenly spaced from 0 to 1.
+- **`(discrete true)`:** each color is one solid step, the steps equal, between the start and the end; such a map takes positions only as `[start end]`. Without it, the colors mix in a straight line between neighbors, in sRGB, as `mix` does.
+- **`(cyclic true)`:** a value past the end wraps around, the period being the distance from the start to the end: with `[0 360]`, 370 gets the color of 10. Without it, a value past either end gets that end's color.
+
+Each call is compiled where it is written, so the colors it mixes stay the tokens they read: a page restyling `navy` restyles every color the map gives.
+
 ### Values and variables
 
 | Form | Name | Positional | Optional arguments | Body |

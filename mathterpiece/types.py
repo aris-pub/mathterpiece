@@ -357,6 +357,9 @@ def type_from_node(node: "Node | str", named: "Mapping[str, Type] | None" = None
         return FuncT(tuple(params), result)
     if items:
         raise TypeError_(f"{name} takes no item type")
+    # An alias, not a type of its own (the author, 2026-11-05).
+    if name == "colormap":
+        return FuncT((REAL,), COLOR)
     if name in PRIMS:
         return PRIMS[name]
     if name in SHAPES:

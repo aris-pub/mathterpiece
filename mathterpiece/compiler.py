@@ -300,11 +300,12 @@ STDLIB = Path(__file__).parent / "stdlib"
 # What a namespace may not hold: it holds values only (the author, 2026-11-04).
 NOT_VALUES = {
     "func", "type", "motif", "variant", "scene", "transition", "animation", "import", "let",
-    "foreach",
+    "foreach", "interface", "colormap",
 }  # fmt: skip
 # What an imported file may declare at its top level, besides const variables.
 IMPORTABLE = {
     "color", "font", "func", "motif", "variant", "type", "import", "namespace", "interface",
+    "colormap",
 }  # fmt: skip
 
 
@@ -619,6 +620,8 @@ class _Compiler:
             return self.variant_decl(form)
         if head == "func" or _typed_func(form) is not None:
             return self.func_decl(form)
+        if head == "colormap":
+            return self.colormap_decl(form)
         if head == "transition":
             self.transition(form, {}, top=True)
             return
@@ -978,6 +981,122 @@ class _Compiler:
         self.model.types[name] = ShapeT(name)
         self.trial(name, form.pos)
 
+    def colormap_decl(self, form: Form) -> None:
+        """(colormap name [color…] (positions …) (discrete bool) (cyclic bool)): sugar for one
+        function of a real, giving a color (the author, 2026-11-05). The positions are in the
+        figure's own values: a start and an end, with the colors evenly spaced, or one per color;
+        with none, 0 and 1. Between two positions the colors mix in a straight line, or with
+        discrete each color is one solid step. Past an end a value gets that end's color, or with
+        cyclic it wraps around."""
+        pos = form.pos
+        if len(form.items) < 3 or not isinstance(form.items[2], ListLit):
+            raise CompileError("a colormap is (colormap name [color…] keyword…)", pos)
+        # A quoted color in a branch is given its type, as (as color 'red') does by hand.
+        colors = [
+            Form((Name(("as",), c.pos), Name(("color",), c.pos), c), c.pos)
+            if isinstance(c, StrLit)
+            else c
+            for c in form.items[2].items
+        ]
+        if len(colors) < 2:
+            raise CompileError("a colormap needs at least two colors", form.items[2].pos)
+        given: dict[str, Node] = {}
+        for item in form.items[3:]:
+            head = _head(item)
+            if (
+                not isinstance(item, Form)
+                or head not in ("positions", "discrete", "cyclic")
+                or len(item.items) != 2
+            ):
+                raise CompileError(
+                    "a colormap takes a list of colors, then (positions …), (discrete …) and"
+                    " (cyclic …)",
+                    item.pos,
+                )
+            if head in given:
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            given[head] = item.items[1]
+
+        def known(node: Node, t: Type, what: str):
+            e = self.expr(node, t, {})
+            if not e.known:
+                raise CompileError(f"a colormap's {what} must be known when compiling", node.pos)
+            return e.value
+
+        discrete = "discrete" in given and known(given["discrete"], BOOL, "discrete")
+        cyclic = "cyclic" in given and known(given["cyclic"], BOOL, "cyclic")
+        n = len(colors)
+        if "positions" in given:
+            at = given["positions"]
+            if not isinstance(at, ListLit):
+                raise CompileError("positions are a list: [start end], or one per color", at.pos)
+            ps = [float(known(p, REAL, "positions")) for p in at.items]
+            if discrete and len(ps) != 2:
+                raise CompileError(
+                    "a discrete colormap takes positions only as a start and an end", at.pos
+                )
+            if len(ps) not in (2, n):
+                raise CompileError("positions are a start and an end, or one per color", at.pos)
+            if any(b < a for a, b in zip(ps, ps[1:], strict=False)):
+                raise CompileError("a colormap's positions may not decrease", at.pos)
+        else:
+            ps = [0.0, 1.0]
+        start, end = ps[0], ps[-1]
+        if cyclic and end <= start:
+            raise CompileError("a cyclic colormap's end must come after its start", pos)
+        if len(ps) == 2 and n > 2 and not discrete:
+            ps = [start + (end - start) * k / (n - 1) for k in range(n)]
+
+        def name(s: str) -> Name:
+            return Name((s,), pos)
+
+        def num(v: float) -> RealLit:
+            return RealLit(float(v), pos)
+
+        def call(head: str, *args: Node) -> Form:
+            return Form((name(head), *args), pos)
+
+        # Names no source can write, so no color passed in can mean them.
+        x, u = name("@value"), name("@at")
+        clauses: list[Node] = []
+        if discrete:
+            step = (end - start) / n
+            for k in range(n - 1):
+                clauses.append(Form((call("<", u, num(start + step * (k + 1))), colors[k]), pos))
+        else:
+            clauses.append(Form((call("<=", u, num(ps[0])), colors[0]), pos))
+            for k in range(n - 1):
+                width = ps[k + 1] - ps[k]
+                if width <= 0:
+                    continue
+                amount = call(
+                    "min",
+                    num(1),
+                    call("max", num(0), call("/", call("-", u, num(ps[k])), num(width))),
+                )
+                clauses.append(
+                    Form(
+                        (
+                            call("<=", u, num(ps[k + 1])),
+                            call("mix", colors[k], colors[k + 1], amount),
+                        ),
+                        pos,
+                    )
+                )
+        clauses.append(Form((name("else"), colors[-1]), pos))
+        where: Node = x
+        if cyclic:
+            where = call("+", num(start), call("mod", call("-", x, num(start)), num(end - start)))
+        body = call("let", Form((Form((u, where), pos),), pos), Form((name("cond"), *clauses), pos))
+        func = Form((name("func"), form.items[1], Form((name("real"), x), pos), body), pos)
+        saved, self.top_form = self.top_form, func
+        try:
+            self.func_decl(func)
+        finally:
+            self.top_form = saved
+        fid = len(self.model.functions) - 1
+        self.model.functions[fid].inline = True
+
     def func_decl(self, form: Form) -> None:
         written = _typed_func(form)
         if isinstance(written, Brackets):
@@ -1072,6 +1191,10 @@ class _Compiler:
         if len(given) > n:
             raise CompileError(f"{f.name} takes {n} argument{'s' * (n != 1)}", node.pos)
         args, deps, maybe = self.arguments(f.params, given, scope, node.pos)
+        if f.inline and f.source is not None:
+            return self.expr(
+                f.source, None, dict(zip((p.name for p in f.params), args, strict=True))
+            )
         t = f.result
         if maybe and t != RECURSING:
             t = _maybe(t)

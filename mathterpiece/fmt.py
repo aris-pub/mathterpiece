@@ -21,6 +21,7 @@ INDENT = {
     ),
     **dict.fromkeys(["color", "type", "motif", "variant", "func", "transition", "readout"], 2),
     "slider": 2,
+    "colormap": 2,
     "toggle": 2,
     **dict.fromkeys(["move", "on-click", "on-release", "on-dragend", "on-view", "exists-when"], 1),
     **dict.fromkeys(["at-once", "in-order", "defaults"], 0),
@@ -52,6 +53,7 @@ NAMED = {
     *["transition", "animation", "canvas", "readout", "slider", "button", "play", "toggle"],
     "namespace",
     "interface",
+    "colormap",
 }
 OPEN, CLOSE = "([", ")]"
 

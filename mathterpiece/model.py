@@ -108,6 +108,9 @@ class FuncDef:
     # by compiling the body again with them.
     source: Node | None = None
     scope: dict = field(default_factory=dict)
+    # A colormap's function: each call compiles its body in place, so the colors it mixes stay
+    # the tokens they read, which the page restyles.
+    inline: bool = False
 
 
 @dataclass(frozen=True)

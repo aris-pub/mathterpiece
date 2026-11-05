@@ -1,0 +1,55 @@
+; Colormaps. On the left, a diverging map from teal through paper to terracotta, with paper at
+; 0 degrees although the strip runs from -5 to 20: drag the marker along the strip, and the disk
+; takes the color of that temperature. On the right, a cyclic map around a wheel: drag the handle
+; around, past a full turn if you like, and the disk takes the color of its angle, which wraps.
+
+(import house paper ink soft terracotta teal saffron plum variable code)
+
+(colormap heat [teal paper terracotta] (positions [-5 0 20]))
+(colormap wheel [terracotta saffron teal plum terracotta] (cyclic true) (positions [0 360]))
+
+(scene board
+  (background paper)
+  (real temp 8 (>= -5) (<= 20))
+  (real angle 40)
+
+  ; The strip: 50 cells from -5 to 20 degrees, 0.12 wide each, and a marker under the reading.
+  (real span 6 (const))
+  (group thermometer (translate [-4 0.6])
+    (foreach i 50
+      ; A little wider than its share, so that no seam shows between two cells.
+      (rect_ (pos [(+ (* -0.5 span) (* span (/ (+ i 0.5) 50))) 0]) (width (* 1.1 (/ span 50)))
+        (height 0.6) (stroke none) (fill (heat (+ -5 (* 25 (/ (+ i 0.5) 50)))))))
+    (circle marker (pos [(+ (* -0.5 span) (* span (/ (+ temp 5) 25))) -0.55]) (r 0.16)
+      (fill ink) (stroke paper) (stroke-width 2))
+    (circle swatch (pos [0 1.9]) (r 0.9) (fill (heat temp)) (stroke soft) (stroke-width 1))
+    (text reading $'{temp:.1f}°' (pos swatch.pos) (halign 'middle') (valign 'middle')
+      (font variable) (fill ink)))
+
+  ; The wheel: 36 parts of a ring, each the color of its middle angle, and a handle outside it.
+  (real reach 2.5 (const))
+  (group dial (translate [4.2 0.9])
+    (foreach k 36
+      ; Half a degree past its share, so that no seam shows between two parts.
+      (ring_ (r 2) (width 0.7) (from (* 10 k)) (to (+ 0.5 (* 10 (+ k 1)))) (stroke none)
+        (fill (wheel (+ (* 10 k) 5)))))
+    (circle center (r 0.95) (fill (wheel angle)) (stroke soft) (stroke-width 1))
+    (circle handle (pos (polar reach angle)) (r 0.16) (fill ink) (stroke paper)
+      (stroke-width 2))
+    (text turned $'{angle:.0f}°' (pos [0 0]) (halign 'middle') (valign 'middle')
+      (font variable) (fill ink)))
+
+  ; The code under each part, at the same height, just under the wheel's handle.
+  (real under (- (+ 0.9 (- reach)) 0.5) (const))
+  (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
+    (text_ '(colormap heat [teal paper terracotta]' (pos [-4 under]))
+    (text_ '(positions [-5 0 20]))' (pos [-4 (- under 0.45)]))
+    (text_ '(colormap wheel' (pos [4.2 under]))
+    (text_ '[terracotta saffron teal plum terracotta]' (pos [4.2 (- under 0.45)]))
+    (text_ '(cyclic true) (positions [0 360]))' (pos [4.2 (- under 0.9)]))))
+
+(canvas view (x -8.4) (y -3.6) (width 16.8) (height 7.6) (pan false) (zoom false)
+  thermometer dial forms)
+
+(on-drag marker temp)
+(on-drag handle angle)

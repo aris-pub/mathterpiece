@@ -20,7 +20,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
     - `bool`, `string`, `color`, `font`
     - `point` (two reals, `x` and `y`)
     - `list[T]`, `transform`
-    - functions (eases, paths), `transition`, `animation`
+    - functions (eases, paths, colormaps: `colormap` is another name for `func[real color]`), `transition`, `animation`
     - `name`
     - `none`
   - **mutable object** (can change)
