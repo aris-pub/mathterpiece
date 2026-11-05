@@ -14,7 +14,7 @@ from mathterpiece.compiler import STDLIB, _declared, compile_source
 from mathterpiece.parse import parse
 
 NAMES = {
-    "colors": ["okabe-ito", "tab10"],
+    "colors": ["okabe-ito", "tab10", "viridis", "magma", "cividis", "blue-white-red"],
     "fonts": ["serif", "sans", "mono", "math"],
     "math": ["dot", "clamp", "smoothstep", "mean", "norm", "normalize", "cross", "midpoint"],
     "ease": [
@@ -191,3 +191,24 @@ class TestFonts:
         value = m.objects[m.names[f"fonts.{name}"]].value.value
         assert value["family"].split(",")[-1].strip() == last
         assert (value["style"], value["weight"], value["size"]) == ("normal", 400, 16)
+
+
+class TestColormaps:
+    @pytest.mark.parametrize(
+        "name, first, middle, last",
+        [
+            ("viridis", "#440154ff", "#21918cff", "#fde725ff"),
+            ("magma", "#000004ff", "#b73779ff", "#fcfdbfff"),
+            ("cividis", "#00224eff", "#7d7c78ff", "#fee838ff"),
+            ("blue-white-red", "#053061ff", "#f7f7f7ff", "#67001fff"),
+        ],
+    )
+    def test_its_ends_and_middle(self, tmp_path, name, first, middle, last):
+        got = [
+            value(tmp_path, f"(import colors {name})", f"({name} {t})", "color")
+            for t in (0, 0.5, 1)
+        ]
+        assert got == [first, middle, last]
+
+    def test_imported_whole(self, tmp_path):
+        assert value(tmp_path, "(import colors)", "(colors.viridis 1)", "color") == "#fde725ff"

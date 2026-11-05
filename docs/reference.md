@@ -430,6 +430,17 @@ Palettes, each a namespace of named colors: `(import colors)` and `colors.okabe-
 | `okabe-ito` | Okabe and Ito's eight, which stay apart for readers with any common color blindness: `orange`, `sky-blue`, `bluish-green`, `yellow`, `blue`, `vermillion`, `reddish-purple`, `black` |
 | `tab10` | matplotlib's default ten: `blue`, `orange`, `green`, `red`, `purple`, `brown`, `pink`, `gray`, `olive`, `cyan` |
 
+Colormaps from 0 to 1, called as `(colors.viridis 0.3)`, or `(viridis 0.3)` after `(import colors viridis)`. A figure gives its own values its own way: `(viridis (/ depth 50))`, or a function of its own, `(func depth-color ((real m)) (viridis (/ m 50)))`, which is a colormap too.
+
+| Colormap | Colors |
+|---|---|
+| `viridis` | dark purple through blue and green to yellow, readable with the common kinds of color blindness |
+| `magma` | black through purple and red to pale yellow, also readable with them |
+| `cividis` | dark blue through grey to yellow, made for them |
+| `blue-white-red` | diverging: blue to white at 0.5 to red, ColorBrewer's eleven |
+
+The first three are sampled from matplotlib's own at 17 points, so close to them that the difference does not show.
+
 ### fonts
 
 Families of fonts: `(import fonts serif)`, or `(import fonts)` and `fonts.serif`. Each is a list of fonts to try in order, as CSS writes it, ending in a family every browser has, with the default style, weight and size. Each is a token, restyled by a page through `--mtp-fonts-serif-family` and the rest.
