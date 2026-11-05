@@ -5,18 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>mathterpiece figures</title>
     <style>
-      body { font-family: system-ui, sans-serif; margin: 2rem; }
-      mtp-canvas { display: block; width: min(90vw, 640px); }
-      mtp-canvas svg { width: 100%; height: auto; }
-      #controls > * { display: block; margin: 0.5rem 0; }
-      #about { max-width: 640px; margin: 1rem 0 1.25rem; font-size: 16px; line-height: 1.55; opacity: 0.85; }
+      /* The page's own look, kept in tokens so the dark page can change them. A figure's look is
+         its own: only the token overrides further down restyle it. */
+      :root {
+        --page-bg: #fbfaf7;
+        --page-fg: #22252b;
+        --muted: #646a75;
+        --rule: #e3e0d8;
+        --panel: #f3f1ec;
+        --accent: #2f5d8a;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--page-fg);
+        font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+      header {
+        border-bottom: 1px solid var(--rule);
+        background: var(--panel);
+      }
+      .bar {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .brand { font-weight: 600; letter-spacing: 0.01em; margin-right: auto; }
+      .bar select, .bar button, #controls button {
+        font: inherit;
+        font-size: 14px;
+        color: var(--page-fg);
+        background: var(--page-bg);
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        padding: 0.3rem 0.7rem;
+        cursor: pointer;
+      }
+      .bar button[aria-pressed="true"], #controls [aria-pressed="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 1.75rem 1.25rem 4rem;
+        display: grid;
+        gap: 1.25rem;
+      }
+      h1 { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 600; }
+      #about { max-width: 68ch; color: var(--muted); }
       #about p { margin: 0 0 0.6em; text-wrap: pretty; }
-      #values { border-collapse: collapse; font-family: ui-monospace, monospace; margin-top: 1rem; }
-      #values td { padding: 0.1rem 0.8rem 0.1rem 0; }
-      [aria-pressed="true"] { font-weight: bold; }
+      #about p:last-child { margin-bottom: 0; }
+      mtp-canvas { display: block; width: 100%; }
+      mtp-canvas svg { display: block; width: 100%; height: auto; border-radius: 8px; }
+      #canvases { display: grid; gap: 1rem; }
+      #controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem 1.25rem;
+        padding: 0.9rem 1rem;
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      #controls:empty { display: none; }
+      #controls > p { flex-basis: 100%; margin: 0; }
+      #controls input[type="range"] { accent-color: var(--accent); vertical-align: middle; }
+      #controls input[type="checkbox"] { accent-color: var(--accent); }
+      details { color: var(--muted); font-size: 14px; }
+      summary { cursor: pointer; }
+      #values { border-collapse: collapse; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; margin-top: 0.5rem; }
+      #values td { padding: 0.15rem 1rem 0.15rem 0; border-bottom: 1px solid var(--rule); }
       /* A page restyling a figure's color tokens: no mtp involved, only CSS. */
       :root.dark {
-        background: #14161c; color: #e8e4d8; --mtp-ink: #e8e4d8; --mtp-paper: #14161c;
+        --page-bg: #14161c; --page-fg: #e8e4d8; --muted: #a3a9b5; --rule: #2c3039; --panel: #1b1e25;
+        --accent: #8db7e0; color-scheme: dark;
+        --mtp-ink: #e8e4d8; --mtp-paper: #14161c;
         --mtp-soft: #8f97a8; --mtp-terracotta: #f08a6c; --mtp-teal: #4cc2b3; --mtp-saffron: #f2d27e;
         --mtp-plum: #a88bb8;
         /* The same, for the examples that import their tokens from house.mtp. */
@@ -40,14 +111,26 @@
   <body>
     <!-- For trying the runtime by hand: just web-dev, then pick a figure: the examples, the demo,
          the shared cases or the runtime's test fixtures, built to .mtpc by just web-examples. -->
-    <select id="pick"></select>
-    <button id="theme" type="button">dark page</button>
-    <button id="fonts" type="button">page fonts</button>
-    <div id="about"></div>
-    <mtp-model id="m"></mtp-model>
-    <div id="canvases"></div>
-    <div id="controls"></div>
-    <table id="values"></table>
+    <header>
+      <div class="bar">
+        <span class="brand">mathterpiece</span>
+        <label for="pick" hidden>figure</label>
+        <select id="pick"></select>
+        <button id="theme" type="button" aria-pressed="false">dark page</button>
+        <button id="fonts" type="button" aria-pressed="false">page fonts</button>
+      </div>
+    </header>
+    <main>
+      <h1 id="title"></h1>
+      <div id="about"></div>
+      <mtp-model id="m"></mtp-model>
+      <div id="canvases"></div>
+      <div id="controls"></div>
+      <details>
+        <summary>every variable and its value</summary>
+        <table id="values"></table>
+      </details>
+    </main>
     <script type="module">
       import "/src/index.ts";
       const figures = import.meta.glob(
@@ -129,11 +212,15 @@
         };
         model.addEventListener("mtp-change", show);
         show();
+        document.getElementById("title").textContent = name(pick.value);
+        document.title = `${name(pick.value)} · mathterpiece`;
         history.replaceState(null, "", `?example=${name(pick.value)}`);
       };
       pick.onchange = load;
-      document.getElementById("theme").onclick = () => document.documentElement.classList.toggle("dark");
-      document.getElementById("fonts").onclick = () => document.documentElement.classList.toggle("fonts");
+      for (const [id, cls] of [["theme", "dark"], ["fonts", "fonts"]]) {
+        const b = document.getElementById(id);
+        b.onclick = () => b.setAttribute("aria-pressed", String(document.documentElement.classList.toggle(cls)));
+      }
       load();
     </script>
   </body>
