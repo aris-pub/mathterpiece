@@ -37,5 +37,11 @@ def typ(src, name="v"):
 
 
 def doc(src, path=None):
-    """The .mtpc document written for a source, as JSON."""
-    return json.loads(write(compile_source(src, path=path)))
+    """The .mtpc document written for a source, as JSON, with each shape's shared attribute
+    values put back in its attrs as the runtime does when it loads the file (mtp-jru8)."""
+    d = json.loads(write(compile_source(src, path=path)))
+    for o in d["objects"]:
+        group = o["kind"] if o["kind"] != "instance" else f"instance:{o.get('of')}"
+        if "attrs" in o and group in d.get("shared", {}):
+            o["attrs"] = {**d["shared"][group], **o["attrs"]}
+    return d

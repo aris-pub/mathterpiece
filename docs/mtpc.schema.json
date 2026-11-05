@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "mtpc.schema.json",
   "title": "mtpc",
-  "description": "The .mtpc format, version 2. See mtpc.md for what each part means and the rules a schema cannot express.",
+  "description": "The .mtpc format, version 3. See mtpc.md for what each part means and the rules a schema cannot express.",
   "type": "object",
   "required": [
     "mtpc",
@@ -13,7 +13,7 @@
   ],
   "properties": {
     "mtpc": {
-      "const": 2
+      "const": 3
     },
     "types": {
       "type": "array",
@@ -37,6 +37,16 @@
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/id"
+      }
+    },
+    "shared": {
+      "description": "Attribute values every shape of one kind has (a kind, or instance:motif), left out of those shapes; see mtpc.md.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/attribute"
+        }
       }
     }
   },

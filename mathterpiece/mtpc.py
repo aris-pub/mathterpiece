@@ -28,7 +28,7 @@ from mathterpiece.types import (
     Type,
 )
 
-VERSION = 2
+VERSION = 3
 # The operations written as ["builtin", T, name, arg…]; every other operation has its own form.
 OWN_FORM = {
     "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
@@ -49,14 +49,16 @@ class Writer:
 
     def doc(self) -> dict:
         m = self.model
-        return _only_used(
-            {
-                "mtpc": VERSION,
-                "types": [self.declared(name, t) for name, t in m.types.items()],
-                "objects": [self.obj(o) for o in m.objects],
-                "functions": [self.function(f) for f in m.functions],
-                "names": dict(m.names),
-            }
+        return _shared(
+            _only_used(
+                {
+                    "mtpc": VERSION,
+                    "types": [self.declared(name, t) for name, t in m.types.items()],
+                    "objects": [self.obj(o) for o in m.objects],
+                    "functions": [self.function(f) for f in m.functions],
+                    "names": dict(m.names),
+                }
+            )
         )
 
     # Types -------------------------------------------------------------------------------
@@ -314,6 +316,31 @@ def _function_id(x) -> int | None:
     else:
         return None
     return f if isinstance(f, int) and not isinstance(f, bool) else None
+
+
+def _shared(doc: dict) -> dict:
+    """The document with each attribute value that every shape of one kind has written once, in
+    shared, and left out of those shapes; instances are grouped by their motif (mtpc.md,
+    "Shared attribute values"). The runtime puts each back when it loads the file."""
+    groups: dict[str, list[dict]] = {}
+    for o in doc["objects"]:
+        if "attrs" in o:
+            key = o["kind"] if o["kind"] != "instance" else f"instance:{o['of']}"
+            groups.setdefault(key, []).append(o)
+    shared: dict[str, dict] = {}
+    for key, objs in sorted(groups.items()):
+        if len(objs) < 2:
+            continue
+        table = {}
+        for attr in sorted(set.intersection(*(set(o["attrs"]) for o in objs))):
+            texts = {json.dumps(o["attrs"][attr], sort_keys=True) for o in objs}
+            if len(texts) == 1:
+                table[attr] = objs[0]["attrs"][attr]
+        if table:
+            shared[key] = table
+            for o in objs:
+                o["attrs"] = {k: v for k, v in o["attrs"].items() if k not in table}
+    return {**doc, "shared": shared} if shared else doc
 
 
 def _only_used(doc: dict) -> dict:

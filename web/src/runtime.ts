@@ -100,6 +100,13 @@ export class Runtime {
     private rng: () => number = Math.random,
   ) {
     this.doc = doc;
+    // Each shape gets back the values its kind shares, each a copy, as it was before the file
+    // wrote them once (mtp-jru8).
+    for (const o of doc.objects) {
+      const table = o.attrs && doc.shared?.[o.kind === "instance" ? `instance:${o.of}` : o.kind];
+      if (!table) continue;
+      for (const [attr, p] of Object.entries(table)) if (!(attr in o.attrs!)) o.attrs![attr] = structuredClone(p);
+    }
     this.objects = doc.objects;
     for (const d of doc.types as { name: string; kind: string; type?: Type }[]) {
       if (d.kind === "type") this.named.set(d.name, d.type!);

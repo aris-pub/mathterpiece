@@ -11,17 +11,19 @@ Three rules from the other documents shape everything here:
 ## Top level
 
     {
-      "mtpc": 2,
+      "mtpc": 3,
       "types": [ … ],
       "objects": [ … ],
       "functions": [ … ],
-      "names": { "theta": 3, "p": 5, "d1.face": 9, … }
+      "names": { "theta": 3, "p": 5, "d1.face": 9, … },
+      "shared": { "circle": { "r": { … }, … }, "instance:dial": { … } }
     }
 
-- **`mtpc`**: the format version, 2.
+- **`mtpc`**: the format version, 3.
 - **`types`**: every type the author declared that the objects use, directly or through other types or functions: named types, motifs and variants. One nothing uses is left out.
 - **`objects`**: every object in the world model (variables, shapes, transitions, animations, components). An object's **id** is its position in this list. Objects appear in the order their declarations are reached in the source, depth first: a container comes before its members, a motif instance's members follow the instance, and a transition or animation written inline as an item comes right before the object that holds it.
 - **`functions`**: every function the model calls while drawing, declared with `func` or written in place with `fn`, in source order. A function only called where the compiler worked out the result, or never called, is left out. A function's id is its position in this list.
+- **`shared`**, only when there is something in it: each attribute that every shape of one kind has with the same value, kind by kind, written here once and left out of those shapes. A kind is a shape's `kind`, such as `circle`, or `instance:` and the motif's name for motif instances, since their attributes differ by motif. A kind with one shape shares nothing. A reader puts each value back in every shape of its kind that does not give it, as a copy, before reading the file; after that, the file is read as if every attribute were written in each shape.
 - **`names`**: each named object's name, mapped to its id, as an author or a page refers to it: `theta`, `m0` (group members are named like any scene object), `d1.face` (names inside a motif instance are written through the instance). Unnamed objects (`head_`, or `none` as the name) have no entry. The `"name"` field of an object holds its own name only: `face`, not `d1.face`.
 
 Every reference to an object is resolved to its id. Two things stay names: a parameter or `let` name inside an expression (`["local", …]`), and a declared type (`"of": "dial"`), which is looked up in `types`.
@@ -113,7 +115,7 @@ with `"fixed": true` on a variant instance's fixed attributes.
 - A **free** one holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
 - A **bound** one holds an expression. `deps` lists every variable and attribute it can read: directly, through any function it calls, and through captured names. Where a read depends on a value known only while drawing, such as `g[side].pos`, `deps` lists every one it could read (the `pos` of every member). When any of them changes, this one is recomputed, and nothing else is. `[id, null]` is a variable.
 - A variable or an attribute known when compiling is written as free, with a `const` constraint in its type, whether the author wrote it that way or the compiler folded it. One exception: one given a constant (the bare name of a `const` variable or of a built-in constant, or a read of a `const` attribute) is free with no `const` constraint, as if given its value.
-- Every attribute of a shape is written, including those left at their default. `pos` is not: it is `x` and `y` read or written together. A line's attributes are its `from` and `to`, a triangle's its corners, a polyline's and a polygon's its `points`; their `x` and `y` are computed (the midpoint, the centroid, the mean of the points), and a write to them is split into writes to every end or corner, or moves every point.
+- Every attribute of a shape is written, including those left at their default, in the shape or, when every shape of its kind has the same value, once in `shared` (see "Top level"). `pos` is not: it is `x` and `y` read or written together. A line's attributes are its `from` and `to`, a triangle's its corners, a polyline's and a polygon's its `points`; their `x` and `y` are computed (the midpoint, the centroid, the mean of the points), and a write to them is split into writes to every end or corner, or moves every point.
 
 ## Objects
 

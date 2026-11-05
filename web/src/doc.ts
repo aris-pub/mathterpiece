@@ -107,9 +107,12 @@ export interface Doc {
   objects: Obj[];
   functions: Fn[];
   names: Record<string, number>;
+  // Attribute values every shape of one kind has, by kind or instance:motif, left out of those
+  // shapes (mtpc.md, "Shared attribute values").
+  shared?: Record<string, Record<string, Attribute>>;
 }
 
-export const FORMAT_VERSION = 2;
+export const FORMAT_VERSION = 3;
 
 export function isBound(p: Attribute): p is BoundAttribute {
   return "bound" in p;
