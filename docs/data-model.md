@@ -2,16 +2,29 @@
 
 Who is involved, how a source file becomes something a reader can use, and what the world model holds.
 
-## Three people, one command, three artifacts
+## Three people, one command, five artifacts
 
-Three people take part, each with a job of their own. The **illustrator** writes a world model as an `.mtp` source file, and the **mtp command** compiles it into the **.mtpc**, the static model. The **author** writes a paper, a web page, and places the world model's components in it alongside the rest of its content. The **reader** opens the page and uses the **live figure**: the runtime and the page together, which hold the live model. The .mtpc is the only thing that passes from the illustrator's side to the author's and the reader's.
+Three people take part, each with a job of their own. The **illustrator** writes a world model as an `.mtp` source file, and the **mtp command** compiles it into the **.mtpc**, the static model. The **author** writes the source of a paper, a web page, and places the world model's components in it alongside the rest of its content. The **reader** opens the page and uses the **live figure**: the runtime and the page together, which hold the live model. The .mtpc is the only thing that passes from the illustrator's side to the author's and the reader's.
+
+The five artifacts:
+
+| Artifact | Who makes it | What it is |
+|---|---|---|
+| **the `.mtp`** | the illustrator | the world model's source |
+| **the `.mtpc`** | the mtp command | the compiled model, also called the static model |
+| **the runtime script**, `mathterpiece.js` | mtp itself, the same for every world model | the library that turns a compiled model into a live one and defines the page's elements |
+| **the author's source** | the author, in a tool of their own, such as a Markdown file | the paper, with the elements that place the components (see "Pages the author writes in Markdown") |
+| **the live figure** | the reader's browser, from the page the author's tool writes | the runtime and the page together, holding the live model |
 
 ```mermaid
 flowchart LR
-  illustrator([illustrator]) -->|writes .mtp| cmd["mtp command"]
-  cmd -->|compiles| mtpc[(".mtpc: static model")]
-  author([author]) -->|writes the page, places the components| live
+  illustrator([illustrator]) -->|writes| mtp[(".mtp")]
+  mtp --> cmd["mtp command"]
+  cmd -->|compiles| mtpc[(".mtpc: compiled model")]
+  author([author]) -->|writes, placing the components| source[("author's source")]
+  source -->|the author's tool writes the page| live
   mtpc --> live
+  script[("runtime script")] --> live
   subgraph live [live figure: the runtime and the page]
     runtime["runtime: holds the model in memory"] --> components["components: views, controls"]
   end
@@ -54,7 +67,7 @@ The command's subcommands each take one source file, and each runs the steps up 
 
 ### The live figure
 
-What the .mtpc becomes on the author's page: the page and the **runtime**, a library the page loads, together. The runtime rebuilds the model in memory, keeps it current as the reader acts, and serves the **components** the author placed on the page.
+What the .mtpc becomes on the author's page: the page and the **runtime**, the library in the runtime script, which the page loads once, together. The runtime rebuilds the model in memory, keeps it current as the reader acts, and serves the **components** the author placed on the page.
 
 ### The reader
 
