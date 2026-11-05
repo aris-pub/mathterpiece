@@ -3188,60 +3188,66 @@ class _Compiler:
                 given[attr] = scoped.pop(0)
         existence: list[tuple[Form, dict]] = []
         clip: tuple[Form, dict] | None = None
-        for item, inner in self.expand_scoped(scoped):
-            if kind == "group" and self.shape_kind(item):
-                members.append((item, inner))
+        for raw, outer in scoped:
+            # A let or a foreach among a group's members is worked out where it is written, so
+            # it reads the members before it: it is expanded as the members are declared.
+            if kind == "group" and _head(raw) in ("let", "foreach"):
+                members.append((raw, outer))
                 continue
-            if kind == "group" and _head(item) == "exists-when":
-                assert isinstance(item, Form)
-                existence.append((item, inner))
-                continue
-            if members:
-                raise CompileError(
-                    f"({_head(item)} …) is an optional argument, so it comes before the group's"
-                    " body",
-                    item.pos,
-                )
-            head = _head(item)
-            if kind == "group" and head == "clip":
-                assert isinstance(item, Form)
-                if clip is not None:
-                    raise CompileError("'clip' is given twice", item.pos)
-                clip = (item, inner)
-                continue
-            if kind == "group" and head == "defaults":
-                assert isinstance(item, Form)
-                self.group_defaults(item, inner, defaults)
-                continue
-            if kind == "group" and head in POSITIONS:
-                raise CompileError(
-                    f"a group has no {head} of its own: move it with (translate …)", item.pos
-                )
-            if kind == "group" and head in GROUP_DEFAULTS:
-                raise CompileError(
-                    f"a group has no {head} of its own: give it in (defaults ({head} …)), for its"
-                    " members",
-                    item.pos,
-                )
-            if head in ("dash", "dash-offset") and "dash" in takes:
-                for attr, node in _dash(item).items():
-                    if attr in given:
-                        raise CompileError(f"'{head}' is given twice", item.pos)
-                    given[attr] = (node, inner)
-                continue
-            if head is None or not isinstance(item, Form) or len(item.items) != 2:
-                raise CompileError(
-                    f"expected an argument such as (r 1), got {_shown(item)}", item.pos
-                )
-            if head == "pos" and "x" in takes:
-                for attr in ("x", "y"):
-                    if attr in given:
-                        raise CompileError(f"'{attr}' is given twice", item.pos)
-            elif head not in takes:
-                raise CompileError(f"a {kind} takes no argument '{head}'", item.pos)
-            if head in given or ("pos" in given and head in ("x", "y")):
-                raise CompileError(f"'{head}' is given twice", item.pos)
-            given[head] = (item.items[1], inner)
+            for item, inner in self.expand([raw], outer):
+                if kind == "group" and self.shape_kind(item):
+                    members.append((item, inner))
+                    continue
+                if kind == "group" and _head(item) == "exists-when":
+                    assert isinstance(item, Form)
+                    existence.append((item, inner))
+                    continue
+                if members:
+                    raise CompileError(
+                        f"({_head(item)} …) is an optional argument, so it comes before the group's"
+                        " body",
+                        item.pos,
+                    )
+                head = _head(item)
+                if kind == "group" and head == "clip":
+                    assert isinstance(item, Form)
+                    if clip is not None:
+                        raise CompileError("'clip' is given twice", item.pos)
+                    clip = (item, inner)
+                    continue
+                if kind == "group" and head == "defaults":
+                    assert isinstance(item, Form)
+                    self.group_defaults(item, inner, defaults)
+                    continue
+                if kind == "group" and head in POSITIONS:
+                    raise CompileError(
+                        f"a group has no {head} of its own: move it with (translate …)", item.pos
+                    )
+                if kind == "group" and head in GROUP_DEFAULTS:
+                    raise CompileError(
+                        f"a group has no {head} of its own: give it in (defaults ({head} …)),"
+                        " for its members",
+                        item.pos,
+                    )
+                if head in ("dash", "dash-offset") and "dash" in takes:
+                    for attr, node in _dash(item).items():
+                        if attr in given:
+                            raise CompileError(f"'{head}' is given twice", item.pos)
+                        given[attr] = (node, inner)
+                    continue
+                if head is None or not isinstance(item, Form) or len(item.items) != 2:
+                    raise CompileError(
+                        f"expected an argument such as (r 1), got {_shown(item)}", item.pos
+                    )
+                if head == "pos" and "x" in takes:
+                    for attr in ("x", "y"):
+                        if attr in given:
+                            raise CompileError(f"'{attr}' is given twice", item.pos)
+                elif head not in takes:
+                    raise CompileError(f"a {kind} takes no argument '{head}'", item.pos)
+                if head in given or ("pos" in given and head in ("x", "y")):
+                    raise CompileError(f"'{head}' is given twice", item.pos)
+                given[head] = (item.items[1], inner)
         # A group's arguments are defaults for its members: a member's own value wins, and the
         # nearest group's wins over one further out (reference.md, "The scene and shapes").
         down = dict(spread or {})
@@ -3271,7 +3277,15 @@ class _Compiler:
             self.frame = saved
         if clip is not None:
             obj.data["clip"] = self.clip(clip[0], i, clip[1])
-        for item, inner in members:
+        for item, inner in self.expand_scoped(members):
+            if _head(item) == "exists-when":
+                assert isinstance(item, Form)
+                existence.append((item, inner))
+                continue
+            if not self.shape_kind(item):
+                raise CompileError(
+                    f"expected an argument such as (r 1), got {_shown(item)}", item.pos
+                )
             assert isinstance(item, Form)
             self.shape(item, i, inner, down)
         for item, inner in existence:

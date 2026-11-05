@@ -1,0 +1,70 @@
+; Heads on the ends of lines and arcs.
+;
+; Two vectors from the same point, and their sum by the parallelogram rule. Drag the tip of a or
+; of b. The buttons pick the head the three vectors end in, and the slider sets its size.
+;
+; A curved head on an arc turns from a to b, and a ruler with a bar at each end measures the sum.
+
+(import house paper ink soft terracotta teal plum variable code)
+
+; The point at distance 1 in p's direction, or straight up for [0 0]: where a name sits past a tip.
+(func direction ((point p))
+  (let ((n (dist [0 0] p)))
+    (if (> n 0.0001) (* p (/ 1 (max n 0.0001))) [0 1])))
+
+(scene board (background paper)
+  (string kind 'dart' (one-of 'dart' 'curved' 'open' 'bar' 'dot'))
+  (real size 1 (>= 0.5) (<= 2.5))
+
+  ; Where the vectors start, and the tips the reader drags: a faint disk under each head, declared
+  ; first so the vectors can read them, and drawn first so the heads show on top. Everything is
+  ; placed in the scene's own coordinates, so a tip's position is where it is drawn.
+  (point o [-2.2 -1.4] (const))
+  (group handles
+    (circle a-tip (pos [0.8 -0.6]) (r 0.3) (fill terracotta) (fill-opacity 0.18) (stroke none))
+    (circle b-tip (pos [-1.3 1]) (r 0.3) (fill teal) (fill-opacity 0.18) (stroke none)))
+
+  (let ((a (- a-tip.pos o))
+        (b (- b-tip.pos o))
+        (s (+ a-tip.pos b-tip.pos (- o))))
+    (group plane
+      (group construction (defaults (stroke soft) (stroke-width 1.5) (dash [5 5]))
+        (line_ (from a-tip.pos) (to s))
+        (line_ (from b-tip.pos) (to s)))
+      (group vectors (defaults (stroke-width 3))
+        (line av (from o) (to a-tip.pos) (stroke terracotta) (head-end kind) (head-size size))
+        (line bv (from o) (to b-tip.pos) (stroke teal) (head-end kind) (head-size size))
+        (line sum (from o) (to s) (stroke plum) (head-end kind) (head-size size)))
+      ; The angle from a to b, turning from a's direction to b's.
+      (let ((pa (to-polar a))
+            (pb (to-polar b)))
+        (arc|none turn (pos o) (r 0.8) (from pa[1]) (to pb[1]) (stroke ink) (stroke-width 1.5)
+            (head-end 'curved')))
+      (group names (defaults (font variable) (halign 'middle') (valign 'middle') (fill ink))
+        (text_ 'a' (pos (+ a-tip.pos (* 0.4 (direction a)))))
+        (text_ 'b' (pos (+ b-tip.pos (* 0.4 (direction b)))))
+        (text_ 'a + b' (pos (+ s (* 0.5 (direction (- s o))))))))
+
+    ; The ruler: as long as the sum, with a bar at each end.
+    (group ruler
+      (let ((n (dist o s)))
+        (line length (from [-2.2 -2.9]) (to [(+ -2.2 n) -2.9]) (stroke ink) (stroke-width 1.5)
+            (head-start 'bar') (head-end 'bar'))
+        (text_ $'|a + b| = {n:.2f}' (pos [(+ -2.2 (/ n 2)) -3.2]) (halign 'middle')
+            (valign 'top') (font code) (fill soft)))))
+
+  (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
+    (text_ $'(line sum (to s) (head-end \'{kind}\') (head-size {size:.1f}))' (pos [-4.6 3.4]))
+    (text_ '(arc turn (from angle-of-a) (to angle-of-b) (head-end \'curved\'))' (pos [-4.6 2.95]))))
+
+(canvas view (x -5) (y -4) (width 10) (height 7.8) (pan false) (zoom false)
+  handles plane ruler forms)
+
+(on-drag a-tip a-tip.pos)
+(on-drag b-tip b-tip.pos)
+(button pick-dart (animation (move kind (to 'dart') (duration 0))) (label 'dart'))
+(button pick-curved (animation (move kind (to 'curved') (duration 0))) (label 'curved'))
+(button pick-open (animation (move kind (to 'open') (duration 0))) (label 'open'))
+(button pick-bar (animation (move kind (to 'bar') (duration 0))) (label 'bar'))
+(button pick-dot (animation (move kind (to 'dot') (duration 0))) (label 'dot'))
+(slider head-size (move size (from 0.5) (to 2.5)) (label 'head size'))

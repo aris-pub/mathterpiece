@@ -409,3 +409,16 @@ class TestWhen:
         assert errors(d) == []
         shows = d["objects"][d["names"]["v"]]["shows"]
         assert shows[0] == d["names"]["a"] and "bound" in shows[1]
+
+
+def test_a_let_in_a_group_reads_the_members_before_it():
+    # Found 2026-11-05 writing examples/arrowheads.mtp: a let inside a group was worked out
+    # before the group's members were declared, so it could not read them.
+    from helpers import model
+
+    m = model(
+        "(scene s (group p (circle t (pos [1 1]))"
+        " (let ((q t.pos)) (circle c (pos q)))"
+        " (foreach k 2 (circle_ (x (+ t.x k))))))"
+    )
+    assert m.get("c").attrs["x"].bound or m.get("c").attrs["x"].value == 1
