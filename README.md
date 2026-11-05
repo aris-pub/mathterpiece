@@ -30,7 +30,7 @@ cd web && pnpm install
 ## Build a world model
 
 ```sh
-uv run mtp build dial.mtp              # writes build_dial/: the .mtpc and a page that shows it
+uv run mtp build dial.mtp              # writes build_dial/: the .mtpc and the inventory page
 uv run mtp serve dial.mtp              # serves that page, building again on each save
 uv run mtp compile dial.mtp            # writes dial.mtpc next to it
 uv run mtp compile dial.mtp -o out.mtpc
@@ -40,13 +40,15 @@ uv run mtp fmt dial.mtp                # indents the file as the Emacs mode does
 ```
 
 A compile error names the line and column and says what is wrong. Building is four steps:
-parsing, compiling, writing the .mtpc and writing a page that shows it (see the data model).
+parsing, compiling, writing the .mtpc and writing the inventory page, which shows every component
+live with the line of HTML that places it (see the data model).
 `mtp build` and `mtp serve` build the runtime with Node and pnpm.
 
 ## Put a live figure on a page
 
 Build the runtime with `just build-web`, which writes `web/dist/mathterpiece.js`. A page loads
-it and places the world model's components anywhere in its text:
+it and places the world model's components anywhere in its text. The inventory page `mtp build`
+writes lists every component with the line that places it:
 
 ```html
 <script type="module" src="mathterpiece.js"></script>

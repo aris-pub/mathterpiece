@@ -7,7 +7,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from mathterpiece.build import BuildError, about, build, page
+from mathterpiece.build import BuildError, about, build, inventory_script, page
 from mathterpiece.compiler import CompileError
 from mathterpiece.parse import ParseError
 
@@ -69,7 +69,7 @@ class Server:
                 mtpc = (out / f"{self.path.stem}.mtpc").read_text(encoding="utf-8")
                 js = (out / "mathterpiece.js").read_text(encoding="utf-8")
                 text = about(self.path.read_text(encoding="utf-8"))
-                self.html = page(self.path.stem, mtpc, js, text, RELOAD)
+                self.html = page(self.path.stem, mtpc, js, inventory_script(), text, RELOAD)
             except (ParseError, CompileError, BuildError, OSError) as e:
                 pos = getattr(e, "pos", None)
                 where = str(e) if pos is not None and pos.file else f"{self.path.name}:{e}"

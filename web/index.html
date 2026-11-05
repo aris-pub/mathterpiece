@@ -106,6 +106,7 @@
         <span class="brand">mathterpiece</span>
         <label for="pick" hidden>figure</label>
         <select id="pick"></select>
+        <button id="view" type="button" aria-pressed="false">inventory</button>
         <button id="theme" type="button" aria-pressed="false">dark page</button>
         <button id="fonts" type="button" aria-pressed="false">page fonts</button>
       </div>
@@ -114,15 +115,17 @@
       <h1 id="title"></h1>
       <div id="about"></div>
       <mtp-model id="m"></mtp-model>
+      <div id="inventory" hidden></div>
       <div id="canvases"></div>
       <div id="controls"></div>
-      <details>
+      <details id="variables">
         <summary>every variable and its value</summary>
         <table id="values"></table>
       </details>
     </main>
     <script type="module">
       import "/src/index.ts";
+      import { inventory } from "/src/inventory.ts";
       const figures = import.meta.glob(
         ["/test/data/examples/*.mtpc", "/test/data/demo/*.mtpc"],
         { query: "?raw", import: "default" },
@@ -135,10 +138,15 @@
       const pick = document.getElementById("pick");
       const name = (path) => path.split("/").pop().replace(".mtpc", "");
       for (const path of examples) pick.add(new Option(name(path), path));
-      const chosen = new URLSearchParams(location.search).get("example");
+      const params = new URLSearchParams(location.search);
+      const chosen = params.get("example");
+      // Each example shows either as here, or as the inventory page mtp build writes.
+      const viewButton = document.getElementById("view");
+      let showInventory = params.get("view") === "inventory";
       pick.value = examples.find((p) => name(p) === (chosen ?? "controls")) ?? examples[0];
       const load = async () => {
-        const doc = JSON.parse(await figures[pick.value]());
+        const text = await figures[pick.value]();
+        const doc = JSON.parse(text);
         // What the figure is and what to try: its leading comments.
         const source = await sources[pick.value.replace(/\.mtpc$/, ".mtp")]?.();
         // Only the comments the file starts with; the rest explain the code.
@@ -158,14 +166,26 @@
         controls.replaceChildren();
         const canvases = document.getElementById("canvases");
         canvases.replaceChildren();
-        for (const o of doc.objects.filter((o) => o.kind === "canvas")) {
+        // Token values set from an inventory belong to the example they were set on.
+        document.documentElement.removeAttribute("style");
+        for (const o of showInventory ? [] : doc.objects.filter((o) => o.kind === "canvas")) {
           const el = document.createElement("mtp-canvas");
           el.setAttribute("model", "m");
           el.setAttribute("name", o.name);
           canvases.append(el);
         }
         document.getElementById("m").doc = doc;
-        for (const o of doc.objects) {
+        viewButton.setAttribute("aria-pressed", String(showInventory));
+        const inv = document.getElementById("inventory");
+        for (const id of ["canvases", "controls", "variables"]) document.getElementById(id).hidden = showInventory;
+        inv.hidden = !showInventory;
+        if (showInventory) {
+          // The inventory places its own components, so the usual view places none.
+          inventory(inv, text, { model: "m", id: name(pick.value), file: `${name(pick.value)}.mtpc` });
+        } else {
+          inv.replaceChildren();
+        }
+        for (const o of showInventory ? [] : doc.objects) {
           if (o.kind === "readout") {
             const p = document.createElement("p");
             p.append(`A sentence with the readout ${o.name} in it: `);
@@ -204,9 +224,13 @@
         show();
         document.getElementById("title").textContent = name(pick.value);
         document.title = `${name(pick.value)} · mathterpiece`;
-        history.replaceState(null, "", `?example=${name(pick.value)}`);
+        history.replaceState(null, "", `?example=${name(pick.value)}${showInventory ? "&view=inventory" : ""}`);
       };
       pick.onchange = load;
+      viewButton.onclick = () => {
+        showInventory = !showInventory;
+        load();
+      };
       for (const [id, cls] of [["theme", "dark"], ["fonts", "fonts"]]) {
         const b = document.getElementById(id);
         b.onclick = () => b.setAttribute("aria-pressed", String(document.documentElement.classList.toggle(cls)));

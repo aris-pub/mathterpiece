@@ -31,7 +31,7 @@ flowchart LR
   components <-->|acts, sees| reader([reader])
 ```
 
-The two jobs may fall to one person, as when a researcher writes the world models of their own paper, or to two, as when a paper uses a world model someone else wrote. The page `mtp build` writes, which shows every view and control, is outside this picture: it is the illustrator's own copy of the live figure while they work.
+The two jobs may fall to one person, as when a researcher writes the world models of their own paper, or to two, as when a paper uses a world model someone else wrote. The inventory page `mtp build` writes is outside this picture. The illustrator uses it to see the live figure while they work, and the author uses it to learn which components a world model has and how to place each one.
 
 ### The illustrator
 
@@ -48,7 +48,7 @@ Runs on the illustrator's machine. **Building** an `.mtp` is four steps, and eac
 1. **Parsing.** The **parser** reads the text into forms and knows only the syntax.
 2. **Compiling.** The **compiler** resolves every name, checks every type, works out everything that can be known in advance, and makes the model, in memory.
 3. **Writing the .mtpc.** The **writer** saves the model as the .mtpc.
-4. **Writing the page.** It also writes a minimal web page that loads the runtime and the .mtpc and shows every view, control and readout, so the illustrator sees the live figure at once instead of a long file of JSON.
+4. **Writing the inventory page.** It also writes a web page that holds the runtime and the compiled model and lists what an author needs: the lines that load the runtime and the compiled model, in both of the ways `<mtp-model>` takes it; every component in the order the source declares it, live, with its name and the line of HTML that places it, ready to copy; every listener, with what it does; and every token, with its CSS variable and a control that restyles the components on the page. The illustrator sees the live figure at once instead of a long file of JSON, and the author sees what there is to place.
 
 Compiling should be fast, but the reader comes first: anything that can be decided here is, even when it makes compiling slower.
 
@@ -59,8 +59,8 @@ The command's subcommands each take one source file, and each runs the steps up 
 | `mtp parse file` | 1 | prints the forms the parser reads, one per line, indented by depth |
 | `mtp check file` | 1, 2 | reports the first error, if any, and writes nothing |
 | `mtp compile file` | 1 to 3 | writes the .mtpc |
-| `mtp build file` | 1 to 4 | writes the .mtpc and the page |
-| `mtp serve file` | 1 to 4, again on each save | builds, serves the page on the illustrator's machine, and builds again and reloads the page whenever the source file is saved |
+| `mtp build file` | 1 to 4 | writes the .mtpc and the inventory page |
+| `mtp serve file` | 1 to 4, again on each save | builds, serves the inventory page on the illustrator's machine, and builds again and reloads the page whenever the source file is saved |
 | `mtp fmt file` | 1 | rewrites the file in the house layout, keeping its comments |
 
 **What `mtp check` reports.** The first error in the file, with its line and column, and nothing after it: the parser and the compiler stop there. Errors are of two kinds. A **syntax error** comes from parsing: an unclosed parenthesis or string, a name that is not valid, a stray character. A **compile error** comes from compiling: a name that is not declared or is declared twice; a form that is not where it may be or is missing a part; a value of the wrong type; a constraint, or a range a value must stay in, that cannot be proved, such as a radius that might be negative; a value known when compiling that is undefined there, such as `(/ 1 0)`; and anything the reference calls a compile error. Whatever the compiler cannot decide is not an error: a value that may be none while drawing is typed `T|none`, and the illustrator handles it.
@@ -223,7 +223,7 @@ The author does not write the page's HTML by hand: a tool such as a Markdown con
 - **Each element stands on its own line, with a blank line around it.** Both converters then pass it through as it is. A converter may wrap an element in a `<p>`, which does no harm.
 - **The block goes on its own line, not inside `<mtp-model>`.** Python-Markdown closes `<mtp-model>` before a block placed inside it, and a converter escapes a block that shares a line with other text.
 - **The runtime is loaded once per page**, whichever and however many models the page holds.
-- **A page opened from disk, not served, works only when the runtime comes from a web address.** A browser does not load a module script from disk for such a page, so `src="mathterpiece.js"` fails there. The page `mtp build` writes holds the runtime itself, so it works opened from disk.
+- **A page opened from disk, not served, works only when the runtime comes from a web address.** A browser does not load a module script from disk for such a page, so `src="mathterpiece.js"` fails there. The inventory page `mtp build` writes holds the runtime itself, so it works opened from disk.
 - **A tool that strips raw HTML or scripts**, as many hosted sites do, cannot show a live figure.
 - **A canvas needs no CSS:** it fills the width of what holds it, and takes its height from its view box.
 

@@ -6,7 +6,10 @@ import { arcBox } from "./arc.ts";
 import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, pointsMean, roundHalfAway } from "./builtins.ts";
 import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
 import { isBound } from "./doc.ts";
+import { cssVariable } from "./css.ts";
 import { format, pyStr } from "./format.ts";
+
+export { cssVariable };
 
 const LIMIT = 1e150;
 // What an instance gives its members and reads from them, as a group does.
@@ -59,13 +62,6 @@ export type FnValue = (args: unknown[], frame: number | null) => unknown;
 
 const TOP: Ctx = { locals: {}, frame: null };
 
-/**
- * A token's CSS custom property. An imported token is kept as file.name, and a CSS name takes no
- * dot, so house.ink is --mtp-house-ink (the author, 2026-11-04).
- */
-export function cssVariable(name: string): string {
-  return `--mtp-${name.replace(/\./g, "-")}`;
-}
 
 function key(id: number, attr: string | null): string {
   return `${id}:${attr ?? ""}`;

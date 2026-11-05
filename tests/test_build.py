@@ -1,7 +1,7 @@
 """mtp build and mtp serve (docs/data-model.md, "The mtp command"): building is parsing,
-compiling, writing the .mtpc, and writing a minimal page that shows the figure. The author,
-2026-11-04: mtp build figure.mtp writes the folder build_figure/; the runtime is built with Node
-and pnpm."""
+compiling, writing the .mtpc, and writing the inventory page (mtp-4he1). The author, 2026-11-04:
+mtp build dial.mtp writes the folder build_dial/; the runtime is built with Node and pnpm. What
+the inventory shows is tested with the runtime (web/test/inventory.test.ts)."""
 
 import json
 import re
@@ -39,25 +39,25 @@ def test_build_writes_a_folder_named_after_the_figure(figure):
     assert json.loads((out / "dot.mtpc").read_text())["objects"]
 
 
-def test_the_page_shows_every_view_control_and_readout_in_order(figure):
+def test_the_page_is_the_inventory_of_the_model_named_after_the_file(figure):
     main(["build", str(figure)])
     page = (figure.parent / "build_dot" / "index.html").read_text()
-    shown = [page.index(f'name="{n}"') for n in ("v", "size", "back", "says")]
-    assert shown == sorted(shown)
-    assert '<mtp-canvas model="model" name="v">' in page
-    assert '<mtp-slider model="model" name="size">' in page
+    assert '<mtp-model id="dot" src="#dot-data"></mtp-model>' in page
+    assert '<div data-mtp-inventory="dot" data-file="dot.mtpc"></div>' in page
     assert "A dot and a slider." in page
 
 
-def test_the_page_holds_the_figure_and_the_runtime_so_it_opens_as_a_file(figure):
+def test_the_page_holds_the_model_and_both_scripts_so_it_opens_as_a_file(figure):
     # A browser loads no module and fetches no file for a page opened as a file.
     main(["build", str(figure)])
     out = figure.parent / "build_dot"
     page = (out / "index.html").read_text()
     assert (out / "dot.mtpc").read_text().strip() in page.replace("<\\/", "</")
     assert "customElements" in page
-    # The model reads the block in the page; nothing names a file.
-    assert re.findall(r'src="[^"]*"', page) == ['src="#model-data"']
+    assert "[data-mtp-inventory]" in page
+    # The model reads the block in the page; nothing in the page's HTML names a file.
+    markup = re.sub(r"<script[^>]*>.*?</script>", "", page, flags=re.DOTALL)
+    assert re.findall(r'src="[^"]*"', markup) == ['src="#dot-data"']
 
 
 def test_build_of_a_figure_with_an_error_writes_nothing(tmp_path, capsys):
@@ -79,14 +79,14 @@ class TestServe:
         try:
             url = f"http://127.0.0.1:{server.port}"
             page = urllib.request.urlopen(url).read().decode()
-            assert '<mtp-canvas model="model" name="v">' in page
+            assert '<div data-mtp-inventory="dot"' in page and '"name":"v"' in page
             before = urllib.request.urlopen(f"{url}/version").read().decode()
             time.sleep(0.05)
             figure.write_text(FIGURE.replace("(canvas v s)", "(canvas w s)"))
             server.check()
             after = urllib.request.urlopen(f"{url}/version").read().decode()
             assert after != before
-            assert 'name="w"' in urllib.request.urlopen(url).read().decode()
+            assert '"name":"w"' in urllib.request.urlopen(url).read().decode()
         finally:
             server.stop()
 

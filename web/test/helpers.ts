@@ -12,6 +12,13 @@ export function doc(name: string): Doc {
   return JSON.parse(raw) as Doc;
 }
 
+/** The text of the document compiled from test/fixtures/runtime/<name>.mtp, as written. */
+export function source(name: string): string {
+  const raw = docs[`./data/runtime/${name}.mtpc`] as string | undefined;
+  if (!raw) throw new Error(`${name} is not compiled; run just web-examples`);
+  return raw;
+}
+
 export function load(name: string): Runtime {
   return new Runtime(doc(name));
 }
