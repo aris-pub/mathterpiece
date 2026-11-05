@@ -15,6 +15,7 @@ INDENT = {
     **dict.fromkeys(
         ["polyline", "polygon", "arc", "ring", "font", "animation", "canvas", "namespace"], 1
     ),
+    **dict.fromkeys(["palette"], 1),
     **dict.fromkeys(["button", "play", "interface"], 1),
     "text": 2,
     **dict.fromkeys(
@@ -53,6 +54,7 @@ NAMED = {
     *["string", "point", "list", "transform", "color", "type", "motif", "variant", "func"],
     *["transition", "animation", "canvas", "readout", "slider", "button", "play", "toggle"],
     "namespace",
+    "palette",
     "interface",
     "colormap",
 }
@@ -75,6 +77,7 @@ KEYWORDS = {
     **{head: _ANIMATION for head in ["animation", "at-once", "in-order"]},
     "motif": set(),
     "namespace": set(),
+    "palette": set(),
 }
 # Forms that take no body: every item after their positional arguments goes 4 in. The same list
 # as the Emacs mode's.

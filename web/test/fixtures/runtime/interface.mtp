@@ -1,9 +1,9 @@
-(interface palette (color ink) (color paper) (real gap (>= 0)))
+(interface inky (color ink) (color paper) (real gap (>= 0)))
 (namespace day (color ink '#1f2a44') (color paper '#f6f1e7') (real gap 0.4 (>= 0)))
 (namespace night (color ink '#e8e4d8') (color paper '#14161c') (real gap 1 (>= 0)))
 (bool dark false)
-(palette look (if dark night day))
-(motif card ((palette colors)) (circle face (fill colors.paper) (stroke colors.ink)))
+(inky look (if dark night day))
+(motif card ((inky colors)) (circle face (fill colors.paper) (stroke colors.ink)))
 (scene s
   (circle c (r look.gap) (fill look.ink))
   (card fixed (colors day))

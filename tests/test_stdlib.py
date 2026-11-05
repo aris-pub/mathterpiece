@@ -12,9 +12,19 @@ from mtpc_check import errors
 
 from mathterpiece.compiler import STDLIB, _declared, compile_source
 from mathterpiece.parse import parse
+from mathterpiece.types import PALETTE
 
 NAMES = {
-    "colors": ["okabe-ito", "tab10", "viridis", "magma", "cividis", "blue-white-red"],
+    "colors": [
+        "okabe-ito-named",
+        "tab10-named",
+        "okabe-ito",
+        "tab10",
+        "viridis",
+        "magma",
+        "cividis",
+        "blue-white-red",
+    ],  # fmt: skip
     "fonts": ["serif", "sans", "mono", "math"],
     "math": ["dot", "clamp", "smoothstep", "mean", "norm", "normalize", "cross", "midpoint"],
     "ease": [
@@ -162,21 +172,36 @@ TAB10 = {
 
 
 class TestColors:
-    @pytest.mark.parametrize("palette, colors", [("okabe-ito", OKABE_ITO), ("tab10", TAB10)])
-    def test_each_palette_is_a_namespace_of_its_colors(self, tmp_path, palette, colors):
+    @pytest.mark.parametrize(
+        "palette, colors", [("okabe-ito-named", OKABE_ITO), ("tab10-named", TAB10)]
+    )
+    def test_each_palette_holds_its_colors_by_name(self, tmp_path, palette, colors):
         m = figure(tmp_path, f"(import colors) (scene s (circle c (fill colors.{palette}.blue)))")
         ns = m.objects[m.names[f"colors.{palette}"]]
-        assert ns.kind == "namespace"
+        assert ns.type == PALETTE
         got = {short: m.objects[i].value.value for short, i in ns.data["members"].items()}
         assert got == colors
 
     def test_imported_by_name(self, tmp_path):
         m = figure(
-            tmp_path, "(import colors okabe-ito) (scene s (circle c (fill okabe-ito.orange)))"
+            tmp_path,
+            "(import colors okabe-ito-named) (scene s (circle c (fill okabe-ito-named.orange)))",
         )
         e = m.get("c").attrs["fill"].expr
-        # A token, named by the file and the namespace: --mtp-colors-okabe-ito-orange.
-        assert m.objects[e.args[0]].name == "colors.okabe-ito.orange"
+        # A token, named by the file and the palette: --mtp-colors-okabe-ito-named-orange.
+        assert m.objects[e.args[0]].name == "colors.okabe-ito-named.orange"
+
+    @pytest.mark.parametrize("name, colors", [("okabe-ito", OKABE_ITO), ("tab10", TAB10)])
+    def test_each_as_a_map_by_number_wrapping_around(self, tmp_path, name, colors):
+        # Color k for each whole k, back to the first after the last; each is the palette's own
+        # token, so a page restyling it restyles the map too.
+        n = len(colors)
+        for k, want in [(0, 0), (3, 3), (n - 1, n - 1), (n, 0), (n + 2, 2)]:
+            src = f"(import colors {name}) (scene s (circle c (fill ({name} {k}))))"
+            e = figure(tmp_path, src).get("c").attrs["fill"].expr
+            assert e.op == "read"
+            m = figure(tmp_path, src)
+            assert m.objects[e.args[0]].name == f"colors.{name}-named.{list(colors)[want]}"
 
 
 class TestFonts:

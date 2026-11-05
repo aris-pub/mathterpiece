@@ -1,12 +1,12 @@
 ; Colormaps. On the left, a diverging map from teal through paper to terracotta, with paper at
 ; 0 degrees although the strip runs from -5 to 20: drag the marker along the strip, and the disk
-; takes the color of that temperature. On the right, a cyclic map around a wheel: drag the handle
+; takes the color of that temperature. On the right, a map that wraps around a wheel: drag the handle
 ; around, past a full turn if you like, and the disk takes the color of its angle, which wraps.
 
 (import house paper ink soft terracotta teal saffron plum variable code)
 
 (colormap heat [teal paper terracotta] (positions [-5 0 20]))
-(colormap wheel [terracotta saffron teal plum terracotta] (cyclic true) (positions [0 360]))
+(colormap wheel [terracotta saffron teal plum] (positions [0 270]) (wrap-at 360))
 
 (scene board (background paper)
   (real temp 8 (>= -5) (<= 20))
@@ -44,8 +44,8 @@
     (text_ '(colormap heat [teal paper terracotta]' (pos [-4 under]))
     (text_ '(positions [-5 0 20]))' (pos [-4 (- under 0.45)]))
     (text_ '(colormap wheel' (pos [4.2 under]))
-    (text_ '[terracotta saffron teal plum terracotta]' (pos [4.2 (- under 0.45)]))
-    (text_ '(cyclic true) (positions [0 360]))' (pos [4.2 (- under 0.9)]))))
+    (text_ '[terracotta saffron teal plum]' (pos [4.2 (- under 0.45)]))
+    (text_ '(positions [0 270]) (wrap-at 360))' (pos [4.2 (- under 0.9)]))))
 
 (canvas view (x -8.4) (y -3.6) (width 16.8) (height 7.6) (pan false) (zoom false)
   thermometer dial forms)

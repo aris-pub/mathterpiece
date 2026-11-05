@@ -139,6 +139,9 @@ PRIMS = {
 }
 # Every namespace has this type, as every circle has circle (the author, 2026-11-05).
 NAMESPACE = Prim("namespace")
+# A namespace whose members are all colors, made by (palette …): every palette is a namespace,
+# accepted wherever one is, and not the other way round (the author, 2026-11-05).
+PALETTE = Prim("palette")
 SHAPES = (
     "circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "arc", "ring", "text",
     "group",
@@ -150,7 +153,7 @@ NUMBERS = (INT, RATIO, REAL, COMPLEX)
 
 def fits(actual: Type, expected: Type) -> bool:
     """Whether an object of type actual is accepted where expected is."""
-    if actual == expected:
+    if actual == expected or (actual == PALETTE and expected == NAMESPACE):
         return True
     if isinstance(expected, Maybe):
         inner = actual.inner if isinstance(actual, Maybe) else actual

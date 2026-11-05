@@ -27,6 +27,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
     - **`shape`** (an interface): `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `arc`, `ring`, `text`, `group` (a row or a column is a group), motif instances (`dial`, …), variants; each satisfies `shape`
     - **`scene`**: holds the shapes
     - **namespace**: `(namespace theme …)`, members read and written as attributes, `theme.ink`; never drawn
+      - **palette**: `(palette brand …)`, a namespace whose members are all colors; every palette is a namespace
     - **component**
       - view: `canvas`, `readout`
       - control: `slider`, `button`, `play`, `toggle`
@@ -62,8 +63,8 @@ A variable is declared with its type, its name, its value, then any constraints.
     (color ink 'navy')                      ; a color variable
     (bool show-tan false)
     (list xs [1 2 3])                       ; the item type is worked out: list[int]
-    (list palette ['red' 'gold'])           ; list[string]: these are strings
-    (list[color] palette ['red' 'gold'])    ; list[color]: the literals become colors
+    (list swatches ['red' 'gold'])           ; list[string]: these are strings
+    (list[color] swatches ['red' 'gold'])    ; list[color]: the literals become colors
     (list[real] samples [])                 ; an empty list: say what it will hold
     (circle c (r 1))                        ; creates an object of type circle
 
@@ -260,13 +261,13 @@ An interface cannot be instantiated: no object's own type is ever an interface, 
 
 Reading an attribute of a group, `g.r`, gives each member's `r`, and is allowed when every member's type has one.
 
-An author declares an interface by the attributes it lists, each with its type and any constraints: `(interface palette (color ink) (color paper))`, `(interface round (real r (>= 0)))`. Any object with those attributes, of fitting types, satisfies it, shapes and namespaces alike, with or without other attributes: a circle and a ring are both `round`, and so is `(namespace n (real r 1 (>= 0)))`. A constraint is met only when it is guaranteed: a namespace whose `r` is a plain `real` is not `round`, since it may be negative. A namespace is passed to a function, or held by a variable, through an interface it fits: `(func f ((palette p)) p.ink)`, `(palette look (if dark night day))`.
+An author declares an interface by the attributes it lists, each with its type and any constraints: `(interface inky (color ink) (color paper))`, `(interface round (real r (>= 0)))`. Any object with those attributes, of fitting types, satisfies it, shapes and namespaces alike, with or without other attributes: a circle and a ring are both `round`, and so is `(namespace n (real r 1 (>= 0)))`. A constraint is met only when it is guaranteed: a namespace whose `r` is a plain `real` is not `round`, since it may be negative. A namespace is passed to a function, or held by a variable, through an interface it fits: `(func f ((inky p)) p.ink)`, `(inky look (if dark night day))`.
 
-    (interface palette (color ink) (color paper))
+    (interface inky (color ink) (color paper))
     (namespace day (color ink '#1f2a44') (color paper '#f6f1e7'))
     (namespace night (color ink '#e8e4d8') (color paper '#14161c'))
     (bool dark false)
-    (palette look (if dark night day))      ; bound, as a variable holding an object always is
+    (inky look (if dark night day))      ; bound, as a variable holding an object always is
     (circle c (fill look.ink))              ; day's ink, or night's
 
 ## 7. Not yet

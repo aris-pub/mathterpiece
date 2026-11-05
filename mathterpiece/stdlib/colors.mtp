@@ -1,30 +1,44 @@
-; Palettes of named colors, and colormaps: (import colors) and colors.okabe-ito.orange or
+; Palettes of named colors, and colormaps: (import colors) and colors.okabe-ito-named.orange or
 ; (colors.viridis 0.3), or (import colors okabe-ito viridis). Each named color is a token, so a
-; page restyles it through its CSS variable, --mtp-colors-okabe-ito-orange.
+; page restyles it through its CSS variable, --mtp-colors-okabe-ito-named-orange.
 
-; Okabe and Ito's eight colors, which stay apart for readers with any common color blindness.
-(namespace okabe-ito
-  (color orange '#e69f00')
-  (color sky-blue '#56b4e9')
-  (color bluish-green '#009e73')
-  (color yellow '#f0e442')
-  (color blue '#0072b2')
-  (color vermillion '#d55e00')
-  (color reddish-purple '#cc79a7')
-  (color black '#000000'))
+; Okabe and Ito's eight colors, which stay apart for readers with any common color blindness:
+; okabe-ito-named.orange by name, or (okabe-ito k) by number.
+(palette okabe-ito-named
+         (orange '#e69f00')
+         (sky-blue '#56b4e9')
+         (bluish-green '#009e73')
+         (yellow '#f0e442')
+         (blue '#0072b2')
+         (vermillion '#d55e00')
+         (reddish-purple '#cc79a7')
+         (black '#000000'))
 
 ; Matplotlib's default ten, the colors its plots take one after another.
-(namespace tab10
-  (color blue '#1f77b4')
-  (color orange '#ff7f0e')
-  (color green '#2ca02c')
-  (color red '#d62728')
-  (color purple '#9467bd')
-  (color brown '#8c564b')
-  (color pink '#e377c2')
-  (color gray '#7f7f7f')
-  (color olive '#bcbd22')
-  (color cyan '#17becf'))
+(palette tab10-named
+         (blue '#1f77b4')
+         (orange '#ff7f0e')
+         (green '#2ca02c')
+         (red '#d62728')
+         (purple '#9467bd')
+         (brown '#8c564b')
+         (pink '#e377c2')
+         (gray '#7f7f7f')
+         (olive '#bcbd22')
+         (cyan '#17becf'))
+
+; The same colors by number, as series and categories take them one after another: (okabe-ito k)
+; is color k, from 0, and the colors start again after the last. They read the palettes' own
+; colors, so a page restyling one restyles both.
+(colormap okabe-ito
+    [okabe-ito-named.orange okabe-ito-named.sky-blue okabe-ito-named.bluish-green
+     okabe-ito-named.yellow okabe-ito-named.blue okabe-ito-named.vermillion
+     okabe-ito-named.reddish-purple okabe-ito-named.black]
+    (discrete true) (positions [0 8]) (wrap-at 8))
+(colormap tab10
+    [tab10-named.blue tab10-named.orange tab10-named.green tab10-named.red tab10-named.purple
+     tab10-named.brown tab10-named.pink tab10-named.gray tab10-named.olive tab10-named.cyan]
+    (discrete true) (positions [0 10]) (wrap-at 10))
 
 ; Colormaps from 0 to 1, each 17 colors evenly spaced, sampled from matplotlib's own: so close to
 ; them that the difference does not show. A figure gives its values its own way, for example

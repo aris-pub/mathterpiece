@@ -4,7 +4,7 @@ functions composed, from the figure's values to the unit interval, then from it 
 func[real color]. Positions are in the figure's values: two, the start and the end, with the
 colors evenly spaced, or one per color; with none, 0 and 1. Colors mix in a straight line between
 neighbors; (discrete true) makes each one a solid step, and takes positions only as a start and an
-end. A value past an end gets that end's color, or with (cyclic true) wraps around."""
+end. A value past an end gets that end's color, or with (wrap-at x) wraps around."""
 
 import pytest
 from helpers import doc, error, model
@@ -74,21 +74,36 @@ class TestDiscrete:
         )
 
 
-class TestCyclic:
-    SRC = (
-        "(colormap phase ['#ff0000' '#00ff00' '#0000ff' '#ff0000'] (cyclic true)"
-        " (positions [0 360]))"
-    )
+class TestWrapAt:
+    # The author, 2026-11-05: (wrap-at x) is read as positions are, the value where the map is
+    # back at its first color; positions keep their meaning, and after the last one the map mixes
+    # from the last color back into the first.
+    SRC = "(colormap phase ['#ff0000' '#00ff00' '#0000ff'] (positions [0 120 240]) (wrap-at 360))"
 
     def test_it_wraps_around(self):
         assert at(self.SRC, "(phase 370)") == at(self.SRC, "(phase 10)")
         assert at(self.SRC, "(phase -90)") == at(self.SRC, "(phase 270)")
 
-    def test_discrete_and_cyclic(self):
-        src = "(colormap c ['#000001' '#000002'] (discrete true) (cyclic true) (positions [0 2]))"
+    def test_the_last_color_mixes_back_into_the_first(self):
+        assert at(self.SRC, "(phase 300)") == at(self.SRC, "(mix '#0000ff' '#ff0000' 0.5)")
+        assert at(self.SRC, "(phase 360)") == "#ff0000ff"
+
+    def test_with_a_start_and_an_end(self):
+        src = "(colormap p ['#ff0000' '#00ff00' '#0000ff'] (positions [0 240]) (wrap-at 360))"
+        assert at(src, "(p 120)") == "#00ff00ff"
+        assert at(src, "(p 300)") == at(self.SRC, "(phase 300)")
+
+    def test_discrete(self):
+        src = "(colormap c ['#000001' '#000002'] (discrete true) (positions [0 2]) (wrap-at 2))"
         assert [at(src, f"(c {x})") for x in (0.5, 1.5, 2.5, 3.5)] == [
             "#000001ff", "#000002ff", "#000001ff", "#000002ff",
         ]  # fmt: skip
+
+    def test_after_the_last_position(self):
+        error(
+            "(colormap p ['#ff0000' '#0000ff'] (positions [0 10]) (wrap-at 10))",
+            "wrap-at comes after the last position",
+        )
 
 
 class TestDeclaring:
@@ -119,6 +134,7 @@ class TestDeclaring:
 
     def test_an_unknown_keyword(self):
         error("(colormap m ['#000000' '#ffffff'] (stepped true))", "a colormap takes")
+        error("(colormap m ['#000000' '#ffffff'] (cyclic true))", "a colormap takes")
 
 
 class TestType:
@@ -137,7 +153,7 @@ class TestType:
     [
         "(color navy '#1f2a44') (real t 0.5) (colormap ice [navy '#ffffff' '#b2182b']"
         " (positions [-5 0 20])) (scene s (circle c (fill (ice t))))",
-        "(real t 0.5) (colormap r ['#000001' '#000002'] (discrete true) (cyclic true))"
+        "(real t 0.5) (colormap r ['#000001' '#000002'] (discrete true) (wrap-at 1))"
         " (scene s (circle c (fill (r t))))",
     ],
 )

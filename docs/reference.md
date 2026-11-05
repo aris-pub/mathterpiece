@@ -38,7 +38,11 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ### Interfaces
 
-`(interface palette (color ink) (color paper) (real gap (>= 0)))` declares an interface: a list of attributes, each with its type and any constraints. Any object that has them, of fitting types, satisfies it, shapes and namespaces alike, but no object's own type is ever an interface (type-system.md, section 6). A parameter or a variable declared with it, such as `(palette look day)`, holds an object of any type that satisfies it, and reads only what it lists. A variable holding an object is bound. A motif's parameter declared with an interface, as `(motif card ((palette colors)) …)`, must be given a value in every instance, `(card a (colors day))`, since an object has no default. A color read through it stays the token it reads, so `(circle c (fill look.ink))` with `look` holding `day` is drawn with `--mtp-day-ink`.
+`(interface inky (color ink) (color paper) (real gap (>= 0)))` declares an interface: a list of attributes, each with its type and any constraints. Any object that has them, of fitting types, satisfies it, shapes and namespaces alike, but no object's own type is ever an interface (type-system.md, section 6). A parameter or a variable declared with it, such as `(inky look day)`, holds an object of any type that satisfies it, and reads only what it lists. A variable holding an object is bound. A motif's parameter declared with an interface, as `(motif card ((inky colors)) …)`, must be given a value in every instance, `(card a (colors day))`, since an object has no default. A color read through it stays the token it reads, so `(circle c (fill look.ink))` with `look` holding `day` is drawn with `--mtp-day-ink`.
+
+### Palettes
+
+`(palette brand (ink '#1f2a44') (paper '#f6f1e7') (soft (mix ink paper 0.5)))` declares named colors, read as `brand.ink`. A palette is a namespace whose members are all colors: its type, `palette`, refines `namespace`, so a palette is accepted wherever a namespace is, and a namespace is not a palette. Each member is written as its name and its color, and reads the members before it by their bare names, as in a namespace. A palette holds colors only, never another palette. Each color is a token, `--mtp-brand-ink`.
 
 ### Colormaps
 
@@ -47,7 +51,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 - **Colors:** a list of at least two, tokens or literals.
 - **`(positions …)`:** in the figure's own values, known when compiling, never decreasing: a start and an end, `[-5 20]`, with the colors evenly spaced between, or one per color, `[-5 0 20]`. Two may be equal, for a hard edge: `[-4000 0 0 4000]` jumps from the second color to the third at 0. Without it, the colors are evenly spaced from 0 to 1.
 - **`(discrete true)`:** each color is one solid step, the steps equal, between the start and the end; such a map takes positions only as `[start end]`. Without it, the colors mix in a straight line between neighbors, in sRGB, as `mix` does.
-- **`(cyclic true)`:** a value past the end wraps around, the period being the distance from the start to the end: with `[0 360]`, 370 gets the color of 10. Without it, a value past either end gets that end's color.
+- **`(wrap-at x)`:** the map goes round: from the last position it mixes from the last color back into the first, reaching it at x, read as positions are, and a value past x starts again from the first position. With `(positions [0 270]) (wrap-at 360)`, four colors sit at 0, 90, 180 and 270, the fourth mixes back into the first between 270 and 360, and 370 gets the color of 10. x comes after the last position. A discrete map keeps its last color from its end to x. Without it, a value past either end gets that end's color.
 
 Each call is compiled where it is written, so the colors it mixes stay the tokens they read: a page restyling `navy` restyles every color the map gives.
 
@@ -57,7 +61,7 @@ Each call is compiled where it is written, so the colors it mixes stay the token
 |---|---|---|---|---|
 | `(T name value)` for any type `T` | required | the value, which may be left out | none | constraints |
 
-`T` is any type or type expression: `(real k 1)`, `(color ink 'navy')`, `(list[color] palette ['red' 'gold'])`, `(real|none crossing (secd theta))`, `((real (>= 0)) r 1)`. A plain `list` infers its item type from the value.
+`T` is any type or type expression: `(real k 1)`, `(color ink 'navy')`, `(list[color] swatches ['red' 'gold'])`, `(real|none crossing (secd theta))`, `((real (>= 0)) r 1)`. A plain `list` infers its item type from the value.
 
 ### Types
 
@@ -423,17 +427,20 @@ Files of declarations in `mathterpiece/stdlib/`, imported by name like any other
 
 ### colors
 
-Palettes, each a namespace of named colors: `(import colors)` and `colors.okabe-ito.orange`, or `(import colors okabe-ito)` and `okabe-ito.orange`. Each color is a token, restyled by a page through its CSS variable, `--mtp-colors-okabe-ito-orange`.
+Palettes of named colors, read by name: `(import colors)` and `colors.okabe-ito-named.orange`, or `(import colors okabe-ito-named)` and `okabe-ito-named.orange`. Each color is a token, restyled by a page through its CSS variable, `--mtp-colors-okabe-ito-named-orange`.
 
 | Palette | Colors |
 |---|---|
-| `okabe-ito` | Okabe and Ito's eight, which stay apart for readers with any common color blindness: `orange`, `sky-blue`, `bluish-green`, `yellow`, `blue`, `vermillion`, `reddish-purple`, `black` |
-| `tab10` | matplotlib's default ten: `blue`, `orange`, `green`, `red`, `purple`, `brown`, `pink`, `gray`, `olive`, `cyan` |
+| `okabe-ito-named` | Okabe and Ito's eight, which stay apart for readers with any common color blindness: `orange`, `sky-blue`, `bluish-green`, `yellow`, `blue`, `vermillion`, `reddish-purple`, `black` |
+| `tab10-named` | matplotlib's default ten: `blue`, `orange`, `green`, `red`, `purple`, `brown`, `pink`, `gray`, `olive`, `cyan` |
+
+The same colors by number, as series and categories take them one after another: `(okabe-ito k)` is color k, counting from 0, and `(tab10 k)` likewise; after the last color they start again, so `(okabe-ito 8)` is orange. Each is a discrete colormap that reads its palette's own colors, so a page restyling one restyles both.
 
 Colormaps from 0 to 1, called as `(colors.viridis 0.3)`, or `(viridis 0.3)` after `(import colors viridis)`. A figure gives its own values its own way: `(viridis (/ depth 50))`, or a function of its own, `(func depth-color ((real m)) (viridis (/ m 50)))`, which is a colormap too.
 
 | Colormap | Colors |
 |---|---|
+| `okabe-ito`, `tab10` | the palettes above, by number |
 | `viridis` | dark purple through blue and green to yellow, readable with the common kinds of color blindness |
 | `magma` | black through purple and red to pale yellow, also readable with them |
 | `cividis` | dark blue through grey to yellow, made for them |

@@ -66,6 +66,7 @@ from mathterpiece.types import (
     NAMESPACE,
     NONE,
     NUMBERS,
+    PALETTE,
     POINT,
     PRIMS,
     RATIO,
@@ -305,7 +306,7 @@ NOT_VALUES = {
 # What an imported file may declare at its top level, besides const variables.
 IMPORTABLE = {
     "color", "font", "func", "motif", "variant", "type", "import", "namespace", "interface",
-    "colormap",
+    "colormap", "palette",
 }  # fmt: skip
 
 
@@ -610,6 +611,9 @@ class _Compiler:
         if head == "namespace":
             self.namespace_decl(form, scope)
             return
+        if head == "palette":
+            self.palette_decl(form, scope)
+            return
         if head == "interface":
             return self.interface_decl(form)
         if head == "scene":
@@ -756,6 +760,9 @@ class _Compiler:
             if head == "namespace":
                 short, _ = self.member_name(item, members)
                 m = self.namespace_decl(item, inside, key)
+            elif head == "palette":
+                short, _ = self.member_name(item, members)
+                m = self.palette_decl(item, inside, key)
             elif (
                 head in NOT_VALUES
                 or head in COMPONENTS
@@ -890,6 +897,37 @@ class _Compiler:
             return {a: (u, None) for a, u in self.model.interfaces[core.name].items()}
         return {a: (u, None) for a, u in self.type_attr_types(core).items()}
 
+    def palette_decl(self, form: Form, scope: dict, within: str | None = None) -> int:
+        """(palette name (member color) …): a namespace whose members are all colors, each
+        written as its name and its value (the author, 2026-11-05)."""
+        colors = []
+        for item in form.items[2:]:
+            if _head(item) in ("palette", "namespace"):
+                raise CompileError("a palette holds colors, not another palette", item.pos)
+            head = item.items[0] if isinstance(item, Form) and item.items else None
+            named = (
+                isinstance(head, Name)
+                and len(head.parts) == 1
+                and isinstance(head.parts[0], str)
+                and head.parts[0] not in RESERVED
+                and head.parts[0] != "color"
+            )
+            if not (isinstance(item, Form) and len(item.items) == 2 and named):
+                raise CompileError("a palette's member is (name color)", item.pos)
+            # As (color member value) is inside a namespace.
+            colors.append(Form((Name(("color",), item.pos), head, item.items[1]), item.pos))
+        whole = Form((*form.items[:2], *colors), form.pos)
+        # The namespace it becomes is named as the palette is: file.name in an imported file.
+        saved = self.top_form
+        if within is None:
+            self.top_form = whole
+        try:
+            i = self.namespace_decl(whole, scope, within)
+        finally:
+            self.top_form = saved
+        self.model.objects[i].type = PALETTE
+        return i
+
     def member_name(self, form: Form, members: dict) -> tuple[str, Pos]:
         node = form.items[1] if len(form.items) > 1 else None
         if not (isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str)):
@@ -982,12 +1020,13 @@ class _Compiler:
         self.trial(name, form.pos)
 
     def colormap_decl(self, form: Form) -> None:
-        """(colormap name [color…] (positions …) (discrete bool) (cyclic bool)): sugar for one
+        """(colormap name [color…] (positions …) (discrete bool) (wrap-at x)): sugar for one
         function of a real, giving a color (the author, 2026-11-05). The positions are in the
         figure's own values: a start and an end, with the colors evenly spaced, or one per color;
         with none, 0 and 1. Between two positions the colors mix in a straight line, or with
-        discrete each color is one solid step. Past an end a value gets that end's color, or with
-        cyclic it wraps around."""
+        discrete each color is one solid step. Past an end a value gets that end's color; with
+        wrap-at, read as positions are, the map mixes from the last color back into the first,
+        reaching it at x, and wraps around."""
         pos = form.pos
         if len(form.items) < 3 or not isinstance(form.items[2], ListLit):
             raise CompileError("a colormap is (colormap name [color…] keyword…)", pos)
@@ -1005,12 +1044,12 @@ class _Compiler:
             head = _head(item)
             if (
                 not isinstance(item, Form)
-                or head not in ("positions", "discrete", "cyclic")
+                or head not in ("positions", "discrete", "wrap-at")
                 or len(item.items) != 2
             ):
                 raise CompileError(
                     "a colormap takes a list of colors, then (positions …), (discrete …) and"
-                    " (cyclic …)",
+                    " (wrap-at …)",
                     item.pos,
                 )
             if head in given:
@@ -1024,7 +1063,7 @@ class _Compiler:
             return e.value
 
         discrete = "discrete" in given and known(given["discrete"], BOOL, "discrete")
-        cyclic = "cyclic" in given and known(given["cyclic"], BOOL, "cyclic")
+        wrap = float(known(given["wrap-at"], REAL, "wrap-at")) if "wrap-at" in given else None
         n = len(colors)
         if "positions" in given:
             at = given["positions"]
@@ -1042,8 +1081,8 @@ class _Compiler:
         else:
             ps = [0.0, 1.0]
         start, end = ps[0], ps[-1]
-        if cyclic and end <= start:
-            raise CompileError("a cyclic colormap's end must come after its start", pos)
+        if wrap is not None and (wrap < end if discrete else wrap <= end):
+            raise CompileError("wrap-at comes after the last position", given["wrap-at"].pos)
         if len(ps) == 2 and n > 2 and not discrete:
             ps = [start + (end - start) * k / (n - 1) for k in range(n)]
 
@@ -1083,10 +1122,19 @@ class _Compiler:
                         pos,
                     )
                 )
-        clauses.append(Form((name("else"), colors[-1]), pos))
+        last = colors[-1]
+        if wrap is not None and not discrete:
+            # From the last position, the last color mixes back into the first by wrap-at.
+            amount = call(
+                "min",
+                num(1),
+                call("max", num(0), call("/", call("-", u, num(ps[-1])), num(wrap - ps[-1]))),
+            )
+            last = call("mix", colors[-1], colors[0], amount)
+        clauses.append(Form((name("else"), last), pos))
         where: Node = x
-        if cyclic:
-            where = call("+", num(start), call("mod", call("-", x, num(start)), num(end - start)))
+        if wrap is not None:
+            where = call("+", num(start), call("mod", call("-", x, num(start)), num(wrap - start)))
         body = call("let", Form((Form((u, where), pos),), pos), Form((name("cond"), *clauses), pos))
         func = Form((name("func"), form.items[1], Form((name("real"), x), pos), body), pos)
         saved, self.top_form = self.top_form, func

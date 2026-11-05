@@ -1,5 +1,5 @@
 """Interfaces an author declares (mtp-ateh; type-system.md, section 6). The author, 2026-11-04:
-(interface palette (color ink) (color paper)) is a constraint on attributes and their types; any
+(interface inky (color ink) (color paper)) is a constraint on attributes and their types; any
 object with those attributes, of fitting types, satisfies it, shapes and namespaces alike. It may
 list constraints, (interface spaced (real gap (>= 0))): an object fits only if its attribute is
 guaranteed to meet them. A namespace is passed as an argument only through a parameter typed with
@@ -13,48 +13,47 @@ from mtpc_check import errors
 
 from mathterpiece.compiler import compile_source
 
-PALETTE = "(interface palette (color ink) (color paper))"
+PALETTE = "(interface inky (color ink) (color paper))"
 DAY = "(namespace day (color ink '#1f2a44') (color paper '#f6f1e7') (real gap 0.4))"
 NIGHT = "(namespace night (color ink '#e8e4d8') (color paper '#14161c'))"
 
 
 class TestNamespaces:
     def test_a_function_takes_one(self):
-        model(f"{PALETTE} {DAY} (func f ((palette p)) p.ink) (color v (f day))")
+        model(f"{PALETTE} {DAY} (func f ((inky p)) p.ink) (color v (f day))")
 
     def test_extra_members_are_allowed(self):
         model(f"(interface inky (color ink)) {DAY} (func f ((inky p)) p.ink) (color v (f day))")
 
     def test_a_missing_member(self):
         error(
-            f"{PALETTE} (namespace n (color ink 'red')) (func f ((palette p)) p.ink)"
-            " (color v (f n))",
-            "n does not fit palette: it has no 'paper'",
+            f"{PALETTE} (namespace n (color ink 'red')) (func f ((inky p)) p.ink) (color v (f n))",
+            "n does not fit inky: it has no 'paper'",
         )
 
     def test_a_member_of_another_type(self):
         error(
-            f"{PALETTE} (namespace n (real ink 1) (color paper 'red')) (func f ((palette p)) p.ink)"
+            f"{PALETTE} (namespace n (real ink 1) (color paper 'red')) (func f ((inky p)) p.ink)"
             " (color v (f n))",
-            "n does not fit palette: its ink is a real, not a color",
+            "n does not fit inky: its ink is a real, not a color",
         )
 
     def test_a_nested_namespace(self):
         model(
-            f"{PALETTE} (interface themed (palette colors))"
+            f"{PALETTE} (interface themed (inky colors))"
             " (namespace t (namespace colors (color ink 'red') (color paper 'white')))"
             " (func f ((themed x)) x.colors.ink) (color v (f t))"
         )
 
     def test_only_what_the_interface_lists_is_read(self):
-        error(f"{PALETTE} {DAY} (func f ((palette p)) p.gap)", "a palette has no attribute 'gap'")
+        error(f"{PALETTE} {DAY} (func f ((inky p)) p.gap)", "an inky has no attribute 'gap'")
 
     def test_a_variable_holds_one(self):
-        model(f"{PALETTE} {DAY} {NIGHT} (palette look day) (color v look.ink)")
+        model(f"{PALETTE} {DAY} {NIGHT} (inky look day) (color v look.ink)")
 
     def test_an_if_picks_one(self):
         model(
-            f"{PALETTE} {DAY} {NIGHT} (bool dark false) (palette look (if dark night day))"
+            f"{PALETTE} {DAY} {NIGHT} (bool dark false) (inky look (if dark night day))"
             " (scene s (circle c (fill look.ink)))"
         )
 
@@ -108,7 +107,7 @@ class TestConstraints:
 
 class TestDeclaring:
     def test_a_name_already_declared(self):
-        error(f"{PALETTE} (real palette 1)", "'palette' is already declared")
+        error(f"{PALETTE} (real inky 1)", "'inky' is already declared")
 
     def test_members_need_a_type_and_a_name(self):
         lists = re.escape("an interface lists (T name constraint…)")
@@ -120,14 +119,14 @@ class TestDeclaring:
 
     def test_imported(self, tmp_path):
         (tmp_path / "house.mtp").write_text(PALETTE + " " + DAY)
-        src = "(import house palette day) (func f ((palette p)) p.ink) (color v (f day))"
+        src = "(import house inky day) (func f ((inky p)) p.ink) (color v (f day))"
         path = tmp_path / "fig.mtp"
         path.write_text(src)
         compile_source(src, path=path)
 
 
 class TestMotifs:
-    CARD = "(motif card ((palette look)) (rect r (fill look.paper) (stroke look.ink)))"
+    CARD = "(motif card ((inky look)) (rect r (fill look.paper) (stroke look.ink)))"
 
     def test_a_motif_takes_one(self):
         m = model(
@@ -148,13 +147,13 @@ class TestMotifs:
     def test_one_that_does_not_fit(self):
         error(
             f"{PALETTE} {self.CARD} (namespace n (color ink 'red')) (scene s (card a (look n)))",
-            "n does not fit palette: it has no 'paper'",
+            "n does not fit inky: it has no 'paper'",
         )
 
     def test_only_what_the_interface_lists_is_read(self):
         error(
-            f"{PALETTE} (motif card ((palette look)) (circle c (r look.gap)))",
-            "a palette has no attribute 'gap'",
+            f"{PALETTE} (motif card ((inky look)) (circle c (r look.gap)))",
+            "an inky has no attribute 'gap'",
         )
 
     def test_a_built_in_interface_too(self):
@@ -169,10 +168,10 @@ class TestMotifs:
 @pytest.mark.parametrize(
     "src",
     [
-        f"{PALETTE} {DAY} {NIGHT} (bool dark false) (palette look (if dark night day))"
+        f"{PALETTE} {DAY} {NIGHT} (bool dark false) (inky look (if dark night day))"
         " (scene s (circle c (fill look.ink)))",
         f"{PALETTE} {DAY} {NIGHT} (bool dark false)"
-        " (motif card ((palette look)) (rect r (fill look.paper)))"
+        " (motif card ((inky look)) (rect r (fill look.paper)))"
         " (scene s (card a (look day)) (card b (look (if dark night day))))",
         "(interface round (real r (>= 0))) (func area ((round o)) (* pi o.r o.r))"
         " (scene s (circle k)) (real a (area k))",

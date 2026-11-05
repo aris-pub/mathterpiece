@@ -68,7 +68,8 @@
             "animation",
             "none",
             "scene",
-            "namespace"
+            "namespace",
+            "palette"
           ]
         },
         {
