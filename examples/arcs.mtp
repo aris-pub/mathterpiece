@@ -4,6 +4,7 @@
 ; sweeps into place when the figure first comes into view.
 
 (import house paper ink soft terracotta teal saffron plum variable code)
+(import ease cubic-out)
 
 (scene board (background paper)
   (real theta 60 (>= 10) (<= 350))
@@ -58,4 +59,4 @@
 
 (on-drag tip theta)
 (slider count (move parts (from 1) (to 8)) (label 'parts'))
-(on-view view (animation (move grow (to 1) (duration 1.4) (ease 'ease-out'))))
+(on-view view (animation (move grow (to 1) (duration 1.4) (ease cubic-out))))

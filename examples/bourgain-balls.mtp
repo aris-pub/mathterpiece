@@ -6,6 +6,8 @@
 ; Coordinates are the original SVG's, with y pointing up. The 32 points are drawn at random
 ; each time the page loads, uniformly over a square.
 
+(import ease linear)
+
 (color fg '#1f2328')
 (color muted '#6b7280')
 (color bg '#faf7f0')
@@ -151,7 +153,7 @@
 
 (slider radius (move share (from 0) (to 1)) (label 'r'))
 
-(play grow (animation (move share (from 0) (to 1) (duration 3.6) (ease 'linear'))))
+(play grow (animation (move share (from 0) (to 1) (duration 3.6) (ease linear))))
 
 (readout note
     (let ((cx (count space (fn p (in-ball x.pos r p.pos))))

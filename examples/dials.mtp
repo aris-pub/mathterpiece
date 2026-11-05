@@ -3,6 +3,7 @@
 ; the fill of the group that holds every dial, and the write reaches each dial's members.
 
 (import house paper ink soft terracotta teal saffron plum number code)
+(import ease cubic-in-out)
 
 ; A needle over a scale from lo to hi, swept through sweep degrees and centered on straight up.
 ; The count of ticks decides how many lines are made, so it must be known when compiling.
@@ -101,12 +102,12 @@
 (slider bold-slider (move bold.value (from 0) (to 100)) (label 'bold dial'))
 (slider half-slider (move half.value (from 0) (to 100)) (label 'half dial'))
 
-(button teal-faces (animation (move panel.fill (to teal) (duration 0.5) (ease 'ease-in-out')))
+(button teal-faces (animation (move panel.fill (to teal) (duration 0.5) (ease cubic-in-out)))
     (label 'teal faces'))
 (button saffron-faces
-    (animation (move panel.fill (to saffron) (duration 0.5) (ease 'ease-in-out')))
+    (animation (move panel.fill (to saffron) (duration 0.5) (ease cubic-in-out)))
     (label 'saffron faces'))
-(button plum-faces (animation (move panel.fill (to plum) (duration 0.5) (ease 'ease-in-out')))
+(button plum-faces (animation (move panel.fill (to plum) (duration 0.5) (ease cubic-in-out)))
     (label 'plum faces'))
-(button clear-faces (animation (move panel.fill (to none) (duration 0.5) (ease 'ease-in-out')))
+(button clear-faces (animation (move panel.fill (to none) (duration 0.5) (ease cubic-in-out)))
     (label 'no faces'))

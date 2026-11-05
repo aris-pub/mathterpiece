@@ -3,6 +3,8 @@
 ; the most irrational turn there is, packs them evenly. Press play for the tour, pick a stop,
 ; or drag the angle yourself.
 
+(import ease cubic-out cubic-in-out)
+
 (color night '#0b1026')
 (color gold '#f6c453')
 (color chalk '#e8e4d8')
@@ -45,22 +47,22 @@
 ; middle of the ease): a small change of angle turns the outer seeds a long way, so faster than
 ; that the flower blurs.
 (animation quarter
-  (at-once (defaults (duration 16) (ease 'ease-in-out'))
+  (at-once (defaults (duration 16) (ease cubic-in-out))
     (move sunflower.angle (to 90))
     (move stop-name (to 'a quarter turn'))
     (move halo.fill (to none))))
 (animation third
-  (at-once (defaults (duration 10) (ease 'ease-in-out'))
+  (at-once (defaults (duration 10) (ease cubic-in-out))
     (move sunflower.angle (to 120))
     (move stop-name (to 'a third of a turn'))
     (move halo.fill (to none))))
 (animation two-fifths
-  (at-once (defaults (duration 8) (ease 'ease-in-out'))
+  (at-once (defaults (duration 8) (ease cubic-in-out))
     (move sunflower.angle (to 144))
     (move stop-name (to 'two fifths of a turn'))
     (move halo.fill (to none))))
 (animation golden
-  (at-once (defaults (duration 6) (ease 'ease-out'))
+  (at-once (defaults (duration 6) (ease cubic-out))
     (move sunflower.angle (to golden-angle))
     (move stop-name (to 'the golden angle'))
     (move halo.fill (to gold))))

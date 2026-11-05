@@ -1,0 +1,4 @@
+; Types that other files and figures share: (import types unit), or (import types) and types.unit.
+
+; A number from 0 to 1, such as how far along a move is.
+(type unit real (>= 0) (<= 1))

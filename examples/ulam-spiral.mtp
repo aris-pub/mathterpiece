@@ -4,6 +4,7 @@
 ; double-click to go back; turn on the path to see how the spiral runs through every number.
 
 (import house paper soft terracotta teal number code)
+(import ease cubic-in-out)
 
 ; Trial division by 5, 7, 11, 13, 17, 19, …: every prime above 3 is one more or one less than a
 ; multiple of 6, so only those divisors need trying, which keeps compiling fast.
@@ -75,7 +76,7 @@
 
 ; The view box shows the whole disc; panning and zooming are on by default.
 (canvas view (x -86) (y -98) (width 172) (height 184) (toggle-duration 0.4)
-    (toggle-ease 'ease-in-out')
+    (toggle-ease cubic-in-out)
   (when show-labels.value path)
   dots one
   (when show-labels.value labels)

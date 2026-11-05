@@ -4,6 +4,7 @@
 ; press 'turn the phase'.
 
 (import house paper ink soft teal variable code)
+(import ease linear)
 
 (scene board (background paper)
   ; Whole frequencies close the curve after one turn of t, so the ratio a:b is what it shows.
@@ -44,6 +45,6 @@
 ; The phase turns once in eight seconds: slowly enough that each frame is still a curve the eye
 ; can follow.
 (play spin (label 'turn the phase')
-    (animation (loop) (move phase (from 0) (to 360) (duration 8) (ease 'linear'))))
+    (animation (loop) (move phase (from 0) (to 360) (duration 8) (ease linear))))
 
 (readout ratio-now $'{a}:{b}' (font variable))

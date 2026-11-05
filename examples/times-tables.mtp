@@ -4,6 +4,7 @@
 ; its number, or drag the slider at any time.
 
 (import house paper ink soft terracotta variable code)
+(import ease cubic-in-out)
 
 (int n 200 (const))
 (real radius 7.4 (const))
@@ -45,10 +46,10 @@
   table captions forms)
 
 ; Each stop moves m to a whole number, where the chords close up into a curve with m - 1 cusps.
-(animation cardioid (move m (to 2) (duration 2.5) (ease 'ease-in-out')))
-(animation nephroid (move m (to 3) (duration 2) (ease 'ease-in-out')))
-(animation four-cusps (move m (to 5) (duration 2.5) (ease 'ease-in-out')))
-(animation eight-cusps (move m (to 9) (duration 3) (ease 'ease-in-out')))
+(animation cardioid (move m (to 2) (duration 2.5) (ease cubic-in-out)))
+(animation nephroid (move m (to 3) (duration 2) (ease cubic-in-out)))
+(animation four-cusps (move m (to 5) (duration 2.5) (ease cubic-in-out)))
+(animation eight-cusps (move m (to 9) (duration 3) (ease cubic-in-out)))
 
 ; Each stop but the last rests a moment before the next.
 (play tour (label 'play the tour') (buttons true)

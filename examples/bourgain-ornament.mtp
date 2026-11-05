@@ -3,6 +3,8 @@
 ; Coordinates are the original SVG's, with y pointing down, until the very end: a screen point
 ; is [x (- y)].
 
+(import ease linear)
+
 (color ink '#6b7280')
 
 ; The base's circumradius, and the tetrahedron's height.
@@ -68,4 +70,4 @@
 
 ; It turns once every 14 seconds, starting the first time it comes into view.
 (play spin (autoplay view)
-    (animation (loop) (move yaw (from 0) (to 360) (duration 14) (ease 'linear'))))
+    (animation (loop) (move yaw (from 0) (to 360) (duration 14) (ease linear))))

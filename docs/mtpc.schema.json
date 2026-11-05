@@ -2674,10 +2674,7 @@
       "oneOf": [
         {
           "enum": [
-            "linear",
-            "ease-in",
-            "ease-out",
-            "ease-in-out"
+            "linear"
           ]
         },
         {

@@ -28,13 +28,14 @@ NAMES = {
     "fonts": ["serif", "sans", "mono", "math"],
     "math": ["dot", "clamp", "smoothstep", "mean", "norm", "normalize", "cross", "midpoint"],
     "ease": [
-        "unit",
+        "linear",
         *(
             f"{kind}-{way}"
-            for kind in ("spring", "bounce", "elastic", "back")
+            for kind in ("cubic", "spring", "bounce", "elastic", "back")
             for way in ("in", "out", "in-out")
         ),
     ],
+    "types": ["unit"],
 }
 
 
@@ -53,7 +54,8 @@ def value(tmp_path, imports, expr, t="real|none"):
 
 @pytest.mark.parametrize("name", sorted(NAMES))
 def test_each_file_compiles_on_its_own(name):
-    compile_source((STDLIB / f"{name}.mtp").read_text())
+    path = STDLIB / f"{name}.mtp"
+    compile_source(path.read_text(), path=path)
 
 
 @pytest.mark.parametrize("name", sorted(NAMES))
@@ -101,7 +103,7 @@ class TestMath:
         assert value(tmp_path, "(import math)", "(math.clamp 5 0 1)") == 1
 
 
-EASES = NAMES["ease"][1:]
+EASES = NAMES["ease"]
 
 
 class TestEases:
@@ -110,17 +112,28 @@ class TestEases:
         ends = [value(tmp_path, f"(import ease {name})", f"({name} {t})") for t in (0, 1)]
         assert [round(e, 9) for e in ends] == [0, 1]
 
-    @pytest.mark.parametrize("kind", ("spring", "bounce", "elastic", "back"))
+    @pytest.mark.parametrize("kind", ("cubic", "spring", "bounce", "elastic", "back"))
     def test_in_is_out_turned_around(self, tmp_path, kind):
         imports = f"(import ease {kind}-in {kind}-out)"
         a = value(tmp_path, imports, f"({kind}-in 0.3)")
         b = value(tmp_path, imports, f"({kind}-out 0.7)")
         assert py.isclose(a, 1 - b)
 
-    @pytest.mark.parametrize("kind", ("spring", "bounce", "elastic", "back"))
+    @pytest.mark.parametrize("kind", ("cubic", "spring", "bounce", "elastic", "back"))
     def test_in_out_is_half_way_at_the_middle(self, tmp_path, kind):
         got = value(tmp_path, f"(import ease {kind}-in-out)", f"({kind}-in-out 0.5)")
         assert py.isclose(got, 0.5)
+
+    def test_the_cubic_eases_are_the_ones_built_in_before(self, tmp_path):
+        # The same curves as 'ease-in', 'ease-out' and 'ease-in-out' were (web/src/transitions.ts).
+        t = 0.3
+        for name, want in (
+            ("cubic-in", t**3),
+            ("cubic-out", 1 - (1 - t) ** 3),
+            ("cubic-in-out", 4 * t**3),
+            ("linear", t),
+        ):
+            assert py.isclose(value(tmp_path, f"(import ease {name})", f"({name} {t})"), want)
 
     def test_back_and_spring_go_past_their_end(self, tmp_path):
         assert value(tmp_path, "(import ease back-out)", "(back-out 0.6)") > 1
@@ -131,7 +144,7 @@ class TestEases:
         src = (
             "(import ease) (real k 0) (scene s (circle c (x k)))"
             " (button b (animation (move k (to 1) (duration 1) (ease ease.back-out))))"
-            " (ease.unit u 0.5)"
+            " (import types) (types.unit u 0.5)"
         )
         path = tmp_path / "fig.mtp"
         path.write_text(src)

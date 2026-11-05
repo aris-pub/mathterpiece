@@ -136,7 +136,6 @@ COMPONENTS = {
 ON_SHAPE = ("on-drag", "on-click", "on-release", "on-dragend")
 # The views and controls a play's autoplay may wait for.
 SEEN = {"canvas", "readout", "slider", "button", "play", "toggle"}
-EASES = ("linear", "ease-in", "ease-out", "ease-in-out")
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
 # Names a function may not take; a built-in function's it may (reference.md, "Functions").
 NOT_FUNCTION_NAMES = (
@@ -2003,15 +2002,16 @@ class _Compiler:
         return e.value
 
     def ease(self, node: Node, scope: dict) -> Attribute:
-        """'linear', 'ease-in', 'ease-out', 'ease-in-out', (step n), or a function of a real from
-        0 to 1, giving a real: it is only called there, so one defined only there fits, and so
-        does one defined on every real (the author, 2026-11-03)."""
+        """(step n), or a function of a real from 0 to 1, giving a real: it is only called there,
+        so one defined only there fits, and so does one defined on every real (the author,
+        2026-11-03). The named eases are functions in the stdlib's ease file, such as
+        cubic-in-out (the author, 2026-11-05); a move with no ease moves in a straight line."""
         if isinstance(node, StrLit):
-            if node.value not in EASES:
-                raise CompileError(
-                    f"'{node.value}' is not an ease: use one of {', '.join(EASES)}", node.pos
-                )
-            return Attribute(STRING, node.value)
+            raise CompileError(
+                "an ease is a function, such as cubic-in-out from the ease file,"
+                " (import ease cubic-in-out), or (step n)",
+                node.pos,
+            )
         if _head(node) == "step-ease":
             assert isinstance(node, Form)
             (arg,) = self.args(node, 1)

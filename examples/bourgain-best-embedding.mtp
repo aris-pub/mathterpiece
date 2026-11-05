@@ -4,6 +4,8 @@
 ; plane does better than 2/sqrt(3), the three leaves at 120 degrees around c.
 ; Stroke widths and font sizes are in screen pixels.
 
+(import ease cubic-in-out)
+
 (color paper '#f7f3ea')
 (color ink '#1f2a44')
 (color accent '#e76f51')
@@ -56,13 +58,13 @@
   (on-drag p p.pos))
 
 (animation optimum
-  (at-once (defaults (duration 0.8) (ease 'ease-in-out'))
+  (at-once (defaults (duration 0.8) (ease cubic-in-out))
     (move c.pos (to [0 0]))
     (move u.pos (to (polar 1 90)))
     (move v.pos (to (polar 1 210)))
     (move w.pos (to (polar 1 330)))))
 (animation on-a-line
-  (at-once (defaults (duration 0.8) (ease 'ease-in-out'))
+  (at-once (defaults (duration 0.8) (ease cubic-in-out))
     (move c.pos (to [0 0]))
     (move u.pos (to [-1 0]))
     (move v.pos (to [1 0]))

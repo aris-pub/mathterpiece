@@ -2,6 +2,9 @@
 ; Try: move the angle slider; drag the red point around the circle (it changes the angle);
 ; drag the blue square anywhere; press "grow the square"; press play, and its numbered buttons;
 ; untick "show the angle" (the label fades out); click the gold sun (the square shrinks).
+
+(import ease cubic-in-out)
+
 (real angle 30 (>= 0) (<= 360))
 (real size 1 (>= 0.2) (<= 3))
 (bool show-angle true)
@@ -17,7 +20,7 @@
   (text label $'{angle:.0f}°' (pos [0 -1]) (halign 'middle') (font label-font)))
 (slider turn (move angle (from 0) (to 360)) (label 'angle'))
 (button grow
-  (animation (move size (to 3) (duration 1) (ease 'ease-in-out'))
+  (animation (move size (to 3) (duration 1) (ease cubic-in-out))
     (move size (to 1) (duration 1)))
   (label 'grow the square'))
 (play spin (animation (defaults (duration 2)) (move angle (to 360)) (move angle (to 0)))

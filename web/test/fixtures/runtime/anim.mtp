@@ -1,3 +1,5 @@
+(import ease cubic-in)
+
 (real k 0 (>= 0) (<= 10))
 (real j 0)
 (bool on false)
@@ -6,7 +8,7 @@
 (animation a
   (move k (to 10) (duration 2))
   (move none (duration 1))
-  (move j (from 1) (to 3) (duration 1) (ease 'ease-in')))
+  (move j (from 1) (to 3) (duration 1) (ease cubic-in)))
 (animation flip (move on (to true) (duration 1)))
 (animation late (move on (to true) (duration 1) (ease (step-ease 1))))
 (animation jumps (move k (to 4) (duration 1) (ease (step 4))))

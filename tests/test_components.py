@@ -281,9 +281,10 @@ class TestCanvasToggles:
     S = "(scene s (circle c))"
 
     def test_a_duration_and_an_ease(self):
-        m = model(f"{self.S} (canvas v (toggle-duration 0.4) (toggle-ease 'ease-in-out') c)")
+        src = "(func cube ((real t (>= 0) (<= 1))) (* t t t))"
+        m = model(f"{src} {self.S} (canvas v (toggle-duration 0.4) (toggle-ease cube) c)")
         t = m.objects[m.get("v").data["transition"]]
-        assert t.attrs["duration"].value == 0.4 and t.attrs["ease"].value == "ease-in-out"
+        assert t.attrs["duration"].value == 0.4 and t.attrs["ease"].bound
 
     def test_a_duration_alone_toggles_linearly(self):
         m = model(f"{self.S} (canvas v (toggle-duration 1) c)")

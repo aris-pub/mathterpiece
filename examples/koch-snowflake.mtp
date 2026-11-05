@@ -7,6 +7,7 @@
 ; shows the same shape again, as far as the depth goes. The wheel zooms too.
 
 (import house paper ink soft saffron variable code)
+(import ease cubic-in-out)
 
 (real radius 4 (const))
 
@@ -73,14 +74,14 @@
   forms)
 
 (animation grow
-  (move depth (from 0) (to 4) (duration 6) (ease 'ease-in-out')))
+  (move depth (from 0) (to 4) (duration 6) (ease cubic-in-out)))
 
 ; It grows, rests on the full snowflake, shrinks back to the triangle and rests, again and again.
 (play cycle (autoplay view) (label 'grow and shrink')
     (animation (loop)
       grow
       (wait 1.5)
-      (move depth (to 0) (duration 3) (ease 'ease-in-out'))
+      (move depth (to 0) (duration 3) (ease cubic-in-out))
       (wait 0.8)))
 
 (slider depth-slider (move depth (from 0) (to 4)) (label 'depth'))

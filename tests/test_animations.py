@@ -13,6 +13,10 @@ def steps(src, name="a"):
 K = "(real k 0 (>= 0) (<= 10))"
 
 
+# An ease of the author's own, as the tests compile sources with no file to import from.
+CUBE = "(func cube ((real t (>= 0) (<= 1))) (* t t t))"
+
+
 class TestTransitions:
     def test_a_named_transition(self):
         m = model(f"{K} (transition up none (to 5) (duration 1)) (animation a (move k (like up)))")
@@ -53,6 +57,14 @@ class TestTransitions:
         assert t.attrs["path"].expr.op == "func"
         error(f"{K} (animation a (move k (to 5) (duration 1) (ease 'wobbly')))", "ease")
 
+    def test_an_ease_is_not_a_quoted_name(self):
+        # The author, 2026-11-05: the named eases are functions in the ease file, such as
+        # cubic-in-out; only (step n) is built in.
+        error(
+            f"{K} (animation a (move k (to 5) (duration 1) (ease 'ease-in-out')))",
+            "an ease is a function",
+        )
+
     def test_a_negative_duration(self):
         error(f"{K} (animation a (move k (to 5) (duration -1)))", "cannot be negative")
 
@@ -60,21 +72,21 @@ class TestTransitions:
 class TestSteps:
     def test_defaults_and_nesting(self):
         s = steps(
-            f"{K} (real j 0) (animation a (defaults (duration 2) (ease 'ease-in'))"
+            f"{K} {CUBE} (real j 0) (animation a (defaults (duration 2) (ease cube))"
             " (move k (to 5)) (move none (duration 1))"
             " (at-once (defaults (duration 3)) (move j (to 1))"
             " (move k (to 1) (duration 4))))"
         )
         assert s[0] == "in-order"
-        assert s[1][3:] == (2, "ease-in")
+        assert s[1][3] == 2 and s[1][4][0] == "func"
         assert s[2] == ("wait", 1)
         assert s[3][0] == "at-once"
         assert s[3][1][3] == 3 and s[3][2][3] == 4
 
     def test_a_move_takes_a_transitions_items(self):
         # reference.md "Transitions and animations": inside a step, the transition is implied.
-        s = steps(f"{K} (animation a (move k (from 1) (to 5) (duration 2) (ease 'ease-in')))")
-        assert s[3:] == (2, "ease-in")
+        s = steps(f"{K} {CUBE} (animation a (move k (from 1) (to 5) (duration 2) (ease cube)))")
+        assert s[3] == 2 and s[4][0] == "func"
 
     def test_a_move_takes_a_named_transition(self):
         m = model(
@@ -159,14 +171,14 @@ class TestBoolMoves:
 
     def test_an_enclosing_default_ease_that_is_not_a_step_does_not_apply(self):
         move = "(move on (to true) (duration 1))"
-        src = f"{self.B} (animation a (defaults (ease 'ease-in')) {move})"
+        src = f"{self.B} {CUBE} (animation a (defaults (ease cube)) {move})"
         assert steps(src)[4] == ("step", 1)
 
-    @pytest.mark.parametrize("ease", ["'linear'", "(step 3)"])
+    @pytest.mark.parametrize("ease", ["cube", "(step 3)"])
     def test_an_ease_that_takes_values_other_than_0_and_1(self, ease):
         # (step 3) jumps to 1/3 and 2/3, which mean nothing for a bool.
         error(
-            f"{self.B} (animation a (move on (to true) (duration 1) (ease {ease})))",
+            f"{self.B} {CUBE} (animation a (move on (to true) (duration 1) (ease {ease})))",
             "an ease for a bool takes only the values 0 and 1",
         )
 
@@ -183,9 +195,9 @@ class TestChoiceMoves:
         )
 
     def test_a_continuous_ease_is_an_error(self):
-        move = "(move s (to 'right') (duration 1) (ease 'linear'))"
+        move = "(move s (to 'right') (duration 1) (ease cube))"
         error(
-            f"{self.SIDE} (animation a {move})",
+            f"{self.SIDE} {CUBE} (animation a {move})",
             "an ease for a choice takes only the values 0 and 1",
         )
 
@@ -286,8 +298,8 @@ class TestForeverDuration:
 class TestAnimationDefaults:
     # mtp-xj5b: (defaults (duration t) (ease e)) on an animation, at-once or in-order.
     def test_on_an_animation(self):
-        s = steps(f"{K} (animation a (defaults (duration 2) (ease 'linear')) (move k (to 1)))")
-        assert s[3:] == (2, "linear")
+        s = steps(f"{K} {CUBE} (animation a (defaults (duration 2) (ease cube)) (move k (to 1)))")
+        assert s[3] == 2 and s[4][0] == "func"
 
     def test_on_at_once(self):
         s = steps(f"{K} (animation a (at-once (defaults (duration 3)) (move k (to 1))))")

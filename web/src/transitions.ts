@@ -7,11 +7,10 @@ import type { FnValue } from "./runtime.ts";
 /** An ease as a move carries it (docs/mtpc.md, "Steps"). */
 export type Ease = string | ["step", number] | ["step-ease", number] | { func: number };
 
+// The straight line a move with no ease takes; every other ease is a step or a function, the
+// usual ones in the standard library's ease file.
 export const EASES: Record<string, (t: number) => number> = {
   linear: (t) => t,
-  "ease-in": (t) => t * t * t,
-  "ease-out": (t) => 1 - (1 - t) ** 3,
-  "ease-in-out": (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2),
 };
 
 /** How far along a move is at progress p in [0, 1]. */

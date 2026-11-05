@@ -164,7 +164,7 @@ An animation, `at-once` and `in-order` take the optional argument `(defaults (du
 
 An animation (not `at-once` or `in-order`) also takes `(loop n)`, which plays its body n times in a row, n an int of at least 1 known when compiling, or `(loop)`, which plays it forever; a round must take some time. Each round starts again from the start of the body: a move with no `from` starts from the value of what it moves then, so it carries on from where the last round left it, and one with a `from` jumps back to it. An animation that loops n times lasts n times as long as one round; one that loops forever has no `duration`, and reading it is a compile error.
 
-Eases: `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`, `(step n)` (n equal jumps, each at the start of its interval: a 1 s `(step 4)` move from 0 to 4 shows 1 at once and reaches 4 at 0.75 s), or a function of a real from 0 to 1, `func[(real (>= 0) (<= 1)) real]`: an ease is only called there, so a function defined only there fits, and so does one defined on every real, such as a `func[real real]`. A function's value may go past 1 or below 0: a number or a point moved by it goes past its ends, as a spring overshoots, and is still brought into its type's constraints; a color or a bool stops at them.
+Eases: a function of a real from 0 to 1, `func[(real (>= 0) (<= 1)) real]`, or `(step n)`, which is built in. The usual eases are functions in the standard library's `ease` file: `(import ease cubic-in-out)` and `(ease cubic-in-out)`; see "The standard library". An ease is only called from 0 to 1, so a function defined only there fits, and so does one defined on every real, such as a `func[real real]`. `(step n)` is n equal jumps, each at the start of its interval: a 1 s `(step 4)` move from 0 to 4 shows 1 at once and reaches 4 at 0.75 s. A function's value may go past 1 or below 0: a number or a point moved by it goes past its ends, as a spring overshoots, and is still brought into its type's constraints; a color or a bool stops at them. A move with no ease moves in a straight line.
 
 A bool, a string or a choice (section 5.d of the type system) cannot change smoothly, so its ease must be piecewise constant and take only the values 0 and 1: where it is 0 what moves holds its start value, where it is 1 its end value. Such eases are only built in, and for now there is one: `(step-ease p)`, with `p` from 0 to 1 known when compiling, which is 0 before progress `p` and 1 from `p` on (`(step-ease 0)` changes at the start, `(step-ease 1)` at the end). An author cannot write one, since the compiler could not check it.
 
@@ -218,7 +218,7 @@ What an attribute is when the author leaves it out:
 | a font's parts | family: the page's font; style `'normal'`; weight 400; size 16 (screen pixels) |
 | scene `background` | `none` |
 | canvas view box | −10 to 10 in both directions |
-| transition `ease` | `'linear'` |
+| transition `ease` | none: a straight line |
 | transition `duration` | none: a move with no duration takes the default duration of the nearest animation, `at-once` or `in-order` around it, and is a compile error if there is none |
 | control `label` | the control's name |
 | toggle `value` | `false` |
@@ -474,12 +474,22 @@ Families of fonts: `(import fonts serif)`, or `(import fonts)` and `fonts.serif`
 
 A result that may be none is held in a variable declared `T|none`, or given a default with `or?`.
 
+### types
+
+Types that other files and figures share: `(import types unit)`, or `(import types)` and `types.unit`.
+
+| Type | Is |
+|---|---|
+| `unit` | a real from 0 to 1, `(type unit real (>= 0) (<= 1))`, such as how far along a move is |
+
 ### ease
 
-Functions to give a move as its ease, `(import ease bounce-out)` and `(ease bounce-out)`, or `(import ease)` and `(ease ease.bounce-out)`: each takes the progress from 0 to 1 and gives how far along the move is, 0 at its start and 1 at its end. Each takes a `unit`, a type the file declares, `(type unit real (>= 0) (<= 1))`, and gives a real. Four kinds, each in three forms: an `-out` ease does its effect at the end, an `-in` ease is the `-out` one turned around, and an `-in-out` ease runs the `-in` one over the first half and the `-out` one over the second.
+Functions to give a move as its ease, `(import ease bounce-out)` and `(ease bounce-out)`, or `(import ease)` and `(ease ease.bounce-out)`: each takes the progress from 0 to 1 and gives how far along the move is, 0 at its start and 1 at its end. Each takes a `unit`, from the `types` file, and gives a real. Four kinds, each in three forms: an `-out` ease does its effect at the end, an `-in` ease is the `-out` one turned around, and an `-in-out` ease runs the `-in` one over the first half and the `-out` one over the second.
 
 | Kind | What it does |
 |---|---|
+| `linear` | a straight line, as a move with no ease takes: to undo an ease given around a move |
+| `cubic-in`, `cubic-out`, `cubic-in-out` | the usual eases, starting slowly, ending slowly, or both |
 | `spring-in`, `spring-out`, `spring-in-out` | a spring released from rest: past the end once, then it settles |
 | `bounce-in`, `bounce-out`, `bounce-in-out` | lands and bounces three times, each bounce smaller |
 | `elastic-in`, `elastic-out`, `elastic-in-out` | past the end and back and forth, each swing smaller |

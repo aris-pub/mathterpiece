@@ -3,6 +3,7 @@
 ; again forever (loop). The last ease is a function the figure declares.
 
 (import house paper ink soft terracotta teal saffron plum code)
+(import ease linear cubic-in cubic-out cubic-in-out)
 
 ; An ease that lands and bounces three times, each bounce smaller: the usual bounce ease, four
 ; parabolas joined end to end.
@@ -20,7 +21,7 @@
 (real overhang 0.6 (const))
 ; Lane i's middle, from the top lane down.
 (func lane ((int i)) (- 3 (* lane-gap i)))
-(list[string] ease-names ['\'linear\'' '\'ease-in\'' '\'ease-out\'' '\'ease-in-out\'' '(step 5)' 'bounce'] (const))
+(list[string] ease-names ['linear' 'cubic-in' 'cubic-out' 'cubic-in-out' '(step 5)' 'bounce'] (const))
 
 (scene track (background paper)
 
@@ -51,18 +52,18 @@
 (play race (autoplay view) (label 'race')
     (animation (loop)
       (at-once (defaults (duration 1.6))
-        (move ball-0.x (to finish) (ease 'linear'))
-        (move ball-1.x (to finish) (ease 'ease-in'))
-        (move ball-2.x (to finish) (ease 'ease-out'))
-        (move ball-3.x (to finish) (ease 'ease-in-out'))
+        (move ball-0.x (to finish) (ease linear))
+        (move ball-1.x (to finish) (ease cubic-in))
+        (move ball-2.x (to finish) (ease cubic-out))
+        (move ball-3.x (to finish) (ease cubic-in-out))
         (move ball-4.x (to finish) (ease (step 5)))
         (move ball-5.x (to finish) (ease bounce)))
       (wait 0.8)
       (in-order (defaults (duration 0.8))
-        (move ball-0.x (to start) (ease 'linear'))
-        (move ball-1.x (to start) (ease 'ease-in'))
-        (move ball-2.x (to start) (ease 'ease-out'))
-        (move ball-3.x (to start) (ease 'ease-in-out'))
+        (move ball-0.x (to start) (ease linear))
+        (move ball-1.x (to start) (ease cubic-in))
+        (move ball-2.x (to start) (ease cubic-out))
+        (move ball-3.x (to start) (ease cubic-in-out))
         (move ball-4.x (to start) (ease (step 5)))
         (move ball-5.x (to start) (ease bounce)))
       (wait 0.8)))
