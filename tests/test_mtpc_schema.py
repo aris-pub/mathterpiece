@@ -17,7 +17,7 @@ TRANSITION = {
 
 
 def doc(*objects):
-    return {"mtpc": 3, "types": [], "objects": list(objects), "functions": [], "names": {}}
+    return {"mtpc": 4, "types": [], "objects": list(objects), "functions": [], "names": {}}
 
 
 def test_the_schema_is_valid():

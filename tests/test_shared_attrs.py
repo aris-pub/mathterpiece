@@ -5,7 +5,7 @@ it back when it loads the file. Found 2026-11-05: examples/colormaps.mtp compile
 
 import json
 
-from helpers import doc
+from helpers import doc, expand_types
 from mtpc_check import errors
 
 from mathterpiece.compiler import compile_source
@@ -30,6 +30,7 @@ def test_a_value_every_shape_of_a_kind_has_is_written_once():
 
 def test_a_shape_put_back_together_is_as_written_before():
     d = raw(GRID)
+    expand_types(d)
     whole = doc(GRID)
     for o, w in zip(d["objects"], whole["objects"], strict=True):
         if o["kind"] == "circle":
@@ -55,7 +56,7 @@ def test_only_what_every_shape_of_the_kind_has():
 
 def test_the_file_passes_the_schema_and_has_the_new_version():
     d = raw(GRID)
-    assert d["mtpc"] == VERSION == 3
+    assert d["mtpc"] == VERSION
     assert errors(d) == []
 
 

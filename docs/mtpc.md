@@ -11,19 +11,21 @@ Three rules from the other documents shape everything here:
 ## Top level
 
     {
-      "mtpc": 3,
+      "mtpc": 4,
       "types": [ … ],
       "objects": [ … ],
       "functions": [ … ],
       "names": { "theta": 3, "p": 5, "d1.face": 9, … },
-      "shared": { "circle": { "r": { … }, … }, "instance:dial": { … } }
+      "shared": { "circle": { "r": { … }, … }, "instance:dial": { … } },
+      "type-table": [ {"refine": "string", "constraints": [ … ]}, … ]
     }
 
-- **`mtpc`**: the format version, 3.
+- **`mtpc`**: the format version, 4.
 - **`types`**: every type the author declared that the objects use, directly or through other types or functions: named types, motifs and variants. One nothing uses is left out.
 - **`objects`**: every object in the world model (variables, shapes, transitions, animations, components). An object's **id** is its position in this list. Objects appear in the order their declarations are reached in the source, depth first: a container comes before its members, a motif instance's members follow the instance, and a transition or animation written inline as an item comes right before the object that holds it.
 - **`functions`**: every function the model calls while drawing, declared with `func` or written in place with `fn`, in source order. A function only called where the compiler worked out the result, or never called, is left out. A function's id is its position in this list.
 - **`shared`**, only when there is something in it: for each attribute that every shape of one kind has, its most common value among them, when at least two share it, written here once and left out of the shapes that have it; a shape with another value keeps its own. A kind is a shape's `kind`, such as `circle`, or `instance:` and the motif's name for motif instances, since their attributes differ by motif. A kind with one shape shares nothing. A reader puts each value back in every shape of its kind that does not give it, as a copy, before reading the file; after that, the file is read as if every attribute were written in each shape.
+- **`type-table`**, only when there is something in it: each structured type the file uses, every type that is not a plain name such as `"real"`, written once. Where the file writes a type at the top of something (an object's `type`, an attribute's, the second item of an expression, a parameter's, a function's `result`, a declared type's `type` or a variant's `base`), it writes a structured type as its position in this list; a type inside another type is written out in full. A reader puts each back in its place, before reading the file and before putting back `shared` values.
 - **`names`**: each named object's name, mapped to its id, as an author or a page refers to it: `theta`, `m0` (group members are named like any scene object), `d1.face` (names inside a motif instance are written through the instance). Unnamed objects (`head_`, or `none` as the name) have no entry. The `"name"` field of an object holds its own name only: `face`, not `d1.face`.
 
 Every reference to an object is resolved to its id. Two things stay names: a parameter or `let` name inside an expression (`["local", …]`), and a declared type (`"of": "dial"`), which is looked up in `types`.

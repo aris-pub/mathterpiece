@@ -71,6 +71,31 @@ function key(id: number, attr: string | null): string {
   return `${id}:${attr ?? ""}`;
 }
 
+// The expression forms, whose second item is always the expression's type (mtpc.md).
+const OPS = new Set([
+  "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
+  "builtinfunc", "part", "spread", "if", "and", "or", "anchor", "rand", "builtin",
+]);
+
+/** Puts each type written by its position in the file's type table back in its place (mtp-qje3). */
+function expandTypes(doc: Doc): void {
+  const table = doc["type-table"];
+  if (!table) return;
+  const at = (t: unknown) => (typeof t === "number" ? table[t] : t);
+  const walk = (x: unknown): void => {
+    if (Array.isArray(x)) {
+      if (x.length >= 2 && typeof x[0] === "string" && OPS.has(x[0])) x[1] = at(x[1]);
+      for (const v of x) walk(v);
+    } else if (x && typeof x === "object") {
+      const o = x as Record<string, unknown>;
+      for (const key of ["type", "result", "base"]) if (key in o) o[key] = at(o[key]);
+      for (const v of Object.values(o)) walk(v);
+    }
+  };
+  for (const part of [doc.types, doc.objects, doc.functions, doc.shared]) walk(part);
+  delete doc["type-table"];
+}
+
 export class Runtime {
   readonly doc: Doc;
   readonly objects: Obj[];
@@ -100,6 +125,7 @@ export class Runtime {
     private rng: () => number = Math.random,
   ) {
     this.doc = doc;
+    expandTypes(doc);
     // Each shape gets back the values its kind shares, each a copy, as it was before the file
     // wrote them once (mtp-jru8).
     for (const o of doc.objects) {

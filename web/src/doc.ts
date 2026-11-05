@@ -110,9 +110,12 @@ export interface Doc {
   // Attribute values every shape of one kind has, by kind or instance:motif, left out of those
   // shapes (mtpc.md, "Shared attribute values").
   shared?: Record<string, Record<string, Attribute>>;
+  // Each structured type, written once; where a type is written, a number is its position here
+  // (mtpc.md, "Top level").
+  "type-table"?: Type[];
 }
 
-export const FORMAT_VERSION = 3;
+export const FORMAT_VERSION = 4;
 
 export function isBound(p: Attribute): p is BoundAttribute {
   return "bound" in p;

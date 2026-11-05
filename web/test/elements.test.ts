@@ -48,7 +48,7 @@ describe("the model", () => {
 
   it("refuses a file of another version", () => {
     page(`<mtp-readout model="m" name="r"></mtp-readout>`, { ...doc("page"), mtpc: 1 });
-    expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("version 3");
+    expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("version 4");
   });
 });
 

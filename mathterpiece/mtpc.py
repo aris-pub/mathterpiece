@@ -28,7 +28,7 @@ from mathterpiece.types import (
     Type,
 )
 
-VERSION = 3
+VERSION = 4
 # The operations written as ["builtin", T, name, arg…]; every other operation has its own form.
 OWN_FORM = {
     "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
@@ -46,20 +46,34 @@ def write(model: Model) -> str:
 class Writer:
     def __init__(self, model: Model):
         self.model = model
+        # Each structured type, written once, by its position (mtpc.md, "Top level").
+        self.table: list = []
+        self.table_index: dict[str, int] = {}
 
     def doc(self) -> dict:
         m = self.model
-        return _shared(
-            _only_used(
-                {
-                    "mtpc": VERSION,
-                    "types": [self.declared(name, t) for name, t in m.types.items()],
-                    "objects": [self.obj(o) for o in m.objects],
-                    "functions": [self.function(f) for f in m.functions],
-                    "names": dict(m.names),
-                }
-            )
-        )
+        doc = {
+            "mtpc": VERSION,
+            "types": [self.declared(name, t) for name, t in m.types.items()],
+            "objects": [self.obj(o) for o in m.objects],
+            "functions": [self.function(f) for f in m.functions],
+            "names": dict(m.names),
+        }
+        if self.table:
+            doc["type-table"] = self.table
+        return _shared(_only_used(doc))
+
+    def ref(self, t: Type, own: bool = False) -> object:
+        """t where a type is written at the top of something: a plain name as it is, and a
+        structured type by its position in the type table, written there once."""
+        j = self.type(t, own)
+        if isinstance(j, str):
+            return j
+        key = json.dumps(j, sort_keys=True)
+        if key not in self.table_index:
+            self.table_index[key] = len(self.table)
+            self.table.append(j)
+        return self.table_index[key]
 
     # Types -------------------------------------------------------------------------------
 
@@ -74,10 +88,10 @@ class Writer:
                 "name": name,
                 "kind": "variant",
                 "params": self.params(v.params),
-                "base": self.type(base),
+                "base": self.ref(base),
                 "fixed": sorted(self.fixed_of(name)),
             }
-        return {"name": name, "kind": "type", "type": self.type(t, own=True)}
+        return {"name": name, "kind": "type", "type": self.ref(t, own=True)}
 
     def fixed_of(self, name: str) -> set:
         v = self.model.variants.get(name)
@@ -86,7 +100,7 @@ class Writer:
     def params(self, params: tuple[Param, ...]) -> list:
         out = []
         for p in params:
-            d = {"name": p.name, "type": self.type(p.type)}
+            d = {"name": p.name, "type": self.ref(p.type)}
             if p.default is not None:
                 d["default"] = self.value(p.type, p.value)
             out.append(d)
@@ -150,7 +164,7 @@ class Writer:
     # Attributes and expressions --------------------------------------------------------------
 
     def attribute(self, p: Attribute) -> dict:
-        d: dict = {"type": self.type(p.type)}
+        d: dict = {"type": self.ref(p.type)}
         if p.bound:
             assert p.expr is not None
             d["bound"] = self.expr(p.expr)
@@ -162,7 +176,7 @@ class Writer:
         return d
 
     def expr(self, e: Expr) -> list:
-        t = self.type(e.type)
+        t = self.ref(e.type)
         op, a = e.op, e.args
         if op == "lit":
             return ["lit", t, self.value(e.type, e.value)]
@@ -212,7 +226,7 @@ class Writer:
     def obj(self, o: Obj) -> dict:
         d = {
             "kind": o.kind,
-            "type": self.type(o.type),
+            "type": self.ref(o.type),
             "access": o.access,
             "name": o.name,
         }
@@ -301,7 +315,7 @@ class Writer:
         assert f.body is not None
         return {
             "params": self.params(f.params),
-            "result": self.type(f.result),
+            "result": self.ref(f.result),
             "body": self.expr(f.body),
         }
 
@@ -361,7 +375,8 @@ def _only_used(doc: dict) -> dict:
     functions, types = doc["functions"], {t["name"]: t for t in doc["types"]}
     used_f: set[int] = set()
     used_t: set[str] = set()
-    todo: list = [doc["objects"]]
+    # A declared type may be named only in the type table, where structured types are written.
+    todo: list = [doc["objects"], doc.get("type-table", [])]
     while todo:
         x = todo.pop()
         f = _function_id(x)

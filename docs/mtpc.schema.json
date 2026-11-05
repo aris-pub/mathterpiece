@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "mtpc.schema.json",
   "title": "mtpc",
-  "description": "The .mtpc format, version 3. See mtpc.md for what each part means and the rules a schema cannot express.",
+  "description": "The .mtpc format, version 4. See mtpc.md for what each part means and the rules a schema cannot express.",
   "type": "object",
   "required": [
     "mtpc",
@@ -13,7 +13,7 @@
   ],
   "properties": {
     "mtpc": {
-      "const": 3
+      "const": 4
     },
     "types": {
       "type": "array",
@@ -48,6 +48,13 @@
           "$ref": "#/$defs/attribute"
         }
       }
+    },
+    "type-table": {
+      "description": "Each structured type the file uses, written once; see mtpc.md.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/typeEntry"
+      }
     }
   },
   "additionalProperties": false,
@@ -61,201 +68,14 @@
       "minLength": 1
     },
     "type": {
-      "oneOf": [
+      "description": "A type, or the position of a structured one in type-table.",
+      "anyOf": [
         {
-          "enum": [
-            "int",
-            "ratio",
-            "real",
-            "complex",
-            "bool",
-            "string",
-            "color",
-            "font",
-            "point",
-            "transform",
-            "transition",
-            "animation",
-            "none",
-            "scene",
-            "namespace",
-            "palette"
-          ]
+          "type": "integer",
+          "minimum": 0
         },
         {
-          "type": "object",
-          "required": [
-            "shape"
-          ],
-          "properties": {
-            "shape": {
-              "enum": [
-                "circle",
-                "rect",
-                "ellipse",
-                "line",
-                "triangle",
-                "polyline",
-                "polygon",
-                "arc",
-                "ring",
-                "text",
-                "group"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "named"
-          ],
-          "properties": {
-            "named": {
-              "$ref": "#/$defs/name"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "component"
-          ],
-          "properties": {
-            "component": {
-              "enum": [
-                "canvas",
-                "readout",
-                "slider",
-                "button",
-                "play",
-                "toggle",
-                "on-drag",
-                "on-click",
-                "on-view",
-                "on-release",
-                "on-dragend"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "oneOf": [
-            {
-              "type": "object",
-              "required": [
-                "interface"
-              ],
-              "properties": {
-                "interface": {
-                  "anyOf": [
-                    {
-                      "enum": [
-                        "shape",
-                        "positioned"
-                      ]
-                    },
-                    {
-                      "$ref": "#/$defs/name"
-                    }
-                  ]
-                }
-              },
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "required": [
-                "interface",
-                "of"
-              ],
-              "properties": {
-                "interface": {
-                  "const": "sequence"
-                },
-                "of": {
-                  "$ref": "#/$defs/type"
-                }
-              },
-              "additionalProperties": false
-            }
-          ]
-        },
-        {
-          "type": "object",
-          "required": [
-            "list"
-          ],
-          "properties": {
-            "list": {
-              "$ref": "#/$defs/type"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "func",
-            "result"
-          ],
-          "properties": {
-            "func": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/type"
-              }
-            },
-            "result": {
-              "$ref": "#/$defs/type"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "union"
-          ],
-          "properties": {
-            "union": {
-              "type": "array",
-              "prefixItems": [
-                {
-                  "$ref": "#/$defs/type"
-                },
-                {
-                  "const": "none"
-                }
-              ],
-              "minItems": 2,
-              "maxItems": 2
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "refine",
-            "constraints"
-          ],
-          "properties": {
-            "refine": {
-              "$ref": "#/$defs/type"
-            },
-            "constraints": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/constraint"
-              },
-              "minItems": 1
-            }
-          },
-          "additionalProperties": false
+          "$ref": "#/$defs/typeEntry"
         }
       ]
     },
@@ -2797,6 +2617,205 @@
       ],
       "minItems": 2,
       "maxItems": 2
+    },
+    "typeEntry": {
+      "oneOf": [
+        {
+          "enum": [
+            "int",
+            "ratio",
+            "real",
+            "complex",
+            "bool",
+            "string",
+            "color",
+            "font",
+            "point",
+            "transform",
+            "transition",
+            "animation",
+            "none",
+            "scene",
+            "namespace",
+            "palette"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "shape"
+          ],
+          "properties": {
+            "shape": {
+              "enum": [
+                "circle",
+                "rect",
+                "ellipse",
+                "line",
+                "triangle",
+                "polyline",
+                "polygon",
+                "arc",
+                "ring",
+                "text",
+                "group"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "named"
+          ],
+          "properties": {
+            "named": {
+              "$ref": "#/$defs/name"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "component"
+          ],
+          "properties": {
+            "component": {
+              "enum": [
+                "canvas",
+                "readout",
+                "slider",
+                "button",
+                "play",
+                "toggle",
+                "on-drag",
+                "on-click",
+                "on-view",
+                "on-release",
+                "on-dragend"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "interface"
+              ],
+              "properties": {
+                "interface": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "shape",
+                        "positioned"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/name"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "interface",
+                "of"
+              ],
+              "properties": {
+                "interface": {
+                  "const": "sequence"
+                },
+                "of": {
+                  "$ref": "#/$defs/type"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "list"
+          ],
+          "properties": {
+            "list": {
+              "$ref": "#/$defs/type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "func",
+            "result"
+          ],
+          "properties": {
+            "func": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/type"
+              }
+            },
+            "result": {
+              "$ref": "#/$defs/type"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "union"
+          ],
+          "properties": {
+            "union": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "$ref": "#/$defs/type"
+                },
+                {
+                  "const": "none"
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "refine",
+            "constraints"
+          ],
+          "properties": {
+            "refine": {
+              "$ref": "#/$defs/type"
+            },
+            "constraints": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/constraint"
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     }
   }
 }
