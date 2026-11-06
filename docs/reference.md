@@ -194,6 +194,8 @@ A move may end, or start, at `none` only when what it moves is declared `T|none`
 
 Paths: a straight line between the ends by default, or a function taking the two ends and the progress.
 
+`a.steps` is the list of transitions an animation plays, in the order it plays them: through `at-once` (in the order written), `in-order` and the animations it names, with each wait as a transition that moves nothing, and for an animation that loops, one round. Its length is known when compiling, so `(foreach t a.steps …)` works, and each step is read like any transition, `a.steps[0].duration`. A transition's `duration` can be read wherever a transition is, such as `(fn ((transition s)) s.duration)`; its `from` and `to` only on a step or a named transition, since their type depends on what it moves. A step does not know when it starts, since that depends on the steps before it: the sum of their durations, in an animation that plays them one after another.
+
 ### Components
 
 A view, a control and a readout must have a name: a page places each by its name (see the data model, "On the page"), so one with no name could never be shown, and is a compile error. A listener has no name.

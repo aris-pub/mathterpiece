@@ -98,7 +98,8 @@ class TestSteps:
         )
         assert s[0] == "in-order"
         assert s[1][3] == 2 and s[1][4][0] == "func"
-        assert s[2] == ("wait", 1)
+        # A wait keeps its transition, for a.steps; the .mtpc writes only its duration.
+        assert s[2][:2] == ("wait", 1)
         assert s[3][0] == "at-once"
         assert s[3][1][3] == 3 and s[3][2][3] == 4
 
@@ -122,15 +123,20 @@ class TestSteps:
         )
 
     def test_a_move_with_no_target_only_waits(self):
-        assert steps(f"{K} (animation a (move none (duration 2)))") == ("wait", 2)
+        # A wait keeps its transition, for a.steps; the .mtpc writes only its duration.
+        assert steps(f"{K} (animation a (move none (duration 2)))")[:2] == ("wait", 2)
         error(f"{K} (animation a (move none (to 1) (duration 2)))", "takes only a duration")
 
     def test_wait_is_a_move_with_no_target(self):
         # The author, 2026-11-03: (wait t) stands for (move none (duration t)).
         assert steps(f"{K} (animation a (wait 2))") == ("wait", 2)
         assert steps(f"{K} (animation a (defaults (duration 3)) (wait))") == ("wait", 3)
-        assert steps(f"{K} (animation a (move k (to 5) (duration 1)) (wait 0.5))") == (
-            steps(f"{K} (animation a (move k (to 5) (duration 1)) (move none (duration 0.5)))")
+
+        def written(src):
+            return next(o for o in doc(src)["objects"] if o.get("name") == "a")["steps"]
+
+        assert written(f"{K} (animation a (move k (to 5) (duration 1)) (wait 0.5))") == (
+            written(f"{K} (animation a (move k (to 5) (duration 1)) (move none (duration 0.5)))")
         )
         error(f"{K} (animation a (wait))", "this wait needs a duration")
         error(f"{K} (animation a (wait 1 2))", r"wait is \(wait seconds\)")
@@ -251,7 +257,8 @@ class TestNamedAnimationsAsSteps:
         s = m.get("a").data["steps"]
         assert s[0] == "in-order"
         assert s[1] == m.get("one").data["steps"]
-        assert s[2] == ("wait", 1)
+        # A wait keeps its transition, for a.steps; the .mtpc writes only its duration.
+        assert s[2][:2] == ("wait", 1)
 
 
 class TestLoops:
@@ -386,3 +393,48 @@ class TestForeachInAnAnimation:
             f"{K} (animation an (let ((v 1)) (move k (to v) (duration 1))))",
             "holds moves, waits, at-once and in-order",
         )
+
+
+class TestReadingSteps:
+    # mtp-76h. The author, 2026-11-06: a.steps is every transition the animation plays, in the
+    # order it plays them, through at-once, in-order and the animations it names, waits
+    # included; one round of a loop; no start times.
+    K = "(real k 0) (real j 0)"
+
+    def durations(self, body):
+        m = model(f"{self.K} {body} (int n a.steps.length)")
+        n = m.get("n").value.value
+        reads = " ".join(f"(real d{k} a.steps[{k}].duration)" for k in range(n))
+        m = model(f"{self.K} {body} {reads}")
+        return [m.get(f"d{k}").value.value for k in range(n)]
+
+    def test_in_the_order_they_play(self):
+        body = (
+            "(animation b (move j (to 2) (duration 0.5)))"
+            " (animation a (move k (to 1) (duration 2)) (wait 1)"
+            " (at-once (move j (to 1) (duration 3)) (move k (to 0) (duration 4)))"
+            " b (move none (duration 0.25)))"
+        )
+        assert self.durations(body) == [2, 1, 3, 4, 0.5, 0.25]
+
+    def test_one_round_of_a_loop(self):
+        assert self.durations("(animation a (loop 3) (move k (to 1) (duration 2)))") == [2]
+
+    def test_its_length_is_known_when_compiling(self):
+        m = model(
+            f"{self.K} (animation a (move k (to 1) (duration 2)) (wait 1))"
+            " (scene s (foreach t a.steps (circle_ (r t.duration))))"
+        )
+        assert [o.attrs["r"].value for o in m.objects if o.kind == "circle"] == [2, 1]
+
+    def test_a_step_is_read_like_a_transition(self):
+        m = model(f"{self.K} (animation a (move k (to 1) (duration 2))) (real v a.steps[0].to)")
+        assert m.get("v").value.value == 1
+
+    def test_a_wait_gets_a_transition_only_when_the_steps_are_read(self):
+        def transitions(src):
+            return sum(o.kind == "transition" for o in model(src).objects)
+
+        src = f"{self.K} (animation a (move k (to 1) (duration 2)) (wait 1))"
+        assert transitions(src) == 1
+        assert transitions(src + " (int v a.steps.length)") == 2

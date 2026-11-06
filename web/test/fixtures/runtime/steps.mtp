@@ -1,0 +1,4 @@
+(real k 0)
+(real speed 1 (>= 0))
+(animation a (move k (to 1) (duration 2)) (wait 1))
+(list[real] ds (map a.steps (fn ((transition s)) (* speed s.duration))))

@@ -1,0 +1,53 @@
+; An animation's steps, read as a list: hops.steps holds every move and wait in the order they
+; play, and each one's duration lays out the timeline under the dot.
+;
+; Press play: the dot hops from place to place, and the playhead runs along the timeline, one
+; bar per step, as long as that step lasts.
+
+(import house paper ink soft terracotta teal plum number code)
+(import ease cubic-in-out)
+
+(point at [-4 0.6])
+(real clock 0 (>= 0))
+
+(animation hops
+  (move at (to [-1.5 2]) (duration 1.2) (ease cubic-in-out))
+  (wait 0.6)
+  (move at (to [1 0]) (duration 0.8) (ease cubic-in-out))
+  (move at (to [3.6 1.8]) (duration 1.6) (ease cubic-in-out))
+  (wait 0.4)
+  (move at (to [-4 0.6]) (duration 1) (ease cubic-in-out)))
+
+; The hops and the playhead together: the clock runs from 0 to the end in step with them.
+(animation show
+  (at-once hops (move clock (from 0) (to hops.duration) (duration hops.duration))))
+
+(scene board (background paper)
+  (real total hops.duration (const))
+  ; Scene units per second, so the timeline spans from -4 to 4.
+  (real unit (/ 8 total) (const))
+
+  (circle dot (pos at) (r 0.25) (fill plum) (stroke none))
+
+  ; Bar i starts where the steps before it end.
+  (group timeline (defaults (stroke none))
+    (foreach i hops.steps.length
+      (let ((start (sum (somes (map i (fn ((int j)) hops.steps[j].duration)))))
+            (d hops.steps[i].duration))
+        (rect (name $'bar-{i}') (pos [(+ -4 (* unit (+ start (/ d 2)))) -1.6])
+            (width (- (* unit d) 0.06)) (height 0.36)
+            (fill (if (= (mod i 2) 0) terracotta teal)) (fill-opacity 0.75))
+        (text_ $'{d:.1f} s' (pos [(+ -4 (* unit (+ start (/ d 2)))) -2.15]) (font number)
+            (fill soft) (halign 'middle') (valign 'middle')))))
+
+  (line playhead (from [(+ -4 (* unit clock)) -1.95]) (to [(+ -4 (* unit clock)) -1.25])
+      (stroke ink) (stroke-width 2))
+
+  (text_ $'hops.steps: {hops.steps.length} steps, {total:.1f} s in all' (pos [-4 3]) (font code)
+      (fill soft) (halign 'start') (valign 'top')))
+
+(canvas view (x -4.6) (y -2.6) (width 9.2) (height 6) (pan false) (zoom false)
+  doc@'The dot, the timeline of the steps, and the playhead.'
+  board)
+
+(play run (animation show) doc@'Plays the hops, with the playhead along the timeline.')

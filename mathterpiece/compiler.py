@@ -293,6 +293,9 @@ VALUE_ATTRS = {
     COLOR: {"r": UNIT, "g": UNIT, "b": UNIT, "a": UNIT},
     STRING: {"length": INT},
     FONT: {part: spec.type for part, spec in FONT_PARTS.items()},
+    # Any transition, such as an item of a.steps, has a duration; its ends' type depends on
+    # what it moves, so only a named one is read for them.
+    TRANSITION: {"duration": REAL},
 }
 # Arguments a group takes only to write them on each of its members.
 SPREAD = frozenset(POSITIONED) | frozenset(PAINTED) | {"pos"}
@@ -2317,7 +2320,8 @@ class _Compiler:
                 raise CompileError(
                     "this wait needs a duration (or (defaults (duration …)) around it)", pos
                 )
-            return ("wait", d)
+            # The transition goes with it, for a.steps; the .mtpc writes only the duration.
+            return ("wait", d, tid)
         i, attr, t = target
         if d is None:
             raise CompileError(
@@ -3004,6 +3008,48 @@ class _Compiler:
             if self.model.objects[i].access == "page":
                 return "page", i
         return "scene", None
+
+    def steps_of(self, i: int, pos: Pos) -> Expr:
+        """a.steps: every transition the animation plays, in the order it plays them, through
+        at-once, in-order and the animations it names, waits included, one round of a loop
+        (the author, 2026-11-06). A (wait t) has no transition of its own, so it is given a
+        pure one the first time the steps are read."""
+        obj = self.model.objects[i]
+        if "step-transitions" not in obj.data:
+            tids: list[int] = []
+
+            def walk(step) -> None:
+                if step[0] == "move":
+                    tids.append(step[2])
+                elif step[0] == "wait":
+                    if len(step) > 2:
+                        tids.append(step[2])
+                    else:
+                        tids.append(self.pure_wait(step[1], obj.pos or pos))
+                elif step[0] == "loop":
+                    walk(step[2])
+                else:
+                    for s in step[1:]:
+                        walk(s)
+
+            walk(obj.data["steps"])
+            obj.data["step-transitions"] = tids
+        tids = obj.data["step-transitions"]
+        items = tuple(self.read(t, None) for t in tids)
+        t = Refine(ListT(TRANSITION), (("length", len(items)),))
+        return Expr("list", t, items)
+
+    def pure_wait(self, seconds: float, pos: Pos) -> int:
+        """A pure transition lasting seconds, as (move none (duration seconds)) makes."""
+        form = Form(
+            (
+                Name(("move",), pos),
+                NoneLit(pos),
+                Form((Name(("duration",), pos), RealLit(float(seconds), pos)), pos),
+            ),
+            pos,
+        )
+        return self.transition(form, {}, top=False)
 
     def written(self, animation: int | None) -> set:
         """The attributes an animation's moves write."""
@@ -4388,6 +4434,8 @@ class _Compiler:
             return _known(STRING, obj.name) if obj.name is not None else _known(NONE, None)
         if obj.kind == "transition" and name in ("from", "to") and obj.data.get("end") is None:
             self.type_ends(i, None, pos)
+        if obj.kind == "animation" and name == "steps":
+            return self.steps_of(i, pos)
         if obj.kind in ("group", "scene") and name == "length":
             return _known(INT, len(obj.members))
         if obj.kind in ("group", "scene") and name == "members":

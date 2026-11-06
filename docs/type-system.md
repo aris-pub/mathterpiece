@@ -280,7 +280,6 @@ An illustrator declares an interface by the attributes it lists, each with its t
 - Variables that hold functions.
 - Types passed or held as values.
 - Maps from keys to values.
-- Reading an animation's steps, `a.steps`, as a list of transitions.
 - Units and dimensional analysis, where a value with a unit would be a quantity.
 
 ## 8. Appendix: attributes by type
@@ -295,7 +294,7 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | list | `length`; items by position, `xs[0]` |
 | point | `x`, `y` |
 | transition | `duration`, `from`, `to`, `ease`, `path` |
-| animation | `duration` (except for one that loops forever) |
+| animation | `duration` (except for one that loops forever), `steps` |
 | shapes | the arguments they take (a circle's `r`, `fill`, …) and their position, `pos`, `x`, `y` |
 | group | `length` (its member count), `members`; members by position or name, `g[0]`, `g['disk-3']`; any member attribute, spread over the members, `g.r` |
 | row, column | as a group; its `gap` and `align` cannot be read, so `cells.gap` reads each member's `gap` |

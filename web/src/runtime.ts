@@ -1030,6 +1030,8 @@ export class Runtime {
   private attrOf(id: number, attr: string, frame: number | null): unknown {
     const o = this.objects[id]!;
     if (attr === "name") return o.name;
+    // A transition's duration is known when compiling and written on it, not as an attribute.
+    if (o.kind === "transition" && attr === "duration") return o.duration;
     if (o["fixed-size"] && attr === "pos") {
       const m = this.frameOf(id, frame);
       return m === null ? [0, 0] : apply(m, [0, 0]);
