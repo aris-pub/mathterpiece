@@ -248,6 +248,16 @@ SHAPE_ATTRS: dict[str, dict[str, Argument]] = {
     # A path through its points, and a closed region through them (mtp-4nt).
     "polyline": {**PAINTED, **TRANSFORMS, **HEADS, "points": Argument(ListT(POINT), [])},
     "polygon": {**PAINTED, **TRANSFORMS, "points": Argument(ListT(POINT), [])},
+    # A Bézier curve from one end to the other, bent by one control (quadratic) or two (cubic)
+    # (mtp-oya); by default an arch over [0 0] to [1 0].
+    "curve": {
+        **PAINTED,
+        **TRANSFORMS,
+        **HEADS,
+        "from": Argument(POINT, (0, 0)),
+        "to": Argument(POINT, (1, 0)),
+        "controls": Argument(ListT(POINT), [(0.5, 1)]),
+    },
     # Part of a circle's outline, and the region between two circles, from one angle to another
     # in degrees; whole by default (mtp-5zmn).
     "arc": {**ARC, **HEADS, "r": Argument(NON_NEGATIVE, 1)},
@@ -298,6 +308,10 @@ GROUP_DEFAULTS = (SPREAD - POSITIONS) | TEXT_DEFAULTS | HEAD_DEFAULTS
 CORNERS = {"line": ("from", "to"), "triangle": ("a", "b", "c")}
 # The shapes whose position is the mean of their list of points.
 THROUGH_POINTS = ("polyline", "polygon")
+# A curve's position is the mean of its ends and its controls (the author, 2026-11-06).
+CURVES = ("curve",)
+# Every shape whose position is computed from its points, never given.
+FROM_POINTS = (*CORNERS, *THROUGH_POINTS, *CURVES)
 # The ones a shape is written with as its positional argument.
 POSITIONAL = {"text": ("value",)}
 
@@ -2374,9 +2388,11 @@ class _Compiler:
 
     def writable_attr(self, i: int, attr: str, label: str, pos: Pos) -> Type:
         obj = self.model.objects[i]
-        if attr in ("x", "y", "pos") and (obj.kind in CORNERS or obj.kind in THROUGH_POINTS):
-            # A write to a line's, a triangle's or a polyline's position moves every point.
-            for c in CORNERS.get(obj.kind, ("points",)):
+        if attr in ("x", "y", "pos") and obj.kind in FROM_POINTS:
+            # A write to a line's, a triangle's, a polyline's or a curve's position moves every
+            # point.
+            held = ("from", "to", "controls") if obj.kind in CURVES else ("points",)
+            for c in CORNERS.get(obj.kind, held):
                 self.check_writable(obj, obj.attrs[c], label, pos)
             return POINT if attr == "pos" else REAL
         if attr == "pos" and "x" in obj.attrs:
@@ -3508,6 +3524,14 @@ class _Compiler:
             self.shape_attrs(obj, given, absent, form.pos, scope, specs)
         finally:
             self.frame = saved
+        if kind in CURVES:
+            n = self.controls_count(i)
+            if n not in (1, 2):
+                raise CompileError(
+                    "a curve has one control or two, and how many must be known when compiling:"
+                    " (controls [k]) or (controls [k1 k2])",
+                    given.get("controls", (form,))[0].pos,
+                )
         if clip is not None:
             obj.data["clip"] = self.clip(clip[0], i, clip[1])
         for item, inner in self.expand_scoped(members):
@@ -3526,6 +3550,13 @@ class _Compiler:
         if axis is not None:
             self.no_text_in(i, form.pos)
         return i
+
+    def controls_count(self, i: int) -> int | None:
+        """How many controls a curve has, when that is known when compiling."""
+        a = self.model.objects[i].attrs["controls"]
+        if a.expr is not None:
+            return _length(a.expr)
+        return len(cast("list", a.value))
 
     def clip(self, form: Form, parent: int, scope: dict) -> int:
         """A container's (clip shape): a shape in the container's frame, never drawn and not one
@@ -4240,7 +4271,7 @@ class _Compiler:
             out = {a: spec.type for a, spec in SHAPE_ATTRS[t.name].items()}
         else:
             return {}
-        if "x" in out or kind.name in CORNERS or kind.name in THROUGH_POINTS:
+        if "x" in out or kind.name in FROM_POINTS:
             out |= {"x": REAL, "y": REAL, "pos": POINT}
         if kind.name == "group":
             out["length"] = INT
@@ -4284,7 +4315,7 @@ class _Compiler:
             names.add("name")
         if obj.kind in ("group", "scene"):
             names |= {"length", "members"}
-        if "x" in obj.attrs or obj.kind in CORNERS or obj.kind in THROUGH_POINTS:
+        if "x" in obj.attrs or obj.kind in FROM_POINTS:
             names |= {"x", "y", "pos"}
         if obj.kind == "instance":
             names |= cast("set[str]", {self.model.objects[m].name for m in obj.members} - {None})
@@ -4344,6 +4375,14 @@ class _Compiler:
             return self.arith(pos, "/", [self.arith(pos, "+", ends), _known(INT, len(ends))])
         if obj.kind in THROUGH_POINTS and name in ("x", "y"):
             return _part(_points_mean(self.read(i, "points")), 0 if name == "x" else 1)
+        if obj.kind in CURVES and name in ("x", "y"):
+            k = 0 if name == "x" else 1
+            controls, n = self.read(i, "controls"), self.controls_count(i)
+            assert n is not None
+            points = [self.read(i, "from"), self.read(i, "to")]
+            points += [_item(controls, j) for j in range(n)]
+            coords = [_part(p, k) for p in points]
+            return self.arith(pos, "/", [self.arith(pos, "+", coords), _known(INT, len(coords))])
         if name in obj.attrs:
             return self.read(i, name)
         if obj.kind == "instance":
@@ -5335,6 +5374,17 @@ def _gather(t: Type, items: list[Expr]) -> Expr:
         v = [i.value for i in items]
         return _known(t, tuple(v) if t == POINT else v)
     return Expr("list", t, tuple(items), frozenset().union(*(i.deps for i in items)))
+
+
+def _item(e: Expr, k: int) -> Expr:
+    """The item at position k of a list whose length is known when compiling."""
+    core = _core(e.type)
+    assert isinstance(core, ListT)
+    if e.known:
+        return _known(core.item, e.value[k])
+    if e.op == "list":
+        return e.args[k]
+    return Expr("part", core.item, (e, _known(INT, k)), e.deps, _type_range(core.item))
 
 
 def _part(e: Expr, k: int) -> Expr:

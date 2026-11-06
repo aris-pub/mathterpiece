@@ -58,6 +58,7 @@ def test_the_examples_that_use_the_house_style_import_it():
         [
             "arcs",
             "arrowheads",
+            "bezier-curves",
             "bubbles",
             "colormaps",
             "dials",

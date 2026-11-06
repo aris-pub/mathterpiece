@@ -3,6 +3,7 @@
 // only what depends on it; a bound one is computed again the next time it is read (data-model.md, "How reactivity
 // works"). The compiler has proved every type, so nothing here checks or converts one.
 import { arcBox } from "./arc.ts";
+import { curveBox } from "./curve.ts";
 import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, pointsMean, roundHalfAway } from "./builtins.ts";
 import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
 import { isBound } from "./doc.ts";
@@ -34,6 +35,7 @@ const SHAPES = new Set([
   "triangle",
   "polyline",
   "polygon",
+  "curve",
   "arc",
   "ring",
   "text",
@@ -43,6 +45,8 @@ const SHAPES = new Set([
 // The shapes whose position is the mean of their list of points (mtp-4nt).
 const THROUGH_POINTS = new Set(["polyline", "polygon"]);
 const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
+// A curve's position is the mean of its ends and controls (the author, 2026-11-06).
+const fromPoints = (kind: string) => CORNERS[kind] !== undefined || THROUGH_POINTS.has(kind) || kind === "curve";
 // Attributes that are points in their shape's frame, which a read converts.
 const POINT_ATTRS = new Set(["from", "to", "a", "b", "c"]);
 // The built-ins that decide something with none themselves; every other one gives none when an
@@ -223,10 +227,10 @@ export class Runtime {
     if (attr !== "exists" && !this.exists(id)) return null;
     if (attr === null && o.kind !== "variable") return new Ref(id);
     if (attr === "pos" && !this.has(id, "pos")) {
-      if (CORNERS[o.kind] || THROUGH_POINTS.has(o.kind)) return this.mean(id, null);
+      if (fromPoints(o.kind)) return this.mean(id, null);
       return [this.value(id, "x"), this.value(id, "y")];
     }
-    if ((attr === "x" || attr === "y") && (CORNERS[o.kind] || THROUGH_POINTS.has(o.kind)) && !this.has(id, attr)) {
+    if ((attr === "x" || attr === "y") && fromPoints(o.kind) && !this.has(id, attr)) {
       return (this.mean(id, null) as number[])[attr === "x" ? 0 : 1];
     }
     return this.get(key(id, attr));
@@ -380,7 +384,7 @@ export class Runtime {
         return;
       }
     }
-    if (THROUGH_POINTS.has(o.kind) && (attr === "x" || attr === "y")) {
+    if ((THROUGH_POINTS.has(o.kind) || o.kind === "curve") && (attr === "x" || attr === "y")) {
       const [mx, my] = this.mean(id, null) as number[];
       return this.writeInto(id, "pos", attr === "x" ? [value, my] : [mx, value], changed);
     }
@@ -391,6 +395,14 @@ export class Runtime {
         const [mx, my] = this.mean(id, null) as number[];
         const points = this.value(id, "points") as number[][];
         this.writeKey(key(id, "points"), points.map(([px, py]) => [px! + x! - mx!, py! + y! - my!]), changed);
+        return;
+      }
+      if (o.kind === "curve") {
+        // A curve's position moves its ends and its controls together.
+        const [mx, my] = this.mean(id, null) as number[];
+        const by = ([px, py]: number[]) => [px! + x! - mx!, py! + y! - my!];
+        for (const c of ["from", "to"]) this.writeKey(key(id, c), by(this.value(id, c) as number[]), changed);
+        this.writeKey(key(id, "controls"), (this.value(id, "controls") as number[][]).map(by), changed);
         return;
       }
       if (CORNERS[o.kind]) {
@@ -938,6 +950,17 @@ export class Runtime {
     } else if (THROUGH_POINTS.has(o.kind)) {
       corners = this.value(id, "points") as number[][];
       if (corners.length === 0) return null;
+    } else if (o.kind === "curve") {
+      const ends = [this.value(id, "from"), this.value(id, "to")] as number[][];
+      const controls = this.value(id, "controls") as number[][] | null;
+      if (controls === null || ends.some((e) => e === null)) return null;
+      const [x0, y0, x1, y1] = curveBox(ends[0]!, controls, ends[1]!) as [number, number, number, number];
+      corners = [
+        [x0, y0],
+        [x1, y0],
+        [x1, y1],
+        [x0, y1],
+      ];
     } else if (o.kind === "arc" || o.kind === "ring") {
       const own = arcBox(v("x"), v("y"), v("r"), o.kind === "ring" ? v("width") : null, v("from"), v("to"));
       if (own === null) return null;
@@ -1005,7 +1028,7 @@ export class Runtime {
       const m = (o.members ?? []).find((x) => this.objects[x]!.name === attr);
       if (m !== undefined) return new Ref(m);
     }
-    if ((CORNERS[o.kind] || THROUGH_POINTS.has(o.kind)) && (attr === "x" || attr === "y" || attr === "pos")) {
+    if (fromPoints(o.kind) && (attr === "x" || attr === "y" || attr === "pos")) {
       const p = this.mean(id, frame) as number[];
       return attr === "pos" ? p : p[attr === "x" ? 0 : 1];
     }
@@ -1023,8 +1046,12 @@ export class Runtime {
   /** The mean of a line's ends, a triangle's corners or a polyline's points: its position. */
   private mean(id: number, frame: number | null): number[] {
     const kind = this.objects[id]!.kind;
-    if (THROUGH_POINTS.has(kind)) {
-      const own = pointsMean(this.value(id, "points") as number[][]);
+    if (THROUGH_POINTS.has(kind) || kind === "curve") {
+      const points =
+        kind === "curve"
+          ? ([this.value(id, "from"), this.value(id, "to"), ...(this.value(id, "controls") as number[][])] as number[][])
+          : (this.value(id, "points") as number[][]);
+      const own = pointsMean(points);
       // The mean of the points seen from a frame is their mean, moved to that frame.
       const m = frame === null ? null : this.frameOf(id, frame);
       return m === null ? own : (apply(m, own) as number[]);

@@ -16,7 +16,7 @@ INDENT = {
     **dict.fromkeys(
         ["polyline", "polygon", "arc", "ring", "font", "animation", "canvas", "namespace"], 1
     ),
-    **dict.fromkeys(["palette"], 1),
+    **dict.fromkeys(["palette", "curve"], 1),
     **dict.fromkeys(["button", "play", "interface"], 1),
     "text": 2,
     **dict.fromkeys(
@@ -43,6 +43,7 @@ NAMED = {
     *["scene", "group", "row", "column", "circle", "rect", "ellipse", "line", "triangle"],
     *[
         "polyline",
+        "curve",
         "polygon",
         "arc",
         "ring",
@@ -87,6 +88,7 @@ KEYWORDS = {
 # as the Emacs mode's.
 NO_BODY = {
     *["circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "arc", "ring"],
+    *["curve"],
     *["text", "slider", "button", "play", "toggle", "readout", "on-drag", "on-click"],
     *["on-release", "on-dragend", "on-view", "move", "transition", "font", "color"],
     *["on-enter", "on-leave", "on-pointermove"],

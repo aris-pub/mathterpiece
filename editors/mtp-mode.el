@@ -10,7 +10,7 @@
 
 (defconst mtp-mode--heads
   '("scene" "group" "row" "column" "motif" "variant" "type" "func" "import"
-    "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text"
+    "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font" "namespace" "palette" "interface" "colormap"
     "transition" "move" "wait" "animation" "at-once" "in-order"
@@ -21,7 +21,7 @@
   "Heads of mtp's forms. Any of them may end in an underscore, as in (circle_ …).")
 
 (defconst mtp-mode--arguments
-  '("a" "active" "align" "autoplay" "b" "background" "buttons" "c" "clip" "dash" "dash-offset"
+  '("a" "active" "align" "autoplay" "b" "background" "buttons" "c" "clip" "controls" "dash" "dash-offset"
     "doc" "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap"
     "halign" "height"
     "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points"
@@ -47,7 +47,7 @@ from the figure's own strings.")
 (defconst mtp-mode--indent
   '(;; Forms with a name: the name, then their positional arguments, then their body.
     ("scene" . 1) ("group" . 1) ("row" . 1) ("column" . 1) ("circle" . 1) ("rect" . 1) ("ellipse" . 1) ("line" . 1)
-    ("triangle" . 1) ("polyline" . 1) ("polygon" . 1) ("arc" . 1) ("ring" . 1) ("text" . 2) ("font" . 1)
+    ("triangle" . 1) ("polyline" . 1) ("polygon" . 1) ("curve" . 1) ("arc" . 1) ("ring" . 1) ("text" . 2) ("font" . 1)
     ("namespace" . 1) ("palette" . 1) ("interface" . 1) ("colormap" . 2)
     ("real" . 2) ("int" . 2) ("ratio" . 2) ("complex" . 2) ("bool" . 2) ("string" . 2)
     ("point" . 2) ("list" . 2) ("transform" . 2) ("color" . 2)
@@ -78,7 +78,7 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
 its own is indented 4, like a positional argument, so it reads apart from the body at 2.")
 
 (defconst mtp-mode--no-body
-  '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text"
+  '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "slider" "button" "play" "toggle" "readout" "on-drag" "on-click"
     "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "move" "transition" "font" "color"
@@ -88,7 +88,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
 
 (defconst mtp-mode--named
   '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring"
-    "text" "font" "namespace" "palette" "interface" "colormap"
+    "curve" "text" "font" "namespace" "palette" "interface" "colormap"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform" "color"
     "type" "motif" "variant" "func" "transition" "animation"
     "canvas" "readout" "slider" "button" "play" "toggle")

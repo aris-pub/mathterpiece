@@ -1,0 +1,60 @@
+; Bézier curves: a quadratic, bent by one control, and a cubic, bent by two.
+;
+; Drag any end or control. The slider sets t, from 0 at the start to 1 at the end, and each curve
+; shows de Casteljau's construction at t: the point a fraction t along each side of the dashed
+; control polygon, then a fraction t along each segment joining those points, and so on down to
+; one point, which is on the curve.
+
+(import house paper ink soft terracotta teal plum code)
+
+; The point a fraction t of the way from p to q.
+(func lerp ((point p) (point q) (real t))
+  (+ p (* t (- q p))))
+
+(scene board (background paper)
+  (real t 0.5 (>= 0) (<= 1))
+
+  ; The ends and controls the reader drags, declared first so the curves can read them.
+  (group handles (defaults (stroke none) (fill-opacity 0.25))
+    (circle p0 (r 0.2) (pos [-4.4 -2.2]) (fill terracotta))
+    (circle k (r 0.2) (pos [-2.9 2]) (fill terracotta))
+    (circle p1 (r 0.2) (pos [-0.7 -2.2]) (fill terracotta))
+    (circle q0 (r 0.2) (pos [0.5 -2.2]) (fill teal))
+    (circle c1 (r 0.2) (pos [1 1.8]) (fill teal))
+    (circle c2 (r 0.2) (pos [4.1 2.2]) (fill teal))
+    (circle q1 (r 0.2) (pos [4.5 -2.2]) (fill teal)))
+
+  (group curves (defaults (stroke-width 3) (head-end 'dart'))
+    (curve quad (from p0.pos) (to p1.pos) (controls [k.pos]) (stroke terracotta))
+    (curve cubic (from q0.pos) (to q1.pos) (controls [c1.pos c2.pos]) (stroke teal)))
+
+  (group polygons (defaults (stroke soft) (stroke-width 1) (dash [4 4]))
+    (polyline_ (points [p0.pos k.pos p1.pos]))
+    (polyline_ (points [q0.pos c1.pos c2.pos q1.pos])))
+
+  ; De Casteljau at t: each level a fraction t along the segments of the one before.
+  (group construction (defaults (stroke plum) (stroke-width 1.5) (fill plum))
+    (let ((a (lerp p0.pos k.pos t))
+          (b (lerp k.pos p1.pos t)))
+      (line_ (from a) (to b))
+      (circle_ (pos (lerp a b t)) (r 0.1)))
+    (let ((a (lerp q0.pos c1.pos t))
+          (b (lerp c1.pos c2.pos t))
+          (c (lerp c2.pos q1.pos t))
+          (d (lerp a b t))
+          (e (lerp b c t)))
+      (polyline_ (points [a b c]) (fill none))
+      (line_ (from d) (to e))
+      (circle_ (pos (lerp d e t)) (r 0.1))))
+
+  (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
+    (text_ $'(curve quad (from p0) (to p1) (controls [k]))  t = {t:.2f}' (pos [-4.6 3.5]))
+    (text_ '(curve cubic (from q0) (to q1) (controls [c1 c2]))' (pos [-4.6 3.05]))))
+
+(canvas view (x -5) (y -3) (width 10) (height 7) (pan false) (zoom false)
+  doc@'The two curves, their control polygons, and de Casteljau\'s construction at t.'
+  polygons construction curves handles forms)
+
+(foreach p handles
+  (on-drag p p.pos doc@'Moves an end or a control.'))
+(slider at (move t (from 0) (to 1)) (label 't') doc@'Sets t, where the construction is shown.')

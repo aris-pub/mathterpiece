@@ -1,0 +1,8 @@
+(real k 3)
+(scene s
+  (curve quad (from [0 0]) (to [4 0]) (controls [[2 4]]) (stroke 'black'))
+  (curve cubic (from [0 0]) (to [4 0]) (controls [[0 k] [4 k]]) (stroke 'black')
+      (head-end 'dart'))
+  (curve flat (from [0 0]) (to [4 0]) (controls [[1 0] [3 0]]) (stroke 'black'))
+  (circle mark (r 0.1) (pos (top quad))))
+(canvas v (x -5) (y -5) (width 10) (height 10) s)

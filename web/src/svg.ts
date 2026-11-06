@@ -3,6 +3,7 @@
 // group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
 import { arcPath, ringPath } from "./arc.ts";
 import { Ref, apply, compose } from "./builtins.ts";
+import { curvePath } from "./curve.ts";
 import type { Expr } from "./doc.ts";
 import { isBound, itemsOf } from "./doc.ts";
 import { type Runtime, cssVariable } from "./runtime.ts";
@@ -216,12 +217,12 @@ const HEAD_SHAPES: Record<string, { refX: number; tag: string; attrs: Record<str
 };
 
 /**
- * The heads at a line's, a polyline's or an arc's ends, as SVG markers in its stroke (mtp-brs).
+ * The heads at a line's, a polyline's, a curve's or an arc's ends, as SVG markers in its stroke (mtp-brs).
  * Its stroke width is in screen pixels, which a marker does not follow, so each head is sized in
  * the view's units from its length in pixels, and zoom sizes it again.
  */
 function heads(rt: Runtime, i: number, el: Element, into: Element, unitsPerPx: number): void {
-  if (!["line", "polyline", "arc"].includes(rt.objects[i]!.kind)) return;
+  if (!["line", "polyline", "curve", "arc"].includes(rt.objects[i]!.kind)) return;
   const stroke = paintCss(rt, i, "stroke");
   if (stroke === "none") return;
   const px = HEAD_LENGTH * (rt.value(i, "stroke-width") as number) * (rt.value(i, "head-size") as number);
@@ -327,6 +328,10 @@ function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
       const points = (rt.value(i, "points") as number[][]).map((p) => p.join(","));
       return el(o.kind, { points: points.join(" ") });
     }
+    case "curve": {
+      const [from, to] = ["from", "to"].map((e) => rt.value(i, e) as number[]);
+      return el("path", { d: curvePath(from!, rt.value(i, "controls") as number[][], to!) });
+    }
     case "arc":
       return el("path", { d: arcPath(v("x"), v("y"), v("r"), v("from"), v("to")) });
     case "ring":
@@ -362,8 +367,8 @@ function text(rt: Runtime, i: number, unitsPerPx: number): Element {
 // multiply, and opacity fades the drawn shape as a whole.
 function paint(rt: Runtime, i: number, el: Element): void {
   const s = el as SVGElement;
-  // A line, a polyline and an arc are paths with no inside, so their fill is never drawn.
-  const open = ["line", "polyline", "arc"].includes(rt.objects[i]!.kind);
+  // A line, a polyline, a curve and an arc are paths with no inside, so their fill is never drawn.
+  const open = ["line", "polyline", "curve", "arc"].includes(rt.objects[i]!.kind);
   s.style.setProperty("fill", open ? "none" : paintCss(rt, i, "fill"));
   s.style.setProperty("stroke", paintCss(rt, i, "stroke"));
   el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity")));
