@@ -4,11 +4,11 @@
 ; none until given, and then the mark draws in ink: a parameter's default is known when
 ; compiling, and a token is not.
 
-(color ink '#3a4150' (doc 'The color every mark is drawn in unless given another.'))
+(color ink '#3a4150' doc@'The color every mark is drawn in unless given another.')
 
 (motif axes ((real left -10) (real right 10) (real bottom -10) (real top 10)
              (color|none stroke none) (bool arrows false))
-    (doc 'The x and y axes, through the origin from left to right and from bottom to top.')
+  doc@'The x and y axes, through the origin from left to right and from bottom to top.'
   (group lines (defaults (stroke (or? stroke ink)) (stroke-width 1)
                    (head-end (if arrows 'dart' 'none')))
     (line_ (from [left 0]) (to [right 0]))
@@ -18,7 +18,7 @@
 (motif grid ((real left -10 (const)) (real right 10 (const)) (real bottom -10 (const))
              (real top 10 (const)) (real step 1 (const) (> 0)) (color|none stroke none)
              (real stroke-opacity 0.25 (>= 0) (<= 1)))
-    (doc 'A line at every step from left to right, and from bottom to top, counting from 0.')
+  doc@'A line at every step from left to right, and from bottom to top, counting from 0.'
   (group lines (defaults (stroke (or? stroke ink)) (stroke-width 1) (stroke-opacity stroke-opacity))
     (foreach k (+ 1 (- (floor (/ right step)) (ceil (/ left step))))
       (line_ (from [(* step (+ k (ceil (/ left step)))) bottom])
@@ -31,7 +31,7 @@
 ; marked with a square, as geometry does.
 (motif angle-mark ((real from 0) (real to 90) (real r 22 (>= 0)) (string label '')
                    (color|none stroke none))
-    (doc 'The angle at its position from the direction from to the direction to, counterclockwise.')
+  doc@'The angle at its position from the direction from to the direction to, counterclockwise.'
   (group mark (fixed-size true) (defaults (stroke (or? stroke ink)) (stroke-width 1.5) (fill none))
     (arc|none turn (r r) (from from) (to to))
     (exists-when turn (!= (mod (- to from) 360) 90))
@@ -43,7 +43,7 @@
         (stroke none) (halign 'middle') (valign 'middle'))))
 
 (motif measure ((point from [0 0]) (point to [1 0]) (string label '') (color|none stroke none))
-    (doc 'A length from one point to another, with a bar at each end and its label above.')
+  doc@'A length from one point to another, with a bar at each end and its label above.'
   (line_ (from from) (to to) (stroke (or? stroke ink)) (stroke-width 1.5) (head-start 'bar')
       (head-end 'bar'))
   ; The label is 6 screen pixels above the middle, whatever the zoom.

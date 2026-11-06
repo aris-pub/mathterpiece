@@ -53,12 +53,12 @@
 
 ; The corners are listed last, so they are drawn on top and the reader can always grab them.
 (canvas above (x -7.3) (y -2.6) (width 14.6) (height 5) (zoom 1 4)
-    (doc 'The triangle and its corners.')
+  doc@'The triangle and its corners.'
   shape above-form corners)
 (canvas below (x -8.7) (y -3.7) (width 17.4) (height 6) (zoom 1 4)
-    (doc 'The triangle and its corners on a grid, with the circle through the corners.')
+  doc@'The triangle and its corners on a grid, with the circle through the corners.'
   grid around shape below-form corners)
 
-(on-drag ca ca.pos (doc 'Moves the corner on both canvases.'))
-(on-drag cb cb.pos (doc 'Moves the corner on both canvases.'))
-(on-drag cc cc.pos (doc 'Moves the corner on both canvases.'))
+(on-drag ca ca.pos doc@'Moves the corner on both canvases.')
+(on-drag cb cb.pos doc@'Moves the corner on both canvases.')
+(on-drag cc cc.pos doc@'Moves the corner on both canvases.')

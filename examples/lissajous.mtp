@@ -36,7 +36,7 @@
           (pos (+ under [0 -0.14]))))))
 
 (canvas view (x -1.78) (y -1.67) (width 3.56) (height 3.17) (pan false) (zoom false)
-    (doc 'The curve, its axes and the ratio a:b.')
+  doc@'The curve, its axes and the ratio a:b.'
   axes curve ratio forms)
 
 (slider freq-a (move a (from 1) (to 7)) (step 7) (label 'frequency a, across'))
@@ -45,7 +45,7 @@
 
 ; Slowly enough that each frame is still a curve the eye can follow.
 (play spin (label 'turn the phase')
-    (doc 'Turns the phase once every eight seconds, again and again.')
+  doc@'Turns the phase once every eight seconds, again and again.'
     (animation (loop) (move phase (from 0) (to 360) (duration 8) (ease linear))))
 
-(readout ratio-now $'{a}:{b}' (font variable) (doc 'The ratio a:b.'))
+(readout ratio-now $'{a}:{b}' (font variable) doc@'The ratio a:b.')

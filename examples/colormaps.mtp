@@ -110,20 +110,20 @@
     (text_ '(positions [0 270]) (wrap-at 360))' (pos (+ (bottom edge 0.25) [0 -0.42])))))
 
 (canvas view (x -8.4) (y -6.4) (width 16.8) (height 10.6) (pan false) (zoom false)
-    (doc 'The heatmap, the coast, the colors by number and by name, and the wheel.')
+  doc@'The heatmap, the coast, the colors by number and by name, and the wheel.'
   heat coast chart named dial forms)
 
-(on-drag handle angle (doc 'Turns the wheel.'))
+(on-drag handle angle doc@'Turns the wheel.')
 
 (button pick-viridis (animation (move scheme (to 'viridis') (duration 0))) (label 'viridis')
-    (doc 'Draws the heatmap with viridis.'))
+  doc@'Draws the heatmap with viridis.')
 (button pick-magma (animation (move scheme (to 'magma') (duration 0))) (label 'magma')
-    (doc 'Draws the heatmap with magma.'))
+  doc@'Draws the heatmap with magma.')
 (button pick-cividis (animation (move scheme (to 'cividis') (duration 0))) (label 'cividis')
-    (doc 'Draws the heatmap with cividis.'))
+  doc@'Draws the heatmap with cividis.')
 (button pick-diverging (animation (move scheme (to 'blue-white-red') (duration 0)))
     (label 'blue-white-red')
-    (doc 'Draws the heatmap with blue-white-red.'))
+  doc@'Draws the heatmap with blue-white-red.')
 (toggle in-bands banded (label 'in bands')
-    (doc 'Draws the heatmap in four solid colors, with no mixing.'))
+  doc@'Draws the heatmap in four solid colors, with no mixing.')
 (slider sea-level (move sea (from -0.6) (to 0.6)) (label 'sea level'))

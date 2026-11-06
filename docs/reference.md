@@ -18,12 +18,14 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ### Docstrings
 
-Every declaration may take `(doc 'text')`, an optional argument that says what the declared thing is: `(func clamp ((real x) (real lo) (real hi)) (doc 'x, kept between lo and hi.') (min hi (max lo x)))`, `(real k 1 (>= 0.2) (<= 3) (doc 'The radius of the circle.'))`, `(slider size (move k (from 0.2) (to 3)) (doc 'Sets the radius of the circle.'))`. It goes with the declaration's other optional arguments, and in a function or a motif after the parameters and before the body.
+Every declaration may take `doc@'text'`, an optional argument that says what the declared thing is: `(func clamp ((real x) (real lo) (real hi)) doc@'x, kept between lo and hi.' (min hi (max lo x)))`, `(real k 1 (>= 0.2) (<= 3) doc@'The radius of the circle.')`, `(slider size (move k (from 0.2) (to 3)) doc@'Sets the radius of the circle.')`. It goes with the declaration's other optional arguments, and in a function or a motif after the parameters and before the body.
+
+- **`doc@'text'` is `(doc 'text')`:** the reader makes one the other, and either may be written. `mtp fmt` writes `doc@'text'`, and puts a docstring on a line of its own 2 in, with the body, whatever form it documents.
 
 - **It is plain text, known when compiling:** an interpolated string is a compile error. It says what something is; a readout shows what it currently holds.
 - **Variables, shapes, components and the rest of the objects** keep it in the compiled model (mtpc.md), and the inventory page `mtp build` writes shows each component's, each listener's and each token's. A function written into the compiled model keeps its own; a type, a motif or an interface keeps it in the compiler only.
 - **It is for the illustrator and the author,** never a description for a reader, which is a separate matter (mtp-fl20).
-- **It is given once:** two `(doc …)` on one declaration are a compile error. `doc` is a reserved word.
+- **It is given once:** two docstrings on one declaration are a compile error. `doc` is a reserved word.
 
 ### Imports
 

@@ -2,35 +2,35 @@
 ; math.dot. Each is worked out when compiling when its arguments are known.
 
 (func dot ((list[real] a) (list[real] b))
-    (doc 'The sum of the products of two lists\' items; none when their lengths differ.')
+  doc@'The sum of the products of two lists\' items; none when their lengths differ.'
   (if (= (count a) (count b))
       (sum (somes (map (count a) (fn i (* a[i] b[i])))))
     none))
 
 (func clamp ((real x) (real lo) (real hi))
-    (doc 'x, kept between lo and hi.')
+  doc@'x, kept between lo and hi.'
   (min hi (max lo x)))
 
 (func smoothstep ((real a) (real b) (real x))
-    (doc '0 up to a, 1 from b on, and a smooth S between, flat at both ends; none when a is b.')
+  doc@'0 up to a, 1 from b on, and a smooth S between, flat at both ends; none when a is b.'
   (let ((t (clamp (/ (- x a) (- b a)) 0 1)))
     (* t t (- 3 (* 2 t)))))
 
 (func mean ((list[real] xs))
-    (doc 'The mean of a list\'s items; none for an empty list.')
+  doc@'The mean of a list\'s items; none for an empty list.'
   (/ (sum xs) (count xs)))
 
 (func norm ((point p))
-    (doc 'A point\'s distance from the origin.')
+  doc@'A point\'s distance from the origin.'
   (dist p [0 0]))
 (func normalize ((point p))
-    (doc 'The point in the same direction as p at distance 1; none for [0 0].')
+  doc@'The point in the same direction as p at distance 1; none for [0 0].'
   (* p (/ 1 (norm p))))
 
 (func cross ((point a) (point b))
-    (doc 'The 2D cross product, the parallelogram\'s signed area: positive when b turns left of a.')
+  doc@'The 2D cross product, the parallelogram\'s signed area: positive when b turns left of a.'
   (- (* a[0] b[1]) (* a[1] b[0])))
 
 (func midpoint ((point a) (point b))
-    (doc 'The point halfway between a and b.')
+  doc@'The point halfway between a and b.'
   (* (+ a b) 0.5))

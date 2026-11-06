@@ -47,11 +47,11 @@
     (text_ '(func bounce (real t) …), an ease of the figure\'s own' (pos (bottom lanes 1.3)))))
 
 (canvas view (x -6.7) (y -5.8) (width 15) (height 10.2) (pan false) (zoom false)
-    (doc 'The six lanes and their balls.')
+  doc@'The six lanes and their balls.'
   track)
 
 (play race (autoplay view) (label 'race')
-    (doc 'The balls run out together, come back one at a time, and do it again.')
+  doc@'The balls run out together, come back one at a time, and do it again.'
     (animation (loop)
       (at-once (defaults (duration 1.6))
         (move ball-0.x (to finish) (ease linear))

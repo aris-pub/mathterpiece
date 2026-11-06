@@ -1,7 +1,8 @@
 """mtp fmt: a source file in the house layout (docs/data-model.md, "The mtp command"). Each line
 is indented as the Emacs mode (editors/mtp-mode.el) indents it, trailing spaces are dropped, at
-most one blank line is kept in a row, and nothing else changes: it works on lines, not on parsed
-forms, so comments and how the author broke the lines stay as written."""
+most one blank line is kept in a row, (doc 'text') is written doc@'text', and nothing else
+changes: it works on lines, not on parsed forms, so comments and how the author broke the lines
+stay as written."""
 
 import re
 from dataclasses import dataclass, field
@@ -93,6 +94,7 @@ NO_BODY = {
     *["colormap", "interface", "defaults"],
 }
 OPEN, CLOSE = "([", ")]"
+_DOC = re.compile(r"\(doc\s+('(?:[^'\\]|\\.)*')\s*\)")
 
 
 @dataclass
@@ -116,7 +118,7 @@ def layout(src: str) -> str:
             if not line.strip():
                 blank += 1
                 continue
-            text = line.lstrip()
+            text = _doc_sugar(line.lstrip())
             line = " " * (_indent(stack, text) if stack else 0) + text
         if out and blank:
             out.append("")
@@ -126,10 +128,37 @@ def layout(src: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def _doc_sugar(line: str) -> str:
+    """The line with each (doc 'text') outside strings and comments written doc@'text'. It starts
+    outside a string: a line that starts inside one is left as it is."""
+    out, i, in_string = [], 0, False
+    while i < len(line):
+        c = line[i]
+        if in_string:
+            out.append(line[i : i + 2] if c == "\\" else c)
+            i += 2 if c == "\\" else 1
+            in_string = c != "'"
+            continue
+        if c == ";":
+            out.append(line[i:])
+            break
+        if m := _DOC.match(line, i):
+            out.append("doc@" + m.group(1))
+            i = m.end()
+            continue
+        in_string = c == "'"
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _indent(stack: list[_Frame], text: str) -> int:
     f = stack[-1]
     if f.bracket == "[" or f.head is None:
         return f.col + 1
+    # A docstring reads with the body, whatever form it documents.
+    if text.startswith("doc@"):
+        return f.col + 2
     unnamed = f.head.endswith("_")
     base = f.head.removesuffix("_").split("|")[0]
     count = INDENT.get(base)
@@ -170,7 +199,9 @@ def _scan(line: str, number: int, stack: list[_Frame], in_string: bool) -> bool:
         if c.isspace():
             atom = False
         elif c == "'" or (c == "$" and line[i + 1 : i + 2] == "'"):
-            _item(stack, i, number, line)
+            # The text of doc@'text' is part of the same item.
+            if not atom:
+                _item(stack, i, number, line)
             in_string, atom = True, False
             i += 2 if c == "$" else 1
             continue

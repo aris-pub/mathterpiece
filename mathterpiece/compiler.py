@@ -5086,8 +5086,9 @@ def _points_mean(points: Expr) -> Expr:
 
 
 def _take_doc(form: Form) -> tuple[Form, str | None]:
-    """A declaration's (doc 'text'), taken out of its items: plain text, known when compiling,
-    for the illustrator and the author; never a reader's description (mtp-fl20)."""
+    """A declaration's doc@'text', which is (doc 'text'), taken out of its items: plain text,
+    known when compiling, for the illustrator and the author; never a reader's description
+    (mtp-fl20)."""
     docs = [it for it in form.items[2:] if _head(it) == "doc"]
     if not docs:
         return form, None
@@ -5096,7 +5097,7 @@ def _take_doc(form: Form) -> tuple[Form, str | None]:
     item = docs[0]
     assert isinstance(item, Form)
     if len(item.items) != 2 or not isinstance(item.items[1], StrLit):
-        raise CompileError("a doc is plain text, known when compiling: (doc 'text')", item.pos)
+        raise CompileError("a doc is plain text, known when compiling: doc@'text'", item.pos)
     rest = tuple(it for it in form.items if it is not item)
     return Form(rest, form.pos), item.items[1].value
 

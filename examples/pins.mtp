@@ -8,7 +8,7 @@
 
 ; The label grows away from the stem's end on whichever side that is.
 (motif pin ((string label '') (color tint) (real toward 90))
-    (doc 'A dot, and a stem and a label pointing out at the angle toward, all in pixels.')
+  doc@'A dot, and a stem and a label pointing out at the angle toward, all in pixels.'
   (group mark (fixed-size true)
     (line_ (from (polar 6 toward)) (to (polar 22 toward)) (stroke ink) (stroke-width 1.5))
     (circle_ (r 6) (fill tint) (stroke paper) (stroke-width 2))
@@ -40,10 +40,10 @@
        (label $'r = 0.1, {(mod c 360):.0f}°')))
 
 (canvas view (x -2.4) (y -1.3) (width 4.8) (height 2.6) (zoom 1 40)
-    (doc 'The three circles and their pins.')
+  doc@'The three circles and their pins.'
   circles radii large middle small)
 
 ; A pin's position is a point on its circle at its angle, so a drag moves the angle.
-(on-drag large a (doc 'Slides the pin around the circle of radius 1.'))
-(on-drag middle b (doc 'Slides the pin around the circle of radius 0.5.'))
-(on-drag small c (doc 'Slides the pin around the circle of radius 0.1.'))
+(on-drag large a doc@'Slides the pin around the circle of radius 1.')
+(on-drag middle b doc@'Slides the pin around the circle of radius 0.5.')
+(on-drag small c doc@'Slides the pin around the circle of radius 0.1.')

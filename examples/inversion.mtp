@@ -31,19 +31,19 @@
         (pos [0 -1.75]) (font number) (fill soft) (halign 'middle'))))
 
 (canvas view (x -3) (y -2) (width 6) (height 4) (pan false) (zoom false)
-    (doc 'The circle, p, and its inverse q.')
+  doc@'The circle, p, and its inverse q.'
   plane)
 
-(on-pointermove view p (doc 'p follows the pointer.'))
+(on-pointermove view p doc@'p follows the pointer.')
 (on-enter unit
     (animation
       (at-once (defaults (duration 0.25) (ease cubic-out))
         (move unit.stroke-width (to 5))
         (move disk.fill-opacity (to 0.16))))
-    (doc 'Thickens the rim and tints the disk while the pointer is on the rim.'))
+  doc@'Thickens the rim and tints the disk while the pointer is on the rim.')
 (on-leave unit
     (animation
       (at-once (defaults (duration 0.5) (ease cubic-out))
         (move unit.stroke-width (to 2))
         (move disk.fill-opacity (to 0))))
-    (doc 'Brings the circle back.'))
+  doc@'Brings the circle back.')

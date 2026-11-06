@@ -12,7 +12,7 @@
 
 ; Once it has popped, its body and the rest of it do not exist.
 (motif bubble ((real size 1 (>= 0)) (color tint) (bool popped false) (real burst 0 (>= 0) (<= 1)))
-    (doc 'A bubble that pops: as burst runs from 0 to 1, it swells and fades, and drops fly out.')
+  doc@'A bubble that pops: as burst runs from 0 to 1, it swells and fades, and drops fly out.'
   ; The body has no position of its own given, so its position is free: a drag writes it, and so
   ; does the spring back.
   (circle|none body (r (* size (+ 1 (* 0.5 burst)))) (fill tint) (fill-opacity 0.3) (stroke tint)
@@ -48,11 +48,11 @@
         (pos (bottom water (+ largest 0.65))))))
 
 (canvas view (x -8) (y -5) (width 16) (height 10) (pan false) (zoom false)
-    (doc 'The pond and its bubbles.')
+  doc@'The pond and its bubbles.'
   pond)
 
 (on-view view (animation (move rise (to 0) (duration 0.8) (ease cubic-out)))
-    (doc 'Brings the bubbles up into place.'))
+  doc@'Brings the bubbles up into place.')
 
 ; A click is a press and a release on the same bubble, so letting go of a drag over a bubble
 ; is a click too; a bubble pops only when it is at home, so a drag never pops it. The spring
@@ -60,13 +60,13 @@
 ; plain click, and when a press that began elsewhere is let go over the bubble.
 (foreach b bubbles
   (on-click b.body (active (< (or? (dist b.body.pos b.pos) 1) 0.1))
-      (doc 'Pops the bubble, when it is at home.')
+    doc@'Pops the bubble, when it is at home.'
       (animation
         (move b.burst (to 1) (duration 0.3) (ease cubic-out))
         (move b.popped (to true) (duration 0))))
-  (on-drag b.body b.body.pos (doc 'Moves the bubble.'))
+  (on-drag b.body b.body.pos doc@'Moves the bubble.')
   (on-dragend b.body (animation (move b.body.pos (to [0 0]) (duration 0.8) (ease spring)))
-      (doc 'Springs the bubble back home.')))
+    doc@'Springs the bubble back home.'))
 
 ; A bubble brought back shrinks from its burst into place; one that never popped has a burst of
 ; 0 and does not change.

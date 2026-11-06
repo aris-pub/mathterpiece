@@ -33,12 +33,16 @@
 such as (x -8), (duration 0.8) and (fill teal).")
 
 (defface mtp-mode-head-face
-  `((t :inherit ,(if (facep 'font-lock-property-name-face)
-                     'font-lock-property-name-face
-                   'font-lock-variable-name-face)
-       :weight normal))
-  "Face for the heads of mtp's forms, such as canvas in (canvas view …). Keyword arguments
-take `font-lock-keyword-face', so the two stand apart.")
+  '((t :inherit font-lock-type-face :weight bold))
+  "Face for the heads of mtp's forms, such as canvas in (canvas view …). Most heads are types,
+as circle and real are, and themes draw the type color strongly and apart from the keyword
+color, which keyword arguments take.")
+
+(defface mtp-mode-doc-face
+  '((t :inherit font-lock-string-face :weight bold :slant italic))
+  "Face for a docstring, the text of doc@'text'. Themes often draw `font-lock-doc-face' faint,
+so it takes the string color, which every theme draws clearly, in bold italic to stand out
+from the figure's own strings.")
 
 (defconst mtp-mode--indent
   '(;; Forms with a name: the name, then their positional arguments, then their body.
@@ -109,6 +113,9 @@ list's items under its first item."
      ;; A list is data, not a call: its items line up under its first one.
      ((eq (char-after start) ?\[)
       (1+ (save-excursion (goto-char start) (current-column))))
+     ;; A docstring reads with the body, whatever form it documents.
+     ((save-excursion (goto-char indent-point) (skip-chars-forward " \t") (looking-at "doc@"))
+      (+ 2 (save-excursion (goto-char start) (current-column))))
      ((not count)
       (lisp-indent-function indent-point state))
      (t
@@ -157,9 +164,20 @@ to `comment-column'."
   `((,(concat "(\\(" (regexp-opt mtp-mode--heads) "\\)\\(?:|none\\)?_?\\_>")
      1 'mtp-mode-head-face)
     (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 font-lock-keyword-face)
+    ("\\_<\\(doc\\)@'" 1 font-lock-keyword-face)
     (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face))
-  "What mtp-mode highlights: the heads of forms, keyword arguments, and none, true, false and
-self.")
+  "What mtp-mode highlights: the heads of forms, keyword arguments, the doc of doc@'text', and
+none, true, false and self.")
+
+(defun mtp-mode--syntactic-face (state)
+  "The face of the string or comment STATE is in: a docstring, the text of doc@'text', takes
+`mtp-mode-doc-face'."
+  (cond ((not (nth 3 state)) 'font-lock-comment-face)
+        ((save-excursion
+           (goto-char (nth 8 state))
+           (looking-back "\\_<doc@" (max (point-min) (- (point) 4))))
+         'mtp-mode-doc-face)
+        (t 'font-lock-string-face)))
 
 (defvar mtp-mode-syntax-table
   (let ((table (make-syntax-table lisp-data-mode-syntax-table)))
@@ -183,7 +201,9 @@ self.")
   (setq-local indent-line-function #'mtp-mode--indent-line)
   ;; Lisp's own region indenter moves one-; comments too, so indent line by line.
   (setq-local indent-region-function nil)
-  (setq-local font-lock-defaults '(mtp-mode--font-lock)))
+  (setq-local font-lock-defaults
+              '(mtp-mode--font-lock nil nil nil nil
+                (font-lock-syntactic-face-function . mtp-mode--syntactic-face))))
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.mtp\\'" . mtp-mode))

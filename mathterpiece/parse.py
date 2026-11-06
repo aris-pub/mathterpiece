@@ -24,7 +24,7 @@ from mathterpiece.nodes import (
 OPERATORS = frozenset({"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!="})
 ESCAPES = {"'": "'", "\\": "\\", "n": "\n"}
 RESERVED = frozenset("[]{}")
-NAME_EXCLUDED = frozenset("[]{}./;\"$^()'|")
+NAME_EXCLUDED = frozenset("[]{}./;\"$^()'|@")
 NAME_BAD_START = frozenset("+-*<>=")
 
 _UREAL = r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?"
@@ -192,7 +192,20 @@ class _Parser:
             raise ParseError("unexpected ']'", pos)
         if ch in RESERVED:
             raise ParseError(f"{ch!r} is reserved", pos)
+        if self.src.startswith("doc@", self.i):
+            return self.doc()
         return self.atom()
+
+    def doc(self) -> Form:
+        """doc@'text', which is (doc 'text')."""
+        pos = self.pos()
+        for _ in "doc@":
+            self.advance()
+        if self.peek() != "'":
+            raise ParseError(
+                "doc@ is followed by its text in single quotes: doc@'text'", self.pos()
+            )
+        return Form((Name(("doc",), pos), self.string()), pos)
 
     def form(self) -> Form:
         pos = self.pos()
@@ -280,6 +293,8 @@ class _Parser:
             return BoolLit(text == "true", pos)
         if text == "none":
             return NoneLit(pos)
+        if "@" in text:
+            raise ParseError("'@' only follows doc, as in doc@'text'", pos)
         if text == "_":
             raise ParseError("_ is not a name: write none, or head_ for a form with no name", pos)
         if (number := _number(text, pos)) is not None:

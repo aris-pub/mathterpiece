@@ -3,7 +3,7 @@
 ; page restyles it through its CSS variable, --mtp-colors-okabe-ito-named-orange.
 
 (palette okabe-ito-named
-    (doc 'Okabe and Ito\'s eight colors, apart for readers with any common color blindness.')
+  doc@'Okabe and Ito\'s eight colors, apart for readers with any common color blindness.'
   (orange '#e69f00')
   (sky-blue '#56b4e9')
   (bluish-green '#009e73')
@@ -14,7 +14,7 @@
   (black '#000000'))
 
 (palette tab10-named
-    (doc 'Matplotlib\'s default ten, the colors its plots take one after another.')
+  doc@'Matplotlib\'s default ten, the colors its plots take one after another.'
   (blue '#1f77b4')
   (orange '#ff7f0e')
   (green '#2ca02c')
@@ -33,12 +33,12 @@
      okabe-ito-named.yellow okabe-ito-named.blue okabe-ito-named.vermillion
      okabe-ito-named.reddish-purple okabe-ito-named.black]
     (discrete true) (positions [0 8]) (wrap-at 8)
-    (doc '(okabe-ito k) is Okabe and Ito\'s color k, from 0, starting again after the last.'))
+  doc@'(okabe-ito k) is Okabe and Ito\'s color k, from 0, starting again after the last.')
 (colormap tab10
     [tab10-named.blue tab10-named.orange tab10-named.green tab10-named.red tab10-named.purple
      tab10-named.brown tab10-named.pink tab10-named.gray tab10-named.olive tab10-named.cyan]
     (discrete true) (positions [0 10]) (wrap-at 10)
-    (doc '(tab10 k) is Matplotlib\'s color k, from 0, starting again after the last.'))
+  doc@'(tab10 k) is Matplotlib\'s color k, from 0, starting again after the last.')
 
 ; Colormaps from 0 to 1, each 17 colors evenly spaced, sampled from matplotlib's own: so close to
 ; them that the difference does not show. A world model gives its values its own way, for
@@ -46,16 +46,16 @@
 (colormap viridis
     ['#440154' '#48186a' '#472d7b' '#424086' '#3b528b' '#33638d' '#2c728e' '#26828e' '#21918c'
      '#1fa088' '#28ae80' '#3fbc73' '#5ec962' '#84d44b' '#addc30' '#d8e219' '#fde725']
-    (doc 'Dark purple through blue and green to yellow, from 0 to 1.'))
+  doc@'Dark purple through blue and green to yellow, from 0 to 1.')
 (colormap magma
     ['#000004' '#0a0822' '#1d1147' '#36106b' '#51127c' '#6a1c81' '#832681' '#9c2e7f' '#b73779'
      '#d0416f' '#e75263' '#f56b5c' '#fc8961' '#fea772' '#fec488' '#fde2a3' '#fcfdbf']
-    (doc 'Black through purple and red to pale yellow, from 0 to 1.'))
+  doc@'Black through purple and red to pale yellow, from 0 to 1.')
 (colormap cividis
     ['#00224e' '#002e6a' '#1a386f' '#32436d' '#434e6c' '#535a6d' '#61656f' '#6f7073' '#7d7c78'
      '#8c8878' '#9b9476' '#aba072' '#bcae6c' '#cdbb63' '#dec958' '#f0d846' '#fee838']
-    (doc 'Blue to yellow, readable with the common kinds of color blindness.'))
+  doc@'Blue to yellow, readable with the common kinds of color blindness.')
 (colormap blue-white-red
     ['#053061' '#2166ac' '#4393c3' '#92c5de' '#d1e5f0' '#f7f7f7' '#fddbc7' '#f4a582' '#d6604d'
      '#b2182b' '#67001f']
-    (doc 'For values on either side of a middle: ColorBrewer\'s eleven, blue to white to red.'))
+  doc@'For values on either side of a middle: ColorBrewer\'s eleven, blue to white to red.')

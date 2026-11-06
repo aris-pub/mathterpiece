@@ -1,5 +1,6 @@
 """mtp fmt (docs/data-model.md, "The mtp command"): each line indented as the Emacs mode indents
-it, trailing spaces dropped, at most one blank line in a row, and nothing else changed."""
+it, trailing spaces dropped, at most one blank line in a row, (doc 'text') written doc@'text',
+and nothing else changed."""
 
 import re
 import shutil
@@ -147,6 +148,27 @@ def _emacs(src: str, tmp_path: Path) -> str:
         capture_output=True,
     )
     return out.read_text()
+
+
+# The author, 2026-11-06: a docstring goes 2 in, with the body, whatever form it documents.
+@pytest.mark.parametrize(
+    "src, want",
+    [
+        (
+            "(motif m ((real r 1))\n(doc 'A dot.')\n(circle c (r r)))\n",
+            "(motif m ((real r 1))\n  doc@'A dot.'\n  (circle c (r r)))\n",
+        ),
+        (
+            "(slider s v\n(from 0)\n(doc 'Sets v.'))\n",
+            "(slider s v\n    (from 0)\n  doc@'Sets v.')\n",
+        ),
+        ("(real k 1 (doc 'It\\'s k.'))\n", "(real k 1 doc@'It\\'s k.')\n"),
+        ("(text_ '(doc \\'x\\')') ; (doc 'y')\n", "(text_ '(doc \\'x\\')') ; (doc 'y')\n"),
+    ],
+)
+def test_a_doc_is_written_doc_at_and_goes_2_in(src, want, tmp_path):
+    assert layout(src) == want
+    assert _emacs(want, tmp_path) == want
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)

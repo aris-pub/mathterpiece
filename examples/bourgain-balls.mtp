@@ -137,7 +137,7 @@
 ; is where it was going: from-moves come before to-moves, so they read the old to.
 (foreach i 32
   (on-click space[i]
-      (doc 'Makes the point x or y, in place of the older of the two.')
+    doc@'Makes the point x or y, in place of the older of the two.'
       (animation (defaults (duration 0.4))
         (at-once
           ; Which point x and y sit on: an int jumps at the start, never passing the points between.
@@ -151,10 +151,10 @@
           (move share (to 1))
           (move replace-x (to (not replace-x)) (duration 0))))))
 
-(slider radius (move share (from 0) (to 1)) (label 'r') (doc 'Sets r, the radius of both balls.'))
+(slider radius (move share (from 0) (to 1)) (label 'r') doc@'Sets r, the radius of both balls.')
 
 (play grow (animation (move share (from 0) (to 1) (duration 3.6) (ease linear)))
-    (doc 'Grows the balls from radius 0 to δ/2.'))
+  doc@'Grows the balls from radius 0 to δ/2.')
 
 (readout note
     (let ((cx (count space (fn p (in-ball x.pos r p.pos))))
@@ -163,11 +163,11 @@
             ((>= r (- h 1e-6))
              'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
             (else $'The balls hold {cx} and {cy} points.')))
-    (doc 'What the balls hold at the radius r.'))
+  doc@'What the balls hold at the radius r.')
 
 (canvas the-space (x 0) (y -318) (width 600) (height 318)
-    (doc 'The points, the pair x and y, and the balls around them.')
+  doc@'The points, the pair x and y, and the balls around them.'
   rings pair space x y)
 (canvas the-bar (x 0) (y -356) (width 600) (height 56)
-    (doc 'The bar that cuts [0, δ/2] at the ρⱼ and fills up to r.')
+  doc@'The bar that cuts [0, δ/2] at the ρⱼ and fills up to r.'
   bar)

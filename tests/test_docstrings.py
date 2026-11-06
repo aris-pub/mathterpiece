@@ -2,11 +2,14 @@
 known when compiling, for the illustrator and the author; it is written into the compiled model
 for objects and functions, and the inventory page shows it. The author, 2026-11-05: written as
 (doc …), never as a string at a fixed place; on every declaration; separate from a reader's
-description (mtp-fl20)."""
+description (mtp-fl20). The author, 2026-11-06: written doc@'text', which the reader makes
+(doc 'text'), and which mtp fmt writes in place of it, 2 in like the body."""
 
 import pytest
 from helpers import doc, error, model
 from mtpc_check import errors
+
+from mathterpiece.parse import ParseError, parse
 
 
 def obj_doc(d, name):
@@ -120,3 +123,31 @@ def test_it_is_plain_text():
 
 def test_doc_is_reserved():
     error("(real doc 1)", "'doc' is reserved")
+
+
+class TestDocAt:
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(real k 1 doc@'D.')",
+            "(scene s (group g doc@'D.' (circle_ (r 1))))",
+            "(motif m () doc@'D.' (circle_ (r 1))) (scene s (m inst))",
+            "(func f ((real x)) doc@'D.' x) (real k) (real v (f k))",
+        ],
+    )
+    def test_doc_at_is_doc(self, src):
+        assert doc(src) == doc(src.replace("doc@'D.'", "(doc 'D.')"))
+
+    @pytest.mark.parametrize(
+        "src, msg",
+        [
+            ("(real k 1 doc@x)", "doc@ is followed by its text in single quotes: doc@'text'"),
+            ("(real k 1 doc@$'x')", "doc@ is followed by its text in single quotes: doc@'text'"),
+            ("(real k 1 note@'x')", "'@' only follows doc, as in doc@'text'"),
+            ("(real a@b 1)", "'@' only follows doc, as in doc@'text'"),
+        ],
+    )
+    def test_at_follows_only_doc_and_takes_a_plain_string(self, src, msg):
+        with pytest.raises(ParseError) as exc:
+            parse(src)
+        assert exc.value.msg == msg

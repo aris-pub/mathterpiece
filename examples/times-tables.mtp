@@ -43,7 +43,7 @@
           (pos (+ first [0.5 (- line)]))))))
 
 (canvas view (x -9) (y -9.6) (width 18) (height 19) (pan false) (zoom false)
-    (doc 'The circle and its chords.')
+  doc@'The circle and its chords.'
   table captions forms)
 
 ; Each stop moves m to a whole number, where the chords close up into a curve with m - 1 cusps.
@@ -54,7 +54,7 @@
 
 ; Each stop but the last rests a moment before the next.
 (play tour (label 'play the tour') (buttons true)
-    (doc 'Plays the tour: m = 2, 3, 5, then 9.')
+  doc@'Plays the tour: m = 2, 3, 5, then 9.'
     (animation
       (in-order cardioid (wait 1.2))
       (in-order nephroid (wait 1.2))

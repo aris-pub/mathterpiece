@@ -65,25 +65,25 @@
     (text_ '(move ring.dash-offset …)' (pos (+ (cell 1 1) under)))))
 
 (canvas view (x -8) (y -4.8) (width 16) (height 9) (pan false) (zoom false)
-    (doc 'The ends, the corners, the dashes and the marching ring.')
+  doc@'The ends, the corners, the dashes and the marching ring.'
   ends-panel corners-panel pattern march-panel captions)
 
 (play march (autoplay view)
-    (doc 'Marches the dashes round the circle.')
+  doc@'Marches the dashes round the circle.'
     (animation (loop) (move ring.dash-offset (from 0) (to -30) (duration 1.5) (ease linear))))
 
 (button butt (animation (move ends (to 'butt') (duration 0))) (label 'butt')
-    (doc 'Gives the lines butt ends.'))
+  doc@'Gives the lines butt ends.')
 (button round-ends (animation (move ends (to 'round') (duration 0))) (label 'round')
-    (doc 'Gives the lines round ends.'))
+  doc@'Gives the lines round ends.')
 (button square (animation (move ends (to 'square') (duration 0))) (label 'square')
-    (doc 'Gives the lines square ends.'))
+  doc@'Gives the lines square ends.')
 (button miter (animation (move corners (to 'miter') (duration 0))) (label 'miter')
-    (doc 'Gives the corners a miter join.'))
+  doc@'Gives the corners a miter join.')
 (button round-corners (animation (move corners (to 'round') (duration 0))) (label 'round')
-    (doc 'Gives the corners a round join.'))
+  doc@'Gives the corners a round join.')
 (button bevel (animation (move corners (to 'bevel') (duration 0))) (label 'bevel')
-    (doc 'Gives the corners a bevel join.'))
+  doc@'Gives the corners a bevel join.')
 (slider thickness (move width (from 2) (to 32)) (label 'width'))
 (slider dash-slider (move dash-length (from 0) (to 30)) (label 'dash'))
 (slider gap-slider (move gap-length (from 2) (to 30)) (label 'gap'))

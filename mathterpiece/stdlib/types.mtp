@@ -1,3 +1,3 @@
 ; Types that other files share: (import types unit), or (import types) and types.unit.
 
-(type unit real (>= 0) (<= 1) (doc 'A number from 0 to 1, such as how far along a move is.'))
+(type unit real (>= 0) (<= 1) doc@'A number from 0 to 1, such as how far along a move is.')

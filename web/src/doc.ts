@@ -48,7 +48,7 @@ export interface Obj {
   type: Type;
   access: "scene" | "page";
   name: string | null;
-  /** The declaration's (doc 'text'), for the illustrator and the author. */
+  /** The declaration's doc@'text', for the illustrator and the author. */
   doc?: string;
   value?: Attribute;
   token?: boolean;

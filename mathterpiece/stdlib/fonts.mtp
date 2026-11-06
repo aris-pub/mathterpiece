@@ -3,10 +3,10 @@
 ; weight and size are the defaults. Each is a token, so a page restyles it through its CSS
 ; variables, --mtp-fonts-serif-family.
 
-(font serif (family 'Georgia, "Times New Roman", serif') (doc 'A serif family, for text.'))
+(font serif (family 'Georgia, "Times New Roman", serif') doc@'A serif family, for text.')
 (font sans (family 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif')
-    (doc 'A sans-serif family, the system\'s own where there is one.'))
+  doc@'A sans-serif family, the system\'s own where there is one.')
 (font mono (family 'ui-monospace, Menlo, Consolas, monospace')
-    (doc 'A monospace family, for code.'))
+  doc@'A monospace family, for code.')
 (font math (family '"Latin Modern Math", "STIX Two Math", "Cambria Math", serif')
-    (doc 'For text that is mathematics: a font made for it where there is one.'))
+  doc@'For text that is mathematics: a font made for it where there is one.')

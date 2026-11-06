@@ -53,6 +53,8 @@ A name refers to something declared: `theta`, `p`, `show-tan`. Names are written
 
 A form is a head followed by its parts, in parentheses: `(+ theta 10)`, `(circle p (r 0.08))`. The head says what the form is.
 
+One form has a shorter spelling: a docstring, `doc@'text'`, is `(doc 'text')` (reference, "Docstrings"). `@` is allowed nowhere else, in a name or on its own.
+
 A `;` starts a comment, which runs to the end of the line. Line breaks and indentation mean nothing; they are for reading.
 
 ## 3. Values and objects

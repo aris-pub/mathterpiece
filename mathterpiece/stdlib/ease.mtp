@@ -10,68 +10,68 @@
 (import types unit)
 
 (func linear ((unit t))
-    (doc 'Moves in a straight line: t itself.')
+  doc@'Moves in a straight line: t itself.'
   t)
 
 ; The cubic eases, the usual ease-in, ease-out and ease-in-out.
 (func cubic-in ((unit t))
-    (doc 'Starts slowly and speeds up: t cubed.')
+  doc@'Starts slowly and speeds up: t cubed.'
   (* t t t))
 (func cubic-out ((unit t))
-    (doc 'Starts fast and slows down to a stop.')
+  doc@'Starts fast and slows down to a stop.'
   (- 1 (cubic-in (- 1 t))))
 (func cubic-in-out ((unit t))
-    (doc 'Starts slowly, speeds up, and slows down to a stop.')
+  doc@'Starts slowly, speeds up, and slows down to a stop.'
   (if (< t 0.5) (/ (cubic-in (min 1 (* 2 t))) 2) (/ (+ 1 (cubic-out (max 0 (- (* 2 t) 1)))) 2)))
 
 (func spring-out ((unit t))
-    (doc 'Like a spring released from rest: past the end once, then settling there.')
+  doc@'Like a spring released from rest: past the end once, then settling there.'
   (- 1 (* (^ (- 1 t) 3) (+ (cos (* 8 t)) (* 0.375 (sin (* 8 t)))))))
 (func spring-in ((unit t))
-    (doc 'spring-out turned around: the spring is at the start.')
+  doc@'spring-out turned around: the spring is at the start.'
   (- 1 (spring-out (- 1 t))))
 (func spring-in-out ((unit t))
-    (doc 'spring-in over the first half and spring-out over the second.')
+  doc@'spring-in over the first half and spring-out over the second.'
   (if (< t 0.5) (/ (spring-in (min 1 (* 2 t))) 2) (/ (+ 1 (spring-out (max 0 (- (* 2 t) 1)))) 2)))
 
 ; Four parabolas end to end.
 (func bounce-out ((unit t))
-    (doc 'Like a ball landing: three bounces, each smaller, before it rests.')
+  doc@'Like a ball landing: three bounces, each smaller, before it rests.'
   (cond ((< t (/ 1 2.75)) (* 7.5625 t t))
         ((< t (/ 2 2.75)) (+ (* 7.5625 (- t (/ 1.5 2.75)) (- t (/ 1.5 2.75))) 0.75))
         ((< t (/ 2.5 2.75)) (+ (* 7.5625 (- t (/ 2.25 2.75)) (- t (/ 2.25 2.75))) 0.9375))
         (else (+ (* 7.5625 (- t (/ 2.625 2.75)) (- t (/ 2.625 2.75))) 0.984375))))
 (func bounce-in ((unit t))
-    (doc 'bounce-out turned around: the bounces are at the start.')
+  doc@'bounce-out turned around: the bounces are at the start.'
   (- 1 (bounce-out (- 1 t))))
 (func bounce-in-out ((unit t))
-    (doc 'bounce-in over the first half and bounce-out over the second.')
+  doc@'bounce-in over the first half and bounce-out over the second.'
   (if (< t 0.5)
       (/ (bounce-in (min 1 (* 2 t))) 2)
     (/ (+ 1 (bounce-out (max 0 (- (* 2 t) 1)))) 2)))
 
 (func elastic-out ((unit t))
-    (doc 'Like a plucked string: past the end and back, each swing smaller.')
+  doc@'Like a plucked string: past the end and back, each swing smaller.'
   (cond ((<= t 0) 0)
         ((>= t 1) 1)
         (else (+ 1 (* (^ 2 (* -10 t)) (sin (* (- (* 10 t) 0.75) (/ (* 2 pi) 3))))))))
 (func elastic-in ((unit t))
-    (doc 'elastic-out turned around: the swings are at the start.')
+  doc@'elastic-out turned around: the swings are at the start.'
   (- 1 (elastic-out (- 1 t))))
 (func elastic-in-out ((unit t))
-    (doc 'elastic-in over the first half and elastic-out over the second.')
+  doc@'elastic-in over the first half and elastic-out over the second.'
   (if (< t 0.5) (/ (elastic-in (min 1 (* 2 t))) 2) (/ (+ 1 (elastic-out (max 0 (- (* 2 t) 1)))) 2)))
 
 ; 1.70158 is the usual amount.
 (func back-out ((unit t))
-    (doc 'Past the end by about 10% and back.')
+  doc@'Past the end by about 10% and back.'
   (let ((u (- t 1)))
     (+ 1 (* 2.70158 u u u) (* 1.70158 u u))))
 (func back-in ((unit t))
-    (doc 'back-out turned around: back by about 10% before it moves on.')
+  doc@'back-out turned around: back by about 10% before it moves on.'
   (- 1 (back-out (- 1 t))))
 (func back-in-out ((unit t))
-    (doc 'back-in over the first half and back-out over the second.')
+  doc@'back-in over the first half and back-out over the second.'
   (if (< t 0.5)
       (/ (back-in (min 1 (* 2 t))) 2)
     (/ (+ 1 (back-out (max 0 (- (* 2 t) 1)))) 2)))

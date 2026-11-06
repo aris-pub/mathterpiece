@@ -35,4 +35,21 @@
   ;; (circle r …) names a circle r: r there is a name, not the attribute.
   (should-not (eq (mtp-mode-test--face-at "(circle fill (r 1))" "fill") 'font-lock-keyword-face)))
 
+(ert-deftest mtp-mode-sets-a-docstring-apart ()
+  (let ((src "(motif dot ((real r 1))\n  doc@'A dot.'\n  (circle c (r r) (fill 'red')))"))
+    (should (eq (mtp-mode-test--face-at src "doc") 'font-lock-keyword-face))
+    (should (eq (mtp-mode-test--face-at src "A dot") 'mtp-mode-doc-face))
+    (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
+
+(ert-deftest mtp-mode-indents-a-docstring-with-the-body ()
+  (dolist (src '("(motif dot ((real r 1))\ndoc@'A dot.'\n(circle c (r r)))"
+                 "(slider s (move k (from 0) (to 1))\ndoc@'Sets k.')"))
+    (with-temp-buffer
+      (insert src)
+      (mtp-mode)
+      (indent-region (point-min) (point-max))
+      (goto-char (point-min))
+      (search-forward "doc@")
+      (should (= (current-indentation) 2)))))
+
 ;;; mtp-mode-test.el ends here

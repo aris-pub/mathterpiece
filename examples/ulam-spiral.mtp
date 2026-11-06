@@ -77,7 +77,7 @@
 ; The view box shows the whole disc; panning and zooming are on by default.
 (canvas view (x -86) (y -98) (width 172) (height 184) (toggle-duration 0.4)
     (toggle-ease cubic-in-out)
-    (doc 'The spiral and its primes, with the path and the first numbers when switched on.')
+  doc@'The spiral and its primes, with the path and the first numbers when switched on.'
   (when show-labels.value path)
   dots one
   (when show-labels.value labels)

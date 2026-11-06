@@ -5,7 +5,7 @@
 (import house paper ink soft terracotta teal saffron plum code)
 
 (motif landscape ((real grey 0 (>= 0) (<= 1)))
-    (doc 'The landscape and its color swatches, every color mixed grey of the way toward soft.')
+  doc@'The landscape and its color swatches, every color mixed grey of the way toward soft.'
   (group land (defaults (stroke none)) (clip (rect frame (pos [0 1.5]) (width 15) (height 6.4)))
     (rect sky (pos frame.pos) (width frame.width) (height frame.height)
         (fill (mix (mix saffron paper 0.7) soft grey)))
@@ -69,8 +69,8 @@
         (pos [(. (bottom dull.land) 0) (. (bottom dull.left-swatches 0.55) 1)]) (halign 'middle'))))
 
 (canvas view (x -8) (y -5.9) (width 16) (height 10.9) (pan false) (zoom false)
-    (doc 'The landscape in greys, and in color under the lens.')
+  doc@'The landscape in greys, and in color under the lens.'
   dull lens glass forms)
 
-(on-drag glass glass.pos (doc 'Moves the lens.'))
+(on-drag glass glass.pos doc@'Moves the lens.')
 (slider lens-size (move size (from 0.8) (to 3)) (label 'lens size'))
