@@ -767,6 +767,8 @@ class TestParsingNoName:
     def test_a_head_ending_in_an_underscore_has_no_name(self):
         assert parse("(circle_ (r 1))") == parse("(circle none (r 1))")
         assert parse("(line|none_ (to [1 0]))") == parse("(line|none none (to [1 0]))")
+        # mtp-vt25: a motif of a file imported whole.
+        assert parse("(marks.grid_ (step 2))") == parse("(marks.grid none (step 2))")
 
     def test_an_underscore_alone_is_not_a_name(self):
         error_at(

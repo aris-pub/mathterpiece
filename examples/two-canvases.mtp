@@ -20,9 +20,9 @@
 (scene plane (background paper)
   ; A line at every whole number, and the two axes darker.
   (group grid
-    (marks.grid lines (left -9) (right 9) (bottom -4) (top 3) (stroke soft))
-    (marks.axes axes (left -9) (right 9) (bottom -4) (top 3) (stroke soft)
-                (defaults (stroke-opacity 0.8))))
+    (marks.grid_ (left -9) (right 9) (bottom -4) (top 3) (stroke soft))
+    (marks.axes_ (left -9) (right 9) (bottom -4) (top 3) (stroke soft)
+                 (defaults (stroke-opacity 0.8))))
 
   ; Each corner is measured in screen pixels, so it keeps its size on both canvases, and when
   ; either zooms.

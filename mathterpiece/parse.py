@@ -93,10 +93,13 @@ def _unnamed(head: Node) -> Node | None:
     if isinstance(head, Bar):
         last = _unnamed(head.items[-1])
         return None if last is None else Bar((*head.items[:-1], last), head.pos)
-    if isinstance(head, Name) and len(head.parts) == 1 and isinstance(head.parts[0], str):
-        text = head.parts[0]
+    if isinstance(head, Name) and isinstance(head.parts[-1], str):
+        text = head.parts[-1]
         if len(text) > 1 and text.endswith("_"):
-            return NoneLit(head.pos) if text == "none_" else Name((text[:-1],), head.pos)
+            if head.parts == ("none_",):
+                return NoneLit(head.pos)
+            # A motif of a file imported whole: (marks.grid_ …) is (marks.grid none …).
+            return Name((*head.parts[:-1], text[:-1]), head.pos)
     return None
 
 

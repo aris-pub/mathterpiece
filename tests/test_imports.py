@@ -84,6 +84,13 @@ def test_motifs_and_types(files):
     fails(files(house=HOUSE, fig="(import house unit) (unit u 2)"), "breaks")
 
 
+def test_a_motif_of_a_file_imported_whole_with_no_name(files):
+    # mtp-vt25: (house.dot_) is (house.dot none), as (dot_) is (dot none).
+    m = build(files(house=HOUSE, fig="(import house) (scene s (house.dot_) (house.dot|none_))"))
+    assert [o.kind for o in m.objects if o.kind == "instance"] == ["instance", "instance"]
+    fails(files(house=HOUSE, fig="(import house) (scene s (house.nope_))"), "declares no 'nope'")
+
+
 def test_const_variables(files):
     m = build(files(house=HOUSE, fig="(import house gap) (real v (* 2 gap))"))
     assert m.get("v").value.value == 0.8

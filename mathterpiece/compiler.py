@@ -5050,16 +5050,14 @@ def _not_importable(form: Node) -> str | None:
 
 def _through(node, whole: dict):
     """node with every name.part of a file imported whole, whole[name], made into the key part is
-    kept under; part may be written part_ for a form with no name."""
+    kept under."""
     if isinstance(node, Name):
         parts = tuple(_through(p, whole) if not isinstance(p, str) else p for p in node.parts)
         if len(parts) >= 2 and parts[0] in whole and isinstance(parts[1], str):
             exports, part = whole[parts[0]], parts[1]
-            bare = part[:-1] if part.endswith("_") and part[:-1] in exports else part
-            if bare not in exports:
+            if part not in exports:
                 raise CompileError(f"{parts[0]}.mtp declares no '{part}'", node.pos)
-            key = exports[bare] + ("_" if bare != part else "")
-            parts = (key, *parts[2:])
+            parts = (exports[part], *parts[2:])
         return replace(node, parts=parts)
     if isinstance(node, (Form, ListLit, Brackets, Bar)):
         return replace(node, items=tuple(_through(i, whole) for i in node.items))

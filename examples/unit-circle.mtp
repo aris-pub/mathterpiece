@@ -44,8 +44,8 @@
   ; fill but none of the stroke attributes.
   (group frame (defaults (stroke ink) (fill ink))
     (circle rim (r 1) (fill none) (stroke-width 1.6))
-    (marks.axes axes (left -1.35) (right 1.35) (bottom -1.15) (top 1.15) (stroke ink)
-                (defaults (stroke-opacity 0.5)))
+    (marks.axes_ (left -1.35) (right 1.35) (bottom -1.15) (top 1.15) (stroke ink)
+                 (defaults (stroke-opacity 0.5)))
     (line radius (from [0 0]) (to handle.pos) (stroke-width 2))
     (text_ 'θ' (pos (polar 0.18 (/ theta 2))) (font variable))
     (text title 'the unit circle' (pos (+ (line-at 0) [0 0.15])) (font heading))
