@@ -24,6 +24,7 @@ const SPREAD = new Set([
   "dash-offset",
   "line-cap",
   "line-join",
+  "pointer-events",
 ]);
 const SHAPES = new Set([
   "circle",

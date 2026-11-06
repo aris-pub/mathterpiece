@@ -302,12 +302,29 @@ class Writer:
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["conditions"] = self.conditions(o)
+        elif kind == "on-pointermove":
+            d["shape"] = o.data["shape"]
+            d["view"] = o.data["view"]
+            d["target"] = list(o.data["target"])
+            d["conditions"] = self.conditions(o)
+            d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
+            d["stop-propagation"] = self.stop(o)
         elif kind in ("on-click", "on-release", "on-dragend"):
             d["shape"] = o.data["shape"]
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["conditions"] = self.conditions(o)
+            d["stop-propagation"] = self.stop(o)
+        elif kind in ("on-enter", "on-leave"):
+            d["shape"] = o.data["shape"]
+            d["animation"] = o.data["animation"]
+            d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
+            d["conditions"] = self.conditions(o)
         return d
+
+    def stop(self, o: Obj):
+        stop = o.data["stop-propagation"]
+        return self.attribute(stop) if stop is not None else None
 
     def conditions(self, o: Obj) -> list:
         return [

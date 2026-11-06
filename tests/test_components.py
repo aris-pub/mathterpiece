@@ -422,3 +422,129 @@ def test_a_let_in_a_group_reads_the_members_before_it():
         " (foreach k 2 (circle_ (x (+ t.x k))))))"
     )
     assert m.get("c").attrs["x"].bound or m.get("c").attrs["x"].value == 1
+
+
+class TestPointerListeners:
+    # mtp-izob: on-enter and on-leave follow JS's pointerenter and pointerleave, and
+    # on-pointermove its pointermove (the author, 2026-11-06).
+    S = f"{K} (point p [0 0]) (scene s (circle c (r 1)) (circle d (r 1))) (canvas v s)"
+
+    @pytest.mark.parametrize("kind", ["on-enter", "on-leave"])
+    def test_a_hover_listener_on_a_shape(self, kind):
+        m = model(f"{self.S} ({kind} c {MOVE})")
+        (o,) = [o for o in m.objects if o.kind == kind]
+        assert o.data["shape"] == m.id("c")
+        assert m.objects[o.data["animation"]].kind == "animation"
+        assert o.name is None and "label" not in o.attrs
+
+    @pytest.mark.parametrize("kind", ["on-enter", "on-leave", "on-pointermove"])
+    def test_it_takes_what_it_listens_to(self, kind):
+        error(f"{K} ({kind} {MOVE})", f"{kind} takes the shape")
+
+    def test_a_pointer_move_on_a_shape_writes_a_point(self):
+        m = model(f"{self.S} (on-pointermove c p)")
+        (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
+        assert (o.data["shape"], o.data["view"]) == (m.id("c"), None)
+        assert o.data["target"] == (m.id("p"), None)
+
+    def test_a_pointer_move_on_a_canvas(self):
+        m = model(f"{self.S} (on-pointermove v p)")
+        (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
+        assert (o.data["shape"], o.data["view"]) == (None, m.id("v"))
+
+    def test_it_can_move_a_shape(self):
+        m = model(f"{self.S} (on-pointermove v d.pos (<= d.x 3) (>= d.y -1))")
+        (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
+        assert o.data["target"] == (m.id("d"), "pos")
+        assert [c["target"] for c in o.data["conditions"]] == [(m.id("d"), "x"), (m.id("d"), "y")]
+
+    def test_its_target_is_a_point(self):
+        error(f"{self.S} (on-pointermove v k)", "on-pointermove writes the pointer's position")
+
+    def test_it_needs_a_target(self):
+        error(f"{self.S} (on-pointermove v)", r"on-pointermove is \(on-pointermove shape target")
+
+    def test_its_target_is_free(self):
+        error(
+            f"{K} (point q [1 1] (const)) (scene s (circle c (r 1))) (canvas v s)"
+            " (on-pointermove v q)",
+            "q is const",
+        )
+
+    def test_a_group_is_moved_by_its_translate(self):
+        src = "(scene s (group g (circle c (r 1)))) (canvas v s)"
+        error(f"{src} (on-pointermove v g.pos)", "write its translate")
+        model(f"{src} (on-pointermove v g.translate)")
+
+    def test_a_shape_inside_a_fixed_size_group_is_an_error(self):
+        error(
+            "(scene s (group g (fixed-size true) (circle c (r 3)))) (canvas v s)"
+            " (on-pointermove v c.pos)",
+            "inside a fixed-size group",
+        )
+
+    def test_the_compiled_file(self):
+        import json
+
+        from mtpc_check import errors
+
+        from mathterpiece.mtpc import write
+
+        m = model(
+            f"{self.S} (on-enter c {MOVE}) (on-leave c (active true) {MOVE})"
+            " (on-pointermove c p) (on-pointermove v d.pos (<= d.x 3))"
+        )
+        d = json.loads(write(m))
+        assert errors(d) == []
+        kinds = [o["kind"] for o in d["objects"]]
+        assert {"on-enter", "on-leave", "on-pointermove"} <= set(kinds)
+
+
+class TestBubbling:
+    # The author, 2026-11-06: as in the DOM, a click, a release, the end of a drag and a pointer
+    # move go up the scene tree to every listener of their kind, unless one stops them.
+    S = f"{K} (point p [0 0]) (scene s (group g (circle c (r 1)))) (canvas v s)"
+
+    @pytest.mark.parametrize("kind", ["on-click", "on-release", "on-dragend"])
+    def test_a_listener_may_stop_the_event(self, kind):
+        m = model(f"{self.S} ({kind} c (stop-propagation true) {MOVE})")
+        (o,) = [o for o in m.objects if o.kind == kind]
+        assert o.data["stop-propagation"].value is True
+
+    def test_by_default_it_goes_on(self):
+        m = model(f"{self.S} (on-click c {MOVE})")
+        (o,) = [o for o in m.objects if o.kind == "on-click"]
+        assert o.data["stop-propagation"] is None
+
+    def test_a_pointer_move_may_stop_it(self):
+        m = model(f"{self.S} (on-pointermove c p (stop-propagation true))")
+        (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
+        assert o.data["stop-propagation"].value is True
+
+    @pytest.mark.parametrize(
+        "decl, kind",
+        [
+            (f"(on-enter c (stop-propagation true) {MOVE})", "on-enter"),
+            (f"(on-leave c (stop-propagation true) {MOVE})", "on-leave"),
+            ("(on-drag c c.pos (stop-propagation true))", "on-drag"),
+            (f"(button b (stop-propagation true) {MOVE})", "button"),
+        ],
+    )
+    def test_only_what_bubbles_takes_it(self, decl, kind):
+        error(f"{self.S} {decl}", f"{kind} takes no stop-propagation")
+
+    def test_the_compiled_file(self):
+        import json
+
+        from mtpc_check import errors
+
+        from mathterpiece.mtpc import write
+
+        m = model(
+            f"{self.S} (on-click c (stop-propagation true) {MOVE}) (on-release g {MOVE})"
+            " (on-pointermove c p (stop-propagation (> k 1)))"
+        )
+        d = json.loads(write(m))
+        assert errors(d) == []
+        stops = {o["kind"]: o["stop-propagation"] for o in d["objects"] if "stop-propagation" in o}
+        assert stops["on-release"] is None and stops["on-click"] is not None

@@ -15,16 +15,18 @@
     "color" "font" "namespace" "palette" "interface" "colormap"
     "transition" "move" "wait" "animation" "at-once" "in-order"
     "canvas" "readout" "slider" "button" "play" "toggle" "on-drag" "on-click"
-    "on-release" "on-dragend" "on-view" "defaults" "clip" "loop" "autoplay" "exists-when"
+    "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
+    "defaults" "clip" "loop" "autoplay" "exists-when"
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
   "Heads of mtp's forms. Any of them may end in an underscore, as in (circle_ …).")
 
 (defconst mtp-mode--arguments
-  '("a" "align" "autoplay" "b" "background" "buttons" "c" "clip" "dash" "dash-offset"
+  '("a" "active" "align" "autoplay" "b" "background" "buttons" "c" "clip" "dash" "dash-offset"
     "doc" "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap"
     "halign" "height"
-    "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points" "pos" "r" "rx"
-    "ry" "size" "step" "stroke" "stroke-opacity" "stroke-width" "style" "to" "toggle-duration" "toggle-ease" "transform"
+    "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points"
+    "pointer-events" "pos" "r" "rx"
+    "ry" "size" "step" "stop-propagation" "stroke" "stroke-opacity" "stroke-width" "style" "to" "toggle-duration" "toggle-ease" "transform"
     "translate" "valign" "value" "weight" "width"
     "x" "y" "zoom")
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,
@@ -50,7 +52,8 @@ take `font-lock-keyword-face', so the two stand apart.")
     ("canvas" . 1) ("readout" . 2) ("slider" . 2) ("button" . 1) ("play" . 1) ("toggle" . 2)
     ;; Forms with no name.
     ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("on-drag" . 2) ("on-click" . 1)
-    ("on-release" . 1) ("on-dragend" . 1) ("on-view" . 1) ("defaults" . 0)
+    ("on-release" . 1) ("on-dragend" . 1) ("on-view" . 1) ("on-enter" . 1) ("on-leave" . 1)
+    ("on-pointermove" . 2) ("defaults" . 0)
     ("exists-when" . 1)
     ("when" . 1) ("foreach" . 2) ("let" . 1) ("fn" . 1) ("if" . 2))
   "How many positional arguments each form takes before its body, counting its name.
@@ -73,7 +76,8 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
 (defconst mtp-mode--no-body
   '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text"
     "slider" "button" "play" "toggle" "readout" "on-drag" "on-click"
-    "on-release" "on-dragend" "on-view" "move" "transition" "font" "color"
+    "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
+    "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "colormap" "interface" "defaults")
   "Forms that take no body: every item after their positional arguments is indented 4.")

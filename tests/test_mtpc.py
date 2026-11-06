@@ -62,6 +62,7 @@ def test_the_examples_that_use_the_house_style_import_it():
             "colormaps",
             "dials",
             "ease-race",
+            "inversion",
             "koch-snowflake",
             "lens",
             "lissajous",

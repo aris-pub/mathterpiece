@@ -561,3 +561,121 @@ describe("a compiled model given in the page", () => {
     expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("no script with the id m-data");
   });
 });
+
+describe("the pointer over a shape", () => {
+  // mtp-izob: on-enter, on-leave and on-pointermove follow JS's pointerenter, pointerleave and
+  // pointermove, touch included (the author, 2026-11-06).
+  const shape = (rt: Runtime, name: string) => document.querySelector(`mtp-canvas [data-mtp-id="${rt.id(name)}"]`)!;
+  const svg = () => document.querySelector("mtp-canvas svg")!;
+  const at = (el: Element, type: string, x = 0, y = 0, pointerType = "mouse") =>
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType }));
+  const open = () => page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("pointer"));
+
+  it("plays on-enter when the pointer comes onto the shape, and on-leave when it goes", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "a"), "pointermove");
+    pass(0.1);
+    expect([v("entered"), v("left")]).toEqual([1, 0]);
+    // Moving over the shape again enters nothing.
+    at(shape(rt, "a"), "pointermove");
+    at(svg(), "pointermove");
+    pass(0.1);
+    expect([v("entered"), v("left")]).toEqual([1, 1]);
+  });
+
+  it("enters a group from any of its members", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "b"), "pointermove");
+    at(shape(rt, "b"), "pointermove");
+    pass(0.1);
+    expect(v("into-g")).toBe(1);
+  });
+
+  it("leaves when the pointer leaves the canvas", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "a"), "pointermove");
+    svg().dispatchEvent(new PointerEvent("pointerleave", { pointerId: 1 }));
+    pass(0.1);
+    expect(v("left")).toBe(1);
+  });
+
+  it("on a touch screen, enters when the finger comes down and leaves when it lifts", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "a"), "pointerdown", 0, 0, "touch");
+    pass(0.1);
+    expect(v("entered")).toBe(1);
+    at(shape(rt, "a"), "pointerup", 0, 0, "touch");
+    pass(0.1);
+    expect(v("left")).toBe(1);
+  });
+
+  it("on-pointermove writes the pointer's position while it is over the shape", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "a"), "pointermove", 3, -1);
+    expect(v("p")).toEqual([0, 0]);
+    at(shape(rt, "b"), "pointermove", 3, -1);
+    expect(v("p")).toEqual([3, 1]);
+  });
+
+  it("on-pointermove on a canvas moves a shape under the pointer, within its conditions", () => {
+    const [, rt, v] = open();
+    at(svg(), "pointermove", 1, -4);
+    expect([v("c", "x"), v("c", "y")]).toEqual([1, 4]);
+    at(shape(rt, "b"), "pointermove", 6, 0);
+    expect([v("c", "x"), v("c", "y")]).toEqual([2, 0]);
+  });
+
+  it("lets the pointer through a shape with pointer-events false", () => {
+    const [, rt] = open();
+    expect(shape(rt, "through").getAttribute("pointer-events")).toBe("none");
+    expect(shape(rt, "a").hasAttribute("pointer-events")).toBe(false);
+    rt.write(rt.id("through"), "pointer-events", true);
+    expect(shape(rt, "through").hasAttribute("pointer-events")).toBe(false);
+  });
+
+  it("on-pointermove writes a translate in its container's frame", () => {
+    const [, , v] = open();
+    at(svg(), "pointermove", 4, -2);
+    expect(v("h", "translate")).toEqual([2, 1]);
+  });
+});
+
+describe("bubbling", () => {
+  // The author, 2026-11-06: as in the DOM, a click, a release and a pointer move go up the scene
+  // tree to every listener of their kind, unless one stops them with stop-propagation.
+  const shape = (rt: Runtime, name: string) => document.querySelector(`mtp-canvas [data-mtp-id="${rt.id(name)}"]`)!;
+  const at = (el: Element, type: string, x = 0, y = 0) =>
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
+  const open = () => page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("bubble"));
+  const click = (el: Element) => {
+    at(el, "pointerdown");
+    at(el, "pointerup");
+    pass(0.1);
+  };
+
+  it("a click reaches the shape's listener and its group's", () => {
+    const [, rt, v] = open();
+    click(shape(rt, "c"));
+    expect([v("inner"), v("outer")]).toEqual([1, 1]);
+  });
+
+  it("a listener with stop-propagation keeps it from its group", () => {
+    const [, rt, v] = open();
+    click(shape(rt, "d"));
+    expect([v("top"), v("outer")]).toEqual([1, 0]);
+  });
+
+  it("a release reaches the shape's listener and its group's", () => {
+    const [, rt, v] = open();
+    click(shape(rt, "c"));
+    expect([v("r-in"), v("r-out")]).toEqual([1, 1]);
+  });
+
+  it("a pointer move reaches the canvas's listener unless a shape's stops it", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "c"), "pointermove", 1, -2);
+    expect([v("p"), v("q")]).toEqual([[0, 0], [1, 2]]);
+    at(shape(rt, "d"), "pointermove", 3, -4);
+    expect([v("p"), v("q")]).toEqual([[3, 4], [1, 2]]);
+  });
+});

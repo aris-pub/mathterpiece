@@ -98,7 +98,11 @@ RESERVED = frozenset(
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
-WRITER_OPTIONS = {"animation", "label", "step", "buttons", "value", "active", "autoplay"}
+WRITER_OPTIONS = {
+    *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"]
+}
+# The listeners whose event goes up the scene tree, as in the DOM, unless one stops it.
+BUBBLES = ("on-click", "on-release", "on-dragend", "on-pointermove")
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
@@ -132,9 +136,12 @@ COMPONENTS = {
     "on-view",
     "on-release",
     "on-dragend",
+    "on-enter",
+    "on-leave",
+    "on-pointermove",
 }
 # Listeners on a shape: their positional argument is the shape they listen to.
-ON_SHAPE = ("on-drag", "on-click", "on-release", "on-dragend")
+ON_SHAPE = ("on-drag", "on-click", "on-release", "on-dragend", "on-enter", "on-leave")
 # The views and controls a play's autoplay may wait for.
 SEEN = {"canvas", "readout", "slider", "button", "play", "toggle"}
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
@@ -183,6 +190,9 @@ PAINTED = {
     "dash-offset": Argument(REAL, 0),
     "line-cap": Argument(LINE_CAP, "butt"),
     "line-join": Argument(LINE_JOIN, "miter"),
+    # With false the pointer passes through to what is drawn under, as CSS's pointer-events:
+    # none (the author, 2026-11-06).
+    "pointer-events": Argument(BOOL, True),
 }
 # What only a stroke uses, which a text takes from no group, since a stroke would outline its
 # letters.
@@ -2371,6 +2381,13 @@ class _Compiler:
                 raise CompileError("on-view takes the canvas it listens to", form.pos)
             name, pos, items = None, form.pos, form.items[2:]
             shape = self.component_named(form.items[1], {"canvas"}, "expected the name of a canvas")
+        elif kind == "on-pointermove":
+            if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
+                raise CompileError(
+                    "on-pointermove takes the shape or the canvas it listens to", form.pos
+                )
+            name, pos, items = None, form.pos, form.items[2:]
+            shape = self.shape_or_canvas(form.items[1])
         else:
             name, pos = self.name_of(form, scope)
             if name is None:
@@ -2388,7 +2405,7 @@ class _Compiler:
         elif kind != "readout":
             # A slider's first item is its move, and on-drag's and toggle's their target:
             # positional arguments.
-            body = items[1:] if kind in ("slider", "on-drag", "toggle") else items
+            body = items[1:] if kind in ("slider", "on-drag", "on-pointermove", "toggle") else items
             self.options_first(body, lambda it: _head(it) in WRITER_OPTIONS, kind)
         build = getattr(self, "build_" + kind.replace("-", "_"))
         build(obj, list(items), shape)
@@ -2414,6 +2431,14 @@ class _Compiler:
         if i is None or self.model.objects[i].kind not in kinds:
             raise CompileError(message, node.pos)
         return i
+
+    def shape_or_canvas(self, node: Node) -> tuple:
+        """What an on-pointermove listens to: (shape, None) or (None, canvas)."""
+        name = node.parts[0] if isinstance(node, Name) and len(node.parts) == 1 else None
+        i = self.model.names.get(name) if isinstance(name, str) else None
+        if i is not None and self.model.objects[i].kind == "canvas":
+            return None, i
+        return self.read_shape(node), None
 
     def read_shape(self, node: Node) -> int:
         e = self.expr(node, None, self.cscope)
@@ -2470,7 +2495,12 @@ class _Compiler:
 
     def writer(self, obj: Obj, items: list, written: set) -> None:
         """What every writer has: a label (controls), conditions, and the items left over."""
-        if obj.kind not in (*ON_SHAPE, "on-view"):
+        if obj.kind in BUBBLES:
+            self.stops(obj, items)
+        stop = next((it for it in items if _head(it) == "stop-propagation"), None)
+        if stop is not None:
+            raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
+        if obj.kind not in (*ON_SHAPE, "on-view", "on-pointermove"):
             label = self.take(items, "label")
             # By default a control's label is its name; one with no name has an empty label.
             obj.attrs["label"] = (
@@ -2504,6 +2534,16 @@ class _Compiler:
         node = self.take(items, "active")
         obj.data["active"] = (
             self.attribute(BOOL, node, obj.pos, "active", scope=self.cscope)
+            if node is not None
+            else None
+        )
+
+    def stops(self, obj: Obj, items: list) -> None:
+        """(stop-propagation bool): while it holds, the event stops at this listener's shape, as
+        JS's stopPropagation (the author, 2026-11-06)."""
+        node = self.take(items, "stop-propagation")
+        obj.data["stop-propagation"] = (
+            self.attribute(BOOL, node, obj.pos, "stop-propagation", scope=self.cscope)
             if node is not None
             else None
         )
@@ -2693,6 +2733,43 @@ class _Compiler:
 
     build_on_release = build_on_click
     build_on_dragend = build_on_click
+    build_on_enter = build_on_click
+    build_on_leave = build_on_click
+
+    def build_on_pointermove(self, obj: Obj, items: list, listened: tuple) -> None:
+        obj.data["shape"], obj.data["view"] = listened
+        if not items or not isinstance(items[0], Name):
+            raise CompileError(
+                "on-pointermove is (on-pointermove shape target item…), its target a point"
+                " variable or attribute",
+                obj.pos,
+            )
+        target = items.pop(0)
+        i, attr, t = self.writable(target, self.cscope)
+        if _core(t) != POINT:
+            raise CompileError(
+                f"on-pointermove writes the pointer's position, a point, and"
+                f" {_name_text(target)} is {_a(str(t))}",
+                target.pos,
+            )
+        own = attr == "pos" and self.model.objects[i].kind != "variable"
+        if own and self.model.objects[i].kind == "group":
+            raise CompileError(
+                f"a group's pos is where its members are, so writing it puts them all at the"
+                f" pointer: write its translate, {_name_text(target)[:-4]}.translate, to move it",
+                target.pos,
+            )
+        if own and self.inside_fixed(i):
+            raise CompileError(
+                "this shape is inside a fixed-size group, whose members have no size in scene"
+                " units",
+                target.pos,
+            )
+        obj.data["target"] = (i, attr)
+        self.active(obj, items)
+        # A shape's own pos is written as its x and its y, so a condition may limit either.
+        written = {(i, attr)} | ({(i, "x"), (i, "y")} if own else set())
+        self.writer(obj, items, written)
 
     def build_canvas(self, obj: Obj, items: list, shape) -> None:
         defaults = {"x": -10, "y": -10, "width": 20, "height": 20}
@@ -3059,6 +3136,7 @@ class _Compiler:
         scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
         defaults: dict[str, tuple[Node, dict]] = {}
         clip: tuple[Form, dict] | None = None
+        passes: tuple[Node, dict] | None = None
         for item, inner in self.expand_scoped(scoped):
             head = _head(item)
             if self.shape_kind(item) and head not in params:
@@ -3072,6 +3150,13 @@ class _Compiler:
             if head == "defaults" and head not in params:
                 assert isinstance(item, Form)
                 self.group_defaults(item, inner, defaults)
+                continue
+            # As a group's, an instance's pointer-events reaches its members.
+            if head == "pointer-events" and head not in params:
+                assert isinstance(item, Form)
+                if passes is not None:
+                    raise CompileError("'pointer-events' is given twice", item.pos)
+                passes = (item.items[1], inner)
                 continue
             if (
                 head in GROUP_DEFAULTS
@@ -3102,6 +3187,10 @@ class _Compiler:
                     given[attr] = (node, inner)
             else:
                 down[attr] = (node, inner)
+        if passes is not None:
+            if "pointer-events" in defaults:
+                raise CompileError("'pointer-events' is given twice", passes[0].pos)
+            defaults["pointer-events"] = passes
         for attr, (node, inner) in defaults.items():
             down.update(_coordinates(attr, node, inner))
         saved, self.frame = self.frame, (parent if parent != self.scene else None)
@@ -3261,6 +3350,7 @@ class _Compiler:
                 given[attr] = scoped.pop(0)
         existence: list[tuple[Form, dict]] = []
         clip: tuple[Form, dict] | None = None
+        passes: tuple[Node, dict] | None = None
         for raw, outer in scoped:
             # A let or a foreach among a group's members is worked out where it is written, so
             # it reads the members before it: it is expanded as the members are declared.
@@ -3296,6 +3386,13 @@ class _Compiler:
                     assert isinstance(item, Form)
                     self.fixed_size(obj, item, parent)
                     continue
+                # As in CSS, a group's pointer-events reaches its members: a default for them.
+                if kind == "group" and head == "pointer-events":
+                    assert isinstance(item, Form)
+                    if passes is not None:
+                        raise CompileError("'pointer-events' is given twice", item.pos)
+                    passes = (item.items[1], inner)
+                    continue
                 if kind == "group" and head in POSITIONS:
                     raise CompileError(
                         f"a group has no {head} of its own: move it with (translate …)", item.pos
@@ -3328,6 +3425,10 @@ class _Compiler:
         # A group's arguments are defaults for its members: a member's own value wins, and the
         # nearest group's wins over one further out (reference.md, "The scene and shapes").
         down = dict(spread or {})
+        if passes is not None:
+            if "pointer-events" in defaults:
+                raise CompileError("'pointer-events' is given twice", passes[0].pos)
+            defaults["pointer-events"] = passes
         if kind == "group":
             # A fixed-size from a container's defaults goes to the groups among its members, and
             # no further down: their members are in pixels already.

@@ -376,6 +376,9 @@ function paint(rt: Runtime, i: number, el: Element): void {
   el.setAttribute("stroke-linejoin", String(rt.value(i, "line-join")));
   // Stroke widths and dashes are in screen pixels, whatever the view box.
   el.setAttribute("vector-effect", "non-scaling-stroke");
+  // A group's pointer-events reached its members when compiling, so only shapes carry it.
+  if (rt.value(i, "pointer-events") === false) el.setAttribute("pointer-events", "none");
+  else el.removeAttribute("pointer-events");
 }
 
 /** A paint as CSS: none, a color, or one computed from tokens through their CSS variables (docs/mtpc.md). */

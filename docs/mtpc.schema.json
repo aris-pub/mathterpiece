@@ -1407,7 +1407,10 @@
                 "on-click",
                 "on-view",
                 "on-release",
-                "on-dragend"
+                "on-dragend",
+                "on-enter",
+                "on-leave",
+                "on-pointermove"
               ]
             }
           }
@@ -2316,10 +2319,214 @@
             "type": "object",
             "properties": {
               "kind": {
+                "const": "on-pointermove"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "shape",
+              "view",
+              "target",
+              "conditions",
+              "active",
+              "stop-propagation"
+            ],
+            "properties": {
+              "kind": {
+                "const": "on-pointermove"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "shape": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "view": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "target": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clamp"
+                }
+              },
+              "stop-propagation": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "active": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
                 "enum": [
                   "on-click",
                   "on-release",
                   "on-dragend"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "shape",
+              "animation",
+              "active",
+              "conditions",
+              "stop-propagation"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "on-click",
+                  "on-release",
+                  "on-dragend"
+                ]
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "shape": {
+                "$ref": "#/$defs/id"
+              },
+              "animation": {
+                "$ref": "#/$defs/id"
+              },
+              "active": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clamp"
+                }
+              },
+              "stop-propagation": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "on-enter",
+                  "on-leave"
                 ]
               }
             },
@@ -2342,9 +2549,8 @@
             "properties": {
               "kind": {
                 "enum": [
-                  "on-click",
-                  "on-release",
-                  "on-dragend"
+                  "on-enter",
+                  "on-leave"
                 ]
               },
               "type": {
@@ -2745,7 +2951,10 @@
                 "on-click",
                 "on-view",
                 "on-release",
-                "on-dragend"
+                "on-dragend",
+                "on-enter",
+                "on-leave",
+                "on-pointermove"
               ]
             }
           },

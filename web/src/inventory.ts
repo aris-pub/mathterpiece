@@ -6,7 +6,10 @@ import { cssVariable } from "./css.ts";
 import type { Doc, Obj } from "./doc.ts";
 
 const ELEMENTS = new Set(["canvas", "readout", "slider", "toggle", "button", "play"]);
-const LISTENERS = new Set(["on-drag", "on-click", "on-release", "on-dragend", "on-view"]);
+const LISTENERS = new Set([
+  ...["on-drag", "on-click", "on-release", "on-dragend", "on-view"],
+  ...["on-enter", "on-leave", "on-pointermove"],
+]);
 
 export interface InventoryOptions {
   /** The id of the <mtp-model> on this page that the live components read. */
@@ -78,12 +81,16 @@ function component(o: Obj, opts: InventoryOptions): HTMLElement {
 
 function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
   const entry = el("section", "mtp-inv-entry");
-  const of = o.kind === "on-view" ? name(o.view!) : name(o.shape!);
+  const onCanvas = o.kind === "on-view" || (o.kind === "on-pointermove" && o.view != null);
+  const of = onCanvas ? name(o.view!) : name(o.shape!);
   entry.append(head(o.kind, of));
   if (o.doc) entry.append(el("p", "mtp-inv-doc", o.doc));
   let what: string;
   if (o.kind === "on-drag") {
     what = `The reader drags ${of}, which moves ${target(o.target!, name)}.`;
+  } else if (o.kind === "on-pointermove") {
+    const over = onCanvas ? `the canvas ${of}` : of;
+    what = `While the reader's pointer is over ${over}, it writes the pointer's position to ${target(o.target!, name)}.`;
   } else {
     const moves = movedBy(doc, o.animation ?? null).map((t) => target(t, name));
     const plays = moves.length ? `plays an animation that moves ${moves.join(", ")}` : "plays an animation";
@@ -92,6 +99,8 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
       "on-release": `When the reader lets go of ${of}, it ${plays}.`,
       "on-dragend": `When the reader stops dragging ${of}, it ${plays}.`,
       "on-view": `When the canvas ${of} first comes into view, it ${plays}.`,
+      "on-enter": `When the reader's pointer comes onto ${of}, it ${plays}.`,
+      "on-leave": `When the reader's pointer leaves ${of}, it ${plays}.`,
     }[o.kind]!;
   }
   entry.append(el("p", "", what));
@@ -99,7 +108,7 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
     el(
       "p",
       "mtp-inv-note",
-      o.kind === "on-view"
+      onCanvas
         ? "It has no element of its own."
         : `It has no element of its own: it acts on ${of} on every canvas that draws it.`,
     ),

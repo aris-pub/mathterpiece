@@ -112,7 +112,7 @@ flowchart LR
     end
     subgraph page
       views["views: (canvas …) (readout …)"]
-      listeners["listeners: (on-drag …) (on-click …) (on-release …) (on-dragend …) (on-view …)"]
+      listeners["listeners: (on-drag …) (on-click …) (on-release …) (on-dragend …) (on-view …) (on-enter …) (on-leave …) (on-pointermove …)"]
       controls["controls: (slider …) (button …) (play …) (toggle …)"]
     end
   end
@@ -123,7 +123,7 @@ flowchart LR
   anims -->|moves an attribute or variable| shapes
   controls -->|runs| anims
   listeners -->|attached to| shapes
-  listeners -->|on-view: attached to| views
+  listeners -->|on-view, on-pointermove: attached to| views
   views -->|shows| sc
   views -->|read| vars
   listeners & controls <-->|read, write| vars
@@ -196,7 +196,7 @@ The author connects a world model to a web page with HTML elements.
 - **`<mtp-model>`** loads one compiled model, once, and gives the live model an id. Its `src` says where the compiled model is, in one of two ways:
   - **a file**, `src="dial.mtpc"`, which the page fetches, so the page must be served by a web server;
   - **a block in the page**, `src="#dial-data"`, naming a `<script type="application/json" id="dial-data">` that holds the compiled model and may stand anywhere in the page, before or after the model. Inside it, every `</` is written `<\/`, so that nothing in the compiled model can end the script early. The page `mtp build` writes does this.
-- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. `on-view` is the exception: it names the canvas whose coming into view it waits for.
+- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. `on-view` is the exception: it names the canvas whose coming into view it waits for. So is an `on-pointermove` that names a canvas, which listens to the pointer anywhere over that canvas.
 - **One live model feeds any number of components,** which share its state: the slider in one paragraph, the readout inside a sentence and the canvas below all change together.
 - **A page may load several world models.** Each has its own state; components of one never affect another.
 - **The page styles components with its own CSS.** Tokens, the color and font variables, appear as CSS custom properties that the page may override: a color variable `ink` as `--mtp-ink`, and a font variable `note` through its parts, `--mtp-note-family`, `--mtp-note-style` and `--mtp-note-weight`. A token imported from another file is named by that file: `ink` from `house.mtp` is `--mtp-house-ink`, however it is imported. Each shape is drawn with the page's value, or with the token's declared value where the page gives none. Colors computed from tokens are passed to the browser as CSS color mixes, so they follow the page's values too. An expression that reads a token's channels (`ink.r`) or compares it sees its declared value.

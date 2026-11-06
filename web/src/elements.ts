@@ -7,6 +7,7 @@ import { Listeners } from "./click.ts";
 import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { Player } from "./player.ts";
+import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
 import { type Look, draw, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
@@ -254,7 +255,7 @@ export class MtpCanvas extends MtpPart {
       draw(rt, canvas, svg, (k) => toggles.shownBy(k), look);
       for (const el of svg.querySelectorAll("[data-mtp-id]")) {
         const id = Number(el.getAttribute("data-mtp-id"));
-        if (drags.draggable(id) || clicks.find(id)) (el as SVGElement).style.cursor = "pointer";
+        if (drags.draggable(id) || clicks.find(id).length) (el as SVGElement).style.cursor = "pointer";
       }
     };
     this.replaceChildren(svg);
@@ -328,7 +329,24 @@ export class MtpCanvas extends MtpPart {
     // The shape pressed, for the click on release; drawing replaces the elements, so shapes are
     // compared by id.
     let pressed: number | null = null;
+    // on-enter, on-leave and on-pointermove. A touch screen has no pointer over the canvas but
+    // while a finger is down, so as in JS the finger enters when it comes down and leaves when it
+    // lifts, and it moves only while down: the canvas keeps the page from scrolling under it then.
+    const pointer = new Pointer(rt, canvas);
+    if (pointer.listens((id) => svg.querySelector(`[data-mtp-id="${id}"]`) !== null)) svg.style.touchAction = "none";
+    const play = (listeners: (Obj | null)[]) => {
+      for (const listener of listeners) {
+        const player = listener ? playerFor(rt, listener) : null;
+        if (listener && player) scheduler.start(player, listener);
+      }
+    };
+    const follow = (event: PointerEvent) => {
+      play(pointer.onto(hitOf(event)));
+      pointer.move(toScene(event), (targets, source) => scheduler.claim(targets, source));
+    };
+    svg.addEventListener("pointerleave", () => play(pointer.onto(null)));
     svg.addEventListener("pointerdown", (event) => {
+      follow(event);
       pressed = hitOf(event);
       if (pressed !== null && drags.grab(pressed, toScene(event))) {
         scheduler.claim(drags.targets, drags);
@@ -341,6 +359,7 @@ export class MtpCanvas extends MtpPart {
       svg.setPointerCapture?.(event.pointerId);
     });
     svg.addEventListener("pointermove", (event) => {
+      follow(event);
       if (drags.dragging) {
         drags.move(toScene(event));
         return;
@@ -375,20 +394,18 @@ export class MtpCanvas extends MtpPart {
       // As JS's click: on the nearest shape holding both the pressed and the released one,
       // whatever the pointer did between.
       const both = pressed !== null && released !== null ? holding(rt, pressed, released) : null;
-      const click = both !== null ? clicks.find(both) : null;
-      for (const listener of [
-        released !== null ? releases.find(released) : null,
-        ended !== null ? dragends.find(ended) : null,
-        click,
-      ]) {
-        const player = listener ? playerFor(rt, listener) : null;
-        if (listener && player) scheduler.start(player, listener);
-      }
+      play([
+        ...(released !== null ? releases.find(released) : []),
+        ...(ended !== null ? dragends.find(ended) : []),
+        ...(both !== null ? clicks.find(both) : []),
+      ]);
+      if (event.pointerType === "touch") play(pointer.onto(null));
       pressed = null;
     });
     svg.addEventListener("pointercancel", (event) => {
       lift(event);
       drags.release();
+      play(pointer.onto(null));
     });
   }
 
