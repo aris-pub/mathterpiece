@@ -57,4 +57,10 @@
     (should (eq (mtp-mode-test--face-at src "dot") 'mtp-mode-name-string-face))
     (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
 
+(ert-deftest mtp-mode-reads-a-tex-string ()
+  (let ((src "(formula f tex'\\frac{(a}{b} f\\'(x) \\\\' (term t (fill 'red')))"))
+    (should (eq (mtp-mode-test--face-at src "tex") 'font-lock-keyword-face))
+    (should (eq (mtp-mode-test--face-at src "frac") 'font-lock-string-face))
+    (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
+
 ;;; mtp-mode-test.el ends here

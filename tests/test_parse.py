@@ -827,3 +827,36 @@ class TestNameStrings:
     def test_hash_is_not_in_names(self):
         error_at("(real a#b 1)", "invalid name 'a#b'")
         error_at("(f #x)", "'#' starts a name string: #'dot-{k}'")
+
+
+class TestTexStrings:
+    # The author, 2026-11-06: LaTeX is written in tex'…', where a backslash means nothing, so
+    # the LaTeX reaches MathJax as written. \' is a quote, for primes; \\ is kept whole, so it
+    # never escapes the quote after it.
+    def test_backslashes_are_kept(self):
+        assert atom(r"tex'\frac1b \neq \nabla'") == StrLit(r"\frac1b \neq \nabla", tex=True)
+
+    def test_a_quote(self):
+        assert atom(r"tex'f\'(x)'") == StrLit("f'(x)", tex=True)
+
+    def test_a_double_backslash_is_kept_whole(self):
+        assert atom(r"tex'a \\ b'") == StrLit(r"a \\ b", tex=True)
+        assert atom(r"tex'a \\'") == StrLit("a \\\\", tex=True)
+
+    def test_braces_are_text(self):
+        assert atom(r"tex'\term{gap}{x^{2}}'") == StrLit(r"\term{gap}{x^{2}}", tex=True)
+
+    def test_it_is_not_an_ordinary_string(self):
+        assert atom("tex'x'") != StrLit("x")
+
+    def test_line_breaks(self):
+        assert atom("tex'a\n  b'") == StrLit("a\n  b", tex=True)
+
+    def test_unterminated_reports_its_start(self):
+        assert error_at(r"(f tex'\frac1b", "unterminated string") == Pos(1, 4)
+
+    def test_followed_directly_by_token_is_error(self):
+        error_at("(f tex'a'b)", "expected whitespace, '(', ')' or ';' after a string")
+
+    def test_tex_alone_is_a_name(self):
+        assert atom("tex") == n("tex")

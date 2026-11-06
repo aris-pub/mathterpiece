@@ -233,3 +233,9 @@ def test_the_keyword_tables_are_the_emacs_modes(tmp_path):
     assert {words[0]: set(words[1:]) for words in lines[:-1]} == KEYWORDS
     assert lines[-1][0] == "no-body"
     assert set(lines[-1][1:]) == NO_BODY
+
+
+def test_a_tex_string_is_read_as_a_string():
+    # Its parentheses and brackets are LaTeX, and a \\ before its closing quote does not escape it.
+    src = "(scene s\n(text t tex'\\left( a \\\\'\n(fill red)))\n"
+    assert layout(src) == "(scene s\n  (text t tex'\\left( a \\\\'\n      (fill red)))\n"

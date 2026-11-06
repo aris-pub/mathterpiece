@@ -178,9 +178,10 @@ to `comment-column'."
      1 'mtp-mode-head-face)
     (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 font-lock-keyword-face)
     ("\\_<\\(doc\\)@'" 1 font-lock-keyword-face)
+    ("\\_<\\(tex\\)'" 1 font-lock-keyword-face)
     (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face))
-  "What mtp-mode highlights: the heads of forms, keyword arguments, the doc of doc@'text', and
-none, true, false and self.")
+  "What mtp-mode highlights: the heads of forms, keyword arguments, the doc of doc@'text', the
+tex of tex'LaTeX', and none, true, false and self.")
 
 (defun mtp-mode--syntactic-face (state)
   "The face of the string or comment STATE is in: a docstring, the text of doc@'text', takes

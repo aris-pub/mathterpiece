@@ -39,7 +39,8 @@ Everything in a file is an expression: a literal, a name, or a form. Names may b
 | `1/3` | an exact fraction |
 | `2.5` `1e-3` | reals |
 | `2i` | a complex number |
-| `'crimson'` | a string, in single quotes |
+| `'crimson'` | a string, in single quotes; `\'` is a quote, `\\` a backslash and `\n` a line break |
+| `tex'\frac1b'` | a TeX string: LaTeX, where a backslash means nothing, so `\frac` and `\\` stay as written; only `\'` is a quote, for primes, as in `tex'f\'(x)'` |
 | `$'θ = {theta:.0f}°'` | an interpolated string: each `{…}` is an expression, with an optional format after the colon |
 | `#'dot-{k}'` | a name string: values filled in as in an interpolated string, then read as a name (section 4) |
 | `true` `false` | bools |

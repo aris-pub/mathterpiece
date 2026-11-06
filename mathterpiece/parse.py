@@ -201,6 +201,8 @@ class _Parser:
             raise ParseError(f"{ch!r} is reserved", pos)
         if self.src.startswith("doc@", self.i):
             return self.doc()
+        if self.src.startswith("tex'", self.i):
+            return self.tex_string()
         return self.atom()
 
     def doc(self) -> Form:
@@ -413,6 +415,29 @@ class _Parser:
             chars.append(self.escape(pos) if ch == "\\" else self.advance())
         self.expect_delimiter()
         return StrLit("".join(chars), pos)
+
+    def tex_string(self) -> StrLit:
+        """tex'…': LaTeX, which uses backslashes everywhere, so only \\' is an escape. \\\\ is
+        kept whole, so that it never escapes the quote after it."""
+        pos = self.pos()
+        for _ in "tex":
+            self.advance()
+        self.advance()
+        chars: list[str] = []
+        while True:
+            ch = self.peek()
+            if not ch:
+                raise ParseError("unterminated string", pos)
+            if ch == "'":
+                self.advance()
+                break
+            if ch == "\\" and self.peek(1) == "'":
+                self.advance()
+            elif ch == "\\" and self.peek(1) == "\\":
+                chars.append(self.advance())
+            chars.append(self.advance())
+        self.expect_delimiter()
+        return StrLit("".join(chars), pos, tex=True)
 
     def interp_string(self, parts_may_follow: bool = False) -> InterpStrLit:
         """$'…', or the string of #'…': two characters open it."""

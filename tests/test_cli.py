@@ -151,3 +151,11 @@ def test_a_syntax_error_in_an_imported_file(tmp_path, capsys):
         main(["compile", str(src)])
     assert exc.value.code == 1
     assert capsys.readouterr().err.startswith("house.mtp:1:")
+
+
+def test_parse_marks_a_tex_string(tmp_path, capsys):
+    src = tmp_path / "f.mtp"
+    src.write_text("(f tex'\\frac1b' 'a')\n")
+    main(["parse", str(src)])
+    out = capsys.readouterr().out.splitlines()
+    assert out[2:] == ["  1:4 tex string '\\\\frac1b'", "  1:17 string 'a'"]

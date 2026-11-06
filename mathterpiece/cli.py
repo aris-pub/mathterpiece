@@ -144,8 +144,8 @@ def _tree(node, depth: int) -> Iterator[str]:
         case nodes.Field(expr, spec):
             yield f"{pad}{node.pos} value{f' :{spec}' if spec else ''}"
             yield from _tree(expr, depth + 1)
-        case nodes.StrLit(value):
-            yield f"{pad}{node.pos} string {value!r}"
+        case nodes.StrLit(value, tex=tex):
+            yield f"{pad}{node.pos} {'tex string' if tex else 'string'} {value!r}"
         case nodes.NoneLit():
             yield f"{pad}{node.pos} none"
         case nodes.BoolLit(value):

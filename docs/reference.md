@@ -575,3 +575,7 @@ Motifs to draw over a world model: `(import marks axes grid)`, then `(axes_)` an
 ## Interpolated strings
 
 `$'…{expr}…'` shows each `{expr}`, optionally followed by a format after a colon, using Python's format mini-language: `{x:.2f}` (2 decimals), `{x:+.3f}`, `{p:.0%}` (percent), `{n:d}`, `{x:e}`, `{x:g}`, with fill, alignment and width (`{x:>8.2f}`).
+
+## TeX strings
+
+`tex'…'` holds LaTeX as written, for MathJax to typeset: `tex'\Big(1-\frac1b\Big)^2'`. In an ordinary string a backslash starts an escape, so `'\frac'` is an error and `'\neq'` is a line break and `eq`; in a TeX string a backslash means nothing, and `\\` stays two backslashes, LaTeX's line break. The one escape is `\'`, a quote, for primes: `tex'f\'(x)'` is the LaTeX `f'(x)`. A TeX string is a string, and goes wherever one does; no values are filled into it.

@@ -27,6 +27,8 @@ class Name:
 class StrLit:
     value: str
     pos: Pos = field(default=NOPOS, compare=False)
+    # Written tex'…': LaTeX, read with no escapes but \'.
+    tex: bool = False
 
 
 @dataclass(frozen=True, slots=True)
