@@ -523,6 +523,17 @@ Functions to give a move as its ease, `(import ease bounce-out)` and `(ease boun
 
 An ease that goes past 1 or below 0 takes what it moves past its ends (see "Transitions and animations").
 
+### marks
+
+Motifs to draw over a world model: `(import marks axes grid)`, then `(axes_)` and `(grid_ (step 2))` in a scene. Every mark is visible with no arguments. Each draws in the color `ink` of this file, a token a page restyles through `--mtp-marks-ink`, unless given `(stroke color)`; anything else, such as its stroke width, it takes from `(defaults …)` like any instance.
+
+| Mark | Parameters | Draws |
+|---|---|---|
+| `axes` | `left`, `right`, `bottom`, `top` (from -10 to 10, the default view box), `stroke`, `arrows` (false) | the x and y axes through the origin, with a head at their positive ends when `arrows` is true |
+| `grid` | `left`, `right`, `bottom`, `top` (from -10 to 10), `step` (1), all `const`; `stroke`, `stroke-opacity` (0.25) | a faint line at every multiple of `step` between the bounds, across and up |
+| `angle-mark` | `from` (0), `to` (90), `r` (22), `label` (''), `stroke` | at its position, an arc of radius `r` from the direction `from` to the direction `to`, counterclockwise, and its label just outside the arc's middle; a right angle is marked with a square instead. It is a fixed-size group, so `r` is in screen pixels and the mark keeps its size when the reader zooms |
+| `measure` | `from` ([0 0]), `to` ([1 0]), `label` (''), `stroke` | a line from one point to the other with a bar at each end, and its label 6 screen pixels above the middle, whatever the zoom |
+
 ## Constants
 
 | Name | Value |

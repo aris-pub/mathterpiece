@@ -5,6 +5,7 @@
 ; Each canvas lists the shapes it shows.
 
 (import house paper ink soft terracotta teal code)
+(import marks)
 
 (func[real] dot ((point p) (point q)) (+ (* p.x q.x) (* p.y q.y)))
 
@@ -18,13 +19,10 @@
 
 (scene plane (background paper)
   ; A line at every whole number, and the two axes darker.
-  (group grid (defaults (stroke soft) (stroke-width 1))
-    (group lines (defaults (stroke-opacity 0.25))
-      (foreach k 19 (line_ (from [(- k 9) -4]) (to [(- k 9) 3])))
-      (foreach k 8 (line_ (from [-9 (- k 4)]) (to [9 (- k 4)]))))
-    (group axes (defaults (stroke-opacity 0.8))
-      (line_ (from [-9 0]) (to [9 0]))
-      (line_ (from [0 -4]) (to [0 3]))))
+  (group grid
+    (marks.grid lines (left -9) (right 9) (bottom -4) (top 3) (stroke soft))
+    (marks.axes axes (left -9) (right 9) (bottom -4) (top 3) (stroke soft)
+                (defaults (stroke-opacity 0.8))))
 
   ; Each corner is measured in screen pixels, so it keeps its size on both canvases, and when
   ; either zooms.

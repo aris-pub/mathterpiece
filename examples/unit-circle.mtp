@@ -4,6 +4,7 @@
 ; each of them with CSS, as it can restyle the color tokens.
 
 (import ease cubic-in-out)
+(import marks)
 
 (color paper '#fbf8f1')
 (color ink '#1f2a44')
@@ -43,9 +44,8 @@
   ; fill but none of the stroke attributes.
   (group frame (defaults (stroke ink) (fill ink))
     (circle rim (r 1) (fill none) (stroke-width 1.6))
-    (group axes (defaults (stroke-width 1) (stroke-opacity 0.5))
-      (line_ (from (left rim 0.35)) (to (right rim 0.35)))
-      (line_ (from (bottom rim 0.15)) (to (top rim 0.15))))
+    (marks.axes axes (left -1.35) (right 1.35) (bottom -1.15) (top 1.15) (stroke ink)
+                (defaults (stroke-opacity 0.5)))
     (line radius (from [0 0]) (to handle.pos) (stroke-width 2))
     (text_ 'θ' (pos (polar 0.18 (/ theta 2))) (font variable))
     (text title 'the unit circle' (pos (+ (line-at 0) [0 0.15])) (font heading))

@@ -1,0 +1,8 @@
+(import marks axes grid angle-mark measure)
+(scene s
+  (axes mark-axes)
+  (grid mark-grid)
+  (angle-mark mark-angle-mark)
+  (measure mark-measure)
+  (angle-mark sharp (pos [3 3]) (to 60)))
+(canvas v s)

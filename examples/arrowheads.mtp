@@ -6,6 +6,7 @@
 ; A curved head on an arc turns from a to b, and a ruler with a bar at each end measures the sum.
 
 (import house paper ink soft terracotta teal plum variable code)
+(import marks measure)
 
 ; The point at distance 1 in p's direction, or straight up for [0 0]: where a name sits past a tip.
 (func direction ((point p))
@@ -45,12 +46,9 @@
         (text_ 'a + b' (pos (+ s (* 0.5 (direction (- s o))))))))
 
     ; The ruler: as long as the sum, with a bar at each end.
-    (group ruler
-      (let ((n (dist o s)))
-        (line length (from [-2.2 -2.9]) (to [(+ -2.2 n) -2.9]) (stroke ink) (stroke-width 1.5)
-            (head-start 'bar') (head-end 'bar'))
-        (text_ $'|a + b| = {n:.2f}' (pos [(+ -2.2 (/ n 2)) -3.2]) (halign 'middle')
-            (valign 'top') (font code) (fill soft)))))
+    (let ((n (dist o s)))
+      (measure ruler (from [-2.2 -2.9]) (to [(+ -2.2 n) -2.9]) (label $'|a + b| = {n:.2f}')
+               (stroke ink) (defaults (font code)))))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
     (text_ $'(line sum (to s) (head-end \'{kind}\') (head-size {size:.1f}))' (pos [-4.6 3.4]))

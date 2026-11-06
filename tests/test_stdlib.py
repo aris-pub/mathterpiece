@@ -10,7 +10,7 @@ import pytest
 from helpers import doc
 from mtpc_check import errors
 
-from mathterpiece.compiler import STDLIB, _declared, compile_source
+from mathterpiece.compiler import STDLIB, _declared, _head, compile_source
 from mathterpiece.parse import parse
 from mathterpiece.types import PALETTE
 
@@ -36,6 +36,7 @@ NAMES = {
         ),
     ],
     "types": ["unit"],
+    "marks": ["ink", "axes", "grid", "angle-mark", "measure"],
 }
 
 
@@ -250,3 +251,27 @@ class TestColormaps:
 
     def test_imported_whole(self, tmp_path):
         assert value(tmp_path, "(import colors)", "(colors.viridis 1)", "color") == "#fde725ff"
+
+
+class TestMarks:
+    # The author, 2026-11-06: every mark is visible with no arguments, or it is a bug. The
+    # runtime's test draws each one (web/test/marks.test.ts); this checks that it draws them all.
+    FIXTURE = STDLIB.parent.parent / "web/test/fixtures/runtime/stdlib-marks.mtp"
+
+    def test_the_runtime_draws_every_mark_with_no_arguments(self):
+        forms = parse((STDLIB / "marks.mtp").read_text())
+        motifs = [_declared(f) for f in forms if _head(f) == "motif"]
+        fixture = self.FIXTURE.read_text()
+        assert motifs and all(f"({m} mark-{m})" in fixture for m in motifs)
+
+    def marks(self, tmp_path, src):
+        return figure(tmp_path, f"(import marks axes grid angle-mark measure) (scene s {src})")
+
+    def test_a_grid_has_a_line_at_every_step_counting_from_0(self, tmp_path):
+        m = self.marks(tmp_path, "(grid g (left -1.5) (right 2) (bottom 0) (top 1) (step 0.5))")
+        lines = [o for o in m.objects if o.kind == "line"]
+        # x at -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2; y at 0, 0.5, 1.
+        assert len(lines) == 8 + 3
+
+    def test_a_mark_takes_a_color(self, tmp_path):
+        self.marks(tmp_path, "(axes x (stroke '#ff0000')) (measure y (stroke '#ff0000'))")
