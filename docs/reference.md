@@ -447,6 +447,8 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 | `range` | `n`, which stands for `(range 0 n (gap 1))`; `start stop (gap g)`: from `start`, `g` apart, up to `stop` but not including it, so `(range 0 5 (gap 1))` is `[0 1 2 3 4]` and `(range 5 0 (gap -2))` is `[5 3 1]`; or `start stop (num n)`: `n` items evenly apart from `start` to `stop`, both included, so `(range 0 1 (num 5))` is `[0 0.25 0.5 0.75 1]` | a list of ints when the ends and the gap are ints (with `num`, when the ends are ints known when compiling and every item is whole), of reals otherwise; with every argument known when compiling, a list of known length, and otherwise one whose length is known only while drawing | a gap of 0, a negative `num`, more than a million items |
 | `xs[i]`, `g[k]` | a position or key | an item | a position out of range, a missing key |
 
+A function given to one of them takes its parameter's type from the items, and, when the list is known when compiling, their range, whether the parameter is written bare, `(fn k …)`, or with its type, `(fn ((int k)) …)`. So `(map 3 (fn ((int j)) xs[j]))` on a list of three or more reads positions 0 to 2 only, and is never `none`.
+
 ### none
 
 | Function | Takes | Gives |

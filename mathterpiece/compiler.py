@@ -1857,6 +1857,15 @@ class _Compiler:
             params = (Param(pnode.parts[0], hint[0]),)
         else:
             params = self.params(pnode)
+            if hint is not None and len(hint) == len(params):
+                # A declared parameter still learns the range of the items it is given, as a bare
+                # one does: (map 3 (fn ((int j)) xs[j])) reads positions 0 to 2 only.
+                params = tuple(
+                    replace(p, type=_with_range(p.type, _type_range(h)))
+                    if fits(_loose(_inner(h)), _loose(p.type))
+                    else p
+                    for p, h in zip(params, hint, strict=True)
+                )
         body, reads = self.function_body(params, node.items[2], result, scope)
         fid = len(self.model.functions)
         own = {p.name for p in params}
@@ -1939,6 +1948,9 @@ class _Compiler:
                 out = _maybe(out)
             vals = self.fold_each(f, item, coll.value) if coll.known else None
             if vals is not None:
+                # Worked out when compiling: its items may be none only if one of them is.
+                if all(v is not None for v in vals):
+                    out = _inner(out)
                 if _core(out) == POINT:
                     vals = [None if v is None else tuple(v) for v in vals]
                 return _known(sized(ListT(out)), vals)
@@ -5583,7 +5595,7 @@ def _with_length(t: Type, n: int) -> Type:
 
 def _with_range(t: Type, r: Range) -> Type:
     """t narrowed to the range r, where r tells more than t's own range."""
-    if r is None or _core(t) not in NUMBERS[:3] or _may_be_none(t):
+    if r is None or _core(t) not in NUMBERS[:3] or _may_be_none(t) or _wrap_of(t) is not None:
         return t
     have = _type_range(t) or WHOLE
     cs = []

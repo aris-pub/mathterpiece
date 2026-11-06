@@ -32,7 +32,7 @@
   ; Bar i starts where the steps before it end.
   (group timeline (defaults (stroke none))
     (foreach i hops.steps.length
-      (let ((start (sum (somes (map i (fn ((int j)) hops.steps[j].duration)))))
+      (let ((start (sum (map i (fn ((int j)) hops.steps[j].duration))))
             (d hops.steps[i].duration))
         (rect (name $'bar-{i}') (pos [(+ -4 (* unit (+ start (/ d 2)))) -1.6])
             (width (- (* unit d) 0.06)) (height 0.36)

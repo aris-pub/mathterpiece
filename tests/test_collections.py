@@ -145,6 +145,23 @@ class TestMapTypedByItsList:
         )
         assert m.get("picks").value.expr.type.base == ListT(INT)
 
+    def test_a_declared_parameter_takes_the_range_too(self):
+        # Found writing examples/animation-steps.mtp: ((int j)) dropped the items' range, so
+        # xs[j] needed (somes …) though every j was a position of xs.
+        m = model(
+            "(real s) (list[int] face [3 1 2 0] (const))"
+            " (list[int] picks (map [0 1 2 3] (fn ((int f)) (+ face[f] (floor s)))))"
+        )
+        assert m.get("picks").value.expr.type.base == ListT(INT)
+
+    def test_a_map_worked_out_with_no_none_has_no_none(self):
+        # Over an empty range the parameter has no range, but no item is none either.
+        m = model(
+            "(list xs [1 2 3] (const)) (int n 0 (const))"
+            " (real v (sum (map n (fn ((int j)) xs[j]))))"
+        )
+        assert m.get("v").value.value == 0
+
     def test_a_position_proved_in_range_is_never_none(self):
         m = model("(list[int] face [3 1 2 0] (const)) (int f 0 (>= 0) (<= 3)) (int k face[f])")
         assert m.get("k").value.expr.type == INT
