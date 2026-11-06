@@ -55,8 +55,11 @@
     (text_ $'{parts:.2f} of 8 parts' (pos (+ (bottom edge 0.5) [0 -0.9])))))
 
 (canvas view (x -8.4) (y -5) (width 16.8) (height 8.6) (pan false) (zoom false)
+    (doc 'The angle with its arc and pie slice, and the ring cut into parts.')
   angle cut forms)
 
-(on-drag tip theta)
-(slider count (move parts (from 1) (to 8)) (label 'parts'))
-(on-view view (animation (move grow (to 1) (duration 1.4) (ease cubic-out))))
+(on-drag tip theta (doc 'Opens the angle.'))
+(slider count (move parts (from 1) (to 8)) (label 'parts')
+    (doc 'Cuts the ring on the right into that many parts.'))
+(on-view view (animation (move grow (to 1) (duration 1.4) (ease cubic-out)))
+    (doc 'Sweeps the ring into place.'))

@@ -1363,6 +1363,9 @@
         },
         "body": {
           "$ref": "#/$defs/expr"
+        },
+        "doc": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -1462,6 +1465,9 @@
                   "type": "integer",
                   "minimum": 0
                 }
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1516,6 +1522,9 @@
               },
               "attrs": {
                 "$ref": "#/$defs/attrs"
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1588,6 +1597,9 @@
               },
               "of": {
                 "$ref": "#/$defs/name"
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1674,6 +1686,9 @@
                     "$ref": "#/$defs/attribute"
                   }
                 }
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1732,6 +1747,9 @@
               },
               "attrs": {
                 "$ref": "#/$defs/attrs"
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1840,6 +1858,9 @@
                     "additionalProperties": false
                   }
                 ]
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1887,6 +1908,9 @@
               },
               "steps": {
                 "$ref": "#/$defs/step"
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -1959,6 +1983,9 @@
               },
               "attrs": {
                 "$ref": "#/$defs/attrs"
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2006,6 +2033,9 @@
               },
               "attrs": {
                 "$ref": "#/$defs/attrs"
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2096,6 +2126,9 @@
                     "$ref": "#/$defs/id"
                   }
                 ]
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2185,6 +2218,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2267,6 +2303,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2344,6 +2383,9 @@
                 "items": {
                   "$ref": "#/$defs/clamp"
                 }
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2413,6 +2455,9 @@
                 "items": {
                   "$ref": "#/$defs/clamp"
                 }
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -2461,6 +2506,9 @@
                   "type": "integer",
                   "minimum": 0
                 }
+              },
+              "doc": {
+                "type": "string"
               }
             },
             "additionalProperties": false

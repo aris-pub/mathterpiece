@@ -48,6 +48,8 @@ export interface Obj {
   type: Type;
   access: "scene" | "page";
   name: string | null;
+  /** The declaration's (doc 'text'), for the illustrator and the author. */
+  doc?: string;
   value?: Attribute;
   token?: boolean;
   // A font's parts read from another font: the part, and that font's id.

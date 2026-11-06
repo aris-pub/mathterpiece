@@ -53,7 +53,7 @@ describe("the inventory", () => {
   it("says what each listener does, and gives it no line to place", () => {
     const texts = [...show().querySelectorAll(".mtp-inv-entry")]
       .filter((e) => e.querySelector("h3")!.textContent!.startsWith("on-"))
-      .map((e) => [e.querySelector("p")!.textContent, e.querySelector(".mtp-inv-snippet")]);
+      .map((e) => [e.querySelector("p:not(.mtp-inv-doc)")!.textContent, e.querySelector(".mtp-inv-snippet")]);
     expect(texts).toEqual([
       ["The reader drags c, which moves c.pos.", null],
       ["When the reader clicks c, it plays an animation that moves k.", null],
@@ -76,7 +76,7 @@ describe("the inventory", () => {
 
 describe("its tokens", () => {
   const row = (root: HTMLElement, name: string) =>
-    [...root.querySelectorAll(".mtp-inv-tokens tr")].find((r) => r.firstElementChild!.textContent === name)!;
+    [...root.querySelectorAll(".mtp-inv-tokens tr")].find((r) => r.firstElementChild!.firstChild!.textContent === name)!;
 
   it("restyles a color on the page from its control, and resets it", () => {
     const root = show();
@@ -96,5 +96,26 @@ describe("its tokens", () => {
     family!.value = "Courier";
     family!.dispatchEvent(new Event("input"));
     expect(document.documentElement.style.getPropertyValue("--mtp-note-family")).toBe("Courier");
+  });
+});
+
+describe("docstrings", () => {
+  const docOf = (root: HTMLElement, head: string) =>
+    [...root.querySelectorAll(".mtp-inv-entry")]
+      .find((e) => e.querySelector("h3")!.textContent === head)
+      ?.querySelector(".mtp-inv-doc")?.textContent ?? null;
+
+  it("shows each component's and listener's doc under its name, and none where there is none", () => {
+    const root = show();
+    expect(docOf(root, "slider size")).toBe("Sets the radius.");
+    expect(docOf(root, "on-drag c")).toBe("Moves the circle.");
+    expect(docOf(root, "canvas v")).toBeNull();
+  });
+
+  it("shows a token's doc with its name", () => {
+    const row = [...show().querySelectorAll(".mtp-inv-tokens tr")].find(
+      (r) => r.firstElementChild!.firstChild!.textContent === "ink",
+    )!;
+    expect(row.querySelector(".mtp-inv-doc")!.textContent).toBe("The color of the circle.");
   });
 });

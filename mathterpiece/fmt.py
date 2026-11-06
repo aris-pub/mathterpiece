@@ -62,23 +62,23 @@ NAMED = {
 # 4 in, like a positional argument, so it reads apart from the body at 2. The same table as the
 # Emacs mode's.
 _GROUP = {
-    *["defaults", "clip", "fixed-size", "translate", "transform", "gap", "align", "opacity"],
+    *["doc", "defaults", "clip", "fixed-size", "translate", "transform", "gap", "align", "opacity"],
     *["fill", "stroke"],
     *["stroke-width", "fill-opacity", "stroke-opacity", "dash", "line-cap", "line-join"],
     *["x", "y", "pos"],
 }
 _CANVAS = {
-    *["x", "y", "width", "height", "transform", "pan", "zoom", "toggle-duration", "toggle-ease"]
+    *["doc", "x", "y", "width", "height", "transform", "pan", "zoom", "toggle-duration"],
+    "toggle-ease",
 }
 _ANIMATION = {"loop", "duration", "ease", "defaults"}
 KEYWORDS = {
-    "scene": {"background", "transform"},
+    "scene": {"doc", "background", "transform"},
     **{head: _GROUP for head in ["group", "row", "column"]},
     "canvas": _CANVAS,
-    **{head: _ANIMATION for head in ["animation", "at-once", "in-order"]},
-    "motif": set(),
-    "namespace": set(),
-    "palette": set(),
+    "animation": _ANIMATION | {"doc"},
+    **{head: _ANIMATION for head in ["at-once", "in-order"]},
+    **{head: {"doc"} for head in ["motif", "variant", "func", "namespace", "palette"]},
 }
 # Forms that take no body: every item after their positional arguments goes 4 in. The same list
 # as the Emacs mode's.

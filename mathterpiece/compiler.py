@@ -94,6 +94,7 @@ from mathterpiece.types import (
 
 RESERVED = frozenset(
     "scene animation transition move in-order at-once when else true false none const self".split()
+    + ["doc"]
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
@@ -605,12 +606,49 @@ class _Compiler:
     # Declarations ------------------------------------------------------------------------
 
     def top(self, form: Node, scope: dict) -> None:
+        doc = None
+        if isinstance(form, Form):
+            form, doc = _take_doc(form)
         saved, self.here = self.here, form.pos.file
         outer, self.top_form = self.top_form, form
+        before = (len(self.model.objects), {k: set(d) for k, d in self.declared_kinds()})
         try:
             self.top_here(form, scope)
         finally:
             self.here, self.top_form = saved, outer
+        if doc is not None:
+            assert isinstance(form, Form)
+            self.attach_doc(form, doc, *before)
+
+    def declared_kinds(self) -> list[tuple[str, dict]]:
+        """What a declaration may add besides objects, in the order a doc goes to the first."""
+        m = self.model
+        return [
+            ("interface", m.interfaces),
+            ("motif", m.motifs),
+            ("variant", m.variants),
+            ("func", m.funcs),
+            ("type", m.types),
+        ]
+
+    def attach_doc(self, form: Form, doc: str, objects: int, keys: dict) -> None:
+        """Gives doc to what form declared: the object of the form's own kind, or the one named
+        in it, or the first it added, or else the function, type, motif or interface it added."""
+        new = range(objects, len(self.model.objects))
+        if new:
+            # A form can add objects of its own before the one it declares: a listener its
+            # animation, and a canvas the transition that fades its members.
+            own = [i for i in new if self.model.objects[i].kind == _head(form)]
+            at = form.items[1].pos if len(form.items) > 1 else form.pos
+            named = [i for i in new if self.model.objects[i].pos == at]
+            self.model.objects[(own or named or list(new))[0]].data["doc"] = doc
+            return
+        for kind, d in self.declared_kinds():
+            added = [k for k in d if k not in keys[kind]]
+            if added:
+                self.model.docs[(kind, added[0])] = doc
+                return
+        raise CompileError("this declaration takes no doc", form.pos)
 
     def top_here(self, form: Node, scope: dict) -> None:
         head = _head(form)
@@ -950,6 +988,15 @@ class _Compiler:
         return name, node.pos
 
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
+        form, doc = _take_doc(form)
+        start = len(self.model.objects)
+        self.variable_here(form, parent, access, scope)
+        if doc is not None:
+            new = range(start, len(self.model.objects))
+            kept = [i for i in new if self.model.objects[i].kind == "variable"] or list(new)
+            self.model.objects[kept[0]].data["doc"] = doc
+
+    def variable_here(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
         if _head(form) == "namespace":
             raise CompileError("a namespace is declared at the top level", form.pos)
         if isinstance(form.items[0], Name) and form.items[0].parts == ("font",):
@@ -3169,11 +3216,17 @@ class _Compiler:
                 raise CompileError("the scene holds shapes and variables", item.pos)
 
     def shape(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
+        doc = None
+        if items is None:
+            form, doc = _take_doc(form)
         saved, self.here = self.here, form.pos.file
         try:
-            return self.shape_here(form, parent, scope, spread, items, pre)
+            i = self.shape_here(form, parent, scope, spread, items, pre)
         finally:
             self.here = saved
+        if doc is not None:
+            self.model.objects[i].data["doc"] = doc
+        return i
 
     def shape_here(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
         """A shape declaration. items, when given, replaces the form's own items, each with its
@@ -4929,6 +4982,22 @@ def _points_mean(points: Expr) -> Expr:
         n = max(len(ps), 1)
         return _known(POINT, (sum(p[0] for p in ps) / n, sum(p[1] for p in ps) / n))
     return Expr("points-mean", POINT, (points,), points.deps)
+
+
+def _take_doc(form: Form) -> tuple[Form, str | None]:
+    """A declaration's (doc 'text'), taken out of its items: plain text, known when compiling,
+    for the illustrator and the author; never a reader's description (mtp-fl20)."""
+    docs = [it for it in form.items[2:] if _head(it) == "doc"]
+    if not docs:
+        return form, None
+    if len(docs) > 1:
+        raise CompileError("'doc' is given twice", docs[1].pos)
+    item = docs[0]
+    assert isinstance(item, Form)
+    if len(item.items) != 2 or not isinstance(item.items[1], StrLit):
+        raise CompileError("a doc is plain text, known when compiling: (doc 'text')", item.pos)
+    rest = tuple(it for it in form.items if it is not item)
+    return Form(rest, form.pos), item.items[1].value
 
 
 def _fixed_size_value(form: Form) -> bool:

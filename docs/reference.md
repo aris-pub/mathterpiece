@@ -16,6 +16,15 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ## Declarations
 
+### Docstrings
+
+Every declaration may take `(doc 'text')`, an optional argument that says what the declared thing is: `(func clamp ((real x) (real lo) (real hi)) (doc 'x, kept between lo and hi.') (min hi (max lo x)))`, `(real k 1 (>= 0.2) (<= 3) (doc 'The radius of the circle.'))`, `(slider size (move k (from 0.2) (to 3)) (doc 'Sets the radius of the circle.'))`. It goes with the declaration's other optional arguments, and in a function or a motif after the parameters and before the body.
+
+- **It is plain text, known when compiling:** an interpolated string is a compile error. It says what something is; a readout shows what it currently holds.
+- **Variables, shapes, components and the rest of the objects** keep it in the compiled model (mtpc.md), and the inventory page `mtp build` writes shows each component's, each listener's and each token's. A function written into the compiled model keeps its own; a type, a motif or an interface keeps it in the compiler only.
+- **It is for the illustrator and the author,** never a description for a reader, which is a separate matter (mtp-fl20).
+- **It is given once:** two `(doc …)` on one declaration are a compile error. `doc` is a reserved word.
+
 ### Imports
 
 `(import house)` reads `house.mtp` from the folder of the file importing it, or, when there is none there, from the standard library. It gives one name, `house`, and what `house.mtp` declares is read through it: `house.ink`, `(house.dial d1)`, `(house.unit u 0.5)`. `(import house ink accent)` gives `ink` and `accent` as names of their own, and not `house`, as Python's `from house import ink, accent` does. There is no way to import every name at once: each name is written, or the file is imported whole.

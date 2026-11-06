@@ -8,9 +8,9 @@
 (font small (size 13))
 (font name (style 'italic') (size 16))
 
-; A flag on a pole. Its tip, the top of the pole, is a transparent circle, so whatever is placed
-; there follows the flag wherever it is moved.
+; Whatever is placed at the tip follows the flag wherever it is moved.
 (motif flag ()
+    (doc 'A flag on a pole, with a transparent circle at its tip, the top of the pole.')
   (line pole (from [0 0]) (to [0 2]) (stroke ink) (stroke-width 2))
   (triangle banner (a [0 2]) (b [1.2 1.6]) (c [0 1.2]) (fill terracotta) (stroke none))
   (circle tip (pos [0 2]) (r 0) (fill none) (stroke none)))
@@ -53,10 +53,11 @@
       (font name) (fill ink)))
 
 (canvas view (x -7) (y -4.5) (width 14) (height 9) (pan false) (zoom false)
+    (doc 'The card and its eight points, the ball, and the flag.')
   both marks names ball-name tether caption pennant pennant-name)
 
-(slider width (move w (from 0.5) (to 5)) (label 'width'))
-(slider height (move h (from 0.5) (to 3)) (label 'height'))
-(slider spin (move turn (from 0) (to 90)) (label 'turn'))
-(on-drag ball ball.pos)
-(on-drag pennant pennant.pos)
+(slider width (move w (from 0.5) (to 5)) (label 'width') (doc 'Sets the card\'s width.'))
+(slider height (move h (from 0.5) (to 3)) (label 'height') (doc 'Sets the card\'s height.'))
+(slider spin (move turn (from 0) (to 90)) (label 'turn') (doc 'Turns the card.'))
+(on-drag ball ball.pos (doc 'Moves the ball.'))
+(on-drag pennant pennant.pos (doc 'Moves the flag.'))

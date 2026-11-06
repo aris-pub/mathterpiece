@@ -94,9 +94,9 @@
 (list[string] tick-names ['1' '2' '5' '10' '100' '1000'] (const))
 (func cy (real v) (+ -114 (* (max 0 (min 1 (/ (log (max v 1) 10) 3))) 106)))
 
-; The handle on a track: a pill with three grip lines, and its tip, the middle of its top edge,
-; where a guide line ends.
+; Its tip is where a guide line ends.
 (motif handle ((color edge '#7f8da0') (real weight 1.5 (>= 0)))
+    (doc 'A pill with three grip lines, with its tip at the middle of its top edge.')
   (rect body (width 22) (height 12) (rx 6) (ry 6) (fill bg) (stroke edge) (stroke-width weight))
   (circle tip (pos [0 6]) (r 0) (fill none) (stroke none))
   (group grip (defaults (stroke edge) (stroke-width 1))
@@ -316,34 +316,42 @@
 ; The original holds 8 seconds after steps 1 and 2 with a countdown on the play button, and
 ; enters Explore after step 3.
 (play tour (buttons true)
+    (doc 'Plays the tour: one density, the floor rising with n, then all densities.')
     (animation
       (in-order one-density (wait 8))
       (in-order floor-rises (wait 8))
       (in-order all-densities to-explore)))
 
-(button explore (animation to-explore) (label 'Explore'))
+(button explore (animation to-explore) (label 'Explore')
+    (doc 'Skips to Explore, the end of the tour.'))
 (button single-density
     (animation (at-once (defaults (duration 0)) (move mix (to 0)) (move exploring (to true))
                  (move floor (to false)) (move g (to 1))))
-    (label 'one'))
+    (label 'one')
+    (doc 'Shows one density.'))
 (button all-of-them
     (animation (at-once (defaults (duration 0)) (move mix (to 1)) (move exploring (to true))
                  (move floor (to false)) (move g (to 1))))
-    (label 'all'))
+    (label 'all')
+    (doc 'Shows all densities together.'))
 
-(on-drag n-grab L)
-(on-drag t-handle t (<= t (+ L 0.5)))
+(on-drag n-grab L (doc 'Changes the number of levels.'))
+(on-drag t-handle t (<= t (+ L 0.5)) (doc 'Changes the density.'))
 
-(readout heading $'n = {(round (^ 2 L))} points, {L} levels')
+(readout heading $'n = {(round (^ 2 L))} points, {L} levels'
+    (doc 'The number of points and of levels.'))
 (readout caption
     (cond ((= chapter 0)
            'One density serves one scale. A random set of density p separates pairs well only at the levels where each half of their common cluster has about 1/p points. As the density sweeps from 1/2 to 2⁻¹⁰, the well-served levels travel down the hierarchy, and the distortion, set by the worst-served level, is enormous except near the bottom of the valley.')
           ((= chapter 1)
            'The floor rises with n. Even the best single density leaves the levels at both ends of the hierarchy poorly served. More points mean more levels to cover, and the lowest distortion a single density can reach climbs from about 1.3 at n = 16 to about 5.2 at n = 1024.')
           (else
-           'All densities at once. Using every density 2⁻¹, …, 2⁻ᴸ together, each level is served by its own density and the bars even out. The distortion drops to between 1.1 and 1.3 and stays below 1.3 for every n shown.')))
+           'All densities at once. Using every density 2⁻¹, …, 2⁻ᴸ together, each level is served by its own density and the bars even out. The distortion drops to between 1.1 and 1.3 and stays below 1.3 for every n shown.'))
+    (doc 'A paragraph on the step of the tour shown.'))
 
 (canvas stretch-chart (x 0) (y -200) (width 480) (height 200) (pan false) (zoom false)
+    (doc 'The top chart: the relative stretch at each level, and the handle for the levels.')
   bars-chart n-guide n-handle n-grab)
 (canvas distortion-chart (x 0) (y -206) (width 480) (height 206) (pan false) (zoom false)
+    (doc 'The bottom chart: the distortion against the density, and the handle for the density.')
   curve-chart marker t-handle)

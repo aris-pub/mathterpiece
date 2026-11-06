@@ -23,6 +23,7 @@
         (else gold)))
 
 (motif flower ((int n 300 (const)) (real angle 90) (real spread 0.5) (real size 0.17 (>= 0)))
+    (doc 'n seeds, seed i at radius spread times (sqrt i), turned i times angle.')
   (foreach i n
     (circle_
         (pos (polar (* spread (sqrt i)) (* i angle)))
@@ -69,14 +70,15 @@
 
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true)
+    (doc 'Plays the tour: a quarter turn, a third, two fifths, then the golden angle.')
     (animation
       (in-order quarter (wait 2.5))
       (in-order third (wait 2.5))
       (in-order two-fifths (wait 2.5))
       golden))
 
-(canvas view garden)
+(canvas view garden (doc 'The sunflower and the name of its angle.'))
 (slider angle (move sunflower.angle (from 80) (to 180)) (label 'angle'))
 
-; Clicking the flower takes it to the golden angle, as the last stop of the tour does.
-(on-click sunflower (animation golden))
+(on-click sunflower (animation golden)
+    (doc 'Takes the flower to the golden angle, as the last stop of the tour does.'))

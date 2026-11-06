@@ -230,6 +230,8 @@ class Writer:
             "access": o.access,
             "name": o.name,
         }
+        if o.data.get("doc") is not None:
+            d["doc"] = o.data["doc"]
         attrs = {k: self.attribute(p) for k, p in o.attrs.items()}
         kind = o.kind
         if kind == "variable":
@@ -315,11 +317,15 @@ class Writer:
 
     def function(self, f: FuncDef) -> dict:
         assert f.body is not None
-        return {
+        d = {
             "params": self.params(f.params),
             "result": self.ref(f.result),
             "body": self.expr(f.body),
         }
+        doc = self.model.docs.get(("func", f.name)) if f.name else None
+        if doc is not None:
+            d["doc"] = doc
+        return d
 
 
 def _function_id(x) -> int | None:

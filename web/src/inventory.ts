@@ -65,6 +65,7 @@ export function inventory(root: HTMLElement, source: string, opts: InventoryOpti
 function component(o: Obj, opts: InventoryOptions): HTMLElement {
   const entry = el("section", "mtp-inv-entry");
   entry.append(head(o.kind, o.name!));
+  if (o.doc) entry.append(el("p", "mtp-inv-doc", o.doc));
   entry.append(snippet(`<mtp-${o.kind} model="${opts.id}" name="${o.name}"></mtp-${o.kind}>`));
   const live = document.createElement(`mtp-${o.kind}`);
   live.setAttribute("model", opts.model);
@@ -79,6 +80,7 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
   const entry = el("section", "mtp-inv-entry");
   const of = o.kind === "on-view" ? name(o.view!) : name(o.shape!);
   entry.append(head(o.kind, of));
+  if (o.doc) entry.append(el("p", "mtp-inv-doc", o.doc));
   let what: string;
   if (o.kind === "on-drag") {
     what = `The reader drags ${of}, which moves ${target(o.target!, name)}.`;
@@ -105,6 +107,13 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
   return entry;
 }
 
+// A token's name, with its doc under it when it has one.
+function tokenName(o: Obj): HTMLElement {
+  const cell = el("td", "", o.name!);
+  if (o.doc) cell.append(el("div", "mtp-inv-doc", o.doc));
+  return cell;
+}
+
 function token(o: Obj): HTMLElement {
   const row = el("tr");
   const variable = cssVariable(o.name!);
@@ -124,7 +133,7 @@ function token(o: Obj): HTMLElement {
       input.value = value.slice(0, 7);
     });
     control.append(input);
-    row.append(el("td", "", o.name!), code(variable), control, code(value));
+    row.append(tokenName(o), code(variable), control, code(value));
   } else if (o.type === "font" && value && typeof value === "object") {
     const font = value as Record<string, unknown>;
     const parts: [string, HTMLInputElement | HTMLSelectElement, string][] = [];
@@ -154,9 +163,9 @@ function token(o: Obj): HTMLElement {
     }
     const namesCell = el("td");
     namesCell.append(names);
-    row.append(el("td", "", o.name!), namesCell, control, code(`${font.size ?? 16}px`));
+    row.append(tokenName(o), namesCell, control, code(`${font.size ?? 16}px`));
   } else {
-    row.append(el("td", "", o.name!), code(variable), el("td"), code(JSON.stringify(value)));
+    row.append(tokenName(o), code(variable), el("td"), code(JSON.stringify(value)));
   }
   const last = el("td");
   last.append(reset);
@@ -238,6 +247,7 @@ function style(): HTMLStyleElement {
 .mtp-inv-kind { font-weight: 400; opacity: 0.7; }
 .mtp-inv-entry { display: grid; gap: 0.5rem; padding-top: 0.9rem; border-top: 1px solid rgb(128 128 128 / 0.25); }
 .mtp-inv-note { opacity: 0.7; font-size: 0.9em; }
+.mtp-inv-doc { font-style: italic; }
 .mtp-inv-snippet { display: flex; gap: 0.5rem; align-items: flex-start; min-width: 0; }
 .mtp-inv-snippet pre { flex: 1; min-width: 0; margin: 0; padding: 0.45rem 0.6rem; overflow-x: auto;
   font: 13px/1.45 ui-monospace, Menlo, Consolas, monospace; background: rgb(128 128 128 / 0.1); border-radius: 6px; }

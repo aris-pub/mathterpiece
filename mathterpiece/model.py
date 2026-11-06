@@ -136,6 +136,8 @@ class Model:
     # Each interface an author declares, by its name: the attributes it lists, with their types
     # (mtp-ateh). Its type, Interface(name), is in types.
     interfaces: dict[str, dict[str, Type]] = field(default_factory=dict)
+    # The docstrings of what is not an object, by kind and name: ('func', 'clamp') (mtp docstrings).
+    docs: dict[tuple[str, str], str] = field(default_factory=dict)
 
     def id(self, name: str) -> int:
         return self.names[name]

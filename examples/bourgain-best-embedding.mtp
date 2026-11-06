@@ -48,14 +48,17 @@
     (text_ (or? $'distortion {measured:.3f}' 'distortion inf') (pos [-3.15 1.93]) (font big))
     (text_ $'best possible {(/ 2 (sqrt 3)):.3f}' (pos [1.17 1.93]) (font small) (opacity 0.6))))
 
-(readout distortion (or? $'{measured:.3f}' 'inf'))
+(readout distortion (or? $'{measured:.3f}' 'inf')
+    (doc 'The distortion of the drawing as it is now.'))
 
 ; The edges are declared after the points they join, but drawn under them, so the reader can
 ; always grab a point.
-(canvas view (x -3.3) (y -2.3) (width 6.6) (height 4.6) edges points labels)
+(canvas view (x -3.3) (y -2.3) (width 6.6) (height 4.6)
+    (doc 'The center, the three leaves, their edges and the distortion.')
+  edges points labels)
 
 (foreach p points
-  (on-drag p p.pos))
+  (on-drag p p.pos (doc 'Moves the point.')))
 
 (animation optimum
   (at-once (defaults (duration 0.8) (ease cubic-in-out))
