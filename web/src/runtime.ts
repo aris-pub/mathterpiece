@@ -4,7 +4,18 @@
 // works"). The compiler has proved every type, so nothing here checks or converts one.
 import { arcBox } from "./arc.ts";
 import { curveBox } from "./curve.ts";
-import { BUILTINS, Complex, Ref, Undefined, apply, compose, equal, pointsMean, roundHalfAway } from "./builtins.ts";
+import {
+  BUILTINS,
+  Complex,
+  Ref,
+  Undefined,
+  apply,
+  compose,
+  equal,
+  pointsMean,
+  roundHalfAway,
+  wrapInto,
+} from "./builtins.ts";
 import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
 import { isBound } from "./doc.ts";
 import { cssVariable } from "./css.ts";
@@ -74,7 +85,7 @@ function key(id: number, attr: string | null): string {
 
 // The expression forms, whose second item is always the expression's type (mtpc.md).
 const OPS = new Set([
-  "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
+  "lit", "list", "format", "read", "obj", "check", "wrap", "local", "call", "apply", "func",
   "builtinfunc", "part", "spread", "if", "and", "or", "anchor", "rand", "builtin",
 ]);
 
@@ -90,7 +101,8 @@ function expandTypes(doc: Doc): void {
     } else if (x && typeof x === "object") {
       const o = x as Record<string, unknown>;
       for (const key of ["type", "result", "base"]) if (key in o) o[key] = at(o[key]);
-      for (const v of Object.values(o)) walk(v);
+      // A type's constraints hold no expression, and ["wrap", lo, hi] is not one.
+      for (const [key, v] of Object.entries(o)) if (key !== "constraints") walk(v);
     }
   };
   for (const part of [doc.types, doc.objects, doc.functions, doc.shared]) walk(part);
@@ -454,7 +466,10 @@ export class Runtime {
     let v = value;
     if (typeof v === "number") {
       v = Math.min(Math.max(v, -LIMIT), LIMIT);
-      for (const [op, limit] of this.constraints(t)) {
+      // Rounded first, so an int that wraps never rounds up out of its interval.
+      if (base === "int") v = roundHalfAway(v as number);
+      for (const [op, limit, top] of this.constraints(t)) {
+        if (op === "wrap") v = wrapInto(v as number, limit as number, top as number);
         const lim = limit as number;
         if (op === ">=" && (v as number) < lim) v = lim;
         if (op === "<=" && (v as number) > lim) v = lim;
@@ -643,6 +658,14 @@ export class Runtime {
       case "obj": {
         const ref = new Ref(parts[0] as number);
         return () => ref;
+      }
+      case "wrap": {
+        const inner = this.compile(parts[0] as Expr);
+        const [lo, hi] = [parts[1] as number, parts[2] as number];
+        return (ctx) => {
+          const v = inner(ctx);
+          return v === null ? null : wrapInto(v as number, lo, hi);
+        };
       }
       case "check": {
         const inner = this.compile(parts[0] as Expr);

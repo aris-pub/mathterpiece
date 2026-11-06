@@ -30,7 +30,8 @@
 ; One group per function: its line, its name, and its value, so a toggle shows or hides all three.
 ; The circle has radius 1, and the canvas's view box makes it large.
 (scene plane (background paper)
-  (real theta 40)
+  ; An angle: dragging past 360 goes on from 0.
+  (real theta 40 (wrap 0 360))
 
   ; The point is measured in screen pixels, so it keeps its size when the canvas zooms.
   (group handle (translate (polar 1 theta)) (fixed-size true) (circle_ (r 9) (fill ink)))

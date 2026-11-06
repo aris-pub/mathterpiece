@@ -96,7 +96,7 @@ RESERVED = frozenset(
     "scene animation transition move in-order at-once when else true false none const self".split()
     + ["doc"]
 )
-CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const"}
+CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"]
@@ -1308,8 +1308,12 @@ class _Compiler:
 
     def within_result(self, name: str, t: Type, body: Expr, pos: Pos) -> Expr:
         """The body of a function with a declared result, proved to stay within its constraints
-        (or checked, when the result may be none), with the declared range when narrower."""
+        (or checked, when the result may be none), with the declared range when narrower; a
+        result that wraps is brought into its interval."""
         inner = _inner(t)
+        wrap = _wrap_of(inner)
+        if wrap is not None:
+            body = _wrapped(body, wrap)
         if isinstance(inner, Refine):
             if body.known:
                 broken = tuple(
@@ -1792,6 +1796,10 @@ class _Compiler:
             del self.model.functions[functions:]
         if not e.known:
             return None
+        # A result type that wraps brings the folded value into its interval, as it does the body.
+        wrap = _wrap_of(_inner(f.declared)) if f.declared else None
+        if wrap is not None:
+            e = _wrapped(e, wrap)
         if key is not None:
             self.folded[key] = e
         return e
@@ -3892,6 +3900,8 @@ class _Compiler:
         if base in NUMBERS:
             value = 0
             for c in cons:
+                if c[0] == "wrap":
+                    return _wrap_value(0, c[1], c[2])
                 if c[0] in COMPARE and not _satisfies(0, c):
                     low = next((d for d in cons if d[0] == ">="), None)
                     if low is None:
@@ -3971,6 +3981,11 @@ class _Compiler:
                 )
             raise CompileError(f"expected {expected}, got {e.type}", node.pos)
         narrowed = _inner(expected) if expected is not None else None
+        # A value entering a type that wraps is brought into its interval, never refused
+        # (the author, 2026-11-06).
+        wrap = _wrap_of(narrowed)
+        if wrap is not None:
+            e = _wrapped(e, wrap)
         if e.known and e.value is not None and isinstance(narrowed, Refine):
             for c in narrowed.constraints:
                 if c[0] != "const" and not _satisfies(e.value, c):
@@ -5424,6 +5439,8 @@ def _type_range(t: Type) -> Range:
     if isinstance(t, Refine) and t.base in NUMBERS[:3]:
         lo, hi = UNBOUNDED
         for c in t.constraints:
+            if c[0] == "wrap":
+                return (float(c[1]), float(c[2]))
             if c[0] in (">=", ">"):
                 lo = max(lo, float(c[1]))
             elif c[0] in ("<=", "<"):
@@ -5541,8 +5558,39 @@ def _range_within(r: Range, c) -> bool:
     return {">=": lo >= bound, ">": lo > bound, "<=": hi <= bound, "<": hi < bound}[c[0]]
 
 
+def _wrap_of(t) -> tuple | None:
+    """A type's (wrap lo hi), or None when it does not wrap."""
+    if isinstance(t, Refine):
+        return next((c for c in t.constraints if c[0] == "wrap"), None)
+    return None
+
+
+def _wrap_value(v, lo, hi):
+    """v brought into [lo, hi): exact for ints and ratios."""
+    r = (v - lo) % (hi - lo)
+    # A float just below 0 can round up to the whole width.
+    return lo + (0 if r >= hi - lo else r)
+
+
+def _wrapped(e: Expr, wrap: tuple) -> Expr:
+    """e brought into the interval of wrap: its value when it is known, otherwise an expression
+    the runtime reduces each time, unless e's range is already inside."""
+    _, lo, hi = wrap
+    if e.known:
+        if e.value is None:
+            return e
+        return _known(e.type, _wrap_value(e.value, lo, hi))
+    if e.op == "wrap" and e.args[1:] == (lo, hi):
+        return e
+    if e.range is not None and e.range[0] >= lo and e.range[1] < hi:
+        return e
+    return Expr("wrap", e.type, (e, lo, hi), e.deps, (float(lo), float(hi)))
+
+
 def _satisfies(value, c) -> bool:
     kind = c[0]
+    if kind == "wrap":
+        return c[1] <= value < c[2]
     if kind in COMPARE:
         return {">=": value >= c[1], ">": value > c[1], "<=": value <= c[1], "<": value < c[1]}[
             kind

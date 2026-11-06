@@ -50,7 +50,7 @@ def doc(src, path=None):
 
 # The expression forms, whose second item is always the expression's type (docs/mtpc.md).
 OPS = {
-    "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
+    "lit", "list", "format", "read", "obj", "check", "wrap", "local", "call", "apply", "func",
     "builtinfunc", "part", "spread", "if", "and", "or", "anchor", "rand", "builtin",
 }  # fmt: skip
 
@@ -68,8 +68,10 @@ def expand_types(d: dict) -> None:
             for key in ("type", "result", "base"):
                 if key in x:
                     x[key] = at(x[key])
-            for v in x.values():
-                walk(v)
+            # A type's constraints hold no expression, and ["wrap", lo, hi] is not one.
+            for key, v in x.items():
+                if key != "constraints":
+                    walk(v)
         elif isinstance(x, list):
             if len(x) >= 2 and isinstance(x[0], str) and x[0] in OPS:
                 x[1] = at(x[1])

@@ -44,7 +44,7 @@
 (list[int] edge-other-face [2 1 2 3 3 3] (const))
 
 (scene ornament
-  (real yaw 0)
+  (real yaw 0 (wrap 0 360))
   ; Each corner on the screen.
   (list[point] on-screen (map [0 1 2 3] (fn k [(turned-x k yaw) (- (screen-y k yaw))])))
   ; Whether each face faces the viewer.
@@ -71,4 +71,4 @@
 
 (play spin (autoplay view)
   doc@'Turns the tetrahedron once every 14 seconds, from the first time it comes into view.'
-    (animation (loop) (move yaw (from 0) (to 360) (duration 14) (ease linear))))
+    (animation (loop) (move yaw (to (+ yaw 360)) (duration 14) (ease linear))))

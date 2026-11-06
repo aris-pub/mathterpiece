@@ -161,6 +161,14 @@ export function roundHalfAway(x: number, decimals = 0): number {
   return x < 0 ? -value : value;
 }
 
+/** v brought into [lo, hi), for a value whose type wraps (docs/type-system.md, 5.b). */
+export function wrapInto(v: number, lo: number, hi: number): number {
+  const w = hi - lo;
+  const r = (((v - lo) % w) + w) % w;
+  // A value just below lo can round up to the whole width.
+  return lo + (r >= w ? 0 : r);
+}
+
 function lerp(a: unknown, b: unknown, t: number): unknown {
   if (Array.isArray(a)) return a.map((x: number, i) => x + ((b as number[])[i]! - x) * t);
   return (a as number) + ((b as number) - (a as number)) * t;

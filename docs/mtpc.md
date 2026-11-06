@@ -48,7 +48,7 @@ Every type is written as JSON:
 | broadened | `{"union": [T, "none"]}` |
 | narrowed | `{"refine": T, "constraints": [C, …]}` |
 
-A constraint is an array: `[">=", 0]`, `["<", 1]`, `["length", 3]`, `["one-of", ["left", "right"]]`, `["const"]`. A list's known length is always written as a `length` constraint.
+A constraint is an array: `[">=", 0]`, `["<", 1]`, `["length", 3]`, `["one-of", ["left", "right"]]`, `["const"]`, `["wrap", 0, 360]`. A list's known length is always written as a `length` constraint.
 
 ### Declared types
 
@@ -90,6 +90,7 @@ An expression is an array: its operation first, then its type, then its parts. `
 | a variable | `["read", T, id, null, frame]` |
 | an attribute | `["read", T, id, attr, frame]` |
 | an object itself (a group passed to `map`, a shape read as a value) | `["obj", T, id]` |
+| a value brought into an interval | `["wrap", T, e, lo, hi]`: `e` brought into [`lo`, `hi`), `none` when `e` is; written wherever a value that may lie outside enters a type with a `wrap` constraint |
 | a value checked against constraints | `["check", T, e, [C, …]]`: `e`, or `none` when it breaks one of the constraints; written by the compiler wherever a bound value's constraint cannot be proved (type system, "What the compiler proves"), so `T` always includes `none` |
 | a parameter or `let` name | `["local", T, name]` |
 | a built-in function or operator | `["builtin", T, name, arg…]`, `name` being its name in the reference: `"sind"`, `"+"`, `"or?"`, … |

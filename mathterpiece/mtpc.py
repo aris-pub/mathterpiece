@@ -32,7 +32,7 @@ VERSION = 4
 # The operations written as ["builtin", T, name, arg…]; every other operation has its own form.
 OWN_FORM = {
     "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
-    "builtinfunc", "part", "member", "spread", "if", "and", "or", "rand", "anchor",
+    "builtinfunc", "part", "member", "spread", "if", "and", "or", "rand", "anchor", "wrap",
 }  # fmt: skip
 
 
@@ -191,6 +191,8 @@ class Writer:
             return ["obj", t, a[0]]
         if op == "check":
             return ["check", t, self.expr(a[0]), [_constraint(c) for c in a[1]]]
+        if op == "wrap":
+            return ["wrap", t, self.expr(a[0]), _number(a[1]), _number(a[2])]
         if op == "local":
             return ["local", t, a[0]]
         if op == "call":
@@ -466,6 +468,8 @@ def _constraint(c: tuple) -> list:
         return ["one-of", list(c[1])]
     if c[0] in (">=", ">", "<=", "<"):
         return [c[0], _number(c[1])]
+    if c[0] == "wrap":
+        return ["wrap", _number(c[1]), _number(c[2])]
     return list(c)
 
 

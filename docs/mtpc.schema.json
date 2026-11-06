@@ -139,6 +139,22 @@
           ],
           "minItems": 1,
           "maxItems": 1
+        },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "wrap"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
         }
       ]
     },
@@ -426,7 +442,8 @@
                 "or",
                 "let",
                 "rand",
-                "anchor"
+                "anchor",
+                "wrap"
               ]
             }
           ]
@@ -623,6 +640,38 @@
                 "items": {
                   "$ref": "#/$defs/constraint"
                 }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "wrap"
+              }
+            ]
+          },
+          "then": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "prefixItems": [
+              {
+                "const": "wrap"
+              },
+              {
+                "$ref": "#/$defs/type"
+              },
+              {
+                "$ref": "#/$defs/expr"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
               }
             ]
           }

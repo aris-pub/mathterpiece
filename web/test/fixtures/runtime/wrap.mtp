@@ -1,0 +1,5 @@
+(real theta 40 (wrap 0 360))
+(int hour 3 (wrap 0 12))
+(real double (* 2 theta) (wrap 0 360))
+(animation turn (move theta (to (+ theta 360)) (duration 1)))
+(animation back (move theta (from 350) (to 10) (duration 1)))

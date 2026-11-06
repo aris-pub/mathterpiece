@@ -116,12 +116,13 @@ A function type is written only for a parameter that takes a function:
 
 ### 5.b Narrowing (constraints)
 
-A constraint narrows a type to some of its values. Constraints are written after a declaration's value, or inside a narrowed type expression. A constraint is always one of: a comparison with one argument, `(length n)`, `(const)` or `(one-of …)`. None of these is a valid value, so the compiler can always tell a constraint from a value, even when the value is left out: `(real k (>= 0))` is a real with no value and a constraint.
+A constraint narrows a type to some of its values. Constraints are written after a declaration's value, or inside a narrowed type expression. A constraint is always one of: a comparison with one argument, `(length n)`, `(const)`, `(one-of …)` or `(wrap lo hi)`. None of these is a valid value, so the compiler can always tell a constraint from a value, even when the value is left out: `(real k (>= 0))` is a real with no value and a constraint.
 
 - **Comparisons** with the value left out: `(>= 0)`, `(< 1)`. A range is two of them: `(real p 0.5 (>= 0) (<= 1))`.
 - **`(length n)`** fixes a list's length.
 - **`(one-of …)`** narrows a string to a few values, a choice type (section 5.d).
 - **`(const)`** forbids every write, so the variable is known when compiling and costs nothing while drawing.
+- **`(wrap lo hi)`** keeps an int, a ratio or a real from `lo` up to but not including `hi`, by bringing every value into that interval instead of refusing it: `(real theta 400 (wrap 0 360))` holds 40, and a drag past 360 goes on from 0. `lo` and `hi` are numbers below one another, ints for an int, and no comparison goes beside it. A value is brought in wherever it enters a type that wraps: a literal, a bound value, a function's argument or declared result, and every write while drawing; a move goes through the numbers as written and each value it writes is brought in, so a full turn is `(move theta (to (+ theta 360)))`. Arithmetic on such a value is ordinary, `(+ theta 30)` may be 380, until it enters the type again; modular arithmetic is written on top: `(type hour int (wrap 0 12))` and `(func[hour] later ((hour h) (int n)) (+ h n))`, so `(later 9 5)` is 2. Its range is the interval, for what the compiler proves.
 
 A value known when compiling that breaks a constraint is a compile error. A bound value that breaks one while drawing is `none` (section 5.c), so unless the compiler can prove the expression stays within the constraint, the value may be `none` and must be handled like any other `none`: the variable declared `T|none`, or the expression given a default with `or?`.
 

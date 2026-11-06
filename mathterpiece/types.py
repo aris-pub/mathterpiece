@@ -86,7 +86,8 @@ class ComponentT:
         return self.name
 
 
-# A constraint: (">=", 0), ("length", 3), ("one-of", ("a", "b")) or ("const",).
+# A constraint: (">=", 0), ("length", 3), ("one-of", ("a", "b")), ("const",) or ("wrap", 0, 360),
+# which brings every value into [0, 360) instead of refusing it (the author, 2026-11-06).
 Constraint = tuple
 
 
@@ -199,6 +200,10 @@ def _fits_refined(actual: Type, expected: Type) -> bool:
 def _implied(have: tuple[Constraint, ...], need: Constraint) -> bool:
     """Whether the constraints have guarantee need."""
     kind = need[0]
+    if kind == "wrap":
+        return need in have
+    # A value that wraps into [lo, hi) is at least lo and below hi.
+    have = have + tuple(b for c in have if c[0] == "wrap" for b in ((">=", c[1]), ("<", c[2])))
     if kind in COMPARE:
         low = kind in (">=", ">")
         for c in have:
@@ -383,7 +388,16 @@ def refine(base: Type, nodes: "tuple[Node, ...] | list[Node]", name: str | None 
     if isinstance(base, Refine):
         own, base = base.constraints, base.base
     added = tuple(constraint(n, base) for n in nodes)
-    return Refine(base, own + added, name)
+    every = own + added
+    wraps = [c for c in every if c[0] == "wrap"]
+    if len(wraps) > 1:
+        raise TypeError_("a value wraps into one interval: give (wrap lo hi) once")
+    if wraps and any(c[0] in COMPARE for c in every):
+        raise TypeError_(
+            "a value that wraps is already within its interval: (wrap lo hi) takes no"
+            " (>= …), (> …), (<= …) or (< …) beside it"
+        )
+    return Refine(base, every, name)
 
 
 def constraint(node: Node, base: Type) -> Constraint:
@@ -418,4 +432,15 @@ def constraint(node: Node, base: Type) -> Constraint:
         if args:
             raise TypeError_("const takes nothing: (const)")
         return ("const",)
+    if head == "wrap":
+        if base not in NUMBERS[:3]:
+            raise TypeError_(f"only an int, a ratio or a real wraps, not {base}")
+        if len(args) != 2 or not all(isinstance(a, (IntLit, RatioLit, RealLit)) for a in args):
+            raise TypeError_("wrap takes the two ends of its interval: (wrap 0 360)")
+        lo, hi = (a.value for a in args if isinstance(a, (IntLit, RatioLit, RealLit)))
+        if base == INT and not all(isinstance(a, IntLit) for a in args):
+            raise TypeError_("an int wraps between two ints: (wrap 0 12)")
+        if not lo < hi:
+            raise TypeError_(f"wrap goes from lo up to hi, so lo is below hi: got {lo} and {hi}")
+        return ("wrap", lo, hi)
     raise TypeError_(f"unknown constraint {head!r}")

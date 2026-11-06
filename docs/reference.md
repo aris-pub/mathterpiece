@@ -274,7 +274,7 @@ Every type has a value used when no value or default is given: in a variable dec
 Every control and listener emits writes to its target (or, through its animation, to the variables and attributes the animation moves).
 
 - **Conditions** are items of a control or listener: any bool expression, recognized as an item because its head is a comparison or another function giving a bool, such as `(>= theta 0)` or `(<= u.x 5)`. They belong to that writer only. Before a write is emitted it is brought into every condition: a condition that compares the variable or attribute written with a value not depending on it, `(>= theta 0)`, `(< theta (* 2 k))`, clamps the write to that limit. Any other condition is a compile error: the compiler must see a direct limit on what is written, and never searches for a value. A drag of a shape's own `pos` writes its `x` and its `y`, so its conditions may limit either, as `(on-drag c c.pos (<= c.x 5) (>= c.y 0))`; `c.pos.x` and `c.pos[0]` are `c.x`. `(when bool)` is different: it decides whether the writer is active (see the data model, "Writers"). An inactive control is shown disabled.
-- **Constraints on the target** (on its type) then apply to every write it receives, from any writer: a range clamps, an int rounds, a choice holds its last valid value. A write that changes nothing is skipped.
+- **Constraints on the target** (on its type) then apply to every write it receives, from any writer: a range clamps, an int rounds, a value that wraps is brought into its interval, a choice holds its last valid value. A write that changes nothing is skipped.
 
 ### Dragging
 
