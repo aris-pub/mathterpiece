@@ -804,3 +804,26 @@ def test_a_malformed_file_gives_one_error_where_it_is(path):
     m = re.match(r"; error (\d+):(\d+) (.*)\n", src)
     assert m, f"{path.name} does not say its error"
     assert error_at(src, m[3]) == Pos(int(m[1]), int(m[2]))
+
+
+class TestNameStrings:
+    # The author, 2026-11-06: #'dot-{k}' is (name $'dot-{k}'): values filled into the string,
+    # which is then read as a name. Parts may follow it. One with nothing to fill in is an
+    # error: write the name itself, or (name 'text').
+    def test_it_is_the_name_form(self):
+        assert parse("(f #'dot-{k}')") == parse("(f (name $'dot-{k}'))")
+
+    def test_parts_may_follow(self):
+        assert parse("(f #'dot-{k}'.pos)") == parse("(f (. (name $'dot-{k}') pos))")
+        assert parse("(f #'row-{i}'[0].x)") == parse("(f (. (. (name $'row-{i}') 0) x))")
+
+    def test_with_nothing_to_fill_in(self):
+        error_at(
+            "(f #'dot')",
+            "a name string fills values into a name: with none, write the"
+            " name itself, or (name 'text')",
+        )
+
+    def test_hash_is_not_in_names(self):
+        error_at("(real a#b 1)", "invalid name 'a#b'")
+        error_at("(f #x)", "'#' starts a name string: #'dot-{k}'")

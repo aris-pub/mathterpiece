@@ -194,9 +194,9 @@
     (group densities (defaults (fill muted))
       (foreach k 10
         (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
-          (text|none (name $'density-{k}') $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
+          (text|none #'density-{k}' $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
               (font tick))
-          (exists-when (name $'density-{k}')
+          (exists-when #'density-{k}'
             (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467))))))
     (line_ (from [54 -8]) (to [54 -130]) (stroke muted) (stroke-width 1))
     (line_ (from [54 -130]) (to [466 -130]) (stroke muted) (stroke-width 1))

@@ -44,6 +44,11 @@ color, which keyword arguments take.")
 so it takes the string color, which every theme draws clearly, in bold italic to stand out
 from the figure's own strings.")
 
+(defface mtp-mode-name-string-face
+  '((t :inherit font-lock-function-name-face))
+  "Face for a name string, #'dot-{k}', which is read as a name, not kept as a string, so it
+takes a color apart from strings.")
+
 (defconst mtp-mode--indent
   '(;; Forms with a name: the name, then their positional arguments, then their body.
     ("scene" . 1) ("group" . 1) ("row" . 1) ("column" . 1) ("circle" . 1) ("rect" . 1) ("ellipse" . 1) ("line" . 1)
@@ -185,6 +190,7 @@ none, true, false and self.")
            (goto-char (nth 8 state))
            (looking-back "\\_<doc@" (max (point-min) (- (point) 4))))
          'mtp-mode-doc-face)
+        ((eq (char-before (nth 8 state)) ?#) 'mtp-mode-name-string-face)
         (t 'font-lock-string-face)))
 
 (defvar mtp-mode-syntax-table

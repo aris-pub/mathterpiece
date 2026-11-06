@@ -17,8 +17,8 @@
 (scene board (background paper)
   (group spiral (defaults (stroke none))
     (foreach k n
-      (circle (name $'dot-{k}') (r (if (= k 0) 0.16 0.09)) (fill (if (= k 0) terracotta plum))
-          (pos (if (= k 0) [3 0] (turn (. (name $'dot-{(- k 1)}') pos) angle factor))))))
+      (circle #'dot-{k}' (r (if (= k 0) 0.16 0.09)) (fill (if (= k 0) terracotta plum))
+          (pos (if (= k 0) [3 0] (turn #'dot-{(- k 1)}'.pos angle factor))))))
   ; The path through the dots that are there.
   (polyline_ (points (somes spiral.pos)) (stroke soft) (stroke-width 1))
   (text_ $'{n} dots, each turned {angle:.0f}° and scaled by {factor:.2f}' (pos [-4.6 4.5])

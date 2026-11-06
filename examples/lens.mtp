@@ -21,7 +21,7 @@
     (ellipse field (pos [-4.5 -2]) (rx 6) (ry 1.9) (fill (mix (darken teal 0.25) soft grey)))
     (foreach k 4
       (let ((x (+ -5.8 (* 0.9 k))))
-        (triangle (name $'tree-{k}') (a [(- x 0.4) -0.4]) (b [(+ x 0.4) -0.4])
+        (triangle #'tree-{k}' (a [(- x 0.4) -0.4]) (b [(+ x 0.4) -0.4])
             (c [x (+ 0.7 (* 0.15 (mod k 2)))]) (fill (mix (darken teal 0.5) soft grey))))))
 
   ; Two columns of swatches under the picture, one under its left half and one under its right.

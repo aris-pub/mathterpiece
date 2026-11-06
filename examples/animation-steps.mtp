@@ -34,7 +34,7 @@
     (foreach i hops.steps.length
       (let ((start (sum (map i (fn ((int j)) hops.steps[j].duration))))
             (d hops.steps[i].duration))
-        (rect (name $'bar-{i}') (pos [(+ -4 (* unit (+ start (/ d 2)))) -1.6])
+        (rect #'bar-{i}' (pos [(+ -4 (* unit (+ start (/ d 2)))) -1.6])
             (width (- (* unit d) 0.06)) (height 0.36)
             (fill (if (= (mod i 2) 0) terracotta teal)) (fill-opacity 0.75))
         (text_ $'{d:.1f} s' (pos [(+ -4 (* unit (+ start (/ d 2)))) -2.15]) (font number)

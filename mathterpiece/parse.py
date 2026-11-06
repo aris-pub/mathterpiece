@@ -24,7 +24,7 @@ from mathterpiece.nodes import (
 OPERATORS = frozenset({"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!="})
 ESCAPES = {"'": "'", "\\": "\\", "n": "\n"}
 RESERVED = frozenset("[]{}")
-NAME_EXCLUDED = frozenset("[]{}./;\"$^()'|@")
+NAME_EXCLUDED = frozenset("[]{}./;\"$^()'|@#")
 NAME_BAD_START = frozenset("+-*<>=")
 
 _UREAL = r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?"
@@ -187,6 +187,10 @@ class _Parser:
             if self.peek(1) != "'":
                 raise ParseError("'$' must be followed by a quote", pos)
             return self.interp_string()
+        if ch == "#":
+            if self.peek(1) != "'":
+                raise ParseError("'#' starts a name string: #'dot-{k}'", pos)
+            return self.name_string()
         if ch == '"':
             raise ParseError("double quotes are not allowed; use single quotes", pos)
         if ch == "[":
@@ -209,6 +213,37 @@ class _Parser:
                 "doc@ is followed by its text in single quotes: doc@'text'", self.pos()
             )
         return Form((Name(("doc",), pos), self.string()), pos)
+
+    def name_string(self) -> Node:
+        """#'dot-{k}', which is (name $'dot-{k}'): the string with values filled in, read as a
+        name. Parts may follow it, as they follow a name: #'dot-{k}'.pos, #'row-{i}'[0]."""
+        pos = self.pos()
+        # The string's own check for what follows it would refuse a part, so it is read here.
+        text = self.interp_string(parts_may_follow=True)
+        if all(isinstance(part, str) for part in text.parts):
+            raise ParseError(
+                "a name string fills values into a name: with none, write the name itself, or"
+                " (name 'text')",
+                pos,
+            )
+        whole: Node = Form((Name(("name",), pos), replace(text, pos=pos)), pos)
+        while self.peek() in (".", "["):
+            at = self.pos()
+            if self.peek() == ".":
+                self.advance()
+                part_pos = self.pos()
+                part = self.run()
+                if not part:
+                    raise ParseError("expected a name after '.'", part_pos)
+                for name in _name_parts(part, part_pos):
+                    whole = Form((Name((".",), at), whole, Name((name,), part_pos)), at)
+            else:
+                index = self.list_items()
+                if len(index.items) != 1:
+                    raise ParseError("brackets after a name hold one position", at)
+                whole = Form((Name((".",), at), whole, index.items[0]), at)
+        self.expect_delimiter()
+        return whole
 
     def form(self) -> Form:
         pos = self.pos()
@@ -379,7 +414,8 @@ class _Parser:
         self.expect_delimiter()
         return StrLit("".join(chars), pos)
 
-    def interp_string(self) -> InterpStrLit:
+    def interp_string(self, parts_may_follow: bool = False) -> InterpStrLit:
+        """$'…', or the string of #'…': two characters open it."""
         pos = self.pos()
         self.advance()
         self.advance()
@@ -416,7 +452,8 @@ class _Parser:
             else:
                 text.append(self.advance())
         flush()
-        self.expect_delimiter()
+        if not parts_may_follow:
+            self.expect_delimiter()
         return InterpStrLit(tuple(parts), pos)
 
     def interp_part(self) -> Node | Field:

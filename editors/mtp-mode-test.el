@@ -52,4 +52,9 @@
       (search-forward "doc@")
       (should (= (current-indentation) 2)))))
 
+(ert-deftest mtp-mode-sets-a-name-string-apart ()
+  (let ((src "(scene s (circle #'dot-{k}' (fill 'red')))"))
+    (should (eq (mtp-mode-test--face-at src "dot") 'mtp-mode-name-string-face))
+    (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
+
 ;;; mtp-mode-test.el ends here

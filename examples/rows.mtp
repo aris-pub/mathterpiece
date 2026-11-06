@@ -53,7 +53,7 @@
 (slider size (move grow (from 0.4) (to 1.6)) (label 'size'))
 
 (foreach alignment ['top' 'middle' 'bottom']
-  (button (name $'my-{alignment}') (animation (move line-up (to alignment) (duration 0.5)))
+  (button #'my-{alignment}' (animation (move line-up (to alignment) (duration 0.5)))
       (label alignment) doc@'Lines the row up by its top, middle or bottom.'))
 
 (toggle circle-in-row with-circle (label 'the circle')

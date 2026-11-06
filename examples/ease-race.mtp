@@ -39,7 +39,7 @@
 
   (group balls (defaults (stroke none))
     (foreach i 6
-      (circle (name $'ball-{i}') (x start) (y (lane i)) (r 0.34)
+      (circle #'ball-{i}' (x start) (y (lane i)) (r 0.34)
           (fill [terracotta teal saffron plum][(mod i 4)]))))
 
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))

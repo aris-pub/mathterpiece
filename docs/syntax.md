@@ -41,6 +41,7 @@ Everything in a file is an expression: a literal, a name, or a form. Names may b
 | `2i` | a complex number |
 | `'crimson'` | a string, in single quotes |
 | `$'θ = {theta:.0f}°'` | an interpolated string: each `{…}` is an expression, with an optional format after the colon |
+| `#'dot-{k}'` | a name string: values filled in as in an interpolated string, then read as a name (section 4) |
 | `true` `false` | bools |
 | `none` | the value that does not exist |
 | `[0 1]` `['red' 'gold']` | lists, in square brackets, items separated by spaces |
@@ -76,7 +77,7 @@ A declaration creates an object and returns it. Its head is usually the type of 
 - **Names** are bare. Each name in the scene is unique, and visible everywhere after its declaration (section 9). A function may call itself.
 - **Shapes** are declared only inside the scene, a group, a motif or a variant, never at the top level.
 - **`none` as a name** declares something with no name: `(circle none (r 1))`. Any form that takes a name may be written with an underscore after its head instead: `(circle_ (r 1))` is `(circle none (r 1))`, `(line|none_ …)` is `(line|none none …)`, and `(marks.grid_ …)`, a motif of a file imported whole, is `(marks.grid none …)`. An underscore is allowed nowhere else, in a name or on its own. An object with no name has a `name` attribute that is `none`.
-- **`(name s)`** builds a name from a string, where it must be computed, as in a loop: `(circle (name $'dot-{i}') …)`. It also refers to such a name: `(name $'dot-{k}')`.
+- **A name string, `#'dot-{i}'`,** builds a name in a loop: values are filled in as in an interpolated string, and the result is read as a name. `(circle #'dot-{i}' …)` declares one, `#'dot-{k}'` refers to one, and parts may follow it as they follow any name: `#'dot-{(- k 1)}'.pos`. It is short for `(name $'dot-{i}')`, which also takes a string computed any other way; a name string with nothing to fill in is an error, since the name can be written itself. `#` is allowed nowhere else.
 - **Constraints** follow, and narrow what the object may be: `(real theta 40 (>= 0) (<= 360))`.
 
 ## 5. Function calls
