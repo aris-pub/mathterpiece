@@ -10,7 +10,7 @@
              (color|none stroke none) (bool arrows false))
   doc@'The x and y axes, through the origin from left to right and from bottom to top.'
   (group lines (defaults (stroke (or? stroke ink)) (stroke-width 1)
-                   (head-end (if arrows 'dart' 'none')))
+                   (head-end (if arrows 'dart' none)))
     (line_ (from [left 0]) (to [right 0]))
     (line_ (from [0 bottom]) (to [0 top]))))
 

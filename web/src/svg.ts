@@ -226,7 +226,8 @@ function heads(rt: Runtime, i: number, el: Element, into: Element, unitsPerPx: n
   if (stroke === "none") return;
   const px = HEAD_LENGTH * (rt.value(i, "stroke-width") as number) * (rt.value(i, "head-size") as number);
   for (const end of ["start", "end"] as const) {
-    const shape = HEAD_SHAPES[rt.value(i, `head-${end}`) as string];
+    const kind = rt.value(i, `head-${end}`) as string | null;
+    const shape = kind === null ? undefined : HEAD_SHAPES[kind];
     if (!shape) continue;
     const marker = document.createElementNS(NS, "marker");
     marker.id = `mtp-head-${++headIds}`;
@@ -262,13 +263,13 @@ function heads(rt: Runtime, i: number, el: Element, into: Element, unitsPerPx: n
 }
 
 // A shape declared T|none is not drawn when it is absent: while its exists-when does not hold, or
-// when an attribute it needs is none.
+// when an attribute it needs is none. Fill, stroke and the heads may be none without it.
+const MAY_BE_NONE = new Set(["fill", "stroke", "head-start", "head-end", "exists"]);
+
 function absent(rt: Runtime, i: number): boolean {
   if (!rt.exists(i)) return true;
   const o = rt.objects[i]!;
-  return Object.entries(o.attrs ?? {}).some(
-    ([attr, p]) => attr !== "fill" && attr !== "stroke" && attr !== "exists" && p.type && rt.value(i, attr) === null,
-  );
+  return Object.entries(o.attrs ?? {}).some(([attr, p]) => !MAY_BE_NONE.has(attr) && p.type && rt.value(i, attr) === null);
 }
 
 // Several canvases may draw the same container on one page, so each clip path gets its own id.

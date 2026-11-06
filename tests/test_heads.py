@@ -1,13 +1,13 @@
 """Heads on the ends of lines, polylines and arcs (mtp-brs). The author, 2026-11-05: one
-attribute per end, (head-start …) and (head-end …), each 'none', 'dart', 'curved', 'open', 'bar'
-or 'dot'; a head takes the shape's stroke and scales with its stroke width, times
-(head-size …)."""
+attribute per end, (head-start …) and (head-end …), each 'dart', 'curved', 'open', 'bar' or
+'dot'; a head takes the shape's stroke and scales with its stroke width, times (head-size …).
+The author, 2026-11-06: no head is none, as for fill and stroke, never the string 'none'."""
 
 import pytest
 from helpers import doc, error, model
 from mtpc_check import errors
 
-KINDS = ["none", "dart", "curved", "open", "bar", "dot"]
+KINDS = ["dart", "curved", "open", "bar", "dot"]
 
 
 @pytest.mark.parametrize(
@@ -15,7 +15,7 @@ KINDS = ["none", "dart", "curved", "open", "bar", "dot"]
 )
 def test_the_shapes_with_ends_take_heads(shape):
     a = model(f"(scene s {shape})").get("l").attrs
-    assert (a["head-start"].value, a["head-end"].value, a["head-size"].value) == ("none", "none", 1)
+    assert (a["head-start"].value, a["head-end"].value, a["head-size"].value) == (None, None, 1)
 
 
 @pytest.mark.parametrize("kind", KINDS)
@@ -28,6 +28,11 @@ def test_an_unknown_kind():
     error("(scene s (line l (head-end 'triangle')))", "one of")
 
 
+def test_no_head_is_none_and_never_the_string():
+    assert model("(scene s (line l (head-end none)))").get("l").attrs["head-end"].value is None
+    error("(scene s (line l (head-end 'none')))", "for none, write none, without quotes")
+
+
 @pytest.mark.parametrize("shape", ["circle", "polygon", "ring", "rect"])
 def test_a_closed_shape_has_no_ends(shape):
     error(f"(scene s ({shape} l (head-end 'dart')))", "head-end")
@@ -38,7 +43,7 @@ def test_the_size_is_not_negative():
 
 
 def test_a_head_can_follow_a_variable():
-    m = model("(bool on true) (scene s (line l (head-end (if on 'dart' 'none'))))")
+    m = model("(bool on true) (scene s (line l (head-end (if on 'dart' none))))")
     assert m.get("l").attrs["head-end"].bound
 
 

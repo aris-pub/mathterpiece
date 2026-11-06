@@ -164,8 +164,9 @@ HALIGN = Refine(STRING, (("one-of", ("start", "middle", "end")),))
 VALIGN = Refine(STRING, (("one-of", ("top", "middle", "baseline", "bottom")),))
 LINE_CAP = Refine(STRING, (("one-of", ("butt", "round", "square")),))
 LINE_JOIN = Refine(STRING, (("one-of", ("miter", "round", "bevel")),))
-# The head drawn at an end of a line, a polyline or an arc (the author, 2026-11-05).
-HEAD = Refine(STRING, (("one-of", ("none", "dart", "curved", "open", "bar", "dot")),))
+# The head drawn at an end of a line, a polyline or an arc (the author, 2026-11-05), none for no
+# head, as for fill and stroke: never the string 'none' (the author, 2026-11-06).
+HEAD = Maybe(Refine(STRING, (("one-of", ("dart", "curved", "open", "bar", "dot")),)))
 
 
 @dataclass(frozen=True)
@@ -200,8 +201,8 @@ STROKE_ONLY = frozenset({"stroke", "stroke-width", "dash", "dash-offset", "line-
 POSITIONED = {"x": Argument(REAL, 0), "y": Argument(REAL, 0)}
 # A head at each end, scaling with the stroke width times head-size (the author, 2026-11-05).
 HEADS = {
-    "head-start": Argument(HEAD, "none"),
-    "head-end": Argument(HEAD, "none"),
+    "head-start": Argument(HEAD, None),
+    "head-end": Argument(HEAD, None),
     "head-size": Argument(NON_NEGATIVE, 1),
 }
 ARC = {
@@ -3893,6 +3894,12 @@ class _Compiler:
                 if c[0] != "const" and not _satisfies(e.value, c):
                     if c[0] == "one-of":
                         choices = ", ".join(f"'{v}'" for v in c[1])
+                        if e.value == "none" and expected is not None and _may_be_none(expected):
+                            raise CompileError(
+                                f"'none' is not one of {choices}: for none, write none,"
+                                " without quotes",
+                                node.pos,
+                            )
                         if narrowed.name:
                             raise CompileError(
                                 f"'{e.value}' is not a {narrowed.name}: a {narrowed.name} is one"
