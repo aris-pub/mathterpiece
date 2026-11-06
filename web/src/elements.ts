@@ -3,9 +3,10 @@
 // put each one where it fits. Every writer emits writes to the model; views redraw on each change.
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
-import { Listeners } from "./click.ts";
+import { Listeners, holds } from "./click.ts";
 import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
+import { latexOf, termClass, typeset } from "./math.ts";
 import { Player } from "./player.ts";
 import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
@@ -508,6 +509,132 @@ export class MtpReadout extends MtpPart {
   }
 }
 
+// A formula's LaTeX is typeset again at most this often while a term's content changes, so a
+// value that changes every frame does not typeset every frame.
+const RETYPESET_MS = 100;
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** Shows a formula (docs/reference.md, "Formulas"): its LaTeX typeset by MathJax, inside a
+ * paragraph or as a block. Each term follows its attributes, and its on-click, on-enter and
+ * on-leave play when the reader clicks it or the pointer comes onto it or goes off it. */
+export class MtpDisplay extends MtpPart {
+  /** The LaTeX typeset last. */
+  latex = "";
+  private show: () => void = () => {};
+
+  protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const display = this.find(rt, "display");
+    const view = rt.objects[display]!;
+    const formula = rt.objects[view.formula!]!;
+    const terms = (formula.members ?? []).map((id) => ({ id, name: rt.objects[id]!.term! }));
+    const clicks = model.clicks!;
+    const hovers = (kind: string, id: number) =>
+      rt.objects.filter((o) => o.kind === kind && o.shape === id && holds(rt, o.active));
+    const play = (listeners: Obj[]) => {
+      for (const listener of listeners) {
+        const player = playerFor(rt, listener);
+        if (player) scheduler.start(player, listener);
+      }
+    };
+    const block = view.as !== "inline";
+    this.style.display = block ? "block" : "inline";
+    // Each term's element and its box before any adornment, in MathJax's units: 1000 an em.
+    let marked = new Map<number, { el: SVGGElement; box: DOMRect | null }>();
+    const wanted = () =>
+      latexOf(
+        formula.tex!,
+        (name) => {
+          const t = terms.find((x) => x.name === name);
+          return t && rt.objects[t.id]!.attrs?.tex ? String(rt.value(t.id, "tex")) : undefined;
+        },
+        (name) => {
+          const t = terms.find((x) => x.name === name);
+          return t === undefined || Boolean(rt.value(t.id, "exists"));
+        },
+      );
+    const render = () => {
+      this.latex = wanted();
+      const node = typeset(this.latex, block);
+      this.replaceChildren(node);
+      marked = new Map();
+      for (const { id, name } of terms) {
+        const el = node.querySelector(`.${termClass(name)}`) as SVGGElement | null;
+        if (!el) continue;
+        el.setAttribute("data-mtp-id", String(id));
+        marked.set(id, { el, box: typeof el.getBBox === "function" ? el.getBBox() : null });
+        el.addEventListener("click", (event) => {
+          const listeners = clicks.find(id);
+          play(listeners);
+          // An enclosing term hears the click too, unless this one stops it.
+          if (listeners.some((l) => holds(rt, l["stop-propagation"], false))) event.stopPropagation();
+        });
+        el.addEventListener("pointerenter", () => play(hovers("on-enter", id)));
+        el.addEventListener("pointerleave", () => play(hovers("on-leave", id)));
+      }
+    };
+    const look = () => {
+      const em = Number.parseFloat(getComputedStyle(this).fontSize) || 16;
+      const units = (px: unknown) => (Number(px) * 1000) / em;
+      for (const [id, { el, box }] of marked) {
+        const fill = rt.value(id, "fill");
+        if (fill === null || fill === undefined) el.style.removeProperty("color");
+        else el.style.color = String(fill);
+        el.style.opacity = String(rt.value(id, "opacity"));
+        el.style.cursor = clicks.find(id).length ? "pointer" : "";
+        let rect = el.querySelector(":scope > rect.mtp-term-box");
+        if (!rect) {
+          rect = document.createElementNS(SVG_NS, "rect");
+          rect.setAttribute("class", "mtp-term-box");
+          // The whole box is the term's, even unpainted, so the pointer between its glyphs is on
+          // it.
+          rect.setAttribute("pointer-events", "all");
+          el.insertBefore(rect, el.firstChild);
+        }
+        const pad = units(rt.value(id, "padding"));
+        const b = box ?? { x: 0, y: 0, width: 0, height: 0 };
+        const background = rt.value(id, "background");
+        const outline = rt.value(id, "outline");
+        const at: Record<string, string | number> = {
+          x: b.x - pad,
+          y: b.y - pad,
+          width: b.width + 2 * pad,
+          height: b.height + 2 * pad,
+          rx: units(rt.value(id, "rounding")),
+          fill: background === null || background === undefined ? "none" : String(background),
+          stroke: outline === null || outline === undefined ? "none" : String(outline),
+          "stroke-width": units(rt.value(id, "outline-width")),
+        };
+        for (const [k, v] of Object.entries(at)) rect.setAttribute(k, String(v));
+      }
+    };
+    let last = Number.NEGATIVE_INFINITY;
+    let waiting = false;
+    const again = (ms: number) => {
+      if (ms - last < RETYPESET_MS) {
+        frames.request(again);
+        return;
+      }
+      waiting = false;
+      last = ms;
+      render();
+      look();
+    };
+    this.show = () => {
+      if (wanted() !== this.latex && !waiting) {
+        waiting = true;
+        frames.request(again);
+      }
+      look();
+    };
+    render();
+    look();
+  }
+
+  protected update(): void {
+    this.show();
+  }
+}
+
 function labelOf(rt: Runtime, id: number): string {
   return String(rt.value(id, "label"));
 }
@@ -741,6 +868,7 @@ const ELEMENTS: [string, CustomElementConstructor][] = [
   ["mtp-model", MtpModel],
   ["mtp-canvas", MtpCanvas],
   ["mtp-readout", MtpReadout],
+  ["mtp-display", MtpDisplay],
   ["mtp-slider", MtpSlider],
   ["mtp-button", MtpButton],
   ["mtp-play", MtpPlay],

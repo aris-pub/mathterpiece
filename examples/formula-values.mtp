@@ -1,0 +1,17 @@
+; A random set A holds each point with probability q, so it meets exactly one of two halves with
+; probability 2q(1 − q). Move the slider: the value at the end of the formula follows it, typeset
+; again. Tick "show a step" and a step appears in the middle, the formula making room for it.
+
+(real q 0.3 (>= 0) (<= 1))
+(bool step false)
+
+(formula meets
+  doc@'The probability that A meets exactly one half, with its value.'
+  tex'P_h(p) = 2q(1-q) \term{step}{= 2q - 2q^2} = \term{value}{}'
+  (term value (tex $'{(* 2 q (- 1 q)):.3f}'))
+  (term step (fill '#8a8478'))
+  (exists-when step step))
+
+(display meets-line meets (kind 'inline') doc@'The formula, inside a sentence.')
+(slider qs (move q (from 0) (to 1)) (label 'q') doc@'Sets q.')
+(toggle steps step (label 'show a step') doc@'Shows the middle step.')

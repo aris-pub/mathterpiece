@@ -1,7 +1,7 @@
 ; A pair x, y at level 2 among eight points, drawn to scale: x's half in teal, y's in coral, and
-; the points of a random set A ringed. Each button highlights the part of the tree one piece of
-; the bounds explains; pressing it again clears it. In the paper, the reader picks these by
-; clicking the pieces of the equation in the text.
+; the points of a random set A ringed. Click a term of the equation above the tree, the factor
+; (1 − 1/b)², either ≤, or the term 1/b², to highlight the part of the tree it explains; click it
+; again to clear it. A box shows behind the colored terms while the pointer is on them.
 ; Each highlight is a group of its own, drawn over the tree while its piece is picked, so the
 ; canvas fades it in and out.
 ; Coordinates are the original SVG's, with y pointing down, negated.
@@ -11,12 +11,15 @@
 (color teal '#1a6f66')
 (color coral '#a65a3a')
 (color accent '#4a6584')
+(color wash '#ece6d8')
 (font tick (size 13))
 (font name (style 'italic') (size 15))
 
 ; Which piece of the bounds is explained: none, the factor (1 − 1/b)², the term 1/b², or the
 ; second inequality (the first one explains the same as the factor).
 (type piece string (one-of 'gap' 'b2' 'hi'))
+; Which piece is shown: a global, since the scene and the formula both read it.
+(piece|none shown none)
 
 ; Point i's x, and the depths of the points, of each pair's root, of each half's and of the
 ; whole cluster's.
@@ -48,8 +51,6 @@
       (circle_ (pos [(px (+ i 4)) top]) (r 5)))))
 
 (scene tree
-  (piece|none shown none)
-
   (group axes (defaults (stroke muted) (stroke-width 1) (fill muted) (halign 'end') (font tick))
     (line_ (from [axis top]) (to [axis level3]))
     (foreach depth [level1 level2 level3]
@@ -122,16 +123,42 @@
   (when (or (= shown 'b2') (= shown 'hi')) ring-in-y)
   names)
 
-; One button per piece of the bounds.
-(button gap (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
-    (label 'the factor (1 − 1/b)²')
-  doc@'Highlights what the factor (1 − 1/b)² explains, or clears it if it is shown.')
-(button b2 (animation (move shown (to (if (= shown 'b2') none 'b2')) (duration 0.25)))
-    (label 'the term 1/b²')
-  doc@'Highlights what the term 1/b² explains, or clears it if it is shown.')
-(button lower (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
-    (label 'the first ≤')
-  doc@'Highlights what the first ≤ explains, or clears it if it is shown.')
-(button upper (animation (move shown (to (if (= shown 'hi') none 'hi')) (duration 0.25)))
-    (label 'the second ≤')
-  doc@'Highlights what the second ≤ explains, or clears it if it is shown.')
+(func lit ((piece|none p) (piece mine))
+  doc@'Full when nothing is picked or this piece is, dim otherwise.'
+  (if (or (none? p) (= p mine)) 1 0.35))
+
+(formula bounds
+  doc@'Equation (4.1): the squared stretch of the pair, bounded below and above.'
+  tex'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
+      \mathrel{\term{lo}{\le}} \frac{\mathbb E\,\big(d(x,A)-d(y,A)\big)^2}{d(x,y)^2}
+      \mathrel{\term{hi}{\le}} P_h(p) + \term{b2}{\frac1{b^2}}'
+  (term gap (fill teal) (opacity (lit shown 'gap')) (background none) (padding 3) (rounding 4))
+  (term lo (opacity (lit shown 'gap')))
+  (term hi (opacity (lit shown 'hi')))
+  (term b2 (fill coral) (opacity (lit shown 'b2')) (background none) (padding 3) (rounding 4)))
+
+(display eq bounds doc@'Equation (4.1), whose terms pick what the tree highlights.')
+
+; Clicking a term shows what it explains, or clears it if it is shown. The first ≤ explains the
+; same as the factor.
+(on-click bounds.gap (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
+  doc@'Highlights what the factor (1 − 1/b)² explains.')
+(on-click bounds.lo (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
+  doc@'Highlights what the first ≤ explains.')
+(on-click bounds.hi (animation (move shown (to (if (= shown 'hi') none 'hi')) (duration 0.25)))
+  doc@'Highlights what the second ≤ explains.')
+(on-click bounds.b2 (animation (move shown (to (if (= shown 'b2') none 'b2')) (duration 0.25)))
+  doc@'Highlights what the term 1/b² explains.')
+
+; A box fades in behind each colored term while the pointer is on it.
+(on-enter bounds.gap (animation (move bounds.gap.background (to wash) (duration 0.2))))
+(on-leave bounds.gap (animation (move bounds.gap.background (to none) (duration 0.2))))
+(on-enter bounds.b2 (animation (move bounds.b2.background (to wash) (duration 0.2))))
+(on-leave bounds.b2 (animation (move bounds.b2.background (to none) (duration 0.2))))
+
+(readout note
+    (if (= shown 'gap') 'If A meets only x\'s half, the gap covers the highlighted stretch.'
+      (if (= shown 'b2') 'If A meets both halves, both distances are at most b, the inner depth.'
+        (if (= shown 'hi') 'One half, both halves, or neither: together at most P plus 1/b².'
+          'Click a term of the equation.')))
+  doc@'What the piece picked explains.')

@@ -119,3 +119,16 @@ describe("docstrings", () => {
     expect(row.querySelector(".mtp-inv-doc")!.textContent).toBe("The color of the circle.");
   });
 });
+
+describe("a formula in the inventory", () => {
+  it("lists its displays and the listeners on its terms", () => {
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><div id="inv"></div>`;
+    const text = source("formula");
+    (document.getElementById("m") as MtpModel).doc = JSON.parse(text) as Doc;
+    const root = document.getElementById("inv")!;
+    inventory(root, text, { model: "m", id: "f", file: "f.mtpc" });
+    expect(heads(root)).toEqual(["display d", "display di", "on-click f.a", "on-enter f.a", "on-leave f.a"]);
+    expect(snippets(root)).toContain('<mtp-display model="f" name="d"></mtp-display>');
+    expect(root.textContent).toContain("it acts on f.a in every display that shows its formula");
+  });
+});

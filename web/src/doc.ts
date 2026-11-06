@@ -74,6 +74,12 @@ export interface Obj {
   conditions?: Clamp[];
   target?: [number, string | null] | null;
   shape?: number;
+  // A formula's LaTeX; a term's name in it and its formula; the formula a display shows, and
+  // whether inside a paragraph or as a block (mtp-bz6h).
+  tex?: string;
+  term?: string;
+  formula?: number;
+  as?: "inline" | "block";
   // on-view: the canvas it listens to; play: "load", or the view or control it waits for.
   view?: number;
   autoplay?: "load" | number | null;

@@ -1,0 +1,20 @@
+; A formula with terms, shown by two displays (mtp-bz6h).
+(string shown '')
+(real q 0.3 (>= 0) (<= 1))
+(bool lit false)
+(color wash '#ffe08a')
+
+(formula f
+  (bool pointed false)
+  tex'\term{a}{x} + \term{b}{\frac{\term{c}{1}}{2}} = \term{v}{}'
+  (term a (fill 'teal') (opacity (if (= shown 'a') 1 0.4)) (padding 2) (rounding 3))
+  (term c (outline 'red') (outline-width 2))
+  (term v (tex $'{q:.2f}'))
+  (exists-when b lit))
+
+(display d f)
+(display di f (kind 'inline'))
+
+(on-click f.a (animation (move shown (to 'a') (duration 0))))
+(on-enter f.a (animation (move f.a.background (to wash) (duration 0))))
+(on-leave f.a (animation (move f.a.background (to none) (duration 0))))

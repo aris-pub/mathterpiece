@@ -5,7 +5,7 @@
 import { cssVariable } from "./css.ts";
 import type { Doc, Obj } from "./doc.ts";
 
-const ELEMENTS = new Set(["canvas", "readout", "slider", "toggle", "button", "play"]);
+const ELEMENTS = new Set(["canvas", "readout", "display", "slider", "toggle", "button", "play"]);
 const LISTENERS = new Set([
   ...["on-drag", "on-click", "on-release", "on-dragend", "on-view"],
   ...["on-enter", "on-leave", "on-pointermove"],
@@ -110,7 +110,9 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
       "mtp-inv-note",
       onCanvas
         ? "It has no element of its own."
-        : `It has no element of its own: it acts on ${of} on every canvas that draws it.`,
+        : doc.objects[o.shape!]?.kind === "term"
+          ? `It has no element of its own: it acts on ${of} in every display that shows its formula.`
+          : `It has no element of its own: it acts on ${of} on every canvas that draws it.`,
     ),
   );
   return entry;

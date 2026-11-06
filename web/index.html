@@ -168,8 +168,10 @@
         canvases.replaceChildren();
         // Token values set from an inventory belong to the example they were set on.
         document.documentElement.removeAttribute("style");
-        for (const o of showInventory ? [] : doc.objects.filter((o) => o.kind === "canvas")) {
-          const el = document.createElement("mtp-canvas");
+        // Canvases and block displays, in the order the source declares them.
+        const blocks = (o) => o.kind === "canvas" || (o.kind === "display" && o.as === "block");
+        for (const o of showInventory ? [] : doc.objects.filter(blocks)) {
+          const el = document.createElement(`mtp-${o.kind}`);
           el.setAttribute("model", "m");
           el.setAttribute("name", o.name);
           canvases.append(el);
@@ -186,10 +188,10 @@
           inv.replaceChildren();
         }
         for (const o of showInventory ? [] : doc.objects) {
-          if (o.kind === "readout") {
+          if (o.kind === "readout" || (o.kind === "display" && o.as === "inline")) {
             const p = document.createElement("p");
-            p.append(`A sentence with the readout ${o.name} in it: `);
-            const el = document.createElement("mtp-readout");
+            p.append(`A sentence with the ${o.kind} ${o.name} in it: `);
+            const el = document.createElement(`mtp-${o.kind}`);
             el.setAttribute("model", "m");
             el.setAttribute("name", o.name);
             p.append(el, ", and then the sentence goes on.");
