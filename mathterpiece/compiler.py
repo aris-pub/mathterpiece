@@ -319,6 +319,11 @@ FROM_POINTS = (*CORNERS, *THROUGH_POINTS, *CURVES)
 POSITIONAL = {"text": ("value",)}
 
 
+# The key, never a name, under which a scope holds the condition the copies of a foreach whose
+# count is known only while drawing exist under (the author, 2026-11-06).
+EXISTS = "\0exists"
+
+
 class CompileError(Exception):
     def __init__(self, msg: str, pos: Pos):
         super().__init__(f"{pos}: {msg}")
@@ -610,13 +615,44 @@ class _Compiler:
         self, bindings: list, body, scope: dict, top: bool
     ) -> Iterator[tuple[Node, dict]]:
         """The body once for every combination of the bindings' items, the last changing
-        fastest, as nested foreach would give; a source may read the names before it."""
+        fastest, as nested foreach would give; a source may read the names before it. A count
+        known only while drawing makes as many copies as it can be at most, and copy k exists
+        only while k is below it."""
         if not bindings:
             yield from self.expand(body, scope, top)
             return
         (var, source), rest = bindings[0], bindings[1:]
-        for value in self.each_of(source, scope):
-            yield from self.foreach_copies(rest, body, {**scope, var.parts[0]: value}, top)
+        bounded = self.bounded_count(source, scope)
+        if bounded is None:
+            for value in self.each_of(source, scope):
+                yield from self.foreach_copies(rest, body, {**scope, var.parts[0]: value}, top)
+            return
+        for k in range(bounded):
+            below = self.expr(
+                Form((Name(("<",), source.pos), IntLit(k, source.pos), source), source.pos),
+                BOOL,
+                scope,
+            )
+            outer = scope.get(EXISTS)
+            if outer is not None:
+                below = Expr("and", BOOL, (outer, below), outer.deps | below.deps)
+            inner = {**scope, var.parts[0]: _known(INT, k), EXISTS: below}
+            yield from self.foreach_copies(rest, body, inner, top)
+
+    def bounded_count(self, node, scope: dict) -> int | None:
+        """How many copies a foreach makes for a count known only while drawing: the most it
+        can be, from its upper bound. None when the count is known, or is not a count."""
+        e = self.expr(node, None, scope)
+        if _core(e.type) != INT or e.known or e.op == "obj":
+            return None
+        hi = e.range[1] if e.range is not None else MAX_REAL
+        if hi >= LIMIT:
+            raise CompileError(
+                "the count of a foreach is known when compiling, or has an upper bound, so the"
+                " copies can be made then: declare it with (<= …)",
+                node.pos,
+            )
+        return max(0, math.floor(hi))
 
     def each_of(self, node, scope: dict) -> list[Expr]:
         """What foreach goes through: 0 to n - 1 for a count, each item of a list, each member
@@ -3458,12 +3494,15 @@ class _Compiler:
         found = self.shape_kind(form)
         assert found is not None
         kind, absent = found
-        # A member of a container that may not exist may not exist either.
-        absent = absent or self.may_be_absent(parent)
+        # A member of a container that may not exist may not exist either, and neither may a
+        # shape in a copy of a foreach whose count changes while drawing.
+        absent = absent or self.may_be_absent(parent) or EXISTS in scope
         if kind in self.model.variants:
-            return self.variant_instance(form, parent, scope, spread)
+            return self.copy_exists(self.variant_instance(form, parent, scope, spread), scope)
         if kind in self.model.motifs:
-            return self.instance(form, parent, scope, spread, absent, items, pre)
+            return self.copy_exists(
+                self.instance(form, parent, scope, spread, absent, items, pre), scope
+            )
         name, pos = self.name_of(form, scope)
         specs = SHAPE_ATTRS[kind]
         # A shape declared T|none may be absent, so its attributes may be none.
@@ -3604,6 +3643,8 @@ class _Compiler:
             self.shape_attrs(obj, given, absent, form.pos, scope, specs)
         finally:
             self.frame = saved
+        # Before its members are declared, so they go with it.
+        self.copy_exists(i, scope)
         if kind in CURVES:
             n = self.controls_count(i)
             if n not in (1, 2):
@@ -3629,6 +3670,23 @@ class _Compiler:
             self.exists_when(item, inner)
         if axis is not None:
             self.no_text_in(i, form.pos)
+        return i
+
+    def copy_exists(self, i: int, scope: dict) -> int:
+        """Shape i exists only while the condition of the foreach copy it is in holds."""
+        cond = scope.get(EXISTS)
+        obj = self.model.objects[i]
+        # A member of a container in the same copy goes with its container.
+        if cond is None or (
+            obj.parent is not None
+            and "exists" in self.model.objects[obj.parent].attrs
+            and self.model.objects[obj.parent].data.get("copy-exists") is cond
+        ):
+            return i
+        if not isinstance(obj.type, Maybe):
+            obj.type = Maybe(obj.type)
+        obj.attrs["exists"] = Attribute(BOOL, expr=cond)
+        obj.data["copy-exists"] = cond
         return i
 
     def controls_count(self, i: int) -> int | None:
@@ -3783,6 +3841,20 @@ class _Compiler:
                     " exists, so every read of it handles none",
                     node.pos,
                 )
+            if "copy-exists" in obj.data and obj.data["copy-exists"] is obj.attrs["exists"].expr:
+                # It also exists only while its foreach copy does.
+                both = obj.attrs["exists"].expr
+                assert both is not None
+                if condition.expr is not None:
+                    both = Expr(
+                        "and", BOOL, (both, condition.expr), both.deps | condition.expr.deps
+                    )
+                elif not condition.value:
+                    both = _known(BOOL, False)
+                obj.attrs["exists"] = (
+                    Attribute(BOOL, expr=both) if not both.known else Attribute(BOOL, both.value)
+                )
+                continue
             if "exists" in obj.attrs:
                 raise CompileError(f"when {obj.name} exists is given twice", node.pos)
             obj.attrs["exists"] = replace(condition)
@@ -4639,9 +4711,14 @@ class _Compiler:
             c = self.expr(args[0], BOOL, scope)
             # Branches may be none; what the if's value is given to decides whether that is allowed.
             branch = _maybe(expected) if expected is not None else None
-            # Folding a call takes only the branch it needs, so recursion ends at its base case.
-            if c.known and self.folding:
-                return self.expr(args[1] if c.value else args[2], branch, scope)
+            # A known condition takes only its branch: folding a call so recursion ends at its
+            # base case, and in a foreach copy so (if (= k 0) start (… previous copy …)) works.
+            if c.known:
+                # Outside a fold the branch taken is the if's whole value, so it meets what is
+                # expected of the if, as a literal [1 0] becomes a point.
+                return self.expr(
+                    args[1] if c.value else args[2], branch if self.folding else expected, scope
+                )
             if branch is None and isinstance(args[1], ListLit) != isinstance(args[2], ListLit):
                 # With nothing outside to give a type, a literal list takes the other branch's.
                 lit = 1 if isinstance(args[1], ListLit) else 2

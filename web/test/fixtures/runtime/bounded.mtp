@@ -1,0 +1,4 @@
+(int n 3 (>= 0) (<= 5))
+(scene s
+  (group dots (foreach k n (circle (name $'d{k}') (x (if (= k 0) 1 (* 2 (. (name $'d{(- k 1)}') x))))))))
+(canvas v s)

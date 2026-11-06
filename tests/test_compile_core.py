@@ -582,3 +582,51 @@ class TestTheFormTemplate:
     def test_optional_arguments_in_any_order_then_the_body(self, src):
         # Only that each compiles: the other tests check what each argument does.
         model(src)
+
+
+class TestForeachOverACountThatChanges:
+    # The author, 2026-11-06: (foreach k n …) with n known only while drawing makes as many
+    # copies as n can be at most, from its upper bound; copy k exists only while k < n.
+    def test_as_many_copies_as_the_count_can_be(self):
+        m = model("(int n 5 (>= 3) (<= 12)) (scene s (foreach k n (circle (name $'d{k}'))))")
+        circles = [o for o in m.objects if o.kind == "circle"]
+        assert len(circles) == 12
+        assert all(isinstance(o.type, Maybe) and o.attrs["exists"].bound for o in circles)
+
+    def test_a_count_needs_an_upper_bound(self):
+        error("(int n 5 (>= 0)) (scene s (foreach k n (circle_)))", r"declare it with \(<= …\)")
+
+    def test_an_exists_when_joins_the_copys_condition(self):
+        m = model(
+            "(int n 3 (>= 0) (<= 3)) (real cut 2)"
+            " (scene s (foreach k n (circle (name $'c{k}'))"
+            " (exists-when (name $'c{k}') (< k cut))))"
+        )
+        assert m.get("c1").attrs["exists"].expr.op == "and"
+
+    def test_a_member_of_a_copy_goes_with_its_container(self):
+        m = model(
+            "(int n 1 (>= 0) (<= 2)) (scene s (foreach k n (group (name $'g{k}') (circle_))))"
+        )
+        (c, _) = [o for o in m.objects if o.kind == "circle"]
+        assert "exists" not in c.attrs and isinstance(c.type, Maybe)
+
+    def test_a_known_count_is_as_before(self):
+        m = model("(scene s (foreach k 3 (circle (name $'d{k}'))))")
+        assert not any("exists" in o.attrs for o in m.objects if o.kind == "circle")
+
+
+class TestIfWithAKnownCondition:
+    # The author, 2026-11-06: an if whose condition is known when compiling compiles only the
+    # branch it takes, so a foreach copy can start a chain: (if (= k 0) start (… previous …)).
+    def test_each_copy_from_the_one_before(self):
+        m = model(
+            "(scene s (foreach k 3 (circle (name $'d{k}')"
+            " (x (if (= k 0) 1 (* 2 (. (name $'d{(- k 1)}') x)))))))"
+        )
+        assert [m.get(f"d{k}").attrs["x"].value for k in range(3)] == [1, 2, 4]
+
+    def test_the_branch_taken_meets_what_the_if_is_given_to(self):
+        assert (
+            model("(scene s (circle c (pos (if true [1 0] none))))").get("c").attrs["x"].value == 1
+        )

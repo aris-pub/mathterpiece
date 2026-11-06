@@ -1,0 +1,36 @@
+; A spiral of dots, each made from the one before: turned by an angle around the center and
+; pulled in by a factor.
+;
+; Drag the first dot, or set how many dots there are, the angle and the factor. The foreach makes
+; as many dots as there can be at most, and only the first n of them are there.
+
+(import house paper ink soft terracotta plum number)
+
+; p turned by a degrees around the origin and scaled by f.
+(func[point] turn ((point p) (real a) (real f))
+  (* f [(- (* p[0] (cosd a)) (* p[1] (sind a))) (+ (* p[0] (sind a)) (* p[1] (cosd a)))]))
+
+(int n 24 (>= 1) (<= 60))
+(real angle 25 (>= -90) (<= 90))
+(real factor 0.95 (>= 0.8) (<= 1.05))
+
+(scene board (background paper)
+  (group spiral (defaults (stroke none))
+    (foreach k n
+      (circle (name $'dot-{k}') (r (if (= k 0) 0.16 0.09)) (fill (if (= k 0) terracotta plum))
+          (pos (if (= k 0) [3 0] (turn (. (name $'dot-{(- k 1)}') pos) angle factor))))))
+  ; The path through the dots that are there.
+  (polyline_ (points (somes spiral.pos)) (stroke soft) (stroke-width 1))
+  (text_ $'{n} dots, each turned {angle:.0f}° and scaled by {factor:.2f}' (pos [-4.6 4.5])
+      (font number) (fill ink) (halign 'start') (valign 'top')))
+
+(canvas view (x -5) (y -5) (width 10) (height 10) (pan false) (zoom false)
+  doc@'The spiral of dots and the path through them.'
+  board)
+
+(on-drag dot-0 dot-0.pos doc@'Moves the first dot, which moves them all.')
+(slider count (move n (from 1) (to 60)) (label 'dots') doc@'Sets how many dots there are.')
+(slider turning (move angle (from -90) (to 90)) (label 'angle')
+  doc@'Sets how far each dot turns from the one before.')
+(slider shrinking (move factor (from 0.8) (to 1.05)) (label 'factor')
+  doc@'Sets how much each dot is scaled from the one before.')
