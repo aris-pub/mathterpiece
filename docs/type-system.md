@@ -223,7 +223,7 @@ Shapes get the same three mechanisms as values, with forms of their own.
     (group marks (circle m0 (pos [0 0])) (circle m1 (pos [1 0])))
     marks[0]  marks['m1']  marks.r            ; members by position or key; marks.r spreads over them
 
-**A motif** declares a type of shape made of several shapes, with parameters each instance sets, so the same container can be created many times. Its members are reached through the instance.
+**A motif** declares a type of shape made of several shapes, with parameters each instance sets, so the same container can be created many times. Its members are reached through the instance. A motif whose body is one `(animation …)` declares instead a type of animation, which refines `animation`: its instances are animations, values whose arguments are read but never written (reference, "Transitions and animations").
 
     (motif dial ((real t 0.5) (color tint 'red'))
       (circle face (r 1) (fill tint))

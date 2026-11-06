@@ -465,6 +465,9 @@ class _Compiler:
         # Each declaration's written arguments, as (node, scope) by name, for a later (like …)
         # to copy and compile again in its own place (the author, 2026-11-06).
         self.as_written: dict[int, object] = {}
+        # Motifs whose body is one animation: templates of animations, each declaring a type
+        # that refines animation (the author, 2026-11-06).
+        self.anim_motifs: dict[str, MotifDef] = {}
         self.fold_words: dict[int, set[str]] = {}
         # Each rand drawn so far, after foreach and motif instances are expanded.
         self.rand_sites = 0
@@ -785,6 +788,9 @@ class _Compiler:
             return
         if head == "animation":
             self.animation(form, {}, named=True)
+            return
+        if head in self.anim_motifs:
+            self.anim_instance(form, scope)
             return
         if head in COMPONENTS:
             return self.component(form, scope)
@@ -1175,12 +1181,99 @@ class _Compiler:
         if name in SHAPE_ATTRS or name in self.model.types:
             raise CompileError(f"'{name}' is already declared", pos)
         params = self.params(form.items[2])
+        body = form.items[3:]
+        if any(_head(item) == "animation" for item in body):
+            return self.anim_motif_decl(name, params, body, form, pos)
         for p in params:
             if p.name in INSTANCE_ATTRS or p.name == "pos":
                 raise CompileError(f"every motif instance already has '{p.name}'", form.pos)
         self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos)
         self.model.types[name] = ShapeT(name)
         self.trial(name, form.pos)
+
+    def anim_motif_decl(self, name: str, params, body, form: Form, pos: Pos) -> None:
+        """(motif name params (animation …)): a template of animations. It declares the type
+        name, which refines animation; its body is that one animation, never shapes beside it."""
+        if len(body) != 1 or not isinstance(body[0], Form):
+            raise CompileError(
+                "a motif's body is shapes, or one (animation …), never both", body[-1].pos
+            )
+        for p in params:
+            if p.name in ("duration", "steps", "name"):
+                raise CompileError(f"every animation already has '{p.name}'", form.pos)
+        self.anim_motifs[name] = MotifDef(name, params, tuple(body), pos)
+        self.model.types[name] = Refine(ANIMATION, (), name)
+        # One instance, then discarded, so the body's errors show without any; not when a
+        # parameter, such as a shape, has no value to stand in for an argument.
+        for p in params:
+            if p.default is None:
+                try:
+                    self.default(p.type, pos)
+                except CompileError:
+                    return
+        objects, names = len(self.model.objects), dict(self.model.names)
+        self.trialing += 1
+        try:
+            self.anim_instance(Form((Name((name,), pos), NoneLit(pos)), pos), {})
+        finally:
+            self.trialing -= 1
+            del self.model.objects[objects:]
+            self.model.names.clear()
+            dict.update(self.model.names, names)
+
+    def anim_instance(self, form: Form, scope: dict) -> int:
+        """(stop third (angle 120) …), or (stop_ …) in an animation's body: the motif's animation
+        with its parameters given, as a shape motif's instance is; its arguments may be read,
+        third.angle, and never written, since an animation is a value."""
+        kind = _head(form)
+        assert kind is not None
+        motif = self.anim_motifs[kind]
+        name, pos = self.name_of(form, scope)
+        params = {p.name: p for p in motif.params}
+        given: dict[str, tuple[Node, dict]] = {}
+        like = None
+        for item in form.items[2:]:
+            head = _head(item)
+            if head == "like":
+                if like is not None:
+                    raise CompileError("'like' is given twice", item.pos)
+                if given:
+                    raise CompileError(LIKE_FIRST, item.pos)
+                like = item
+                continue
+            if head not in params or not isinstance(item, Form) or len(item.items) != 2:
+                raise CompileError(f"a {kind} takes no argument {_shown(item)}", item.pos)
+            if head in given:
+                raise CompileError(f"'{head}' is given twice", item.pos)
+            given[head] = (item.items[1], scope)
+        if like is not None:
+            source = self.as_written.get(self.like_of(like, scope, "animation", kind))
+            assert isinstance(source, dict)
+            for p, given_at in source["given"].items():
+                given.setdefault(p, given_at)
+        args = {}
+        for p in motif.params:
+            if p.name in given:
+                node, inner = given[p.name]
+                args[p.name] = self.expr(node, p.type, inner)
+            elif p.default is not None:
+                args[p.name] = _known(p.type, p.value)
+            else:
+                args[p.name] = _known(p.type, self.default(p.type, pos))
+        (body,) = motif.body
+        assert isinstance(body, Form)
+        head = Name(("animation",), pos)
+        anim = Form((head, Name((name,), pos), *body.items[1:]), pos) if name else None
+        if anim is not None:
+            i = self.animation(anim, dict(args), named=True)
+        else:
+            i = self.animation(Form((head, *body.items[1:]), pos), dict(args), named=False)
+        obj = self.model.objects[i]
+        obj.type = self.model.types[kind]
+        obj.of = kind
+        obj.data["args"] = args
+        self.as_written[i] = {"given": given}
+        return i
 
     def colormap_decl(self, form: Form) -> None:
         """(colormap name [color…] (positions …) (discrete bool) (wrap-at x)): sugar for one
@@ -2356,6 +2449,9 @@ class _Compiler:
             elif head in ("at-once", "in-order"):
                 assert isinstance(item, Form)
                 out.append((head, *self.steps(item.items[1:], duration, ease, scope)))
+            elif head in self.anim_motifs:
+                assert isinstance(item, Form)
+                out.append(self.model.objects[self.anim_instance(item, scope)].data["steps"])
             else:
                 raise CompileError(
                     "an animation holds moves, waits, at-once and in-order", item.pos
@@ -4631,6 +4727,8 @@ class _Compiler:
             self.type_ends(i, None, pos)
         if obj.kind == "animation" and name == "steps":
             return self.steps_of(i, pos)
+        if obj.kind == "animation" and name in obj.data.get("args", {}):
+            return obj.data["args"][name]
         if obj.kind in ("group", "scene") and name == "length":
             return _known(INT, len(obj.members))
         if obj.kind in ("group", "scene") and name == "members":

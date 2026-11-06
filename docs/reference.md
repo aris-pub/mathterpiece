@@ -88,7 +88,7 @@ Each call is compiled where it is written, so the colors it mixes stay the token
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
 | `(type name base)` | required | the base type | none | constraints |
-| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `foreach`, `let`, `exists-when` |
+| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `foreach`, `let`, `exists-when`; or one `(animation …)`, for a motif of animations (see "Transitions and animations") |
 | `(variant name params shape)` | required | the parameter list; one shape declaration | none | none |
 
 A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t 0.5) (color tint 'red'))`, or `()` for none; each may have a default. `()` is also an empty list of `let` bindings, and is never a value.
@@ -97,7 +97,7 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(func name params body)`, `(func[T] name params body)` | required | the parameter list; the body, one expression | none | none |
+| `(func name params body)`, `(func[T] name params body)` | required | the parameter list; the body, one expression, which never holds a declaration: a function computes, and a motif or a variant declares (syntax, "Values and objects") | none | none |
 
 `func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself. A function may take the name of a built-in function, such as `sind` or `map`: from its declaration on, that name calls the illustrator's function, and above it, the built-in. It may not take the name of a special form (`if`, `let`, `foreach` …), a type (`real`, `circle`, `slider` …) or a constant (`pi`, `infty` …): that is a compile error.
 
@@ -202,6 +202,17 @@ By default a bool, a string or a choice changes at the start of its move and hol
 A move may end, or start, at `none` only when what it moves is declared `T|none`: `(real|none m 2)` may be moved by `(move m (to none))`. A color mixes `none` as transparent, as everywhere. Anything else cannot move smoothly to or from `none`, so it changes as a bool does: at the start of its move, or where a `(step-ease p)` says, and a path is not used.
 
 Paths: a straight line between the ends by default, or a function taking the two ends and the progress.
+
+**A motif of animations** makes many animations from one template, as a motif of shapes makes many shapes: its body is one `(animation …)`, which reads the parameters.
+
+    (motif turn-to ((real angle 0) (string label '') (real seconds 8))
+      (animation
+        (at-once (defaults (duration seconds))
+          (move sunflower.angle (to angle))
+          (move caption (to label)))))
+    (turn-to third (angle 120) (label 'a third of a turn') (seconds 10))
+
+`(turn-to third …)` at the top level declares the animation `third`; `(turn-to_ …)` in an animation's body, or in a play's, is a step of it. Each instance is compiled when compiling, its parameters filled in, so whatever a move needs known then, its target and its duration, is known from the arguments. The motif's name is a type that refines `animation`: `third` is a `turn-to`, accepted wherever an animation is. Its arguments can be read, `third.angle`, and never written, since an animation is a value. A parameter takes a default as a motif's does, an instance may begin with `(like …)`, and a parameter may be a shape, as in `((shape who)) … (move who.opacity (to 0))`. A motif's body is shapes, or one animation, never both; and a function never declares one, since a function only computes (syntax, "Values and objects").
 
 `a.steps` is the list of transitions an animation plays, in the order it plays them: through `at-once` (in the order written), `in-order` and the animations it names, with each wait as a transition that moves nothing, and for an animation that loops, one round. Its length is known when compiling, so `(foreach t a.steps …)` works, and each step is read like any transition, `a.steps[0].duration`. A transition's `duration` can be read wherever a transition is, such as `(fn ((transition s)) s.duration)`; its `from` and `to` only on a step or a named transition, since their type depends on what it moves. A step does not know when it starts, since that depends on the steps before it: the sum of their durations, in an animation that plays them one after another.
 

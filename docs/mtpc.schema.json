@@ -3122,8 +3122,7 @@
               "type": "array",
               "items": {
                 "$ref": "#/$defs/constraint"
-              },
-              "minItems": 1
+              }
             }
           },
           "additionalProperties": false

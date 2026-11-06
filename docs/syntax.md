@@ -64,6 +64,8 @@ Every expression gives an object. Some objects are **values**, which never chang
 
 A form either **computes** something, like the function call `(+ theta 10)`, and has no other effect, or it **declares** something, like `(circle p …)`, and its only effect is that a new object exists. Components are declarations too. A few **special forms** do neither in the ordinary way (section 6).
 
+The templates follow the same split, and always will. **A function is a template of a computation:** its body is an expression, and a function's body will never be allowed to hold a declaration, so calling one never creates anything. **A motif or a variant is a template of declarations:** it is how the same objects are declared many times with different arguments.
+
 ## 4. Declarations
 
 A declaration creates an object and returns it. Its head is usually the type of what it creates (`real`, `circle`, `list[color]`), then its name. A few heads instead say what is being declared: `func`, `type`, `motif`, `variant`, and the components.
