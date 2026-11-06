@@ -16,7 +16,7 @@
 
 ; Which piece of the bounds is explained: none, the factor (1 − 1/b)², the term 1/b², or the
 ; second inequality (the first one explains the same as the factor).
-(type piece string (one-of 'none' 'gap' 'b2' 'hi'))
+(type piece string (one-of 'gap' 'b2' 'hi'))
 
 ; Point i's x, and the depths of the points, of each pair's root, of each half's and of the
 ; whole cluster's.
@@ -48,7 +48,7 @@
       (circle_ (pos [(px (+ i 4)) top]) (r 5)))))
 
 (scene tree
-  (piece shown 'none')
+  (piece|none shown none)
 
   (group axes (defaults (stroke muted) (stroke-width 1) (fill muted) (halign 'end') (font tick))
     (line_ (from [axis top]) (to [axis level3]))
@@ -111,8 +111,8 @@
 (canvas view (x 0) (y -182) (width 300) (height 162) (pan false) (zoom false) (toggle-duration 0.25)
   doc@'The tree, the points, and the highlight of the piece picked.'
   axes
-  (when (= shown 'none') whole)
-  (when (!= shown 'none') faint)
+  (when (none? shown) whole)
+  (when (some? shown) faint)
   cluster
   (when (= shown 'gap') gap-highlight)
   (when (or (= shown 'b2') (= shown 'hi')) both-highlight)
@@ -123,15 +123,15 @@
   names)
 
 ; One button per piece of the bounds.
-(button gap (animation (move shown (to (if (= shown 'gap') 'none' 'gap')) (duration 0.25)))
+(button gap (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
     (label 'the factor (1 − 1/b)²')
   doc@'Highlights what the factor (1 − 1/b)² explains, or clears it if it is shown.')
-(button b2 (animation (move shown (to (if (= shown 'b2') 'none' 'b2')) (duration 0.25)))
+(button b2 (animation (move shown (to (if (= shown 'b2') none 'b2')) (duration 0.25)))
     (label 'the term 1/b²')
   doc@'Highlights what the term 1/b² explains, or clears it if it is shown.')
-(button lower (animation (move shown (to (if (= shown 'gap') 'none' 'gap')) (duration 0.25)))
+(button lower (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
     (label 'the first ≤')
   doc@'Highlights what the first ≤ explains, or clears it if it is shown.')
-(button upper (animation (move shown (to (if (= shown 'hi') 'none' 'hi')) (duration 0.25)))
+(button upper (animation (move shown (to (if (= shown 'hi') none 'hi')) (duration 0.25)))
     (label 'the second ≤')
   doc@'Highlights what the second ≤ explains, or clears it if it is shown.')

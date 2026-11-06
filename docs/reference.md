@@ -190,6 +190,8 @@ A bool, a string or a choice (section 5.d of the type system) cannot change smoo
 
 By default a bool, a string or a choice changes at the start of its move and holds its new value for the rest of the duration, so a move that is cancelled never leaves it in between. An enclosing default ease that is not such an ease does not apply to it.
 
+A move may end, or start, at `none` only when what it moves is declared `T|none`: `(real|none m 2)` may be moved by `(move m (to none))`. A color mixes `none` as transparent, as everywhere. Anything else cannot move smoothly to or from `none`, so it changes as a bool does: at the start of its move, or where a `(step-ease p)` says, and a path is not used.
+
 Paths: a straight line between the ends by default, or a function taking the two ends and the progress.
 
 ### Components
@@ -292,7 +294,7 @@ Every control and listener emits writes to its target (or, through its animation
 
 ### Controls
 
-- **Slider:** it shows its move's path as a track, and the reader scrubs along it: its knob runs from 0 to 1, its `position`, and the target lies that far along the path from `from` to `to`. Clicking the track jumps there; dragging the knob gives the speed. So the move must give a target, `from` and `to`, and may give a `path`, but no `duration` and no `ease`. With `(step n)` the knob stops at n evenly spaced positions.
+- **Slider:** it shows its move's path as a track, and the reader scrubs along it: its knob runs from 0 to 1, its `position`, and the target lies that far along the path from `from` to `to`. Clicking the track jumps there; dragging the knob gives the speed. So the move must give a target, `from` and `to`, neither of which may be `none`, and may give a `path`, but no `duration` and no `ease`. With `(step n)` the knob stops at n evenly spaced positions.
 - **A slider follows its target:** when another writer changes the variable or attribute its move writes, the knob goes to the position whose value is closest to its new value. Its starting position is found the same way.
 - **Button:** a press plays its animation from the start, over time; a press while it runs starts it again.
 - **Play:** a press plays the animation, and its label reads "pause" while it runs. A press while it runs pauses it, and the next resumes it; after the end, a press plays it again from the start.

@@ -2159,8 +2159,9 @@ class _Compiler:
         return Attribute(e.type, expr=e)
 
     def type_ends(self, tid: int, t: Type | None, pos: Pos) -> None:
-        """Compile a transition's ends for an attribute of type t. An end that may be none must be
-        handled, except into a color|none attribute, where none is mixed as transparent."""
+        """Compile a transition's ends for an attribute of type t. An end may be none only when t
+        allows none (the author, 2026-11-06): a color mixes it as transparent, anything else
+        changes to or from it at once, as a bool does."""
         obj = self.model.objects[tid]
         if obj.data["end"] is not None:
             if t is not None and not fits(_loose(obj.data["end"]), _loose(t)):
@@ -2169,9 +2170,11 @@ class _Compiler:
         target = _loose(t) if t is not None else None
         for end, (node, scope) in obj.data["ends"].items():
             e = self.expr(node, _maybe(target) if target is not None else None, scope)
-            if _may_be_none(e.type) and target != Maybe(COLOR):
+            if _may_be_none(e.type) and (target is None or not _may_be_none(target)):
                 raise CompileError(
-                    "this end may be none: give it a default with (or? value default)", node.pos
+                    "this end may be none: give it a default with (or? value default), or"
+                    " declare what it moves T|none",
+                    node.pos,
                 )
             obj.attrs[end] = Attribute(e.type, e.value) if e.known else Attribute(e.type, expr=e)
         obj.data["end"] = target if target is not None else NONE
@@ -2628,6 +2631,17 @@ class _Compiler:
                 )
         if "from" not in tr.data["ends"] or "to" not in tr.data["ends"]:
             raise CompileError("a slider's move needs both (from …) and (to …)", node.pos)
+        # Its knob runs along a track between two values, so neither end may be none.
+        for end in ("from", "to"):
+            if (
+                end in tr.attrs
+                and _may_be_none(tr.attrs[end].type)
+                and _core(tr.attrs[end].type) != COLOR
+            ):
+                raise CompileError(
+                    "a slider's ends may not be none: its knob runs between two values",
+                    tr.data["ends"][end][0].pos,
+                )
         steps = self.played(tid, 1, None, node.pos)
         animation = self.add(
             Obj(

@@ -28,6 +28,17 @@ export function applyEase(ease: Ease, p: number, fn: (id: number) => FnValue): n
 /** What kind of value is moved, for how it moves when no path is given. */
 export type Moves = "number" | "point" | "color" | "jump";
 
+/**
+ * How a move whose end is none goes (the author, 2026-11-06): a color mixes none as transparent;
+ * anything else cannot move smoothly to or from none, so it jumps as a bool does, at the start
+ * unless its ease is a step-ease, which says when. Gives the kind and how far along it is.
+ */
+export function noneEnds(from: unknown, to: unknown, ease: Ease, u: number, moves: Moves): [Moves, number] {
+  if (moves === "color" || moves === "jump" || (from !== null && to !== null)) return [moves, u];
+  const stepped = Array.isArray(ease) && ease[0] === "step-ease";
+  return ["jump", stepped ? u : 1];
+}
+
 /** The value u of the way from a to b along a straight line. */
 export function along(from: unknown, to: unknown, u: number, moves: Moves): unknown {
   // Exactly the end at 1, whatever rounding would give. A number or a point goes past its ends

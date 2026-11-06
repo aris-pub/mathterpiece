@@ -44,8 +44,27 @@ class TestTransitions:
 
     def test_an_end_that_may_be_none(self):
         src = "(real|none e) (scene s (circle c))"
-        error(f"{K} {src} (animation a (move k (to e) (duration 1)))", "may be none")
+        error(
+            f"{K} {src} (animation a (move k (to e) (duration 1)))", "declare what it moves T|none"
+        )
         model("(color|none e) (scene s (circle c))(animation a (move c.fill (to e) (duration 1)))")
+
+    def test_a_target_declared_t_or_none_may_be_moved_to_none(self):
+        # The author, 2026-11-06: declaring T|none says the target may hold none, so a move may
+        # take it there or back; web/test/none-moves.test.ts has how it jumps.
+        for src in (
+            "(real|none m 2) (animation a (move m (to none) (duration 1)))",
+            "(real|none m none) (animation a (move m (from none) (to 3) (duration 1)))",
+            "(type piece string (one-of 'gap' 'b2')) (piece|none shown 'gap')"
+            " (animation a (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))",
+        ):
+            model(src)
+
+    def test_a_sliders_ends_are_never_none(self):
+        error(
+            "(real|none m 2) (slider s (move m (from 0) (to none)))",
+            "a slider's ends may not be none",
+        )
 
     def test_eases_and_paths(self):
         m = model(

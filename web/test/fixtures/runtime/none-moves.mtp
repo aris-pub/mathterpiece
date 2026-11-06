@@ -1,0 +1,6 @@
+(real|none m 2)
+(string|none shown 'gap')
+(animation gone (move m (to none) (duration 1)))
+(animation back (move m (from none) (to 3) (duration 1)))
+(animation late (move m (to none) (duration 1) (ease (step-ease 1))))
+(animation hide (move shown (to none) (duration 1)))

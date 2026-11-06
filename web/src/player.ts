@@ -3,7 +3,7 @@
 // slider scrubs through it (docs/reference.md, "Transitions and animations" and "Controls").
 import type { Clamp, Step } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
-import { type Ease, type Moves, along, applyEase } from "./transitions.ts";
+import { type Ease, type Moves, along, applyEase, noneEnds } from "./transitions.ts";
 
 interface Move {
   id: number;
@@ -156,7 +156,8 @@ export class Player {
       const from = tr.from ? rt.evaluate(tr.from) : (m.from ?? cur);
       const to = tr.to ? rt.evaluate(tr.to) : (m.to ?? cur);
       const p = m.duration > 0 ? Math.min((t - m.start) / m.duration, 1) : 1;
-      cur = along(from, to, applyEase(m.ease, p, (id) => rt.fn(id)), this.movesAs(m));
+      const [kind, u] = noneEnds(from, to, m.ease, applyEase(m.ease, p, (id) => rt.fn(id)), this.movesAs(m));
+      cur = along(from, to, u, kind);
     }
     return cur;
   }
@@ -176,10 +177,11 @@ export class Player {
       m.from = tr.from ? rt.evaluate(tr.from) : here;
       m.to = tr.to ? rt.evaluate(tr.to) : here;
     }
-    const e = applyEase(m.ease, p, (id) => rt.fn(id));
+    const [kind, e] = noneEnds(m.from, m.to, m.ease, applyEase(m.ease, p, (id) => rt.fn(id)), this.movesAs(m));
     const tr = rt.objects[m.transition]!;
-    const path = tr.path && typeof tr.path === "object" ? (tr.path as { func: number }).func : null;
-    let v = path === null ? along(m.from, m.to, e, this.movesAs(m)) : rt.fn(path)([m.from, m.to, e], null);
+    // A path runs between two values, so a move to or from none jumps instead.
+    const path = tr.path && typeof tr.path === "object" && m.from !== null && m.to !== null ? (tr.path as { func: number }).func : null;
+    let v = path === null ? along(m.from, m.to, e, kind) : rt.fn(path)([m.from, m.to, e], null);
     for (const c of this.clamps) {
       if (c.target[0] === m.id && c.target[1] === m.attr && typeof v === "number") v = rt.clamp(c, v);
     }
