@@ -171,6 +171,9 @@ def _indent(stack: list[_Frame], text: str) -> int:
     second = f.second if len(f.items) > 1 else text[:1]
     if base in NAMED and (unnamed or (second != "" and second in OPEN)):
         count = max(0, count - 1)
+    # (foreach ((i n) (j m)) …) has its bindings in one list, where (foreach i n …) has two items.
+    if base == "foreach" and second == "(":
+        count = 1
     before = len(f.items) - 1
     if before < count or base in NO_BODY:
         return f.col + 4

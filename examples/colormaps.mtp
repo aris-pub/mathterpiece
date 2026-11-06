@@ -51,28 +51,26 @@
   ; The heatmap: 20 by 20 cells, each the color of its value under the map chosen.
   (group heat (translate [-4.6 1])
     (rect frame (width 5) (height 5) (fill none) (stroke soft) (stroke-width 1))
-    (foreach i 20
-      (foreach j 20
-        (let ((v (bumps (/ (+ i 0.5) 20) (/ (+ j 0.5) 20))))
-          ; A little wider than its share, so that no seam shows between two cells.
-          (rect_ (pos [(+ -2.5 (* cell (+ i 0.5))) (+ -2.5 (* cell (+ j 0.5)))])
-              (width (* 1.06 cell)) (height (* 1.06 cell)) (stroke none)
-              (fill
-               (cond (banded (bands v))
-                     ((= scheme 'magma') (magma v))
-                     ((= scheme 'cividis') (cividis v))
-                     ((= scheme 'blue-white-red') (blue-white-red v))
-                     (else (viridis v)))))))))
+    (foreach ((i 20) (j 20))
+      (let ((v (bumps (/ (+ i 0.5) 20) (/ (+ j 0.5) 20))))
+        ; A little wider than its share, so that no seam shows between two cells.
+        (rect_ (pos [(+ -2.5 (* cell (+ i 0.5))) (+ -2.5 (* cell (+ j 0.5)))])
+            (width (* 1.06 cell)) (height (* 1.06 cell)) (stroke none)
+            (fill
+             (cond (banded (bands v))
+                   ((= scheme 'magma') (magma v))
+                   ((= scheme 'cividis') (cividis v))
+                   ((= scheme 'blue-white-red') (blue-white-red v))
+                   (else (viridis v))))))))
 
   ; The coast: 24 by 20 cells, each the color of its height above the sea.
   (group coast (translate [2.4 1])
     (rect shore (width 6) (height 5) (fill none) (stroke soft) (stroke-width 1))
-    (foreach i 24
-      (foreach j 20
-        (let ((h (height (/ (+ i 0.5) 24) (/ (+ j 0.5) 20))))
-          (rect_ (pos [(+ -3 (* cell (+ i 0.5))) (+ -2.5 (* cell (+ j 0.5)))])
-              (width (* 1.06 cell)) (height (* 1.06 cell)) (stroke none)
-              (fill (land (- h sea))))))))
+    (foreach ((i 24) (j 20))
+      (let ((h (height (/ (+ i 0.5) 24) (/ (+ j 0.5) 20))))
+        (rect_ (pos [(+ -3 (* cell (+ i 0.5))) (+ -2.5 (* cell (+ j 0.5)))])
+            (width (* 1.06 cell)) (height (* 1.06 cell)) (stroke none)
+            (fill (land (- h sea)))))))
 
   ; Okabe and Ito by number: twelve dots, so the last four repeat the first four. Under them,
   ; the first eight again, each read by its name.

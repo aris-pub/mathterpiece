@@ -489,6 +489,59 @@ class TestForeach:
         error("(blah 2 i)", "1:2: unknown type 'blah'")
 
 
+class TestForeachOverSeveral:
+    # mtp-h8f. The author, 2026-11-06: (foreach ((i n) (x xs) …) decl…), written as let writes
+    # its names, beside (foreach i n …); every combination, the last changing fastest, as nested
+    # foreach give; a source may read the names before it; a plain int n is (range n).
+    def names(self, src):
+        return [o.name for o in model(src).objects if o.kind == "circle"]
+
+    def test_every_combination_the_last_fastest(self):
+        src = "(scene s (foreach ((i 2) (j 3)) (circle (name $'c{i}{j}'))))"
+        assert self.names(src) == ["c00", "c01", "c02", "c10", "c11", "c12"]
+
+    def test_the_same_as_nested_foreach(self):
+        body = "(circle (name $'c{i}-{x}') (r (+ i x)))"
+        nested = model(f"(list xs [4 5] (const)) (scene s (foreach i 2 (foreach x xs {body})))")
+        flat = model(f"(list xs [4 5] (const)) (scene s (foreach ((i 2) (x xs)) {body}))")
+        assert [(o.name, o.attrs["r"].value) for o in flat.objects if o.kind == "circle"] == [
+            (o.name, o.attrs["r"].value) for o in nested.objects if o.kind == "circle"
+        ]
+
+    def test_a_source_reads_the_names_before_it(self):
+        src = "(scene s (foreach ((i 3) (j (range i))) (circle (name $'c{i}{j}'))))"
+        assert self.names(src) == ["c10", "c20", "c21"]
+
+    def test_over_a_group_and_a_count(self):
+        src = (
+            "(scene s (group g (circle a) (circle b))"
+            " (foreach ((p g) (k 2)) (circle (name $'{p.name}{k}'))))"
+        )
+        assert self.names(src)[2:] == ["a0", "a1", "b0", "b1"]
+
+    def test_inside_a_group_and_an_animation(self):
+        m = model("(scene s (group g (foreach ((i 2) (j 2)) (circle (name $'m{i}{j}')))))")
+        assert len(m.get("g").members) == 4
+        m = model(
+            "(real k 0) (animation a (at-once (foreach ((i 2) (j 2))"
+            " (move k (to (+ i j)) (duration 1)))))"
+        )
+        assert len([o for o in m.objects if o.kind == "transition"]) == 4
+
+    @pytest.mark.parametrize(
+        "src, msg",
+        [
+            ("(scene s (foreach () (circle_)))", "at least one thing"),
+            ("(scene s (foreach (i 2) (circle_)))", r"bindings as \(\(name source\) …\)"),
+            ("(scene s (foreach ((i 2) (i 3)) (circle_)))", "foreach gives 'i' twice"),
+            ("(scene s (foreach ((none 2)) (circle_)))", "expected the name foreach gives"),
+            ("(int n 2) (scene s (foreach ((i 2) (j n)) (circle_)))", "known when compiling"),
+        ],
+    )
+    def test_errors(self, src, msg):
+        error(src, msg)
+
+
 class TestTheFormTemplate:
     # syntax.md, section 8: a head, a name, positional arguments, optional arguments in any order,
     # then a body.

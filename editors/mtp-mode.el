@@ -129,6 +129,14 @@ list's items under its first item."
                        (skip-chars-forward " \t\n")
                        (looking-at "[([]"))))
         (setq count (max 0 (1- count))))
+      ;; (foreach ((i n) (j m)) …) has its bindings in one list, where (foreach i n …) has two.
+      (when (and (equal base "foreach")
+                 (save-excursion
+                   (goto-char (1+ start))
+                   (forward-sexp 1)
+                   (skip-chars-forward " \t\n")
+                   (looking-at "(")))
+        (setq count 1))
       ;; How many of the form's arguments come before the line being indented.
       (let ((before 0))
         (save-excursion

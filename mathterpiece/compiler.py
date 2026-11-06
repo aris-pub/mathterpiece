@@ -553,16 +553,53 @@ class _Compiler:
             if _head(item) != "foreach":
                 yield item, scope
                 continue
-            if len(item.items) < 3:
+            if len(item.items) >= 2 and isinstance(item.items[1], Form):
+                bindings = self.foreach_bindings(item.items[1])
+                body = item.items[2:]
+            elif len(item.items) >= 3:
+                bindings = [(item.items[1], item.items[2])]
+                body = item.items[3:]
+            else:
                 raise CompileError(
-                    "foreach is (foreach i n declaration…) or (foreach x list declaration…)",
+                    "foreach is (foreach i n declaration…), (foreach x list declaration…) or"
+                    " (foreach ((i n) (x list) …) declaration…)",
                     item.pos,
                 )
-            var = item.items[1]
-            if not isinstance(var, Name) or len(var.parts) != 1 or var.parts[0] in RESERVED:
-                raise CompileError("expected the name foreach gives each item", var.pos)
-            for value in self.each_of(item.items[2], scope):
-                yield from self.expand(item.items[3:], {**scope, var.parts[0]: value}, top)
+            for var, _ in bindings:
+                if not isinstance(var, Name) or len(var.parts) != 1 or var.parts[0] in RESERVED:
+                    raise CompileError("expected the name foreach gives each item", var.pos)
+            yield from self.foreach_copies(bindings, body, scope, top)
+
+    def foreach_bindings(self, form: Form) -> list[tuple[Node, Node]]:
+        """The (name source) pairs of (foreach ((i n) (x list) …) …), in order."""
+        if not form.items:
+            raise CompileError("a foreach goes through at least one thing: ((i n) …)", form.pos)
+        pairs, seen = [], set()
+        for binding in form.items:
+            if not isinstance(binding, Form) or len(binding.items) != 2:
+                raise CompileError(
+                    "foreach takes its bindings as ((name source) …), as in ((i 20) (x xs))",
+                    binding.pos,
+                )
+            var = binding.items[0]
+            if isinstance(var, Name) and var.parts in seen:
+                raise CompileError(f"foreach gives '{_shown(var)}' twice", var.pos)
+            if isinstance(var, Name):
+                seen.add(var.parts)
+            pairs.append((var, binding.items[1]))
+        return pairs
+
+    def foreach_copies(
+        self, bindings: list, body, scope: dict, top: bool
+    ) -> Iterator[tuple[Node, dict]]:
+        """The body once for every combination of the bindings' items, the last changing
+        fastest, as nested foreach would give; a source may read the names before it."""
+        if not bindings:
+            yield from self.expand(body, scope, top)
+            return
+        (var, source), rest = bindings[0], bindings[1:]
+        for value in self.each_of(source, scope):
+            yield from self.foreach_copies(rest, body, {**scope, var.parts[0]: value}, top)
 
     def each_of(self, node, scope: dict) -> list[Expr]:
         """What foreach goes through: 0 to n - 1 for a count, each item of a list, each member

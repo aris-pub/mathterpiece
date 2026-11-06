@@ -62,6 +62,11 @@ def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
         ("(real v 1\n(>= 0))\n", "(real v 1\n    (>= 0))\n"),
         ("(slider s v\n(from 0)\n(to 1))\n", "(slider s v\n    (from 0)\n    (to 1))\n"),
         ("(if a\nb\nc)\n", "(if a\n    b\n  c)\n"),
+        ("(foreach i 2\n(circle_))\n", "(foreach i 2\n  (circle_))\n"),
+        (
+            "(foreach ((i 2)\n(j 3))\n(circle_))\n",
+            "(foreach ((i 2)\n          (j 3))\n  (circle_))\n",
+        ),
     ],
 )
 def test_keyword_arguments_go_4_in_in_fmt_and_emacs(src, want, tmp_path):
