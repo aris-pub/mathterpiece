@@ -23,7 +23,7 @@
   (point o [-2.2 -1.4] (const))
   (group handles
     (circle a-tip (pos [0.8 -0.6]) (r 0.3) (fill terracotta) (fill-opacity 0.18) (stroke none))
-    (circle b-tip (pos [-1.3 1]) (r 0.3) (fill teal) (fill-opacity 0.18) (stroke none)))
+    (circle b-tip (like a-tip) (pos [-1.3 1]) (fill teal)))
 
   (let ((a (- a-tip.pos o))
         (b (- b-tip.pos o))

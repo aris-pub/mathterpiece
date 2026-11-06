@@ -322,6 +322,8 @@ POSITIONAL = {"text": ("value",)}
 # The key, never a name, under which a scope holds the condition the copies of a foreach whose
 # count is known only while drawing exist under (the author, 2026-11-06).
 EXISTS = "\0exists"
+# (like x) comes before every other keyword argument (the author, 2026-11-06).
+LIKE_FIRST = "(like …) comes first, before the other arguments"
 
 
 class CompileError(Exception):
@@ -460,6 +462,9 @@ class _Compiler:
         # The values of folded calls of named functions, by fold_key, and the names written in
         # each such function's body.
         self.folded: dict[tuple, Expr] = {}
+        # Each declaration's written arguments, as (node, scope) by name, for a later (like …)
+        # to copy and compile again in its own place (the author, 2026-11-06).
+        self.as_written: dict[int, object] = {}
         self.fold_words: dict[int, set[str]] = {}
         # Each rand drawn so far, after foreach and motif instances are expanded.
         self.rand_sites = 0
@@ -2142,6 +2147,8 @@ class _Compiler:
                     f"expected an argument such as (to 1), got {_shown(item)}", item.pos
                 )
             arg = item.items[1]
+            if head == "like" and (given or ends):
+                raise CompileError(LIKE_FIRST, item.pos)
             if head == "like":
                 # The named transition's arguments, under the ones this one gives itself: they
                 # fill only what is not given, wherever (like …) is written.
@@ -3001,16 +3008,35 @@ class _Compiler:
         """(font name (family …) (style …) (weight …) (size …)): declared with items, not a
         value (type-system.md, section 4)."""
         name, pos = self.name_of(form, scope)
-        parts = {}
+        written: dict[str, tuple[Node, dict]] = {}
+        like = None
         for item in form.items[2:]:
             head = _head(item)
+            if head == "like":
+                if like is not None:
+                    raise CompileError("'like' is given twice", item.pos)
+                if written:
+                    raise CompileError(LIKE_FIRST, item.pos)
+                like = item
+                continue
             if head not in FONT_PARTS or not isinstance(item, Form) or len(item.items) != 2:
                 raise CompileError(
-                    "a font takes (family …), (style …), (weight …), (size …)", item.pos
+                    "a font takes (family …), (style …), (weight …), (size …), and (like f)",
+                    item.pos,
                 )
-            if head in parts:
+            if head in written:
                 raise CompileError(f"'{head}' is given twice", item.pos)
-            parts[head] = self.expr(item.items[1], FONT_PARTS[head].type, scope)
+            written[head] = (item.items[1], scope)
+        # (like f) gives every part f was written with that this font does not give.
+        if like is not None:
+            source = self.as_written[self.like_of(like, scope, "variable", None)]
+            if not isinstance(source, dict) or source.get("font") is not True:
+                raise CompileError("like takes the name of a font declared before it", like.pos)
+            for p, given_at in source["parts"].items():
+                written.setdefault(p, given_at)
+        parts = {
+            p: self.expr(node, FONT_PARTS[p].type, inner) for p, (node, inner) in written.items()
+        }
         # A part may read the same part of another font: it takes that font's value, and the
         # page's CSS for it falls back to that font's, so restyling one restyles both.
         linked: dict[str, int] = {}
@@ -3037,7 +3063,7 @@ class _Compiler:
         }
         attribute = Attribute(FONT, values)
         data = {"links": linked} if linked else {}
-        self.add(
+        i = self.add(
             Obj(
                 "variable",
                 name,
@@ -3049,6 +3075,7 @@ class _Compiler:
                 data=data,
             )
         )
+        self.as_written[i] = {"font": True, "parts": written}
 
     def access_of(self, deps) -> tuple[str, int | None]:
         """page, and the object that gives it, when anything in deps has page access."""
@@ -3220,8 +3247,16 @@ class _Compiler:
         params = {p.name for p in v.params}
         own = list(items) if items is not None else _scoped(form.items[2:], scope)
         mine, rest = {}, []
+        like: tuple[Node, dict] | None = None
         for item, inner in self.expand_scoped(own):
             head = _head(item)
+            if head == "like" and head not in params:
+                if like is not None:
+                    raise CompileError("'like' is given twice", item.pos)
+                if mine or rest:
+                    raise CompileError(LIKE_FIRST, item.pos)
+                like = (item, inner)
+                continue
             if head in params:
                 if head in mine or not isinstance(item, Form) or len(item.items) != 2:
                     raise CompileError(f"'{head}' is given twice", item.pos)
@@ -3231,6 +3266,16 @@ class _Compiler:
             if hit:
                 raise CompileError(f"a {kind}'s {hit[0]} is fixed", item.pos)
             rest.append((item, inner))
+        if like is not None:
+            source = self.variant_like(like[0], like[1], outer)
+            for p, given_at in source["mine"].items():
+                mine.setdefault(p, given_at)
+            heads = {_head(item) for item, _ in rest}
+            for item, inner in source["rest"]:
+                head = _head(item)
+                if head not in heads and not _overlaps(head or "", dict.fromkeys(heads - {None})):
+                    rest.append((item, inner))
+        written = {"variant": outer, "mine": dict(mine), "rest": list(rest)}
         i = len(self.model.objects)
         body_scope = {p: (lambda p=p: self.read(i, p)) for p in params}
 
@@ -3251,6 +3296,7 @@ class _Compiler:
         if v.base in self.model.variants:
             return self.variant_instance(base_form, parent, scope, spread, merged, pre, outer)
         j = self.shape(base_form, parent, scope, spread, merged, pre)
+        self.as_written[j] = written
         obj = self.model.objects[j]
         obj.of = outer
         obj.type = Maybe(self.model.types[outer]) if absent else self.model.types[outer]
@@ -3307,8 +3353,18 @@ class _Compiler:
         defaults: dict[str, tuple[Node, dict]] = {}
         clip: tuple[Form, dict] | None = None
         passes: tuple[Node, dict] | None = None
+        like: tuple[Node, dict] | None = None
+        after_args = False
         for item, inner in self.expand_scoped(scoped):
             head = _head(item)
+            if head == "like" and head not in params:
+                if like is not None:
+                    raise CompileError("'like' is given twice", item.pos)
+                if after_args:
+                    raise CompileError(LIKE_FIRST, item.pos)
+                like = (item, inner)
+                continue
+            after_args = True
             if self.shape_kind(item) and head not in params:
                 raise CompileError(f"an instance of {kind} takes no members", item.pos)
             if head == "clip" and head not in params:
@@ -3348,6 +3404,13 @@ class _Compiler:
             if head in given or _overlaps(head, given):
                 raise CompileError(f"'{head}' is given twice", item.pos)
             given[head] = (item.items[1], inner)
+        if like is not None:
+            source = self.as_written[self.like_of(like[0], like[1], "instance", kind)]
+            assert isinstance(source, dict)
+            _fill_from(given, source["given"])
+            if not defaults:
+                defaults = dict(source["defaults"])
+        self.as_written[i] = {"given": dict(given), "defaults": dict(defaults)}
         # From a group around it: a position moves the instance's frame; the rest are for its
         # members, under its own defaults.
         down = {}
@@ -3519,11 +3582,13 @@ class _Compiler:
         scoped = list(items) if items is not None else _scoped(form.items[2:], scope)
         for attr in POSITIONAL.get(kind, ()):
             # The first item is the positional unless it names one of the shape's arguments.
-            if scoped and _head(scoped[0][0]) not in takes | {"pos"}:
+            if scoped and _head(scoped[0][0]) not in takes | {"pos", "like"}:
                 given[attr] = scoped.pop(0)
         existence: list[tuple[Form, dict]] = []
         clip: tuple[Form, dict] | None = None
         passes: tuple[Node, dict] | None = None
+        like: tuple[Node, dict] | None = None
+        after_args = False
         for raw, outer in scoped:
             # A let or a foreach among a group's members is worked out where it is written, so
             # it reads the members before it: it is expanded as the members are declared.
@@ -3545,6 +3610,19 @@ class _Compiler:
                         item.pos,
                     )
                 head = _head(item)
+                if head != "like":
+                    after_args = True
+                if head == "like":
+                    if after_args:
+                        raise CompileError(LIKE_FIRST, item.pos)
+                    if kind == "group":
+                        raise CompileError(
+                            "a container takes no (like …): its members are its own", item.pos
+                        )
+                    if like is not None:
+                        raise CompileError("'like' is given twice", item.pos)
+                    like = (item, inner)
+                    continue
                 if kind == "group" and head == "clip":
                     assert isinstance(item, Form)
                     if clip is not None:
@@ -3595,6 +3673,12 @@ class _Compiler:
                 if head in given or ("pos" in given and head in ("x", "y")):
                     raise CompileError(f"'{head}' is given twice", item.pos)
                 given[head] = (item.items[1], inner)
+        # (like x) gives every argument x was written with that this one does not give.
+        if like is not None:
+            source = self.as_written[self.like_of(like[0], like[1], kind, None)]
+            assert isinstance(source, dict)
+            _fill_from(given, source)
+        self.as_written[i] = dict(given)
         # A group's arguments are defaults for its members: a member's own value wins, and the
         # nearest group's wins over one further out (reference.md, "The scene and shapes").
         down = dict(spread or {})
@@ -3671,6 +3755,33 @@ class _Compiler:
         if axis is not None:
             self.no_text_in(i, form.pos)
         return i
+
+    def like_of(self, item: Node, scope: dict, kind: str, of: str | None) -> int:
+        """The declaration (like x) names: one of the same kind, declared before."""
+        if not isinstance(item, Form) or len(item.items) != 2:
+            raise CompileError(
+                "like is (like name), naming a declaration of the same kind", item.pos
+            )
+        e = self.expr(item.items[1], None, scope)
+        i = e.args[0] if e.op in ("obj", "read") and e.args and isinstance(e.args[0], int) else None
+        obj = self.model.objects[i] if i is not None else None
+        if obj is None or i not in self.as_written or obj.kind != kind or obj.of != of:
+            what = of or kind
+            raise CompileError(f"like takes the name of a {what} declared before it", item.pos)
+        return i
+
+    def variant_like(self, item: Node, scope: dict, variant: str) -> dict:
+        """What the instance of variant that (like x) names was written with."""
+        if not isinstance(item, Form) or len(item.items) != 2:
+            raise CompileError(
+                "like is (like name), naming a declaration of the same kind", item.pos
+            )
+        e = self.expr(item.items[1], None, scope)
+        i = e.args[0] if e.op == "obj" else None
+        written = self.as_written.get(i) if i is not None else None
+        if not isinstance(written, dict) or written.get("variant") != variant:
+            raise CompileError(f"like takes the name of a {variant} declared before it", item.pos)
+        return written
 
     def copy_exists(self, i: int, scope: dict) -> int:
         """Shape i exists only while the condition of the foreach copy it is in holds."""
@@ -5165,6 +5276,19 @@ def _locals(e) -> set:
 
 def _scoped(nodes, scope: dict) -> list:
     return [(n, scope) for n in nodes]
+
+
+def _fill_from(given: dict, source: dict) -> None:
+    """given with every argument of source it does not give itself, for (like …). A position
+    written whole, (pos p), still gives the coordinate given leaves out: p's y beside its x."""
+    for attr, (node, scope) in source.items():
+        if attr == "pos" and ("x" in given) != ("y" in given) and "pos" not in given:
+            other = "y" if "x" in given else "x"
+            # By position, which a point and a list written [x y] both have.
+            k = IntLit(1 if other == "y" else 0, node.pos)
+            given[other] = (Form((Name((".",), node.pos), node, k), node.pos), scope)
+        elif attr not in given and not _overlaps(attr, given):
+            given[attr] = (node, scope)
 
 
 def _overlaps(attr: str, given: dict) -> bool:

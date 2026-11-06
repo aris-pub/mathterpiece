@@ -27,6 +27,15 @@ Every declaration may take `doc@'text'`, an optional argument that says what the
 - **It is for the illustrator and the author,** never a description for a reader, which is a separate matter (mtp-fl20).
 - **It is given once:** two docstrings on one declaration are a compile error. `doc` is a reserved word.
 
+### Copying a declaration
+
+`(like x)` gives a declaration every argument `x` was written with that it does not give itself: `(circle b-tip (like a-tip) (pos [-1.3 1]) (fill teal))` has `a-tip`'s radius, fill opacity and stroke, and its own position and fill.
+
+- **What is copied is what was written,** compiled again in the new declaration, so the copy follows whatever `x`'s arguments read: if `x`'s radius is `(* 2 k)`, so is the copy's. The copy has its own free values: a drag on `x` does not move it. An argument that should follow `x` itself is written `(r x.r)`.
+- **A position written whole** still gives the coordinate the copy leaves out: with `x` at `(pos [1 2])`, `(like x) (x 5)` is at `[5 2]`.
+- **Who takes it:** a shape, a motif instance (its arguments and its `(defaults …)`), a variant instance (its parameters and arguments), a font, and a transition or a move. `x` is declared before, and is of the same kind: a circle from a circle, an instance from an instance of the same motif or variant. A container takes none, since its members are its own. One `(like …)` at most, and it comes first, before every other keyword argument; a positional argument, such as a text's string, still comes before it.
+- **A variant is different:** it declares a new type of shape. A `(like …)` written the same way in many places is a sign a variant is wanted.
+
 ### Imports
 
 `(import house)` reads `house.mtp` from the folder of the file importing it, or, when there is none there, from the standard library. It gives one name, `house`, and what `house.mtp` declares is read through it: `house.ink`, `(house.dial d1)`, `(house.unit u 0.5)`. `(import house ink accent)` gives `ink` and `accent` as names of their own, and not `house`, as Python's `from house import ink, accent` does. There is no way to import every name at once: each name is written, or the file is imported whole.
