@@ -28,8 +28,10 @@ Objects are values, which never change, or mutable objects, which can. A type th
     - **`scene`**: holds the shapes
     - **namespace**: `(namespace theme …)`, members read and written as attributes, `theme.ink`; never drawn
       - **palette**: `(palette brand …)`, a namespace whose members are all colors; every palette is a namespace
+    - **`formula`**: `(formula bounds …)`, typeset math, holding its terms, read and written as `bounds.gap`; every formula is a `formula`
+      - **`term`**: a piece of a formula its LaTeX marks, `\term{gap}{…}`, with attributes as a shape has; every term is a `term`
     - **component**
-      - view: `canvas`, `readout`
+      - view: `canvas`, `readout`, `display`
       - control: `slider`, `button`, `play`, `toggle`
       - listener: `on-drag`, `on-click`, `on-release`, `on-dragend`, `on-view`
 

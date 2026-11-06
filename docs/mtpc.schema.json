@@ -1445,10 +1445,13 @@
                 "group",
                 "instance",
                 "namespace",
+                "formula",
+                "term",
                 "transition",
                 "animation",
                 "canvas",
                 "readout",
+                "display",
                 "slider",
                 "button",
                 "play",
@@ -2088,6 +2091,64 @@
               },
               "attrs": {
                 "$ref": "#/$defs/attrs"
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "display"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "formula",
+              "as"
+            ],
+            "properties": {
+              "kind": {
+                "const": "display"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "formula": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "as": {
+                "enum": [
+                  "inline",
+                  "block"
+                ]
               },
               "doc": {
                 "type": "string"
@@ -2771,6 +2832,120 @@
             },
             "additionalProperties": false
           }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "formula"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "tex",
+              "members"
+            ],
+            "properties": {
+              "kind": {
+                "const": "formula"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "$ref": "#/$defs/name"
+              },
+              "tex": {
+                "type": "string"
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "term"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "term",
+              "formula",
+              "attrs"
+            ],
+            "properties": {
+              "kind": {
+                "const": "term"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "term": {
+                "type": "string"
+              },
+              "formula": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "attrs": {
+                "$ref": "#/$defs/attrs"
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
         }
       ]
     },
@@ -2946,7 +3121,9 @@
             "none",
             "scene",
             "namespace",
-            "palette"
+            "palette",
+            "formula",
+            "term"
           ]
         },
         {
@@ -2996,6 +3173,7 @@
               "enum": [
                 "canvas",
                 "readout",
+                "display",
                 "slider",
                 "button",
                 "play",

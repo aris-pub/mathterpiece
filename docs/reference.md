@@ -177,6 +177,40 @@ Each part is known when compiling, or reads the same part of another font: `(fon
 
 Color and font variables are tokens: the page may restyle them with CSS, so no writer (control or listener) can write them (see the data model, "What changes, and what follows" and "On the page").
 
+### Formulas
+
+A **formula** is typeset math, as the scene is geometry: `(formula name item…)`, declared at the top level, beside the scene, and shown on the page by a display (see "Components"). It holds its LaTeX, one TeX string fixed when compiling (see "TeX strings"), in which `\term{name}{…}` marks a **term**: a piece of the formula that is an object of its own, read and written as `formula.name`.
+
+```
+(formula bounds
+  doc@'The squared stretch of the pair, bounded below and above.'
+  tex'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
+      \mathrel{\term{lo}{\le}} \frac{\mathbb E\,(d(x,A)-d(y,A))^2}{d(x,y)^2}
+      \mathrel{\term{hi}{\le}} P_h(p) + \term{b2}{\frac1{b^2}}'
+  (term gap (fill teal) (opacity (lit shown 'gap')) (background none) (padding 2) (rounding 3))
+  (term b2 (fill coral) (opacity (lit shown 'b2'))))
+```
+
+- **Terms** are marked in the LaTeX, each name once, and may nest: `\term{all}{\frac{\term{top}{a}}{b}}` marks `all` and, inside it, `top`. A term's name is a name, as a variable's is. The runtime has MathJax read `\term` as its own `\class`, so the LaTeX goes to MathJax as written.
+- **`(term name (attr value)…)`** gives a term's attributes, at most once for each term; a term with no such form has the defaults:
+
+  | Attribute | Type | Default | Is |
+  |---|---|---|---|
+  | `fill` | color or `none` | `none` | the color of its glyphs; `none` takes the color of the page around the formula |
+  | `opacity` | real from 0 to 1 | 1 | |
+  | `background` | color or `none` | `none` | a box drawn behind it |
+  | `outline` | color or `none` | `none` | a line drawn around it |
+  | `outline-width` | real, at least 0 | 1 | the outline's width, in screen pixels |
+  | `padding` | real, at least 0 | 0 | how far the box and the outline reach past its glyphs, in screen pixels |
+  | `rounding` | real, at least 0 | 0 | the radius of the box's and the outline's corners, in screen pixels |
+  | `tex` | string | its LaTeX | its content, in place of what the LaTeX marks |
+
+  The box and the outline never move the glyphs around them. As any attribute, each may be given by an expression, which it then follows, or by a value that a writer may write and move: `(move bounds.gap.background (to wash) (duration 0.2))` fades a box in. `tex` is how values enter a formula: with `\term{v}{}` in the LaTeX, `(term v (tex $'{(* 2 q (- 1 q)):.3f}'))` shows the value, typeset again when it changes.
+- **`(exists-when name bool)`** says when a term exists: while it does not, it is not shown, and the formula closes up around it.
+- **Variables** declared in a formula belong to it: what follows them in the formula reads them by their bare names, and outside it they are read and written by their full names, as `bounds.lit`.
+- **Formulas and the scene never read each other.** A formula reads the globals and its own variables; the scene reads the globals and its own. One formula never reads another, and a formula, as the scene, never reads page access. What both follow, such as which piece of a formula the reader picked, is a global.
+- **The rest of its look** comes from the page around it: its font, its size and the color of every glyph no term colors.
+
 ### Transitions and animations
 
 | Form | Name | Positional | Optional arguments | Body |
@@ -224,17 +258,18 @@ A view, a control and a readout must have a name: a page places each by its name
 |---|---|---|---|---|
 | `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling the shapes its items give, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene), and expressions that give a shape, none, or a list of them, such as `(when bool name)`, `(when bool [a b])` or `(if bool a b)`, drawn in the order written, each on top of those before it |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
+| `(display name formula)` | required | the formula it shows | `(kind k)`, known when compiling: `'block'` (the default) for a formula on its own line, or `'inline'` for one inside a paragraph | none |
 | `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, `(active bool)` | conditions |
 | `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(autoplay)`, `(autoplay name)`, `(active bool)` | conditions |
 | `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(active bool)` | conditions |
 | `(on-drag shape target)` | none | the shape; the target, a `name`, the variable or attribute the drag writes | `(active bool)` | conditions |
-| `(on-click shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
+| `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
 | `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
 | `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
 | `(on-view canvas)` | none | the canvas | `(animation …)`, `(active bool)` | conditions |
-| `(on-enter shape)` | none | the shape | `(animation …)`, `(active bool)` | conditions |
-| `(on-leave shape)` | none | the shape | `(animation …)`, `(active bool)` | conditions |
+| `(on-enter shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)` | conditions |
+| `(on-leave shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)` | conditions |
 | `(on-pointermove shape target)` | none | the shape or the canvas; the target, a `name`, the point it writes | `(active bool)`, `(stop-propagation bool)` | conditions |
 
 A canvas **toggles** the shapes its items give: when an item starts or stops giving a shape, as `(when show d)` does when `show` changes, or `(if show d c)` does by giving one shape for another, the canvas shows or hides that shape. A toggle takes the canvas's `(toggle-duration t)`, in seconds, 0 (at once) if left out, with its `(toggle-ease e)`, `'linear'` if left out, any ease an animation takes: over that time the items' opacity, as the canvas shows them, goes from 0 to 1 or back. A canvas takes no `move`. The canvas never writes the scene: the opacity is its own. "Toggle" is the word for a canvas showing or hiding one of its items.

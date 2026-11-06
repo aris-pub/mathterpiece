@@ -140,6 +140,8 @@ PRIMS = {
 }
 # Every namespace has this type, as every circle has circle (the author, 2026-11-05).
 NAMESPACE = Prim("namespace")
+# Every formula and every term of one has these types (the author, 2026-11-06).
+FORMULA, TERM = Prim("formula"), Prim("term")
 # A namespace whose members are all colors, made by (palette …): every palette is a namespace,
 # accepted wherever one is, and not the other way round (the author, 2026-11-05).
 PALETTE = Prim("palette")

@@ -12,9 +12,9 @@
   '("scene" "group" "row" "column" "motif" "variant" "type" "func" "import"
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
-    "color" "font" "namespace" "palette" "interface" "colormap"
+    "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
     "transition" "move" "wait" "animation" "at-once" "in-order"
-    "canvas" "readout" "slider" "button" "play" "toggle" "on-drag" "on-click"
+    "canvas" "readout" "display" "slider" "button" "play" "toggle" "on-drag" "on-click"
     "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "defaults" "clip" "loop" "autoplay" "exists-when"
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
@@ -24,9 +24,9 @@
   '("a" "active" "align" "autoplay" "b" "background" "buttons" "c" "clip" "controls" "dash" "dash-offset"
     "doc" "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap"
     "halign" "height"
-    "label" "like" "line-cap" "line-join" "num" "opacity" "pan" "path" "points"
-    "pointer-events" "pos" "r" "rx"
-    "ry" "size" "step" "stop-propagation" "stroke" "stroke-opacity" "stroke-width" "style" "to" "toggle-duration" "toggle-ease" "transform"
+    "kind" "label" "like" "line-cap" "line-join" "num" "opacity" "outline" "outline-width" "padding" "pan" "path" "points"
+    "pointer-events" "pos" "r" "rounding" "rx"
+    "ry" "size" "step" "stop-propagation" "stroke" "stroke-opacity" "stroke-width" "style" "tex" "to" "toggle-duration" "toggle-ease" "transform"
     "translate" "valign" "value" "weight" "width"
     "x" "y" "zoom")
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,
@@ -54,6 +54,7 @@ takes a color apart from strings.")
     ("scene" . 1) ("group" . 1) ("row" . 1) ("column" . 1) ("circle" . 1) ("rect" . 1) ("ellipse" . 1) ("line" . 1)
     ("triangle" . 1) ("polyline" . 1) ("polygon" . 1) ("curve" . 1) ("arc" . 1) ("ring" . 1) ("text" . 2) ("font" . 1)
     ("namespace" . 1) ("palette" . 1) ("interface" . 1) ("colormap" . 2)
+    ("formula" . 1) ("term" . 1) ("display" . 2)
     ("real" . 2) ("int" . 2) ("ratio" . 2) ("complex" . 2) ("bool" . 2) ("string" . 2)
     ("point" . 2) ("list" . 2) ("transform" . 2) ("color" . 2)
     ("type" . 2) ("motif" . 2) ("variant" . 2) ("func" . 2)
@@ -78,7 +79,8 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
       ("canvas" "doc" "x" "y" "width" "height" "transform" "pan" "zoom" "toggle-duration"
        "toggle-ease")
       ("animation" "doc" ,@animation) ("at-once" ,@animation) ("in-order" ,@animation)
-      ("motif" "doc") ("variant" "doc") ("func" "doc") ("namespace" "doc") ("palette" "doc")))
+      ("motif" "doc") ("variant" "doc") ("func" "doc") ("namespace" "doc") ("palette" "doc")
+      ("formula" "doc")))
   "Forms that take a body, and their keyword arguments. A keyword argument on a line of
 its own is indented 4, like a positional argument, so it reads apart from the body at 2.")
 
@@ -88,7 +90,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
     "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
-    "colormap" "interface" "defaults")
+    "colormap" "interface" "defaults" "term" "display")
   "Forms that take no body: every item after their positional arguments is indented 4.")
 
 (defconst mtp-mode--named
@@ -96,7 +98,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
     "curve" "text" "font" "namespace" "palette" "interface" "colormap"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform" "color"
     "type" "motif" "variant" "func" "transition" "animation"
-    "canvas" "readout" "slider" "button" "play" "toggle")
+    "canvas" "readout" "slider" "button" "play" "toggle" "formula" "display")
   "Forms that take a name, so that (head_ …) has one argument fewer before its body.")
 
 (defun mtp-mode--indent-function (indent-point state)

@@ -16,7 +16,7 @@ INDENT = {
     **dict.fromkeys(
         ["polyline", "polygon", "arc", "ring", "font", "animation", "canvas", "namespace"], 1
     ),
-    **dict.fromkeys(["palette", "curve"], 1),
+    **dict.fromkeys(["palette", "curve", "formula", "term"], 1),
     **dict.fromkeys(["button", "play", "interface"], 1),
     "text": 2,
     **dict.fromkeys(
@@ -24,6 +24,7 @@ INDENT = {
     ),
     **dict.fromkeys(["color", "type", "motif", "variant", "func", "transition", "readout"], 2),
     "slider": 2,
+    "display": 2,
     "colormap": 2,
     "toggle": 2,
     **dict.fromkeys(["move", "on-click", "on-release", "on-dragend", "on-view", "exists-when"], 1),
@@ -61,6 +62,8 @@ NAMED = {
     "palette",
     "interface",
     "colormap",
+    "formula",
+    "display",
 }
 # Forms that take a body, and their keyword arguments. A keyword argument on a line of its own goes
 # 4 in, like a positional argument, so it reads apart from the body at 2. The same table as the
@@ -82,7 +85,7 @@ KEYWORDS = {
     "canvas": _CANVAS,
     "animation": _ANIMATION | {"doc"},
     **{head: _ANIMATION for head in ["at-once", "in-order"]},
-    **{head: {"doc"} for head in ["motif", "variant", "func", "namespace", "palette"]},
+    **{head: {"doc"} for head in ["motif", "variant", "func", "namespace", "palette", "formula"]},
 }
 # Forms that take no body: every item after their positional arguments goes 4 in. The same list
 # as the Emacs mode's.
@@ -93,7 +96,7 @@ NO_BODY = {
     *["on-release", "on-dragend", "on-view", "move", "transition", "font", "color"],
     *["on-enter", "on-leave", "on-pointermove"],
     *["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"],
-    *["colormap", "interface", "defaults"],
+    *["colormap", "interface", "defaults", "term", "display"],
 }
 OPEN, CLOSE = "([", ")]"
 _DOC = re.compile(r"\(doc\s+('(?:[^'\\]|\\.)*')\s*\)")

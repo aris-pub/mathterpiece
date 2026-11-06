@@ -53,7 +53,7 @@ from mathterpiece.nodes import (
     RealLit,
     StrLit,
 )
-from mathterpiece.parse import parse
+from mathterpiece.parse import _valid_name_part, parse
 from mathterpiece.types import (
     ANIMATION,
     BOOL,
@@ -61,6 +61,7 @@ from mathterpiece.types import (
     COMPARE,
     COMPLEX,
     FONT,
+    FORMULA,
     INT,
     INTERFACES,
     NAMESPACE,
@@ -74,6 +75,7 @@ from mathterpiece.types import (
     SCENE,
     SHAPES,
     STRING,
+    TERM,
     TRANSFORM,
     TRANSITION,
     ComponentT,
@@ -127,6 +129,7 @@ LAYOUTS = {
 COMPONENTS = {
     "canvas",
     "readout",
+    "display",
     "slider",
     "button",
     "play",
@@ -195,6 +198,22 @@ PAINTED = {
     # none (the author, 2026-11-06).
     "pointer-events": Argument(BOOL, True),
 }
+# A term's attributes (the author, 2026-11-06): its color, none for the color of the page around
+# the formula, its opacity, and the adornments drawn around it without moving the glyphs, in
+# screen pixels. Its content, tex, is given only by its (term …) form; its existence, by
+# exists-when.
+TERM_ATTRS = {
+    "fill": Argument(PAINT, None),
+    "opacity": Argument(UNIT, 1),
+    "background": Argument(PAINT, None),
+    "outline": Argument(PAINT, None),
+    "outline-width": Argument(NON_NEGATIVE, 1),
+    "padding": Argument(NON_NEGATIVE, 0),
+    "rounding": Argument(NON_NEGATIVE, 0),
+}
+# Where \term{name}{…} marks a term in a formula's LaTeX.
+TERM_MARK = re.compile(r"\\term\s*\{([^{}]*)\}")
+DISPLAY_AS = Refine(STRING, (("one-of", ("inline", "block")),))
 # What only a stroke uses, which a text takes from no group, since a stroke would outline its
 # letters.
 STROKE_ONLY = frozenset({"stroke", "stroke-width", "dash", "dash-offset", "line-cap", "line-join"})
@@ -444,6 +463,9 @@ class _Compiler:
         self.cscope: dict = {}
         # True while compiling the scene's contents, which may never read page access.
         self.in_scene = False
+        # The formula whose contents are being compiled, which reads neither the scene nor
+        # another formula, nor page access (the author, 2026-11-06).
+        self.in_formula: int | None = None
         # The object and attribute whose attribute is being compiled, so a message can name them:
         # (name, the shape's type or None for a variable, attribute or None).
         self.where: tuple | None = None
@@ -775,6 +797,10 @@ class _Compiler:
             return self.interface_decl(form)
         if head == "scene":
             return self.scene_decl(form)
+        if head == "formula":
+            return self.formula_decl(form, scope)
+        if head == "term":
+            raise CompileError("a term is given inside its formula", form.pos)
         if head == "motif":
             return self.motif_decl(form)
         if head == "variant":
@@ -2520,7 +2546,7 @@ class _Compiler:
             obj = self.model.objects[i]
             if attr is not None:
                 raise CompileError(f"{label} is not a variable or an attribute", node.pos)
-            if isinstance(part, str) and obj.kind == "namespace":
+            if isinstance(part, str) and obj.kind in ("namespace", "formula"):
                 if part not in obj.data["members"]:
                     raise CompileError(f"{obj.name} has no member '{part}'", node.pos)
                 i = obj.data["members"][part]
@@ -2595,7 +2621,7 @@ class _Compiler:
             if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
                 raise CompileError(f"{kind} takes the shape it listens to", form.pos)
             name, pos, items = None, form.pos, form.items[2:]
-            shape = self.read_shape(form.items[1])
+            shape = self.read_listened(form.items[1], kind)
         elif kind == "on-view":
             if len(form.items) < 2 or _head(form.items[1]) == "animation":
                 raise CompileError("on-view takes the canvas it listens to", form.pos)
@@ -2659,6 +2685,15 @@ class _Compiler:
         if i is not None and self.model.objects[i].kind == "canvas":
             return None, i
         return self.read_shape(node), None
+
+    def read_listened(self, node: Node, kind: str) -> int:
+        """The shape, or the term of a formula, a listener listens to."""
+        e = self.expr(node, None, self.cscope)
+        if e.op == "obj" and _core(e.type) == TERM:
+            if kind not in ("on-click", "on-enter", "on-leave"):
+                raise CompileError("a term takes on-click, on-enter and on-leave", node.pos)
+            return e.args[0]
+        return self.read_shape(node)
 
     def read_shape(self, node: Node) -> int:
         e = self.expr(node, None, self.cscope)
@@ -3081,6 +3116,27 @@ class _Compiler:
         if "clips" in self.model.objects[e.args[0]].data:
             raise CompileError("a container's clip is never drawn, so no canvas shows it", node.pos)
         return e.args[0]
+
+    def build_display(self, obj: Obj, items: list, shape) -> None:
+        """(display name formula (kind k)): shows a formula on the page, as a canvas shows the
+        scene, inside a paragraph ('inline') or on its own line ('block', the default)."""
+        kind = self.take(items, "kind")
+        if not items:
+            raise CompileError("a display shows a formula: (display name formula)", obj.pos)
+        node = items.pop(0)
+        obj.data["formula"] = self.component_named(
+            node, {"formula"}, "expected the name of a formula"
+        )
+        obj.data["as"] = "block"
+        if kind is not None:
+            attribute = self.attribute(DISPLAY_AS, kind, kind.pos, "kind", scope=self.cscope)
+            if attribute.bound:
+                raise CompileError("a display's kind is known when compiling", kind.pos)
+            obj.data["as"] = attribute.value
+        if items:
+            raise CompileError(
+                "expected an item of a display, such as (kind 'inline')", items[0].pos
+            )
 
     def build_readout(self, obj: Obj, items: list, shape) -> None:
         if not items:
@@ -3621,7 +3677,7 @@ class _Compiler:
                 attrs["transform"] = self.attribute(
                     TRANSFORM, item.items[1], item.pos, "transform", scope=scope
                 )
-            elif head in ("motif", "variant", "func", "transition", "animation") or (
+            elif head in ("motif", "variant", "func", "transition", "animation", "formula") or (
                 head in COMPONENTS or _typed_func(item) is not None
             ):
                 raise CompileError(
@@ -3637,6 +3693,148 @@ class _Compiler:
                 self.variable(item, self.scene, "scene", scope)
             else:
                 raise CompileError("the scene holds shapes and variables", item.pos)
+
+    def formula_decl(self, form: Form, scope: dict) -> None:
+        """(formula name tex'…' item…): typeset math, beside the scene (the author, 2026-11-06).
+        Its LaTeX is fixed when compiling; each \\term{name}{…} in it is a term, an object
+        named formula.name. Its other items are its own variables, read by their bare names by
+        what follows them, (term name …) forms giving a term's attributes, and exists-when."""
+        name, pos = self.name_of(form)
+        if name is None:
+            raise CompileError("a formula needs a name", form.pos)
+        items = list(form.items[2:])
+        texts = [it for it in items if isinstance(it, (StrLit, InterpStrLit))]
+        if not texts:
+            raise CompileError("a formula holds its LaTeX: (formula name tex'…')", form.pos)
+        if len(texts) > 1:
+            raise CompileError("a formula holds one LaTeX string", texts[1].pos)
+        text = texts[0]
+        if not isinstance(text, StrLit):
+            raise CompileError("a formula's LaTeX is known when compiling", text.pos)
+        i = self.add(
+            Obj("formula", name, FORMULA, pos=pos, data={"members": {}, "tex": text.value})
+        )
+        members: dict[str, int] = self.model.objects[i].data["members"]
+        for short in _marked_terms(text.value, text.pos):
+            attrs = {k: Attribute(a.type, a.default) for k, a in TERM_ATTRS.items()}
+            attrs["exists"] = Attribute(BOOL, True)
+            obj = Obj(
+                "term", f"{name}.{short}", TERM, attrs=attrs, parent=i, pos=text.pos,
+                data={"term": short},
+            )  # fmt: skip
+            members[short] = self.add(obj)
+        inside = dict(scope)
+        given: set[str] = set()
+        saved, self.in_formula = self.in_formula, i
+        try:
+            for item in items:
+                if item is text:
+                    continue
+                head = _head(item)
+                if head == "term":
+                    assert isinstance(item, Form)
+                    self.term_form(item, i, inside, given)
+                elif head == "exists-when":
+                    assert isinstance(item, Form)
+                    self.term_exists(item, i, inside)
+                elif (
+                    not isinstance(item, Form)
+                    or head in NOT_VALUES
+                    or head in COMPONENTS
+                    or head in ("namespace", "palette", "formula")
+                    or _typed_func(item) is not None
+                    or self.shape_kind(item)
+                ):
+                    raise CompileError("a formula holds its LaTeX, terms and variables", item.pos)
+                else:
+                    short, at = self.member_name(item, members)
+                    named = Form(
+                        (item.items[0], Name((f"{name}.{short}",), at), *item.items[2:]), item.pos
+                    )
+                    self.variable(named, i, "scene", inside)
+                    m = self.model.names[f"{name}.{short}"]
+                    members[short] = m
+                    inside[short] = self.read(m, None)
+        finally:
+            self.in_formula = saved
+
+    def formula_term(self, f: int, node: Node) -> int:
+        """The term of formula f a bare name in its body names."""
+        formula = self.model.objects[f]
+        short = node.parts[0] if isinstance(node, Name) and len(node.parts) == 1 else None
+        m = formula.data["members"].get(short) if isinstance(short, str) else None
+        if m is None or self.model.objects[m].kind != "term":
+            shown = short if isinstance(short, str) else "…"
+            raise CompileError(
+                f"{formula.name} has no term '{shown}': mark one in its LaTeX,"
+                f" \\term{{{shown}}}{{…}}",
+                node.pos,
+            )
+        return m
+
+    def term_form(self, form: Form, f: int, scope: dict, given: set) -> None:
+        """(term name (attr value)…): a term's attributes, and its content as tex."""
+        if len(form.items) < 2:
+            raise CompileError("a term form names its term: (term name (attr value)…)", form.pos)
+        m = self.formula_term(f, form.items[1])
+        term = self.model.objects[m]
+        short = term.data["term"]
+        if short in given:
+            raise CompileError(f"the term '{short}' is given twice", form.pos)
+        given.add(short)
+        for item in form.items[2:]:
+            head = _head(item)
+            if not isinstance(item, Form) or len(item.items) != 2 or head is None:
+                raise CompileError("a term takes attributes, as (opacity 0.5)", item.pos)
+            if head == "tex":
+                t: Type = STRING
+            elif head in TERM_ATTRS:
+                t = TERM_ATTRS[head].type
+            else:
+                raise CompileError(f"a term has no attribute '{head}'", item.pos)
+            saved, self.where = self.where, (term.name, "term", head)
+            try:
+                term.attrs[head] = self.attribute(t, item.items[1], item.pos, head, scope=scope)
+            finally:
+                self.where = saved
+
+    def term_exists(self, form: Form, f: int, scope: dict) -> None:
+        """(exists-when name bool) in a formula: the term exists only while bool holds."""
+        if len(form.items) != 3:
+            raise CompileError("exists-when is (exists-when term condition)", form.pos)
+        m = self.formula_term(f, form.items[1])
+        term = self.model.objects[m]
+        if term.attrs["exists"].bound or term.attrs["exists"].value is not True:
+            raise CompileError(f"when {term.name} exists is given twice", form.pos)
+        term.attrs["exists"] = self.attribute(BOOL, form.items[2], form.pos, "exists", scope=scope)
+
+    def home(self, i: int) -> int | str | None:
+        """Where object i belongs: "scene", the id of its formula, or None for a global."""
+        while True:
+            obj = self.model.objects[i]
+            if obj.kind == "formula":
+                return i
+            if obj.kind == "scene":
+                return "scene"
+            if obj.parent is None:
+                return None
+            i = obj.parent
+
+    def check_home(self, deps, pos: Pos) -> None:
+        """Formulas and the scene never read each other (the author, 2026-11-06)."""
+        in_scene = self.in_scene or bool(self.bodies)
+        if self.in_formula is None and not in_scene:
+            return
+        for i, _ in deps:
+            h = self.home(i)
+            label = self.model.objects[i].name
+            owner = f"the formula {self.model.objects[h].name}" if isinstance(h, int) else ""
+            if self.in_formula is not None and h == "scene":
+                raise CompileError(f"a formula cannot read {label}: it belongs to the scene", pos)
+            if self.in_formula is not None and isinstance(h, int) and h != self.in_formula:
+                raise CompileError(f"a formula cannot read {label}: it belongs to {owner}", pos)
+            if in_scene and isinstance(h, int):
+                raise CompileError(f"the scene cannot read {label}: it belongs to {owner}", pos)
 
     def shape(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
         doc = None
@@ -4148,6 +4346,8 @@ class _Compiler:
         fix = "constrain what it reads so this can be proved"
         if self.where and self.where[0] and self.where[2]:
             name, kind, attr = self.where
+            if kind == "term":
+                return f"{name}'s {attr} may break {_show(c)}: {fix}"
             return f"{name}'s {attr} may break {_show(c)}: {fix}, or declare {name} as {kind}|none"
         if self.where and self.where[0]:
             return f"{self.where[0]} may break {_show(c)}: {fix}, or declare it {t}|none"
@@ -4215,14 +4415,16 @@ class _Compiler:
         if e.known:
             return Attribute(t, e.value)
         access, source = self.access_of(e.deps)
-        if access == "page" and (self.in_scene or self.bodies):
+        if access == "page" and (self.in_scene or self.bodies or self.in_formula is not None):
             assert source is not None
             label = self.model.objects[source].name
+            who = "a formula" if self.in_formula is not None else "the scene"
             raise CompileError(
-                f"the scene cannot read {label}: it has page access, so only components and"
+                f"{who} cannot read {label}: it has page access, so only components and"
                 " globals may read it",
                 pos,
             )
+        self.check_home(e.deps, pos)
         inner = _inner(t)
         if isinstance(inner, Refine):
             broken = tuple(
@@ -4722,7 +4924,7 @@ class _Compiler:
 
     def obj_attr(self, i: int, name: str, pos: Pos) -> Expr:
         obj = self.model.objects[i]
-        if obj.kind == "namespace":
+        if obj.kind in ("namespace", "formula"):
             if name not in obj.data["members"]:
                 raise CompileError(f"{obj.name} has no member '{name}'", pos)
             return self.read(obj.data["members"][name], None)
@@ -5580,6 +5782,36 @@ def _take_doc(form: Form) -> tuple[Form, str | None]:
         raise CompileError("a doc is plain text, known when compiling: doc@'text'", item.pos)
     rest = tuple(it for it in form.items if it is not item)
     return Form(rest, form.pos), item.items[1].value
+
+
+def _marked_terms(tex: str, pos: Pos) -> list[str]:
+    """The names of the terms a formula's LaTeX marks, \\term{name}{…}, in the order written,
+    after checking its braces match (an escaped brace, \\{, is text)."""
+    depth = 0
+    k = 0
+    while k < len(tex):
+        c = tex[k]
+        if c == "\\":
+            k += 2
+            continue
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth < 0:
+                raise CompileError("the formula's LaTeX has a '}' that closes nothing", pos)
+        k += 1
+    if depth > 0:
+        raise CompileError("the formula's LaTeX has a '{' that is never closed", pos)
+    names: list[str] = []
+    for found in TERM_MARK.finditer(tex):
+        short = found.group(1)
+        if not _valid_name_part(short) or short in RESERVED or any(c.isspace() for c in short):
+            raise CompileError(f"'{short}' is not a term's name", pos)
+        if short in names:
+            raise CompileError(f"the term '{short}' is marked twice", pos)
+        names.append(short)
+    return names
 
 
 def _fixed_size_value(form: Form) -> bool:

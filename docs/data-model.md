@@ -93,7 +93,7 @@ Objects are of two sorts. A **value** is an immutable object: it never changes, 
 
 A **variable**, such as `(real k 1)`, is not a value: it is a name for a piece of state that holds one object of its type at a time. The objects it holds may be values (3, then 4) or mutable objects (a shape). It evaluates to what it currently holds, and has no attributes of its own.
 
-Every box below has a title and examples of the forms that declare what it holds. Arrows are relations between them. Apart from function calls, forms fall into five groups: special forms, declarations that create types, declarations of things in the scene, declarations of things on the page, and **globals**: declarations of things in neither, which both use. A variable belongs to the scene when declared in it, and to the globals otherwise. Either way, views may read it, and controls and listeners may read it and write it, as long as it is free, has no `const` constraint, and is not a token. A motif's body may declare only bound variables; free per-instance state is a motif parameter.
+Every box below has a title and examples of the forms that declare what it holds. Arrows are relations between them. Apart from function calls, forms fall into six groups: special forms, declarations that create types, declarations of things in the scene, declarations of things in a formula, declarations of things on the page, and **globals**: declarations of things in none of them, which all use. A variable belongs to the scene when declared in it, to a formula when declared in one, and to the globals otherwise. Either way, views may read it, and controls and listeners may read it and write it, as long as it is free, has no `const` constraint, and is not a token. A motif's body may declare only bound variables; free per-instance state is a motif parameter.
 
 ```mermaid
 flowchart LR
@@ -104,6 +104,10 @@ flowchart LR
       sc["the scene: (scene …)"]
       shapes["shapes: (circle …) (group …) (dial …)"]
     end
+    subgraph formula
+      fm["formulas: (formula …)"]
+      terms["terms: \term{name}{…}, (term …)"]
+    end
     vars["variables: (real …) (color …) (bool …)"]
     subgraph globals
       funcs["functions: (func …)"]
@@ -111,7 +115,7 @@ flowchart LR
       anims["animations: (animation …)"]
     end
     subgraph page
-      views["views: (canvas …) (readout …)"]
+      views["views: (canvas …) (readout …) (display …)"]
       listeners["listeners: (on-drag …) (on-click …) (on-release …) (on-dragend …) (on-view …) (on-enter …) (on-leave …) (on-pointermove …)"]
       controls["controls: (slider …) (button …) (play …) (toggle …)"]
     end
@@ -125,6 +129,9 @@ flowchart LR
   listeners -->|attached to| shapes
   listeners -->|on-view, on-pointermove: attached to| views
   views -->|shows| sc
+  views -->|display shows| fm
+  listeners -->|on-click, on-enter, on-leave: attached to| terms
+  terms <-->|read| vars
   views -->|read| vars
   listeners & controls <-->|read, write| vars
 ```
@@ -136,6 +143,7 @@ A **namespace**, `(namespace theme (color ink …) (real gap 0.4))`, is a global
 A group (a row and a column included) and a motif instance are both **containers**: collections of shapes, which behave the same way. Neither draws anything itself, so an attribute such as `fill` or `stroke` is never a container's own: reading one gives every member's, and writing one writes every member's. What an instance has besides is a frame of its own, moved by its `x`, `y`, `translate` and `transform`, and its parameters. The reference, "Containers", gives the full rules, `(defaults …)` included.
 
 - **The scene** is the mathematical content: the shapes, and the variables declared with them. It is a subset of the model and knows nothing of how it is shown or changed. The model includes the scene; the scene never includes the rest of the model.
+- **A formula** is typeset math, as the scene is geometry: its LaTeX, its **terms**, the pieces of it marked in the LaTeX, which are objects with attributes as shapes are, and the variables declared in it. A display shows it on the page, as a canvas shows the scene, and listeners attach to its terms as they attach to shapes. The scene and a formula never read each other, and neither does one formula another: what they share is a global.
 - **Components** are what the illustrator declares and the author places on the page. They come in two sorts, by the direction information flows: **writers** (controls and listeners) carry the reader's actions into the model; **views** carry the model to the reader. ("Reader" on its own always means the person.) Basic components come from the standard library, and authors will be able to make their own from them.
 - **Writers are active or not.** A writer that is **active** accepts triggers: a press of a button, a move of a slider's knob, a click on a toggle, a drag, a click on a shape, a release over one, the end of a drag, a canvas coming into view. Once **triggered**, it writes what it targets, directly or through its animation. An inactive writer cannot be triggered; what it already set off goes on. The illustrator says when a writer is active with `(active bool)`; a writer without one is always active.
 - **A writer animates only toward a state it knows.** A triggered writer with an animation builds a path from the state at that moment (or from a transition's own `from`) to the state the animation ends at, then writes along it over the animation's duration. It can do so only if that end state is known when it is triggered. A writer whose end state is never known then, such as a drag, which goes wherever the reader takes the pointer, takes no animation. A writer whose end state is known only sometimes follows its animation whenever the end is known, and otherwise writes the end state at once. (A slider differs: its knob sets how far along its animation things are, not a path played over time; see the reference.)
@@ -196,7 +204,7 @@ The author connects a world model to a web page with HTML elements.
 - **`<mtp-model>`** loads one compiled model, once, and gives the live model an id. Its `src` says where the compiled model is, in one of two ways:
   - **a file**, `src="dial.mtpc"`, which the page fetches, so the page must be served by a web server;
   - **a block in the page**, `src="#dial-data"`, naming a `<script type="application/json" id="dial-data">` that holds the compiled model and may stand anywhere in the page, before or after the model. Inside it, every `</` is written `<\/`, so that nothing in the compiled model can end the script early. The page `mtp build` writes does this.
-- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. `on-view` is the exception: it names the canvas whose coming into view it waits for. So is an `on-pointermove` that names a canvas, which listens to the pointer anywhere over that canvas.
+- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-display>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. `on-view` is the exception: it names the canvas whose coming into view it waits for. So is an `on-pointermove` that names a canvas, which listens to the pointer anywhere over that canvas.
 - **One live model feeds any number of components,** which share its state: the slider in one paragraph, the readout inside a sentence and the canvas below all change together.
 - **A page may load several world models.** Each has its own state; components of one never affect another.
 - **The page styles components with its own CSS.** Tokens, the color and font variables, appear as CSS custom properties that the page may override: a color variable `ink` as `--mtp-ink`, and a font variable `note` through its parts, `--mtp-note-family`, `--mtp-note-style` and `--mtp-note-weight`. A token imported from another file is named by that file: `ink` from `house.mtp` is `--mtp-house-ink`, however it is imported. Each shape is drawn with the page's value, or with the token's declared value where the page gives none. Colors computed from tokens are passed to the browser as CSS color mixes, so they follow the page's values too. An expression that reads a token's channels (`ink.r`) or compares it sees its declared value.

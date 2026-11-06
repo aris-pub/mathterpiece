@@ -258,6 +258,16 @@ class Writer:
                 }
         elif kind == "namespace":
             d["members"] = list(o.members)
+        elif kind == "formula":
+            d["tex"] = o.data["tex"]
+            d["members"] = list(o.members)
+        elif kind == "term":
+            d["term"] = o.data["term"]
+            d["formula"] = o.parent
+            d["attrs"] = attrs
+        elif kind == "display":
+            d["formula"] = o.data["formula"]
+            d["as"] = o.data["as"]
         elif kind == "instance":
             d["of"] = o.of
             d["members"] = list(o.members)

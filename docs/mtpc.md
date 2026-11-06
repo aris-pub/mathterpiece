@@ -38,7 +38,7 @@ Every type is written as JSON:
 
 | Type | Written |
 |---|---|
-| built-in | `"int"`, `"ratio"`, `"real"`, `"complex"`, `"bool"`, `"string"`, `"color"`, `"font"`, `"point"`, `"transform"`, `"transition"`, `"animation"`, `"none"`, `"scene"`, `"namespace"` (every namespace, as every circle is `{"shape": "circle"}`), `"palette"` (every palette, a namespace whose members are colors; its object is of kind `namespace`) |
+| built-in | `"int"`, `"ratio"`, `"real"`, `"complex"`, `"bool"`, `"string"`, `"color"`, `"font"`, `"point"`, `"transform"`, `"transition"`, `"animation"`, `"none"`, `"scene"`, `"namespace"` (every namespace, as every circle is `{"shape": "circle"}`), `"palette"` (every palette, a namespace whose members are colors; its object is of kind `namespace`), `"formula"` and `"term"` (every formula and every term of one) |
 | a built-in shape type | `{"shape": "circle"}`, likewise `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `curve`, `arc`, `ring`, `text`, `group` |
 | a declared type | `{"named": "unit"}`, `{"named": "dial"}`, `{"named": "bar"}`: an entry of `types` |
 | a component | `{"component": "slider"}`, likewise for each component |
@@ -134,6 +134,8 @@ and `"doc"`, a string, when its declaration gives a docstring, `doc@'text'` (ref
 | `scene` | `"members"`: the ids of its shapes; `"attrs"`: `background`, and `transform`, how the scene's own coordinates are drawn |
 | a row or a column | kind `group`, with `"layout"`: `{"axis": "row" or "column", "gap": a real, "align": a string}`, each free or bound; the runtime moves each member after the box of the one before (reference, "Placing") |
 | `namespace` | `"members"`: the ids of its members, variables and namespaces, in the order declared. Each member is an object of its own, named by the namespace: `theme.ink`, `colors.tab10.blue` |
+| `formula` | `"tex"`: its LaTeX, as written, `\term{name}{…}` marking each term; `"members"`: the ids of its terms, in the order the LaTeX marks them. Its variables are objects of their own, named by the formula, as `bounds.lit` |
+| `term` | `"term"`: its name in the LaTeX, `gap` for `\term{gap}{…}`; `"formula"`: its formula's id; `"attrs"`: `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding`, `exists`, each free or bound, and `tex`, its content, when its `(term …)` form gives one |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `curve`, `arc`, `ring`, `text`, `group` | `"attrs"`: every attribute, free or bound, and `exists`, a bool, when an `exists-when` names the shape (while it is false the shape is absent, and so are its members when it is a container, and every read of them is none); `group` also `"members"`, `"clip"`, the id of its clip shape, when it has one (that shape is an object of its own, in the group's frame, and not among the members), and `"fixed-size": true` when its members are measured in screen pixels (a group given `(fixed-size false)` or nothing has no such key) |
 | a motif instance | kind `instance`; `"of"`: the motif's name; `"members"`; `"attrs"`: its parameters, its bound variables, and `x`, `y`, `translate` and `transform` (its `fill` and the like are its members'); `"clip"`, as for a group |
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |
@@ -141,12 +143,13 @@ and `"doc"`, a string, when its declaration gives a docstring, `doc@'text'` (ref
 | `animation` | `"steps"`: a step (below) |
 | `canvas` | `"shows"`: what it shows, in the order written, which is the order it draws them in (later ones on top): each entry the id of a shape, or an attribute, free or bound, for an item that gives a shape, none or a list of them, such as `(when show d)`; `"transition"`: an id or `null`; `"attrs"`: the view box, `transform`, `pan` and `zoom` |
 | `readout` | `"attrs"`: `value` (the string), `font` |
+| `display` | `"formula"`: the id of the formula it shows; `"as"`: `"block"` or `"inline"` |
 | `slider`, `button`, `play` | `"animation"`: an id; `"autoplay"` (play only): `null`, `"load"`, or the id of the view or control whose first coming into view starts it; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"attrs"`: `label`, and `step` (slider: the number of positions its knob stops at), `buttons` (play), and the attributes the reader's actions change: `position` (slider), `playing` and `step` (play: the step now playing) |
 | `toggle` | `"target"`: `[id, attr]` or `null`; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"attrs"`: `label`, `value` |
 | `on-drag` | `"shape"`: an id; `"target"`: `[id, attr]`; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 | `on-pointermove` | `"shape"`: an id or `null`; `"view"`: the canvas's id or `null`, one of the two; `"target"`: `[id, attr]`; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
-| `on-click`, `on-release`, `on-dragend` | `"shape"`: an id; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
-| `on-enter`, `on-leave` | `"shape"`: an id; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
+| `on-click`, `on-release`, `on-dragend` | `"shape"`: an id, of a shape or, for `on-click`, of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
+| `on-enter`, `on-leave` | `"shape"`: an id, of a shape or of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 | `on-view` | `"view"`: the canvas's id; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 
 A writer's `"conditions"` is a list of clamps, one per condition, already in the form the reference requires (a comparison of the variable or attribute written with a value not depending on it): `{"target": [id, attr], "op": ">=" | ">" | "<=" | "<", "limit": L}`, `L` free or bound. Before emitting a write to that target, the runtime clamps it to the limit.
