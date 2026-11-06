@@ -48,17 +48,16 @@
 ; middle of the ease): a small change of angle turns the outer seeds a long way, so faster than
 ; that the flower blurs.
 (motif turn-to ((real angle 0) (stop label 'a quarter turn') (color|none glow none)
-                (real seconds 8) (func[(real (>= 0) (<= 1)) real] curve))
+                (real seconds 8) (func[(real (>= 0) (<= 1)) real] curve cubic-in-out))
   doc@'One stop of the tour: turn to angle, show its label, and light the halo or not.'
   (animation
     (at-once (defaults (duration seconds) (ease curve))
       (move sunflower.angle (to angle))
       (move stop-name (to label))
       (move halo.fill (to glow)))))
-(turn-to quarter (angle 90) (label 'a quarter turn') (seconds 16) (curve cubic-in-out))
-(turn-to third (angle 120) (label 'a third of a turn') (seconds 10) (curve cubic-in-out))
-(turn-to two-fifths (angle 144) (label 'two fifths of a turn') (seconds 8)
-         (curve cubic-in-out))
+(turn-to quarter (angle 90) (label 'a quarter turn') (seconds 16))
+(turn-to third (angle 120) (label 'a third of a turn') (seconds 10))
+(turn-to two-fifths (angle 144) (label 'two fifths of a turn') (seconds 8))
 (turn-to golden (angle golden-angle) (label 'the golden angle') (glow gold) (seconds 6)
          (curve cubic-out))
 

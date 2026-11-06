@@ -1257,7 +1257,7 @@ class _Compiler:
                 node, inner = given[p.name]
                 args[p.name] = self.expr(node, p.type, inner)
             elif p.default is not None:
-                args[p.name] = _known(p.type, p.value)
+                args[p.name] = _default_arg(p)
             else:
                 args[p.name] = _known(p.type, self.default(p.type, pos))
         (body,) = motif.body
@@ -1632,7 +1632,7 @@ class _Compiler:
                             raise CompileError(f"{p.name} may break {_show(c)}", given[k].pos)
             elif p.default is not None:
                 # Known when the parameter was declared, so not worked out again for each call.
-                e = _known(p.type, p.value)
+                e = _default_arg(p)
             else:
                 e = _known(p.type, self.default(p.type, pos))
             args.append(e)
@@ -3378,7 +3378,7 @@ class _Compiler:
         def set_params(obj: Obj) -> None:
             for p in v.params:
                 node, inner = mine.get(p.name, (p.default, {}))
-                first = _known(p.type, p.value) if p.name not in mine else None
+                first = _default_arg(p) if p.name not in mine else None
                 obj.attrs[p.name] = self.attribute(
                     p.type, node, form.pos, p.name, None, inner, first
                 )
@@ -3423,11 +3423,16 @@ class _Compiler:
             value = None
             if default is not None:
                 e = self.again(first, default, t, {})
-                if not e.known:
+                # A function is fixed, so it may be a default too (the author, 2026-11-06).
+                if e.op in ("func", "builtinfunc") and (e.op == "builtinfunc" or not e.args[1]):
+                    value = e
+                elif not e.known:
                     raise CompileError(
-                        "a parameter's default must be known when compiling", default.pos
+                        "a parameter's default must be known when compiling, or be a function",
+                        default.pos,
                     )
-                value = e.value
+                else:
+                    value = e.value
             out.append(Param(name, t, default, value))
         return tuple(out)
 
@@ -3540,7 +3545,7 @@ class _Compiler:
                         )
                     obj.attrs[p.name] = Attribute(at, None)
                     continue
-                first = _known(p.type, p.value) if p.name not in given else None
+                first = _default_arg(p) if p.name not in given else None
                 obj.attrs[p.name] = self.attribute(at, node, form.pos, p.name, None, inner, first)
             self.shape_attrs(obj, given, absent, form.pos, scope, INSTANCE_ATTRS)
         finally:
@@ -5374,6 +5379,12 @@ def _locals(e) -> set:
 
 def _scoped(nodes, scope: dict) -> list:
     return [(n, scope) for n in nodes]
+
+
+def _default_arg(p: Param) -> Expr:
+    """What a parameter takes when no argument is given: its default's value, or the named
+    function it names."""
+    return p.value if isinstance(p.value, Expr) else _known(p.type, p.value)
 
 
 def _fill_from(given: dict, source: dict) -> None:

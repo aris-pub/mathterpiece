@@ -232,3 +232,33 @@ class TestNamesAFunctionCannotTake:
 
     def test_a_built_in_function_is_still_replaced(self):
         assert value("(func sind (real x) (* 2 x)) (real v (sind 3))") == 6
+
+
+class TestAFunctionAsADefault:
+    # mtp-ft0x. The author, 2026-11-06: a function is fixed, so a parameter may take one as its
+    # default; found when golden-tour's stops each had to write their ease.
+    def test_a_named_function(self):
+        src = (
+            "(func[real] twice ((real x)) (* 2 x))"
+            " (func apply ((real x) (func[real real] f twice)) (f x))"
+        )
+        assert model(src + " (real v (apply 3))").get("v").value.value == 6
+
+    def test_a_fn(self):
+        src = "(func apply ((real x) (func[real real] f (fn y (+ y 1)))) (f x))"
+        assert model(src + " (real v (apply 3))").get("v").value.value == 4
+
+    def test_a_motif_of_animations(self):
+        m = model(
+            "(func[real] sq ((real t)) (* t t)) (real k 0)"
+            " (motif go ((real to-k 1) (func[(real (>= 0) (<= 1)) real] curve sq))"
+            " (animation (move k (to to-k) (duration 1) (ease curve))))"
+            " (go a)"
+        )
+        assert m.get("a").attrs["duration"].value == 1
+
+    def test_a_variable_is_not_a_default(self):
+        error(
+            "(real k 2) (func apply ((real x) (real m k)) (* m x))",
+            "must be known when compiling, or be a function",
+        )

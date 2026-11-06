@@ -101,7 +101,8 @@ class Writer:
         out = []
         for p in params:
             d = {"name": p.name, "type": self.ref(p.type)}
-            if p.default is not None:
+            # A function given as a default is not a value the .mtpc writes.
+            if p.default is not None and not hasattr(p.value, "op"):
                 d["default"] = self.value(p.type, p.value)
             out.append(d)
         return out

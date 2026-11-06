@@ -75,6 +75,8 @@ Parameters of functions and motifs always write their type, and may give a defau
       (circle face (r 1) (fill tint)))
     (func area (circle o) (* pi o.r o.r))            ; circles, and any variant of circle (section 5.e)
 
+A default is known when compiling, or is a function, which is fixed: `(func[(real (>= 0) (<= 1)) real] curve cubic-in-out)` gives a parameter the ease `cubic-in-out` unless an argument names another.
+
 A small, complete use: a bar chart whose bars are declared with typed parameters.
 
     (type prob real (>= 0) (<= 1))
