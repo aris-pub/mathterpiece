@@ -220,6 +220,8 @@ A **formula** is typeset math, as the scene is geometry: `(formula name item…)
   | `tex` | string | its LaTeX | its content, in place of what the LaTeX marks |
 
   The box and the outline never move the glyphs around them. As any attribute, each may be given by an expression, which it then follows, or by a value that a writer may write and move: `(move bounds.gap.background (to wash) (duration 0.2))` fades a box in. `tex` is how values enter a formula: with `\term{v}{}` in the LaTeX, `(term v (tex $'{(* 2 q (- 1 q)):.3f}'))` shows the value, typeset again when it changes.
+- **`(defaults (attr value)…)`**, an item of the formula, gives every term those attributes, the ones in the table above but `tex`: `(formula bounds (defaults (padding 3) (rounding 4)) tex'…' …)`. Each term gets its own copy, so a writer writing one term's padding leaves the others alone, and a term's own `(term …)` form wins over them. Once per formula.
+- **`(term name (like t) …)`** starts from the arguments of `t`'s form, which comes before it, and its own win: `(term b2 (like gap) (fill coral))`. As everywhere, `(like …)` comes first.
 - **`(exists-when name bool)`** says when a term exists: while it does not, it is not shown, and the formula closes up around it.
 - **Variables** declared in a formula belong to it: what follows them in the formula reads them by their bare names, and outside it they are read and written by their full names, as `bounds.lit`.
 - **Formulas and the scene never read each other.** A formula reads the globals and its own variables; the scene reads the globals and its own. One formula never reads another, and a formula, as the scene, never reads page access. What both follow, such as which piece of a formula the reader picked, is a global.

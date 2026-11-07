@@ -62,10 +62,11 @@
 
 (formula machine
   doc@'f(x) = ax² + bx + c, with the coefficients\' values.'
+    (defaults (padding 3) (rounding 4))
   tex'f(x) = \term{a}{} x^2 \term{b}{} x \term{c}{}'
-  (term a (tex $'{a:.1f}') (fill terracotta) (background none) (padding 3) (rounding 4))
-  (term b (tex (signed b)) (fill teal) (background none) (padding 3) (rounding 4))
-  (term c (tex (signed c)) (fill plum) (background none) (padding 3) (rounding 4)))
+  (term a (tex $'{a:.1f}') (fill terracotta))
+  (term b (tex (signed b)) (fill teal))
+  (term c (tex (signed c)) (fill plum)))
 
 (display machine-line machine doc@'The formula, whose terms show what they add to the graph.')
 

@@ -85,7 +85,7 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
        "toggle-ease")
       ("animation" "doc" ,@animation) ("at-once" ,@animation) ("in-order" ,@animation)
       ("motif" "doc") ("variant" "doc") ("func" "doc") ("namespace" "doc") ("palette" "doc")
-      ("formula" "doc")))
+      ("formula" "doc" "defaults")))
   "Forms that take a body, and their keyword arguments. A keyword argument on a line of
 its own is indented 4, like a positional argument, so it reads apart from the body at 2.")
 

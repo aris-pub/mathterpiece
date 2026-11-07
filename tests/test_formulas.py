@@ -200,6 +200,46 @@ class TestReading:
         assert m.get("r").attrs["value"].deps == {(m.id("k"), None), (m.id("f.j"), None)}
 
 
+class TestDefaultsAndLike:
+    # mtp-mca1: a formula's (defaults …) give every term those attributes, and a term's own win;
+    # (like t) copies an earlier term's arguments, and its own win.
+    AB = r"tex'\term{a}{x} + \term{b}{y}'"
+
+    def test_defaults_reach_every_term(self):
+        m = model(
+            f"(formula f (defaults (padding 3) (rounding 4)) {self.AB} (term a (fill 'red')))"
+        )
+        assert m.get("f.a").attrs["padding"].value == 3
+        assert m.get("f.b").attrs["rounding"].value == 4
+
+    def test_a_terms_own_wins(self):
+        m = model(f"(formula f (defaults (padding 3)) {self.AB} (term a (padding 1)))")
+        assert m.get("f.a").attrs["padding"].value == 1
+        assert m.get("f.b").attrs["padding"].value == 3
+
+    def test_each_term_has_its_own(self):
+        m = model(f"(formula f (defaults (padding 3)) {self.AB})")
+        assert m.get("f.a").attrs["padding"] is not m.get("f.b").attrs["padding"]
+
+    def test_defaults_are_term_attributes(self):
+        error(f"(formula f (defaults (tex 'z')) {self.AB})", "a formula's defaults are")
+        error(f"(formula f (defaults (r 1)) {self.AB})", "a formula's defaults are")
+
+    def test_defaults_once(self):
+        error(f"(formula f (defaults (padding 1)) (defaults (padding 2)) {self.AB})", "twice")
+
+    def test_like_copies_an_earlier_term(self):
+        m = model(
+            f"(formula f {self.AB} (term a (fill 'red') (padding 2))"
+            " (term b (like a) (fill 'blue')))"
+        )
+        b = m.get("f.b").attrs
+        assert b["padding"].value == 2 and b["fill"].value == "#0000ffff"
+
+    def test_like_names_a_term_given_before(self):
+        error(f"(formula f {self.AB} (term b (like a)) (term a (padding 2)))", "given before")
+
+
 class TestDisplay:
     def test_a_display_shows_a_formula_as_a_block(self):
         d = obj(BOUNDS + " (display eq bounds)", "eq")

@@ -3865,11 +3865,13 @@ class _Compiler:
             )  # fmt: skip
             members[short] = self.add(obj)
         inside = dict(scope)
-        given: set[str] = set()
+        # Each term's written arguments, by its name, for (like t) to copy.
+        given: dict[str, list] = {}
         saved, self.in_formula = self.in_formula, i
         try:
+            self.formula_defaults(items, i, inside)
             for item in items:
-                if item is text:
+                if item is text or _head(item) == "defaults":
                     continue
                 head = _head(item)
                 if head == "term":
@@ -3913,8 +3915,42 @@ class _Compiler:
             )
         return m
 
-    def term_form(self, form: Form, f: int, scope: dict, given: set) -> None:
-        """(term name (attr value)…): a term's attributes, and its content as tex."""
+    def formula_defaults(self, items: list, f: int, scope: dict) -> None:
+        """(defaults (attr value)…) in a formula: every term's attributes, each its own copy,
+        which a term's own (term …) form wins over (mtp-mca1)."""
+        found = [it for it in items if _head(it) == "defaults"]
+        if len(found) > 1:
+            raise CompileError("'defaults' is given twice", found[1].pos)
+        if not found:
+            return
+        entries = found[0].items[1:]
+        for entry in entries:
+            if (
+                not isinstance(entry, Form)
+                or len(entry.items) != 2
+                or _head(entry) not in TERM_ATTRS
+            ):
+                raise CompileError(
+                    "a formula's defaults are its terms' attributes: " + ", ".join(TERM_ATTRS),
+                    entry.pos,
+                )
+        for m in self.model.objects[f].data["members"].values():
+            term = self.model.objects[m]
+            if term.kind != "term":
+                continue
+            for entry in entries:
+                head = _head(entry)
+                saved, self.where = self.where, (term.name, "term", head)
+                try:
+                    term.attrs[head] = self.attribute(
+                        TERM_ATTRS[head].type, entry.items[1], entry.pos, head, scope=scope
+                    )
+                finally:
+                    self.where = saved
+
+    def term_form(self, form: Form, f: int, scope: dict, given: dict) -> None:
+        """(term name (like t) (attr value)…): a term's attributes, and its content as tex.
+        (like t) copies the arguments of t's form, given before, and the form's own win."""
         if len(form.items) < 2:
             raise CompileError("a term form names its term: (term name (attr value)…)", form.pos)
         m = self.formula_term(f, form.items[1])
@@ -3922,8 +3958,21 @@ class _Compiler:
         short = term.data["term"]
         if short in given:
             raise CompileError(f"the term '{short}' is given twice", form.pos)
-        given.add(short)
-        for item in form.items[2:]:
+        own = list(form.items[2:])
+        if own and _head(own[0]) == "like":
+            like = own.pop(0)
+            assert isinstance(like, Form)
+            if len(like.items) != 2:
+                raise CompileError("(like t) names one term", like.pos)
+            other = self.model.objects[self.formula_term(f, like.items[1])].data["term"]
+            if other not in given:
+                raise CompileError(
+                    f"(like {other}) copies a term's form given before this one", like.pos
+                )
+            heads = {_head(it) for it in own}
+            own = [it for it in given[other] if _head(it) not in heads] + own
+        given[short] = own
+        for item in own:
             head = _head(item)
             if not isinstance(item, Form) or len(item.items) != 2 or head is None:
                 raise CompileError("a term takes attributes, as (opacity 0.5)", item.pos)

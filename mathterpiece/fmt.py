@@ -86,7 +86,8 @@ KEYWORDS = {
     "canvas": _CANVAS,
     "animation": _ANIMATION | {"doc"},
     **{head: _ANIMATION for head in ["at-once", "in-order"]},
-    **{head: {"doc"} for head in ["motif", "variant", "func", "namespace", "palette", "formula"]},
+    **{head: {"doc"} for head in ["motif", "variant", "func", "namespace", "palette"]},
+    "formula": {"doc", "defaults"},
 }
 # Forms that take no body: every item after their positional arguments goes 4 in. The same list
 # as the Emacs mode's.
