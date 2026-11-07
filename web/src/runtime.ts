@@ -75,6 +75,10 @@ const FAST: Record<string, (a: number, b: number) => number | boolean | null> = 
   "-": (a, b) => finite(a + -b),
   "*": (a, b) => finite(a * b),
   "/": (a, b) => (b === 0 ? null : finite(a / b)),
+  "^": (a, b) => ((a === 0 && b < 0) || (a < 0 && !Number.isInteger(b)) ? null : finite(a ** b)),
+  mod: (a, b) => (b === 0 ? null : a - b * Math.floor(a / b)),
+  min: (a, b) => Math.min(a, b),
+  max: (a, b) => Math.max(a, b),
   "<": (a, b) => a < b,
   "<=": (a, b) => a <= b,
   ">": (a, b) => a > b,
@@ -170,6 +174,9 @@ export class Runtime {
   private boxes = new Map<number, number[] | null>();
   private css_ = new Map<string, CompiledCss | null>();
   private made = new WeakMap<Expr, Compiled>();
+  private pure: boolean[] | null = null;
+  // What each function that follows only from its arguments gave, by its arguments.
+  private memos: Map<string, unknown>[] = [];
   // The rows and columns whose members are being measured, so are not moved to their places.
   private unplaced = new Set<number>();
   private dependents = new Map<string, Set<string>>();
@@ -800,6 +807,7 @@ export class Runtime {
         const fid = parts[0] as number;
         const captured = parts[1] as string[];
         return (ctx) => {
+          if (captured.length === 0) return this.functionValue(fid);
           const around: Record<string, unknown> = {};
           for (const name of captured) around[name] = ctx.locals[name];
           return this.functionValue(fid, around);
@@ -956,7 +964,20 @@ export class Runtime {
     const isInt = this.core(t) === "int";
     const fast = FAST[name];
     const exprs = parts.slice(1) as Expr[];
-    if (fast && exprs.length === 2 && exprs.every((x) => NUMBERS.has(this.core(x[1]) as string))) {
+    const plain = exprs.every((x) => NUMBERS.has(this.core(x[1]) as string));
+    if (plain && exprs.length > 2 && (name === "+" || name === "-" || name === "*")) {
+      // More than two plain numbers: the built-in goes from left to right, and a step that is not
+      // finite makes the whole none.
+      const step = FAST[name]!;
+      return (ctx) => {
+        const vs = args.map((f) => f(ctx) as number | null);
+        if (vs.includes(null)) return null;
+        let v: number | null = vs[0]!;
+        for (let i = 1; i < vs.length && v !== null; i++) v = step(v, vs[i]!) as number | null;
+        return isInt && typeof v === "number" ? Math.round(v) : v;
+      };
+    }
+    if (fast && exprs.length === 2 && plain) {
       // Two plain numbers: the operator itself, with what the built-in would check.
       const [fa, fb] = args as [Compiled, Compiled];
       return (ctx) => {
@@ -1039,20 +1060,22 @@ export class Runtime {
 
   /** A function of the file, by id, as a value. */
   fn(fid: number): FnValue {
-    return this.functionValue(fid, {});
+    return this.functionValue(fid);
   }
 
-  private functionValue(fid: number, around: Record<string, unknown>): FnValue {
+  private functionValue(fid: number, around?: Record<string, unknown>): FnValue {
     const params = this.doc.functions[fid]!.params;
     return (args, frame) => this.call(fid, params, args, frame, around);
   }
 
+  // around holds the names a function value took from where it was made; a function with none
+  // whose value follows only from its arguments is called once for each list of arguments.
   private call(
     fid: number,
     params: { name: string; type: Type }[],
     args: unknown[],
     frame: number | null,
-    around: Record<string, unknown> = {},
+    around?: Record<string, unknown>,
   ): unknown {
     const locals: Record<string, unknown> = { ...around };
     for (let i = 0; i < params.length; i++) {
@@ -1061,7 +1084,96 @@ export class Runtime {
       if (args[i] === null && !acceptsNone(p.type)) return null;
       locals[p.name] = args[i];
     }
-    return this.functions[fid]!({ locals, frame });
+    const k = around === undefined && this.pureFns()[fid] ? argsKey(args) : null;
+    if (k === null) return this.functions[fid]!({ locals, frame });
+    let memo = this.memos[fid];
+    if (!memo) memo = this.memos[fid] = new Map();
+    if (memo.has(k)) return memo.get(k);
+    const v = this.functions[fid]!({ locals, frame });
+    if (memo.size >= MEMO_SIZE) memo.clear();
+    memo.set(k, v);
+    return v;
+  }
+
+  /** Whether a function of the file is called once for each list of arguments (see pureFns). */
+  isPure(fid: number): boolean {
+    return this.pureFns()[fid]!;
+  }
+
+  /**
+   * Which functions give a value that follows only from their arguments: their bodies read no
+   * variable but a const one, no attribute and no shape, draw no random numbers, call no
+   * function value they are given, and call only functions that do the same. Worked out once,
+   * for every function together, so functions that call each other are found too.
+   */
+  private pureFns(): boolean[] {
+    if (this.pure) return this.pure;
+    const fns = this.doc.functions;
+    const calls: number[][] = fns.map(() => []);
+    const ok = fns.map((f, i) => this.pureExpr(f.body, calls[i]!));
+    for (let changed = true; changed; ) {
+      changed = false;
+      fns.forEach((_, i) => {
+        if (ok[i] && calls[i]!.some((c) => !ok[c])) [ok[i], changed] = [false, true];
+      });
+    }
+    this.pure = ok;
+    return ok;
+  }
+
+  // Whether an expression's value follows only from its locals, if the functions it calls (put
+  // in calls) do.
+  private pureExpr(e: Expr, calls: number[]): boolean {
+    const [op] = e;
+    const parts = e.slice(2);
+    const all = (xs: unknown[]) => xs.every((x) => this.pureExpr(x as Expr, calls));
+    switch (op) {
+      case "lit": {
+        // A literal may hold a function or a shape, which are objects.
+        const plain = (v: unknown): boolean => v === null || typeof v !== "object" || (Array.isArray(v) && v.every(plain));
+        return plain(parts[0]);
+      }
+      case "local":
+      case "builtinfunc":
+        return true;
+      case "list":
+      case "if":
+      case "and":
+      case "or":
+        return all(parts);
+      case "builtin":
+        return all(parts.slice(1));
+      case "format":
+        return parts.every((p) => typeof p === "string" || this.pureExpr((p as [Expr, string])[0], calls));
+      case "wrap":
+      case "check":
+        return this.pureExpr(parts[0] as Expr, calls);
+      case "cond":
+        return (parts[0] as [Expr, Expr][]).every(([c, v]) => this.pureExpr(c, calls) && this.pureExpr(v, calls)) && this.pureExpr(parts[1] as Expr, calls);
+      case "let":
+        return (parts[0] as [string, Expr][]).every(([, x]) => this.pureExpr(x, calls)) && this.pureExpr(parts[1] as Expr, calls);
+      case "call":
+        calls.push(parts[0] as number);
+        return all(parts.slice(1));
+      case "func":
+        calls.push(parts[0] as number);
+        return true;
+      case "part": {
+        // A part of a point, a list, a string or a color is the value's own; of a shape, the
+        // model's.
+        const whole = parts[0] as Expr;
+        const c = this.core(whole[1]);
+        const own = typeof c === "string" ? ["point", "complex", "string", "color", "transform"].includes(c) : "list" in c;
+        return own && this.pureExpr(whole, calls) && (typeof parts[1] === "string" || this.pureExpr(parts[1] as Expr, calls));
+      }
+      case "read": {
+        const [id, attr] = parts as [number, string | null];
+        const s = this.slots[id]?.get(attr);
+        return attr === null && this.objects[id]!.kind === "variable" && s !== undefined && s.state === FREE && this.constraints(s.type).some(([c]) => c === "const");
+      }
+      default:
+        return false;
+    }
   }
 
   // Reads and frames --------------------------------------------------------------------
@@ -1272,6 +1384,23 @@ export class Runtime {
     }
     return (w as Record<string, unknown>)[k];
   }
+}
+
+// A function's results kept, at most, before they are forgotten all at once.
+const MEMO_SIZE = 20000;
+
+// A list of arguments as a key, when each is a number, a string, a bool or none; null otherwise.
+// -0 is kept apart from 0, since a function may tell them apart.
+function argsKey(args: unknown[]): string | null {
+  let k = "";
+  for (const a of args) {
+    if (typeof a === "number") k += Object.is(a, -0) ? "-0," : `${a},`;
+    else if (typeof a === "string") k += `${JSON.stringify(a)},`;
+    else if (typeof a === "boolean") k += a ? "t," : "f,";
+    else if (a === null) k += "n,";
+    else return null;
+  }
+  return k;
 }
 
 function holds(op: string, v: number, lim: number): boolean {

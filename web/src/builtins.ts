@@ -262,7 +262,8 @@ export function mix(a: string, b: string, t: number): string {
 }
 
 function extreme(pick: (...xs: number[]) => number, args: unknown[]): number {
-  const xs = args.flatMap((a) => (Array.isArray(a) ? (a as number[]) : [a as number]));
+  const one = args.length === 1 && Array.isArray(args[0]);
+  const xs = one ? (args[0] as number[]) : args.flatMap((a) => (Array.isArray(a) ? (a as number[]) : [a as number]));
   check(xs.length > 0);
   return pick(...xs);
 }

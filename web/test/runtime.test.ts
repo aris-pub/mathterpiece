@@ -50,6 +50,30 @@ describe("arithmetic on two numbers", () => {
   });
 });
 
+describe("a function whose value follows only from its arguments", () => {
+  it("is told apart from one that reads the model", () => {
+    const rt = load("pure");
+    // twice, fact (which calls itself) and first-x (a part of a list) follow from their
+    // arguments; scaled reads k, and uses-scaled calls it.
+    expect(rt.doc.functions.map((_, i) => rt.isPure(i))).toEqual([true, false, true, false, true]);
+  });
+
+  it("gives what it gave before for the same arguments, and one that reads the model follows its writes", () => {
+    const rt = load("pure");
+    const v = (name: string) => rt.value(rt.id(name));
+    const all = () => ["a", "b", "e", "g", "h"].map(v);
+    expect(all()).toEqual([2, 3, 120, 3, 1]);
+    rt.write(rt.id("k"), null, 4);
+    rt.write(rt.id("n"), null, 3);
+    expect(all()).toEqual([8, 12, 6, 9, 4]);
+    rt.write(rt.id("k"), null, 1);
+    rt.write(rt.id("n"), null, 5);
+    expect(all()).toEqual([2, 3, 120, 3, 1]);
+    expect(rt.fn(4)([[[7, 1]]], null)).toBe(7);
+    expect(rt.fn(4)([[]], null)).toBe(0);
+  });
+});
+
 describe("writes", () => {
   it("clamp to a range, round an int and hold a choice", () => {
     const rt = load("writes");
