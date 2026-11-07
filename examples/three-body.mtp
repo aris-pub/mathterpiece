@@ -1,0 +1,123 @@
+; Three bodies of equal mass pull on each other by gravity. Press run, and each leaves a fading
+; trail. Drag a body to move where it starts, or load a start with a button: the figure eight,
+; where the three chase each other along one curve, or a start that soon turns chaotic. A button
+; takes over from the run, so press run again after it. The readout shows the total energy: the
+; step keeps it nearly fixed, and it wobbles only while two bodies pass close.
+;
+; Each round of the play takes a few steps of semi-implicit Euler: every velocity is pushed by
+; the pull of the other two, and every body then moves by its new velocity. A move reads what it
+; needs when it starts, and moves that run together read the same values, so the round is an
+; in-order: the velocities are all pushed, then the bodies move, and after the last step the
+; trails take the new positions.
+
+(import house paper ink terracotta teal saffron)
+(import ease cubic-in-out)
+
+(real dt 0.01 (const))
+; How many steps each round takes: the bodies move this many steps for every frame drawn.
+(int substeps 5 (const))
+; Softening: keeps the pull finite when two bodies pass very close.
+(real eps 0.1 (const))
+; How many steps each trail remembers.
+(int trail-length 160 (const))
+
+; The pull on a body at p from a body of mass 1 at q (G is 1).
+(func[point] pull ((point p) (point q))
+  (let ((d (- q p))
+        (r2 (+ (* d.x d.x) (* d.y d.y) (* eps eps))))
+    (* (or? (/ 1 (* r2 (sqrt r2))) 0) d)))
+(func[real] potential ((point p) (point q))
+  (let ((d (- q p))) (- (or? (/ 1 (sqrt (+ (* d.x d.x) (* d.y d.y) (* eps eps)))) 0))))
+(func[real] kinetic ((point v)) (* 0.5 (+ (* v.x v.x) (* v.y v.y))))
+; A trail with a new position in front, and its oldest dropped.
+(func[list[point]] shifted ((list[point] trail) (point new))
+  (map (range trail-length) (fn i (if (= i 0) new (or? trail[(- i 1)] new)))))
+
+(point v1 [0.466203685 0.43236573])
+(point v2 [0.466203685 0.43236573])
+(point v3 [-0.93240737 -0.86473146])
+(list[point] trail-1 [])
+(list[point] trail-2 [])
+(list[point] trail-3 [])
+
+(scene sky (background paper)
+  (group trails (defaults (stroke-width 2) (line-cap 'round'))
+    (foreach ((t [trail-1 trail-2 trail-3]) (i (- trail-length 1)))
+      (line|none_ (from t[i]) (to t[(+ i 1)])
+          (stroke (cond ((= t trail-1) terracotta) ((= t trail-2) teal) (else saffron)))
+          (stroke-opacity (- 1 (/ i trail-length))))))
+  (group bodies (defaults (stroke ink) (stroke-width 1))
+    (circle b1 (pos [0.97000436 -0.24308753]) (r 0.07) (fill terracotta))
+    (circle b2 (pos [-0.97000436 0.24308753]) (r 0.07) (fill teal))
+    (circle b3 (pos [0 0]) (r 0.07) (fill saffron))))
+
+(canvas view (x -2) (y -1.25) (width 4) (height 2.5) (pan false) (zoom false)
+  doc@'The three bodies and their trails.'
+  sky)
+
+(readout energy
+    $'energy {(+ (kinetic v1) (kinetic v2) (kinetic v3) (potential b1.pos b2.pos)
+               (potential b1.pos b3.pos) (potential b2.pos b3.pos)):.5f}'
+  doc@'The total energy: the bodies\' motion and their pull on each other.')
+
+(play run (label 'run')
+  doc@'Steps the bodies forward, a few steps each frame.'
+    (animation (loop)
+      (in-order (defaults (duration 0))
+        (foreach k substeps
+          (at-once
+            (move v1 (to (+ v1 (* dt (+ (pull b1.pos b2.pos) (pull b1.pos b3.pos))))))
+            (move v2 (to (+ v2 (* dt (+ (pull b2.pos b1.pos) (pull b2.pos b3.pos))))))
+            (move v3 (to (+ v3 (* dt (+ (pull b3.pos b1.pos) (pull b3.pos b2.pos)))))))
+          (at-once
+            (move b1.pos (to (+ b1.pos (* dt v1))))
+            (move b2.pos (to (+ b2.pos (* dt v2))))
+            (move b3.pos (to (+ b3.pos (* dt v3))))))
+        (at-once
+          (move trail-1 (to (shifted trail-1 b1.pos)))
+          (move trail-2 (to (shifted trail-2 b2.pos)))
+          (move trail-3 (to (shifted trail-3 b3.pos)))))
+      (wait 0.016)))
+
+(animation clear-trails
+  (at-once (defaults (duration 0))
+    (move trail-1 (to []))
+    (move trail-2 (to []))
+    (move trail-3 (to []))))
+
+(button figure-eight (label 'figure eight')
+  doc@'The figure eight: the three chase each other along one curve.'
+    (animation
+      (at-once (defaults (duration 0.4) (ease cubic-in-out))
+        (move b1.pos (to [0.97000436 -0.24308753]))
+        (move b2.pos (to [-0.97000436 0.24308753]))
+        (move b3.pos (to [0 0]))
+        (move v1 (to [0.466203685 0.43236573]) (duration 0))
+        (move v2 (to [0.466203685 0.43236573]) (duration 0))
+        (move v3 (to [-0.93240737 -0.86473146]) (duration 0))
+        clear-trails)))
+
+(button chaos (label 'chaos')
+  doc@'A start near the figure eight\'s, which soon falls apart.'
+    (animation
+      (at-once (defaults (duration 0.4) (ease cubic-in-out))
+        (move b1.pos (to [1 0]))
+        (move b2.pos (to [-0.6 0.5]))
+        (move b3.pos (to [-0.3 -0.7]))
+        (move v1 (to [0 0.6]) (duration 0))
+        (move v2 (to [-0.5 -0.2]) (duration 0))
+        (move v3 (to [0.5 -0.4]) (duration 0))
+        clear-trails)))
+
+(button rest (label 'stop all')
+  doc@'Stops every body where it is, so dragging sets where each starts from rest.'
+    (animation
+      (at-once (defaults (duration 0))
+        (move v1 (to [0 0]))
+        (move v2 (to [0 0]))
+        (move v3 (to [0 0]))
+        clear-trails)))
+
+(on-drag b1 b1.pos doc@'Moves the body.')
+(on-drag b2 b2.pos doc@'Moves the body.')
+(on-drag b3 b3.pos doc@'Moves the body.')

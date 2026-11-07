@@ -1,0 +1,120 @@
+; The Pythagorean theorem by rearrangement. A square of side a + b holds four copies of a right
+; triangle with legs a and b. Laid out one way, they leave two squares uncovered, a² and b²;
+; laid out the other way, one tilted square, c². The triangles cover the same area both times,
+; so what they leave uncovered is the same too: a² + b² = c².
+;
+; Press rearrange, or click a term of the formula, to move the triangles into the layout that
+; shows that square. Point at a term to light its square, and at a square to light its term.
+; The slider changes a, with a + b kept at 5.
+
+(import house paper ink soft terracotta teal saffron variable)
+(import math smoothstep)
+
+(color wash '#ece6d8')
+(color triangle-fill '#d8d2c6')
+
+(type square string (one-of 'a' 'b' 'c'))
+; Which square the pointer is on, in the picture or in the formula: a global, since both read it.
+(square|none lit none)
+
+(real side-a 3 (>= 1) (<= 4))
+(real side-b (- 5 side-a))
+(real side (+ side-a side-b))
+; 0 is the layout that leaves c² uncovered, 1 the one that leaves a² and b².
+(real layout 1 (>= 0) (<= 1))
+
+; Where each triangle's right angle is in the c² layout, and in the a² and b² one.
+(list[point] starts [[0 0] [side 0] [side side] [0 side]])
+(list[point] ends [[0 side-a] [side 0] [side-a side] [side-a side-a]])
+; When each slides, in thirds of the move: the second never moves.
+(list[int] slots [0 0 1 2] (const))
+
+; From p to q, u of the way.
+(func[point] toward ((point p) (point q) (real u)) (+ p (* u (- q p))))
+
+(scene proof (background paper)
+  (rect frame (pos [(/ side 2) (/ side 2)]) (width side) (height side) (fill none) (stroke ink)
+      (stroke-width 2))
+
+  ; The uncovered squares, under the triangles. The one the pointer is on is drawn stronger.
+  (group square-a
+    (rect sq-a (pos [(/ side-a 2) (/ side-a 2)]) (width side-a) (height side-a) (fill teal)
+        (fill-opacity (if (= lit 'a') 0.7 0.35)) (stroke (if (= lit 'a') teal none))
+        (stroke-width 3))
+    (text_ 'a²' (pos sq-a.pos) (font variable) (fill ink) (halign 'middle') (valign 'middle')))
+  (group square-b
+    (rect sq-b (pos [(+ side-a (/ side-b 2)) (+ side-a (/ side-b 2))]) (width side-b) (height side-b)
+        (fill saffron) (fill-opacity (if (= lit 'b') 0.8 0.4)) (stroke (if (= lit 'b') saffron none))
+        (stroke-width 3))
+    (text_ 'b²' (pos sq-b.pos) (font variable) (fill ink) (halign 'middle') (valign 'middle')))
+  (group square-c
+    (polygon sq-c (points [[side-a 0] [side side-a] [side-b side] [0 side-b]]) (fill terracotta)
+        (fill-opacity (if (= lit 'c') 0.7 0.35)) (stroke (if (= lit 'c') terracotta none))
+        (stroke-width 3))
+    (text_ 'c²' (pos [(/ side 2) (/ side 2)]) (font variable) (fill ink) (halign 'middle')
+        (valign 'middle')))
+
+  ; The four triangles, each the triangle with its right angle at the origin and legs a along x
+  ; and b along y, turned a number of quarters and moved to a corner. Going from the c² layout
+  ; to the a² and b² one, three of them slide, one after another, and none turns.
+  (group triangles (defaults (fill triangle-fill) (stroke ink) (stroke-width 1.5)
+                       (line-join 'round'))
+    (foreach k 4
+      (group_ (transform (let ((u (or? (smoothstep (/ slots[k] 3) (/ (+ slots[k] 1) 3) layout) 0))
+                               (p (toward starts[k] ends[k] u)))
+                           (transform (rotate (* 90 k)) (translate p.x p.y))))
+        (triangle_ (a [0 0]) (b [side-a 0]) (c [0 side-b])))))
+
+  ; The bottom edge is a then b in both layouts.
+  (group legs (defaults (font variable) (fill ink) (halign 'middle') (valign 'top'))
+    (text_ 'a' (pos [(/ side-a 2) -0.15]))
+    (text_ 'b' (pos [(+ side-a (/ side-b 2)) -0.15]))))
+
+(canvas view (x -0.4) (y -0.9) (width 5.8) (height 6.3) (pan false) (zoom false)
+    (toggle-duration 0.4)
+  doc@'The square of side a + b, its four triangles, and the squares they leave uncovered.'
+  frame
+  (when (>= layout 1) [square-a square-b])
+  (when (<= layout 0) square-c)
+  triangles legs)
+
+(formula pythagoras
+  doc@'The theorem, each square a term.'
+  tex'\term{a2}{a^2} + \term{b2}{b^2} = \term{c2}{c^2}'
+  (term a2 (fill teal) (background (if (= lit 'a') wash none)) (padding 3) (rounding 4))
+  (term b2 (fill saffron) (background (if (= lit 'b') wash none)) (padding 3) (rounding 4))
+  (term c2 (fill terracotta) (background (if (= lit 'c') wash none)) (padding 3) (rounding 4)))
+
+(display theorem pythagoras doc@'a² + b² = c², whose terms light and show their squares.')
+
+(readout areas
+    $'a² + b² = {(* side-a side-a):.2f} + {(* side-b side-b):.2f} = {(+ (* side-a side-a) (* side-b side-b)):.2f} = c²'
+  doc@'The two areas, for the a and b the slider sets.')
+
+(slider leg (move side-a (from 1) (to 4)) (label 'a') doc@'Sets a, with a + b kept at 5.')
+
+(button rearrange (label 'rearrange')
+    (animation (move layout (to (if (> layout 0.5) 0 1)) (duration 2.4)))
+  doc@'Moves the triangles into the other layout.')
+
+; Clicking a term moves the triangles into the layout that shows its square.
+(on-click pythagoras.a2 (animation (move layout (to 1) (duration 2.4)))
+  doc@'Shows a² by moving the triangles.')
+(on-click pythagoras.b2 (animation (move layout (to 1) (duration 2.4)))
+  doc@'Shows b² by moving the triangles.')
+(on-click pythagoras.c2 (animation (move layout (to 0) (duration 2.4)))
+  doc@'Shows c² by moving the triangles.')
+
+; Pointing at a term or at a square lights both.
+(on-enter pythagoras.a2 (animation (move lit (to 'a') (duration 0))) doc@'Lights a².')
+(on-leave pythagoras.a2 (animation (move lit (to none) (duration 0))) doc@'Unlights a².')
+(on-enter pythagoras.b2 (animation (move lit (to 'b') (duration 0))) doc@'Lights b².')
+(on-leave pythagoras.b2 (animation (move lit (to none) (duration 0))) doc@'Unlights b².')
+(on-enter pythagoras.c2 (animation (move lit (to 'c') (duration 0))) doc@'Lights c².')
+(on-leave pythagoras.c2 (animation (move lit (to none) (duration 0))) doc@'Unlights c².')
+(on-enter square-a (animation (move lit (to 'a') (duration 0))) doc@'Lights a².')
+(on-leave square-a (animation (move lit (to none) (duration 0))) doc@'Unlights a².')
+(on-enter square-b (animation (move lit (to 'b') (duration 0))) doc@'Lights b².')
+(on-leave square-b (animation (move lit (to none) (duration 0))) doc@'Unlights b².')
+(on-enter square-c (animation (move lit (to 'c') (duration 0))) doc@'Lights c².')
+(on-leave square-c (animation (move lit (to none) (duration 0))) doc@'Unlights c².')

@@ -1,0 +1,130 @@
+; Bubble sort and insertion sort race on the same shuffled bars, one comparison each per step.
+; The two bars being compared are marked, and so are the bars each sort has put where they
+; belong. Press race to run both, and shuffle to start again on new bars. The bars are dealt
+; from a number drawn when the page loads, so each visit starts from its own shuffle.
+;
+; Each sort is a small machine whose whole state is one list: where it is, its counts, and its
+; bars. Every step of the race moves the list to the next state, which a function works out
+; from the one before.
+
+(import house paper soft terracotta teal saffron)
+
+(int n 16 (const))
+
+; A number from 0 to 1 that looks random, the same every time for the same k and seed.
+(func[real] scramble ((int k) (real seed))
+  (let ((x (* (sin (+ (* k 12.9898) seed)) 43758.5453))) (- x (floor x))))
+; The heights 1 to n in an order the seed picks.
+(func[list[real]] shuffled ((real seed))
+  (map (sort (range n) (fn k (scramble k seed))) (fn k (+ k 1.0))))
+
+; A state: four numbers, then the n bars.
+(func[list[real]] fresh ((real a) (real b) (real seed))
+  (let ((bars (shuffled seed)))
+    (map (range (+ 4 n)) (fn k (cond ((= k 0) a) ((= k 1) b) ((< k 4) 0) (else (or? bars[(- k 4)] 0)))))))
+(func[real] part ((list[real] s) (int k)) (or? s[k] 0))
+(func[real] bar ((list[real] s) (int k)) (part s (+ 4 k)))
+; The state with its first four numbers replaced, and the bars at p and q traded when trade.
+(func[list[real]] next ((list[real] s) (real a) (real b) (real c) (real d) (bool trade)
+                        (int p) (int q))
+  (map (range (+ 4 n))
+       (fn k (cond ((= k 0) a) ((= k 1) b) ((= k 2) c) ((= k 3) d)
+                   ((and trade (= k (+ 4 p))) (bar s q))
+                   ((and trade (= k (+ 4 q))) (bar s p))
+                   (else (part s k))))))
+
+; Bubble sort's state: j, end, comparisons, trades. It compares the bars at j and j + 1,
+; trading them when out of order, and walks j up to end: the tallest bar before end then sits
+; at end − 1 for good, and end moves down by one. It is done when end reaches 1.
+(func[bool] bubble-done ((list[real] s)) (<= (part s 1) 1))
+(func[list[real]] bubble-step ((list[real] s))
+  (let ((j (round (part s 0))) (end (part s 1)) (c (part s 2)) (t (part s 3))
+        (trade (> (bar s j) (bar s (+ j 1))))
+        (last (>= (+ j 2) end)))
+    (if (bubble-done s)
+        s
+      (next s (if last 0 (+ j 1)) (if last (- end 1) end) (+ c 1) (if trade (+ t 1) t) trade j
+            (+ j 1)))))
+
+; Insertion sort's state: i, j, comparisons, trades. It carries the bar first at i left,
+; comparing it with the bar before it, at j − 1, and trading them while that one is taller.
+; When it stops, or reaches the start, the bars before i + 1 are in order, and the next bar
+; starts at i + 1. It is done when i reaches n.
+(func[bool] insertion-done ((list[real] s)) (>= (part s 0) n))
+(func[list[real]] insertion-step ((list[real] s))
+  (let ((i (part s 0)) (j (round (part s 1))) (c (part s 2)) (t (part s 3))
+        (trade (> (bar s (- j 1)) (bar s j)))
+        (on (and trade (> j 1))))
+    (if (insertion-done s)
+        s
+      (next s (if on i (+ i 1)) (if on (- j 1) (+ i 1)) (+ c 1) (if trade (+ t 1) t) trade
+            (- j 1) j))))
+
+(real seed 1)
+; Drawn once when the page loads, so every visit starts from its own shuffle.
+(real salt (rand 0 1000))
+(list[real] bubble [0 16 0 0 14 8 2 16 13 10 15 9 1 7 12 6 3 5 4 11])
+(list[real] insertion [1 1 0 0 14 8 2 16 13 10 15 9 1 7 12 6 3 5 4 11])
+
+(scene race (background paper)
+  (group bubble-bars
+    (foreach k n
+      (rect_ (pos [k (/ (bar bubble k) 2)]) (width 0.8) (height (bar bubble k)) (stroke none)
+          (fill (cond ((bubble-done bubble) teal)
+                      ((or (= k (part bubble 0)) (= k (+ (part bubble 0) 1))) terracotta)
+                      ((>= k (part bubble 1)) teal)
+                      (else soft))))))
+  (group insertion-bars
+    (foreach k n
+      (rect_ (pos [k (/ (bar insertion k) 2)]) (width 0.8) (height (bar insertion k))
+          (stroke none)
+          (fill (cond ((insertion-done insertion) teal)
+                      ((or (= k (part insertion 1)) (= k (- (part insertion 1) 1))) terracotta)
+                      ((< k (part insertion 0)) saffron)
+                      (else soft)))))))
+
+(canvas bubble-view (x -1) (y -0.5) (width 17) (height 17.5) (pan false) (zoom false)
+  doc@'Bubble sort\'s bars: red where it compares, green where they are in place.'
+  bubble-bars)
+(canvas insertion-view (x -1) (y -0.5) (width 17) (height 17.5) (pan false) (zoom false)
+  doc@'Insertion sort\'s bars: red where it compares, yellow where they are in order so far.'
+  insertion-bars)
+
+(readout bubble-count
+    $'bubble sort: {(part bubble 2):.0f} comparisons, {(part bubble 3):.0f} trades'
+  doc@'How much work bubble sort has done.')
+(readout insertion-count
+    $'insertion sort: {(part insertion 2):.0f} comparisons, {(part insertion 3):.0f} trades'
+  doc@'How much work insertion sort has done.')
+; Both make one comparison a step, so the one that needs fewer finishes first.
+(readout winner
+    (let ((b (bubble-done bubble)) (i (insertion-done insertion))
+          (bc (part bubble 2)) (ic (part insertion 2)))
+      (cond ((and b i (= bc ic)) 'A tie.')
+            ((and i (or (not b) (< ic bc))) 'Insertion sort finished first.')
+            (b 'Bubble sort finished first.')
+            (else 'Both are still sorting.')))
+  doc@'Which sort finished first.')
+
+(play run (label 'race')
+  doc@'Steps both sorts, one comparison each, until both are done.'
+    (animation (loop)
+      (at-once (defaults (duration 0.12))
+        (move bubble (to (bubble-step bubble)))
+        (move insertion (to (insertion-step insertion))))))
+
+; Moves that run together all read the seed as it was, so each works out the next one itself.
+(button shuffle (label 'shuffle')
+  doc@'Puts new shuffled bars in front of both sorts and starts them again.'
+    (animation
+      (at-once (defaults (duration 0))
+        (move bubble (to (fresh 0 n (+ seed 1 salt))))
+        (move insertion (to (fresh 1 1 (+ seed 1 salt))))
+        (move seed (to (+ seed 1))))))
+
+(on-view bubble-view
+    (animation
+      (at-once (defaults (duration 0))
+        (move bubble (to (fresh 0 n (+ seed salt))))
+        (move insertion (to (fresh 1 1 (+ seed salt))))))
+  doc@'Deals the first shuffle of this visit when the bars come into view.')
