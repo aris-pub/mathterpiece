@@ -80,6 +80,7 @@ const START = 2;
 
 /** A variable or an attribute: its value, as written or as last computed, and how it gets it. */
 interface Slot {
+  id: number;
   key: string;
   type: Type;
   state: typeof FREE | typeof BOUND | typeof START;
@@ -133,6 +134,9 @@ export class Runtime {
   readonly objects: Obj[];
   /** How many bound values have been computed, so a test can see what a write recomputes. */
   evaluations = 0;
+  /** Counts the writes that changed something; see touchedAt. */
+  clock = 0;
+  private touched: number[] = [];
   private parents: (number | null)[];
   // Each object's variables and attributes, by attribute (null for a variable's value). Reads
   // are most of the runtime's work, so they find their slot without building a key.
@@ -242,7 +246,7 @@ export class Runtime {
 
   private load(id: number, attr: string | null, p: Attribute): void {
     const k = key(id, attr);
-    const s: Slot = { key: k, type: p.type, state: FREE, value: null, fn: null, cached: false, css: null, cssKnown: false };
+    const s: Slot = { id, key: k, type: p.type, state: FREE, value: null, fn: null, cached: false, css: null, cssKnown: false };
     this.slots[id]!.set(attr, s);
     this.byKey.set(k, s);
     if (isStart(p)) {
@@ -272,6 +276,12 @@ export class Runtime {
   exists(id: number): boolean {
     for (const s of this.existsChain[id]!) if (!this.get(s)) return false;
     return true;
+  }
+
+  /** The clock at the last write that changed one of an object's variables or attributes, or
+   * anything bound that they read: what was worked out from them after that still holds. */
+  touchedAt(id: number): number {
+    return this.touched[id] ?? 0;
   }
 
   /** The id of a named object. */
@@ -491,6 +501,7 @@ export class Runtime {
     if (v === undefined || equal(v, old)) return;
     s.value = v;
     s.cssKnown = false;
+    this.touched[s.id] = ++this.clock;
     changed.add(k);
     this.places.clear();
     this.frames.clear();
@@ -500,6 +511,7 @@ export class Runtime {
   private forget(k: string, changed: Set<string>): void {
     for (const d of this.dependents.get(k) ?? []) {
       const s = this.byKey.get(d)!;
+      this.touched[s.id] = this.clock;
       if (!s.cached && changed.has(d)) continue;
       s.cached = false;
       s.cssKnown = false;

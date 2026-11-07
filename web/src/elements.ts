@@ -12,7 +12,7 @@ import { latexOf, termClass, typeset } from "./math.ts";
 import { Player } from "./player.ts";
 import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
-import { type Look, draw, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
+import { DrawMemo, type Look, draw, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
@@ -275,15 +275,22 @@ export class MtpCanvas extends MtpPart {
     const reaches = (id: number) =>
       drags.draggable(id) || clicks.find(id).length > 0 || releases.find(id).length > 0 || pointer.hears(id);
     const mark = () => {
-      for (const el of svg.querySelectorAll(".mtp-selected")) el.classList.remove("mtp-selected");
-      if (selection) for (const el of svg.querySelectorAll(`[data-mtp-id="${selection.shape}"]`)) el.classList.add("mtp-selected");
+      const want = selection ? `${selection.shape}` : null;
+      for (const el of svg.querySelectorAll(".mtp-selected")) {
+        if (el.getAttribute("data-mtp-id") !== want) el.classList.remove("mtp-selected");
+      }
+      if (want !== null) for (const el of svg.querySelectorAll(`[data-mtp-id="${want}"]`)) el.classList.add("mtp-selected");
     };
+    const memo = new DrawMemo();
     this.redraw = () => {
       toggles.follow();
-      draw(rt, canvas, svg, (k) => toggles.shownBy(k), look);
+      draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo);
+      // Drawing keeps the elements of shapes still drawn, so a shape that can no longer be
+      // dragged or clicked loses its pointer.
       for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
         const id = Number(el.getAttribute("data-mtp-id"));
-        if (drags.draggable(id) || clicks.find(id).length) el.style.cursor = "pointer";
+        const cursor = drags.draggable(id) || clicks.find(id).length ? "pointer" : "";
+        if (el.style.cursor !== cursor) el.style.cursor = cursor;
       }
       mark();
     };

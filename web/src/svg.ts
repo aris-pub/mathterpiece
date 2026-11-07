@@ -64,9 +64,51 @@ export function lookBox(box: number[], look?: Look): number[] {
 }
 
 /**
+ * An element as drawing wants it: its tag, attributes, style, text and children. A canvas is
+ * drawn as these first, and the SVG on the page is then changed only where they differ from what
+ * it shows, so a change to one shape does not make the browser lay out every other one again.
+ */
+interface Drawn {
+  tag: string;
+  attrs: Record<string, string>;
+  style: Record<string, string>;
+  children: Drawn[];
+  text: string | null;
+}
+
+function node(tag: string, attrs: Record<string, unknown> = {}): Drawn {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(attrs)) out[k] = String(v);
+  return { tag, attrs: out, style: {}, children: [], text: null };
+}
+
+/**
+ * What a canvas keeps between drawings: each shape's elements, with the runtime's clock when
+ * they were drawn. A shape is drawn again only once something it is drawn from has changed
+ * since (Runtime.touchedAt), or the canvas's units a pixel have.
+ */
+export class DrawMemo {
+  shapes = new Map<number, { at: number; drawn: Drawn[] }>();
+  units = Number.NaN;
+}
+
+interface Pass {
+  rt: Runtime;
+  // Each drawing's marker and clip ids start with its SVG's own number.
+  prefix: number;
+  memo: DrawMemo | null;
+}
+
+// What each element on the page was last drawn as.
+const DRAWN = new WeakMap<Element, Drawn>();
+const prefixes = new WeakMap<SVGSVGElement, number>();
+let svgs = 0;
+
+/**
  * Draws a canvas: what it shows, and the shapes each of its items gives. shownBy gives the k-th
  * item's shapes and how visible each is, from 0 (not drawn) to 1, for a canvas toggling them; by
- * default, the shapes the item gives now, each fully visible.
+ * default, the shapes the item gives now, each fully visible. memo keeps what is drawn for the
+ * next drawing of the same SVG.
  */
 export function draw(
   rt: Runtime,
@@ -74,12 +116,13 @@ export function draw(
   svg?: SVGSVGElement,
   shownBy?: (k: number) => [number, number][],
   look?: Look,
+  memo?: DrawMemo,
 ): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
-  out.replaceChildren();
+  if (!prefixes.has(out)) prefixes.set(out, ++svgs);
   const { box: authors, toUser } = viewOf(rt, canvas);
   const box = lookBox(authors, look);
-  out.setAttribute("viewBox", box.join(" "));
+  setIfNew(out, "viewBox", box.join(" "));
   const view = rt.objects[canvas]!;
   const shows = view.shows ?? [];
   const items = itemsOf(view);
@@ -88,30 +131,37 @@ export function draw(
   );
   let j = 0;
   background(rt, shows.flatMap((s) => (typeof s === "number" ? [s] : shapes[j++]!.map(([id]) => id))), out);
-  const top = document.createElementNS(NS, "g");
-  top.setAttribute("transform", matrix(toUser));
+  const top = node("g", { transform: matrix(toUser) });
   const unitsPerPx = unitsPerPxOf(out, box);
+  if (memo && memo.units !== unitsPerPx) {
+    memo.shapes.clear();
+    memo.units = unitsPerPx;
+  }
+  const pass: Pass = { rt, prefix: prefixes.get(out)!, memo: memo ?? null };
   let k = 0;
   for (const shown of shows) {
     if (typeof shown === "number") {
-      drawObject(rt, shown, top, unitsPerPx);
+      drawObject(pass, shown, top.children, unitsPerPx);
       continue;
     }
     for (const [id, level] of shapes[k++]!) {
       if (level <= 0) continue;
-      let into: Element = top;
+      let into = top.children;
       if (level < 1) {
         // A canvas toggles a shape, showing or hiding it, over its toggle-duration.
-        into = document.createElementNS(NS, "g");
-        into.setAttribute("data-mtp-toggle", "");
-        into.setAttribute("opacity", String(level));
-        top.appendChild(into);
+        const g = node("g", { "data-mtp-toggle": "", opacity: level });
+        top.children.push(g);
+        into = g.children;
       }
-      drawObject(rt, id, into, unitsPerPx);
+      drawObject(pass, id, into, unitsPerPx);
     }
   }
-  out.appendChild(top);
+  patchChildren(out, [top]);
   return out;
+}
+
+function setIfNew(el: Element, attr: string, value: string): void {
+  if (el.getAttribute(attr) !== value) el.setAttribute(attr, value);
 }
 
 /** The ids of the shapes a canvas item gives: one shape, none, or a list of them. */
@@ -126,8 +176,79 @@ export function shapesOf(v: unknown): number[] {
 // pixels multiplies by --mtp-unit, the units a pixel.
 function unitsPerPxOf(svg: SVGSVGElement, box: number[]): number {
   const units = box[2]! / (svg.getBoundingClientRect?.().width || 640);
-  svg.style.setProperty("--mtp-unit", String(units));
+  if (svg.style.getPropertyValue("--mtp-unit") !== String(units)) svg.style.setProperty("--mtp-unit", String(units));
   return units;
+}
+
+// The page's SVG made to show what is wanted, keeping each element that is still wanted: an
+// element drawn with a data-mtp-id is kept for the same shape, any other for the next one of its
+// tag.
+function patchChildren(parent: Element, want: Drawn[]): void {
+  const keyed = new Map<string, Element[]>();
+  const loose = new Map<string, Element[]>();
+  for (const el of Array.from(parent.children)) {
+    const was = DRAWN.get(el);
+    if (!was) continue;
+    const id = was.attrs["data-mtp-id"];
+    const [pool, k] = id === undefined ? [loose, was.tag] : [keyed, `${was.tag}#${id}`];
+    const list = pool.get(k);
+    if (list) list.push(el);
+    else pool.set(k, [el]);
+  }
+  want.forEach((d, i) => {
+    const id = d.attrs["data-mtp-id"];
+    const pool = id === undefined ? loose.get(d.tag) : keyed.get(`${d.tag}#${id}`);
+    let el = pool?.shift();
+    if (el) patch(el, d);
+    else el = create(d);
+    const at = parent.children[i];
+    if (at !== el) parent.insertBefore(el, at ?? null);
+  });
+  while (parent.children.length > want.length) parent.lastElementChild!.remove();
+}
+
+function create(d: Drawn): Element {
+  const el = document.createElementNS(NS, d.tag);
+  for (const [k, v] of Object.entries(d.attrs)) setAttr(el, k, v);
+  const style = (el as SVGElement).style;
+  for (const [k, v] of Object.entries(d.style)) style.setProperty(k, v);
+  if (d.text !== null) el.textContent = d.text;
+  for (const c of d.children) el.appendChild(create(c));
+  DRAWN.set(el, d);
+  return el;
+}
+
+function patch(el: Element, d: Drawn): void {
+  const was = DRAWN.get(el)!;
+  if (was === d) return;
+  for (const [k, v] of Object.entries(d.attrs)) if (was.attrs[k] !== v) setAttr(el, k, v);
+  for (const k of Object.keys(was.attrs)) if (!(k in d.attrs)) removeAttr(el, k);
+  const style = (el as SVGElement).style;
+  for (const [k, v] of Object.entries(d.style)) if (was.style[k] !== v) style.setProperty(k, v);
+  for (const k of Object.keys(was.style)) if (!(k in d.style)) style.removeProperty(k);
+  if (d.text !== was.text) el.textContent = d.text ?? "";
+  if (d.children.length > 0 || was.children.length > 0) patchChildren(el, d.children);
+  DRAWN.set(el, d);
+}
+
+const XML_NS = "http://www.w3.org/XML/1998/namespace";
+
+function setAttr(el: Element, k: string, v: string): void {
+  if (k === "xml:space") el.setAttributeNS(XML_NS, k, v);
+  else el.setAttribute(k, v);
+}
+
+function removeAttr(el: Element, k: string): void {
+  if (k === "xml:space") el.removeAttributeNS(XML_NS, "space");
+  else el.removeAttribute(k);
+}
+
+// Zoom changes what is sized in screen pixels on the page itself, and what each element was
+// last drawn as with it, so the next drawing compares against what the page shows.
+function setZoomed(el: Element, attr: string, value: string): void {
+  el.setAttribute(attr, value);
+  const was = DRAWN.get(el);
+  if (was) DRAWN.set(el, { ...was, attrs: { ...was.attrs, [attr]: value } });
 }
 
 /**
@@ -142,17 +263,17 @@ export function zoom(rt: Runtime, canvas: number, svg: SVGSVGElement, look: Look
   // What is inside a fixed-size group is already in pixels: only the group's scale changes.
   const fixed = (el: Element) => el.closest("[data-mtp-fixed-size]") !== null;
   for (const g of svg.querySelectorAll("g[data-mtp-fixed-size]")) {
-    g.setAttribute("transform", matrix(rt.local(Number(g.getAttribute("data-mtp-id")), true, unitsPerPx)));
+    setZoomed(g, "transform", matrix(rt.local(Number(g.getAttribute("data-mtp-id")), true, unitsPerPx)));
   }
   for (const el of svg.querySelectorAll("text[data-mtp-id]")) {
     if (fixed(el)) continue;
-    el.setAttribute("font-size", fontSize(rt, Number(el.getAttribute("data-mtp-id")), unitsPerPx));
+    setZoomed(el, "font-size", fontSize(rt, Number(el.getAttribute("data-mtp-id")), unitsPerPx));
   }
   for (const m of svg.querySelectorAll("marker[data-mtp-head-px]")) {
     if (fixed(m)) continue;
     const size = String(Number(m.getAttribute("data-mtp-head-px")) * unitsPerPx);
-    m.setAttribute("markerWidth", size);
-    m.setAttribute("markerHeight", size);
+    setZoomed(m, "markerWidth", size);
+    setZoomed(m, "markerHeight", size);
   }
 }
 
@@ -167,48 +288,76 @@ function background(rt: Runtime, shown: number[], svg: SVGSVGElement): void {
   while (root !== undefined && rt.parent(root) !== null) root = rt.parent(root)!;
   const bg = root === undefined || rt.objects[root]!.kind !== "scene" ? null : rt.value(root, "background");
   if (bg === null) svg.style.removeProperty("background-color");
-  else svg.style.setProperty("background-color", paintCss(rt, root!, "background"));
+  else {
+    const css = paintCss(rt, root!, "background");
+    if (svg.style.getPropertyValue("background-color") !== css) svg.style.setProperty("background-color", css);
+  }
 }
 
-function drawObject(rt: Runtime, i: number, into: Element, unitsPerPx: number): void {
+function drawObject(pass: Pass, i: number, into: Drawn[], unitsPerPx: number): void {
+  const rt = pass.rt;
   const o = rt.objects[i]!;
   if (o.kind === "scene") {
-    for (const m of o.members ?? []) drawObject(rt, m, into, unitsPerPx);
+    for (const m of o.members ?? []) drawObject(pass, m, into, unitsPerPx);
     return;
   }
-  if (absent(rt, i)) return;
   if (o.kind === "group" || o.kind === "instance") {
-    const g = document.createElementNS(NS, "g");
-    g.setAttribute("transform", matrix(rt.local(i, true, unitsPerPx)));
-    g.setAttribute("data-mtp-id", String(i));
+    if (absent(rt, i)) return;
+    const g = node("g", { transform: matrix(rt.local(i, true, unitsPerPx)), "data-mtp-id": i });
     // Inside a fixed-size group one unit is one screen pixel, so what is sized in pixels inside
     // it needs no converting.
     const inside = o["fixed-size"] ? 1 : unitsPerPx;
-    if (o["fixed-size"]) g.setAttribute("data-mtp-fixed-size", "");
-    if (o.clip !== undefined) clipTo(rt, o.clip, g, inside);
-    for (const m of o.members ?? []) drawObject(rt, m, g, inside);
-    into.appendChild(g);
+    if (o["fixed-size"]) g.attrs["data-mtp-fixed-size"] = "";
+    if (o.clip !== undefined) clipTo(pass, i, o.clip, g, inside);
+    for (const m of o.members ?? []) drawObject(pass, m, g.children, inside);
+    into.push(g);
     return;
   }
+  const memo = pass.memo && keepable(rt, i) ? pass.memo : null;
+  const kept = memo?.shapes.get(i);
+  if (kept && rt.touchedAt(i) <= kept.at) {
+    into.push(...kept.drawn);
+    return;
+  }
+  const drawn = absent(rt, i) ? [] : shapeDrawn(pass, i, unitsPerPx);
+  memo?.shapes.set(i, { at: rt.clock, drawn });
+  into.push(...drawn);
+}
+
+// Whether what a shape is drawn as follows only its own attributes, so can be kept until one of
+// them changes: not in a row or a column, whose places follow the other members, and not a text
+// whose font token falls back on another font, which none of its attributes reads.
+function keepable(rt: Runtime, i: number): boolean {
+  const up = rt.parent(i);
+  if (up !== null && rt.objects[up]!.layout) return false;
+  if (rt.objects[i]!.kind !== "text") return true;
+  const variable = tokenOf(rt, i, "font");
+  return variable === null || rt.objects[rt.id(variable)]!.links === undefined;
+}
+
+// A shape's heads, then the shape.
+function shapeDrawn(pass: Pass, i: number, unitsPerPx: number): Drawn[] {
+  const rt = pass.rt;
+  const o = rt.objects[i]!;
+  const out: Drawn[] = [];
   const el = shapeElement(rt, i, unitsPerPx);
-  el.setAttribute("data-mtp-id", String(i));
+  el.attrs["data-mtp-id"] = String(i);
   const own = rt.local(i);
   if (o.kind === "text") {
     const [x, y] = rt.value(i, "pos") as number[];
     // Text is placed at its anchor and flipped back upright there.
-    el.setAttribute("transform", matrix(compose(FLIP, [1, 0, 0, 1, x!, y!], own)));
+    el.attrs.transform = matrix(compose(FLIP, [1, 0, 0, 1, x!, y!], own));
   } else if (!own.every((v, k) => v === [1, 0, 0, 1, 0, 0][k])) {
-    el.setAttribute("transform", matrix(own));
+    el.attrs.transform = matrix(own);
   }
   paint(rt, i, el);
-  heads(rt, i, el, into, unitsPerPx);
-  into.appendChild(el);
+  heads(pass, i, el, out, unitsPerPx);
+  out.push(el);
+  return out;
 }
 
 // A head is this many stroke widths long (mtp-brs), times the shape's head-size.
 const HEAD_LENGTH = 5;
-// Several canvases may draw the same shape on one page, so each head gets its own id.
-let headIds = 0;
 
 // Each kind, drawn in a 10 by 10 box with the line coming in from the left along y = 5. refX is
 // the point put at the line's end: a little short of the tip, so the head covers the line's end.
@@ -223,9 +372,11 @@ const HEAD_SHAPES: Record<string, { refX: number; tag: string; attrs: Record<str
 /**
  * The heads at a line's, a polyline's, a curve's or an arc's ends, as SVG markers in its stroke (mtp-brs).
  * Its stroke width is in screen pixels, which a marker does not follow, so each head is sized in
- * the view's units from its length in pixels, and zoom sizes it again.
+ * the view's units from its length in pixels, and zoom sizes it again. Several canvases may draw
+ * the same shape on one page, so each head's id names its SVG as well as its shape.
  */
-function heads(rt: Runtime, i: number, el: Element, into: Element, unitsPerPx: number): void {
+function heads(pass: Pass, i: number, el: Drawn, into: Drawn[], unitsPerPx: number): void {
+  const rt = pass.rt;
   if (!["line", "polyline", "curve", "arc"].includes(rt.objects[i]!.kind)) return;
   const stroke = paintCss(rt, i, "stroke");
   if (stroke === "none") return;
@@ -234,36 +385,33 @@ function heads(rt: Runtime, i: number, el: Element, into: Element, unitsPerPx: n
     const kind = rt.value(i, `head-${end}`) as string | null;
     const shape = kind === null ? undefined : HEAD_SHAPES[kind];
     if (!shape) continue;
-    const marker = document.createElementNS(NS, "marker");
-    marker.id = `mtp-head-${++headIds}`;
-    for (const [k, v] of Object.entries({
+    const id = `mtp-head-${pass.prefix}-${i}-${end}`;
+    const marker = node("marker", {
+      id,
       viewBox: "0 0 10 10",
       markerUnits: "userSpaceOnUse",
-      markerWidth: String(px * unitsPerPx),
-      markerHeight: String(px * unitsPerPx),
-      refX: String(shape.refX),
+      markerWidth: px * unitsPerPx,
+      markerHeight: px * unitsPerPx,
+      refX: shape.refX,
       refY: "5",
       // The start's head points back, away from the line, as the end's points forward.
       orient: end === "start" ? "auto-start-reverse" : "auto",
-      "data-mtp-head-px": String(px),
-    })) {
-      marker.setAttribute(k, v);
-    }
-    const mark = document.createElementNS(NS, shape.tag) as SVGElement;
-    for (const [k, v] of Object.entries(shape.attrs)) mark.setAttribute(k, v);
-    mark.style.setProperty("fill", shape.stroked ? "none" : stroke);
-    mark.style.setProperty("stroke", shape.stroked ? stroke : "none");
+      "data-mtp-head-px": px,
+    });
+    const mark = node(shape.tag, shape.attrs);
+    mark.style.fill = shape.stroked ? "none" : stroke;
+    mark.style.stroke = shape.stroked ? stroke : "none";
     if (shape.stroked) {
       // As wide as the line itself: the box is a tenth of the head's length on each side.
-      mark.setAttribute("stroke-width", String(10 / HEAD_LENGTH));
-      mark.setAttribute("stroke-linecap", "round");
-      mark.setAttribute("stroke-linejoin", "round");
+      mark.attrs["stroke-width"] = String(10 / HEAD_LENGTH);
+      mark.attrs["stroke-linecap"] = "round";
+      mark.attrs["stroke-linejoin"] = "round";
     }
     const opacity = String(rt.value(i, "stroke-opacity"));
-    mark.setAttribute(shape.stroked ? "stroke-opacity" : "fill-opacity", opacity);
-    marker.appendChild(mark);
-    into.appendChild(marker);
-    el.setAttribute(`marker-${end}`, `url(#${marker.id})`);
+    mark.attrs[shape.stroked ? "stroke-opacity" : "fill-opacity"] = opacity;
+    marker.children.push(mark);
+    into.push(marker);
+    el.attrs[`marker-${end}`] = `url(#${id})`;
   }
 }
 
@@ -277,38 +425,44 @@ function absent(rt: Runtime, i: number): boolean {
   return Object.entries(o.attrs ?? {}).some(([attr, p]) => !MAY_BE_NONE.has(attr) && p.type && rt.value(i, attr) === null);
 }
 
-// Several canvases may draw the same container on one page, so each clip path gets its own id.
-let clips = 0;
-
 /**
  * Clips a container's <g> to its clip shape (mtp-un2f). The clip path sits inside the <g>, in its
- * frame; SVG then also keeps the pointer from what it cuts off.
+ * frame; SVG then also keeps the pointer from what it cuts off. Its id names its SVG and its
+ * container, so several canvases may draw the same container on one page.
  */
-function clipTo(rt: Runtime, clip: number, g: Element, unitsPerPx: number): void {
-  const path = document.createElementNS(NS, "clipPath");
-  path.id = `mtp-clip-${++clips}`;
+function clipTo(pass: Pass, container: number, clip: number, g: Drawn, unitsPerPx: number): void {
+  const rt = pass.rt;
+  const id = `mtp-clip-${pass.prefix}-${container}`;
+  const path = node("clipPath", { id });
   const el = shapeElement(rt, clip, unitsPerPx);
   const own = rt.local(clip);
-  if (!own.every((v, k) => v === [1, 0, 0, 1, 0, 0][k])) el.setAttribute("transform", matrix(own));
-  path.appendChild(el);
-  g.appendChild(path);
-  g.setAttribute("clip-path", `url(#${path.id})`);
+  if (!own.every((v, k) => v === [1, 0, 0, 1, 0, 0][k])) el.attrs.transform = matrix(own);
+  path.children.push(el);
+  g.children.push(path);
+  g.attrs["clip-path"] = `url(#${id})`;
 }
 
-function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
+// A list of points as SVG writes it. A long one, such as a path through thousands of points, is
+// the same list until it is written, so its text is kept with it.
+const pointTexts = new WeakMap<object, string>();
+function pointsText(points: number[][]): string {
+  let s = pointTexts.get(points);
+  if (s === undefined) {
+    s = points.map((p) => p.join(",")).join(" ");
+    pointTexts.set(points, s);
+  }
+  return s;
+}
+
+function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Drawn {
   const v = (attr: string) => rt.value(i, attr) as number;
-  const el = (tag: string, attrs: Record<string, unknown>) => {
-    const e = document.createElementNS(NS, tag);
-    for (const [k, value] of Object.entries(attrs)) e.setAttribute(k, String(value));
-    return e;
-  };
   const o = rt.objects[i]!;
   switch (o.kind) {
     case "circle":
-      return el("circle", { cx: v("x"), cy: v("y"), r: v("r") });
+      return node("circle", { cx: v("x"), cy: v("y"), r: v("r") });
     case "rect":
       // A rect's position is its center.
-      return el("rect", {
+      return node("rect", {
         x: v("x") - v("width") / 2,
         y: v("y") - v("height") / 2,
         width: v("width"),
@@ -317,29 +471,27 @@ function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
         ry: v("ry"),
       });
     case "ellipse":
-      return el("ellipse", { cx: v("x"), cy: v("y"), rx: v("rx"), ry: v("ry") });
+      return node("ellipse", { cx: v("x"), cy: v("y"), rx: v("rx"), ry: v("ry") });
     case "line": {
       const [x1, y1] = rt.value(i, "from") as number[];
       const [x2, y2] = rt.value(i, "to") as number[];
-      return el("line", { x1, y1, x2, y2 });
+      return node("line", { x1, y1, x2, y2 });
     }
     case "triangle": {
       const corners = ["a", "b", "c"].map((c) => (rt.value(i, c) as number[]).join(","));
-      return el("polygon", { points: corners.join(" ") });
+      return node("polygon", { points: corners.join(" ") });
     }
     case "polyline":
-    case "polygon": {
-      const points = (rt.value(i, "points") as number[][]).map((p) => p.join(","));
-      return el(o.kind, { points: points.join(" ") });
-    }
+    case "polygon":
+      return node(o.kind, { points: pointsText(rt.value(i, "points") as number[][]) });
     case "curve": {
       const [from, to] = ["from", "to"].map((e) => rt.value(i, e) as number[]);
-      return el("path", { d: curvePath(from!, rt.value(i, "controls") as number[][], to!) });
+      return node("path", { d: curvePath(from!, rt.value(i, "controls") as number[][], to!) });
     }
     case "arc":
-      return el("path", { d: arcPath(v("x"), v("y"), v("r"), v("from"), v("to")) });
+      return node("path", { d: arcPath(v("x"), v("y"), v("r"), v("from"), v("to")) });
     case "ring":
-      return el("path", { d: ringPath(v("x"), v("y"), v("r"), v("width"), v("from"), v("to")) });
+      return node("path", { d: ringPath(v("x"), v("y"), v("r"), v("width"), v("from"), v("to")) });
     case "text":
       return text(rt, i, unitsPerPx);
     default:
@@ -347,48 +499,47 @@ function shapeElement(rt: Runtime, i: number, unitsPerPx: number): Element {
   }
 }
 
-function text(rt: Runtime, i: number, unitsPerPx: number): Element {
-  const el = document.createElementNS(NS, "text") as SVGElement;
-  el.textContent = String(rt.value(i, "value"));
+function text(rt: Runtime, i: number, unitsPerPx: number): Drawn {
+  const el = node("text");
+  el.text = String(rt.value(i, "value"));
   // SVG would otherwise drop leading spaces and run spaces together; this keeps each one, and
   // shows a tab or a newline as a space.
-  el.setAttributeNS("http://www.w3.org/XML/1998/namespace", "xml:space", "preserve");
+  el.attrs["xml:space"] = "preserve";
   const anchor = rt.value(i, "halign");
-  if (anchor === "middle" || anchor === "end") el.setAttribute("text-anchor", anchor as string);
+  if (anchor === "middle" || anchor === "end") el.attrs["text-anchor"] = anchor as string;
   const baseline = { top: "hanging", middle: "central", bottom: "text-after-edge" }[rt.value(i, "valign") as string];
-  if (baseline) el.setAttribute("dominant-baseline", baseline);
+  if (baseline) el.attrs["dominant-baseline"] = baseline;
   const font = rt.value(i, "font") as Record<string, unknown>;
-  el.setAttribute("font-size", fontSize(rt, i, unitsPerPx));
+  el.attrs["font-size"] = fontSize(rt, i, unitsPerPx);
   const variable = tokenOf(rt, i, "font");
   for (const part of ["family", "style", "weight"]) {
     const css = variable === null ? font[part] : fontPartCss(rt, rt.id(variable), part);
-    if (css !== null && css !== undefined) el.style.setProperty(`font-${part}`, String(css));
+    if (css !== null && css !== undefined) el.style[`font-${part}`] = String(css);
   }
   return el;
 }
 
 // Fill, stroke and their opacities mirror SVG: a color's alpha, fill-opacity and stroke-opacity
 // multiply, and opacity fades the drawn shape as a whole.
-function paint(rt: Runtime, i: number, el: Element): void {
-  const s = el as SVGElement;
+function paint(rt: Runtime, i: number, el: Drawn): void {
   // A line, a polyline, a curve and an arc are paths with no inside, so their fill is never drawn.
   const open = ["line", "polyline", "curve", "arc"].includes(rt.objects[i]!.kind);
-  s.style.setProperty("fill", open ? "none" : paintCss(rt, i, "fill"));
-  s.style.setProperty("stroke", paintCss(rt, i, "stroke"));
-  el.setAttribute("fill-opacity", String(rt.value(i, "fill-opacity")));
-  el.setAttribute("stroke-opacity", String(rt.value(i, "stroke-opacity")));
-  el.setAttribute("opacity", String(rt.value(i, "opacity")));
-  el.setAttribute("stroke-width", String(rt.value(i, "stroke-width")));
+  el.style.fill = open ? "none" : paintCss(rt, i, "fill");
+  el.style.stroke = paintCss(rt, i, "stroke");
+  const a = el.attrs;
+  a["fill-opacity"] = String(rt.value(i, "fill-opacity"));
+  a["stroke-opacity"] = String(rt.value(i, "stroke-opacity"));
+  a.opacity = String(rt.value(i, "opacity"));
+  a["stroke-width"] = String(rt.value(i, "stroke-width"));
   const dash = rt.value(i, "dash") as number[];
-  el.setAttribute("stroke-dasharray", dash.length ? dash.join(" ") : "none");
-  el.setAttribute("stroke-dashoffset", String(rt.value(i, "dash-offset")));
-  el.setAttribute("stroke-linecap", String(rt.value(i, "line-cap")));
-  el.setAttribute("stroke-linejoin", String(rt.value(i, "line-join")));
+  a["stroke-dasharray"] = dash.length ? dash.join(" ") : "none";
+  a["stroke-dashoffset"] = String(rt.value(i, "dash-offset"));
+  a["stroke-linecap"] = String(rt.value(i, "line-cap"));
+  a["stroke-linejoin"] = String(rt.value(i, "line-join"));
   // Stroke widths and dashes are in screen pixels, whatever the view box.
-  el.setAttribute("vector-effect", "non-scaling-stroke");
+  a["vector-effect"] = "non-scaling-stroke";
   // A group's pointer-events reached its members when compiling, so only shapes carry it.
-  if (rt.value(i, "pointer-events") === false) el.setAttribute("pointer-events", "none");
-  else el.removeAttribute("pointer-events");
+  if (rt.value(i, "pointer-events") === false) a["pointer-events"] = "none";
 }
 
 /** A paint as CSS: none, a color, or one computed from tokens through their CSS variables (docs/mtpc.md). */
@@ -398,7 +549,6 @@ export function paintCss(rt: Runtime, i: number, attr: string): string {
   return rt.css(i, attr) ?? String(v);
 }
 
-// The name of the token variable an attribute reads directly, if it does.
 /** A font token's part as CSS: its own variable, falling back to the font it reads the part
  * from, if any, and then to its value. */
 function fontPartCss(rt: Runtime, id: number, part: string): string {
@@ -409,6 +559,7 @@ function fontPartCss(rt: Runtime, id: number, part: string): string {
   return `var(${cssVariable(o.name!)}-${part}${fallback === null ? "" : `, ${fallback}`})`;
 }
 
+// The name of the token variable an attribute reads directly, if it does.
 function tokenOf(rt: Runtime, i: number, attr: string): string | null {
   const p = rt.objects[i]!.attrs?.[attr];
   if (!p || !isBound(p)) return null;
