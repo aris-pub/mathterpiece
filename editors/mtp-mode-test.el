@@ -111,3 +111,9 @@
   (should (eq (face-attribute 'mtp-mode-head-face :weight) 'bold))
   (should (eq (face-attribute 'mtp-mode-call-face :weight) 'normal))
   (should (eq (mtp-mode-test--face-at "(real v (next 1))" "next") 'mtp-mode-call-face)))
+
+(ert-deftest mtp-mode-reapplies-its-faces-when-loaded-again ()
+  ;; defface leaves a face that exists as it is, so a reloaded mode kept old weights.
+  (face-spec-set 'mtp-mode-head-face '((t :weight light)) 'face-defface-spec)
+  (load (locate-library "mtp-mode") nil t)
+  (should (eq (face-attribute 'mtp-mode-head-face :weight) 'bold)))
