@@ -1389,18 +1389,32 @@ export class Runtime {
 // A function's results kept, at most, before they are forgotten all at once.
 const MEMO_SIZE = 20000;
 
-// A list of arguments as a key, when each is a number, a string, a bool or none; null otherwise.
-// -0 is kept apart from 0, since a function may tell them apart.
+// A list of arguments as a key, when each is a number, a string, a bool, none, or a short list
+// of them such as a point; null otherwise. -0 is kept apart from 0, since a function may tell
+// them apart.
 function argsKey(args: unknown[]): string | null {
   let k = "";
   for (const a of args) {
-    if (typeof a === "number") k += Object.is(a, -0) ? "-0," : `${a},`;
-    else if (typeof a === "string") k += `${JSON.stringify(a)},`;
-    else if (typeof a === "boolean") k += a ? "t," : "f,";
-    else if (a === null) k += "n,";
-    else return null;
+    const part = keyOf(a, 2);
+    if (part === null) return null;
+    k += part;
   }
   return k;
+}
+
+function keyOf(a: unknown, depth: number): string | null {
+  if (typeof a === "number") return Object.is(a, -0) ? "-0," : `${a},`;
+  if (typeof a === "string") return `${JSON.stringify(a)},`;
+  if (typeof a === "boolean") return a ? "t," : "f,";
+  if (a === null) return "n,";
+  if (!Array.isArray(a) || depth === 0 || a.length > 8) return null;
+  let k = "[";
+  for (const x of a) {
+    const part = keyOf(x, depth - 1);
+    if (part === null) return null;
+    k += part;
+  }
+  return `${k}],`;
 }
 
 function holds(op: string, v: number, lim: number): boolean {

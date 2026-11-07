@@ -69,7 +69,11 @@ describe("a function whose value follows only from its arguments", () => {
     rt.write(rt.id("k"), null, 1);
     rt.write(rt.id("n"), null, 5);
     expect(all()).toEqual([2, 3, 120, 3, 1]);
+    // Points and short lists are arguments it is kept for too, each list apart.
     expect(rt.fn(4)([[[7, 1]]], null)).toBe(7);
+    expect(rt.fn(4)([[[8, 1]]], null)).toBe(8);
+    expect(rt.fn(4)([[[-0, 1]]], null)).toBe(-0);
+    expect(rt.fn(4)([[[0, 1]]], null)).toBe(0);
     expect(rt.fn(4)([[]], null)).toBe(0);
   });
 });
