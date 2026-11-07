@@ -445,8 +445,6 @@ class _Compiler:
             setattr(self.model, table, _Names(self))
         # Built in: only the types an object uses are written into the compiled model.
         dict.__setitem__(self.model.types, "rand-seed", RAND_SEED)
-        # The seed a file that declares none gets, once something random needs one (mtp-bjn0).
-        self.implicit_seed: int | None = None
         # The file built, and what each file sees by a name of its own: None for the file built,
         # an imported file by the name it is imported by. here is the file of the node being
         # compiled, so a name is looked up as that file sees it.
@@ -1147,12 +1145,6 @@ class _Compiler:
         name, pos, t, node, first = self.declared(form, scope)
         if isinstance(_core(t), FuncT):
             raise CompileError("a variable cannot hold a function", pos)
-        if _is_seed(t) and self.implicit_seed is not None:
-            raise CompileError(
-                "a seed is declared before the random values that follow it: something random"
-                " above already follows the seed named seed",
-                pos,
-            )
         if node is not None and self.shape_kind(node):
             # (shape sel (circle c …)) declares the circle where the variable is, and holds it.
             assert isinstance(node, Form)
@@ -1827,8 +1819,7 @@ class _Compiler:
         ]
 
     def default_seed(self, pos: Pos, scope: dict) -> Expr:
-        """The file's only seed, or, in a file that declares none, the seed named seed, starting
-        at 0, added the first time something random needs it."""
+        """The only seed the file declares or imports, such as rand.seed after (import rand)."""
         seeds = self.seeds()
         if len(seeds) > 1:
             raise CompileError(
@@ -1837,18 +1828,11 @@ class _Compiler:
                 pos,
             )
         if not seeds:
-            if "seed" in self.model.names:
-                raise CompileError(
-                    "something random follows a seed named seed, but seed is declared already:"
-                    " declare a seed, (rand-seed dots 0), and name it, (seed dots)",
-                    pos,
-                )
-            obj = Obj("variable", "seed", RAND_SEED, "scene", {"value": Attribute(RAND_SEED, 0)})
-            obj.pos = pos
-            self.model.objects.append(obj)
-            self.implicit_seed = len(self.model.objects) - 1
-            self.model.names["seed"] = self.implicit_seed
-            seeds = [self.implicit_seed]
+            raise CompileError(
+                "a random value follows a seed: import the standard one, (import rand), or declare"
+                " one, (rand-seed dots 0)",
+                pos,
+            )
         return self.read(seeds[0], None)
 
     def special_builtin(self, node: Form, head: str, given, scope: dict) -> Expr:
@@ -2595,9 +2579,10 @@ class _Compiler:
             target = item.items[1]
             self.seed_expr(target, scope)
         else:
+            # Kept under its full name, rand.seed for the standard one, which finds it from any
+            # file.
             seed = self.default_seed(pos, scope)
-            name = self.model.objects[seed.args[0]].name
-            target = Name((name,), pos)
+            target = Name((self.model.objects[seed.args[0]].name,), pos)
         move = Form(
             (
                 Name(("move",), pos),
@@ -5918,6 +5903,9 @@ def _used(forms, path: Path | None) -> set[Pos] | None:
     for form in forms:
         if _head(form) != "import":
             _words(form, words)
+    # Something random follows a seed it does not name: the one rand.mtp declares (mtp-bjn0).
+    if words & (RANDOM | {"roll-dice"}):
+        words.add("seed")
     pending = [
         (f, _declared(f)) for theirs in files.values() for f in theirs if _head(f) != "import"
     ]
@@ -5943,6 +5931,9 @@ def _not_importable(form: Node) -> str | None:
         return None
     if head in ("scene", "transition", "animation") or head in COMPONENTS:
         return _a(head)
+    # A seed is free, and a file to import may hold one, as the standard library's rand does.
+    if head == "rand-seed":
+        return None
     if not any(_head(item) == "const" for item in form.items[2:]):
         return "a variable that is not const"
     return None

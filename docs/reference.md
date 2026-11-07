@@ -40,7 +40,7 @@ Every declaration may take `doc@'text'`, an optional argument that says what the
 
 `(import house)` reads `house.mtp` from the folder of the file importing it, or, when there is none there, from the standard library. It gives one name, `house`, and what `house.mtp` declares is read through it: `house.ink`, `(house.dial d1)`, `(house.unit u 0.5)`. `(import house ink accent)` gives `ink` and `accent` as names of their own, and not `house`, as Python's `from house import ink, accent` does. There is no way to import every name at once: each name is written, or the file is imported whole.
 
-- **What a file to import holds:** only top-level declarations of colors, fonts, functions, motifs, variants, types, and variables that are `const`, and its own imports. Anything else, such as a scene, a view, a control, an animation or a variable that is not `const`, makes importing it a compile error. A file with no scene still compiles by itself.
+- **What a file to import holds:** only top-level declarations of colors, fonts, functions, motifs, variants, types, variables that are `const`, and seeds (see "Random values and seeds"), and its own imports. Anything else, such as a scene, a view, a control, an animation or a variable that is not `const`, makes importing it a compile error. A file with no scene still compiles by itself.
 - **Names:** the file reads its own declarations by their bare names, and a local name inside it, such as a `let` or a parameter, wins over them as anywhere. A name imported by name cannot also be declared in the importing file. A name a file imported can be imported from it in turn.
 - **Once:** a file imported more than once, directly or through other files, is compiled once. A file that imports itself, through the files it imports, is a compile error, as are two different files of the same name.
 - **Errors** inside an imported file name that file, as `house.mtp:3:5: …`.
@@ -92,9 +92,9 @@ A value given by an expression is bound to it and follows it for as long as the 
 
 Every random value is computed from a **seed**, a free variable of the built-in type `rand-seed`, a whole number of at least 0: `(rand-seed dots 42)`. A random value is bound to its seed and to the place it is written in the source (each `foreach` copy and each motif instance is a place of its own), so the live model is the same on every refresh, and a new seed draws every value that follows it again.
 
-- **Which seed:** a random function follows the file's only seed, or the one it names, `(rand 0 1 (seed dots))`. With several seeds, naming one is required. A file that declares none gets one, named `seed`, starting at 0, the first time something random needs it; a seed declared after that is a compile error, so declare seeds first.
+- **Which seed:** a random function follows the only seed the file declares or imports, or the one it names, `(rand 0 1 (seed dots))`. With several, naming one is required. The standard library's `rand` file holds a seed for files that need no seed of their own: `(import rand)`, and random values follow `rand.seed`, which starts at 0. A file that uses something random and neither declares nor imports a seed is a compile error: no file has a seed it did not ask for.
 - **The functions:** `(rand)` and `(rand lo hi)` (a real), `(rand-int lo hi)` (an int, both ends included), `(pick xs)` (an item of `xs`, or none when it is empty) and `(shuffle xs)` (the items of `xs` in a random order). Inside a function each is a compile error for now.
-- **Rolling the dice** is a write of the seed, as any write is: `(move dots (to (next-seed dots)))`, which `(roll-dice dots)` stands for in an animation, an instant move. `(roll-dice)` rolls the file's only seed. A roll redraws only what follows the seed rolled, so a shuffle button with a seed of its own leaves a scatter plot elsewhere where it is. Rolls are reproducible too: the same seed and the same rolls give the same values.
+- **Rolling the dice** is a write of the seed, as any write is: `(move dots (to (next-seed dots)))`, which `(roll-dice dots)` stands for in an animation, an instant move. `(roll-dice)` rolls the only seed the file declares or imports. A roll redraws only what follows the seed rolled, so a shuffle button with a seed of its own leaves a scatter plot elsewhere where it is. Rolls are reproducible too: the same seed and the same rolls give the same values.
 - **A starting state that is random:** a free variable may start at a random value, `(list[int] bars free@(shuffle (range 16)))`, and then never follow the seed (see "Free starting values").
 
 ### Types
@@ -583,6 +583,10 @@ Families of fonts: `(import fonts serif)`, or `(import fonts)` and `fonts.serif`
 | `midpoint` | two points | the point halfway between them | never |
 
 A result that may be none is held in a variable declared `T|none`, or given a default with `or?`.
+
+### rand
+
+The standard seed: `(import rand)`, and every random value that names no seed follows `rand.seed`, a `rand-seed` starting at 0; `(roll-dice)` rolls it. `(import rand seed)` gives it as `seed`. See "Random values and seeds".
 
 ### types
 

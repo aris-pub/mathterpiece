@@ -2,9 +2,21 @@
 is a free variable of type rand-seed, every random value is computed from a seed and the place it
 is written, and rolling the dice is a write of the seed."""
 
+import tempfile
+from pathlib import Path
+
 import pytest
 from helpers import doc, error, model
 from mtpc_check import errors
+
+from mathterpiece.compiler import compile_source
+
+
+def in_file(src):
+    """The model of a source compiled from a file, as an import needs."""
+    path = Path(tempfile.mkdtemp()) / "fig.mtp"
+    path.write_text(src)
+    return compile_source(src, path=path)
 
 
 def seed_of(m, name):
@@ -23,14 +35,20 @@ class TestSeeds:
     def test_a_seed_is_a_whole_number_of_at_least_zero(self):
         error("(rand-seed dots -1)", r"-1 breaks \(>= 0\)")
 
-    def test_a_file_with_no_seed_gets_one_named_seed_at_0(self):
-        m = model("(real v (rand))")
-        s = m.get("seed")
+    def test_the_standard_seed_is_imported(self):
+        m = in_file("(import rand) (real v (rand))")
+        s = m.get("rand.seed")
         assert s.kind == "variable" and s.value.value == 0 and str(s.value.type) == "rand-seed"
+        assert (m.id("rand.seed"), None) in m.get("v").value.deps
 
-    def test_none_is_added_when_nothing_is_random(self):
+    def test_a_file_that_neither_imports_nor_declares_a_seed(self):
+        error("(real v (rand))", r"import the standard one, \(import rand\)")
+
+    def test_no_file_has_a_seed_it_did_not_ask_for(self):
         with pytest.raises(KeyError):
-            model("(real v 1)").get("seed")
+            in_file("(real v 1)").get("seed")
+        with pytest.raises(KeyError):
+            in_file("(import rand) (real v 1)").get("rand.seed")
 
     def test_a_random_value_follows_the_only_seed(self):
         m = model("(rand-seed dots 7) (real v (rand))")
@@ -45,33 +63,30 @@ class TestSeeds:
     def test_with_several_it_must_name_one(self):
         error("(rand-seed dots 7) (rand-seed bars 8) (real v (rand))", "several seeds")
 
-    def test_a_seed_is_declared_before_what_follows_it(self):
-        error("(real v (rand)) (rand-seed dots 7)", "declared before")
-
 
 class TestRandomFunctions:
     def test_rand(self):
-        m = model("(real v (rand)) (real w (rand 2 3))")
+        m = model("(rand-seed s 0) (real v (rand)) (real w (rand 2 3))")
         assert m.get("v").value.expr.op == "rand"
         assert m.get("w").value.expr.range == (2, 3)
 
     def test_rand_int(self):
-        m = model("(int v (rand-int 1 6))")
+        m = model("(rand-seed s 0) (int v (rand-int 1 6))")
         assert m.get("v").value.expr.op == "rand-int"
         assert m.get("v").value.expr.range == (1, 6)
 
     def test_pick_may_be_none(self):
-        m = model("(string|none v (pick ['a' 'b']))")
+        m = model("(rand-seed s 0) (string|none v (pick ['a' 'b']))")
         assert m.get("v").value.expr.op == "pick"
-        error("(string v (pick ['a' 'b']))", "may be none")
+        error("(rand-seed s 0) (string v (pick ['a' 'b']))", "may be none")
 
     def test_shuffle_keeps_the_items_type(self):
-        m = model("(list[int] v (shuffle [1 2 3]))")
+        m = model("(rand-seed s 0) (list[int] v (shuffle [1 2 3]))")
         assert m.get("v").value.expr.op == "shuffle"
 
     def test_not_inside_a_function_for_now(self):
-        error("(func f (real x) (+ x (rand)))", "rand inside a function")
-        error("(func f ((list[int] xs)) (shuffle xs))", "shuffle inside a function")
+        error("(rand-seed s 0) (func f (real x) (+ x (rand)))", "rand inside a function")
+        error("(rand-seed s 0) (func f ((list[int] xs)) (shuffle xs))", "shuffle inside a function")
 
     def test_each_is_written_with_its_place_and_its_seed(self):
         d = doc("(rand-seed dots 7) (real v (rand 2 3)) (list[int] w (shuffle [1 2 3]))")
@@ -86,9 +101,9 @@ class TestRolling:
         assert m.get("after").value.expr.op == "next-seed"
 
     def test_roll_dice_is_a_move_of_the_seed(self):
-        m = model("(real v (rand)) (animation roll (roll-dice))")
+        m = in_file("(import rand) (animation roll (roll-dice))")
         step = m.get("roll").data["steps"]
-        assert step[0] == "move" and step[1] == (m.id("seed"), None) and step[3] == 0
+        assert step[0] == "move" and step[1] == (m.id("rand.seed"), None) and step[3] == 0
         tr = m.objects[step[2]]
         assert tr.attrs["to"].expr.op == "next-seed"
 

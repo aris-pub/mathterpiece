@@ -1,7 +1,7 @@
 ; Bubble sort and insertion sort race on the same shuffled bars, one comparison each per step.
 ; The two bars being compared are marked, and so are the bars each sort has put where they
 ; belong. Press race to run both, and shuffle to start again on new bars. The bars are shuffled
-; from the file's seed, so a refresh shows the same bars, and shuffle rolls the dice for new
+; from the standard seed, rand.seed, so a refresh shows the same bars, and shuffle rolls the dice for new
 ; ones.
 ;
 ; Each sort is a small machine whose whole state is one list: where it is, its counts, and its
@@ -9,6 +9,7 @@
 ; from the one before.
 
 (import house paper soft terracotta teal saffron)
+(import rand)
 
 (int n 16 (const))
 

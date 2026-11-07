@@ -7,6 +7,7 @@
 ; each time the page loads, uniformly over a square.
 
 (import ease linear)
+(import rand)
 
 (color fg '#1f2328')
 (color muted '#6b7280')

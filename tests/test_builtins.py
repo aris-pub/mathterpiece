@@ -46,7 +46,7 @@ class TestNumbers:
         assert value("(point v (lerp [0 0] [2 4] 0.5))") == (1, 2)
 
     def test_rand(self):
-        m = model("(real v (rand)) (real w (rand 2 3))")
+        m = model("(rand-seed s 0) (real v (rand)) (real w (rand 2 3))")
         assert m.get("v").value.expr.op == "rand"
         assert m.get("w").value.expr.range == (2, 3)
         error("(func f (real x) (+ x (rand)))", "rand inside a function")
@@ -277,5 +277,5 @@ class TestWrittenPointsInArithmetic:
         assert typ("(real r 2) (list v (* r [1 0 2]))").base == ListT(REAL)
 
     def test_rand_inside_is_drawn_once(self):
-        m = model("(point o [1 1]) (point v (+ (* (rand) [1 0]) o))")
+        m = model("(rand-seed s 0) (point o [1 1]) (point v (+ (* (rand) [1 0]) o))")
         assert m.get("v").value.bound

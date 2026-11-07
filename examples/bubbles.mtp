@@ -4,6 +4,7 @@
 
 (import house paper soft terracotta teal saffron plum code)
 (import ease cubic-out)
+(import rand)
 
 ; A damped spring: it starts from rest, goes past its end once and settles, as a ball on a
 ; spring does, and ends at exactly 1.

@@ -1,0 +1,4 @@
+; The seed every random value follows when a file declares none of its own: (import rand), then
+; (rand), (shuffle xs) and the others follow rand.seed, and (roll-dice) rolls it.
+
+(rand-seed seed 0 doc@'The seed random values follow when a file declares none, starting at 0.')
