@@ -64,3 +64,33 @@
     (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
 
 ;;; mtp-mode-test.el ends here
+
+(ert-deftest mtp-mode-highlights-declared-names ()
+  (let ((src "(func[bool] done ((list[real] s)) (>= (part s 0) 1))\n(real k 1)\n(scene s (circle dot (r 1)))"))
+    (should (eq (mtp-mode-test--face-at src "done") 'font-lock-function-name-face))
+    (should (eq (mtp-mode-test--face-at src "k 1") 'font-lock-variable-name-face))
+    (should (eq (mtp-mode-test--face-at src "dot") 'font-lock-variable-name-face))))
+
+(ert-deftest mtp-mode-highlights-types-in-brackets ()
+  (let ((src "(func[bool] done ((list[real] s)) s)"))
+    (should (eq (mtp-mode-test--face-at src "bool") 'font-lock-type-face))
+    (should (eq (mtp-mode-test--face-at src "real") 'font-lock-type-face))))
+
+(ert-deftest mtp-mode-highlights-calls ()
+  (let ((src "(real v (next (part s 0) (+ 1 2)))"))
+    (dolist (word '("next" "part" "+ 1"))
+      (should (eq (mtp-mode-test--face-at src word) 'font-lock-function-call-face)))))
+
+(ert-deftest mtp-mode-highlights-what-let-binds ()
+  (let ((src "(let ((i (part s 0)) (j 2)) (+ i j))"))
+    (should (eq (mtp-mode-test--face-at src "i (") 'font-lock-variable-name-face))
+    (should (eq (mtp-mode-test--face-at src "j 2") 'font-lock-variable-name-face))
+    (should (eq (mtp-mode-test--face-at src "part") 'font-lock-function-call-face))))
+
+(ert-deftest mtp-mode-highlights-numbers ()
+  (should (eq (mtp-mode-test--face-at "(real k -12.5)" "-12.5") 'font-lock-number-face)))
+
+(ert-deftest mtp-mode-highlights-nested-types-and-bindings-named-like-arguments ()
+  (let ((src "(func[list[real]] step ((real s)) (let ((c 2)) c))"))
+    (should (eq (mtp-mode-test--face-at src "real]") 'font-lock-type-face))
+    (should (eq (mtp-mode-test--face-at src "c 2") 'font-lock-variable-name-face))))

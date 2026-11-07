@@ -175,15 +175,80 @@ to `comment-column'."
         (when (> offset 0) (move-to-column (+ (current-indentation) offset))))
     (lisp-indent-line)))
 
+(defconst mtp-mode--named-heads
+  '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "polyline"
+    "polygon" "arc" "ring" "text" "curve" "real" "int" "ratio" "complex" "bool" "string" "point"
+    "list" "transform" "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
+    "transition" "animation" "canvas" "readout" "display" "slider" "button" "play" "toggle")
+  "Heads whose form declares a name, the word after the head, as (circle dot …) declares dot.")
+
+(defconst mtp-mode--types
+  '("real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform" "color" "font"
+    "sequence" "func" "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc"
+    "ring" "text" "curve" "group" "formula" "term" "transition")
+  "Types, highlighted inside brackets, as real in list[real] and bool in func[bool].")
+
+(defun mtp-mode--match-type (limit)
+  "Find the next type inside the brackets of a type, as real in list[real] or func[real real],
+before LIMIT."
+  (let ((re (concat "\\_<\\(" (regexp-opt mtp-mode--types) "\\)\\_>"))
+        found)
+    (while (and (not found) (re-search-forward re limit t))
+      (let ((open (nth 1 (save-match-data (save-excursion (syntax-ppss (match-beginning 0)))))))
+        (when (and open
+                   (eq (char-after open) ?\[)
+                   (> open (point-min))
+                   (memq (char-syntax (char-before open)) '(?w ?_)))
+          (setq found t))))
+    found))
+
+(defun mtp-mode--match-binding (limit)
+  "Find the next name a let or a foreach binds, as i in (let ((i 1)) …), before LIMIT."
+  (let (found)
+    (while (and (not found)
+                (re-search-forward "(\\(\\(?:\\sw\\|\\s_\\)+\\)" limit t))
+      (let ((outer (nth 1 (save-excursion (syntax-ppss (match-beginning 0))))))
+        (when (and outer
+                   (save-match-data
+                     (save-excursion
+                       (goto-char outer)
+                       (looking-back "(\\(?:let\\|foreach\\)[ \t\n]+"
+                                     (max (point-min) (- (point) 20))))))
+          (setq found t))))
+    found))
+
+(defun mtp-mode--match-call (limit)
+  "Find the next head of a form that is a function call, before LIMIT: every head that is
+not one of mtp's forms or keyword arguments, which earlier rules have already highlighted."
+  (let (found)
+    (while (and (not found)
+                (re-search-forward "(\\([^][() \t\n';\"#@]+\\)" limit t))
+      (unless (or (save-match-data (let ((st (syntax-ppss))) (or (nth 3 st) (nth 4 st))))
+                  (get-text-property (match-beginning 1) 'face))
+        (setq found t)))
+    found))
+
 (defconst mtp-mode--font-lock
   `((,(concat "(\\(" (regexp-opt mtp-mode--heads) "\\)\\(?:|none\\)?_?\\_>")
      1 'mtp-mode-head-face)
+    (,(concat "(\\(?:func\\|motif\\|variant\\|type\\)\\(?:\\[[^ \t\n()]*\\]\\)?[ \t]+"
+              "\\([^][() \t\n';\"#]+\\)")
+     1 font-lock-function-name-face)
+    (,(concat "(" (regexp-opt mtp-mode--named-heads) "\\(?:\\[[^ \t\n()]*\\]\\)?\\(?:|none\\)?[ \t]+"
+              "\\([^][() \t\n';\"#0-9-][^][() \t\n';\"#]*\\)")
+     1 font-lock-variable-name-face)
+    (mtp-mode--match-type 1 font-lock-type-face)
+    (mtp-mode--match-binding 1 font-lock-variable-name-face)
     (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 font-lock-keyword-face)
+    ("(\\(const\\))" 1 font-lock-keyword-face)
     ("\\_<\\(doc\\)@'" 1 font-lock-keyword-face)
     ("\\_<\\(tex\\)'" 1 font-lock-keyword-face)
-    (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face))
-  "What mtp-mode highlights: the heads of forms, keyword arguments, the doc of doc@'text', the
-tex of tex'LaTeX', and none, true, false and self.")
+    (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face)
+    ("\\_<-?[0-9]+\\(?:\\.[0-9]*\\)?\\_>" . 'font-lock-number-face)
+    (mtp-mode--match-call 1 'font-lock-function-call-face))
+  "What mtp-mode highlights: the heads of forms, the names they declare, types in brackets,
+keyword arguments, the doc of doc@'text', the tex of tex'LaTeX', none, true, false and self,
+numbers, the names let and foreach bind, and function calls.")
 
 (defun mtp-mode--syntactic-face (state)
   "The face of the string or comment STATE is in: a docstring, the text of doc@'text', takes
