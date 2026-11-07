@@ -469,6 +469,19 @@ describe("a control's when", () => {
   });
 });
 
+describe("a canvas drawing again", () => {
+  it("shows the pointer on a shape only while it can be dragged", () => {
+    const [, rt] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("active"));
+    const cursor = (name: string) => (document.querySelector(`[data-mtp-id="${rt.id(name)}"]`) as SVGElement).style.cursor;
+    expect(cursor("c")).toBe("");
+    rt.write(rt.id("on"), null, true);
+    expect(cursor("c")).toBe("pointer");
+    expect(cursor("d")).toBe("");
+    rt.write(rt.id("on"), null, false);
+    expect(cursor("c")).toBe("");
+  });
+});
+
 describe("starting without the reader", () => {
   // mtp-9wm: on-view, and a play's autoplay.
 

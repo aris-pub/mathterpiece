@@ -77,6 +77,17 @@ describe("reads and frames", () => {
     expect(rt.value(rt.id("inside"))).toBe(6);
   });
 
+  it("gives a container's box again after a member or a transform on the way is written", () => {
+    const rt = load("frames");
+    const g = rt.id("g");
+    const box = rt.box(g, null)!;
+    rt.write(rt.id("p"), "x", 3);
+    // q stands where p does, so both move.
+    expect(rt.box(g, null)).toEqual([box[0]! + 2, box[1], box[2]! + 2, box[3]]);
+    rt.write(g, "translate", [6, 0]);
+    expect(rt.box(g, null)).toEqual([box[0]! + 3, box[1], box[2]! + 3, box[3]]);
+  });
+
   it("converts again after a transform on the way is written", () => {
     const rt = load("frames");
     expect(rt.value(rt.id("outside"))).toBe(6);

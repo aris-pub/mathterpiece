@@ -166,6 +166,8 @@ export class Runtime {
   private existsChain: Slot[][] = [];
   // Each frame transform worked out since the last write, by shape and frame.
   private frames = new Map<number, number[] | null>();
+  // Each box worked out since the last write, by shape and frame.
+  private boxes = new Map<number, number[] | null>();
   private css_ = new Map<string, CompiledCss | null>();
   private made = new WeakMap<Expr, Compiled>();
   // The rows and columns whose members are being measured, so are not moved to their places.
@@ -523,6 +525,7 @@ export class Runtime {
     changed.add(k);
     this.places.clear();
     this.frames.clear();
+    this.boxes.clear();
     this.forget(k, changed);
   }
 
@@ -1091,6 +1094,21 @@ export class Runtime {
    * "Placing").
    */
   box(id: number, frame: number | null): number[] | null {
+    // A box reads the boxes of every member, and anchors read the same boxes again and again, so
+    // each is kept until the next write; not while a row is measured, when its members are not
+    // at their places.
+    if (this.unplaced.size > 0) return this.boxNow(id, frame);
+    const n = this.objects.length;
+    const k = id * (n + 1) + (frame === null ? n : frame);
+    let b = this.boxes.get(k);
+    if (b === undefined) {
+      b = this.boxNow(id, frame);
+      this.boxes.set(k, b);
+    }
+    return b;
+  }
+
+  private boxNow(id: number, frame: number | null): number[] | null {
     if (!this.exists(id)) return null;
     const o = this.objects[id]!;
     if (o["fixed-size"]) {

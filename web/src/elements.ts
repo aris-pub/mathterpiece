@@ -12,7 +12,7 @@ import { latexOf, termClass, typeset } from "./math.ts";
 import { Player } from "./player.ts";
 import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
-import { DrawMemo, type Look, draw, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
+import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
@@ -283,17 +283,24 @@ export class MtpCanvas extends MtpPart {
       if (want !== null) for (const el of svg.querySelectorAll(`[data-mtp-id="${want}"]`)) el.classList.add("mtp-selected");
     };
     const memo = new DrawMemo();
+    // The model's clock and the elements made when the pointers and the selection were last
+    // shown: drawing keeps the elements of shapes still drawn, so they need showing again only
+    // after a write, which may change what can be dragged or clicked, or on new elements.
+    let shownAt = -1;
+    let madeAt = -1;
     this.redraw = () => {
       toggles.follow();
       draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo);
-      // Drawing keeps the elements of shapes still drawn, so a shape that can no longer be
-      // dragged or clicked loses its pointer.
-      for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
-        const id = Number(el.getAttribute("data-mtp-id"));
-        const cursor = drags.draggable(id) || clicks.find(id).length ? "pointer" : "";
-        if (el.style.cursor !== cursor) el.style.cursor = cursor;
+      const made = elementsMade();
+      if (rt.clock !== shownAt || made !== madeAt) {
+        for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
+          const id = Number(el.getAttribute("data-mtp-id"));
+          const cursor = drags.draggable(id) || clicks.find(id).length ? "pointer" : "";
+          if (el.style.cursor !== cursor) el.style.cursor = cursor;
+        }
       }
-      mark();
+      if (made !== madeAt) mark();
+      [shownAt, madeAt] = [rt.clock, made];
     };
     this.replaceChildren(svg);
     this.redraw();

@@ -210,7 +210,24 @@ function patchChildren(parent: Element, want: Drawn[]): void {
   while (parent.children.length > want.length) parent.lastElementChild!.remove();
 }
 
+// Whether an element's children are already drawn as wanted, as when every shape in a group of
+// thousands is kept.
+function showing(el: Element, want: Drawn[]): boolean {
+  const children = el.children;
+  if (children.length !== want.length) return false;
+  for (let i = 0; i < want.length; i++) if (DRAWN.get(children[i]!) !== want[i]) return false;
+  return true;
+}
+
+let made = 0;
+
+/** How many elements drawing has made: none new means each one drawn before is still there. */
+export function elementsMade(): number {
+  return made;
+}
+
 function create(d: Drawn): Element {
+  made++;
   const el = document.createElementNS(NS, d.tag);
   for (const [k, v] of Object.entries(d.attrs)) setAttr(el, k, v);
   const style = (el as SVGElement).style;
@@ -230,7 +247,7 @@ function patch(el: Element, d: Drawn): void {
   for (const [k, v] of Object.entries(d.style)) if (was.style[k] !== v) style.setProperty(k, v);
   for (const k of Object.keys(was.style)) if (!(k in d.style)) style.removeProperty(k);
   if (d.text !== was.text) el.textContent = d.text ?? "";
-  if (d.children.length > 0 || was.children.length > 0) patchChildren(el, d.children);
+  if ((d.children.length > 0 || was.children.length > 0) && !showing(el, d.children)) patchChildren(el, d.children);
   DRAWN.set(el, d);
 }
 
