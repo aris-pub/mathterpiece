@@ -1,6 +1,8 @@
 ; The colors and fonts the examples share. Not a figure: each example imports what it uses.
 
-(color paper '#f6f1e7')
+; The paper is the warm one bourgain puts over BRAIID, RSM's design system. A page sets each
+; token for its dark theme (--mtp-house-ink in web/index.html).
+(color paper '#faf7f0')
 (color ink '#1f2a44')
 (color soft '#8a93a6')
 (color terracotta '#e76f51')
@@ -8,9 +10,9 @@
 (color saffron '#e9c46a')
 (color plum '#6d597a')
 
-; The fonts by what they are for, each from a family of the standard library: restyling the
-; family (--mtp-fonts-serif-family) restyles every font built from it.
-(import fonts serif mono)
-(font variable (family serif.family) (style 'italic') (size 18))
-(font number (family mono.family) (size 14))
-(font code (family mono.family) (size 13))
+; The fonts by what they are for. A page with BRAIID points each family at the document's
+; (--mtp-house-variable-family: var(--font-body), and --font-mono for number and code), so a
+; figure's text follows the typeface the reader picks.
+(font variable (family '"Source Sans 3", sans-serif') (style 'italic') (size 18))
+(font number (family '"Source Code Pro", monospace') (size 14))
+(font code (family '"Source Code Pro", monospace') (size 13))

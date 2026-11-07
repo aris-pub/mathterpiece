@@ -1,6 +1,8 @@
 // The page elements (docs/data-model.md, "On the page"): <mtp-model> holds a figure's .mtpc and
 // its runtime, and views and controls placed anywhere in the page find it by id, so an author can
 // put each one where it fits. Every writer emits writes to the model; views redraw on each change.
+import { CONTROLS_CSS } from "./controls-style.ts";
+import { placeTicks } from "./ticks.ts";
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Listeners, holds } from "./click.ts";
@@ -661,8 +663,12 @@ export class MtpSlider extends MtpPart {
     input.max = stops === null ? "1000" : String(stops - 1);
     input.step = "1";
     input.value = String(Math.round((rt.value(id, "position") as number) * Number(input.max)));
+    // How far along the knob is, which fills the track up to it.
+    const fill = () => input.style.setProperty("--u", String(Number(input.value) / Number(input.max)));
+    fill();
     input.addEventListener("input", () => {
       if (!activeOf(rt, id)) return;
+      fill();
       const u = Number(input.value) / Number(input.max);
       if (player) {
         scheduler.claim(player.targets, this);
@@ -692,6 +698,7 @@ export class MtpSlider extends MtpPart {
         if (d < gap) [best, gap] = [n, d];
       }
       input.value = String(best);
+      fill();
       rt.write(id, "position", best / max);
     };
     this.follow();
@@ -707,10 +714,22 @@ export class MtpSlider extends MtpPart {
     // The label sits above the track: a label whose width changes as it follows its value would
     // otherwise move the track under the pointer while it drags.
     const label = document.createElement("label");
-    label.style.display = "inline-flex";
-    label.style.flexDirection = "column";
-    label.style.alignItems = "flex-start";
     label.append(text, input);
+    // Round values across the range the knob covers, each where the knob gives it. The labels
+    // are drawn from data-value, so the control's text stays its label.
+    const ticks = player ? placeTicks((u) => player.valueAt(u)) : [];
+    if (ticks.length) {
+      const row = document.createElement("div");
+      row.className = "mtp-ticks";
+      row.setAttribute("aria-hidden", "true");
+      for (const t of ticks) {
+        const mark = document.createElement("span");
+        mark.dataset.value = String(t.value);
+        mark.style.setProperty("--u", String(Number(t.u.toFixed(6))));
+        row.append(mark);
+      }
+      label.append(row);
+    }
     this.replaceChildren(label);
   }
 
@@ -810,7 +829,14 @@ export class MtpPlay extends MtpPart {
       if (now !== null && rt.value(id, "step") !== now) rt.write(id, "step", now);
     };
     this.refresh();
-    this.replaceChildren(play, ...steps);
+    if (steps.length) {
+      const group = document.createElement("span");
+      group.className = "mtp-steps";
+      group.append(...steps);
+      this.replaceChildren(play, group);
+    } else {
+      this.replaceChildren(play);
+    }
     // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
     const start = () => {
       if (!activeOf(rt, id) || scheduler.running(this)) return;
@@ -895,6 +921,12 @@ const ELEMENTS: [string, CustomElementConstructor][] = [
 ];
 
 export function define(): void {
+  if (typeof document !== "undefined" && !document.getElementById("mtp-controls")) {
+    const style = document.createElement("style");
+    style.id = "mtp-controls";
+    style.textContent = CONTROLS_CSS;
+    document.head.append(style);
+  }
   for (const [tag, element] of ELEMENTS) {
     if (!customElements.get(tag)) customElements.define(tag, element);
   }

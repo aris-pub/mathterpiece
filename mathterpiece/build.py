@@ -69,6 +69,10 @@ def about(src: str) -> list[str]:
     return [" ".join(p) for p in paragraphs if p]
 
 
+# BRAIID, the design system of RSM documents, which draws the controls (web/src/controls-style.ts).
+BRAIID = "https://cdn.jsdelivr.net/gh/aris-pub/rsm@main/braiid/braiid.css"
+
+
 def page(
     name: str, mtpc: str, js: str, inv: str, text: list[str] | None = None, extra: str = ""
 ) -> str:
@@ -85,6 +89,7 @@ def page(
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{model}</title>
+<link rel="stylesheet" href="{BRAIID}">
 <style>
   body {{ font: 16px/1.55 system-ui, sans-serif; margin: 2rem auto; max-width: 880px;
          padding: 0 1.25rem; }}

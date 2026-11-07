@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>mathterpiece figures</title>
+    <!-- BRAIID, which draws the controls, in a layer of its own: its tokens reach the controls,
+         and this page's own rules still win over its look. Added by a script so that Vite does
+         not try to inline it. -->
+    <script>
+      document.head.prepend(Object.assign(document.createElement("style"), {
+        textContent: '@import url("https://cdn.jsdelivr.net/gh/aris-pub/rsm@main/braiid/braiid.css") layer(braiid);',
+      }));
+    </script>
     <style>
       /* The page's own look, kept in tokens so the dark page can change them. A figure's look is
          its own: only the token overrides further down restyle it. */
@@ -15,6 +23,8 @@
         --panel: #f3f1ec;
         --accent: #2f5d8a;
         color-scheme: light;
+        /* BRAIID sets the root size by the screen's width; this page keeps its own. */
+        font-size: 16px;
       }
       * { box-sizing: border-box; }
       /* The page never scrolls: the list of figures and the figure each scroll on their own. */
@@ -167,10 +177,20 @@
         --mtp-ink: #e8e4d8; --mtp-paper: #14161c;
         --mtp-soft: #8f97a8; --mtp-terracotta: #f08a6c; --mtp-teal: #4cc2b3; --mtp-saffron: #f2d27e;
         --mtp-plum: #a88bb8;
-        /* The same, for the examples that import their tokens from house.mtp. */
-        --mtp-house-ink: #e8e4d8; --mtp-house-paper: #14161c; --mtp-house-soft: #8f97a8;
-        --mtp-house-terracotta: #f08a6c; --mtp-house-teal: #4cc2b3; --mtp-house-saffron: #f2d27e;
-        --mtp-house-plum: #a88bb8;
+      }
+      /* The examples' house colors, in the light and dark themes the page's color-scheme picks. */
+      :root {
+        --mtp-house-paper: light-dark(#faf7f0, #272522);
+        --mtp-house-ink: light-dark(#1f2a44, #e8e4d8);
+        --mtp-house-soft: light-dark(#8a93a6, #8f97a8);
+        --mtp-house-terracotta: light-dark(#e76f51, #f08a6c);
+        --mtp-house-teal: light-dark(#2a9d8f, #4cc2b3);
+        --mtp-house-saffron: light-dark(#e9c46a, #f2d27e);
+        --mtp-house-plum: light-dark(#6d597a, #a88bb8);
+        /* Their fonts are the document's: BRAIID's content font, and its mono. */
+        --mtp-house-variable-family: var(--font-body);
+        --mtp-house-number-family: var(--font-mono);
+        --mtp-house-code-family: var(--font-mono);
       }
       /* A page restyling a figure's type tokens, also only with CSS. */
       :root.fonts {

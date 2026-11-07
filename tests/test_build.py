@@ -118,3 +118,13 @@ def test_the_opening_comment_becomes_paragraphs():
     src = "; One line\n; and the next.\n;\n; A second paragraph.\n(real k 1)\n; Not this one.\n"
     assert about(src) == ["One line and the next.", "A second paragraph."]
     assert about("(real k 1)") == []
+
+
+def test_the_page_loads_braiid_which_draws_the_controls(figure):
+    # BRAIID is RSM's design system; the controls read its tokens (web/src/controls-style.ts).
+    main(["build", str(figure)])
+    page = (figure.parent / "build_dot" / "index.html").read_text()
+    assert (
+        '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/aris-pub/rsm@main/braiid/braiid.css">'
+        in page
+    )

@@ -63,6 +63,27 @@ describe("controls", () => {
     expect(v("sl", "position")).toBe(0.5);
   });
 
+  it("a slider shows round ticks across its range, and fills its track up to the knob", () => {
+    page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
+    const ticks = [...document.querySelectorAll("mtp-slider .mtp-ticks [data-value]")] as HTMLElement[];
+    expect(ticks.map((t) => t.dataset.value)).toEqual(["0", "2", "4", "6", "8", "10"]);
+    expect(ticks.map((t) => t.style.getPropertyValue("--u"))).toEqual(["0", "0.2", "0.4", "0.6", "0.8", "1"]);
+    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
+    input.value = "300";
+    input.dispatchEvent(new Event("input"));
+    expect(input.style.getPropertyValue("--u")).toBe("0.3");
+  });
+
+  it("puts a play's step buttons in one group", () => {
+    page(`<mtp-play model="m" name="run"></mtp-play>`);
+    expect(document.querySelectorAll("mtp-play .mtp-steps button").length).toBe(2);
+  });
+
+  it("adds the controls' stylesheet to the page once", () => {
+    define();
+    expect(document.querySelectorAll("style#mtp-controls").length).toBe(1);
+  });
+
   it("a button plays its animation over time", () => {
     const [, , v] = page(`<mtp-button model="m" name="go"></mtp-button>`);
     (document.querySelector("mtp-button button") as HTMLButtonElement).click();
