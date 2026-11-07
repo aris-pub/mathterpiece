@@ -17,7 +17,12 @@
         color-scheme: light;
       }
       * { box-sizing: border-box; }
+      /* The page never scrolls: the list of figures and the figure each scroll on their own. */
       body {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
         margin: 0;
         background: var(--page-bg);
         color: var(--page-fg);
@@ -51,15 +56,15 @@
       }
       /* The list of figures on the left, always in view, and the figure beside it. */
       .layout {
+        flex: 1;
+        min-height: 0;
         display: grid;
         grid-template-columns: 15rem minmax(0, 1fr);
-        align-items: start;
       }
+      #stage { overflow-y: auto; min-height: 0; }
       #figures {
-        position: sticky;
-        top: 0;
-        max-height: 100vh;
         overflow-y: auto;
+        min-height: 0;
         border-right: 1px solid var(--rule);
         padding: 1rem 0.75rem 2rem;
         display: grid;
@@ -100,14 +105,14 @@
       #names .kind:first-child { padding-top: 0.25rem; }
       #names button[aria-current="page"] { color: var(--accent); background: var(--panel); font-weight: 600; }
       @media (max-width: 760px) {
-        .layout { grid-template-columns: minmax(0, 1fr); }
-        #figures { position: static; max-height: 14rem; border-right: 0; border-bottom: 1px solid var(--rule); }
+        .layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+        #figures { max-height: 14rem; border-right: 0; border-bottom: 1px solid var(--rule); }
       }
       main {
         max-width: 880px;
         width: 100%;
         margin: 0 auto;
-        padding: 1.75rem 1.25rem 4rem;
+        padding: 1.75rem 1.25rem 1.25rem;
         display: grid;
         gap: 1.25rem;
       }
@@ -196,6 +201,7 @@
       <input id="filter" type="search" placeholder="filter" aria-label="filter the figures" />
       <ul id="names"></ul>
     </nav>
+    <div id="stage">
     <main>
       <h1 id="title"></h1>
       <section id="side">
@@ -211,6 +217,7 @@
       <div id="canvases"></div>
       <div id="controls"></div>
     </main>
+    </div>
     </div>
     <script type="module">
       import "/src/index.ts";
@@ -389,7 +396,6 @@
         const all = [...document.querySelectorAll("#canvases mtp-canvas")];
         for (const c of all) {
           c.style.maxWidth = "";
-          c.style.marginInline = "";
         }
         if (showInventory || all.length !== 1) return;
         const c = all[0];
@@ -397,15 +403,15 @@
         if (!box || !box.width || !box.height) return;
         const main = document.querySelector("main").getBoundingClientRect();
         const canvas = c.getBoundingClientRect();
-        const controls = document.getElementById("controls");
-        const last = controls.children.length ? controls.getBoundingClientRect().bottom : canvas.bottom;
-        // Everything but the canvas, from the top of the column to the bottom of the controls.
-        const rest = Math.max(last, canvas.bottom) - main.top - canvas.height;
-        const room = Math.max(200, innerHeight - (main.top + scrollY) - rest - 16);
+        // Everything in the column but the canvas: the title, the rows and gaps around it, the
+        // controls, and the column's padding.
+        const rest = main.height - canvas.height;
+        const stage = document.getElementById("stage");
+        const top = main.top + stage.scrollTop - stage.getBoundingClientRect().top;
+        const room = Math.max(200, stage.clientHeight - top - rest);
         const width = (room * box.width) / box.height;
         if (width < canvas.width) {
           c.style.maxWidth = `${width}px`;
-          c.style.marginInline = "auto";
         }
       };
       addEventListener("resize", fit);
