@@ -51,3 +51,15 @@ emacs-test:
 
 # run lint, type check, and tests, for Python and the web runtime
 check: lint typecheck test web-typecheck web-test
+
+# time compiling each example against scripts/perf/compile-times.json and fail at over 30% and 20 ms slower; the baseline is this machine's times, so on another machine record its own first with --update
+compile-times *args:
+    uv run python scripts/perf/compile_times.py {{args}}
+
+# open each example's built page in Chromium as a phone (390x844, touch, CPU 4 times slower) and fail when it draws in over 2 s or an update does over 16 ms of work (handlers, style and layout, and the next frame's callbacks; waiting for the screen is left out)
+phone-speed *examples: _web-ready
+    cd web && node perf/phone.mjs {{examples}}
+
+# install the web runtime's packages and Chromium, and build the runtime bundle mtp build puts in a page
+_web-ready:
+    cd web && pnpm install --frozen-lockfile && pnpm build && pnpm exec playwright install chromium

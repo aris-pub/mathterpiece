@@ -22,3 +22,5 @@ web/.vitest/
 
 # What mtp build writes next to a figure.
 build_*/
+# The examples just phone-speed copies and builds
+web/perf/pages/
