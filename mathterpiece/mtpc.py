@@ -33,6 +33,7 @@ VERSION = 4
 OWN_FORM = {
     "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
     "builtinfunc", "part", "member", "spread", "if", "and", "or", "rand", "anchor", "wrap",
+    "rand-int", "pick", "shuffle",
 }  # fmt: skip
 
 
@@ -223,8 +224,9 @@ class Writer:
             return [op, "bool", *(self.expr(x) for x in a)]
         if op == "anchor":
             return ["anchor", t, a[0], self.expr(a[1]), self.expr(a[2]), a[3]]
-        if op == "rand":
-            return ["rand", "real", a[0], *(self.expr(x) for x in a[1:])]
+        if op in ("rand", "rand-int", "pick", "shuffle"):
+            # The place it is written, then the seed it follows, then its arguments (mtp-bjn0).
+            return [op, t, a[0], *(self.expr(x) for x in a[1:])]
         return ["builtin", t, op, *(self.expr(x) for x in a)]
 
     # Objects -----------------------------------------------------------------------------

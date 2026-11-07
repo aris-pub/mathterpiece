@@ -138,6 +138,9 @@ PRIMS = {
         SCENE,
     )
 }
+# A seed: a whole number every random value is computed from (mtp-bjn0). A named type, so a
+# literal such as 42 fits it, and a seed is declared as any variable is: (rand-seed dots 42).
+RAND_SEED = Refine(INT, ((">=", 0),), "rand-seed")
 # Every namespace has this type, as every circle has circle (the author, 2026-11-05).
 NAMESPACE = Prim("namespace")
 # Every formula and every term of one has these types (the author, 2026-11-06).

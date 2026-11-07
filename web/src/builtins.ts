@@ -1,6 +1,7 @@
 // The built-in functions (docs/reference.md "Functions" and "Operators"), as the compiler folds
 // them (mathterpiece/builtins.py). A built-in called where it is undefined gives none (null):
 // the compiler has already proved where that may happen and typed the result to allow it.
+import { nextSeed } from "./random.ts";
 
 export class Complex {
   constructor(
@@ -263,6 +264,7 @@ export function pointsMean(points: number[][]): number[] {
 }
 
 export const BUILTINS: Record<string, Impl> = {
+  "next-seed": (s) => nextSeed(s as number),
   "points-mean": (ps) => pointsMean(ps as number[][]),
   range: (start, stop, by, step) => range(start as number, stop as number, by as string, step as number),
   "+": (...xs) => (xs.length === 1 ? xs[0] : xs.reduce(add)),

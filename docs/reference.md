@@ -87,6 +87,16 @@ Each call is compiled where it is written, so the colors it mixes stay the token
 
 A value given by an expression is bound to it and follows it for as long as the page is open. `free@` makes the opposite: `(list bars free@(shuffled deal))` declares `bars` **free**, starting at the expression's value when the live model is built, and never following it after; any writer may then change it. It may be written wherever a variable's value or a shape's attribute is given, `(circle p (pos free@(meet l1 l2)))`, and nowhere else: not inside an expression. The expression may read whatever a bound expression in the same place may read, other starting values included. One known when compiling is that value, free and not `const`. A `const` variable and a token (a color or font variable) cannot start `free@`.
 
+
+#### Random values and seeds
+
+Every random value is computed from a **seed**, a free variable of the built-in type `rand-seed`, a whole number of at least 0: `(rand-seed dots 42)`. A random value is bound to its seed and to the place it is written in the source (each `foreach` copy and each motif instance is a place of its own), so the live model is the same on every refresh, and a new seed draws every value that follows it again.
+
+- **Which seed:** a random function follows the file's only seed, or the one it names, `(rand 0 1 (seed dots))`. With several seeds, naming one is required. A file that declares none gets one, named `seed`, starting at 0, the first time something random needs it; a seed declared after that is a compile error, so declare seeds first.
+- **The functions:** `(rand)` and `(rand lo hi)` (a real), `(rand-int lo hi)` (an int, both ends included), `(pick xs)` (an item of `xs`, or none when it is empty) and `(shuffle xs)` (the items of `xs` in a random order). Inside a function each is a compile error for now.
+- **Rolling the dice** is a write of the seed, as any write is: `(move dots (to (next-seed dots)))`, which `(roll-dice dots)` stands for in an animation, an instant move. `(roll-dice)` rolls the file's only seed. A roll redraws only what follows the seed rolled, so a shuffle button with a seed of its own leaves a scatter plot elsewhere where it is. Rolls are reproducible too: the same seed and the same rolls give the same values.
+- **A starting state that is random:** a free variable may start at a random value, `(list[int] bars free@(shuffle (range 16)))`, and then never follow the seed (see "Free starting values").
+
 ### Types
 
 | Form | Name | Positional | Optional arguments | Body |
@@ -225,7 +235,7 @@ A **formula** is typeset math, as the scene is geometry: `(formula name item…)
 
 A **transition** is a trajectory from `from` to `to`, along `path`, over `duration`, with `ease`, and the variable or attribute it moves, its target. Two forms make one: `(transition name target …)` declares a named one at the top level, and `(move target …)` writes one in place, with no name, inside an animation, a slider or a canvas. Every argument but the target may be left out, and is then none. A **pure** transition has `none` as its target and keeps only the trajectory. `(like t)` copies the arguments of the transition named `t`, and the form's own arguments win over them, wherever `(like …)` is written. A transition with no `from` starts from the value of what it moves; with no `to`, ends there.
 
-The body of an animation holds moves, `(at-once …)` and `(in-order …)`, and the names of animations and transitions, which stand for what they name: `(move k (to 1) (duration 2))` moves `k`; `(at-once …)` runs what it holds together and `(in-order …)` one after another, and items written in a row run one after another; the name of an animation runs that animation there, and the name of a transition runs that transition. A move whose target is `none` writes nothing, so in an animation it may give only a duration: `(move none (duration 1))` waits a second, and `(wait 1)` is a shorter way to write it (`(wait)` waits the default duration). A `(foreach …)` in the body puts its moves where it is written, once for each item, as it puts declarations: together inside `at-once`, one after another inside `in-order` or in a row, so `(at-once (foreach b bubbles (move b.popped (to false))))` writes every bubble's at once.
+The body of an animation holds moves, `(at-once …)` and `(in-order …)`, and the names of animations and transitions, which stand for what they name: `(move k (to 1) (duration 2))` moves `k`; `(at-once …)` runs what it holds together and `(in-order …)` one after another, and items written in a row run one after another; the name of an animation runs that animation there, and the name of a transition runs that transition. A move whose target is `none` writes nothing, so in an animation it may give only a duration: `(move none (duration 1))` waits a second, and `(wait 1)` is a shorter way to write it (`(wait)` waits the default duration). `(roll-dice s)` is short for `(move s (to (next-seed s)) (duration 0))`, and `(roll-dice)` rolls the file's only seed (see "Random values and seeds"). A `(foreach …)` in the body puts its moves where it is written, once for each item, as it puts declarations: together inside `at-once`, one after another inside `in-order` or in a row, so `(at-once (foreach b bubbles (move b.popped (to false))))` writes every bubble's at once.
 
 **A move reads its `from` and `to` at the instant it starts**, not when the animation around it was triggered, and they stay fixed while it runs. Moves that start at the same instant, as the moves of an `at-once` do, all read the values as they were before any of them writes: `(at-once (move a (to b)) (move b (to a)))` swaps `a` and `b`. A move that starts after another has ended reads what that one left, and so does each step of an `in-order`, even when its steps take no time: `(in-order (defaults (duration 0)) (move a (to 5)) (move b (to a)))` sets `b` to 5. Each round of a loop starts its moves again, so a round reads what the reader changed during the last one, such as a slider. Two parts of one `at-once` that move the same variable or attribute at the same time are a compile error, as are a position and its `x` or `y`: they would start from the same values and undo each other, so one is written after the other with `in-order`. At different times they may, as `(at-once (move k (to 0) (duration 0)) (in-order (wait 2) (move k (to 1))))` does; a loop counts as moving what it moves for as long as it runs.
 
@@ -422,7 +432,9 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `log` | real, and optionally a base (e if left out) | real | input 0 or below; base 0 or below, or 1 |
 | `min` `max` | reals and lists of reals, any count: a list counts as its items, so `(max g.r)` is the largest radius in a group `g` | real | no items at all, as from a list that may be empty |
 | `lerp` | `a`, `b`, `t` (reals or points) | the same type | never |
-| `rand` | none (0 to 1), or `lo hi` | real, drawn once per page load and never again; each copy of a `rand` (in each `foreach` copy, each motif instance) draws its own; a `rand` inside a function is a compile error for now | never |
+| `rand` | none (0 to 1), or `lo hi`, and optionally `(seed s)` | a real from `lo` up to `hi`, drawn from a seed (see "Random values and seeds") | never |
+| `rand-int` | `lo hi`, and optionally `(seed s)` | an int from `lo` to `hi`, both included, drawn from a seed | never |
+| `next-seed` | a seed | the seed a roll of the dice writes after it | never |
 
 ### Angles
 
@@ -505,6 +517,8 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 | `count` | a collection, optionally `func[T bool]` | int | never |
 | `any` `all` | a list of bools, or a collection and `func[T bool]` | bool | never |
 | `somes` | `list[T\|none]` | `list[T]` | never |
+| `shuffle` | a list, and optionally `(seed s)` | the same items in an order drawn from a seed | never |
+| `pick` | a list, and optionally `(seed s)` | one item, drawn from a seed | the list is empty |
 | `range` | `n`, which stands for `(range 0 n (gap 1))`; `start stop (gap g)`: from `start`, `g` apart, up to `stop` but not including it, so `(range 0 5 (gap 1))` is `[0 1 2 3 4]` and `(range 5 0 (gap -2))` is `[5 3 1]`; or `start stop (num n)`: `n` items evenly apart from `start` to `stop`, both included, so `(range 0 1 (num 5))` is `[0 0.25 0.5 0.75 1]` | a list of ints when the ends and the gap are ints (with `num`, when the ends are ints known when compiling and every item is whole), of reals otherwise; with every argument known when compiling, a list of known length, and otherwise one whose length is known only while drawing | a gap of 0, a negative `num`, more than a million items |
 | `xs[i]`, `g[k]` | a position or key | an item | a position out of range, a missing key |
 

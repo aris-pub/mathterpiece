@@ -100,6 +100,8 @@ There are three ways to make a type out of others: narrow it with constraints, b
     (unit progress 0.3)                     ; a named type heads a declaration like any other
     (motif dial ((unit t 0.5)) ...)  ; a motif declares the shape type dial
 
+One named type is built in: `rand-seed`, `(type rand-seed int (>= 0))`, the type of a seed, which every random value is computed from (reference, "Random values and seeds"): `(rand-seed dots 42)`.
+
 A type can also be written in place, as a **type expression**, anywhere a type goes:
 
     list[real]                              ; a container

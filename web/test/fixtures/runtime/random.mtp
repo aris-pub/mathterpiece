@@ -1,0 +1,10 @@
+; Random values bound to seeds (mtp-bjn0).
+(rand-seed dots 7)
+(rand-seed bars 8)
+(real a (rand 2 3 (seed dots)))
+(int d (rand-int 1 6 (seed dots)))
+(list[int] order (shuffle [1 2 3 4 5] (seed dots)))
+(string|none p (pick ['x' 'y' 'z'] (seed dots)))
+(real b (rand (seed bars)))
+(list[int] start free@(shuffle [1 2 3 4 5] (seed dots)))
+(animation roll (roll-dice dots))

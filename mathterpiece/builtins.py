@@ -230,7 +230,10 @@ BUILTINS: dict[str, Builtin] = {
 }
 
 # Built-ins whose arguments vary in number or type, handled by the compiler itself.
-SPECIAL_BUILTINS = {"round", "log", "min", "max", "lerp", "rand", "scale", "transform", "range"}
+SPECIAL_BUILTINS = {
+    "round", "log", "min", "max", "lerp", "scale", "transform", "range",
+    "rand", "rand-int", "pick", "shuffle", "next-seed",
+}  # fmt: skip
 CONSTANTS = {
     "pi": math.pi,
     "π": math.pi,

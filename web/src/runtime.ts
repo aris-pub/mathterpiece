@@ -20,6 +20,7 @@ import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
 import { isBound, isStart } from "./doc.ts";
 import { cssVariable } from "./css.ts";
 import { format, pyStr } from "./format.ts";
+import { shuffle, unit } from "./random.ts";
 
 export { cssVariable };
 
@@ -126,7 +127,6 @@ export class Runtime {
   private cache = new Map<string, unknown>();
   private dependents = new Map<string, Set<string>>();
   private functions: Compiled[] = [];
-  private rands = new Map<number, number>();
   private listeners: ((changed: Set<string>) => void)[] = [];
   // Each row's and column's places, as placesIn last worked them out.
   private places = new Map<number, Map<number, number[]>>();
@@ -135,10 +135,7 @@ export class Runtime {
   // The named types the file declares (type-system.md 5.a), by name.
   private named = new Map<string, Type>();
 
-  constructor(
-    doc: Doc,
-    private rng: () => number = Math.random,
-  ) {
+  constructor(doc: Doc) {
     this.doc = doc;
     expandTypes(doc);
     // Each shape gets back the values its kind shares, each a copy, as it was before the file
@@ -759,16 +756,26 @@ export class Runtime {
           return body({ ...ctx, locals });
         };
       }
-      case "rand": {
+      case "rand":
+      case "rand-int":
+      case "pick":
+      case "shuffle": {
+        // The place it is written, the seed it follows, then its arguments (mtp-bjn0).
         const site = parts[0] as number;
-        const bounds = (parts.slice(1) as Expr[]).map((p) => this.compile(p));
-        // Each site draws its number once, when the page loads.
+        const seed = this.compile(parts[1] as Expr);
+        const args = (parts.slice(2) as Expr[]).map((p) => this.compile(p));
         return (ctx) => {
-          if (!this.rands.has(site)) {
-            const [lo, hi] = bounds.length ? bounds.map((f) => f(ctx) as number) : [0, 1];
-            this.rands.set(site, lo! + this.rng() * (hi! - lo!));
+          const s = seed(ctx) as number;
+          const vs = args.map((f) => f(ctx));
+          if (op === "shuffle") return shuffle(vs[0] as unknown[], s, site);
+          const u = unit(s, site);
+          if (op === "pick") {
+            const xs = vs[0] as unknown[];
+            return xs.length ? xs[Math.floor(u * xs.length)] : null;
           }
-          return this.rands.get(site);
+          const [lo, hi] = vs.length ? (vs as number[]) : [0, 1];
+          if (op === "rand-int") return lo! + Math.floor(u * (hi! - lo! + 1));
+          return lo! + u * (hi! - lo!);
         };
       }
       case "anchor": {

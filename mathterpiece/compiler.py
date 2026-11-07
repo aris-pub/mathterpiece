@@ -70,6 +70,7 @@ from mathterpiece.types import (
     PALETTE,
     POINT,
     PRIMS,
+    RAND_SEED,
     RATIO,
     REAL,
     SCENE,
@@ -442,6 +443,10 @@ class _Compiler:
         self.model = Model()
         for table in ("names", "types", "motifs", "variants", "funcs"):
             setattr(self.model, table, _Names(self))
+        # Built in: only the types an object uses are written into the compiled model.
+        dict.__setitem__(self.model.types, "rand-seed", RAND_SEED)
+        # The seed a file that declares none gets, once something random needs one (mtp-bjn0).
+        self.implicit_seed: int | None = None
         # The file built, and what each file sees by a name of its own: None for the file built,
         # an imported file by the name it is imported by. here is the file of the node being
         # compiled, so a name is looked up as that file sees it.
@@ -1142,6 +1147,12 @@ class _Compiler:
         name, pos, t, node, first = self.declared(form, scope)
         if isinstance(_core(t), FuncT):
             raise CompileError("a variable cannot hold a function", pos)
+        if _is_seed(t) and self.implicit_seed is not None:
+            raise CompileError(
+                "a seed is declared before the random values that follow it: something random"
+                " above already follows the seed named seed",
+                pos,
+            )
         if node is not None and self.shape_kind(node):
             # (shape sel (circle c …)) declares the circle where the variable is, and holds it.
             assert isinstance(node, Form)
@@ -1754,24 +1765,97 @@ class _Compiler:
             shown = ", ".join(_value_str(v) for v in values)
             raise CompileError(f"{head} is undefined at {shown}", pos) from None
 
-    def special_builtin(self, node: Form, head: str, given, scope: dict) -> Expr:
-        """The built-ins whose arguments vary in number or type."""
+    def random(self, node: Form, head: str, given, scope: dict) -> Expr:
+        """A random value, computed from a seed and the place it is written (mtp-bjn0): the
+        file's only seed, or the one (seed s) names. next-seed gives the seed a roll writes."""
         pos = node.pos
+        if head == "next-seed":
+            (a,) = self.args(node, 1)
+            s = self.seed_expr(a, scope)
+            return Expr("next-seed", RAND_SEED, (s,), s.deps, (0, math.inf))
+        given = list(given)
+        named = given.pop() if given and _head(given[-1]) == "seed" else None
+        if self.reads:
+            raise CompileError(f"{head} inside a function is a compile error for now", pos)
+        if named is not None:
+            assert isinstance(named, Form)
+            if len(named.items) != 2:
+                raise CompileError("(seed s) names one seed", named.pos)
+            seed = self.seed_expr(named.items[1], scope)
+        else:
+            seed = self.default_seed(pos, scope)
+        site, self.rand_sites = self.rand_sites, self.rand_sites + 1
         if head == "rand":
-            self.count(head, given, 0, 2, pos)
-            if len(given) == 1:
+            if len(given) not in (0, 2):
                 raise CompileError("rand takes no arguments, or lo and hi", pos)
-            if self.reads:
-                raise CompileError("rand inside a function is a compile error for now", pos)
             bounds = [self.expr(g, REAL, scope) for g in given]
-            site, self.rand_sites = self.rand_sites, self.rand_sites + 1
             r = (0.0, 1.0)
             if bounds and all(b.known for b in bounds):
                 r = (float(bounds[0].value), float(bounds[1].value))
             elif bounds:
                 r = WHOLE
-            deps = frozenset().union(*(b.deps for b in bounds))
-            return Expr("rand", REAL, (site, *bounds), deps, r)
+            deps = frozenset().union(seed.deps, *(b.deps for b in bounds))
+            return Expr("rand", REAL, (site, seed, *bounds), deps, r)
+        if head == "rand-int":
+            if len(given) != 2:
+                raise CompileError("rand-int takes lo and hi, both included", pos)
+            lo, hi = (self.expr(g, INT, scope) for g in given)
+            r = (lo.value, hi.value) if lo.known and hi.known else WHOLE
+            return Expr("rand-int", INT, (site, seed, lo, hi), seed.deps | lo.deps | hi.deps, r)
+        if len(given) != 1:
+            raise CompileError(f"{head} takes one list", pos)
+        xs = self.expr(given[0], None, scope)
+        whole = _base(_inner(xs.type))
+        if not isinstance(whole, ListT) or _may_be_none(xs.type):
+            raise CompileError(f"{head} takes a list, got {xs.type}", pos)
+        if head == "pick":
+            return Expr("pick", Maybe(_inner(whole.item)), (site, seed, xs), seed.deps | xs.deps)
+        return Expr("shuffle", xs.type, (site, seed, xs), seed.deps | xs.deps)
+
+    def seed_expr(self, node: Node, scope: dict) -> Expr:
+        e = self.expr(node, None, scope)
+        if not _is_seed(e.type):
+            raise CompileError(
+                f"a seed is a rand-seed, such as one declared (rand-seed dots 7), got {e.type}",
+                node.pos,
+            )
+        return e
+
+    def seeds(self) -> list[int]:
+        return [
+            i for i, o in enumerate(self.model.objects) if o.kind == "variable" and _is_seed(o.type)
+        ]
+
+    def default_seed(self, pos: Pos, scope: dict) -> Expr:
+        """The file's only seed, or, in a file that declares none, the seed named seed, starting
+        at 0, added the first time something random needs it."""
+        seeds = self.seeds()
+        if len(seeds) > 1:
+            raise CompileError(
+                "this file declares several seeds: name the one this follows, as"
+                " (rand 0 1 (seed dots))",
+                pos,
+            )
+        if not seeds:
+            if "seed" in self.model.names:
+                raise CompileError(
+                    "something random follows a seed named seed, but seed is declared already:"
+                    " declare a seed, (rand-seed dots 0), and name it, (seed dots)",
+                    pos,
+                )
+            obj = Obj("variable", "seed", RAND_SEED, "scene", {"value": Attribute(RAND_SEED, 0)})
+            obj.pos = pos
+            self.model.objects.append(obj)
+            self.implicit_seed = len(self.model.objects) - 1
+            self.model.names["seed"] = self.implicit_seed
+            seeds = [self.implicit_seed]
+        return self.read(seeds[0], None)
+
+    def special_builtin(self, node: Form, head: str, given, scope: dict) -> Expr:
+        """The built-ins whose arguments vary in number or type."""
+        pos = node.pos
+        if head in RANDOM or head == "next-seed":
+            return self.random(node, head, given, scope)
         if head == "range":
             return self.range_list(node, given, scope)
         if head == "round":
@@ -2470,6 +2554,10 @@ class _Compiler:
                 out.append(
                     self.played(self.transition(item, scope, top=False), duration, ease, item.pos)
                 )
+            elif head == "roll-dice":
+                # (roll-dice s) stands for (move s (to (next-seed s)) (duration 0)) (mtp-bjn0).
+                assert isinstance(item, Form)
+                out.append(self.roll(item, scope))
             elif head == "wait":
                 # (wait t) stands for (move none (duration t)) (the author, 2026-11-03).
                 assert isinstance(item, Form)
@@ -2497,6 +2585,29 @@ class _Compiler:
                     "an animation holds moves, waits, at-once and in-order", item.pos
                 )
         return out
+
+    def roll(self, item: Form, scope: dict) -> tuple:
+        """(roll-dice) or (roll-dice s): an instant move of the seed to its next value."""
+        pos = item.pos
+        if len(item.items) > 2:
+            raise CompileError("roll-dice takes the seed it rolls, or none for the only one", pos)
+        if len(item.items) == 2:
+            target = item.items[1]
+            self.seed_expr(target, scope)
+        else:
+            seed = self.default_seed(pos, scope)
+            name = self.model.objects[seed.args[0]].name
+            target = Name((name,), pos)
+        move = Form(
+            (
+                Name(("move",), pos),
+                target,
+                Form((Name(("to",), pos), Form((Name(("next-seed",), pos), target), pos)), pos),
+                Form((Name(("duration",), pos), IntLit(0, pos)), pos),
+            ),
+            pos,
+        )
+        return self.played(self.transition(move, scope, top=False), 0, None, pos)
 
     def check_together(self, parts, pos: Pos) -> None:
         """Moves that run at the same time read the same values when they start (mtp-lm24), so
@@ -5582,6 +5693,15 @@ def _is_literal(node: Node) -> bool:
     if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, BoolLit, NoneLit)):
         return True
     return isinstance(node, ListLit) and all(_is_literal(i) for i in node.items)
+
+
+# The random functions: each draws from a seed, at the place it is written (mtp-bjn0).
+RANDOM = {"rand", "rand-int", "pick", "shuffle"}
+
+
+def _is_seed(t: Type) -> bool:
+    t = _inner(t) if isinstance(t, Maybe) else t
+    return isinstance(t, Refine) and t.name == "rand-seed"
 
 
 def _is_free_start(node) -> bool:

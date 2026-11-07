@@ -143,7 +143,10 @@ class TestDocAt:
         [
             ("(real k 1 doc@x)", "doc@ is followed by its text in single quotes: doc@'text'"),
             ("(real k 1 doc@$'x')", "doc@ is followed by its text in single quotes: doc@'text'"),
-            ("(real k 1 note@'x')", "'@' only follows doc and free, as in doc@'text' and free@(f x)"),
+            (
+                "(real k 1 note@'x')",
+                "'@' only follows doc and free, as in doc@'text' and free@(f x)",
+            ),
             ("(real a@b 1)", "'@' only follows doc and free, as in doc@'text' and free@(f x)"),
         ],
     )

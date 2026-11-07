@@ -13,7 +13,7 @@
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
-    "transition" "move" "wait" "animation" "at-once" "in-order"
+    "transition" "move" "wait" "roll-dice" "animation" "at-once" "in-order" "rand-seed"
     "canvas" "readout" "display" "slider" "button" "play" "toggle" "on-drag" "on-click"
     "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "defaults" "clip" "loop" "autoplay" "exists-when"
@@ -26,7 +26,7 @@
     "halign" "height"
     "kind" "label" "like" "line-cap" "line-join" "num" "opacity" "outline" "outline-width" "padding" "pan" "path" "points"
     "pointer-events" "pos" "r" "rounding" "rx"
-    "ry" "size" "step" "stop-propagation" "stroke" "stroke-opacity" "stroke-width" "style" "tex" "to" "toggle-duration" "toggle-ease" "transform"
+    "ry" "seed" "size" "step" "stop-propagation" "stroke" "stroke-opacity" "stroke-width" "style" "tex" "to" "toggle-duration" "toggle-ease" "transform"
     "translate" "valign" "value" "weight" "width"
     "x" "y" "zoom")
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,
@@ -60,7 +60,7 @@ takes a color apart from strings.")
     ("triangle" . 1) ("polyline" . 1) ("polygon" . 1) ("curve" . 1) ("arc" . 1) ("ring" . 1) ("text" . 2) ("font" . 1)
     ("namespace" . 1) ("palette" . 1) ("interface" . 1) ("colormap" . 2)
     ("formula" . 1) ("term" . 1) ("display" . 2)
-    ("real" . 2) ("int" . 2) ("ratio" . 2) ("complex" . 2) ("bool" . 2) ("string" . 2)
+    ("rand-seed" . 2) ("real" . 2) ("int" . 2) ("ratio" . 2) ("complex" . 2) ("bool" . 2) ("string" . 2)
     ("point" . 2) ("list" . 2) ("transform" . 2) ("color" . 2)
     ("type" . 2) ("motif" . 2) ("variant" . 2) ("func" . 2)
     ("transition" . 2) ("animation" . 1)
@@ -95,7 +95,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
     "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
-    "colormap" "interface" "defaults" "term" "display")
+    "colormap" "interface" "defaults" "term" "display" "rand-seed")
   "Forms that take no body: every item after their positional arguments is indented 4.")
 
 (defconst mtp-mode--named
@@ -184,7 +184,8 @@ to `comment-column'."
   '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "polyline"
     "polygon" "arc" "ring" "text" "curve" "real" "int" "ratio" "complex" "bool" "string" "point"
     "list" "transform" "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
-    "transition" "animation" "canvas" "readout" "display" "slider" "button" "play" "toggle")
+    "transition" "animation" "canvas" "readout" "display" "slider" "button" "play" "toggle"
+    "rand-seed")
   "Heads whose form declares a name, the word after the head, as (circle dot …) declares dot.")
 
 (defconst mtp-mode--types

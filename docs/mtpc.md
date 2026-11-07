@@ -104,7 +104,7 @@ An expression is an array: its operation first, then its type, then its parts. `
 | `and`, `or` | `["and", "bool", e…]`, `["or", "bool", e…]` |
 | `let` | `["let", T, [[name, e], …], body]` |
 | a point on a shape's box | `["anchor", T, side, e, gap, frame]`, `side` being one of the eight names (`"top"`, `"top-right"`, …), `e` the shape, `gap` an expression, and `frame` as in a read (reference, "Placing") |
-| `rand` | `["rand", "real", site, lo?, hi?]`, `site` numbering each copy of each `rand` after `foreach` and motif instances are expanded, starting at 0; each site draws its number once, when the page loads |
+| `rand`, `rand-int`, `pick`, `shuffle` | `[op, T, site, seed, arg…]`: `site` numbers each place a random function is written, after `foreach` and motif instances are expanded, starting at 0; `seed` is the expression of the seed it follows, a read of a `rand-seed` variable; the args are `lo` and `hi` (`rand`, optional, and `rand-int`) or the list (`pick`, `shuffle`). The value is computed from the seed's value, the site and, for a shuffle, each item's position, by the runtime's hash (web/src/random.ts), so the same seed always gives the same values; a new seed gives new ones. `next-seed` is a built-in, `["builtin", T, "next-seed", seed]`. |
 
 ## Free and bound values
 

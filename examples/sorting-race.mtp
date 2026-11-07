@@ -1,7 +1,8 @@
 ; Bubble sort and insertion sort race on the same shuffled bars, one comparison each per step.
 ; The two bars being compared are marked, and so are the bars each sort has put where they
-; belong. Press race to run both, and shuffle to start again on new bars. The bars are dealt
-; from a number drawn when the page loads, so each visit starts from its own shuffle.
+; belong. Press race to run both, and shuffle to start again on new bars. The bars are shuffled
+; from the file's seed, so a refresh shows the same bars, and shuffle rolls the dice for new
+; ones.
 ;
 ; Each sort is a small machine whose whole state is one list: where it is, its counts, and its
 ; bars. Every step of the race moves the list to the next state, which a function works out
@@ -11,17 +12,9 @@
 
 (int n 16 (const))
 
-; A number from 0 to 1 that looks random, the same every time for the same k and seed.
-(func[real] scramble ((int k) (real seed))
-  (let ((x (* (sin (+ (* k 12.9898) seed)) 43758.5453))) (- x (floor x))))
-; The heights 1 to n in an order the seed picks.
-(func[list[real]] shuffled ((real seed))
-  (map (sort (range n) (fn k (scramble k seed))) (fn k (+ k 1.0))))
-
 ; A state: four numbers, then the n bars.
-(func[list[real]] fresh ((real a) (real b) (real seed))
-  (let ((bars (shuffled seed)))
-    (map (range (+ 4 n)) (fn k (cond ((= k 0) a) ((= k 1) b) ((< k 4) 0) (else (or? bars[(- k 4)] 0)))))))
+(func[list[real]] fresh ((real a) (real b) (list[real] bars))
+  (map (range (+ 4 n)) (fn k (cond ((= k 0) a) ((= k 1) b) ((< k 4) 0) (else (or? bars[(- k 4)] 0))))))
 (func[real] part ((list[real] s) (int k)) (or? s[k] 0))
 (func[real] bar ((list[real] s) (int k)) (part s (+ 4 k)))
 ; The state with its first four numbers replaced, and the bars at p and q traded when trade.
@@ -60,11 +53,11 @@
       (next s (if on i (+ i 1)) (if on (- j 1) (+ i 1)) (+ c 1) (if trade (+ t 1) t) trade
             (- j 1) j))))
 
-(real seed 1)
-; Drawn once when the page loads, so every visit starts from its own shuffle.
-(real salt (rand 0 1000))
-(list[real] bubble [0 16 0 0 14 8 2 16 13 10 15 9 1 7 12 6 3 5 4 11])
-(list[real] insertion [1 1 0 0 14 8 2 16 13 10 15 9 1 7 12 6 3 5 4 11])
+; The heights 1 to n, shuffled from the seed: a new seed deals new bars.
+(list[real] deal (shuffle (map (range n) (fn k (+ k 1.0)))))
+; Each sort starts on the bars dealt when the page loads, and then moves them itself.
+(list[real] bubble free@(fresh 0 n deal))
+(list[real] insertion free@(fresh 1 1 deal))
 
 (scene race (background paper)
   (group bubble-bars
@@ -113,18 +106,12 @@
         (move bubble (to (bubble-step bubble)))
         (move insertion (to (insertion-step insertion))))))
 
-; Moves that run together all read the seed as it was, so each works out the next one itself.
+; The roll comes first, so the moves after it read the new deal.
 (button shuffle (label 'shuffle')
   doc@'Puts new shuffled bars in front of both sorts and starts them again.'
     (animation
-      (at-once (defaults (duration 0))
-        (move bubble (to (fresh 0 n (+ seed 1 salt))))
-        (move insertion (to (fresh 1 1 (+ seed 1 salt))))
-        (move seed (to (+ seed 1))))))
-
-(on-view bubble-view
-    (animation
-      (at-once (defaults (duration 0))
-        (move bubble (to (fresh 0 n (+ seed salt))))
-        (move insertion (to (fresh 1 1 (+ seed salt))))))
-  doc@'Deals the first shuffle of this visit when the bars come into view.')
+      (in-order
+        (roll-dice)
+        (at-once (defaults (duration 0))
+          (move bubble (to (fresh 0 n deal)))
+          (move insertion (to (fresh 1 1 deal)))))))

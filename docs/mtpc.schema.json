@@ -377,7 +377,8 @@
                 "somes",
                 "or?",
                 "none?",
-                "some?"
+                "some?",
+                "next-seed"
               ]
             }
           },
@@ -442,6 +443,9 @@
                 "or",
                 "let",
                 "rand",
+                "shuffle",
+                "pick",
+                "rand-int",
                 "anchor",
                 "wrap"
               ]
@@ -798,7 +802,8 @@
                   "somes",
                   "or?",
                   "none?",
-                  "some?"
+                  "some?",
+                  "next-seed"
                 ]
               }
             ],
@@ -992,7 +997,8 @@
                   "somes",
                   "or?",
                   "none?",
-                  "some?"
+                  "some?",
+                  "next-seed"
                 ]
               }
             ],
@@ -1235,7 +1241,97 @@
                 "minimum": 0
               }
             ],
-            "minItems": 3,
+            "minItems": 4,
+            "items": {
+              "$ref": "#/$defs/expr"
+            },
+            "maxItems": 6
+          }
+        },
+        {
+          "if": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "rand-int"
+              }
+            ]
+          },
+          "then": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "rand-int"
+              },
+              {
+                "$ref": "#/$defs/type"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
+            ],
+            "minItems": 6,
+            "items": {
+              "$ref": "#/$defs/expr"
+            },
+            "maxItems": 6
+          }
+        },
+        {
+          "if": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "pick"
+              }
+            ]
+          },
+          "then": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "pick"
+              },
+              {
+                "$ref": "#/$defs/type"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
+            ],
+            "minItems": 5,
+            "items": {
+              "$ref": "#/$defs/expr"
+            },
+            "maxItems": 5
+          }
+        },
+        {
+          "if": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "shuffle"
+              }
+            ]
+          },
+          "then": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "shuffle"
+              },
+              {
+                "$ref": "#/$defs/type"
+              },
+              {
+                "type": "integer",
+                "minimum": 0
+              }
+            ],
+            "minItems": 5,
             "items": {
               "$ref": "#/$defs/expr"
             },
