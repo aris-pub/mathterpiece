@@ -334,6 +334,8 @@
         };
         model.addEventListener("mtp-change", show);
         show();
+        // Drawn in the next frames: then the one canvas is fitted to the window.
+        requestAnimationFrame(() => requestAnimationFrame(fit));
         for (const it of items) {
           if (it.path === current) it.b.setAttribute("aria-current", "page");
           else it.b.removeAttribute("aria-current");
@@ -346,6 +348,33 @@
         showInventory = !showInventory;
         load();
       };
+      // A figure with one canvas fits in the window: its text, its formulas, its canvas and its
+      // controls, all but the list of variables. The canvas gives up width so that its height,
+      // which follows its view box, leaves room for the rest. Figures with several canvases scroll.
+      const fit = () => {
+        const all = [...document.querySelectorAll("#canvases mtp-canvas")];
+        for (const c of all) {
+          c.style.maxWidth = "";
+          c.style.marginInline = "";
+        }
+        if (showInventory || all.length !== 1) return;
+        const c = all[0];
+        const box = c.querySelector("svg")?.viewBox?.baseVal;
+        if (!box || !box.width || !box.height) return;
+        const main = document.querySelector("main").getBoundingClientRect();
+        const canvas = c.getBoundingClientRect();
+        const controls = document.getElementById("controls");
+        const last = controls.children.length ? controls.getBoundingClientRect().bottom : canvas.bottom;
+        // Everything but the canvas, from the top of the column to the bottom of the controls.
+        const rest = Math.max(last, canvas.bottom) - main.top - canvas.height;
+        const room = Math.max(200, innerHeight - (main.top + scrollY) - rest - 16);
+        const width = (room * box.width) / box.height;
+        if (width < canvas.width) {
+          c.style.maxWidth = `${width}px`;
+          c.style.marginInline = "auto";
+        }
+      };
+      addEventListener("resize", fit);
       for (const [id, cls] of [["theme", "dark"], ["fonts", "fonts"]]) {
         const b = document.getElementById(id);
         b.onclick = () => b.setAttribute("aria-pressed", String(document.documentElement.classList.toggle(cls)));
