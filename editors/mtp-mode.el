@@ -36,12 +36,13 @@ such as (x -8), (duration 0.8) and (fill teal).")
 ;; from: the author's rule is that nothing is italic.
 
 (defface mtp-mode-head-face
-  '((t :inherit font-lock-type-face :weight ultra-bold :slant normal))
-  "Face for the heads of mtp's forms, such as canvas in (canvas view …), drawn heaviest. Most
-heads are types, as circle and real are, so it takes the type color.")
+  '((t :inherit font-lock-type-face :weight bold :slant normal))
+  "Face for the heads of mtp's forms, such as canvas in (canvas view …), in bold, the heaviest
+weight every font has; nothing else in the mode is bold but docstrings and free@. Most heads are
+types, as circle and real are, so it takes the type color.")
 
 (defface mtp-mode-call-face
-  '((t :inherit font-lock-function-call-face :weight bold :slant normal))
+  '((t :inherit font-lock-function-call-face :weight normal :slant normal))
   "Face for the head of a function call, built in or the author's own, such as part in
 (part s 0).")
 

@@ -106,7 +106,8 @@
     (should (> (length faces) 5))
     (dolist (f faces) (should (eq (face-attribute f :slant) 'normal)))))
 
-(ert-deftest mtp-mode-draws-heads-heaviest-and-calls-bold ()
-  (should (eq (face-attribute 'mtp-mode-head-face :weight) 'ultra-bold))
-  (should (eq (face-attribute 'mtp-mode-call-face :weight) 'bold))
+(ert-deftest mtp-mode-draws-heads-heavier-than-calls ()
+  ;; Bold, which every font has: a weight the font lacks is drawn regular (seen 2026-11-07).
+  (should (eq (face-attribute 'mtp-mode-head-face :weight) 'bold))
+  (should (eq (face-attribute 'mtp-mode-call-face :weight) 'normal))
   (should (eq (mtp-mode-test--face-at "(real v (next 1))" "next") 'mtp-mode-call-face)))
