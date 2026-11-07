@@ -189,7 +189,7 @@ describe("a player", () => {
     // three-body wrote dozens of times a frame, and the page redrew for each.
     const [rt, p] = setup("both");
     let heard = 0;
-    rt.listeners.push(() => heard++);
+    rt.onChange(() => heard++);
     p.seek(0.5);
     expect(heard).toBe(1);
   });
