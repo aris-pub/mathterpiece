@@ -18,6 +18,10 @@ import { type Ease, applyEase } from "./transitions.ts";
 export { FORMAT_VERSION };
 const READY = "mtp-ready";
 const CHANGE = "mtp-change";
+// Touch (docs/reference.md, "Touch screens"): how far, in CSS pixels, a finger may miss a shape
+// and still press it, and how far it may move and still tap.
+const TOUCH_REACH = 22;
+const TOUCH_SLOP = 8;
 
 /** How the page asks for animation frames; tests replace it to move time by hand. */
 export const frames = {
@@ -256,13 +260,32 @@ export class MtpCanvas extends MtpPart {
     const dragends = model.dragends!;
     const toggles = new Toggles(rt, canvas, scheduler, () => this.redraw());
     const look: Look = { scale: 1, dx: 0, dy: 0 };
+    const pointer = new Pointer(rt, canvas);
+    // The shape a tap selected, to move by the next tap, as the drag from the press point there.
+    let selection: { hit: number; shape: number; at: [number, number] } | null = null;
+    // Whether the finger just pressed is on a shape it can act on. Chromium does not heed
+    // touch-action on the shapes inside an SVG, so the page is kept from scrolling by the
+    // touchstart that follows the pointerdown. That goes to the element pressed, which the
+    // pointerdown's drawing may have taken off the page, so the element pressed listens, as well
+    // as the canvas.
+    let held = false;
+    const hold = (event: Event) => {
+      if (held) event.preventDefault();
+    };
+    const reaches = (id: number) =>
+      drags.draggable(id) || clicks.find(id).length > 0 || releases.find(id).length > 0 || pointer.hears(id);
+    const mark = () => {
+      for (const el of svg.querySelectorAll(".mtp-selected")) el.classList.remove("mtp-selected");
+      if (selection) for (const el of svg.querySelectorAll(`[data-mtp-id="${selection.shape}"]`)) el.classList.add("mtp-selected");
+    };
     this.redraw = () => {
       toggles.follow();
       draw(rt, canvas, svg, (k) => toggles.shownBy(k), look);
-      for (const el of svg.querySelectorAll("[data-mtp-id]")) {
+      for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
         const id = Number(el.getAttribute("data-mtp-id"));
-        if (drags.draggable(id) || clicks.find(id).length) (el as SVGElement).style.cursor = "pointer";
+        if (drags.draggable(id) || clicks.find(id).length) el.style.cursor = "pointer";
       }
+      mark();
     };
     this.replaceChildren(svg);
     this.redraw();
@@ -283,6 +306,29 @@ export class MtpCanvas extends MtpPart {
       const under = at?.closest?.("[data-mtp-id]");
       return under && svg.contains(under) ? Number(under.getAttribute("data-mtp-id")) : null;
     };
+    // A finger is wide and hides what it presses, so a shape it can act on takes it within
+    // TOUCH_REACH pixels of what is drawn: a target at least 44 pixels across. The nearest wins.
+    const nearest = (x: number, y: number): number | null => {
+      let best: number | null = null;
+      let gap = TOUCH_REACH;
+      for (const el of svg.querySelectorAll("[data-mtp-id]")) {
+        if (el.querySelector("[data-mtp-id]") || el.closest('[pointer-events="none"]')) continue;
+        if (!reaches(Number(el.getAttribute("data-mtp-id")))) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) continue;
+        const d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+        if (d <= gap) [best, gap] = [Number(el.getAttribute("data-mtp-id")), d];
+      }
+      return best;
+    };
+    // A pen that hovers is a mouse; one that does not, a finger.
+    let penHovers = false;
+    const touchy = (event: PointerEvent) => event.pointerType === "touch" || (event.pointerType === "pen" && !penHovers);
+    const targetOf = (event: PointerEvent): number | null => {
+      const hit = hitOf(event);
+      if (!touchy(event) || (hit !== null && reaches(hit))) return hit;
+      return nearest(event.clientX, event.clientY) ?? hit;
+    };
     // The pointer in the SVG's own coordinates, and in scene coordinates through the canvas's view.
     const toUser = (event: { clientX: number; clientY: number }): [number, number] => {
       const ctm = svg.getScreenCTM?.();
@@ -293,7 +339,8 @@ export class MtpCanvas extends MtpPart {
     const toScene = (event: PointerEvent): [number, number] =>
       apply(invert(viewOf(rt, canvas).toUser), toUser(event)) as [number, number];
     const allows = (attr: "pan" | "zoom") => Boolean(rt.value(canvas, attr));
-    if (allows("pan") || allows("zoom")) svg.style.touchAction = "none";
+    // Elsewhere a finger on the canvas scrolls the page.
+    if (allows("pan") || allows("zoom") || pointer.onCanvas) svg.style.touchAction = "none";
     // The reader zooms between the canvas's bounds and pans only inside its view box, so never
     // sees past what the author framed (the author, 2026-11-04).
     const inside = () => {
@@ -335,37 +382,72 @@ export class MtpCanvas extends MtpPart {
     // The shape pressed, for the click on release; drawing replaces the elements, so shapes are
     // compared by id.
     let pressed: number | null = null;
-    // on-enter, on-leave and on-pointermove. A touch screen has no pointer over the canvas but
-    // while a finger is down, so as in JS the finger enters when it comes down and leaves when it
-    // lifts, and it moves only while down: the canvas keeps the page from scrolling under it then.
-    const pointer = new Pointer(rt, canvas);
-    if (pointer.listens((id) => svg.querySelector(`[data-mtp-id="${id}"]`) !== null)) svg.style.touchAction = "none";
+    // Where a finger came down, to tell a tap from a drag: a finger is never quite still.
+    let press: { id: number; x: number; y: number; at: [number, number]; moved: boolean } | null = null;
     const play = (listeners: (Obj | null)[]) => {
       for (const listener of listeners) {
         const player = listener ? playerFor(rt, listener) : null;
         if (listener && player) scheduler.start(player, listener);
       }
     };
-    const follow = (event: PointerEvent) => {
-      play(pointer.onto(hitOf(event)));
+    // on-enter, on-leave and on-pointermove. A finger has no hover, so a tap enters a shape and
+    // it stays entered until the reader presses elsewhere, here or anywhere on the page.
+    const follow = (event: PointerEvent, hit: number | null) => {
+      play(pointer.onto(hit));
       pointer.move(toScene(event), (targets, source) => scheduler.claim(targets, source));
     };
-    svg.addEventListener("pointerleave", () => play(pointer.onto(null)));
+    const deselect = () => {
+      if (selection === null) return;
+      selection = null;
+      mark();
+    };
+    document.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (!svg.isConnected || !touchy(event) || svg.contains(event.target as Node)) return;
+        play(pointer.onto(null));
+        deselect();
+      },
+      true,
+    );
+    svg.addEventListener("touchstart", hold, { passive: false });
+    svg.addEventListener("pointerleave", (event) => {
+      if (!touchy(event)) play(pointer.onto(null));
+    });
     svg.addEventListener("pointerdown", (event) => {
-      follow(event);
-      pressed = hitOf(event);
+      const touch = touchy(event);
+      pressed = touch ? targetOf(event) : hitOf(event);
+      held = touch && pressed !== null && reaches(pressed);
+      if (held && event.target !== svg) (event.target as Element).addEventListener("touchstart", hold, { passive: false, once: true });
+      follow(event, pressed);
+      if (touch && event.isPrimary) {
+        press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: toScene(event), moved: false };
+      }
       if (pressed !== null && drags.grab(pressed, toScene(event))) {
         scheduler.claim(drags.targets, drags);
       } else if (allows("pan") || allows("zoom")) {
         touches.set(event.pointerId, [event.clientX, event.clientY]);
       } else {
+        // A finger's events go to the element it pressed, which drawing may replace, and then
+        // they reach nothing: the canvas holds them instead.
+        if (touch) svg.setPointerCapture?.(event.pointerId);
         return;
       }
       event.preventDefault();
       svg.setPointerCapture?.(event.pointerId);
     });
     svg.addEventListener("pointermove", (event) => {
-      follow(event);
+      if (event.pointerType === "pen" && event.buttons === 0) penHovers = true;
+      // A finger that has not yet moved from its press stays on what it pressed. Once it moves, it
+      // is on what is under it: finding the nearest shape at every move would cost a layout each.
+      if (press && press.id === event.pointerId && !press.moved) {
+        if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < TOUCH_SLOP) {
+          follow(event, pressed);
+          return;
+        }
+        press.moved = true;
+      }
+      follow(event, hitOf(event));
       if (drags.dragging) {
         // As JS's dragstart, a drag starts at its first move, and its listeners play before the
         // drag writes, so they may reset what the drag then reads (mtp-5opl).
@@ -393,12 +475,34 @@ export class MtpCanvas extends MtpPart {
       }
     });
     const lift = (event: PointerEvent) => touches.delete(event.pointerId);
+    // The tap alternative to a drag (WCAG 2.2, 2.5.7): a tap on a draggable shape selects it, and
+    // the next tap on the canvas drags it from the press point to there; a tap on it again ends
+    // the selection, and so does any press that is not a tap. Gives the shape moved, if any.
+    const tapped = (event: PointerEvent, grabbed: number | null): number | null => {
+      const tap = press !== null && press.id === event.pointerId && !press.moved;
+      const chosen = selection;
+      if (tap && chosen === null && grabbed !== null) {
+        selection = { hit: pressed!, shape: grabbed, at: press!.at };
+        mark();
+        return null;
+      }
+      deselect();
+      if (!tap || chosen === null || grabbed === chosen.shape || !drags.grab(chosen.hit, chosen.at)) return null;
+      scheduler.claim(drags.targets, drags);
+      play(dragstarts.find(drags.shape!));
+      drags.move(toScene(event));
+      drags.release();
+      return chosen.shape;
+    };
     svg.addEventListener("pointerup", (event) => {
       lift(event);
+      const touch = touchy(event);
       // As JS's dragend, only a drag that moved ends.
       const ended = drags.moved ? drags.shape : null;
+      const grabbed = drags.shape;
       drags.release();
-      const released = hitOf(event);
+      const moved = touch ? tapped(event, grabbed) : null;
+      const released = touch && press?.id === event.pointerId && !press.moved ? pressed : hitOf(event);
       // pointerup comes before click, as in JS; the end of a drag comes between them.
       // As JS's click: on the nearest shape holding both the pressed and the released one,
       // whatever the pointer did between.
@@ -406,15 +510,25 @@ export class MtpCanvas extends MtpPart {
       play([
         ...(released !== null ? releases.find(released) : []),
         ...(ended !== null ? dragends.find(ended) : []),
+        ...(moved !== null ? dragends.find(moved) : []),
         ...(both !== null ? clicks.find(both) : []),
       ]);
-      if (event.pointerType === "touch") play(pointer.onto(null));
       pressed = null;
+      if (press?.id === event.pointerId) press = null;
     });
     svg.addEventListener("pointercancel", (event) => {
       lift(event);
       drags.release();
-      play(pointer.onto(null));
+      if (!touchy(event)) {
+        play(pointer.onto(null));
+        return;
+      }
+      // The page took the finger, to scroll: what it entered stays entered.
+      if (press?.id === event.pointerId) {
+        press = null;
+        deselect();
+      }
+      pressed = null;
     });
   }
 

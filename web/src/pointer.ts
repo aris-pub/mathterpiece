@@ -29,9 +29,19 @@ export class Pointer {
     }
   }
 
-  /** Whether an on-pointermove listens to this canvas or to a shape drawn, as drawn tells. */
-  listens(drawn: (shape: number) => boolean): boolean {
-    return this.moves.some((l) => l.view === this.canvas || (l.shape != null && drawn(l.shape)));
+  /** Whether an on-pointermove listens to the canvas itself. */
+  get onCanvas(): boolean {
+    return this.moves.some((l) => l.view === this.canvas);
+  }
+
+  /** Whether an active on-enter, on-leave or on-pointermove hears the pointer on the shape, its
+   * own or a container's. */
+  hears(shape: number): boolean {
+    for (let i: number | null = shape; i !== null; i = this.rt.parent(i)) {
+      if (this.active(this.enters, i).length || this.active(this.leaves, i).length) return true;
+      if (this.moves.some((l) => l.shape === i && holds(this.rt, l.active))) return true;
+    }
+    return false;
   }
 
   /** The pointer is now over the shape hit, or over no shape when hit is null: gives the on-leave

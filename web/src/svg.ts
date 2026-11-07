@@ -122,8 +122,12 @@ export function shapesOf(v: unknown): number[] {
 }
 
 // Until the SVG is on the page its width is 0; a canvas redraws once it has one.
+// A CSS length on a shape inside the SVG is in the view box's units, so a style sized in screen
+// pixels multiplies by --mtp-unit, the units a pixel.
 function unitsPerPxOf(svg: SVGSVGElement, box: number[]): number {
-  return box[2]! / (svg.getBoundingClientRect?.().width || 640);
+  const units = box[2]! / (svg.getBoundingClientRect?.().width || 640);
+  svg.style.setProperty("--mtp-unit", String(units));
+  return units;
 }
 
 /**

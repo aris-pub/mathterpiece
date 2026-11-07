@@ -108,6 +108,16 @@ mtp-toggle label {
 }
 mtp-toggle input { accent-color: var(--primary-600); width: 1rem; height: 1rem; margin: 0; }
 
+/* A shape a tap selected, which the next tap moves (the tap alternative to a drag). Chromium
+   draws no outline on the shapes inside an SVG, so the ring is a shadow, sized in the view box's
+   units (--mtp-unit is one pixel's worth). */
+mtp-canvas .mtp-selected {
+  --ring: calc(2px * var(--mtp-unit, 1));
+  --ring-color: var(--border-action, Highlight);
+  filter: drop-shadow(0 0 var(--ring) var(--ring-color)) drop-shadow(0 0 var(--ring) var(--ring-color))
+    drop-shadow(0 0 var(--ring) var(--ring-color));
+}
+
 @media (prefers-reduced-motion: reduce) {
   mtp-button button, mtp-play button { transition: none; }
 }

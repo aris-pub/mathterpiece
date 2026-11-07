@@ -686,12 +686,17 @@ describe("the pointer over a shape", () => {
     expect(v("left")).toBe(1);
   });
 
-  it("on a touch screen, enters when the finger comes down and leaves when it lifts", () => {
+  it("on a touch screen, a tap enters and the shape stays entered until a press elsewhere", () => {
+    // mtp-4hin.1: a finger has no hover, so a tap is a hover that stays (the author, 2026-11-07).
     const [, rt, v] = open();
     at(shape(rt, "a"), "pointerdown", 0, 0, "touch");
     pass(0.1);
     expect(v("entered")).toBe(1);
     at(shape(rt, "a"), "pointerup", 0, 0, "touch");
+    svg().dispatchEvent(new PointerEvent("pointerleave", { pointerId: 1, pointerType: "touch" }));
+    pass(0.1);
+    expect(v("left")).toBe(0);
+    at(svg(), "pointerdown", 0, 0, "touch");
     pass(0.1);
     expect(v("left")).toBe(1);
   });
