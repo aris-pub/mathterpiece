@@ -12,6 +12,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Literal, cast
 
+from mathterpiece import colors
 from mathterpiece.builtins import (
     BUILTINS,
     CONSTANTS,
@@ -5895,7 +5896,10 @@ def _value_part(core: Type, v, name: str):
     if core == COMPLEX:
         return complex(v).real if name == "re" else complex(v).imag
     if core == COLOR:
+        # The model never knows which mode a page is in, so a color's channels are its light
+        # value's (mtp-m34w.1).
         k = "rgba".index(name)
+        v = colors.light(v)
         return int(v[1 + 2 * k : 3 + 2 * k], 16) / 255
     if core == STRING:
         return len(v)

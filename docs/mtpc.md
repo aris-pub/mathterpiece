@@ -69,7 +69,7 @@ A value is plain JSON, read according to the type that always accompanies it:
 | `complex` | `[re, im]` |
 | `bool` | `true`, `false` |
 | `string`, a choice | a string |
-| `color` | a string, `"#rrggbbaa"`, always in this form |
+| `color` | a string, `"#rrggbbaa"`, always in this form; a color with a dark value of its own (reference, "Colors"), the CSS that picks between the two, `"light-dark(#rrggbbaa, #rrggbbaa)"`, always in this form, with one space after the comma, and only when the two differ. The runtime paints it as written, so the browser picks by the `color-scheme` where it is drawn, and mixes the two modes apart |
 | `font` | `{"family": …, "style": …, "weight": …, "size": …}`, `family` `null` for the page's font |
 | `point` | `[x, y]` |
 | `list[T]` | an array of values of type T |

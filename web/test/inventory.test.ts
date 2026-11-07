@@ -89,6 +89,17 @@ describe("its tokens", () => {
     expect(document.documentElement.style.getPropertyValue("--mtp-ink")).toBe("");
   });
 
+  it("gives a color with a dark value a control for each mode", () => {
+    const root = show();
+    const [lit, dim] = [...row(root, "glow").querySelectorAll('input[type="color"]')] as HTMLInputElement[];
+    expect([lit!.value, dim!.value]).toEqual(["#204060", "#e0d0c0"]);
+    dim!.value = "#ff0000";
+    dim!.dispatchEvent(new Event("input"));
+    expect(document.documentElement.style.getPropertyValue("--mtp-glow")).toBe("light-dark(#204060, #ff0000)");
+    (row(root, "glow").querySelector("button") as HTMLButtonElement).click();
+    expect(dim!.value).toBe("#e0d0c0");
+  });
+
   it("restyles each part of a font", () => {
     const root = show();
     const [family, style, weight] = row(root, "note").querySelectorAll("input, select") as unknown as HTMLInputElement[];

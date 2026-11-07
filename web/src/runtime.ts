@@ -12,6 +12,7 @@ import {
   apply,
   compose,
   equal,
+  light,
   pointsMean,
   roundHalfAway,
   wrapInto,
@@ -679,6 +680,15 @@ export class Runtime {
           lighten: ["lit", "color", "#ffffffff"],
           darken: ["lit", "color", "#000000ff"],
         };
+        if (name === "light-dark") {
+          const [a, b] = args as [Expr, Expr];
+          if (!this.compileCss(a) && !this.compileCss(b)) return null;
+          const [fa, fb] = [either(a), either(b)];
+          return (ctx) => {
+            const [ca, cb] = [fa(ctx), fb(ctx)];
+            return ca === null || cb === null ? null : `light-dark(${ca}, ${cb})`;
+          };
+        }
         if (name !== "mix" && !(name in toward)) return null;
         const [a, b, t] = name === "mix" ? args : [args[0]!, toward[name]!, args[1]!];
         if (!this.compileCss(a!) && !this.compileCss(b!)) return null;
@@ -1379,8 +1389,11 @@ export class Runtime {
     }
     if (typeof w === "string") {
       if (k === "length") return [...w].length;
+      // The model never knows which mode a page is in, so a color's channels are its light
+      // value's (mtp-m34w.1).
       const i = "rgba".indexOf(k);
-      return Number.parseInt(w.slice(1 + 2 * i, 3 + 2 * i), 16) / 255;
+      const c = light(w);
+      return Number.parseInt(c.slice(1 + 2 * i, 3 + 2 * i), 16) / 255;
     }
     return (w as Record<string, unknown>)[k];
   }

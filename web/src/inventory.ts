@@ -2,6 +2,7 @@
 // It shows the lines that load the runtime and the compiled model, then every component in
 // source order, each live with its name and the HTML that places it, then the listeners, which
 // have no element, and the tokens, each with a control that restyles the components live.
+import { dark, light } from "./builtins.ts";
 import { cssVariable } from "./css.ts";
 import type { Doc, Obj } from "./doc.ts";
 
@@ -135,16 +136,22 @@ function token(o: Obj): HTMLElement {
   const reset = el("button", "", "reset") as HTMLButtonElement;
   reset.type = "button";
   if (o.type === "color" && typeof value === "string") {
-    const input = document.createElement("input");
-    input.type = "color";
-    input.value = value.slice(0, 7);
-    input.setAttribute("aria-label", o.name!);
-    input.addEventListener("input", () => root.setProperty(variable, input.value));
+    // A color with a dark value of its own gets a control for each mode.
+    const modes = value === light(value) ? [light(value)] : [light(value), dark(value)];
+    const inputs = modes.map((start, k) => {
+      const input = document.createElement("input");
+      input.type = "color";
+      input.value = start.slice(0, 7);
+      input.setAttribute("aria-label", modes.length === 1 ? o.name! : `${o.name} ${k === 0 ? "light" : "dark"}`);
+      return input;
+    });
+    const css = () => (inputs.length === 1 ? inputs[0]!.value : `light-dark(${inputs[0]!.value}, ${inputs[1]!.value})`);
+    for (const input of inputs) input.addEventListener("input", () => root.setProperty(variable, css()));
     reset.addEventListener("click", () => {
       root.removeProperty(variable);
-      input.value = value.slice(0, 7);
+      inputs.forEach((input, k) => (input.value = modes[k]!.slice(0, 7)));
     });
-    control.append(input);
+    control.append(...inputs);
     row.append(tokenName(o), code(variable), control, code(value));
   } else if (o.type === "font" && value && typeof value === "object") {
     const font = value as Record<string, unknown>;

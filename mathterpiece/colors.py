@@ -1,6 +1,8 @@
 """Colors: reading color strings and writing them as #rrggbbaa.
 
-For now every color is RGBA; the JSON says so, so other color spaces can come later.
+For now every color is RGBA; the JSON says so, so other color spaces can come later. A color with
+a dark value of its own is written as the CSS that picks between the two by the page's
+color-scheme, light-dark(#rrggbbaa, #rrggbbaa) (mtp-m34w.1).
 """
 
 import re
@@ -176,6 +178,26 @@ def parse_color(text: str) -> str | None:
     return f"#{digits}" if len(digits) == 8 else f"#{digits}ff"
 
 
+LIGHT_DARK = "light-dark("
+
+
+def light(color: str) -> str:
+    """A color's value on a light page."""
+    return color[len(LIGHT_DARK) : color.index(",")] if color.startswith(LIGHT_DARK) else color
+
+
+def dark(color: str) -> str:
+    """A color's value on a dark page."""
+    return color[color.index(",") + 2 : -1] if color.startswith(LIGHT_DARK) else color
+
+
+def light_dark(a: str, b: str) -> str:
+    """a on a light page and b on a dark one; one color when the two are the same, so two equal
+    colors are always written alike."""
+    la, db = light(a), dark(b)
+    return la if la == db else f"{LIGHT_DARK}{la}, {db})"
+
+
 def same(a: object, b: object) -> bool:
     """Equality of colors: two strings that both name colors are equal if the colors are."""
     if isinstance(a, str) and isinstance(b, str) and a != b:
@@ -195,9 +217,16 @@ def _channels(color: str) -> tuple[float, float, float, float]:
 
 def mix(a: str, b: str, t: float) -> str:
     """t of the way from a to b, as CSS's color-mix(in srgb, a, b t*100%) computes it: with
-    premultiplied alpha, so a transparent color takes on the other's hue. 'none' is transparent."""
+    premultiplied alpha, so a transparent color takes on the other's hue. 'none' is transparent.
+    Each mode is mixed on its own."""
     if not 0 <= t <= 1:
         raise ValueError("the amount must be between 0 and 1")
+    if a.startswith(LIGHT_DARK) or b.startswith(LIGHT_DARK):
+        return light_dark(_mix(light(a), light(b), t), _mix(dark(a), dark(b), t))
+    return _mix(a, b, t)
+
+
+def _mix(a: str, b: str, t: float) -> str:
     ca, cb = _channels(a), _channels(b)
     alpha = ca[3] * (1 - t) + cb[3] * t
     if alpha == 0:

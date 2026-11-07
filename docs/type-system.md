@@ -296,7 +296,7 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | Type | Attributes |
 |----|----|
 | complex | `re`, `im` |
-| color | `r`, `g`, `b`, `a`, each from 0 to 1 |
+| color | `r`, `g`, `b`, `a`, each from 0 to 1; of a light-dark color, its light value's (reference, "Colors") |
 | string | `length` |
 | list | `length`; items by position, `xs[0]` |
 | point | `x`, `y` |

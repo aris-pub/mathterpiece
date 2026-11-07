@@ -1,4 +1,5 @@
 (color ink '#204060' doc@'The color of the circle.')
+(color glow (light-dark '#204060' '#e0d0c0'))
 (font note (family 'Georgia, serif') (style 'italic') (size 14))
 (real k 1 (>= 0) (<= 2))
 (scene s (circle c (r k) (fill ink)) (text label 'hi' (font note)))

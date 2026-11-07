@@ -250,8 +250,35 @@ function channels(color: string): [number, number, number, number] {
   return [n(1), n(3), n(5), n(7) / 255];
 }
 
-/** t of the way from a to b, as CSS color-mix in sRGB computes it: with premultiplied alpha. */
+const LIGHT_DARK = "light-dark(";
+
+/** A color's value on a light page; one with no dark value of its own is the same in both. */
+export function light(color: string): string {
+  return color.startsWith(LIGHT_DARK) ? color.slice(LIGHT_DARK.length, color.indexOf(",")) : color;
+}
+
+/** A color's value on a dark page. */
+export function dark(color: string): string {
+  return color.startsWith(LIGHT_DARK) ? color.slice(color.indexOf(",") + 2, -1) : color;
+}
+
+/** a on a light page and b on a dark one, written as CSS's light-dark() so the page's
+ * color-scheme picks; one color when the two are the same, so equal colors are written alike. */
+export function lightDark(a: string, b: string): string {
+  const [l, d] = [light(a), dark(b)];
+  return l === d ? l : `${LIGHT_DARK}${l}, ${d})`;
+}
+
+/** t of the way from a to b, as CSS color-mix in sRGB computes it: with premultiplied alpha.
+ * Each mode is mixed on its own. */
 export function mix(a: string, b: string, t: number): string {
+  if (a.startsWith(LIGHT_DARK) || b.startsWith(LIGHT_DARK)) {
+    return lightDark(mixOne(light(a), light(b), t), mixOne(dark(a), dark(b), t));
+  }
+  return mixOne(a, b, t);
+}
+
+function mixOne(a: string, b: string, t: number): string {
   const ca = channels(a);
   const cb = channels(b);
   const alpha = ca[3] * (1 - t) + cb[3] * t;
@@ -386,4 +413,5 @@ export const BUILTINS: Record<string, Impl> = {
   mix: (a, b, t) => mix(a as string, b as string, t as number),
   lighten: (c, t) => mix(c as string, "#ffffffff", t as number),
   darken: (c, t) => mix(c as string, "#000000ff", t as number),
+  "light-dark": (a, b) => lightDark(a as string, b as string),
 };

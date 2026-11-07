@@ -197,7 +197,7 @@ A font's `style` is one of `'normal' 'italic' 'oblique'`.
 
 Each part is known when compiling, or reads the same part of another font: `(font variable (family fonts.serif.family) (style 'italic') (size 18))`. Such a part takes the other font's value, and its CSS falls back to the other font's variable, `var(--mtp-variable-family, var(--mtp-fonts-serif-family, …))`, so a page restyling the family restyles this font too, unless it restyles this one itself.
 
-Color and font variables are tokens: the page may restyle them with CSS, so no writer (control or listener) can write them (see the data model, "What changes, and what follows" and "On the page").
+Color and font variables are tokens: the page may restyle them with CSS, so no writer (control or listener) can write them (see the data model, "What changes, and what follows" and "On the page"). A color token may carry its own dark value, `(color ink (light-dark '#1f2a44' '#e8e4d8'))`, which the page's CSS variable then falls back to, the mode picked by the page's `color-scheme` (see "Colors" under "Functions").
 
 ### Formulas
 
@@ -519,8 +519,18 @@ Only these eight points are built in. For another, a motif declares a member at 
 |---|---|---|
 | `mix` | two colors, `t` in 0..1 | color |
 | `lighten` `darken` | a color, `t` in 0..1 | color |
+| `light-dark` | a color for a light page, then one for a dark page | color |
 
 A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa'`.
+
+**Light and dark pages.** `(light-dark '#1f2a44' '#e8e4d8')` is one color, drawn as its first value where the page around the figure is light and as its second where it is dark, as CSS's `light-dark()` does: the mode is the CSS `color-scheme` of the place the figure is drawn, so a figure in a page that switches to dark switches with it. It is a color, written wherever one is: a color variable `(color ink (light-dark '#1f2a44' '#e8e4d8'))`, a palette member, a colormap's list, a fill, a stroke, `(defaults …)`. The rules (the author, 2026-11-08, mtp-m34w.1):
+
+- **A color with no dark value is the same in both modes.** Nothing is inverted for the reader.
+- **A color computed from light-dark colors is worked out for each mode on its own:** `mix`, `lighten`, `darken`, a colormap and a move between two colors mix the light values together and the dark values together, so `(mix ink paper 0.5)` is halfway between the two light values on a light page and between the two dark ones on a dark page. A plain color mixed with a light-dark one is mixed into both.
+- **Either argument may itself be a light-dark color:** the first gives its light value and the second its dark one, so `(light-dark ink '#ffffff')` is `ink` on a light page and white on a dark one.
+- **One value for both is one color:** `(light-dark 'red' '#ff0000')` is `'red'`, and so is a mix whose two modes come out the same.
+- **The figure itself never knows the mode;** only its drawing does. So two colors are equal when both of their modes are, a light-dark color shown as text, `$'{c}'` or a readout, reads as its CSS, `light-dark(#1f2a44ff, #e8e4d8ff)`, and its channels, `c.r`, `c.g`, `c.b` and `c.a`, are its light value's.
+- **A token keeps its CSS variable:** a light-dark token `ink` is drawn as `var(--mtp-ink, light-dark(#1f2a44ff, #e8e4d8ff))`, so a page that sets `--mtp-ink` still restyles it, in one mode or, with `light-dark()` of its own, in both.
 
 ### Collections
 

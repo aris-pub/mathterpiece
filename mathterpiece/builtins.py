@@ -233,6 +233,7 @@ BUILTINS: dict[str, Builtin] = {
     "mix": Builtin((COLOR, COLOR, UNIT), COLOR, colors.mix, None),
     "lighten": Builtin((COLOR, UNIT), COLOR, lambda c, t: colors.mix(c, "#ffffffff", t), None),
     "darken": Builtin((COLOR, UNIT), COLOR, lambda c, t: colors.mix(c, "#000000ff", t), None),
+    "light-dark": Builtin((COLOR, COLOR), COLOR, colors.light_dark, None),
 }
 
 # Built-ins whose arguments vary in number or type, handled by the compiler itself.
