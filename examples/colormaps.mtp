@@ -41,6 +41,11 @@
 (func height ((real u) (real w))
   (+ (* 0.6 (sin (+ (* 5 u) 1)) (cos (* 4 w))) (* 0.35 (cos (- (* 3 u) (* 2 w))))))
 
+; The angle of p in degrees, taken within half a turn of near: a drag carried past a full turn
+; goes on turning instead of jumping back.
+(func[real] toward ((point p) (real near))
+  (let ((q (or? (to-polar p) [0 near])) (a q[1])) (+ a (* 360 (round (/ (- near a) 360))))))
+
 (scene board (background paper)
   (string scheme 'viridis' (one-of 'viridis' 'magma' 'cividis' 'blue-white-red'))
   (real sea 0 (>= -0.6) (<= 0.6))
@@ -111,7 +116,7 @@
   doc@'The heatmap, the coast, the colors by number and by name, and the wheel.'
   heat coast chart named dial forms)
 
-(on-drag handle angle doc@'Turns the wheel.')
+(on-drag handle (move angle (to (toward pointer angle))) doc@'Turns the wheel.')
 
 (foreach m ['viridis' 'magma' 'cividis' 'blue-white-red']
   (button #'pick-{m}' (animation (move scheme (to m) (duration 0))) (label m)

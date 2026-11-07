@@ -6,6 +6,11 @@
 (import house paper ink soft terracotta teal saffron plum variable code)
 (import ease cubic-out)
 
+; The angle of p in degrees, taken within half a turn of near: a drag carried past a full turn
+; goes on turning instead of jumping back.
+(func[real] toward ((point p) (real near))
+  (let ((q (or? (to-polar p) [0 near])) (a q[1])) (+ a (* 360 (round (/ (- near a) 360))))))
+
 (scene board (background paper)
   (real theta 60 (>= 10) (<= 350))
   (real parts 5 (>= 1) (<= 8))
@@ -58,7 +63,7 @@
   doc@'The angle with its arc and pie slice, and the ring cut into parts.'
   angle cut forms)
 
-(on-drag tip theta doc@'Opens the angle.')
+(on-drag tip (move theta (to (toward pointer theta))) doc@'Opens the angle.')
 (slider count (move parts (from 1) (to 8)) (label 'parts')
   doc@'Cuts the ring on the right into that many parts.')
 (on-view view (animation (move grow (to 1) (duration 1.4) (ease cubic-out)))

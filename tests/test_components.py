@@ -58,13 +58,13 @@ class TestListeners:
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert (d.name, d.data["shape"], d.data["target"]) == (None, m.id("c"), (m.id("c"), "pos"))
 
-    def test_dragging_a_number_the_position_depends_on(self):
-        m = model(f"{K} (scene s (circle c (x k))) (on-drag c k (<= k 8))")
+    def test_dragging_a_number_by_a_move(self):
+        m = model(f"{K} (scene s (circle c (x k))) (on-drag c (move k (to pointer.x)) (<= k 8))")
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert d.data["conditions"][0]["op"] == "<="
 
-    def test_a_target_the_position_does_not_depend_on(self):
-        error(f"{K} (scene s (circle c)) (on-drag c k)", "position does not depend on")
+    def test_a_target_that_is_not_the_position_needs_a_move(self):
+        error(f"{K} (scene s (circle c)) (on-drag c k)", "is not the shape's position")
 
     def test_when(self):
         m = model("(bool on true) (scene s (circle c)) (on-drag c c.x (active on))")

@@ -18,6 +18,11 @@
         (valign (cond ((> (sind toward) 0.4) 'bottom') ((< (sind toward) -0.4) 'top')
                       (else 'middle'))))))
 
+; The angle of p in degrees, taken within half a turn of near: a drag carried past a full turn
+; goes on turning instead of jumping back.
+(func[real] toward ((point p) (real near))
+  (let ((q (or? (to-polar p) [0 near])) (a q[1])) (+ a (* 360 (round (/ (- near a) 360))))))
+
 (scene board (background paper)
   (real a 50)
   (real b 140)
@@ -44,6 +49,6 @@
   circles radii large middle small)
 
 ; A pin's position is a point on its circle at its angle, so a drag moves the angle.
-(on-drag large a doc@'Slides the pin around the circle of radius 1.')
-(on-drag middle b doc@'Slides the pin around the circle of radius 0.5.')
-(on-drag small c doc@'Slides the pin around the circle of radius 0.1.')
+(on-drag large (move a (to (toward pointer a))) doc@'Slides the pin around the circle of radius 1.')
+(on-drag middle (move b (to (toward pointer b))) doc@'Slides the pin around the circle of radius 0.5.')
+(on-drag small (move c (to (toward pointer c))) doc@'Slides the pin around the circle of radius 0.1.')

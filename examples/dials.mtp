@@ -50,6 +50,15 @@
 (real between 1.6 (const))
 (real under 1.7 (const))
 
+; The angle of p in degrees, taken within half a turn of near: a drag carried past a full turn
+; goes on turning instead of jumping back.
+(func[real] toward ((point p) (real near))
+  (let ((q (or? (to-polar p) [0 near])) (a q[1])) (+ a (* 360 (round (/ (- near a) 360))))))
+
+; The value whose needle points toward p.
+(func[real] value-at ((gauge d) (point p))
+  (+ d.lo (* (or? (/ (- d.start (toward p d.turn)) d.sweep) 0) (- d.hi d.lo))))
+
 (scene board (background paper)
 
   ; Two rows of dials in a column. The first dial stays where it is, so the panel is moved for
@@ -85,8 +94,10 @@
 ; The knob is a ring, and its middle is not part of it, so a press there reaches the needle
 ; under it: the needle can be dragged too. Each dial's own lo and hi limit its drag.
 (foreach d [speed heat pressure thin bold half]
-  (on-drag d.knob d.value (>= d.value d.lo) (<= d.value d.hi) doc@'Turns the dial by its knob.')
-  (on-drag d.needle d.value (>= d.value d.lo) (<= d.value d.hi)
+  ; The needle turns from start, sweep degrees for the whole range: its angle gives the value.
+  (on-drag d.knob (move d.value (to (value-at d pointer))) (>= d.value d.lo) (<= d.value d.hi)
+    doc@'Turns the dial by its knob.')
+  (on-drag d.needle (move d.value (to (value-at d pointer))) (>= d.value d.lo) (<= d.value d.hi)
     doc@'Turns the dial by its needle.'))
 
 (slider speed-slider (move speed.value (from 0) (to 120)) (label 'speed'))

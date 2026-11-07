@@ -328,8 +328,10 @@
     (label 'all')
   doc@'Shows all densities together.')
 
-(on-drag n-grab L doc@'Changes the number of levels.')
-(on-drag t-handle t (<= t (+ L 0.5)) doc@'Changes the density.')
+; The grab sits at x = 54 + 41.2 L, and the handle at x = 54 + 412 (t - 1/2) / lv.
+(on-drag n-grab (move L (to (round (/ (- pointer.x 54) 41.2)))) doc@'Changes the number of levels.')
+(on-drag t-handle (move t (to (+ 0.5 (/ (* (- pointer.x 54) lv) 412)))) (<= t (+ L 0.5))
+  doc@'Changes the density.')
 
 (readout heading $'n = {(round (^ 2 L))} points, {L} levels'
   doc@'The number of points and of levels.')

@@ -3037,27 +3037,56 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_on_drag(self, obj: Obj, items: list, shape: int) -> None:
-        if not items or not isinstance(items[0], Name):
+        """(on-drag shape target) for the shape's own position, which follows the pointer, or
+        (on-drag shape (move target (to expr))), whose to reads the name pointer: where the
+        pointer has moved the shape's position to, in the frame the position lives in. A drag
+        never searches for a value (the author, 2026-11-07, mtp-r6al)."""
+        if not items or not (isinstance(items[0], Name) or _head(items[0]) == "move"):
             raise CompileError(
-                "on-drag is (on-drag shape target item…), its target a variable or an attribute",
+                "on-drag is (on-drag shape target item…), its target the shape's position, or"
+                " (move target (to expr)), whose to reads pointer",
                 obj.pos,
             )
-        target = items.pop(0)
+        given = items.pop(0)
         if self.inside_fixed(shape):
             raise CompileError(
                 "this shape is inside a fixed-size group, whose members have no size in scene"
                 " units: drag the group instead",
                 obj.pos,
             )
-        i, attr, _ = self.writable(target, self.cscope)
+        mapped = None
+        if isinstance(given, Name):
+            target = given
+        else:
+            assert isinstance(given, Form)
+            parts = given.items[1:]
+            if (
+                len(parts) != 2
+                or not isinstance(parts[0], Name)
+                or _head(parts[1]) != "to"
+                or len(parts[1].items) != 2
+            ):
+                raise CompileError(
+                    "a drag's move takes its target and its to, and nothing else: it writes"
+                    " (move target (to expr)) at every move of the pointer",
+                    given.pos,
+                )
+            target, mapped = parts[0], parts[1].items[1]
+        i, attr, t = self.writable(target, self.cscope)
         own = i == shape and attr in ("x", "y", "pos")
-        if not own and (i, attr) not in self.position_deps(shape):
+        if mapped is None and not own:
+            shown = _name_text(target)
             raise CompileError(
-                f"{_name_text(target)} is not the shape's position, and its position does not"
-                " depend on it",
+                f"{shown} is not the shape's position: say what the pointer makes it,"
+                f" (on-drag {self.model.objects[shape].name} (move {shown} (to …)))",
                 target.pos,
             )
         obj.data["shape"], obj.data["target"] = shape, (i, attr)
+        if mapped is not None:
+            scope = {**self.cscope, "pointer": Expr("local", POINT, ("pointer",))}
+            # Like any write, a drag's is brought into the target's constraints when it is made,
+            # so the map need only give the target's type.
+            obj.data["map"] = self.attribute(_loose(t), mapped, mapped.pos, "to", scope=scope)
         self.active(obj, items)
         # The runtime writes a drag of pos as a write to x and one to y, and limits each by its
         # own conditions, so a condition may limit either (mtp-0814).

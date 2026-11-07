@@ -606,11 +606,12 @@ export class Runtime {
   }
 
   /** The value of a condition, a limit or a when, which belong to no attribute. */
-  evaluate(p: Attribute): unknown {
-    if (isStart(p)) return this.compile(p.start)(TOP);
+  evaluate(p: Attribute, locals: Record<string, unknown> = {}): unknown {
+    const ctx = { ...TOP, locals };
+    if (isStart(p)) return this.compile(p.start)(ctx);
     if (!isBound(p)) return this.decode(p.type, p.free);
     this.evaluations++;
-    return this.compile(p.bound)(TOP);
+    return this.compile(p.bound)(ctx);
   }
 
   // Values ------------------------------------------------------------------------------

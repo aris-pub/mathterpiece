@@ -17,15 +17,14 @@ describe("a drag", () => {
     expect(v("dot", "pos")).toEqual([2, 3]);
   });
 
-  it("finds the value of a number the position depends on that brings it closest", () => {
+  it("writes a number from the pointer, by the drag's move", () => {
     const [rt, drags, v] = setup();
     drags.grab(rt.id("orbit"), [2, 0]);
     drags.move([0, 2]);
     expect(v("k") as number).toBeCloseTo(10, 0);
   });
 
-  it("tells the page once per pointer move, however many values it tries", () => {
-    // Each change redraws every canvas, so the search's own writes must not each tell the page.
+  it("tells the page once per pointer move", () => {
     const [rt, drags, v] = setup();
     let told = 0;
     rt.onChange(() => told++);
@@ -63,7 +62,6 @@ describe("a drag", () => {
   });
 
   it("moves an int target by whole steps", () => {
-    // mtp-q44: the search used to step by 1e-6, which the write into an int rounds away.
     const [rt, drags, v] = setup();
     drags.grab(rt.id("stepper"), [0, 0]);
     drags.move([3.2, 0]);
@@ -71,10 +69,24 @@ describe("a drag", () => {
   });
 
   it("moves a target that starts at its upper limit", () => {
-    // mtp-n8j: the search used to step only upward, which the limit undoes.
     const [rt, drags, v] = setup();
     drags.grab(rt.id("edge"), [10, 5]);
     drags.move([7, 5]);
     expect(v("top") as number).toBeCloseTo(7, 6);
+  });
+
+  it("gives the move the pointer in the frame the shape's position lives in", () => {
+    // The handle is drawn turned a quarter: at [0, 1] in the scene for start [1, 0].
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("handle"), [0, 1]);
+    drags.move([-1, 1]);
+    expect((v("start") as number[]).map((x) => Math.round(x * 1e9) / 1e9)).toEqual([1, 1]);
+  });
+
+  it("gives a fixed-size group's move the pointer in its container's frame", () => {
+    const [rt, drags, v] = setup();
+    drags.grab(rt.id("grip"), [0, 1]);
+    drags.move([-1, 1]);
+    expect((v("corner") as number[]).map((x) => Math.round(x * 1e9) / 1e9)).toEqual([1, 1]);
   });
 });

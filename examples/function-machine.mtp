@@ -80,8 +80,9 @@
 (slider b-knob (move b (from -5) (to 5)) (label 'b') doc@'Sets b.')
 (slider c-knob (move c (from -5) (to 5)) (label 'c') doc@'Sets c.')
 
-(on-drag crossing c doc@'Moves the graph up and down.')
-(on-drag vertex b doc@'Slides the vertex along its path, changing b.')
+(on-drag crossing (move c (to pointer.y)) doc@'Moves the graph up and down.')
+; The vertex sits at x = -b / 2a, so the pointer's x gives b.
+(on-drag vertex (move b (to (* -2 a pointer.x))) doc@'Slides the vertex along its path, changing b.')
 
 ; Where the graph turns and where it crosses the x axis, in words.
 (readout facts

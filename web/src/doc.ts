@@ -81,6 +81,8 @@ export interface Obj {
   animation?: number | null;
   conditions?: Clamp[];
   target?: [number, string | null] | null;
+  // on-drag: the move's to, which reads the name pointer (mtp-r6al).
+  map?: Attribute;
   shape?: number;
   // A formula's LaTeX; a term's name in it and its formula; the formula a display shows, and
   // whether inside a paragraph or as a block (mtp-bz6h).

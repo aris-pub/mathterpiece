@@ -62,11 +62,11 @@ class TestPosition:
         model("(scene s (arc a (stroke 'black'))) (on-drag a a.pos)")
 
     def test_an_angle_is_dragged_through_a_handle(self):
-        # A drag writes a number the shape's position depends on, and an arc's center does not
-        # depend on its angles, so a handle on the arc's end is dragged instead.
+        # A handle on the arc's end is dragged, and its move gives the angle of the pointer.
         model(
             "(real t 90) (scene s (arc a (to t) (stroke 'black'))"
-            " (circle h (pos (polar 1 t)) (r 0.1))) (on-drag h t)"
+            " (circle h (pos (polar 1 t)) (r 0.1)))"
+            " (on-drag h (move t (to (let ((q (or? (to-polar pointer) [1 t]))) q[1]))))"
         )
 
 

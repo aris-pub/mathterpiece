@@ -29,6 +29,11 @@
 
 ; One group per function: its line, its name, and its value, so a toggle shows or hides all three.
 ; The circle has radius 1, and the canvas's view box makes it large.
+; The angle of p in degrees, taken within half a turn of near: a drag carried past a full turn
+; goes on turning instead of jumping back.
+(func[real] toward ((point p) (real near))
+  (let ((q (or? (to-polar p) [0 near])) (a q[1])) (+ a (* 360 (round (/ (- near a) 360))))))
+
 (scene plane (background paper)
   ; An angle: dragging past 360 goes on from 0.
   (real theta 40 (wrap 0 360))
@@ -141,7 +146,8 @@
   (when show-cot.value cotangent)
   handle)
 
-(on-drag handle theta doc@'Slides the point along the circle, which changes theta.')
+(on-drag handle (move theta (to (toward pointer theta)))
+  doc@'Slides the point along the circle, which changes theta.')
 (slider turn (move theta (from 0) (to 360)) (label 'θ'))
 
 (readout x-now $'{(cosd theta):+z.3f}' (font number) doc@'cos θ, for the text around the canvas.')

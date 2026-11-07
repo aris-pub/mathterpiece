@@ -1,9 +1,10 @@
 // Dragging (docs/reference.md, "Dragging"): a press goes up the scene tree from the shape hit to
 // the nearest shape with an on-drag whose when holds. A target that is the shape's own x, y or
 // pos follows the pointer, keeping the offset it had at the press; a group moves every member, and
-// a fixed-size group its translate, since its members are in screen pixels (mtp-ggs); a
-// number the shape's position depends on takes the value that brings the shape closest to where
-// the pointer has moved it. The listener's conditions clamp each write.
+// a fixed-size group its translate, since its members are in screen pixels (mtp-ggs). Any other
+// target is written by the drag's move: its to reads pointer, where the pointer has moved the
+// shape's position, in the frame that position lives in (mtp-r6al). The listener's conditions
+// clamp each write.
 import { apply, compose, invert } from "./builtins.ts";
 import type { Obj } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
@@ -20,6 +21,8 @@ interface Held {
   members?: [number, Point][];
   // A fixed-size group, moved by its translate.
   fixed?: boolean;
+  // A drag written by a move whose to reads pointer.
+  mapped?: boolean;
   // Whether the pointer has moved since the press.
   moved?: boolean;
 }
@@ -78,6 +81,15 @@ export class Drags {
     const target = listener.target!;
     const own = target[0] === shape && ["x", "y", "pos"].includes(target[1] ?? "");
     const rt = this.rt;
+    if (listener.map) {
+      // Where the shape's position is, and the pointer, in the frame the position lives in: a
+      // fixed-size group's translate in its container's, any other shape's in its own.
+      const fixed = Boolean(rt.objects[shape]!["fixed-size"]);
+      const start = (fixed ? rt.value(shape, "translate") : rt.value(shape, "pos")) as Point;
+      const grab = fixed ? this.inFrame(rt.parent(shape), scene) : this.ownFrame(shape, scene);
+      this.held = { listener, shape, target, grab, start, fixed, mapped: true };
+      return true;
+    }
     if (rt.objects[shape]!["fixed-size"] && own) {
       const start = rt.value(shape, "translate") as Point;
       this.held = { listener, shape, target, grab: this.inFrame(rt.parent(shape), scene), start, fixed: true };
@@ -90,13 +102,8 @@ export class Drags {
       this.held = { listener, shape, target, grab: this.inFrame(shape, scene), start: [0, 0], members };
       return true;
     }
-    this.held = {
-      listener,
-      shape,
-      target,
-      grab: own ? this.ownFrame(shape, scene) : scene,
-      start: own ? (rt.value(shape, "pos") as Point) : this.where(shape),
-    };
+    // The shape's own position: the compiler gives any other target a move (mtp-r6al).
+    this.held = { listener, shape, target, grab: this.ownFrame(shape, scene), start: rt.value(shape, "pos") as Point };
     return true;
   }
 
@@ -112,6 +119,17 @@ export class Drags {
     const [id, attr] = held.target;
     const rt = this.rt;
     let changed = false;
+    if (held.mapped) {
+      const [px, py] = held.fixed ? this.inFrame(rt.parent(held.shape), scene) : this.ownFrame(held.shape, scene);
+      const pointer: Point = [held.start[0] + px - held.grab[0], held.start[1] + py - held.grab[1]];
+      const value = rt.evaluate(held.listener.map!, { pointer });
+      if (attr === "pos" && id === held.shape) {
+        const [x, y] = value as Point;
+        changed = rt.write(id, "x", this.clamped(id, "x", x));
+        return rt.write(id, "y", this.clamped(id, "y", y)) || changed;
+      }
+      return rt.write(id, attr, typeof value === "number" ? this.clamped(id, attr, value) : value);
+    }
     if (held.fixed) {
       const [px, py] = this.inFrame(this.rt.parent(held.shape), scene);
       const x = attr === "y" ? held.start[0] : held.start[0] + px - held.grab[0];
@@ -133,11 +151,7 @@ export class Drags {
       if (attr !== "x") changed = rt.write(id, "y", this.clamped(id, "y", held.start[1] + py - held.grab[1])) || changed;
       return changed;
     }
-    const aim: Point = [held.start[0] + scene[0] - held.grab[0], held.start[1] + scene[1] - held.grab[1]];
-    const before = rt.value(id, attr) as number;
-    const best = this.closest(held.shape, id, attr, before, aim);
-    rt.write(id, attr, before);
-    return rt.write(id, attr, this.clamped(id, attr, best));
+    return changed;
   }
 
   release(): void {
@@ -149,57 +163,6 @@ export class Drags {
       if (c.target[0] === id && c.target[1] === attr) v = this.rt.clamp(c, v);
     }
     return v;
-  }
-
-  // Gauss-Newton on one number: from the current value, step along the direction in which the
-  // shape moves, halving steps that do not bring it closer. Starting from where it is keeps the
-  // shape from jumping to another position that is as close (the far side of a circle). Steps
-  // are measured by the value the write stores: at a limit a step up is undone, so it tries a
-  // step down, and an int rounds a small step away, so it tries a whole one.
-  private closest(shape: number, id: number, attr: string | null, from: number, aim: Point): number {
-    const rt = this.rt;
-    const set = (value: number): number => {
-      rt.write(id, attr, value);
-      return rt.value(id, attr) as number;
-    };
-    const far = (p: Point) => (p[0] - aim[0]) ** 2 + (p[1] - aim[1]) ** 2;
-    let value = set(from);
-    let where = this.where(shape);
-    let distance = far(where);
-    for (let k = 0; k < 30; k++) {
-      const small = 1e-6 * Math.max(1, Math.abs(value));
-      let h = 0;
-      for (const tried of [small, -small, 1, -1]) {
-        h = set(value + tried) - value;
-        if (h !== 0) break;
-      }
-      if (h === 0) break;
-      const ahead = this.where(shape);
-      const along: Point = [(ahead[0] - where[0]) / h, (ahead[1] - where[1]) / h];
-      const speed = along[0] ** 2 + along[1] ** 2;
-      if (speed < 1e-20) break;
-      const step = (along[0] * (aim[0] - where[0]) + along[1] * (aim[1] - where[1])) / speed;
-      let moved = false;
-      for (let t = 1; t > 1e-3; t /= 2) {
-        const stored = set(value + t * step);
-        const next = this.where(shape);
-        const d = far(next);
-        if (d < distance) {
-          value = stored;
-          where = next;
-          distance = d;
-          moved = true;
-          break;
-        }
-      }
-      if (!moved || Math.abs(step) < 1e-10 * Math.max(1, Math.abs(value))) break;
-    }
-    return value;
-  }
-
-  // The shape's position as drawn, in scene coordinates.
-  private where(shape: number): Point {
-    return this.rt.read(shape, "pos", null) as Point;
   }
 
   // A scene point in the frame a container's members live in.

@@ -281,7 +281,7 @@ A view, a control and a readout must have a name: a page places each by its name
 | `(button name)` | required | none | `(animation …)`, `(label string)`, `(active bool)` | conditions |
 | `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(autoplay)`, `(autoplay name)`, `(active bool)` | conditions |
 | `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(active bool)` | conditions |
-| `(on-drag shape target)` | none | the shape; the target, a `name`, the variable or attribute the drag writes | `(active bool)` | conditions |
+| `(on-drag shape target)` | none | the shape; the target: the shape's own `pos`, `x` or `y`, or `(move target (to expr))`, whose `expr` reads `pointer` | `(active bool)` | conditions |
 | `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
 | `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
 | `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
@@ -354,11 +354,11 @@ Every control and listener emits writes to its target (or, through its animation
 ### Dragging
 
 - **The press** hits the topmost shape under the pointer, then goes up the scene tree to the nearest shape with an `on-drag` that is active, its `(active bool)` holding. That shape is dragged.
-- **The target** is the shape's own position or a number its position depends on.
-- **A target that is the shape's own `x`, `y` or `pos`** follows the pointer's motion, keeping the offset the pointer had from the shape at the press: the shape does not jump to center itself under the pointer. A target of `x` alone or `y` alone follows the pointer along that axis only.
-- **A target that is a number the shape's position depends on** (`theta` in `(polar 1 theta)`) takes the value that brings the shape closest to where the pointer has moved it. The search starts from the current value and stays near it, so the shape never jumps to another position equally close (the far side of a circle). When no value reaches the pointer exactly, the closest is taken.
+- **The target** is the shape's own position, written as a name, or anything else a writer may write, written as a move: `(on-drag tip (move theta (to expr)))`.
+- **A target that is the shape's own `x`, `y` or `pos`** follows the pointer's motion, keeping the offset the pointer had from the shape at the press: the shape does not jump to center itself under the pointer. A target of `x` alone or `y` alone follows the pointer along that axis only. `(on-drag p p.pos)` is short for `(on-drag p (move p.pos (to pointer)))`, and `p.x` and `p.y` likewise.
+- **A move** takes its target and its `to`, and nothing else: no `from`, `duration`, `ease`, `path` or `(like …)`. At every move of the pointer, the drag writes the value of `to`, which reads the name `pointer`: where the pointer has moved the shape's position to, keeping the offset of the press, in the frame that position lives in (for a fixed-size group, its `translate`'s). The illustrator says how the pointer gives the target; nothing is searched for. An angle, for a handle at `(polar 1.1 theta)`: `(on-drag tip (move theta (to (let ((q (or? (to-polar pointer) [0 theta]))) q[1]))))`. A point a turned copy of the shape reads: `(on-drag copy (move start (to pointer)))`, since the pointer arrives already turned back. Inside the move, `pointer` hides any variable of that name; outside a drag it means nothing.
 - **A group** moves every member by the pointer's motion, and a group with `(fixed-size true)` its `translate` (see "Containers").
-- **Any other target is a compile error**, such as an arc's `to`, a ring's `width` or a circle's `r`: the drag moves the shape's position, and these never move it, so no value brings the shape any closer to the pointer. To drag one, declare the number as a variable, have the shape read it, and drag a point whose position depends on it: `(real theta 60) (arc mark (r 1.1) (to theta)) (circle tip (pos (polar 1.1 theta)) (r 0.15)) (on-drag tip theta)`. examples/arcs.mtp does this.
+- **What `to` gives** is written as any write is: brought into the target's constraints, and limited by the listener's conditions. A name that is not the shape's own position, written without a move, is a compile error that shows the move to write. examples/arcs.mtp drags an angle this way.
 
 ### Panning and zooming
 
