@@ -78,7 +78,8 @@ just check       # lint, type checks and both test suites
 
 - `mathterpiece/`: the compiler (`parse.py`, `compiler.py`, `mtpc.py`) and the `mtp` command.
 - `web/src/`: the runtime, which plays a `.mtpc` and defines the page's elements.
-- `docs/`: the language and the file format.
+- `docs/`: the language and the file format, and `docs/figure-guidelines.md`, the rules every
+  figure here follows (phones and touch first).
 - `examples/`: one world model per feature to read and try, and the interactive ones from the
   Bourgain notes (`bourgain-*.mtp`). `house.mtp` is not a world model to show: it holds the colors and fonts
   the examples share, and they import it.
