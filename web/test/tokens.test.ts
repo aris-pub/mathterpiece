@@ -46,6 +46,15 @@ describe("a color computed from tokens", () => {
     expect(paintCss(rt, dot, "fill")).toBe(ink);
   });
 
+  it("follows a write to the token it reads", () => {
+    const [rt, fill] = setup();
+    expect(fill("direct")).toBe(ink);
+    expect(fill("mixed")).toBe(`color-mix(in srgb, ${ink} 75%, ${paper} 25%)`);
+    rt.write(rt.id("ink"), null, "#ff0000ff");
+    expect(fill("direct")).toBe("var(--mtp-ink, #ff0000ff)");
+    expect(fill("mixed")).toBe(`color-mix(in srgb, var(--mtp-ink, #ff0000ff) 75%, ${paper} 25%)`);
+  });
+
   it("stays a plain color when it reads no token", () => {
     const [, fill] = setup();
     expect(fill("plain")).toBe("#ff0000ff");

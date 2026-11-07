@@ -11,5 +11,6 @@
   (circle chosen (fill (if on ink paper)))
   (circle picked (fill (cond ((= pick 0) ink) ((= pick 1) 'red') (else paper))))
   (circle plain (fill (if on 'red' 'blue')))
-  (tag tagged (mark ink)))
+  (tag tagged (mark ink))
+  (circle direct (fill ink)))
 (canvas v s)

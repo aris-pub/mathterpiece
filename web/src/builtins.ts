@@ -177,16 +177,30 @@ function lerp(a: unknown, b: unknown, t: number): unknown {
 
 /** Transforms as [a b c d e f]: x' = a x + c y + e, y' = b x + d y + f; the first applies first. */
 export function compose(...ts: Transform[]): Transform {
-  let [a, b, c, d, e, f] = [1, 0, 0, 1, 0, 0];
-  for (const [a2, b2, c2, d2, e2, f2] of ts as [number, number, number, number, number, number][]) {
-    [a, b, c, d, e, f] = [
-      a2 * a + c2 * b,
-      b2 * a + d2 * b,
-      a2 * c + c2 * d,
-      b2 * c + d2 * d,
-      a2 * e + c2 * f + e2,
-      b2 * e + d2 * f + f2,
-    ];
+  // Reads compose transforms all the time, so this makes no arrays on the way.
+  let a = 1;
+  let b = 0;
+  let c = 0;
+  let d = 1;
+  let e = 0;
+  let f = 0;
+  for (const t of ts) {
+    const a2 = t[0]!;
+    const b2 = t[1]!;
+    const c2 = t[2]!;
+    const d2 = t[3]!;
+    const na = a2 * a + c2 * b;
+    const nb = b2 * a + d2 * b;
+    const nc = a2 * c + c2 * d;
+    const nd = b2 * c + d2 * d;
+    const ne = a2 * e + c2 * f + t[4]!;
+    const nf = b2 * e + d2 * f + t[5]!;
+    a = na;
+    b = nb;
+    c = nc;
+    d = nd;
+    e = ne;
+    f = nf;
   }
   return [a, b, c, d, e, f];
 }

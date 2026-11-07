@@ -57,6 +57,15 @@ describe("reads and frames", () => {
     expect(rt.value(rt.id("outside"))).toBe(6);
     expect(rt.value(rt.id("inside"))).toBe(6);
   });
+
+  it("converts again after a transform on the way is written", () => {
+    const rt = load("frames");
+    expect(rt.value(rt.id("outside"))).toBe(6);
+    rt.write(rt.id("g"), "translate", [7, 0]);
+    expect(rt.value(rt.id("outside"))).toBe(8);
+    expect(rt.value(rt.id("inside"))).toBe(8);
+    expect(rt.value(rt.id("q"), "x")).toBe(1);
+  });
 });
 
 describe("none", () => {

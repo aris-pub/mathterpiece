@@ -73,6 +73,24 @@ interface Ctx {
 }
 
 type Compiled = (ctx: Ctx) => unknown;
+
+const FREE = 0;
+const BOUND = 1;
+const START = 2;
+
+/** A variable or an attribute: its value, as written or as last computed, and how it gets it. */
+interface Slot {
+  key: string;
+  type: Type;
+  state: typeof FREE | typeof BOUND | typeof START;
+  value: unknown;
+  fn: Compiled | null;
+  // Whether a bound value is computed and not forgotten since.
+  cached: boolean;
+  // Its CSS (see css), computed once until what it reads is written.
+  css: string | null;
+  cssKnown: boolean;
+}
 type CompiledCss = (ctx: Ctx) => string | null;
 /** A function value: its arguments, and the frame of the expression calling it. */
 export type FnValue = (args: unknown[], frame: number | null) => unknown;
@@ -116,15 +134,20 @@ export class Runtime {
   /** How many bound values have been computed, so a test can see what a write recomputes. */
   evaluations = 0;
   private parents: (number | null)[];
-  private free = new Map<string, unknown>();
-  private bound = new Map<string, Compiled>();
+  // Each object's variables and attributes, by attribute (null for a variable's value). Reads
+  // are most of the runtime's work, so they find their slot without building a key.
+  private slots: Map<string | null, Slot>[];
+  private byKey = new Map<string, Slot>();
   // free@ values whose starts are not read yet: each is read once, when the model is built.
-  private starts = new Map<string, Compiled>();
+  private starts: Slot[] = [];
+  // For each object, the exists slots of it and of the containers around it.
+  private existsChain: Slot[][] = [];
+  // Each frame transform worked out since the last write, by shape and frame.
+  private frames = new Map<number, number[] | null>();
   private css_ = new Map<string, CompiledCss | null>();
+  private made = new WeakMap<Expr, Compiled>();
   // The rows and columns whose members are being measured, so are not moved to their places.
   private unplaced = new Set<number>();
-  private types = new Map<string, Type>();
-  private cache = new Map<string, unknown>();
   private dependents = new Map<string, Set<string>>();
   private functions: Compiled[] = [];
   private listeners: ((changed: Set<string>) => void)[] = [];
@@ -150,6 +173,7 @@ export class Runtime {
       if (d.kind === "type") this.named.set(d.name, d.type!);
     }
     this.parents = doc.objects.map(() => null);
+    this.slots = doc.objects.map(() => new Map());
     doc.objects.forEach((o, i) => {
       for (const m of o.members ?? []) this.parents[m] = i;
       if (o.clip !== undefined) this.parents[o.clip] = i;
@@ -173,15 +197,25 @@ export class Runtime {
       };
       follow(i);
     });
+    this.existsChain = doc.objects.map((_, id) => {
+      const chain: Slot[] = [];
+      for (let i: number | null = id; i !== null; i = this.parent(i)) {
+        const s = this.slots[i]!.get("exists");
+        if (s) chain.push(s);
+      }
+      return chain;
+    });
     // A start may read another, which is then read first.
-    for (const k of [...this.starts.keys()]) if (this.starts.has(k)) this.started(k);
+    for (const s of this.starts) if (s.state === START) this.started(s);
+    this.starts = [];
   }
 
-  private started(k: string): unknown {
-    const fn = this.starts.get(k)!;
-    this.starts.delete(k);
+  private started(s: Slot): unknown {
+    const fn = s.fn!;
+    s.fn = null;
+    s.state = FREE;
     const v = fn(TOP);
-    this.free.set(k, v);
+    s.value = v;
     return v;
   }
 
@@ -208,18 +242,23 @@ export class Runtime {
 
   private load(id: number, attr: string | null, p: Attribute): void {
     const k = key(id, attr);
-    this.types.set(k, p.type);
+    const s: Slot = { key: k, type: p.type, state: FREE, value: null, fn: null, cached: false, css: null, cssKnown: false };
+    this.slots[id]!.set(attr, s);
+    this.byKey.set(k, s);
     if (isStart(p)) {
-      this.starts.set(k, this.compile(p.start));
+      s.state = START;
+      s.fn = this.compile(p.start);
+      this.starts.push(s);
     } else if (isBound(p)) {
-      this.bound.set(k, this.compile(p.bound));
+      s.state = BOUND;
+      s.fn = this.compile(p.bound);
       for (const [d, a] of p.deps) {
         const dk = key(d, a);
         if (!this.dependents.has(dk)) this.dependents.set(dk, new Set());
         this.dependents.get(dk)!.add(k);
       }
     } else {
-      this.free.set(k, this.decode(p.type, p.free));
+      s.value = this.decode(p.type, p.free);
     }
   }
 
@@ -231,9 +270,7 @@ export class Runtime {
   /** Whether a shape exists now: not while its exists-when, or a container's around it, does
    * not hold. */
   exists(id: number): boolean {
-    for (let i: number | null = id; i !== null; i = this.parent(i)) {
-      if (this.has(i, "exists") && !this.get(key(i, "exists"))) return false;
-    }
+    for (const s of this.existsChain[id]!) if (!this.get(s)) return false;
     return true;
   }
 
@@ -249,30 +286,30 @@ export class Runtime {
     const o = this.objects[id]!;
     if (attr !== "exists" && !this.exists(id)) return null;
     if (attr === null && o.kind !== "variable") return new Ref(id);
-    if (attr === "pos" && !this.has(id, "pos")) {
+    const s = this.slots[id]!.get(attr);
+    if (s) return this.get(s);
+    if (attr === "pos") {
       if (fromPoints(o.kind)) return this.mean(id, null);
       return [this.value(id, "x"), this.value(id, "y")];
     }
-    if ((attr === "x" || attr === "y") && fromPoints(o.kind) && !this.has(id, attr)) {
+    if ((attr === "x" || attr === "y") && fromPoints(o.kind)) {
       return (this.mean(id, null) as number[])[attr === "x" ? 0 : 1];
     }
-    return this.get(key(id, attr));
+    throw new Error(`no variable or attribute ${key(id, attr)}`);
   }
 
   private has(id: number, attr: string | null): boolean {
-    const k = key(id, attr);
-    return this.free.has(k) || this.bound.has(k) || this.starts.has(k);
+    return this.slots[id]!.has(attr);
   }
 
-  private get(k: string): unknown {
-    if (this.free.has(k)) return this.free.get(k);
-    if (this.starts.has(k)) return this.started(k);
-    if (this.cache.has(k)) return this.cache.get(k);
-    const fn = this.bound.get(k);
-    if (!fn) throw new Error(`no variable or attribute ${k}`);
+  private get(s: Slot): unknown {
+    if (s.state === FREE) return s.value;
+    if (s.state === START) return this.started(s);
+    if (s.cached) return s.value;
     this.evaluations++;
-    const v = fn(TOP);
-    this.cache.set(k, v);
+    const v = s.fn!(TOP);
+    s.value = v;
+    s.cached = true;
     return v;
   }
 
@@ -367,7 +404,7 @@ export class Runtime {
 
   /** The type of a variable or an attribute. */
   typeOf(id: number, attr: string | null): Type | undefined {
-    return this.types.get(key(id, attr));
+    return this.slots[id]!.get(attr)?.type;
   }
 
   /**
@@ -446,22 +483,26 @@ export class Runtime {
   }
 
   private writeKey(k: string, value: unknown, changed: Set<string>): void {
-    if (!this.free.has(k)) throw new Error(`${k} is not a free variable or attribute`);
-    const t = this.types.get(k)!;
-    const old = this.free.get(k);
-    const v = this.constrain(t, value, old);
+    const s = this.byKey.get(k);
+    if (!s || s.state !== FREE) throw new Error(`${k} is not a free variable or attribute`);
+    const old = s.value;
+    const v = this.constrain(s.type, value, old);
     // A write that changes nothing is skipped, so nothing downstream is computed again.
     if (v === undefined || equal(v, old)) return;
-    this.free.set(k, v);
+    s.value = v;
+    s.cssKnown = false;
     changed.add(k);
     this.places.clear();
+    this.frames.clear();
     this.forget(k, changed);
   }
 
   private forget(k: string, changed: Set<string>): void {
     for (const d of this.dependents.get(k) ?? []) {
-      if (!this.cache.has(d) && changed.has(d)) continue;
-      this.cache.delete(d);
+      const s = this.byKey.get(d)!;
+      if (!s.cached && changed.has(d)) continue;
+      s.cached = false;
+      s.cssKnown = false;
       changed.add(d);
       this.forget(d, changed);
     }
@@ -511,7 +552,15 @@ export class Runtime {
    */
   css(id: number, attr: string | null): string | null {
     const f = this.cssOf(id, attr);
-    return f ? f(TOP) : null;
+    if (!f) return null;
+    // It reads what the value reads, so it is forgotten with the value.
+    const s = this.slots[id]!.get(attr);
+    if (!s) return f(TOP);
+    if (!s.cssKnown) {
+      s.css = f(TOP);
+      s.cssKnown = true;
+    }
+    return s.css;
   }
 
   private cssOf(id: number, attr: string | null): CompiledCss | null {
@@ -608,10 +657,20 @@ export class Runtime {
   /** The value of a condition, a limit or a when, which belong to no attribute. */
   evaluate(p: Attribute, locals: Record<string, unknown> = {}): unknown {
     const ctx = { ...TOP, locals };
-    if (isStart(p)) return this.compile(p.start)(ctx);
+    if (isStart(p)) return this.compiled(p.start)(ctx);
     if (!isBound(p)) return this.decode(p.type, p.free);
     this.evaluations++;
-    return this.compile(p.bound)(ctx);
+    return this.compiled(p.bound)(ctx);
+  }
+
+  // Conditions, actives and canvas items are evaluated again and again, so each is made once.
+  private compiled(e: Expr): Compiled {
+    let f = this.made.get(e);
+    if (!f) {
+      f = this.compile(e);
+      this.made.set(e, f);
+    }
+    return f;
   }
 
   // Values ------------------------------------------------------------------------------
@@ -1039,6 +1098,19 @@ export class Runtime {
 
   /** The transform from a shape's frame to its container frame's, or null when there is none. */
   private frameOf(id: number, frame: number | null): number[] | null {
+    // While a row is measured its members are not at their places, so nothing is kept then.
+    if (this.unplaced.size > 0) return this.frameNow(id, frame);
+    const n = this.objects.length;
+    const k = id * (n + 1) + (frame === null ? n : frame);
+    let m = this.frames.get(k);
+    if (m === undefined) {
+      m = this.frameNow(id, frame);
+      this.frames.set(k, m);
+    }
+    return m;
+  }
+
+  private frameNow(id: number, frame: number | null): number[] | null {
     const shared = new Set<number>();
     for (let j: number | null = frame; j !== null; j = this.parents[j]!) shared.add(j);
     const steps: number[][] = [];
