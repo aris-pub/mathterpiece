@@ -5573,6 +5573,10 @@ def _locals(e) -> set:
     """The parameter names an expression reads."""
     if isinstance(e, Expr):
         own = {e.args[0]} if e.op == "local" else set()
+        # A nested function's names are strings, not reads: count them, so the function around
+        # it captures them too and can pass them on.
+        if e.op == "func":
+            own = set(e.args[1])
         return own.union(*(_locals(a) for a in e.args))
     if isinstance(e, tuple):
         return set().union(*(_locals(a) for a in e))

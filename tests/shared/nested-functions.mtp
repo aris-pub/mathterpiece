@@ -1,0 +1,13 @@
+; A function nested two deep reads a parameter of the outermost one: the function between them
+; captures it to pass it on, though it never reads it itself. What the innermost reads through
+; it, a shape's attribute, is followed as a direct read would be.
+; expect hits 3
+; write n 1
+; expect hits 3
+; expect at-origin 2
+; write a.x 5
+; expect at-origin 1
+(int n 0)
+(int hits (count (range (+ 5 n)) (fn k (any (range 2) (fn p (any (range 3) (fn j (= j k))))))))
+(scene sc (group g (circle a (r 1)) (circle b (r 1))))
+(int at-origin (count g (fn s (any (range 2) (fn j (= s.x (* j n)))))))
