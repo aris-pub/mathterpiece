@@ -72,6 +72,7 @@ def test_the_examples_that_use_the_house_style_import_it():
             "placement",
             "rows",
             "spiral-of-copies",
+            "split-screen-race",
             "times-tables",
             "triangle-lines",
             "two-canvases",

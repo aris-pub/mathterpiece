@@ -1,0 +1,90 @@
+; Two cars race around a closed track. The map shows the whole track, and each player has a
+; canvas of their own that follows their car, turned so the car always points up. Each player
+; sets their car's speed with a slider. Press race to start.
+;
+; The track is one thick curve. Its width is in screen pixels, as every stroke's is, so it is as
+; wide in the close views as on the map, and the cars are measured in pixels too, so they fit
+; on it in every view.
+
+(import house paper ink terracotta teal)
+
+(color grass '#7fa66b')
+(color asphalt '#55585e')
+(color glass '#cfe3ea')
+(color tyre '#22252a')
+(color lamp '#f4d35e')
+
+(motif car ((color paint))
+  doc@'A race car seen from above, facing right, measured in pixels: wheels, a body with a
+       stripe down it, a windscreen and rear window, headlights and a spoiler.'
+  (group wheels (defaults (fill tyre) (stroke none))
+    (rect_ (pos [8 7.5]) (width 7) (height 3.5) (rx 1))
+    (rect_ (pos [8 -7.5]) (width 7) (height 3.5) (rx 1))
+    (rect_ (pos [-8 7.5]) (width 7) (height 3.5) (rx 1))
+    (rect_ (pos [-8 -7.5]) (width 7) (height 3.5) (rx 1)))
+  (rect body (pos [0 0]) (width 28) (height 13) (rx 5) (fill paint) (stroke ink)
+      (stroke-width 1))
+  (rect stripe (pos [0 0]) (width 28) (height 3) (fill paper) (fill-opacity 0.8) (stroke none))
+  (group windows (defaults (fill glass) (stroke ink) (stroke-width 0.75))
+    (rect_ (pos [4.5 0]) (width 4.5) (height 10) (rx 1.5))
+    (rect_ (pos [-5.5 0]) (width 3) (height 9) (rx 1.5)))
+  (group lights (defaults (fill lamp) (stroke none))
+    (circle_ (pos [13 4]) (r 1.6))
+    (circle_ (pos [13 -4]) (r 1.6)))
+  (rect spoiler (pos [-14 0]) (width 3) (height 16) (rx 1) (fill ink) (stroke none)))
+
+; The track, at u degrees around it.
+(func[point] track ((real u))
+  [(* 10 (cosd u))
+   (+ (* 6 (sind u)) (* 1.5 (sind (* 3 u))))])
+; The direction the track runs at u, in degrees.
+(func[real] heading ((real u))
+  (let ((p (or? (to-polar (- (track (+ u 0.5)) (track (- u 0.5)))) [1 0]))) p[1]))
+
+; How far each car has gone, in degrees around the track, and how fast each player drives it.
+(real run-1 0)
+(real run-2 0)
+(real gas-1 0.5)
+(real gas-2 0.5)
+
+(scene circuit (background grass)
+  (polyline road
+      (points (map (range 0 360 (num 361)) (fn u (track u))))
+      (stroke asphalt) (stroke-width 44) (line-join 'round') (line-cap 'round') (fill none))
+  (polyline middle
+      (points (map (range 0 360 (num 361)) (fn u (track u))))
+      (stroke paper) (stroke-width 2) (dash [10 12]) (fill none))
+
+  ; Each car is measured in pixels, around its place on the track, and turned to face the way
+  ; the track runs: player 1 keeps to the left half of the road, and player 2 to the right.
+  (group car-1 (fixed-size true)
+      (transform (let ((p (track run-1))) (transform (rotate (heading run-1)) (translate p.x p.y))))
+    (car_ (paint terracotta) (pos [0 11])))
+  (group car-2 (fixed-size true)
+      (transform (let ((p (track run-2))) (transform (rotate (heading run-2)) (translate p.x p.y))))
+    (car_ (paint teal) (pos [0 -11]))))
+
+(canvas map (x -12.5) (y -8.5) (width 25) (height 17) (pan false) (zoom false)
+  doc@'The whole track, with both cars.'
+  circuit)
+(canvas view-1 (x (- (. (track run-1) x) 4)) (y (- (. (track run-1) y) 3)) (width 8) (height 6)
+    (transform (rotate (- 90 (heading run-1)))) (pan false) (zoom false)
+  doc@'Player 1\'s car, from close by, facing up.'
+  circuit)
+(canvas view-2 (x (- (. (track run-2) x) 4)) (y (- (. (track run-2) y) 3)) (width 8) (height 6)
+    (transform (rotate (- 90 (heading run-2)))) (pan false) (zoom false)
+  doc@'Player 2\'s car, from close by, facing up.'
+  circuit)
+
+(readout laps-1 $'player 1: lap {(+ 1 (floor (/ run-1 360)))}' doc@'Player 1\'s lap.')
+(readout laps-2 $'player 2: lap {(+ 1 (floor (/ run-2 360)))}' doc@'Player 2\'s lap.')
+
+(slider pedal-1 (move gas-1 (from 0) (to 1)) (label 'player 1') doc@'Player 1\'s speed.')
+(slider pedal-2 (move gas-2 (from 0) (to 1)) (label 'player 2') doc@'Player 2\'s speed.')
+
+(play race (label 'race')
+  doc@'Drives both cars, each as fast as its player sets.'
+    (animation (loop)
+      (at-once (defaults (duration 0.1))
+        (move run-1 (to (+ run-1 (* 8 gas-1))))
+        (move run-2 (to (+ run-2 (* 8 gas-2)))))))
