@@ -27,26 +27,31 @@ const frames = (n = 2) =>
   });
 
 // The page is taller than the screen, so a finger that the figure does not hold scrolls it.
-async function open(name: string): Promise<{ rt: Runtime; svg: SVGSVGElement; v: (n: string, a?: string) => unknown }> {
+async function open(
+  name: string,
+  width = 390,
+): Promise<{ rt: Runtime; svg: SVGSVGElement; v: (n: string, a?: string) => unknown }> {
   window.scrollTo(0, 0);
-  document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="v" style="display: block; width: 390px"></mtp-canvas><div id="below" style="height: 2000px"></div>`;
+  document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="v" style="display: block; width: ${width}px"></mtp-canvas><div id="below" style="height: 2000px"></div>`;
   const model = document.querySelector("mtp-model") as MtpModel;
   model.doc = doc(name);
   const rt = model.runtime!;
   const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
-  svg.style.width = "390px";
-  svg.style.height = "390px";
+  svg.style.width = `${width}px`;
+  svg.style.height = `${width}px`;
   await frames();
   return { rt, svg, v: (n, a) => rt.value(rt.id(n), a ?? null) };
 }
 
-// Where a scene point is on the screen: the view box is 20 units across 390 pixels, y up.
+// Where a scene point is on the screen, y up. A touch is placed on the screen, the visual
+// viewport, which on a phone may stand away from the page's layout viewport.
 function client(svg: SVGSVGElement, x: number, y: number): [number, number] {
   const m = svg.getScreenCTM()!;
-  return [m.a * x + m.c * -y + m.e, m.b * x + m.d * -y + m.f];
+  const view = window.visualViewport!;
+  return [m.a * x + m.c * -y + m.e - view.offsetLeft, m.b * x + m.d * -y + m.f - view.offsetTop];
 }
 
-async function touch(type: "touchStart" | "touchMove" | "touchEnd", at?: [number, number]): Promise<void> {
+async function touch(type: "touchStart" | "touchMove" | "touchEnd" | "touchCancel", at?: [number, number]): Promise<void> {
   const touchPoints = at ? [{ x: at[0], y: at[1] }] : [];
   await session.send("Input.dispatchTouchEvent", { type, touchPoints });
 }
@@ -210,6 +215,30 @@ describe("touch targets", () => {
     await frames();
     expect(v("on-other")).toBe(true);
     await session.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 1, y: 600 });
+  });
+});
+
+describe("a canvas wider than the screen", () => {
+  // As replicas/replica-momentum-damping.mtp on a phone: the canvas is 463 pixels wide on a
+  // screen 390 across, so the page can also move sideways under a finger.
+  it("a press on the band enters it, and the finger moving along it writes, without moving the page", async () => {
+    const { svg, v } = await open("touch", 463);
+    document.querySelector("mtp-canvas")!.scrollIntoView({ block: "center" });
+    await frames();
+    const [x0, y0] = [window.scrollX, window.scrollY];
+    await swipe(client(svg, -6.4, -6), client(svg, -3.2, -6));
+    expect(v("over")).toBe(true);
+    near(v("p"), [-3.2, -6]);
+    expect([window.scrollX, window.scrollY]).toEqual([x0, y0]);
+  });
+
+  it("a press keeps its enter when the browser then cancels the finger", async () => {
+    const { svg, v } = await open("touch", 463);
+    await touch("touchStart", client(svg, -6.4, -6));
+    await touch("touchCancel");
+    await frames();
+    expect([v("over"), v("enters"), v("leaves")]).toEqual([true, 1, 0]);
+    near(v("p"), [-6.4, -6]);
   });
 });
 
