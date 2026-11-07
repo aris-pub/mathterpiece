@@ -42,10 +42,9 @@ so loading the mode again would keep a face's old look."
           (face-spec-set ',face ,spec 'face-defface-spec)))
 
 (mtp-mode--defface mtp-mode-form-head-face
-  '((t :inherit font-lock-type-face :weight bold :slant normal))
-  "Face for the heads of mtp's forms, such as canvas in (canvas view …), in bold, the heaviest
-weight every font has; nothing else in the mode is bold but docstrings and free@. Most heads are
-types, as circle and real are, so it takes the type color.")
+  '((t :weight bold :slant normal))
+  "Face for the heads of mtp's forms, such as canvas in (canvas view …): the text's own color,
+in bold, the heaviest weight every font has.")
 
 (mtp-mode--defface mtp-mode-call-face
   '((t :inherit font-lock-function-call-face :weight normal :slant normal))
