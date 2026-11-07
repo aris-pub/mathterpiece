@@ -17,7 +17,7 @@ import {
   wrapInto,
 } from "./builtins.ts";
 import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
-import { isBound } from "./doc.ts";
+import { isBound, isStart } from "./doc.ts";
 import { cssVariable } from "./css.ts";
 import { format, pyStr } from "./format.ts";
 
@@ -117,6 +117,8 @@ export class Runtime {
   private parents: (number | null)[];
   private free = new Map<string, unknown>();
   private bound = new Map<string, Compiled>();
+  // free@ values whose starts are not read yet: each is read once, when the model is built.
+  private starts = new Map<string, Compiled>();
   private css_ = new Map<string, CompiledCss | null>();
   // The rows and columns whose members are being measured, so are not moved to their places.
   private unplaced = new Set<number>();
@@ -174,6 +176,16 @@ export class Runtime {
       };
       follow(i);
     });
+    // A start may read another, which is then read first.
+    for (const k of [...this.starts.keys()]) if (this.starts.has(k)) this.started(k);
+  }
+
+  private started(k: string): unknown {
+    const fn = this.starts.get(k)!;
+    this.starts.delete(k);
+    const v = fn(TOP);
+    this.free.set(k, v);
+    return v;
   }
 
   private resolve(t: Type): Type {
@@ -200,7 +212,9 @@ export class Runtime {
   private load(id: number, attr: string | null, p: Attribute): void {
     const k = key(id, attr);
     this.types.set(k, p.type);
-    if (isBound(p)) {
+    if (isStart(p)) {
+      this.starts.set(k, this.compile(p.start));
+    } else if (isBound(p)) {
       this.bound.set(k, this.compile(p.bound));
       for (const [d, a] of p.deps) {
         const dk = key(d, a);
@@ -250,11 +264,12 @@ export class Runtime {
 
   private has(id: number, attr: string | null): boolean {
     const k = key(id, attr);
-    return this.free.has(k) || this.bound.has(k);
+    return this.free.has(k) || this.bound.has(k) || this.starts.has(k);
   }
 
   private get(k: string): unknown {
     if (this.free.has(k)) return this.free.get(k);
+    if (this.starts.has(k)) return this.started(k);
     if (this.cache.has(k)) return this.cache.get(k);
     const fn = this.bound.get(k);
     if (!fn) throw new Error(`no variable or attribute ${k}`);
@@ -595,6 +610,7 @@ export class Runtime {
 
   /** The value of a condition, a limit or a when, which belong to no attribute. */
   evaluate(p: Attribute): unknown {
+    if (isStart(p)) return this.compile(p.start)(TOP);
     if (!isBound(p)) return this.decode(p.type, p.free);
     this.evaluations++;
     return this.compile(p.bound)(TOP);

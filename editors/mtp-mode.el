@@ -44,6 +44,11 @@ color, which keyword arguments take.")
 so it takes the string color, which every theme draws clearly, in bold italic to stand out
 from the figure's own strings.")
 
+(defface mtp-mode-free-face
+  '((t :inherit font-lock-warning-face :weight bold))
+  "Face for free@ in free@(f x): the value is free, starting at the expression's value and never
+following it, though an expression is written there, so it is drawn to stand out.")
+
 (defface mtp-mode-name-string-face
   '((t :inherit font-lock-function-name-face))
   "Face for a name string, #'dot-{k}', which is read as a name, not kept as a string, so it
@@ -243,11 +248,12 @@ not one of mtp's forms or keyword arguments, which earlier rules have already hi
     ("(\\(const\\))" 1 font-lock-keyword-face)
     ("\\_<\\(doc\\)@'" 1 font-lock-keyword-face)
     ("\\_<\\(tex\\)'" 1 font-lock-keyword-face)
+    ("\\_<\\(free@\\)" 1 'mtp-mode-free-face)
     (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face)
     ("\\_<-?[0-9]+\\(?:\\.[0-9]*\\)?\\_>" . 'font-lock-number-face)
     (mtp-mode--match-call 1 'font-lock-function-call-face))
   "What mtp-mode highlights: the heads of forms, the names they declare, types in brackets,
-keyword arguments, the doc of doc@'text', the tex of tex'LaTeX', none, true, false and self,
+keyword arguments, the doc of doc@'text', the tex of tex'LaTeX', free@, none, true, false and self,
 numbers, the names let and foreach bind, and function calls.")
 
 (defun mtp-mode--syntactic-face (state)

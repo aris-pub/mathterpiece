@@ -29,7 +29,15 @@ export interface BoundAttribute {
   fixed?: true;
 }
 
-export type Attribute = FreeAttribute | BoundAttribute;
+/** free@expr: free, starting at the expression's value when the live model is built. */
+export interface StartAttribute {
+  type: Type;
+  start: Expr;
+  deps: [number, string | null][];
+  fixed?: true;
+}
+
+export type Attribute = FreeAttribute | BoundAttribute | StartAttribute;
 
 export interface Clamp {
   target: [number, string | null];
@@ -131,4 +139,8 @@ export const FORMAT_VERSION = 4;
 
 export function isBound(p: Attribute): p is BoundAttribute {
   return "bound" in p;
+}
+
+export function isStart(p: Attribute): p is StartAttribute {
+  return "start" in p;
 }

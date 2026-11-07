@@ -203,7 +203,21 @@ class _Parser:
             return self.doc()
         if self.src.startswith("tex'", self.i):
             return self.tex_string()
+        if self.src.startswith("free@", self.i):
+            return self.free_start()
         return self.atom()
+
+    def free_start(self) -> Form:
+        """free@expr: a free value that starts at expr's value and never follows it. Its head,
+        free@, is not a name an author can write, so only this spelling makes the form."""
+        pos = self.pos()
+        for _ in "free@":
+            self.advance()
+        if self.peek() in ("", " ", "\t", "\n", ")", "]"):
+            raise ParseError(
+                "free@ is followed by the expression its value starts at: free@(f x)", self.pos()
+            )
+        return Form((Name(("free@",), pos), self.node()), pos)
 
     def doc(self) -> Form:
         """doc@'text', which is (doc 'text')."""
@@ -334,7 +348,7 @@ class _Parser:
         if text == "none":
             return NoneLit(pos)
         if "@" in text:
-            raise ParseError("'@' only follows doc, as in doc@'text'", pos)
+            raise ParseError("'@' only follows doc and free, as in doc@'text' and free@(f x)", pos)
         if text == "_":
             raise ParseError("_ is not a name: write none, or head_ for a form with no name", pos)
         if (number := _number(text, pos)) is not None:

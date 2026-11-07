@@ -170,6 +170,9 @@ class Writer:
             assert p.expr is not None
             d["bound"] = self.expr(p.expr)
             d["deps"] = _deps(p.deps)
+        elif p.start is not None:
+            d["start"] = self.expr(p.start)
+            d["deps"] = _deps(p.deps)
         else:
             d["free"] = self.value(p.type, p.value)
         if p.fixed:

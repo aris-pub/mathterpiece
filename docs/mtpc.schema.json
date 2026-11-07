@@ -3083,6 +3083,45 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "start",
+            "deps"
+          ],
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/type"
+            },
+            "start": {
+              "$ref": "#/$defs/expr"
+            },
+            "deps": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                ],
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "fixed": {
+              "const": true
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },

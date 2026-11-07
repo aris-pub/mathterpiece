@@ -1151,6 +1151,18 @@ class _Compiler:
             attribute = self.settle(t, self.expect(shape, t, node.pos), "the value", node.pos)
             self.add(Obj("variable", name, t, access, {"value": attribute}, parent=parent, pos=pos))
             return
+        if node is not None and _is_free_start(node):
+            if _is_const(t):
+                raise CompileError(
+                    "a const variable cannot start free@: it never changes, so give it its value",
+                    node.pos,
+                )
+            if _core(t) in (COLOR, FONT):
+                raise CompileError(
+                    f"a {_core(t)} variable is a token, which the page may restyle, so its value is"
+                    " written out, not started free@",
+                    node.pos,
+                )
         saved, self.where = self.where, (name, None, None)
         try:
             attribute = self.attribute(t, node, form.pos, "the value", scope=scope, first=first)
@@ -3652,6 +3664,18 @@ class _Compiler:
 
     def body_variable(self, form: Form, obj: Obj, scope: dict) -> None:
         name, pos, t, node, first = self.declared(form, scope)
+        if node is not None and _is_free_start(node):
+            if _is_const(t):
+                raise CompileError(
+                    "a const variable cannot start free@: it never changes, so give it its value",
+                    node.pos,
+                )
+            if _core(t) in (COLOR, FONT):
+                raise CompileError(
+                    f"a {_core(t)} variable is a token, which the page may restyle, so its value is"
+                    " written out, not started free@",
+                    node.pos,
+                )
         saved, self.where = self.where, (name, None, None)
         try:
             attribute = self.attribute(t, node, form.pos, "the value", scope=scope, first=first)
@@ -4381,6 +4405,14 @@ class _Compiler:
             return Attribute(
                 t, self.default(t, pos) if default is None and t != Maybe(COLOR) else default
             )
+        if _is_free_start(node):
+            assert isinstance(node, Form)
+            given = self.attribute(t, node.items[1], pos, what, default, scope, first)
+            if given.bound:
+                return Attribute(given.type, start=given.expr)
+            # Known when compiling, it is that value, and a writer may still change it.
+            given.type = _without_const(given.type)
+            return given
         attribute = self.settle(t, self.again(first, node, t, scope or {}), what, node.pos)
         # An attribute given by an expression is bound; folded, it is free but const, so no writer
         # can write it (mtpc.md, "Attributes").
@@ -5235,6 +5267,12 @@ class _Compiler:
             if e.known:
                 return _known(t, [v for v in e.value if v is not None])
             return Expr("somes", t, (e,), e.deps)
+        if head == "free@":
+            raise CompileError(
+                "free@ gives a variable or an attribute its starting value, so it is written only"
+                " in place of that value: (real k free@(f x))",
+                node.pos,
+            )
         raise CompileError(f"unknown function '{head}'", node.pos)
 
     def operands(self, nodes, expected: Type | None, scope: dict) -> list:
@@ -5544,6 +5582,24 @@ def _is_literal(node: Node) -> bool:
     if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, BoolLit, NoneLit)):
         return True
     return isinstance(node, ListLit) and all(_is_literal(i) for i in node.items)
+
+
+def _is_free_start(node) -> bool:
+    return (
+        isinstance(node, Form)
+        and len(node.items) == 2
+        and isinstance(node.items[0], Name)
+        and node.items[0].parts == ("free@",)
+    )
+
+
+def _without_const(t: Type) -> Type:
+    if isinstance(t, Maybe):
+        return Maybe(_without_const(t.inner))
+    if isinstance(t, Refine) and ("const",) in t.constraints:
+        rest = tuple(c for c in t.constraints if c != ("const",))
+        return replace(t, constraints=rest) if rest else t.base
+    return t
 
 
 def _with_const(t: Type) -> Type:

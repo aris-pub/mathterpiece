@@ -37,6 +37,8 @@ class Attribute:
     expr: Expr | None = None
     # Set by a variant's body: no instance and no writer may change it.
     fixed: bool = False
+    # free@expr: free, starting at expr's value when the live model is built, never following it.
+    start: Expr | None = None
 
     @property
     def bound(self) -> bool:
@@ -44,7 +46,9 @@ class Attribute:
 
     @property
     def deps(self) -> frozenset[Dep]:
-        return self.expr.deps if self.expr else frozenset()
+        if self.expr:
+            return self.expr.deps
+        return self.start.deps if self.start else frozenset()
 
 
 @dataclass

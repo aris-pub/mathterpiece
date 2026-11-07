@@ -94,3 +94,7 @@
   (let ((src "(func[list[real]] step ((real s)) (let ((c 2)) c))"))
     (should (eq (mtp-mode-test--face-at src "real]") 'font-lock-type-face))
     (should (eq (mtp-mode-test--face-at src "c 2") 'font-lock-variable-name-face))))
+
+(ert-deftest mtp-mode-sets-free-starts-apart ()
+  ;; free@ declares a free value though an expression follows it, so it must stand out.
+  (should (eq (mtp-mode-test--face-at "(real k free@(* 2 a))" "free@") 'mtp-mode-free-face)))

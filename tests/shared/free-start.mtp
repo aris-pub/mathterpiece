@@ -1,0 +1,15 @@
+; free@: a free value that starts at its expression's value and never follows it. A start may
+; read another start.
+; expect k 2
+; expect j 3
+; expect c.r 3
+; write a 5
+; expect k 2
+; expect j 3
+; write k 7
+; expect m 14
+(real a 1 (>= 0))
+(real k free@(* 2 a))
+(real j free@(+ k 1))
+(real m (* 2 k))
+(scene s (circle c (r free@(* 3 a))))

@@ -112,10 +112,12 @@ A variable's value, every attribute of a mutable object, and every condition a c
 
     {"type": T, "free": value}
     {"type": T, "bound": expr, "deps": [[id, attr], …]}
+    {"type": T, "start": expr, "deps": [[id, attr], …]}
 
 with `"fixed": true` on a variant instance's fixed attributes.
 
 - A **free** one holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
+- A **started** one, written `free@expr` in the source, is free, and its starting value is `expr`'s value, which the runtime reads once, when it builds the live model, and never again; `deps` lists what it reads, as for a bound one. From then on it is free like any other.
 - A **bound** one holds an expression. `deps` lists every variable and attribute it can read: directly, through any function it calls, and through captured names. Where a read depends on a value known only while drawing, such as `g[side].pos`, `deps` lists every one it could read (the `pos` of every member). When any of them changes, this one is recomputed, and nothing else is. `[id, null]` is a variable.
 - A variable or an attribute known when compiling is written as free, with a `const` constraint in its type, whether the illustrator wrote it that way or the compiler folded it. One exception: one given a constant (the bare name of a `const` variable or of a built-in constant, or a read of a `const` attribute) is free with no `const` constraint, as if given its value.
 - Every attribute of a shape is written, including those left at their default, in the shape or, when it is the value most shapes of its kind share, once in `shared` (see "Top level"). `pos` is not: it is `x` and `y` read or written together. A line's attributes are its `from` and `to`, a triangle's its corners, a polyline's and a polygon's its `points`, a curve's its `from`, `to` and `controls`; their `x` and `y` are computed (the midpoint, the centroid, the mean of the points, the mean of a curve's ends and controls), and a write to them is split into writes to every end or corner, or moves every point.

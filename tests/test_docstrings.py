@@ -143,8 +143,8 @@ class TestDocAt:
         [
             ("(real k 1 doc@x)", "doc@ is followed by its text in single quotes: doc@'text'"),
             ("(real k 1 doc@$'x')", "doc@ is followed by its text in single quotes: doc@'text'"),
-            ("(real k 1 note@'x')", "'@' only follows doc, as in doc@'text'"),
-            ("(real a@b 1)", "'@' only follows doc, as in doc@'text'"),
+            ("(real k 1 note@'x')", "'@' only follows doc and free, as in doc@'text' and free@(f x)"),
+            ("(real a@b 1)", "'@' only follows doc and free, as in doc@'text' and free@(f x)"),
         ],
     )
     def test_at_follows_only_doc_and_takes_a_plain_string(self, src, msg):
