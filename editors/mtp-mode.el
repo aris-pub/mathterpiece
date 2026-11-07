@@ -32,25 +32,64 @@
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,
 such as (x -8), (duration 0.8) and (fill teal).")
 
+;; Every face is the mode's own, upright whatever the theme draws the face it takes its color
+;; from: the author's rule is that nothing is italic.
+
 (defface mtp-mode-head-face
-  '((t :inherit font-lock-type-face :weight bold))
-  "Face for the heads of mtp's forms, such as canvas in (canvas view …). Most heads are types,
-as circle and real are, and themes draw the type color strongly and apart from the keyword
-color, which keyword arguments take.")
+  '((t :inherit font-lock-type-face :weight ultra-bold :slant normal))
+  "Face for the heads of mtp's forms, such as canvas in (canvas view …), drawn heaviest. Most
+heads are types, as circle and real are, so it takes the type color.")
+
+(defface mtp-mode-call-face
+  '((t :inherit font-lock-function-call-face :weight bold :slant normal))
+  "Face for the head of a function call, built in or the author's own, such as part in
+(part s 0).")
+
+(defface mtp-mode-keyword-face
+  '((t :inherit font-lock-keyword-face :slant normal))
+  "Face for keyword arguments, such as x in (x -8), and for doc@, tex' and (const).")
+
+(defface mtp-mode-function-name-face
+  '((t :inherit font-lock-function-name-face :slant normal))
+  "Face for the name a func, motif, variant or type declares.")
+
+(defface mtp-mode-variable-name-face
+  '((t :inherit font-lock-variable-name-face :slant normal))
+  "Face for the name any other declaration declares, and for what let and foreach bind.")
+
+(defface mtp-mode-type-face
+  '((t :inherit font-lock-type-face :slant normal))
+  "Face for a type inside brackets, as real in list[real].")
+
+(defface mtp-mode-constant-face
+  '((t :inherit font-lock-constant-face :slant normal))
+  "Face for none, true, false and self.")
+
+(defface mtp-mode-number-face
+  '((t :inherit font-lock-number-face :slant normal))
+  "Face for numbers.")
+
+(defface mtp-mode-string-face
+  '((t :inherit font-lock-string-face :slant normal))
+  "Face for strings.")
+
+(defface mtp-mode-comment-face
+  '((t :inherit font-lock-comment-face :slant normal))
+  "Face for comments.")
 
 (defface mtp-mode-doc-face
-  '((t :inherit font-lock-string-face :weight bold :slant italic))
+  '((t :inherit font-lock-string-face :weight bold :slant normal))
   "Face for a docstring, the text of doc@'text'. Themes often draw `font-lock-doc-face' faint,
-so it takes the string color, which every theme draws clearly, in bold italic to stand out
-from the figure's own strings.")
+so it takes the string color, which every theme draws clearly, in bold to stand out from the
+figure's own strings.")
 
 (defface mtp-mode-free-face
-  '((t :inherit font-lock-warning-face :weight bold))
+  '((t :inherit font-lock-warning-face :weight bold :slant normal))
   "Face for free@ in free@(f x): the value is free, starting at the expression's value and never
 following it, though an expression is written there, so it is drawn to stand out.")
 
 (defface mtp-mode-name-string-face
-  '((t :inherit font-lock-function-name-face))
+  '((t :inherit font-lock-function-name-face :slant normal))
   "Face for a name string, #'dot-{k}', which is read as a name, not kept as a string, so it
 takes a color apart from strings.")
 
@@ -239,20 +278,20 @@ not one of mtp's forms or keyword arguments, which earlier rules have already hi
      1 'mtp-mode-head-face)
     (,(concat "(\\(?:func\\|motif\\|variant\\|type\\)\\(?:\\[[^ \t\n()]*\\]\\)?[ \t]+"
               "\\([^][() \t\n';\"#]+\\)")
-     1 font-lock-function-name-face)
+     1 'mtp-mode-function-name-face)
     (,(concat "(" (regexp-opt mtp-mode--named-heads) "\\(?:\\[[^ \t\n()]*\\]\\)?\\(?:|none\\)?[ \t]+"
               "\\([^][() \t\n';\"#0-9-][^][() \t\n';\"#]*\\)")
-     1 font-lock-variable-name-face)
-    (mtp-mode--match-type 1 font-lock-type-face)
-    (mtp-mode--match-binding 1 font-lock-variable-name-face)
-    (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 font-lock-keyword-face)
-    ("(\\(const\\))" 1 font-lock-keyword-face)
-    ("\\_<\\(doc\\)@'" 1 font-lock-keyword-face)
-    ("\\_<\\(tex\\)'" 1 font-lock-keyword-face)
+     1 'mtp-mode-variable-name-face)
+    (mtp-mode--match-type 1 'mtp-mode-type-face)
+    (mtp-mode--match-binding 1 'mtp-mode-variable-name-face)
+    (,(concat "(\\(" (regexp-opt mtp-mode--arguments) "\\)\\_>") 1 'mtp-mode-keyword-face)
+    ("(\\(const\\))" 1 'mtp-mode-keyword-face)
+    ("\\_<\\(doc\\)@'" 1 'mtp-mode-keyword-face)
+    ("\\_<\\(tex\\)'" 1 'mtp-mode-keyword-face)
     ("\\_<\\(free@\\)" 1 'mtp-mode-free-face)
-    (,(regexp-opt '("none" "true" "false" "self") 'symbols) . font-lock-constant-face)
-    ("\\_<-?[0-9]+\\(?:\\.[0-9]*\\)?\\_>" . 'font-lock-number-face)
-    (mtp-mode--match-call 1 'font-lock-function-call-face))
+    (,(regexp-opt '("none" "true" "false" "self") 'symbols) . 'mtp-mode-constant-face)
+    ("\\_<-?[0-9]+\\(?:\\.[0-9]*\\)?\\_>" . 'mtp-mode-number-face)
+    (mtp-mode--match-call 1 'mtp-mode-call-face))
   "What mtp-mode highlights: the heads of forms, the names they declare, types in brackets,
 keyword arguments, the doc of doc@'text', the tex of tex'LaTeX', free@, none, true, false and self,
 numbers, the names let and foreach bind, and function calls.")
@@ -260,13 +299,13 @@ numbers, the names let and foreach bind, and function calls.")
 (defun mtp-mode--syntactic-face (state)
   "The face of the string or comment STATE is in: a docstring, the text of doc@'text', takes
 `mtp-mode-doc-face'."
-  (cond ((not (nth 3 state)) 'font-lock-comment-face)
+  (cond ((not (nth 3 state)) 'mtp-mode-comment-face)
         ((save-excursion
            (goto-char (nth 8 state))
            (looking-back "\\_<doc@" (max (point-min) (- (point) 4))))
          'mtp-mode-doc-face)
         ((eq (char-before (nth 8 state)) ?#) 'mtp-mode-name-string-face)
-        (t 'font-lock-string-face)))
+        (t 'mtp-mode-string-face)))
 
 (defvar mtp-mode-syntax-table
   (let ((table (make-syntax-table lisp-data-mode-syntax-table)))

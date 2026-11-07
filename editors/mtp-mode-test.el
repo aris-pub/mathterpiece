@@ -17,29 +17,29 @@
 (ert-deftest mtp-mode-highlights-keyword-arguments ()
   (let ((src "(canvas view (x -8) (pan false)\n  pond)\n(on-view view (animation (move rise (to 0) (duration 0.8) (ease 'ease-out'))))"))
     (dolist (word '("x" "pan" "to 0" "duration" "ease"))
-      (should (eq (mtp-mode-test--face-at src word) 'font-lock-keyword-face)))
+      (should (eq (mtp-mode-test--face-at src word) 'mtp-mode-keyword-face)))
     (should (eq (mtp-mode-test--face-at src "canvas") 'mtp-mode-head-face))
     (should (eq (mtp-mode-test--face-at src "animation") 'mtp-mode-head-face))))
 
 (ert-deftest mtp-mode-highlights-shape-attributes ()
   (let ((src "(scene s (circle c (r 1) (fill teal) (stroke-width 2) (dash [4 2])))"))
     (dolist (word '("(r 1" "fill" "stroke-width" "dash"))
-      (should (eq (mtp-mode-test--face-at src (string-trim-left word "(")) 'font-lock-keyword-face)))))
+      (should (eq (mtp-mode-test--face-at src (string-trim-left word "(")) 'mtp-mode-keyword-face)))))
 
 (ert-deftest mtp-mode-leaves-function-calls-alone ()
   (let ((src "(real v (sind (max 3 4)))"))
-    (should-not (eq (mtp-mode-test--face-at src "sind") 'font-lock-keyword-face))
-    (should-not (eq (mtp-mode-test--face-at src "max") 'font-lock-keyword-face))))
+    (should-not (eq (mtp-mode-test--face-at src "sind") 'mtp-mode-keyword-face))
+    (should-not (eq (mtp-mode-test--face-at src "max") 'mtp-mode-keyword-face))))
 
 (ert-deftest mtp-mode-leaves-a-name-alone ()
   ;; (circle r …) names a circle r: r there is a name, not the attribute.
-  (should-not (eq (mtp-mode-test--face-at "(circle fill (r 1))" "fill") 'font-lock-keyword-face)))
+  (should-not (eq (mtp-mode-test--face-at "(circle fill (r 1))" "fill") 'mtp-mode-keyword-face)))
 
 (ert-deftest mtp-mode-sets-a-docstring-apart ()
   (let ((src "(motif dot ((real r 1))\n  doc@'A dot.'\n  (circle c (r r) (fill 'red')))"))
-    (should (eq (mtp-mode-test--face-at src "doc") 'font-lock-keyword-face))
+    (should (eq (mtp-mode-test--face-at src "doc") 'mtp-mode-keyword-face))
     (should (eq (mtp-mode-test--face-at src "A dot") 'mtp-mode-doc-face))
-    (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
+    (should (eq (mtp-mode-test--face-at src "red") 'mtp-mode-string-face))))
 
 (ert-deftest mtp-mode-indents-a-docstring-with-the-body ()
   (dolist (src '("(motif dot ((real r 1))\ndoc@'A dot.'\n(circle c (r r)))"
@@ -55,46 +55,58 @@
 (ert-deftest mtp-mode-sets-a-name-string-apart ()
   (let ((src "(scene s (circle #'dot-{k}' (fill 'red')))"))
     (should (eq (mtp-mode-test--face-at src "dot") 'mtp-mode-name-string-face))
-    (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
+    (should (eq (mtp-mode-test--face-at src "red") 'mtp-mode-string-face))))
 
 (ert-deftest mtp-mode-reads-a-tex-string ()
   (let ((src "(formula f tex'\\frac{(a}{b} f\\'(x) \\\\' (term t (fill 'red')))"))
-    (should (eq (mtp-mode-test--face-at src "tex") 'font-lock-keyword-face))
-    (should (eq (mtp-mode-test--face-at src "frac") 'font-lock-string-face))
-    (should (eq (mtp-mode-test--face-at src "red") 'font-lock-string-face))))
+    (should (eq (mtp-mode-test--face-at src "tex") 'mtp-mode-keyword-face))
+    (should (eq (mtp-mode-test--face-at src "frac") 'mtp-mode-string-face))
+    (should (eq (mtp-mode-test--face-at src "red") 'mtp-mode-string-face))))
 
 ;;; mtp-mode-test.el ends here
 
 (ert-deftest mtp-mode-highlights-declared-names ()
   (let ((src "(func[bool] done ((list[real] s)) (>= (part s 0) 1))\n(real k 1)\n(scene s (circle dot (r 1)))"))
-    (should (eq (mtp-mode-test--face-at src "done") 'font-lock-function-name-face))
-    (should (eq (mtp-mode-test--face-at src "k 1") 'font-lock-variable-name-face))
-    (should (eq (mtp-mode-test--face-at src "dot") 'font-lock-variable-name-face))))
+    (should (eq (mtp-mode-test--face-at src "done") 'mtp-mode-function-name-face))
+    (should (eq (mtp-mode-test--face-at src "k 1") 'mtp-mode-variable-name-face))
+    (should (eq (mtp-mode-test--face-at src "dot") 'mtp-mode-variable-name-face))))
 
 (ert-deftest mtp-mode-highlights-types-in-brackets ()
   (let ((src "(func[bool] done ((list[real] s)) s)"))
-    (should (eq (mtp-mode-test--face-at src "bool") 'font-lock-type-face))
-    (should (eq (mtp-mode-test--face-at src "real") 'font-lock-type-face))))
+    (should (eq (mtp-mode-test--face-at src "bool") 'mtp-mode-type-face))
+    (should (eq (mtp-mode-test--face-at src "real") 'mtp-mode-type-face))))
 
 (ert-deftest mtp-mode-highlights-calls ()
   (let ((src "(real v (next (part s 0) (+ 1 2)))"))
     (dolist (word '("next" "part" "+ 1"))
-      (should (eq (mtp-mode-test--face-at src word) 'font-lock-function-call-face)))))
+      (should (eq (mtp-mode-test--face-at src word) 'mtp-mode-call-face)))))
 
 (ert-deftest mtp-mode-highlights-what-let-binds ()
   (let ((src "(let ((i (part s 0)) (j 2)) (+ i j))"))
-    (should (eq (mtp-mode-test--face-at src "i (") 'font-lock-variable-name-face))
-    (should (eq (mtp-mode-test--face-at src "j 2") 'font-lock-variable-name-face))
-    (should (eq (mtp-mode-test--face-at src "part") 'font-lock-function-call-face))))
+    (should (eq (mtp-mode-test--face-at src "i (") 'mtp-mode-variable-name-face))
+    (should (eq (mtp-mode-test--face-at src "j 2") 'mtp-mode-variable-name-face))
+    (should (eq (mtp-mode-test--face-at src "part") 'mtp-mode-call-face))))
 
 (ert-deftest mtp-mode-highlights-numbers ()
-  (should (eq (mtp-mode-test--face-at "(real k -12.5)" "-12.5") 'font-lock-number-face)))
+  (should (eq (mtp-mode-test--face-at "(real k -12.5)" "-12.5") 'mtp-mode-number-face)))
 
 (ert-deftest mtp-mode-highlights-nested-types-and-bindings-named-like-arguments ()
   (let ((src "(func[list[real]] step ((real s)) (let ((c 2)) c))"))
-    (should (eq (mtp-mode-test--face-at src "real]") 'font-lock-type-face))
-    (should (eq (mtp-mode-test--face-at src "c 2") 'font-lock-variable-name-face))))
+    (should (eq (mtp-mode-test--face-at src "real]") 'mtp-mode-type-face))
+    (should (eq (mtp-mode-test--face-at src "c 2") 'mtp-mode-variable-name-face))))
 
 (ert-deftest mtp-mode-sets-free-starts-apart ()
   ;; free@ declares a free value though an expression follows it, so it must stand out.
   (should (eq (mtp-mode-test--face-at "(real k free@(* 2 a))" "free@") 'mtp-mode-free-face)))
+
+(ert-deftest mtp-mode-draws-nothing-in-italic ()
+  ;; The author's rule: no italic. Every face the mode uses is its own, upright whatever the
+  ;; theme's face it takes its color from.
+  (let ((faces (seq-filter (lambda (f) (string-prefix-p "mtp-mode-" (symbol-name f))) (face-list))))
+    (should (> (length faces) 5))
+    (dolist (f faces) (should (eq (face-attribute f :slant) 'normal)))))
+
+(ert-deftest mtp-mode-draws-heads-heaviest-and-calls-bold ()
+  (should (eq (face-attribute 'mtp-mode-head-face :weight) 'ultra-bold))
+  (should (eq (face-attribute 'mtp-mode-call-face :weight) 'bold))
+  (should (eq (mtp-mode-test--face-at "(real v (next 1))" "next") 'mtp-mode-call-face)))
