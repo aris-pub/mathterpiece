@@ -89,6 +89,15 @@
         cursor: pointer;
       }
       #names button:hover { color: var(--page-fg); background: var(--panel); }
+      #names .kind {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 0.9rem 0.55rem 0.25rem;
+      }
+      #names .kind:first-child { padding-top: 0.25rem; }
       #names button[aria-current="page"] { color: var(--accent); background: var(--panel); font-weight: 600; }
       @media (max-width: 760px) {
         .layout { grid-template-columns: minmax(0, 1fr); }
@@ -184,22 +193,40 @@
       );
       const examples = Object.keys(figures);
       const name = (path) => path.split("/").pop().replace(".mtpc", "");
-      examples.sort((a, b) => name(a).localeCompare(name(b)));
       // The list of figures: one button each, the current one marked; the filter hides the others.
       const list = document.getElementById("names");
       const filter = document.getElementById("filter");
+      // Three kinds of figure: showcases, each showing one feature; showpieces, larger and
+      // impressive; and realistic ones, as a paper would have. Any figure not named is a showcase.
+      const kinds = {
+        showpieces: ["ball-puzzle", "split-screen-race", "three-body", "sorting-race", "pythagoras",
+          "function-machine", "times-tables", "golden-tour", "koch-snowflake", "ulam-spiral"],
+        realistic: ["bourgain-balls", "bourgain-best-embedding", "bourgain-densities",
+          "bourgain-ornament", "bourgain-pair-at-level"],
+      };
+      const kindOf = (n) => Object.keys(kinds).find((k) => kinds[k].includes(n)) ?? "showcases";
+      const order = ["showcases", "showpieces", "realistic"];
+      examples.sort((a, b) => order.indexOf(kindOf(name(a))) - order.indexOf(kindOf(name(b))) || name(a).localeCompare(name(b)));
+      const headings = {};
+      for (const k of order) {
+        headings[k] = Object.assign(document.createElement("li"), { className: "kind", textContent: k });
+      }
       const items = examples.map((path) => {
+        const k = kindOf(name(path));
+        if (!headings[k].isConnected) list.append(headings[k]);
         const b = Object.assign(document.createElement("button"), { type: "button", textContent: name(path) });
         b.onclick = () => open(path);
         const li = document.createElement("li");
         li.append(b);
         list.append(li);
-        return { path, li, b };
+        return { path, li, b, kind: k };
       });
       const shown = () => items.filter((it) => !it.li.hidden);
       filter.oninput = () => {
         const q = filter.value.trim().toLowerCase();
         for (const it of items) it.li.hidden = q !== "" && !name(it.path).includes(q);
+        // A kind's heading shows while any of its figures does.
+        for (const k of order) headings[k].hidden = !items.some((it) => it.kind === k && !it.li.hidden);
       };
       filter.onkeydown = (e) => {
         if (e.key === "Enter" && shown()[0]) open(shown()[0].path);
