@@ -7,7 +7,7 @@ import type { Doc, Obj } from "./doc.ts";
 
 const ELEMENTS = new Set(["canvas", "readout", "display", "slider", "toggle", "button", "play"]);
 const LISTENERS = new Set([
-  ...["on-drag", "on-click", "on-release", "on-dragend", "on-view"],
+  ...["on-drag", "on-click", "on-release", "on-dragstart", "on-dragend", "on-view"],
   ...["on-enter", "on-leave", "on-pointermove"],
 ]);
 
@@ -97,6 +97,7 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
     what = {
       "on-click": `When the reader clicks ${of}, it ${plays}.`,
       "on-release": `When the reader lets go of ${of}, it ${plays}.`,
+      "on-dragstart": `When the reader starts dragging ${of}, it ${plays}.`,
       "on-dragend": `When the reader stops dragging ${of}, it ${plays}.`,
       "on-view": `When the canvas ${of} first comes into view, it ${plays}.`,
       "on-enter": `When the reader's pointer comes onto ${of}, it ${plays}.`,

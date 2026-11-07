@@ -1559,6 +1559,7 @@
                 "on-click",
                 "on-view",
                 "on-release",
+                "on-dragstart",
                 "on-dragend",
                 "on-enter",
                 "on-leave",
@@ -2654,6 +2655,7 @@
                 "enum": [
                   "on-click",
                   "on-release",
+                  "on-dragstart",
                   "on-dragend"
                 ]
               }
@@ -2680,6 +2682,7 @@
                 "enum": [
                   "on-click",
                   "on-release",
+                  "on-dragstart",
                   "on-dragend"
                 ]
               },
@@ -3326,6 +3329,7 @@
                 "on-click",
                 "on-view",
                 "on-release",
+                "on-dragstart",
                 "on-dragend",
                 "on-enter",
                 "on-leave",

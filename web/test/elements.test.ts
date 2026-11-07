@@ -542,6 +542,60 @@ describe("releases", () => {
     expect(v("e")).toBe(0);
   });
 
+  it("runs an on-dragstart when a drag of the shape starts, before the drag's first write", () => {
+    // mtp-5opl: dragging a data point first resets an offset, then follows the pointer.
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("dragstart"));
+    const svg = document.querySelector("mtp-canvas svg")!;
+    at(shape(rt, "p"), "pointerdown", 0);
+    expect(v("o")).toBe(3);
+    svg.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 0, clientY: -2, pointerId: 1 }));
+    // The drag writes y from o, so y shows o already reset.
+    expect([v("o"), v("y")]).toEqual([0, 2]);
+    at(svg, "pointerup", 0);
+  });
+
+  it("runs no on-dragstart on hover, or for a press and release with no move between", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("dragstart"));
+    const p = shape(rt, "p");
+    at(p, "pointermove");
+    at(p, "pointermove", 0.5);
+    pass(0.1);
+    expect(v("o")).toBe(3);
+    at(p, "pointerdown");
+    at(p, "pointerup");
+    pass(0.1);
+    expect(v("o")).toBe(3);
+  });
+
+  it("runs an on-dragstart once per drag", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("dragstart"));
+    const svg = document.querySelector("mtp-canvas svg")!;
+    at(shape(rt, "p"), "pointerdown", 0);
+    at(svg, "pointermove", 1);
+    pass(0.1);
+    rt.write(rt.id("o"), null, 3);
+    at(svg, "pointermove", 2);
+    pass(0.1);
+    expect(v("o")).toBe(3);
+  });
+
+  it("the start of a drag goes up the scene tree, unless a listener stops it", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("dragstart"));
+    const svg = document.querySelector("mtp-canvas svg")!;
+    const drag = (name: string) => {
+      at(shape(rt, name), "pointerdown", 0);
+      at(svg, "pointermove", 1);
+      at(svg, "pointerup", 1);
+      pass(0.1);
+    };
+    drag("q");
+    expect([v("stopped"), v("up")]).toEqual([1, 0]);
+    drag("p");
+    expect(v("up")).toBe(1);
+    drag("r");
+    expect(v("off")).toBe(0);
+  });
+
   it("clicks the nearest shape holding both the pressed and the released one, as JS's click", () => {
     const [, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("release"));
     at(shape(rt, "p1"), "pointerdown");

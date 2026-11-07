@@ -1,0 +1,27 @@
+; A let reads positions in the frame it is written in, as a shape there does (mtp-gvrf.4).
+
+(real m 1 (>= 0))
+
+(motif one ()
+  (circle ma (x m) (r 1))
+  (let ((p ma.pos))
+    (circle mb (pos p) (r 1)))
+  (circle mc (pos ma.pos) (r 1)))
+
+(scene sc
+  (group g (translate [5 0])
+    (circle a (x m) (r 1))
+    (let ((p a.pos))
+      (circle b (pos p) (r 1)))
+    (circle c (pos a.pos) (r 1))
+    (group h (transform (rotate 90))
+      (circle ha (x m) (r 1))
+      (let ((p ha.pos))
+        (circle hb (pos p) (r 1)))
+      (circle hc (pos ha.pos) (r 1))))
+  (let ((p a.pos))
+    (circle d (pos p) (r 1)))
+  (circle e (pos a.pos) (r 1))
+  (one o (translate [5 0])))
+
+(canvas view (x 0) (y 0) (width 10) (height 10) sc)

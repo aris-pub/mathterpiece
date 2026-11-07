@@ -37,3 +37,17 @@ describe("a let holding declarations", () => {
     expect(held.every((o) => o.name === null)).toBe(true);
   });
 });
+
+describe("a let holding declarations, in a moved container", () => {
+  it("reads positions in the frame it is written in, as a shape there does", () => {
+    const rt = load("frame-lets");
+    rt.write(rt.id("m"), null, 2);
+    const pairs: [string, string][] = [["b", "c"], ["hb", "hc"], ["d", "e"], ["o.mb", "o.mc"]];
+    for (const [held, direct] of pairs) {
+      expect(rt.value(rt.id(held), "pos")).toEqual(rt.value(rt.id(direct), "pos"));
+    }
+    expect(rt.value(rt.id("b"), "pos")).toEqual([2, 0]);
+    expect(rt.value(rt.id("hb"), "pos")).toEqual([2, 0]);
+    expect(rt.value(rt.id("d"), "pos")).toEqual([7, 0]);
+  });
+});

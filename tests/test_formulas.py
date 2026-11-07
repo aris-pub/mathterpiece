@@ -272,7 +272,7 @@ class TestListeners:
         listener = next(o for o in m.objects if o.kind == head)
         assert listener.data["shape"] == m.id("bounds.gap")
 
-    @pytest.mark.parametrize("head", ["on-release", "on-dragend"])
+    @pytest.mark.parametrize("head", ["on-release", "on-dragstart", "on-dragend"])
     def test_only_click_and_hover(self, head):
         error(
             "(string shown '') "

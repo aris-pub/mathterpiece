@@ -105,7 +105,7 @@ WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"]
 }
 # The listeners whose event goes up the scene tree, as in the DOM, unless one stops it.
-BUBBLES = ("on-click", "on-release", "on-dragend", "on-pointermove")
+BUBBLES = ("on-click", "on-release", "on-dragstart", "on-dragend", "on-pointermove")
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
 LIMIT = 1e150
 UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
@@ -139,13 +139,17 @@ COMPONENTS = {
     "on-click",
     "on-view",
     "on-release",
+    "on-dragstart",
     "on-dragend",
     "on-enter",
     "on-leave",
     "on-pointermove",
 }
 # Listeners on a shape: their positional argument is the shape they listen to.
-ON_SHAPE = ("on-drag", "on-click", "on-release", "on-dragend", "on-enter", "on-leave")
+ON_SHAPE = (
+    *("on-drag", "on-click", "on-release", "on-dragstart", "on-dragend"),
+    *("on-enter", "on-leave"),
+)
 # The views and controls a play's autoplay may wait for.
 SEEN = {"canvas", "readout", "slider", "button", "play", "toggle"}
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
@@ -3314,6 +3318,7 @@ class _Compiler:
         self.writer(obj, items, written)
 
     build_on_release = build_on_click
+    build_on_dragstart = build_on_click
     build_on_dragend = build_on_click
     build_on_enter = build_on_click
     build_on_leave = build_on_click
@@ -4415,19 +4420,25 @@ class _Compiler:
                 )
         if clip is not None:
             obj.data["clip"] = self.clip(clip[0], i, clip[1])
-        for item, inner in self.expand_scoped(members):
-            if _head(item) == "exists-when":
+        # A let, foreach or exists-when among the members reads in the group's frame, as the
+        # members do (mtp-gvrf.4).
+        saved, self.frame = self.frame, i
+        try:
+            for item, inner in self.expand_scoped(members):
+                if _head(item) == "exists-when":
+                    assert isinstance(item, Form)
+                    existence.append((item, inner))
+                    continue
+                if not self.shape_kind(item):
+                    raise CompileError(
+                        f"expected an argument such as (r 1), got {_shown(item)}", item.pos
+                    )
                 assert isinstance(item, Form)
-                existence.append((item, inner))
-                continue
-            if not self.shape_kind(item):
-                raise CompileError(
-                    f"expected an argument such as (r 1), got {_shown(item)}", item.pos
-                )
-            assert isinstance(item, Form)
-            self.shape(item, i, inner, down)
-        for item, inner in existence:
-            self.exists_when(item, inner)
+                self.shape(item, i, inner, down)
+            for item, inner in existence:
+                self.exists_when(item, inner)
+        finally:
+            self.frame = saved
         if axis is not None:
             self.no_text_in(i, form.pos)
         return i

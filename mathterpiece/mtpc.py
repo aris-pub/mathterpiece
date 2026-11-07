@@ -333,7 +333,7 @@ class Writer:
             d["conditions"] = self.conditions(o)
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["stop-propagation"] = self.stop(o)
-        elif kind in ("on-click", "on-release", "on-dragend"):
+        elif kind in ("on-click", "on-release", "on-dragstart", "on-dragend"):
             d["shape"] = o.data["shape"]
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None

@@ -58,6 +58,7 @@ ANIM = "(animation (move k (to 1) (duration 1)))"
     [
         (f"(on-click c {ANIM} (doc 'D.'))", "on-click"),
         (f"(on-release c {ANIM} (doc 'D.'))", "on-release"),
+        (f"(on-dragstart c {ANIM} (doc 'D.'))", "on-dragstart"),
         (f"(on-dragend c {ANIM} (doc 'D.'))", "on-dragend"),
         (f"(on-view v {ANIM} (doc 'D.'))", "on-view"),
         (f"(button go {ANIM} (doc 'D.'))", "button"),

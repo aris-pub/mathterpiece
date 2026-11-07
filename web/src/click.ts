@@ -1,5 +1,5 @@
 // Listeners on a shape that play an animation (docs/reference.md, "Controls"): on-click,
-// on-release and on-dragend. As in the DOM, an event on a shape goes up the scene tree and plays
+// on-release, on-dragstart and on-dragend. As in the DOM, an event on a shape goes up the scene tree and plays
 // every listener of its kind whose (active bool) holds, on the shape and on each container,
 // until a listener with (stop-propagation true) stops it at its shape.
 import type { Obj } from "./doc.ts";

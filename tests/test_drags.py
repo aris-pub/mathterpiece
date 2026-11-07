@@ -80,3 +80,21 @@ class TestNameStrings:
         )
         steps = m.get("a").data["steps"]
         assert [s[1] for s in steps[1:]] == [(m.id("c-0"), "r"), (m.id("c-1"), "r")]
+
+
+class TestTheStart:
+    # mtp-5opl: on-dragstart plays its animation when a drag of the shape starts, as JS's
+    # dragstart, so a drag may first reset what other writers added.
+    def test_a_reset_then_the_drag(self):
+        d = doc(
+            "(real o 3) (real y 0) (scene s (circle p (pos [0 (+ y o)]) (r 1))) (canvas v s)"
+            " (on-dragstart p (animation (move o (to 0) (duration 0))))"
+            " (on-drag p (move y (to pointer.y)))"
+        )
+        assert errors(d) == []
+        (start,) = [o for o in d["objects"] if o["kind"] == "on-dragstart"]
+        assert start["shape"] == d["names"]["p"]
+        assert start["active"] is None and start["stop-propagation"] is None
+
+    def test_it_takes_a_shape(self):
+        error("(real k 0) (on-dragstart (animation (move k (to 1))))", "takes the shape")

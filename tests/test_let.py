@@ -126,3 +126,85 @@ def test_a_shape_in_a_body_stays_written_out():
         " (scene sc (circle a (r 1)) (circle b (r 2)) (let ((c [a b][i])) (circle_ (r c.r))))"
     )
     assert _held(d) == []
+
+
+# A let among a group's members reads in the group's frame, as its members do (mtp-gvrf.4).
+
+
+def _frames(d, name):
+    """The frames of the reads in what shape name's x is bound to, through any held value."""
+    objects = d["objects"]
+    (o,) = [o for o in objects if o["name"] == name]
+    found = []
+    for e in _ops(o["attrs"]["x"]["bound"], "read"):
+        held = objects[e[2]]
+        if held["kind"] == "variable" and "let" in held:
+            found += [r[4] for r in _ops(held["value"]["bound"], "read")]
+        else:
+            found.append(e[4])
+    return set(found)
+
+
+def _index(d, name):
+    (i,) = [i for i, o in enumerate(d["objects"]) if o["name"] == name]
+    return i
+
+
+def test_a_let_in_a_group_reads_in_the_groups_frame():
+    d = doc(
+        "(real m 1) (scene sc (group g (translate [5 0]) (circle a (x m) (r 1))"
+        " (let ((p a.pos)) (circle b (pos p) (r 1))) (circle c (pos a.pos) (r 1))))"
+    )
+    assert _frames(d, "c") == {_index(d, "g")}
+    assert _frames(d, "b") == {_index(d, "g")}
+
+
+def test_a_let_in_a_nested_group_reads_in_the_inner_groups_frame():
+    d = doc(
+        "(real m 1) (scene sc (group g (translate [5 0]) (group h (transform (rotate 90))"
+        " (circle a (x m) (r 1)) (let ((p a.pos)) (circle b (pos p) (r 1))))))"
+    )
+    assert _frames(d, "b") == {_index(d, "h")}
+
+
+def test_a_let_in_a_foreach_in_a_group_reads_in_the_groups_frame():
+    d = doc(
+        "(real m 1) (scene sc (group g (translate [5 0]) (circle a (x m) (r 1))"
+        " (foreach i 2 (let ((p a.pos)) (circle #'b{i}' (pos p) (r 1))))))"
+    )
+    assert _frames(d, "b0") == {_index(d, "g")}
+
+
+def test_a_foreach_in_a_group_reads_its_list_in_the_groups_frame():
+    d = doc(
+        "(real m 1) (scene sc (group g (translate [5 0]) (circle a (x m) (r 1))"
+        " (foreach q [a.pos] (circle b (pos q) (r 1)))))"
+    )
+    assert _frames(d, "b") == {_index(d, "g")}
+
+
+def test_an_exists_when_in_a_group_reads_in_the_groups_frame():
+    d = doc(
+        "(real m 1) (scene sc (group g (translate [5 0]) (circle a (x m) (r 1))"
+        " (circle|none b (r 1)) (exists-when b (< a.x 3))))"
+    )
+    (o,) = [o for o in d["objects"] if o["name"] == "b"]
+    assert {e[4] for e in _ops(o["attrs"]["exists"]["bound"], "read")} == {_index(d, "g")}
+
+
+def test_a_let_in_the_scene_reads_a_group_member_in_the_scenes_frame():
+    d = doc(
+        "(real m 1) (scene sc (group g (translate [5 0]) (circle a (x m) (r 1)))"
+        " (let ((p a.pos)) (circle b (pos p) (r 1))) (circle c (pos a.pos) (r 1)))"
+    )
+    assert _frames(d, "c") == {None}
+    assert _frames(d, "b") == {None}
+
+
+def test_a_let_in_a_motif_reads_in_the_instances_frame():
+    d = doc(
+        "(real m 1) (motif one () (circle a (x m) (r 1))"
+        " (let ((p a.pos)) (circle b (pos p) (r 1))))"
+        " (scene sc (one o (translate [5 0])))"
+    )
+    assert _frames(d, "b") == {_index(d, "o")}

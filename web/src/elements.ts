@@ -32,6 +32,7 @@ export class MtpModel extends HTMLElement {
   drags: Drags | null = null;
   clicks: Listeners | null = null;
   releases: Listeners | null = null;
+  dragstarts: Listeners | null = null;
   dragends: Listeners | null = null;
   error: string | null = null;
   // The views and controls that have come into view, and what waits for one to.
@@ -92,6 +93,7 @@ export class MtpModel extends HTMLElement {
     this.drags = new Drags(rt);
     this.clicks = new Listeners(rt, "on-click");
     this.releases = new Listeners(rt, "on-release");
+    this.dragstarts = new Listeners(rt, "on-dragstart");
     this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
     this.seen.clear();
@@ -250,6 +252,7 @@ export class MtpCanvas extends MtpPart {
     const drags = model.drags!;
     const clicks = model.clicks!;
     const releases = model.releases!;
+    const dragstarts = model.dragstarts!;
     const dragends = model.dragends!;
     const toggles = new Toggles(rt, canvas, scheduler, () => this.redraw());
     const look: Look = { scale: 1, dx: 0, dy: 0 };
@@ -364,6 +367,9 @@ export class MtpCanvas extends MtpPart {
     svg.addEventListener("pointermove", (event) => {
       follow(event);
       if (drags.dragging) {
+        // As JS's dragstart, a drag starts at its first move, and its listeners play before the
+        // drag writes, so they may reset what the drag then reads (mtp-5opl).
+        if (!drags.moved) play(dragstarts.find(drags.shape!));
         drags.move(toScene(event));
         return;
       }

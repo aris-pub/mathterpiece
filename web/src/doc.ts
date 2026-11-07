@@ -98,7 +98,7 @@ export interface Obj {
   // A row or a column: how it places its members (mtp-50n).
   layout?: { axis: "row" | "column"; gap: Attribute; align: Attribute } | null;
   active?: Attribute | null;
-  // on-click, on-release, on-dragend, on-pointermove: whether the event stops at its shape.
+  // on-click, on-release, on-dragstart, on-dragend, on-pointermove: whether the event stops at its shape.
   "stop-propagation"?: Attribute | null;
   // canvases: what each shows, in drawing order
   shows?: Shown[];

@@ -15,7 +15,7 @@
     "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
     "transition" "move" "wait" "roll-dice" "animation" "at-once" "in-order" "rand-seed"
     "canvas" "readout" "display" "slider" "button" "play" "toggle" "on-drag" "on-click"
-    "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
+    "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "defaults" "clip" "loop" "autoplay" "exists-when"
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
   "Heads of mtp's forms. Any of them may end in an underscore, as in (circle_ …).")
@@ -112,7 +112,8 @@ takes a color apart from strings.")
     ("canvas" . 1) ("readout" . 2) ("slider" . 2) ("button" . 1) ("play" . 1) ("toggle" . 2)
     ;; Forms with no name.
     ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("on-drag" . 2) ("on-click" . 1)
-    ("on-release" . 1) ("on-dragend" . 1) ("on-view" . 1) ("on-enter" . 1) ("on-leave" . 1)
+    ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 1) ("on-enter" . 1)
+    ("on-leave" . 1)
     ("on-pointermove" . 2) ("defaults" . 0)
     ("exists-when" . 1)
     ("when" . 1) ("foreach" . 2) ("let" . 1) ("fn" . 1) ("if" . 2))
@@ -137,7 +138,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
 (defconst mtp-mode--no-body
   '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "slider" "button" "play" "toggle" "readout" "on-drag" "on-click"
-    "on-release" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
+    "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "colormap" "interface" "defaults" "term" "display" "rand-seed")

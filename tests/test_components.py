@@ -209,10 +209,11 @@ class TestStartingWithoutTheReader:
 
 class TestReleaseListeners:
     # mtp-jpj: on-release runs when the pointer is released over the shape, as JS's pointerup;
-    # on-dragend when a drag of the shape ends, as JS's dragend.
+    # on-dragend when a drag of the shape ends, as JS's dragend; on-dragstart (mtp-5opl) when
+    # one starts, as JS's dragstart.
     S = f"{K} (scene s (circle c))"
 
-    @pytest.mark.parametrize("kind", ["on-release", "on-dragend"])
+    @pytest.mark.parametrize("kind", ["on-release", "on-dragstart", "on-dragend"])
     def test_a_listener_on_a_shape(self, kind):
         m = model(f"{self.S} ({kind} c {MOVE})")
         (o,) = [o for o in m.objects if o.kind == kind]
@@ -220,15 +221,21 @@ class TestReleaseListeners:
         assert m.objects[o.data["animation"]].kind == "animation"
         assert o.name is None and "label" not in o.attrs
 
-    @pytest.mark.parametrize("kind", ["on-release", "on-dragend"])
+    @pytest.mark.parametrize("kind", ["on-release", "on-dragstart", "on-dragend"])
     def test_it_takes_a_shape(self, kind):
         error(f"{K} ({kind} {MOVE})", f"{kind} takes the shape it listens to")
 
     def test_the_compiled_file(self):
-        d = doc(f"{self.S} (on-release c {MOVE}) (on-dragend c (active true) {MOVE})")
+        d = doc(
+            f"{self.S} (on-release c {MOVE}) (on-dragend c (active true) {MOVE})"
+            f" (on-dragstart c (active true) (stop-propagation true) {MOVE})"
+        )
         assert errors(d) == []
         kinds = [o["kind"] for o in d["objects"]]
-        assert "on-release" in kinds and "on-dragend" in kinds
+        assert {"on-release", "on-dragstart", "on-dragend"} <= set(kinds)
+        (o,) = [o for o in d["objects"] if o["kind"] == "on-dragstart"]
+        assert o["shape"] == d["names"]["c"]
+        assert d["objects"][o["animation"]]["kind"] == "animation"
 
 
 class TestButtons:
@@ -501,11 +508,11 @@ class TestPointerListeners:
 
 
 class TestBubbling:
-    # The author, 2026-11-06: as in the DOM, a click, a release, the end of a drag and a pointer
-    # move go up the scene tree to every listener of their kind, unless one stops them.
+    # The author, 2026-11-06: as in the DOM, a click, a release, the start or end of a drag and a
+    # pointer move go up the scene tree to every listener of their kind, unless one stops them.
     S = f"{K} (point p [0 0]) (scene s (group g (circle c (r 1)))) (canvas v s)"
 
-    @pytest.mark.parametrize("kind", ["on-click", "on-release", "on-dragend"])
+    @pytest.mark.parametrize("kind", ["on-click", "on-release", "on-dragstart", "on-dragend"])
     def test_a_listener_may_stop_the_event(self, kind):
         m = model(f"{self.S} ({kind} c (stop-propagation true) {MOVE})")
         (o,) = [o for o in m.objects if o.kind == kind]

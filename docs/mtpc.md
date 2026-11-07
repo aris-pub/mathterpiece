@@ -150,7 +150,7 @@ and `"doc"`, a string, when its declaration gives a docstring, `doc@'text'` (ref
 | `toggle` | `"target"`: `[id, attr]` or `null`; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"attrs"`: `label`, `value` |
 | `on-drag` | `"shape"`: an id; `"target"`: `[id, attr]`; `"map"`, when the drag is written as a move: its `to`, free or bound, reading the local `pointer`, a point; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 | `on-pointermove` | `"shape"`: an id or `null`; `"view"`: the canvas's id or `null`, one of the two; `"target"`: `[id, attr]`; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
-| `on-click`, `on-release`, `on-dragend` | `"shape"`: an id, of a shape or, for `on-click`, of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
+| `on-click`, `on-release`, `on-dragstart`, `on-dragend` | `"shape"`: an id, of a shape or, for `on-click`, of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
 | `on-enter`, `on-leave` | `"shape"`: an id, of a shape or of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 | `on-view` | `"view"`: the canvas's id; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 

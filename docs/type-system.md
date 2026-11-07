@@ -33,7 +33,7 @@ Objects are values, which never change, or mutable objects, which can. A type th
     - **component**
       - view: `canvas`, `readout`, `display`
       - control: `slider`, `button`, `play`, `toggle`
-      - listener: `on-drag`, `on-click`, `on-release`, `on-dragend`, `on-view`
+      - listener: `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`
 
 - **A name** holds a variable or an attribute without evaluating it: `k`, `p.r`, `g[1].r`, `d.c.pos`. A name is declared once and never changes, so it is always known when compiling. A transition's target is a `name|none`.
 - **Numbers** come in four types: `int`, `ratio` (exact fractions such as `1/3`), `real` and `complex`.
