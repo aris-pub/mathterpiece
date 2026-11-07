@@ -34,6 +34,23 @@ describe("on a page", () => {
     expect(t.getBoundingClientRect().height).toBeLessThan(30);
   });
 
+  it("sizes text for the canvas's width on screen after the canvas is resized", async () => {
+    const model = page("draw", `<mtp-canvas model="m" name="v" style="display: block; width: 400px"></mtp-canvas>`);
+    const rt = model.runtime!;
+    const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+    const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const size = () => Number(document.querySelector(`[data-mtp-id="${rt.id("t")}"]`)!.getAttribute("font-size"));
+    svg.style.width = "400px";
+    await frames();
+    const wide = size();
+    svg.style.width = "200px";
+    await frames();
+    expect(size()).toBeCloseTo(wide * 2);
+    // A drawing after a write keeps the size the canvas has now.
+    rt.write(rt.id("k"), null, 2);
+    expect(size()).toBeCloseTo(wide * 2);
+  });
+
   it("drags a shape to where the pointer is in the scene", () => {
     const model = page("page", `<mtp-canvas model="m" name="v" style="display: block; width: 400px"></mtp-canvas>`);
     const rt = model.runtime!;

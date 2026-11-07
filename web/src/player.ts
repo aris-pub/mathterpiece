@@ -2,6 +2,7 @@
 // each as long as its longest part), and each move written to its variable or attribute as time passes or as a
 // slider scrubs through it (docs/reference.md, "Transitions and animations" and "Controls").
 import type { Clamp, Step } from "./doc.ts";
+import { equal } from "./builtins.ts";
 import type { Runtime } from "./runtime.ts";
 import { type Ease, type Moves, along, applyEase, noneEnds } from "./transitions.ts";
 
@@ -45,6 +46,9 @@ export class Player {
   private window: [number, number] | null = null;
   // A loop around the whole body: the step buttons are its body's items.
   private outer: Loop | null = null;
+  // The values at a slider's stops, and the values they were worked out from.
+  private table: { inputs: unknown[]; max: number; values: unknown[] } | null = null;
+  private keeps: boolean | null = null;
 
   constructor(
     private rt: Runtime,
@@ -193,6 +197,34 @@ export class Player {
       cur = along(from, to, u, kind);
     }
     return cur;
+  }
+
+  /**
+   * valueAt at each of a slider's max + 1 stops. A slider follows its target after every change,
+   * so the stops are kept while what they are worked out from stays the same: the target's
+   * value and each move's ends.
+   */
+  valuesAt(max: number): unknown[] {
+    // An ease that is a function of the file may read the model, so is not trusted to stay.
+    this.keeps ??= this.moves.every((m) => typeof m.ease !== "object" || Array.isArray(m.ease));
+    const inputs = this.keeps ? this.inputs() : null;
+    const t = this.table;
+    if (inputs && t && t.max === max && equal(t.inputs, inputs)) return t.values;
+    const values = Array.from({ length: max + 1 }, (_, n) => this.valueAt(n / max));
+    this.table = inputs ? { inputs, max, values } : null;
+    return values;
+  }
+
+  // What valueAt reads besides the time: the target's value and each move's ends.
+  private inputs(): unknown[] {
+    const rt = this.rt;
+    const first = this.moves[0]!;
+    const out: unknown[] = [rt.value(this.holder(first), first.attr)];
+    for (const m of this.moves) {
+      const tr = rt.objects[m.transition]!;
+      out.push(tr.from ? rt.evaluate(tr.from) : m.from, tr.to ? rt.evaluate(tr.to) : m.to);
+    }
+    return out;
   }
 
   /** The top-level step running at the current time, or null when none is. */

@@ -130,6 +130,7 @@ export class MtpModel extends HTMLElement {
 
   /** Tells every view and control of this model to show the current values. */
   changed(): void {
+    this.scheduler?.told();
     this.dispatchEvent(new Event(CHANGE, { bubbles: true }));
   }
 
@@ -300,6 +301,7 @@ export class MtpCanvas extends MtpPart {
     let width = 0;
     new ResizeObserver(() => {
       const now = svg.getBoundingClientRect().width;
+      memo.width = now;
       if (now !== width) {
         width = now;
         this.redraw();
@@ -820,8 +822,9 @@ export class MtpSlider extends MtpPart {
       const max = Number(input.max);
       let best = Number(input.value);
       let gap = Infinity;
+      const values = player.valuesAt(max);
       for (let n = 0; n <= max; n++) {
-        const d = distance(player.valueAt(n / max), now);
+        const d = distance(values[n], now);
         if (d < gap) [best, gap] = [n, d];
       }
       input.value = String(best);

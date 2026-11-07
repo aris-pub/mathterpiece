@@ -5,6 +5,30 @@ import { Player } from "../src/player.ts";
 import type { Runtime } from "../src/runtime.ts";
 import { load } from "./helpers.ts";
 
+describe("a slider's stops", () => {
+  function slider() {
+    const rt = load("stops");
+    const a = rt.objects[rt.id("a")]!;
+    return { rt, p: new Player(rt, a.animation!, a.conditions ?? []) };
+  }
+
+  it("are the values at each stop", () => {
+    const { p } = slider();
+    expect(p.valuesAt(4)).toEqual([0, 0.25, 0.5, 0.75, 1].map((u) => p.valueAt(u)));
+    expect(p.valuesAt(4)).toEqual([0, 5, 10, 15, 20]);
+  });
+
+  it("follow a write to what a move's ends read", () => {
+    const { rt, p } = slider();
+    expect(p.valuesAt(2)).toEqual([0, 10, 20]);
+    rt.write(rt.id("lo"), null, 4);
+    expect(p.valuesAt(2)).toEqual([4, 12, 20]);
+    rt.write(rt.id("hi"), null, 2);
+    expect(p.valuesAt(2)).toEqual([4, 4, 4]);
+    expect(p.valuesAt(4)).toEqual([4, 4, 4, 4, 4]);
+  });
+});
+
 function setup(animation: string): [Runtime, Player, (name: string, attr?: string) => unknown] {
   const rt = load("anim");
   const value = (name: string, attr?: string) => rt.value(rt.id(name), attr ?? null);

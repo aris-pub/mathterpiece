@@ -17,12 +17,19 @@ export class Scheduler {
   // What moves a view's own state, such as a canvas fading something in: it writes nothing in
   // the model, so it never collides with a writer.
   private tickers: ((seconds: number) => boolean)[] = [];
+  // Whether the page has told its views of a change since this last changed what it runs.
+  private heard = false;
 
   /** wake is called whenever something starts moving, so the page can ask for frames. */
   constructor(
     private redraw: () => void,
     private wake: () => void,
   ) {}
+
+  /** The page calls this whenever it tells its views of a change. */
+  told(): void {
+    this.heard = true;
+  }
 
   busy(): boolean {
     return this.tickers.length > 0 || this.sources.some((s) => !s.paused);
@@ -48,8 +55,10 @@ export class Scheduler {
     this.claim(player.targets, source);
     player.release();
     this.sources.push({ source, player, time: from, paused: false });
+    // A seek that writes something tells the views already, as they stand now.
+    this.heard = false;
     player.seek(from);
-    this.redraw();
+    if (!this.heard) this.redraw();
     this.wake();
   }
 
@@ -77,13 +86,19 @@ export class Scheduler {
 
   tick(seconds: number): void {
     this.tickers = this.tickers.filter((t) => t(seconds));
+    this.heard = false;
     for (const s of [...this.sources]) {
       if (s.paused) continue;
       s.time += seconds;
+      this.heard = false;
       s.player.seek(s.time);
-      if (s.player.done) this.forget(s.source);
+      if (s.player.done) {
+        this.forget(s.source);
+        this.heard = false;
+      }
     }
-    this.redraw();
+    // The views are told once more only when the last thing that changed has not been told.
+    if (!this.heard) this.redraw();
   }
 
   private forget(source: object): void {

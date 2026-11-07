@@ -90,6 +90,9 @@ function node(tag: string, attrs: Record<string, unknown> = {}): Drawn {
 export class DrawMemo {
   shapes = new Map<number, { at: number; drawn: Drawn[] }>();
   units = Number.NaN;
+  /** The SVG's width on screen, when its canvas follows it as it changes: asking the page for it
+   * while drawing would make the browser lay the page out first. */
+  width: number | null = null;
 }
 
 interface Pass {
@@ -132,7 +135,7 @@ export function draw(
   let j = 0;
   background(rt, shows.flatMap((s) => (typeof s === "number" ? [s] : shapes[j++]!.map(([id]) => id))), out);
   const top = node("g", { transform: matrix(toUser) });
-  const unitsPerPx = unitsPerPxOf(out, box);
+  const unitsPerPx = unitsPerPxOf(out, box, memo?.width ?? undefined);
   if (memo && memo.units !== unitsPerPx) {
     memo.shapes.clear();
     memo.units = unitsPerPx;
@@ -174,8 +177,8 @@ export function shapesOf(v: unknown): number[] {
 // Until the SVG is on the page its width is 0; a canvas redraws once it has one.
 // A CSS length on a shape inside the SVG is in the view box's units, so a style sized in screen
 // pixels multiplies by --mtp-unit, the units a pixel.
-function unitsPerPxOf(svg: SVGSVGElement, box: number[]): number {
-  const units = box[2]! / (svg.getBoundingClientRect?.().width || 640);
+function unitsPerPxOf(svg: SVGSVGElement, box: number[], width?: number): number {
+  const units = box[2]! / ((width ?? svg.getBoundingClientRect?.().width) || 640);
   if (svg.style.getPropertyValue("--mtp-unit") !== String(units)) svg.style.setProperty("--mtp-unit", String(units));
   return units;
 }
@@ -419,10 +422,18 @@ function heads(pass: Pass, i: number, el: Drawn, into: Drawn[], unitsPerPx: numb
 // when an attribute it needs is none. Fill, stroke and the heads may be none without it.
 const MAY_BE_NONE = new Set(["fill", "stroke", "head-start", "head-end", "exists"]);
 
+// Each kind of object's attributes that must not be none, found once.
+const needed = new WeakMap<object, string[]>();
+
 function absent(rt: Runtime, i: number): boolean {
   if (!rt.exists(i)) return true;
   const o = rt.objects[i]!;
-  return Object.entries(o.attrs ?? {}).some(([attr, p]) => !MAY_BE_NONE.has(attr) && p.type && rt.value(i, attr) === null);
+  let attrs = needed.get(o);
+  if (!attrs) {
+    attrs = Object.entries(o.attrs ?? {}).flatMap(([attr, p]) => (!MAY_BE_NONE.has(attr) && p.type ? [attr] : []));
+    needed.set(o, attrs);
+  }
+  return attrs.some((attr) => rt.value(i, attr) === null);
 }
 
 /**

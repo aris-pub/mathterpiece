@@ -1,0 +1,4 @@
+(real lo 0)
+(real hi 10)
+(real k 0)
+(slider a (move k (from lo) (to (* 2 hi))))
