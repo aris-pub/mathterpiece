@@ -117,15 +117,14 @@
         main.side {
           max-width: 1500px;
           grid-template-columns: minmax(16rem, 26rem) minmax(0, 1fr);
-          grid-template-areas: "title title" "about figure" "about controls" "variables variables";
+          grid-template-areas: "title title" "about figure" "about controls";
           column-gap: 2rem;
           align-items: start;
         }
         main.side h1 { grid-area: title; }
-        main.side #about { grid-area: about; }
+        main.side #side { grid-area: about; }
         main.side #canvases { grid-area: figure; }
         main.side #controls { grid-area: controls; }
-        main.side #variables { grid-area: variables; }
       }
       h1 { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 600; }
       #about { color: var(--muted); }
@@ -138,9 +137,23 @@
       #controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.25rem; }
       #controls:empty { display: none; }
       #controls > p { flex-basis: 100%; margin: 0; }
-      details { color: var(--muted); font-size: 14px; }
-      summary { cursor: pointer; }
-      #values { border-collapse: collapse; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; margin-top: 0.5rem; }
+      /* The figure's explanation and its variables, one at a time, under two tabs. */
+      #side { display: grid; gap: 0.75rem; align-content: start; min-width: 0; }
+      .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--rule); }
+      .tabs button {
+        font: inherit;
+        font-size: 14px;
+        color: var(--muted);
+        background: none;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        padding: 0.3rem 0.6rem;
+        cursor: pointer;
+      }
+      .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+      #values-panel { overflow-x: auto; }
+      #values { border-collapse: collapse; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }
       #values td { padding: 0.15rem 1rem 0.15rem 0; border-bottom: 1px solid var(--rule); }
       /* A page restyling a figure's color tokens: no mtp involved, only CSS. */
       :root.dark {
@@ -185,15 +198,18 @@
     </nav>
     <main>
       <h1 id="title"></h1>
-      <div id="about"></div>
+      <section id="side">
+        <div class="tabs" role="tablist">
+          <button id="tab-about" type="button" role="tab" aria-selected="true">explanation</button>
+          <button id="tab-values" type="button" role="tab" aria-selected="false">variables</button>
+        </div>
+        <div id="about" role="tabpanel"></div>
+        <div id="values-panel" role="tabpanel" hidden><table id="values"></table></div>
+      </section>
       <mtp-model id="m"></mtp-model>
       <div id="inventory" hidden></div>
       <div id="canvases"></div>
       <div id="controls"></div>
-      <details id="variables">
-        <summary>every variable and its value</summary>
-        <table id="values"></table>
-      </details>
     </main>
     </div>
     <script type="module">
@@ -307,7 +323,7 @@
         document.querySelector("main").classList.toggle("side", ones && !showInventory);
         viewButton.setAttribute("aria-pressed", String(showInventory));
         const inv = document.getElementById("inventory");
-        for (const id of ["canvases", "controls", "variables"]) document.getElementById(id).hidden = showInventory;
+        for (const id of ["canvases", "controls"]) document.getElementById(id).hidden = showInventory;
         inv.hidden = !showInventory;
         if (showInventory) {
           // The inventory places its own components, so the usual view places none.
@@ -393,6 +409,16 @@
         }
       };
       addEventListener("resize", fit);
+      // The explanation shows first; the tab chosen stays as the figures change.
+      const tabs = [["tab-about", "about"], ["tab-values", "values-panel"]];
+      for (const [tab, panel] of tabs) {
+        document.getElementById(tab).onclick = () => {
+          for (const [t, p] of tabs) {
+            document.getElementById(t).setAttribute("aria-selected", String(t === tab));
+            document.getElementById(p).hidden = p !== panel;
+          }
+        };
+      }
       for (const [id, cls] of [["theme", "dark"], ["fonts", "fonts"]]) {
         const b = document.getElementById(id);
         b.onclick = () => b.setAttribute("aria-pressed", String(document.documentElement.classList.toggle(cls)));
