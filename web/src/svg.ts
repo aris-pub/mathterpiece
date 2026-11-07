@@ -187,9 +187,20 @@ function unitsPerPxOf(svg: SVGSVGElement, box: number[], width?: number): number
 // element drawn with a data-mtp-id is kept for the same shape, any other for the next one of its
 // tag.
 function patchChildren(parent: Element, want: Drawn[]): void {
+  // Most often the elements are the ones wanted, in the same order: those are changed in place.
+  const children = parent.children;
+  let start = 0;
+  for (; start < want.length && start < children.length; start++) {
+    const el = children[start]!;
+    const was = DRAWN.get(el);
+    const d = want[start]!;
+    if (!was || was.tag !== d.tag || was.attrs["data-mtp-id"] !== d.attrs["data-mtp-id"]) break;
+    patch(el, d);
+  }
+  if (start === want.length && start === children.length) return;
   const keyed = new Map<string, Element[]>();
   const loose = new Map<string, Element[]>();
-  for (const el of Array.from(parent.children)) {
+  for (const el of Array.from(children).slice(start)) {
     const was = DRAWN.get(el);
     if (!was) continue;
     const id = was.attrs["data-mtp-id"];
@@ -199,6 +210,7 @@ function patchChildren(parent: Element, want: Drawn[]): void {
     else pool.set(k, [el]);
   }
   want.forEach((d, i) => {
+    if (i < start) return;
     const id = d.attrs["data-mtp-id"];
     const pool = id === undefined ? loose.get(d.tag) : keyed.get(`${d.tag}#${id}`);
     let el = pool?.shift();
@@ -241,11 +253,11 @@ function create(d: Drawn): Element {
 function patch(el: Element, d: Drawn): void {
   const was = DRAWN.get(el)!;
   if (was === d) return;
-  for (const [k, v] of Object.entries(d.attrs)) if (was.attrs[k] !== v) setAttr(el, k, v);
-  for (const k of Object.keys(was.attrs)) if (!(k in d.attrs)) removeAttr(el, k);
+  for (const k in d.attrs) if (was.attrs[k] !== d.attrs[k]) setAttr(el, k, d.attrs[k]!);
+  for (const k in was.attrs) if (!(k in d.attrs)) removeAttr(el, k);
   const style = (el as SVGElement).style;
-  for (const [k, v] of Object.entries(d.style)) if (was.style[k] !== v) style.setProperty(k, v);
-  for (const k of Object.keys(was.style)) if (!(k in d.style)) style.removeProperty(k);
+  for (const k in d.style) if (was.style[k] !== d.style[k]) style.setProperty(k, d.style[k]!);
+  for (const k in was.style) if (!(k in d.style)) style.removeProperty(k);
   if (d.text !== was.text) el.textContent = d.text ?? "";
   if ((d.children.length > 0 || was.children.length > 0) && !showing(el, d.children)) patchChildren(el, d.children);
   DRAWN.set(el, d);
