@@ -32,8 +32,8 @@
   "Keyword arguments: the heads of the forms a form takes as its optional arguments,
 such as (x -8), (duration 0.8) and (fill teal).")
 
-;; Every face is the mode's own, upright, in the colors of Solarized (Ethan Schoonover's
-;; palette), whose accents are the same on light and dark backgrounds.
+;; Every face is the mode's own, upright, in the colors of Tango, the palette Emacs's tango
+;; theme uses.
 
 (defmacro mtp-mode--defface (face spec doc)
   "Declare FACE as defface does, then apply SPEC: defface leaves a face that exists as it is,
@@ -42,61 +42,60 @@ so loading the mode again would keep a face's old look."
           (face-spec-set ',face ,spec 'face-defface-spec)))
 
 (mtp-mode--defface mtp-mode-form-head-face
-  '((t :foreground "#859900" :weight bold :slant normal))
+  '((t :foreground "#204a87" :weight bold :slant normal))
   "Face for the heads of mtp's forms, such as canvas in (canvas view …), in bold, the heaviest
 weight every font has.")
 
 (mtp-mode--defface mtp-mode-call-face
-  '((t :foreground "#268bd2" :weight normal :slant normal))
+  '((t :foreground "#75507b" :weight normal :slant normal))
   "Face for the head of a function call, built in or the author's own, such as part in
 (part s 0).")
 
 (mtp-mode--defface mtp-mode-keyword-face
-  '((t :foreground "#6c71c4" :slant normal))
+  '((t :foreground "#346604" :slant normal))
   "Face for keyword arguments, such as x in (x -8), and for doc@, tex' and (const).")
 
 (mtp-mode--defface mtp-mode-function-name-face
-  '((t :foreground "#268bd2" :slant normal))
+  '((t :foreground "#a40000" :slant normal))
   "Face for the name a func, motif, variant or type declares.")
 
 (mtp-mode--defface mtp-mode-variable-name-face
-  '((t :foreground "#cb4b16" :slant normal))
+  '((t :foreground "#b35000" :slant normal))
   "Face for the name any other declaration declares, and for what let and foreach bind.")
 
 (mtp-mode--defface mtp-mode-type-face
-  '((t :foreground "#b58900" :slant normal))
+  '((t :foreground "#204a87" :slant normal))
   "Face for a type inside brackets, as real in list[real].")
 
 (mtp-mode--defface mtp-mode-constant-face
-  '((t :foreground "#2aa198" :slant normal))
+  '((t :foreground "#5c3566" :slant normal))
   "Face for none, true, false and self.")
 
 (mtp-mode--defface mtp-mode-number-face
-  '((t :foreground "#d33682" :slant normal))
+  '((t :foreground "#ce5c00" :slant normal))
   "Face for numbers.")
 
 (mtp-mode--defface mtp-mode-string-face
-  '((t :foreground "#2aa198" :slant normal))
+  '((t :foreground "#5c3566" :slant normal))
   "Face for strings.")
 
 (mtp-mode--defface mtp-mode-comment-face
-  '((((background light)) :foreground "#93a1a1" :slant normal)
-    (t :foreground "#586e75" :slant normal))
+  '((t :foreground "#5f615c" :slant normal))
   "Face for comments.")
 
 (mtp-mode--defface mtp-mode-doc-face
-  '((t :foreground "#2aa198" :weight bold :slant normal))
+  '((t :foreground "#5c3566" :weight bold :slant normal))
   "Face for a docstring, the text of doc@'text'. Themes often draw `font-lock-doc-face' faint,
 so it takes the string color, which every theme draws clearly, in bold to stand out from the
 figure's own strings.")
 
 (mtp-mode--defface mtp-mode-free-face
-  '((t :foreground "#dc322f" :weight bold :slant normal))
+  '((t :foreground "#cc0000" :weight bold :slant normal))
   "Face for free@ in free@(f x): the value is free, starting at the expression's value and never
 following it, though an expression is written there, so it is drawn to stand out.")
 
 (mtp-mode--defface mtp-mode-name-string-face
-  '((t :foreground "#268bd2" :slant normal))
+  '((t :foreground "#a40000" :slant normal))
   "Face for a name string, #'dot-{k}', which is read as a name, not kept as a string, so it
 takes a color apart from strings.")
 
