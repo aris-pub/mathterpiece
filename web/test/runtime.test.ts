@@ -1,6 +1,7 @@
 // The live model on .mtpc files the compiler writes (built by `just web-examples` from
 // test/fixtures/runtime/*.mtp).
 import { describe, expect, it } from "vitest";
+import { BUILTINS } from "../src/builtins.ts";
 import { load } from "./helpers.ts";
 
 describe("recomputing only what changed", () => {
@@ -28,6 +29,24 @@ describe("recomputing only what changed", () => {
   it("skips a write that changes nothing", () => {
     const rt = load("chain");
     expect(rt.write(rt.id("k"), null, 1)).toBe(false);
+  });
+});
+
+describe("arithmetic on two numbers", () => {
+  it("gives what the built-ins give, and none where they are undefined", () => {
+    const rt = load("arith");
+    const v = (name: string) => rt.value(rt.id(name));
+    expect(v("over")).toBe(-1);
+    expect(v("under")).toBe(-1);
+    expect(v("div")).toBe(-1);
+    expect(v("sum")).toBe(BUILTINS["+"]!(0.1, 0.2));
+    expect(v("diff")).toBe(BUILTINS["-"]!(0.1, 0.2));
+    expect(v("quot")).toBe(BUILTINS["/"]!(0.1, 0.2));
+    expect([v("less"), v("same"), v("twice")]).toEqual([true, false, 14]);
+    rt.write(rt.id("z"), null, 4);
+    expect(v("div")).toBe(0.25);
+    rt.write(rt.id("b"), null, 0.1);
+    expect([v("less"), v("same"), v("diff")]).toEqual([false, true, 0]);
   });
 });
 

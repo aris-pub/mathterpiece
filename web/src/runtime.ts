@@ -64,6 +64,24 @@ const POINT_ATTRS = new Set(["from", "to", "a", "b", "c"]);
 // The built-ins that decide something with none themselves; every other one gives none when an
 // argument is none (type-system.md 5.c).
 const NONE_AWARE = new Set(["or?", "none?", "some?", "somes", "=", "!="]);
+// The types whose values are plain numbers.
+const NUMBERS = new Set(["real", "int", "ratio"]);
+// What the arithmetic built-ins give for two plain numbers, as builtins.ts does: a result that
+// is not a finite number is undefined, so none.
+const MAX_REAL = Number.MAX_VALUE;
+const finite = (x: number) => (Number.isFinite(x) && Math.abs(x) <= MAX_REAL ? x : null);
+const FAST: Record<string, (a: number, b: number) => number | boolean | null> = {
+  "+": (a, b) => finite(a + b),
+  "-": (a, b) => finite(a + -b),
+  "*": (a, b) => finite(a * b),
+  "/": (a, b) => (b === 0 ? null : finite(a / b)),
+  "<": (a, b) => a < b,
+  "<=": (a, b) => a <= b,
+  ">": (a, b) => a > b,
+  ">=": (a, b) => a >= b,
+  "=": (a, b) => a === b,
+  "!=": (a, b) => a !== b,
+};
 const COLLECTIONS = new Set(["map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"]);
 
 /** What an expression needs to run: the names around it, and the frame of its caller. */
@@ -823,9 +841,9 @@ export class Runtime {
         const bindings = (parts[0] as [string, Expr][]).map(([n, x]) => [n, this.compile(x)] as const);
         const body = this.compile(parts[1] as Expr);
         return (ctx) => {
-          const locals = { ...ctx.locals };
-          for (const [n, f] of bindings) locals[n] = f({ ...ctx, locals });
-          return body({ ...ctx, locals });
+          const inner = { locals: { ...ctx.locals }, frame: ctx.frame };
+          for (const [n, f] of bindings) inner.locals[n] = f(inner);
+          return body(inner);
         };
       }
       case "rand":
@@ -933,6 +951,34 @@ export class Runtime {
     if (!impl) throw new Error(`unknown built-in ${name}`);
     const aware = NONE_AWARE.has(name);
     const isInt = this.core(t) === "int";
+    const fast = FAST[name];
+    const exprs = parts.slice(1) as Expr[];
+    if (fast && exprs.length === 2 && exprs.every((x) => NUMBERS.has(this.core(x[1]) as string))) {
+      // Two plain numbers: the operator itself, with what the built-in would check.
+      const [fa, fb] = args as [Compiled, Compiled];
+      return (ctx) => {
+        const a = fa(ctx) as number | null;
+        const b = fb(ctx) as number | null;
+        if (!aware && (a === null || b === null)) return null;
+        const v = fast(a!, b!);
+        return isInt && typeof v === "number" ? Math.round(v) : v;
+      };
+    }
+    if (args.length === 1 && !aware) {
+      // One argument, as most built-ins take, with no list made for it.
+      const [fa] = args as [Compiled];
+      return (ctx) => {
+        const a = fa(ctx);
+        if (a === null) return null;
+        try {
+          const v = impl(a);
+          return isInt && typeof v === "number" ? Math.round(v) : v;
+        } catch (err) {
+          if (err instanceof Undefined) return null;
+          throw err;
+        }
+      };
+    }
     return (ctx) => {
       const vs = args.map((f) => f(ctx));
       if (!aware && vs.some((v) => v === null)) return null;
