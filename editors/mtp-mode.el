@@ -41,7 +41,7 @@ so loading the mode again would keep a face's old look."
   `(progn (defface ,face ,spec ,doc)
           (face-spec-set ',face ,spec 'face-defface-spec)))
 
-(mtp-mode--defface mtp-mode-head-face
+(mtp-mode--defface mtp-mode-form-head-face
   '((t :inherit font-lock-type-face :weight bold :slant normal))
   "Face for the heads of mtp's forms, such as canvas in (canvas view …), in bold, the heaviest
 weight every font has; nothing else in the mode is bold but docstrings and free@. Most heads are
@@ -282,7 +282,7 @@ not one of mtp's forms or keyword arguments, which earlier rules have already hi
 
 (defconst mtp-mode--font-lock
   `((,(concat "(\\(" (regexp-opt mtp-mode--heads) "\\)\\(?:|none\\)?_?\\_>")
-     1 'mtp-mode-head-face)
+     1 'mtp-mode-form-head-face)
     (,(concat "(\\(?:func\\|motif\\|variant\\|type\\)\\(?:\\[[^ \t\n()]*\\]\\)?[ \t]+"
               "\\([^][() \t\n';\"#]+\\)")
      1 'mtp-mode-function-name-face)

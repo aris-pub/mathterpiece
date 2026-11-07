@@ -18,8 +18,8 @@
   (let ((src "(canvas view (x -8) (pan false)\n  pond)\n(on-view view (animation (move rise (to 0) (duration 0.8) (ease 'ease-out'))))"))
     (dolist (word '("x" "pan" "to 0" "duration" "ease"))
       (should (eq (mtp-mode-test--face-at src word) 'mtp-mode-keyword-face)))
-    (should (eq (mtp-mode-test--face-at src "canvas") 'mtp-mode-head-face))
-    (should (eq (mtp-mode-test--face-at src "animation") 'mtp-mode-head-face))))
+    (should (eq (mtp-mode-test--face-at src "canvas") 'mtp-mode-form-head-face))
+    (should (eq (mtp-mode-test--face-at src "animation") 'mtp-mode-form-head-face))))
 
 (ert-deftest mtp-mode-highlights-shape-attributes ()
   (let ((src "(scene s (circle c (r 1) (fill teal) (stroke-width 2) (dash [4 2])))"))
@@ -108,12 +108,12 @@
 
 (ert-deftest mtp-mode-draws-heads-heavier-than-calls ()
   ;; Bold, which every font has: a weight the font lacks is drawn regular (seen 2026-11-07).
-  (should (eq (face-attribute 'mtp-mode-head-face :weight) 'bold))
+  (should (eq (face-attribute 'mtp-mode-form-head-face :weight) 'bold))
   (should (eq (face-attribute 'mtp-mode-call-face :weight) 'normal))
   (should (eq (mtp-mode-test--face-at "(real v (next 1))" "next") 'mtp-mode-call-face)))
 
 (ert-deftest mtp-mode-reapplies-its-faces-when-loaded-again ()
   ;; defface leaves a face that exists as it is, so a reloaded mode kept old weights.
-  (face-spec-set 'mtp-mode-head-face '((t :weight light)) 'face-defface-spec)
+  (face-spec-set 'mtp-mode-form-head-face '((t :weight light)) 'face-defface-spec)
   (load (locate-library "mtp-mode") nil t)
-  (should (eq (face-attribute 'mtp-mode-head-face :weight) 'bold)))
+  (should (eq (face-attribute 'mtp-mode-form-head-face :weight) 'bold)))
