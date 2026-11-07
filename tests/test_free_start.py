@@ -61,3 +61,11 @@ def test_not_on_a_const_variable():
 
 def test_not_on_a_token():
     error("(color a '#ff0000') (color k free@a)", "a color variable is a token")
+
+
+def test_a_position_written_whole():
+    # A position is its x and its y, each starting free at its part of the point.
+    m = model("(real a 1) (scene s (circle c (pos free@[a 1]) (r 1)))")
+    c = m.get("c").attrs
+    assert c["x"].start is not None and not c["x"].bound
+    assert not c["y"].bound and c["y"].value == 1

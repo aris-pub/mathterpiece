@@ -4512,10 +4512,20 @@ class _Compiler:
                 self.where = saved
         if "pos" in given:
             node, inner = given["pos"]
+            # free@ on a position starts its x and its y free, each at its part of the point.
+            start = _is_free_start(node)
+            if start:
+                assert isinstance(node, Form)
+                node = node.items[1]
             point = self.expr(node, _maybe(POINT) if absent else POINT, inner)
             for k, attr in enumerate(("x", "y")):
                 at = _maybe(REAL) if absent else REAL
-                obj.attrs[attr] = self.settle(at, _part(point, k), attr, node.pos)
+                part = self.settle(at, _part(point, k), attr, node.pos)
+                if start and part.bound:
+                    part = Attribute(part.type, start=part.expr)
+                elif start:
+                    part.type = _without_const(part.type)
+                obj.attrs[attr] = part
         if absent:
             for attr, attribute in obj.attrs.items():
                 if not _may_be_none(_value_type(attribute)):
