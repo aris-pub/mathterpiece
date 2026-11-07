@@ -121,6 +121,11 @@ export class Player {
 
   /** Writes every move as it stands t seconds in. */
   seek(time: number): void {
+    // The page hears of a frame's writes once, at its end: a round may write many times.
+    this.rt.together(() => this.seekNow(time));
+  }
+
+  private seekNow(time: number): void {
     this.time = time;
     const shown = this.moves.filter((m) => this.inWindow(m.start));
     // A new round: the last one ends first, every move in the order it ends, so a later move's

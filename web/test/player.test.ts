@@ -184,5 +184,14 @@ describe("a player", () => {
     p.seek(0);
     expect([v("left"), v("right")]).toEqual([5, 5]);
   });
+
+  it("tells the page of a frame's writes once", () => {
+    // three-body wrote dozens of times a frame, and the page redrew for each.
+    const [rt, p] = setup("both");
+    let heard = 0;
+    rt.listeners.push(() => heard++);
+    p.seek(0.5);
+    expect(heard).toBe(1);
+  });
 });
 
