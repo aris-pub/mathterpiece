@@ -36,8 +36,8 @@ function complex(x: unknown): Complex {
   return x instanceof Complex ? x : new Complex(x as number, 0);
 }
 
-function isComplex(...xs: unknown[]): boolean {
-  return xs.some((x) => x instanceof Complex);
+function isComplex(a: unknown, b: unknown): boolean {
+  return a instanceof Complex || b instanceof Complex;
 }
 
 // math.sin(math.pi) is 1.2e-16, not 0, so right angles in degrees are looked up instead.
@@ -132,13 +132,42 @@ function power(a: unknown, b: unknown): unknown {
   return finite(x ** y);
 }
 
+// No value is changed once made, so whether two long lists are equal is kept for the two: a
+// figure may compare the same lists for each of hundreds of shapes.
+const LONG = 16;
+const longEqual = new WeakMap<unknown[], WeakMap<unknown[], boolean>>();
+
+function equalLong(a: unknown[], b: unknown[]): boolean {
+  let row = longEqual.get(a);
+  const known = row?.get(b);
+  if (known !== undefined) return known;
+  let same = true;
+  for (let i = 0; i < a.length && same; i++) {
+    const x = a[i];
+    const y = b[i];
+    same = typeof x === "number" && typeof y === "number" ? x === y : equal(x, y);
+  }
+  if (!row) longEqual.set(a, (row = new WeakMap()));
+  row.set(b, same);
+  return same;
+}
+
 /** Two values of one type equal: colors as colors, points and lists item by item. */
 export function equal(a: unknown, b: unknown): boolean {
   if (a === null || b === null) return a === b;
   if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((x, i) => equal(x, b[i]));
+    if (a.length !== b.length) return false;
+    if (a.length >= LONG) return equalLong(a, b);
+    // Lists of points and numbers are compared often, such as a trail of 160 points against
+    // another, so two numbers are compared here without a call.
+    for (let i = 0; i < a.length; i++) {
+      const x = a[i];
+      const y = b[i];
+      if (typeof x === "number" && typeof y === "number" ? x !== y : !equal(x, y)) return false;
+    }
+    return true;
   }
-  if (isComplex(a, b)) {
+  if (a instanceof Complex || b instanceof Complex) {
     const x = complex(a);
     const y = complex(b);
     return x.re === y.re && x.im === y.im;
