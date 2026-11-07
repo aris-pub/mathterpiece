@@ -52,6 +52,36 @@
       (search-forward "doc@")
       (should (= (current-indentation) 2)))))
 
+(defun mtp-mode-test--indent (src)
+  "SRC as mtp-mode indents it."
+  (with-temp-buffer
+    (insert src)
+    (mtp-mode)
+    (indent-region (point-min) (point-max))
+    (buffer-string)))
+
+(ert-deftest mtp-mode-reads-a-type-in-brackets-as-part-of-the-head ()
+  (dolist (pair
+           '(("(func[real] next\n((real s))\ns)"
+              . "(func[real] next\n    ((real s))\n  s)")
+             ("(func[list[real]] next\n((list[real] s) (int k))\ns)"
+              . "(func[list[real]] next\n    ((list[real] s) (int k))\n  s)")
+             ("(func[real]\nnext\n((real s))\ns)"
+              . "(func[real]\n    next\n    ((real s))\n  s)")
+             ("(func[real] next ((real s))\ns)"
+              . "(func[real] next ((real s))\n  s)")
+             ("(func next\n((real s))\ns)"
+              . "(func next\n    ((real s))\n  s)")
+             ("(func\nnext\n((real s))\ns)"
+              . "(func\n    next\n    ((real s))\n  s)")
+             ("(motif m\n((real v))\n(circle c))"
+              . "(motif m\n    ((real v))\n  (circle c))")
+             ("(list[real] xs\n[1 2])"
+              . "(list[real] xs\n    [1 2])")
+             ("(play p\n(animation\n(in-order a b)))"
+              . "(play p\n    (animation\n      (in-order a b)))")))
+    (should (equal (mtp-mode-test--indent (car pair)) (cdr pair)))))
+
 (ert-deftest mtp-mode-sets-a-name-string-apart ()
   (let ((src "(scene s (circle #'dot-{k}' (fill 'red')))"))
     (should (eq (mtp-mode-test--face-at src "dot") 'mtp-mode-name-string-face))

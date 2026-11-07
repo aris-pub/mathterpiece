@@ -151,6 +151,14 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
     "canvas" "readout" "slider" "button" "play" "toggle" "formula" "display")
   "Forms that take a name, so that (head_ …) has one argument fewer before its body.")
 
+(defun mtp-mode--skip-head ()
+  "Move past the head that starts at point, with the type in brackets right after it.
+[ ] are parentheses to Emacs, so without this func[real] would read as a head
+and a list, as if the list stood where the name goes."
+  (forward-sexp 1)
+  (when (eq (char-after) ?\[)
+    (forward-sexp 1)))
+
 (defun mtp-mode--indent-function (indent-point state)
   "Indent an mtp form as Emacs Lisp indents a `defun'.
 Positional and keyword arguments on lines of their own go 4 in from the
@@ -182,7 +190,7 @@ list's items under its first item."
                  (or unnamed
                      (save-excursion
                        (goto-char (1+ start))
-                       (forward-sexp 1)
+                       (mtp-mode--skip-head)
                        (skip-chars-forward " \t\n")
                        (looking-at "[([]"))))
         (setq count (max 0 (1- count))))
@@ -190,7 +198,7 @@ list's items under its first item."
       (when (and (equal base "foreach")
                  (save-excursion
                    (goto-char (1+ start))
-                   (forward-sexp 1)
+                   (mtp-mode--skip-head)
                    (skip-chars-forward " \t\n")
                    (looking-at "(")))
         (setq count 1))
@@ -198,7 +206,7 @@ list's items under its first item."
       (let ((before 0))
         (save-excursion
           (goto-char (1+ start))
-          (forward-sexp 1)
+          (mtp-mode--skip-head)
           (while (condition-case nil
                      (progn (forward-sexp 1) (< (point) indent-point))
                    (error nil))

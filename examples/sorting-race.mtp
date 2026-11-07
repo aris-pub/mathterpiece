@@ -19,8 +19,8 @@
 (func[real] part ((list[real] s) (int k)) (or? s[k] 0))
 (func[real] bar ((list[real] s) (int k)) (part s (+ 4 k)))
 ; The state with its first four numbers replaced, and the bars at p and q traded when trade.
-(func[list[real]] next ((list[real] s) (real a) (real b) (real c) (real d) (bool trade)
-                        (int p) (int q))
+(func[list[real]] next
+    ((list[real] s) (real a) (real b) (real c) (real d) (bool trade) (int p) (int q))
   (map (range (+ 4 n))
        (fn k (cond ((= k 0) a) ((= k 1) b) ((= k 2) c) ((= k 3) d)
                    ((and trade (= k (+ 4 p))) (bar s q))
