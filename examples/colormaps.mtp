@@ -78,16 +78,18 @@
             (fill (land (- h sea)))))))
 
   ; Okabe and Ito by number: twelve dots, so the last four repeat the first four. Under them,
-  ; the first eight again, each read by its name.
-  (group chart (translate [-4.6 -2.7])
+  ; the first eight again, each read by its name. Their black would vanish on a dark page, so
+  ; there each dot has an edge; on a light page the edge is clear.
+  (color dot-edge (light-dark '#00000000' soft))
+  (group chart (translate [-4.6 -2.7]) (defaults (stroke dot-edge))
     (foreach k 12
-      (circle_ (pos [(* 0.48 (- k 5.5)) 0]) (r 0.19) (fill (okabe-ito k)) (stroke none))))
-  (group named (translate [-4.6 -4.05])
+      (circle_ (pos [(* 0.48 (- k 5.5)) 0]) (r 0.19) (fill (okabe-ito k)))))
+  (group named (translate [-4.6 -4.05]) (defaults (stroke dot-edge))
     (foreach k 8
       (let ((names [okabe-ito-named.orange okabe-ito-named.sky-blue okabe-ito-named.bluish-green
                     okabe-ito-named.yellow okabe-ito-named.blue okabe-ito-named.vermillion
                     okabe-ito-named.reddish-purple okabe-ito-named.black]))
-        (circle_ (pos [(* 0.48 (- k 3.5)) 0]) (r 0.19) (fill names[k]) (stroke none)))))
+        (circle_ (pos [(* 0.48 (- k 3.5)) 0]) (r 0.19) (fill names[k])))))
 
   ; The wheel: 36 parts of a ring, each the color of its middle angle, and a handle outside it.
   (real reach 1.75 (const))

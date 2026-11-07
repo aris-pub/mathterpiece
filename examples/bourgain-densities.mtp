@@ -8,13 +8,13 @@
 ; them. Press play for a tour in three steps.
 ; Coordinates are the original SVG's at a width of 480, with y pointing up.
 
-(color fg '#1f2328')
-(color muted '#6b7280')
-(color bg '#faf7f0')
-(color rule '#d8d3c4')
-(color grid '#e8e5dc')
-(color one '#7f8da0')
-(color every '#1a6f66')
+(color fg (light-dark '#1f2328' '#e6e1d6'))
+(color muted (light-dark '#6b7280' '#9aa1ad'))
+(color bg (light-dark '#faf7f0' '#272522'))
+(color rule (light-dark '#d8d3c4' '#4a463e'))
+(color grid (light-dark '#e8e5dc' '#36332d'))
+(color one (light-dark '#7f8da0' '#a9b5c6'))
+(color every (light-dark '#1a6f66' '#4cb8aa'))
 (font plain (size 13))
 (font tick (size 12))
 (font strong (size 13) (weight 600))
@@ -95,7 +95,7 @@
 (func cy (real v) (+ -114 (* (max 0 (min 1 (/ (log (max v 1) 10) 3))) 106)))
 
 ; Its tip is where a guide line ends.
-(motif handle ((color edge '#7f8da0') (real weight 1.5 (>= 0)))
+(motif handle ((color edge (light-dark '#7f8da0' '#a9b5c6')) (real weight 1.5 (>= 0)))
   doc@'A pill with three grip lines, with its tip at the middle of its top edge.'
   (rect body (width 22) (height 12) (rx 6) (ry 6) (fill bg) (stroke edge) (stroke-width weight))
   (circle tip (pos [0 6]) (r 0) (fill none) (stroke none))

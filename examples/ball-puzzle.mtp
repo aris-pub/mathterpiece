@@ -5,8 +5,8 @@
 
 (import house paper ink soft)
 
-(color board-wood '#e8dcc4')
-(color hole '#cbbd9f')
+(color board-wood (light-dark '#e8dcc4' '#4a4235'))
+(color hole (light-dark '#cbbd9f' '#2f2a22'))
 
 ; A piece's balls, as offsets from its first ball, in whole holes.
 (list[list[point]] shapes
@@ -25,7 +25,7 @@
     (const))
 (list[color] paints
     ['#e63946' '#f4a261' '#e9c46a' '#8ab17d' '#2a9d8f' '#457b9d' '#6d597a' '#b5838d' '#f28482'
-     '#84a59d' '#264653' '#9c6644']
+     '#84a59d' (light-dark '#264653' '#3f6f80') '#9c6644']
     (const))
 ; Where each piece waits below the board before it is placed.
 (list[point] trays
@@ -49,7 +49,7 @@
   doc@'Balls joined into one piece, turned by orient: size of them, at most 5.'
   (foreach k size
     (circle_ (pos (turned cells[k] orient)) (r 0.47) (fill paint) (stroke ink) (stroke-width 1))
-    (circle_ (pos (+ (turned cells[k] orient) [-0.13 0.13])) (r 0.12) (fill paper) (fill-opacity 0.6)
+    (circle_ (pos (+ (turned cells[k] orient) [-0.13 0.13])) (r 0.12) (fill (light-dark paper ink)) (fill-opacity 0.6)
         (stroke none))))
 
 (scene puzzle (background paper)

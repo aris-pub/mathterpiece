@@ -1,14 +1,15 @@
 ; The colors and fonts the examples share. Not a figure: each example imports what it uses.
 
-; The paper is the warm one bourgain puts over BRAIID, RSM's design system. A page sets each
-; token for its dark theme (--mtp-house-ink in web/index.html).
-(color paper '#faf7f0')
-(color ink '#1f2a44')
-(color soft '#8a93a6')
-(color terracotta '#e76f51')
-(color teal '#2a9d8f')
-(color saffron '#e9c46a')
-(color plum '#6d597a')
+; The paper is the warm one bourgain puts over BRAIID, RSM's design system. Each color has a
+; dark value, which a page whose color-scheme is dark draws instead; on a dark page the paper is
+; the page's own dark.
+(color paper (light-dark '#faf7f0' '#272522'))
+(color ink (light-dark '#1f2a44' '#e8e4d8'))
+(color soft (light-dark '#8a93a6' '#8f97a8'))
+(color terracotta (light-dark '#e76f51' '#f08a6c'))
+(color teal (light-dark '#2a9d8f' '#4cc2b3'))
+(color saffron (light-dark '#e9c46a' '#f2d27e'))
+(color plum (light-dark '#6d597a' '#a88bb8'))
 
 ; The fonts by what they are for. A page with BRAIID points each family at the document's
 ; (--mtp-house-variable-family: var(--font-body), and --font-mono for number and code), so a

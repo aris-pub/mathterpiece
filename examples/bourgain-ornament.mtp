@@ -6,7 +6,7 @@
 (import ease linear)
 (import math clamp)
 
-(color ink '#6b7280')
+(color ink (light-dark '#6b7280' '#9aa1ad'))
 
 ; The base's circumradius, and the tetrahedron's height.
 (real radius 10.2 (const))

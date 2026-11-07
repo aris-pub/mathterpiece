@@ -10,8 +10,8 @@
 (import house paper ink soft terracotta teal saffron variable)
 (import math smoothstep)
 
-(color wash '#ece6d8')
-(color triangle-fill '#d8d2c6')
+(color wash (light-dark '#ece6d8' '#3a362f'))
+(color triangle-fill (light-dark '#d8d2c6' '#3d3a34'))
 
 (type square string (one-of 'a' 'b' 'c'))
 ; Which square the pointer is on, in the picture or in the formula: a global, since both read it.

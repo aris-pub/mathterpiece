@@ -8,8 +8,8 @@
 
 (import house paper ink terracotta teal)
 
-(color grass '#7fa66b')
-(color asphalt '#55585e')
+(color grass (light-dark '#7fa66b' '#4a6b40'))
+(color asphalt (light-dark '#55585e' '#3a3c41'))
 (color glass '#cfe3ea')
 (color tyre '#22252a')
 (color lamp '#f4d35e')
@@ -22,7 +22,7 @@
       (rect_ (pos [x y]) (width 7) (height 3.5) (rx 1))))
   (rect body (pos [0 0]) (width 28) (height 13) (rx 5) (fill paint) (stroke ink)
       (stroke-width 1))
-  (rect stripe (pos [0 0]) (width 28) (height 3) (fill paper) (fill-opacity 0.8) (stroke none))
+  (rect stripe (pos [0 0]) (width 28) (height 3) (fill (light-dark paper ink)) (fill-opacity 0.8) (stroke none))
   (group windows (defaults (fill glass) (stroke ink) (stroke-width 0.75))
     (rect_ (pos [4.5 0]) (width 4.5) (height 10) (rx 1.5))
     (rect_ (pos [-5.5 0]) (width 3) (height 9) (rx 1.5)))
@@ -50,7 +50,7 @@
       (points (map (range 0 360 (num 361)) (fn u (track u))))
       (stroke asphalt) (stroke-width 44) (line-join 'round') (line-cap 'round') (fill none))
   (polyline middle (points road.points)
-      (stroke paper) (stroke-width 2) (dash [10 12]) (fill none))
+      (stroke (light-dark paper ink)) (stroke-width 2) (dash [10 12]) (fill none))
 
   ; Each car is measured in pixels, around its place on the track, and turned to face the way
   ; the track runs: player 1 keeps to the left half of the road, and player 2 to the right.

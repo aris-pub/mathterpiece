@@ -6,12 +6,12 @@
 ; canvas fades it in and out.
 ; Coordinates are the original SVG's, with y pointing down, negated.
 
-(color fg '#2a2724')
-(color muted '#8a8478')
-(color teal '#1a6f66')
-(color coral '#a65a3a')
-(color accent '#4a6584')
-(color wash '#ece6d8')
+(color fg (light-dark '#2a2724' '#e6e1d6'))
+(color muted (light-dark '#8a8478' '#a39d90'))
+(color teal (light-dark '#1a6f66' '#4cb8aa'))
+(color coral (light-dark '#a65a3a' '#e08a66'))
+(color accent (light-dark '#4a6584' '#7f9cc0'))
+(color wash (light-dark '#ece6d8' '#3a362f'))
 (font tick (size 13))
 (font name (style 'italic') (size 15))
 

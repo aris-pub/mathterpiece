@@ -6,9 +6,9 @@
 
 (import ease cubic-in-out)
 
-(color paper '#f7f3ea')
-(color ink '#1f2a44')
-(color accent '#e76f51')
+(color paper (light-dark '#f7f3ea' '#272522'))
+(color ink (light-dark '#1f2a44' '#e8e4d8'))
+(color accent (light-dark '#e76f51' '#f08a6c'))
 ; Point names are math variables, so they are italic.
 (font variable (style 'italic') (size 19))
 (font big (size 22))

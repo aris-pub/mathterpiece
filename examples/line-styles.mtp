@@ -7,11 +7,11 @@
 
 (import ease linear)
 
-(color paper '#f7f4ee')
-(color ink '#23303f')
-(color soft '#9aa3ad')
-(color warm '#d1603d')
-(color cool '#2f7f86')
+(color paper (light-dark '#f7f4ee' '#272522'))
+(color ink (light-dark '#23303f' '#e8e4d8'))
+(color soft (light-dark '#9aa3ad' '#8f97a8'))
+(color warm (light-dark '#d1603d' '#e98462'))
+(color cool (light-dark '#2f7f86' '#4fb3ba'))
 (font small (size 13))
 (font mono (family 'ui-monospace, monospace') (size 13))
 
