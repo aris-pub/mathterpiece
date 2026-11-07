@@ -14,7 +14,7 @@
     </script>
     <style>
       /* The page's own look, kept in tokens so the dark page can change them. A figure's look is
-         its own: only the token overrides further down restyle it. */
+         its own, its dark colors included: only the token overrides further down restyle it. */
       :root {
         --page-bg: #fbfaf7;
         --page-fg: #22252b;
@@ -170,24 +170,13 @@
       #values-panel { overflow-x: auto; }
       #values { border-collapse: collapse; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); }
       #values td { padding: 0.15rem 1rem 0.15rem 0; border-bottom: 1px solid var(--rule); }
-      /* A page restyling a figure's color tokens: no mtp involved, only CSS. */
+      /* The dark page. A figure carries its own dark colors, which follow the color-scheme. */
       :root.dark {
         --page-bg: #14161c; --page-fg: #e8e4d8; --muted: #a3a9b5; --rule: #2c3039; --panel: #1b1e25;
         --accent: #8db7e0; color-scheme: dark;
-        --mtp-ink: #e8e4d8; --mtp-paper: #14161c;
-        --mtp-soft: #8f97a8; --mtp-terracotta: #f08a6c; --mtp-teal: #4cc2b3; --mtp-saffron: #f2d27e;
-        --mtp-plum: #a88bb8;
       }
-      /* The examples' house colors, in the light and dark themes the page's color-scheme picks. */
       :root {
-        --mtp-house-paper: light-dark(#faf7f0, #272522);
-        --mtp-house-ink: light-dark(#1f2a44, #e8e4d8);
-        --mtp-house-soft: light-dark(#8a93a6, #8f97a8);
-        --mtp-house-terracotta: light-dark(#e76f51, #f08a6c);
-        --mtp-house-teal: light-dark(#2a9d8f, #4cc2b3);
-        --mtp-house-saffron: light-dark(#e9c46a, #f2d27e);
-        --mtp-house-plum: light-dark(#6d597a, #a88bb8);
-        /* Their fonts are the document's: BRAIID's content font, and its mono. */
+        /* The examples' fonts are the document's: BRAIID's content font, and its mono. */
         --mtp-house-variable-family: var(--font-body);
         --mtp-house-number-family: var(--font-mono);
         --mtp-house-code-family: var(--font-mono);

@@ -8,7 +8,7 @@
 (real angle 30 (>= 0) (<= 360))
 (real size 1 (>= 0.2) (<= 3))
 (bool show-angle true)
-(color paper '#fbf8f1')
+(color paper (light-dark '#fbf8f1' '#14161c'))
 (color red 'crimson')
 (font label-font (size 16))
 (scene s (background paper)
