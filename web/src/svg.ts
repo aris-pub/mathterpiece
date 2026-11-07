@@ -159,7 +159,9 @@ export function draw(
       drawObject(pass, id, into, unitsPerPx);
     }
   }
+  placed = new Set();
   patchChildren(out, [top]);
+  placed = new Set();
   return out;
 }
 
@@ -186,7 +188,10 @@ function unitsPerPxOf(svg: SVGSVGElement, box: number[], width?: number): number
 // The page's SVG made to show what is wanted, keeping each element that is still wanted: an
 // element drawn with a data-mtp-id is kept for the same shape, any other for the next one of its
 // tag.
-function patchChildren(parent: Element, want: Drawn[]): void {
+// spare finds an element kept elsewhere for a shape, by tag and id.
+type Spare = (key: string) => Element | undefined;
+
+function patchChildren(parent: Element, want: Drawn[], spare?: Spare): void {
   // Most often the elements are the ones wanted, in the same order: those are changed in place.
   const children = parent.children;
   let start = 0;
@@ -200,26 +205,49 @@ function patchChildren(parent: Element, want: Drawn[]): void {
   if (start === want.length && start === children.length) return;
   const keyed = new Map<string, Element[]>();
   const loose = new Map<string, Element[]>();
+  // A shape a canvas starts or stops toggling moves out of or into the <g> that fades it, so
+  // the shapes inside those are kept too.
+  const inner = new Map<string, Element[]>();
+  const add = (pool: Map<string, Element[]>, k: string, el: Element) => {
+    const list = pool.get(k);
+    if (list) list.push(el);
+    else pool.set(k, [el]);
+  };
   for (const el of Array.from(children).slice(start)) {
     const was = DRAWN.get(el);
     if (!was) continue;
     const id = was.attrs["data-mtp-id"];
-    const [pool, k] = id === undefined ? [loose, was.tag] : [keyed, `${was.tag}#${id}`];
-    const list = pool.get(k);
-    if (list) list.push(el);
-    else pool.set(k, [el]);
+    if (id === undefined) add(loose, was.tag, el);
+    else add(keyed, `${was.tag}#${id}`, el);
+    if (was.attrs["data-mtp-toggle"] === undefined) continue;
+    for (const c of Array.from(el.children)) {
+      const w = DRAWN.get(c);
+      const cid = w?.attrs["data-mtp-id"];
+      if (cid !== undefined) add(inner, `${w!.tag}#${cid}`, c);
+    }
   }
+  const find: Spare = (k) => take(keyed.get(k)) ?? take(inner.get(k)) ?? spare?.(k);
   want.forEach((d, i) => {
     if (i < start) return;
     const id = d.attrs["data-mtp-id"];
-    const pool = id === undefined ? loose.get(d.tag) : keyed.get(`${d.tag}#${id}`);
-    let el = pool?.shift();
-    if (el) patch(el, d);
-    else el = create(d);
+    let el = id === undefined ? take(loose.get(d.tag)) : find(`${d.tag}#${id}`);
+    if (el) patch(el, d, find);
+    else el = create(d, find);
     const at = parent.children[i];
     if (at !== el) parent.insertBefore(el, at ?? null);
   });
   while (parent.children.length > want.length) parent.lastElementChild!.remove();
+}
+
+// The elements drawing has already given a place this time, which no other place may take.
+let placed = new Set<Element>();
+
+function take(pool: Element[] | undefined): Element | undefined {
+  while (pool?.length) {
+    const el = pool.shift()!;
+    if (!placed.has(el)) return el;
+  }
+  return undefined;
 }
 
 // Whether an element's children are already drawn as wanted, as when every shape in a group of
@@ -238,19 +266,26 @@ export function elementsMade(): number {
   return made;
 }
 
-function create(d: Drawn): Element {
+function create(d: Drawn, spare?: Spare): Element {
   made++;
   const el = document.createElementNS(NS, d.tag);
+  placed.add(el);
   for (const [k, v] of Object.entries(d.attrs)) setAttr(el, k, v);
   const style = (el as SVGElement).style;
   for (const [k, v] of Object.entries(d.style)) style.setProperty(k, v);
   if (d.text !== null) el.textContent = d.text;
-  for (const c of d.children) el.appendChild(create(c));
+  for (const c of d.children) {
+    const id = c.attrs["data-mtp-id"];
+    const kept = id === undefined ? undefined : spare?.(`${c.tag}#${id}`);
+    if (kept) patch(kept, c);
+    el.appendChild(kept ?? create(c, spare));
+  }
   DRAWN.set(el, d);
   return el;
 }
 
-function patch(el: Element, d: Drawn): void {
+function patch(el: Element, d: Drawn, spare?: Spare): void {
+  placed.add(el);
   const was = DRAWN.get(el)!;
   if (was === d) return;
   for (const k in d.attrs) if (was.attrs[k] !== d.attrs[k]) setAttr(el, k, d.attrs[k]!);
@@ -259,7 +294,7 @@ function patch(el: Element, d: Drawn): void {
   for (const k in d.style) if (was.style[k] !== d.style[k]) style.setProperty(k, d.style[k]!);
   for (const k in was.style) if (!(k in d.style)) style.removeProperty(k);
   if (d.text !== was.text) el.textContent = d.text ?? "";
-  if ((d.children.length > 0 || was.children.length > 0) && !showing(el, d.children)) patchChildren(el, d.children);
+  if ((d.children.length > 0 || was.children.length > 0) && !showing(el, d.children)) patchChildren(el, d.children, spare);
   DRAWN.set(el, d);
 }
 

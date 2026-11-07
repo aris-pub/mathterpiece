@@ -233,6 +233,22 @@ describe("a canvas's showing and hiding", () => {
     expect(opacityOf(rt, "d")).toBe(1);
   });
 
+  it("keeps a shape's element as it fades out, and the other's as it fades in and once it has", () => {
+    const [, rt] = page(`<mtp-canvas model="m" name="swap"></mtp-canvas>`, doc("toggle"));
+    const el = (name: string) => document.querySelector(`mtp-canvas[name="swap"] [data-mtp-id="${rt.id(name)}"]`);
+    const c = el("c");
+    rt.write(rt.id("show"), null, true);
+    pass(0.1);
+    pass(0.5);
+    expect(el("c")).toBe(c);
+    expect(c!.parentElement!.hasAttribute("data-mtp-toggle")).toBe(true);
+    const d = el("d");
+    pass(1);
+    expect(el("d")).toBe(d);
+    expect(d!.parentElement!.hasAttribute("data-mtp-toggle")).toBe(false);
+    expect(el("c")).toBeNull();
+  });
+
   it("draws its items in the order they are written", () => {
     const [, rt] = page(`<mtp-canvas model="m" name="stack"></mtp-canvas>`, doc("toggle"));
     rt.write(rt.id("show"), null, true);
