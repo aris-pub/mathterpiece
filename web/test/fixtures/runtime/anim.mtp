@@ -21,3 +21,11 @@
 (animation recolor (move duo.fill (to 'white') (duration 1)))
 (animation outback (loop) (at-once (move k (to 10) (duration 1))) (in-order (move k (to 0) (duration 1))))
 (animation stops (in-order (move k (to 2) (duration 2.5)) (wait 1.2)) (in-order (move k (to 3) (duration 2)) (wait 1.2)) (in-order (move k (to 5) (duration 2.5)) (wait 1.2)) (move k (to 9) (duration 3)))
+; Each move reads its ends at the instant it starts (mtp-lm24): moves that start together read
+; the same values, so these swap.
+(real left 1)
+(real right 2)
+(animation swap (at-once (move left (to right) (duration 0)) (move right (to left) (duration 0))))
+(animation swaps (loop 3) (at-once (move left (to right) (duration 0.5)) (move right (to left) (duration 0.5))))
+(animation chain (move left (to 5) (duration 1)) (move right (to left) (duration 1)))
+(animation instant-chain (in-order (move left (to 5) (duration 0)) (move right (to left) (duration 0))))

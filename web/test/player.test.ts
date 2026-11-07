@@ -155,5 +155,34 @@ describe("a player", () => {
     expect(rt.value(rt.id("duo.p"), "fill")).toBe("#808080ff");
     expect(rt.value(rt.id("duo.q"), "fill")).toBe("#808080ff");
   });
+
+  it("reads the ends of moves that start together before any of them writes (mtp-lm24)", () => {
+    const [, p, v] = setup("swap");
+    p.seek(0);
+    expect([v("left"), v("right")]).toEqual([2, 1]);
+  });
+
+  it("swaps in every round of a loop, wherever a frame falls in it", () => {
+    // Frames that do not land on a round's start: each round read what the last had half written.
+    const [, p, v] = setup("swaps");
+    for (let t = 0; t <= 1.5; t += 0.3) p.seek(t);
+    p.seek(1.5);
+    expect([v("left"), v("right")]).toEqual([2, 1]);
+  });
+
+  it("starts a later move from what the moves before it left", () => {
+    const [, p, v] = setup("chain");
+    p.seek(0.5);
+    p.seek(1.5);
+    expect(v("right")).toBe(3.5);
+    p.seek(2);
+    expect(v("right")).toBe(5);
+  });
+
+  it("keeps the order of an in-order even when its moves take no time", () => {
+    const [, p, v] = setup("instant-chain");
+    p.seek(0);
+    expect([v("left"), v("right")]).toEqual([5, 5]);
+  });
 });
 

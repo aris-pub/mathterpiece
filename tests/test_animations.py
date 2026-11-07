@@ -438,3 +438,53 @@ class TestReadingSteps:
         src = f"{self.K} (animation a (move k (to 1) (duration 2)) (wait 1))"
         assert transitions(src) == 1
         assert transitions(src + " (int v a.steps.length)") == 2
+
+
+class TestTogether:
+    # mtp-lm24: moves that run together read the same values when they start, so two of them
+    # writing the same variable or attribute describe no one state; in-order may.
+    def test_the_same_variable_twice(self):
+        error(
+            f"{K} (animation a (at-once (move k (to 1) (duration 1))"
+            " (move k (to 2) (duration 1))))",
+            "k is moved twice at the same time in this at-once",
+        )
+
+    def test_a_position_and_its_x(self):
+        error(
+            "(scene s (circle c (r 1)))"
+            " (animation a (at-once (move c.pos (to [1 1]) (duration 1))"
+            " (move c.x (to 3) (duration 1))))",
+            "c.x is moved twice at the same time in this at-once",
+        )
+
+    def test_inside_an_in_order_and_a_named_animation(self):
+        src = (
+            f"{K} (animation up (move k (to 3) (duration 1)))"
+            " (animation a (at-once (in-order (wait 0.5) (move k (to 1) (duration 1))) up))"
+        )
+        error(src, "k is moved twice at the same time in this at-once")
+
+    def test_at_different_times_is_fine(self):
+        # As examples/bourgain-densities.mtp does: once at the start, and again much later.
+        steps(
+            f"{K} (animation a (at-once (move k (to 1) (duration 0))"
+            " (in-order (wait 2) (move k (to 2) (duration 1)))))"
+        )
+
+    def test_a_loop_runs_until_it_is_stopped(self):
+        error(
+            f"{K} (animation up (loop) (move k (to 3) (duration 1)))"
+            " (animation a (at-once up (in-order (wait 5) (move k (to 1) (duration 1)))))",
+            "k is moved twice at the same time in this at-once",
+        )
+
+    def test_different_targets_and_in_order_are_fine(self):
+        steps(
+            f"{K} (real j 0) (animation a (at-once (move k (to 1) (duration 1))"
+            " (move j (to 2) (duration 1))))"
+        )
+        steps(
+            f"{K} (animation a (in-order (move k (to 1) (duration 1))"
+            " (move k (to 2) (duration 1))))"
+        )

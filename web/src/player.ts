@@ -10,6 +10,9 @@ interface Move {
   attr: string | null;
   transition: number;
   start: number;
+  // Its place among the steps of an in-order that start at the same instant, as moves that take
+  // no time do: a later one reads what the earlier ones wrote.
+  stage: number;
   duration: number;
   ease: Ease;
   // Read once, when the move starts (docs/mtpc.md, "Transitions").
@@ -36,6 +39,7 @@ export class Player {
   readonly duration: number;
   readonly spans: Span[];
   private moves: Move[] = [];
+  private stage = 0;
   private time = 0;
   // The one top-level step it plays (only), or null for all of them.
   private window: [number, number] | null = null;
@@ -65,7 +69,7 @@ export class Player {
   private layout(step: Step, start: number, loops: Loop[]): number {
     if (step[0] === "move") {
       const [, [id, attr], transition, duration, ease] = step;
-      this.moves.push({ id, attr, transition, start, duration, ease: ease as Ease, loops });
+      this.moves.push({ id, attr, transition, start, stage: this.stage, duration, ease: ease as Ease, loops });
       return duration;
     }
     if (step[0] === "wait") return step[1];
@@ -76,11 +80,19 @@ export class Player {
     }
     let longest = 0;
     let t = start;
+    const first = this.stage;
+    let last = first;
     for (const s of step.slice(1) as Step[]) {
+      if (step[0] === "at-once") this.stage = first;
       const d = this.layout(s, step[0] === "in-order" ? t : start, loops);
-      if (step[0] === "in-order") t += d;
+      if (step[0] === "in-order") {
+        t += d;
+        this.stage++;
+      }
+      last = Math.max(last, this.stage);
       longest = Math.max(longest, d);
     }
+    this.stage = last;
     return step[0] === "in-order" ? t - start : longest;
   }
 
@@ -119,13 +131,29 @@ export class Player {
       delete m.from;
       delete m.to;
     }
-    for (const m of shown) {
+    const now = shown.map((m) => {
       const [t, rounds] = inRound(m.loops, time);
       m.rounds = rounds;
-      if (t < m.start && m.from === undefined) continue;
-      const p = m.duration > 0 ? Math.min(Math.max((t - m.start) / m.duration, 0), 1) : t >= m.start ? 1 : 0;
-      this.write(m, p);
+      return { m, t, at: time - (t - m.start) };
+    });
+    // Each move reads its ends at the instant it starts (mtp-lm24), however late the frame comes:
+    // the moves under way are first brought to that instant, so a move sees what the moves that
+    // ended before it left, and then every move starting then reads, before any of them writes.
+    const eps = (x: number) => 1e-9 * Math.max(1, Math.abs(x));
+    const starting = now
+      .filter(({ m, t }) => m.from === undefined && t >= m.start)
+      .sort((a, b) => (Math.abs(a.at - b.at) <= eps(a.at) ? a.m.stage - b.m.stage : a.at - b.at));
+    for (let i = 0; i < starting.length; ) {
+      const { at, m: lead } = starting[i]!;
+      for (const { m } of now) {
+        if (m.from === undefined) continue;
+        const [t, rounds] = inRound(m.loops, at);
+        if (rounds === m.rounds) this.write(m, progress(m, t));
+      }
+      const together = (x: (typeof starting)[number]) => x.at - at <= eps(at) && x.m.stage === lead.stage;
+      for (; i < starting.length && together(starting[i]!); i++) this.read(starting[i]!.m);
     }
+    for (const { m, t } of now) if (m.from !== undefined) this.write(m, progress(m, t));
   }
 
   /** A slider's knob at u in [0, 1]: each part takes a share of the track equal to its duration. */
@@ -169,14 +197,17 @@ export class Player {
     return k < 0 ? null : k;
   }
 
+  private read(m: Move): void {
+    const rt = this.rt;
+    const tr = rt.objects[m.transition]!;
+    const here = rt.value(this.holder(m), m.attr);
+    m.from = tr.from ? rt.evaluate(tr.from) : here;
+    m.to = tr.to ? rt.evaluate(tr.to) : here;
+  }
+
   private write(m: Move, p: number): void {
     const rt = this.rt;
-    if (m.from === undefined) {
-      const tr = rt.objects[m.transition]!;
-      const here = rt.value(this.holder(m), m.attr);
-      m.from = tr.from ? rt.evaluate(tr.from) : here;
-      m.to = tr.to ? rt.evaluate(tr.to) : here;
-    }
+    if (m.from === undefined) this.read(m);
     const [kind, e] = noneEnds(m.from, m.to, m.ease, applyEase(m.ease, p, (id) => rt.fn(id)), this.movesAs(m));
     const tr = rt.objects[m.transition]!;
     // A path runs between two values, so a move to or from none jumps instead.
@@ -226,6 +257,12 @@ function inRound(loops: Loop[], t: number): [number, string] {
     rounds += `${k},`;
   }
   return [t, rounds];
+}
+
+// How far along a move is at time t of its round.
+function progress(m: Move, t: number): number {
+  if (m.duration > 0) return Math.min(Math.max((t - m.start) / m.duration, 0), 1);
+  return t >= m.start ? 1 : 0;
 }
 
 function length(step: Step): number {

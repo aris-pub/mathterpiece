@@ -2475,6 +2475,8 @@ class _Compiler:
             elif head in ("at-once", "in-order"):
                 assert isinstance(item, Form)
                 out.append((head, *self.steps(item.items[1:], duration, ease, scope)))
+                if head == "at-once":
+                    self.check_together(out[-1][1:], item.pos)
             elif head in self.anim_motifs:
                 assert isinstance(item, Form)
                 out.append(self.model.objects[self.anim_instance(item, scope)].data["steps"])
@@ -2483,6 +2485,25 @@ class _Compiler:
                     "an animation holds moves, waits, at-once and in-order", item.pos
                 )
         return out
+
+    def check_together(self, parts, pos: Pos) -> None:
+        """Moves that run at the same time read the same values when they start (mtp-lm24), so
+        two parts of an at-once moving the same thing at overlapping times would describe no
+        one state; at different times they may."""
+        timed = [_timed(part, 0.0) for part in parts]
+        for a in range(len(timed)):
+            for b in range(a + 1, len(timed)):
+                for target, s1, e1 in timed[a]:
+                    for other, s2, e2 in timed[b]:
+                        if target == other and (s1 == s2 or (s1 < e2 and s2 < e1)):
+                            i, attr = target
+                            label = self.model.objects[i].name + (f".{attr}" if attr else "")
+                            raise CompileError(
+                                f"{label} is moved twice at the same time in this at-once: what"
+                                " runs together reads the same values when it starts, so write"
+                                " one move after the other with in-order",
+                                pos,
+                            )
 
     def played(self, tid: int, duration, ease, pos: Pos) -> tuple:
         """What a transition does inside an animation: it moves its target, or, with none,
@@ -5567,6 +5588,28 @@ def _name_text(node: Name) -> str:
 def _get(scope: dict, name: str) -> Expr:
     v = scope[name]
     return v() if callable(v) else v
+
+
+def _timed(step, start: float) -> list:
+    """The variables and attributes a step moves, a position as its x and its y, each with when
+    it starts and ends."""
+    if step[0] == "move":
+        i, attr = step[1]
+        end = start + step[3]
+        return [((i, a), start, end) for a in (("x", "y") if attr == "pos" else (attr,))]
+    if step[0] == "loop":
+        # A part of the body may move in any round, so it counts for the whole loop.
+        end = start + _duration(step)
+        return [(t, s, end) for t, s, _ in _timed(step[2], start)]
+    if step[0] == "at-once":
+        return [x for s in step[1:] for x in _timed(s, start)]
+    if step[0] == "in-order":
+        out, t = [], start
+        for s in step[1:]:
+            out += _timed(s, t)
+            t += _duration(s)
+        return out
+    return []
 
 
 def _locals(e) -> set:

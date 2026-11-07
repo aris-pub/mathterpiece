@@ -523,7 +523,7 @@ class TestForeachOverSeveral:
         m = model("(scene s (group g (foreach ((i 2) (j 2)) (circle (name $'m{i}{j}')))))")
         assert len(m.get("g").members) == 4
         m = model(
-            "(real k 0) (animation a (at-once (foreach ((i 2) (j 2))"
+            "(real k 0) (animation a (in-order (foreach ((i 2) (j 2))"
             " (move k (to (+ i j)) (duration 1)))))"
         )
         assert len([o for o in m.objects if o.kind == "transition"]) == 4
