@@ -648,6 +648,7 @@ function activeOf(rt: Runtime, id: number): boolean {
 export class MtpSlider extends MtpPart {
   private follow: () => void = () => {};
   private gate: () => void = () => {};
+  private named: () => void = () => {};
 
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "slider");
@@ -698,15 +699,20 @@ export class MtpSlider extends MtpPart {
       input.disabled = !activeOf(rt, id);
     };
     this.gate();
+    // The label follows what it is given, as anything bound does.
+    const text = document.createTextNode(labelOf(rt, id));
+    this.named = () => {
+      text.data = labelOf(rt, id);
+    };
     const label = document.createElement("label");
-    label.textContent = labelOf(rt, id);
-    label.append(input);
+    label.append(text, input);
     this.replaceChildren(label);
   }
 
   protected update(): void {
     this.follow();
     this.gate();
+    this.named();
   }
 }
 
@@ -731,6 +737,7 @@ export class MtpButton extends MtpPart {
     });
     this.gate = () => {
       button.disabled = !activeOf(rt, id);
+      button.textContent = labelOf(rt, id);
     };
     this.gate();
     this.replaceChildren(button);
@@ -819,6 +826,7 @@ export class MtpPlay extends MtpPart {
 export class MtpToggle extends MtpPart {
   private input: HTMLInputElement | null = null;
   private show: () => void = () => {};
+  private named: () => void = () => {};
 
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "toggle");
@@ -854,13 +862,19 @@ export class MtpToggle extends MtpPart {
     });
     this.input = input;
     this.show();
+    // The label follows what it is given, as anything bound does.
+    const text = document.createTextNode(labelOf(rt, id));
+    this.named = () => {
+      text.data = labelOf(rt, id);
+    };
     const label = document.createElement("label");
-    label.append(input, labelOf(rt, id));
+    label.append(input, text);
     this.replaceChildren(label);
   }
 
   protected update(): void {
     this.show();
+    this.named();
   }
 }
 

@@ -142,6 +142,18 @@ describe("controls", () => {
     expect(v("k")).toBe(4);
   });
 
+  it("a control's label follows the expression it is given", () => {
+    const [, rt] = page(
+      `<mtp-slider model="m" name="told"></mtp-slider><mtp-button model="m" name="set"></mtp-button>` +
+        `<mtp-toggle model="m" name="said"></mtp-toggle>`,
+    );
+    const text = () => ["mtp-slider", "mtp-button", "mtp-toggle"].map((t) => document.querySelector(t)!.textContent!.trim());
+    expect(text()).toEqual(["k = 0", "set 0", "on with k = 0"]);
+    rt.write(rt.id("k"), null, 7);
+    pass(0.1);
+    expect(text()).toEqual(["k = 7", "set 7", "on with k = 7"]);
+  });
+
   it("a slider follows its target when another writer changes it", () => {
     const [, rt] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
     const input = document.querySelector("mtp-slider input") as HTMLInputElement;
