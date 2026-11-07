@@ -112,6 +112,10 @@ def _exp_range(rs):
     return (math.exp(min(lo, top)), math.exp(min(hi, top)))
 
 
+def _sign(x: float) -> int:
+    return (x > 0) - (x < 0)
+
+
 def _sqrt(x: float) -> float:
     _check(x >= 0)
     return math.sqrt(x)
@@ -175,6 +179,8 @@ def range_by_count(start, stop, n) -> list:
 
 BUILTINS: dict[str, Builtin] = {
     "sqrt": _unary(_sqrt, _sqrt_range, lambda rs: rs[0][0] < 0),
+    # sign never falls as its input grows, so the ends of the input's range give the result's.
+    "sign": _unary(_sign, lambda rs: (_sign(rs[0][0]), _sign(rs[0][1])), result=INT),
     "floor": _unary(
         math.floor, lambda rs: (math.floor(rs[0][0]), math.floor(rs[0][1])), result=INT
     ),

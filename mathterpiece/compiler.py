@@ -486,6 +486,8 @@ class _Compiler:
         self.shape_types: dict[str, dict[str, Type]] = {}
         # How many function bodies are being compiled again to fold a call.
         self.folding = 0
+        # The errors a fold met where it gave none instead (known_or_none).
+        self.fold_undefined: list[CompileError] = []
         self.lets = 0
         # How many motifs' trial instances are being compiled.
         self.trialing = 0
@@ -744,8 +746,24 @@ class _Compiler:
             name = binding.items[0]
             if not isinstance(name, Name) or len(name.parts) != 1:
                 raise CompileError("expected a name", binding.pos)
-            inner[name.parts[0]] = self.expr(binding.items[1], None, inner)
+            inner[name.parts[0]] = self.let_value(
+                name.parts[0], self.expr(binding.items[1], None, inner), binding.pos
+            )
         yield from self.expand(node.items[2:], inner, top)
+
+    def let_value(self, name: str, e: Expr, pos: Pos) -> Expr:
+        """What a name a body's let gives stands for. Many attributes of many shapes may read
+        it, so a value known only while drawing is held by a variable of its own, which the
+        runtime works out once per change (mtp-gvrf.2). Known values, shapes and functions are
+        written out, as an expression's let does, and so is a color: a color variable is a
+        token, which the page may restyle."""
+        if e.known or e.op in _CHEAP or not _plain(e.type) or _core(e.type) == COLOR or _locals(e):
+            return e
+        attribute = Attribute(e.type, None, e)
+        t = self.keep_length(e.type, attribute)
+        access = self.access_of(e.deps)[0]
+        obj = Obj("variable", None, t, access, {"value": attribute}, pos=pos, data={"let": name})
+        return self.read(self.add(obj), None)
 
     # Declarations ------------------------------------------------------------------------
 
@@ -1521,9 +1539,9 @@ class _Compiler:
             body, reads = self.function_body(params, form.items[3])
             if _inner(body.type) == RECURSING:
                 raise CompileError(f"{name} has no base case: every branch calls {name}", pos)
-            if body.type == f.result:
+            if _sized(body) == f.result:
                 break
-            f.result = body.type
+            f.result = _sized(body)
         f.body, f.deps = body, body.deps
         f.reads = {p.name: frozenset(reads[p.name]) for p in params if p.name in reads}
 
@@ -1833,12 +1851,27 @@ class _Compiler:
         if any(a.known and a.value is None for a in args):
             return _known(Maybe(b.result), None)
         if all(a.known for a in args):
-            return _known(b.result, self.fold_builtin(head, b.fold, [a.value for a in args], pos))
+            values = [a.value for a in args]
+            return self.known_or_none(
+                b.result, lambda: self.fold_builtin(head, b.fold, values, pos)
+            )
         ranges = [a.range if a.range is not None else UNBOUNDED for a in args]
         undefined = b.undefined is not None and b.undefined(ranges)
         r = cast(Range, b.range(ranges) if callable(b.range) else b.range)
         t = Maybe(b.result) if maybe or undefined else b.result
         return Expr(head, t, tuple(args), deps, r)
+
+    def known_or_none(self, t: Type, compute) -> Expr:
+        """compute's value, known when compiling. Where it is undefined that is an error, except
+        while folding a call: the author wrote the body with parameters, not with known inputs,
+        so it gives none as it would while drawing, for or? to catch (mtp-gvrf.1)."""
+        try:
+            return _known(t, compute())
+        except CompileError as err:
+            if not self.folding:
+                raise
+            self.fold_undefined.append(err)
+            return _known(_maybe(t), None)
 
     def fold_builtin(self, head: str, fold, values: list, pos: Pos):
         try:
@@ -1992,7 +2025,13 @@ class _Compiler:
         whole = all(_core(a.type) == INT for a in args)
         if all(a.known for a in args):
             fold = range_by_gap if by == "gap" else range_by_count
-            items = self.fold_builtin("range", fold, [a.value for a in args], node.pos)
+            values = [a.value for a in args]
+            e = self.known_or_none(
+                ListT(REAL), lambda: self.fold_builtin("range", fold, values, node.pos)
+            )
+            if e.value is None:
+                return e
+            items = e.value
             # Whole items from whole ends are ints, as are a whole gap's.
             if (whole or by == "num" and _core(start.type) == _core(stop.type) == INT) and all(
                 float(v).is_integer() for v in items
@@ -2075,10 +2114,11 @@ class _Compiler:
                 raise CompileError(f"{op} takes lists of numbers", pos)
             t = ListT(max(items, key=NUMBERS.index))
         maybe = any(_may_be_none(a.type) for a in args)
+        if any(a.known and a.value is None for a in args):
+            return _known(_maybe(t), None)
         if all(a.known for a in args) and not maybe:
-            columns = zip(*(a.value for a in args), strict=True)
-            vals = [_fold_number(op, list(c), pos) for c in columns]
-            return _known(t, tuple(vals) if t == POINT else vals)
+            columns = [list(c) for c in zip(*(a.value for a in args), strict=True)]
+            return self.known_or_none(t, lambda: _fold_items(t, op, columns, pos))
         deps = frozenset().union(*(a.deps for a in args))
         if t != POINT:
             t = Refine(t, (("length", lengths.pop()),))
@@ -2094,10 +2134,11 @@ class _Compiler:
         t = POINT if core == POINT else ListT(widest)
         args = (e, *scalars)
         maybe = any(_may_be_none(a.type) for a in args)
+        if any(a.known and a.value is None for a in args):
+            return _known(_maybe(t), None)
         if all(a.known for a in args) and not maybe:
-            factor = [a.value for a in scalars]
-            vals = [_fold_number("*", [v, *factor], pos) for v in e.value]
-            return _known(t, tuple(vals) if t == POINT else vals)
+            columns = [[v, *(a.value for a in scalars)] for v in e.value]
+            return self.known_or_none(t, lambda: _fold_items(t, "*", columns, pos))
         deps = frozenset().union(*(a.deps for a in args))
         if core != POINT and _length(e) is not None:
             t = Refine(t, (("length", _length(e)),))
@@ -2118,8 +2159,19 @@ class _Compiler:
         saved, self.frame = self.frame, "caller"
         self.folding += 1
         self.reads.append({})
+        mark = len(self.fold_undefined)
         try:
-            e = self.expr(f.source, _loose(f.declared) if f.declared else None, scope)
+            try:
+                e = self.expr(f.source, _loose(f.declared) if f.declared else None, scope)
+            except CompileError:
+                # A none the fold gave where the body was undefined reached a place that does
+                # not take none: the undefined value is what the author needs to hear about.
+                if len(self.fold_undefined) > mark:
+                    raise self.fold_undefined[mark] from None
+                raise
+            if e.known and e.value is None and len(self.fold_undefined) > mark:
+                if f.result != RECURSING and not _may_be_none(f.result):
+                    raise self.fold_undefined[mark]
         except RecursionError:
             return None
         finally:
@@ -2127,6 +2179,8 @@ class _Compiler:
             self.folding -= 1
             self.reads.pop()
             del self.model.functions[functions:]
+            if not self.folding:
+                self.fold_undefined.clear()
         if not e.known:
             return None
         # A result type that wraps brings the folded value into its interval, as it does the body.
@@ -2211,7 +2265,8 @@ class _Compiler:
         if self.reads:
             for name in captured:
                 self.reads[-1].setdefault(name, set()).update(reads.get(name, ()))
-        t = FuncT(tuple(p.type for p in params), body.type)
+        f.result = _sized(body)
+        t = FuncT(tuple(p.type for p in params), f.result)
         return Expr("func", t, (fid, captured), body.deps)
 
     def function_arg(self, node: Node, params: tuple, result, scope: dict) -> Expr:
@@ -2228,7 +2283,11 @@ class _Compiler:
             and all(
                 fits(_loose(_inner(a)), _loose(b)) for a, b in zip(params, ft.params, strict=True)
             )
-            and (result is None or fits(_loose(ft.result), _loose(result)))
+            and (
+                result is None
+                or fits(_loose(ft.result), _loose(result))
+                or (_core(result) == POINT and _is_pair(ft.result))
+            )
         )
         if not ok:
             want = " ".join(str(t) for t in (*params, result if result is not None else "…"))
@@ -4839,7 +4898,7 @@ class _Compiler:
         # A constraint is checked on the value (known) or its range (settle), not on its type.
         target = _loose(expected) if expected is not None else None
         if target is not None and not fits(_loose(e.type), target):
-            e = self.as_point(e, expected) or e
+            e = self.as_point(e, expected) or self.as_points(e, expected) or e
         if target is not None and not fits(_loose(e.type), target):
             assert expected is not None
             reason = self.misfit(e, expected)
@@ -5007,7 +5066,7 @@ class _Compiler:
 
     def expect(self, e: Expr, t: Type, pos: Pos) -> Expr:
         if not fits(_loose(e.type), _loose(t)):
-            point = self.as_point(e, t)
+            point = self.as_point(e, t) or self.as_points(e, t)
             if point is None:
                 raise CompileError(f"expected {t}, got {e.type}", pos)
             return point
@@ -5026,6 +5085,31 @@ class _Compiler:
         if e.known:
             return _known(POINT, tuple(e.value))
         return replace(e, type=POINT)
+
+    def as_points(self, e: Expr, t: Type) -> Expr | None:
+        """e as a list of points, where t is one and e is a list whose items are all lists of two
+        numbers, a length known when compiling (mtp-gvrf.3); otherwise None."""
+        want, lt = _core(t), _core(e.type)
+        if not (isinstance(want, ListT) and _core(want.item) == POINT and isinstance(lt, ListT)):
+            return None
+        if isinstance(e.type, Maybe) or isinstance(lt.item, Maybe):
+            return None
+        if not isinstance(_core(lt.item), ListT) or _item_length(e) != 2:
+            return None
+        if _core(_core(lt.item).item) not in (INT, RATIO, REAL):
+            return None
+        out = ListT(POINT)
+        n = _length(e)
+        if n is not None:
+            out = _with_length(out, n)
+        if e.op == "list":
+            items = [self.as_point(a, POINT) for a in e.args]
+            if any(a is None for a in items):
+                return None
+            return _gather(out, items)
+        if e.known:
+            return _known(out, [tuple(v) for v in e.value])
+        return replace(e, type=out)
 
     def length_of(self, e: Expr, seen: set) -> int | None:
         """A list's length, when it is known when compiling."""
@@ -5692,7 +5776,8 @@ class _Compiler:
                     t = RATIO
                 if op == "^":
                     t = _power_type(*args)
-                return _known(t, _fold_number(op, [a.value for a in args], pos))
+                values = [a.value for a in args]
+                return self.known_or_none(t, lambda: _fold_number(op, values, pos))
         if any(a.type == RECURSING for a in args):
             return Expr(op, RECURSING, tuple(args))
         if any(_core(a.type) == POINT or isinstance(_core(a.type), ListT) for a in args):
@@ -5711,7 +5796,8 @@ class _Compiler:
         if any(a.known and a.value is None for a in args):
             return _known(Maybe(t), None)
         if all(a.known for a in args):
-            return _known(t, _fold_number(op, [a.value for a in args], pos))
+            values = [a.value for a in args]
+            return self.known_or_none(t, lambda: _fold_number(op, values, pos))
         ranges = [a.range for a in args]
         r = _range_of(op, ranges)
         undefined = any(_may_be_none(a.type) for a in args) or _may_be_undefined(op, args)
@@ -6379,6 +6465,34 @@ def _item_length(e: Expr) -> int | None:
     return lengths.pop() if len(lengths) == 1 else None
 
 
+def _sized(e: Expr) -> Type:
+    """e's type with the lengths known when compiling, so a function whose body is [a b] gives
+    a list of length 2, as a bound variable does (mtp-gvrf.3)."""
+    t = e.type
+    core = _core(t)
+    if not isinstance(core, ListT) or _may_be_none(t):
+        return t
+    if _length_constraint(_inner(t)) is None:
+        n = _length(e)
+        if n is not None:
+            t = _with_length(t, n)
+    m = _item_length(e)
+    if m is not None and _length_constraint(_inner(core.item)) is None:
+        t = _with_item_length(t, m)
+    return t
+
+
+def _is_pair(t: Type) -> bool:
+    """Whether t is a list of two numbers, which is a point where a point is expected."""
+    core = _core(t)
+    return (
+        not isinstance(t, Maybe)
+        and isinstance(core, ListT)
+        and _core(core.item) in (INT, RATIO, REAL)
+        and _length_constraint(_inner(t)) == 2
+    )
+
+
 def _length_constraint(t: Type) -> int | None:
     if isinstance(t, Refine):
         return next((c[1] for c in t.constraints if c[0] == "length"), None)
@@ -6454,6 +6568,11 @@ def _may_be_undefined(op: str, args: list[Expr]) -> bool:
                 except (OverflowError, ZeroDivisionError, ValueError):
                     return True
     return False
+
+
+def _fold_items(t: Type, op: str, columns: list, pos: Pos):
+    vals = [_fold_number(op, c, pos) for c in columns]
+    return tuple(vals) if t == POINT else vals
 
 
 def _fold_number(op: str, vals: list, pos: Pos):

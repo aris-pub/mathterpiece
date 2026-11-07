@@ -274,6 +274,8 @@ export const BUILTINS: Record<string, Impl> = {
   "^": power,
   mod: (a, b) => mod(a as number, b as number),
   abs: (x) => (x instanceof Complex ? Math.hypot(x.re, x.im) : Math.abs(x as number)),
+  // Math.sign gives -0 for -0; the compiler's fold gives 0.
+  sign: (x) => ((x as number) > 0 ? 1 : (x as number) < 0 ? -1 : 0),
   "=": equal,
   "!=": (a, b) => !equal(a, b),
   "<": (a, b) => (a as number) < (b as number),

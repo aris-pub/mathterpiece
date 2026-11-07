@@ -27,7 +27,42 @@ class TestCalls:
         assert model(src).get("k").value.bound
 
     def test_known_inputs_where_the_function_is_undefined(self):
-        error("(func f (real x) (/ 1 x)) (real|none d (f 0))", "division by zero")
+        # A fold gives none where the body is undefined, as the figure would while drawing
+        # (mtp-gvrf.1).
+        m = model("(func f (real x) (/ 1 x)) (real|none d (f 0))")
+        assert not m.get("d").value.bound
+        assert m.get("d").value.value is None
+        assert value("(func f (real x) (/ 1 x)) (real v (or? (f 0) 7))") == 7
+
+    def test_an_undefined_value_caught_inside_the_body(self):
+        f = "(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))"
+        assert value(f"{f} (real v (f -1))") == 1
+        assert value(f"{f} (real v (f 4))") == 2
+
+    def test_an_undefined_value_written_with_known_inputs_is_an_error(self):
+        error("(real v (sqrt -1))", "sqrt is undefined at -1")
+        error("(real v (or? (sqrt -1) 0))", "sqrt is undefined at -1")
+        error("(real v (or? (/ 1 0) 0))", "division by zero")
+
+    def test_other_undefined_forms_in_a_fold(self):
+        f = "(func f ((real g)) (count (or? (range 0 1 (gap g)) [])))"
+        assert value(f"{f} (int v (f 0))") == 0
+        f = "(func f ((real k)) (or? (* [1 2] (/ 1 k)) [0 0]))"
+        assert value(f"{f} (list v (f 0))") == [0, 0]
+        assert value(f"{f} (list v (f 2))") == [0.5, 1]
+
+    def test_a_folded_none_where_none_is_not_allowed(self):
+        # The same error the call gets when it is not folded: its result may be none.
+        f = "(func f ((real t)) (sqrt t))"
+        error(f"{f} (real v (f -1))", "may be none")
+        error(f"{f} (real v (f 4))", "may be none")
+        error(f"{f} (real a) (real v (f a))", "may be none")
+
+    def test_a_folded_none_the_function_type_does_not_allow(self):
+        # The ranges say sind is defined for every real, so f is a plain real, but infty is
+        # known only when compiling: the undefined value is reported.
+        error("(func[real] f ((real x)) (sind x)) (real v (f infty))", "sind is undefined at infty")
+        error("(func f ((real x)) (+ 1 (sind x))) (real v (f infty))", "sind is undefined at infty")
 
     def test_functions_as_arguments(self):
         src = f"{DOUBLE} (func twice ((func[real real] f) (real x)) (f (f x)))"
@@ -54,6 +89,14 @@ class TestCollections:
         assert value("(int n (count [3 1 2] (fn x (> x 1))))", "n") == 2
         assert value("(int n (reduce [1 2 3] 0 (fn ((int t) (int x)) (+ t x))))", "n") == 6
         assert value("(bool b (all [1 2] (fn x (> x 0))))", "b") is True
+
+    def test_a_function_undefined_at_an_item(self):
+        src = "(list[real|none] v (map [-1 4] (fn ((real x)) (sqrt x))))"
+        assert value(src) == [None, 2]
+        assert value("(list v (map [-1 4] (fn ((real x)) (or? (sqrt x) 0))))") == [0, 2]
+        f = "(func[real] f ((real t)) (or? (sqrt t) 0))"
+        assert value(f"{f} (list v (map [-1 4] f))") == [0, 2]
+        assert value(f"{f} (real v (reduce [-1 4] 0 (fn ((real s) (real x)) (+ s (f x)))))") == 2
 
     def test_a_captured_known_name(self):
         assert value("(list ys (let ((k 10)) (map [1 2] (fn x (* k x)))))", "ys") == [10, 20]

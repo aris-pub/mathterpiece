@@ -132,7 +132,7 @@ and `"doc"`, a string, when its declaration gives a docstring, `doc@'text'` (ref
 
 | Kind | Further keys |
 |---|---|
-| `variable` | `"value"`: its value, free or bound; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded: it is written with its declared value, which the runtime draws with where the page's CSS gives none (data model, "On the page"). |
+| `variable` | `"value"`: its value, free or bound; `"token"`: `true` for color and font variables, `false` otherwise. A token is never folded: it is written with its declared value, which the runtime draws with where the page's CSS gives none (data model, "On the page"). `"let"`, a string, on a variable the compiler made to hold a value of a `let` whose body holds declarations: the name the `let` gives it. Every attribute that reads the name reads this variable, so the value is worked out once each time what it reads changes. Such a variable is never named (`"name"` is `null`) and is not one the figure declares, so a page does not list it among the variables. |
 | `scene` | `"members"`: the ids of its shapes; `"attrs"`: `background`, and `transform`, how the scene's own coordinates are drawn |
 | a row or a column | kind `group`, with `"layout"`: `{"axis": "row" or "column", "gap": a real, "align": a string}`, each free or bound; the runtime moves each member after the box of the one before (reference, "Placing") |
 | `namespace` | `"members"`: the ids of its members, variables and namespaces, in the order declared. Each member is an object of its own, named by the namespace: `theme.ink`, `colors.tab10.blue` |

@@ -32,6 +32,28 @@ class TestNumbers:
         assert typ("(real k) (real|none v (exp k))") == Maybe(REAL)
         assert typ("(real k 1 (<= 100)) (real v (exp k))") == REAL
 
+    def test_sign(self):
+        # mtp-a5np: sign behaves like abs wherever that applies.
+        assert value("(int v (sign -3))") == -1
+        assert value("(int v (sign 0))") == 0
+        assert value("(int v (sign 2.5))") == 1
+        assert typ("(real k) (int v (sign k))") == INT
+        assert bound("(real k) (int v (sign k))").range == (-1, 1)
+        assert bound("(real k 3 (>= 2) (<= 5)) (int v (sign k))").range == (1, 1)
+        model("(real k) (scene s (circle c (r (+ 6 (* (sign k) 5)))))")
+
+    def test_sign_of_none_is_none_as_for_abs(self):
+        assert typ("(real|none k) (int|none v (sign k))") == Maybe(INT)
+        assert value("(int|none v (sign none))") is None
+
+    def test_sign_is_not_item_by_item_as_abs_is_not(self):
+        error("(point p [1 -2]) (point v (sign p))", "point")
+        error("(list v (sign [1 -2]))", "list")
+
+    def test_an_authors_sign_wins_from_its_declaration_on(self):
+        src = "(int a (sign -4)) (func[real] sign ((real v)) (* 10 v)) (real b (sign -4))"
+        assert value(src, "a") == -1 and value(src, "b") == -40
+
     def test_min_max(self):
         assert value("(real v (max 1 5 3))") == 5
         assert value("(real v (min [4 2 8]))") == 2

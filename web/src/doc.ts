@@ -60,6 +60,8 @@ export interface Obj {
   doc?: string;
   value?: Attribute;
   token?: boolean;
+  /** The let name a variable the compiler made holds the value of, read once per change. */
+  let?: string;
   // A font's parts read from another font: the part, and that font's id.
   links?: Record<string, number>;
   attrs?: Record<string, Attribute>;

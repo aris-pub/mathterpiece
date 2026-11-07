@@ -405,7 +405,10 @@ class TestLetInBodies:
             "(real k 1 (>= 0))"
             " (scene s (foreach i 2 (let ((w (* k i))) (circle (name $'c{i}') (r w)))))"
         )
-        assert m.get("c1").attrs["r"].deps >= {(m.id("k"), None)}
+        # r reads the variable that holds w, which follows k (mtp-gvrf.2).
+        ((held, _),) = m.get("c1").attrs["r"].deps
+        assert m.objects[held].data["let"] == "w"
+        assert m.objects[held].value.deps >= {(m.id("k"), None)}
 
     def test_in_a_group_and_the_scene(self):
         m = model("(scene s (let ((w 2)) (group g (let ((v (* w 3))) (circle c (r v))))))")
@@ -416,8 +419,10 @@ class TestLetInBodies:
             "(motif dot ((real t 1 (>= 0))) (let ((w (* 2 t))) (circle c (r w))))"
             " (scene s (dot d (t 3)))"
         )
-        # A motif's parameter is an attribute of the instance, so r follows d.t.
-        assert m.get("d.c").attrs["r"].deps >= {(m.id("d"), "t")}
+        # A motif's parameter is an attribute of the instance, so r follows d.t, through the
+        # variable that holds w.
+        ((held, _),) = m.get("d.c").attrs["r"].deps
+        assert m.objects[held].value.deps >= {(m.id("d"), "t")}
 
     def test_not_at_the_top_level(self):
         error("(let ((w 2)) (real k w))", "top level")

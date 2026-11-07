@@ -1,0 +1,14 @@
+; mtp-a5np: sign gives -1, 0 or 1. A free variable keeps it from folding, so the runtime works it
+; out; a none input gives none, as for abs.
+; expect s -1
+; expect t -1
+; write k 0
+; expect s 0
+; expect t null
+; write k 2.5
+; expect s 1
+; expect t 1
+(real k -3)
+(int s (sign k))
+(real|none inv (/ 1 k))
+(int|none t (sign inv))

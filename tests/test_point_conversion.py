@@ -122,3 +122,54 @@ def test_a_default_of_another_length_is_still_a_default():
         " (int i 0 (>= 0) (<= 5)) (real v (let ((row (or? rows[i] []))) (or? row[2] 0)))"
     )
     assert str(model(src).get("v").type) == "real"
+
+
+# mtp-gvrf.3: a function's result keeps the known length of its body, so a map whose function
+# gives [x y] gives a list of points where one is expected, whether bound, held by a variable
+# or written straight in.
+PS = "(list[point] ps [[0 0] [1 1]]) (real x 1)"
+SHIFT = "(map ps (fn p [(+ p.x x) p.y]))"
+
+
+@pytest.mark.parametrize(
+    "src",
+    [
+        f"(scene s (let ((pts {SHIFT})) (polyline_ (points pts))))",
+        f"(list pts {SHIFT}) (scene s (polyline_ (points pts)))",
+        f"(scene s (polyline_ (points {SHIFT})))",
+        "(func f ((point p)) [(+ p.x x) 0]) (scene s (polyline_ (points (map ps f))))",
+        "(func f ((point p)) [(+ p.x x) 0]) (list pts (map ps f))"
+        " (scene s (polyline_ (points pts)))",
+        "(list pts (map 3 (fn ((int k)) [k x]))) (scene s (polyline_ (points pts)))",
+        f"(list pts (reverse {SHIFT})) (scene s (polyline_ (points pts)))",
+        f"(list pts (sort {SHIFT} (fn q q[0]))) (scene s (polyline_ (points pts)))",
+        f"(list pts (where {SHIFT} (fn q (> q[0] 0)))) (scene s (polyline_ (points pts)))",
+    ],
+    ids=[
+        "let",
+        "variable",
+        "straight",
+        "named",
+        "named-variable",
+        "count",
+        "reverse",
+        "sort",
+        "where",
+    ],
+)
+def test_a_map_to_pairs_gives_points(src):
+    model(f"{PS} {src}")
+
+
+def test_a_map_to_lists_of_different_lengths_gives_lists():
+    error(
+        f"{PS} (list pts (map ps (fn p (if (> p.x 0) [p.x 0] [0 0 0]))))"
+        " (scene s (polyline_ (points pts)))",
+        r"expected list\[point\]",
+    )
+
+
+def test_a_function_result_keeps_its_length():
+    m = model(f"{PS} (list pts {SHIFT})")
+    # ps is free, so a move may change how many points it holds.
+    assert str(m.get("pts").type) == "list[(list[real] (length 2))]"

@@ -44,3 +44,10 @@ describe("range (mtp-966)", () => {
     expect(() => range(0, 1, "num", 2_000_000)).toThrow(Undefined);
   });
 });
+
+describe("sign (mtp-a5np)", () => {
+  it("gives -1 below 0, 0 at 0 and 1 above 0", () => {
+    // toEqual tells -0 from 0, so this also checks that -0 gives 0, as Python's fold does.
+    expect([-3, -0.5, 0, -0, 2.5].map((x) => BUILTINS.sign!(x))).toEqual([-1, -1, 0, 0, 1]);
+  });
+});

@@ -2,7 +2,7 @@
 
 Every form, built-in function and constant in mtp. Each entry says exactly which parts are the name, the positional arguments, the optional arguments and the body (see the syntax document, section 8, "The form template"), the types it takes and gives, and where it is undefined.
 
-"Undefined" means: a compile error when the inputs are known when compiling, and `none` while drawing (see the type system document, section 5.c). Constraint names, types and the declaration rule are as in the other documents.
+"Undefined" means: a compile error when the author writes the inputs known when compiling, as in `(sqrt -1)`, and `none` while drawing. A call of a function with known arguments is worked out while compiling, and there an undefined value in its body is `none`, as while drawing, so `or?` in the body catches it (see the type system document, section 5.c). Constraint names, types and the declaration rule are as in the other documents.
 
 ## Coordinates
 
@@ -408,7 +408,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(cond (c1 v1) (c2 v2) … (else v))` | the tests in order, then only the value of the first that holds |
 | `(and a b …)` | left to right, stopping at the first false |
 | `(or a b …)` | left to right, stopping at the first true |
-| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, foreach or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written. Each value is worked out once each time the `let` is, however often its name is read, so `(let ((s (walk (- k 1)))) [(+ s.x s.y) (- s.x s.y)])` calls `walk` once |
+| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, foreach or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written, once, however many declarations read its name (in a `foreach` or a motif, once in each copy or instance). Each value is worked out once each time the `let` is, however often its name is read, so `(let ((s (walk (- k 1)))) [(+ s.x s.y) (- s.x s.y)])` calls `walk` once |
 | `(fn params body)` | nothing until called; binds its parameters in its body. A single parameter may be a bare name, typed by where the function is used; several must all be typed |
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name; `#'dot-{k}'` is short for `(name $'dot-{k}')`, and parts may follow it: `#'dot-{k}'.pos` |
@@ -425,6 +425,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `^` | two numbers | an int to a non-negative int power gives an int, to a negative int power a ratio; a complex input gives a complex; otherwise a real | 0 to a negative power; a negative base to a power that is not an int; a result too large for a real |
 | `mod` | two numbers | number, with the sign of the divisor: `(mod -1 360)` is 359 | by 0 |
 | `abs` | a number | the same type; a complex gives a real | never |
+| `sign` | real | int: -1 below 0, 0 at 0, 1 above 0, so `(* (sign v) 5)` lies from -5 to 5 | never |
 | `=` `!=` | any two of one type | bool | never (`(= none none)` is true) |
 | `<` `<=` `>` `>=` | two reals | bool | never |
 | `not` | a bool | bool | never |

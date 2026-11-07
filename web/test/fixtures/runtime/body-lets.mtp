@@ -1,0 +1,21 @@
+; A let whose body holds declarations works out each value once, where it is written (mtp-gvrf.2).
+
+(real m 1 (>= 0))
+(func[list[point]] dots-of ((real s)) (map 5 (fn k [(* k s) 0])))
+
+(motif pair ((real s 1 (>= 0)))
+  (let ((v (* s 2)))
+    (circle a (r v))
+    (circle b (x v) (r 1))))
+
+(scene sc
+  (let ((pts (dots-of m)))
+    (polyline line (points pts))
+    (foreach k 5 (circle #'d{k}' (pos (or? pts[k] [0 0])) (r 1))))
+  (foreach i 3
+    (let ((w (* m (+ i 1))))
+      (circle #'w{i}' (r w))))
+  (pair p (s m))
+  (pair q (s (+ m 1))))
+
+(canvas view (x 0) (y 0) (width 10) (height 10) sc)

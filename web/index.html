@@ -355,10 +355,13 @@
           el.setAttribute("name", o.name);
           controls.append(el);
         }
-        // Every variable and its value, kept current, for figures that are mostly values.
+        // Every variable and its value, kept current, for figures that are mostly values. A
+        // variable holding a let's value is the compiler's, not one the figure declares.
         const model = document.getElementById("m");
         const table = document.getElementById("values");
-        const rows = doc.objects.flatMap((o, i) => (o.kind === "variable" ? [[o.name ?? `#${i}`, i]] : []));
+        const rows = doc.objects.flatMap((o, i) =>
+          o.kind === "variable" && o.let === undefined ? [[o.name ?? `#${i}`, i]] : [],
+        );
         const show = () => {
           table.replaceChildren(
             ...rows.map(([n, i]) => {
