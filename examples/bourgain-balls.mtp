@@ -3,8 +3,9 @@
 ; the distance from x to y. The bar below cuts [0, δ/2] at the ρⱼ; it fills up to the common
 ; radius r of the two balls. Click a point to make it x or y (the older of the two is replaced),
 ; move the slider to change r, or press play to grow the balls from 0 to δ/2.
-; Coordinates are the original SVG's, with y pointing up. The 32 points are drawn at random
-; each time the page loads, uniformly over a square.
+; Coordinates are the original SVG's, with y pointing up. The 32 points are drawn at random,
+; uniformly over a square, from the standard seed: the same on every refresh, and new ones when
+; the dice are rolled.
 
 (import ease linear)
 (import rand)
@@ -75,8 +76,7 @@
   (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
   (list dy (sort (map space (fn p (dist y.pos p.pos))) (fn d d)))
   ; ρ₁ to ρ₅: the 2ʲ-th nearest distance (index 2ʲ - 1), for x or y, whichever is larger.
-  (list rho [(min (max dx[1] dy[1]) h) (min (max dx[3] dy[3]) h) (min (max dx[7] dy[7]) h)
-             (min (max dx[15] dy[15]) h) (min (max dx[31] dy[31]) h)])
+  (list rho (map [1 3 7 15 31] (fn i (min (max dx[i] dy[i]) h))))
   ; 0, then ρ₁ to ρ₅: segment j of the bar covers [edges[j], edges[j + 1]].
   (list edges [0 rho[0] rho[1] rho[2] rho[3] rho[4]])
   ; The first j with ρⱼ = δ/2.
@@ -135,7 +135,7 @@
         (exists-when #'tick-name-{j}' (<= j k))))))
 
 ; The older of x and y slides to the point, and r grows to the new δ/2. The point it slides from
-; is where it was going: from-moves come before to-moves, so they read the old to.
+; is where it was going: the moves start together, so each reads the old to.
 (foreach i 32
   (on-click space[i]
     doc@'Makes the point x or y, in place of the older of the two.'
@@ -151,6 +151,9 @@
           (move y-t (from (if replace-x y-t 0)) (to 1))
           (move share (to 1))
           (move replace-x (to (not replace-x)) (duration 0))))))
+
+(button new-points (animation (roll-dice)) (label 'new points')
+  doc@'Draws the 32 points again.')
 
 (slider radius (move share (from 0) (to 1)) (label 'r') doc@'Sets r, the radius of both balls.')
 

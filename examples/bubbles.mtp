@@ -1,6 +1,7 @@
-; Bubbles, each placed and sized at random when the page loads. They rise into place when the
-; figure first comes into view. Click a bubble to pop it, or drag one and let go: it springs back
-; to where it was. The button brings the popped ones back.
+; Bubbles, each placed and sized at random, from the standard seed: the same on every refresh.
+; They rise into place when the figure first comes into view. Click a bubble to pop it, or drag
+; one and let go: it springs back to where it was. One button brings the popped ones back, and
+; another rolls the dice for new bubbles.
 
 (import house paper soft terracotta teal saffron plum code)
 (import ease cubic-out)
@@ -78,3 +79,6 @@
           (move b.popped (to false) (duration 0))
           (move b.burst (to 0)))))
     (label 'bring the bubbles back'))
+
+(button new-bubbles (animation (roll-dice)) (label 'new bubbles')
+  doc@'Places and sizes every bubble again.')

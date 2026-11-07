@@ -41,9 +41,8 @@
       (circle|none circle (pos o) (r (dist o ca.pos)) (fill none) (stroke terracotta)
           (stroke-width 2))
       (group radii (defaults (stroke terracotta) (stroke-width 1) (dash [4 4]))
-        (line|none_ (from o) (to ca.pos))
-        (line|none_ (from o) (to cb.pos))
-        (line|none_ (from o) (to cc.pos)))
+        (foreach c corners
+          (line|none_ (from o) (to c.pos))))
       (group|none center (translate o) (fixed-size true)
         (circle_ (r 4) (fill terracotta) (stroke none)))))
 
@@ -59,6 +58,5 @@
   doc@'The triangle and its corners on a grid, with the circle through the corners.'
   grid around shape below-form corners)
 
-(on-drag ca ca.pos doc@'Moves the corner on both canvases.')
-(on-drag cb cb.pos doc@'Moves the corner on both canvases.')
-(on-drag cc cc.pos doc@'Moves the corner on both canvases.')
+(foreach c corners
+  (on-drag c c.pos doc@'Moves the corner on both canvases.'))

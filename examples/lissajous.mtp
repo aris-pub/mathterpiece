@@ -11,7 +11,8 @@
   ; Whole frequencies close the curve after one turn of t, so the ratio a:b is what it shows.
   (int a 3 (>= 1) (<= 7))
   (int b 2 (>= 1) (<= 7))
-  (real phase 90 (>= 0) (<= 360))
+  ; The phase goes round: 360 is 0 again.
+  (real phase 90 (wrap 0 360))
 
   ; The curve fills the square from -1 to 1; the axes run a little past it, and the texts
   ; are placed against the axes, which stay put while the curve changes.
@@ -43,9 +44,10 @@
 (slider freq-b (move b (from 1) (to 7)) (step 7) (label 'frequency b, up'))
 (slider turn (move phase (from 0) (to 360)) (label 'phase'))
 
-; Slowly enough that each frame is still a curve the eye can follow.
+; Slowly enough that each frame is still a curve the eye can follow. Each round turns the phase
+; once from where it is, which the phase's wrap brings back into 0 to 360.
 (play spin (label 'turn the phase')
-  doc@'Turns the phase once every eight seconds, again and again.'
-    (animation (loop) (move phase (from 0) (to 360) (duration 8) (ease linear))))
+  doc@'Turns the phase once every eight seconds, again and again, from where it is.'
+    (animation (loop) (move phase (to (+ phase 360)) (duration 8) (ease linear))))
 
 (readout ratio-now $'{a}:{b}' (font variable) doc@'The ratio a:b.')

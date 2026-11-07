@@ -36,11 +36,10 @@
 
   (group window (clip (rect_ (pos [0 0]) (width (- right left)) (height (- top bottom))))
     ; What each term adds, drawn while the pointer is on it.
-    (polyline a-part (points (trace (fn x (* a x x)))) (stroke terracotta) (stroke-width 2.5)
-        (dash [6 5]) (fill none))
-    (polyline b-part (points (trace (fn x (* b x)))) (stroke teal) (stroke-width 2.5)
-        (dash [6 5]) (fill none))
-    (line c-part (from [left c]) (to [right c]) (stroke plum) (stroke-width 2.5) (dash [6 5]))
+    (group parts (defaults (stroke-width 2.5) (dash [6 5]) (fill none))
+      (polyline a-part (points (trace (fn x (* a x x)))) (stroke terracotta))
+      (polyline b-part (points (trace (fn x (* b x)))) (stroke teal))
+      (line c-part (from [left c]) (to [right c]) (stroke plum)))
     (polyline graph (points (trace f)) (stroke ink) (stroke-width 3) (line-join 'round')
         (fill none)))
 
@@ -86,9 +85,12 @@
 
 ; Where the graph turns and where it crosses the x axis, in words.
 (readout facts
-    (or? (let ((d (- (* b b) (* 4 a c))))
+    (or? (let ((d (- (* b b) (* 4 a c)))
+               (vx (/ (- b) (* 2 a)))
+               (vy (- c (/ (* b b) (* 4 a)))))
            (cond ((= a 0) 'With a = 0 the graph is a line, with no vertex.')
-                 ((< d 0) $'Vertex at ({(/ (- b) (* 2 a)):.2f}, {(- c (/ (* b b) (* 4 a))):.2f}). It never crosses the x axis.')
-                 ((= d 0) $'Vertex at ({(/ (- b) (* 2 a)):.2f}, 0): it touches the x axis there.')
-                 (else $'Vertex at ({(/ (- b) (* 2 a)):.2f}, {(- c (/ (* b b) (* 4 a))):.2f}). It crosses the x axis at {(/ (- (- b) (sqrt d)) (* 2 a)):.2f} and {(/ (+ (- b) (sqrt d)) (* 2 a)):.2f}.'))) '')
+                 ((< d 0) $'Vertex at ({vx:.2f}, {vy:.2f}). It never crosses the x axis.')
+                 ((= d 0) $'Vertex at ({vx:.2f}, 0): it touches the x axis there.')
+                 (else $'Vertex at ({vx:.2f}, {vy:.2f}). It crosses the x axis at {(/ (- (- b) (sqrt d)) (* 2 a)):.2f} and {(/ (+ (- b) (sqrt d)) (* 2 a)):.2f}.')))
+         '')
   doc@'The vertex and the roots.')

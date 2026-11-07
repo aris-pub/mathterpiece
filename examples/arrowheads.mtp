@@ -60,14 +60,7 @@
 
 (on-drag a-tip a-tip.pos doc@'Moves the tip of a.')
 (on-drag b-tip b-tip.pos doc@'Moves the tip of b.')
-(button pick-dart (animation (move kind (to 'dart') (duration 0))) (label 'dart')
-  doc@'Ends the three vectors in a dart.')
-(button pick-curved (animation (move kind (to 'curved') (duration 0))) (label 'curved')
-  doc@'Ends the three vectors in a curved head.')
-(button pick-open (animation (move kind (to 'open') (duration 0))) (label 'open')
-  doc@'Ends the three vectors in an open head.')
-(button pick-bar (animation (move kind (to 'bar') (duration 0))) (label 'bar')
-  doc@'Ends the three vectors in a bar.')
-(button pick-dot (animation (move kind (to 'dot') (duration 0))) (label 'dot')
-  doc@'Ends the three vectors in a dot.')
+(foreach k ['dart' 'curved' 'open' 'bar' 'dot']
+  (button #'pick-{k}' (animation (move kind (to k) (duration 0))) (label k)
+    doc@'Ends the three vectors in this head.'))
 (slider head-size (move size (from 0.5) (to 2.5)) (label 'head size'))

@@ -7,22 +7,18 @@
 
 (import house paper ink soft terracotta teal plum code)
 
-; The point a fraction t of the way from p to q.
-(func lerp ((point p) (point q) (real t))
-  (+ p (* t (- q p))))
-
 (scene board (background paper)
   (real t 0.5 (>= 0) (<= 1))
 
   ; The ends and controls the reader drags, declared first so the curves can read them.
   (group handles (defaults (stroke none) (fill-opacity 0.25))
     (circle p0 (r 0.2) (pos [-4.4 -2.2]) (fill terracotta))
-    (circle k (r 0.2) (pos [-2.9 2]) (fill terracotta))
-    (circle p1 (r 0.2) (pos [-0.7 -2.2]) (fill terracotta))
-    (circle q0 (r 0.2) (pos [0.5 -2.2]) (fill teal))
-    (circle c1 (r 0.2) (pos [1 1.8]) (fill teal))
-    (circle c2 (r 0.2) (pos [4.1 2.2]) (fill teal))
-    (circle q1 (r 0.2) (pos [4.5 -2.2]) (fill teal)))
+    (circle k (like p0) (pos [-2.9 2]))
+    (circle p1 (like p0) (pos [-0.7 -2.2]))
+    (circle q0 (like p0) (pos [0.5 -2.2]) (fill teal))
+    (circle c1 (like q0) (pos [1 1.8]))
+    (circle c2 (like q0) (pos [4.1 2.2]))
+    (circle q1 (like q0) (pos [4.5 -2.2])))
 
   (group curves (defaults (stroke-width 3) (head-end 'dart'))
     (curve quad (from p0.pos) (to p1.pos) (controls [k.pos]) (stroke terracotta))
@@ -32,7 +28,8 @@
     (polyline_ (points [p0.pos k.pos p1.pos]))
     (polyline_ (points [q0.pos c1.pos c2.pos q1.pos])))
 
-  ; De Casteljau at t: each level a fraction t along the segments of the one before.
+  ; De Casteljau at t: each level a fraction t along the segments of the one before, with
+  ; (lerp p q t), the point a fraction t of the way from p to q.
   (group construction (defaults (stroke plum) (stroke-width 1.5) (fill plum))
     (let ((a (lerp p0.pos k.pos t))
           (b (lerp k.pos p1.pos t)))

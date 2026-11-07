@@ -113,15 +113,9 @@
 
 (on-drag handle angle doc@'Turns the wheel.')
 
-(button pick-viridis (animation (move scheme (to 'viridis') (duration 0))) (label 'viridis')
-  doc@'Draws the heatmap with viridis.')
-(button pick-magma (animation (move scheme (to 'magma') (duration 0))) (label 'magma')
-  doc@'Draws the heatmap with magma.')
-(button pick-cividis (animation (move scheme (to 'cividis') (duration 0))) (label 'cividis')
-  doc@'Draws the heatmap with cividis.')
-(button pick-diverging (animation (move scheme (to 'blue-white-red') (duration 0)))
-    (label 'blue-white-red')
-  doc@'Draws the heatmap with blue-white-red.')
+(foreach m ['viridis' 'magma' 'cividis' 'blue-white-red']
+  (button #'pick-{m}' (animation (move scheme (to m) (duration 0))) (label m)
+    doc@'Draws the heatmap with this map.'))
 (toggle in-bands banded (label 'in bands')
   doc@'Draws the heatmap in four solid colors, with no mixing.')
 (slider sea-level (move sea (from -0.6) (to 0.6)) (label 'sea level'))

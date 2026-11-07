@@ -29,15 +29,19 @@
   (real side 0.4 (const))
   (column left-swatches (translate (+ (bottom-left land) [0.5 -1.2])) (gap 0.2)
       (defaults (stroke none))
-    (rect_ (width side) (height side) (fill sky.fill))
-    (rect_ (width side) (height side) (fill sun.fill))
-    (rect_ (width side) (height side) (fill far-left.fill))
-    (rect_ (width side) (height side) (fill near.fill)))
+    (foreach c [sky.fill sun.fill far-left.fill near.fill]
+      (rect_ (width side) (height side) (fill c))))
   (column right-swatches (translate (+ (bottom land) [0.6 -1.2])) (gap 0.2) (defaults (stroke none))
-    (rect_ (width side) (height side) (fill field.fill))
-    (rect_ (width side) (height side) (fill tree-0.fill))
-    (rect_ (width side) (height side) (fill house.fill))
-    (rect_ (width side) (height side) (fill roof.fill))))
+    (foreach c [field.fill tree-0.fill house.fill roof.fill]
+      (rect_ (width side) (height side) (fill c)))))
+
+; How each swatch's color is made, in the order the swatches are stacked.
+(list[string] left-mixes
+    ['(mix saffron paper 0.7)' '(lighten saffron 0.3)' '(mix plum paper 0.45)' '(mix teal saffron 0.35)']
+    (const))
+(list[string] right-mixes
+    ['(darken teal 0.25)' '(darken teal 0.5)' '(lighten terracotta 0.45)' '(darken terracotta 0.15)']
+    (const))
 
 (scene view-scene (background paper)
   (real size 1.8 (>= 0.8) (<= 3))
@@ -57,14 +61,9 @@
     (text_
         $'(group lens (clip (circle window (pos [{glass.x:.1f} {glass.y:.1f}]) (r {size:.1f}))) …)'
         (pos (bottom dull.land 0.45)) (halign 'middle'))
-    (text_ '(mix saffron paper 0.7)' (pos (right dull.left-swatches[0] 0.2)))
-    (text_ '(lighten saffron 0.3)' (pos (right dull.left-swatches[1] 0.2)))
-    (text_ '(mix plum paper 0.45)' (pos (right dull.left-swatches[2] 0.2)))
-    (text_ '(mix teal saffron 0.35)' (pos (right dull.left-swatches[3] 0.2)))
-    (text_ '(darken teal 0.25)' (pos (right dull.right-swatches[0] 0.2)))
-    (text_ '(darken teal 0.5)' (pos (right dull.right-swatches[1] 0.2)))
-    (text_ '(lighten terracotta 0.45)' (pos (right dull.right-swatches[2] 0.2)))
-    (text_ '(darken terracotta 0.15)' (pos (right dull.right-swatches[3] 0.2)))
+    (foreach k 4
+      (text_ left-mixes[k] (pos (right dull.left-swatches[k] 0.2)))
+      (text_ right-mixes[k] (pos (right dull.right-swatches[k] 0.2))))
     (text_ 'underneath, each color is mixed toward soft: (mix … soft 0.75)'
         (pos [(. (bottom dull.land) 0) (. (bottom dull.left-swatches 0.55) 1)]) (halign 'middle'))))
 

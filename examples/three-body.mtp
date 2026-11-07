@@ -33,9 +33,15 @@
 (func[list[point]] shifted ((list[point] trail) (point new))
   (map (range trail-length) (fn i (if (= i 0) new (or? trail[(- i 1)] new)))))
 
-(point v1 [0.466203685 0.43236573])
-(point v2 [0.466203685 0.43236573])
-(point v3 [-0.93240737 -0.86473146])
+; The figure eight's start (Chenciner and Montgomery), where the page begins.
+(list[point] eight-at [[0.97000436 -0.24308753] [-0.97000436 0.24308753] [0 0]] (const))
+(list[point] eight-speed [[0.466203685 0.43236573] [0.466203685 0.43236573]
+                          [-0.93240737 -0.86473146]]
+    (const))
+
+(point v1 free@eight-speed[0])
+(point v2 free@eight-speed[1])
+(point v3 free@eight-speed[2])
 (list[point] trail-1 [])
 (list[point] trail-2 [])
 (list[point] trail-3 [])
@@ -47,9 +53,9 @@
           (stroke (cond ((= t trail-1) terracotta) ((= t trail-2) teal) (else saffron)))
           (stroke-opacity (- 1 (/ i trail-length))))))
   (group bodies (defaults (stroke ink) (stroke-width 1))
-    (circle b1 (pos [0.97000436 -0.24308753]) (r 0.07) (fill terracotta))
-    (circle b2 (pos [-0.97000436 0.24308753]) (r 0.07) (fill teal))
-    (circle b3 (pos [0 0]) (r 0.07) (fill saffron))))
+    (circle b1 (pos free@eight-at[0]) (r 0.07) (fill terracotta))
+    (circle b2 (pos free@eight-at[1]) (r 0.07) (fill teal))
+    (circle b3 (pos free@eight-at[2]) (r 0.07) (fill saffron))))
 
 (canvas view (x -2) (y -1.25) (width 4) (height 2.5) (pan false) (zoom false)
   doc@'The three bodies and their trails.'
@@ -89,12 +95,12 @@
   doc@'The figure eight: the three chase each other along one curve.'
     (animation
       (at-once (defaults (duration 0.4) (ease cubic-in-out))
-        (move b1.pos (to [0.97000436 -0.24308753]))
-        (move b2.pos (to [-0.97000436 0.24308753]))
-        (move b3.pos (to [0 0]))
-        (move v1 (to [0.466203685 0.43236573]) (duration 0))
-        (move v2 (to [0.466203685 0.43236573]) (duration 0))
-        (move v3 (to [-0.93240737 -0.86473146]) (duration 0))
+        (move b1.pos (to eight-at[0]))
+        (move b2.pos (to eight-at[1]))
+        (move b3.pos (to eight-at[2]))
+        (move v1 (to eight-speed[0]) (duration 0))
+        (move v2 (to eight-speed[1]) (duration 0))
+        (move v3 (to eight-speed[2]) (duration 0))
         clear-trails)))
 
 (button chaos (label 'chaos')
@@ -118,6 +124,4 @@
         (move v3 (to [0 0]))
         clear-trails)))
 
-(on-drag b1 b1.pos doc@'Moves the body.')
-(on-drag b2 b2.pos doc@'Moves the body.')
-(on-drag b3 b3.pos doc@'Moves the body.')
+(foreach b bodies (on-drag b b.pos doc@'Moves the body.'))

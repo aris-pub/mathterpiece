@@ -18,10 +18,8 @@
   doc@'A race car seen from above, facing right, measured in pixels: wheels, a body with a
        stripe down it, a windscreen and rear window, headlights and a spoiler.'
   (group wheels (defaults (fill tyre) (stroke none))
-    (rect_ (pos [8 7.5]) (width 7) (height 3.5) (rx 1))
-    (rect_ (pos [8 -7.5]) (width 7) (height 3.5) (rx 1))
-    (rect_ (pos [-8 7.5]) (width 7) (height 3.5) (rx 1))
-    (rect_ (pos [-8 -7.5]) (width 7) (height 3.5) (rx 1)))
+    (foreach ((x [8 -8]) (y [7.5 -7.5]))
+      (rect_ (pos [x y]) (width 7) (height 3.5) (rx 1))))
   (rect body (pos [0 0]) (width 28) (height 13) (rx 5) (fill paint) (stroke ink)
       (stroke-width 1))
   (rect stripe (pos [0 0]) (width 28) (height 3) (fill paper) (fill-opacity 0.8) (stroke none))
@@ -29,8 +27,8 @@
     (rect_ (pos [4.5 0]) (width 4.5) (height 10) (rx 1.5))
     (rect_ (pos [-5.5 0]) (width 3) (height 9) (rx 1.5)))
   (group lights (defaults (fill lamp) (stroke none))
-    (circle_ (pos [13 4]) (r 1.6))
-    (circle_ (pos [13 -4]) (r 1.6)))
+    (foreach y [4 -4]
+      (circle_ (pos [13 y]) (r 1.6))))
   (rect spoiler (pos [-14 0]) (width 3) (height 16) (rx 1) (fill ink) (stroke none)))
 
 ; The track, at u degrees around it.
@@ -51,8 +49,7 @@
   (polyline road
       (points (map (range 0 360 (num 361)) (fn u (track u))))
       (stroke asphalt) (stroke-width 44) (line-join 'round') (line-cap 'round') (fill none))
-  (polyline middle
-      (points (map (range 0 360 (num 361)) (fn u (track u))))
+  (polyline middle (points road.points)
       (stroke paper) (stroke-width 2) (dash [10 12]) (fill none))
 
   ; Each car is measured in pixels, around its place on the track, and turned to face the way

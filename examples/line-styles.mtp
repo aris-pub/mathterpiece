@@ -44,8 +44,7 @@
   (group corners-panel (translate (cell 1 0))
     (triangle outline (a [-2.6 -1]) (b [2.6 -1]) (c [-0.8 1]) (fill none) (stroke cool)
         (stroke-width width) (line-join corners))
-    (triangle_ (a outline.a) (b outline.b) (c outline.c) (fill none) (stroke ink)
-        (stroke-width 1)))
+    (triangle_ (like outline) (stroke ink) (stroke-width 1)))
 
   ; A dash pattern from the sliders, with the ends the buttons pick.
   (line pattern (translate (cell 0 1)) (from [(- half) 0]) (to [half 0]) (stroke ink)

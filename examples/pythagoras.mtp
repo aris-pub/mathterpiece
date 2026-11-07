@@ -80,10 +80,11 @@
 
 (formula pythagoras
   doc@'The theorem, each square a term.'
+    (defaults (padding 3) (rounding 4))
   tex'\term{a2}{a^2} + \term{b2}{b^2} = \term{c2}{c^2}'
-  (term a2 (fill teal) (background (if (= lit 'a') wash none)) (padding 3) (rounding 4))
-  (term b2 (fill saffron) (background (if (= lit 'b') wash none)) (padding 3) (rounding 4))
-  (term c2 (fill terracotta) (background (if (= lit 'c') wash none)) (padding 3) (rounding 4)))
+  (term a2 (fill teal) (background (if (= lit 'a') wash none)))
+  (term b2 (fill saffron) (background (if (= lit 'b') wash none)))
+  (term c2 (fill terracotta) (background (if (= lit 'c') wash none))))
 
 (display theorem pythagoras doc@'a² + b² = c², whose terms light and show their squares.')
 
@@ -98,23 +99,19 @@
   doc@'Moves the triangles into the other layout.')
 
 ; Clicking a term moves the triangles into the layout that shows its square.
-(on-click pythagoras.a2 (animation (move layout (to 1) (duration 2.4)))
-  doc@'Shows a² by moving the triangles.')
-(on-click pythagoras.b2 (animation (move layout (to 1) (duration 2.4)))
-  doc@'Shows b² by moving the triangles.')
+(foreach t ['a2' 'b2']
+  (on-click #'pythagoras.{t}' (animation (move layout (to 1) (duration 2.4)))
+    doc@'Shows a² and b² by moving the triangles.'))
 (on-click pythagoras.c2 (animation (move layout (to 0) (duration 2.4)))
   doc@'Shows c² by moving the triangles.')
 
 ; Pointing at a term or at a square lights both.
-(on-enter pythagoras.a2 (animation (move lit (to 'a') (duration 0))) doc@'Lights a².')
-(on-leave pythagoras.a2 (animation (move lit (to none) (duration 0))) doc@'Unlights a².')
-(on-enter pythagoras.b2 (animation (move lit (to 'b') (duration 0))) doc@'Lights b².')
-(on-leave pythagoras.b2 (animation (move lit (to none) (duration 0))) doc@'Unlights b².')
-(on-enter pythagoras.c2 (animation (move lit (to 'c') (duration 0))) doc@'Lights c².')
-(on-leave pythagoras.c2 (animation (move lit (to none) (duration 0))) doc@'Unlights c².')
-(on-enter square-a (animation (move lit (to 'a') (duration 0))) doc@'Lights a².')
-(on-leave square-a (animation (move lit (to none) (duration 0))) doc@'Unlights a².')
-(on-enter square-b (animation (move lit (to 'b') (duration 0))) doc@'Lights b².')
-(on-leave square-b (animation (move lit (to none) (duration 0))) doc@'Unlights b².')
-(on-enter square-c (animation (move lit (to 'c') (duration 0))) doc@'Lights c².')
-(on-leave square-c (animation (move lit (to none) (duration 0))) doc@'Unlights c².')
+(foreach s ['a' 'b' 'c']
+  (on-enter #'pythagoras.{s}2' (animation (move lit (to s) (duration 0)))
+    doc@'Lights the term and its square.')
+  (on-leave #'pythagoras.{s}2' (animation (move lit (to none) (duration 0)))
+    doc@'Unlights them.')
+  (on-enter #'square-{s}' (animation (move lit (to s) (duration 0)))
+    doc@'Lights the square and its term.')
+  (on-leave #'square-{s}' (animation (move lit (to none) (duration 0)))
+    doc@'Unlights them.'))

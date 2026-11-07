@@ -140,16 +140,14 @@
 
 (display eq bounds doc@'Equation (4.1), whose terms pick what the tree highlights.')
 
-; Clicking a term shows what it explains, or clears it if it is shown. The first ≤ explains the
-; same as the factor.
-(on-click bounds.gap (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
-  doc@'Highlights what the factor (1 − 1/b)² explains.')
+; Clicking a term shows what it explains, or clears it if it is shown. Each term but the first
+; ≤ is named after the piece it shows; the first ≤ explains the same as the factor.
+(foreach piece ['gap' 'hi' 'b2']
+  (on-click #'bounds.{piece}'
+      (animation (move shown (to (if (= shown piece) none piece)) (duration 0.25)))
+    doc@'Highlights what the term explains.'))
 (on-click bounds.lo (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))
   doc@'Highlights what the first ≤ explains.')
-(on-click bounds.hi (animation (move shown (to (if (= shown 'hi') none 'hi')) (duration 0.25)))
-  doc@'Highlights what the second ≤ explains.')
-(on-click bounds.b2 (animation (move shown (to (if (= shown 'b2') none 'b2')) (duration 0.25)))
-  doc@'Highlights what the term 1/b² explains.')
 
 ; A box fades in behind each colored term while the pointer is on it.
 (on-enter bounds.gap (animation (move bounds.gap.background (to wash) (duration 0.2))))

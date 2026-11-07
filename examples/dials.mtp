@@ -13,10 +13,10 @@
   ; How far the value is from lo to hi; a range of no size puts the needle at its start.
   (real share (or? (/ (- value lo) (- hi lo)) 0))
   (real turn (- start (* sweep share)))
-  ; The face's fill starts as none, so the face buttons can write it: a fill given by a color
-  ; token would be bound to the token, and nothing could write it.
+  ; The face's fill starts free@ at teal: a fill given by the token itself would be bound to it,
+  ; and the face buttons could not write it.
   (group frame (defaults (stroke ink) (fill none))
-    (circle face (r 1.3) (fill-opacity 0.22) (stroke-width 2))
+    (circle face (r 1.3) (fill free@teal) (fill-opacity 0.22) (stroke-width 2))
     (foreach i (+ ticks 1)
       (line_ (from (polar 1.02 (- start (* sweep (/ i ticks)))))
           (to (polar 1.18 (- start (* sweep (/ i ticks))))) (stroke-width 1.5))))
@@ -29,13 +29,21 @@
       (line-cap 'round'))
   ; The hub and the knob are rings: their color is their stroke, so writing the faces' fill
   ; only fills them in.
-  (circle hub (r 0.06) (fill none) (stroke ink) (stroke-width 4))
-  (circle knob (pos needle.to) (r 0.1) (fill none) (stroke accent) (stroke-width 6)))
+  (circle hub (r 0.06) (fill free@teal) (stroke ink) (stroke-width 4))
+  (circle knob (pos needle.to) (r 0.1) (fill free@teal) (stroke accent) (stroke-width 6)))
 
 ; Variants fix some of a gauge's parameters, so each one is a style of dial.
 (variant thin-gauge () (gauge_ (lo 0) (hi 100) (accent plum) (weight 2) (ticks 20)))
 (variant bold-gauge () (gauge_ (lo 0) (hi 100) (accent terracotta) (weight 12) (ticks 4)))
 (variant half-gauge () (gauge_ (lo 0) (hi 100) (accent saffron) (sweep 180) (ticks 6)))
+
+; How each dial's declaration starts, in the order the dials are placed.
+(list[string] heads
+    ['(gauge (lo 0) (hi 120)' '(gauge (lo -20) (hi 40)' '(gauge (lo 0) (hi 6)' '(thin-gauge'
+     '(bold-gauge' '(half-gauge']
+    (const))
+; A dial's value as it reads, to a tenth when its range is under 10.
+(func[string] reading ((gauge d)) (if (< (- d.hi d.lo) 10) $'{d.value:.1f}' $'{d.value:.0f}'))
 
 ; The space between two dials, along a row and down the column; the column has room under each
 ; dial for its reading and its declaration.
@@ -56,28 +64,16 @@
       (bold-gauge bold (value 60))
       (half-gauge half (value 80))))
 
+  ; Each dial's reading, to a tenth when its range is under 10, and under the dial the
+  ; declaration that makes it, with its value as it is now.
   (group readings (defaults (fill ink) (font number) (halign 'middle') (valign 'middle'))
-    (text_ $'{speed.value:.0f}' (pos (+ speed.pos [0 -0.55])))
-    (text_ $'{heat.value:.0f}' (pos (+ heat.pos [0 -0.55])))
-    (text_ $'{pressure.value:.1f}' (pos (+ pressure.pos [0 -0.55])))
-    (text_ $'{thin.value:.0f}' (pos (+ thin.pos [0 -0.55])))
-    (text_ $'{bold.value:.0f}' (pos (+ bold.pos [0 -0.55])))
-    (text_ $'{half.value:.0f}' (pos (+ half.pos [0 -0.55]))))
-
-  ; Under each dial, the declaration that makes it, with its value as it is now.
+    (foreach d [speed heat pressure thin bold half]
+      (text_ (reading d) (pos (+ d.pos [0 -0.55])))))
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
-    (text_ '(gauge (lo 0) (hi 120)' (pos (bottom speed 0.25)))
-    (text_ $'(value {speed.value:.0f}))' (pos (bottom speed 0.62)))
-    (text_ '(gauge (lo -20) (hi 40)' (pos (bottom heat 0.25)))
-    (text_ $'(value {heat.value:.0f}))' (pos (bottom heat 0.62)))
-    (text_ '(gauge (lo 0) (hi 6)' (pos (bottom pressure 0.25)))
-    (text_ $'(value {pressure.value:.1f}))' (pos (bottom pressure 0.62)))
-    (text_ '(thin-gauge' (pos (bottom thin 0.25)))
-    (text_ $'(value {thin.value:.0f}))' (pos (bottom thin 0.62)))
-    (text_ '(bold-gauge' (pos (bottom bold 0.25)))
-    (text_ $'(value {bold.value:.0f}))' (pos (bottom bold 0.62)))
-    (text_ '(half-gauge' (pos (bottom half 0.25)))
-    (text_ $'(value {half.value:.0f}))' (pos (bottom half 0.62))))
+    (foreach k 6
+      (let ((d [speed heat pressure thin bold half][k]))
+        (text_ heads[k] (pos (bottom d 0.25)))
+        (text_ $'(value {(reading d)}))' (pos (bottom d 0.62))))))
 
   (text fill-form '(move panel.fill (to …))' (pos (top panel 1)) (halign 'middle')
       (valign 'middle') (font code) (fill soft)))
@@ -92,11 +88,6 @@
   (on-drag d.knob d.value (>= d.value d.lo) (<= d.value d.hi) doc@'Turns the dial by its knob.')
   (on-drag d.needle d.value (>= d.value d.lo) (<= d.value d.hi)
     doc@'Turns the dial by its needle.'))
-
-; The faces start with no fill, so the buttons can write one (a fill given by a token would be
-; bound to it); they take their first color when the figure comes into view.
-(on-view view (animation (move panel.fill (to teal) (duration 0)))
-  doc@'Gives the faces their first color, teal.')
 
 (slider speed-slider (move speed.value (from 0) (to 120)) (label 'speed'))
 (slider heat-slider (move heat.value (from -20) (to 40)) (label 'temperature'))
