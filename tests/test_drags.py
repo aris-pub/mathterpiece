@@ -61,3 +61,22 @@ class TestErrors:
 
     def test_pointer_is_known_only_in_a_drag(self):
         error("(point v pointer)", "unknown name 'pointer'")
+
+
+class TestNameStrings:
+    # mtp-m2rw: a name string stands for the name it builds, a move's target included.
+    def test_a_drag_moves_a_variable_named_by_a_string(self):
+        m = model(
+            "(real k-0 0) (real k-1 0) (scene s (circle c-0 (x k-0)) (circle c-1 (x k-1)))"
+            " (foreach i 2 (on-drag #'c-{i}' (move #'k-{i}' (to pointer.x))))"
+        )
+        targets = [o.data["target"] for o in m.objects if o.kind == "on-drag"]
+        assert targets == [(m.id("k-0"), None), (m.id("k-1"), None)]
+
+    def test_an_animation_moves_an_attribute_named_by_a_string(self):
+        m = model(
+            "(scene s (foreach i 2 (circle #'c-{i}' (r 1))))"
+            " (animation a (foreach i 2 (move #'c-{i}'.r (to 2) (duration 1))))"
+        )
+        steps = m.get("a").data["steps"]
+        assert [s[1] for s in steps[1:]] == [(m.id("c-0"), "r"), (m.id("c-1"), "r")]

@@ -883,6 +883,18 @@ class _Compiler:
                 return kind, absent
         return None
 
+    def target_name(self, node: Node, scope: dict) -> Node:
+        """A writer's target as a name: a name string, #'c-{i}', stands for the name it builds,
+        and parts may follow it, #'c-{i}'.r (mtp-m2rw). Anything else is returned as it is."""
+        if _head(node) == "name":
+            assert isinstance(node, Form)
+            return Name((self.built_name(node, scope),), node.pos)
+        if _head(node) == "." and isinstance(node, Form) and len(node.items) == 3:
+            base, part = self.target_name(node.items[1], scope), node.items[2]
+            if isinstance(base, Name) and isinstance(part, Name):
+                return Name((*base.parts, *part.parts), node.pos)
+        return node
+
     def built_name(self, node: Form, scope: dict) -> str:
         """The name (name s) stands for; s must be known when compiling."""
         (arg,) = self.args(node, 1)
@@ -2329,6 +2341,7 @@ class _Compiler:
                 raise CompileError("a move is (move target item…)", form.pos)
             name, pos = None, form.pos
             tnode, items = form.items[1], form.items[2:]
+        tnode = self.target_name(tnode, scope)
         target = None
         if not isinstance(tnode, NoneLit):
             if not isinstance(tnode, Name):
@@ -3059,7 +3072,11 @@ class _Compiler:
             target = given
         else:
             assert isinstance(given, Form)
-            parts = given.items[1:]
+            parts = (
+                [self.target_name(given.items[1], self.cscope), *given.items[2:]]
+                if len(given.items) > 1
+                else []
+            )
             if (
                 len(parts) != 2
                 or not isinstance(parts[0], Name)
