@@ -111,6 +111,22 @@
         display: grid;
         gap: 1.25rem;
       }
+      /* A figure with one canvas: its text in a column beside the canvas, and its controls under
+         the canvas, so the canvas takes the window's height (fit, below). */
+      @media (min-width: 1000px) {
+        main.side {
+          max-width: 1500px;
+          grid-template-columns: minmax(16rem, 26rem) minmax(0, 1fr);
+          grid-template-areas: "title title" "about figure" "about controls" "variables variables";
+          column-gap: 2rem;
+          align-items: start;
+        }
+        main.side h1 { grid-area: title; }
+        main.side #about { grid-area: about; }
+        main.side #canvases { grid-area: figure; }
+        main.side #controls { grid-area: controls; }
+        main.side #variables { grid-area: variables; }
+      }
       h1 { margin: 0; font-size: 1.75rem; line-height: 1.2; font-weight: 600; }
       #about { color: var(--muted); }
       #about p { margin: 0 0 0.6em; text-wrap: pretty; }
@@ -287,6 +303,8 @@
           canvases.append(el);
         }
         document.getElementById("m").doc = doc;
+        const ones = doc.objects.filter((o) => o.kind === "canvas").length === 1;
+        document.querySelector("main").classList.toggle("side", ones && !showInventory);
         viewButton.setAttribute("aria-pressed", String(showInventory));
         const inv = document.getElementById("inventory");
         for (const id of ["canvases", "controls", "variables"]) document.getElementById(id).hidden = showInventory;
