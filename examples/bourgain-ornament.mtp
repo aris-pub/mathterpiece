@@ -4,6 +4,7 @@
 ; is [x (- y)].
 
 (import ease linear)
+(import math clamp)
 
 (color ink '#6b7280')
 
@@ -50,8 +51,8 @@
   ; Whether each face faces the viewer.
   (list front (map [0 1 2 3] (fn f (facing face-a[f] face-b[f] face-c[f] yaw))))
   ; How near each corner is, from 0 (far) to 1 (near). Depth stays within the height, but the
-  ; compiler only knows a function's result as any real, so it is clamped to show it.
-  (list near (map [0 1 2 3] (fn k (max 0 (min 1 (/ (+ (depth k yaw) height) (* 2 height)))))))
+  ; compiler cannot prove it from depth's body, so it is clamped to show it.
+  (list near (map [0 1 2 3] (fn k (clamp (/ (+ (depth k yaw) height) (* 2 height)) 0 1))))
 
   ; An edge is drawn in full when either face it borders faces the viewer.
   (group edges (defaults (stroke ink) (stroke-width 1.1))

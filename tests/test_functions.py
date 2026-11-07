@@ -174,7 +174,7 @@ class TestDeclaredResults:
     def test_without_it_the_call_may_break_a_constraint(self):
         error(
             "(func near ((real x)) (* 2 x)) (real k 0 (>= 0) (<= 1))"
-            " (scene s (circle c (opacity (near (/ k 2)))))",
+            " (scene s (circle c (opacity (near k))))",
             "may break",
         )
 
@@ -213,6 +213,35 @@ class TestDeclaredResults:
 
     def test_only_at_the_top_level(self):
         error("(scene s (func[real] f ((real x)) x))", "declared only at the top level")
+
+
+class TestRangesOfCalls:
+    # mtp-crhg, the author 2026-11-07: a call's range is what the body gives with each parameter
+    # taking its argument's range, so (clamp x 0 1) lies between 0 and 1.
+    clamp = "(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))"
+
+    def test_the_range_follows_the_arguments(self):
+        assert bound(f"{self.clamp} (real x 0.5) (real v (clamp x 0 1))").range == (0, 1)
+        model(f"{self.clamp} (real x 0.5) (scene s (circle c (r 1) (opacity (clamp x 0 1))))")
+
+    def test_an_argument_with_no_limit(self):
+        error(
+            f"{self.clamp} (real x 0.5) (real lo) (scene s (circle c (opacity (clamp x lo 1))))",
+            r"may break \(>= 0\)",
+        )
+
+    def test_through_a_function_that_calls_another(self):
+        src = f"{self.clamp} (func unit ((real x)) (clamp x 0 1)) (real x 0.5) (real v (unit x))"
+        assert bound(src).range == (0, 1)
+
+    def test_a_declared_result_keeps_the_narrower_range(self):
+        src = "(func[(real (>= 0) (<= 1))] f ((real x)) (min 1 (max 0 x)))"
+        assert bound(f"{src} (real k 0 (>= 0) (<= 0.5)) (real v (f k))").range == (0, 0.5)
+        assert bound(f"{src} (real k) (real v (f k))").range == (0, 1)
+
+    def test_a_recursive_function(self):
+        src = "(func f ((int n)) (if (<= n 0) 0 (+ 1 (f (- n 1)))))"
+        assert bound(f"{src} (int k 3 (>= 0) (<= 5)) (int v (f k))").type is not None
 
 
 class TestNamesAFunctionCannotTake:

@@ -102,7 +102,7 @@ An expression is an array: its operation first, then its type, then its parts. `
 | `if` | `["if", T, c, a, b]` |
 | `cond` | `["cond", T, [[c, v], …], else]` |
 | `and`, `or` | `["and", "bool", e…]`, `["or", "bool", e…]` |
-| `let` | `["let", T, [[name, e], …], body]` |
+| `let` | `["let", T, [[name, e], …], body]`: each `e` in order, once, then the body. The compiler writes one only for values known while drawing that are not shapes, and gives each name a `#` and a number, so no two `let` names in one expression are the same |
 | a point on a shape's box | `["anchor", T, side, e, gap, frame]`, `side` being one of the eight names (`"top"`, `"top-right"`, …), `e` the shape, `gap` an expression, and `frame` as in a read (reference, "Placing") |
 | `rand`, `rand-int`, `pick`, `shuffle` | `[op, T, site, seed, arg…]`: `site` numbers each place a random function is written, after `foreach` and motif instances are expanded, starting at 0; `seed` is the expression of the seed it follows, a read of a `rand-seed` variable; the args are `lo` and `hi` (`rand`, optional, and `rand-int`) or the list (`pick`, `shuffle`). The value is computed from the seed's value, the site and, for a shuffle, each item's position, by the runtime's hash (web/src/random.ts), so the same seed always gives the same values; a new seed gives new ones. `next-seed` is a built-in, `["builtin", T, "next-seed", seed]`. |
 

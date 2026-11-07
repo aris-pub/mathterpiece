@@ -100,6 +100,17 @@ class TestMath:
             2,
         )
 
+    def test_clamp_keeps_its_range(self, tmp_path):
+        # mtp-crhg: a call of an imported function has the range its body gives.
+        figure(
+            tmp_path,
+            "(import math clamp) (real x 0.5) (scene s (circle c (r 1) (opacity (clamp x 0 1))))",
+        )
+        figure(
+            tmp_path,
+            "(import math) (real x 0.5) (scene s (circle c (r 1) (opacity (math.clamp x 0 1))))",
+        )
+
     def test_imported_whole(self, tmp_path):
         assert value(tmp_path, "(import math)", "(math.clamp 5 0 1)") == 1
 

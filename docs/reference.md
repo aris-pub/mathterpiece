@@ -36,12 +36,20 @@ Every declaration may take `doc@'text'`, an optional argument that says what the
 - **Who takes it:** a shape, a motif instance (its arguments and its `(defaults …)`), a variant instance (its parameters and arguments), a font, and a transition or a move. `x` is declared before, and is of the same kind: a circle from a circle, an instance from an instance of the same motif or variant. A container takes none, since its members are its own. One `(like …)` at most, and it comes first, before every other keyword argument; a positional argument, such as a text's string, still comes before it.
 - **A variant is different:** it declares a new type of shape. A `(like …)` written the same way in many places is a sign a variant is wanted.
 
+### Names inside the scene, groups and motifs
+
+A shape or a variable declared inside the scene, a group or a motif may not take a name the file declares at its top level or imports by name: inside, it would hide that name, so a read of the name there would get the shape, not the top-level declaration. It is a compile error at the declaration, and the message names both: `(color mark 'red') (motif m () (group mark …))` is `group 'mark' would hide the top-level color 'mark' (1:8): give it another name`. The same holds inside the motifs of an imported file, against that file's own top-level names.
+
+- **A `let` name may hide a top-level name:** it is written right where it is read.
+- **A parameter may hide a top-level name**, as in Python: inside a function or a motif, `x` is its parameter `x`, and outside it, the top-level `x`. `(real x 1) (func f ((real x)) (* 10 x))` makes `(f 2)` 20.
+- **Only top-level names count:** two motifs may each have a member `c`, and so may the scene. A file imported whole gives only its own name, `house`, so a member `ink` does not hide `house.ink`.
+
 ### Imports
 
 `(import house)` reads `house.mtp` from the folder of the file importing it, or, when there is none there, from the standard library. It gives one name, `house`, and what `house.mtp` declares is read through it: `house.ink`, `(house.dial d1)`, `(house.unit u 0.5)`. `(import house ink accent)` gives `ink` and `accent` as names of their own, and not `house`, as Python's `from house import ink, accent` does. There is no way to import every name at once: each name is written, or the file is imported whole.
 
 - **What a file to import holds:** only top-level declarations of colors, fonts, functions, motifs, variants, types, variables that are `const`, and seeds (see "Random values and seeds"), and its own imports. Anything else, such as a scene, a view, a control, an animation or a variable that is not `const`, makes importing it a compile error. A file with no scene still compiles by itself.
-- **Names:** the file reads its own declarations by their bare names, and a local name inside it, such as a `let` or a parameter, wins over them as anywhere. A name imported by name cannot also be declared in the importing file. A name a file imported can be imported from it in turn.
+- **Names:** the file reads its own declarations by their bare names, and a local name inside it, such as a `let` or a parameter, wins over them as anywhere. A name imported by name cannot also be declared in the importing file, at its top level or inside its scene, groups or motifs (see "Names inside the scene, groups and motifs"). A name a file imported can be imported from it in turn.
 - **Once:** a file imported more than once, directly or through other files, is compiled once. A file that imports itself, through the files it imports, is a compile error, as are two different files of the same name.
 - **Errors** inside an imported file name that file, as `house.mtp:3:5: …`.
 - **Only what is used:** an imported declaration is compiled into the compiled model only when the source uses it, directly or through another imported declaration it uses, such as a function that reads a color. A declaration nothing uses is still checked, so an error in it is still an error.
@@ -400,7 +408,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(cond (c1 v1) (c2 v2) … (else v))` | the tests in order, then only the value of the first that holds |
 | `(and a b …)` | left to right, stopping at the first false |
 | `(or a b …)` | left to right, stopping at the first true |
-| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, foreach or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written |
+| `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, foreach or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written. Each value is worked out once each time the `let` is, however often its name is read, so `(let ((s (walk (- k 1)))) [(+ s.x s.y) (- s.x s.y)])` calls `walk` once |
 | `(fn params body)` | nothing until called; binds its parameters in its body. A single parameter may be a bare name, typed by where the function is used; several must all be typed |
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
 | `(name s)` | `s`, a string, which becomes a name; `#'dot-{k}'` is short for `(name $'dot-{k}')`, and parts may follow it: `#'dot-{k}'.pos` |

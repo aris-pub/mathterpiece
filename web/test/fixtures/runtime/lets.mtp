@@ -1,0 +1,19 @@
+; A let's value is worked out once, however often its name is read (mtp-rjda).
+
+(int n 30 (>= 0) (<= 40))
+
+; Each level reads s four times: copied into each use, this would make 4^30 calls.
+(func[point] walk ((int k))
+  (if (<= k 0)
+    [1 0]
+    (let ((s (walk (- k 1))))
+      [(or? (+ s.x s.y) 0) (or? (- s.x s.y) 0)])))
+(point far (walk n))
+
+; A let's name read inside a fn, and an inner let that reuses an outer name.
+(real m 3)
+(list[real] scaled (let ((f (* m 2))) (map [1 2 3] (fn v (* v f)))))
+(real hidden (let ((a (* m 2))) (let ((b a) (a (+ m 1))) (+ (* 100 b) a))))
+
+(scene s (circle c (pos far) (r 1)))
+(canvas view (x 0) (y 0) (width 10) (height 10) s)

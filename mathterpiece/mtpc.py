@@ -200,6 +200,8 @@ class Writer:
             return ["wrap", t, self.expr(a[0]), _number(a[1]), _number(a[2])]
         if op == "local":
             return ["local", t, a[0]]
+        if op == "let":
+            return ["let", t, [[n, self.expr(x)] for n, x in a[0]], self.expr(a[1])]
         if op == "call":
             return ["call", t, a[0], *(self.expr(x) for x in a[1:])]
         if op == "apply":

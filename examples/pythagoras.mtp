@@ -24,8 +24,8 @@
 (real layout 1 (>= 0) (<= 1))
 
 ; Where each triangle's right angle is in the c² layout, and in the a² and b² one.
-(list[point] starts [[0 0] [side 0] [side side] [0 side]])
-(list[point] ends [[0 side-a] [side 0] [side-a side] [side-a side-a]])
+(list starts [[0 0] [side 0] [side side] [0 side]])
+(list ends [[0 side-a] [side 0] [side-a side] [side-a side-a]])
 ; When each slides, in thirds of the move: the second never moves.
 (list[int] slots [0 0 1 2] (const))
 

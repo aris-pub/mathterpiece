@@ -61,3 +61,64 @@ def test_the_compiled_file_passes_the_schema():
         f"{X} (func f ((real a)) [a 2]) (scene s (circle c (pos (f x))) (circle d (pos [x 1])))"
     )
     assert errors(d) == []
+
+
+# mtp-trp9: a list whose items all have the same known length gives each item that length, so
+# an item, even at a position known only while drawing, is a point where a point is expected.
+# The author chose this on 2026-11-07, after [[side 0] [0 0]] in examples/pythagoras.mtp had to
+# be declared list[point].
+SIDE = "(real side 3) (int j 0 (>= 0) (<= 1))"
+
+
+@pytest.mark.parametrize(
+    "src",
+    [
+        "(list corners [[side 0] [0 0]]) (scene s (circle c (pos corners[0])))",
+        "(list corners [[side 0] [0 0]]) (scene s (circle c (pos corners[j])))",
+        "(list[list[real]] corners [[side 0] [0 0]]) (scene s (circle c (pos corners[j])))",
+        "(scene s (let ((cs [[side 0] [0 0]])) (circle c (pos cs[j]))))",
+        "(scene s (let ((cs [[3 0] [0 0]])) (circle c (pos cs[j]))))",
+        "(list corners [[3 0] [0 0]] (const)) (scene s (circle c (pos corners[j])))",
+    ],
+    ids=["fixed", "drawing", "declared", "let", "let-of-literals", "const"],
+)
+def test_an_item_of_a_list_of_pairs(src):
+    pos_of(f"{SIDE} {src}")
+
+
+def test_items_of_different_lengths_are_not_points():
+    error(
+        f"{SIDE} (list corners [[side 0] [0 0 0]]) (scene s (circle c (pos corners[j])))",
+        "expected point",
+    )
+
+
+def test_a_free_list_of_pairs_is_not_converted():
+    # A writer may give a free list, or one started free@, items of another length.
+    error(
+        f"{SIDE} (list corners [[3 0] [0 0]] (length 2)) (scene s (circle c (pos corners[j])))",
+        "expected point",
+    )
+    error(
+        f"{SIDE} (list[list[real]] corners free@[[side 0] [0 0]] (length 2))"
+        " (scene s (circle c (pos corners[j])))",
+        "expected point",
+    )
+
+
+def test_lists_of_numbers_of_different_types_meet():
+    # [0 0] is a list of ints and [side 0] one of reals with side's range: both are lists of
+    # reals, as examples/pythagoras.mtp first needed.
+    src = "(real side 3 (>= 0)) (list corners [[0 0] [side 0]])"
+    assert str(model(src).get("corners").type) == "(list[(list[real] (length 2))] (length 2))"
+    pos_of(f"{src} (int j 0 (>= 0) (<= 1)) (scene s (circle c (pos corners[j])))")
+
+
+def test_a_default_of_another_length_is_still_a_default():
+    # Items of a known length met an empty default and broke it, as in a replica that read
+    # (or? shares[i] []) before items carried their length.
+    src = (
+        "(real m 1) (list[list[real]] rows (map (range 3) (fn j (map (range 4) (fn k (* m k))))))"
+        " (int i 0 (>= 0) (<= 5)) (real v (let ((row (or? rows[i] []))) (or? row[2] 0)))"
+    )
+    assert str(model(src).get("v").type) == "real"

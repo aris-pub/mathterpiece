@@ -453,6 +453,10 @@ class _Compiler:
         self.here: str | None = None
         # The top-level form being compiled: only its own name is kept as file.name.
         self.top_form: Node | None = None
+        self.top_head: str | None = None
+        # What each file declares at its top level or imports by name, by (file, name), as the
+        # phrase an error names it by, so a shape or member inside may not hide it (mtp-o89r).
+        self.top_names: dict[tuple[str | None, str], str] = {}
         self.loaded: dict[Path, str] = {}
         self.loading: list[Path] = []
         # The top-level forms of imported files that are compiled, by their positions: the
@@ -482,6 +486,7 @@ class _Compiler:
         self.shape_types: dict[str, dict[str, Type]] = {}
         # How many function bodies are being compiled again to fold a call.
         self.folding = 0
+        self.lets = 0
         # How many motifs' trial instances are being compiled.
         self.trialing = 0
         # The values of folded calls of named functions, by fold_key, and the names written in
@@ -494,6 +499,10 @@ class _Compiler:
         # that refines animation (the author, 2026-11-06).
         self.anim_motifs: dict[str, MotifDef] = {}
         self.fold_words: dict[int, set[str]] = {}
+        # The functions whose bodies are being compiled again for a call's range, so a
+        # recursive call keeps its body's range, and the ranges found, by fold_key.
+        self.ranging: set[int] = set()
+        self.ranged: dict[tuple, Range] = {}
         # Each rand drawn so far, after foreach and motif instances are expanded.
         self.rand_sites = 0
 
@@ -543,6 +552,7 @@ class _Compiler:
                 if part in self.aliases[file]:
                     raise CompileError(f"'{part}' is already declared", n.pos)
                 self.aliases[file][part] = exports[part]
+                self.top_names[(file, part)] = f"'{part}', imported from {name}.mtp ({n.pos})"
         return tuple(_through(f, whole) for f in rest) if whole else tuple(rest)
 
     def load(self, name: str, importer: Path | None, pos: Pos) -> dict[str, str]:
@@ -745,11 +755,12 @@ class _Compiler:
             form, doc = _take_doc(form)
         saved, self.here = self.here, form.pos.file
         outer, self.top_form = self.top_form, form
+        outer_head, self.top_head = self.top_head, _head(form)
         before = (len(self.model.objects), {k: set(d) for k, d in self.declared_kinds()})
         try:
             self.top_here(form, scope)
         finally:
-            self.here, self.top_form = saved, outer
+            self.here, self.top_form, self.top_head = saved, outer, outer_head
         if doc is not None:
             assert isinstance(form, Form)
             self.attach_doc(form, doc, *before)
@@ -827,7 +838,11 @@ class _Compiler:
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
 
-    def name_of(self, form: Form, scope: dict | None = None) -> tuple[str | None, Pos]:
+    def name_of(
+        self, form: Form, scope: dict | None = None, member: bool = False, param: bool = False
+    ) -> tuple[str | None, Pos]:
+        """The name a declaration gives. member is True for a shape or variable declared inside
+        a scene, group or motif, which may not take a top-level name."""
         if len(form.items) < 2:
             raise CompileError("a declaration needs a name", form.pos)
         node = form.items[1]
@@ -845,9 +860,19 @@ class _Compiler:
             raise CompileError("expected a name", node.pos)
         if name in RESERVED:
             raise CompileError(f"'{name}' is reserved", node.pos)
+        if member and (form.pos.file, name) in self.top_names:
+            what = _head(form) or "shape"
+            hidden = self.top_names[(form.pos.file, name)]
+            raise CompileError(
+                f"{what} '{name}' would hide {hidden}: give it another name", node.pos
+            )
         file = form.pos.file if form is self.top_form else None
         if form is self.top_form and (name in self.aliases[form.pos.file] or name in self.aliases):
             raise CompileError(f"'{name}' is already declared", node.pos)
+        if form is self.top_form:
+            what = self.top_head or ("func" if _typed_func(form) is not None else "variable")
+            where = f"the top-level {what} '{name}' ({node.pos})"
+            self.top_names.setdefault((form.pos.file, name), where)
         if file is not None:
             # A top-level declaration of an imported file is kept as file.name (mtp-1lq).
             self.aliases[file][name] = f"{file}.{name}"
@@ -855,7 +880,8 @@ class _Compiler:
         taken = self.model.names.keys() | self.model.funcs.keys() | self.model.types.keys()
         if self.bodies:
             taken = self.bodies[-1]["names"].keys() | self.bodies[-1]["attrs"]
-        if name in taken:
+        # A parameter hides a top-level name inside its function or motif, as in Python.
+        if name in taken and not param:
             raise CompileError(f"'{name}' is already declared", node.pos)
         return name, node.pos
 
@@ -1154,7 +1180,7 @@ class _Compiler:
             raise CompileError("a namespace is declared at the top level", form.pos)
         if isinstance(form.items[0], Name) and form.items[0].parts == ("font",):
             return self.font_variable(form, parent, access, scope)
-        name, pos, t, node, first = self.declared(form, scope)
+        name, pos, t, node, first = self.declared(form, scope, parent is not None)
         if isinstance(_core(t), FuncT):
             raise CompileError("a variable cannot hold a function", pos)
         if node is not None and self.shape_kind(node):
@@ -1196,10 +1222,15 @@ class _Compiler:
             if n is not None:
                 t = _with_length(t, n)
                 attribute.type = t
+        if attribute.bound and attribute.expr is not None and isinstance(_core(t), ListT):
+            m = _item_length(attribute.expr)
+            if m is not None and _length_constraint(_inner(cast(ListT, _core(t)).item)) is None:
+                t = _with_item_length(t, m)
+                attribute.type = t
         return t
 
     def declared(
-        self, form: Form, scope: dict
+        self, form: Form, scope: dict, member: bool = False, param: bool = False
     ) -> tuple[str | None, Pos, Type, Node | None, Expr | None]:
         """A (T name value? constraint…) form's name, its type with the constraints, its value's
         source and, for a plain list, its value compiled without a type to take the type from."""
@@ -1210,7 +1241,7 @@ class _Compiler:
         # The type first: in (repeat 2 i …), that repeat is not a type is the error, not that 2 is
         # not a name.
         t = None if plain_list else self.type_of(head)
-        name, pos = self.name_of(form, scope)
+        name, pos = self.name_of(form, scope, member, param)
         rest = list(form.items[2:])
         node = rest.pop(0) if rest and not _is_constraint(rest[0]) else None
         # A plain list takes its item type from its value (type-system.md, section 4).
@@ -1571,12 +1602,59 @@ class _Compiler:
                     ):
                         return _known(t, None)
                 return _known(t, folded.value)
-        r = f.body.range if f.body is not None else _type_range(t)
+        r = self.call_range(fid, args) if f.body is not None else _type_range(t)
         for p, a in zip(f.params, args, strict=True):
             for path in f.reads.get(p.name, ()):
                 for each in self.through_function(path, f, args):
                     deps |= self.reads_through(a, each)
         return Expr("call", t, (fid, *args), deps | f.deps, r)
+
+    def call_range(self, fid: int, args: list) -> Range:
+        """The range of a call that is not folded: the body's, compiled again with each
+        parameter taking its argument's range, since the body alone sees a parameter's whole
+        range, and (min hi (max lo x)) then has no limit (mtp-crhg)."""
+        f = self.model.functions[fid]
+        assert f.body is not None
+        r = f.body.range
+        # A result that wraps is brought into its interval, whose range the body already has.
+        if f.source is None or fid in self.ranging or _wrap_of(_inner(f.result)) is not None:
+            return r
+        ranges = [
+            a.range if a.range is not None else _type_range(p.type)
+            for p, a in zip(f.params, args, strict=True)
+        ]
+        if ranges == [_type_range(p.type) for p in f.params]:
+            return r
+        key = self.fold_key(fid, f, args, by_range=True)
+        if key is not None and key in self.ranged:
+            return self.ranged[key]
+        scope = dict(f.scope)
+        scope.update(
+            {
+                p.name: Expr("local", p.type, (p.name,), range=pr)
+                for p, pr in zip(f.params, ranges, strict=True)
+            }
+        )
+        functions, sites = len(self.model.functions), self.rand_sites
+        saved, self.frame = self.frame, "caller"
+        self.ranging.add(fid)
+        self.reads.append({})
+        try:
+            e = self.expr(f.source, _loose(f.declared) if f.declared else None, scope)
+        except (CompileError, RecursionError):
+            # The body compiled once already, so this only gives up a narrower range.
+            e = None
+        finally:
+            self.frame = saved
+            self.ranging.discard(fid)
+            self.reads.pop()
+            del self.model.functions[functions:]
+            self.rand_sites = sites
+        if e is not None and e.range is not None and r is not None:
+            r = (max(r[0], e.range[0]), min(r[1], e.range[1]))
+        if key is not None:
+            self.ranged[key] = r
+        return r
 
     def through_function(self, path: str, f: FuncDef, args: list) -> list[str]:
         """A path read through a parameter of f, with "@g/k" in it, which stands for what the
@@ -2059,12 +2137,13 @@ class _Compiler:
             self.folded[key] = e
         return e
 
-    def fold_key(self, fid: int, f: FuncDef, args: list) -> tuple | None:
+    def fold_key(self, fid: int, f: FuncDef, args: list, by_range=False) -> tuple | None:
         """What a folded call's value depends on, or None when it is not kept. Only named
         functions are kept: a fn is made again each time it is compiled, and its id is reused
         once a fold deletes it. A name in the body may mean a member or an attribute of the
-        motif instance being compiled, so a body that writes one of those names is not kept."""
-        if f.name is None or not all(a.known for a in args):
+        motif instance being compiled, so a body that writes one of those names is not kept.
+        by_range gives what a call's range depends on instead (call_range)."""
+        if f.name is None or not (by_range or all(a.known for a in args)):
             return None
         if self.bodies:
             words = self.fold_words.get(fid)
@@ -2073,7 +2152,10 @@ class _Compiler:
             body = self.bodies[-1]
             if "self" in words or not words.isdisjoint(body["names"]) or words & body["attrs"]:
                 return None
-        key = (fid, self.here, tuple((a.type, a.range, _frozen(a.value)) for a in args))
+        if by_range:
+            key = (fid, self.here, tuple((a.type, a.range) for a in args))
+        else:
+            key = (fid, self.here, tuple((a.type, a.range, _frozen(a.value)) for a in args))
         try:
             hash(key)
         except TypeError:
@@ -3334,7 +3416,7 @@ class _Compiler:
     def font_variable(self, form: Form, parent, access: str, scope: dict) -> None:
         """(font name (family …) (style …) (weight …) (size …)): declared with items, not a
         value (type-system.md, section 4)."""
-        name, pos = self.name_of(form, scope)
+        name, pos = self.name_of(form, scope, parent is not None)
         written: dict[str, tuple[Node, dict]] = {}
         like = None
         for item in form.items[2:]:
@@ -3646,7 +3728,7 @@ class _Compiler:
         for f in forms:
             if not isinstance(f, Form) or len(f.items) < 2:
                 raise CompileError("expected a parameter such as (real t 0.5)", f.pos)
-            name, pos, t, default, first = self.declared(f, {})
+            name, pos, t, default, first = self.declared(f, {}, param=True)
             if name is None:
                 raise CompileError("a parameter needs a name", pos)
             if any(p.name == name for p in out):
@@ -3675,7 +3757,7 @@ class _Compiler:
         kind = found[0]
         absent = absent or self.may_be_absent(parent)
         motif = self.model.motifs[kind]
-        name, pos = self.name_of(form, scope)
+        name, pos = self.name_of(form, scope, True)
         t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
         obj = Obj("instance", name, t, parent=parent, pos=pos, of=kind)
         i = self.add(obj)
@@ -3805,7 +3887,7 @@ class _Compiler:
         return i
 
     def body_variable(self, form: Form, obj: Obj, scope: dict) -> None:
-        name, pos, t, node, first = self.declared(form, scope)
+        name, pos, t, node, first = self.declared(form, scope, True)
         if node is not None and _is_free_start(node):
             if _is_const(t):
                 raise CompileError(
@@ -4101,7 +4183,7 @@ class _Compiler:
             return self.copy_exists(
                 self.instance(form, parent, scope, spread, absent, items, pre), scope
             )
-        name, pos = self.name_of(form, scope)
+        name, pos = self.name_of(form, scope, True)
         specs = SHAPE_ATTRS[kind]
         # A shape declared T|none may be absent, so its attributes may be none.
         t = Maybe(ShapeT(kind)) if absent else ShapeT(kind)
@@ -4961,6 +5043,8 @@ class _Compiler:
         if e.op == "call" and e.args[0] not in seen:
             body = self.model.functions[e.args[0]].body
             return None if body is None else self.length_of(body, seen | {e.args[0]})
+        if e.op == "part" and isinstance(e.args[1], Expr):
+            return _item_length(e.args[0])
         return None
 
     def lookup(self, name: str, scope: dict, pos: Pos) -> Expr:
@@ -5556,18 +5640,42 @@ class _Compiler:
         assert result is not None
         return result
 
-    def let(self, node: Form, expected: Type | None, scope: dict) -> Expr:
+    def let(self, node: Form, expected: Type | None, scope: dict, share: bool = True) -> Expr:
         if len(node.items) != 3 or not isinstance(node.items[1], Form):
             raise CompileError("let is (let ((name value) …) body)", node.pos)
+        functions = len(self.model.functions)
         inner = dict(scope)
+        bound: list[tuple[str, Expr]] = []
         for binding in node.items[1].items:
             if not isinstance(binding, Form) or len(binding.items) != 2:
                 raise CompileError("a let binding is (name value)", binding.pos)
             name = binding.items[0]
             if not isinstance(name, Name) or len(name.parts) != 1:
                 raise CompileError("expected a name", binding.pos)
-            inner[name.parts[0]] = self.expr(binding.items[1], None, inner)
-        return self.expr(node.items[2], expected, inner)
+            e = self.expr(binding.items[1], None, inner)
+            if not share or e.known or e.op in _CHEAP or not _plain(e.type):
+                # Shapes and functions stay written out: what the compiler learns from them
+                # (which shapes, which function) would be lost behind a name.
+                inner[name.parts[0]] = e
+                continue
+            # Any other value is worked out once, under a name no other local can hide (mtp-rjda).
+            self.lets += 1
+            local = f"{name.parts[0]}#{self.lets}"
+            bound.append((local, e))
+            inner[name.parts[0]] = inner[local] = Expr("local", e.type, (local,), range=e.range)
+        body = self.expr(node.items[2], expected, inner)
+        if not bound or body.known:
+            return body
+        if not _plain(body.type):
+            # A body that holds shapes is read by the compiler, so its values are written out.
+            del self.model.functions[functions:]
+            return self.let(node, expected, scope, share=False)
+        used = _locals((body, *(e for _, e in bound)))
+        bound = [(n, e) for n, e in bound if n in used]
+        if not bound:
+            return body
+        deps = body.deps.union(*(e.deps for _, e in bound))
+        return Expr("let", body.type, (tuple(bound), body), deps, body.range)
 
     def arith(self, pos: Pos, op: str, args: list[Expr]) -> Expr:
         if not args or (op in ("/", "^", "mod") and len(args) != 2):
@@ -5616,7 +5724,11 @@ class _Compiler:
     def or_default(self, node: Form, expected: Type | None, scope: dict) -> Expr:
         x, d = self.args(node, 2)
         ex = self.expr(x, _maybe(expected) if expected is not None else None, scope)
-        ed = self.expr(d, expected if expected is not None else _inner(ex.type), scope)
+        # A default of another length is still a default: (or? rows[i] []) gives a list of no
+        # known length when rows' items have one.
+        ed = self.expr(
+            d, expected if expected is not None else _without_length(_inner(ex.type)), scope
+        )
         if ex.known:
             # A value known when compiling is none or not; if not, its type has no none.
             return ed if ex.value is None else replace(ex, type=_inner(ex.type))
@@ -5878,6 +5990,18 @@ def _timed(step, start: float) -> list:
     return []
 
 
+# Values a let writes out where its name is used, as they cost nothing to read again.
+_CHEAP = frozenset(("local", "obj", "read", "func", "builtinfunc"))
+
+
+def _plain(t: Type) -> bool:
+    """Whether t holds only values: numbers, points, strings, colors, bools, and lists of them."""
+    t = _core(t)
+    if isinstance(t, ListT):
+        return _plain(t.item)
+    return t in (*NUMBERS, BOOL, STRING, COLOR, POINT)
+
+
 def _locals(e) -> set:
     """The parameter names an expression reads."""
     if isinstance(e, Expr):
@@ -5886,7 +6010,10 @@ def _locals(e) -> set:
         # it captures them too and can pass them on.
         if e.op == "func":
             own = set(e.args[1])
-        return own.union(*(_locals(a) for a in e.args))
+        reads = own.union(*(_locals(a) for a in e.args))
+        if e.op == "let":
+            reads -= {n for n, _ in e.args[0]}
+        return reads
     if isinstance(e, tuple):
         return set().union(*(_locals(a) for a in e))
     return set()
@@ -6176,6 +6303,13 @@ def _choices(t: Type) -> tuple | None:
     return None
 
 
+def _without_length(t: Type) -> Type:
+    if not isinstance(t, Refine):
+        return t
+    kept = tuple(c for c in t.constraints if c[0] != "length")
+    return Refine(t.base, kept) if kept else t.base
+
+
 def _join_all(types: list[Type], pos: Pos) -> Type:
     t = types[0]
     for u in types[1:]:
@@ -6230,6 +6364,36 @@ def _length(e: Expr) -> int | None:
     return None
 
 
+def _item_length(e: Expr) -> int | None:
+    """The length every item of a list has, when it is the same for all of them and known when
+    compiling (mtp-trp9)."""
+    core = _core(e.type)
+    if not isinstance(core, ListT) or not isinstance(_core(core.item), ListT):
+        return None
+    if e.known and isinstance(e.value, (list, tuple)):
+        lengths = {len(v) if isinstance(v, (list, tuple)) else None for v in e.value}
+    elif e.op == "list":
+        lengths = {_length(a) for a in e.args}
+    else:
+        return _length_constraint(_inner(core.item))
+    return lengths.pop() if len(lengths) == 1 else None
+
+
+def _length_constraint(t: Type) -> int | None:
+    if isinstance(t, Refine):
+        return next((c[1] for c in t.constraints if c[0] == "length"), None)
+    return None
+
+
+def _with_item_length(t: Type, n: int) -> Type:
+    if isinstance(t, Maybe):
+        return Maybe(_with_item_length(t.inner, n))
+    if isinstance(t, Refine):
+        return replace(t, base=_with_item_length(t.base, n))
+    assert isinstance(t, ListT)
+    return ListT(_with_length(t.item, n))
+
+
 def _widen(a: Type, b: Type) -> Type | None:
     """The narrowest type both a and b fit, or None."""
     if _inner(a) == RECURSING:
@@ -6250,6 +6414,11 @@ def _widen(a: Type, b: Type) -> Type | None:
     # Numbers broaden, so two numbers meet at the broader of their types, without narrowing.
     if _core(a) in NUMBERS and _core(b) in NUMBERS:
         return max(_core(a), _core(b), key=NUMBERS.index)
+    # A list never changes, so a list of ints is a list of reals, and two lists meet at a list
+    # of the narrowest type their items both fit.
+    if isinstance(_core(a), ListT) and isinstance(_core(b), ListT):
+        item = _widen(cast(ListT, _core(a)).item, cast(ListT, _core(b)).item)
+        return ListT(item) if item is not None else None
     return None
 
 
