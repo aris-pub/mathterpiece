@@ -704,7 +704,12 @@ export class MtpSlider extends MtpPart {
     this.named = () => {
       text.data = labelOf(rt, id);
     };
+    // The label sits above the track: a label whose width changes as it follows its value would
+    // otherwise move the track under the pointer while it drags.
     const label = document.createElement("label");
+    label.style.display = "inline-flex";
+    label.style.flexDirection = "column";
+    label.style.alignItems = "flex-start";
     label.append(text, input);
     this.replaceChildren(label);
   }
