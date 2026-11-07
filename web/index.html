@@ -28,8 +28,6 @@
         background: var(--panel);
       }
       .bar {
-        max-width: 880px;
-        margin: 0 auto;
         padding: 0.75rem 1.25rem;
         display: flex;
         flex-wrap: wrap;
@@ -37,7 +35,7 @@
         gap: 0.75rem;
       }
       .brand { font-weight: 600; letter-spacing: 0.01em; margin-right: auto; }
-      .bar select, .bar button {
+      .bar button {
         font: inherit;
         font-size: 14px;
         color: var(--page-fg);
@@ -51,8 +49,54 @@
         border-color: var(--accent);
         color: var(--accent);
       }
+      /* The list of figures on the left, always in view, and the figure beside it. */
+      .layout {
+        display: grid;
+        grid-template-columns: 15rem minmax(0, 1fr);
+        align-items: start;
+      }
+      #figures {
+        position: sticky;
+        top: 0;
+        max-height: 100vh;
+        overflow-y: auto;
+        border-right: 1px solid var(--rule);
+        padding: 1rem 0.75rem 2rem;
+        display: grid;
+        gap: 0.5rem;
+      }
+      #filter {
+        font: inherit;
+        font-size: 14px;
+        color: var(--page-fg);
+        background: var(--page-bg);
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        padding: 0.35rem 0.6rem;
+        width: 100%;
+      }
+      #names { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+      #names button {
+        font: inherit;
+        font-size: 14px;
+        text-align: left;
+        width: 100%;
+        color: var(--muted);
+        background: none;
+        border: 0;
+        border-radius: 5px;
+        padding: 0.25rem 0.55rem;
+        cursor: pointer;
+      }
+      #names button:hover { color: var(--page-fg); background: var(--panel); }
+      #names button[aria-current="page"] { color: var(--accent); background: var(--panel); font-weight: 600; }
+      @media (max-width: 760px) {
+        .layout { grid-template-columns: minmax(0, 1fr); }
+        #figures { position: static; max-height: 14rem; border-right: 0; border-bottom: 1px solid var(--rule); }
+      }
       main {
         max-width: 880px;
+        width: 100%;
         margin: 0 auto;
         padding: 1.75rem 1.25rem 4rem;
         display: grid;
@@ -104,13 +148,16 @@
     <header>
       <div class="bar">
         <span class="brand">mathterpiece</span>
-        <label for="pick" hidden>figure</label>
-        <select id="pick"></select>
         <button id="view" type="button" aria-pressed="false">inventory</button>
         <button id="theme" type="button" aria-pressed="false">dark page</button>
         <button id="fonts" type="button" aria-pressed="false">page fonts</button>
       </div>
     </header>
+    <div class="layout">
+    <nav id="figures" aria-label="figures">
+      <input id="filter" type="search" placeholder="filter" aria-label="filter the figures" />
+      <ul id="names"></ul>
+    </nav>
     <main>
       <h1 id="title"></h1>
       <div id="about"></div>
@@ -123,6 +170,7 @@
         <table id="values"></table>
       </details>
     </main>
+    </div>
     <script type="module">
       import "/src/index.ts";
       import { inventory } from "/src/inventory.ts";
@@ -135,20 +183,55 @@
         { query: "?raw", import: "default" },
       );
       const examples = Object.keys(figures);
-      const pick = document.getElementById("pick");
       const name = (path) => path.split("/").pop().replace(".mtpc", "");
-      for (const path of examples) pick.add(new Option(name(path), path));
+      examples.sort((a, b) => name(a).localeCompare(name(b)));
+      // The list of figures: one button each, the current one marked; the filter hides the others.
+      const list = document.getElementById("names");
+      const filter = document.getElementById("filter");
+      const items = examples.map((path) => {
+        const b = Object.assign(document.createElement("button"), { type: "button", textContent: name(path) });
+        b.onclick = () => open(path);
+        const li = document.createElement("li");
+        li.append(b);
+        list.append(li);
+        return { path, li, b };
+      });
+      const shown = () => items.filter((it) => !it.li.hidden);
+      filter.oninput = () => {
+        const q = filter.value.trim().toLowerCase();
+        for (const it of items) it.li.hidden = q !== "" && !name(it.path).includes(q);
+      };
+      filter.onkeydown = (e) => {
+        if (e.key === "Enter" && shown()[0]) open(shown()[0].path);
+      };
+      // Up and down step through the figures shown, unless a field or a control has the keys.
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+        const t = document.activeElement;
+        if (t && t !== filter && t.matches("input, select, textarea, [contenteditable]")) return;
+        const visible = shown();
+        const at = visible.findIndex((it) => it.path === current);
+        const next = visible[at + (e.key === "ArrowDown" ? 1 : -1)];
+        if (!next) return;
+        e.preventDefault();
+        open(next.path);
+        next.b.scrollIntoView({ block: "nearest" });
+      });
       const params = new URLSearchParams(location.search);
       const chosen = params.get("example");
       // Each example shows either as here, or as the inventory page mtp build writes.
       const viewButton = document.getElementById("view");
       let showInventory = params.get("view") === "inventory";
-      pick.value = examples.find((p) => name(p) === (chosen ?? "controls")) ?? examples[0];
+      let current = examples.find((p) => name(p) === (chosen ?? "controls")) ?? examples[0];
+      const open = (path) => {
+        current = path;
+        load();
+      };
       const load = async () => {
-        const text = await figures[pick.value]();
+        const text = await figures[current]();
         const doc = JSON.parse(text);
         // What the figure is and what to try: its leading comments.
-        const source = await sources[pick.value.replace(/\.mtpc$/, ".mtp")]?.();
+        const source = await sources[current.replace(/\.mtpc$/, ".mtp")]?.();
         // Only the comments the file starts with; the rest explain the code.
         const lines = (source ?? "").split("\n");
         const end = lines.findIndex((l) => l.trim() !== "" && !l.startsWith(";"));
@@ -183,7 +266,7 @@
         inv.hidden = !showInventory;
         if (showInventory) {
           // The inventory places its own components, so the usual view places none.
-          inventory(inv, text, { model: "m", id: name(pick.value), file: `${name(pick.value)}.mtpc` });
+          inventory(inv, text, { model: "m", id: name(current), file: `${name(current)}.mtpc` });
         } else {
           inv.replaceChildren();
         }
@@ -224,11 +307,14 @@
         };
         model.addEventListener("mtp-change", show);
         show();
-        document.getElementById("title").textContent = name(pick.value);
-        document.title = `${name(pick.value)} · mathterpiece`;
-        history.replaceState(null, "", `?example=${name(pick.value)}${showInventory ? "&view=inventory" : ""}`);
+        for (const it of items) {
+          if (it.path === current) it.b.setAttribute("aria-current", "page");
+          else it.b.removeAttribute("aria-current");
+        }
+        document.getElementById("title").textContent = name(current);
+        document.title = `${name(current)} · mathterpiece`;
+        history.replaceState(null, "", `?example=${name(current)}${showInventory ? "&view=inventory" : ""}`);
       };
-      pick.onchange = load;
       viewButton.onclick = () => {
         showInventory = !showInventory;
         load();
