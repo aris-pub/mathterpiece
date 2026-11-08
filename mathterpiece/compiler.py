@@ -4102,7 +4102,13 @@ class _Compiler:
                     obj.attrs[p.name] = Attribute(at, None)
                     continue
                 first = _default_arg(p) if p.name not in given else None
-                obj.attrs[p.name] = self.attribute(at, node, form.pos, p.name, None, inner, first)
+                attribute = self.attribute(at, node, form.pos, p.name, None, inner, first)
+                # A value that is never none, worked out while drawing or known now, keeps the
+                # parameter's own type, as a shape's attribute does.
+                known = _is_const(attribute.type) and attribute.value is not None
+                if absent and (not _may_be_none(_value_type(attribute)) or known):
+                    attribute.type = _inner(attribute.type)
+                obj.attrs[p.name] = attribute
             self.shape_attrs(obj, given, absent, form.pos, scope, INSTANCE_ATTRS)
         finally:
             self.frame = saved
@@ -4904,8 +4910,9 @@ class _Compiler:
                     part.type = _without_const(part.type)
                 obj.attrs[attr] = part
         if absent:
+            # An instance's parameters are in its attrs too, with types of their own.
             for attr, attribute in obj.attrs.items():
-                if not _may_be_none(_value_type(attribute)):
+                if attr in specs and not _may_be_none(_value_type(attribute)):
                     attribute.type = specs[attr].type
 
     # Attributes ------------------------------------------------------------------------------
@@ -5363,7 +5370,10 @@ class _Compiler:
             attribute = obj.attrs[attr]
             if obj.kind in SHAPE_ATTRS or (obj.kind == "instance" and attr in INSTANCE_ATTRS):
                 moves = self.moves(i)
-        t = _maybe(attribute.type) if isinstance(obj.type, Maybe) else attribute.type
+        # An instance that may not exist is read as one that may be none, but not from its own
+        # body, which is drawn only while it exists.
+        inside = any(b["id"] == i for b in self.bodies)
+        t = _maybe(attribute.type) if isinstance(obj.type, Maybe) and not inside else attribute.type
         # A token is never folded: the page may restyle it. A transition or an animation is a
         # value, so its free parts are known.
         token = obj.kind == "variable" and _core(attribute.type) in (COLOR, FONT)

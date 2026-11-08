@@ -1,0 +1,14 @@
+; Motif instances declared dot|none, so that an exists-when hides those past n, each given a
+; parameter that is never none (mtp-3f9l).
+
+(int n 3 (>= 0) (<= 5))
+
+(motif dot ((bool wide false))
+  (circle_ (r (if wide 2 1))))
+
+(scene s
+  (foreach i 5
+    (dot|none #'d-{i}' (wide (< i 2)) (pos [(* 5 i) 0]))
+    (exists-when #'d-{i}' (< i n))))
+
+(canvas v (x -5) (y -5) (width 30) (height 10) s)

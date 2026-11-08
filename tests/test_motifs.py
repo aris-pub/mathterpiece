@@ -1,10 +1,10 @@
 """Motifs: types of shape made of several shapes, with parameters (docs/type-system.md 5.e;
 docs/reference.md "Types" and "The scene and shapes"; docs/mtpc.md "Objects")."""
 
-from helpers import error, model
+from helpers import doc, error, model
 
 from mathterpiece.compiler import compile_source
-from mathterpiece.types import REAL, Interface, ShapeT, fits
+from mathterpiece.types import BOOL, REAL, Interface, ShapeT, fits
 
 DIAL = (
     "(motif dial ((real t 0.5 (>= 0) (<= 1)) (color tint 'red'))"
@@ -191,3 +191,33 @@ class TestBodyLists:
         )
         (c,) = [o for o in m.objects if o.kind == "circle"]
         assert not c.attrs["r"].bound and c.attrs["r"].value == 2
+
+
+class TestOptionalInstances:
+    # An instance declared T|none so that an exists-when can hide it (mtp-3f9l). Its parameters
+    # may be none as its attributes may, but one given a value that is never none keeps its own
+    # type, as a shape's attribute does.
+    SRC = (
+        "(int n 3) (motif dot ((bool shown true) (real size 1 (>= 0))) (circle_ (r size)))\n"
+        "(scene s (foreach i 5 (dot|none #'d-{i}' (shown (< i n))) (exists-when #'d-{i}' (< i n))))"
+    )
+
+    def test_a_parameter_given_a_value_never_none_keeps_its_type(self):
+        m = compile_source(self.SRC)
+        dots = [o for o in m.objects if o.kind == "instance"]
+        assert len(dots) == 5
+        for d in dots:
+            assert d.attrs["shown"].type == BOOL
+
+    def test_its_document_is_written(self):
+        d = doc(self.SRC)
+        assert len([o for o in d["objects"] if o["kind"] == "instance"]) == 5
+
+    def test_its_body_reads_its_parameters_as_given(self):
+        # The body is drawn only while the instance exists, so a parameter that is never none
+        # is never none there either.
+        compile_source(
+            "(int n 3) (motif dot ((bool wide false)) (circle_ (r (if wide 2 1))))\n"
+            "(scene s (foreach i 5 (dot|none #'d-{i}' (wide (< i 2)))"
+            " (exists-when #'d-{i}' (< i n))))"
+        )
