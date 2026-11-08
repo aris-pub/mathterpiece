@@ -5,24 +5,24 @@
 ; control polygon, then a fraction t along each segment joining those points, and so on down to
 ; one point, which is on the curve.
 
-(import house paper ink soft terracotta teal plum code)
+(import house paper ink soft red green blue code)
 
 (scene board (background paper)
   (real t 0.5 (>= 0) (<= 1))
 
   ; The ends and controls the reader drags, declared first so the curves can read them.
   (group handles (defaults (stroke none) (fill-opacity 0.25))
-    (circle p0 (r 0.2) (pos [-4.4 -2.2]) (fill terracotta))
+    (circle p0 (r 0.2) (pos [-4.4 -2.2]) (fill red))
     (circle k (like p0) (pos [-2.9 2]))
     (circle p1 (like p0) (pos [-0.7 -2.2]))
-    (circle q0 (like p0) (pos [0.5 -2.2]) (fill teal))
+    (circle q0 (like p0) (pos [0.5 -2.2]) (fill green))
     (circle c1 (like q0) (pos [1 1.8]))
     (circle c2 (like q0) (pos [4.1 2.2]))
     (circle q1 (like q0) (pos [4.5 -2.2])))
 
   (group curves (defaults (stroke-width 3) (head-end 'dart'))
-    (curve quad (from p0.pos) (to p1.pos) (controls [k.pos]) (stroke terracotta))
-    (curve cubic (from q0.pos) (to q1.pos) (controls [c1.pos c2.pos]) (stroke teal)))
+    (curve quad (from p0.pos) (to p1.pos) (controls [k.pos]) (stroke red))
+    (curve cubic (from q0.pos) (to q1.pos) (controls [c1.pos c2.pos]) (stroke green)))
 
   (group polygons (defaults (stroke soft) (stroke-width 1) (dash [4 4]))
     (polyline_ (points [p0.pos k.pos p1.pos]))
@@ -30,7 +30,7 @@
 
   ; De Casteljau at t: each level a fraction t along the segments of the one before, with
   ; (lerp p q t), the point a fraction t of the way from p to q.
-  (group construction (defaults (stroke plum) (stroke-width 1.5) (fill plum))
+  (group construction (defaults (stroke blue) (stroke-width 1.5) (fill blue))
     (let ((a (lerp p0.pos k.pos t))
           (b (lerp k.pos p1.pos t)))
       (line_ (from a) (to b))

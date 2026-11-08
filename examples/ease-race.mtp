@@ -2,7 +2,7 @@
 ; ease differs. They run out together (at-once), come back one at a time (in-order), and do it
 ; again forever (loop). The last ease is a function the figure declares.
 
-(import house paper ink soft terracotta teal saffron plum code)
+(import house paper ink soft red green yellow blue code)
 (import ease linear cubic-in cubic-out cubic-in-out)
 
 ; An ease that lands and bounces three times, each bounce smaller: the usual bounce ease, four
@@ -40,7 +40,7 @@
   (group balls (defaults (stroke none))
     (foreach i 6
       (circle #'ball-{i}' (x start) (y (lane i)) (r 0.34)
-          (fill [terracotta teal saffron plum][(mod i 4)]))))
+          (fill [red green yellow blue][(mod i 4)]))))
 
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (text_ '(animation (loop) (at-once …) (in-order …))' (pos (bottom lanes 0.6)))

@@ -2,7 +2,7 @@
 ; the same ray from the center, at distance 1 / |p|, so a point inside the circle goes outside and
 ; one outside comes in. Rest the pointer on the circle, where p and q meet, and the disk fills in.
 
-(import house paper ink soft terracotta teal number variable)
+(import house paper ink soft red green number variable)
 (import math norm)
 (import ease cubic-out)
 
@@ -14,7 +14,7 @@
 
 (scene plane (background paper)
   ; The disk is only a tint, and lets the pointer through: only the rim catches it.
-  (circle disk (r 1) (fill teal) (fill-opacity 0) (pointer-events false))
+  (circle disk (r 1) (fill green) (fill-opacity 0) (pointer-events false))
   (circle unit (r 1) (fill none) (stroke ink) (stroke-width 2))
   ; Everything else lets the pointer through, so the dot under it never hides the circle.
   (group marks (pointer-events false)
@@ -25,8 +25,8 @@
       (text_ 'p' (pos (- p along)))
       (text_ 'q' (pos (+ q along))))
     (group points (defaults (stroke paper) (stroke-width 2))
-      (circle_ (pos p) (r 0.07) (fill terracotta))
-      (circle_ (pos q) (r 0.07) (fill teal)))
+      (circle_ (pos p) (r 0.07) (fill red))
+      (circle_ (pos q) (r 0.07) (fill green)))
     (text_ $'|p| = {(norm p):.2f}    |q| = {(norm q):.2f}    |p| · |q| = 1'
         (pos [0 -1.75]) (font number) (fill soft) (halign 'middle'))))
 

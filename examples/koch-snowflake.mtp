@@ -6,7 +6,7 @@
 ; The zoom slider magnifies the top tip by powers of 3, the snowflake's own scale: each power
 ; shows the same shape again, as far as the depth goes. The wheel zooms too.
 
-(import house paper ink soft saffron variable code)
+(import house paper ink soft yellow variable code)
 (import ease cubic-in-out)
 
 (real radius 4 (const))
@@ -53,7 +53,7 @@
 
   (polygon flake
       (points (map (range (* 3 pieces)) (fn k (koch k level rise))))
-      (fill saffron) (stroke ink) (stroke-width 1.5) (line-join 'round'))
+      (fill yellow) (stroke ink) (stroke-width 1.5) (line-join 'round'))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
     (text caption $'depth {depth:.2f}, zoomed {(^ 3 zoom-power):.1f} times' (pos code-at)

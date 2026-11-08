@@ -3,7 +3,7 @@
 ; one and let go: it springs back to where it was. One button brings the popped ones back, and
 ; another rolls the dice for new bubbles.
 
-(import house paper soft terracotta teal saffron plum code)
+(import house paper soft red green yellow blue code)
 (import ease cubic-out)
 (import rand)
 
@@ -42,7 +42,7 @@
         (bubble #'b{i}'
                 (pos [(rand low[0] high[0]) (- (rand low[1] high[1]) (* rise (rand 9 13)))])
                 (size (rand 0.55 largest))
-                (tint [terracotta teal saffron plum][(mod i 4)])))))
+                (tint [red green yellow blue][(mod i 4)])))))
 
   (int popped-count (count bubbles (fn b b.popped)))
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'middle'))
