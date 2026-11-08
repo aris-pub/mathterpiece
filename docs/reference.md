@@ -406,6 +406,17 @@ Every control and listener emits writes to its target (or, through its animation
 - **Guidance:** these touch rules follow WCAG 2.2 (success criteria 2.5.7, Dragging Movements, and 1.4.13, Content on Hover or Focus), the WARP design system's guidance for interaction with data graphics, Microsoft's touch guidance, and the UW Interactive Data Lab's study of interaction with data graphics on phones (EuroVis 2024).
 - **Two writers on one target:** a writer that starts moving a variable or an attribute cancels any other writer moving it. The newest wins, whatever its kind.
 
+### The controls' look
+
+The controls are drawn with BRAIID, the design system of RSM documents, and read its CSS tokens, so a page that shows controls loads `braiid.css`; their accent is BRAIID's `--primary-700` (`--primary-600` for a toggle's box). A control has two states: at rest, and in use, while the reader presses it, drags it, or has given it the keyboard's focus, and for a play, while it plays. A page may give each state its own color with two CSS custom properties, set anywhere above the controls, such as on `:root`:
+
+| Property | What it colors | When the page sets none |
+|---|---|---|
+| `--mtp-control-rest` | a control at rest: a button's text, a slider's knob and the track up to it, a toggle's box, a play's filled bars | `--primary-700` (`--primary-600` for a toggle) |
+| `--mtp-control-active` | the same, while in use; and a play's round button, always, since it is what the reader presses first and a gray there would look turned off | the same as the rest color |
+
+So a page that sets neither looks as BRAIID draws it. A page that wants its controls gray at rest and ink while used sets, for example, `--mtp-control-rest: #8a8f98; --mtp-control-active: #1f2a44`. The track a play's bars lie on is the page's text color, faint, in both states.
+
 ## Rounding
 
 One rule, the same in the compiler and the runtime, wherever a number is rounded: `round`, a write into an int, and a format spec such as `{x:.2f}`. **Halves round away from zero:** 2.5 gives 3, −2.5 gives −3, and 0.125 to two decimal places gives 0.13. Rounding works on the number's shortest exact decimal form, not its binary value, so 2.675 to two decimal places gives 2.68.

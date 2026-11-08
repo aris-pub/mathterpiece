@@ -118,3 +118,57 @@ describe("a play's bar", () => {
     }
   });
 });
+
+describe("the controls' colors at rest and in use", () => {
+  // mtp-kwy2.1: a page sets --mtp-control-rest and --mtp-control-active; with neither set, the
+  // controls keep BRAIID's --primary-700.
+  const all = `<mtp-button model="m" name="go"></mtp-button><mtp-slider model="m" name="sl"></mtp-slider>
+    <mtp-play model="m" name="run" style="width: 420px"></mtp-play><mtp-toggle model="m" name="t"></mtp-toggle>`;
+  const GRAY = "rgb(128, 128, 128)";
+  const INK = "rgb(10, 10, 10)";
+  const BLUE = "rgb(1, 2, 3)";
+
+  async function controls(style: string): Promise<void> {
+    document.documentElement.setAttribute("style", style);
+    document.body.innerHTML = `<button id="before">before</button><mtp-model id="m"></mtp-model>${all}`;
+    (document.querySelector("mtp-model") as MtpModel).doc = doc("active");
+    await frames();
+  }
+
+  const color = (sel: string, prop: string, pseudo?: string) => getComputedStyle(document.querySelector(sel)!, pseudo).getPropertyValue(prop);
+  const fill = () => color("mtp-play .mtp-bar", "background-image");
+
+  it("keeps BRAIID's accent when the page sets neither", async () => {
+    await controls(`--primary-700: ${BLUE}`);
+    expect(color("mtp-button button", "color")).toBe(BLUE);
+    expect(color("mtp-play .mtp-play-button", "background-color")).toBe(BLUE);
+    expect(fill()).toContain(BLUE);
+    expect(color("mtp-slider input", "--mtp-c").trim()).toBe(BLUE);
+    document.documentElement.removeAttribute("style");
+  });
+
+  it("draws the controls in the rest color, and in the active color while in use", async () => {
+    await controls(`--primary-700: ${BLUE}; --mtp-control-rest: ${GRAY}; --mtp-control-active: ${INK}`);
+    expect(color("mtp-button button", "color")).toBe(GRAY);
+    expect(color("mtp-slider input", "--mtp-c").trim()).toBe(GRAY);
+    expect(color("mtp-toggle input", "accent-color")).toBe(GRAY);
+    expect(fill()).toContain(GRAY);
+    // The play button is the active color at rest too: it is what the reader presses first.
+    expect(color("mtp-play .mtp-play-button", "background-color")).toBe(INK);
+    // Focused from the keyboard.
+    (document.getElementById("before") as HTMLButtonElement).focus();
+    await userEvent.tab();
+    expect(color("mtp-button button", "color")).toBe(INK);
+    await userEvent.tab();
+    expect(color("mtp-slider input", "--mtp-c").trim()).toBe(INK);
+    // A play playing.
+    (document.querySelector("mtp-play .mtp-play-button") as HTMLButtonElement).click();
+    await frames();
+    expect(fill()).toContain(INK);
+    (document.querySelector("mtp-play .mtp-play-button") as HTMLButtonElement).click();
+    (document.activeElement as HTMLElement).blur();
+    await frames();
+    expect(fill()).toContain(GRAY);
+    document.documentElement.removeAttribute("style");
+  });
+});

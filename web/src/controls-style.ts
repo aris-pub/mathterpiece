@@ -9,6 +9,23 @@ mtp-slider, mtp-button, mtp-play, mtp-toggle {
   color: var(--text-body);
 }
 
+/* A control is drawn in one color at rest and another while the reader uses it: pressing,
+   dragging, focused from the keyboard, or a play playing. A page sets them with
+   --mtp-control-rest and --mtp-control-active; where it sets neither, both are BRAIID's accent,
+   as before there were two. --mtp-c is the one a control draws with now. */
+mtp-slider, mtp-button, mtp-play {
+  --mtp-rest: var(--mtp-control-rest, var(--primary-700));
+  --mtp-active: var(--mtp-control-active, var(--primary-700));
+}
+mtp-toggle {
+  --mtp-rest: var(--mtp-control-rest, var(--primary-600));
+  --mtp-active: var(--mtp-control-active, var(--primary-600));
+}
+mtp-slider input, mtp-button button, mtp-toggle input { --mtp-c: var(--mtp-rest); }
+mtp-slider input:active, mtp-slider input:focus-visible,
+mtp-button button:active, mtp-button button:focus-visible,
+mtp-toggle input:active, mtp-toggle input:focus-visible { --mtp-c: var(--mtp-active); }
+
 mtp-slider { display: inline-block; min-width: 12rem; }
 mtp-slider label {
   display: flex; flex-direction: column; gap: 0.25rem;
@@ -24,24 +41,24 @@ mtp-slider input[type="range"] {
 mtp-slider input[type="range"]::-webkit-slider-runnable-track {
   height: 4px; border-radius: 999px;
   background: linear-gradient(to right,
-    var(--primary-700) calc(8px + var(--u) * (100% - 16px)),
+    var(--mtp-c) calc(8px + var(--u) * (100% - 16px)),
     var(--border-primary) calc(8px + var(--u) * (100% - 16px)));
 }
 mtp-slider input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 16px; height: 16px; margin-top: -6px; border-radius: 50%;
-  background: var(--primary-700); border: 2px solid var(--surface-page);
+  background: var(--mtp-c); border: 2px solid var(--surface-page);
   box-shadow: 0 0 0 1px var(--border-primary);
 }
 mtp-slider input[type="range"]::-moz-range-track {
   height: 4px; border-radius: 999px; background: var(--border-primary);
 }
 mtp-slider input[type="range"]::-moz-range-progress {
-  height: 4px; border-radius: 999px; background: var(--primary-700);
+  height: 4px; border-radius: 999px; background: var(--mtp-c);
 }
 mtp-slider input[type="range"]::-moz-range-thumb {
   width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box;
-  background: var(--primary-700); border: 2px solid var(--surface-page);
+  background: var(--mtp-c); border: 2px solid var(--surface-page);
   box-shadow: 0 0 0 1px var(--border-primary);
 }
 mtp-slider input[type="range"]:focus-visible {
@@ -70,7 +87,7 @@ mtp-button button {
   font: 600 0.875rem/1.2 "Source Sans 3", sans-serif;
   padding: 0.375rem 0.75rem;
   border: 1px solid var(--border-primary); border-radius: var(--radius-lg);
-  background: var(--surface-page); color: var(--primary-700);
+  background: var(--surface-page); color: var(--mtp-c);
   cursor: pointer;
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
@@ -90,22 +107,28 @@ mtp-button button:disabled, mtp-play .mtp-play-button:disabled { cursor: not-all
 
 /* A play: the button, then the bars, one per step, with the step playing under them. The bars
    sit on a track of their own color, so at rest they read as a tour not yet played rather than as
-   a control turned off. */
+   a control turned off. The button is the active color even at rest: it is what the reader
+   presses first, and a rest color such as a gray would make it look turned off. */
 mtp-play {
   display: flex; align-items: flex-start; gap: 0.75rem; min-width: 16rem;
-  --mtp-bar-track: color-mix(in srgb, var(--text-body) 20%, transparent);
-  --mtp-bar-fill: var(--primary-700);
+  --mtp-bar-track: color-mix(in srgb, var(--text-body, currentColor) 20%, transparent);
+  --mtp-bar-fill: var(--mtp-rest);
+}
+mtp-play[data-playing], mtp-play:has(:focus-visible), mtp-play .mtp-bars.mtp-dragging {
+  --mtp-bar-fill: var(--mtp-active);
 }
 mtp-play .mtp-play-button {
   position: relative; flex: none;
   display: grid; place-items: center;
   width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 50%;
-  background: var(--primary-700); color: var(--surface-page);
+  background: var(--mtp-active); color: var(--surface-page, white);
   cursor: pointer;
   transition: background-color 0.12s ease;
 }
 mtp-play .mtp-play-button svg { width: 1rem; height: 1rem; fill: currentColor; }
-mtp-play .mtp-play-button:hover { background: var(--primary-800, var(--primary-700)); }
+mtp-play .mtp-play-button:hover {
+  background: color-mix(in srgb, var(--mtp-active) 85%, var(--text-body, black));
+}
 mtp-play .mtp-indicator { flex: 1; min-width: 0; display: grid; gap: 0.125rem; }
 /* The bars are thin, but the area that takes a press is 2rem tall, and reaches a little above
    and below that for a finger. */
@@ -130,7 +153,7 @@ mtp-play .mtp-now {
 mtp-toggle label {
   display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;
 }
-mtp-toggle input { accent-color: var(--primary-600); width: 1rem; height: 1rem; margin: 0; }
+mtp-toggle input { accent-color: var(--mtp-c); width: 1rem; height: 1rem; margin: 0; }
 
 /* A shape a tap selected, which the next tap moves (the tap alternative to a drag). Chromium
    draws no outline on the shapes inside an SVG, so the ring is a shadow, sized in the view box's
