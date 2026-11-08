@@ -31,6 +31,11 @@
     (should (eq (mtp-mode-test--face-at src "in ") 'mtp-mode-keyword-face))
     (should (eq (mtp-mode-test--face-at src "in-order") 'mtp-mode-form-head-face))))
 
+(ert-deftest mtp-mode-highlights-quiet-mode-listeners ()
+  (let ((src "(on-live view (animation (move k (to 1))))\n(on-quiet view (animation (move k (to 0))))"))
+    (should (eq (mtp-mode-test--face-at src "on-live") 'mtp-mode-form-head-face))
+    (should (eq (mtp-mode-test--face-at src "on-quiet") 'mtp-mode-form-head-face))))
+
 (ert-deftest mtp-mode-leaves-function-calls-alone ()
   (let ((src "(real v (sind (max 3 4)))"))
     (should-not (eq (mtp-mode-test--face-at src "sind") 'mtp-mode-keyword-face))

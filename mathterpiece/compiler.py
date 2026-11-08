@@ -142,6 +142,8 @@ COMPONENTS = {
     "on-drag",
     "on-click",
     "on-view",
+    "on-live",
+    "on-quiet",
     "on-release",
     "on-dragstart",
     "on-dragend",
@@ -149,6 +151,9 @@ COMPONENTS = {
     "on-leave",
     "on-pointermove",
 }
+# The listeners that name the view they listen to: its first coming into view, and its going
+# live and back to quiet (mtp-16z).
+ON_VIEW = ("on-view", "on-live", "on-quiet")
 # Listeners on a shape: their positional argument is the shape they listen to.
 ON_SHAPE = (
     *("on-drag", "on-click", "on-release", "on-dragstart", "on-dragend"),
@@ -529,11 +534,22 @@ class _Compiler:
         forms = self.imports(forms, None, self.source)
         for form, scope in self.expand(forms, {}, top=True):
             self.top(form, scope)
+        self.check_quiet()
         # A named transition no move ever used still needs its ends compiled.
         for i, obj in enumerate(self.model.objects):
             if obj.kind == "transition" and obj.data.get("end") is None:
                 self.type_ends(i, None, obj.pos)
         return self.model
+
+    def check_quiet(self) -> None:
+        """A view has a quiet mode only with an on-live, so an on-quiet needs one (mtp-16z)."""
+        live = {o.data["view"] for o in self.model.objects if o.kind == "on-live"}
+        for o in self.model.objects:
+            if o.kind == "on-quiet" and o.data["view"] not in live:
+                name = self.model.objects[o.data["view"]].name
+                raise CompileError(
+                    f"{name} has no on-live, so it is never live: on-quiet needs one", o.pos
+                )
 
     def imports(self, forms, file: str | None, path: Path | None) -> tuple:
         """Reads the (import name …) forms of a file, and gives its other forms, with each
@@ -2972,6 +2988,11 @@ class _Compiler:
                 raise CompileError("on-view takes the canvas it listens to", form.pos)
             name, pos, items = None, form.pos, form.items[2:]
             shape = self.component_named(form.items[1], {"canvas"}, "expected the name of a canvas")
+        elif kind in ("on-live", "on-quiet"):
+            if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
+                raise CompileError(f"{kind} takes the view it listens to", form.pos)
+            name, pos, items = None, form.pos, form.items[2:]
+            shape = self.component_named(form.items[1], set(VIEWS), "expected the name of a view")
         elif kind == "on-pointermove":
             if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
                 raise CompileError(
@@ -3024,6 +3045,8 @@ class _Compiler:
         items.remove(item)
         if kind == "on-view":
             raise CompileError("on-view listens to its canvas, so it takes no (in …)", item.pos)
+        if kind in ON_VIEW:
+            raise CompileError(f"{kind} listens to its view, so it takes no (in …)", item.pos)
         if kind == "on-pointermove" and listened[1] is not None:
             raise CompileError(
                 "this on-pointermove listens to its canvas, so it takes no (in …)", item.pos
@@ -3190,7 +3213,7 @@ class _Compiler:
         stop = next((it for it in items if _head(it) == "stop-propagation"), None)
         if stop is not None:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
-        if obj.kind not in (*ON_SHAPE, "on-view", "on-pointermove"):
+        if obj.kind not in (*ON_SHAPE, *ON_VIEW, "on-pointermove"):
             label = self.take(items, "label")
             # By default a control's label is its name; one with no name has an empty label.
             obj.attrs["label"] = (
@@ -3463,6 +3486,9 @@ class _Compiler:
         written = self.animated(obj, items)
         self.active(obj, items)
         self.writer(obj, items, written)
+
+    build_on_live = build_on_view
+    build_on_quiet = build_on_view
 
     def build_on_click(self, obj: Obj, items: list, shape: int) -> None:
         obj.data["shape"] = shape

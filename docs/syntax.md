@@ -171,7 +171,7 @@ Every form follows one template:
     (head name? positional… option… body…)
 
 - **The head** says what the form is.
-- **The name** comes next, for a form that has one. Some forms have none: listeners (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`, `on-enter`, `on-leave`, `on-pointermove`), an animation written inside a control, and `move`, which writes a transition in place.
+- **The name** comes next, for a form that has one. Some forms have none: listeners (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`, `on-live`, `on-quiet`, `on-enter`, `on-leave`, `on-pointermove`), an animation written inside a control, and `move`, which writes a transition in place.
 - **Positional arguments** come next, recognized by where they are. Each form fixes how many it takes, and some take none. A positional argument may be left out when the form allows it: a variable's value, as in `(real k (>= 0))`.
 - **Optional arguments** come next, in any order. Each is a form recognized by its head, such as `(r 1)`, `(fill 'red')` or `(when on)`, and is given at most once.
 - **The body** comes last: any number of items, or none. What it holds depends on the form: member declarations, a variable's constraints, the shapes a canvas shows, a writer's conditions, the moves of an animation.
@@ -201,7 +201,7 @@ A file is a sequence of declarations, read in order: a name must be declared bef
 - **Types**: `type`, `motif` and `variant`, at the top level.
 - **Globals**: functions, transitions, animations, and variables that are not part of the scene, at the top level.
 - **The scene**: exactly one `(scene …)`, holding the shapes and the variables they share.
-- **Components**: views (`canvas`, `readout`), controls (`slider`, `button`, `play`, `toggle`) and listeners (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`, `on-enter`, `on-leave`, `on-pointermove`), at the top level.
+- **Components**: views (`canvas`, `readout`), controls (`slider`, `button`, `play`, `toggle`) and listeners (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`, `on-live`, `on-quiet`, `on-enter`, `on-leave`, `on-pointermove`), at the top level.
 
 The data model shows how these relate: what reads what, and what writes what.
 

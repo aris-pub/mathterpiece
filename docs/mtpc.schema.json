@@ -1570,6 +1570,8 @@
                 "on-drag",
                 "on-click",
                 "on-view",
+                "on-live",
+                "on-quiet",
                 "on-release",
                 "on-dragstart",
                 "on-dragend",
@@ -2938,6 +2940,164 @@
             "type": "object",
             "properties": {
               "kind": {
+                "const": "on-live"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "view",
+              "animation",
+              "active",
+              "conditions"
+            ],
+            "properties": {
+              "kind": {
+                "const": "on-live"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "view": {
+                "$ref": "#/$defs/id"
+              },
+              "animation": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "active": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clamp"
+                }
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "on-quiet"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "view",
+              "animation",
+              "active",
+              "conditions"
+            ],
+            "properties": {
+              "kind": {
+                "const": "on-quiet"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "view": {
+                "$ref": "#/$defs/id"
+              },
+              "animation": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/id"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "active": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clamp"
+                }
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
                 "const": "namespace"
               }
             },
@@ -3371,6 +3531,8 @@
                 "on-drag",
                 "on-click",
                 "on-view",
+                "on-live",
+                "on-quiet",
                 "on-release",
                 "on-dragstart",
                 "on-dragend",

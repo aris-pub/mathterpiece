@@ -16,7 +16,7 @@
     "transition" "move" "wait" "roll-dice" "animation" "at-once" "in-order" "rand-seed"
     "canvas" "readout" "display" "slider" "button" "play" "toggle" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
-    "defaults" "clip" "loop" "autoplay" "exists-when"
+    "on-live" "on-quiet" "defaults" "clip" "loop" "autoplay" "exists-when"
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
   "Heads of mtp's forms. Any of them may end in an underscore, as in (circle_ …).")
 
@@ -113,7 +113,7 @@ takes a color apart from strings.")
     ;; Forms with no name.
     ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("step" . 1) ("on-drag" . 2) ("on-click" . 1)
     ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 1) ("on-enter" . 1)
-    ("on-leave" . 1)
+    ("on-leave" . 1) ("on-live" . 1) ("on-quiet" . 1)
     ("on-pointermove" . 2) ("defaults" . 0)
     ("exists-when" . 1)
     ("when" . 1) ("foreach" . 2) ("let" . 1) ("fn" . 1) ("if" . 2))
@@ -140,7 +140,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
   '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "slider" "button" "play" "toggle" "readout" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
-    "move" "transition" "font" "color"
+    "on-live" "on-quiet" "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "colormap" "interface" "defaults" "term" "display" "rand-seed")
   "Forms that take no body: every item after their positional arguments is indented 4.")
