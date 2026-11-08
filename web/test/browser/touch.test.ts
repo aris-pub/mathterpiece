@@ -301,3 +301,53 @@ describe("listeners tied to a view", () => {
     expect(v("entered")).toBe(1);
   });
 });
+
+describe("quiet mode", () => {
+  // mtp-16z: left starts quiet, and its listeners take no finger until the reader taps its hand,
+  // whose target is 44 pixels across though it is drawn smaller.
+  async function quiet(): Promise<{ left: SVGSVGElement; hand: HTMLButtonElement; v: (n: string, a?: string) => unknown }> {
+    window.scrollTo(0, 0);
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="left" style="display: block; width: 390px"></mtp-canvas><mtp-slider model="m" name="sl"></mtp-slider><div style="height: 2000px"></div>`;
+    const model = document.querySelector("mtp-model") as MtpModel;
+    model.doc = doc("quiet");
+    const rt = model.runtime!;
+    const left = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+    Object.assign(left.style, { width: "390px", height: "390px" });
+    await frames();
+    const hand = document.querySelector("mtp-canvas .mtp-switch") as HTMLButtonElement;
+    return { left, hand, v: (n, a) => rt.value(rt.id(n), a ?? null) };
+  }
+  const mode = () => document.querySelector("mtp-canvas")!.getAttribute("data-mtp-mode");
+
+  it("a finger on a quiet view scrolls the page, and drags once a tap near the hand makes it live", async () => {
+    const { left, hand, v } = await quiet();
+    await swipe(client(left, 5, 0), client(left, 5, 6));
+    expect(window.scrollY).toBeGreaterThan(20);
+    expect(v("knob", "y")).toBe(0);
+    window.scrollTo(0, 0);
+    await frames();
+    const r = hand.getBoundingClientRect();
+    expect(r.width).toBeLessThan(44);
+    // Off the drawn circle, inside the 44 pixel target.
+    await tap([r.left + r.width / 2 - 20, r.top + r.height / 2]);
+    expect(mode()).toBe("live");
+    await swipe(client(left, 5, 0), client(left, 5, 3));
+    expect(window.scrollY).toBe(0);
+    expect(v("knob", "y") as number).toBeGreaterThan(1);
+  });
+
+  it("a tap on the cross puts it back to quiet, and the finger scrolls the page again", async () => {
+    const { left, hand, v } = await quiet();
+    const middle = (): [number, number] => {
+      const r = hand.getBoundingClientRect();
+      return [r.left + r.width / 2, r.top + r.height / 2];
+    };
+    await tap(middle());
+    expect(mode()).toBe("live");
+    await tap(middle());
+    expect(mode()).toBe("quiet");
+    await swipe(client(left, 5, 0), client(left, 5, 6));
+    expect(window.scrollY).toBeGreaterThan(20);
+    expect(v("knob", "y")).toBe(0);
+  });
+});

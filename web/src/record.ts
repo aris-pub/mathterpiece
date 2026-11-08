@@ -42,6 +42,10 @@ html.mtp-recording, html.mtp-recording * { cursor: none !important; }
 .mtp-record-frame mtp-play { min-width: 0; zoom: 1.25; }
 .mtp-record-frame mtp-play .mtp-play-button { display: none; }
 .mtp-record-frame mtp-play .mtp-now { font-size: 1rem; }
+/* A viewer cannot press the switch of a view with a quiet mode, and the play shows whether its
+   view is quiet or not. */
+.mtp-record-frame .mtp-switch { display: none; }
+html.mtp-recording .mtp-record-frame mtp-play[data-mtp-folded] { display: flex !important; }
 `;
 
 /** Shows the recording page for the model with the given id: the canvas and the play's

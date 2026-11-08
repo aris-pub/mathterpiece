@@ -18,6 +18,8 @@ import { type Ease, applyEase } from "./transitions.ts";
 export { FORMAT_VERSION };
 const READY = "mtp-ready";
 const CHANGE = "mtp-change";
+// A view went live or back to quiet (mtp-16z).
+const MODE = "mtp-mode";
 // Touch (docs/reference.md, "Touch screens"): how far, in CSS pixels, a finger may miss a shape
 // and still press it, and how far it may move and still tap.
 const TOUCH_REACH = 22;
@@ -114,6 +116,24 @@ export class MtpModel extends HTMLElement {
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
 
+  /** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
+   * views"), playing its active on-live or on-quiet listeners. */
+  setLive(view: number, live: boolean): void {
+    const rt = this.runtime;
+    const scheduler = this.scheduler;
+    if (!rt || !scheduler || !rt.quietMode.has(view) || rt.quiet.has(view) !== live) return;
+    if (live) rt.quiet.delete(view);
+    else rt.quiet.add(view);
+    const kind = live ? "on-live" : "on-quiet";
+    rt.objects.forEach((o, i) => {
+      if (o.kind !== kind || o.view !== view || !activeOf(rt, i)) return;
+      const player = playerFor(rt, o);
+      if (player) scheduler.start(player, o);
+    });
+    this.dispatchEvent(new Event(MODE, { bubbles: true }));
+    this.changed();
+  }
+
   /** Runs work the first time the view or control id comes into view, or now if it has. */
   whenSeen(id: number, work: () => void): void {
     if (this.seen.has(id)) work();
@@ -167,10 +187,15 @@ abstract class MtpPart extends HTMLElement {
   private onChange = (event: Event) => {
     if (this.mine(event)) this.guard(() => this.update());
   };
+  private onMode = (event: Event) => {
+    if (this.mine(event)) this.moded(false);
+  };
 
   connectedCallback(): void {
     document.addEventListener(READY, this.onReady);
     document.addEventListener(CHANGE, this.onChange);
+    document.addEventListener(MODE, this.onMode);
+    this.addEventListener("keydown", this.onKey);
     const model = this.model();
     if (model && (model.runtime || model.error)) this.build();
   }
@@ -178,6 +203,8 @@ abstract class MtpPart extends HTMLElement {
   disconnectedCallback(): void {
     document.removeEventListener(READY, this.onReady);
     document.removeEventListener(CHANGE, this.onChange);
+    document.removeEventListener(MODE, this.onMode);
+    this.removeEventListener("keydown", this.onKey);
   }
 
   private mine(event: Event): boolean {
@@ -195,7 +222,10 @@ abstract class MtpPart extends HTMLElement {
       const model = this.model();
       if (model?.error) throw new Error(model.error);
       if (model?.runtime && model.scheduler) {
+        this.switch = null;
+        this.folded = null;
         this.setup(model, model.runtime, model.scheduler);
+        this.moded(true);
         this.watch(model);
       }
     });
@@ -226,6 +256,80 @@ abstract class MtpPart extends HTMLElement {
 
   // The object this element shows, once found.
   private shown: number | null = null;
+  // A view's button to make it live and back to quiet, when it has a quiet mode.
+  private switch: HTMLButtonElement | null = null;
+  private folding: Animation | null = null;
+  private folded: boolean | null = null;
+  private onKey = (event: KeyboardEvent) => {
+    const rt = this.model()?.runtime;
+    const id = this.shown;
+    if (event.key === "Escape" && rt && id !== null && rt.quietMode.has(id) && !rt.quiet.has(id)) this.model()!.setLive(id, false);
+  };
+
+  /** Puts nodes in the element, with the view's switch after them. */
+  protected present(...nodes: Node[]): void {
+    this.replaceChildren(...nodes);
+    if (this.switch) this.append(this.switch);
+  }
+
+  /** Follows whether a view is quiet or live: a view with a quiet mode shows it and its switch,
+   * and a control tied to views is folded away while every one of them is quiet. The first
+   * time, at setup, nothing is animated. */
+  private moded(first: boolean): void {
+    const model = this.model();
+    const rt = model?.runtime;
+    const id = this.shown;
+    if (!model || !rt || id === null) return;
+    const obj = rt.objects[id]!;
+    if (VIEWS.has(obj.kind)) {
+      if (!rt.quietMode.has(id)) return;
+      const quiet = rt.quiet.has(id);
+      this.dataset.mtpMode = quiet ? "quiet" : "live";
+      if (!this.switch) {
+        this.switch = makeSwitch(this, () => model.setLive(id, rt.quiet.has(id)));
+        this.append(this.switch);
+      }
+      this.switch.innerHTML = quiet ? HAND_ICON : CLOSE_ICON;
+      const label = quiet ? "Interactive figure: open it" : "Back to the plain figure";
+      this.switch.setAttribute("aria-label", label);
+      this.switch.title = label;
+      return;
+    }
+    if (!obj.in) return;
+    this.fold(obj.in.every((v) => rt.quiet.has(v)), !first);
+  }
+
+  // A control unfolds by growing to its height and fading in, and folds the other way.
+  // data-mtp-folded is where it is going, at once; while data-mtp-folding is there too, it is
+  // still drawn, on its way.
+  private fold(folded: boolean, animate: boolean): void {
+    if (this.folded === folded) return;
+    this.folded = folded;
+    this.folding?.cancel();
+    this.folding = null;
+    this.removeAttribute("data-mtp-folding");
+    const still = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!animate || still || typeof this.animate !== "function") {
+      this.toggleAttribute("data-mtp-folded", folded);
+      return;
+    }
+    this.removeAttribute("data-mtp-folded");
+    const open = { height: `${this.getBoundingClientRect().height}px`, opacity: 1 };
+    const shut = { height: "0px", opacity: 0 };
+    this.setAttribute("data-mtp-folding", "");
+    this.toggleAttribute("data-mtp-folded", folded);
+    const animation = this.animate(folded ? [open, shut] : [shut, open], { duration: FOLD_MS, easing: "ease" });
+    this.folding = animation;
+    // A fold cancelled by the next one ends here too, rejected, which is no error.
+    animation.finished.then(
+      () => {
+        if (this.folding !== animation) return;
+        this.folding = null;
+        this.removeAttribute("data-mtp-folding");
+      },
+      () => {},
+    );
+  }
 
   /** The id of the object this element shows, by its name attribute and kind. */
   protected find(rt: Runtime, kind: string): number {
@@ -240,6 +344,27 @@ abstract class MtpPart extends HTMLElement {
 
   protected abstract setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void;
   protected abstract update(): void;
+}
+
+// The views (docs/data-model.md, "Components"): what may have a quiet mode.
+const VIEWS = new Set(["canvas", "readout", "display"]);
+// How long a control takes to unfold when its view goes live, in milliseconds.
+const FOLD_MS = 300;
+// The switch's icons: a hand, to make a view live, as in the Bourgain paper's figures, and a
+// cross to put it back to quiet.
+const HAND_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>';
+const CLOSE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+/** A view's switch: one button that makes it live and, pressed again, quiet, so the keyboard's
+ * focus stays on it. A readout and a formula inside a paragraph take it in the line. */
+function makeSwitch(view: HTMLElement, press: () => void): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "mtp-switch";
+  if (view.localName === "mtp-readout" || view.style.display === "inline") button.classList.add("mtp-switch-inline");
+  button.addEventListener("click", press);
+  return button;
 }
 
 function playerFor(rt: Runtime, writer: Obj): Player | null {
@@ -302,7 +427,7 @@ export class MtpCanvas extends MtpPart {
       if (made !== madeAt) mark();
       [shownAt, madeAt] = [rt.clock, made];
     };
-    this.replaceChildren(svg);
+    this.present(svg);
     this.redraw();
     // Font sizes are in screen pixels, so the drawing depends on the canvas's size on screen.
     let width = 0;
@@ -628,22 +753,25 @@ class Toggles {
 }
 
 export class MtpReadout extends MtpPart {
-  private show: () => void = () => {};
+  private say: () => void = () => {};
 
   protected setup(_model: MtpModel, rt: Runtime): void {
     const readout = this.find(rt, "readout");
-    this.show = () => {
-      this.textContent = String(rt.value(readout, "value"));
+    // A text node of its own, so that the view's switch beside it stays.
+    const text = document.createTextNode("");
+    this.present(text);
+    this.say = () => {
+      text.data = String(rt.value(readout, "value"));
       const font = rt.objects[readout]!.attrs?.font ? (rt.value(readout, "font") as Record<string, unknown>) : null;
       for (const part of ["family", "style", "weight"]) {
         if (font?.[part] !== null && font?.[part] !== undefined) this.style.setProperty(`font-${part}`, String(font[part]));
       }
     };
-    this.show();
+    this.say();
   }
 
   protected update(): void {
-    this.show();
+    this.say();
   }
 }
 
@@ -667,7 +795,7 @@ export class MtpDisplay extends MtpPart {
     const terms = (formula.members ?? []).map((id) => ({ id, name: rt.objects[id]!.term! }));
     const clicks = model.clicks!;
     const hovers = (kind: string, id: number) =>
-      rt.objects.filter((o) => o.kind === kind && o.shape === id && heardIn(o, display) && holds(rt, o.active));
+      rt.objects.filter((o) => o.kind === kind && o.shape === id && heardIn(o, display, rt.quiet) && holds(rt, o.active));
     const play = (listeners: Obj[]) => {
       for (const listener of listeners) {
         const player = playerFor(rt, listener);
@@ -693,7 +821,7 @@ export class MtpDisplay extends MtpPart {
     const render = () => {
       this.latex = wanted();
       const node = typeset(this.latex, block);
-      this.replaceChildren(node);
+      this.present(node);
       marked = new Map();
       for (const { id, name } of terms) {
         const el = node.querySelector(`.${termClass(name)}`) as SVGGElement | null;

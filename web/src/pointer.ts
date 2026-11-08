@@ -22,6 +22,8 @@ export class Pointer {
     private rt: Runtime,
     private canvas: number,
   ) {
+    // Which views a listener is tied to never changes; whether they are quiet does, so that is
+    // asked as the pointer moves.
     for (const o of rt.objects) {
       if (!heardIn(o, canvas)) continue;
       const into = o.kind === "on-enter" ? this.enters : o.kind === "on-leave" ? this.leaves : null;
@@ -40,7 +42,7 @@ export class Pointer {
   hears(shape: number): boolean {
     for (let i: number | null = shape; i !== null; i = this.rt.parent(i)) {
       if (this.active(this.enters, i).length || this.active(this.leaves, i).length) return true;
-      if (this.moves.some((l) => l.shape === i && holds(this.rt, l.active))) return true;
+      if (this.moves.some((l) => l.shape === i && this.awake(l))) return true;
     }
     return false;
   }
@@ -63,7 +65,7 @@ export class Pointer {
    * "id:attr", so that it cancels any other writer moving it. */
   move(scene: Point, claim: (targets: string[], source: object) => void): void {
     const rt = this.rt;
-    const onShapes = bubble(rt, this.over[0] ?? null, (i) => this.moves.filter((l) => l.shape === i));
+    const onShapes = bubble(rt, this.over[0] ?? null, (i) => this.moves.filter((l) => l.shape === i && this.heard(l)));
     const stopped = onShapes.some((l) => holds(rt, l["stop-propagation"], false));
     const onCanvas = stopped ? [] : this.moves.filter((l) => l.view === this.canvas && holds(rt, l.active));
     rt.together(() => {
@@ -75,7 +77,15 @@ export class Pointer {
   }
 
   private active(listeners: Map<number, Obj[]>, shape: number): Obj[] {
-    return (listeners.get(shape) ?? []).filter((l) => holds(this.rt, l.active));
+    return (listeners.get(shape) ?? []).filter((l) => this.awake(l));
+  }
+
+  private heard(l: Obj): boolean {
+    return heardIn(l, this.canvas, this.rt.quiet);
+  }
+
+  private awake(l: Obj): boolean {
+    return this.heard(l) && holds(this.rt, l.active);
   }
 
   private write(l: Obj, scene: Point): boolean {

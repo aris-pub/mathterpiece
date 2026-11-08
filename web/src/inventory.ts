@@ -9,7 +9,7 @@ import type { Doc, Obj } from "./doc.ts";
 const ELEMENTS = new Set(["canvas", "readout", "display", "slider", "toggle", "button", "play"]);
 const LISTENERS = new Set([
   ...["on-drag", "on-click", "on-release", "on-dragstart", "on-dragend", "on-view"],
-  ...["on-enter", "on-leave", "on-pointermove"],
+  ...["on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet"],
 ]);
 
 export interface InventoryOptions {
@@ -82,7 +82,8 @@ function component(o: Obj, opts: InventoryOptions): HTMLElement {
 
 function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
   const entry = el("section", "mtp-inv-entry");
-  const onCanvas = o.kind === "on-view" || (o.kind === "on-pointermove" && o.view != null);
+  const onView = o.kind === "on-live" || o.kind === "on-quiet";
+  const onCanvas = o.kind === "on-view" || onView || (o.kind === "on-pointermove" && o.view != null);
   const of = onCanvas ? name(o.view!) : name(o.shape!);
   entry.append(head(o.kind, of));
   if (o.doc) entry.append(el("p", "mtp-inv-doc", o.doc));
@@ -101,6 +102,8 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
       "on-dragstart": `When the reader starts dragging ${of}, it ${plays}.`,
       "on-dragend": `When the reader stops dragging ${of}, it ${plays}.`,
       "on-view": `When the canvas ${of} first comes into view, it ${plays}.`,
+      "on-live": `When the reader makes ${of} live, with the hand in its corner, it ${plays}.`,
+      "on-quiet": `When the reader puts ${of} back to quiet, with the cross in its corner, it ${plays}.`,
       "on-enter": `When the reader's pointer comes onto ${of}, it ${plays}.`,
       "on-leave": `When the reader's pointer leaves ${of}, it ${plays}.`,
     }[o.kind]!;

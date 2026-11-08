@@ -159,6 +159,10 @@ export class Runtime {
   evaluations = 0;
   /** Counts the writes that changed something; see touchedAt. */
   clock = 0;
+  /** The views with a quiet mode, those with an on-live, and those of them quiet now (mtp-16z).
+   * Each starts quiet. The listeners tied to a view hear nothing in it while it is quiet. */
+  readonly quietMode = new Set<number>();
+  readonly quiet = new Set<number>();
   private touched: number[] = [];
   private parents: (number | null)[];
   // Each object's variables and attributes, by attribute (null for a variable's value). Reads
@@ -204,6 +208,8 @@ export class Runtime {
     for (const d of doc.types as { name: string; kind: string; type?: Type }[]) {
       if (d.kind === "type") this.named.set(d.name, d.type!);
     }
+    for (const o of doc.objects) if (o.kind === "on-live") this.quietMode.add(o.view!);
+    for (const v of this.quietMode) this.quiet.add(v);
     this.parents = doc.objects.map(() => null);
     this.slots = doc.objects.map(() => new Map());
     doc.objects.forEach((o, i) => {

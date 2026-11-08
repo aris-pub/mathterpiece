@@ -1074,3 +1074,110 @@ describe("listeners tied to a view", () => {
     expect(rt.objects[rt.id("b")]!.in).toEqual([rt.id("left"), rt.id("right")]);
   });
 });
+
+describe("quiet mode", () => {
+  // mtp-16z: left and says have an on-live, so each starts quiet, with a switch to make it live;
+  // right has none, and behaves as before. What is tied to a quiet view is put away.
+  const controls: [string, string][] = [["slider", "sl"], ["play", "p"], ["button", "b"], ["toggle", "t"], ["button", "free"]];
+  const open = () =>
+    page(
+      `<mtp-canvas model="m" name="left"></mtp-canvas><mtp-canvas model="m" name="right"></mtp-canvas>` +
+        `<mtp-readout model="m" name="says"></mtp-readout>` +
+        controls.map(([kind, name]) => `<mtp-${kind} model="m" name="${name}"></mtp-${kind}>`).join(""),
+      doc("quiet"),
+    );
+  const view = (name: string) => document.querySelector(`:is(mtp-canvas, mtp-readout)[name="${name}"]`) as HTMLElement;
+  const control = (name: string) => document.querySelector(`:not(mtp-canvas, mtp-readout)[name="${name}"]`) as HTMLElement;
+  const toggler = (name: string) => view(name).querySelector(".mtp-switch") as HTMLButtonElement | null;
+  const folded = (name: string) => control(name).hasAttribute("data-mtp-folded");
+  const shape = (rt: Runtime, canvas: string, name: string) =>
+    document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`)!;
+  const at = (el: Element, type: string, x = 0, y = 0) =>
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse" }));
+
+  it("a view with an on-live starts quiet, with a switch; one without has neither", () => {
+    open();
+    expect(view("left").dataset.mtpMode).toBe("quiet");
+    expect(toggler("left")!.getAttribute("aria-label")).toBe("Interactive figure: open it");
+    expect(toggler("left")!.type).toBe("button");
+    expect(view("right").hasAttribute("data-mtp-mode")).toBe(false);
+    expect(toggler("right")).toBeNull();
+  });
+
+  it("hides the controls tied only to quiet views, and no others", () => {
+    open();
+    expect([folded("sl"), folded("p"), folded("t")]).toEqual([true, true, true]);
+    expect([folded("b"), folded("free")]).toEqual([false, false]);
+  });
+
+  it("the switch makes the view live: its on-live plays and its controls unfold", () => {
+    const [, , v] = open();
+    toggler("left")!.click();
+    expect(view("left").dataset.mtpMode).toBe("live");
+    expect(toggler("left")!.getAttribute("aria-label")).toBe("Back to the plain figure");
+    expect([folded("sl"), folded("p"), folded("t")]).toEqual([false, false, true]);
+    pass(1.2);
+    expect(v("k")).toBe(10);
+    expect(view("right").hasAttribute("data-mtp-mode")).toBe(false);
+  });
+
+  it("the switch, pressed again, puts it back to quiet: its on-quiet plays and its controls fold", () => {
+    const [, , v] = open();
+    toggler("left")!.click();
+    pass(1.2);
+    toggler("left")!.click();
+    expect(view("left").dataset.mtpMode).toBe("quiet");
+    expect(folded("sl")).toBe(true);
+    pass(1.2);
+    expect(v("k")).toBe(0);
+  });
+
+  it("Escape on a live view puts it back to quiet", () => {
+    open();
+    toggler("left")!.click();
+    toggler("left")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(view("left").dataset.mtpMode).toBe("quiet");
+  });
+
+  it("the listeners tied to a quiet view hear nothing in it until it is live", () => {
+    const [, rt, v] = open();
+    const drag = () => {
+      at(shape(rt, "left", "knob"), "pointerdown", 100, 100);
+      at(shape(rt, "left", "knob"), "pointermove", 164, 100);
+      at(shape(rt, "left", "knob"), "pointerup", 164, 100);
+    };
+    drag();
+    expect(v("knob", "x")).toBe(5);
+    expect((shape(rt, "left", "knob") as SVGElement).style.cursor).toBe("");
+    at(shape(rt, "left", "dot"), "pointerdown");
+    at(shape(rt, "left", "dot"), "pointerup");
+    pass(0.1);
+    expect(v("clicks")).toBe(0);
+    toggler("left")!.click();
+    expect((shape(rt, "left", "knob") as SVGElement).style.cursor).toBe("pointer");
+    drag();
+    expect(v("knob", "x") as number).toBeGreaterThan(5);
+  });
+
+  it("a readout keeps its text beside its switch, and goes live on its own", () => {
+    const [, , v] = open();
+    expect(view("says").textContent).toBe("k is 0.0");
+    toggler("says")!.click();
+    expect(view("left").dataset.mtpMode).toBe("quiet");
+    expect(folded("t")).toBe(false);
+    pass(0.1);
+    expect(v("said")).toBe(1);
+    expect(view("says").textContent).toBe("k is 0.0");
+    expect(toggler("says")).not.toBeNull();
+  });
+
+  it("an on-live may move the view itself", () => {
+    page(`<mtp-canvas model="m" name="wide"></mtp-canvas>`, doc("quiet"));
+    const svg = document.querySelector("mtp-canvas svg")!;
+    const width = () => Number(svg.getAttribute("viewBox")!.split(" ")[2]);
+    expect(width()).toBe(20);
+    (document.querySelector("mtp-canvas .mtp-switch") as HTMLButtonElement).click();
+    pass(1.2);
+    expect(width()).toBe(10);
+  });
+});

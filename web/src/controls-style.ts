@@ -165,7 +165,49 @@ mtp-canvas .mtp-selected {
     drop-shadow(0 0 var(--ring) var(--ring-color));
 }
 
+/* Quiet mode (mtp-16z). A control tied only to quiet views is folded away; while it folds or
+   unfolds it is still drawn, clipped to the height it is passing through. */
+:is(mtp-slider, mtp-button, mtp-play, mtp-toggle)[data-mtp-folded]:not([data-mtp-folding]) {
+  display: none !important;
+}
+:is(mtp-slider, mtp-button, mtp-play, mtp-toggle)[data-mtp-folding] { overflow: hidden; }
+
+/* The switch of a view with a quiet mode: a hand to make it live, a cross to put it back. It sits
+   in the view's top right corner, or in the line for a readout or an inline formula, and is drawn
+   as the controls are, in their rest color, and their in-use color under the pointer or focus.
+   It looks 2rem across and takes a press 44px across. */
+:is(mtp-canvas, mtp-display)[data-mtp-mode] { position: relative; }
+.mtp-switch {
+  position: absolute; top: 0.375rem; right: 0.375rem; z-index: 1;
+  display: grid; place-items: center;
+  width: 2rem; height: 2rem; padding: 0; margin: 0;
+  border: 1px solid var(--border-primary, currentColor); border-radius: 50%;
+  background: var(--surface-page, white);
+  color: var(--mtp-control-rest, var(--primary-700));
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.mtp-switch::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+.mtp-switch:hover, .mtp-switch:active, .mtp-switch:focus-visible {
+  color: var(--mtp-control-active, var(--primary-700));
+  border-color: currentColor;
+}
+.mtp-switch:focus-visible { outline: 2px solid var(--border-action, Highlight); outline-offset: 2px; }
+.mtp-switch svg {
+  width: 1.125rem; height: 1.125rem;
+  fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+.mtp-switch.mtp-switch-inline {
+  position: relative; top: auto; right: auto;
+  display: inline-grid; vertical-align: middle; margin-inline-start: 0.375em;
+  width: 1.5rem; height: 1.5rem;
+}
+.mtp-switch.mtp-switch-inline svg { width: 0.875rem; height: 0.875rem; }
+
 @media (prefers-reduced-motion: reduce) {
-  mtp-button button, mtp-play .mtp-play-button { transition: none; }
+  mtp-button button, mtp-play .mtp-play-button, .mtp-switch { transition: none; }
 }
 `;

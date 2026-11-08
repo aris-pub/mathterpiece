@@ -72,6 +72,18 @@ describe("the inventory", () => {
     const json = copied.split('id="dial-data">')[1]!.replace(/<\/script>$/, "");
     expect(json).toBe(source("inventory").trim().replace(/<\//g, "<\\/"));
   });
+
+  it("says what a view's on-live and on-quiet do", () => {
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><div id="inv"></div>`;
+    const text = source("quiet");
+    (document.getElementById("m") as MtpModel).doc = JSON.parse(text) as Doc;
+    const root = document.getElementById("inv")!;
+    inventory(root, text, { model: "m", id: "q", file: "q.mtpc" });
+    const said = (head: string) =>
+      [...root.querySelectorAll(".mtp-inv-entry")].find((e) => e.querySelector("h3")!.textContent === head)!.querySelector("p")!.textContent;
+    expect(said("on-live left")).toBe("When the reader makes left live, with the hand in its corner, it plays an animation that moves k.");
+    expect(said("on-quiet left")).toBe("When the reader puts left back to quiet, with the cross in its corner, it plays an animation that moves k.");
+  });
 });
 
 describe("its tokens", () => {
