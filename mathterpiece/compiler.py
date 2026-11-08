@@ -104,8 +104,10 @@ CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
-    "rest",
+    *["rest", "in"],
 }
+# The views (data-model.md, "Components"): what a listener or a control may belong to.
+VIEWS = ("canvas", "readout", "display")
 # The listeners whose event goes up the scene tree, as in the DOM, unless one stops it.
 BUBBLES = ("on-click", "on-release", "on-dragstart", "on-dragend", "on-pointermove")
 # Every number lies within ±10^150 (type-system.md, "What the compiler proves").
@@ -2986,6 +2988,12 @@ class _Compiler:
                 )
             items, shape = form.items[2:], None
         obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
+        items = list(items)
+        tied = next((it for it in items if _head(it) == "in"), None)
+        if kind in VIEWS and tied is not None:
+            raise CompileError(
+                "a view takes no (in …): listeners and controls belong to views", tied.pos
+            )
         # A canvas's body is what it shows; a writer's is its conditions.
         if kind == "canvas":
             self.options_first(
@@ -2996,9 +3004,90 @@ class _Compiler:
             # positional arguments.
             body = items[1:] if kind in ("slider", "on-drag", "on-pointermove", "toggle") else items
             self.options_first(body, lambda it: _head(it) in WRITER_OPTIONS, kind)
+        if kind not in VIEWS:
+            obj.data["in"] = self.tie(kind, items, form, shape)
         build = getattr(self, "build_" + kind.replace("-", "_"))
-        build(obj, list(items), shape)
+        build(obj, items, shape)
         self.add(obj)
+
+    def tie(self, kind: str, items: list, form: Form, listened) -> list[int] | None:
+        """(in view…): the views a listener hears the pointer in, or a control belongs to (the
+        author, 2026-11-08, mtp-2juu.1). None when not given: a listener then hears it in every
+        view showing its shape, and a control belongs to no view."""
+        found = [it for it in items if _head(it) == "in"]
+        if not found:
+            return None
+        if len(found) > 1:
+            raise CompileError("'in' is given twice", found[1].pos)
+        item = found[0]
+        assert isinstance(item, Form)
+        items.remove(item)
+        if kind == "on-view":
+            raise CompileError("on-view listens to its canvas, so it takes no (in …)", item.pos)
+        if kind == "on-pointermove" and listened[1] is not None:
+            raise CompileError(
+                "this on-pointermove listens to its canvas, so it takes no (in …)", item.pos
+            )
+        if len(item.items) == 1:
+            raise CompileError("(in …) names at least one view", item.pos)
+        views: list[int] = []
+        for node in item.items[1:]:
+            name = node.parts[0] if isinstance(node, Name) and len(node.parts) == 1 else None
+            if not isinstance(name, str):
+                raise CompileError("(in …) names views, such as (in a b)", node.pos)
+            i = self.model.names.get(name)
+            if i is None:
+                raise CompileError(
+                    f"unknown view '{name}': a listener or control names views declared before it",
+                    node.pos,
+                )
+            if self.model.objects[i].kind not in VIEWS:
+                raise CompileError(
+                    f"{name} is {_a(self.model.objects[i].kind)}, not a view", node.pos
+                )
+            if i in views:
+                raise CompileError(f"{name} is named twice", node.pos)
+            views.append(i)
+        shape = listened[0] if kind == "on-pointermove" else listened
+        if shape is not None:
+            heard = form.items[1]
+            label = _name_text(heard) if isinstance(heard, Name) else self.model.objects[shape].name
+            for node, view in zip(item.items[1:], views, strict=True):
+                self.check_shows(view, shape, str(label), node.pos)
+        return views
+
+    def check_shows(self, view: int, listened: int, label: str, pos: Pos) -> None:
+        """A listener tied to a view that can never show its shape or term is an error, when the
+        compiler can know it: a canvas that shows only shapes it names, or a display."""
+        v = self.model.objects[view]
+        term = self.model.objects[listened].kind == "term"
+        if v.kind == "readout" or (v.kind == "display") != term:
+            things = "terms" if term else "shapes"
+            raise CompileError(
+                f"{_a(v.kind)} shows no {things}, so {label} is never in {v.name}", pos
+            )
+        chain = []
+        i = listened
+        while i is not None:
+            chain.append(i)
+            i = self.model.objects[i].parent
+        if v.kind == "display":
+            formula = v.data["formula"]
+            if formula not in chain:
+                shown = self.model.objects[formula].name
+                own = next(
+                    self.model.objects[j].name
+                    for j in chain
+                    if self.model.objects[j].kind == "formula"
+                )
+                raise CompileError(
+                    f"the display {v.name} shows {shown}, not {own}, so {label} is never in it",
+                    pos,
+                )
+            return
+        shows = v.data["shows"]
+        if all(isinstance(s, int) for s in shows) and not any(s in chain for s in shows):
+            raise CompileError(f"the canvas {v.name} never shows {label}", pos)
 
     def options_first(self, items, is_option, what: str) -> None:
         """Optional arguments come before a form's body (syntax.md, section 8)."""

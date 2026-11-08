@@ -154,6 +154,8 @@ and `"doc"`, a string, when its declaration gives a docstring, `doc@'text'` (ref
 | `on-enter`, `on-leave` | `"shape"`: an id, of a shape or of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 | `on-view` | `"view"`: the canvas's id; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 
+A listener or a control whose source gives `(in view…)` has `"in"`: the ids of those views, in the order written, at least one (reference, "Listeners and controls in views"). A listener with one hears the pointer only in those views; one without it hears it in every view that shows its shape. A control with one belongs to those views, and one without it to none: nothing at the runtime reads a control's `"in"` yet. A listener or control without `(in …)` has no `"in"` key.
+
 A writer's `"conditions"` is a list of clamps, one per condition, already in the form the reference requires (a comparison of the variable or attribute written with a value not depending on it): `{"target": [id, attr], "op": ">=" | ">" | "<=" | "<", "limit": L}`, `L` free or bound. Before emitting a write to that target, the runtime clamps it to the limit.
 
 Motif and variant instances are written out in full: the runtime never builds an instance itself.

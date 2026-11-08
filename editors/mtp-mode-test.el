@@ -26,6 +26,11 @@
     (dolist (word '("(r 1" "fill" "stroke-width" "dash"))
       (should (eq (mtp-mode-test--face-at src (string-trim-left word "(")) 'mtp-mode-keyword-face)))))
 
+(ert-deftest mtp-mode-highlights-the-views-a-listener-is-in ()
+  (let ((src "(on-drag c c.pos (in view-1))\n(button b (animation (in-order (wait 1))))"))
+    (should (eq (mtp-mode-test--face-at src "in ") 'mtp-mode-keyword-face))
+    (should (eq (mtp-mode-test--face-at src "in-order") 'mtp-mode-form-head-face))))
+
 (ert-deftest mtp-mode-leaves-function-calls-alone ()
   (let ((src "(real v (sind (max 3 4)))"))
     (should-not (eq (mtp-mode-test--face-at src "sind") 'mtp-mode-keyword-face))

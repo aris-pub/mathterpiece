@@ -25,7 +25,7 @@
     "doc" "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap"
     "halign" "height"
     "kind" "label" "like" "line-cap" "line-join" "num" "opacity" "outline" "outline-width" "padding" "pan" "path" "points"
-    "pointer-events" "pos" "r" "rest" "rounding" "rx"
+    "in" "pointer-events" "pos" "r" "rest" "rounding" "rx"
     "ry" "seed" "size" "step" "stop-propagation" "stroke" "stroke-opacity" "stroke-width" "style" "tex" "to" "toggle-duration" "toggle-ease" "transform"
     "translate" "valign" "value" "weight" "width"
     "x" "y" "zoom")

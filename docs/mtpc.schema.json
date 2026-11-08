@@ -63,6 +63,15 @@
       "type": "integer",
       "minimum": 0
     },
+    "in": {
+      "description": "The views a listener hears the pointer in, or a control belongs to (mtpc.md, \"Objects\"). Left out when the source gives none.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
     "name": {
       "type": "string",
       "minLength": 1
@@ -2362,6 +2371,9 @@
                   }
                 ]
               },
+              "in": {
+                "$ref": "#/$defs/in"
+              },
               "doc": {
                 "type": "string"
               }
@@ -2454,6 +2466,9 @@
                   }
                 ]
               },
+              "in": {
+                "$ref": "#/$defs/in"
+              },
               "doc": {
                 "type": "string"
               }
@@ -2538,6 +2553,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "in": {
+                "$ref": "#/$defs/in"
               },
               "doc": {
                 "type": "string"
@@ -2656,6 +2674,9 @@
                   }
                 ]
               },
+              "in": {
+                "$ref": "#/$defs/in"
+              },
               "doc": {
                 "type": "string"
               }
@@ -2749,6 +2770,9 @@
                   }
                 ]
               },
+              "in": {
+                "$ref": "#/$defs/in"
+              },
               "doc": {
                 "type": "string"
               }
@@ -2826,6 +2850,9 @@
                 "items": {
                   "$ref": "#/$defs/clamp"
                 }
+              },
+              "in": {
+                "$ref": "#/$defs/in"
               },
               "doc": {
                 "type": "string"

@@ -348,6 +348,9 @@ class Writer:
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["conditions"] = self.conditions(o)
+        # Written only when given, so a figure that ties nothing is as small as before.
+        if o.data.get("in") is not None:
+            d["in"] = list(o.data["in"])
         return d
 
     def stop(self, o: Obj):

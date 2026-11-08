@@ -287,21 +287,34 @@ A view, a control and a readout must have a name: a page places each by its name
 | `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling the shapes its items give, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene), and expressions that give a shape, none, or a list of them, such as `(when bool name)`, `(when bool [a b])` or `(if bool a b)`, drawn in the order written, each on top of those before it |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
 | `(display name formula)` | required | the formula it shows | `(kind k)`, known when compiling: `'block'` (the default) for a formula on its own line, or `'inline'` for one inside a paragraph | none |
-| `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)` | conditions |
-| `(button name)` | required | none | `(animation …)`, `(label string)`, `(active bool)` | conditions |
-| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(rest seconds)`, `(autoplay)`, `(autoplay name)`, `(active bool)` | conditions |
-| `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(active bool)` | conditions |
-| `(on-drag shape target)` | none | the shape; the target: the shape's own `pos`, `x` or `y`, or `(move target (to expr))`, whose `expr` reads `pointer` | `(active bool)` | conditions |
-| `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
-| `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
-| `(on-dragstart shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
-| `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
+| `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)`, `(in view…)` | conditions |
+| `(button name)` | required | none | `(animation …)`, `(label string)`, `(active bool)`, `(in view…)` | conditions |
+| `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(rest seconds)`, `(autoplay)`, `(autoplay name)`, `(active bool)`, `(in view…)` | conditions |
+| `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(active bool)`, `(in view…)` | conditions |
+| `(on-drag shape target)` | none | the shape; the target: the shape's own `pos`, `x` or `y`, or `(move target (to expr))`, whose `expr` reads `pointer` | `(active bool)`, `(in view…)` | conditions |
+| `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
+| `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
+| `(on-dragstart shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
+| `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
 | `(on-view canvas)` | none | the canvas | `(animation …)`, `(active bool)` | conditions |
-| `(on-enter shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)` | conditions |
-| `(on-leave shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)` | conditions |
-| `(on-pointermove shape target)` | none | the shape or the canvas; the target, a `name`, the point it writes | `(active bool)`, `(stop-propagation bool)` | conditions |
+| `(on-enter shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(in view…)` | conditions |
+| `(on-leave shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(in view…)` | conditions |
+| `(on-pointermove shape target)` | none | the shape or the canvas; the target, a `name`, the point it writes | `(active bool)`, `(stop-propagation bool)`, `(in view…)`, only on a shape | conditions |
 
 A canvas **toggles** the shapes its items give: when an item starts or stops giving a shape, as `(when show d)` does when `show` changes, or `(if show d c)` does by giving one shape for another, the canvas shows or hides that shape. A toggle takes the canvas's `(toggle-duration t)`, in seconds, 0 (at once) if left out, with its `(toggle-ease e)`, `'linear'` if left out, any ease an animation takes: over that time the items' opacity, as the canvas shows them, goes from 0 to 1 or back. A canvas takes no `move`. The canvas never writes the scene: the opacity is its own. "Toggle" is the word for a canvas showing or hiding one of its items.
+
+#### Listeners and controls in views
+
+A listener or a control may name the views it belongs to with `(in view…)`: one or more views (canvases, readouts, displays) declared before it, by name.
+
+```
+(on-drag car-1 car-1.pos (in view-1))
+(slider speed (move v (from 0) (to 5)) (in left right))
+```
+
+- **A listener** with `(in …)` hears the pointer only in those views. In every other view that shows its shape, the shape does not react to it: no drag, no click, no release, no hover, no pointer moves, no pointer cursor, no wider touch target and no page kept from scrolling, as if the listener were not there, so a click there goes on up the scene tree as it would without it. A listener without `(in …)` hears the pointer in every view that shows its shape.
+- **A control** with `(in …)` belongs to those views; one without it belongs to none. Nothing on the page depends on it yet: it is written into the compiled model for the views that will show and hide their own controls.
+- **Errors:** naming something that is not a view, a name not declared before, the same view twice, or no view at all. A listener on a shape tied to a readout or a display, or a listener on a term tied to a canvas or to a display of another formula, since that view never shows what it listens to; and one tied to a canvas whose items all name shapes, none of which is the listener's shape or holds it. When a canvas has an item that gives a shape by an expression, such as `(when on c)`, the compiler cannot know what it may show, and allows it. A view takes no `(in …)`, nor does `on-view` or an `on-pointermove` on a canvas, which already name their canvas.
 
 ## Defaults
 
