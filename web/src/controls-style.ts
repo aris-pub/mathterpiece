@@ -99,6 +99,11 @@ mtp-button button:hover {
   background: var(--surface-hover); border-color: var(--primary-300);
 }
 mtp-button button:active { background: var(--gray-100); }
+/* A button that says it is the current choice, (selected true): filled, as a play's button. */
+mtp-button button[aria-pressed="true"],
+mtp-button button[aria-pressed="true"]:hover {
+  background: var(--mtp-active); border-color: var(--mtp-active); color: var(--surface-page, white);
+}
 mtp-button button:focus-visible, mtp-play .mtp-play-button:focus-visible,
 mtp-play .mtp-bars:focus-visible {
   outline: 2px solid var(--border-action, Highlight); outline-offset: 2px;

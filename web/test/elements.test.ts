@@ -90,6 +90,20 @@ describe("controls", () => {
     expect(v("k")).toBe(5);
   });
 
+  it("a button with (selected bool) says whether it is the current choice", () => {
+    const [, rt] = page(`<mtp-button model="m" name="five"></mtp-button><mtp-button model="m" name="go"></mtp-button>`);
+    const [five, go] = [...document.querySelectorAll("mtp-button button")] as HTMLButtonElement[];
+    expect(five!.getAttribute("aria-pressed")).toBe("false");
+    // A button that does not say which state is current is not a toggle button.
+    expect(go!.hasAttribute("aria-pressed")).toBe(false);
+    five!.click();
+    pass(0.1);
+    expect(five!.getAttribute("aria-pressed")).toBe("true");
+    rt.write(rt.id("k"), null, 2);
+    pass(0.1);
+    expect(five!.getAttribute("aria-pressed")).toBe("false");
+  });
+
   it("a control's label follows the expression it is given", () => {
     const [, rt] = page(
       `<mtp-slider model="m" name="told"></mtp-slider><mtp-button model="m" name="set"></mtp-button>` +

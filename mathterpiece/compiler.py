@@ -104,7 +104,7 @@ CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
-    *["rest", "in"],
+    *["rest", "in", "selected"],
 }
 # The views (data-model.md, "Components"): what a listener or a control may belong to.
 VIEWS = ("canvas", "readout", "display")
@@ -3278,6 +3278,9 @@ class _Compiler:
         rest = next((it for it in items if _head(it) == "rest"), None)
         if rest is not None:
             raise CompileError(f"only a play takes (rest …), not a {obj.kind}", rest.pos)
+        chosen = next((it for it in items if _head(it) == "selected"), None)
+        if chosen is not None:
+            raise CompileError(f"only a button takes (selected …), not a {obj.kind}", chosen.pos)
         stop = next((it for it in items if _head(it) == "stop-propagation"), None)
         if stop is not None:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
@@ -3332,6 +3335,13 @@ class _Compiler:
     def build_button(self, obj: Obj, items: list, shape) -> None:
         written = self.animated(obj, items)
         self.active(obj, items)
+        # (selected bool): a button that also says which state is the current one, as one of a
+        # row choosing a value, shows it while this holds (the author, 2026-11-08).
+        selected = self.take(items, "selected")
+        if selected is not None:
+            obj.attrs["selected"] = self.attribute(
+                BOOL, selected, obj.pos, "selected", scope=self.cscope
+            )
         self.writer(obj, items, written)
 
     def build_slider(self, obj: Obj, items: list, shape) -> None:

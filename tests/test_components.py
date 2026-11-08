@@ -282,6 +282,28 @@ class TestButtons:
         error(f"{src} (> j 1))", "compares an attribute this writer writes")
         error(f"{src} (> k (* 2 k)))", "compares an attribute this writer writes")
 
+    # (selected bool): a button that also says which state is the current one shows it, as
+    # the K3 to K6 buttons that choose the clique forbidden (the author, 2026-11-08).
+    def test_selected_follows_what_it_reads(self):
+        m = model(f"{K} (button b (animation (move k (to 5) (duration 1))) (selected (= k 5)))")
+        selected = m.get("b").attrs["selected"]
+        assert selected.bound and (m.id("k"), None) in selected.deps
+
+    def test_a_button_without_selected_has_none(self):
+        m = model(f"{K} (button b (animation (move k (to 5) (duration 1))))")
+        assert "selected" not in m.get("b").attrs
+
+    def test_selected_is_a_bool(self):
+        error(
+            f"{K} (button b (animation (move k (to 5) (duration 1))) (selected k))", "expected bool"
+        )
+
+    def test_only_a_button_takes_selected(self):
+        error(
+            f"{K} (slider s (move k (from 0) (to 5)) (selected true))",
+            r"only a button takes \(selected …\), not a slider",
+        )
+
 
 class TestListenersInAForeach:
     def test_a_foreach_gives_a_listener_for_each_shape(self):
