@@ -7,7 +7,7 @@
 ; wide in the close views as on the map, and the cars are measured in pixels too, so they fit
 ; on it in every view.
 
-(import house paper ink terracotta teal)
+(import house paper ink red green)
 
 (color grass (light-dark '#7fa66b' '#4a6b40'))
 (color asphalt (light-dark '#55585e' '#3a3c41'))
@@ -57,10 +57,10 @@
   ; the track runs: player 1 keeps to the left half of the road, and player 2 to the right.
   (group car-1 (fixed-size true)
       (transform (let ((p (track run-1))) (transform (rotate (heading run-1)) (translate p.x p.y))))
-    (car_ (paint terracotta) (pos [0 11])))
+    (car_ (paint red) (pos [0 11])))
   (group car-2 (fixed-size true)
       (transform (let ((p (track run-2))) (transform (rotate (heading run-2)) (translate p.x p.y))))
-    (car_ (paint teal) (pos [0 -11]))))
+    (car_ (paint green) (pos [0 -11]))))
 
 (canvas map (x -12.5) (y -8.5) (width 25) (height 17) (pan false) (zoom false)
   doc@'The whole track, with both cars.'

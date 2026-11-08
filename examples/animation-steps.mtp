@@ -4,7 +4,7 @@
 ; Press play: the dot hops from place to place, and the playhead runs along the timeline, one
 ; bar per step, as long as that step lasts.
 
-(import house paper ink soft terracotta teal plum number code)
+(import house paper ink soft red green blue number code)
 (import ease cubic-in-out)
 
 (point at [-4 0.6])
@@ -27,7 +27,7 @@
   ; Scene units per second, so the timeline spans from -4 to 4.
   (real unit (/ 8 total) (const))
 
-  (circle dot (pos at) (r 0.25) (fill plum) (stroke none))
+  (circle dot (pos at) (r 0.25) (fill blue) (stroke none))
 
   ; Bar i starts where the steps before it end.
   (group timeline (defaults (stroke none))
@@ -36,7 +36,7 @@
             (d hops.steps[i].duration))
         (rect #'bar-{i}' (pos [(+ -4 (* unit (+ start (/ d 2)))) -1.6])
             (width (- (* unit d) 0.06)) (height 0.36)
-            (fill (if (= (mod i 2) 0) terracotta teal)) (fill-opacity 0.75))
+            (fill (if (= (mod i 2) 0) red green)) (fill-opacity 0.75))
         (text_ $'{d:.1f} s' (pos [(+ -4 (* unit (+ start (/ d 2)))) -2.15]) (font number)
             (fill soft) (halign 'middle') (valign 'middle')))))
 

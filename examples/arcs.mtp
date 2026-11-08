@@ -3,7 +3,7 @@
 ; into that many parts; between two whole numbers the last part grows out of the gap. The ring
 ; sweeps into place when the figure first comes into view.
 
-(import house paper ink soft terracotta teal saffron plum variable code)
+(import house paper ink soft red green yellow blue variable code)
 (import ease cubic-out)
 
 ; The angle of p in degrees, taken within half a turn of near: a drag carried past a full turn
@@ -21,15 +21,15 @@
   (group angle (translate [-3.9 0])
     ; The circle the point moves on, faint, so the reader sees where it can go.
     (circle track (r reach) (fill none) (stroke soft) (stroke-opacity 0.5) (dash [2 5]))
-    (ring shade (r 1.7) (width 1.7) (to theta) (fill terracotta) (fill-opacity 0.15)
+    (ring shade (r 1.7) (width 1.7) (to theta) (fill red) (fill-opacity 0.15)
         (stroke none))
-    (arc mark (r 1.1) (to theta) (stroke terracotta) (stroke-width 2.5) (line-cap 'round'))
+    (arc mark (r 1.1) (to theta) (stroke red) (stroke-width 2.5) (line-cap 'round'))
     (group rays (defaults (stroke ink) (stroke-width 2) (line-cap 'round'))
       (line_ (from [0 0]) (to [reach 0]))
       (line_ (from [0 0]) (to (polar reach theta))))
     (text degrees $'{theta:.0f}°' (pos (polar 2.3 (/ theta 2))) (halign 'middle')
         (valign 'middle') (font variable) (fill ink))
-    (circle tip (pos (polar reach theta)) (r 0.16) (fill terracotta) (stroke paper)
+    (circle tip (pos (polar reach theta)) (r 0.16) (fill red) (stroke paper)
         (stroke-width 2)))
 
   ; The ring: eight parts, each from where the one before ends, less a gap; a part past the
@@ -38,7 +38,7 @@
   (real gap 3 (const))
   ; Eight colors, so that the first and the last part never share one: the house's four, then
   ; each of them lighter.
-  (list[color] bright [terracotta teal saffron plum])
+  (list[color] bright [red green yellow blue])
   (real share (/ 360 parts))
   (group cut (translate [4.1 0])
     ; The ring's outer edge, which the code below is placed against, drawn as nothing: the

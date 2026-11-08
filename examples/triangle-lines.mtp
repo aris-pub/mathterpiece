@@ -3,7 +3,7 @@
 ; and apart. Each toggle fades in one family of lines, and the Euler line passes through three
 ; of the points they meet at.
 
-(import house paper ink soft terracotta teal saffron plum variable code)
+(import house paper ink soft red green yellow blue variable code)
 (import ease cubic-in-out)
 
 (func[real] dot ((point p) (point q)) (+ (* p.x q.x) (* p.y q.y)))
@@ -57,7 +57,7 @@
     (triangle shape (a A) (b B) (c C) (fill none) (stroke ink) (stroke-width 3)
         (line-join 'round'))
 
-    (group medians (defaults (stroke terracotta) (fill terracotta) (stroke-width 2))
+    (group medians (defaults (stroke red) (fill red) (stroke-width 2))
         (clip (polygon_ (points window)))
       (line_ (from A) (to (lerp B C 0.5)))
       (line_ (from B) (to (lerp C A 0.5)))
@@ -65,7 +65,7 @@
       (circle g-dot (pos G) (r 0.14) (stroke none))
       (text_ 'G' (pos (top-right g-dot gap)) (valign 'bottom') (font variable)))
 
-    (group altitudes (defaults (stroke teal) (fill teal) (stroke-width 2))
+    (group altitudes (defaults (stroke green) (fill green) (stroke-width 2))
         (clip (polygon_ (points window)))
       (line|none_ (from (reach-from A FA H)) (to (reach-to A FA H)))
       (line|none_ (from (reach-from B FB H)) (to (reach-to B FB H)))
@@ -80,7 +80,7 @@
       (circle|none h-dot (pos H) (r 0.14) (stroke none))
       (text|none_ 'H' (pos (top-right h-dot gap)) (valign 'bottom') (font variable)))
 
-    (group bisectors (defaults (stroke saffron) (fill saffron) (stroke-width 2))
+    (group bisectors (defaults (stroke yellow) (fill yellow) (stroke-width 2))
         (clip (polygon_ (points window)))
       (line|none_ (from A) (to (* (/ 1 (+ b c)) (+ (* b B) (* c C)))))
       (line|none_ (from B) (to (* (/ 1 (+ c a)) (+ (* c C) (* a A)))))
@@ -90,7 +90,7 @@
       (text|none_ 'I' (pos (top-right i-dot gap)) (valign 'bottom') (font variable)))
 
     ; The line runs well past the canvas both ways: 30 units from O along O to H.
-    (group euler (defaults (stroke plum) (fill plum) (stroke-width 2))
+    (group euler (defaults (stroke blue) (fill blue) (stroke-width 2))
         (clip (polygon_ (points window)))
       (line|none_ (from (- O (* (/ 30 (dist O H)) (- H O))))
           (to (+ O (* (/ 30 (dist O H)) (- H O)))))

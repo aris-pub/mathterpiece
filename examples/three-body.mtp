@@ -10,7 +10,7 @@
 ; in-order: the velocities are all pushed, then the bodies move, and after the last step the
 ; trails take the new positions.
 
-(import house paper ink terracotta teal saffron)
+(import house paper ink red green yellow)
 (import ease cubic-in-out)
 
 (real dt 0.01 (const))
@@ -50,12 +50,12 @@
   (group trails (defaults (stroke-width 2) (line-cap 'round'))
     (foreach ((t [trail-1 trail-2 trail-3]) (i (- trail-length 1)))
       (line|none_ (from t[i]) (to t[(+ i 1)])
-          (stroke (cond ((= t trail-1) terracotta) ((= t trail-2) teal) (else saffron)))
+          (stroke (cond ((= t trail-1) red) ((= t trail-2) green) (else yellow)))
           (stroke-opacity (- 1 (/ i trail-length))))))
   (group bodies (defaults (stroke ink) (stroke-width 1))
-    (circle b1 (pos free@eight-at[0]) (r 0.07) (fill terracotta))
-    (circle b2 (pos free@eight-at[1]) (r 0.07) (fill teal))
-    (circle b3 (pos free@eight-at[2]) (r 0.07) (fill saffron))))
+    (circle b1 (pos free@eight-at[0]) (r 0.07) (fill red))
+    (circle b2 (pos free@eight-at[1]) (r 0.07) (fill green))
+    (circle b3 (pos free@eight-at[2]) (r 0.07) (fill yellow))))
 
 (canvas view (x -2) (y -1.25) (width 4) (height 2.5) (pan false) (zoom false)
   doc@'The three bodies and their trails.'

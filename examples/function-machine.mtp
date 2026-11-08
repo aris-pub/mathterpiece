@@ -4,7 +4,7 @@
 ; the y axis to change c, or the vertex to change b: it slides along the path its position can
 ; take while a and c stay put.
 
-(import house paper ink soft terracotta teal plum code)
+(import house paper ink soft red green blue code)
 (import marks)
 
 (real a 0.5 (>= -2) (<= 2))
@@ -37,9 +37,9 @@
   (group window (clip (rect_ (pos [0 0]) (width (- right left)) (height (- top bottom))))
     ; What each term adds, drawn while the pointer is on it.
     (group parts (defaults (stroke-width 2.5) (dash [6 5]) (fill none))
-      (polyline a-part (points (trace (fn x (* a x x)))) (stroke terracotta))
-      (polyline b-part (points (trace (fn x (* b x)))) (stroke teal))
-      (line c-part (from [left c]) (to [right c]) (stroke plum)))
+      (polyline a-part (points (trace (fn x (* a x x)))) (stroke red))
+      (polyline b-part (points (trace (fn x (* b x)))) (stroke green))
+      (line c-part (from [left c]) (to [right c]) (stroke blue)))
     (polyline graph (points (trace f)) (stroke ink) (stroke-width 3) (line-join 'round')
         (fill none)))
 
@@ -47,7 +47,7 @@
   (group handles (defaults (stroke paper) (stroke-width 2))
     (circle|none vertex (pos (if (= a 0) none [(/ (- b) (* 2 a)) (- c (/ (* b b) (* 4 a)))]))
         (r 0.22) (fill ink))
-    (circle crossing (pos [0 c]) (r 0.22) (fill plum))))
+    (circle crossing (pos [0 c]) (r 0.22) (fill blue))))
 
 (canvas view (x left) (y bottom) (width (- right left)) (height (- top bottom)) (pan false)
     (zoom false) (toggle-duration 0.25)
@@ -63,9 +63,9 @@
   doc@'f(x) = ax² + bx + c, with the coefficients\' values.'
     (defaults (padding 3) (rounding 4))
   tex'f(x) = \term{a}{} x^2 \term{b}{} x \term{c}{}'
-  (term a (tex $'{a:.1f}') (fill terracotta))
-  (term b (tex (signed b)) (fill teal))
-  (term c (tex (signed c)) (fill plum)))
+  (term a (tex $'{a:.1f}') (fill red))
+  (term b (tex (signed b)) (fill green))
+  (term c (tex (signed c)) (fill blue)))
 
 (display machine-line machine doc@'The formula, whose terms show what they add to the graph.')
 

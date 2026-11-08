@@ -12,14 +12,14 @@
 ; The wheel, below on the right: a map that wraps around. Drag the handle past a full turn, and
 ; the disk keeps going round the colors.
 
-(import house paper ink soft terracotta teal saffron plum code)
+(import house paper ink soft red green yellow blue code)
 (import colors okabe-ito okabe-ito-named viridis magma cividis blue-white-red)
 
 ; Round a wheel: four colors a quarter turn apart, the last mixing back into the first by 360.
-(colormap wheel [terracotta saffron teal plum] (positions [0 270]) (wrap-at 360))
+(colormap wheel [red yellow green blue] (positions [0 270]) (wrap-at 360))
 
 ; Bands: each of four colors one solid step.
-(colormap bands [plum teal saffron terracotta] (discrete true))
+(colormap bands [blue green yellow red] (discrete true))
 
 ; Land and sea, by height above the sea: deep water up to 0, then sand at once, forest and snow.
 (palette terrain
@@ -103,7 +103,7 @@
     (circle handle (pos (polar reach angle)) (r 0.15) (fill ink) (stroke paper)
         (stroke-width 2))
     (text turned $'{angle:.0f}°' (pos [0 0]) (halign 'middle') (valign 'middle') (font code)
-        (fill ink)))
+        (fill paper)))
 
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (text_ (if banded '(bands v), four solid steps' $'({scheme} v)')
@@ -111,7 +111,7 @@
     (text_ $'(land (- height {sea:.2f}))' (pos (bottom shore 0.25)))
     (text_ '(okabe-ito k), k from 0 to 11' (pos (bottom chart 0.2)))
     (text_ 'okabe-ito-named.orange, .sky-blue, …' (pos (bottom named 0.2)))
-    (text_ '(colormap wheel [terracotta saffron teal plum]' (pos (bottom edge 0.25)))
+    (text_ '(colormap wheel [red yellow green blue]' (pos (bottom edge 0.25)))
     (text_ '(positions [0 270]) (wrap-at 360))' (pos (+ (bottom edge 0.25) [0 -0.42])))))
 
 (canvas view (x -8.4) (y -6.4) (width 16.8) (height 10.6) (pan false) (zoom false)

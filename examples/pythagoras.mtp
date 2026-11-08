@@ -7,11 +7,11 @@
 ; shows that square. Point at a term to light its square, and at a square to light its term.
 ; The slider changes a, with a + b kept at 5.
 
-(import house paper ink soft terracotta teal saffron variable)
+(import house paper ink soft red green yellow variable)
 (import math smoothstep)
 
-(color wash (light-dark '#ece6d8' '#3a362f'))
-(color triangle-fill (light-dark '#d8d2c6' '#3d3a34'))
+(color wash (light-dark '#edf0f2' '#2a3740'))
+(color triangle-fill (light-dark '#dae1e5' '#38454f'))
 
 (type square string (one-of 'a' 'b' 'c'))
 ; Which square the pointer is on, in the picture or in the formula: a global, since both read it.
@@ -38,18 +38,18 @@
 
   ; The uncovered squares, under the triangles. The one the pointer is on is drawn stronger.
   (group square-a
-    (rect sq-a (pos [(/ side-a 2) (/ side-a 2)]) (width side-a) (height side-a) (fill teal)
-        (fill-opacity (if (= lit 'a') 0.7 0.35)) (stroke (if (= lit 'a') teal none))
+    (rect sq-a (pos [(/ side-a 2) (/ side-a 2)]) (width side-a) (height side-a) (fill green)
+        (fill-opacity (if (= lit 'a') 0.7 0.35)) (stroke (if (= lit 'a') green none))
         (stroke-width 3))
     (text_ 'a²' (pos sq-a.pos) (font variable) (fill ink) (halign 'middle') (valign 'middle')))
   (group square-b
     (rect sq-b (pos [(+ side-a (/ side-b 2)) (+ side-a (/ side-b 2))]) (width side-b) (height side-b)
-        (fill saffron) (fill-opacity (if (= lit 'b') 0.8 0.4)) (stroke (if (= lit 'b') saffron none))
+        (fill yellow) (fill-opacity (if (= lit 'b') 0.8 0.4)) (stroke (if (= lit 'b') yellow none))
         (stroke-width 3))
     (text_ 'b²' (pos sq-b.pos) (font variable) (fill ink) (halign 'middle') (valign 'middle')))
   (group square-c
-    (polygon sq-c (points [[side-a 0] [side side-a] [side-b side] [0 side-b]]) (fill terracotta)
-        (fill-opacity (if (= lit 'c') 0.7 0.35)) (stroke (if (= lit 'c') terracotta none))
+    (polygon sq-c (points [[side-a 0] [side side-a] [side-b side] [0 side-b]]) (fill red)
+        (fill-opacity (if (= lit 'c') 0.7 0.35)) (stroke (if (= lit 'c') red none))
         (stroke-width 3))
     (text_ 'c²' (pos [(/ side 2) (/ side 2)]) (font variable) (fill ink) (halign 'middle')
         (valign 'middle')))
@@ -82,9 +82,9 @@
   doc@'The theorem, each square a term.'
     (defaults (padding 3) (rounding 4))
   tex'\term{a2}{a^2} + \term{b2}{b^2} = \term{c2}{c^2}'
-  (term a2 (fill teal) (background (if (= lit 'a') wash none)))
-  (term b2 (fill saffron) (background (if (= lit 'b') wash none)))
-  (term c2 (fill terracotta) (background (if (= lit 'c') wash none))))
+  (term a2 (fill green) (background (if (= lit 'a') wash none)))
+  (term b2 (fill yellow) (background (if (= lit 'b') wash none)))
+  (term c2 (fill red) (background (if (= lit 'c') wash none))))
 
 (display theorem pythagoras doc@'a² + b² = c², whose terms light and show their squares.')
 

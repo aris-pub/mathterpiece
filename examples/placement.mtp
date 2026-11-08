@@ -4,7 +4,7 @@
 ; card's right side to the ball's left, and the caption stays under both. Drag the flag: its
 ; label sits at its tip, a point the flag's motif marks with a transparent circle.
 
-(import house paper ink soft terracotta teal)
+(import house paper ink soft red green)
 (font small (size 13))
 (font name (style 'italic') (size 16))
 
@@ -12,7 +12,7 @@
 (motif flag ()
   doc@'A flag on a pole, with a transparent circle at its tip, the top of the pole.'
   (line pole (from [0 0]) (to [0 2]) (stroke ink) (stroke-width 2))
-  (triangle banner (a [0 2]) (b [1.2 1.6]) (c [0 1.2]) (fill terracotta) (stroke none))
+  (triangle banner (a [0 2]) (b [1.2 1.6]) (c [0 1.2]) (fill red) (stroke none))
   (circle tip (pos [0 2]) (r 0) (fill none) (stroke none)))
 
 (scene board (background paper)
@@ -23,11 +23,11 @@
   (group both
     (rect card (width w) (height h) (transform (rotate turn)) (fill none) (stroke ink)
         (stroke-width 1.5))
-    (circle ball (pos [4.5 -1.5]) (r 0.35) (fill teal) (stroke none)))
+    (circle ball (pos [4.5 -1.5]) (r 0.35) (fill green) (stroke none)))
 
   ; A dot at each point of the card's box, and the point's name just outside it. A corner's name
   ; is pushed out on two sides, so it takes a smaller gap to look as far away as a side's.
-  (group marks (defaults (fill terracotta) (stroke none))
+  (group marks (defaults (fill red) (stroke none))
     (foreach p [(top card) (bottom card) (left card) (right card)
                 (top-left card) (top-right card) (bottom-left card) (bottom-right card)]
       (circle_ (pos p) (r 0.07))))
@@ -44,7 +44,7 @@
 
   ; The ball's name, a line from the card to the ball, and a caption under both.
   (text ball-name 'ball' (pos (top-right ball 0.05)) (valign 'bottom') (font name) (fill ink))
-  (line tether (from (right card)) (to (left ball)) (stroke teal) (stroke-width 1))
+  (line tether (from (right card)) (to (left ball)) (stroke green) (stroke-width 1))
   (text caption 'the card and the ball' (pos (bottom both 0.6)) (halign 'middle') (valign 'top')
       (font small) (fill ink))
 

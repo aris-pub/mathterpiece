@@ -3,7 +3,7 @@
 ; nephroid for m = 3, and m - 1 cusps for every whole m. Press play for the tour, pick a stop by
 ; its number, or drag the slider at any time.
 
-(import house paper ink soft terracotta variable code)
+(import house paper ink soft red variable code)
 (import ease cubic-in-out)
 
 (int n 200 (const))
@@ -24,7 +24,7 @@
 
   (group table (translate [0 0.6])
     (circle rim (r radius) (fill none) (stroke soft) (stroke-width 1))
-    (group chords (defaults (stroke terracotta) (stroke-width 1) (stroke-opacity 0.4))
+    (group chords (defaults (stroke red) (stroke-width 1) (stroke-opacity 0.4))
       (foreach k (range n)
         (line_ (from (spot k)) (to (spot (* m k))))))
     (group dots (defaults (fill ink) (stroke none))

@@ -6,7 +6,7 @@
 ; themselves a column lined up on the left, so the second sits under the first wherever that
 ; row's bottom is. Each caption sits under what it names.
 
-(import house paper soft terracotta teal saffron plum)
+(import house paper soft red green yellow blue)
 (font small (size 13))
 
 ; How the row lines its members up: by their top edges, their middles or their bottom edges.
@@ -21,11 +21,11 @@
   ; The gap leaves room for the first row's caption.
   (column rows (translate [-5.6 2.4]) (gap 1.5) (align 'left')
     (row shelf (gap gap) (align line-up) (defaults (stroke none))
-      (rect a (width 1) (height 1) (fill terracotta))
-      (circle|none b (r (* 0.6 grow)) (fill teal))
+      (rect a (width 1) (height 1) (fill red))
+      (circle|none b (r (* 0.6 grow)) (fill green))
       (exists-when b with-circle)
-      (rect c (width 1.2) (height (* 1.8 grow)) (fill saffron) (translate [0.3 0]))
-      (ellipse d (rx 0.9) (ry (* 0.5 grow)) (fill plum)))
+      (rect c (width 1.2) (height (* 1.8 grow)) (fill yellow) (translate [0.3 0]))
+      (ellipse d (rx 0.9) (ry (* 0.5 grow)) (fill blue)))
 
     (row lower (gap 2.5) (align 'top')
       (column grid (gap (/ gap 2))
@@ -33,9 +33,9 @@
           (row_ (gap (/ gap 2)) (defaults (stroke none))
             (foreach k 3
               (rect_ (width 0.6) (height 0.6)
-                  (fill (cond ((= (mod (+ r k) 3) 0) terracotta) ((= (mod (+ r k) 3) 1) saffron)
-                              (else plum))))))))
-      (column bars (gap (/ gap 2)) (align 'left') (defaults (fill teal) (stroke none))
+                  (fill (cond ((= (mod (+ r k) 3) 0) red) ((= (mod (+ r k) 3) 1) yellow)
+                              (else blue))))))))
+      (column bars (gap (/ gap 2)) (align 'left') (defaults (fill green) (stroke none))
         (foreach i 4
           (rect_ (width (+ 0.6 (* 0.5 grow i))) (height 0.35))))))
 

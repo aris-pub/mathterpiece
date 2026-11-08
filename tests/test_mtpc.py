@@ -28,7 +28,7 @@ def test_the_example_compiles_to_a_valid_mtpc(path):
 
 # The author, 2026-11-04: the colors and fonts the examples share live in examples/house.mtp,
 # which each example imports; it is not a figure, so the dev page does not list it.
-HOUSE_COLORS = ["paper", "ink", "soft", "terracotta", "teal", "saffron", "plum"]
+HOUSE_COLORS = ["paper", "ink", "soft", "red", "green", "yellow", "blue"]
 HOUSE_FONTS = ["variable", "number", "code"]
 
 

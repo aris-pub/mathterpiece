@@ -194,9 +194,9 @@ def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
     "src, want",
     [
         (
-            "(list[color] hues [terracotta teal saffron plum\n(mix terracotta paper 0.45)])\n",
-            "(list[color] hues [terracotta teal saffron plum\n"
-            "                   (mix terracotta paper 0.45)])\n",
+            "(list[color] hues [red green yellow blue\n(mix red paper 0.45)])\n",
+            "(list[color] hues [red green yellow blue\n"
+            "                   (mix red paper 0.45)])\n",
         ),
         ("(list xs [1 2\n3])\n", "(list xs [1 2\n          3])\n"),
         ("(list xs [(f a) b\nc])\n", "(list xs [(f a) b\n          c])\n"),

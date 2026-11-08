@@ -1,9 +1,9 @@
 ; The Ulam spiral: the whole numbers laid out on a square spiral from 1 in the middle, with a
 ; dot on every prime. Primes crowd onto diagonal lines: a prime with another prime diagonally
-; next to it is teal, a prime on its own is grey. Drag to pan, scroll or pinch to zoom, and
+; next to it is green, a prime on its own is grey. Drag to pan, scroll or pinch to zoom, and
 ; double-click to go back; turn on the path to see how the spiral runs through every number.
 
-(import house paper soft terracotta teal number code)
+(import house paper soft red green number code)
 (import ease cubic-in-out)
 
 ; Trial division by 5, 7, 11, 13, 17, 19, …: every prime above 3 is one more or one less than a
@@ -55,8 +55,8 @@
   (group dots (defaults (stroke none))
     (foreach p (where (range 2 25000 (gap 1)) (fn n (and (prime? n) (<= (dist [0 0] (spiral n)) reach))))
       (let ((lined (on-a-line p)))
-        (circle_ (pos (spiral p)) (r (if lined 0.5 0.3)) (fill (if lined teal soft))))))
-  (circle one (r 0.6) (fill terracotta) (stroke none))
+        (circle_ (pos (spiral p)) (r (if lined 0.5 0.3)) (fill (if lined green soft))))))
+  (circle one (r 0.6) (fill red) (stroke none))
 
   ; The path the spiral takes through every number, one shape, and the first 81 numbers, a 9 by
   ; 9 square. Their text keeps its size on screen, so they are only readable zoomed in; that
@@ -70,7 +70,7 @@
 
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (text_ 'the primes below 25000 within 78 of 1' (pos (bottom dots 3)))
-    (text_ '(fill (if (on-a-line p) teal soft))' (pos (bottom dots 7.5)))))
+    (text_ '(fill (if (on-a-line p) green soft))' (pos (bottom dots 7.5)))))
 
 (toggle show-labels none (label 'the path and the first numbers'))
 

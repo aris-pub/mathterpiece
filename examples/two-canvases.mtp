@@ -4,7 +4,7 @@
 ;
 ; Each canvas lists the shapes it shows.
 
-(import house paper ink soft terracotta teal code)
+(import house paper ink soft red green code)
 (import marks)
 
 (func[real] dot ((point p) (point q)) (+ (* p.x q.x) (* p.y q.y)))
@@ -31,20 +31,20 @@
     (group cb (translate [2.5 -1.5]) (circle_ (r 9)))
     (group cc (translate [-0.8 2]) (circle_ (r 9))))
 
-  (triangle shape (a ca.pos) (b cb.pos) (c cc.pos) (fill teal) (fill-opacity 0.12) (stroke ink)
+  (triangle shape (a ca.pos) (b cb.pos) (c cc.pos) (fill green) (fill-opacity 0.12) (stroke ink)
       (stroke-width 3) (line-join 'round'))
 
   ; The circle through the corners. When they are nearly on one line it grows past any canvas,
   ; so it is cut off at a window around the triangle.
   (group around (clip (rect_ (pos [0 0]) (width 16) (height 12)))
     (let ((o (circumcenter ca.pos cb.pos cc.pos)))
-      (circle|none circle (pos o) (r (dist o ca.pos)) (fill none) (stroke terracotta)
+      (circle|none circle (pos o) (r (dist o ca.pos)) (fill none) (stroke red)
           (stroke-width 2))
-      (group radii (defaults (stroke terracotta) (stroke-width 1) (dash [4 4]))
+      (group radii (defaults (stroke red) (stroke-width 1) (dash [4 4]))
         (foreach c corners
           (line|none_ (from o) (to c.pos))))
       (group|none center (translate o) (fixed-size true)
-        (circle_ (r 4) (fill terracotta) (stroke none)))))
+        (circle_ (r 4) (fill red) (stroke none)))))
 
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (text above-form '(canvas above (zoom 1 4) … shape corners)' (pos [0 -2.3]))

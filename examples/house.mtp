@@ -1,15 +1,18 @@
 ; The colors and fonts the examples share. Not a figure: each example imports what it uses.
 
-; The paper is the warm one bourgain puts over BRAIID, RSM's design system. Each color has a
-; dark value, which a page whose color-scheme is dark draws instead; on a dark page the paper is
-; the page's own dark.
-(color paper (light-dark '#faf7f0' '#272522'))
-(color ink (light-dark '#1f2a44' '#e8e4d8'))
-(color soft (light-dark '#8a93a6' '#8f97a8'))
-(color terracotta (light-dark '#e76f51' '#f08a6c'))
-(color teal (light-dark '#2a9d8f' '#4cc2b3'))
-(color saffron (light-dark '#e9c46a' '#f2d27e'))
-(color plum (light-dark '#6d597a' '#a88bb8'))
+; The colors are BRAIID's, RSM's design system, so a figure in mathterpiece's default style sits
+; well in a default RSM document: paper is gray-0, ink is the body text (gray-900, gray-950 in
+; dark), soft is gray-600, and the accents are shade 600 of BRAIID's red, green, yellow and
+; blue. Each color has a dark value, which a page whose color-scheme is dark draws instead. BRAIID's
+; dark mode mirrors its shades around 500, so an accent's dark value is the light value of its
+; shade 400.
+(color paper (light-dark '#ffffff' '#13181b'))
+(color ink (light-dark '#3c4952' '#ced6dc'))
+(color soft (light-dark '#8b9fad' '#7a8a99'))
+(color red (light-dark '#db2728' '#f87172'))
+(color green (light-dark '#158c7f' '#37cab6'))
+(color yellow (light-dark '#e28800' '#ffd31b'))
+(color blue (light-dark '#027ac7' '#38b4f8'))
 
 ; The fonts by what they are for. A page with BRAIID points each family at the document's
 ; (--mtp-house-variable-family: var(--font-body), and --font-mono for number and code), so a

@@ -4,7 +4,7 @@
 ; Drag the first dot, or set how many dots there are, the angle and the factor. The foreach makes
 ; as many dots as there can be at most, and only the first n of them are there.
 
-(import house paper ink soft terracotta plum number)
+(import house paper ink soft red blue number)
 
 ; p turned by a degrees around the origin and scaled by f.
 (func[point] turn ((point p) (real a) (real f))
@@ -17,7 +17,7 @@
 (scene board (background paper)
   (group spiral (defaults (stroke none))
     (foreach k n
-      (circle #'dot-{k}' (r (if (= k 0) 0.16 0.09)) (fill (if (= k 0) terracotta plum))
+      (circle #'dot-{k}' (r (if (= k 0) 0.16 0.09)) (fill (if (= k 0) red blue))
           (pos (if (= k 0) [3 0] (turn #'dot-{(- k 1)}'.pos angle factor))))))
   ; The path through the dots that are there.
   (polyline_ (points (somes spiral.pos)) (stroke soft) (stroke-width 1))
