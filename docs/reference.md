@@ -417,6 +417,10 @@ The controls are drawn with BRAIID, the design system of RSM documents, and read
 
 So a page that sets neither looks as BRAIID draws it. A page that wants its controls gray at rest and ink while used sets, for example, `--mtp-control-rest: #8a8f98; --mtp-control-active: #1f2a44`. The track a play's bars lie on is the page's text color, faint, in both states.
 
+### Recording mode
+
+For recording a vertical short while a play runs, the page `mtp build` writes, and the dev page, show a figure alone when their address ends in `?record`: `build_golden-tour/index.html?record`. The page then holds only a 9:16 frame, as large as fits the window, on a slightly darker ground so its edges can be found when cropping. In the frame are the figure's first canvas and, under it, its first play's bars and the line naming the step, without the play button, since a viewer cannot press it. Nothing else of the page shows, and the pointer is hidden over the whole window. `&canvas=name` and `&play=name` choose another canvas or play: `?record&canvas=view&play=tour`. The play is driven with its keys (see "A play's keys"), which work from anywhere, since the page holds one play. The frame is sized in CSS pixels to fit the window, not drawn at a fixed 1080 by 1920 and scaled down: a canvas draws its strokes and text in screen pixels, so it looks in the frame as it does on a phone of that width. The screen's pixel density, or the browser's zoom, sets how sharp the recording is.
+
 ## Rounding
 
 One rule, the same in the compiler and the runtime, wherever a number is rounded: `round`, a write into an int, and a format spec such as `{x:.2f}`. **Halves round away from zero:** 2.5 gives 3, −2.5 gives −3, and 0.125 to two decimal places gives 0.13. Rounding works on the number's shortest exact decimal form, not its binary value, so 2.675 to two decimal places gives 2.68.

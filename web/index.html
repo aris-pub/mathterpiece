@@ -231,6 +231,7 @@
     <script type="module">
       import "/src/index.ts";
       import { inventory } from "/src/inventory.ts";
+      import { record, recordingOf } from "/src/record.ts";
       const figures = import.meta.glob(
         ["/test/data/examples/*.mtpc", "/test/data/demo/*.mtpc"],
         { query: "?raw", import: "default" },
@@ -326,15 +327,25 @@
         canvases.replaceChildren();
         // Token values set from an inventory belong to the example they were set on.
         document.documentElement.removeAttribute("style");
+        const rec = recordingOf(location.search, doc);
         // Canvases and block displays, in the order the source declares them.
         const blocks = (o) => o.kind === "canvas" || (o.kind === "display" && o.as === "block");
-        for (const o of showInventory ? [] : doc.objects.filter(blocks)) {
+        for (const o of showInventory || rec ? [] : doc.objects.filter(blocks)) {
           const el = document.createElement(`mtp-${o.kind}`);
           el.setAttribute("model", "m");
           el.setAttribute("name", o.name);
           canvases.append(el);
         }
         document.getElementById("m").doc = doc;
+        // ?record: the figure alone on a 9:16 page, for recording a short (record.ts).
+        document.querySelector(".mtp-record")?.remove();
+        if (rec) {
+          record("m", doc, rec);
+          const kept = new URLSearchParams(location.search);
+          kept.set("example", name(current));
+          history.replaceState(null, "", `?${kept}`);
+          return;
+        }
         const ones = doc.objects.filter((o) => o.kind === "canvas").length === 1;
         document.querySelector("main").classList.toggle("side", ones && !showInventory);
         viewButton.setAttribute("aria-pressed", String(showInventory));

@@ -1,0 +1,8 @@
+; Two canvases and two plays, for choosing which to record.
+(real k 0 (>= 0) (<= 10))
+(scene s (circle c (r k)))
+(canvas first s)
+(canvas second s)
+(play one (buttons true) (animation (step 'Grow' (move k (to 2) (duration 1))) (move k (to 4) (duration 1))))
+(play two (animation (move k (to 1) (duration 1))))
+(slider sl (move k (from 0) (to 10)))
