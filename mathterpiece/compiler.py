@@ -3226,8 +3226,8 @@ class _Compiler:
 
     def zoom_range(self, obj: Obj, items: list) -> None:
         """(zoom bool), or (zoom lo hi): the reader zooms from lo times closer than the view box to
-        hi times, both known when compiling, and never further out than the view box (the author,
-        2026-11-04)."""
+        hi times, both known when compiling (the author, 2026-11-04). A lo below 1 zooms out past
+        the view box (the author, 2026-11-08)."""
         found = [it for it in items if _head(it) == "zoom"]
         if len(found) > 1:
             raise CompileError("'zoom' is given twice", found[1].pos)
@@ -3246,10 +3246,10 @@ class _Compiler:
                 if not all(e.known for e in ends):
                     raise CompileError("a canvas's zoom bounds are known when compiling", item.pos)
                 lo, hi = (e.value for e in ends)
-                if lo < 1:
+                if lo <= 0:
                     raise CompileError(
-                        "a canvas never shows more than its view box, so its zoom starts at 1 or"
-                        " more",
+                        "a canvas's zoom bounds are above 0: (zoom 0.5 4) zooms out to twice the"
+                        " view box",
                         item.pos,
                     )
                 if hi < lo:

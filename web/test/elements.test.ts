@@ -304,6 +304,20 @@ describe("panning and zooming a canvas", () => {
     expect(rounded()[2]).toBe(2);
   });
 
+  it("zooms out past the view box to a bound below 1, and pans with the view box inside", () => {
+    // The author, 2026-11-08: zooming out shows more than the view box; the view box then stays
+    // inside what the canvas shows.
+    page(`<mtp-canvas model="m" name="wide"></mtp-canvas>`, doc("view"));
+    for (let k = 0; k < 20; k++) wheel(500, false, svg("wide"));
+    const shown = () => box("wide").map((n) => Math.round(n * 1e6) / 1e6);
+    expect(shown()).toEqual([-20, -20, 40, 40]);
+    pointer("pointerdown", 0, 0, 1, svg("wide"));
+    pointer("pointermove", 5000, -5000, 1, svg("wide"));
+    pointer("pointerup", 5000, -5000, 1, svg("wide"));
+    // Far right and up: what is shown stops where the view box meets its right and bottom edges.
+    expect(shown()).toEqual([-30, -10, 40, 40]);
+  });
+
   it("zooms up to the bound the canvas gives", () => {
     page(`<mtp-canvas model="m" name="bounded"></mtp-canvas>`, doc("view"));
     for (let k = 0; k < 20; k++) wheel(-500, false, svg("bounded"));

@@ -406,8 +406,13 @@ class TestZoomBounds:
     def test_no_zoom(self):
         assert model(f"{self.S} (canvas v (zoom false) s)").get("v").attrs["zoom"].value is False
 
-    def test_never_further_out_than_the_view_box(self):
-        error(f"{self.S} (canvas v (zoom 0.5 4) s)", "never shows more than its view box")
+    # The author, 2026-11-08: a canvas may also zoom out past its view box, to a bound below 1.
+    def test_out_past_the_view_box(self):
+        a = model(f"{self.S} (canvas v (zoom 0.5 4) s)").get("v").attrs
+        assert (a["zoom-min"].value, a["zoom-max"].value) == (0.5, 4)
+
+    def test_the_lower_bound_above_zero(self):
+        error(f"{self.S} (canvas v (zoom 0 4) s)", "a canvas's zoom bounds are above 0")
 
     def test_the_bounds_in_order(self):
         error(f"{self.S} (canvas v (zoom 4 2) s)", "from a lower bound to a higher one")

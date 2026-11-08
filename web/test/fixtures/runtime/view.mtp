@@ -3,3 +3,5 @@
 (canvas fixed (pan false) (zoom false) s)
 (on-drag dot dot.pos)
 (canvas bounded (zoom 1 4) s)
+; Zooms out to twice the view box, and in to 4 times closer.
+(canvas wide (zoom 0.5 4) s)

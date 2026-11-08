@@ -413,8 +413,8 @@ Every control and listener emits writes to its target (or, through its animation
 
 ### Panning and zooming
 
-- **Pan:** dragging where no draggable shape is moves what the canvas shows with the pointer, but only inside the view box: the reader never sees past what the illustrator framed, so a pan moves something only once the reader has zoomed in.
-- **Zoom:** the wheel, or a pinch on a trackpad or with two fingers, zooms about the pointer. While the pointer is over a canvas that zooms, the wheel does not scroll the page. It zooms between bounds: `(zoom lo hi)`, two reals known when compiling with 1 ≤ lo ≤ hi, from lo times closer than the view box to hi times; by default from 1, the view box itself, to 10. A canvas never shows more than its view box.
+- **Pan:** dragging where no draggable shape is moves what the canvas shows with the pointer. Zoomed in, what is shown stays inside the view box: the reader never sees past what the illustrator framed. Zoomed out past the view box (see Zoom), the view box stays inside what is shown.
+- **Zoom:** the wheel, or a pinch on a trackpad or with two fingers, zooms about the pointer. While the pointer is over a canvas that zooms, the wheel does not scroll the page. It zooms between bounds: `(zoom lo hi)`, two reals known when compiling with 0 < lo ≤ hi, from lo times closer than the view box to hi times; by default from 1, the view box itself, to 10. A lo below 1 lets the reader zoom out past the view box: `(zoom 0.5 4)` shows up to twice its width and height.
 - **A double click** goes back to the view box the illustrator gave.
 - **Neither writes anything:** they are the canvas's own state, like its toggles, so stroke widths and font sizes stay the same on screen. `(pan false)` or `(zoom false)` turns either off.
 

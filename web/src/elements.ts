@@ -490,11 +490,12 @@ export class MtpCanvas extends MtpPart {
     };
     const toScene = (event: PointerEvent): [number, number] =>
       apply(invert(viewOf(rt, canvas).toUser), toUser(event)) as [number, number];
-    // The reader zooms between the canvas's bounds and pans only inside its view box, so never
-    // sees past what the author framed (the author, 2026-11-04).
+    // The reader zooms between the canvas's bounds. Zoomed in, what is shown stays inside the
+    // view box, so the reader never sees past what the author framed (the author, 2026-11-04);
+    // zoomed out past it, the view box stays inside what is shown (the author, 2026-11-08).
     const inside = () => {
       const [, , w, h] = viewOf(rt, canvas).box as [number, number, number, number];
-      const [mx, my] = [(w - w / look.scale) / 2, (h - h / look.scale) / 2];
+      const [mx, my] = [Math.abs(w - w / look.scale) / 2, Math.abs(h - h / look.scale) / 2];
       look.dx = Math.min(Math.max(look.dx, -mx), mx);
       look.dy = Math.min(Math.max(look.dy, -my), my);
     };
