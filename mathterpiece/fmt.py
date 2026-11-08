@@ -31,6 +31,7 @@ INDENT = {
     **dict.fromkeys(["move", "on-click", "on-release", "on-dragend", "on-view", "exists-when"], 1),
     **dict.fromkeys(["on-dragstart", "on-enter", "on-leave"], 1),
     **dict.fromkeys(["at-once", "in-order", "defaults"], 0),
+    "step": 1,
     "on-drag": 2,
     "on-pointermove": 2,
     "when": 1,
@@ -86,6 +87,7 @@ KEYWORDS = {
     "canvas": _CANVAS,
     "animation": _ANIMATION | {"doc"},
     **{head: _ANIMATION for head in ["at-once", "in-order"]},
+    "step": {"defaults"},
     **{head: {"doc"} for head in ["motif", "variant", "func", "namespace", "palette"]},
     "formula": {"doc", "defaults"},
 }

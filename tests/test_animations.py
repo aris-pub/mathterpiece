@@ -488,3 +488,49 @@ class TestTogether:
             f"{K} (animation a (in-order (move k (to 1) (duration 1))"
             " (move k (to 2) (duration 1))))"
         )
+
+
+class TestStepNames:
+    """A play's steps are the items of its animation's body, and each may take a name (the
+    author, 2026-11-08, mtp-33xt)."""
+
+    TWO = "(move k (to 2) (duration 1))"
+
+    def test_a_step_is_its_items_one_after_another(self):
+        src = f"{K} (animation a (step 'Grow' {self.TWO} (wait 1)) (move k (to 4) (duration 1)))"
+        m = model(src)
+        a = m.get("a")
+        assert a.data["steps"][0] == "in-order"
+        first = a.data["steps"][1]
+        assert first[0] == "in-order" and first[2][:2] == ("wait", 1)
+        assert a.data["names"] == ["Grow", None]
+
+    def test_the_names_are_written_on_the_animation(self):
+        d = doc(f"{K} (play p (animation (step 'Grow' {self.TWO}) (step 'Shrink' {self.TWO})))")
+        (a,) = [o for o in d["objects"] if o["kind"] == "animation"]
+        assert a["names"] == ["Grow", "Shrink"]
+        assert errors(d) == []
+
+    def test_with_no_names_nothing_is_written(self):
+        d = doc(f"{K} (play p (animation (step {self.TWO}) {self.TWO}))")
+        (a,) = [o for o in d["objects"] if o["kind"] == "animation"]
+        assert "names" not in a
+
+    def test_one_step_alone_stays_one_step(self):
+        a = model(f"{K} (animation a (step 'All' {self.TWO} {self.TWO}))").get("a")
+        assert a.data["steps"][0] == "in-order" and len(a.data["steps"]) == 2
+        assert a.data["names"] == ["All"]
+
+    def test_a_name_may_be_interpolated_in_a_foreach(self):
+        a = model(f"{K} (animation a (foreach i 2 (step $'step {{i}}' {self.TWO})))").get("a")
+        assert a.data["names"] == ["step 0", "step 1"]
+
+    def test_a_step_belongs_to_an_animation_body(self):
+        error(f"{K} (animation a (in-order (step 'x' {self.TWO})))", "a step is an item of an")
+
+    def test_a_step_name_is_a_string_known_when_compiling(self):
+        error(f"{K} (animation a (step (+ k 1) {self.TWO}))", "a step's name is a string")
+        error(f"(string s 'x') {K} (animation a (step s {self.TWO}))", "known when compiling")
+
+    def test_a_step_holds_something(self):
+        error(f"{K} (animation a (step 'x'))", "a step holds")

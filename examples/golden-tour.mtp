@@ -65,10 +65,10 @@
 (play tour (buttons true)
   doc@'Plays the tour: a quarter turn, a third, two fifths, then the golden angle.'
     (animation
-      (in-order quarter (wait 2.5))
-      (in-order third (wait 2.5))
-      (in-order two-fifths (wait 2.5))
-      golden))
+      (step 'A quarter turn' quarter (wait 2.5))
+      (step 'A third of a turn' third (wait 2.5))
+      (step 'Two fifths of a turn' two-fifths (wait 2.5))
+      (step 'The golden angle' golden)))
 
 (canvas view garden doc@'The sunflower and the name of its angle.')
 (slider angle (move sunflower.angle (from 80) (to 180)) (label 'angle'))

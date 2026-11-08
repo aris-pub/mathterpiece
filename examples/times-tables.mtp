@@ -56,9 +56,9 @@
 (play tour (label 'play the tour') (buttons true)
   doc@'Plays the tour: m = 2, 3, 5, then 9.'
     (animation
-      (in-order cardioid (wait 1.2))
-      (in-order nephroid (wait 1.2))
-      (in-order four-cusps (wait 1.2))
-      eight-cusps))
+      (step 'm = 2, a cardioid' cardioid (wait 1.2))
+      (step 'm = 3, a nephroid' nephroid (wait 1.2))
+      (step 'm = 5, four cusps' four-cusps (wait 1.2))
+      (step 'm = 9, eight cusps' eight-cusps)))
 
 (slider times (move m (from 1) (to 12)) (label 'multiplier m'))

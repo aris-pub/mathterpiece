@@ -311,9 +311,9 @@
 (play tour (buttons true)
   doc@'Plays the tour: one density, the floor rising with n, then all densities.'
     (animation
-      (in-order one-density (wait 8))
-      (in-order floor-rises (wait 8))
-      (in-order all-densities to-explore)))
+      (step 'One density' one-density (wait 8))
+      (step 'The floor rises with n' floor-rises (wait 8))
+      (step 'All densities' all-densities to-explore)))
 
 (button explore (animation to-explore) (label 'Explore')
   doc@'Skips to Explore, the end of the tour.')

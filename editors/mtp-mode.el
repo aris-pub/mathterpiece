@@ -111,7 +111,7 @@ takes a color apart from strings.")
     ("transition" . 2) ("animation" . 1)
     ("canvas" . 1) ("readout" . 2) ("slider" . 2) ("button" . 1) ("play" . 1) ("toggle" . 2)
     ;; Forms with no name.
-    ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("on-drag" . 2) ("on-click" . 1)
+    ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("step" . 1) ("on-drag" . 2) ("on-click" . 1)
     ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 1) ("on-enter" . 1)
     ("on-leave" . 1)
     ("on-pointermove" . 2) ("defaults" . 0)
@@ -130,6 +130,7 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
       ("canvas" "doc" "x" "y" "width" "height" "transform" "pan" "zoom" "toggle-duration"
        "toggle-ease")
       ("animation" "doc" ,@animation) ("at-once" ,@animation) ("in-order" ,@animation)
+      ("step" "defaults")
       ("motif" "doc") ("variant" "doc") ("func" "doc") ("namespace" "doc") ("palette" "doc")
       ("formula" "doc" "defaults")))
   "Forms that take a body, and their keyword arguments. A keyword argument on a line of

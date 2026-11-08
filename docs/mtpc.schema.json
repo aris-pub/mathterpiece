@@ -2073,6 +2073,15 @@
               "steps": {
                 "$ref": "#/$defs/step"
               },
+              "names": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
               "doc": {
                 "type": "string"
               }

@@ -295,6 +295,8 @@ class Writer:
             d["path"] = _path(o.attrs.get("path"))
         elif kind == "animation":
             d["steps"] = _step(o.data["steps"])
+            if "names" in o.data:
+                d["names"] = o.data["names"]
         elif kind == "canvas":
             d["shows"] = [s if isinstance(s, int) else self.attribute(s) for s in o.data["shows"]]
             d["transition"] = o.data["transition"]

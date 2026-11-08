@@ -142,7 +142,7 @@ and `"doc"`, a string, when its declaration gives a docstring, `doc@'text'` (ref
 | a motif instance | kind `instance`; `"of"`: the motif's name; `"members"`; `"attrs"`: its parameters, its bound variables, and `x`, `y`, `translate` and `transform` (its `fill` and the like are its members'); `"clip"`, as for a group |
 | a variant instance | the kind of its base shape (`"rect"` for a bar); `"of"`: the variant's name; `"attrs"`: its base's attributes, the fixed ones marked, then its parameters |
 | `transition` | `"from"`, `"to"`, `"duration"`, `"ease"`, `"path"` (below) |
-| `animation` | `"steps"`: a step (below) |
+| `animation` | `"steps"`: a step (below); `"names"`, only when at least one of its steps has a name: one entry per step of its body (the items of its top-level `in-order`, or the one step), the step's name or `null` |
 | `canvas` | `"shows"`: what it shows, in the order written, which is the order it draws them in (later ones on top): each entry the id of a shape, or an attribute, free or bound, for an item that gives a shape, none or a list of them, such as `(when show d)`; `"transition"`: an id or `null`; `"attrs"`: the view box, `transform`, `pan` and `zoom` |
 | `readout` | `"attrs"`: `value` (the string), `font` |
 | `display` | `"formula"`: the id of the formula it shows; `"as"`: `"block"` or `"inline"` |
@@ -166,7 +166,7 @@ Motif and variant instances are written out in full: the runtime never builds an
     ["in-order", step, …]
     ["loop", n | null, step]
 
-A move carries its own `duration` and `ease`, resolved from the transition and the nearest enclosing default, so one named transition can be used in animations with different defaults. An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`. A `(move …)` with a target, or the name of a transition, in an animation's body, is written as a move; a `(move none …)`, as a wait. A slider's move is written as an animation of one move, with duration 1, which the compiler adds. An animation with `(loop n)` or `(loop)` has a `loop` step around its body, `n` being the number of rounds, or `null` for forever; each round starts again from the start of its step, reading every move's ends again.
+A move carries its own `duration` and `ease`, resolved from the transition and the nearest enclosing default, so one named transition can be used in animations with different defaults. An animation's `"steps"` is one step; several steps written in a row in the source become one `in-order`. A `(step …)` is written as an `in-order` of its items, or as its one item when it holds one; a body that is one `(step …)` alone is an `in-order` holding that one, so that the play's steps are always the items of the top-level `in-order`, or the one step when there is none. A `(move …)` with a target, or the name of a transition, in an animation's body, is written as a move; a `(move none …)`, as a wait. A slider's move is written as an animation of one move, with duration 1, which the compiler adds. An animation with `(loop n)` or `(loop)` has a `loop` step around its body, `n` being the number of rounds, or `null` for forever; each round starts again from the start of its step, reading every move's ends again.
 
 ### Transitions
 

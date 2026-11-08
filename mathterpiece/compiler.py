@@ -2620,14 +2620,32 @@ class _Compiler:
         loops = [it for it in items if _head(it) == "loop"]
         if len(loops) > 1:
             raise CompileError("an animation takes one (loop …)", loops[1].pos)
-        steps = _in_order(self.steps([it for it in items if it not in loops], None, None, scope))
+        names: list = []
+        body = self.steps([it for it in items if it not in loops], None, None, scope, names)
+        if len(body) == 1 and isinstance(names[0], str | None):
+            # A step alone is still one step: written as an in-order of one, so the runtime does
+            # not take its own items for the play's steps.
+            steps = ("in-order", body[0])
+        else:
+            steps = _in_order(body)
+        if len(body) == 1 and names[0] is _NOT_A_STEP and steps[0] == "in-order":
+            # One item whose steps the runtime takes for this animation's: when it is a named
+            # animation, their names are this one's.
+            only = [it for it in items if it not in loops and _head(it) != "defaults"]
+            if len(only) == 1 and isinstance(only[0], Name):
+                i = self.model.names.get(only[0].parts[0]) if len(only[0].parts) == 1 else None
+                if i is not None and self.model.objects[i].kind == "animation":
+                    names = list(self.model.objects[i].data.get("names", []))
         if loops:
             if _duration(steps) <= 0:
                 raise CompileError("this animation loops, but a round of it takes no time", pos)
             steps = ("loop", self.loop_count(loops[0], scope), steps)
         # One that loops forever lasts ∞.
         attrs = {"duration": Attribute(_with_const(REAL), _duration(steps))}
-        obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data={"steps": steps})
+        data: dict = {"steps": steps}
+        if any(isinstance(n, str) for n in names):
+            data["names"] = [n if isinstance(n, str) else None for n in names]
+        obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data=data)
         return self.add(obj)
 
     def loop_count(self, form, scope: dict) -> int | None:
@@ -2651,8 +2669,10 @@ class _Compiler:
             raise CompileError(f"expected the name of a {kind}", node.pos)
         return i
 
-    def steps(self, items, duration, ease, scope: dict) -> list:
-        """The steps among items; the defaults among them apply to the moves inside."""
+    def steps(self, items, duration, ease, scope: dict, names: list | None = None) -> list:
+        """The steps among items; the defaults among them apply to the moves inside. names is
+        given only for the items of an animation's body: it gets, for each, the name of a
+        (step …), None for a step with none, or _NOT_A_STEP for any other item."""
         self.options_first(items, lambda it: _head(it) == "defaults", "animation")
         found = [it for it in items if _head(it) == "defaults"]
         if len(found) > 1:
@@ -2680,7 +2700,25 @@ class _Compiler:
             head = _head(item)
             if head == "defaults":
                 continue
-            if isinstance(item, Name):
+            if names is not None:
+                names.append(_NOT_A_STEP)
+            if head == "step":
+                assert isinstance(item, Form)
+                if names is None:
+                    raise CompileError(
+                        "a step is an item of an animation's body, as in"
+                        " (animation (step 'name' …) …), where a play shows it as one of its steps",
+                        item.pos,
+                    )
+                parts = list(item.items[1:])
+                label = None
+                if parts and not self.animates(parts[0]):
+                    label = self.step_name(parts.pop(0), scope)
+                if not [p for p in parts if _head(p) != "defaults"]:
+                    raise CompileError("a step holds moves, waits, at-once or in-order", item.pos)
+                names[-1] = label
+                out.append(_in_order(self.steps(parts, duration, ease, scope)))
+            elif isinstance(item, Name):
                 # A name stands for the animation or transition it names.
                 name = item.parts[0] if len(item.parts) == 1 else None
                 i = self.model.names.get(name) if isinstance(name, str) else None
@@ -2728,6 +2766,22 @@ class _Compiler:
                     "an animation holds moves, waits, at-once and in-order", item.pos
                 )
         return out
+
+    def animates(self, node: Node) -> bool:
+        """Whether node is an item of an animation, rather than a step's name."""
+        if isinstance(node, Name):
+            i = self.model.names.get(node.parts[0]) if len(node.parts) == 1 else None
+            return i is not None and self.model.objects[i].kind in ("animation", "transition")
+        head = _head(node)
+        return head in ANIMATION_ITEMS or head in self.anim_motifs
+
+    def step_name(self, node: Node, scope: dict) -> str:
+        e = self.expr(node, None, scope)
+        if _core(e.type) != STRING:
+            raise CompileError(f"a step's name is a string, got {e.type}", node.pos)
+        if not e.known:
+            raise CompileError("a step's name is a string known when compiling", node.pos)
+        return e.value
 
     def roll(self, item: Form, scope: dict) -> tuple:
         """(roll-dice) or (roll-dice s): an instant move of the seed to its next value."""
@@ -5985,6 +6039,15 @@ def _lerp(a, b, t):
 
 def _scale(sx, sy=None):
     return (sx, 0, 0, sx if sy is None else sy, 0, 0)
+
+
+# What steps() notes for an item of an animation's body that is not a (step …).
+_NOT_A_STEP = object()
+
+# The heads of the forms an animation holds, besides motif instances.
+ANIMATION_ITEMS = (
+    *["move", "wait", "roll-dice", "at-once", "in-order", "foreach", "defaults", "step"],
+)
 
 
 def _in_order(steps: list) -> tuple:
