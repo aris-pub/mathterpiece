@@ -103,7 +103,7 @@
     (circle handle (pos (polar reach angle)) (r 0.15) (fill ink) (stroke paper)
         (stroke-width 2))
     (text turned $'{angle:.0f}°' (pos [0 0]) (halign 'middle') (valign 'middle') (font code)
-        (fill ink)))
+        (fill paper)))
 
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (text_ (if banded '(bands v), four solid steps' $'({scheme} v)')
