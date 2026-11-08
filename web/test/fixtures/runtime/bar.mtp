@@ -6,3 +6,8 @@
     (step (move k (to 4) (duration 3)))))
 (play whole (animation (move k (to 2) (duration 1)) (move k (to 4) (duration 1))))
 (button go (animation (move k (to 9) (duration 1))))
+; The same tour with a rest of a second between its steps (mtp-wfrs).
+(play rested (buttons true) (rest 1)
+  (animation
+    (step 'Grow' (move k (to 2) (duration 1)))
+    (step (move k (to 4) (duration 3)))))

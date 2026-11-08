@@ -28,6 +28,20 @@ class TestControls:
         assert p.attrs["buttons"].value is True
         assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, 0)
 
+    def test_a_play_rests_between_its_steps(self):
+        # mtp-wfrs: (rest t) pauses t seconds between each pair of steps.
+        p = model(f"{K} (play p {MOVE} (rest 1.2))").get("p")
+        assert p.data["rest"] == 1.2
+        d = doc(f"{K} (play p {MOVE} (rest 1.2)) (play q {MOVE})")
+        p, q = [o for o in d["objects"] if o["kind"] == "play"]
+        assert p["rest"] == 1.2 and "rest" not in q
+        assert errors(d) == []
+
+    def test_a_rest_is_seconds_known_when_compiling(self):
+        error(f"{K} (play p {MOVE} (rest -1))", "cannot be negative")
+        error(f"{K} (play p {MOVE} (rest k))", "known when compiling")
+        error(f"{K} (button b {MOVE} (rest 1))", "only a play takes")
+
     def test_a_toggle_holding_its_own_value(self):
         t = model("(toggle t none (value true))").get("t")
         assert t.attrs["value"].value is True and t.data["target"] is None

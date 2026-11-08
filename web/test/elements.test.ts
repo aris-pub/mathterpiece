@@ -521,6 +521,54 @@ describe("a play's bar", () => {
     expect((v("k") as number) - from).toBeCloseTo(0.4);
   });
 
+  describe("with a rest between steps", () => {
+    // mtp-wfrs: (rest t) pauses t seconds between each pair of steps; the bars count only the
+    // steps' own durations.
+    const rested = () => page(`<mtp-play model="m" name="rested"></mtp-play>`, doc("bar"));
+
+    it("draws each bar as wide as its step alone", () => {
+      rested();
+      expect(bars().map((b) => b.style.flexGrow)).toEqual(["1", "3"]);
+    });
+
+    it("rests between the steps with the finished one full and the next empty", () => {
+      const [, , v] = rested();
+      button().click();
+      pass(0.1);
+      pass(1.5);
+      expect(v("k")).toBe(2);
+      expect(fills()).toEqual([1, 0]);
+      expect(line()).toBe("1 / 2 · Grow");
+      expect(v("tour", "playing")).toBe(false);
+      expect(v("rested", "playing")).toBe(true);
+      pass(1);
+      // Half a second into the second step.
+      expect(v("k")).toBeCloseTo(2 + 2 * (0.5 / 3));
+      expect(line()).toBe("2 / 2");
+      pass(3);
+      expect(v("k")).toBe(4);
+      expect(v("rested", "playing")).toBe(false);
+    });
+
+    it("jumps to a step's start past the rest before it, and scrubs over the steps alone", () => {
+      const [, , v] = rested();
+      lay();
+      press("pointerdown", 250);
+      press("pointerup", 250);
+      expect(v("k")).toBe(2);
+      button().click();
+      pass(0.1);
+      pass(0.3);
+      // No rest first: the step starts at once.
+      expect(v("k")).toBeGreaterThan(2);
+      button().click();
+      press("pointerdown", 10);
+      press("pointermove", 254);
+      expect(v("k")).toBeCloseTo(3);
+      press("pointerup", 254);
+    });
+  });
+
   it("cancels any other writer moving what the play moves", () => {
     const [, , v] = page(`<mtp-button model="m" name="go"></mtp-button><mtp-play model="m" name="tour"></mtp-play>`, doc("bar"));
     lay();

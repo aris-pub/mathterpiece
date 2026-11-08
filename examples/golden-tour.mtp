@@ -62,12 +62,12 @@
          (curve cubic-out))
 
 ; Each stop but the last rests a moment before the next.
-(play tour (buttons true)
+(play tour (buttons true) (rest 2.5)
   doc@'Plays the tour: a quarter turn, a third, two fifths, then the golden angle.'
     (animation
-      (step 'A quarter turn' quarter (wait 2.5))
-      (step 'A third of a turn' third (wait 2.5))
-      (step 'Two fifths of a turn' two-fifths (wait 2.5))
+      (step 'A quarter turn' quarter)
+      (step 'A third of a turn' third)
+      (step 'Two fifths of a turn' two-fifths)
       (step 'The golden angle' golden)))
 
 (canvas view garden doc@'The sunflower and the name of its angle.')

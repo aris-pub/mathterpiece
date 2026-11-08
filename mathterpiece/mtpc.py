@@ -306,6 +306,8 @@ class Writer:
         elif kind in ("slider", "button", "play"):
             if kind == "play":
                 d["autoplay"] = o.data["autoplay"]
+                if "rest" in o.data:
+                    d["rest"] = _number(o.data["rest"])
             d["animation"] = o.data["animation"]
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)

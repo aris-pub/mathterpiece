@@ -245,7 +245,7 @@ abstract class MtpPart extends HTMLElement {
 function playerFor(rt: Runtime, writer: Obj): Player | null {
   return writer.animation === null || writer.animation === undefined
     ? null
-    : new Player(rt, writer.animation, writer.conditions ?? []);
+    : new Player(rt, writer.animation, writer.conditions ?? [], writer.rest ?? 0);
 }
 
 export class MtpCanvas extends MtpPart {

@@ -52,17 +52,23 @@ export class Player {
     private rt: Runtime,
     animation: number,
     private clamps: Clamp[] = [],
+    rest = 0,
   ) {
-    const root = rt.objects[animation]!.steps!;
-    this.duration = this.layout(root, 0, []);
-    const body = root[0] === "loop" ? root[2] : root;
-    if (root[0] === "loop") this.outer = { start: 0, round: length(body), times: root[1] ?? Number.POSITIVE_INFINITY };
+    let root = rt.objects[animation]!.steps!;
+    let body = root[0] === "loop" ? root[2] : root;
     const top = body[0] === "in-order" ? (body.slice(1) as Step[]) : [body];
+    // A play's (rest t) is a wait between each pair of steps, in every round of a loop.
+    if (rest > 0 && top.length > 1) {
+      body = ["in-order", ...top.flatMap((s, k): Step[] => (k ? [["wait", rest], s] : [s]))];
+      root = root[0] === "loop" ? ["loop", root[1], body] : body;
+    }
+    this.duration = this.layout(root, 0, []);
+    if (root[0] === "loop") this.outer = { start: 0, round: length(body), times: root[1] ?? Number.POSITIVE_INFINITY };
     let t = 0;
     this.spans = top.map((s) => {
       const d = length(s);
       const span = { start: t, end: t + d };
-      t += d;
+      t += d + rest;
       return span;
     });
   }

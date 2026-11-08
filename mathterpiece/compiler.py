@@ -103,7 +103,8 @@ RESERVED = frozenset(
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
-    *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"]
+    *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
+    "rest",
 }
 # The listeners whose event goes up the scene tree, as in the DOM, unless one stops it.
 BUBBLES = ("on-click", "on-release", "on-dragstart", "on-dragend", "on-pointermove")
@@ -3094,6 +3095,9 @@ class _Compiler:
         """What every writer has: a label (controls), conditions, and the items left over."""
         if obj.kind in BUBBLES:
             self.stops(obj, items)
+        rest = next((it for it in items if _head(it) == "rest"), None)
+        if rest is not None:
+            raise CompileError(f"only a play takes (rest …), not a {obj.kind}", rest.pos)
         stop = next((it for it in items if _head(it) == "stop-propagation"), None)
         if stop is not None:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
@@ -3209,6 +3213,11 @@ class _Compiler:
         buttons = self.take(items, "buttons")
         obj.attrs["buttons"] = self.attribute(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
         obj.data["autoplay"] = self.autoplay(items)
+        # (rest t): t seconds between each pair of steps, so the illustrator need not write a
+        # wait after each (the author, 2026-11-08, mtp-wfrs).
+        rest = self.take(items, "rest")
+        if rest is not None:
+            obj.data["rest"] = self.seconds(rest, self.cscope)
         obj.attrs["playing"] = Attribute(BOOL, False)
         obj.attrs["step"] = Attribute(INT, 0)
         self.active(obj, items)

@@ -173,6 +173,20 @@ describe("a player", () => {
     expect(v("k")).toBe(0);
   });
 
+  it("rests between a play's steps, in every round of a loop", () => {
+    const rt = load("anim");
+    const p = new Player(rt, rt.id("rounds"), [], 0.5);
+    expect(p.spans).toEqual([
+      { start: 0, end: 1 },
+      { start: 1.5, end: 2.5 },
+    ]);
+    p.seek(1.25);
+    expect(rt.value(rt.id("k"), null)).toBe(2);
+    p.seek(3.75);
+    expect(rt.value(rt.id("k"), null)).toBe(2);
+    expect(p.position).toBeCloseTo(1.25);
+  });
+
   it("seeks back over moves that start one after another", () => {
     const [, p, v] = setup("chain");
     p.seek(2);

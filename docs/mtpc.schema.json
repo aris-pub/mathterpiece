@@ -2345,6 +2345,10 @@
                   }
                 ]
               },
+              "rest": {
+                "type": "number",
+                "minimum": 0
+              },
               "autoplay": {
                 "oneOf": [
                   {
