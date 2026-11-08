@@ -914,6 +914,16 @@ const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9
 const PAUSE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3" width="3" height="10" rx="0.8"/><rect x="9.5" y="3" width="3" height="10" rx="0.8"/></svg>';
 // How far, in CSS pixels, a mouse may move on the bars and still tap one rather than drag.
 const MOUSE_SLOP = 3;
+// How far past a stop, in seconds, the left arrow still goes back to the stop before it rather
+// than to that one, so pressing it twice while the play runs goes back two.
+const BACK_GRACE = 0.5;
+
+// Whether keys pressed on el are its own: a field takes Space and the arrows, and so does any
+// other control.
+function takesKeys(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  return el.isContentEditable || el.closest("input, textarea, select, button, [role=slider], mtp-slider, mtp-toggle, mtp-button") !== null;
+}
 
 /**
  * A play (docs/reference.md, "Controls"; mtp-33xt): a play button, then one bar per step, each
@@ -922,6 +932,13 @@ const MOUSE_SLOP = 3;
  */
 export class MtpPlay extends MtpPart {
   private refresh: () => void = () => {};
+  private onPage: ((event: KeyboardEvent) => void) | null = null;
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.onPage) document.removeEventListener("keydown", this.onPage);
+    this.onPage = null;
+  }
 
   protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "play");
@@ -987,6 +1004,40 @@ export class MtpPlay extends MtpPart {
       this.refresh();
     };
     play.addEventListener("click", toggle);
+
+    // Keys (mtp-yhau): Space plays and pauses; the arrows go to the next stop or back one. The
+    // stops are the starts of the steps and the end, so a rest is skipped.
+    const stops = [...spans.map((s) => s.start), spans.at(-1)!.end];
+    const next = () => {
+      const t = player ? player.position : -1;
+      const s = stops.find((x) => x > t + 1e-6);
+      if (s !== undefined) seek(s);
+    };
+    const back = () => {
+      const t = player ? player.position : 0;
+      seek(stops.filter((x) => x < t - BACK_GRACE).at(-1) ?? 0);
+    };
+    const keys: Record<string, () => void> = { " ": toggle, ArrowRight: next, ArrowLeft: back };
+    const onKey = (event: KeyboardEvent) => {
+      const act = keys[event.key];
+      if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      if (!event.repeat && activeOf(rt, id)) act();
+    };
+    this.addEventListener("keydown", (event) => {
+      // The play button presses itself on Space, as any button does.
+      if (event.key === " " && event.target === play) return;
+      onKey(event);
+    });
+    // On a page with one play, as when recording it, the keys work from anywhere on the page,
+    // unless what has focus takes keys of its own.
+    if (this.onPage) document.removeEventListener("keydown", this.onPage);
+    this.onPage = (event) => {
+      if (this.contains(event.target as Node) || document.querySelectorAll("mtp-play").length !== 1) return;
+      if (takesKeys(event.target) || takesKeys(document.activeElement)) return;
+      onKey(event);
+    };
+    document.addEventListener("keydown", this.onPage);
 
     // The bar nearest x, and the time x stands for along it.
     const nearest = (x: number): number => {

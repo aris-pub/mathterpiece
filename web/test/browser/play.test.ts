@@ -1,6 +1,6 @@
 // A play's bar with a real pointer and real layout (docs/reference.md, "Controls"; mtp-33xt).
 import { describe, expect, it } from "vitest";
-import { cdp } from "vitest/browser";
+import { cdp, userEvent } from "vitest/browser";
 import { type MtpModel, define } from "../../src/elements.ts";
 import type { Runtime } from "../../src/runtime.ts";
 import { doc } from "../helpers.ts";
@@ -69,6 +69,41 @@ describe("a play's bar", () => {
     await mouse("mousePressed", [x, y - 12]);
     await mouse("mouseReleased", [x, y - 12]);
     expect(v("k")).toBe(2);
+  });
+
+  it("shows a focus ring on the button and the bars when reached by the keyboard", async () => {
+    await open(`<button id="before">before</button><mtp-play model="m" name="tour" style="width: 420px"></mtp-play>`);
+    (document.getElementById("before") as HTMLButtonElement).focus();
+    const ring = (el: Element) => getComputedStyle(el).outlineStyle;
+    await userEvent.tab();
+    const button = document.querySelector("mtp-play .mtp-play-button")!;
+    expect(document.activeElement).toBe(button);
+    expect(ring(button)).toBe("solid");
+    await userEvent.tab();
+    const track = document.querySelector("mtp-play .mtp-bars")!;
+    expect(document.activeElement).toBe(track);
+    expect(ring(track)).toBe("solid");
+  });
+
+  it("plays and steps with real keys, on the bars and from anywhere on a page with one play", async () => {
+    const { v } = await open();
+    (document.querySelector("mtp-play .mtp-bars") as HTMLElement).focus();
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+    expect(v("k")).toBe(2);
+    (document.activeElement as HTMLElement).blur();
+    await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
+    expect(v("k")).toBe(0);
+    await userEvent.keyboard(" ");
+    expect(v("tour", "playing")).toBe(true);
+    await userEvent.keyboard(" ");
+    expect(v("tour", "playing")).toBe(false);
+  });
+
+  it("presses the play button once on Space when it has focus", async () => {
+    const { v } = await open();
+    (document.querySelector("mtp-play .mtp-play-button") as HTMLElement).focus();
+    await userEvent.keyboard(" ");
+    expect(v("tour", "playing")).toBe(true);
   });
 
   it("gives the play button and the bars touch targets at least 44 pixels tall", async () => {

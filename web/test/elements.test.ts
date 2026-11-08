@@ -569,6 +569,93 @@ describe("a play's bar", () => {
     });
   });
 
+  describe("keys", () => {
+    // mtp-yhau: Space plays and pauses, the right arrow goes to the next stop, the left arrow
+    // back one. A stop is the start of a step, or the end of the tour.
+    const key = (target: EventTarget, k: string) => {
+      const event = new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+
+    it("plays, pauses and steps through the stops with the bars focused", () => {
+      const [, , v] = page(`<mtp-play model="m" name="rested"></mtp-play>`, doc("bar"));
+      expect(key(track(), " ")).toBe(true);
+      expect(v("rested", "playing")).toBe(true);
+      pass(0.1);
+      pass(0.5);
+      key(track(), " ");
+      expect(v("rested", "playing")).toBe(false);
+      key(track(), "ArrowRight");
+      expect(v("k")).toBe(2);
+      expect(line()).toBe("2 / 2");
+      key(track(), "ArrowRight");
+      expect(v("k")).toBe(4);
+      expect(fills()).toEqual([1, 1]);
+      key(track(), "ArrowRight");
+      expect(v("k")).toBe(4);
+      key(track(), "ArrowLeft");
+      expect(v("k")).toBe(2);
+      expect(fills()).toEqual([1, 0]);
+      key(track(), "ArrowLeft");
+      expect(v("k")).toBe(0);
+      expect(line()).toBe("1 / 2 · Grow");
+    });
+
+    it("goes to the first step's start from rest", () => {
+      const [, , v] = tour();
+      key(track(), "ArrowRight");
+      expect(line()).toBe("1 / 2 · Grow");
+      expect(v("k")).toBe(0);
+    });
+
+    it("keeps playing from the stop it goes to", () => {
+      const [, , v] = page(`<mtp-play model="m" name="rested"></mtp-play>`, doc("bar"));
+      key(track(), " ");
+      pass(0.1);
+      pass(0.3);
+      key(track(), "ArrowRight");
+      expect(v("rested", "playing")).toBe(true);
+      pass(0.6);
+      expect(v("k")).toBeGreaterThan(2);
+    });
+
+    it("goes back to the start of the step playing, or the one before when just past its start", () => {
+      const [, , v] = tour();
+      key(track(), " ");
+      pass(0.1);
+      pass(2);
+      // Well into the second step: back to its start.
+      key(track(), "ArrowLeft");
+      expect(v("k")).toBe(2);
+      expect(v("tour", "playing")).toBe(true);
+      pass(0.2);
+      // Just past its start: back to the step before.
+      key(track(), "ArrowLeft");
+      expect(line()).toBe("1 / 2 · Grow");
+    });
+
+    it("work from anywhere on a page with one play, but not from a text field", () => {
+      const [, , v] = page(`<input id="t"><mtp-play model="m" name="tour"></mtp-play>`, doc("bar"));
+      key(document.body, "ArrowRight");
+      key(document.body, "ArrowRight");
+      expect(v("k")).toBe(2);
+      const input = document.getElementById("t") as HTMLInputElement;
+      input.focus();
+      expect(key(input, "ArrowRight")).toBe(false);
+      expect(v("k")).toBe(2);
+      expect(key(input, " ")).toBe(false);
+      expect(v("tour", "playing")).toBe(false);
+    });
+
+    it("work only on a focused play when the page has more than one", () => {
+      const [, , v] = page(`<mtp-play model="m" name="tour"></mtp-play><mtp-play model="m" name="rested"></mtp-play>`, doc("bar"));
+      key(document.body, " ");
+      expect(v("tour", "playing")).toBe(false);
+      expect(v("rested", "playing")).toBe(false);
+    });
+  });
+
   it("cancels any other writer moving what the play moves", () => {
     const [, , v] = page(`<mtp-button model="m" name="go"></mtp-button><mtp-play model="m" name="tour"></mtp-play>`, doc("bar"));
     lay();

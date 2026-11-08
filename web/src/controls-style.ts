@@ -84,7 +84,7 @@ mtp-button button:hover {
 mtp-button button:active { background: var(--gray-100); }
 mtp-button button:focus-visible, mtp-play .mtp-play-button:focus-visible,
 mtp-play .mtp-bars:focus-visible {
-  outline: 2px solid var(--border-action); outline-offset: 2px;
+  outline: 2px solid var(--border-action, Highlight); outline-offset: 2px;
 }
 mtp-button button:disabled, mtp-play .mtp-play-button:disabled { cursor: not-allowed; opacity: 0.5; }
 
