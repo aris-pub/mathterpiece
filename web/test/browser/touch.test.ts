@@ -350,4 +350,64 @@ describe("quiet mode", () => {
     expect(window.scrollY).toBeGreaterThan(20);
     expect(v("knob", "y")).toBe(0);
   });
+
+  describe("on a canvas that pans and zooms", () => {
+    // The author, 2026-11-08: a reader scrolling past must not be caught by a quiet figure, so it
+    // pans and zooms only once live.
+    async function roam(): Promise<{ svg: SVGSVGElement; middle: () => [number, number] }> {
+      window.scrollTo(0, 0);
+      document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="roam" style="display: block; width: 390px"></mtp-canvas><div style="height: 2000px"></div>`;
+      (document.querySelector("mtp-model") as MtpModel).doc = doc("quiet-pan");
+      const svg = document.querySelector("mtp-canvas svg") as SVGSVGElement;
+      Object.assign(svg.style, { width: "390px", height: "390px" });
+      await frames();
+      const hand = document.querySelector("mtp-canvas .mtp-switch") as HTMLButtonElement;
+      const middle = (): [number, number] => {
+        const r = hand.getBoundingClientRect();
+        return [r.left + r.width / 2, r.top + r.height / 2];
+      };
+      return { svg, middle };
+    }
+    const box = (svg: SVGSVGElement) => svg.getAttribute("viewBox");
+    const wheel = async (at: [number, number]) => {
+      await session.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: at[0], y: at[1], deltaX: 0, deltaY: -300 });
+      await frames();
+    };
+
+    it("a swipe on it while quiet scrolls the page, and a wheel leaves its view box", async () => {
+      const { svg } = await roam();
+      const before = box(svg);
+      await swipe(client(svg, 3, -2), client(svg, 3, 6));
+      expect(window.scrollY).toBeGreaterThan(20);
+      expect(box(svg)).toBe(before);
+      window.scrollTo(0, 0);
+      await frames();
+      await wheel(client(svg, 0, 0));
+      expect(box(svg)).toBe(before);
+    });
+
+    it("once live, a swipe pans it without scrolling the page, and a wheel zooms it", async () => {
+      const { svg, middle } = await roam();
+      const before = box(svg);
+      await tap(middle());
+      await wheel(client(svg, 0, 0));
+      const zoomed = box(svg);
+      expect(zoomed).not.toBe(before);
+      window.scrollTo(0, 0);
+      await frames();
+      await swipe(client(svg, 3, -2), client(svg, 3, 2));
+      expect(window.scrollY).toBe(0);
+      expect(box(svg)).not.toBe(zoomed);
+    });
+
+    it("back to quiet, a swipe scrolls the page again", async () => {
+      const { svg, middle } = await roam();
+      await tap(middle());
+      await tap(middle());
+      const before = box(svg);
+      await swipe(client(svg, 3, -2), client(svg, 3, 6));
+      expect(window.scrollY).toBeGreaterThan(20);
+      expect(box(svg)).toBe(before);
+    });
+  });
 });

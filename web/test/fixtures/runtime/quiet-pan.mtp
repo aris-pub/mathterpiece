@@ -1,0 +1,7 @@
+; Quiet mode and pan and zoom (mtp-16z): roam pans and zooms, but only while it is live, and
+; plain, with no on-live, pans and zooms always.
+(real k 0)
+(scene s (circle c (r 1)))
+(canvas roam s)
+(on-live roam (animation (move k (to 1) (duration 0))))
+(canvas plain s)

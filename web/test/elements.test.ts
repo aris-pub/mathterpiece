@@ -1180,4 +1180,84 @@ describe("quiet mode", () => {
     pass(1.2);
     expect(width()).toBe(10);
   });
+
+  describe("pan and zoom", () => {
+    // roam pans and zooms but has an on-live; plain has none.
+    const roam = () => {
+      page(`<mtp-canvas model="m" name="roam"></mtp-canvas><mtp-canvas model="m" name="plain"></mtp-canvas>`, doc("quiet-pan"));
+      return {
+        svg: (name = "roam") => document.querySelector(`mtp-canvas[name="${name}"] svg`) as SVGSVGElement,
+        hand: () => toggler("roam")!,
+      };
+    };
+    const box = (svg: Element) => svg.getAttribute("viewBox")!.split(" ").map((n) => Math.round(Number(n) * 1e6) / 1e6);
+    const wheel = (svg: Element) => {
+      const event = new WheelEvent("wheel", { deltaY: -500 * Math.log(2), cancelable: true });
+      Object.defineProperties(event, { clientX: { value: 0 }, clientY: { value: 0 } });
+      svg.dispatchEvent(event);
+      return event;
+    };
+    const finger = (svg: Element, type: string, x: number, y: number, id = 1) =>
+      svg.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: id, bubbles: true, pointerType: "touch", cancelable: true }));
+    const drag = (svg: Element) => {
+      finger(svg, "pointerdown", 100, 100);
+      finger(svg, "pointermove", 164, 132);
+      finger(svg, "pointerup", 164, 132);
+    };
+    const pinch = (svg: Element) => {
+      finger(svg, "pointerdown", -10, 0, 1);
+      finger(svg, "pointerdown", 10, 0, 2);
+      finger(svg, "pointermove", -20, 0, 1);
+      finger(svg, "pointermove", 20, 0, 2);
+      finger(svg, "pointerup", -20, 0, 1);
+      finger(svg, "pointerup", 20, 0, 2);
+    };
+
+    it("a quiet canvas ignores the wheel, and leaves it to the page", () => {
+      const { svg } = roam();
+      const event = wheel(svg());
+      expect(event.defaultPrevented).toBe(false);
+      expect(box(svg())).toEqual([-10, -10, 20, 20]);
+    });
+
+    it("a quiet canvas does not pan or pinch, and lets a finger scroll the page", () => {
+      const { svg } = roam();
+      expect(svg().style.touchAction).toBe("");
+      drag(svg());
+      pinch(svg());
+      expect(box(svg())).toEqual([-10, -10, 20, 20]);
+    });
+
+    it("once live, it zooms, pans and pinches, and keeps the finger", () => {
+      const { svg, hand } = roam();
+      hand().click();
+      expect(svg().style.touchAction).toBe("none");
+      expect(wheel(svg()).defaultPrevented).toBe(true);
+      expect(box(svg())).toEqual([-5, -5, 10, 10]);
+      drag(svg());
+      expect(box(svg())).toEqual([-6, -5.5, 10, 10]);
+      svg().dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      pinch(svg());
+      expect(box(svg())[2]).toBeCloseTo(10);
+    });
+
+    it("going quiet again turns them off, and puts back the illustrator's view", () => {
+      const { svg, hand } = roam();
+      hand().click();
+      wheel(svg());
+      hand().click();
+      expect(svg().style.touchAction).toBe("");
+      expect(box(svg())).toEqual([-10, -10, 20, 20]);
+      expect(wheel(svg()).defaultPrevented).toBe(false);
+      drag(svg());
+      expect(box(svg())).toEqual([-10, -10, 20, 20]);
+    });
+
+    it("a canvas with no on-live pans and zooms as before", () => {
+      const { svg } = roam();
+      expect(svg("plain").style.touchAction).toBe("none");
+      wheel(svg("plain"));
+      expect(box(svg("plain"))).toEqual([-5, -5, 10, 10]);
+    });
+  });
 });

@@ -413,8 +413,19 @@ export class MtpCanvas extends MtpPart {
     // after a write, which may change what can be dragged or clicked, or on new elements.
     let shownAt = -1;
     let madeAt = -1;
+    // A quiet canvas neither pans nor zooms, so a reader scrolling past on a phone is not caught
+    // by it (the author, 2026-11-08).
+    const allows = (attr: "pan" | "zoom") => !rt.quiet.has(canvas) && Boolean(rt.value(canvas, attr));
+    let wasQuiet = rt.quiet.has(canvas);
     this.redraw = () => {
       toggles.follow();
+      const quiet = rt.quiet.has(canvas);
+      // Back to quiet, the reader can no longer undo a pan or zoom, so the canvas drops it.
+      if (quiet && !wasQuiet) Object.assign(look, { scale: 1, dx: 0, dy: 0 });
+      wasQuiet = quiet;
+      // Elsewhere a finger on the canvas scrolls the page.
+      const action = allows("pan") || allows("zoom") || pointer.onCanvas ? "none" : "";
+      if (svg.style.touchAction !== action) svg.style.touchAction = action;
       draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo);
       const made = elementsMade();
       if (rt.clock !== shownAt || made !== madeAt) {
@@ -479,9 +490,6 @@ export class MtpCanvas extends MtpPart {
     };
     const toScene = (event: PointerEvent): [number, number] =>
       apply(invert(viewOf(rt, canvas).toUser), toUser(event)) as [number, number];
-    const allows = (attr: "pan" | "zoom") => Boolean(rt.value(canvas, attr));
-    // Elsewhere a finger on the canvas scrolls the page.
-    if (allows("pan") || allows("zoom") || pointer.onCanvas) svg.style.touchAction = "none";
     // The reader zooms between the canvas's bounds and pans only inside its view box, so never
     // sees past what the author framed (the author, 2026-11-04).
     const inside = () => {
@@ -509,6 +517,7 @@ export class MtpCanvas extends MtpPart {
       zoomAbout(toUser(event), Math.exp(-event.deltaY * 0.002));
     });
     svg.addEventListener("dblclick", () => {
+      if (!allows("pan") && !allows("zoom")) return;
       Object.assign(look, { scale: 1, dx: 0, dy: 0 });
       zoom(rt, canvas, svg, look);
     });
