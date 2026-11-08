@@ -909,79 +909,174 @@ export class MtpButton extends MtpPart {
   }
 }
 
+// The play button's icons, drawn in the color of the page on the button's ink.
+const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>';
+const PAUSE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3" width="3" height="10" rx="0.8"/><rect x="9.5" y="3" width="3" height="10" rx="0.8"/></svg>';
+// How far, in CSS pixels, a mouse may move on the bars and still tap one rather than drag.
+const MOUSE_SLOP = 3;
+
+/**
+ * A play (docs/reference.md, "Controls"; mtp-33xt): a play button, then one bar per step, each
+ * as wide as its step's duration and filling as it plays, and the step now playing under them.
+ * The reader drags along the bars to scrub the tour, and taps one to jump to its step's start.
+ */
 export class MtpPlay extends MtpPart {
   private refresh: () => void = () => {};
 
   protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "play");
-    const play = document.createElement("button");
+    const obj = rt.objects[id]!;
+    // The one player the bars show. It is kept after the tour ends or another writer cancels it,
+    // so the bars stay where it stood; a press after the end starts a new one.
     let player: Player | null = null;
-    play.addEventListener("click", () => {
+    const layout = playerFor(rt, obj);
+    if (!layout) {
+      this.replaceChildren();
+      return;
+    }
+    const split = Boolean(rt.value(id, "buttons"));
+    const all = layout.spans;
+    const spans = split ? all : [{ start: all[0]!.start, end: all.at(-1)!.end }];
+    const names = (obj.animation !== null && obj.animation !== undefined ? rt.objects[obj.animation]!.names : undefined) ?? [];
+
+    const play = document.createElement("button");
+    play.type = "button";
+    play.className = "mtp-play-button";
+    const track = document.createElement("div");
+    track.className = "mtp-bars";
+    track.tabIndex = 0;
+    track.setAttribute("role", "slider");
+    track.setAttribute("aria-valuemin", "0");
+    track.setAttribute("aria-valuemax", String(spans.length));
+    const bars = spans.map((s) => {
+      const bar = document.createElement("span");
+      bar.className = "mtp-bar";
+      // A step that takes no time still gets a sliver, so it can be seen and tapped.
+      bar.style.flexGrow = String(Math.max(s.end - s.start, 0.05 * (all.at(-1)!.end || 1)));
+      bar.style.setProperty("--u", "0");
+      track.append(bar);
+      return bar;
+    });
+    const line = document.createElement("div");
+    line.className = "mtp-now";
+    const indicator = document.createElement("div");
+    indicator.className = "mtp-indicator";
+    indicator.append(track);
+    if (split) indicator.append(line);
+
+    const own = (): Player => {
+      const held = scheduler.playerOf(this);
+      if (held) return held;
+      player ??= playerFor(rt, obj)!;
+      scheduler.hold(player, this);
+      return player;
+    };
+    const seek = (t: number) => {
+      own();
+      scheduler.seek(this, t);
+      this.refresh();
+    };
+    const toggle = () => {
       if (!activeOf(rt, id)) return;
       if (scheduler.running(this)) scheduler.pause(this);
-      else if (player && !player.done && scheduler.playerOf(this)) scheduler.resume(this);
+      else if (player && !player.done && scheduler.playerOf(this) === player) scheduler.resume(this);
       else {
-        player = playerFor(rt, rt.objects[id]!);
+        player = playerFor(rt, obj);
         if (player) scheduler.start(player, this);
       }
       this.refresh();
-    });
-    const steps: HTMLButtonElement[] = [];
-    // A step clicked runs on its own, apart from the play: the play stops, and the step
-    // animates from wherever things are. Starting it claims everything the play moves, not only
-    // what the step moves, so it cancels the play and every other writer moving any of it.
-    const alone = {};
-    let single: { player: Player; k: number } | null = null;
-    if (rt.value(id, "buttons")) {
-      const spans = playerFor(rt, rt.objects[id]!)?.spans ?? [];
-      spans.forEach((span, k) => {
-        const b = document.createElement("button");
-        b.textContent = String(k + 1);
-        b.addEventListener("click", () => {
-          if (!activeOf(rt, id)) return;
-          const one = playerFor(rt, rt.objects[id]!);
-          if (!one) return;
-          one.only(k);
-          single = { player: one, k };
-          scheduler.start(one, alone, span.start);
-          this.refresh();
-        });
-        steps.push(b);
+    };
+    play.addEventListener("click", toggle);
+
+    // The bar nearest x, and the time x stands for along it.
+    const nearest = (x: number): number => {
+      let best = 0;
+      let gap = Infinity;
+      bars.forEach((bar, k) => {
+        const r = bar.getBoundingClientRect();
+        const d = x < r.left ? r.left - x : x > r.right ? x - r.right : 0;
+        if (d < gap) [best, gap] = [k, d];
       });
-    }
+      return best;
+    };
+    const timeAt = (x: number): number => {
+      const k = nearest(x);
+      const r = bars[k]!.getBoundingClientRect();
+      const u = r.width > 0 ? Math.min(Math.max((x - r.left) / r.width, 0), 1) : 0;
+      return spans[k]!.start + u * (spans[k]!.end - spans[k]!.start);
+    };
+    let press: { x: number; slop: number; playing: boolean; moved: boolean } | null = null;
+    track.addEventListener("pointerdown", (event) => {
+      if (!activeOf(rt, id) || event.button !== 0) return;
+      const playing = scheduler.running(this);
+      if (playing) scheduler.pause(this);
+      press = { x: event.clientX, slop: event.pointerType === "mouse" ? MOUSE_SLOP : TOUCH_SLOP, playing, moved: false };
+      track.setPointerCapture?.(event.pointerId);
+      track.classList.add("mtp-dragging");
+      event.preventDefault();
+    });
+    track.addEventListener("pointermove", (event) => {
+      if (!press) return;
+      if (!press.moved && Math.abs(event.clientX - press.x) <= press.slop) return;
+      press.moved = true;
+      seek(timeAt(event.clientX));
+    });
+    const release = (event: PointerEvent, tap: boolean) => {
+      if (!press) return;
+      const { moved, playing } = press;
+      press = null;
+      track.classList.remove("mtp-dragging");
+      if (tap && !moved) seek(spans[nearest(event.clientX)]!.start);
+      else if (moved) seek(timeAt(event.clientX));
+      if (playing) scheduler.resume(this);
+      this.refresh();
+    };
+    track.addEventListener("pointerup", (event) => release(event, true));
+    track.addEventListener("pointercancel", (event) => release(event, false));
+
+    // The step at t: the last one started by then, so a rest after a step still shows it.
+    const stepAt = (t: number): number => {
+      let k = 0;
+      spans.forEach((s, j) => {
+        if (t >= s.start - 1e-9 * Math.max(1, s.start)) k = j;
+      });
+      return k;
+    };
     this.refresh = () => {
       const running = scheduler.running(this);
-      play.textContent = running ? "pause" : labelOf(rt, id);
-      const now = running
-        ? (player?.stepNow() ?? null)
-        : // The last frame of the step redraws before the scheduler drops it, so a step that is
-          // done counts as over.
-          single && scheduler.running(alone) && !single.player.done
-          ? single.k
-          : null;
-      steps.forEach((b, k) => b.classList.toggle("mtp-lit", now === k));
       const active = activeOf(rt, id);
-      for (const b of [play, ...steps]) b.disabled = !active;
+      const t = player ? player.position : 0;
+      play.innerHTML = running ? PAUSE_ICON : PLAY_ICON;
+      play.setAttribute("aria-label", running ? "pause" : labelOf(rt, id));
+      play.disabled = !active;
+      track.setAttribute("aria-disabled", String(!active));
+      this.toggleAttribute("data-playing", running);
+      bars.forEach((bar, j) => {
+        const s = spans[j]!;
+        const u = s.end > s.start ? Math.min(Math.max((t - s.start) / (s.end - s.start), 0), 1) : t >= s.start && player ? 1 : 0;
+        bar.style.setProperty("--u", String(Number(u.toFixed(4))));
+      });
+      const n = spans.length;
+      const k = stepAt(t);
+      const name = names[k] ?? null;
+      const text = player ? `${k + 1} / ${n}${name ? ` · ${name}` : ""}` : `${n} ${n === 1 ? "step" : "steps"}`;
+      line.textContent = text;
+      track.setAttribute("aria-label", labelOf(rt, id));
+      track.setAttribute("aria-valuenow", String(player ? k + 1 : 0));
+      track.setAttribute("aria-valuetext", text);
       if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-      if (now !== null && rt.value(id, "step") !== now) rt.write(id, "step", now);
+      if (player && split && rt.value(id, "step") !== k) rt.write(id, "step", k);
     };
     this.refresh();
-    if (steps.length) {
-      const group = document.createElement("span");
-      group.className = "mtp-steps";
-      group.append(...steps);
-      this.replaceChildren(play, group);
-    } else {
-      this.replaceChildren(play);
-    }
+    this.replaceChildren(play, indicator);
     // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
     const start = () => {
       if (!activeOf(rt, id) || scheduler.running(this)) return;
-      player = playerFor(rt, rt.objects[id]!);
+      player = playerFor(rt, obj);
       if (player) scheduler.start(player, this);
       this.refresh();
     };
-    const auto = rt.objects[id]!.autoplay;
+    const auto = obj.autoplay;
     if (auto === "load") start();
     else if (typeof auto === "number") model.whenSeen(auto, start);
   }

@@ -30,7 +30,7 @@ interface Loop {
   times: number;
 }
 
-/** A top-level step's span in time, for play's step buttons. */
+/** A top-level step's span in time, for a play's bars. */
 export interface Span {
   start: number;
   end: number;
@@ -41,9 +41,7 @@ export class Player {
   readonly spans: Span[];
   private moves: Move[] = [];
   private stage = 0;
-  private time = 0;
-  // The one top-level step it plays (only), or null for all of them.
-  private window: [number, number] | null = null;
+  private at = 0;
   // A loop around the whole body: the step buttons are its body's items.
   private outer: Loop | null = null;
   // The values at a slider's stops, and the values they were worked out from.
@@ -100,22 +98,18 @@ export class Player {
     return step[0] === "in-order" ? t - start : longest;
   }
 
+  /** How far in it stands, in seconds. */
+  get time(): number {
+    return this.at;
+  }
+
   get done(): boolean {
-    return this.time >= (this.window ? this.window[1] : this.duration);
+    return this.at >= this.duration;
   }
 
-  // Whether a move starting at t belongs to the step being played alone. Spans and moves sum
-  // their durations in different orders, so a start may differ from its span's by rounding.
-  private inWindow(t: number): boolean {
-    if (!this.window) return true;
-    const eps = 1e-9 * Math.max(1, Math.abs(this.window[1]));
-    return t >= this.window[0] - eps && t < this.window[1] - eps;
-  }
-
-  /** Plays only the k-th top-level step, from wherever things are. */
-  only(k: number): void {
-    const span = this.spans[k]!;
-    this.window = [span.start, span.end];
+  /** Where it stands in its round: the time, for an animation that does not loop as a whole. */
+  get position(): number {
+    return inRound(this.outer ? [this.outer] : [], this.at)[0];
   }
 
   /** The variables and attributes it writes, as "id:attr". */
@@ -130,8 +124,20 @@ export class Player {
   }
 
   private seekNow(time: number): void {
-    this.time = time;
-    const shown = this.moves.filter((m) => this.inWindow(m.start));
+    const back = time < this.at;
+    this.at = time;
+    const shown = this.moves;
+    if (back) {
+      // A move that has not started by then puts back the value it started from, the latest
+      // first, so each thing moved ends at how it stood before the first of them; it reads its
+      // ends again when it starts.
+      const later = shown.filter((m) => m.from !== undefined && inRound(m.loops, time)[0] < m.start);
+      for (const m of later.sort((a, b) => b.start - a.start || b.stage - a.stage)) {
+        this.write(m, 0);
+        delete m.from;
+        delete m.to;
+      }
+    }
     // A new round: the last one ends first, every move in the order it ends, so a later move's
     // end is not undone by an earlier one's; then each reads its ends again.
     const ending = shown.filter((m) => m.rounds !== undefined && m.from !== undefined && inRound(m.loops, time)[1] !== m.rounds);
@@ -229,7 +235,7 @@ export class Player {
 
   /** The top-level step running at the current time, or null when none is. */
   stepNow(): number | null {
-    const [t] = inRound(this.outer ? [this.outer] : [], this.time);
+    const t = this.position;
     const k = this.spans.findIndex((s) => t >= s.start && t < s.end);
     return k < 0 ? null : k;
   }

@@ -79,6 +79,8 @@ export interface Obj {
   path?: unknown;
   // animations
   steps?: Step;
+  // An animation's step names, one per step of its body (docs/mtpc.md, "Objects").
+  names?: (string | null)[];
   // components
   animation?: number | null;
   conditions?: Clamp[];

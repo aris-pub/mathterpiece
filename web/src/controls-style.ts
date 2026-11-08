@@ -65,7 +65,7 @@ mtp-slider .mtp-ticks [data-value]::after {
   white-space: nowrap; background: none;
 }
 
-mtp-button button, mtp-play button {
+mtp-button button {
   position: relative;
   font: 600 0.875rem/1.2 "Source Sans 3", sans-serif;
   padding: 0.375rem 0.75rem;
@@ -75,32 +75,56 @@ mtp-button button, mtp-play button {
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 /* A larger area the finger can hit than the button draws, for 44px touch targets. */
-mtp-button button::after, mtp-play button::after {
+mtp-button button::after, mtp-play .mtp-play-button::after {
   content: ""; position: absolute; inset: -6px;
 }
-mtp-button button:hover, mtp-play button:hover {
+mtp-button button:hover {
   background: var(--surface-hover); border-color: var(--primary-300);
 }
-mtp-button button:active, mtp-play button:active { background: var(--gray-100); }
-mtp-button button:focus-visible, mtp-play button:focus-visible {
+mtp-button button:active { background: var(--gray-100); }
+mtp-button button:focus-visible, mtp-play .mtp-play-button:focus-visible,
+mtp-play .mtp-bars:focus-visible {
   outline: 2px solid var(--border-action); outline-offset: 2px;
 }
-mtp-button button:disabled, mtp-play button:disabled { cursor: not-allowed; opacity: 0.5; }
+mtp-button button:disabled, mtp-play .mtp-play-button:disabled { cursor: not-allowed; opacity: 0.5; }
 
-mtp-play { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-mtp-play .mtp-steps {
-  display: inline-flex; overflow: hidden;
-  border: 1px solid var(--border-primary); border-radius: var(--radius-md);
+/* A play: the button, then the bars, one per step, with the step playing under them. The bars
+   sit on a track of their own color, so at rest they read as a tour not yet played rather than as
+   a control turned off. */
+mtp-play {
+  display: flex; align-items: flex-start; gap: 0.75rem; min-width: 16rem;
+  --mtp-bar-track: color-mix(in srgb, var(--text-body) 20%, transparent);
+  --mtp-bar-fill: var(--primary-700);
 }
-mtp-play .mtp-steps button {
-  border: 0; border-left: 1px solid var(--border-primary); border-radius: 0;
-  min-width: 2rem; padding: 0.375rem 0.5rem;
-  color: var(--text-body); font-variant-numeric: tabular-nums;
+mtp-play .mtp-play-button {
+  position: relative; flex: none;
+  display: grid; place-items: center;
+  width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 50%;
+  background: var(--primary-700); color: var(--surface-page);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
 }
-mtp-play .mtp-steps button:first-child { border-left: 0; }
-mtp-play .mtp-steps button.mtp-lit {
-  background: var(--primary-50); color: var(--primary-800);
-  box-shadow: inset 0 0 0 1px var(--primary-700);
+mtp-play .mtp-play-button svg { width: 1rem; height: 1rem; fill: currentColor; }
+mtp-play .mtp-play-button:hover { background: var(--primary-800, var(--primary-700)); }
+mtp-play .mtp-indicator { flex: 1; min-width: 0; display: grid; gap: 0.125rem; }
+/* The bars are thin, but the area that takes a press is 2rem tall, and reaches a little above
+   and below that for a finger. */
+mtp-play .mtp-bars {
+  position: relative; display: flex; align-items: center; gap: 0.25rem;
+  height: 2rem; cursor: pointer; touch-action: none; border-radius: 4px;
+}
+mtp-play .mtp-bars::after { content: ""; position: absolute; inset: -6px 0; }
+mtp-play .mtp-bars[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
+mtp-play .mtp-bar {
+  --u: 0;
+  flex: 1 1 0; min-width: 0.25rem; height: 0.25rem; border-radius: 999px;
+  background: linear-gradient(to right, var(--mtp-bar-fill) calc(var(--u) * 100%),
+    var(--mtp-bar-track) calc(var(--u) * 100%));
+}
+mtp-play .mtp-now {
+  font-size: 0.8125rem; line-height: 1.25; color: var(--text-subtle);
+  font-variant-numeric: tabular-nums; min-height: 1.25em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 mtp-toggle label {
@@ -119,6 +143,6 @@ mtp-canvas .mtp-selected {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  mtp-button button, mtp-play button { transition: none; }
+  mtp-button button, mtp-play .mtp-play-button { transition: none; }
 }
 `;

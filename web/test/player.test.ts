@@ -150,14 +150,35 @@ describe("a player", () => {
     expect(seen.map((x) => Math.round(x * 10) / 10)).toEqual([5, 5]);
   });
 
-  it("plays any one step alone, however its start rounds", () => {
+  it("jumps to any step's start, however its start rounds, with the steps before it done", () => {
     // Seen in examples/times-tables.mtp: the fourth step's span began at 10.600000000000001 and
-    // its move at 10.6, so playing that step alone left its move out.
+    // its move at 10.6.
     const [, p, v] = setup("stops");
-    p.only(3);
-    const span = p.spans[3]!;
-    for (let t = span.start; t <= span.end + 0.01; t += 0.05) p.seek(t);
+    p.seek(p.spans[3]!.start);
+    expect(v("k")).toBeCloseTo(5);
+    p.seek(p.spans[3]!.end);
     expect(v("k")).toBe(9);
+  });
+
+  it("seeks back: what it moves stands as it did then, and plays on from there", () => {
+    const [, p, v] = setup("stops");
+    p.seek(12);
+    p.seek(1);
+    expect(v("k")).toBeCloseTo(0.8);
+    p.seek(3.7 + 1);
+    expect(v("k")).toBeCloseTo(2.5);
+    p.seek(p.duration);
+    expect(v("k")).toBe(9);
+    p.seek(0);
+    expect(v("k")).toBe(0);
+  });
+
+  it("seeks back over moves that start one after another", () => {
+    const [, p, v] = setup("chain");
+    p.seek(2);
+    expect([v("left"), v("right")]).toEqual([5, 5]);
+    p.seek(0.5);
+    expect([v("left"), v("right")]).toEqual([3, 2]);
   });
 
   it("gives a looping body's items as its steps, and the one running in any round", () => {

@@ -74,11 +74,6 @@ describe("controls", () => {
     expect(input.style.getPropertyValue("--u")).toBe("0.3");
   });
 
-  it("puts a play's step buttons in one group", () => {
-    page(`<mtp-play model="m" name="run"></mtp-play>`);
-    expect(document.querySelectorAll("mtp-play .mtp-steps button").length).toBe(2);
-  });
-
   it("adds the controls' stylesheet to the page once", () => {
     define();
     expect(document.querySelectorAll("style#mtp-controls").length).toBe(1);
@@ -93,74 +88,6 @@ describe("controls", () => {
     expect(v("k")).toBeCloseTo(2.5);
     pass(1);
     expect(v("k")).toBe(5);
-  });
-
-  it("play pauses and resumes, and shows a button per step", () => {
-    const [, , v] = page(`<mtp-play model="m" name="run"></mtp-play>`);
-    const buttons = document.querySelectorAll("mtp-play button");
-    expect(buttons.length).toBe(3);
-    const play = buttons[0] as HTMLButtonElement;
-    play.click();
-    expect(play.textContent).toBe("pause");
-    expect(v("run", "playing")).toBe(true);
-    pass(0.5);
-    play.click();
-    const paused = v("k");
-    pass(1);
-    expect(v("k")).toBe(paused);
-    play.click();
-    pass(2);
-    expect(v("k")).toBe(4);
-  });
-
-  it("a step clicked while stopped runs that step alone", () => {
-    const [, rt, v] = page(`<mtp-play model="m" name="run"></mtp-play>`);
-    rt.write(rt.id("k"), null, 9);
-    const second = document.querySelectorAll("mtp-play button")[2] as HTMLButtonElement;
-    second.click();
-    pass(0.1);
-    pass(0.5);
-    // The second step moves k from 9, where it is, to 4; the first step does not run.
-    expect(v("k")).toBeCloseTo(6.5);
-    pass(1);
-    expect(v("k")).toBe(4);
-    expect(v("run", "playing")).toBe(false);
-  });
-
-  it("a step clicked while playing stops the play and animates that step alone", () => {
-    const [, , v] = page(`<mtp-play model="m" name="run"></mtp-play>`);
-    const [play, , second] = document.querySelectorAll("mtp-play button") as NodeListOf<HTMLButtonElement>;
-    play!.click();
-    pass(0.1);
-    pass(0.5);
-    expect(v("k")).toBeCloseTo(1);
-    second!.click();
-    // The tour stops at once; the step animates on its own.
-    expect(v("run", "playing")).toBe(false);
-    expect(play!.textContent).not.toBe("pause");
-    // The clock is already running, so no frame is needed to start it.
-    pass(0.5);
-    // From 1, where k was, towards 4: it does not jump to the second step's start.
-    expect(v("k")).toBeCloseTo(2.5);
-    pass(1);
-    expect(v("k")).toBe(4);
-    pass(2);
-    expect(v("k")).toBe(4);
-    expect(v("run", "playing")).toBe(false);
-    // Its button is lit only while the step runs.
-    expect(document.querySelectorAll("mtp-play button.mtp-lit").length).toBe(0);
-  });
-
-  it("a step clicked cancels any other writer moving what the play moves", () => {
-    const [, , v] = page(`<mtp-button model="m" name="go"></mtp-button><mtp-play model="m" name="run"></mtp-play>`);
-    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
-    pass(0.1);
-    pass(0.5);
-    expect(v("k")).toBeCloseTo(2.5);
-    (document.querySelectorAll("mtp-play button")[2] as HTMLButtonElement).click();
-    pass(0.1);
-    pass(2);
-    expect(v("k")).toBe(4);
   });
 
   it("a control's label follows the expression it is given", () => {
@@ -461,6 +388,149 @@ describe("panning and zooming a canvas", () => {
     pointer("pointerdown", 100, 100, 1, svg("fixed"));
     pointer("pointermove", 164, 132, 1, svg("fixed"));
     expect(box("fixed")).toEqual([-10, -10, 20, 20]);
+  });
+});
+
+describe("a play's bar", () => {
+  // mtp-33xt: an ink play button, then one bar per step, as wide as its duration, filling as it
+  // plays, and the step now playing under the bars.
+  const tour = () => page(`<mtp-play model="m" name="tour"></mtp-play>`, doc("bar"));
+  const button = () => document.querySelector("mtp-play .mtp-play-button") as HTMLButtonElement;
+  const bars = () => [...document.querySelectorAll("mtp-play .mtp-bar")] as HTMLElement[];
+  const fills = () => bars().map((b) => Number(b.style.getPropertyValue("--u")));
+  const line = () => document.querySelector("mtp-play .mtp-now")?.textContent;
+  const track = () => document.querySelector("mtp-play .mtp-bars") as HTMLElement;
+
+  // happy-dom lays nothing out: the first bar takes 100 pixels and the second, three times as
+  // long, 300, after a 4 pixel gap.
+  function lay(): void {
+    const rect = (left: number, width: number) => () => ({ left, width, right: left + width, top: 0, bottom: 4, height: 4, x: left, y: 0, toJSON: () => ({}) }) as DOMRect;
+    const [a, b] = bars();
+    a!.getBoundingClientRect = rect(0, 100);
+    b!.getBoundingClientRect = rect(104, 300);
+    track().getBoundingClientRect = rect(0, 404);
+  }
+
+  function press(type: string, x: number): void {
+    track().dispatchEvent(new PointerEvent(type, { clientX: x, clientY: 2, bubbles: true, pointerId: 1, button: 0 }));
+  }
+
+  it("shows a play button, then one bar per step as wide as its duration", () => {
+    tour();
+    expect(button().getAttribute("aria-label")).toBe("play the tour");
+    expect(bars().map((b) => b.style.flexGrow)).toEqual(["1", "3"]);
+    expect(fills()).toEqual([0, 0]);
+  });
+
+  it("without (buttons true) shows one bar for the whole animation, and no line under it", () => {
+    page(`<mtp-play model="m" name="whole"></mtp-play>`, doc("bar"));
+    expect(bars().length).toBe(1);
+    expect(line() ?? "").toBe("");
+  });
+
+  it("counts the steps at rest, and names the step playing", () => {
+    const [, , v] = tour();
+    expect(line()).toBe("2 steps");
+    button().click();
+    expect(button().getAttribute("aria-label")).toBe("pause");
+    expect(v("tour", "playing")).toBe(true);
+    pass(0.1);
+    pass(0.5);
+    expect(line()).toBe("1 / 2 · Grow");
+    expect(fills()[0]).toBeCloseTo(0.5);
+    expect(fills()[1]).toBe(0);
+    pass(2);
+    expect(line()).toBe("2 / 2");
+    expect(fills()[0]).toBe(1);
+    expect(fills()[1]).toBeCloseTo(0.5);
+    expect(v("tour", "step")).toBe(1);
+    pass(2);
+    expect(fills()).toEqual([1, 1]);
+    expect(v("tour", "playing")).toBe(false);
+    expect(button().getAttribute("aria-label")).toBe("play the tour");
+  });
+
+  it("pauses and resumes", () => {
+    const [, , v] = tour();
+    button().click();
+    pass(0.1);
+    pass(0.5);
+    button().click();
+    const paused = v("k");
+    pass(1);
+    expect(v("k")).toBe(paused);
+    button().click();
+    pass(4);
+    expect(v("k")).toBe(4);
+  });
+
+  it("is a slider to assistive technology, saying the step", () => {
+    tour();
+    expect(track().getAttribute("role")).toBe("slider");
+    expect(track().getAttribute("aria-valuetext")).toBe("2 steps");
+    expect(track().tabIndex).toBe(0);
+  });
+
+  it("jumps to the start of a step tapped, and plays on from there when pressed", () => {
+    const [, , v] = tour();
+    lay();
+    press("pointerdown", 250);
+    press("pointerup", 250);
+    expect(v("k")).toBe(2);
+    expect(line()).toBe("2 / 2");
+    expect(fills()).toEqual([1, 0]);
+    expect(v("tour", "playing")).toBe(false);
+    button().click();
+    pass(0.1);
+    pass(1.5);
+    expect(v("k")).toBeCloseTo(3);
+  });
+
+  it("scrubs the tour as the reader drags along the bars, forward and back", () => {
+    const [, , v] = tour();
+    lay();
+    press("pointerdown", 10);
+    press("pointermove", 50);
+    expect(v("k")).toBeCloseTo(1);
+    press("pointermove", 254);
+    expect(v("k")).toBeCloseTo(3);
+    expect(fills()[1]).toBeCloseTo(0.5);
+    press("pointermove", 50);
+    expect(v("k")).toBeCloseTo(1);
+    press("pointerup", 50);
+    expect(v("k")).toBeCloseTo(1);
+    expect(v("tour", "playing")).toBe(false);
+  });
+
+  it("plays on after a drag that began while it played", () => {
+    const [, , v] = tour();
+    lay();
+    button().click();
+    pass(0.1);
+    pass(0.3);
+    press("pointerdown", 10);
+    press("pointermove", 254);
+    pass(0.5);
+    expect(v("k")).toBeCloseTo(3);
+    press("pointerup", 254);
+    expect(v("tour", "playing")).toBe(true);
+    pass(0.1);
+    const from = v("k") as number;
+    pass(0.6);
+    // The second step moves k by 2 in 3 seconds.
+    expect((v("k") as number) - from).toBeCloseTo(0.4);
+  });
+
+  it("cancels any other writer moving what the play moves", () => {
+    const [, , v] = page(`<mtp-button model="m" name="go"></mtp-button><mtp-play model="m" name="tour"></mtp-play>`, doc("bar"));
+    lay();
+    (document.querySelector("mtp-button button") as HTMLButtonElement).click();
+    pass(0.1);
+    pass(0.5);
+    press("pointerdown", 250);
+    press("pointerup", 250);
+    pass(1);
+    expect(v("k")).toBe(2);
   });
 });
 

@@ -62,6 +62,24 @@ export class Scheduler {
     this.wake();
   }
 
+  /** Holds a player for a source, paused where it stands, writing nothing until it is sought or
+   * resumed: a play the reader scrubs keeps the one player, so what it read stays read. */
+  hold(player: Player, source: object): void {
+    this.forget(source);
+    this.sources.push({ source, player, time: player.time, paused: true });
+  }
+
+  /** Moves a source's player to a time, cancelling every other writer of what it moves. */
+  seek(source: object, time: number): void {
+    const s = this.sources.find((r) => r.source === source);
+    if (!s) return;
+    this.claim(s.player.targets, source);
+    s.time = time;
+    this.heard = false;
+    s.player.seek(time);
+    if (!this.heard) this.redraw();
+  }
+
   /** Cancels every other source that writes any of these ("id:attr"). */
   claim(targets: string[], source: object): void {
     const wanted = new Set(targets.flatMap(covers));

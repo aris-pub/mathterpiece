@@ -242,7 +242,8 @@ The elements also give the page these names, for its scripts and its CSS:
 | `mtp-ready` | an event an `<mtp-model>` sends, and which bubbles, when its .mtpc has loaded or failed to load |
 | `mtp-change` | an event an `<mtp-model>` sends, and which bubbles, whenever a value in its live model changes |
 | `mtp-error` | the class of the `<pre>` that takes the place of a component that cannot be shown, holding the error: the model did not load, or it has no view or control of that name |
-| `mtp-lit` | the class of a play's step button while its item runs |
+| `data-playing` | an attribute an `<mtp-play>` has while its animation runs |
+| `mtp-play-button`, `mtp-bars`, `mtp-bar`, `mtp-now` | the classes of a play's button, of the bar the reader drags along, of each step's bar inside it (its CSS variable `--u`, from 0 to 1, is how far that step has played), and of the line that names the step |
 
 ## Two properties of every expression
 
