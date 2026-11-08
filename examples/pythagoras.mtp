@@ -10,8 +10,8 @@
 (import house paper ink soft red green yellow variable)
 (import math smoothstep)
 
-(color wash (light-dark '#ece6d8' '#3a362f'))
-(color triangle-fill (light-dark '#d8d2c6' '#3d3a34'))
+(color wash (light-dark '#edf0f2' '#2a3740'))
+(color triangle-fill (light-dark '#dae1e5' '#38454f'))
 
 (type square string (one-of 'a' 'b' 'c'))
 ; Which square the pointer is on, in the picture or in the formula: a global, since both read it.
