@@ -520,6 +520,12 @@ class _Compiler:
         self.ranged: dict[tuple, Range] = {}
         # Each rand drawn so far, after foreach and motif instances are expanded.
         self.rand_sites = 0
+        # The groups being compiled, each with whether a member has read it whole (mtp-mnvd).
+        self.open_groups: dict[int, bool] = {}
+        # Where the next object goes while a group is compiled a second time: over its own
+        # object from the first time. None when objects are added at the end.
+        self.cursor: int | None = None
+        self.redo_differs = False
 
     def alias(self, k):
         """The key a name is kept under, as the file being compiled sees it."""
@@ -972,8 +978,21 @@ class _Compiler:
         return e.value
 
     def add(self, obj: Obj) -> int:
-        self.model.objects.append(obj)
-        i = len(self.model.objects) - 1
+        if self.cursor is not None and self.cursor < len(self.model.objects):
+            # The second time a group is compiled: each object takes the place of the same one
+            # from the first time, and holds its members from the start, so that a read of the
+            # group sees every member, those not declared again yet too.
+            i = self.cursor
+            old = self.model.objects[i]
+            if (old.kind, old.name, old.parent) != (obj.kind, obj.name, obj.parent):
+                self.redo_differs = True
+            obj.members = list(old.members)
+            self.model.objects[i] = obj
+        else:
+            self.model.objects.append(obj)
+            i = len(self.model.objects) - 1
+        if self.cursor is not None:
+            self.cursor += 1
         if obj.name is not None and self.bodies:
             body = self.bodies[-1]
             body["names"][obj.name] = i
@@ -982,7 +1001,56 @@ class _Compiler:
         elif obj.name is not None:
             self.model.names[obj.name] = i
         if obj.parent is not None and obj.kind != "variable":
-            self.model.objects[obj.parent].members.append(i)
+            members = self.model.objects[obj.parent].members
+            if i not in members:
+                members.append(i)
+        return i
+
+    def whole(self, i: int) -> list[int]:
+        """The members of a group or the scene, read as a whole: a group being compiled is
+        then compiled again, so that every member is there to be read (mtp-mnvd)."""
+        if i in self.open_groups:
+            self.open_groups[i] = True
+        return self.model.objects[i].members
+
+    def group_whole(self, form: Form, parent, scope: dict, spread, items, pre) -> int:
+        """A group. When a member reads the group whole, as g[j] with j known only while
+        drawing, (map g …), g.r or (count g), the members after it are not declared yet, so the
+        group is compiled a second time with every member from the first time in place."""
+        start = len(self.model.objects) if self.cursor is None else self.cursor
+        names, sites = dict(self.model.names), self.rand_sites
+        functions, undefined = len(self.model.functions), len(self.fold_undefined)
+        folded, ranged = dict(self.folded), dict(self.ranged)
+        self.open_groups[start] = False
+        try:
+            i = self.shape_here(form, parent, scope, spread, items, pre, once=True)
+        finally:
+            read = self.open_groups.pop(start)
+        assert i == start
+        if not read:
+            return i
+        end = len(self.model.objects) if self.cursor is None else self.cursor
+        self.model.names.clear()
+        dict.update(self.model.names, names)
+        self.rand_sites = sites
+        del self.model.functions[functions:]
+        del self.fold_undefined[undefined:]
+        self.folded, self.ranged = folded, ranged
+        outer, differs = self.cursor, self.redo_differs
+        self.cursor, self.redo_differs = start, False
+        try:
+            self.shape_here(form, parent, scope, spread, items, pre, once=True)
+            if self.redo_differs or self.cursor != end:
+                name = self.model.objects[i].name or "this group"
+                raise CompileError(
+                    f"the members of {name} depend on {name} itself: it is read whole, as"
+                    f" (count {name}) or (map {name} …), where its members are declared",
+                    form.pos,
+                )
+        finally:
+            self.redo_differs = differs
+            if outer is None:
+                self.cursor = None
         return i
 
     def type_decl(self, form: Form) -> None:
@@ -1779,7 +1847,7 @@ class _Compiler:
     def items_of(self, e: Expr) -> tuple | None:
         """The shapes a collection may hold, when they are known when compiling."""
         if e.op == "obj" and self.model.objects[e.args[0]].kind in ("group", "scene"):
-            return tuple(self.model.objects[e.args[0]].members)
+            return tuple(self.whole(e.args[0]))
         if e.op == "list":
             parts = [self.objects_in(a) for a in e.args]
             return None if any(p is None for p in parts) else sum(cast("list[tuple]", parts), ())
@@ -4416,13 +4484,17 @@ class _Compiler:
             self.model.objects[i].data["doc"] = doc
         return i
 
-    def shape_here(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
+    def shape_here(
+        self, form: Form, parent, scope: dict, spread=None, items=None, pre=(), once=False
+    ) -> int:
         """A shape declaration. items, when given, replaces the form's own items, each with its
         scope, and pre runs on the new object before its attributes are compiled (a variant
         uses both)."""
         found = self.shape_kind(form)
         assert found is not None
         kind, absent = found
+        if kind == "group" and not once:
+            return self.group_whole(form, parent, scope, spread, items, pre)
         # A member of a container that may not exist may not exist either, and neither may a
         # shape in a copy of a foreach whose count changes while drawing.
         absent = absent or self.may_be_absent(parent) or EXISTS in scope
@@ -5559,9 +5631,9 @@ class _Compiler:
         if obj.kind == "animation" and name in obj.data.get("args", {}):
             return obj.data["args"][name]
         if obj.kind in ("group", "scene") and name == "length":
-            return _known(INT, len(obj.members))
+            return _known(INT, len(self.whole(i)))
         if obj.kind in ("group", "scene") and name == "members":
-            items = tuple(self.read(m, None) for m in obj.members)
+            items = tuple(self.read(m, None) for m in self.whole(i))
             return Expr("list", ListT(self.common(obj.members)), items)
         if self.fixed(i) and name in ("x", "y", "pos"):
             where = Expr("read", POINT, (i, "pos", self.frame), frozenset(self.moves(i)))
@@ -5589,7 +5661,7 @@ class _Compiler:
                 if self.model.objects[m].name == name:
                     return self.read(m, None)
         if obj.kind == "group" or (obj.kind == "instance" and name in GROUP_DEFAULTS):
-            if not obj.members or name not in self.attr_names(i):
+            if not self.whole(i) or name not in self.attr_names(i):
                 raise CompileError(f"every member of {obj.name} must have '{name}'", pos)
             reads = [self.obj_attr(m, name, pos) for m in obj.members]
             t = _join_all([r.type for r in reads], pos)
@@ -5682,6 +5754,8 @@ class _Compiler:
             if not -len(ids) <= k < len(ids):
                 raise CompileError(f"position {k} is out of range", pos)
             return self.read(ids[k], None)
+        # A key known only while drawing may be any member, those declared after this read too.
+        ids = self.whole(i)
         # A key known only while drawing may miss, unless every choice of its type is a name.
         choices = _choices(index.type)
         safe = choices is not None and all(c in names for c in choices)
