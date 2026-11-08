@@ -1,6 +1,7 @@
 ; Two cars race around a closed track. The map shows the whole track, and each player has a
 ; canvas of their own that follows their car, turned so the car always points up. Each player
-; sets their car's speed with a slider. Press race to start.
+; sets their car's speed with a slider, which belongs to their view and their lap count, and
+; the race button belongs to the map. Press race to start.
 ;
 ; The track is one thick curve. Its width is in screen pixels, as every stroke's is, so it is as
 ; wide in the close views as on the map, and the cars are measured in pixels too, so they fit
@@ -76,10 +77,12 @@
 (readout laps-1 $'player 1: lap {(+ 1 (floor (/ run-1 360)))}' doc@'Player 1\'s lap.')
 (readout laps-2 $'player 2: lap {(+ 1 (floor (/ run-2 360)))}' doc@'Player 2\'s lap.')
 
-(slider pedal-1 (move gas-1 (from 0) (to 1)) (label 'player 1') doc@'Player 1\'s speed.')
-(slider pedal-2 (move gas-2 (from 0) (to 1)) (label 'player 2') doc@'Player 2\'s speed.')
+(slider pedal-1 (move gas-1 (from 0) (to 1)) (label 'player 1') (in view-1 laps-1)
+  doc@'Player 1\'s speed.')
+(slider pedal-2 (move gas-2 (from 0) (to 1)) (label 'player 2') (in view-2 laps-2)
+  doc@'Player 2\'s speed.')
 
-(play race (label 'race')
+(play race (label 'race') (in map)
   doc@'Drives both cars, each as fast as its player sets.'
     (animation (loop)
       (at-once (defaults (duration 0.1))
