@@ -7,20 +7,31 @@ import type { Runtime } from "./runtime.ts";
 
 export class Listeners {
   private byShape = new Map<number, Obj[]>();
+  private tied = false;
 
   constructor(
     private rt: Runtime,
     kind: string,
   ) {
     for (const o of rt.objects) {
-      if (o.kind === kind) this.byShape.set(o.shape!, [...(this.byShape.get(o.shape!) ?? []), o]);
+      if (o.kind !== kind) continue;
+      this.byShape.set(o.shape!, [...(this.byShape.get(o.shape!) ?? []), o]);
+      if (o.in) this.tied = true;
     }
   }
 
-  /** The listeners an event on shape hit sets off, from the shape up. */
-  find(hit: number): Obj[] {
-    return bubble(this.rt, hit, (i) => this.byShape.get(i) ?? []);
+  /** The listeners an event on shape hit, in the view given, sets off, from the shape up. */
+  find(hit: number, view?: number): Obj[] {
+    // Drawing asks this of every shape, so a figure that ties no listener to a view filters none.
+    const on = (i: number) => this.byShape.get(i) ?? [];
+    return bubble(this.rt, hit, this.tied ? (i) => on(i).filter((l) => heardIn(l, view)) : on);
   }
+}
+
+/** Whether a listener hears the pointer in a view: in every one, unless it names its own with
+ * (in view…) (mtp-2juu.1). No view given means any. */
+export function heardIn(listener: Obj, view?: number): boolean {
+  return view === undefined || !listener.in || listener.in.includes(view);
 }
 
 /** The listeners of an event on hit, up the scene tree from it, each shape's own given by

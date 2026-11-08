@@ -263,3 +263,41 @@ describe("page scrolling", () => {
     expect(svg.style.touchAction).toBe("none");
   });
 });
+
+describe("listeners tied to a view", () => {
+  // mtp-2juu.1: in-views draws knob and dot in left and right, their listeners tied to left. In
+  // right they take no finger: a swipe on them scrolls the page, and a near miss is a miss.
+  async function both(): Promise<{ rt: Runtime; left: SVGSVGElement; right: SVGSVGElement; v: (n: string, a?: string) => unknown }> {
+    window.scrollTo(0, 0);
+    const style = "display: block; width: 390px";
+    document.body.innerHTML = `<mtp-model id="m"></mtp-model><mtp-canvas model="m" name="left" style="${style}"></mtp-canvas><mtp-canvas model="m" name="right" style="${style}"></mtp-canvas><div style="height: 2000px"></div>`;
+    const model = document.querySelector("mtp-model") as MtpModel;
+    model.doc = doc("in-views");
+    const rt = model.runtime!;
+    const [left, right] = [...document.querySelectorAll("mtp-canvas svg")] as SVGSVGElement[];
+    for (const svg of [left!, right!]) Object.assign(svg.style, { width: "390px", height: "390px" });
+    await frames();
+    return { rt, left: left!, right: right!, v: (n, a) => rt.value(rt.id(n), a ?? null) };
+  }
+
+  it("a finger drags the shape in its view, and scrolls the page from it in the other", async () => {
+    const { left, right, v } = await both();
+    await swipe(client(right, 5, 0), client(right, 5, 6));
+    expect(window.scrollY).toBeGreaterThan(20);
+    expect(v("knob", "y")).toBe(0);
+    window.scrollTo(0, 0);
+    await frames();
+    await swipe(client(left, 5, 0), client(left, 5, 3));
+    expect(window.scrollY).toBe(0);
+    expect(v("knob", "y") as number).toBeGreaterThan(1);
+  });
+
+  it("a press near the shape counts as on it in its view only", async () => {
+    const { left, right, v } = await both();
+    // dot's edge is at x -4: 0.75 units further is about 15 pixels.
+    await tap(client(right, -3.25, 0));
+    expect(v("entered")).toBe(0);
+    await tap(client(left, -3.25, 0));
+    expect(v("entered")).toBe(1);
+  });
+});

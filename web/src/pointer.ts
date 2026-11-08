@@ -5,7 +5,7 @@
 // one under it, so a group is entered from any of its members and left only when the pointer is
 // off all of them.
 import { apply, compose, invert } from "./builtins.ts";
-import { bubble, holds } from "./click.ts";
+import { bubble, heardIn, holds } from "./click.ts";
 import type { Obj } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
 
@@ -23,6 +23,7 @@ export class Pointer {
     private canvas: number,
   ) {
     for (const o of rt.objects) {
+      if (!heardIn(o, canvas)) continue;
       const into = o.kind === "on-enter" ? this.enters : o.kind === "on-leave" ? this.leaves : null;
       if (into) into.set(o.shape!, [...(into.get(o.shape!) ?? []), o]);
       if (o.kind === "on-pointermove" && (o.view === canvas || (o.shape ?? null) !== null)) this.moves.push(o);

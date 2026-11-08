@@ -1,0 +1,19 @@
+; Shapes drawn in two canvases whose listeners are tied to one of them (mtp-2juu.1): in left
+; they drag, click, hover and follow the pointer; in right they do none of that, and a click on
+; dot goes on to its group's listener, which every canvas hears.
+(real clicks 0)
+(real outer 0)
+(real entered 0)
+(point p [0 0])
+(scene s
+  (group g
+    (circle dot (pos [-5 0]) (r 1)))
+  (circle knob (pos [5 0]) (r 1)))
+(canvas left (pan false) (zoom false) s)
+(canvas right (pan false) (zoom false) s)
+(on-click dot (in left) (animation (move clicks (to (+ clicks 1)) (duration 0))))
+(on-click g (animation (move outer (to (+ outer 1)) (duration 0))))
+(on-enter dot (in left) (animation (move entered (to (+ entered 1)) (duration 0))))
+(on-pointermove dot p (in left))
+(on-drag knob knob.pos (in left))
+(button b (in left right) (animation (move clicks (to 0) (duration 0))))

@@ -1005,3 +1005,72 @@ describe("bubbling", () => {
     expect([v("p"), v("q")]).toEqual([[3, 4], [1, 2]]);
   });
 });
+
+describe("listeners tied to a view", () => {
+  // mtp-2juu.1: with (in view…) a listener hears the pointer only in those views, so a shape
+  // drawn in two canvases reacts in the one it is tied to and not in the other.
+  const shape = (rt: Runtime, canvas: string, name: string) =>
+    document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`)!;
+  const at = (el: Element, type: string, x = 0, y = 0, pointerType = "mouse") =>
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType }));
+  const open = () =>
+    page(`<mtp-canvas model="m" name="left"></mtp-canvas><mtp-canvas model="m" name="right"></mtp-canvas>`, doc("in-views"));
+  const drag = (el: Element, dx: number) => {
+    at(el, "pointerdown", 100, 100);
+    at(el, "pointermove", 100 + dx, 100);
+    at(el, "pointerup", 100 + dx, 100);
+  };
+
+  it("drags the shape in its view and not in the other", () => {
+    const [, rt, v] = open();
+    drag(shape(rt, "right", "knob"), 64);
+    expect(v("knob", "x")).toBe(5);
+    drag(shape(rt, "left", "knob"), 64);
+    expect(v("knob", "x") as number).toBeGreaterThan(5);
+  });
+
+  it("clicks in its view, and elsewhere the click goes on to the group's listener", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "right", "dot"), "pointerdown");
+    at(shape(rt, "right", "dot"), "pointerup");
+    pass(0.1);
+    expect([v("clicks"), v("outer")]).toEqual([0, 1]);
+    at(shape(rt, "left", "dot"), "pointerdown");
+    at(shape(rt, "left", "dot"), "pointerup");
+    pass(0.1);
+    expect([v("clicks"), v("outer")]).toEqual([1, 2]);
+  });
+
+  it("enters and follows the pointer in its view only", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "right", "dot"), "pointermove", 3, -1);
+    pass(0.1);
+    expect([v("entered"), v("p")]).toEqual([0, [0, 0]]);
+    at(shape(rt, "left", "dot"), "pointermove", 3, -1);
+    pass(0.1);
+    expect(v("entered")).toBe(1);
+    expect(v("p")).not.toEqual([0, 0]);
+  });
+
+  it("enters on a tap in its view only", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "right", "dot"), "pointerdown", 0, 0, "touch");
+    at(shape(rt, "right", "dot"), "pointerup", 0, 0, "touch");
+    pass(0.1);
+    expect(v("entered")).toBe(0);
+    at(shape(rt, "left", "dot"), "pointerdown", 0, 0, "touch");
+    pass(0.1);
+    expect(v("entered")).toBe(1);
+  });
+
+  it("shows the pointer cursor in its view only", () => {
+    const [, rt] = open();
+    expect((shape(rt, "left", "knob") as SVGElement).style.cursor).toBe("pointer");
+    expect((shape(rt, "right", "knob") as SVGElement).style.cursor).toBe("");
+  });
+
+  it("writes a control's views into the model, which changes nothing on the page", () => {
+    const [, rt] = open();
+    expect(rt.objects[rt.id("b")]!.in).toEqual([rt.id("left"), rt.id("right")]);
+  });
+});

@@ -6,6 +6,7 @@
 // shape's position, in the frame that position lives in (mtp-r6al). The listener's conditions
 // clamp each write.
 import { apply, compose, invert } from "./builtins.ts";
+import { heardIn } from "./click.ts";
 import type { Obj } from "./doc.ts";
 import type { Runtime } from "./runtime.ts";
 
@@ -59,23 +60,25 @@ export class Drags {
     return [`${id}:${attr ?? ""}`];
   }
 
-  draggable(hit: number): boolean {
-    return this.find(hit) !== null;
+  /** Whether a press on shape hit, in the view given, drags anything. */
+  draggable(hit: number, view?: number): boolean {
+    return this.find(hit, view) !== null;
   }
 
-  private find(hit: number): { listener: Obj; shape: number } | null {
+  private find(hit: number, view?: number): { listener: Obj; shape: number } | null {
     for (let i: number | null = hit; i !== null; i = this.rt.parent(i)) {
       const listener = (this.byShape.get(i) ?? []).find(
-        (l) => !l.active || Boolean(this.rt.evaluate(l.active as never)),
+        (l) => heardIn(l, view) && (!l.active || Boolean(this.rt.evaluate(l.active as never))),
       );
       if (listener) return { listener, shape: i };
     }
     return null;
   }
 
-  /** Starts dragging whatever a press on shape hit, at a point in scene coordinates, grabs. */
-  grab(hit: number, scene: Point): boolean {
-    const found = this.find(hit);
+  /** Starts dragging whatever a press on shape hit, at a point in scene coordinates, in the view
+   * given, grabs. */
+  grab(hit: number, scene: Point, view?: number): boolean {
+    const found = this.find(hit, view);
     if (!found) return false;
     const { listener, shape } = found;
     const target = listener.target!;

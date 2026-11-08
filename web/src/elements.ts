@@ -5,7 +5,7 @@ import { CONTROLS_CSS } from "./controls-style.ts";
 import { placeTicks } from "./ticks.ts";
 import { Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
-import { Listeners, holds } from "./click.ts";
+import { Listeners, heardIn, holds } from "./click.ts";
 import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { latexOf, termClass, typeset } from "./math.ts";
@@ -274,7 +274,7 @@ export class MtpCanvas extends MtpPart {
       if (held) event.preventDefault();
     };
     const reaches = (id: number) =>
-      drags.draggable(id) || clicks.find(id).length > 0 || releases.find(id).length > 0 || pointer.hears(id);
+      drags.draggable(id, canvas) || clicks.find(id, canvas).length > 0 || releases.find(id, canvas).length > 0 || pointer.hears(id);
     const mark = () => {
       const want = selection ? `${selection.shape}` : null;
       for (const el of svg.querySelectorAll(".mtp-selected")) {
@@ -295,7 +295,7 @@ export class MtpCanvas extends MtpPart {
       if (rt.clock !== shownAt || made !== madeAt) {
         for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
           const id = Number(el.getAttribute("data-mtp-id"));
-          const cursor = drags.draggable(id) || clicks.find(id).length ? "pointer" : "";
+          const cursor = drags.draggable(id, canvas) || clicks.find(id, canvas).length ? "pointer" : "";
           if (el.style.cursor !== cursor) el.style.cursor = cursor;
         }
       }
@@ -439,7 +439,7 @@ export class MtpCanvas extends MtpPart {
       if (touch && event.isPrimary) {
         press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: toScene(event), moved: false };
       }
-      if (pressed !== null && drags.grab(pressed, toScene(event))) {
+      if (pressed !== null && drags.grab(pressed, toScene(event), canvas)) {
         scheduler.claim(drags.targets, drags);
       } else if (allows("pan") || allows("zoom")) {
         touches.set(event.pointerId, [event.clientX, event.clientY]);
@@ -467,7 +467,7 @@ export class MtpCanvas extends MtpPart {
       if (drags.dragging) {
         // As JS's dragstart, a drag starts at its first move, and its listeners play before the
         // drag writes, so they may reset what the drag then reads (mtp-5opl).
-        if (!drags.moved) play(dragstarts.find(drags.shape!));
+        if (!drags.moved) play(dragstarts.find(drags.shape!, canvas));
         drags.move(toScene(event));
         return;
       }
@@ -503,9 +503,9 @@ export class MtpCanvas extends MtpPart {
         return null;
       }
       deselect();
-      if (!tap || chosen === null || grabbed === chosen.shape || !drags.grab(chosen.hit, chosen.at)) return null;
+      if (!tap || chosen === null || grabbed === chosen.shape || !drags.grab(chosen.hit, chosen.at, canvas)) return null;
       scheduler.claim(drags.targets, drags);
-      play(dragstarts.find(drags.shape!));
+      play(dragstarts.find(drags.shape!, canvas));
       drags.move(toScene(event));
       drags.release();
       return chosen.shape;
@@ -524,10 +524,10 @@ export class MtpCanvas extends MtpPart {
       // whatever the pointer did between.
       const both = pressed !== null && released !== null ? holding(rt, pressed, released) : null;
       play([
-        ...(released !== null ? releases.find(released) : []),
-        ...(ended !== null ? dragends.find(ended) : []),
-        ...(moved !== null ? dragends.find(moved) : []),
-        ...(both !== null ? clicks.find(both) : []),
+        ...(released !== null ? releases.find(released, canvas) : []),
+        ...(ended !== null ? dragends.find(ended, canvas) : []),
+        ...(moved !== null ? dragends.find(moved, canvas) : []),
+        ...(both !== null ? clicks.find(both, canvas) : []),
       ]);
       pressed = null;
       if (press?.id === event.pointerId) press = null;
@@ -667,7 +667,7 @@ export class MtpDisplay extends MtpPart {
     const terms = (formula.members ?? []).map((id) => ({ id, name: rt.objects[id]!.term! }));
     const clicks = model.clicks!;
     const hovers = (kind: string, id: number) =>
-      rt.objects.filter((o) => o.kind === kind && o.shape === id && holds(rt, o.active));
+      rt.objects.filter((o) => o.kind === kind && o.shape === id && heardIn(o, display) && holds(rt, o.active));
     const play = (listeners: Obj[]) => {
       for (const listener of listeners) {
         const player = playerFor(rt, listener);
@@ -701,7 +701,7 @@ export class MtpDisplay extends MtpPart {
         el.setAttribute("data-mtp-id", String(id));
         marked.set(id, { el, box: typeof el.getBBox === "function" ? el.getBBox() : null });
         el.addEventListener("click", (event) => {
-          const listeners = clicks.find(id);
+          const listeners = clicks.find(id, display);
           play(listeners);
           // An enclosing term hears the click too, unless this one stops it.
           if (listeners.some((l) => holds(rt, l["stop-propagation"], false))) event.stopPropagation();
@@ -718,7 +718,7 @@ export class MtpDisplay extends MtpPart {
         if (fill === null || fill === undefined) el.style.removeProperty("color");
         else el.style.color = String(fill);
         el.style.opacity = String(rt.value(id, "opacity"));
-        el.style.cursor = clicks.find(id).length ? "pointer" : "";
+        el.style.cursor = clicks.find(id, display).length ? "pointer" : "";
         let rect = el.querySelector(":scope > rect.mtp-term-box");
         if (!rect) {
           rect = document.createElementNS(SVG_NS, "rect");
