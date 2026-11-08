@@ -7,11 +7,7 @@
 
 (import ease linear)
 
-(color paper (light-dark '#f7f4ee' '#272522'))
-(color ink (light-dark '#23303f' '#e8e4d8'))
-(color soft (light-dark '#9aa3ad' '#8f97a8'))
-(color warm (light-dark '#d1603d' '#e98462'))
-(color cool (light-dark '#2f7f86' '#4fb3ba'))
+(import house paper ink soft red green)
 (font small (size 13))
 (font mono (family 'ui-monospace, monospace') (size 13))
 
@@ -33,7 +29,7 @@
 
   ; How a stroke ends: a thick line, with thin ones where it ends and along its middle.
   (group ends-panel (translate (cell 0 0))
-    (line thick (from [(- half) 0]) (to [half 0]) (stroke warm) (stroke-width width)
+    (line thick (from [(- half) 0]) (to [half 0]) (stroke red) (stroke-width width)
         (line-cap ends))
     (group guides (defaults (stroke ink) (stroke-width 1))
       (line_ (from (+ (left thick) [0 -0.8])) (to (+ (left thick) [0 0.8])))
@@ -42,7 +38,7 @@
 
   ; How it turns a corner: a sharp triangle's outline, with a thin one along its middle.
   (group corners-panel (translate (cell 1 0))
-    (triangle outline (a [-2.6 -1]) (b [2.6 -1]) (c [-0.8 1]) (fill none) (stroke cool)
+    (triangle outline (a [-2.6 -1]) (b [2.6 -1]) (c [-0.8 1]) (fill none) (stroke green)
         (stroke-width width) (line-join corners))
     (triangle_ (like outline) (stroke ink) (stroke-width 1)))
 
@@ -52,8 +48,8 @@
 
   ; Marching dashes: the animation moves the ring's dash-offset by two patterns.
   (group march-panel (translate (cell 1 1))
-    (circle dot (r 0.5) (fill warm) (stroke none))
-    (circle ring (r 1.4) (fill none) (stroke cool) (stroke-width 3) (dash [9 6])
+    (circle dot (r 0.5) (fill red) (stroke none))
+    (circle ring (r 1.4) (fill none) (stroke green) (stroke-width 3) (dash [9 6])
         (line-cap 'round')))
 
   ; Each caption sits the same way under its panel's center, so the two in a row line up.

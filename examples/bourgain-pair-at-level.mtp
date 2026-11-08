@@ -1,4 +1,4 @@
-; A pair x, y at level 2 among eight points, drawn to scale: x's half in teal, y's in coral, and
+; A pair x, y at level 2 among eight points, drawn to scale: x's half in green, y's in red, and
 ; the points of a random set A ringed. Click a term of the equation above the tree, the factor
 ; (1 − 1/b)², either ≤, or the term 1/b², to highlight the part of the tree it explains; click it
 ; again to clear it. A box shows behind the colored terms while the pointer is on them.
@@ -6,12 +6,9 @@
 ; canvas fades it in and out.
 ; Coordinates are the original SVG's, with y pointing down, negated.
 
-(color fg (light-dark '#2a2724' '#e6e1d6'))
-(color muted (light-dark '#8a8478' '#a39d90'))
-(color teal (light-dark '#1a6f66' '#4cb8aa'))
-(color coral (light-dark '#a65a3a' '#e08a66'))
-(color accent (light-dark '#4a6584' '#7f9cc0'))
-(color wash (light-dark '#ece6d8' '#3a362f'))
+(import house ink soft red green blue)
+; Behind a term under the pointer: BRAIID's gray-100.
+(color wash (light-dark '#edf0f2' '#2a3740'))
 (font tick (size 13))
 (font name (style 'italic') (size 15))
 
@@ -41,17 +38,17 @@
 
 (motif outside ()
   doc@'The tree outside x\'s and y\'s cluster, which fades while a piece is picked.'
-  (group_ (defaults (stroke fg) (stroke-width 1.5))
+  (group_ (defaults (stroke ink) (stroke-width 1.5))
     (bracket_ (left (px 4)) (right (px 5)) (from top) (to level1))
     (bracket_ (left (px 6)) (right (px 7)) (from top) (to level1))
     (bracket_ (left mid[2]) (right mid[3]) (from level1) (to level2))
     (bracket_ (left half[0]) (right half[1]) (from level2) (to level3)))
-  (group_ (defaults (fill fg))
+  (group_ (defaults (fill ink))
     (foreach i 4
       (circle_ (pos [(px (+ i 4)) top]) (r 5)))))
 
 (scene tree
-  (group axes (defaults (stroke muted) (stroke-width 1) (fill muted) (halign 'end') (font tick))
+  (group axes (defaults (stroke soft) (stroke-width 1) (fill soft) (halign 'end') (font tick))
     (line_ (from [axis top]) (to [axis level3]))
     (foreach depth [level1 level2 level3]
       (line_ (from [(- axis 4) depth]) (to [axis depth])))
@@ -60,29 +57,29 @@
     (text_ 'b²' (pos [(- axis 7) (- level2 4)]))
     (text_ 'b³' (pos [(- axis 7) (- level3 4)])))
 
-  ; x's half in teal and y's in coral, joined where x meets y, at depth b².
+  ; x's half in green and y's in red, joined where x meets y, at depth b².
   (group cluster (defaults (stroke-width 2.5))
-    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (defaults (stroke teal)))
-    (line_ (from [mid[0] level1]) (to [mid[0] level2]) (stroke teal))
-    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (defaults (stroke coral)))
-    (line_ (from [mid[1] level1]) (to [mid[1] level2]) (stroke coral))
-    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke fg))
+    (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1) (defaults (stroke green)))
+    (line_ (from [mid[0] level1]) (to [mid[0] level2]) (stroke green))
+    (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1) (defaults (stroke red)))
+    (line_ (from [mid[1] level1]) (to [mid[1] level2]) (stroke red))
+    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke ink))
     (foreach i 4
-      (circle_ (pos [(px i) top]) (r 5) (fill (if (< i 2) teal coral)))))
+      (circle_ (pos [(px i) top]) (r 5) (fill (if (< i 2) green red)))))
 
   (outside whole)
   (outside faint (defaults (opacity 0.2)))
 
   ; The points of A: x's first neighbour, and a point outside the cluster or, for the pieces where
   ; A meets both halves, one in y's half.
-  (group rings (defaults (fill none) (stroke accent) (stroke-width 2))
+  (group rings (defaults (fill none) (stroke blue) (stroke-width 2))
     (circle_ (pos [(px 0) top]) (r 10)))
-  (group ring-outside (defaults (fill none) (stroke accent) (stroke-width 2))
+  (group ring-outside (defaults (fill none) (stroke blue) (stroke-width 2))
     (circle_ (pos [(px 6) top]) (r 10)))
-  (group ring-in-y (defaults (fill none) (stroke accent) (stroke-width 2))
+  (group ring-in-y (defaults (fill none) (stroke blue) (stroke-width 2))
     (circle_ (pos [(px 2) top]) (r 10)))
 
-  (group names (defaults (fill fg) (halign 'middle') (font name))
+  (group names (defaults (fill ink) (halign 'middle') (font name))
     (text_ 'x' (pos [(px 1) (+ top 14)]))
     (text_ 'y' (pos [(px 2) (+ top 14)])))
 
@@ -90,24 +87,24 @@
   ; x's half.
   (group gap-highlight
     (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1)
-              (defaults (stroke teal) (stroke-width 3.5)))
-    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke teal) (stroke-width 3.5))
-    (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke muted) (stroke-width 5))
-    (line_ (from [(+ axis 6) level1]) (to [(+ axis 6) level2]) (stroke teal) (stroke-width 5))
-    (line_ (from [axis level1]) (to [(px 0) level1]) (stroke accent) (stroke-width 1)))
+              (defaults (stroke green) (stroke-width 3.5)))
+    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke green) (stroke-width 3.5))
+    (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke soft) (stroke-width 5))
+    (line_ (from [(+ axis 6) level1]) (to [(+ axis 6) level2]) (stroke green) (stroke-width 5))
+    (line_ (from [axis level1]) (to [(px 0) level1]) (stroke blue) (stroke-width 1)))
 
   ; Where A meets both halves, both distances are at most the inner depth b: the term 1/b², and
   ; the second inequality, which also counts the gap across x and y's join.
   (group both-highlight
     (bracket_ (left (px 0)) (right (px 1)) (from top) (to level1)
-              (defaults (stroke coral) (stroke-width 3.5)))
+              (defaults (stroke red) (stroke-width 3.5)))
     (bracket_ (left (px 2)) (right (px 3)) (from top) (to level1)
-              (defaults (stroke coral) (stroke-width 3.5)))
-    (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke coral) (stroke-width 5))
-    (line_ (from [(+ axis 13) top]) (to [(+ axis 13) level2]) (stroke fg) (stroke-width 5))
-    (line_ (from [axis level1]) (to [(px 0) level1]) (stroke accent) (stroke-width 1)))
+              (defaults (stroke red) (stroke-width 3.5)))
+    (line_ (from [(+ axis 6) top]) (to [(+ axis 6) level1]) (stroke red) (stroke-width 5))
+    (line_ (from [(+ axis 13) top]) (to [(+ axis 13) level2]) (stroke ink) (stroke-width 5))
+    (line_ (from [axis level1]) (to [(px 0) level1]) (stroke blue) (stroke-width 1)))
   (group join-highlight
-    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke fg) (stroke-width 3.5))))
+    (line_ (from [mid[0] level2]) (to [mid[1] level2]) (stroke ink) (stroke-width 3.5))))
 
 (canvas view (x 0) (y -182) (width 300) (height 162) (pan false) (zoom false) (toggle-duration 0.25)
   doc@'The tree, the points, and the highlight of the piece picked.'
@@ -133,10 +130,10 @@
   tex'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
       \mathrel{\term{lo}{\le}} \frac{\mathbb E\,\big(d(x,A)-d(y,A)\big)^2}{d(x,y)^2}
       \mathrel{\term{hi}{\le}} P_h(p) + \term{b2}{\frac1{b^2}}'
-  (term gap (fill teal) (opacity (lit shown 'gap')))
+  (term gap (fill green) (opacity (lit shown 'gap')))
   (term lo (opacity (lit shown 'gap')))
   (term hi (opacity (lit shown 'hi')))
-  (term b2 (fill coral) (opacity (lit shown 'b2'))))
+  (term b2 (fill red) (opacity (lit shown 'b2'))))
 
 (display eq bounds doc@'Equation (4.1), whose terms pick what the tree highlights.')
 

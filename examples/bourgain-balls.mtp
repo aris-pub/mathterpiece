@@ -12,17 +12,17 @@
 (import ease linear)
 (import rand)
 
-(color fg (light-dark '#1f2328' '#e6e1d6'))
-(color muted (light-dark '#6b7280' '#9aa1ad'))
-(color bg (light-dark '#faf7f0' '#272522'))
-(color env (light-dark '#f2ede2' '#34312c'))
-(color x-color (light-dark '#1a6f66' '#4cb8aa'))
-(color y-color (light-dark '#a65a3a' '#e08a66'))
-(color s1 (light-dark '#4a6584' '#7f9cc0'))
-(color s2 (light-dark '#a07a2c' '#d0a85a'))
-(color s3 (light-dark '#7e5a86' '#b391bb'))
-(color s4 (light-dark '#6f7f45' '#a3b474'))
-(color s5 (light-dark '#7f8da0' '#a9b5c6'))
+(import house paper ink soft red green)
+
+; The bar's track, and its segments, one per j: BRAIID's gray-100, and shade 700 of its blue,
+; yellow, purple, pink and gray, with the light value of shade 300 in dark (as house.mtp pairs
+; shade 600 with 400), so the segment names in paper read on them.
+(color env (light-dark '#edf0f2' '#2a3740'))
+(color s1 (light-dark '#0361a1' '#7dcdfc'))
+(color s2 (light-dark '#b85c01' '#ffe446'))
+(color s3 (light-dark '#7629c7' '#d5b7fb'))
+(color s4 (light-dark '#be185d' '#f9a8d4'))
+(color s5 (light-dark '#5f7186' '#c2ccd3'))
 (font label (style 'italic') (size 17))
 (font tick-label (size 13))
 (font segment (size 12))
@@ -64,15 +64,15 @@
   (real bar-width 520 (const))
   (real bar-y -338 (const))
 
-  (circle x (pos x-at) (r 6.5) (fill x-color))
-  (circle y (pos y-at) (r 6.5) (fill y-color))
+  (circle x (pos x-at) (r 6.5) (fill green))
+  (circle y (pos y-at) (r 6.5) (fill red))
 
   ; A point in x's ball takes x's color, else one in y's ball takes y's.
   (group space
     (foreach spot spots
       (let ((in-x (in-ball x.pos r spot.pos)) (in-y (in-ball y.pos r spot.pos)))
         (circle_ (pos spot.pos) (r 4.5)
-            (fill (cond (in-x x-color) (in-y y-color) (else fg)))
+            (fill (cond (in-x green) (in-y red) (else ink)))
             (opacity (if (or in-x in-y) 1 0.45))))))
 
   (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
@@ -88,7 +88,7 @@
   (real at (or? (/ bar-width h) 0))
 
   ; Faint rings at ρ₁ to ρₖ around both points; the rest do not exist.
-  (group rings (defaults (fill none) (stroke muted) (opacity 0.3))
+  (group rings (defaults (fill none) (stroke soft) (opacity 0.3))
     (foreach j 5
       (circle|none #'x-ring-{j}' (pos x.pos) (r rho[j]))
       (circle|none #'y-ring-{j}' (pos y.pos) (r rho[j]))
@@ -96,15 +96,15 @@
       (exists-when #'y-ring-{j}' (< j k))))
 
   (group pair
-    (line_ (from x.pos) (to y.pos) (stroke muted) (stroke-width 1) (opacity 0.6))
+    (line_ (from x.pos) (to y.pos) (stroke soft) (stroke-width 1) (opacity 0.6))
     ; The balls, which do not exist at radius 0.
-    (circle|none x-ball (pos x.pos) (r r) (fill x-color) (fill-opacity 0.1) (stroke x-color)
+    (circle|none x-ball (pos x.pos) (r r) (fill green) (fill-opacity 0.1) (stroke green)
         (stroke-width 1.5))
-    (circle|none y-ball (pos y.pos) (r r) (fill y-color) (fill-opacity 0.1) (stroke y-color)
+    (circle|none y-ball (pos y.pos) (r r) (fill red) (fill-opacity 0.1) (stroke red)
         (stroke-width 1.5))
     (exists-when x-ball (> r 0))
     (exists-when y-ball (> r 0))
-    (group names (defaults (fill fg) (font label))
+    (group names (defaults (fill ink) (font label))
       (text_ 'x' (pos (top-right x 2.5)))
       (text_ 'y' (pos (top-right y 2.5)))))
 
@@ -124,10 +124,10 @@
         ; A segment's name, only once it is full and wide enough to hold it.
         (text|none #'segment-{j}' $'j = {(+ j 1)}'
             (pos [(+ bar-left (* at (/ (+ edges[j] filled) 2))) (- bar-y 4.5)])
-            (halign 'middle') (font segment) (fill bg))
+            (halign 'middle') (font segment) (fill paper))
         (exists-when #'segment-{j}' (and (>= r (- rho[j] 1e-9)) (> width 26)))))
     ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
-    (group ticks (defaults (stroke fg) (stroke-width 1.2) (fill fg))
+    (group ticks (defaults (stroke ink) (stroke-width 1.2) (fill ink))
       (foreach j 6
         (line|none #'tick-{j}' (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
             (to [(+ bar-left (* at edges[j])) (- bar-y 9)]))

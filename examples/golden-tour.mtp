@@ -7,7 +7,7 @@
 
 (color night '#0b1026')
 (color gold '#f6c453')
-(color chalk '#e8e4d8')
+(color chalk '#e8edf0')
 (font heading (weight 600) (size 19))
 (font small (size 14))
 (real golden-angle (* 180 (- 3 (sqrt 5))) (const))

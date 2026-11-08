@@ -6,11 +6,8 @@
 
 (import ease cubic-in-out)
 
-(color paper (light-dark '#f7f3ea' '#272522'))
-(color ink (light-dark '#1f2a44' '#e8e4d8'))
-(color accent (light-dark '#e76f51' '#f08a6c'))
-; Point names are math variables, so they are italic.
-(font variable (style 'italic') (size 19))
+; Point names are math variables, in the house's italic.
+(import house paper ink red variable)
 (font big (size 22))
 (font small (size 16))
 
@@ -25,7 +22,7 @@
 
 (scene plane (background paper)
   (group points (defaults (fill ink))
-    (circle c (pos [0 0]) (r 0.1) (fill accent))
+    (circle c (pos [0 0]) (r 0.1) (fill red))
     (circle u (pos (polar 1 90)) (r 0.1))
     (circle v (pos (polar 1 210)) (r 0.1))
     (circle w (pos (polar 1 330)) (r 0.1)))

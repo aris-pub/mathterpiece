@@ -5,23 +5,14 @@
 
 (import ease cubic-in-out)
 (import marks)
-
-(color paper (light-dark '#fbf8f1' '#272522'))
-(color ink (light-dark '#1f2a44' '#e8e4d8'))
-(color accent (light-dark '#e76f51' '#f08a6c'))
-(color cool (light-dark '#2a9d8f' '#4cc2b3'))
-(color warm (light-dark '#e9c46a' '#f2d27e'))
-(color deep (light-dark '#6d597a' '#a88bb8'))
+; Math variables (variable) and the numbers that change (number) take the house fonts.
+(import house paper ink red green yellow blue variable number)
 
 ; Font sizes and stroke widths are in screen pixels.
 ; Headings: the page's font, heavier.
 (font heading (weight 600) (size 24))
-; Math variables are italic, in a serif, as in typeset math.
-(font variable (family 'Georgia, serif') (style 'italic') (size 21))
-; Names of functions, upright as in typeset math.
-(font small (family 'Georgia, serif') (size 16))
-; Numbers that change, in a monospace font, so the digits do not jump around as they change.
-(font number (family 'ui-monospace, Menlo, monospace') (size 16))
+; Names of functions, upright as in typeset math, in the page's font.
+(font small (size 16))
 
 ; Where line k of the readings on the left sits: the angle is line 0, and the six functions
 ; follow it down, one line apiece.
@@ -58,7 +49,7 @@
     (text angle $'θ = {theta:5.1f}°' (pos (line-at 0)) (font number)))
 
   ; The names sit beside their lines, centered on the spot given.
-  (group cosine (defaults (stroke accent) (fill accent))
+  (group cosine (defaults (stroke red) (fill red))
     (line across (from [0 0]) (to [handle.x 0]) (stroke-width 4))
     (text_ 'cos' (pos (+ across.pos [0 (* -0.1 above)])) (halign 'middle') (valign 'middle')
         (font small))
@@ -66,7 +57,7 @@
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
   ; triangle is too thin for it.
-  (group sine (defaults (stroke cool) (fill cool))
+  (group sine (defaults (stroke green) (fill green))
     (line up (from [handle.x 0]) (to handle.pos) (stroke-width 4))
     (text_ 'sin'
         (pos (+ up.pos [(* 0.12 right (if (< (abs handle.x) 0.45) 1 -1)) 0]))
@@ -81,7 +72,7 @@
   ; long, and along the x axis from the center, sec theta. The tangent is at right angles to the
   ; radius, so its name moves out along the radius to clear the line, and it stays near the
   ; point, since the segment's far end may be off the canvas.
-  (group tangent (defaults (stroke deep) (fill deep))
+  (group tangent (defaults (stroke blue) (fill blue))
     ; The tangent line itself, at right angles to the radius: it exists at every angle, even
     ; where the segment does not.
     (line along (from (+ handle.pos (* 3 (polar 1 (+ theta 90)))))
@@ -96,7 +87,7 @@
 
   ; sec runs along the x axis past cos, so its name goes on the part of the line beyond cos,
   ; kept on the canvas.
-  (group secant (defaults (stroke deep) (fill deep))
+  (group secant (defaults (stroke blue) (fill blue))
     (line|none sec (from [0 0]) (to [sec-x 0]) (stroke-width 2))
     (text|none_ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ handle.x sec-x) 2))) (* -0.1 above)])
         (halign 'middle') (valign 'middle') (font small))
@@ -107,7 +98,7 @@
   (real|none csc-y (cscd theta))
 
   ; From the point to the y axis is cot theta long, and along the y axis, csc theta.
-  (group cotangent (defaults (stroke warm) (fill warm))
+  (group cotangent (defaults (stroke yellow) (fill yellow))
     (line|none cot (from handle.pos) (to [0 csc-y]) (stroke-width 4))
     (text|none_ 'cot'
         (pos (+ (lerp handle.pos [0 csc-y] (min 0.5 (/ 0.3 (dist handle.pos [0 csc-y]))))
@@ -116,7 +107,7 @@
     (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
         (pos (line-at 5)) (font number)))
 
-  (group cosecant (defaults (stroke warm) (fill warm))
+  (group cosecant (defaults (stroke yellow) (fill yellow))
     (line|none csc (from [0 0]) (to [0 csc-y]) (stroke-width 2))
     (text|none_ 'csc' (pos [(* -0.12 right) (max -1.1 (min 1.1 (/ csc-y 2)))])
         (halign 'middle') (valign 'middle') (font small))

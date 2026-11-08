@@ -23,9 +23,11 @@
      [[1 0] [0 1] [1 1] [2 1] [1 2]]
      [[0 0] [1 0] [2 0] [3 0] [1 1]]]
     (const))
+; The pieces' colors are BRAIID's: twelve shades of its hues and gray, chosen to be easy to tell
+; apart. The darkest blue would sink into a dark board, so on a dark page it is a light one.
 (list[color] paints
-    ['#e63946' '#f4a261' '#e9c46a' '#8ab17d' '#2a9d8f' '#457b9d' '#6d597a' '#b5838d' '#f28482'
-     '#84a59d' (light-dark '#264653' '#3f6f80') '#9c6644']
+    ['#db2728' '#f5862b' '#ffd31b' '#37cab6' '#157067' '#0e9ae9' '#7629c7' '#bb89f7' '#f472b6'
+     '#8b9fad' (light-dark '#0c456e' '#7dcdfc') '#973a15']
     (const))
 ; Where each piece waits below the board before it is placed.
 (list[point] trays

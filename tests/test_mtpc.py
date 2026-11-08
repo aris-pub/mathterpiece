@@ -60,6 +60,10 @@ def test_the_examples_that_use_the_house_style_import_it():
             "arcs",
             "arrowheads",
             "ball-puzzle",
+            "bourgain-balls",
+            "bourgain-best-embedding",
+            "bourgain-densities",
+            "bourgain-pair-at-level",
             "bezier-curves",
             "bubbles",
             "colormaps",
@@ -69,6 +73,7 @@ def test_the_examples_that_use_the_house_style_import_it():
             "inversion",
             "koch-snowflake",
             "lens",
+            "line-styles",
             "lissajous",
             "pins",
             "placement",
@@ -82,6 +87,7 @@ def test_the_examples_that_use_the_house_style_import_it():
             "triangle-lines",
             "two-canvases",
             "ulam-spiral",
+            "unit-circle",
         ]
     )
 

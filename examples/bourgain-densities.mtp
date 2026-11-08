@@ -8,13 +8,13 @@
 ; them. Press play for a tour in three steps.
 ; Coordinates are the original SVG's at a width of 480, with y pointing up.
 
-(color fg (light-dark '#1f2328' '#e6e1d6'))
-(color muted (light-dark '#6b7280' '#9aa1ad'))
-(color bg (light-dark '#faf7f0' '#272522'))
-(color rule (light-dark '#d8d3c4' '#4a463e'))
-(color grid (light-dark '#e8e5dc' '#36332d'))
-(color one (light-dark '#7f8da0' '#a9b5c6'))
-(color every (light-dark '#1a6f66' '#4cb8aa'))
+(import house paper ink soft green)
+
+; BRAIID's grays: the tracks under the charts are gray-300, the grid lines gray-100, and one
+; density gray-700 (gray-500's light value in dark, as bright as the green beside it).
+(color rule (light-dark '#c2ccd3' '#475662'))
+(color grid (light-dark '#edf0f2' '#2a3740'))
+(color one (light-dark '#5f7186' '#a9b7c1'))
 (font plain (size 13))
 (font tick (size 12))
 (font strong (size 13) (weight 600))
@@ -95,9 +95,9 @@
 (func cy (real v) (+ -114 (* (max 0 (min 1 (/ (log (max v 1) 10) 3))) 106)))
 
 ; Its tip is where a guide line ends.
-(motif handle ((color edge (light-dark '#7f8da0' '#a9b5c6')) (real weight 1.5 (>= 0)))
+(motif handle ((color edge (light-dark '#5f7186' '#a9b7c1')) (real weight 1.5 (>= 0)))
   doc@'A pill with three grip lines, with its tip at the middle of its top edge.'
-  (rect body (width 22) (height 12) (rx 6) (ry 6) (fill bg) (stroke edge) (stroke-width weight))
+  (rect body (width 22) (height 12) (rx 6) (ry 6) (fill paper) (stroke edge) (stroke-width weight))
   (circle tip (pos [0 6]) (r 0) (fill none) (stroke none))
   (group grip (defaults (stroke edge) (stroke-width 1))
     (line_ (from [-3 -3]) (to [-3 3]))
@@ -137,22 +137,22 @@
       (line_ (from [54 -134]) (to [466 -134]))
       (line_ (from [54 -71]) (to [466 -71]))
       (line_ (from [54 -8]) (to [466 -8])))
-    (group values (defaults (fill muted) (halign 'end') (font plain))
+    (group values (defaults (fill soft) (halign 'end') (font plain))
       (text_ '0' (pos [48 -138]))
       (text_ '0.5' (pos [48 -75]))
       (text_ '1' (pos [48 -12])))
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
-        (stroke muted) (stroke-width 1) (stroke-opacity 0.8) (dash [4 3]))
+        (stroke soft) (stroke-width 1) (stroke-opacity 0.8) (dash [4 3]))
     ; Level i + 1.
     ; The bars stand on the axis, 41.2 apart. A bar too short to see is transparent: in a row,
     ; one that did not exist would let the bars after it slide out of their levels.
-    (row bars (defaults (fill (if all every one))) (translate [74.6 -134]) (gap 14.832)
+    (row bars (defaults (fill (if all green one))) (translate [74.6 -134]) (gap 14.832)
         (align 'bottom')
       (foreach i 10
         (let ((height (max 0.5 (* 126 shown[i]))))
           (rect_ (pos [0 (/ height 2)]) (width 26.368) (height height) (rx 2) (ry 2)
               (opacity (if (< shown[i] 0.002) 0 1))))))
-    (group level-names (defaults (fill muted))
+    (group level-names (defaults (fill soft))
       (foreach i 10
         (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
             (opacity
@@ -160,20 +160,20 @@
                    ((< i (min L Lp)) 1)
                    ((< i L) g)
                    (else (- 1 g)))))))
-    (line_ (from [54 -134]) (to [466 -134]) (stroke muted) (stroke-width 1))
+    (line_ (from [54 -134]) (to [466 -134]) (stroke soft) (stroke-width 1))
     (line_ (from [54 -168]) (to [466 -168]) (stroke rule) (stroke-width 3) (line-cap 'round'))
-    (text_ 'level' (pos [260 -194]) (fill fg))
-    (text_ 'relative stretch' (fill fg)
+    (text_ 'level' (pos [260 -194]) (fill ink))
+    (text_ 'relative stretch' (fill ink)
         (transform (transform (rotate 90) (translate 13 -71)))))
 
   ; The end of the hierarchy, and its handle, with a dashed guide down to it.
   (handle n-handle (x (+ 54 (* lv 41.2))) (y -168)
-          (edge (if n-on (if all every one) muted)) (weight (if n-on 1.5 1)))
+          (edge (if n-on (if all green one) soft)) (weight (if n-on 1.5 1)))
   (line n-guide (from [(+ 54 (* lv 41.2)) -8]) (to n-handle.tip.pos)
-      (stroke (if n-on (if all every one) muted)) (stroke-width 1)
+      (stroke (if n-on (if all green one) soft)) (stroke-width 1)
       (stroke-opacity (if n-on 0.7 0.45)) (dash [4 3]))
   ; What the reader grabs: an area wider than the handle, as wide as a level.
-  (rect n-grab (pos [(+ 54 (* L 41.2)) -168]) (width 41.2) (height 24) (fill bg)
+  (rect n-grab (pos [(+ 54 (* L 41.2)) -168]) (width 41.2) (height 24) (fill paper)
       (opacity 0))
 
   (real d-all (+ (* (spread-all Lp) (- 1 g)) (* (spread-all L) g)))
@@ -186,27 +186,27 @@
     (group curve-grid (defaults (stroke grid) (stroke-width 1))
       (foreach k 6
         (line_ (from [54 (cy ticks[k])]) (to [466 (cy ticks[k])]))))
-    (group curve-values (defaults (fill muted))
+    (group curve-values (defaults (fill soft))
       (foreach k 6
         (text_ tick-names[k] (pos [48 (- (cy ticks[k]) 4)])
             (halign 'end') (font plain))))
     ; A label every density up to 2^-L, every other one past 6 levels.
-    (group densities (defaults (fill muted))
+    (group densities (defaults (fill soft))
       (foreach k 10
         (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
           (text|none #'density-{k}' $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
               (font tick))
           (exists-when #'density-{k}'
             (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467))))))
-    (line_ (from [54 -8]) (to [54 -130]) (stroke muted) (stroke-width 1))
-    (line_ (from [54 -130]) (to [466 -130]) (stroke muted) (stroke-width 1))
+    (line_ (from [54 -8]) (to [54 -130]) (stroke soft) (stroke-width 1))
+    (line_ (from [54 -130]) (to [466 -130]) (stroke soft) (stroke-width 1))
     ; One text in the original, with p in italics; mtp gives a text one font, so three texts
     ; placed by hand, since a text's width cannot be measured.
-    (text_ 'density' (pos [(if all 266 238) -192]) (halign 'end') (font plain) (fill fg))
-    (text_ 'p' (pos [(if all 270 242) -192]) (font var) (fill fg))
-    (text|none equals-p $' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill fg))
+    (text_ 'density' (pos [(if all 266 238) -192]) (halign 'end') (font plain) (fill ink))
+    (text_ 'p' (pos [(if all 270 242) -192]) (font var) (fill ink))
+    (text|none equals-p $' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill ink))
     (exists-when equals-p (not all))
-    (text_ 'distortion' (halign 'middle') (font plain) (fill fg)
+    (text_ 'distortion' (halign 'middle') (font plain) (fill ink)
         (transform (transform (rotate 90) (translate 13 -69))))
     ; The curve fades with all densities, and is cut off at the chart's right edge, as in the
     ; original.
@@ -214,13 +214,13 @@
         (clip (rect_ (pos [260.5 -69]) (width 413) (height 150)))
       ; Sample k across the chart, at its distortion's height.
       (polyline_ (points (map samples (fn k [(+ 54 (* (/ (* L (/ k 200)) lv) 412)) (cy ds[k])])))))
-    (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke every)
+    (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke green)
         (stroke-width (if all 3.5 2.4)))
     ; The line's name, set bold with all densities.
     (text|none all-plain $'all densities: {(fmt d-all)}, for every p'
-        (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font plain) (fill every))
+        (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font plain) (fill green))
     (text|none all-strong $'all densities: {(fmt d-all)}, for every p'
-        (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font strong) (fill every))
+        (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font strong) (fill green))
     (exists-when all-plain (not all))
     (exists-when all-strong all)
     (text|none best-label $'best: {(fmt best-now[0])}'
@@ -233,9 +233,9 @@
   ; gives way to the best one's name near it. With all densities, only the handle is left, grey.
   (real mx (+ 54 (* (/ (- te 0.5) lv) 412)))
   (handle t-handle (x mx) (y -166)
-          (edge (if (and t-on (not all)) one muted)) (weight (if (and t-on (not all)) 1.5 1)))
+          (edge (if (and t-on (not all)) one soft)) (weight (if (and t-on (not all)) 1.5 1)))
   (group|none marker
-    (line_ (from [mx (- (cy d-now) 7)]) (to t-handle.tip.pos) (stroke (if t-on one muted))
+    (line_ (from [mx (- (cy d-now) 7)]) (to t-handle.tip.pos) (stroke (if t-on one soft))
         (stroke-width 1) (stroke-opacity 0.7))
     (circle_ (pos [mx (cy d-now)]) (r 7) (fill one))
     (text|none value-now (fmt d-now) (pos [(if (< mx 406) (+ mx 11) (- mx 11)) (+ (cy d-now) 9)])
