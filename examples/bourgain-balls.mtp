@@ -2,7 +2,9 @@
 ; which the balls around x and around y both hold at least 2ʲ points, capped at δ/2, where δ is
 ; the distance from x to y. The bar below cuts [0, δ/2] at the ρⱼ; it fills up to the common
 ; radius r of the two balls. Click a point to make it x or y (the older of the two is replaced),
-; move the slider to change r, or press play to grow the balls from 0 to δ/2.
+; move the slider to change r, or press play to grow the balls from 0 to δ/2. At rest the figure
+; is quiet, the balls at δ/2 and no controls under it: the hand in its corner brings out the
+; controls, and the cross puts them away and grows the balls back to δ/2, as in the paper.
 ; Coordinates are the original SVG's, with y pointing up. The 32 points are drawn at random,
 ; uniformly over a square, from the standard seed: the same on every refresh, and new ones when
 ; the dice are rolled.
@@ -152,12 +154,24 @@
           (move share (to 1))
           (move replace-x (to (not replace-x)) (duration 0))))))
 
-(button new-points (animation (roll-dice)) (label 'new points')
+(canvas the-space (x 0) (y -318) (width 600) (height 318)
+  doc@'The points, the pair x and y, and the balls around them.'
+  rings pair space x y)
+(canvas the-bar (x 0) (y -356) (width 600) (height 56)
+  doc@'The bar that cuts [0, δ/2] at the ρⱼ and fills up to r.'
+  bar)
+
+(on-live the-space doc@'Brings out the controls.')
+(on-quiet the-space (animation (move share (to 1) (duration 0.4)))
+  doc@'Grows the balls back to δ/2, the figure at rest.')
+
+(button new-points (animation (roll-dice)) (label 'new points') (in the-space)
   doc@'Draws the 32 points again.')
 
-(slider radius (move share (from 0) (to 1)) (label 'r') doc@'Sets r, the radius of both balls.')
+(slider radius (move share (from 0) (to 1)) (label 'r') (in the-space)
+  doc@'Sets r, the radius of both balls.')
 
-(play grow (animation (move share (from 0) (to 1) (duration 3.6) (ease linear)))
+(play grow (in the-space) (animation (move share (from 0) (to 1) (duration 3.6) (ease linear)))
   doc@'Grows the balls from radius 0 to δ/2.')
 
 (readout note
@@ -168,10 +182,3 @@
              'At radius δ/2 the bar is full: the gaps ρⱼ − ρⱼ₋₁ add up to δ/2.')
             (else $'The balls hold {cx} and {cy} points.')))
   doc@'What the balls hold at the radius r.')
-
-(canvas the-space (x 0) (y -318) (width 600) (height 318)
-  doc@'The points, the pair x and y, and the balls around them.'
-  rings pair space x y)
-(canvas the-bar (x 0) (y -356) (width 600) (height 56)
-  doc@'The bar that cuts [0, δ/2] at the ρⱼ and fills up to r.'
-  bar)
