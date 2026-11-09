@@ -84,10 +84,10 @@ weight every font has.")
   "Face for comments.")
 
 (mtp-mode--defface mtp-mode-doc-face
-  '((t :foreground "#5c3566" :weight bold :slant normal))
-  "Face for a docstring, the text of doc@'text'. Themes often draw `font-lock-doc-face' faint,
-so it takes the string color, which every theme draws clearly, in bold to stand out from the
-figure's own strings.")
+  '((t :foreground "#4e6a5a" :weight normal :slant normal))
+  "Face for a docstring, the text of doc@'text': prose about the code, so a quiet gray-green,
+apart from strings and comments. Themes often draw `font-lock-doc-face' faint, so it does not
+inherit from it.")
 
 (mtp-mode--defface mtp-mode-free-face
   '((t :foreground "#cc0000" :weight bold :slant normal))
