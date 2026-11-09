@@ -315,6 +315,7 @@ class Writer:
         elif kind == "toggle":
             target = o.data["target"]
             d["target"] = list(target) if target is not None else None
+            d["animation"] = o.data["animation"]
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None

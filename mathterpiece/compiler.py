@@ -3422,7 +3422,9 @@ class _Compiler:
         first = items.pop(0)
         target = None if isinstance(first, NoneLit) else first
         value = self.take(items, "value")
-        written: set = set()
+        # (animation …): played after each flip, once the bool is written, so it may read it (the
+        # author, 2026-11-09).
+        written = self.animated(obj, items)
         if target is None:
             obj.data["target"] = None
             obj.attrs["value"] = self.attribute(BOOL, value, obj.pos, "value", scope=self.cscope)
@@ -3437,7 +3439,7 @@ class _Compiler:
             if _core(t) != BOOL:
                 raise CompileError(f"a toggle's target is a bool, got {t}", target.pos)
             obj.data["target"] = (i, attr)
-            written = {(i, attr)}
+            written = written | {(i, attr)}
             # On a group's attribute it reads true only when every member's is true.
             if attr is not None and attr not in self.model.objects[i].attrs:
                 e = Expr("all", BOOL, (self.obj_attr(i, attr, target.pos),))

@@ -291,7 +291,7 @@ A view, a control and a readout must have a name: a page places each by its name
 | `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)`, `(in view…)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)`, `(selected bool)`, `(active bool)`, `(in view…)` | conditions |
 | `(play name)` | required | none | `(animation …)`, `(label string)`, `(buttons bool)`, `(rest seconds)`, `(autoplay)`, `(autoplay name)`, `(active bool)`, `(in view…)` | conditions |
-| `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(label string)`, `(value bool)` (only with `none`), `(active bool)`, `(in view…)` | conditions |
+| `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(animation …)`, played after each flip, once the bool is written, `(label string)`, `(value bool)` (only with `none`), `(active bool)`, `(in view…)` | conditions |
 | `(on-drag shape target)` | none | the shape; the target: the shape's own `pos`, `x` or `y`, or `(move target (to expr))`, whose `expr` reads `pointer` | `(active bool)`, `(in view…)` | conditions |
 | `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
 | `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |

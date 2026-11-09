@@ -29,6 +29,8 @@
 (button five (animation (move k (to 5) (duration 0))) (selected (= k 5)))
 (toggle own none)
 (toggle t on)
+; A toggle that plays an animation after it flips.
+(toggle slide on (animation (move k (to (if on 5 0)) (duration 1))))
 (toggle all lamps.lit)
 (readout r $'k = {k:.1f}')
 (canvas v s)

@@ -52,6 +52,16 @@ class TestControls:
         assert t.data["target"] == (m.id("b"), None)
         assert t.attrs["value"].deps == {(m.id("b"), None)}
 
+    # (animation …): what a flip of the toggle plays, after it writes its bool, such as zooming a
+    # canvas to what the toggle shows (the author, 2026-11-09).
+    def test_a_toggle_plays_an_animation(self):
+        m = model(f"{K} (bool b) (toggle t b (animation (move k (to (if b 5 0)) (duration 1))))")
+        t = m.get("t")
+        assert t.data["animation"] is not None
+
+    def test_a_toggle_without_an_animation_has_none(self):
+        assert model("(bool b) (toggle t b)").get("t").data["animation"] is None
+
     def test_a_toggle_target_is_a_bool(self):
         error(f"{K} (toggle t k)", "a toggle's target is a bool")
 

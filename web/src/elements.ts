@@ -1338,6 +1338,8 @@ export class MtpToggle extends MtpPart {
         rt.write(id, "value", v);
       }
       this.show();
+      const player = playerFor(rt, rt.objects[id]!);
+      if (player) scheduler.start(player, this);
     });
     this.input = input;
     this.show();

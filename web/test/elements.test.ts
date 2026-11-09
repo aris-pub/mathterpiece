@@ -132,6 +132,23 @@ describe("controls", () => {
     expect(v("on")).toBe(true);
   });
 
+  it("a toggle with an animation writes its bool, then plays it", () => {
+    const [, , v] = page(`<mtp-toggle model="m" name="slide"></mtp-toggle>`);
+    const input = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    input.click();
+    expect(v("on")).toBe(true);
+    // The first frame starts the clock.
+    pass(0.1);
+    pass(0.5);
+    expect(v("k")).toBeCloseTo(2.5);
+    pass(0.6);
+    expect(v("k")).toBe(5);
+    input.click();
+    expect(v("on")).toBe(false);
+    pass(1.2);
+    expect(v("k")).toBeCloseTo(0);
+  });
+
   it("a toggle on a group's attribute shows a mixed state, and a click sets every member", () => {
     const [, rt] = page(`<mtp-toggle model="m" name="all"></mtp-toggle>`);
     const input = document.querySelector("mtp-toggle input") as HTMLInputElement;
