@@ -747,6 +747,38 @@ describe("starting without the reader", () => {
     expect(v("k")).toBe(0);
   });
 
+  it("waits for a canvas hidden by a fully transparent ancestor to be shown before counting it as in view", () => {
+    // A page may hide its content at opacity 0 while it loads (Firsthand Math does); a canvas on
+    // screen then is not yet seen by anyone.
+    const observers: { callback: IntersectionObserverCallback; target?: Element }[] = [];
+    const saved = globalThis.IntersectionObserver;
+    globalThis.IntersectionObserver = class {
+      callback: IntersectionObserverCallback;
+      target?: Element;
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback;
+        observers.push(this);
+      }
+      observe(el: Element) {
+        this.target = el;
+      }
+      disconnect() {}
+    } as unknown as typeof IntersectionObserver;
+    try {
+      document.body.innerHTML = "";
+      const [, , v] = page(`<div id="wrap" style="opacity: 0"><mtp-canvas model="m" name="v"></mtp-canvas></div>`, doc("seen"));
+      const watcher = observers.find((o) => o.target?.tagName === "MTP-CANVAS")!;
+      watcher.callback([{ isIntersecting: true, target: watcher.target! } as IntersectionObserverEntry], watcher as unknown as IntersectionObserver);
+      pass(1.3);
+      expect(v("k")).toBe(0);
+      (document.getElementById("wrap") as HTMLElement).style.opacity = "1";
+      pass(1.5);
+      expect(v("k")).toBeCloseTo(10);
+    } finally {
+      globalThis.IntersectionObserver = saved;
+    }
+  });
+
   it("starts a play with (autoplay) when the page loads", () => {
     const [, rt, v] = page(`<mtp-play model="m" name="now"></mtp-play>`, doc("seen"));
     expect(v("now", "playing")).toBe(true);

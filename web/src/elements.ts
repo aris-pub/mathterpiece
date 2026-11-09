@@ -25,6 +25,15 @@ const MODE = "mtp-mode";
 const TOUCH_REACH = 22;
 const TOUCH_SLOP = 8;
 
+/** Whether an element can be seen: neither it nor an ancestor is fully transparent or hidden. */
+function shown(el: Element): boolean {
+  for (let e: Element | null = el; e; e = e.parentElement) {
+    const style = getComputedStyle(e);
+    if (style.opacity === "0" || style.visibility === "hidden" || style.display === "none") return false;
+  }
+  return true;
+}
+
 /** How the page asks for animation frames; tests replace it to move time by hand. */
 export const frames = {
   request: (callback: (ms: number) => void): void => {
@@ -231,14 +240,28 @@ abstract class MtpPart extends HTMLElement {
     });
   }
 
-  // Tells the model when this element first comes into view (on-view, autoplay).
+  // Tells the model when this element first comes into view (on-view, autoplay). On screen is not
+  // enough: a page may hide its content at opacity 0 while it loads, so the element counts as in
+  // view only once no ancestor is fully transparent or hidden, checked again each frame meanwhile.
   private watch(model: MtpModel): void {
     const id = this.shown;
     if (id === null || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
+    let onScreen = false;
+    let checking = false;
+    const check = () => {
+      checking = false;
+      if (!onScreen) return;
+      if (!shown(this)) {
+        checking = true;
+        frames.request(check);
+        return;
+      }
       observer.disconnect();
       model.markSeen(id);
+    };
+    const observer = new IntersectionObserver((entries) => {
+      onScreen = entries.some((e) => e.isIntersecting);
+      if (onScreen && !checking) check();
     });
     observer.observe(this);
   }
