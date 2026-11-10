@@ -1429,7 +1429,7 @@ export class MtpStepper extends MtpPart {
         else dot.removeAttribute("aria-current");
       });
       const label = labelOf(rt, id);
-      count.textContent = at ? `${at} / ${n}` : `${n} ${label}`;
+      count.textContent = `${at} / ${n}`;
       group.setAttribute("aria-label", at ? `${label}: step ${at} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
       this.toggleAttribute("data-playing", running);
       // As a play's: a page shows what goes with each step by this attribute.

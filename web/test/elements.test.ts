@@ -756,11 +756,12 @@ describe("a stepper", () => {
   });
 
 
-  // The author, 2026-11-10: the count beside the dots, "3 hints" before the first step, then "2 / 3".
+  // The author, 2026-11-10: the count beside the dots, the step and the number of steps, "0 / 3"
+  // before the first step, then "2 / 3".
   it("counts the steps beside the dots", () => {
     hints();
     const count = () => document.querySelector("mtp-stepper .mtp-count")?.textContent;
-    expect(count()).toBe("3 hints");
+    expect(count()).toBe("0 / 3");
     dots()[1]!.click();
     pass(0.1);
     expect(count()).toBe("2 / 3");
@@ -777,7 +778,7 @@ describe("a stepper", () => {
     expect(group().getAttribute("role")).toBe("group");
     expect(group().getAttribute("aria-label")).toBe("hints: 3 steps");
     expect(el().hasAttribute("data-step")).toBe(false);
-    expect(el().textContent).toBe("3 hints");
+    expect(el().textContent).toBe("0 / 3");
     expect([v("hints", "step"), v("a"), v("b"), v("k")]).toEqual([0, 0, 0, 0]);
   });
 
