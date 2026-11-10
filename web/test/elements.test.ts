@@ -116,6 +116,25 @@ describe("controls", () => {
     expect(text()).toEqual(["k = 7", "set 7", "on with k = 7"]);
   });
 
+  // The author, 2026-11-09: a control's label may be LaTeX, (label (tex …)), typeset as a formula is.
+  it("a label given as LaTeX is typeset, and follows its expression", () => {
+    const file = doc("page");
+    for (const name of ["told", "set", "said"]) file.objects.find((o) => o.name === name)!["label-tex"] = true;
+    const [, rt] = page(
+      `<mtp-slider model="m" name="told"></mtp-slider><mtp-button model="m" name="set"></mtp-button>` +
+        `<mtp-toggle model="m" name="said"></mtp-toggle>`,
+      file,
+    );
+    const maths = () => ["mtp-slider", "mtp-button", "mtp-toggle"].map((t) => document.querySelector(`${t} .mtp-label-math`));
+    expect(maths().every((m) => m?.querySelector("mjx-container svg"))).toBe(true);
+    expect(maths().map((m) => m!.getAttribute("aria-label"))).toEqual(["k = 0", "set 0", "on with k = 0"]);
+    rt.write(rt.id("k"), null, 7);
+    pass(0.1);
+    expect(maths().map((m) => m!.getAttribute("aria-label"))).toEqual(["k = 7", "set 7", "on with k = 7"]);
+    expect(document.querySelector("mtp-slider input")).not.toBeNull();
+    expect(document.querySelector("mtp-toggle input")).not.toBeNull();
+  });
+
   it("a slider follows its target when another writer changes it", () => {
     const [, rt] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
     const input = document.querySelector("mtp-slider input") as HTMLInputElement;

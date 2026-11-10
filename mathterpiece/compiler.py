@@ -3287,6 +3287,13 @@ class _Compiler:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
         if obj.kind not in (*ON_SHAPE, *ON_VIEW, "on-pointermove"):
             label = self.take(items, "label")
+            # (label (tex …)) gives the label as LaTeX, the form a term of a formula takes.
+            if _head(label) == "tex":
+                assert isinstance(label, Form)
+                if len(label.items) != 2:
+                    raise CompileError("(tex …) takes one string, the label's LaTeX", label.pos)
+                label = label.items[1]
+                obj.data["label-tex"] = True
             # By default a control's label is its name; one with no name has an empty label.
             obj.attrs["label"] = (
                 self.attribute(STRING, label, obj.pos, "label", scope=self.cscope)

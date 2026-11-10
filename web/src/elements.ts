@@ -938,6 +938,35 @@ function labelOf(rt: Runtime, id: number): string {
   return String(rt.value(id, "label"));
 }
 
+/** What a control shows as its label: its text, or, for one given as (label (tex …)), its LaTeX
+ * typeset as a formula is, named for a screen reader by the LaTeX. follow() brings it up to date
+ * with the expression it is given. */
+function labelPart(rt: Runtime, id: number): { node: Node; follow: () => void } {
+  if (!rt.objects[id]!["label-tex"]) {
+    const text = document.createTextNode(labelOf(rt, id));
+    return {
+      node: text,
+      follow: () => {
+        const now = labelOf(rt, id);
+        if (text.data !== now) text.data = now;
+      },
+    };
+  }
+  const math = document.createElement("span");
+  math.className = "mtp-label-math";
+  math.setAttribute("role", "img");
+  let shown: string | null = null;
+  const follow = () => {
+    const latex = labelOf(rt, id);
+    if (latex === shown) return;
+    shown = latex;
+    math.replaceChildren(typeset(latex, false));
+    math.setAttribute("aria-label", latex);
+  };
+  follow();
+  return { node: math, follow };
+}
+
 /** Whether a writer is active, so it can be triggered: always, unless its active is false. */
 function activeOf(rt: Runtime, id: number): boolean {
   const active = rt.objects[id]!.active;
@@ -1005,14 +1034,12 @@ export class MtpSlider extends MtpPart {
     };
     this.gate();
     // The label follows what it is given, as anything bound does.
-    const text = document.createTextNode(labelOf(rt, id));
-    this.named = () => {
-      text.data = labelOf(rt, id);
-    };
+    const text = labelPart(rt, id);
+    this.named = text.follow;
     // The label sits above the track: a label whose width changes as it follows its value would
     // otherwise move the track under the pointer while it drags.
     const label = document.createElement("label");
-    label.append(text, input);
+    label.append(text.node, input);
     // Round values across the range the knob covers, each where the knob gives it. The labels
     // are drawn from data-value, so the control's text stays its label.
     const ticks = player ? placeTicks((u) => player.valueAt(u)) : [];
@@ -1050,7 +1077,8 @@ export class MtpButton extends MtpPart {
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "button");
     const button = document.createElement("button");
-    button.textContent = labelOf(rt, id);
+    const text = labelPart(rt, id);
+    button.append(text.node);
     // A press plays the animation from the start; a press while it runs starts it again.
     button.addEventListener("click", () => {
       if (!activeOf(rt, id)) return;
@@ -1062,7 +1090,7 @@ export class MtpButton extends MtpPart {
     const chooses = rt.objects[id]!.attrs?.selected !== undefined;
     this.gate = () => {
       button.disabled = !activeOf(rt, id);
-      button.textContent = labelOf(rt, id);
+      text.follow();
       if (chooses) button.setAttribute("aria-pressed", String(Boolean(rt.value(id, "selected"))));
     };
     this.gate();
@@ -1489,12 +1517,10 @@ export class MtpToggle extends MtpPart {
     this.input = input;
     this.show();
     // The label follows what it is given, as anything bound does.
-    const text = document.createTextNode(labelOf(rt, id));
-    this.named = () => {
-      text.data = labelOf(rt, id);
-    };
+    const text = labelPart(rt, id);
+    this.named = text.follow;
     const label = document.createElement("label");
-    label.append(input, text);
+    label.append(input, text.node);
     this.replaceChildren(label);
   }
 

@@ -97,6 +97,8 @@ export interface Obj {
   // on-view: the canvas it listens to; play: "load", or the view or control it waits for.
   view?: number;
   autoplay?: "load" | number | null;
+  // A control whose label is LaTeX, given as (label (tex …)).
+  "label-tex"?: boolean;
   rest?: number;
   // A listener or a control: the views it belongs to, when its source names them (mtp-2juu.1).
   in?: number[];

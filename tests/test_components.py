@@ -638,3 +638,37 @@ class TestBubbling:
         assert errors(d) == []
         stops = {o["kind"]: o["stop-propagation"] for o in d["objects"] if "stop-propagation" in o}
         assert stops["on-release"] is None and stops["on-click"] is not None
+
+
+class TestMathLabels:
+    # The author, 2026-11-09: a control's label may be LaTeX, (label (tex …)), the form a term of a
+    # formula takes, for every control with a label.
+    @pytest.mark.parametrize(
+        "control",
+        [
+            f"(button b {MOVE} (label (tex 'C_3')))",
+            f"(slider b {SLIDE} (label (tex 'C_3')))",
+            f"(play b {MOVE} (label (tex 'C_3')))",
+            f"(stepper b {MOVE} (label (tex 'C_3')))",
+            "(toggle b none (label (tex 'C_3')))",
+        ],
+    )
+    def test_a_label_in_latex(self, control):
+        d = doc(f"{K} {control}")
+        (b,) = [o for o in d["objects"] if o.get("name") == "b"]
+        assert b["attrs"]["label"] == {"type": "string", "free": "C_3"}
+        assert b["label-tex"] is True
+        assert errors(d) == []
+
+    def test_a_latex_label_reads_the_model(self):
+        b = model(f"{K} (foreach j 3 (button #'b-{{j}}' {MOVE} (label (tex $'C_{{j}}'))))").get("b-2")
+        assert b.attrs["label"].value == "C_2" and b.data["label-tex"] is True
+
+    def test_a_plain_label_is_not_latex(self):
+        d = doc(f"{K} (button b {MOVE} (label 'go'))")
+        (b,) = [o for o in d["objects"] if o.get("name") == "b"]
+        assert "label-tex" not in b
+
+    def test_tex_takes_one_string(self):
+        error(f"{K} (button b {MOVE} (label (tex)))", r"\(tex …\) takes one string")
+        error(f"{K} (button b {MOVE} (label (tex 'a' 'b')))", r"\(tex …\) takes one string")

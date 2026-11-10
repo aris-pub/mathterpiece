@@ -2359,6 +2359,9 @@
                   }
                 ]
               },
+              "label-tex": {
+                "const": true
+              },
               "rest": {
                 "type": "number",
                 "minimum": 0
@@ -2481,6 +2484,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "label-tex": {
+                "const": true
               },
               "in": {
                 "$ref": "#/$defs/in"

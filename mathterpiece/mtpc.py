@@ -312,6 +312,8 @@ class Writer:
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
+            if o.data.get("label-tex"):
+                d["label-tex"] = True
         elif kind == "toggle":
             target = o.data["target"]
             d["target"] = list(target) if target is not None else None
@@ -319,6 +321,8 @@ class Writer:
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
+            if o.data.get("label-tex"):
+                d["label-tex"] = True
         elif kind == "on-drag":
             d["shape"] = o.data["shape"]
             d["target"] = list(o.data["target"])
