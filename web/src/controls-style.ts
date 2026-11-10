@@ -4,7 +4,7 @@
 // Studio, not the document's, so they look the same whatever typeface the reader picks.
 
 export const CONTROLS_CSS = `
-mtp-slider, mtp-button, mtp-play, mtp-toggle {
+mtp-slider, mtp-button, mtp-play, mtp-stepper, mtp-toggle {
   font-family: "Source Sans 3", sans-serif;
   color: var(--text-body);
 }
@@ -13,7 +13,7 @@ mtp-slider, mtp-button, mtp-play, mtp-toggle {
    dragging, focused from the keyboard, or a play playing. A page sets them with
    --mtp-control-rest and --mtp-control-active; where it sets neither, both are BRAIID's accent,
    as before there were two. --mtp-c is the one a control draws with now. */
-mtp-slider, mtp-button, mtp-play {
+mtp-slider, mtp-button, mtp-play, mtp-stepper {
   --mtp-rest: var(--mtp-control-rest, var(--primary-700));
   --mtp-active: var(--mtp-control-active, var(--primary-700));
 }
@@ -92,7 +92,7 @@ mtp-button button {
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 /* A larger area the finger can hit than the button draws, for 44px touch targets. */
-mtp-button button::after, mtp-play .mtp-play-button::after {
+mtp-button button::after, mtp-play .mtp-play-button::after, mtp-stepper .mtp-step-button::after {
   content: ""; position: absolute; inset: -6px;
 }
 mtp-button button:hover {
@@ -105,10 +105,11 @@ mtp-button button[aria-pressed="true"]:hover {
   background: var(--mtp-active); border-color: var(--mtp-active); color: var(--surface-page, white);
 }
 mtp-button button:focus-visible, mtp-play .mtp-play-button:focus-visible,
-mtp-play .mtp-bars:focus-visible {
+mtp-play .mtp-bars:focus-visible, mtp-stepper button:focus-visible {
   outline: 2px solid var(--border-action, Highlight); outline-offset: 2px;
 }
-mtp-button button:disabled, mtp-play .mtp-play-button:disabled { cursor: not-allowed; opacity: 0.5; }
+mtp-button button:disabled, mtp-play .mtp-play-button:disabled,
+mtp-stepper .mtp-step-button:disabled, mtp-stepper .mtp-dot:disabled { cursor: not-allowed; opacity: 0.5; }
 
 /* A play: the button, then the bars, one per step, with the step playing under them. The bars
    sit on a track of their own color, so at rest they read as a tour not yet played rather than as
@@ -155,6 +156,41 @@ mtp-play .mtp-now {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* A stepper: "‹", a dot per step, then "›", the buttons drawn as a play's. A passed step's dot is
+   solid, the current one solid with a ring, and one still to come pale. The dots are drawn as the
+   play's bars are: in the rest color, and the active one while a step plays or a part has focus. */
+mtp-stepper {
+  display: inline-flex; align-items: center; gap: 0.75rem;
+  --mtp-dot: var(--mtp-rest);
+}
+mtp-stepper[data-playing], mtp-stepper:has(:focus-visible) { --mtp-dot: var(--mtp-active); }
+mtp-stepper .mtp-step-button {
+  position: relative; flex: none;
+  display: grid; place-items: center;
+  width: 2rem; height: 2rem; padding: 0; border: 0; border-radius: 50%;
+  background: var(--mtp-active); color: var(--surface-page, white);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+mtp-stepper .mtp-step-button svg { width: 1rem; height: 1rem; fill: currentColor; }
+mtp-stepper .mtp-count { font-size: 0.8125rem; color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+mtp-stepper .mtp-step-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--mtp-active) 85%, var(--text-body, black));
+}
+mtp-stepper .mtp-dots { display: flex; align-items: center; gap: 10px; }
+mtp-stepper .mtp-dot {
+  position: relative; flex: none;
+  width: 10px; height: 10px; padding: 0; border: 0; border-radius: 50%;
+  background: color-mix(in srgb, var(--mtp-dot) 22%, var(--surface-page, white));
+  cursor: pointer;
+}
+/* The dot takes a press 24px across, which reaches a little past the gap to the next. */
+mtp-stepper .mtp-dot::after { content: ""; position: absolute; inset: -7px; }
+mtp-stepper .mtp-dot.mtp-passed, mtp-stepper .mtp-dot[aria-current="step"] { background: var(--mtp-dot); }
+mtp-stepper .mtp-dot[aria-current="step"] {
+  box-shadow: 0 0 0 2px var(--surface-page, white), 0 0 0 3.5px var(--mtp-dot);
+}
+
 mtp-toggle label {
   display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;
 }
@@ -172,10 +208,10 @@ mtp-canvas .mtp-selected {
 
 /* Quiet mode (mtp-16z). A control tied only to quiet views is folded away; while it folds or
    unfolds it is still drawn, clipped to the height it is passing through. */
-:is(mtp-slider, mtp-button, mtp-play, mtp-toggle)[data-mtp-folded]:not([data-mtp-folding]) {
+:is(mtp-slider, mtp-button, mtp-play, mtp-stepper, mtp-toggle)[data-mtp-folded]:not([data-mtp-folding]) {
   display: none !important;
 }
-:is(mtp-slider, mtp-button, mtp-play, mtp-toggle)[data-mtp-folding] { overflow: hidden; }
+:is(mtp-slider, mtp-button, mtp-play, mtp-stepper, mtp-toggle)[data-mtp-folding] { overflow: hidden; }
 
 /* The switch of a view with a quiet mode: a hand to make it live, a cross to put it back. It sits
    in the view's top right corner, or in the line for a readout or an inline formula, and is drawn
@@ -213,6 +249,6 @@ mtp-canvas .mtp-selected {
 .mtp-switch.mtp-switch-inline svg { width: 0.875rem; height: 0.875rem; }
 
 @media (prefers-reduced-motion: reduce) {
-  mtp-button button, mtp-play .mtp-play-button, .mtp-switch { transition: none; }
+  mtp-button button, mtp-play .mtp-play-button, mtp-stepper .mtp-step-button, .mtp-switch { transition: none; }
 }
 `;

@@ -1566,6 +1566,7 @@
                 "slider",
                 "button",
                 "play",
+                "stepper",
                 "toggle",
                 "on-drag",
                 "on-click",
@@ -2291,7 +2292,8 @@
                 "enum": [
                   "slider",
                   "button",
-                  "play"
+                  "play",
+                  "stepper"
                 ]
               }
             },
@@ -2316,7 +2318,8 @@
                 "enum": [
                   "slider",
                   "button",
-                  "play"
+                  "play",
+                  "stepper"
                 ]
               },
               "type": {
@@ -3538,6 +3541,7 @@
                 "slider",
                 "button",
                 "play",
+                "stepper",
                 "toggle",
                 "on-drag",
                 "on-click",

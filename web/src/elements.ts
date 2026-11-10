@@ -1089,6 +1089,8 @@ function takesKeys(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
   return el.isContentEditable || el.closest("input, textarea, select, button, [role=slider], mtp-slider, mtp-toggle, mtp-button") !== null;
 }
+// What has the keys of a play: on a page with only one, they work from anywhere on it.
+const KEYED = "mtp-play, mtp-stepper";
 
 /**
  * A play (docs/reference.md, "Controls"; mtp-33xt): a play button, then one bar per step, each
@@ -1194,11 +1196,11 @@ export class MtpPlay extends MtpPart {
       if (event.key === " " && event.target === play) return;
       onKey(event);
     });
-    // On a page with one play, as when recording it, the keys work from anywhere on the page,
+    // On a page with one play or stepper, as when recording it, the keys work from anywhere on the page,
     // unless what has focus takes keys of its own.
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
     this.onPage = (event) => {
-      if (this.contains(event.target as Node) || document.querySelectorAll("mtp-play").length !== 1) return;
+      if (this.contains(event.target as Node) || document.querySelectorAll(KEYED).length !== 1) return;
       if (takesKeys(event.target) || takesKeys(document.activeElement)) return;
       onKey(event);
     };
@@ -1279,6 +1281,9 @@ export class MtpPlay extends MtpPart {
       line.textContent = text;
       track.setAttribute("aria-label", labelOf(rt, id));
       track.setAttribute("aria-valuenow", String(player ? k + 1 : 0));
+      // A page shows what goes with each step (a question under the figure, say) by this attribute.
+      if (player) this.setAttribute("data-step", String(k + 1));
+      else this.removeAttribute("data-step");
       track.setAttribute("aria-valuetext", text);
       if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
       if (player && split && rt.value(id, "step") !== k) rt.write(id, "step", k);
@@ -1295,6 +1300,146 @@ export class MtpPlay extends MtpPart {
     const auto = obj.autoplay;
     if (auto === "load") start();
     else if (typeof auto === "number") model.whenSeen(auto, start);
+  }
+
+  protected update(): void {
+    this.refresh();
+  }
+}
+
+// A stepper's buttons' icons, drawn as the play button's are.
+const BACK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.8 3.2 5.1 8l4.7 4.8 1.4-1.4L7.9 8l3.3-3.4z"/></svg>';
+const NEXT_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 3.2 10.9 8l-4.7 4.8-1.4-1.4L8.1 8 4.8 4.6z"/></svg>';
+// A time before the first move starts: seeking to it applies none, not even one that takes no
+// time, as a seek to 0 would.
+const BEFORE = -1;
+
+/**
+ * A stepper (docs/reference.md, "Controls"; the author, 2026-11-10): a play with no clock. "›"
+ * plays the next step from the end of the one before and stops at its end; "‹" and the dots, one
+ * per step, jump at once to the end of a step, as a play's bars jump to a step tapped.
+ */
+export class MtpStepper extends MtpPart {
+  private refresh: () => void = () => {};
+  private onPage: ((event: KeyboardEvent) => void) | null = null;
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.onPage) document.removeEventListener("keydown", this.onPage);
+    this.onPage = null;
+  }
+
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const id = this.find(rt, "stepper");
+    const obj = rt.objects[id]!;
+    const layout = playerFor(rt, obj);
+    if (!layout) {
+      this.replaceChildren();
+      return;
+    }
+    const spans = layout.spans;
+    const n = spans.length;
+    // As a play's: one player, kept when another writer cancels it, so what it read stays read.
+    let player: Player | null = null;
+    // The step it is at, or is playing to; 0 is before the first.
+    let at = 0;
+
+    // The player, held by this stepper, with the moves of the steps after j held from starting.
+    const own = (j: number) => {
+      player ??= playerFor(rt, obj)!;
+      if (scheduler.playerOf(this) !== player) scheduler.hold(player, this);
+      player.holdFrom(j);
+    };
+    const go = (j: number) => {
+      if (!activeOf(rt, id)) return;
+      own(j);
+      scheduler.pause(this);
+      at = j;
+      scheduler.seek(this, j === 0 ? BEFORE : spans[j - 1]!.end);
+      this.refresh();
+    };
+    const forward = () => {
+      if (!activeOf(rt, id) || at >= n) return;
+      own(at + 1);
+      // A step still playing is ended at once, so each press moves on by one step.
+      scheduler.seek(this, spans[at]!.start);
+      at++;
+      scheduler.resume(this, spans[at - 1]!.end);
+      this.refresh();
+    };
+    const backward = () => {
+      if (at > 0) go(at - 1);
+    };
+
+    const round = (name: string, icon: string, label: string, act: () => void) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `mtp-step-button ${name}`;
+      b.innerHTML = icon;
+      b.setAttribute("aria-label", label);
+      b.addEventListener("click", act);
+      return b;
+    };
+    const back = round("mtp-prev", BACK_ICON, "previous step", backward);
+    const next = round("mtp-next", NEXT_ICON, "next step", forward);
+    const group = document.createElement("div");
+    group.className = "mtp-dots";
+    group.setAttribute("role", "group");
+    const dots = spans.map((_, j) => {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "mtp-dot";
+      dot.setAttribute("aria-label", `step ${j + 1}`);
+      dot.addEventListener("click", () => go(j + 1));
+      group.append(dot);
+      return dot;
+    });
+
+    // The count beside the dots; the dots' group already says it to a screen reader.
+    const count = document.createElement("span");
+    count.className = "mtp-count";
+    count.setAttribute("aria-hidden", "true");
+
+    // The keys of a play: the arrows go to the next step and back one.
+    const keys: Record<string, () => void> = { ArrowRight: forward, ArrowLeft: backward };
+    const onKey = (event: KeyboardEvent) => {
+      const act = keys[event.key];
+      if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      if (!event.repeat && activeOf(rt, id)) act();
+    };
+    this.addEventListener("keydown", onKey);
+    if (this.onPage) document.removeEventListener("keydown", this.onPage);
+    this.onPage = (event) => {
+      if (this.contains(event.target as Node) || document.querySelectorAll(KEYED).length !== 1) return;
+      if (takesKeys(event.target) || takesKeys(document.activeElement)) return;
+      onKey(event);
+    };
+    document.addEventListener("keydown", this.onPage);
+
+    this.refresh = () => {
+      const running = scheduler.running(this);
+      const active = activeOf(rt, id);
+      back.disabled = !active || at === 0;
+      next.disabled = !active || at === n;
+      dots.forEach((dot, j) => {
+        dot.disabled = !active;
+        dot.classList.toggle("mtp-passed", j + 1 < at);
+        if (j + 1 === at) dot.setAttribute("aria-current", "step");
+        else dot.removeAttribute("aria-current");
+      });
+      const label = labelOf(rt, id);
+      count.textContent = at ? `${at} / ${n}` : `${n} ${label}`;
+      group.setAttribute("aria-label", at ? `${label}: step ${at} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
+      this.toggleAttribute("data-playing", running);
+      // As a play's: a page shows what goes with each step by this attribute.
+      if (at) this.setAttribute("data-step", String(at));
+      else this.removeAttribute("data-step");
+      if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
+      if (rt.value(id, "step") !== at) rt.write(id, "step", at);
+    };
+    this.refresh();
+    this.replaceChildren(back, group, next, count);
   }
 
   protected update(): void {
@@ -1367,6 +1512,7 @@ const ELEMENTS: [string, CustomElementConstructor][] = [
   ["mtp-slider", MtpSlider],
   ["mtp-button", MtpButton],
   ["mtp-play", MtpPlay],
+  ["mtp-stepper", MtpStepper],
   ["mtp-toggle", MtpToggle],
 ];
 

@@ -8,6 +8,7 @@ export {
   MtpPlay,
   MtpReadout,
   MtpSlider,
+  MtpStepper,
   MtpToggle,
   define,
 } from "./elements.ts";

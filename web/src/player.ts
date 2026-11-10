@@ -21,6 +21,8 @@ interface Move {
   to?: unknown;
   // The loops around it, outermost first, and the rounds it was last written in.
   loops: Loop[];
+  // The top-level step it is in.
+  top: number;
   rounds?: string;
 }
 
@@ -47,6 +49,14 @@ export class Player {
   // The values at a slider's stops, and the values they were worked out from.
   private table: { inputs: unknown[]; max: number; values: unknown[] } | null = null;
   private keeps: boolean | null = null;
+  // The in-order whose items are the top-level steps, if there is one; whether a rest has put a
+  // wait between each pair of them; and the step being laid out.
+  private body: Step | null = null;
+  private rested = false;
+  private topNow = 0;
+  // Moves of this top-level step and later ones are held from starting: a stepper stopped at the
+  // end of a step leaves the next one's moves undone, even those that start at that instant.
+  private upTo = Number.POSITIVE_INFINITY;
 
   constructor(
     private rt: Runtime,
@@ -62,6 +72,8 @@ export class Player {
       body = ["in-order", ...top.flatMap((s, k): Step[] => (k ? [["wait", rest], s] : [s]))];
       root = root[0] === "loop" ? ["loop", root[1], body] : body;
     }
+    if (body[0] === "in-order") this.body = body;
+    this.rested = rest > 0 && top.length > 1;
     this.duration = this.layout(root, 0, []);
     if (root[0] === "loop") this.outer = { start: 0, round: length(body), times: root[1] ?? Number.POSITIVE_INFINITY };
     let t = 0;
@@ -77,7 +89,7 @@ export class Player {
   private layout(step: Step, start: number, loops: Loop[]): number {
     if (step[0] === "move") {
       const [, [id, attr], transition, duration, ease] = step;
-      this.moves.push({ id, attr, transition, start, stage: this.stage, duration, ease: ease as Ease, loops });
+      this.moves.push({ id, attr, transition, start, stage: this.stage, duration, ease: ease as Ease, loops, top: this.topNow });
       return duration;
     }
     if (step[0] === "wait") return step[1];
@@ -90,7 +102,8 @@ export class Player {
     let t = start;
     const first = this.stage;
     let last = first;
-    for (const s of step.slice(1) as Step[]) {
+    (step.slice(1) as Step[]).forEach((s, k) => {
+      if (step === this.body) this.topNow = this.rested ? Math.ceil(k / 2) : k;
       if (step[0] === "at-once") this.stage = first;
       const d = this.layout(s, step[0] === "in-order" ? t : start, loops);
       if (step[0] === "in-order") {
@@ -99,7 +112,7 @@ export class Player {
       }
       last = Math.max(last, this.stage);
       longest = Math.max(longest, d);
-    }
+    });
     this.stage = last;
     return step[0] === "in-order" ? t - start : longest;
   }
@@ -123,6 +136,11 @@ export class Player {
     return [...new Set(this.moves.map((m) => `${m.id}:${m.attr ?? ""}`))];
   }
 
+  /** Holds the moves of the top-level steps from the kth on from starting, from the next seek. */
+  holdFrom(k: number): void {
+    this.upTo = k;
+  }
+
   /** Writes every move as it stands t seconds in. */
   seek(time: number): void {
     // The page hears of a frame's writes once, at its end: a round may write many times.
@@ -133,11 +151,12 @@ export class Player {
     const back = time < this.at;
     this.at = time;
     const shown = this.moves;
-    if (back) {
+    const held = (m: Move) => m.top >= this.upTo;
+    if (back || shown.some((m) => held(m) && m.from !== undefined)) {
       // A move that has not started by then puts back the value it started from, the latest
       // first, so each thing moved ends at how it stood before the first of them; it reads its
       // ends again when it starts.
-      const later = shown.filter((m) => m.from !== undefined && inRound(m.loops, time)[0] < m.start);
+      const later = shown.filter((m) => m.from !== undefined && (held(m) || inRound(m.loops, time)[0] < m.start));
       for (const m of later.sort((a, b) => b.start - a.start || b.stage - a.stage)) {
         this.write(m, 0);
         delete m.from;
@@ -162,7 +181,7 @@ export class Player {
     // ended before it left, and then every move starting then reads, before any of them writes.
     const eps = (x: number) => 1e-9 * Math.max(1, Math.abs(x));
     const starting = now
-      .filter(({ m, t }) => m.from === undefined && t >= m.start)
+      .filter(({ m, t }) => m.from === undefined && t >= m.start && !held(m))
       .sort((a, b) => (Math.abs(a.at - b.at) <= eps(a.at) ? a.m.stage - b.m.stage : a.at - b.at));
     for (let i = 0; i < starting.length; ) {
       const { at, m: lead } = starting[i]!;
@@ -310,7 +329,12 @@ function inRound(loops: Loop[], t: number): [number, string] {
 
 // How far along a move is at time t of its round.
 function progress(m: Move, t: number): number {
-  if (m.duration > 0) return Math.min(Math.max((t - m.start) / m.duration, 0), 1);
+  // A stop at a step's end is a sum of durations, so (end - start) / duration may fall a hair
+  // short of 1, as (1.4 - 0.4) / 1 does.
+  if (m.duration > 0) {
+    const u = (t - m.start) / m.duration;
+    return u >= 1 - 1e-9 ? 1 : Math.max(u, 0);
+  }
   return t >= m.start ? 1 : 0;
 }
 

@@ -14,7 +14,7 @@
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
     "transition" "move" "wait" "roll-dice" "animation" "at-once" "in-order" "rand-seed"
-    "canvas" "readout" "display" "slider" "button" "play" "toggle" "on-drag" "on-click"
+    "canvas" "readout" "display" "slider" "button" "play" "stepper" "toggle" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "on-live" "on-quiet" "defaults" "clip" "loop" "autoplay" "exists-when"
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
@@ -109,7 +109,8 @@ takes a color apart from strings.")
     ("point" . 2) ("list" . 2) ("transform" . 2) ("color" . 2)
     ("type" . 2) ("motif" . 2) ("variant" . 2) ("func" . 2)
     ("transition" . 2) ("animation" . 1)
-    ("canvas" . 1) ("readout" . 2) ("slider" . 2) ("button" . 1) ("play" . 1) ("toggle" . 2)
+    ("canvas" . 1) ("readout" . 2) ("slider" . 2) ("button" . 1) ("play" . 1) ("stepper" . 1)
+    ("toggle" . 2)
     ;; Forms with no name.
     ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("step" . 1) ("on-drag" . 2) ("on-click" . 1)
     ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 1) ("on-enter" . 1)
@@ -138,7 +139,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
 
 (defconst mtp-mode--no-body
   '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
-    "slider" "button" "play" "toggle" "readout" "on-drag" "on-click"
+    "slider" "button" "play" "stepper" "toggle" "readout" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "on-live" "on-quiet" "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
@@ -150,7 +151,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
     "curve" "text" "font" "namespace" "palette" "interface" "colormap"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform" "color"
     "type" "motif" "variant" "func" "transition" "animation"
-    "canvas" "readout" "slider" "button" "play" "toggle" "formula" "display")
+    "canvas" "readout" "slider" "button" "play" "stepper" "toggle" "formula" "display")
   "Forms that take a name, so that (head_ …) has one argument fewer before its body.")
 
 (defun mtp-mode--skip-head ()
@@ -239,8 +240,8 @@ to `comment-column'."
   '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "polyline"
     "polygon" "arc" "ring" "text" "curve" "real" "int" "ratio" "complex" "bool" "string" "point"
     "list" "transform" "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
-    "transition" "animation" "canvas" "readout" "display" "slider" "button" "play" "toggle"
-    "rand-seed")
+    "transition" "animation" "canvas" "readout" "display" "slider" "button" "play" "stepper"
+    "toggle" "rand-seed")
   "Heads whose form declares a name, the word after the head, as (circle dot …) declares dot.")
 
 (defconst mtp-mode--types

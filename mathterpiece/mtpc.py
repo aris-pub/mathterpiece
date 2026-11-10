@@ -303,7 +303,7 @@ class Writer:
             d["attrs"] = attrs
         elif kind == "readout":
             d["attrs"] = attrs
-        elif kind in ("slider", "button", "play"):
+        elif kind in ("slider", "button", "play", "stepper"):
             if kind == "play":
                 d["autoplay"] = o.data["autoplay"]
                 if "rest" in o.data:

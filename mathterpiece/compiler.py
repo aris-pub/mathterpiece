@@ -138,6 +138,7 @@ COMPONENTS = {
     "slider",
     "button",
     "play",
+    "stepper",
     "toggle",
     "on-drag",
     "on-click",
@@ -160,7 +161,7 @@ ON_SHAPE = (
     *("on-enter", "on-leave"),
 )
 # The views and controls a play's autoplay may wait for.
-SEEN = {"canvas", "readout", "slider", "button", "play", "toggle"}
+SEEN = {"canvas", "readout", "slider", "button", "play", "stepper", "toggle"}
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
 # Names a function may not take; a built-in function's it may (reference.md, "Functions").
 NOT_FUNCTION_NAMES = (
@@ -3408,6 +3409,28 @@ class _Compiler:
         rest = self.take(items, "rest")
         if rest is not None:
             obj.data["rest"] = self.seconds(rest, self.cscope)
+        obj.attrs["playing"] = Attribute(BOOL, False)
+        obj.attrs["step"] = Attribute(INT, 0)
+        self.active(obj, items)
+        self.writer(obj, items, written)
+
+    def build_stepper(self, obj: Obj, items: list, shape) -> None:
+        """(stepper name (animation …)): the reader moves through the animation's steps one at a
+        time, with no clock, so it has one stop per step and nothing starts it (the author,
+        2026-11-10)."""
+        for head in ("buttons", "autoplay"):
+            found = next((it for it in items if _head(it) == head), None)
+            if found is not None:
+                raise CompileError(
+                    f"a stepper takes no ({head} …): it stops after each step, and the reader"
+                    " moves it",
+                    found.pos,
+                )
+        written = self.animated(obj, items)
+        if obj.data["animation"] is None:
+            raise CompileError(
+                "a stepper needs an (animation …): the steps it moves through", obj.pos
+            )
         obj.attrs["playing"] = Attribute(BOOL, False)
         obj.attrs["step"] = Attribute(INT, 0)
         self.active(obj, items)

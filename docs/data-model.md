@@ -117,7 +117,7 @@ flowchart LR
     subgraph page
       views["views: (canvas …) (readout …) (display …)"]
       listeners["listeners: (on-drag …) (on-click …) (on-release …) (on-dragstart …) (on-dragend …) (on-view …) (on-live …) (on-quiet …) (on-enter …) (on-leave …) (on-pointermove …)"]
-      controls["controls: (slider …) (button …) (play …) (toggle …)"]
+      controls["controls: (slider …) (button …) (play …) (stepper …) (toggle …)"]
     end
   end
   shapes -->|instance of| types
@@ -206,7 +206,7 @@ The author connects a world model to a web page with HTML elements.
 - **`<mtp-model>`** loads one compiled model, once, and gives the live model an id. Its `src` says where the compiled model is, in one of two ways:
   - **a file**, `src="dial.mtpc"`, which the page fetches, so the page must be served by a web server;
   - **a block in the page**, `src="#dial-data"`, naming a `<script type="application/json" id="dial-data">` that holds the compiled model and may stand anywhere in the page, before or after the model. Inside it, every `</` is written `<\/`, so that nothing in the compiled model can end the script early. The page `mtp build` writes does this.
-- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-display>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. A listener that names the views it belongs to, with `(in view…)`, attaches only to those (reference, "Listeners and controls in views"). `on-view` is the exception: it names the canvas whose coming into view it waits for. So are `on-live` and `on-quiet`, which name the view whose going live or back to quiet they wait for. So is an `on-pointermove` that names a canvas, which listens to the pointer anywhere over that canvas.
+- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-display>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-stepper>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. A listener that names the views it belongs to, with `(in view…)`, attaches only to those (reference, "Listeners and controls in views"). `on-view` is the exception: it names the canvas whose coming into view it waits for. So are `on-live` and `on-quiet`, which name the view whose going live or back to quiet they wait for. So is an `on-pointermove` that names a canvas, which listens to the pointer anywhere over that canvas.
 - **One live model feeds any number of components,** which share its state: the slider in one paragraph, the readout inside a sentence and the canvas below all change together.
 - **A page may load several world models.** Each has its own state; components of one never affect another.
 - **The page styles components with its own CSS.** Tokens, the color and font variables, appear as CSS custom properties that the page may override: a color variable `ink` as `--mtp-ink`, and a font variable `note` through its parts, `--mtp-note-family`, `--mtp-note-style` and `--mtp-note-weight`. A token imported from another file is named by that file: `ink` from `house.mtp` is `--mtp-house-ink`, however it is imported. Each shape is drawn with the page's value, or with the token's declared value where the page gives none. Colors computed from tokens are passed to the browser as CSS color mixes, so they follow the page's values too. A color with a dark value, `(light-dark light dark)`, is passed as CSS's `light-dark()`, so the browser draws it by the page's `color-scheme`. An expression that reads a token's channels (`ink.r`) or compares it sees its declared value, and the channels of a light-dark color are its light value's.
@@ -244,8 +244,10 @@ The elements also give the page these names, for its scripts and its CSS:
 | `mtp-ready` | an event an `<mtp-model>` sends, and which bubbles, when its .mtpc has loaded or failed to load |
 | `mtp-change` | an event an `<mtp-model>` sends, and which bubbles, whenever a value in its live model changes |
 | `mtp-error` | the class of the `<pre>` that takes the place of a component that cannot be shown, holding the error: the model did not load, or it has no view or control of that name |
-| `data-playing` | an attribute an `<mtp-play>` has while its animation runs |
+| `data-playing` | an attribute an `<mtp-play>` has while its animation runs, and an `<mtp-stepper>` while a step plays |
+| `data-step` | the step an `<mtp-play>` is at, counted from 1 as under its bars; absent until it first starts; and the step an `<mtp-stepper>` is at, from 1, absent at step 0. A page shows what goes with a step with it, as `.fig:has(mtp-play[data-step="2"]) .q2` |
 | `mtp-play-button`, `mtp-bars`, `mtp-bar`, `mtp-now` | the classes of a play's button, of the bar the reader drags along, of each step's bar inside it (its CSS variable `--u`, from 0 to 1, is how far that step has played), and of the line that names the step |
+| `mtp-step-button`, `mtp-prev`, `mtp-next`, `mtp-dots`, `mtp-dot`, `mtp-passed` | the classes of a stepper's round buttons, of its "‹" and its "›", of the row of dots, of each dot, and of the dot of a step passed. The current step's dot has `aria-current="step"` |
 
 ## Two properties of every expression
 

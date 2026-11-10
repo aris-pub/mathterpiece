@@ -10,6 +10,8 @@ interface Running {
   player: Player;
   time: number;
   paused: boolean;
+  // Where it pauses by itself: a stepper plays one step and stops at its end.
+  until?: number | undefined;
 }
 
 export class Scheduler {
@@ -94,11 +96,13 @@ export class Scheduler {
     for (const s of this.sources) if (s.source === source) s.paused = true;
   }
 
-  resume(source: object): void {
+  /** Plays a source's player on from where it stands, to the time until when given. */
+  resume(source: object, until?: number): void {
     const s = this.sources.find((r) => r.source === source);
     if (!s) return;
     this.claim(s.player.targets, source);
     s.paused = false;
+    s.until = until;
     this.wake();
   }
 
@@ -108,6 +112,11 @@ export class Scheduler {
     for (const s of [...this.sources]) {
       if (s.paused) continue;
       s.time += seconds;
+      if (s.until !== undefined && s.time >= s.until) {
+        s.time = s.until;
+        s.paused = true;
+        s.until = undefined;
+      }
       this.heard = false;
       s.player.seek(s.time);
       if (s.player.done) {

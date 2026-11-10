@@ -17,7 +17,7 @@ INDENT = {
         ["polyline", "polygon", "arc", "ring", "font", "animation", "canvas", "namespace"], 1
     ),
     **dict.fromkeys(["palette", "curve", "formula", "term"], 1),
-    **dict.fromkeys(["button", "play", "interface"], 1),
+    **dict.fromkeys(["button", "play", "stepper", "interface"], 1),
     "text": 2,
     **dict.fromkeys(
         ["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"], 2
@@ -60,6 +60,7 @@ NAMED = {
     ],
     *["string", "point", "list", "transform", "color", "type", "motif", "variant", "func"],
     *["transition", "animation", "canvas", "readout", "slider", "button", "play", "toggle"],
+    "stepper",
     "namespace",
     "palette",
     "interface",
@@ -96,7 +97,8 @@ KEYWORDS = {
 NO_BODY = {
     *["circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "arc", "ring"],
     *["curve"],
-    *["text", "slider", "button", "play", "toggle", "readout", "on-drag", "on-click"],
+    *["text", "slider", "button", "play", "stepper", "toggle", "readout", "on-drag"],
+    "on-click",
     *["on-release", "on-dragend", "on-view", "move", "transition", "font", "color"],
     *["on-dragstart", "on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet"],
     *["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"],

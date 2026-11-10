@@ -42,6 +42,38 @@ class TestControls:
         error(f"{K} (play p {MOVE} (rest k))", "known when compiling")
         error(f"{K} (button b {MOVE} (rest 1))", "only a play takes")
 
+    # A stepper: a play the reader moves through one step at a time, with no clock (the author,
+    # 2026-11-10).
+    def test_a_stepper(self):
+        m = model(f"{K} (bool on true) (stepper s {MOVE} (label 'hints') (active on))")
+        s = m.get("s")
+        assert (s.kind, s.type, s.access) == ("stepper", ComponentT("stepper"), "page")
+        assert s.data["animation"] is not None
+        assert s.attrs["label"].value == "hints"
+        assert s.data["active"].deps == {(m.id("on"), None)}
+        assert (s.attrs["playing"].value, s.attrs["step"].value) == (False, 0)
+
+    def test_a_stepper_is_read_through_its_step(self):
+        m = model(f"{K} (stepper s {MOVE}) (bool past (> s.step 0))")
+        assert m.get("past").value.deps == {(m.id("s"), "step")}
+
+    def test_a_stepper_needs_an_animation(self):
+        error("(stepper s (label 'hints'))", r"a stepper needs an \(animation …\)")
+
+    def test_a_stepper_has_one_stop_per_step(self):
+        error(f"{K} (stepper s {MOVE} (buttons true))", r"a stepper takes no \(buttons …\)")
+        error(f"{K} (stepper s {MOVE} (rest 1))", "only a play takes")
+        error(f"{K} (stepper s {MOVE} (autoplay))", r"a stepper takes no \(autoplay …\)")
+
+    def test_the_compiled_stepper(self):
+        d = doc(f"{K} (stepper s {MOVE} (label 'hints'))")
+        (s,) = [o for o in d["objects"] if o["kind"] == "stepper"]
+        assert d["objects"][s["animation"]]["kind"] == "animation"
+        assert s["attrs"]["label"] == {"type": "string", "free": "hints"}
+        assert s["active"] is None and s["conditions"] == []
+        assert "autoplay" not in s and "rest" not in s
+        assert errors(d) == []
+
     def test_a_toggle_holding_its_own_value(self):
         t = model("(toggle t none (value true))").get("t")
         assert t.attrs["value"].value is True and t.data["target"] is None

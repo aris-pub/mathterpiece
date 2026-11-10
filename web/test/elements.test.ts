@@ -1,6 +1,6 @@
 // The page elements (docs/data-model.md, "On the page"; docs/reference.md, "Components" and
 // "Controls").
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Doc } from "../src/doc.ts";
 import { type MtpModel, define, frames } from "../src/elements.ts";
 import type { Runtime } from "../src/runtime.ts";
@@ -467,6 +467,22 @@ describe("a play's bar", () => {
     expect(fills()).toEqual([0, 0]);
   });
 
+  // The page reads the step to show what goes with it (the author, 2026-11-10): counted from 1, as
+  // under the bars, and absent until the play starts.
+  it("says which step is playing in data-step, from when it starts", () => {
+    tour();
+    const el = document.querySelector("mtp-play") as HTMLElement;
+    expect(el.hasAttribute("data-step")).toBe(false);
+    button().click();
+    pass(0.1);
+    pass(0.5);
+    expect(el.getAttribute("data-step")).toBe("1");
+    pass(1);
+    expect(el.getAttribute("data-step")).toBe("2");
+    pass(4);
+    expect(el.getAttribute("data-step")).toBe("2");
+  });
+
   it("without (buttons true) shows one bar for the whole animation, and no line under it", () => {
     page(`<mtp-play model="m" name="whole"></mtp-play>`, doc("bar"));
     expect(bars().length).toBe(1);
@@ -711,6 +727,231 @@ describe("a play's bar", () => {
     press("pointerup", 250);
     pass(1);
     expect(v("k")).toBe(2);
+  });
+});
+
+describe("a stepper", () => {
+  // The author, 2026-11-10: a play with no clock. "›" plays the next step and stops at its end,
+  // "‹" and the dots jump at once to the end of a step, and step 0 is before the first step.
+  const hints = () => page(`<mtp-stepper model="m" name="hints"></mtp-stepper>`, doc("stepper"));
+  const el = () => document.querySelector("mtp-stepper") as HTMLElement;
+  const back = () => document.querySelector("mtp-stepper .mtp-prev") as HTMLButtonElement;
+  const next = () => document.querySelector("mtp-stepper .mtp-next") as HTMLButtonElement;
+  const dots = () => [...document.querySelectorAll("mtp-stepper .mtp-dot")] as HTMLButtonElement[];
+  const group = () => document.querySelector("mtp-stepper .mtp-dots") as HTMLElement;
+  // What each dot shows: a passed step, the current one, or one still to come.
+  const states = () => dots().map((d) => (d.getAttribute("aria-current") === "step" ? "now" : d.classList.contains("mtp-passed") ? "done" : "later"));
+  const key = (target: EventTarget, k: string) => {
+    const event = new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  // The model starts its frames from performance.now(); on the test's clock, a step played after
+  // others starts on time.
+  beforeEach(() => {
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+
+  // The author, 2026-11-10: the count beside the dots, "3 hints" before the first step, then "2 / 3".
+  it("counts the steps beside the dots", () => {
+    hints();
+    const count = () => document.querySelector("mtp-stepper .mtp-count")?.textContent;
+    expect(count()).toBe("3 hints");
+    dots()[1]!.click();
+    pass(0.1);
+    expect(count()).toBe("2 / 3");
+  });
+  it("shows a back button, a dot per step and a next button, before the first step", () => {
+    const [, , v] = hints();
+    expect(dots().length).toBe(3);
+    expect(states()).toEqual(["later", "later", "later"]);
+    expect(back().disabled).toBe(true);
+    expect(next().disabled).toBe(false);
+    expect(back().getAttribute("aria-label")).toBe("previous step");
+    expect(next().getAttribute("aria-label")).toBe("next step");
+    expect(dots().map((d) => d.getAttribute("aria-label"))).toEqual(["step 1", "step 2", "step 3"]);
+    expect(group().getAttribute("role")).toBe("group");
+    expect(group().getAttribute("aria-label")).toBe("hints: 3 steps");
+    expect(el().hasAttribute("data-step")).toBe(false);
+    expect(el().textContent).toBe("3 hints");
+    expect([v("hints", "step"), v("a"), v("b"), v("k")]).toEqual([0, 0, 0, 0]);
+  });
+
+  it("plays the next step and stops at its end", () => {
+    const [, , v] = hints();
+    next().click();
+    expect(v("hints", "step")).toBe(1);
+    expect(v("hints", "playing")).toBe(true);
+    expect(el().hasAttribute("data-playing")).toBe(true);
+    pass(0.1);
+    pass(0.1);
+    // The move that takes no time is done at once; the other is under way.
+    expect(v("a")).toBe(1);
+    expect(v("b")).toBeGreaterThan(0);
+    expect(v("b")).toBeLessThan(1);
+    pass(2);
+    expect([v("a"), v("b"), v("k")]).toEqual([1, 1, 0]);
+    expect(v("hints", "playing")).toBe(false);
+    expect(el().getAttribute("data-step")).toBe("1");
+    expect(states()).toEqual(["now", "later", "later"]);
+    expect(group().getAttribute("aria-label")).toBe("hints: step 1 of 3");
+    expect(back().disabled).toBe(false);
+    next().click();
+    pass(0.5);
+    expect(v("k")).toBeCloseTo(1);
+    pass(2);
+    expect(v("k")).toBe(2);
+    expect(states()).toEqual(["done", "now", "later"]);
+    next().click();
+    pass(0.1);
+    pass(3);
+    expect(v("k")).toBe(6);
+    expect(v("hints", "step")).toBe(3);
+    expect(el().getAttribute("data-step")).toBe("3");
+    expect(next().disabled).toBe(true);
+    next().click();
+    expect(v("hints", "step")).toBe(3);
+  });
+
+  it("on next while a step plays, ends that step at once and plays the one after", () => {
+    const [, , v] = hints();
+    next().click();
+    pass(2.5);
+    next().click();
+    pass(0.1);
+    pass(0.5);
+    next().click();
+    expect(v("k")).toBe(2);
+    expect(v("hints", "step")).toBe(3);
+    expect(v("hints", "playing")).toBe(true);
+    pass(1);
+    expect(v("k")).toBeCloseTo(4);
+    pass(2);
+    expect(v("k")).toBe(6);
+  });
+
+  it("goes back at once to the end of the step before, and to nothing applied from the first", () => {
+    const [, , v] = hints();
+    for (let j = 0; j < 3; j++) {
+      next().click();
+      pass(3.1);
+    }
+    back().click();
+    expect([v("hints", "step"), v("k"), v("hints", "playing")]).toEqual([2, 2, false]);
+    pass(1);
+    expect(v("k")).toBe(2);
+    back().click();
+    expect([v("a"), v("b"), v("k")]).toEqual([1, 1, 0]);
+    back().click();
+    expect([v("hints", "step"), v("a"), v("b"), v("k")]).toEqual([0, 0, 0, 0]);
+    expect(el().hasAttribute("data-step")).toBe(false);
+    expect(states()).toEqual(["later", "later", "later"]);
+    expect(back().disabled).toBe(true);
+  });
+
+  it("goes back at once from a step still playing", () => {
+    const [, , v] = hints();
+    next().click();
+    pass(1);
+    next().click();
+    pass(0.1);
+    pass(0.5);
+    back().click();
+    expect([v("hints", "step"), v("k"), v("hints", "playing")]).toEqual([1, 0, false]);
+    pass(1);
+    expect(v("k")).toBe(0);
+  });
+
+  it("jumps at once to the end of the step whose dot is tapped", () => {
+    const [, , v] = hints();
+    dots()[2]!.click();
+    expect([v("hints", "step"), v("a"), v("b"), v("k"), v("hints", "playing")]).toEqual([3, 1, 1, 6, false]);
+    expect(states()).toEqual(["done", "done", "now"]);
+    dots()[0]!.click();
+    expect([v("hints", "step"), v("a"), v("b"), v("k")]).toEqual([1, 1, 1, 0]);
+    // Next plays on from there.
+    next().click();
+    pass(0.1);
+    pass(2);
+    expect(v("k")).toBe(2);
+  });
+
+  it("stops at a step's end with the moves that end it done, and none of the next step's", () => {
+    const [, , v] = page(`<mtp-stepper model="m" name="edges"></mtp-stepper>`, doc("stepper"));
+    next().click();
+    pass(1.5);
+    expect([v("k"), v("a"), v("b")]).toEqual([2, 1, 0]);
+    dots()[1]!.click();
+    expect([v("k"), v("a"), v("b")]).toEqual([4, 1, 1]);
+    dots()[0]!.click();
+    expect([v("k"), v("a"), v("b")]).toEqual([2, 1, 0]);
+  });
+
+  it("is read by the model through its step", () => {
+    const [, , v] = hints();
+    expect(v("past")).toBe(false);
+    dots()[1]!.click();
+    expect(v("past")).toBe(true);
+  });
+
+  it("does nothing while inactive", () => {
+    const [, rt, v] = hints();
+    rt.write(rt.id("on"), null, false);
+    expect([back().disabled, next().disabled, ...dots().map((d) => d.disabled)]).toEqual([true, true, true, true, true]);
+    next().click();
+    key(el(), "ArrowRight");
+    expect(v("hints", "step")).toBe(0);
+  });
+
+  it("is cancelled by another writer moving what it moves, keeping its step", () => {
+    const [, , v] = page(`<mtp-stepper model="m" name="hints"></mtp-stepper><mtp-play model="m" name="tour"></mtp-play>`, doc("stepper"));
+    dots()[0]!.click();
+    next().click();
+    pass(0.5);
+    (document.querySelector("mtp-play .mtp-play-button") as HTMLButtonElement).click();
+    pass(0.1);
+    pass(2);
+    expect(v("k")).toBe(9);
+    expect([v("hints", "step"), v("hints", "playing")]).toEqual([2, false]);
+    next().click();
+    expect(v("k")).toBe(2);
+  });
+
+  describe("keys", () => {
+    it("go to the next and the previous step with the stepper focused", () => {
+      const [, , v] = hints();
+      expect(key(next(), "ArrowRight")).toBe(true);
+      expect(v("hints", "step")).toBe(1);
+      pass(1);
+      key(dots()[0]!, "ArrowRight");
+      expect(v("hints", "step")).toBe(2);
+      key(back(), "ArrowLeft");
+      expect([v("hints", "step"), v("k"), v("hints", "playing")]).toEqual([1, 0, false]);
+    });
+
+    it("work from anywhere on a page with one stepper, but not from a text field", () => {
+      const [, , v] = page(`<input id="t"><mtp-stepper model="m" name="hints"></mtp-stepper>`, doc("stepper"));
+      key(document.body, "ArrowRight");
+      expect(v("hints", "step")).toBe(1);
+      key(document.body, "ArrowLeft");
+      expect(v("hints", "step")).toBe(0);
+      const input = document.getElementById("t") as HTMLInputElement;
+      input.focus();
+      expect(key(input, "ArrowRight")).toBe(false);
+      expect(v("hints", "step")).toBe(0);
+    });
+
+    it("work from anywhere only when the page has one play or stepper", () => {
+      const [, , v] = page(`<mtp-stepper model="m" name="hints"></mtp-stepper><mtp-play model="m" name="tour"></mtp-play>`, doc("stepper"));
+      key(document.body, "ArrowRight");
+      key(document.body, " ");
+      expect(v("hints", "step")).toBe(0);
+      expect(v("tour", "playing")).toBe(false);
+    });
   });
 });
 
