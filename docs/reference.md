@@ -421,6 +421,7 @@ Every control and listener emits writes to its target (or, through its animation
 
 ### Controls
 
+- **Copies of a control:** a page may show one control in two places, as when a block holding it is pinned beside the text. The copies are two writers: moving one cancels the other, which keeps showing what it showed. Only the copy of a play or stepper moved last writes its `step` and `playing`.
 - **Label:** a control's label is plain text, `(label 'size')`, or LaTeX, `(label (tex $'C_{k}'))`, the form a term of a formula takes. Plain text is shown as written. LaTeX is typeset as a formula is, and a screen reader hears the LaTeX itself. Either may be an expression that reads the model, and the label follows it. A play and a stepper show no label: theirs only names them for a screen reader.
 - **Slider:** it shows its move's path as a track, and the reader scrubs along it: its knob runs from 0 to 1, its `position`, and the target lies that far along the path from `from` to `to`. Clicking the track jumps there; dragging the knob gives the speed. So the move must give a target, `from` and `to`, neither of which may be `none`, and may give a `path`, but no `duration` and no `ease`. With `(step n)` the knob stops at n evenly spaced positions.
 - **A slider follows its target:** when another writer changes the variable or attribute its move writes, the knob goes to the position whose value is closest to its new value. Its starting position is found the same way.

@@ -967,6 +967,21 @@ function labelPart(rt: Runtime, id: number): { node: Node; follow: () => void } 
   return { node: math, follow };
 }
 
+/** The copy of each play or stepper that moved it last. Two copies of one control on a page, such
+ * as a block pinned beside the text, are two writers: the newest wins and cancels the other
+ * (docs/reference.md, "Controls"), so only it writes the control's own step and playing. */
+const movers = new WeakMap<Runtime, Map<number, Element>>();
+
+function moves(rt: Runtime, id: number, el: Element): void {
+  let byId = movers.get(rt);
+  if (!byId) movers.set(rt, (byId = new Map()));
+  byId.set(id, el);
+}
+
+function movedLastBy(rt: Runtime, id: number, el: Element): boolean {
+  return movers.get(rt)?.get(id) === el;
+}
+
 /** Whether a writer is active, so it can be triggered: always, unless its active is false. */
 function activeOf(rt: Runtime, id: number): boolean {
   const active = rt.objects[id]!.active;
@@ -1177,6 +1192,7 @@ export class MtpPlay extends MtpPart {
     if (split) indicator.append(line);
 
     const own = (): Player => {
+      moves(rt, id, this);
       const held = scheduler.playerOf(this);
       if (held) return held;
       player ??= playerFor(rt, obj)!;
@@ -1196,6 +1212,7 @@ export class MtpPlay extends MtpPart {
         player = playerFor(rt, obj);
         if (player) scheduler.start(player, this);
       }
+      moves(rt, id, this);
       this.refresh();
     };
     play.addEventListener("click", toggle);
@@ -1313,8 +1330,10 @@ export class MtpPlay extends MtpPart {
       if (player) this.setAttribute("data-step", String(k + 1));
       else this.removeAttribute("data-step");
       track.setAttribute("aria-valuetext", text);
-      if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-      if (player && split && rt.value(id, "step") !== k) rt.write(id, "step", k);
+      if (movedLastBy(rt, id, this)) {
+        if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
+        if (player && split && rt.value(id, "step") !== k) rt.write(id, "step", k);
+      }
     };
     this.refresh();
     this.replaceChildren(play, indicator);
@@ -1323,6 +1342,7 @@ export class MtpPlay extends MtpPart {
       if (!activeOf(rt, id) || scheduler.running(this)) return;
       player = playerFor(rt, obj);
       if (player) scheduler.start(player, this);
+      moves(rt, id, this);
       this.refresh();
     };
     const auto = obj.autoplay;
@@ -1374,6 +1394,7 @@ export class MtpStepper extends MtpPart {
 
     // The player, held by this stepper, with the moves of the steps after j held from starting.
     const own = (j: number) => {
+      moves(rt, id, this);
       player ??= playerFor(rt, obj)!;
       if (scheduler.playerOf(this) !== player) scheduler.hold(player, this);
       player.holdFrom(j);
@@ -1463,8 +1484,10 @@ export class MtpStepper extends MtpPart {
       // As a play's: a page shows what goes with each step by this attribute.
       if (at) this.setAttribute("data-step", String(at));
       else this.removeAttribute("data-step");
-      if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-      if (rt.value(id, "step") !== at) rt.write(id, "step", at);
+      if (movedLastBy(rt, id, this)) {
+        if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
+        if (rt.value(id, "step") !== at) rt.write(id, "step", at);
+      }
     };
     this.refresh();
     this.replaceChildren(back, group, next, count);

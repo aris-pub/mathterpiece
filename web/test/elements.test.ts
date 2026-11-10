@@ -459,6 +459,27 @@ describe("a play's bar", () => {
   // mtp-33xt: an ink play button, then one bar per step, as wide as its duration, filling as it
   // plays, and the step now playing under the bars.
   const tour = () => page(`<mtp-play model="m" name="tour"></mtp-play>`, doc("bar"));
+
+  // The author, 2026-11-10: two copies of one play are two writers, as for a stepper.
+  it("two copies of one play: the one moved last writes, and the page does not freeze", () => {
+    const [, rt, v] = page(`<mtp-play model="m" name="tour"></mtp-play><mtp-play model="m" name="tour"></mtp-play>`, doc("bar"));
+    const write = rt.write.bind(rt);
+    let writes = 0;
+    rt.write = (...args: Parameters<typeof rt.write>) => {
+      if (++writes > 1000) throw new Error("the two copies write without end");
+      return write(...args);
+    };
+    const [first, second] = [...document.querySelectorAll("mtp-play")] as HTMLElement[];
+    (second!.querySelector(".mtp-play-button") as HTMLButtonElement).click();
+    pass(0.2);
+    expect(v("tour", "playing")).toBe(true);
+    (first!.querySelector(".mtp-play-button") as HTMLButtonElement).click();
+    pass(0.2);
+    expect(v("tour", "playing")).toBe(true);
+    (first!.querySelector(".mtp-play-button") as HTMLButtonElement).click();
+    pass(0.2);
+    expect(v("tour", "playing")).toBe(false);
+  });
   const button = () => document.querySelector("mtp-play .mtp-play-button") as HTMLButtonElement;
   const bars = () => [...document.querySelectorAll("mtp-play .mtp-bar")] as HTMLElement[];
   const fills = () => bars().map((b) => Number(b.style.getPropertyValue("--u")));
@@ -765,6 +786,35 @@ describe("a stepper", () => {
     target.dispatchEvent(event);
     return event.defaultPrevented;
   };
+
+  // The author, 2026-11-10: two copies of one stepper on a page (a block pinned beside the text
+  // copies it) are two writers. The newest wins and cancels the other, which stops writing and
+  // keeps the step it showed; before this, each wrote its own step back and the page froze.
+  it("two copies of one stepper: the one moved last writes, and the page does not freeze", () => {
+    const [, rt, v] = page(
+      `<mtp-stepper model="m" name="hints"></mtp-stepper><mtp-stepper model="m" name="hints"></mtp-stepper>`,
+      doc("stepper"),
+    );
+    const write = rt.write.bind(rt);
+    let writes = 0;
+    rt.write = (...args: Parameters<typeof rt.write>) => {
+      if (++writes > 1000) throw new Error("the two copies write without end");
+      return write(...args);
+    };
+    const [first, second] = [...document.querySelectorAll("mtp-stepper")] as HTMLElement[];
+    (second!.querySelector(".mtp-next") as HTMLButtonElement).click();
+    pass(5);
+    expect(v("hints", "step")).toBe(1);
+    expect(second!.querySelector(".mtp-count")!.textContent).toBe("1 / 3");
+    expect(first!.querySelector(".mtp-count")!.textContent).toBe("0 / 3");
+    (first!.querySelector(".mtp-next") as HTMLButtonElement).click();
+    pass(5);
+    expect(v("hints", "step")).toBe(1);
+    expect(first!.querySelector(".mtp-count")!.textContent).toBe("1 / 3");
+    (first!.querySelector(".mtp-next") as HTMLButtonElement).click();
+    pass(5);
+    expect(v("hints", "step")).toBe(2);
+  });
   // The model starts its frames from performance.now(); on the test's clock, a step played after
   // others starts on time.
   beforeEach(() => {
