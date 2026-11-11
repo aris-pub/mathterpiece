@@ -22,7 +22,7 @@
 
 (defconst mtp-mode--arguments
   '("a" "active" "align" "autoplay" "b" "background" "buttons" "c" "clip" "controls" "dash" "dash-offset"
-    "doc" "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap"
+    "doc" "drawn" "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap"
     "halign" "height"
     "kind" "label" "like" "line-cap" "line-join" "num" "opacity" "outline" "outline-width" "padding" "pan" "path" "points"
     "in" "pointer-events" "pos" "r" "rest" "rounding" "rx"
