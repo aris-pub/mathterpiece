@@ -65,11 +65,11 @@ Every expression gives an object. Some objects are **values**, which never chang
 
 A form either **computes** something, like the function call `(+ theta 10)`, and has no other effect, or it **declares** something, like `(circle p …)`, and its only effect is that a new object exists. Components are declarations too. A few **special forms** do neither in the ordinary way (section 6).
 
-The templates follow the same split, and always will. **A function is a template of a computation:** its body is an expression, and a function's body will never be allowed to hold a declaration, so calling one never creates anything. **A motif or a variant is a template of declarations:** it is how the same objects are declared many times with different arguments.
+The templates follow the same split, and always will. **A function is a template of a computation:** its body is an expression, and a function's body will never be allowed to hold a declaration, so calling one never creates anything. **A motif or a variant is a template of declarations:** it is how the same objects are declared many times with different arguments. **A choreo is a template of animations:** each use of one declares an animation in place.
 
 ## 4. Declarations
 
-A declaration creates an object and returns it. Its head is usually the type of what it creates (`real`, `circle`, `list[color]`), then its name. A few heads instead say what is being declared: `func`, `type`, `motif`, `variant`, and the components.
+A declaration creates an object and returns it. Its head is usually the type of what it creates (`real`, `circle`, `list[color]`), then its name. A few heads instead say what is being declared: `func`, `type`, `motif`, `variant`, `choreo`, and the components.
 
     (real theta 40)                       ; a variable holding a real
     (color ink 'navy')
@@ -186,19 +186,20 @@ Each form decides whether it has a name, which positional arguments it takes and
 | `(group marks (defaults (fill 'red')) (circle m0) (circle m1))` | `marks` | none | `(defaults (fill 'red'))` | two member declarations |
 | `(func double (real x) (* 2 x))` | `double` | `(real x)`, `(* 2 x)` | none | none |
 | `(motif dial ((real t 0.5)) (circle face …) …)` | `dial` | its parameters, `((real t 0.5))` | none | member declarations |
+| `(choreo fade-in ((shape who)) (move who.opacity (to 1)))` | `fade-in` | its parameters, `((shape who))` | none | a move of `who.opacity` |
 | `(transition slide none (to 5) (duration 1))` | `slide` | the target, here `none` | `(to 5)`, `(duration 1)` | none |
 | `(animation grow (defaults (duration 1)) (move theta (like slide)) (wait 0.5))` | `grow` | none | `(defaults (duration 1))` | a move of `theta` along `slide`, then a wait of half a second |
 | `(slider spin (move theta (from 0) (to 360)) (label 'angle'))` | `spin` | the move | `(label 'angle')` | none |
 | `(canvas v (x -5) a b (when show c))` | `v` | none | `(x -5)` | `a`, `b`, `(when show c)` |
 | `(on-drag p theta)` | none | `p`, `theta` | none | none |
 
-Function calls and special forms follow the template too. A call's head is the function, it has no name, and its arguments are positional, some of which may be left out, as in `(round x)` and `(round x 2)`; a function that takes any number of arguments takes them as its body, as in `(+ a b c)`. Each special form has its own positional arguments and body: `(if c a b)` has three positional arguments, and `(cond …)` a body of clauses.
+Function calls and special forms follow the template too. A call's head is the function, it has no name, and its arguments are positional, some of which may be left out, as in `(round x)` and `(round x 2)`; a use of a choreo is written the same way, `(fade-in d1)` or `(fade-in d1 2)`, though it declares an animation rather than computing a value; a function that takes any number of arguments takes them as its body, as in `(+ a b c)`. Each special form has its own positional arguments and body: `(if c a b)` has three positional arguments, and `(cond …)` a body of clauses.
 
 ## 9. Putting a file together
 
 A file is a sequence of declarations, read in order: a name must be declared before it is used. The order is only how the file is written; the objects it declares hold all their relations at once. A typical file runs:
 
-- **Types**: `type`, `motif` and `variant`, at the top level.
+- **Types and templates**: `type`, `motif`, `variant` and `choreo`, at the top level.
 - **Globals**: functions, transitions, animations, and variables that are not part of the scene, at the top level.
 - **The scene**: exactly one `(scene …)`, holding the shapes and the variables they share.
 - **Components**: views (`canvas`, `readout`), controls (`slider`, `button`, `play`, `toggle`) and listeners (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`, `on-live`, `on-quiet`, `on-enter`, `on-leave`, `on-pointermove`), at the top level.
@@ -207,6 +208,6 @@ The data model shows how these relate: what reads what, and what writes what.
 
 ## 10. Types in brief
 
-A variable's or shape's head is its type: `real`, `int`, `bool`, `string`, `color`, `point`, `list`, a shape such as `circle`, or a type the illustrator declared (section 4 lists the heads that are not types). A function's or motif's parameters always write theirs: `((real t 0.5) (color tint 'red'))`. A type can be written in place: `list[color]` is a list of colors, `real|none` (or `(maybe real)`) a real or `none`, `(real (>= 0))` a real no less than 0.
+A variable's or shape's head is its type: `real`, `int`, `bool`, `string`, `color`, `point`, `list`, a shape such as `circle`, or a type the illustrator declared (section 4 lists the heads that are not types). A function's, motif's or choreo's parameters always write theirs: `((real t 0.5) (color tint 'red'))`. A type can be written in place: `list[color]` is a list of colors, `real|none` (or `(maybe real)`) a real or `none`, `(real (>= 0))` a real no less than 0.
 
 A literal takes the type expected where it is written: `'red'` is a string, but written as a fill it is a color. The type document covers all of this in full.

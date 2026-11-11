@@ -110,7 +110,7 @@ Every random value is computed from a **seed**, a free variable of the built-in 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
 | `(type name base)` | required | the base type | none | constraints |
-| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `foreach`, `let`, `exists-when`; or one `(animation …)`, for a motif of animations (see "Transitions and animations") |
+| `(motif name params)` | required | the parameter list | none | member declarations, bound variable declarations, `foreach`, `let`, `exists-when` |
 | `(variant name params shape)` | required | the parameter list; one shape declaration | none | none |
 
 A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t 0.5) (color tint 'red'))`, or `()` for none; each may have a default. `()` is also an empty list of `let` bindings, and is never a value.
@@ -254,7 +254,8 @@ A **formula** is typeset math, as the scene is geometry: `(formula name item…)
 |---|---|---|---|---|
 | `(transition name target)` | required; declared only at the top level | the target: a `name`, the variable or attribute it moves, or `none` for a pure transition | `(from v)`, `(to v)`, `(duration real)`, `(ease …)`, `(path …)`, `(like t)` | none |
 | `(move target)` | none; written only inside an animation, a slider or a canvas | the target, as for `transition` | the same as `transition` | none |
-| `(animation name)` | required, except when written inline as an item of a control or listener | none | `(defaults (duration real) (ease …))`, `(loop)`, `(loop n)` | moves, `at-once`, `in-order` and `step` forms, and the names of animations and transitions |
+| `(animation name)` | required, except when written inline as an item of a control or listener | none | `(defaults (duration real) (ease …))`, `(loop)`, `(loop n)` | moves, `at-once`, `in-order` and `step` forms, the names of animations and transitions, and uses of choreos |
+| `(choreo name params)` | required; declared only at the top level | the parameter list | the same as `animation` | the same as `animation` |
 
 A **transition** is a trajectory from `from` to `to`, along `path`, over `duration`, with `ease`, and the variable or attribute it moves, its target. Two forms make one: `(transition name target …)` declares a named one at the top level, and `(move target …)` writes one in place, with no name, inside an animation, a slider or a canvas. Every argument but the target may be left out, and is then none. A **pure** transition has `none` as its target and keeps only the trajectory. `(like t)` copies the arguments of the transition named `t`, and the form's own arguments win over them, wherever `(like …)` is written. A transition with no `from` starts from the value of what it moves; with no `to`, ends there.
 
@@ -278,16 +279,27 @@ A move may end, or start, at `none` only when what it moves is declared `T|none`
 
 Paths: a straight line between the ends by default, or a function taking the two ends and the progress.
 
-**A motif of animations** makes many animations from one template, as a motif of shapes makes many shapes: its body is one `(animation …)`, which reads the parameters.
+**A choreo** is a template of animations, as a motif is a template of shapes: `(choreo name params item…)` declares a kind of animation, with typed parameters written as a motif's or a function's are, each with an optional default. Its body holds what an animation's body holds, and its moves may move its parameters and their attributes.
 
-    (motif turn-to ((real angle 0) (string label '') (real seconds 8))
-      (animation
-        (at-once (defaults (duration seconds))
-          (move sunflower.angle (to angle))
-          (move caption (to label)))))
-    (turn-to third (angle 120) (label 'a third of a turn') (seconds 10))
+    (choreo fade-in ((shape who) (real seconds 0.4))
+      doc@'Fades a shape in.'
+      (move who.opacity (to 1) (duration seconds)))
+    (button show-both (fade-in d1))
+    (play reveal (animation (fade-in d1) (fade-in d2 1)))
 
-`(turn-to third …)` at the top level declares the animation `third`; `(turn-to_ …)` in an animation's body, or in a play's, is a step of it. Each instance is compiled when compiling, its parameters filled in, so whatever a move needs known then, its target and its duration, is known from the arguments. The motif's name is a type that refines `animation`: `third` is a `turn-to`, accepted wherever an animation is. Its arguments can be read, `third.angle`, and never written, since an animation is a value. A parameter takes a default as a motif's does, an instance may begin with `(like …)`, and a parameter may be a shape, as in `((shape who)) … (move who.opacity (to 0))`. A motif's body is shapes, or one animation, never both; and a function never declares one, since a function only computes (syntax, "Values and objects").
+**A use** of a choreo, `(fade-in d1)`, gives its arguments in order, without their names, and may leave out trailing ones that have defaults. Each use declares an animation in place, the choreo's body with the arguments in place of the parameters, as an inline `(animation …)` does. A use is written where an animation is written:
+
+- **As the animation of a control or a listener**, in place of `(animation …)`: `(button show-both (fade-in d1))` is `(button show-both (animation (fade-in d1)))`, and is the same as `(button show-both (animation (move d1.opacity (to 1) (duration 0.4))))`.
+- **As an item of an animation's body**, as the name of an animation is, or of a choreo's body, so one choreo may use another, passing its own parameters on: `(choreo both ((shape a) (shape b)) (at-once (fade-in a) (fade-in b)))`.
+- **A named animation** made from a use is an animation whose body holds that use: `(animation third (turn-to 120 'a third of a turn' 10))`.
+
+A use anywhere else, such as at the top level, in the scene or in an expression, is a compile error, as is a form whose head is neither a choreo nor anything an animation holds.
+
+**Arguments are known when compiling**: names of shapes, variables and attributes, literals, constants and eases. Each use is written out by the compiler as an ordinary animation, so the compiled file holds no choreo. A parameter given a name stands for what it names: given a shape, `who.opacity` is that shape's opacity; given a variable or an attribute, a move of the parameter moves it, `(move x (to 1))`, and reading the parameter reads its value when the move starts, as reading the variable itself does. A parameter given a value, such as 3, cannot be moved. An argument that needs the live model, such as `(* 2 k)`, is a compile error, as are a wrong number of arguments and an argument of the wrong type.
+
+**A choreo uses only choreos declared before it**, so a choreo that uses itself, directly or through other choreos, is a compile error: `(choreo pulse ((shape a)) (fade-in a) (pulse a))` is refused. A choreo whose parameters all have defaults is compiled once without a use, so the errors in its body show even when nothing uses it.
+
+**Steps.** A choreo's steps are the items of its body, as an animation's are. A use in an animation's body is one step of it, as the name of an animation is, whatever the choreo's body holds; a use written alone in an animation's body, or as the animation of a play or a stepper, gives that animation the choreo's steps, with their names.
 
 `a.steps` is the list of transitions an animation plays, in the order it plays them: through `at-once` (in the order written), `in-order` and the animations it names, with each wait as a transition that moves nothing, and for an animation that loops, one round. Its length is known when compiling, so `(foreach t a.steps …)` works, and each step is read like any transition, `a.steps[0].duration`. A transition's `duration` can be read wherever a transition is, such as `(fn ((transition s)) s.duration)`; its `from` and `to` only on a step or a named transition, since their type depends on what it moves. A step does not know when it starts, since that depends on the steps before it: the sum of their durations, in an animation that plays them one after another.
 
@@ -316,6 +328,8 @@ A view, a control and a readout must have a name: a page places each by its name
 | `(on-enter shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(in view…)` | conditions |
 | `(on-leave shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(in view…)` | conditions |
 | `(on-pointermove shape target)` | none | the shape or the canvas; the target, a `name`, the point it writes | `(active bool)`, `(stop-propagation bool)`, `(in view…)`, only on a shape | conditions |
+
+Wherever a control or a listener takes `(animation …)`, a use of a choreo may stand in its place, among its optional arguments: `(button show (fade-in d1) (label 'Show'))` (see "Transitions and animations").
 
 A canvas **toggles** the shapes its items give: when an item starts or stops giving a shape, as `(when show d)` does when `show` changes, or `(if show d c)` does by giving one shape for another, the canvas shows or hides that shape. A toggle takes the canvas's `(toggle-duration t)`, in seconds, 0 (at once) if left out, with its `(toggle-ease e)`, `'linear'` if left out, any ease an animation takes: over that time the items' opacity, as the canvas shows them, goes from 0 to 1 or back. A canvas takes no `move`. The canvas never writes the scene: the opacity is its own. "Toggle" is the word for a canvas showing or hiding one of its items.
 

@@ -93,12 +93,12 @@ Objects are of two sorts. A **value** is an immutable object: it never changes, 
 
 A **variable**, such as `(real k 1)`, is not a value: it is a name for a piece of state that holds one object of its type at a time. The objects it holds may be values (3, then 4) or mutable objects (a shape). It evaluates to what it currently holds, and has no attributes of its own.
 
-Every box below has a title and examples of the forms that declare what it holds. Arrows are relations between them. Apart from function calls, forms fall into six groups: special forms, declarations that create types, declarations of things in the scene, declarations of things in a formula, declarations of things on the page, and **globals**: declarations of things in none of them, which all use. A variable belongs to the scene when declared in it, to a formula when declared in one, and to the globals otherwise. Either way, views may read it, and controls and listeners may read it and write it, as long as it is free, has no `const` constraint, and is not a token. A motif's body may declare only bound variables; free per-instance state is a motif parameter.
+Every box below has a title and examples of the forms that declare what it holds. Arrows are relations between them. Apart from function calls, forms fall into six groups: special forms, declarations that create types, declarations of things in the scene, declarations of things in a formula, declarations of things on the page, and **globals**: declarations of things in none of them, which all use. A variable belongs to the scene when declared in it, to a formula when declared in one, and to the globals otherwise. Either way, views may read it, and controls and listeners may read it and write it, as long as it is free, has no `const` constraint, and is not a token. A motif's body may declare only bound variables; free per-instance state is a motif parameter. A choreo creates a kind of animation, as a motif creates a kind of shape, but it declares no type: the compiler writes each use of it out as an ordinary animation, so the compiled file holds animations only.
 
 ```mermaid
 flowchart LR
   subgraph wm [world model]
-    types["types: (motif …) (type …) (variant …)"]
+    types["types and templates: (motif …) (type …) (variant …) (choreo …)"]
     special["special forms: (foreach …) (let …) …"]
     subgraph scene
       sc["the scene: (scene …)"]
@@ -124,6 +124,7 @@ flowchart LR
   shapes <-->|read each other| vars
   vars & shapes -->|call| funcs
   anims -->|made of| trans
+  anims -->|use of| types
   anims -->|moves an attribute or variable| shapes
   controls -->|runs| anims
   listeners -->|attached to| shapes

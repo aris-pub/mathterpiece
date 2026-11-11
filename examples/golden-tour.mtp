@@ -47,19 +47,17 @@
 ; Each move turns the angle about 3 degrees a second on average (about 9 at its fastest, in the
 ; middle of the ease): a small change of angle turns the outer seeds a long way, so faster than
 ; that the flower blurs.
-(motif turn-to ((real angle 0) (stop label 'a quarter turn') (color|none glow none)
-                (real seconds 8) (func[(real (>= 0) (<= 1)) real] curve cubic-in-out))
+(choreo turn-to ((real angle 0) (stop label 'a quarter turn') (real seconds 8)
+                 (color|none glow none) (func[(real (>= 0) (<= 1)) real] curve cubic-in-out))
   doc@'One stop of the tour: turn to angle, show its label, and light the halo or not.'
-  (animation
-    (at-once (defaults (duration seconds) (ease curve))
-      (move sunflower.angle (to angle))
-      (move stop-name (to label))
-      (move halo.fill (to glow)))))
-(turn-to quarter (angle 90) (label 'a quarter turn') (seconds 16))
-(turn-to third (angle 120) (label 'a third of a turn') (seconds 10))
-(turn-to two-fifths (angle 144) (label 'two fifths of a turn') (seconds 8))
-(turn-to golden (angle golden-angle) (label 'the golden angle') (glow gold) (seconds 6)
-         (curve cubic-out))
+  (at-once (defaults (duration seconds) (ease curve))
+    (move sunflower.angle (to angle))
+    (move stop-name (to label))
+    (move halo.fill (to glow))))
+(animation quarter (turn-to 90 'a quarter turn' 16))
+(animation third (turn-to 120 'a third of a turn' 10))
+(animation two-fifths (turn-to 144 'two fifths of a turn' 8))
+(animation golden (turn-to golden-angle 'the golden angle' 6 gold cubic-out))
 
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true) (rest 2.5)

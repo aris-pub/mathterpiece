@@ -46,7 +46,7 @@ Every type is written as JSON:
 | a list | `{"list": T}` |
 | a function | `{"func": [T1, T2, …], "result": T}` |
 | broadened | `{"union": [T, "none"]}` |
-| narrowed | `{"refine": T, "constraints": [C, …]}`; with no constraints for a type a motif of animations declares, `{"refine": "animation", "constraints": []}`, so its instances are animations |
+| narrowed | `{"refine": T, "constraints": [C, …]}` |
 
 A constraint is an array: `[">=", 0]`, `["<", 1]`, `["length", 3]`, `["one-of", ["left", "right"]]`, `["const"]`, `["wrap", 0, 360]`. A list's known length is always written as a `length` constraint.
 

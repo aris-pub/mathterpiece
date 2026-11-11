@@ -118,9 +118,7 @@ class TestSteps:
         assert t.kind == "transition" and t.attrs["to"].value == 5
 
     def test_an_animation_holds_only_moves_at_once_and_in_order(self):
-        error(
-            f"{K} (animation a (k (to 5) (duration 1)))", "holds moves, waits, at-once and in-order"
-        )
+        error(f"{K} (animation a (k (to 5) (duration 1)))", "holds moves, waits, at-once, in-order")
 
     def test_a_move_with_no_target_only_waits(self):
         # A wait keeps its transition, for a.steps; the .mtpc writes only its duration.
@@ -391,7 +389,7 @@ class TestForeachInAnAnimation:
     def test_let_is_still_not_an_animation_item(self):
         error(
             f"{K} (animation an (let ((v 1)) (move k (to v) (duration 1))))",
-            "holds moves, waits, at-once and in-order",
+            "holds moves, waits, at-once, in-order",
         )
 
 

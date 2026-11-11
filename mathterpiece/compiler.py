@@ -385,12 +385,12 @@ STDLIB = Path(__file__).parent / "stdlib"
 # What a namespace may not hold: it holds values only (the author, 2026-11-04).
 NOT_VALUES = {
     "func", "type", "motif", "variant", "scene", "transition", "animation", "import", "let",
-    "foreach", "interface", "colormap",
+    "foreach", "interface", "colormap", "choreo",
 }  # fmt: skip
 # What an imported file may declare at its top level, besides const variables.
 IMPORTABLE = {
     "color", "font", "func", "motif", "variant", "type", "import", "namespace", "interface",
-    "colormap", "palette",
+    "colormap", "palette", "choreo",
 }  # fmt: skip
 
 
@@ -515,9 +515,13 @@ class _Compiler:
         # Each declaration's written arguments, as (node, scope) by name, for a later (like …)
         # to copy and compile again in its own place (the author, 2026-11-06).
         self.as_written: dict[int, object] = {}
-        # Motifs whose body is one animation: templates of animations, each declaring a type
-        # that refines animation (the author, 2026-11-06).
-        self.anim_motifs: dict[str, MotifDef] = {}
+        # The choreos, templates of animations (mtp-h972), and the uses being written out,
+        # innermost last.
+        self.choreos: dict[str, _Choreo] = _Names(self)
+        self.playing: list[_Choreo] = []
+        self.choreo_trials: list[_Choreo] = []
+        # For a use written alone in an animation's body, the names of its steps.
+        self.use_names: dict[int, list] = {}
         self.fold_words: dict[int, set[str]] = {}
         # The functions whose bodies are being compiled again for a call's range, so a
         # recursive call keeps its body's range, and the ranges found, by fold_key.
@@ -545,6 +549,8 @@ class _Compiler:
         forms = self.imports(forms, None, self.source)
         for form, scope in self.expand(forms, {}, top=True):
             self.top(form, scope)
+        for choreo in self.choreo_trials:
+            self.choreo_trial(choreo)
         self.check_quiet()
         # A named transition no move ever used still needs its ends compiled.
         for i, obj in enumerate(self.model.objects):
@@ -825,6 +831,7 @@ class _Compiler:
             ("interface", m.interfaces),
             ("motif", m.motifs),
             ("variant", m.variants),
+            ("choreo", self.choreos),
             ("func", m.funcs),
             ("type", m.types),
         ]
@@ -882,9 +889,10 @@ class _Compiler:
         if head == "animation":
             self.animation(form, {}, named=True)
             return
-        if head in self.anim_motifs:
-            self.anim_instance(form, scope)
-            return
+        if head == "choreo":
+            return self.choreo_decl(form)
+        if self.choreo_of(form) is not None:
+            raise CompileError(_USE_OUTSIDE, form.pos)
         if head in COMPONENTS:
             return self.component(form, scope)
         if self.shape_kind(form):
@@ -931,6 +939,7 @@ class _Compiler:
             self.aliases[file][name] = f"{file}.{name}"
             return f"{file}.{name}", node.pos
         taken = self.model.names.keys() | self.model.funcs.keys() | self.model.types.keys()
+        taken |= self.choreos.keys()
         if self.bodies:
             taken = self.bodies[-1]["names"].keys() | self.bodies[-1]["attrs"]
         # A parameter hides a top-level name inside its function or motif, as in Python.
@@ -1380,9 +1389,13 @@ class _Compiler:
         if name in SHAPE_ATTRS or name in self.model.types:
             raise CompileError(f"'{name}' is already declared", pos)
         params = self.params(form.items[2])
-        body = form.items[3:]
-        if any(_head(item) == "animation" for item in body):
-            return self.anim_motif_decl(name, params, body, form, pos)
+        for item in form.items[3:]:
+            if _head(item) == "animation":
+                raise CompileError(
+                    "a motif makes shapes; for a template of animations, use choreo:"
+                    " (choreo name parameters item…)",
+                    item.pos,
+                )
         for p in params:
             if p.name in INSTANCE_ATTRS or p.name == "pos":
                 raise CompileError(f"every motif instance already has '{p.name}'", form.pos)
@@ -1390,89 +1403,152 @@ class _Compiler:
         self.model.types[name] = ShapeT(name)
         self.trial(name, form.pos)
 
-    def anim_motif_decl(self, name: str, params, body, form: Form, pos: Pos) -> None:
-        """(motif name params (animation …)): a template of animations. It declares the type
-        name, which refines animation; its body is that one animation, never shapes beside it."""
-        if len(body) != 1 or not isinstance(body[0], Form):
+    def choreo_decl(self, form: Form) -> None:
+        """(choreo name parameters item…): a kind of animation, as a motif is a kind of shape
+        (the author, 2026-11-11, mtp-h972). Its body holds what an animation's body holds. Each
+        use, (name argument…), is written out as an ordinary animation with its arguments in
+        place of the parameters, so the compiled file holds no choreo."""
+        name, pos = self.name_of(form)
+        if name is None or len(form.items) < 3:
+            raise CompileError("a choreo is (choreo name parameters item…)", form.pos)
+        if name in ANIMATION_ITEMS or name in ("loop", "choreo"):
+            raise CompileError(f"'{name}' is already a form an animation holds", pos)
+        if name in self.choreos or name in COMPONENTS or name in SHAPE_ATTRS:
+            raise CompileError(f"'{name}' is already declared", pos)
+        if len(form.items) == 3:
             raise CompileError(
-                "a motif's body is shapes, or one (animation …), never both", body[-1].pos
+                "a choreo holds what an animation's body holds: moves, waits, at-once, in-order,"
+                " steps, the names of animations and transitions, and uses of choreos",
+                form.pos,
             )
-        for p in params:
-            if p.name in ("duration", "steps", "name"):
-                raise CompileError(f"every animation already has '{p.name}'", form.pos)
-        self.anim_motifs[name] = MotifDef(name, params, tuple(body), pos)
-        self.model.types[name] = Refine(ANIMATION, (), name)
-        # One instance, then discarded, so the body's errors show without any; not when a
-        # parameter, such as a shape, has no value to stand in for an argument.
-        for p in params:
-            if p.default is None:
-                try:
-                    self.default(p.type, pos)
-                except CompileError:
-                    return
-        objects, names = len(self.model.objects), dict(self.model.names)
+        params = self.params(form.items[2])
+        choreo = _Choreo(
+            name, params, form.items[3:], pos, len(self.choreos), _heads(form.items[3:])
+        )
+        dict.__setitem__(self.choreos, name, choreo)
+        through = self.choreo_cycle(choreo)
+        if through is not None:
+            names = [f"'{c}'" for c in through]
+            via = (
+                f", through {', '.join(names[:-1])} and {names[-1]}"
+                if len(names) > 1
+                else f", through {names[0]}"
+                if names
+                else ""
+            )
+            raise CompileError(
+                f"the choreo '{name}' uses itself{via}: a choreo may not play itself, directly or"
+                " through other choreos",
+                pos,
+            )
+        # One use with every argument left out, once every top-level form is compiled, so the
+        # body's errors show without any use. Not when a parameter has no default: the type's
+        # own default, such as 0 for a real, would stand where a use may give the name of a
+        # variable to move.
+        if all(p.default is not None for p in params):
+            self.choreo_trials.append(choreo)
+
+    def choreo_trial(self, choreo: "_Choreo") -> None:
+        args = {p.name: _default_arg(p) for p in choreo.params}
+        objects, names, sites = len(self.model.objects), dict(self.model.names), self.rand_sites
         self.trialing += 1
         try:
-            self.anim_instance(Form((Name((name,), pos), NoneLit(pos)), pos), {})
+            self.choreo_steps(choreo, args, choreo.pos)
         finally:
             self.trialing -= 1
             del self.model.objects[objects:]
             self.model.names.clear()
             dict.update(self.model.names, names)
+            self.rand_sites = sites
 
-    def anim_instance(self, form: Form, scope: dict) -> int:
-        """(stop third (angle 120) …), or (stop_ …) in an animation's body: the motif's animation
-        with its parameters given, as a shape motif's instance is; its arguments may be read,
-        third.angle, and never written, since an animation is a value."""
-        kind = _head(form)
-        assert kind is not None
-        motif = self.anim_motifs[kind]
-        name, pos = self.name_of(form, scope)
-        params = {p.name: p for p in motif.params}
-        given: dict[str, tuple[Node, dict]] = {}
-        like = None
-        for item in form.items[2:]:
-            head = _head(item)
-            if head == "like":
-                if like is not None:
-                    raise CompileError("'like' is given twice", item.pos)
-                if given:
-                    raise CompileError(LIKE_FIRST, item.pos)
-                like = item
-                continue
-            if head not in params or not isinstance(item, Form) or len(item.items) != 2:
-                raise CompileError(f"a {kind} takes no argument {_shown(item)}", item.pos)
-            if head in given:
-                raise CompileError(f"'{head}' is given twice", item.pos)
-            given[head] = (item.items[1], scope)
-        if like is not None:
-            source = self.as_written.get(self.like_of(like, scope, "animation", kind))
-            assert isinstance(source, dict)
-            for p, given_at in source["given"].items():
-                given.setdefault(p, given_at)
-        args = {}
-        for p in motif.params:
-            if p.name in given:
-                node, inner = given[p.name]
-                args[p.name] = self.expr(node, p.type, inner)
-            elif p.default is not None:
-                args[p.name] = _default_arg(p)
+    def choreo_cycle(self, choreo: "_Choreo") -> list[str] | None:
+        """The choreos through which choreo uses itself, in order, or None when it does not. A
+        choreo's uses are found in its body as written, so a cycle is found when the last of its
+        choreos is declared, whether or not any is used."""
+
+        def walk(c: _Choreo, path: list[str], seen: set[str]) -> list[str] | None:
+            for head in sorted(c.uses):
+                d = self.choreos.get(head)
+                if d is None:
+                    continue
+                if d is choreo:
+                    return path
+                if d.name not in seen:
+                    seen.add(d.name)
+                    found = walk(d, [*path, d.name], seen)
+                    if found is not None:
+                        return found
+            return None
+
+        return walk(choreo, [], set())
+
+    def choreo_of(self, node: Node) -> "_Choreo | None":
+        """The choreo a form uses, (fade-in d1), or (lib.fade-in d1) from a file imported whole."""
+        if not isinstance(node, Form) or not node.items or not isinstance(node.items[0], Name):
+            return None
+        parts = node.items[0].parts
+        if not all(isinstance(p, str) for p in parts):
+            return None
+        return self.choreos.get(".".join(cast(tuple[str, ...], parts)))
+
+    def choreo_use(self, form: Form, scope: dict) -> tuple[tuple, list]:
+        """A use of a choreo, (fade-in d1 0.4): its steps, and the names of its steps, as an
+        animation's body with the arguments in place of the parameters gives them."""
+        choreo = self.choreo_of(form)
+        assert choreo is not None
+        shown = choreo.name.rsplit(".", 1)[-1]
+        given, params = form.items[1:], choreo.params
+        least = max((k + 1 for k, p in enumerate(params) if p.default is None), default=0)
+        if not least <= len(given) <= len(params):
+            if least == len(params):
+                takes = f"{least} argument{'s' if least != 1 else ''}"
+            elif least == 0:
+                takes = f"up to {len(params)} arguments"
             else:
-                args[p.name] = _known(p.type, self.default(p.type, pos))
-        (body,) = motif.body
-        assert isinstance(body, Form)
-        head = Name(("animation",), pos)
-        anim = Form((head, Name((name,), pos), *body.items[1:]), pos) if name else None
-        if anim is not None:
-            i = self.animation(anim, dict(args), named=True)
-        else:
-            i = self.animation(Form((head, *body.items[1:]), pos), dict(args), named=False)
-        obj = self.model.objects[i]
-        obj.type = self.model.types[kind]
-        obj.of = kind
-        obj.data["args"] = args
-        self.as_written[i] = {"given": given}
-        return i
+                takes = f"{least} to {len(params)} arguments"
+            raise CompileError(f"{shown} takes {takes}, got {len(given)}", form.pos)
+        names = {p.name for p in params}
+        args = {}
+        for p, node in zip(params, given, strict=False):
+            try:
+                e = self.expr(node, p.type, scope)
+            except CompileError:
+                if _head(node) in names and isinstance(node, Form) and len(node.items) == 2:
+                    raise CompileError(
+                        "the arguments of a choreo are written in order, without names: write"
+                        f" the value of {_head(node)} alone, as in"
+                        f" ({shown} … {_shown(node.items[1])} …)",
+                        node.pos,
+                    ) from None
+                raise
+            named = isinstance(node, Name) and all(isinstance(x, str) for x in node.parts)
+            if not (e.known or named or e.op in ("obj", "func", "builtinfunc")):
+                raise CompileError(
+                    "the arguments of a choreo are known when compiling: names of shapes,"
+                    " variables and attributes, literals, constants and eases",
+                    node.pos,
+                )
+            args[p.name] = e
+        for p in params[len(given) :]:
+            args[p.name] = _default_arg(p)
+        return self.choreo_steps(choreo, args, form.pos)
+
+    def choreo_steps(self, choreo: "_Choreo", args: dict, pos: Pos) -> tuple[tuple, list]:
+        outer = self.playing[-1] if self.playing else None
+        if outer is not None and choreo.index > outer.index:
+            raise CompileError(
+                f"'{choreo.name}' is declared after '{outer.name}': a choreo uses only choreos"
+                " declared before it",
+                pos,
+            )
+        self.playing.append(choreo)
+        # The body reads its names as the file that declares the choreo sees them.
+        saved, self.here = self.here, choreo.pos.file
+        try:
+            return self.anim_body(list(choreo.body), dict(args), choreo.pos)
+        finally:
+            self.here = saved
+            self.playing.pop()
 
     def colormap_decl(self, form: Form) -> None:
         """(colormap name [color…] (positions …) (discrete bool) (wrap-at x)): sugar for one
@@ -2708,6 +2784,17 @@ class _Compiler:
             name, pos, items = None, form.pos, form.items[1:]
             if len(items) == 1 and isinstance(items[0], Name):
                 return self.named(items[0], "animation")
+        steps, names = self.anim_body(items, scope, pos)
+        # One that loops forever lasts ∞.
+        attrs = {"duration": Attribute(_with_const(REAL), _duration(steps))}
+        data: dict = {"steps": steps}
+        if any(isinstance(n, str) for n in names):
+            data["names"] = [n if isinstance(n, str) else None for n in names]
+        obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data=data)
+        return self.add(obj)
+
+    def anim_body(self, items: Sequence, scope: dict, pos: Pos) -> tuple[tuple, list]:
+        """The steps of an animation's body, and the name of each, as steps() gives them."""
         self.options_first(items, lambda it: _head(it) in ("defaults", "loop"), "animation")
         loops = [it for it in items if _head(it) == "loop"]
         if len(loops) > 1:
@@ -2728,17 +2815,13 @@ class _Compiler:
                 i = self.model.names.get(only[0].parts[0]) if len(only[0].parts) == 1 else None
                 if i is not None and self.model.objects[i].kind == "animation":
                     names = list(self.model.objects[i].data.get("names", []))
+            elif len(only) == 1 and self.choreo_of(only[0]) is not None:
+                names = self.use_names.pop(id(only[0]))
         if loops:
             if _duration(steps) <= 0:
                 raise CompileError("this animation loops, but a round of it takes no time", pos)
             steps = ("loop", self.loop_count(loops[0], scope), steps)
-        # One that loops forever lasts ∞.
-        attrs = {"duration": Attribute(_with_const(REAL), _duration(steps))}
-        data: dict = {"steps": steps}
-        if any(isinstance(n, str) for n in names):
-            data["names"] = [n if isinstance(n, str) else None for n in names]
-        obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data=data)
-        return self.add(obj)
+        return steps, names
 
     def loop_count(self, form, scope: dict) -> int | None:
         """How many times (loop n) repeats an animation; None, with no n, for forever."""
@@ -2850,12 +2933,17 @@ class _Compiler:
                 out.append((head, *self.steps(item.items[1:], duration, ease, scope)))
                 if head == "at-once":
                     self.check_together(out[-1][1:], item.pos)
-            elif head in self.anim_motifs:
+            elif self.choreo_of(item) is not None:
+                # A use stands for the animation it declares, as the name of an animation does.
                 assert isinstance(item, Form)
-                out.append(self.model.objects[self.anim_instance(item, scope)].data["steps"])
+                used, self.use_names[id(item)] = self.choreo_use(item, scope)
+                out.append(used)
             else:
                 raise CompileError(
-                    "an animation holds moves, waits, at-once and in-order", item.pos
+                    "an animation holds moves, waits, at-once, in-order, steps, the names of"
+                    " animations and transitions, and uses of choreos"
+                    + (f": '{head}' is not a choreo" if head is not None else ""),
+                    item.pos,
                 )
         return out
 
@@ -2865,7 +2953,7 @@ class _Compiler:
             i = self.model.names.get(node.parts[0]) if len(node.parts) == 1 else None
             return i is not None and self.model.objects[i].kind in ("animation", "transition")
         head = _head(node)
-        return head in ANIMATION_ITEMS or head in self.anim_motifs
+        return head in ANIMATION_ITEMS or self.choreo_of(node) is not None
 
     def step_name(self, node: Node, scope: dict) -> str:
         e = self.expr(node, None, scope)
@@ -2972,6 +3060,17 @@ class _Compiler:
         local = scope.get(first) if isinstance(first, str) else None
         if isinstance(local, Expr) and local.op == "obj":
             i, attr = local.args[0], None
+        elif self.playing and isinstance(local, Expr) and local.op == "read" and not local.args[2]:
+            # A choreo's parameter given the name of a variable or an attribute stands for it.
+            i, attr = local.args[0], local.args[1]
+            if attr is not None and len(node.parts) > 1:
+                raise CompileError(f"{label} is not a variable or an attribute", node.pos)
+        elif self.playing and first in self.playing[-1].names and isinstance(local, Expr):
+            raise CompileError(
+                f"'{first}' was given a value, not the name of a variable or an attribute, so"
+                " nothing can write it",
+                node.pos,
+            )
         elif not isinstance(first, str) or first not in self.model.names:
             raise CompileError(f"unknown name '{first}'", node.pos)
         else:
@@ -3088,6 +3187,10 @@ class _Compiler:
             raise CompileError(
                 "a view takes no (in …): listeners and controls belong to views", tied.pos
             )
+        if kind in VIEWS or kind in ("slider", "on-drag", "on-pointermove"):
+            use = next((it for it in items if self.choreo_of(it) is not None), None)
+            if use is not None:
+                raise CompileError(f"a {kind} plays no animation: {_USE_OUTSIDE}", use.pos)
         # A canvas's body is what it shows; a writer's is its conditions.
         if kind == "canvas":
             self.options_first(
@@ -3097,7 +3200,12 @@ class _Compiler:
             # A slider's first item is its move, and on-drag's and toggle's their target:
             # positional arguments.
             body = items[1:] if kind in ("slider", "on-drag", "on-pointermove", "toggle") else items
-            self.options_first(body, lambda it: _head(it) in WRITER_OPTIONS, kind)
+            # A use of a choreo stands for (animation …), an optional argument.
+            self.options_first(
+                body,
+                lambda it: _head(it) in WRITER_OPTIONS or self.choreo_of(it) is not None,
+                kind,
+            )
         if kind not in VIEWS:
             obj.data["in"] = self.tie(kind, items, form, shape)
         build = getattr(self, "build_" + kind.replace("-", "_"))
@@ -3310,13 +3418,18 @@ class _Compiler:
         obj.data["conditions"] = [self.condition(c, written) for c in items]
 
     def animated(self, obj: Obj, items: list) -> set:
-        anims = [it for it in items if _head(it) == "animation"]
+        # A use of a choreo may stand for (animation (use)).
+        anims = [it for it in items if _head(it) == "animation" or self.choreo_of(it) is not None]
         if len(anims) > 1:
             raise CompileError("'animation' is given twice", anims[1].pos)
         animation = None
         if anims:
-            items.remove(anims[0])
-            animation = self.animation(anims[0], self.cscope, named=False)
+            form = anims[0]
+            items[:] = [it for it in items if it is not form]
+            if _head(form) != "animation":
+                form = Form((Name(("animation",), form.pos), form), form.pos)
+            assert isinstance(form, Form)
+            animation = self.animation(form, self.cscope, named=False)
         obj.data["animation"] = animation
         return self.written(animation)
 
@@ -3921,9 +4034,10 @@ class _Compiler:
                     if attribute in written and attribute not in limit.deps:
                         lim = self.settle(limit.type, limit, "the limit", node.pos)
                         return {"target": attribute, "op": op, "limit": lim}
+        unknown = head is not None and head not in COMPARE and head not in self.model.funcs
         raise CompileError(
             "a condition compares an attribute this writer writes with a limit that does not depend"
-            " on it, such as (>= k 0)",
+            " on it, such as (>= k 0)" + (f"; '{head}' is not a choreo either" if unknown else ""),
             node.pos,
         )
 
@@ -4238,6 +4352,8 @@ class _Compiler:
                 elif self.shape_kind(item):
                     assert isinstance(item, Form)
                     self.shape(item, i, inner, down)
+                elif self.choreo_of(item) is not None:
+                    raise CompileError(_USE_OUTSIDE, item.pos)
                 elif isinstance(item, Form) and _head(item) not in ("motif", "scene"):
                     self.body_variable(item, obj, inner)
                 else:
@@ -4310,11 +4426,13 @@ class _Compiler:
                     TRANSFORM, item.items[1], item.pos, "transform", scope=scope
                 )
             elif head in ("motif", "variant", "func", "transition", "animation", "formula") or (
-                head in COMPONENTS or _typed_func(item) is not None
+                head in COMPONENTS or head == "choreo" or _typed_func(item) is not None
             ):
                 raise CompileError(
                     f"a {head or 'func'} is declared only at the top level", item.pos
                 )
+            elif self.choreo_of(item) is not None:
+                raise CompileError(_USE_OUTSIDE, item.pos)
             elif head == "exists-when":
                 assert isinstance(item, Form)
                 self.exists_when(item, scope)
@@ -4580,6 +4698,8 @@ class _Compiler:
                 members.append((raw, outer))
                 continue
             for item, inner in self.expand([raw], outer):
+                if self.choreo_of(item) is not None:
+                    raise CompileError(_USE_OUTSIDE, item.pos)
                 if kind == "group" and self.shape_kind(item):
                     members.append((item, inner))
                     continue
@@ -5674,8 +5794,6 @@ class _Compiler:
             self.type_ends(i, None, pos)
         if obj.kind == "animation" and name == "steps":
             return self.steps_of(i, pos)
-        if obj.kind == "animation" and name in obj.data.get("args", {}):
-            return obj.data["args"][name]
         if obj.kind in ("group", "scene") and name == "length":
             return _known(INT, len(self.whole(i)))
         if obj.kind in ("group", "scene") and name == "members":
@@ -5962,6 +6080,8 @@ class _Compiler:
                 " in place of that value: (real k free@(f x))",
                 node.pos,
             )
+        if self.choreo_of(node) is not None:
+            raise CompileError(_USE_OUTSIDE, node.pos)
         raise CompileError(f"unknown function '{head}'", node.pos)
 
     def operands(self, nodes, expected: Type | None, scope: dict) -> list:
@@ -6298,7 +6418,45 @@ def _scale(sx, sy=None):
 # What steps() notes for an item of an animation's body that is not a (step …).
 _NOT_A_STEP = object()
 
-# The heads of the forms an animation holds, besides motif instances.
+_USE_OUTSIDE = (
+    "a use of a choreo declares an animation, so it is written where an animation is: as the"
+    " animation of a control or a listener, or in an animation's body; a named one is"
+    " (animation name (choreo-name argument…))"
+)
+
+
+@dataclass
+class _Choreo:
+    """A choreo as declared: index is its place among the choreos, in the order declared, and
+    uses holds the heads of the forms in its body, among them the choreos it uses."""
+
+    name: str
+    params: tuple[Param, ...]
+    body: tuple[Node, ...]
+    pos: Pos
+    index: int
+    uses: frozenset[str]
+
+    @property
+    def names(self) -> set[str]:
+        return {p.name for p in self.params}
+
+
+def _heads(nodes) -> frozenset[str]:
+    """The heads of every form among nodes, at any depth, a dotted head joined back."""
+    out: set[str] = set()
+    todo = list(nodes)
+    while todo:
+        node = todo.pop()
+        if isinstance(node, Form):
+            head = node.items[0] if node.items else None
+            if isinstance(head, Name) and all(isinstance(p, str) for p in head.parts):
+                out.add(".".join(cast(tuple[str, ...], head.parts)))
+            todo.extend(node.items)
+    return frozenset(out)
+
+
+# The heads of the forms an animation holds, besides uses of choreos.
 ANIMATION_ITEMS = (
     *["move", "wait", "roll-dice", "at-once", "in-order", "foreach", "defaults", "step"],
 )

@@ -9,7 +9,7 @@
 (require 'lisp-mode)
 
 (defconst mtp-mode--heads
-  '("scene" "group" "row" "column" "motif" "variant" "type" "func" "import"
+  '("scene" "group" "row" "column" "motif" "variant" "type" "func" "import" "choreo"
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
@@ -57,7 +57,7 @@ weight every font has.")
 
 (mtp-mode--defface mtp-mode-function-name-face
   '((t :foreground "#a40000" :slant normal))
-  "Face for the name a func, motif, variant or type declares.")
+  "Face for the name a func, motif, variant, type or choreo declares.")
 
 (mtp-mode--defface mtp-mode-variable-name-face
   '((t :foreground "#b35000" :slant normal))
@@ -107,7 +107,7 @@ takes a color apart from strings.")
     ("formula" . 1) ("term" . 1) ("display" . 2)
     ("rand-seed" . 2) ("real" . 2) ("int" . 2) ("ratio" . 2) ("complex" . 2) ("bool" . 2) ("string" . 2)
     ("point" . 2) ("list" . 2) ("transform" . 2) ("color" . 2)
-    ("type" . 2) ("motif" . 2) ("variant" . 2) ("func" . 2)
+    ("type" . 2) ("motif" . 2) ("variant" . 2) ("func" . 2) ("choreo" . 2)
     ("transition" . 2) ("animation" . 1)
     ("canvas" . 1) ("readout" . 2) ("slider" . 2) ("button" . 1) ("play" . 1) ("stepper" . 1)
     ("toggle" . 2)
@@ -130,7 +130,8 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
       ("group" ,@group) ("row" ,@group) ("column" ,@group)
       ("canvas" "doc" "x" "y" "width" "height" "transform" "pan" "zoom" "toggle-duration"
        "toggle-ease")
-      ("animation" "doc" ,@animation) ("at-once" ,@animation) ("in-order" ,@animation)
+      ("animation" "doc" ,@animation) ("choreo" "doc" ,@animation)
+      ("at-once" ,@animation) ("in-order" ,@animation)
       ("step" "defaults")
       ("motif" "doc") ("variant" "doc") ("func" "doc") ("namespace" "doc") ("palette" "doc")
       ("formula" "doc" "defaults")))
@@ -150,7 +151,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
   '("scene" "group" "row" "column" "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring"
     "curve" "text" "font" "namespace" "palette" "interface" "colormap"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform" "color"
-    "type" "motif" "variant" "func" "transition" "animation"
+    "type" "motif" "variant" "func" "choreo" "transition" "animation"
     "canvas" "readout" "slider" "button" "play" "stepper" "toggle" "formula" "display")
   "Forms that take a name, so that (head_ …) has one argument fewer before its body.")
 
@@ -293,7 +294,7 @@ not one of mtp's forms or keyword arguments, which earlier rules have already hi
 (defconst mtp-mode--font-lock
   `((,(concat "(\\(" (regexp-opt mtp-mode--heads) "\\)\\(?:|none\\)?_?\\_>")
      1 'mtp-mode-form-head-face)
-    (,(concat "(\\(?:func\\|motif\\|variant\\|type\\)\\(?:\\[[^ \t\n()]*\\]\\)?[ \t]+"
+    (,(concat "(\\(?:func\\|motif\\|variant\\|type\\|choreo\\)\\(?:\\[[^ \t\n()]*\\]\\)?[ \t]+"
               "\\([^][() \t\n';\"#]+\\)")
      1 'mtp-mode-function-name-face)
     (,(concat "(" (regexp-opt mtp-mode--named-heads) "\\(?:\\[[^ \t\n()]*\\]\\)?\\(?:|none\\)?[ \t]+"

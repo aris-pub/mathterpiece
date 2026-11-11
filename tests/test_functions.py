@@ -277,12 +277,12 @@ class TestAFunctionAsADefault:
         src = "(func apply ((real x) (func[real real] f (fn y (+ y 1)))) (f x))"
         assert model(src + " (real v (apply 3))").get("v").value.value == 4
 
-    def test_a_motif_of_animations(self):
+    def test_a_choreo(self):
         m = model(
             "(func[real] sq ((real t)) (* t t)) (real k 0)"
-            " (motif go ((real to-k 1) (func[(real (>= 0) (<= 1)) real] curve sq))"
-            " (animation (move k (to to-k) (duration 1) (ease curve))))"
-            " (go a)"
+            " (choreo go ((real to-k 1) (func[(real (>= 0) (<= 1)) real] curve sq))"
+            " (move k (to to-k) (duration 1) (ease curve)))"
+            " (animation a (go))"
         )
         assert m.get("a").attrs["duration"].value == 1
 

@@ -262,29 +262,27 @@
 ; Steps 2 and 3 change the number of levels four times; each change blends the bars from the
 ; old number to the new one, with the density gliding to the new level's best (step 2) or set
 ; to it at once (step 3).
-(motif levels-glide ((int to-L 10 (>= 2) (<= 10)) (int from-L 10 (>= 2) (<= 10)) (real t-from 1)
-                     (real t-to 1))
+(choreo levels-glide ((int to-L 10 (>= 2) (<= 10)) (int from-L 10 (>= 2) (<= 10))
+                      (real t-from 1) (real t-to 1))
   doc@'Step 2 changes the levels: the bars blend to the new number while the density glides.'
-  (animation
-    (at-once (defaults (duration 0)) (move L (to to-L)) (move Lp (to from-L)) (move g (to 0)))
-    (at-once (defaults (duration 0.9625) (ease quad))
-      (move g (to 1)) (move t (from t-from) (to t-to)))
-    (wait 1.7875)))
-(motif levels-jump ((int to-L 10 (>= 2) (<= 10)) (int from-L 10 (>= 2) (<= 10)) (real t-to 1))
+  (at-once (defaults (duration 0)) (move L (to to-L)) (move Lp (to from-L)) (move g (to 0)))
+  (at-once (defaults (duration 0.9625) (ease quad))
+    (move g (to 1)) (move t (from t-from) (to t-to)))
+  (wait 1.7875))
+(choreo levels-jump ((int to-L 10 (>= 2) (<= 10)) (int from-L 10 (>= 2) (<= 10)) (real t-to 1))
   doc@'Step 3 changes the levels: the density is set at once, and the bars blend.'
-  (animation
-    (at-once (defaults (duration 0)) (move L (to to-L)) (move Lp (to from-L)) (move g (to 0))
-      (move t (to t-to)))
-    (move g (to 1) (duration 0.735) (ease quad))
-    (wait 1.365)))
+  (at-once (defaults (duration 0)) (move L (to to-L)) (move Lp (to from-L)) (move g (to 0))
+    (move t (to t-to)))
+  (move g (to 1) (duration 0.735) (ease quad))
+  (wait 1.365))
 
 (animation floor-rises
   (at-once (defaults (duration 0))
     (move chapter (to 1)) (move exploring (to false)) (move mix (to 0)) (move floor (to true)))
-  (levels-glide_ (to-L 4) (from-L 10) (t-from 4.5) (t-to bests[0][1]))
-  (levels-glide_ (to-L 6) (from-L 4) (t-from bests[0][1]) (t-to bests[1][1]))
-  (levels-glide_ (to-L 8) (from-L 6) (t-from bests[1][1]) (t-to bests[2][1]))
-  (levels-glide_ (to-L 10) (from-L 8) (t-from bests[2][1]) (t-to bests[3][1])))
+  (levels-glide 4 10 4.5 bests[0][1])
+  (levels-glide 6 4 bests[0][1] bests[1][1])
+  (levels-glide 8 6 bests[1][1] bests[2][1])
+  (levels-glide 10 8 bests[2][1] bests[3][1]))
 
 (animation all-densities
   (at-once (defaults (duration 0))
@@ -294,10 +292,10 @@
     (move mix (to 1) (duration 2.16) (ease quad))
     (in-order
       (wait 3.6)
-      (levels-jump_ (to-L 4) (from-L 10) (t-to bests[0][1]))
-      (levels-jump_ (to-L 6) (from-L 4) (t-to bests[1][1]))
-      (levels-jump_ (to-L 8) (from-L 6) (t-to bests[2][1]))
-      (levels-jump_ (to-L 10) (from-L 8) (t-to bests[3][1])))))
+      (levels-jump 4 10 bests[0][1])
+      (levels-jump 6 4 bests[1][1])
+      (levels-jump 8 6 bests[2][1])
+      (levels-jump 10 8 bests[3][1]))))
 
 ; Leaving the tour keeps the state, snapped to one density or all, and finishes any change of
 ; the number of levels.
