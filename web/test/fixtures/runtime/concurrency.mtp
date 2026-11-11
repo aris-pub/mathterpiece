@@ -4,7 +4,14 @@
 (scene s
   (circle d (pos [0 0]) (r 1))
   (circle e (pos [5 5]) (r 1))
-  (group g (circle c1 (r 1)) (circle c2 (r 1))))
+  (group g (circle c1 (r 1)) (circle c2 (r 1)))
+  ; Shapes whose position is worked out from other attributes, so writing x, y or pos writes
+  ; those (mtp-gzs9).
+  (polyline pl (points [[0 0] [0 2]]))
+  (polygon pg (points [[0 0] [2 0] [2 2]]))
+  (curve cv (from [0 0]) (to [2 0]) (controls [[1 1]]))
+  (line ln (from [0 0]) (to [2 0]))
+  (triangle tr (a [0 0]) (b [3 0]) (c [3 3])))
 (button go (animation (move k (to 10) (duration 1))))
 (button back (animation (move k (to 0) (duration 1))))
 (button lock (animation (move k (to 10) (duration 1))) (exclusive))
@@ -34,3 +41,12 @@
 (button jump (animation (move p (to [1 1]) (duration 1))))
 (canvas pm s
   (on-pointermove p (exclusive)))
+; A stepper another writer cancels goes on from where it stopped (mtp-ibem).
+(button set-j (animation (move j (to 1) (duration 0))))
+(stepper walk (label 'walk')
+  (animation
+    (move j (to 5) (duration 1))
+    (move k (to 10) (duration 2))
+    (move j (to 7) (duration 1))))
+(button pl-x (animation (move pl.x (to 5) (duration 1))) (exclusive))
+(button pl-points (animation (move pl.points (to [[0 0] [2 0]]) (duration 1))) (exclusive))

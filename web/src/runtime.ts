@@ -61,6 +61,8 @@ const THROUGH_POINTS = new Set(["polyline", "polygon"]);
 const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
 // A curve's position is the mean of its ends and controls (the author, 2026-11-06).
 const fromPoints = (kind: string) => CORNERS[kind] !== undefined || THROUGH_POINTS.has(kind) || kind === "curve";
+// The attributes a write of such a shape's x, y or pos writes.
+const PLACED_BY: Record<string, string[]> = { ...CORNERS, polyline: ["points"], polygon: ["points"], curve: ["from", "to", "controls"] };
 // Attributes that are points in their shape's frame, which a read converts.
 const POINT_ATTRS = new Set(["from", "to", "a", "b", "c"]);
 // The built-ins that decide something with none themselves; every other one gives none when an
@@ -484,7 +486,10 @@ export class Runtime {
   /**
    * The shapes' attributes and the variables a write of a target ("id:attr") reaches, as
    * "id:attr": a group's or an instance's attribute that is not its own is each member's, at any
-   * depth, as writeInto writes it, and a position is its x and its y.
+   * depth, as writeInto writes it, and a position is its x and its y. A shape whose position is
+   * worked out from its points, ends, controls or corners has its x and y written into those
+   * (mtp-gzs9), so each of those is reached as its x and its y parts, "id:points.x": a writer of
+   * x then meets a writer of points, and does not meet a writer of y.
    */
   reached(target: string): string[] {
     const at = target.indexOf(":");
@@ -493,6 +498,12 @@ export class Runtime {
     const o = this.objects[id]!;
     if ((o.kind === "group" || o.kind === "instance") && attr !== null && !this.has(id, attr)) {
       if (attr !== "pos" || o.kind === "group") return (o.members ?? []).flatMap((m) => this.reached(`${m}:${attr}`));
+    }
+    const held = PLACED_BY[o.kind];
+    if (held && attr !== null) {
+      const parts = attr === "pos" ? ["x", "y"] : attr === "x" || attr === "y" ? [attr] : null;
+      if (parts) return held.flatMap((c) => parts.map((p) => `${id}:${c}.${p}`));
+      if (held.includes(attr)) return [`${id}:${attr}.x`, `${id}:${attr}.y`];
     }
     return attr === "pos" ? [`${id}:x`, `${id}:y`] : [target];
   }

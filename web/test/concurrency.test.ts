@@ -1,6 +1,7 @@
 // Writers moving the same targets at the same time (docs/reference.md, "Concurrency"; the author,
 // 2026-11-11, mtp-vs5d, mtp-s7z9, mtp-ddi1): whatever the reader is doing now, or did last, wins.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Scheduler } from "../src/animate.ts";
 import { type MtpModel, define, frames } from "../src/elements.ts";
 import type { Runtime } from "../src/runtime.ts";
 import { doc } from "./helpers.ts";
@@ -386,5 +387,156 @@ describe("an exclusive on-pointermove", () => {
     press("jump");
     pass(1.5);
     expect(v("p")).toEqual([1, 1]);
+  });
+});
+
+describe("a stepper another writer cancelled", () => {
+  // mtp-ibem: it goes on from where it stopped; the moves that had ended are not written again,
+  // and the move cut off starts again from the value at the press, over the time it had left.
+  const page3 = () => page(`<mtp-stepper model="m" name="walk"></mtp-stepper><mtp-slider model="m" name="sl"></mtp-slider>` + buttons("set-j"));
+  const step = (which: string) => (document.querySelector(`mtp-stepper .mtp-${which}`) as HTMLButtonElement).click();
+  const count = () => document.querySelector("mtp-stepper .mtp-count")!.textContent;
+  const slide = (to: number) => {
+    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
+    input.value = String(to);
+    input.dispatchEvent(new Event("input"));
+  };
+
+  it("partway through a step, plays that step on from where it stopped over the time it had left", () => {
+    const [, , v] = page3();
+    step("next");
+    pass(1.2);
+    step("next");
+    pass(1);
+    expect(v("k")).toBeCloseTo(5);
+    slide(200);
+    expect(v("k")).toBe(2);
+    expect(v("walk", "playing")).toBe(false);
+    press("set-j");
+    pass(0.5);
+    expect(v("j")).toBe(1);
+    step("next");
+    expect(count()).toBe("2 / 3");
+    expect(v("walk", "playing")).toBe(true);
+    expect(v("j")).toBe(1);
+    expect(v("k")).toBeCloseTo(2);
+    pass(0.5);
+    expect(v("k")).toBeCloseTo(6);
+    pass(0.6);
+    expect(v("k")).toBe(10);
+    expect(v("j")).toBe(1);
+    expect(v("walk", "playing")).toBe(false);
+    expect(v("walk", "step")).toBe(2);
+    step("next");
+    expect(count()).toBe("3 / 3");
+    pass(1.2);
+    expect([v("j"), v("k")]).toEqual([7, 10]);
+  });
+
+  it("between two steps, plays the next step without writing the ended ones again", () => {
+    const [, , v] = page3();
+    step("next");
+    pass(1.2);
+    expect(v("j")).toBe(5);
+    press("set-j");
+    expect(v("j")).toBe(1);
+    step("next");
+    expect(count()).toBe("2 / 3");
+    pass(2.2);
+    expect([v("j"), v("k")]).toEqual([1, 10]);
+  });
+
+  it("before the first step, plays the first step at once", () => {
+    const [, , v] = page3();
+    step("next");
+    pass(0.5);
+    press("set-j");
+    step("prev");
+    expect(count()).toBe("0 / 3");
+    press("set-j");
+    expect(v("j")).toBe(1);
+    step("next");
+    pass(0.5);
+    expect(v("j")).toBeCloseTo(3);
+    pass(0.6);
+    expect(v("j")).toBe(5);
+  });
+
+  it("goes back with \u2039 to the end of the step before, as documented", () => {
+    const [, , v] = page3();
+    step("next");
+    pass(1.2);
+    step("next");
+    pass(1);
+    slide(200);
+    step("prev");
+    expect(count()).toBe("1 / 3");
+    expect([v("j"), v("k")]).toEqual([5, 0]);
+  });
+});
+
+describe("a shape whose position is worked out from other attributes", () => {
+  // mtp-gzs9: writing its x, y or pos writes those attributes, so the writers meet.
+  it("a polyline's exclusive writer of x refuses a writer of its points", () => {
+    const [, , v] = page(buttons("pl-x", "pl-points"));
+    press("pl-x");
+    pass(0.5);
+    press("pl-points");
+    pass(1.5);
+    expect(v("pl", "points")).toEqual([
+      [5, 0],
+      [5, 2],
+    ]);
+  });
+
+  it("a polyline's exclusive writer of points refuses a writer of its x", () => {
+    const [, , v] = page(buttons("pl-points", "pl-x"));
+    press("pl-points");
+    pass(0.5);
+    press("pl-x");
+    pass(1.5);
+    expect(v("pl", "points")).toEqual([
+      [0, 0],
+      [2, 0],
+    ]);
+  });
+
+  const meets = (rt: Runtime, a: string, b: string) => {
+    const s = new Scheduler(
+      () => {},
+      () => {},
+      (t) => rt.reached(t),
+    );
+    const held = {};
+    s.grip([a], held, { reader: true, exclusive: true }, () => {});
+    return !s.claim([b], {}, { reader: true, exclusive: false });
+  };
+  const cases: [string, string[]][] = [
+    ["pl", ["points"]],
+    ["pg", ["points"]],
+    ["cv", ["from", "to", "controls"]],
+    ["ln", ["from", "to"]],
+    ["tr", ["a", "b", "c"]],
+  ];
+  for (const [name, attrs] of cases) {
+    it(`${name}: a writer of x, y or pos meets a writer of ${attrs.join(", ")}, both ways`, () => {
+      const [, rt] = page("");
+      const id = rt.id(name);
+      for (const pos of ["x", "y", "pos"]) {
+        for (const attr of attrs) {
+          expect(meets(rt, `${id}:${pos}`, `${id}:${attr}`), `${pos} then ${attr}`).toBe(true);
+          expect(meets(rt, `${id}:${attr}`, `${id}:${pos}`), `${attr} then ${pos}`).toBe(true);
+        }
+      }
+    });
+  }
+
+  it("a writer of x does not meet a writer of y, and a line's from does not meet its to", () => {
+    const [, rt] = page("");
+    const pl = rt.id("pl");
+    const ln = rt.id("ln");
+    expect(meets(rt, `${pl}:x`, `${pl}:y`)).toBe(false);
+    expect(meets(rt, `${ln}:from`, `${ln}:to`)).toBe(false);
+    expect(meets(rt, `${pl}:pos`, `${pl}:y`)).toBe(true);
   });
 });
