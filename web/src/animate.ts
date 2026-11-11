@@ -4,8 +4,10 @@
 // starts, resumes or is moved along, a slider's knob, a toggle's flip, a drag's grab, an
 // on-pointermove's write) that would write a target a running source writes is refused when that
 // source is exclusive, or was set off by the reader while the newcomer was not; otherwise it
-// cancels that source. A refused newcomer does not start at all. Time is in seconds; the page
-// moves it forward on each animation frame.
+// cancels that source. A refused newcomer does not start at all. An exclusive writer holds the
+// lock on its targets for every write, even one that takes no time, and always releases it, even
+// when the write throws (the author, 2026-11-11). Time is in seconds; the page moves it forward on
+// each animation frame.
 import type { Player } from "./player.ts";
 
 /** Who set a writer off, the reader or not (on-view, autoplay), and whether it is exclusive. */
@@ -97,9 +99,46 @@ export class Scheduler {
     this.sources.push({ source, player, reached: this.reached(player.targets), time: from, paused: false, how });
     // A seek that writes something tells the views already, as they stand now.
     this.heard = false;
-    player.seek(from);
+    this.seekOrForget(player, source, from);
     if (!this.heard) this.redraw();
     this.wake();
+  }
+
+  // A player that throws while it writes holds its targets no longer.
+  private seekOrForget(player: Player, source: object, time: number): void {
+    try {
+      player.seek(time);
+    } catch (err) {
+      this.forget(source);
+      throw err;
+    }
+  }
+
+  /**
+   * A write that takes no time, such as a slider's step, an on-pointermove's write or a toggle's
+   * flip: a newcomer, refused or not as any is, and given false when refused, so write is not
+   * called. An exclusive one holds the lock on its targets while it writes, and releases it after,
+   * even when the write throws.
+   */
+  instant(targets: string[], source: object, how: How, write: () => void): boolean {
+    if (!this.claim(targets, source, how)) return false;
+    this.locked(this.reached(targets), how, write);
+    return true;
+  }
+
+  private locked(reached: Set<string>, how: How, write: () => void): void {
+    if (!how.exclusive) {
+      write();
+      return;
+    }
+    // The lock is a running writer of its own, so the source's own entry, if any, stays as it is.
+    const lock = {};
+    this.sources.push({ source: lock, player: null, reached, time: 0, paused: false, how });
+    try {
+      write();
+    } finally {
+      this.forget(lock);
+    }
   }
 
   /** Holds a player for a source, paused where it stands, writing nothing until it is sought or
@@ -132,7 +171,9 @@ export class Scheduler {
     s.how = how;
     s.time = time;
     this.heard = false;
-    s.player.seek(time);
+    // A paused player writes nothing, so it holds no lock; a seek, as from a key, writes at once.
+    const player = s.player;
+    this.locked(s.reached, how, () => this.seekOrForget(player, source, time));
     if (!this.heard) this.redraw();
     return true;
   }
@@ -181,7 +222,7 @@ export class Scheduler {
         s.until = undefined;
       }
       this.heard = false;
-      s.player.seek(s.time);
+      this.seekOrForget(s.player, s.source, s.time);
       if (s.player.done) {
         this.forget(s.source);
         this.heard = false;

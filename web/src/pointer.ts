@@ -61,16 +61,17 @@ export class Pointer {
 
   /** Writes the pointer's position, a point in scene coordinates, for the on-pointermove
    * listeners the move reaches: as in the DOM, those up the scene tree from the shape under the
-   * pointer and then the canvas's, until one stops it. Each first gives claim what it writes, as
-   * "id:attr", and writes only when claim allows it (docs/reference.md, "Concurrency"). */
-  move(scene: Point, claim: (targets: string[], listener: Obj) => boolean): void {
+   * pointer and then the canvas's, until one stops it. Each gives act what it writes, as
+   * "id:attr", and its write, which act makes only when the concurrency rules allow it
+   * (docs/reference.md, "Concurrency"). */
+  move(scene: Point, act: (targets: string[], listener: Obj, write: () => void) => void): void {
     const rt = this.rt;
     const onShapes = bubble(rt, this.over[0] ?? null, (i) => this.moves.filter((l) => l.shape === i && this.heard(l)));
     const stopped = onShapes.some((l) => holds(rt, l["stop-propagation"], false));
     const onCanvas = stopped ? [] : this.moves.filter((l) => l.view === this.canvas && holds(rt, l.active));
     rt.together(() => {
       for (const l of [...onShapes, ...onCanvas]) {
-        if (claim([`${l.target![0]}:${l.target![1] ?? ""}`], l)) this.write(l, scene);
+        act([`${l.target![0]}:${l.target![1] ?? ""}`], l, () => this.write(l, scene));
       }
     });
   }

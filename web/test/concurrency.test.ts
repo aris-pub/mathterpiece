@@ -278,3 +278,113 @@ describe("a group's attribute", () => {
     expect([v("c1", "r"), v("c2", "r")]).toEqual([2, 1]);
   });
 });
+
+describe("a slider", () => {
+  // The author, 2026-11-11: a slider is a running writer while the reader holds its knob, as a
+  // drag is.
+  const input = () => document.querySelector("mtp-slider input") as HTMLInputElement;
+  const slide = (to: number) => {
+    input().value = String(to);
+    input().dispatchEvent(new Event("input"));
+  };
+  const knob = (type: string) => input().dispatchEvent(new PointerEvent(type, { bubbles: true }));
+
+  it("held, is a running writer that refuses an on-view", () => {
+    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    knob("pointerdown");
+    slide(200);
+    model.markSeen(rt.id("v"));
+    pass(1.5);
+    expect(v("k")).toBe(2);
+    knob("pointerup");
+  });
+
+  it("released, no longer refuses an on-view", () => {
+    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    knob("pointerdown");
+    slide(200);
+    knob("pointerup");
+    model.markSeen(rt.id("v"));
+    pass(1.5);
+    expect(v("k")).toBe(4);
+  });
+
+  it("is released by a pointercancel too", () => {
+    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    knob("pointerdown");
+    slide(200);
+    knob("pointercancel");
+    model.markSeen(rt.id("v"));
+    pass(1.5);
+    expect(v("k")).toBe(4);
+  });
+
+  it("held and cancelled by a newcomer the reader sets off, writes nothing more until its release", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>` + buttons("back"));
+    knob("pointerdown");
+    slide(500);
+    press("back");
+    pass(1.5);
+    expect(v("k")).toBe(0);
+    slide(800);
+    expect(v("k")).toBe(0);
+    knob("pointerup");
+    slide(800);
+    expect(v("k")).toBe(8);
+  });
+
+  it("exclusive and held, refuses a newcomer the reader sets off", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="locked"></mtp-slider>` + buttons("back"));
+    knob("pointerdown");
+    slide(500);
+    press("back");
+    pass(1.5);
+    expect(v("k")).toBe(5);
+    knob("pointerup");
+  });
+
+  it("exclusive, holds the lock during a step from a key, which takes no time", () => {
+    const [, rt, v] = page(`<mtp-slider model="m" name="locked"></mtp-slider>` + buttons("back"));
+    const write = rt.write.bind(rt);
+    let pressed = false;
+    rt.write = (...args: Parameters<typeof rt.write>) => {
+      if (!pressed) {
+        pressed = true;
+        press("back");
+      }
+      return write(...args);
+    };
+    slide(500);
+    pass(1.5);
+    expect(v("k")).toBe(5);
+    rt.write = write;
+    press("back");
+    pass(1.5);
+    expect(v("k")).toBe(0);
+  });
+});
+
+describe("an exclusive on-pointermove", () => {
+  it("holds the lock on its target during each write, which takes no time", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="pm"></mtp-canvas>` + buttons("jump"));
+    const write = rt.write.bind(rt);
+    let pressed = false;
+    rt.write = (...args: Parameters<typeof rt.write>) => {
+      if (!pressed && args[0] === rt.id("p")) {
+        pressed = true;
+        press("jump");
+      }
+      return write(...args);
+    };
+    const svg = document.querySelector("mtp-canvas svg")!;
+    svg.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 0, clientY: 0, pointerId: 1 }));
+    expect(pressed).toBe(true);
+    const written = v("p");
+    pass(1.5);
+    expect(v("p")).toEqual(written);
+    rt.write = write;
+    press("jump");
+    pass(1.5);
+    expect(v("p")).toEqual([1, 1]);
+  });
+});

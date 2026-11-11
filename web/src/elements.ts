@@ -577,7 +577,7 @@ export class MtpCanvas extends MtpPart {
     // it stays entered until the reader presses elsewhere, here or anywhere on the page.
     const follow = (event: PointerEvent, hit: number | null) => {
       play(pointer.onto(hit));
-      pointer.move(toScene(event), (targets, l) => scheduler.claim(targets, l, howOf(l, true)));
+      pointer.move(toScene(event), (targets, l, write) => scheduler.instant(targets, l, howOf(l, true), write));
     };
     const deselect = () => {
       if (selection === null) return;
@@ -1013,6 +1013,7 @@ export class MtpSlider extends MtpPart {
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "slider");
     const player = playerFor(rt, rt.objects[id]!);
+    const how = howOf(rt.objects[id]!, true);
     const input = document.createElement("input");
     input.type = "range";
     const stops = rt.objects[id]!.attrs?.step ? (rt.value(id, "step") as number) : null;
@@ -1026,27 +1027,45 @@ export class MtpSlider extends MtpPart {
     fill();
     input.addEventListener("input", () => {
       if (!activeOf(rt, id)) return;
-      if (player && !scheduler.claim(player.targets, this, howOf(rt.objects[id]!, true))) {
-        // Refused: the knob goes back to where it was.
+      const u = Number(input.value) / Number(input.max);
+      const write = () => {
+        player?.scrub(u);
+        rt.write(id, "position", u);
+      };
+      if (cut || (player && !scheduler.instant(player.targets, this, how, write))) {
+        // Refused, or cancelled while held: the knob goes back to where it was.
         input.value = String(Math.round((rt.value(id, "position") as number) * Number(input.max)));
         fill();
         return;
       }
+      if (!player) write();
       fill();
-      const u = Number(input.value) / Number(input.max);
-      if (player) player.scrub(u);
-      rt.write(id, "position", u);
     });
     input.addEventListener("change", () => player?.release());
     // A slider follows its target: when another writer changes the one variable or attribute its animation
     // moves, the knob goes to the position whose value is closest (reference.md, "Controls").
     let scrubbing = false;
+    // While the reader holds the knob, the slider is a running writer of its targets, as a drag is
+    // (the author, 2026-11-11); cancelled while held, it writes nothing more until the release.
+    let cut = false;
+    const release = () => {
+      if (!scrubbing) return;
+      scrubbing = false;
+      cut = false;
+      scheduler.letGo(this);
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
     input.addEventListener("pointerdown", () => {
       scrubbing = true;
+      cut = false;
+      if (player && activeOf(rt, id)) scheduler.grip(player.targets, this, how, () => (cut = true));
+      // The release may come anywhere on the page, so the window hears it too.
+      window.addEventListener("pointerup", release);
+      window.addEventListener("pointercancel", release);
     });
-    input.addEventListener("pointerup", () => {
-      scrubbing = false;
-    });
+    input.addEventListener("pointerup", release);
+    input.addEventListener("pointercancel", release);
     this.follow = () => {
       if (scrubbing || !player || player.targets.length !== 1) return;
       const [tid, tattr] = player.targets[0]!.split(":");
@@ -1563,11 +1582,11 @@ export class MtpToggle extends MtpPart {
       const how = howOf(obj, true);
       const player = playerFor(rt, obj);
       // The flip and the animation it plays are one newcomer: refused, neither happens.
-      if (!scheduler.claim([`${target[0]}:${target[1] ?? ""}`, ...(player?.targets ?? [])], this, how)) {
+      const targets = [`${target[0]}:${target[1] ?? ""}`, ...(player?.targets ?? [])];
+      if (!scheduler.instant(targets, this, how, () => rt.write(target[0], target[1], v))) {
         this.show();
         return;
       }
-      rt.write(target[0], target[1], v);
       this.show();
       if (player) scheduler.start(player, this, how);
     });
