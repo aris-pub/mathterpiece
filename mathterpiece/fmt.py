@@ -29,8 +29,9 @@ INDENT = {
     "display": 2,
     "colormap": 2,
     "toggle": 2,
-    **dict.fromkeys(["move", "on-click", "on-release", "on-dragend", "on-view", "exists-when"], 1),
-    **dict.fromkeys(["on-dragstart", "on-enter", "on-leave", "on-live", "on-quiet"], 1),
+    **dict.fromkeys(["move", "on-click", "on-release", "on-dragend", "exists-when"], 1),
+    **dict.fromkeys(["on-dragstart", "on-enter", "on-leave"], 1),
+    **dict.fromkeys(["on-view", "on-live", "on-quiet"], 0),
     **dict.fromkeys(["at-once", "in-order", "defaults"], 0),
     "step": 1,
     "on-drag": 2,
@@ -93,18 +94,20 @@ KEYWORDS = {
     "step": {"defaults"},
     **{head: {"doc"} for head in ["motif", "variant", "func", "namespace", "palette"]},
     "formula": {"doc", "defaults"},
+    "display": {"doc", "kind"},
+    "readout": {"doc", "font"},
 }
 # Forms that take no body: every item after their positional arguments goes 4 in. The same list
 # as the Emacs mode's.
 NO_BODY = {
     *["circle", "rect", "ellipse", "line", "triangle", "polyline", "polygon", "arc", "ring"],
     *["curve"],
-    *["text", "slider", "button", "play", "stepper", "toggle", "readout", "on-drag"],
+    *["text", "slider", "button", "play", "stepper", "toggle", "on-drag"],
     "on-click",
     *["on-release", "on-dragend", "on-view", "move", "transition", "font", "color"],
     *["on-dragstart", "on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet"],
     *["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"],
-    *["colormap", "interface", "defaults", "term", "display", "rand-seed"],
+    *["colormap", "interface", "defaults", "term", "rand-seed"],
 }
 OPEN, CLOSE = "([", ")]"
 _DOC = re.compile(r"\(doc\s+('(?:[^'\\]|\\.)*')\s*\)")

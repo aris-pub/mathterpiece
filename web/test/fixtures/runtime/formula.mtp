@@ -12,9 +12,11 @@
   (term v (tex $'{q:.2f}'))
   (exists-when b lit))
 
-(display d f)
-(display di f (kind 'inline'))
-
-(on-click f.a (animation (move shown (to 'a') (duration 0))))
-(on-enter f.a (animation (move f.a.background (to wash) (duration 0))))
-(on-leave f.a (animation (move f.a.background (to none) (duration 0))))
+(display d f
+  (on-click f.a (animation (move shown (to 'a') (duration 0))))
+  (on-enter f.a (animation (move f.a.background (to wash) (duration 0))))
+  (on-leave f.a (animation (move f.a.background (to none) (duration 0)))))
+(display di f (kind 'inline')
+  (on-click f.a (animation (move shown (to 'a') (duration 0))))
+  (on-enter f.a (animation (move f.a.background (to wash) (duration 0))))
+  (on-leave f.a (animation (move f.a.background (to none) (duration 0)))))

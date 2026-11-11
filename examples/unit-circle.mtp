@@ -135,10 +135,10 @@
   (when show-sin.value sine)
   (when show-tan.value tangent)
   (when show-cot.value cotangent)
-  handle)
+  handle
+  (on-drag handle (move theta (to (toward pointer theta)))
+    doc@'Slides the point along the circle, which changes theta.'))
 
-(on-drag handle (move theta (to (toward pointer theta)))
-  doc@'Slides the point along the circle, which changes theta.')
 (slider turn (move theta (from 0) (to 360)) (label 'θ'))
 
 (readout x-now $'{(cosd theta):+z.3f}' (font number) doc@'cos θ, for the text around the canvas.')

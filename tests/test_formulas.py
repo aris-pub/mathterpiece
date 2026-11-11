@@ -141,7 +141,7 @@ class TestVariables:
     def test_a_writer_writes_it_by_its_full_name(self):
         m = model(
             r"(formula f (bool lit false) tex'\term{a}{x}')"
-            r" (display d f) (on-click f.a (animation (move f.lit (to true) (duration 0.2))))"
+            r" (display d f (on-click f.a (animation (move f.lit (to true) (duration 0.2)))))"
         )
         assert m.get("f.lit").kind == "variable"
 
@@ -266,8 +266,8 @@ class TestListeners:
     @pytest.mark.parametrize("head", ["on-click", "on-enter", "on-leave"])
     def test_a_term_takes_a_listener(self, head):
         m = model(
-            "(string shown '') " + BOUNDS + " (display eq bounds)"
-            f" ({head} bounds.gap (animation (move shown (to 'gap') (duration 0.2))))"
+            "(string shown '') " + BOUNDS + " (display eq bounds"
+            f" ({head} bounds.gap (animation (move shown (to 'gap') (duration 0.2)))))"
         )
         listener = next(o for o in m.objects if o.kind == head)
         assert listener.data["shape"] == m.id("bounds.gap")
@@ -277,28 +277,30 @@ class TestListeners:
         error(
             "(string shown '') "
             + BOUNDS
-            + f" ({head} bounds.gap (animation (move shown (to 'gap') (duration 0.2))))",
+            + f" (display eq bounds ({head} bounds.gap (animation (move shown (to 'gap')"
+            " (duration 0.2)))))",
             "a term takes on-click, on-enter and on-leave",
         )
 
     def test_a_drag_is_not_on_a_term(self):
         error(
-            "(real k 0) " + BOUNDS + " (on-drag bounds.gap k)",
+            "(real k 0) " + BOUNDS + " (display eq bounds (on-drag bounds.gap k))",
             "a term takes on-click, on-enter and on-leave",
         )
 
     def test_a_writer_moves_a_terms_attribute(self):
         m = model(
             BOUNDS[:-1] + " (term gap (background none)))"
-            " (on-enter bounds.gap"
-            " (animation (move bounds.gap.background (to 'gold') (duration 0.2))))"
+            " (display eq bounds (on-enter bounds.gap"
+            " (animation (move bounds.gap.background (to 'gold') (duration 0.2)))))"
         )
         assert m.get("bounds.gap").attrs["background"].value is None
 
     def test_a_bound_attribute_is_not_written(self):
         error(
             "(real k 1 (>= 0) (<= 1)) " + BOUNDS[:-1] + " (term gap (opacity k)))"
-            " (on-enter bounds.gap (animation (move bounds.gap.opacity (to 0.5) (duration 0.2))))",
+            " (display eq bounds (on-enter bounds.gap"
+            " (animation (move bounds.gap.opacity (to 0.5) (duration 0.2)))))",
             "bounds.gap.opacity is bound",
         )
 
@@ -340,7 +342,7 @@ def test_the_compiled_model_fits_the_schema():
         "(string shown '') (real q 0.3 (>= 0) (<= 1)) "
         + BOUNDS[:-1]
         + " (bool lit false) (term gap (fill 'teal') (tex $'{q:.2f}')) (exists-when lo lit))"
-        " (display eq bounds (kind 'inline'))"
-        " (on-click bounds.gap (animation (move shown (to 'gap') (duration 0.2))))"
+        " (display eq bounds (kind 'inline')"
+        " (on-click bounds.gap (animation (move shown (to 'gap') (duration 0.2)))))"
     )
     assert errors(json.loads(write(compile_source(src)))) == []

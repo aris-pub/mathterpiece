@@ -392,9 +392,9 @@ describe("panning and zooming a canvas", () => {
     expect(label().getAttribute("font-size")).toBe(String((16 * 20) / 640));
   });
 
-  it("lets the reader drag a shape on every canvas that draws it", () => {
-    // A listener attaches to every element that draws its shape, so dot, drawn by v and by
-    // fixed, can be dragged on either, and both show where it went.
+  it("lets the reader drag a shape on each canvas that holds a drag of it", () => {
+    // Both v and fixed hold an on-drag of dot in their bodies, so dot can be dragged on either,
+    // and both show where it went.
     const [, , v] = page(
       `<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="fixed"></mtp-canvas>`,
       doc("view"),
@@ -1394,9 +1394,9 @@ describe("bubbling", () => {
   });
 });
 
-describe("listeners tied to a view", () => {
-  // mtp-2juu.1: with (in view…) a listener hears the pointer only in those views, so a shape
-  // drawn in two canvases reacts in the one it is tied to and not in the other.
+describe("listeners inside a view", () => {
+  // mtp-6k7f: a listener written inside a canvas's body hears the pointer only in that canvas, so
+  // a shape drawn in two canvases reacts in the one whose body holds its listener.
   const shape = (rt: Runtime, canvas: string, name: string) =>
     document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`)!;
   const at = (el: Element, type: string, x = 0, y = 0, pointerType = "mouse") =>
@@ -1427,6 +1427,18 @@ describe("listeners tied to a view", () => {
     at(shape(rt, "left", "dot"), "pointerup");
     pass(0.1);
     expect([v("clicks"), v("outer")]).toEqual([1, 2]);
+  });
+
+  it("hears a click on a shape only in the canvas whose body holds the listener", () => {
+    const [, rt, v] = open();
+    at(shape(rt, "right", "pad"), "pointerdown");
+    at(shape(rt, "right", "pad"), "pointerup");
+    pass(0.1);
+    expect([v("tapped-left"), v("tapped-right")]).toEqual([0, 1]);
+    at(shape(rt, "left", "pad"), "pointerdown");
+    at(shape(rt, "left", "pad"), "pointerup");
+    pass(0.1);
+    expect([v("tapped-left"), v("tapped-right")]).toEqual([1, 1]);
   });
 
   it("enters and follows the pointer in its view only", () => {

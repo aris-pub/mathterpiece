@@ -46,7 +46,7 @@ def test_a_namespaces_member_takes_its_own():
 
 
 def test_a_listener_has_no_name_and_still_takes_one():
-    d = doc("(scene s (circle c (r 1))) (canvas v s) (on-drag c c.pos (doc 'D.'))")
+    d = doc("(scene s (circle c (r 1))) (canvas v s (on-drag c c.pos (doc 'D.')))")
     assert next(o for o in d["objects"] if o["kind"] == "on-drag")["doc"] == "D."
 
 
@@ -56,11 +56,11 @@ ANIM = "(animation (move k (to 1) (duration 1)))"
 @pytest.mark.parametrize(
     "decl, kind",
     [
-        (f"(on-click c {ANIM} (doc 'D.'))", "on-click"),
-        (f"(on-release c {ANIM} (doc 'D.'))", "on-release"),
-        (f"(on-dragstart c {ANIM} (doc 'D.'))", "on-dragstart"),
-        (f"(on-dragend c {ANIM} (doc 'D.'))", "on-dragend"),
-        (f"(on-view v {ANIM} (doc 'D.'))", "on-view"),
+        (f"(canvas w s (on-click c {ANIM} (doc 'D.')))", "on-click"),
+        (f"(canvas w s (on-release c {ANIM} (doc 'D.')))", "on-release"),
+        (f"(canvas w s (on-dragstart c {ANIM} (doc 'D.')))", "on-dragstart"),
+        (f"(canvas w s (on-dragend c {ANIM} (doc 'D.')))", "on-dragend"),
+        (f"(canvas w s (on-view {ANIM} (doc 'D.')))", "on-view"),
         (f"(button go {ANIM} (doc 'D.'))", "button"),
         (f"(play go {ANIM} (doc 'D.'))", "play"),
         ("(toggle t none (label 't') (doc 'D.'))", "toggle"),

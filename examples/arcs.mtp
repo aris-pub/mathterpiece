@@ -61,10 +61,10 @@
 
 (canvas view (x -8.4) (y -5) (width 16.8) (height 8.6) (pan false) (zoom false)
   doc@'The angle with its arc and pie slice, and the ring cut into parts.'
-  angle cut forms)
+  angle cut forms
+  (on-drag tip (move theta (to (toward pointer theta))) doc@'Opens the angle.')
+  (on-view (animation (move grow (to 1) (duration 1.4) (ease cubic-out)))
+    doc@'Sweeps the ring into place.'))
 
-(on-drag tip (move theta (to (toward pointer theta))) doc@'Opens the angle.')
 (slider count (move parts (from 1) (to 8)) (label 'parts')
   doc@'Cuts the ring on the right into that many parts.')
-(on-view view (animation (move grow (to 1) (duration 1.4) (ease cubic-out)))
-  doc@'Sweeps the ring into place.')

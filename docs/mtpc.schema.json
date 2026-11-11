@@ -64,7 +64,7 @@
       "minimum": 0
     },
     "in": {
-      "description": "The views a listener hears the pointer in, or a control belongs to (mtpc.md, \"Objects\"). Left out when the source gives none.",
+      "description": "For a listener on a shape or a term, the one view whose body holds it; for a control, the views it belongs to (mtpc.md, \"Objects\"). Left out for a listener on its own view, and for a control whose source gives none.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/id"

@@ -60,8 +60,8 @@ class TestPosition:
         assert _core(m.get("v").value.type) == POINT
 
     def test_writing_it_needs_every_point_free(self):
-        model("(scene s (curve c)) (on-drag c c.pos)")
+        model("(scene s (curve c)) (canvas v s (on-drag c c.pos))")
         error(
-            "(real k 1) (scene s (curve c (to [k 0]))) (on-drag c c.pos)",
+            "(real k 1) (scene s (curve c (to [k 0]))) (canvas v s (on-drag c c.pos))",
             "bound",
         )

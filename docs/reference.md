@@ -305,29 +305,29 @@ A use anywhere else, such as at the top level, in the scene or in an expression,
 
 ### Components
 
-A view, a control and a readout must have a name: a page places each by its name (see the data model, "On the page"), so one with no name could never be shown, and is a compile error. A listener has no name.
+A view, a control and a readout must have a name: a page places each by its name (see the data model, "On the page"), so one with no name could never be shown, and is a compile error. A listener has no name, and is written inside the body of the view it acts in (see "Listeners and controls in views").
 
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
-| `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling the shapes its items give, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene), and expressions that give a shape, none, or a list of them, such as `(when bool name)`, `(when bool [a b])` or `(if bool a b)`, drawn in the order written, each on top of those before it |
-| `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | none |
-| `(display name formula)` | required | the formula it shows | `(kind k)`, known when compiling: `'block'` (the default) for a formula on its own line, or `'inline'` for one inside a paragraph | none |
+| `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling the shapes its items give, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene), and expressions that give a shape, none, or a list of them, such as `(when bool name)`, `(when bool [a b])` or `(if bool a b)`, drawn in the order written, each on top of those before it; and its listeners: on its shapes, and its own `on-view`, `on-live`, `on-quiet` and `on-pointermove` |
+| `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | its `on-live` and `on-quiet` |
+| `(display name formula)` | required | the formula it shows | `(kind k)`, known when compiling: `'block'` (the default) for a formula on its own line, or `'inline'` for one inside a paragraph | its listeners: `on-click`, `on-enter` and `on-leave` on the terms of its formula, and its own `on-live` and `on-quiet` |
 | `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)` or `(label (tex string))`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)`, `(in view…)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)` or `(label (tex string))`, `(selected bool)`, `(active bool)`, `(in view…)` | conditions |
 | `(play name)` | required | none | `(animation …)`, `(label string)` or `(label (tex string))`, `(buttons bool)`, `(rest seconds)`, `(autoplay)`, `(autoplay name)`, `(active bool)`, `(in view…)` | conditions |
 | `(stepper name)` | required | none | `(animation …)` (required), `(label string)` or `(label (tex string))`, `(active bool)`, `(in view…)` | conditions |
 | `(toggle name target)` | required | the target: a `name`, the bool it writes, or `none`, and then it holds its own bool | `(animation …)`, played after each flip, once the bool is written, `(label string)` or `(label (tex string))`, `(value bool)` (only with `none`), `(active bool)`, `(in view…)` | conditions |
-| `(on-drag shape target)` | none | the shape; the target: the shape's own `pos`, `x` or `y`, or `(move target (to expr))`, whose `expr` reads `pointer` | `(active bool)`, `(in view…)` | conditions |
-| `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
-| `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
-| `(on-dragstart shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
-| `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(in view…)` | conditions |
-| `(on-view canvas)` | none | the canvas | `(animation …)`, `(active bool)` | conditions |
-| `(on-live view)` | none | the view: a canvas, a readout or a display | `(animation …)`, `(active bool)` | conditions |
-| `(on-quiet view)` | none | the view, which has an `on-live` | `(animation …)`, `(active bool)` | conditions |
-| `(on-enter shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(in view…)` | conditions |
-| `(on-leave shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(in view…)` | conditions |
-| `(on-pointermove shape target)` | none | the shape or the canvas; the target, a `name`, the point it writes | `(active bool)`, `(stop-propagation bool)`, `(in view…)`, only on a shape | conditions |
+| `(on-drag shape target)` | none | the shape; the target: the shape's own `pos`, `x` or `y`, or `(move target (to expr))`, whose `expr` reads `pointer` | `(active bool)` | conditions |
+| `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
+| `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
+| `(on-dragstart shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
+| `(on-dragend shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)` | conditions |
+| `(on-view)` | none | none: it listens to the canvas whose body holds it | `(animation …)`, `(active bool)` | conditions |
+| `(on-live)` | none | none: it listens to the view whose body holds it, a canvas, a readout or a display | `(animation …)`, `(active bool)` | conditions |
+| `(on-quiet)` | none | none: it listens to the view whose body holds it, which has an `on-live` | `(animation …)`, `(active bool)` | conditions |
+| `(on-enter shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)` | conditions |
+| `(on-leave shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)` | conditions |
+| `(on-pointermove shape target)` or `(on-pointermove target)` | none | the shape, or none for one on the canvas whose body holds it; the target, a `name`, the point it writes | `(active bool)`, `(stop-propagation bool)` | conditions |
 
 Wherever a control or a listener takes `(animation …)`, a use of a choreo may stand in its place, among its optional arguments: `(button show (fade-in d1) (label 'Show'))` (see "Transitions and animations").
 
@@ -335,26 +335,40 @@ A canvas **toggles** the shapes its items give: when an item starts or stops giv
 
 #### Listeners and controls in views
 
-A listener or a control may name the views it belongs to with `(in view…)`: one or more views (canvases, readouts, displays) declared before it, by name.
+Every listener is written inside the body of the view it acts in, after the view's optional arguments. Controls stay at the top level and name the views they belong to with `(in view…)`: one or more views (canvases, readouts, displays) declared before it, by name.
 
 ```
-(on-drag car-1 car-1.pos (in view-1))
-(slider speed (move v (from 0) (to 5)) (in left right))
+(canvas view-1 (pan false)
+  space
+  (on-drag car-1 car-1.pos)
+  (on-click car-2 (animation (move speed (to 0) (duration 0.4))))
+  (on-view (animation (move speed (to 1) (duration 2))))
+  (on-pointermove aim))
+(display law motion
+  (on-enter motion.v (animation (move lit (to true) (duration 0))))
+  (on-leave motion.v (animation (move lit (to false) (duration 0)))))
+(readout says $'{speed:.1f} m/s'
+  (on-live (animation (move speed (to 0) (duration 0.4)))))
+(slider speed-knob (move speed (from 0) (to 5)) (in view-1 says))
 ```
 
-- **A listener** with `(in …)` hears the pointer only in those views. In every other view that shows its shape, the shape does not react to it: no drag, no click, no release, no hover, no pointer moves, no pointer cursor, no wider touch target and no page kept from scrolling, as if the listener were not there, so a click there goes on up the scene tree as it would without it. A listener without `(in …)` hears the pointer in every view that shows its shape.
+- **A canvas** holds listeners on the shapes it may show (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, and `on-pointermove` on a shape) and its own: `on-view`, `on-live`, `on-quiet`, and `on-pointermove` with only a target, which follows the pointer anywhere over the canvas. **A display** holds listeners on the terms of its formula (`on-click`, `on-enter`, `on-leave`) and its own `on-live` and `on-quiet`. **A readout** holds its `on-live` and `on-quiet`.
+- **A listener on its own view** names no view: `(on-view (animation …))` plays when the canvas whose body holds it first comes into view.
+- **A listener hears the pointer only in its view.** In every other view that shows its shape, the shape does not react to it: no drag, no click, no release, no hover, no pointer moves, no pointer cursor, no wider touch target and no page kept from scrolling, as if the listener were not there, so a click there goes on up the scene tree as it would without it. A shape that reacts in two canvases has its listener written in both, and each is a listener of its own.
+- **A foreach or a let** in a view's body may hold listeners, as it holds declarations elsewhere: `(canvas above shape corners (foreach c corners (on-drag c c.pos)))`. It holds nothing but listeners.
 - **A control** with `(in …)` belongs to those views; one without it belongs to none. A control belonging only to views that are quiet is put away until one of them goes live (see "Quiet and live views").
-- **While a view is quiet**, the listeners tied to it hear nothing in it, as if it were not one of their views.
-- **Errors:** naming something that is not a view, a name not declared before, the same view twice, or no view at all. A listener on a shape tied to a readout or a display, or a listener on a term tied to a canvas or to a display of another formula, since that view never shows what it listens to; and one tied to a canvas whose items all name shapes, none of which is the listener's shape or holds it. When a canvas has an item that gives a shape by an expression, such as `(when on c)`, the compiler cannot know what it may show, and allows it. A view takes no `(in …)`, nor does `on-view`, `on-live`, `on-quiet` or an `on-pointermove` on a canvas, which already name their view.
+- **While a view is quiet**, the listeners inside it hear nothing in it.
+- **Errors:** a listener at the top level or with `(in …)`, each with a message that shows how to write it inside its view, and a listener inside a scene. A listener on a shape inside a readout or a display, or on a term inside a canvas or a display of another formula, since that view never shows what it listens to; one inside a canvas whose items all name shapes, none of which is the listener's shape or holds it. When a canvas has an item that gives a shape by an expression, such as `(when on c)`, the compiler cannot know what it may show, and allows it. An `on-view` or an `on-pointermove` inside a readout or a display, and anything but listeners in a foreach or a let of a view's body. For a control: naming something that is not a view, a name not declared before, the same view twice, or no view at all. A view takes no `(in …)`.
 
 #### Quiet and live views
 
 A view with an `on-live` has a **quiet mode**: it starts **quiet**, at rest, and the reader makes it **live** to use it, and puts it back to quiet when done. A view without one has no quiet mode, and is as it would be without this section.
 
 ```
-(canvas view (width 600) (height 318) space)
-(on-live view (animation (move view.width (to 400) (duration 0.4))))
-(on-quiet view (animation (defaults (duration 0.4)) (at-once (move view.width (to 600)) (move share (to 1)))))
+(canvas view (width 600) (height 318)
+  space
+  (on-live (animation (move view.width (to 400) (duration 0.4))))
+  (on-quiet (animation (defaults (duration 0.4)) (at-once (move view.width (to 600)) (move share (to 1))))))
 (slider radius (move share (from 0) (to 1)) (in view))
 ```
 
@@ -362,11 +376,11 @@ A view with an `on-live` has a **quiet mode**: it starts **quiet**, at rest, and
 - **Going live:** in its top right corner a quiet view shows a hand, a button; a press on it, or Enter or Space with it focused, makes the view live and plays every `on-live` of the view whose `(active bool)` holds. The hand becomes a cross, which keeps the focus.
 - **Going back:** a press on the cross, or Escape with the focus in the view, makes the view quiet again and plays every active `on-quiet` of the view. Nothing moves back by itself: what the `on-quiet` does not move stays where it is. Each writer that starts cancels any other moving what it moves, as anywhere ("Concurrency").
 - **Controls:** a control tied with `(in …)` to views is hidden while every one of them is quiet, and unfolds when one goes live: it grows to its height and fades in, and folds the other way when they are all quiet again, at once when the reader asks for reduced motion. A view without a quiet mode is never quiet, so a control tied to one is always shown, as is a control tied to none.
-- **Listeners** tied with `(in …)` to a view hear nothing in it while it is quiet ("Listeners and controls in views"); those tied to none hear the pointer as always. `on-view` plays when its canvas first comes into view, quiet or not. In view means on screen and shown: while the canvas or an ancestor is fully transparent (opacity 0), hidden or not displayed, as a page may keep its content while it loads, the canvas is not yet in view, and `on-view` waits until it is shown.
+- **Listeners** inside a view hear nothing in it while it is quiet ("Listeners and controls in views"). `on-view` plays when its canvas first comes into view, quiet or not. In view means on screen and shown: while the canvas or an ancestor is fully transparent (opacity 0), hidden or not displayed, as a page may keep its content while it loads, the canvas is not yet in view, and `on-view` waits until it is shown.
 - **Pan and zoom:** a quiet canvas neither pans nor zooms, whatever its `pan` and `zoom`: the wheel, a pinch, a drag on empty canvas and a double click do nothing to it, and a finger on it scrolls the page, so a reader scrolling past on a phone is not caught by it. Live, it pans and zooms as its `pan` and `zoom` allow. Going back to quiet drops what the reader panned and zoomed, back to the canvas's own view box.
 - **Two views, two modes:** each view has its own mode, so two canvases of one scene may be one quiet and one live.
 - **On the page:** a view with a quiet mode has `data-mtp-mode="quiet"` or `data-mtp-mode="live"`, for the page's CSS. A readout, and a display inside a paragraph, take the hand in the line, after their text. The hand and the cross are drawn 2rem across (1.5rem in the line) and take a press 44 pixels across. They are colored as the controls are ("The controls' look").
-- **Errors:** an `on-quiet` for a view with no `on-live`; an `on-live` or `on-quiet` on something that is not a view.
+- **Errors:** an `on-quiet` inside a view with no `on-live`; an `on-live` or `on-quiet` outside a view's body.
 
 ## Defaults
 
@@ -483,7 +497,7 @@ These are the rules for several writers acting on the same variable or attribute
 - **On-view:** the first time the canvas comes into view on the page, it plays its animation, as a button does; it never plays again.
 - **On-live and on-quiet:** when the reader makes the view live, every `on-live` of it plays its animation, as a button does, and when the reader puts it back to quiet every `on-quiet` of it does (see "Quiet and live views").
 - **On-enter and on-leave:** like JavaScript's `pointerenter` and `pointerleave`, the pointer coming onto the shape plays the `on-enter`'s animation, and the pointer going off it, or off the canvas, plays the `on-leave`'s. As in JavaScript, the pointer is over every shape up the scene tree from the one under it: a group is entered from any of its members, and left only when the pointer is off all of them. Each shape plays its own listener, the first of its kind whose `(active bool)` holds; when the pointer moves from one shape to another, the leaves come first, the innermost first, and then the enters, the outermost first.
-- **On-pointermove:** like JavaScript's `pointermove`, while the pointer is over the shape, or anywhere over the canvas, each move writes the pointer's position to the target, a point variable or attribute, in the scene's coordinates. When the target is a shape's own `pos`, it is written in the frame the shape's `x` and `y` live in, so the shape sits under the pointer, and a condition may limit either, as `(on-pointermove v lens.pos (<= lens.x 5))`. A group, a fixed-size one too, follows the pointer by its `translate`, written in the frame of the group's container; a group's `pos` is a compile error, since writing it would put every member at the pointer, and so is a target inside a fixed-size group.
+- **On-pointermove:** like JavaScript's `pointermove`, while the pointer is over the shape, or anywhere over the canvas, each move writes the pointer's position to the target, a point variable or attribute, in the scene's coordinates. When the target is a shape's own `pos`, it is written in the frame the shape's `x` and `y` live in, so the shape sits under the pointer, and a condition may limit either, as `(on-pointermove lens.pos (<= lens.x 5))` inside the canvas. A group, a fixed-size one too, follows the pointer by its `translate`, written in the frame of the group's container; a group's `pos` is a compile error, since writing it would put every member at the pointer, and so is a target inside a fixed-size group.
 - **Touch screens:** a finger has no hover, so a tap stands for it. A tap on a shape enters it, playing its `on-enter` and its containers', and it stays entered after the finger lifts; it is left, playing its `on-leave`, only when the reader taps or presses somewhere else: another shape, which is then entered, empty canvas, or anywhere else on the page. While a finger is down and moving, the figure follows it: shapes are entered and left as it passes over them, and `on-pointermove` writes where it is. Lifting the finger keeps the last shape entered and the last position written. When the browser takes the finger away from the figure, to scroll or zoom the page, what the press and the moves did stays: the shapes entered stay entered and the last position written stays, but the release does nothing, so no `on-release`, `on-click` or `on-dragend` plays, a drag stops where it is, and a selection for the tap alternative to a drag ends. `on-pointermove` writes only while a finger is down, and a tap writes where it was. A pen that does not hover counts as a finger; the mouse, and a pen that hovers, work as described above.
 - **Touch targets:** a finger press that lands on no shape the reader can act on (one with an `on-drag`, `on-click`, `on-release`, `on-enter`, `on-leave` or `on-pointermove`, its own or a container's) but within 22 pixels of one counts as a press on the nearest, measured to the box around what is drawn. So every such shape takes a finger over an area at least 44 pixels across. The mouse stays exact.
 - **Page scrolling:** a finger on a shape the reader can act on, or within 22 pixels of one, does not scroll the page; elsewhere on the canvas it does. A canvas that pans or zooms, or that an `on-pointermove` of its own listens to, keeps the page from scrolling anywhere on it; a quiet canvas does not pan or zoom (see "Quiet and live views").

@@ -123,10 +123,9 @@
   (when show-bisectors.value bisectors)
   (when show-altitudes.value altitudes)
   (when show-medians.value medians)
-  shape names captions ca cb cc)
-
-; The lower corners move only along the rail, so each drag writes x alone; the conditions keep
-; each one on the rail and at least 1.5 from the other, so the corners never swap sides.
-(on-drag ca ca.x (>= ca.x -7) (<= ca.x (- cb.x 1.5)) doc@'Slides the left corner along the rail.')
-(on-drag cb cb.x (>= cb.x (+ ca.x 1.5)) (<= cb.x 7) doc@'Slides the right corner along the rail.')
-(on-drag cc cc.pos doc@'Moves the top corner.')
+  shape names captions ca cb cc
+  ; The lower corners move only along the rail, so each drag writes x alone; the conditions keep
+  ; each one on the rail and at least 1.5 from the other, so the corners never swap sides.
+  (on-drag ca ca.x (>= ca.x -7) (<= ca.x (- cb.x 1.5)) doc@'Slides the left corner along the rail.')
+  (on-drag cb cb.x (>= cb.x (+ ca.x 1.5)) (<= cb.x 7) doc@'Slides the right corner along the rail.')
+  (on-drag cc cc.pos doc@'Moves the top corner.'))

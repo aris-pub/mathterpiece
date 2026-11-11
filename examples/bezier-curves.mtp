@@ -50,8 +50,8 @@
 
 (canvas view (x -5) (y -3) (width 10) (height 7) (pan false) (zoom false)
   doc@'The two curves, their control polygons, and de Casteljau\'s construction at t.'
-  polygons construction curves handles forms)
+  polygons construction curves handles forms
+  (foreach p handles
+    (on-drag p p.pos doc@'Moves an end or a control.')))
 
-(foreach p handles
-  (on-drag p p.pos doc@'Moves an end or a control.'))
 (slider at (move t (from 0) (to 1)) (label 't') doc@'Sets t, where the construction is shown.')

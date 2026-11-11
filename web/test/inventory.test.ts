@@ -32,7 +32,7 @@ describe("the inventory", () => {
   });
 
   it("lists every component and listener in the order the source declares them", () => {
-    expect(heads(show())).toEqual(["canvas v", "slider size", "on-drag c", "on-click c", "readout says", "on-view v"]);
+    expect(heads(show())).toEqual(["canvas v", "on-drag c", "on-click c", "on-view v", "slider size", "readout says"]);
   });
 
   it("gives each component the line that places it, with the id the author sees", () => {
@@ -150,8 +150,10 @@ describe("a formula in the inventory", () => {
     (document.getElementById("m") as MtpModel).doc = JSON.parse(text) as Doc;
     const root = document.getElementById("inv")!;
     inventory(root, text, { model: "m", id: "f", file: "f.mtpc" });
-    expect(heads(root)).toEqual(["display d", "display di", "on-click f.a", "on-enter f.a", "on-leave f.a"]);
+    const each = ["on-click f.a", "on-enter f.a", "on-leave f.a"];
+    expect(heads(root)).toEqual(["display d", ...each, "display di", ...each]);
     expect(snippets(root)).toContain('<mtp-display model="f" name="d"></mtp-display>');
-    expect(root.textContent).toContain("it acts on f.a in every display that shows its formula");
+    expect(root.textContent).toContain("it acts on f.a in the display d.");
+    expect(root.textContent).toContain("it acts on f.a in the display di.");
   });
 });

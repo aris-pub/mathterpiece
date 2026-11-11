@@ -59,14 +59,15 @@ class TestPosition:
         assert _core(m.get("v").value.expr.type) == POINT
 
     def test_written_by_a_drag(self):
-        model("(scene s (arc a (stroke 'black'))) (on-drag a a.pos)")
+        model("(scene s (arc a (stroke 'black'))) (canvas v s (on-drag a a.pos))")
 
     def test_an_angle_is_dragged_through_a_handle(self):
         # A handle on the arc's end is dragged, and its move gives the angle of the pointer.
         model(
             "(real t 90) (scene s (arc a (to t) (stroke 'black'))"
             " (circle h (pos (polar 1 t)) (r 0.1)))"
-            " (on-drag h (move t (to (let ((q (or? (to-polar pointer) [1 t]))) q[1]))))"
+            " (canvas v s"
+            " (on-drag h (move t (to (let ((q (or? (to-polar pointer) [1 t]))) q[1])))))"
         )
 
 

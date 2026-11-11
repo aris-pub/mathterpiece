@@ -26,9 +26,9 @@
 
 (canvas view (x -5) (y -5) (width 10) (height 10) (pan false) (zoom false)
   doc@'The spiral of dots and the path through them.'
-  board)
+  board
+  (on-drag dot-0 dot-0.pos doc@'Moves the first dot, which moves them all.'))
 
-(on-drag dot-0 dot-0.pos doc@'Moves the first dot, which moves them all.')
 (slider count (move n (from 1) (to 60)) (label 'dots') doc@'Sets how many dots there are.')
 (slider turning (move angle (from -90) (to 90)) (label 'angle')
   doc@'Sets how far each dot turns from the one before.')

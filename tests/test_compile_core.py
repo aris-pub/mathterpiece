@@ -460,7 +460,9 @@ class TestForeach:
         assert len(circles) == 4 and circles[3].attrs["x"].deps >= {(m.id("b"), "x")}
 
     def test_a_writer_on_each_member(self):
-        m = model("(scene s (group g (circle a) (circle b))) (foreach p g (on-drag p p.pos))")
+        m = model(
+            "(scene s (group g (circle a) (circle b))) (canvas v s (foreach p g (on-drag p p.pos)))"
+        )
         drags = [o for o in m.objects if o.kind == "on-drag"]
         assert [o.data["target"][0] for o in drags] == [m.id("a"), m.id("b")]
 

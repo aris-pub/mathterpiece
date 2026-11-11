@@ -94,4 +94,4 @@ def test_a_drag_of_pos_may_limit_its_x_and_y():
     from mathterpiece.compiler import compile_source
 
     for cond in ("(<= c.x 5)", "(<= c.pos.x 5)", "(>= c.pos[1] 0)"):
-        compile_source(f"(scene s (circle c)) (on-drag c c.pos {cond})")
+        compile_source(f"(scene s (circle c)) (canvas v s (on-drag c c.pos {cond}))")

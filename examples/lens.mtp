@@ -69,7 +69,7 @@
 
 (canvas view (x -8) (y -5.9) (width 16) (height 10.9) (pan false) (zoom false)
   doc@'The landscape in greys, and in color under the lens.'
-  dull lens glass forms)
+  dull lens glass forms
+  (on-drag glass glass.pos doc@'Moves the lens.'))
 
-(on-drag glass glass.pos doc@'Moves the lens.')
 (slider lens-size (move size (from 0.8) (to 3)) (label 'lens size'))

@@ -57,7 +57,10 @@
   (when (= focus 'b') b-part)
   (when (= focus 'c') c-part)
   graph
-  handles)
+  handles
+  (on-drag crossing (move c (to pointer.y)) doc@'Moves the graph up and down.')
+  ; The vertex sits at x = -b / 2a, so the pointer's x gives b.
+  (on-drag vertex (move b (to (* -2 a pointer.x))) doc@'Slides the vertex along its path, changing b.'))
 
 (formula machine
   doc@'f(x) = ax² + bx + c, with the coefficients\' values.'
@@ -67,22 +70,17 @@
   (term b (tex (signed b)) (fill green))
   (term c (tex (signed c)) (fill blue)))
 
-(display machine-line machine doc@'The formula, whose terms show what they add to the graph.')
-
-; Pointing at a term shows what it adds to the graph; each term's piece is named after it.
-(foreach t ['a' 'b' 'c']
-  (on-enter #'machine.{t}' (animation (move focus (to t) (duration 0)))
-    doc@'Shows what the term adds to the graph.')
-  (on-leave #'machine.{t}' (animation (move focus (to none) (duration 0)))
-    doc@'Hides it again.'))
+(display machine-line machine doc@'The formula, whose terms show what they add to the graph.'
+  ; Pointing at a term shows what it adds to the graph; each term's piece is named after it.
+  (foreach t ['a' 'b' 'c']
+    (on-enter #'machine.{t}' (animation (move focus (to t) (duration 0)))
+      doc@'Shows what the term adds to the graph.')
+    (on-leave #'machine.{t}' (animation (move focus (to none) (duration 0)))
+      doc@'Hides it again.')))
 
 (slider a-knob (move a (from -2) (to 2)) (label 'a') doc@'Sets a.')
 (slider b-knob (move b (from -5) (to 5)) (label 'b') doc@'Sets b.')
 (slider c-knob (move c (from -5) (to 5)) (label 'c') doc@'Sets c.')
-
-(on-drag crossing (move c (to pointer.y)) doc@'Moves the graph up and down.')
-; The vertex sits at x = -b / 2a, so the pointer's x gives b.
-(on-drag vertex (move b (to (* -2 a pointer.x))) doc@'Slides the vertex along its path, changing b.')
 
 ; Where the graph turns and where it crosses the x axis, in words.
 (readout facts

@@ -56,10 +56,10 @@
 
 (canvas view (x -5) (y -4) (width 10) (height 7.8) (pan false) (zoom false)
   doc@'The vectors a and b, their sum, the arc from a to b, and the ruler.'
-  handles plane ruler forms)
+  handles plane ruler forms
+  (on-drag a-tip a-tip.pos doc@'Moves the tip of a.')
+  (on-drag b-tip b-tip.pos doc@'Moves the tip of b.'))
 
-(on-drag a-tip a-tip.pos doc@'Moves the tip of a.')
-(on-drag b-tip b-tip.pos doc@'Moves the tip of b.')
 (foreach k ['dart' 'curved' 'open' 'bar' 'dot']
   (button #'pick-{k}' (animation (move kind (to k) (duration 0))) (label k)
     doc@'Ends the three vectors in this head.'))

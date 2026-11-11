@@ -64,19 +64,20 @@
              $'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
         (pos (+ code-at [0 -1.25])))))
 
+(animation grow
+  (move depth (from 0) (to 4) (duration 6) (ease cubic-in-out)))
+
 ; The flake's canvas is centered on the flake, and its transform applies about that center, so
 ; moving the tip to the center, scaling, and moving it back magnifies about the tip.
 (point tip (corner 0) (const))
 (canvas view (x -5.5) (y -5) (width 11) (height 10) (pan false)
     (transform (transform (translate (- tip.x) (- tip.y)) (scale (^ 3 zoom-power)) (translate tip.x tip.y)))
   doc@'The snowflake, magnified about its top tip.'
-  flake)
+  flake
+  (on-click flake (animation grow) doc@'Grows the snowflake again from the triangle.'))
 (canvas text-below (x -5.5) (y (- code-at.y 1.75)) (width 11) (height 2) (pan false) (zoom false)
   doc@'The code under the snowflake.'
   forms)
-
-(animation grow
-  (move depth (from 0) (to 4) (duration 6) (ease cubic-in-out)))
 
 (play cycle (autoplay view) (label 'grow and shrink')
   doc@'Grows, rests, shrinks back to the triangle and rests, again and again.'
@@ -88,4 +89,3 @@
 
 (slider depth-slider (move depth (from 0) (to 4)) (label 'depth'))
 (slider zoom-slider (move zoom-power (from 0) (to 3)) (label 'zoom, in powers of 3'))
-(on-click flake (animation grow) doc@'Grows the snowflake again from the triangle.')

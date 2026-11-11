@@ -13,17 +13,16 @@ A point on a circle, a slider and a drag that move it, and a number in the prose
       (circle p (pos (polar 1 theta)) (r 0.08) (fill 'crimson'))
       (line radius (from [0 0]) (to p.pos) (stroke 'crimson')))
 
+    (canvas v s
+      (on-drag p theta))
     (slider spin (move theta (from 0) (to 360)) (label 'angle'))
-    (on-drag p theta)
-
-    (canvas v s)
     (readout r $'θ = {theta:.0f}°')
 
 - `(scene s …)` declares the scene, the mathematical content. Inside it: a variable `theta`, kept between 0 and 360, and three shapes.
 - `p`'s position is `(polar 1 theta)`, and `radius` ends at `p.pos`. These are not computed once: they hold at every moment, so when `theta` changes, both follow.
 - `spin` is a slider. Moving it plays its animation to that point: `theta` from 0 to 360.
-- `(on-drag p …)` lets the reader drag `p`, writing whatever `theta` puts it under the pointer.
 - `v` draws the scene and `r` shows `theta` as text; the author places both on the page.
+- `(on-drag p …)`, inside `v`'s body, lets the reader drag `p` in `v`, writing whatever `theta` puts it under the pointer. A listener is always written inside the view it acts in.
 
 Everything below explains one piece of this file.
 
@@ -202,7 +201,7 @@ A file is a sequence of declarations, read in order: a name must be declared bef
 - **Types and templates**: `type`, `motif`, `variant` and `choreo`, at the top level.
 - **Globals**: functions, transitions, animations, and variables that are not part of the scene, at the top level.
 - **The scene**: exactly one `(scene …)`, holding the shapes and the variables they share.
-- **Components**: views (`canvas`, `readout`), controls (`slider`, `button`, `play`, `toggle`) and listeners (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`, `on-live`, `on-quiet`, `on-enter`, `on-leave`, `on-pointermove`), at the top level.
+- **Components**: views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`), at the top level, and listeners (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-view`, `on-live`, `on-quiet`, `on-enter`, `on-leave`, `on-pointermove`), each inside the body of the view it acts in.
 
 The data model shows how these relate: what reads what, and what writes what.
 

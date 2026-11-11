@@ -52,10 +52,9 @@
 ; always grab a point.
 (canvas view (x -3.3) (y -2.3) (width 6.6) (height 4.6)
   doc@'The center, the three leaves, their edges and the distortion.'
-  edges points labels)
-
-(foreach p points
-  (on-drag p p.pos doc@'Moves the point.'))
+  edges points labels
+  (foreach p points
+    (on-drag p p.pos doc@'Moves the point.')))
 
 (animation optimum
   (at-once (defaults (duration 0.8) (ease cubic-in-out))

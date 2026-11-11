@@ -3,9 +3,9 @@
 (font note (family 'Georgia, serif') (style 'italic') (size 14))
 (real k 1 (>= 0) (<= 2))
 (scene s (circle c (r k) (fill ink)) (text label 'hi' (font note)))
-(canvas v s)
+(canvas v s
+  (on-drag c c.pos doc@'Moves the circle.')
+  (on-click c (animation (move k (to 2) (duration 1))))
+  (on-view (animation (move k (to 0) (duration 1)))))
 (slider size (move k (from 0) (to 2)) (label 'size') doc@'Sets the radius.')
-(on-drag c c.pos doc@'Moves the circle.')
-(on-click c (animation (move k (to 2) (duration 1))))
 (readout says $'k = {k:.1f}')
-(on-view v (animation (move k (to 0) (duration 1))))

@@ -76,7 +76,13 @@
   frame
   (when (>= layout 1) [square-a square-b])
   (when (<= layout 0) square-c)
-  triangles legs)
+  triangles legs
+  ; Pointing at a square lights it and its term.
+  (foreach s ['a' 'b' 'c']
+    (on-enter #'square-{s}' (animation (move lit (to s) (duration 0)))
+      doc@'Lights the square and its term.')
+    (on-leave #'square-{s}' (animation (move lit (to none) (duration 0)))
+      doc@'Unlights them.')))
 
 (formula pythagoras
   doc@'The theorem, each square a term.'
@@ -86,7 +92,20 @@
   (term b2 (fill yellow) (background (if (= lit 'b') wash none)))
   (term c2 (fill red) (background (if (= lit 'c') wash none))))
 
-(display theorem pythagoras doc@'a² + b² = c², whose terms light and show their squares.')
+(display theorem pythagoras
+  doc@'a² + b² = c², whose terms light and show their squares.'
+  ; Clicking a term moves the triangles into the layout that shows its square.
+  (foreach t ['a2' 'b2']
+    (on-click #'pythagoras.{t}' (animation (move layout (to 1) (duration 2.4)))
+      doc@'Shows a² and b² by moving the triangles.'))
+  (on-click pythagoras.c2 (animation (move layout (to 0) (duration 2.4)))
+    doc@'Shows c² by moving the triangles.')
+  ; Pointing at a term lights it and its square.
+  (foreach s ['a' 'b' 'c']
+    (on-enter #'pythagoras.{s}2' (animation (move lit (to s) (duration 0)))
+      doc@'Lights the term and its square.')
+    (on-leave #'pythagoras.{s}2' (animation (move lit (to none) (duration 0)))
+      doc@'Unlights them.')))
 
 (readout areas
     $'a² + b² = {(* side-a side-a):.2f} + {(* side-b side-b):.2f} = {(+ (* side-a side-a) (* side-b side-b)):.2f} = c²'
@@ -97,21 +116,3 @@
 (button rearrange (label 'rearrange')
     (animation (move layout (to (if (> layout 0.5) 0 1)) (duration 2.4)))
   doc@'Moves the triangles into the other layout.')
-
-; Clicking a term moves the triangles into the layout that shows its square.
-(foreach t ['a2' 'b2']
-  (on-click #'pythagoras.{t}' (animation (move layout (to 1) (duration 2.4)))
-    doc@'Shows a² and b² by moving the triangles.'))
-(on-click pythagoras.c2 (animation (move layout (to 0) (duration 2.4)))
-  doc@'Shows c² by moving the triangles.')
-
-; Pointing at a term or at a square lights both.
-(foreach s ['a' 'b' 'c']
-  (on-enter #'pythagoras.{s}2' (animation (move lit (to s) (duration 0)))
-    doc@'Lights the term and its square.')
-  (on-leave #'pythagoras.{s}2' (animation (move lit (to none) (duration 0)))
-    doc@'Unlights them.')
-  (on-enter #'square-{s}' (animation (move lit (to s) (duration 0)))
-    doc@'Lights the square and its term.')
-  (on-leave #'square-{s}' (animation (move lit (to none) (duration 0)))
-    doc@'Unlights them.'))

@@ -28,8 +28,8 @@
 (toggle show show-angle (label 'show the angle'))
 (readout r $'angle = {angle:.1f}°')
 (canvas view (x -7) (y -7) (width 14) (height 14) (toggle-duration 0.5)
-  track radius point box sun (when show-angle label))
-; The pointer's angle around the center, from 0 to 360.
-(on-drag point (move angle (to (let ((q (or? (to-polar pointer) [0 angle]))) (mod q[1] 360)))))
-(on-drag box box.pos)
-(on-click sun (animation (move size (to 0.2) (duration 0.5))))
+  track radius point box sun (when show-angle label)
+  ; The pointer's angle around the center, from 0 to 360.
+  (on-drag point (move angle (to (let ((q (or? (to-polar pointer) [0 angle]))) (mod q[1] 360)))))
+  (on-drag box box.pos)
+  (on-click sun (animation (move size (to 0.2) (duration 0.5)))))

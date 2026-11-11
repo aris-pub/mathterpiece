@@ -15,7 +15,7 @@
     (get-text-property (match-beginning 0) 'face)))
 
 (ert-deftest mtp-mode-highlights-keyword-arguments ()
-  (let ((src "(canvas view (x -8) (pan false)\n  pond)\n(on-view view (animation (move rise (to 0) (duration 0.8) (ease 'ease-out'))))"))
+  (let ((src "(canvas view (x -8) (pan false)\n  pond\n  (on-view (animation (move rise (to 0) (duration 0.8) (ease 'ease-out')))))"))
     (dolist (word '("x" "pan" "to 0" "duration" "ease"))
       (should (eq (mtp-mode-test--face-at src word) 'mtp-mode-keyword-face)))
     (should (eq (mtp-mode-test--face-at src "canvas") 'mtp-mode-form-head-face))
@@ -26,13 +26,13 @@
     (dolist (word '("(r 1" "fill" "stroke-width" "dash"))
       (should (eq (mtp-mode-test--face-at src (string-trim-left word "(")) 'mtp-mode-keyword-face)))))
 
-(ert-deftest mtp-mode-highlights-the-views-a-listener-is-in ()
-  (let ((src "(on-drag c c.pos (in view-1))\n(button b (animation (in-order (wait 1))))"))
+(ert-deftest mtp-mode-highlights-the-views-a-control-is-in ()
+  (let ((src "(slider sl (move k (from 0) (to 1)) (in view-1))\n(button b (animation (in-order (wait 1))))"))
     (should (eq (mtp-mode-test--face-at src "in ") 'mtp-mode-keyword-face))
     (should (eq (mtp-mode-test--face-at src "in-order") 'mtp-mode-form-head-face))))
 
 (ert-deftest mtp-mode-highlights-quiet-mode-listeners ()
-  (let ((src "(on-live view (animation (move k (to 1))))\n(on-quiet view (animation (move k (to 0))))"))
+  (let ((src "(canvas view s\n  (on-live (animation (move k (to 1))))\n  (on-quiet (animation (move k (to 0)))))"))
     (should (eq (mtp-mode-test--face-at src "on-live") 'mtp-mode-form-head-face))
     (should (eq (mtp-mode-test--face-at src "on-quiet") 'mtp-mode-form-head-face))))
 

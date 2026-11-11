@@ -1,7 +1,10 @@
 (scene s (text label 'hi' (pos [0 3])) (circle c (r 1)) (circle dot (pos [5 5]) (r 1)))
-(canvas v s)
-(canvas fixed (pan false) (zoom false) s)
-(on-drag dot dot.pos)
-(canvas bounded (zoom 1 4) s)
+(canvas v s
+  (on-drag dot dot.pos))
+(canvas fixed (pan false) (zoom false) s
+  (on-drag dot dot.pos))
+(canvas bounded (zoom 1 4) s
+  (on-drag dot dot.pos))
 ; Zooms out to twice the view box, and in to 4 times closer.
-(canvas wide (zoom 0.5 4) s)
+(canvas wide (zoom 0.5 4) s
+  (on-drag dot dot.pos))

@@ -49,7 +49,7 @@ def test_things_are_placed_against_its_position_even_with_a_text_inside():
 
 
 def test_a_drag_moves_it_by_its_translate():
-    d = doc(f"(scene s {HANDLE}) (canvas v s) (on-drag grip grip.pos)")
+    d = doc(f"(scene s {HANDLE}) (canvas v s (on-drag grip grip.pos))")
     assert errors(d) == []
 
 
@@ -76,7 +76,7 @@ def test_one_inside_another_is_an_error():
 
 def test_a_drag_on_a_member_is_an_error():
     error(
-        "(scene s (group g (fixed-size true) (circle c (r 6)))) (on-drag c c.pos)",
+        "(scene s (group g (fixed-size true) (circle c (r 6)))) (canvas v s (on-drag c c.pos))",
         "drag the group instead",
     )
 
@@ -84,7 +84,7 @@ def test_a_drag_on_a_member_is_an_error():
 def test_a_drag_with_a_bound_translate_is_an_error():
     error(
         "(scene s (circle p (r 1)) (group g (translate p.pos) (fixed-size true) (circle_ (r 6))))"
-        " (on-drag g g.pos)",
+        " (canvas v s (on-drag g g.pos))",
         "translate is bound",
     )
 
@@ -132,7 +132,7 @@ def test_a_drag_with_a_const_translate_is_an_error():
     # A translate worked out when compiling is free but const, so no writer may write it.
     error(
         "(scene s (group g (translate (+ [1 0] [0 1])) (fixed-size true) (circle_ (r 6))))"
-        " (on-drag g g.pos)",
+        " (canvas v s (on-drag g g.pos))",
         "g.translate is const",
     )
 
@@ -140,7 +140,7 @@ def test_a_drag_with_a_const_translate_is_an_error():
 def test_a_const_point_by_name_leaves_it_free_to_drag():
     d = doc(
         "(point at (+ [1 0] [0 1]) (const))"
-        " (scene s (group g (translate at) (fixed-size true) (circle_ (r 6)))) (canvas v s)"
-        " (on-drag g g.pos)"
+        " (scene s (group g (translate at) (fixed-size true) (circle_ (r 6))))"
+        " (canvas v s (on-drag g g.pos))"
     )
     assert errors(d) == []

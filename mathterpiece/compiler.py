@@ -130,7 +130,8 @@ LAYOUTS = {
     "row": Refine(STRING, (("one-of", ("top", "middle", "bottom")),)),
     "column": Refine(STRING, (("one-of", ("left", "middle", "right")),)),
 }
-# The components (reference.md, "Components"), declared at the top level only.
+# The components (reference.md, "Components"): views and controls at the top level, listeners
+# inside the body of a view.
 COMPONENTS = {
     "canvas",
     "readout",
@@ -160,6 +161,13 @@ ON_SHAPE = (
     *("on-drag", "on-click", "on-release", "on-dragstart", "on-dragend"),
     *("on-enter", "on-leave"),
 )
+# Every listener is written inside the body of the view it acts in (mtp-6k7f).
+LISTENERS = (*ON_SHAPE, *ON_VIEW, "on-pointermove")
+# Whether a listener on its own view (on-view, on-live, on-quiet, and on-pointermove on a canvas)
+# names that view inside its body, (on-view v (animation …)), or leaves the name out,
+# (on-view (animation …)). Not decided by the author yet (mtp-6k7f); own_view_items and
+# canvas_move are the only places that read it.
+OWN_VIEW_NAMED = False
 # The views and controls a play's autoplay may wait for.
 SEEN = {"canvas", "readout", "slider", "button", "play", "stepper", "toggle"}
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
@@ -894,7 +902,8 @@ class _Compiler:
         if self.choreo_of(form) is not None:
             raise CompileError(_USE_OUTSIDE, form.pos)
         if head in COMPONENTS:
-            return self.component(form, scope)
+            self.component(form, scope)
+            return
         if self.shape_kind(form):
             raise CompileError("a shape is declared only inside the scene", form.pos)
         self.variable(form, None, "scene", scope)
@@ -3144,34 +3153,19 @@ class _Compiler:
             raise CompileError(f"{label} is fixed by its variant", pos)
         return attribute.type
 
-    def component(self, form: Form, scope: dict) -> None:
-        """A view, control or listener (reference.md, "Components")."""
+    def component(self, form: Form, scope: dict, view: int | None = None) -> int:
+        """A view, control or listener (reference.md, "Components"). view is the view whose
+        body holds a listener; every listener is written in one (mtp-6k7f)."""
         # The names a foreach around the component gives it.
         self.cscope = scope
         kind = _head(form)
         assert kind is not None
-        if kind in ON_SHAPE:
-            if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
-                raise CompileError(f"{kind} takes the shape it listens to", form.pos)
-            name, pos, items = None, form.pos, form.items[2:]
-            shape = self.read_listened(form.items[1], kind)
-        elif kind == "on-view":
-            if len(form.items) < 2 or _head(form.items[1]) == "animation":
-                raise CompileError("on-view takes the canvas it listens to", form.pos)
-            name, pos, items = None, form.pos, form.items[2:]
-            shape = self.component_named(form.items[1], {"canvas"}, "expected the name of a canvas")
-        elif kind in ("on-live", "on-quiet"):
-            if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
-                raise CompileError(f"{kind} takes the view it listens to", form.pos)
-            name, pos, items = None, form.pos, form.items[2:]
-            shape = self.component_named(form.items[1], set(VIEWS), "expected the name of a view")
-        elif kind == "on-pointermove":
-            if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
-                raise CompileError(
-                    "on-pointermove takes the shape or the canvas it listens to", form.pos
-                )
-            name, pos, items = None, form.pos, form.items[2:]
-            shape = self.shape_or_canvas(form.items[1])
+        heard: list = []
+        if kind in LISTENERS:
+            if view is None:
+                raise CompileError(self.outside_view(form), form.pos)
+            name, pos = None, form.pos
+            items, shape = self.listened(form, kind, view)
         else:
             name, pos = self.name_of(form, scope)
             if name is None:
@@ -3179,24 +3173,37 @@ class _Compiler:
                 raise CompileError(
                     f"a {kind} is placed on the page by its name, so it needs one", pos
                 )
-            items, shape = form.items[2:], None
+            items, shape = list(form.items[2:]), None
+            if kind in VIEWS:
+                heard = [it for it in items if self.holds_listeners(it)]
         obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
-        items = list(items)
         tied = next((it for it in items if _head(it) == "in"), None)
         if kind in VIEWS and tied is not None:
+            raise CompileError("a view takes no (in …): controls belong to views", tied.pos)
+        if kind in LISTENERS and tied is not None:
             raise CompileError(
-                "a view takes no (in …): listeners and controls belong to views", tied.pos
+                "a listener takes no (in …): it hears only in the view it is written in",
+                tied.pos,
             )
         if kind in VIEWS or kind in ("slider", "on-drag", "on-pointermove"):
-            use = next((it for it in items if self.choreo_of(it) is not None), None)
+            use = next(
+                (it for it in items if it not in heard and self.choreo_of(it) is not None), None
+            )
             if use is not None:
                 raise CompileError(f"a {kind} plays no animation: {_USE_OUTSIDE}", use.pos)
-        # A canvas's body is what it shows; a writer's is its conditions.
+        # A canvas's body is what it shows and its listeners; a writer's is its conditions.
         if kind == "canvas":
             self.options_first(
-                items, lambda it: not isinstance(it, Name) and _head(it) != "when", kind
+                items,
+                lambda it: (
+                    not isinstance(it, Name)
+                    and _head(it) != "when"
+                    and not self.holds_listeners(it)
+                ),
+                kind,
             )
-        elif kind != "readout":
+        items = [it for it in items if not any(it is h for h in heard)]
+        if kind not in ("canvas", "readout"):
             # A slider's first item is its move, and on-drag's and toggle's their target:
             # positional arguments.
             body = items[1:] if kind in ("slider", "on-drag", "on-pointermove", "toggle") else items
@@ -3206,16 +3213,142 @@ class _Compiler:
                 lambda it: _head(it) in WRITER_OPTIONS or self.choreo_of(it) is not None,
                 kind,
             )
-        if kind not in VIEWS:
-            obj.data["in"] = self.tie(kind, items, form, shape)
+        if kind in LISTENERS:
+            on_shape = kind in ON_SHAPE or (isinstance(shape, tuple) and shape[0] is not None)
+            obj.data["in"] = [view] if on_shape else None
+        elif kind not in VIEWS:
+            obj.data["in"] = self.tie(items)
         build = getattr(self, "build_" + kind.replace("-", "_"))
         build(obj, items, shape)
-        self.add(obj)
+        i = self.add(obj)
+        for node, inner in self.expand(heard, scope):
+            if _head(node) not in LISTENERS:
+                raise CompileError("a view's foreach or let holds listeners only", node.pos)
+            assert isinstance(node, Form)
+            listener, doc = _take_doc(node, 1)
+            j = self.component(listener, inner, i)
+            if doc is not None:
+                self.model.objects[j].data["doc"] = doc
+        self.cscope = scope
+        return i
 
-    def tie(self, kind: str, items: list, form: Form, listened) -> list[int] | None:
-        """(in view…): the views a listener hears the pointer in, or a control belongs to (the
-        author, 2026-11-08, mtp-2juu.1). None when not given: a listener then hears it in every
-        view showing its shape, and a control belongs to no view."""
+    def holds_listeners(self, node: Node) -> bool:
+        """Whether an item of a view's body is a listener, or a foreach or let around some."""
+        head = _head(node)
+        if head in LISTENERS:
+            return True
+        if head not in ("foreach", "let") or not isinstance(node, Form) or len(node.items) < 3:
+            return False
+        body = node.items[2:]
+        if head == "foreach" and not isinstance(node.items[1], Form):
+            body = node.items[3:]
+        return any(self.holds_listeners(it) for it in body)
+
+    def listened(self, form: Form, kind: str, view: int) -> tuple[list, object]:
+        """A listener's items after what it listens to, and what that is: a shape or a term,
+        the view, or for on-pointermove (shape, None) or (None, canvas)."""
+        v = self.model.objects[view]
+        if kind == "on-view" and v.kind != "canvas":
+            raise CompileError(
+                "on-view plays when a canvas first comes into view, so it is written inside a"
+                f" canvas, not {_a(v.kind)}",
+                form.pos,
+            )
+        if kind == "on-pointermove" and v.kind != "canvas":
+            raise CompileError(
+                "on-pointermove follows the pointer in a canvas, so it is written inside a"
+                f" canvas, not {_a(v.kind)}",
+                form.pos,
+            )
+        if kind in ON_VIEW:
+            return self.own_view_items(form, view), view
+        if kind == "on-pointermove":
+            on_canvas = self.canvas_move(form, view)
+            if on_canvas is not None:
+                return on_canvas, (None, view)
+        if v.kind == "readout":
+            raise CompileError(f"a readout takes on-live and on-quiet, not {kind}", form.pos)
+        if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
+            raise CompileError(f"{kind} takes the shape it listens to", form.pos)
+        node = form.items[1]
+        if kind == "on-pointermove":
+            shape = self.read_shape(node)
+        else:
+            shape = self.read_listened(node, kind)
+        label = _name_text(node) if isinstance(node, Name) else self.model.objects[shape].name
+        self.check_shows(view, shape, str(label), node.pos)
+        return list(form.items[2:]), ((shape, None) if kind == "on-pointermove" else shape)
+
+    def own_view_items(self, form: Form, view: int) -> list:
+        """The items of a listener on its own view, after its head and, when OWN_VIEW_NAMED,
+        the view's name, which must be the view whose body holds it."""
+        if not OWN_VIEW_NAMED:
+            return list(form.items[1:])
+        kind = _head(form)
+        if len(form.items) < 2 or _head(form.items[1]) in WRITER_OPTIONS:
+            raise CompileError(f"{kind} takes the view it listens to", form.pos)
+        name = self.model.objects[view].name
+        if self.component_named(form.items[1], set(VIEWS), "expected the name of a view") != view:
+            raise CompileError(f"{kind} inside {name} listens to {name}", form.items[1].pos)
+        return list(form.items[2:])
+
+    def canvas_move(self, form: Form, view: int) -> list | None:
+        """The items of an on-pointermove on its canvas after its head, and its canvas's name
+        when OWN_VIEW_NAMED; None for one on a shape. Without the name, one on a shape starts
+        with two names, the shape and its target, and one on the canvas with one, its target."""
+        if OWN_VIEW_NAMED:
+            node = form.items[1] if len(form.items) > 1 else None
+            name = node.parts[0] if isinstance(node, Name) and len(node.parts) == 1 else None
+            if name is None or self.model.names.get(name) != view:
+                return None
+            return list(form.items[2:])
+        names = [isinstance(it, Name) for it in form.items[1:3]]
+        return None if names == [True, True] else list(form.items[1:])
+
+    def outside_view(self, form: Form) -> str:
+        """The message for a listener written outside a view's body, with how to write it in."""
+        kind = _head(form)
+        items = list(form.items[1:])
+        tied = next((it for it in items if _head(it) == "in"), None)
+        first = items[0] if items else None
+        named = first.parts[0] if isinstance(first, Name) and len(first.parts) == 1 else None
+        own = self.model.names.get(named) if isinstance(named, str) else None
+        if own is not None and self.model.objects[own].kind not in VIEWS:
+            own = None
+        if own is not None and kind in (*ON_VIEW, "on-pointermove"):
+            items = items[1:]
+        shown = items[0] if items and isinstance(items[0], Name) and kind not in ON_VIEW else None
+        inner = f"({kind} {_name_text(shown)} …)" if shown is not None else f"({kind} …)"
+        if isinstance(tied, Form):
+            names = [it for it in tied.items[1:] if isinstance(it, Name) and len(it.parts) == 1]
+            view = self.model.names.get(names[0].parts[0]) if names else None
+            where = "(canvas name …"
+            if view is not None and self.model.objects[view].kind in VIEWS:
+                where = f"({self.model.objects[view].kind} {self.model.objects[view].name} …"
+            return (
+                "a listener takes no (in …): it hears only in the view it is written in, so"
+                f" write it inside the body of each view: {where} {inner})"
+            )
+        if own is not None:
+            where = f"({self.model.objects[own].kind} {self.model.objects[own].name} …"
+        elif self.is_term(first):
+            where = "(display name formula …"
+        else:
+            where = "(canvas name …"
+        return f"{kind} is written inside the body of the view it acts in: {where} {inner})"
+
+    def is_term(self, node) -> bool:
+        if not isinstance(node, Name):
+            return False
+        try:
+            e = self.expr(node, None, self.cscope)
+        except CompileError:
+            return False
+        return e.op == "obj" and _core(e.type) == TERM
+
+    def tie(self, items: list) -> list[int] | None:
+        """(in view…): the views a control belongs to (the author, 2026-11-08, mtp-2juu.1), or
+        None when not given: it then belongs to no view."""
         found = [it for it in items if _head(it) == "in"]
         if not found:
             return None
@@ -3224,14 +3357,6 @@ class _Compiler:
         item = found[0]
         assert isinstance(item, Form)
         items.remove(item)
-        if kind == "on-view":
-            raise CompileError("on-view listens to its canvas, so it takes no (in …)", item.pos)
-        if kind in ON_VIEW:
-            raise CompileError(f"{kind} listens to its view, so it takes no (in …)", item.pos)
-        if kind == "on-pointermove" and listened[1] is not None:
-            raise CompileError(
-                "this on-pointermove listens to its canvas, so it takes no (in …)", item.pos
-            )
         if len(item.items) == 1:
             raise CompileError("(in …) names at least one view", item.pos)
         views: list[int] = []
@@ -3242,8 +3367,7 @@ class _Compiler:
             i = self.model.names.get(name)
             if i is None:
                 raise CompileError(
-                    f"unknown view '{name}': a listener or control names views declared before it",
-                    node.pos,
+                    f"unknown view '{name}': a control names views declared before it", node.pos
                 )
             if self.model.objects[i].kind not in VIEWS:
                 raise CompileError(
@@ -3252,16 +3376,10 @@ class _Compiler:
             if i in views:
                 raise CompileError(f"{name} is named twice", node.pos)
             views.append(i)
-        shape = listened[0] if kind == "on-pointermove" else listened
-        if shape is not None:
-            heard = form.items[1]
-            label = _name_text(heard) if isinstance(heard, Name) else self.model.objects[shape].name
-            for node, view in zip(item.items[1:], views, strict=True):
-                self.check_shows(view, shape, str(label), node.pos)
         return views
 
     def check_shows(self, view: int, listened: int, label: str, pos: Pos) -> None:
-        """A listener tied to a view that can never show its shape or term is an error, when the
+        """A listener inside a view that can never show its shape or term is an error, when the
         compiler can know it: a canvas that shows only shapes it names, or a display."""
         v = self.model.objects[view]
         term = self.model.objects[listened].kind == "term"
@@ -3313,14 +3431,6 @@ class _Compiler:
         if i is None or self.model.objects[i].kind not in kinds:
             raise CompileError(message, node.pos)
         return i
-
-    def shape_or_canvas(self, node: Node) -> tuple:
-        """What an on-pointermove listens to: (shape, None) or (None, canvas)."""
-        name = node.parts[0] if isinstance(node, Name) and len(node.parts) == 1 else None
-        i = self.model.names.get(name) if isinstance(name, str) else None
-        if i is not None and self.model.objects[i].kind == "canvas":
-            return None, i
-        return self.read_shape(node), None
 
     def read_listened(self, node: Node, kind: str) -> int:
         """The shape, or the term of a formula, a listener listens to."""
@@ -3397,7 +3507,7 @@ class _Compiler:
         stop = next((it for it in items if _head(it) == "stop-propagation"), None)
         if stop is not None:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
-        if obj.kind not in (*ON_SHAPE, *ON_VIEW, "on-pointermove"):
+        if obj.kind not in LISTENERS:
             label = self.take(items, "label")
             # (label (tex …)) gives the label as LaTeX, the form a term of a formula takes.
             if _head(label) == "tex":
@@ -3733,8 +3843,8 @@ class _Compiler:
         obj.data["shape"], obj.data["view"] = listened
         if not items or not isinstance(items[0], Name):
             raise CompileError(
-                "on-pointermove is (on-pointermove shape target item…), its target a point"
-                " variable or attribute",
+                "on-pointermove is (on-pointermove shape target item…), or (on-pointermove"
+                " target item…) on its canvas, its target a point variable or attribute",
                 obj.pos,
             )
         target = items.pop(0)
@@ -4428,6 +4538,10 @@ class _Compiler:
             elif head in ("motif", "variant", "func", "transition", "animation", "formula") or (
                 head in COMPONENTS or head == "choreo" or _typed_func(item) is not None
             ):
+                if head in LISTENERS:
+                    raise CompileError(
+                        f"{head} is written inside the body of the view it acts in", item.pos
+                    )
                 raise CompileError(
                     f"a {head or 'func'} is declared only at the top level", item.pos
                 )
@@ -6789,11 +6903,11 @@ def _points_mean(points: Expr) -> Expr:
     return Expr("points-mean", POINT, (points,), points.deps)
 
 
-def _take_doc(form: Form) -> tuple[Form, str | None]:
-    """A declaration's doc@'text', which is (doc 'text'), taken out of its items: plain text,
-    known when compiling, for the illustrator and the author; never a reader's description
-    (mtp-fl20)."""
-    docs = [it for it in form.items[2:] if _head(it) == "doc"]
+def _take_doc(form: Form, start: int = 2) -> tuple[Form, str | None]:
+    """A declaration's doc@'text', which is (doc 'text'), taken out of its items from start:
+    plain text, known when compiling, for the illustrator and the author; never a reader's
+    description (mtp-fl20). A listener has no name, so its doc may come right after its head."""
+    docs = [it for it in form.items[start:] if _head(it) == "doc"]
     if not docs:
         return form, None
     if len(docs) > 1:

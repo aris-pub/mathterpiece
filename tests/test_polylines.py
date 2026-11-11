@@ -58,7 +58,7 @@ class TestPosition:
         assert _core(e.type) == REAL
 
     def test_writing_it_moves_every_point(self):
-        model(f"(scene s (polyline p {PTS})) (canvas v s) (on-drag p p.pos)")
+        model(f"(scene s (polyline p {PTS})) (canvas v s (on-drag p p.pos))")
         model(f"(scene s (polygon p {PTS})) (animation a (move p.x (to 5) (duration 1)))")
 
     def test_bound_points_cannot_be_moved_by_their_position(self):

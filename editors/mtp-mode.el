@@ -113,8 +113,8 @@ takes a color apart from strings.")
     ("toggle" . 2)
     ;; Forms with no name.
     ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("step" . 1) ("on-drag" . 2) ("on-click" . 1)
-    ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 1) ("on-enter" . 1)
-    ("on-leave" . 1) ("on-live" . 1) ("on-quiet" . 1)
+    ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 0) ("on-enter" . 1)
+    ("on-leave" . 1) ("on-live" . 0) ("on-quiet" . 0)
     ("on-pointermove" . 2) ("defaults" . 0)
     ("exists-when" . 1)
     ("when" . 1) ("foreach" . 2) ("let" . 1) ("fn" . 1) ("if" . 2))
@@ -134,17 +134,18 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
       ("at-once" ,@animation) ("in-order" ,@animation)
       ("step" "defaults")
       ("motif" "doc") ("variant" "doc") ("func" "doc") ("namespace" "doc") ("palette" "doc")
-      ("formula" "doc" "defaults")))
+      ("formula" "doc" "defaults")
+      ("display" "doc" "kind") ("readout" "doc" "font")))
   "Forms that take a body, and their keyword arguments. A keyword argument on a line of
 its own is indented 4, like a positional argument, so it reads apart from the body at 2.")
 
 (defconst mtp-mode--no-body
   '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
-    "slider" "button" "play" "stepper" "toggle" "readout" "on-drag" "on-click"
+    "slider" "button" "play" "stepper" "toggle" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "on-live" "on-quiet" "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
-    "colormap" "interface" "defaults" "term" "display" "rand-seed")
+    "colormap" "interface" "defaults" "term" "rand-seed")
   "Forms that take no body: every item after their positional arguments is indented 4.")
 
 (defconst mtp-mode--named

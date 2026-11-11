@@ -89,16 +89,15 @@
 
 (canvas view (x -7.6) (y -5.4) (width 15.2) (height 10.4) (pan false) (zoom false)
   doc@'The six dials.'
-  board)
-
-; The knob is a ring, and its middle is not part of it, so a press there reaches the needle
-; under it: the needle can be dragged too. Each dial's own lo and hi limit its drag.
-(foreach d [speed heat pressure thin bold half]
-  ; The needle turns from start, sweep degrees for the whole range: its angle gives the value.
-  (on-drag d.knob (move d.value (to (value-at d pointer))) (>= d.value d.lo) (<= d.value d.hi)
-    doc@'Turns the dial by its knob.')
-  (on-drag d.needle (move d.value (to (value-at d pointer))) (>= d.value d.lo) (<= d.value d.hi)
-    doc@'Turns the dial by its needle.'))
+  board
+  ; The knob is a ring, and its middle is not part of it, so a press there reaches the needle
+  ; under it: the needle can be dragged too. Each dial's own lo and hi limit its drag.
+  (foreach d [speed heat pressure thin bold half]
+    ; The needle turns from start, sweep degrees for the whole range: its angle gives the value.
+    (on-drag d.knob (move d.value (to (value-at d pointer))) (>= d.value d.lo) (<= d.value d.hi)
+      doc@'Turns the dial by its knob.')
+    (on-drag d.needle (move d.value (to (value-at d pointer))) (>= d.value d.lo) (<= d.value d.hi)
+      doc@'Turns the dial by its needle.')))
 
 (slider speed-slider (move speed.value (from 0) (to 120)) (label 'speed'))
 (slider heat-slider (move heat.value (from -20) (to 40)) (label 'temperature'))

@@ -1,19 +1,26 @@
-; Shapes drawn in two canvases whose listeners are tied to one of them (mtp-2juu.1): in left
-; they drag, click, hover and follow the pointer; in right they do none of that, and a click on
-; dot goes on to its group's listener, which every canvas hears.
+; Shapes drawn in two canvases, each canvas with its own listeners (mtp-6k7f): in left they drag,
+; click, hover and follow the pointer; in right they do none of that, and a click on dot goes on
+; to its group's listener, which both canvases have. A click on pad counts in tapped-left or
+; tapped-right, by the canvas it is in.
 (real clicks 0)
 (real outer 0)
 (real entered 0)
+(real tapped-left 0)
+(real tapped-right 0)
 (point p [0 0])
 (scene s
   (group g
     (circle dot (pos [-5 0]) (r 1)))
-  (circle knob (pos [5 0]) (r 1)))
-(canvas left (pan false) (zoom false) s)
-(canvas right (pan false) (zoom false) s)
-(on-click dot (in left) (animation (move clicks (to (+ clicks 1)) (duration 0))))
-(on-click g (animation (move outer (to (+ outer 1)) (duration 0))))
-(on-enter dot (in left) (animation (move entered (to (+ entered 1)) (duration 0))))
-(on-pointermove dot p (in left))
-(on-drag knob knob.pos (in left))
+  (circle knob (pos [5 0]) (r 1))
+  (circle pad (pos [0 5]) (r 1)))
+(canvas left (pan false) (zoom false) s
+  (on-click dot (animation (move clicks (to (+ clicks 1)) (duration 0))))
+  (on-click g (animation (move outer (to (+ outer 1)) (duration 0))))
+  (on-enter dot (animation (move entered (to (+ entered 1)) (duration 0))))
+  (on-pointermove dot p)
+  (on-drag knob knob.pos)
+  (on-click pad (animation (move tapped-left (to (+ tapped-left 1)) (duration 0)))))
+(canvas right (pan false) (zoom false) s
+  (on-click g (animation (move outer (to (+ outer 1)) (duration 0))))
+  (on-click pad (animation (move tapped-right (to (+ tapped-right 1)) (duration 0)))))
 (button b (in left right) (animation (move clicks (to 0) (duration 0))))

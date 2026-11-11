@@ -36,7 +36,10 @@ def test_a_use_in_a_button_is_the_hand_written_animation():
 
 def test_a_use_may_stand_as_the_animation_itself():
     same(BASE + " (button b (fade-in c))", BASE + " (button b (animation (fade-in c)))")
-    same(BASE + " (on-click c (fade-in d 2))", BASE + " (on-click c (animation (fade-in d 2)))")
+    same(
+        BASE + " (canvas v s (on-click c (fade-in d 2)))",
+        BASE + " (canvas v s (on-click c (animation (fade-in d 2))))",
+    )
 
 
 def test_a_use_stands_among_the_optional_arguments():

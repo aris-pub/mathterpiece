@@ -116,9 +116,8 @@
 
 (canvas view (x -8.4) (y -6.4) (width 16.8) (height 10.6) (pan false) (zoom false)
   doc@'The heatmap, the coast, the colors by number and by name, and the wheel.'
-  heat coast chart named dial forms)
-
-(on-drag handle (move angle (to (toward pointer angle))) doc@'Turns the wheel.')
+  heat coast chart named dial forms
+  (on-drag handle (move angle (to (toward pointer angle))) doc@'Turns the wheel.'))
 
 (foreach m ['viridis' 'magma' 'cividis' 'blue-white-red']
   (button #'pick-{m}' (animation (move scheme (to m) (duration 0))) (label m)

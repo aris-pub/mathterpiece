@@ -136,34 +136,32 @@
         (exists-when #'tick-{j}' (<= j k))
         (exists-when #'tick-name-{j}' (<= j k))))))
 
-; The older of x and y slides to the point, and r grows to the new δ/2. The point it slides from
-; is where it was going: the moves start together, so each reads the old to.
-(foreach i 32
-  (on-click space[i]
-    doc@'Makes the point x or y, in place of the older of the two.'
-      (animation (defaults (duration 0.4))
-        (at-once
-          ; Which point x and y sit on: an int jumps at the start, never passing the points between.
-          (at-once (defaults (ease (step 1)))
-            (move x-from (to (if replace-x x-to x-from)))
-            (move y-from (to (if replace-x y-from y-to)))
-            (move x-to (to (if replace-x i x-to)))
-            (move y-to (to (if replace-x y-to i))))
-          (move x-t (from (if replace-x 0 x-t)) (to 1))
-          (move y-t (from (if replace-x y-t 0)) (to 1))
-          (move share (to 1))
-          (move replace-x (to (not replace-x)) (duration 0))))))
-
 (canvas the-space (x 0) (y -318) (width 600) (height 318)
   doc@'The points, the pair x and y, and the balls around them.'
-  rings pair space x y)
+  rings pair space x y
+  ; The older of x and y slides to the point, and r grows to the new δ/2. The point it slides from
+  ; is where it was going: the moves start together, so each reads the old to.
+  (foreach i 32
+    (on-click space[i]
+      doc@'Makes the point x or y, in place of the older of the two.'
+        (animation (defaults (duration 0.4))
+          (at-once
+            ; Which point x and y sit on: an int jumps at the start, never passing the points between.
+            (at-once (defaults (ease (step 1)))
+              (move x-from (to (if replace-x x-to x-from)))
+              (move y-from (to (if replace-x y-from y-to)))
+              (move x-to (to (if replace-x i x-to)))
+              (move y-to (to (if replace-x y-to i))))
+            (move x-t (from (if replace-x 0 x-t)) (to 1))
+            (move y-t (from (if replace-x y-t 0)) (to 1))
+            (move share (to 1))
+            (move replace-x (to (not replace-x)) (duration 0))))))
+  (on-live doc@'Brings out the controls.')
+  (on-quiet (animation (move share (to 1) (duration 0.4)))
+    doc@'Grows the balls back to δ/2, the figure at rest.'))
 (canvas the-bar (x 0) (y -356) (width 600) (height 56)
   doc@'The bar that cuts [0, δ/2] at the ρⱼ and fills up to r.'
   bar)
-
-(on-live the-space doc@'Brings out the controls.')
-(on-quiet the-space (animation (move share (to 1) (duration 0.4)))
-  doc@'Grows the balls back to δ/2, the figure at rest.')
 
 (button new-points (animation (roll-dice)) (label 'new points') (in the-space)
   doc@'Draws the 32 points again.')

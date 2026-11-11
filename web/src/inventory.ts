@@ -109,15 +109,14 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
     }[o.kind]!;
   }
   entry.append(el("p", "", what));
+  // A listener belongs to the one view whose body holds it (mtp-6k7f).
+  const view = doc.objects[o.shape!]?.kind === "term" ? "display" : "canvas";
+  const where = `${view} ${(o.in ?? []).map(name).join(", ")}`;
   entry.append(
     el(
       "p",
       "mtp-inv-note",
-      onCanvas
-        ? "It has no element of its own."
-        : doc.objects[o.shape!]?.kind === "term"
-          ? `It has no element of its own: it acts on ${of} in every display that shows its formula.`
-          : `It has no element of its own: it acts on ${of} on every canvas that draws it.`,
+      onCanvas ? "It has no element of its own." : `It has no element of its own: it acts on ${of} in the ${where}.`,
     ),
   );
   return entry;

@@ -63,6 +63,15 @@ def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
             "(motif dial ((real v))\n(x 1)\n(circle c))\n",
             "(motif dial ((real v))\n  (x 1)\n  (circle c))\n",
         ),
+        # A display's and a readout's listeners are their body (mtp-6k7f).
+        (
+            "(display d f\n(kind 'inline')\n(on-click f.t\n(animation a)))\n",
+            "(display d f\n    (kind 'inline')\n  (on-click f.t\n      (animation a)))\n",
+        ),
+        (
+            "(readout r v\n(font f)\n(on-live\n(animation a)))\n",
+            "(readout r v\n    (font f)\n  (on-live\n      (animation a)))\n",
+        ),
         ("(real v 1\n(>= 0))\n", "(real v 1\n    (>= 0))\n"),
         ("(slider s v\n(from 0)\n(to 1))\n", "(slider s v\n    (from 0)\n    (to 1))\n"),
         ("(if a\nb\nc)\n", "(if a\n    b\n  c)\n"),
@@ -195,8 +204,7 @@ def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
     [
         (
             "(list[color] hues [red green yellow blue\n(mix red paper 0.45)])\n",
-            "(list[color] hues [red green yellow blue\n"
-            "                   (mix red paper 0.45)])\n",
+            "(list[color] hues [red green yellow blue\n                   (mix red paper 0.45)])\n",
         ),
         ("(list xs [1 2\n3])\n", "(list xs [1 2\n          3])\n"),
         ("(list xs [(f a) b\nc])\n", "(list xs [(f a) b\n          c])\n"),

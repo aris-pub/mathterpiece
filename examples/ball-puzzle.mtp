@@ -65,7 +65,17 @@
 
 (canvas view (x -1.5) (y -12) (width 21) (height 17.5) (pan false) (zoom false)
   doc@'The board, and the pieces waiting below it.'
-  puzzle)
+  puzzle
+  ; A press and a release on the same piece is a click, so letting go of a drag is one too. A piece
+  ; turns only when it sits in the holes, so the click that ends a drag, which comes before the
+  ; piece has settled, never turns it.
+  (foreach p pieces
+    (on-drag p p.pos doc@'Moves the piece.')
+    (on-dragend p (animation (move p.pos (to [(round p.x) (round p.y)]) (duration 0.12)))
+      doc@'Settles the piece into the nearest holes.')
+    (on-click p (active (and (= p.x (round p.x)) (= p.y (round p.y))))
+        (animation (move p.orient (to (mod (+ p.orient 1) 8)) (duration 0)))
+      doc@'Turns the piece a quarter, or flips it after four turns.')))
 
 ; The holes some ball sits in, counting each hole once.
 (readout filled
@@ -76,14 +86,3 @@
                                                   (and (= b.x (mod k 11)) (= b.y (floor (/ k 11)))))))))))))
       (if (= n 55) 'Solved: every hole is filled.' $'{n} of 55 holes filled'))
   doc@'How many holes the pieces fill.')
-
-; A press and a release on the same piece is a click, so letting go of a drag is one too. A piece
-; turns only when it sits in the holes, so the click that ends a drag, which comes before the
-; piece has settled, never turns it.
-(foreach p pieces
-  (on-drag p p.pos doc@'Moves the piece.')
-  (on-dragend p (animation (move p.pos (to [(round p.x) (round p.y)]) (duration 0.12)))
-    doc@'Settles the piece into the nearest holes.')
-  (on-click p (active (and (= p.x (round p.x)) (= p.y (round p.y))))
-      (animation (move p.orient (to (mod (+ p.orient 1) 8)) (duration 0)))
-    doc@'Turns the piece a quarter, or flips it after four turns.'))

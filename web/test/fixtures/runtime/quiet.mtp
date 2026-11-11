@@ -1,26 +1,26 @@
 ; Quiet mode (mtp-16z): left and says have an on-live, so they start quiet, and right has none,
 ; so it has no quiet mode. Going live moves k to 10, and going back to quiet moves it to 0. The
-; controls and listeners tied to left are put away while it is quiet; the button is tied to right
-; too, so it is always there.
+; controls tied to left are put away while it is quiet, and the listeners inside it hear nothing;
+; the button is tied to right too, so it is always there.
 (real k 0)
 (real clicks 0)
 (real said 0)
 (scene s
   (circle dot (pos [-5 0]) (r 1))
   (circle knob (pos [5 0]) (r 1)))
-(canvas left (pan false) (zoom false) s)
+(canvas left (pan false) (zoom false) s
+  (on-live (animation (move k (to 10) (duration 1))))
+  (on-quiet (animation (move k (to 0) (duration 1))))
+  (on-drag knob knob.pos)
+  (on-click dot (animation (move clicks (to (+ clicks 1)) (duration 0)))))
 (canvas right (pan false) (zoom false) s)
-(readout says $'k is {k}')
-(on-live left (animation (move k (to 10) (duration 1))))
-(on-quiet left (animation (move k (to 0) (duration 1))))
-(on-live says (animation (move said (to 1) (duration 0))))
+(readout says $'k is {k}'
+  (on-live (animation (move said (to 1) (duration 0)))))
 (slider sl (move k (from 0) (to 10)) (in left))
 (play p (in left) (animation (move k (to 5) (duration 1))))
 (button b (in left right) (animation (move clicks (to 0) (duration 0))))
 (toggle t none (in says))
 (button free (animation (move clicks (to 0) (duration 0))))
-(on-drag knob knob.pos (in left))
-(on-click dot (in left) (animation (move clicks (to (+ clicks 1)) (duration 0))))
 ; Going live, wide narrows its view box to half: the view moves by a move.
-(canvas wide (x -10) (y -10) (width 20) (height 20) (pan false) (zoom false) s)
-(on-live wide (animation (move wide.width (to 10) (duration 1))))
+(canvas wide (x -10) (y -10) (width 20) (height 20) (pan false) (zoom false) s
+  (on-live (animation (move wide.width (to 10) (duration 1)))))

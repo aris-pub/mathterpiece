@@ -59,7 +59,8 @@
 
 (canvas view (x -2) (y -1.25) (width 4) (height 2.5) (pan false) (zoom false)
   doc@'The three bodies and their trails.'
-  sky)
+  sky
+  (foreach b bodies (on-drag b b.pos doc@'Moves the body.')))
 
 (readout energy
     $'energy {(+ (kinetic v1) (kinetic v2) (kinetic v3) (potential b1.pos b2.pos)
@@ -123,5 +124,3 @@
         (move v2 (to [0 0]))
         (move v3 (to [0 0]))
         clear-trails)))
-
-(foreach b bodies (on-drag b b.pos doc@'Moves the body.'))

@@ -15,49 +15,57 @@ def drag(m):
 
 class TestAMove:
     def test_a_number_from_the_pointer(self):
-        m = model(f"{K} (scene s (circle c (x k))) (on-drag c (move k (to pointer.x)))")
+        m = model(
+            f"{K} (scene s (circle c (x k))) (canvas v s (on-drag c (move k (to pointer.x))))"
+        )
         d = drag(m)
         assert d.data["target"] == (m.id("k"), None)
         assert d.data["map"].bound
 
     def test_a_point_from_the_pointer(self):
-        m = model("(point p [0 0]) (scene s (circle c (pos p))) (on-drag c (move p (to pointer)))")
+        m = model(
+            "(point p [0 0]) (scene s (circle c (pos p)))"
+            " (canvas v s (on-drag c (move p (to pointer))))"
+        )
         assert drag(m).data["target"] == (m.id("p"), None)
 
     def test_conditions_still_limit_it(self):
-        m = model(f"{K} (scene s (circle c (x k))) (on-drag c (move k (to pointer.x)) (<= k 8))")
+        m = model(
+            f"{K} (scene s (circle c (x k)))"
+            " (canvas v s (on-drag c (move k (to pointer.x)) (<= k 8)))"
+        )
         assert drag(m).data["conditions"]
 
     def test_the_short_form_is_unchanged(self):
-        m = model("(scene s (circle c)) (on-drag c c.pos)")
+        m = model("(scene s (circle c)) (canvas v s (on-drag c c.pos))")
         d = drag(m)
         assert d.data["target"] == (m.id("c"), "pos") and "map" not in d.data
 
     def test_it_is_written_with_its_map(self):
-        d = doc(f"{K} (scene s (circle c (x k))) (on-drag c (move k (to pointer.x)))")
+        d = doc(f"{K} (scene s (circle c (x k))) (canvas v s (on-drag c (move k (to pointer.x))))")
         o = next(o for o in d["objects"] if o["kind"] == "on-drag")
         assert "bound" in o["map"]
         assert errors(d) == []
 
 
 class TestErrors:
-    S = f"{K} (scene s (circle c (x k)))"
+    S = f"{K} (scene s (circle c (x k))) (canvas v s"
 
     def test_a_number_the_position_depends_on_needs_a_move(self):
-        error(f"{self.S} (on-drag c k)", r"\(on-drag c \(move k \(to …\)\)\)")
+        error(f"{self.S} (on-drag c k))", r"\(on-drag c \(move k \(to …\)\)\)")
 
     def test_a_drag_move_takes_only_to(self):
         for extra in ["(duration 1)", "(ease linear)", "(from 0)"]:
             error(
-                f"{self.S} (on-drag c (move k (to pointer.x) {extra}))",
+                f"{self.S} (on-drag c (move k (to pointer.x) {extra})))",
                 "a drag's move takes its target and its to, and nothing else",
             )
 
     def test_it_needs_a_to(self):
-        error(f"{self.S} (on-drag c (move k))", "a drag's move takes its target and its to")
+        error(f"{self.S} (on-drag c (move k)))", "a drag's move takes its target and its to")
 
     def test_the_to_fits_the_target(self):
-        error(f"{self.S} (on-drag c (move k (to pointer)))", "expected real")
+        error(f"{self.S} (on-drag c (move k (to pointer))))", "expected real")
 
     def test_pointer_is_known_only_in_a_drag(self):
         error("(point v pointer)", "unknown name 'pointer'")
@@ -68,7 +76,7 @@ class TestNameStrings:
     def test_a_drag_moves_a_variable_named_by_a_string(self):
         m = model(
             "(real k-0 0) (real k-1 0) (scene s (circle c-0 (x k-0)) (circle c-1 (x k-1)))"
-            " (foreach i 2 (on-drag #'c-{i}' (move #'k-{i}' (to pointer.x))))"
+            " (canvas v s (foreach i 2 (on-drag #'c-{i}' (move #'k-{i}' (to pointer.x)))))"
         )
         targets = [o.data["target"] for o in m.objects if o.kind == "on-drag"]
         assert targets == [(m.id("k-0"), None), (m.id("k-1"), None)]
@@ -87,9 +95,9 @@ class TestTheStart:
     # dragstart, so a drag may first reset what other writers added.
     def test_a_reset_then_the_drag(self):
         d = doc(
-            "(real o 3) (real y 0) (scene s (circle p (pos [0 (+ y o)]) (r 1))) (canvas v s)"
-            " (on-dragstart p (animation (move o (to 0) (duration 0))))"
-            " (on-drag p (move y (to pointer.y)))"
+            "(real o 3) (real y 0) (scene s (circle p (pos [0 (+ y o)]) (r 1)))"
+            " (canvas v s (on-dragstart p (animation (move o (to 0) (duration 0))))"
+            " (on-drag p (move y (to pointer.y))))"
         )
         assert errors(d) == []
         (start,) = [o for o in d["objects"] if o["kind"] == "on-dragstart"]
@@ -97,4 +105,7 @@ class TestTheStart:
         assert start["active"] is None and start["stop-propagation"] is None
 
     def test_it_takes_a_shape(self):
-        error("(real k 0) (on-dragstart (animation (move k (to 1))))", "takes the shape")
+        error(
+            "(real k 0) (scene s) (canvas v s (on-dragstart (animation (move k (to 1)))))",
+            "takes the shape",
+        )

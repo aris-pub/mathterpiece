@@ -68,8 +68,7 @@
       (step 'Two fifths of a turn' two-fifths)
       (step 'The golden angle' golden)))
 
-(canvas view garden doc@'The sunflower and the name of its angle.')
+(canvas view garden doc@'The sunflower and the name of its angle.'
+  (on-click sunflower (animation golden)
+    doc@'Takes the flower to the golden angle, as the last stop of the tour does.'))
 (slider angle (move sunflower.angle (from 80) (to 180)) (label 'angle'))
-
-(on-click sunflower (animation golden)
-  doc@'Takes the flower to the golden angle, as the last stop of the tour does.')

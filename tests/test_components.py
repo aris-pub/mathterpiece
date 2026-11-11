@@ -110,20 +110,23 @@ class TestControls:
 
 class TestListeners:
     def test_dragging_a_position(self):
-        m = model("(scene s (circle c)) (on-drag c c.pos)")
+        m = model("(scene s (circle c)) (canvas v s (on-drag c c.pos))")
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert (d.name, d.data["shape"], d.data["target"]) == (None, m.id("c"), (m.id("c"), "pos"))
 
     def test_dragging_a_number_by_a_move(self):
-        m = model(f"{K} (scene s (circle c (x k))) (on-drag c (move k (to pointer.x)) (<= k 8))")
+        m = model(
+            f"{K} (scene s (circle c (x k)))"
+            " (canvas v s (on-drag c (move k (to pointer.x)) (<= k 8)))"
+        )
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert d.data["conditions"][0]["op"] == "<="
 
     def test_a_target_that_is_not_the_position_needs_a_move(self):
-        error(f"{K} (scene s (circle c)) (on-drag c k)", "is not the shape's position")
+        error(f"{K} (scene s (circle c)) (canvas v s (on-drag c k))", "is not the shape's position")
 
     def test_when(self):
-        m = model("(bool on true) (scene s (circle c)) (on-drag c c.x (active on))")
+        m = model("(bool on true) (scene s (circle c)) (canvas v s (on-drag c c.x (active on)))")
         (d,) = [o for o in m.objects if o.kind == "on-drag"]
         assert d.data["active"].deps == {(m.id("on"), None)}
 
@@ -146,12 +149,12 @@ class TestListeners:
         assert model(f"{K} (button b {MOVE})").get("b").data["active"] is None
 
     def test_on_click(self):
-        m = model(f"{K} (scene s (circle c)) (on-click c {MOVE})")
+        m = model(f"{K} (scene s (circle c)) (canvas v s (on-click c {MOVE}))")
         (o,) = [o for o in m.objects if o.kind == "on-click"]
         assert m.objects[o.data["animation"]].kind == "animation"
 
     def test_a_listener_has_no_name(self):
-        error("(scene s (circle c)) (on-click c c)", "expected an item")
+        error("(scene s (circle c)) (canvas v s (on-click c c))", "expected an item")
 
 
 class TestViews:
@@ -208,8 +211,8 @@ class TestPositionalTargets:
     # reference.md "Components": on-drag's target and toggle's are positional; a toggle's may be
     # none, and then it holds its own bool.
     def test_on_drag_needs_its_target_after_the_shape(self):
-        error("(scene s (circle c)) (on-drag c)", "on-drag is")
-        error("(scene s (circle c)) (on-drag c (target c.pos))", "on-drag is")
+        error("(scene s (circle c)) (canvas v s (on-drag c))", "on-drag is")
+        error("(scene s (circle c)) (canvas v s (on-drag c (target c.pos)))", "on-drag is")
 
     def test_a_toggle_names_its_target_or_none(self):
         error("(toggle t (label 'x'))", "a toggle is")
@@ -217,21 +220,21 @@ class TestPositionalTargets:
 
 
 class TestStartingWithoutTheReader:
-    # mtp-9wm: (on-view view (animation …)) plays the first time the canvas comes into view, and
+    # mtp-9wm: (on-view (animation …)) in a canvas plays the first time it comes into view, and
     # a play with (autoplay) starts when the page loads, or with (autoplay view-or-control) the
     # first time that comes into view.
     S = f"{K} (scene s (circle c)) (canvas v s)"
 
     def test_on_view(self):
-        m = model(f"{self.S} (on-view v {MOVE})")
+        m = model(f"{K} (scene s (circle c)) (canvas v s (on-view {MOVE}))")
         (o,) = [o for o in m.objects if o.kind == "on-view"]
         assert o.data["view"] == m.id("v")
         assert m.objects[o.data["animation"]].kind == "animation"
         assert o.name is None and o.access == "page"
 
-    def test_on_view_takes_a_canvas(self):
-        error(f"{self.S} (on-view c {MOVE})", "expected the name of a canvas")
-        error(f"{K} (on-view {MOVE})", "on-view takes the canvas it listens to")
+    def test_on_view_is_inside_a_canvas(self):
+        error(f"{self.S} (on-view v {MOVE})", "on-view is written inside the body of the view")
+        error(f"{K} (readout r 'x' (on-view {MOVE}))", "so it is written inside a canvas")
 
     def test_autoplay_when_the_page_loads(self):
         m = model(f"{self.S} (play p (autoplay) {MOVE})")
@@ -253,7 +256,8 @@ class TestStartingWithoutTheReader:
 
     def test_the_compiled_file(self):
         d = doc(
-            f"{self.S} (on-view v {MOVE}) (play p (autoplay) {MOVE}) (play q (autoplay v) {MOVE})"
+            f"{K} (scene s (circle c)) (canvas v s (on-view {MOVE})) (play p (autoplay) {MOVE})"
+            f" (play q (autoplay v) {MOVE})"
         )
         assert errors(d) == []
         names = d["names"]
@@ -271,7 +275,7 @@ class TestReleaseListeners:
 
     @pytest.mark.parametrize("kind", ["on-release", "on-dragstart", "on-dragend"])
     def test_a_listener_on_a_shape(self, kind):
-        m = model(f"{self.S} ({kind} c {MOVE})")
+        m = model(f"{self.S} (canvas v s ({kind} c {MOVE}))")
         (o,) = [o for o in m.objects if o.kind == kind]
         assert o.data["shape"] == m.id("c")
         assert m.objects[o.data["animation"]].kind == "animation"
@@ -279,12 +283,14 @@ class TestReleaseListeners:
 
     @pytest.mark.parametrize("kind", ["on-release", "on-dragstart", "on-dragend"])
     def test_it_takes_a_shape(self, kind):
-        error(f"{K} ({kind} {MOVE})", f"{kind} takes the shape it listens to")
+        error(
+            f"{K} (scene s) (canvas v s ({kind} {MOVE}))", f"{kind} takes the shape it listens to"
+        )
 
     def test_the_compiled_file(self):
         d = doc(
-            f"{self.S} (on-release c {MOVE}) (on-dragend c (active true) {MOVE})"
-            f" (on-dragstart c (active true) (stop-propagation true) {MOVE})"
+            f"{self.S} (canvas v s (on-release c {MOVE}) (on-dragend c (active true) {MOVE})"
+            f" (on-dragstart c (active true) (stop-propagation true) {MOVE}))"
         )
         assert errors(d) == []
         kinds = [o["kind"] for o in d["objects"]]
@@ -352,8 +358,8 @@ class TestListenersInAForeach:
         src = (
             "(real k 0)"
             "(scene s (foreach i 3 (circle (name $'c{i}'))))"
-            "(foreach i 3 (on-click (name $'c{i}')"
-            " (animation (move k (to i) (duration 0)))))"
+            "(canvas v s (foreach i 3 (on-click (name $'c{i}')"
+            " (animation (move k (to i) (duration 0))))))"
         )
         m = model(src)
         clicks = [o for o in m.objects if o.kind == "on-click"]
@@ -428,7 +434,7 @@ class TestEveryShownPartHasAName:
             error(f"{self.K} {src}", "is placed on the page by its name, so it needs one")
 
     def test_listeners_need_none(self):
-        model(f"{self.K} (canvas v s) (on-click c (animation (move k (to 1) (duration 0))))")
+        model(f"{self.K} (canvas v s (on-click c (animation (move k (to 1) (duration 0)))))")
 
 
 class TestZoomBounds:
@@ -517,59 +523,59 @@ def test_a_let_in_a_group_reads_the_members_before_it():
 class TestPointerListeners:
     # mtp-izob: on-enter and on-leave follow JS's pointerenter and pointerleave, and
     # on-pointermove its pointermove (the author, 2026-11-06).
-    S = f"{K} (point p [0 0]) (scene s (circle c (r 1)) (circle d (r 1))) (canvas v s)"
+    S = f"{K} (point p [0 0]) (scene s (circle c (r 1)) (circle d (r 1))) (canvas v s"
 
     @pytest.mark.parametrize("kind", ["on-enter", "on-leave"])
     def test_a_hover_listener_on_a_shape(self, kind):
-        m = model(f"{self.S} ({kind} c {MOVE})")
+        m = model(f"{self.S} ({kind} c {MOVE}))")
         (o,) = [o for o in m.objects if o.kind == kind]
         assert o.data["shape"] == m.id("c")
         assert m.objects[o.data["animation"]].kind == "animation"
         assert o.name is None and "label" not in o.attrs
 
-    @pytest.mark.parametrize("kind", ["on-enter", "on-leave", "on-pointermove"])
+    @pytest.mark.parametrize("kind", ["on-enter", "on-leave"])
     def test_it_takes_what_it_listens_to(self, kind):
-        error(f"{K} ({kind} {MOVE})", f"{kind} takes the shape")
+        error(f"{K} (scene s) (canvas v s ({kind} {MOVE}))", f"{kind} takes the shape")
 
     def test_a_pointer_move_on_a_shape_writes_a_point(self):
-        m = model(f"{self.S} (on-pointermove c p)")
+        m = model(f"{self.S} (on-pointermove c p))")
         (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
         assert (o.data["shape"], o.data["view"]) == (m.id("c"), None)
         assert o.data["target"] == (m.id("p"), None)
 
     def test_a_pointer_move_on_a_canvas(self):
-        m = model(f"{self.S} (on-pointermove v p)")
+        m = model(f"{self.S} (on-pointermove p))")
         (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
         assert (o.data["shape"], o.data["view"]) == (None, m.id("v"))
 
     def test_it_can_move_a_shape(self):
-        m = model(f"{self.S} (on-pointermove v d.pos (<= d.x 3) (>= d.y -1))")
+        m = model(f"{self.S} (on-pointermove d.pos (<= d.x 3) (>= d.y -1)))")
         (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
         assert o.data["target"] == (m.id("d"), "pos")
         assert [c["target"] for c in o.data["conditions"]] == [(m.id("d"), "x"), (m.id("d"), "y")]
 
     def test_its_target_is_a_point(self):
-        error(f"{self.S} (on-pointermove v k)", "on-pointermove writes the pointer's position")
+        error(f"{self.S} (on-pointermove k))", "on-pointermove writes the pointer's position")
 
     def test_it_needs_a_target(self):
-        error(f"{self.S} (on-pointermove v)", r"on-pointermove is \(on-pointermove shape target")
+        error(f"{self.S} (on-pointermove))", r"on-pointermove is \(on-pointermove shape target")
 
     def test_its_target_is_free(self):
         error(
-            f"{K} (point q [1 1] (const)) (scene s (circle c (r 1))) (canvas v s)"
-            " (on-pointermove v q)",
+            f"{K} (point q [1 1] (const)) (scene s (circle c (r 1)))"
+            " (canvas v s (on-pointermove q))",
             "q is const",
         )
 
     def test_a_group_is_moved_by_its_translate(self):
-        src = "(scene s (group g (circle c (r 1)))) (canvas v s)"
-        error(f"{src} (on-pointermove v g.pos)", "write its translate")
-        model(f"{src} (on-pointermove v g.translate)")
+        src = "(scene s (group g (circle c (r 1)))) (canvas v s"
+        error(f"{src} (on-pointermove g.pos))", "write its translate")
+        model(f"{src} (on-pointermove g.translate))")
 
     def test_a_shape_inside_a_fixed_size_group_is_an_error(self):
         error(
-            "(scene s (group g (fixed-size true) (circle c (r 3)))) (canvas v s)"
-            " (on-pointermove v c.pos)",
+            "(scene s (group g (fixed-size true) (circle c (r 3))))"
+            " (canvas v s (on-pointermove c.pos))",
             "inside a fixed-size group",
         )
 
@@ -582,7 +588,7 @@ class TestPointerListeners:
 
         m = model(
             f"{self.S} (on-enter c {MOVE}) (on-leave c (active true) {MOVE})"
-            " (on-pointermove c p) (on-pointermove v d.pos (<= d.x 3))"
+            " (on-pointermove c p) (on-pointermove d.pos (<= d.x 3)))"
         )
         d = json.loads(write(m))
         assert errors(d) == []
@@ -593,31 +599,31 @@ class TestPointerListeners:
 class TestBubbling:
     # The author, 2026-11-06: as in the DOM, a click, a release, the start or end of a drag and a
     # pointer move go up the scene tree to every listener of their kind, unless one stops them.
-    S = f"{K} (point p [0 0]) (scene s (group g (circle c (r 1)))) (canvas v s)"
+    S = f"{K} (point p [0 0]) (scene s (group g (circle c (r 1)))) (canvas v s"
 
     @pytest.mark.parametrize("kind", ["on-click", "on-release", "on-dragstart", "on-dragend"])
     def test_a_listener_may_stop_the_event(self, kind):
-        m = model(f"{self.S} ({kind} c (stop-propagation true) {MOVE})")
+        m = model(f"{self.S} ({kind} c (stop-propagation true) {MOVE}))")
         (o,) = [o for o in m.objects if o.kind == kind]
         assert o.data["stop-propagation"].value is True
 
     def test_by_default_it_goes_on(self):
-        m = model(f"{self.S} (on-click c {MOVE})")
+        m = model(f"{self.S} (on-click c {MOVE}))")
         (o,) = [o for o in m.objects if o.kind == "on-click"]
         assert o.data["stop-propagation"] is None
 
     def test_a_pointer_move_may_stop_it(self):
-        m = model(f"{self.S} (on-pointermove c p (stop-propagation true))")
+        m = model(f"{self.S} (on-pointermove c p (stop-propagation true)))")
         (o,) = [o for o in m.objects if o.kind == "on-pointermove"]
         assert o.data["stop-propagation"].value is True
 
     @pytest.mark.parametrize(
         "decl, kind",
         [
-            (f"(on-enter c (stop-propagation true) {MOVE})", "on-enter"),
-            (f"(on-leave c (stop-propagation true) {MOVE})", "on-leave"),
-            ("(on-drag c c.pos (stop-propagation true))", "on-drag"),
-            (f"(button b (stop-propagation true) {MOVE})", "button"),
+            (f"(on-enter c (stop-propagation true) {MOVE}))", "on-enter"),
+            (f"(on-leave c (stop-propagation true) {MOVE}))", "on-leave"),
+            ("(on-drag c c.pos (stop-propagation true)))", "on-drag"),
+            (f") (button b (stop-propagation true) {MOVE})", "button"),
         ],
     )
     def test_only_what_bubbles_takes_it(self, decl, kind):
@@ -632,7 +638,7 @@ class TestBubbling:
 
         m = model(
             f"{self.S} (on-click c (stop-propagation true) {MOVE}) (on-release g {MOVE})"
-            " (on-pointermove c p (stop-propagation (> k 1)))"
+            " (on-pointermove c p (stop-propagation (> k 1))))"
         )
         d = json.loads(write(m))
         assert errors(d) == []
@@ -661,7 +667,9 @@ class TestMathLabels:
         assert errors(d) == []
 
     def test_a_latex_label_reads_the_model(self):
-        b = model(f"{K} (foreach j 3 (button #'b-{{j}}' {MOVE} (label (tex $'C_{{j}}'))))").get("b-2")
+        b = model(f"{K} (foreach j 3 (button #'b-{{j}}' {MOVE} (label (tex $'C_{{j}}'))))").get(
+            "b-2"
+        )
         assert b.attrs["label"].value == "C_2" and b.data["label-tex"] is True
 
     def test_a_plain_label_is_not_latex(self):
