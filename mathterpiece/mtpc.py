@@ -316,7 +316,7 @@ class Writer:
                 d["label-tex"] = True
         elif kind == "toggle":
             target = o.data["target"]
-            d["target"] = list(target) if target is not None else None
+            d["target"] = list(target)
             d["animation"] = o.data["animation"]
             d["attrs"] = attrs
             d["conditions"] = self.conditions(o)
@@ -353,6 +353,8 @@ class Writer:
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["conditions"] = self.conditions(o)
+        if o.data.get("exclusive"):
+            d["exclusive"] = True
         # Written only when given, so a figure that ties nothing is as small as before.
         if o.data.get("in") is not None:
             d["in"] = list(o.data["in"])

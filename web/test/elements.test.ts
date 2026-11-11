@@ -142,13 +142,44 @@ describe("controls", () => {
     expect(Number(input.value) / Number(input.max)).toBeCloseTo(0.7, 2);
   });
 
-  it("a toggle holds its own value, or writes its target", () => {
+  it("a toggle writes its target, and its value reads it", () => {
     const [, , v] = page(`<mtp-toggle model="m" name="own"></mtp-toggle><mtp-toggle model="m" name="t"></mtp-toggle>`);
     const [own, t] = [...document.querySelectorAll("mtp-toggle input")] as HTMLInputElement[];
     own!.click();
-    expect(v("own", "value")).toBe(true);
+    expect([v("mine"), v("own", "value")]).toEqual([true, true]);
     t!.click();
     expect(v("on")).toBe(true);
+  });
+
+  // mtp-0lzp: a flip is a writer set off by the reader, and goes through the same claim as any.
+  it("a toggle's flip cancels a writer of its target, and is refused by an exclusive one", () => {
+    const [, rt, v] = page(`<mtp-toggle model="m" name="own"></mtp-toggle>`);
+    const input = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    const mine = rt.id("mine");
+    const flips = (exclusive: boolean) => {
+      // An animation that sets mine to false at its end, a second from now.
+      const writer = { exclusive };
+      const player = {
+        targets: [`${mine}:`],
+        done: false,
+        time: 0,
+        release() {},
+        seek(t: number) {
+          player.time = t;
+          player.done = t >= 1;
+          if (player.done) rt.write(mine, null, false);
+        },
+      };
+      rt.write(mine, null, false);
+      const model = document.querySelector("mtp-model") as MtpModel;
+      model.scheduler!.start(player as never, writer, { reader: true, exclusive });
+      input.click();
+      pass(1.5);
+      return v("mine");
+    };
+    expect(flips(false)).toBe(true);
+    expect(flips(true)).toBe(false);
+    expect(input.checked).toBe(false);
   });
 
   it("a toggle with an animation writes its bool, then plays it", () => {

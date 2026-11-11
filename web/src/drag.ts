@@ -26,6 +26,8 @@ interface Held {
   mapped?: boolean;
   // Whether the pointer has moved since the press.
   moved?: boolean;
+  // Cancelled by another writer while held: it writes nothing more until the release.
+  cancelled?: boolean;
 }
 
 export class Drags {
@@ -49,6 +51,16 @@ export class Drags {
 
   get moved(): boolean {
     return this.held?.moved ?? false;
+  }
+
+  /** The on-drag listener the held drag follows. */
+  get listener(): Obj | null {
+    return this.held?.listener ?? null;
+  }
+
+  /** Another writer cancelled the held drag. */
+  cancel(): void {
+    if (this.held) this.held.cancelled = true;
   }
 
   /** What the held drag writes, as "id:attr". */
@@ -119,6 +131,7 @@ export class Drags {
     const held = this.held;
     if (!held) return false;
     held.moved = true;
+    if (held.cancelled) return false;
     const [id, attr] = held.target;
     const rt = this.rt;
     let changed = false;

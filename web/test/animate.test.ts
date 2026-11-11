@@ -34,14 +34,14 @@ describe("telling the views of a frame", () => {
 
   it("does not tell them again of a frame whose writes they heard of", () => {
     const { s, redraws } = setup();
-    s.start(fake(() => s, () => true), {});
+    s.start(fake(() => s, () => true), {}, { reader: true, exclusive: false });
     s.tick(0.1);
     expect(redraws()).toBe(0);
   });
 
   it("tells them of a frame that wrote nothing, as time still moved", () => {
     const { s, redraws } = setup();
-    s.start(fake(() => s, () => false), {});
+    s.start(fake(() => s, () => false), {}, { reader: true, exclusive: false });
     expect(redraws()).toBe(1);
     s.tick(0.1);
     expect(redraws()).toBe(2);
@@ -49,7 +49,7 @@ describe("telling the views of a frame", () => {
 
   it("tells them when a player ends after its last writes", () => {
     const { s, redraws } = setup();
-    s.start(fake(() => s, () => true, 0.05), {});
+    s.start(fake(() => s, () => true, 0.05), {}, { reader: true, exclusive: false });
     s.tick(0.1);
     expect(redraws()).toBe(1);
     expect(s.busy()).toBe(false);
@@ -57,8 +57,8 @@ describe("telling the views of a frame", () => {
 
   it("tells them when a later player writes nothing after an earlier one wrote", () => {
     const { s, redraws } = setup();
-    s.start(fake(() => s, () => true), {});
-    s.start(fake(() => s, () => false), {});
+    s.start(fake(() => s, () => true), {}, { reader: true, exclusive: false });
+    s.start(fake(() => s, () => false), {}, { reader: true, exclusive: false });
     const before = redraws();
     s.tick(0.1);
     expect(redraws()).toBe(before + 1);

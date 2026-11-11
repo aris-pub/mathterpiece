@@ -114,14 +114,20 @@
     (text cscs (or? $'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
         (pos (line-at 6)) (font number))))
 
-; Which functions are shown. These toggles hold their own value: whether a line is shown is about
-; this view, not about the circle, so the scene does not need to know.
-(toggle show-cos none (label 'cos') (value true))
-(toggle show-sin none (label 'sin') (value true))
-(toggle show-tan none (label 'tan') (value true))
-(toggle show-sec none (label 'sec'))
-(toggle show-cot none (label 'cot'))
-(toggle show-csc none (label 'csc'))
+; Which functions are shown. Only the canvas reads these bools: whether a line is shown is about
+; this view, not about the circle.
+(bool cos-shown true)
+(bool sin-shown true)
+(bool tan-shown true)
+(bool sec-shown false)
+(bool cot-shown false)
+(bool csc-shown false)
+(toggle show-cos cos-shown (label 'cos'))
+(toggle show-sin sin-shown (label 'sin'))
+(toggle show-tan tan-shown (label 'tan'))
+(toggle show-sec sec-shown (label 'sec'))
+(toggle show-cot cot-shown (label 'cot'))
+(toggle show-csc csc-shown (label 'csc'))
 
 ; Drawn in this order: the point last, on top, so the pointer always reaches it. Switching a
 ; function on or off fades its line, name and value in or out.
@@ -129,12 +135,12 @@
     (toggle-ease cubic-in-out)
   doc@'The circle, the point, and the functions switched on.'
   frame
-  (when show-sec.value secant)
-  (when show-csc.value cosecant)
-  (when show-cos.value cosine)
-  (when show-sin.value sine)
-  (when show-tan.value tangent)
-  (when show-cot.value cotangent)
+  (when sec-shown secant)
+  (when csc-shown cosecant)
+  (when cos-shown cosine)
+  (when sin-shown sine)
+  (when tan-shown tangent)
+  (when cot-shown cotangent)
   handle
   (on-drag handle (move theta (to (toward pointer theta)))
     doc@'Slides the point along the circle, which changes theta.'))

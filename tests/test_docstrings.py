@@ -63,7 +63,7 @@ ANIM = "(animation (move k (to 1) (duration 1)))"
         (f"(canvas w s (on-view {ANIM} (doc 'D.')))", "on-view"),
         (f"(button go {ANIM} (doc 'D.'))", "button"),
         (f"(play go {ANIM} (doc 'D.'))", "play"),
-        ("(toggle t none (label 't') (doc 'D.'))", "toggle"),
+        ("(bool on) (toggle t on (label 't') (doc 'D.'))", "toggle"),
         ("(readout says $'{k}' (doc 'D.'))", "readout"),
     ],
 )

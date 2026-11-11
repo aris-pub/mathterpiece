@@ -1,0 +1,30 @@
+; Writers moving the same targets at the same time (reference.md, "Concurrency").
+(real k 0)
+(real j 0)
+(scene s
+  (circle d (pos [0 0]) (r 1))
+  (circle e (pos [5 5]) (r 1))
+  (group g (circle c1 (r 1)) (circle c2 (r 1))))
+(button go (animation (move k (to 10) (duration 1))))
+(button back (animation (move k (to 0) (duration 1))))
+(button lock (animation (move k (to 10) (duration 1))) (exclusive))
+(button both (animation (at-once (move k (to 0) (duration 1)) (move j (to 5) (duration 1)))))
+(button other (animation (move j (to 5) (duration 1))))
+(button grow (animation (move g.r (to 3) (duration 1))))
+(button grow-one (animation (move c1.r (to 2) (duration 1))))
+(button hold-one (animation (move c1.r (to 2) (duration 1))) (exclusive))
+(play tour (animation (move k (to 10) (duration 2))))
+(slider sl (move k (from 0) (to 10)))
+; Its on-view is not the reader's doing.
+(canvas v s
+  (on-view (animation (move k (to 4) (duration 1)))))
+(canvas z s)
+(canvas w s
+  (on-view (animation (move d.x (to 8) (duration 1))))
+  (on-drag d d.pos)
+  (on-enter e (animation (move d.x (to 3) (duration 1)))))
+(canvas held s
+  (on-view (animation (move d.x (to 8) (duration 1))))
+  (on-drag d d.pos (exclusive))
+  (on-enter e (animation (move d.x (to 3) (duration 1)))))
+(play auto (animation (move k (to 3) (duration 1))) (autoplay z))

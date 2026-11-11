@@ -302,7 +302,7 @@ CONTROLS = [
     ("slider", "(slider sl (move k (from 0) (to 1)) (in a))"),
     ("button", f"(button bt (in a) {GO})"),
     ("play", f"(play pl (in a) {GO})"),
-    ("toggle", "(toggle tg none (in a))"),
+    ("toggle", "(bool on) (toggle tg on (in a))"),
 ]
 
 

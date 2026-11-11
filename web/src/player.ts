@@ -24,6 +24,12 @@ interface Move {
   // The top-level step it is in.
   top: number;
   rounds?: string;
+  // A move another writer cut off, played on again (mtp-ddi1): it starts again at this time of
+  // its round, from the value then, and goes to its to by its end.
+  cut?: number;
+  // A move that had ended when its play was cut off: what it wrote may have been changed since,
+  // so it is not written again until it starts again.
+  settled?: boolean;
 }
 
 interface Loop {
@@ -159,22 +165,18 @@ export class Player {
       const later = shown.filter((m) => m.from !== undefined && (held(m) || inRound(m.loops, time)[0] < m.start));
       for (const m of later.sort((a, b) => b.start - a.start || b.stage - a.stage)) {
         this.write(m, 0);
-        delete m.from;
-        delete m.to;
+        forgetEnds(m);
       }
     }
     // A new round: the last one ends first, every move in the order it ends, so a later move's
     // end is not undone by an earlier one's; then each reads its ends again.
     const ending = shown.filter((m) => m.rounds !== undefined && m.from !== undefined && inRound(m.loops, time)[1] !== m.rounds);
-    for (const m of ending.sort((a, b) => a.start + a.duration - (b.start + b.duration))) this.write(m, 1);
-    for (const m of ending) {
-      delete m.from;
-      delete m.to;
-    }
+    for (const m of ending.sort((a, b) => a.start + a.duration - (b.start + b.duration))) if (!m.settled) this.write(m, 1);
+    for (const m of ending) forgetEnds(m);
     const now = shown.map((m) => {
       const [t, rounds] = inRound(m.loops, time);
       m.rounds = rounds;
-      return { m, t, at: time - (t - m.start) };
+      return { m, t, at: time - (t - (m.cut ?? m.start)) };
     });
     // Each move reads its ends at the instant it starts (mtp-lm24), however late the frame comes:
     // the moves under way are first brought to that instant, so a move sees what the moves that
@@ -186,14 +188,14 @@ export class Player {
     for (let i = 0; i < starting.length; ) {
       const { at, m: lead } = starting[i]!;
       for (const { m } of now) {
-        if (m.from === undefined) continue;
+        if (m.from === undefined || m.settled) continue;
         const [t, rounds] = inRound(m.loops, at);
         if (rounds === m.rounds) this.write(m, progress(m, t));
       }
       const together = (x: (typeof starting)[number]) => x.at - at <= eps(at) && x.m.stage === lead.stage;
       for (; i < starting.length && together(starting[i]!); i++) this.read(starting[i]!.m);
     }
-    for (const { m, t } of now) if (m.from !== undefined) this.write(m, progress(m, t));
+    for (const { m, t } of now) if (m.from !== undefined && !m.settled) this.write(m, progress(m, t));
   }
 
   /** A slider's knob at u in [0, 1]: each part takes a share of the track equal to its duration. */
@@ -203,9 +205,25 @@ export class Player {
 
   /** Forgets where each move started, so the next run starts from their values then. */
   release(): void {
+    for (const m of this.moves) forgetEnds(m);
+  }
+
+  /**
+   * Readies a player another writer cancelled to play on from where it stands (mtp-ddi1): each
+   * move under way starts again from the value of its target as it is at the next seek, and goes
+   * on to its to over what is left of it; a move that has ended keeps what it wrote.
+   */
+  cut(): void {
     for (const m of this.moves) {
-      delete m.from;
-      delete m.to;
+      if (m.from === undefined) continue;
+      const [t, rounds] = inRound(m.loops, this.at);
+      if (rounds !== m.rounds) continue;
+      if (progress(m, t) >= 1) {
+        m.settled = true;
+        continue;
+      }
+      forgetEnds(m);
+      m.cut = Math.max(t, m.start);
     }
   }
 
@@ -327,8 +345,19 @@ function inRound(loops: Loop[], t: number): [number, string] {
   return [t, rounds];
 }
 
-// How far along a move is at time t of its round.
+function forgetEnds(m: Move): void {
+  delete m.from;
+  delete m.to;
+  delete m.cut;
+  delete m.settled;
+}
+
+// How far along a move is at time t of its round: from where it was cut off, for one cut off.
 function progress(m: Move, t: number): number {
+  if (m.cut !== undefined) {
+    const left = m.start + m.duration - m.cut;
+    return left > 0 ? Math.min(Math.max((t - m.cut) / left, 0), 1) : 1;
+  }
   // A stop at a step's end is a sum of durations, so (end - start) / duration may fall a hair
   // short of 1, as (1.4 - 0.4) / 1 does.
   if (m.duration > 0) {

@@ -74,9 +74,13 @@ class TestControls:
         assert "autoplay" not in s and "rest" not in s
         assert errors(d) == []
 
-    def test_a_toggle_holding_its_own_value(self):
-        t = model("(toggle t none (value true))").get("t")
-        assert t.attrs["value"].value is True and t.data["target"] is None
+    # The author, 2026-11-11 (mtp-0lzp): a toggle always writes a bool variable or attribute, so
+    # it takes no none and no (value …).
+    def test_a_toggle_takes_no_none(self):
+        error("(toggle t none)", r"declare one, \(bool t-on false\), and target it")
+
+    def test_a_toggle_takes_no_value(self):
+        error("(bool b) (toggle t b (value true))", r"a toggle takes no \(value …\)")
 
     def test_a_toggle_with_a_target(self):
         m = model("(bool b true) (toggle t b)")
@@ -103,9 +107,9 @@ class TestControls:
         assert m.get("t").attrs["value"].expr.op == "all"
 
     def test_a_toggle_is_read_through_its_value(self):
-        m = model("(toggle show none) (bool on (= show.value true))")
+        m = model("(bool shown) (toggle show shown) (bool on (= show.value true))")
         assert m.get("on").value.deps == {(m.id("show"), "value")}
-        error("(toggle show none) (bool on show)", "write show.value")
+        error("(bool shown) (toggle show shown) (bool on show)", "write show.value")
 
 
 class TestListeners:
@@ -136,7 +140,7 @@ class TestListeners:
             f"(button b {MOVE} (active (> k 1)))",
             f"(slider b {SLIDE} (active (> k 1)))",
             f"(play b {MOVE} (active (> k 1)))",
-            "(toggle b none (active (> k 1)))",
+            "(bool on) (toggle b on (active (> k 1)))",
         ],
     )
     def test_a_control_is_active_while_its_active_holds(self, control):
@@ -204,19 +208,20 @@ class TestAccess:
         )
 
     def test_a_bool_reading_a_toggle(self):
-        assert model("(toggle show none) (bool on show.value)").get("on").value.type == BOOL
+        assert (
+            model("(bool shown) (toggle show shown) (bool on show.value)").get("on").value.type
+            == BOOL
+        )
 
 
 class TestPositionalTargets:
-    # reference.md "Components": on-drag's target and toggle's are positional; a toggle's may be
-    # none, and then it holds its own bool.
+    # reference.md "Components": on-drag's target and toggle's are positional.
     def test_on_drag_needs_its_target_after_the_shape(self):
         error("(scene s (circle c)) (canvas v s (on-drag c))", "on-drag is")
         error("(scene s (circle c)) (canvas v s (on-drag c (target c.pos)))", "on-drag is")
 
-    def test_a_toggle_names_its_target_or_none(self):
+    def test_a_toggle_names_its_target(self):
         error("(toggle t (label 'x'))", "a toggle is")
-        assert model("(toggle t none)").get("t").data["target"] is None
 
 
 class TestStartingWithoutTheReader:
@@ -656,7 +661,7 @@ class TestMathLabels:
             f"(slider b {SLIDE} (label (tex 'C_3')))",
             f"(play b {MOVE} (label (tex 'C_3')))",
             f"(stepper b {MOVE} (label (tex 'C_3')))",
-            "(toggle b none (label (tex 'C_3')))",
+            "(bool on) (toggle b on (label (tex 'C_3')))",
         ],
     )
     def test_a_label_in_latex(self, control):
@@ -680,3 +685,49 @@ class TestMathLabels:
     def test_tex_takes_one_string(self):
         error(f"{K} (button b {MOVE} (label (tex)))", r"\(tex …\) takes one string")
         error(f"{K} (button b {MOVE} (label (tex 'a' 'b')))", r"\(tex …\) takes one string")
+
+
+# The author, 2026-11-11 (mtp-vs5d): any writer, listener or control, may take (exclusive): while
+# it runs, a newcomer that would write any of its targets is refused (reference.md,
+# "Concurrency"). The compiled file says so on the writer; whether the reader set a writer off is
+# known only at run time.
+SCENE = "(scene s (circle c (r 1)))"
+EXCLUSIVE = [
+    ("slider", f"(slider w {SLIDE} (exclusive))"),
+    ("button", f"(button w {MOVE} (exclusive))"),
+    ("play", f"(play w {MOVE} (exclusive))"),
+    ("stepper", f"(stepper w {MOVE} (exclusive))"),
+    ("toggle", "(bool on) (toggle w on (exclusive))"),
+    ("on-drag", "(canvas v s (on-drag c c.pos (exclusive)))"),
+    ("on-click", f"(canvas v s (on-click c {MOVE} (exclusive)))"),
+    ("on-release", f"(canvas v s (on-release c {MOVE} (exclusive)))"),
+    ("on-dragstart", f"(canvas v s (on-dragstart c {MOVE} (exclusive)))"),
+    ("on-dragend", f"(canvas v s (on-dragend c {MOVE} (exclusive)))"),
+    ("on-enter", f"(canvas v s (on-enter c {MOVE} (exclusive)))"),
+    ("on-leave", f"(canvas v s (on-leave c {MOVE} (exclusive)))"),
+    ("on-view", f"(canvas v s (on-view {MOVE} (exclusive)))"),
+    ("on-live", f"(canvas v s (on-live {MOVE} (exclusive)))"),
+    ("on-quiet", f"(canvas v s (on-live {MOVE}) (on-quiet {MOVE} (exclusive)))"),
+    ("on-pointermove", "(point p) (canvas v s (on-pointermove c p (exclusive)))"),
+]
+
+
+class TestExclusive:
+    @pytest.mark.parametrize("kind,src", EXCLUSIVE)
+    def test_every_writer_takes_it_and_the_file_says_so(self, kind, src):
+        d = doc(f"{K} {SCENE} {src}")
+        (w,) = [o for o in d["objects"] if o["kind"] == kind]
+        assert w["exclusive"] is True
+        assert errors(d) == []
+
+    @pytest.mark.parametrize("kind,src", EXCLUSIVE)
+    def test_a_writer_without_it_leaves_it_out(self, kind, src):
+        d = doc(f"{K} {SCENE} {src.replace(' (exclusive)', '')}")
+        (w,) = [o for o in d["objects"] if o["kind"] == kind]
+        assert "exclusive" not in w
+
+    def test_it_takes_nothing(self):
+        error(f"{K} (button w {MOVE} (exclusive true))", r"\(exclusive\) takes nothing")
+
+    def test_it_is_given_once(self):
+        error(f"{K} (button w {MOVE} (exclusive) (exclusive))", "'exclusive' is given twice")

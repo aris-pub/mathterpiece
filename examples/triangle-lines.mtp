@@ -109,20 +109,25 @@
     (text_ '(on-drag ca ca.x (>= ca.x -7) (<= ca.x (- cb.x 1.5)))' (pos (bottom rail 1.3)))
     (text_ '(on-drag cb cb.x (>= cb.x (+ ca.x 1.5)) (<= cb.x 7))' (pos (bottom rail 2)))))
 
-(toggle show-medians none (label 'medians'))
-(toggle show-altitudes none (label 'altitudes'))
-(toggle show-bisectors none (label 'angle bisectors'))
-(toggle show-euler none (label 'Euler line'))
+; Which families are shown.
+(bool medians-shown false)
+(bool altitudes-shown false)
+(bool bisectors-shown false)
+(bool euler-shown false)
+(toggle show-medians medians-shown (label 'medians'))
+(toggle show-altitudes altitudes-shown (label 'altitudes'))
+(toggle show-bisectors bisectors-shown (label 'angle bisectors'))
+(toggle show-euler euler-shown (label 'Euler line'))
 
 ; Switching a family on or off fades it in or out over 0.4 s.
 (canvas view (x -8) (y -6) (width 16) (height 12.5) (pan false) (zoom false) (toggle-duration 0.4)
     (toggle-ease cubic-in-out)
   doc@'The triangle, and the families of lines switched on.'
   rail
-  (when show-euler.value euler)
-  (when show-bisectors.value bisectors)
-  (when show-altitudes.value altitudes)
-  (when show-medians.value medians)
+  (when euler-shown euler)
+  (when bisectors-shown bisectors)
+  (when altitudes-shown altitudes)
+  (when medians-shown medians)
   shape names captions ca cb cc
   ; The lower corners move only along the rail, so each drag writes x alone; the conditions keep
   ; each one on the rail and at least 1.5 from the other, so the corners never swap sides.

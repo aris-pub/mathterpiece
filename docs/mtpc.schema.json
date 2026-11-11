@@ -2359,6 +2359,9 @@
                   }
                 ]
               },
+              "exclusive": {
+                "const": true
+              },
               "label-tex": {
                 "const": true
               },
@@ -2444,27 +2447,20 @@
                 ]
               },
               "target": {
-                "oneOf": [
+                "type": "array",
+                "prefixItems": [
                   {
-                    "type": "array",
-                    "prefixItems": [
-                      {
-                        "$ref": "#/$defs/id"
-                      },
-                      {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      }
-                    ],
-                    "minItems": 2,
-                    "maxItems": 2
+                    "$ref": "#/$defs/id"
                   },
                   {
-                    "type": "null"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   }
-                ]
+                ],
+                "minItems": 2,
+                "maxItems": 2
               },
               "attrs": {
                 "$ref": "#/$defs/attrs"
@@ -2484,6 +2480,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "exclusive": {
+                "const": true
               },
               "label-tex": {
                 "const": true
@@ -2575,6 +2574,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "exclusive": {
+                "const": true
               },
               "in": {
                 "$ref": "#/$defs/in"
@@ -2696,6 +2698,9 @@
                   }
                 ]
               },
+              "exclusive": {
+                "const": true
+              },
               "in": {
                 "$ref": "#/$defs/in"
               },
@@ -2775,6 +2780,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "exclusive": {
+                "const": true
               },
               "conditions": {
                 "type": "array",
@@ -2867,6 +2875,9 @@
                   }
                 ]
               },
+              "exclusive": {
+                "const": true
+              },
               "conditions": {
                 "type": "array",
                 "items": {
@@ -2942,6 +2953,9 @@
                   }
                 ]
               },
+              "exclusive": {
+                "const": true
+              },
               "conditions": {
                 "type": "array",
                 "items": {
@@ -3021,6 +3035,9 @@
                   }
                 ]
               },
+              "exclusive": {
+                "const": true
+              },
               "conditions": {
                 "type": "array",
                 "items": {
@@ -3099,6 +3116,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "exclusive": {
+                "const": true
               },
               "conditions": {
                 "type": "array",

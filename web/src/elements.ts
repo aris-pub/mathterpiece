@@ -3,7 +3,7 @@
 // put each one where it fits. Every writer emits writes to the model; views redraw on each change.
 import { CONTROLS_CSS } from "./controls-style.ts";
 import { placeTicks } from "./ticks.ts";
-import { Scheduler } from "./animate.ts";
+import { type How, Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Listeners, heardIn, holds } from "./click.ts";
 import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
@@ -104,6 +104,7 @@ export class MtpModel extends HTMLElement {
     this.scheduler = new Scheduler(
       () => this.changed(),
       () => this.wake(),
+      (target) => rt.reached(target),
     );
     this.drags = new Drags(rt);
     this.clicks = new Listeners(rt, "on-click");
@@ -119,7 +120,7 @@ export class MtpModel extends HTMLElement {
       if (o.kind !== "on-view") return;
       this.whenSeen(o.view!, () => {
         const player = activeOf(rt, i) ? playerFor(rt, o) : null;
-        if (player) scheduler.start(player, o);
+        if (player) scheduler.start(player, o, howOf(o, false));
       });
     });
     this.dispatchEvent(new Event(READY, { bubbles: true }));
@@ -137,7 +138,7 @@ export class MtpModel extends HTMLElement {
     rt.objects.forEach((o, i) => {
       if (o.kind !== kind || o.view !== view || !activeOf(rt, i)) return;
       const player = playerFor(rt, o);
-      if (player) scheduler.start(player, o);
+      if (player) scheduler.start(player, o, howOf(o, true));
     });
     this.dispatchEvent(new Event(MODE, { bubbles: true }));
     this.changed();
@@ -390,6 +391,12 @@ function makeSwitch(view: HTMLElement, press: () => void): HTMLButtonElement {
   return button;
 }
 
+/** How a writer was set off: by the reader or not (on-view and autoplay), and whether it is
+ * exclusive (docs/reference.md, "Concurrency"). */
+function howOf(writer: Obj, reader: boolean): How {
+  return { reader, exclusive: Boolean(writer.exclusive) };
+}
+
 function playerFor(rt: Runtime, writer: Obj): Player | null {
   return writer.animation === null || writer.animation === undefined
     ? null
@@ -558,17 +565,19 @@ export class MtpCanvas extends MtpPart {
     let pressed: number | null = null;
     // Where a finger came down, to tell a tap from a drag: a finger is never quite still.
     let press: { id: number; x: number; y: number; at: [number, number]; moved: boolean } | null = null;
+    // A drag refused at its grab follows nothing; one cancelled while held stops writing.
+    const grip = () => scheduler.grip(drags.targets, drags, howOf(drags.listener!, true), () => drags.cancel());
     const play = (listeners: (Obj | null)[]) => {
       for (const listener of listeners) {
         const player = listener ? playerFor(rt, listener) : null;
-        if (listener && player) scheduler.start(player, listener);
+        if (listener && player) scheduler.start(player, listener, howOf(listener, true));
       }
     };
     // on-enter, on-leave and on-pointermove. A finger has no hover, so a tap enters a shape and
     // it stays entered until the reader presses elsewhere, here or anywhere on the page.
     const follow = (event: PointerEvent, hit: number | null) => {
       play(pointer.onto(hit));
-      pointer.move(toScene(event), (targets, source) => scheduler.claim(targets, source));
+      pointer.move(toScene(event), (targets, l) => scheduler.claim(targets, l, howOf(l, true)));
     };
     const deselect = () => {
       if (selection === null) return;
@@ -598,7 +607,8 @@ export class MtpCanvas extends MtpPart {
         press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: toScene(event), moved: false };
       }
       if (pressed !== null && drags.grab(pressed, toScene(event), canvas)) {
-        scheduler.claim(drags.targets, drags);
+        // From the grab to the release, the drag is a running writer of its targets (mtp-vs5d).
+        if (!grip()) drags.release();
       } else if (allows("pan") || allows("zoom")) {
         touches.set(event.pointerId, [event.clientX, event.clientY]);
       } else {
@@ -662,10 +672,14 @@ export class MtpCanvas extends MtpPart {
       }
       deselect();
       if (!tap || chosen === null || grabbed === chosen.shape || !drags.grab(chosen.hit, chosen.at, canvas)) return null;
-      scheduler.claim(drags.targets, drags);
+      if (!grip()) {
+        drags.release();
+        return null;
+      }
       play(dragstarts.find(drags.shape!, canvas));
       drags.move(toScene(event));
       drags.release();
+      scheduler.letGo(drags);
       return chosen.shape;
     };
     svg.addEventListener("pointerup", (event) => {
@@ -675,6 +689,7 @@ export class MtpCanvas extends MtpPart {
       const ended = drags.moved ? drags.shape : null;
       const grabbed = drags.shape;
       drags.release();
+      scheduler.letGo(drags);
       const moved = touch ? tapped(event, grabbed) : null;
       const released = touch && press?.id === event.pointerId && !press.moved ? pressed : hitOf(event);
       // pointerup comes before click, as in JS; the end of a drag comes between them.
@@ -693,6 +708,7 @@ export class MtpCanvas extends MtpPart {
     svg.addEventListener("pointercancel", (event) => {
       lift(event);
       drags.release();
+      scheduler.letGo(drags);
       if (!touchy(event)) {
         play(pointer.onto(null));
         return;
@@ -832,7 +848,7 @@ export class MtpDisplay extends MtpPart {
     const play = (listeners: Obj[]) => {
       for (const listener of listeners) {
         const player = playerFor(rt, listener);
-        if (player) scheduler.start(player, listener);
+        if (player) scheduler.start(player, listener, howOf(listener, true));
       }
     };
     const block = view.as !== "inline";
@@ -968,8 +984,9 @@ function labelPart(rt: Runtime, id: number): { node: Node; follow: () => void } 
 }
 
 /** The copy of each play or stepper that moved it last. Two copies of one control on a page, such
- * as a block pinned beside the text, are two writers: the newest wins and cancels the other
- * (docs/reference.md, "Controls"), so only it writes the control's own step and playing. */
+ * as a block pinned beside the text, are two writers, decided between as any two are
+ * (docs/reference.md, "Concurrency"), so only the one moved last writes the control's own step
+ * and playing. */
 const movers = new WeakMap<Runtime, Map<number, Element>>();
 
 function moves(rt: Runtime, id: number, el: Element): void {
@@ -1009,12 +1026,15 @@ export class MtpSlider extends MtpPart {
     fill();
     input.addEventListener("input", () => {
       if (!activeOf(rt, id)) return;
+      if (player && !scheduler.claim(player.targets, this, howOf(rt.objects[id]!, true))) {
+        // Refused: the knob goes back to where it was.
+        input.value = String(Math.round((rt.value(id, "position") as number) * Number(input.max)));
+        fill();
+        return;
+      }
       fill();
       const u = Number(input.value) / Number(input.max);
-      if (player) {
-        scheduler.claim(player.targets, this);
-        player.scrub(u);
-      }
+      if (player) player.scrub(u);
       rt.write(id, "position", u);
     });
     input.addEventListener("change", () => player?.release());
@@ -1098,7 +1118,7 @@ export class MtpButton extends MtpPart {
     button.addEventListener("click", () => {
       if (!activeOf(rt, id)) return;
       const player = playerFor(rt, rt.objects[id]!);
-      if (player) scheduler.start(player, this);
+      if (player) scheduler.start(player, this, howOf(rt.objects[id]!, true));
     });
     // Only a button given (selected bool) says whether it is the current choice; any other is
     // not a toggle button, and says nothing.
@@ -1199,19 +1219,26 @@ export class MtpPlay extends MtpPart {
       scheduler.hold(player, this);
       return player;
     };
+    // Whatever the reader does to a play makes it the reader's, even one autoplay started.
+    const how = howOf(obj, true);
     const seek = (t: number) => {
       own();
-      scheduler.seek(this, t);
+      scheduler.seek(this, t, how);
       this.refresh();
+    };
+    // A new player, kept only when it starts, so a refused press leaves the bars as they were.
+    const fresh = (by: How) => {
+      const next = playerFor(rt, obj);
+      if (next && scheduler.start(next, this, by)) player = next;
     };
     const toggle = () => {
       if (!activeOf(rt, id)) return;
       if (scheduler.running(this)) scheduler.pause(this);
-      else if (player && !player.done && scheduler.playerOf(this) === player) scheduler.resume(this);
-      else {
-        player = playerFor(rt, obj);
-        if (player) scheduler.start(player, this);
-      }
+      else if (player && !player.done) {
+        // A play another writer cancelled goes on from where it stopped (mtp-ddi1).
+        if (scheduler.playerOf(this) === player) scheduler.resume(this, how);
+        else scheduler.again(player, this, how);
+      } else fresh(how);
       moves(rt, id, this);
       this.refresh();
     };
@@ -1291,7 +1318,7 @@ export class MtpPlay extends MtpPart {
       track.classList.remove("mtp-dragging");
       if (tap && !moved) seek(spans[nearest(event.clientX)]!.start);
       else if (moved) seek(timeAt(event.clientX));
-      if (playing) scheduler.resume(this);
+      if (playing) scheduler.resume(this, how);
       this.refresh();
     };
     track.addEventListener("pointerup", (event) => release(event, true));
@@ -1340,8 +1367,7 @@ export class MtpPlay extends MtpPart {
     // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
     const start = () => {
       if (!activeOf(rt, id) || scheduler.running(this)) return;
-      player = playerFor(rt, obj);
-      if (player) scheduler.start(player, this);
+      fresh(howOf(obj, false));
       moves(rt, id, this);
       this.refresh();
     };
@@ -1399,21 +1425,26 @@ export class MtpStepper extends MtpPart {
       if (scheduler.playerOf(this) !== player) scheduler.hold(player, this);
       player.holdFrom(j);
     };
+    const how = howOf(obj, true);
     const go = (j: number) => {
       if (!activeOf(rt, id)) return;
       own(j);
       scheduler.pause(this);
-      at = j;
-      scheduler.seek(this, j === 0 ? BEFORE : spans[j - 1]!.end);
+      if (scheduler.seek(this, j === 0 ? BEFORE : spans[j - 1]!.end, how)) at = j;
+      else player!.holdFrom(at);
       this.refresh();
     };
     const forward = () => {
       if (!activeOf(rt, id) || at >= n) return;
       own(at + 1);
       // A step still playing is ended at once, so each press moves on by one step.
-      scheduler.seek(this, spans[at]!.start);
+      if (!scheduler.seek(this, spans[at]!.start, how)) {
+        player!.holdFrom(at);
+        this.refresh();
+        return;
+      }
       at++;
-      scheduler.resume(this, spans[at - 1]!.end);
+      scheduler.resume(this, how, spans[at - 1]!.end);
       this.refresh();
     };
     const backward = () => {
@@ -1505,13 +1536,15 @@ export class MtpToggle extends MtpPart {
 
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "toggle");
-    const target = rt.objects[id]!.target ?? null;
+    const obj = rt.objects[id]!;
+    // A toggle always writes a bool variable or attribute (mtp-0lzp).
+    const target = obj.target!;
     const input = document.createElement("input");
     input.type = "checkbox";
-    const members = target && rt.objects[target[0]]!.kind === "group" ? rt.objects[target[0]]!.members! : null;
+    const members = rt.objects[target[0]]!.kind === "group" ? rt.objects[target[0]]!.members! : null;
     this.show = () => {
       input.disabled = !activeOf(rt, id);
-      if (members && target) {
+      if (members) {
         const values = members.map((m) => Boolean(rt.value(m, target[1])));
         // A mixed state when the members differ.
         input.indeterminate = values.some(Boolean) && !values.every(Boolean);
@@ -1527,15 +1560,16 @@ export class MtpToggle extends MtpPart {
       }
       // A click on a mixed toggle sets every member to true.
       const v = input.indeterminate ? true : input.checked;
-      if (target) {
-        scheduler.claim([`${target[0]}:${target[1] ?? ""}`], this);
-        rt.write(target[0], target[1], v);
-      } else {
-        rt.write(id, "value", v);
+      const how = howOf(obj, true);
+      const player = playerFor(rt, obj);
+      // The flip and the animation it plays are one newcomer: refused, neither happens.
+      if (!scheduler.claim([`${target[0]}:${target[1] ?? ""}`, ...(player?.targets ?? [])], this, how)) {
+        this.show();
+        return;
       }
+      rt.write(target[0], target[1], v);
       this.show();
-      const player = playerFor(rt, rt.objects[id]!);
-      if (player) scheduler.start(player, this);
+      if (player) scheduler.start(player, this, how);
     });
     this.input = input;
     this.show();

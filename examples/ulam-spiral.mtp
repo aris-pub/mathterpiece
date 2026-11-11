@@ -72,13 +72,14 @@
     (text_ 'the primes below 25000 within 78 of 1' (pos (bottom dots 3)))
     (text_ '(fill (if (on-a-line p) green soft))' (pos (bottom dots 7.5)))))
 
-(toggle show-labels none (label 'the path and the first numbers'))
+(bool labels-shown false)
+(toggle show-labels labels-shown (label 'the path and the first numbers'))
 
 ; The view box shows the whole disc; panning and zooming are on by default.
 (canvas view (x -86) (y -98) (width 172) (height 184) (toggle-duration 0.4)
     (toggle-ease cubic-in-out)
   doc@'The spiral and its primes, with the path and the first numbers when switched on.'
-  (when show-labels.value path)
+  (when labels-shown path)
   dots one
-  (when show-labels.value labels)
+  (when labels-shown labels)
   captions)

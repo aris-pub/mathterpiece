@@ -104,7 +104,7 @@ CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
-    *["rest", "in", "selected"],
+    *["rest", "in", "selected", "exclusive"],
 }
 # The views (data-model.md, "Components"): what a listener or a control may belong to.
 VIEWS = ("canvas", "readout", "display")
@@ -3507,6 +3507,7 @@ class _Compiler:
         stop = next((it for it in items if _head(it) == "stop-propagation"), None)
         if stop is not None:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
+        self.exclusive(obj, items)
         if obj.kind not in LISTENERS:
             label = self.take(items, "label")
             # (label (tex …)) gives the label as LaTeX, the form a term of a formula takes.
@@ -3556,6 +3557,20 @@ class _Compiler:
             if node is not None
             else None
         )
+
+    def exclusive(self, obj: Obj, items: list) -> None:
+        """(exclusive): while the writer runs, any other writer that would write one of its
+        targets is refused at its start (reference.md, "Concurrency"; the author, 2026-11-11)."""
+        found = [it for it in items if _head(it) == "exclusive"]
+        if len(found) > 1:
+            raise CompileError("'exclusive' is given twice", found[1].pos)
+        if found:
+            item = found[0]
+            assert isinstance(item, Form)
+            if len(item.items) != 1:
+                raise CompileError("(exclusive) takes nothing", item.pos)
+            items.remove(item)
+            obj.data["exclusive"] = True
 
     def stops(self, obj: Obj, items: list) -> None:
         """(stop-propagation bool): while it holds, the event stops at this listener's shape, as
@@ -3671,39 +3686,40 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_toggle(self, obj: Obj, items: list, shape) -> None:
-        # Its target is positional: the bool it writes, or none to hold its own.
-        if not items or not (isinstance(items[0], (Name, NoneLit))):
+        # Its target is positional: the bool variable or attribute it writes. A toggle holds no
+        # bool of its own, so a flip is a write that the concurrency rules decide like any other
+        # (the author, 2026-11-11, mtp-0lzp).
+        if items and isinstance(items[0], NoneLit):
             raise CompileError(
-                "a toggle is (toggle name target item…), its target none or a bool", obj.pos
+                f"a toggle writes a bool, so it takes no none: declare one, (bool {obj.name}-on"
+                f" false), and target it, (toggle {obj.name} {obj.name}-on)",
+                items[0].pos,
             )
-        first = items.pop(0)
-        target = None if isinstance(first, NoneLit) else first
-        value = self.take(items, "value")
+        if not items or not isinstance(items[0], Name):
+            raise CompileError("a toggle is (toggle name target item…), its target a bool", obj.pos)
+        target = items.pop(0)
+        value = next((it for it in items if _head(it) == "value"), None)
+        if value is not None:
+            raise CompileError(
+                "a toggle takes no (value …): it shows its target's value, so give the bool its"
+                " start where it is declared",
+                value.pos,
+            )
         # (animation …): played after each flip, once the bool is written, so it may read it (the
         # author, 2026-11-09).
         written = self.animated(obj, items)
-        if target is None:
-            obj.data["target"] = None
-            obj.attrs["value"] = self.attribute(BOOL, value, obj.pos, "value", scope=self.cscope)
+        i, attr, t = self.writable(target, self.cscope)
+        if _core(t) != BOOL:
+            raise CompileError(f"a toggle's target is a bool, got {t}", target.pos)
+        obj.data["target"] = (i, attr)
+        written = written | {(i, attr)}
+        # On a group's attribute it reads true only when every member's is true.
+        if attr is not None and attr not in self.model.objects[i].attrs:
+            e = Expr("all", BOOL, (self.obj_attr(i, attr, target.pos),))
+            e = replace(e, deps=e.args[0].deps)
         else:
-            if value is not None:
-                raise CompileError("a toggle with a target shows its target's value", value.pos)
-            if not isinstance(target, Name):
-                raise CompileError(
-                    "a toggle's target is a variable or an attribute, such as b or g.on", target.pos
-                )
-            i, attr, t = self.writable(target, self.cscope)
-            if _core(t) != BOOL:
-                raise CompileError(f"a toggle's target is a bool, got {t}", target.pos)
-            obj.data["target"] = (i, attr)
-            written = written | {(i, attr)}
-            # On a group's attribute it reads true only when every member's is true.
-            if attr is not None and attr not in self.model.objects[i].attrs:
-                e = Expr("all", BOOL, (self.obj_attr(i, attr, target.pos),))
-                e = replace(e, deps=e.args[0].deps)
-            else:
-                e = self.read(i, attr)
-            obj.attrs["value"] = Attribute(BOOL, expr=e)
+            e = self.read(i, attr)
+        obj.attrs["value"] = Attribute(BOOL, expr=e)
         self.active(obj, items)
         self.writer(obj, items, written)
 

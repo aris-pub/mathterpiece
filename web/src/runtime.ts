@@ -481,6 +481,22 @@ export class Runtime {
     }
   }
 
+  /**
+   * The shapes' attributes and the variables a write of a target ("id:attr") reaches, as
+   * "id:attr": a group's or an instance's attribute that is not its own is each member's, at any
+   * depth, as writeInto writes it, and a position is its x and its y.
+   */
+  reached(target: string): string[] {
+    const at = target.indexOf(":");
+    const id = Number(target.slice(0, at));
+    const attr = target.slice(at + 1) || null;
+    const o = this.objects[id]!;
+    if ((o.kind === "group" || o.kind === "instance") && attr !== null && !this.has(id, attr)) {
+      if (attr !== "pos" || o.kind === "group") return (o.members ?? []).flatMap((m) => this.reached(`${m}:${attr}`));
+    }
+    return attr === "pos" ? [`${id}:x`, `${id}:y`] : [target];
+  }
+
   private writeInto(id: number, attr: string | null, value: unknown, changed: Set<string>): void {
     const o = this.objects[id]!;
     // A group's or an instance's attribute that is not its own is each member's (mtp-4cw5).
