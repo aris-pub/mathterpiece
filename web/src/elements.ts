@@ -1455,6 +1455,10 @@ export class MtpStepper extends MtpPart {
     };
     const forward = () => {
       if (!activeOf(rt, id) || at >= n) return;
+      if (player && scheduler.playerOf(this) !== player) {
+        resume();
+        return;
+      }
       own(at + 1);
       // A step still playing is ended at once, so each press moves on by one step.
       if (!scheduler.seek(this, spans[at]!.start, how)) {
@@ -1464,6 +1468,18 @@ export class MtpStepper extends MtpPart {
       }
       at++;
       scheduler.resume(this, how, spans[at - 1]!.end);
+      this.refresh();
+    };
+    // Another writer cancelled it, so it goes on from where it stopped, as a play does (mtp-ibem):
+    // a step cut off plays on over what it had left, and no move that had ended is written again.
+    const resume = () => {
+      moves(rt, id, this);
+      const p = player!;
+      const j = at > 0 && p.time < spans[at - 1]!.end ? at : at + 1;
+      p.holdFrom(j);
+      // From before the first step, the first starts at once.
+      if (scheduler.again(p, this, how, spans[j - 1]!.end, spans[j - 1]!.start)) at = j;
+      else p.holdFrom(at);
       this.refresh();
     };
     const backward = () => {

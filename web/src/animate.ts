@@ -85,18 +85,19 @@ export class Scheduler {
     return true;
   }
 
-  /** Plays on a player another writer cancelled, from where it stood: the moves it cut off start
-   * again from the values as they are now. Gives false when it is refused. */
-  again(player: Player, source: object, how: How): boolean {
+  /** Plays on a player another writer cancelled, from where it stood, or from a later time when
+   * given, and to the time until when given: the moves it cut off start again from the values as
+   * they are now. Gives false when it is refused. */
+  again(player: Player, source: object, how: How, until?: number, from = player.time): boolean {
     if (!this.claim(player.targets, source, how)) return false;
     this.forget(source);
     player.cut();
-    this.run(player, source, how, player.time);
+    this.run(player, source, how, Math.max(from, player.time), until);
     return true;
   }
 
-  private run(player: Player, source: object, how: How, from: number): void {
-    this.sources.push({ source, player, reached: this.reached(player.targets), time: from, paused: false, how });
+  private run(player: Player, source: object, how: How, from: number, until?: number): void {
+    this.sources.push({ source, player, reached: this.reached(player.targets), time: from, paused: false, until, how });
     // A seek that writes something tells the views already, as they stand now.
     this.heard = false;
     this.seekOrForget(player, source, from);

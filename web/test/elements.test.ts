@@ -1018,8 +1018,14 @@ describe("a stepper", () => {
     pass(2);
     expect(v("k")).toBe(9);
     expect([v("hints", "step"), v("hints", "playing")]).toEqual([2, false]);
+    // "›" plays the step cut off on from where it stopped, from 9 to 2 over the half second it had
+    // left (mtp-ibem).
     next().click();
-    expect(v("k")).toBe(2);
+    expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([9, 2, true]);
+    pass(0.6);
+    expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([2, 2, false]);
+    next().click();
+    expect(v("hints", "step")).toBe(3);
   });
 
   describe("keys", () => {
