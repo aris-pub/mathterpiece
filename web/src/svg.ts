@@ -4,6 +4,7 @@
 import { arcPath, ringPath } from "./arc.ts";
 import { Ref, apply, compose } from "./builtins.ts";
 import { curvePath } from "./curve.ts";
+import { drawnPart, outlineOf, outlinePath } from "./outline.ts";
 import type { Expr } from "./doc.ts";
 import { isBound, itemsOf } from "./doc.ts";
 import { type Runtime, cssVariable } from "./runtime.ts";
@@ -205,8 +206,9 @@ function patchChildren(parent: Element, want: Drawn[], spare?: Spare): void {
   if (start === want.length && start === children.length) return;
   const keyed = new Map<string, Element[]>();
   const loose = new Map<string, Element[]>();
-  // A shape a canvas starts or stops toggling moves out of or into the <g> that fades it, so
-  // the shapes inside those are kept too.
+  // A shape a canvas starts or stops toggling moves out of or into the <g> that fades it, and a
+  // shape partly drawn is inside a <g> too (data-mtp-drawn), so the shapes inside those are
+  // kept as well.
   const inner = new Map<string, Element[]>();
   const add = (pool: Map<string, Element[]>, k: string, el: Element) => {
     const list = pool.get(k);
@@ -219,7 +221,7 @@ function patchChildren(parent: Element, want: Drawn[], spare?: Spare): void {
     const id = was.attrs["data-mtp-id"];
     if (id === undefined) add(loose, was.tag, el);
     else add(keyed, `${was.tag}#${id}`, el);
-    if (was.attrs["data-mtp-toggle"] === undefined) continue;
+    if (was.attrs["data-mtp-toggle"] === undefined && was.attrs["data-mtp-drawn"] === undefined) continue;
     for (const c of Array.from(el.children)) {
       const w = DRAWN.get(c);
       const cid = w?.attrs["data-mtp-id"];
@@ -418,9 +420,46 @@ function shapeDrawn(pass: Pass, i: number, unitsPerPx: number): Drawn[] {
     el.attrs.transform = matrix(own);
   }
   paint(rt, i, el);
-  heads(pass, i, el, out, unitsPerPx);
-  out.push(el);
+  const share = o.kind === "text" ? 1 : (rt.value(i, "drawn") as number);
+  if (share >= 1) {
+    heads(pass, i, el, out, unitsPerPx);
+    out.push(el);
+    return out;
+  }
+  const stroked = el.style.stroke !== "none";
+  el.style.stroke = "none";
+  if (share <= 0 || !stroked) {
+    out.push(el);
+    return out;
+  }
+  const line = outlineElement(rt, i, el, share);
+  heads(pass, i, line, out, unitsPerPx);
+  // The fill and the outline are faded together, as one shape, so the fill does not show
+  // through the outline where they overlap.
+  const g = node("g", { "data-mtp-drawn": "", opacity: el.attrs.opacity });
+  delete el.attrs.opacity;
+  delete line.attrs.opacity;
+  g.children.push(el, line);
+  out.push(g);
   return out;
+}
+
+/**
+ * The part of a shape's outline drawn so far (mtp-ggsb), as a path of its own in the shape's
+ * stroke, with the shape's dashes. It is not the whole outline cut short by a dash pattern with
+ * pathLength, since with vector-effect a dash pattern is measured in screen pixels, and since the
+ * shape's own dashes must stay. Its heads, markers on it, ride at its ends.
+ */
+function outlineElement(rt: Runtime, i: number, el: Drawn, share: number): Drawn {
+  const kind = rt.objects[i]!.kind;
+  const d = outlinePath(drawnPart(outlineOf(kind, (attr) => rt.value(i, attr)), share));
+  const line = node("path", { d, "data-mtp-id": i, "data-mtp-outline": "" });
+  for (const [k, v] of Object.entries(el.attrs)) {
+    if (k.startsWith("stroke") || ["opacity", "transform", "vector-effect", "pointer-events"].includes(k)) line.attrs[k] = v;
+  }
+  line.style.fill = "none";
+  line.style.stroke = paintCss(rt, i, "stroke");
+  return line;
 }
 
 // A head is this many stroke widths long (mtp-brs), times the shape's head-size.

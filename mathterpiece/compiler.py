@@ -209,6 +209,8 @@ PAINTED = {
     "dash-offset": Argument(REAL, 0),
     "line-cap": Argument(LINE_CAP, "butt"),
     "line-join": Argument(LINE_JOIN, "miter"),
+    # The share of the outline drawn, from its start, as if by a pen (mtp-ggsb).
+    "drawn": Argument(UNIT, 1),
     # With false the pointer passes through to what is drawn under, as CSS's pointer-events:
     # none (the author, 2026-11-06).
     "pointer-events": Argument(BOOL, True),
@@ -231,7 +233,9 @@ TERM_MARK = re.compile(r"\\term\s*\{([^{}]*)\}")
 DISPLAY_AS = Refine(STRING, (("one-of", ("inline", "block")),))
 # What only a stroke uses, which a text takes from no group, since a stroke would outline its
 # letters.
-STROKE_ONLY = frozenset({"stroke", "stroke-width", "dash", "dash-offset", "line-cap", "line-join"})
+STROKE_ONLY = frozenset(
+    {"stroke", "stroke-width", "dash", "dash-offset", "line-cap", "line-join", "drawn"}
+)
 POSITIONED = {"x": Argument(REAL, 0), "y": Argument(REAL, 0)}
 # A head at each end, scaling with the stroke width times head-size (the author, 2026-11-05).
 HEADS = {

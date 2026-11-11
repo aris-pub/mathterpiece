@@ -38,6 +38,7 @@ const SPREAD = new Set([
   "dash-offset",
   "line-cap",
   "line-join",
+  "drawn",
   "pointer-events",
 ]);
 const SHAPES = new Set([
