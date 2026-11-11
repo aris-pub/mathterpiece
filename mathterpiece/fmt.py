@@ -30,7 +30,7 @@ INDENT = {
     "colormap": 2,
     "toggle": 2,
     **dict.fromkeys(["move", "on-click", "on-release", "on-dragend", "exists-when"], 1),
-    **dict.fromkeys(["on-dragstart", "on-enter", "on-leave"], 1),
+    **dict.fromkeys(["on-dragstart", "on-enter", "on-leave", "on-show", "on-hide"], 1),
     **dict.fromkeys(["on-view", "on-live", "on-quiet"], 0),
     **dict.fromkeys(["at-once", "in-order", "defaults"], 0),
     "step": 1,
@@ -106,6 +106,7 @@ NO_BODY = {
     "on-click",
     *["on-release", "on-dragend", "on-view", "move", "transition", "font", "color"],
     *["on-dragstart", "on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet"],
+    *["on-show", "on-hide"],
     *["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"],
     *["colormap", "interface", "defaults", "term", "rand-seed"],
 }

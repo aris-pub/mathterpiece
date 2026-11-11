@@ -506,7 +506,8 @@ class TestWhen:
         error(f"{self.S} (canvas v show)", "a canvas shows shapes")
 
     def test_the_compiled_file(self):
-        d = doc(f"{self.S} (canvas v a (when show [a b]))")
+        # One item per shape (mtp-7i3j), so the when gives only b.
+        d = doc(f"{self.S} (canvas v a (when show [b]))")
         assert errors(d) == []
         shows = d["objects"][d["names"]["v"]]["shows"]
         assert shows[0] == d["names"]["a"] and "bound" in shows[1]

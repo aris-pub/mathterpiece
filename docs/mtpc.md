@@ -152,6 +152,7 @@ and `"doc"`, a string, when its declaration gives a docstring, `doc@'text'` (ref
 | `on-pointermove` | `"shape"`: an id or `null`; `"view"`: the canvas's id or `null`, one of the two; `"target"`: `[id, attr]`; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
 | `on-click`, `on-release`, `on-dragstart`, `on-dragend` | `"shape"`: an id, of a shape or, for `on-click`, of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null`; `"stop-propagation"`: a bool, free or bound, or `null` |
 | `on-enter`, `on-leave` | `"shape"`: an id, of a shape or of a term; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
+| `on-show`, `on-hide` | `"shape"`: the id of a shape, or of a group or an instance, whose shapes it then plays for unless one has its own; `"animation"`: an id, whose moves move only that shape's stand-in, drawn by the canvas in `"in"` (reference, "Showing and hiding"). No `"active"`, `"conditions"` or `"exclusive"` |
 | `on-view` | `"view"`: the canvas's id; `"animation"`: an id; `"conditions"`; `"active"`: a bool, free or bound, or `null` |
 | `on-live`, `on-quiet` | `"view"`: the id of the canvas, readout or display; `"animation"`: an id, or `null` when it gives none; `"conditions"`; `"active"`: a bool, free or bound, or `null`. A view with an `on-live` has a quiet mode (reference, "Quiet and live views"); every `on-quiet`'s view has an `on-live` |
 

@@ -313,6 +313,24 @@ export class Runtime {
     return true;
   }
 
+  /** Whether a shape may stop existing: it, or a container around it, has an exists-when. */
+  mayVanish(id: number): boolean {
+    return this.existsChain[id]!.length > 0;
+  }
+
+  /** A number brought into the range its attribute's type allows, for a value drawn but never
+   * written, as a stand-in's (mtp-7i3j). */
+  inRange(id: number, attr: string, value: unknown): unknown {
+    const t = this.typeOf(id, attr);
+    if (t === undefined || typeof value !== "number") return value;
+    let v = value;
+    for (const [op, limit] of this.constraints(t)) {
+      if ((op === ">=" || op === ">") && v < (limit as number)) v = limit as number;
+      if ((op === "<=" || op === "<") && v > (limit as number)) v = limit as number;
+    }
+    return v;
+  }
+
   /** The clock at the last write that changed one of an object's variables or attributes, or
    * anything bound that they read: what was worked out from them after that still holds. */
   touchedAt(id: number): number {
@@ -1485,7 +1503,7 @@ export function show(v: unknown, t: Type, spec: string): string {
   return String(v);
 }
 
-function percent(x: number): string {
+export function percent(x: number): string {
   return `${Number((100 * x).toFixed(6))}%`;
 }
 

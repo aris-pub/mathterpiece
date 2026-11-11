@@ -38,6 +38,29 @@ interface Loop {
   times: number;
 }
 
+/**
+ * What a player moves in place of the model: a canvas's stand-ins (mtp-7i3j). A move reads the
+ * value of what it moves from here when it starts, ends here at the resting value when it gives
+ * no to, and hands each value over with how far along it is, so that what it moves can follow
+ * values the scene goes on changing.
+ */
+export interface Stage {
+  value(id: number, attr: string | null): unknown;
+  rest(id: number, attr: string | null): unknown;
+  starts(id: number, attr: string | null): void;
+  write(id: number, attr: string | null, value: unknown, move: StageMove): void;
+}
+
+/** A move's ends as read when it started, whether the move gave each, and how far along it is. */
+export interface StageMove {
+  from: unknown;
+  to: unknown;
+  fromGiven: boolean;
+  toGiven: boolean;
+  along: number;
+  moves: Moves;
+}
+
 /** A top-level step's span in time, for a play's bars. */
 export interface Span {
   start: number;
@@ -69,6 +92,7 @@ export class Player {
     animation: number,
     private clamps: Clamp[] = [],
     rest = 0,
+    private into: Stage | null = null,
   ) {
     let root = rt.objects[animation]!.steps!;
     let body = root[0] === "loop" ? root[2] : root;
@@ -286,9 +310,11 @@ export class Player {
   private read(m: Move): void {
     const rt = this.rt;
     const tr = rt.objects[m.transition]!;
-    const here = rt.value(this.holder(m), m.attr);
+    const into = this.into;
+    const here = into ? into.value(m.id, m.attr) : rt.value(this.holder(m), m.attr);
+    into?.starts(m.id, m.attr);
     m.from = tr.from ? rt.evaluate(tr.from) : here;
-    m.to = tr.to ? rt.evaluate(tr.to) : here;
+    m.to = tr.to ? rt.evaluate(tr.to) : into ? into.rest(m.id, m.attr) : here;
   }
 
   private write(m: Move, p: number): void {
@@ -301,6 +327,11 @@ export class Player {
     let v = path === null ? along(m.from, m.to, e, kind) : rt.fn(path)([m.from, m.to, e], null);
     for (const c of this.clamps) {
       if (c.target[0] === m.id && c.target[1] === m.attr && typeof v === "number") v = rt.clamp(c, v);
+    }
+    if (this.into) {
+      const move = { from: m.from, to: m.to, fromGiven: Boolean(tr.from), toGiven: Boolean(tr.to), along: e, moves: kind };
+      this.into.write(m.id, m.attr, v, move);
+      return;
     }
     rt.write(m.id, m.attr, v);
   }

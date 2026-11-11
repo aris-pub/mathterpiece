@@ -152,6 +152,8 @@ COMPONENTS = {
     "on-enter",
     "on-leave",
     "on-pointermove",
+    "on-show",
+    "on-hide",
 }
 # The listeners that name the view they listen to: its first coming into view, and its going
 # live and back to quiet (mtp-16z).
@@ -161,8 +163,11 @@ ON_SHAPE = (
     *("on-drag", "on-click", "on-release", "on-dragstart", "on-dragend"),
     *("on-enter", "on-leave"),
 )
+# Listeners on a shape as a canvas shows it: they play while the canvas starts or stops showing
+# it, and move a stand-in the canvas draws in its place (mtp-7i3j).
+SHOW_HIDE = ("on-show", "on-hide")
 # Every listener is written inside the body of the view it acts in (mtp-6k7f).
-LISTENERS = (*ON_SHAPE, *ON_VIEW, "on-pointermove")
+LISTENERS = (*ON_SHAPE, *SHOW_HIDE, *ON_VIEW, "on-pointermove")
 # Whether a listener on its own view (on-view, on-live, on-quiet, and on-pointermove on a canvas)
 # names that view inside its body, (on-view v (animation …)), or leaves the name out,
 # (on-view (animation …)). Not decided by the author yet (mtp-6k7f); own_view_items and
@@ -494,6 +499,9 @@ class _Compiler:
         self.frame: int | Literal["caller"] | None = None
         # The names a foreach around the component being compiled gives it.
         self.cscope: dict = {}
+        # The shapes whose on-show or on-hide animation is being compiled: its moves move a
+        # stand-in, whose attributes follow the scene's, so what the scene binds may be moved.
+        self.standing: list[int] = []
         # True while compiling the scene's contents, which may never read page access.
         self.in_scene = False
         # The formula whose contents are being compiled, which reads neither the scene nor
@@ -3141,6 +3149,8 @@ class _Compiler:
         return self.check_writable(obj, obj.attrs[attr], label, pos)
 
     def check_writable(self, obj: Obj, attribute: Attribute, label: str, pos: Pos) -> Type:
+        if self.standing and obj.kind != "variable":
+            return attribute.type
         if attribute.bound:
             raise CompileError(
                 f"{label} is bound: only a free variable or attribute can be written", pos
@@ -3214,7 +3224,9 @@ class _Compiler:
                 kind,
             )
         if kind in LISTENERS:
-            on_shape = kind in ON_SHAPE or (isinstance(shape, tuple) and shape[0] is not None)
+            on_shape = kind in (*ON_SHAPE, *SHOW_HIDE) or (
+                isinstance(shape, tuple) and shape[0] is not None
+            )
             obj.data["in"] = [view] if on_shape else None
         elif kind not in VIEWS:
             obj.data["in"] = self.tie(items)
@@ -3252,6 +3264,12 @@ class _Compiler:
             raise CompileError(
                 "on-view plays when a canvas first comes into view, so it is written inside a"
                 f" canvas, not {_a(v.kind)}",
+                form.pos,
+            )
+        if kind in SHOW_HIDE and v.kind != "canvas":
+            raise CompileError(
+                f"{kind} plays while a canvas starts or stops showing a shape, so it is written"
+                f" inside a canvas, not {_a(v.kind)}",
                 form.pos,
             )
         if kind == "on-pointermove" and v.kind != "canvas":
@@ -3843,6 +3861,81 @@ class _Compiler:
     build_on_live = build_on_view
     build_on_quiet = build_on_view
 
+    def build_on_show(self, obj: Obj, items: list, shape: int) -> None:
+        """(on-show d1 animation) and (on-hide d1 animation), inside a canvas (mtp-7i3j): the
+        animation moves the stand-in the canvas draws in place of d1, and never the scene, so
+        it may move what the scene binds and moves nothing but d1."""
+        kind, label = obj.kind, self.model.objects[shape].name
+        view = obj.data["in"][0]
+        for other in self.model.objects:
+            if (
+                other.kind == kind
+                and other.data.get("shape") == shape
+                and other.data["in"] == [view]
+            ):
+                raise CompileError(
+                    f"{label} has an {kind} in {self.model.objects[view].name} already", obj.pos
+                )
+        obj.data["shape"] = shape
+        self.standing.append(shape)
+        try:
+            written = self.animated(obj, items)
+        finally:
+            self.standing.pop()
+        if obj.data["animation"] is None:
+            raise CompileError(
+                f"{kind} {label} takes an animation that moves {label}.drawn and"
+                f" {label}.opacity, such as (animation …) or a use of a choreo",
+                obj.pos,
+            )
+        if items:
+            raise CompileError(
+                f"{kind} takes the shape and its animation, nothing else", items[0].pos
+            )
+        self.check_stand_in(obj, shape, written)
+
+    build_on_hide = build_on_show
+
+    def check_stand_in(self, obj: Obj, shape: int, written: set) -> None:
+        """What an on-show or on-hide moves: only its shape's stand-in, and drawn and opacity on
+        every shape in it, since hidden is drawn 0 and opacity 0 (the author, 2026-11-11)."""
+        objects = self.model.objects
+        label = objects[shape].name
+
+        def chain(i: int | None) -> list[int]:
+            out = []
+            while i is not None:
+                out.append(i)
+                i = objects[i].parent
+            return out
+
+        for i, attr in written:
+            if shape not in chain(i):
+                what = objects[i].name if attr is None else f"{objects[i].name}.{attr}"
+                raise CompileError(
+                    f"{obj.kind} {label} moves only {label}'s stand-in, not {what}", obj.pos
+                )
+
+        def leaves(i: int) -> list[int]:
+            o = objects[i]
+            if o.kind in ("group", "instance"):
+                return [leaf for m in o.members for leaf in leaves(m)]
+            return [i]
+
+        moved = {(i, attr) for i, attr in written}
+        for leaf in leaves(shape):
+            for attr in ("drawn", "opacity"):
+                if attr not in objects[leaf].attrs:
+                    continue
+                if not any((i, attr) in moved for i in chain(leaf)):
+                    end = 1 if obj.kind == "on-show" else 0
+                    raise CompileError(
+                        f"{obj.kind} {label} leaves {objects[leaf].name}.{attr} unmoved: hidden is"
+                        f" drawn 0 and opacity 0, so an {obj.kind} moves both to {end}; one that"
+                        " changes at once takes a move of duration 0",
+                        obj.pos,
+                    )
+
     def build_on_click(self, obj: Obj, items: list, shape: int) -> None:
         obj.data["shape"] = shape
         written = self.animated(obj, items)
@@ -3922,7 +4015,17 @@ class _Compiler:
             parts = [Form((Name((a,), n.pos), n), n.pos) for a, n in toggle]
             move = Form((Name(("move",), obj.pos), NoneLit(obj.pos), *parts), obj.pos)
             obj.data["transition"] = self.transition(move, self.cscope, top=False)
+        given: dict[int, Node] = {}
         for item in items:
+            for shape in self.given_by(item):
+                if shape in given:
+                    raise CompileError(
+                        f"the canvas {obj.name} gives {self.model.objects[shape].name} from two"
+                        " items: write one (when …) with one condition, such as"
+                        " (when (or a b) d)",
+                        item.pos,
+                    )
+                given[shape] = item
             head = _head(item)
             if isinstance(item, Name):
                 obj.data["shows"].append(self.shown(item))
@@ -3938,6 +4041,23 @@ class _Compiler:
                 raise CompileError(f"a canvas takes no argument '{head}'", item.pos)
             else:
                 raise CompileError("expected an item of a canvas", item.pos)
+
+    def given_by(self, node: Node) -> set[int]:
+        """The shapes a canvas item may give that the compiler can see: those it names, in a
+        list or a branch of a when or an if (mtp-7i3j). An item that gives its shapes any other
+        way gives none here."""
+        if isinstance(node, Name):
+            try:
+                e = self.expr(node, None, self.cscope)
+            except CompileError:
+                return set()
+            return {e.args[0]} if e.op == "obj" else set()
+        if isinstance(node, ListLit):
+            return set().union(*(self.given_by(it) for it in node.items))
+        head = _head(node)
+        if head in ("when", "if") and isinstance(node, Form) and len(node.items) >= 3:
+            return set().union(*(self.given_by(it) for it in node.items[2:]))
+        return set()
 
     def is_expression(self, head) -> bool:
         """Whether a form with this head is an expression rather than an argument."""
