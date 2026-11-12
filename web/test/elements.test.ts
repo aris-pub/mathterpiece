@@ -1597,6 +1597,18 @@ describe("quiet mode", () => {
     expect(v("knob", "x") as number).toBeGreaterThan(5);
   });
 
+  // The cursor of a shape the reader can act on follows its view going live, even when nothing
+  // was written or made since the view last drew.
+  it("shows the pointer cursor on a shape once its view goes live, after a write while quiet", () => {
+    const [, rt] = open();
+    rt.write(rt.id("k"), null, 1);
+    expect((shape(rt, "left", "knob") as SVGElement).style.cursor).toBe("");
+    toggler("left")!.click();
+    expect((shape(rt, "left", "knob") as SVGElement).style.cursor).toBe("pointer");
+    toggler("left")!.click();
+    expect((shape(rt, "left", "knob") as SVGElement).style.cursor).toBe("");
+  });
+
   it("a readout keeps its text beside its switch, and goes live on its own", () => {
     const [, , v] = open();
     expect(view("says").textContent).toBe("k is 0.0");

@@ -531,13 +531,15 @@ export class MtpCanvas extends MtpPart {
       const quiet = rt.quiet.has(canvas);
       // Back to quiet, the reader can no longer undo a pan or zoom, so the canvas drops it.
       if (quiet && !wasQuiet) Object.assign(look, { scale: 1, dx: 0, dy: 0 });
+      // Going live or back changes what its listeners hear, so what can be dragged or clicked.
+      const moded = quiet !== wasQuiet;
       wasQuiet = quiet;
       // Elsewhere a finger on the canvas scrolls the page.
       const action = allows("pan") || allows("zoom") || pointer.onCanvas ? "none" : "";
       if (svg.style.touchAction !== action) svg.style.touchAction = action;
       draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo);
       const made = elementsMade();
-      if (rt.clock !== shownAt || made !== madeAt) {
+      if (rt.clock !== shownAt || made !== madeAt || moded) {
         for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
           const id = Number(el.getAttribute("data-mtp-id"));
           const cursor = drags.draggable(id, canvas) || clicks.find(id, canvas).length ? "pointer" : "";
