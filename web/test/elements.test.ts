@@ -560,6 +560,18 @@ describe("a play's bar", () => {
     expect(line() ?? "").toBe("");
   });
 
+  // The author, 2026-11-12: a play writes its step always, counting its animation's steps from 1.
+  it("without (buttons true) still gives the step playing in its step", () => {
+    const [, , v] = page(`<mtp-play model="m" name="whole"></mtp-play>`, doc("bar"));
+    expect(v("whole", "step")).toBe(0);
+    button().click();
+    pass(0.1);
+    pass(0.5);
+    expect(v("whole", "step")).toBe(1);
+    pass(1);
+    expect(v("whole", "step")).toBe(2);
+  });
+
   it("shows no count at rest, in explore mode (mtp-wjtd), and names the step playing", () => {
     const [, , v] = tour();
     expect(line()).toBe("");
@@ -575,7 +587,7 @@ describe("a play's bar", () => {
     expect(line()).toBe("2 / 2");
     expect(fills()[0]).toBe(1);
     expect(fills()[1]).toBeCloseTo(0.5);
-    expect(v("tour", "step")).toBe(1);
+    expect(v("tour", "step")).toBe(2);
     pass(2);
     expect(fills()).toEqual([1, 1]);
     expect(v("tour", "playing")).toBe(false);

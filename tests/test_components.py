@@ -26,7 +26,7 @@ class TestControls:
     def test_play(self):
         p = model(f"{K} (play p {MOVE} (buttons true))").get("p")
         assert p.attrs["buttons"].value is True
-        assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, 0)
+        assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, -1)
         # The time within its animation, in seconds from the start (the author, 2026-11-12).
         assert p.attrs["time"].value == 0
 
@@ -57,7 +57,7 @@ class TestControls:
         assert s.data["animation"] is not None
         assert s.attrs["label"].value == "hints"
         assert s.data["active"].deps == {(m.id("on"), None)}
-        assert (s.attrs["playing"].value, s.attrs["step"].value) == (False, 0)
+        assert (s.attrs["playing"].value, s.attrs["step"].value) == (False, -1)
 
     def test_a_stepper_is_read_through_its_step(self):
         m = model(f"{K} (stepper s {MOVE}) (bool past (> s.step 0))")

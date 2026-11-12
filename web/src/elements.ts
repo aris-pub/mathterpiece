@@ -20,6 +20,8 @@ const READY = "mtp-ready";
 const CHANGE = "mtp-change";
 // A view went live or back to quiet (mtp-16z).
 const MODE = "mtp-mode";
+// The model came to stand in state 0, the rest state (mtp-wjtd).
+const REST = "mtp-rest";
 // Touch (docs/reference.md, "Touch screens"): how far, in CSS pixels, a finger may miss a shape
 // and still press it, and how far it may move and still tap.
 const TOUCH_REACH = 22;
@@ -126,8 +128,11 @@ export class MtpModel extends HTMLElement {
 
   private checkRest(): void {
     const rest = this.atRest();
+    const was = this.hasAttribute("data-mtp-rest");
     this.toggleAttribute("data-mtp-rest", rest);
     if (!rest) return;
+    // The plays and steppers then show state 0, their step going from -1 to 0.
+    if (!was) this.dispatchEvent(new Event(REST));
     const waiting = this.rested;
     this.rested = [];
     for (const resolve of waiting) resolve();
@@ -199,7 +204,9 @@ export class MtpModel extends HTMLElement {
       this.whenSeen(o.view!, () => this.playOnView(i));
     });
     this.dispatchEvent(new Event(READY, { bubbles: true }));
-    // The views of the page are there once it is told the model is ready.
+    // The views of the page are there once it is told the model is ready, or, for those added
+    // with it, once the HTML being added is all there.
+    this.checkRest();
     queueMicrotask(() => this.checkRest());
   }
 
@@ -1080,6 +1087,12 @@ function movedLastBy(rt: Runtime, id: number, el: Element): boolean {
   return movers.get(rt)?.get(id) === el;
 }
 
+// Whether the reader has moved no copy of a control yet: each copy then shows state 0, and
+// writes the same.
+function unmoved(rt: Runtime, id: number): boolean {
+  return !movers.get(rt)?.has(id);
+}
+
 /** Whether a writer is active, so it can be triggered: always, unless its active is false. */
 function activeOf(rt: Runtime, id: number): boolean {
   const active = rt.objects[id]!.active;
@@ -1377,7 +1390,12 @@ export class MtpPlay extends MtpPart {
     scheduler.watch(this, targets, () => {
       if (!player?.done) explore();
     });
-    this.unwatch = () => scheduler.unwatch(this);
+    const rested = () => this.refresh();
+    model.addEventListener(REST, rested);
+    this.unwatch = () => {
+      scheduler.unwatch(this);
+      model.removeEventListener(REST, rested);
+    };
     // From step 0 it plays from the start at once, not after the time before the first move.
     const playOn = () => {
       if (atZero()) fresh(how);
@@ -1385,11 +1403,12 @@ export class MtpPlay extends MtpPart {
     };
     const toggle = () => {
       if (!activeOf(rt, id)) return;
+      // First, so this copy alone writes the step while the press writes.
+      moves(rt, id, this);
       if (exploring) fresh(how);
       else if (scheduler.running(this)) scheduler.pause(this);
       else if (player && !player.done) playOn();
       else fresh(how);
-      moves(rt, id, this);
       this.refresh();
     };
     // A press waits for the rest state, hurrying the on-views still to play (the author, 2026-11-12).
@@ -1486,9 +1505,9 @@ export class MtpPlay extends MtpPart {
     track.addEventListener("pointercancel", (event) => release(event, false));
 
     // The step at t: the last one started by then, so a rest after a step still shows it.
-    const stepAt = (t: number): number => {
+    const stepAt = (t: number, among = spans): number => {
       let k = 0;
-      spans.forEach((s, j) => {
+      among.forEach((s, j) => {
         if (t >= s.start - 1e-9 * Math.max(1, s.start)) k = j;
       });
       return k;
@@ -1523,11 +1542,13 @@ export class MtpPlay extends MtpPart {
       if (shown && !zero) this.setAttribute("data-step", String(k + 1));
       else this.removeAttribute("data-step");
       track.setAttribute("aria-valuetext", text || `${n} ${n === 1 ? "step" : "steps"}`);
-      if (movedLastBy(rt, id, this)) {
+      if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        // In explore mode its step is as it is at rest.
-        const step = shown ? k : rt.atRest(id, "step");
-        if (split && rt.value(id, "step") !== step) rt.write(id, "step", step);
+        // Its step counts the animation's steps, split into bars or not: -1 until state 0 is
+        // set, 0 in state 0 (in explore mode and at step 0), and k for step k (the author,
+        // 2026-11-12).
+        const step = shown && !zero ? stepAt(t, all) + 1 : 0;
+        if (model.hasAttribute("data-mtp-rest") && rt.value(id, "step") !== step) rt.write(id, "step", step);
         // A model compiled before plays had a time has none to write.
         if (timed) {
           // The last frame may pass the end.
@@ -1541,8 +1562,8 @@ export class MtpPlay extends MtpPart {
     // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
     const start = () => {
       if (!activeOf(rt, id) || scheduler.running(this)) return;
-      fresh(howOf(obj, false));
       moves(rt, id, this);
+      fresh(howOf(obj, false));
       this.refresh();
     };
     const auto = obj.autoplay;
@@ -1642,7 +1663,12 @@ export class MtpStepper extends MtpPart {
       const finished = player !== null && at === n && player.time >= end - 1e-9 * Math.max(1, end);
       if (!finished) explore();
     });
-    this.unwatch = () => scheduler.unwatch(this);
+    const rested = () => this.refresh();
+    model.addEventListener(REST, rested);
+    this.unwatch = () => {
+      scheduler.unwatch(this);
+      model.removeEventListener(REST, rested);
+    };
     const forward = () => {
       if (!activeOf(rt, id)) return;
       if (exploring) {
@@ -1738,11 +1764,11 @@ export class MtpStepper extends MtpPart {
       // As a play's: a page shows what goes with each step by this attribute.
       if (at) this.setAttribute("data-step", String(at));
       else this.removeAttribute("data-step");
-      if (movedLastBy(rt, id, this)) {
+      if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        // In explore mode its step is as it is at rest.
-        const step = exploring ? rt.atRest(id, "step") : at;
-        if (rt.value(id, "step") !== step) rt.write(id, "step", step);
+        // -1 until state 0 is set, then 0 in explore mode, as a play's.
+        const step = exploring ? 0 : at;
+        if (model.hasAttribute("data-mtp-rest") && rt.value(id, "step") !== step) rt.write(id, "step", step);
       }
     };
     this.refresh();

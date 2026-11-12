@@ -530,10 +530,10 @@ describe("explore mode", () => {
 
     it("running, goes into explore mode when a slider writes what it moves, forgetting what it played", () => {
       const [, , v] = both();
-      const rest = v("trip", "step");
+      expect(v("trip", "step")).toBe(0);
       play().click();
       pass(2);
-      expect(v("trip", "step")).toBe(1);
+      expect(v("trip", "step")).toBe(2);
       slide(200);
       expect(v("k")).toBe(2);
       expect(exploring("mtp-play")).toBe(true);
@@ -541,7 +541,7 @@ describe("explore mode", () => {
       expect(line()).toBe("");
       expect(el("mtp-play").hasAttribute("data-step")).toBe(false);
       expect(v("trip", "playing")).toBe(false);
-      expect(v("trip", "step")).toBe(rest);
+      expect(v("trip", "step")).toBe(0);
       pass(1);
       expect(v("k")).toBe(2);
     });
@@ -994,6 +994,35 @@ describe("explore mode", () => {
         pass(HURRY);
         expect(count()).toBe("2 / 3");
       });
+    });
+
+    // The author, 2026-11-12: step is -1 in state -1, 0 in state 0, and k for step k.
+    it("holds every play's and stepper's step at -1 until state 0 is set, and 0 then", () => {
+      const [model, rt, v] = viewed();
+      expect([v("trip", "step"), v("walk", "step")]).toEqual([-1, -1]);
+      model.markSeen(rt.id("v"));
+      pass(0.5);
+      expect([v("trip", "step"), v("walk", "step")]).toEqual([-1, -1]);
+      pass(1);
+      expect([v("trip", "step"), v("walk", "step")]).toEqual([0, 0]);
+    });
+
+    it("gives a play's step from 1, the step playing or just played, and 0 at step 0", () => {
+      const [, , v] = both();
+      expect(v("trip", "step")).toBe(0);
+      play().click();
+      pass(0.5);
+      expect(v("trip", "step")).toBe(1);
+      pass(1);
+      expect(v("trip", "step")).toBe(2);
+      pass(3);
+      expect(v("trip", "step")).toBe(3);
+      key("mtp-play", "ArrowLeft");
+      key("mtp-play", "ArrowLeft");
+      key("mtp-play", "ArrowLeft");
+      key("mtp-play", "ArrowLeft");
+      expect(line()).toBe("0 / 3");
+      expect(v("trip", "step")).toBe(0);
     });
 
     it("is there at once on a page whose views have no on-view", async () => {

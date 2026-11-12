@@ -3659,7 +3659,9 @@ class _Compiler:
         if rest is not None:
             obj.data["rest"] = self.seconds(rest, self.cscope)
         obj.attrs["playing"] = Attribute(BOOL, False)
-        obj.attrs["step"] = Attribute(INT, 0)
+        # -1 in state -1, before the on-views have played, 0 in state 0, k for step k (the
+        # author, 2026-11-12).
+        obj.attrs["step"] = Attribute(INT, -1)
         # The time within its animation, in seconds from the start (the author, 2026-11-12).
         obj.attrs["time"] = Attribute(REAL, 0)
         self.active(obj, items)
@@ -3683,7 +3685,7 @@ class _Compiler:
                 "a stepper needs an (animation …): the steps it moves through", obj.pos
             )
         obj.attrs["playing"] = Attribute(BOOL, False)
-        obj.attrs["step"] = Attribute(INT, 0)
+        obj.attrs["step"] = Attribute(INT, -1)
         self.active(obj, items)
         self.writer(obj, items, written)
 
