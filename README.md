@@ -4,7 +4,7 @@ mathterpiece (mtp) is a small language for math figures that readers can drag, s
 world model is written in a `.mtp` file, in a Lisp-like syntax. A compiler checks it and writes
 the compiled model, a `.mtpc` file, which a JavaScript runtime draws on a web page.
 
-![A figure of the Pythagorean theorem. Pressing rearrange moves four triangles between two layouts of the same square, and dragging the slider for a changes the squares a² and b².](docs/images/pythagoras.gif)
+![The source of examples/spiral-of-copies.mtp next to the figure it draws. Moving the sliders changes how many dots there are, how far each one turns and how much each one shrinks. Dragging the red first dot moves the whole spiral.](docs/images/spiral-of-copies.gif)
 
 ```lisp
 (real k 1 (>= 0.2) (<= 3))
