@@ -171,4 +171,25 @@ describe("the controls' colors at rest and in use", () => {
     expect(fill()).toContain(GRAY);
     document.documentElement.removeAttribute("style");
   });
+
+  // mtp-wjtd: a pill after the bars, filled with the active color in explore mode (at rest, too)
+  // and outlined in the rest color otherwise.
+  it("draws the Explore button filled while on and outlined while off", async () => {
+    await controls(`--mtp-control-rest: ${GRAY}; --mtp-control-active: ${INK}`);
+    const ex = document.querySelector("mtp-play .mtp-explore") as HTMLButtonElement;
+    const bars = document.querySelector("mtp-play .mtp-bars")!;
+    expect(ex.getBoundingClientRect().left).toBeGreaterThan(bars.getBoundingClientRect().right);
+    expect(ex.getAttribute("aria-pressed")).toBe("true");
+    expect(color("mtp-play .mtp-explore", "background-color")).toBe(INK);
+    (document.querySelector("mtp-play .mtp-play-button") as HTMLButtonElement).click();
+    // After the button's transition.
+    await new Promise((r) => setTimeout(r, 250));
+    expect(ex.getAttribute("aria-pressed")).toBe("false");
+    expect(color("mtp-play .mtp-explore", "background-color")).toBe("rgba(0, 0, 0, 0)");
+    expect(color("mtp-play .mtp-explore", "border-top-color")).toBe(GRAY);
+    expect(color("mtp-play .mtp-explore", "color")).toBe(GRAY);
+    const r = ex.getBoundingClientRect();
+    expect(r.height - 2 * parseFloat(getComputedStyle(ex, "::after").top)).toBeGreaterThanOrEqual(44);
+    document.documentElement.removeAttribute("style");
+  });
 });

@@ -191,6 +191,23 @@ mtp-stepper .mtp-dot[aria-current="step"] {
   box-shadow: 0 0 0 2px var(--surface-page, white), 0 0 0 3.5px var(--mtp-dot);
 }
 
+/* A play's or a stepper's Explore button (mtp-wjtd): a pill, outlined in the rest color while
+   off, and filled with the active color while the control is in explore mode. */
+mtp-play .mtp-explore, mtp-stepper .mtp-explore {
+  position: relative; flex: none;
+  height: 2rem; padding: 0 0.875rem; border-radius: 999px;
+  font: 600 0.8125rem/1 "Source Sans 3", sans-serif;
+  border: 1px solid var(--mtp-rest); background: none; color: var(--mtp-rest);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+mtp-play .mtp-explore[aria-pressed="true"], mtp-stepper .mtp-explore[aria-pressed="true"] {
+  background: var(--mtp-active); border-color: var(--mtp-active); color: var(--surface-page, white);
+}
+mtp-play .mtp-explore::after, mtp-stepper .mtp-explore::after { content: ""; position: absolute; inset: -6px; }
+mtp-play .mtp-explore:focus-visible { outline: 2px solid var(--border-action, Highlight); outline-offset: 2px; }
+mtp-play .mtp-explore:disabled, mtp-stepper .mtp-explore:disabled { cursor: not-allowed; opacity: 0.5; }
+
 mtp-toggle label {
   display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;
 }
@@ -249,6 +266,6 @@ mtp-canvas .mtp-selected {
 .mtp-switch.mtp-switch-inline svg { width: 0.875rem; height: 0.875rem; }
 
 @media (prefers-reduced-motion: reduce) {
-  mtp-button button, mtp-play .mtp-play-button, mtp-stepper .mtp-step-button, .mtp-switch { transition: none; }
+  mtp-button button, mtp-play .mtp-play-button, mtp-stepper .mtp-step-button, .mtp-explore, .mtp-switch { transition: none; }
 }
 `;

@@ -172,6 +172,11 @@ export class Runtime {
   // are most of the runtime's work, so they find their slot without building a key.
   private slots: Map<string | null, Slot>[];
   private byKey = new Map<string, Slot>();
+  // The rest state a play or stepper starts from (mtp-wjtd): what each free variable or attribute
+  // held when the model was built, kept at its first write, or what an on-view last wrote to it,
+  // since the on-views' writes are part of the rest state (the author, 2026-11-12).
+  private rest = new Map<string, unknown>();
+  private resting = false;
   // free@ values whose starts are not read yet: each is read once, when the model is built.
   private starts: Slot[] = [];
   // For each object, the exists slots of it and of the containers around it.
@@ -508,6 +513,54 @@ export class Runtime {
     return attr === "pos" ? [`${id}:x`, `${id}:y`] : [target];
   }
 
+  /** A variable's or an attribute's value in the rest state, as value gives it now. */
+  atRest(id: number, attr: string | null): unknown {
+    const k = key(id, attr);
+    return this.rest.has(k) ? this.rest.get(k) : this.value(id, attr);
+  }
+
+  /** Runs work whose writes are part of the rest state, as an on-view's are. */
+  asRest<T>(work: () => T): T {
+    if (this.resting) return work();
+    this.resting = true;
+    try {
+      return work();
+    } finally {
+      this.resting = false;
+    }
+  }
+
+  /** Writes back what the targets ("id:attr") hold in the rest state, every slot a write of them
+   * reaches, so a group's members get back each their own value. */
+  restore(targets: string[]): void {
+    this.together(() => {
+      const changed = new Set<string>();
+      for (const t of targets) {
+        const at = t.indexOf(":");
+        for (const k of this.slotsOf(Number(t.slice(0, at)), t.slice(at + 1) || null)) {
+          if (this.rest.has(k)) this.writeKey(k, this.rest.get(k), changed);
+        }
+      }
+      for (const k of changed) this.pending!.add(k);
+    });
+  }
+
+  // The slots writeInto writes for a target, worked out as it works them out.
+  private slotsOf(id: number, attr: string | null): string[] {
+    const o = this.objects[id]!;
+    if ((o.kind === "group" || o.kind === "instance") && attr !== null && !this.has(id, attr)) {
+      if (attr !== "pos" || o.kind === "group") return (o.members ?? []).flatMap((m) => this.slotsOf(m, attr));
+    }
+    if ((THROUGH_POINTS.has(o.kind) || o.kind === "curve") && (attr === "x" || attr === "y")) return this.slotsOf(id, "pos");
+    if (attr === "pos" && !this.has(id, "pos")) {
+      if (THROUGH_POINTS.has(o.kind)) return [key(id, "points")];
+      if (o.kind === "curve") return ["from", "to", "controls"].map((c) => key(id, c));
+      if (CORNERS[o.kind]) return CORNERS[o.kind]!.map((c) => key(id, c));
+      return [key(id, "x"), key(id, "y")];
+    }
+    return [key(id, attr)];
+  }
+
   private writeInto(id: number, attr: string | null, value: unknown, changed: Set<string>): void {
     const o = this.objects[id]!;
     // A group's or an instance's attribute that is not its own is each member's (mtp-4cw5).
@@ -559,8 +612,10 @@ export class Runtime {
     if (!s || s.state !== FREE) throw new Error(`${k} is not a free variable or attribute`);
     const old = s.value;
     const v = this.constrain(s.type, value, old);
+    if (this.resting && v !== undefined) this.rest.set(k, v);
     // A write that changes nothing is skipped, so nothing downstream is computed again.
     if (v === undefined || equal(v, old)) return;
+    if (!this.rest.has(k)) this.rest.set(k, old);
     s.value = v;
     s.cssKnown = false;
     this.touched[s.id] = ++this.clock;

@@ -41,7 +41,7 @@
 (button jump (animation (move p (to [1 1]) (duration 1))))
 (canvas pm s
   (on-pointermove p (exclusive)))
-; A stepper another writer cancels goes on from where it stopped (mtp-ibem).
+; A play or stepper whose targets another writer writes goes into explore mode (mtp-wjtd).
 (button set-j (animation (move j (to 1) (duration 0))))
 (stepper walk (label 'walk')
   (animation
@@ -50,3 +50,8 @@
     (move j (to 7) (duration 1))))
 (button pl-x (animation (move pl.x (to 5) (duration 1))) (exclusive))
 (button pl-points (animation (move pl.points (to [[0 0] [2 0]]) (duration 1))) (exclusive))
+(play trip (buttons true)
+  (animation
+    (move j (to 5) (duration 1))
+    (move k (to 10) (duration 2))
+    (move j (to 7) (duration 1))))

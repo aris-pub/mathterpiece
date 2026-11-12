@@ -55,6 +55,40 @@ export class MtpModel extends HTMLElement {
   private waiting = new Map<number, (() => void)[]>();
   private running = false;
   private last = 0;
+  private rested: (() => void)[] = [];
+
+  /**
+   * Whether the model stands in its rest state (mtp-wjtd): every on-view of a view shown on this
+   * page has played to its end. That state is the one a play or stepper starts from, and the one
+   * a static figure is made from. The element has the data-mtp-rest attribute while it holds.
+   */
+  atRest(): boolean {
+    const rt = this.runtime;
+    if (!rt || !this.scheduler || this.scheduler.resting()) return false;
+    const name = new Map(Object.entries(rt.doc.names).map(([n, i]) => [i, n]));
+    const shown = (view: number) => {
+      const n = name.get(view);
+      return n !== undefined && document.querySelector(`[model="${CSS.escape(this.id)}"][name="${CSS.escape(n)}"]`) !== null;
+    };
+    return rt.objects.every((o) => o.kind !== "on-view" || this.seen.has(o.view!) || !shown(o.view!));
+  }
+
+  /** Resolves once the model stands in its rest state, as atRest gives. */
+  whenRest(): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.atRest()) resolve();
+      else this.rested.push(resolve);
+    });
+  }
+
+  private checkRest(): void {
+    const rest = this.atRest();
+    this.toggleAttribute("data-mtp-rest", rest);
+    if (!rest) return;
+    const waiting = this.rested;
+    this.rested = [];
+    for (const resolve of waiting) resolve();
+  }
 
   connectedCallback(): void {
     if (this.runtime || this.error) return;
@@ -120,10 +154,15 @@ export class MtpModel extends HTMLElement {
       if (o.kind !== "on-view") return;
       this.whenSeen(o.view!, () => {
         const player = activeOf(rt, i) ? playerFor(rt, o) : null;
-        if (player) scheduler.start(player, o, howOf(o, false));
+        if (!player) return;
+        // Its writes are part of the rest state (the author, 2026-11-12).
+        player.rest = true;
+        scheduler.start(player, o, { ...howOf(o, false), rest: true });
       });
     });
     this.dispatchEvent(new Event(READY, { bubbles: true }));
+    // The views of the page are there once it is told the model is ready.
+    queueMicrotask(() => this.checkRest());
   }
 
   /** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
@@ -156,6 +195,7 @@ export class MtpModel extends HTMLElement {
     this.seen.add(id);
     for (const work of this.waiting.get(id) ?? []) work();
     this.waiting.delete(id);
+    this.checkRest();
   }
 
   /** Tells every view and control of this model to show the current values. */
@@ -176,6 +216,7 @@ export class MtpModel extends HTMLElement {
     if (!scheduler) return;
     scheduler.tick(Math.max(ms - this.last, 0) / 1000);
     this.last = ms;
+    if (!this.hasAttribute("data-mtp-rest")) this.checkRest();
     if (scheduler.busy()) frames.request((next) => this.frame(next));
     else this.running = false;
   }
@@ -1174,6 +1215,16 @@ function takesKeys(el: EventTarget | null): boolean {
 // What has the keys of a play: on a page with only one, they work from anywhere on it.
 const KEYED = "mtp-play, mtp-stepper";
 
+// A play's or a stepper's Explore button (mtp-wjtd), on while the control is in explore mode.
+function exploreButton(act: () => void): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "mtp-explore";
+  b.textContent = "Explore";
+  b.addEventListener("click", act);
+  return b;
+}
+
 /**
  * A play (docs/reference.md, "Controls"; mtp-33xt): a play button, then one bar per step, each
  * as wide as its step's duration and filling as it plays, and the step now playing under them.
@@ -1182,25 +1233,32 @@ const KEYED = "mtp-play, mtp-stepper";
 export class MtpPlay extends MtpPart {
   private refresh: () => void = () => {};
   private onPage: ((event: KeyboardEvent) => void) | null = null;
+  private unwatch: () => void = () => {};
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
     this.onPage = null;
+    this.unwatch();
   }
 
   protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "play");
     const obj = rt.objects[id]!;
-    // The one player the bars show. It is kept after the tour ends or another writer cancels it,
-    // so the bars stay where it stood; a press after the end starts a new one.
+    // The one player the bars show. It is kept after the tour ends, so the bars stay full. A
+    // press after the end starts a new one.
     let player: Player | null = null;
     const layout = playerFor(rt, obj);
     if (!layout) {
       this.replaceChildren();
       return;
     }
+    // Explore mode (mtp-wjtd): at rest, and once another writer writes what the play moves
+    // before it has finished. It shows no step, and the next play starts from state 0.
+    let exploring = true;
+    const targets = layout.targets;
     const split = Boolean(rt.value(id, "buttons"));
+    const timed = obj.attrs?.time !== undefined;
     const all = layout.spans;
     const spans = split ? all : [{ start: all[0]!.start, end: all.at(-1)!.end }];
     const names = (obj.animation !== null && obj.animation !== undefined ? rt.objects[obj.animation]!.names : undefined) ?? [];
@@ -1240,38 +1298,66 @@ export class MtpPlay extends MtpPart {
     };
     // Whatever the reader does to a play makes it the reader's, even one autoplay started.
     const how = howOf(obj, true);
+    // A jump sets the state at that time: state 0 with every move up to then applied, whatever
+    // was written since.
     const seek = (t: number) => {
-      own();
-      scheduler.seek(this, t, how);
+      const p = own();
+      const reset = () => {
+        rt.restore(targets);
+        p.release();
+      };
+      if (scheduler.seek(this, t, how, reset)) exploring = false;
       this.refresh();
     };
     // A new player, kept only when it starts, so a refused press leaves the bars as they were.
+    // From explore mode it starts from state 0.
     const fresh = (by: How) => {
       const next = playerFor(rt, obj);
-      if (next && scheduler.start(next, this, by)) player = next;
+      const reset = exploring ? () => rt.restore(targets) : undefined;
+      if (next && scheduler.start(next, this, by, 0, reset)) {
+        player = next;
+        exploring = false;
+      }
     };
+    const explore = () => {
+      if (exploring) return;
+      exploring = true;
+      scheduler.letGo(this);
+      player = null;
+      this.refresh();
+    };
+    scheduler.watch(this, targets, () => {
+      if (!player?.done) explore();
+    });
+    this.unwatch = () => scheduler.unwatch(this);
     const toggle = () => {
       if (!activeOf(rt, id)) return;
-      if (scheduler.running(this)) scheduler.pause(this);
-      else if (player && !player.done) {
-        // A play another writer cancelled goes on from where it stopped (mtp-ddi1).
-        if (scheduler.playerOf(this) === player) scheduler.resume(this, how);
-        else scheduler.again(player, this, how);
-      } else fresh(how);
+      if (exploring) fresh(how);
+      else if (scheduler.running(this)) scheduler.pause(this);
+      else if (player && !player.done) scheduler.resume(this, how);
+      else fresh(how);
       moves(rt, id, this);
       this.refresh();
     };
     play.addEventListener("click", toggle);
+    const ex = exploreButton(() => {
+      if (!activeOf(rt, id)) return;
+      moves(rt, id, this);
+      explore();
+    });
 
     // Keys (mtp-yhau): Space plays and pauses; the arrows go to the next stop or back one. The
     // stops are the starts of the steps and the end, so a rest is skipped.
     const stops = [...spans.map((s) => s.start), spans.at(-1)!.end];
+    // In explore mode no stop is current: the right arrow jumps to the first, and the left arrow
+    // does nothing.
     const next = () => {
-      const t = player ? player.position : -1;
+      const t = player && !exploring ? player.position : -1;
       const s = stops.find((x) => x > t + 1e-6);
       if (s !== undefined) seek(s);
     };
     const back = () => {
+      if (exploring) return;
       const t = player ? player.position : 0;
       seek(stops.filter((x) => x < t - BACK_GRACE).at(-1) ?? 0);
     };
@@ -1283,8 +1369,8 @@ export class MtpPlay extends MtpPart {
       if (!event.repeat && activeOf(rt, id)) act();
     };
     this.addEventListener("keydown", (event) => {
-      // The play button presses itself on Space, as any button does.
-      if (event.key === " " && event.target === play) return;
+      // The play button and the Explore button press themselves on Space, as any button does.
+      if (event.key === " " && (event.target === play || event.target === ex)) return;
       onKey(event);
     });
     // On a page with one play or stepper, as when recording it, the keys work from anywhere on the page,
@@ -1354,35 +1440,46 @@ export class MtpPlay extends MtpPart {
     this.refresh = () => {
       const running = scheduler.running(this);
       const active = activeOf(rt, id);
-      const t = player ? player.position : 0;
+      const shown = exploring ? null : player;
+      const t = shown ? shown.position : 0;
       play.innerHTML = running ? PAUSE_ICON : PLAY_ICON;
       play.setAttribute("aria-label", running ? "pause" : labelOf(rt, id));
       play.disabled = !active;
+      ex.disabled = !active;
+      ex.setAttribute("aria-pressed", String(exploring));
       track.setAttribute("aria-disabled", String(!active));
       this.toggleAttribute("data-playing", running);
       bars.forEach((bar, j) => {
         const s = spans[j]!;
-        const u = s.end > s.start ? Math.min(Math.max((t - s.start) / (s.end - s.start), 0), 1) : t >= s.start && player ? 1 : 0;
+        const u = s.end > s.start ? Math.min(Math.max((t - s.start) / (s.end - s.start), 0), 1) : t >= s.start && shown ? 1 : 0;
         bar.style.setProperty("--u", String(Number(u.toFixed(4))));
       });
       const n = spans.length;
       const k = stepAt(t);
       const name = names[k] ?? null;
-      const text = player ? `${k + 1} / ${n}${name ? ` · ${name}` : ""}` : `${n} ${n === 1 ? "step" : "steps"}`;
+      const text = shown ? `${k + 1} / ${n}${name ? ` · ${name}` : ""}` : "";
       line.textContent = text;
       track.setAttribute("aria-label", labelOf(rt, id));
-      track.setAttribute("aria-valuenow", String(player ? k + 1 : 0));
+      track.setAttribute("aria-valuenow", String(shown ? k + 1 : 0));
       // A page shows what goes with each step (a question under the figure, say) by this attribute.
-      if (player) this.setAttribute("data-step", String(k + 1));
+      if (shown) this.setAttribute("data-step", String(k + 1));
       else this.removeAttribute("data-step");
-      track.setAttribute("aria-valuetext", text);
+      track.setAttribute("aria-valuetext", text || `${n} ${n === 1 ? "step" : "steps"}`);
       if (movedLastBy(rt, id, this)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        if (player && split && rt.value(id, "step") !== k) rt.write(id, "step", k);
+        // In explore mode its step is as it is at rest.
+        const step = shown ? k : rt.atRest(id, "step");
+        if (split && rt.value(id, "step") !== step) rt.write(id, "step", step);
+        // A model compiled before plays had a time has none to write.
+        if (timed) {
+          // The last frame may pass the end.
+          const time = shown ? Math.min(Math.max(shown.time, 0), shown.duration) : rt.atRest(id, "time");
+          if (rt.value(id, "time") !== time) rt.write(id, "time", time);
+        }
       }
     };
     this.refresh();
-    this.replaceChildren(play, indicator);
+    this.replaceChildren(play, indicator, ex);
     // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
     const start = () => {
       if (!activeOf(rt, id) || scheduler.running(this)) return;
@@ -1415,11 +1512,13 @@ const BEFORE = -1;
 export class MtpStepper extends MtpPart {
   private refresh: () => void = () => {};
   private onPage: ((event: KeyboardEvent) => void) | null = null;
+  private unwatch: () => void = () => {};
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
     this.onPage = null;
+    this.unwatch();
   }
 
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
@@ -1432,10 +1531,12 @@ export class MtpStepper extends MtpPart {
     }
     const spans = layout.spans;
     const n = spans.length;
-    // As a play's: one player, kept when another writer cancels it, so what it read stays read.
+    const targets = layout.targets;
     let player: Player | null = null;
     // The step it is at, or is playing to; 0 is before the first.
     let at = 0;
+    // Explore mode, as a play's (mtp-wjtd): no step is current, and "›" starts from state 0.
+    let exploring = true;
 
     // The player, held by this stepper, with the moves of the steps after j held from starting.
     const own = (j: number) => {
@@ -1445,20 +1546,55 @@ export class MtpStepper extends MtpPart {
       player.holdFrom(j);
     };
     const how = howOf(obj, true);
+    // A jump, and a start from explore mode, work out the state from state 0, whatever was
+    // written since.
+    const reset = () => {
+      rt.restore(targets);
+      player!.release();
+    };
     const go = (j: number) => {
       if (!activeOf(rt, id)) return;
       own(j);
       scheduler.pause(this);
-      if (scheduler.seek(this, j === 0 ? BEFORE : spans[j - 1]!.end, how)) at = j;
-      else player!.holdFrom(at);
+      if (scheduler.seek(this, j === 0 ? BEFORE : spans[j - 1]!.end, how, reset)) {
+        at = j;
+        exploring = false;
+      } else player!.holdFrom(at);
       this.refresh();
     };
-    const forward = () => {
-      if (!activeOf(rt, id) || at >= n) return;
-      if (player && scheduler.playerOf(this) !== player) {
-        resume();
+    const begin = () => {
+      own(1);
+      if (!scheduler.seek(this, spans[0]!.start, how, reset)) {
+        player!.holdFrom(at);
+        this.refresh();
         return;
       }
+      exploring = false;
+      at = 1;
+      scheduler.resume(this, how, spans[0]!.end);
+      this.refresh();
+    };
+    const explore = () => {
+      if (exploring) return;
+      exploring = true;
+      at = 0;
+      scheduler.letGo(this);
+      player = null;
+      this.refresh();
+    };
+    const end = spans[n - 1]!.end;
+    scheduler.watch(this, targets, () => {
+      const finished = player !== null && at === n && player.time >= end - 1e-9 * Math.max(1, end);
+      if (!finished) explore();
+    });
+    this.unwatch = () => scheduler.unwatch(this);
+    const forward = () => {
+      if (!activeOf(rt, id)) return;
+      if (exploring) {
+        begin();
+        return;
+      }
+      if (at >= n) return;
       own(at + 1);
       // A step still playing is ended at once, so each press moves on by one step.
       if (!scheduler.seek(this, spans[at]!.start, how)) {
@@ -1470,20 +1606,8 @@ export class MtpStepper extends MtpPart {
       scheduler.resume(this, how, spans[at - 1]!.end);
       this.refresh();
     };
-    // Another writer cancelled it, so it goes on from where it stopped, as a play does (mtp-ibem):
-    // a step cut off plays on over what it had left, and no move that had ended is written again.
-    const resume = () => {
-      moves(rt, id, this);
-      const p = player!;
-      const j = at > 0 && p.time < spans[at - 1]!.end ? at : at + 1;
-      p.holdFrom(j);
-      // From before the first step, the first starts at once.
-      if (scheduler.again(p, this, how, spans[j - 1]!.end, spans[j - 1]!.start)) at = j;
-      else p.holdFrom(at);
-      this.refresh();
-    };
     const backward = () => {
-      if (at > 0) go(at - 1);
+      if (!exploring && at > 0) go(at - 1);
     };
 
     const round = (name: string, icon: string, label: string, act: () => void) => {
@@ -1514,6 +1638,11 @@ export class MtpStepper extends MtpPart {
     const count = document.createElement("span");
     count.className = "mtp-count";
     count.setAttribute("aria-hidden", "true");
+    const ex = exploreButton(() => {
+      if (!activeOf(rt, id)) return;
+      moves(rt, id, this);
+      explore();
+    });
 
     // The keys of a play: the arrows go to the next step and back one.
     const keys: Record<string, () => void> = { ArrowRight: forward, ArrowLeft: backward };
@@ -1535,8 +1664,10 @@ export class MtpStepper extends MtpPart {
     this.refresh = () => {
       const running = scheduler.running(this);
       const active = activeOf(rt, id);
-      back.disabled = !active || at === 0;
-      next.disabled = !active || at === n;
+      back.disabled = !active || exploring || at === 0;
+      next.disabled = !active || (!exploring && at === n);
+      ex.disabled = !active;
+      ex.setAttribute("aria-pressed", String(exploring));
       dots.forEach((dot, j) => {
         dot.disabled = !active;
         dot.classList.toggle("mtp-passed", j + 1 < at);
@@ -1544,7 +1675,7 @@ export class MtpStepper extends MtpPart {
         else dot.removeAttribute("aria-current");
       });
       const label = labelOf(rt, id);
-      count.textContent = `${at} / ${n}`;
+      count.textContent = exploring ? "" : `${at} / ${n}`;
       group.setAttribute("aria-label", at ? `${label}: step ${at} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
       this.toggleAttribute("data-playing", running);
       // As a play's: a page shows what goes with each step by this attribute.
@@ -1552,11 +1683,13 @@ export class MtpStepper extends MtpPart {
       else this.removeAttribute("data-step");
       if (movedLastBy(rt, id, this)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        if (rt.value(id, "step") !== at) rt.write(id, "step", at);
+        // In explore mode its step is as it is at rest.
+        const step = exploring ? rt.atRest(id, "step") : at;
+        if (rt.value(id, "step") !== step) rt.write(id, "step", step);
       }
     };
     this.refresh();
-    this.replaceChildren(back, group, next, count);
+    this.replaceChildren(back, group, next, count, ex);
   }
 
   protected update(): void {

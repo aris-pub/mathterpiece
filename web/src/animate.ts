@@ -14,6 +14,9 @@ import type { Player } from "./player.ts";
 export interface How {
   reader: boolean;
   exclusive: boolean;
+  // Whether what it writes is part of the rest state, as an on-view's writes are: such a write
+  // puts no play or stepper in explore mode (mtp-wjtd).
+  rest?: boolean;
 }
 
 interface Running {
@@ -39,6 +42,9 @@ function ownCovers(target: string): string[] {
 
 export class Scheduler {
   private sources: Running[] = [];
+  // Plays and steppers, told of every write of what they move by another writer, whether or
+  // not they run: such a write puts one that has not finished into explore mode (mtp-wjtd).
+  private watchers: { source: object; reached: Set<string>; written: () => void }[] = [];
   // What moves a view's own state, such as a canvas fading something in: it writes nothing in
   // the model, so it never collides with a writer.
   private tickers: ((seconds: number) => boolean)[] = [];
@@ -62,6 +68,11 @@ export class Scheduler {
     return this.tickers.length > 0 || this.sources.some((s) => s.player && !s.paused);
   }
 
+  /** Whether a writer of the rest state, an on-view, still runs. */
+  resting(): boolean {
+    return this.sources.some((s) => s.how.rest && s.player && !s.paused);
+  }
+
   /** Moves view state with the clock; tick gives whether it has more to do. */
   addTicker(tick: (seconds: number) => boolean): void {
     this.tickers.push(tick);
@@ -76,30 +87,32 @@ export class Scheduler {
     return this.sources.find((s) => s.source === source)?.player ?? null;
   }
 
-  /** Starts a player for a source, from the beginning; gives false when it is refused. */
-  start(player: Player, source: object, how: How, from = 0): boolean {
+  /** Starts a player for a source, from the beginning, and gives false when it is refused. reset,
+   * when given, writes first, once the start is not refused. */
+  start(player: Player, source: object, how: How, from = 0, reset?: () => void): boolean {
     if (!this.claim(player.targets, source, how)) return false;
     this.forget(source);
     player.release();
-    this.run(player, source, how, from);
+    this.run(player, source, how, from, reset);
     return true;
   }
 
-  /** Plays on a player another writer cancelled, from where it stood, or from a later time when
-   * given, and to the time until when given: the moves it cut off start again from the values as
-   * they are now. Gives false when it is refused. */
-  again(player: Player, source: object, how: How, until?: number, from = player.time): boolean {
-    if (!this.claim(player.targets, source, how)) return false;
-    this.forget(source);
-    player.cut();
-    this.run(player, source, how, Math.max(from, player.time), until);
-    return true;
+  /** Tells written of every write by another source that reaches one of these targets and is
+   * not refused. */
+  watch(source: object, targets: string[], written: () => void): void {
+    this.watchers = this.watchers.filter((w) => w.source !== source);
+    this.watchers.push({ source, reached: this.reached(targets), written });
   }
 
-  private run(player: Player, source: object, how: How, from: number, until?: number): void {
-    this.sources.push({ source, player, reached: this.reached(player.targets), time: from, paused: false, until, how });
+  unwatch(source: object): void {
+    this.watchers = this.watchers.filter((w) => w.source !== source);
+  }
+
+  private run(player: Player, source: object, how: How, from: number, reset?: () => void): void {
+    this.sources.push({ source, player, reached: this.reached(player.targets), time: from, paused: false, how });
     // A seek that writes something tells the views already, as they stand now.
     this.heard = false;
+    if (reset) this.writeOrForget(source, reset);
     this.seekOrForget(player, source, from);
     if (!this.heard) this.redraw();
     this.wake();
@@ -107,8 +120,12 @@ export class Scheduler {
 
   // A player that throws while it writes holds its targets no longer.
   private seekOrForget(player: Player, source: object, time: number): void {
+    this.writeOrForget(source, () => player.seek(time));
+  }
+
+  private writeOrForget(source: object, write: () => void): void {
     try {
-      player.seek(time);
+      write();
     } catch (err) {
       this.forget(source);
       throw err;
@@ -165,8 +182,8 @@ export class Scheduler {
   }
 
   /** Moves a source's player to a time, cancelling every other writer of what it moves; gives
-   * false when it is refused. */
-  seek(source: object, time: number, how: How): boolean {
+   * false when it is refused. reset, when given, writes first, once the seek is not refused. */
+  seek(source: object, time: number, how: How, reset?: () => void): boolean {
     const s = this.sources.find((r) => r.source === source);
     if (!s?.player || !this.claim(s.player.targets, source, how)) return false;
     s.how = how;
@@ -174,7 +191,10 @@ export class Scheduler {
     this.heard = false;
     // A paused player writes nothing, so it holds no lock; a seek, as from a key, writes at once.
     const player = s.player;
-    this.locked(s.reached, how, () => this.seekOrForget(player, source, time));
+    this.locked(s.reached, how, () => {
+      if (reset) this.writeOrForget(source, reset);
+      this.seekOrForget(player, source, time);
+    });
     if (!this.heard) this.redraw();
     return true;
   }
@@ -191,6 +211,9 @@ export class Scheduler {
     for (const s of met) {
       this.forget(s.source);
       s.cancelled?.();
+    }
+    for (const w of how.rest ? [] : [...this.watchers]) {
+      if (w.source !== source && [...w.reached].some((t) => wanted.has(t))) w.written();
     }
     return true;
   }

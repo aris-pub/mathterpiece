@@ -1,5 +1,5 @@
 // Writers moving the same targets at the same time (docs/reference.md, "Concurrency"; the author,
-// 2026-11-11, mtp-vs5d, mtp-s7z9, mtp-ddi1): whatever the reader is doing now, or did last, wins.
+// 2026-11-11, mtp-vs5d, mtp-s7z9, mtp-wjtd): whatever the reader is doing now, or did last, wins.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Scheduler } from "../src/animate.ts";
 import { type MtpModel, define, frames } from "../src/elements.ts";
@@ -169,28 +169,6 @@ describe("a play the reader started", () => {
     model.markSeen(rt.id("v"));
     pass(1.5);
     expect(v("k")).toBe(3);
-  });
-
-  it("cancelled, goes on from where it stopped, its move starting again from the value the slider left", () => {
-    const [, , v] = page(`<mtp-play model="m" name="tour"></mtp-play><mtp-slider model="m" name="sl"></mtp-slider>`);
-    playButton("tour").click();
-    pass(1);
-    expect(v("k")).toBeCloseTo(5);
-    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
-    input.value = "200";
-    input.dispatchEvent(new Event("input"));
-    pass(0.5);
-    expect(v("k")).toBe(2);
-    expect(v("tour", "playing")).toBe(false);
-    playButton("tour").click();
-    expect(v("tour", "playing")).toBe(true);
-    // From 2 at the press to 10 over the second the move had left.
-    expect(v("k")).toBeCloseTo(2);
-    pass(0.5);
-    expect(v("k")).toBeCloseTo(6);
-    pass(0.6);
-    expect(v("k")).toBe(10);
-    expect(v("tour", "playing")).toBe(false);
   });
 });
 
@@ -390,91 +368,6 @@ describe("an exclusive on-pointermove", () => {
   });
 });
 
-describe("a stepper another writer cancelled", () => {
-  // mtp-ibem: it goes on from where it stopped; the moves that had ended are not written again,
-  // and the move cut off starts again from the value at the press, over the time it had left.
-  const page3 = () => page(`<mtp-stepper model="m" name="walk"></mtp-stepper><mtp-slider model="m" name="sl"></mtp-slider>` + buttons("set-j"));
-  const step = (which: string) => (document.querySelector(`mtp-stepper .mtp-${which}`) as HTMLButtonElement).click();
-  const count = () => document.querySelector("mtp-stepper .mtp-count")!.textContent;
-  const slide = (to: number) => {
-    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
-    input.value = String(to);
-    input.dispatchEvent(new Event("input"));
-  };
-
-  it("partway through a step, plays that step on from where it stopped over the time it had left", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(1.2);
-    step("next");
-    pass(1);
-    expect(v("k")).toBeCloseTo(5);
-    slide(200);
-    expect(v("k")).toBe(2);
-    expect(v("walk", "playing")).toBe(false);
-    press("set-j");
-    pass(0.5);
-    expect(v("j")).toBe(1);
-    step("next");
-    expect(count()).toBe("2 / 3");
-    expect(v("walk", "playing")).toBe(true);
-    expect(v("j")).toBe(1);
-    expect(v("k")).toBeCloseTo(2);
-    pass(0.5);
-    expect(v("k")).toBeCloseTo(6);
-    pass(0.6);
-    expect(v("k")).toBe(10);
-    expect(v("j")).toBe(1);
-    expect(v("walk", "playing")).toBe(false);
-    expect(v("walk", "step")).toBe(2);
-    step("next");
-    expect(count()).toBe("3 / 3");
-    pass(1.2);
-    expect([v("j"), v("k")]).toEqual([7, 10]);
-  });
-
-  it("between two steps, plays the next step without writing the ended ones again", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(1.2);
-    expect(v("j")).toBe(5);
-    press("set-j");
-    expect(v("j")).toBe(1);
-    step("next");
-    expect(count()).toBe("2 / 3");
-    pass(2.2);
-    expect([v("j"), v("k")]).toEqual([1, 10]);
-  });
-
-  it("before the first step, plays the first step at once", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(0.5);
-    press("set-j");
-    step("prev");
-    expect(count()).toBe("0 / 3");
-    press("set-j");
-    expect(v("j")).toBe(1);
-    step("next");
-    pass(0.5);
-    expect(v("j")).toBeCloseTo(3);
-    pass(0.6);
-    expect(v("j")).toBe(5);
-  });
-
-  it("goes back with \u2039 to the end of the step before, as documented", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(1.2);
-    step("next");
-    pass(1);
-    slide(200);
-    step("prev");
-    expect(count()).toBe("1 / 3");
-    expect([v("j"), v("k")]).toEqual([5, 0]);
-  });
-});
-
 describe("a shape whose position is worked out from other attributes", () => {
   // mtp-gzs9: writing its x, y or pos writes those attributes, so the writers meet.
   it("a polyline's exclusive writer of x refuses a writer of its points", () => {
@@ -538,5 +431,428 @@ describe("a shape whose position is worked out from other attributes", () => {
     expect(meets(rt, `${pl}:x`, `${pl}:y`)).toBe(false);
     expect(meets(rt, `${ln}:from`, `${ln}:to`)).toBe(false);
     expect(meets(rt, `${pl}:pos`, `${pl}:y`)).toBe(true);
+  });
+});
+
+describe("explore mode", () => {
+  // mtp-wjtd: a play or stepper is in explore mode at rest, and goes into it again when another
+  // writer writes what it moves before it has finished. Then the next play, "›" or right arrow
+  // starts from state 0, and every jump is worked out from state 0.
+  const both = () =>
+    page(
+      `<mtp-play model="m" name="trip"></mtp-play><mtp-stepper model="m" name="walk"></mtp-stepper>` +
+        `<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>` +
+        buttons("set-j"),
+    );
+  const play = () => playButton("trip");
+  const exploreOf = (tag: string) => document.querySelector(`${tag} .mtp-explore`) as HTMLButtonElement;
+  const exploring = (tag: string) => exploreOf(tag).getAttribute("aria-pressed") === "true";
+  const el = (tag: string) => document.querySelector(tag) as HTMLElement;
+  const bars = () => [...document.querySelectorAll("mtp-play .mtp-bar")] as HTMLElement[];
+  const fills = () => bars().map((b) => Number(b.style.getPropertyValue("--u")));
+  const line = () => document.querySelector("mtp-play .mtp-now")!.textContent;
+  const step = (which: string) => (document.querySelector(`mtp-stepper .mtp-${which}`) as HTMLButtonElement).click();
+  const dots = () => [...document.querySelectorAll("mtp-stepper .mtp-dot")] as HTMLButtonElement[];
+  const states = () => dots().map((d) => (d.getAttribute("aria-current") === "step" ? "now" : d.classList.contains("mtp-passed") ? "done" : "later"));
+  const count = () => document.querySelector("mtp-stepper .mtp-count")!.textContent;
+  const key = (tag: string, k: string) => el(tag).dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true }));
+  const slide = (to: number) => {
+    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
+    input.value = String(to);
+    input.dispatchEvent(new Event("input"));
+  };
+  // happy-dom lays nothing out: trip's bars are 100, 200 and 100 pixels wide, 4 apart.
+  const lay = () => {
+    const rect = (left: number, width: number) => () => ({ left, width, right: left + width, top: 0, bottom: 4, height: 4, x: left, y: 0, toJSON: () => ({}) }) as DOMRect;
+    const [a, b, c] = bars();
+    a!.getBoundingClientRect = rect(0, 100);
+    b!.getBoundingClientRect = rect(104, 200);
+    c!.getBoundingClientRect = rect(308, 100);
+  };
+  const track = (type: string, x: number) =>
+    document.querySelector("mtp-play .mtp-bars")!.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: 2, bubbles: true, pointerId: 1, button: 0 }));
+
+  describe("a play", () => {
+    it("is in explore mode before it is touched, showing no step", () => {
+      const [, , v] = both();
+      expect(exploring("mtp-play")).toBe(true);
+      expect(exploreOf("mtp-play").textContent).toBe("Explore");
+      expect(fills()).toEqual([0, 0, 0]);
+      expect(line()).toBe("");
+      expect(el("mtp-play").hasAttribute("data-step")).toBe(false);
+      expect(v("trip", "playing")).toBe(false);
+    });
+
+    it("holds the time within its animation in its time, and its rest value in explore mode", () => {
+      const [, , v] = both();
+      expect(v("trip", "time")).toBe(0);
+      play().click();
+      pass(0.5);
+      expect(v("trip", "time")).toBeCloseTo(0.5);
+      press("set-j");
+      expect(v("trip", "time")).toBe(0);
+      play().click();
+      pass(4.2);
+      expect(v("trip", "time")).toBe(4);
+    });
+
+    it("puts the Explore button after its bars", () => {
+      both();
+      expect(el("mtp-play").lastElementChild).toBe(exploreOf("mtp-play"));
+    });
+
+    it("leaves explore mode when played, and is not in it once it has finished", () => {
+      const [, , v] = both();
+      play().click();
+      expect(exploring("mtp-play")).toBe(false);
+      pass(4.2);
+      expect([v("j"), v("k")]).toEqual([7, 10]);
+      expect(v("trip", "playing")).toBe(false);
+      press("set-j");
+      expect(exploring("mtp-play")).toBe(false);
+      expect(fills()).toEqual([1, 1, 1]);
+      expect(line()).toBe("3 / 3");
+    });
+
+    it("running, goes into explore mode when a slider writes what it moves, forgetting what it played", () => {
+      const [, , v] = both();
+      const rest = v("trip", "step");
+      play().click();
+      pass(2);
+      expect(v("trip", "step")).toBe(1);
+      slide(200);
+      expect(v("k")).toBe(2);
+      expect(exploring("mtp-play")).toBe(true);
+      expect(fills()).toEqual([0, 0, 0]);
+      expect(line()).toBe("");
+      expect(el("mtp-play").hasAttribute("data-step")).toBe(false);
+      expect(v("trip", "playing")).toBe(false);
+      expect(v("trip", "step")).toBe(rest);
+      pass(1);
+      expect(v("k")).toBe(2);
+    });
+
+    it("paused, goes into explore mode when a button writes what it moves", () => {
+      both();
+      play().click();
+      pass(0.5);
+      play().click();
+      expect(exploring("mtp-play")).toBe(false);
+      press("set-j");
+      expect(exploring("mtp-play")).toBe(true);
+    });
+
+    it("does not go into explore mode for a write that is refused", () => {
+      const [model, rt, v] = both();
+      play().click();
+      pass(1.5);
+      model.markSeen(rt.id("v"));
+      pass(0.5);
+      expect(exploring("mtp-play")).toBe(false);
+      expect(v("trip", "playing")).toBe(true);
+    });
+
+    it("in explore mode, a press sets state 0 at once and plays from step 1", () => {
+      const [, , v] = both();
+      play().click();
+      pass(2);
+      press("set-j");
+      expect(v("j")).toBe(1);
+      expect(v("k")).toBeCloseTo(5);
+      play().click();
+      expect([v("j"), v("k")]).toEqual([0, 0]);
+      expect(v("trip", "playing")).toBe(true);
+      pass(0.5);
+      expect(v("j")).toBeCloseTo(2.5);
+      pass(3.7);
+      expect([v("j"), v("k")]).toEqual([7, 10]);
+    });
+
+    it("in explore mode, Space plays as a press does", () => {
+      const [, , v] = both();
+      play().click();
+      pass(2);
+      press("set-j");
+      key("mtp-play", " ");
+      expect([v("j"), v("k")]).toEqual([0, 0]);
+      expect(v("trip", "playing")).toBe(true);
+    });
+
+    it("in explore mode, the right arrow jumps to the start of step 1, worked out from state 0", () => {
+      const [, , v] = both();
+      play().click();
+      pass(2);
+      press("set-j");
+      key("mtp-play", "ArrowRight");
+      expect([v("j"), v("k")]).toEqual([0, 0]);
+      expect(v("trip", "playing")).toBe(false);
+      expect(exploring("mtp-play")).toBe(false);
+      expect(line()).toBe("1 / 3");
+      key("mtp-play", "ArrowRight");
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+    });
+
+    it("in explore mode, the left arrow does nothing", () => {
+      const [, , v] = both();
+      play().click();
+      pass(2);
+      press("set-j");
+      key("mtp-play", "ArrowLeft");
+      expect(v("j")).toBe(1);
+      expect(v("k")).toBeCloseTo(5);
+      expect(exploring("mtp-play")).toBe(true);
+    });
+
+    it("the Explore button pauses a running play and goes into explore mode; pressed again it does nothing", () => {
+      const [, , v] = both();
+      play().click();
+      pass(0.5);
+      exploreOf("mtp-play").click();
+      expect(exploring("mtp-play")).toBe(true);
+      expect(v("trip", "playing")).toBe(false);
+      const j = v("j");
+      pass(1);
+      expect(v("j")).toBe(j);
+      exploreOf("mtp-play").click();
+      expect(exploring("mtp-play")).toBe(true);
+      expect(v("j")).toBe(j);
+    });
+
+    it("a tap on a bar sets the state at that step's start worked out from state 0, whatever came before", () => {
+      const [, , v] = both();
+      lay();
+      play().click();
+      pass(2);
+      press("set-j");
+      slide(200);
+      track("pointerdown", 150);
+      track("pointerup", 150);
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+      expect(exploring("mtp-play")).toBe(false);
+      expect(el("mtp-play").getAttribute("data-step")).toBe("2");
+      expect(line()).toBe("2 / 3");
+    });
+
+    it("a drag along the bars and the arrow keys jump to states worked out from state 0", () => {
+      const [, , v] = both();
+      lay();
+      press("set-j");
+      track("pointerdown", 150);
+      track("pointermove", 204);
+      expect(v("j")).toBe(5);
+      expect(v("k")).toBeCloseTo(5);
+      track("pointerup", 204);
+      expect(exploring("mtp-play")).toBe(false);
+      key("mtp-play", "ArrowRight");
+      expect([v("j"), v("k")]).toEqual([5, 10]);
+      key("mtp-play", "ArrowLeft");
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+      key("mtp-play", "ArrowLeft");
+      expect([v("j"), v("k")]).toEqual([0, 0]);
+    });
+  });
+
+  describe("a stepper", () => {
+    it("is in explore mode before it is touched, with no step and an empty count", () => {
+      const [, , v] = both();
+      expect(exploring("mtp-stepper")).toBe(true);
+      expect(states()).toEqual(["later", "later", "later"]);
+      expect(count()).toBe("");
+      expect(el("mtp-stepper").hasAttribute("data-step")).toBe(false);
+      expect([v("walk", "step"), v("walk", "playing")]).toEqual([0, false]);
+      expect((document.querySelector("mtp-stepper .mtp-prev") as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("puts the Explore button after › and the count", () => {
+      both();
+      const parts = [...el("mtp-stepper").children].map((c) => c.className);
+      expect(parts.slice(-3)).toEqual(["mtp-step-button mtp-next", "mtp-count", "mtp-explore"]);
+    });
+
+    it("partway through a step, goes into explore mode when a slider writes what it moves", () => {
+      const [, , v] = both();
+      step("next");
+      pass(1.2);
+      step("next");
+      pass(1);
+      slide(200);
+      expect(exploring("mtp-stepper")).toBe(true);
+      expect(states()).toEqual(["later", "later", "later"]);
+      expect(count()).toBe("");
+      expect(el("mtp-stepper").hasAttribute("data-step")).toBe(false);
+      expect([v("walk", "step"), v("walk", "playing")]).toEqual([0, false]);
+      expect((document.querySelector("mtp-stepper .mtp-prev") as HTMLButtonElement).disabled).toBe(true);
+      pass(1);
+      expect(v("k")).toBe(2);
+    });
+
+    it("between two steps, goes into explore mode when a button writes what it moves", () => {
+      both();
+      step("next");
+      pass(1.2);
+      expect(count()).toBe("1 / 3");
+      press("set-j");
+      expect(exploring("mtp-stepper")).toBe(true);
+      expect(count()).toBe("");
+    });
+
+    it("is not in explore mode once it has finished", () => {
+      both();
+      for (let k = 0; k < 3; k++) {
+        step("next");
+        pass(2.2);
+      }
+      press("set-j");
+      expect(exploring("mtp-stepper")).toBe(false);
+      expect(count()).toBe("3 / 3");
+    });
+
+    it("does not go into explore mode for a write that is refused", () => {
+      const [model, rt, v] = both();
+      step("next");
+      pass(1.2);
+      step("next");
+      pass(0.5);
+      model.markSeen(rt.id("v"));
+      expect(exploring("mtp-stepper")).toBe(false);
+      pass(2);
+      expect(v("k")).toBe(10);
+    });
+
+    it("in explore mode, › sets state 0 at once, plays step 1 and stops", () => {
+      const [, , v] = both();
+      step("next");
+      pass(1.2);
+      step("next");
+      pass(1);
+      slide(200);
+      step("next");
+      expect([v("j"), v("k")]).toEqual([0, 0]);
+      expect(exploring("mtp-stepper")).toBe(false);
+      expect(count()).toBe("1 / 3");
+      pass(0.5);
+      expect(v("j")).toBeCloseTo(2.5);
+      pass(1);
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+      expect([v("walk", "step"), v("walk", "playing")]).toEqual([1, false]);
+    });
+
+    it("in explore mode, the right arrow plays step 1 and the left arrow does nothing", () => {
+      const [, , v] = both();
+      step("next");
+      pass(1.2);
+      press("set-j");
+      key("mtp-stepper", "ArrowLeft");
+      expect([v("j"), count()]).toEqual([1, ""]);
+      key("mtp-stepper", "ArrowRight");
+      expect(v("j")).toBe(0);
+      expect(count()).toBe("1 / 3");
+    });
+
+    it("a dot sets the state at its step's end worked out from state 0, whatever came before", () => {
+      const [, , v] = both();
+      step("next");
+      pass(1.2);
+      press("set-j");
+      slide(300);
+      dots()[1]!.click();
+      expect([v("j"), v("k")]).toEqual([5, 10]);
+      expect(exploring("mtp-stepper")).toBe(false);
+      expect(count()).toBe("2 / 3");
+      expect(states()).toEqual(["done", "now", "later"]);
+      press("set-j");
+      dots()[0]!.click();
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+    });
+
+    it("‹ jumps to the end of the step before, worked out from state 0", () => {
+      const [, , v] = both();
+      dots()[2]!.click();
+      expect([v("j"), v("k")]).toEqual([7, 10]);
+      step("prev");
+      expect([v("j"), v("k")]).toEqual([5, 10]);
+      step("prev");
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+      step("prev");
+      expect([v("j"), v("k")]).toEqual([0, 0]);
+      expect(count()).toBe("0 / 3");
+      expect(exploring("mtp-stepper")).toBe(false);
+    });
+
+    it("the Explore button stops a step that plays and goes into explore mode", () => {
+      const [, , v] = both();
+      step("next");
+      pass(0.5);
+      exploreOf("mtp-stepper").click();
+      expect(exploring("mtp-stepper")).toBe(true);
+      expect(v("walk", "playing")).toBe(false);
+      const j = v("j");
+      pass(1);
+      expect(v("j")).toBe(j);
+      exploreOf("mtp-stepper").click();
+      expect(exploring("mtp-stepper")).toBe(true);
+    });
+
+    it("goes into explore mode when another play writes what it moves", () => {
+      both();
+      step("next");
+      pass(1.2);
+      play().click();
+      expect(exploring("mtp-stepper")).toBe(true);
+    });
+  });
+
+  // The author, 2026-11-12: state 0, the rest state, which plays and steppers start from and
+  // jumps are worked out from, is the state after the on-views have played.
+  describe("state 0, the rest state", () => {
+    it("takes in what an on-view writes, which puts no control in explore mode", () => {
+      const [model, rt, v] = both();
+      dots()[0]!.click();
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+      model.markSeen(rt.id("v"));
+      pass(1.5);
+      expect(v("k")).toBe(4);
+      expect(exploring("mtp-stepper")).toBe(false);
+      expect(count()).toBe("1 / 3");
+      dots()[1]!.click();
+      expect([v("j"), v("k")]).toEqual([5, 10]);
+      dots()[0]!.click();
+      expect([v("j"), v("k")]).toEqual([5, 4]);
+    });
+
+    it("is where a play starts from out of explore mode", () => {
+      const [model, rt, v] = both();
+      model.markSeen(rt.id("v"));
+      pass(1.5);
+      slide(800);
+      play().click();
+      expect([v("j"), v("k")]).toEqual([0, 4]);
+      pass(2.1);
+      expect(v("k")).toBeCloseTo(7.3);
+    });
+
+    it("is told by the model once every on-view of a view on the page has played", async () => {
+      const [model, rt] = both();
+      await Promise.resolve();
+      expect(model.atRest()).toBe(false);
+      expect(model.hasAttribute("data-mtp-rest")).toBe(false);
+      let told = false;
+      void model.whenRest().then(() => (told = true));
+      model.markSeen(rt.id("v"));
+      pass(0.5);
+      await Promise.resolve();
+      expect([model.atRest(), told]).toEqual([false, false]);
+      pass(1);
+      await Promise.resolve();
+      expect([model.atRest(), told]).toEqual([true, true]);
+      expect(model.hasAttribute("data-mtp-rest")).toBe(true);
+    });
+
+    it("is there at once on a page whose views have no on-view", async () => {
+      const [model] = page(`<mtp-stepper model="m" name="walk"></mtp-stepper>`);
+      await Promise.resolve();
+      expect(model.atRest()).toBe(true);
+      expect(model.hasAttribute("data-mtp-rest")).toBe(true);
+    });
   });
 });

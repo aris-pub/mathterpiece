@@ -3660,6 +3660,8 @@ class _Compiler:
             obj.data["rest"] = self.seconds(rest, self.cscope)
         obj.attrs["playing"] = Attribute(BOOL, False)
         obj.attrs["step"] = Attribute(INT, 0)
+        # The time within its animation, in seconds from the start (the author, 2026-11-12).
+        obj.attrs["time"] = Attribute(REAL, 0)
         self.active(obj, items)
         self.writer(obj, items, written)
 

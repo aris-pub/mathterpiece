@@ -560,9 +560,9 @@ describe("a play's bar", () => {
     expect(line() ?? "").toBe("");
   });
 
-  it("counts the steps at rest, and names the step playing", () => {
+  it("shows no count at rest, in explore mode (mtp-wjtd), and names the step playing", () => {
     const [, , v] = tour();
-    expect(line()).toBe("2 steps");
+    expect(line()).toBe("");
     button().click();
     expect(button().getAttribute("aria-label")).toBe("pause");
     expect(v("tour", "playing")).toBe(true);
@@ -819,8 +819,8 @@ describe("a stepper", () => {
   };
 
   // The author, 2026-11-10: two copies of one stepper on a page (a block pinned beside the text
-  // copies it) are two writers. The newest wins and cancels the other, which stops writing and
-  // keeps the step it showed; before this, each wrote its own step back and the page froze.
+  // copies it) are two writers. The newest wins and puts the other in explore mode (mtp-wjtd), where it
+  // stops writing and shows no step. Before this, each wrote its own step back and the page froze.
   it("two copies of one stepper: the one moved last writes, and the page does not freeze", () => {
     const [, rt, v] = page(
       `<mtp-stepper model="m" name="hints"></mtp-stepper><mtp-stepper model="m" name="hints"></mtp-stepper>`,
@@ -837,7 +837,7 @@ describe("a stepper", () => {
     pass(5);
     expect(v("hints", "step")).toBe(1);
     expect(second!.querySelector(".mtp-count")!.textContent).toBe("1 / 3");
-    expect(first!.querySelector(".mtp-count")!.textContent).toBe("0 / 3");
+    expect(first!.querySelector(".mtp-count")!.textContent).toBe("");
     (first!.querySelector(".mtp-next") as HTMLButtonElement).click();
     pass(5);
     expect(v("hints", "step")).toBe(1);
@@ -857,14 +857,17 @@ describe("a stepper", () => {
 
 
   // The author, 2026-11-10: the count beside the dots, the step and the number of steps, "0 / 3"
-  // before the first step, then "2 / 3".
+  // at step 0, then "2 / 3". At rest, in explore mode, it is empty (mtp-wjtd).
   it("counts the steps beside the dots", () => {
     hints();
     const count = () => document.querySelector("mtp-stepper .mtp-count")?.textContent;
-    expect(count()).toBe("0 / 3");
+    expect(count()).toBe("");
     dots()[1]!.click();
     pass(0.1);
     expect(count()).toBe("2 / 3");
+    back().click();
+    back().click();
+    expect(count()).toBe("0 / 3");
   });
   it("shows a back button, a dot per step and a next button, before the first step", () => {
     const [, , v] = hints();
@@ -878,7 +881,7 @@ describe("a stepper", () => {
     expect(group().getAttribute("role")).toBe("group");
     expect(group().getAttribute("aria-label")).toBe("hints: 3 steps");
     expect(el().hasAttribute("data-step")).toBe(false);
-    expect(el().textContent).toBe("0 / 3");
+    expect(document.querySelector("mtp-stepper .mtp-count")!.textContent).toBe("");
     expect([v("hints", "step"), v("a"), v("b"), v("k")]).toEqual([0, 0, 0, 0]);
   });
 
@@ -1008,7 +1011,7 @@ describe("a stepper", () => {
     expect(v("hints", "step")).toBe(0);
   });
 
-  it("is cancelled by another writer moving what it moves, keeping its step", () => {
+  it("is cancelled by another writer moving what it moves, and goes into explore mode (mtp-wjtd)", () => {
     const [, , v] = page(`<mtp-stepper model="m" name="hints"></mtp-stepper><mtp-play model="m" name="tour"></mtp-play>`, doc("stepper"));
     dots()[0]!.click();
     next().click();
@@ -1017,15 +1020,13 @@ describe("a stepper", () => {
     pass(0.1);
     pass(2);
     expect(v("k")).toBe(9);
-    expect([v("hints", "step"), v("hints", "playing")]).toEqual([2, false]);
-    // "›" plays the step cut off on from where it stopped, from 9 to 2 over the half second it had
-    // left (mtp-ibem).
+    expect([v("hints", "step"), v("hints", "playing")]).toEqual([0, false]);
+    expect(states()).toEqual(["later", "later", "later"]);
+    // "›" sets state 0 and plays step 1.
     next().click();
-    expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([9, 2, true]);
+    expect([v("a"), v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([1, 0, 1, true]);
     pass(0.6);
-    expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([2, 2, false]);
-    next().click();
-    expect(v("hints", "step")).toBe(3);
+    expect([v("a"), v("b"), v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([1, 1, 0, 1, false]);
   });
 
   describe("keys", () => {

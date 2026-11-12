@@ -27,6 +27,12 @@ class TestControls:
         p = model(f"{K} (play p {MOVE} (buttons true))").get("p")
         assert p.attrs["buttons"].value is True
         assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, 0)
+        # The time within its animation, in seconds from the start (the author, 2026-11-12).
+        assert p.attrs["time"].value == 0
+
+    def test_a_play_time_is_readable(self):
+        d = model(f"{K} (play p {MOVE}) (real later (+ p.time 1))")
+        assert d.get("later") is not None
 
     def test_a_play_rests_between_its_steps(self):
         # mtp-wfrs: (rest t) pauses t seconds between each pair of steps.

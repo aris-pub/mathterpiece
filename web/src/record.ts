@@ -40,7 +40,7 @@ html.mtp-recording, html.mtp-recording * { cursor: none !important; }
 .mtp-record-frame mtp-canvas { display: block; flex: none; width: 100%; margin: 0 auto; }
 .mtp-record-frame mtp-canvas svg { display: block; width: 100%; height: auto; }
 .mtp-record-frame mtp-play { min-width: 0; zoom: 1.25; }
-.mtp-record-frame mtp-play .mtp-play-button { display: none; }
+.mtp-record-frame mtp-play .mtp-play-button, .mtp-record-frame mtp-play .mtp-explore { display: none; }
 .mtp-record-frame mtp-play .mtp-now { font-size: 1rem; }
 /* A viewer cannot press the switch of a view with a quiet mode, and the play shows whether its
    view is quiet or not. */
