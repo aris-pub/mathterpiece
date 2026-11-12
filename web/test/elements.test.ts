@@ -731,13 +731,13 @@ describe("a play's bar", () => {
       expect(fills()).toEqual([1, 0]);
       key(track(), "ArrowLeft");
       expect(v("k")).toBe(0);
-      expect(line()).toBe("1 / 2 · Grow");
+      expect(line()).toBe("0 / 2");
     });
 
-    it("goes to the first step's start from rest", () => {
+    it("goes to step 0, in state 0, from rest (the author, 2026-11-12)", () => {
       const [, , v] = tour();
       key(track(), "ArrowRight");
-      expect(line()).toBe("1 / 2 · Grow");
+      expect(line()).toBe("0 / 2");
       expect(v("k")).toBe(0);
     });
 

@@ -1216,6 +1216,9 @@ function takesKeys(el: EventTarget | null): boolean {
 }
 // What has the keys of a play: on a page with only one, they work from anywhere on it.
 const KEYED = "mtp-play, mtp-stepper";
+// A time before the first move starts: seeking to it applies none, not even one that takes no
+// time, as a seek to 0 would. A play or a stepper standing there is at step 0, in state 0.
+const BEFORE = -1;
 
 // A play's or a stepper's Explore button (mtp-wjtd), on while the control is in explore mode.
 function exploreButton(act: () => void): HTMLButtonElement {
@@ -1301,21 +1304,24 @@ export class MtpPlay extends MtpPart {
     // Whatever the reader does to a play makes it the reader's, even one autoplay started.
     const how = howOf(obj, true);
     // A jump sets the state at that time: state 0 with every move up to then applied, whatever
-    // was written since.
+    // was written since. A paused play jumped to its start stands at step 0, in state 0 exactly
+    // (the author, 2026-11-12). A running one plays on from its start at once.
     const seek = (t: number) => {
       const p = own();
       const reset = () => {
         rt.restore(targets);
         p.release();
       };
-      if (scheduler.seek(this, t, how, reset)) exploring = false;
+      const at = t <= 0 && !scheduler.running(this) ? BEFORE : t;
+      if (scheduler.seek(this, at, how, reset)) exploring = false;
       this.refresh();
     };
+    const atZero = () => !exploring && player !== null && player.time < 0;
     // A new player, kept only when it starts, so a refused press leaves the bars as they were.
-    // From explore mode it starts from state 0.
+    // From explore mode, and from step 0, it starts from state 0.
     const fresh = (by: How) => {
       const next = playerFor(rt, obj);
-      const reset = exploring ? () => rt.restore(targets) : undefined;
+      const reset = exploring || atZero() ? () => rt.restore(targets) : undefined;
       if (next && scheduler.start(next, this, by, 0, reset)) {
         player = next;
         exploring = false;
@@ -1332,11 +1338,16 @@ export class MtpPlay extends MtpPart {
       if (!player?.done) explore();
     });
     this.unwatch = () => scheduler.unwatch(this);
+    // From step 0 it plays from the start at once, not after the time before the first move.
+    const playOn = () => {
+      if (atZero()) fresh(how);
+      else scheduler.resume(this, how);
+    };
     const toggle = () => {
       if (!activeOf(rt, id)) return;
       if (exploring) fresh(how);
       else if (scheduler.running(this)) scheduler.pause(this);
-      else if (player && !player.done) scheduler.resume(this, how);
+      else if (player && !player.done) playOn();
       else fresh(how);
       moves(rt, id, this);
       this.refresh();
@@ -1351,10 +1362,10 @@ export class MtpPlay extends MtpPart {
     // Keys (mtp-yhau): Space plays and pauses; the arrows go to the next stop or back one. The
     // stops are the starts of the steps and the end, so a rest is skipped.
     const stops = [...spans.map((s) => s.start), spans.at(-1)!.end];
-    // In explore mode no stop is current: the right arrow jumps to the first, and the left arrow
-    // does nothing.
+    // In explore mode no stop is current: the right arrow goes to step 0, in state 0, and the left
+    // arrow does nothing.
     const next = () => {
-      const t = player && !exploring ? player.position : -1;
+      const t = player && !exploring ? Math.max(player.position, 0) : -1;
       const s = stops.find((x) => x > t + 1e-6);
       if (s !== undefined) seek(s);
     };
@@ -1425,7 +1436,7 @@ export class MtpPlay extends MtpPart {
       track.classList.remove("mtp-dragging");
       if (tap && !moved) seek(spans[nearest(event.clientX)]!.start);
       else if (moved) seek(timeAt(event.clientX));
-      if (playing) scheduler.resume(this, how);
+      if (playing) playOn();
       this.refresh();
     };
     track.addEventListener("pointerup", (event) => release(event, true));
@@ -1459,12 +1470,14 @@ export class MtpPlay extends MtpPart {
       const n = spans.length;
       const k = stepAt(t);
       const name = names[k] ?? null;
-      const text = shown ? `${k + 1} / ${n}${name ? ` · ${name}` : ""}` : "";
+      // At step 0, before the first move, no step has started.
+      const zero = shown !== null && t < 0;
+      const text = shown ? (zero ? `0 / ${n}` : `${k + 1} / ${n}${name ? ` · ${name}` : ""}`) : "";
       line.textContent = text;
       track.setAttribute("aria-label", labelOf(rt, id));
-      track.setAttribute("aria-valuenow", String(shown ? k + 1 : 0));
+      track.setAttribute("aria-valuenow", String(shown && !zero ? k + 1 : 0));
       // A page shows what goes with each step (a question under the figure, say) by this attribute.
-      if (shown) this.setAttribute("data-step", String(k + 1));
+      if (shown && !zero) this.setAttribute("data-step", String(k + 1));
       else this.removeAttribute("data-step");
       track.setAttribute("aria-valuetext", text || `${n} ${n === 1 ? "step" : "steps"}`);
       if (movedLastBy(rt, id, this)) {
@@ -1502,9 +1515,6 @@ export class MtpPlay extends MtpPart {
 // A stepper's buttons' icons, drawn as the play button's are.
 const BACK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.8 3.2 5.1 8l4.7 4.8 1.4-1.4L7.9 8l3.3-3.4z"/></svg>';
 const NEXT_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 3.2 10.9 8l-4.7 4.8-1.4-1.4L8.1 8 4.8 4.6z"/></svg>';
-// A time before the first move starts: seeking to it applies none, not even one that takes no
-// time, as a seek to 0 would.
-const BEFORE = -1;
 
 /**
  * A stepper (docs/reference.md, "Controls"; the author, 2026-11-10): a play with no clock. "›"

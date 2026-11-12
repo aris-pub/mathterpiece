@@ -55,3 +55,9 @@
     (move j (to 5) (duration 1))
     (move k (to 10) (duration 2))
     (move j (to 7) (duration 1))))
+; A play whose step 1 starts with a move that takes no time, so the start of step 1 is not
+; state 0.
+(play hop (buttons true)
+  (animation
+    (in-order (move j (to 1) (duration 0)) (move j (to 5) (duration 1)))
+    (move k (to 10) (duration 2))))

@@ -578,7 +578,7 @@ describe("explore mode", () => {
       expect(v("trip", "playing")).toBe(true);
     });
 
-    it("in explore mode, the right arrow jumps to the start of step 1, worked out from state 0", () => {
+    it("in explore mode, the right arrow sets state 0 and stands at step 0", () => {
       const [, , v] = both();
       play().click();
       pass(2);
@@ -587,9 +587,77 @@ describe("explore mode", () => {
       expect([v("j"), v("k")]).toEqual([0, 0]);
       expect(v("trip", "playing")).toBe(false);
       expect(exploring("mtp-play")).toBe(false);
-      expect(line()).toBe("1 / 3");
+      expect(line()).toBe("0 / 3");
       key("mtp-play", "ArrowRight");
       expect([v("j"), v("k")]).toEqual([5, 0]);
+    });
+
+    // The author, 2026-11-12: a play stands at step 0, out of explore mode, in state 0 exactly,
+    // with no move of step 1 done, not even one that takes no time.
+    describe("at step 0", () => {
+      const hop = () => page(`<mtp-play model="m" name="hop"></mtp-play>` + buttons("set-j"));
+      const lay2 = () => {
+        const rect = (left: number, width: number) => () => ({ left, width, right: left + width, top: 0, bottom: 4, height: 4, x: left, y: 0, toJSON: () => ({}) }) as DOMRect;
+        const [a, b] = bars();
+        a!.getBoundingClientRect = rect(0, 100);
+        b!.getBoundingClientRect = rect(104, 200);
+      };
+
+      it("is where the right arrow goes from explore mode, showing step 0 and nothing played", () => {
+        const [, , v] = hop();
+        key("mtp-play", "ArrowRight");
+        expect([v("j"), v("k")]).toEqual([0, 0]);
+        expect(exploring("mtp-play")).toBe(false);
+        expect(line()).toBe("0 / 2");
+        expect(fills()).toEqual([0, 0]);
+        expect(el("mtp-play").hasAttribute("data-step")).toBe(false);
+        expect([v("hop", "step"), v("hop", "time"), v("hop", "playing")]).toEqual([0, 0, false]);
+      });
+
+      it("goes on with the right arrow to the next stop, and back to step 0 with the left", () => {
+        const [, , v] = hop();
+        key("mtp-play", "ArrowRight");
+        key("mtp-play", "ArrowRight");
+        expect([v("j"), v("k")]).toEqual([5, 0]);
+        expect(line()).toBe("2 / 2");
+        key("mtp-play", "ArrowLeft");
+        expect([v("j"), v("k")]).toEqual([0, 0]);
+        expect(line()).toBe("0 / 2");
+      });
+
+      it("is where a tap on bar 1 goes, whatever came before", () => {
+        const [, , v] = hop();
+        lay2();
+        press("set-j");
+        track("pointerdown", 50);
+        track("pointerup", 50);
+        expect([v("j"), v("k")]).toEqual([0, 0]);
+        expect(exploring("mtp-play")).toBe(false);
+        expect(line()).toBe("0 / 2");
+      });
+
+      it("plays from state 0 through the steps on Space", () => {
+        const [, , v] = hop();
+        key("mtp-play", "ArrowRight");
+        key("mtp-play", " ");
+        expect(v("hop", "playing")).toBe(true);
+        expect(v("j")).toBe(1);
+        pass(0.5);
+        expect(v("j")).toBeCloseTo(3);
+        pass(2.6);
+        expect([v("j"), v("k")]).toEqual([5, 10]);
+      });
+
+      it("while playing, the left arrow back to the start plays on from there at once", () => {
+        const [, , v] = hop();
+        playButton("hop").click();
+        pass(0.3);
+        key("mtp-play", "ArrowLeft");
+        expect(v("hop", "playing")).toBe(true);
+        expect(v("j")).toBe(1);
+        pass(0.5);
+        expect(v("j")).toBeCloseTo(3);
+      });
     });
 
     it("in explore mode, the left arrow does nothing", () => {
