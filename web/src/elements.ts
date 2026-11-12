@@ -155,9 +155,11 @@ export class MtpModel extends HTMLElement {
       this.whenSeen(o.view!, () => {
         const player = activeOf(rt, i) ? playerFor(rt, o) : null;
         if (!player) return;
-        // Its writes are part of the rest state (the author, 2026-11-12).
-        player.rest = true;
-        scheduler.start(player, o, { ...howOf(o, false), rest: true });
+        // Its writes are part of the rest state, unless it plays once that state is set: then it
+        // is another writer (the author, 2026-11-12).
+        const rest = !this.hasAttribute("data-mtp-rest");
+        player.rest = rest;
+        scheduler.start(player, o, { ...howOf(o, false), rest });
       });
     });
     this.dispatchEvent(new Event(READY, { bubbles: true }));

@@ -854,5 +854,24 @@ describe("explore mode", () => {
       expect(model.atRest()).toBe(true);
       expect(model.hasAttribute("data-mtp-rest")).toBe(true);
     });
+
+    // The author, 2026-11-12: an on-view is another writer, and only the on-views that make up
+    // state 0 are exempt.
+    it("does not take in an on-view that plays after state 0 is set, which is another writer", async () => {
+      const [model, rt, v] = page(`<mtp-stepper model="m" name="walk"></mtp-stepper>`);
+      await Promise.resolve();
+      expect(model.hasAttribute("data-mtp-rest")).toBe(true);
+      dots()[0]!.click();
+      expect([v("j"), v("k")]).toEqual([5, 0]);
+      document.body.insertAdjacentHTML("beforeend", `<mtp-canvas model="m" name="v"></mtp-canvas>`);
+      model.markSeen(rt.id("v"));
+      pass(0.5);
+      expect(exploring("mtp-stepper")).toBe(true);
+      expect(count()).toBe("");
+      pass(1);
+      expect(v("k")).toBe(4);
+      step("next");
+      expect([v("j"), v("k")]).toEqual([0, 0]);
+    });
   });
 });
