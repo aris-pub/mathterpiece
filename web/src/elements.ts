@@ -41,6 +41,10 @@ export const frames = {
   },
 };
 
+// The seconds within which the on-views still to play end, hurried, when the reader presses a
+// play or a stepper before they have all played (the author, 2026-11-12).
+export const HURRY = 0.3;
+
 export class MtpModel extends HTMLElement {
   runtime: Runtime | null = null;
   scheduler: Scheduler | null = null;
@@ -55,7 +59,9 @@ export class MtpModel extends HTMLElement {
   private waiting = new Map<number, (() => void)[]>();
   private running = false;
   private last = 0;
+  // What waits for the rest state, and the on-views that have played or been hurried.
   private rested: (() => void)[] = [];
+  private played = new Set<number>();
 
   /**
    * Whether the model stands in its rest state (mtp-wjtd): every on-view of a view shown on this
@@ -65,12 +71,49 @@ export class MtpModel extends HTMLElement {
   atRest(): boolean {
     const rt = this.runtime;
     if (!rt || !this.scheduler || this.scheduler.resting()) return false;
-    const name = new Map(Object.entries(rt.doc.names).map(([n, i]) => [i, n]));
-    const shown = (view: number) => {
-      const n = name.get(view);
-      return n !== undefined && document.querySelector(`[model="${CSS.escape(this.id)}"][name="${CSS.escape(n)}"]`) !== null;
-    };
-    return rt.objects.every((o) => o.kind !== "on-view" || this.seen.has(o.view!) || !shown(o.view!));
+    return rt.objects.every((o, i) => o.kind !== "on-view" || this.played.has(i) || !this.shown(o.view!));
+  }
+
+  // Whether a view is shown on this page.
+  private shown(view: number): boolean {
+    const rt = this.runtime!;
+    const name = Object.entries(rt.doc.names).find(([, i]) => i === view)?.[0];
+    return name !== undefined && document.querySelector(`[model="${CSS.escape(this.id)}"][name="${CSS.escape(name)}"]`) !== null;
+  }
+
+  /**
+   * Does act once the model stands in its rest state. A reader's press on a play or a stepper
+   * waits for it (the author, 2026-11-12): every on-view of a view on the page that has not
+   * played to its end is hurried, one not yet started starting now, so they all end within
+   * HURRY seconds, and then the press does what it does.
+   */
+  settle(act: () => void): void {
+    if (this.atRest()) {
+      act();
+      return;
+    }
+    this.rested.push(act);
+    const rt = this.runtime!;
+    rt.objects.forEach((o, i) => {
+      if (o.kind === "on-view" && this.shown(o.view!)) this.playOnView(i);
+    });
+    this.scheduler!.hurry(HURRY);
+    this.checkRest();
+  }
+
+  // Plays an on-view, once only, whether its view has come into view or a press hurries it.
+  private playOnView(i: number): void {
+    const rt = this.runtime!;
+    if (this.played.has(i)) return;
+    this.played.add(i);
+    const o = rt.objects[i]!;
+    const player = activeOf(rt, i) ? playerFor(rt, o) : null;
+    if (!player) return;
+    // Its writes are part of the rest state, unless it plays once that state is set: then it is
+    // another writer (the author, 2026-11-12).
+    const rest = !this.hasAttribute("data-mtp-rest");
+    player.rest = rest;
+    this.scheduler!.start(player, o, { ...howOf(o, false), rest });
   }
 
   /** Resolves once the model stands in its rest state, as atRest gives. */
@@ -147,20 +190,13 @@ export class MtpModel extends HTMLElement {
     this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
     this.seen.clear();
+    this.played.clear();
+    this.rested = [];
     this.waiting.clear();
     rt.onChange(() => this.changed());
-    const scheduler = this.scheduler;
     rt.objects.forEach((o, i) => {
       if (o.kind !== "on-view") return;
-      this.whenSeen(o.view!, () => {
-        const player = activeOf(rt, i) ? playerFor(rt, o) : null;
-        if (!player) return;
-        // Its writes are part of the rest state, unless it plays once that state is set: then it
-        // is another writer (the author, 2026-11-12).
-        const rest = !this.hasAttribute("data-mtp-rest");
-        player.rest = rest;
-        scheduler.start(player, o, { ...howOf(o, false), rest });
-      });
+      this.whenSeen(o.view!, () => this.playOnView(i));
     });
     this.dispatchEvent(new Event(READY, { bubbles: true }));
     // The views of the page are there once it is told the model is ready.
@@ -1305,17 +1341,19 @@ export class MtpPlay extends MtpPart {
     const how = howOf(obj, true);
     // A jump sets the state at that time: state 0 with every move up to then applied, whatever
     // was written since. A paused play jumped to its start stands at step 0, in state 0 exactly
-    // (the author, 2026-11-12). A running one plays on from its start at once.
-    const seek = (t: number) => {
-      const p = own();
-      const reset = () => {
-        rt.restore(targets);
-        p.release();
-      };
-      const at = t <= 0 && !scheduler.running(this) ? BEFORE : t;
-      if (scheduler.seek(this, at, how, reset)) exploring = false;
-      this.refresh();
-    };
+    // (the author, 2026-11-12). A running one plays on from its start at once. A tap or a drag
+    // on the bars waits for the rest state, as a press does.
+    const seek = (t: number) =>
+      model.settle(() => {
+        const p = own();
+        const reset = () => {
+          rt.restore(targets);
+          p.release();
+        };
+        const at = t <= 0 && !scheduler.running(this) ? BEFORE : t;
+        if (scheduler.seek(this, at, how, reset)) exploring = false;
+        this.refresh();
+      });
     const atZero = () => !exploring && player !== null && player.time < 0;
     // A new player, kept only when it starts, so a refused press leaves the bars as they were.
     // From explore mode, and from step 0, it starts from state 0.
@@ -1352,12 +1390,15 @@ export class MtpPlay extends MtpPart {
       moves(rt, id, this);
       this.refresh();
     };
-    play.addEventListener("click", toggle);
-    const ex = exploreButton(() => {
-      if (!activeOf(rt, id)) return;
-      moves(rt, id, this);
-      explore();
-    });
+    // A press waits for the rest state, hurrying the on-views still to play (the author, 2026-11-12).
+    play.addEventListener("click", () => model.settle(toggle));
+    const ex = exploreButton(() =>
+      model.settle(() => {
+        if (!activeOf(rt, id)) return;
+        moves(rt, id, this);
+        explore();
+      }),
+    );
 
     // Keys (mtp-yhau): Space plays and pauses; the arrows go to the next stop or back one. The
     // stops are the starts of the steps and the end, so a rest is skipped.
@@ -1379,7 +1420,7 @@ export class MtpPlay extends MtpPart {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
-      if (!event.repeat && activeOf(rt, id)) act();
+      if (!event.repeat && activeOf(rt, id)) model.settle(act);
     };
     this.addEventListener("keydown", (event) => {
       // The play button and the Explore button press themselves on Space, as any button does.
@@ -1533,7 +1574,7 @@ export class MtpStepper extends MtpPart {
     this.unwatch();
   }
 
-  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+  protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "stepper");
     const obj = rt.objects[id]!;
     const layout = playerFor(rt, obj);
@@ -1628,7 +1669,7 @@ export class MtpStepper extends MtpPart {
       b.className = `mtp-step-button ${name}`;
       b.innerHTML = icon;
       b.setAttribute("aria-label", label);
-      b.addEventListener("click", act);
+      b.addEventListener("click", () => model.settle(act));
       return b;
     };
     const back = round("mtp-prev", BACK_ICON, "previous step", backward);
@@ -1641,7 +1682,7 @@ export class MtpStepper extends MtpPart {
       dot.type = "button";
       dot.className = "mtp-dot";
       dot.setAttribute("aria-label", `step ${j + 1}`);
-      dot.addEventListener("click", () => go(j + 1));
+      dot.addEventListener("click", () => model.settle(() => go(j + 1)));
       group.append(dot);
       return dot;
     });
@@ -1650,11 +1691,13 @@ export class MtpStepper extends MtpPart {
     const count = document.createElement("span");
     count.className = "mtp-count";
     count.setAttribute("aria-hidden", "true");
-    const ex = exploreButton(() => {
-      if (!activeOf(rt, id)) return;
-      moves(rt, id, this);
-      explore();
-    });
+    const ex = exploreButton(() =>
+      model.settle(() => {
+        if (!activeOf(rt, id)) return;
+        moves(rt, id, this);
+        explore();
+      }),
+    );
 
     // The keys of a play: the arrows go to the next step and back one.
     const keys: Record<string, () => void> = { ArrowRight: forward, ArrowLeft: backward };
@@ -1662,7 +1705,7 @@ export class MtpStepper extends MtpPart {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
-      if (!event.repeat && activeOf(rt, id)) act();
+      if (!event.repeat && activeOf(rt, id)) model.settle(act);
     };
     this.addEventListener("keydown", onKey);
     if (this.onPage) document.removeEventListener("keydown", this.onPage);

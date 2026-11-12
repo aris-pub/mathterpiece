@@ -2,7 +2,7 @@
 // 2026-11-11, mtp-vs5d, mtp-s7z9, mtp-wjtd): whatever the reader is doing now, or did last, wins.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Scheduler } from "../src/animate.ts";
-import { type MtpModel, define, frames } from "../src/elements.ts";
+import { HURRY, type MtpModel, define, frames } from "../src/elements.ts";
 import type { Runtime } from "../src/runtime.ts";
 import { doc } from "./helpers.ts";
 
@@ -158,18 +158,27 @@ describe("a play the reader started", () => {
   });
 
   it("started by autoplay becomes the reader's once the reader presses it", () => {
+    // A press waits for the on-views of the page to have played (mtp-wjtd), so v's on-view plays
+    // before the autoplay starts here, and cannot start after the press.
     const [model, rt, v] = page(
       `<mtp-canvas model="m" name="z"></mtp-canvas><mtp-play model="m" name="auto"></mtp-play><mtp-canvas model="m" name="v"></mtp-canvas>`,
     );
+    model.markSeen(rt.id("v"));
+    pass(1.5);
     model.markSeen(rt.id("z"));
     pass(0.3);
     // Paused and played again by the reader.
     playButton("auto").click();
     playButton("auto").click();
-    model.markSeen(rt.id("v"));
+    expect(v("auto", "playing")).toBe(true);
     pass(1.5);
     expect(v("k")).toBe(3);
   });
+
+  // Open (mtp-wjtd): an autoplay running when the reader presses it before the on-views have
+  // played. The hurried on-view cancels the autoplay, which is not put in explore mode since the
+  // on-view's writes are part of state 0, and the press then neither resumes nor restarts it.
+  it.todo("started by autoplay and cancelled by an on-view a press hurries, plays on the reader's press");
 });
 
 describe("a drag", () => {
@@ -438,12 +447,17 @@ describe("explore mode", () => {
   // mtp-wjtd: a play or stepper is in explore mode at rest, and goes into it again when another
   // writer writes what it moves before it has finished. Then the next play, "›" or right arrow
   // starts from state 0, and every jump is worked out from state 0.
-  const both = () =>
+  const both = (more = "") =>
     page(
       `<mtp-play model="m" name="trip"></mtp-play><mtp-stepper model="m" name="walk"></mtp-stepper>` +
-        `<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>` +
-        buttons("set-j"),
+        `<mtp-slider model="m" name="sl"></mtp-slider>` +
+        buttons("set-j") +
+        more,
     );
+  // A canvas whose on-view moves k to 4 over a second.
+  const viewed = () => both(`<mtp-canvas model="m" name="v"></mtp-canvas>`);
+  // An autoplay the reader did not set off, which a play or stepper the reader runs refuses.
+  const auto = () => both(`<mtp-canvas model="m" name="z"></mtp-canvas><mtp-play model="m" name="auto"></mtp-play>`);
   const play = () => playButton("trip");
   const exploreOf = (tag: string) => document.querySelector(`${tag} .mtp-explore`) as HTMLButtonElement;
   const exploring = (tag: string) => exploreOf(tag).getAttribute("aria-pressed") === "true";
@@ -543,10 +557,10 @@ describe("explore mode", () => {
     });
 
     it("does not go into explore mode for a write that is refused", () => {
-      const [model, rt, v] = both();
+      const [model, rt, v] = auto();
       play().click();
       pass(1.5);
-      model.markSeen(rt.id("v"));
+      model.markSeen(rt.id("z"));
       pass(0.5);
       expect(exploring("mtp-play")).toBe(false);
       expect(v("trip", "playing")).toBe(true);
@@ -776,12 +790,12 @@ describe("explore mode", () => {
     });
 
     it("does not go into explore mode for a write that is refused", () => {
-      const [model, rt, v] = both();
+      const [model, rt, v] = auto();
       step("next");
       pass(1.2);
       step("next");
       pass(0.5);
-      model.markSeen(rt.id("v"));
+      model.markSeen(rt.id("z"));
       expect(exploring("mtp-stepper")).toBe(false);
       pass(2);
       expect(v("k")).toBe(10);
@@ -874,14 +888,13 @@ describe("explore mode", () => {
   // jumps are worked out from, is the state after the on-views have played.
   describe("state 0, the rest state", () => {
     it("takes in what an on-view writes, which puts no control in explore mode", () => {
-      const [model, rt, v] = both();
-      dots()[0]!.click();
-      expect([v("j"), v("k")]).toEqual([5, 0]);
+      const [model, rt, v] = viewed();
       model.markSeen(rt.id("v"));
       pass(1.5);
       expect(v("k")).toBe(4);
-      expect(exploring("mtp-stepper")).toBe(false);
-      expect(count()).toBe("1 / 3");
+      expect(exploring("mtp-stepper")).toBe(true);
+      dots()[0]!.click();
+      expect([v("j"), v("k")]).toEqual([5, 4]);
       dots()[1]!.click();
       expect([v("j"), v("k")]).toEqual([5, 10]);
       dots()[0]!.click();
@@ -889,7 +902,7 @@ describe("explore mode", () => {
     });
 
     it("is where a play starts from out of explore mode", () => {
-      const [model, rt, v] = both();
+      const [model, rt, v] = viewed();
       model.markSeen(rt.id("v"));
       pass(1.5);
       slide(800);
@@ -900,7 +913,7 @@ describe("explore mode", () => {
     });
 
     it("is told by the model once every on-view of a view on the page has played", async () => {
-      const [model, rt] = both();
+      const [model, rt] = viewed();
       await Promise.resolve();
       expect(model.atRest()).toBe(false);
       expect(model.hasAttribute("data-mtp-rest")).toBe(false);
@@ -914,6 +927,73 @@ describe("explore mode", () => {
       await Promise.resolve();
       expect([model.atRest(), told]).toEqual([true, true]);
       expect(model.hasAttribute("data-mtp-rest")).toBe(true);
+    });
+
+    // The author, 2026-11-12: a press before every on-view on the page has played hurries the
+    // on-views still to play, so they all end within HURRY seconds, and then does what it does.
+    describe("a press before the on-views have played", () => {
+      it("plays every on-view not yet started, hurried, and then plays from state 0", () => {
+        const [model, , v] = viewed();
+        play().click();
+        expect(v("trip", "playing")).toBe(false);
+        expect(model.hasAttribute("data-mtp-rest")).toBe(false);
+        pass(HURRY - 0.1);
+        expect(v("k")).toBeGreaterThan(0);
+        expect(v("k")).toBeLessThan(4);
+        expect(v("trip", "playing")).toBe(false);
+        pass(0.1);
+        expect(model.hasAttribute("data-mtp-rest")).toBe(true);
+        expect(v("trip", "playing")).toBe(true);
+        expect([v("j"), v("k")]).toEqual([0, 4]);
+        pass(1);
+        expect(v("j")).toBeCloseTo(5);
+        pass(1);
+        expect(v("k")).toBeCloseTo(7);
+      });
+
+      it("hurries the rest of an on-view partway through", () => {
+        const [model, rt, v] = viewed();
+        model.markSeen(rt.id("v"));
+        pass(0.5);
+        expect(v("k")).toBeCloseTo(2);
+        step("next");
+        expect(count()).toBe("");
+        pass(HURRY);
+        expect(v("k")).toBe(4);
+        expect(count()).toBe("1 / 3");
+        expect(v("walk", "playing")).toBe(true);
+      });
+
+      it("does not play a hurried on-view again when its canvas comes into view", () => {
+        const [model, rt, v] = viewed();
+        dots()[0]!.click();
+        pass(HURRY);
+        expect([v("j"), v("k")]).toEqual([5, 4]);
+        slide(200);
+        model.markSeen(rt.id("v"));
+        pass(1.5);
+        expect(v("k")).toBe(2);
+      });
+
+      it("leaves a paused play that the on-views could have cut off to play on", () => {
+        const [model, rt, v] = viewed();
+        play().click();
+        pass(HURRY + 0.5);
+        play().click();
+        model.markSeen(rt.id("v"));
+        pass(0.5);
+        expect(exploring("mtp-play")).toBe(false);
+        play().click();
+        expect(v("trip", "playing")).toBe(true);
+      });
+
+      it("does each press in order once the on-views have ended", () => {
+        const [, , v] = viewed();
+        step("next");
+        step("next");
+        pass(HURRY);
+        expect(count()).toBe("2 / 3");
+      });
     });
 
     it("is there at once on a page whose views have no on-view", async () => {

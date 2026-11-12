@@ -32,6 +32,8 @@ interface Running {
   how: How;
   // Told when another writer cancels it: a drag then stops following the pointer.
   cancelled?: () => void;
+  // How many times as fast as written it plays: an on-view hurried to its end runs faster.
+  speed?: number;
 }
 
 // A position is its x and its y, so writing one collides with writing the other.
@@ -70,7 +72,17 @@ export class Scheduler {
 
   /** Whether a writer of the rest state, an on-view, still runs. */
   resting(): boolean {
-    return this.sources.some((s) => s.how.rest && s.player && !s.paused);
+    // One that loops forever never ends, so it is not waited for.
+    return this.sources.some((s) => s.how.rest && s.player && !s.paused && Number.isFinite(s.player.duration));
+  }
+
+  /** Speeds up every writer of the rest state still running so each ends within seconds. */
+  hurry(seconds: number): void {
+    for (const s of this.sources) {
+      if (!s.how.rest || !s.player || s.paused || !Number.isFinite(s.player.duration)) continue;
+      const left = s.player.duration - s.time;
+      if (left > seconds) s.speed = left / seconds;
+    }
   }
 
   /** Moves view state with the clock; tick gives whether it has more to do. */
@@ -239,7 +251,7 @@ export class Scheduler {
     this.heard = false;
     for (const s of [...this.sources]) {
       if (s.paused || !s.player) continue;
-      s.time += seconds;
+      s.time += seconds * (s.speed ?? 1);
       if (s.until !== undefined && s.time >= s.until) {
         s.time = s.until;
         s.paused = true;
