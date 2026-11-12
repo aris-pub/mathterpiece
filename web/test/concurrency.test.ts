@@ -187,17 +187,53 @@ describe("a drag", () => {
   const at = (el: Element, type: string, x = 0, y = 0) =>
     el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
 
-  it("held, refuses an on-view on the dragged shape", () => {
+  // The author, 2026-11-12: a drag is a running writer from its first change of value, not
+  // from the grab.
+  it("held and moved, refuses an on-view on the dragged shape", () => {
+    const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    at(svg(), "pointermove", 30, 0);
+    const moved = v("d", "x");
+    expect(moved).not.toBe(0);
+    model.markSeen(rt.id("w"));
+    pass(1.5);
+    expect(v("d", "x")).toBe(moved);
+    at(svg(), "pointerup", 30, 0);
+  });
+
+  it("grabbed and not yet moved, writes nothing, so an on-view plays", () => {
     const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
     model.markSeen(rt.id("w"));
     pass(1.5);
-    expect(v("d", "x")).toBe(0);
+    expect(v("d", "x")).toBe(8);
+    at(svg(), "pointerup", 0, 0);
+  });
+
+  it("grabbed and not moved, leaves a play running and out of explore mode", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="roll"></mtp-play>`);
+    const explore = () => document.querySelector("mtp-play .mtp-explore")!.getAttribute("aria-pressed");
+    playButton("roll").click();
+    pass(0.5);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    pass(0.5);
+    expect(v("roll", "playing")).toBe(true);
+    expect(explore()).toBe("false");
+    at(svg(), "pointerup", 0, 0);
+    pass(1.2);
+    expect(v("d", "x")).toBe(8);
+  });
+
+  it("moved, stops a play and puts it in explore mode", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="roll"></mtp-play>`);
+    const explore = () => document.querySelector("mtp-play .mtp-explore")!.getAttribute("aria-pressed");
+    playButton("roll").click();
+    pass(0.5);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    pass(0.5);
     at(svg(), "pointermove", 30, 0);
-    const moved = v("d", "x");
-    expect(moved).not.toBe(0);
-    pass(1.5);
-    expect(v("d", "x")).toBe(moved);
+    expect(v("roll", "playing")).toBe(false);
+    expect(explore()).toBe("true");
     at(svg(), "pointerup", 30, 0);
   });
 
@@ -214,12 +250,26 @@ describe("a drag", () => {
   it("held, is cancelled by an on-enter the pointer sets off", () => {
     const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
+    at(svg(), "pointermove", 10, 0);
     at(shape(rt, "e"), "pointermove", 30, 0);
     pass(1.5);
     expect(v("d", "x")).toBe(3);
     at(svg(), "pointermove", 60, 0);
     expect(v("d", "x")).toBe(3);
     at(svg(), "pointerup", 60, 0);
+  });
+
+  // The move that starts a drag sets off its on-enter first and writes last, so the drag, a
+  // writer from that first write, cancels the on-enter it set off.
+  it("at its first move, cancels an on-enter that move sets off", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    at(shape(rt, "e"), "pointermove", 30, 0);
+    const moved = v("d", "x");
+    expect(moved).not.toBe(0);
+    pass(1.5);
+    expect(v("d", "x")).toBe(moved);
+    at(svg(), "pointerup", 30, 0);
   });
 
   it("exclusive, refuses both an on-view and an on-enter", () => {
@@ -284,6 +334,45 @@ describe("a slider", () => {
     model.markSeen(rt.id("v"));
     pass(1.5);
     expect(v("k")).toBe(2);
+    knob("pointerup");
+  });
+
+  // The author, 2026-11-12: a held slider is a running writer from its first change of value.
+  it("grabbed and not moved, leaves a play running and out of explore mode", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-play model="m" name="tour"></mtp-play>`);
+    const explore = () => document.querySelector("mtp-play .mtp-explore")!.getAttribute("aria-pressed");
+    playButton("tour").click();
+    pass(0.5);
+    knob("pointerdown");
+    pass(0.5);
+    expect(v("tour", "playing")).toBe(true);
+    expect(explore()).toBe("false");
+    knob("pointerup");
+    pass(1.2);
+    expect(v("k")).toBe(10);
+  });
+
+  it("grabbed and moved, stops a play and puts it in explore mode", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-play model="m" name="tour"></mtp-play>`);
+    const explore = () => document.querySelector("mtp-play .mtp-explore")!.getAttribute("aria-pressed");
+    playButton("tour").click();
+    pass(0.5);
+    knob("pointerdown");
+    pass(0.5);
+    slide(200);
+    expect(v("tour", "playing")).toBe(false);
+    expect(explore()).toBe("true");
+    pass(1);
+    expect(v("k")).toBe(2);
+    knob("pointerup");
+  });
+
+  it("grabbed and not moved, writes nothing, so an on-view plays", () => {
+    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    knob("pointerdown");
+    model.markSeen(rt.id("v"));
+    pass(1.5);
+    expect(v("k")).toBe(4);
     knob("pointerup");
   });
 

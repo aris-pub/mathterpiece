@@ -653,7 +653,9 @@ export class MtpCanvas extends MtpPart {
     let pressed: number | null = null;
     // Where a finger came down, to tell a tap from a drag: a finger is never quite still.
     let press: { id: number; x: number; y: number; at: [number, number]; moved: boolean } | null = null;
-    // A drag refused at its grab follows nothing; one cancelled while held stops writing.
+    // A drag refused follows nothing, and one cancelled while held stops writing. Whether the
+    // held drag has claimed its targets yet: it does at its first move.
+    let gripped = false;
     const grip = () => scheduler.grip(drags.targets, drags, howOf(drags.listener!, true), () => drags.cancel());
     const play = (listeners: (Obj | null)[]) => {
       for (const listener of listeners) {
@@ -695,8 +697,9 @@ export class MtpCanvas extends MtpPart {
         press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: toScene(event), moved: false };
       }
       if (pressed !== null && drags.grab(pressed, toScene(event), canvas)) {
-        // From the grab to the release, the drag is a running writer of its targets (mtp-vs5d).
-        if (!grip()) drags.release();
+        // The drag is a running writer of its targets from its first move to the release
+        // (mtp-vs5d): a grab that changes nothing writes nothing (the author, 2026-11-12).
+        gripped = false;
       } else if (allows("pan") || allows("zoom")) {
         touches.set(event.pointerId, [event.clientX, event.clientY]);
       } else {
@@ -721,6 +724,14 @@ export class MtpCanvas extends MtpPart {
       }
       follow(event, hitOf(event));
       if (drags.dragging) {
+        // A drag refused at its first move follows nothing.
+        if (!gripped) {
+          gripped = true;
+          if (!grip()) {
+            drags.release();
+            return;
+          }
+        }
         // As JS's dragstart, a drag starts at its first move, and its listeners play before the
         // drag writes, so they may reset what the drag then reads (mtp-5opl).
         if (!drags.moved) play(dragstarts.find(drags.shape!, canvas));
@@ -1122,6 +1133,11 @@ export class MtpSlider extends MtpPart {
     input.addEventListener("input", () => {
       if (!activeOf(rt, id)) return;
       const u = Number(input.value) / Number(input.max);
+      // A held knob becomes a running writer at its first change (the author, 2026-11-12).
+      if (scrubbing && !gripped && player) {
+        gripped = true;
+        scheduler.grip(player.targets, this, how, () => (cut = true));
+      }
       const write = () => {
         player?.scrub(u);
         rt.write(id, "position", u);
@@ -1139,9 +1155,11 @@ export class MtpSlider extends MtpPart {
     // A slider follows its target: when another writer changes the one variable or attribute its animation
     // moves, the knob goes to the position whose value is closest (reference.md, "Controls").
     let scrubbing = false;
-    // While the reader holds the knob, the slider is a running writer of its targets, as a drag is
-    // (the author, 2026-11-11); cancelled while held, it writes nothing more until the release.
+    // While the reader holds the knob, from its first change, the slider is a running writer of
+    // its targets, as a drag is (the author, 2026-11-11 and 2026-11-12). Cancelled while held, it
+    // writes nothing more until the release.
     let cut = false;
+    let gripped = false;
     const release = () => {
       if (!scrubbing) return;
       scrubbing = false;
@@ -1153,7 +1171,7 @@ export class MtpSlider extends MtpPart {
     input.addEventListener("pointerdown", () => {
       scrubbing = true;
       cut = false;
-      if (player && activeOf(rt, id)) scheduler.grip(player.targets, this, how, () => (cut = true));
+      gripped = false;
       // The release may come anywhere on the page, so the window hears it too.
       window.addEventListener("pointerup", release);
       window.addEventListener("pointercancel", release);

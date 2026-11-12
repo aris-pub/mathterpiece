@@ -1,7 +1,7 @@
 // Runs the animations writers set off, and decides between writers that would write the same
 // targets (docs/reference.md, "Concurrency"). Each running source (a button press, a play, a
 // click, a held drag) holds the variables and attributes it writes. A newcomer (a source that
-// starts, resumes or is moved along, a slider's knob, a toggle's flip, a drag's grab, an
+// starts, resumes or is moved along, a slider's knob, a toggle's flip, a drag's first move, an
 // on-pointermove's write) that would write a target a running source writes is refused when that
 // source is exclusive, or was set off by the reader while the newcomer was not; otherwise it
 // cancels that source. A refused newcomer does not start at all. An exclusive writer holds the
@@ -178,8 +178,8 @@ export class Scheduler {
     this.sources.push({ source, player, reached: this.reached(player.targets), time: player.time, paused: true, how: { reader: true, exclusive: false } });
   }
 
-  /** A drag held from the grab to the release: a running writer of its targets, which writes as
-   * the pointer moves. Gives false when it is refused; cancelled is called if another writer
+  /** A drag held from its first move to the release, or a slider from its first change: a
+   * running writer of its targets, which writes as the pointer moves. Gives false when it is refused; cancelled is called if another writer
    * cancels it. */
   grip(targets: string[], source: object, how: How, cancelled: () => void): boolean {
     if (!this.claim(targets, source, how)) return false;

@@ -61,3 +61,5 @@
   (animation
     (in-order (move j (to 1) (duration 0)) (move j (to 5) (duration 1)))
     (move k (to 10) (duration 2))))
+; A play moving what the canvas w drags, for a grab that changes nothing (the author, 2026-11-12).
+(play roll (animation (move d.x (to 8) (duration 2))))
