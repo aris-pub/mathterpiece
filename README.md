@@ -1,8 +1,10 @@
 # mathterpiece
 
-mathterpiece (mtp) is a small language for mathematics a reader can drag, slide and play. A
+mathterpiece (mtp) is a small language for math figures that readers can drag, slide and play. A
 world model is written in a `.mtp` file, in a Lisp-like syntax. A compiler checks it and writes
 the compiled model, a `.mtpc` file, which a JavaScript runtime draws on a web page.
+
+![The source of a figure next to the figure it draws: a spiral of dots, each one turned and scaled from the one before. Moving the sliders changes how many dots there are, how far each one turns and how much each one shrinks.](docs/images/spiral-of-copies.gif)
 
 ```lisp
 (real k 1 (>= 0.2) (<= 3))
@@ -17,6 +19,15 @@ The circle's radius is the variable `k`, the slider moves `k`, and the readout s
 The compiler checks the types and the ranges, so a world model that could draw something undefined,
 such as a negative radius, does not compile.
 
+## Why a language
+
+- Every figure gets touch, keyboard use, light and dark mode, reduced motion, and labels for
+  screen readers, so you do not build them again for each figure.
+- Every figure uses the same sliders, buttons and gestures, so readers learn them once. A page
+  can restyle them with CSS.
+- The source of a figure is a few dozen lines with the mathematics in them, short enough to
+  review and to compare between versions.
+
 ## Install
 
 You need Python 3.13 or later with [uv](https://docs.astral.sh/uv/), and, for the web runtime,
@@ -26,6 +37,15 @@ Node with [pnpm](https://pnpm.io/). [just](https://just.systems/) runs the commo
 uv sync
 cd web && pnpm install
 ```
+
+## Try the examples
+
+```sh
+just web-dev
+```
+
+This builds every example in `examples/` and serves a page that draws any of them. Vite prints
+the address to open.
 
 ## Build a world model
 
