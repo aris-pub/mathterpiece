@@ -6,6 +6,7 @@ import pytest
 from helpers import doc, error, model, typ, value
 from mtpc_check import errors
 
+from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, ComponentT, Maybe
 
 K = "(real k 0 (>= 0) (<= 10))"
@@ -329,6 +330,49 @@ class TestButtons:
             f"{K} (slider s (move k (from 0) (to 5)) (selected true))",
             r"only a button takes \(selected …\), not a slider",
         )
+
+
+class TestItemsAWriterDoesNotTake:
+    """An item that is neither an argument of the writer nor a condition is reported as an
+    argument that the writer does not take, at that item (mtp-843h). Before, it was read as a
+    condition, and the error was about conditions."""
+
+    HEAD = f"{K} (bool on false) (color teal '#2a9d8f') (scene s (circle c))\n"
+
+    def where(self, src: str, message: str) -> str:
+        with pytest.raises(CompileError) as exc:
+            compile_source(self.HEAD + src)
+        assert exc.value.msg == message
+        return f"{exc.value.pos.line}:{exc.value.pos.col}"
+
+    @pytest.mark.parametrize(
+        "src, message",
+        [
+            ("(toggle t on (label 'a circle') (color teal))", "a toggle takes no (color …)"),
+            ("(toggle t on (color teal) (label 'a circle'))", "a toggle takes no (color …)"),
+            (f"(button t {MOVE} (color teal))", "a button takes no (color …)"),
+            (f"(button t (color teal) {MOVE})", "a button takes no (color …)"),
+            (f"(slider t {SLIDE} (color teal))", "a slider takes no (color …)"),
+            (f"(play t {MOVE} (color teal))", "a play takes no (color …)"),
+            (f"(stepper t {MOVE} (color teal))", "a stepper takes no (color …)"),
+            (f"(canvas t s (on-click c {MOVE} (color teal)))", "on-click takes no (color …)"),
+            (f"(button t {MOVE} (> k 1) (color teal))", "a button takes no (color …)"),
+            # An argument of another control.
+            (f"(button t {MOVE} (step 2))", "a button takes no (step …)"),
+        ],
+    )
+    def test_the_error_is_at_the_item(self, src, message):
+        col = src.index("(color") if "(color" in src else src.index("(step")
+        assert self.where(src, message) == f"2:{col + 1}"
+
+    def test_a_word_that_names_nothing_may_be_a_misspelled_choreo(self):
+        message = "a button takes no (fade …), and 'fade' is not a choreo"
+        src = f"(button t {MOVE} (fade c))"
+        assert self.where(src, message) == f"2:{src.index('(fade') + 1}"
+
+    def test_a_condition_that_is_not_a_limit_still_says_so(self):
+        with pytest.raises(CompileError, match="compares an attribute this writer writes"):
+            compile_source(f"{self.HEAD}(real j) (button t {MOVE} (and (> j 1) (< j 2)))")
 
 
 class TestListenersInAForeach:

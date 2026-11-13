@@ -106,6 +106,8 @@ WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
     *["rest", "in", "selected", "priority", "labels", "move"],
 }
+# The writers that play no animation: their effect is a gesture.
+PLAY_NOTHING = ("slider", "on-drag", "on-pointermove")
 # The views (data-model.md, "Components"): what a listener or a control may belong to.
 VIEWS = ("canvas", "readout", "display")
 # The listeners whose event goes up the scene tree, as in the DOM, unless one stops it.
@@ -332,6 +334,23 @@ FONT_PARTS = {
     "size": Argument(REAL, 16),
 }
 FONT_DEFAULT = {part: spec.default for part, spec in FONT_PARTS.items()}
+# Words that name an argument or a type somewhere in the language. When a writer is given one
+# that it does not take, its error does not suggest a misspelled choreo.
+ARGUMENT_WORDS = frozenset(
+    {
+        *WRITER_OPTIONS,
+        *PRIMS,
+        *POSITIONED,
+        *PAINTED,
+        *TRANSFORMS,
+        *HEADS,
+        *TERM_ATTRS,
+        *FONT_PARTS,
+        *(a for attrs in SHAPE_ATTRS.values() for a in attrs),
+        *["width", "height", "pan", "zoom", "toggle-duration", "toggle-ease", "kind"],
+        *["duration", "ease", "from", "to", "font", "halign", "valign"],
+    }
+)
 # The attributes of values that are not objects (type-system.md, section 8).
 VALUE_ATTRS = {
     COMPLEX: {"re": REAL, "im": REAL},
@@ -3274,7 +3293,7 @@ class _Compiler:
                 "a listener takes no (in …): it hears only in the view it is written in",
                 tied.pos,
             )
-        if kind in VIEWS or kind in ("slider", "on-drag", "on-pointermove"):
+        if kind in VIEWS or kind in PLAY_NOTHING:
             use = next(
                 (it for it in items if it not in heard and self.choreo_of(it) is not None), None
             )
@@ -3296,6 +3315,9 @@ class _Compiler:
             # A slider's first item is its move, and on-drag's and toggle's their target:
             # positional arguments.
             body = items[1:] if kind in ("slider", "on-drag", "on-pointermove", "toggle") else items
+            # writer() reports an item that the writer does not take. If such an item counted as
+            # the start of the body here, the option after it would get an error about its place.
+            body = [it for it in body if _head(it) in WRITER_OPTIONS or not self.not_taken(it)]
             # A use of a choreo stands for (animation …), an optional argument.
             self.options_first(
                 body,
@@ -3626,7 +3648,26 @@ class _Compiler:
         for item in items:
             if not isinstance(item, Form):
                 raise CompileError(f"expected an item of a {obj.kind}, got a name", item.pos)
+            if self.not_taken(item):
+                head = _head(item)
+                who = obj.kind if obj.kind in LISTENERS else _a(obj.kind)
+                message = f"{who} takes no ({head} …)"
+                if head not in ARGUMENT_WORDS and obj.kind not in PLAY_NOTHING:
+                    message += f", and '{head}' is not a choreo"
+                raise CompileError(message, item.pos)
         obj.data["conditions"] = [self.condition(c, written) for c in items]
+
+    def not_taken(self, item: Node) -> bool:
+        """Whether a writer's item is a form whose head is not a comparison, an expression or a
+        choreo. Once a writer's arguments are taken out of its items, such an item is one that
+        the writer does not take, and not a condition."""
+        head = _head(item)
+        return (
+            head is not None
+            and head not in COMPARE
+            and not self.is_expression(head)
+            and self.choreo_of(item) is None
+        )
 
     def animated(self, obj: Obj, items: list) -> set:
         # A use of a choreo, and a move, may stand for (animation (use)) and (animation (move …))
@@ -4270,10 +4311,9 @@ class _Compiler:
                     if attribute in written and attribute not in limit.deps:
                         lim = self.settle(limit.type, limit, "the limit", node.pos)
                         return {"target": attribute, "op": op, "limit": lim}
-        unknown = head is not None and head not in COMPARE and head not in self.model.funcs
         raise CompileError(
             "a condition compares an attribute this writer writes with a limit that does not depend"
-            " on it, such as (>= k 0)" + (f"; '{head}' is not a choreo either" if unknown else ""),
+            " on it, such as (>= k 0)",
             node.pos,
         )
 
