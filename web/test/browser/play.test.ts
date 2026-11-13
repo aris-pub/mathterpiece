@@ -50,7 +50,7 @@ describe("a play's bar", () => {
     await mouse("mouseReleased", along(1, 0.6));
     expect(v("k")).toBeGreaterThanOrEqual(2);
     expect(v("tour", "playing")).toBe(true);
-    expect(document.querySelector("mtp-play .mtp-count")!.textContent).toBe("2 / 2");
+    expect(document.querySelector("mtp-play .mtp-count")!.textContent).toBe("2 / 2 · Grow more");
   });
 
   it("scrubs as the mouse drags along the bars", async () => {
@@ -63,6 +63,22 @@ describe("a play's bar", () => {
     expect(v("k")).toBeCloseTo(3, 1);
     await mouse("mouseReleased", along(1, 0.5));
     expect(v("k")).toBeCloseTo(3, 1);
+  });
+
+  // The author, 2026-11-13: the labels sit after the bars, and the row never changes length.
+  it("names the step after the bars, at one length in every state", async () => {
+    const { rt } = await open();
+    const play = document.querySelector("mtp-play")!;
+    const bars = play.querySelector(".mtp-bars")!;
+    const width = () => [bars.getBoundingClientRect().width, play.querySelector(".mtp-count")!.getBoundingClientRect().left];
+    const explore = width();
+    rt.write(rt.id("k"), null, 2);
+    await frames();
+    expect(play.querySelector(".mtp-count")!.textContent).toBe("1 / 2 · Grow");
+    expect(width()).toEqual(explore);
+    rt.write(rt.id("k"), null, 4);
+    await frames();
+    expect(width()).toEqual(explore);
   });
 
   it("takes a press a little above the thin bars", async () => {

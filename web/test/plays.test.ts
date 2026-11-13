@@ -274,10 +274,34 @@ describe("a play", () => {
 
   describe("its count", () => {
     it("with (buttons true) sits after the bars, and reads – / N in explore mode", () => {
-      tour();
+      page(`<mtp-play model="m" name="rested"></mtp-play>${BUTTONS}`);
       expect(count()).toBe("– / 2");
       click("set-two");
       expect(count()).toBe("1 / 2");
+    });
+
+    // The author, 2026-11-13: a play's labels show after the bar, next to the count, and the room
+    // after the bar is as wide as the longest label and count in every state.
+    it("names the step with its label, and none in explore mode", () => {
+      tour();
+      expect(count()).toBe("– / 2");
+      click("set-two");
+      expect(count()).toBe("1 / 2 · Grow");
+      click("set-four");
+      expect(count()).toBe("2 / 2 · Grow more");
+    });
+
+    it("keeps room for every state's text, so the row never changes length", () => {
+      tour();
+      const room = [...el().querySelectorAll(".mtp-count-room")].map((r) => r.textContent);
+      expect(room).toEqual(["– / 2", "1 / 2 · Grow", "2 / 2 · Grow more"]);
+      expect(el().querySelector(".mtp-count-room")!.getAttribute("aria-hidden")).toBe("true");
+    });
+
+    it("keeps the screen reader text on the bars", () => {
+      tour();
+      click("set-two");
+      expect(track().getAttribute("aria-valuetext")).toBe("1 / 2 · Grow");
     });
 
     it("without (buttons true) is not there", () => {

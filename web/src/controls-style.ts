@@ -178,10 +178,14 @@ mtp-play .mtp-exploring {
   pointer-events: none;
 }
 mtp-play .mtp-exploring[hidden] { display: none; }
-mtp-play .mtp-count {
-  flex: none; width: 2.5rem; text-align: right;
+/* The count and the step's label after the bars. Every state's text is laid in one grid cell,
+   the others hidden, so the room is as wide as the longest. */
+mtp-play .mtp-after {
+  flex: none; display: grid; align-items: center; min-width: 2.5rem;
   font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--text-subtle); white-space: nowrap;
 }
+mtp-play .mtp-after > * { grid-area: 1 / 1; }
+mtp-play .mtp-count-room { visibility: hidden; }
 
 /* A stepper: "‹", a dot per step, then "›", the buttons drawn as a play's. A passed step's dot is
    solid, the current one solid with a ring, and one still to come pale. The dots are drawn as the

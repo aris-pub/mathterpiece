@@ -1393,10 +1393,24 @@ export class MtpPlay extends MtpPart {
     pill.textContent = "Exploring";
     pill.setAttribute("aria-hidden", "true");
     track.append(pill);
+    // After the bars, with (buttons true): the count and the step's label, as "2 / 4 · A third
+    // of a turn" (the author, 2026-11-13). The text of every state is laid in the same place,
+    // hidden, so the room is as wide as the longest and the row never changes length.
+    const textOf = (k: number) => (k === 0 ? `– / ${n}` : `${k} / ${n}${labels[k - 1] ? ` · ${labels[k - 1]}` : ""}`);
     const count = split ? document.createElement("span") : null;
-    if (count) {
+    const after = split ? document.createElement("div") : null;
+    if (count && after) {
       count.className = "mtp-count";
       count.setAttribute("aria-hidden", "true");
+      after.className = "mtp-after";
+      for (let k = 0; k <= n; k++) {
+        const room = document.createElement("span");
+        room.className = "mtp-count-room";
+        room.setAttribute("aria-hidden", "true");
+        room.textContent = textOf(k);
+        after.append(room);
+      }
+      after.append(count);
     }
 
     // Keys (the author, 2026-11-13): Space is the button. At step k the right arrow is a tap on
@@ -1540,9 +1554,8 @@ export class MtpPlay extends MtpPart {
       knob.classList.toggle("mtp-empty", exploring);
       knob.classList.toggle("mtp-end", at === bars.length - 1 && t >= spans.at(-1)!.end - EPS);
       pill.hidden = !exploring;
-      if (count) count.textContent = `${exploring ? "–" : k} / ${n}`;
-      const label = k > 0 ? labels[k - 1] : undefined;
-      const text = exploring ? `${n} ${n === 1 ? "step" : "steps"}` : `${k} / ${n}${label ? ` · ${label}` : ""}`;
+      if (count) count.textContent = textOf(exploring ? 0 : k);
+      const text = exploring ? `${n} ${n === 1 ? "step" : "steps"}` : textOf(k);
       track.setAttribute("aria-label", labelOf(rt, id));
       track.setAttribute("aria-valuenow", String(k));
       track.setAttribute("aria-valuetext", text);
@@ -1555,7 +1568,7 @@ export class MtpPlay extends MtpPart {
     const indicator = document.createElement("div");
     indicator.className = "mtp-indicator";
     indicator.append(track);
-    this.replaceChildren(play, indicator, ...(count ? [count] : []));
+    this.replaceChildren(play, indicator, ...(after ? [after] : []));
     this.refresh();
   }
 

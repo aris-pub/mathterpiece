@@ -42,7 +42,7 @@ describe("recording mode", () => {
     await userEvent.keyboard("{ArrowRight}{ArrowRight}");
     // Step 2 plays from state 1, k at 2, in real time.
     expect(rt.value(rt.id("k"), null)).toBeGreaterThanOrEqual(2);
-    expect(stage.querySelector("mtp-play .mtp-count")!.textContent).toBe("2 / 2");
+    expect(stage.querySelector("mtp-play .mtp-count")!.textContent).toBe("2 / 2 · More");
     await userEvent.keyboard(" ");
     expect(rt.value(rt.id("one"), "playing")).toBe(false);
   });
