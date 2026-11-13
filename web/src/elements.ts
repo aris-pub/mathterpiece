@@ -183,11 +183,17 @@ export class MtpModel extends HTMLElement {
     }
     const rt = new Runtime(doc);
     this.runtime = rt;
-    this.scheduler = new Scheduler(
+    const scheduler = new Scheduler(
       () => this.changed(),
       () => this.wake(),
-      (target) => rt.reached(target),
+      (target) => {
+        const at = target.indexOf(":");
+        return rt.slotsOf(Number(target.slice(0, at)), target.slice(at + 1) || null);
+      },
     );
+    this.scheduler = scheduler;
+    // Every write a writer makes is decided, free value by free value (docs/concurrency-model.md).
+    rt.gate = (k) => scheduler.accept(k);
     this.drags = new Drags(rt);
     this.clicks = new Listeners(rt, "on-click");
     this.releases = new Listeners(rt, "on-release");
@@ -477,10 +483,10 @@ function makeSwitch(view: HTMLElement, press: () => void): HTMLButtonElement {
   return button;
 }
 
-/** How a writer was set off: by the reader or not (on-view and autoplay), and whether it is
- * exclusive (docs/reference.md, "Concurrency"). */
+/** How a writer was set off, by the reader or not (on-view), and the priority it gives, if any
+ * (docs/concurrency-model.md). */
 function howOf(writer: Obj, reader: boolean): How {
-  return { reader, exclusive: Boolean(writer.exclusive) };
+  return { reader, priority: writer.priority };
 }
 
 function playerFor(rt: Runtime, writer: Obj): Player | null {
@@ -653,10 +659,11 @@ export class MtpCanvas extends MtpPart {
     let pressed: number | null = null;
     // Where a finger came down, to tell a tap from a drag: a finger is never quite still.
     let press: { id: number; x: number; y: number; at: [number, number]; moved: boolean } | null = null;
-    // A drag refused follows nothing, and one cancelled while held stops writing. Whether the
-    // held drag has claimed its targets yet: it does at its first move.
+    // A drag the reader holds is a held writer from its first move to the release: a grab that
+    // moves nothing writes nothing. One cancelled while held stops writing.
     let gripped = false;
-    const grip = () => scheduler.grip(drags.targets, drags, howOf(drags.listener!, true), () => drags.cancel());
+    const grip = () => scheduler.grip(drags, howOf(drags.listener!, true), () => drags.cancel());
+    const dragTo = (at: [number, number]) => scheduler.instant(drags, { ...howOf(drags.listener!, true), held: true }, () => drags.move(at));
     const play = (listeners: (Obj | null)[]) => {
       for (const listener of listeners) {
         const player = listener ? playerFor(rt, listener) : null;
@@ -667,7 +674,7 @@ export class MtpCanvas extends MtpPart {
     // it stays entered until the reader presses elsewhere, here or anywhere on the page.
     const follow = (event: PointerEvent, hit: number | null) => {
       play(pointer.onto(hit));
-      pointer.move(toScene(event), (targets, l, write) => scheduler.instant(targets, l, howOf(l, true), write));
+      pointer.move(toScene(event), (_targets, l, write) => scheduler.instant(l, { ...howOf(l, true), held: true }, write));
     };
     const deselect = () => {
       if (selection === null) return;
@@ -724,18 +731,14 @@ export class MtpCanvas extends MtpPart {
       }
       follow(event, hitOf(event));
       if (drags.dragging) {
-        // A drag refused at its first move follows nothing.
         if (!gripped) {
           gripped = true;
-          if (!grip()) {
-            drags.release();
-            return;
-          }
+          grip();
         }
         // As JS's dragstart, a drag starts at its first move, and its listeners play before the
         // drag writes, so they may reset what the drag then reads (mtp-5opl).
         if (!drags.moved) play(dragstarts.find(drags.shape!, canvas));
-        drags.move(toScene(event));
+        dragTo(toScene(event));
         return;
       }
       const was = touches.get(event.pointerId);
@@ -771,12 +774,9 @@ export class MtpCanvas extends MtpPart {
       }
       deselect();
       if (!tap || chosen === null || grabbed === chosen.shape || !drags.grab(chosen.hit, chosen.at, canvas)) return null;
-      if (!grip()) {
-        drags.release();
-        return null;
-      }
+      grip();
       play(dragstarts.find(drags.shape!, canvas));
-      drags.move(toScene(event));
+      dragTo(toScene(event));
       drags.release();
       scheduler.letGo(drags);
       return chosen.shape;
@@ -1136,13 +1136,13 @@ export class MtpSlider extends MtpPart {
       // A held knob becomes a running writer at its first change (the author, 2026-11-12).
       if (scrubbing && !gripped && player) {
         gripped = true;
-        scheduler.grip(player.targets, this, how, () => (cut = true));
+        scheduler.grip(this, how, () => (cut = true));
       }
       const write = () => {
         player?.scrub(u);
         rt.write(id, "position", u);
       };
-      if (cut || (player && !scheduler.instant(player.targets, this, how, write))) {
+      if (cut || (player && !scheduler.instant(this, how, write))) {
         // Refused, or cancelled while held: the knob goes back to where it was.
         input.value = String(Math.round((rt.value(id, "position") as number) * Number(input.max)));
         fill();
@@ -1831,12 +1831,9 @@ export class MtpToggle extends MtpPart {
       const v = input.indeterminate ? true : input.checked;
       const how = howOf(obj, true);
       const player = playerFor(rt, obj);
-      // The flip and the animation it plays are one newcomer: refused, neither happens.
-      const targets = [`${target[0]}:${target[1] ?? ""}`, ...(player?.targets ?? [])];
-      if (!scheduler.instant(targets, this, how, () => rt.write(target[0], target[1], v))) {
-        this.show();
-        return;
-      }
+      // The flip and the animation it plays are decided write by write, as any writer's are: a
+      // flip that is rejected leaves the box as the bool is.
+      scheduler.instant(this, how, () => rt.write(target[0], target[1], v));
       this.show();
       if (player) scheduler.start(player, this, how);
     });

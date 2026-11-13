@@ -61,6 +61,7 @@ const THROUGH_POINTS = new Set(["polyline", "polygon"]);
 const CORNERS: Record<string, string[]> = { line: ["from", "to"], triangle: ["a", "b", "c"] };
 // A curve's position is the mean of its ends and controls (the author, 2026-11-06).
 const fromPoints = (kind: string) => CORNERS[kind] !== undefined || THROUGH_POINTS.has(kind) || kind === "curve";
+const isPoint = (p: unknown): p is number[] => Array.isArray(p) && p.length === 2 && typeof p[0] === "number" && typeof p[1] === "number";
 // The attributes a write of such a shape's x, y or pos writes.
 const PLACED_BY: Record<string, string[]> = { ...CORNERS, polyline: ["points"], polygon: ["points"], curve: ["from", "to", "controls"] };
 // Attributes that are points in their shape's frame, which a read converts.
@@ -177,6 +178,11 @@ export class Runtime {
   // since the on-views' writes are part of the rest state (the author, 2026-11-12).
   private rest = new Map<string, unknown>();
   private resting = false;
+  /** Decides each write of a free value that changes something, by its key: a write it rejects
+   * is skipped (docs/concurrency-model.md). */
+  gate: ((k: string) => boolean) | null = null;
+  // The axis a write of a shape's x or y writes into its points, ends or controls, if any.
+  private axis: "x" | "y" | null = null;
   // free@ values whose starts are not read yet: each is read once, when the model is built.
   private starts: Slot[] = [];
   // For each object, the exists slots of it and of the containers around it.
@@ -469,7 +475,7 @@ export class Runtime {
     this.writeInto(id, attr, value, changed);
     if (changed.size === 0) return false;
     if (this.pending) for (const k of changed) this.pending.add(k);
-    else for (const l of this.listeners) l(changed);
+    else this.tell(changed);
     return true;
   }
 
@@ -484,7 +490,18 @@ export class Runtime {
       return work();
     } finally {
       this.pending = null;
-      if (changed.size > 0) for (const l of this.listeners) l(changed);
+      if (changed.size > 0) this.tell(changed);
+    }
+  }
+
+  // What the listeners write as they hear of a change, a control its own step say, is no writer's.
+  private tell(changed: Set<string>): void {
+    const gate = this.gate;
+    this.gate = null;
+    try {
+      for (const l of this.listeners) l(changed);
+    } finally {
+      this.gate = gate;
     }
   }
 
@@ -545,13 +562,13 @@ export class Runtime {
     });
   }
 
-  // The slots writeInto writes for a target, worked out as it works them out.
-  private slotsOf(id: number, attr: string | null): string[] {
+  /** The free values a write of a target writes, as their keys, worked out as writeInto does. */
+  slotsOf(id: number, attr: string | null): string[] {
     const o = this.objects[id]!;
     if ((o.kind === "group" || o.kind === "instance") && attr !== null && !this.has(id, attr)) {
       if (attr !== "pos" || o.kind === "group") return (o.members ?? []).flatMap((m) => this.slotsOf(m, attr));
     }
-    if ((THROUGH_POINTS.has(o.kind) || o.kind === "curve") && (attr === "x" || attr === "y")) return this.slotsOf(id, "pos");
+    if (fromPoints(o.kind) && (attr === "x" || attr === "y") && !this.has(id, attr)) return this.slotsOf(id, "pos");
     if (attr === "pos" && !this.has(id, "pos")) {
       if (THROUGH_POINTS.has(o.kind)) return [key(id, "points")];
       if (o.kind === "curve") return ["from", "to", "controls"].map((c) => key(id, c));
@@ -570,9 +587,18 @@ export class Runtime {
         return;
       }
     }
-    if ((THROUGH_POINTS.has(o.kind) || o.kind === "curve") && (attr === "x" || attr === "y")) {
+    // A shape whose position is worked out from its points, ends, corners or controls has no x or
+    // y of its own: a write of one writes those (mtp-gzs9).
+    if (fromPoints(o.kind) && (attr === "x" || attr === "y") && !this.has(id, attr)) {
       const [mx, my] = this.mean(id, null) as number[];
-      return this.writeInto(id, "pos", attr === "x" ? [value, my] : [mx, value], changed);
+      // A write of its x writes each point's x only, and so for y.
+      const was = this.axis;
+      this.axis = attr;
+      try {
+        return this.writeInto(id, "pos", attr === "x" ? [value, my] : [mx, value], changed);
+      } finally {
+        this.axis = was;
+      }
     }
     if (attr === "pos" && !this.has(id, "pos")) {
       const [x, y] = value as number[];
@@ -607,14 +633,56 @@ export class Runtime {
     this.writeKey(key(id, attr), value, changed);
   }
 
+  /**
+   * What of a write of the slot k is accepted, or undefined when none is. A point is two free
+   * values, its x and its y, and a list of points two for each point, so a writer of a
+   * polyline's x and a writer of its y never meet (the author, 2026-11-13). A part rejected keeps
+   * its old value.
+   */
+  private decide(k: string, v: unknown, old: unknown): unknown {
+    const gate = this.gate!;
+    const axes = this.axis === null ? [0, 1] : [this.axis === "x" ? 0 : 1];
+    const point = (p: number[], was: unknown, at: string): number[] | undefined => {
+      const out = [...p];
+      let any = false;
+      for (const a of axes) {
+        if (gate(`${at}.${a === 0 ? "x" : "y"}`)) any = true;
+        else if (isPoint(was)) out[a] = was[a]!;
+        else return undefined;
+      }
+      return any ? out : undefined;
+    };
+    if (isPoint(v)) return point(v, old, k);
+    if (Array.isArray(v) && v.length > 0 && v.every(isPoint)) {
+      const was = Array.isArray(old) && old.length === v.length ? old : [];
+      let any = false;
+      const out = v.map((p, i) => {
+        const kept = point(p, was[i], `${k}.${i}`);
+        if (kept === undefined) return was[i] ?? null;
+        any = true;
+        return kept;
+      });
+      return any && out.every((p) => p !== null) ? out : undefined;
+    }
+    return gate(k) ? v : undefined;
+  }
+
   private writeKey(k: string, value: unknown, changed: Set<string>): void {
     const s = this.byKey.get(k);
     if (!s || s.state !== FREE) throw new Error(`${k} is not a free variable or attribute`);
     const old = s.value;
-    const v = this.constrain(s.type, value, old);
-    if (this.resting && v !== undefined) this.rest.set(k, v);
+    let v = this.constrain(s.type, value, old);
+    // A write its constraints skip is not made. Every other is decided, free value by free value,
+    // and takes ownership whether or not it changes anything (docs/concurrency-model.md).
+    if (v === undefined) return;
+    if (this.gate) {
+      const kept = this.decide(k, v, old);
+      if (kept === undefined) return;
+      v = kept;
+    }
+    if (this.resting) this.rest.set(k, v);
     // A write that changes nothing is skipped, so nothing downstream is computed again.
-    if (v === undefined || equal(v, old)) return;
+    if (equal(v, old)) return;
     if (!this.rest.has(k)) this.rest.set(k, old);
     s.value = v;
     s.cssKnown = false;

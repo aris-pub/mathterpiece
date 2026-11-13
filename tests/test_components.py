@@ -693,47 +693,67 @@ class TestMathLabels:
         error(f"{K} (button b {MOVE} (label (tex 'a' 'b')))", r"\(tex …\) takes one string")
 
 
-# The author, 2026-11-11 (mtp-vs5d): any writer, listener or control, may take (exclusive): while
-# it runs, a newcomer that would write any of its targets is refused (reference.md,
-# "Concurrency"). The compiled file says so on the writer; whether the reader set a writer off is
-# known only at run time.
+# The author, 2026-11-13 (docs/concurrency-model.md): any writer, listener or control, may take
+# (priority n), n an int from 1 to 1000. One without it has its kind's priority, which the runtime
+# knows: 300 for on-view, 500 for what the reader triggers, 700 for a gesture. (exclusive) is gone.
 SCENE = "(scene s (circle c (r 1)))"
-EXCLUSIVE = [
-    ("slider", f"(slider w {SLIDE} (exclusive))"),
-    ("button", f"(button w {MOVE} (exclusive))"),
-    ("play", f"(play w {MOVE} (exclusive))"),
-    ("stepper", f"(stepper w {MOVE} (exclusive))"),
-    ("toggle", "(bool on) (toggle w on (exclusive))"),
-    ("on-drag", "(canvas v s (on-drag c c.pos (exclusive)))"),
-    ("on-click", f"(canvas v s (on-click c {MOVE} (exclusive)))"),
-    ("on-release", f"(canvas v s (on-release c {MOVE} (exclusive)))"),
-    ("on-dragstart", f"(canvas v s (on-dragstart c {MOVE} (exclusive)))"),
-    ("on-dragend", f"(canvas v s (on-dragend c {MOVE} (exclusive)))"),
-    ("on-enter", f"(canvas v s (on-enter c {MOVE} (exclusive)))"),
-    ("on-leave", f"(canvas v s (on-leave c {MOVE} (exclusive)))"),
-    ("on-view", f"(canvas v s (on-view {MOVE} (exclusive)))"),
-    ("on-live", f"(canvas v s (on-live {MOVE} (exclusive)))"),
-    ("on-quiet", f"(canvas v s (on-live {MOVE}) (on-quiet {MOVE} (exclusive)))"),
-    ("on-pointermove", "(point p) (canvas v s (on-pointermove c p (exclusive)))"),
+PRIORITY = [
+    ("slider", f"(slider w {SLIDE} (priority 900))"),
+    ("button", f"(button w {MOVE} (priority 900))"),
+    ("play", f"(play w {MOVE} (priority 900))"),
+    ("stepper", f"(stepper w {MOVE} (priority 900))"),
+    ("toggle", "(bool on) (toggle w on (priority 900))"),
+    ("on-drag", "(canvas v s (on-drag c c.pos (priority 900)))"),
+    ("on-click", f"(canvas v s (on-click c {MOVE} (priority 900)))"),
+    ("on-release", f"(canvas v s (on-release c {MOVE} (priority 900)))"),
+    ("on-dragstart", f"(canvas v s (on-dragstart c {MOVE} (priority 900)))"),
+    ("on-dragend", f"(canvas v s (on-dragend c {MOVE} (priority 900)))"),
+    ("on-enter", f"(canvas v s (on-enter c {MOVE} (priority 900)))"),
+    ("on-leave", f"(canvas v s (on-leave c {MOVE} (priority 900)))"),
+    ("on-view", f"(canvas v s (on-view {MOVE} (priority 900)))"),
+    ("on-live", f"(canvas v s (on-live {MOVE} (priority 900)))"),
+    ("on-quiet", f"(canvas v s (on-live {MOVE}) (on-quiet {MOVE} (priority 900)))"),
+    ("on-pointermove", "(point p) (canvas v s (on-pointermove c p (priority 900)))"),
 ]
 
 
-class TestExclusive:
-    @pytest.mark.parametrize("kind,src", EXCLUSIVE)
+class TestPriority:
+    @pytest.mark.parametrize("kind,src", PRIORITY)
     def test_every_writer_takes_it_and_the_file_says_so(self, kind, src):
         d = doc(f"{K} {SCENE} {src}")
         (w,) = [o for o in d["objects"] if o["kind"] == kind]
-        assert w["exclusive"] is True
+        assert w["priority"] == 900
         assert errors(d) == []
 
-    @pytest.mark.parametrize("kind,src", EXCLUSIVE)
+    @pytest.mark.parametrize("kind,src", PRIORITY)
     def test_a_writer_without_it_leaves_it_out(self, kind, src):
-        d = doc(f"{K} {SCENE} {src.replace(' (exclusive)', '')}")
+        d = doc(f"{K} {SCENE} {src.replace(' (priority 900)', '')}")
         (w,) = [o for o in d["objects"] if o["kind"] == kind]
-        assert "exclusive" not in w
+        assert "priority" not in w
 
-    def test_it_takes_nothing(self):
-        error(f"{K} (button w {MOVE} (exclusive true))", r"\(exclusive\) takes nothing")
+    @pytest.mark.parametrize("n", ["1", "1000"])
+    def test_it_takes_an_int_from_1_to_1000(self, n):
+        d = doc(f"{K} (button w {MOVE} (priority {n}))")
+        (w,) = [o for o in d["objects"] if o["kind"] == "button"]
+        assert w["priority"] == int(n)
+
+    @pytest.mark.parametrize("n", ["0", "1001", "2.5", "k", "'high'"])
+    def test_it_takes_nothing_else(self, n):
+        error(
+            f"{K} (button w {MOVE} (priority {n}))", r"\(priority n\) takes an int from 1 to 1000"
+        )
+
+    def test_it_takes_one_number(self):
+        error(f"{K} (button w {MOVE} (priority))", r"\(priority n\) takes an int from 1 to 1000")
+        error(
+            f"{K} (button w {MOVE} (priority 1 2))", r"\(priority n\) takes an int from 1 to 1000"
+        )
 
     def test_it_is_given_once(self):
-        error(f"{K} (button w {MOVE} (exclusive) (exclusive))", "'exclusive' is given twice")
+        error(f"{K} (button w {MOVE} (priority 1) (priority 2))", "'priority' is given twice")
+
+    def test_exclusive_is_gone(self):
+        error(
+            f"{K} (button w {MOVE} (exclusive))",
+            r"\(exclusive\) is gone: give the writer a \(priority n\)",
+        )

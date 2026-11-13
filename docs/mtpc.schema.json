@@ -2359,8 +2359,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "label-tex": {
                 "const": true
@@ -2481,8 +2483,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "label-tex": {
                 "const": true
@@ -2575,8 +2579,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "in": {
                 "$ref": "#/$defs/in"
@@ -2698,8 +2704,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "in": {
                 "$ref": "#/$defs/in"
@@ -2781,8 +2789,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -2875,8 +2885,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -2953,8 +2965,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -3035,8 +3049,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -3117,8 +3133,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",

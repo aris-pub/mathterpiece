@@ -353,8 +353,8 @@ class Writer:
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
             d["conditions"] = self.conditions(o)
-        if o.data.get("exclusive"):
-            d["exclusive"] = True
+        if o.data.get("priority") is not None:
+            d["priority"] = o.data["priority"]
         # Written only when given, so a figure that ties nothing is as small as before.
         if o.data.get("in") is not None:
             d["in"] = list(o.data["in"])

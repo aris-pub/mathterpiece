@@ -1,19 +1,26 @@
-// Runs the animations writers set off, and decides between writers that would write the same
-// targets (docs/reference.md, "Concurrency"). Each running source (a button press, a play, a
-// click, a held drag) holds the variables and attributes it writes. A newcomer (a source that
-// starts, resumes or is moved along, a slider's knob, a toggle's flip, a drag's first move, an
-// on-pointermove's write) that would write a target a running source writes is refused when that
-// source is exclusive, or was set off by the reader while the newcomer was not; otherwise it
-// cancels that source. A refused newcomer does not start at all. An exclusive writer holds the
-// lock on its targets for every write, even one that takes no time, and always releases it, even
-// when the write throws (the author, 2026-11-11). Time is in seconds; the page moves it forward on
-// each animation frame.
+// Runs the animations writers set off, and decides every write a writer makes, as
+// docs/concurrency-model.md says (the author, 2026-11-13). Each free value written, a target,
+// has at most one owner: the running writer whose write it last accepted. A write is accepted
+// when its writer's priority is higher than the owner's, or the same and its writer was triggered
+// later. Then the writer becomes the owner, and the writer that owned the value before is
+// cancelled on every value. A rejected write cancels nothing, and its writer writes that value no
+// more for the rest of its effect. Each value is decided on its own. Time is in seconds; the page
+// moves it forward on each frame.
 import type { Player } from "./player.ts";
 
-/** Who set a writer off, the reader or not (on-view, autoplay), and whether it is exclusive. */
+// The priorities writers have when they give none: the page's (on-view, on-rest), the reader's,
+// and a gesture's (on-drag, a held slider's knob, on-pointermove).
+export const PAGE = 300;
+export const READER = 500;
+export const GESTURE = 700;
+
+/** Who set a writer off, the reader or not (on-view), whether it is a gesture the reader is
+ * making now (a dragged shape, a slider's knob held, a pointer moving), and its own (priority n),
+ * if it gives one. */
 export interface How {
   reader: boolean;
-  exclusive: boolean;
+  priority?: number | undefined;
+  held?: boolean;
   // Whether what it writes is part of the rest state, as an on-view's writes are: such a write
   // puts no play or stepper in explore mode (mtp-wjtd).
   rest?: boolean;
@@ -21,10 +28,8 @@ export interface How {
 
 interface Running {
   source: object;
-  // A drag has no player: it writes as the pointer moves.
+  // A drag and a slider's knob have no player: they write as the pointer moves.
   player: Player | null;
-  // What it writes, as the shapes' attributes and the variables reached ("id:attr").
-  reached: Set<string>;
   time: number;
   paused: boolean;
   // Where it pauses by itself: a stepper plays one step and stops at its end.
@@ -34,18 +39,26 @@ interface Running {
   cancelled?: () => void;
   // How many times as fast as written it plays: an on-view hurried to its end runs faster.
   speed?: number;
+  // When it was triggered, counted: at the same priority, the one triggered later wins.
+  born: number;
+  // The values a write of it was rejected on: it writes them no more.
+  blocked: Set<string>;
 }
 
-// A position is its x and its y, so writing one collides with writing the other.
-function ownCovers(target: string): string[] {
-  const [id, attr] = target.split(":");
-  return attr === "pos" ? [`${id}:x`, `${id}:y`] : [target];
+function priority(how: How): number {
+  return how.priority ?? (how.held ? GESTURE : how.reader ? READER : PAGE);
 }
 
 export class Scheduler {
   private sources: Running[] = [];
-  // Plays and steppers, told of every write of what they move by another writer, whether or
-  // not they run: such a write puts one that has not finished into explore mode (mtp-wjtd).
+  // Each target's owner, by the runtime's key of the free value ("id:attr").
+  private owners = new Map<string, Running>();
+  // The writer whose writes are being made now, if any: a write made with none, such as a
+  // control writing its own step, is not decided.
+  private current: Running | null = null;
+  private rejected = 0;
+  // Plays and steppers, told of every accepted write of what they move by another writer, whether
+  // or not they run: such a write puts one that has not finished into explore mode (mtp-wjtd).
   private watchers: { source: object; reached: Set<string>; written: () => void }[] = [];
   // What moves a view's own state, such as a canvas fading something in: it writes nothing in
   // the model, so it never collides with a writer.
@@ -54,11 +67,11 @@ export class Scheduler {
   private heard = false;
 
   /** wake is called whenever something starts moving, so the page can ask for frames; reach
-   * gives what a write of a target reaches, so a group's attribute collides with its members'. */
+   * gives the free values a write of a target ("id:attr") writes, for the watchers. */
   constructor(
     private redraw: () => void,
     private wake: () => void,
-    private reach: (target: string) => string[] = ownCovers,
+    private reach: (target: string) => string[] = (t) => [t],
   ) {}
 
   /** The page calls this whenever it tells its views of a change. */
@@ -99,21 +112,56 @@ export class Scheduler {
     return this.sources.find((s) => s.source === source)?.player ?? null;
   }
 
-  /** Starts a player for a source, from the beginning, and gives false when it is refused. reset,
-   * when given, writes first, once the start is not refused. */
+  /**
+   * Decides a write of the free value k by the writer making writes now, as the runtime asks
+   * before it writes one that changes something; gives whether it is accepted.
+   */
+  accept(k: string): boolean {
+    const by = this.current;
+    if (!by) return true;
+    const owner = this.owners.get(k);
+    const loses = (o: Running) => {
+      const [p, q] = [priority(by.how), priority(o.how)];
+      return p < q || (p === q && by.born < o.born);
+    };
+    if (by.blocked.has(k) || (owner && owner.source !== by.source && loses(owner))) {
+      by.blocked.add(k);
+      this.rejected++;
+      return false;
+    }
+    if (owner && owner.source !== by.source) this.cancel(owner);
+    this.owners.set(k, by);
+    if (!by.how.rest) {
+      const reaches = (r: string) => k === r || k.startsWith(`${r}.`);
+      for (const w of [...this.watchers]) if (w.source !== by.source && [...w.reached].some(reaches)) w.written();
+    }
+    return true;
+  }
+
+  private triggers = 0;
+  private entry(source: object, player: Player | null, how: How, time = 0): Running {
+    return { source, player, time, paused: false, how, born: ++this.triggers, blocked: new Set() };
+  }
+
+  private cancel(s: Running): void {
+    this.forget(s.source);
+    s.cancelled?.();
+  }
+
+  /** Starts a player for a source, from the beginning. reset, when given, writes first. Every
+   * start is made: a write it makes may be rejected, but the writer is not. */
   start(player: Player, source: object, how: How, from = 0, reset?: () => void): boolean {
-    if (!this.claim(player.targets, source, how)) return false;
     this.forget(source);
     player.release();
     this.run(player, source, how, from, reset);
     return true;
   }
 
-  /** Tells written of every write by another source that reaches one of these targets and is
-   * not refused. */
+  /** Tells written of every accepted write by another source of a free value these targets
+   * reach. */
   watch(source: object, targets: string[], written: () => void): void {
     this.watchers = this.watchers.filter((w) => w.source !== source);
-    this.watchers.push({ source, reached: this.reached(targets), written });
+    this.watchers.push({ source, reached: new Set(targets.flatMap((t) => this.reach(t))), written });
   }
 
   unwatch(source: object): void {
@@ -121,71 +169,65 @@ export class Scheduler {
   }
 
   private run(player: Player, source: object, how: How, from: number, reset?: () => void): void {
-    this.sources.push({ source, player, reached: this.reached(player.targets), time: from, paused: false, how });
+    const s = this.entry(source, player, how, from);
+    this.sources.push(s);
     // A seek that writes something tells the views already, as they stand now.
     this.heard = false;
-    if (reset) this.writeOrForget(source, reset);
-    this.seekOrForget(player, source, from);
+    this.as(s, () => {
+      reset?.();
+      player.seek(from);
+    });
     if (!this.heard) this.redraw();
     this.wake();
   }
 
-  // A player that throws while it writes holds its targets no longer.
-  private seekOrForget(player: Player, source: object, time: number): void {
-    this.writeOrForget(source, () => player.seek(time));
-  }
-
-  private writeOrForget(source: object, write: () => void): void {
+  // Makes s's writes, deciding each. A writer that throws while it writes is forgotten, and a
+  // paused one owns nothing after.
+  private as(s: Running, write: () => void): void {
+    const was = this.current;
+    this.current = s;
     try {
       write();
     } catch (err) {
-      this.forget(source);
+      this.forget(s.source);
       throw err;
+    } finally {
+      this.current = was;
+      if (s.paused) this.release(s);
     }
   }
 
   /**
-   * A write that takes no time, such as a slider's step, an on-pointermove's write or a toggle's
-   * flip: a newcomer, refused or not as any is, and given false when refused, so write is not
-   * called. An exclusive one holds the lock on its targets while it writes, and releases it after,
-   * even when the write throws.
+   * A write that takes no time, such as a slider's step, an on-pointermove's write, a toggle's
+   * flip or a held drag's move: the writer runs while it writes, and a held one until its release.
+   * Gives false when a write of it was rejected.
    */
-  instant(targets: string[], source: object, how: How, write: () => void): boolean {
-    if (!this.claim(targets, source, how)) return false;
-    this.locked(this.reached(targets), how, write);
-    return true;
-  }
-
-  private locked(reached: Set<string>, how: How, write: () => void): void {
-    if (!how.exclusive) {
-      write();
-      return;
-    }
-    // The lock is a running writer of its own, so the source's own entry, if any, stays as it is.
-    const lock = {};
-    this.sources.push({ source: lock, player: null, reached, time: 0, paused: false, how });
+  instant(source: object, how: How, write: () => void): boolean {
+    const held = this.sources.find((r) => r.source === source && !r.player);
+    const s = held ?? this.entry(source, null, how);
+    if (held) held.how = { ...how, held: Boolean(held.how.held || how.held) };
+    else this.sources.push(s);
+    const before = this.rejected;
     try {
-      write();
+      this.as(s, write);
     } finally {
-      this.forget(lock);
+      if (!held) this.forget(s);
     }
+    return this.rejected === before;
   }
 
   /** Holds a player for a source, paused where it stands, writing nothing until it is sought or
    * resumed: a play the reader scrubs keeps the one player, so what it read stays read. */
   hold(player: Player, source: object): void {
     this.forget(source);
-    this.sources.push({ source, player, reached: this.reached(player.targets), time: player.time, paused: true, how: { reader: true, exclusive: false } });
+    this.sources.push({ ...this.entry(source, player, { reader: true }, player.time), paused: true });
   }
 
-  /** A drag held from its first move to the release, or a slider from its first change: a
-   * running writer of its targets, which writes as the pointer moves. Gives false when it is refused; cancelled is called if another writer
-   * cancels it. */
-  grip(targets: string[], source: object, how: How, cancelled: () => void): boolean {
-    if (!this.claim(targets, source, how)) return false;
+  /** A drag or a slider's knob the reader holds: a running writer, held, until the release, which
+   * owns what its accepted writes write. cancelled is called if another writer cancels it. */
+  grip(source: object, how: How, cancelled: () => void): void {
     this.forget(source);
-    this.sources.push({ source, player: null, reached: this.reached(targets), time: 0, paused: false, how, cancelled });
-    return true;
+    this.sources.push({ ...this.entry(source, null, { ...how, held: true }), cancelled });
   }
 
   /** Ends a source without cancelling it, as a drag's release does. */
@@ -193,53 +235,42 @@ export class Scheduler {
     this.forget(source);
   }
 
-  /** Moves a source's player to a time, cancelling every other writer of what it moves; gives
-   * false when it is refused. reset, when given, writes first, once the seek is not refused. */
+  /** Moves a source's player to a time, its writes decided as any are. reset, when given, writes
+   * first. */
   seek(source: object, time: number, how: How, reset?: () => void): boolean {
     const s = this.sources.find((r) => r.source === source);
-    if (!s?.player || !this.claim(s.player.targets, source, how)) return false;
+    if (!s?.player) return false;
     s.how = how;
+    // A jump or a resume is a trigger of its own, so a new effect.
+    s.born = ++this.triggers;
+    s.blocked.clear();
     s.time = time;
     this.heard = false;
-    // A paused player writes nothing, so it holds no lock; a seek, as from a key, writes at once.
     const player = s.player;
-    this.locked(s.reached, how, () => {
-      if (reset) this.writeOrForget(source, reset);
-      this.seekOrForget(player, source, time);
+    this.as(s, () => {
+      reset?.();
+      player.seek(time);
     });
     if (!this.heard) this.redraw();
     return true;
   }
 
-  /**
-   * A newcomer that would write these targets ("id:attr"): gives false, cancelling nothing, when
-   * a running source writing one of them refuses it; otherwise cancels every other source writing
-   * one of them and gives true. A paused source writes nothing, so it refuses nothing.
-   */
-  claim(targets: string[], source: object, how: How): boolean {
-    const wanted = this.reached(targets);
-    const met = this.sources.filter((s) => s.source !== source && [...s.reached].some((t) => wanted.has(t)));
-    if (met.some((s) => !s.paused && (s.how.exclusive || (s.how.reader && !how.reader)))) return false;
-    for (const s of met) {
-      this.forget(s.source);
-      s.cancelled?.();
-    }
-    for (const w of how.rest ? [] : [...this.watchers]) {
-      if (w.source !== source && [...w.reached].some((t) => wanted.has(t))) w.written();
-    }
-    return true;
-  }
-
+  /** A paused source writes nothing, so it owns nothing. */
   pause(source: object): void {
-    for (const s of this.sources) if (s.source === source) s.paused = true;
+    for (const s of this.sources) {
+      if (s.source !== source) continue;
+      s.paused = true;
+      this.release(s);
+    }
   }
 
-  /** Plays a source's player on from where it stands, to the time until when given; gives false
-   * when it is refused. */
+  /** Plays a source's player on from where it stands, to the time until when given. */
   resume(source: object, how: How, until?: number): boolean {
     const s = this.sources.find((r) => r.source === source);
-    if (!s?.player || !this.claim(s.player.targets, source, how)) return false;
+    if (!s?.player) return false;
     s.how = how;
+    s.born = ++this.triggers;
+    s.blocked.clear();
     s.paused = false;
     s.until = until;
     this.wake();
@@ -250,7 +281,7 @@ export class Scheduler {
     this.tickers = this.tickers.filter((t) => t(seconds));
     this.heard = false;
     for (const s of [...this.sources]) {
-      if (s.paused || !s.player) continue;
+      if (s.paused || !s.player || !this.sources.includes(s)) continue;
       s.time += seconds * (s.speed ?? 1);
       if (s.until !== undefined && s.time >= s.until) {
         s.time = s.until;
@@ -258,8 +289,9 @@ export class Scheduler {
         s.until = undefined;
       }
       this.heard = false;
-      this.seekOrForget(s.player, s.source, s.time);
-      if (s.player.done) {
+      const player = s.player;
+      this.as(s, () => player.seek(s.time));
+      if (player.done) {
         this.forget(s.source);
         this.heard = false;
       }
@@ -268,11 +300,19 @@ export class Scheduler {
     if (!this.heard) this.redraw();
   }
 
-  private reached(targets: string[]): Set<string> {
-    return new Set(targets.flatMap((t) => this.reach(t)));
+  /** Who owns a free value now, for tests. */
+  ownerOf(k: string): object | null {
+    return this.owners.get(k)?.source ?? null;
   }
 
-  private forget(source: object): void {
-    this.sources = this.sources.filter((s) => s.source !== source);
+  private release(s: Running): void {
+    for (const [k, o] of this.owners) if (o === s) this.owners.delete(k);
+  }
+
+  private forget(source: object | Running | null): void {
+    if (source === null) return;
+    const gone = this.sources.filter((s) => s.source === source || s === source);
+    this.sources = this.sources.filter((s) => !gone.includes(s));
+    for (const s of gone) this.release(s);
   }
 }

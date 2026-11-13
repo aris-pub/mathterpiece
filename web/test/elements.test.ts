@@ -151,14 +151,14 @@ describe("controls", () => {
     expect(v("on")).toBe(true);
   });
 
-  // mtp-0lzp: a flip is a writer set off by the reader, and goes through the same claim as any.
-  it("a toggle's flip cancels a writer of its target, and is refused by an exclusive one", () => {
+  // mtp-0lzp: a flip is a writer set off by the reader, decided as any (docs/concurrency-model.md).
+  it("a toggle's flip cancels a writer of its target, and is rejected by one of a higher priority", () => {
     const [, rt, v] = page(`<mtp-toggle model="m" name="own"></mtp-toggle>`);
     const input = document.querySelector("mtp-toggle input") as HTMLInputElement;
     const mine = rt.id("mine");
-    const flips = (exclusive: boolean) => {
-      // An animation that sets mine to false at its end, a second from now.
-      const writer = { exclusive };
+    const flips = (priority: number) => {
+      // An animation that holds mine at false from now to its end, a second from now.
+      const writer = {};
       const player = {
         targets: [`${mine}:`],
         done: false,
@@ -167,18 +167,18 @@ describe("controls", () => {
         seek(t: number) {
           player.time = t;
           player.done = t >= 1;
-          if (player.done) rt.write(mine, null, false);
+          rt.write(mine, null, false);
         },
       };
       rt.write(mine, null, false);
       const model = document.querySelector("mtp-model") as MtpModel;
-      model.scheduler!.start(player as never, writer, { reader: true, exclusive });
+      model.scheduler!.start(player as never, writer, { reader: true, priority });
       input.click();
       pass(1.5);
       return v("mine");
     };
-    expect(flips(false)).toBe(true);
-    expect(flips(true)).toBe(false);
+    expect(flips(500)).toBe(true);
+    expect(flips(900)).toBe(false);
     expect(input.checked).toBe(false);
   });
 

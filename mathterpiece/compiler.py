@@ -104,7 +104,7 @@ CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
-    *["rest", "in", "selected", "exclusive"],
+    *["rest", "in", "selected", "priority"],
 }
 # The views (data-model.md, "Components"): what a listener or a control may belong to.
 VIEWS = ("canvas", "readout", "display")
@@ -3507,7 +3507,7 @@ class _Compiler:
         stop = next((it for it in items if _head(it) == "stop-propagation"), None)
         if stop is not None:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
-        self.exclusive(obj, items)
+        self.priority(obj, items)
         if obj.kind not in LISTENERS:
             label = self.take(items, "label")
             # (label (tex …)) gives the label as LaTeX, the form a term of a formula takes.
@@ -3558,19 +3558,25 @@ class _Compiler:
             else None
         )
 
-    def exclusive(self, obj: Obj, items: list) -> None:
-        """(exclusive): while the writer runs, any other writer that would write one of its
-        targets is refused at its start (reference.md, "Concurrency"; the author, 2026-11-11)."""
-        found = [it for it in items if _head(it) == "exclusive"]
+    def priority(self, obj: Obj, items: list) -> None:
+        """(priority n): the writer's priority, an int from 1 to 1000. A write is accepted when its
+        writer's priority is at least that of the writer owning the value (docs/concurrency-
+        model.md; the author, 2026-11-13). One without it has its kind's priority."""
+        gone = next((it for it in items if _head(it) == "exclusive"), None)
+        if gone is not None:
+            raise CompileError("(exclusive) is gone: give the writer a (priority n)", gone.pos)
+        found = [it for it in items if _head(it) == "priority"]
         if len(found) > 1:
-            raise CompileError("'exclusive' is given twice", found[1].pos)
+            raise CompileError("'priority' is given twice", found[1].pos)
         if found:
             item = found[0]
             assert isinstance(item, Form)
-            if len(item.items) != 1:
-                raise CompileError("(exclusive) takes nothing", item.pos)
+            n = item.items[1] if len(item.items) == 2 else None
+            value = getattr(n, "value", None)
+            if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 1000:
+                raise CompileError("(priority n) takes an int from 1 to 1000", item.pos)
             items.remove(item)
-            obj.data["exclusive"] = True
+            obj.data["priority"] = value
 
     def stops(self, obj: Obj, items: list) -> None:
         """(stop-propagation bool): while it holds, the event stops at this listener's shape, as

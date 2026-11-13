@@ -105,9 +105,8 @@ export interface Obj {
   // A row or a column: how it places its members (mtp-50n).
   layout?: { axis: "row" | "column"; gap: Attribute; align: Attribute } | null;
   active?: Attribute | null;
-  // A writer given (exclusive): while it runs, a newcomer that would write any of its targets is
-  // refused (docs/reference.md, "Concurrency").
-  exclusive?: boolean;
+  // A writer's (priority n), from 1 to 1000, when it gives one (docs/concurrency-model.md).
+  priority?: number;
   // on-click, on-release, on-dragstart, on-dragend, on-pointermove: whether the event stops at its shape.
   "stop-propagation"?: Attribute | null;
   // canvases: what each shows, in drawing order

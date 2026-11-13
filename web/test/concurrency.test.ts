@@ -44,7 +44,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("a writer set off by the reader, not exclusive, while it runs", () => {
+describe("a writer set off by the reader, while it runs", () => {
   it("is cancelled by a newcomer the reader sets off", () => {
     const [, , v] = page(buttons("go", "back"));
     press("go");
@@ -54,7 +54,7 @@ describe("a writer set off by the reader, not exclusive, while it runs", () => {
     expect(v("k")).toBe(0);
   });
 
-  it("refuses a newcomer the reader did not set off: an on-view", () => {
+  it("rejects the writes of a newcomer the reader did not set off: an on-view", () => {
     const [model, rt, v] = page(buttons("go") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     press("go");
     pass(0.5);
@@ -63,19 +63,19 @@ describe("a writer set off by the reader, not exclusive, while it runs", () => {
     expect(v("k")).toBe(10);
   });
 
-  it("refuses a newcomer the reader did not set off: an autoplay", () => {
+  // A rejected writer writes that value no more, so k stays where the reader's writer left it.
+  it("rejects the writes of a newcomer the reader did not set off: an autoplay", () => {
     const [model, rt, v] = page(buttons("go") + `<mtp-canvas model="m" name="z"></mtp-canvas><mtp-play model="m" name="auto"></mtp-play>`);
     press("go");
     pass(0.5);
     model.markSeen(rt.id("z"));
-    expect(v("auto", "playing")).toBe(false);
     pass(1.5);
     expect(v("k")).toBe(10);
   });
 });
 
-describe("an exclusive writer, while it runs", () => {
-  it("refuses a newcomer the reader sets off", () => {
+describe("a writer of a higher priority, while it runs", () => {
+  it("rejects the writes of a newcomer the reader sets off", () => {
     const [, , v] = page(buttons("lock", "back"));
     press("lock");
     pass(0.5);
@@ -84,7 +84,7 @@ describe("an exclusive writer, while it runs", () => {
     expect(v("k")).toBe(10);
   });
 
-  it("refuses a newcomer the reader did not set off", () => {
+  it("rejects the writes of a newcomer the reader did not set off", () => {
     const [model, rt, v] = page(buttons("lock") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     press("lock");
     pass(0.5);
@@ -93,13 +93,14 @@ describe("an exclusive writer, while it runs", () => {
     expect(v("k")).toBe(10);
   });
 
-  it("refuses the whole newcomer, so none of its moves happen, even on other targets", () => {
+  // Each value is decided on its own: the newcomer's move of j goes on (the author, 2026-11-13).
+  it("rejects a newcomer's writes of its values only, and accepts its others", () => {
     const [, , v] = page(buttons("lock", "both"));
     press("lock");
     pass(0.5);
     press("both");
     pass(1.5);
-    expect([v("k"), v("j")]).toEqual([10, 0]);
+    expect([v("k"), v("j")]).toEqual([10, 5]);
   });
 
   it("allows a newcomer on a different target", () => {
@@ -111,7 +112,7 @@ describe("an exclusive writer, while it runs", () => {
     expect([v("k"), v("j")]).toEqual([10, 5]);
   });
 
-  it("refuses newcomers only until it ends", () => {
+  it("rejects the writes of newcomers only until it ends", () => {
     const [, , v] = page(buttons("lock", "back"));
     press("lock");
     pass(1.5);
@@ -121,7 +122,7 @@ describe("an exclusive writer, while it runs", () => {
   });
 });
 
-describe("a writer the reader did not set off, not exclusive, while it runs", () => {
+describe("a writer the reader did not set off, while it runs", () => {
   it("is cancelled by a newcomer the reader sets off", () => {
     const [model, rt, v] = page(buttons("back") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     rt.write(rt.id("k"), null, 2);
@@ -247,15 +248,18 @@ describe("a drag", () => {
     expect(v("d", "x")).toBe(8);
   });
 
-  it("held, is cancelled by an on-enter the pointer sets off", () => {
+  // The author, 2026-11-13: a held drag is a gesture, which no on-enter can cancel; the
+  // on-enter's writes of the dragged shape are rejected.
+  it("held, rejects the writes an on-enter the pointer sets off makes of the dragged shape", () => {
     const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
     at(svg(), "pointermove", 10, 0);
     at(shape(rt, "e"), "pointermove", 30, 0);
+    const moved = v("d", "x");
     pass(1.5);
-    expect(v("d", "x")).toBe(3);
+    expect(v("d", "x")).toBe(moved);
     at(svg(), "pointermove", 60, 0);
-    expect(v("d", "x")).toBe(3);
+    expect(v("d", "x")).not.toBe(moved);
     at(svg(), "pointerup", 60, 0);
   });
 
@@ -272,7 +276,7 @@ describe("a drag", () => {
     at(svg(), "pointerup", 30, 0);
   });
 
-  it("exclusive, refuses both an on-view and an on-enter", () => {
+  it("of a higher priority, rejects the writes of both an on-view and an on-enter", () => {
     const [model, rt, v] = page(`<mtp-canvas model="m" name="held"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
     model.markSeen(rt.id("held"));
@@ -307,13 +311,14 @@ describe("a group's attribute", () => {
     expect([v("c1", "r"), v("c2", "r")]).toEqual([3, 3]);
   });
 
-  it("a writer of it is refused by an exclusive writer of a member's, on every member", () => {
+  // Each member's value is decided on its own (the author, 2026-11-13).
+  it("a writer of it is rejected on a member a writer of a higher priority owns, and writes the others", () => {
     const [, , v] = page(buttons("hold-one", "grow"));
     press("hold-one");
     pass(0.5);
     press("grow");
     pass(1.5);
-    expect([v("c1", "r"), v("c2", "r")]).toEqual([2, 1]);
+    expect([v("c1", "r"), v("c2", "r")]).toEqual([2, 3]);
   });
 });
 
@@ -396,21 +401,21 @@ describe("a slider", () => {
     expect(v("k")).toBe(4);
   });
 
-  it("held and cancelled by a newcomer the reader sets off, writes nothing more until its release", () => {
+  // The author, 2026-11-13: a held knob is a gesture, so a newcomer the reader sets off is
+  // rejected on its value.
+  it("held, rejects the writes of a newcomer the reader sets off, and writes on", () => {
     const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(500);
     press("back");
     pass(1.5);
-    expect(v("k")).toBe(0);
-    slide(800);
-    expect(v("k")).toBe(0);
-    knob("pointerup");
+    expect(v("k")).toBe(5);
     slide(800);
     expect(v("k")).toBe(8);
+    knob("pointerup");
   });
 
-  it("exclusive and held, refuses a newcomer the reader sets off", () => {
+  it("of a higher priority and held, rejects the writes of a newcomer the reader sets off", () => {
     const [, , v] = page(`<mtp-slider model="m" name="locked"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(500);
@@ -420,7 +425,7 @@ describe("a slider", () => {
     knob("pointerup");
   });
 
-  it("exclusive, holds the lock during a step from a key, which takes no time", () => {
+  it("of a higher priority, owns its value during a step from a key, which takes no time", () => {
     const [, rt, v] = page(`<mtp-slider model="m" name="locked"></mtp-slider>` + buttons("back"));
     const write = rt.write.bind(rt);
     let pressed = false;
@@ -441,7 +446,7 @@ describe("a slider", () => {
   });
 });
 
-describe("an exclusive on-pointermove", () => {
+describe("an on-pointermove, a gesture", () => {
   it("holds the lock on its target during each write, which takes no time", () => {
     const [, rt, v] = page(`<mtp-canvas model="m" name="pm"></mtp-canvas>` + buttons("jump"));
     const write = rt.write.bind(rt);
@@ -468,23 +473,13 @@ describe("an exclusive on-pointermove", () => {
 
 describe("a shape whose position is worked out from other attributes", () => {
   // mtp-gzs9: writing its x, y or pos writes those attributes, so the writers meet.
-  it("a polyline's exclusive writer of x refuses a writer of its points", () => {
+  // The author, 2026-11-13: a polyline's x is neither free nor bound: a write of it writes each
+  // point's x. Writers meet only on those values.
+  it("a polyline's writer of points, pressed later, cancels a writer of its x", () => {
     const [, , v] = page(buttons("pl-x", "pl-points"));
     press("pl-x");
     pass(0.5);
     press("pl-points");
-    pass(1.5);
-    expect(v("pl", "points")).toEqual([
-      [5, 0],
-      [5, 2],
-    ]);
-  });
-
-  it("a polyline's exclusive writer of points refuses a writer of its x", () => {
-    const [, , v] = page(buttons("pl-points", "pl-x"));
-    press("pl-points");
-    pass(0.5);
-    press("pl-x");
     pass(1.5);
     expect(v("pl", "points")).toEqual([
       [0, 0],
@@ -492,15 +487,51 @@ describe("a shape whose position is worked out from other attributes", () => {
     ]);
   });
 
-  const meets = (rt: Runtime, a: string, b: string) => {
-    const s = new Scheduler(
-      () => {},
-      () => {},
-      (t) => rt.reached(t),
-    );
-    const held = {};
-    s.grip([a], held, { reader: true, exclusive: true }, () => {});
-    return !s.claim([b], {}, { reader: true, exclusive: false });
+  it("a polyline's writer of x, pressed later, cancels a writer of its points", () => {
+    const [, , v] = page(buttons("pl-points", "pl-x"));
+    press("pl-points");
+    pass(0.5);
+    press("pl-x");
+    pass(1.5);
+    // A list of points jumps at the end of its move, so the points had not moved yet.
+    expect(v("pl", "points")).toEqual([
+      [5, 0],
+      [5, 2],
+    ]);
+  });
+
+  it("a polyline's writer of x and a writer of its y never meet", () => {
+    const [, , v] = page(buttons("pl-x", "pl-y"));
+    press("pl-x");
+    pass(0.5);
+    press("pl-y");
+    pass(1.5);
+    expect(v("pl", "points")).toEqual([
+      [5, 4],
+      [5, 6],
+    ]);
+  });
+
+  // Two writers meet when a write of each writes a free value in common (docs/concurrency-model.md):
+  // a writer of a high priority writes a, each value as it is, and the newcomer's write of b is
+  // then rejected on some value.
+  const meets = (model: MtpModel, rt: Runtime, a: string, b: string) => {
+    const s = model.scheduler!;
+    const target = (t: string): [number, string | null] => {
+      const at = t.indexOf(":");
+      return [Number(t.slice(0, at)), t.slice(at + 1) || null];
+    };
+    const same = (t: string) => {
+      const [id, attr] = target(t);
+      rt.write(id, attr, rt.value(id, attr));
+    };
+    const high = {};
+    let met = false;
+    s.instant(high, { reader: true, priority: 900 }, () => {
+      same(a);
+      met = !s.instant({}, { reader: true }, () => same(b));
+    });
+    return met;
   };
   const cases: [string, string[]][] = [
     ["pl", ["points"]],
@@ -511,24 +542,29 @@ describe("a shape whose position is worked out from other attributes", () => {
   ];
   for (const [name, attrs] of cases) {
     it(`${name}: a writer of x, y or pos meets a writer of ${attrs.join(", ")}, both ways`, () => {
-      const [, rt] = page("");
+      const [model, rt] = page("");
       const id = rt.id(name);
       for (const pos of ["x", "y", "pos"]) {
         for (const attr of attrs) {
-          expect(meets(rt, `${id}:${pos}`, `${id}:${attr}`), `${pos} then ${attr}`).toBe(true);
-          expect(meets(rt, `${id}:${attr}`, `${id}:${pos}`), `${attr} then ${pos}`).toBe(true);
+          expect(meets(model, rt, `${id}:${pos}`, `${id}:${attr}`), `${pos} then ${attr}`).toBe(true);
+          expect(meets(model, rt, `${id}:${attr}`, `${id}:${pos}`), `${attr} then ${pos}`).toBe(true);
         }
       }
     });
   }
 
+  // The free values are whole: a polyline's x and its y are both written into its points, so a
+  // writer of x now meets a writer of y (docs/concurrency-model.md). A circle's x and y are two
+  // free values, and a line's from and its to.
   it("a writer of x does not meet a writer of y, and a line's from does not meet its to", () => {
-    const [, rt] = page("");
+    const [model, rt] = page("");
     const pl = rt.id("pl");
     const ln = rt.id("ln");
-    expect(meets(rt, `${pl}:x`, `${pl}:y`)).toBe(false);
-    expect(meets(rt, `${ln}:from`, `${ln}:to`)).toBe(false);
-    expect(meets(rt, `${pl}:pos`, `${pl}:y`)).toBe(true);
+    const d = rt.id("d");
+    expect(meets(model, rt, `${pl}:x`, `${pl}:y`)).toBe(false);
+    expect(meets(model, rt, `${ln}:from`, `${ln}:to`)).toBe(false);
+    expect(meets(model, rt, `${pl}:pos`, `${pl}:y`)).toBe(true);
+    expect(meets(model, rt, `${d}:x`, `${d}:y`)).toBe(false);
   });
 });
 
