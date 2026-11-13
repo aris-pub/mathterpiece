@@ -203,11 +203,28 @@ mtp-stepper .mtp-step-button svg {
   width: 1rem; height: 1rem;
   fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
 }
-mtp-stepper .mtp-count { font-size: 0.8125rem; color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+mtp-stepper .mtp-count {
+  flex: none; min-width: 2.5rem; text-align: right;
+  font-size: 0.8125rem; color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 mtp-stepper .mtp-step-button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--mtp-active) 85%, var(--text-body, black));
 }
-mtp-stepper .mtp-dots { display: flex; align-items: center; gap: 10px; }
+/* The dots and the pill reading Exploring share one grid cell, so the dots are never narrower
+   than the pill: few dots spread to its width. The pill keeps its room while hidden, so the
+   stepper has one width in every state. */
+mtp-stepper .mtp-dot-area { display: grid; align-items: center; }
+mtp-stepper .mtp-dots {
+  grid-area: 1 / 1; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+mtp-stepper .mtp-exploring {
+  grid-area: 1 / 1; justify-self: center; z-index: 1;
+  font-size: 0.8125rem; font-weight: 700; line-height: 1.2; white-space: nowrap;
+  padding: 0.2rem 0.65rem; border-radius: 999px;
+  background: var(--mtp-active); color: var(--surface-page, white);
+  pointer-events: none;
+}
+mtp-stepper .mtp-exploring[hidden] { display: block; visibility: hidden; }
 mtp-stepper .mtp-dot {
   position: relative; flex: none;
   width: 10px; height: 10px; padding: 0; border: 0; border-radius: 50%;

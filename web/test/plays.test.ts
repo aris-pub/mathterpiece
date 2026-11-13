@@ -478,6 +478,17 @@ describe("a stepper", () => {
     expect(count()).toBe("1 / 3");
   });
 
+  // The author, 2026-11-13: in explore mode a pill reading Exploring sits on the dimmed dots, as
+  // on a play's bars.
+  it("shows a pill reading Exploring on its dots in explore mode only", () => {
+    hints();
+    const pill = el().querySelector(".mtp-exploring") as HTMLElement;
+    expect(pill.textContent).toBe("Exploring");
+    expect(pill.hidden).toBe(false);
+    click("set-two");
+    expect(pill.hidden).toBe(true);
+  });
+
   it("names its inputs: back, next and one dot per step", () => {
     hints();
     expect(back().getAttribute("aria-label")).toBe("previous step");

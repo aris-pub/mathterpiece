@@ -41,8 +41,35 @@ describe("a stepper", () => {
     expect(getComputedStyle(back).borderRadius).toBe("50%");
     const [a, b] = dots();
     expect([box(a!).width, box(a!).height]).toEqual([10, 10]);
-    expect(box(b!).left - box(a!).right).toBe(10);
+    expect(box(b!).left - box(a!).right).toBeGreaterThanOrEqual(10);
     expect(getComputedStyle(back).opacity).toBe("0.5");
+  });
+
+  // The author, 2026-11-13: the dots are never narrower than the Exploring pill, spread to its
+  // width when there are few, the pill sits on them in explore mode, and the stepper is as wide in
+  // every state.
+  it("spreads few dots to the width of the Exploring pill, which sits on them, at one width in every state", async () => {
+    const { rt } = await open();
+    const el = document.querySelector("mtp-stepper") as HTMLElement;
+    const pill = el.querySelector(".mtp-exploring") as HTMLElement;
+    const row = el.querySelector(".mtp-dots") as HTMLElement;
+    const [first, , last] = dots();
+    const p = box(pill);
+    expect(box(row).width).toBeGreaterThanOrEqual(p.width - 0.5);
+    expect(Math.abs(box(first!).left - box(row).left)).toBeLessThan(1);
+    expect(Math.abs(box(last!).right - box(row).right)).toBeLessThan(1);
+    expect(Math.abs((p.left + p.right) / 2 - (box(row).left + box(row).right) / 2)).toBeLessThan(1);
+    expect(getComputedStyle(pill).visibility).toBe("visible");
+    expect(getComputedStyle(first!).opacity).toBe("0.45");
+    const wide = box(el).width;
+    rt.write(rt.id("k"), null, 2);
+    await frames();
+    expect(getComputedStyle(pill).visibility).toBe("hidden");
+    expect(box(el).width).toBe(wide);
+    rt.write(rt.id("k"), null, 4);
+    rt.write(rt.id("j"), null, 1);
+    await frames();
+    expect(box(el).width).toBe(wide);
   });
 
   it("takes a tap a little outside a dot", async () => {

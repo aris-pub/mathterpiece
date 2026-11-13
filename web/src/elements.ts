@@ -1612,6 +1612,15 @@ export class MtpStepper extends MtpPart {
       group.append(dot);
       return dot;
     });
+    // The pill reading Exploring sits on the dots in explore mode, as on a play's bars, and keeps
+    // its room while hidden, so the dots are never narrower than it (the author, 2026-11-13).
+    const pill = document.createElement("span");
+    pill.className = "mtp-exploring";
+    pill.textContent = "Exploring";
+    pill.setAttribute("aria-hidden", "true");
+    const area = document.createElement("div");
+    area.className = "mtp-dot-area";
+    area.append(group, pill);
     // The count beside the dots; the dots' group already says it to a screen reader.
     const count = document.createElement("span");
     count.className = "mtp-count";
@@ -1649,6 +1658,7 @@ export class MtpStepper extends MtpPart {
       });
       const label = labelOf(rt, id);
       count.textContent = `${exploring ? "–" : k} / ${n}`;
+      pill.hidden = !exploring;
       group.setAttribute("aria-label", k ? `${label}: step ${k} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
       this.pageState({ inactive: !active, step: String(k), playing: running, exploring });
       if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
@@ -1656,7 +1666,7 @@ export class MtpStepper extends MtpPart {
         if (rt.value(id, "step") !== k) rt.write(id, "step", k);
       }
     };
-    this.replaceChildren(back, group, next, count);
+    this.replaceChildren(back, area, next, count);
     this.refresh();
   }
 

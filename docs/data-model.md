@@ -250,7 +250,7 @@ The elements also give the page these names, for its scripts and its CSS:
 | `data-mtp-ready`, `data-mtp-step` and the like | the attributes that show each element's page state (see "Page state and inputs", below). A page shows what goes with a step with it, as `.fig:has(mtp-play[data-mtp-step="2"]) .q2` |
 | `data-mtp-input` | the name of each input of an element (see "Page state and inputs", below) |
 | `mtp-play-button`, `mtp-bars`, `mtp-bar`, `mtp-knob`, `mtp-exploring`, `mtp-count` | the classes of a play's button, of the row of bars the reader drags along, of each step's bar inside it (its CSS variable `--u`, from 0 to 1, is how far that step has played), of the knob, of the pill reading "Exploring", and of the step count |
-| `mtp-step-button`, `mtp-back`, `mtp-next`, `mtp-dots`, `mtp-dot`, `mtp-passed`, `mtp-count` | the classes of a stepper's round buttons, of its "‹" and its "›", of the row of dots, of each dot, of the dot of a step passed, and of the step count. The current step's dot has `aria-current="step"` |
+| `mtp-step-button`, `mtp-back`, `mtp-next`, `mtp-dots`, `mtp-dot`, `mtp-passed`, `mtp-exploring`, `mtp-count` | the classes of a stepper's round buttons, of its "‹" and its "›", of the row of dots, of each dot, of the dot of a step passed, of the pill reading "Exploring", and of the step count. The current step's dot has `aria-current="step"` |
 
 ### Page state and inputs
 
