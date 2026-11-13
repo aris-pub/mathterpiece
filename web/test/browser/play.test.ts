@@ -111,8 +111,11 @@ describe("a play's bar", () => {
     expect(v("k")).toBeGreaterThanOrEqual(2);
     expect(v("tour", "step")).toBe(2);
     (document.activeElement as HTMLElement).blur();
+    // A left arrow within 300 ms of step 2's start would go back to step 1.
+    await new Promise((r) => setTimeout(r, 400));
     await userEvent.keyboard("{ArrowLeft}");
     expect(v("k")).toBeGreaterThanOrEqual(2);
+    expect(v("tour", "step")).toBe(2);
     expect(v("tour", "playing")).toBe(true);
     await userEvent.keyboard(" ");
     expect(v("tour", "playing")).toBe(false);
