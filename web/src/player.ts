@@ -124,7 +124,9 @@ export class Player {
   }
 
   get done(): boolean {
-    return this.at >= this.duration;
+    // Frame times add up with rounding, so the time can fall a hair under the end after the last
+    // frame has already written every move's end.
+    return this.at >= this.duration - eps(this.duration);
   }
 
   /** Where it stands in its round: the time, for an animation that does not loop as a whole. */

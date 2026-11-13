@@ -116,6 +116,17 @@ describe("a play", () => {
     });
   });
 
+  it("ends when its frames add up to a hair under its end, and reports playing no longer", () => {
+    const [, , v] = page(`<mtp-play model="m" name="once"></mtp-play>`);
+    (input(document.querySelector("mtp-play")!, "button") as HTMLButtonElement).click();
+    // The first frame starts the clock.
+    pass(0.1);
+    pass(1);
+    expect(v("j")).toBe(1);
+    expect(v("once", "playing")).toBe(false);
+    expect(document.querySelector("mtp-play")!.hasAttribute("data-mtp-playing")).toBe(false);
+  });
+
   describe("its button", () => {
     it("in explore mode sets state 0 and plays every step", () => {
       const [, , v] = tour();
