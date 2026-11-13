@@ -28,6 +28,8 @@
   (animation
     (move j (to 1) (duration 0.1))
     (in-order (move j (to 2) (duration 0.1)) (wait 0.4) (move k (to 7) (duration 0)))))
+; One step of a second: ten frames of 0.1 s add up to 0.9999999999999999, a hair under its end.
+(play once (move j (to 1) (duration 1)))
 (button go (move k (to 9) (duration 1)))
 (button set-two (move k (to 2) (duration 0)))
 (button set-three (move k (to 3) (duration 0)))
