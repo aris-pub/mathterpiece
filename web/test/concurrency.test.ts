@@ -475,6 +475,63 @@ describe("a shape whose position is worked out from other attributes", () => {
     ]);
   });
 
+  // mtp-wtwz: a line's and a triangle's x and y are written into their ends and corners, as a
+  // polyline's are into its points (docs/reference.md, "Concurrency").
+  it("a line's x and y move both its ends", () => {
+    const [, , v] = page(buttons("ln-x", "ln-y"));
+    press("ln-x");
+    pass(1.5);
+    expect([v("ln", "from"), v("ln", "to"), v("ln", "x")]).toEqual([[4, 0], [6, 0], 5]);
+    press("ln-y");
+    pass(1.5);
+    expect([v("ln", "from"), v("ln", "to"), v("ln", "y")]).toEqual([[4, 5], [6, 5], 5]);
+  });
+
+  // A triangle's centroid is a third of the sum of its corners, which leaves rounding errors.
+  const rounded = (x: unknown): unknown => (Array.isArray(x) ? x.map(rounded) : Math.round((x as number) * 1e9) / 1e9);
+
+  it("a triangle's x and y move all its corners", () => {
+    const [, , v] = page(buttons("tr-x", "tr-y"));
+    press("tr-x");
+    pass(1.5);
+    expect(rounded([v("tr", "a"), v("tr", "b"), v("tr", "c"), v("tr", "x")])).toEqual([[3, 0], [6, 0], [6, 3], 5]);
+    press("tr-y");
+    pass(1.5);
+    expect(rounded([v("tr", "a"), v("tr", "b"), v("tr", "c"), v("tr", "y")])).toEqual([[3, 4], [6, 4], [6, 7], 5]);
+  });
+
+  it("a line's writer of x and a writer of its y never meet, nor a triangle's", () => {
+    const [, , v] = page(buttons("ln-x", "ln-y", "tr-x", "tr-y"));
+    press("ln-x");
+    press("tr-x");
+    pass(0.5);
+    press("ln-y");
+    press("tr-y");
+    pass(1.5);
+    expect([v("ln", "from"), v("ln", "to")]).toEqual([
+      [4, 5],
+      [6, 5],
+    ]);
+    expect(rounded([v("tr", "a"), v("tr", "b"), v("tr", "c")])).toEqual([
+      [3, 4],
+      [6, 4],
+      [6, 7],
+    ]);
+  });
+
+  it("a line's writer of from, pressed later, cancels a writer of its x", () => {
+    const [, , v] = page(buttons("ln-x", "ln-from"));
+    press("ln-x");
+    pass(0.5);
+    press("ln-from");
+    pass(1.5);
+    const [from, to] = [v("ln", "from"), v("ln", "to")] as number[][];
+    expect(from).toEqual([0, 4]);
+    // The writer of x was cancelled part way, so the line's to stopped short of 6.
+    expect(to![0]).toBeGreaterThan(2);
+    expect(to![0]).toBeLessThan(6);
+  });
+
   // Two writers meet when a write of each writes a free value in common (docs/concurrency-model.md):
   // a writer of a high priority writes a, each value as it is, and the newcomer's write of b is
   // then rejected on some value.
