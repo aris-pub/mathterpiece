@@ -22,6 +22,12 @@
     (move k (to 2) (duration 1))
     (move k (to 4) (duration 1))
     (move j (to 1) (duration 1))))
+; Its second step ends at 0.1 + (0.1 + 0.4) = 0.6 s, and its last move starts at
+; (0.1 + 0.1) + 0.4 = 0.6000000000000001 s: the same time, summed in another order.
+(stepper rounded
+  (animation
+    (move j (to 1) (duration 0.1))
+    (in-order (move j (to 2) (duration 0.1)) (wait 0.4) (move k (to 7) (duration 0)))))
 (button go (move k (to 9) (duration 1)))
 (button set-two (move k (to 2) (duration 0)))
 (button set-three (move k (to 3) (duration 0)))
