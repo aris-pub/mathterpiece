@@ -136,23 +136,6 @@ export class MtpModel extends HTMLElement {
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
 
-  /** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
-   * views"), playing its active on-live or on-quiet listeners. */
-  setLive(view: number, live: boolean): void {
-    const rt = this.runtime;
-    const scheduler = this.scheduler;
-    if (!rt || !scheduler || !rt.quietMode.has(view) || rt.quiet.has(view) !== live) return;
-    if (live) rt.quiet.delete(view);
-    else rt.quiet.add(view);
-    const kind = live ? "on-live" : "on-quiet";
-    rt.objects.forEach((o, i) => {
-      if (o.kind !== kind || o.view !== view || !activeOf(rt, i)) return;
-      const player = playerFor(rt, o);
-      if (player) scheduler.start(player, o, howOf(o, true));
-    });
-    this.changed();
-  }
-
   /** Runs work the first time the view or control id comes into view, or now if it has. */
   whenSeen(id: number, work: () => void): void {
     if (this.seen.has(id)) work();
@@ -195,6 +178,24 @@ export class MtpModel extends HTMLElement {
     this.error = message;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
+}
+
+/** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
+ * views"), playing its active on-live or on-quiet listeners. A function, not a method of the
+ * model: no element has methods that change it (docs/page-interface.md). */
+function setLive(model: MtpModel, view: number, live: boolean): void {
+  const rt = model.runtime;
+  const scheduler = model.scheduler;
+  if (!rt || !scheduler || !rt.quietMode.has(view) || rt.quiet.has(view) !== live) return;
+  if (live) rt.quiet.delete(view);
+  else rt.quiet.add(view);
+  const kind = live ? "on-live" : "on-quiet";
+  rt.objects.forEach((o, i) => {
+    if (o.kind !== kind || o.view !== view || !activeOf(rt, i)) return;
+    const player = playerFor(rt, o);
+    if (player) scheduler.start(player, o, howOf(o, true));
+  });
+  model.changed();
 }
 
 // What views and controls share: finding their model and their object, and hearing when the
@@ -294,7 +295,7 @@ abstract class MtpPart extends HTMLElement {
   private onKey = (event: KeyboardEvent) => {
     const rt = this.model()?.runtime;
     const id = this.shown;
-    if (event.key === "Escape" && rt && id !== null && rt.quietMode.has(id) && !rt.quiet.has(id)) this.model()!.setLive(id, false);
+    if (event.key === "Escape" && rt && id !== null && rt.quietMode.has(id) && !rt.quiet.has(id)) setLive(this.model()!, id, false);
   };
 
   /**
@@ -334,7 +335,7 @@ abstract class MtpPart extends HTMLElement {
       const quiet = rt.quiet.has(id);
       this.pageState({ mode: quiet ? "quiet" : "live" });
       if (!this.switch) {
-        this.switch = makeSwitch(this, () => model.setLive(id, rt.quiet.has(id)));
+        this.switch = makeSwitch(this, () => setLive(model, id, rt.quiet.has(id)));
         this.append(this.switch);
       } else if (!first && this.switchQuiet === quiet) return;
       this.switchQuiet = quiet;
@@ -411,6 +412,7 @@ function makeSwitch(view: HTMLElement, press: () => void): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "mtp-switch";
+  button.dataset.mtpInput = "switch";
   if (view.localName === "mtp-readout" || view.style.display === "inline") button.classList.add("mtp-switch-inline");
   button.addEventListener("click", press);
   return button;
@@ -1093,12 +1095,14 @@ export class MtpSlider extends MtpPart {
       scrubbing = false;
       cut = false;
       scheduler.letGo(this);
+      this.gate();
       window.removeEventListener("pointerup", release);
       window.removeEventListener("pointercancel", release);
     };
     input.addEventListener("pointerdown", () => {
       scrubbing = true;
       cut = false;
+      this.gate();
       if (player && activeOf(rt, id)) scheduler.grip(this, how, () => (cut = true));
       // The release may come anywhere on the page, so the window hears it too.
       window.addEventListener("pointerup", release);
@@ -1123,8 +1127,10 @@ export class MtpSlider extends MtpPart {
       rt.write(id, "position", best / max);
     };
     this.follow();
+    input.dataset.mtpInput = "track";
     this.gate = () => {
       input.disabled = !activeOf(rt, id);
+      this.pageState({ inactive: input.disabled, held: scrubbing });
     };
     this.gate();
     // The label follows what it is given, as anything bound does.
@@ -1182,8 +1188,10 @@ export class MtpButton extends MtpPart {
     // Only a button given (selected bool) says whether it is the current choice; any other is
     // not a toggle button, and says nothing.
     const chooses = rt.objects[id]!.attrs?.selected !== undefined;
+    button.dataset.mtpInput = "button";
     this.gate = () => {
       button.disabled = !activeOf(rt, id);
+      this.pageState({ inactive: button.disabled });
       text.follow();
       if (chooses) button.setAttribute("aria-pressed", String(Boolean(rt.value(id, "selected"))));
     };
@@ -1638,8 +1646,10 @@ export class MtpToggle extends MtpPart {
     const input = document.createElement("input");
     input.type = "checkbox";
     const members = rt.objects[target[0]]!.kind === "group" ? rt.objects[target[0]]!.members! : null;
+    input.dataset.mtpInput = "box";
     this.show = () => {
       input.disabled = !activeOf(rt, id);
+      this.pageState({ inactive: input.disabled });
       if (members) {
         const values = members.map((m) => Boolean(rt.value(m, target[1])));
         // A mixed state when the members differ.
