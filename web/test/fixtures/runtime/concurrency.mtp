@@ -48,5 +48,10 @@
 (button pl-x (animation (move pl.x (to 5) (duration 1))) (priority 900))
 (button pl-points (animation (move pl.points (to [[0 0] [2 0]]) (duration 1))) (priority 900))
 (button pl-y (animation (move pl.y (to 5) (duration 1))) (priority 900))
+(button ln-x (animation (move ln.x (to 5) (duration 1))) (priority 900))
+(button ln-y (animation (move ln.y (to 5) (duration 1))) (priority 900))
+(button ln-from (animation (move ln.from (to [0 4]) (duration 1))) (priority 900))
+(button tr-x (animation (move tr.x (to 5) (duration 1))) (priority 900))
+(button tr-y (animation (move tr.y (to 5) (duration 1))) (priority 900))
 ; A play moving what the canvas w drags, for a grab that changes nothing (the author, 2026-11-12).
 (play roll (animation (move d.x (to 8) (duration 2))))
