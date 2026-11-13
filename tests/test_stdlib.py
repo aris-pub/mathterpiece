@@ -12,7 +12,7 @@ from mtpc_check import errors
 
 from mathterpiece.compiler import STDLIB, _declared, _head, compile_source
 from mathterpiece.parse import parse
-from mathterpiece.types import PALETTE
+from mathterpiece.types import PALETTE, REAL
 
 NAMES = {
     "colors": [
@@ -87,6 +87,11 @@ class TestMath:
         assert value(tmp_path, "(import math norm)", "(norm [3 4])") == 5
         got = value(tmp_path, "(import math normalize)", "(normalize [3 4])", "point|none")
         assert got == pytest.approx((0.6, 0.8))
+
+    def test_norm_times_a_number_is_a_real(self, tmp_path):
+        # mtp-ob7p, found on the inversion figure: the product was inferred as maybe none.
+        m = figure(tmp_path, "(import math norm) (point p [0.6 0.35]) (real x (* (norm p) 8))")
+        assert m.get("x").value.expr.type == REAL
 
     def test_cross(self, tmp_path):
         # The 2D cross product: positive when b is counterclockwise from a.

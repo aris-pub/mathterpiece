@@ -103,6 +103,13 @@ class TestPointsTransformsColors:
         assert value("(real v (dist [0 0] [3 4]))") == 5
         assert typ("(point p) (point|none v (to-polar p))") == Maybe(POINT)
 
+    def test_dist_times_a_number_is_a_real(self):
+        # mtp-ob7p: the range of dist reached the largest real, so (* (dist p q) 8) could
+        # overflow and was inferred as maybe none. A value with no upper limit of its own stops
+        # at 10^150 (type-system.md, "What the compiler proves").
+        assert bound("(point p) (real v (dist p [0 0]))").range == (0, 1e150)
+        assert typ("(point p) (real v (* (dist p [0 0]) 8))") == REAL
+
     def test_point_arithmetic(self):
         assert value("(point v (+ [1 2] [3 4]))") == (4, 6)
         assert value("(list v (* [1 2 3] [2 2 2]))") == [2, 4, 6]
