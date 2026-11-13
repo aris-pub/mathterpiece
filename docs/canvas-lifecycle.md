@@ -13,7 +13,7 @@ sequenceDiagram
   Page->>Copy: page loads
   Note over Copy,Scene: state -1: the values at page load
   Copy->>Copy: first comes into view
-  Copy->>Scene: on-view plays (priority 300)
+  Copy->>Scene: on-view plays (priority 1000)
   Note over Copy,Scene: state 0: the values when on-view ends.<br/>Copy is ready: data-mtp-ready, mtp-state.<br/>Still images are captured now.
   Copy->>Scene: on-ready plays (priority 300)
 ```
@@ -28,17 +28,22 @@ ready from the start, and its `on-ready` is triggered when the page loads.
 2. **`on-view`** is triggered when the copy first comes into view, if the scene still has the
    values at page load. Otherwise it is not triggered. It may not loop (compile error).
 3. **State 0** is exactly the values after the `on-view` has played from the values at page load.
-4. **Ready:** a copy is ready at the moment nothing stands between it and the reader's input:
-   when its `on-view` ends, or at page load if it has none. It stays ready from then on. Ready is
-   a moment, not a comparison of values: nothing the reader or any writer does later changes it.
-5. **`on-ready`** is triggered when the copy becomes ready. It may play any animation, at
-   priority 300. It is not triggered in a copy when its effect is already running from another
-   copy of the same canvas.
-6. **Compile errors:** an `on-view` that loops, and a move in `on-view` whose `to` reads the
+4. **Ready:** a canvas is ready, in every copy at once, from the first moment the `on-view` of one
+   of its copies has ended, or from page load if it has no `on-view`. It stays ready from then
+   on. Ready is a moment, not a comparison of values. A copy whose `on-view` is not triggered,
+   because its values had already changed, is ready because its canvas is.
+5. **`on-view`** has priority 1000. Until a canvas is ready, every input that belongs to it is
+   disabled, and it is enabled once the canvas is ready. An input belongs to a canvas when it is
+   a listener inside the canvas's body, or a control that writes a value some shape the canvas
+   shows depends on (the compiler works this out).
+6. **`on-ready`** is triggered once, when the canvas becomes ready. It may play any animation, at
+   priority 300.
+7. **Compile errors:** an `on-view` that loops, and a move in `on-view` whose `to` expression depends on the
    value it moves.
-7. **Still images** are captured at the moment a copy becomes ready.
-8. **The page is ready** once every canvas, display and readout copy on it is ready. Controls
-   do not count. A display or a readout has no `on-view`, so it is ready from the start.
-9. **On the page** (docs/page-interface.md): each copy has `data-mtp-ready` once ready and
+8. **Still images** are captured at the moment a canvas becomes ready.
+9. **The page is ready** once every canvas, display and readout on it is ready. Controls do not
+   count. A display or a readout has no `on-view`, so it is ready from the start. The page is
+   static: no view or control is added to or removed from it after it loads.
+10. **On the page** (docs/page-interface.md): each copy has `data-mtp-ready` once ready and
    fires `mtp-state` then. `<mtp-model>` has `data-mtp-ready` once the page is ready. The
    model's old `mtp-ready` event (the model has loaded) is renamed `mtp-loaded`.
