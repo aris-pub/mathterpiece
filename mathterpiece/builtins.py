@@ -227,7 +227,9 @@ BUILTINS: dict[str, Builtin] = {
     "to-turn": _unary(lambda x: x / 360),
     "polar": Builtin((REAL, REAL), POINT, lambda r, a: (r * cosd(a), r * sind(a)), None),
     "to-polar": Builtin((POINT,), POINT, _to_polar, None, lambda rs: True),
-    "dist": Builtin((POINT, POINT), REAL, lambda p, q: math.dist(p, q), (0.0, MAX_REAL)),
+    # dist has no upper limit of its own, so its range stops at 10^150 as the ranges of other
+    # functions do. Up to the largest real, (* (dist p q) 8) could overflow (mtp-ob7p).
+    "dist": Builtin((POINT, POINT), REAL, lambda p, q: math.dist(p, q), (0.0, WHOLE[1])),
     "rotate": Builtin((REAL,), TRANSFORM, _rotate, None),
     "translate": Builtin((REAL, REAL), TRANSFORM, lambda dx, dy: (1, 0, 0, 1, dx, dy), None),
     "mix": Builtin((COLOR, COLOR, UNIT), COLOR, colors.mix, None),
