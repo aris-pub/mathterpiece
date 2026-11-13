@@ -310,8 +310,8 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | variant instances | their parameters, and every attribute of their base, `b1.p`, `b1.x` |
 | font | `family`, `style`, `weight`, `size` |
 | slider | `label`, `position` (0 to 1), `step` (the number of positions its knob stops at, if given) |
-| play | `label`, `step` (the step of its animation's body playing or just played, from 1, 0 in state 0 and -1 before it), `playing`, `time` (the time within its animation, in seconds from the start), `buttons` |
-| stepper | `label`, `step` (the step it is at or is playing, from 1 to the number of steps, 0 in state 0 and -1 before it), `playing` (while a step plays) |
+| play | `label`, `step` (the step playing or paused in, or else the highest step whose state the scene is in, from 1 to the number of steps, and 0 in explore mode, defined in the reference, "States and explore mode"), `playing` (while it runs), `buttons` |
+| stepper | `label`, `step` (as a play's: the step playing, or else the highest step whose state the scene is in, and 0 in explore mode), `playing` (while a step plays) |
 | button, toggle | `label`; a toggle's `value` |
 | readout | `value` (its string), `font` |
 | canvas | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `zoom-min`, `zoom-max` |
