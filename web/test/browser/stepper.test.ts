@@ -19,7 +19,7 @@ const frames = (n = 2) =>
 async function open(body = `<mtp-stepper model="m" name="hints"></mtp-stepper>`): Promise<{ rt: Runtime; v: (n: string, a?: string) => unknown }> {
   document.body.innerHTML = `<mtp-model id="m"></mtp-model>${body}`;
   const model = document.querySelector("mtp-model") as MtpModel;
-  model.doc = doc("stepper");
+  model.doc = doc("plays");
   const rt = model.runtime!;
   await frames();
   return { rt, v: (n, a) => rt.value(rt.id(n), a ?? null) };
@@ -36,7 +36,7 @@ async function tap([x, y]: [number, number]): Promise<void> {
 describe("a stepper", () => {
   it("draws round buttons either side of a row of small dots", async () => {
     await open();
-    const back = document.querySelector("mtp-stepper .mtp-prev")!;
+    const back = document.querySelector("mtp-stepper .mtp-back")!;
     expect([box(back).width, box(back).height]).toEqual([32, 32]);
     expect(getComputedStyle(back).borderRadius).toBe("50%");
     const [a, b] = dots();

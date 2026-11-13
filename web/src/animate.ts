@@ -21,9 +21,6 @@ export interface How {
   reader: boolean;
   priority?: number | undefined;
   held?: boolean;
-  // Whether what it writes is part of the rest state, as an on-view's writes are: such a write
-  // puts no play or stepper in explore mode (mtp-wjtd).
-  rest?: boolean;
 }
 
 interface Running {
@@ -37,8 +34,9 @@ interface Running {
   how: How;
   // Told when another writer cancels it: a drag then stops following the pointer.
   cancelled?: () => void;
-  // How many times as fast as written it plays: an on-view hurried to its end runs faster.
-  speed?: number;
+  // A drag along a play's bars: a gesture that moves its player where the pointer is, not with
+  // the clock.
+  scrubbing?: boolean;
   // When it was triggered, counted: at the same priority, the one triggered later wins.
   born: number;
   // The values a write of it was rejected on: it writes them no more.
@@ -57,8 +55,7 @@ export class Scheduler {
   // control writing its own step, is not decided.
   private current: Running | null = null;
   private rejected = 0;
-  // Plays and steppers, told of every accepted write of what they move by another writer, whether
-  // or not they run: such a write puts one that has not finished into explore mode (mtp-wjtd).
+  // Paused plays and steppers, told of every accepted write of what they move by another writer.
   private watchers: { source: object; reached: Set<string>; written: () => void }[] = [];
   // What moves a view's own state, such as a canvas fading something in: it writes nothing in
   // the model, so it never collides with a writer.
@@ -80,22 +77,7 @@ export class Scheduler {
   }
 
   busy(): boolean {
-    return this.tickers.length > 0 || this.sources.some((s) => s.player && !s.paused);
-  }
-
-  /** Whether a writer of the rest state, an on-view, still runs. */
-  resting(): boolean {
-    // One that loops forever never ends, so it is not waited for.
-    return this.sources.some((s) => s.how.rest && s.player && !s.paused && Number.isFinite(s.player.duration));
-  }
-
-  /** Speeds up every writer of the rest state still running so each ends within seconds. */
-  hurry(seconds: number): void {
-    for (const s of this.sources) {
-      if (!s.how.rest || !s.player || s.paused || !Number.isFinite(s.player.duration)) continue;
-      const left = s.player.duration - s.time;
-      if (left > seconds) s.speed = left / seconds;
-    }
+    return this.tickers.length > 0 || this.sources.some((s) => s.player && !s.paused && !s.scrubbing);
   }
 
   /** Moves view state with the clock; tick gives whether it has more to do. */
@@ -105,11 +87,21 @@ export class Scheduler {
   }
 
   running(source: object): boolean {
-    return this.sources.some((s) => s.source === source && !s.paused);
+    return this.sources.some((s) => s.source === source && !s.paused && !s.scrubbing);
   }
 
   playerOf(source: object): Player | null {
     return this.sources.find((s) => s.source === source)?.player ?? null;
+  }
+
+  /** The player of a source that is paused, or null. */
+  pausedOf(source: object): Player | null {
+    return this.sources.find((s) => s.source === source && s.paused)?.player ?? null;
+  }
+
+  /** Whether any writer runs, as an on-view or an on-rest does, from the given source. */
+  runs(source: object): boolean {
+    return this.sources.some((s) => s.source === source && !s.paused);
   }
 
   /**
@@ -131,10 +123,8 @@ export class Scheduler {
     }
     if (owner && owner.source !== by.source) this.cancel(owner);
     this.owners.set(k, by);
-    if (!by.how.rest) {
-      const reaches = (r: string) => k === r || k.startsWith(`${r}.`);
-      for (const w of [...this.watchers]) if (w.source !== by.source && [...w.reached].some(reaches)) w.written();
-    }
+    const reaches = (r: string) => k === r || k.startsWith(`${r}.`);
+    for (const w of [...this.watchers]) if (w.source !== by.source && [...w.reached].some(reaches)) w.written();
     return true;
   }
 
@@ -148,12 +138,40 @@ export class Scheduler {
     s.cancelled?.();
   }
 
-  /** Starts a player for a source, from the beginning. reset, when given, writes first. Every
-   * start is made: a write it makes may be rejected, but the writer is not. */
-  start(player: Player, source: object, how: How, from = 0, reset?: () => void): boolean {
+  /** Starts a player for a source, from the time from, and pauses it at until when given.
+   * reset, when given, writes first, as part of the same effect. Every start is made: a write it
+   * makes may be rejected, but the writer is not. */
+  start(player: Player, source: object, how: How, from = 0, reset?: () => void, until?: number): boolean {
     this.forget(source);
     player.release();
-    this.run(player, source, how, from, reset);
+    this.run(player, source, how, from, reset, until);
+    return true;
+  }
+
+  /**
+   * A drag along a play's bars (the author, 2026-11-13): a gesture, triggered now, that moves
+   * its player to where the pointer is with scrubTo, and owns what it writes until it is paused
+   * or let go. cancelled is called if another writer cancels it.
+   */
+  scrub(player: Player, source: object, how: How, cancelled: () => void): void {
+    this.forget(source);
+    player.release();
+    this.sources.push({ ...this.entry(source, player, { ...how, held: true }), scrubbing: true, cancelled });
+  }
+
+  /** Moves a scrubbing source's player to a time. reset, when given, writes first. Gives false
+   * when the source no longer scrubs. */
+  scrubTo(source: object, time: number, reset?: () => void): boolean {
+    const s = this.sources.find((r) => r.source === source && r.scrubbing);
+    if (!s?.player) return false;
+    s.time = time;
+    this.heard = false;
+    const player = s.player;
+    this.as(s, () => {
+      reset?.();
+      player.seek(time);
+    });
+    if (!this.heard) this.redraw();
     return true;
   }
 
@@ -168,8 +186,9 @@ export class Scheduler {
     this.watchers = this.watchers.filter((w) => w.source !== source);
   }
 
-  private run(player: Player, source: object, how: How, from: number, reset?: () => void): void {
+  private run(player: Player, source: object, how: How, from: number, reset?: () => void, until?: number): void {
     const s = this.entry(source, player, how, from);
+    s.until = until;
     this.sources.push(s);
     // A seek that writes something tells the views already, as they stand now.
     this.heard = false;
@@ -216,13 +235,6 @@ export class Scheduler {
     return this.rejected === before;
   }
 
-  /** Holds a player for a source, paused where it stands, writing nothing until it is sought or
-   * resumed: a play the reader scrubs keeps the one player, so what it read stays read. */
-  hold(player: Player, source: object): void {
-    this.forget(source);
-    this.sources.push({ ...this.entry(source, player, { reader: true }, player.time), paused: true });
-  }
-
   /** A drag or a slider's knob the reader holds: a running writer, held, until the release, which
    * owns what its accepted writes write. cancelled is called if another writer cancels it. */
   grip(source: object, how: How, cancelled: () => void): void {
@@ -235,31 +247,12 @@ export class Scheduler {
     this.forget(source);
   }
 
-  /** Moves a source's player to a time, its writes decided as any are. reset, when given, writes
-   * first. */
-  seek(source: object, time: number, how: How, reset?: () => void): boolean {
-    const s = this.sources.find((r) => r.source === source);
-    if (!s?.player) return false;
-    s.how = how;
-    // A jump or a resume is a trigger of its own, so a new effect.
-    s.born = ++this.triggers;
-    s.blocked.clear();
-    s.time = time;
-    this.heard = false;
-    const player = s.player;
-    this.as(s, () => {
-      reset?.();
-      player.seek(time);
-    });
-    if (!this.heard) this.redraw();
-    return true;
-  }
-
-  /** A paused source writes nothing, so it owns nothing. */
+  /** A paused source writes nothing, so it owns nothing. A scrubbing one stops scrubbing. */
   pause(source: object): void {
     for (const s of this.sources) {
       if (s.source !== source) continue;
       s.paused = true;
+      s.scrubbing = false;
       this.release(s);
     }
   }
@@ -281,8 +274,8 @@ export class Scheduler {
     this.tickers = this.tickers.filter((t) => t(seconds));
     this.heard = false;
     for (const s of [...this.sources]) {
-      if (s.paused || !s.player || !this.sources.includes(s)) continue;
-      s.time += seconds * (s.speed ?? 1);
+      if (s.paused || s.scrubbing || !s.player || !this.sources.includes(s)) continue;
+      s.time += seconds;
       if (s.until !== undefined && s.time >= s.until) {
         s.time = s.until;
         s.paused = true;

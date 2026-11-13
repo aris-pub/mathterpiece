@@ -1,4 +1,5 @@
-// A play's bar with a real pointer and real layout (docs/reference.md, "Controls"; mtp-33xt).
+// A play's bar with a real pointer and real layout (docs/reference.md, "Controls"; mtp-33xt,
+// mtp-wjtd).
 import { describe, expect, it } from "vitest";
 import { cdp, userEvent } from "vitest/browser";
 import { type MtpModel, define } from "../../src/elements.ts";
@@ -18,7 +19,7 @@ const frames = (n = 2) =>
 async function open(body = `<mtp-play model="m" name="tour" style="width: 420px"></mtp-play>`): Promise<{ rt: Runtime; v: (n: string, a?: string) => unknown }> {
   document.body.innerHTML = `<mtp-model id="m"></mtp-model>${body}`;
   const model = document.querySelector("mtp-model") as MtpModel;
-  model.doc = doc("bar");
+  model.doc = doc("plays");
   const rt = model.runtime!;
   await frames();
   return { rt, v: (n, a) => rt.value(rt.id(n), a ?? null) };
@@ -43,12 +44,13 @@ describe("a play's bar", () => {
     expect(b! / a!).toBeCloseTo(3, 1);
   });
 
-  it("jumps to the start of a step the mouse taps", async () => {
+  it("sets the state before a step the mouse taps, and plays from there", async () => {
     const { v } = await open();
     await mouse("mousePressed", along(1, 0.6));
     await mouse("mouseReleased", along(1, 0.6));
-    expect(v("k")).toBe(2);
-    expect(document.querySelector("mtp-play .mtp-now")!.textContent).toBe("2 / 2");
+    expect(v("k")).toBeCloseTo(2, 1);
+    expect(v("tour", "playing")).toBe(true);
+    expect(document.querySelector("mtp-play .mtp-count")!.textContent).toBe("2 / 2");
   });
 
   it("scrubs as the mouse drags along the bars", async () => {
@@ -68,7 +70,8 @@ describe("a play's bar", () => {
     const [x, y] = along(1, 0.5);
     await mouse("mousePressed", [x, y - 12]);
     await mouse("mouseReleased", [x, y - 12]);
-    expect(v("k")).toBe(2);
+    expect(v("k")).toBeCloseTo(2, 1);
+    expect(v("tour", "playing")).toBe(true);
   });
 
   it("shows a focus ring on the button and the bars when reached by the keyboard", async () => {
@@ -89,14 +92,16 @@ describe("a play's bar", () => {
     const { v } = await open();
     (document.querySelector("mtp-play .mtp-bars") as HTMLElement).focus();
     await userEvent.keyboard("{ArrowRight}{ArrowRight}");
-    expect(v("k")).toBe(2);
+    expect(v("k")).toBeCloseTo(2, 1);
+    expect(v("tour", "step")).toBe(2);
     (document.activeElement as HTMLElement).blur();
-    await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
-    expect(v("k")).toBe(0);
-    await userEvent.keyboard(" ");
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(v("k")).toBeCloseTo(2, 1);
     expect(v("tour", "playing")).toBe(true);
     await userEvent.keyboard(" ");
     expect(v("tour", "playing")).toBe(false);
+    await userEvent.keyboard(" ");
+    expect(v("tour", "playing")).toBe(true);
   });
 
   it("presses the play button once on Space when it has focus", async () => {
@@ -172,24 +177,24 @@ describe("the controls' colors at rest and in use", () => {
     document.documentElement.removeAttribute("style");
   });
 
-  // mtp-wjtd: a pill after the bars, filled with the active color in explore mode (at rest, too)
-  // and outlined in the rest color otherwise.
-  it("draws the Explore button filled while on and outlined while off", async () => {
+  // mtp-wjtd: in explore mode the bars are dimmed and a pill filled with the active color reads
+  // Exploring on their middle, in a row no taller than the button.
+  it("draws explore mode as a pill on the dimmed bars, in one row as tall as the button", async () => {
     await controls(`--mtp-control-rest: ${GRAY}; --mtp-control-active: ${INK}`);
-    const ex = document.querySelector("mtp-play .mtp-explore") as HTMLButtonElement;
-    const bars = document.querySelector("mtp-play .mtp-bars")!;
-    expect(ex.getBoundingClientRect().left).toBeGreaterThan(bars.getBoundingClientRect().right);
-    expect(ex.getAttribute("aria-pressed")).toBe("true");
-    expect(color("mtp-play .mtp-explore", "background-color")).toBe(INK);
-    (document.querySelector("mtp-play .mtp-play-button") as HTMLButtonElement).click();
-    // After the button's transition.
-    await new Promise((r) => setTimeout(r, 250));
-    expect(ex.getAttribute("aria-pressed")).toBe("false");
-    expect(color("mtp-play .mtp-explore", "background-color")).toBe("rgba(0, 0, 0, 0)");
-    expect(color("mtp-play .mtp-explore", "border-top-color")).toBe(GRAY);
-    expect(color("mtp-play .mtp-explore", "color")).toBe(GRAY);
-    const r = ex.getBoundingClientRect();
-    expect(r.height - 2 * parseFloat(getComputedStyle(ex, "::after").top)).toBeGreaterThanOrEqual(44);
+    const play = document.querySelector("mtp-play")!;
+    const pill = play.querySelector(".mtp-exploring") as HTMLElement;
+    const bars = play.querySelector(".mtp-bars")!.getBoundingClientRect();
+    const r = pill.getBoundingClientRect();
+    expect(r.left).toBeGreaterThan(bars.left);
+    expect(r.right).toBeLessThan(bars.right);
+    expect(Math.abs((r.left + r.right) / 2 - (bars.left + bars.right) / 2)).toBeLessThan(1);
+    expect(color("mtp-play .mtp-exploring", "background-color")).toBe(INK);
+    expect(getComputedStyle(play.querySelector(".mtp-bar")!).opacity).toBe("0.45");
+    expect(play.getBoundingClientRect().height).toBe(32);
+    (play.querySelector(".mtp-play-button") as HTMLButtonElement).click();
+    await frames();
+    expect(getComputedStyle(pill).display).toBe("none");
+    expect(getComputedStyle(play.querySelector(".mtp-bar")!).opacity).toBe("1");
     document.documentElement.removeAttribute("style");
   });
 });

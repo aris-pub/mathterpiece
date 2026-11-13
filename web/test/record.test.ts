@@ -34,7 +34,7 @@ describe("recording mode", () => {
       "MTP-PLAY one",
     ]);
     expect(stage.querySelector("mtp-canvas svg")).not.toBe(null);
-    expect(stage.querySelector("mtp-play .mtp-now")!.textContent).toBe("");
+    expect(stage.querySelector("mtp-play .mtp-count")!.textContent).toBe("– / 2");
   });
 
   it("takes the place of the inventory on the page mtp build writes", () => {

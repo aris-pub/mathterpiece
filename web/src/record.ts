@@ -1,5 +1,5 @@
 // Recording mode (mtp-mvje.1): one figure on a 9:16 page, for recording a vertical short while a
-// play runs. It shows one canvas and, under it, only the play's bars and the line naming the step:
+// play runs. It shows one canvas and, under it, only the play's bars and its count:
 // no button the viewer could not press, nothing else of the page, and no cursor. The presenter
 // drives the play with its keys (reference.md, "A play's keys"), which work from anywhere on a
 // page with one play.
@@ -40,8 +40,7 @@ html.mtp-recording, html.mtp-recording * { cursor: none !important; }
 .mtp-record-frame mtp-canvas { display: block; flex: none; width: 100%; margin: 0 auto; }
 .mtp-record-frame mtp-canvas svg { display: block; width: 100%; height: auto; }
 .mtp-record-frame mtp-play { min-width: 0; zoom: 1.25; }
-.mtp-record-frame mtp-play .mtp-play-button, .mtp-record-frame mtp-play .mtp-explore { display: none; }
-.mtp-record-frame mtp-play .mtp-now { font-size: 1rem; }
+.mtp-record-frame mtp-play .mtp-play-button { display: none; }
 /* A viewer cannot press the switch of a view with a quiet mode, and the play shows whether its
    view is quiet or not. */
 .mtp-record-frame .mtp-switch { display: none; }

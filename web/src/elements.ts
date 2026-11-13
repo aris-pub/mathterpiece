@@ -9,7 +9,7 @@ import { Listeners, heardIn, holds } from "./click.ts";
 import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { latexOf, termClass, typeset } from "./math.ts";
-import { Player } from "./player.ts";
+import { Player, type Span } from "./player.ts";
 import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
 import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
@@ -18,10 +18,8 @@ import { type Ease, applyEase } from "./transitions.ts";
 export { FORMAT_VERSION };
 const READY = "mtp-ready";
 const CHANGE = "mtp-change";
-// A view went live or back to quiet (mtp-16z).
-const MODE = "mtp-mode";
-// The model came to stand in state 0, the rest state (mtp-wjtd).
-const REST = "mtp-rest";
+// An element's page state changed (docs/page-interface.md).
+const STATE = "mtp-state";
 // Touch (docs/reference.md, "Touch screens"): how far, in CSS pixels, a finger may miss a shape
 // and still press it, and how far it may move and still tap.
 const TOUCH_REACH = 22;
@@ -43,10 +41,6 @@ export const frames = {
   },
 };
 
-// The seconds within which the on-views still to play end, hurried, when the reader presses a
-// play or a stepper before they have all played (the author, 2026-11-12).
-export const HURRY = 0.3;
-
 export class MtpModel extends HTMLElement {
   runtime: Runtime | null = null;
   scheduler: Scheduler | null = null;
@@ -61,81 +55,13 @@ export class MtpModel extends HTMLElement {
   private waiting = new Map<number, (() => void)[]>();
   private running = false;
   private last = 0;
-  // What waits for the rest state, and the on-views that have played or been hurried.
-  private rested: (() => void)[] = [];
-  private played = new Set<number>();
 
-  /**
-   * Whether the model stands in its rest state (mtp-wjtd): every on-view of a view shown on this
-   * page has played to its end. That state is the one a play or stepper starts from, and the one
-   * a static figure is made from. The element has the data-mtp-rest attribute while it holds.
-   */
-  atRest(): boolean {
-    const rt = this.runtime;
-    if (!rt || !this.scheduler || this.scheduler.resting()) return false;
-    return rt.objects.every((o, i) => o.kind !== "on-view" || this.played.has(i) || !this.shown(o.view!));
-  }
-
-  // Whether a view is shown on this page.
-  private shown(view: number): boolean {
-    const rt = this.runtime!;
-    const name = Object.entries(rt.doc.names).find(([, i]) => i === view)?.[0];
-    return name !== undefined && document.querySelector(`[model="${CSS.escape(this.id)}"][name="${CSS.escape(name)}"]`) !== null;
-  }
-
-  /**
-   * Does act once the model stands in its rest state. A reader's press on a play or a stepper
-   * waits for it (the author, 2026-11-12): every on-view of a view on the page that has not
-   * played to its end is hurried, one not yet started starting now, so they all end within
-   * HURRY seconds, and then the press does what it does.
-   */
-  settle(act: () => void): void {
-    if (this.atRest()) {
-      act();
-      return;
-    }
-    this.rested.push(act);
-    const rt = this.runtime!;
-    rt.objects.forEach((o, i) => {
-      if (o.kind === "on-view" && this.shown(o.view!)) this.playOnView(i);
-    });
-    this.scheduler!.hurry(HURRY);
-    this.checkRest();
-  }
-
-  // Plays an on-view, once only, whether its view has come into view or a press hurries it.
+  // Plays an on-view the first time its view comes into view.
   private playOnView(i: number): void {
     const rt = this.runtime!;
-    if (this.played.has(i)) return;
-    this.played.add(i);
     const o = rt.objects[i]!;
     const player = activeOf(rt, i) ? playerFor(rt, o) : null;
-    if (!player) return;
-    // Its writes are part of the rest state, unless it plays once that state is set: then it is
-    // another writer (the author, 2026-11-12).
-    const rest = !this.hasAttribute("data-mtp-rest");
-    player.rest = rest;
-    this.scheduler!.start(player, o, { ...howOf(o, false), rest });
-  }
-
-  /** Resolves once the model stands in its rest state, as atRest gives. */
-  whenRest(): Promise<void> {
-    return new Promise((resolve) => {
-      if (this.atRest()) resolve();
-      else this.rested.push(resolve);
-    });
-  }
-
-  private checkRest(): void {
-    const rest = this.atRest();
-    const was = this.hasAttribute("data-mtp-rest");
-    this.toggleAttribute("data-mtp-rest", rest);
-    if (!rest) return;
-    // The plays and steppers then show state 0, their step going from -1 to 0.
-    if (!was) this.dispatchEvent(new Event(REST));
-    const waiting = this.rested;
-    this.rested = [];
-    for (const resolve of waiting) resolve();
+    if (player) this.scheduler!.start(player, o, howOf(o, false));
   }
 
   connectedCallback(): void {
@@ -201,8 +127,6 @@ export class MtpModel extends HTMLElement {
     this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
     this.seen.clear();
-    this.played.clear();
-    this.rested = [];
     this.waiting.clear();
     rt.onChange(() => this.changed());
     rt.objects.forEach((o, i) => {
@@ -210,10 +134,6 @@ export class MtpModel extends HTMLElement {
       this.whenSeen(o.view!, () => this.playOnView(i));
     });
     this.dispatchEvent(new Event(READY, { bubbles: true }));
-    // The views of the page are there once it is told the model is ready, or, for those added
-    // with it, once the HTML being added is all there.
-    this.checkRest();
-    queueMicrotask(() => this.checkRest());
   }
 
   /** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
@@ -230,7 +150,6 @@ export class MtpModel extends HTMLElement {
       const player = playerFor(rt, o);
       if (player) scheduler.start(player, o, howOf(o, true));
     });
-    this.dispatchEvent(new Event(MODE, { bubbles: true }));
     this.changed();
   }
 
@@ -246,7 +165,6 @@ export class MtpModel extends HTMLElement {
     this.seen.add(id);
     for (const work of this.waiting.get(id) ?? []) work();
     this.waiting.delete(id);
-    this.checkRest();
   }
 
   /** Tells every view and control of this model to show the current values. */
@@ -267,7 +185,6 @@ export class MtpModel extends HTMLElement {
     if (!scheduler) return;
     scheduler.tick(Math.max(ms - this.last, 0) / 1000);
     this.last = ms;
-    if (!this.hasAttribute("data-mtp-rest")) this.checkRest();
     if (scheduler.busy()) frames.request((next) => this.frame(next));
     else this.running = false;
   }
@@ -287,16 +204,14 @@ abstract class MtpPart extends HTMLElement {
     if (this.mine(event)) this.build();
   };
   private onChange = (event: Event) => {
-    if (this.mine(event)) this.guard(() => this.update());
-  };
-  private onMode = (event: Event) => {
-    if (this.mine(event)) this.moded(false);
+    if (!this.mine(event)) return;
+    this.guard(() => this.update());
+    this.moded(false);
   };
 
   connectedCallback(): void {
     document.addEventListener(READY, this.onReady);
     document.addEventListener(CHANGE, this.onChange);
-    document.addEventListener(MODE, this.onMode);
     this.addEventListener("keydown", this.onKey);
     const model = this.model();
     if (model && (model.runtime || model.error)) this.build();
@@ -305,7 +220,6 @@ abstract class MtpPart extends HTMLElement {
   disconnectedCallback(): void {
     document.removeEventListener(READY, this.onReady);
     document.removeEventListener(CHANGE, this.onChange);
-    document.removeEventListener(MODE, this.onMode);
     this.removeEventListener("keydown", this.onKey);
   }
 
@@ -374,6 +288,7 @@ abstract class MtpPart extends HTMLElement {
   private shown: number | null = null;
   // A view's button to make it live and back to quiet, when it has a quiet mode.
   private switch: HTMLButtonElement | null = null;
+  private switchQuiet: boolean | null = null;
   private folding: Animation | null = null;
   private folded: boolean | null = null;
   private onKey = (event: KeyboardEvent) => {
@@ -381,6 +296,23 @@ abstract class MtpPart extends HTMLElement {
     const id = this.shown;
     if (event.key === "Escape" && rt && id !== null && rt.quietMode.has(id) && !rt.quiet.has(id)) this.model()!.setLive(id, false);
   };
+
+  /**
+   * Shows the element's page state as data-mtp-… attributes, present or absent for true or false
+   * and a value otherwise, and fires mtp-state when any of them changes (docs/page-interface.md).
+   */
+  protected pageState(state: Record<string, string | boolean>): void {
+    let changed = false;
+    for (const [name, v] of Object.entries(state)) {
+      const attr = `data-mtp-${name}`;
+      const now = v === false ? null : v === true ? "" : v;
+      if (this.getAttribute(attr) === now) continue;
+      if (now === null) this.removeAttribute(attr);
+      else this.setAttribute(attr, now);
+      changed = true;
+    }
+    if (changed) this.dispatchEvent(new Event(STATE, { bubbles: true }));
+  }
 
   /** Puts nodes in the element, with the view's switch after them. */
   protected present(...nodes: Node[]): void {
@@ -400,11 +332,12 @@ abstract class MtpPart extends HTMLElement {
     if (VIEWS.has(obj.kind)) {
       if (!rt.quietMode.has(id)) return;
       const quiet = rt.quiet.has(id);
-      this.dataset.mtpMode = quiet ? "quiet" : "live";
+      this.pageState({ mode: quiet ? "quiet" : "live" });
       if (!this.switch) {
         this.switch = makeSwitch(this, () => model.setLive(id, rt.quiet.has(id)));
         this.append(this.switch);
-      }
+      } else if (!first && this.switchQuiet === quiet) return;
+      this.switchQuiet = quiet;
       this.switch.innerHTML = quiet ? HAND_ICON : CLOSE_ICON;
       const label = quiet ? "Interactive figure: open it" : "Back to the plain figure";
       this.switch.setAttribute("aria-label", label);
@@ -1268,14 +1201,18 @@ export class MtpButton extends MtpPart {
   }
 }
 
-// The play button's icons, drawn in the color of the page on the button's ink.
-const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>';
-const PAUSE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3" width="3" height="10" rx="0.8"/><rect x="9.5" y="3" width="3" height="10" rx="0.8"/></svg>';
+// The play button's icons (Tabler's player-play-filled, player-pause-filled and rotate), drawn in
+// the color of the page on the button's ink.
+const PLAY_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z"/></svg>';
+const PAUSE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2z"/><path d="M17 4h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2z"/></svg>';
+const REPLAY_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.933 13.041a8 8 0 1 1 -9.925 -8.788c3.899 -1 7.935 1.007 9.425 4.747"/><path d="M20 4v5h-5"/></svg>';
 // How far, in CSS pixels, a mouse may move on the bars and still tap one rather than drag.
 const MOUSE_SLOP = 3;
-// How far past a stop, in seconds, the left arrow still goes back to the stop before it rather
-// than to that one, so pressing it twice while the play runs goes back two.
-const BACK_GRACE = 0.5;
+// How close, in seconds, two times along an animation count as the same.
+const EPS = 1e-9;
 
 // Whether keys pressed on el are its own: a field takes Space and the arrows, and so does any
 // other control.
@@ -1285,24 +1222,30 @@ function takesKeys(el: EventTarget | null): boolean {
 }
 // What has the keys of a play: on a page with only one, they work from anywhere on it.
 const KEYED = "mtp-play, mtp-stepper";
-// A time before the first move starts: seeking to it applies none, not even one that takes no
-// time, as a seek to 0 would. A play or a stepper standing there is at step 0, in state 0.
-const BEFORE = -1;
 
-// A play's or a stepper's Explore button (mtp-wjtd), on while the control is in explore mode.
-function exploreButton(act: () => void): HTMLButtonElement {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "mtp-explore";
-  b.textContent = "Explore";
-  b.addEventListener("click", act);
-  return b;
+/** The step, from 1, that a time along an animation is in: the last one started by then, so a
+ * rest after a step is still that step's. */
+function stepAt(spans: Span[], t: number): number {
+  let k = 1;
+  spans.forEach((s, j) => {
+    if (t >= s.start - EPS * Math.max(1, s.start)) k = j + 1;
+  });
+  return k;
+}
+
+/** Whether a paused time is partway through a step, so the step is the one paused in rather than
+ * one read from the scene: past the start, and not at the end of a step. */
+function partway(spans: Span[], t: number): boolean {
+  const near = (x: number) => Math.abs(t - x) <= EPS * Math.max(1, Math.abs(x));
+  return t > spans[0]!.start && !near(spans[0]!.start) && !spans.some((s) => near(s.end));
 }
 
 /**
- * A play (docs/reference.md, "Controls"; mtp-33xt): a play button, then one bar per step, each
- * as wide as its step's duration and filling as it plays, and the step now playing under them.
- * The reader drags along the bars to scrub the tour, and taps one to jump to its step's start.
+ * A play (docs/reference.md, "Controls"; the author, 2026-11-13): a button, then a bar with a
+ * knob, one bar per step with (buttons true) and the step count after them. Its step is read
+ * from the scene: the highest step whose state the scene is in, or 0 in explore mode, except
+ * while it plays or is paused partway through a step. Each input is a listener whose effect sets
+ * a state j and plays steps j + 1 to N.
  */
 export class MtpPlay extends MtpPart {
   private refresh: () => void = () => {};
@@ -1316,154 +1259,115 @@ export class MtpPlay extends MtpPart {
     this.unwatch();
   }
 
-  protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "play");
     const obj = rt.objects[id]!;
-    // The one player the bars show. It is kept after the tour ends, so the bars stay full. A
-    // press after the end starts a new one.
-    let player: Player | null = null;
     const layout = playerFor(rt, obj);
     if (!layout) {
       this.replaceChildren();
       return;
     }
-    // Explore mode (mtp-wjtd): at rest, and once another writer writes what the play moves
-    // before it has finished. It shows no step, and the next play starts from state 0.
-    let exploring = true;
-    const targets = layout.targets;
     const split = Boolean(rt.value(id, "buttons"));
-    const timed = obj.attrs?.time !== undefined;
     const all = layout.spans;
+    const n = all.length;
     const spans = split ? all : [{ start: all[0]!.start, end: all.at(-1)!.end }];
-    const names = (obj.animation !== null && obj.animation !== undefined ? rt.objects[obj.animation]!.names : undefined) ?? [];
+    const labels = obj.labels ?? [];
+    const how = howOf(obj, true);
+    // The player of this copy's effect while it runs, is paused or is dragged.
+    let player: Player | null = null;
+    let dragging = false;
+
+    const paused = () => {
+      const p = scheduler.pausedOf(this);
+      return p !== null && !p.done && partway(all, p.position);
+    };
+    const moving = () => scheduler.running(this) || dragging || paused();
+    const stepNow = () => (moving() && player ? stepAt(all, player.position) : layout.stepNowIn());
+    // Set state j, then play steps j + 1 to N.
+    const go = (j: number) => {
+      if (!activeOf(rt, id)) return;
+      moves(rt, id, this);
+      player = playerFor(rt, obj)!;
+      scheduler.start(player, this, how, all[j]!.start, () => layout.setState(j));
+      this.refresh();
+    };
+    const press = () => {
+      if (!activeOf(rt, id)) return;
+      moves(rt, id, this);
+      if (scheduler.running(this)) scheduler.pause(this);
+      else if (paused()) scheduler.resume(this, how);
+      else {
+        const k = stepNow();
+        go(k < n ? k : 0);
+      }
+      this.refresh();
+    };
 
     const play = document.createElement("button");
     play.type = "button";
     play.className = "mtp-play-button";
+    play.dataset.mtpInput = "button";
+    play.addEventListener("click", press);
     const track = document.createElement("div");
     track.className = "mtp-bars";
     track.tabIndex = 0;
     track.setAttribute("role", "slider");
     track.setAttribute("aria-valuemin", "0");
-    track.setAttribute("aria-valuemax", String(spans.length));
-    const bars = spans.map((s) => {
+    track.setAttribute("aria-valuemax", String(n));
+    const bars = spans.map((s, j) => {
       const bar = document.createElement("span");
       bar.className = "mtp-bar";
+      bar.dataset.mtpInput = `bar-${j + 1}`;
       // A step that takes no time still gets a sliver, so it can be seen and tapped.
       bar.style.flexGrow = String(Math.max(s.end - s.start, 0.05 * (all.at(-1)!.end || 1)));
       bar.style.setProperty("--u", "0");
       track.append(bar);
       return bar;
     });
-    const line = document.createElement("div");
-    line.className = "mtp-now";
-    const indicator = document.createElement("div");
-    indicator.className = "mtp-indicator";
-    indicator.append(track);
-    if (split) indicator.append(line);
+    const knob = document.createElement("span");
+    knob.className = "mtp-knob";
+    knob.setAttribute("aria-hidden", "true");
+    const pill = document.createElement("span");
+    pill.className = "mtp-exploring";
+    pill.textContent = "Exploring";
+    pill.setAttribute("aria-hidden", "true");
+    track.append(pill);
+    const count = split ? document.createElement("span") : null;
+    if (count) {
+      count.className = "mtp-count";
+      count.setAttribute("aria-hidden", "true");
+    }
 
-    const own = (): Player => {
-      moves(rt, id, this);
-      const held = scheduler.playerOf(this);
-      if (held) return held;
-      player ??= playerFor(rt, obj)!;
-      scheduler.hold(player, this);
-      return player;
+    // Keys (the author, 2026-11-13): Space is the button. At step k the right arrow is a tap on
+    // bar k + 1 and the left arrow one on bar k, and each is off where that bar does not exist.
+    // Without (buttons true) there are no arrow keys.
+    const keys: Record<string, () => boolean> = {
+      " ": () => (press(), true),
+      ArrowRight: () => {
+        const k = stepNow();
+        if (!split) return false;
+        if (k < n) go(k);
+        return true;
+      },
+      ArrowLeft: () => {
+        const k = stepNow();
+        if (!split) return false;
+        if (k > 0) go(k - 1);
+        return true;
+      },
     };
-    // Whatever the reader does to a play makes it the reader's, even one autoplay started.
-    const how = howOf(obj, true);
-    // A jump sets the state at that time: state 0 with every move up to then applied, whatever
-    // was written since. A paused play jumped to its start stands at step 0, in state 0 exactly
-    // (the author, 2026-11-12). A running one plays on from its start at once. A tap or a drag
-    // on the bars waits for the rest state, as a press does.
-    const seek = (t: number) =>
-      model.settle(() => {
-        const p = own();
-        const reset = () => {
-          rt.restore(targets);
-          p.release();
-        };
-        const at = t <= 0 && !scheduler.running(this) ? BEFORE : t;
-        if (scheduler.seek(this, at, how, reset)) exploring = false;
-        this.refresh();
-      });
-    const atZero = () => !exploring && player !== null && player.time < 0;
-    // A new player, kept only when it starts, so a refused press leaves the bars as they were.
-    // From explore mode, and from step 0, it starts from state 0.
-    const fresh = (by: How) => {
-      const next = playerFor(rt, obj);
-      const reset = exploring || atZero() ? () => rt.restore(targets) : undefined;
-      if (next && scheduler.start(next, this, by, 0, reset)) {
-        player = next;
-        exploring = false;
-      }
-    };
-    const explore = () => {
-      if (exploring) return;
-      exploring = true;
-      scheduler.letGo(this);
-      player = null;
-      this.refresh();
-    };
-    scheduler.watch(this, targets, () => {
-      if (!player?.done) explore();
-    });
-    const rested = () => this.refresh();
-    model.addEventListener(REST, rested);
-    this.unwatch = () => {
-      scheduler.unwatch(this);
-      model.removeEventListener(REST, rested);
-    };
-    // From step 0 it plays from the start at once, not after the time before the first move.
-    const playOn = () => {
-      if (atZero()) fresh(how);
-      else scheduler.resume(this, how);
-    };
-    const toggle = () => {
-      if (!activeOf(rt, id)) return;
-      // First, so this copy alone writes the step while the press writes.
-      moves(rt, id, this);
-      if (exploring) fresh(how);
-      else if (scheduler.running(this)) scheduler.pause(this);
-      else if (player && !player.done) playOn();
-      else fresh(how);
-      this.refresh();
-    };
-    // A press waits for the rest state, hurrying the on-views still to play (the author, 2026-11-12).
-    play.addEventListener("click", () => model.settle(toggle));
-    const ex = exploreButton(() =>
-      model.settle(() => {
-        if (!activeOf(rt, id)) return;
-        moves(rt, id, this);
-        explore();
-      }),
-    );
-
-    // Keys (mtp-yhau): Space plays and pauses; the arrows go to the next stop or back one. The
-    // stops are the starts of the steps and the end, so a rest is skipped.
-    const stops = [...spans.map((s) => s.start), spans.at(-1)!.end];
-    // In explore mode no stop is current: the right arrow goes to step 0, in state 0, and the left
-    // arrow does nothing.
-    const next = () => {
-      const t = player && !exploring ? Math.max(player.position, 0) : -1;
-      const s = stops.find((x) => x > t + 1e-6);
-      if (s !== undefined) seek(s);
-    };
-    const back = () => {
-      if (exploring) return;
-      const t = player ? player.position : 0;
-      seek(stops.filter((x) => x < t - BACK_GRACE).at(-1) ?? 0);
-    };
-    const keys: Record<string, () => void> = { " ": toggle, ArrowRight: next, ArrowLeft: back };
     const onKey = (event: KeyboardEvent) => {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-      event.preventDefault();
-      if (!event.repeat && activeOf(rt, id)) model.settle(act);
+      if (event.repeat || !activeOf(rt, id)) {
+        if (event.key === " " || split) event.preventDefault();
+        return;
+      }
+      if (act()) event.preventDefault();
     };
     this.addEventListener("keydown", (event) => {
-      // The play button and the Explore button press themselves on Space, as any button does.
-      if (event.key === " " && (event.target === play || event.target === ex)) return;
+      // The play button presses itself on Space, as any button does.
+      if (event.key === " " && event.target === play) return;
       onKey(event);
     });
     // On a page with one play or stepper, as when recording it, the keys work from anywhere on the page,
@@ -1493,100 +1397,105 @@ export class MtpPlay extends MtpPart {
       const u = r.width > 0 ? Math.min(Math.max((x - r.left) / r.width, 0), 1) : 0;
       return spans[k]!.start + u * (spans[k]!.end - spans[k]!.start);
     };
-    let press: { x: number; slop: number; playing: boolean; moved: boolean } | null = null;
+    // A press on the bars is a tap, or once it moves past the slop, a drag (a gesture, the author,
+    // 2026-11-13): at each point it sets state i - 1 for the step i under the pointer, then each
+    // move of step i at its value there, and on release the play is paused there.
+    let held: { x: number; slop: number; was: boolean; moved: boolean; cut: boolean } | null = null;
     track.addEventListener("pointerdown", (event) => {
       if (!activeOf(rt, id) || event.button !== 0) return;
-      const playing = scheduler.running(this);
-      if (playing) scheduler.pause(this);
-      press = { x: event.clientX, slop: event.pointerType === "mouse" ? MOUSE_SLOP : TOUCH_SLOP, playing, moved: false };
+      const was = scheduler.running(this);
+      if (was) scheduler.pause(this);
+      held = { x: event.clientX, slop: event.pointerType === "mouse" ? MOUSE_SLOP : TOUCH_SLOP, was, moved: false, cut: false };
       track.setPointerCapture?.(event.pointerId);
       track.classList.add("mtp-dragging");
       event.preventDefault();
     });
     track.addEventListener("pointermove", (event) => {
-      if (!press) return;
-      if (!press.moved && Math.abs(event.clientX - press.x) <= press.slop) return;
-      press.moved = true;
-      seek(timeAt(event.clientX));
+      const h = held;
+      if (!h || h.cut) return;
+      if (!h.moved && Math.abs(event.clientX - h.x) <= h.slop) return;
+      if (!h.moved) {
+        h.moved = true;
+        dragging = true;
+        moves(rt, id, this);
+        player = playerFor(rt, obj)!;
+        scheduler.scrub(player, this, how, () => {
+          h.cut = true;
+          dragging = false;
+        });
+      }
+      const t = timeAt(event.clientX);
+      scheduler.scrubTo(this, t, () => layout.setState(stepAt(all, t) - 1));
+      this.refresh();
     });
     const release = (event: PointerEvent, tap: boolean) => {
-      if (!press) return;
-      const { moved, playing } = press;
-      press = null;
+      const h = held;
+      if (!h) return;
+      held = null;
       track.classList.remove("mtp-dragging");
-      if (tap && !moved) seek(spans[nearest(event.clientX)]!.start);
-      else if (moved) seek(timeAt(event.clientX));
-      if (playing) playOn();
+      if (h.moved) {
+        dragging = false;
+        if (!h.cut) scheduler.pause(this);
+      } else if (tap) go(split ? nearest(event.clientX) : 0);
+      else if (h.was) scheduler.resume(this, how);
       this.refresh();
     };
     track.addEventListener("pointerup", (event) => release(event, true));
     track.addEventListener("pointercancel", (event) => release(event, false));
 
-    // The step at t: the last one started by then, so a rest after a step still shows it.
-    const stepAt = (t: number, among = spans): number => {
-      let k = 0;
-      among.forEach((s, j) => {
-        if (t >= s.start - 1e-9 * Math.max(1, s.start)) k = j;
-      });
-      return k;
-    };
+    // A pause ends when another writer writes what the play moves (the author, 2026-11-12;
+    // which writes end it is not decided yet).
+    scheduler.watch(this, layout.targets, () => {
+      if (!scheduler.running(this) && !dragging && scheduler.pausedOf(this)) scheduler.letGo(this);
+    });
+    this.unwatch = () => scheduler.unwatch(this);
+
     this.refresh = () => {
       const running = scheduler.running(this);
       const active = activeOf(rt, id);
-      const shown = exploring ? null : player;
-      const t = shown ? shown.position : 0;
-      play.innerHTML = running ? PAUSE_ICON : PLAY_ICON;
+      const shown = moving() ? player : null;
+      const k = stepNow();
+      const exploring = k === 0 && !shown;
+      // How far along the animation the bars stand: where the player stands, or the end of the
+      // step read from the scene.
+      const t = shown ? shown.position : k > 0 ? all[k - 1]!.end : all[0]!.start;
+      const last = k === n && !shown;
+      play.innerHTML = running ? PAUSE_ICON : last ? REPLAY_ICON : PLAY_ICON;
+      play.classList.toggle("mtp-replay", !running && last);
       play.setAttribute("aria-label", running ? "pause" : labelOf(rt, id));
       play.disabled = !active;
-      ex.disabled = !active;
-      ex.setAttribute("aria-pressed", String(exploring));
       track.setAttribute("aria-disabled", String(!active));
-      this.toggleAttribute("data-playing", running);
+      let at = 0;
       bars.forEach((bar, j) => {
         const s = spans[j]!;
-        const u = s.end > s.start ? Math.min(Math.max((t - s.start) / (s.end - s.start), 0), 1) : t >= s.start && shown ? 1 : 0;
+        const u = s.end > s.start ? Math.min(Math.max((t - s.start) / (s.end - s.start), 0), 1) : t >= s.start - EPS && !exploring ? 1 : 0;
         bar.style.setProperty("--u", String(Number(u.toFixed(4))));
+        if (t >= s.start - EPS) at = j;
       });
-      const n = spans.length;
-      const k = stepAt(t);
-      const name = names[k] ?? null;
-      // At step 0, before the first move, no step has started.
-      const zero = shown !== null && t < 0;
-      const text = shown ? (zero ? `0 / ${n}` : `${k + 1} / ${n}${name ? ` · ${name}` : ""}`) : "";
-      line.textContent = text;
+      // The knob sits where the fill ends, on the bar it is in; in explore mode, an empty ring at
+      // the left end.
+      if (exploring) at = 0;
+      if (knob.parentElement !== bars[at]) bars[at]!.append(knob);
+      knob.classList.toggle("mtp-empty", exploring);
+      knob.classList.toggle("mtp-end", at === bars.length - 1 && t >= spans.at(-1)!.end - EPS);
+      pill.hidden = !exploring;
+      if (count) count.textContent = `${exploring ? "–" : k} / ${n}`;
+      const label = k > 0 ? labels[k - 1] : undefined;
+      const text = exploring ? `${n} ${n === 1 ? "step" : "steps"}` : `${k} / ${n}${label ? ` · ${label}` : ""}`;
       track.setAttribute("aria-label", labelOf(rt, id));
-      track.setAttribute("aria-valuenow", String(shown && !zero ? k + 1 : 0));
-      // A page shows what goes with each step (a question under the figure, say) by this attribute.
-      if (shown && !zero) this.setAttribute("data-step", String(k + 1));
-      else this.removeAttribute("data-step");
-      track.setAttribute("aria-valuetext", text || `${n} ${n === 1 ? "step" : "steps"}`);
+      track.setAttribute("aria-valuenow", String(k));
+      track.setAttribute("aria-valuetext", text);
+      this.pageState({ inactive: !active, step: String(k), playing: running, exploring });
       if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        // Its step counts the animation's steps, split into bars or not: -1 until state 0 is
-        // set, 0 in state 0 (in explore mode and at step 0), and k for step k (the author,
-        // 2026-11-12).
-        const step = shown && !zero ? stepAt(t, all) + 1 : 0;
-        if (model.hasAttribute("data-mtp-rest") && rt.value(id, "step") !== step) rt.write(id, "step", step);
-        // A model compiled before plays had a time has none to write.
-        if (timed) {
-          // The last frame may pass the end.
-          const time = shown ? Math.min(Math.max(shown.time, 0), shown.duration) : rt.atRest(id, "time");
-          if (rt.value(id, "time") !== time) rt.write(id, "time", time);
-        }
+        if (rt.value(id, "step") !== k) rt.write(id, "step", k);
       }
     };
+    const indicator = document.createElement("div");
+    indicator.className = "mtp-indicator";
+    indicator.append(track);
+    this.replaceChildren(play, indicator, ...(count ? [count] : []));
     this.refresh();
-    this.replaceChildren(play, indicator, ex);
-    // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
-    const start = () => {
-      if (!activeOf(rt, id) || scheduler.running(this)) return;
-      moves(rt, id, this);
-      fresh(howOf(obj, false));
-      this.refresh();
-    };
-    const auto = obj.autoplay;
-    if (auto === "load") start();
-    else if (typeof auto === "number") model.whenSeen(auto, start);
   }
 
   protected update(): void {
@@ -1594,28 +1503,27 @@ export class MtpPlay extends MtpPart {
   }
 }
 
-// A stepper's buttons' icons, drawn as the play button's are.
-const BACK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.8 3.2 5.1 8l4.7 4.8 1.4-1.4L7.9 8l3.3-3.4z"/></svg>';
-const NEXT_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 3.2 10.9 8l-4.7 4.8-1.4-1.4L8.1 8 4.8 4.6z"/></svg>';
+// A stepper's buttons' icons (Tabler's chevron-left and chevron-right), drawn as the play
+// button's are.
+const BACK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6l6 6"/></svg>';
+const NEXT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6l-6 6"/></svg>';
 
 /**
- * A stepper (docs/reference.md, "Controls"; the author, 2026-11-10): a play with no clock. "›"
- * plays the next step from the end of the one before and stops at its end; "‹" and the dots, one
- * per step, jump at once to the end of a step, as a play's bars jump to a step tapped.
+ * A stepper (docs/reference.md, "Controls"; the author, 2026-11-13): "‹", a dot per step, "›"
+ * and the step count. Its step is read from the scene as a play's is. Dot i sets state i - 1 and
+ * plays step i; "›" is the dot after the step, and "‹" the dot of the step, which plays it again.
  */
 export class MtpStepper extends MtpPart {
   private refresh: () => void = () => {};
   private onPage: ((event: KeyboardEvent) => void) | null = null;
-  private unwatch: () => void = () => {};
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
     this.onPage = null;
-    this.unwatch();
   }
 
-  protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "stepper");
     const obj = rt.objects[id]!;
     const layout = playerFor(rt, obj);
@@ -1623,135 +1531,64 @@ export class MtpStepper extends MtpPart {
       this.replaceChildren();
       return;
     }
-    const spans = layout.spans;
-    const n = spans.length;
-    const targets = layout.targets;
-    let player: Player | null = null;
-    // The step it is at, or is playing to; 0 is before the first.
-    let at = 0;
-    // Explore mode, as a play's (mtp-wjtd): no step is current, and "›" starts from state 0.
-    let exploring = true;
-
-    // The player, held by this stepper, with the moves of the steps after j held from starting.
-    const own = (j: number) => {
-      moves(rt, id, this);
-      player ??= playerFor(rt, obj)!;
-      if (scheduler.playerOf(this) !== player) scheduler.hold(player, this);
-      player.holdFrom(j);
-    };
+    const all = layout.spans;
+    const n = all.length;
     const how = howOf(obj, true);
-    // A jump, and a start from explore mode, work out the state from state 0, whatever was
-    // written since.
-    const reset = () => {
-      rt.restore(targets);
-      player!.release();
-    };
-    const go = (j: number) => {
-      if (!activeOf(rt, id)) return;
-      own(j);
-      scheduler.pause(this);
-      if (scheduler.seek(this, j === 0 ? BEFORE : spans[j - 1]!.end, how, reset)) {
-        at = j;
-        exploring = false;
-      } else player!.holdFrom(at);
+    let player: Player | null = null;
+
+    const stepNow = () => (scheduler.running(this) && player ? stepAt(all, player.position) : layout.stepNowIn());
+    // Dot i: set state i - 1, then play step i and stop at its end.
+    const go = (i: number) => {
+      if (!activeOf(rt, id) || i < 1 || i > n) return;
+      moves(rt, id, this);
+      player = playerFor(rt, obj)!;
+      player.holdFrom(i);
+      scheduler.start(player, this, how, all[i - 1]!.start, () => layout.setState(i - 1), all[i - 1]!.end);
       this.refresh();
     };
-    const begin = () => {
-      own(1);
-      if (!scheduler.seek(this, spans[0]!.start, how, reset)) {
-        player!.holdFrom(at);
-        this.refresh();
-        return;
-      }
-      exploring = false;
-      at = 1;
-      scheduler.resume(this, how, spans[0]!.end);
-      this.refresh();
-    };
-    const explore = () => {
-      if (exploring) return;
-      exploring = true;
-      at = 0;
-      scheduler.letGo(this);
-      player = null;
-      this.refresh();
-    };
-    const end = spans[n - 1]!.end;
-    scheduler.watch(this, targets, () => {
-      const finished = player !== null && at === n && player.time >= end - 1e-9 * Math.max(1, end);
-      if (!finished) explore();
-    });
-    const rested = () => this.refresh();
-    model.addEventListener(REST, rested);
-    this.unwatch = () => {
-      scheduler.unwatch(this);
-      model.removeEventListener(REST, rested);
-    };
-    const forward = () => {
-      if (!activeOf(rt, id)) return;
-      if (exploring) {
-        begin();
-        return;
-      }
-      if (at >= n) return;
-      own(at + 1);
-      // A step still playing is ended at once, so each press moves on by one step.
-      if (!scheduler.seek(this, spans[at]!.start, how)) {
-        player!.holdFrom(at);
-        this.refresh();
-        return;
-      }
-      at++;
-      scheduler.resume(this, how, spans[at - 1]!.end);
-      this.refresh();
-    };
+    const forward = () => go(stepNow() + 1);
     const backward = () => {
-      if (!exploring && at > 0) go(at - 1);
+      const k = stepNow();
+      if (k > 0) go(k);
     };
 
     const round = (name: string, icon: string, label: string, act: () => void) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = `mtp-step-button ${name}`;
+      b.className = `mtp-step-button mtp-${name}`;
+      b.dataset.mtpInput = name;
       b.innerHTML = icon;
       b.setAttribute("aria-label", label);
-      b.addEventListener("click", () => model.settle(act));
+      b.addEventListener("click", act);
       return b;
     };
-    const back = round("mtp-prev", BACK_ICON, "previous step", backward);
-    const next = round("mtp-next", NEXT_ICON, "next step", forward);
+    const back = round("back", BACK_ICON, "previous step", backward);
+    const next = round("next", NEXT_ICON, "next step", forward);
     const group = document.createElement("div");
     group.className = "mtp-dots";
     group.setAttribute("role", "group");
-    const dots = spans.map((_, j) => {
+    const dots = all.map((_, j) => {
       const dot = document.createElement("button");
       dot.type = "button";
       dot.className = "mtp-dot";
+      dot.dataset.mtpInput = `dot-${j + 1}`;
       dot.setAttribute("aria-label", `step ${j + 1}`);
-      dot.addEventListener("click", () => model.settle(() => go(j + 1)));
+      dot.addEventListener("click", () => go(j + 1));
       group.append(dot);
       return dot;
     });
-
     // The count beside the dots; the dots' group already says it to a screen reader.
     const count = document.createElement("span");
     count.className = "mtp-count";
     count.setAttribute("aria-hidden", "true");
-    const ex = exploreButton(() =>
-      model.settle(() => {
-        if (!activeOf(rt, id)) return;
-        moves(rt, id, this);
-        explore();
-      }),
-    );
 
-    // The keys of a play: the arrows go to the next step and back one.
+    // The keys of a stepper: the arrows are "›" and "‹".
     const keys: Record<string, () => void> = { ArrowRight: forward, ArrowLeft: backward };
     const onKey = (event: KeyboardEvent) => {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
-      if (!event.repeat && activeOf(rt, id)) model.settle(act);
+      if (!event.repeat && activeOf(rt, id)) act();
     };
     this.addEventListener("keydown", onKey);
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
@@ -1765,32 +1602,27 @@ export class MtpStepper extends MtpPart {
     this.refresh = () => {
       const running = scheduler.running(this);
       const active = activeOf(rt, id);
-      back.disabled = !active || exploring || at === 0;
-      next.disabled = !active || (!exploring && at === n);
-      ex.disabled = !active;
-      ex.setAttribute("aria-pressed", String(exploring));
+      const k = stepNow();
+      const exploring = k === 0 && !running;
+      back.disabled = !active || k === 0;
+      next.disabled = !active || k === n;
       dots.forEach((dot, j) => {
         dot.disabled = !active;
-        dot.classList.toggle("mtp-passed", j + 1 < at);
-        if (j + 1 === at) dot.setAttribute("aria-current", "step");
+        dot.classList.toggle("mtp-passed", j + 1 < k);
+        if (j + 1 === k) dot.setAttribute("aria-current", "step");
         else dot.removeAttribute("aria-current");
       });
       const label = labelOf(rt, id);
-      count.textContent = exploring ? "" : `${at} / ${n}`;
-      group.setAttribute("aria-label", at ? `${label}: step ${at} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
-      this.toggleAttribute("data-playing", running);
-      // As a play's: a page shows what goes with each step by this attribute.
-      if (at) this.setAttribute("data-step", String(at));
-      else this.removeAttribute("data-step");
+      count.textContent = `${exploring ? "–" : k} / ${n}`;
+      group.setAttribute("aria-label", k ? `${label}: step ${k} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
+      this.pageState({ inactive: !active, step: String(k), playing: running, exploring });
       if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        // -1 until state 0 is set, then 0 in explore mode, as a play's.
-        const step = exploring ? 0 : at;
-        if (model.hasAttribute("data-mtp-rest") && rt.value(id, "step") !== step) rt.write(id, "step", step);
+        if (rt.value(id, "step") !== k) rt.write(id, "step", k);
       }
     };
+    this.replaceChildren(back, group, next, count);
     this.refresh();
-    this.replaceChildren(back, group, next, count, ex);
   }
 
   protected update(): void {

@@ -1,0 +1,30 @@
+; Plays and steppers whose step is read from the scene (mtp-wjtd; reference.md, "Controls").
+(real k 0 (>= 0) (<= 10))
+(real j 0)
+(play tour (buttons true) (label 'play the tour') (labels 'Grow' 'Grow more')
+  (animation
+    (move k (to 2) (duration 1))
+    (move k (to 4) (duration 3))))
+; Without (buttons true): one bar, no count and no arrow keys.
+(play whole (animation (move k (to 2) (duration 1)) (move k (to 4) (duration 1))))
+; Its first step starts from a from: state 0 has j at 5.
+(play froms (buttons true)
+  (animation
+    (move j (from 5) (to 6) (duration 1))
+    (move k (to 1) (duration 1))))
+; The same tour with a rest of a second between its steps (mtp-wfrs).
+(play rested (buttons true) (rest 1)
+  (animation
+    (move k (to 2) (duration 1))
+    (move k (to 4) (duration 3))))
+(stepper hints (label 'hints')
+  (animation
+    (move k (to 2) (duration 1))
+    (move k (to 4) (duration 1))
+    (move j (to 1) (duration 1))))
+(button go (move k (to 9) (duration 1)))
+(button set-two (move k (to 2) (duration 0)))
+(button set-three (move k (to 3) (duration 0)))
+(button set-four (move k (to 4) (duration 0)))
+(bool on false)
+(play off (active on) (move k (to 2) (duration 1)))

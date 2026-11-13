@@ -26,6 +26,9 @@
 (canvas v s
   (on-view (animation (move k (to 4) (duration 1)))))
 (canvas z s)
+; Another on-view on k, for one writer the reader did not set off meeting another.
+(canvas late s
+  (on-view (animation (move k (to 3) (duration 1)))))
 (canvas w s
   (on-view (animation (move d.x (to 8) (duration 1))))
   (on-drag d d.pos)
@@ -34,33 +37,14 @@
   (on-view (animation (move d.x (to 8) (duration 1))))
   (on-drag d d.pos (priority 900))
   (on-enter e (animation (move d.x (to 3) (duration 1)))))
-(play auto (animation (move k (to 3) (duration 1))) (autoplay z))
 ; Writers of a high priority whose writes take no time.
 (point p [0 0])
 (slider locked (move k (from 0) (to 10)) (priority 900))
 (button jump (animation (move p (to [1 1]) (duration 1))))
 (canvas pm s
   (on-pointermove p))
-; A play or stepper whose targets another writer writes goes into explore mode (mtp-wjtd).
-(button set-j (animation (move j (to 1) (duration 0))))
-(stepper walk (label 'walk')
-  (animation
-    (move j (to 5) (duration 1))
-    (move k (to 10) (duration 2))
-    (move j (to 7) (duration 1))))
 (button pl-x (animation (move pl.x (to 5) (duration 1))) (priority 900))
 (button pl-points (animation (move pl.points (to [[0 0] [2 0]]) (duration 1))) (priority 900))
 (button pl-y (animation (move pl.y (to 5) (duration 1))) (priority 900))
-(play trip (buttons true)
-  (animation
-    (move j (to 5) (duration 1))
-    (move k (to 10) (duration 2))
-    (move j (to 7) (duration 1))))
-; A play whose step 1 starts with a move that takes no time, so the start of step 1 is not
-; state 0.
-(play hop (buttons true)
-  (animation
-    (in-order (move j (to 1) (duration 0)) (move j (to 5) (duration 1)))
-    (move k (to 10) (duration 2))))
 ; A play moving what the canvas w drags, for a grab that changes nothing (the author, 2026-11-12).
 (play roll (animation (move d.x (to 8) (duration 2))))

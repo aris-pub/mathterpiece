@@ -173,11 +173,6 @@ export class Runtime {
   // are most of the runtime's work, so they find their slot without building a key.
   private slots: Map<string | null, Slot>[];
   private byKey = new Map<string, Slot>();
-  // The rest state a play or stepper starts from (mtp-wjtd): what each free variable or attribute
-  // held when the model was built, kept at its first write, or what an on-view last wrote to it,
-  // since the on-views' writes are part of the rest state (the author, 2026-11-12).
-  private rest = new Map<string, unknown>();
-  private resting = false;
   /** Decides each write of a free value that changes something, by its key: a write it rejects
    * is skipped (docs/concurrency-model.md). */
   gate: ((k: string) => boolean) | null = null;
@@ -530,36 +525,35 @@ export class Runtime {
     return attr === "pos" ? [`${id}:x`, `${id}:y`] : [target];
   }
 
-  /** A variable's or an attribute's value in the rest state, as value gives it now. */
-  atRest(id: number, attr: string | null): unknown {
-    const k = key(id, attr);
-    return this.rest.has(k) ? this.rest.get(k) : this.value(id, attr);
-  }
-
-  /** Runs work whose writes are part of the rest state, as an on-view's are. */
-  asRest<T>(work: () => T): T {
-    if (this.resting) return work();
-    this.resting = true;
-    try {
-      return work();
-    } finally {
-      this.resting = false;
+  /** The objects a read or a write of a target is each of: a group's or an instance's attribute
+   * that is not its own is each member's, at any depth, as writeInto writes it. */
+  holders(id: number, attr: string | null): number[] {
+    const o = this.objects[id]!;
+    if ((o.kind === "group" || o.kind === "instance") && attr !== null && !this.has(id, attr)) {
+      if (attr !== "pos" || o.kind === "group") return (o.members ?? []).flatMap((m) => this.holders(m, attr));
     }
+    return [id];
   }
 
-  /** Writes back what the targets ("id:attr") hold in the rest state, every slot a write of them
-   * reaches, so a group's members get back each their own value. */
-  restore(targets: string[]): void {
-    this.together(() => {
-      const changed = new Set<string>();
-      for (const t of targets) {
-        const at = t.indexOf(":");
-        for (const k of this.slotsOf(Number(t.slice(0, at)), t.slice(at + 1) || null)) {
-          if (this.rest.has(k)) this.writeKey(k, this.rest.get(k), changed);
-        }
-      }
-      for (const k of changed) this.pending!.add(k);
-    });
+  /** A value as a write of it to a free variable or attribute would keep it, brought into its
+   * type's constraints; as given when that is not a free one. */
+  fitted(id: number, attr: string | null, value: unknown): unknown {
+    const s = this.slots[id]!.get(attr);
+    if (!s || s.state !== FREE) return value;
+    const v = this.constrain(s.type, value, s.value);
+    return v === undefined ? s.value : v;
+  }
+
+  /** The free variables and attributes and their values now, by key. */
+  freeValues(): Map<string, unknown> {
+    const out = new Map<string, unknown>();
+    for (const [k, s] of this.byKey) if (s.state === FREE) out.set(k, s.value);
+    return out;
+  }
+
+  /** The value of a free variable or attribute, by key. */
+  freeValue(k: string): unknown {
+    return this.byKey.get(k)?.value;
   }
 
   /** The free values a write of a target writes, as their keys, worked out as writeInto does. */
@@ -680,10 +674,8 @@ export class Runtime {
       if (kept === undefined) return;
       v = kept;
     }
-    if (this.resting) this.rest.set(k, v);
     // A write that changes nothing is skipped, so nothing downstream is computed again.
     if (equal(v, old)) return;
-    if (!this.rest.has(k)) this.rest.set(k, old);
     s.value = v;
     s.cssKnown = false;
     this.touched[s.id] = ++this.clock;

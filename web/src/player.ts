@@ -3,6 +3,7 @@
 // slider scrubs through it (docs/reference.md, "Transitions and animations" and "Controls").
 import type { Clamp, Step } from "./doc.ts";
 import { equal } from "./builtins.ts";
+import { same } from "./same.ts";
 import type { Runtime } from "./runtime.ts";
 import { type Ease, type Moves, along, applyEase, noneEnds } from "./transitions.ts";
 
@@ -57,8 +58,6 @@ export class Player {
   // Moves of this top-level step and later ones are held from starting: a stepper stopped at the
   // end of a step leaves the next one's moves undone, even those that start at that instant.
   private upTo = Number.POSITIVE_INFINITY;
-  /** Whether what it writes is part of the rest state, as an on-view's writes are (mtp-wjtd). */
-  rest = false;
 
   constructor(
     private rt: Runtime,
@@ -146,7 +145,7 @@ export class Player {
   /** Writes every move as it stands t seconds in. */
   seek(time: number): void {
     // The page hears of a frame's writes once, at its end: a round may write many times.
-    this.rt.together(() => (this.rest ? this.rt.asRest(() => this.seekNow(time)) : this.seekNow(time)));
+    this.rt.together(() => this.seekNow(time));
   }
 
   private seekNow(time: number): void {
@@ -253,6 +252,55 @@ export class Player {
     return out;
   }
 
+  /**
+   * Writes the values of state j of a play or a stepper (the author, 2026-11-13): for state 0,
+   * the from of each move of the first step that gives one; for state j from 1, each value the
+   * steps 1 to j move, at the last to written for it, read now.
+   */
+  setState(j: number): void {
+    this.rt.together(() => {
+      for (const [m, v] of this.stateOf(j)) this.rt.write(m.id, m.attr, this.clamped(m, v));
+    });
+  }
+
+  /** Whether the scene is in state k, k from 1: each value the steps 1 to k move is the last to
+   * written for it, as a write of it would keep it, numbers within a millionth. */
+  inState(k: number): boolean {
+    const rt = this.rt;
+    return this.stateOf(k).every(([m, v]) => {
+      const want = this.clamped(m, v);
+      return rt.holders(m.id, m.attr).every((h) => same(rt.value(h, m.attr), rt.fitted(h, m.attr, want)));
+    });
+  }
+
+  /** The highest step k from 1 whose state the scene is in, or 0 when it is in none. */
+  stepNowIn(): number {
+    for (let k = this.spans.length; k >= 1; k--) if (this.inState(k)) return k;
+    return 0;
+  }
+
+  // Each target of state j and the value it holds there, in the order the moves are written.
+  private stateOf(j: number): [Move, unknown][] {
+    const rt = this.rt;
+    const out = new Map<string, [Move, unknown]>();
+    const order = [...this.moves].sort((a, b) => a.top - b.top || a.start - b.start || a.stage - b.stage);
+    for (const m of order) {
+      const tr = rt.objects[m.transition]!;
+      const k = `${m.id}:${m.attr ?? ""}`;
+      // A move with no to ends where it started, so it fixes no value of its own.
+      if (j === 0 && m.top === 0 && tr.from && !out.has(k)) out.set(k, [m, rt.evaluate(tr.from)]);
+      if (j > 0 && m.top < j && tr.to) out.set(k, [m, rt.evaluate(tr.to)]);
+    }
+    return [...out.values()];
+  }
+
+  private clamped(m: Move, v: unknown): unknown {
+    for (const c of this.clamps) {
+      if (c.target[0] === m.id && c.target[1] === m.attr && typeof v === "number") v = this.rt.clamp(c, v);
+    }
+    return v;
+  }
+
   /** The top-level step running at the current time, or null when none is. */
   stepNow(): number | null {
     const t = this.position;
@@ -275,11 +323,8 @@ export class Player {
     const tr = rt.objects[m.transition]!;
     // A path runs between two values, so a move to or from none jumps instead.
     const path = tr.path && typeof tr.path === "object" && m.from !== null && m.to !== null ? (tr.path as { func: number }).func : null;
-    let v = path === null ? along(m.from, m.to, e, kind) : rt.fn(path)([m.from, m.to, e], null);
-    for (const c of this.clamps) {
-      if (c.target[0] === m.id && c.target[1] === m.attr && typeof v === "number") v = rt.clamp(c, v);
-    }
-    rt.write(m.id, m.attr, v);
+    const v = path === null ? along(m.from, m.to, e, kind) : rt.fn(path)([m.from, m.to, e], null);
+    rt.write(m.id, m.attr, this.clamped(m, v));
   }
 
   private movesAs(m: Move): Moves {

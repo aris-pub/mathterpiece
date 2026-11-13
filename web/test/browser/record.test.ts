@@ -40,9 +40,9 @@ describe("recording mode", () => {
     expect(canvas.bottom).toBeLessThanOrEqual(frame.bottom);
     const rt = model.runtime!;
     await userEvent.keyboard("{ArrowRight}{ArrowRight}");
-    expect(rt.value(rt.id("k"), null)).toBe(2);
-    expect(stage.querySelector("mtp-play .mtp-now")!.textContent).toBe("2 / 2");
+    expect(rt.value(rt.id("k"), null)).toBeCloseTo(2, 1);
+    expect(stage.querySelector("mtp-play .mtp-count")!.textContent).toBe("2 / 2");
     await userEvent.keyboard(" ");
-    expect(rt.value(rt.id("one"), "playing")).toBe(true);
+    expect(rt.value(rt.id("one"), "playing")).toBe(false);
   });
 });

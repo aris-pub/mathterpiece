@@ -79,8 +79,8 @@ export interface Obj {
   path?: unknown;
   // animations
   steps?: Step;
-  // An animation's step names, one per step of its body (docs/mtpc.md, "Objects").
-  names?: (string | null)[];
+  // A play's name for each step (docs/mtpc.md, "Objects").
+  labels?: string[];
   // components
   animation?: number | null;
   conditions?: Clamp[];
@@ -94,9 +94,8 @@ export interface Obj {
   term?: string;
   formula?: number;
   as?: "inline" | "block";
-  // on-view: the canvas it listens to; play: "load", or the view or control it waits for.
+  // on-view, on-rest, on-live, on-quiet: the view it listens to.
   view?: number;
-  autoplay?: "load" | number | null;
   // A control whose label is LaTeX, given as (label (tex …)).
   "label-tex"?: boolean;
   rest?: number;
