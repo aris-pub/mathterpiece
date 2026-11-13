@@ -157,7 +157,7 @@ export class Player {
       // A move that has not started by then puts back the value it started from, the latest
       // first, so each thing moved ends at how it stood before the first of them; it reads its
       // ends again when it starts.
-      const later = shown.filter((m) => m.from !== undefined && (held(m) || inRound(m.loops, time)[0] < m.start));
+      const later = shown.filter((m) => m.from !== undefined && (held(m) || !begun(inRound(m.loops, time)[0], m.start)));
       for (const m of later.sort((a, b) => b.start - a.start || b.stage - a.stage)) {
         this.write(m, 0);
         forgetEnds(m);
@@ -176,9 +176,8 @@ export class Player {
     // Each move reads its ends at the instant it starts (mtp-lm24), however late the frame comes:
     // the moves under way are first brought to that instant, so a move sees what the moves that
     // ended before it left, and then every move starting then reads, before any of them writes.
-    const eps = (x: number) => 1e-9 * Math.max(1, Math.abs(x));
     const starting = now
-      .filter(({ m, t }) => m.from === undefined && t >= m.start && !held(m))
+      .filter(({ m, t }) => m.from === undefined && begun(t, m.start) && !held(m))
       .sort((a, b) => (Math.abs(a.at - b.at) <= eps(a.at) ? a.m.stage - b.m.stage : a.at - b.at));
     for (let i = 0; i < starting.length; ) {
       const { at, m: lead } = starting[i]!;
@@ -213,7 +212,7 @@ export class Player {
     const first = this.moves[0]!;
     let cur = rt.value(this.holder(first), first.attr);
     for (const m of this.moves) {
-      if (t < m.start) break;
+      if (!begun(t, m.start)) break;
       const tr = rt.objects[m.transition]!;
       const from = tr.from ? rt.evaluate(tr.from) : (m.from ?? cur);
       const to = tr.to ? rt.evaluate(tr.to) : (m.to ?? cur);
@@ -372,6 +371,17 @@ function forgetEnds(m: Move): void {
   delete m.to;
 }
 
+// Two sums of the same durations, added in another order, can differ in their
+// last digit.
+const eps = (x: number) => 1e-9 * Math.max(1, Math.abs(x));
+
+// Whether a move that starts at start has started at time t. A stepper stops at a step's end, a
+// sum of durations, and a move of duration 0 at that end starts at another sum of them, which can
+// fall a hair after it.
+function begun(t: number, start: number): boolean {
+  return t >= start - eps(start);
+}
+
 // How far along a move is at time t of its round.
 function progress(m: Move, t: number): number {
   // A stop at a step's end is a sum of durations, so (end - start) / duration may fall a hair
@@ -380,7 +390,7 @@ function progress(m: Move, t: number): number {
     const u = (t - m.start) / m.duration;
     return u >= 1 - 1e-9 ? 1 : Math.max(u, 0);
   }
-  return t >= m.start ? 1 : 0;
+  return begun(t, m.start) ? 1 : 0;
 }
 
 function length(step: Step): number {

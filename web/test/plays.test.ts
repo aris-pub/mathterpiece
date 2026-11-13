@@ -471,6 +471,15 @@ describe("a stepper", () => {
     expect(v("k")).toBe(4);
   });
 
+  it("writes a step's last move when its start and the step's end differ only by rounding", () => {
+    const [, , v] = page(`<mtp-stepper model="m" name="rounded"></mtp-stepper>`);
+    input(el(), "dot-2").click();
+    pass(0.1);
+    pass(1);
+    expect(v("k")).toBe(7);
+    expect(v("rounded", "step")).toBe(2);
+  });
+
   it("› while a step plays sets the state at its end and plays the next", () => {
     const [, , v] = hints();
     next().click();
