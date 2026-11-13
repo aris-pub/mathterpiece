@@ -1,23 +1,14 @@
-# mathterpiece
+# Mathterpiece
 
-mathterpiece (mtp) is a small language for math figures that readers can drag, slide and play. A
-world model is written in a `.mtp` file, in a Lisp-like syntax. A compiler checks it and writes
-the compiled model, a `.mtpc` file, which a JavaScript runtime draws on a web page.
+Mathterpiece (mtp) is a small language for math figures that readers can drag, slide and play.
+You describe a figure in a `.mtp` file, in a Lisp-like syntax: its variables and their ranges, its
+shapes, and how each one depends on the others. The compiler checks it and writes a `.mtpc` file,
+which a JavaScript runtime draws on any web page.
 
-![The source of a figure next to the figure it draws: a spiral of dots, each one turned and scaled from the one before. Moving the sliders changes how many dots there are, how far each one turns and how much each one shrinks.](docs/images/spiral-of-copies.gif)
+![The source of a figure next to the figure it draws: a spiral of dots, each one turned and scaled from the one before. Moving the sliders changes how many dots there are, how far each one turns and how much each one shrinks.](docs/images/spiral.gif)
 
-```lisp
-(real k 1 (>= 0.2) (<= 3))
-(scene s
-  (circle c (r k) (fill 'teal')))
-(canvas v (x -4) (y -4) (width 8) (height 8) s)
-(slider radius (move k (from 0.2) (to 3)) (label 'radius'))
-(readout area $'area = {(* pi k k):.2f}')
-```
-
-The circle's radius is the variable `k`, the slider moves `k`, and the readout shows the area.
-The compiler checks the types and the ranges, so a world model that could draw something undefined,
-such as a negative radius, does not compile.
+The compiler checks the types and the ranges. A figure that could draw something undefined, such
+as a circle with a negative radius, does not compile.
 
 ## Why a language
 
@@ -27,6 +18,9 @@ such as a negative radius, does not compile.
   can restyle them with CSS.
 - The source of a figure is a few dozen lines with the mathematics in them, short enough to
   review and to compare between versions.
+- A figure is saved as data (the `.mtpc` file), separate from the runtime that draws it. When the
+  runtime improves, every published figure gets the improvement, and the file keeps working when
+  browsers change.
 
 ## Install
 
@@ -59,10 +53,9 @@ uv run mtp parse dial.mtp              # prints the forms the parser reads
 uv run mtp fmt dial.mtp                # indents the file as the Emacs mode does
 ```
 
-A compile error names the line and column and says what is wrong. Building is four steps:
-parsing, compiling, writing the .mtpc and writing the inventory page, which shows every component
-live with the line of HTML that places it (see the data model).
-`mtp build` and `mtp serve` build the runtime with Node and pnpm.
+`mtp build` also writes an inventory page that shows every component of the figure live, next to
+the line of HTML that places it on a page. `mtp build` and `mtp serve` need Node and pnpm, because
+they build the runtime too.
 
 ## Put a live figure on a page
 
@@ -100,9 +93,9 @@ just check       # lint, type checks and both test suites
 - `web/src/`: the runtime, which plays a `.mtpc` and defines the page's elements.
 - `docs/`: the language and the file format, and `docs/figure-guidelines.md`, the rules every
   figure here follows (phones and touch first).
-- `examples/`: one world model per feature to read and try, and the interactive ones from the
-  Bourgain notes (`bourgain-*.mtp`). `house.mtp` is not a world model to show: it holds the colors and fonts
-  the examples share, and they import it.
+- `examples/`: one figure per feature to read and try, plus the interactive figures from the
+  Bourgain notes (`bourgain-*.mtp`). `house.mtp` is not a figure: it holds the colors and fonts that
+  the other examples import.
 - `tests/`: the compiler's tests; `tests/shared/` holds cases both the compiler and the runtime
   check.
 - `web/test/`: the runtime's tests.
