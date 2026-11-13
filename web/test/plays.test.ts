@@ -13,6 +13,7 @@ let clock = 0;
 frames.request = (callback) => {
   queued.push(callback);
 };
+frames.now = () => clock;
 
 /** Moves time forward by seconds, one animation frame at a time. */
 function pass(seconds: number, step = 0.1): void {
@@ -378,6 +379,91 @@ describe("a play", () => {
     });
   });
 
+  // The author, 2026-11-13: the left arrow works as a music player's back button.
+  describe("the left arrow pressed soon after a step starts", () => {
+    const trio = () => page(`<mtp-play model="m" name="trio"></mtp-play>${BUTTONS}`);
+    const bars3 = () => document.querySelector("mtp-play .mtp-bars") as HTMLElement;
+
+    it("pressed once at step k, plays steps k to N", () => {
+      const [, , v] = tour();
+      click("set-four");
+      key(track(), "ArrowLeft");
+      expect([v("k"), v("tour", "step"), v("tour", "playing")]).toEqual([2, 2, true]);
+    });
+
+    it("pressed twice within 300 ms, sets state k - 2 and plays steps k - 1 to N", () => {
+      const [, , v] = tour();
+      click("set-four");
+      key(track(), "ArrowLeft");
+      pass(0.1);
+      key(track(), "ArrowLeft");
+      expect([v("tour", "step"), v("tour", "playing")]).toEqual([1, true]);
+      pass(0.1);
+      pass(0.5);
+      expect(v("tour", "step")).toBe(1);
+      pass(1);
+      expect([v("tour", "step"), v("tour", "playing")]).toEqual([2, true]);
+    });
+
+    it("pressed more than 300 ms after step k started, plays steps k to N", () => {
+      const [, , v] = tour();
+      click("set-four");
+      key(track(), "ArrowLeft");
+      pass(0.1);
+      pass(0.4);
+      key(track(), "ArrowLeft");
+      expect([v("k"), v("tour", "step"), v("tour", "playing")]).toEqual([2, 2, true]);
+    });
+
+    it("counts from the frame in which a running play enters step k", () => {
+      const [, , v] = trio();
+      key(bars3(), " ");
+      pass(0.1);
+      pass(1);
+      expect(v("trio", "step")).toBe(2);
+      pass(0.1);
+      key(bars3(), "ArrowLeft");
+      expect([v("trio", "step"), v("trio", "playing")]).toEqual([1, true]);
+    });
+
+    it("does not count a play that entered step k more than 300 ms ago", () => {
+      const [, , v] = trio();
+      key(bars3(), " ");
+      pass(0.1);
+      pass(1);
+      expect(v("trio", "step")).toBe(2);
+      pass(0.5);
+      key(bars3(), "ArrowLeft");
+      expect([v("k"), v("trio", "step"), v("trio", "playing")]).toEqual([2, 2, true]);
+    });
+
+    it("pressed again and again within 300 ms from step 3, reaches step 1", () => {
+      const [, rt, v] = trio();
+      rt.write(rt.id("k"), null, 6);
+      expect(v("trio", "step")).toBe(3);
+      key(bars3(), "ArrowLeft");
+      expect(v("trio", "step")).toBe(3);
+      pass(0.1);
+      key(bars3(), "ArrowLeft");
+      expect([v("k"), v("trio", "step")]).toEqual([2, 2]);
+      pass(0.1);
+      key(bars3(), "ArrowLeft");
+      expect([v("trio", "step"), v("trio", "playing")]).toEqual([1, true]);
+      pass(0.1);
+      key(bars3(), "ArrowLeft");
+      expect([v("trio", "step"), v("trio", "playing")]).toEqual([1, true]);
+    });
+
+    it("pressed twice within 300 ms at step 1, plays steps 1 to N again", () => {
+      const [, , v] = tour();
+      click("set-two");
+      key(track(), "ArrowLeft");
+      pass(0.1);
+      key(track(), "ArrowLeft");
+      expect([v("tour", "step"), v("tour", "playing")]).toEqual([1, true]);
+    });
+  });
+
   describe("on the page", () => {
     it("names its inputs: the button and one bar per step", () => {
       tour();
@@ -611,5 +697,94 @@ describe("a stepper", () => {
     key(el(), "ArrowLeft");
     expect(v("k")).toBe(2);
     expect(v("hints", "playing")).toBe(true);
+  });
+
+  // The author, 2026-11-13: "‹" and the left arrow work as a music player's back button.
+  describe("‹ pressed soon after a step starts", () => {
+    const finish = () => {
+      pass(0.1);
+      pass(1.1);
+    };
+
+    it("pressed once at step k, plays step k", () => {
+      const [, , v] = hints();
+      dot(2).click();
+      finish();
+      back().click();
+      expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([2, 2, true]);
+    });
+
+    it("pressed twice within 300 ms, sets state k - 2 and plays step k - 1, stopping at its end", () => {
+      const [, , v] = hints();
+      dot(2).click();
+      finish();
+      back().click();
+      pass(0.1);
+      back().click();
+      expect([v("hints", "step"), v("hints", "playing")]).toEqual([1, true]);
+      finish();
+      expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([2, 1, false]);
+    });
+
+    it("the left arrow pressed twice within 300 ms, as ‹ is", () => {
+      const [, , v] = hints();
+      dot(2).click();
+      finish();
+      key(el(), "ArrowLeft");
+      pass(0.1);
+      key(el(), "ArrowLeft");
+      expect([v("hints", "step"), v("hints", "playing")]).toEqual([1, true]);
+    });
+
+    it("pressed more than 300 ms after step k started, plays step k", () => {
+      const [, , v] = hints();
+      dot(2).click();
+      finish();
+      back().click();
+      pass(0.1);
+      pass(0.4);
+      back().click();
+      expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([2, 2, true]);
+    });
+
+    it("counts from the press on a dot or on ›", () => {
+      const [, , v] = hints();
+      dot(1).click();
+      finish();
+      next().click();
+      pass(0.1);
+      back().click();
+      expect([v("hints", "step"), v("hints", "playing")]).toEqual([1, true]);
+    });
+
+    it("pressed again and again within 300 ms from step 3, reaches step 1", () => {
+      const [, , v] = hints();
+      dot(3).click();
+      finish();
+      expect(v("hints", "step")).toBe(3);
+      back().click();
+      expect(v("hints", "step")).toBe(3);
+      pass(0.1);
+      back().click();
+      expect([v("k"), v("hints", "step")]).toEqual([2, 2]);
+      pass(0.1);
+      back().click();
+      expect([v("hints", "step"), v("hints", "playing")]).toEqual([1, true]);
+      pass(0.1);
+      back().click();
+      expect([v("hints", "step"), v("hints", "playing")]).toEqual([1, true]);
+    });
+
+    it("pressed twice within 300 ms at step 1, plays step 1 again", () => {
+      const [, , v] = hints();
+      dot(1).click();
+      finish();
+      back().click();
+      pass(0.1);
+      back().click();
+      expect([v("hints", "step"), v("hints", "playing")]).toEqual([1, true]);
+      finish();
+      expect([v("k"), v("hints", "step"), v("hints", "playing")]).toEqual([2, 1, false]);
+    });
   });
 });

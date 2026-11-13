@@ -36,11 +36,13 @@ function shown(el: Element): boolean {
   return true;
 }
 
-/** How the page asks for animation frames; tests replace it to move time by hand. */
+/** How the page asks for animation frames and reads the clock, in milliseconds; tests replace
+ * both to move time by hand. */
 export const frames = {
   request: (callback: (ms: number) => void): void => {
     requestAnimationFrame(callback);
   },
+  now: (): number => performance.now(),
 };
 
 export class MtpModel extends HTMLElement {
@@ -1294,6 +1296,30 @@ function stepAt(spans: Span[], t: number): number {
   return k;
 }
 
+// How soon, in milliseconds, after a step starts playing, a press of the left arrow or "‹" goes
+// back one step further, as a music player's back button does (the author, 2026-11-13).
+const BACK_MS = 300;
+
+/** When the step that plays now started playing: at the press that started it, or in the frame
+ * in which a running play's position entered it. */
+function stepStarts() {
+  let step = 0;
+  let at = -Infinity;
+  const started = (k: number) => {
+    step = k;
+    at = frames.now();
+  };
+  return {
+    started,
+    // Called on each refresh while running, so the time of a step reached by playing on is the
+    // time of the frame in which the play reached it.
+    playing: (k: number) => {
+      if (k !== step) started(k);
+    },
+    soon: (k: number) => k === step && frames.now() - at < BACK_MS,
+  };
+}
+
 /** Whether a paused time is partway through a step, so the step is the one paused in rather than
  * one read from the scene: past the start, and not at the end of a step. */
 function partway(spans: Span[], t: number): boolean {
@@ -1337,6 +1363,7 @@ export class MtpPlay extends MtpPart {
     // The player of this copy's effect while it runs, is paused or is dragged.
     let player: Player | null = null;
     let dragging = false;
+    const starts = stepStarts();
 
     const paused = () => {
       const p = scheduler.pausedOf(this);
@@ -1349,6 +1376,7 @@ export class MtpPlay extends MtpPart {
       if (!usable(rt, id)) return;
       moves(rt, id, this);
       player = playerFor(rt, obj)!;
+      starts.started(j + 1);
       scheduler.start(player, this, how, all[j]!.start, () => layout.setState(j));
       this.refresh();
     };
@@ -1414,8 +1442,9 @@ export class MtpPlay extends MtpPart {
     }
 
     // Keys (the author, 2026-11-13): Space is the button. At step k the right arrow is a tap on
-    // bar k + 1 and the left arrow one on bar k, and each is off where that bar does not exist.
-    // Without (buttons true) there are no arrow keys.
+    // bar k + 1 and the left arrow one on bar k, or on bar k - 1 when pressed soon after step k
+    // started. Each is off where that bar does not exist. Without (buttons true) there are no
+    // arrow keys.
     const keys: Record<string, () => boolean> = {
       " ": () => (press(), true),
       ArrowRight: () => {
@@ -1427,7 +1456,7 @@ export class MtpPlay extends MtpPart {
       ArrowLeft: () => {
         const k = stepNow();
         if (!split) return false;
-        if (k > 0) go(k - 1);
+        if (k > 0) go(starts.soon(k) && k > 1 ? k - 2 : k - 1);
         return true;
       },
     };
@@ -1530,6 +1559,7 @@ export class MtpPlay extends MtpPart {
       const active = usable(rt, id);
       const shown = moving() ? player : null;
       const k = stepNow();
+      if (running) starts.playing(k);
       const exploring = k === 0 && !shown;
       // How far along the animation the bars stand: where the player stands, or the end of the
       // step read from the scene.
@@ -1585,7 +1615,8 @@ const NEXT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6
 /**
  * A stepper (docs/reference.md, "Controls"; the author, 2026-11-13): "‹", a dot per step, "›"
  * and the step count. Its step is read from the scene as a play's is. Dot i sets state i - 1 and
- * plays step i; "›" is the dot after the step, and "‹" the dot of the step, which plays it again.
+ * plays step i; "›" is the dot after the step, and "‹" the dot of the step, which plays it again,
+ * or the dot before it when pressed soon after the step started.
  */
 export class MtpStepper extends MtpPart {
   private refresh: () => void = () => {};
@@ -1609,6 +1640,7 @@ export class MtpStepper extends MtpPart {
     const n = all.length;
     const how = howOf(obj, true);
     let player: Player | null = null;
+    const starts = stepStarts();
 
     const stepNow = () => (scheduler.running(this) && player ? stepAt(all, player.position) : layout.stepNowIn());
     // Dot i: set state i - 1, then play step i and stop at its end.
@@ -1617,13 +1649,14 @@ export class MtpStepper extends MtpPart {
       moves(rt, id, this);
       player = playerFor(rt, obj)!;
       player.holdFrom(i);
+      starts.started(i);
       scheduler.start(player, this, how, all[i - 1]!.start, () => layout.setState(i - 1), all[i - 1]!.end);
       this.refresh();
     };
     const forward = () => go(stepNow() + 1);
     const backward = () => {
       const k = stepNow();
-      if (k > 0) go(k);
+      if (k > 0) go(starts.soon(k) && k > 1 ? k - 1 : k);
     };
 
     const round = (name: string, icon: string, label: string, act: () => void) => {

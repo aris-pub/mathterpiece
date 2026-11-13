@@ -17,6 +17,12 @@
   (animation
     (move k (to 2) (duration 1))
     (move k (to 4) (duration 3))))
+; Three steps of a second each, for quick presses of the left arrow.
+(play trio (buttons true)
+  (animation
+    (move k (to 2) (duration 1))
+    (move k (to 4) (duration 1))
+    (move k (to 6) (duration 1))))
 (stepper hints (label 'hints')
   (animation
     (move k (to 2) (duration 1))
