@@ -11,6 +11,7 @@ function fake(scheduler: () => Scheduler, writes: () => boolean, end = 10): Play
     targets: [] as string[],
     done: false,
     release() {},
+    place() {},
     seek(t: number) {
       p.done = t >= end;
       if (writes()) scheduler().told();
@@ -101,6 +102,7 @@ describe("the rule for every write", () => {
       done: false,
       time: 0,
       release() {},
+      place() {},
       seek() {
         if (next === null) return;
         w.accepted = next.map((k) => s.accept(k));

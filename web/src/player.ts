@@ -142,6 +142,11 @@ export class Player {
     this.upTo = k;
   }
 
+  /** Stands t seconds in without writing anything. */
+  place(time: number): void {
+    this.at = time;
+  }
+
   /** Writes every move as it stands t seconds in. */
   seek(time: number): void {
     // The page hears of a frame's writes once, at its end: a round may write many times.
