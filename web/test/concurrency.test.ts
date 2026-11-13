@@ -291,7 +291,7 @@ describe("a slider", () => {
     const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
     const k = rt.id("k");
     knob("pointerdown");
-    const later = { targets: [`${k}:`], done: false, time: 0, release() {}, seek: () => rt.write(k, null, 7) };
+    const later = { targets: [`${k}:`], done: false, time: 0, release() {}, place() {}, seek: () => rt.write(k, null, 7) };
     model.scheduler!.start(later as never, {}, { reader: true, held: true });
     slide(200);
     expect(v("k")).toBe(7);

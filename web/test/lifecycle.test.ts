@@ -88,7 +88,7 @@ describe("a canvas with an on-view", () => {
     pass(0.1);
     pass(0.3);
     const k = rt.id("k");
-    const reader = { targets: [`${k}:`], done: false, time: 0, release() {}, seek: () => rt.write(k, null, 9) };
+    const reader = { targets: [`${k}:`], done: false, time: 0, release() {}, place() {}, seek: () => rt.write(k, null, 9) };
     model.scheduler!.start(reader as never, {}, { reader: true });
     pass(1);
     expect(v("k")).toBe(4);

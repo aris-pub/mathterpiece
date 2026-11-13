@@ -164,6 +164,7 @@ describe("controls", () => {
         done: false,
         time: 0,
         release() {},
+        place() {},
         seek(t: number) {
           player.time = t;
           player.done = t >= 1;
@@ -209,7 +210,7 @@ describe("controls", () => {
     pass(0.5);
     const on = rt.id("on");
     expect(model.scheduler!.ownerOf(`${on}:`)).toBe(document.querySelector("mtp-toggle"));
-    const player = { targets: [`${on}:`], done: false, time: 0, release() {}, seek: () => rt.write(on, null, false) };
+    const player = { targets: [`${on}:`], done: false, time: 0, release() {}, place() {}, seek: () => rt.write(on, null, false) };
     model.scheduler!.start(player as never, {}, { reader: true });
     const k = v("k");
     pass(0.5);

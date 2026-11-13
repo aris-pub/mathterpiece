@@ -194,6 +194,10 @@ export class Scheduler {
     this.sources.push(s);
     // A seek that writes something tells the views already, as they stand now.
     this.heard = false;
+    // The source counts as running from here, so a play or stepper refreshed by the reset's writes
+    // computes its step from player.position. Setting the time to from first keeps one started at
+    // step i from reporting step 1 for an instant.
+    player.place(from);
     this.as(s, () => {
       reset?.();
       player.seek(from);

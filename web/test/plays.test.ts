@@ -387,6 +387,29 @@ describe("a play", () => {
       expect(told).toBe(2);
     });
 
+    it("reports step i from a tap on bar i in explore mode to the end", () => {
+      tour();
+      lay();
+      const told: string[] = [];
+      el().addEventListener("mtp-state", () => told.push(el().getAttribute("data-mtp-step")!));
+      tap(250);
+      pass(4.5, 0.25);
+      expect(new Set(told)).toEqual(new Set(["2"]));
+    });
+
+    it("reports step 2 from a left arrow while step 2 plays to the end", () => {
+      tour();
+      lay();
+      tap(250);
+      pass(0.1);
+      pass(1);
+      const told: string[] = [];
+      el().addEventListener("mtp-state", () => told.push(el().getAttribute("data-mtp-step")!));
+      key(track(), "ArrowLeft");
+      pass(4.5, 0.25);
+      expect(new Set(told)).toEqual(new Set(["2"]));
+    });
+
     it("marks itself inactive while its (active bool) does not hold", () => {
       const [, rt] = page(`<mtp-play model="m" name="off"></mtp-play>`);
       const off = document.querySelector("mtp-play") as HTMLElement;
@@ -478,6 +501,30 @@ describe("a stepper", () => {
     pass(1);
     expect(v("k")).toBe(7);
     expect(v("rounded", "step")).toBe(2);
+  });
+
+  it("reports step i from the press on dot i to the end of step i", () => {
+    hints();
+    const told: string[] = [];
+    el().addEventListener("mtp-state", () => told.push(el().getAttribute("data-mtp-step")!));
+    dot(2).click();
+    pass(1.5, 0.25);
+    expect(new Set(told)).toEqual(new Set(["2"]));
+  });
+
+  it("› while a step plays reports the next step from the press on", () => {
+    hints();
+    next().click();
+    pass(0.1);
+    pass(1.1);
+    next().click();
+    pass(0.1);
+    pass(0.3);
+    const told: string[] = [];
+    el().addEventListener("mtp-state", () => told.push(el().getAttribute("data-mtp-step")!));
+    next().click();
+    pass(1.5, 0.25);
+    expect(new Set(told)).toEqual(new Set(["3"]));
   });
 
   it("› while a step plays sets the state at its end and plays the next", () => {
