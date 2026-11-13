@@ -295,8 +295,6 @@ class Writer:
             d["path"] = _path(o.attrs.get("path"))
         elif kind == "animation":
             d["steps"] = _step(o.data["steps"])
-            if "names" in o.data:
-                d["names"] = o.data["names"]
         elif kind == "canvas":
             d["shows"] = [s if isinstance(s, int) else self.attribute(s) for s in o.data["shows"]]
             d["transition"] = o.data["transition"]
@@ -305,7 +303,8 @@ class Writer:
             d["attrs"] = attrs
         elif kind in ("slider", "button", "play", "stepper"):
             if kind == "play":
-                d["autoplay"] = o.data["autoplay"]
+                if "labels" in o.data:
+                    d["labels"] = o.data["labels"]
                 if "rest" in o.data:
                     d["rest"] = _number(o.data["rest"])
             d["animation"] = o.data["animation"]
@@ -330,7 +329,7 @@ class Writer:
                 d["map"] = self.attribute(o.data["map"])
             d["conditions"] = self.conditions(o)
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
-        elif kind in ("on-view", "on-live", "on-quiet"):
+        elif kind in ("on-view", "on-rest", "on-live", "on-quiet"):
             d["view"] = o.data["view"]
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None

@@ -26,13 +26,7 @@ class TestControls:
     def test_play(self):
         p = model(f"{K} (play p {MOVE} (buttons true))").get("p")
         assert p.attrs["buttons"].value is True
-        assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, -1)
-        # The time within its animation, in seconds from the start (the author, 2026-11-12).
-        assert p.attrs["time"].value == 0
-
-    def test_a_play_time_is_readable(self):
-        d = model(f"{K} (play p {MOVE}) (real later (+ p.time 1))")
-        assert d.get("later") is not None
+        assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, 0)
 
     def test_a_play_rests_between_its_steps(self):
         # mtp-wfrs: (rest t) pauses t seconds between each pair of steps.
@@ -57,7 +51,7 @@ class TestControls:
         assert s.data["animation"] is not None
         assert s.attrs["label"].value == "hints"
         assert s.data["active"].deps == {(m.id("on"), None)}
-        assert (s.attrs["playing"].value, s.attrs["step"].value) == (False, -1)
+        assert (s.attrs["playing"].value, s.attrs["step"].value) == (False, 0)
 
     def test_a_stepper_is_read_through_its_step(self):
         m = model(f"{K} (stepper s {MOVE}) (bool past (> s.step 0))")
@@ -69,7 +63,6 @@ class TestControls:
     def test_a_stepper_has_one_stop_per_step(self):
         error(f"{K} (stepper s {MOVE} (buttons true))", r"a stepper takes no \(buttons …\)")
         error(f"{K} (stepper s {MOVE} (rest 1))", "only a play takes")
-        error(f"{K} (stepper s {MOVE} (autoplay))", r"a stepper takes no \(autoplay …\)")
 
     def test_the_compiled_stepper(self):
         d = doc(f"{K} (stepper s {MOVE} (label 'hints'))")
@@ -231,9 +224,7 @@ class TestPositionalTargets:
 
 
 class TestStartingWithoutTheReader:
-    # mtp-9wm: (on-view (animation …)) in a canvas plays the first time it comes into view, and
-    # a play with (autoplay) starts when the page loads, or with (autoplay view-or-control) the
-    # first time that comes into view.
+    # mtp-9wm: (on-view (animation …)) in a canvas plays the first time it comes into view.
     S = f"{K} (scene s (circle c)) (canvas v s)"
 
     def test_on_view(self):
@@ -247,35 +238,11 @@ class TestStartingWithoutTheReader:
         error(f"{self.S} (on-view v {MOVE})", "on-view is written inside the body of the view")
         error(f"{K} (readout r 'x' (on-view {MOVE}))", "so it is written inside a canvas")
 
-    def test_autoplay_when_the_page_loads(self):
-        m = model(f"{self.S} (play p (autoplay) {MOVE})")
-        assert m.get("p").data["autoplay"] == "load"
-
-    def test_autoplay_when_a_view_or_a_control_comes_into_view(self):
-        m = model(
-            f"{self.S} (button b {MOVE}) (play p (autoplay v) {MOVE}) (play q (autoplay b) {MOVE})"
-        )
-        assert m.get("p").data["autoplay"] == m.id("v")
-        assert m.get("q").data["autoplay"] == m.id("b")
-
-    def test_no_autoplay(self):
-        assert model(f"{self.S} (play p {MOVE})").get("p").data["autoplay"] is None
-
-    def test_autoplay_takes_a_view_or_a_control(self):
-        error(f"{self.S} (play p (autoplay c) {MOVE})", "autoplay takes a view or a control")
-        error(f"{self.S} (play p (autoplay v v) {MOVE})", "autoplay takes")
-
     def test_the_compiled_file(self):
-        d = doc(
-            f"{K} (scene s (circle c)) (canvas v s (on-view {MOVE})) (play p (autoplay) {MOVE})"
-            f" (play q (autoplay v) {MOVE})"
-        )
+        d = doc(f"{K} (scene s (circle c)) (canvas v s (on-view {MOVE}))")
         assert errors(d) == []
-        names = d["names"]
         (o,) = [o for o in d["objects"] if o["kind"] == "on-view"]
-        assert o["view"] == names["v"]
-        assert d["objects"][names["p"]]["autoplay"] == "load"
-        assert d["objects"][names["q"]]["autoplay"] == names["v"]
+        assert o["view"] == d["names"]["v"]
 
 
 class TestReleaseListeners:

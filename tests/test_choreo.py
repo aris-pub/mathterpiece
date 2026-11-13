@@ -95,25 +95,13 @@ def test_a_use_of_several_items_is_one_step_as_a_named_animation_is():
     )
 
 
-def test_a_use_alone_gives_its_steps_and_their_names():
-    tour = (
-        "(choreo tour () (step 'Up' (move k (to 1) (duration 1)))"
-        " (step 'Down' (move k (to 0) (duration 1))))"
-    )
+def test_a_use_alone_gives_its_steps():
+    tour = "(choreo tour () (move k (to 1) (duration 1)) (move k (to 0) (duration 1)))"
     same(
         BASE + f" {tour} (play p (animation (tour)))",
-        BASE + " (play p (animation (step 'Up' (move k (to 1) (duration 1)))"
-        " (step 'Down' (move k (to 0) (duration 1)))))",
+        BASE + " (play p (animation (move k (to 1) (duration 1)) (move k (to 0) (duration 1))))",
     )
     same(BASE + f" {tour} (play p (tour))", BASE + f" {tour} (play p (animation (tour)))")
-
-
-def test_a_step_may_hold_a_use():
-    same(
-        BASE + " (play p (animation (step 'Fade' (fade-in c)) (step (fade-in d))))",
-        BASE + " (play p (animation (step 'Fade' (move c.opacity (to 1) (duration 0.4)))"
-        " (step (move d.opacity (to 1) (duration 0.4)))))",
-    )
 
 
 def test_nested_uses_pass_their_parameters_on():

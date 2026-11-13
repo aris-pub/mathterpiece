@@ -1571,6 +1571,7 @@
                 "on-drag",
                 "on-click",
                 "on-view",
+                "on-rest",
                 "on-live",
                 "on-quiet",
                 "on-release",
@@ -2085,15 +2086,6 @@
               "steps": {
                 "$ref": "#/$defs/step"
               },
-              "names": {
-                "type": "array",
-                "items": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
               "doc": {
                 "type": "string"
               }
@@ -2371,18 +2363,11 @@
                 "type": "number",
                 "minimum": 0
               },
-              "autoplay": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "const": "load"
-                  },
-                  {
-                    "$ref": "#/$defs/id"
-                  }
-                ]
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               },
               "in": {
                 "$ref": "#/$defs/in"
@@ -2933,6 +2918,83 @@
             "properties": {
               "kind": {
                 "const": "on-view"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "view": {
+                "$ref": "#/$defs/id"
+              },
+              "animation": {
+                "$ref": "#/$defs/id"
+              },
+              "active": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clamp"
+                }
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "on-rest"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "view",
+              "animation",
+              "active",
+              "conditions"
+            ],
+            "properties": {
+              "kind": {
+                "const": "on-rest"
               },
               "type": {
                 "$ref": "#/$defs/type"
@@ -3590,6 +3652,7 @@
                 "on-drag",
                 "on-click",
                 "on-view",
+                "on-rest",
                 "on-live",
                 "on-quiet",
                 "on-release",

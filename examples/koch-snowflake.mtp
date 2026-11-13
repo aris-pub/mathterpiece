@@ -79,7 +79,7 @@
   doc@'The code under the snowflake.'
   forms)
 
-(play cycle (autoplay view) (label 'grow and shrink')
+(play cycle (label 'grow and shrink')
   doc@'Grows, rests, shrinks back to the triangle and rests, again and again.'
     (animation (loop)
       grow
