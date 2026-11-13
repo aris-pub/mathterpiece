@@ -453,6 +453,20 @@ describe("a stepper", () => {
     expect(v("j")).toBe(0);
   });
 
+  it("stops at a step's end, and never reports the next step, when its frames add up to a hair under it", () => {
+    const [, , v] = hints();
+    const told: string[] = [];
+    el().addEventListener("mtp-state", () => told.push(`${el().getAttribute("data-mtp-step")}${el().hasAttribute("data-mtp-playing") ? " playing" : ""}`));
+    dot(1).click();
+    pass(0.1);
+    // Ten frames of 0.1 s add up to 0.9999999999999999 s, not to the step's end at 1 s.
+    pass(1);
+    expect(v("k")).toBe(2);
+    expect(v("hints", "playing")).toBe(false);
+    expect(v("hints", "step")).toBe(1);
+    expect(told).toEqual(["1 playing", "1"]);
+  });
+
   it("› at step k is dot k + 1, and ‹ is dot k, which plays step k again", () => {
     const [, , v] = hints();
     next().click();

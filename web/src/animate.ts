@@ -278,7 +278,9 @@ export class Scheduler {
     for (const s of [...this.sources]) {
       if (s.paused || s.scrubbing || !s.player || !this.sources.includes(s)) continue;
       s.time += seconds;
-      if (s.until !== undefined && s.time >= s.until) {
+      // Frame times add up with rounding, so a sum can fall a hair under until, a time that a
+      // stepper already counts as the next step's start.
+      if (s.until !== undefined && s.time >= s.until - 1e-9 * Math.max(1, Math.abs(s.until))) {
         s.time = s.until;
         s.paused = true;
         s.until = undefined;
