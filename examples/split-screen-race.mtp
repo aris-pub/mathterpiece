@@ -1,7 +1,7 @@
 ; Two cars race around a closed track. The map shows the whole track, and each player has a
 ; canvas of their own that follows their car, turned so the car always points up. Each player
 ; sets their car's speed with a slider, which belongs to their view and their lap count, and
-; the race button belongs to the map. Press race to start.
+; the race toggle belongs to the map. Tick race to start, and untick it to stop.
 ;
 ; The track is one thick curve. Its width is in screen pixels, as every stroke's is, so it is as
 ; wide in the close views as on the map, and the cars are measured in pixels too, so they fit
@@ -45,6 +45,10 @@
 (real run-2 0)
 (real gas-1 0.5)
 (real gas-2 0.5)
+; Whether the cars are racing. The race runs in the map's on-ready, which may read what it moves,
+; and moves each car by nothing while this is false: a play's move may not read what it moves,
+; since a play's step is read from the scene (the author, 2026-11-13).
+(bool racing false)
 
 (scene circuit (background grass)
   (polyline road
@@ -64,7 +68,12 @@
 
 (canvas map (x -12.5) (y -8.5) (width 25) (height 17) (pan false) (zoom false)
   doc@'The whole track, with both cars.'
-  circuit)
+  circuit
+  (on-ready doc@'Drives both cars while racing, each as fast as its player sets.'
+      (animation (loop)
+        (at-once (defaults (duration 0.1))
+          (move run-1 (to (+ run-1 (if racing (* 8 gas-1) 0))))
+          (move run-2 (to (+ run-2 (if racing (* 8 gas-2) 0))))))))
 (canvas view-1 (x (- (. (track run-1) x) 4)) (y (- (. (track run-1) y) 3)) (width 8) (height 6)
     (transform (rotate (- 90 (heading run-1)))) (pan false) (zoom false)
   doc@'Player 1\'s car, from close by, facing up.'
@@ -82,9 +91,4 @@
 (slider pedal-2 (move gas-2 (from 0) (to 1)) (label 'player 2') (in view-2 laps-2)
   doc@'Player 2\'s speed.')
 
-(play race (label 'race') (in map)
-  doc@'Drives both cars, each as fast as its player sets.'
-    (animation (loop)
-      (at-once (defaults (duration 0.1))
-        (move run-1 (to (+ run-1 (* 8 gas-1))))
-        (move run-2 (to (+ run-2 (* 8 gas-2)))))))
+(toggle race racing (label 'race') (in map) doc@'Starts and stops the race.')

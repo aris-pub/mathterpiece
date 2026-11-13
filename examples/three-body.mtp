@@ -4,11 +4,16 @@
 ; takes over from the run, so press run again after it. The readout shows the total energy: the
 ; step keeps it nearly fixed, and it wobbles only while two bodies pass close.
 ;
-; Each round of the play takes a few steps of semi-implicit Euler: every velocity is pushed by
+; Each round of the run takes a few steps of semi-implicit Euler: every velocity is pushed by
 ; the pull of the other two, and every body then moves by its new velocity. A move reads what it
 ; needs when it starts, and moves that run together read the same values, so the round is an
 ; in-order: the velocities are all pushed, then the bodies move, and after the last step the
 ; trails take the new positions.
+;
+; The run is a button, not a play: a play's move may not read what it moves, since a play's step
+; is read from the scene (the author, 2026-11-13), and each step here works out the next values
+; from the ones before. A button may. So stop is a second button, which writes the velocities as
+; they are: its writes take them over and cancel the run.
 
 (import house paper ink red green yellow)
 (import ease cubic-in-out)
@@ -67,8 +72,8 @@
                (potential b1.pos b3.pos) (potential b2.pos b3.pos)):.5f}'
   doc@'The total energy: the bodies\' motion and their pull on each other.')
 
-(play run (label 'run')
-  doc@'Steps the bodies forward, a few steps each frame.'
+(button run (label 'run')
+  doc@'Steps the bodies forward, a few steps each frame, until another writer takes over.'
     (animation (loop)
       (in-order (defaults (duration 0))
         (foreach k substeps
@@ -124,3 +129,11 @@
         (move v2 (to [0 0]))
         (move v3 (to [0 0]))
         clear-trails)))
+
+(button stop (label 'stop')
+  doc@'Stops the run where it is, keeping each body\'s position and velocity. Press run to go on.'
+    (animation
+      (at-once (defaults (duration 0))
+        (move v1 (to v1))
+        (move v2 (to v2))
+        (move v3 (to v3)))))
