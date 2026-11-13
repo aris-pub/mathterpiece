@@ -303,6 +303,12 @@
   (at-once (defaults (duration 0))
     (move exploring (to true)) (move floor (to false)) (move mix (to (round mix)))
     (move g (to 1) (duration 0.42) (ease quad))))
+; The same at the end of the tour, where all-densities has just moved mix to 1: a play's move
+; may not read what it moves (the author, 2026-11-13), so it gives mix as 1 rather than rounding.
+(animation to-explore-from-all
+  (at-once (defaults (duration 0))
+    (move exploring (to true)) (move floor (to false)) (move mix (to 1))
+    (move g (to 1) (duration 0.42) (ease quad))))
 
 ; The original holds 8 seconds after steps 1 and 2 with a countdown on the play button, and
 ; enters Explore after step 3.
@@ -311,7 +317,7 @@
     (animation
       (in-order one-density (wait 8))
       (in-order floor-rises (wait 8))
-      (in-order all-densities to-explore)))
+      (in-order all-densities to-explore-from-all)))
 
 (button explore (animation to-explore) (label 'Explore')
   doc@'Skips to Explore, the end of the tour.')

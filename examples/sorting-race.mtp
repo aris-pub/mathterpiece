@@ -5,8 +5,9 @@
 ; dice for new ones.
 ;
 ; Each sort is a small machine whose whole state is one list: where it is, its counts, and its
-; bars. Every step of the race moves the list to the next state, which a function works out
-; from the one before.
+; bars. Each step of the race works out the next state from the one before. A play's move may
+; not read what it moves (the author, 2026-11-13), so the play moves only how many steps have
+; been taken, and each sort's state is its first state stepped that many times.
 
 (import house paper soft red green yellow)
 (import rand)
@@ -56,9 +57,12 @@
 
 ; The heights 1 to n, shuffled from the seed: a new seed deals new bars.
 (list[real] deal (shuffle (map (range n) (fn k (+ k 1.0)))))
-; Each sort starts on the bars dealt when the page loads, and then moves them itself.
-(list[real] bubble free@(fresh 0 n deal))
-(list[real] insertion free@(fresh 1 1 deal))
+; How many comparisons each sort has made so far. Neither needs more than n (n - 1) / 2 + n.
+(int most (+ (floor (/ (* n (- n 1)) 2)) n) (const))
+(int taken 0 (>= 0))
+; Each sort's state: its first state, on the bars dealt, stepped taken times.
+(list[real] bubble (reduce (range taken) (fresh 0 n deal) (fn ((list[real] s) (int k)) (bubble-step s))))
+(list[real] insertion (reduce (range taken) (fresh 1 1 deal) (fn ((list[real] s) (int k)) (insertion-step s))))
 
 (scene race (background paper)
   (group bubble-bars
@@ -100,19 +104,11 @@
             (else 'Both are still sorting.')))
   doc@'Which sort finished first.')
 
+; One comparison each every 0.12 seconds: taken is an int, so it moves up by one at a time.
 (play run (label 'race')
   doc@'Steps both sorts, one comparison each, until both are done.'
-    (animation (loop)
-      (at-once (defaults (duration 0.12))
-        (move bubble (to (bubble-step bubble)))
-        (move insertion (to (insertion-step insertion))))))
+    (move taken (from 0) (to most) (duration (* most 0.12))))
 
-; The roll comes first, so the moves after it read the new deal.
 (button shuffle (label 'shuffle')
   doc@'Puts new shuffled bars in front of both sorts and starts them again.'
-    (animation
-      (in-order
-        (roll-dice)
-        (at-once (defaults (duration 0))
-          (move bubble (to (fresh 0 n deal)))
-          (move insertion (to (fresh 1 1 deal)))))))
+    (animation (in-order (roll-dice) (move taken (to 0) (duration 0)))))
