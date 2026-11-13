@@ -1,8 +1,8 @@
 // Writers moving the same targets at the same time (docs/reference.md, "Concurrency"; the author,
-// 2026-11-11, mtp-vs5d, mtp-s7z9, mtp-ddi1): whatever the reader is doing now, or did last, wins.
+// 2026-11-11, mtp-vs5d, mtp-s7z9, mtp-wjtd): whatever the reader is doing now, or did last, wins.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Scheduler } from "../src/animate.ts";
-import { type MtpModel, define, frames } from "../src/elements.ts";
+import { type MtpModel, define, frames, markSeen } from "../src/elements.ts";
 import type { Runtime } from "../src/runtime.ts";
 import { doc } from "./helpers.ts";
 
@@ -44,7 +44,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("a writer set off by the reader, not exclusive, while it runs", () => {
+describe("a writer set off by the reader, while it runs", () => {
   it("is cancelled by a newcomer the reader sets off", () => {
     const [, , v] = page(buttons("go", "back"));
     press("go");
@@ -54,28 +54,18 @@ describe("a writer set off by the reader, not exclusive, while it runs", () => {
     expect(v("k")).toBe(0);
   });
 
-  it("refuses a newcomer the reader did not set off: an on-view", () => {
+  it("rejects the writes of a newcomer the reader did not set off: an on-view", () => {
     const [model, rt, v] = page(buttons("go") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     press("go");
     pass(0.5);
-    model.markSeen(rt.id("v"));
-    pass(1.5);
-    expect(v("k")).toBe(10);
-  });
-
-  it("refuses a newcomer the reader did not set off: an autoplay", () => {
-    const [model, rt, v] = page(buttons("go") + `<mtp-canvas model="m" name="z"></mtp-canvas><mtp-play model="m" name="auto"></mtp-play>`);
-    press("go");
-    pass(0.5);
-    model.markSeen(rt.id("z"));
-    expect(v("auto", "playing")).toBe(false);
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.5);
     expect(v("k")).toBe(10);
   });
 });
 
-describe("an exclusive writer, while it runs", () => {
-  it("refuses a newcomer the reader sets off", () => {
+describe("a writer of a higher priority, while it runs", () => {
+  it("rejects the writes of a newcomer the reader sets off", () => {
     const [, , v] = page(buttons("lock", "back"));
     press("lock");
     pass(0.5);
@@ -84,22 +74,23 @@ describe("an exclusive writer, while it runs", () => {
     expect(v("k")).toBe(10);
   });
 
-  it("refuses a newcomer the reader did not set off", () => {
+  it("rejects the writes of a newcomer the reader did not set off", () => {
     const [model, rt, v] = page(buttons("lock") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     press("lock");
     pass(0.5);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.5);
     expect(v("k")).toBe(10);
   });
 
-  it("refuses the whole newcomer, so none of its moves happen, even on other targets", () => {
+  // Each value is decided on its own: the newcomer's move of j goes on (the author, 2026-11-13).
+  it("rejects a newcomer's writes of its values only, and accepts its others", () => {
     const [, , v] = page(buttons("lock", "both"));
     press("lock");
     pass(0.5);
     press("both");
     pass(1.5);
-    expect([v("k"), v("j")]).toEqual([10, 0]);
+    expect([v("k"), v("j")]).toEqual([10, 5]);
   });
 
   it("allows a newcomer on a different target", () => {
@@ -111,7 +102,7 @@ describe("an exclusive writer, while it runs", () => {
     expect([v("k"), v("j")]).toEqual([10, 5]);
   });
 
-  it("refuses newcomers only until it ends", () => {
+  it("rejects the writes of newcomers only until it ends", () => {
     const [, , v] = page(buttons("lock", "back"));
     press("lock");
     pass(1.5);
@@ -121,76 +112,37 @@ describe("an exclusive writer, while it runs", () => {
   });
 });
 
-describe("a writer the reader did not set off, not exclusive, while it runs", () => {
+describe("a writer the reader did not set off, while it runs", () => {
   it("is cancelled by a newcomer the reader sets off", () => {
     const [model, rt, v] = page(buttons("back") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     rt.write(rt.id("k"), null, 2);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(0.5);
     press("back");
     pass(1.5);
     expect(v("k")).toBe(0);
   });
 
-  it("is cancelled by a newcomer the reader did not set off", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="z"></mtp-canvas><mtp-play model="m" name="auto"></mtp-play>`);
-    model.markSeen(rt.id("v"));
+  // An on-view is triggered only while the scene still has the values at page load
+  // (docs/canvas-lifecycle.md, rule 2), so one on-view cannot meet another on the same values.
+  it("keeps another canvas's on-view on its values from being triggered at all", () => {
+    const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="late"></mtp-canvas>`);
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(0.5);
-    model.markSeen(rt.id("z"));
+    markSeen(document.querySelector(`[name="late"]`)!);
     pass(1.5);
-    expect(v("k")).toBe(3);
+    expect(v("k")).toBe(4);
   });
 });
 
 describe("a play the reader started", () => {
-  it("is not cancelled by an on-view or an autoplay while it runs", () => {
-    const [model, rt, v] = page(
-      `<mtp-play model="m" name="tour"></mtp-play><mtp-canvas model="m" name="v"></mtp-canvas>` +
-        `<mtp-canvas model="m" name="z"></mtp-canvas><mtp-play model="m" name="auto"></mtp-play>`,
-    );
+  it("is not cancelled by an on-view while it runs", () => {
+    const [model, rt, v] = page(`<mtp-play model="m" name="tour"></mtp-play><mtp-canvas model="m" name="v"></mtp-canvas>`);
     playButton("tour").click();
     pass(0.5);
-    model.markSeen(rt.id("v"));
-    model.markSeen(rt.id("z"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(2);
     expect(v("k")).toBe(10);
-    expect(v("auto", "playing")).toBe(false);
-  });
-
-  it("started by autoplay becomes the reader's once the reader presses it", () => {
-    const [model, rt, v] = page(
-      `<mtp-canvas model="m" name="z"></mtp-canvas><mtp-play model="m" name="auto"></mtp-play><mtp-canvas model="m" name="v"></mtp-canvas>`,
-    );
-    model.markSeen(rt.id("z"));
-    pass(0.3);
-    // Paused and played again by the reader.
-    playButton("auto").click();
-    playButton("auto").click();
-    model.markSeen(rt.id("v"));
-    pass(1.5);
-    expect(v("k")).toBe(3);
-  });
-
-  it("cancelled, goes on from where it stopped, its move starting again from the value the slider left", () => {
-    const [, , v] = page(`<mtp-play model="m" name="tour"></mtp-play><mtp-slider model="m" name="sl"></mtp-slider>`);
-    playButton("tour").click();
-    pass(1);
-    expect(v("k")).toBeCloseTo(5);
-    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
-    input.value = "200";
-    input.dispatchEvent(new Event("input"));
-    pass(0.5);
-    expect(v("k")).toBe(2);
-    expect(v("tour", "playing")).toBe(false);
-    playButton("tour").click();
-    expect(v("tour", "playing")).toBe(true);
-    // From 2 at the press to 10 over the second the move had left.
-    expect(v("k")).toBeCloseTo(2);
-    pass(0.5);
-    expect(v("k")).toBeCloseTo(6);
-    pass(0.6);
-    expect(v("k")).toBe(10);
-    expect(v("tour", "playing")).toBe(false);
   });
 });
 
@@ -200,13 +152,76 @@ describe("a drag", () => {
   const at = (el: Element, type: string, x = 0, y = 0) =>
     el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
 
-  it("held, refuses an on-view on the dragged shape", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+  // The author, 2026-11-12: a drag is a running writer from its first change of value, not
+  // from the grab. An on-view has priority 1000 (the author, 2026-11-13), above a gesture's.
+  it("grabbed and not yet moved, writes nothing, so an on-view plays, and its moves are rejected while it does", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-canvas model="m" name="viewed"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
-    model.markSeen(rt.id("w"));
-    pass(1.5);
-    expect(v("d", "x")).toBe(0);
+    markSeen(document.querySelector(`[name="viewed"]`)!);
+    pass(0.3);
+    const x = v("d", "x");
     at(svg(), "pointermove", 30, 0);
+    expect(v("d", "x")).toBe(x);
+    pass(1.5);
+    expect(v("d", "x")).toBe(8);
+    at(svg(), "pointerup", 30, 0);
+  });
+
+  it("grabbed and not moved, leaves a play running", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="roll"></mtp-play>`);
+    playButton("roll").click();
+    pass(0.5);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    pass(0.5);
+    expect(v("roll", "playing")).toBe(true);
+    at(svg(), "pointerup", 0, 0);
+    pass(1.2);
+    expect(v("d", "x")).toBe(8);
+  });
+
+  it("moved, stops a play, which is then in explore mode", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="roll"></mtp-play>`);
+    playButton("roll").click();
+    pass(0.5);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    pass(0.5);
+    at(svg(), "pointermove", 30, 0);
+    expect(v("roll", "playing")).toBe(false);
+    expect(document.querySelector("mtp-play")!.hasAttribute("data-mtp-exploring")).toBe(true);
+    at(svg(), "pointerup", 30, 0);
+  });
+
+  it("is a running writer only until the release", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="roll"></mtp-play>`);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    at(svg(), "pointermove", 30, 0);
+    at(svg(), "pointerup", 30, 0);
+    playButton("roll").click();
+    pass(2.5);
+    expect(v("d", "x")).toBe(8);
+  });
+
+  // The author, 2026-11-13: a held drag is a gesture, which no on-enter can cancel; the
+  // on-enter's writes of the dragged shape are rejected.
+  it("held, rejects the writes an on-enter the pointer sets off makes of the dragged shape", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    at(svg(), "pointermove", 10, 0);
+    at(shape(rt, "e"), "pointermove", 30, 0);
+    const moved = v("d", "x");
+    pass(1.5);
+    expect(v("d", "x")).toBe(moved);
+    at(svg(), "pointermove", 60, 0);
+    expect(v("d", "x")).not.toBe(moved);
+    at(svg(), "pointerup", 60, 0);
+  });
+
+  // The move that starts a drag sets off its on-enter first and writes last, so the drag, a
+  // writer from that first write, cancels the on-enter it set off.
+  it("at its first move, cancels an on-enter that move sets off", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+    at(shape(rt, "d"), "pointerdown", 0, 0);
+    at(shape(rt, "e"), "pointermove", 30, 0);
     const moved = v("d", "x");
     expect(moved).not.toBe(0);
     pass(1.5);
@@ -214,31 +229,9 @@ describe("a drag", () => {
     at(svg(), "pointerup", 30, 0);
   });
 
-  it("is a running writer only until the release", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+  it("of a higher priority, rejects the writes of an on-enter", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="held"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
-    at(svg(), "pointermove", 30, 0);
-    at(svg(), "pointerup", 30, 0);
-    model.markSeen(rt.id("w"));
-    pass(1.5);
-    expect(v("d", "x")).toBe(8);
-  });
-
-  it("held, is cancelled by an on-enter the pointer sets off", () => {
-    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
-    at(shape(rt, "d"), "pointerdown", 0, 0);
-    at(shape(rt, "e"), "pointermove", 30, 0);
-    pass(1.5);
-    expect(v("d", "x")).toBe(3);
-    at(svg(), "pointermove", 60, 0);
-    expect(v("d", "x")).toBe(3);
-    at(svg(), "pointerup", 60, 0);
-  });
-
-  it("exclusive, refuses both an on-view and an on-enter", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="held"></mtp-canvas>`);
-    at(shape(rt, "d"), "pointerdown", 0, 0);
-    model.markSeen(rt.id("held"));
     at(shape(rt, "e"), "pointermove", 30, 0);
     const moved = v("d", "x");
     expect(moved).not.toBe(0);
@@ -270,13 +263,14 @@ describe("a group's attribute", () => {
     expect([v("c1", "r"), v("c2", "r")]).toEqual([3, 3]);
   });
 
-  it("a writer of it is refused by an exclusive writer of a member's, on every member", () => {
+  // Each member's value is decided on its own (the author, 2026-11-13).
+  it("a writer of it is rejected on a member a writer of a higher priority owns, and writes the others", () => {
     const [, , v] = page(buttons("hold-one", "grow"));
     press("hold-one");
     pass(0.5);
     press("grow");
     pass(1.5);
-    expect([v("c1", "r"), v("c2", "r")]).toEqual([2, 1]);
+    expect([v("c1", "r"), v("c2", "r")]).toEqual([2, 3]);
   });
 });
 
@@ -290,51 +284,101 @@ describe("a slider", () => {
   };
   const knob = (type: string) => input().dispatchEvent(new PointerEvent(type, { bubbles: true }));
 
+  // The author, 2026-11-13: a press on the track or the knob through the release is one gesture,
+  // triggered by the press, so a gesture of the same priority triggered after the press but
+  // before the first move is the newer one.
+  it("is triggered by the press, not by its first move", () => {
+    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
+    const k = rt.id("k");
+    knob("pointerdown");
+    const later = { targets: [`${k}:`], done: false, time: 0, release() {}, seek: () => rt.write(k, null, 7) };
+    model.scheduler!.start(later as never, {}, { reader: true, held: true });
+    slide(200);
+    expect(v("k")).toBe(7);
+    knob("pointerup");
+  });
+
   it("held, is a running writer that refuses an on-view", () => {
     const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
     knob("pointerdown");
     slide(200);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.5);
     expect(v("k")).toBe(2);
     knob("pointerup");
   });
 
-  it("released, no longer refuses an on-view", () => {
+  // The author, 2026-11-12: a held slider is a running writer from its first change of value.
+  it("grabbed and not moved, leaves a play running", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-play model="m" name="tour"></mtp-play>`);
+    playButton("tour").click();
+    pass(0.5);
+    knob("pointerdown");
+    pass(0.5);
+    expect(v("tour", "playing")).toBe(true);
+    knob("pointerup");
+    pass(1.2);
+    expect(v("k")).toBe(10);
+  });
+
+  it("grabbed and moved, stops a play, which is then in explore mode", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-play model="m" name="tour"></mtp-play>`);
+    playButton("tour").click();
+    pass(0.5);
+    knob("pointerdown");
+    pass(0.5);
+    slide(200);
+    expect(v("tour", "playing")).toBe(false);
+    expect(document.querySelector("mtp-play")!.hasAttribute("data-mtp-exploring")).toBe(true);
+    pass(1);
+    expect(v("k")).toBe(2);
+    knob("pointerup");
+  });
+
+  it("grabbed and not moved, writes nothing, so an on-view plays", () => {
     const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    knob("pointerdown");
+    markSeen(document.querySelector(`[name="v"]`)!);
+    pass(1.5);
+    expect(v("k")).toBe(4);
+    knob("pointerup");
+  });
+
+  it("released, no longer refuses a newcomer", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(200);
     knob("pointerup");
-    model.markSeen(rt.id("v"));
+    press("back");
     pass(1.5);
-    expect(v("k")).toBe(4);
+    expect(v("k")).toBe(0);
   });
 
   it("is released by a pointercancel too", () => {
-    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(200);
     knob("pointercancel");
-    model.markSeen(rt.id("v"));
+    press("back");
     pass(1.5);
-    expect(v("k")).toBe(4);
+    expect(v("k")).toBe(0);
   });
 
-  it("held and cancelled by a newcomer the reader sets off, writes nothing more until its release", () => {
+  // The author, 2026-11-13: a held knob is a gesture, so a newcomer the reader sets off is
+  // rejected on its value.
+  it("held, rejects the writes of a newcomer the reader sets off, and writes on", () => {
     const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(500);
     press("back");
     pass(1.5);
-    expect(v("k")).toBe(0);
-    slide(800);
-    expect(v("k")).toBe(0);
-    knob("pointerup");
+    expect(v("k")).toBe(5);
     slide(800);
     expect(v("k")).toBe(8);
+    knob("pointerup");
   });
 
-  it("exclusive and held, refuses a newcomer the reader sets off", () => {
+  it("of a higher priority and held, rejects the writes of a newcomer the reader sets off", () => {
     const [, , v] = page(`<mtp-slider model="m" name="locked"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(500);
@@ -344,7 +388,7 @@ describe("a slider", () => {
     knob("pointerup");
   });
 
-  it("exclusive, holds the lock during a step from a key, which takes no time", () => {
+  it("of a higher priority, owns its value during a step from a key, which takes no time", () => {
     const [, rt, v] = page(`<mtp-slider model="m" name="locked"></mtp-slider>` + buttons("back"));
     const write = rt.write.bind(rt);
     let pressed = false;
@@ -365,7 +409,7 @@ describe("a slider", () => {
   });
 });
 
-describe("an exclusive on-pointermove", () => {
+describe("an on-pointermove, a gesture", () => {
   it("holds the lock on its target during each write, which takes no time", () => {
     const [, rt, v] = page(`<mtp-canvas model="m" name="pm"></mtp-canvas>` + buttons("jump"));
     const write = rt.write.bind(rt);
@@ -390,110 +434,15 @@ describe("an exclusive on-pointermove", () => {
   });
 });
 
-describe("a stepper another writer cancelled", () => {
-  // mtp-ibem: it goes on from where it stopped; the moves that had ended are not written again,
-  // and the move cut off starts again from the value at the press, over the time it had left.
-  const page3 = () => page(`<mtp-stepper model="m" name="walk"></mtp-stepper><mtp-slider model="m" name="sl"></mtp-slider>` + buttons("set-j"));
-  const step = (which: string) => (document.querySelector(`mtp-stepper .mtp-${which}`) as HTMLButtonElement).click();
-  const count = () => document.querySelector("mtp-stepper .mtp-count")!.textContent;
-  const slide = (to: number) => {
-    const input = document.querySelector("mtp-slider input") as HTMLInputElement;
-    input.value = String(to);
-    input.dispatchEvent(new Event("input"));
-  };
-
-  it("partway through a step, plays that step on from where it stopped over the time it had left", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(1.2);
-    step("next");
-    pass(1);
-    expect(v("k")).toBeCloseTo(5);
-    slide(200);
-    expect(v("k")).toBe(2);
-    expect(v("walk", "playing")).toBe(false);
-    press("set-j");
-    pass(0.5);
-    expect(v("j")).toBe(1);
-    step("next");
-    expect(count()).toBe("2 / 3");
-    expect(v("walk", "playing")).toBe(true);
-    expect(v("j")).toBe(1);
-    expect(v("k")).toBeCloseTo(2);
-    pass(0.5);
-    expect(v("k")).toBeCloseTo(6);
-    pass(0.6);
-    expect(v("k")).toBe(10);
-    expect(v("j")).toBe(1);
-    expect(v("walk", "playing")).toBe(false);
-    expect(v("walk", "step")).toBe(2);
-    step("next");
-    expect(count()).toBe("3 / 3");
-    pass(1.2);
-    expect([v("j"), v("k")]).toEqual([7, 10]);
-  });
-
-  it("between two steps, plays the next step without writing the ended ones again", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(1.2);
-    expect(v("j")).toBe(5);
-    press("set-j");
-    expect(v("j")).toBe(1);
-    step("next");
-    expect(count()).toBe("2 / 3");
-    pass(2.2);
-    expect([v("j"), v("k")]).toEqual([1, 10]);
-  });
-
-  it("before the first step, plays the first step at once", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(0.5);
-    press("set-j");
-    step("prev");
-    expect(count()).toBe("0 / 3");
-    press("set-j");
-    expect(v("j")).toBe(1);
-    step("next");
-    pass(0.5);
-    expect(v("j")).toBeCloseTo(3);
-    pass(0.6);
-    expect(v("j")).toBe(5);
-  });
-
-  it("goes back with \u2039 to the end of the step before, as documented", () => {
-    const [, , v] = page3();
-    step("next");
-    pass(1.2);
-    step("next");
-    pass(1);
-    slide(200);
-    step("prev");
-    expect(count()).toBe("1 / 3");
-    expect([v("j"), v("k")]).toEqual([5, 0]);
-  });
-});
-
 describe("a shape whose position is worked out from other attributes", () => {
   // mtp-gzs9: writing its x, y or pos writes those attributes, so the writers meet.
-  it("a polyline's exclusive writer of x refuses a writer of its points", () => {
+  // The author, 2026-11-13: a polyline's x is neither free nor bound: a write of it writes each
+  // point's x. Writers meet only on those values.
+  it("a polyline's writer of points, pressed later, cancels a writer of its x", () => {
     const [, , v] = page(buttons("pl-x", "pl-points"));
     press("pl-x");
     pass(0.5);
     press("pl-points");
-    pass(1.5);
-    expect(v("pl", "points")).toEqual([
-      [5, 0],
-      [5, 2],
-    ]);
-  });
-
-  it("a polyline's exclusive writer of points refuses a writer of its x", () => {
-    const [, , v] = page(buttons("pl-points", "pl-x"));
-    press("pl-points");
-    pass(0.5);
-    press("pl-x");
     pass(1.5);
     expect(v("pl", "points")).toEqual([
       [0, 0],
@@ -501,15 +450,51 @@ describe("a shape whose position is worked out from other attributes", () => {
     ]);
   });
 
-  const meets = (rt: Runtime, a: string, b: string) => {
-    const s = new Scheduler(
-      () => {},
-      () => {},
-      (t) => rt.reached(t),
-    );
-    const held = {};
-    s.grip([a], held, { reader: true, exclusive: true }, () => {});
-    return !s.claim([b], {}, { reader: true, exclusive: false });
+  it("a polyline's writer of x, pressed later, cancels a writer of its points", () => {
+    const [, , v] = page(buttons("pl-points", "pl-x"));
+    press("pl-points");
+    pass(0.5);
+    press("pl-x");
+    pass(1.5);
+    // A list of points jumps at the end of its move, so the points had not moved yet.
+    expect(v("pl", "points")).toEqual([
+      [5, 0],
+      [5, 2],
+    ]);
+  });
+
+  it("a polyline's writer of x and a writer of its y never meet", () => {
+    const [, , v] = page(buttons("pl-x", "pl-y"));
+    press("pl-x");
+    pass(0.5);
+    press("pl-y");
+    pass(1.5);
+    expect(v("pl", "points")).toEqual([
+      [5, 4],
+      [5, 6],
+    ]);
+  });
+
+  // Two writers meet when a write of each writes a free value in common (docs/concurrency-model.md):
+  // a writer of a high priority writes a, each value as it is, and the newcomer's write of b is
+  // then rejected on some value.
+  const meets = (model: MtpModel, rt: Runtime, a: string, b: string) => {
+    const s = model.scheduler!;
+    const target = (t: string): [number, string | null] => {
+      const at = t.indexOf(":");
+      return [Number(t.slice(0, at)), t.slice(at + 1) || null];
+    };
+    const same = (t: string) => {
+      const [id, attr] = target(t);
+      rt.write(id, attr, rt.value(id, attr));
+    };
+    const high = {};
+    let met = false;
+    s.instant(high, { reader: true, priority: 900 }, () => {
+      same(a);
+      met = !s.instant({}, { reader: true }, () => same(b));
+    });
+    return met;
   };
   const cases: [string, string[]][] = [
     ["pl", ["points"]],
@@ -520,23 +505,28 @@ describe("a shape whose position is worked out from other attributes", () => {
   ];
   for (const [name, attrs] of cases) {
     it(`${name}: a writer of x, y or pos meets a writer of ${attrs.join(", ")}, both ways`, () => {
-      const [, rt] = page("");
+      const [model, rt] = page("");
       const id = rt.id(name);
       for (const pos of ["x", "y", "pos"]) {
         for (const attr of attrs) {
-          expect(meets(rt, `${id}:${pos}`, `${id}:${attr}`), `${pos} then ${attr}`).toBe(true);
-          expect(meets(rt, `${id}:${attr}`, `${id}:${pos}`), `${attr} then ${pos}`).toBe(true);
+          expect(meets(model, rt, `${id}:${pos}`, `${id}:${attr}`), `${pos} then ${attr}`).toBe(true);
+          expect(meets(model, rt, `${id}:${attr}`, `${id}:${pos}`), `${attr} then ${pos}`).toBe(true);
         }
       }
     });
   }
 
+  // The free values are whole: a polyline's x and its y are both written into its points, so a
+  // writer of x now meets a writer of y (docs/concurrency-model.md). A circle's x and y are two
+  // free values, and a line's from and its to.
   it("a writer of x does not meet a writer of y, and a line's from does not meet its to", () => {
-    const [, rt] = page("");
+    const [model, rt] = page("");
     const pl = rt.id("pl");
     const ln = rt.id("ln");
-    expect(meets(rt, `${pl}:x`, `${pl}:y`)).toBe(false);
-    expect(meets(rt, `${ln}:from`, `${ln}:to`)).toBe(false);
-    expect(meets(rt, `${pl}:pos`, `${pl}:y`)).toBe(true);
+    const d = rt.id("d");
+    expect(meets(model, rt, `${pl}:x`, `${pl}:y`)).toBe(false);
+    expect(meets(model, rt, `${ln}:from`, `${ln}:to`)).toBe(false);
+    expect(meets(model, rt, `${pl}:pos`, `${pl}:y`)).toBe(true);
+    expect(meets(model, rt, `${d}:x`, `${d}:y`)).toBe(false);
   });
 });

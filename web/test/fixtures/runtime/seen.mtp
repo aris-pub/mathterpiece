@@ -1,9 +1,5 @@
 (real k 0)
-(real j 0)
-(real m 0)
 (scene s (circle dot (r 1)))
 (canvas v s
   (on-view (animation (move k (to 10) (duration 1)))))
 (canvas w s)
-(play now (autoplay) (animation (move j (to 5) (duration 1))))
-(play later (autoplay w) (animation (move m (to 7) (duration 1))))

@@ -74,18 +74,16 @@
     (transform (transform (translate (- tip.x) (- tip.y)) (scale (^ 3 zoom-power)) (translate tip.x tip.y)))
   doc@'The snowflake, magnified about its top tip.'
   flake
-  (on-click flake (animation grow) doc@'Grows the snowflake again from the triangle.'))
+  (on-click flake (animation grow) doc@'Grows the snowflake again from the triangle.')
+  (on-ready doc@'Grows, rests, shrinks back to the triangle and rests, again and again.'
+      (animation (loop)
+        grow
+        (wait 1.5)
+        (move depth (to 0) (duration 3) (ease cubic-in-out))
+        (wait 0.8))))
 (canvas text-below (x -5.5) (y (- code-at.y 1.75)) (width 11) (height 2) (pan false) (zoom false)
   doc@'The code under the snowflake.'
   forms)
-
-(play cycle (autoplay view) (label 'grow and shrink')
-  doc@'Grows, rests, shrinks back to the triangle and rests, again and again.'
-    (animation (loop)
-      grow
-      (wait 1.5)
-      (move depth (to 0) (duration 3) (ease cubic-in-out))
-      (wait 0.8)))
 
 (slider depth-slider (move depth (from 0) (to 4)) (label 'depth'))
 (slider zoom-slider (move zoom-power (from 0) (to 3)) (label 'zoom, in powers of 3'))

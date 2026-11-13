@@ -79,8 +79,10 @@ export interface Obj {
   path?: unknown;
   // animations
   steps?: Step;
-  // An animation's step names, one per step of its body (docs/mtpc.md, "Objects").
-  names?: (string | null)[];
+  // A play's name for each step (docs/mtpc.md, "Objects").
+  labels?: string[];
+  // The canvases a control belongs to, which must be ready before it takes input.
+  canvases?: number[];
   // components
   animation?: number | null;
   conditions?: Clamp[];
@@ -94,9 +96,8 @@ export interface Obj {
   term?: string;
   formula?: number;
   as?: "inline" | "block";
-  // on-view: the canvas it listens to; play: "load", or the view or control it waits for.
+  // on-view, on-ready, on-live, on-quiet: the view it listens to.
   view?: number;
-  autoplay?: "load" | number | null;
   // A control whose label is LaTeX, given as (label (tex …)).
   "label-tex"?: boolean;
   rest?: number;
@@ -105,9 +106,8 @@ export interface Obj {
   // A row or a column: how it places its members (mtp-50n).
   layout?: { axis: "row" | "column"; gap: Attribute; align: Attribute } | null;
   active?: Attribute | null;
-  // A writer given (exclusive): while it runs, a newcomer that would write any of its targets is
-  // refused (docs/reference.md, "Concurrency").
-  exclusive?: boolean;
+  // A writer's (priority n), from 1 to 1000, when it gives one (docs/concurrency-model.md).
+  priority?: number;
   // on-click, on-release, on-dragstart, on-dragend, on-pointermove: whether the event stops at its shape.
   "stop-propagation"?: Attribute | null;
   // canvases: what each shows, in drawing order

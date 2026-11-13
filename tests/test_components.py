@@ -63,7 +63,6 @@ class TestControls:
     def test_a_stepper_has_one_stop_per_step(self):
         error(f"{K} (stepper s {MOVE} (buttons true))", r"a stepper takes no \(buttons …\)")
         error(f"{K} (stepper s {MOVE} (rest 1))", "only a play takes")
-        error(f"{K} (stepper s {MOVE} (autoplay))", r"a stepper takes no \(autoplay …\)")
 
     def test_the_compiled_stepper(self):
         d = doc(f"{K} (stepper s {MOVE} (label 'hints'))")
@@ -225,9 +224,7 @@ class TestPositionalTargets:
 
 
 class TestStartingWithoutTheReader:
-    # mtp-9wm: (on-view (animation …)) in a canvas plays the first time it comes into view, and
-    # a play with (autoplay) starts when the page loads, or with (autoplay view-or-control) the
-    # first time that comes into view.
+    # mtp-9wm: (on-view (animation …)) in a canvas plays the first time it comes into view.
     S = f"{K} (scene s (circle c)) (canvas v s)"
 
     def test_on_view(self):
@@ -241,35 +238,11 @@ class TestStartingWithoutTheReader:
         error(f"{self.S} (on-view v {MOVE})", "on-view is written inside the body of the view")
         error(f"{K} (readout r 'x' (on-view {MOVE}))", "so it is written inside a canvas")
 
-    def test_autoplay_when_the_page_loads(self):
-        m = model(f"{self.S} (play p (autoplay) {MOVE})")
-        assert m.get("p").data["autoplay"] == "load"
-
-    def test_autoplay_when_a_view_or_a_control_comes_into_view(self):
-        m = model(
-            f"{self.S} (button b {MOVE}) (play p (autoplay v) {MOVE}) (play q (autoplay b) {MOVE})"
-        )
-        assert m.get("p").data["autoplay"] == m.id("v")
-        assert m.get("q").data["autoplay"] == m.id("b")
-
-    def test_no_autoplay(self):
-        assert model(f"{self.S} (play p {MOVE})").get("p").data["autoplay"] is None
-
-    def test_autoplay_takes_a_view_or_a_control(self):
-        error(f"{self.S} (play p (autoplay c) {MOVE})", "autoplay takes a view or a control")
-        error(f"{self.S} (play p (autoplay v v) {MOVE})", "autoplay takes")
-
     def test_the_compiled_file(self):
-        d = doc(
-            f"{K} (scene s (circle c)) (canvas v s (on-view {MOVE})) (play p (autoplay) {MOVE})"
-            f" (play q (autoplay v) {MOVE})"
-        )
+        d = doc(f"{K} (scene s (circle c)) (canvas v s (on-view {MOVE}))")
         assert errors(d) == []
-        names = d["names"]
         (o,) = [o for o in d["objects"] if o["kind"] == "on-view"]
-        assert o["view"] == names["v"]
-        assert d["objects"][names["p"]]["autoplay"] == "load"
-        assert d["objects"][names["q"]]["autoplay"] == names["v"]
+        assert o["view"] == d["names"]["v"]
 
 
 class TestReleaseListeners:
@@ -687,47 +660,67 @@ class TestMathLabels:
         error(f"{K} (button b {MOVE} (label (tex 'a' 'b')))", r"\(tex …\) takes one string")
 
 
-# The author, 2026-11-11 (mtp-vs5d): any writer, listener or control, may take (exclusive): while
-# it runs, a newcomer that would write any of its targets is refused (reference.md,
-# "Concurrency"). The compiled file says so on the writer; whether the reader set a writer off is
-# known only at run time.
+# The author, 2026-11-13 (docs/concurrency-model.md): any writer, listener or control, may take
+# (priority n), n an int from 1 to 1000. One without it has its kind's priority, which the runtime
+# knows: 300 for on-view, 500 for what the reader triggers, 700 for a gesture. (exclusive) is gone.
 SCENE = "(scene s (circle c (r 1)))"
-EXCLUSIVE = [
-    ("slider", f"(slider w {SLIDE} (exclusive))"),
-    ("button", f"(button w {MOVE} (exclusive))"),
-    ("play", f"(play w {MOVE} (exclusive))"),
-    ("stepper", f"(stepper w {MOVE} (exclusive))"),
-    ("toggle", "(bool on) (toggle w on (exclusive))"),
-    ("on-drag", "(canvas v s (on-drag c c.pos (exclusive)))"),
-    ("on-click", f"(canvas v s (on-click c {MOVE} (exclusive)))"),
-    ("on-release", f"(canvas v s (on-release c {MOVE} (exclusive)))"),
-    ("on-dragstart", f"(canvas v s (on-dragstart c {MOVE} (exclusive)))"),
-    ("on-dragend", f"(canvas v s (on-dragend c {MOVE} (exclusive)))"),
-    ("on-enter", f"(canvas v s (on-enter c {MOVE} (exclusive)))"),
-    ("on-leave", f"(canvas v s (on-leave c {MOVE} (exclusive)))"),
-    ("on-view", f"(canvas v s (on-view {MOVE} (exclusive)))"),
-    ("on-live", f"(canvas v s (on-live {MOVE} (exclusive)))"),
-    ("on-quiet", f"(canvas v s (on-live {MOVE}) (on-quiet {MOVE} (exclusive)))"),
-    ("on-pointermove", "(point p) (canvas v s (on-pointermove c p (exclusive)))"),
+PRIORITY = [
+    ("slider", f"(slider w {SLIDE} (priority 900))"),
+    ("button", f"(button w {MOVE} (priority 900))"),
+    ("play", f"(play w {MOVE} (priority 900))"),
+    ("stepper", f"(stepper w {MOVE} (priority 900))"),
+    ("toggle", "(bool on) (toggle w on (priority 900))"),
+    ("on-drag", "(canvas v s (on-drag c c.pos (priority 900)))"),
+    ("on-click", f"(canvas v s (on-click c {MOVE} (priority 900)))"),
+    ("on-release", f"(canvas v s (on-release c {MOVE} (priority 900)))"),
+    ("on-dragstart", f"(canvas v s (on-dragstart c {MOVE} (priority 900)))"),
+    ("on-dragend", f"(canvas v s (on-dragend c {MOVE} (priority 900)))"),
+    ("on-enter", f"(canvas v s (on-enter c {MOVE} (priority 900)))"),
+    ("on-leave", f"(canvas v s (on-leave c {MOVE} (priority 900)))"),
+    ("on-view", f"(canvas v s (on-view {MOVE} (priority 900)))"),
+    ("on-live", f"(canvas v s (on-live {MOVE} (priority 900)))"),
+    ("on-quiet", f"(canvas v s (on-live {MOVE}) (on-quiet {MOVE} (priority 900)))"),
+    ("on-pointermove", "(point p) (canvas v s (on-pointermove c p (priority 900)))"),
 ]
 
 
-class TestExclusive:
-    @pytest.mark.parametrize("kind,src", EXCLUSIVE)
+class TestPriority:
+    @pytest.mark.parametrize("kind,src", PRIORITY)
     def test_every_writer_takes_it_and_the_file_says_so(self, kind, src):
         d = doc(f"{K} {SCENE} {src}")
         (w,) = [o for o in d["objects"] if o["kind"] == kind]
-        assert w["exclusive"] is True
+        assert w["priority"] == 900
         assert errors(d) == []
 
-    @pytest.mark.parametrize("kind,src", EXCLUSIVE)
+    @pytest.mark.parametrize("kind,src", PRIORITY)
     def test_a_writer_without_it_leaves_it_out(self, kind, src):
-        d = doc(f"{K} {SCENE} {src.replace(' (exclusive)', '')}")
+        d = doc(f"{K} {SCENE} {src.replace(' (priority 900)', '')}")
         (w,) = [o for o in d["objects"] if o["kind"] == kind]
-        assert "exclusive" not in w
+        assert "priority" not in w
 
-    def test_it_takes_nothing(self):
-        error(f"{K} (button w {MOVE} (exclusive true))", r"\(exclusive\) takes nothing")
+    @pytest.mark.parametrize("n", ["1", "1000"])
+    def test_it_takes_an_int_from_1_to_1000(self, n):
+        d = doc(f"{K} (button w {MOVE} (priority {n}))")
+        (w,) = [o for o in d["objects"] if o["kind"] == "button"]
+        assert w["priority"] == int(n)
+
+    @pytest.mark.parametrize("n", ["0", "1001", "2.5", "k", "'high'"])
+    def test_it_takes_nothing_else(self, n):
+        error(
+            f"{K} (button w {MOVE} (priority {n}))", r"\(priority n\) takes an int from 1 to 1000"
+        )
+
+    def test_it_takes_one_number(self):
+        error(f"{K} (button w {MOVE} (priority))", r"\(priority n\) takes an int from 1 to 1000")
+        error(
+            f"{K} (button w {MOVE} (priority 1 2))", r"\(priority n\) takes an int from 1 to 1000"
+        )
 
     def test_it_is_given_once(self):
-        error(f"{K} (button w {MOVE} (exclusive) (exclusive))", "'exclusive' is given twice")
+        error(f"{K} (button w {MOVE} (priority 1) (priority 2))", "'priority' is given twice")
+
+    def test_exclusive_is_gone(self):
+        error(
+            f"{K} (button w {MOVE} (exclusive))",
+            r"\(exclusive\) is gone: give the writer a \(priority n\)",
+        )

@@ -111,16 +111,18 @@ mtp-play .mtp-bars:focus-visible, mtp-stepper button:focus-visible {
 mtp-button button:disabled, mtp-play .mtp-play-button:disabled,
 mtp-stepper .mtp-step-button:disabled, mtp-stepper .mtp-dot:disabled { cursor: not-allowed; opacity: 0.5; }
 
-/* A play: the button, then the bars, one per step, with the step playing under them. The bars
-   sit on a track of their own color, so at rest they read as a tour not yet played rather than as
-   a control turned off. The button is the active color even at rest: it is what the reader
-   presses first, and a rest color such as a gray would make it look turned off. */
+/* A play: the button, then the bars, one per step with (buttons true), with a knob like the
+   slider's, and the step count after them, in one row no taller than the button. The bars sit on a
+   track of their own color, so at rest they read as a tour not yet played rather than as a control
+   turned off. The button is the active color even at rest: it is what the reader presses first,
+   and a rest color such as a gray would make it look turned off. In explore mode the bars are
+   dimmed, the knob is an empty ring at the left end, and a pill reading Exploring sits on them. */
 mtp-play {
-  display: flex; align-items: flex-start; gap: 0.75rem; min-width: 16rem;
+  display: flex; align-items: center; gap: 0.75rem; min-width: 16rem;
   --mtp-bar-track: color-mix(in srgb, var(--text-body, currentColor) 20%, transparent);
   --mtp-bar-fill: var(--mtp-rest);
 }
-mtp-play[data-playing], mtp-play:has(:focus-visible), mtp-play .mtp-bars.mtp-dragging {
+mtp-play[data-mtp-playing], mtp-play:has(:focus-visible), mtp-play .mtp-bars.mtp-dragging {
   --mtp-bar-fill: var(--mtp-active);
 }
 mtp-play .mtp-play-button {
@@ -132,10 +134,13 @@ mtp-play .mtp-play-button {
   transition: background-color 0.12s ease;
 }
 mtp-play .mtp-play-button svg { width: 1rem; height: 1rem; fill: currentColor; }
+mtp-play .mtp-play-button.mtp-replay svg {
+  fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+}
 mtp-play .mtp-play-button:hover {
   background: color-mix(in srgb, var(--mtp-active) 85%, var(--text-body, black));
 }
-mtp-play .mtp-indicator { flex: 1; min-width: 0; display: grid; gap: 0.125rem; }
+mtp-play .mtp-indicator { flex: 1; min-width: 0; }
 /* The bars are thin, but the area that takes a press is 2rem tall, and reaches a little above
    and below that for a finger. */
 mtp-play .mtp-bars {
@@ -146,15 +151,41 @@ mtp-play .mtp-bars::after { content: ""; position: absolute; inset: -6px 0; }
 mtp-play .mtp-bars[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
 mtp-play .mtp-bar {
   --u: 0;
+  position: relative;
   flex: 1 1 0; min-width: 0.25rem; height: 0.25rem; border-radius: 999px;
   background: linear-gradient(to right, var(--mtp-bar-fill) calc(var(--u) * 100%),
     var(--mtp-bar-track) calc(var(--u) * 100%));
 }
-mtp-play .mtp-now {
-  font-size: 0.8125rem; line-height: 1.25; color: var(--text-subtle);
-  font-variant-numeric: tabular-nums; min-height: 1.25em;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+mtp-play[data-mtp-exploring] .mtp-bar { opacity: 0.45; }
+/* The knob sits on the bar it is in, where its fill ends, as the slider's does. */
+mtp-play .mtp-knob {
+  position: absolute; top: 50%; left: calc(var(--u) * 100%); z-index: 1;
+  width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%;
+  background: var(--mtp-bar-fill); border: 2px solid var(--surface-page, white);
+  box-shadow: 0 0 0 1px var(--border-primary);
+  transform: translate(-50%, -50%); pointer-events: none;
 }
+mtp-play .mtp-knob.mtp-end { transform: translate(-100%, -50%); }
+mtp-play .mtp-knob.mtp-empty {
+  left: 0; transform: translate(0, -50%);
+  background: var(--surface-page, white); border-color: var(--mtp-bar-fill); box-shadow: none;
+}
+mtp-play .mtp-exploring {
+  position: absolute; left: 50%; top: 50%; z-index: 1; transform: translate(-50%, -50%);
+  font-size: 0.8125rem; font-weight: 700; line-height: 1.2; white-space: nowrap;
+  padding: 0.2rem 0.65rem; border-radius: 999px;
+  background: var(--mtp-active); color: var(--surface-page, white);
+  pointer-events: none;
+}
+mtp-play .mtp-exploring[hidden] { display: none; }
+/* The count and the step's label after the bars. Every state's text is laid in one grid cell,
+   the others hidden, so the room is as wide as the longest. */
+mtp-play .mtp-after {
+  flex: none; display: grid; align-items: center; min-width: 2.5rem;
+  font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--text-subtle); white-space: nowrap;
+}
+mtp-play .mtp-after > * { grid-area: 1 / 1; }
+mtp-play .mtp-count-room { visibility: hidden; }
 
 /* A stepper: "‹", a dot per step, then "›", the buttons drawn as a play's. A passed step's dot is
    solid, the current one solid with a ring, and one still to come pale. The dots are drawn as the
@@ -163,7 +194,7 @@ mtp-stepper {
   display: inline-flex; align-items: center; gap: 0.75rem;
   --mtp-dot: var(--mtp-rest);
 }
-mtp-stepper[data-playing], mtp-stepper:has(:focus-visible) { --mtp-dot: var(--mtp-active); }
+mtp-stepper[data-mtp-playing], mtp-stepper:has(:focus-visible) { --mtp-dot: var(--mtp-active); }
 mtp-stepper .mtp-step-button {
   position: relative; flex: none;
   display: grid; place-items: center;
@@ -172,12 +203,32 @@ mtp-stepper .mtp-step-button {
   cursor: pointer;
   transition: background-color 0.12s ease;
 }
-mtp-stepper .mtp-step-button svg { width: 1rem; height: 1rem; fill: currentColor; }
-mtp-stepper .mtp-count { font-size: 0.8125rem; color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+mtp-stepper .mtp-step-button svg {
+  width: 1rem; height: 1rem;
+  fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+}
+mtp-stepper .mtp-count {
+  flex: none; min-width: 2.5rem; text-align: right;
+  font-size: 0.8125rem; color: var(--text-subtle); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 mtp-stepper .mtp-step-button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--mtp-active) 85%, var(--text-body, black));
 }
-mtp-stepper .mtp-dots { display: flex; align-items: center; gap: 10px; }
+/* The dots and the pill reading Exploring share one grid cell, so the dots are never narrower
+   than the pill: few dots spread to its width. The pill keeps its room while hidden, so the
+   stepper has one width in every state. */
+mtp-stepper .mtp-dot-area { display: grid; align-items: center; }
+mtp-stepper .mtp-dots {
+  grid-area: 1 / 1; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+mtp-stepper .mtp-exploring {
+  grid-area: 1 / 1; justify-self: center; z-index: 1;
+  font-size: 0.8125rem; font-weight: 700; line-height: 1.2; white-space: nowrap;
+  padding: 0.2rem 0.65rem; border-radius: 999px;
+  background: var(--mtp-active); color: var(--surface-page, white);
+  pointer-events: none;
+}
+mtp-stepper .mtp-exploring[hidden] { display: block; visibility: hidden; }
 mtp-stepper .mtp-dot {
   position: relative; flex: none;
   width: 10px; height: 10px; padding: 0; border: 0; border-radius: 50%;
@@ -190,6 +241,8 @@ mtp-stepper .mtp-dot.mtp-passed, mtp-stepper .mtp-dot[aria-current="step"] { bac
 mtp-stepper .mtp-dot[aria-current="step"] {
   box-shadow: 0 0 0 2px var(--surface-page, white), 0 0 0 3.5px var(--mtp-dot);
 }
+/* In explore mode the dots are dimmed, as a play's bars are, and the count reads – / N. */
+mtp-stepper[data-mtp-exploring] .mtp-dot { opacity: 0.45; }
 
 mtp-toggle label {
   display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;

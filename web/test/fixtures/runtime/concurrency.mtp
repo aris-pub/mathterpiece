@@ -14,39 +14,39 @@
   (triangle tr (a [0 0]) (b [3 0]) (c [3 3])))
 (button go (animation (move k (to 10) (duration 1))))
 (button back (animation (move k (to 0) (duration 1))))
-(button lock (animation (move k (to 10) (duration 1))) (exclusive))
+(button lock (animation (move k (to 10) (duration 1))) (priority 900))
 (button both (animation (at-once (move k (to 0) (duration 1)) (move j (to 5) (duration 1)))))
 (button other (animation (move j (to 5) (duration 1))))
 (button grow (animation (move g.r (to 3) (duration 1))))
 (button grow-one (animation (move c1.r (to 2) (duration 1))))
-(button hold-one (animation (move c1.r (to 2) (duration 1))) (exclusive))
+(button hold-one (animation (move c1.r (to 2) (duration 1))) (priority 900))
 (play tour (animation (move k (to 10) (duration 2))))
 (slider sl (move k (from 0) (to 10)))
 ; Its on-view is not the reader's doing.
 (canvas v s
   (on-view (animation (move k (to 4) (duration 1)))))
 (canvas z s)
+; Another on-view on k, for one writer the reader did not set off meeting another.
+(canvas late s
+  (on-view (animation (move k (to 3) (duration 1)))))
 (canvas w s
-  (on-view (animation (move d.x (to 8) (duration 1))))
   (on-drag d d.pos)
   (on-enter e (animation (move d.x (to 3) (duration 1)))))
 (canvas held s
-  (on-view (animation (move d.x (to 8) (duration 1))))
-  (on-drag d d.pos (exclusive))
+  (on-drag d d.pos (priority 900))
   (on-enter e (animation (move d.x (to 3) (duration 1)))))
-(play auto (animation (move k (to 3) (duration 1))) (autoplay z))
-; Exclusive writers whose writes take no time.
+; An on-view on what w drags, in a canvas of its own: until a canvas is ready the listeners in it
+; hear nothing (docs/canvas-lifecycle.md).
+(canvas viewed s
+  (on-view (animation (move d.x (to 8) (duration 1)))))
+; Writers of a high priority whose writes take no time.
 (point p [0 0])
-(slider locked (move k (from 0) (to 10)) (exclusive))
+(slider locked (move k (from 0) (to 10)) (priority 900))
 (button jump (animation (move p (to [1 1]) (duration 1))))
 (canvas pm s
-  (on-pointermove p (exclusive)))
-; A stepper another writer cancels goes on from where it stopped (mtp-ibem).
-(button set-j (animation (move j (to 1) (duration 0))))
-(stepper walk (label 'walk')
-  (animation
-    (move j (to 5) (duration 1))
-    (move k (to 10) (duration 2))
-    (move j (to 7) (duration 1))))
-(button pl-x (animation (move pl.x (to 5) (duration 1))) (exclusive))
-(button pl-points (animation (move pl.points (to [[0 0] [2 0]]) (duration 1))) (exclusive))
+  (on-pointermove p))
+(button pl-x (animation (move pl.x (to 5) (duration 1))) (priority 900))
+(button pl-points (animation (move pl.points (to [[0 0] [2 0]]) (duration 1))) (priority 900))
+(button pl-y (animation (move pl.y (to 5) (duration 1))) (priority 900))
+; A play moving what the canvas w drags, for a grab that changes nothing (the author, 2026-11-12).
+(play roll (animation (move d.x (to 8) (duration 2))))

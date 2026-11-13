@@ -6,20 +6,22 @@ import { placeTicks } from "./ticks.ts";
 import { type How, Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Listeners, heardIn, holds } from "./click.ts";
+import { Lifecycle } from "./lifecycle.ts";
 import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { latexOf, termClass, typeset } from "./math.ts";
-import { Player } from "./player.ts";
+import { Player, type Span } from "./player.ts";
 import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
 import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
-const READY = "mtp-ready";
+// The model has loaded (docs/page-interface.md, "Events").
+const LOADED = "mtp-loaded";
 const CHANGE = "mtp-change";
-// A view went live or back to quiet (mtp-16z).
-const MODE = "mtp-mode";
+// An element's page state changed (docs/page-interface.md).
+const STATE = "mtp-state";
 // Touch (docs/reference.md, "Touch screens"): how far, in CSS pixels, a finger may miss a shape
 // and still press it, and how far it may move and still tap.
 const TOUCH_REACH = 22;
@@ -50,9 +52,6 @@ export class MtpModel extends HTMLElement {
   dragstarts: Listeners | null = null;
   dragends: Listeners | null = null;
   error: string | null = null;
-  // The views and controls that have come into view, and what waits for one to.
-  private seen = new Set<number>();
-  private waiting = new Map<number, (() => void)[]>();
   private running = false;
   private last = 0;
 
@@ -101,67 +100,49 @@ export class MtpModel extends HTMLElement {
     }
     const rt = new Runtime(doc);
     this.runtime = rt;
-    this.scheduler = new Scheduler(
+    const scheduler = new Scheduler(
       () => this.changed(),
       () => this.wake(),
-      (target) => rt.reached(target),
+      (target) => {
+        const at = target.indexOf(":");
+        return rt.slotsOf(Number(target.slice(0, at)), target.slice(at + 1) || null);
+      },
     );
+    this.scheduler = scheduler;
+    // Every write a writer makes is decided, free value by free value (docs/concurrency-model.md).
+    rt.gate = (k) => scheduler.accept(k);
     this.drags = new Drags(rt);
     this.clicks = new Listeners(rt, "on-click");
     this.releases = new Listeners(rt, "on-release");
     this.dragstarts = new Listeners(rt, "on-dragstart");
     this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
-    this.seen.clear();
-    this.waiting.clear();
+    // Made before the page hears of any change, so it reads the values at page load.
+    lives.set(
+      this,
+      new Lifecycle(
+        rt,
+        scheduler,
+        (o) => playerFor(rt, o),
+        (i) => activeOf(rt, i),
+        () => this.changed(),
+      ),
+    );
     rt.onChange(() => this.changed());
-    const scheduler = this.scheduler;
-    rt.objects.forEach((o, i) => {
-      if (o.kind !== "on-view") return;
-      this.whenSeen(o.view!, () => {
-        const player = activeOf(rt, i) ? playerFor(rt, o) : null;
-        if (player) scheduler.start(player, o, howOf(o, false));
-      });
-    });
-    this.dispatchEvent(new Event(READY, { bubbles: true }));
-  }
-
-  /** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
-   * views"), playing its active on-live or on-quiet listeners. */
-  setLive(view: number, live: boolean): void {
-    const rt = this.runtime;
-    const scheduler = this.scheduler;
-    if (!rt || !scheduler || !rt.quietMode.has(view) || rt.quiet.has(view) !== live) return;
-    if (live) rt.quiet.delete(view);
-    else rt.quiet.add(view);
-    const kind = live ? "on-live" : "on-quiet";
-    rt.objects.forEach((o, i) => {
-      if (o.kind !== kind || o.view !== view || !activeOf(rt, i)) return;
-      const player = playerFor(rt, o);
-      if (player) scheduler.start(player, o, howOf(o, true));
-    });
-    this.dispatchEvent(new Event(MODE, { bubbles: true }));
-    this.changed();
-  }
-
-  /** Runs work the first time the view or control id comes into view, or now if it has. */
-  whenSeen(id: number, work: () => void): void {
-    if (this.seen.has(id)) work();
-    else this.waiting.set(id, [...(this.waiting.get(id) ?? []), work]);
-  }
-
-  /** Called by a view or control when it comes into view; only the first time counts. */
-  markSeen(id: number): void {
-    if (this.seen.has(id)) return;
-    this.seen.add(id);
-    for (const work of this.waiting.get(id) ?? []) work();
-    this.waiting.delete(id);
+    this.dispatchEvent(new Event(LOADED, { bubbles: true }));
+    // The views of the page are there once it is told the model is ready, or, for those added
+    // with it, once the HTML being added is all there.
+    checkPageReady(this);
+    // Once every element of the page is built, the controls show whether the canvases they
+    // belong to are ready.
+    queueMicrotask(() => this.changed());
   }
 
   /** Tells every view and control of this model to show the current values. */
   changed(): void {
     this.scheduler?.told();
     this.dispatchEvent(new Event(CHANGE, { bubbles: true }));
+    checkPageReady(this);
   }
 
   private wake(): void {
@@ -184,8 +165,49 @@ export class MtpModel extends HTMLElement {
     this.runtime = null;
     this.scheduler = null;
     this.error = message;
-    this.dispatchEvent(new Event(READY, { bubbles: true }));
+    this.dispatchEvent(new Event(LOADED, { bubbles: true }));
   }
+}
+
+// Each model's canvases' lifecycles, kept off the element: no element has methods that change it.
+const lives = new WeakMap<MtpModel, Lifecycle>();
+
+/** Puts data-mtp-ready on the model once every canvas, display and readout copy of it on the page
+ * is ready, and fires mtp-state when that changes (docs/canvas-lifecycle.md, rule 8). */
+function checkPageReady(model: MtpModel): void {
+  if (!model.runtime || !model.id) return;
+  const views = document.querySelectorAll(`:is(mtp-canvas, mtp-display, mtp-readout)[model="${CSS.escape(model.id)}"]`);
+  const ready = [...views].every((v) => v.hasAttribute("data-mtp-ready"));
+  if (model.hasAttribute("data-mtp-ready") === ready) return;
+  model.toggleAttribute("data-mtp-ready", ready);
+  model.dispatchEvent(new Event(STATE, { bubbles: true }));
+}
+
+// What marks each view copy seen, as its watch does once it first comes into view.
+const seers = new WeakMap<Element, () => void>();
+
+/** Marks a view copy as having come into view, as the page does the first time it does: tests
+ * and recording use it where nothing scrolls. */
+export function markSeen(copy: Element): void {
+  seers.get(copy)?.();
+}
+
+/** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
+ * views"), playing its active on-live or on-quiet listeners. A function, not a method of the
+ * model: no element has methods that change it (docs/page-interface.md). */
+function setLive(model: MtpModel, view: number, live: boolean): void {
+  const rt = model.runtime;
+  const scheduler = model.scheduler;
+  if (!rt || !scheduler || !rt.quietMode.has(view) || rt.quiet.has(view) !== live) return;
+  if (live) rt.quiet.delete(view);
+  else rt.quiet.add(view);
+  const kind = live ? "on-live" : "on-quiet";
+  rt.objects.forEach((o, i) => {
+    if (o.kind !== kind || o.view !== view || !activeOf(rt, i)) return;
+    const player = playerFor(rt, o);
+    if (player) scheduler.start(player, o, howOf(o, true));
+  });
+  model.changed();
 }
 
 // What views and controls share: finding their model and their object, and hearing when the
@@ -195,25 +217,23 @@ abstract class MtpPart extends HTMLElement {
     if (this.mine(event)) this.build();
   };
   private onChange = (event: Event) => {
-    if (this.mine(event)) this.guard(() => this.update());
-  };
-  private onMode = (event: Event) => {
-    if (this.mine(event)) this.moded(false);
+    if (!this.mine(event)) return;
+    this.guard(() => this.update());
+    this.moded(false);
+    this.lifecycle();
   };
 
   connectedCallback(): void {
-    document.addEventListener(READY, this.onReady);
+    document.addEventListener(LOADED, this.onReady);
     document.addEventListener(CHANGE, this.onChange);
-    document.addEventListener(MODE, this.onMode);
     this.addEventListener("keydown", this.onKey);
     const model = this.model();
     if (model && (model.runtime || model.error)) this.build();
   }
 
   disconnectedCallback(): void {
-    document.removeEventListener(READY, this.onReady);
+    document.removeEventListener(LOADED, this.onReady);
     document.removeEventListener(CHANGE, this.onChange);
-    document.removeEventListener(MODE, this.onMode);
     this.removeEventListener("keydown", this.onKey);
   }
 
@@ -236,17 +256,48 @@ abstract class MtpPart extends HTMLElement {
         this.folded = null;
         this.setup(model, model.runtime, model.scheduler);
         this.moded(true);
+        this.seenOnce = false;
+        this.readyOnce = false;
         this.watch(model);
+        this.lifecycle();
+        checkPageReady(model);
       }
     });
   }
 
-  // Tells the model when this element first comes into view (on-view, autoplay). On screen is not
+  // Whether this view copy has come into view, and has been ready, yet.
+  private seenOnce = false;
+  private readyOnce = false;
+
+  // A view copy's lifecycle (docs/canvas-lifecycle.md): from the moment its canvas is ready it
+  // has data-mtp-ready, and its switch takes input.
+  private lifecycle(): void {
+    const model = this.model();
+    const id = this.shown;
+    const life = model ? lives.get(model) : undefined;
+    if (!model || !life || id === null || this.readyOnce || !VIEWS.has(model.runtime!.objects[id]!.kind)) return;
+    life.check(id);
+    if (this.switch) this.switch.disabled = !life.ready(id);
+    if (!life.ready(id)) return;
+    this.readyOnce = true;
+    this.pageState({ ready: true });
+  }
+
+  // Tells the lifecycle when this view copy first comes into view (on-view). On screen is not
   // enough: a page may hide its content at opacity 0 while it loads, so the element counts as in
   // view only once no ancestor is fully transparent or hidden, checked again each frame meanwhile.
   private watch(model: MtpModel): void {
     const id = this.shown;
-    if (id === null || typeof IntersectionObserver === "undefined") return;
+    if (id === null || !VIEWS.has(model.runtime!.objects[id]!.kind)) return;
+    seers.set(this, () => {
+      if (this.seenOnce) return;
+      this.seenOnce = true;
+      this.pageState({ seen: true });
+      lives.get(model)?.seen(this, id);
+      this.lifecycle();
+      checkPageReady(model);
+    });
+    if (typeof IntersectionObserver === "undefined") return;
     let onScreen = false;
     let checking = false;
     const check = () => {
@@ -258,7 +309,7 @@ abstract class MtpPart extends HTMLElement {
         return;
       }
       observer.disconnect();
-      model.markSeen(id);
+      markSeen(this);
     };
     const observer = new IntersectionObserver((entries) => {
       onScreen = entries.some((e) => e.isIntersecting);
@@ -282,13 +333,31 @@ abstract class MtpPart extends HTMLElement {
   private shown: number | null = null;
   // A view's button to make it live and back to quiet, when it has a quiet mode.
   private switch: HTMLButtonElement | null = null;
+  private switchQuiet: boolean | null = null;
   private folding: Animation | null = null;
   private folded: boolean | null = null;
   private onKey = (event: KeyboardEvent) => {
     const rt = this.model()?.runtime;
     const id = this.shown;
-    if (event.key === "Escape" && rt && id !== null && rt.quietMode.has(id) && !rt.quiet.has(id)) this.model()!.setLive(id, false);
+    if (event.key === "Escape" && rt && id !== null && rt.quietMode.has(id) && !rt.quiet.has(id)) setLive(this.model()!, id, false);
   };
+
+  /**
+   * Shows the element's page state as data-mtp-… attributes, present or absent for true or false
+   * and a value otherwise, and fires mtp-state when any of them changes (docs/page-interface.md).
+   */
+  protected pageState(state: Record<string, string | boolean>): void {
+    let changed = false;
+    for (const [name, v] of Object.entries(state)) {
+      const attr = `data-mtp-${name}`;
+      const now = v === false ? null : v === true ? "" : v;
+      if (this.getAttribute(attr) === now) continue;
+      if (now === null) this.removeAttribute(attr);
+      else this.setAttribute(attr, now);
+      changed = true;
+    }
+    if (changed) this.dispatchEvent(new Event(STATE, { bubbles: true }));
+  }
 
   /** Puts nodes in the element, with the view's switch after them. */
   protected present(...nodes: Node[]): void {
@@ -308,11 +377,12 @@ abstract class MtpPart extends HTMLElement {
     if (VIEWS.has(obj.kind)) {
       if (!rt.quietMode.has(id)) return;
       const quiet = rt.quiet.has(id);
-      this.dataset.mtpMode = quiet ? "quiet" : "live";
+      this.pageState({ mode: quiet ? "quiet" : "live" });
       if (!this.switch) {
-        this.switch = makeSwitch(this, () => model.setLive(id, rt.quiet.has(id)));
+        this.switch = makeSwitch(this, () => setLive(model, id, rt.quiet.has(id)));
         this.append(this.switch);
-      }
+      } else if (!first && this.switchQuiet === quiet) return;
+      this.switchQuiet = quiet;
       this.switch.innerHTML = quiet ? HAND_ICON : CLOSE_ICON;
       const label = quiet ? "Interactive figure: open it" : "Back to the plain figure";
       this.switch.setAttribute("aria-label", label);
@@ -386,15 +456,16 @@ function makeSwitch(view: HTMLElement, press: () => void): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "mtp-switch";
+  button.dataset.mtpInput = "switch";
   if (view.localName === "mtp-readout" || view.style.display === "inline") button.classList.add("mtp-switch-inline");
   button.addEventListener("click", press);
   return button;
 }
 
-/** How a writer was set off: by the reader or not (on-view and autoplay), and whether it is
- * exclusive (docs/reference.md, "Concurrency"). */
+/** How a writer was set off, by the reader or not (on-view), and the priority it gives, if any
+ * (docs/concurrency-model.md). */
 function howOf(writer: Obj, reader: boolean): How {
-  return { reader, exclusive: Boolean(writer.exclusive) };
+  return { reader, priority: writer.priority };
 }
 
 function playerFor(rt: Runtime, writer: Obj): Player | null {
@@ -408,6 +479,9 @@ export class MtpCanvas extends MtpPart {
 
   protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const canvas = this.find(rt, "canvas");
+    let here = placed.get(rt);
+    if (!here) placed.set(rt, (here = new Set()));
+    here.add(canvas);
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
     const drags = model.drags!;
     const clicks = model.clicks!;
@@ -452,13 +526,15 @@ export class MtpCanvas extends MtpPart {
       const quiet = rt.quiet.has(canvas);
       // Back to quiet, the reader can no longer undo a pan or zoom, so the canvas drops it.
       if (quiet && !wasQuiet) Object.assign(look, { scale: 1, dx: 0, dy: 0 });
+      // Going live or back changes what its listeners hear, so what can be dragged or clicked.
+      const moded = quiet !== wasQuiet;
       wasQuiet = quiet;
       // Elsewhere a finger on the canvas scrolls the page.
       const action = allows("pan") || allows("zoom") || pointer.onCanvas ? "none" : "";
       if (svg.style.touchAction !== action) svg.style.touchAction = action;
       draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo);
       const made = elementsMade();
-      if (rt.clock !== shownAt || made !== madeAt) {
+      if (rt.clock !== shownAt || made !== madeAt || moded) {
         for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
           const id = Number(el.getAttribute("data-mtp-id"));
           const cursor = drags.draggable(id, canvas) || clicks.find(id, canvas).length ? "pointer" : "";
@@ -565,8 +641,11 @@ export class MtpCanvas extends MtpPart {
     let pressed: number | null = null;
     // Where a finger came down, to tell a tap from a drag: a finger is never quite still.
     let press: { id: number; x: number; y: number; at: [number, number]; moved: boolean } | null = null;
-    // A drag refused at its grab follows nothing; one cancelled while held stops writing.
-    const grip = () => scheduler.grip(drags.targets, drags, howOf(drags.listener!, true), () => drags.cancel());
+    // A drag the reader holds is a held writer from its first move to the release: a grab that
+    // moves nothing writes nothing. One cancelled while held stops writing.
+    let gripped = false;
+    const grip = () => scheduler.grip(drags, howOf(drags.listener!, true), () => drags.cancel());
+    const dragTo = (at: [number, number]) => scheduler.instant(drags, { ...howOf(drags.listener!, true), held: true }, () => drags.move(at));
     const play = (listeners: (Obj | null)[]) => {
       for (const listener of listeners) {
         const player = listener ? playerFor(rt, listener) : null;
@@ -577,7 +656,7 @@ export class MtpCanvas extends MtpPart {
     // it stays entered until the reader presses elsewhere, here or anywhere on the page.
     const follow = (event: PointerEvent, hit: number | null) => {
       play(pointer.onto(hit));
-      pointer.move(toScene(event), (targets, l, write) => scheduler.instant(targets, l, howOf(l, true), write));
+      pointer.move(toScene(event), (_targets, l, write) => scheduler.instant(l, { ...howOf(l, true), held: true }, write));
     };
     const deselect = () => {
       if (selection === null) return;
@@ -607,8 +686,9 @@ export class MtpCanvas extends MtpPart {
         press = { id: event.pointerId, x: event.clientX, y: event.clientY, at: toScene(event), moved: false };
       }
       if (pressed !== null && drags.grab(pressed, toScene(event), canvas)) {
-        // From the grab to the release, the drag is a running writer of its targets (mtp-vs5d).
-        if (!grip()) drags.release();
+        // The drag is a running writer of its targets from its first move to the release
+        // (mtp-vs5d): a grab that changes nothing writes nothing (the author, 2026-11-12).
+        gripped = false;
       } else if (allows("pan") || allows("zoom")) {
         touches.set(event.pointerId, [event.clientX, event.clientY]);
       } else {
@@ -633,10 +713,14 @@ export class MtpCanvas extends MtpPart {
       }
       follow(event, hitOf(event));
       if (drags.dragging) {
+        if (!gripped) {
+          gripped = true;
+          grip();
+        }
         // As JS's dragstart, a drag starts at its first move, and its listeners play before the
         // drag writes, so they may reset what the drag then reads (mtp-5opl).
         if (!drags.moved) play(dragstarts.find(drags.shape!, canvas));
-        drags.move(toScene(event));
+        dragTo(toScene(event));
         return;
       }
       const was = touches.get(event.pointerId);
@@ -672,12 +756,9 @@ export class MtpCanvas extends MtpPart {
       }
       deselect();
       if (!tap || chosen === null || grabbed === chosen.shape || !drags.grab(chosen.hit, chosen.at, canvas)) return null;
-      if (!grip()) {
-        drags.release();
-        return null;
-      }
+      grip();
       play(dragstarts.find(drags.shape!, canvas));
-      drags.move(toScene(event));
+      dragTo(toScene(event));
       drags.release();
       scheduler.letGo(drags);
       return chosen.shape;
@@ -844,7 +925,7 @@ export class MtpDisplay extends MtpPart {
     const terms = (formula.members ?? []).map((id) => ({ id, name: rt.objects[id]!.term! }));
     const clicks = model.clicks!;
     const hovers = (kind: string, id: number) =>
-      rt.objects.filter((o) => o.kind === kind && o.shape === id && heardIn(o, display, rt.quiet) && holds(rt, o.active));
+      rt.objects.filter((o) => o.kind === kind && o.shape === id && heardIn(o, display, rt) && holds(rt, o.active));
     const play = (listeners: Obj[]) => {
       for (const listener of listeners) {
         const player = playerFor(rt, listener);
@@ -999,6 +1080,23 @@ function movedLastBy(rt: Runtime, id: number, el: Element): boolean {
   return movers.get(rt)?.get(id) === el;
 }
 
+// Whether the reader has moved no copy of a control yet: each copy then shows state 0, and
+// writes the same.
+function unmoved(rt: Runtime, id: number): boolean {
+  return !movers.get(rt)?.has(id);
+}
+
+// The canvases with a copy on the page, by runtime. A control waits only for those: a canvas
+// not on the page never comes into view, so it would never be ready.
+const placed = new WeakMap<Runtime, Set<number>>();
+
+/** Whether a control takes input: it is active, and every canvas it belongs to that is on the
+ * page is ready (docs/canvas-lifecycle.md, rule 5). */
+function usable(rt: Runtime, id: number): boolean {
+  const here = placed.get(rt);
+  return activeOf(rt, id) && !(rt.objects[id]!.canvases ?? []).some((c) => rt.unready.has(c) && here?.has(c));
+}
+
 /** Whether a writer is active, so it can be triggered: always, unless its active is false. */
 function activeOf(rt: Runtime, id: number): boolean {
   const active = rt.objects[id]!.active;
@@ -1026,13 +1124,13 @@ export class MtpSlider extends MtpPart {
     const fill = () => input.style.setProperty("--u", String(Number(input.value) / Number(input.max)));
     fill();
     input.addEventListener("input", () => {
-      if (!activeOf(rt, id)) return;
+      if (!usable(rt, id)) return;
       const u = Number(input.value) / Number(input.max);
       const write = () => {
         player?.scrub(u);
         rt.write(id, "position", u);
       };
-      if (cut || (player && !scheduler.instant(player.targets, this, how, write))) {
+      if (cut || (player && !scheduler.instant(this, how, write))) {
         // Refused, or cancelled while held: the knob goes back to where it was.
         input.value = String(Math.round((rt.value(id, "position") as number) * Number(input.max)));
         fill();
@@ -1045,21 +1143,25 @@ export class MtpSlider extends MtpPart {
     // A slider follows its target: when another writer changes the one variable or attribute its animation
     // moves, the knob goes to the position whose value is closest (reference.md, "Controls").
     let scrubbing = false;
-    // While the reader holds the knob, the slider is a running writer of its targets, as a drag is
-    // (the author, 2026-11-11); cancelled while held, it writes nothing more until the release.
+    // A press on the track or the knob through the release is one gesture, triggered by the press
+    // (the author, 2026-11-13): its first write jumps to the pressed point. Cancelled while held,
+    // it writes nothing more until the release. An arrow key is a trigger of the reader's of its
+    // own, an animation of one move that takes no time.
     let cut = false;
     const release = () => {
       if (!scrubbing) return;
       scrubbing = false;
       cut = false;
       scheduler.letGo(this);
+      this.gate();
       window.removeEventListener("pointerup", release);
       window.removeEventListener("pointercancel", release);
     };
     input.addEventListener("pointerdown", () => {
       scrubbing = true;
       cut = false;
-      if (player && activeOf(rt, id)) scheduler.grip(player.targets, this, how, () => (cut = true));
+      this.gate();
+      if (player && usable(rt, id)) scheduler.grip(this, how, () => (cut = true));
       // The release may come anywhere on the page, so the window hears it too.
       window.addEventListener("pointerup", release);
       window.addEventListener("pointercancel", release);
@@ -1083,8 +1185,10 @@ export class MtpSlider extends MtpPart {
       rt.write(id, "position", best / max);
     };
     this.follow();
+    input.dataset.mtpInput = "track";
     this.gate = () => {
-      input.disabled = !activeOf(rt, id);
+      input.disabled = !usable(rt, id);
+      this.pageState({ inactive: !activeOf(rt, id), held: scrubbing });
     };
     this.gate();
     // The label follows what it is given, as anything bound does.
@@ -1135,15 +1239,17 @@ export class MtpButton extends MtpPart {
     button.append(text.node);
     // A press plays the animation from the start; a press while it runs starts it again.
     button.addEventListener("click", () => {
-      if (!activeOf(rt, id)) return;
+      if (!usable(rt, id)) return;
       const player = playerFor(rt, rt.objects[id]!);
       if (player) scheduler.start(player, this, howOf(rt.objects[id]!, true));
     });
     // Only a button given (selected bool) says whether it is the current choice; any other is
     // not a toggle button, and says nothing.
     const chooses = rt.objects[id]!.attrs?.selected !== undefined;
+    button.dataset.mtpInput = "button";
     this.gate = () => {
-      button.disabled = !activeOf(rt, id);
+      button.disabled = !usable(rt, id);
+      this.pageState({ inactive: !activeOf(rt, id) });
       text.follow();
       if (chooses) button.setAttribute("aria-pressed", String(Boolean(rt.value(id, "selected"))));
     };
@@ -1156,14 +1262,18 @@ export class MtpButton extends MtpPart {
   }
 }
 
-// The play button's icons, drawn in the color of the page on the button's ink.
-const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>';
-const PAUSE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3" width="3" height="10" rx="0.8"/><rect x="9.5" y="3" width="3" height="10" rx="0.8"/></svg>';
+// The play button's icons (Tabler's player-play-filled, player-pause-filled and rotate), drawn in
+// the color of the page on the button's ink.
+const PLAY_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z"/></svg>';
+const PAUSE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2z"/><path d="M17 4h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2z"/></svg>';
+const REPLAY_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.933 13.041a8 8 0 1 1 -9.925 -8.788c3.899 -1 7.935 1.007 9.425 4.747"/><path d="M20 4v5h-5"/></svg>';
 // How far, in CSS pixels, a mouse may move on the bars and still tap one rather than drag.
 const MOUSE_SLOP = 3;
-// How far past a stop, in seconds, the left arrow still goes back to the stop before it rather
-// than to that one, so pressing it twice while the play runs goes back two.
-const BACK_GRACE = 0.5;
+// How close, in seconds, two times along an animation count as the same.
+const EPS = 1e-9;
 
 // Whether keys pressed on el are its own: a field takes Space and the arrows, and so does any
 // other control.
@@ -1174,27 +1284,45 @@ function takesKeys(el: EventTarget | null): boolean {
 // What has the keys of a play: on a page with only one, they work from anywhere on it.
 const KEYED = "mtp-play, mtp-stepper";
 
+/** The step, from 1, that a time along an animation is in: the last one started by then, so a
+ * rest after a step is still that step's. */
+function stepAt(spans: Span[], t: number): number {
+  let k = 1;
+  spans.forEach((s, j) => {
+    if (t >= s.start - EPS * Math.max(1, s.start)) k = j + 1;
+  });
+  return k;
+}
+
+/** Whether a paused time is partway through a step, so the step is the one paused in rather than
+ * one read from the scene: past the start, and not at the end of a step. */
+function partway(spans: Span[], t: number): boolean {
+  const near = (x: number) => Math.abs(t - x) <= EPS * Math.max(1, Math.abs(x));
+  return t > spans[0]!.start && !near(spans[0]!.start) && !spans.some((s) => near(s.end));
+}
+
 /**
- * A play (docs/reference.md, "Controls"; mtp-33xt): a play button, then one bar per step, each
- * as wide as its step's duration and filling as it plays, and the step now playing under them.
- * The reader drags along the bars to scrub the tour, and taps one to jump to its step's start.
+ * A play (docs/reference.md, "Controls"; the author, 2026-11-13): a button, then a bar with a
+ * knob, one bar per step with (buttons true) and the step count after them. Its step is read
+ * from the scene: the highest step whose state the scene is in, or 0 in explore mode, except
+ * while it plays or is paused partway through a step. Each input is a listener whose effect sets
+ * a state j and plays steps j + 1 to N.
  */
 export class MtpPlay extends MtpPart {
   private refresh: () => void = () => {};
   private onPage: ((event: KeyboardEvent) => void) | null = null;
+  private unwatch: () => void = () => {};
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
     this.onPage = null;
+    this.unwatch();
   }
 
-  protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "play");
     const obj = rt.objects[id]!;
-    // The one player the bars show. It is kept after the tour ends or another writer cancels it,
-    // so the bars stay where it stood; a press after the end starts a new one.
-    let player: Player | null = null;
     const layout = playerFor(rt, obj);
     if (!layout) {
       this.replaceChildren();
@@ -1202,85 +1330,115 @@ export class MtpPlay extends MtpPart {
     }
     const split = Boolean(rt.value(id, "buttons"));
     const all = layout.spans;
+    const n = all.length;
     const spans = split ? all : [{ start: all[0]!.start, end: all.at(-1)!.end }];
-    const names = (obj.animation !== null && obj.animation !== undefined ? rt.objects[obj.animation]!.names : undefined) ?? [];
+    const labels = obj.labels ?? [];
+    const how = howOf(obj, true);
+    // The player of this copy's effect while it runs, is paused or is dragged.
+    let player: Player | null = null;
+    let dragging = false;
+
+    const paused = () => {
+      const p = scheduler.pausedOf(this);
+      return p !== null && !p.done && partway(all, p.position);
+    };
+    const moving = () => scheduler.running(this) || dragging || paused();
+    const stepNow = () => (moving() && player ? stepAt(all, player.position) : layout.stepNowIn());
+    // Set state j, then play steps j + 1 to N.
+    const go = (j: number) => {
+      if (!usable(rt, id)) return;
+      moves(rt, id, this);
+      player = playerFor(rt, obj)!;
+      scheduler.start(player, this, how, all[j]!.start, () => layout.setState(j));
+      this.refresh();
+    };
+    const press = () => {
+      if (!usable(rt, id)) return;
+      moves(rt, id, this);
+      if (scheduler.running(this)) scheduler.pause(this);
+      else if (paused()) scheduler.resume(this, how);
+      else {
+        const k = stepNow();
+        go(k < n ? k : 0);
+      }
+      this.refresh();
+    };
 
     const play = document.createElement("button");
     play.type = "button";
     play.className = "mtp-play-button";
+    play.dataset.mtpInput = "button";
+    play.addEventListener("click", press);
     const track = document.createElement("div");
     track.className = "mtp-bars";
     track.tabIndex = 0;
     track.setAttribute("role", "slider");
     track.setAttribute("aria-valuemin", "0");
-    track.setAttribute("aria-valuemax", String(spans.length));
-    const bars = spans.map((s) => {
+    track.setAttribute("aria-valuemax", String(n));
+    const bars = spans.map((s, j) => {
       const bar = document.createElement("span");
       bar.className = "mtp-bar";
+      bar.dataset.mtpInput = `bar-${j + 1}`;
       // A step that takes no time still gets a sliver, so it can be seen and tapped.
       bar.style.flexGrow = String(Math.max(s.end - s.start, 0.05 * (all.at(-1)!.end || 1)));
       bar.style.setProperty("--u", "0");
       track.append(bar);
       return bar;
     });
-    const line = document.createElement("div");
-    line.className = "mtp-now";
-    const indicator = document.createElement("div");
-    indicator.className = "mtp-indicator";
-    indicator.append(track);
-    if (split) indicator.append(line);
+    const knob = document.createElement("span");
+    knob.className = "mtp-knob";
+    knob.setAttribute("aria-hidden", "true");
+    const pill = document.createElement("span");
+    pill.className = "mtp-exploring";
+    pill.textContent = "Exploring";
+    pill.setAttribute("aria-hidden", "true");
+    track.append(pill);
+    // After the bars, with (buttons true): the count and the step's label, as "2 / 4 · A third
+    // of a turn" (the author, 2026-11-13). The text of every state is laid in the same place,
+    // hidden, so the room is as wide as the longest and the row never changes length.
+    const textOf = (k: number) => (k === 0 ? `– / ${n}` : `${k} / ${n}${labels[k - 1] ? ` · ${labels[k - 1]}` : ""}`);
+    const count = split ? document.createElement("span") : null;
+    const after = split ? document.createElement("div") : null;
+    if (count && after) {
+      count.className = "mtp-count";
+      count.setAttribute("aria-hidden", "true");
+      after.className = "mtp-after";
+      for (let k = 0; k <= n; k++) {
+        const room = document.createElement("span");
+        room.className = "mtp-count-room";
+        room.setAttribute("aria-hidden", "true");
+        room.textContent = textOf(k);
+        after.append(room);
+      }
+      after.append(count);
+    }
 
-    const own = (): Player => {
-      moves(rt, id, this);
-      const held = scheduler.playerOf(this);
-      if (held) return held;
-      player ??= playerFor(rt, obj)!;
-      scheduler.hold(player, this);
-      return player;
+    // Keys (the author, 2026-11-13): Space is the button. At step k the right arrow is a tap on
+    // bar k + 1 and the left arrow one on bar k, and each is off where that bar does not exist.
+    // Without (buttons true) there are no arrow keys.
+    const keys: Record<string, () => boolean> = {
+      " ": () => (press(), true),
+      ArrowRight: () => {
+        const k = stepNow();
+        if (!split) return false;
+        if (k < n) go(k);
+        return true;
+      },
+      ArrowLeft: () => {
+        const k = stepNow();
+        if (!split) return false;
+        if (k > 0) go(k - 1);
+        return true;
+      },
     };
-    // Whatever the reader does to a play makes it the reader's, even one autoplay started.
-    const how = howOf(obj, true);
-    const seek = (t: number) => {
-      own();
-      scheduler.seek(this, t, how);
-      this.refresh();
-    };
-    // A new player, kept only when it starts, so a refused press leaves the bars as they were.
-    const fresh = (by: How) => {
-      const next = playerFor(rt, obj);
-      if (next && scheduler.start(next, this, by)) player = next;
-    };
-    const toggle = () => {
-      if (!activeOf(rt, id)) return;
-      if (scheduler.running(this)) scheduler.pause(this);
-      else if (player && !player.done) {
-        // A play another writer cancelled goes on from where it stopped (mtp-ddi1).
-        if (scheduler.playerOf(this) === player) scheduler.resume(this, how);
-        else scheduler.again(player, this, how);
-      } else fresh(how);
-      moves(rt, id, this);
-      this.refresh();
-    };
-    play.addEventListener("click", toggle);
-
-    // Keys (mtp-yhau): Space plays and pauses; the arrows go to the next stop or back one. The
-    // stops are the starts of the steps and the end, so a rest is skipped.
-    const stops = [...spans.map((s) => s.start), spans.at(-1)!.end];
-    const next = () => {
-      const t = player ? player.position : -1;
-      const s = stops.find((x) => x > t + 1e-6);
-      if (s !== undefined) seek(s);
-    };
-    const back = () => {
-      const t = player ? player.position : 0;
-      seek(stops.filter((x) => x < t - BACK_GRACE).at(-1) ?? 0);
-    };
-    const keys: Record<string, () => void> = { " ": toggle, ArrowRight: next, ArrowLeft: back };
     const onKey = (event: KeyboardEvent) => {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-      event.preventDefault();
-      if (!event.repeat && activeOf(rt, id)) act();
+      if (event.repeat || !usable(rt, id)) {
+        if (event.key === " " || split) event.preventDefault();
+        return;
+      }
+      if (act()) event.preventDefault();
     };
     this.addEventListener("keydown", (event) => {
       // The play button presses itself on Space, as any button does.
@@ -1314,85 +1472,104 @@ export class MtpPlay extends MtpPart {
       const u = r.width > 0 ? Math.min(Math.max((x - r.left) / r.width, 0), 1) : 0;
       return spans[k]!.start + u * (spans[k]!.end - spans[k]!.start);
     };
-    let press: { x: number; slop: number; playing: boolean; moved: boolean } | null = null;
+    // A press on the bars is a tap, or once it moves past the slop, a drag (a gesture, the author,
+    // 2026-11-13): at each point it sets state i - 1 for the step i under the pointer, then each
+    // move of step i at its value there, and on release the play is paused there.
+    let held: { x: number; slop: number; was: boolean; moved: boolean; cut: boolean } | null = null;
     track.addEventListener("pointerdown", (event) => {
-      if (!activeOf(rt, id) || event.button !== 0) return;
-      const playing = scheduler.running(this);
-      if (playing) scheduler.pause(this);
-      press = { x: event.clientX, slop: event.pointerType === "mouse" ? MOUSE_SLOP : TOUCH_SLOP, playing, moved: false };
+      if (!usable(rt, id) || event.button !== 0) return;
+      const was = scheduler.running(this);
+      if (was) scheduler.pause(this);
+      held = { x: event.clientX, slop: event.pointerType === "mouse" ? MOUSE_SLOP : TOUCH_SLOP, was, moved: false, cut: false };
       track.setPointerCapture?.(event.pointerId);
       track.classList.add("mtp-dragging");
       event.preventDefault();
     });
     track.addEventListener("pointermove", (event) => {
-      if (!press) return;
-      if (!press.moved && Math.abs(event.clientX - press.x) <= press.slop) return;
-      press.moved = true;
-      seek(timeAt(event.clientX));
+      const h = held;
+      if (!h || h.cut) return;
+      if (!h.moved && Math.abs(event.clientX - h.x) <= h.slop) return;
+      if (!h.moved) {
+        h.moved = true;
+        dragging = true;
+        moves(rt, id, this);
+        player = playerFor(rt, obj)!;
+        scheduler.scrub(player, this, how, () => {
+          h.cut = true;
+          dragging = false;
+        });
+      }
+      const t = timeAt(event.clientX);
+      scheduler.scrubTo(this, t, () => layout.setState(stepAt(all, t) - 1));
+      this.refresh();
     });
     const release = (event: PointerEvent, tap: boolean) => {
-      if (!press) return;
-      const { moved, playing } = press;
-      press = null;
+      const h = held;
+      if (!h) return;
+      held = null;
       track.classList.remove("mtp-dragging");
-      if (tap && !moved) seek(spans[nearest(event.clientX)]!.start);
-      else if (moved) seek(timeAt(event.clientX));
-      if (playing) scheduler.resume(this, how);
+      if (h.moved) {
+        dragging = false;
+        if (!h.cut) scheduler.pause(this);
+      } else if (tap) go(split ? nearest(event.clientX) : 0);
+      else if (h.was) scheduler.resume(this, how);
       this.refresh();
     };
     track.addEventListener("pointerup", (event) => release(event, true));
     track.addEventListener("pointercancel", (event) => release(event, false));
 
-    // The step at t: the last one started by then, so a rest after a step still shows it.
-    const stepAt = (t: number): number => {
-      let k = 0;
-      spans.forEach((s, j) => {
-        if (t >= s.start - 1e-9 * Math.max(1, s.start)) k = j;
-      });
-      return k;
-    };
+    // A pause ends when another writer writes what the play moves (the author, 2026-11-12;
+    // which writes end it is not decided yet).
+    scheduler.watch(this, layout.targets, () => {
+      if (!scheduler.running(this) && !dragging && scheduler.pausedOf(this)) scheduler.letGo(this);
+    });
+    this.unwatch = () => scheduler.unwatch(this);
+
     this.refresh = () => {
       const running = scheduler.running(this);
-      const active = activeOf(rt, id);
-      const t = player ? player.position : 0;
-      play.innerHTML = running ? PAUSE_ICON : PLAY_ICON;
+      const active = usable(rt, id);
+      const shown = moving() ? player : null;
+      const k = stepNow();
+      const exploring = k === 0 && !shown;
+      // How far along the animation the bars stand: where the player stands, or the end of the
+      // step read from the scene.
+      const t = shown ? shown.position : k > 0 ? all[k - 1]!.end : all[0]!.start;
+      const last = k === n && !shown;
+      play.innerHTML = running ? PAUSE_ICON : last ? REPLAY_ICON : PLAY_ICON;
+      play.classList.toggle("mtp-replay", !running && last);
       play.setAttribute("aria-label", running ? "pause" : labelOf(rt, id));
       play.disabled = !active;
       track.setAttribute("aria-disabled", String(!active));
-      this.toggleAttribute("data-playing", running);
+      let at = 0;
       bars.forEach((bar, j) => {
         const s = spans[j]!;
-        const u = s.end > s.start ? Math.min(Math.max((t - s.start) / (s.end - s.start), 0), 1) : t >= s.start && player ? 1 : 0;
+        const u = s.end > s.start ? Math.min(Math.max((t - s.start) / (s.end - s.start), 0), 1) : t >= s.start - EPS && !exploring ? 1 : 0;
         bar.style.setProperty("--u", String(Number(u.toFixed(4))));
+        if (t >= s.start - EPS) at = j;
       });
-      const n = spans.length;
-      const k = stepAt(t);
-      const name = names[k] ?? null;
-      const text = player ? `${k + 1} / ${n}${name ? ` · ${name}` : ""}` : `${n} ${n === 1 ? "step" : "steps"}`;
-      line.textContent = text;
+      // The knob sits where the fill ends, on the bar it is in; in explore mode, an empty ring at
+      // the left end.
+      if (exploring) at = 0;
+      if (knob.parentElement !== bars[at]) bars[at]!.append(knob);
+      knob.classList.toggle("mtp-empty", exploring);
+      knob.classList.toggle("mtp-end", at === bars.length - 1 && t >= spans.at(-1)!.end - EPS);
+      pill.hidden = !exploring;
+      if (count) count.textContent = textOf(exploring ? 0 : k);
+      const text = exploring ? `${n} ${n === 1 ? "step" : "steps"}` : textOf(k);
       track.setAttribute("aria-label", labelOf(rt, id));
-      track.setAttribute("aria-valuenow", String(player ? k + 1 : 0));
-      // A page shows what goes with each step (a question under the figure, say) by this attribute.
-      if (player) this.setAttribute("data-step", String(k + 1));
-      else this.removeAttribute("data-step");
+      track.setAttribute("aria-valuenow", String(k));
       track.setAttribute("aria-valuetext", text);
-      if (movedLastBy(rt, id, this)) {
+      this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
+      if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        if (player && split && rt.value(id, "step") !== k) rt.write(id, "step", k);
+        if (rt.value(id, "step") !== k) rt.write(id, "step", k);
       }
     };
+    const indicator = document.createElement("div");
+    indicator.className = "mtp-indicator";
+    indicator.append(track);
+    this.replaceChildren(play, indicator, ...(after ? [after] : []));
     this.refresh();
-    this.replaceChildren(play, indicator);
-    // (autoplay) starts it when the page loads; (autoplay x) the first time x comes into view.
-    const start = () => {
-      if (!activeOf(rt, id) || scheduler.running(this)) return;
-      fresh(howOf(obj, false));
-      moves(rt, id, this);
-      this.refresh();
-    };
-    const auto = obj.autoplay;
-    if (auto === "load") start();
-    else if (typeof auto === "number") model.whenSeen(auto, start);
   }
 
   protected update(): void {
@@ -1400,17 +1577,15 @@ export class MtpPlay extends MtpPart {
   }
 }
 
-// A stepper's buttons' icons, drawn as the play button's are.
-const BACK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.8 3.2 5.1 8l4.7 4.8 1.4-1.4L7.9 8l3.3-3.4z"/></svg>';
-const NEXT_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 3.2 10.9 8l-4.7 4.8-1.4-1.4L8.1 8 4.8 4.6z"/></svg>';
-// A time before the first move starts: seeking to it applies none, not even one that takes no
-// time, as a seek to 0 would.
-const BEFORE = -1;
+// A stepper's buttons' icons (Tabler's chevron-left and chevron-right), drawn as the play
+// button's are.
+const BACK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6l6 6"/></svg>';
+const NEXT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6l-6 6"/></svg>';
 
 /**
- * A stepper (docs/reference.md, "Controls"; the author, 2026-11-10): a play with no clock. "›"
- * plays the next step from the end of the one before and stops at its end; "‹" and the dots, one
- * per step, jump at once to the end of a step, as a play's bars jump to a step tapped.
+ * A stepper (docs/reference.md, "Controls"; the author, 2026-11-13): "‹", a dot per step, "›"
+ * and the step count. Its step is read from the scene as a play's is. Dot i sets state i - 1 and
+ * plays step i; "›" is the dot after the step, and "‹" the dot of the step, which plays it again.
  */
 export class MtpStepper extends MtpPart {
   private refresh: () => void = () => {};
@@ -1430,98 +1605,73 @@ export class MtpStepper extends MtpPart {
       this.replaceChildren();
       return;
     }
-    const spans = layout.spans;
-    const n = spans.length;
-    // As a play's: one player, kept when another writer cancels it, so what it read stays read.
-    let player: Player | null = null;
-    // The step it is at, or is playing to; 0 is before the first.
-    let at = 0;
-
-    // The player, held by this stepper, with the moves of the steps after j held from starting.
-    const own = (j: number) => {
-      moves(rt, id, this);
-      player ??= playerFor(rt, obj)!;
-      if (scheduler.playerOf(this) !== player) scheduler.hold(player, this);
-      player.holdFrom(j);
-    };
+    const all = layout.spans;
+    const n = all.length;
     const how = howOf(obj, true);
-    const go = (j: number) => {
-      if (!activeOf(rt, id)) return;
-      own(j);
-      scheduler.pause(this);
-      if (scheduler.seek(this, j === 0 ? BEFORE : spans[j - 1]!.end, how)) at = j;
-      else player!.holdFrom(at);
-      this.refresh();
-    };
-    const forward = () => {
-      if (!activeOf(rt, id) || at >= n) return;
-      if (player && scheduler.playerOf(this) !== player) {
-        resume();
-        return;
-      }
-      own(at + 1);
-      // A step still playing is ended at once, so each press moves on by one step.
-      if (!scheduler.seek(this, spans[at]!.start, how)) {
-        player!.holdFrom(at);
-        this.refresh();
-        return;
-      }
-      at++;
-      scheduler.resume(this, how, spans[at - 1]!.end);
-      this.refresh();
-    };
-    // Another writer cancelled it, so it goes on from where it stopped, as a play does (mtp-ibem):
-    // a step cut off plays on over what it had left, and no move that had ended is written again.
-    const resume = () => {
+    let player: Player | null = null;
+
+    const stepNow = () => (scheduler.running(this) && player ? stepAt(all, player.position) : layout.stepNowIn());
+    // Dot i: set state i - 1, then play step i and stop at its end.
+    const go = (i: number) => {
+      if (!usable(rt, id) || i < 1 || i > n) return;
       moves(rt, id, this);
-      const p = player!;
-      const j = at > 0 && p.time < spans[at - 1]!.end ? at : at + 1;
-      p.holdFrom(j);
-      // From before the first step, the first starts at once.
-      if (scheduler.again(p, this, how, spans[j - 1]!.end, spans[j - 1]!.start)) at = j;
-      else p.holdFrom(at);
+      player = playerFor(rt, obj)!;
+      player.holdFrom(i);
+      scheduler.start(player, this, how, all[i - 1]!.start, () => layout.setState(i - 1), all[i - 1]!.end);
       this.refresh();
     };
+    const forward = () => go(stepNow() + 1);
     const backward = () => {
-      if (at > 0) go(at - 1);
+      const k = stepNow();
+      if (k > 0) go(k);
     };
 
     const round = (name: string, icon: string, label: string, act: () => void) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = `mtp-step-button ${name}`;
+      b.className = `mtp-step-button mtp-${name}`;
+      b.dataset.mtpInput = name;
       b.innerHTML = icon;
       b.setAttribute("aria-label", label);
       b.addEventListener("click", act);
       return b;
     };
-    const back = round("mtp-prev", BACK_ICON, "previous step", backward);
-    const next = round("mtp-next", NEXT_ICON, "next step", forward);
+    const back = round("back", BACK_ICON, "previous step", backward);
+    const next = round("next", NEXT_ICON, "next step", forward);
     const group = document.createElement("div");
     group.className = "mtp-dots";
     group.setAttribute("role", "group");
-    const dots = spans.map((_, j) => {
+    const dots = all.map((_, j) => {
       const dot = document.createElement("button");
       dot.type = "button";
       dot.className = "mtp-dot";
+      dot.dataset.mtpInput = `dot-${j + 1}`;
       dot.setAttribute("aria-label", `step ${j + 1}`);
       dot.addEventListener("click", () => go(j + 1));
       group.append(dot);
       return dot;
     });
-
+    // The pill reading Exploring sits on the dots in explore mode, as on a play's bars, and keeps
+    // its room while hidden, so the dots are never narrower than it (the author, 2026-11-13).
+    const pill = document.createElement("span");
+    pill.className = "mtp-exploring";
+    pill.textContent = "Exploring";
+    pill.setAttribute("aria-hidden", "true");
+    const area = document.createElement("div");
+    area.className = "mtp-dot-area";
+    area.append(group, pill);
     // The count beside the dots; the dots' group already says it to a screen reader.
     const count = document.createElement("span");
     count.className = "mtp-count";
     count.setAttribute("aria-hidden", "true");
 
-    // The keys of a play: the arrows go to the next step and back one.
+    // The keys of a stepper: the arrows are "›" and "‹".
     const keys: Record<string, () => void> = { ArrowRight: forward, ArrowLeft: backward };
     const onKey = (event: KeyboardEvent) => {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
-      if (!event.repeat && activeOf(rt, id)) act();
+      if (!event.repeat && usable(rt, id)) act();
     };
     this.addEventListener("keydown", onKey);
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
@@ -1534,29 +1684,29 @@ export class MtpStepper extends MtpPart {
 
     this.refresh = () => {
       const running = scheduler.running(this);
-      const active = activeOf(rt, id);
-      back.disabled = !active || at === 0;
-      next.disabled = !active || at === n;
+      const active = usable(rt, id);
+      const k = stepNow();
+      const exploring = k === 0 && !running;
+      back.disabled = !active || k === 0;
+      next.disabled = !active || k === n;
       dots.forEach((dot, j) => {
         dot.disabled = !active;
-        dot.classList.toggle("mtp-passed", j + 1 < at);
-        if (j + 1 === at) dot.setAttribute("aria-current", "step");
+        dot.classList.toggle("mtp-passed", j + 1 < k);
+        if (j + 1 === k) dot.setAttribute("aria-current", "step");
         else dot.removeAttribute("aria-current");
       });
       const label = labelOf(rt, id);
-      count.textContent = `${at} / ${n}`;
-      group.setAttribute("aria-label", at ? `${label}: step ${at} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
-      this.toggleAttribute("data-playing", running);
-      // As a play's: a page shows what goes with each step by this attribute.
-      if (at) this.setAttribute("data-step", String(at));
-      else this.removeAttribute("data-step");
-      if (movedLastBy(rt, id, this)) {
+      count.textContent = `${exploring ? "–" : k} / ${n}`;
+      pill.hidden = !exploring;
+      group.setAttribute("aria-label", k ? `${label}: step ${k} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
+      this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
+      if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        if (rt.value(id, "step") !== at) rt.write(id, "step", at);
+        if (rt.value(id, "step") !== k) rt.write(id, "step", k);
       }
     };
+    this.replaceChildren(back, area, next, count);
     this.refresh();
-    this.replaceChildren(back, group, next, count);
   }
 
   protected update(): void {
@@ -1577,8 +1727,10 @@ export class MtpToggle extends MtpPart {
     const input = document.createElement("input");
     input.type = "checkbox";
     const members = rt.objects[target[0]]!.kind === "group" ? rt.objects[target[0]]!.members! : null;
+    input.dataset.mtpInput = "box";
     this.show = () => {
-      input.disabled = !activeOf(rt, id);
+      input.disabled = !usable(rt, id);
+      this.pageState({ inactive: !activeOf(rt, id) });
       if (members) {
         const values = members.map((m) => Boolean(rt.value(m, target[1])));
         // A mixed state when the members differ.
@@ -1589,7 +1741,7 @@ export class MtpToggle extends MtpPart {
       }
     };
     input.addEventListener("change", () => {
-      if (!activeOf(rt, id)) {
+      if (!usable(rt, id)) {
         this.show();
         return;
       }
@@ -1597,14 +1749,13 @@ export class MtpToggle extends MtpPart {
       const v = input.indeterminate ? true : input.checked;
       const how = howOf(obj, true);
       const player = playerFor(rt, obj);
-      // The flip and the animation it plays are one newcomer: refused, neither happens.
-      const targets = [`${target[0]}:${target[1] ?? ""}`, ...(player?.targets ?? [])];
-      if (!scheduler.instant(targets, this, how, () => rt.write(target[0], target[1], v))) {
-        this.show();
-        return;
-      }
+      // One effect (the author, 2026-11-13): the flip, a move that takes no time, then the
+      // toggle's animation, so the toggle owns its bool until the animation ends. Each write is
+      // decided as any writer's is: a flip that is rejected leaves the box as the bool is.
+      const flip = () => rt.write(target[0], target[1], v);
+      if (player) scheduler.start(player, this, how, 0, flip);
+      else scheduler.instant(this, how, flip);
       this.show();
-      if (player) scheduler.start(player, this, how);
     });
     this.input = input;
     this.show();

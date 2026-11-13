@@ -1571,6 +1571,7 @@
                 "on-drag",
                 "on-click",
                 "on-view",
+                "on-ready",
                 "on-live",
                 "on-quiet",
                 "on-release",
@@ -2085,15 +2086,6 @@
               "steps": {
                 "$ref": "#/$defs/step"
               },
-              "names": {
-                "type": "array",
-                "items": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
               "doc": {
                 "type": "string"
               }
@@ -2359,8 +2351,17 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "canvases": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "label-tex": {
                 "const": true
@@ -2369,18 +2370,11 @@
                 "type": "number",
                 "minimum": 0
               },
-              "autoplay": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "const": "load"
-                  },
-                  {
-                    "$ref": "#/$defs/id"
-                  }
-                ]
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               },
               "in": {
                 "$ref": "#/$defs/in"
@@ -2481,8 +2475,17 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "canvases": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "label-tex": {
                 "const": true
@@ -2575,8 +2578,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "in": {
                 "$ref": "#/$defs/in"
@@ -2698,8 +2703,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "in": {
                 "$ref": "#/$defs/in"
@@ -2781,8 +2788,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -2875,8 +2884,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -2953,8 +2964,87 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "conditions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/clamp"
+                }
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "on-ready"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "view",
+              "animation",
+              "active",
+              "conditions"
+            ],
+            "properties": {
+              "kind": {
+                "const": "on-ready"
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "view": {
+                "$ref": "#/$defs/id"
+              },
+              "animation": {
+                "$ref": "#/$defs/id"
+              },
+              "active": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/attribute"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -3035,8 +3125,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -3117,8 +3209,10 @@
                   }
                 ]
               },
-              "exclusive": {
-                "const": true
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
               },
               "conditions": {
                 "type": "array",
@@ -3572,6 +3666,7 @@
                 "on-drag",
                 "on-click",
                 "on-view",
+                "on-ready",
                 "on-live",
                 "on-quiet",
                 "on-release",

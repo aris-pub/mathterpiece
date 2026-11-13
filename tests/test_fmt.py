@@ -56,10 +56,6 @@ def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
             "(in-order\n    (ease 'linear')\n  (at-once (duration 2)\n    (move a 1)))\n",
         ),
         (
-            "(step 'Grow'\n(defaults (duration 1))\n(move a 1)\n(wait 1))\n",
-            "(step 'Grow'\n    (defaults (duration 1))\n  (move a 1)\n  (wait 1))\n",
-        ),
-        (
             "(motif dial ((real v))\n(x 1)\n(circle c))\n",
             "(motif dial ((real v))\n  (x 1)\n  (circle c))\n",
         ),

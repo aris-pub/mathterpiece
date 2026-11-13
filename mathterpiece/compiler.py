@@ -104,7 +104,7 @@ CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
-    *["rest", "in", "selected", "exclusive"],
+    *["rest", "in", "selected", "priority", "labels", "move"],
 }
 # The views (data-model.md, "Components"): what a listener or a control may belong to.
 VIEWS = ("canvas", "readout", "display")
@@ -144,6 +144,7 @@ COMPONENTS = {
     "on-drag",
     "on-click",
     "on-view",
+    "on-ready",
     "on-live",
     "on-quiet",
     "on-release",
@@ -153,9 +154,9 @@ COMPONENTS = {
     "on-leave",
     "on-pointermove",
 }
-# The listeners that name the view they listen to: its first coming into view, and its going
-# live and back to quiet (mtp-16z).
-ON_VIEW = ("on-view", "on-live", "on-quiet")
+# The listeners that name the view they listen to: its first coming into view, its being ready
+# (docs/canvas-lifecycle.md), and its going live and back to quiet (mtp-16z).
+ON_VIEW = ("on-view", "on-ready", "on-live", "on-quiet")
 # Listeners on a shape: their positional argument is the shape they listen to.
 ON_SHAPE = (
     *("on-drag", "on-click", "on-release", "on-dragstart", "on-dragend"),
@@ -168,8 +169,6 @@ LISTENERS = (*ON_SHAPE, *ON_VIEW, "on-pointermove")
 # (on-view (animation …)). Not decided by the author yet (mtp-6k7f); own_view_items and
 # canvas_move are the only places that read it.
 OWN_VIEW_NAMED = False
-# The views and controls a play's autoplay may wait for.
-SEEN = {"canvas", "readout", "slider", "button", "play", "stepper", "toggle"}
 COLLECTION = {"map", "where", "sort", "reverse", "reduce", "sum", "count", "any", "all"}
 # Names a function may not take; a built-in function's it may (reference.md, "Functions").
 NOT_FUNCTION_NAMES = (
@@ -528,8 +527,6 @@ class _Compiler:
         self.choreos: dict[str, _Choreo] = _Names(self)
         self.playing: list[_Choreo] = []
         self.choreo_trials: list[_Choreo] = []
-        # For a use written alone in an animation's body, the names of its steps.
-        self.use_names: dict[int, list] = {}
         self.fold_words: dict[int, set[str]] = {}
         # The functions whose bodies are being compiled again for a call's range, so a
         # recursive call keeps its body's range, and the ranges found, by fold_key.
@@ -564,7 +561,142 @@ class _Compiler:
         for i, obj in enumerate(self.model.objects):
             if obj.kind == "transition" and obj.data.get("end") is None:
                 self.type_ends(i, None, obj.pos)
+        self.check_states()
+        self.mark_canvases()
         return self.model
+
+    def check_states(self) -> None:
+        """Compile errors wherever a play's or a stepper's states, or a canvas's state 0, cannot
+        be worked out (the author, 2026-11-13; docs/canvas-lifecycle.md, rule 6)."""
+        objects = self.model.objects
+        for o in objects:
+            if o.kind not in ("play", "stepper", "on-view"):
+                continue
+            animation = o.data.get("animation")
+            if animation is None:
+                continue
+            steps = objects[animation].data["steps"]
+            what = (
+                f"the {o.kind}'s step cannot be read from the scene"
+                if o.kind in ("play", "stepper")
+                else "the canvas's state 0 cannot be worked out"
+            )
+            for move in _moves(steps):
+                tr = objects[move[2]]
+                to = tr.attrs.get("to")
+                if to is None or not to.bound:
+                    continue
+                read = self.closure(to.deps) & self.values_of(move[1])
+                if read:
+                    name = self.value_name(min(read, key=str))
+                    raise CompileError(
+                        f"this move's to expression depends on {name}, the value its move"
+                        f" writes, so {what}",
+                        tr.pos,
+                    )
+            if o.kind == "on-view" and _duration(steps) == float("inf"):
+                raise CompileError(
+                    "an on-view may not loop: its canvas is ready when it ends. Play the loop from"
+                    " (on-ready …)",
+                    o.pos,
+                )
+
+    def mark_canvases(self) -> None:
+        """Each control's canvases: those that show a shape depending on a value the control
+        writes. Until such a canvas is ready the control takes no input (docs/canvas-
+        lifecycle.md, rule 5)."""
+        objects = self.model.objects
+        shown = {i: self.shown_values(i) for i, o in enumerate(objects) if o.kind == "canvas"}
+        for i, o in enumerate(objects):
+            if o.kind not in ("slider", "button", "play", "stepper", "toggle"):
+                continue
+            writes: set = set()
+            for target in self.writes_of(i):
+                writes |= self.values_of(target)
+            found = [
+                c
+                for c, (ids, deps) in shown.items()
+                if any(w in deps or w[0] in ids for w in writes)
+            ]
+            if found:
+                o.data["canvases"] = found
+
+    def shown_values(self, canvas: int) -> tuple[set, set]:
+        """The shapes a canvas may show, members included, and every variable and attribute they
+        and the items giving them depend on."""
+        objects = self.model.objects
+        ids: set = set()
+        deps: set = set()
+        todo: list = []
+        for item in objects[canvas].data["shows"]:
+            if isinstance(item, int):
+                todo.append(item)
+            elif item.bound:
+                deps |= self.closure(item.deps)
+                todo.extend(_objects_in(item.expr))
+        while todo:
+            i = todo.pop()
+            if i in ids:
+                continue
+            ids.add(i)
+            o = objects[i]
+            todo.extend(o.members)
+            if o.data.get("clip") is not None:
+                todo.append(o.data["clip"])
+            for attribute in o.attrs.values():
+                if attribute.bound:
+                    deps |= self.closure(attribute.deps)
+        return ids, deps
+
+    def writes_of(self, i: int) -> set:
+        """The variables and attributes a control writes: those its animation moves, its target,
+        and its own attributes the reader's actions change."""
+        o = self.model.objects[i]
+        out = set(self.written(o.data.get("animation")))
+        if o.data.get("target") is not None:
+            out.add(tuple(o.data["target"]))
+        for attr in ("step", "playing", "position"):
+            if attr in o.attrs:
+                out.add((i, attr))
+        return out
+
+    def values_of(self, target: tuple) -> set:
+        """The variables and attributes a write of target writes or stands for: a shape's pos
+        is its x and y, and a group's attribute that is not its own is each member's."""
+        i, attr = target
+        o = self.model.objects[i]
+        out = {(i, attr)}
+        if attr == "pos":
+            out |= {(i, "x"), (i, "y")}
+        if attr in ("x", "y"):
+            out.add((i, "pos"))
+        if o.kind in ("group", "instance") and attr is not None and attr not in o.attrs:
+            for m in o.members:
+                out |= self.values_of((m, attr))
+        return out
+
+    def value_name(self, target: tuple) -> str:
+        i, attr = target
+        name = self.model.objects[i].name or "a shape"
+        return name if attr is None else f"{name}.{attr}"
+
+    def closure(self, deps) -> set:
+        """Every variable and attribute deps read, through bound ones too."""
+        seen: set = set()
+        todo = list(deps)
+        while todo:
+            dep = todo.pop()
+            if dep in seen:
+                continue
+            seen.add(dep)
+            obj = self.model.objects[dep[0]]
+            if dep[1] is None and obj.kind == "variable":
+                attribute = obj.value
+            else:
+                attribute = obj.attrs.get(dep[1])
+            if attribute is not None and attribute.bound:
+                todo.extend(attribute.deps)
+        return seen
 
     def check_quiet(self) -> None:
         """A view has a quiet mode only with an on-live, so an on-quiet needs one (mtp-16z)."""
@@ -1500,7 +1632,7 @@ class _Compiler:
             return None
         return self.choreos.get(".".join(cast(tuple[str, ...], parts)))
 
-    def choreo_use(self, form: Form, scope: dict) -> tuple[tuple, list]:
+    def choreo_use(self, form: Form, scope: dict) -> tuple:
         """A use of a choreo, (fade-in d1 0.4): its steps, and the names of its steps, as an
         animation's body with the arguments in place of the parameters gives them."""
         choreo = self.choreo_of(form)
@@ -1542,7 +1674,7 @@ class _Compiler:
             args[p.name] = _default_arg(p)
         return self.choreo_steps(choreo, args, form.pos)
 
-    def choreo_steps(self, choreo: "_Choreo", args: dict, pos: Pos) -> tuple[tuple, list]:
+    def choreo_steps(self, choreo: "_Choreo", args: dict, pos: Pos) -> tuple:
         outer = self.playing[-1] if self.playing else None
         if outer is not None and choreo.index > outer.index:
             raise CompileError(
@@ -2793,44 +2925,24 @@ class _Compiler:
             name, pos, items = None, form.pos, form.items[1:]
             if len(items) == 1 and isinstance(items[0], Name):
                 return self.named(items[0], "animation")
-        steps, names = self.anim_body(items, scope, pos)
+        steps = self.anim_body(items, scope, pos)
         # One that loops forever lasts ∞.
         attrs = {"duration": Attribute(_with_const(REAL), _duration(steps))}
-        data: dict = {"steps": steps}
-        if any(isinstance(n, str) for n in names):
-            data["names"] = [n if isinstance(n, str) else None for n in names]
-        obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data=data)
+        obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data={"steps": steps})
         return self.add(obj)
 
-    def anim_body(self, items: Sequence, scope: dict, pos: Pos) -> tuple[tuple, list]:
-        """The steps of an animation's body, and the name of each, as steps() gives them."""
+    def anim_body(self, items: Sequence, scope: dict, pos: Pos) -> tuple:
+        """The steps of an animation's body."""
         self.options_first(items, lambda it: _head(it) in ("defaults", "loop"), "animation")
         loops = [it for it in items if _head(it) == "loop"]
         if len(loops) > 1:
             raise CompileError("an animation takes one (loop …)", loops[1].pos)
-        names: list = []
-        body = self.steps([it for it in items if it not in loops], None, None, scope, names)
-        if len(body) == 1 and isinstance(names[0], str | None):
-            # A step alone is still one step: written as an in-order of one, so the runtime does
-            # not take its own items for the play's steps.
-            steps = ("in-order", body[0])
-        else:
-            steps = _in_order(body)
-        if len(body) == 1 and names[0] is _NOT_A_STEP and steps[0] == "in-order":
-            # One item whose steps the runtime takes for this animation's: when it is a named
-            # animation, their names are this one's.
-            only = [it for it in items if it not in loops and _head(it) != "defaults"]
-            if len(only) == 1 and isinstance(only[0], Name):
-                i = self.model.names.get(only[0].parts[0]) if len(only[0].parts) == 1 else None
-                if i is not None and self.model.objects[i].kind == "animation":
-                    names = list(self.model.objects[i].data.get("names", []))
-            elif len(only) == 1 and self.choreo_of(only[0]) is not None:
-                names = self.use_names.pop(id(only[0]))
+        steps = _in_order(self.steps([it for it in items if it not in loops], None, None, scope))
         if loops:
             if _duration(steps) <= 0:
                 raise CompileError("this animation loops, but a round of it takes no time", pos)
             steps = ("loop", self.loop_count(loops[0], scope), steps)
-        return steps, names
+        return steps
 
     def loop_count(self, form, scope: dict) -> int | None:
         """How many times (loop n) repeats an animation; None, with no n, for forever."""
@@ -2853,10 +2965,8 @@ class _Compiler:
             raise CompileError(f"expected the name of a {kind}", node.pos)
         return i
 
-    def steps(self, items, duration, ease, scope: dict, names: list | None = None) -> list:
-        """The steps among items; the defaults among them apply to the moves inside. names is
-        given only for the items of an animation's body: it gets, for each, the name of a
-        (step …), None for a step with none, or _NOT_A_STEP for any other item."""
+    def steps(self, items, duration, ease, scope: dict) -> list:
+        """The steps among items; the defaults among them apply to the moves inside."""
         self.options_first(items, lambda it: _head(it) == "defaults", "animation")
         found = [it for it in items if _head(it) == "defaults"]
         if len(found) > 1:
@@ -2884,25 +2994,13 @@ class _Compiler:
             head = _head(item)
             if head == "defaults":
                 continue
-            if names is not None:
-                names.append(_NOT_A_STEP)
             if head == "step":
-                assert isinstance(item, Form)
-                if names is None:
-                    raise CompileError(
-                        "a step is an item of an animation's body, as in"
-                        " (animation (step 'name' …) …), where a play shows it as one of its steps",
-                        item.pos,
-                    )
-                parts = list(item.items[1:])
-                label = None
-                if parts and not self.animates(parts[0]):
-                    label = self.step_name(parts.pop(0), scope)
-                if not [p for p in parts if _head(p) != "defaults"]:
-                    raise CompileError("a step holds moves, waits, at-once or in-order", item.pos)
-                names[-1] = label
-                out.append(_in_order(self.steps(parts, duration, ease, scope)))
-            elif isinstance(item, Name):
+                raise CompileError(
+                    "(step …) is gone: a play names its steps with (labels 'a' 'b' …), and"
+                    " (in-order …) makes one step of several items",
+                    item.pos,
+                )
+            if isinstance(item, Name):
                 # A name stands for the animation or transition it names.
                 name = item.parts[0] if len(item.parts) == 1 else None
                 i = self.model.names.get(name) if isinstance(name, str) else None
@@ -2945,31 +3043,22 @@ class _Compiler:
             elif self.choreo_of(item) is not None:
                 # A use stands for the animation it declares, as the name of an animation does.
                 assert isinstance(item, Form)
-                used, self.use_names[id(item)] = self.choreo_use(item, scope)
-                out.append(used)
+                out.append(self.choreo_use(item, scope))
             else:
                 raise CompileError(
-                    "an animation holds moves, waits, at-once, in-order, steps, the names of"
+                    "an animation holds moves, waits, at-once, in-order, the names of"
                     " animations and transitions, and uses of choreos"
                     + (f": '{head}' is not a choreo" if head is not None else ""),
                     item.pos,
                 )
         return out
 
-    def animates(self, node: Node) -> bool:
-        """Whether node is an item of an animation, rather than a step's name."""
-        if isinstance(node, Name):
-            i = self.model.names.get(node.parts[0]) if len(node.parts) == 1 else None
-            return i is not None and self.model.objects[i].kind in ("animation", "transition")
-        head = _head(node)
-        return head in ANIMATION_ITEMS or self.choreo_of(node) is not None
-
-    def step_name(self, node: Node, scope: dict) -> str:
+    def label(self, node: Node, scope: dict) -> str:
         e = self.expr(node, None, scope)
         if _core(e.type) != STRING:
-            raise CompileError(f"a step's name is a string, got {e.type}", node.pos)
+            raise CompileError(f"a label is a string, got {e.type}", node.pos)
         if not e.known:
-            raise CompileError("a step's name is a string known when compiling", node.pos)
+            raise CompileError("a label is a string known when compiling", node.pos)
         return e.value
 
     def roll(self, item: Form, scope: dict) -> tuple:
@@ -3248,9 +3337,10 @@ class _Compiler:
         """A listener's items after what it listens to, and what that is: a shape or a term,
         the view, or for on-pointermove (shape, None) or (None, canvas)."""
         v = self.model.objects[view]
-        if kind == "on-view" and v.kind != "canvas":
+        if kind in ("on-view", "on-ready") and v.kind != "canvas":
+            when = "first comes into view" if kind == "on-view" else "is ready"
             raise CompileError(
-                "on-view plays when a canvas first comes into view, so it is written inside a"
+                f"{kind} plays when a canvas {when}, so it is written inside a"
                 f" canvas, not {_a(v.kind)}",
                 form.pos,
             )
@@ -3507,7 +3597,17 @@ class _Compiler:
         stop = next((it for it in items if _head(it) == "stop-propagation"), None)
         if stop is not None:
             raise CompileError(f"{obj.kind} takes no stop-propagation", stop.pos)
-        self.exclusive(obj, items)
+        gone = next((it for it in items if _head(it) == "autoplay"), None)
+        if gone is not None:
+            raise CompileError(
+                "(autoplay) is gone: a canvas's (on-ready (animation …)) plays when the canvas"
+                " is ready",
+                gone.pos,
+            )
+        labels = next((it for it in items if _head(it) == "labels"), None)
+        if labels is not None:
+            raise CompileError(f"only a play takes (labels …), not a {obj.kind}", labels.pos)
+        self.priority(obj, items)
         if obj.kind not in LISTENERS:
             label = self.take(items, "label")
             # (label (tex …)) gives the label as LaTeX, the form a term of a formula takes.
@@ -3529,8 +3629,13 @@ class _Compiler:
         obj.data["conditions"] = [self.condition(c, written) for c in items]
 
     def animated(self, obj: Obj, items: list) -> set:
-        # A use of a choreo may stand for (animation (use)).
-        anims = [it for it in items if _head(it) == "animation" or self.choreo_of(it) is not None]
+        # A use of a choreo, and a move, may stand for (animation (use)) and (animation (move …))
+        # (the author, 2026-11-13).
+        anims = [
+            it
+            for it in items
+            if _head(it) in ("animation", "move") or self.choreo_of(it) is not None
+        ]
         if len(anims) > 1:
             raise CompileError("'animation' is given twice", anims[1].pos)
         animation = None
@@ -3558,19 +3663,25 @@ class _Compiler:
             else None
         )
 
-    def exclusive(self, obj: Obj, items: list) -> None:
-        """(exclusive): while the writer runs, any other writer that would write one of its
-        targets is refused at its start (reference.md, "Concurrency"; the author, 2026-11-11)."""
-        found = [it for it in items if _head(it) == "exclusive"]
+    def priority(self, obj: Obj, items: list) -> None:
+        """(priority n): the writer's priority, an int from 1 to 1000. A write is accepted when its
+        writer's priority is at least that of the writer owning the value (docs/concurrency-
+        model.md; the author, 2026-11-13). One without it has its kind's priority."""
+        gone = next((it for it in items if _head(it) == "exclusive"), None)
+        if gone is not None:
+            raise CompileError("(exclusive) is gone: give the writer a (priority n)", gone.pos)
+        found = [it for it in items if _head(it) == "priority"]
         if len(found) > 1:
-            raise CompileError("'exclusive' is given twice", found[1].pos)
+            raise CompileError("'priority' is given twice", found[1].pos)
         if found:
             item = found[0]
             assert isinstance(item, Form)
-            if len(item.items) != 1:
-                raise CompileError("(exclusive) takes nothing", item.pos)
+            n = item.items[1] if len(item.items) == 2 else None
+            value = getattr(n, "value", None)
+            if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 1000:
+                raise CompileError("(priority n) takes an int from 1 to 1000", item.pos)
             items.remove(item)
-            obj.data["exclusive"] = True
+            obj.data["priority"] = value
 
     def stops(self, obj: Obj, items: list) -> None:
         """(stop-propagation bool): while it holds, the event stops at this listener's shape, as
@@ -3652,13 +3763,15 @@ class _Compiler:
         written = self.animated(obj, items)
         buttons = self.take(items, "buttons")
         obj.attrs["buttons"] = self.attribute(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
-        obj.data["autoplay"] = self.autoplay(items)
+        self.labels(obj, items)
         # (rest t): t seconds between each pair of steps, so the illustrator need not write a
         # wait after each (the author, 2026-11-08, mtp-wfrs).
         rest = self.take(items, "rest")
         if rest is not None:
             obj.data["rest"] = self.seconds(rest, self.cscope)
         obj.attrs["playing"] = Attribute(BOOL, False)
+        # The highest step whose state the scene is in, or 0 in explore mode (the author,
+        # 2026-11-12). The runtime reads it from the scene.
         obj.attrs["step"] = Attribute(INT, 0)
         self.active(obj, items)
         self.writer(obj, items, written)
@@ -3667,14 +3780,12 @@ class _Compiler:
         """(stepper name (animation …)): the reader moves through the animation's steps one at a
         time, with no clock, so it has one stop per step and nothing starts it (the author,
         2026-11-10)."""
-        for head in ("buttons", "autoplay"):
-            found = next((it for it in items if _head(it) == head), None)
-            if found is not None:
-                raise CompileError(
-                    f"a stepper takes no ({head} …): it stops after each step, and the reader"
-                    " moves it",
-                    found.pos,
-                )
+        found = next((it for it in items if _head(it) == "buttons"), None)
+        if found is not None:
+            raise CompileError(
+                "a stepper takes no (buttons …): it stops after each step, and the reader moves it",
+                found.pos,
+            )
         written = self.animated(obj, items)
         if obj.data["animation"] is None:
             raise CompileError(
@@ -3800,39 +3911,37 @@ class _Compiler:
         """Every variable and attribute the shape's position depends on, through bound ones too."""
         if "pos" not in self.attr_names(shape):
             return set()
-        seen: set = set()
-        todo = list(self.obj_attr(shape, "pos", NOPOS).deps)
-        while todo:
-            dep = todo.pop()
-            if dep in seen:
-                continue
-            seen.add(dep)
-            obj = self.model.objects[dep[0]]
-            if dep[1] is None and obj.kind == "variable":
-                attribute = obj.value
-            else:
-                attribute = obj.attrs.get(dep[1])
-            if attribute is not None and attribute.bound:
-                todo.extend(attribute.deps)
-        return seen
+        return self.closure(self.obj_attr(shape, "pos", NOPOS).deps)
 
-    def autoplay(self, items: list):
-        """A play's (autoplay): "load" to start when the page loads, the id of the view or
-        control whose first coming into view starts it, or None."""
-        found = [it for it in items if _head(it) == "autoplay"]
-        if not found:
-            return None
+    def labels(self, obj: Obj, items: list) -> None:
+        """(labels 'a' 'b' …): a play's name for each of its steps, one per step (the author,
+        2026-11-12)."""
+        found = [it for it in items if _head(it) == "labels"]
         if len(found) > 1:
-            raise CompileError("'autoplay' is given twice", found[1].pos)
+            raise CompileError("'labels' is given twice", found[1].pos)
+        if not found:
+            return
         item = found[0]
         items.remove(item)
         assert isinstance(item, Form)
-        if len(item.items) == 1:
-            return "load"
-        message = "autoplay takes a view or a control, or nothing to start when the page loads"
-        if len(item.items) != 2:
-            raise CompileError(message, item.pos)
-        return self.component_named(item.items[1], SEEN, message)
+        names = [self.label(n, self.cscope) for n in item.items[1:]]
+        n = self.step_count(obj.data["animation"])
+        if obj.data["animation"] is not None and len(names) != n:
+            steps = f"{n} step" + ("s" if n != 1 else "")
+            given = f"{len(names)} label is" if len(names) == 1 else f"{len(names)} labels are"
+            raise CompileError(
+                f"the play's animation has {steps}, but {given} given: one per step", item.pos
+            )
+        obj.data["labels"] = names
+
+    def step_count(self, animation: int | None) -> int:
+        """How many steps a play of the animation has: the items of its body, inside a loop
+        around the whole of it, as the runtime counts them."""
+        if animation is None:
+            return 0
+        steps = self.model.objects[animation].data["steps"]
+        body = steps[2] if steps[0] == "loop" else steps
+        return len(body) - 1 if body[0] == "in-order" else 1
 
     def build_on_view(self, obj: Obj, items: list, view: int) -> None:
         obj.data["view"] = view
@@ -3840,6 +3949,7 @@ class _Compiler:
         self.active(obj, items)
         self.writer(obj, items, written)
 
+    build_on_ready = build_on_view
     build_on_live = build_on_view
     build_on_quiet = build_on_view
 
@@ -6464,6 +6574,32 @@ def _value_part(core: Type, v, name: str):
     return v[name]
 
 
+def _objects_in(e) -> list:
+    """The objects an expression names, at any depth."""
+    out: list = []
+    todo = [e]
+    while todo:
+        x = todo.pop()
+        if isinstance(x, Expr):
+            if x.op == "obj" and isinstance(x.args[0], int):
+                out.append(x.args[0])
+            todo.extend(x.args)
+        elif isinstance(x, (tuple, list)):
+            todo.extend(x)
+    return out
+
+
+def _moves(step):
+    """The moves of a step, in the order written."""
+    if step[0] == "move":
+        yield step
+    elif step[0] == "loop":
+        yield from _moves(step[2])
+    elif step[0] in ("at-once", "in-order"):
+        for s in step[1:]:
+            yield from _moves(s)
+
+
 def _duration(step) -> float:
     """How long a step takes: a move its duration, in-order the sum, at-once the longest."""
     if step[0] == "move":
@@ -6546,7 +6682,6 @@ def _scale(sx, sy=None):
 
 
 # What steps() notes for an item of an animation's body that is not a (step …).
-_NOT_A_STEP = object()
 
 _USE_OUTSIDE = (
     "a use of a choreo declares an animation, so it is written where an animation is: as the"

@@ -68,8 +68,6 @@
 
 (canvas view (x -12) (y -12) (width 24) (height 24) (pan false) (zoom false)
   doc@'The turning tetrahedron.'
-  edges corners)
-
-(play spin (autoplay view)
-  doc@'Turns the tetrahedron once every 14 seconds, from the first time it comes into view.'
-    (animation (loop) (move yaw (to (+ yaw 360)) (duration 14) (ease linear))))
+  edges corners
+  (on-ready doc@'Turns the tetrahedron once every 14 seconds.'
+      (animation (loop) (move yaw (to (+ yaw 360)) (duration 14) (ease linear)))))

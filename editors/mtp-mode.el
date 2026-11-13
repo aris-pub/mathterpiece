@@ -16,12 +16,12 @@
     "transition" "move" "wait" "roll-dice" "animation" "at-once" "in-order" "rand-seed"
     "canvas" "readout" "display" "slider" "button" "play" "stepper" "toggle" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
-    "on-live" "on-quiet" "defaults" "clip" "loop" "autoplay" "exists-when"
+    "on-ready" "on-live" "on-quiet" "defaults" "clip" "loop" "labels" "exists-when"
     "foreach" "let" "fn" "if" "cond" "and" "or" "when" "else" "name" "as" "like")
   "Heads of mtp's forms. Any of them may end in an underscore, as in (circle_ …).")
 
 (defconst mtp-mode--arguments
-  '("a" "active" "align" "autoplay" "b" "background" "buttons" "c" "clip" "controls" "dash" "dash-offset"
+  '("a" "active" "align" "b" "background" "buttons" "c" "clip" "controls" "dash" "dash-offset"
     "doc" "drawn" "duration" "ease" "family" "fill" "fill-opacity" "fixed-size" "font" "from" "gap"
     "halign" "height"
     "kind" "label" "like" "line-cap" "line-join" "num" "opacity" "outline" "outline-width" "padding" "pan" "path" "points"
@@ -114,7 +114,7 @@ takes a color apart from strings.")
     ;; Forms with no name.
     ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("step" . 1) ("on-drag" . 2) ("on-click" . 1)
     ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 0) ("on-enter" . 1)
-    ("on-leave" . 1) ("on-live" . 0) ("on-quiet" . 0)
+    ("on-leave" . 1) ("on-ready" . 0) ("on-live" . 0) ("on-quiet" . 0)
     ("on-pointermove" . 2) ("defaults" . 0)
     ("exists-when" . 1)
     ("when" . 1) ("foreach" . 2) ("let" . 1) ("fn" . 1) ("if" . 2))
@@ -132,7 +132,6 @@ Their lines are indented 4; the body's, 2, as for Emacs Lisp's own forms.")
        "toggle-ease")
       ("animation" "doc" ,@animation) ("choreo" "doc" ,@animation)
       ("at-once" ,@animation) ("in-order" ,@animation)
-      ("step" "defaults")
       ("motif" "doc") ("variant" "doc") ("func" "doc") ("namespace" "doc") ("palette" "doc")
       ("formula" "doc" "defaults")
       ("display" "doc" "kind") ("readout" "doc" "font")))
@@ -143,7 +142,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
   '("circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "slider" "button" "play" "stepper" "toggle" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
-    "on-live" "on-quiet" "move" "transition" "font" "color"
+    "on-ready" "on-live" "on-quiet" "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "colormap" "interface" "defaults" "term" "rand-seed")
   "Forms that take no body: every item after their positional arguments is indented 4.")
