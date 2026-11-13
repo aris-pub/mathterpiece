@@ -291,6 +291,20 @@ describe("a slider", () => {
   };
   const knob = (type: string) => input().dispatchEvent(new PointerEvent(type, { bubbles: true }));
 
+  // The author, 2026-11-13: a press on the track or the knob through the release is one gesture,
+  // triggered by the press, so a gesture of the same priority triggered after the press but
+  // before the first move is the newer one.
+  it("is triggered by the press, not by its first move", () => {
+    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>`);
+    const k = rt.id("k");
+    knob("pointerdown");
+    const later = { targets: [`${k}:`], done: false, time: 0, release() {}, seek: () => rt.write(k, null, 7) };
+    model.scheduler!.start(later as never, {}, { reader: true, held: true });
+    slide(200);
+    expect(v("k")).toBe(7);
+    knob("pointerup");
+  });
+
   it("held, is a running writer that refuses an on-view", () => {
     const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
     knob("pointerdown");

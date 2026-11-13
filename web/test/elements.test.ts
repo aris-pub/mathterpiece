@@ -199,6 +199,24 @@ describe("controls", () => {
     expect(v("k")).toBeCloseTo(0);
   });
 
+  // The author, 2026-11-13: a toggle is a button whose effect is (move target (to (not target))
+  // (duration 0)) then its own animation, so it owns its bool until that animation ends.
+  it("a toggle's flip and its animation are one effect: a newer writer of its bool cancels both", () => {
+    const [model, rt, v] = page(`<mtp-toggle model="m" name="slide"></mtp-toggle>`);
+    const input = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    input.click();
+    pass(0.1);
+    pass(0.5);
+    const on = rt.id("on");
+    expect(model.scheduler!.ownerOf(`${on}:`)).toBe(document.querySelector("mtp-toggle"));
+    const player = { targets: [`${on}:`], done: false, time: 0, release() {}, seek: () => rt.write(on, null, false) };
+    model.scheduler!.start(player as never, {}, { reader: true });
+    const k = v("k");
+    pass(0.5);
+    expect(v("k")).toBe(k);
+    expect(v("on")).toBe(false);
+  });
+
   it("a toggle on a group's attribute shows a mixed state, and a click sets every member", () => {
     const [, rt] = page(`<mtp-toggle model="m" name="all"></mtp-toggle>`);
     const input = document.querySelector("mtp-toggle input") as HTMLInputElement;

@@ -1066,11 +1066,6 @@ export class MtpSlider extends MtpPart {
     input.addEventListener("input", () => {
       if (!activeOf(rt, id)) return;
       const u = Number(input.value) / Number(input.max);
-      // A held knob becomes a running writer at its first change (the author, 2026-11-12).
-      if (scrubbing && !gripped && player) {
-        gripped = true;
-        scheduler.grip(this, how, () => (cut = true));
-      }
       const write = () => {
         player?.scrub(u);
         rt.write(id, "position", u);
@@ -1088,11 +1083,11 @@ export class MtpSlider extends MtpPart {
     // A slider follows its target: when another writer changes the one variable or attribute its animation
     // moves, the knob goes to the position whose value is closest (reference.md, "Controls").
     let scrubbing = false;
-    // While the reader holds the knob, from its first change, the slider is a running writer of
-    // its targets, as a drag is (the author, 2026-11-11 and 2026-11-12). Cancelled while held, it
-    // writes nothing more until the release.
+    // A press on the track or the knob through the release is one gesture, triggered by the press
+    // (the author, 2026-11-13): its first write jumps to the pressed point. Cancelled while held,
+    // it writes nothing more until the release. An arrow key is a trigger of the reader's of its
+    // own, an animation of one move that takes no time.
     let cut = false;
-    let gripped = false;
     const release = () => {
       if (!scrubbing) return;
       scrubbing = false;
@@ -1104,7 +1099,7 @@ export class MtpSlider extends MtpPart {
     input.addEventListener("pointerdown", () => {
       scrubbing = true;
       cut = false;
-      gripped = false;
+      if (player && activeOf(rt, id)) scheduler.grip(this, how, () => (cut = true));
       // The release may come anywhere on the page, so the window hears it too.
       window.addEventListener("pointerup", release);
       window.addEventListener("pointercancel", release);
@@ -1663,11 +1658,13 @@ export class MtpToggle extends MtpPart {
       const v = input.indeterminate ? true : input.checked;
       const how = howOf(obj, true);
       const player = playerFor(rt, obj);
-      // The flip and the animation it plays are decided write by write, as any writer's are: a
-      // flip that is rejected leaves the box as the bool is.
-      scheduler.instant(this, how, () => rt.write(target[0], target[1], v));
+      // One effect (the author, 2026-11-13): the flip, a move that takes no time, then the
+      // toggle's animation, so the toggle owns its bool until the animation ends. Each write is
+      // decided as any writer's is: a flip that is rejected leaves the box as the bool is.
+      const flip = () => rt.write(target[0], target[1], v);
+      if (player) scheduler.start(player, this, how, 0, flip);
+      else scheduler.instant(this, how, flip);
       this.show();
-      if (player) scheduler.start(player, this, how);
     });
     this.input = input;
     this.show();
