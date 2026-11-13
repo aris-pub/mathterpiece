@@ -167,6 +167,9 @@ export class Runtime {
    * Each starts quiet. The listeners tied to a view hear nothing in it while it is quiet. */
   readonly quietMode = new Set<number>();
   readonly quiet = new Set<number>();
+  /** The canvases not ready yet (docs/canvas-lifecycle.md): the listeners tied to one hear
+   * nothing in it, and the controls that belong to it take no input. */
+  readonly unready = new Set<number>();
   private touched: number[] = [];
   private parents: (number | null)[];
   // Each object's variables and attributes, by attribute (null for a variable's value). Reads

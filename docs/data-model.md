@@ -270,7 +270,7 @@ The author, 2026-11-13 (docs/page-interface.md).
 | play | `inactive`, `step`, `playing`, `exploring` | `button`, `bar-1` to `bar-N` |
 | stepper | `inactive`, `step`, `playing`, `exploring` | `back`, `next`, `dot-1` to `dot-N` |
 
-- **`ready`** is on a view copy from the moment it is ready, and on `<mtp-model>` once every canvas, display and readout copy of the model on the page is ready (reference, "On-view and on-ready"). A page that captures still images captures each copy when it first has `ready`.
+- **`ready`** is on a view copy from the moment its canvas is ready, on every copy at once, and on `<mtp-model>` once every canvas, display and readout of the model on the page is ready (reference, "On-view and on-ready"). A page that captures still images captures each copy when it first has `ready`.
 - **`seen`** is on a view copy once it has come into view.
 - **`mode`** and the input `switch` are only on a view with a quiet mode (reference, "Quiet and live views").
 - **`inactive`** is on a control while its `(active bool)` does not hold.

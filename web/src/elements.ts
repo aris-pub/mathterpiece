@@ -118,13 +118,24 @@ export class MtpModel extends HTMLElement {
     this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
     // Made before the page hears of any change, so it reads the values at page load.
-    lives.set(this, new Lifecycle(rt, scheduler, (o) => playerFor(rt, o), (i) => activeOf(rt, i)));
+    lives.set(
+      this,
+      new Lifecycle(
+        rt,
+        scheduler,
+        (o) => playerFor(rt, o),
+        (i) => activeOf(rt, i),
+        () => this.changed(),
+      ),
+    );
     rt.onChange(() => this.changed());
     this.dispatchEvent(new Event(LOADED, { bubbles: true }));
     // The views of the page are there once it is told the model is ready, or, for those added
     // with it, once the HTML being added is all there.
     checkPageReady(this);
-    queueMicrotask(() => checkPageReady(this));
+    // Once every element of the page is built, the controls show whether the canvases they
+    // belong to are ready.
+    queueMicrotask(() => this.changed());
   }
 
   /** Tells every view and control of this model to show the current values. */
@@ -258,17 +269,18 @@ abstract class MtpPart extends HTMLElement {
   private seenOnce = false;
   private readyOnce = false;
 
-  // A view copy's lifecycle (docs/canvas-lifecycle.md): the moment it is ready it has
-  // data-mtp-ready, from then on, and its on-readies play.
+  // A view copy's lifecycle (docs/canvas-lifecycle.md): from the moment its canvas is ready it
+  // has data-mtp-ready, and its switch takes input.
   private lifecycle(): void {
     const model = this.model();
     const id = this.shown;
     const life = model ? lives.get(model) : undefined;
     if (!model || !life || id === null || this.readyOnce || !VIEWS.has(model.runtime!.objects[id]!.kind)) return;
-    if (!life.free(id, this.seenOnce)) return;
+    life.check(id);
+    if (this.switch) this.switch.disabled = !life.ready(id);
+    if (!life.ready(id)) return;
     this.readyOnce = true;
     this.pageState({ ready: true });
-    life.ready(this, id);
   }
 
   // Tells the lifecycle when this view copy first comes into view (on-view). On screen is not
@@ -467,6 +479,9 @@ export class MtpCanvas extends MtpPart {
 
   protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const canvas = this.find(rt, "canvas");
+    let here = placed.get(rt);
+    if (!here) placed.set(rt, (here = new Set()));
+    here.add(canvas);
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg") as SVGSVGElement;
     const drags = model.drags!;
     const clicks = model.clicks!;
@@ -910,7 +925,7 @@ export class MtpDisplay extends MtpPart {
     const terms = (formula.members ?? []).map((id) => ({ id, name: rt.objects[id]!.term! }));
     const clicks = model.clicks!;
     const hovers = (kind: string, id: number) =>
-      rt.objects.filter((o) => o.kind === kind && o.shape === id && heardIn(o, display, rt.quiet) && holds(rt, o.active));
+      rt.objects.filter((o) => o.kind === kind && o.shape === id && heardIn(o, display, rt) && holds(rt, o.active));
     const play = (listeners: Obj[]) => {
       for (const listener of listeners) {
         const player = playerFor(rt, listener);
@@ -1071,6 +1086,17 @@ function unmoved(rt: Runtime, id: number): boolean {
   return !movers.get(rt)?.has(id);
 }
 
+// The canvases with a copy on the page, by runtime. A control waits only for those: a canvas
+// not on the page never comes into view, so it would never be ready.
+const placed = new WeakMap<Runtime, Set<number>>();
+
+/** Whether a control takes input: it is active, and every canvas it belongs to that is on the
+ * page is ready (docs/canvas-lifecycle.md, rule 5). */
+function usable(rt: Runtime, id: number): boolean {
+  const here = placed.get(rt);
+  return activeOf(rt, id) && !(rt.objects[id]!.canvases ?? []).some((c) => rt.unready.has(c) && here?.has(c));
+}
+
 /** Whether a writer is active, so it can be triggered: always, unless its active is false. */
 function activeOf(rt: Runtime, id: number): boolean {
   const active = rt.objects[id]!.active;
@@ -1098,7 +1124,7 @@ export class MtpSlider extends MtpPart {
     const fill = () => input.style.setProperty("--u", String(Number(input.value) / Number(input.max)));
     fill();
     input.addEventListener("input", () => {
-      if (!activeOf(rt, id)) return;
+      if (!usable(rt, id)) return;
       const u = Number(input.value) / Number(input.max);
       const write = () => {
         player?.scrub(u);
@@ -1135,7 +1161,7 @@ export class MtpSlider extends MtpPart {
       scrubbing = true;
       cut = false;
       this.gate();
-      if (player && activeOf(rt, id)) scheduler.grip(this, how, () => (cut = true));
+      if (player && usable(rt, id)) scheduler.grip(this, how, () => (cut = true));
       // The release may come anywhere on the page, so the window hears it too.
       window.addEventListener("pointerup", release);
       window.addEventListener("pointercancel", release);
@@ -1161,8 +1187,8 @@ export class MtpSlider extends MtpPart {
     this.follow();
     input.dataset.mtpInput = "track";
     this.gate = () => {
-      input.disabled = !activeOf(rt, id);
-      this.pageState({ inactive: input.disabled, held: scrubbing });
+      input.disabled = !usable(rt, id);
+      this.pageState({ inactive: !activeOf(rt, id), held: scrubbing });
     };
     this.gate();
     // The label follows what it is given, as anything bound does.
@@ -1213,7 +1239,7 @@ export class MtpButton extends MtpPart {
     button.append(text.node);
     // A press plays the animation from the start; a press while it runs starts it again.
     button.addEventListener("click", () => {
-      if (!activeOf(rt, id)) return;
+      if (!usable(rt, id)) return;
       const player = playerFor(rt, rt.objects[id]!);
       if (player) scheduler.start(player, this, howOf(rt.objects[id]!, true));
     });
@@ -1222,8 +1248,8 @@ export class MtpButton extends MtpPart {
     const chooses = rt.objects[id]!.attrs?.selected !== undefined;
     button.dataset.mtpInput = "button";
     this.gate = () => {
-      button.disabled = !activeOf(rt, id);
-      this.pageState({ inactive: button.disabled });
+      button.disabled = !usable(rt, id);
+      this.pageState({ inactive: !activeOf(rt, id) });
       text.follow();
       if (chooses) button.setAttribute("aria-pressed", String(Boolean(rt.value(id, "selected"))));
     };
@@ -1320,14 +1346,14 @@ export class MtpPlay extends MtpPart {
     const stepNow = () => (moving() && player ? stepAt(all, player.position) : layout.stepNowIn());
     // Set state j, then play steps j + 1 to N.
     const go = (j: number) => {
-      if (!activeOf(rt, id)) return;
+      if (!usable(rt, id)) return;
       moves(rt, id, this);
       player = playerFor(rt, obj)!;
       scheduler.start(player, this, how, all[j]!.start, () => layout.setState(j));
       this.refresh();
     };
     const press = () => {
-      if (!activeOf(rt, id)) return;
+      if (!usable(rt, id)) return;
       moves(rt, id, this);
       if (scheduler.running(this)) scheduler.pause(this);
       else if (paused()) scheduler.resume(this, how);
@@ -1394,7 +1420,7 @@ export class MtpPlay extends MtpPart {
     const onKey = (event: KeyboardEvent) => {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-      if (event.repeat || !activeOf(rt, id)) {
+      if (event.repeat || !usable(rt, id)) {
         if (event.key === " " || split) event.preventDefault();
         return;
       }
@@ -1437,7 +1463,7 @@ export class MtpPlay extends MtpPart {
     // move of step i at its value there, and on release the play is paused there.
     let held: { x: number; slop: number; was: boolean; moved: boolean; cut: boolean } | null = null;
     track.addEventListener("pointerdown", (event) => {
-      if (!activeOf(rt, id) || event.button !== 0) return;
+      if (!usable(rt, id) || event.button !== 0) return;
       const was = scheduler.running(this);
       if (was) scheduler.pause(this);
       held = { x: event.clientX, slop: event.pointerType === "mouse" ? MOUSE_SLOP : TOUCH_SLOP, was, moved: false, cut: false };
@@ -1487,7 +1513,7 @@ export class MtpPlay extends MtpPart {
 
     this.refresh = () => {
       const running = scheduler.running(this);
-      const active = activeOf(rt, id);
+      const active = usable(rt, id);
       const shown = moving() ? player : null;
       const k = stepNow();
       const exploring = k === 0 && !shown;
@@ -1520,7 +1546,7 @@ export class MtpPlay extends MtpPart {
       track.setAttribute("aria-label", labelOf(rt, id));
       track.setAttribute("aria-valuenow", String(k));
       track.setAttribute("aria-valuetext", text);
-      this.pageState({ inactive: !active, step: String(k), playing: running, exploring });
+      this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
       if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
         if (rt.value(id, "step") !== k) rt.write(id, "step", k);
@@ -1574,7 +1600,7 @@ export class MtpStepper extends MtpPart {
     const stepNow = () => (scheduler.running(this) && player ? stepAt(all, player.position) : layout.stepNowIn());
     // Dot i: set state i - 1, then play step i and stop at its end.
     const go = (i: number) => {
-      if (!activeOf(rt, id) || i < 1 || i > n) return;
+      if (!usable(rt, id) || i < 1 || i > n) return;
       moves(rt, id, this);
       player = playerFor(rt, obj)!;
       player.holdFrom(i);
@@ -1632,7 +1658,7 @@ export class MtpStepper extends MtpPart {
       const act = keys[event.key];
       if (!act || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
-      if (!event.repeat && activeOf(rt, id)) act();
+      if (!event.repeat && usable(rt, id)) act();
     };
     this.addEventListener("keydown", onKey);
     if (this.onPage) document.removeEventListener("keydown", this.onPage);
@@ -1645,7 +1671,7 @@ export class MtpStepper extends MtpPart {
 
     this.refresh = () => {
       const running = scheduler.running(this);
-      const active = activeOf(rt, id);
+      const active = usable(rt, id);
       const k = stepNow();
       const exploring = k === 0 && !running;
       back.disabled = !active || k === 0;
@@ -1660,7 +1686,7 @@ export class MtpStepper extends MtpPart {
       count.textContent = `${exploring ? "–" : k} / ${n}`;
       pill.hidden = !exploring;
       group.setAttribute("aria-label", k ? `${label}: step ${k} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
-      this.pageState({ inactive: !active, step: String(k), playing: running, exploring });
+      this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
       if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
         if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
         if (rt.value(id, "step") !== k) rt.write(id, "step", k);
@@ -1690,8 +1716,8 @@ export class MtpToggle extends MtpPart {
     const members = rt.objects[target[0]]!.kind === "group" ? rt.objects[target[0]]!.members! : null;
     input.dataset.mtpInput = "box";
     this.show = () => {
-      input.disabled = !activeOf(rt, id);
-      this.pageState({ inactive: input.disabled });
+      input.disabled = !usable(rt, id);
+      this.pageState({ inactive: !activeOf(rt, id) });
       if (members) {
         const values = members.map((m) => Boolean(rt.value(m, target[1])));
         // A mixed state when the members differ.
@@ -1702,7 +1728,7 @@ export class MtpToggle extends MtpPart {
       }
     };
     input.addEventListener("change", () => {
-      if (!activeOf(rt, id)) {
+      if (!usable(rt, id)) {
         this.show();
         return;
       }

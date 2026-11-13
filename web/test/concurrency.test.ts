@@ -153,26 +153,18 @@ describe("a drag", () => {
     el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
 
   // The author, 2026-11-12: a drag is a running writer from its first change of value, not
-  // from the grab.
-  it("held and moved, refuses an on-view on the dragged shape", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+  // from the grab. An on-view has priority 1000 (the author, 2026-11-13), above a gesture's.
+  it("grabbed and not yet moved, writes nothing, so an on-view plays, and its moves are rejected while it does", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-canvas model="m" name="viewed"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
+    markSeen(document.querySelector(`[name="viewed"]`)!);
+    pass(0.3);
+    const x = v("d", "x");
     at(svg(), "pointermove", 30, 0);
-    const moved = v("d", "x");
-    expect(moved).not.toBe(0);
-    markSeen(document.querySelector(`[name="w"]`)!);
-    pass(1.5);
-    expect(v("d", "x")).toBe(moved);
-    at(svg(), "pointerup", 30, 0);
-  });
-
-  it("grabbed and not yet moved, writes nothing, so an on-view plays", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
-    at(shape(rt, "d"), "pointerdown", 0, 0);
-    markSeen(document.querySelector(`[name="w"]`)!);
+    expect(v("d", "x")).toBe(x);
     pass(1.5);
     expect(v("d", "x")).toBe(8);
-    at(svg(), "pointerup", 0, 0);
+    at(svg(), "pointerup", 30, 0);
   });
 
   it("grabbed and not moved, leaves a play running", () => {
@@ -237,10 +229,9 @@ describe("a drag", () => {
     at(svg(), "pointerup", 30, 0);
   });
 
-  it("of a higher priority, rejects the writes of both an on-view and an on-enter", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="held"></mtp-canvas>`);
+  it("of a higher priority, rejects the writes of an on-enter", () => {
+    const [, rt, v] = page(`<mtp-canvas model="m" name="held"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
-    markSeen(document.querySelector(`[name="held"]`)!);
     at(shape(rt, "e"), "pointermove", 30, 0);
     const moved = v("d", "x");
     expect(moved).not.toBe(0);

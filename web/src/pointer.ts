@@ -81,7 +81,9 @@ export class Pointer {
   }
 
   private heard(l: Obj): boolean {
-    return heardIn(l, this.canvas, this.rt.quiet);
+    // An on-pointermove on the canvas itself has no in, and hears nothing until the canvas is
+    // ready, as the listeners on its shapes do.
+    return heardIn(l, this.canvas, this.rt) && !this.rt.unready.has(this.canvas);
   }
 
   private awake(l: Obj): boolean {

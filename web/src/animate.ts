@@ -13,6 +13,8 @@ import type { Player } from "./player.ts";
 export const PAGE = 300;
 export const READER = 500;
 export const GESTURE = 700;
+// An on-view's: nothing the reader does cuts it short (the author, 2026-11-13).
+export const VIEW = 1000;
 
 /** Who set a writer off, the reader or not (on-view), whether it is a gesture the reader is
  * making now (a dragged shape, a slider's knob held, a pointer moving), and its own (priority n),

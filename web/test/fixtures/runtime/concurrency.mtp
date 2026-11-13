@@ -30,13 +30,15 @@
 (canvas late s
   (on-view (animation (move k (to 3) (duration 1)))))
 (canvas w s
-  (on-view (animation (move d.x (to 8) (duration 1))))
   (on-drag d d.pos)
   (on-enter e (animation (move d.x (to 3) (duration 1)))))
 (canvas held s
-  (on-view (animation (move d.x (to 8) (duration 1))))
   (on-drag d d.pos (priority 900))
   (on-enter e (animation (move d.x (to 3) (duration 1)))))
+; An on-view on what w drags, in a canvas of its own: until a canvas is ready the listeners in it
+; hear nothing (docs/canvas-lifecycle.md).
+(canvas viewed s
+  (on-view (animation (move d.x (to 8) (duration 1)))))
 ; Writers of a high priority whose writes take no time.
 (point p [0 0])
 (slider locked (move k (from 0) (to 10)) (priority 900))

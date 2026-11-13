@@ -562,6 +562,7 @@ class _Compiler:
             if obj.kind == "transition" and obj.data.get("end") is None:
                 self.type_ends(i, None, obj.pos)
         self.check_states()
+        self.mark_canvases()
         return self.model
 
     def check_states(self) -> None:
@@ -587,9 +588,10 @@ class _Compiler:
                     continue
                 read = self.closure(to.deps) & self.values_of(move[1])
                 if read:
+                    name = self.value_name(min(read, key=str))
                     raise CompileError(
-                        f"this move's to reads {self.value_name(min(read, key=str))}, the value it"
-                        f" moves, so {what}",
+                        f"this move's to expression depends on {name}, the value its move"
+                        f" writes, so {what}",
                         tr.pos,
                     )
             if o.kind == "on-view" and _duration(steps) == float("inf"):
@@ -598,6 +600,65 @@ class _Compiler:
                     " (on-ready …)",
                     o.pos,
                 )
+
+    def mark_canvases(self) -> None:
+        """Each control's canvases: those that show a shape depending on a value the control
+        writes. Until such a canvas is ready the control takes no input (docs/canvas-
+        lifecycle.md, rule 5)."""
+        objects = self.model.objects
+        shown = {i: self.shown_values(i) for i, o in enumerate(objects) if o.kind == "canvas"}
+        for i, o in enumerate(objects):
+            if o.kind not in ("slider", "button", "play", "stepper", "toggle"):
+                continue
+            writes: set = set()
+            for target in self.writes_of(i):
+                writes |= self.values_of(target)
+            found = [
+                c
+                for c, (ids, deps) in shown.items()
+                if any(w in deps or w[0] in ids for w in writes)
+            ]
+            if found:
+                o.data["canvases"] = found
+
+    def shown_values(self, canvas: int) -> tuple[set, set]:
+        """The shapes a canvas may show, members included, and every variable and attribute they
+        and the items giving them depend on."""
+        objects = self.model.objects
+        ids: set = set()
+        deps: set = set()
+        todo: list = []
+        for item in objects[canvas].data["shows"]:
+            if isinstance(item, int):
+                todo.append(item)
+            elif item.bound:
+                deps |= self.closure(item.deps)
+                todo.extend(_objects_in(item.expr))
+        while todo:
+            i = todo.pop()
+            if i in ids:
+                continue
+            ids.add(i)
+            o = objects[i]
+            todo.extend(o.members)
+            if o.data.get("clip") is not None:
+                todo.append(o.data["clip"])
+            for attribute in o.attrs.values():
+                if attribute.bound:
+                    deps |= self.closure(attribute.deps)
+        return ids, deps
+
+    def writes_of(self, i: int) -> set:
+        """The variables and attributes a control writes: those its animation moves, its target,
+        and its own attributes the reader's actions change."""
+        o = self.model.objects[i]
+        out = set(self.written(o.data.get("animation")))
+        if o.data.get("target") is not None:
+            out.add(tuple(o.data["target"]))
+        for attr in ("step", "playing", "position"):
+            if attr in o.attrs:
+                out.add((i, attr))
+        return out
 
     def values_of(self, target: tuple) -> set:
         """The variables and attributes a write of target writes or stands for: a shape's pos
@@ -6511,6 +6572,21 @@ def _value_part(core: Type, v, name: str):
     if core == STRING:
         return len(v)
     return v[name]
+
+
+def _objects_in(e) -> list:
+    """The objects an expression names, at any depth."""
+    out: list = []
+    todo = [e]
+    while todo:
+        x = todo.pop()
+        if isinstance(x, Expr):
+            if x.op == "obj" and isinstance(x.args[0], int):
+                out.append(x.args[0])
+            todo.extend(x.args)
+        elif isinstance(x, (tuple, list)):
+            todo.extend(x)
+    return out
 
 
 def _moves(step):

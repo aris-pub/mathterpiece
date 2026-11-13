@@ -1,16 +1,21 @@
 ; A canvas's lifecycle (docs/canvas-lifecycle.md): state -1 at page load, its on-view, the moment
 ; it is ready, and its on-ready.
-(real k 0)
+(real k 0 (>= 0))
 (real j 0)
 (real spin 0)
-(scene s (circle c (r 1)))
-; An on-view, then an on-ready loop.
+(scene s (circle c (r (+ 1 k))))
+; An on-view, then an on-ready loop, and a listener inside its body.
 (canvas v s
   (on-view (move k (to 4) (duration 1)))
-  (on-ready (animation (loop) (move spin (from 0) (to 1) (duration 1)))))
+  (on-ready (animation (loop) (move spin (from 0) (to 1) (duration 1))))
+  (on-click c (move j (to 5) (duration 0))))
 ; No on-view: ready from the start, and its on-ready plays when the page loads.
 (canvas plain s
   (on-ready (move j (to 2) (duration 1))))
 (canvas bare s)
 (readout r $'k is {k}')
+; It writes k, which a shape v shows depends on, so it belongs to v.
 (button go (move k (to 9) (duration 1)))
+; It writes nothing any canvas shows, so it belongs to none.
+(real other 0)
+(button free (move other (to 1) (duration 0)))

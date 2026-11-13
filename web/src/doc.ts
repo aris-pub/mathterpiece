@@ -81,6 +81,8 @@ export interface Obj {
   steps?: Step;
   // A play's name for each step (docs/mtpc.md, "Objects").
   labels?: string[];
+  // The canvases a control belongs to, which must be ready before it takes input.
+  canvases?: number[];
   // components
   animation?: number | null;
   conditions?: Clamp[];

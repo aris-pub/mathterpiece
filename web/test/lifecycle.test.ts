@@ -38,7 +38,7 @@ beforeEach(() => {
 const copies = (name: string) => [...document.querySelectorAll(`[name="${name}"]`)] as HTMLElement[];
 const copy = (name: string) => copies(name)[0]!;
 const ready = (el: Element) => el.hasAttribute("data-mtp-ready");
-const go = () => (document.querySelector(`mtp-button[name="go"] button`) as HTMLButtonElement).click();
+const button = (name: string) => document.querySelector(`mtp-button[name="${name}"] button`) as HTMLButtonElement;
 
 describe("a canvas with an on-view", () => {
   it("is in state -1 at page load, not ready and not seen", () => {
@@ -70,42 +70,71 @@ describe("a canvas with an on-view", () => {
     expect(v("spin")).toBeGreaterThan(0);
   });
 
-  // The author, 2026-11-13: ready is a moment, not a comparison of values.
   it("stays ready whatever any writer does after", () => {
     const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-button model="m" name="go"></mtp-button>`);
     markSeen(copy("v"));
     pass(0.1);
     pass(1.2);
-    go();
+    button("go").click();
     pass(0.3);
     expect(v("k")).toBeGreaterThan(4);
     expect(ready(copy("v"))).toBe(true);
   });
 
-  it("plays no on-view in a copy that comes into view once the scene has left the values at page load, and is ready then", () => {
-    const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-button model="m" name="go"></mtp-button>`);
-    go();
+  // The author, 2026-11-13: an on-view has priority 1000.
+  it("plays its on-view at priority 1000, which a writer the reader sets off cannot cancel", () => {
+    const [model, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`);
+    markSeen(copy("v"));
     pass(0.1);
     pass(0.3);
-    markSeen(copy("v"));
-    expect(ready(copy("v"))).toBe(true);
-    pass(1.5);
-    expect(v("k")).toBe(9);
+    const k = rt.id("k");
+    const reader = { targets: [`${k}:`], done: false, time: 0, release() {}, seek: () => rt.write(k, null, 9) };
+    model.scheduler!.start(reader as never, {}, { reader: true });
+    pass(1);
+    expect(v("k")).toBe(4);
   });
+});
 
-  it("is ready when its on-view ends because another writer cancels it", () => {
-    page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-button model="m" name="go"></mtp-button>`);
+describe("the inputs of a canvas that is not ready", () => {
+  it("are disabled until it is ready: a control that writes what it shows, and a listener in it", () => {
+    const [rt, v] = ((r) => [r[1], r[2]] as const)(
+      page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-button model="m" name="go"></mtp-button><mtp-button model="m" name="free"></mtp-button>`),
+    );
+    expect(button("go").disabled).toBe(true);
+    expect(button("free").disabled).toBe(false);
+    expect(copy("go").hasAttribute("data-mtp-inactive")).toBe(false);
+    button("go").click();
+    pass(0.5);
+    expect(v("k")).toBe(0);
+    const circle = document.querySelector(`mtp-canvas [data-mtp-id="${rt.id("c")}"]`)!;
+    circle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    circle.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    pass(0.1);
+    expect(v("j")).toBe(0);
     markSeen(copy("v"));
     pass(0.1);
-    pass(0.3);
-    expect(ready(copy("v"))).toBe(false);
-    go();
-    expect(ready(copy("v"))).toBe(true);
+    pass(1.2);
+    expect(button("go").disabled).toBe(false);
+    circle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    circle.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    pass(0.1);
+    expect(v("j")).toBe(5);
   });
 });
 
 describe("copies of a canvas", () => {
-  it("each has its own page state, and one seen later plays no on-view of its own and is ready when the other's ends", () => {
+  // The author, 2026-11-13: copies of one canvas reach ready together.
+  it("are ready together, from the moment the on-view of one of them has ended", () => {
+    page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    const [a, b] = copies("v");
+    markSeen(a!);
+    pass(0.1);
+    pass(1.2);
+    expect([ready(a!), ready(b!)]).toEqual([true, true]);
+    expect(b!.hasAttribute("data-mtp-seen")).toBe(false);
+  });
+
+  it("each has its own page state, and one seen later plays no on-view of its own", () => {
     const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="v"></mtp-canvas>`);
     const [a, b] = copies("v");
     markSeen(a!);
@@ -122,18 +151,23 @@ describe("copies of a canvas", () => {
     expect([ready(a!), ready(b!)]).toEqual([true, true]);
   });
 
-  it("plays no on-ready in a copy while it runs from another copy", () => {
-    const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`);
-    markSeen(copy("v"));
+  it("play the canvas's on-ready once", () => {
+    const [model, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    const started: unknown[] = [];
+    const start = model.scheduler!.start.bind(model.scheduler!);
+    model.scheduler!.start = (...args: Parameters<typeof start>) => {
+      started.push(args[1]);
+      return start(...args);
+    };
+    const [a, b] = copies("v");
+    markSeen(a!);
+    markSeen(b!);
     pass(0.1);
     pass(1.5);
-    const spin = v("spin") as number;
-    expect(spin).toBeGreaterThan(0.2);
-    document.body.insertAdjacentHTML("beforeend", `<mtp-canvas model="m" name="v"></mtp-canvas>`);
-    markSeen(copies("v")[1]!);
-    expect(ready(copies("v")[1]!)).toBe(true);
-    // Its on-ready, started again, would have put spin back to 0.
-    expect(v("spin")).toBe(spin);
+    expect(v("spin")).toBeGreaterThan(0);
+    // Both copies come into view while the scene still has the values at page load, so each
+    // copy's on-view is triggered, and the canvas's on-ready plays once.
+    expect(started.length).toBe(3);
   });
 });
 
@@ -150,7 +184,7 @@ describe("a canvas with no on-view", () => {
 });
 
 describe("the page", () => {
-  it("is ready once every canvas, display and readout copy on it is", () => {
+  it("is ready once every canvas, display and readout on it is", () => {
     const [model] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="bare"></mtp-canvas><mtp-readout model="m" name="r"></mtp-readout>`);
     expect(ready(copy("bare"))).toBe(true);
     expect(ready(copy("r"))).toBe(true);

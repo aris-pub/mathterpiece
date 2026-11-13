@@ -96,14 +96,16 @@ class TestAMoveIsAnAnimation:
 
 
 class TestStepsCanBeWorkedOut:
-    # A move in a play or a stepper whose to reads the value it moves: its step could not be read
+    # A move in a play or a stepper whose to expression depends on the value its move writes: its
+    # step could not be read
     # from the scene (the author, 2026-11-13).
-    def test_a_move_whose_to_reads_its_target(self):
-        error(f"{K} (play p (move k (to (+ k 1)) (duration 1)))", "reads k, the value it moves")
-        error(f"{K} (stepper p (move k (to (* k 2)) (duration 1)))", "reads k")
+    def test_a_move_whose_to_depends_on_its_target(self):
+        src = f"{K} (play p (move k (to (+ k 1)) (duration 1)))"
+        error(src, "to expression depends on k, the value its move writes")
+        error(f"{K} (stepper p (move k (to (* k 2)) (duration 1)))", "depends on k")
 
     def test_through_a_bound_variable(self):
-        error(f"{K} (real twice (* k 2)) (play p (move k (to twice) (duration 1)))", "reads k")
+        error(f"{K} (real twice (* k 2)) (play p (move k (to twice) (duration 1)))", "depends on k")
 
     def test_a_to_reading_another_value_is_fine(self):
         assert errors(doc(f"{K} {J} (play p (move k (to (+ j 1)) (duration 1)))")) == []
@@ -112,7 +114,7 @@ class TestStepsCanBeWorkedOut:
         assert errors(doc(f"{K} (button b (move k (to (+ k 1)) (duration 1)))")) == []
 
     def test_on_view_too(self):
-        error(f"{S} (canvas v s (on-view (move k (to (+ k 1)) (duration 1))))", "reads k")
+        error(f"{S} (canvas v s (on-view (move k (to (+ k 1)) (duration 1))))", "depends on k")
 
     def test_on_ready_may_read_what_it_moves(self):
         src = f"{S} (canvas v s (on-ready (animation (loop) (move k (to (+ k 1)) (duration 1)))))"
@@ -147,3 +149,49 @@ class TestOnReady:
         loop = f"(on-ready (animation (loop) {UP} {DOWN}))"
         src = f"{S} (canvas v s {loop}) (button b (move k (to 5) (duration 1)))"
         assert errors(doc(src)) == []
+
+
+class TestCanvasesOfAControl:
+    # The author, 2026-11-13: until a canvas is ready, every input that belongs to it is disabled.
+    # A control belongs to a canvas when it writes a value some shape the canvas shows depends on.
+    SRC = (
+        f"{K} {J} (real far 1 (>= 0)) (bool on false)"
+        " (scene s (group g (circle c (r k)) (circle d (x j))) (circle e (r far)))"
+        " (canvas v g (on-view (move k (to 2) (duration 1))))"
+        " (canvas w e)"
+        " (canvas some (when on d))"
+    )
+
+    def canvases(self, src, name):
+        d = doc(src)
+        assert errors(d) == []
+        return sorted(d["objects"][d["names"][name]].get("canvases", []))
+
+    def test_a_control_writing_what_a_shown_shape_depends_on(self):
+        src = self.SRC + " (button b (move k (to 5) (duration 1)))"
+        d = doc(src)
+        assert self.canvases(src, "b") == [d["names"]["v"]]
+
+    def test_a_control_writing_a_shapes_own_attribute(self):
+        # d is in g, which v shows, and some may show d.
+        src = self.SRC + " (slider sl (move d.r (from 0) (to 3)))"
+        d = doc(src)
+        assert self.canvases(src, "sl") == sorted([d["names"]["v"], d["names"]["some"]])
+
+    def test_a_control_writing_what_decides_what_a_canvas_shows(self):
+        src = self.SRC + " (toggle tg on)"
+        d = doc(src)
+        assert self.canvases(src, "tg") == [d["names"]["some"]]
+
+    def test_a_control_writing_a_value_of_two_canvases(self):
+        src = (
+            self.SRC
+            + " (play p (animation (move j (to 1) (duration 1)) (move far (to 2) (duration 1))))"
+        )
+        d = doc(src)
+        assert self.canvases(src, "p") == sorted([d["names"][n] for n in ("v", "w", "some")])
+
+    def test_a_control_writing_nothing_shown_belongs_to_none(self):
+        src = self.SRC + " (real other 0) (button b (move other (to 5) (duration 1)))"
+        d = doc(src)
+        assert "canvases" not in d["objects"][d["names"]["b"]]

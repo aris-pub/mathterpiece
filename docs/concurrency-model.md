@@ -21,7 +21,8 @@ the case-by-case rules in reference.md, "Concurrency".
    conditions and the value's constraints), whether or not that write changes the value.
 4. **Priority.** Every writer has a priority, an int from 1 to 1000, set with `(priority n)`.
    One without it has its kind's:
-   - **Page, 300:** nothing the reader did triggered it. `on-view` and `on-ready`.
+   - **View, 1000:** `on-view` (the author, 2026-11-13): nothing the reader does cuts it short.
+   - **Page, 300:** nothing the reader did triggered it. `on-ready`.
    - **Reader, 500:** the reader triggered it. A press, a click, a key, a flip, `on-enter`,
      `on-leave`, `on-live`, `on-quiet`, and a play or stepper the reader pressed.
    - **Gesture, 700:** the reader is making it now. An `on-drag` and a slider's knob, from the
@@ -69,11 +70,11 @@ the scene's values (mtp-wjtd notes).
 | Case | Before | Under the model |
 |---|---|---|
 | Reader writer running, reader newcomer | newcomer wins | follows (same priority, triggered later) |
-| Reader writer running, page newcomer (`on-view`) | newcomer refused | rejected on the shared values, and writes them no more |
+| Reader writer running, `on-view` newcomer | newcomer refused | **changes**: the `on-view` wins, at priority 1000 (the author, 2026-11-13) |
 | Page writer running, any newcomer | newcomer wins | follows |
 | `(exclusive)` writer running, any newcomer | newcomer refused | removed: a higher `(priority n)` instead |
 | Held drag, `on-enter` onto another shape writing the dragged value | `on-enter` cancels the drag | **changes**: rejected (lower priority), its other writes accepted |
-| Held drag, `on-view` writing the dragged value | refused | follows (lower priority) |
+| Held drag, `on-view` writing the dragged value | refused | **changes**: the `on-view` wins, at priority 1000 |
 | Grab with no move, play running on the value | play runs on | follows (no write, no ownership) |
 | Held slider knob, reader newcomer writing its value | newcomer cancels the slider | **changes**: rejected (lower priority), as for a drag |
 | Slider step from the keyboard | a newcomer of its own | follows (reader, not a gesture) |
