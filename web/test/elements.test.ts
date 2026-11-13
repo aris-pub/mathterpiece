@@ -2,7 +2,7 @@
 // "Controls").
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Doc } from "../src/doc.ts";
-import { type MtpModel, define, frames } from "../src/elements.ts";
+import { type MtpModel, define, frames, markSeen } from "../src/elements.ts";
 import type { Runtime } from "../src/runtime.ts";
 import { doc } from "./helpers.ts";
 
@@ -545,11 +545,11 @@ describe("starting without the reader", () => {
     const [model, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas>`, doc("seen"));
     pass(0.5);
     expect(v("k")).toBe(0);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.3);
     expect(v("k")).toBeCloseTo(10);
     rt.write(rt.id("k"), null, 0);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.3);
     expect(v("k")).toBe(0);
   });

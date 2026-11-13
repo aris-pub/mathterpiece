@@ -6,6 +6,7 @@ import { placeTicks } from "./ticks.ts";
 import { type How, Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Listeners, heardIn, holds } from "./click.ts";
+import { Lifecycle } from "./lifecycle.ts";
 import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { latexOf, termClass, typeset } from "./math.ts";
@@ -50,19 +51,8 @@ export class MtpModel extends HTMLElement {
   dragstarts: Listeners | null = null;
   dragends: Listeners | null = null;
   error: string | null = null;
-  // The views and controls that have come into view, and what waits for one to.
-  private seen = new Set<number>();
-  private waiting = new Map<number, (() => void)[]>();
   private running = false;
   private last = 0;
-
-  // Plays an on-view the first time its view comes into view.
-  private playOnView(i: number): void {
-    const rt = this.runtime!;
-    const o = rt.objects[i]!;
-    const player = activeOf(rt, i) ? playerFor(rt, o) : null;
-    if (player) this.scheduler!.start(player, o, howOf(o, false));
-  }
 
   connectedCallback(): void {
     if (this.runtime || this.error) return;
@@ -126,34 +116,22 @@ export class MtpModel extends HTMLElement {
     this.dragstarts = new Listeners(rt, "on-dragstart");
     this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
-    this.seen.clear();
-    this.waiting.clear();
+    // Worked out before the page hears of any change: it plays the on-views and puts back the
+    // values at page load.
+    lives.set(this, new Lifecycle(rt, scheduler, (o) => playerFor(rt, o), (i) => activeOf(rt, i)));
     rt.onChange(() => this.changed());
-    rt.objects.forEach((o, i) => {
-      if (o.kind !== "on-view") return;
-      this.whenSeen(o.view!, () => this.playOnView(i));
-    });
     this.dispatchEvent(new Event(READY, { bubbles: true }));
-  }
-
-  /** Runs work the first time the view or control id comes into view, or now if it has. */
-  whenSeen(id: number, work: () => void): void {
-    if (this.seen.has(id)) work();
-    else this.waiting.set(id, [...(this.waiting.get(id) ?? []), work]);
-  }
-
-  /** Called by a view or control when it comes into view; only the first time counts. */
-  markSeen(id: number): void {
-    if (this.seen.has(id)) return;
-    this.seen.add(id);
-    for (const work of this.waiting.get(id) ?? []) work();
-    this.waiting.delete(id);
+    // The views of the page are there once it is told the model is ready, or, for those added
+    // with it, once the HTML being added is all there.
+    checkPageRest(this);
+    queueMicrotask(() => checkPageRest(this));
   }
 
   /** Tells every view and control of this model to show the current values. */
   changed(): void {
     this.scheduler?.told();
     this.dispatchEvent(new Event(CHANGE, { bubbles: true }));
+    checkPageRest(this);
   }
 
   private wake(): void {
@@ -178,6 +156,29 @@ export class MtpModel extends HTMLElement {
     this.error = message;
     this.dispatchEvent(new Event(READY, { bubbles: true }));
   }
+}
+
+// Each model's canvases' lifecycles, kept off the element: no element has methods that change it.
+const lives = new WeakMap<MtpModel, Lifecycle>();
+
+/** Puts data-mtp-rest on the model while every canvas, display and readout copy of it on the page
+ * is at rest, and fires mtp-state when that changes (docs/canvas-lifecycle.md, rule 8). */
+function checkPageRest(model: MtpModel): void {
+  if (!model.runtime || !model.id) return;
+  const views = document.querySelectorAll(`:is(mtp-canvas, mtp-display, mtp-readout)[model="${CSS.escape(model.id)}"]`);
+  const rest = [...views].every((v) => v.hasAttribute("data-mtp-rest"));
+  if (model.hasAttribute("data-mtp-rest") === rest) return;
+  model.toggleAttribute("data-mtp-rest", rest);
+  model.dispatchEvent(new Event(STATE, { bubbles: true }));
+}
+
+// What marks each view copy seen, as its watch does once it first comes into view.
+const seers = new WeakMap<Element, () => void>();
+
+/** Marks a view copy as having come into view, as the page does the first time it does: tests
+ * and recording use it where nothing scrolls. */
+export function markSeen(copy: Element): void {
+  seers.get(copy)?.();
 }
 
 /** Makes a view with a quiet mode live, or quiet again (docs/reference.md, "Quiet and live
@@ -208,6 +209,7 @@ abstract class MtpPart extends HTMLElement {
     if (!this.mine(event)) return;
     this.guard(() => this.update());
     this.moded(false);
+    this.lifecycle();
   };
 
   connectedCallback(): void {
@@ -243,17 +245,47 @@ abstract class MtpPart extends HTMLElement {
         this.folded = null;
         this.setup(model, model.runtime, model.scheduler);
         this.moded(true);
+        this.seenOnce = false;
+        this.restedOnce = false;
         this.watch(model);
+        this.lifecycle();
+        checkPageRest(model);
       }
     });
   }
 
-  // Tells the model when this element first comes into view (on-view, autoplay). On screen is not
+  // Whether this view copy has come into view, and has been at rest, yet.
+  private seenOnce = false;
+  private restedOnce = false;
+
+  // A view copy's lifecycle (docs/canvas-lifecycle.md): data-mtp-rest while the scene is in its
+  // state 0, and its on-rests the first time it is.
+  private lifecycle(): void {
+    const model = this.model();
+    const id = this.shown;
+    const life = model ? lives.get(model) : undefined;
+    if (!model || !life || id === null || !VIEWS.has(model.runtime!.objects[id]!.kind)) return;
+    const rest = life.rest(id);
+    this.pageState({ rest });
+    if (rest && !this.restedOnce) {
+      this.restedOnce = true;
+      life.rested(this, id);
+    }
+  }
+
+  // Tells the lifecycle when this view copy first comes into view (on-view). On screen is not
   // enough: a page may hide its content at opacity 0 while it loads, so the element counts as in
   // view only once no ancestor is fully transparent or hidden, checked again each frame meanwhile.
   private watch(model: MtpModel): void {
     const id = this.shown;
-    if (id === null || typeof IntersectionObserver === "undefined") return;
+    if (id === null || !VIEWS.has(model.runtime!.objects[id]!.kind)) return;
+    seers.set(this, () => {
+      if (this.seenOnce) return;
+      this.seenOnce = true;
+      this.pageState({ seen: true });
+      lives.get(model)?.seen(this, id);
+    });
+    if (typeof IntersectionObserver === "undefined") return;
     let onScreen = false;
     let checking = false;
     const check = () => {
@@ -265,7 +297,7 @@ abstract class MtpPart extends HTMLElement {
         return;
       }
       observer.disconnect();
-      model.markSeen(id);
+      markSeen(this);
     };
     const observer = new IntersectionObserver((entries) => {
       onScreen = entries.some((e) => e.isIntersecting);

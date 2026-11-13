@@ -2,7 +2,7 @@
 // 2026-11-11, mtp-vs5d, mtp-s7z9, mtp-wjtd): whatever the reader is doing now, or did last, wins.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Scheduler } from "../src/animate.ts";
-import { type MtpModel, define, frames } from "../src/elements.ts";
+import { type MtpModel, define, frames, markSeen } from "../src/elements.ts";
 import type { Runtime } from "../src/runtime.ts";
 import { doc } from "./helpers.ts";
 
@@ -58,7 +58,7 @@ describe("a writer set off by the reader, while it runs", () => {
     const [model, rt, v] = page(buttons("go") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     press("go");
     pass(0.5);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.5);
     expect(v("k")).toBe(10);
   });
@@ -78,7 +78,7 @@ describe("a writer of a higher priority, while it runs", () => {
     const [model, rt, v] = page(buttons("lock") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     press("lock");
     pass(0.5);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.5);
     expect(v("k")).toBe(10);
   });
@@ -116,20 +116,22 @@ describe("a writer the reader did not set off, while it runs", () => {
   it("is cancelled by a newcomer the reader sets off", () => {
     const [model, rt, v] = page(buttons("back") + `<mtp-canvas model="m" name="v"></mtp-canvas>`);
     rt.write(rt.id("k"), null, 2);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(0.5);
     press("back");
     pass(1.5);
     expect(v("k")).toBe(0);
   });
 
-  it("is cancelled by a newcomer the reader did not set off", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="late"></mtp-canvas>`);
-    model.markSeen(rt.id("v"));
+  // An on-view is triggered only while the scene still has the values at page load
+  // (docs/canvas-lifecycle.md, rule 2), so one on-view cannot meet another on the same values.
+  it("keeps another canvas's on-view on its values from being triggered at all", () => {
+    const [, , v] = page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-canvas model="m" name="late"></mtp-canvas>`);
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(0.5);
-    model.markSeen(rt.id("late"));
+    markSeen(document.querySelector(`[name="late"]`)!);
     pass(1.5);
-    expect(v("k")).toBe(3);
+    expect(v("k")).toBe(4);
   });
 });
 
@@ -138,7 +140,7 @@ describe("a play the reader started", () => {
     const [model, rt, v] = page(`<mtp-play model="m" name="tour"></mtp-play><mtp-canvas model="m" name="v"></mtp-canvas>`);
     playButton("tour").click();
     pass(0.5);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(2);
     expect(v("k")).toBe(10);
   });
@@ -158,7 +160,7 @@ describe("a drag", () => {
     at(svg(), "pointermove", 30, 0);
     const moved = v("d", "x");
     expect(moved).not.toBe(0);
-    model.markSeen(rt.id("w"));
+    markSeen(document.querySelector(`[name="w"]`)!);
     pass(1.5);
     expect(v("d", "x")).toBe(moved);
     at(svg(), "pointerup", 30, 0);
@@ -167,7 +169,7 @@ describe("a drag", () => {
   it("grabbed and not yet moved, writes nothing, so an on-view plays", () => {
     const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
-    model.markSeen(rt.id("w"));
+    markSeen(document.querySelector(`[name="w"]`)!);
     pass(1.5);
     expect(v("d", "x")).toBe(8);
     at(svg(), "pointerup", 0, 0);
@@ -198,12 +200,12 @@ describe("a drag", () => {
   });
 
   it("is a running writer only until the release", () => {
-    const [model, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas>`);
+    const [, rt, v] = page(`<mtp-canvas model="m" name="w"></mtp-canvas><mtp-play model="m" name="roll"></mtp-play>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
     at(svg(), "pointermove", 30, 0);
     at(svg(), "pointerup", 30, 0);
-    model.markSeen(rt.id("w"));
-    pass(1.5);
+    playButton("roll").click();
+    pass(2.5);
     expect(v("d", "x")).toBe(8);
   });
 
@@ -238,7 +240,7 @@ describe("a drag", () => {
   it("of a higher priority, rejects the writes of both an on-view and an on-enter", () => {
     const [model, rt, v] = page(`<mtp-canvas model="m" name="held"></mtp-canvas>`);
     at(shape(rt, "d"), "pointerdown", 0, 0);
-    model.markSeen(rt.id("held"));
+    markSeen(document.querySelector(`[name="held"]`)!);
     at(shape(rt, "e"), "pointermove", 30, 0);
     const moved = v("d", "x");
     expect(moved).not.toBe(0);
@@ -309,7 +311,7 @@ describe("a slider", () => {
     const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
     knob("pointerdown");
     slide(200);
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.5);
     expect(v("k")).toBe(2);
     knob("pointerup");
@@ -345,30 +347,30 @@ describe("a slider", () => {
   it("grabbed and not moved, writes nothing, so an on-view plays", () => {
     const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
     knob("pointerdown");
-    model.markSeen(rt.id("v"));
+    markSeen(document.querySelector(`[name="v"]`)!);
     pass(1.5);
     expect(v("k")).toBe(4);
     knob("pointerup");
   });
 
-  it("released, no longer refuses an on-view", () => {
-    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+  it("released, no longer refuses a newcomer", () => {
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(200);
     knob("pointerup");
-    model.markSeen(rt.id("v"));
+    press("back");
     pass(1.5);
-    expect(v("k")).toBe(4);
+    expect(v("k")).toBe(0);
   });
 
   it("is released by a pointercancel too", () => {
-    const [model, rt, v] = page(`<mtp-slider model="m" name="sl"></mtp-slider><mtp-canvas model="m" name="v"></mtp-canvas>`);
+    const [, , v] = page(`<mtp-slider model="m" name="sl"></mtp-slider>` + buttons("back"));
     knob("pointerdown");
     slide(200);
     knob("pointercancel");
-    model.markSeen(rt.id("v"));
+    press("back");
     pass(1.5);
-    expect(v("k")).toBe(4);
+    expect(v("k")).toBe(0);
   });
 
   // The author, 2026-11-13: a held knob is a gesture, so a newcomer the reader sets off is

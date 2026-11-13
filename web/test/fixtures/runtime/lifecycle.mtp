@@ -1,0 +1,17 @@
+; A canvas's lifecycle (docs/canvas-lifecycle.md): state -1 at page load, its on-view, state 0
+; and rest, and its on-rest.
+(real k 0)
+(real j 0)
+(real spin 0)
+(scene s (circle c (r 1)))
+; An on-view, then an on-rest loop that nothing else writes, which counts as rest.
+(canvas v s
+  (on-view (move k (to 4) (duration 1)))
+  (on-rest (animation (loop) (move spin (from 0) (to 1) (duration 1)))))
+; No on-view: at rest from the start, and its on-rest plays when the page loads. It is an
+; ordinary writer, so the canvas leaves rest when it changes j.
+(canvas plain s
+  (on-rest (move j (to 2) (duration 1))))
+(canvas bare s)
+(readout r $'k is {k}')
+(button go (move k (to 9) (duration 1)))
