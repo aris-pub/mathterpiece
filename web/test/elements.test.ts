@@ -950,6 +950,10 @@ describe("quiet mode", () => {
   const control = (name: string) => document.querySelector(`:not(mtp-canvas, mtp-readout)[name="${name}"]`) as HTMLElement;
   const toggler = (name: string) => view(name).querySelector(".mtp-switch") as HTMLButtonElement | null;
   const folded = (name: string) => control(name).hasAttribute("data-mtp-folded");
+  // The switch icon is Tabler's hand-finger while quiet and Tabler's x while live (mtp-fq1c). The
+  // hand is checked by its first path, the raised finger.
+  const paths = (el: Element) => [...el.querySelectorAll("svg path")].map((p) => p.getAttribute("d"));
+  const HAND_FINGER = "M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5";
   const shape = (rt: Runtime, canvas: string, name: string) =>
     document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`)!;
   const at = (el: Element, type: string, x = 0, y = 0) =>
@@ -960,6 +964,7 @@ describe("quiet mode", () => {
     expect(view("left").dataset.mtpMode).toBe("quiet");
     expect(toggler("left")!.getAttribute("aria-label")).toBe("Interactive figure: open it");
     expect(toggler("left")!.type).toBe("button");
+    expect(paths(toggler("left")!)[0]).toBe(HAND_FINGER);
     expect(view("right").hasAttribute("data-mtp-mode")).toBe(false);
     expect(toggler("right")).toBeNull();
   });
@@ -975,6 +980,7 @@ describe("quiet mode", () => {
     toggler("left")!.click();
     expect(view("left").dataset.mtpMode).toBe("live");
     expect(toggler("left")!.getAttribute("aria-label")).toBe("Back to the plain figure");
+    expect(paths(toggler("left")!)).toEqual(["M18 6l-12 12", "M6 6l12 12"]);
     expect([folded("sl"), folded("p"), folded("t")]).toEqual([false, false, true]);
     pass(1.2);
     expect(v("k")).toBe(10);
