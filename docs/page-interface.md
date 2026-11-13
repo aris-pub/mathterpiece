@@ -19,8 +19,8 @@ Status: approved by the author, 2026-11-13. Not built yet.
 
 | Element | Attributes (each `data-mtp-…`) | Inputs (`data-mtp-input=…`) |
 |---|---|---|
-| `mtp-model` (the page) | `rest` | none |
-| canvas, display, readout | `rest`, `seen`, `mode` (`quiet` or `live`) | `switch` (the hand) |
+| `mtp-model` (the page) | `ready` | none |
+| canvas, display, readout | `ready`, `seen`, `mode` (`quiet` or `live`) | `switch` (the hand) |
 | button | `inactive` | `button` |
 | toggle | `inactive` | `box` |
 | slider | `inactive`, `held` | `track` |
@@ -32,5 +32,6 @@ mode, and `exploring` is present then.
 
 ## Events
 
-`mtp-state` on each element replaces `mtp-mode` and `mtp-rest`. `mtp-ready` and `mtp-change`
-on `<mtp-model>` stay: they are about the model and the scene, not page state.
+`mtp-state` on each element replaces `mtp-mode` and `mtp-rest`. On `<mtp-model>`, `mtp-change`
+stays, and the old `mtp-ready` (the model has loaded) is renamed `mtp-loaded`: both are about
+the model and the scene, not page state.
