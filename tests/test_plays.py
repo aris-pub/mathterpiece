@@ -1,4 +1,4 @@
-"""Plays and steppers whose step is read from the scene, a canvas's on-rest, and a move written
+"""Plays and steppers whose step is read from the scene, a canvas's on-ready, and a move written
 where an animation is (mtp-wjtd; docs/reference.md "Controls", docs/canvas-lifecycle.md)."""
 
 from helpers import doc, error, model
@@ -111,26 +111,29 @@ class TestStepsCanBeWorkedOut:
     def test_a_button_may_read_what_it_moves(self):
         assert errors(doc(f"{K} (button b (move k (to (+ k 1)) (duration 1)))")) == []
 
-    def test_on_view_and_on_rest_too(self):
+    def test_on_view_too(self):
         error(f"{S} (canvas v s (on-view (move k (to (+ k 1)) (duration 1))))", "reads k")
-        error(f"{S} (canvas v s (on-rest (move k (to (+ k 1)) (duration 1))))", "reads k")
+
+    def test_on_ready_may_read_what_it_moves(self):
+        src = f"{S} (canvas v s (on-ready (animation (loop) (move k (to (+ k 1)) (duration 1)))))"
+        assert errors(doc(src)) == []
 
 
-class TestOnRest:
-    def test_on_rest_in_a_canvas(self):
-        m = model(f"{S} (canvas v s (on-rest (animation {UP})))")
-        (o,) = [o for o in m.objects if o.kind == "on-rest"]
+class TestOnReady:
+    def test_on_ready_in_a_canvas(self):
+        m = model(f"{S} (canvas v s (on-ready (animation {UP})))")
+        (o,) = [o for o in m.objects if o.kind == "on-ready"]
         assert o.data["view"] == m.id("v")
         assert o.name is None and o.access == "page"
 
-    def test_the_compiled_on_rest(self):
-        d = doc(f"{S} (canvas v s (on-rest (animation (loop) {UP} {DOWN})))")
-        (o,) = [o for o in d["objects"] if o["kind"] == "on-rest"]
+    def test_the_compiled_on_ready(self):
+        d = doc(f"{S} (canvas v s (on-ready (animation (loop) {UP} {DOWN})))")
+        (o,) = [o for o in d["objects"] if o["kind"] == "on-ready"]
         assert o["view"] == d["names"]["v"]
         assert errors(d) == []
 
-    def test_on_rest_is_inside_a_canvas(self):
-        error(f"{K} (readout r 'x' (on-rest {UP}))", "so it is written inside a canvas")
+    def test_on_ready_is_inside_a_canvas(self):
+        error(f"{K} (readout r 'x' (on-ready {UP}))", "so it is written inside a canvas")
 
     def test_an_on_view_may_not_loop(self):
         error(f"{S} (canvas v s (on-view (animation (loop) {UP} {DOWN})))", "on-view may not loop")
@@ -138,19 +141,9 @@ class TestOnRest:
     def test_an_on_view_may_loop_a_count_of_times(self):
         assert errors(doc(f"{S} (canvas v s (on-view (animation (loop 2) {UP} {DOWN})))")) == []
 
-    def test_a_loop_another_writer_writes_is_an_error(self):
-        loop = f"(on-rest (animation (loop) {UP} {DOWN}))"
-        error(f"{S} (canvas v s {loop}) (button b (move k (to 5) (duration 1)))", "writes k")
-
-    def test_a_loop_reading_what_another_writer_writes_is_an_error(self):
-        loop = "(on-rest (animation (loop) (move k (to (+ j 1)) (duration 1)) " + DOWN + "))"
-        error(f"{S} (canvas v s {loop}) (button b (move j (to 5) (duration 1)))", "writes j")
-
-    def test_its_own_on_view_does_not_count(self):
-        src = f"{S} (canvas v s (on-view {UP}) (on-rest (animation (loop) {UP} {DOWN})))"
-        assert errors(doc(src)) == []
-
-    def test_a_loop_that_ends_is_an_ordinary_writer(self):
-        loop = f"(on-rest (animation (loop 2) {UP} {DOWN}))"
+    # The author, 2026-11-13: on-ready may play any animation, loop or not, whatever other
+    # writers write.
+    def test_a_loop_another_writer_writes_is_fine(self):
+        loop = f"(on-ready (animation (loop) {UP} {DOWN}))"
         src = f"{S} (canvas v s {loop}) (button b (move k (to 5) (duration 1)))"
         assert errors(doc(src)) == []

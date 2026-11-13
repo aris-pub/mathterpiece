@@ -40,7 +40,8 @@ describe("recording mode", () => {
     expect(canvas.bottom).toBeLessThanOrEqual(frame.bottom);
     const rt = model.runtime!;
     await userEvent.keyboard("{ArrowRight}{ArrowRight}");
-    expect(rt.value(rt.id("k"), null)).toBeCloseTo(2, 1);
+    // Step 2 plays from state 1, k at 2, in real time.
+    expect(rt.value(rt.id("k"), null)).toBeGreaterThanOrEqual(2);
     expect(stage.querySelector("mtp-play .mtp-count")!.textContent).toBe("2 / 2");
     await userEvent.keyboard(" ");
     expect(rt.value(rt.id("one"), "playing")).toBe(false);

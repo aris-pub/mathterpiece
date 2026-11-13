@@ -8,7 +8,7 @@
 // moves it forward on each frame.
 import type { Player } from "./player.ts";
 
-// The priorities writers have when they give none: the page's (on-view, on-rest), the reader's,
+// The priorities writers have when they give none: the page's (on-view, on-ready), the reader's,
 // and a gesture's (on-drag, a held slider's knob, on-pointermove).
 export const PAGE = 300;
 export const READER = 500;
@@ -99,7 +99,7 @@ export class Scheduler {
     return this.sources.find((s) => s.source === source && s.paused)?.player ?? null;
   }
 
-  /** Whether any writer runs, as an on-view or an on-rest does, from the given source. */
+  /** Whether any writer runs, as an on-view or an on-ready does, from the given source. */
   runs(source: object): boolean {
     return this.sources.some((s) => s.source === source && !s.paused);
   }

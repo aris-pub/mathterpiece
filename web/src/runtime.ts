@@ -544,22 +544,6 @@ export class Runtime {
     return v === undefined ? s.value : v;
   }
 
-  /** The free variables and attributes and their values now, by key. */
-  freeValues(): Map<string, unknown> {
-    const out = new Map<string, unknown>();
-    for (const [k, s] of this.byKey) if (s.state === FREE) out.set(k, s.value);
-    return out;
-  }
-
-  /** Writes back free variables and attributes, by key, as they were: each that differs. */
-  putFree(values: Map<string, unknown>): void {
-    this.together(() => {
-      const changed = new Set<string>();
-      for (const [k, v] of values) if (!equal(this.byKey.get(k)?.value, v)) this.writeKey(k, v, changed);
-      for (const k of changed) this.pending!.add(k);
-    });
-  }
-
   /** The value of a free variable or attribute, by key. */
   freeValue(k: string): unknown {
     return this.byKey.get(k)?.value;

@@ -17,7 +17,8 @@ import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoo
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { FORMAT_VERSION };
-const READY = "mtp-ready";
+// The model has loaded (docs/page-interface.md, "Events").
+const LOADED = "mtp-loaded";
 const CHANGE = "mtp-change";
 // An element's page state changed (docs/page-interface.md).
 const STATE = "mtp-state";
@@ -116,22 +117,21 @@ export class MtpModel extends HTMLElement {
     this.dragstarts = new Listeners(rt, "on-dragstart");
     this.dragends = new Listeners(rt, "on-dragend");
     this.error = null;
-    // Worked out before the page hears of any change: it plays the on-views and puts back the
-    // values at page load.
+    // Made before the page hears of any change, so it reads the values at page load.
     lives.set(this, new Lifecycle(rt, scheduler, (o) => playerFor(rt, o), (i) => activeOf(rt, i)));
     rt.onChange(() => this.changed());
-    this.dispatchEvent(new Event(READY, { bubbles: true }));
+    this.dispatchEvent(new Event(LOADED, { bubbles: true }));
     // The views of the page are there once it is told the model is ready, or, for those added
     // with it, once the HTML being added is all there.
-    checkPageRest(this);
-    queueMicrotask(() => checkPageRest(this));
+    checkPageReady(this);
+    queueMicrotask(() => checkPageReady(this));
   }
 
   /** Tells every view and control of this model to show the current values. */
   changed(): void {
     this.scheduler?.told();
     this.dispatchEvent(new Event(CHANGE, { bubbles: true }));
-    checkPageRest(this);
+    checkPageReady(this);
   }
 
   private wake(): void {
@@ -154,21 +154,21 @@ export class MtpModel extends HTMLElement {
     this.runtime = null;
     this.scheduler = null;
     this.error = message;
-    this.dispatchEvent(new Event(READY, { bubbles: true }));
+    this.dispatchEvent(new Event(LOADED, { bubbles: true }));
   }
 }
 
 // Each model's canvases' lifecycles, kept off the element: no element has methods that change it.
 const lives = new WeakMap<MtpModel, Lifecycle>();
 
-/** Puts data-mtp-rest on the model while every canvas, display and readout copy of it on the page
- * is at rest, and fires mtp-state when that changes (docs/canvas-lifecycle.md, rule 8). */
-function checkPageRest(model: MtpModel): void {
+/** Puts data-mtp-ready on the model once every canvas, display and readout copy of it on the page
+ * is ready, and fires mtp-state when that changes (docs/canvas-lifecycle.md, rule 8). */
+function checkPageReady(model: MtpModel): void {
   if (!model.runtime || !model.id) return;
   const views = document.querySelectorAll(`:is(mtp-canvas, mtp-display, mtp-readout)[model="${CSS.escape(model.id)}"]`);
-  const rest = [...views].every((v) => v.hasAttribute("data-mtp-rest"));
-  if (model.hasAttribute("data-mtp-rest") === rest) return;
-  model.toggleAttribute("data-mtp-rest", rest);
+  const ready = [...views].every((v) => v.hasAttribute("data-mtp-ready"));
+  if (model.hasAttribute("data-mtp-ready") === ready) return;
+  model.toggleAttribute("data-mtp-ready", ready);
   model.dispatchEvent(new Event(STATE, { bubbles: true }));
 }
 
@@ -213,7 +213,7 @@ abstract class MtpPart extends HTMLElement {
   };
 
   connectedCallback(): void {
-    document.addEventListener(READY, this.onReady);
+    document.addEventListener(LOADED, this.onReady);
     document.addEventListener(CHANGE, this.onChange);
     this.addEventListener("keydown", this.onKey);
     const model = this.model();
@@ -221,7 +221,7 @@ abstract class MtpPart extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    document.removeEventListener(READY, this.onReady);
+    document.removeEventListener(LOADED, this.onReady);
     document.removeEventListener(CHANGE, this.onChange);
     this.removeEventListener("keydown", this.onKey);
   }
@@ -246,31 +246,29 @@ abstract class MtpPart extends HTMLElement {
         this.setup(model, model.runtime, model.scheduler);
         this.moded(true);
         this.seenOnce = false;
-        this.restedOnce = false;
+        this.readyOnce = false;
         this.watch(model);
         this.lifecycle();
-        checkPageRest(model);
+        checkPageReady(model);
       }
     });
   }
 
-  // Whether this view copy has come into view, and has been at rest, yet.
+  // Whether this view copy has come into view, and has been ready, yet.
   private seenOnce = false;
-  private restedOnce = false;
+  private readyOnce = false;
 
-  // A view copy's lifecycle (docs/canvas-lifecycle.md): data-mtp-rest while the scene is in its
-  // state 0, and its on-rests the first time it is.
+  // A view copy's lifecycle (docs/canvas-lifecycle.md): the moment it is ready it has
+  // data-mtp-ready, from then on, and its on-readies play.
   private lifecycle(): void {
     const model = this.model();
     const id = this.shown;
     const life = model ? lives.get(model) : undefined;
-    if (!model || !life || id === null || !VIEWS.has(model.runtime!.objects[id]!.kind)) return;
-    const rest = life.rest(id);
-    this.pageState({ rest });
-    if (rest && !this.restedOnce) {
-      this.restedOnce = true;
-      life.rested(this, id);
-    }
+    if (!model || !life || id === null || this.readyOnce || !VIEWS.has(model.runtime!.objects[id]!.kind)) return;
+    if (!life.free(id, this.seenOnce)) return;
+    this.readyOnce = true;
+    this.pageState({ ready: true });
+    life.ready(this, id);
   }
 
   // Tells the lifecycle when this view copy first comes into view (on-view). On screen is not
@@ -284,6 +282,8 @@ abstract class MtpPart extends HTMLElement {
       this.seenOnce = true;
       this.pageState({ seen: true });
       lives.get(model)?.seen(this, id);
+      this.lifecycle();
+      checkPageReady(model);
     });
     if (typeof IntersectionObserver === "undefined") return;
     let onScreen = false;

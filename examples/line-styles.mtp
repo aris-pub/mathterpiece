@@ -62,7 +62,7 @@
 (canvas view (x -8) (y -4.8) (width 16) (height 9) (pan false) (zoom false)
   doc@'The ends, the corners, the dashes and the marching ring.'
   ends-panel corners-panel pattern march-panel captions
-  (on-rest doc@'Marches the dashes round the circle.'
+  (on-ready doc@'Marches the dashes round the circle.'
       (animation (loop) (move ring.dash-offset (from 0) (to -30) (duration 1.5) (ease linear)))))
 
 (button butt (animation (move ends (to 'butt') (duration 0))) (label 'butt')

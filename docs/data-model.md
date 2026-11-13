@@ -116,7 +116,7 @@ flowchart LR
     end
     subgraph page
       views["views: (canvas …) (readout …) (display …)"]
-      listeners["listeners: (on-drag …) (on-click …) (on-release …) (on-dragstart …) (on-dragend …) (on-view …) (on-rest …) (on-live …) (on-quiet …) (on-enter …) (on-leave …) (on-pointermove …)"]
+      listeners["listeners: (on-drag …) (on-click …) (on-release …) (on-dragstart …) (on-dragend …) (on-view …) (on-ready …) (on-live …) (on-quiet …) (on-enter …) (on-leave …) (on-pointermove …)"]
       controls["controls: (slider …) (button …) (play …) (stepper …) (toggle …)"]
     end
   end
@@ -129,7 +129,7 @@ flowchart LR
   controls -->|runs| anims
   listeners -->|attached to| shapes
   listeners -->|written inside one, and belong to it| views
-  listeners -->|on-view, on-rest, on-live, on-quiet, on-pointermove: attached to| views
+  listeners -->|on-view, on-ready, on-live, on-quiet, on-pointermove: attached to| views
   views -->|shows| sc
   views -->|display shows| fm
   listeners -->|on-click, on-enter, on-leave: attached to| terms
@@ -208,7 +208,7 @@ The author connects a world model to a web page with HTML elements.
 - **`<mtp-model>`** loads one compiled model, once, and gives the live model an id. Its `src` says where the compiled model is, in one of two ways:
   - **a file**, `src="dial.mtpc"`, which the page fetches, so the page must be served by a web server;
   - **a block in the page**, `src="#dial-data"`, naming a `<script type="application/json" id="dial-data">` that holds the compiled model and may stand anywhere in the page, before or after the model. Inside it, every `</` is written `<\/`, so that nothing in the compiled model can end the script early. The page `mtp build` writes does this.
-- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-display>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-stepper>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. A listener that names the views it belongs to, with `(in view…)`, attaches only to those (reference, "Listeners and controls in views"). `on-view` and `on-rest` are the exception: they name the canvas whose coming into view, or to rest, they wait for. So are `on-live` and `on-quiet`, which name the view whose going live or back to quiet they wait for. So is an `on-pointermove` that names a canvas, which listens to the pointer anywhere over that canvas.
+- **Each component is an element** placed anywhere on the page, naming its model and the view or control it presents: `<mtp-canvas>`, `<mtp-readout>`, `<mtp-display>`, `<mtp-slider>`, `<mtp-button>`, `<mtp-play>`, `<mtp-stepper>`, `<mtp-toggle>`. Listeners have no element of their own: a listener attaches to each element that draws its shape. Such an element is usually in a canvas, and when more than one canvas draws the shape, the listener attaches to all of them, so the reader can act on the shape in any of them. A listener that names the views it belongs to, with `(in view…)`, attaches only to those (reference, "Listeners and controls in views"). `on-view` and `on-ready` are the exception: they name the canvas whose coming into view, or to rest, they wait for. So are `on-live` and `on-quiet`, which name the view whose going live or back to quiet they wait for. So is an `on-pointermove` that names a canvas, which listens to the pointer anywhere over that canvas.
 - **One live model feeds any number of components,** which share its state: the slider in one paragraph, the readout inside a sentence and the canvas below all change together. Any view or control may be placed more than once: each copy has its own page state (see "Page state and inputs", below), and only the scene is shared.
 - **A page may load several world models.** Each has its own state; components of one never affect another.
 - **The page styles components with its own CSS.** Tokens, the color and font variables, appear as CSS custom properties that the page may override: a color variable `ink` as `--mtp-ink`, and a font variable `note` through its parts, `--mtp-note-family`, `--mtp-note-style` and `--mtp-note-weight`. A token imported from another file is named by that file: `ink` from `house.mtp` is `--mtp-house-ink`, however it is imported. Each shape is drawn with the page's value, or with the token's declared value where the page gives none. Colors computed from tokens are passed to the browser as CSS color mixes, so they follow the page's values too. A color with a dark value, `(light-dark light dark)`, is passed as CSS's `light-dark()`, so the browser draws it by the page's `color-scheme`. An expression that reads a token's channels (`ink.r`) or compares it sees its declared value, and the channels of a light-dark color are its light value's.
@@ -243,11 +243,11 @@ The elements also give the page these names, for its scripts and its CSS:
 
 | Name | What it is |
 |---|---|
-| `mtp-ready` | an event an `<mtp-model>` sends, and which bubbles, when its .mtpc has loaded or failed to load |
+| `mtp-loaded` | an event an `<mtp-model>` sends, and which bubbles, when its .mtpc has loaded or failed to load. It was called `mtp-ready` before |
 | `mtp-change` | an event an `<mtp-model>` sends, and which bubbles, whenever a value in its live model changes |
 | `mtp-state` | an event that `<mtp-model>` and every view and control sends, and which bubbles, once for each change of its page state (see "Page state and inputs", below). It replaces the old `mtp-mode` and `mtp-rest` events |
 | `mtp-error` | the class of the `<pre>` that takes the place of a component that cannot be shown, holding the error: the model did not load, or it has no view or control of that name |
-| `data-mtp-rest`, `data-mtp-step` and the like | the attributes that show each element's page state (see "Page state and inputs", below). A page shows what goes with a step with it, as `.fig:has(mtp-play[data-mtp-step="2"]) .q2` |
+| `data-mtp-ready`, `data-mtp-step` and the like | the attributes that show each element's page state (see "Page state and inputs", below). A page shows what goes with a step with it, as `.fig:has(mtp-play[data-mtp-step="2"]) .q2` |
 | `data-mtp-input` | the name of each input of an element (see "Page state and inputs", below) |
 | `mtp-play-button`, `mtp-bars`, `mtp-bar`, `mtp-knob`, `mtp-exploring`, `mtp-count` | the classes of a play's button, of the row of bars the reader drags along, of each step's bar inside it (its CSS variable `--u`, from 0 to 1, is how far that step has played), of the knob, of the pill reading "Exploring", and of the step count |
 | `mtp-step-button`, `mtp-back`, `mtp-next`, `mtp-dots`, `mtp-dot`, `mtp-passed`, `mtp-count` | the classes of a stepper's round buttons, of its "‹" and its "›", of the row of dots, of each dot, of the dot of a step passed, and of the step count. The current step's dot has `aria-current="step"` |
@@ -262,15 +262,15 @@ The author, 2026-11-13 (docs/page-interface.md).
 
 | Element | Attributes (each `data-mtp-…`) | Inputs (`data-mtp-input=…`) |
 |---|---|---|
-| `mtp-model` (the page) | `rest` | none |
-| canvas, display, readout | `rest`, `seen`, `mode` (`quiet` or `live`) | `switch` (the hand) |
+| `mtp-model` (the page) | `ready` | none |
+| canvas, display, readout | `ready`, `seen`, `mode` (`quiet` or `live`) | `switch` (the hand) |
 | button | `inactive` | `button` |
 | toggle | `inactive` | `box` |
 | slider | `inactive`, `held` | `track` |
 | play | `inactive`, `step`, `playing`, `exploring` | `button`, `bar-1` to `bar-N` |
 | stepper | `inactive`, `step`, `playing`, `exploring` | `back`, `next`, `dot-1` to `dot-N` |
 
-- **`rest`** is on a view copy while it is at rest, and on `<mtp-model>` while every canvas, display and readout copy of the model on the page is at rest (reference, "On-view and on-rest"). A page that captures still images captures each copy when it first has `rest`.
+- **`ready`** is on a view copy from the moment it is ready, and on `<mtp-model>` once every canvas, display and readout copy of the model on the page is ready (reference, "On-view and on-ready"). A page that captures still images captures each copy when it first has `ready`.
 - **`seen`** is on a view copy once it has come into view.
 - **`mode`** and the input `switch` are only on a view with a quiet mode (reference, "Quiet and live views").
 - **`inactive`** is on a control while its `(active bool)` does not hold.

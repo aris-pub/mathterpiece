@@ -21,7 +21,7 @@ the case-by-case rules in reference.md, "Concurrency".
    conditions and the value's constraints), whether or not that write changes the value.
 4. **Priority.** Every writer has a priority, an int from 1 to 1000, set with `(priority n)`.
    One without it has its kind's:
-   - **Page, 300:** nothing the reader did triggered it. `on-view` and `on-rest`.
+   - **Page, 300:** nothing the reader did triggered it. `on-view` and `on-ready`.
    - **Reader, 500:** the reader triggered it. A press, a click, a key, a flip, `on-enter`,
      `on-leave`, `on-live`, `on-quiet`, and a play or stepper the reader pressed.
    - **Gesture, 700:** the reader is making it now. An `on-drag` and a slider's knob, from the
@@ -88,7 +88,7 @@ the scene's values (mtp-wjtd notes).
 | Inactive writer `(active false)` | cannot be triggered, what runs goes on | follows (not triggered, nothing else changes) |
 | Canvas showing or hiding a shape | writes nothing | follows (not a writer) |
 | A write that changes nothing | skipped | still skipped, but it takes ownership (part 3) |
-| Background loop counted as rest | no other writer may write its values | follows (no other writer, no conflict) |
+| An `on-ready` loop | no other writer may write its values | follows: an ordinary writer of priority 300 (the author, 2026-11-13) |
 | On-view sped up by a press | built | removed (author, 2026-11-12) |
 
 Not about writers meeting, so outside the model: two moves of one animation at the same time

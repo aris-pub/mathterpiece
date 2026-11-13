@@ -94,7 +94,7 @@ export interface Obj {
   term?: string;
   formula?: number;
   as?: "inline" | "block";
-  // on-view, on-rest, on-live, on-quiet: the view it listens to.
+  // on-view, on-ready, on-live, on-quiet: the view it listens to.
   view?: number;
   // A control whose label is LaTeX, given as (label (tex …)).
   "label-tex"?: boolean;

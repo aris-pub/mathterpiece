@@ -1571,7 +1571,7 @@
                 "on-drag",
                 "on-click",
                 "on-view",
-                "on-rest",
+                "on-ready",
                 "on-live",
                 "on-quiet",
                 "on-release",
@@ -2973,7 +2973,7 @@
             "type": "object",
             "properties": {
               "kind": {
-                "const": "on-rest"
+                "const": "on-ready"
               }
             },
             "required": [
@@ -2994,7 +2994,7 @@
             ],
             "properties": {
               "kind": {
-                "const": "on-rest"
+                "const": "on-ready"
               },
               "type": {
                 "$ref": "#/$defs/type"
@@ -3652,7 +3652,7 @@
                 "on-drag",
                 "on-click",
                 "on-view",
-                "on-rest",
+                "on-ready",
                 "on-live",
                 "on-quiet",
                 "on-release",

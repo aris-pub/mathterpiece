@@ -329,7 +329,7 @@ class Writer:
                 d["map"] = self.attribute(o.data["map"])
             d["conditions"] = self.conditions(o)
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None
-        elif kind in ("on-view", "on-rest", "on-live", "on-quiet"):
+        elif kind in ("on-view", "on-ready", "on-live", "on-quiet"):
             d["view"] = o.data["view"]
             d["animation"] = o.data["animation"]
             d["active"] = self.attribute(o.data["active"]) if o.data["active"] is not None else None

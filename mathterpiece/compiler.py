@@ -144,7 +144,7 @@ COMPONENTS = {
     "on-drag",
     "on-click",
     "on-view",
-    "on-rest",
+    "on-ready",
     "on-live",
     "on-quiet",
     "on-release",
@@ -154,9 +154,9 @@ COMPONENTS = {
     "on-leave",
     "on-pointermove",
 }
-# The listeners that name the view they listen to: its first coming into view, its first coming
-# to rest (docs/canvas-lifecycle.md), and its going live and back to quiet (mtp-16z).
-ON_VIEW = ("on-view", "on-rest", "on-live", "on-quiet")
+# The listeners that name the view they listen to: its first coming into view, its being ready
+# (docs/canvas-lifecycle.md), and its going live and back to quiet (mtp-16z).
+ON_VIEW = ("on-view", "on-ready", "on-live", "on-quiet")
 # Listeners on a shape: their positional argument is the shape they listen to.
 ON_SHAPE = (
     *("on-drag", "on-click", "on-release", "on-dragstart", "on-dragend"),
@@ -164,8 +164,6 @@ ON_SHAPE = (
 )
 # Every listener is written inside the body of the view it acts in (mtp-6k7f).
 LISTENERS = (*ON_SHAPE, *ON_VIEW, "on-pointermove")
-# The writers: the controls and the listeners (docs/concurrency-model.md).
-WRITERS = {"slider", "button", "play", "stepper", "toggle", *LISTENERS}
 # Whether a listener on its own view (on-view, on-live, on-quiet, and on-pointermove on a canvas)
 # names that view inside its body, (on-view v (animation …)), or leaves the name out,
 # (on-view (animation …)). Not decided by the author yet (mtp-6k7f); own_view_items and
@@ -570,8 +568,8 @@ class _Compiler:
         """Compile errors wherever a play's or a stepper's states, or a canvas's state 0, cannot
         be worked out (the author, 2026-11-13; docs/canvas-lifecycle.md, rule 6)."""
         objects = self.model.objects
-        for i, o in enumerate(objects):
-            if o.kind not in ("play", "stepper", "on-view", "on-rest"):
+        for o in objects:
+            if o.kind not in ("play", "stepper", "on-view"):
                 continue
             animation = o.data.get("animation")
             if animation is None:
@@ -594,57 +592,12 @@ class _Compiler:
                         f" moves, so {what}",
                         tr.pos,
                     )
-            forever = _duration(steps) == float("inf")
-            if o.kind == "on-view" and forever:
+            if o.kind == "on-view" and _duration(steps) == float("inf"):
                 raise CompileError(
-                    "an on-view may not loop: its canvas comes to rest when it ends. Play the loop"
-                    " from (on-rest …)",
+                    "an on-view may not loop: its canvas is ready when it ends. Play the loop from"
+                    " (on-ready …)",
                     o.pos,
                 )
-            if o.kind == "on-rest" and forever:
-                self.check_unchanged(i, steps)
-
-    def check_unchanged(self, i: int, steps: tuple) -> None:
-        """An on-rest loop counts as rest only when nothing can change it: no writer that can run
-        while it runs writes a value it moves or a value its ends and eases read. The canvas's own
-        on-view has ended by then (docs/canvas-lifecycle.md, rule 5)."""
-        objects = self.model.objects
-        view = objects[i].data["view"]
-        moved: set = set()
-        reads: set = set()
-        for move in _moves(steps):
-            moved |= self.values_of(move[1])
-            tr = objects[move[2]]
-            for part in ("from", "to", "ease", "path"):
-                attribute = tr.attrs.get(part)
-                if attribute is not None and attribute.bound:
-                    reads |= self.closure(attribute.deps)
-        for j, w in enumerate(objects):
-            if j == i or w.kind not in WRITERS or (w.kind == "on-view" and w.data["view"] == view):
-                continue
-            writes: set = set()
-            for target in self.writes_of(j):
-                writes |= self.values_of(target)
-            for found, did in ((writes & moved, "moves"), (writes & reads, "reads")):
-                if found:
-                    name = self.value_name(min(found, key=str))
-                    by = f"{w.kind} {w.name}" if w.name else _a(w.kind)
-                    raise CompileError(
-                        f"{by} writes {name}, which this on-rest loop {did}, so the loop could"
-                        " change and its canvas's rest cannot be worked out",
-                        objects[i].pos,
-                    )
-
-    def writes_of(self, i: int) -> set:
-        """The variables and attributes a writer writes."""
-        o = self.model.objects[i]
-        out = set(self.written(o.data.get("animation")))
-        if o.data.get("target") is not None:
-            out.add(tuple(o.data["target"]))
-        for attr in ("step", "playing", "position"):
-            if o.kind in ("play", "stepper", "slider") and attr in o.attrs:
-                out.add((i, attr))
-        return out
 
     def values_of(self, target: tuple) -> set:
         """The variables and attributes a write of target writes or stands for: a shape's pos
@@ -3323,10 +3276,10 @@ class _Compiler:
         """A listener's items after what it listens to, and what that is: a shape or a term,
         the view, or for on-pointermove (shape, None) or (None, canvas)."""
         v = self.model.objects[view]
-        if kind in ("on-view", "on-rest") and v.kind != "canvas":
-            when = "into view" if kind == "on-view" else "to rest"
+        if kind in ("on-view", "on-ready") and v.kind != "canvas":
+            when = "first comes into view" if kind == "on-view" else "is ready"
             raise CompileError(
-                f"{kind} plays when a canvas first comes {when}, so it is written inside a"
+                f"{kind} plays when a canvas {when}, so it is written inside a"
                 f" canvas, not {_a(v.kind)}",
                 form.pos,
             )
@@ -3586,8 +3539,8 @@ class _Compiler:
         gone = next((it for it in items if _head(it) == "autoplay"), None)
         if gone is not None:
             raise CompileError(
-                "(autoplay) is gone: a canvas's (on-rest (animation …)) plays when the canvas"
-                " first comes to rest",
+                "(autoplay) is gone: a canvas's (on-ready (animation …)) plays when the canvas"
+                " is ready",
                 gone.pos,
             )
         labels = next((it for it in items if _head(it) == "labels"), None)
@@ -3935,7 +3888,7 @@ class _Compiler:
         self.active(obj, items)
         self.writer(obj, items, written)
 
-    build_on_rest = build_on_view
+    build_on_ready = build_on_view
     build_on_live = build_on_view
     build_on_quiet = build_on_view
 
