@@ -167,6 +167,15 @@ class TestExpressions:
             "(circle c (r 1) (fill (if (> c.r 0) 'red' 'blue')))",
             "(circle c (pos [1 0]) (r c.pos[0]))",
             "(line c (from [0 0]) (to [1 c.x]))",
+            # Attributes that the compiler builds before the one that reads them (mtp-gvrf.9).
+            "(circle c (opacity 0.5) (r c.opacity))",
+            "(circle c (r c.opacity) (opacity 0.5))",
+            "(circle c (fill 'red') (stroke c.fill))",
+            "(rect c (width 1) (height c.width))",
+            "(rect c (height 1) (width c.height))",
+            "(line c (from [0 0]) (to c.from))",
+            "(text c 'hi' (x 1) (y c.x))",
+            "(text c c.name)",
         ],
     )
     def test_a_shape_reading_itself(self, shape):
@@ -175,6 +184,18 @@ class TestExpressions:
             re.escape(
                 "c cannot read its own attributes in its own declaration: give the value a name"
                 " with (let ((name value)) …) around c, and read that name instead"
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        "shape", ["(bar b (p b.x))", "(bar b (p 1) (x b.p))", "(bar b (p 1) (x b.height))"]
+    )
+    def test_a_variant_instance_reading_itself(self, shape):
+        error(
+            f"(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p)))) (scene s {shape})",
+            re.escape(
+                "b cannot read its own attributes in its own declaration: give the value a name"
+                " with (let ((name value)) …) around b, and read that name instead"
             ),
         )
 

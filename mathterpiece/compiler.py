@@ -6171,7 +6171,12 @@ class _Compiler:
             return Expr("part", RECURSING, (e, index))
         if isinstance(part, str):
             if e.op == "obj":
-                return self.obj_attr(e.args[0], part, pos)
+                # Whether an attribute is built yet depends on the compiler's order, not the
+                # author's, so every self-read is an error (mtp-gvrf.9). Groups are mtp-gvrf.6.
+                i = e.args[0]
+                if i in self.declaring and self.model.objects[i].kind != "group":
+                    raise self.self_read(i, pos)
+                return self.obj_attr(i, part, pos)
             if isinstance(_core(e.type), (ShapeT, Interface)) and e.op != "member":
                 held = self.objects_in(e)
                 if held is None:
