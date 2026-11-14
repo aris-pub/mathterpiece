@@ -4,6 +4,8 @@ The specification defines the mtp language: its syntax, what a world model means
 figure behaves. It is written for the people and agents who build mtp or implement it again. Every
 rule is stated once, here, and everything else links to it.
 
+The first drafts left questions open: {doc}`open-questions` groups them by principle.
+
 ```{toctree}
 :numbered:
 :maxdepth: 2
@@ -34,4 +36,5 @@ stdlib
 :hidden:
 
 glossary
+open-questions
 ```
