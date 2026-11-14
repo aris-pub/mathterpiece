@@ -253,6 +253,26 @@ describe("a play", () => {
       expect(v("k")).toBe(4);
     });
 
+    it("a drag from one step's bar to another's reports only the new step from the move on", () => {
+      const [, , v] = tour();
+      lay();
+      pointer("pointerdown", 10);
+      pointer("pointermove", 50);
+      expect(el().getAttribute("data-mtp-step")).toBe("1");
+      const told: string[] = [];
+      el().addEventListener("mtp-state", () => told.push(el().getAttribute("data-mtp-step")!));
+      pointer("pointermove", 254);
+      expect(new Set(told)).toEqual(new Set(["2"]));
+      expect(el().getAttribute("data-mtp-step")).toBe("2");
+      expect(v("tour", "step")).toBe(2);
+      told.length = 0;
+      pointer("pointermove", 50);
+      expect(new Set(told)).toEqual(new Set(["1"]));
+      expect(el().getAttribute("data-mtp-step")).toBe("1");
+      expect(v("tour", "step")).toBe(1);
+      pointer("pointerup", 50);
+    });
+
     it("a drag is a gesture: a button pressed while it is held writes none of what it drags", () => {
       const [, , v] = tour();
       lay();
