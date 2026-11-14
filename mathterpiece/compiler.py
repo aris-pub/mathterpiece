@@ -1673,8 +1673,11 @@ class _Compiler:
         names = {p.name for p in params}
         args = {}
         for p, node in zip(params, given, strict=False):
+            # A use is the inline animation, so an argument that may be none is checked where
+            # the body uses it, as a function's plain parameter takes one (type-system.md 5.c).
+            t = p.type if _may_be_none(p.type) else _maybe(p.type)
             try:
-                e = self.expr(node, p.type, scope)
+                e = self.expr(node, t, scope)
             except CompileError:
                 if _head(node) in names and isinstance(node, Form) and len(node.items) == 2:
                     raise CompileError(
