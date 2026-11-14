@@ -20,7 +20,7 @@ compile error
   {doc}`compiler-runtime`, and each one in {doc}`errors`.
 
 compiler
-  The program that turns a source file into a .mtpc, in the steps parse, rewrite, expand, prove,
+  The program that turns a source file into a .mtpc, in the steps parse, rewrite, prove, expand,
   and fold and write. Defined in {doc}`compiler-runtime`.
 
 component
@@ -218,8 +218,8 @@ folding
 
 match
   Two values match when they are equal, except that two reals match when they are within about a
-  millionth of their size. The step of a play or a stepper is read from the scene by matching.
-  Defined in {doc}`evaluation`.
+  millionth of their size. Matching is not equality, and only the runtime matches values: the step
+  of a play or a stepper is read from the scene by matching. Defined in {doc}`evaluation`.
 
 number limit
   ±10¹⁵⁰, the bound on every literal and every written number. Defined in {doc}`evaluation`.
@@ -234,6 +234,15 @@ site
 
 undefined
   An operation is undefined at an input where it has no value, such as `(/ x 0)`. It gives `none`
-  while drawing, and is a compile error when its inputs are known when compiling. Defined in
-  {doc}`evaluation`.
+  when folded and while drawing, and is a compile error in the prove step when its inputs are
+  known when compiling. Defined in {doc}`evaluation`.
+
+call depth limit
+  The constant `max-call-depth`: a call of a function nested deeper than it gives `none`, the same
+  when folding and while drawing. Defined in {doc}`evaluation`.
+
+real error bound
+  The constant `max-real-error`: the most units in the last place by which a built-in function on
+  reals other than `+`, `-`, `*`, `/` and `sqrt` may differ from its exact value. The prover widens
+  every real range by it. Defined in {doc}`evaluation`.
 ```

@@ -3,16 +3,15 @@
 
 This part defines how an expression is computed: the order in which its parts are evaluated, the
 forms that evaluate only some of their parts, the operations that are {term}`undefined` and
-where, how `none` propagates, the numbers and their limits, random values, equality, and whether a
-computation ends.
+where, how `none` propagates, the numbers and their limits, random values, equality, and how deep
+a chain of calls may go.
 
 An expression is computed at one of two times ({doc}`binding-time`). When every value that it
-reads is known when compiling, the compiler computes it and writes the value into the .mtpc in
-place of the expression. This is {term}`folding`. Otherwise the runtime computes it while drawing,
-again each time a value that it reads changes ({doc}`reaction`). Every rule in this part applies at
-both times, unless the rule is stated for one of them. Where the current compiler and runtime do
-something else, or disagree with each other or with the guides, this part describes what the code
-does, and an open question follows.
+reads is known when compiling, the compiler computes it in the fold step and writes the value into
+the .mtpc in place of the expression. This is {term}`folding`. Otherwise the runtime computes it
+while drawing, again each time a value that it reads changes ({doc}`reaction`). Every rule in this
+part applies at both times, unless the rule is stated for one of them. Where the compiler or the
+runtime does something else today, a note that starts with "Code differs" follows the rule.
 
 ## Expressions change nothing
 
@@ -35,10 +34,8 @@ exceptions.
 ```
 
 By {numref}`evaluation-is-pure`, and since every argument is evaluated, the order in which the
-arguments of one call are evaluated changes neither the value nor whether the computation ends
-({ref}`termination`). The runtime
-evaluates arguments from left to right (web/src/runtime.ts, `compileBuiltin` and the case `call`
-of `compile`).
+arguments of one call are evaluated does not change the value. The runtime evaluates arguments
+from left to right (web/src/runtime.ts, `compileBuiltin` and the case `call` of `compile`).
 
 ```{rule} forms-evaluate-some-parts
 These forms evaluate only some of their parts:
@@ -46,14 +43,28 @@ These forms evaluate only some of their parts:
 | Form | Evaluates |
 |---|---|
 | `(if c a b)` | `c`, then `a` when `c` is true, or `b` when it is false |
-| `(when c x)` | the same as `(if c x none)` |
-| `(cond (c1 v1) (c2 v2) … (else v))` | the tests in order, up to the first that is true, then the value of that clause only. When no test is true, `v` only |
-| `(and a b …)` | the parts from left to right, up to the first that is false. The value is false when a part is false, and true otherwise |
-| `(or a b …)` | the parts from left to right, up to the first that is true. The value is true when a part is true, and false otherwise |
 | `(or? x d)` | `x`, then `d` only when `x` is `none` |
 | `(let ((n1 v1) (n2 v2) …) body)` | each value that the body or a later value reads, once, in order, then the body. A value that nothing reads is not evaluated. A value that is read is evaluated before the body, even when the branch of the body that reads it is not taken |
 | `(fn params body)` | nothing, until the function is called |
 ```
+
+```{rule} cond-and-or-as-if
+`cond`, `and` and `or` are sugar, and mean exactly these `if` forms:
+
+| Form | Is |
+|---|---|
+| `(cond (c1 v1) more… (else v))` | `(if c1 v1 (cond more… (else v)))` |
+| `(cond (else v))` | `v` |
+| `(and a b …)` | `(if a (and b …) false)` |
+| `(and a)` | `a` |
+| `(or a b …)` | `(if a true (or b …))` |
+| `(or a)` | `a` |
+```
+
+So, when compiling and while drawing, `cond` evaluates its tests in order, up to the first that is
+true, then the value of that clause only. `and` stops at the first part that is false, and `or` at
+the first part that is true. `(when c x)` is `(if c x none)` ({numref}`rewrite-when`), and
+evaluates its parts in the same way.
 
 The compiler leaves out every `let` value that nothing reads (mathterpiece/compiler.py, line 6693),
 and the runtime evaluates the rest before the body (web/src/runtime.ts, line 1060). So in
@@ -63,54 +74,44 @@ The collection functions call their function on the items in order. While drawin
 `all` with a function stop at the first item at which the result is known (`Array.some` and
 `Array.every` in web/src/runtime.ts, `compileCollection`). When folding, the compiler calls the
 function on every item first (mathterpiece/compiler.py, line 2794). By
-{numref}`evaluation-is-pure` the two give the same value, and they differ only in whether a call
-that never ends is reached.
+{numref}`evaluation-is-pure` the two give the same value.
 
 ### Parts of these forms when compiling
 
 ```{rule} known-condition-takes-one-branch
-When the condition of an `if` is known when compiling, the compiler compiles only the branch that
-is taken. The other branch is neither type-checked nor folded.
+When the condition of an `if` is known when compiling, the prove step proves only the branch that
+is taken. The other branch is neither proved nor folded. Inside the body of a `foreach` or a
+motif, the variable of the `foreach` and the parameters of the motif are not known in the prove
+step, since the body is proved once for all their values ({numref}`prove-bodies-once`).
 ```
 
-So a folded call ends at its base case, and a `foreach` copy can start a chain, as in
-`(if (= k 0) 1 (* 2 (. (name $'d-{(- k 1)}') x)))`. In copy 0, the untaken branch refers to
-`d--1`, which does not exist (docs/reference.md, line 619).
-
-The other forms of {numref}`forms-evaluate-some-parts` are compiled whole. `cond`, `and`, `or`,
-`or?` and `let` compile every part, also a part that the form would not evaluate because a test or
-a value before it is known when compiling (mathterpiece/compiler.py, lines 6519 to 6531 and 6608 to
-6662). There is one exception: while a call is folded, `cond` stops at the first test that is known
-to be true, as `if` does (line 6614). An undefined operation with known inputs in a part that would
-not be evaluated is then still a compile error ({numref}`undefined-known-is-error`):
+By {numref}`cond-and-or-as-if`, the same holds for the tests of a `cond` and the parts of an `and`
+or an `or`. `or?` and `let` are proved whole: every part is proved, also a part that the form
+would not evaluate because a value before it is known when compiling. An undefined operation with
+known inputs in such a part is a compile error ({numref}`undefined-gives-none`):
 
 ```mtp
 (real x 0 (const))
 (real a (if (= x 0) 0 (/ 1 x)))              ; compiles, and a is 0
-(real b (cond ((= x 0) 0) (else (/ 1 x))))   ; division by zero, at (/ 1 x)
-(bool c (and (> x 0) (> (/ 1 x) 2)))         ; division by zero, at (/ 1 x)
+(real b (cond ((= x 0) 0) (else (/ 1 x))))   ; compiles, and b is 0
+(bool c (and (> x 0) (> (/ 1 x) 2)))         ; compiles, and c is false
 (real d (let ((u (/ 1 x))) 0))               ; division by zero, at (/ 1 x)
-(real e (if (= x 0) 0 'not a number'))       ; compiles: the string is never checked
+(real e (if (= x 0) 0 'not a number'))       ; compiles: the string is never proved
 ```
 
-:::{admonition} Open question Q-evaluation-1
-:class: warning
-When compiling, the parts that a form would not evaluate are treated in two ways. The untaken
-branch of an `if` is not compiled at all, so `(real e (if (= x 0) 0 'not a number'))` compiles
-although the branch has the wrong type. `cond`, `and`, `or`, `or?` and `let` compile every part,
-so `(cond ((= x 0) 0) (else (/ 1 x)))` is a compile error although `(/ 1 x)` is never evaluated,
-while the same choice written with `if` compiles. In docs/reference.md, lines 619 to 624, `cond`,
-`and` and `or` evaluate only some of their parts, and the rule for a known condition is given for
-`if` only. The options:
+A folded call is computed by evaluating its body, not by proving it again, so a folded call of a
+function that calls itself ends at its base case. A `foreach` copy can start a chain, in which
+copy k reads copy k - 1 through a `(name …)` string, as in `(if (= k 0) 1 (* 2 (. (name
+$'d-{(- k 1)}') x)))`. How such a name is resolved when the body is proved once is defined in
+{doc}`core` (Q-core-3).
 
-- (a) Every form compiles only the parts that it would evaluate, as `if` does. The `cond`, `and`
-  and `or` cases above compile. An untaken part may hold a type error that is never reported.
-- (b) Every form type-checks every part, and an undefined operation with known inputs is an error
-  only in a part that is evaluated. Type errors are always reported. The untaken branch of an `if`
-  then needs a check that neither folds nor reports an undefined value, and a `foreach` chain such
-  as the one above, whose untaken branch names a shape that does not exist, still has to compile.
-- (c) Every form compiles every part, `if` too. This is the simplest rule, but it breaks the
-  `foreach` chains and the base cases of folded recursive calls, which compile with `if` today.
+:::{admonition} Code differs
+:class: note
+`cond`, `and` and `or` are compiled whole: every part is compiled, also a part that the form would
+not evaluate (mathterpiece/compiler.py, lines 6519 to 6531 for `and` and `or`, and 6608 to 6662
+for `cond`). So `b` and `c` in the example above are rejected with "division by zero". Only while
+a call is folded does `cond` stop at the first test that is known to be true (line 6614).
+mtp-08wd.2.
 :::
 
 ## Undefined values
@@ -139,6 +140,7 @@ An operation is {term}`undefined` at these inputs, and at no others:
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
 | a bound value with a constraint | a value that breaks the constraint ({doc}`types`) |
+| a call of a function | a call whose depth is above the call depth limit ({numref}`call-depth-limit`) |
 
 Every other built-in function and operator is undefined nowhere.
 ```
@@ -147,31 +149,34 @@ The functions of the standard library are written in mtp, and are undefined wher
 that they call are ({doc}`stdlib`).
 
 ```{rule} undefined-gives-none
-While drawing, an undefined operation gives `none`. It never stops the figure, and never gives an
-infinity or a value that is not a number.
+In the fold step and while drawing, an undefined operation gives `none`. It never stops the
+figure, and never gives an infinity or a value that is not a number. In the prove step, an
+operation that is undefined at inputs known when compiling is a compile error, at the operation.
+The inputs may be written by the illustrator, or read from `const` variables. The variable of a
+`foreach` and the parameters of a motif or a function are not such inputs, since their bodies are
+proved once ({numref}`prove-bodies-once`).
 ```
 
-```{rule} undefined-known-is-error
-When compiling, an operation that is undefined at inputs known when compiling is a compile error,
-at the operation. The inputs may be written by the illustrator, read from `const` variables, or be
-the index of a `foreach` copy.
-```
+So `(sqrt -1)` and `(or? (sqrt -1) 0)` are compile errors. In
+`(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, `(/ 1 i)` may be undefined, since `i` may be 0, so
+its type includes `none`, and `r` does not take `none`: this is a compile error at `(/ 1 i)` in the
+body. With `(r (or? (/ 1 i) 1))`, the scene compiles, and the copy for `i` = 0 has a radius of 1.
 
-So `(sqrt -1)` and `(or? (sqrt -1) 0)` are compile errors, and so is
-`(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, at copy 0.
+:::{admonition} Code differs
+:class: note
+The compiler proves each copy of a `foreach` with the value of its variable, so
+`(r (or? (/ 1 i) 1))` is rejected with "division by zero" at copy 0. mtp-08wd.1.
+:::
 
-```{rule} undefined-in-folded-call
-A call of a function whose arguments are all known when compiling is folded: the compiler computes
-the body with those arguments. Inside the body, an undefined operation gives `none`, as while
-drawing. It is a compile error only when its `none` reaches a place in the body that does not take
-`none`, or makes a function whose declared result type does not include `none` give `none`.
-```
-
-The illustrator wrote the body with parameters, not with known inputs, so an `or?` in the body can
-replace the `none` with a default (docs/type-system.md, section 5.c, and mathterpiece/compiler.py,
-`known_or_none`, line 2217). With `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t
-0) b 1)))`, `(f -1)` is 1. With `(func f ((real x)) (/ 1 x))`, `(f 0)` is `none`, and with
-`(func[real] f ((real x)) (/ 1 x))`, `(f 0)` is a compile error.
+A function body is proved once, with each parameter ranging over its declared type
+({numref}`prove-bodies-once`). A call whose arguments are all known when compiling is folded: the
+fold step computes the body with those arguments, and an undefined operation in the body gives
+`none` ({numref}`undefined-gives-none`). The illustrator wrote the body with parameters, not with
+known inputs, so an `or?` in the body can replace the `none` with a default (docs/type-system.md,
+section 5.c). With `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f
+-1)` is 1. With `(func f ((real x)) (/ 1 x))`, the result type includes `none`, and `(f 0)` is
+`none`. `(func[real] f ((real x)) (/ 1 x))` is a compile error at `(/ 1 x)`, since its body may give
+`none` and its declared result does not include `none`.
 
 The compiler works out which expressions may be undefined from the ranges of their inputs, and
 gives each such expression a type that includes `none` ({doc}`types`). The example below is live:
@@ -192,7 +197,7 @@ exceptions:
 
 - `or?`, `none?`, `some?` and `somes`, which give a value that is not `none` for an argument that
   is `none` ({doc}`stdlib`).
-- `=` and `!=`, by {numref}`equality-with-none`.
+- `=` and `!=`, by {numref}`equality-by-content`.
 - A call of a function whose parameter is declared `T|none`: the body is evaluated with `none` as
   the parameter. A parameter whose type does not include `none` makes the call `none`, and the body
   is not evaluated.
@@ -222,18 +227,40 @@ argument is known to give `none` (mathterpiece/compiler.py, `apply_builtin`, lin
 
 ## Numbers
 
-There are four types of number ({doc}`types`). Each is held this way at each time:
+There are four types of number ({doc}`types`). Each is held this way at both times:
 
-| Type | When compiling | While drawing |
-|---|---|---|
-| `int` | an exact whole number, of any size | an IEEE 754 binary64 number, exact up to 2⁵³ |
-| `ratio` | an exact fraction | a binary64 number, the quotient of the fraction |
-| `real` | a binary64 number | a binary64 number |
-| `complex` | two binary64 numbers | two binary64 numbers |
+| Type | When compiling and while drawing |
+|---|---|
+| `int` | an exact whole number |
+| `ratio` | an exact fraction |
+| `real` | an IEEE 754 binary64 number |
+| `complex` | two binary64 numbers |
+
+Ints and ratios are exact ({numref}`number-literals`), and only a real may differ between the two
+times ({numref}`same-value-at-both-times`). So the runtime computes values of type `int` as exact
+whole numbers and values of type `ratio` as exact fractions, as the compiler does, and an operation
+on ints and ratios alone gives the same value when folded as while drawing.
 
 In the .mtpc, a ratio is written as its numerator and denominator in lowest terms
-({doc}`compiled-format`), and the runtime divides them when it loads the .mtpc
-(web/src/runtime.ts, line 934).
+({doc}`compiled-format`).
+
+:::{admonition} Code differs
+:class: note
+The runtime divides the two numbers of a ratio when it loads the .mtpc (web/src/runtime.ts, lines
+934 to 937), and computes ints and ratios as binary64 numbers (web/src/builtins.ts). The compiler
+computes them exactly, with Python's `Fraction` and ints (mathterpiece/compiler.py, `_fold`, line
+7913). So with `(int n 1)`, which a slider writes, `(= (+ (/ n 10) 1/5) 3/10)` is false while
+drawing, and the readout of the example below holds False at n = 1. `(+ (^ 2 60) 1)` is folded to
+1152921504606846977, and the runtime reads that value from the .mtpc as 1152921504606846976.
+mtp-ydd4.7.13.
+:::
+
+```{mtp-example}
+; at n = 1 the sum is exactly 3/10, when folded and while drawing
+(int n 1 (>= 0) (<= 10))
+(slider pick (move n (from 0) (to 10)) (label 'n'))
+(readout r $'n/10 + 1/5 = 3/10 is {(= (+ (/ n 10) 1/5) 3/10)}')
+```
 
 ```{rule} number-result-types
 An arithmetic operation gives the broadest type of its inputs, in the order `int`, `ratio`,
@@ -248,50 +275,16 @@ When the inputs of an operation include a ratio and a real, the ratio is convert
 first.
 ```
 
-:::{admonition} Open question Q-evaluation-2
-:class: warning
-Ratios and ints are exact when compiling and not exact while drawing. The compiler computes ratios
-with Python's `Fraction` and ints with Python's ints of any size (mathterpiece/compiler.py, `_fold`,
-line 7913). The runtime computes both as binary64 numbers (web/src/runtime.ts, line 934, and
-web/src/builtins.ts). So the same expression gives two values:
-
-- With `(int m 1 (const))`, `(= (+ (/ m 10) 1/5) 3/10)` is folded to true. With `(int n 1)`, which
-  a slider writes, `(= (+ (/ n 10) 1/5) 3/10)` is false while drawing, since 0.1 + 0.2 is
-  0.30000000000000004 in binary64.
-- `(+ (^ 2 60) 1)` is folded to 1152921504606846977, and the runtime reads that value from the
-  .mtpc as 1152921504606846976. With n = 1, `(^ (* 3 n) 40)` while drawing is
-  12157665459056929000, and the exact value is 12157665459056928801.
-
-In docs/type-system.md, section 2, ratios are "exact fractions such as `1/3`", at both times. The
-options:
-
-- (a) The runtime computes ratios exactly, as pairs of whole numbers, and ints exactly beyond 2⁵³.
-  Both times agree. Arithmetic while drawing is slower, and the numbers of a ratio can grow without
-  bound.
-- (b) A ratio is exact only when compiling, by a rule of the spec. Equality of ratios then depends
-  on the time.
-- (c) The compiler folds ratios and ints in binary64 too, as the runtime computes them. Both times
-  agree, and no number is exact beyond binary64.
-
-In the live example below, the comparison is computed while drawing, and at n = 1 the readout
-holds False.
-:::
-
-```{mtp-example}
-; at n = 1 the sum is 3/10, but the comparison is made in binary64 while drawing
-(int n 1 (>= 0) (<= 10))
-(slider pick (move n (from 0) (to 10)) (label 'n'))
-(readout r $'n/10 + 1/5 = 3/10 is {(= (+ (/ n 10) 1/5) 3/10)}')
-```
-
 ### The limit of every number
 
 ```{rule} number-limit
 Every number lies within ±10¹⁵⁰, the {term}`number limit`:
 
-- A literal beyond it is a compile error.
-- A write of a number beyond it is clamped to it.
-- For the ranges that the compiler proves, a value with no limit of its own lies within it.
+- A literal beyond it is a compile error, and so is a starting value known when compiling, also
+  one given with `free@`.
+- A write of a number beyond it is clamped to it. So is each number of a point or a list that is
+  written.
+- For the ranges that the prover proves, a value with no limit of its own lies within it.
 
 A computed result may go beyond the number limit. A result beyond the largest real, about 1.8 ×
 10³⁰⁸, is an overflow, and is undefined ({numref}`undefined-operations`).
@@ -300,28 +293,16 @@ A computed result may go beyond the number limit. A result beyond the largest re
 With these limits, `(* 2 k)` or `(* 360 t)` can never overflow, while a product of several values
 with no limit of their own may (docs/type-system.md, section 5.c).
 
-:::{admonition} Open question Q-evaluation-3
-:class: warning
-{numref}`number-limit` is not kept everywhere:
-
-- **A starting value known when compiling is not checked.** `(real k free@(* 1e100 1e100))` starts
-  at 10²⁰⁰. The compiler checks only literals against the limit (`_Compiler.literal`,
-  mathterpiece/compiler.py, line 5882), and the runtime clamps only writes (`constrain`,
-  web/src/runtime.ts, line 761). The compiler then proves `(real m (* k k))` safe, since by the
-  number limit `k` lies within ±10¹⁵⁰, and while drawing `m` is `none` although its type does not
-  include `none`.
-- **A point or a list written whole is not clamped.** `constrain` clamps a write only when the
-  value is a single number. After a write of a point variable, of a line's `from`, or of a list,
-  its items may lie beyond the limit.
-- **`sum` while drawing does not give `none` on an overflow.** It adds with the built-in `+`
-  (web/src/runtime.ts, line 1248), whose `Undefined` error is not caught there, so the error stops
-  the evaluation. Within the number limit a sum overflows only with more than about 10¹⁵⁸ items, so
-  this is reached only through the first point.
-
-The options for the first two points: (a) check a starting value known when compiling against the
-limit, as a literal is, and clamp the items of a point or a list on a write. (b) Treat the limit as
-a rule for literals and single numbers only, and make the compiler prove ranges without assuming
-it. The third point is a bug in either case.
+:::{admonition} Code differs
+:class: note
+- The compiler checks only literals against the limit (`_Compiler.literal`,
+  mathterpiece/compiler.py, line 5882), so `(real k free@(* 1e100 1e100))` starts at 10²⁰⁰, and
+  `(real m (* k k))`, which the prover takes to be safe, is `none` while drawing. Bug mtp-mqbu.
+- `constrain` (web/src/runtime.ts, line 761) clamps a write only when the value is a single number.
+  mtp-ydd4.7.18.
+- `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248), whose
+  `Undefined` error is not caught there, so an overflow stops the evaluation and does not give
+  `none`. Bug mtp-ec05.
 :::
 
 ### Infinity
@@ -340,22 +321,14 @@ beyond the number limit, and both are values known when compiling only:
 :class: warning
 An infinity known when compiling can be an input of an expression that is computed while drawing.
 In the .mtpc it is written as `"infty"` ({doc}`compiled-format`), and the runtime reads it as an
-infinite binary64 number (web/src/runtime.ts, line 932). With `(real big infty (const))` and a free `(real y
-1)`:
+infinite binary64 number (web/src/runtime.ts, line 932). With `(real big infty (const))` and a free
+`(real y 1)`, `(+ y big)` is `none` while drawing, since its result is infinite. With `y` known
+when compiling, the same expression is folded to `infty`. That breaks
+{numref}`same-value-at-both-times`, so the code as it is today is not an option. The options:
 
-- `(< y big)` is true and `(min y big)` is 1, while drawing.
-- `(+ y big)` is `none` while drawing, since its result is infinite. With `y` known when compiling,
-  the same expression is folded to `infty`.
-
-In docs/type-system.md, section 5.c, infinities "appear only in values known when compiling". It
-is not stated whether such a value may be an input of an expression computed while drawing. The
-options:
-
-- (a) An expression computed while drawing never reads an infinity: reading a `const` that holds one
-  outside an expression that is folded is a compile error.
-- (b) It may read one, and a result that is infinite is `none`, as today. Then the same expression
-  gives `infty` when folded and `none` while drawing, against {numref}`same-value-at-both-times`.
-- (c) The runtime carries infinities as the compiler does, and gives `none` only where the result
+- (a) An expression computed while drawing never reads an infinity: reading a `const` that holds
+  one outside an expression that is folded is a compile error.
+- (b) The runtime carries infinities as the compiler does, and gives `none` only where the result
   would reach a place that needs a finite number, such as an attribute of a shape.
 :::
 
@@ -365,12 +338,9 @@ options:
 Wherever a number is rounded, halves round away from zero, on the number's shortest exact decimal
 form, not on its binary value: 2.5 gives 3, -2.5 gives -3, 0.125 to two decimal places gives 0.13,
 and 2.675 to two decimal places gives 2.68. The rule applies to `round`, to a write into an int,
-and to the format spec of an interpolated string, such as `{x:.2f}`.
-```
-
-```{rule} write-into-int
-While drawing, a number written into an int is rounded by {numref}`rounding`, after it is clamped
-to the int's range, so that it lands on the nearest int inside the range ({doc}`types`).
+and to the format spec of an interpolated string, such as `{x:.2f}`. `round` is undefined nowhere.
+A number written into an int is rounded after it is clamped to the int's range, so that it lands
+on the nearest int inside the range ({doc}`types`).
 ```
 
 The runtime rounds the value once before the constraints and once after them, so that an int that
@@ -379,24 +349,25 @@ compiler rounds with Python's `Decimal` (mathterpiece/compiler.py, `_round`, lin
 runtime with `roundHalfAway` (web/src/builtins.ts, line 181). On 1,031 values from -8 to 8, and on
 156 pairs of a value and a format spec, the two agree.
 
+:::{admonition} Code differs
+:class: note
+`_round` quantizes a `Decimal` in the default context, whose precision is 28 digits, so
+`(int r (round 1e28))` raises `decimal.InvalidOperation`, which is not a compile error and has no
+position. Bug mtp-6yga.
+:::
+
 :::{admonition} Open question Q-evaluation-5
 :class: warning
-Two places round in another way, or fail:
+How the channels of a mixed color are rounded. By {numref}`same-value-at-both-times`, both times
+must give the same channels. Today the compiler rounds halves to even (Python's `round`,
+mathterpiece/colors.py, line 237), and the runtime rounds halves up (`Math.round`,
+web/src/builtins.ts, line 287). So `(mix '#000000' '#050505' 0.5)` is `#020202ff` when folded and
+`#030303ff` while drawing (bug mtp-nk2w). The options, at both times:
 
-- **`round` of a known value of 10²⁸ or more stops the compiler.** `_round` quantizes a `Decimal`
-  in the default context, whose precision is 28 digits, so `(int r (round 1e28))` raises
-  `decimal.InvalidOperation`, which is not a compile error and has no position. While drawing the
-  same value rounds to itself. In docs/reference.md, line 653, `round` is never undefined.
-- **Mixing colors rounds each channel differently at the two times.** The compiler rounds halves to
-  even (Python's `round`, mathterpiece/colors.py, line 237), and the runtime rounds halves up
-  (`Math.round`, web/src/builtins.ts, line 287). So `(mix '#000000' '#050505' 0.5)` is `#020202ff`
-  when folded and `#030303ff` while drawing, and `=` on the two is false. {numref}`rounding` does
-  not name the channels of a color.
-
-The options for colors: (a) the channels of a mixed color follow {numref}`rounding`, at both
-times. (b) The channels round halves up, as CSS `color-mix()` does in browsers, at both times. (c)
-Colors are not rounded until they are drawn, so the channels of a mixed color may be fractions. The first point
-is a bug with one fix: the compiler rounds as the runtime does.
+- (a) The channels of a mixed color follow {numref}`rounding`.
+- (b) The channels round halves up, as CSS `color-mix()` does in browsers.
+- (c) Colors are not rounded until they are drawn, so the channels of a mixed color may be
+  fractions.
 :::
 
 ## Randomness
@@ -449,20 +420,22 @@ With s the value of the seed and p the site:
 These are the functions `unit`, `shuffle` and `nextSeed` of web/src/random.ts, and the case
 `rand` of `compile` in web/src/runtime.ts, line 1069.
 
-```{rule} random-same-on-refresh
-A random value is computed while drawing, and is never folded. For one .mtpc, the same values of
-the seeds give the same random values, on every refresh and in every browser.
+```{rule} random-never-folded
+A random value is known only while drawing ({doc}`binding-time`). The compiler never draws one and
+never folds one.
 ```
 
-A random value is therefore known only while drawing ({doc}`binding-time`). Since the sites are
+By {numref}`random-values`, for one .mtpc, the same values of the seeds give the same random
+values, on every refresh and in every browser, and when a seed takes a new value, every random
+value that follows it is drawn again ({doc}`reaction`). Since the sites are
 counted when compiling, a change to the source that adds or removes a random function before
 another one changes the site of the later one, and with it the value that the later one draws.
+docs/data-model.md, line 283, has "is drawn once, when the page loads", which is wrong: a new seed
+draws every value that follows it again, as docs/reference.md, line 101, has.
 
-```{rule} rolling-the-dice
-A roll is a write of `(next-seed s)` into the seed `s`. It changes the random values that follow
-`s`, and no others. `(roll-dice s)` stands for `(move s (to (next-seed s)) (duration 0))`
-({doc}`time`).
-```
+A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`
+({numref}`rewrite-roll-dice`). By {numref}`random-values`, it changes the random values that follow
+`s`, and no others.
 
 `rand`, `rand-int`, `pick` and `shuffle` inside the body of a function are a compile error for now
 (mathterpiece/compiler.py, line 2247). A free variable may start at a random value with `free@`,
@@ -478,151 +451,139 @@ and then never follows the seed (docs/reference.md, line 106).
 (button roll (animation (roll-dice dots)) (label 'Roll'))
 ```
 
+A `rand` that follows a `const` seed, such as `(rand-seed s 3 (const))`, is a compile error by
+{numref}`seed-variable`. Today the message is "a random value follows a seed: import the standard
+one, (import rand), or declare one, (rand-seed dots 0)", although one is declared. The wording of
+a message is not normative ({numref}`what-is-normative`).
+
 :::{admonition} Open question Q-evaluation-6
 :class: warning
-Four points about random values are not settled:
+Two points about random values are not settled:
 
-- **`lo` above `hi`.** Neither `rand` nor `rand-int` checks that `lo` is at most `hi`. With `(rand-int
-  10 3)`, {numref}`random-values` gives an int from 4 to 10, not from 3 to 10. The compiler gives
-  the result the range from `lo` to `hi` (mathterpiece/compiler.py, lines 2262 and 2273), here
-  from 10 to 3, so it accepts `((int (>= 3) (<= 5)) b (rand-int 5 3))`. The options: (a) `lo` above
-  `hi` is undefined, (b) the two are swapped, (c) the compiler proves that `lo` is at most `hi`.
+- **`lo` above `hi`.** Neither `rand` nor `rand-int` checks that `lo` is at most `hi`. With
+  `(rand-int 10 3)`, {numref}`random-values` gives an int from 4 to 10, not from 3 to 10. The
+  compiler gives the result the range from `lo` to `hi` (mathterpiece/compiler.py, lines 2262 and
+  2273), here from 10 to 3, so it accepts `((int (>= 3) (<= 5)) b (rand-int 5 3))`, which is a bug
+  in every case (mtp-y7vp). The options: (a) `lo` above `hi` is undefined, (b) the two are
+  swapped, (c) the compiler proves that `lo` is at most `hi`.
 - **Only the seed modulo 2³² counts.** The hash uses x mod 2³² (`x >>> 0`, web/src/random.ts,
-  line 9), so the seeds 0 and 2³² draw the same values, and so do 0 and 10¹⁵⁰. The options: (a) a
-  rule of the spec states this, (b) `rand-seed` is narrowed to ints below 2³².
-- **When the number is drawn.** In docs/data-model.md, line 283, the number of `rand` "is drawn
-  once, when the page loads". In docs/reference.md, line 101, "a new seed draws every value that
-  follows it again". The runtime does the second. One of the two guides needs a fix.
-- **A `const` seed.** `(rand-seed s 3 (const))` is not counted as a seed, and the error message for
-  a `rand` that follows it is "a random value follows a seed: import the standard one, (import
-  rand), or declare one, (rand-seed dots 0)", although one is declared.
+  line 9), so the seeds 0 and 2³² draw the same values, and so do 0 and 10¹⁵⁰. The options: (a) the
+  spec keeps {numref}`random-hash` as it is, and states this in a sentence, (b) `rand-seed` is
+  narrowed to ints below 2³².
 :::
 
 ## Equality
 
-`=` and `!=` take any two values of one type, and `!=` gives the opposite of `=`. When both sides
-are known when compiling, the compiler folds `=` with Python's `==` on the values
-(mathterpiece/compiler.py, `_fold`, line 7913). While drawing, the runtime compares them with
-`equal` (web/src/builtins.ts, line 156).
+`=` and `!=` take any two values of one type, and `!=` gives the opposite of `=`.
 
-```{rule} equality-of-one-type
-`(= a b)` and `(!= a b)` are a compile error unless the type of one side fits the type of the
-other, or one side is `none`. A list of two numbers is not converted to a point for them: `(= p
-xs)`, with `p` a point and `xs` a list of ints, is a compile error. A literal list on one side is
-given the type of the other side, so `(= p [1 2])` compiles.
+```{rule} equality-operands
+`(= a b)` and `(!= a b)` are a compile error unless the type of one side fits the type of the other,
+or one side is `none`. They are a compile error on functions, transitions or animations, or on
+values whose type holds one of them, such as a list of functions. A list of two numbers is not
+converted to a point for them: `(= p xs)`, with `p` a point and `xs` a list of ints, is a compile
+error. A literal list on one side is given the type of the other side, so `(= p [1 2])` compiles.
 ```
 
-```{rule} equality-with-none
-`(= none none)` is true, and `(= none x)` is false for every `x` that is not `none`. `=` and `!=`
-never give `none`.
-```
-
-The spec does not yet define what `=` means for each type (Q-evaluation-7). The code does this
-today:
+```{rule} equality-by-content
+Values compare by content, and mutable objects by identity. `=` and `!=` never give `none`:
 
 | Type | `(= a b)` is true when |
 |---|---|
-| `int`, `ratio`, `real` | the two are the same number, exactly: 0 and -0 are equal, an int and a real of the same value are equal. When compiling, ratios are compared exactly, and while drawing as binary64 numbers (Q-evaluation-2). `(= (sind 30) 0.5)` is false, since `(sind 30)` is 0.49999999999999994 |
+| `none` | both are `none`. `(= none x)` is false for every `x` that is not `none` |
+| `int`, `ratio`, `real` | the two are the same number, exactly: 0 and -0 are equal, and an int and a real of the same value are equal |
 | `complex` | both parts are equal. A complex whose second part is 0 equals the real of its first part |
 | `bool`, `string`, a choice | the two are exactly the same |
 | `point`, `list[T]`, `transform` | they have the same length, and the items at each position are equal |
-| `color` | they are the same color once parsed: `(= ink '#000080')` is true with `(color ink 'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color (docs/reference.md, lines 737 and 738). A token is compared by its value in the live model, never by a value that the page's CSS gives it |
-| `font` | every part is the same |
+| `color` | they are the same color once parsed: `(= ink '#000080')` is true with `(color ink 'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the live model, never by a value that the page's CSS gives it |
+| `font` | every part is equal |
 | a shape, a group, a namespace, a formula, a term and every other mutable object | the two are the same object. Two circles with the same attributes are not equal |
-| `transition`, `animation` | the two are the same declaration. Two transitions declared with the same arguments are not equal |
-| a function | never, while drawing. `(= f f)` is false, and so is `(= sind sind)`. The runtime makes a new JavaScript function for each read of a function (web/src/runtime.ts, `functionValue` and `builtinValue`), and `equal` compares functions with `===`. The compiler never folds `=` on functions |
+```
+
+Since `=` on reals is exact, `(= (sind 30) 0.5)` is false, since `(sind 30)` is
+0.49999999999999994. A real may differ in its last digits when folded and while drawing
+({numref}`real-error-bound`), so `=` on two reals that come from such functions may be true at one
+time and false at the other.
+
+:::{admonition} Code differs
+:class: note
+The compiler accepts `=` and `!=` with every type (mathterpiece/compiler.py, line 6443), so
+`(= sind sind)` and `(= t t)` for a transition `t` compile. While drawing, `equal`
+(web/src/builtins.ts, line 156) compares functions with `===`, and the runtime makes a new
+JavaScript function for each read of a function (web/src/runtime.ts, `functionValue` and
+`builtinValue`), so `(= f f)` is false. mtp-08wd.4.
+:::
 
 ### Matching
 
-A separate, tolerant comparison is used where the runtime checks whether the scene is in a state.
+The runtime uses a separate, tolerant comparison to check whether the scene is in a state. It is
+not equality.
 
 ```{rule} matching
 Two values {term}`match` when they are equal, with one difference: two reals match when they
 differ by at most 10⁻¹² or by at most a millionth of the larger of their sizes. Points and lists
 match when they have the same length and the items at each position match. Bools, strings, choices
-and colors match only when they are exactly the same, and `none` matches only `none`.
+and colors match only when they are exactly the same, and `none` matches only `none`. Only the
+runtime matches values: no form of the language matches two values.
 ```
 
 Matching is `same` in web/src/same.ts. The runtime uses it to read the step of a play or a stepper
 from the scene (docs/reference.md, line 572, and web/src/player.ts, line 302), and to check
 whether the free values that a canvas's `on-view` moves still have their values from page load
-(web/src/lifecycle.ts, line 62). Two complex numbers, two objects and two functions match only when
-they are the same JavaScript value.
+(web/src/lifecycle.ts, line 62).
 
-While drawing, the runtime also uses `=` to skip writes: a write of a value equal to the current
-one is skipped, and nothing that depends on it is computed again (web/src/runtime.ts, line 728).
-
-:::{admonition} Open question Q-evaluation-7
-:class: warning
-Equality is not defined for each type, and two notions of it exist: exact `=`, and matching. The
-table above describes the code. The guides define equality only for `none` (docs/reference.md,
-line 642), for light-dark colors (lines 737 and 738) and for matching (line 572). The questions and
-their options:
-
-- **Functions.** Today `(= f f)` is false while drawing. (a) A function equals itself: two
-  functions are equal when they come from the same declaration, or the same `fn` with the same
-  values around it. The runtime then compares functions by declaration and captured values. (b)
-  `=` on functions is a compile error. (c) As today, which makes `=` on functions useless.
-- **Transitions, animations and other objects.** (a) The same object, as today. (b) The same
-  arguments, as for values. With (a), two transitions with the same arguments are not equal. With
-  (b), a transition equals every transition with the same trajectory. In docs/type-system.md,
-  section 2, transitions and animations are listed among the values, which never change, and not
-  among the mutable objects.
-- **Reals.** (a) Exact, as today, which makes `(= (sind 30) 0.5)` false, and makes the result depend
-  on the time (Q-evaluation-2, Q-evaluation-9). (b) `=` matches, as plays do. Then `=` is not
-  transitive: a may match b, and b match c, while a does not match c. (c) Exact `=`, and a separate
-  built-in function for matching, for the illustrator to choose.
-- **Which notion the runtime uses.** Skipping a write uses `=`, and reading the step of a play
-  uses matching. It is open whether every comparison that the runtime makes for itself should use
-  one notion.
-:::
+While drawing, the runtime uses `=` to skip writes: a write of a value equal to the current one is
+skipped, and nothing that depends on it is computed again (web/src/runtime.ts, line 728).
 
 (termination)=
 ## Termination
 
 A function may call itself, directly, through other functions, or through a function value
-(docs/reference.md, line 124). Nothing in the language requires that a call ends. There are no
-other loops: a `foreach` makes a number of copies known when compiling, and `range` gives at most
-1,000,000 items. So a computation that does not end is a chain of calls that does not end.
+(docs/reference.md, line 124). There are no other loops: a `foreach` makes a number of copies known
+when compiling, and `range` gives at most 1,000,000 items. So the only computation that could go
+on without end is a chain of calls, and the call depth limit ends every chain.
 
-What the code does today:
+```{rule} call-depth-limit
+The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
+of such calls that are still being computed when it starts. Calls of built-in functions do not
+count. `max-call-depth` is one constant of this spec, the {term}`call depth limit`, and it is the
+same when folding and while drawing. A call whose depth is above it is undefined
+({numref}`undefined-operations`). A function is recursive when its body names it, directly or
+through the bodies of the functions that it names, and a call of a recursive function has a type
+that includes `none` ({doc}`types`).
+```
 
+So in `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m 1)))))`, the inner call
+`(down (- m 1))` has the type `int|none`, so the body may give `none`, and the declaration is a
+compile error. Written `(func down ((int m)) …)`, with the same body, the result type is
+`int|none`, and `(down 5)` is 5, when folded and while drawing. A call of `down` with an argument
+large enough to pass the limit gives `none`.
+
+Every computation ends, since every chain of calls is at most `max-call-depth` deep. A computation
+that ends may still take a long time, and the spec sets no limit on time.
+
+:::{admonition} Code differs
+:class: note
 - **When compiling.** A call with known arguments is folded by compiling its body again with those
-  arguments. When the nesting is too deep for Python, the compiler catches the `RecursionError` and
-  leaves the call to the runtime (mathterpiece/compiler.py, `fold_call`, line 2530). Working out the
-  range of a call does the same (line 2013). A call that never ends therefore compiles. With a
-  simple function that counts down, `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m
-  1)))))`, `(down 80)` is folded and `(down 81)` is not. Folded calls are kept by their arguments,
-  so a call with the same arguments is folded once.
-- **While drawing.** There is no limit on the depth of calls or on the time that a computation
-  takes (web/src/runtime.ts, `call`, line 1282). Each call uses the JavaScript call stack. With the
-  function above, `(down n)` gives a value up to n = 1740 or so in Node 26, and the limit depends on
-  the browser. Deeper, and for a call that never ends, JavaScript throws `RangeError: Maximum call
-  stack size exceeded`. The runtime does not turn it into `none`. The error stops the evaluation, and
-  the message of the error is drawn in place of the view or the control that was being drawn
-  (web/src/elements.ts, `guard`, line 324). A computation that ends but takes a long time freezes
-  the page.
+  arguments. When the nesting is too deep for Python, at a depth of about 80, the compiler catches
+  the `RecursionError` and leaves the call to the runtime (mathterpiece/compiler.py, `fold_call`,
+  line 2530). Working out the range of a call does the same (line 2013). A recursive call is typed
+  by the declared result of its function, so `(func[int] down …)` above compiles, and `(down 80)`
+  is folded while `(down 81)` is not.
+- **While drawing.** There is no limit on the depth of calls (web/src/runtime.ts, `call`, line
+  1282). Each call uses the JavaScript call stack, and a call that is too deep throws `RangeError:
+  Maximum call stack size exceeded`, which is drawn in place of the view or the control
+  (web/src/elements.ts, `guard`, line 324). In Node 26 this happens past a depth of about 1740,
+  and the depth depends on the browser.
+
+mtp-ydd4.7.15.
+:::
 
 :::{admonition} Open question Q-evaluation-8
 :class: warning
-Termination is not guaranteed, and the spec does not define what happens when a computation does
-not end. Two consequences of the code today: a call such as `(down 100)`, whose arguments are all
-known, is computed while drawing, since the compiler stops folding at a depth of about 80, so
-whether an expression is folded depends on the depth of its calls. And the same figure may work in
-one browser and fail in another, whose stack is smaller. The options:
-
-- (a) Keep recursion unlimited, and define a computation that does not end, or that is too deep
-  for the runtime, as an error of the figure, with its message drawn in place of the component.
-  Simple, but a figure may fail for some values of a slider only.
-- (b) Give both times one depth limit, such as 10,000 nested calls, past which a call is undefined
-  and gives `none`. Every recursive call then has a type that includes `none`, and the compiler folds
-  up to the same depth as the runtime. Calls that run for long but are not deep still never end.
-- (c) Allow only recursion that the compiler proves to end, such as a call whose int argument
-  decreases by at least 1 at each step and stops at a bound. Every figure then ends, and some
-  recursive functions that end are rejected.
-- (d) Make a recursive call with known arguments that the compiler cannot fold a compile error.
-  The compiler then finds some calls that never end, but not those whose arguments are known only
-  while drawing.
+The value of `max-call-depth`. Neither the code nor the decisions give one. It must be small
+enough that every browser that the runtime supports can compute a chain of that depth, and large
+enough for the recursive functions of the examples: `best-in` in bourgain-densities.mtp, `koch` in
+koch-snowflake.mtp and `has-divisor` in ulam-spiral.mtp.
 :::
 
 (folding-and-drawing)=
@@ -630,59 +591,53 @@ one browser and fail in another, whose stack is smaller. The options:
 
 ```{rule} same-value-at-both-times
 An expression gives the same value when it is folded as when it is computed while drawing, for the
-same values of what it reads.
+same values of what it reads, with one exception: a real may differ in its last digits
+({numref}`real-error-bound`), and so may a value computed from such a real.
 ```
 
-This rule is the intent of the guides and the code: docs/reference.md, line 613, has "One rule, the
-same in the compiler and the runtime", and the comment at line 1 of web/src/builtins.ts has "as the
-compiler folds them". The compiler computes
-with CPython and its `math` module, and the runtime with JavaScript and its `Math` object, and the
-two differ in these places:
+```{rule} real-error-bound
+`+`, `-`, `*`, `/` and `sqrt` on reals give the correctly rounded binary64 result, at both times.
+Every other built-in function on reals gives a result within `max-real-error` units in the last
+place of its exact value at the same binary64 inputs. This holds for the trigonometric functions
+in radians and in degrees, `exp`, `log`, `^`, `mod`, `dist`, and the conversion between degrees
+and radians. `max-real-error` is one constant of this spec, the {term}`real error bound`. At
+multiples of 90 degrees, the functions in degrees give exact values.
+```
 
-| Where | When compiling | While drawing | Open question |
+```{rule} prover-widens-reals
+When the prover works out the range of a real, it widens the range outward after each operation:
+the lower bound is moved down and the upper bound up, by one unit in the last place for the five
+correctly rounded operations, and by `max-real-error` units in the last place for every other
+function on reals. So a range that the prover proves holds at both times.
+```
+
+A folded value is final: the .mtpc holds the value in place of the expression
+({numref}`compile-steps`), so the runtime uses it as written and never computes it again.
+
+{numref}`same-value-at-both-times` follows the guides: docs/reference.md, line 613, has "One rule,
+the same in the compiler and the runtime", and the comment at line 1 of web/src/builtins.ts has "as
+the compiler folds them". The compiler computes with CPython and its `math` module, and the runtime
+with JavaScript and its `Math` object.
+
+:::{admonition} Code differs
+:class: note
+The two programs differ in these places, beyond what the rules above allow:
+
+| Where | When compiling | While drawing | Bead |
 |---|---|---|---|
-| ratios | exact | binary64 | Q-evaluation-2 |
-| ints beyond 2⁵³ | exact | binary64 | Q-evaluation-2 |
-| `round` of 10²⁸ or more | the compiler stops | rounds | Q-evaluation-5 |
-| the channels of a mixed color | halves to even | halves up | Q-evaluation-5 |
+| ratios, and ints beyond 2⁵³ | exact | binary64 | mtp-ydd4.7.13 |
+| `round` of 10²⁸ or more | the compiler stops | rounds | mtp-6yga |
+| the channels of a mixed color | halves to even | halves up | mtp-nk2w, Q-evaluation-5 |
 | an infinite input | carried, `(+ y infty)` is `infty` | `none` | Q-evaluation-4 |
-| recursion | folded up to a depth of about 80 | computed up to the stack of the browser | Q-evaluation-8 |
-| `sin`, `cos`, `exp`, `log`, `atan`, `asin`, `acos`, `dist` and the rest | CPython's `math` | JavaScript's `Math` | Q-evaluation-9 |
-| degrees to radians, and back | `x × (π/180)` | `(x × π) / 180` | Q-evaluation-9 |
-| `mod` of reals | Python's `%`, which is exact | `a - b × ⌊a / b⌋` | Q-evaluation-9 |
+| recursion | folded up to a depth of about 80 | computed up to the stack of the browser | mtp-ydd4.7.15 |
+| `mod` of reals | Python's `%`, which is exact | `a - b × ⌊a / b⌋`, so `(mod 5.5 0.1)` is 0 and not 0.0999999999999997 | mtp-ydd4.7.14 |
+| the functions in degrees, for large angles | converted to radians first, so `(cosd (+ 1e15 90))` is 0.98478… | `(x × π) / 180` first, so it is 0.98512… | mtp-ydd4.7.14 |
+| the range of a real | not widened (`_range_of`, mathterpiece/compiler.py, line 7698) | | mtp-08wd.3 |
 
-Formatting with a format spec, `round`, and `sqrt` agreed on every value tried.
-
-:::{admonition} Open question Q-evaluation-9
-:class: warning
-The elementary functions, the conversion between degrees and radians, and `mod` of reals give
-different binary64 results at the two times. On the same inputs, computed with
-mathterpiece/builtins.py and with web/src/builtins.ts:
-
-- `sind` differs on 776 of 2,885 angles from -360 to 360 degrees, a quarter of a degree apart. The
-  difference is in the last bits, as for -359.75, where it is 0.004363309284746544 when folded and
-  0.004363309284747432 while drawing. `cosd`, `tand`, `secd`, `cscd`, `cotd`
-  and `to-rad` differ on 692 to 1,265 of the same angles. Part of the difference comes from the
-  conversion: Python's `math.radians` multiplies by π/180, and the runtime computes `(x × π) / 180`
-  (web/src/builtins.ts, line 52).
-- `sin`, `cos`, `tan`, `exp`, `log`, `atan`, `asin`, `acos` and `dist` differ in the last bit on
-  1 to 41 percent of 1,031 values from -8 to 8.
-- `mod` of reals: `(mod 5.5 0.1)` is 0.0999999999999997 when folded and 0 while drawing. Python's
-  `%` is exact, and the runtime computes `a - b × ⌊a / b⌋` (web/src/builtins.ts, line 46).
-- For large angles the two differ by more than the last bits: `(cosd (+ 1e15 90))` is
-  0.9847837611566258 when folded and 0.9851213048563215 while drawing.
-
-Both times give exact values at multiples of 90 degrees, by a table of right angles
-(web/src/builtins.ts, line 43, and mathterpiece/builtins.py, line 41), so the undefined points of
-{numref}`undefined-operations` agree. Other values agree only to the last bits. `(= (sind 30) 0.5)`
-is false at both times. The options:
-
-- (a) Require the same bits: both programs use one algorithm for each function, such as correctly
-  rounded functions, and the same order of operations for conversions and `mod`. Both times then
-  agree exactly, at the cost of work in both programs.
-- (b) Allow results that differ in the last bits for these functions, and state this in
-  {numref}`same-value-at-both-times`. Then `=` on such results may differ between the two times
-  (Q-evaluation-7).
-- (c) Fold these functions only when the result is exact, as at right angles, and leave the rest
-  to the runtime. Both times agree, and less is folded.
+For `(cosd (+ 1e15 90))` the exact value is the cosine of 10 degrees, 0.98481…, so both times
+are wrong in the fourth digit. Elsewhere the two differ only in the last bits, which
+{numref}`real-error-bound` allows: `sind` differs on 776 of 2,885 angles from -360 to 360 degrees,
+a quarter of a degree apart, and `sin`, `cos`, `tan`, `exp`, `log`, `atan`, `asin`, `acos` and
+`dist` differ in the last bit on 1 to 41 percent of 1,031 values from -8 to 8. Formatting with a
+format spec, `round`, and `sqrt` agreed on every value tried.
 :::
