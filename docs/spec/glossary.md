@@ -31,10 +31,6 @@ control
   A component that the reader presses, drags or clicks, and which writes the model: a slider, a
   button, a play, a stepper or a toggle. Defined in {doc}`compiler-runtime`.
 
-core form
-  A form that is not sugar, and which the rewrite step leaves as it is. Defined in
-  {doc}`compiler-runtime`, and each one in {doc}`core`.
-
 illustrator
   The person who writes a world model as an `.mtp` source file. Defined in
   {doc}`compiler-runtime`.
@@ -76,17 +72,12 @@ runtime script
   The file `mathterpiece.js`, which holds the runtime and defines the page elements. It is the
   same for every world model. Defined in {doc}`compiler-runtime`.
 
-sugar
-  A form that can be rewritten into core forms without computing any value. Defined in
-  {doc}`compiler-runtime`.
-
 syntax error
   An error by which the parse step rejects a source. Defined in {doc}`compiler-runtime`.
 
 view
   A component through which the reader sees the model: a canvas, a readout or a display. Defined in
   {doc}`compiler-runtime`.
-
 
 bar
   Two words or more joined by `|` with no blank, such as `real|none` ({numref}`bars`).
@@ -196,4 +187,24 @@ token
 
 word
   One run read whole: a name, a number, an operator or a boolean ({numref}`run`).
+
+core form
+  A form that the prover checks and the runtime runs: every form that is not sugar. See
+  {numref}`core-form`.
+
+library
+  The built-in functions and the files of the standard library. A call of a library function is
+  a core form. See {numref}`library-form`.
+
+prover
+  The part of the compiler that checks types, proves ranges and constraints, and checks every
+  invariant of the world model. It sees only core forms. See {numref}`prover-sees-core`.
+
+rewrite
+  A rule that replaces a sugar form by core forms, as a pair of mtp fragments. See
+  {ref}`core-rewrites`.
+
+sugar
+  A form that can be rewritten into core forms without computing any value. Also called a
+  derived form. See {numref}`sugar-form`.
 ```
