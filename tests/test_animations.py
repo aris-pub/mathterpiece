@@ -477,6 +477,45 @@ class TestTogether:
             "k is moved twice at the same time in this at-once",
         )
 
+    # mtp-bvrp: a write of such a shape's x, y or pos writes these attributes, as the runtime
+    # counts them since mtp-gzs9.
+    PLACED = {
+        "polyline": ("(polyline sh (points [[0 0] [0 2]]))", {"points": "[[0 0] [2 0]]"}),
+        "polygon": ("(polygon sh (points [[0 0] [2 0] [2 2]]))", {"points": "[[0 0] [1 0] [1 1]]"}),
+        "curve": (
+            "(curve sh (from [0 0]) (to [2 0]) (controls [[1 1]]))",
+            {"from": "[1 1]", "to": "[3 1]", "controls": "[[2 2]]"},
+        ),
+        "line": ("(line sh (from [0 0]) (to [2 0]))", {"from": "[1 1]", "to": "[3 1]"}),
+        "triangle": (
+            "(triangle sh (a [0 0]) (b [3 0]) (c [3 3]))",
+            {"a": "[1 1]", "b": "[4 1]", "c": "[4 4]"},
+        ),
+    }
+
+    @pytest.mark.parametrize("kind", list(PLACED))
+    def test_a_position_and_what_it_is_worked_out_from(self, kind):
+        shape, held = self.PLACED[kind]
+        for pos, to in (("x", "3"), ("y", "3"), ("pos", "[3 3]")):
+            for attr, value in held.items():
+                for first, second in (((pos, to), (attr, value)), ((attr, value), (pos, to))):
+                    error(
+                        f"(scene s {shape}) (animation a (at-once"
+                        f" (move sh.{first[0]} (to {first[1]}) (duration 1))"
+                        f" (move sh.{second[0]} (to {second[1]}) (duration 1))))",
+                        f"sh.{attr} is moved twice at the same time in this at-once",
+                    )
+
+    def test_x_and_y_and_two_ends_are_fine(self):
+        for shape, first, second in (
+            ("(polyline sh (points [[0 0] [0 2]]))", "x (to 3)", "y (to 3)"),
+            ("(line sh (from [0 0]) (to [2 0]))", "from (to [1 1])", "to (to [3 1])"),
+        ):
+            steps(
+                f"(scene s {shape}) (animation a (at-once (move sh.{first} (duration 1))"
+                f" (move sh.{second} (duration 1))))"
+            )
+
     def test_different_targets_and_in_order_are_fine(self):
         steps(
             f"{K} (real j 0) (animation a (at-once (move k (to 1) (duration 1))"

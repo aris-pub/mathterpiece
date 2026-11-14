@@ -3108,13 +3108,16 @@ class _Compiler:
         """Moves that run at the same time read the same values when they start (mtp-lm24), so
         two parts of an at-once moving the same thing at overlapping times would describe no
         one state; at different times they may."""
-        timed = [_timed(part, 0.0) for part in parts]
+        timed = [
+            [(t, s, e) for target, s, e in _timed(part, 0.0) for t in self.placed(target)]
+            for part in parts
+        ]
         for a in range(len(timed)):
             for b in range(a + 1, len(timed)):
                 for target, s1, e1 in timed[a]:
                     for other, s2, e2 in timed[b]:
                         if target == other and (s1 == s2 or (s1 < e2 and s2 < e1)):
-                            i, attr = target
+                            i, attr, _ = target
                             label = self.model.objects[i].name + (f".{attr}" if attr else "")
                             raise CompileError(
                                 f"{label} is moved twice at the same time in this at-once: what"
@@ -3122,6 +3125,24 @@ class _Compiler:
                                 " one move after the other with in-order",
                                 pos,
                             )
+
+    def placed(self, target: tuple) -> list[tuple]:
+        """Split a target of _timed, which has already split a pos into x and y, into the values
+        that a write of it changes. Each is an object, an attribute, and "x" or "y" for one part
+        of a point, or None for the whole value."""
+        i, attr = target
+        kind = self.model.objects[i].kind
+        if kind not in FROM_POINTS:
+            return [(i, attr, None)]
+        # Writing x or y writes that part of every point that the position is worked out from,
+        # so the runtime counts a writer of x as overlapping a writer of those points and not a
+        # writer of y (mtp-gzs9).
+        held = CORNERS.get(kind, ("from", "to", "controls") if kind in CURVES else ("points",))
+        if attr in ("x", "y"):
+            return [(i, c, attr) for c in held]
+        if attr in held:
+            return [(i, attr, "x"), (i, attr, "y")]
+        return [(i, attr, None)]
 
     def played(self, tid: int, duration, ease, pos: Pos) -> tuple:
         """What a transition does inside an animation: it moves its target, or, with none,
