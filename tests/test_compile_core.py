@@ -1,6 +1,8 @@
 """The compiler's core: declarations, names, the body rule and typed expressions (docs/syntax.md
 sections 4, 8 and 9; docs/type-system.md sections 3 to 5.b)."""
 
+import re
+
 import pytest
 from helpers import error, model, value
 
@@ -157,6 +159,24 @@ class TestExpressions:
 
     def test_an_unknown_attribute(self):
         error("(scene s (circle c) (circle d (r c.width)))", "a circle has no attribute 'width'")
+
+    @pytest.mark.parametrize(
+        "shape",
+        [
+            "(circle c (pos [1 0]) (r (* 0.5 c.x)))",
+            "(circle c (r 1) (fill (if (> c.r 0) 'red' 'blue')))",
+            "(circle c (pos [1 0]) (r c.pos[0]))",
+            "(line c (from [0 0]) (to [1 c.x]))",
+        ],
+    )
+    def test_a_shape_reading_itself(self, shape):
+        error(
+            f"(scene s {shape})",
+            re.escape(
+                "c cannot read its own attributes in its own declaration: give the value a name"
+                " with (let ((name value)) …) around c, and read that name instead"
+            ),
+        )
 
     def test_strings_as_colors(self):
         m = model("(scene s (circle c (fill 'red')))")

@@ -559,6 +559,9 @@ class _Compiler:
         # object from the first time. None when objects are added at the end.
         self.cursor: int | None = None
         self.redo_differs = False
+        # The shapes whose arguments are being compiled. Such a shape has only some of its
+        # attributes, so a read of one that is missing is the shape reading itself (mtp-k0ik).
+        self.declaring: set[int] = set()
 
     def alias(self, k):
         """The key a name is kept under, as the file being compiled sees it."""
@@ -5110,6 +5113,7 @@ class _Compiler:
                 if attr not in given and not (attr in ("x", "y") and "pos" in given):
                     given[attr] = (node, inner)
         saved, self.frame = self.frame, (parent if parent != self.scene else None)
+        self.declaring.add(i)
         try:
             for f in pre:
                 f(obj)
@@ -5118,6 +5122,7 @@ class _Compiler:
             self.shape_attrs(obj, given, absent, form.pos, scope, specs)
         finally:
             self.frame = saved
+            self.declaring.discard(i)
         # Before its members are declared, so they go with it.
         self.copy_exists(i, scope)
         if kind in CURVES:
@@ -5890,6 +5895,8 @@ class _Compiler:
         else:
             if attr is None:
                 return Expr("obj", obj.type, (i,))
+            if attr not in obj.attrs and i in self.declaring:
+                raise self.self_read(i, obj.pos)
             if attr not in obj.attrs:
                 raise CompileError(f"{_a(obj.kind)} has no attribute '{attr}'", obj.pos)
             attribute = obj.attrs[attr]
@@ -6120,7 +6127,17 @@ class _Compiler:
             deps = frozenset().union(*(r.deps for r in reads))
             t = Refine(ListT(t), (("length", len(obj.members)),))
             return Expr("spread", t, (Expr("obj", obj.type, (i,)), name), deps)
+        if i in self.declaring:
+            raise self.self_read(i, pos)
         raise CompileError(f"{_a(obj.kind)} has no attribute '{name}'", pos)
+
+    def self_read(self, i: int, pos: Pos) -> CompileError:
+        name = self.model.objects[i].name
+        return CompileError(
+            f"{name} cannot read its own attributes in its own declaration: give the value a name"
+            f" with (let ((name value)) …) around {name}, and read that name instead",
+            pos,
+        )
 
     def part_of(self, e: Expr, part, scope: dict, pos: Pos) -> Expr:
         if e.type == RECURSING:
