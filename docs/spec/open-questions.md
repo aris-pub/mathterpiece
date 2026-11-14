@@ -68,6 +68,11 @@ input while drawing (Q-evaluation-4), rounding of colours (Q-evaluation-5), the 
 The open choice is what numbers are: IEEE doubles at both times, with `1/3` only a way to write a
 real, or exact ratios at both times, which the runtime would then implement.
 
+**Decided:** ints and ratios are exact at both times, reals may differ in their last digits and
+the prover widens every real range outward to allow for it, and a folded value is final
+({numref}`same-value-at-both-times`, {numref}`real-error-bound`,
+{numref}`prover-widens-reals`).
+
 ## P5. Equality for each type
 
 **Today.** `=` compares numbers exactly, points and lists item by item, and everything else by
@@ -80,6 +85,11 @@ Functions, transitions and animations cannot be compared, and comparing them is 
 The tolerant comparison is not equality: it gets its own name and is used only by the runtime.
 
 **Settles:** Q-evaluation-7.
+
+**Decided:** as proposed, values compare by content, mutable objects by identity, `=` on
+functions, transitions and animations is a compile error, and the tolerant comparison is called
+matching and is used only by the runtime ({numref}`equality-by-content`,
+{numref}`equality-operands`, {numref}`matching`).
 
 ## P6. Termination
 
@@ -97,6 +107,9 @@ bourgain-densities.mtp, `koch` in koch-snowflake.mtp and `has-divisor` in ulam-s
   that the prover can show. This adds a proof to the prover.
 
 **Settles:** Q-evaluation-8.
+
+**Decided:** a depth limit, the same at both times, past which a call gives `none`
+({numref}`call-depth-limit`). Its value is still open (Q-evaluation-8).
 
 ## P7. What a name may contain, and what text the reader accepts
 
@@ -133,3 +146,6 @@ format of the .mtpc changes its version. A runtime refuses a .mtpc that does not
 
 **Settles:** Q-compiler-runtime-3, 5, 6, 7, 8, 9 and 10, Q-lexical-10 (a bug), and the doc
 contradictions Q-core-24 to 26 and Q-evaluation-6.
+
+**Decided:** as proposed, and a runtime refuses a .mtpc that does not match the schema
+({numref}`what-is-normative`, {numref}`format-version`, {numref}`runtime-loads-mtpc`).
