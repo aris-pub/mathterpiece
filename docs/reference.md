@@ -365,7 +365,7 @@ Every listener is written inside the body of the view it acts in, after the view
 
 #### Showing and hiding
 
-`(on-show shape animation)` and `(on-hide shape animation)` are listeners written inside a canvas's body. The animation is an inline `(animation …)` or a use of a choreo. `on-show` plays when the canvas starts showing the shape, as when an item's `when` turns true. `on-hide` plays when the canvas stops showing the shape, and the canvas stops drawing it only when the animation ends.
+`(on-show shape animation)` and `(on-hide shape animation)` are listeners written inside a canvas's body. The animation is an inline `(animation …)`, a use of a choreo, or a single `(move …)`, which is the same as `(animation (move …))`, as for every listener (see "Components"). A single move moves only one attribute, so it leaves `drawn` or `opacity` unmoved, which is a compile error (see "Hidden" below). `on-show` plays when the canvas starts showing the shape, as when an item's `when` turns true. `on-hide` plays when the canvas stops showing the shape, and the canvas stops drawing it only when the animation ends.
 
 ```
 (choreo draw-on ((shape who) (real seconds 1))

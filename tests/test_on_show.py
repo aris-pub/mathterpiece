@@ -6,8 +6,11 @@ so an on-show moves both to 1 and an on-hide both to 0: an animation that leaves
 is a compile error naming what is missing. A group passes its on-show or on-hide to its members,
 and a member's own wins. A canvas gives a shape from one item at most."""
 
+import pytest
 from helpers import doc, error, model
 from mtpc_check import errors
+
+from mathterpiece.compiler import CompileError, compile_source
 
 SCENE = (
     "(bool show false) (real k 0)"
@@ -172,3 +175,28 @@ def test_one_item_with_one_condition_is_fine():
 def test_a_text_takes_on_show():
     d = doc(BASE + " (canvas v (when show label) (on-show label (fade-in label)))")
     assert errors(d) == []
+
+
+# What other listeners take in place of an animation (the author, 2026-11-13): a single move is
+# (animation (move …)), with no change in behavior, and giving both is the animation twice.
+def compile_error(src: str) -> str:
+    with pytest.raises(CompileError) as caught:
+        compile_source(src)
+    return str(caught.value)
+
+
+def test_a_move_where_the_animation_goes_is_that_animation():
+    move = "(move c.opacity (to 0) (duration 1))"
+    for kind in ("on-show", "on-hide"):
+        bare = compile_error(BASE + f" (canvas v (when show c) ({kind} c {move}))")
+        inline = compile_error(BASE + f" (canvas v (when show c) ({kind} c (animation {move})))")
+        assert bare == inline
+        assert f"{kind} c leaves c.drawn unmoved" in bare
+
+
+def test_a_move_and_an_animation_are_the_animation_twice():
+    error(
+        BASE + " (canvas v (when show c) (on-show c (move c.opacity (to 1) (duration 1))"
+        f" {DRAW_ON}))",
+        "'animation' is given twice",
+    )
