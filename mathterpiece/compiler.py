@@ -3141,7 +3141,13 @@ class _Compiler:
         that a write of it changes. Each is an object, an attribute, and "x" or "y" for one part
         of a point, or None for the whole value."""
         i, attr = target
-        kind = self.model.objects[i].kind
+        obj = self.model.objects[i]
+        # A write of a container's attribute that is not its own writes each member's, at any
+        # depth, so the runtime counts a writer of g.r as overlapping a writer of c.r for a
+        # member c of g (mtp-gvrf.11).
+        if attr is not None and _spreads(obj, attr):
+            return [t for m in obj.members for t in self.placed((m, attr))]
+        kind = obj.kind
         if kind not in FROM_POINTS:
             return [(i, attr, None)]
         # Writing x or y writes that part of every point that the position is worked out from,
