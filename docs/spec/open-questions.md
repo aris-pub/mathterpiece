@@ -34,6 +34,11 @@ values are known.
 **Settles:** Q-compiler-runtime-1, Q-compiler-runtime-2, Q-core-3, Q-core-6, and the order of
 the steps in {doc}`compiler-runtime`.
 
+**Decided:** prove, then expand: each `foreach` body and each motif body is proved once, and the
+copies and instances are not proved again ({numref}`prove-bodies-once`). In {doc}`core`, a form
+whose rewrite would need the value of a `foreach` name or a motif parameter is core
+({numref}`names-from-values`).
+
 ## P2. A shorthand means exactly its rewrite
 
 **Proposed principle.** Every sugar form means exactly the core forms that it rewrites into. Where
@@ -47,6 +52,12 @@ a type is core.
 `like` (Q-core-2), and the defaults of containers, animations and formulas (Q-core-15, 18, 21).
 Using a type to choose a rewrite makes the form core (Q-core-7, `map` over an int).
 
+**Decided:** a shorthand means exactly its rewrite, and where the code gives it another meaning,
+the code is changed. A form that needs a value or a type to be rewritten is core
+({numref}`sugar-form`, {numref}`sugar-rewrites`). `(on-drag p p.pos)` (Q-core-23) and
+`(foreach i n …)` (Q-core-27) are still open under P3, since applying P2 would change existing
+figures.
+
 ## P3. Which forms are core
 
 Under P2, these forms need a decision of their own: `import` (Q-core-8), `type` (Q-core-9),
@@ -54,6 +65,23 @@ Under P2, these forms need a decision of their own: `import` (Q-core-8), `type` 
 (Q-core-13), `pos` as `x` and `y` (Q-core-14), `exists-when` (Q-core-16), `let` (Q-core-17), the
 search for the only seed (Q-core-5), and a function that takes the name of an operator
 (Q-core-20). Each is listed in {doc}`core` with the rewrite that it would have.
+
+**Decided:** P2 is applied form by form, and only the cases where that changes an existing figure
+are brought to the author. Sugar: `import`, `type`, `palette`, `pos`, the defaults of groups,
+rows, columns and formulas, and the search for the only seed. Core: `colormap`, variant
+instances, rows and columns, `exists-when`, `let`, the defaults of instances and of animations,
+and an `in-order` of one item. The operators are library functions, which a declared function may
+replace ({numref}`library-form`). The list is in {doc}`core`, "Summary".
+
+Still open, because applying P2 changes existing figures:
+
+- Q-core-23, `(on-drag p p.pos)` as `(on-drag p (move p.pos (to pointer)))`: a group is dragged
+  differently by the two. Applying P2 changes examples/two-canvases.mtp, whose corners are
+  fixed-size groups dragged by a bare target.
+- Q-core-27, `(foreach i n …)` as `(foreach i (range n) …)`: with a count known only while drawing,
+  the first makes as many copies as the count can be at most, and the second is an error.
+  Applying P2 makes examples/ball-puzzle.mtp, examples/spiral-of-copies.mtp and
+  ~/blog/ball-puzzle/ball-puzzle.mtp stop compiling.
 
 ## P4. One meaning for every expression, at both times
 
