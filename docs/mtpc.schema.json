@@ -1579,7 +1579,9 @@
                 "on-dragend",
                 "on-enter",
                 "on-leave",
-                "on-pointermove"
+                "on-pointermove",
+                "on-show",
+                "on-hide"
               ]
             }
           }
@@ -2910,6 +2912,69 @@
             "type": "object",
             "properties": {
               "kind": {
+                "enum": [
+                  "on-show",
+                  "on-hide"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "kind",
+              "type",
+              "access",
+              "name",
+              "shape",
+              "animation"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "on-show",
+                  "on-hide"
+                ]
+              },
+              "type": {
+                "$ref": "#/$defs/type"
+              },
+              "access": {
+                "enum": [
+                  "scene",
+                  "page"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "shape": {
+                "$ref": "#/$defs/id"
+              },
+              "animation": {
+                "$ref": "#/$defs/id"
+              },
+              "in": {
+                "$ref": "#/$defs/in"
+              },
+              "doc": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": {
                 "const": "on-view"
               }
             },
@@ -3674,7 +3739,9 @@
                 "on-dragend",
                 "on-enter",
                 "on-leave",
-                "on-pointermove"
+                "on-pointermove",
+                "on-show",
+                "on-hide"
               ]
             }
           },

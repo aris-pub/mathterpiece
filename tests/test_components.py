@@ -521,16 +521,18 @@ class TestWhen:
     @pytest.mark.parametrize(
         "items, ops",
         [
-            ("(when show a) (if show a b) b", ["if", "if", "b"]),
-            ("(if show a b) (when show a) b", ["if", "if", "b"]),
-            ("(when show a) b (if show a b)", ["if", "b", "if"]),
-            ("(when show a) [a b] b", ["if", "list", "b"]),
-            ("[a b] (when show a) b", ["list", "if", "b"]),
+            ("(when show a) (if show c d) b", ["if", "if", "b"]),
+            ("(if show c d) (when show a) b", ["if", "if", "b"]),
+            ("(when show a) b (if show c d)", ["if", "b", "if"]),
+            ("(when show a) [c d] b", ["if", "list", "b"]),
+            ("[c d] (when show a) b", ["list", "if", "b"]),
         ],
     )
     def test_items_that_give_shapes_in_any_order(self, items, ops):
         # mtp-1l12: an (if …) item after a (when …) item was taken for an optional argument.
-        m = model(f"{self.S} (canvas v (pan false) {items})")
+        # A canvas gives a shape from one item at most (mtp-7i3j), so each item gives others.
+        scene = "(bool show true) (scene s (circle a) (circle b) (circle c) (circle d))"
+        m = model(f"{scene} (canvas v (pan false) {items})")
         shows = m.get("v").data["shows"]
         assert [s if isinstance(s, int) else s.expr.op for s in shows] == [
             m.id(op) if op == "b" else op for op in ops
@@ -541,7 +543,8 @@ class TestWhen:
         error(f"{self.S} (canvas v show)", "a canvas shows shapes")
 
     def test_the_compiled_file(self):
-        d = doc(f"{self.S} (canvas v a (when show [a b]))")
+        # One item per shape (mtp-7i3j), so the when gives only b.
+        d = doc(f"{self.S} (canvas v a (when show [b]))")
         assert errors(d) == []
         shows = d["objects"][d["names"]["v"]]["shows"]
         assert shows[0] == d["names"]["a"] and "bound" in shows[1]

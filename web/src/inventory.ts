@@ -9,7 +9,7 @@ import type { Doc, Obj } from "./doc.ts";
 const ELEMENTS = new Set(["canvas", "readout", "display", "slider", "toggle", "button", "play", "stepper"]);
 const LISTENERS = new Set([
   ...["on-drag", "on-click", "on-release", "on-dragstart", "on-dragend", "on-view"],
-  ...["on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet"],
+  ...["on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet", "on-show", "on-hide"],
 ]);
 
 export interface InventoryOptions {
@@ -106,6 +106,8 @@ function listener(doc: Doc, o: Obj, name: (id: number) => string): HTMLElement {
       "on-quiet": `When the reader puts ${of} back to quiet, with the cross in its corner, it ${plays}.`,
       "on-enter": `When the reader's pointer comes onto ${of}, it ${plays}.`,
       "on-leave": `When the reader's pointer leaves ${of}, it ${plays}.`,
+      "on-show": `When the canvas starts showing ${of}, or first comes into view with ${of} shown, it ${plays}, on a stand-in drawn in place of ${of}: the scene does not change.`,
+      "on-hide": `When the canvas stops showing ${of}, it ${plays}, on a stand-in drawn in place of ${of}, and hides ${of} once it ends: the scene does not change.`,
     }[o.kind]!;
   }
   entry.append(el("p", "", what));
