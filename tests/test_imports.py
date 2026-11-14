@@ -96,6 +96,24 @@ def test_const_variables(files):
     assert m.get("v").value.value == 0.8
 
 
+def test_const_lists(files):
+    # mtp-reoe: a const list, of any item type, can be imported like any other const variable.
+    house = (
+        "(list[int] sizes [3 4 5] (const))"
+        " (list[list[point]] spots [[[0 0] [1 0]] [[2 2]]] (const))"
+    )
+    fig = "(import house sizes spots) (int n (+ sizes[0] (count spots)))"
+    m = build(files(house=house, fig=fig))
+    assert m.get("n").value.value == 5
+
+
+def test_a_list_that_is_not_const_is_not_imported(files):
+    fails(
+        files(house="(list[int] sizes [3 4 5])", fig="(import house)"),
+        "house.mtp holds a variable that is not const",
+    )
+
+
 @pytest.mark.parametrize(
     "decl, what",
     [

@@ -7038,6 +7038,11 @@ def _not_importable(form: Node) -> str | None:
     """What a top-level form of a file to import is, when it may not be there; None when it may
     (the author, 2026-11-04)."""
     head = _head(form)
+    # A variable whose type takes an item type, such as list[int], has a head of two parts.
+    if head is None and isinstance(form, Form) and form.items and isinstance(form.items[0], Name):
+        parts = form.items[0].parts
+        typed = len(parts) == 2 and isinstance(parts[0], str) and not isinstance(parts[1], str)
+        head = parts[0] if typed else None
     if not isinstance(form, Form) or head is None:
         return "an item that is not a declaration"
     if head in IMPORTABLE or _typed_func(form) is not None:
