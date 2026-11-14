@@ -391,6 +391,10 @@ POSITIONAL = {"text": ("value",)}
 # The key, never a name, under which a scope holds the condition the copies of a foreach whose
 # count is known only while drawing exist under (the author, 2026-11-06).
 EXISTS = "\0exists"
+# The key, never a name, under which the scope of a container's clip or defaults holds the
+# container. Those are compiled inside the clip's or a member's declaration, after the container's
+# own, and a read of the container there is a read of it in its own declaration (mtp-gvrf.16).
+OWN = "\0own"
 # (like x) comes before every other keyword argument (the author, 2026-11-06).
 LIKE_FIRST = "(like …) comes first, before the other arguments"
 
@@ -1971,7 +1975,7 @@ class _Compiler:
         for p, a in zip(f.params, args, strict=True):
             for path in f.reads.get(p.name, ()):
                 for each in self.through_function(path, f, args):
-                    deps |= self.reads_through(a, each)
+                    deps |= self.reads_through(a, each, node.pos)
         return Expr("call", t, (fid, *args), deps | f.deps, r)
 
     def call_range(self, fid: int, args: list) -> Range:
@@ -2039,7 +2043,7 @@ class _Compiler:
         reads = g.reads.get(g.params[int(k)].name, ())
         return [prefix + r for r in reads if "@" not in r]
 
-    def applied(self, fexpr: Expr, args: list) -> frozenset:
+    def applied(self, fexpr: Expr, args: list, pos: Pos) -> frozenset:
         """What a function value reads through the shapes it is given here. When it is a
         parameter, the reads are recorded for each call, which knows the function given."""
         out: set = set()
@@ -2047,21 +2051,23 @@ class _Compiler:
             g = self.model.functions[fexpr.args[0]]
             for q, a in zip(g.params, args, strict=True):
                 for path in g.reads.get(q.name, ()):
-                    out |= self.reads_through(a, path)
+                    out |= self.reads_through(a, path, pos)
         elif fexpr.op == "local":
             for k, a in enumerate(args):
                 self.note(a, f"@{fexpr.args[0]}/{k}")
         return frozenset(out)
 
-    def reads_through(self, e: Expr, path: str) -> frozenset:
+    def reads_through(self, e: Expr, path: str, pos: Pos) -> frozenset:
         """The attributes a function reads when it reads path through an argument e."""
         if path.startswith("[]."):
+            if e.op == "obj":
+                self.not_from_inside(e.args[0], pos)
             items = self.items_of(e)
             if items is None:
                 self.note(e, path)
                 return frozenset()
             objs = [Expr("obj", self.model.objects[m].type, (m,)) for m in items]
-            return frozenset().union(*(self.reads_through(o, path[3:]) for o in objs))
+            return frozenset().union(*(self.reads_through(o, path[3:], pos) for o in objs))
         objs = self.objects_in(e)
         if objs is None:
             self.note(e, path)
@@ -2069,7 +2075,7 @@ class _Compiler:
         out: set = set()
         for m in objs:
             if path in self.attr_names(m):
-                out |= self.obj_attr(m, path, NOPOS).deps
+                out |= self.obj_attr(m, path, pos).deps
         return frozenset(out)
 
     def note(self, e: Expr, path: str) -> None:
@@ -2159,7 +2165,7 @@ class _Compiler:
             folded = self.call_value(fexpr, args)
             if folded is not None:
                 return _known(t, folded.value)
-        deps |= self.applied(fexpr, args)
+        deps |= self.applied(fexpr, args, node.pos)
         return Expr("apply", t, (fexpr, *args), deps | fexpr.deps, _type_range(t))
 
     def foldable(self, e: Expr) -> bool:
@@ -2655,8 +2661,13 @@ class _Compiler:
         if head == "map" and _core(coll.type) == INT:
             # (map n f) stands for (map (range 0 n (gap 1)) f) (the author, 2026-11-03).
             coll = self.range_list(node, (args[0],), scope)
-        item, n = self.collection_items(coll, head, node.pos)
         rest = args[1:]
+        # (count g) reads no attribute of the members.
+        if coll.op == "obj" and (head != "count" or rest):
+            if coll.args[0] in scope.get(OWN, ()):
+                raise self.self_read(coll.args[0], node.pos)
+            self.not_from_inside(coll.args[0], node.pos)
+        item, n = self.collection_items(coll, head, node.pos)
         if head in ("sum", "count", "reduce", "any", "all") and _may_be_none(item):
             raise CompileError(
                 f"the items of {head} may be none: filter them out with (somes xs)", node.pos
@@ -2674,7 +2685,7 @@ class _Compiler:
             if f.op == "func":
                 fdef = self.model.functions[f.args[0]]
                 for path in fdef.reads.get(fdef.params[len(params) - 1].name, ()):
-                    deps |= self.reads_through(coll, "[]." + path)
+                    deps |= self.reads_through(coll, "[]." + path, node.pos)
             return f
 
         def sized(t: Type) -> Type:
@@ -4696,11 +4707,11 @@ class _Compiler:
                 assert isinstance(item, Form)
                 if clip is not None:
                     raise CompileError("'clip' is given twice", item.pos)
-                clip = (item, inner)
+                clip = (item, _own(inner, i))
                 continue
             if head == "defaults" and head not in params:
                 assert isinstance(item, Form)
-                self.group_defaults(item, inner, defaults)
+                self.group_defaults(item, _own(inner, i), defaults)
                 continue
             # As a group's, an instance's pointer-events reaches its members.
             if head == "pointer-events" and head not in params:
@@ -5178,11 +5189,11 @@ class _Compiler:
                     assert isinstance(item, Form)
                     if clip is not None:
                         raise CompileError("'clip' is given twice", item.pos)
-                    clip = (item, inner)
+                    clip = (item, _own(inner, i))
                     continue
                 if kind == "group" and head == "defaults":
                     assert isinstance(item, Form)
-                    self.group_defaults(item, inner, defaults)
+                    self.group_defaults(item, _own(inner, i), defaults)
                     continue
                 if kind == "group" and head == "fixed-size":
                     assert isinstance(item, Form)
@@ -6249,6 +6260,7 @@ class _Compiler:
         if obj.kind in ("group", "scene") and name == "length":
             return _known(INT, len(self.whole(i)))
         if obj.kind in ("group", "scene") and name == "members":
+            self.not_from_inside(i, pos)
             items = tuple(self.read(m, None) for m in self.whole(i))
             return Expr("list", ListT(self.common(obj.members)), items)
         if self.fixed(i) and name in ("x", "y", "pos"):
@@ -6277,6 +6289,7 @@ class _Compiler:
                 if self.model.objects[m].name == name:
                     return self.read(m, None)
         if obj.kind == "group" or (obj.kind == "instance" and name in GROUP_DEFAULTS):
+            self.not_from_inside(i, pos)
             if not self.whole(i) or name not in self.attr_names(i):
                 raise CompileError(f"every member of {obj.name} must have '{name}'", pos)
             reads = [self.obj_attr(m, name, pos) for m in obj.members]
@@ -6287,6 +6300,18 @@ class _Compiler:
         if i in self.declaring:
             raise self.self_read(i, pos)
         raise CompileError(f"{_a(obj.kind)} has no attribute '{name}'", pos)
+
+    def not_from_inside(self, i: int, pos: Pos) -> None:
+        """A read of group i whole includes every member of i, so a shape inside i, at any
+        depth, never reads it whole in its own declaration (mtp-gvrf.16)."""
+        if self.model.objects[i].kind != "group":
+            return
+        for d in sorted(self.declaring, reverse=True):
+            j = self.model.objects[d].parent
+            while j is not None:
+                if j == i:
+                    raise self.self_read(d, pos)
+                j = self.model.objects[j].parent
 
     def self_read(self, i: int, pos: Pos) -> CompileError:
         name = self.model.objects[i].name
@@ -6300,6 +6325,9 @@ class _Compiler:
         if e.type == RECURSING:
             index = part if isinstance(part, str) else self.expr(part, None, scope)
             return Expr("part", RECURSING, (e, index))
+        # A group's length reads no attribute, as (count g) does.
+        if e.op == "obj" and e.args[0] in scope.get(OWN, ()) and part != "length":
+            raise self.self_read(e.args[0], pos)
         if isinstance(part, str):
             if e.op == "obj":
                 # Whether an attribute is built yet depends on the compiler's order, not the
@@ -6386,6 +6414,7 @@ class _Compiler:
                 raise CompileError(f"position {k} is out of range", pos)
             return self.read(ids[k], None)
         # A key known only while drawing may be any member, those declared after this read too.
+        self.not_from_inside(i, pos)
         ids = self.whole(i)
         # A key known only while drawing may miss, unless every choice of its type is a name.
         choices = _choices(index.type)
@@ -7108,6 +7137,10 @@ def _fill_from(given: dict, source: dict) -> None:
             given[other] = (Form((Name((".",), node.pos), node, k), node.pos), scope)
         elif attr not in given and not _overlaps(attr, given):
             given[attr] = (node, scope)
+
+
+def _own(scope: dict, i: int) -> dict:
+    return {**scope, OWN: scope.get(OWN, frozenset()) | {i}}
 
 
 def _overlaps(attr: str, given: dict) -> bool:
