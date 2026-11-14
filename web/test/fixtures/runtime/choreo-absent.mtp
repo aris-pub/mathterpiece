@@ -1,0 +1,10 @@
+(bool show true)
+(choreo fade-out ((shape x)) (move x.opacity (to 0) (duration 1)))
+(scene s
+  (circle|none a (r 1))
+  (exists-when a show)
+  (circle|none b (r 1))
+  (exists-when b show))
+(animation inline (move a.opacity (to 0) (duration 1)))
+(animation used (fade-out b))
+(canvas v s)

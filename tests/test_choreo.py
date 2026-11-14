@@ -174,6 +174,39 @@ def test_uses_in_a_foreach():
     )
 
 
+MAYBE = "(bool show true) (scene s (circle|none gone (r 1)) (exists-when gone show))"
+
+
+def test_a_shape_that_may_not_exist_is_an_argument_as_in_the_inline_move():
+    # mtp-0eha: a use is the inline animation, and a function's plain parameter takes an
+    # argument that may be none too (type-system.md 5.c).
+    fade = "(choreo fade-out ((shape x)) (move x.opacity (to 0) (duration 1)))"
+    same(
+        MAYBE + f" {fade} (play p (animation (fade-out gone))) (canvas v s)",
+        MAYBE + " (play p (animation (move gone.opacity (to 0) (duration 1)))) (canvas v s)",
+    )
+
+
+def test_a_value_that_may_be_none_is_an_argument_as_in_the_inline_move():
+    bump = "(choreo bump ((real x) (real to 1)) (move x (to to) (duration 1)))"
+    same(
+        "(real|none m 2)" + f" {bump} (button b (bump m))",
+        "(real|none m 2) (button b (animation (move m (to 1) (duration 1))))",
+    )
+
+
+def test_an_argument_that_may_be_none_is_refused_where_the_inline_move_refuses_it():
+    error(
+        "(real|none m 2) (real k 0)"
+        " (choreo bump ((real to 1)) (move k (to to) (duration 1))) (button b (bump m))",
+        "may be none",
+    )
+    error(
+        "(real|none m 2) (real k 0) (button b (animation (move k (to m) (duration 1))))",
+        "may be none",
+    )
+
+
 def test_the_examples_pass_the_schema():
     assert (
         errors(doc(BASE + " (animation third (stop 120)) (play p (animation third (fade-in c)))"))
