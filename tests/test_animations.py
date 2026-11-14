@@ -516,6 +516,62 @@ class TestTogether:
                 f" (move sh.{second} (duration 1))))"
             )
 
+    # mtp-gvrf.11: a write of a container's attribute that is not its own writes each member's,
+    # at any depth, and the runtime counts it so.
+    CIRCLES = "(group g (circle c1 (r 1)) (circle c2 (r 1)))"
+    NESTED = "(group g (group h (circle c1 (r 1))))"
+    MEMBERS = {
+        "r": (CIRCLES, "g.r (to 2)", "c1.r (to 3)", "c1.r"),
+        "by position": (CIRCLES, "g.fill (to 'red')", "g[1].fill (to 'blue')", "c2.fill"),
+        "points": (
+            "(group g (polyline pl (points [[0 0] [0 2]])))",
+            "g.x (to 3)",
+            "pl.points (to [[0 0] [2 0]])",
+            "pl.points",
+        ),
+        "pos and x": (
+            "(group g (polyline pl (points [[0 0] [0 2]])))",
+            "g.pos (to [3 3])",
+            "pl.x (to 3)",
+            "pl.points",
+        ),
+        "nested": (NESTED, "g.r (to 2)", "c1.r (to 3)", "c1.r"),
+        "nested group": (NESTED, "g.fill (to 'red')", "h.fill (to 'blue')", "c1.fill"),
+        "instance": ("(dot d)", "d.fill (to 'red')", "d.c.fill (to 'blue')", "c.fill"),
+        "instance in a group": (
+            "(group g (dot d))",
+            "g.fill (to 'red')",
+            "d.c.fill (to 'blue')",
+            "c.fill",
+        ),
+    }
+
+    @pytest.mark.parametrize("case", list(MEMBERS))
+    @pytest.mark.parametrize("swap", [False, True])
+    def test_a_container_and_its_member(self, case, swap):
+        shapes, one, two, label = self.MEMBERS[case]
+        first, second = (two, one) if swap else (one, two)
+        error(
+            f"(motif dot () (circle c (r 1))) (scene s {shapes}) (animation a (at-once"
+            f" (move {first} (duration 1)) (move {second} (duration 1))))",
+            f"{label} is moved twice at the same time in this at-once",
+        )
+
+    def test_a_container_and_what_it_does_not_spread_are_fine(self):
+        g = "(group g (circle c1 (r 1)) (circle c2 (r 1)) (dot d))"
+        for first, second in (
+            ("g.translate (to [1 1])", "c1.x (to 3)"),
+            ("g.transform (to (rotate 30))", "c1.pos (to [3 3])"),
+            ("c1.r (to 2)", "c2.r (to 3)"),
+            ("g.x (to 3)", "c1.y (to 3)"),
+            ("d.x (to 3)", "d.c.x (to 3)"),
+            ("d.translate (to [1 1])", "d.c.fill (to 'red')"),
+        ):
+            steps(
+                f"(motif dot () (circle c (r 1))) (scene s {g}) (animation a (at-once"
+                f" (move {first} (duration 1)) (move {second} (duration 1))))"
+            )
+
     def test_different_targets_and_in_order_are_fine(self):
         steps(
             f"{K} (real j 0) (animation a (at-once (move k (to 1) (duration 1))"
