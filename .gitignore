@@ -27,3 +27,4 @@ web/perf/pages/
 
 # The spec site that Sphinx writes (just spec)
 docs/_build/
+.netlify/

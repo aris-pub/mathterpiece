@@ -6,10 +6,14 @@
   rules are added or moved.
 - The directive `mtp-example` compiles its source while the site is built and shows it highlighted,
   then live. A source that does not compile fails the build, so an example never goes stale.
+- The directive `mtp-grammar` shows one section of the reader grammar, docs/spec/mtp.lark, as a
+  list of productions in which each name links to its definition. tests/test_grammar.py checks the
+  same file against the reader.
 """
 
 import html
 import json
+import re
 from pathlib import Path
 
 from docutils import nodes
@@ -26,7 +30,9 @@ from pygments.token import (
     Text,
     Whitespace,
 )
+from sphinx import addnodes
 from sphinx.application import Sphinx
+from sphinx.domains.std import ProductionList
 from sphinx.util.docutils import SphinxDirective
 
 from mathterpiece import builtins, compiler, types
@@ -189,6 +195,79 @@ class MtpExample(SphinxDirective):
 
 PLACED_CONTROLS = ("slider", "button", "play", "stepper", "toggle")
 
+GRAMMAR = Path(__file__).parent.parent / "spec" / "mtp.lark"
+# A string in quotes, a regular expression between slashes, or a name of a rule or a token.
+GRAMMAR_PIECE = re.compile(r'"(?:\\.|[^"\\])*"|/(?:\\.|[^/\\])*/|[A-Za-z_][A-Za-z_0-9]*')
+
+
+def grammar_sections(text: str) -> dict[str, list[tuple[str, str]]]:
+    """The rules of each section of the grammar, as (name, definition), in order. A line that
+    goes on with another alternative of the rule above has the name ""."""
+    sections: dict[str, list[tuple[str, str]]] = {}
+    current: list[tuple[str, str]] | None = None
+    for line in text.splitlines():
+        if line.startswith("//:"):
+            current = sections.setdefault(line[3:].strip(), [])
+        elif not line.strip() or line.lstrip().startswith("//"):
+            continue
+        elif current is None:
+            raise ValueError(f"a rule before the first section of {GRAMMAR.name}: {line}")
+        elif line[0].isspace():
+            current.append(("", line.strip()))
+        else:
+            name, _, definition = line.partition(":")
+            current.append((name.strip(), definition.strip()))
+    return sections
+
+
+def _defined(name: str) -> str:
+    """The name that a rule's head defines: form for form{w}, INT for INT.2, operator for
+    !operator."""
+    return re.sub(r"[{.].*$", "", name).lstrip("!?")
+
+
+class MtpGrammar(ProductionList):
+    """```{mtp-grammar} section
+    ```
+    The productions of one section of docs/spec/mtp.lark."""
+
+    required_arguments = 1
+    final_argument_whitespace = False
+    has_content = True
+
+    def run(self):
+        sections = grammar_sections(GRAMMAR.read_text(encoding="utf-8"))
+        self.env.note_dependency(str(GRAMMAR))
+        section = self.arguments[0]
+        if section not in sections:
+            raise self.error(f"{GRAMMAR.name} has no section {section!r}")
+        names = {_defined(n) for rules in sections.values() for n, _ in rules if n}
+
+        def linked(definition: str) -> str:
+            def link(m: re.Match) -> str:
+                word = m.group(0)
+                return f"`{word}`" if word in names else word
+
+            return GRAMMAR_PIECE.sub(link, definition)
+
+        lines = ["mtp"]
+        for name, definition in sections[section]:
+            lines.append(f"{name}: {linked(definition)}")
+        self.arguments = ["\n".join(lines)]
+        return super().run()
+
+    def make_name_target(self, *, name, production_group, location):
+        # The target is the name that the rule defines, so that form{w} and INT.2 are found as
+        # form and INT, while the list shows the head as the grammar writes it.
+        name_node = addnodes.literal_strong(name, name)
+        defined = _defined(name)
+        node_id = f"grammar-token-{production_group}-{defined}"
+        name_node["ids"].append(node_id)
+        self.state.document.note_implicit_target(name_node, name_node)
+        std = self.env.domains.standard_domain
+        std.note_object("token", f"{production_group}:{defined}", node_id, location=location)
+        return name_node
+
 
 def copy_runtime(app: Sphinx):
     """The runtime is built from web/src when it is older than its source (mathterpiece.build)."""
@@ -205,6 +284,7 @@ def setup(app: Sphinx):
     app.add_enumerable_node(rule_node, "rule", _rule_title, html=(visit_rule, depart_rule))
     app.add_directive("rule", Rule)
     app.add_directive("mtp-example", MtpExample)
+    app.add_directive("mtp-grammar", MtpGrammar)
     app.add_js_file("mathterpiece.js", type="module")
     # The design system that draws the controls, as on the inventory page.
     app.add_css_file(BRAIID)

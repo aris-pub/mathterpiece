@@ -1,0 +1,513 @@
+"""The reader grammar of the spec (docs/spec/mtp.lark) against the reader (mathterpiece/parse.py).
+
+The spec renders the grammar from the same file (docs/spec/grammar.md). Every source below must be
+accepted by both or rejected by both, and where both accept it, the grammar's tree, built into the
+reader's nodes by Reading below, must equal the reader's. Positions are not compared."""
+
+import logging
+import random
+import re
+from fractions import Fraction
+from pathlib import Path
+
+import pytest
+from lark import Lark, Token, Transformer
+from lark.exceptions import LarkError, VisitError
+
+from mathterpiece.nodes import (
+    Bar,
+    BoolLit,
+    Brackets,
+    ComplexLit,
+    Field,
+    Form,
+    InterpStrLit,
+    IntLit,
+    ListLit,
+    Name,
+    NoneLit,
+    RatioLit,
+    RealLit,
+    StrLit,
+)
+from mathterpiece.parse import ParseError, parse
+
+ROOT = Path(__file__).parent.parent
+GRAMMAR = ROOT / "docs" / "spec" / "mtp.lark"
+SPEC = ROOT / "docs" / "spec"
+
+CORPUS = sorted(
+    p
+    for folder in ("examples", "tests/shared", "tests/malformed", "web/test/fixtures", "web/demo")
+    for p in (ROOT / folder).rglob("*.mtp")
+) + sorted((ROOT / "mathterpiece" / "stdlib").glob("*.mtp"))
+
+
+def _spec_examples() -> list[tuple[str, str]]:
+    """Each {mtp-example} block and each ```mtp fence of the spec, with where it is."""
+    found = []
+    fence = re.compile(r"^(`{3,})(\{mtp-example\}|mtp)[ \t]*\n(.*?)^\1[ \t]*$", re.M | re.S)
+    for page in sorted(SPEC.glob("*.md")):
+        text = page.read_text(encoding="utf-8")
+        for k, m in enumerate(fence.finditer(text)):
+            lines = m[3].splitlines()
+            while lines and lines[0].startswith(":"):
+                lines.pop(0)
+            found.append((f"{page.name}#{k}", "\n".join(lines) + "\n"))
+    return found
+
+
+SPEC_EXAMPLES = _spec_examples()
+
+# Sources that the reader accepts, for the corners of the grammar that the corpus does not reach.
+ACCEPTED = [
+    "",
+    "  ; only a comment\n",
+    "(a)(b)",
+    "(a (b)(c))",
+    "(f a(b)c)",
+    "(f (a)b)",
+    "(f 'x'(b))",
+    "(f [1](b))",
+    "(f (b)'x')",
+    "(f\t a\n\r b)",
+    "(f 3 -2 +4 007)",
+    "(f 1/3 -2/4 1/05)",
+    "(f 2.5 1. .5 -.5 1e3 1.5E-3 +2e+2)",
+    "(f 2i -1.5i 1e3i 1+2i 1-2.5e3i -1e+2+3i)",
+    "(f true false none)",
+    "(f truex true.x none.x none[0] x.none)",
+    "(f + - * / ^ < <= > >= = != .)",
+    "(f !=x a!b a?b a*b a=b a-b a' a'' f'(x))",
+    "(f a:b :a)",
+    "(f θ x² ünï)",
+    "(f p.r p.pos.x)",
+    "(f xs[0] xs[-1] xs[(+ k 1)] g['m1'] xs[ 0 ] f[real real] xs[0][1])",
+    "(f xs[0].a xs[0].a.b[1].c xs[0].true xs[0]._ xs[0].tex'q')",
+    "(f [] [ ] [1 2] [[1] [2]] [a b c][h] [a][0][1] [(f)(g)])",
+    "(f real|none a|b|c 1|2 a[0]|b b|c[0] true|x .|a a|tex'q')",
+    "(f 'a' 'it\\'s' 'back\\\\slash' 'line\\nbreak' '')",
+    "(f tex'\\frac12' tex'f\\'(x)' tex'a\\\\' tex'\\q')",
+    "(f $'x = {x}' $'{x:.2f}' $'{ x }' $'{x :>5}' $'{x:}' $'{{lit}}' $'}}' $'{(* 2 a)}')",
+    "(f $'{[1 2]}' $'{'s'}' $'{a[0]}' $'{a|b}' $'{$'{a}' }')",
+    "(f $'{x ; a comment\n}')",
+    "(f $'{a:b}' $'{a.b:c}' $'{a[0].b:c}' $'{#'n-{k}'.x :y}')",
+    "(f #'dot-{k}' #'dot-{k}'.pos #'row-{i}'[0] #'a{b}'.c.d[0].e #'{k}')",
+    "(f doc@'text')",
+    "(real k free@(* 2 a))",
+    "(f free@x free@[1] free@'s' free@free@(g))",
+    "(f free@(g)x (h)free@x)",
+    "(circle_ (r 1))",
+    "(line|none_ (r 1))",
+    "(marks.grid_ a)",
+    "(none_ a)",
+    "(a_)",
+    "(f a_ a_.b)",
+    "(f _.a a._ _[0])",
+    "(f)",
+    "()",
+]
+
+# Sources that the reader rejects.
+REJECTED = [
+    "x",
+    "'s'",
+    "[1]",
+    "(a)x",
+    "(a",
+    "(a))",
+    ")",
+    "(a]",
+    "(a [1)",
+    '(f "x")',
+    "(f {a})",
+    "(f })",
+    "(f a {)",
+    "(f 'a)",
+    "(f $'a)",
+    "(f tex'a)",
+    "(f 'a\\q')",
+    "(f 'a'b)",
+    "(f 'a''b')",
+    "(f 'a'[0])",
+    "(f [1]x)",
+    "(f [1].x)",
+    "(f [1][])",
+    "(f [1][0 1])",
+    "(f (a).b)",
+    "(f (a)[0])",
+    "(f a [0]b)",
+    "(f xs[])",
+    "(f xs[ ])",
+    "(f xs[0)",
+    "(f xs[0]x)",
+    "(f xs[0].)",
+    "(f xs[0].1)",
+    "(f 1[0])",
+    "(f true[0])",
+    "(f +[0])",
+    "(f .[0])",
+    "(f 12abc)",
+    "(f 1/0)",
+    "(f 1/2/3)",
+    "(f 1-2)",
+    "(f 1e)",
+    "(f 1.5.x)",
+    "(f -x)",
+    "(f +a)",
+    "(f <=x)",
+    "(f a.)",
+    "(f .a)",
+    "(f a..b)",
+    "(f a/b)",
+    "(f a^b)",
+    "(f a$b)",
+    "(f a#b)",
+    "(f a@b)",
+    "(f free@)",
+    "(f free@ x)",
+    "(f doc@ 'x')",
+    "(f doc@x)",
+    "(f _)",
+    "(f a_b)",
+    "(f _a)",
+    "(f a|)",
+    "(f a| b)",
+    "(f a |b)",
+    "(f a||b)",
+    "(f a|'b')",
+    "(f a|(b))",
+    "(f a|[b])",
+    "(f a|doc@'x')",
+    "(f $'{}')",
+    "(f $'{ }')",
+    "(f $'{:x}')",
+    "(f $'{a b}')",
+    "(f $'{(g)x}')",
+    "(f $'}')",
+    "(f $'a}b')",
+    "(f $'{x:{y}}')",
+    "(f $'{x:a'b}')",
+    "(f $'{(g a:b)}')",
+    "(f $x)",
+    "(f #x)",
+    "(f #'plain')",
+    "(f #'a{b}'x)",
+    "(f #'a{b}'.)",
+    "(f #'a{b}'[])",
+    "(f 'a':b)",
+]
+
+
+# Sources on which the grammar and the reader differ, each one an open question in the spec.
+# When the author answers one, the grammar or the reader changes, and the source moves to
+# ACCEPTED or REJECTED.
+KNOWN_DIFFERENCES = {
+    # After a string nested in braces ends, the reader reads the rest of the field as if it were
+    # outside braces.
+    "(f $'{$'{a}'}')": "Q-lexical-10-1",
+    "(f $'{#'n-{k}'.x:y}')": "Q-lexical-10-2",
+    "(f $'{(g $'{a}' b:c)}')": "Q-lexical-10-3",
+    # The reader uses str.isdigit for the first character of a name part, and the value of int()
+    # for the denominator of a ratio.
+    "(f ²x)": "Q-lexical-9-1",
+    "(f 1/٠)": "Q-lexical-9-2",
+}
+
+
+def _decoded(body: str, braces: bool = False) -> str:
+    """The text of a string with its escapes undone, and with its doubled braces undone too when
+    braces is true, as in an interpolated string."""
+    escapes = {"'": "'", "\\": "\\", "n": "\n"}
+    out, i = [], 0
+    while i < len(body):
+        ch = body[i]
+        if ch == "\\":
+            out.append(escapes[body[i + 1]])
+            i += 2
+        elif braces and ch in "{}":
+            out.append(ch)
+            i += 2
+        else:
+            out.append(ch)
+            i += 1
+    return "".join(out)
+
+
+def _tex(body: str) -> str:
+    out, i = [], 0
+    while i < len(body):
+        if body[i] == "\\" and i + 1 < len(body):
+            out.append("'" if body[i + 1] == "'" else body[i : i + 2])
+            i += 2
+        else:
+            out.append(body[i])
+            i += 1
+    return "".join(out)
+
+
+def _unnamed(head):
+    """The head of (head_ …) without its underscore, or None (grammar.md, rule unnamed-head)."""
+    if isinstance(head, Bar):
+        last = _unnamed(head.items[-1])
+        return None if last is None else Bar((*head.items[:-1], last))
+    if isinstance(head, Name) and isinstance(head.parts[-1], str):
+        text = head.parts[-1]
+        if len(text) > 1 and text.endswith("_"):
+            if head.parts == ("none_",):
+                return NoneLit()
+            return Name((*head.parts[:-1], text[:-1]))
+    return None
+
+
+def _dot(whole, part):
+    return Form((Name((".",)), whole, part))
+
+
+UREAL = r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?"
+SPLIT_COMPLEX = re.compile(rf"([+-]?{UREAL})([+-]{UREAL})i")
+
+
+class Reading(Transformer):
+    """The grammar's tree as the reader's nodes. Template rules keep their base names."""
+
+    def start(self, forms):
+        return tuple(forms)
+
+    def form(self, c):
+        items = [x for x in c if not isinstance(x, Token)]
+        items = [x for group in items for x in group]
+        if items and (head := _unnamed(items[0])) is not None:
+            items = [head, NoneLit(), *items[1:]]
+        return Form(tuple(items))
+
+    def seq(self, c):
+        return [x for group in c for x in group]
+
+    def items(self, c):
+        return [x for group in c for x in group]
+
+    def chunk(self, c):
+        out = []
+        for x in c:
+            out.extend(x if isinstance(x, list) else [x])
+        return out
+
+    def node(self, c):
+        return c[0]
+
+    paren = plain = node
+
+    def free(self, c):
+        return Form((Name(("free@",)), c[-1]))
+
+    def list(self, c):
+        whole = ListLit(tuple(c[0]))
+        for index in c[1:]:
+            whole = _dot(whole, index)
+        return whole
+
+    def list_index(self, c):
+        return next(x for x in c if not isinstance(x, Token))
+
+    def index(self, c):
+        items = next(x for x in c if isinstance(x, list))
+        return items[0] if len(items) == 1 else Brackets(tuple(items))
+
+    def word(self, c):
+        return c[0] if len(c) == 1 else Bar(tuple(c))
+
+    def operand(self, c):
+        first = c[0]
+        if isinstance(first, Token):
+            parts: list = first.value.split(".")
+            if len(c) == 1 and first.value in ("true", "false"):
+                return BoolLit(first.value == "true")
+            if len(c) == 1 and first.value == "none":
+                return NoneLit()
+            for part in c[1:]:
+                parts.extend(part)
+            return Name(tuple(parts))
+        return first
+
+    def tail(self, c):
+        parts: list = []
+        for x in c:
+            if isinstance(x, Token):
+                parts.extend(x.value.split("."))
+            else:
+                parts.append(x)
+        return parts
+
+    def name_string(self, c):
+        whole = Form((Name(("name",)), c[0]))
+        for x in c[1:]:
+            if isinstance(x, Token):
+                for part in x.value.split("."):
+                    whole = _dot(whole, Name((part,)))
+            else:
+                whole = _dot(whole, x)
+        return whole
+
+    # Inside the braces of an interpolated string, the words follow the same rules.
+    first = bfirst = boperand = operand
+    bword = word
+    btail = tail
+    bname_string = name_string
+
+    def number(self, c):
+        (t,) = c
+        text = t.value
+        if t.type == "INT":
+            return IntLit(int(text))
+        if t.type == "RATIO":
+            num, den = text.split("/")
+            return RatioLit(Fraction(int(num), int(den)))
+        if t.type == "REAL":
+            return RealLit(float(text))
+        if t.type == "IMAG":
+            return ComplexLit(complex(0, float(text[:-1])))
+        m = SPLIT_COMPLEX.fullmatch(text)
+        assert m is not None
+        return ComplexLit(complex(float(m[1]), float(m[2])))
+
+    def boolean(self, c):
+        return BoolLit(c[0].value == "true")
+
+    def operator(self, c):
+        return Name((c[0].value,))
+
+    def string(self, c):
+        (t,) = c
+        if t.type == "TEX":
+            return StrLit(_tex(t.value[4:-1]), tex=True)
+        return StrLit(_decoded(t.value[1:-1]))
+
+    def doc(self, c):
+        return Form((Name(("doc",)), self.string([c[1]])))
+
+    def _pieces(self, c):
+        parts = []
+        for x in c:
+            if isinstance(x, Token):
+                if x.type == "TEXT":
+                    parts.append(_decoded(x.value, braces=True))
+            else:
+                parts.append(x)
+        return InterpStrLit(tuple(parts))
+
+    interpolated = name_text = _pieces
+
+    def field(self, c):
+        expr = next(x for x in c if not isinstance(x, Token))
+        spec = next((x.value[1:] for x in c if isinstance(x, Token) and x.type == "FORMAT"), None)
+        return expr if spec is None else Field(expr, spec)
+
+
+def load() -> Lark:
+    return Lark(GRAMMAR.read_text(encoding="utf-8"), parser="lalr", lexer="contextual", debug=True)
+
+
+@pytest.fixture(scope="module")
+def grammar() -> Lark:
+    return load()
+
+
+def test_no_conflicts(caplog):
+    # Lark settles a shift/reduce conflict by shifting and only logs it, so the grammar would no
+    # longer mean what it says.
+    with caplog.at_level(logging.DEBUG, logger="lark"):
+        load()
+    assert not [r.message for r in caplog.records if "conflict" in r.message.lower()]
+
+
+def read_both(grammar: Lark, src: str):
+    """The reader's forms and the grammar's, each None when it rejects the source."""
+    try:
+        reader = parse(src)
+    except ParseError:
+        reader = None
+    try:
+        tree = grammar.parse(src)
+    except LarkError:
+        return reader, None
+    return reader, Reading().transform(tree)
+
+
+def check(grammar: Lark, src: str) -> None:
+    reader, ours = read_both(grammar, src)
+    if reader is None:
+        assert ours is None, "the grammar accepts what the reader rejects"
+    else:
+        assert ours is not None, "the grammar rejects what the reader accepts"
+        assert ours == reader
+
+
+@pytest.mark.parametrize("path", CORPUS, ids=lambda p: str(p.relative_to(ROOT)))
+def test_corpus(grammar, path):
+    check(grammar, path.read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("src", [s for _, s in SPEC_EXAMPLES], ids=[k for k, _ in SPEC_EXAMPLES])
+def test_spec_example(grammar, src):
+    check(grammar, src)
+    # A fragment is a sequence of nodes, so it is also read as the items of a form.
+    check(grammar, f"(\n{src}\n)")
+
+
+@pytest.mark.parametrize("src", ACCEPTED)
+def test_accepted(grammar, src):
+    assert read_both(grammar, src)[0] is not None, "the reader rejects this source"
+    check(grammar, src)
+
+
+@pytest.mark.parametrize("src", REJECTED)
+def test_rejected(grammar, src):
+    reader, ours = read_both(grammar, src)
+    assert reader is None, "the reader accepts this source"
+    assert ours is None, "the grammar accepts this source"
+
+
+@pytest.mark.parametrize("src", KNOWN_DIFFERENCES, ids=KNOWN_DIFFERENCES.values())
+def test_known_difference(grammar, src):
+    try:
+        reader, ours = read_both(grammar, src)
+    except VisitError:
+        # The grammar accepts a source whose value cannot be built, such as 1/٠.
+        return
+    assert reader != ours, "the reader and the grammar now agree: update the open question"
+
+
+# Pieces of text where the reader's choices lie, which random sources put together.
+PIECES = [
+    "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "$'", "#'", "tex'", "doc@", "free@",
+    "a", "b", "x_", "_", ".", "|", ":", "1", "-", "+", "2.5", "1/2", "/", "e", "i", "true",
+    "none", "!=", "\\", "\\'", "\\n", "{{", "}}", '"', "@", "#", "$", "^", "*", "<=", "0", "{x:",
+    "$'{", "}'", "[0]", "a[", ".b", "(g)", "x:y",
+]  # fmt: skip
+
+
+def test_random_sources(grammar):
+    rng = random.Random(0)
+    for _ in range(20000):
+        body = "".join(rng.choice(PIECES) for _ in range(rng.randint(1, 16)))
+        src = body if rng.random() < 0.3 else f"(f {body})"
+        if src in KNOWN_DIFFERENCES:
+            continue
+        reader, ours = read_both(grammar, src)
+        assert reader == ours, f"the reader and the grammar differ on {src!r}"
+
+
+def test_spec_shows_every_section_once():
+    sections = re.findall(r"^//: (\S+)$", GRAMMAR.read_text(encoding="utf-8"), re.M)
+    shown = [
+        m
+        for page in sorted(SPEC.glob("*.md"))
+        for m in re.findall(r"^`{3,}\{mtp-grammar\} (\S+)$", page.read_text(encoding="utf-8"), re.M)
+    ]
+    assert sorted(shown) == sorted(sections)
+
+
+def test_corpus_is_large():
+    # A wrong path would make every corpus test vanish silently.
+    assert len(CORPUS) > 100
