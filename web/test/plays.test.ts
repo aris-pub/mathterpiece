@@ -504,6 +504,18 @@ describe("a play", () => {
       expect(told).toBe(2);
     });
 
+    it("has its new step and playing values in the runtime during mtp-state (mtp-gvrf.12)", () => {
+      const [, , v] = tour();
+      const told: string[] = [];
+      el().addEventListener("mtp-state", () =>
+        told.push(`step ${el().getAttribute("data-mtp-step")} ${v("tour", "step")}, playing ${el().hasAttribute("data-mtp-playing")} ${v("tour", "playing")}`),
+      );
+      click("set-two");
+      click("set-three");
+      button().click();
+      expect(told).toEqual(["step 1 1, playing false false", "step 0 0, playing false false", "step 1 1, playing true true"]);
+    });
+
     it("reports step i from a tap on bar i in explore mode to the end", () => {
       tour();
       lay();
@@ -632,6 +644,18 @@ describe("a stepper", () => {
     pass(1);
     expect(v("k")).toBe(7);
     expect(v("rounded", "step")).toBe(2);
+  });
+
+  it("has its new step and playing values in the runtime during mtp-state (mtp-gvrf.12)", () => {
+    const [, , v] = hints();
+    const told: string[] = [];
+    el().addEventListener("mtp-state", () =>
+      told.push(`step ${el().getAttribute("data-mtp-step")} ${v("hints", "step")}, playing ${el().hasAttribute("data-mtp-playing")} ${v("hints", "playing")}`),
+    );
+    click("set-two");
+    click("set-three");
+    dot(2).click();
+    expect(told).toEqual(["step 1 1, playing false false", "step 0 0, playing false false", "step 2 2, playing true true"]);
   });
 
   it("reports step i from the press on dot i to the end of step i", () => {
