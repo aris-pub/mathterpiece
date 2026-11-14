@@ -66,11 +66,11 @@ _web-ready:
 
 # serve the spec site at http://127.0.0.1:8820, building it again and reloading the page on each save
 spec:
-    uv run --group docs sphinx-autobuild -W --keep-going docs docs/_build/html --host 127.0.0.1 --port 8820 --watch mathterpiece --watch docs/_ext
+    uv run --group docs sphinx-autobuild -E -W --keep-going docs docs/_build/html --host 127.0.0.1 --port 8820 --watch mathterpiece --watch docs/_ext
 
 # build the spec site once into docs/_build/html
 spec-build:
-    uv run --group docs sphinx-build -W --keep-going -b html -d docs/_build/doctrees docs docs/_build/html
+    uv run --group docs sphinx-build -E -W --keep-going -b html -d docs/_build/doctrees docs docs/_build/html
 
 # build the spec site and publish it to its fixed draft address on Netlify, https://draft--mtp-spec.netlify.app, to read on a phone
 spec-preview: spec-build

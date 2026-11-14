@@ -146,7 +146,61 @@ class Rule(SphinxDirective):
         node["names"].append(label)
         self.state.document.note_explicit_target(node)
         self.state.nested_parse(self.content, self.content_offset, node)
+        first = node.next_node(nodes.paragraph)
+        text = first.astext() if first is not None else ""
+        if not hasattr(self.env, "mtp_rules"):
+            self.env.mtp_rules = {}
+        self.env.mtp_rules[label] = (self.env.docname, node["ids"][0], text)
         return [node]
+
+
+class rule_index_node(nodes.General, nodes.Element):
+    pass
+
+
+class RuleIndex(SphinxDirective):
+    """```{rule-index}
+    ```
+    Every rule of the spec, in order, with its number, its label and its first sentence, so that
+    rules that overlap or repeat each other can be seen side by side."""
+
+    def run(self):
+        return [rule_index_node()]
+
+
+def _purge_rules(app, env, docname):
+    rules = getattr(env, "mtp_rules", {})
+    for label in [k for k, v in rules.items() if v[0] == docname]:
+        del rules[label]
+
+
+def _merge_rules(app, env, docnames, other):
+    if not hasattr(env, "mtp_rules"):
+        env.mtp_rules = {}
+    env.mtp_rules.update(getattr(other, "mtp_rules", {}))
+
+
+def _fill_rule_index(app, doctree, fromdoc):
+    env = app.builder.env
+    rules = getattr(env, "mtp_rules", {})
+
+    def number(item):
+        docname, ident, _ = item[1]
+        return env.toc_fignumbers.get(docname, {}).get("rule", {}).get(ident, (999,))
+
+    for placeholder in list(doctree.findall(rule_index_node)):
+        table = nodes.bullet_list(classes=["mtp-rule-index"])
+        for label, (docname, ident, text) in sorted(rules.items(), key=number):
+            num = ".".join(map(str, number((label, (docname, ident, text)))))
+            uri = app.builder.get_relative_uri(fromdoc, docname) + "#" + ident
+            sentence = text.split(". ")[0].strip().rstrip(".") + "."
+            para = nodes.paragraph()
+            para += nodes.reference("", f"Rule {num}", refuri=uri)
+            para += nodes.Text(" ")
+            para += nodes.literal("", label)
+            para += nodes.Text(" " + sentence)
+            table += nodes.list_item("", para)
+        placeholder.replace_self(table)
 
 
 class MtpExample(SphinxDirective):
@@ -283,6 +337,11 @@ def setup(app: Sphinx):
     app.add_lexer("mtp", MtpLexer)
     app.add_enumerable_node(rule_node, "rule", _rule_title, html=(visit_rule, depart_rule))
     app.add_directive("rule", Rule)
+    app.add_node(rule_index_node)
+    app.add_directive("rule-index", RuleIndex)
+    app.connect("env-purge-doc", _purge_rules)
+    app.connect("env-merge-info", _merge_rules)
+    app.connect("doctree-resolved", _fill_rule_index)
     app.add_directive("mtp-example", MtpExample)
     app.add_directive("mtp-grammar", MtpGrammar)
     app.add_js_file("mathterpiece.js", type="module")

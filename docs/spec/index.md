@@ -36,5 +36,6 @@ stdlib
 :hidden:
 
 glossary
+rules
 open-questions
 ```
