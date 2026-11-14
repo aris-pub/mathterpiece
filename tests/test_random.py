@@ -75,6 +75,23 @@ class TestRandomFunctions:
         assert m.get("v").value.expr.op == "rand-int"
         assert m.get("v").value.expr.range == (1, 6)
 
+    def test_rand_times_a_number_is_not_none(self):
+        # mtp-gvrf.13: with bounds not known when compiling, the range of rand reached the
+        # largest real, so a product of it could overflow and was inferred as maybe none. A
+        # value with no upper limit of its own stops at 10^150, as sum does (mtp-gvrf.8).
+        src = "(rand-seed s 0) (real a 0) (real b 1)"
+        m = model(f"{src} (real v (rand a b)) (real x (* (rand a b) 8))")
+        assert m.get("v").value.expr.range == (-1e150, 1e150)
+        assert m.get("x").value.expr.range == (-8e150, 8e150)
+        assert model(f"{src} (real x (* (rand 0 10) 8))").get("x").value.expr.range == (0, 80)
+
+    def test_rand_int_times_a_number_is_not_none(self):
+        src = "(rand-seed s 0) (int a 0) (int b 1)"
+        m = model(f"{src} (int v (rand-int a b)) (int x (* (rand-int a b) 8))")
+        assert m.get("v").value.expr.range == (-1e150, 1e150)
+        assert m.get("x").value.expr.range == (-8e150, 8e150)
+        assert model(f"{src} (int x (* (rand-int 1 6) 8))").get("x").value.expr.range == (8, 48)
+
     def test_pick_may_be_none(self):
         m = model("(rand-seed s 0) (string|none v (pick ['a' 'b']))")
         assert m.get("v").value.expr.op == "pick"

@@ -2255,14 +2255,16 @@ class _Compiler:
             if bounds and all(b.known for b in bounds):
                 r = (float(bounds[0].value), float(bounds[1].value))
             elif bounds:
-                r = WHOLE
+                # Stops at 10^150 for the same reason as sum's range. Up to the largest real,
+                # (* (rand a b) 8) could overflow (mtp-gvrf.13).
+                r = UNBOUNDED
             deps = frozenset().union(seed.deps, *(b.deps for b in bounds))
             return Expr("rand", REAL, (site, seed, *bounds), deps, r)
         if head == "rand-int":
             if len(given) != 2:
                 raise CompileError("rand-int takes lo and hi, both included", pos)
             lo, hi = (self.expr(g, INT, scope) for g in given)
-            r = (lo.value, hi.value) if lo.known and hi.known else WHOLE
+            r = (lo.value, hi.value) if lo.known and hi.known else UNBOUNDED
             return Expr("rand-int", INT, (site, seed, lo, hi), seed.deps | lo.deps | hi.deps, r)
         if len(given) != 1:
             raise CompileError(f"{head} takes one list", pos)
