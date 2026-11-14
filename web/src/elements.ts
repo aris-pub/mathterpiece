@@ -1612,11 +1612,16 @@ export class MtpPlay extends MtpPart {
       track.setAttribute("aria-label", labelOf(rt, id));
       track.setAttribute("aria-valuenow", String(k));
       track.setAttribute("aria-valuetext", text);
-      this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
-      if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
-        if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        if (rt.value(id, "step") !== k) rt.write(id, "step", k);
-      }
+      // The writes come before mtp-state, so that a page listener on it reads the step and
+      // playing values that the attributes show. together holds back the change until after
+      // mtp-state, so mtp-state still fires before mtp-change (mtp-gvrf.12).
+      rt.together(() => {
+        if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
+          if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
+          if (rt.value(id, "step") !== k) rt.write(id, "step", k);
+        }
+        this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
+      });
     };
     const indicator = document.createElement("div");
     indicator.className = "mtp-indicator";
@@ -1755,11 +1760,14 @@ export class MtpStepper extends MtpPart {
       count.textContent = `${exploring ? "–" : k} / ${n}`;
       pill.hidden = !exploring;
       group.setAttribute("aria-label", k ? `${label}: step ${k} of ${n}` : `${label}: ${n} ${n === 1 ? "step" : "steps"}`);
-      this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
-      if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
-        if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
-        if (rt.value(id, "step") !== k) rt.write(id, "step", k);
-      }
+      // The writes come before mtp-state for the reason given in a play's refresh (mtp-gvrf.12).
+      rt.together(() => {
+        if (movedLastBy(rt, id, this) || unmoved(rt, id)) {
+          if (rt.value(id, "playing") !== running) rt.write(id, "playing", running);
+          if (rt.value(id, "step") !== k) rt.write(id, "step", k);
+        }
+        this.pageState({ inactive: !activeOf(rt, id), step: String(k), playing: running, exploring });
+      });
     };
     this.replaceChildren(back, area, next, count);
     this.refresh();

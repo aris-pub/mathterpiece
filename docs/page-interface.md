@@ -35,3 +35,7 @@ mode, and `exploring` is present then.
 `mtp-state` on each element replaces `mtp-mode` and `mtp-rest`. On `<mtp-model>`, `mtp-change`
 stays, and the old `mtp-ready` (the model has loaded) is renamed `mtp-loaded`: both are about
 the model and the scene, not page state.
+
+During `mtp-state` on a play or a stepper, its `step` and `playing` values read from
+`<mtp-model>` already match its attributes, or for copies, the attributes of the copy that moved
+the scene last.
