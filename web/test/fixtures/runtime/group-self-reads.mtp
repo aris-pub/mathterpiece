@@ -1,12 +1,23 @@
-; Each vertex is drawn as high as its part is large, read through its own group: a vertex moves
+; Each vertex of verts is drawn as high as its part is large. The parts are variables, one for
+; each vertex, since a vertex never reads itself through its group (mtp-gvrf.10): a vertex moves
 ; when another vertex leaves or joins its part, one declared after it too (mtp-mnvd).
+; Each vertex of others is drawn as high as the part of another vertex, read through the group:
+; a vertex moves when the part of the vertex that it reads changes, one declared after it too.
 
 (motif vertex ((int part 0)) (circle_ (r 10)))
+
+(int p-0 0)
+(int p-1 0)
+(int p-2 0)
+(int shift 1 (>= 1) (<= 2))
 
 (scene s
   (group verts
     (foreach i 3
-      (vertex #'v-{i}' (part free@0)
-        (pos [0 (count (range 3) (fn j (= (or? verts[j].part 0) (or? verts[i].part 0))))])))))
+      (let ((p (name $'p-{i}')))
+        (vertex #'v-{i}' (part p) (pos [0 (count [p-0 p-1 p-2] (fn q (= q p)))])))))
+  (group others
+    (foreach i 3
+      (vertex #'w-{i}' (part free@0) (pos [20 (or? others[(mod (+ i shift) 3)].part 0)])))))
 
 (canvas view (x -50) (y -50) (width 100) (height 100) s)

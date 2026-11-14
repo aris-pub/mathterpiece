@@ -1,6 +1,7 @@
 """Motifs: types of shape made of several shapes, with parameters (docs/type-system.md 5.e;
 docs/reference.md "Types" and "The scene and shapes"; docs/mtpc.md "Objects")."""
 
+import pytest
 from helpers import doc, error, model
 
 from mathterpiece.compiler import compile_source
@@ -85,6 +86,34 @@ class TestInstances:
             "(scene s (pair p))"
         )
         assert m.get("p.left.face").parent == m.id("p.left")
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(scene s (dial d (t 0.2) (x d.t)))",
+            "(scene s (dial d (t d.x)))",
+            "(scene s (dial d (x d.face.r)))",
+            "(scene s (dial d (x d.angle)))",
+            "(scene s (group g (dial d (t 0.2) (x d.t))))",
+            "(motif pair (real u 0.5) (dial left (t left.x))) (scene s (pair p))",
+        ],
+    )
+    def test_an_instance_reading_itself(self, src):
+        error(
+            f"{DIAL} {src}",
+            r"(d|left) cannot read its own attributes in its own declaration: give the value a"
+            r" name with \(let \(\(name value\)\) …\) around \1, and read that name instead",
+        )
+
+    def test_reads_of_an_instance_outside_its_declaration(self):
+        m = model(
+            f"{DIAL} (motif pair (real u 0.5 (>= 0) (<= 1))"
+            " (dial left (t u)) (dial right (t self.u)))"
+            " (scene s (dial d (t 0.2)) (real v d.t) (circle c (r d.face.r)) (pair p))"
+        )
+        assert (m.id("d"), "t") in m.get("v").value.deps
+        assert (m.id("d.face"), "r") in m.get("c").attrs["r"].deps
+        assert (m.id("p"), "u") in m.get("p.right").attrs["t"].deps
 
 
 class TestShapeArguments:
