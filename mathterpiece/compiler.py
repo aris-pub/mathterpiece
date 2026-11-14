@@ -2747,7 +2747,9 @@ class _Compiler:
                 raise CompileError(f"sum takes numbers, got {item}", node.pos)
             if coll.known:
                 return _known(t, sum(coll.value))
-            return Expr("sum", t, (coll,), deps, WHOLE)
+            # Stops at 10^150 for the same reason as count's range. Up to the largest real,
+            # (* (sum xs) 8) could overflow (mtp-gvrf.8).
+            return Expr("sum", t, (coll,), deps, UNBOUNDED)
         if head == "count":
             # A count has no upper limit of its own, so its range stops at 10^150 as other
             # ranges do. Up to the largest real, (* (count xs) 8) could overflow (mtp-pwjz).
@@ -6289,7 +6291,12 @@ class _Compiler:
             return Expr("part", RECURSING, (e, index))
         if isinstance(part, str):
             if e.op == "obj":
-                return self.obj_attr(e.args[0], part, pos)
+                # Whether an attribute is built yet depends on the compiler's order, not the
+                # author's, so every self-read is an error (mtp-gvrf.9). Groups are mtp-gvrf.6.
+                i = e.args[0]
+                if i in self.declaring and self.model.objects[i].kind != "group":
+                    raise self.self_read(i, pos)
+                return self.obj_attr(i, part, pos)
             if isinstance(_core(e.type), (ShapeT, Interface)) and e.op != "member":
                 held = self.objects_in(e)
                 if held is None:
