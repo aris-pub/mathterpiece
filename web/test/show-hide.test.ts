@@ -83,33 +83,6 @@ describe("on-show", () => {
     expect(Number(plain!.getAttribute("opacity"))).toBeCloseTo(0.5, 1);
   });
 
-  it("plays when the canvas first comes into view, and until then the shape is hidden", () => {
-    const [, rt] = page("w");
-    pass(0.2);
-    expect(elementOf(rt, "w", "label")).toBeNull();
-    markSeen(canvasOf("w"));
-    expect(drawnAs(rt, "w", "label", "opacity")).toBe(0);
-    pass(1);
-    expect(drawnAs(rt, "w", "label", "opacity")).toBeCloseTo(0.5, 1);
-    expect(rt.value(rt.id("label"), "opacity")).toBe(1);
-    pass(1.1);
-    expect(standIns("w")).toBe(0);
-    expect(elementOf(rt, "w", "label")).not.toBeNull();
-  });
-
-  it("each canvas plays its own on-show at its own first view", () => {
-    const [, rt] = page("v", "w");
-    markSeen(canvasOf("v"));
-    pass(0.5);
-    expect(drawnAs(rt, "v", "label", "opacity")).toBeCloseTo(0.5, 1);
-    expect(elementOf(rt, "w", "label")).toBeNull();
-    markSeen(canvasOf("w"));
-    expect(drawnAs(rt, "w", "label", "opacity")).toBe(0);
-    pass(0.5);
-    expect(drawnAs(rt, "v", "label", "opacity")).toBe(1);
-    expect(drawnAs(rt, "w", "label", "opacity")).toBeCloseTo(0.25, 1);
-  });
-
   it("a group passes its on-show to its members, and a member's own wins", () => {
     const [, rt] = page("pairs");
     markSeen(canvasOf("pairs"));
@@ -210,11 +183,52 @@ describe("a stand-in's attributes follow the original's", () => {
   });
 
   it("a stand-in lets the pointer through to what is under it", () => {
-    const [, rt] = page("w");
-    markSeen(canvasOf("w"));
+    const [, rt] = page("v");
+    rt.write(rt.id("show"), null, true);
     pass(0.05);
-    expect(elementOf(rt, "w", "label")!.getAttribute("pointer-events")).toBe("none");
-    pass(2.1);
-    expect(elementOf(rt, "w", "label")!.getAttribute("pointer-events")).toBeNull();
+    expect(elementOf(rt, "v", "c")!.getAttribute("pointer-events")).toBe("none");
+    pass(1.1);
+    expect(elementOf(rt, "v", "c")!.getAttribute("pointer-events")).toBeNull();
+  });
+});
+
+// The start of a canvas is on-view, then state 0, then on-ready (docs/canvas-lifecycle.md):
+// on-show and on-hide play only for shapes shown or hidden after state 0 (the author,
+// 2026-11-14).
+describe("the start of a canvas", () => {
+  it("draws a shape that state 0 shows as it is, before and after its first view", () => {
+    const [, rt] = page("w");
+    expect(elementOf(rt, "w", "label")).not.toBeNull();
+    expect(standIns("w")).toBe(0);
+    markSeen(canvasOf("w"));
+    pass(0.1);
+    expect(standIns("w")).toBe(0);
+    expect(drawnAs(rt, "w", "label", "opacity")).toBe(1);
+  });
+
+  it("plays no on-show before state 0, so the still picture at ready has every shape state 0 shows", () => {
+    const [, rt] = page("opening");
+    const copy = canvasOf("opening");
+    let still: { label: boolean; glow: boolean; standIns: number } | null = null;
+    copy.addEventListener("mtp-state", () => {
+      if (still || !copy.hasAttribute("data-mtp-ready")) return;
+      const drawn = (shape: string) => elementOf(rt, "opening", shape) !== null;
+      still = { label: drawn("label"), glow: drawn("glow"), standIns: standIns("opening") };
+    });
+    expect(elementOf(rt, "opening", "label")).not.toBeNull();
+    markSeen(copy);
+    pass(1.2);
+    expect(copy.hasAttribute("data-mtp-ready")).toBe(true);
+    expect(rt.value(rt.id("lit"), null)).toBe(true);
+    expect(still).toEqual({ label: true, glow: true, standIns: 0 });
+    expect(drawnAs(rt, "opening", "glow", "opacity")).toBe(1);
+  });
+
+  it("plays on-show for a shape shown after state 0, as by on-ready", () => {
+    const [, rt] = page("later-on");
+    expect(rt.value(rt.id("later"), null)).toBe(true);
+    pass(0.5);
+    expect(drawnAs(rt, "later-on", "dot", "opacity")).toBeCloseTo(0.5, 1);
+    expect(standIns("later-on")).toBe(1);
   });
 });

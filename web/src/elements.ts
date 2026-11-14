@@ -297,7 +297,6 @@ abstract class MtpPart extends HTMLElement {
       this.seenOnce = true;
       this.pageState({ seen: true });
       lives.get(model)?.seen(this, id);
-      this.firstSeen();
       this.lifecycle();
       checkPageReady(model);
     });
@@ -321,9 +320,6 @@ abstract class MtpPart extends HTMLElement {
     });
     observer.observe(this);
   }
-
-  /** Called when this view copy first comes into view, after its on-views have started. */
-  protected firstSeen(): void {}
 
   private guard(work: () => void): void {
     try {
@@ -489,12 +485,6 @@ export class MtpCanvas extends MtpPart {
    * on-hide plays, or null while it does not draw the shape (mtp-7i3j). */
   drawnAs(shape: number, attr: string): unknown {
     return this.showings?.drawnAs(shape, attr) ?? null;
-  }
-
-  // A shape with an on-show is hidden until the copy first comes into view, which plays it.
-  protected override firstSeen(): void {
-    this.showings?.see();
-    this.redraw();
   }
 
   protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {

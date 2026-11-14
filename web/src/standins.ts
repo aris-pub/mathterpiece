@@ -82,12 +82,13 @@ export class Showings implements Showing {
   // The last values of each shown shape that may stop existing, for its frozen stand-in.
   private last = new Map<number, Map<number, Snapshot>>();
   private frozen = new Map<number, Snapshot>();
-  private seen = false;
+  // Whether the canvas has drawn its shapes once: the first time, they are as the scene gives them.
+  private started = false;
   private ticking = false;
 
   constructor(
     private scene: Runtime,
-    canvas: number,
+    private canvas: number,
     private scheduler: Scheduler,
     private redraw: () => void,
   ) {
@@ -154,11 +155,6 @@ export class Showings implements Showing {
     return this.listeners.size > 0;
   }
 
-  /** Called the first time the canvas comes into view: an on-show plays then. */
-  see(): void {
-    this.seen = true;
-  }
-
   around(id: number): boolean {
     return this.holding.has(id);
   }
@@ -193,23 +189,26 @@ export class Showings implements Showing {
   /**
    * Starts an on-show for each shape the canvas starts showing, and an on-hide for each it stops
    * showing, given the shapes its items give now. A shape with no on-show is shown at once, and
-   * one with no on-hide hidden at once, as before (mtp-7i3j).
+   * one with no on-hide hidden at once, as before (mtp-7i3j). Until the canvas is ready, shapes
+   * are shown and hidden at once: on-show and on-hide play only after state 0 (the author,
+   * 2026-11-14).
    */
   follow(given: Set<number>): void {
     if (this.listeners.size === 0) return;
+    const atOnce = !this.started || this.scene.unready.has(this.canvas);
+    this.started = true;
     const starting = new Map<Obj, number[]>();
     const add = (l: Obj, leaf: number) => starting.set(l, [...(starting.get(l) ?? []), leaf]);
     for (const [leaf, l] of this.listeners) {
       const state = this.states.get(leaf)!;
       const exists = this.scene.exists(leaf);
       const drawn = state.phase === "shown" || state.phase === "showing";
-      // A shape with an on-show waits for the canvas's first view, which plays it.
-      const wanted = exists && this.given(leaf, given) && (this.seen || !l.show);
+      const wanted = exists && this.given(leaf, given);
       if (wanted && !drawn) {
-        if (l.show) add(l.show, leaf);
+        if (l.show && !atOnce) add(l.show, leaf);
         else this.settle(leaf, "shown");
       } else if (!wanted && drawn) {
-        if (l.hide) add(l.hide, leaf);
+        if (l.hide && !atOnce) add(l.hide, leaf);
         else this.settle(leaf, "hidden");
       }
     }
