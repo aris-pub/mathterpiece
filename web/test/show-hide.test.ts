@@ -319,4 +319,64 @@ describe("setting a state", () => {
     pointer("pointerup", 50);
     expect(standIns("v")).toBe(0);
   });
+
+  // A jump ends every on-show and on-hide that plays, even for a shape that it leaves shown or
+  // hidden: the stand-in ends where its animation would end (the author, 2026-11-14).
+  const showing = (rt: Runtime) => {
+    rt.write(rt.id("show"), null, true);
+    pass(0.3);
+    expect(standIns("v")).toBe(1);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBeLessThan(1);
+  };
+  const hiding = (rt: Runtime) => {
+    rt.write(rt.id("show"), null, true);
+    pass(1.1);
+    rt.write(rt.id("show"), null, false);
+    pass(0.3);
+    expect(standIns("v")).toBe(1);
+    expect(elementOf(rt, "v", "c")).not.toBeNull();
+  };
+
+  it("a jump that leaves a shape shown ends its on-show, with the original drawn", () => {
+    const rt = withTour();
+    showing(rt);
+    tap(154);
+    expect(rt.value(rt.id("show"), null)).toBe(true);
+    expect(standIns("v")).toBe(0);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBe(1);
+    expect(elementOf(rt, "v", "c")).not.toBeNull();
+  });
+
+  it("a jump that leaves a shape hidden ends its on-hide, with nothing drawn", () => {
+    const rt = withTour();
+    document.body.insertAdjacentHTML("beforeend", `<mtp-stepper model="m" name="hops"></mtp-stepper>`);
+    hiding(rt);
+    (document.querySelector(`mtp-stepper [data-mtp-input="dot-2"]`) as HTMLButtonElement).click();
+    expect(rt.value(rt.id("show"), null)).toBe(false);
+    expect(standIns("v")).toBe(0);
+    expect(elementOf(rt, "v", "c")).toBeNull();
+    expect(drawnAs(rt, "v", "c", "drawn")).toBeNull();
+  });
+
+  it("a drag along the bars that leaves a shape shown ends its on-show", () => {
+    const rt = withTour();
+    showing(rt);
+    pointer("pointerdown", 10);
+    pointer("pointermove", 50);
+    expect(rt.value(rt.id("show"), null)).toBe(true);
+    expect(standIns("v")).toBe(0);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBe(1);
+    pointer("pointerup", 50);
+  });
+
+  it("a drag along the bars that leaves a shape hidden ends its on-hide", () => {
+    const rt = withTour();
+    hiding(rt);
+    pointer("pointerdown", 250);
+    pointer("pointermove", 290);
+    expect(rt.value(rt.id("show"), null)).toBe(false);
+    expect(standIns("v")).toBe(0);
+    expect(elementOf(rt, "v", "c")).toBeNull();
+    pointer("pointerup", 290);
+  });
 });

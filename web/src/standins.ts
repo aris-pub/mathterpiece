@@ -192,7 +192,8 @@ export class Showings implements Showing {
    * one with no on-hide hidden at once, as before (mtp-7i3j). Until the canvas is ready, shapes
    * are shown and hidden at once: on-show and on-hide play only after state 0 (the author,
    * 2026-11-14). So are they when a play or a stepper sets a state, and while the reader drags a
-   * play's bars.
+   * play's bars, which also ends every on-show and on-hide that plays, where its animation would
+   * end.
    */
   follow(given: Set<number>): void {
     if (this.listeners.size === 0) return;
@@ -205,11 +206,13 @@ export class Showings implements Showing {
       const exists = this.scene.exists(leaf);
       const drawn = state.phase === "shown" || state.phase === "showing";
       const wanted = exists && this.given(leaf, given);
-      if (wanted && !drawn) {
-        if (l.show && !atOnce) add(l.show, leaf);
+      if (atOnce) {
+        if (state.play || wanted !== drawn) this.settle(leaf, wanted ? "shown" : "hidden");
+      } else if (wanted && !drawn) {
+        if (l.show) add(l.show, leaf);
         else this.settle(leaf, "shown");
       } else if (!wanted && drawn) {
-        if (l.hide && !atOnce) add(l.hide, leaf);
+        if (l.hide) add(l.hide, leaf);
         else this.settle(leaf, "hidden");
       }
     }

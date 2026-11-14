@@ -52,3 +52,8 @@
     (in-order (move show (from false) (to true) (duration 0)) (wait 1))
     (move p (to 3) (duration 1))
     (in-order (move show (to false) (duration 0)) (wait 1))))
+; Step 1 hides c and step 2 moves p, for a jump that leaves c hidden.
+(stepper hops
+  (animation
+    (move show (to false) (duration 0))
+    (move p (to 5) (duration 1))))

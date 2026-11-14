@@ -516,14 +516,28 @@ export class Runtime {
    * Runs work whose writes set a state, as a play or a stepper does before it plays its steps and
    * a drag along a play's bars does at each point, told to the listeners at its end as one
    * change. While the listeners are told of it, jumping is true, and a canvas shows and hides
-   * shapes at once, with no on-show or on-hide (the author, 2026-11-14).
+   * shapes at once and ends every on-show and on-hide that plays (the author, 2026-11-14).
    */
   jump<T>(work: () => T): T {
     this.jumps++;
+    if (this.jumps > 1 || this.pending) {
+      try {
+        return work();
+      } finally {
+        this.jumps--;
+      }
+    }
+    // The listeners are told even of a jump that changes nothing, since it still ends what plays.
+    const changed = (this.pending = new Set<string>());
     try {
-      return this.together(work);
+      return work();
     } finally {
-      this.jumps--;
+      this.pending = null;
+      try {
+        this.tell(changed);
+      } finally {
+        this.jumps--;
+      }
     }
   }
 
