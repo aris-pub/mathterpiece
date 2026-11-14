@@ -3301,11 +3301,16 @@ class _Compiler:
                 raise CompileError(f"a {kind} plays no animation: {_USE_OUTSIDE}", use.pos)
         # A canvas's body is what it shows and its listeners; a writer's is its conditions.
         if kind == "canvas":
+            # build_canvas() takes these before it reads the items, so (transform …) is always
+            # the option here, though transform is also a builtin.
+            options = ("x", "y", "width", "height", "transform", "pan", "zoom")
+            options += ("toggle-duration", "toggle-ease")
             self.options_first(
                 items,
                 lambda it: (
-                    not isinstance(it, Name)
-                    and _head(it) != "when"
+                    _head(it) in options
+                    or not isinstance(it, (Name, ListLit))
+                    and not self.is_expression(_head(it))
                     and not self.holds_listeners(it)
                 ),
                 kind,
