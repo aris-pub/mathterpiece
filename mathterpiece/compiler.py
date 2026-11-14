@@ -2739,7 +2739,9 @@ class _Compiler:
                 raise CompileError(f"sum takes numbers, got {item}", node.pos)
             if coll.known:
                 return _known(t, sum(coll.value))
-            return Expr("sum", t, (coll,), deps, WHOLE)
+            # Stops at 10^150 for the same reason as count's range. Up to the largest real,
+            # (* (sum xs) 8) could overflow (mtp-gvrf.8).
+            return Expr("sum", t, (coll,), deps, UNBOUNDED)
         if head == "count":
             # A count has no upper limit of its own, so its range stops at 10^150 as other
             # ranges do. Up to the largest real, (* (count xs) 8) could overflow (mtp-pwjz).
