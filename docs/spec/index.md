@@ -9,6 +9,7 @@ rule is stated once, here, and everything else links to it.
 :maxdepth: 2
 
 overview
+compiler-runtime
 lexical
 grammar
 core
