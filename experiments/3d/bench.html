@@ -1,0 +1,65 @@
+<!doctype html><html><body style="margin:0;background:#f6f1e7">
+<svg id="s" width="800" height="800" viewBox="-1.6 -1.6 3.2 3.2"></svg>
+<script>
+// A surface as a mesh of quads, drawn in SVG. Every frame: project the vertices with a perspective
+// camera, light each face, sort the faces far to near, and write them into a fixed set of paths
+// (path k always draws the k-th farthest face, so no element is moved in the document).
+const P = new URLSearchParams(location.search);
+const n = +P.get("n") || 40, kind = P.get("kind") || "graph", seam = P.get("seam") || "stroke";
+const svg = document.getElementById("s");
+const V = [], F = [];
+if (kind === "graph") {
+  for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) {
+    const x = -1 + 2 * i / n, y = -1 + 2 * j / n;
+    V.push([x, y, 0.35 * Math.sin(3 * x) * Math.cos(3 * y)]);
+  }
+} else {
+  for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) {
+    const u = 2 * Math.PI * i / n, v = 2 * Math.PI * j / n, R = 0.9, r = 0.4;
+    V.push([(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)]);
+  }
+}
+for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+  const a = i * (n + 1) + j; F.push([a, a + n + 1, a + n + 2, a + 1]);
+}
+const paths = F.map(() => { const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); svg.appendChild(p); return p; });
+const light = [0.4, -0.5, 0.77];
+const order = F.map((_, k) => k), depth = new Float64Array(F.length);
+let az = -60;
+const sx = new Float64Array(V.length), sy = new Float64Array(V.length), sz = new Float64Array(V.length);
+function frame() {
+  const t0 = performance.now();
+  az += 1;
+  const a = az * Math.PI / 180, e = 30 * Math.PI / 180, dist = 5;
+  const ca = Math.cos(a), sa = Math.sin(a), ce = Math.cos(e), se = Math.sin(e);
+  for (let k = 0; k < V.length; k++) {
+    const [x, y, z] = V[k];
+    const xr = -sa * x + ca * y;
+    const yr = -se * (ca * x + sa * y) + ce * z;
+    const zr = ce * (ca * x + sa * y) + se * z;
+    const w = dist / (dist - zr);
+    sx[k] = xr * w; sy[k] = -yr * w; sz[k] = zr;
+  }
+  for (let k = 0; k < F.length; k++) { const f = F[k]; depth[k] = sz[f[0]] + sz[f[1]] + sz[f[2]] + sz[f[3]]; }
+  order.sort((p, q) => depth[p] - depth[q]);
+  for (let m = 0; m < F.length; m++) {
+    const f = F[order[m]];
+    const [p0, p1, p3] = [V[f[0]], V[f[1]], V[f[3]]];
+    const u = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]], v = [p3[0] - p0[0], p3[1] - p0[1], p3[2] - p0[2]];
+    let nx = u[1] * v[2] - u[2] * v[1], ny = u[2] * v[0] - u[0] * v[2], nz = u[0] * v[1] - u[1] * v[0];
+    const L = Math.hypot(nx, ny, nz) || 1;
+    const b = Math.abs((nx * light[0] + ny * light[1] + nz * light[2]) / L);
+    const c = Math.round(60 + 150 * b);
+    const col = `rgb(${c},${Math.round(c * 0.6 + 40)},${Math.round(200 - c * 0.4)})`;
+    const d = `M${sx[f[0]].toFixed(4)} ${sy[f[0]].toFixed(4)}L${sx[f[1]].toFixed(4)} ${sy[f[1]].toFixed(4)}L${sx[f[2]].toFixed(4)} ${sy[f[2]].toFixed(4)}L${sx[f[3]].toFixed(4)} ${sy[f[3]].toFixed(4)}Z`;
+    const el = paths[m];
+    el.setAttribute("d", d); el.setAttribute("fill", col);
+    if (seam === "stroke") { el.setAttribute("stroke", col); el.setAttribute("stroke-width", "0.6"); el.setAttribute("vector-effect", "non-scaling-stroke"); el.setAttribute("stroke-linejoin", "round"); }
+  }
+  window.jsTimes.push(performance.now() - t0);
+}
+window.jsTimes = []; window.frameTimes = [];
+let last = 0, run = +P.get("frames") || 0;
+function loop(t) { if (last) window.frameTimes.push(t - last); last = t; frame(); if (run === 0 || window.frameTimes.length < run) requestAnimationFrame(loop); else window.done = true; }
+if (run) requestAnimationFrame(loop); else frame();
+</script></body></html>

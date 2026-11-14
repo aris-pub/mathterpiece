@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sphere camera sweep</title>
+<style>
+  :root { --paper: #faf9f7; --ink: #1f1f24; --soft: #6b6b73; --red: #c8332f; --blue: #2766c9; --green: #2a8a45; --hi: #e0a100; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.5 Georgia, serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; display: grid; gap: 10px; }
+  svg { width: 100%; height: auto; display: block; touch-action: none; }
+  p { margin: 0; }
+  .term { border-bottom: 2px solid currentColor; cursor: pointer; padding: 0 1px; }
+  .term.hi { background: color-mix(in srgb, var(--hi) 30%, transparent); }
+  svg [data-name] { transition: stroke-width .15s; }
+  svg .hi { stroke-width: 6px; }
+  svg circle.hi { stroke: var(--hi); stroke-width: 4px; }
+  .row { display: flex; gap: 12px; align-items: center; font: 14px system-ui, sans-serif; color: var(--soft); }
+  button { font: inherit; padding: 4px 12px; }
+  input[type=range] { flex: 1; }
+</style>
+</head>
+<body>
+<main>
+<svg id="s" viewBox="-2.15 -2.2 4.3 4.25" aria-label="A sphere with its equator, a meridian, a point p and the three axes"></svg>
+<p>On the unit sphere, <span class="term" data-for="equator" style="color: var(--red)">the equator</span> is where z = 0,
+  <span class="term" data-for="meridian" style="color: var(--blue)">this meridian</span> is where y = 0, and
+  <span class="term" data-for="p" style="color: var(--green)">the point p</span> sits at latitude 35°.</p>
+<div class="row"><button id="play">Pause</button><span>Turn</span><input id="turn" type="range" min="-180" max="180" value="-60"></div>
+</main>
+<script>
+// Plain SVG, not mathterpiece. Every shape is an SVG element in the page. Each frame the camera's
+// azimuth and elevation give where every 3D point lands; the sphere's faces are lit, sorted far to
+// near and written into a fixed set of paths; curves and axes are cut into the parts that the
+// sphere does not hide, which is an exact test for a sphere.
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("s");
+const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+const LAT = 24, LON = 48, R = 1, DIST = 6;
+const faces = [];
+for (let i = 0; i < LAT; i++) for (let j = 0; j < LON; j++) {
+  const t0 = -Math.PI / 2 + Math.PI * i / LAT, t1 = -Math.PI / 2 + Math.PI * (i + 1) / LAT;
+  const p0 = 2 * Math.PI * j / LON, p1 = 2 * Math.PI * (j + 1) / LON;
+  const at = (t, p) => [R * Math.cos(t) * Math.cos(p), R * Math.cos(t) * Math.sin(p), R * Math.sin(t)];
+  const c = at((t0 + t1) / 2, (p0 + p1) / 2);
+  faces.push({ pts: [at(t0, p0), at(t0, p1), at(t1, p1), at(t1, p0)], c });
+}
+const facePaths = faces.map(() => el("path", { "stroke-width": 0.5, "vector-effect": "non-scaling-stroke", "stroke-linejoin": "round" }));
+
+const circle = (f, n = 240) => Array.from({ length: n + 1 }, (_, k) => f(2 * Math.PI * k / n));
+const lift = 1.004;
+const curves = [
+  { name: "equator", color: "--red", pts: circle((s) => [lift * Math.cos(s), lift * Math.sin(s), 0]) },
+  { name: "meridian", color: "--blue", pts: circle((s) => [lift * Math.cos(s), 0, lift * Math.sin(s)]) },
+];
+const axisPts = (dir) => [[1.0, 1.75]].flatMap(([a, b]) => Array.from({ length: 41 }, (_, k) => { const t = a + (b - a) * k / 40; return dir.map((d) => d * t); }));
+const axes = [
+  { name: "x-axis", dir: [1, 0, 0], label: "x" }, { name: "y-axis", dir: [0, 1, 0], label: "y" }, { name: "z-axis", dir: [0, 0, 1], label: "z" },
+].map((a) => ({ ...a, pts: axisPts(a.dir), neg: axisPts(a.dir.map((d) => -d)) }));
+for (const a of axes) {
+  a.path = el("path", { "data-name": a.name, fill: "none", stroke: css("--ink"), "stroke-width": 1.6, "vector-effect": "non-scaling-stroke", "stroke-linecap": "round" });
+  a.head = el("path", { fill: css("--ink") });
+  a.text = el("text", { "font-size": 0.16, "font-style": "italic", "text-anchor": "middle", "dominant-baseline": "middle", fill: css("--ink") });
+  a.text.textContent = a.label;
+}
+for (const c of curves) c.path = el("path", { "data-name": c.name, fill: "none", stroke: css(c.color), "stroke-width": 3, "vector-effect": "non-scaling-stroke", "stroke-linecap": "round", "stroke-linejoin": "round" });
+const lat = 35 * Math.PI / 180, lon = 25 * Math.PI / 180;
+const P = [lift * Math.cos(lat) * Math.cos(lon), lift * Math.cos(lat) * Math.sin(lon), lift * Math.sin(lat)];
+const pDot = el("circle", { "data-name": "p", r: 0.045, fill: css("--green"), stroke: css("--paper"), "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" });
+const pText = el("text", { "font-size": 0.16, "font-style": "italic", fill: css("--green") });
+pText.textContent = "p";
+
+let cam;
+function setCamera(azDeg, elDeg) {
+  const a = azDeg * Math.PI / 180, e = elDeg * Math.PI / 180;
+  const d = [Math.cos(e) * Math.cos(a), Math.cos(e) * Math.sin(a), Math.sin(e)];
+  const r = [-Math.sin(a), Math.cos(a), 0];
+  const u = [d[1] * r[2] - d[2] * r[1], d[2] * r[0] - d[0] * r[2], d[0] * r[1] - d[1] * r[0]];
+  cam = { d, r, u, pos: d.map((x) => x * DIST) };
+}
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+function project(p) {
+  const z = dot(p, cam.d), w = DIST / (DIST - z);
+  return [dot(p, cam.r) * w, -dot(p, cam.u) * w, z];
+}
+function hidden(p) {
+  // Does the line from the camera to p meet the sphere before reaching p?
+  const C = cam.pos, v = [p[0] - C[0], p[1] - C[1], p[2] - C[2]];
+  const a = dot(v, v), b = 2 * dot(C, v), c = dot(C, C) - R * R;
+  const disc = b * b - 4 * a * c;
+  if (disc <= 0) return false;
+  return (-b - Math.sqrt(disc)) / (2 * a) < 0.999;
+}
+const fmt = (x) => x.toFixed(4);
+function visibleRuns(pts) {
+  let d = "", open = false;
+  for (const p of pts) {
+    if (hidden(p)) { open = false; continue; }
+    const [x, y] = project(p);
+    d += (open ? "L" : "M") + fmt(x) + " " + fmt(y);
+    open = true;
+  }
+  return d;
+}
+const light = (() => { const l = [0.35, -0.55, 0.76]; const n = Math.hypot(...l); return l.map((x) => x / n); })();
+function draw(az, elv) {
+  setCamera(az, elv);
+  const shown = [];
+  for (const f of faces) {
+    if (dot(f.c, [cam.pos[0] - f.c[0], cam.pos[1] - f.c[1], cam.pos[2] - f.c[2]]) <= 0) continue;
+    shown.push({ f, z: dot(f.c, cam.d) });
+  }
+  shown.sort((a, b) => a.z - b.z);
+  for (let k = 0; k < facePaths.length; k++) {
+    const p = facePaths[k];
+    if (k >= shown.length) { p.setAttribute("d", ""); continue; }
+    const f = shown[k].f;
+    const b = Math.max(0, dot(f.c, light));
+    const g = Math.round(150 + 95 * b), col = `rgb(${g - 18},${g - 8},${g})`;
+    p.setAttribute("d", "M" + f.pts.map((q) => { const [x, y] = project(q); return fmt(x) + " " + fmt(y); }).join("L") + "Z");
+    p.setAttribute("fill", col); p.setAttribute("stroke", col);
+  }
+  for (const c of curves) c.path.setAttribute("d", visibleRuns(c.pts));
+  for (const a of axes) {
+    a.path.setAttribute("d", visibleRuns(a.pts) + visibleRuns(a.neg));
+    const tip = a.dir.map((x) => x * 1.75), back = a.dir.map((x) => x * 1.62);
+    if (hidden(tip)) { a.head.setAttribute("d", ""); a.text.setAttribute("opacity", 0); continue; }
+    const [tx, ty] = project(tip), [bx, by] = project(back);
+    const dx = tx - bx, dy = ty - by, n = Math.hypot(dx, dy) || 1, ux = dx / n, uy = dy / n, L = 0.12, W = 0.05;
+    a.head.setAttribute("d", `M${fmt(tx + ux * 0.02)} ${fmt(ty + uy * 0.02)}L${fmt(tx - ux * L - uy * W)} ${fmt(ty - uy * L + ux * W)}L${fmt(tx - ux * L + uy * W)} ${fmt(ty - uy * L - ux * W)}Z`);
+    const [lx, ly] = project(a.dir.map((x) => x * 1.95));
+    a.text.setAttribute("x", fmt(lx)); a.text.setAttribute("y", fmt(ly)); a.text.setAttribute("opacity", 1);
+  }
+  const pv = !hidden(P), [px, py] = project(P);
+  pDot.setAttribute("cx", fmt(px)); pDot.setAttribute("cy", fmt(py));
+  pText.setAttribute("x", fmt(px + 0.07)); pText.setAttribute("y", fmt(py - 0.07));
+  pDot.setAttribute("opacity", pv ? 1 : 0); pText.setAttribute("opacity", pv ? 1 : 0);
+}
+
+// The sweep: one ease over the whole move, the azimuth once around, the camera rising and coming
+// back down on the way.
+const SWEEP = 9, HOLD = 1.5;
+const ease = (s) => (s < 0.5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2);
+const AZ0 = -60;
+const turn = document.getElementById("turn"), playBtn = document.getElementById("play");
+let playing = true, t = 0, last = null;
+function camAt(time) {
+  const s = ease(Math.min(1, (time % (SWEEP + HOLD)) / SWEEP));
+  return [AZ0 + 360 * s, 22 + 38 * Math.sin(Math.PI * s)];
+}
+function loop(now) {
+  if (last !== null && playing) t += (now - last) / 1000;
+  last = now;
+  if (playing) {
+    const [az, elv] = camAt(t);
+    turn.value = ((az + 180) % 360 + 360) % 360 - 180;
+    draw(az, elv);
+  }
+  requestAnimationFrame(loop);
+}
+const frozen = new URLSearchParams(location.search).get("t");
+if (frozen !== null) { const [az, elv] = camAt(+frozen); draw(az, elv); }
+else requestAnimationFrame(loop);
+playBtn.onclick = () => { playing = !playing; playBtn.textContent = playing ? "Pause" : "Play"; };
+turn.oninput = () => { playing = false; playBtn.textContent = "Play"; draw(+turn.value, 22); };
+
+// Every shape is in the page, so the prose and the figure can point at each other: a term in the
+// text marks its shape, and a shape marks its term.
+const mark = (name, on) => {
+  svg.querySelector(`[data-name="${name}"]`)?.classList.toggle("hi", on);
+  document.querySelector(`.term[data-for="${name}"]`)?.classList.toggle("hi", on);
+};
+for (const term of document.querySelectorAll(".term")) {
+  term.addEventListener("pointerenter", () => mark(term.dataset.for, true));
+  term.addEventListener("pointerleave", () => mark(term.dataset.for, false));
+}
+for (const shape of svg.querySelectorAll("[data-name]")) {
+  shape.addEventListener("pointerenter", () => mark(shape.dataset.name, true));
+  shape.addEventListener("pointerleave", () => mark(shape.dataset.name, false));
+}
+</script>
+</body>
+</html>
