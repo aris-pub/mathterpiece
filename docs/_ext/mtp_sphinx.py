@@ -71,11 +71,15 @@ SPECIAL = {
 }
 BUILTIN = {*builtins.BUILTINS, *builtins.SPECIAL_BUILTINS, *compiler.COLLECTION}
 CONSTANT = {*builtins.CONSTANTS, "true", "false", "none", "self"}
-NAME = r"[^\s()\[\]'\";.]+"
+# A name part as docs/spec/lexical.md defines it (rule name-characters), and the _ that may end
+# the head of a form (rule name-underscore).
+NAME = r"[A-Za-z][A-Za-z0-9-]*\??_?"
+OPERATOR = r"!=|<=|>=|[-+*/^<>=]"
+UREAL = r"([0-9]+\.?[0-9]*|\.[0-9]+)([eE][-+]?[0-9]+)?"
 
 
 def _word(lexer, match):
-    word = match.group(0)
+    word = match.group(0).removesuffix("_")
     if word in CONSTANT:
         kind = Keyword.Constant
     elif word in DECLARING:
@@ -88,7 +92,7 @@ def _word(lexer, match):
         kind = Operator
     else:
         kind = Name.Variable
-    yield match.start(), kind, word
+    yield match.start(), kind, match.group(0)
 
 
 class MtpLexer(RegexLexer):
@@ -102,12 +106,15 @@ class MtpLexer(RegexLexer):
             (r";.*$", Comment.Single),
             (r"\$'(\\.|[^'\\])*'", String.Interpol),
             (r"#'(\\.|[^'\\])*'", String.Other),
+            (r"tex'(\\.|[^'\\])*'", String),
             (r"'(\\.|[^'\\])*'", String),
-            (r"-?\d+/\d+", Number),
-            (r"-?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?i?(?![^\s()\[\]'\";.])", Number),
+            (r"(doc|free)@", Keyword),
+            (r"[-+]?[0-9]+/[0-9]+", Number),
+            (rf"[-+]?{UREAL}([-+]{UREAL}i|i)?", Number),
             (r"(\.)(" + NAME + ")", bygroups(Punctuation, Name.Attribute)),
-            (r"[()\[\]]", Punctuation),
+            (r"[()\[\]|]", Punctuation),
             (NAME, _word),
+            (OPERATOR, Operator),
             (r".", Text),
         ]
     }

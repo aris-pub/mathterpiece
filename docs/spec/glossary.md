@@ -86,6 +86,9 @@ blank
   A sequence of whitespace characters and comments, which only separates tokens
   ({numref}`blank`).
 
+digit
+  One of the ASCII digits `0` to `9` ({numref}`number-literals`).
+
 body
   The last items of a form, after its options. What a body may hold depends on the form
   ({numref}`contexts`).
@@ -124,14 +127,15 @@ index
   A `[…]` right after a name or a list, which reads a part of it ({numref}`lists`,
   {numref}`name-index`).
 
-inside braces
-  Read as the node of a field, where `:` ends a run ({numref}`inside-braces`).
-
 int
   A number literal that is a whole number, such as `3` or `-2` ({numref}`number-literals`).
 
 interpolated string
   `$'…'`: a string with fields, whose values are filled in ({numref}`interpolated-strings`).
+
+letter
+  One of the ASCII letters `a` to `z` and `A` to `Z`, as a character of a name
+  ({numref}`name-characters`).
 
 list
   Nodes in square brackets, such as `[0 1]` ({numref}`lists`).
@@ -148,8 +152,8 @@ name string
   ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
 
 node
-  One item of a source as the reader produces it: a form, a list, a word, a string or a free start
-  ({numref}`reader-nodes`).
+  One item of a source as the parser produces it: a form, a list, a word, a string or a free start
+  ({numref}`parser-nodes`).
 
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name of one part
@@ -173,7 +177,8 @@ reserved word
   A word that is never the name of a declaration ({numref}`reserved-words`).
 
 run
-  A longest sequence of characters with no blank and none of `( ) [ ] { } " | ;` ({numref}`run`).
+  A longest sequence of characters with no blank and none of `( ) [ ] { } " | ; :`
+  ({numref}`run`).
 
 string
   Text in single quotes, such as `'crimson'` ({numref}`string-literals`).
@@ -182,7 +187,7 @@ TeX string
   `tex'…'`: a string of LaTeX, in which only `\'` is an escape ({numref}`tex-strings`).
 
 token
-  A piece of text that the reader reads whole, such as a name or a string
+  A piece of text that the parser reads whole, such as a name or a string
   ({numref}`tokens-in-context`).
 
 word
