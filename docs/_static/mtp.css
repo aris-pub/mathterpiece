@@ -1,0 +1,21 @@
+/* The look is not designed yet: this only sets rules and examples apart from the text. */
+.mtp-rule {
+  border-left: 3px solid var(--pst-color-primary);
+  padding: 0.1rem 0 0.1rem 1rem;
+  margin: 1rem 0;
+}
+.mtp-rule-head {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+.mtp-example {
+  border: 1px solid var(--pst-color-border);
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+.mtp-example .highlight {
+  margin: 0;
+}
+.mtp-live {
+  padding: 1rem;
+}

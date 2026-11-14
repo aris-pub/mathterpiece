@@ -1,0 +1,2 @@
+```{include} ../canvas-lifecycle.md
+```

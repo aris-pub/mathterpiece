@@ -63,3 +63,11 @@ phone-speed *examples: _web-ready
 # install the web runtime's packages and Chromium, and build the runtime bundle mtp build puts in a page
 _web-ready:
     cd web && pnpm install --frozen-lockfile && pnpm build && pnpm exec playwright install chromium
+
+# serve the spec site at http://127.0.0.1:8820, building it again and reloading the page on each save
+spec:
+    uv run sphinx-autobuild -W --keep-going docs docs/_build/html --host 127.0.0.1 --port 8820 --watch mathterpiece --watch docs/_ext
+
+# build the spec site once into docs/_build/html
+spec-build:
+    uv run sphinx-build -W --keep-going -b html docs docs/_build/html

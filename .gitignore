@@ -24,3 +24,6 @@ web/.vitest/
 build_*/
 # The examples just phone-speed copies and builds
 web/perf/pages/
+
+# The spec site that Sphinx writes (just spec)
+docs/_build/
