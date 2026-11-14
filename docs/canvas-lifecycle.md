@@ -47,3 +47,6 @@ ready from the start, and its `on-ready` is triggered when the page loads.
 10. **On the page** (docs/page-interface.md): each copy has `data-mtp-ready` once ready and
    fires `mtp-state` then. `<mtp-model>` has `data-mtp-ready` once the page is ready. The
    model's old `mtp-ready` event (the model has loaded) is renamed `mtp-loaded`.
+11. **`on-show` and `on-hide`** are not part of the lifecycle (the author, 2026-11-14): nothing but
+   the `on-view` plays before state 0, ready never waits for them, and they play only when a copy
+   starts or stops showing a shape after state 0.

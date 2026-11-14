@@ -96,8 +96,23 @@ export class DrawMemo {
   width: number | null = null;
 }
 
+/**
+ * How a canvas draws the shapes that have an on-show or on-hide in it (mtp-7i3j): rt is what it
+ * draws from, the scene with each stand-in in place of its shape. Such a shape is drawn as its
+ * stand-in or its original, or not at all while hidden, and never faded by toggle-duration.
+ */
+export interface Showing {
+  rt: Runtime;
+  /** Whether the shape is one of them, or a container holding one. */
+  around(id: number): boolean;
+  governs(id: number): boolean;
+  hidden(id: number): boolean;
+  standIn(id: number): boolean;
+}
+
 interface Pass {
   rt: Runtime;
+  showing: Showing | null;
   // Each drawing's marker and clip ids start with its SVG's own number.
   prefix: number;
   memo: DrawMemo | null;
@@ -121,6 +136,7 @@ export function draw(
   shownBy?: (k: number) => [number, number][],
   look?: Look,
   memo?: DrawMemo,
+  showing?: Showing,
 ): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
   if (!prefixes.has(out)) prefixes.set(out, ++svgs);
@@ -141,7 +157,7 @@ export function draw(
     memo.shapes.clear();
     memo.units = unitsPerPx;
   }
-  const pass: Pass = { rt, prefix: prefixes.get(out)!, memo: memo ?? null };
+  const pass: Pass = { rt: showing?.rt ?? rt, showing: showing ?? null, prefix: prefixes.get(out)!, memo: memo ?? null };
   let k = 0;
   for (const shown of shows) {
     if (typeof shown === "number") {
@@ -149,6 +165,11 @@ export function draw(
       continue;
     }
     for (const [id, level] of shapes[k++]!) {
+      // Such an item is faded shape by shape, so its shapes with an on-show or on-hide are not.
+      if (showing?.around(id)) {
+        drawObject(pass, id, top.children, unitsPerPx, level);
+        continue;
+      }
       if (level <= 0) continue;
       let into = top.children;
       if (level < 1) {
@@ -363,11 +384,11 @@ function background(rt: Runtime, shown: number[], svg: SVGSVGElement): void {
   }
 }
 
-function drawObject(pass: Pass, i: number, into: Drawn[], unitsPerPx: number): void {
+function drawObject(pass: Pass, i: number, into: Drawn[], unitsPerPx: number, fade = 1): void {
   const rt = pass.rt;
   const o = rt.objects[i]!;
   if (o.kind === "scene") {
-    for (const m of o.members ?? []) drawObject(pass, m, into, unitsPerPx);
+    for (const m of o.members ?? []) drawObject(pass, m, into, unitsPerPx, fade);
     return;
   }
   if (o.kind === "group" || o.kind === "instance") {
@@ -378,9 +399,25 @@ function drawObject(pass: Pass, i: number, into: Drawn[], unitsPerPx: number): v
     const inside = o["fixed-size"] ? 1 : unitsPerPx;
     if (o["fixed-size"]) g.attrs["data-mtp-fixed-size"] = "";
     if (o.clip !== undefined) clipTo(pass, i, o.clip, g, inside);
-    for (const m of o.members ?? []) drawObject(pass, m, g.children, inside);
+    for (const m of o.members ?? []) drawObject(pass, m, g.children, inside, fade);
     into.push(g);
     return;
+  }
+  const showing = pass.showing;
+  if (showing?.governs(i)) {
+    if (showing.hidden(i)) return;
+    if (showing.standIn(i)) {
+      // A stand-in changes with the clock, not with the scene, so it is never kept.
+      const drawn = absent(rt, i) ? [] : shapeDrawn(pass, i, unitsPerPx);
+      for (const d of drawn) d.attrs["data-mtp-stand-in"] = "";
+      into.push(...drawn);
+      return;
+    }
+  } else if (fade < 1) {
+    if (fade <= 0) return;
+    const g = node("g", { "data-mtp-toggle": "", opacity: fade });
+    into.push(g);
+    into = g.children;
   }
   const memo = pass.memo && keepable(rt, i) ? pass.memo : null;
   const kept = memo?.shapes.get(i);

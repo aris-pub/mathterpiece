@@ -9,7 +9,9 @@ the case-by-case rules in reference.md, "Concurrency".
    effect is either an animation, known ahead, or a gesture: an `on-drag`, a slider's knob
    while the reader holds it, and an `on-pointermove`, which write as the pointer moves. A
    writer is triggered, then emits writes to its values until its effect ends, it is released,
-   or it is cancelled. A writer that emits writes is running.
+   or it is cancelled. A writer that emits writes is running. `on-show` and `on-hide` write only
+   a canvas's stand-ins, which no other writer writes, so they meet only each other, and the one
+   triggered later wins (reference, "Showing and hiding").
 2. **Values.** The free values a write changes. A write to a group's attribute is a write of
    each member's. A shape's `pos` is its `x` and its `y`. A container attribute, such as a
    polyline's `x`, a line's `x` or a group's `r`, is neither free nor bound: it broadcasts each

@@ -170,6 +170,8 @@ export class Runtime {
   /** The canvases not ready yet (docs/canvas-lifecycle.md): the listeners tied to one hear
    * nothing in it, and the controls that belong to it take no input. */
   readonly unready = new Set<number>();
+  // How many jumps are under way: writes that set a state, which a canvas shows at once.
+  private jumps = 0;
   private touched: number[] = [];
   private parents: (number | null)[];
   // Each object's variables and attributes, by attribute (null for a variable's value). Reads
@@ -322,6 +324,24 @@ export class Runtime {
   exists(id: number): boolean {
     for (const s of this.existsChain[id]!) if (!this.get(s)) return false;
     return true;
+  }
+
+  /** Whether a shape may stop existing: it, or a container around it, has an exists-when. */
+  mayVanish(id: number): boolean {
+    return this.existsChain[id]!.length > 0;
+  }
+
+  /** A number brought into the range its attribute's type allows, for a value drawn but never
+   * written, as a stand-in's (mtp-7i3j). */
+  inRange(id: number, attr: string, value: unknown): unknown {
+    const t = this.typeOf(id, attr);
+    if (t === undefined || typeof value !== "number") return value;
+    let v = value;
+    for (const [op, limit] of this.constraints(t)) {
+      if ((op === ">=" || op === ">") && v < (limit as number)) v = limit as number;
+      if ((op === "<=" || op === "<") && v > (limit as number)) v = limit as number;
+    }
+    return v;
   }
 
   /** The clock at the last write that changed one of an object's variables or attributes, or
@@ -490,6 +510,40 @@ export class Runtime {
       this.pending = null;
       if (changed.size > 0) this.tell(changed);
     }
+  }
+
+  /**
+   * Runs work whose writes set a state, as a play or a stepper does before it plays its steps and
+   * a drag along a play's bars does at each point, told to the listeners at its end as one
+   * change. While the listeners are told of it, jumping is true, and a canvas shows and hides
+   * shapes at once and ends every on-show and on-hide that plays (the author, 2026-11-14).
+   */
+  jump<T>(work: () => T): T {
+    this.jumps++;
+    if (this.jumps > 1 || this.pending) {
+      try {
+        return work();
+      } finally {
+        this.jumps--;
+      }
+    }
+    // The listeners are told even of a jump that changes nothing, since it still ends what plays.
+    const changed = (this.pending = new Set<string>());
+    try {
+      return work();
+    } finally {
+      this.pending = null;
+      try {
+        this.tell(changed);
+      } finally {
+        this.jumps--;
+      }
+    }
+  }
+
+  /** Whether the writes that the listeners are told of now set a state (see jump). */
+  get jumping(): boolean {
+    return this.jumps > 0;
   }
 
   // What the listeners write as they hear of a change, a control its own step say, is no writer's.
@@ -1607,7 +1661,7 @@ export function show(v: unknown, t: Type, spec: string): string {
   return String(v);
 }
 
-function percent(x: number): string {
+export function percent(x: number): string {
   return `${Number((100 * x).toFixed(6))}%`;
 }
 

@@ -13,6 +13,7 @@ import { latexOf, termClass, typeset } from "./math.ts";
 import { Player, type Span } from "./player.ts";
 import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
+import { Showings } from "./standins.ts";
 import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
@@ -478,6 +479,13 @@ function playerFor(rt: Runtime, writer: Obj): Player | null {
 
 export class MtpCanvas extends MtpPart {
   private redraw: () => void = () => {};
+  private showings: Showings | null = null;
+
+  /** A shape's attribute as this canvas draws it now, its stand-in's while its on-show or
+   * on-hide plays, or null while it does not draw the shape (mtp-7i3j). */
+  drawnAs(shape: number, attr: string): unknown {
+    return this.showings?.drawnAs(shape, attr) ?? null;
+  }
 
   protected setup(model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const canvas = this.find(rt, "canvas");
@@ -490,7 +498,9 @@ export class MtpCanvas extends MtpPart {
     const releases = model.releases!;
     const dragstarts = model.dragstarts!;
     const dragends = model.dragends!;
-    const toggles = new Toggles(rt, canvas, scheduler, () => this.redraw());
+    const showings = new Showings(rt, canvas, scheduler, () => this.redraw());
+    this.showings = showings;
+    const toggles = new Toggles(rt, canvas, scheduler, () => this.redraw(), showings);
     const look: Look = { scale: 1, dx: 0, dy: 0 };
     const pointer = new Pointer(rt, canvas);
     // The shape a tap selected, to move by the next tap, as the drag from the press point there.
@@ -534,7 +544,7 @@ export class MtpCanvas extends MtpPart {
       // Elsewhere a finger on the canvas scrolls the page.
       const action = allows("pan") || allows("zoom") || pointer.onCanvas ? "none" : "";
       if (svg.style.touchAction !== action) svg.style.touchAction = action;
-      draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo);
+      draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo, showings);
       const made = elementsMade();
       if (rt.clock !== shownAt || made !== madeAt || moded) {
         for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
@@ -812,7 +822,9 @@ export class MtpCanvas extends MtpPart {
 
 // How visible each shape a canvas item gives is: the canvas's own state. When an item starts or
 // stops giving a shape, a toggle moves that shape's level over the canvas's toggle-duration with
-// its toggle-ease. Turning back midway covers only what is left, at the same speed.
+// its toggle-ease. Turning back midway covers only what is left, at the same speed. A shape with
+// an on-show or on-hide is not faded so: its listeners show and hide it (mtp-7i3j), and a shape
+// an item no longer gives is kept while one of its stand-ins still hides.
 class Toggles {
   // Each item's shapes, by "k:id", and how far each is shown, from 0 to 1.
   private levels = new Map<string, number>();
@@ -828,6 +840,7 @@ class Toggles {
     private canvas: number,
     private scheduler: Scheduler,
     private redraw: () => void,
+    private showings: Showings,
   ) {
     const view = rt.objects[canvas]!;
     const tr = view.transition === null || view.transition === undefined ? null : rt.objects[view.transition]!;
@@ -850,6 +863,12 @@ class Toggles {
   follow(): void {
     const now = this.now();
     const wanted = this.keys(now);
+    if (this.showings.any) {
+      const bare = (this.rt.objects[this.canvas]!.shows ?? []).filter((s): s is number => typeof s === "number");
+      this.showings.follow(new Set([...bare, ...now.flat()]));
+    }
+    const held = (key: string) => this.showings.holds(Number(key.slice(key.indexOf(":") + 1)));
+    for (const [key, level] of this.levels) if (level <= 0 && !wanted.has(key) && !held(key)) this.levels.delete(key);
     const same = wanted.size === this.wanted.size && [...wanted].every((key) => this.wanted.has(key));
     // Leaving shapes keep their place after the ones the item gives now, until they are gone.
     this.order = now.map((ids, k) => [...ids, ...(this.order[k] ?? []).filter((id) => !ids.includes(id))]);
@@ -857,7 +876,11 @@ class Toggles {
     this.wanted = wanted;
     for (const key of wanted) if (!this.levels.has(key)) this.levels.set(key, 0);
     if (this.duration <= 0) {
-      this.levels = new Map([...wanted].map((key) => [key, 1]));
+      for (const key of [...this.levels.keys()]) {
+        if (wanted.has(key)) this.levels.set(key, 1);
+        else if (held(key)) this.levels.set(key, 0);
+        else this.levels.delete(key);
+      }
       return;
     }
     if (this.moving) return;
@@ -867,7 +890,7 @@ class Toggles {
       this.moving = false;
       for (const [key, level] of this.levels) {
         const next = this.wanted.has(key) ? Math.min(level + step, 1) : Math.max(level - step, 0);
-        if (next <= 0 && !this.wanted.has(key)) this.levels.delete(key);
+        if (next <= 0 && !this.wanted.has(key) && !held(key)) this.levels.delete(key);
         else this.levels.set(key, next);
         if (next !== (this.wanted.has(key) ? 1 : 0)) this.moving = true;
       }
@@ -1529,7 +1552,7 @@ export class MtpPlay extends MtpPart {
         });
       }
       const t = timeAt(event.clientX);
-      scheduler.scrubTo(this, t, () => layout.setState(stepAt(all, t) - 1));
+      rt.jump(() => scheduler.scrubTo(this, t, () => layout.setState(stepAt(all, t) - 1)));
       this.refresh();
     });
     const release = (event: PointerEvent, tap: boolean) => {
