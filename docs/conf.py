@@ -26,7 +26,7 @@ numfig_format = {
 }
 
 highlight_language = "mtp"
-html_theme = "furo"
+html_theme = "pydata_sphinx_theme"
 html_title = "mathterpiece"
 html_static_path = ["_static"]
 html_css_files = ["mtp.css"]
