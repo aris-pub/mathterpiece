@@ -79,6 +79,13 @@ class TestCountSumReduce:
         assert model("(real k (sum [1 2 3.5]))").get("k").value.value == 6.5
         assert expr("(real j) (real k (sum [j 1]))", "k").type == REAL
 
+    def test_sum_times_a_number_is_not_none(self):
+        # mtp-gvrf.8: the range of sum reached the largest real, so a product of it could
+        # overflow and was inferred as maybe none. A value with no upper limit of its own stops
+        # at 10^150 (type-system.md, "What the compiler proves").
+        assert expr("(list[real] xs [1 2]) (real s (sum xs))", "s").range == (-1e150, 1e150)
+        assert typ("(list[real] xs [1 2]) (real x (* (sum xs) 8))", "x") == REAL
+
     def test_reduce(self):
         src = f"(scene s {G} (real total (reduce g 0 (fn ((real t) (circle p)) (+ t p.r)))))"
         m = model(src)
