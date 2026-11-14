@@ -46,3 +46,9 @@
 (canvas later-on (when later dot)
   (on-show dot (fade-in dot 1))
   (on-ready (animation (move later (to true) (duration 0)))))
+(real p 0)
+(play tour (buttons true)
+  (animation
+    (in-order (move show (from false) (to true) (duration 0)) (wait 1))
+    (move p (to 3) (duration 1))
+    (in-order (move show (to false) (duration 0)) (wait 1))))

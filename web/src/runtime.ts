@@ -170,6 +170,8 @@ export class Runtime {
   /** The canvases not ready yet (docs/canvas-lifecycle.md): the listeners tied to one hear
    * nothing in it, and the controls that belong to it take no input. */
   readonly unready = new Set<number>();
+  // How many jumps are under way: writes that set a state, which a canvas shows at once.
+  private jumps = 0;
   private touched: number[] = [];
   private parents: (number | null)[];
   // Each object's variables and attributes, by attribute (null for a variable's value). Reads
@@ -508,6 +510,26 @@ export class Runtime {
       this.pending = null;
       if (changed.size > 0) this.tell(changed);
     }
+  }
+
+  /**
+   * Runs work whose writes set a state, as a play or a stepper does before it plays its steps and
+   * a drag along a play's bars does at each point, told to the listeners at its end as one
+   * change. While the listeners are told of it, jumping is true, and a canvas shows and hides
+   * shapes at once, with no on-show or on-hide (the author, 2026-11-14).
+   */
+  jump<T>(work: () => T): T {
+    this.jumps++;
+    try {
+      return this.together(work);
+    } finally {
+      this.jumps--;
+    }
+  }
+
+  /** Whether the writes that the listeners are told of now set a state (see jump). */
+  get jumping(): boolean {
+    return this.jumps > 0;
   }
 
   // What the listeners write as they hear of a change, a control its own step say, is no writer's.

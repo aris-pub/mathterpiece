@@ -288,7 +288,7 @@ export class Player {
    * steps 1 to j move, at the last to written for it, read now.
    */
   setState(j: number): void {
-    this.rt.together(() => {
+    this.rt.jump(() => {
       for (const [m, v] of this.stateOf(j)) this.rt.write(m.id, m.attr, this.clamped(m, v));
     });
   }

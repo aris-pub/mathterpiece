@@ -1552,7 +1552,7 @@ export class MtpPlay extends MtpPart {
         });
       }
       const t = timeAt(event.clientX);
-      scheduler.scrubTo(this, t, () => layout.setState(stepAt(all, t) - 1));
+      rt.jump(() => scheduler.scrubTo(this, t, () => layout.setState(stepAt(all, t) - 1)));
       this.refresh();
     });
     const release = (event: PointerEvent, tap: boolean) => {

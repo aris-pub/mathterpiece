@@ -232,3 +232,70 @@ describe("the start of a canvas", () => {
     expect(standIns("later-on")).toBe(1);
   });
 });
+
+// When a play or a stepper sets a state, and while the reader drags a play's bars, shapes appear
+// and disappear at once, so a state looks the same however it was reached (the author,
+// 2026-11-14). The play tour shows c in step 1 and hides it in step 3, a second each.
+describe("setting a state", () => {
+  const withTour = (): Runtime => {
+    const [, rt] = page("v");
+    document.body.insertAdjacentHTML("beforeend", `<mtp-play model="m" name="tour"></mtp-play>`);
+    const play = document.querySelector("mtp-play")!;
+    const rect = (left: number) => () => ({ left, width: 100, right: left + 100, top: 0, bottom: 4, height: 4, x: left, y: 0, toJSON: () => ({}) }) as DOMRect;
+    play.querySelectorAll<HTMLElement>(".mtp-bar").forEach((bar, k) => {
+      bar.getBoundingClientRect = rect(104 * k);
+    });
+    track().getBoundingClientRect = () => ({ ...rect(0)(), width: 308, right: 308 }) as DOMRect;
+    return rt;
+  };
+  const track = () => document.querySelector("mtp-play .mtp-bars") as HTMLElement;
+  const pointer = (type: string, x: number) => track().dispatchEvent(new PointerEvent(type, { clientX: x, clientY: 2, bubbles: true, pointerId: 1, button: 0 }));
+  const tap = (x: number) => {
+    pointer("pointerdown", x);
+    pointer("pointerup", x);
+  };
+
+  it("a tap on a bar sets its state with no on-show, and the steps after it play as usual", () => {
+    const rt = withTour();
+    tap(154);
+    expect(rt.value(rt.id("show"), null)).toBe(true);
+    expect(standIns("v")).toBe(0);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBe(1);
+    pass(0.9);
+    expect(standIns("v")).toBe(0);
+    // Step 3 hides c as it plays: its on-hide plays.
+    pass(0.2);
+    expect(rt.value(rt.id("show"), null)).toBe(false);
+    expect(standIns("v")).toBe(1);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBeLessThan(1);
+  });
+
+  it("setting state 0 hides at once, and step 1 then plays its on-show from nothing drawn", () => {
+    const rt = withTour();
+    tap(154);
+    pass(0.2);
+    tap(50);
+    expect(rt.value(rt.id("show"), null)).toBe(true);
+    expect(standIns("v")).toBe(1);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBe(0);
+    pass(0.5);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBeCloseTo(0.5, 1);
+  });
+
+  it("a drag along the bars shows and hides at once", () => {
+    const rt = withTour();
+    pointer("pointerdown", 10);
+    pointer("pointermove", 50);
+    expect(rt.value(rt.id("show"), null)).toBe(true);
+    expect(standIns("v")).toBe(0);
+    expect(elementOf(rt, "v", "c")).not.toBeNull();
+    pointer("pointermove", 258);
+    expect(rt.value(rt.id("show"), null)).toBe(false);
+    expect(elementOf(rt, "v", "c")).toBeNull();
+    pointer("pointermove", 50);
+    expect(standIns("v")).toBe(0);
+    expect(drawnAs(rt, "v", "c", "drawn")).toBe(1);
+    pointer("pointerup", 50);
+    expect(standIns("v")).toBe(0);
+  });
+});

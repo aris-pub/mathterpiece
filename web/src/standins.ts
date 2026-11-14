@@ -191,11 +191,12 @@ export class Showings implements Showing {
    * showing, given the shapes its items give now. A shape with no on-show is shown at once, and
    * one with no on-hide hidden at once, as before (mtp-7i3j). Until the canvas is ready, shapes
    * are shown and hidden at once: on-show and on-hide play only after state 0 (the author,
-   * 2026-11-14).
+   * 2026-11-14). So are they when a play or a stepper sets a state, and while the reader drags a
+   * play's bars.
    */
   follow(given: Set<number>): void {
     if (this.listeners.size === 0) return;
-    const atOnce = !this.started || this.scene.unready.has(this.canvas);
+    const atOnce = !this.started || this.scene.unready.has(this.canvas) || this.scene.jumping;
     this.started = true;
     const starting = new Map<Obj, number[]>();
     const add = (l: Obj, leaf: number) => starting.set(l, [...(starting.get(l) ?? []), leaf]);
