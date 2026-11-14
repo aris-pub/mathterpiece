@@ -175,7 +175,9 @@ class MtpExample(SphinxDirective):
         mid = f"ex-{self.env.docname.replace('/', '-')}-{number}"
         data = mtpc.strip().replace("</", "<\\/")
         parts = [f'<mtp-model id="{mid}" src="#{mid}-data"></mtp-model>']
-        parts += [f'<mtp-{placeable[n]} model="{mid}" name="{html.escape(n)}"></mtp-{placeable[n]}>' for n in wanted]
+        for n in wanted:
+            tag = f"mtp-{placeable[n]}"
+            parts.append(f'<{tag} model="{mid}" name="{html.escape(n)}"></{tag}>')
         parts.append(f'<script type="application/json" id="{mid}-data">{data}</script>')
 
         code = nodes.literal_block(src, src, language="mtp")
@@ -200,9 +202,7 @@ def copy_runtime(app: Sphinx):
 
 def setup(app: Sphinx):
     app.add_lexer("mtp", MtpLexer)
-    app.add_enumerable_node(
-        rule_node, "rule", _rule_title, html=(visit_rule, depart_rule)
-    )
+    app.add_enumerable_node(rule_node, "rule", _rule_title, html=(visit_rule, depart_rule))
     app.add_directive("rule", Rule)
     app.add_directive("mtp-example", MtpExample)
     app.add_js_file("mathterpiece.js", type="module")
@@ -210,4 +210,3 @@ def setup(app: Sphinx):
     app.add_css_file(BRAIID)
     app.connect("builder-inited", copy_runtime)
     return {"version": "0.1", "parallel_read_safe": True}
-

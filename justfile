@@ -66,8 +66,8 @@ _web-ready:
 
 # serve the spec site at http://127.0.0.1:8820, building it again and reloading the page on each save
 spec:
-    uv run sphinx-autobuild -W --keep-going docs docs/_build/html --host 127.0.0.1 --port 8820 --watch mathterpiece --watch docs/_ext
+    uv run --group docs sphinx-autobuild -W --keep-going docs docs/_build/html --host 127.0.0.1 --port 8820 --watch mathterpiece --watch docs/_ext
 
 # build the spec site once into docs/_build/html
 spec-build:
-    uv run sphinx-build -W --keep-going -b html docs docs/_build/html
+    uv run --group docs sphinx-build -W --keep-going -b html docs docs/_build/html
