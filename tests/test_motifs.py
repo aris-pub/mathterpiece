@@ -96,6 +96,12 @@ class TestInstances:
             "(scene s (dial d (x d.angle)))",
             "(scene s (group g (dial d (t 0.2) (x d.t))))",
             "(motif pair (real u 0.5) (dial left (t left.x))) (scene s (pair p))",
+            # In its own clip or defaults too (mtp-gvrf.16).
+            "(scene s (dial d (t 0.3) (clip (rect_ (width d.t) (height 1)))))",
+            "(scene s (dial d (clip (rect_ (width d.face.r) (height 1)))))",
+            "(scene s (dial d (defaults (stroke d.tint))))",
+            "(scene s (dial d (t 0.3) (defaults (stroke-width d.t))))",
+            "(scene s (group g (dial d (defaults (stroke-width g[0].t)))))",
         ],
     )
     def test_an_instance_reading_itself(self, src):
