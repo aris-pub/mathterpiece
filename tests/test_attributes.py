@@ -1,7 +1,7 @@
 """Attributes by type (docs/type-system.md, section 8), and the stroke attributes: dash,
 dash-offset, line-cap and line-join (docs/reference.md "The scene and shapes")."""
 
-from helpers import bound, error, model, value
+from helpers import bound, error, model, typ, value
 
 from mathterpiece.types import FONT, INT, REAL, ListT, Refine
 
@@ -30,6 +30,11 @@ class TestValues:
         assert value("(list xs [1 2 3] (const)) (int n xs.length)", "n") == 3
         assert value("(list[real] xs [1 2] (length 2)) (int n xs.length)", "n") == 2
         assert bound("(list[real] xs [1 2]) (int n xs.length)", "n").type == INT
+
+    def test_a_list_length_times_a_number_is_not_none(self):
+        # mtp-pwjz: as with count, the range of a list's length stops at 10^150.
+        assert bound("(list[real] xs [1 2]) (int n xs.length)", "n").range == (0, 1e150)
+        assert typ("(list[real] xs [1 2]) (real x (* xs.length 8))", "x") == INT
 
 
 class TestTransitionsAndAnimations:
