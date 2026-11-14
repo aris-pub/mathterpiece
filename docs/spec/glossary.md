@@ -189,24 +189,25 @@ word
   One run read whole: a name, a number, an operator or a boolean ({numref}`run`).
 
 core form
-  A form that the prover checks and the runtime runs: every form that is not sugar. See
-  {numref}`core-form`.
+  A form that is neither sugar nor library. The prover proves core forms, and the runtime runs
+  them. See {numref}`kinds-of-form`.
 
 library
   The built-in functions and the files of the standard library. A call of a library function is
   a core form. See {numref}`library-form`.
 
 prover
-  The part of the compiler that checks types, proves ranges and constraints, and checks every
-  invariant of the world model. It sees only core forms. See {numref}`prover-sees-core`.
+  The part of the compiler that does the prove step: it checks types, proves ranges and
+  constraints, and checks every invariant of the world model. It is given only core forms. See
+  {numref}`compile-steps`.
 
 rewrite
-  A rule that replaces a sugar form by core forms, as a pair of mtp fragments. See
-  {ref}`core-rewrites`.
+  A pair of mtp fragments: a sugar form, and the core forms that it means. See
+  {numref}`sugar-rewrites`.
 
 sugar
-  A form that can be rewritten into core forms without computing any value. Also called a
-  derived form. See {numref}`sugar-form`.
+  A form that can be rewritten into core forms without computing any value and without using
+  any type. Also called a derived form. See {numref}`sugar-form`.
 
 evaluation
   Computing the value of an expression, when compiling or while drawing. Evaluation changes
