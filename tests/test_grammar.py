@@ -1,8 +1,11 @@
-"""The reader grammar of the spec (docs/spec/mtp.lark) against the reader (mathterpiece/parse.py).
+"""The grammar of the spec (docs/spec/mtp.lark) against the parser (mathterpiece/parse.py).
 
 The spec renders the grammar from the same file (docs/spec/grammar.md). Every source below must be
 accepted by both or rejected by both, and where both accept it, the grammar's tree, built into the
-reader's nodes by Reading below, must equal the reader's. Positions are not compared."""
+parser's nodes by Reading below, must equal the parser's. Positions are not compared.
+
+The grammar states the decided language. Where the parser does not follow it yet, the source is
+listed in KNOWN_DIFFERENCES with the bead that will change the parser."""
 
 import logging
 import random
@@ -12,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from lark import Lark, Token, Transformer
-from lark.exceptions import LarkError, VisitError
+from lark.exceptions import LarkError
 
 from mathterpiece.nodes import (
     Bar,
@@ -53,16 +56,20 @@ def _spec_examples() -> list[tuple[str, str]]:
             lines = m[3].splitlines()
             while lines and lines[0].startswith(":"):
                 lines.pop(0)
-            found.append((f"{page.name}#{k}", "\n".join(lines) + "\n"))
+            # In a template such as (H_ ITEMS…), … marks the place of more items. It is no
+            # character of a source, so it is dropped.
+            source = "\n".join(lines).replace("…", "")
+            found.append((f"{page.name}#{k}", source + "\n"))
     return found
 
 
 SPEC_EXAMPLES = _spec_examples()
 
-# Sources that the reader accepts, for the corners of the grammar that the corpus does not reach.
+# Sources that the parser accepts, for the corners of the grammar that the corpus does not reach.
 ACCEPTED = [
     "",
     "  ; only a comment\n",
+    "\n(f)\n",
     "(a)(b)",
     "(a (b)(c))",
     "(f a(b)c)",
@@ -71,6 +78,7 @@ ACCEPTED = [
     "(f [1](b))",
     "(f (b)'x')",
     "(f\t a\n\r b)",
+    "(f\r\n a)",
     "(f 3 -2 +4 007)",
     "(f 1/3 -2/4 1/05)",
     "(f 2.5 1. .5 -.5 1e3 1.5E-3 +2e+2)",
@@ -78,14 +86,12 @@ ACCEPTED = [
     "(f true false none)",
     "(f truex true.x none.x none[0] x.none)",
     "(f + - * / ^ < <= > >= = != .)",
-    "(f !=x a!b a?b a*b a=b a-b a' a'' f'(x))",
-    "(f a:b :a)",
-    "(f θ x² ünï)",
+    "(f a-b a- a--b a? none? a?.b a1 a-1 Ab)",
     "(f p.r p.pos.x)",
     "(f xs[0] xs[-1] xs[(+ k 1)] g['m1'] xs[ 0 ] f[real real] xs[0][1])",
-    "(f xs[0].a xs[0].a.b[1].c xs[0].true xs[0]._ xs[0].tex'q')",
+    "(f xs[0].a xs[0].a.b[1].c xs[0].true)",
     "(f [] [ ] [1 2] [[1] [2]] [a b c][h] [a][0][1] [(f)(g)])",
-    "(f real|none a|b|c 1|2 a[0]|b b|c[0] true|x .|a a|tex'q')",
+    "(f real|none a|b|c 1|2 a[0]|b b|c[0] true|x .|a)",
     "(f 'a' 'it\\'s' 'back\\\\slash' 'line\\nbreak' '')",
     "(f tex'\\frac12' tex'f\\'(x)' tex'a\\\\' tex'\\q')",
     "(f $'x = {x}' $'{x:.2f}' $'{ x }' $'{x :>5}' $'{x:}' $'{{lit}}' $'}}' $'{(* 2 a)}')",
@@ -98,17 +104,19 @@ ACCEPTED = [
     "(f free@x free@[1] free@'s' free@free@(g))",
     "(f free@(g)x (h)free@x)",
     "(circle_ (r 1))",
+    "(circle_(r 1))",
     "(line|none_ (r 1))",
+    "(true|none_ x)",
     "(marks.grid_ a)",
+    "(a.b-c_ x)",
     "(none_ a)",
     "(a_)",
-    "(f a_ a_.b)",
-    "(f _.a a._ _[0])",
+    "(f (g_ x))",
     "(f)",
     "()",
 ]
 
-# Sources that the reader rejects.
+# Sources that the parser rejects.
 REJECTED = [
     "x",
     "'s'",
@@ -149,6 +157,7 @@ REJECTED = [
     "(f .[0])",
     "(f 12abc)",
     "(f 1/0)",
+    "(f 1/٠)",
     "(f 1/2/3)",
     "(f 1-2)",
     "(f 1e)",
@@ -156,6 +165,7 @@ REJECTED = [
     "(f -x)",
     "(f +a)",
     "(f <=x)",
+    "(f ²x)",
     "(f a.)",
     "(f .a)",
     "(f a..b)",
@@ -169,6 +179,7 @@ REJECTED = [
     "(f doc@ 'x')",
     "(f doc@x)",
     "(f _)",
+    "(_ x)",
     "(f a_b)",
     "(f _a)",
     "(f a|)",
@@ -198,21 +209,99 @@ REJECTED = [
     "(f 'a':b)",
 ]
 
+BOM = "mtp-ydd4.7.1"
+BLANKS = "mtp-ydd4.7.2"
+NAMES = "mtp-ydd4.7.3"
+DIGITS = "mtp-ydd4.7.4"
+NESTED_FIELDS = "mtp-kzx2"
 
-# Sources on which the grammar and the reader differ, each one an open question in the spec.
-# When the author answers one, the grammar or the reader changes, and the source moves to
-# ACCEPTED or REJECTED.
+# Sources on which the grammar, which states the decided language, and today's parser differ.
+# Each one names the bead that will change the parser. Once the parser follows the spec on a
+# source, test_known_difference fails, and the entry is removed.
 KNOWN_DIFFERENCES = {
-    # After a string nested in braces ends, the reader reads the rest of the field as if it were
+    "﻿(f)": BOM,
+    "﻿\n(f)": BOM,
+    "(f a)": BLANKS,
+    "(f a b)": BLANKS,
+    "　(f)": BLANKS,
+    "(f a!b)": NAMES,
+    "(f a?b)": NAMES,
+    "(f a*b)": NAMES,
+    "(f a=b)": NAMES,
+    "(f !=x)": NAMES,
+    "(f a')": NAMES,
+    "(f a'')": NAMES,
+    "(f a'b)": NAMES,
+    "(f f'(x))": NAMES,
+    "(f a:b)": NAMES,
+    "(f :a)": NAMES,
+    "(f :)": NAMES,
+    "(f θ)": NAMES,
+    "(f ünï)": NAMES,
+    "(f x²)": NAMES,
+    "(f a\x00b)": NAMES,
+    "(f a﻿b)": NAMES,
+    "(f xs[0]._)": NAMES,
+    "(f xs[0].tex'q')": NAMES,
+    "(f a|tex'q')": NAMES,
+    "(f a_)": NAMES,
+    "(f a b_)": NAMES,
+    "(f a|b_)": NAMES,
+    "(f a_.b)": NAMES,
+    "(f _.a)": NAMES,
+    "(f a._)": NAMES,
+    "(f _[0])": NAMES,
+    "(a_.b x)": NAMES,
+    "(f ٣)": DIGITS,
+    "(f 1/٣)": DIGITS,
+    "(f ١.٥)": DIGITS,
+    # After a string nested in a field ends, the parser reads the rest of the field as if it were
     # outside braces.
-    "(f $'{$'{a}'}')": "Q-lexical-10-1",
-    "(f $'{#'n-{k}'.x:y}')": "Q-lexical-10-2",
-    "(f $'{(g $'{a}' b:c)}')": "Q-lexical-10-3",
-    # The reader uses str.isdigit for the first character of a name part, and the value of int()
-    # for the denominator of a ratio.
-    "(f ²x)": "Q-lexical-9-1",
-    "(f 1/٠)": "Q-lexical-9-2",
+    "(f $'{$'{a}'}')": NESTED_FIELDS,
+    "(f $'{#'n-{k}'.x:y}')": NESTED_FIELDS,
+    "(f $'{[$'{a}' b]}')": NESTED_FIELDS,
 }
+
+OPERATOR_NAMES = {"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!=", ".", "free@"}
+NAME_PART = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
+
+
+def _bad_name(node) -> bool:
+    """Whether a node holds a name part that the rule name-characters does not allow."""
+    if isinstance(node, Name):
+        if len(node.parts) == 1 and node.parts[0] in OPERATOR_NAMES:
+            return False
+        return any(
+            _bad_name(p) if not isinstance(p, str) else not NAME_PART.fullmatch(p)
+            for p in node.parts
+        )
+    if isinstance(node, (Form, ListLit, Bar, Brackets)):
+        return any(_bad_name(x) for x in node.items)
+    if isinstance(node, InterpStrLit):
+        return any(_bad_name(p) for p in node.parts if not isinstance(p, str))
+    if isinstance(node, Field):
+        return _bad_name(node.expr)
+    return False
+
+
+def _names_step(forms):
+    return None if any(_bad_name(f) for f in forms) else forms
+
+
+# For the random sources, which no list could name in advance: the parser as it will be once each
+# bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.
+PENDING_STEPS = {NAMES: _names_step}
+
+
+def parser_after_beads(src: str):
+    try:
+        forms = parse(src)
+    except ParseError:
+        return None
+    for step in PENDING_STEPS.values():
+        if forms is not None:
+            forms = step(forms)
+    return forms
 
 
 def _decoded(body: str, braces: bool = False) -> str:
@@ -246,18 +335,11 @@ def _tex(body: str) -> str:
     return "".join(out)
 
 
-def _unnamed(head):
-    """The head of (head_ …) without its underscore, or None (grammar.md, rule unnamed-head)."""
-    if isinstance(head, Bar):
-        last = _unnamed(head.items[-1])
-        return None if last is None else Bar((*head.items[:-1], last))
-    if isinstance(head, Name) and isinstance(head.parts[-1], str):
-        text = head.parts[-1]
-        if len(text) > 1 and text.endswith("_"):
-            if head.parts == ("none_",):
-                return NoneLit()
-            return Name((*head.parts[:-1], text[:-1]))
-    return None
+def _without_underscore(text: str):
+    """The head (head_ …) without its underscore (grammar.md, rule unnamed-head)."""
+    if text == "none_":
+        return NoneLit()
+    return Name(tuple(text[:-1].split(".")))
 
 
 def _dot(whole, part):
@@ -268,30 +350,33 @@ UREAL = r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?"
 SPLIT_COMPLEX = re.compile(rf"([+-]?{UREAL})([+-]{UREAL})i")
 
 
+def _flat(c):
+    out = []
+    for x in c:
+        if isinstance(x, list):
+            out.extend(x)
+        elif not isinstance(x, Token):
+            out.append(x)
+    return out
+
+
 class Reading(Transformer):
-    """The grammar's tree as the reader's nodes. Template rules keep their base names."""
+    """The grammar's tree as the parser's nodes."""
 
     def start(self, forms):
         return tuple(forms)
 
     def form(self, c):
-        items = [x for x in c if not isinstance(x, Token)]
-        items = [x for group in items for x in group]
-        if items and (head := _unnamed(items[0])) is not None:
-            items = [head, NoneLit(), *items[1:]]
-        return Form(tuple(items))
+        return Form(tuple(_flat(c)))
 
-    def seq(self, c):
-        return [x for group in c for x in group]
+    seq = items = head_items = chunk = head_chunk = lambda self, c: _flat(c)
 
-    def items(self, c):
-        return [x for group in c for x in group]
-
-    def chunk(self, c):
-        out = []
-        for x in c:
-            out.extend(x if isinstance(x, list) else [x])
-        return out
+    def head(self, c):
+        *words, last = c
+        head = _without_underscore(last.value)
+        if words:
+            head = Bar((*words, head))
+        return [head, NoneLit()]
 
     def node(self, c):
         return c[0]
@@ -317,7 +402,7 @@ class Reading(Transformer):
     def word(self, c):
         return c[0] if len(c) == 1 else Bar(tuple(c))
 
-    def operand(self, c):
+    def first(self, c):
         first = c[0]
         if isinstance(first, Token):
             parts: list = first.value.split(".")
@@ -348,12 +433,6 @@ class Reading(Transformer):
             else:
                 whole = _dot(whole, x)
         return whole
-
-    # Inside the braces of an interpolated string, the words follow the same rules.
-    first = bfirst = boperand = operand
-    bword = word
-    btail = tail
-    bname_string = name_string
 
     def number(self, c):
         (t,) = c
@@ -421,26 +500,30 @@ def test_no_conflicts(caplog):
     assert not [r.message for r in caplog.records if "conflict" in r.message.lower()]
 
 
-def read_both(grammar: Lark, src: str):
-    """The reader's forms and the grammar's, each None when it rejects the source."""
-    try:
-        reader = parse(src)
-    except ParseError:
-        reader = None
+def read_grammar(grammar: Lark, src: str):
     try:
         tree = grammar.parse(src)
     except LarkError:
-        return reader, None
-    return reader, Reading().transform(tree)
+        return None
+    return Reading().transform(tree)
+
+
+def read_both(grammar: Lark, src: str):
+    """The parser's forms and the grammar's, each None when it rejects the source."""
+    try:
+        parsed = parse(src)
+    except ParseError:
+        parsed = None
+    return parsed, read_grammar(grammar, src)
 
 
 def check(grammar: Lark, src: str) -> None:
-    reader, ours = read_both(grammar, src)
-    if reader is None:
-        assert ours is None, "the grammar accepts what the reader rejects"
+    parsed, ours = read_both(grammar, src)
+    if parsed is None:
+        assert ours is None, "the grammar accepts what the parser rejects"
     else:
-        assert ours is not None, "the grammar rejects what the reader accepts"
-        assert ours == reader
+        assert ours is not None, "the grammar rejects what the parser accepts"
+        assert ours == parsed
 
 
 @pytest.mark.parametrize("path", CORPUS, ids=lambda p: str(p.relative_to(ROOT)))
@@ -457,33 +540,37 @@ def test_spec_example(grammar, src):
 
 @pytest.mark.parametrize("src", ACCEPTED)
 def test_accepted(grammar, src):
-    assert read_both(grammar, src)[0] is not None, "the reader rejects this source"
+    assert read_both(grammar, src)[0] is not None, "the parser rejects this source"
     check(grammar, src)
 
 
 @pytest.mark.parametrize("src", REJECTED)
 def test_rejected(grammar, src):
-    reader, ours = read_both(grammar, src)
-    assert reader is None, "the reader accepts this source"
+    parsed, ours = read_both(grammar, src)
+    assert parsed is None, "the parser accepts this source"
     assert ours is None, "the grammar accepts this source"
 
 
 @pytest.mark.parametrize("src", KNOWN_DIFFERENCES, ids=KNOWN_DIFFERENCES.values())
 def test_known_difference(grammar, src):
-    try:
-        reader, ours = read_both(grammar, src)
-    except VisitError:
-        # The grammar accepts a source whose value cannot be built, such as 1/٠.
-        return
-    assert reader != ours, "the reader and the grammar now agree: update the open question"
+    parsed, ours = read_both(grammar, src)
+    assert parsed != ours, (
+        f"the parser now follows the spec on {src!r}: remove the entry, and close"
+        f" {KNOWN_DIFFERENCES[src]} once it has no entry left"
+    )
 
 
-# Pieces of text where the reader's choices lie, which random sources put together.
+def test_pending_steps_have_entries():
+    # A step with no entry left models a change that the parser has made already.
+    assert set(PENDING_STEPS) <= set(KNOWN_DIFFERENCES.values())
+
+
+# Pieces of text where the parser's choices lie, which random sources put together.
 PIECES = [
     "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "$'", "#'", "tex'", "doc@", "free@",
     "a", "b", "x_", "_", ".", "|", ":", "1", "-", "+", "2.5", "1/2", "/", "e", "i", "true",
     "none", "!=", "\\", "\\'", "\\n", "{{", "}}", '"', "@", "#", "$", "^", "*", "<=", "0", "{x:",
-    "$'{", "}'", "[0]", "a[", ".b", "(g)", "x:y",
+    "$'{", "}'", "[0]", "a[", ".b", "(g)", "x:y", "?", "a-", "(c_ ",
 ]  # fmt: skip
 
 
@@ -494,8 +581,9 @@ def test_random_sources(grammar):
         src = body if rng.random() < 0.3 else f"(f {body})"
         if src in KNOWN_DIFFERENCES:
             continue
-        reader, ours = read_both(grammar, src)
-        assert reader == ours, f"the reader and the grammar differ on {src!r}"
+        expected = parser_after_beads(src)
+        ours = read_grammar(grammar, src)
+        assert expected == ours, f"the parser and the grammar differ on {src!r}"
 
 
 def test_spec_shows_every_section_once():

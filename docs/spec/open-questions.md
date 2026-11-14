@@ -120,6 +120,10 @@ byte order mark at the start.
 
 **Settles:** Q-lexical-1 to 9, and the lexer of the site (mtp-phpx).
 
+**Decided:** the parser accepts exactly what the spec allows: names of letters, digits and hyphens
+with an optional `?` at the end and `_` only right after a head, ASCII blanks and digits, and a
+byte order mark at the start of a file ignored.
+
 ## P8. Declare before use, everywhere
 
 **Proposed principle.** A name is used only after its declaration, in every scope, with no
@@ -129,6 +133,9 @@ exceptions, imports included. Optional arguments come before the body, in any or
 use it (Q-grammar-11), the items of a formula in any order (Q-grammar-9), and where a docstring
 may stand (Q-grammar-3).
 
+**Decided:** a name is used only after its declaration in every scope, imports included, and
+optional arguments come before the body, in any order.
+
 ## P9. `let` and `foreach` stand wherever declarations stand
 
 **Proposed principle.** `let` and `foreach` may stand in every body that holds declarations or
@@ -136,6 +143,9 @@ items, and nowhere else: not among the options of a shape.
 
 **Settles:** Q-grammar-4 to 7. Q-grammar-10 (whether a listener on its own view names that view)
 is a separate question, already filed as mtp-6k7f.
+
+**Decided:** `let` and `foreach` may stand in every body that holds declarations or items, the top
+level included, and never among the arguments of a form.
 
 ## P10. What a conforming implementation must match
 

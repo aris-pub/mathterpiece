@@ -1,43 +1,43 @@
-// The reader grammar of mtp, in Lark's notation. It is read with parser="lalr" and
+// The grammar of mtp, in Lark's notation. It is read with parser="lalr" and
 // lexer="contextual". The spec renders it (the directive mtp-grammar, docs/_ext/mtp_sphinx.py),
-// and tests/test_grammar.py checks it against the reader, mathterpiece/parse.py.
+// and tests/test_grammar.py checks it against the parser, mathterpiece/parse.py.
 //
 // Each section starts with a line "//: name". The spec renders each section once, in the place
 // where it describes that section.
 
 //: file
-start: _BLANK? (form{word} _BLANK?)*
+start: _BOM? _BLANK? (form _BLANK?)*
+
+//: bom-token
+_BOM: /\ufeff/
 
 //: sequences
-form{w}: "(" seq{w} RPAR
-seq{w}: _BLANK? items{w}?
-items{w}: chunk{w} (_BLANK items{w}?)?
-chunk{w}: plain{w} (form{w} chunk{w}?)?
-        | paren{w} chunk{w}?
-node{w}: paren{w} | plain{w}
-paren{w}: form{w}
-        | FREE paren{w} -> free
-plain{w}: list{w} | w | string | doc | interpolated
-        | FREE plain{w} -> free
+form: "(" _BLANK? (items | head_items)? RPAR
+seq: _BLANK? items?
+items: chunk (_BLANK items?)?
+head_items: head_chunk (_BLANK items?)?
+chunk: plain (form chunk?)?
+     | paren chunk?
+head_chunk: head (form chunk?)?
+node: paren | plain
+paren: form
+     | FREE paren -> free
+plain: list | word | string | doc | interpolated
+     | FREE plain -> free
 
 //: lists
-list{w}: "[" seq{w} "]" list_index{w}*
-list_index{w}: "[" _BLANK? node{w} _BLANK? "]"
-index{w}: "[" _BLANK? items{w} "]"
+list: "[" seq "]" list_index*
+list_index: "[" _BLANK? node _BLANK? "]"
+index: "[" _BLANK? items "]"
 
 //: words
-word: first ("|" operand)* | name_string
+word: first ("|" first)* | name_string
 first: NAME tail? | number | boolean | operator
-operand: OPERAND tail? | number | boolean | operator
-tail: (index{word} ("." PARTS)?)+
-name_string: name_text ("." PARTS | list_index{word})*
+tail: (index ("." PARTS)?)+
+name_string: name_text ("." PARTS | list_index)*
 
-//: brace-words
-bword: bfirst ("|" boperand)* | bname_string
-bfirst: BNAME btail? | number | boolean | operator
-boperand: BOPERAND btail? | number | boolean | operator
-btail: (index{bword} ("." BPARTS)?)+
-bname_string: name_text ("." BPARTS | list_index{bword})*
+//: heads
+head: HEAD | first ("|" first)* "|" HEAD
 
 //: literals
 number: INT | RATIO | REAL | IMAG | COMPLEX
@@ -49,10 +49,10 @@ string: STRING | TEX
 doc: DOC STRING
 interpolated: DOLLAR_QUOTE (TEXT | field)* QUOTE
 name_text: HASH_QUOTE TEXT? field (TEXT | field)* QUOTE
-field: "{" _BLANK? node{bword} _BLANK? FORMAT? "}"
+field: "{" _BLANK? node _BLANK? FORMAT? "}"
 
 //: blank-tokens
-_BLANK: (/\s/ | COMMENT)+
+_BLANK: (/[ \t\n\r]/ | COMMENT)+
 COMMENT: ";" /[^\n]/*
 
 //: closing-token
@@ -60,23 +60,14 @@ RPAR: ")" NOT_PART
 NOT_PART: /(?![.\[])/
 
 //: name-tokens
-NAME: NOT_TEX NOT_LONE_UNDERSCORE PARTS
-OPERAND: NOT_LONE_UNDERSCORE PARTS
+NAME: PARTS
 PARTS: PART ("." PART)*
-PART: PART_START PART_CHAR* "_"? | "_"
-PART_START: NOT_PART_START PART_CHAR
-PART_CHAR: /[^\s()\[\]{}"|;.\/$^@#_]/
-NOT_PART_START: /(?![\d+\-*<>='])/
-NOT_TEX: /(?!tex')/
-NOT_LONE_UNDERSCORE: /(?!_(?![.\[]))/
+PART: LETTER (LETTER | DIGIT | "-")* "?"?
+LETTER: /[A-Za-z]/
+DIGIT: /[0-9]/
 
-//: brace-name-tokens
-BNAME: NOT_TEX NOT_LONE_UNDERSCORE BPARTS
-BOPERAND: NOT_LONE_UNDERSCORE BPARTS
-BPARTS: BPART ("." BPART)*
-BPART: BPART_START BPART_CHAR* "_"? | "_"
-BPART_START: NOT_PART_START BPART_CHAR
-BPART_CHAR: /[^\s()\[\]{}"|;.\/$^@#_:]/
+//: head-token
+HEAD.1: PARTS "_"
 
 //: keyword-tokens
 TRUE: "true"
@@ -90,8 +81,8 @@ IMAG.5: SIGN? UREAL "i"
 COMPLEX.6: SIGN? UREAL SIGN UREAL "i"
 UREAL: (DIGITS "." DIGITS? | "." DIGITS | DIGITS) EXPONENT?
 EXPONENT: /[eE]/ SIGN? DIGITS
-NONZERO: /\d*[^\D0]\d*/
-DIGITS: /\d+/
+NONZERO: /[0-9]*[1-9][0-9]*/
+DIGITS: /[0-9]+/
 SIGN: /[+-]/
 
 //: string-tokens
