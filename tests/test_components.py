@@ -518,6 +518,24 @@ class TestWhen:
         for item in ("(when show a)", "(when show [a b])", "(if show a b)", "[a b]"):
             model(f"{self.S} (canvas v {item})")
 
+    @pytest.mark.parametrize(
+        "items, ops",
+        [
+            ("(when show a) (if show a b) b", ["if", "if", "b"]),
+            ("(if show a b) (when show a) b", ["if", "if", "b"]),
+            ("(when show a) b (if show a b)", ["if", "b", "if"]),
+            ("(when show a) [a b] b", ["if", "list", "b"]),
+            ("[a b] (when show a) b", ["list", "if", "b"]),
+        ],
+    )
+    def test_items_that_give_shapes_in_any_order(self, items, ops):
+        # mtp-1l12: an (if …) item after a (when …) item was taken for an optional argument.
+        m = model(f"{self.S} (canvas v (pan false) {items})")
+        shows = m.get("v").data["shows"]
+        assert [s if isinstance(s, int) else s.expr.op for s in shows] == [
+            m.id(op) if op == "b" else op for op in ops
+        ]
+
     def test_only_shapes(self):
         error(f"{self.S} (canvas v (when show 3))", "a canvas shows shapes")
         error(f"{self.S} (canvas v show)", "a canvas shows shapes")
