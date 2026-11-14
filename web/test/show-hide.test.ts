@@ -83,6 +83,27 @@ describe("on-show", () => {
     expect(Number(plain!.getAttribute("opacity"))).toBeCloseTo(0.5, 1);
   });
 
+  it("every copy of a canvas plays its own on-show at the same time, each on its own stand-in", () => {
+    const [, rt] = page("v", "v");
+    const copies = [...document.querySelectorAll<MtpCanvas>(`mtp-canvas[name="v"]`)];
+    expect(copies).toHaveLength(2);
+    const c = rt.id("c");
+    const ins = (copy: MtpCanvas) => copy.querySelectorAll("[data-mtp-stand-in]").length;
+    rt.write(rt.id("show"), null, true);
+    pass(0.5);
+    for (const copy of copies) {
+      expect(copy.drawnAs(c, "drawn")).toBeCloseTo(0.5, 1);
+      expect(ins(copy)).toBe(1);
+      expect(copy.querySelector(`[data-mtp-id="${c}"]`)!.closest("[data-mtp-stand-in]")).not.toBeNull();
+    }
+    expect(copies[0]!.querySelector(`[data-mtp-id="${c}"]`)).not.toBe(copies[1]!.querySelector(`[data-mtp-id="${c}"]`));
+    pass(0.6);
+    for (const copy of copies) {
+      expect(copy.drawnAs(c, "drawn")).toBe(1);
+      expect(ins(copy)).toBe(0);
+    }
+  });
+
   it("a group passes its on-show to its members, and a member's own wins", () => {
     const [, rt] = page("pairs");
     markSeen(canvasOf("pairs"));
