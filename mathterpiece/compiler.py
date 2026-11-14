@@ -4752,6 +4752,7 @@ class _Compiler:
         for attr, (node, inner) in defaults.items():
             down.update(_coordinates(attr, node, inner))
         saved, self.frame = self.frame, (parent if parent != self.scene else None)
+        self.declaring.add(i)
         try:
             for f in pre:
                 f(obj)
@@ -4780,6 +4781,8 @@ class _Compiler:
             self.shape_attrs(obj, given, absent, form.pos, scope, INSTANCE_ATTRS)
         finally:
             self.frame = saved
+            # Reads of the parameters in the motif's body are not self-reads (mtp-gvrf.10).
+            self.declaring.discard(i)
         outer = self.bodies[-1]["path"] if self.bodies else ""
         path = None if name is None or outer is None else (f"{outer}.{name}" if outer else name)
         self.bodies.append({"id": i, "names": {}, "attrs": set(params), "path": path})
