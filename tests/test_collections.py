@@ -67,6 +67,14 @@ class TestCountSumReduce:
         e = expr(f"(scene s {G} (int n (count g (fn p (> p.r 1)))))", "n")
         assert e.type == INT
 
+    def test_count_times_a_number_is_not_none(self):
+        # mtp-pwjz: the range of count reached the largest real, so a product of it could
+        # overflow and was inferred as maybe none. A value with no upper limit of its own stops
+        # at 10^150 (type-system.md, "What the compiler proves").
+        assert expr("(list[real] xs [1 2]) (int n (count xs))", "n").range == (0, 1e150)
+        src = "(list[real] xs [1 2]) (real k) (real x (* (count (where xs (fn x (> x k)))) 8))"
+        assert typ(src, "x") == INT
+
     def test_sum(self):
         assert model("(real k (sum [1 2 3.5]))").get("k").value.value == 6.5
         assert expr("(real j) (real k (sum [j 1]))", "k").type == REAL

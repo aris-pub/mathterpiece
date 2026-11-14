@@ -2735,18 +2735,20 @@ class _Compiler:
                 return _known(t, sum(coll.value))
             return Expr("sum", t, (coll,), deps, WHOLE)
         if head == "count":
+            # A count has no upper limit of its own, so its range stops at 10^150 as other
+            # ranges do. Up to the largest real, (* (count xs) 8) could overflow (mtp-pwjz).
             if len(rest) > 1:
                 raise CompileError("count takes a collection and, optionally, a function", node.pos)
             if not rest:
                 if n is not None:
                     return _known(INT, n)
-                return Expr("count", INT, (coll,), deps, (0.0, MAX_REAL))
+                return Expr("count", INT, (coll,), deps, (0.0, LIMIT))
             given(0, (each,), BOOL)
             assert f is not None
             hits = self.fold_each(f, item, coll.value) if coll.known else None
             if hits is not None:
                 return _known(INT, sum(1 for h in hits if h))
-            return Expr("count", INT, (coll, f), deps, (0.0, MAX_REAL))
+            return Expr("count", INT, (coll, f), deps, (0.0, LIMIT))
         # any, all
         if len(rest) > 1:
             raise CompileError(f"{head} takes a collection and, optionally, a function", node.pos)
@@ -6013,7 +6015,8 @@ class _Compiler:
             n = _length(e)
             if n is not None:
                 return _known(INT, n)
-            return Expr("part", INT, (e, name), e.deps, (0.0, MAX_REAL))
+            # Stops at 10^150 for the same reason as count's range (mtp-pwjz).
+            return Expr("part", INT, (e, name), e.deps, (0.0, LIMIT))
         t = VALUE_ATTRS.get(core, {}).get(name)
         if t is None:
             raise CompileError(f"{_a(e.type)} has no attribute '{name}'", pos)
