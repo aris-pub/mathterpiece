@@ -7,8 +7,7 @@ On this page, every {term}`head` that the {term}`compiler` accepts is sorted int
 meaning is defined.
 
 The inventory was built from `mathterpiece/compiler.py` and `mathterpiece/parse.py` as they are
-on 2026-11-14, and then checked against `docs/reference.md` and `docs/syntax.md`. Citations such
-as `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page specifies the language. Where the code does not yet follow a rule, a box marked "Code differs"
+on 2026-11-14. Citations such as `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page specifies the language. Where the code does not yet follow a rule, a box marked "Code differs"
 after the rule gives what the code does and the bead that will change it.
 
 (core-kinds)=
@@ -190,9 +189,7 @@ For a bare target, the {term}`runtime` moves each member of a group that is not 
 motion of the pointer (web/src/drag.ts:113-117, drag.ts:155-162), and moves a fixed-size group by
 its `translate` (drag.ts:108-111, drag.ts:149-153). For a move, it writes the group's `x` and `y`
 (drag.ts:138-147), and the compiler marks the `translate` as what the drag writes only for a
-fixed-size group (compiler.py:4009-4021). docs/reference.md, "Dragging" ("A group moves every member
-by the pointer's motion"), is wrong. Bead mtp-ydd4.7.36 makes the code and the documents follow the
-rule.
+fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code follow the rule.
 :::
 
 ### `foreach` over a count or a list whose length is known only while drawing
@@ -592,36 +589,6 @@ their place. They are not forms of the language.
 | `dash-offset` | as an item | write `(dash [4 2] 1)` | compiler.py:7378-7382 |
 | `move` | in a canvas | a canvas takes no move | compiler.py:4240-4245 |
 | `term` | at the top level | a term is given inside its formula | compiler.py:1050-1051 |
-
-(core-docs-check)=
-## Where the old documents are wrong
-
-The inventory was checked against reference.md and syntax.md. Every head in the tables is
-described in at least one of the two, except `exclusive` and `value` on a toggle, which appear
-only in the code, as compile errors. `(maybe T)` is in syntax.md, section 10, and not in
-reference.md. Where the two documents and this spec disagree, the spec holds (P10). These
-documents are cut down in mtp-ydd4.7.
-
-- **A move in a canvas.** A canvas takes no move: its body holds no `move`
-  ({numref}`contexts-table`). reference.md, "Transitions and animations", which has a move "written
-  only inside an animation, a slider or a canvas", is wrong.
-- **`(when bool)` on a writer.** A writer acts while its `(active B)` is true, and a `when` item on
-  a control or a listener is an error (see "Heads that are errors"). reference.md, "Writes and
-  conditions" ("`(when bool)` is different: it decides whether the writer is active"), and
-  syntax.md, section 8, which gives `(when on)` as an optional argument, are wrong.
-- **`doc` and the reserved words.** `doc` is a keyword ({numref}`keywords`), and no declaration
-  takes a keyword as its name ({numref}`declaration-names`). syntax.md, "Names", which leaves `doc`
-  out of its list of reserved words and lists `const` in it, is wrong.
-- **A function with the name of a constant.** A declaration may take the name of a built-in
-  constant ({numref}`declaration-names`). reference.md, "Functions" (line 124), which makes it a
-  compile error, is wrong.
-- **Dragging a group.** A drag of a group writes its `translate` ({numref}`drag-group-translate`).
-  reference.md, "Dragging" ("A group moves every member by the pointer's motion"), is wrong.
-- **The arguments of a choreo.** An argument may be any expression that may be written in the body
-  where its parameter is written ({numref}`sugar-rewrites`). reference.md, "Transitions and
-  animations" ("Arguments are known when compiling … `(* 2 k)` is a compile error"), is wrong.
-- **A palette's type.** A palette is a namespace, of type `namespace`. reference.md, "Palettes"
-  ("its type, `palette`, refines `namespace`"), is wrong.
 
 (core-summary)=
 ## Summary
