@@ -248,7 +248,6 @@ REJECTED = [
     "(f none[0]x)",
 ]
 
-DIGITS = "mtp-ydd4.7.4"
 NESTED_BRACES = "mtp-kzx2"
 BRACE_COMMENTS = "mtp-ydd4.7.31"
 LITERAL_PARTS = "mtp-ydd4.7.32"
@@ -257,9 +256,6 @@ LITERAL_PARTS = "mtp-ydd4.7.32"
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
 # source, test_known_difference fails, and the entry is removed.
 KNOWN_DIFFERENCES = {
-    "(f ٣)": DIGITS,
-    "(f 1/٣)": DIGITS,
-    "(f ١.٥)": DIGITS,
     # After a string nested in braces ends, the parser reads the rest of the braces as if it were
     # outside them.
     "(f $'{$'{a}'}')": NESTED_BRACES,

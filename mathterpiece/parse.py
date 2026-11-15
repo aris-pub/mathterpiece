@@ -28,13 +28,14 @@ RESERVED = frozenset("[]{}")
 NAME_PART_RE = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
 UNDERSCORE = "an underscore may only end the head of a form, as in (circle_ (r 1))"
 
-_UREAL = r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?"
-INT_RE = re.compile(r"[+-]?\d+")
-RATIO_RE = re.compile(r"([+-]?\d+)/(\d+)")
+# A digit is 0 to 9 only: \d would match every decimal digit of Unicode, such as ٣.
+_UREAL = r"(?:[0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)(?:[eE][+-]?[0-9]+)?"
+INT_RE = re.compile(r"[+-]?[0-9]+")
+RATIO_RE = re.compile(r"([+-]?[0-9]+)/([0-9]+)")
 REAL_RE = re.compile(rf"[+-]?{_UREAL}")
 IMAG_RE = re.compile(rf"([+-]?{_UREAL})i")
 COMPLEX_RE = re.compile(rf"([+-]?{_UREAL})([+-]{_UREAL})i")
-LOOKS_NUMERIC_RE = re.compile(r"[+-]?\.?\d")
+LOOKS_NUMERIC_RE = re.compile(r"[+-]?\.?[0-9]")
 BOM = "\ufeff"
 WHITESPACE = " \t\n"
 # Characters that unicodedata gives no name.
@@ -101,6 +102,8 @@ def _check_char(ch: str, pos: Pos) -> None:
         raise ParseError(
             "a byte order mark (U+FEFF) may only be the first character of a source", pos
         )
+    if ch.isdecimal() and not ch.isascii():
+        raise ParseError(f"{ch!r} is not a digit: the digits are 0 to 9", pos)
     # Python counts more characters as space than mtp does, such as U+00A0 and U+2028.
     if ch.isspace() and ch not in WHITESPACE:
         raise ParseError(

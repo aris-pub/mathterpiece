@@ -257,6 +257,14 @@ class TestInvalidNumbers:
     def test_number_followed_by_other_chars(self, text):
         atom_error(text, f"invalid number '{text}'")
 
+    # lexical.md, rule number-literals: a digit is one of 0 to 9.
+    @pytest.mark.parametrize(
+        "text, ch, col",
+        [("٣", "٣", 4), ("1/٣", "٣", 6), ("١.٥", "١", 4), ("2e٣", "٣", 6), ("x٣", "٣", 5)],
+    )
+    def test_other_decimal_digits_are_not_digits(self, text, ch, col):
+        assert atom_error(text, f"{ch!r} is not a digit: the digits are 0 to 9") == Pos(1, col)
+
 
 class TestBool:
     def test_true(self):

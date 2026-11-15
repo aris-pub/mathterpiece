@@ -35,7 +35,6 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-DIGITS = xfail("mtp-ydd4.7.4", "the parser reads every Unicode decimal digit as a digit")
 LITERAL_PARTS = xfail("mtp-ydd4.7.32", "the parser reads true, false or none as a part of a name")
 KEYWORD_NAMES = xfail("mtp-ydd4.7.35", "the compiler forbids only a few names, not every keyword")
 NESTED_BRACES = xfail("mtp-kzx2", "the parser leaves braces when a string nested in them ends")
@@ -477,9 +476,7 @@ class TestNumberLiterals:
     def test_not_numbers(self, src):
         syntax_error(src)
 
-    @pytest.mark.parametrize(
-        "text", [pytest.param("٣", marks=DIGITS), pytest.param("1/٣", marks=DIGITS), "²"]
-    )
+    @pytest.mark.parametrize("text", ["٣", "1/٣", "١.٥", "2e٣", "x٣", "²", "1²"])
     def test_only_ascii_digits_are_digits(self, text):
         syntax_error(f"(f {text})")
 

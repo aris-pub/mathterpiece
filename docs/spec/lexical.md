@@ -227,12 +227,6 @@ matches it whole.
 So `٣` (ARABIC-INDIC DIGIT THREE) and `²` are not digits. `1-2` is an error, since it is no
 number, and the difference of 2 and 1 is written `(- 2 1)`.
 
-:::{admonition} Code differs
-:class: note
-`parse.py:30` to `parse.py:36` use `\d`, which matches every decimal digit of Unicode, so the
-parser reads `٣` as the int 3 and `1/٣` as a ratio. Bead mtp-ydd4.7.4 limits digits to `0` to `9`.
-:::
-
 ## Strings
 
 ```{mtp-grammar} string-literals
