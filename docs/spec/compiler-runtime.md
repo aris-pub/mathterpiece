@@ -17,6 +17,15 @@ runs in the reader's browser. mtp requires no particular tool for making the pag
 use any software for making web pages, an AI assistant included, and is encouraged to use the
 tools that they already prefer.
 
+A component is a view, a control or a listener. A {term}`view` shows the world model to the
+reader: a canvas draws shapes, a readout shows a line of text, and a display shows a formula. A
+{term}`control` is a slider, a button, a play, a stepper or a toggle, and the reader presses, drags
+or clicks it to change a value of the world model. A {term}`listener` is written inside a view and
+has no element of its own on the page: it changes a value of the world model when the reader acts
+on a shape or a term of that view, or when the view changes, for example when it comes into
+sight. The illustrator declares every component, and the author places each view and control on
+the page with an element of its own.
+
 <figure class="mtp-diagram">
 <svg viewBox="0 0 480 480" role="img" aria-labelledby="mtp-d-title"><title id="mtp-d-title">The illustrator writes the .mtp, which the mtp command compiles into the .mtpc. The author writes the page. The .mtpc, the runtime script and the page make the open page in the reader’s browser, where the runtime holds one live model for each .mtpc and serves the components, which the reader sees and acts on.</title><defs><marker id="mtp-d-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mtp-d-headpath" d="M0 0 L10 5 L0 10 z"/></marker></defs><rect class="mtp-d-person" x="15.0" y="16" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="85.0" y="39.0" text-anchor="middle">illustrator</text><rect class="mtp-d-person" x="325.0" y="16" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="395.0" y="39.0" text-anchor="middle">author</text><line class="mtp-d-arrow" x1="85" y1="52" x2="85" y2="94" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="93" y="78" text-anchor="start">writes</text><line class="mtp-d-arrow" x1="395" y1="52" x2="395" y2="94" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="403" y="78" text-anchor="start">writes</text><rect class="mtp-d-file" x="15.0" y="96" width="140" height="36" rx="6"/><text class="mtp-d-code" x="85.0" y="119.0" text-anchor="middle">.mtp</text><rect class="mtp-d-file" x="325.0" y="96" width="140" height="36" rx="6"/><text class="mtp-d-name" x="395.0" y="119.0" text-anchor="middle">page</text><line class="mtp-d-arrow" x1="85" y1="132" x2="85" y2="178" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="93" y="152" text-anchor="start">the mtp command</text><text class="mtp-d-label" x="93" y="166" text-anchor="start">compiles it</text><rect class="mtp-d-file" x="15.0" y="180" width="140" height="48" rx="6"/><text class="mtp-d-code" x="85.0" y="209.0" text-anchor="middle">.mtpc</text><rect class="mtp-d-file" x="175.0" y="180" width="140" height="48" rx="6"/><text class="mtp-d-name" x="245.0" y="200.5" text-anchor="middle">runtime script</text><text class="mtp-d-code" x="245.0" y="217.5" text-anchor="middle">mathterpiece.js</text><line class="mtp-d-arrow" x1="85" y1="228" x2="85" y2="268" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="245" y1="228" x2="245" y2="268" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="395" y1="132" x2="395" y2="268" marker-end="url(#mtp-d-head)"/><rect class="mtp-d-live" x="15" y="270" width="450" height="112" rx="10"/><text class="mtp-d-livename" x="31" y="292">open page, in the reader’s browser</text><rect class="mtp-d-part" x="35" y="306" width="190" height="58" rx="6"/><text class="mtp-d-name" x="130.0" y="331.5" text-anchor="middle">runtime</text><text class="mtp-d-sub" x="130.0" y="348.5" text-anchor="middle">one live model for each .mtpc</text><rect class="mtp-d-part" x="255" y="306" width="190" height="58" rx="6"/><text class="mtp-d-name" x="350.0" y="331.5" text-anchor="middle">components</text><text class="mtp-d-sub" x="350.0" y="348.5" text-anchor="middle">views, controls, listeners</text><line class="mtp-d-arrow" x1="225" y1="335" x2="253" y2="335" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="350" y1="364" x2="350" y2="428" marker-start="url(#mtp-d-head)" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="358" y="402" text-anchor="start">sees, acts on</text><rect class="mtp-d-person" x="280.0" y="430" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="350.0" y="453.0" text-anchor="middle">reader</text></svg>
 </figure>
@@ -140,7 +149,7 @@ Building a source is the six steps of compiling, then writing the {term}`invento
 inventory page holds the runtime, the .mtpc and the script of the inventory, all inside the page, so
 that it works when it is opened as a file. It also holds the opening {term}`comment` of the source,
 the lines of HTML that load the runtime and the .mtpc, every component live with its name and the
-line of HTML that places it, every {term}`listener` with what it does, and every token with its CSS
+line of HTML that places it, every listener with what it does, and every token with its CSS
 variable and an input that restyles it.
 
 ```{rule} subcommands
@@ -277,7 +286,7 @@ imports. An import is looked for in the folder of the file that imports it, then
 
 ```{rule} compiler-never-acts-while-drawing
 The compiler never does what happens only while drawing ({doc}`binding-time`). It never runs a
-writer: it never plays an animation, never performs a write that a {term}`control` or a listener
+writer: it never plays an animation, never performs a write that a control or a listener
 would perform, and never acts as a reader would. It never reads a page, its CSS or its color scheme,
 and so never folds a token: a token is written with its declared value, which the runtime uses where
 the page gives none.
@@ -368,21 +377,20 @@ loaded ({numref}`runtime-loads-mtpc`).
 
 This rule follows from a principle of the design of mtp: a state that breaks a rule of the spec
 cannot be represented. No source can declare such a state, since the compiler proves every type
-and constraint before the page opens, and no reader can reach one, since the runtime brings every
-write into the constraints of what it writes. The principle is a goal of the design: where the
-spec still allows a state that breaks a rule, the spec has a gap, and the gap is closed by
-changing the language, never by showing an error to the reader.
-
-So an operation that has no value gives `none` ({numref}`operations-that-give-none`), and a write
-of a value that breaks a constraint brings it into the constraint ({numref}`number-limit`,
-{doc}`types`), and neither stops a component.
+and constraint before the page opens. No reader can reach one, since a computation that has no
+value gives the value `none` instead of failing, and a write is brought into the constraints of
+what it is written into. For example, a line declared `line|none` is not drawn while it is `none`
+({numref}`operations-that-give-none`, {doc}`evaluation`), and a write of -1 into a variable
+declared with `(>= 0)` writes 0 ({numref}`writes-into-constraints`). The principle is a goal of
+the design: where the spec still allows a state that breaks a rule, the spec has a gap, and the
+gap is closed by changing the language, never by showing an error to the reader.
 
 ```{rule} runtime-builds-live-model
 When a .mtpc loads, the runtime builds its live model, once, before any component draws: it turns
 every expression into a function, once, and gives every free variable and attribute its starting
 value, reading each `free@` start once ({doc}`compiled-format`, "Free and bound values"). Then it
 keeps the live model current as the reader acts: after each write, it computes again only what
-depends on what changed, and the {term}`views <view>` draw again ({doc}`reaction`, {doc}`time`,
+depends on what changed, and the views draw again ({doc}`reaction`, {doc}`time`,
 {doc}`concurrency`).
 ```
 
