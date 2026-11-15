@@ -70,4 +70,4 @@
     (move w.pos (to [2 0]))))
 
 (button best (animation optimum) (label 'show the optimum'))
-(button line (animation on-a-line) (label 'collapse onto a line'))
+(button collapse (animation on-a-line) (label 'collapse onto a line'))

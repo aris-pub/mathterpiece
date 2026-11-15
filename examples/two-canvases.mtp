@@ -38,7 +38,7 @@
   ; so it is cut off at a window around the triangle.
   (group around (clip (rect_ (pos [0 0]) (width 16) (height 12)))
     (let ((o (circumcenter ca.pos cb.pos cc.pos)))
-      (circle|none circle (pos o) (r (dist o ca.pos)) (fill none) (stroke red)
+      (circle|none circumcircle (pos o) (r (dist o ca.pos)) (fill none) (stroke red)
           (stroke-width 2))
       (group radii (defaults (stroke red) (stroke-width 1) (dash [4 4]))
         (foreach c corners

@@ -63,7 +63,7 @@ describe("a drag", () => {
 
   it("moves an int target by whole steps", () => {
     const [rt, drags, v] = setup();
-    drags.grab(rt.id("stepper"), [0, 0]);
+    drags.grab(rt.id("knob"), [0, 0]);
     drags.move([3.2, 0]);
     expect(v("steps")).toBe(3);
   });

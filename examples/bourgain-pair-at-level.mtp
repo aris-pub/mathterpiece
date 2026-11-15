@@ -10,7 +10,7 @@
 ; Behind a term under the pointer: BRAIID's gray-100.
 (color wash (light-dark '#edf0f2' '#2a3740'))
 (font tick (size 13))
-(font name (style 'italic') (size 15))
+(font name-font (style 'italic') (size 15))
 
 ; Which piece of the bounds is explained: none, the factor (1 − 1/b)², the term 1/b², or the
 ; second inequality (the first one explains the same as the factor).
@@ -79,7 +79,7 @@
   (group ring-in-y (defaults (fill none) (stroke blue) (stroke-width 2))
     (circle_ (pos [(px 2) top]) (r 10)))
 
-  (group names (defaults (fill ink) (halign 'middle') (font name))
+  (group names (defaults (fill ink) (halign 'middle') (font name-font))
     (text_ 'x' (pos [(px 1) (+ top 14)]))
     (text_ 'y' (pos [(px 2) (+ top 14)])))
 

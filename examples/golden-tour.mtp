@@ -48,9 +48,9 @@
 ; middle of the ease): a small change of angle turns the outer seeds a long way, so faster than
 ; that the flower blurs.
 (choreo turn-to ((real angle 0) (stop label 'a quarter turn') (real seconds 8)
-                 (color|none glow none) (func[(real (>= 0) (<= 1)) real] curve cubic-in-out))
+                 (color|none glow none) (func[(real (>= 0) (<= 1)) real] easing cubic-in-out))
   doc@'One stop of the tour: turn to angle, show its label, and light the halo or not.'
-  (at-once (defaults (duration seconds) (ease curve))
+  (at-once (defaults (duration seconds) (ease easing))
     (move sunflower.angle (to angle))
     (move stop-name (to label))
     (move halo.fill (to glow))))

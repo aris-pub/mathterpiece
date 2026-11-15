@@ -11,8 +11,8 @@
 (font small (size 13))
 (font mono (family 'ui-monospace, monospace') (size 13))
 
-; The four panels sit on a two by two grid: cell (col, row) is the center of one, row 0 on top.
-(func[point] cell ((int col) (int row)) [(* 8 (- col 0.5)) (- 2.6 (* 4.6 row))])
+; The four panels sit on a two by two grid: cell (col, level) is the center of one, level 0 on top.
+(func[point] cell ((int col) (int level)) [(* 8 (- col 0.5)) (- 2.6 (* 4.6 level))])
 ; Half the length of the two lines, and where a caption sits from its panel's center.
 (real half 2.5 (const))
 (point under [0 -1.9] (const))
@@ -49,7 +49,7 @@
   ; Marching dashes: the animation moves the ring's dash-offset by two patterns.
   (group march-panel (translate (cell 1 1))
     (circle dot (r 0.5) (fill red) (stroke none))
-    (circle ring (r 1.4) (fill none) (stroke green) (stroke-width 3) (dash [9 6])
+    (circle dashed (r 1.4) (fill none) (stroke green) (stroke-width 3) (dash [9 6])
         (line-cap 'round')))
 
   ; Each caption sits the same way under its panel's center, so the two in a row line up.
@@ -57,13 +57,13 @@
     (text_ $'(line-cap \'{ends}\')' (pos (+ (cell 0 0) under)))
     (text_ $'(line-join \'{corners}\')' (pos (+ (cell 1 0) under)))
     (text_ $'(dash [{dash-length:.0f} {gap-length:.0f}])' (pos (+ (cell 0 1) under)))
-    (text_ '(move ring.dash-offset …)' (pos (+ (cell 1 1) under)))))
+    (text_ '(move dashed.dash-offset …)' (pos (+ (cell 1 1) under)))))
 
 (canvas view (x -8) (y -4.8) (width 16) (height 9) (pan false) (zoom false)
   doc@'The ends, the corners, the dashes and the marching ring.'
   ends-panel corners-panel pattern march-panel captions
   (on-ready doc@'Marches the dashes round the circle.'
-      (animation (loop) (move ring.dash-offset (from 0) (to -30) (duration 1.5) (ease linear)))))
+      (animation (loop) (move dashed.dash-offset (from 0) (to -30) (duration 1.5) (ease linear)))))
 
 (button butt (animation (move ends (to 'butt') (duration 0))) (label 'butt')
   doc@'Gives the lines butt ends.')
