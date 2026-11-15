@@ -165,7 +165,7 @@ describe("rule mtpc-only-boundary: the runtime needs only the .mtpc", () => {
   });
 });
 
-describe("rule format-version: the runtime and the compiler implement one version", () => {
+describe("rule spec-version: the runtime and the compiler implement one version", () => {
   it("the version of a .mtpc is the version of the runtime", () => {
     expect(compile(FIGURE).mtpc).toBe(FORMAT_VERSION);
   });

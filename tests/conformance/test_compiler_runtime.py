@@ -341,7 +341,7 @@ class TestSchemaStrength:
         assert schema_errors(d)
 
 
-@rule("format-version")
+@rule("spec-version")
 class TestFormatVersion:
     def test_every_mtpc_holds_the_version(self):
         assert raw_mtpc("")["mtpc"] == VERSION

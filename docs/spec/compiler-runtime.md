@@ -241,8 +241,9 @@ The page needs nothing else: it holds no script of its own, and calls no functio
 The runtime loads each .mtpc given by the `src` attribute of an `<mtp-model>` element, once,
 from a file that it fetches or from a block in the page ({doc}`page-interface`). When the .mtpc
 cannot be fetched or read as JSON, the model fails to load, and the error takes the place of every
-component of that model on the page. The runtime reads only the versions of the .mtpc format that
-it implements. It refuses a .mtpc of another version, a .mtpc that does not match the schema of
+component of that model on the page. The runtime reads only .mtpc files that state a version of
+this spec that it implements, and which versions those are is not normative. It refuses a .mtpc of
+another version, a .mtpc that does not match the schema of
 its version ({doc}`compiled-format`), and every {term}`corrupt <corrupt .mtpc>` .mtpc
 ({numref}`corrupt-mtpc`). A .mtpc that the runtime refuses fails to load too, and the runtime runs
 no part of it. For a .mtpc of another version, the error gives both versions.
@@ -316,7 +317,7 @@ and is not a check of a type. How the runtime does this is not normative.
 
 ```{rule} any-compiler-any-runtime
 Every conforming compiler works with every conforming runtime. Every conforming runtime that
-implements the version of the format of a .mtpc runs it, whichever conforming compiler wrote it.
+implements the version of this spec that a .mtpc states runs it, whichever conforming compiler wrote it.
 Two conforming compilers may write different bytes for one source ({numref}`what-is-normative`),
 and every conforming runtime makes the same open page from both files.
 ```
@@ -345,21 +346,23 @@ conforming compiler never writes a corrupt .mtpc.
 ```
 
 ```{rule} schema-strength
-The schema of each version of the format holds every rule of {doc}`compiled-format` that a JSON
+The schema of each version of this spec holds every rule of {doc}`compiled-format` that a JSON
 schema can express, so that as few corrupt files as possible match it.
 ```
 
 So the runtime refuses a corrupt .mtpc ({numref}`runtime-loads-mtpc`), although it matches the
 schema. How the runtime finds that a .mtpc is corrupt is not part of this spec.
 
-```{rule} format-version
-The compiler writes the version of the format that it implements in every .mtpc. Every change to
-the format changes its version, so two .mtpc files of the same version are read by the same rules.
+```{rule} spec-version
+Every .mtpc states the version of this spec that its compiler implements. The format of the .mtpc
+and its schema are part of this spec, so two .mtpc files that state the same version are read by
+the same rules.
 ```
 
 :::{admonition} Code differs
 :class: note
-The runtime reads an older form of version 4: a listener with no `in`, or with several views in
+The .mtpc states a version of its format, 4, and this spec has no version yet. Bead mtp-ydd4.7.60.
+The runtime also reads an older form of version 4: a listener with no `in`, or with several views in
 `in`, is heard in every view that shows its shape (`heardIn` in web/src/click.ts, line 35, and
 docs/mtpc.md, "Objects"). The compiler (mathterpiece/mtpc.py, line 31) and the runtime
 (web/src/doc.ts, line 152) both use version 4, so two version 4 files can follow different rules.

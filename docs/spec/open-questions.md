@@ -257,7 +257,7 @@ format of the .mtpc changes its version. A runtime refuses a .mtpc that does not
 contradictions Q-core-24 to 26 and Q-evaluation-6.
 
 **Decided:** as proposed, and a runtime refuses a .mtpc that does not match the schema
-({numref}`what-is-normative`, {numref}`format-version`, {numref}`runtime-loads-mtpc`).
+({numref}`what-is-normative`, {numref}`spec-version`, {numref}`runtime-loads-mtpc`).
 
 **Decided (2026-11-15):** nothing is left to the implementation: every source and every .mtpc has
 a behavior that the spec states. A rejected source gets an error that points to at least one rule
