@@ -148,9 +148,9 @@ is given in {numref}`dot-name-part`.
 ## The form template
 
 ```{rule} form-template
-Every declaration is written `(head name? positional… option… body…)`:
+Every form is written `(head name? positional… option… body…)`:
 
-- The head is the first item, and it names the kind of thing declared. It is a name
+- The head is the first item. In a declaration, it names the kind of thing declared. It is a name
   (`circle`, `real`, `motif`, `dial`), a name followed by brackets (`list[color]`, `func[real]`), a
   broadened type (`real|none`), or a form that gives a type (`((real (>= 0)) r 1)`).
 - The name, for a form that has one, is the second item ({numref}`declared-names`).
@@ -162,8 +162,8 @@ Every declaration is written `(head name? positional… option… body…)`:
 - The body comes last: any number of items, or none. The kinds of item in a body depend on
   the form ({numref}`contexts`).
 
-A call, a special form, a `let`, a `foreach` and an `import` follow the same template: `(+ a b c)`,
-`(if c a b)`, `(import math dot)`.
+So a call `(+ a b c)`, a special form `(if c a b)` and an import `(import math dot)` follow the
+template, with no name.
 ```
 
 ```{rule} declared-names

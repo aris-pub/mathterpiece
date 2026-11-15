@@ -19,13 +19,18 @@ An import is `(import F)` or `(import F N1 N2…)`, with `F` and each `Ni` a nam
 {term}`name part` ({numref}`name-characters`). `(import F)` imports the file `F.mtp` whole, and
 `(import F N1 N2…)` imports the names `N1`, `N2` and so on from `F.mtp`. Any other `import` is a
 {term}`compile error`, "import is (import file name…)", and so is an `Ni` that `F.mtp` does not
-give ({numref}`import-files`), "F.mtp declares no 'Ni'".
+give ({numref}`import-files`), "F.mtp gives no 'Ni'".
 ```
 
 So `(import colors)`, `(import math dot clamp)` and `(import house ink)` are imports, and
 `(import)`, `(import 'colors')`, `(import colors.okabe-ito)` and `(import math (dot))` are compile
 errors. A name given twice, as in `(import math dot dot)`, is a compile error by
 {numref}`one-declaration-per-scope`.
+
+:::{admonition} Code differs
+:class: note
+The error for an `Ni` that `F.mtp` does not give reads "F.mtp declares no 'Ni'". mtp-ydd4.7.62.
+:::
 
 ## Which file an import reads
 
