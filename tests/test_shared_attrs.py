@@ -9,7 +9,7 @@ from helpers import doc, expand_types
 from mtpc_check import errors
 
 from mathterpiece.compiler import compile_source
-from mathterpiece.mtpc import VERSION, write
+from mathterpiece.mtpc import SPEC_VERSION, write
 
 GRID = "(scene s (foreach i 5 (circle_ (x i) (r 0.4) (stroke none))))"
 
@@ -56,7 +56,7 @@ def test_only_what_every_shape_of_the_kind_has():
 
 def test_the_file_passes_the_schema_and_has_the_new_version():
     d = raw(GRID)
-    assert d["mtpc"] == VERSION
+    assert d["mtpc"] == SPEC_VERSION
     assert errors(d) == []
 
 

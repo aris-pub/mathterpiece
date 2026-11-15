@@ -2,7 +2,7 @@
 // A test that today's code fails, by a "Code differs" note of the spec, is written with it.fails
 // and names the bead of the note.
 import { describe, expect, it } from "vitest";
-import { type Doc, FORMAT_VERSION } from "../../src/doc.ts";
+import { type Doc, SPEC_VERSION } from "../../src/doc.ts";
 import { type MtpModel, define, frames } from "../../src/elements.ts";
 import { Runtime } from "../../src/runtime.ts";
 import { compile, live } from "./compile.ts";
@@ -34,12 +34,12 @@ describe("rule runtime-loads-mtpc: the runtime refuses what it cannot run", () =
   });
 
   it("refuses a .mtpc of another version, with both versions in the error", () => {
-    const doc = { ...compile(FIGURE), mtpc: FORMAT_VERSION + 1 };
+    const doc = { ...compile(FIGURE), mtpc: SPEC_VERSION + 1 };
     const model = page(`<mtp-readout model="m" name="r"></mtp-readout>`, doc);
     expect(model.runtime).toBeFalsy();
     const error = errorIn("mtp-readout")!;
-    expect(error).toContain(String(FORMAT_VERSION));
-    expect(error).toContain(String(FORMAT_VERSION + 1));
+    expect(error).toContain(String(SPEC_VERSION));
+    expect(error).toContain(String(SPEC_VERSION + 1));
   });
 
   it.fails("refuses a .mtpc that does not match the schema (mtp-ydd4.7.16: only the version is checked)", () => {
@@ -167,6 +167,10 @@ describe("rule mtpc-only-boundary: the runtime needs only the .mtpc", () => {
 
 describe("rule spec-version: the runtime and the compiler implement one version", () => {
   it("the version of a .mtpc is the version of the runtime", () => {
-    expect(compile(FIGURE).mtpc).toBe(FORMAT_VERSION);
+    expect(compile(FIGURE).mtpc).toBe(SPEC_VERSION);
+  });
+
+  it("the runtime implements version 1, the version of this draft", () => {
+    expect(SPEC_VERSION).toBe(1);
   });
 });

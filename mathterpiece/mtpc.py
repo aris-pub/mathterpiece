@@ -28,7 +28,7 @@ from mathterpiece.types import (
     Type,
 )
 
-VERSION = 4
+SPEC_VERSION = 1
 # The operations written as ["builtin", T, name, arg…]; every other operation has its own form.
 OWN_FORM = {
     "lit", "list", "format", "read", "obj", "check", "local", "call", "apply", "func",
@@ -54,7 +54,7 @@ class Writer:
     def doc(self) -> dict:
         m = self.model
         doc = {
-            "mtpc": VERSION,
+            "mtpc": SPEC_VERSION,
             "types": [self.declared(name, t) for name, t in m.types.items()],
             "objects": [self.obj(o) for o in m.objects],
             "functions": [self.function(f) for f in m.functions],

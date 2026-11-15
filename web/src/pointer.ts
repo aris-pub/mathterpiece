@@ -25,10 +25,12 @@ export class Pointer {
     // Which views a listener is tied to never changes; whether they are quiet does, so that is
     // asked as the pointer moves.
     for (const o of rt.objects) {
+      // An on-pointermove on the canvas itself names the canvas in view, and has no in.
+      if (o.kind === "on-pointermove" && o.view === canvas) this.moves.push(o);
       if (!heardIn(o, canvas)) continue;
       const into = o.kind === "on-enter" ? this.enters : o.kind === "on-leave" ? this.leaves : null;
       if (into) into.set(o.shape!, [...(into.get(o.shape!) ?? []), o]);
-      if (o.kind === "on-pointermove" && (o.view === canvas || (o.shape ?? null) !== null)) this.moves.push(o);
+      if (o.kind === "on-pointermove") this.moves.push(o);
     }
   }
 
@@ -81,9 +83,7 @@ export class Pointer {
   }
 
   private heard(l: Obj): boolean {
-    // An on-pointermove on the canvas itself has no in, and hears nothing until the canvas is
-    // ready, as the listeners on its shapes do.
-    return heardIn(l, this.canvas, this.rt) && !this.rt.unready.has(this.canvas);
+    return heardIn(l, this.canvas, this.rt);
   }
 
   private awake(l: Obj): boolean {

@@ -7,7 +7,7 @@ import { type How, Scheduler } from "./animate.ts";
 import { apply, invert } from "./builtins.ts";
 import { Listeners, heardIn, holds } from "./click.ts";
 import { Lifecycle } from "./lifecycle.ts";
-import { type Doc, FORMAT_VERSION, type Obj, itemsOf } from "./doc.ts";
+import { type Doc, SPEC_VERSION, type Obj, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { latexOf, termClass, typeset } from "./math.ts";
 import { Player, type Span } from "./player.ts";
@@ -17,7 +17,7 @@ import { Showings } from "./standins.ts";
 import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
-export { FORMAT_VERSION };
+export { SPEC_VERSION };
 // The model has loaded (docs/page-interface.md, "Events").
 const LOADED = "mtp-loaded";
 const CHANGE = "mtp-change";
@@ -97,8 +97,8 @@ export class MtpModel extends HTMLElement {
   }
 
   set doc(doc: Doc) {
-    if (doc.mtpc !== FORMAT_VERSION) {
-      this.fail(`this runtime reads .mtpc version ${FORMAT_VERSION}, but the figure is version ${String(doc.mtpc)}`);
+    if (doc.mtpc !== SPEC_VERSION) {
+      this.fail(`this runtime reads .mtpc files of spec version ${SPEC_VERSION}, but this file states version ${String(doc.mtpc)}`);
       return;
     }
     const rt = new Runtime(doc);
