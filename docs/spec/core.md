@@ -40,10 +40,10 @@ By {numref}`declaration-names`, a declared function may take the name of a libra
 
 The compiler rewrites every sugar form in the rewrite step, which comes before the prove step
 ({numref}`compile-steps`), so the {term}`prover` is given only core forms. The prove step proves
-the {term}`body` of each `foreach` and of each motif once, before the expand step makes the copies
-and the instances ({numref}`prove-bodies-once`). So a form whose rewrite would need the value of a
-`foreach` name or of a motif parameter is core: the prover proves it once for every value that the
-name may take, and the expand step replaces it ({numref}`names-from-values`).
+the {term}`body` of each `foreach`, motif and choreo once, before the expand step makes the
+copies, the instances and the uses ({numref}`prove-bodies-once`). So a form whose rewrite would need
+the value of a `foreach` name or of a parameter of a motif or a choreo is core: the prover proves
+it once for every value that the name may take, and the expand step replaces it ({numref}`names-from-values`).
 
 ### How a rewrite is written
 
@@ -98,20 +98,31 @@ before any other rewrite of the declaration that it copies.
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, `(wait)`, in an animation's body | `(move none (duration T))`, `(move none)` | |
 | `(animation OPT… A B MORE…)`, and the body of a choreo | `(animation OPT… (in-order A B MORE…))` | `OPT…` are the {term}`optional arguments <optional argument>` of the animation, the `(defaults …)` and the `(loop …)` |
-| `(K ITEMS… X MORE…)`, where `X` is a use of a choreo | `(K ITEMS… (animation X) MORE…)` | `K` is a {term}`control` or a {term}`listener` that plays moves (not a slider, an `on-drag` or an `on-pointermove`), and the form has at most one of a `(move …)`, an `(animation …)` and a use of a choreo |
 | `(on-drag S M.pos ITEMS…)`, `(on-drag S M.x ITEMS…)`, `(on-drag S M.y ITEMS…)` | `(on-drag S (move M.pos (to pointer)) ITEMS…)`, `(on-drag S (move M.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move M.y (to (. pointer 1))) ITEMS…)` | `M` names the shape or the term `S` |
-| `(C A1 … Ak)`, a use of `(choreo C (P1 … Pn) BODY…)` | `(animation BODY…)`, with each `Pi` replaced by `Ai`, and each `Pi` for i above k by its default. The declaration of `C` is removed | k is at least the position of the last parameter with no default. `C` uses only choreos declared before it. The use is written where an animation or a step of an animation's body may be written. The prover proves that each `Ai` {term}`fits <fit>` the type of `Pi` |
 ```
 
 Of the declarations that an `(import …)` puts in, the {term}`.mtpc` holds only those that the source
 uses ({numref}`mtpc-imported-declarations`).
 
-A use of a choreo written as a step of an animation's body becomes an `(animation …)` there, which
-is one step ({numref}`animation-step`). An argument of a choreo may be any expression that may be
-written in the body in the places where its parameter is written, so `(pulse (* 2 k))` is an error
-when the parameter is a duration, by {doc}`binding-time`, and is accepted when it is a `to`. A
-choreo whose parameters all have defaults also gives one use with every default, so that the prover
-proves its body when nothing uses it. That use is not written in the .mtpc.
+A use of a choreo, `(C A1 … Ak)`, is core, as a motif instance is. It is written where a move, an
+animation or a step of an animation's body may be written, and k is at least the position of the
+last parameter with no default. In the expand step it becomes an `(animation …)` whose body is the
+body of the choreo, with each parameter replaced by the value of its argument, or by its default
+when the use gives no argument for it. So a use written as a step of an animation's body is one
+step ({numref}`animation-step`). The prover proves that each argument {term}`fits <fit>` the type
+of its parameter. An argument may be any expression that may be written in the body in the places
+where its parameter is written, so `(pulse (* 2 k))` is an error when the parameter is a duration,
+by {doc}`binding-time`, and is accepted when it is a `to`. A parameter stands for a value or a
+shape, never for a variable: a move in the body may move an attribute of a shape given as a
+parameter, such as `who.opacity`, and never the parameter itself.
+
+:::{admonition} Code differs
+:class: note
+The compiler writes each use of a choreo out where it is written (compiler.py:1669-1729), proves
+the body again for each use, compiles a choreo whose parameters all have defaults once more without
+a use, and binds a parameter given a name to that name, so that a move of the parameter moves what
+it names (mtp-ydd4.7.56).
+:::
 
 Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
 of `M`'s container: `(circle b (like a))` outside the group of `a` has only what `a` was written
@@ -290,6 +301,8 @@ inventory.
   `(foreach x xs …)` by the type of the second item ({numref}`foreach-count`).
 - **A motif instance.** Its members are the motif's body with the values of its parameters, made in
   the expand step.
+- **A use of a choreo.** Its moves are the choreo's body with the values of its parameters, made in
+  the expand step, as for a motif instance.
 - **A variant instance.** It is its base shape with the variant's parameters as attributes, some
   attributes fixed, and the variant as its type. No core form of a shape carries these.
 - **`row` and `column`.** Each member is placed after the box of the member before. A rewrite into
@@ -342,7 +355,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `func`, `func[T]` | core | `(func N PARAMS BODY)`: a named function | {doc}`types`, {doc}`evaluation` |
 | `transition` | core | `(transition N TARGET ITEM…)`: a named trajectory | {doc}`time` |
 | `animation` | core | `(animation N ITEM…)`: a named animation | {doc}`time` |
-| `choreo` | sugar | `(choreo N PARAMS ITEM…)`: a template of animations | {numref}`sugar-rewrites` |
+| `choreo` | core | `(choreo N PARAMS ITEM…)`: a template of moves, as a motif is a template of shapes | {doc}`time` |
 | `foreach` | core | copies of its declarations, made in the expand step | {doc}`binding-time` |
 | `(T N …)` for a type `T` | core | a variable, among them `color` and `font` tokens and `rand-seed` seeds | {doc}`world-model`, {doc}`reaction` |
 | {term}`components <component>` | core | {term}`views <view>` and controls (see "Components and their items") | {doc}`page-interface` |
@@ -531,7 +544,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | the name of an animation or a transition in a body | core | plays what it names | {doc}`time` |
 | `wait` | sugar | | {numref}`sugar-rewrites` |
 | `roll-dice` | sugar | | {numref}`sugar-rewrites` |
-| a use of a choreo | sugar | | {numref}`sugar-rewrites` |
+| a use of a choreo | core | the choreo's moves, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
 
 ### Components and their items
 
@@ -547,8 +560,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | a name, a list literal or an expression in a canvas | core | what the canvas draws | {doc}`page-interface` |
 | `font` on a readout | core | the readout's font | {doc}`page-interface` |
 | `kind` on a display | core | `'block'` or `'inline'` | {doc}`page-interface` |
-| `move` or `animation` on a control or a listener | core | what the writer plays: one move, or a collection of moves | {doc}`reaction`, {doc}`time` |
-| a use of a choreo on a control or a listener | sugar | | {numref}`sugar-rewrites` |
+| `move`, `animation` or a use of a choreo on a control or a listener | core | what the writer plays: one move, a collection of moves, or the moves of a choreo. A writer has at most one of them | {doc}`reaction`, {doc}`time` |
 | the move of a slider | core | a `move` or the name of a transition, its first item | {doc}`page-interface`, {doc}`reaction` |
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
@@ -632,8 +644,6 @@ documents are cut down in mtp-ydd4.7.
 | `foreach` with a list of names | sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | sugar | {numref}`sugar-rewrites` |
 | `wait`, `roll-dice`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
-| a use of a choreo on a control or a listener | sugar | {numref}`sugar-rewrites` |
-| `choreo` and its uses | sugar | {numref}`sugar-rewrites` |
 | `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |
 | `scene`, `background`, `transform` in the scene | core | {doc}`world-model` |
@@ -642,6 +652,7 @@ documents are cut down in mtp-ydd4.7.
 | `variant`, a variant instance | core | {doc}`types`, {doc}`world-model` |
 | `func`, `func[T]`, `fn`, calls | core | {doc}`types`, {doc}`evaluation` |
 | `transition`, `move` and their parts | core | {doc}`time` |
+| `choreo` and its uses | core | {doc}`time`, {numref}`prove-bodies-once` |
 | `animation`, `at-once`, `in-order`, `loop`, `defaults` in an animation | core | {doc}`time`, {numref}`animation-step` |
 | `foreach` | core | {numref}`foreach-count`, {numref}`foreach-bounded-length`, {doc}`binding-time` |
 | `let` | core | {doc}`scope`, {doc}`binding-time` |

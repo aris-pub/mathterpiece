@@ -307,4 +307,12 @@ move
 animation
   A collection of moves, played in order or at once, as a group is a collection of shapes. Defined
   in {doc}`time`.
+
+motif
+  A template of shapes, `(motif N PARAMS ITEM…)`. Each instance is the body of the motif with the
+  values of its parameters. Defined in {doc}`world-model`.
+
+choreo
+  A template of moves, `(choreo N PARAMS ITEM…)`, as a motif is a template of shapes. Each use is
+  the body of the choreo with the values of its parameters. Defined in {doc}`time`.
 ```

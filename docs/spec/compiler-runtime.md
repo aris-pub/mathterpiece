@@ -37,13 +37,14 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 1. **Parse.** The {term}`parser` reads the text into {term}`forms <form>`, by the syntax alone
    ({doc}`lexical`, {doc}`grammar`). It looks up no {term}`name`.
 2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`sugar`
-   form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, each
-   use of a choreo becomes an `(animation …)`. No value is computed and no type is used.
+   form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, `(pos [1 2])`
+   becomes `(x 1) (y 2)`. No value is computed and no type is used.
 3. **Prove.** Every {term}`expression` is given a type, and every type, {term}`range`,
    {term}`constraint` and other invariant that the spec requires is proved ({doc}`types`,
    {doc}`well-formedness`). This step proves and does nothing else.
-4. **Expand.** Each `foreach` is written out as its copies, and each motif instance as the
-   {term}`body` of its motif with the arguments of the instance. In the copies and the instances,
+4. **Expand.** Each `foreach` is written out as its copies, each motif instance as the
+   {term}`body` of its motif with the arguments of the instance, and each use of a choreo as the
+   body of its choreo with the arguments of the use. In the copies, the instances and the uses,
    the names built from values are replaced ({numref}`names-from-values`).
 5. **Fold.** Every expression known when compiling ({doc}`binding-time`) is replaced by its
    value.
@@ -52,20 +53,20 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 ```
 
 So a check that the parts of a sugar form are known when compiling is made in the prove step, and
-every form that is not sugar, other than `foreach` and a motif instance, reaches the prove step as
-it is. Which forms are sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
+every core form other than `foreach`, a motif instance and a use of a choreo reaches the fold step
+as it is. Which forms are sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
 
 ```{rule} prove-bodies-once
 The prove step proves each body once: the body of a function with each parameter ranging over
 every value of its declared type, the body of a `foreach` with its variable ranging over every
-value of its range, and the body of a motif with each parameter ranging over every value of its
-declared type and constraints. An imported motif is proved once, in the file that declares it.
-The copies that a `foreach` makes and the instances of a motif are not proved again. A motif body
-that is safe for only some values of a parameter is a {term}`compile error`, unless the parameter
-declares a constraint that leaves out the other values. An expression is known in the prove step
-when it is known when compiling ({doc}`binding-time`) and does not read, inside the body of a
-`foreach`, a function or a motif, the variable of that `foreach` or a parameter of that function or
-motif.
+value of its range, and the body of a motif or a choreo with each parameter ranging over every
+value of its declared type and constraints. An imported motif or choreo is proved once, in the file
+that declares it. The copies that a `foreach` makes, the instances of a motif and the uses of a
+choreo are not proved again. A motif or choreo body that is safe for only some values of a
+parameter is a {term}`compile error`, unless the parameter declares a constraint that leaves out
+the other values. An expression is known in the prove step when it is known when compiling
+({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or a
+choreo, the variable of that `foreach` or a parameter of that function, motif or choreo.
 ```
 
 So an error in such a body is about the body as written, and this implementation reports it once,
