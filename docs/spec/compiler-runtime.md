@@ -2,8 +2,7 @@
 
 Two programs implement mtp. The {term}`compiler` turns a source file into a {term}`.mtpc`, and
 the {term}`runtime` turns a .mtpc into a {term}`live model` in a browser. This page defines what
-each program must do and must never do, the {term}`mtp command` that runs the compiler, the .mtpc
-as the only thing that passes between the two programs, and what an implementation of either
+each program must do and must never do, the .mtpc as the only thing that passes between the two programs, and what an implementation of either
 program must do to conform to this spec.
 The format of the .mtpc is defined in {doc}`compiled-format`, and is not repeated here.
 
@@ -27,14 +26,14 @@ sight. The illustrator declares every component, and the author places each view
 the page with an element of its own.
 
 <figure class="mtp-diagram">
-<svg viewBox="0 0 480 480" role="img" aria-labelledby="mtp-d-title"><title id="mtp-d-title">The illustrator writes the .mtp, which the mtp command compiles into the .mtpc. The author writes the page. The .mtpc, the runtime script and the page make the open page in the reader’s browser, where the runtime holds one live model for each .mtpc and serves the components, which the reader sees and acts on.</title><defs><marker id="mtp-d-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mtp-d-headpath" d="M0 0 L10 5 L0 10 z"/></marker></defs><rect class="mtp-d-person" x="15.0" y="16" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="85.0" y="39.0" text-anchor="middle">illustrator</text><rect class="mtp-d-person" x="325.0" y="16" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="395.0" y="39.0" text-anchor="middle">author</text><line class="mtp-d-arrow" x1="85" y1="52" x2="85" y2="94" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="93" y="78" text-anchor="start">writes</text><line class="mtp-d-arrow" x1="395" y1="52" x2="395" y2="94" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="403" y="78" text-anchor="start">writes</text><rect class="mtp-d-file" x="15.0" y="96" width="140" height="36" rx="6"/><text class="mtp-d-code" x="85.0" y="119.0" text-anchor="middle">.mtp</text><rect class="mtp-d-file" x="325.0" y="96" width="140" height="36" rx="6"/><text class="mtp-d-name" x="395.0" y="119.0" text-anchor="middle">page</text><line class="mtp-d-arrow" x1="85" y1="132" x2="85" y2="178" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="93" y="152" text-anchor="start">the mtp command</text><text class="mtp-d-label" x="93" y="166" text-anchor="start">compiles it</text><rect class="mtp-d-file" x="15.0" y="180" width="140" height="48" rx="6"/><text class="mtp-d-code" x="85.0" y="209.0" text-anchor="middle">.mtpc</text><rect class="mtp-d-file" x="175.0" y="180" width="140" height="48" rx="6"/><text class="mtp-d-name" x="245.0" y="200.5" text-anchor="middle">runtime script</text><text class="mtp-d-code" x="245.0" y="217.5" text-anchor="middle">mathterpiece.js</text><line class="mtp-d-arrow" x1="85" y1="228" x2="85" y2="268" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="245" y1="228" x2="245" y2="268" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="395" y1="132" x2="395" y2="268" marker-end="url(#mtp-d-head)"/><rect class="mtp-d-live" x="15" y="270" width="450" height="112" rx="10"/><text class="mtp-d-livename" x="31" y="292">open page, in the reader’s browser</text><rect class="mtp-d-part" x="35" y="306" width="190" height="58" rx="6"/><text class="mtp-d-name" x="130.0" y="331.5" text-anchor="middle">runtime</text><text class="mtp-d-sub" x="130.0" y="348.5" text-anchor="middle">one live model for each .mtpc</text><rect class="mtp-d-part" x="255" y="306" width="190" height="58" rx="6"/><text class="mtp-d-name" x="350.0" y="331.5" text-anchor="middle">components</text><text class="mtp-d-sub" x="350.0" y="348.5" text-anchor="middle">views, controls, listeners</text><line class="mtp-d-arrow" x1="225" y1="335" x2="253" y2="335" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="350" y1="364" x2="350" y2="428" marker-start="url(#mtp-d-head)" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="358" y="402" text-anchor="start">sees, acts on</text><rect class="mtp-d-person" x="280.0" y="430" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="350.0" y="453.0" text-anchor="middle">reader</text></svg>
+<svg viewBox="0 0 480 480" role="img" aria-labelledby="mtp-d-title"><title id="mtp-d-title">The illustrator writes the .mtp, which the compiler compiles into the .mtpc. The author writes the page. The .mtpc, the runtime script and the page make the open page in the reader’s browser, where the runtime holds one live model for each .mtpc and serves the components, which the reader sees and acts on.</title><defs><marker id="mtp-d-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mtp-d-headpath" d="M0 0 L10 5 L0 10 z"/></marker></defs><rect class="mtp-d-person" x="15.0" y="16" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="85.0" y="39.0" text-anchor="middle">illustrator</text><rect class="mtp-d-person" x="325.0" y="16" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="395.0" y="39.0" text-anchor="middle">author</text><line class="mtp-d-arrow" x1="85" y1="52" x2="85" y2="94" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="93" y="78" text-anchor="start">writes</text><line class="mtp-d-arrow" x1="395" y1="52" x2="395" y2="94" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="403" y="78" text-anchor="start">writes</text><rect class="mtp-d-file" x="15.0" y="96" width="140" height="36" rx="6"/><text class="mtp-d-code" x="85.0" y="119.0" text-anchor="middle">.mtp</text><rect class="mtp-d-file" x="325.0" y="96" width="140" height="36" rx="6"/><text class="mtp-d-name" x="395.0" y="119.0" text-anchor="middle">page</text><line class="mtp-d-arrow" x1="85" y1="132" x2="85" y2="178" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="93" y="152" text-anchor="start">the compiler</text><text class="mtp-d-label" x="93" y="166" text-anchor="start">compiles it</text><rect class="mtp-d-file" x="15.0" y="180" width="140" height="48" rx="6"/><text class="mtp-d-code" x="85.0" y="209.0" text-anchor="middle">.mtpc</text><rect class="mtp-d-file" x="175.0" y="180" width="140" height="48" rx="6"/><text class="mtp-d-name" x="245.0" y="200.5" text-anchor="middle">runtime script</text><text class="mtp-d-code" x="245.0" y="217.5" text-anchor="middle">mathterpiece.js</text><line class="mtp-d-arrow" x1="85" y1="228" x2="85" y2="268" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="245" y1="228" x2="245" y2="268" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="395" y1="132" x2="395" y2="268" marker-end="url(#mtp-d-head)"/><rect class="mtp-d-live" x="15" y="270" width="450" height="112" rx="10"/><text class="mtp-d-livename" x="31" y="292">open page, in the reader’s browser</text><rect class="mtp-d-part" x="35" y="306" width="190" height="58" rx="6"/><text class="mtp-d-name" x="130.0" y="331.5" text-anchor="middle">runtime</text><text class="mtp-d-sub" x="130.0" y="348.5" text-anchor="middle">one live model for each .mtpc</text><rect class="mtp-d-part" x="255" y="306" width="190" height="58" rx="6"/><text class="mtp-d-name" x="350.0" y="331.5" text-anchor="middle">components</text><text class="mtp-d-sub" x="350.0" y="348.5" text-anchor="middle">views, controls, listeners</text><line class="mtp-d-arrow" x1="225" y1="335" x2="253" y2="335" marker-end="url(#mtp-d-head)"/><line class="mtp-d-arrow" x1="350" y1="364" x2="350" y2="428" marker-start="url(#mtp-d-head)" marker-end="url(#mtp-d-head)"/><text class="mtp-d-label" x="358" y="402" text-anchor="start">sees, acts on</text><rect class="mtp-d-person" x="280.0" y="430" width="140" height="36" rx="18.0"/><text class="mtp-d-name" x="350.0" y="453.0" text-anchor="middle">reader</text></svg>
 </figure>
 
 | Artifact | Made by | What it is |
 |---|---|---|
 | the `.mtp` | the illustrator | the source of one world model |
-| the `.mtpc` | the mtp command | the {term}`compiled model` of one world model |
-| the {term}`runtime script`, `mathterpiece.js` | the implementation of mtp, the same for every world model, and copied next to the .mtpc by `mtp build` | the runtime, and the page elements that it defines |
+| the `.mtpc` | the compiler | the {term}`compiled model` of one world model |
+| the {term}`runtime script`, `mathterpiece.js` | the implementation of mtp, the same for every world model | the runtime, and the page elements that it defines |
 | the page | the author, with any tool for making web pages | the text, the elements that load .mtpc files, and the elements that place components |
 | the {term}`open page` | the reader's browser, from the page | the page with the runtime running in it, and one live model for each .mtpc that the page loads |
 
@@ -140,127 +139,18 @@ constraint against the folded value. The new middle of the compiler (mtp-08wd) f
 The order of the steps and proving each body once are mtp-08wd.1.
 :::
 
-## The mtp command
+## Running the compiler
 
-The mtp command runs on the illustrator's machine. It has six subcommands, and each runs the steps
-of compiling up to a point.
-
-Building a source is the six steps of compiling, then writing the {term}`inventory page`. The
-inventory page holds the runtime, the .mtpc and the script of the inventory, all inside the page, so
-that it works when it is opened as a file. It also holds the opening {term}`comment` of the source,
-the lines of HTML that load the runtime and the .mtpc, every component live with its name and the
-line of HTML that places it, every listener with what it does, and every token with its CSS
-variable and an input that restyles it.
-
-```{rule} subcommands
-Each subcommand takes the path of one source file, and runs these steps:
-
-| Subcommand | Steps | What it writes |
-|---|---|---|
-| `mtp parse file` | parse | prints the expressions that the parser reads, and writes no file |
-| `mtp check file` | parse, rewrite and prove | prints `file: no errors` when there is no error, and writes no file |
-| `mtp compile file` | parse to write | the .mtpc |
-| `mtp build file` | parse to write, then the inventory page | the folder `build_name/`, `name` being the file name without `.mtp` |
-| `mtp serve file` | as `mtp build`, again each time the file or a file that it imports is saved | as `mtp build`, and serves the inventory page |
-| `mtp fmt file` | parse | the file itself, in a house layout |
-
-Every subcommand takes `-v`, given up to three times, which prints more of what the command does:
-`-v` information, `-vv` debugging, `-vvv` tracing.
+```{rule} compiler-input-output
+The compiler is given one source file. It reads that file and the files that it imports
+({numref}`compiler-reads-files`), and then either rejects the source with an error
+({numref}`conformance`) and writes no .mtpc, or writes one .mtpc for it.
 ```
 
-```{rule} command-errors
-When the compiler rejects the source, the subcommand writes no file, prints the error of the
-source ({numref}`conformance`) to standard error, and exits with status 1. When a file cannot be
-read or written, or when `mtp serve` cannot listen on its port, the subcommand writes no file,
-prints one line that gives the reason to standard error, and exits with status 1.
-```
-
-:::{admonition} Code differs
-:class: note
-`mtp compile` writes with `out.write_text` (mathterpiece/cli.py, line 72) and `mtp build` calls
-`build` (line 82), and neither catches `OSError`, so a folder that cannot be written prints a
-Python traceback and not one line. `mtp serve` stops in the same way when its port is taken
-(`ThreadingHTTPServer` in mathterpiece/serve.py, line 53). Bug mtp-vrzc.
-:::
-
-### mtp parse
-
-What `mtp parse` prints is not normative ({numref}`what-is-normative`).
-
-### mtp check
-
-`mtp check` prints `file: no errors` to standard output. Since no step after prove rejects a source
-({numref}`step-rejects-or-passes`), `mtp check` rejects every source that `mtp compile` rejects.
-
-:::{admonition} Code differs
-:class: note
-`mtp check` runs all of `compile_model`, folding included (mathterpiece/cli.py, line 64), and
-skips only writing. mtp-08wd.1.
-:::
-
-### mtp compile
-
-```{rule} mtp-compile
-`mtp compile` writes the .mtpc to the path given with `-o` or `--output`, or else next to the
-source, with the same name and the extension `.mtpc`. It makes the folder of that path when the
-folder does not exist. It prints nothing unless `-v` is given.
-```
-
-### mtp build
-
-```{rule} mtp-build
-`mtp build` writes the folder `build_name/` next to the source, making it when it does not exist,
-and writes three files into it: the .mtpc as `name.mtpc`, the runtime script as
-`mathterpiece.js`, and the inventory page as `index.html`. It then prints `wrote` and the path
-of `index.html`. Other files in the folder are left as they are. The runtime script is the one
-that comes with the mtp command, the same for every world model, and building a page needs no
-program other than the mtp command. How the mtp command gets its runtime script is not normative.
-```
-
-:::{admonition} Code differs
-:class: note
-The runtime script is built from web/src with `pnpm build` whenever a file in web/src is newer
-than the built script in web/dist (`_bundle` in mathterpiece/build.py, lines 29 to 44). Building
-it needs Node and pnpm, and fails with "the runtime's source is not in …" when web/src is not
-there, so an installed mtp cannot build pages. Bug mtp-crid.
-:::
-
-### mtp serve
-
-```{rule} mtp-serve
-`mtp serve` builds the source as `mtp build` does, then serves the inventory page at
-`http://127.0.0.1:port`, `port` being the number given with `-p` or `--port`, or 8000. It prints
-`serving file at` and that address. While it runs:
-
-- It builds the source again whenever the modification time of the source file changes, or that of
-  a file that the source imports, directly or through other imports. It checks them every quarter
-  of a second.
-- It answers a request for `/version` with the number of builds so far, and a request for any
-  other path with the page of the last build.
-- A script in the page requests `/version` every 400 milliseconds, and reloads the page when the
-  number changes.
-- When a build fails, it serves a page that holds the error ({numref}`command-errors`) in place of
-  the inventory page, until the next save, and goes on running.
-
-It stops when it is interrupted.
-```
-
-:::{admonition} Code differs
-:class: note
-`Server.check` in mathterpiece/serve.py, lines 57 to 66, compares only the modification time of
-the source file, so saving a file that the source imports does not build the page again. Bug
-mtp-q02m.
-:::
-
-### mtp fmt
-
-```{rule} mtp-fmt
-`mtp fmt` parses the source, and rejects it when the parse step does. It then writes the file again
-in a house layout, keeping every comment and every line break that the illustrator wrote, so that the
-file that it writes has the same meaning as the file that it read. It writes the file only when
-the result differs from it. It runs no step after parse. The layout is not normative
-({numref}`what-is-normative`).
-```
+How the compiler is run, such as the name of a command, its options, where it writes the .mtpc and
+what it prints, is not part of this spec ({numref}`what-is-normative`). An implementation may offer
+other tools with the compiler, such as a formatter for sources or a page that shows every component
+of a world model, and these are not part of this spec either.
 
 ## What the compiler must do and must never do
 
@@ -306,8 +196,7 @@ The illustrator writes the source dial.mtp:
 :language: mtp
 ```
 
-`mtp build dial.mtp` writes dial.mtpc and the runtime script mathterpiece.js into the folder
-build_dial/ ({numref}`mtp-build`). The author writes the page dial.html, next to them:
+The compiler compiles dial.mtp into dial.mtpc, and the author writes the page dial.html:
 
 ```{literalinclude} pages/dial/dial.html
 :language: html
@@ -483,8 +372,8 @@ mtp-ydd4.7.17.
 These are normative, and every conforming implementation gives the same: which sources are
 accepted and which are rejected, the meaning of the .mtpc, and what the runtime does. These are
 not normative: everything about an error beyond what {numref}`conformance` requires, such as its
-wording and the position that it gives, the bytes of the .mtpc, what `mtp parse` prints, and the
-layout that `mtp fmt` writes.
+wording and the position that it gives, the bytes of the .mtpc, and how the compiler is run
+({numref}`compiler-input-output`).
 ```
 
 So two conforming compilers may write different bytes for one source, as long as a runtime builds
@@ -505,8 +394,6 @@ pick the other.
 - An implementation of the runtime conforms when it loads every valid .mtpc of the versions that
   it implements, and builds and keeps current its live model as the pages from {doc}`world-model`
   to {doc}`accessibility` define.
-- An implementation of the mtp command conforms when its compiler conforms, and each of its
-  subcommands runs the steps and writes the files that this page gives for it.
 
 Each conforms only when it also obeys every rule of this page about it.
 ```

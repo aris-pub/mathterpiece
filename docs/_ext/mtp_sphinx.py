@@ -289,9 +289,9 @@ class MtpcOf(SphinxDirective):
             raise self.error(f"{src.name} does not compile: {e}") from None
         size = len(mtpc.encode("utf-8"))
         para = nodes.paragraph()
-        para += nodes.literal("", f"mtp compile {src.name}")
         para += nodes.Text(
-            f" writes {src.stem}.mtpc, {size:,} bytes, shown here whole with line breaks added:"
+            f"The compiler compiles {src.name} into {src.stem}.mtpc, {size:,} bytes, shown here"
+            " whole with line breaks added:"
         )
         shown = _readable_json(json.loads(mtpc))
         code = nodes.literal_block(shown, shown, language="json", classes=["mtpc-whole"])

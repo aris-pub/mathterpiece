@@ -39,10 +39,6 @@ illustrator
   The person who writes a world model as an `.mtp` source file. Defined in
   {doc}`compiler-runtime`.
 
-inventory page
-  The page that `mtp build` writes, which holds the runtime and the .mtpc, and every
-  component live with the HTML that places it. Defined in {doc}`compiler-runtime`.
-
 listener
   A component that is written inside a view and has no page element of its own, and which writes
   the model when the reader acts on a shape or a term, or when its view changes. Defined in
@@ -55,10 +51,6 @@ open page
 live model
   The world model of one .mtpc, as the runtime holds it in memory while a page is open, with the
   current value of every variable and attribute. Defined in {doc}`compiler-runtime`.
-
-mtp command
-  The command that runs the compiler on the illustrator's machine, with the subcommands `parse`,
-  `check`, `compile`, `build`, `serve` and `fmt`. Defined in {doc}`compiler-runtime`.
 
 parser
   The part of the compiler that does the parse step: it reads the text into forms by the syntax
