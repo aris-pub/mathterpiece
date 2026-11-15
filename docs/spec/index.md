@@ -1,8 +1,12 @@
 # Specification
 
-The specification defines the mtp language: its syntax, what a world model means, and how a live
-figure behaves. It is written for the people and agents who build mtp or implement it again. Every
+This is the draft of version 1 of the specification ({numref}`spec-version`).
+
+The specification defines the mtp language: its syntax, what a world model means, and how an open page
+behaves. It is written for the people and agents who build mtp or implement it again. Every
 rule is stated once, here, and everything else links to it.
+
+The first drafts left questions open: {doc}`open-questions` groups them by principle.
 
 ```{toctree}
 :numbered:
@@ -14,6 +18,7 @@ lexical
 grammar
 core
 scope
+imports
 types
 binding-time
 well-formedness
@@ -34,4 +39,6 @@ stdlib
 :hidden:
 
 glossary
+rules
+open-questions
 ```

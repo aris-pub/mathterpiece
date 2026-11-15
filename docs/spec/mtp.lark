@@ -1,0 +1,105 @@
+// The grammar of mtp, in Lark's notation. It is read with parser="lalr" and
+// lexer="contextual". The spec renders it (the directive mtp-grammar, docs/_ext/mtp_sphinx.py),
+// and tests/test_grammar.py checks it against the parser, mathterpiece/parse.py.
+//
+// Each section starts with a line "//: name". The spec renders each section once, in the place
+// where it describes that section.
+
+//: file
+start: _BOM? _whitespace_or_comment? (form _whitespace_or_comment?)*
+
+//: bom
+_BOM: /\ufeff/
+
+//: forms
+form: "(" _whitespace_or_comment? (items | head_items)? RPAR
+list_items: _whitespace_or_comment? items?
+items: touching (_whitespace_or_comment items?)?
+head_items: head_touching (_whitespace_or_comment items?)?
+touching: plain (form touching?)?
+        | paren touching?
+head_touching: head (form touching?)?
+expression: paren | plain
+paren: form
+     | FREE paren -> free
+plain: list | word | string | doc | interpolated
+     | FREE plain -> free
+
+//: lists
+list: "[" list_items "]" list_brackets*
+list_brackets: "[" _whitespace_or_comment? expression _whitespace_or_comment? "]"
+brackets: "[" _whitespace_or_comment? items "]"
+
+//: words
+word: one_word ("|" one_word)* | name_string
+one_word: NAME after_brackets? | number | bool | NONE | operator
+after_brackets: (brackets ("." PARTS)?)+
+name_string: name_string_text ("." PARTS | list_brackets)*
+
+//: heads
+head: HEAD | one_word ("|" one_word)* "|" HEAD
+
+//: literals
+number: INT | RATIO | REAL | IMAG | COMPLEX
+bool: TRUE | FALSE
+!operator: "+" | "-" | "*" | "/" | "^" | "<" | "<=" | ">" | ">=" | "=" | "!=" | "."
+
+//: strings
+string: STRING | TEX
+doc: DOC STRING
+interpolated: DOLLAR_QUOTE (TEXT | braces)* QUOTE
+name_string_text: HASH_QUOTE TEXT? braces (TEXT | braces)* QUOTE
+braces: "{" _WHITESPACE? expression _WHITESPACE? FORMAT? "}"
+
+//: whitespace-and-comments
+_whitespace_or_comment: (_WHITESPACE | _COMMENT)+
+_WHITESPACE: /[ \t\n\r]+/
+_COMMENT: ";" /[^\n]/*
+
+//: closing-parenthesis
+RPAR: ")" NOT_PART
+NOT_PART: /(?![.\[])/
+
+//: names
+NAME: PARTS
+PARTS: PART ("." PART)*
+PART: NOT_LITERAL LETTER (LETTER | DIGIT | "-")* "?"?
+NOT_LITERAL: /(?!(?:true|false|none)(?![A-Za-z0-9?-]))/
+LETTER: /[A-Za-z]/
+DIGIT: /[0-9]/
+
+//: heads-with-no-name
+HEAD.1: (PARTS | "none") "_"
+
+//: bools-and-none
+TRUE: "true"
+FALSE: "false"
+NONE: "none"
+
+//: numbers
+INT.2: SIGN? DIGITS
+REAL.3: SIGN? ((DIGITS "." DIGITS? | "." DIGITS) EXPONENT? | DIGITS EXPONENT)
+RATIO.4: SIGN? DIGITS "/" NONZERO
+IMAG.5: SIGN? UREAL "i"
+COMPLEX.6: SIGN? UREAL SIGN UREAL "i"
+UREAL: (DIGITS "." DIGITS? | "." DIGITS | DIGITS) EXPONENT?
+EXPONENT: /[eE]/ SIGN? DIGITS
+NONZERO: /[0-9]*[1-9][0-9]*/
+DIGITS: /[0-9]+/
+SIGN: /[+-]/
+
+//: string-literals
+STRING: "'" (/[^'\\]/ | ESCAPE)* "'"
+ESCAPE: /\\['\\n]/
+TEX.1: "tex'" (/[^'\\]/ | /\\[\s\S]/)* "'"
+
+//: prefixes
+DOC.1: "doc@"
+FREE.1: "free@"
+
+//: interpolated-strings
+DOLLAR_QUOTE: "$'"
+HASH_QUOTE: "#'"
+QUOTE: "'"
+TEXT: (/[^'\\{}]/ | ESCAPE | "{{" | "}}")+
+FORMAT: ":" /[^{}']*/

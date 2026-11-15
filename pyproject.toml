@@ -24,6 +24,7 @@ module-root = ""
 [dependency-groups]
 dev = [
     "jsonschema>=4.26.0",
+    "lark>=1.3.1",
     "pytest>=9.2.0",
     "ruff>=0.17.3",
     "ty>=0.0.94",
@@ -41,6 +42,9 @@ testpaths = ["tests"]
 # A test that runs this long prints every thread's stack: a hang once seen in the full suite
 # could not be reproduced, so the next one should say where it is.
 faulthandler_timeout = 120
+markers = [
+    "rule(label): the rule of the spec (docs/spec) that a conformance test checks, by its label",
+]
 
 [tool.ruff]
 line-length = 100
