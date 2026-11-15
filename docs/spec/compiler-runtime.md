@@ -403,9 +403,17 @@ own view ({doc}`page-interface`, {doc}`lifecycle`).
 ```
 
 ```{rule} runtime-adds-no-objects
-The runtime never adds an object to a live model. A stand-in that a canvas draws for
-`on-show` and `on-hide` is not an object of the live model ({doc}`page-interface`).
+What a world model holds is decided by the illustrator alone: the objects of a live model are
+those that the source declares, and the runtime never adds an object to a live model or removes
+one. What the runtime draws beyond the objects of the live model changes only how a component
+looks. It is not an object of the live model, no expression and no writer of the world model reads
+it, and it never changes a value of the live model.
 ```
+
+For example, while an `on-show` or an `on-hide` plays, a canvas draws a stand-in in place of the
+shape: a copy of the shape that only this canvas has, which the animation moves. The shape in the
+live model keeps every attribute as it was, and when the animation ends, the canvas drops the
+stand-in ({doc}`page-interface`).
 
 ```{rule} runtime-no-type-work-while-drawing
 While drawing, the runtime never checks whether a value has its type, and never converts a value
