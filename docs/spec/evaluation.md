@@ -48,21 +48,9 @@ These forms evaluate only some of their parts:
 | `(fn params body)` | nothing, until the function is called |
 ```
 
-```{rule} cond-and-or-as-if
-`cond`, `and` and `or` are sugar, and mean exactly these `if` forms:
-
-| Form | Is |
-|---|---|
-| `(cond (c1 v1) more… (else v))` | `(if c1 v1 (cond more… (else v)))` |
-| `(cond (else v))` | `v` |
-| `(and a b …)` | `(if a (and b …) false)` |
-| `(and a)` | `a` |
-| `(or a b …)` | `(if a true (or b …))` |
-| `(or a)` | `a` |
-```
-
-So, when compiling and while drawing, `cond` evaluates its tests in order, up to the first that is
-true, then the value of that clause only. `and` stops at the first part that is false, and `or` at
+`cond`, `and` and `or` are sugar for `if` forms ({numref}`sugar-rewrites`). So, when compiling
+and while drawing, `cond` evaluates its tests in order, up to the first that is true, then the
+value of that clause only. `and` stops at the first part that is false, and `or` at
 the first part that is true. `(when c x)` is `(if c x none)` ({numref}`rewrite-when`), and
 evaluates its parts in the same way.
 
@@ -79,14 +67,14 @@ function on every item first (mathterpiece/compiler.py, line 2794). By
 ### Parts of these forms when compiling
 
 ```{rule} known-condition-takes-one-branch
-When the condition of an `if` is known when compiling, the prove step proves only the branch that
-is taken. The other branch is neither proved nor folded. Inside the body of a `foreach` or a
-motif, the variable of the `foreach` and the parameters of the motif are not known in the prove
-step, since the body is proved once for all their values ({numref}`prove-bodies-once`).
+When the condition of an `if` is known in the prove step ({numref}`prove-bodies-once`), the prove
+step proves only the branch that is taken. The other branch is neither proved nor folded.
 ```
 
-By {numref}`cond-and-or-as-if`, the same holds for the tests of a `cond` and the parts of an `and`
-or an `or`. `or?` and `let` are proved whole: every part is proved, also a part that the form
+So inside the body of a `foreach` or a motif, the prove step proves both branches of an `if` whose
+condition reads the variable of the `foreach` or a parameter of the motif, since the body is proved
+once for all their values. By {numref}`sugar-rewrites`, the same holds for the tests of a `cond`
+and the parts of an `and` or an `or`. `or?` and `let` are proved whole: every part is proved, also a part that the form
 would not evaluate because a value before it is known when compiling. An operation that gives
 `none` at known inputs in such a part is a compile error ({numref}`none-at-known-inputs`):
 
@@ -102,8 +90,8 @@ would not evaluate because a value before it is known when compiling. An operati
 A folded call is computed by evaluating its body, not by proving it again, so a folded call of a
 function that calls itself ends at its base case. A `foreach` copy can start a chain, in which
 copy k reads copy k - 1 through a `(name …)` string, as in `(if (= k 0) 1 (* 2 (. (name
-$'d-{(- k 1)}') x)))`. How such a name is resolved when the body is proved once is defined in
-{doc}`core` (Q-core-3).
+$'d-{(- k 1)}') x)))`. How such a name is proved when the body is proved once is defined in
+{numref}`names-from-values`.
 
 :::{admonition} Code differs
 :class: note
@@ -150,15 +138,14 @@ functions of the standard library are written in mtp, and give `none` where the 
 `none` ({doc}`stdlib`).
 
 ```{rule} none-at-known-inputs
-In the prove step, an operation whose inputs are known when compiling ({doc}`binding-time`), and
-are among the inputs at which it gives `none` ({numref}`operations-that-give-none`), is a compile
-error, at the operation. So are `rand` and `rand-int` with both bounds known when compiling and
-`lo` above `hi`, although their seed is never known when compiling. The variable of a `foreach` and
-the parameters of a motif or a function are not known in the prove step, since their bodies are
-proved once ({numref}`prove-bodies-once`).
+An operation whose inputs are known in the prove step ({numref}`prove-bodies-once`), and are among
+the inputs at which it gives `none` ({numref}`operations-that-give-none`), is a compile error. So
+are `rand` and `rand-int` with both bounds known in the prove step and `lo` above `hi`, although
+their seed is never known when compiling.
 ```
 
-So `(sqrt -1)`, `(or? (sqrt -1) 0)` and `(rand-int 10 3)` are compile errors. In
+So `(sqrt -1)`, `(or? (sqrt -1) 0)` and `(rand-int 10 3)` are compile errors, and this
+implementation reports each one at the operation. In
 `(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, `(/ 1 i)` gives `none` when `i` is 0, so its type
 includes `none`, and the type of `r` does not include `none`: this is a compile error at
 `(/ 1 i)` in the body. With `(r (or? (/ 1 i) 1))`, the scene compiles, and the copy for `i` = 0
@@ -210,7 +197,7 @@ exceptions:
   is not evaluated.
 - A list built from expressions, which holds `none` as an item. A point is the exception: a point
   with a coordinate that is `none` is `none`.
-- `if`, `cond` and `when`, whose value is `none` only when the branch taken is `none`.
+- `if`, whose value is `none` only when the branch taken is `none`.
 - `map`, `reverse` and a read of a position of a list, which pass items that are `none` through.
 
 A part of `none` is `none`: when `g[k]` is `none`, so is `g[k].pos`. An interpolated string with a
@@ -218,11 +205,17 @@ part that is `none` is `none`. A collection function given `none` in place of it
 `none`.
 ```
 
+By {numref}`sugar-rewrites`, `cond` and `when` are `if` forms, so the value of either is `none`
+only when the branch taken is `none`.
+
 ```{rule} none-never-a-condition
-The condition of an `if`, a `cond`, an `and` or an `or`, and the `when` of a component, never
+The condition of an `if` and the value of the `(active …)` of a control or a listener never
 receive `none`. Neither do the items given to `sum`, `count`, `min`, `max`, `any`, `all` and
 `reduce`. A form that might give them `none` is a compile error ({doc}`types`).
 ```
+
+By {numref}`sugar-rewrites`, the tests of a `cond` and the parts of an `and` or an `or` that become
+the condition of an `if` never receive `none` either.
 
 Where `none` must stop, and the forms that stop it, are defined in {doc}`types`. A shape declared
 `T|none` is not drawn while it is `none`. `none` as a `fill` or a `stroke` means no fill or no
@@ -370,18 +363,52 @@ mtp-nk2w.
 
 ```{rule} seed-variable
 Every random value is computed from a {term}`seed`: a free variable of the built-in type
-`rand-seed`, which is any int. A random function follows the seed named in it with `(seed s)`,
-or, without one, the only seed that the file declares or imports. In a file with several seeds,
-every random function is written with `(seed s)`. A `const` variable is not a seed.
+`rand-seed`, which is any int. A random function follows the seed named in it with `(seed s)`. A
+`const` variable is not a seed.
 ```
 
+A random function written without `(seed …)` follows the only seed that the file declares or
+imports ({numref}`sugar-rewrites`). So in a file with several seeds, every random function is
+written with `(seed s)`.
+
 ```{rule} random-site
-Each place in the source where `rand`, `rand-int`, `pick` or `shuffle` is written has a
-{term}`site`: a whole number, counted from 0 in the order in which the compiler compiles them,
-after the copies of each `foreach` and the members of each motif instance are written out. Each
-copy and each instance therefore has sites of its own. The site is written in the expression in
-the .mtpc ({doc}`compiled-format`).
+Each call of `rand`, `rand-int`, `pick` or `shuffle` has a {term}`site`: a whole number. The sites
+are counted from 0, in the order in which the calls start in the text of the source after the
+rewrite step ({numref}`compile-steps`), read with these changes:
+
+- Each `(import …)` is read as the declarations that it puts in, in the order of the imported file.
+- Each `foreach` is read as its copies, in the order of the copy index.
+- Each motif instance is read as the instance, followed by the body of its motif. The body of a
+  `motif` declaration is read only in its instances.
+
+A call that is written in the arguments of another call starts after it, and so comes after it. A
+call in a branch that is not taken has a site too. The site is written in the expression in the
+.mtpc ({doc}`compiled-format`).
 ```
+
+So each copy and each instance has sites of its own, and so does each copy of a call that a
+rewrite makes. In
+
+```mtp
+(scene s
+  (circle c (r (rand 1 2)) (x (rand (rand 0 1) 5)))
+  (foreach i 2 (circle_ (r (rand 0 1))))
+  (dot d (k (rand 0 1))))
+```
+
+where `dot` is a motif whose body holds one `rand`, the sites are 0 for the `r` of `c`, 1 and 2 for
+the outer and the inner call in its `x`, 3 and 4 for the copies of the `foreach`, 5 for the `k` of
+`d`, and 6 for the `rand` in the body of `dot`.
+
+:::{admonition} Code differs
+:class: note
+The compiler counts the sites in the order in which it compiles the calls (`_Compiler.random`,
+mathterpiece/compiler.py, line 2255). Within a shape, it compiles the attributes in the order of
+the shape's table of attributes (`SHAPE_ATTRS`, line 268), with `pos` last, and not in the order in
+which they are written. So in the example above it gives the `x` of `c` the sites 0 and 1, and the
+`r` of `c` the site 2. It also reads every `import` before any other form (line 745). Bead
+mtp-ydd4.7.39 makes the compiler follow the rule.
+:::
 
 ```{rule} random-hash
 The hash h of whole numbers x₁, …, xₙ is a 32-bit word, computed with every product taken modulo
@@ -420,14 +447,14 @@ With s the value of the seed and p the site:
 web/src/random.ts, and the case `rand` of `compile` in web/src/runtime.ts, line 1069.
 
 ```{rule} random-never-folded
-A random value is known only while drawing ({doc}`binding-time`). The compiler never draws one and
-never folds one.
+A random value is known only while drawing ({doc}`binding-time`).
 ```
 
-By {numref}`random-values`, for one .mtpc, the same values of the seeds give the same random
-values, on every refresh and in every browser, and when a seed takes a new value, every random
-value that follows it is drawn again ({doc}`reaction`). Since the sites are
-counted when compiling, a change to the source that adds or removes a random function before
+So the compiler never draws a random value ({numref}`compiler-never-acts-while-drawing`) and never
+folds one. By {numref}`random-values`, for one .mtpc, the same values of the seeds give the same
+random values, on every refresh and in every browser, and when a seed takes a new value, every
+random value that follows it is drawn again ({doc}`reaction`). Since the sites are counted when
+compiling, a change to the source that adds or removes a random function before
 another one changes the site of the later one, and with it the value that the later one draws.
 docs/data-model.md, line 283, has "is drawn once, when the page loads", which is wrong: a new seed
 draws every value that follows it again, as docs/reference.md, line 101, has.
@@ -533,8 +560,9 @@ drawing, how every chain ends is Q-evaluation-13, below.
 ```{rule} call-depth-limit
 The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
 of such calls that are still being computed when it starts. Calls of built-in functions do not
-count. `max-call-depth`, the {term}`call depth limit`, is 256. When folding, a call whose depth is
-above `max-call-depth` is a compile error, at the call.
+count. `max-call-depth`, the {term}`call depth limit`, is 256. When a call is known in the prove
+step and folding it would start a call whose depth is above `max-call-depth`, the call is a compile
+error of the prove step ({numref}`step-rejects-or-passes`).
 ```
 
 So with `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m 1)))))`, `(down 255)` is folded
@@ -549,7 +577,10 @@ drawing to a call of a recursive function whose depth would pass `max-call-depth
 :class: warning
 A call of a recursive function whose arguments are known only while drawing may reach a depth
 above `max-call-depth`, and no rule may make that an error while drawing
-({numref}`no-errors-after-loading`). The options:
+({numref}`no-errors-after-loading`). The same holds for a call in the body of a `foreach` or a
+motif that reads the variable or a parameter: it is not known in the prove step
+({numref}`prove-bodies-once`), so {numref}`call-depth-limit` does not reject it, and its arguments
+are known only once the expand step has made the copies and the instances. The options:
 
 - (a) The compiler rejects a recursive function unless the prover can show that every call of it
   stays within `max-call-depth`.

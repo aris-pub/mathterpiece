@@ -78,8 +78,9 @@ search for the only seed (Q-core-5), and a function that takes the name of an op
 are brought to the author. Sugar: `import`, `type`, `palette`, `pos`, the defaults of groups,
 rows, columns and formulas, and the search for the only seed. Core: `colormap`, variant
 instances, rows and columns, `exists-when`, `let`, the defaults of instances and of animations,
-and an `in-order` of one item. The operators are library functions, which a declared function may
-replace ({numref}`library-form`). The list is in {doc}`core`, "Summary".
+and an `in-order` of one item. The operators are library functions ({numref}`library-form`),
+which a declared function may replace ({numref}`declaration-names`). The list is in {doc}`core`,
+"Summary".
 
 The two cases that changed existing figures, Q-core-23 and Q-core-27, are decided under P2.
 
@@ -149,8 +150,8 @@ bourgain-densities.mtp, `koch` in koch-snowflake.mtp and `has-divisor` in ulam-s
 
 **Decided:** a depth limit, the same at both times ({numref}`call-depth-limit`).
 
-**Decided (2026-11-15):** `max-call-depth` is 256 (Q-evaluation-8). A call past it when folding is
-a compile error, at the call, and a call of a recursive function does not get a type that includes
+**Decided (2026-11-15):** `max-call-depth` is 256 (Q-evaluation-8). A call known when compiling
+that passes it when folded is a compile error, and a call of a recursive function does not get a type that includes
 `none` ({numref}`call-depth-limit`). Since no error may appear after loading (P11), what happens
 to a call past the limit while drawing is open: Q-evaluation-13 in {doc}`evaluation`.
 

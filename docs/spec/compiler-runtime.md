@@ -17,7 +17,7 @@ illustrator and the author.
 | Artifact | Made by | What it is |
 |---|---|---|
 | the `.mtp` | the illustrator | the source of one world model |
-| the `.mtpc` | the mtp command | the compiled model of one world model |
+| the `.mtpc` | the mtp command | the {term}`compiled model` of one world model |
 | the {term}`runtime script`, `mathterpiece.js` | mtp, the same for every world model | the runtime, and the page elements that it defines |
 | the page | the author, usually through a tool such as a Markdown converter | the text, the elements that load .mtpc files, and the elements that place components |
 | the {term}`live figure` | the reader's browser, from the page | the runtime and the page together, with one live model for each .mtpc that the page loads |
@@ -40,7 +40,8 @@ The compiler turns a source into a .mtpc in five steps, in this order:
    invariant that the spec requires is proved ({doc}`types`, {doc}`well-formedness`). This step
    proves and does nothing else.
 4. **Expand.** Each `foreach` is written out as its copies, and each motif instance as the body of
-   its motif with the arguments of the instance. Nothing else is expanded.
+   its motif with the arguments of the instance. In the copies and the instances, the names built
+   from values are replaced ({numref}`names-from-values`).
 5. **Fold and write.** Every expression known when compiling ({doc}`binding-time`) is replaced by
    its value, and the model is written as the .mtpc ({doc}`compiled-format`), with every type that
    the runtime needs.
@@ -55,13 +56,16 @@ The prove step proves each body once: the body of a function with each parameter
 every value of its declared type, the body of a `foreach` with its variable ranging over every
 value of its range, and the body of a motif with each parameter ranging over every value of its
 declared type and constraints. An imported motif is proved once, in the file that declares it.
-The copies that a `foreach` makes and the instances of a motif are not proved again, and an error
-in such a body is reported at the body as written. A motif body that is safe for only some values
-of a parameter is a compile error, unless the parameter declares a constraint that leaves out the
-other values.
+The copies that a `foreach` makes and the instances of a motif are not proved again. A motif body
+that is safe for only some values of a parameter is a compile error, unless the parameter declares
+a constraint that leaves out the other values. An expression is known in the prove step when it
+is known when compiling ({doc}`binding-time`) and does not read, inside the body of a `foreach`, a
+function or a motif, the variable of that `foreach` or a parameter of that function or motif.
 ```
 
-For example, `(motif dot ((real k)) (circle_ (r (/ 1 k))))` is a compile error at `(/ 1 k)`, since
+So an error in such a body is about the body as written, and this implementation reports it once,
+at the body, and not once for each copy or instance. For example,
+`(motif dot ((real k)) (circle_ (r (/ 1 k))))` is a compile error at `(/ 1 k)`, since
 `k` may be 0, whatever the instances give for `k`. With `(real k 1 (>= 1))` as the parameter, the
 motif compiles.
 
@@ -275,8 +279,11 @@ The compiler never does what happens only while drawing ({doc}`binding-time`). I
 writer: it never plays an animation, never performs a write that a control or a listener would
 perform, and never acts as a reader would. It never reads a page, its CSS or its color scheme, and
 so never folds a token: a token is written with its declared value, which the runtime uses where
-the page gives none. It never draws a random value ({numref}`random-never-folded`).
+the page gives none.
 ```
+
+So the compiler never draws a random value, since a random value is known only while drawing
+({numref}`random-never-folded`).
 
 ## What the runtime must do and must never do
 
@@ -321,11 +328,11 @@ depends on what changed, and the views draw again ({doc}`reaction`, {doc}`time`,
 ```
 
 ```{rule} runtime-serves-components
-The runtime defines one page element for each kind of view and control, and serves each element
-that the page places: in each element, it draws the view or control of the element's model that
-the element's `name` attribute gives. A listener has no element: it acts on each element that
-draws its shape or term, or, for a listener such as `on-view`, on its own view
-({doc}`page-interface`, {doc}`lifecycle`).
+The runtime defines one page element for each kind of {term}`view` and {term}`control`, and
+serves each element that the page places: in each element, it draws the view or control of the
+element's model that the element's `name` attribute gives. A {term}`listener` has no element: it
+acts on each element that draws its shape or term, or, for a listener such as `on-view`, on its
+own view ({doc}`page-interface`, {doc}`lifecycle`).
 ```
 
 ```{rule} runtime-adds-no-objects
