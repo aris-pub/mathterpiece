@@ -1,18 +1,67 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { playwright } from "@vitest/browser-playwright";
-import Ajv2020 from "ajv/dist/2020.js";
-import standaloneCode from "ajv/dist/standalone/index.js";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
 const SCHEMA = fileURLToPath(new URL("../docs/mtpc.schema.json", import.meta.url));
 const SCHEMA_MODULE = "virtual:mtpc-schema";
 
-// The runtime checks each .mtpc against docs/mtpc.schema.json with a validator that Ajv writes
-// from the schema at each build, so the runtime carries no schema compiler and a change to the
-// schema needs no edit here. Messages are left out of the code to keep it small: the runtime
-// writes its own (src/schema.ts).
+// The keywords that the runtime's check of a .mtpc handles (src/schema.ts), and what each one holds:
+// a schema, a list of schemas, a map of schemas, or something else.
+const KEYWORDS: Record<string, "schema" | "list" | "map" | "data"> = {
+  $ref: "data",
+  type: "data",
+  const: "data",
+  enum: "data",
+  minimum: "data",
+  maximum: "data",
+  exclusiveMinimum: "data",
+  exclusiveMaximum: "data",
+  minLength: "data",
+  maxLength: "data",
+  minItems: "data",
+  maxItems: "data",
+  uniqueItems: "data",
+  prefixItems: "list",
+  items: "schema",
+  required: "data",
+  properties: "map",
+  additionalProperties: "schema",
+  allOf: "list",
+  anyOf: "list",
+  oneOf: "list",
+  if: "schema",
+  then: "schema",
+  else: "schema",
+  $defs: "map",
+  $schema: "data",
+  $id: "data",
+  title: "data",
+  description: "data",
+};
+
+/** The first keyword in a schema that the runtime's check does not handle, with where it is. */
+function unknownKeyword(schema: unknown, at: string): string | null {
+  if (typeof schema === "boolean") return null;
+  for (const [keyword, sub] of Object.entries(schema as Record<string, unknown>)) {
+    const kind = KEYWORDS[keyword];
+    if (!kind) return `${keyword} at ${at}`;
+    if (keyword === "$ref" && !String(sub).startsWith("#")) return `$ref to ${String(sub)} at ${at}`;
+    const subs =
+      kind === "schema" ? [sub] : kind === "list" ? (sub as unknown[]) : kind === "map" ? Object.values(sub as object) : [];
+    for (const s of subs) {
+      const found = unknownKeyword(s, `${at}/${keyword}`);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// The runtime checks each .mtpc against docs/mtpc.schema.json, which this puts in the runtime, so a
+// change to the schema needs no edit in the runtime. The build fails when the schema uses a keyword
+// that the check does not handle. The schema goes in as a string for JSON.parse, so that the build
+// does not spread it over thousands of lines.
 function mtpcSchema(): Plugin {
   return {
     name: "mtpc-schema",
@@ -20,31 +69,10 @@ function mtpcSchema(): Plugin {
     load(id) {
       if (id !== `\0${SCHEMA_MODULE}`) return undefined;
       this.addWatchFile(SCHEMA);
-      const ajv = new Ajv2020({
-        code: { source: true, esm: true, optimize: true },
-        messages: false,
-        inlineRefs: false,
-        // Strict about keywords that Ajv does not know, but the schema may give a type more than
-        // one kind of value, and a list of fixed items no upper length.
-        strictSchema: true,
-        strictTypes: false,
-        strictTuples: false,
-        strictRequired: false,
-      });
-      const code = standaloneCode(ajv, ajv.compile(JSON.parse(readFileSync(SCHEMA, "utf8"))));
-      // Ajv writes require() for its few helper functions even in an ES module. The helpers are
-      // CommonJS modules, and the build and the test server in a browser give their default
-      // export differently: as the function, or as the object that holds it.
-      const imports: string[] = [];
-      const body = code.replace(/require\("([^"]+)"\)\.default/g, (_, path: string) => {
-        const n = imports.length;
-        imports.push(
-          `import helper${n}Module from "${path}.js";`,
-          `const helper${n} = typeof helper${n}Module === "function" ? helper${n}Module : helper${n}Module.default;`,
-        );
-        return `helper${n}`;
-      });
-      return `${imports.join("\n")}\n${body}`;
+      const schema: unknown = JSON.parse(readFileSync(SCHEMA, "utf8"));
+      const unknown = unknownKeyword(schema, "#");
+      if (unknown) throw new Error(`the runtime cannot check a .mtpc against ${SCHEMA}: its check does not handle the keyword ${unknown}`);
+      return `export default JSON.parse(${JSON.stringify(JSON.stringify(schema))});`;
     },
   };
 }
