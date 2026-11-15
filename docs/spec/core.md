@@ -98,7 +98,7 @@ before any other rewrite of the declaration that it copies.
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, `(wait)`, in an animation's body | `(move none (duration T))`, `(move none)` | |
 | `(animation OPT… A B MORE…)`, and the body of a choreo | `(animation OPT… (in-order A B MORE…))` | `OPT…` are the {term}`optional arguments <optional argument>` of the animation, the `(defaults …)` and the `(loop …)` |
-| `(K ITEMS… X MORE…)`, where `X` is a `(move …)` or a use of a choreo | `(K ITEMS… (animation X) MORE…)` | `K` is a {term}`control` or a {term}`listener` that has an animation (not a slider, an `on-drag` or an `on-pointermove`), and the form has at most one of an `(animation …)`, a `(move …)` and a use of a choreo |
+| `(K ITEMS… X MORE…)`, where `X` is a use of a choreo | `(K ITEMS… (animation X) MORE…)` | `K` is a {term}`control` or a {term}`listener` that plays moves (not a slider, an `on-drag` or an `on-pointermove`), and the form has at most one of a `(move …)`, an `(animation …)` and a use of a choreo |
 | `(on-drag S M.pos ITEMS…)`, `(on-drag S M.x ITEMS…)`, `(on-drag S M.y ITEMS…)` | `(on-drag S (move M.pos (to pointer)) ITEMS…)`, `(on-drag S (move M.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move M.y (to (. pointer 1))) ITEMS…)` | `M` names the shape or the term `S` |
 | `(C A1 … Ak)`, a use of `(choreo C (P1 … Pn) BODY…)` | `(animation BODY…)`, with each `Pi` replaced by `Ai`, and each `Pi` for i above k by its default. The declaration of `C` is removed | k is at least the position of the last parameter with no default. `C` uses only choreos declared before it. The use is written where an animation or a step of an animation's body may be written. The prover proves that each `Ai` {term}`fits <fit>` the type of `Pi` |
 ```
@@ -547,8 +547,8 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | a name, a list literal or an expression in a canvas | core | what the canvas draws | {doc}`page-interface` |
 | `font` on a readout | core | the readout's font | {doc}`page-interface` |
 | `kind` on a display | core | `'block'` or `'inline'` | {doc}`page-interface` |
-| `animation` on a control or a listener | core | its animation | {doc}`reaction` |
-| `move`, or a use of a choreo, in place of `animation` | sugar | | {numref}`sugar-rewrites` |
+| `move` or `animation` on a control or a listener | core | what the writer plays: one move, or a collection of moves | {doc}`reaction`, {doc}`time` |
+| a use of a choreo on a control or a listener | sugar | | {numref}`sugar-rewrites` |
 | the move of a slider | core | a `move` or the name of a transition, its first item | {doc}`page-interface`, {doc}`reaction` |
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
@@ -632,7 +632,7 @@ documents are cut down in mtp-ydd4.7.
 | `foreach` with a list of names | sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | sugar | {numref}`sugar-rewrites` |
 | `wait`, `roll-dice`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
-| `move` or a use in place of `animation` | sugar | {numref}`sugar-rewrites` |
+| a use of a choreo on a control or a listener | sugar | {numref}`sugar-rewrites` |
 | `choreo` and its uses | sugar | {numref}`sugar-rewrites` |
 | `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |

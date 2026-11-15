@@ -298,4 +298,13 @@ world model
   Everything that one `.mtp` source file defines, such as its shapes, variables and components.
   The compiler builds it, the .mtpc stores it, and the runtime holds it as the live model. Defined
   in {doc}`world-model`.
+
+move
+  A form `(move T …)` that changes one target, such as a variable or an attribute, to a new value
+  over a duration. Every control, listener and animation that changes the model over time plays
+  moves. Defined in {doc}`time`.
+
+animation
+  A collection of moves, played in order or at once, as a group is a collection of shapes. Defined
+  in {doc}`time`.
 ```
