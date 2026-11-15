@@ -42,6 +42,9 @@ testpaths = ["tests"]
 # A test that runs this long prints every thread's stack: a hang once seen in the full suite
 # could not be reproduced, so the next one should say where it is.
 faulthandler_timeout = 120
+markers = [
+    "rule(label): the rule of the spec (docs/spec) that a conformance test checks, by its label",
+]
 
 [tool.ruff]
 line-length = 100
