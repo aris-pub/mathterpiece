@@ -23,7 +23,7 @@ NONE_COLLECTION = xfail("mtp-ydd4.7.52", "a collection that may be none is rejec
 WHOLE_FORMS = xfail("mtp-08wd.2", "cond, and and or are compiled whole")
 COPIES = xfail("mtp-08wd.1", "each copy of a foreach is proved with the value of its variable")
 RAND_BOUNDS = xfail("mtp-y7vp", "rand and rand-int do not check that lo is at most hi")
-LIMIT = xfail("mtp-mqbu", "the compiler checks only literals against the number limit")
+SATURATE = xfail("mtp-ydd4.7.54", "results are not clamped to the number limit")
 ROUND = xfail("mtp-6yga", "round of 10^28 or more raises decimal.InvalidOperation")
 MIX = xfail("mtp-nk2w", "the compiler rounds the channels of a mixed color halves to even")
 SEED_SIGN = xfail("mtp-ydd4.7.30", "the type rand-seed is an int of at least 0")
@@ -132,7 +132,6 @@ GIVES_NONE = [
     ("(to-polar [x 0])", "real", "0"),
     ("(range 0 1 (gap x))", "real", "0"),
     ("(range 0 1 (num x))", "int", "-1"),
-    ("(* x x x)", "real", "1e150"),
 ]
 GIVES_NONE_FOLD_REJECTS = [
     ("(min x)", "list[real]", "(as list[real] [])"),
@@ -170,6 +169,10 @@ class TestOperationsThatGiveNone:
     )
     def test_at_every_other_input_there_is_a_value(self, body, t, arg):
         assert value(f"(func f (({t} x)) {body}) (bool v (none? (f {arg})))", "v") is False
+
+    @SATURATE
+    def test_a_result_beyond_the_largest_real_is_not_none(self):
+        assert value("(func f ((real x)) (* x x x)) (bool v (none? (f 1e150)))", "v") is False
 
     @PICK
     def test_pick_on_a_list_that_is_not_empty_never_gives_none(self):
@@ -345,16 +348,40 @@ class TestNumberLimit:
     def test_a_literal_at_the_limit(self):
         accepted("(real v 1e150)")
 
-    @LIMIT
-    def test_a_free_starting_value_beyond_the_limit(self):
-        compile_error("(real k free@(* 1e100 1e100))")
+    @SATURATE
+    @pytest.mark.parametrize(
+        "expr, limit",
+        [("(f 1e100)", 1e150), ("(f -1e100)", 1e150), ("(- (f 1e100))", -1e150)],
+    )
+    def test_a_real_result_is_clamped(self, expr, limit):
+        assert value(f"(func f ((real x)) (* x x)) (real v {expr})", "v") == limit
 
-    @LIMIT
-    def test_a_starting_value_known_when_compiling_beyond_the_limit(self):
-        compile_error("(real k (* 1e100 1e100))")
+    @SATURATE
+    def test_a_result_beyond_the_largest_real_is_clamped(self):
+        assert value("(real v (* 1e150 1e150 1e150))", "v") == 1e150
 
-    def test_a_computed_result_is_not_held_to_the_limit(self):
-        assert value("(func f ((real x)) (* x x)) (real v (f 1e100))", "v") == 1e200
+    @SATURATE
+    def test_an_int_result_is_clamped_to_exactly_the_limit(self):
+        assert value("(int v (* (^ 10 100) (^ 10 100)))", "v") == 10**150
+
+    @SATURATE
+    def test_a_ratio_result_is_clamped_to_exactly_the_limit(self):
+        assert value("(ratio v (/ (^ 10 200) 3))", "v") == 10**150
+
+    def test_an_int_inside_the_limit_stays_exact(self):
+        assert value("(int v (+ (^ 10 149) 1))", "v") == 10**149 + 1
+
+    def test_an_operation_with_several_arguments_is_clamped_once(self):
+        # Clamped after each product, the value would be 1e-50.
+        assert value("(real v (* 1e150 1e150 1e-200))", "v") == pytest.approx(1e100)
+
+    @SATURATE
+    def test_a_starting_value_known_when_compiling_is_clamped(self):
+        assert value("(real k (* 1e100 1e100))", "k") == 1e150
+
+    @SATURATE
+    def test_a_free_starting_value_is_clamped(self):
+        assert obj(mtpc("(real k free@(* 1e100 1e100))"), "k")["value"]["free"] == 1e150
 
 
 @rule("rounding")
