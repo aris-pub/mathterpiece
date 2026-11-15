@@ -365,8 +365,7 @@ same version are read by the same rules.
 :class: note
 The .mtpc states a version of its format, 4, and this spec has no version yet. Bead mtp-ydd4.7.60.
 The runtime also reads an older form of version 4: a listener with no `in`, or with several views in
-`in`, is heard in every view that shows its shape (`heardIn` in web/src/click.ts, line 35, and
-docs/mtpc.md, "Objects"). The compiler (mathterpiece/mtpc.py, line 31) and the runtime
+`in`, is heard in every view that shows its shape (`heardIn` in web/src/click.ts, line 35). The compiler (mathterpiece/mtpc.py, line 31) and the runtime
 (web/src/doc.ts, line 152) both use version 4, so two version 4 files can follow different rules.
 mtp-ydd4.7.17.
 :::
@@ -382,10 +381,8 @@ wording and the position that it gives, the bytes of the .mtpc, and how the comp
 ```
 
 So two conforming compilers may write different bytes for one source, as long as a runtime builds
-the same live model from both. For example, docs/mtpc.md, "Top level", has no rule for which value
-`shared` holds when two values of an attribute are equally common, and `_shared` in
-mathterpiece/mtpc.py, line 426, picks the one whose JSON text sorts first. Another compiler may
-pick the other.
+the same live model from both. For example, the members of a JSON object may be written in any
+order, so one compiler may write `{"r": 1, "x": 0}` where another writes `{"x": 0, "r": 1}`.
 
 ```{rule} conformance
 - An implementation of the compiler conforms to this spec when, for every source and the files
