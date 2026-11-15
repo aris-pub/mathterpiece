@@ -63,9 +63,9 @@ the parser drop the mark.
 
 ```{rule} expression-positions
 Each expression that the parser produces has a position: the line and the column of its
-first character, counting from 1. A byte order mark at the start is not counted. A line feed
-(U+000A) starts a new line. Every other character, a tab and a carriage return included, adds 1 to
-the column. An expression that the parser builds from a shorter spelling has the position given in
+first character, counting from 1. A byte order mark at the start is not counted. A newline
+(line feed, U+000A) starts a new line. Every other character, a tab included, adds 1 to the
+column. An expression that the parser builds from a shorter spelling has the position given in
 {numref}`shorthand-forms`.
 ```
 
@@ -75,23 +75,23 @@ the column. An expression that the parser builds from a shorter spelling has the
 ```
 
 ```{rule} whitespace-and-comments
-Whitespace is the four characters space (U+0020), tab (U+0009), line feed
-(U+000A) and carriage return (U+000D). A comment starts with `;` and runs up to the next
-line feed, or to the end of the source. Whitespace and comments have no meaning. Inside a string
+Whitespace is the three characters space (U+0020), tab (U+0009) and newline
+(line feed, U+000A). A comment starts with `;` and runs up to the next newline, or to the end of
+the source. Whitespace and comments have no meaning. Inside a string
 literal, `;` and whitespace are text.
 ```
 
-So U+00A0 (no-break space), U+2028 (line separator), a form feed, a vertical tab and the other
+A source holds no carriage return, since {numref}`source-text` turns each one into a newline. So
+U+00A0 (no-break space), U+2028 (line separator), a form feed, a vertical tab and the other
 characters whose Unicode general category is Zs, or whose bidirectional class is WS, B or S, are
-errors outside string literals and
-comments. {doc}`grammar` gives the places where whitespace and comments may be written, and
+errors outside string literals and comments. {doc}`grammar` gives the places where whitespace and comments may be written, and
 {numref}`interpolated-strings` the places inside an {term}`interpolated string`.
 
 :::{admonition} Code differs
 :class: note
 `parse.py:157` (`skip_blank`) and `parse.py:75` (`_is_delimiter`) use `ch.isspace()`, so the
 parser reads every character for which `str.isspace()` is true as whitespace. Bead mtp-ydd4.7.2
-limits whitespace to the four characters of the rule.
+limits whitespace to the three characters of the rule.
 :::
 
 ## Where words end
