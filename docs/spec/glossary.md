@@ -247,6 +247,14 @@ site
   The number that each call of a random function has, counted from 0 in the order of the calls in
   the source after the rewrite step. Defined in {doc}`evaluation`.
 
+declaration
+  A form that creates a new thing that can be addressed: an object of the world model, a function,
+  a type or a choreo, with a name or without one ({numref}`declarations-and-bindings`).
+
+binding
+  A name that a `let`, a `foreach` or a parameter gives to a value for a part of a source. A binding
+  creates nothing ({numref}`declarations-and-bindings`).
+
 scope
   A part of a file in which some names may be used, such as the body of a motif or of a `let`
   ({numref}`scopes`).

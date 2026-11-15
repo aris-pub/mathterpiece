@@ -1,8 +1,9 @@
 (scope)=
 # Names and scope
 
-This page defines the {term}`forms <form>` that declare {term}`names <name>`, the part of a source
-in which each name may be used, and the declaration to which each use of a name refers. Which
+This page defines {term}`declarations <declaration>` and {term}`bindings <binding>`, the part of a
+source in which each {term}`name` may be used, and the declaration or binding to which each use of
+a name refers. Which
 characters a name holds is defined in {numref}`name-characters`, and which names a declaration may
 take in {numref}`keywords` and {numref}`declaration-names`. Which {term}`expressions <expression>`
 may read the scene, a formula or the page is defined in {doc}`binding-time`.
@@ -11,6 +12,23 @@ The rewrite step resolves every name to its declaration ({numref}`compile-steps`
 that breaks a rule of this page is rejected in the rewrite step. A name that is built from a value,
 `(name S)` with `S` reading a `foreach` name or a motif parameter, is resolved in the prove step
 instead ({numref}`names-from-values`). This page specifies the language.
+
+## Declarations and bindings
+
+```{rule} declarations-and-bindings
+A declaration is a {term}`form` that creates a new thing that can be addressed: an object of the
+world model, a function, a type or a choreo. The thing exists whether or not the source gives it a
+name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
+for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
+parameters of a function, a motif, a variant or a choreo, are bindings. An `import` creates
+nothing either: it gives names to the things that the declarations of another file create
+({doc}`imports`).
+```
+
+So `(real a 1)`, `(circle c (r a))`, `(canvas v s)`, `(func twice ((real x)) (* 2 x))` and
+`(type unit real (>= 0) (<= 1))` are declarations, and so is a listener written in a
+canvas, such as `(on-click c (move a (to 0) (duration 1)))`, which creates a listener with no name. In
+`(let ((k 2)) (circle c (r k)))`, the circle `c` is a declaration and `k` is a binding.
 
 ## Scopes
 
