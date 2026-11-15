@@ -251,11 +251,10 @@ no part of it. For a .mtpc of another version, the error gives both versions.
 
 :::{admonition} Code differs
 :class: note
-The runtime checks only the version (web/src/elements.ts, lines 100 to 103). A file that breaks the
-schema or is corrupt either makes the `Runtime` constructor throw, so that the model fails to load
-with that message, or throws later, when a component draws, or draws something wrong with no
-error. The schema docs/mtpc.schema.json is checked only by the tests (tests/mtpc_check.py).
-mtp-ydd4.7.16, mtp-ydd4.7.27.
+The runtime checks the version and the schema (web/src/elements.ts, web/src/schema.ts), but it
+does not look for corrupt files. A corrupt .mtpc either makes the `Runtime` constructor throw, so
+that the model fails to load with that message, or throws later, when a component draws, or draws
+something wrong with no error. mtp-ydd4.7.27.
 :::
 
 ```{rule} no-errors-after-loading

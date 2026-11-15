@@ -13,6 +13,7 @@ import { latexOf, termClass, typeset } from "./math.ts";
 import { Player, type Span } from "./player.ts";
 import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
+import { schemaProblem } from "./schema.ts";
 import { Showings } from "./standins.ts";
 import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
@@ -99,6 +100,11 @@ export class MtpModel extends HTMLElement {
   set doc(doc: Doc) {
     if (doc.mtpc !== SPEC_VERSION) {
       this.fail(`this runtime reads .mtpc files of spec version ${SPEC_VERSION}, but this file states version ${String(doc.mtpc)}`);
+      return;
+    }
+    const problem = schemaProblem(doc);
+    if (problem) {
+      this.fail(problem);
       return;
     }
     const rt = new Runtime(doc);
