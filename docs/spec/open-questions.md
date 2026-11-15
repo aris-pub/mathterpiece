@@ -11,7 +11,7 @@ boxes of each part.
 | {doc}`lexical` | Q-lexical-1 to 10 |
 | {doc}`grammar` | Q-grammar-1 to 11 |
 | {doc}`core` | Q-core-1 to 27 |
-| {doc}`evaluation` | Q-evaluation-1 to 12 |
+| {doc}`evaluation` | Q-evaluation-1 to 13 |
 
 ## P1. When bodies are proved: once, or once per copy
 
@@ -54,9 +54,17 @@ Using a type to choose a rewrite makes the form core (Q-core-7, `map` over an in
 
 **Decided:** a shorthand means exactly its rewrite, and where the code gives it another meaning,
 the code is changed. A form that needs a value or a type to be rewritten is core
-({numref}`sugar-form`, {numref}`sugar-rewrites`). `(on-drag p p.pos)` (Q-core-23) and
-`(foreach i n …)` (Q-core-27) are still open under P3, since applying P2 would change existing
-figures.
+({numref}`sugar-form`, {numref}`sugar-rewrites`).
+
+**Decided (2026-11-15):** `(on-drag p p.pos)` is sugar for `(on-drag p (move p.pos (to pointer)))`,
+and `p.x` and `p.y` likewise, and the two spellings mean the same at all times. Dragging a group, a
+row or a column, fixed-size or not, writes its `translate`, for both spellings
+({numref}`sugar-rewrites`, {numref}`drag-group-translate`) (Q-core-23). `(foreach k n …)` means
+exactly `(foreach k (range n) …)`. A `foreach` over a count, or over a list whose length is known
+only while drawing and has an upper bound, makes as many copies as the bound, and copy k exists
+only while k is below the count or the length ({numref}`foreach-count`,
+{numref}`foreach-bounded-length`) (Q-core-27). Since an int and a list are told apart by their
+type, `(foreach k n …)` stays core by {numref}`sugar-form`.
 
 ## P3. Which forms are core
 
@@ -73,15 +81,7 @@ instances, rows and columns, `exists-when`, `let`, the defaults of instances and
 and an `in-order` of one item. The operators are library functions, which a declared function may
 replace ({numref}`library-form`). The list is in {doc}`core`, "Summary".
 
-Still open, because applying P2 changes existing figures:
-
-- Q-core-23, `(on-drag p p.pos)` as `(on-drag p (move p.pos (to pointer)))`: a group is dragged
-  differently by the two. Applying P2 changes examples/two-canvases.mtp, whose corners are
-  fixed-size groups dragged by a bare target.
-- Q-core-27, `(foreach i n …)` as `(foreach i (range n) …)`: with a count known only while drawing,
-  the first makes as many copies as the count can be at most, and the second is an error.
-  Applying P2 makes examples/ball-puzzle.mtp, examples/spiral-of-copies.mtp and
-  ~/blog/ball-puzzle/ball-puzzle.mtp stop compiling.
+The two cases that changed existing figures, Q-core-23 and Q-core-27, are decided under P2.
 
 ## P4. One meaning for every expression, at both times
 
@@ -96,22 +96,21 @@ input while drawing (Q-evaluation-4), rounding of colours (Q-evaluation-5), the 
 The open choice is what numbers are: IEEE doubles at both times, with `1/3` only a way to write a
 real, or exact ratios at both times, which the runtime would then implement.
 
-**Decided:** ints and ratios are exact at both times, reals may differ in their last digits and
-the prover widens every real range outward to allow for it, and a folded value is final
-({numref}`same-value-at-both-times`, {numref}`real-error-bound`,
-{numref}`prover-widens-reals`).
+**Decided:** ints and ratios are exact at both times, and a folded value is final
+({numref}`same-value-at-both-times`). The first decision let reals differ in their last digits,
+and the decisions of 2026-11-15 below replace it.
 
-**Decided (2026-11-15):** ints and ratios are exact at both times ({numref}`number-types`). `+`,
-`-`, `*`, `/` and `sqrt` on reals give the same binary64 result at both times, and every other
-function on reals differs by at most `max-real-error` ({numref}`real-error-bound`). The ±10¹⁵⁰
-limit applies to every starting value known when compiling, and an overflow gives `none`
-({numref}`number-limit`, {numref}`operations-that-give-none`). Infinities are values at both
-times, so with `(real big infty (const))` and a free `(real y 1)`, `(+ y big)` is `infty` when
-folded and while drawing (Q-evaluation-4, {numref}`infinity`). The channels of a mixed color round
-halves up at both times, as CSS `color-mix()` does (Q-evaluation-5,
-{numref}`mixed-color-channels`). Still open: what the other built-in functions give at an infinite
-input (Q-evaluation-10), what happens when an infinity reaches another place that needs a finite
-number (Q-evaluation-11), and the value of `max-real-error` (Q-evaluation-12).
+**Decided (2026-11-15):** ints and ratios are exact at both times ({numref}`number-types`). Every
+function on reals gives the correctly rounded binary64 result of its exact value, at both times,
+so folding and drawing never differ, and the prover does not widen ranges
+({numref}`correctly-rounded-reals`, {numref}`same-value-at-both-times`) (Q-evaluation-9,
+Q-evaluation-12). Infinity is removed from the language: `infty` is not a name, a real is finite,
+and an overflow gives `none` ({numref}`number-types`, {numref}`operations-that-give-none`)
+(Q-evaluation-4, Q-evaluation-10, Q-evaluation-11). The ±10¹⁵⁰ limit applies to every starting
+value known when compiling ({numref}`number-limit`). The channels of a mixed color round halves up
+at both times, as CSS `color-mix()` does (Q-evaluation-5, {numref}`mixed-color-channels`).
+
+A type `real|infty`, with `real` finite, may be added later, when a figure needs it.
 
 ## P5. Equality for each type
 
@@ -148,10 +147,12 @@ bourgain-densities.mtp, `koch` in koch-snowflake.mtp and `has-divisor` in ulam-s
 
 **Settles:** Q-evaluation-8.
 
-**Decided:** a depth limit, the same at both times, past which a call gives `none`
-({numref}`call-depth-limit`).
+**Decided:** a depth limit, the same at both times ({numref}`call-depth-limit`).
 
-**Decided (2026-11-15):** `max-call-depth` is 256 (Q-evaluation-8).
+**Decided (2026-11-15):** `max-call-depth` is 256 (Q-evaluation-8). A call past it when folding is
+a compile error, at the call, and a call of a recursive function does not get a type that includes
+`none` ({numref}`call-depth-limit`). Since no error may appear after loading (P11), what happens
+to a call past the limit while drawing is open: Q-evaluation-13 in {doc}`evaluation`.
 
 ## P7. What a name may contain, and what text the parser accepts
 
@@ -166,6 +167,29 @@ byte order mark at the start.
 with an optional `?` at the end and `_` only right after a head, ASCII whitespace and digits, and a
 byte order mark at the start of a file ignored.
 
+**Decided (2026-11-15):**
+
+- Letters in names are ASCII only, so `π`, `τ` and `∞` are not names ({numref}`name-characters`)
+  (Q-lexical-4).
+- `?` may end each part of a name, as in `found?.x` ({numref}`name-characters`).
+- `true`, `false` and `none` may be part of a name, as in `the-true-value`, but never a whole
+  name or a whole part between dots, so `p.true` is an error ({numref}`name-characters`)
+  (Q-lexical-7).
+- Whitespace is space, tab, carriage return and line feed ({numref}`whitespace-and-comments`).
+- No comment may be written in the braces of an interpolated string, around the expression
+  ({numref}`interpolated-strings`) (Q-lexical-3).
+- A form may touch its neighbors with no whitespace between them ({numref}`adjacent-items`)
+  (Q-grammar-1).
+- No declaration of any kind takes a keyword as its name: the head of a declaration, a shape, an
+  expression form, a step, a component or a listener, or `term`, `doc`, `exists-when` or `import`
+  ({numref}`keywords`). The heads of optional arguments are not keywords. No declaration takes the
+  name of a built-in type, `pointer` or `self`. A declaration may take the name of a built-in
+  function or constant, and from it on the name means the declared thing. `true`, `false` and
+  `none` are values, never names. The names of the standard library are ordinary declarations
+  brought in with `import` ({numref}`declaration-names`) (Q-lexical-8, Q-core-26).
+- The coined words "token", "run", "chunk", "sequence", "field" and "name part" are not used: the
+  spec writes out what they mean, and says "part" as the documents do.
+
 ## P8. Declare before use, everywhere
 
 **Proposed principle.** A name is used only after its declaration, in every scope, with no
@@ -178,16 +202,27 @@ may be written (Q-grammar-3).
 **Decided:** a name is used only after its declaration in every scope, imports included, and
 optional arguments come before the body, in any order.
 
+**Decided (2026-11-15):** a docstring comes after all the positional arguments and all the optional
+arguments, and before the body. A form that has no body has its docstring last
+({numref}`docstrings`).
+
 ## P9. `let` and `foreach` may be written wherever declarations may be written
 
 **Proposed principle.** `let` and `foreach` may be written in every body that holds declarations
 or items, and nowhere else: not among the optional arguments of a shape.
 
 **Settles:** Q-grammar-4 to 7. Q-grammar-10 (whether a listener on its own view names that view)
-is a separate question, already filed as mtp-6k7f.
+was a separate question, filed as mtp-6k7f.
 
 **Decided:** `let` and `foreach` may be written in every body that holds declarations or items, the
-top level included, and never among the arguments of a form.
+top level included, and never among the arguments of a form. This includes the constraints of a
+variable or a type, the conditions of a writer, every `(defaults …)`, and the items of a palette
+and of an interface ({numref}`body-let-foreach`, {numref}`contexts-table`).
+
+**Decided (2026-11-11, mtp-6k7f):** every listener is written in the body of its view, acts only on
+what happens in that view, and has no `(in …)`. A listener on its own view leaves out the name of
+the view. Controls stay at the top level, with `(in …)` ({numref}`listeners-in-views`)
+(Q-grammar-10).
 
 ## P10. What a conforming implementation must match
 
@@ -214,3 +249,13 @@ refuses every corrupt .mtpc and runs no part of it ({numref}`corrupt-mtpc`,
 are a compile error when both bounds are known when compiling ({numref}`none-at-known-inputs`).
 Any int is a seed, and two seeds that are equal modulo 2³² draw the same values
 ({numref}`seed-variable`, {numref}`random-hash`) (Q-evaluation-6).
+
+## P11. No figure breaks in front of the reader
+
+**Principle (the author, 2026-11-15).** We do not break figures in front of the reader's face.
+
+**Decided (2026-11-15):** once a model has loaded, nothing that a reader does and nothing that the
+runtime computes makes a figure or a component fail or show an error. Every case that could fail
+is rejected when compiling, or when the .mtpc is loaded ({numref}`no-errors-after-loading`). So a
+call past `max-call-depth` while drawing may not be an error, and Q-evaluation-13 asks what the
+language does in its place.

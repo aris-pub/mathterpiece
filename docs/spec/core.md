@@ -9,10 +9,9 @@ meaning is defined.
 The inventory was built from `mathterpiece/compiler.py` and `mathterpiece/parse.py` as they are
 on 2026-11-14, and then checked against `docs/reference.md` and `docs/syntax.md`. Citations of
 the form `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This part states the
-language as the author decided it on 2026-11-14 (decisions P1, P2 and P3 of
+language as the author decided it on 2026-11-14 and 2026-11-15 (decisions P1, P2 and P3 of
 {doc}`open-questions`). Where the code does not yet follow a rule, a box marked "Code differs"
-after the rule gives what the code does and the bead that will change it. Two questions are still
-open, in the boxes marked "Open question".
+after the rule gives what the code does and the bead that will change it.
 
 (core-kinds)=
 ## Kinds of form
@@ -36,9 +35,10 @@ that needs a value or a type to be rewritten is core.
 The library is the built-in functions, which are implemented natively, and the files of the
 standard library, which are written in mtp. A call of a library function is a call, which is a
 core form. The library holds functions, constants and declarations, and no form of the language.
-A declared function may take the name of a library function, operators included: from its
-declaration on, a call of that name calls the declared function.
 ```
+
+By {numref}`declaration-names`, a declaration may take the name of a built-in function or
+constant, operators included, and from that declaration on, the name means the declared thing.
 
 The compiler rewrites every sugar form in the rewrite step, which comes before the prove step
 ({numref}`compile-steps`), so the {term}`prover` is given only core forms. The prove step proves
@@ -99,6 +99,7 @@ any other rewrite of the declaration that it copies.
 | `(wait T)`, `(wait)`, in an animation's body | `(move none (duration T))`, `(move none)` | |
 | `(animation OPT… A B MORE…)`, and the body of a choreo | `(animation OPT… (in-order A B MORE…))` | `OPT…` are the optional arguments of the animation, the `(defaults …)` and the `(loop …)` |
 | `(K ITEMS… X MORE…)`, where `X` is a `(move …)` or a use of a choreo | `(K ITEMS… (animation X) MORE…)` | `K` is a control or a listener that has an animation (not a slider, an `on-drag` or an `on-pointermove`), and the form has at most one of an `(animation …)`, a `(move …)` and a use of a choreo |
+| `(on-drag S M.pos ITEMS…)`, `(on-drag S M.x ITEMS…)`, `(on-drag S M.y ITEMS…)` | `(on-drag S (move M.pos (to pointer)) ITEMS…)`, `(on-drag S (move M.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move M.y (to (. pointer 1))) ITEMS…)` | `M` names the shape or the term `S` |
 | `(C A1 … Ak)`, a use of `(choreo C (P1 … Pn) BODY…)` | `(animation BODY…)`, with each `Pi` replaced by `Ai`, and each `Pi` for i above k by its default. The declaration of `C` is removed | k is at least the position of the last parameter with no default. `C` uses only choreos declared before it. The use is written where an animation or a step of an animation's body may be written. The prover proves that each `Ai` fits the type of `Pi` |
 ```
 
@@ -148,6 +149,62 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
   and is compiled once, then bound to the parameter (mtp-08wd.5).
 - An imported file that the source uses only in part is compiled a second time on its own, to
   check the declarations that nothing uses (compiler.py:815-823) (mtp-08wd.6).
+:::
+
+So a bare name as the target of an `on-drag` is the position of the dragged shape, its `x` or its
+`y`, and any other bare name there is a compile error: `(on-drag p k)` must be written with a
+move, such as `(on-drag p (move k (to (. pointer 0))))`.
+
+### Dragging a group
+
+```{rule} drag-group-translate
+In an `on-drag` on a group, a row or a column, whether its `fixed-size` is true or not, a move
+whose target is the `pos`, the `x` or the `y` of that same container writes the container's
+`translate` in place of the target: all of it for `pos`, its first number for `x`, and its second
+number for `y`. In that move, `pointer` is the `translate` of the container at the press plus the
+motion of the pointer since the press, in the frame of the container's container.
+```
+
+By {numref}`sugar-rewrites`, `(on-drag g g.pos)` is `(on-drag g (move g.pos (to pointer)))`, so
+both spellings move the group by its `translate`, and the members keep their own positions.
+
+:::{admonition} Code differs
+:class: note
+For a bare target, the runtime moves each member of a group that is not fixed-size by the motion
+of the pointer (web/src/drag.ts:113-117, drag.ts:155-162), and moves a fixed-size group by its
+`translate` (drag.ts:108-111, drag.ts:149-153). For a move, it writes the group's `x` and `y`
+(drag.ts:138-147), and the compiler marks the `translate` as what the drag writes only for a
+fixed-size group (compiler.py:4009-4021). docs/reference.md, "Dragging" ("A group moves every
+member by the pointer's motion"), is wrong. Bead mtp-ydd4.7.36 makes the code and the documents
+follow the rule.
+:::
+
+### `foreach` over a count or a list whose length is known only while drawing
+
+```{rule} foreach-count
+`(foreach N X ITEMS…)`, where `X` is an int, means exactly `(foreach N (range X) ITEMS…)`.
+```
+
+The int and the list are told apart by the type of `X`, so this form is core by
+{numref}`sugar-form`, as `(map n f)` is.
+
+```{rule} foreach-bounded-length
+A `foreach` over a list whose length is known only while drawing makes as many copies as the upper
+bound of that length that the prover proves ({numref}`prover-finds-ranges`). Copy k, counted from
+0, exists only while k is below the length. When the prover proves no upper bound of the length
+below the number limit, the `foreach` is a compile error.
+```
+
+So with `(int n 3 (>= 0) (<= 5))`, which a slider writes, `(foreach k n …)` and
+`(foreach k (range n) …)` both make 5 copies, and copies 3 and 4 do not exist while `n` is 3.
+examples/ball-puzzle.mtp and examples/spiral-of-copies.mtp use this.
+
+:::{admonition} Code differs
+:class: note
+The compiler makes the bounded copies for a count (compiler.py:880-915), but rejects a list whose
+length is known only while drawing, `(range n)` included, with "the length of the list a foreach
+goes through must be known when compiling" (compiler.py:930-934). Bead mtp-ydd4.7.37 makes the
+compiler follow the rule.
 :::
 
 ### The form `.`
@@ -221,7 +278,7 @@ inventory.
 
 - **`(. X Y)`.** Whether `Y` is an attribute depends on `X` ({numref}`dot-part`).
 - **`foreach`.** The number of copies is a value. `(foreach i n …)`, with an int `n`, and
-  `(foreach x xs …)` are told apart by the type of the second item (Q-core-27).
+  `(foreach x xs …)` are told apart by the type of the second item ({numref}`foreach-count`).
 - **A motif instance.** Its members are the motif's body with the values of its parameters, made in
   the expand step.
 - **A variant instance.** It is its base shape with the variant's parameters as attributes, some
@@ -250,56 +307,8 @@ inventory.
   `(map xs f)` by the type of `n`. This is part of the typing of the library function `map`
   ({doc}`stdlib`).
 - **The operators, `not`, `abs`, `or?`, `none?`, `some?`, `somes` and the box points.** They are
-  library functions, which the compiler reads itself. By {numref}`library-form`, a declared
+  library functions, which the compiler reads itself. By {numref}`declaration-names`, a declared
   function may take their names, as `(func + ((real a) (real b)) 7)`, after which `(+ 1 2)` is 7.
-
-## Questions still open
-
-:::{admonition} Open question Q-core-23
-:class: warning
-reference.md, "Dragging", has "`(on-drag p p.pos)` is short for
-`(on-drag p (move p.pos (to pointer)))`, and `p.x` and `p.y` likewise", which for `p.x` would be
-`(to pointer.x)`. By P2 the bare target would mean exactly that move. For a shape that is not a
-group, and for an instance, the runtime moves the shape in the same way for both: to its position
-at the press plus the pointer's motion since (web/src/drag.ts:138-147, drag.ts:164-169). For a
-group they differ. With the bare target, a group's members each move by the pointer's motion
-(drag.ts:113-117, drag.ts:155-162), and a fixed-size group moves by its `translate`
-(drag.ts:108-111, drag.ts:149-153). With the move, the runtime writes the group's own `x` and `y`,
-also for a fixed-size group, while the compiler marks the `translate` as what the drag writes
-(compiler.py:4009-4021).
-
-Applying P2 changes one figure: examples/two-canvases.mtp:58 and :63, `(foreach c corners
-(on-drag c c.pos))`, where each corner is a fixed-size group. Its corners would no longer move by
-their `translate`. No figure drags a plain group with a bare target.
-
-Options: (a) apply P2 unchanged, and change two-canvases.mtp to drag something else. (b) the
-bare target is sugar for the move, and a drag's move of a group's own position is defined to move
-the group as the bare target does today: its members by the pointer's motion, or a fixed-size
-group by its `translate`. two-canvases.mtp does not change. (c) the bare target is core, and the
-sentence of reference.md is removed.
-:::
-
-:::{admonition} Open question Q-core-27
-:class: warning
-reference.md, "Special forms", gives `(foreach i n …)` as `(foreach i (range n) …)`. By P2 they
-mean the same, although `foreach` stays core. They differ today for a count that is known only
-while drawing and has an upper bound. `(foreach i n …)` then makes as many copies as `n` can be at
-most, and copy k exists only while k is below `n` (compiler.py:880-915). `(range n)` then has no
-length known when compiling, which is the error "the length of the list a foreach goes through
-must be known when compiling" (compiler.py:930-934).
-
-Applying P2 makes three figures stop compiling: examples/ball-puzzle.mtp:52 (`(foreach k size …)`,
-with the motif parameter `size` from 0 to 5), examples/spiral-of-copies.mtp:19 (`(foreach k n …)`,
-with `n` from 1 to 60, set by a slider) and ~/blog/ball-puzzle/ball-puzzle.mtp:136 (`(foreach j size
-…)`).
-
-Options: (a) apply P2 unchanged: a count known only while drawing is an error, and the three
-figures make a fixed number of copies, each with an `exists-when`. (b) a `foreach` over a list
-whose length is known only while drawing, with an upper bound, makes as many copies as the length
-can be at most, and copy k exists only while k is below the length. Then `(range n)` gives the
-same copies as `n`, and the three figures do not change. (c) the two keep different meanings, and
-reference.md is changed.
-:::
 
 (core-inventory)=
 ## Inventory of heads
@@ -438,8 +447,8 @@ a default that reads its own container is an error, also once it is moved into t
 
 ### Special forms and other expressions
 
-The special forms are the set at compiler.py:122. No declared function may have the name of one
-(compiler.py:181-185).
+The heads of this table that are written as words, from `.` to `type-of`, are keywords
+({numref}`keywords`).
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
@@ -478,7 +487,7 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `seed` | the last argument of a random function, `(seed S)` | compiler.py:2245-2252 |
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections | compiler.py:2652-2795 |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box | compiler.py:5420-5440 |
-| `pi`, `π`, `tau`, `τ`, `euler`, `infty`, `∞` | constants | builtins.py:246-254 |
+| `pi`, `tau`, `euler` | constants. builtins.py has `π`, `τ`, `infty` and `∞` too, which bead mtp-ydd4.7.33 removes | builtins.py:246-254 |
 | the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp | `mathterpiece/stdlib/` |
 
 ### Transitions and animations
@@ -519,7 +528,9 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `animation` on a control or a listener | core | its animation | {doc}`reaction` |
 | `move`, or a use of a choreo, in place of `animation` | sugar | | {numref}`sugar-rewrites` |
 | the move of a slider | core | a `move` or the name of a transition, its first item | {doc}`page-interface`, {doc}`reaction` |
-| the target of `on-drag`, `toggle`, `on-pointermove` | core | a name, or for `on-drag` a `(move TARGET (to X))`. Whether the bare target of `on-drag` is sugar is Q-core-23 | {doc}`reaction` |
+| the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
+| the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
+| the target of `on-drag` written as a name | sugar | the move of the shape's position | {numref}`sugar-rewrites` |
 | `label` | core | a control's label | {doc}`page-interface`, {doc}`accessibility` |
 | `tex` in a label | core | a label given as LaTeX | {doc}`page-interface` |
 | `step` on a slider | core | the number of positions of its knob | {doc}`page-interface` |
@@ -549,7 +560,6 @@ their place. They are not forms of the language.
 | `dash-offset` | as an item | write `(dash [4 2] 1)` | compiler.py:7378-7382 |
 | `move` | in a canvas | a canvas takes no move | compiler.py:4240-4245 |
 | `term` | at the top level | a term is given inside its formula | compiler.py:1050-1051 |
-| `let` | at the top level | write it in a scene, group, `foreach` or motif body | compiler.py:949-954 |
 
 (core-docs-check)=
 ## Where the old documents are wrong
@@ -567,8 +577,14 @@ documents are cut down in mtp-ydd4.7.
   a control or a listener is an error (see "Heads that are errors"). reference.md, "Writes and
   conditions" ("`(when bool)` is different: it decides whether the writer is active"), and
   syntax.md, section 8, which gives `(when on)` as an optional argument, are wrong.
-- **`doc` as a reserved word.** `doc` is reserved ({numref}`reserved-words`). syntax.md, "Names",
-  which leaves it out of the reserved words, is wrong.
+- **`doc` and the reserved words.** `doc` is a keyword ({numref}`keywords`), and no declaration
+  takes a keyword as its name ({numref}`declaration-names`). syntax.md, "Names", which leaves `doc`
+  out of its list of reserved words and lists `const` in it, is wrong.
+- **A function with the name of a constant.** A declaration may take the name of a built-in
+  constant ({numref}`declaration-names`). reference.md, "Functions" (line 124), which makes it a
+  compile error, is wrong.
+- **Dragging a group.** A drag of a group writes its `translate` ({numref}`drag-group-translate`).
+  reference.md, "Dragging" ("A group moves every member by the pointer's motion"), is wrong.
 - **The arguments of a choreo.** An argument may be any expression that may be written in the body
   where its parameter is written ({numref}`sugar-rewrites`). reference.md, "Transitions and
   animations" ("Arguments are known when compiling … `(* 2 k)` is a compile error"), is wrong.
@@ -592,6 +608,7 @@ documents are cut down in mtp-ydd4.7.
 | `defaults` on a group, a row or a column, and in a formula | sugar | {numref}`sugar-rewrites` |
 | `dash` with one argument, `pos` | sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | sugar | {numref}`sugar-rewrites` |
+| a name as the target of `on-drag` | sugar | {numref}`sugar-rewrites` |
 | `wait`, `roll-dice`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
 | `move` or a use in place of `animation` | sugar | {numref}`sugar-rewrites` |
 | `choreo` and its uses | sugar | {numref}`sugar-rewrites` |
@@ -604,7 +621,7 @@ documents are cut down in mtp-ydd4.7.
 | `func`, `func[T]`, `fn`, calls | core | {doc}`types`, {doc}`evaluation` |
 | `transition`, `move` and their parts, `step`, `step-ease` | core | {doc}`time` |
 | `animation`, `at-once`, `in-order`, `loop`, `defaults` in an animation | core | {doc}`time`, {numref}`animation-step` |
-| `foreach` | core | {doc}`binding-time` |
+| `foreach` | core | {numref}`foreach-count`, {numref}`foreach-bounded-length`, {doc}`binding-time` |
 | `let` | core | {doc}`scope`, {doc}`binding-time` |
 | `(T N …)`, a variable, `font` and its parts | core | {doc}`world-model`, {doc}`reaction` |
 | `free@` | core | {doc}`reaction`, {doc}`binding-time` |
@@ -620,15 +637,8 @@ documents are cut down in mtp-ydd4.7.
 | `doc` | core | {doc}`compiled-format` |
 | the views, the controls and their items | core | {doc}`page-interface`, {doc}`reaction`, {doc}`concurrency` |
 | the fourteen listeners | core | {doc}`reaction`, {doc}`concurrency`, {doc}`lifecycle` |
-| the target of `on-drag` | core (Q-core-23) | {doc}`reaction` |
+| a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-translate` |
 | a condition | core | {doc}`reaction` |
 | the operators, `not`, `abs`, the `none` functions and the box points | library | {numref}`library-form` |
 | the built-in functions of builtins.py and the collections, `map` over an int included | library | {doc}`stdlib` |
 | the constants and the standard library files | library | {doc}`stdlib` |
-
-## Open questions in this part
-
-- Q-core-23: the bare target of `on-drag` and its move drag a group differently, and
-  examples/two-canvases.mtp drags fixed-size groups by the bare target.
-- Q-core-27: `(foreach i n …)` with a count known only while drawing has no equal in
-  `(foreach i (range n) …)`, and three figures use it.

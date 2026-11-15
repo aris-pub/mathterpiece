@@ -33,7 +33,7 @@ from mathterpiece.nodes import (
     RealLit,
     StrLit,
 )
-from mathterpiece.parse import ParseError, parse
+from mathterpiece.parse import ParseError, _Parser, parse
 
 ROOT = Path(__file__).parent.parent
 GRAMMAR = ROOT / "docs" / "spec" / "mtp.lark"
@@ -84,19 +84,19 @@ ACCEPTED = [
     "(f 2.5 1. .5 -.5 1e3 1.5E-3 +2e+2)",
     "(f 2i -1.5i 1e3i 1+2i 1-2.5e3i -1e+2+3i)",
     "(f true false none)",
-    "(f truex true.x none.x none[0] x.none)",
+    "(f truex the-true-value nonex true-x none? true? x.none? found?.x ball.on-floor?)",
     "(f + - * / ^ < <= > >= = != .)",
     "(f a-b a- a--b a? none? a?.b a1 a-1 Ab)",
     "(f p.r p.pos.x)",
     "(f xs[0] xs[-1] xs[(+ k 1)] g['m1'] xs[ 0 ] f[real real] xs[0][1])",
-    "(f xs[0].a xs[0].a.b[1].c xs[0].true)",
+    "(f xs[0].a xs[0].a.b[1].c xs[0].truex xs[none])",
     "(f [] [ ] [1 2] [[1] [2]] [a b c][h] [a][0][1] [(f)(g)])",
     "(f real|none a|b|c 1|2 a[0]|b b|c[0] true|x .|a)",
     "(f 'a' 'it\\'s' 'back\\\\slash' 'line\\nbreak' '')",
     "(f tex'\\frac12' tex'f\\'(x)' tex'a\\\\' tex'\\q')",
     "(f $'x = {x}' $'{x:.2f}' $'{ x }' $'{x :>5}' $'{x:}' $'{{lit}}' $'}}' $'{(* 2 a)}')",
     "(f $'{[1 2]}' $'{'s'}' $'{a[0]}' $'{a|b}' $'{$'{a}' }')",
-    "(f $'{x ; a comment\n}')",
+    "(f $'{(g ; a comment\n x)}')",
     "(f $'{a:b}' $'{a.b:c}' $'{a[0].b:c}' $'{#'n-{k}'.x :y}')",
     "(f #'dot-{k}' #'dot-{k}'.pos #'row-{i}'[0] #'a{b}'.c.d[0].e #'{k}')",
     "(f doc@'text')",
@@ -207,13 +207,16 @@ REJECTED = [
     "(f #'a{b}'.)",
     "(f #'a{b}'[])",
     "(f 'a':b)",
+    "(f none[0]x)",
 ]
 
 BOM = "mtp-ydd4.7.1"
 BLANKS = "mtp-ydd4.7.2"
 NAMES = "mtp-ydd4.7.3"
 DIGITS = "mtp-ydd4.7.4"
-NESTED_FIELDS = "mtp-kzx2"
+NESTED_BRACES = "mtp-kzx2"
+BRACE_COMMENTS = "mtp-ydd4.7.31"
+LITERAL_PARTS = "mtp-ydd4.7.32"
 
 # Sources on which the grammar, which states the decided language, and today's parser differ.
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
@@ -255,11 +258,21 @@ KNOWN_DIFFERENCES = {
     "(f ٣)": DIGITS,
     "(f 1/٣)": DIGITS,
     "(f ١.٥)": DIGITS,
-    # After a string nested in a field ends, the parser reads the rest of the field as if it were
-    # outside braces.
-    "(f $'{$'{a}'}')": NESTED_FIELDS,
-    "(f $'{#'n-{k}'.x:y}')": NESTED_FIELDS,
-    "(f $'{[$'{a}' b]}')": NESTED_FIELDS,
+    # After a string nested in braces ends, the parser reads the rest of the braces as if it were
+    # outside them.
+    "(f $'{$'{a}'}')": NESTED_BRACES,
+    "(f $'{#'n-{k}'.x:y}')": NESTED_BRACES,
+    "(f $'{[$'{a}' b]}')": NESTED_BRACES,
+    "(f $'{x ; a comment\n}')": BRACE_COMMENTS,
+    "(f $'{ ;c\n x}')": BRACE_COMMENTS,
+    "(f #'a{k ;c\n}')": BRACE_COMMENTS,
+    "(f true.x)": LITERAL_PARTS,
+    "(f none.x)": LITERAL_PARTS,
+    "(f x.none)": LITERAL_PARTS,
+    "(f p.true)": LITERAL_PARTS,
+    "(f xs[0].false)": LITERAL_PARTS,
+    "(f none[0])": LITERAL_PARTS,
+    "(a.true_ x)": LITERAL_PARTS,
 }
 
 OPERATOR_NAMES = {"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!=", ".", "free@"}
@@ -288,14 +301,68 @@ def _names_step(forms):
     return None if any(_bad_name(f) for f in forms) else forms
 
 
+LITERALS = {"true", "false", "none"}
+
+
+def _literal_part(node) -> bool:
+    """Whether a node holds a name with a part that is exactly true, false or none."""
+    if isinstance(node, Name):
+        return any(p in LITERALS if isinstance(p, str) else _literal_part(p) for p in node.parts)
+    if isinstance(node, (Form, ListLit, Bar, Brackets)):
+        return any(_literal_part(x) for x in node.items)
+    if isinstance(node, InterpStrLit):
+        return any(_literal_part(p) for p in node.parts if not isinstance(p, str))
+    if isinstance(node, Field):
+        return _literal_part(node.expr)
+    return False
+
+
+def _literal_parts_step(forms):
+    return None if any(_literal_part(f) for f in forms) else forms
+
+
+class _NoCommentInBraces(_Parser):
+    """The parser once BRACE_COMMENTS is done: around the expression in the braces of an
+    interpolated string, whitespace and no comment."""
+
+    def __init__(self, src: str):
+        super().__init__(src)
+        self.around: list[bool] = []
+
+    def interp_part(self):
+        self.around.append(True)
+        try:
+            return super().interp_part()
+        finally:
+            self.around.pop()
+
+    def node(self):
+        # Inside the expression, such as a form in the braces, comments are allowed again.
+        saved, self.around = self.around, []
+        try:
+            return super().node()
+        finally:
+            self.around = saved
+
+    def skip_blank(self):
+        if not self.around:
+            return super().skip_blank()
+        while self.peek() and self.peek().isspace():
+            self.advance()
+        if self.peek() == ";":
+            raise ParseError("a comment in braces", self.pos())
+
+
 # For the random sources, which no list could name in advance: the parser as it will be once each
-# bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.
-PENDING_STEPS = {NAMES: _names_step}
+# bead is done. A step or a parser is removed together with the last KNOWN_DIFFERENCES entry of
+# its bead.
+PENDING_PARSERS = {BRACE_COMMENTS: _NoCommentInBraces}
+PENDING_STEPS = {NAMES: _names_step, LITERAL_PARTS: _literal_parts_step}
 
 
 def parser_after_beads(src: str):
     try:
-        forms = parse(src)
+        forms = _NoCommentInBraces(src).parse() if PENDING_PARSERS else parse(src)
     except ParseError:
         return None
     for step in PENDING_STEPS.values():
@@ -369,7 +436,7 @@ class Reading(Transformer):
     def form(self, c):
         return Form(tuple(_flat(c)))
 
-    seq = items = head_items = chunk = head_chunk = lambda self, c: _flat(c)
+    list_items = items = head_items = touching = head_touching = lambda self, c: _flat(c)
 
     def head(self, c):
         *words, last = c
@@ -402,20 +469,18 @@ class Reading(Transformer):
     def word(self, c):
         return c[0] if len(c) == 1 else Bar(tuple(c))
 
-    def first(self, c):
+    def one_word(self, c):
         first = c[0]
         if isinstance(first, Token):
-            parts: list = first.value.split(".")
-            if len(c) == 1 and first.value in ("true", "false"):
-                return BoolLit(first.value == "true")
-            if len(c) == 1 and first.value == "none":
+            if first.type == "NONE":
                 return NoneLit()
+            parts: list = first.value.split(".")
             for part in c[1:]:
                 parts.extend(part)
             return Name(tuple(parts))
         return first
 
-    def tail(self, c):
+    def after_brackets(self, c):
         parts: list = []
         for x in c:
             if isinstance(x, Token):
@@ -475,9 +540,9 @@ class Reading(Transformer):
                 parts.append(x)
         return InterpStrLit(tuple(parts))
 
-    interpolated = name_text = _pieces
+    interpolated = name_string_text = _pieces
 
-    def field(self, c):
+    def braces(self, c):
         expr = next(x for x in c if not isinstance(x, Token))
         spec = next((x.value[1:] for x in c if isinstance(x, Token) and x.type == "FORMAT"), None)
         return expr if spec is None else Field(expr, spec)
@@ -562,7 +627,7 @@ def test_known_difference(grammar, src):
 
 def test_pending_steps_have_entries():
     # A step with no entry left models a change that the parser has made already.
-    assert set(PENDING_STEPS) <= set(KNOWN_DIFFERENCES.values())
+    assert {*PENDING_STEPS, *PENDING_PARSERS} <= set(KNOWN_DIFFERENCES.values())
 
 
 # Pieces of text where the parser's choices lie, which random sources put together.
