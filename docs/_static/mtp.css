@@ -36,3 +36,56 @@
 .mtp-term-tip strong {
   font-weight: 600;
 }
+.mtp-diagram {
+  margin: 1.5rem auto;
+  max-width: 30rem;
+}
+.mtp-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--pst-font-family-base);
+}
+.mtp-d-person {
+  fill: var(--pst-color-primary-bg);
+  stroke: var(--pst-color-primary);
+  stroke-width: 1.5;
+}
+.mtp-d-file,
+.mtp-d-part {
+  fill: var(--pst-color-on-background);
+  stroke: var(--pst-color-border);
+  stroke-width: 1.5;
+}
+.mtp-d-live {
+  fill: var(--pst-color-surface);
+  stroke: var(--pst-color-border);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+.mtp-d-name {
+  fill: var(--pst-color-text-base);
+  font-size: 15px;
+  font-weight: 600;
+}
+.mtp-d-code {
+  fill: var(--pst-color-text-base);
+  font-family: var(--pst-font-family-monospace);
+  font-size: 14px;
+}
+.mtp-d-sub,
+.mtp-d-label,
+.mtp-d-livename {
+  fill: var(--pst-color-text-muted);
+  font-size: 12.5px;
+}
+.mtp-d-livename {
+  font-weight: 600;
+}
+.mtp-d-arrow {
+  stroke: var(--pst-color-text-muted);
+  stroke-width: 1.5;
+}
+.mtp-d-headpath {
+  fill: var(--pst-color-text-muted);
+}
