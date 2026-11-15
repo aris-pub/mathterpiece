@@ -1,57 +1,46 @@
 (grammar)=
 # Grammar
 
-This part defines how the parser puts the tokens of {doc}`lexical` together into forms, the
-expressions that the parser produces, the template that every form follows, and the kinds of form
+This part defines how the parser puts the words, strings and other pieces of text of
+{doc}`lexical` together into forms, the expressions that the parser produces, the template that every form follows, and the kinds of form
 that may be written in each body. The signatures of the forms, which list the arguments of each
 head, are not part of this part.
 
 As in {doc}`lexical`, this part states the language as the author has decided it. Where the parser
 or the compiler does not follow a rule yet, a note after the rule says what the code does today
-and names the bead that will change it. A box marks each question that is still open.
+and names the bead that will change it.
 
 ## The grammar of the parser
 
-The rules below and the tokens of {doc}`lexical` are one grammar, `docs/spec/mtp.lark`. An
+The rules below and the definitions of {doc}`lexical` are one grammar, `docs/spec/mtp.lark`. An
 alternative written `a -> free` puts its result in the tree under the name `free`, and `!` before
-the name of a rule keeps its quoted tokens in the tree.
+the name of a rule keeps the quoted text of that rule in the tree.
 
-### Files and sequences
+### Files and forms
 
 ```{mtp-grammar} file
 ```
 
 ```{rule} top-level-forms
-A source is a sequence of {term}`forms <form>`, with or without whitespace and comments between
+A source is any number of {term}`forms <form>`, with or without whitespace and comments between
 them. Anything else at the top level of a source is an error. A source may hold no form at all.
 ```
 
-```{mtp-grammar} sequences
+```{mtp-grammar} forms
 ```
 
 An {term}`expression` is one item of a source, of a form, of a list or of brackets: a form, a list,
-a word, a string or a free starting value. A sequence is the expressions of a form or a list. A
-chunk is a sequence of expressions with no whitespace or comment between them. The first chunk of a
-form may start with a head that ends with `_` ({numref}`unnamed-head`).
+a word, a string or a free starting value. The first item of a form may be a head that ends with
+`_` ({numref}`unnamed-head`).
 
 ```{rule} adjacent-items
-In a sequence, whitespace or a comment separates every two expressions, except where one of the
-two is a form. More exactly, an expression that ends with the `)` of a form, which is a form or a
+Among the items of a form, a list or brackets, whitespace or a comment separates every two
+expressions, except where one of the two is a form. More exactly, an expression that ends with the `)` of a form, which is a form or a
 free starting value such as `free@(g)`, may be followed directly by any expression, and every
 other expression may be followed directly only by a form. So `(f a(b)c)`, `(f (a)b)` and
 `(f 'x'(b))` hold three expressions after `f`, and `(f 'a''b')` and
 `(f [1]x)` are errors.
 ```
-
-:::{admonition} Open question Q-grammar-1
-:class: warning
-The documents have no rule for when whitespace is needed between two expressions. The only rule in
-`syntax.md` (section 2, "Forms") is that "line breaks and indentation mean nothing". The parser
-allows a form to touch its neighbors, as in {numref}`adjacent-items`: a run ends at `(` and `)`
-(`parse.py:74`), and after a `)`, `parse.py:276` checks only for `.` and `[`. The grammar follows
-the parser here. The decisions do not settle this case. Option A: keep this rule. Option B: require
-whitespace between every two expressions, as in `(f a (b) c)`.
-:::
 
 ### Lists and brackets
 
@@ -67,7 +56,7 @@ A {term}`list` is written in square brackets, with its items separated as in
 ```{rule} name-brackets
 A `[` right after a name, with no whitespace between them, starts brackets after the name, which
 hold one expression or more: `xs[0]`, `xs[(+ k 1)]`, `g['m1']`, `func[real real]`. Several pairs
-of brackets may follow each other, and after brackets, `.` and more name parts may follow:
+of brackets may follow each other, and after brackets, `.` and more parts may follow:
 `xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after whitespace starts a list: `xs [0]` is the
 name `xs` and the list `[0]`.
 ```
@@ -102,19 +91,19 @@ broadened type whose last word is such a name. {numref}`unnamed-head` gives its 
 ## The expressions that the parser produces
 
 ```{rule} parser-expressions
-The parser produces the forms of a source as a sequence of expressions, in the order of the
+The parser produces the forms of a source as expressions, one for each form, in the order of the
 source. Each expression is one of these:
 
 | Expression | Written | Holds |
 |---|---|---|
 | form | `(…)` | its items, in order |
 | list | `[…]` | its items, in order |
-| name | `p`, `p.pos.x`, `xs[0].y` | its parts, in order. Each part is the text of a name part, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
+| name | `p`, `p.pos.x`, `xs[0].y` | its parts, in order. Each part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
 | brackets | `[real real]` in `func[real real]` | its expressions, in order |
 | broadened type | `real\|none` | its words, as expressions, in order |
 | string | `'…'`, `tex'…'` | its text, and whether it is a TeX string |
-| interpolated string | `$'…'` | its pieces: text, the expression of each field without a format spec, and each field with a format spec |
-| field with a format spec | `{x:.2f}` | the expression and the format spec |
+| interpolated string | `$'…'` | its pieces: text, the expression of each `{…}` with no format spec, and each `{…}` with a format spec |
+| `{…}` with a format spec | `{x:.2f}` | the expression and the format spec |
 | int, ratio, real, complex | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
 | bool | `true`, `false` | the value |
 | none | `none` | nothing |
@@ -190,8 +179,8 @@ A call and a special form follow the same template, with no name: `(+ a b c)`, `
 The name of a declaration is a bare name of one part, `none`, a name string such as `#'dot-{k}'`,
 or `(name s)`. The string of a name string and of `(name s)` is known when compiling. `none` as the
 name means that the declaration has no name, as the head `head_` does ({numref}`unnamed-head`). A
-name in quotes is an error ("a name is written bare, not in quotes"), and so is a reserved word
-({numref}`reserved-words`).
+name in quotes is an error ("a name is written bare, not in quotes"), and so is a name that
+{numref}`declaration-names` does not allow.
 ```
 
 ```{rule} forms-with-no-name
@@ -228,20 +217,26 @@ a term and a font), comes before every other optional argument.
 
 ```{rule} docstrings
 Every declaration and every listener may have a docstring, `doc@'text'`, and at most one. The
-docstring is written among the optional arguments ({numref}`optional-arguments-first`), but it is
-not one of them. Its string is plain: an interpolated string is an error.
+docstring comes after all the positional arguments and all the optional arguments, and before the
+body. In a form that has no body, the docstring is the last item. Its string is plain: an
+interpolated string is an error.
 ```
 
-So a docstring comes after the name and the positional arguments, the parameters of a function or a
-motif included, and before the body. A variable in the body of a motif may have one, as any other
-declaration. `(real k 1 doc@'d' (>= 0))` and `(func f ((real x)) doc@'d' (* 2 x))` are allowed, and
-`(real k 1 (>= 0) doc@'d')` and `(func f ((real x)) (* 2 x) doc@'d')` are errors.
+So a docstring comes after the name, the positional arguments, the parameters of a function or a
+motif included, and the optional arguments. A variable in the body of a motif may have one, as any
+other declaration. `(real k 1 doc@'d' (>= 0))`, `(func f ((real x)) doc@'d' (* 2 x))` and
+`(circle c (r 1) doc@'d')` are allowed. `(real k 1 (>= 0) doc@'d')`,
+`(func f ((real x)) (* 2 x) doc@'d')`, `(circle c doc@'d' (r 1))` and
+`(button b doc@'d' (animation a))` are errors.
 
 :::{admonition} Code differs
 :class: note
 The compiler removes a docstring from any place after the name (`compiler.py:7322`, `_take_doc`),
-so a docstring after the body compiles. Bead mtp-ydd4.7.6 makes it an error. A variable in the
-body of a motif may not have a docstring: `(motif m () (real k 1 doc@'d') …)` is the error
+so a docstring before an optional argument or after the body compiles. About 22 forms of the
+examples have a docstring before an optional argument, such as a button, a play, an `on-ready` or
+an `on-click` with a docstring before its `(animation …)`, and three formulas with a docstring
+before their `(defaults …)`. Bead mtp-ydd4.7.34 makes these errors and moves those docstrings. A
+variable in the body of a motif may not have a docstring: `(motif m () (real k 1 doc@'d') …)` is the error
 "unknown constraint 'doc'", because `compiler.py:4822` (`body_variable`) does not remove the
 docstring. Bead mtp-qiro fixes this.
 :::
@@ -278,9 +273,9 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(transition name target …)`, `(move target …)` | `like` first, then `from`, `to`, `duration`, `ease`, `path` | None | no body | `transition` |
 | `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, the name of an animation or a transition, a use of a choreo | yes | `anim_body`, `steps` |
 | `(at-once …)`, `(in-order …)` | `(defaults …)` | The steps of an animation. Not: `loop` | yes | `steps` |
-| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content: names of shapes or of the scene, lists, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners | yes | `component`, `build_canvas` |
-| `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` | yes | `component`, `build_readout` |
-| `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` | yes | `component`, `listened` |
+| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content: names of shapes or of the scene, lists, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes | `component`, `build_canvas` |
+| `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `build_readout` |
+| `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `listened` |
 | A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes | `component`, `writer` |
 | A listener, inside the body of a view | its optional arguments, its animation among them. Not: `(in …)` | Its positional arguments: the shape or term that it listens to, and for some listeners a target. Conditions | yes | `component`, `listened`, `writer` |
 | `(defaults …)` of a group or an instance | none | Items `(attribute value)` for the members of the container | yes | `group_defaults` |
@@ -350,12 +345,19 @@ and the same formula with `(defaults …)` last, or with `(term a …)` before t
 may come after a `(term …)`. Bead mtp-ydd4.7.11 makes the compiler follow the rule.
 :::
 
-:::{admonition} Open question Q-grammar-10
-:class: warning
-Whether a listener on its own view names that view, as in `(on-view v (animation …))`, or leaves
-the name out, as in `(on-view (animation …))` today. The comment at `compiler.py:178`
-(`OWN_VIEW_NAMED = False`) points to bead mtp-6k7f, which holds this question.
-:::
+```{rule} listeners-in-views
+A listener acts only on what happens in the view in whose body it is written. A listener on its
+own view leaves out the name of the view: `(on-view (animation …))`, `(on-pointermove target)`.
+```
+
+{numref}`contexts-table` gives the view in whose body each listener is written: a listener on a
+shape, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` and `on-pointermove` in a
+canvas, a listener on a term of a formula, `on-live` and `on-quiet` in a display, and `on-live` and
+`on-quiet` in a readout. A listener is never written at the top level and has no `(in …)`, while a
+control is written at the top level and names the views that it belongs to with `(in …)`.
+
+Bead mtp-6k7f, done on 2026-11-11, made the compiler follow this rule. `compiler.py:178`
+(`OWN_VIEW_NAMED = False`) gives the spelling with the name left out.
 
 ## Imports
 

@@ -88,8 +88,8 @@ broadened type
   ({numref}`broadened-types`).
 
 whitespace
-  The characters space, tab, line feed and carriage return. Whitespace and comments only separate
-  tokens ({numref}`whitespace-and-comments`).
+  The characters space, tab, line feed and carriage return. Whitespace and comments have no
+  meaning ({numref}`whitespace-and-comments`).
 
 digit
   One of the ASCII digits `0` to `9` ({numref}`number-literals`).
@@ -101,6 +101,10 @@ body
 bool
   The word `true` or `false` ({numref}`literal-words`).
 
+built-in type
+  One of the types that mtp gives, such as `real`, `point` or `circle`, whose name no declaration
+  takes ({numref}`declaration-names`).
+
 comment
   Text from `;` up to the end of the line ({numref}`whitespace-and-comments`).
 
@@ -111,16 +115,13 @@ docstring
   `doc@'text'`, which is `(doc 'text')`: plain text about a declaration, for the illustrator
   ({numref}`prefix-forms`, {numref}`docstrings`).
 
-field
-  `{…}` in an interpolated string or a name string: an expression, then a format spec or nothing
-  ({numref}`interpolated-strings`).
-
 form
   A head and its items in parentheses, such as `(circle p (r 1))` ({numref}`top-level-forms`,
   {numref}`form-template`).
 
 format spec
-  The text after `:` in a field, such as `.2f` in `{x:.2f}` ({numref}`interpolated-strings`).
+  The text after `:` in the braces of an interpolated string, such as `.2f` in `{x:.2f}`
+  ({numref}`interpolated-strings`).
 
 free starting value
   `free@X`, which is `(free@ X)` ({numref}`prefix-forms`).
@@ -136,7 +137,8 @@ int
   A number literal that is a whole number, such as `3` or `-2` ({numref}`number-literals`).
 
 interpolated string
-  `$'…'`: a string with fields, whose values are filled in ({numref}`interpolated-strings`).
+  `$'…'`: a string with expressions in braces, whose values are filled in
+  ({numref}`interpolated-strings`).
 
 letter
   One of the ASCII letters `a` to `z` and `A` to `Z`, as a character of a name
@@ -146,11 +148,12 @@ list
   Expressions in square brackets, such as `[0 1]` ({numref}`lists`).
 
 name
-  A word that refers to something declared: name parts joined by dots, such as `p.pos.x`
+  A word that refers to something declared: parts joined by dots, such as `p.pos.x`
   ({numref}`name-characters`).
 
-name part
-  One of the pieces of a name that dots separate ({numref}`name-characters`).
+part
+  A piece of a name: the text between two dots, or a pair of brackets, such as `pos` and `[0]` in
+  `xs[0].pos` ({numref}`name-characters`, {numref}`name-brackets`).
 
 name string
   `#'…'`: an interpolated string read as a name, which is `(name $'…')`
@@ -179,12 +182,9 @@ real
   A number literal with a decimal point or an exponent, such as `2.5` or `1e3`
   ({numref}`number-literals`).
 
-reserved word
-  A word that is never the name of a declaration ({numref}`reserved-words`).
-
-run
-  A longest sequence of characters with no whitespace and none of `( ) [ ] { } " | ; :`
-  ({numref}`run`).
+keyword
+  The head of a form of the language, such as `circle`, `if` or `on-drag`, which no declaration
+  takes as its name ({numref}`keywords`, {numref}`declaration-names`).
 
 string
   Text in single quotes, such as `'crimson'` ({numref}`string-literals`).
@@ -192,12 +192,8 @@ string
 TeX string
   `tex'…'`: a string of LaTeX, in which only `\'` is an escape ({numref}`tex-strings`).
 
-token
-  A piece of text that the parser reads whole, such as a name or a string
-  ({numref}`tokens-in-context`).
-
 word
-  One run read whole: a name, a number, an operator or a bool ({numref}`run`).
+  A name, a number, an operator, a bool or `none` ({numref}`word-ends`).
 
 core form
   A form that is neither sugar nor library. The prover proves core forms, and the runtime runs
@@ -245,11 +241,6 @@ site
   0. Defined in {doc}`evaluation`.
 
 call depth limit
-  The constant `max-call-depth`, which is 256: a call of a function nested deeper than it gives
-  `none`, the same when folding and while drawing. Defined in {doc}`evaluation`.
-
-real error bound
-  The constant `max-real-error`: the most units in the last place by which a built-in function on
-  reals other than `+`, `-`, `*`, `/` and `sqrt` can differ from its exact value. The prover widens
-  every real range by it. Defined in {doc}`evaluation`.
+  The constant `max-call-depth`, which is 256: when folding, a call of a function nested deeper
+  than it is a compile error. Defined in {doc}`evaluation`.
 ```

@@ -6,19 +6,19 @@
 // where it describes that section.
 
 //: file
-start: _BOM? _WHITESPACE_OR_COMMENT? (form _WHITESPACE_OR_COMMENT?)*
+start: _BOM? _whitespace_or_comment? (form _whitespace_or_comment?)*
 
-//: bom-token
+//: bom
 _BOM: /\ufeff/
 
-//: sequences
-form: "(" _WHITESPACE_OR_COMMENT? (items | head_items)? RPAR
-seq: _WHITESPACE_OR_COMMENT? items?
-items: chunk (_WHITESPACE_OR_COMMENT items?)?
-head_items: head_chunk (_WHITESPACE_OR_COMMENT items?)?
-chunk: plain (form chunk?)?
-     | paren chunk?
-head_chunk: head (form chunk?)?
+//: forms
+form: "(" _whitespace_or_comment? (items | head_items)? RPAR
+list_items: _whitespace_or_comment? items?
+items: touching (_whitespace_or_comment items?)?
+head_items: head_touching (_whitespace_or_comment items?)?
+touching: plain (form touching?)?
+        | paren touching?
+head_touching: head (form touching?)?
 expression: paren | plain
 paren: form
      | FREE paren -> free
@@ -26,18 +26,18 @@ plain: list | word | string | doc | interpolated
      | FREE plain -> free
 
 //: lists
-list: "[" seq "]" list_brackets*
-list_brackets: "[" _WHITESPACE_OR_COMMENT? expression _WHITESPACE_OR_COMMENT? "]"
-brackets: "[" _WHITESPACE_OR_COMMENT? items "]"
+list: "[" list_items "]" list_brackets*
+list_brackets: "[" _whitespace_or_comment? expression _whitespace_or_comment? "]"
+brackets: "[" _whitespace_or_comment? items "]"
 
 //: words
-word: first ("|" first)* | name_string
-first: NAME tail? | number | bool | operator
-tail: (brackets ("." PARTS)?)+
-name_string: name_text ("." PARTS | list_brackets)*
+word: one_word ("|" one_word)* | name_string
+one_word: NAME after_brackets? | number | bool | NONE | operator
+after_brackets: (brackets ("." PARTS)?)+
+name_string: name_string_text ("." PARTS | list_brackets)*
 
 //: heads
-head: HEAD | first ("|" first)* "|" HEAD
+head: HEAD | one_word ("|" one_word)* "|" HEAD
 
 //: literals
 number: INT | RATIO | REAL | IMAG | COMPLEX
@@ -47,33 +47,36 @@ bool: TRUE | FALSE
 //: strings
 string: STRING | TEX
 doc: DOC STRING
-interpolated: DOLLAR_QUOTE (TEXT | field)* QUOTE
-name_text: HASH_QUOTE TEXT? field (TEXT | field)* QUOTE
-field: "{" _WHITESPACE_OR_COMMENT? expression _WHITESPACE_OR_COMMENT? FORMAT? "}"
+interpolated: DOLLAR_QUOTE (TEXT | braces)* QUOTE
+name_string_text: HASH_QUOTE TEXT? braces (TEXT | braces)* QUOTE
+braces: "{" _WHITESPACE? expression _WHITESPACE? FORMAT? "}"
 
 //: whitespace-and-comments
-_WHITESPACE_OR_COMMENT: (/[ \t\n\r]/ | COMMENT)+
-COMMENT: ";" /[^\n]/*
+_whitespace_or_comment: (_WHITESPACE | _COMMENT)+
+_WHITESPACE: /[ \t\n\r]+/
+_COMMENT: ";" /[^\n]/*
 
-//: closing-token
+//: closing-parenthesis
 RPAR: ")" NOT_PART
 NOT_PART: /(?![.\[])/
 
-//: name-tokens
+//: names
 NAME: PARTS
 PARTS: PART ("." PART)*
-PART: LETTER (LETTER | DIGIT | "-")* "?"?
+PART: NOT_LITERAL LETTER (LETTER | DIGIT | "-")* "?"?
+NOT_LITERAL: /(?!(?:true|false|none)(?![A-Za-z0-9?-]))/
 LETTER: /[A-Za-z]/
 DIGIT: /[0-9]/
 
-//: head-token
-HEAD.1: PARTS "_"
+//: heads-with-no-name
+HEAD.1: (PARTS | "none") "_"
 
-//: keyword-tokens
+//: bools-and-none
 TRUE: "true"
 FALSE: "false"
+NONE: "none"
 
-//: number-tokens
+//: numbers
 INT.2: SIGN? DIGITS
 REAL.3: SIGN? ((DIGITS "." DIGITS? | "." DIGITS) EXPONENT? | DIGITS EXPONENT)
 RATIO.4: SIGN? DIGITS "/" NONZERO
@@ -85,16 +88,16 @@ NONZERO: /[0-9]*[1-9][0-9]*/
 DIGITS: /[0-9]+/
 SIGN: /[+-]/
 
-//: string-tokens
+//: string-literals
 STRING: "'" (/[^'\\]/ | ESCAPE)* "'"
 ESCAPE: /\\['\\n]/
 TEX.1: "tex'" (/[^'\\]/ | /\\[\s\S]/)* "'"
 
-//: prefix-tokens
+//: prefixes
 DOC.1: "doc@"
 FREE.1: "free@"
 
-//: interpolation-tokens
+//: interpolated-strings
 DOLLAR_QUOTE: "$'"
 HASH_QUOTE: "#'"
 QUOTE: "'"

@@ -78,7 +78,7 @@ What the error of a rejected source holds is given in {numref}`conformance`.
 
 ```{rule} prover-finds-ranges
 To prove a range or a constraint, the {term}`prover` works out the range of every number that an
-expression can give, from the ranges of its inputs ({numref}`prover-widens-reals`). For an
+expression can give, from the ranges of its inputs ({numref}`correctly-rounded-reals`). For an
 expression known when compiling, that range holds its value. The prover writes nothing into the
 model. Where the range of a bound value does not lie inside the constraint of the value, the
 prover gives the value a type that includes `none`, and the fold and write step writes the `check`
@@ -299,6 +299,17 @@ with that message, or throws later, when a component draws, or draws something w
 error. The schema docs/mtpc.schema.json is checked only by the tests (tests/mtpc_check.py).
 mtp-ydd4.7.16, mtp-ydd4.7.27.
 :::
+
+```{rule} no-errors-after-loading
+Once a .mtpc has loaded, nothing that a reader does and nothing that the runtime computes makes a
+figure or a component fail or show an error. A source in which something could fail after loading
+is rejected when compiling, and a .mtpc in which something could fail is refused when it is
+loaded ({numref}`runtime-loads-mtpc`).
+```
+
+So an operation that has no value gives `none` ({numref}`operations-that-give-none`), and a write
+of a value that breaks a constraint brings it into the constraint ({numref}`number-limit`,
+{doc}`types`), and neither stops a figure.
 
 ```{rule} runtime-builds-live-model
 When a .mtpc loads, the runtime builds its live model, once, before any component draws: it turns

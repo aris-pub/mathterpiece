@@ -118,15 +118,12 @@ mtp-08wd.2.
 
 ```{rule} operations-that-give-none
 Besides an argument that is `none` ({numref}`none-propagates`), an operation gives `none` at these
-inputs, when folded and while drawing. Giving `none` never stops the figure.
+inputs, when folded and while drawing.
 
 | Operation | Gives `none` at |
 |---|---|
-| every built-in function and operator | inputs that are all finite and a result beyond the largest real, about 1.8 × 10³⁰⁸. This is an overflow |
-| `+` | two infinities of opposite signs |
-| `-` | two infinities of the same sign |
-| `*` | 0 and an infinity |
-| `/` | a divisor of 0, and an infinity divided by an infinity |
+| every built-in function and operator | an exact result whose nearest binary64 number is beyond the largest real, about 1.8 × 10³⁰⁸. This is an overflow |
+| `/` | a divisor of 0 |
 | `mod` | a divisor of 0 |
 | `^` | 0 to a negative power, and a negative base to a power that is not an int |
 | `sqrt` | an input below 0 |
@@ -134,7 +131,7 @@ inputs, when folded and while drawing. Giving `none` never stops the figure.
 | `min`, `max` | no items at all |
 | `tand`, `secd` | 90 + 180k degrees, for every int k |
 | `cscd`, `cotd` | 180k degrees, for every int k |
-| `tan`, `sec`, `csc`, `cot` | an input where the result is not a finite number. No real is exactly π/2, so for a finite input this is only `csc` and `cot` at exactly 0 |
+| `csc`, `cot` | 0. No real is exactly π/2, so `tan` and `sec` give `none` at no input |
 | `asin`, `acos`, `asind`, `acosd` | an input below -1 or above 1 |
 | `asec`, `acsc`, `asecd`, `acscd` | an input strictly between -1 and 1 |
 | `to-polar` | the point `[0 0]` |
@@ -144,13 +141,12 @@ inputs, when folded and while drawing. Giving `none` never stops the figure.
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
 | a bound value with a constraint | a value that breaks the constraint ({doc}`types`) |
-| a call of a function | a call whose depth is above the call depth limit ({numref}`call-depth-limit`) |
 
-At every other finite input, an operation never gives `none`.
+At every other input, an operation never gives `none`.
 ```
 
-So an operation with inputs that are all finite never gives an infinity. The functions of the
-standard library are written in mtp, and give `none` where the built-ins that they call give
+So no operation gives an infinity or NaN: a real is always finite ({numref}`number-types`). The
+functions of the standard library are written in mtp, and give `none` where the built-ins that they call give
 `none` ({doc}`stdlib`).
 
 ```{rule} none-at-known-inputs
@@ -246,13 +242,13 @@ drawing:
 |---|---|
 | `int` | an exact whole number |
 | `ratio` | an exact fraction |
-| `real` | an IEEE 754 binary64 number that is not NaN. The infinities are reals ({numref}`infinity`) |
+| `real` | an IEEE 754 binary64 number that is finite: not an infinity and not NaN |
 | `complex` | two binary64 numbers |
 ```
 
 So the runtime computes values of type `int` as exact whole numbers and values of type `ratio` as
 exact fractions, as the compiler does, and an operation on ints and ratios alone gives the same
-value when folded as while drawing. Only a real can differ between the two times
+value when folded as while drawing, as every other operation does
 ({numref}`same-value-at-both-times`). In the .mtpc, a ratio is written as its numerator and
 denominator in lowest terms ({doc}`compiled-format`).
 
@@ -265,6 +261,16 @@ computes them exactly, with Python's `Fraction` and ints (mathterpiece/compiler.
 drawing, and the readout of the example below holds False at n = 1. `(+ (^ 2 60) 1)` is folded to
 1152921504606846977, and the runtime reads that value from the .mtpc as 1152921504606846976.
 mtp-ydd4.7.13.
+:::
+
+:::{admonition} Code differs
+:class: note
+The compiler and the runtime still have infinite reals. The constants `infty` and `∞` are infinite
+(builtins.py:246-254). The compiler carries an infinite result of an infinite input
+(mathterpiece/compiler.py, lines 7613 to 7617), writes it in text as `∞` (`_infinity`, line
+7841), and writes it in the .mtpc as `"infty"` or `"-infty"` (mathterpiece/mtpc.py, line 500).
+The runtime reads these (web/src/runtime.ts, lines 932 and 933), and writes an infinity in text
+as `inf` (web/src/format.ts, line 12). Bead mtp-ydd4.7.33 removes infinity from both.
 :::
 
 ```{mtp-example}
@@ -319,66 +325,6 @@ with no limit of their own can (docs/type-system.md, section 5.c). An overflow g
   so the evaluation stops and does not give `none`. Bug mtp-ec05.
 :::
 
-### Infinity
-
-```{rule} infinity
-`infty`, also written `∞`, is a real above every finite number, and `(- infty)` is a real below
-every finite number. Both lie beyond the number limit, and both are values at both times, when
-folded and while drawing. The value of a variable that is not `const`, and the value of an
-attribute of a shape, are never infinite: when the range of such a value includes an infinity,
-this is a compile error at the value.
-```
-
-By {numref}`real-error-bound`, `+`, `-`, `*`, `/` and `sqrt` with an infinite input give the
-binary64 result, except at the inputs at which they give `none`
-({numref}`operations-that-give-none`): `(+ infty 1)` is `infty`, `(/ 1 infty)` is 0, and
-`(- infty infty)`, `(* 0 infty)` and `(/ infty infty)` are `none`. So with `(real big infty
-(const))` and a free `(real y 1)`, `(+ y big)` is `infty` when folded and while drawing, and never
-`none`, and `(min (+ y big) 3)` is 3. `(real z (+ y big))` is a compile error, since `z` is not
-`const`, and so is `(circle c (r big))`. A write of an infinity is clamped to the number limit
-({numref}`number-limit`). In the .mtpc, an infinity is written as `"infty"` or `"-infty"`
-({doc}`compiled-format`).
-
-:::{admonition} Code differs
-:class: note
-While drawing, every built-in function gives `none` for a result that is infinite (`finite` in
-web/src/builtins.ts, line 29), also when an input is infinite. So `(+ y big)` above is `none` while
-drawing, and `infty` when folded. The compiler gives an expression that can be infinite a type
-that includes `none`, so it rejects a readout of `(min (+ y big) 3)` with "this value may be
-none". mtp-ydd4.7.28.
-:::
-
-:::{admonition} Open question Q-evaluation-10
-:class: warning
-What the built-in functions other than `+`, `-`, `*`, `/`, `sqrt` and the comparisons give at an
-infinite input. {numref}`real-error-bound` settles the five operations, and {numref}`infinity`
-settles the comparisons, `min` and `max`. For the others, such as `(sin infty)`,
-`(exp (- infty))`, `(atan infty)`, `(mod 3 infty)`, `(abs (- infty))` and `(round infty)`, no
-rule gives the result. Today the compiler rejects `(sin infty)` as an operation that gives `none`
-at known inputs, and carries an infinite result of an infinite input (mathterpiece/compiler.py,
-lines 7613 to 7617). The options, at both times:
-
-- (a) Each gives the limit of its exact value when that limit exists and has the result type of
-  the function, and `none` otherwise: `(exp (- infty))` is 0, `(atan infty)` is π/2, and
-  `(sin infty)` and `(round infty)` are `none`.
-- (b) Each gives `none` at an infinite input.
-:::
-
-:::{admonition} Open question Q-evaluation-11
-:class: warning
-What happens when an infinity reaches a place that needs a finite number, other than a variable
-that is not `const` or an attribute of a shape ({numref}`infinity`). Such places are the text of
-an interpolated string, as `$'{big}'`, an attribute of a view, a control or an animation, such as
-the duration of an animation, and a bound of `rand` or `rand-int`. Today the compiler writes an
-infinity in text as `∞` or `-∞` (`_infinity`, mathterpiece/compiler.py, line 7849), and the runtime
-as `inf` or `-inf` (web/src/format.ts, line 12). The options:
-
-- (a) Every such place is a compile error when the range of its value includes an infinity, as
-  for an attribute of a shape.
-- (b) Text holds `∞` or `-∞`, at both times, and every other such place is a compile error when
-  the range of its value includes an infinity.
-:::
-
 ### Rounding
 
 ```{rule} rounding
@@ -387,7 +333,7 @@ Wherever a number is rounded, other than a channel of a mixed color
 decimal form, not on its binary value: 2.5 gives 3, -2.5 gives -3, 0.125 to two decimal places
 gives 0.13, and 2.675 to two decimal places gives 2.68. The rule applies to `round`, to a write
 into an int, and to the format spec of an interpolated string, such as `{x:.2f}`. `round` gives
-`none` at no finite input. A number written into an int is rounded after it is clamped to the
+`none` at no input. A number written into an int is rounded after it is clamped to the
 int's range, so that it lands on the nearest int inside the range ({doc}`types`).
 ```
 
@@ -542,10 +488,8 @@ Values compare by content, and mutable objects by identity. `=` and `!=` never g
 | a shape, a group, a namespace, a formula, a term and every other mutable object | the two are the same object. Two circles with the same attributes are not equal |
 ```
 
-Since `=` on reals is exact, `(= (sind 30) 0.5)` is false, since `(sind 30)` is
-0.49999999999999994. A real can differ in its last digits when folded and while drawing
-({numref}`real-error-bound`), so `=` on two reals that come from such functions can be true at one
-time and false at the other.
+Since `=` on reals is exact, `(= (+ 0.1 0.2) 0.3)` is false: the sum is 0.30000000000000004. By
+{numref}`same-value-at-both-times`, `=` gives the same result when folded as while drawing.
 
 :::{admonition} Code differs
 :class: note
@@ -583,40 +527,50 @@ skipped, and nothing that depends on it is computed again (web/src/runtime.ts, l
 A function may call itself, directly, through other functions, or through a function value
 (docs/reference.md, line 124). There are no other loops: a `foreach` makes a number of copies known
 when compiling, and `range` gives at most 1,000,000 items. So the only computation that could go
-on without end is a chain of calls, and the call depth limit ends every chain.
+on without end is a chain of calls. When folding, the call depth limit ends every chain. While
+drawing, how every chain ends is Q-evaluation-13, below.
 
 ```{rule} call-depth-limit
 The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
 of such calls that are still being computed when it starts. Calls of built-in functions do not
-count. `max-call-depth`, the {term}`call depth limit`, is 256, when folding and while drawing.
-A function is recursive when its body names it, directly or
-through the bodies of the functions that it names, and a call of a recursive function has a type
-that includes `none` ({doc}`types`).
+count. `max-call-depth`, the {term}`call depth limit`, is 256. When folding, a call whose depth is
+above `max-call-depth` is a compile error, at the call.
 ```
 
-So in `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m 1)))))`, the inner call
-`(down (- m 1))` has the type `int|none`, so the body can give `none`, and the declaration is a
-compile error. Written `(func down ((int m)) …)`, with the same body, the result type is
-`int|none`, and `(down 5)` is 5, when folded and while drawing. A call of `down` with an argument
-large enough to pass the limit gives `none` ({numref}`operations-that-give-none`): `(down 255)`
-is 255, and `(down 256)` is `none`, since its innermost call has a depth of 257.
+So with `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m 1)))))`, `(down 255)` is folded
+to 255, and `(down 256)` is a compile error, since its innermost call has a depth of 257. A
+function is recursive when its body names it, directly or through the bodies of the functions that
+it names.
 
-Every computation ends, since every chain of calls is at most `max-call-depth` deep. A computation
-that ends can still run for a long time, and the spec sets no limit on time.
+By {numref}`no-errors-after-loading`, no call while drawing makes a figure fail. What happens while
+drawing to a call of a recursive function whose depth would pass `max-call-depth` is still open:
+
+:::{admonition} Open question Q-evaluation-13
+:class: warning
+A call of a recursive function whose arguments are known only while drawing may reach a depth
+above `max-call-depth`, and no rule may make that an error while drawing
+({numref}`no-errors-after-loading`). The options:
+
+- (a) The compiler rejects a recursive function unless the prover can show that every call of it
+  stays within `max-call-depth`.
+- (b) mtp has no recursion: a function may not call itself, directly or through other functions,
+  and the depth limit goes away.
+:::
+
+A computation can run for a long time, and the spec sets no limit on time.
 
 :::{admonition} Code differs
 :class: note
 - **When compiling.** A call with known arguments is folded by compiling its body again with those
   arguments. When the nesting is too deep for Python, at a depth of about 80, the compiler catches
   the `RecursionError` and leaves the call to the runtime (mathterpiece/compiler.py, `fold_call`,
-  line 2530). Working out the range of a call does the same (line 2013). A recursive call is typed
-  by the declared result of its function, so `(func[int] down …)` above compiles, and `(down 80)`
-  is folded while `(down 81)` is not.
+  line 2530). Working out the range of a call does the same (line 2013). So `(down 80)` above is
+  folded, while `(down 81)` is not, and `(down 256)` compiles.
 - **While drawing.** There is no limit on the depth of calls (web/src/runtime.ts, `call`, line
   1282). Each call uses the JavaScript call stack, and a call that is too deep throws `RangeError:
   Maximum call stack size exceeded`, which is drawn in place of the view or the control
   (web/src/elements.ts, `guard`, line 324). In Node 26 this happens past a depth of about 1740,
-  and the depth depends on the browser.
+  and the depth depends on the browser. This breaks {numref}`no-errors-after-loading`.
 
 mtp-ydd4.7.15.
 :::
@@ -626,41 +580,30 @@ mtp-ydd4.7.15.
 
 ```{rule} same-value-at-both-times
 An expression gives the same value when it is folded as when it is computed while drawing, for the
-same values of what it reads, with one exception: a real that a built-in function other than
-`+`, `-`, `*`, `/` and `sqrt` gives can differ in its last digits, within the bound of
-{numref}`real-error-bound`, and so can a value computed from such a real.
+same values of what it reads.
 ```
 
-```{rule} real-error-bound
-`+`, `-`, `*`, `/` and `sqrt` on reals give the correctly rounded binary64 result, at both times.
-Every other built-in function on reals gives a result within `max-real-error` units in the last
-place of its exact value at the same binary64 inputs. This holds for the trigonometric functions
-in radians and in degrees, `exp`, `log`, `^`, `mod`, `dist`, and the conversion between degrees
-and radians. `max-real-error` is one constant of this spec, the {term}`real error bound`. At
-multiples of 90 degrees, the functions in degrees give exact values.
+```{rule} correctly-rounded-reals
+Each built-in function and operator gives, as each binary64 number of its result (a real, a part
+of a complex number, a number of a point or of a list), the binary64 number nearest to the exact
+value at its binary64 inputs, and of the two nearest, the one whose last bit is 0 when the exact
+value lies exactly halfway between them. This holds when folding and while drawing.
 ```
 
-```{rule} prover-widens-reals
-When the prover works out the range of a real, it widens the range outward after each operation:
-the lower bound is moved down and the upper bound up, by one unit in the last place for the five
-correctly rounded operations, and by `max-real-error` units in the last place for every other
-function on reals. So a range that the prover proves holds at both times.
-```
+This holds for `+`, `-`, `*`, `/`, `sqrt`, the trigonometric functions in radians and in degrees,
+`exp`, `log`, `^`, `mod`, `dist`, `polar`, `lerp`, `sum`, `rand`, and the conversions between
+degrees and radians. So `(sind 30)` is exactly 0.5, the functions in degrees give exact values at
+multiples of 90 degrees, and `sum` gives its exact sum rounded once, not the result of adding its
+items one at a time.
+
+Rounding to the nearest binary64 number never puts two numbers in the opposite order. So when the
+prover works out a bound of a range with the same functions, at the ends of an interval on which
+the exact function only rises or only falls, or as an exact value that is a binary64 number, such
+as 1 for the largest value of `sin`, every value computed at either time lies within the range.
+The prover therefore does not widen the ranges that it works out ({numref}`prover-finds-ranges`).
 
 A folded value is final: the .mtpc holds the value in place of the expression
 ({numref}`compile-steps`), so the runtime uses it as written and never computes it again.
-
-:::{admonition} Open question Q-evaluation-12
-:class: warning
-The value of `max-real-error`. {numref}`real-error-bound` and {numref}`prover-widens-reals` use it,
-and no rule gives it. ECMAScript sets no bound on the error of the functions of `Math` other than
-`Math.sqrt`, and CPython's `math` module uses the C library of the system. The options:
-
-- (a) A fixed number of units in the last place, such as 2, checked against every browser that the
-  runtime supports.
-- (b) The compiler and the runtime compute these functions with code of their own that gives the
-  correctly rounded result, so that the two times never differ.
-:::
 
 {numref}`same-value-at-both-times` follows the guides: docs/reference.md, line 613, has "One rule,
 the same in the compiler and the runtime", and the comment at line 1 of web/src/builtins.ts has "as
@@ -676,15 +619,17 @@ The two programs differ in these places, beyond what the rules above allow:
 | ratios, and ints beyond 2⁵³ | exact | binary64 | mtp-ydd4.7.13 |
 | `round` of 10²⁸ or more | the compiler stops | rounds | mtp-6yga |
 | the channels of a mixed color | halves to even | halves up | mtp-nk2w |
-| an infinite input | carried, `(+ y infty)` is `infty` | `none` | mtp-ydd4.7.28 |
+| an infinite input | carried, `(+ y infty)` is `infty` | `none` | mtp-ydd4.7.33 |
+| the functions on reals other than `+`, `-`, `*`, `/` and `sqrt` | Python's `math` module, which is not correctly rounded | ECMAScript `Math`, which is not correctly rounded | mtp-ydd4.7.38 |
+| `sum` of reals | adds the items one at a time | adds the items one at a time | mtp-ydd4.7.38 |
 | recursion | folded up to a depth of about 80 | computed up to the stack of the browser | mtp-ydd4.7.15 |
 | `mod` of reals | Python's `%`, which is exact | `a - b × ⌊a / b⌋`, so `(mod 5.5 0.1)` is 0 and not 0.0999999999999997 | mtp-ydd4.7.14 |
 | the functions in degrees, for large angles | converted to radians first, so `(cosd (+ 1e15 90))` is 0.98478… | `(x × π) / 180` first, so it is 0.98512… | mtp-ydd4.7.14 |
-| the range of a real | not widened (`_range_of`, mathterpiece/compiler.py, line 7698) | | mtp-08wd.3 |
 
 For `(cosd (+ 1e15 90))` the exact value is the cosine of 10 degrees, 0.98481…, so both times
-are wrong in the fourth digit. Elsewhere the two differ only in the last bits, which
-{numref}`real-error-bound` allows: `sind` differs on 776 of 2,885 angles from -360 to 360 degrees,
+are wrong in the fourth digit. Elsewhere the two differ in the last bits, which
+{numref}`correctly-rounded-reals` does not allow: `(sind 30)` is 0.49999999999999994 at both times,
+and `sind` differs on 776 of 2,885 angles from -360 to 360 degrees,
 a quarter of a degree apart, and `sin`, `cos`, `tan`, `exp`, `log`, `atan`, `asin`, `acos` and
 `dist` differ in the last bit on 1 to 41 percent of 1,031 values from -8 to 8. Formatting with a
 format spec, `round`, and `sqrt` agreed on every value tried.
