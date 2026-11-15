@@ -111,11 +111,6 @@ class TestExpressionPositions:
         # A tab adds 1 to the column, like every character but a line feed.
         assert (x.pos.line, x.pos.col) == (2, 7)
 
-    def test_a_carriage_return_adds_1_to_the_column(self):
-        (f,) = forms("(f\r(g))")
-        g = f.items[1]
-        assert (g.pos.line, g.pos.col) == (1, 4)
-
     @BOM
     def test_a_byte_order_mark_at_the_start_is_not_counted(self):
         (f,) = forms("﻿(f)")
@@ -124,8 +119,8 @@ class TestExpressionPositions:
 
 @rule("whitespace-and-comments")
 class TestWhitespaceAndComments:
-    def test_the_four_whitespace_characters_separate_items(self):
-        assert items("(f a\tb\nc\rd e)") == tuple(name(c) for c in "abcde")
+    def test_the_three_whitespace_characters_separate_items(self):
+        assert items("(f a\tb\nc d)") == tuple(name(c) for c in "abcd")
 
     def test_a_comment_runs_to_the_next_line_feed(self):
         assert forms("(f ; a comment (g)\n a)") == forms("(f a)")

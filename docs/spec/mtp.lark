@@ -53,7 +53,7 @@ braces: "{" _WHITESPACE? expression _WHITESPACE? FORMAT? "}"
 
 //: whitespace-and-comments
 _whitespace_or_comment: (_WHITESPACE | _COMMENT)+
-_WHITESPACE: /[ \t\n\r]+/
+_WHITESPACE: /[ \t\n]+/
 _COMMENT: ";" /[^\n]/*
 
 //: closing-parenthesis
