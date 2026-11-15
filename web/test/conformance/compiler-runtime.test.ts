@@ -42,15 +42,44 @@ describe("rule runtime-loads-mtpc: the runtime refuses what it cannot run", () =
     expect(error).toContain(String(FORMAT_VERSION + 1));
   });
 
-  it.fails("refuses a .mtpc that does not match the schema (mtp-ydd4.7.16: only the version is checked)", () => {
-    const doc = compile(FIGURE) as unknown as Record<string, unknown>;
-    doc["objects"] = "not a list";
+  /** Loads a .mtpc that does not match the schema, and gives the error that each component shows. */
+  function refused(doc: Record<string, unknown>): string[] {
     let model: MtpModel | null = null;
     expect(() => {
-      model = page(`<mtp-readout model="m" name="r"></mtp-readout>`, doc as unknown as Doc);
+      model = page(
+        `<mtp-canvas model="m" name="v"></mtp-canvas><mtp-readout model="m" name="r"></mtp-readout>`,
+        doc as unknown as Doc,
+      );
     }).not.toThrow();
     expect(model!.runtime).toBeFalsy();
-    expect(errorIn("mtp-readout")).toBeTruthy();
+    expect(document.querySelector("mtp-canvas circle")).toBe(null);
+    expect(document.querySelector("mtp-readout")!.textContent).not.toContain("k =");
+    const errors = [errorIn("mtp-canvas")!, errorIn("mtp-readout")!];
+    for (const error of errors) expect(error).toContain("does not match the schema");
+    return errors;
+  }
+
+  it("refuses a .mtpc with a member of the wrong kind", () => {
+    const doc = compile(FIGURE) as unknown as Record<string, unknown>;
+    doc["objects"] = "not a list";
+    for (const error of refused(doc)) expect(error).toContain("/objects");
+  });
+
+  it("refuses a .mtpc with a required member missing, and names the member", () => {
+    const doc = compile(FIGURE) as unknown as Record<string, unknown>;
+    delete doc["names"];
+    for (const error of refused(doc)) expect(error).toContain(`"names"`);
+  });
+
+  it("refuses a .mtpc with an unknown kind of expression, and gives where it is", () => {
+    const doc = compile(FIGURE);
+    const at = doc.names["c"]!;
+    const c = doc.objects[at] as unknown as { attrs: Record<string, { bound: unknown[] }> };
+    c.attrs["r"]!.bound[0] = "no-such-kind";
+    for (const error of refused(doc as unknown as Record<string, unknown>)) {
+      expect(error).toContain(`/objects/${at}/attrs/r/bound/0`);
+      expect(error).toContain("no-such-kind");
+    }
   });
 
   it.fails("refuses a corrupt .mtpc (mtp-ydd4.7.27: a corrupt file loads)", () => {
