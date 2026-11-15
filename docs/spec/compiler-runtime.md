@@ -25,7 +25,7 @@ tools that they already prefer.
 |---|---|---|
 | the `.mtp` | the illustrator | the source of one world model |
 | the `.mtpc` | the mtp command | the {term}`compiled model` of one world model |
-| the {term}`runtime script`, `mathterpiece.js` | mtp, the same for every world model | the runtime, and the page elements that it defines |
+| the {term}`runtime script`, `mathterpiece.js` | the implementation of mtp, the same for every world model, and copied next to the .mtpc by `mtp build` | the runtime, and the page elements that it defines |
 | the page | the author, with any tool for making web pages | the text, the elements that load .mtpc files, and the elements that place components |
 | the {term}`live figure` | the reader's browser, from the page | the runtime and the page together, with one live model for each .mtpc that the page loads |
 
