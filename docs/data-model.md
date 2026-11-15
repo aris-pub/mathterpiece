@@ -61,7 +61,7 @@ The command's subcommands each take one source file, and each runs the steps up 
 | `mtp compile file` | 1 to 3 | writes the .mtpc |
 | `mtp build file` | 1 to 4 | writes the .mtpc and the inventory page |
 | `mtp serve file` | 1 to 4, again on each save | builds, serves the inventory page on the illustrator's machine, and builds again and reloads the page whenever the source file is saved |
-| `mtp fmt file` | 1 | rewrites the file in the house layout, keeping its comments |
+| `mtp fmt file` | 1 | rewrites the file in the house layout, keeping its comments, with `(doc 'text')` written `doc@'text'` and `(free X)` written `free@X` |
 
 **What `mtp check` reports.** The first error in the file, with its line and column, and nothing after it: the parser and the compiler stop there. Errors are of two kinds. A **syntax error** comes from parsing: an unclosed parenthesis or string, a name that is not valid, a stray character. A **compile error** comes from compiling: a name that is not declared or is declared twice; a form that is not where it may be or is missing a part; a value of the wrong type; a constraint, or a range a value must stay in, that cannot be proved, such as a radius that might be negative; a value known when compiling that is undefined there, such as `(/ 1 0)`; and anything the reference calls a compile error. Whatever the compiler cannot decide is not an error: a value that may be none while drawing is typed `T|none`, and the illustrator handles it.
 

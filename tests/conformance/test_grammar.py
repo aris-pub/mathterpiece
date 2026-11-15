@@ -75,7 +75,7 @@ class TestAdjacentItems:
     def test_a_form_needs_no_whitespace_around_it(self, src, count):
         assert len(items(src)) == count
 
-    def test_after_a_free_starting_value_that_ends_with_a_form(self):
+    def test_after_a_prefixed_form_that_ends_with_a_form(self):
         assert len(items("(f free@(g)x)")) == 2
 
     @pytest.mark.parametrize(
@@ -188,8 +188,9 @@ class TestShorthandForms:
     def test_docstring(self):
         assert items("(f doc@'text')") == (form(name("doc"), StrLit("text")),)
 
-    def test_free_starting_value(self):
-        assert items("(f free@x)") == (form(name("free@"), name("x")),)
+    def test_prefixed_form(self):
+        assert items("(f r@1)") == (form(name("r"), IntLit(1)),)
+        assert items("(f free@x)") == (form(name("free"), name("x")),)
 
     def test_name_string(self):
         n = form(name("name"), InterpStrLit(("dot-", name("k"))))

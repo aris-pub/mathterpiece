@@ -92,8 +92,9 @@ inherit from it.")
 
 (mtp-mode--defface mtp-mode-free-face
   '((t :foreground "#cc0000" :weight bold :slant normal))
-  "Face for free@ in free@(f x): the value is free, starting at the expression's value and never
-following it, though an expression is written there, so it is drawn to stand out.")
+  "Face for free@ in free@(f x), and for free in (free (f x)): the value is free, starting at the
+expression's value and never following it, though an expression is written there, so it is drawn
+to stand out.")
 
 (mtp-mode--defface mtp-mode-name-string-face
   '((t :foreground "#a40000" :slant normal))
@@ -309,12 +310,13 @@ not one of mtp's forms or keyword arguments, which earlier rules have already hi
     ("\\_<\\(doc\\)@'" 1 'mtp-mode-keyword-face)
     ("\\_<\\(tex\\)'" 1 'mtp-mode-keyword-face)
     ("\\_<\\(free@\\)" 1 'mtp-mode-free-face)
+    ("(\\(free\\)\\_>" 1 'mtp-mode-free-face)
     (,(regexp-opt '("none" "true" "false" "self") 'symbols) . 'mtp-mode-constant-face)
     ("\\_<-?[0-9]+\\(?:\\.[0-9]*\\)?\\_>" . 'mtp-mode-number-face)
     (mtp-mode--match-call 1 'mtp-mode-call-face))
   "What mtp-mode highlights: the heads of forms, the names they declare, types in brackets,
-keyword arguments, the doc of doc@'text', the tex of tex'LaTeX', free@, none, true, false and self,
-numbers, the names let and foreach bind, and function calls.")
+keyword arguments, the doc of doc@'text', the tex of tex'LaTeX', free@ and (free, none, true,
+false and self, numbers, the names let and foreach bind, and function calls.")
 
 (defun mtp-mode--syntactic-face (state)
   "The face of the string or comment STATE is in: a docstring, the text of doc@'text', takes

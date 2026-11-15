@@ -18,4 +18,4 @@
 (button go (move k (to 9) (duration 1)))
 ; It writes nothing any canvas shows, so it belongs to none.
 (real other 0)
-(button free (move other (to 1) (duration 0)))
+(button loose (move other (to 1) (duration 0)))

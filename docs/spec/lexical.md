@@ -144,11 +144,11 @@ So `theta`, `show-tan`, `x2`, `a-`, `none?`, `the-true-value`, `truex`, `p.empty
 `ball.on-floor?` are names. `2x`, `-x`, `a?b`, `x'`, `a!b`, `a*b`, `a=b`, `a:b`, `θ`, `π` and `x²`
 are not, and neither is any word that holds a character that is not ASCII. `true.x`, `p.true`,
 `none.x`, `xs[0].none` and `none[0]` are errors, since one of their name parts is `true` or `none`.
-Since no name holds `'` or `@`, text that starts with `tex'`, `doc@` or `free@` is a
-{term}`TeX string`, a {term}`docstring` or a {term}`free starting value` at the start of an
-expression ({numref}`tex-strings`, {numref}`prefix-forms`), and an error in every other place, such
-as after `|` in a {term}`broadened type` or after a `.` that follows {term}`brackets`: `a|tex'q'`
-and `xs[0].tex'q'` are errors.
+Since no name holds `'` or `@`, text that starts with `tex'` is a {term}`TeX string`, and a name
+followed by `@` starts a prefixed form, at the start of an expression ({numref}`tex-strings`,
+{numref}`prefix-forms`). Both are errors in every other place, such as after `|` in a
+{term}`broadened type` or after a `.` that follows {term}`brackets`: `a|tex'q'`, `xs[0].tex'q'` and
+`a|r@1` are errors.
 
 :::{admonition} Code differs
 :class: note
@@ -220,7 +220,7 @@ Each keyword is the head of a form of the language.
 | Declarations of {term}`listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 | Declarations of functions, types and choreos | `func`, `colormap`, `type`, `interface`, `motif`, `variant`, `choreo` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
-| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as` |
+| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free` |
 | Steps of an animation | `move`, `wait`, `roll-dice`, `at-once`, `in-order` |
 :::
 
@@ -291,12 +291,18 @@ together, so in `tex'a\\'` the string is `a\\` and the last quote closes it.
 ```
 
 ```{rule} prefix-forms
-At the start of an expression, `doc@` followed directly by a string literal is a docstring, and
-`free@` followed directly by an expression is a free starting value. No whitespace or
-comment may be written between the prefix and the string literal or expression after it.
-{numref}`shorthand-forms` gives the form that each one is short for. `@` may not be written in
-any other place.
+A name, `@` and an item, written with nothing between them, are short for the form of that name
+and that item: `H@X` is `(H X)`. H is a name that is not an operator and does not end with `_`. X
+is any expression that is not itself a prefixed form. `@` may not be written in any other
+place.
 ```
+
+So `doc@'The dot.'` is the {term}`docstring` `(doc 'The dot.')`, `free@green` is the
+{term}`free starting value` `(free green)`, `r@1` is `(r 1)`, and `(circle c r@1 fill@'red')` is
+`(circle c (r 1) (fill 'red'))`. `free@(mix a b)` is `(free (mix a b))`, `r@(* 2 k)` is
+`(r (* 2 k))` and `pos@[1 2]` is `(pos [1 2])`. `fill@free@green`, `+@1`, `circle_@c`, `r@ 1` and
+`r @1` are errors. The form `(H X)` must be allowed where it is written, by the same
+rules as when it is written with parentheses: `if@c` is `(if c)`, which is an error.
 
 ## Interpolated strings and name strings
 

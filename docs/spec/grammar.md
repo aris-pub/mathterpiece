@@ -30,13 +30,14 @@ source may hold no form at all.
 ```
 
 An expression is one item of a source, of a form, of a {term}`list` literal or of {term}`brackets`:
-a form, a list literal, a word, a string literal or a {term}`free starting value`. The first item of
+a form, a list literal, a word or a string literal. A prefixed form such as `free@x` is a form
+({numref}`prefix-forms`). The first item of
 a form may be a head that ends with `_` ({numref}`unnamed-head`).
 
 ```{rule} adjacent-items
 Among the items of a form, a list literal or brackets, whitespace or a comment separates every two
 expressions, except where one of the two is a form. More exactly, an expression that ends with the
-`)` of a form, which is a form or a free starting value such as `free@(g)`, may be followed
+`)` of a form, which is a form or a prefixed form such as `free@(g)`, may be followed
 directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
 and every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
 expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
@@ -121,8 +122,7 @@ The parser produces each spelling on the left as the form on the right:
 
 | Written | Is the form |
 |---|---|
-| `doc@'text'` | `(doc 'text')` |
-| `free@X` | `(free@ X)`, whose head is the name `free@`, which no source can write as a word |
+| `H@X`, such as `r@1` | `(H X)`, such as `(r 1)` ({numref}`prefix-forms`) |
 | `#'dot-{k}'` | `(name $'dot-{k}')` |
 | `#'dot-{k}'.a.b` | `(. (. (name $'dot-{k}') a) b)` |
 | `#'dot-{k}'[i]` | `(. (name $'dot-{k}') i)` |

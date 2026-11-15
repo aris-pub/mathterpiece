@@ -1,6 +1,5 @@
 // The grammar of mtp, in Lark's notation. It is read with parser="lalr" and
-// lexer="contextual". The spec renders it (the directive mtp-grammar, docs/_ext/mtp_sphinx.py),
-// and tests/test_grammar.py checks it against the parser, mathterpiece/parse.py.
+// lexer="contextual".
 //
 // Each section starts with a line "//: name". The spec renders each section once, in the place
 // where it describes that section.
@@ -21,9 +20,10 @@ touching: plain (form touching?)?
 head_touching: head (form touching?)?
 expression: paren | plain
 paren: form
-     | FREE paren -> free
-plain: list | word | string | doc | interpolated
-     | FREE plain -> free
+     | PREFIX form -> prefixed
+plain: plain_item
+     | PREFIX plain_item -> prefixed
+plain_item: list | word | string | interpolated
 
 //: lists
 list: "[" list_items "]" list_brackets*
@@ -46,7 +46,6 @@ bool: TRUE | FALSE
 
 //: strings
 string: STRING | TEX
-doc: DOC STRING
 interpolated: DOLLAR_QUOTE (TEXT | braces)* QUOTE
 name_string_text: HASH_QUOTE TEXT? braces (TEXT | braces)* QUOTE
 braces: "{" _WHITESPACE? expression _WHITESPACE? FORMAT? "}"
@@ -94,8 +93,7 @@ ESCAPE: /\\['\\n]/
 TEX.1: "tex'" (/[^'\\]/ | /\\[\s\S]/)* "'"
 
 //: prefixes
-DOC.1: "doc@"
-FREE.1: "free@"
+PREFIX.1: PARTS "@"
 
 //: interpolated-strings
 DOLLAR_QUOTE: "$'"

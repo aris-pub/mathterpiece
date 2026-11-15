@@ -491,7 +491,7 @@ Each form has this type:
 | `(name S)` | the type of the declaration that it names ({numref}`names-from-values`) |
 | `(type-of X)` | `string`. X is compiled for its type only |
 | a declaration | the type that its head gives, as in {numref}`form-template` |
-| `free@X` | the type of X |
+| `(free X)` | the type of X |
 
 Each expression that is given where a type is expected must fit that type ({numref}`fits`), after
 the conversions of {numref}`conversions`, or meet its constraints by {numref}`constraint-proof`.
