@@ -319,10 +319,19 @@ keeps its range. In an `if` inside A or B, the range of N is the part that the o
 {term}`rewrites <rewrite>` into `if` ({numref}`sugar-rewrites`). No other condition narrows a range.
 ```
 
-So in examples/spiral-of-copies.mtp, line 21, where the body of the `foreach` is proved for `k`
-from 0 to 59 ({numref}`prove-bodies-once`), `k` in the second branch of `(if (= k 0) …)` is from 1
-to 59, so `#'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58`
-({numref}`names-from-values`). With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` gives `k` the
+In the source below, the body of the `foreach` is proved for `k` from 0 to 59
+({numref}`prove-bodies-once`). So `k` in the second branch of `(if (= k 0) …)` is from 1 to 59,
+and `#'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58` ({numref}`names-from-values`).
+
+```mtp
+(int n 24 (>= 1) (<= 60))
+(scene s
+  (foreach k n
+    (circle #'dot-{k}' (r 0.1)
+      (pos (if (= k 0) [3 0] (* 0.9 #'dot-{(- k 1)}'.pos))))))
+```
+
+With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` gives `k` the
 range 0 to 2 in A and 3 to 5 in B, and `(if (> k 7) A B)` never runs A. With `(real x 1)`,
 `(if (> x 0) (sqrt x) 0)` is a `real`, since `x` in the first branch is from 0 to `1e150`. In
 `(if (> x 0) (/ 1 x) 0)`, `x` in the first branch has the same range, which holds 0, so

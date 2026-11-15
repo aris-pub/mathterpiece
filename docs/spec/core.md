@@ -6,9 +6,9 @@ On this page, every {term}`head` that the {term}`compiler` accepts is sorted int
 {term}`rewrite` into core forms. Each core form is given with the page of the spec where its
 meaning is defined.
 
-The inventory was built from `mathterpiece/compiler.py` and `mathterpiece/parse.py` as they are
-on 2026-11-14. Citations such as `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page specifies the language. Where the code does not yet follow a rule, a box marked "Code differs"
-after the rule gives what the code does and the bead that will change it.
+The inventory lists the heads that the compiler accepted on 2026-11-14. This page specifies the
+language. Where the code does not yet follow a rule, a box marked "Code differs" after the rule
+gives what the code does and the bead that will change it.
 
 (core-kinds)=
 ## Kinds of form
@@ -211,7 +211,6 @@ below the {term}`number limit`, the `foreach` is a compile error.
 
 So with `(int n 3 (>= 0) (<= 5))`, which a slider writes, `(foreach k n …)` and
 `(foreach k (range n) …)` both make 5 copies, and copies 3 and 4 do not exist while `n` is 3.
-examples/ball-puzzle.mtp and examples/spiral-of-copies.mtp use this.
 
 :::{admonition} Code differs
 :class: note
@@ -231,14 +230,14 @@ of `X`.
 
 So `p.r` is the attribute `r` of a circle `p`, and with `(let ((r 1)) xs.r)`, `xs.r` is item 1 of
 the list `xs`, as `(. xs r)` is. A member of a namespace, a palette, a formula or an instance is
-read by its name, even when another declaration has the same name: `okabe-ito-named.yellow` in
-examples/colormaps.mtp reads the member `yellow` of the palette, although the file also imports a
-color `yellow`.
+read by its name, even when another declaration has the same name. So with
+`(color yellow '#ffd700')` and `(palette marks (yellow '#e6c200') (blue '#0072b2'))` at the top
+level, `marks.yellow` is the member `yellow` of the palette, and not the color `yellow`.
 
 :::{admonition} Code differs
 :class: note
 compiler.py:6540-6549 reads `Y` as an attribute only when `has_attr` (compiler.py:6175-6188) finds
-one, and `has_attr` finds no member of a namespace or a formula. So `(. okabe-ito-named yellow)`
+one, and `has_attr` finds no member of a namespace or a formula. So `(. marks yellow)`
 reads the color `yellow` as a key (mtp-ydd4.7.19).
 :::
 
@@ -410,7 +409,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `font` | core | an attribute of the shape, by the table at compiler.py:268-328 | {doc}`world-model` |
+| `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `font` | core | an attribute of the shape | {doc}`world-model` |
 | `pos` | sugar | `x` and `y` given as one point | {numref}`sugar-rewrites` |
 | `dash` with two arguments | core | the dash lengths and `dash-offset` | {doc}`world-model` |
 | `dash` with one argument | sugar | an offset of 0 | {numref}`sugar-rewrites` |
@@ -488,31 +487,34 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 
 These heads name functions of the library. Each call is a core call ({numref}`library-form`).
 
-| Heads | What they are | Where the compiler reads them |
-|---|---|---|
-| `+`, `-`, `*`, `/`, `^`, `mod`, `=`, `!=`, `<`, `<=`, `>`, `>=` | the operators | compiler.py:6441-6447 |
-| `not`, `abs`, `or?`, `none?`, `some?`, `somes` | logic, absolute value and `none` | compiler.py:6532-6572 |
-| `sqrt`, `sign`, `floor`, `ceil`, `exp` | numbers | builtins.py:180-188 |
-| `sin`, `cos`, `tan`, `sec`, `csc`, `cot`, `sind`, `cosd`, `tand`, `secd`, `cscd`, `cotd`, `asin`, `acos`, `atan`, `acot`, `asec`, `acsc`, `asind`, `acosd`, `atand`, `acotd`, `asecd`, `acscd`, `rad`, `turn`, `deg`, `to-rad`, `to-turn` | angles | builtins.py:189-227 |
-| `polar`, `to-polar`, `dist` | points | builtins.py:228-232 |
-| `rotate`, `translate`, `scale`, `transform` | transforms | builtins.py:233-234, compiler.py:2345-2355 |
-| `mix`, `lighten`, `darken`, `light-dark` | colors | builtins.py:235-238 |
-| `round`, `log`, `min`, `max`, `lerp`, `range` | with a varying number or type of arguments | compiler.py:2316-2444 |
-| `gap`, `num` | the third argument of `range` | compiler.py:2357-2407 |
-| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds | compiler.py:2236-2314 |
-| `step`, `step-ease` | eases: `(step N)` gives the ease of N equal jumps, and `(step-ease P)` the ease that is 0 before P and 1 from P on | compiler.py:2918-2933 |
-| `seed` | the last argument of a random function, `(seed S)` | compiler.py:2245-2252 |
-| `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections | compiler.py:2652-2795 |
-| `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box | compiler.py:5420-5440 |
-| `pi`, `tau`, `euler` | constants. builtins.py has `π`, `τ`, `infty` and `∞` too, which bead mtp-ydd4.7.33 removes | builtins.py:246-254 |
-| the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp | `mathterpiece/stdlib/` |
+| Heads | What they are |
+|---|---|
+| `+`, `-`, `*`, `/`, `^`, `mod`, `=`, `!=`, `<`, `<=`, `>`, `>=` | the operators |
+| `not`, `abs`, `or?`, `none?`, `some?`, `somes` | logic, absolute value and `none` |
+| `sqrt`, `sign`, `floor`, `ceil`, `exp` | numbers |
+| `sin`, `cos`, `tan`, `sec`, `csc`, `cot`, `sind`, `cosd`, `tand`, `secd`, `cscd`, `cotd`, `asin`, `acos`, `atan`, `acot`, `asec`, `acsc`, `asind`, `acosd`, `atand`, `acotd`, `asecd`, `acscd`, `rad`, `turn`, `deg`, `to-rad`, `to-turn` | angles |
+| `polar`, `to-polar`, `dist` | points |
+| `rotate`, `translate`, `scale`, `transform` | transforms |
+| `mix`, `lighten`, `darken`, `light-dark` | colors |
+| `round`, `log`, `min`, `max`, `lerp`, `range` | with a varying number or type of arguments |
+| `gap`, `num` | the third argument of `range` |
+| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds |
+| `step`, `step-ease` | eases: `(step N)` gives the ease of N equal jumps, and `(step-ease P)` the ease that is 0 before P and 1 from P on |
+| `seed` | the last argument of a random function, `(seed S)` |
+| `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
+| `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
+| `pi`, `tau`, `euler` | constants |
+| the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp |
+
+:::{admonition} Code differs
+:class: note
+builtins.py:246-254 also declares the constants `π`, `τ`, `infty` and `∞`. Bead mtp-ydd4.7.33
+removes them.
+:::
 
 A call of `step` or `step-ease` gives an ease, which is a function, so the two are library
 functions and not keywords. By {numref}`declaration-names`, a declaration named `step` or
-`step-ease` takes the place of the library function from that declaration on. Three files declare
-the name `step`: the parameter `step` of `grid` in mathterpiece/stdlib/marks.mtp, the parameter
-`step` of `best-in` in examples/bourgain-densities.mtp, and the variable `step` in
-examples/formula-values.mtp. None of them uses an ease `(step N)` after its declaration.
+`step-ease` takes the place of the library function from that declaration on.
 
 :::{admonition} Code differs
 :class: note
@@ -578,17 +580,17 @@ These heads were once part of the language, or belong in another context. No bod
 each is a compile error ({numref}`contexts`). The compiler gives a message about what to write in
 their place. They are not forms of the language.
 
-| Head | Where | The message, in short | Code |
-|---|---|---|---|
-| `step` | in an animation's body | use `(labels …)` and `(in-order …)` | compiler.py:3047-3052 |
-| `autoplay` | on a control | use a canvas's `(on-ready …)` | compiler.py:3695-3701 |
-| `exclusive` | on a writer | use `(priority n)` | compiler.py:3784-3786 |
-| `when` | on a control or a listener | use `(active bool)` | compiler.py:3769-3772 |
-| `value` | on a toggle | give the bool its start where it is declared | compiler.py:3926-3932 |
-| `buttons` | on a stepper | a stepper stops after each step | compiler.py:3897-3902 |
-| `dash-offset` | as an item | write `(dash [4 2] 1)` | compiler.py:7378-7382 |
-| `move` | in a canvas | a canvas takes no move | compiler.py:4240-4245 |
-| `term` | at the top level | a term is given inside its formula | compiler.py:1050-1051 |
+| Head | Where | The message, in short |
+|---|---|---|
+| `step` | in an animation's body | use `(labels …)` and `(in-order …)` |
+| `autoplay` | on a control | use a canvas's `(on-ready …)` |
+| `exclusive` | on a writer | use `(priority n)` |
+| `when` | on a control or a listener | use `(active bool)` |
+| `value` | on a toggle | give the bool its start where it is declared |
+| `buttons` | on a stepper | a stepper stops after each step |
+| `dash-offset` | as an item | write `(dash [4 2] 1)` |
+| `move` | in a canvas | a canvas takes no move |
+| `term` | at the top level | a term is given inside its formula |
 
 (core-summary)=
 ## Summary
@@ -638,5 +640,5 @@ their place. They are not forms of the language.
 | a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-translate` |
 | a condition | core | {doc}`reaction` |
 | the operators, `not`, `abs`, the `none` functions and the box points | library | {numref}`library-form` |
-| the built-in functions of builtins.py and the collections, `map` over an int included, `step` and `step-ease` | library | {doc}`stdlib` |
+| the built-in functions and the collections, `map` over an int included, `step` and `step-ease` | library | {doc}`stdlib` |
 | the constants and the standard library files | library | {doc}`stdlib` |

@@ -36,7 +36,7 @@ exceptions.
 
 By {numref}`evaluation-is-pure`, and since every argument is evaluated, the order in which the
 arguments of one call are evaluated does not change the value. The runtime evaluates arguments
-from left to right (web/src/runtime.ts, `compileBuiltin` and the case `call` of `compile`).
+from left to right.
 
 ```{rule} forms-evaluate-some-parts
 These forms evaluate only some of their parts:
@@ -55,15 +55,14 @@ the value of that clause only. `and` stops at the first part that is false, and 
 part that is true. `(when c x)` is `(if c x none)` ({numref}`rewrite-when`), and evaluates its parts
 in the same way.
 
-The compiler leaves out every `let` value that nothing reads (mathterpiece/compiler.py, line 6693),
-and the runtime evaluates the rest before the body (web/src/runtime.ts, line 1060). So in
+The compiler leaves out every `let` value that nothing reads, and the runtime evaluates the rest
+before the body. So in
 `(let ((s (walk k))) (if c s 0))`, `walk` is called while drawing whether `c` is true or not.
 
 The collection functions call their function on the items in order. While drawing, `any` and
-`all` with a function stop at the first item at which the result is known (`Array.some` and
-`Array.every` in web/src/runtime.ts, `compileCollection`). When folding, the compiler calls the
-function on every item first (mathterpiece/compiler.py, line 2794). By
-{numref}`evaluation-is-pure` the two give the same value.
+`all` with a function stop at the first item at which the result is known. When folding, the
+compiler calls the function on every item first. By {numref}`evaluation-is-pure` the two give the
+same value.
 
 ### Parts of these forms when compiling
 
@@ -252,7 +251,7 @@ stroke. In every other place that reaches the {term}`reader`, `none` is replaced
 `or?`, or left out of a list by `somes`.
 
 When compiling, a value known to be `none` propagates by the same rule: an operation with such an
-argument is known to give `none` (mathterpiece/compiler.py, `apply_builtin`, line 2204).
+argument is known to give `none`.
 
 ## Numbers
 
@@ -373,10 +372,9 @@ range, so that it lands on the nearest int inside the range ({doc}`types`).
 ```
 
 The runtime rounds the value once before the constraints and once after them, so that an int that
-wraps is never rounded up out of its interval (web/src/runtime.ts, lines 763 and 771). The
-compiler rounds with Python's `Decimal` (mathterpiece/compiler.py, `_round`, line 6877), and the
-runtime with `roundHalfAway` (web/src/builtins.ts, line 181). On 1,031 values from -8 to 8, and on
-156 pairs of a value and a format spec, the two agree.
+wraps is never rounded up out of its interval. The compiler rounds with Python's `Decimal`, and the
+runtime with a JavaScript function. On 1,031 values from -8 to 8, and on 156 pairs of a value and a format
+spec, the two agree.
 
 :::{admonition} Code differs
 :class: note
@@ -485,8 +483,7 @@ With s the value of the seed and p the site:
 ```
 
 `rand` and `rand-int` with `lo` above `hi`, and `pick` on an empty list, give `none`
-({numref}`operations-that-give-none`). These are the functions `unit`, `shuffle` and `nextSeed` of
-web/src/random.ts, and the case `rand` of `compile` in web/src/runtime.ts, line 1069.
+({numref}`operations-that-give-none`).
 
 ```{rule} random-never-folded
 A random value is known only while drawing ({doc}`binding-time`).
@@ -503,8 +500,8 @@ A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`
 ({numref}`rewrite-roll-dice`). By {numref}`random-values`, it changes the random values that follow
 `s`, and no others.
 
-`rand`, `rand-int`, `pick` and `shuffle` inside the body of a function are a compile error for now
-(mathterpiece/compiler.py, line 2247). A free variable may start at a random value with `free@`,
+`rand`, `rand-int`, `pick` and `shuffle` inside the body of a function are a compile error for
+now. A free variable may start at a random value with `free@`,
 and then never follows the seed.
 
 ```{mtp-example}
@@ -581,13 +578,11 @@ strings, choices and colors match only when they are exactly the same, and `none
 `none`. Only the runtime matches values: no form of the language matches two values.
 ```
 
-Matching is `same` in web/src/same.ts. The runtime uses it to read the step of a play or a stepper
-from the scene (web/src/player.ts, line 302), and to check
-whether the free values that a canvas's `on-view` moves still have their values from page load
-(web/src/lifecycle.ts, line 62).
+The runtime matches values to read the step of a play or a stepper from the scene, and to check
+whether the free values that a canvas's `on-view` moves still have their values from page load.
 
 While drawing, the runtime uses `=` to skip writes: a write of a value equal to the current one is
-skipped, and nothing that depends on it is computed again (web/src/runtime.ts, line 728).
+skipped, and nothing that depends on it is computed again.
 
 (termination)=
 ## Termination
@@ -679,8 +674,7 @@ The prover therefore does not widen the ranges that it works out ({numref}`prove
 A folded value is final: the .mtpc holds the value in place of the expression
 ({numref}`compile-steps`), so the runtime uses it as written and never computes it again.
 
-{numref}`same-value-at-both-times` matches the comment at line 1 of web/src/builtins.ts, "as the
-compiler folds them". The compiler computes with CPython and its `math` module, and the runtime
+The compiler computes with CPython and its `math` module, and the runtime
 with JavaScript and its `Math` object.
 
 :::{admonition} Code differs

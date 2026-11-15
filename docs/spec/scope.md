@@ -81,8 +81,7 @@ When neither step finds a declaration, the source is a {term}`compile error`.
 
 So an inner name hides an outer name of the same text inside its scope: a parameter, a `let`
 name and a `foreach` name hide a name of the file scope, and a member of a namespace hides a
-top-level name inside the namespace, as the palette member `yellow` of examples/colormaps.mtp does
-while the file also imports a color `yellow`. A declaration in the file scope hides a built-in
+top-level name inside the namespace. A declaration in the file scope hides a built-in
 function or constant from that declaration on ({numref}`declaration-names`). The name parts of a
 name after its first are not looked up in any scope: `p.r` is `(. p r)` ({numref}`sugar-rewrites`),
 and what `r` is in it is defined in {numref}`dot-name-part`. `pointer` is found only in the move of
@@ -151,7 +150,6 @@ imported name.
 What `self` means, and every rule about a declaration that reads itself or its container, are to
 be redesigned around `self` (bead mtp-9b4m). The redesign is parked, and this spec
 does not define `self`. Today the compiler reads `self` in the body of a motif as the instance
-being built, and gives an error for `self` outside a motif's body (`compiler.py:6036` to
-`compiler.py:6043`, `lookup`). The rules of today about a declaration that reads itself are in
-{numref}`self-reference-today`.
+being built, and gives an error for `self` outside a motif's body. The rules of today about a
+declaration that reads itself are in {numref}`self-reference-today`.
 :::

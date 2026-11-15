@@ -189,7 +189,7 @@ of the optional arguments that the form allows, such as `(r 1)` in `(circle c (r
 form, the optional arguments come before the body, in any order, except that a `(like …)` comes
 before every other optional argument. An optional argument after the first item of the body is an
 error, such as "(x …) is an optional argument, so
-it comes before the canvas's body" (`compiler.py:3599`).
+it comes before the canvas's body".
 ```
 
 :::{admonition} Code differs
@@ -247,38 +247,38 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 :::{table} The bodies of mtp. "let, foreach" is "yes" for a body that may hold a `let` and a `foreach` ({numref}`body-let-foreach`), and "no body" for a form that has no body.
 :name: contexts-table
 
-| Body | Optional arguments | Other items | let, foreach | Compiler |
-|---|---|---|---|---|
-| The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. At most one `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes | `top_here`, `expand` |
-| The top level of a {term}`file to import` | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes | `_not_importable` |
-| `(scene name …)` | `(background …)`, `(transform …)` | Shapes: every shape, `group`, `row`, `column`, motif and variant instances. Variables. `exists-when` | yes | `scene_items` |
-| `(group name …)`, `(row name …)`, `(column name …)` | the optional arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes | `shape_here` |
-| Any other shape, such as `(circle name …)` | the optional arguments of the shape | The string of a text, as a positional argument | no body | `shape_here` |
-| A motif instance, `(M name …)` | its parameters, and the optional arguments of an instance: `x`, `y`, `pos`, `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `like` | None: "an instance of M takes no members" | no body | `instance` |
-| A variant instance | the optional arguments of its base shape, and the parameters of the variant | None | no body | `variant_instance` |
-| `(motif name params …)` | none | Shapes. Variables that are bound or known when compiling. `exists-when`. Not: `animation` (a choreo is the template of animations), uses of choreos, `motif`, `scene` | yes | `instance` |
-| `(variant name params shape)` | none | Exactly one shape, which is not a group | no | `variant_decl` |
-| `(func name params body)` | none | Exactly one expression | no | `func_decl` |
-| `(type name base …)` | none | {term}`Constraints <constraint>` | yes | `type_decl` |
-| `(interface name …)` | none | Items `(T attribute constraint…)` | yes | `interface_decl` |
-| `(namespace name …)` | none | Variables, namespaces, palettes. Not: functions, types, motifs, variants, shapes, {term}`components <component>`, transitions, animations, imports, interfaces, colormaps, choreos | yes | `namespace_decl` |
-| `(palette name …)` | none | Items `(member color)`. Not: palettes, namespaces | yes | `palette_decl` |
-| `(formula name …)` | `(defaults …)`, at most once | Exactly one string, plain or TeX, known when compiling. `(term …)`, `exists-when`, variables. A `(term …)` and an `exists-when` of a term come after the string ({numref}`formula-terms`) | yes | `formula_decl` |
-| `(term name …)` | `(like t)` first, then items `(attribute value)`, `(tex …)` among them | None | no body | `term_form` |
-| A variable, `(T name value? …)` | none | Constraints, such as `(>= 0)` | yes | `declared` |
-| `(transition name target …)`, `(move target …)` | `like` first, then `from`, `to`, `duration`, `ease`, `path` | None | no body | `transition` |
-| `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, `(animation …)` ({numref}`animation-step`), the name of an animation or a transition, a use of a choreo | yes | `anim_body`, `steps` |
-| `(at-once …)`, `(in-order …)` | `(defaults …)` | The steps of an animation. Not: `loop` | yes | `steps` |
-| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content, at least one item: names of shapes or of the scene, list literals, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes | `component`, `build_canvas` |
-| `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `build_readout` |
-| `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `listened` |
-| A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes | `component`, `writer` |
-| A listener, inside the body of a view | its optional arguments, its animation among them. Not: `(in …)` | Its positional arguments: the shape or term that it listens to, and for some listeners a target. Conditions | yes | `component`, `listened`, `writer` |
-| `(defaults …)` of a group or an instance | none | Items `(attribute value)` for the members of the container | yes | `group_defaults` |
-| `(defaults …)` of an animation | none | `(duration …)`, `(ease …)` | yes | `steps` |
-| `(defaults …)` of a formula | none | Items `(attribute value)` for the terms | yes | `formula_defaults` |
-| `(clip shape)` | none | Exactly one circle, rect, ellipse, triangle, polygon or ring | no | `clip` |
-| `(import file name…)` | none | The file, then the names to import, or no names to import the file whole | no | `imports` |
+| Body | Optional arguments | Other items | let, foreach |
+|---|---|---|---|
+| The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. At most one `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes |
+| The top level of a {term}`file to import` | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes |
+| `(scene name …)` | `(background …)`, `(transform …)` | Shapes: every shape, `group`, `row`, `column`, motif and variant instances. Variables. `exists-when` | yes |
+| `(group name …)`, `(row name …)`, `(column name …)` | the optional arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes |
+| Any other shape, such as `(circle name …)` | the optional arguments of the shape | The string of a text, as a positional argument | no body |
+| A motif instance, `(M name …)` | its parameters, and the optional arguments of an instance: `x`, `y`, `pos`, `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `like` | None: "an instance of M takes no members" | no body |
+| A variant instance | the optional arguments of its base shape, and the parameters of the variant | None | no body |
+| `(motif name params …)` | none | Shapes. Variables that are bound or known when compiling. `exists-when`. Not: `animation` (a choreo is the template of animations), uses of choreos, `motif`, `scene` | yes |
+| `(variant name params shape)` | none | Exactly one shape, which is not a group | no |
+| `(func name params body)` | none | Exactly one expression | no |
+| `(type name base …)` | none | {term}`Constraints <constraint>` | yes |
+| `(interface name …)` | none | Items `(T attribute constraint…)` | yes |
+| `(namespace name …)` | none | Variables, namespaces, palettes. Not: functions, types, motifs, variants, shapes, {term}`components <component>`, transitions, animations, imports, interfaces, colormaps, choreos | yes |
+| `(palette name …)` | none | Items `(member color)`. Not: palettes, namespaces | yes |
+| `(formula name …)` | `(defaults …)`, at most once | Exactly one string, plain or TeX, known when compiling. `(term …)`, `exists-when`, variables. A `(term …)` and an `exists-when` of a term come after the string ({numref}`formula-terms`) | yes |
+| `(term name …)` | `(like t)` first, then items `(attribute value)`, `(tex …)` among them | None | no body |
+| A variable, `(T name value? …)` | none | Constraints, such as `(>= 0)` | yes |
+| `(transition name target …)`, `(move target …)` | `like` first, then `from`, `to`, `duration`, `ease`, `path` | None | no body |
+| `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, `(animation …)` ({numref}`animation-step`), the name of an animation or a transition, a use of a choreo | yes |
+| `(at-once …)`, `(in-order …)` | `(defaults …)` | The steps of an animation. Not: `loop` | yes |
+| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content, at least one item: names of shapes or of the scene, list literals, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes |
+| `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes |
+| `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` ({numref}`listeners-in-views`) | yes |
+| A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes |
+| A listener, inside the body of a view | its optional arguments, its animation among them. Not: `(in …)` | Its positional arguments: the shape or term that it listens to, and for some listeners a target. Conditions | yes |
+| `(defaults …)` of a group or an instance | none | Items `(attribute value)` for the members of the container | yes |
+| `(defaults …)` of an animation | none | `(duration …)`, `(ease …)` | yes |
+| `(defaults …)` of a formula | none | Items `(attribute value)` for the terms | yes |
+| `(clip shape)` | none | Exactly one circle, rect, ellipse, triangle, polygon or ring | no |
+| `(import file name…)` | none | The file, then the names to import, or no names to import the file whole | no |
 :::
 
 So a source need not hold a scene: `(real a 1) (readout r $'{a}')` is a world model with a
@@ -363,8 +363,7 @@ canvas, a listener on a term of a formula, `on-live` and `on-quiet` in a display
 `on-quiet` in a readout. A listener is never written at the top level and has no `(in …)`, while a
 control is written at the top level and names the views that it belongs to with `(in …)`.
 
-Bead mtp-6k7f, done on 2026-11-11, made the compiler follow this rule. `compiler.py:178`
-(`OWN_VIEW_NAMED = False`) gives the spelling with the name left out.
+Bead mtp-6k7f, done on 2026-11-11, made the compiler follow this rule.
 
 ## Imports
 
