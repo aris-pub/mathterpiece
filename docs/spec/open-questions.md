@@ -193,9 +193,9 @@ byte order mark at the start of a file ignored.
 
 - Letters in names are ASCII only, so `π`, `τ` and `∞` are not names ({numref}`name-characters`)
   (Q-lexical-4).
-- `?` may end each part of a name, as in `found?.x` ({numref}`name-characters`).
+- `?` may end each name part of a name, as in `found?.x` ({numref}`name-characters`).
 - `true`, `false` and `none` may be part of a name, as in `the-true-value`, but never a whole
-  name or a whole part between dots, so `p.true` is an error ({numref}`name-characters`)
+  name or a whole name part between dots, so `p.true` is an error ({numref}`name-characters`)
   (Q-lexical-7).
 - Whitespace is space, tab, carriage return and line feed ({numref}`whitespace-and-comments`).
 - No comment may be written in the braces of an interpolated string, around the expression
@@ -209,8 +209,8 @@ byte order mark at the start of a file ignored.
   function or constant, and from it on the name means the declared thing. `true`, `false` and
   `none` are values, never names. The names of the standard library are ordinary declarations
   brought in with `import` ({numref}`declaration-names`) (Q-lexical-8, Q-core-26).
-- The coined words "token", "run", "chunk", "sequence", "field" and "name part" are not used: the
-  spec writes out what they mean, and says "part" as the documents do.
+- The coined words "token", "run", "chunk", "sequence" and "field" are not used: the spec writes
+  out what they mean. A piece of a name is a "name part" ({numref}`name-characters`).
 
 ## P8. Declare before use, everywhere
 

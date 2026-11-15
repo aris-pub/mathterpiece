@@ -464,7 +464,7 @@ class TestForeachBoundedLength:
         compile_error("(int n 3 (>= 0)) (scene s (foreach k n (circle #'c-{k}' (r 1))))")
 
 
-@rule("dot-part")
+@rule("dot-name-part")
 class TestDotPart:
     def test_an_attribute(self):
         m = accepted(SCENE + "(real v (. q r))")

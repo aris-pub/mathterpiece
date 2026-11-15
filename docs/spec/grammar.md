@@ -1,11 +1,11 @@
 (grammar)=
 # Grammar
 
-This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`strings <string>` and
-other pieces of text of {doc}`lexical` together into {term}`forms <form>`, the
-{term}`expressions <expression>` that the parser produces, the template that every form follows, and
-the kinds of form that may be written in each {term}`body`. The signatures of the forms, which list
-the arguments of each {term}`head`, are not part of this page.
+This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`string`
+{term}`literals <literal>` and other pieces of text of {doc}`lexical` together into
+{term}`forms <form>`, the {term}`expressions <expression>` that the parser produces, the template
+that every form follows, and the kinds of form that may be written in each {term}`body`. The
+signatures of the forms, which list the arguments of each {term}`head`, are not part of this page.
 
 This page specifies the language. Where the parser
 or the {term}`compiler` does not follow a rule yet, a note after the rule says what the code does
@@ -31,16 +31,16 @@ source may hold no form at all.
 ```{mtp-grammar} forms
 ```
 
-An expression is one item of a source, of a form, of a {term}`list` or of {term}`brackets`:
-a form, a list, a word, a string or a {term}`free starting value`. The first item of a form may be a
-head that ends with `_` ({numref}`unnamed-head`).
+An expression is one item of a source, of a form, of a {term}`list` literal or of {term}`brackets`:
+a form, a list literal, a word, a string literal or a {term}`free starting value`. The first item of
+a form may be a head that ends with `_` ({numref}`unnamed-head`).
 
 ```{rule} adjacent-items
-Among the items of a form, a list or brackets, whitespace or a comment separates every two
+Among the items of a form, a list literal or brackets, whitespace or a comment separates every two
 expressions, except where one of the two is a form. More exactly, an expression that ends with the
 `)` of a form, which is a form or a free starting value such as `free@(g)`, may be followed
-directly by any expression that does not start with `.` or `[` ({numref}`no-part-after-form`), and
-every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
+directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
+and every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
 expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
 errors.
 ```
@@ -51,17 +51,17 @@ errors.
 ```
 
 ```{rule} lists
-A list is written in square brackets, with its items separated as in
-{numref}`adjacent-items`: `[]`, `[0 1]`, `[(f x) 'a']`. A `[` right after the `]` of a list starts
-brackets after the list, which hold exactly one expression: `[a b c][h]`.
+A list literal is written in square brackets, with its items separated as in
+{numref}`adjacent-items`: `[]`, `[0 1]`, `[(f x) 'a']`. A `[` right after the `]` of a list literal
+starts brackets after the list literal, which hold exactly one expression: `[a b c][h]`.
 ```
 
 ```{rule} name-brackets
 A `[` right after a {term}`name`, with no whitespace between them, starts brackets after the name,
 which hold one expression or more: `xs[0]`, `xs[(+ k 1)]`, `g['m1']`, `func[real real]`. Several
-pairs of brackets may follow each other, and after brackets, `.` and more {term}`parts <part>` may
-follow: `xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after whitespace starts a list: `xs [0]` is the
-name `xs` and the list `[0]`.
+pairs of brackets may follow each other, and after brackets, `.` and more
+{term}`name parts <name part>` may follow: `xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after
+whitespace starts a list literal: `xs [0]` is the name `xs` and the list literal `[0]`.
 ```
 
 ### Words
@@ -74,7 +74,7 @@ name `xs` and the list `[0]`.
 
 ```{rule} broadened-types
 A {term}`broadened type` is two words or more joined by `|` with no whitespace between them, such
-as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bools <bool>` or
+as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bool` literals or
 {term}`operators <operator>`. A broadened type is one expression, and the compiler reads it as a
 type ({doc}`types`).
 ```
@@ -101,22 +101,22 @@ source. Each expression is one of these:
 | Expression | Written | Holds |
 |---|---|---|
 | form | `(…)` | its items, in order |
-| list | `[…]` | its items, in order |
-| name | `p`, `p.pos.x`, `xs[0].y` | its parts, in order. Each part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
+| list literal | `[…]` | its items, in order |
+| name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
 | brackets | `[real real]` in `func[real real]` | its expressions, in order |
 | broadened type | `real\|none` | its words, as expressions, in order |
-| string | `'…'`, `tex'…'` | its text, and whether it is a {term}`TeX string` |
+| string literal | `'…'`, `tex'…'` | its text, and whether it is a {term}`TeX string` |
 | {term}`interpolated string` | `$'…'` | its pieces: text, the expression of each `{…}` with no {term}`format spec`, and each `{…}` with a format spec |
 | `{…}` with a format spec | `{x:.2f}` | the expression and the format spec |
-| {term}`int`, {term}`ratio`, {term}`real`, {term}`complex` | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
-| bool | `true`, `false` | the value |
+| {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
+| bool literal | `true`, `false` | the value |
 | none | `none` | nothing |
 
 In an interpolated string, each piece of text is as long as possible, so two pieces of text are
 never next to each other.
 ```
 
-An operator is a name of one part ({numref}`literal-words`).
+An operator is a name with one name part ({numref}`literal-words`).
 
 ```{rule} shorthand-forms
 The parser produces each spelling on the left as the form on the right:
@@ -142,10 +142,10 @@ the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ �
 `(none_ a)` is `(none none a)`.
 ```
 
-The parser produces a name of several parts, such as `p.r` or `xs[0].y`, as one name
+The parser produces a name with several name parts, such as `p.r` or `xs[0].y`, as one name
 ({numref}`parser-expressions`). The rewrite step rewrites it into `(. X Y)` forms: `p.r` is
 `(. p r)`, and `xs[0].y` is `(. (. xs 0) y)` ({numref}`sugar-rewrites`). The meaning of `(. X Y)`
-is given in {numref}`dot-part`.
+is given in {numref}`dot-name-part`.
 
 ## The form template
 
@@ -168,7 +168,7 @@ A call and a special form follow the same template: `(+ a b c)`, `(if c a b)`.
 ```
 
 ```{rule} declared-names
-The name of a declaration is a bare name of one part, `none`, a {term}`name string` such as
+The name of a declaration is a bare name with one name part, `none`, a {term}`name string` such as
 `#'dot-{k}'`, or `(name s)`. The string of a name string and of `(name s)` is known when compiling.
 `none` as the name means that the declaration has no name, as the head `head_` does
 ({numref}`unnamed-head`). A name in quotes is an error ("a name is written bare, not in quotes"),
@@ -213,7 +213,7 @@ or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like �
 ```{rule} docstrings
 Every declaration and every listener may have a docstring, `doc@'text'`, and at most one. The
 docstring comes after all the positional arguments and all the optional arguments, and before the
-body. In a form that has no body, the docstring is the last item. Its string is plain: an
+body. In a form that has no body, the docstring is the last item. Its string literal is plain: an
 interpolated string is an error.
 ```
 
@@ -268,7 +268,7 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(transition name target …)`, `(move target …)` | `like` first, then `from`, `to`, `duration`, `ease`, `path` | None | no body | `transition` |
 | `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, `(animation …)` ({numref}`animation-step`), the name of an animation or a transition, a use of a choreo | yes | `anim_body`, `steps` |
 | `(at-once …)`, `(in-order …)` | `(defaults …)` | The steps of an animation. Not: `loop` | yes | `steps` |
-| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content: names of shapes or of the scene, lists, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes | `component`, `build_canvas` |
+| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content: names of shapes or of the scene, list literals, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes | `component`, `build_canvas` |
 | `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `build_readout` |
 | `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `listened` |
 | A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes | `component`, `writer` |

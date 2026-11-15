@@ -2,13 +2,13 @@
 # Lexical syntax
 
 This page defines the characters of a source, and the {term}`names <name>`, numbers,
-{term}`strings <string>` and other pieces of text that the {term}`parser` reads whole. The next
-page, {doc}`grammar`, defines how the parser puts these pieces together into {term}`forms <form>`.
-The definitions of this page and the rules of the next page are one grammar, in the file
-`docs/spec/mtp.lark`, written in the notation of the Lark parser. The test `tests/test_grammar.py`
-reads every source of the project both with this grammar and with the parser of the
-{term}`compiler`, `mathterpiece/parse.py`, and checks that the two accept the same sources and
-produce the same forms.
+{term}`string` {term}`literals <literal>` and other pieces of text that the {term}`parser` reads
+whole. The next page, {doc}`grammar`, defines how the parser puts these pieces together into
+{term}`forms <form>`. The definitions of this page and the rules of the next page are one grammar,
+in the file `docs/spec/mtp.lark`, written in the notation of the Lark parser. The test
+`tests/test_grammar.py` reads every source of the project both with this grammar and with the parser
+of the {term}`compiler`, `mathterpiece/parse.py`, and checks that the two accept the same sources
+and produce the same forms.
 
 This page specifies the language. The parser accepts exactly the text
 that this page allows, and rejects everything else. Where the parser does not follow a rule yet, a
@@ -18,9 +18,9 @@ test lists each such source as a known difference, with its bead.
 ## How the grammar is written
 
 The grammar is a list of definitions, `name: definition`. A definition whose name is in capitals
-gives a piece of text that the parser reads whole, such as a name, a number or a string, with no
-{term}`whitespace` or {term}`comment` inside it. A definition whose name is in small letters is a
-rule of {doc}`grammar`. In a definition:
+gives a piece of text that the parser reads whole, such as a name, a number or a string literal,
+with no {term}`whitespace` or {term}`comment` inside it. A definition whose name is in small letters
+is a rule of {doc}`grammar`. In a definition:
 
 - `"…"` is the text between the quotes.
 - `/…/` is a regular expression, in the notation of Python's `re` module. `[\s\S]` is any
@@ -55,8 +55,8 @@ newlines: each `\r\n` and each `\r` alone becomes `\n`. A byte order mark (U+FEF
 start of a source is ignored. The text has no other change.
 ```
 
-A byte order mark at any other place, outside strings and comments, is an error, because it is
-not whitespace ({numref}`whitespace-and-comments`) and not a character of a {term}`word`
+A byte order mark at any other place, outside string literals and comments, is an error, because it
+is not whitespace ({numref}`whitespace-and-comments`) and not a character of a {term}`word`
 ({numref}`word-ends`).
 
 :::{admonition} Code differs
@@ -82,13 +82,13 @@ the column. An expression that the parser builds from a shorter spelling has the
 ```{rule} whitespace-and-comments
 Whitespace is the four characters space (U+0020), tab (U+0009), line feed
 (U+000A) and carriage return (U+000D). A comment starts with `;` and runs up to the next
-line feed, or to the end of the source. Whitespace and comments have no meaning. Inside a string,
-`;` and whitespace are text.
+line feed, or to the end of the source. Whitespace and comments have no meaning. Inside a string
+literal, `;` and whitespace are text.
 ```
 
 So U+00A0 (no-break space), U+2028 (line separator), a form feed, a vertical tab and the other
-characters for which Python's `str.isspace()` is true are errors outside strings and comments.
-{doc}`grammar` gives the places where whitespace and comments may be written, and
+characters for which Python's `str.isspace()` is true are errors outside string literals and
+comments. {doc}`grammar` gives the places where whitespace and comments may be written, and
 {numref}`interpolated-strings` the places inside an {term}`interpolated string`.
 
 :::{admonition} Code differs
@@ -101,7 +101,7 @@ limits whitespace to the four characters of the rule.
 ## Where words end
 
 ```{rule} word-ends
-A word is a name, a number, an {term}`operator`, a {term}`bool` or `none`. From the first
+A word is a name, a number, an {term}`operator`, a {term}`bool` literal or `none`. From the first
 character of a word up to the next whitespace, the end of the source, or the next of the characters
 `( ) [ ] { } " | ; :`, the text is exactly one word. Text that starts where a word may start and is
 not one word up to there is an error.
@@ -118,12 +118,12 @@ one word, and a name, everywhere else. Bead mtp-ydd4.7.3 changes this, together 
 characters of a name.
 :::
 
-```{rule} no-part-after-form
+```{rule} no-name-part-after-form
 The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` and
 `(sort xs)[0]` are errors.
 ```
 
-A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-part`), as
+A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-name-part`), as
 `(. (sort xs) 0)`.
 
 ```{mtp-grammar} closing-parenthesis
@@ -132,22 +132,22 @@ A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-part
 ## Names
 
 A name is a word that refers to something declared: `theta`, `p.pos`, `show-tan`. It is
-one or more {term}`parts <part>` joined by dots. `p.pos.x` is the name of the three parts `p`,
-`pos` and `x`.
+one or more {term}`name parts <name part>` joined by dots. `p.pos.x` is the name of the three name
+parts `p`, `pos` and `x`.
 
 ```{mtp-grammar} names
 ```
 
 ```{rule} name-characters
-Each part of a name starts with a {term}`letter`, one of the ASCII letters `a` to `z` and `A` to
+Each name part starts with a {term}`letter`, one of the ASCII letters `a` to `z` and `A` to
 `Z`. Then come any number of letters, {term}`digits <digit>` and hyphens (`-`). Last comes `?`, or
-nothing. A part is never exactly `true`, `false` or `none`.
+nothing. A name part is never exactly `true`, `false` or `none`.
 ```
 
 So `theta`, `show-tan`, `x2`, `a-`, `none?`, `the-true-value`, `truex`, `p.empty?`, `found?.x` and
 `ball.on-floor?` are names. `2x`, `-x`, `a?b`, `x'`, `a!b`, `a*b`, `a=b`, `a:b`, `θ`, `π` and `x²`
 are not, and neither is any word that holds a character that is not ASCII. `true.x`, `p.true`,
-`none.x`, `xs[0].none` and `none[0]` are errors, since one of their parts is `true` or `none`.
+`none.x`, `xs[0].none` and `none[0]` are errors, since one of their name parts is `true` or `none`.
 Since no name holds `'` or `@`, text that starts with `tex'`, `doc@` or `free@` is a
 {term}`TeX string`, a {term}`docstring` or a {term}`free starting value` at the start of an
 expression ({numref}`tex-strings`, {numref}`prefix-forms`), and an error in every other place, such
@@ -174,8 +174,8 @@ and `xs[0].tex'q'` are errors.
 
 ```{rule} name-underscore
 An underscore may be written only at the very end of the head of a form, right after its last
-part: `(circle_ (r 1))`, `(marks.grid_ …)`, `(line|none_ …)` and `(none_ a)`. Such a head matches
-{token}`mtp:HEAD`.
+name part: `(circle_ (r 1))`, `(marks.grid_ …)`, `(line|none_ …)` and `(none_ a)`. Such a head
+matches {token}`mtp:HEAD`.
 ```
 
 So an underscore in any other place is an error: `x_` as an argument, `a_b`, `_x`, `_` alone,
@@ -184,8 +184,8 @@ has no name ({numref}`unnamed-head`).
 
 :::{admonition} Code differs
 :class: note
-`parse.py:86` allows `_` at the end of every part of every name, in any place, so the parser reads
-`(f x_)`, `a_.b`, `a._` and `_.a` as names, and `_[0]` too, because `parse.py:342` reads the
+`parse.py:86` allows `_` at the end of every name part of every name, in any place, so the parser
+reads `(f x_)`, `a_.b`, `a._` and `_.a` as names, and `_[0]` too, because `parse.py:342` reads the
 brackets before `parse.py:352` rejects a lone `_`. Bead mtp-ydd4.7.3 makes the parser follow the
 rule.
 :::
@@ -196,14 +196,14 @@ rule.
 ```
 
 ```{rule} literal-words
-The word `true` or `false` is a bool. The word `none` is the literal `none`. Each of the
-words `+ - * / ^ < <= > >= = != .` is an operator: a name of one part, which is never
+The word `true` or `false` is a bool literal. The word `none` is the literal `none`. Each of the
+words `+ - * / ^ < <= > >= = != .` is an operator: a name with one name part, which is never
 followed directly by `[`.
 ```
 
 So `+[0]` is an error. `true[0]`, `none[0]` and `3[0]` are errors too, since by
-{numref}`adjacent-items` only a form may follow a bool, `none` or a number directly. `!=x` is not a
-word.
+{numref}`adjacent-items` only a form may follow a bool literal, `none` or a number directly. `!=x`
+is not a word.
 
 ## Keywords and built-in names
 
@@ -266,9 +266,9 @@ mtp-ydd4.7.35 makes the compiler and the documents follow the rule.
 :::
 
 ```{rule} reserved-characters
-Outside a string, `{`, `}` and `"` are errors, and so is a `$` or a `#` that is not followed by
-`'`. Outside the {term}`format spec` of an interpolated string ({numref}`interpolated-strings`), `:`
-is an error. Strings are written in single quotes only.
+Outside a string literal, `{`, `}` and `"` are errors, and so is a `$` or a `#` that is not followed
+by `'`. Outside the {term}`format spec` of an interpolated string ({numref}`interpolated-strings`),
+`:` is an error. String literals are written in single quotes only.
 ```
 
 ## Numbers
@@ -280,13 +280,13 @@ is an error. Strings are written in single quotes only.
 A digit is one of the ASCII digits `0` to `9`. A word that matches one of the number
 definitions is a number, of the kind of the definition:
 
-- {token}`mtp:INT` is an {term}`int`, of any size. `007` is 7 and `+4` is 4.
-- {token}`mtp:RATIO` is a {term}`ratio`: the exact fraction of two ints, reduced, so `-2/4` is
-  `-1/2`. Only the numerator has a sign. A denominator of 0 is an error.
-- {token}`mtp:REAL` is a {term}`real`: the double-precision float nearest to the decimal number. A
-  real has a decimal point or an exponent: `2.5`, `1.`, `.5`, `1e3`, `1.5E-3`.
-- {token}`mtp:IMAG` is a {term}`complex` number whose real part is 0, such as `2i` and `-1.5e3i`.
-- {token}`mtp:COMPLEX` is a complex number with both parts, the real part first, such as `1+2i`
+- {token}`mtp:INT` is an {term}`int` literal, of any size. `007` is 7 and `+4` is 4.
+- {token}`mtp:RATIO` is a {term}`ratio` literal: the exact fraction of two ints, reduced, so `-2/4`
+  is `-1/2`. Only the numerator has a sign. A denominator of 0 is an error.
+- {token}`mtp:REAL` is a {term}`real` literal: the double-precision float nearest to the decimal
+  number. A real literal has a decimal point or an exponent: `2.5`, `1.`, `.5`, `1e3`, `1.5E-3`.
+- {token}`mtp:IMAG` is a {term}`complex` literal whose real part is 0, such as `2i` and `-1.5e3i`.
+- {token}`mtp:COMPLEX` is a complex literal with both parts, the real part first, such as `1+2i`
   and `-1e+2-3.5i`. Each part is a real, so `1+2i` is `1.0 + 2.0i`.
 
 The priorities of the grammar make a word the first of COMPLEX, IMAG, RATIO, REAL and INT that
@@ -309,7 +309,7 @@ parser reads `٣` as the int 3 and `1/٣` as a ratio. Bead mtp-ydd4.7.4 limits d
 ```
 
 ```{rule} string-literals
-A string is written in single quotes. Inside it, `\'` is a quote, `\\` is a backslash and
+A string literal is written in single quotes. Inside it, `\'` is a quote, `\\` is a backslash and
 `\n` is a line feed. A backslash followed by any other character is an error. Every other
 character, a line feed included, is itself.
 ```
@@ -326,9 +326,9 @@ together, so in `tex'a\\'` the string is `a\\` and the last quote closes it.
 ```
 
 ```{rule} prefix-forms
-At the start of an expression, `doc@` followed directly by a string is a docstring, and
+At the start of an expression, `doc@` followed directly by a string literal is a docstring, and
 `free@` followed directly by an expression is a free starting value. No whitespace or
-comment may be written between the prefix and the string or expression after it.
+comment may be written between the prefix and the string literal or expression after it.
 {numref}`shorthand-forms` gives the form that each one is short for. `@` may not be written in
 any other place.
 ```
@@ -355,20 +355,20 @@ inside a form in the braces is allowed, since it is inside the form and not arou
 expression: `$'{(f ; c\n x)}'` holds the form `(f x)`. `$'{x ; c\n}'` is an error.
 
 The grammar has no rule that depends on how deep braces are nested, so braces are read in the
-same way at every depth. When a string nested in the expression in braces ends, the expression
-and the rest of the braces go on by the same rules as before the nested string. So `$'{$'{a}'}'`
-is the interpolated string whose braces hold the interpolated string `$'{a}'`, and in
-`$'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.
+same way at every depth. When a string literal nested in the expression in braces ends, the
+expression and the rest of the braces go on by the same rules as before the nested string literal.
+So `$'{$'{a}'}'` is the interpolated string whose braces hold the interpolated string `$'{a}'`, and
+in `$'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.
 
 :::{admonition} Code differs
 :class: note
 - `parse.py:505` sets `in_braces = True` when braces open, and `parse.py:509` sets it to `False`
-  when they close, instead of setting back the value that it had before. So after a string nested
-  in braces ends, the parser reads the rest of the outer braces as if it were outside braces:
-  `$'{$'{a}'}'` is an error, and in `$'{#'n-{k}'.x:y}'` the parser reads `x:y` as one part. Bead
-  mtp-kzx2 fixes this.
+  when they close, instead of setting back the value that it had before. So after a string literal
+  nested in braces ends, the parser reads the rest of the outer braces as if it were outside braces:
+  `$'{$'{a}'}'` is an error, and in `$'{#'n-{k}'.x:y}'` the parser reads `x:y` as one name part.
+  Bead mtp-kzx2 fixes this.
 - `parse.py:501` and `parse.py:510` skip whitespace around the expression with `skip_blank`,
   which also skips comments, so the parser reads `$'{x ; c\n}'` as `$'{x}'`. Such a comment runs
-  to the end of the line, so it can hide the closing brace and the closing quote of the string.
-  Bead mtp-ydd4.7.31 makes it an error.
+  to the end of the line, so it can hide the closing brace and the closing quote of the string
+  literal. Bead mtp-ydd4.7.31 makes it an error.
 :::

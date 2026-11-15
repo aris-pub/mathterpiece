@@ -40,8 +40,8 @@ mtp-9b4m replaces them:
 4. A shape in a group, at any depth, never reads the group whole in its own form: an attribute of
    every member, such as `g.x`, a collection function over the group or over `g.members`, a
    function given `g.members`, or a member by a position known only while drawing. `(count g)` and
-   `g.length` may be read. The count and the list of a `foreach` inside the group never read the
-   group.
+   `g.length` may be read. The count and the {term}`list` of a `foreach` inside the group never read
+   the group.
 5. A container never reads itself in its own `clip` or in its own `(defaults …)`, also once the
    defaults are moved into its members ({numref}`sugar-rewrites`).
 
@@ -92,8 +92,8 @@ includes `none`.
 
 So `(move k (to (* 3 a)))` into `(real k 1 (>= 0) (<= 2))` compiles, and the write clamps each
 value to 0 or 2. `(move n (to 2.5))` into an `int` is a compile error, while the values between
-the ends of a move into an int are rounded. A `(length n)` is kept, so a move of a list declared
-`(length 2)` to a list of length 3 is a compile error.
+the ends of a move into an {term}`int` are rounded. A `(length n)` is kept, so a move of a list
+declared `(length 2)` to a list of length 3 is a compile error.
 
 ```{rule} writer-conditions
 Each condition of a control or a listener ({numref}`contexts-table`) is a comparison `(OP A B)`, OP
@@ -163,9 +163,9 @@ the prover, although it is always 0. It never counts, never searches for a value
 range only by the conditions of {numref}`if-narrowing`.
 
 ```{rule} ranges
-A range is a closed interval of reals, from a lower end to an upper end, each of them an
-int, a ratio or a binary64 number, the lower at most the upper. The prover works out a range for
-every expression of type `int`, `ratio` or `real`, with or without `none`. The range of an
+A range is a closed interval of {term}`reals <real>`, from a lower end to an upper end, each of them
+an int, a {term}`ratio` or a binary64 number, the lower at most the upper. The prover works out a
+range for every expression of type `int`, `ratio` or `real`, with or without `none`. The range of an
 expression holds every value other than `none` that the expression can give, when
 {term}`folded <folding>` and while drawing.
 ```
@@ -215,7 +215,7 @@ out from several ends, such as the sum of the lower ends, is one call of the ope
 ends, and is clamped once.
 ```
 
-The item type of a {term}`list` in brackets whose items are not all known, and whose items all have
+The item type of a list {term}`literal` whose items are not all known, and whose items all have
 ranges, holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the largest upper
 end of the items. So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
 
@@ -244,7 +244,7 @@ For a part of a list or a group:
 |---|---|
 | `xs[i]`, an item of a list | the length n of `xs` is known ({numref}`known-lengths`), and the range of `i` lies from -n to n - 1 |
 | `g[k]`, a member of a group by an int | the range of `k` lies from -n to n - 1, n being the number of members |
-| `g[k]`, a member of a group by a string | the type of `k` is a {term}`choice type` whose choices are all names of members of `g` |
+| `g[k]`, a member of a group by a {term}`string` | the type of `k` is a {term}`choice type` whose choices are all names of members of `g` |
 ```
 
 So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, a `real`. With
@@ -270,7 +270,7 @@ When a value does not meet C:
 | the value of a bound variable or attribute | {numref}`prover-finds-ranges` |
 | an argument of a call, of an instance or of a use of a choreo | a compile error |
 | the body of a function declared with a result type R | when R includes `none`, a call gives `none` where the value of the body breaks C, and the fold and write step writes the `check` for it. Otherwise a compile error |
-| an item of a list in brackets whose item type is expected | a compile error |
+| an item of a list literal whose item type is expected | a compile error |
 | a value that a writer writes | no proof: {numref}`written-values` |
 ```
 
