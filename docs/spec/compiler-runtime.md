@@ -366,6 +366,13 @@ is rejected when compiling, and a .mtpc in which something could fail is refused
 loaded ({numref}`runtime-loads-mtpc`).
 ```
 
+This rule follows from a principle of the design of mtp: a state that breaks a rule of the spec
+cannot be represented. No source can declare such a state, since the compiler proves every type
+and constraint before the page opens, and no reader can reach one, since the runtime brings every
+write into the constraints of what it writes. The principle is a goal of the design: where the
+spec still allows a state that breaks a rule, the spec has a gap, and the gap is closed by
+changing the language, never by showing an error to the reader.
+
 So an operation that has no value gives `none` ({numref}`operations-that-give-none`), and a write
 of a value that breaks a constraint brings it into the constraint ({numref}`number-limit`,
 {doc}`types`), and neither stops a component.
