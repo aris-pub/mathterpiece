@@ -37,8 +37,8 @@ The compiler turns a source into a .mtpc in five steps, in this order:
 1. **Parse.** The {term}`parser` reads the text into {term}`forms <form>`, by the syntax alone
    ({doc}`lexical`, {doc}`grammar`). It looks up no {term}`name`.
 2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`sugar`
-   form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). No value is
-   computed and no type is used.
+   form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, each
+   use of a choreo becomes an `(animation …)`. No value is computed and no type is used.
 3. **Prove.** Every {term}`expression` is given a type, and every type, {term}`range`,
    {term}`constraint` and other invariant that the spec requires is proved ({doc}`types`,
    {doc}`well-formedness`). This step proves and does nothing else.
