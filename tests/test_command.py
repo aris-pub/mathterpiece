@@ -16,7 +16,7 @@ from conformance.support import (
 )
 
 from mathterpiece.cli import main
-from mathterpiece.mtpc import VERSION
+from mathterpiece.mtpc import SPEC_VERSION
 
 
 def xfail(bead: str, why: str):
@@ -141,7 +141,7 @@ class TestMtpCompile:
     def test_the_path_given_with_o_making_its_folder(self, figure, flag):
         out = figure.parent / "new" / "deeper" / "x.mtpc"
         assert run("compile", str(figure), flag, str(out)) == 0
-        assert json.loads(out.read_text())["mtpc"] == VERSION
+        assert json.loads(out.read_text())["mtpc"] == SPEC_VERSION
 
 
 @NEEDS_PNPM

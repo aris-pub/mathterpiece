@@ -47,8 +47,10 @@ describe("the model", () => {
   });
 
   it("refuses a file of another version", () => {
-    page(`<mtp-readout model="m" name="r"></mtp-readout>`, { ...doc("page"), mtpc: 1 });
-    expect(document.querySelector("mtp-readout .mtp-error")!.textContent).toContain("version 4");
+    page(`<mtp-readout model="m" name="r"></mtp-readout>`, { ...doc("page"), mtpc: 4 });
+    const error = document.querySelector("mtp-readout .mtp-error")!.textContent;
+    expect(error).toContain("version 1");
+    expect(error).toContain("version 4");
   });
 });
 
@@ -861,8 +863,8 @@ describe("listeners inside a view", () => {
     document.querySelector(`mtp-canvas[name="${canvas}"] [data-mtp-id="${rt.id(name)}"]`)!;
   const at = (el: Element, type: string, x = 0, y = 0, pointerType = "mouse") =>
     el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType }));
-  const open = () =>
-    page(`<mtp-canvas model="m" name="left"></mtp-canvas><mtp-canvas model="m" name="right"></mtp-canvas>`, doc("in-views"));
+  const open = (file = doc("in-views")) =>
+    page(`<mtp-canvas model="m" name="left"></mtp-canvas><mtp-canvas model="m" name="right"></mtp-canvas>`, file);
   const drag = (el: Element, dx: number) => {
     at(el, "pointerdown", 100, 100);
     at(el, "pointermove", 100 + dx, 100);
@@ -899,6 +901,37 @@ describe("listeners inside a view", () => {
     at(shape(rt, "left", "pad"), "pointerup");
     pass(0.1);
     expect([v("tapped-left"), v("tapped-right")]).toEqual([1, 1]);
+  });
+
+  // mtp-ydd4.7.17: in an older form of the .mtpc, a listener with no in, or with several views in
+  // in, was heard in every view that shows its shape. The compiler writes one view in the in of
+  // every listener on a shape, and the runtime reads only that.
+  const withPad = (views: (file: Doc) => number[] | undefined) => {
+    const file = doc("in-views");
+    const pad = file.objects.find((o) => o.kind === "on-click" && o.shape === file.names["pad"] && o.in?.[0] === file.names["left"])!;
+    const into = views(file);
+    if (into === undefined) delete pad.in;
+    else pad.in = into;
+    return file;
+  };
+  const tapPads = (rt: Runtime) => {
+    for (const canvas of ["left", "right"]) {
+      at(shape(rt, canvas, "pad"), "pointerdown");
+      at(shape(rt, canvas, "pad"), "pointerup");
+    }
+    pass(0.1);
+  };
+
+  it("hears nothing for a listener on a shape with no in", () => {
+    const [, rt, v] = open(withPad(() => undefined));
+    tapPads(rt);
+    expect([v("tapped-left"), v("tapped-right")]).toEqual([0, 1]);
+  });
+
+  it("hears nothing for a listener on a shape with several views in in", () => {
+    const [, rt, v] = open(withPad((file) => [file.names["left"]!, file.names["right"]!]));
+    tapPads(rt);
+    expect([v("tapped-left"), v("tapped-right")]).toEqual([0, 1]);
   });
 
   it("enters and follows the pointer in its view only", () => {

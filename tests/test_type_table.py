@@ -10,7 +10,7 @@ from helpers import doc
 from mtpc_check import errors
 
 from mathterpiece.compiler import compile_source
-from mathterpiece.mtpc import VERSION, write
+from mathterpiece.mtpc import SPEC_VERSION, write
 
 SRC = (
     "(string scheme 'a' (one-of 'a' 'b' 'c')) (real t 0.5 (>= 0) (<= 1))"
@@ -45,5 +45,5 @@ def test_put_back_it_reads_as_before():
 
 def test_the_file_passes_the_schema_and_has_the_new_version():
     d = raw(SRC)
-    assert d["mtpc"] == VERSION == 4
+    assert d["mtpc"] == SPEC_VERSION == 1
     assert errors(d) == []

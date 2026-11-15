@@ -1,7 +1,7 @@
 import { define } from "./elements.ts";
 
 export {
-  FORMAT_VERSION,
+  SPEC_VERSION,
   MtpButton,
   MtpCanvas,
   MtpModel,

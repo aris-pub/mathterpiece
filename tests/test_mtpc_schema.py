@@ -3,6 +3,8 @@
 from jsonschema import Draft202012Validator
 from mtpc_check import SCHEMA, errors
 
+from mathterpiece.mtpc import SPEC_VERSION
+
 TRANSITION = {
     "kind": "transition",
     "type": "transition",
@@ -17,7 +19,13 @@ TRANSITION = {
 
 
 def doc(*objects):
-    return {"mtpc": 4, "types": [], "objects": list(objects), "functions": [], "names": {}}
+    return {
+        "mtpc": SPEC_VERSION,
+        "types": [],
+        "objects": list(objects),
+        "functions": [],
+        "names": {},
+    }
 
 
 def test_the_schema_is_valid():
