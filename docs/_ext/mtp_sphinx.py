@@ -6,9 +6,9 @@
   rules are added or moved.
 - The directive `mtp-example` compiles its source while the site is built and shows it highlighted,
   then live. A source that does not compile fails the build, so an example never goes stale.
-- The directive `mtp-grammar` shows one section of the reader grammar, docs/spec/mtp.lark, as a
-  list of productions in which each name links to its definition. tests/test_grammar.py checks the
-  same file against the reader.
+- The directive `mtp-grammar` shows one section of the grammar, docs/spec/mtp.lark, as a list of
+  productions in which each name links to its definition. tests/test_grammar.py checks the same
+  file against the parser.
 """
 
 import html

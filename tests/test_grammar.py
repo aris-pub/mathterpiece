@@ -378,10 +378,10 @@ class Reading(Transformer):
             head = Bar((*words, head))
         return [head, NoneLit()]
 
-    def node(self, c):
+    def expression(self, c):
         return c[0]
 
-    paren = plain = node
+    paren = plain = expression
 
     def free(self, c):
         return Form((Name(("free@",)), c[-1]))
@@ -392,10 +392,10 @@ class Reading(Transformer):
             whole = _dot(whole, index)
         return whole
 
-    def list_index(self, c):
+    def list_brackets(self, c):
         return next(x for x in c if not isinstance(x, Token))
 
-    def index(self, c):
+    def brackets(self, c):
         items = next(x for x in c if isinstance(x, list))
         return items[0] if len(items) == 1 else Brackets(tuple(items))
 
@@ -450,7 +450,7 @@ class Reading(Transformer):
         assert m is not None
         return ComplexLit(complex(float(m[1]), float(m[2])))
 
-    def boolean(self, c):
+    def bool(self, c):
         return BoolLit(c[0].value == "true")
 
     def operator(self, c):

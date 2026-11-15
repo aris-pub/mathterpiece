@@ -54,8 +54,9 @@ newlines: each `\r\n` and each `\r` alone becomes `\n`. A byte order mark (U+FEF
 start of a source is ignored. The text has no other change.
 ```
 
-A byte order mark at any other place, outside strings and comments, is an error, because it is no
-blank ({numref}`blank`) and no character of a word ({numref}`name-characters`).
+A byte order mark at any other place, outside strings and comments, is an error, because it is
+not whitespace ({numref}`whitespace-and-comments`) and not a character of a word
+({numref}`name-characters`).
 
 :::{admonition} Code differs
 :class: note
@@ -64,24 +65,24 @@ mark, and `parse.py:174` then raises "expected a form at the top level". Bead mt
 the parser drop the mark.
 :::
 
-```{rule} node-positions
-Each node that the parser produces has a position: the line and the column of its first
+```{rule} expression-positions
+Each expression that the parser produces has a position: the line and the column of its first
 character, counting from 1. A byte order mark at the start is not counted. A line feed (U+000A)
 starts a new line. Every other character, a tab and a carriage return included, adds 1 to the
-column. A node that the parser builds from a shorter spelling has the position given in
+column. An expression that the parser builds from a shorter spelling has the position given in
 {numref}`shorthand-forms`.
 ```
 
-## Blanks and comments
+## Whitespace and comments
 
-```{mtp-grammar} blank-tokens
+```{mtp-grammar} whitespace-and-comments
 ```
 
-```{rule} blank
-A {term}`blank` is a sequence of whitespace characters and comments. A whitespace character is one
-of space (U+0020), tab (U+0009), line feed (U+000A) and carriage return (U+000D). A
-{term}`comment` starts with `;` and runs up to the next line feed, or to the end of the source. A
-blank has no meaning: it only separates two tokens. Inside a string, `;` and whitespace are text.
+```{rule} whitespace-and-comments
+{term}`Whitespace <whitespace>` is the four characters space (U+0020), tab (U+0009), line feed
+(U+000A) and carriage return (U+000D). A {term}`comment` starts with `;` and runs up to the next
+line feed, or to the end of the source. Whitespace and comments have no meaning: they only
+separate two tokens. Inside a string, `;` and whitespace are text.
 ```
 
 So U+00A0 (no-break space), U+2028 (line separator), a form feed and the other characters for
@@ -89,33 +90,33 @@ which Python's `str.isspace()` is true are errors outside strings and comments.
 
 :::{admonition} Code differs
 :class: note
-`parse.py:157` (`skip_blank`) and `parse.py:75` (`_is_delimiter`) use `ch.isspace()`, so every
-Unicode whitespace character is a blank. Bead mtp-ydd4.7.2 limits blanks to the four characters
-of the rule.
+`parse.py:157` (`skip_blank`) and `parse.py:75` (`_is_delimiter`) use `ch.isspace()`, so the
+parser reads every character for which `str.isspace()` is true as whitespace. Bead mtp-ydd4.7.2
+limits whitespace to the four characters of the rule.
 :::
 
 :::{admonition} Open question Q-lexical-3
 :class: warning
-A comment may stand inside the braces of an interpolated string, as in `$'{x ; note\n}'`, because
-`parse.py:501` and `parse.py:510` skip blanks there with `skip_blank`, which also skips comments.
-Such a comment runs to the end of the line, so it can hide the closing brace and the closing
-quote of the string. The grammar allows it, as the parser does. The decisions do not settle this
+A comment may be written inside the braces of an interpolated string, as in `$'{x ; note\n}'`,
+because `parse.py:501` and `parse.py:510` skip whitespace there with `skip_blank`, which also skips
+comments. Such a comment runs to the end of the line, so it can hide the closing brace and the
+closing quote of the string. The grammar allows it, as the parser does. The decisions do not settle this
 case. Option A: allow comments inside braces. Option B: allow only whitespace there.
 :::
 
 ## Where tokens end
 
 ```{rule} run
-A {term}`run` is a longest sequence of characters in which no character is a blank or one of
+A {term}`run` is a longest sequence of characters in which no character is whitespace or one of
 `( ) [ ] { } " | ; :`. A {term}`word` is one run read whole: a name, a number, an operator or a
-boolean. A run that is none of these is an error.
+bool. A run that is none of these is an error.
 ```
 
 The characters `'`, `$`, `#`, `@`, `.`, `/` and `^` do not end a run, so `a$'x'` is one run, and it
 is not a word. Each token of a word matches a whole run. Where a token could match only the start of
 a run, the rest of the run would be read as a second word right after it, and
-{numref}`adjacent-items` does not allow two words with no blank between them. So the grammar rejects
-every run that is not one word, as the parser does.
+{numref}`adjacent-items` does not allow two words with no whitespace between them. So the grammar
+rejects every run that is not one word, as the parser does.
 
 :::{admonition} Code differs
 :class: note
@@ -148,38 +149,40 @@ come any number of letters, {term}`digits <digit>` and hyphens (`-`). Last comes
 ```
 
 So `theta`, `show-tan`, `x2`, `a-`, `none?` and `p.empty?` are names. `2x`, `-x`, `a?b`, `x'`,
-`a!b`, `a*b`, `a=b`, `a:b`, `θ` and `x²` are not, and neither is any run that holds a character
-that is not ASCII. Since no name holds `'` or `@`, a run that starts with `tex'`, `doc@` or
-`free@` is a TeX string, a docstring or a free start at the start of a node
+`a!b`, `a*b`, `a=b`, `a:b`, `θ` and `x²` are not, and neither is any run that holds a character that
+is not ASCII. Since no name holds `'` or `@`, a run that starts with `tex'`, `doc@` or `free@` is a
+TeX string, a docstring or a free starting value at the start of an expression
 ({numref}`tex-strings`, {numref}`prefix-forms`), and an error in every other place, such as after
-`|` in a bar or after a `.` that follows an index: `a|tex'q'` and `xs[0].tex'q'` are errors.
+`|` in a broadened type or after a `.` that follows brackets: `a|tex'q'` and `xs[0].tex'q'` are
+errors.
 
 :::{admonition} Code differs
 :class: note
 `parse.py:27` (`NAME_EXCLUDED`) and `parse.py:82` (`_valid_name_part`) allow every character
 but `( ) [ ] { } . / ; " $ ^ | @ #` and a few first characters. So the parser reads `a!b`, `a*b`, `a=b`,
 `!=x`, `f'`, `a'b`, `a:b`, `θ`, `x²` and names that hold control characters or U+FEFF as names, and
-`a|tex'q'` as the bar of the names `a` and `tex'q'`. Bead mtp-ydd4.7.3 makes the parser follow the
-rule. The site lexer of `docs/_ext/mtp_sphinx.py` follows it already.
+`a|tex'q'` as the broadened type of the names `a` and `tex'q'`. Bead mtp-ydd4.7.3 makes the parser
+follow the rule. The site lexer of `docs/_ext/mtp_sphinx.py` follows it already.
 :::
 
 :::{admonition} Open question Q-lexical-4
 :class: warning
-The decision on names (P7) is "letters, digits and hyphens". Digits and blanks are ASCII by the
+The decision on names (P7) is "letters, digits and hyphens". Digits and whitespace are ASCII by the
 same decision, but the decision does not say whether letters are ASCII too. The rule above allows
 only ASCII letters, so `θ` and `ünï` are not names. Option A: keep ASCII letters only. Option B:
-allow every character for which Python's `str.isalpha()` is true, as `θ`. No source of the
-project has a name with a letter that is not ASCII. But the built-in constants `π`, `τ` and `∞`
-(`builtins.py:246` to `builtins.py:254`, and {numref}`infinity`) are names
-today. With option A, none of the three can be written. With option B, `π` and `τ` can, and `∞`
-cannot, since it is not a letter.
+allow every character for which Python's `str.isalpha()` is true, as `θ`. No source of the project
+has a name with a letter that is not ASCII. But the built-in constants `π`, `τ` and `∞`
+(`builtins.py:246` to `builtins.py:254`, and {numref}`infinity`) are names today. With option A,
+none of the three can be written. With option B, `π` and `τ` can, and `∞` cannot, since it is not a
+letter.
 :::
 
 ```{mtp-grammar} head-token
 ```
 
 ```{rule} name-underscore
-An underscore stands only at the very end of the head of a form, right after its last name part:
+An underscore may be written only at the very end of the head of a form, right after its last
+name part:
 `(circle_ (r 1))`, `(marks.grid_ …)` and `(line|none_ …)`. Such a head is the token
 {token}`mtp:HEAD`.
 ```
@@ -191,20 +194,22 @@ has no name ({numref}`unnamed-head`).
 :::{admonition} Code differs
 :class: note
 `parse.py:86` allows `_` at the end of every part of every name, in any place, so the parser reads
-`(f x_)`, `a_.b`, `a._` and `_.a` as names, and `_[0]` too, because `parse.py:342` reads an index
-before `parse.py:352` rejects a lone `_`. Bead mtp-ydd4.7.3 makes the parser follow the rule.
+`(f x_)`, `a_.b`, `a._` and `_.a` as names, and `_[0]` too, because `parse.py:342` reads the
+brackets before `parse.py:352` rejects a lone `_`. Bead mtp-ydd4.7.3 makes the parser follow the
+rule.
 :::
 
-## Booleans, none and the operators
+## Bools, none and the operators
 
 ```{mtp-grammar} keyword-tokens
 ```
 
 ```{rule} literal-words
-A word that is `true` or `false` alone is a {term}`boolean`. A word that is `none` alone is the
+A word that is `true` or `false` alone is a {term}`bool`. A word that is `none` alone is the
 literal `none`. Each of the words `+ - * / ^ < <= > >= = != .` alone is an {term}`operator`: a name
-of one part. A boolean, an operator or a number is never followed directly by `[`: only a name may
-have an index. `none` may have one: `none[0]` is a name whose parts are `none` and `0`.
+of one part. A bool, an operator or a number is never followed directly by `[`: only a name may be
+followed by brackets. `none` may be followed by brackets: `none[0]` is a name whose parts are
+`none` and `0`.
 ```
 
 A word that only starts with one of these is a name when it follows {numref}`name-characters`, so
@@ -214,8 +219,8 @@ A word that only starts with one of these is a name when it follows {numref}`nam
 :class: warning
 `true`, `false` and `none` may be name parts: `xs[0].true`, `p.none` and `true.x` are names,
 because `parse.py:346` compares the whole run with `true`, `false` and `none`. And `none[0]` is a
-name, while `true[0]` is an error, because `parse.py:362` checks only `true` and `false` before an
-index. The grammar follows the parser here. The decisions do not settle this case. Option A: make
+name, while `true[0]` is an error, because `parse.py:362` checks only `true` and `false` before
+brackets. The grammar follows the parser here. The decisions do not settle this case. Option A: make
 `true`, `false` and `none` errors as any part of a name. Option B: keep the parser's rule.
 :::
 
@@ -303,10 +308,11 @@ together, so in `tex'a\\'` the string is `a\\` and the last quote closes it.
 ```
 
 ```{rule} prefix-forms
-At the start of a node, `doc@` followed directly by a string is a {term}`docstring`, and `free@`
-followed directly by a node is a {term}`free start`. No blank may stand between the prefix and the
-string or node after it. {numref}`shorthand-forms` gives the form that each one stands for. `@`
-may not stand in any other place.
+At the start of an expression, `doc@` followed directly by a string is a {term}`docstring`, and
+`free@` followed directly by an expression is a {term}`free starting value`. No whitespace or
+comment may be written between the prefix and the string or expression after it.
+{numref}`shorthand-forms` gives the form that each one is short for. `@` may not be written in
+any other place.
 ```
 
 ## Interpolated strings and name strings
@@ -315,23 +321,23 @@ may not stand in any other place.
 ```
 
 ```{rule} interpolated-strings
-An {term}`interpolated string` is written `$'…'`, and a {term}`name string` is written `#'…'`.
-Their text has the escapes of {numref}`string-literals`, and in it `{{` is `{` and `}}` is `}`. A
-`{` that is not doubled opens a {term}`field`. A field is: blanks, one node, blanks, then
-optionally a {term}`format spec`, which is `:` followed by any characters but `{`, `}` and `'`,
-and last `}`. A `}` that is not doubled and does not close a field is an error. A name string has
-at least one field.
+An {term}`interpolated string` is written `$'…'`, and a {term}`name string` is written `#'…'`. Their
+text has the escapes of {numref}`string-literals`, and in it `{{` is `{` and `}}` is `}`. A `{` that
+is not doubled opens a {term}`field`. A field is one expression, with any whitespace and comments
+before and after it, then a {term}`format spec` or nothing, and last `}`. A format spec is `:`
+followed by any characters but `{`, `}` and `'`. A `}` that is not doubled and does not close a
+field is an error. A name string has at least one field.
 ```
 
 The parser keeps the format spec as written. This part does not give its meaning. Since `:` ends
-a run ({numref}`run`), `{x:.2f}` holds the name `x` and the format spec `.2f`. A `:` in a node
-nested in the node of a field is an error, so `{(f a:b)}` is an error.
+a run ({numref}`run`), `{x:.2f}` holds the name `x` and the format spec `.2f`. A `:` in an
+expression nested in the expression of a field is an error, so `{(f a:b)}` is an error.
 
-The grammar has no rule that depends on the depth of a field, so a field is read in the same way
-at every depth. When a string nested in the node of a field ends, the node and the rest of the
-field go on by the same rules as before the nested string. So `$'{$'{a}'}'` is the interpolated
-string whose one field holds the interpolated string `$'{a}'`, and in `$'{#'n-{k}'.x:y}'` the
-field holds `#'n-{k}'.x` and the format spec `y`.
+The grammar has no rule that depends on the depth of a field, so a field is read in the same way at
+every depth. When a string nested in the expression of a field ends, the expression and the rest of
+the field go on by the same rules as before the nested string. So `$'{$'{a}'}'` is the interpolated
+string whose one field holds the interpolated string `$'{a}'`, and in `$'{#'n-{k}'.x:y}'` the field
+holds `#'n-{k}'.x` and the format spec `y`.
 
 :::{admonition} Code differs
 :class: note

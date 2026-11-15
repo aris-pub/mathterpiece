@@ -83,25 +83,26 @@ view
   A component through which the reader sees the model: a canvas, a readout or a display. Defined in
   {doc}`compiler-runtime`.
 
-bar
-  Two words or more joined by `|` with no blank, such as `real|none` ({numref}`bars`).
+broadened type
+  Two words or more joined by `|` with no whitespace between them, such as `real|none`
+  ({numref}`broadened-types`).
 
-blank
-  A sequence of whitespace characters and comments, which only separates tokens
-  ({numref}`blank`).
+whitespace
+  The characters space, tab, line feed and carriage return. Whitespace and comments only separate
+  tokens ({numref}`whitespace-and-comments`).
 
 digit
   One of the ASCII digits `0` to `9` ({numref}`number-literals`).
 
 body
-  The last items of a form, after its options. What a body may hold depends on the form
+  The last items of a form, after its optional arguments. What a body may hold depends on the form
   ({numref}`contexts`).
 
-boolean
+bool
   The word `true` or `false` ({numref}`literal-words`).
 
 comment
-  Text from `;` up to the end of the line ({numref}`blank`).
+  Text from `;` up to the end of the line ({numref}`whitespace-and-comments`).
 
 complex
   A number literal with an imaginary part, such as `2i` or `1+2i` ({numref}`number-literals`).
@@ -111,7 +112,7 @@ docstring
   ({numref}`prefix-forms`, {numref}`docstrings`).
 
 field
-  `{…}` in an interpolated string or a name string: a node, and optionally a format spec
+  `{…}` in an interpolated string or a name string: an expression, then a format spec or nothing
   ({numref}`interpolated-strings`).
 
 form
@@ -121,15 +122,15 @@ form
 format spec
   The text after `:` in a field, such as `.2f` in `{x:.2f}` ({numref}`interpolated-strings`).
 
-free start
+free starting value
   `free@X`, which is `(free@ X)` ({numref}`prefix-forms`).
 
 head
   The first item of a form ({numref}`form-template`).
 
-index
+brackets
   A `[…]` right after a name or a list, which reads a part of it ({numref}`lists`,
-  {numref}`name-index`).
+  {numref}`name-brackets`).
 
 int
   A number literal that is a whole number, such as `3` or `-2` ({numref}`number-literals`).
@@ -142,7 +143,7 @@ letter
   ({numref}`name-characters`).
 
 list
-  Nodes in square brackets, such as `[0 1]` ({numref}`lists`).
+  Expressions in square brackets, such as `[0 1]` ({numref}`lists`).
 
 name
   A word that refers to something declared: name parts joined by dots, such as `p.pos.x`
@@ -155,17 +156,18 @@ name string
   `#'…'`: an interpolated string read as a name, which is `(name $'…')`
   ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
 
-node
-  One item of a source as the parser produces it: a form, a list, a word, a string or a free start
-  ({numref}`parser-nodes`).
+expression
+  One item of a source as the parser produces it: a form, a list, a word, a string or a free
+  starting value ({numref}`parser-expressions`).
 
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name of one part
   ({numref}`literal-words`).
 
-option
-  A form among the items of a declaration whose head is one of the options of the declaration,
-  such as `(r 1)` ({numref}`options-first`).
+optional argument
+  A form after the name and the positional arguments of a form, whose head names one of the
+  optional arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`
+  ({numref}`optional-arguments-first`).
 
 positional argument
   An item of a form that comes right after the name, known by its place ({numref}`form-template`).
@@ -181,7 +183,7 @@ reserved word
   A word that is never the name of a declaration ({numref}`reserved-words`).
 
 run
-  A longest sequence of characters with no blank and none of `( ) [ ] { } " | ; :`
+  A longest sequence of characters with no whitespace and none of `( ) [ ] { } " | ; :`
   ({numref}`run`).
 
 string
@@ -195,7 +197,7 @@ token
   ({numref}`tokens-in-context`).
 
 word
-  One run read whole: a name, a number, an operator or a boolean ({numref}`run`).
+  One run read whole: a name, a number, an operator or a bool ({numref}`run`).
 
 core form
   A form that is neither sugar nor library. The prover proves core forms, and the runtime runs
