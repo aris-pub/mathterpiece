@@ -4,16 +4,12 @@
 This page defines the characters of a source, and the {term}`names <name>`, numbers,
 {term}`string` {term}`literals <literal>` and other pieces of text that the {term}`parser` reads
 whole. The next page, {doc}`grammar`, defines how the parser puts these pieces together into
-{term}`forms <form>`. The definitions of this page and the rules of the next page are one grammar,
-in the file `docs/spec/mtp.lark`, written in the notation of the Lark parser. The test
-`tests/test_grammar.py` reads every source of the project both with this grammar and with the parser
-of the {term}`compiler`, `mathterpiece/parse.py`, and checks that the two accept the same sources
-and produce the same forms.
+{term}`expressions <expression>`, {term}`forms <form>` and declarations. The definitions of this
+page and the rules of the next page are one grammar, written in the notation of the Lark parser and
+shown in pieces on the two pages. The whole grammar is also one file, [mtp.lark](https://github.com/aris-pub/mathterpiece/blob/main/docs/spec/mtp.lark).
 
 This page specifies the language. The parser accepts exactly the text
-that this page allows, and rejects everything else. Where the parser does not follow a rule yet, a
-note after the rule says what the parser does today and names the bead that will change it. The
-test lists each such source as a known difference, with its bead.
+that this page allows, and rejects everything else.
 
 ## How the grammar is written
 
@@ -67,7 +63,7 @@ the parser drop the mark.
 :::
 
 ```{rule} expression-positions
-Each {term}`expression` that the parser produces has a position: the line and the column of its
+Each expression that the parser produces has a position: the line and the column of its
 first character, counting from 1. A byte order mark at the start is not counted. A line feed
 (U+000A) starts a new line. Every other character, a tab and a carriage return included, adds 1 to
 the column. An expression that the parser builds from a shorter spelling has the position given in
@@ -250,8 +246,8 @@ So `(real if 1)`, `(circle line …)` and `(let ((self 2)) …)` are
 allowed. `scene`, `transition`, `animation` and `func` are both built-in types and keywords. `true`,
 `false` and `none` are values, never names ({numref}`name-characters`). The names of the standard
 {term}`library` are not built-in: they are ordinary declarations of the files of
-`mathterpiece/stdlib/`, which a source brings in with `import` ({numref}`sugar-rewrites`). The
-parser does not check this rule, and the compiler checks it.
+the standard library ({doc}`stdlib`), which a source brings in with `import` ({numref}`sugar-rewrites`). The
+parser does not check this rule, and the {term}`compiler` checks it.
 
 :::{admonition} Code differs
 :class: note
@@ -292,9 +288,8 @@ The priorities of the grammar make a word the first of COMPLEX, IMAG, RATIO, REA
 matches it whole.
 ```
 
-So `٣` (ARABIC-INDIC DIGIT THREE) and `²` are not digits. `parse.py:113` (`_number`) returns the
-same kind as these priorities give. `1-2` is an error, since it is no number, and the difference
-of 2 and 1 is written `(- 2 1)`.
+So `٣` (ARABIC-INDIC DIGIT THREE) and `²` are not digits. `1-2` is an error, since it is no
+number, and the difference of 2 and 1 is written `(- 2 1)`.
 
 :::{admonition} Code differs
 :class: note

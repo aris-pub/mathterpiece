@@ -10,9 +10,7 @@ may read the scene, a formula or the page is defined in {doc}`binding-time`.
 The rewrite step resolves every name to its declaration ({numref}`compile-steps`), so a source
 that breaks a rule of this page is rejected in the rewrite step. A name that is built from a value,
 `(name S)` with `S` reading a `foreach` name or a motif parameter, is resolved in the prove step
-instead ({numref}`names-from-values`). This page specifies the language. Where the {term}`compiler`
-does not follow a rule yet, a box marked "Code differs" gives what the code does and the bead that
-will change it.
+instead ({numref}`names-from-values`). This page specifies the language.
 
 ## Scopes
 

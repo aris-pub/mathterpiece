@@ -7,13 +7,11 @@ This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`s
 that every form follows, and the kinds of form that may be written in each {term}`body`. The
 signatures of the forms, which list the arguments of each {term}`head`, are not part of this page.
 
-This page specifies the language. Where the parser
-or the {term}`compiler` does not follow a rule yet, a note after the rule says what the code does
-today and names the bead that will change it.
+This page specifies the language.
 
 ## The grammar of the parser
 
-The rules below and the definitions of {doc}`lexical` are one grammar, `docs/spec/mtp.lark`. An
+The rules below and the definitions of {doc}`lexical` are one grammar, [mtp.lark](https://github.com/aris-pub/mathterpiece/blob/main/docs/spec/mtp.lark). An
 alternative written `a -> free` puts its result in the tree under the name `free`, and `!` before
 the name of a rule keeps the quoted text of that rule in the tree.
 
@@ -75,7 +73,7 @@ whitespace starts a list literal: `xs [0]` is the name `xs` and the list literal
 ```{rule} broadened-types
 A {term}`broadened type` is two words or more joined by `|` with no whitespace between them, such
 as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bool` literals or
-{term}`operators <operator>`. A broadened type is one expression, and the compiler reads it as a
+{term}`operators <operator>`. A broadened type is one expression, and the {term}`compiler` reads it as a
 type ({doc}`types`).
 ```
 

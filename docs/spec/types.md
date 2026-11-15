@@ -11,8 +11,7 @@ the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` pr
 {term}`ranges <range>`, {term}`constraints <constraint>` and `none` is defined in
 {doc}`well-formedness`.
 
-This page specifies the language. Where the {term}`compiler` does not follow a rule yet, a box
-marked "Code differs" gives what the code does and the bead that will change it.
+This page specifies the language.
 
 ## The types
 
@@ -57,7 +56,7 @@ The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SE
 :::
 
 ```{rule} type-notation
-Where a type is expected, the compiler reads these expressions as types, and every other
+Where a type is expected, the {term}`compiler` reads these expressions as types, and every other
 expression there is a {term}`compile error`:
 
 - The name of a {term}`built-in type` of {numref}`the-types`, or a name declared by `interface`,
