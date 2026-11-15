@@ -13,7 +13,7 @@ today and names the bead that will change it.
 
 ## The grammar of the parser
 
-The rules below and the definitions of {doc}`lexical` are one grammar, {download}`mtp.lark`. An
+The rules below and the definitions of {doc}`lexical` are one grammar, [mtp.lark](https://github.com/aris-pub/mathterpiece/blob/main/docs/spec/mtp.lark). An
 alternative written `a -> free` puts its result in the tree under the name `free`, and `!` before
 the name of a rule keeps the quoted text of that rule in the tree.
 

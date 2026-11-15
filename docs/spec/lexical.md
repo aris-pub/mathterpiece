@@ -6,7 +6,7 @@ This page defines the characters of a source, and the {term}`names <name>`, numb
 whole. The next page, {doc}`grammar`, defines how the parser puts these pieces together into
 {term}`expressions <expression>`, {term}`forms <form>` and declarations. The definitions of this
 page and the rules of the next page are one grammar, written in the notation of the Lark parser and
-shown in pieces on the two pages. The whole grammar is also one file, {download}`mtp.lark`.
+shown in pieces on the two pages. The whole grammar is also one file, [mtp.lark](https://github.com/aris-pub/mathterpiece/blob/main/docs/spec/mtp.lark).
 
 This page specifies the language. The parser accepts exactly the text
 that this page allows, and rejects everything else. Where the parser does not follow a rule yet, a
@@ -289,9 +289,8 @@ The priorities of the grammar make a word the first of COMPLEX, IMAG, RATIO, REA
 matches it whole.
 ```
 
-So `٣` (ARABIC-INDIC DIGIT THREE) and `²` are not digits. `parse.py:113` (`_number`) returns the
-same kind as these priorities give. `1-2` is an error, since it is no number, and the difference
-of 2 and 1 is written `(- 2 1)`.
+So `٣` (ARABIC-INDIC DIGIT THREE) and `²` are not digits. `1-2` is an error, since it is no
+number, and the difference of 2 and 1 is written `(- 2 1)`.
 
 :::{admonition} Code differs
 :class: note
