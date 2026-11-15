@@ -68,9 +68,6 @@ class TestForms:
     def test_an_item_may_be_any_kind_of_expression(self, src):
         assert len(items(src)) == 1
 
-    def test_a_prefixed_form_is_a_form(self):
-        assert items("(f r@1)") == (form(name("r"), IntLit(1)),)
-
     def test_the_empty_form_has_no_items(self):
         assert forms("(f ())") == (form(name("f"), form()),)
 

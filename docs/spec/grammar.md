@@ -23,8 +23,7 @@ the name of a rule keeps the quoted text of that rule in the tree.
 ```{rule} forms
 A form is a `(`, then any number of expressions, its items, then a `)`. An
 expression is a form, a {term}`list` literal, a word, a {term}`broadened type`, a
-string literal or an {term}`interpolated string`. A prefixed form such as `free@x` is a
-form ({numref}`prefix-forms`). The first item of a form is its head, and it may be a head
+string literal or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
 that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
 ```
 
