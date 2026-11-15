@@ -45,7 +45,6 @@ TOP_LET = xfail("mtp-ydd4.7.7", "a let at the top level is an error")
 BODY_LET = xfail("mtp-ydd4.7.8", "a let is an error in some bodies that hold items")
 ARGUMENT_LET = xfail("mtp-ydd4.7.9", "a let or a foreach among the arguments of a shape compiles")
 GROUP_EXISTS_WHEN = xfail("mtp-ydd4.7.10", "a group keeps every exists-when until its end")
-NAMES = xfail("mtp-ydd4.7.3", "the parser allows more characters in a name than the rule")
 IMPORT_ORDER = xfail("mtp-ydd4.7.12", "every import is read before any other form")
 
 D = name(".")
@@ -97,7 +96,7 @@ class TestAdjacentItems:
 
     @pytest.mark.parametrize(
         "src",
-        ["(f 'a''b')", "(f [1]x)", "(f 'a'b)", pytest.param("(f a'b')", marks=NAMES), "(f 1'a')"],
+        ["(f 'a''b')", "(f [1]x)", "(f 'a'b)", "(f a'b')", "(f 1'a')"],
     )
     def test_other_items_need_whitespace_between_them(self, src):
         syntax_error(src)

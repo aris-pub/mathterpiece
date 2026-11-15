@@ -236,3 +236,12 @@ def test_an_unused_declaration_with_an_error_is_still_an_error(files):
         files(house="(color ink 'red') (color bad (mix 'red' nope 0.5))", fig="(import house ink)"),
         "house.mtp:1:",
     )
+
+
+def test_an_imported_file_with_carriage_returns_and_a_byte_order_mark(files, tmp_path):
+    # lexical.md, rule source-text: a file is read with each \r\n and \r as \n, and without the
+    # mark at its start.
+    fig = files(fig="(import house ink) (scene s (circle c (fill ink)))")
+    text = "﻿; style\r\n(color ink 'red')\r(color x 'blue')"
+    (tmp_path / "house.mtp").write_bytes(text.encode())
+    assert "house.ink" in build(fig).names

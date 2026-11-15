@@ -54,13 +54,6 @@ A byte order mark at any other place, outside string literals and comments, is a
 is not whitespace ({numref}`whitespace-and-comments`) and not a character of a {term}`word`
 ({numref}`word-ends`).
 
-:::{admonition} Code differs
-:class: note
-`mathterpiece/cli.py:103` reads a file with `path.read_text(encoding="utf-8")`, which keeps the
-mark, and `parse.py:174` then raises "expected a form at the top level". Bead mtp-ydd4.7.1 makes
-the parser drop the mark.
-:::
-
 ```{rule} expression-positions
 Each expression that the parser produces has a position: the line and the column of its
 first character, counting from 1. A byte order mark at the start is not counted. A newline
@@ -87,13 +80,6 @@ characters whose Unicode general category is Zs, or whose bidirectional class is
 errors outside string literals and comments. {doc}`grammar` gives the places where whitespace and comments may be written, and
 {numref}`interpolated-strings` the places inside an {term}`interpolated string`.
 
-:::{admonition} Code differs
-:class: note
-`parse.py:157` (`skip_blank`) and `parse.py:75` (`_is_delimiter`) use `ch.isspace()`, so the
-parser reads every character for which `str.isspace()` is true as whitespace. Bead mtp-ydd4.7.2
-limits whitespace to the three characters of the rule.
-:::
-
 ## Where words end
 
 ```{rule} word-ends
@@ -106,13 +92,6 @@ not one word up to there is an error.
 The characters `'`, `$`, `#`, `@`, `.`, `/` and `^` do not end a word, so `a$'x'`, `1x` and `a'b`
 are errors: none of them is one word. The grammar rejects them, as the parser does, because by
 {numref}`adjacent-items` only a form may follow a word with no whitespace between them.
-
-:::{admonition} Code differs
-:class: note
-`parse.py:319` ends a word at `:` only inside the braces of an interpolated string, so `a:b` is
-one word, and a name, everywhere else. Bead mtp-ydd4.7.3 changes this, together with the
-characters of a name.
-:::
 
 ```{rule} no-name-part-after-form
 The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` and
@@ -150,21 +129,6 @@ followed by `@` starts a prefixed form, at the start of an expression ({numref}`
 {term}`broadened type` or after a `.` that follows {term}`brackets`: `a|tex'q'`, `xs[0].tex'q'` and
 `a|r@1` are errors.
 
-:::{admonition} Code differs
-:class: note
-- `parse.py:27` (`NAME_EXCLUDED`) and `parse.py:82` (`_valid_name_part`) allow every character
-  but `( ) [ ] { } . / ; " $ ^ | @ #` and a few first characters. So the parser reads `a!b`, `a*b`,
-  `a=b`, `!=x`, `f'`, `a'b`, `a:b`, `θ`, `x²` and names that hold control characters or U+FEFF as
-  names, and `a|tex'q'` as the broadened type of the names `a` and `tex'q'`. Bead mtp-ydd4.7.3
-  makes the parser follow the rule. The lexer in `docs/_ext/mtp_sphinx.py` follows it
-  already.
-- `parse.py:346` compares only the whole word with `true`, `false` and `none`, and `parse.py:362`
-  checks only `true` and `false` before brackets, so the parser reads `true.x`, `p.true`, `none.x`
-  and `none[0]` as names. Bead mtp-ydd4.7.32 makes these errors.
-- `builtins.py:246` to `builtins.py:254` declare the constants `π`, `τ` and `∞`, which no source
-  can write by this rule. Bead mtp-ydd4.7.33 removes them, together with `infty`.
-:::
-
 ```{mtp-grammar} heads-with-no-name
 ```
 
@@ -177,14 +141,6 @@ matches {token}`mtp:HEAD`.
 So an underscore in any other place is an error: `x_` as an argument, `a_b`, `_x`, `_` alone,
 `a_.b`, `a._`, `_.a` and `_[0]`. An underscore at the end of the head of a form means that the form
 has no name ({numref}`unnamed-head`).
-
-:::{admonition} Code differs
-:class: note
-`parse.py:86` allows `_` at the end of every name part of every name, in any place, so the parser
-reads `(f x_)`, `a_.b`, `a._` and `_.a` as names, and `_[0]` too, because `parse.py:342` reads the
-brackets before `parse.py:352` rejects a lone `_`. Bead mtp-ydd4.7.3 makes the parser follow the
-rule.
-:::
 
 ## Bools, none and the operators
 
@@ -262,12 +218,6 @@ matches it whole.
 So `٣` (ARABIC-INDIC DIGIT THREE) and `²` are not digits. `1-2` is an error, since it is no
 number, and the difference of 2 and 1 is written `(- 2 1)`.
 
-:::{admonition} Code differs
-:class: note
-`parse.py:30` to `parse.py:36` use `\d`, which matches every decimal digit of Unicode, so the
-parser reads `٣` as the int 3 and `1/٣` as a ratio. Bead mtp-ydd4.7.4 limits digits to `0` to `9`.
-:::
-
 ## Strings
 
 ```{mtp-grammar} string-literals
@@ -330,16 +280,3 @@ same way at every depth. When a string literal nested in the expression in brace
 expression and the rest of the braces go on by the same rules as before the nested string literal.
 So `$'{$'{a}'}'` is the interpolated string whose braces hold the interpolated string `$'{a}'`, and
 in `$'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.
-
-:::{admonition} Code differs
-:class: note
-- `parse.py:505` sets `in_braces = True` when braces open, and `parse.py:509` sets it to `False`
-  when they close, instead of setting back the value that it had before. So after a string literal
-  nested in braces ends, the parser reads the rest of the outer braces as if it were outside braces:
-  `$'{$'{a}'}'` is an error, and in `$'{#'n-{k}'.x:y}'` the parser reads `x:y` as one name part.
-  Bead mtp-kzx2 fixes this.
-- `parse.py:501` and `parse.py:510` skip whitespace around the expression with `skip_blank`,
-  which also skips comments, so the parser reads `$'{x ; c\n}'` as `$'{x}'`. Such a comment runs
-  to the end of the line, so it can hide the closing brace and the closing quote of the string
-  literal. Bead mtp-ydd4.7.31 makes it an error.
-:::

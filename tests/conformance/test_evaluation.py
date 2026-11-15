@@ -308,6 +308,9 @@ class TestNumberTypes:
     def test_a_complex_is_two_doubles(self):
         assert value("(complex v (* 1+2i 2))", "v") == complex(2, 4)
 
+    def test_a_real_is_finite_so_there_is_no_constant_for_infinity(self):
+        compile_error("(real v infty)")
+
 
 @rule("number-result-types")
 class TestNumberResultTypes:
