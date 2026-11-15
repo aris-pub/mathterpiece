@@ -1,6 +1,6 @@
 # Open questions
 
-The first drafts of five parts raised 67 open questions. Most of them are cases of a few missing
+The first drafts of five pages raised 67 open questions. Most of them are cases of a few missing
 principles. This page groups them by principle. Each group proposes one principle, lists the
 questions that it settles, and gives the options. The questions themselves are in the warning
 boxes of each part.

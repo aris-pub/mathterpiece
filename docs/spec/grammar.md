@@ -1,12 +1,12 @@
 (grammar)=
 # Grammar
 
-This part defines how the parser puts the words, strings and other pieces of text of
+This page defines how the parser puts the words, strings and other pieces of text of
 {doc}`lexical` together into forms, the expressions that the parser produces, the template that every form follows, and the kinds of form
 that may be written in each body. The signatures of the forms, which list the arguments of each
-head, are not part of this part.
+head, are not part of this page.
 
-As in {doc}`lexical`, this part states the language as the author has decided it. Where the parser
+As in {doc}`lexical`, this page states the language as the author has decided it. Where the parser
 or the compiler does not follow a rule yet, a note after the rule says what the code does today
 and names the bead that will change it.
 

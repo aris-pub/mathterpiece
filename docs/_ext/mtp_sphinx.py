@@ -1,14 +1,15 @@
 """The Sphinx extension of the mtp site.
 
 - The lexer `mtp` highlights code blocks written ```mtp.
-- The directive `rule` states one rule of the spec. Rules are numbered by part, as 4.2 for the
-  second rule of part 4, and cited by label with {numref}`label`, so a citation keeps working when
+- The directive `rule` states one rule of the spec. Rules are numbered by page, as 4.2 for the
+  second rule of page 4, and cited by label with {numref}`label`, so a citation keeps working when
   rules are added or moved.
 - The directive `mtp-example` compiles its source while the site is built and shows it highlighted,
   then live. A source that does not compile fails the build, so an example never goes stale.
 - The directive `mtp-grammar` shows one section of the grammar, docs/spec/mtp.lark, as a list of
   productions in which each name links to its definition. tests/test_grammar.py checks the same
   file against the parser.
+- A link to a term of the glossary shows the term's definition when the mouse is over it.
 """
 
 import html
@@ -330,6 +331,52 @@ class MtpGrammar(ProductionList):
         return name_node
 
 
+def _definition_text(node) -> str:
+    # Citations are left out, since a tooltip cannot link anywhere.
+    if isinstance(node, addnodes.pending_xref) and node.get("reftype") in ("numref", "ref", "doc"):
+        return ""
+    if isinstance(node, nodes.Text):
+        return str(node)
+    return "".join(_definition_text(child) for child in node.children)
+
+
+def _collect_terms(app, doctree):
+    env = app.env
+    if not hasattr(env, "mtp_terms"):
+        env.mtp_terms = {}
+    for glossary in doctree.findall(addnodes.glossary):
+        for item in glossary.findall(nodes.definition_list_item):
+            text = " ".join(_definition_text(item.next_node(nodes.definition)).split())
+            text = re.sub(r"\s*Defined in .*$", "", text)
+            text = re.sub(r"\s*\((\s|,|and)*\)", "", text)
+            for term in item.findall(nodes.term):
+                for ident in term["ids"]:
+                    env.mtp_terms[ident] = (env.docname, text)
+
+
+def _purge_terms(app, env, docname):
+    terms = getattr(env, "mtp_terms", {})
+    for ident in [k for k, v in terms.items() if v[0] == docname]:
+        del terms[ident]
+
+
+def _merge_terms(app, env, docnames, other):
+    if not hasattr(env, "mtp_terms"):
+        env.mtp_terms = {}
+    env.mtp_terms.update(getattr(other, "mtp_terms", {}))
+
+
+def _title_term_links(app, doctree, fromdoc):
+    terms = getattr(app.builder.env, "mtp_terms", {})
+    for ref in doctree.findall(nodes.reference):
+        inline = ref.next_node(nodes.inline)
+        if inline is None or "std-term" not in inline["classes"]:
+            continue
+        ident = ref.get("refuri", "").rpartition("#")[2] or ref.get("refid", "")
+        if ident in terms:
+            ref["reftitle"] = terms[ident][1]
+
+
 def copy_runtime(app: Sphinx):
     """The runtime is built from web/src when it is older than its source (mathterpiece.build)."""
     static = Path(app.outdir) / "_static"
@@ -349,6 +396,10 @@ def setup(app: Sphinx):
     app.connect("env-purge-doc", _purge_rules)
     app.connect("env-merge-info", _merge_rules)
     app.connect("doctree-resolved", _fill_rule_index)
+    app.connect("doctree-read", _collect_terms)
+    app.connect("env-purge-doc", _purge_terms)
+    app.connect("env-merge-info", _merge_terms)
+    app.connect("doctree-resolved", _title_term_links)
     app.add_directive("mtp-example", MtpExample)
     app.add_directive("mtp-grammar", MtpGrammar)
     app.add_js_file("mathterpiece.js", type="module")

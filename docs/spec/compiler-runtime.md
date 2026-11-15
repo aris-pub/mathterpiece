@@ -1,10 +1,10 @@
 # Compiler and runtime
 
-Two programs implement mtp. The {term}`compiler` runs on the illustrator's machine and turns a
-source file into a {term}`.mtpc`. The {term}`runtime` runs in the reader's browser and turns a
-.mtpc into a {term}`live model`. This part defines what each program must do and must never do,
-the {term}`mtp command` that runs the compiler, the .mtpc as the only thing that passes between
-the two programs, and what an implementation of either program must do to conform to this spec.
+Two programs implement mtp. The {term}`compiler` turns a source file into a {term}`.mtpc`, and
+the {term}`runtime` turns a .mtpc into a {term}`live model` in a browser. This page defines what
+each program must do and must never do, the {term}`mtp command` that runs the compiler, the .mtpc
+as the only thing that passes between the two programs, and what an implementation of either
+program must do to conform to this spec.
 The format of the .mtpc is defined in {doc}`compiled-format`, and is not repeated here.
 
 ## People and artifacts
@@ -12,7 +12,8 @@ The format of the .mtpc is defined in {doc}`compiled-format`, and is not repeate
 Three people take part. The {term}`illustrator` writes a world model as an `.mtp` source file.
 The {term}`author` writes a page and places {term}`components <component>` of the world model in
 it. The {term}`reader` opens the page and acts on the components. One person may be both the
-illustrator and the author.
+illustrator and the author. The illustrator runs the compiler on their own machine, and the runtime
+runs in the reader's browser.
 
 | Artifact | Made by | What it is |
 |---|---|---|
@@ -422,9 +423,9 @@ pick the other.
   it implements, and builds and keeps current its live model as the parts from {doc}`world-model`
   to {doc}`accessibility` define.
 - An implementation of the mtp command conforms when its compiler conforms, and each of its
-  subcommands runs the steps and writes the files that this part gives for it.
+  subcommands runs the steps and writes the files that this page gives for it.
 
-Each conforms only when it also obeys every rule of this part about it.
+Each conforms only when it also obeys every rule of this page about it.
 ```
 
 :::{admonition} Code differs

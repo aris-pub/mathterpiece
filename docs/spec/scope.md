@@ -1,16 +1,16 @@
 (scope)=
 # Names and scope
 
-This part defines the forms that declare names, the part of a source in which each name may be
+This page defines the forms that declare names, the part of a source in which each name may be
 used, and the declaration to which each use of a name refers. Which characters a name holds is
 defined in {numref}`name-characters`, and which names a declaration may take in
 {numref}`keywords` and {numref}`declaration-names`. Which expressions may read the scene, a
 formula or the page is defined in {doc}`binding-time`.
 
 The rewrite step resolves every name to its declaration ({numref}`compile-steps`), so a source
-that breaks a rule of this part is rejected in the rewrite step. A name that is built from a value,
+that breaks a rule of this page is rejected in the rewrite step. A name that is built from a value,
 `(name S)` with `S` reading a `foreach` name or a motif parameter, is resolved in the prove step
-instead ({numref}`names-from-values`). This part states the language as the author decided it
+instead ({numref}`names-from-values`). This page states the language as the author decided it
 (decision P8 of {doc}`open-questions`). Where the compiler does not follow a rule yet, a box marked
 "Code differs" gives what the code does and the bead that will change it.
 

@@ -1,16 +1,16 @@
 (lexical)=
 # Lexical syntax
 
-This part defines the characters of a source, and the names, numbers, strings and other pieces of
-text that the parser reads whole. The next part, {doc}`grammar`, defines how the parser puts these
-pieces together into forms. The definitions of this part and the rules of the next part are one
+This page defines the characters of a source, and the names, numbers, strings and other pieces of
+text that the parser reads whole. The next page, {doc}`grammar`, defines how the parser puts these
+pieces together into forms. The definitions of this page and the rules of the next page are one
 grammar, in the file `docs/spec/mtp.lark`, written in the notation of the Lark parser. The test
 `tests/test_grammar.py` reads every source of the project both with this grammar and with the
 parser of the compiler, `mathterpiece/parse.py`, and checks that the two accept the same sources
 and produce the same forms.
 
-This part states the language as the author has decided it. The parser accepts exactly the text
-that this part allows, and rejects everything else. Where the parser does not follow a rule yet, a
+This page states the language as the author has decided it. The parser accepts exactly the text
+that this page allows, and rejects everything else. Where the parser does not follow a rule yet, a
 note after the rule says what the parser does today and names the bead that will change it. The
 test lists each such source as a known difference, with its bead.
 
@@ -345,7 +345,7 @@ braces, around the expression. A format spec is `:` followed by any characters b
 at least once.
 ```
 
-The parser keeps the format spec as written. This part does not give its meaning. Since `:` ends
+The parser keeps the format spec as written. This page does not give its meaning. Since `:` ends
 a word ({numref}`word-ends`), `{x:.2f}` holds the name `x` and the format spec `.2f`. A `:` in an
 expression nested in the expression in braces is an error, so `{(f a:b)}` is an error. A comment
 inside a form in the braces is allowed, since it is inside the form and not around the

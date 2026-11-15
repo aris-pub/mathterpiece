@@ -1,7 +1,7 @@
 (evaluation)=
 # Evaluation
 
-This part defines how an expression is computed: the order in which its parts are evaluated, the
+This page defines how an expression is computed: the order in which its parts are evaluated, the
 forms that evaluate only some of their parts, the inputs at which an operation gives `none`, how
 `none` propagates, the numbers and their limits, random values, equality, and how deep a chain of
 calls can go.
@@ -10,7 +10,7 @@ An expression is computed at one of two times ({doc}`binding-time`). When every 
 reads is known when compiling, the compiler computes it in the fold step and writes the value into
 the .mtpc in place of the expression. This is {term}`folding`. Otherwise the runtime computes it
 while drawing, again each time a value that it reads changes ({doc}`reaction`). Every rule in this
-part applies at both times, unless the rule is stated for one of them. Where the compiler or the
+page applies at both times, unless the rule is stated for one of them. Where the compiler or the
 runtime does something else today, a note that starts with "Code differs" follows the rule.
 
 ## Expressions change nothing

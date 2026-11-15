@@ -1,14 +1,14 @@
 (core)=
 # Core and derived forms
 
-In this part, every {term}`head` that the compiler accepts is sorted into three kinds:
+On this page, every {term}`head` that the compiler accepts is sorted into three kinds:
 {term}`core form`, {term}`sugar` and {term}`library`. Each sugar form is given as a
-{term}`rewrite` into core forms. Each core form is given with the part of the spec where its
+{term}`rewrite` into core forms. Each core form is given with the page of the spec where its
 meaning is defined.
 
 The inventory was built from `mathterpiece/compiler.py` and `mathterpiece/parse.py` as they are
 on 2026-11-14, and then checked against `docs/reference.md` and `docs/syntax.md`. Citations of
-the form `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This part states the
+the form `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page states the
 language as the author decided it on 2026-11-14 and 2026-11-15 (decisions P1, P2 and P3 of
 {doc}`open-questions`). Where the code does not yet follow a rule, a box marked "Code differs"
 after the rule gives what the code does and the bead that will change it.
@@ -283,7 +283,7 @@ that copy (compiler.py:1161-1167, compiler.py:5329-5341) (mtp-08wd.1).
 (core-core-forms)=
 ## Forms that are core because a rewrite would need a value or a type
 
-By {numref}`sugar-form`, each form below is core. Its meaning is defined in the part named in the
+By {numref}`sugar-form`, each form below is core. Its meaning is defined in the page named in the
 inventory.
 
 - **`(. X Y)`.** Whether `Y` is an attribute depends on `X` ({numref}`dot-part`).
@@ -323,7 +323,7 @@ inventory.
 (core-inventory)=
 ## Inventory of heads
 
-Each table lists the heads of one context. The column "Defined in" gives the part where a core
+Each table lists the heads of one context. The column "Defined in" gives the page where a core
 form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the library.
 
 ### Top-level declarations
@@ -617,7 +617,7 @@ documents are cut down in mtp-ydd4.7.
 (core-summary)=
 ## Summary
 
-| Head | Kind | Rewrite or defining part |
+| Head | Kind | Rewrite or defining page |
 |---|---|---|
 | `doc@'…'`, `free@X`, `#'…'`, `[…][X]` | sugar, made by the parser | {numref}`shorthand-forms` |
 | `(H_ …)` | sugar, made by the parser | {numref}`unnamed-head` |

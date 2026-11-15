@@ -2,13 +2,13 @@
 # Well-formedness
 
 A world model whose names resolve ({ref}`scope`) and whose expressions have types ({doc}`types`)
-must still pass the rules of this part: its dependencies form no cycle, its writers write only what
+must still pass the rules of this page: its dependencies form no cycle, its writers write only what
 may be written, the moves that run together do not write the same value, and every constraint is
 proved. All of them are checked in the prove step ({numref}`compile-steps`), and a source that
 breaks one is a compile error. The last section defines the {term}`prover`: exactly what it proves,
 and the ranges with which it proves it.
 
-This part states the language as the author decided it. Where the compiler does not follow a rule
+This page states the language as the author decided it. Where the compiler does not follow a rule
 yet, a box marked "Code differs" gives what the code does and the bead that will change it.
 
 ## No cycles
@@ -152,7 +152,7 @@ The prover proves exactly these, and nothing else:
    while drawing ({numref}`foreach-bounded-length`).
 5. That a name built from a value names a declaration that fits ({numref}`names-from-values`).
 6. The call depth limit of a call known in the prove step ({numref}`call-depth-limit`).
-7. The rules of this part before this section.
+7. The rules of this page before this section.
 
 For numbers, its only reasoning is the ranges of {numref}`ranges` and {numref}`range-rules`, and
 the narrowing of {numref}`if-narrowing`. It proves each body once ({numref}`prove-bodies-once`).
