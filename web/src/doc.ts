@@ -1,4 +1,4 @@
-// The .mtpc the compiler writes (format version 2; docs/mtpc.md, checked against
+// The .mtpc the compiler writes (docs/spec/compiled-format.md, checked against
 // docs/mtpc.schema.json). Expressions are arrays: their operation, their type, then their parts.
 
 export type Type =
@@ -149,7 +149,7 @@ export interface Doc {
   "type-table"?: Type[];
 }
 
-export const FORMAT_VERSION = 4;
+export const SPEC_VERSION = 1;
 
 export function isBound(p: Attribute): p is BoundAttribute {
   return "bound" in p;

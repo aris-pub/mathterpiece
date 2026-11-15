@@ -7,7 +7,6 @@ import type { Runtime } from "./runtime.ts";
 
 export class Listeners {
   private byShape = new Map<number, Obj[]>();
-  private tied = false;
 
   constructor(
     private rt: Runtime,
@@ -16,23 +15,21 @@ export class Listeners {
     for (const o of rt.objects) {
       if (o.kind !== kind) continue;
       this.byShape.set(o.shape!, [...(this.byShape.get(o.shape!) ?? []), o]);
-      if (o.in) this.tied = true;
     }
   }
 
   /** The listeners an event on shape hit, in the view given, sets off, from the shape up. */
   find(hit: number, view?: number): Obj[] {
-    // Drawing asks this of every shape, so a figure that ties no listener to a view filters none.
-    const on = (i: number) => this.byShape.get(i) ?? [];
-    return bubble(this.rt, hit, this.tied ? (i) => on(i).filter((l) => heardIn(l, view, this.rt)) : on);
+    return bubble(this.rt, hit, (i) => (this.byShape.get(i) ?? []).filter((l) => heardIn(l, view, this.rt)));
   }
 }
 
-/** Whether a listener hears the pointer in a view: in every one, unless it names its own with
- * (in view…) (mtp-2juu.1), and then in those of them not quiet now (mtp-16z). No view given
- * means any. */
+/** Whether a listener on a shape or a term hears the pointer in a view: only in the one view in its
+ * in, the view in whose body it is written (mtp-6k7f), and only while that view is not quiet
+ * (mtp-16z) and is ready. No view given means any. */
 export function heardIn(listener: Obj, view?: number, rt?: Runtime): boolean {
-  return view === undefined || !listener.in || (listener.in.includes(view) && !rt?.quiet.has(view) && !rt?.unready.has(view));
+  if (view === undefined) return true;
+  return listener.in?.length === 1 && listener.in[0] === view && !rt?.quiet.has(view) && !rt?.unready.has(view);
 }
 
 /** The listeners of an event on hit, up the scene tree from it, each shape's own given by

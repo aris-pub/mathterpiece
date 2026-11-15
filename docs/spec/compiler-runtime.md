@@ -361,15 +361,6 @@ The format of the .mtpc and its schema are part of this spec, so two .mtpc files
 same version are read by the same rules.
 ```
 
-:::{admonition} Code differs
-:class: note
-The .mtpc states a version of its format, 4, and this spec has no version yet. Bead mtp-ydd4.7.60.
-The runtime also reads an older form of version 4: a listener with no `in`, or with several views in
-`in`, is heard in every view that shows its shape (`heardIn` in web/src/click.ts, line 35). The compiler (mathterpiece/mtpc.py, line 31) and the runtime
-(web/src/doc.ts, line 152) both use version 4, so two version 4 files can follow different rules.
-mtp-ydd4.7.17.
-:::
-
 ## Conformance
 
 ```{rule} what-is-normative

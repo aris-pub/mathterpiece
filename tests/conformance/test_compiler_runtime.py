@@ -15,7 +15,7 @@ from mtpc_check import errors as schema_errors
 from mathterpiece.build import compiled
 from mathterpiece.cli import main
 from mathterpiece.compiler import CompileError, compile_source
-from mathterpiece.mtpc import VERSION
+from mathterpiece.mtpc import SPEC_VERSION
 from mathterpiece.parse import ParseError, parse
 
 from .support import (
@@ -248,7 +248,7 @@ class TestAnyCompilerAnyRuntime:
     def test_the_mtpc_of_each_example_page_matches_the_schema(self, src):
         doc = json.loads(compiled(src.read_text(encoding="utf-8"), src))
         assert schema_errors(doc) == []
-        assert doc["mtpc"] == VERSION
+        assert doc["mtpc"] == SPEC_VERSION
 
 
 @rule("mtpc-only-boundary")
@@ -327,7 +327,7 @@ class TestSchemaStrength:
 
     def test_another_version_does_not_match(self):
         d = raw_mtpc(FIGURE)
-        d["mtpc"] = VERSION + 1
+        d["mtpc"] = SPEC_VERSION + 1
         assert schema_errors(d)
 
     def test_an_unknown_kind_of_object_does_not_match(self):
@@ -340,16 +340,71 @@ class TestSchemaStrength:
         d["names"]["k"] = "zero"
         assert schema_errors(d)
 
+    def test_a_listener_on_a_shape_names_one_view_in_in(self):
+        d = raw_mtpc(LISTENERS)
+        assert schema_errors(d) == []
+        v, w = d["names"]["v"], d["names"]["w"]
+        for kind in ("on-click", "on-enter", "on-drag", "on-show"):
+            listener = _listener(d, kind)
+            listener["in"] = [v, w]
+            assert schema_errors(d), kind
+            del listener["in"]
+            assert schema_errors(d), kind
+            listener["in"] = [v]
+
+    def test_an_on_pointermove_names_one_view_in_in_only_on_a_shape(self):
+        d = raw_mtpc(LISTENERS)
+        moves = [o for o in d["objects"] if o["kind"] == "on-pointermove"]
+        (on_shape,) = [o for o in moves if o["shape"] is not None]
+        (on_canvas,) = [o for o in moves if o["shape"] is None]
+        v = d["names"]["v"]
+        del on_shape["in"]
+        assert schema_errors(d)
+        on_shape["in"] = [v]
+        on_canvas["in"] = [v]
+        assert schema_errors(d)
+
+    def test_a_listener_on_its_own_view_has_no_in(self):
+        d = raw_mtpc(LISTENERS)
+        _listener(d, "on-view")["in"] = [d["names"]["v"]]
+        assert schema_errors(d)
+
+
+LISTENERS = """(real k 0 (>= 0) (<= 1))
+(point p [0 0])
+(scene s (circle c (r 1)))
+(canvas v s
+  (on-click c (animation (move k (to 1) (duration 1))))
+  (on-enter c (animation (move k (to 1) (duration 1))))
+  (on-drag c c.pos)
+  (on-show c (animation (at-once (move c.opacity (to 1) (duration 0))
+                                 (move c.drawn (to 1) (duration 1)))))
+  (on-pointermove c p)
+  (on-pointermove p)
+  (on-view (animation (move k (to 1) (duration 1)))))
+(canvas w s)
+"""
+
+
+def _listener(d: dict, kind: str) -> dict:
+    return next(o for o in d["objects"] if o["kind"] == kind)
+
 
 @rule("spec-version")
-class TestFormatVersion:
-    def test_every_mtpc_holds_the_version(self):
-        assert raw_mtpc("")["mtpc"] == VERSION
+class TestSpecVersion:
+    def test_every_mtpc_holds_the_version_of_this_draft(self):
+        index = (SPEC / "index.md").read_text()
+        (draft,) = re.findall(r"This is the draft of version (\d+) of the specification", index)
+        assert raw_mtpc("")["mtpc"] == int(draft)
+
+    def test_the_version_is_a_whole_number(self):
+        version = raw_mtpc("")["mtpc"]
+        assert type(version) is int and version >= 1
 
     def test_the_compiler_and_the_runtime_implement_the_same_version(self):
         doc_ts = (ROOT / "web" / "src" / "doc.ts").read_text()
-        (runtime,) = re.findall(r"export const FORMAT_VERSION = (\d+);", doc_ts)
-        assert int(runtime) == VERSION
+        (runtime,) = re.findall(r"export const SPEC_VERSION = (\d+);", doc_ts)
+        assert int(runtime) == SPEC_VERSION
 
 
 # pytest.raises with a match argument checks the wording of an error.
