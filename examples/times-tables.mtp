@@ -37,10 +37,10 @@
 
   ; The second line is indented, as the code would be in a file.
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
-    (let ((line 0.8) (first (+ (bottom-left table) [0 (- line)])))
+    (let ((spacing 0.8) (first (+ (bottom-left table) [0 (- spacing)])))
       (text_ '(foreach k (range 200)' (pos first))
       (text_ $'(line_ (from (spot k)) (to (spot (* {m:.2f} k)))))'
-          (pos (+ first [0.5 (- line)]))))))
+          (pos (+ first [0.5 (- spacing)]))))))
 
 (canvas view (x -9) (y -9.6) (width 18) (height 19) (pan false) (zoom false)
   doc@'The circle and its chords.'

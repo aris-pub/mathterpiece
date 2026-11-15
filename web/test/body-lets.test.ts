@@ -5,14 +5,14 @@ import { load } from "./helpers.ts";
 describe("a let holding declarations", () => {
   it("gives every shape that reads it the same value", () => {
     const rt = load("body-lets");
-    expect(rt.value(rt.id("line"), "points")).toEqual([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]]);
+    expect(rt.value(rt.id("trail"), "points")).toEqual([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]]);
     expect(rt.value(rt.id("d3"), "pos")).toEqual([3, 0]);
   });
 
   it("follows what its value reads", () => {
     const rt = load("body-lets");
     rt.write(rt.id("m"), null, 2);
-    expect(rt.value(rt.id("line"), "points")).toEqual([[0, 0], [2, 0], [4, 0], [6, 0], [8, 0]]);
+    expect(rt.value(rt.id("trail"), "points")).toEqual([[0, 0], [2, 0], [4, 0], [6, 0], [8, 0]]);
     expect(rt.value(rt.id("d4"), "pos")).toEqual([8, 0]);
   });
 

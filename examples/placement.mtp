@@ -6,7 +6,7 @@
 
 (import house paper ink soft red green)
 (font small (size 13))
-(font name (style 'italic') (size 16))
+(font name-font (style 'italic') (size 16))
 
 ; Whatever is placed at the tip follows the flag wherever it is moved.
 (motif flag ()
@@ -43,14 +43,14 @@
       (text_ 'bottom-right' (pos (bottom-right card corner)) (halign 'start') (valign 'top'))))
 
   ; The ball's name, a line from the card to the ball, and a caption under both.
-  (text ball-name 'ball' (pos (top-right ball 0.05)) (valign 'bottom') (font name) (fill ink))
+  (text ball-name 'ball' (pos (top-right ball 0.05)) (valign 'bottom') (font name-font) (fill ink))
   (line tether (from (right card)) (to (left ball)) (stroke green) (stroke-width 1))
   (text caption 'the card and the ball' (pos (bottom both 0.6)) (halign 'middle') (valign 'top')
       (font small) (fill ink))
 
   (flag pennant (pos [-5 -3.5]))
   (text pennant-name 'flag' (pos pennant.tip.pos) (halign 'middle') (valign 'bottom')
-      (font name) (fill ink)))
+      (font name-font) (fill ink)))
 
 (canvas view (x -7) (y -4.5) (width 14) (height 9) (pan false) (zoom false)
   doc@'The card and its eight points, the ball, and the flag.'
