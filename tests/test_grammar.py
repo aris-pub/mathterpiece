@@ -248,7 +248,6 @@ REJECTED = [
     "(f none[0]x)",
 ]
 
-BLANKS = "mtp-ydd4.7.2"
 NAMES = "mtp-ydd4.7.3"
 DIGITS = "mtp-ydd4.7.4"
 NESTED_BRACES = "mtp-kzx2"
@@ -259,9 +258,6 @@ LITERAL_PARTS = "mtp-ydd4.7.32"
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
 # source, test_known_difference fails, and the entry is removed.
 KNOWN_DIFFERENCES = {
-    "(f a)": BLANKS,
-    "(f a b)": BLANKS,
-    "　(f)": BLANKS,
     "(f a!b)": NAMES,
     "(f a?b)": NAMES,
     "(f a*b)": NAMES,

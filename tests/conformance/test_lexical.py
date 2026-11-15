@@ -35,7 +35,6 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-WHITESPACE = xfail("mtp-ydd4.7.2", "the parser reads every str.isspace() character as whitespace")
 NAMES = xfail("mtp-ydd4.7.3", "the parser allows more characters in a name than the rule")
 DIGITS = xfail("mtp-ydd4.7.4", "the parser reads every Unicode decimal digit as a digit")
 LITERAL_PARTS = xfail("mtp-ydd4.7.32", "the parser reads true, false or none as a part of a name")
@@ -129,15 +128,37 @@ class TestWhitespaceAndComments:
     @pytest.mark.parametrize(
         "ch",
         [
-            pytest.param(" ", id="no-break-space", marks=WHITESPACE),
-            pytest.param(" ", id="line-separator", marks=WHITESPACE),
-            pytest.param("\x0c", id="form-feed", marks=WHITESPACE),
-            pytest.param("\x0b", id="vertical-tab", marks=WHITESPACE),
-            pytest.param("　", id="ideographic-space", marks=WHITESPACE),
+            pytest.param(" ", id="no-break-space"),
+            pytest.param(" ", id="line-separator"),
+            pytest.param("\x0c", id="form-feed"),
+            pytest.param("\x0b", id="vertical-tab"),
+            pytest.param("　", id="ideographic-space"),
         ],
     )
     def test_other_space_characters_are_errors(self, ch):
         syntax_error(f"(f a{ch}b)")
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "\xa0(f)",
+            "(f)\xa0",
+            "(f a\xa0)",
+            "(f 'a'\xa0)",
+            "(f [1]\xa0)",
+            "(f xs[0]\xa0)",
+            "(f r@\xa01)",
+            "(f $'{\xa0x}')",
+            "(f $'{x\xa0}')",
+            "(f\ra)",
+            "(f\r\na)",
+        ],
+    )
+    def test_they_are_errors_in_every_place(self, src):
+        syntax_error(src)
+
+    def test_inside_strings_and_comments_they_are_text(self):
+        assert items("(f 'a\xa0b c' ; d\xa0e\x0cf\n)") == (StrLit("a\xa0b c"),)
 
 
 @rule("word-ends")

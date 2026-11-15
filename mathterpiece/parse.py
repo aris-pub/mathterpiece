@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from dataclasses import replace
 from fractions import Fraction
 
@@ -35,6 +36,14 @@ IMAG_RE = re.compile(rf"([+-]?{_UREAL})i")
 COMPLEX_RE = re.compile(rf"([+-]?{_UREAL})([+-]{_UREAL})i")
 LOOKS_NUMERIC_RE = re.compile(r"[+-]?\.?\d")
 BOM = "\ufeff"
+WHITESPACE = " \t\n"
+# Characters that unicodedata gives no name.
+CONTROL_NAMES = {
+    "\x0b": "vertical tab",
+    "\x0c": "form feed",
+    "\r": "carriage return",
+    "\x85": "next line",
+}
 
 
 class ParseError(Exception):
@@ -73,11 +82,17 @@ def _at(node: Node, pos: Pos) -> Node:
 
 
 def _is_delimiter(ch: str) -> bool:
-    return ch.isspace() or ch in "();"
+    return ch in WHITESPACE or ch in "();"
 
 
 def _ends_run(ch: str) -> bool:
     return _is_delimiter(ch) or ch in '[]{}"|'
+
+
+def _shown(ch: str) -> str:
+    """A character that cannot be seen, as an error message names it: U+00A0 (no-break space)."""
+    name = CONTROL_NAMES.get(ch) or unicodedata.name(ch, "").lower()
+    return f"U+{ord(ch):04X} ({name})" if name else f"U+{ord(ch):04X}"
 
 
 def _check_char(ch: str, pos: Pos) -> None:
@@ -85,6 +100,11 @@ def _check_char(ch: str, pos: Pos) -> None:
     if ch == BOM:
         raise ParseError(
             "a byte order mark (U+FEFF) may only be the first character of a source", pos
+        )
+    # Python counts more characters as space than mtp does, such as U+00A0 and U+2028.
+    if ch.isspace() and ch not in WHITESPACE:
+        raise ParseError(
+            f"{_shown(ch)} is not whitespace: whitespace is only space, tab and newline", pos
         )
 
 
@@ -163,7 +183,7 @@ class _Parser:
 
     def skip_blank(self):
         while ch := self.peek():
-            if ch.isspace():
+            if ch in WHITESPACE:
                 self.advance()
             elif ch == ";":
                 while self.peek() and self.peek() != "\n":
@@ -247,7 +267,7 @@ class _Parser:
 
     def prefixed_item(self, head: str) -> Node:
         ch = self.peek()
-        if not ch or ch.isspace() or ch in ");]":
+        if not ch or ch in WHITESPACE or ch in ");]":
             raise ParseError(
                 f"{head}@ is followed directly by its item, as in {head}@1", self.pos()
             )
@@ -319,6 +339,7 @@ class _Parser:
         if self.peek() and not (
             _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
         ):
+            _check_char(self.peek(), self.pos())
             raise ParseError(f"unexpected {self.peek()!r} after a list", self.pos())
         return whole
 
@@ -418,6 +439,7 @@ class _Parser:
                 parts.extend(_name_parts(part, part_pos))
         ends = _ends_run(self.peek()) or (self.in_braces and self.peek() == ":")
         if self.peek() and not ends:
+            _check_char(self.peek(), self.pos())
             raise ParseError(f"unexpected {self.peek()!r} after index", self.pos())
         return Name(tuple(parts), pos)
 
@@ -429,6 +451,7 @@ class _Parser:
         if self.peek() and not (
             _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
         ):
+            _check_char(self.peek(), self.pos())
             raise ParseError("expected whitespace, '(', ')' or ';' after a string", self.pos())
 
     def escape(self, start: Pos) -> str:

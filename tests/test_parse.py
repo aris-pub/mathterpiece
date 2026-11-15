@@ -138,6 +138,25 @@ class TestByteOrderMark:
         assert atom("'a﻿b'") == StrLit("a﻿b")
 
 
+class TestWhitespace:
+    @pytest.mark.parametrize(
+        "src, pos, shown",
+        [
+            ("(f\xa0a)", Pos(1, 3), "U+00A0 (no-break space)"),
+            ("(f a b)", Pos(1, 5), "U+2028 (line separator)"),
+            ("　(f)", Pos(1, 1), "U+3000 (ideographic space)"),
+            ("(f\n  'a'\x0c)", Pos(2, 6), "U+000C (form feed)"),
+            ("(f [1]\x0b)", Pos(1, 7), "U+000B (vertical tab)"),
+            ("(f xs[0]\x85)", Pos(1, 9), "U+0085 (next line)"),
+            ("(f\ra)", Pos(1, 3), "U+000D (carriage return)"),
+            ("(f\x1fa)", Pos(1, 3), "U+001F"),
+        ],
+    )
+    def test_other_space_characters_are_errors(self, src, pos, shown):
+        msg = f"{shown} is not whitespace: whitespace is only space, tab and newline"
+        assert error_at(src, msg) == pos
+
+
 class TestInt:
     @pytest.mark.parametrize(
         "text, value", [("3", 3), ("0", 0), ("-12", -12), ("+3", 3), ("007", 7)]

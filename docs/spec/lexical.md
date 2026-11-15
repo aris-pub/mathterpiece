@@ -80,13 +80,6 @@ characters whose Unicode general category is Zs, or whose bidirectional class is
 errors outside string literals and comments. {doc}`grammar` gives the places where whitespace and comments may be written, and
 {numref}`interpolated-strings` the places inside an {term}`interpolated string`.
 
-:::{admonition} Code differs
-:class: note
-`parse.py:157` (`skip_blank`) and `parse.py:75` (`_is_delimiter`) use `ch.isspace()`, so the
-parser reads every character for which `str.isspace()` is true as whitespace. Bead mtp-ydd4.7.2
-limits whitespace to the three characters of the rule.
-:::
-
 ## Where words end
 
 ```{rule} word-ends
