@@ -163,8 +163,8 @@ name string
   ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
 
 expression
-  One item of a source as the parser produces it: a form, a list literal, a word, a string literal
-  or a free starting value ({numref}`parser-expressions`).
+  One item of a source as the parser produces it: a form, a list literal, a word or a string
+  literal ({numref}`parser-expressions`).
 
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name with one name part

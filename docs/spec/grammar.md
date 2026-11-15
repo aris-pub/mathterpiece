@@ -30,7 +30,8 @@ source may hold no form at all.
 ```
 
 An expression is one item of a source, of a form, of a {term}`list` literal or of {term}`brackets`:
-a form, a list literal, a word, a string literal or a {term}`free starting value`. The first item of
+a form, a list literal, a word or a string literal. A prefixed form such as `free@x` is a form
+({numref}`prefix-forms`). The first item of
 a form may be a head that ends with `_` ({numref}`unnamed-head`).
 
 ```{rule} adjacent-items
