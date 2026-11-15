@@ -340,8 +340,8 @@ A .mtpc that matches the schema of its version and breaks a rule of this spec is
 corrupt. Among the corrupt files are a .mtpc with a reference to an
 object or a function that it does not hold, one with an expression that can give a value of
 another type than the type written with it, one with a `deps` list that leaves out something that
-its expression can read, and one with an expression known when compiling that is not folded. The
-compiler never writes a corrupt .mtpc.
+its expression can read, and one with an expression known when compiling that is not folded. A
+conforming compiler never writes a corrupt .mtpc.
 ```
 
 ```{rule} schema-strength
