@@ -298,9 +298,15 @@ comparison holds, and in B the part for which it fails. With lo and hi the ends 
   which the comparison holds, and the part in B is the same for the ints for which it fails. So
   with c an int from lo + 1 to hi, `(< N c)` gives A the upper end c - 1, and `(!= N c)` changes
   the range only when c is lo or hi.
-- For a ratio or a real N, a part in which N is below c, or at most c, is from lo to the smaller of
-  hi and c, and a part in which N is above c, or at least c, is from the larger of lo and c to hi.
-  The part in which N is c is from c to c, and the part in which N is not c is from lo to hi.
+- For a real N, a part in which N is at most c is from lo to the smaller of hi and c, and a part in
+  which N is at least c is from the larger of lo and c to hi. A part in which N is below c is from
+  lo to the smaller of hi and the largest binary64 number below c, and a part in which N is above c
+  is from the larger of lo and the smallest binary64 number above c to hi. So `(> N 0)` gives A a
+  range that does not hold 0. The part in which N is c is from c to c, and the part in which N is
+  not c is the range of N with an end that equals c moved to the next binary64 number inside it.
+- For a ratio N, a part in which N is below c, or at most c, is from lo to the smaller of hi and c,
+  and a part in which N is above c, or at least c, is from the larger of lo and c to hi. The part in
+  which N is c is from c to c, and the part in which N is not c is from lo to hi.
 - When a part holds no int, for an int N, or when its lower end is above its upper end, or when lo
   and hi are both c in the part in which N is not c, the branch never runs, and the prover proves
   nothing in it.
@@ -308,7 +314,8 @@ comparison holds, and in B the part for which it fails. With lo and hi the ends 
 The range of N changes only for the reads of N in A and in B that read the same declaration as
 the N of the condition. A value that is computed from N outside the `if`, such as a `let` name,
 keeps its range. In an `if` inside A or B, the range of N is the part that the outer `if` gives.
-`cond`, `when`, `and` and `or` narrow through their rewrites into `if` ({numref}`sugar-rewrites`).
+`(OP c N)` narrows as the comparison with N first that holds for the same values: `(< c N)` as
+`(> N c)`, and `(= c N)` as `(= N c)`. `cond`, `when`, `and` and `or` narrow through their rewrites into `if` ({numref}`sugar-rewrites`).
 No other condition narrows a range.
 ```
 
