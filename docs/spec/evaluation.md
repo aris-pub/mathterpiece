@@ -182,7 +182,7 @@ A function body is proved once, with each parameter ranging over its declared ty
 fold step computes the body with those arguments, and an operation in the body that gives `none`
 at those arguments gives `none` there too ({numref}`operations-that-give-none`). The
 {term}`illustrator` wrote the body with parameters, not with known inputs, so an `or?` in the body
-can replace the `none` with a default (docs/type-system.md, section 5.c). With
+can replace the `none` with a default. With
 `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f -1)` is 1. With
 `(func f ((real x)) (/ 1 x))`, the result type includes `none`, and `(f 0)` is `none`.
 `(func[real] f ((real x)) (/ 1 x))` is a compile error at `(/ 1 x)`, since its body gives `none`
@@ -498,8 +498,6 @@ random values, on every refresh and in every browser, and when a seed takes a ne
 random value that follows it is drawn again ({doc}`reaction`). Since the sites are counted when
 compiling, a change to the source that adds or removes a random function before
 another one changes the site of the later one, and with it the value that the later one draws.
-docs/data-model.md, line 283, has "is drawn once, when the page loads", which is wrong: a new seed
-draws every value that follows it again, as docs/reference.md, line 101, has.
 
 A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`
 ({numref}`rewrite-roll-dice`). By {numref}`random-values`, it changes the random values that follow
@@ -507,7 +505,7 @@ A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`
 
 `rand`, `rand-int`, `pick` and `shuffle` inside the body of a function are a compile error for now
 (mathterpiece/compiler.py, line 2247). A free variable may start at a random value with `free@`,
-and then never follows the seed (docs/reference.md, line 106).
+and then never follows the seed.
 
 ```{mtp-example}
 ; every dot is drawn from the seed dots and the site of its rand
@@ -584,7 +582,7 @@ strings, choices and colors match only when they are exactly the same, and `none
 ```
 
 Matching is `same` in web/src/same.ts. The runtime uses it to read the step of a play or a stepper
-from the scene (docs/reference.md, line 572, and web/src/player.ts, line 302), and to check
+from the scene (web/src/player.ts, line 302), and to check
 whether the free values that a canvas's `on-view` moves still have their values from page load
 (web/src/lifecycle.ts, line 62).
 
@@ -595,7 +593,7 @@ skipped, and nothing that depends on it is computed again (web/src/runtime.ts, l
 ## Termination
 
 A function may call itself, directly, through other functions, or through a function value
-(docs/reference.md, line 124). There are no other loops: a `foreach` makes a number of copies known
+({numref}`self-reference-today`). There are no other loops: a `foreach` makes a number of copies known
 when compiling, and `range` gives at most 1,000,000 items. So the only computation that could go
 on without end is a chain of calls. When folding, the {term}`call depth limit` ends every chain.
 While drawing, how every chain ends is Q-evaluation-13, below.
@@ -681,9 +679,8 @@ The prover therefore does not widen the ranges that it works out ({numref}`prove
 A folded value is final: the .mtpc holds the value in place of the expression
 ({numref}`compile-steps`), so the runtime uses it as written and never computes it again.
 
-{numref}`same-value-at-both-times` follows the guides: docs/reference.md, line 613, has "One rule,
-the same in the compiler and the runtime", and the comment at line 1 of web/src/builtins.ts has "as
-the compiler folds them". The compiler computes with CPython and its `math` module, and the runtime
+{numref}`same-value-at-both-times` matches the comment at line 1 of web/src/builtins.ts, "as the
+compiler folds them". The compiler computes with CPython and its `math` module, and the runtime
 with JavaScript and its `Math` object.
 
 :::{admonition} Code differs
