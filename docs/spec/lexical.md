@@ -201,7 +201,7 @@ So `+[0]` is an error. `true[0]`, `none[0]` and `3[0]` are errors too, since by
 {numref}`adjacent-items` only a form may follow a bool literal, `none` or a number directly. `!=x`
 is not a word.
 
-## Keywords and built-in names
+## Keywords
 
 ```{rule} keywords
 A {term}`keyword` is one of the words of {numref}`keywords-table`, and no other word.
@@ -229,37 +229,7 @@ The heads of {term}`optional arguments <optional argument>`, such as `x`, `r`, `
 heads of {term}`constraints <constraint>`, such as `const`, `length` and `wrap`. A word that is the
 head of an optional argument and also a keyword, such as `animation` or `move`, is a keyword.
 
-```{rule} declaration-names
-No declaration and no binding takes as its name a keyword, a {term}`built-in type`, `pointer` or
-`self` ({numref}`declarations-and-bindings`). This holds for every kind of declaration and
-binding: a variable, a shape, a function, a parameter, a name of a `let` or a `foreach`, a member
-of a namespace, a palette or a formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`, `complex`, `bool`, `string`, `color`, `font`,
-`point`, `transform`, `transition`, `animation`, `scene`, `func`, `rand-seed`, `list`, `maybe`, the
-shape types, and the {term}`interfaces <interface>` `shape`, `positioned` and `sequence`. `pointer`
-is the name bound in the move of a drag, and `self` the instance being built in the body of a motif.
-A declaration or a binding may take the name of a built-in function, an operator included, or of a
-built-in constant (`pi`, `tau` and `euler`): from that declaration or binding on, the name refers
-to what it declares or binds ({numref}`name-lookup`).
-```
-
-So `(real if 1)`, `(circle line …)` and `(let ((self 2)) …)` are
-{term}`compile errors <compile error>`, and `(func max ((real a) (real b)) a)` and `(real pi 3)` are
-allowed. `scene`, `transition`, `animation` and `func` are both built-in types and keywords. `true`,
-`false` and `none` are values, never names ({numref}`name-characters`). The names of the standard
-{term}`library` are not built-in: they are ordinary declarations of the files of
-the standard library ({doc}`stdlib`), which a source brings in with `import` ({numref}`sugar-rewrites`). The
-parser does not check this rule, and the {term}`compiler` checks it.
-
-:::{admonition} Code differs
-:class: note
-`compiler.py:99` (`RESERVED`) forbids only the names `scene`, `animation`, `transition`, `move`,
-`in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self` and `doc`. The
-special forms of `compiler.py:122` (`SPECIAL`) and the types are forbidden only as the name of a
-function (`compiler.py:181`, `NOT_FUNCTION_NAMES`), so a variable may be named `if`, and a
-function may not take the name of a constant. A name bound by `let` is checked against neither
-(`_Compiler.let`, `compiler.py:6663`), so `(real v (let ((self 2)) self))` compiles, and `v` is 2.
-Bead mtp-ydd4.7.35 makes the compiler follow the rule.
-:::
+Which names no declaration and no binding may take is defined in {numref}`declaration-names`.
 
 ```{rule} reserved-characters
 Outside a string literal, `{`, `}` and `"` are errors, and so is a `$` or a `#` that is not followed

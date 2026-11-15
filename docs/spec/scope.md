@@ -3,8 +3,7 @@
 
 This page defines {term}`declarations <declaration>` and {term}`bindings <binding>`, the part of a
 source in which each {term}`name` may be used, and the declaration or binding to which each use of
-a name refers. Which characters a name holds is defined in {numref}`name-characters`, and which
-names a declaration or a binding may take in {numref}`keywords` and {numref}`declaration-names`.
+a name refers. Which characters a name holds is defined in {numref}`name-characters`.
 Which {term}`expressions <expression>` may read the scene, a formula or the page is defined in
 {doc}`binding-time`.
 
@@ -20,7 +19,9 @@ A declaration is a {term}`form` that creates a new thing that can be addressed: 
 world model, a function, a type or a choreo. The thing exists whether or not the source gives it a
 name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
 for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
-parameters of a function, a motif, a variant or a choreo, are bindings. An `import` creates
+parameters of a function, a motif, a variant or a choreo, are bindings. The language makes two
+bindings of its own: the move of a drag binds `pointer` to the position of the pointer, and the
+body of a motif binds `self` to the instance being built. An `import` creates
 nothing either: it gives names to the things that the declarations of another file create
 ({doc}`imports`).
 ```
@@ -39,7 +40,7 @@ and the names of each one:
 | Scope | Covers | Names |
 |---|---|---|
 | the {term}`file scope` of a source or of a {term}`file to import` | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
-| the {term}`body` of a motif | the motif's body | the parameters of the motif, and every shape and variable declared in the body, at any depth |
+| the {term}`body` of a motif | the motif's body | the parameters of the motif, `self`, and every shape and variable declared in the body, at any depth |
 | a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and a choreo | the body | the parameters |
 | `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each value after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
@@ -157,18 +158,50 @@ imported whole gives only its own name ({numref}`sugar-rewrites`), so a member `
 The file scope of an imported file, and the names that an import gives, are defined in
 {doc}`imports`.
 
-## The keywords, the built-in names and `self`
+## Names that no declaration or binding takes
 
-No declaration and no binding takes a {term}`keyword`, a {term}`built-in type`, `pointer` or
-`self` as its name ({numref}`keywords`, {numref}`declaration-names`), and `true`, `false` and
-`none` are values and never names ({numref}`name-characters`). The built-in functions and constants are found only by
-the second step of {numref}`name-lookup`. The names of the standard {term}`library` are ordinary
-declarations of its files, which a source brings in with `import`, and are found as any other
-imported name.
+```{rule} declaration-names
+No declaration and no binding takes as its name a {term}`keyword` ({numref}`keywords`) or a
+{term}`built-in type`. This holds for every kind of declaration and binding: a variable, a shape, a
+function, a parameter, a name of a `let` or a `foreach`, a member of a namespace, a palette or a
+formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`,
+`complex`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`,
+`scene`, `func`, `rand-seed`, `list`, `maybe`, the shape types, and the
+interfaces `shape`, `positioned` and `sequence`. A declaration or a binding may
+take the name of a built-in function, an operator included, or of a built-in constant (`pi`, `tau`
+and `euler`): from that declaration or binding on, the name refers to what it declares or binds
+({numref}`name-lookup`).
+```
+
+So `(real if 1)` and `(circle line …)` are compile errors, and
+`(func max ((real a) (real b)) a)` and `(real pi 3)` are allowed. `scene`, `transition`,
+`animation` and `func` are both built-in types and keywords. `true`, `false` and `none` are values,
+never names ({numref}`name-characters`). The built-in functions and constants are found only by the
+second step of {numref}`name-lookup`. The names of the standard {term}`library` are not built-in:
+they are ordinary declarations of its files ({doc}`stdlib`), which a source brings in with
+`import`, and are found as any other imported name.
+
+A variable may be named `pointer` or `self`. Inside the move of a drag, the binding `pointer` hides
+a declaration named `pointer`, and inside the body of a motif, the binding `self` hides a
+declaration named `self` ({numref}`name-lookup`). A member of a motif's body named `self` is a
+compile error by {numref}`one-declaration-per-scope`, since the body binds `self`.
+
+:::{admonition} Code differs
+:class: note
+`compiler.py:99` (`RESERVED`) forbids only the names `scene`, `animation`, `transition`, `move`,
+`in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self` and `doc`, so the
+name `self` is refused everywhere. The special forms of `compiler.py:122` (`SPECIAL`) and the types
+are forbidden only as the name of a function (`compiler.py:181`, `NOT_FUNCTION_NAMES`), so a
+variable may be named `if`, and a function may not take the name of a constant. A name bound by
+`let` is checked against neither (`_Compiler.let`, `compiler.py:6663`). Bead mtp-ydd4.7.35 makes
+the compiler follow the rule.
+:::
 
 :::{admonition} Open question Q-scope-1 (parked)
 :class: warning
-What `self` means, and every rule about a declaration that reads itself or its container, are to
-be redesigned around `self`. The redesign is parked, and this spec does not define `self`. The
-rules of today about a declaration that reads itself are in {numref}`self-reference-today`.
+Every rule about a declaration that reads itself or its container is to be redesigned around
+`self`, so that a declaration, a shape for example, refers to itself through `self`. Today `self`
+is bound only in the body of a motif ({numref}`declarations-and-bindings`). The redesign is parked,
+and the rules of today about a declaration that reads itself are in
+{numref}`self-reference-today`.
 :::
