@@ -56,8 +56,8 @@ is written as it is.
 ## Rewrite rules
 
 The {term}`parser` makes the rewrites of the lexical shorthands while it reads the source:
-`doc@'text'`, `free@X`, a {term}`name string` `#'…'`, a {term}`part` after a {term}`list`, `[…][X]`
-({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
+`doc@'text'`, `free@X`, a {term}`name string` `#'…'`, a part after a {term}`list` {term}`literal`,
+`[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other sugar form is in the table of the rule below.
 
 (rewrite-when)=
@@ -93,7 +93,7 @@ before any other rewrite of the declaration that it copies.
 | `(defaults (A V)…)`, in a formula | the same formula without it, with each `(A V)` added to the `(term T …)` form of each term `T` of the formula that does not give `A`, and a form `(term T (A V)…)` added for each term that has none | The terms are those marked in the formula's string |
 | `(dash L)` | `(dash L 0)` | |
 | `(pos [X Y])` | `(x X) (y Y)` | |
-| `(pos P)` | `(x (. P 0)) (y (. P 1))` | `P` is not a literal list, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
+| `(pos P)` | `(x (. P 0)) (y (. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(pos free@[X Y])`, `(pos free@P)` | `(x free@X) (y free@Y)`, `(x free@(. P 0)) (y free@(. P 1))` | As for `(pos P)` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, `(wait)`, in an animation's body | `(move none (duration T))`, `(move none)` | |
@@ -132,9 +132,9 @@ it, and not in a step of their own (for example compiler.py:6471-6479 for `when`
 5543-5576 for the defaults of a group). Beads mtp-08wd.5, mtp-08wd.6, mtp-08wd.7, mtp-08wd.8
 and mtp-08wd.2 will make them in the rewrite step. Where the result differs today:
 
-- `p.r` is read as one name with parts (parse.py:337-395), and each part after the first as an
-  attribute (compiler.py:5953-5960), so with a local `r`, `xs.r` is an error while `(. xs r)` is
-  an item of `xs` (mtp-ydd4.7.5).
+- `p.r` is read as one name with {term}`name parts <name part>` (parse.py:337-395), and each name
+  part after the first as an attribute (compiler.py:5953-5960), so with a local `r`, `xs.r` is an
+  error while `(. xs r)` is an item of `xs` (mtp-ydd4.7.5).
 - `(like M)` on an instance copies neither its `pointer-events` (compiler.py:4749, 4759-4762) nor
   its `clip` (mtp-ydd4.7.20).
 - `(wait T)` makes no transition object, while `(move none (duration T))` does
@@ -144,10 +144,10 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
 - `(cond (else V))` is {term}`folded <folding>` to the value of `V` and, since it is not a literal,
   marked const (compiler.py:5653-5657), so `(real v (cond (else 3)))` makes `v` a constant, while
   `(real v 3)` is a free variable that a writer may write (mtp-ydd4.7.46).
-- `_through` (compiler.py:7280-7290) rewrites only a name of several parts, so after
+- `_through` (compiler.py:7280-7290) rewrites only a name with several name parts, so after
   `(import lib)`, `lib.k` is accepted, and `(. lib k)` is a compile error, "unknown name 'lib'"
   (compiler.py:6056) (mtp-ydd4.7.47).
-- `cond` gives a literal list among its values the type of all its other values
+- `cond` gives a list literal among its values the type of all its other values
   (compiler.py:6629-6641), while an `if` gives it the type of its other branch only
   (compiler.py:6494-6504) (mtp-08wd.2).
 - `(pos P)` compiles `P` once and splits it (compiler.py:5594-5611), so a random call in `P` is
@@ -189,7 +189,7 @@ rule.
 ### `foreach` over a count or a list whose length is known only while drawing
 
 ```{rule} foreach-count
-`(foreach N X ITEMS…)`, where `X` is an int, means exactly `(foreach N (range X) ITEMS…)`.
+`(foreach N X ITEMS…)`, where `X` is an {term}`int`, means exactly `(foreach N (range X) ITEMS…)`.
 ```
 
 So the two spellings mean the same, at all times, and every rule about the second applies to the
@@ -217,9 +217,9 @@ compiler follow the rule.
 
 ### The form `.`
 
-```{rule} dot-part
-In `(. X Y)`, where `Y` is a bare name of one part, `Y` is the attribute or the member of `X` of
-that name, when `X` has one. Otherwise `Y` is an expression, and its value is a position or a key
+```{rule} dot-name-part
+In `(. X Y)`, where `Y` is a bare name with one name part, `Y` is the attribute or the member of `X`
+of that name, when `X` has one. Otherwise `Y` is an expression, and its value is a position or a key
 of `X`.
 ```
 
@@ -285,7 +285,7 @@ that copy (compiler.py:1161-1167, compiler.py:5329-5341) (mtp-08wd.1).
 By {numref}`sugar-form`, each form below is core. Its meaning is defined in the page named in the
 inventory.
 
-- **`(. X Y)`.** Whether `Y` is an attribute depends on `X` ({numref}`dot-part`).
+- **`(. X Y)`.** Whether `Y` is an attribute depends on `X` ({numref}`dot-name-part`).
 - **`foreach`.** The number of copies is a value, and `(foreach i n …)` is told apart from
   `(foreach x xs …)` by the type of the second item ({numref}`foreach-count`).
 - **A motif instance.** Its members are the motif's body with the values of its parameters, made in
@@ -306,8 +306,8 @@ inventory.
 - **`(defaults …)` on an instance.** The members of an instance are made only in the expand step,
   so the prover proves that each value fits its attribute.
 - **`(defaults …)` in an animation, an `at-once` or an `in-order`.** A default ease does not apply
-  to a move of a bool, a string or a choice, so writing the ease into each move needs the type of
-  its target. A default duration also applies to the name of a transition in the body, which
+  to a move of a {term}`bool`, a string or a choice, so writing the ease into each move needs the
+  type of its target. A default duration also applies to the name of a transition in the body, which
   cannot be given a duration without making a new transition.
 - **An `in-order` or an `at-once` of one item.** It is one step, while its item may be several: a
   play of `(animation (in-order (in-order a b)))` has one step, and a play of
@@ -334,7 +334,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
 | `palette` | sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
-| `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a real to a color | {doc}`evaluation` |
+| `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the one scene | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
 | `motif` | core | `(motif N PARAMS ITEM…)`: a template of shapes | {doc}`world-model` |
@@ -460,10 +460,10 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a literal | core | a number, string, TeX string, {term}`interpolated string`, {term}`bool`, `none` or list | {doc}`lexical`, {doc}`types` |
+| a literal | core | a number, string, TeX string, {term}`interpolated string`, bool, `none` or list literal | {doc}`lexical`, {doc}`types` |
 | a name | core | what the name refers to | {doc}`scope` |
-| a name with parts, `N.A`, `N[X]` | sugar | | {numref}`sugar-rewrites` |
-| `.` | core | `(. X Y)`: an attribute, member, item or key of `X` | {numref}`dot-part` |
+| a name with several name parts, `N.A`, `N[X]` | sugar | | {numref}`sugar-rewrites` |
+| `.` | core | `(. X Y)`: an attribute, member, item or key of `X` | {numref}`dot-name-part` |
 | `name` | core | `(name S)`: the name whose text is `S`, known when compiling | {doc}`scope`, {numref}`names-from-values` |
 | `if` | core | `(if C A B)` | {doc}`evaluation` |
 | `when` | sugar | `(when C X)` | {numref}`sugar-rewrites` |
@@ -544,7 +544,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | `on-view`, `on-ready`, `on-live`, `on-quiet` | core | listeners on their own view | {doc}`lifecycle` |
 | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom` on a canvas | core | the view box and how the {term}`reader` may move it | {doc}`page-interface` |
 | `toggle-duration`, `toggle-ease` | core | how a canvas fades its items in and out | {doc}`time`, {doc}`page-interface` |
-| a name, a list or an expression in a canvas | core | what the canvas draws | {doc}`page-interface` |
+| a name, a list literal or an expression in a canvas | core | what the canvas draws | {doc}`page-interface` |
 | `font` on a readout | core | the readout's font | {doc}`page-interface` |
 | `kind` on a display | core | `'block'` or `'inline'` | {doc}`page-interface` |
 | `animation` on a control or a listener | core | its animation | {doc}`reaction` |
@@ -653,7 +653,7 @@ documents are cut down in mtp-ydd4.7.
 | `row`, `column`, `gap`, `align` | core | {doc}`world-model` |
 | the attribute arguments of the shapes, `dash` with two arguments, `clip`, `fixed-size` | core | {doc}`world-model` |
 | `exists-when` | core | {doc}`world-model` |
-| `.` | core | {numref}`dot-part` |
+| `.` | core | {numref}`dot-name-part` |
 | `name` | core | {doc}`scope`, {numref}`names-from-values` |
 | `if`, `as`, `type-of` | core | {doc}`evaluation`, {doc}`types` |
 | `doc` | core | {doc}`compiled-format` |

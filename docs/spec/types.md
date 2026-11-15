@@ -23,12 +23,12 @@ These are the types of mtp:
 |---|---|---|
 | `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
 | `bool` | `bool` | `true` and `false` |
-| `string` | `string` | the strings, TeX strings among them |
+| `string` | `string` | the {term}`strings <string>`, TeX strings among them |
 | `color` | `color` | the colors ({doc}`world-model`) |
 | `font` | `font` | the fonts, each given by a family, a style, a weight and a size |
-| `point` | `point` | the pairs of reals, `x` and `y` |
+| `point` | `point` | the pairs of {term}`reals <real>`, `x` and `y` |
 | `transform` | `transform` | the affine transforms of the plane |
-| a list type | `list[T]` | the lists of any length whose items are of type T |
+| a {term}`list` type | `list[T]` | the lists of any length whose items are of type T |
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
 | `transition`, `animation` | as named | the transitions and the animations ({doc}`time`) |
 | `none` | `none` | the value `none` alone |
@@ -52,8 +52,8 @@ for `func[real color]`, and `(maybe T)` another spelling of `T|none` ({numref}`s
 
 :::{admonition} Code differs
 :class: note
-The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SEED`), so an int
-below 0 does not {term}`fit` it. Bead mtp-ydd4.7.30.
+The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SEED`), so an
+{term}`int` below 0 does not {term}`fit` it. Bead mtp-ydd4.7.30.
 :::
 
 ```{rule} type-notation
@@ -130,13 +130,13 @@ A list of constraints implies a constraint C exactly in these cases:
 
 ```{rule} constraints
 A constraint is one of these forms. Each may refine only the types of its row, and its
-numbers and {term}`strings <string>` are literals:
+numbers and strings are {term}`literals <literal>`:
 
 | Constraint | Refines | Its values | Written with |
 |---|---|---|---|
 | `(>= c)`, `(> c)`, `(<= c)`, `(< c)` | `int`, `ratio`, `real` | the numbers at least c, above c, at most c, below c | one number |
 | `(length n)` | `list[T]` | the lists of n items | one int, 0 or more |
-| `(one-of s1 … sk)` | `string` | the strings s1 to sk | one string or more |
+| `(one-of s1 … sk)` | `string` | the strings s1 to sk | one string literal or more |
 | `(const)` | every type | every value of the type ({numref}`writable-targets`) | nothing |
 | `(wrap lo hi)` | `int`, `ratio`, `real` | the numbers from lo up to hi, hi left out | two numbers, lo below hi, both ints for an `int` |
 
@@ -151,9 +151,9 @@ known in {doc}`binding-time`.
 ```{rule} wrap-brings-in
 A number that enters a type that holds `(wrap lo hi)` is brought into its interval, and is never
 refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)), with `mod` as {doc}`stdlib` defines
-it, exact for ints and ratios. A number enters a type when it is the value of a variable or an
-attribute of the type, an argument for a parameter of the type, the result of a function declared
-with the type, or a write into a variable or an attribute of the type.
+it, exact for ints and {term}`ratios <ratio>`. A number enters a type when it is the value of a
+variable or an attribute of the type, an argument for a parameter of the type, the result of a
+function declared with the type, or a write into a variable or an attribute of the type.
 ```
 
 So `(real theta 400 (wrap 0 360))` holds 40, and with `(type hour int (wrap 0 12))` and
@@ -208,7 +208,7 @@ own type.
 | Literal | Own type | Where a type is expected |
 |---|---|---|
 | a number | its kind ({numref}`number-literals`) | its kind must fit the expected type, without its constraints: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
-| a string or a {term}`TeX string` | `string` | where a color is expected, it is a color, and must be `#` followed by 3, 4, 6 or 8 hex digits, a CSS color name, or `transparent`, in small or capital letters, with {term}`whitespace` before or after. Where a refined string type is expected, it must be among its choices |
+| a string literal or a {term}`TeX string` | `string` | where a color is expected, it is a color, and must be `#` followed by 3, 4, 6 or 8 hex digits, a CSS color name, or `transparent`, in small or capital letters, with {term}`whitespace` before or after. Where a refined string type is expected, it must be among its choices |
 | `true`, `false` | `bool` | as its own type |
 | `none` | `none` | it must be a broadened type |
 | `[X…]` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, it has no own type, and is a compile error | where a point is expected, it must have two items, each a number, or a value whose type is a number type with `none`, and it is a point. Where `list[T]` is expected, each item has T expected |
@@ -218,7 +218,7 @@ A literal is checked against the constraints of the expected type by {numref}`co
 ```
 
 So `(circle c (fill 'red'))` gives a color, `(string s 'red')` a string, and
-`(list[color] swatches ['red' 'gold'])` a list of colors. A {term}`list` in brackets is a literal
+`(list[color] swatches ['red' 'gold'])` a list of colors. A list in brackets is a literal
 even when its items are expressions, such as `[k 0]`. A point whose coordinate is `none` is `none`
 ({numref}`none-propagates`), so `[x y]` is of type `point|none` when the type of `x` includes
 `none`.
@@ -248,7 +248,7 @@ since a writer may give it another length.
 The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists
 have that constraint in their types, with these lengths:
 
-- a list in brackets, of n items: n
+- a list literal, of n items: n
 - a list known when compiling: its length
 - a variable, an attribute, a parameter or a declared result whose declared type holds
   `(length n)`: n
@@ -368,7 +368,7 @@ them fits, found this way for two types A and B:
 - Two list types meet at the list type of the meeting of their item types.
 - Otherwise there is no meeting, and the source is a compile error.
 
-The branches of an `if` and the items of a list in brackets meet this way, except that the
+The branches of an `if` and the items of a list literal meet this way, except that the
 branches of an `if` meet at the expected type when it is a declared interface that both satisfy.
 The members of a group meet otherwise: at their type when all have the same type, else at
 `positioned` when all satisfy it, else at `shape`, and broadened when the type of one of them
@@ -454,7 +454,7 @@ Each form has this type:
 |---|---|
 | a literal | {numref}`literal-types` |
 | a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape or an instance, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
-| `(. X Y)` | the type of the attribute or the member Y of X ({numref}`dot-part`). An item of a list or a point: the item type. A member of a group by a key known only while drawing: the common type of the members. Each broadened as {numref}`may-give-none` gives |
+| `(. X Y)` | the type of the attribute or the member Y of X ({numref}`dot-name-part`). An item of a list or a point: the item type. A member of a group by a key known only while drawing: the common type of the members. Each broadened as {numref}`may-give-none` gives |
 | a spread `g.A` | `list[U]`, U the meeting of the types of A of the members, with the number of members as its length |
 | `(if C A B)` | C has type `bool`. The type is the meeting of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
 | `(or? X D)` | the meeting of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |

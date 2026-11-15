@@ -99,7 +99,8 @@ body
   ({numref}`contexts`).
 
 bool
-  The word `true` or `false` ({numref}`literal-words`).
+  A value of type `bool`: `true` or `false`. Written as the word `true` or `false`
+  ({numref}`the-types`, {numref}`literal-words`).
 
 built-in type
   One of the types that mtp gives, such as `real`, `point` or `circle`, whose name no declaration
@@ -109,7 +110,9 @@ comment
   Text from `;` up to the end of the line ({numref}`whitespace-and-comments`).
 
 complex
-  A number literal with an imaginary part, such as `2i` or `1+2i` ({numref}`number-literals`).
+  A value of type `complex`: two binary64 numbers, its real part and its imaginary part, within the
+  number limit. Written as a number literal with an imaginary part, such as `2i` or `1+2i`
+  ({numref}`number-types`, {numref}`number-literals`).
 
 docstring
   `doc@'text'`, which is `(doc 'text')`: plain text about a declaration, for the illustrator
@@ -130,14 +133,16 @@ head
   The first item of a form ({numref}`form-template`).
 
 brackets
-  A `[…]` right after a name or a list, which reads a part of it ({numref}`lists`,
+  A `[…]` right after a name or a list literal, which reads a part of it ({numref}`lists`,
   {numref}`name-brackets`).
 
 int
-  A number literal that is a whole number, such as `3` or `-2` ({numref}`number-literals`).
+  A value of type `int`: an exact whole number, within the number limit. Written as a number
+  literal that is a whole number, such as `3` or `-2` ({numref}`number-types`,
+  {numref}`number-literals`).
 
 interpolated string
-  `$'…'`: a string with expressions in braces, whose values are filled in
+  `$'…'`: a string literal with expressions in braces, whose values are filled in
   ({numref}`interpolated-strings`).
 
 letter
@@ -145,13 +150,18 @@ letter
   ({numref}`name-characters`).
 
 list
-  Expressions in square brackets, such as `[0 1]` ({numref}`lists`).
+  A value of a list type `list[T]`: items of type T, in order, of any length. Written as
+  expressions in square brackets, such as `[0 1]` ({numref}`the-types`, {numref}`lists`).
+
+literal
+  Text that writes a value directly, such as `2.5`, `'crimson'` or `[0 1]`
+  ({numref}`literal-types`).
 
 name
-  A word that refers to something declared: parts joined by dots, such as `p.pos.x`
+  A word that refers to something declared: name parts joined by dots, such as `p.pos.x`
   ({numref}`name-characters`).
 
-part
+name part
   A piece of a name: the text between two dots, or a pair of brackets, such as `pos` and `[0]` in
   `xs[0].pos` ({numref}`name-characters`, {numref}`name-brackets`).
 
@@ -160,11 +170,11 @@ name string
   ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
 
 expression
-  One item of a source as the parser produces it: a form, a list, a word, a string or a free
-  starting value ({numref}`parser-expressions`).
+  One item of a source as the parser produces it: a form, a list literal, a word, a string literal
+  or a free starting value ({numref}`parser-expressions`).
 
 operator
-  One of the words `+ - * / ^ < <= > >= = != .`, read as a name of one part
+  One of the words `+ - * / ^ < <= > >= = != .`, read as a name with one name part
   ({numref}`literal-words`).
 
 optional argument
@@ -176,24 +186,27 @@ positional argument
   An item of a form that comes right after the name, known by its place ({numref}`form-template`).
 
 ratio
-  A number literal that is an exact fraction, such as `1/3` ({numref}`number-literals`).
+  A value of type `ratio`: an exact fraction, within the number limit. Written as a number literal
+  that is an exact fraction, such as `1/3` ({numref}`number-types`, {numref}`number-literals`).
 
 real
-  A number literal with a decimal point or an exponent, such as `2.5` or `1e3`
-  ({numref}`number-literals`).
+  A value of type `real`: a finite binary64 number, within the number limit. Written as a number
+  literal with a decimal point or an exponent, such as `2.5` or `1e3` ({numref}`number-types`,
+  {numref}`number-literals`).
 
 keyword
   The head of a form of the language, such as `circle`, `if` or `on-drag`, which no declaration
   takes as its name ({numref}`keywords`, {numref}`declaration-names`).
 
 string
-  Text in single quotes, such as `'crimson'` ({numref}`string-literals`).
+  A value of type `string`: text. Written as text in single quotes, such as `'crimson'`
+  ({numref}`the-types`, {numref}`string-literals`).
 
 TeX string
-  `tex'…'`: a string of LaTeX, in which only `\'` is an escape ({numref}`tex-strings`).
+  `tex'…'`: a string literal of LaTeX, in which only `\'` is an escape ({numref}`tex-strings`).
 
 word
-  A name, a number, an operator, a bool or `none` ({numref}`word-ends`).
+  A name, a number, an operator, a bool literal or `none` ({numref}`word-ends`).
 
 core form
   A form that is not sugar, such as a form whose head is core or a call of a library function. The

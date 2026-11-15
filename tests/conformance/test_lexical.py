@@ -169,7 +169,7 @@ class TestWordEnds:
         syntax_error("(f a:b)")
 
 
-@rule("no-part-after-form")
+@rule("no-name-part-after-form")
 class TestNoPartAfterForm:
     @pytest.mark.parametrize("src", ["(f (sort xs).x)", "(f (sort xs)[0])"])
     def test_a_part_after_a_form_is_an_error(self, src):

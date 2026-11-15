@@ -164,14 +164,14 @@ one expression per line, in source order, each line indented by two spaces for e
 depth. A line holds the position of the expression as `line:column`, its kind, and its value, as
 follows:
 
-- `form`, `list`, `brackets` or `bar`, for an expression that holds others: a form, a {term}`list`,
-  {term}`brackets` or a {term}`broadened type`. The expressions that it holds follow on the next
-  lines.
-- `name` and the name, its {term}`parts <part>` joined by `.`, with `[…]` for each part that is an
-  expression. The expressions of those parts follow on the next lines.
-- `string with values`, for a {term}`string` with values in it. Each part follows on the next lines:
-  `text` and the text, or the expression of the value.
-- `value` and, after a colon, its format, for a value inside a string.
+- `form`, `list`, `brackets` or `bar`, for an expression that holds others: a form, a {term}`list`
+  {term}`literal`, {term}`brackets` or a {term}`broadened type`. The expressions that it holds
+  follow on the next lines.
+- `name` and the name, its {term}`name parts <name part>` joined by `.`, with `[…]` for each name
+  part that is an expression. The expressions of those name parts follow on the next lines.
+- `string with values`, for a {term}`string` literal with values in it. Each part follows on the
+  next lines: `text` and the text, or the expression of the value.
+- `value` and, after a colon, its format, for a value inside a string literal.
 - `string` or `tex string`, and the string.
 - `none`, or `bool` and `true` or `false`.
 - `int`, `ratio`, `real` or `complex`, and the number.

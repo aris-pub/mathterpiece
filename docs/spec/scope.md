@@ -42,8 +42,8 @@ So the shapes of the scene, at any depth in its groups, are names of the file sc
 `#'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
 parameter is used only in its body, and so a default of a parameter never reads another parameter.
 A member of a namespace, a palette or a formula is used by its bare name only inside that
-declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-part`. In the same way, a
-member of a motif's body is used from outside the body only through an instance, as `d1.face`.
+declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
+a member of a motif's body is used from outside the body only through an instance, as `d1.face`.
 
 ```{rule} declare-before-use
 A use of a name refers only to a declaration that comes before the use, in every scope, imports
@@ -69,8 +69,8 @@ so a name that an import gives may be used above the import. Bead mtp-ydd4.7.12.
 ## Which declaration a name refers to
 
 ```{rule} name-lookup
-A use of a bare name, and the first {term}`part` of a name of several parts, refers to the
-declaration that these steps find, in order:
+A use of a bare name, and the first {term}`name part` of a name with several name parts, refers to
+the declaration that these steps find, in order:
 
 1. Among the scopes around the use, from the innermost outwards to the file scope, the first that
    declares the name before the use ({numref}`declare-before-use`).
@@ -83,10 +83,10 @@ So an inner name hides an outer name of the same text inside its scope: a parame
 name and a `foreach` name hide a name of the file scope, and a member of a namespace hides a
 top-level name inside the namespace, as the palette member `yellow` of examples/colormaps.mtp does
 while the file also imports a color `yellow`. A declaration in the file scope hides a built-in
-function or constant from that declaration on ({numref}`declaration-names`). The parts of a name
-after its first are not looked up in any scope: `p.r` is `(. p r)` ({numref}`sugar-rewrites`), and
-what `r` is in it is defined in {numref}`dot-part`. `pointer` is found only in the move of an
-`on-drag`, and is a compile error everywhere else, since no declaration takes it as its name.
+function or constant from that declaration on ({numref}`declaration-names`). The name parts of a
+name after its first are not looked up in any scope: `p.r` is `(. p r)` ({numref}`sugar-rewrites`),
+and what `r` is in it is defined in {numref}`dot-name-part`. `pointer` is found only in the move of
+an `on-drag`, and is a compile error everywhere else, since no declaration takes it as its name.
 
 In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `(tenfold 2)` is
 20 whatever the slider gives the variable:

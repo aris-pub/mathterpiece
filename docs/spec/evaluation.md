@@ -114,18 +114,18 @@ inputs, when folded and while drawing.
 |---|---|
 | `/` | a divisor of 0 |
 | `mod` | a divisor of 0 |
-| `^` | 0 to a negative power, and a negative base to a power that is not an int |
+| `^` | 0 to a negative power, and a negative base to a power that is not an {term}`int` |
 | `sqrt` | an input below 0 |
 | `log` | an input of 0 or below, and a base of 0 or below or of 1 |
 | `min`, `max` | no items at all |
 | `tand`, `secd` | 90 + 180k degrees, for every int k |
 | `cscd`, `cotd` | 180k degrees, for every int k |
-| `csc`, `cot` | 0. No real is exactly π/2, so `tan` and `sec` give `none` at no input |
+| `csc`, `cot` | 0. No {term}`real` is exactly π/2, so `tan` and `sec` give `none` at no input |
 | `asin`, `acos`, `asind`, `acosd` | an input below -1 or above 1 |
 | `asec`, `acsc`, `asecd`, `acscd` | an input strictly between -1 and 1 |
 | `to-polar` | the point `[0 0]` |
 | `rand`, `rand-int` | a `lo` above `hi`, whatever the seed |
-| `pick` | an empty list |
+| `pick` | an empty {term}`list` |
 | `range` | a gap of 0, a negative count `num`, and more than 1,000,000 items |
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
@@ -212,7 +212,7 @@ exceptions:
 - A call of a function whose parameter is declared `T|none`: the body is evaluated with `none` as
   the parameter. A parameter whose type does not include `none` makes the call `none`, and the body
   is not evaluated.
-- A {term}`list` built from expressions, which holds `none` as an item. A point is the exception: a
+- A list built from expressions, which holds `none` as an item. A point is the exception: a
   point with a coordinate that is `none` is `none`.
 - `if`, whose value is `none` only when the branch taken is `none`.
 - `map`, `reverse` and a read of a position of a list, which pass items that are `none` through.
@@ -270,8 +270,8 @@ drawing:
 ```
 
 So the runtime computes values of type `int` as exact whole numbers and values of type `ratio` as
-exact fractions, as the compiler does, and an operation on ints and ratios alone gives the same
-value when folded as while drawing, as every other operation does
+exact fractions, as the compiler does, and an operation on ints and {term}`ratios <ratio>` alone
+gives the same value when folded as while drawing, as every other operation does
 ({numref}`same-value-at-both-times`). In the .mtpc, a ratio is written as its numerator and
 denominator in lowest terms ({doc}`compiled-format`).
 
@@ -309,7 +309,7 @@ An arithmetic operation gives the broadest type of its inputs, in the order `int
 
 - `/` of an int by an int gives a ratio.
 - `^` of an int to an int power gives an int when the range of the power holds no negative int,
-  and a ratio otherwise. With a complex input it gives a complex, and otherwise a real.
+  and a ratio otherwise. With a {term}`complex` input it gives a complex, and otherwise a real.
 - `abs` of a complex gives a real.
 
 When the inputs of an operation include a real and an int or a ratio, the int or the ratio is
@@ -329,7 +329,7 @@ drawing:
   and each number of a point or of a list.
 - A write of a number beyond the number limit is clamped to it. So is each number of a point or a
   list that is written.
-- A literal beyond the number limit is a compile error.
+- A {term}`literal` beyond the number limit is a compile error.
 
 An int and a ratio are clamped to exactly -10¹⁵⁰ or 10¹⁵⁰. A real is clamped to the binary64
 number nearest to 10¹⁵⁰, written `1e150`, which lies just below 10¹⁵⁰, or to minus that number.
@@ -540,7 +540,7 @@ seed that is below 0 is a compile error. mtp-ydd4.7.30.
 of the other, or one side is `none`. They are a compile error on functions, transitions or
 animations, or on values whose type holds one of them, such as a list of functions. A list of two
 numbers is not converted to a point for them: `(= p xs)`, with `p` a point and `xs` a list of ints,
-is a compile error. A literal list on one side is given the type of the other side, so `(= p [1 2])`
+is a compile error. A list literal on one side is given the type of the other side, so `(= p [1 2])`
 compiles.
 ```
 
@@ -579,9 +579,9 @@ not equality.
 ```{rule} matching
 Two values {term}`match` when they are equal, with one difference: two reals match when they
 differ by at most 10⁻¹² or by at most a millionth of the larger of their sizes. Points and lists
-match when they have the same length and the items at each position match. Bools, strings, choices
-and colors match only when they are exactly the same, and `none` matches only `none`. Only the
-runtime matches values: no form of the language matches two values.
+match when they have the same length and the items at each position match. {term}`Bools <bool>`,
+strings, choices and colors match only when they are exactly the same, and `none` matches only
+`none`. Only the runtime matches values: no form of the language matches two values.
 ```
 
 Matching is `same` in web/src/same.ts. The runtime uses it to read the step of a play or a stepper
