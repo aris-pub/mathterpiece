@@ -3,7 +3,7 @@
 
 This page defines how a file uses the declarations of another `.mtp` file: how an `import` is
 written, which file it reads, what that file may hold, and which {term}`names <name>` the import
-declares. Three rules about imports are on other pages, next to rules of the same kind: where an
+gives. Three rules about imports are on other pages, next to rules of the same kind: where an
 `import` may be written is in {numref}`contexts-table`, the {term}`rewrites <rewrite>` of
 `(import F)` and `(import F N…)` are in {numref}`sugar-rewrites`, and which imported declarations
 the {term}`.mtpc` holds is in {numref}`mtpc-imported-declarations`. The {term}`compiler` reads no
@@ -93,9 +93,9 @@ So whether a file to import is correct never depends on the source that imports 
 
 ```{rule} import-files
 An imported file has a {term}`file scope` of its own: its forms use only the names that it
-declares and imports, and never a name of a file that imports it. A file gives a file that imports
-it its own top-level declarations and the names that it imports by name, with `(import G N…)`, and
-never the name of a file that it imports whole.
+declares, binds and imports, and never a name of a file that imports it. A file gives a file
+that imports it its own top-level declarations and the names that it imports by name, with
+`(import G N…)`, and never the name of a file that it imports whole.
 ```
 
 So inside house.mtp, a function reads the color `ink` of house.mtp by its bare name, and a
@@ -106,7 +106,7 @@ With `(import colors)` in house.mtp, `(import house colors)` is a compile error 
 and a source brings them in as it brings in the names of any other file.
 
 ```{rule} import-declares-names
-An `(import …)` declares the names that it gives at its place in the file.
+An `(import …)` gives its names at its place in the file.
 ```
 
 By {numref}`declare-before-use`, a name that an import gives is then used only after the import.

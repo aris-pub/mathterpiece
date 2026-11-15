@@ -19,15 +19,15 @@ reads ({doc}`reaction`). These reads make no cycle: no bound value reads itself,
 through other bound values.
 ```
 
-By {numref}`declare-before-use`, an expression reads only declarations that come before it, so a
-cycle could only come from a read inside the {term}`form` of the declaration that is read. The rules
-of today for such reads are below. A choreo uses only choreos declared before it, so no choreo uses
-itself ({numref}`sugar-rewrites`), and no file imports itself ({numref}`import-same-file`). A function
-may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
+By {numref}`declare-before-use`, an expression reads only declarations and bindings that come
+before it, so a cycle could only come from a read inside the {term}`form` of the declaration or the
+binding that is read. The rules of today for such reads are below. A choreo uses only choreos
+declared before it, so no choreo uses itself ({numref}`sugar-rewrites`), and no file imports itself
+({numref}`import-same-file`). A function may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
 {numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13).
 
 ```{rule} self-reference-today
-These rules hold for a use of a name inside the form that declares it:
+These rules hold for a use of a name inside the form that declares or binds it:
 
 1. A function may call itself in its own {term}`body`.
 2. A variable, a `let` name and a parameter never read themselves: `(real k (+ k 1))` is a compile
@@ -309,9 +309,9 @@ comparison holds, and in B the part for which it fails. With lo and hi the ends 
   and hi are both c in the part in which N is not c, the branch never runs, and the prover proves
   nothing in it.
 
-The range of N changes only for the reads of N in A and in B that read the same declaration as
-the N of the condition. A value that is computed from N outside the `if`, such as a `let` name,
-keeps its range. In an `if` inside A or B, the range of N is the part that the outer `if` gives.
+The range of N changes only for the reads of N in A and in B that read the same declaration or
+binding as the N of the condition. A value that is computed from N outside the `if`, such as a
+`let` name, keeps its range. In an `if` inside A or B, the range of N is the part that the outer `if` gives.
 `(OP c N)` narrows as the comparison with N first that holds for the same values: `(< c N)` as
 `(> N c)`, and `(= c N)` as `(= N c)`. `cond`, `when`, `and` and `or` narrow through their
 {term}`rewrites <rewrite>` into `if` ({numref}`sugar-rewrites`). No other condition narrows a range.

@@ -22,7 +22,8 @@ Every head belongs to exactly one of three kinds: sugar ({numref}`sugar-form`), 
 ```{rule} sugar-form
 A form is sugar if and only if it can be rewritten into core forms without computing any value and
 without using any type. Looking up a {term}`name` is neither, since lexical scope is fixed by the
-text, so a rewrite may resolve a name and read the text of the declaration that the name refers to.
+text, so a rewrite may resolve a name and read the text of the declaration or the binding that the
+name refers to.
 A form that needs a value or a type to be rewritten is core.
 ```
 
@@ -63,7 +64,7 @@ other sugar form is in the table of the rule below.
 Each form in the first column of this table is sugar, and means exactly the core forms in the
 second column, when the conditions in the third column hold. A sugar form whose conditions do not
 hold is a {term}`compile error`. A rewrite may move text or copy it, and each name in the moved or
-copied text refers to the declaration that it referred to where it was written. A rewrite may give
+copied text refers to what it referred to where it was written. A rewrite may give
 sugar forms, which are rewritten in turn, until no sugar form is left. A `(like …)` is rewritten
 before any other rewrite of the declaration that it copies.
 
@@ -228,7 +229,7 @@ of `X`.
 
 So `p.r` is the attribute `r` of a circle `p`, and with `(let ((r 1)) xs.r)`, `xs.r` is item 1 of
 the list `xs`, as `(. xs r)` is. A member of a namespace, a palette, a formula or an instance is
-read by its name, even when another declaration has the same name. So with
+read by its name, even when another declaration or a binding has the same name. So with
 `(color yellow '#ffd700')` and `(palette marks (yellow '#e6c200') (blue '#0072b2'))` at the top
 level, `marks.yellow` is the member `yellow` of the palette, and not the color `yellow`.
 
@@ -330,7 +331,7 @@ inventory.
 Each table lists the heads of one context. The column "Defined in" gives the page where a core
 form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the library.
 
-### Top-level declarations
+### Top-level forms
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
@@ -511,8 +512,8 @@ removes them.
 :::
 
 A call of `step` or `step-ease` gives an ease, which is a function, so the two are library
-functions and not keywords. By {numref}`declaration-names`, a declaration named `step` or
-`step-ease` takes the place of the library function from that declaration on.
+functions and not keywords. By {numref}`declaration-names`, a declaration or a binding named
+`step` or `step-ease` takes the place of the library function from that declaration or binding on.
 
 :::{admonition} Code differs
 :class: note
