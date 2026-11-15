@@ -24,11 +24,10 @@ cycle could only come from a read inside the {term}`form` of the declaration tha
 of today for such reads are below. A choreo uses only choreos declared before it, so no choreo uses
 itself ({numref}`sugar-rewrites`), and no file imports itself ({numref}`import-same-file`). A function
 may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
-{numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13, bead mtp-ydd4.11).
+{numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13).
 
 ```{rule} self-reference-today
-These rules hold for a use of a name inside the form that declares it, until the redesign of bead
-mtp-9b4m replaces them:
+These rules hold for a use of a name inside the form that declares it:
 
 1. A function may call itself in its own {term}`body`.
 2. A variable, a `let` name and a parameter never read themselves: `(real k (+ k 1))` is a compile
@@ -318,10 +317,19 @@ keeps its range. In an `if` inside A or B, the range of N is the part that the o
 {term}`rewrites <rewrite>` into `if` ({numref}`sugar-rewrites`). No other condition narrows a range.
 ```
 
-So in examples/spiral-of-copies.mtp, line 21, where the body of the `foreach` is proved for `k`
-from 0 to 59 ({numref}`prove-bodies-once`), `k` in the second branch of `(if (= k 0) …)` is from 1
-to 59, so `#'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58`
-({numref}`names-from-values`). With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` gives `k` the
+In the source below, the body of the `foreach` is proved for `k` from 0 to 59
+({numref}`prove-bodies-once`). So `k` in the second branch of `(if (= k 0) …)` is from 1 to 59,
+and `#'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58` ({numref}`names-from-values`).
+
+```mtp
+(int n 24 (>= 1) (<= 60))
+(scene s
+  (foreach k n
+    (circle #'dot-{k}' (r 0.1)
+      (pos (if (= k 0) [3 0] (* 0.9 #'dot-{(- k 1)}'.pos))))))
+```
+
+With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` gives `k` the
 range 0 to 2 in A and 3 to 5 in B, and `(if (> k 7) A B)` never runs A. With `(real x 1)`,
 `(if (> x 0) (sqrt x) 0)` is a `real`, since `x` in the first branch is from 0 to `1e150`. In
 `(if (> x 0) (/ 1 x) 0)`, `x` in the first branch has the same range, which holds 0, so
