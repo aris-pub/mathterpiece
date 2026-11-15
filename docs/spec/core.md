@@ -87,7 +87,7 @@ any other rewrite of the declaration that it copies.
 | `(roll-dice S)`, in an animation's body | `(move S (to (next-seed S)) (duration 0))` | `S` is a seed |
 | `(roll-dice)`, in an animation's body | `(roll-dice S)` | `S` as for a random function |
 | `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a file to import holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
-| `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | `F.mtp` declares each `Ni`, and the source declares none of them |
+| `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
 | `(K N (like M) ARGS…)` | `(K N ARGS… COPIED…)`. `COPIED…` is each item of the declaration of `M`, as written, after its own `(like …)` is rewritten, whose head `ARGS…` does not give. A positional string of a text is copied too. A `(pos P)` of `M` gives both `x` and `y`: when `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))` | `M` is a plain name. `K` is a shape head other than `group`, `row` and `column`, and `M` a shape of kind `K`. Or `M` is an instance of the motif or the variant `K`. Or `K` is `font` and `M` a font. Or `K` is `term` and `M` a term of the same formula, whose `(term …)` form comes before. Or the form is a `move` or a `transition`, and `M` is a transition declared at the top level |
 | `(pointer-events B)`, on a group, a row, a column or an instance | the same container, with `(pointer-events B)` moved into its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `pointer-events` |
@@ -268,7 +268,8 @@ For example, take this `foreach`:
 
 The prover proves its body once, for k from 0 to 4. In the branch of the `if` that is taken for k
 from 1 to 4, `#'d-{(- k 1)}'` names one of the copies `d-0` to `d-3`, each a circle that comes
-before.
+before. The prover can prove this only when it narrows the range of k in that branch, which is
+open question Q-well-formedness-1 in {doc}`well-formedness`.
 
 :::{admonition} Code differs
 :class: note
@@ -426,9 +427,8 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `like` on an instance or a variant instance | sugar | copies another instance's items | {numref}`sugar-rewrites` |
 
 The rules about a declaration that reads itself or its container, such as a default that reads
-its own group, are to be redesigned around `self` (mtp-9b4m). Until then, the rules of today hold:
-a default that reads its own container is an error, also once it is moved into the members
-(compiler.py:394-397, compiler.py:6329).
+its own group, are to be redesigned around `self` (mtp-9b4m). Until then, the rules of today hold
+({numref}`self-reference-today`).
 
 ### Namespaces, palettes and interfaces
 

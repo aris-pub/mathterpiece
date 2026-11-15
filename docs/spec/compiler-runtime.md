@@ -81,11 +81,9 @@ never both.
 What the error of a rejected source holds is given in {numref}`conformance`.
 
 ```{rule} prover-finds-ranges
-To prove a range or a constraint, the {term}`prover` works out the range of every number that an
-expression can give, from the ranges of its inputs ({numref}`correctly-rounded-reals`). For an
-expression known when compiling, that range holds its value. The prover writes nothing into the
-model. Where the range of a bound value does not lie inside the constraint of the value, the
-prover gives the value a type that includes `none`, and the fold and write step writes the `check`
+To prove a range or a constraint, the {term}`prover` works out ranges ({numref}`ranges`,
+{numref}`range-rules`). The prover writes nothing into the model. Where the range of a bound
+value does not lie inside the constraint of the value, the prover gives the value a type that includes `none`, and the fold and write step writes the `check`
 that this type needs ({doc}`compiled-format`).
 ```
 

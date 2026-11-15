@@ -173,7 +173,7 @@ compile error at `(/ 1 x)`, since its body gives `none` when `x` is 0 and its de
 not include `none`.
 
 The compiler works out which expressions can give `none` from the ranges of their inputs, and
-gives each such expression a type that includes `none` ({doc}`types`). The example below is live:
+gives each such expression a type that includes `none` ({numref}`may-give-none`). The example below is live:
 the secant gives `none` at 90°, and there the readout holds its default text.
 
 ```{mtp-example}
@@ -296,7 +296,8 @@ The {term}`number limit` is ±10¹⁵⁰:
   that is beyond it, also one given with `free@`.
 - A write of a number beyond it is clamped to it. So is each number of a point or a list that is
   written.
-- For the ranges that the prover proves, a value with no limit of its own lies within it.
+- For the ranges that the prover proves, a free value or a parameter with no limit of its own lies
+  within it ({numref}`range-rules`).
 
 A computed result is not held to the number limit.
 ```
