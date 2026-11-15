@@ -89,3 +89,14 @@
 .mtp-d-headpath {
   fill: var(--pst-color-text-muted);
 }
+
+/* An example page, open in a frame, as a reader sees it. */
+iframe.mtp-page {
+  display: block;
+  width: 100%;
+  height: 25rem;
+  margin: 1rem 0;
+  border: 1px solid var(--pst-color-border);
+  border-radius: 6px;
+  background: #fff;
+}

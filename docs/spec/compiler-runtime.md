@@ -263,6 +263,57 @@ the page gives none.
 So the compiler never draws a random value, since a random value is known only while drawing
 ({numref}`random-never-folded`).
 
+## From the .mtpc to the open page
+
+This section follows one world model from its source to an open page. It states no rule: the
+rules are in the sections after it and in {doc}`page-interface`.
+
+The illustrator writes the source dial.mtp:
+
+```{literalinclude} pages/dial/dial.mtp
+:language: mtp
+```
+
+`mtp build dial.mtp` writes dial.mtpc and the runtime script mathterpiece.js into the folder
+build_dial/ ({numref}`mtp-build`). The author writes the page dial.html, next to them:
+
+```{literalinclude} pages/dial/dial.html
+:language: html
+```
+
+Below is that page, served from a folder that holds dial.html, dial.mtpc and mathterpiece.js, as
+the author would serve it.
+
+```{raw} html
+<iframe class="mtp-page" src="pages/dial/dial.html" title="The page dial.html, open"></iframe>
+<p><a href="pages/dial/dial.html">Open dial.html on its own</a>.</p>
+```
+
+When the reader opens the page, the browser and the runtime do the following, in this order:
+
+1. The browser reads the page. The `<script>` element loads the runtime script, which defines
+   the page elements `<mtp-model>`, `<mtp-canvas>`, `<mtp-slider>`, `<mtp-readout>` and the
+   others ({numref}`runtime-serves-components`). The `<link>` element loads the stylesheet that
+   draws the controls, and the `<style>` element holds the author's own CSS, which sets the width
+   of the canvas.
+2. For the `<mtp-model>` element, the runtime fetches the file that its `src` attribute names,
+   dial.mtpc, and checks it ({numref}`runtime-loads-mtpc`). The `src` attribute may instead name a
+   block `<script type="application/json">` of the page that holds the .mtpc, as in
+   `src="#dial-data"` ({doc}`page-interface`).
+3. The runtime builds the live model of dial.mtpc, once: the free variable `a` takes its
+   starting value 0.6, and every bound value is computed from it
+   ({numref}`runtime-builds-live-model`). The page refers to this live model by the `id` attribute
+   of the element, `dial`.
+4. In each element whose `model` attribute is `dial`, the runtime draws the component of
+   that live model that the element's `name` attribute gives: the canvas `v`, the slider `turn` and
+   the readout `now` ({numref}`runtime-serves-components`). The author may place these elements
+   anywhere in the page, inside a sentence too.
+5. When the reader drags the slider, the slider writes `a`. The position of `dot` and the text of
+   `now` are computed again, and the canvas and the readout draw again
+   ({numref}`runtime-builds-live-model`).
+
+The page needs nothing else: it holds no script of its own, and calls no function of the runtime.
+
 ## What the runtime must do and must never do
 
 ```{rule} runtime-loads-mtpc

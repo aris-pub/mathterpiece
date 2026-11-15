@@ -389,6 +389,24 @@ def copy_runtime(app: Sphinx):
         raise RuntimeError(str(e)) from None
 
 
+def write_pages(app: Sphinx):
+    """Each folder of spec/pages holds a source and a page that places it. The page is written
+    out with the compiled source and the runtime next to it, so it is served as an author would
+    serve it, and a source that does not compile stops the build."""
+    for folder in sorted((Path(app.srcdir) / "spec" / "pages").iterdir()):
+        out = Path(app.outdir) / "spec" / "pages" / folder.name
+        out.mkdir(parents=True, exist_ok=True)
+        for src in sorted(folder.glob("*.mtp")):
+            try:
+                mtpc = compiled(src.read_text(encoding="utf-8"), src)
+            except Exception as e:  # a parse or compile error, with its line and column
+                raise RuntimeError(f"{src.name} does not compile: {e}") from None
+            (out / f"{src.stem}.mtpc").write_text(mtpc, encoding="utf-8")
+        for page in sorted(folder.glob("*.html")):
+            (out / page.name).write_text(page.read_text(encoding="utf-8"), encoding="utf-8")
+        (out / "mathterpiece.js").write_text(runtime(), encoding="utf-8")
+
+
 def setup(app: Sphinx):
     app.add_lexer("mtp", MtpLexer)
     app.add_enumerable_node(rule_node, "rule", _rule_title, html=(visit_rule, depart_rule))
@@ -409,4 +427,5 @@ def setup(app: Sphinx):
     # The design system that draws the controls, as on the inventory page.
     app.add_css_file(BRAIID)
     app.connect("builder-inited", copy_runtime)
+    app.connect("builder-inited", write_pages)
     return {"version": "0.1", "parallel_read_safe": True}

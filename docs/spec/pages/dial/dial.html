@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A dot on a circle</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/aris-pub/rsm@main/braiid/braiid.css">
+<script type="module" src="mathterpiece.js"></script>
+<style>mtp-canvas { display: block; max-width: 20rem; }</style>
+</head>
+<body>
+<mtp-model id="dial" src="dial.mtpc"></mtp-model>
+<p>Turn the dot with the slider <mtp-slider model="dial" name="turn"></mtp-slider>.
+The angle is now <mtp-readout model="dial" name="now"></mtp-readout>.</p>
+<mtp-canvas model="dial" name="v"></mtp-canvas>
+</body>
+</html>
