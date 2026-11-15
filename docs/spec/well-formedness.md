@@ -23,7 +23,7 @@ through other bound values.
 By {numref}`declare-before-use`, an expression reads only declarations that come before it, so a
 cycle could only come from a read inside the {term}`form` of the declaration that is read. The rules
 of today for such reads are below. A choreo uses only choreos declared before it, so no choreo uses
-itself ({numref}`sugar-rewrites`), and no file imports itself ({numref}`import-files`). A function
+itself ({numref}`sugar-rewrites`), and no file imports itself ({numref}`import-same-file`). A function
 may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
 {numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13, bead mtp-ydd4.11).
 

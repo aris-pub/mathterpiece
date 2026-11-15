@@ -249,7 +249,7 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | Body | Optional arguments | Other items | let, foreach | Compiler |
 |---|---|---|---|---|
 | The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. One `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes | `top_here`, `expand` |
-| The top level of a file to import | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes | `_not_importable` |
+| The top level of a {term}`file to import` | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes | `_not_importable` |
 | `(scene name …)` | `(background …)`, `(transform …)` | Shapes: every shape, `group`, `row`, `column`, motif and variant instances. Variables. `exists-when` | yes | `scene_items` |
 | `(group name …)`, `(row name …)`, `(column name …)` | the optional arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes | `shape_here` |
 | Any other shape, such as `(circle name …)` | the optional arguments of the shape | The string of a text, as a positional argument | no body | `shape_here` |
@@ -356,20 +356,8 @@ Bead mtp-6k7f, done on 2026-11-11, made the compiler follow this rule. `compiler
 
 ## Imports
 
-```{rule} import-declares-names
-An `(import …)` declares the names that it gives at its place in the file.
-```
-
-By {numref}`declare-before-use`, a name that an import gives is then used only after the import.
-An import need not come before the forms that do not use its names. So
-`(scene s (circle c (fill colors.tab10-named.red))) (import colors)` is an error, and the same
-two forms in the other order are allowed.
-
-:::{admonition} Code differs
-:class: note
-`compiler.py:745` (`imports`) reads every import of a file before any other form, so an import may
-come after the forms that use its names. Bead mtp-ydd4.7.12 makes such a use an error.
-:::
+Where an `import` may be written is given in {numref}`contexts-table`. Everything else about
+imports is in {doc}`imports`.
 
 ## An example
 

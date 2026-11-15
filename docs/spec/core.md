@@ -84,7 +84,7 @@ before any other rewrite of the declaration that it copies.
 | `(rand ARGS…)`, and the same with `rand-int`, `pick` or `shuffle`, with no `(seed …)` | `(rand ARGS… (seed S))` | `S` is the only {term}`seed` that the file declares or imports ({numref}`seed-variable`) |
 | `(roll-dice S)`, in an animation's body | `(move S (to (next-seed S)) (duration 0))` | `S` is a seed |
 | `(roll-dice)`, in an animation's body | `(roll-dice S)` | `S` as for a random function |
-| `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a file to import holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
+| `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
 | `(K N (like M) ARGS…)` | `(K N ARGS… COPIED…)`. `COPIED…` is each item of the declaration of `M`, as written, after its own `(like …)` is rewritten, whose head `ARGS…` does not give. A positional {term}`string` of a text is copied too. A `(pos P)` of `M` gives both `x` and `y`: when `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))` | `M` is a plain name. `K` is a shape head other than `group`, `row` and `column`, and `M` a shape of kind `K`. Or `M` is an instance of the motif or the variant `K`. Or `K` is `font` and `M` a font. Or `K` is `term` and `M` a term of the same formula, whose `(term …)` form comes before. Or the form is a `move` or a `transition`, and `M` is a transition declared at the top level |
@@ -165,8 +165,6 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
   accepted, as one site (mtp-ydd4.7.25).
 - A choreo's argument must be known when compiling, a name or a function (compiler.py:1702-1708),
   and is compiled once, then bound to the parameter (mtp-08wd.5).
-- An imported file that the source uses only in part is compiled a second time on its own, to
-  check the declarations that nothing uses (compiler.py:815-823) (mtp-08wd.6).
 :::
 
 So a bare name as the target of an `on-drag` is the position of the dragged shape, its `x` or its

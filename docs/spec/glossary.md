@@ -263,6 +263,10 @@ file scope
   The scope of a whole file: its top-level declarations, its imports, and the declarations of its
   scene at any depth ({numref}`scopes`).
 
+file to import
+  A `.mtp` file that another file imports with `import`. It holds only declarations that
+  {numref}`contexts-table` allows at its top level. Defined in {doc}`imports`.
+
 fit
   A type A fits a type B when a value of type A is accepted where a value of type B is expected
   ({numref}`fits`).

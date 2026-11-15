@@ -22,7 +22,7 @@ and the names that each one declares:
 
 | Scope | Covers | Declares |
 |---|---|---|
-| the {term}`file scope` of a source or of a file to import | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
+| the {term}`file scope` of a source or of a {term}`file to import` | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
 | the {term}`body` of a motif | the motif's body | the parameters of the motif, and every shape and variable that the body declares, at any depth |
 | a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and a choreo | the body | the parameters |
 | `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each value after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
@@ -134,21 +134,8 @@ imported whole gives only its own name ({numref}`sugar-rewrites`), so a member `
 
 ## Imports
 
-`(import F)` and `(import F N…)` are {term}`sugar`, and their {term}`rewrites <rewrite>` are in
-{numref}`sugar-rewrites`. Where the file F.mtp is found is given in {numref}`compiler-reads-files`.
-
-```{rule} import-files
-An imported file has a file scope of its own: its forms use only the names that it declares and
-imports, and never a name of a file that imports it. A file gives a file that imports it its own
-top-level declarations and the names that it imports by name, with `(import G N…)`, and never the
-name of a file that it imports whole. A file that imports itself, directly or through the files
-that it imports, is a compile error, and so are two different files of the same name imported into
-one source, directly or through other files.
-```
-
-So inside house.mtp, a function reads the color `ink` of house.mtp by its bare name, and a
-`let` name `ink` in it hides that color, by {numref}`name-lookup`. With `(import house ink)` in a
-source and `(import colors red)` in house.mtp, the source may also write `(import house red)`.
+The file scope of an imported file, and the names that an import gives, are defined in
+{doc}`imports`.
 
 ## The keywords, the built-in names and `self`
 

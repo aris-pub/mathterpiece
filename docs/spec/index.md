@@ -16,6 +16,7 @@ lexical
 grammar
 core
 scope
+imports
 types
 binding-time
 well-formedness
