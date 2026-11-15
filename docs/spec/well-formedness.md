@@ -1,14 +1,15 @@
 (well-formedness)=
 # Well-formedness
 
-A {term}`world model` whose names resolve ({ref}`scope`) and whose expressions have types ({doc}`types`)
-must still pass the rules of this page: its dependencies form no cycle, its writers write only what
-may be written, the moves that run together do not write the same value, and every constraint is
-proved. All of them are checked in the prove step ({numref}`compile-steps`), and a source that
-breaks one is a compile error. The last section defines the {term}`prover`: exactly what it proves,
-and the ranges with which it proves it.
+A {term}`world model` whose {term}`names <name>` resolve ({ref}`scope`) and whose
+{term}`expressions <expression>` have types ({doc}`types`) must still pass the rules of this page:
+its dependencies form no cycle, its writers write only what may be written, the moves that run
+together do not write the same value, and every {term}`constraint` is proved. All of them are
+checked in the prove step ({numref}`compile-steps`), and a source that breaks one is a
+{term}`compile error`. The last section defines the {term}`prover`: exactly what it proves, and the
+{term}`ranges <range>` with which it proves it.
 
-This page specifies the language. Where the compiler does not follow a rule
+This page specifies the language. Where the {term}`compiler` does not follow a rule
 yet, a box marked "Code differs" gives what the code does and the bead that will change it.
 
 ## No cycles
@@ -20,18 +21,17 @@ through other bound values.
 ```
 
 By {numref}`declare-before-use`, an expression reads only declarations that come before it, so a
-cycle could only come from a read inside the form of the declaration that is read. The rules of
-today for such reads are below. A choreo uses only choreos declared before it, so no choreo uses
+cycle could only come from a read inside the {term}`form` of the declaration that is read. The rules
+of today for such reads are below. A choreo uses only choreos declared before it, so no choreo uses
 itself ({numref}`sugar-rewrites`), and no file imports itself ({numref}`import-files`). A function
 may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
-{numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13, bead
-mtp-ydd4.11).
+{numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13, bead mtp-ydd4.11).
 
 ```{rule} self-reference-today
 These rules hold for a use of a name inside the form that declares it, until the redesign of bead
 mtp-9b4m replaces them:
 
-1. A function may call itself in its own body.
+1. A function may call itself in its own {term}`body`.
 2. A variable, a `let` name and a parameter never read themselves: `(real k (+ k 1))` is a compile
    error.
 3. A shape, a variant instance and a motif instance never read one of their own attributes in
@@ -54,13 +54,13 @@ redesign (Q-scope-1), and this spec does not define them yet.
 
 ## What a writer may write
 
-The controls and the listeners are the writers ({doc}`concurrency`). A writer writes its target,
-and the moves of its animation write theirs.
+The {term}`controls <control>` and the {term}`listeners <listener>` are the writers
+({doc}`concurrency`). A writer writes its target, and the moves of its animation write theirs.
 
 ```{rule} writable-targets
 The target of a writer and of a move is a name: a variable, an attribute of a shape, of an
-instance or of a term, or a member of a namespace or a formula, with a name string allowed in
-place of a name ({numref}`shorthand-forms`). A target may be written only when it is free
+instance or of a term, or a member of a namespace or a formula, with a {term}`name string` allowed
+in place of a name ({numref}`shorthand-forms`). A target may be written only when it is free
 ({doc}`world-model`), its type does not hold `(const)`, it is not a token (a variable of type
 `color` or `font`), and it is not fixed by a variant ({numref}`motif-and-variant-types`). Besides:
 
@@ -82,7 +82,7 @@ move of a `(const)` variable or of a color variable. Two writers may write the s
 not an error, and {doc}`concurrency` defines what happens when they meet.
 
 ```{rule} written-values
-Each value that a write gives must fit the type of its target ({numref}`fits`), with the
+Each value that a write gives must {term}`fit` the type of its target ({numref}`fits`), with the
 comparisons, the wraps and the choices of the constraints of that type left out, since the write
 brings the value into those ({numref}`writes-into-constraints`). This holds for the `from` and the
 `to` of a move and of a transition, the `to` of the move of an `on-drag`, and the values of a
@@ -151,7 +151,7 @@ The prover proves exactly these, and nothing else:
 4. An upper bound of the count, or of the length of the list, of a `foreach` that is known only
    while drawing ({numref}`foreach-bounded-length`).
 5. That a name built from a value names a declaration that fits ({numref}`names-from-values`).
-6. The call depth limit of a call known in the prove step ({numref}`call-depth-limit`).
+6. The {term}`call depth limit` of a call known in the prove step ({numref}`call-depth-limit`).
 7. The rules of this page before this section.
 
 For numbers, its only reasoning is the ranges of {numref}`ranges` and {numref}`range-rules`, and
@@ -166,12 +166,12 @@ range only by the conditions of {numref}`if-narrowing`.
 A {term}`range` is a closed interval of reals, from a lower end to an upper end, each of them an
 int, a ratio or a binary64 number, the lower at most the upper. The prover works out a range for
 every expression of type `int`, `ratio` or `real`, with or without `none`. The range of an
-expression holds every value other than `none` that the expression can give, when folded and while
-drawing.
+expression holds every value other than `none` that the expression can give, when
+{term}`folded <folding>` and while drawing.
 ```
 
-The prover works out each end of a range with the functions that evaluation uses: exactly for
-ints and ratios ({numref}`number-types`), and with the functions of
+The prover works out each end of a range with the functions that {term}`evaluation` uses: exactly
+for ints and ratios ({numref}`number-types`), and with the functions of
 {numref}`correctly-rounded-reals` for reals. So by the argument that follows
 {numref}`correctly-rounded-reals`, a range worked out at the ends of the ranges of the inputs holds
 every value that either time computes. An end has no mark for whether it is reached: the range of
@@ -185,10 +185,10 @@ the part that they share.
 | Expression | Its range |
 |---|---|
 | a number known in the prove step | from the number to the number |
-| the range of a type | the ends that its comparisons give, a `(> c)` and a `(< c)` giving c, from lo to hi for `(wrap lo hi)`, and the end of the number limit for a side with no bound ({numref}`number-limit`) |
+| the range of a type | the ends that its comparisons give, a `(> c)` and a `(< c)` giving c, from lo to hi for `(wrap lo hi)`, and the end of the {term}`number limit` for a side with no bound ({numref}`number-limit`) |
 | a read of a free variable or attribute | the range of its type |
 | a read of a bound variable or attribute | the range of its expression, and the range of the constraints of its declared type, each side with no bound left out. A read through a `translate` or a `transform` ({doc}`world-model`): the range of its type |
-| a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a library function, the range that {doc}`stdlib` gives it |
+| a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a {term}`library` function, the range that {doc}`stdlib` gives it |
 | a `let` name | the range of its value |
 | the name of a `foreach` over a count X | from 0 to the upper end of the range of X, minus 1 |
 | the name of a `foreach` over a list | the range of the items of the list |
@@ -215,9 +215,9 @@ out from several ends, such as the sum of the lower ends, is one call of the ope
 ends, and is clamped once.
 ```
 
-The item type of a list in brackets whose items are not all known, and whose items all have ranges,
-holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the largest upper end of
-the items. So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
+The item type of a {term}`list` in brackets whose items are not all known, and whose items all have
+ranges, holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the largest upper
+end of the items. So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
 
 With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 5 k)`, -5 to 5. With
 `(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamp x 0 1)` has the range 0
@@ -244,7 +244,7 @@ For a part of a list or a group:
 |---|---|
 | `xs[i]`, an item of a list | the length n of `xs` is known ({numref}`known-lengths`), and the range of `i` lies from -n to n - 1 |
 | `g[k]`, a member of a group by an int | the range of `k` lies from -n to n - 1, n being the number of members |
-| `g[k]`, a member of a group by a string | the type of `k` is a choice type whose choices are all names of members of `g` |
+| `g[k]`, a member of a group by a string | the type of `k` is a {term}`choice type` whose choices are all names of members of `g` |
 ```
 
 So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, a `real`. With
@@ -315,8 +315,8 @@ The range of N changes only for the reads of N in A and in B that read the same 
 the N of the condition. A value that is computed from N outside the `if`, such as a `let` name,
 keeps its range. In an `if` inside A or B, the range of N is the part that the outer `if` gives.
 `(OP c N)` narrows as the comparison with N first that holds for the same values: `(< c N)` as
-`(> N c)`, and `(= c N)` as `(= N c)`. `cond`, `when`, `and` and `or` narrow through their rewrites into `if` ({numref}`sugar-rewrites`).
-No other condition narrows a range.
+`(> N c)`, and `(= c N)` as `(= N c)`. `cond`, `when`, `and` and `or` narrow through their
+{term}`rewrites <rewrite>` into `if` ({numref}`sugar-rewrites`). No other condition narrows a range.
 ```
 
 So in examples/spiral-of-copies.mtp, line 21, where the body of the `foreach` is proved for `k`

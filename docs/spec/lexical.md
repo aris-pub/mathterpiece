@@ -1,13 +1,14 @@
 (lexical)=
 # Lexical syntax
 
-This page defines the characters of a source, and the names, numbers, strings and other pieces of
-text that the parser reads whole. The next page, {doc}`grammar`, defines how the parser puts these
-pieces together into forms. The definitions of this page and the rules of the next page are one
-grammar, in the file `docs/spec/mtp.lark`, written in the notation of the Lark parser. The test
-`tests/test_grammar.py` reads every source of the project both with this grammar and with the
-parser of the compiler, `mathterpiece/parse.py`, and checks that the two accept the same sources
-and produce the same forms.
+This page defines the characters of a source, and the {term}`names <name>`, numbers,
+{term}`strings <string>` and other pieces of text that the {term}`parser` reads whole. The next
+page, {doc}`grammar`, defines how the parser puts these pieces together into {term}`forms <form>`.
+The definitions of this page and the rules of the next page are one grammar, in the file
+`docs/spec/mtp.lark`, written in the notation of the Lark parser. The test `tests/test_grammar.py`
+reads every source of the project both with this grammar and with the parser of the
+{term}`compiler`, `mathterpiece/parse.py`, and checks that the two accept the same sources and
+produce the same forms.
 
 This page specifies the language. The parser accepts exactly the text
 that this page allows, and rejects everything else. Where the parser does not follow a rule yet, a
@@ -18,8 +19,8 @@ test lists each such source as a known difference, with its bead.
 
 The grammar is a list of definitions, `name: definition`. A definition whose name is in capitals
 gives a piece of text that the parser reads whole, such as a name, a number or a string, with no
-whitespace or comment inside it. A definition whose name is in small letters is a rule of
-{doc}`grammar`. In a definition:
+{term}`whitespace` or {term}`comment` inside it. A definition whose name is in small letters is a
+rule of {doc}`grammar`. In a definition:
 
 - `"…"` is the text between the quotes.
 - `/…/` is a regular expression, in the notation of Python's `re` module. `[\s\S]` is any
@@ -40,8 +41,8 @@ priority, and among those of the same priority, the one that matches the longest
 
 This is how Lark reads the grammar with `parser="lalr"` and `lexer="contextual"`, and the test
 reads it the same way. So `truex` is a {token}`mtp:NAME`, and not {token}`mtp:TRUE` followed by
-`x`. In the same way, `circle_` matches {token}`mtp:HEAD` only where a form may have its head
-({numref}`name-underscore`).
+`x`. In the same way, `circle_` matches {token}`mtp:HEAD` only where a form may have its
+{term}`head` ({numref}`name-underscore`).
 
 ## Characters
 
@@ -55,7 +56,7 @@ start of a source is ignored. The text has no other change.
 ```
 
 A byte order mark at any other place, outside strings and comments, is an error, because it is
-not whitespace ({numref}`whitespace-and-comments`) and not a character of a word
+not whitespace ({numref}`whitespace-and-comments`) and not a character of a {term}`word`
 ({numref}`word-ends`).
 
 :::{admonition} Code differs
@@ -66,10 +67,10 @@ the parser drop the mark.
 :::
 
 ```{rule} expression-positions
-Each expression that the parser produces has a position: the line and the column of its first
-character, counting from 1. A byte order mark at the start is not counted. A line feed (U+000A)
-starts a new line. Every other character, a tab and a carriage return included, adds 1 to the
-column. An expression that the parser builds from a shorter spelling has the position given in
+Each {term}`expression` that the parser produces has a position: the line and the column of its
+first character, counting from 1. A byte order mark at the start is not counted. A line feed
+(U+000A) starts a new line. Every other character, a tab and a carriage return included, adds 1 to
+the column. An expression that the parser builds from a shorter spelling has the position given in
 {numref}`shorthand-forms`.
 ```
 
@@ -88,7 +89,7 @@ line feed, or to the end of the source. Whitespace and comments have no meaning.
 So U+00A0 (no-break space), U+2028 (line separator), a form feed, a vertical tab and the other
 characters for which Python's `str.isspace()` is true are errors outside strings and comments.
 {doc}`grammar` gives the places where whitespace and comments may be written, and
-{numref}`interpolated-strings` the places inside an interpolated string.
+{numref}`interpolated-strings` the places inside an {term}`interpolated string`.
 
 :::{admonition} Code differs
 :class: note
@@ -100,8 +101,8 @@ limits whitespace to the four characters of the rule.
 ## Where words end
 
 ```{rule} word-ends
-A {term}`word` is a name, a number, an operator, a bool or `none`. From the first character of a word up
-to the next whitespace, the end of the source, or the next of the characters
+A {term}`word` is a name, a number, an {term}`operator`, a {term}`bool` or `none`. From the first
+character of a word up to the next whitespace, the end of the source, or the next of the characters
 `( ) [ ] { } " | ; :`, the text is exactly one word. Text that starts where a word may start and is
 not one word up to there is an error.
 ```
@@ -147,10 +148,11 @@ So `theta`, `show-tan`, `x2`, `a-`, `none?`, `the-true-value`, `truex`, `p.empty
 `ball.on-floor?` are names. `2x`, `-x`, `a?b`, `x'`, `a!b`, `a*b`, `a=b`, `a:b`, `θ`, `π` and `x²`
 are not, and neither is any word that holds a character that is not ASCII. `true.x`, `p.true`,
 `none.x`, `xs[0].none` and `none[0]` are errors, since one of their parts is `true` or `none`.
-Since no name holds `'` or `@`, text that starts with `tex'`, `doc@` or `free@` is a TeX string, a
-docstring or a free starting value at the start of an expression ({numref}`tex-strings`,
-{numref}`prefix-forms`), and an error in every other place, such as after `|` in a broadened type
-or after a `.` that follows brackets: `a|tex'q'` and `xs[0].tex'q'` are errors.
+Since no name holds `'` or `@`, text that starts with `tex'`, `doc@` or `free@` is a
+{term}`TeX string`, a {term}`docstring` or a {term}`free starting value` at the start of an
+expression ({numref}`tex-strings`, {numref}`prefix-forms`), and an error in every other place, such
+as after `|` in a {term}`broadened type` or after a `.` that follows {term}`brackets`: `a|tex'q'`
+and `xs[0].tex'q'` are errors.
 
 :::{admonition} Code differs
 :class: note
@@ -218,17 +220,17 @@ Each keyword is the head of a form of the language.
 |---|---|
 | Declarations | `import`, `type`, `interface`, `namespace`, `palette`, `colormap`, `scene`, `formula`, `motif`, `variant`, `func`, `transition`, `animation`, `choreo` |
 | Shapes and containers | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `curve`, `arc`, `ring`, `text`, `group`, `row`, `column` |
-| Items of bodies | `let`, `foreach`, `exists-when`, `term`, `doc` |
+| Items of {term}`bodies <body>` | `let`, `foreach`, `exists-when`, `term`, `doc` |
 | Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as` |
 | Steps of an animation | `move`, `wait`, `roll-dice`, `at-once`, `in-order` |
-| Components | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
-| Listeners | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
+| {term}`Components <component>` | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
+| {term}`Listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 :::
 
-The heads of optional arguments, such as `x`, `r`, `size`, `gap`, `step`, `fill`, `duration`,
-`like`, `defaults` and `loop`, are not keywords, and neither are the heads of constraints, such as
-`const`, `length` and `wrap`. A word that is the head of an optional argument and also a keyword,
-such as `animation` or `move`, is a keyword.
+The heads of {term}`optional arguments <optional argument>`, such as `x`, `r`, `size`, `gap`,
+`step`, `fill`, `duration`, `like`, `defaults` and `loop`, are not keywords, and neither are the
+heads of {term}`constraints <constraint>`, such as `const`, `length` and `wrap`. A word that is the
+head of an optional argument and also a keyword, such as `animation` or `move`, is a keyword.
 
 ```{rule} declaration-names
 No declaration takes as its name a keyword, a {term}`built-in type`, `pointer` or `self`. This
@@ -236,19 +238,20 @@ holds for every kind of declaration: a variable, a shape, a function, a paramete
 `let` or `foreach`, a member of a namespace, a palette or a formula, a motif, a font, and every
 other. The built-in types are `int`, `ratio`, `real`, `complex`, `bool`, `string`, `color`, `font`,
 `point`, `transform`, `transition`, `animation`, `scene`, `func`, `rand-seed`, `list`, `maybe`, the
-shape types, and the interfaces `shape`, `positioned` and `sequence`. `pointer` is the name bound in
-the move of a drag, and `self` the instance being built in the body of a motif. A declaration may
-take the name of a built-in function, an operator included, or of a built-in constant (`pi`, `tau`
-and `euler`): from that declaration on, the name refers to the declared thing
+shape types, and the {term}`interfaces <interface>` `shape`, `positioned` and `sequence`. `pointer`
+is the name bound in the move of a drag, and `self` the instance being built in the body of a motif.
+A declaration may take the name of a built-in function, an operator included, or of a built-in
+constant (`pi`, `tau` and `euler`): from that declaration on, the name refers to the declared thing
 ({numref}`name-lookup`).
 ```
 
-So `(real if 1)`, `(circle line …)` and `(let ((self 2)) …)` are compile errors, and
-`(func max ((real a) (real b)) a)` and `(real pi 3)` are allowed. `scene`, `transition`,
-`animation` and `func` are both built-in types and keywords. `true`, `false` and `none` are values,
-never names ({numref}`name-characters`). The names of the standard library are not built-in: they
-are ordinary declarations of the files of `mathterpiece/stdlib/`, which a source brings in with
-`import` ({numref}`sugar-rewrites`). The parser does not check this rule, and the compiler checks it.
+So `(real if 1)`, `(circle line …)` and `(let ((self 2)) …)` are
+{term}`compile errors <compile error>`, and `(func max ((real a) (real b)) a)` and `(real pi 3)` are
+allowed. `scene`, `transition`, `animation` and `func` are both built-in types and keywords. `true`,
+`false` and `none` are values, never names ({numref}`name-characters`). The names of the standard
+{term}`library` are not built-in: they are ordinary declarations of the files of
+`mathterpiece/stdlib/`, which a source brings in with `import` ({numref}`sugar-rewrites`). The
+parser does not check this rule, and the compiler checks it.
 
 :::{admonition} Code differs
 :class: note
@@ -264,8 +267,8 @@ mtp-ydd4.7.35 makes the compiler and the documents follow the rule.
 
 ```{rule} reserved-characters
 Outside a string, `{`, `}` and `"` are errors, and so is a `$` or a `#` that is not followed by
-`'`. Outside the format spec of an interpolated string ({numref}`interpolated-strings`), `:` is an
-error. Strings are written in single quotes only.
+`'`. Outside the {term}`format spec` of an interpolated string ({numref}`interpolated-strings`), `:`
+is an error. Strings are written in single quotes only.
 ```
 
 ## Numbers
