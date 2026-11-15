@@ -13,6 +13,10 @@ boxes of each part.
 | {doc}`core` | Q-core-1 to 27 |
 | {doc}`evaluation` | Q-evaluation-1 to 13 |
 
+The drafts of {doc}`scope` and {doc}`well-formedness` raised three more: Q-scope-1, which the
+author has parked (bead mtp-9b4m), and Q-well-formedness-1 and Q-well-formedness-2, which no
+principle below settles.
+
 ## P1. When bodies are proved: once, or once per copy
 
 **Today.** The compiler expands each `foreach` into its copies and each motif into its instances,

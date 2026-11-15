@@ -241,6 +241,41 @@ site
   The number that each call of a random function has, counted from 0 in the order of the calls in
   the source after the rewrite step. Defined in {doc}`evaluation`.
 
+scope
+  A part of a file in which some names may be used, such as the body of a motif or of a `let`
+  ({numref}`scopes`).
+
+file scope
+  The scope of a whole file: its top-level declarations, its imports, and the declarations of its
+  scene at any depth ({numref}`scopes`).
+
+fit
+  A type A fits a type B when a value of type A is accepted where a value of type B is expected
+  ({numref}`fits`).
+
+constraint
+  A form that refines a type to some of its values, such as `(>= 0)` or `(one-of 'a' 'b')`
+  ({numref}`constraints`).
+
+refined type
+  A type with constraints, written `(T C…)`, whose values are the values of T that meet every
+  constraint ({numref}`the-types`, {numref}`constraints`).
+
+choice type
+  A string type refined by `(one-of …)` to a few strings ({numref}`choice-types`).
+
+interface
+  A type that no object has as its own type, which every type with what it lists satisfies, such
+  as `shape` or a type declared with `interface` ({numref}`interfaces`).
+
+known length
+  The length of a list when it is known when compiling, as a `(length n)` in its type
+  ({numref}`known-lengths`).
+
+range
+  The closed interval of reals that holds every value of an expression, which the prover works
+  out ({numref}`ranges`, {numref}`range-rules`).
+
 call depth limit
   The constant `max-call-depth`, which is 256: a call known when compiling that, when folded, would
   nest calls of functions deeper than it is a compile error. Defined in {doc}`evaluation`.

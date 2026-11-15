@@ -1,5 +1,336 @@
+(well-formedness)=
 # Well-formedness
 
-:::{note}
-Not drafted yet. This part defines: the rules that a typed world model must still pass: no cycles in its dependencies, who may write what, and moves that conflict.
+A world model whose names resolve ({ref}`scope`) and whose expressions have types ({doc}`types`)
+must still pass the rules of this part: its dependencies form no cycle, its writers write only what
+may be written, the moves that run together do not write the same value, and every constraint is
+proved. All of them are checked in the prove step ({numref}`compile-steps`), and a source that
+breaks one is a compile error. The last section defines the {term}`prover`: exactly what it proves,
+and the ranges with which it proves it.
+
+This part states the language as the author decided it. Where the compiler does not follow a rule
+yet, a box marked "Code differs" gives what the code does and the bead that will change it.
+
+## No cycles
+
+```{rule} no-dependency-cycles
+The value of every bound variable and attribute is computed from the values that its expression
+reads ({doc}`reaction`). These reads form no cycle: no bound value reads itself, directly or
+through other bound values.
+```
+
+By {numref}`declare-before-use`, an expression reads only declarations that come before it, so a
+cycle could only come from a read inside the form of the declaration that is read. The rules of
+today for such reads are below. A choreo uses only choreos declared before it, so no choreo uses
+itself ({numref}`sugar-rewrites`), and no file imports itself ({numref}`import-files`). A function
+may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
+{numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13, bead
+mtp-ydd4.11).
+
+```{rule} self-reference-today
+These rules hold for a use of a name inside the form that declares it, until the redesign of bead
+mtp-9b4m replaces them:
+
+1. A function may call itself in its own body.
+2. A variable, a `let` name and a parameter never read themselves: `(real k (+ k 1))` is a compile
+   error.
+3. A shape, a variant instance and a motif instance never read one of their own attributes in
+   their own form, whether directly, in a `free@` starting value, through a position on their
+   group known when compiling, or through a function.
+4. A shape in a group, at any depth, never reads the group whole in its own form: an attribute of
+   every member, such as `g.x`, a collection function over the group or over `g.members`, a
+   function given `g.members`, or a member by a position known only while drawing. `(count g)` and
+   `g.length` may be read. The count and the list of a `foreach` inside the group never read the
+   group.
+5. A container never reads itself in its own `clip` or in its own `(defaults …)`, also once the
+   defaults are moved into its members ({numref}`sugar-rewrites`).
+
+Each read that items 2 to 5 forbid is a compile error.
+```
+
+The other cases of a declaration that reads itself or its container, such as an `exists-when` that
+reads its own shape or a member that reads the `translate` of its group, are part of the same
+redesign (Q-scope-1), and this spec does not define them yet.
+
+## What a writer may write
+
+The controls and the listeners are the writers ({doc}`concurrency`). A writer writes its target,
+and the moves of its animation write theirs.
+
+```{rule} writable-targets
+The target of a writer and of a move is a name: a variable, an attribute of a shape, of an
+instance or of a term, or a member of a namespace or a formula, with a name string allowed in
+place of a name ({numref}`shorthand-forms`). A target may be written only when it is free
+({doc}`world-model`), its type does not hold `(const)`, it is not a token (a variable of type
+`color` or `font`), and it is not fixed by a variant ({numref}`motif-and-variant-types`). Besides:
+
+- A name that is not a variable or an attribute, such as a group or a namespace by its name alone,
+  is never a target.
+- A target that stands for several values, as {doc}`concurrency`, part "Values", gives, is
+  writable only when each of those values is: a `pos`, an attribute of a group or an instance that
+  is not its own, and the `x`, the `y` and the `pos` of a line, a triangle, a polyline, a polygon
+  and a curve. An attribute of a container with no members is never a target.
+- A member of a group chosen by a position is chosen by a position known when compiling.
+- A move of an `on-show` or an `on-hide` writes the stand-in of its shape, so it may write an
+  attribute of that shape that is bound ({doc}`lifecycle`).
+
+Every other target is a compile error.
+```
+
+So `(slider s (move m (from 0) (to 1)))` with `(real m (* 2 k))` is a compile error, and so is a
+move of a `(const)` variable or of a color variable. Two writers may write the same value: that is
+not an error, and {doc}`concurrency` defines what happens when they meet.
+
+```{rule} written-values
+Each value that a write gives must fit the type of its target ({numref}`fits`), with the
+comparisons, the wraps and the choices of the constraints of that type left out, since the write
+brings the value into those ({numref}`writes-into-constraints`). This holds for the `from` and the
+`to` of a move and of a transition, the `to` of the move of an `on-drag`, and the values of a
+toggle and a slider. A value whose type includes `none` is written only into a target whose type
+includes `none`.
+```
+
+So `(move k (to (* 3 a)))` into `(real k 1 (>= 0) (<= 2))` compiles, and the write clamps each
+value to 0 or 2. `(move n (to 2.5))` into an `int` is a compile error, while the values between
+the ends of a move into an int are rounded. A `(length n)` is kept, so a move of a list declared
+`(length 2)` to a list of length 3 is a compile error.
+
+```{rule} writer-conditions
+Each condition of a control or a listener ({numref}`contexts-table`) is a comparison `(OP A B)`, OP
+one of `<`, `<=`, `>` and `>=`, in which one side is a read of a variable or an attribute that the
+writer writes, and the other side, the limit, does not depend on that variable or attribute,
+directly or through bound values. Every other condition is a compile error.
+```
+
+What a condition does to a write is defined in {doc}`reaction`. A writer that writes the `pos` of a
+shape writes its `x` and its `y` ({numref}`writable-targets`), so its conditions may limit either,
+as `(on-drag c c.pos (<= c.x 5) (>= c.y 0))`, and `c.pos.x` and `c.pos[0]` are `c.x`.
+
+:::{admonition} Code differs
+:class: note
+- The compiler checks the end of a move against its target without the constraints of the target
+  (`_loose` in `compiler.py:5794`, `checked`), so a move of a list declared `(length 2)` to a list
+  of three items compiles.
+- A condition is refused only when its limit reads the target directly (`compiler.py:4486`,
+  `condition`), so a limit that reads it through a bound variable compiles.
+
+Bead mtp-ydd4.7.44.
+:::
+
+## Moves that run at the same time
+
+```{rule} moves-at-once
+Two parts of one `at-once` that write the same value at times that overlap are a compile error.
+The values that a move writes are those of {doc}`concurrency`, part "Values". The times are
+these:
+
+- Each part of an `at-once` starts when the `at-once` starts, and the moves inside it start at the
+  times that {doc}`time` gives them.
+- A move writes from its start up to its start plus its duration, and a loop that never ends
+  writes forever.
+- Two times overlap when they start at the same instant, or when each starts before the other ends.
+```
+
+So `(at-once (move k (to 2) (duration 1)) (move k (to 3) (duration 1)))` is a compile error, and
+`(at-once (move k (to 0) (duration 0)) (in-order (wait 2) (move k (to 1))))` is not. For a
+polyline `pl`, `(at-once (move pl.x (to 3)) (move pl.points (to [[0 0] [2 0]])))` is a compile
+error, and `(at-once (move pl.x (to 3)) (move pl.y (to 3)))` is not. A container's `translate` and
+`transform` are its own, so `(at-once (move g.translate (to [1 1])) (move c.x (to 3)))` is allowed
+for a member `c` of `g`.
+
+## The prover
+
+```{rule} prover-proves
+The prover proves exactly these, and nothing else:
+
+1. The type of every expression, and that it fits where it is given ({numref}`form-types`).
+2. That every value meets the constraints of the type expected where it is given
+   ({numref}`constraint-proof`).
+3. Which operations may give `none`, and so which types include `none` ({numref}`may-give-none`),
+   and that an operation whose inputs are known gives no `none` ({numref}`none-at-known-inputs`).
+4. An upper bound of the count, or of the length of the list, of a `foreach` that is known only
+   while drawing ({numref}`foreach-bounded-length`).
+5. That a name built from a value names a declaration that fits ({numref}`names-from-values`).
+6. The call depth limit of a call known in the prove step ({numref}`call-depth-limit`).
+7. The rules of this part before this section.
+
+For numbers, its only reasoning is the ranges of {numref}`ranges` and {numref}`range-rules`. It
+proves each body once ({numref}`prove-bodies-once`).
+```
+
+So the prover never uses a relation between two values: in `(/ 1 (- k k))` the divisor may be 0 for
+the prover, although it is always 0. It never counts, never searches for a value, and never
+narrows a range by the condition of an `if` around it (Q-well-formedness-1).
+
+```{rule} ranges
+A {term}`range` is a closed interval of reals, from a lower end to an upper end, each of them a
+binary64 number, the lower at most the upper. The prover works out a range for every expression of
+type `int`, `ratio` or `real`, with or without `none`. The range of an expression holds every value
+other than `none` that the expression can give, when folded and while drawing.
+```
+
+The prover works out each end of a range with the functions of {numref}`correctly-rounded-reals`,
+so by the argument that follows that rule, a range worked out at the ends of the ranges of the
+inputs holds every value that either time computes. An end has no mark for whether it is reached:
+the range of `(real k (> 0))` is from 0 to 10¹⁵⁰, the same as for `(real k (>= 0))`. A strict
+bound helps the prover only to meet the same strict bound by {numref}`fits`.
+
+```{rule} range-rules
+The range of each expression is the following. Where the table gives several ranges, the range is
+the part that they share.
+
+| Expression | Its range |
+|---|---|
+| a number known in the prove step | from the number to the number |
+| the range of a type | the ends that its comparisons give, a `(> c)` and a `(< c)` giving c, from lo to hi for `(wrap lo hi)`, and the number limit for a side with no bound ({numref}`number-limit`, Q-well-formedness-2) |
+| a read of a free variable or attribute | the range of its type |
+| a read of a bound variable or attribute | the range of its expression, and the range of the constraints of its declared type, each side with no bound left out. A read through a `translate` or a `transform` ({doc}`world-model`): the range of its type |
+| a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a library function, the range that {doc}`stdlib` gives it |
+| a `let` name | the range of its value |
+| the name of a `foreach` over a count X | from 0 to the upper end of the range of X, minus 1 |
+| the name of a `foreach` over a list | the range of the items of the list |
+| an item of a list | the range of the item type of the list |
+| `(- A)` | from minus the upper end of A to minus its lower end |
+| `(+ A B …)` | from the sum of the lower ends to the sum of the upper ends |
+| `(- A B …)` | from the lower end of A minus the upper ends of the others to the upper end of A minus their lower ends |
+| `(* A B …)` | from left to right: of two ranges, the smallest and the largest of the four products of their ends |
+| `(/ A B)` | when the range of B does not hold 0, the smallest and the largest of the four quotients of the ends. When it holds 0, every real: from minus the largest real to the largest real |
+| `(mod A B)` | from the smaller of 0 and the lower end of B to the larger of 0 and the upper end of B |
+| `(^ A B)` | when the lower end of A is 0 or more, the smallest and the largest of the four powers of the ends. When B is known in the prove step and is an int n, the smallest and the largest of the powers n of the ends of A, and 0 when the range of A holds 0 and n is above 0. Otherwise every real |
+| `(abs A)` | from 0 to the larger of minus the lower end and the upper end, when the range of A holds 0, and otherwise from the smaller to the larger of the absolute values of the ends |
+| `(if C A B)`, `(or? A D)` | from the smaller of the lower ends to the larger of the upper ends. With C known in the prove step, the range of the branch taken |
+| a call of a function declared with `func`, outside its own body, not folded | the range of its body worked out again with the range of each parameter being the range of its argument, and the range of its result type. This only gives a range: the body is proved once |
+| a call of a function inside its own body | the range of its result type (Q-well-formedness-2) |
+| a call of another library function | the range that {doc}`stdlib` gives for it |
+| any other expression | the range of its type |
+
+An end that is worked out beyond the largest real is replaced by the largest real, or by minus the
+largest real, and the operation may give `none` ({numref}`may-give-none`).
+```
+
+The item type of a list in brackets whose items are not all known, and whose items all have ranges,
+holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the largest upper end of
+the items. So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
+
+With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 5 k)`, -5 to 5. With
+`(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamp x 0 1)` has the range 0
+to 1 whatever `x` is, by the row for a call.
+
+:::{admonition} Code differs
+:class: note
+The compiler works out some ranges that do not hold every value that the expression can give,
+which {numref}`ranges` does not allow:
+
+- A divisor whose range holds 0 gives the range ±10¹⁵⁰ (`compiler.py:7718`, `_range_of`), though
+  `(/ 1 1e-200)` is 10²⁰⁰. examples/dials.mtp, line 60, compiles today and is a compile error by
+  {numref}`range-rules`, since `(* (or? (/ …) 0) (- d.hi d.lo))` may then overflow.
+- A read of a bound value with no bound of its own gets the range ±10¹⁵⁰ (`compiler.py:6085`,
+  `read`), though `(real m (* k k))` can be 10³⁰⁰.
+- `rad`, `turn` and `dist` give the range ±10¹⁵⁰ or 0 to 10¹⁵⁰ (`builtins.py`, `BUILTINS`),
+  though `(turn 1e150)` is 3.6 × 10¹⁵².
+- An argument whose type implies a strict constraint of its parameter is still checked by its range
+  (`compiler.py:2134`, `arguments`), so a `(real a 1 (> 0))` given to a parameter
+  `((real (> 0)) x)` is the error "x may break (> 0)".
+
+Bead mtp-ydd4.7.45.
+:::
+
+```{rule} may-give-none
+The type of an operation that is not folded includes `none` when the ranges of its arguments, each
+taken on its own, hold an input at which it gives `none` by {numref}`operations-that-give-none`,
+or when an end of the range of its result is worked out beyond the largest real
+({numref}`range-rules`). For a part of a list or a group:
+
+| Operation | Its type includes `none` unless |
+|---|---|
+| `xs[i]`, an item of a list | the length n of `xs` is known ({numref}`known-lengths`), and the range of `i` lies from -n to n - 1 |
+| `g[k]`, a member of a group by an int | the range of `k` lies from -n to n - 1, n being the number of members |
+| `g[k]`, a member of a group by a string | the type of `k` is a choice type whose choices are all names of members of `g` |
+```
+
+So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, a `real`. With
+`(int f 0 (>= 0) (<= 3))`, `xs[f]` on a bound list of four items is never `none`. With
+`(type side string (one-of 'left' 'right'))` and a group `arms` whose members are named `left` and
+`right`, `arms[s]` is never `none` for a `side` `s`.
+
+```{rule} constraint-proof
+A value given where the expected type holds a constraint C meets C when one of these holds:
+
+- C is `(const)` or a `(wrap …)`, which every value meets ({numref}`wrap-brings-in`).
+- The value is known in the prove step and meets C.
+- The type of the value fits the expected type with C as its only constraint ({numref}`fits`).
+- C is a comparison, and the range of the value lies inside it: its lower end is at least c for
+  `(>= c)` and above c for `(> c)`, and its upper end is at most c for `(<= c)` and below c for
+  `(< c)`.
+
+When a value does not meet C:
+
+| The value | Then |
+|---|---|
+| a value known in the prove step | a compile error |
+| the value of a bound variable or attribute | {numref}`prover-finds-ranges` |
+| an argument of a call, of an instance or of a use of a choreo | a compile error |
+| the body of a function declared with a result type R | when R includes `none`, a call gives `none` where the value of the body breaks C, and the fold and write step writes the `check` for it. Otherwise a compile error |
+| an item of a list in brackets whose item type is expected | a compile error |
+| a value that a writer writes | no proof: {numref}`written-values` |
+```
+
+So `(real k 5 (<= 3))` is a compile error. With `(real a 1)` and
+`(func g (((real (>= 0)) x)) (* 2 x))`, `(g a)` is a compile error, and `(g (abs a))` is not. With
+`(func[(real|none (>= 0))] h ((real x)) x)`, `(h a)` is `none` while `a` is below 0.
+
+```{mtp-example}
+; k is at least 1, so the prover proves that 1/k is never none
+(real k 2 (>= 1) (<= 5))
+(scene s (circle c (r (/ 1 k)) (fill 'teal')))
+(canvas v (x -1.2) (y -1.2) (width 2.4) (height 2.4) s)
+(slider size (move k (from 1) (to 5)) (label 'k'))
+```
+
+### Narrowing and unbounded values
+
+:::{admonition} Open question Q-well-formedness-1
+:class: warning
+examples/spiral-of-copies.mtp, line 21, reads `#'dot-{(- k 1)}'` only in the branch of
+`(if (= k 0) …)` that is taken when `k` is not 0. The body of the `foreach` is proved once, for `k`
+from 0 to 59 ({numref}`prove-bodies-once`), and by {numref}`range-rules` the range of `k` is the
+same in both branches of the `if`, so for `k` = 0 the prover must prove that `dot--1` names a
+declaration ({numref}`names-from-values`), which it cannot. The figure stops compiling once bead
+mtp-08wd.1 is done, and so does the example after {numref}`names-from-values`. The compiler has no
+rule that narrows a range today: it proves each copy with its own value of `k`. The options:
+
+- (a) Narrowing in the branches of an `if`. In `(if (OP N c) A B)`, where N is a name whose range
+  the prover works out, c is a number known in the prove step, and OP is one of `=`, `!=`, `<`,
+  `<=`, `>` and `>=`, the range of N in A is the part of its range for which the comparison is
+  true, and in B the part for which it is false. For an int, `(< N c)` gives an upper end of c - 1
+  where it is true, and where N is known not to be c, an end that equals c moves by 1 toward the
+  other end. For a real, `<` and `>` give c as the end, since a range has no open end. No other
+  condition narrows. With this rule, `k` in the second branch of `(if (= k 0) …)` ranges from 1 to
+  59.
+- (b) No narrowing. The two figures are rewritten, for example with the first dot declared before
+  the `foreach` and `(foreach k (range 1 n) …)` for the others.
+:::
+
+:::{admonition} Open question Q-well-formedness-2
+:class: warning
+By {numref}`range-rules`, a parameter whose type has no bound has the number limit as its range in
+its body, and so does a call of a function inside its own body ({numref}`number-limit`). But an
+argument can lie beyond the number limit: in `(f (* k k))`, with `k` a real with no bound, the
+argument can be 10³⁰⁰. A body proved for `x` from -10¹⁵⁰ to 10¹⁵⁰, such as `(* x x)`, then
+overflows while drawing, and gives `none` where its type does not include `none`. P11 does not allow this
+({numref}`no-errors-after-loading`), and the compiler does it today. The options:
+
+- (a) Each argument for a parameter whose type has no bound on a side, and the body of a function
+  whose declared result type has no bound on a side, is proved to lie within the number limit on
+  that side, as for a constraint ({numref}`constraint-proof`). Three sources stop compiling unless
+  their parameters get bounds: examples/bourgain-densities.mtp, line 70, at
+  `(+ a (* step half))`, examples/ulam-spiral.mtp, line 48, at `(+ x 1)`, and the example after
+  {numref}`call-depth-limit`, at `(- m 1)`. A bound on an argument that decreases, as in that
+  example, needs narrowing too (Q-well-formedness-1).
+- (b) A parameter whose type has no bound, and a call of a function inside its own body, have no
+  bound on that side: their range is every real. Ten examples stop compiling, since arithmetic in
+  a body may then overflow: bourgain-densities.mtp (line 64), bourgain-ornament.mtp (50),
+  bourgain-pair-at-level.mtp (42), colormaps.mtp (46), ease-race.mtp (38), function-machine.mtp
+  (24), koch-snowflake.mtp (21), line-styles.mtp (15), split-screen-race.mtp (37) and
+  ulam-spiral.mtp (12).
 :::

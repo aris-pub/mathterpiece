@@ -239,7 +239,8 @@ other. The built-in types are `int`, `ratio`, `real`, `complex`, `bool`, `string
 shape types, and the interfaces `shape`, `positioned` and `sequence`. `pointer` is the name bound in
 the move of a drag, and `self` the instance being built in the body of a motif. A declaration may
 take the name of a built-in function, an operator included, or of a built-in constant (`pi`, `tau`
-and `euler`): from that declaration on, the name means the declared thing.
+and `euler`): from that declaration on, the name refers to the declared thing
+({numref}`name-lookup`).
 ```
 
 So `(real if 1)`, `(circle line …)` and `(let ((self 2)) …)` are compile errors, and
