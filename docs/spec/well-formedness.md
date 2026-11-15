@@ -3,7 +3,7 @@
 
 A {term}`world model` whose {term}`names <name>` resolve ({ref}`scope`) and whose
 {term}`expressions <expression>` have types ({doc}`types`) must still pass the rules of this page:
-its dependencies form no cycle, its writers write only what may be written, the moves that run
+its dependencies make no cycle, its writers write only what may be written, the moves that run
 together do not write the same value, and every {term}`constraint` is proved. All of them are
 checked in the prove step ({numref}`compile-steps`), and a source that breaks one is a
 {term}`compile error`. The last section defines the {term}`prover`: exactly what it proves, and the
@@ -16,7 +16,7 @@ yet, a box marked "Code differs" gives what the code does and the bead that will
 
 ```{rule} no-dependency-cycles
 The value of every bound variable and attribute is computed from the values that its expression
-reads ({doc}`reaction`). These reads form no cycle: no bound value reads itself, directly or
+reads ({doc}`reaction`). These reads make no cycle: no bound value reads itself, directly or
 through other bound values.
 ```
 
@@ -66,7 +66,7 @@ in place of a name ({numref}`shorthand-forms`). A target may be written only whe
 
 - A name that is not a variable or an attribute, such as a group or a namespace by its name alone,
   is never a target.
-- A target that stands for several values, as {doc}`concurrency`, part "Values", gives, is
+- A target that stands for several values, as {doc}`concurrency`, section "Values", gives, is
   writable only when each of those values is: a `pos`, an attribute of a group or an instance that
   is not its own, and the `x`, the `y` and the `pos` of a line, a triangle, a polyline, a polygon
   and a curve. An attribute of a container with no members is never a target.
@@ -121,7 +121,7 @@ Bead mtp-ydd4.7.44.
 
 ```{rule} moves-at-once
 Two parts of one `at-once` that write the same value at times that overlap are a compile error.
-The values that a move writes are those of {doc}`concurrency`, part "Values". The times are
+The values that a move writes are those of {doc}`concurrency`, section "Values". The times are
 these:
 
 - Each part of an `at-once` starts when the `at-once` starts, and the moves inside it start at the

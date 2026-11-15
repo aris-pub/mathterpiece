@@ -162,7 +162,7 @@ imported name.
 :::{admonition} Open question Q-scope-1 (parked)
 :class: warning
 What `self` means, and every rule about a declaration that reads itself or its container, are to
-be redesigned around `self` (bead mtp-9b4m). The author has parked the redesign, and this spec
+be redesigned around `self` (bead mtp-9b4m). The redesign is parked, and this spec
 does not define `self`. Today the compiler reads `self` in the body of a motif as the instance
 being built, and gives an error for `self` outside a motif's body (`compiler.py:6036` to
 `compiler.py:6043`, `lookup`). The rules of today about a declaration that reads itself are in

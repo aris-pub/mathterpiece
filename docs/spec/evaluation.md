@@ -454,8 +454,8 @@ mtp-ydd4.7.39 makes the compiler follow the rule.
 :::
 
 ```{rule} random-hash
-The hash h of whole numbers x₁, …, xₙ is a 32-bit word, computed with every product taken modulo
-2³², every xor and shift on 32-bit words, and `>>` the shift that fills with zeros:
+The hash h of whole numbers x₁, …, xₙ is a whole number below 2³², computed with every product taken modulo
+2³², every xor and shift on 32-bit numbers, and `>>` the shift that fills with zeros:
 
     h = 0x811c9dc5
     for each x, in order:

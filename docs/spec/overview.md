@@ -14,7 +14,7 @@ Every term the spec defines is in the {doc}`glossary`.
 
 ## Examples
 
-Every example in the spec is compiled while the site is built, and an example that does not
+Every example in the spec is compiled while the spec's pages are built, and an example that does not
 compile stops the build. Each is shown as its source, then live:
 
 ```{mtp-example}

@@ -116,7 +116,7 @@ inventory page holds the runtime, the .mtpc and the script of the inventory, all
 that it works when it is opened as a file. It also holds the opening {term}`comment` of the source,
 the lines of HTML that load the runtime and the .mtpc, every component live with its name and the
 line of HTML that places it, every {term}`listener` with what it does, and every token with its CSS
-variable and a control that restyles it. With `?record` at the end of its address, the page holds
+variable and an input that restyles it. With `?record` at the end of its address, the page holds
 only one canvas and the play under it, on a 9:16 page.
 
 ```{rule} subcommands
@@ -244,8 +244,8 @@ mtp-q02m.
 ### mtp fmt
 
 ```{rule} mtp-fmt
-`mtp fmt` parses the source, and rejects it when the parse step does. It then rewrites the file in
-a house layout, keeping every comment and every line break that the illustrator wrote, so that the
+`mtp fmt` parses the source, and rejects it when the parse step does. It then writes the file again
+in a house layout, keeping every comment and every line break that the illustrator wrote, so that the
 file that it writes has the same meaning as the file that it read. It writes the file only when
 the result differs from it. It runs no step after parse. The layout is not normative
 ({numref}`what-is-normative`).

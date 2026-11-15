@@ -7,8 +7,8 @@ On this page, every {term}`head` that the {term}`compiler` accepts is sorted int
 meaning is defined.
 
 The inventory was built from `mathterpiece/compiler.py` and `mathterpiece/parse.py` as they are
-on 2026-11-14, and then checked against `docs/reference.md` and `docs/syntax.md`. Citations of
-the form `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page specifies the language. Where the code does not yet follow a rule, a box marked "Code differs"
+on 2026-11-14, and then checked against `docs/reference.md` and `docs/syntax.md`. Citations such
+as `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page specifies the language. Where the code does not yet follow a rule, a box marked "Code differs"
 after the rule gives what the code does and the bead that will change it.
 
 (core-kinds)=

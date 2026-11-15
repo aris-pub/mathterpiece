@@ -160,7 +160,7 @@ and `xs[0].tex'q'` are errors.
   but `( ) [ ] { } . / ; " $ ^ | @ #` and a few first characters. So the parser reads `a!b`, `a*b`,
   `a=b`, `!=x`, `f'`, `a'b`, `a:b`, `θ`, `x²` and names that hold control characters or U+FEFF as
   names, and `a|tex'q'` as the broadened type of the names `a` and `tex'q'`. Bead mtp-ydd4.7.3
-  makes the parser follow the rule. The site lexer of `docs/_ext/mtp_sphinx.py` follows it
+  makes the parser follow the rule. The lexer in `docs/_ext/mtp_sphinx.py` follows it
   already.
 - `parse.py:346` compares only the whole word with `true`, `false` and `none`, and `parse.py:362`
   checks only `true` and `false` before brackets, so the parser reads `true.x`, `p.true`, `none.x`
