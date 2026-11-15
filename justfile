@@ -72,6 +72,12 @@ spec:
 spec-build:
     uv run --group docs sphinx-build -E -W --keep-going -b html -d docs/_build/doctrees docs docs/_build/html
 
+# check every link of the spec site, internal and external, and fail on a broken one
+spec-linkcheck:
+    uv run --group docs sphinx-build -E -W --keep-going -b linkcheck -d docs/_build/doctrees docs docs/_build/linkcheck
+    uv run --group docs sphinx-build -E -W --keep-going -b html -d docs/_build/doctrees docs docs/_build/html
+    uv run --no-project python docs/_ext/check_local_links.py docs/_build/html
+
 # build the spec site and publish it to its fixed draft address on Netlify, https://draft--mtp-spec.netlify.app, to read on a phone
 spec-preview: spec-build
     npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/html --site d1eaf3d8-0626-4e13-a3a1-c9ed535b30da --alias draft --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['deploy_url'])"
