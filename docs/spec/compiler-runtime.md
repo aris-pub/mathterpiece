@@ -425,6 +425,17 @@ and is not a check of a type. How the runtime does this is not normative.
 
 ## The .mtpc between the compiler and the runtime
 
+```{rule} any-compiler-any-runtime
+Every conforming compiler works with every conforming runtime. Every conforming runtime that
+implements the version of the format of a .mtpc runs it, whichever conforming compiler wrote it.
+Two conforming compilers may write different bytes for one source ({numref}`what-is-normative`),
+and every conforming runtime makes the same open page from both files.
+```
+
+So an implementation of the compiler and an implementation of the runtime can be built apart, by
+different people and in different languages, and the .mtpc is the only thing that each needs to
+know of the other. This is why the format of the .mtpc is defined in full in {doc}`compiled-format`.
+
 ```{rule} mtpc-only-boundary
 The .mtpc is the only thing that passes from the compiler to the runtime. No other file, no call
 and no shared state passes between them. Besides the .mtpc, the runtime reads only the page: its
@@ -434,10 +445,6 @@ the clock.
 
 So the runtime never reads a source file, and every object, every motif instance and every copy
 that a `foreach` makes is written out in the .mtpc ({numref}`compile-steps`).
-
-The inventory page holds the opening comment of the source, which is not in the .mtpc
-(`about` in mathterpiece/build.py). The mtp command writes that comment into the page, and the
-runtime does not read it, so it does not pass from the compiler to the runtime.
 
 ```{rule} corrupt-mtpc
 A .mtpc that matches the schema of its version and breaks a rule of this spec is
