@@ -96,7 +96,7 @@ bool
 
 built-in type
   One of the types that mtp gives, such as `real`, `point` or `circle`, whose name no declaration
-  takes ({numref}`declaration-names`).
+  and no binding takes ({numref}`declaration-names`).
 
 comment
   Text from `;` up to the end of the line ({numref}`whitespace-and-comments`).
@@ -150,7 +150,7 @@ literal
   ({numref}`literal-types`).
 
 name
-  A word that refers to something declared: name parts joined by dots, such as `p.pos.x`
+  A word that refers to a declaration or a binding: name parts joined by dots, such as `p.pos.x`
   ({numref}`name-characters`).
 
 name part
@@ -188,7 +188,7 @@ real
 
 keyword
   The head of a form of the language, such as `circle`, `if` or `on-drag`, which no declaration
-  takes as its name ({numref}`keywords`, {numref}`declaration-names`).
+  and no binding takes as its name ({numref}`keywords`, {numref}`declaration-names`).
 
 string
   A value of type `string`: text. Written as text in single quotes, such as `'crimson'`
@@ -260,12 +260,22 @@ scope
   ({numref}`scopes`).
 
 file scope
-  The scope of a whole file: its top-level declarations, its imports, and the declarations of its
-  scene at any depth ({numref}`scopes`).
+  The scope of a whole file. Its names are the names of its top-level declarations, the names
+  that its imports give, and the names of the declarations of its scene at any depth
+  ({numref}`scopes`).
 
 file to import
-  A `.mtp` file that another file imports with `import`. It holds only declarations that
+  A `.mtp` file that another file imports with `import`. It holds only the forms that
   {numref}`contexts-table` allows at its top level. Defined in {doc}`imports`.
+
+value
+  What an expression gives: a number, a bool, a string, a color, a font, a point, a transform, a
+  list, a function or `none`. A value never changes ({numref}`values-and-objects`).
+
+object
+  A thing that a declaration creates in the world model, such as the scene, a shape, a variable, a
+  component, a transition or an animation. It stays the same object while its value or the values
+  of its attributes change ({numref}`values-and-objects`).
 
 fit
   A type A fits a type B when a value of type A is accepted where a value of type B is expected

@@ -1,8 +1,8 @@
 (types)=
 # Types
 
-This page defines the types of mtp, how a type is written, which values and objects each type
-holds, when a value of one type is accepted where another type is expected, and the type of each
+This page defines the types of mtp, how a type is written, which {term}`values <value>` and
+{term}`objects <object>` each type holds, when a value of one type is accepted where another type is expected, and the type of each
 {term}`form`. Every {term}`expression` has a type, which the prove step works out
 ({numref}`compile-steps`), and the {term}`runtime` never checks a type
 ({numref}`runtime-no-type-work-while-drawing`). How a value is held and computed is defined in
@@ -12,6 +12,21 @@ the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` pr
 {doc}`well-formedness`.
 
 This page specifies the language.
+
+## Values and objects
+
+```{rule} values-and-objects
+A value is what an expression gives: a number, a bool, a string, a color, a font, a
+point, a transform, a list, a function or `none`. A value never changes, and two values that are
+equal are the same value. An object is a thing that a {term}`declaration` creates in the
+{term}`world model` ({numref}`declarations-and-bindings`), such as the scene, a shape, a variable,
+a component, a transition or an animation. An object stays the same object while its value, or the
+values of its attributes, change.
+```
+
+So `(+ 1 2)` and `3` give the same value, and two circles declared with the same attributes are two
+objects. A variable `(real a 1)` is an object whose value is 1 when the page opens, and may change
+when a writer writes it.
 
 ## The types
 
@@ -74,8 +89,8 @@ expression there is a {term}`compile error`:
   the first is a name, or a name followed by brackets, that gives a type that is not broadened.
 - `(T C…)` is a refined type: `T` is a type and each `C` is a constraint. `((T C…) D…)` is
   `(T C… D…)`, and `(T|none C…)` is `(T C…)|none`.
-- `none` is the type `none`, which is the type only of an expression. No declaration has the
-  type `none`.
+- `none` is the type `none`. It is never written as the type of a declaration or of a parameter:
+  it is the type only of an expression, and of a name that a `let` binds to such an expression.
 ```
 
 So `real|real`, `real|none|none` and `real[int]` are compile errors. A broadened type of a refined
