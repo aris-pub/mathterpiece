@@ -10,9 +10,7 @@ the {term}`.mtpc` holds is in {numref}`mtpc-imported-declarations`. The {term}`c
 file other than the source and the files that it imports ({numref}`compiler-reads-files`).
 
 The rewrite step reads every imported file ({numref}`compile-steps`), so a source that breaks a
-rule of this page is rejected in the rewrite step. This page specifies the language. Where the
-compiler does not follow a rule yet, a box marked "Code differs" gives what the code does and the
-bead that will change it.
+rule of this page is rejected in the rewrite step. This page specifies the language.
 
 ## How an import is written
 

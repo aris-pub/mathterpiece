@@ -9,8 +9,7 @@ page and the rules of the next page are one grammar, written in the notation of 
 shown in pieces on the two pages. The whole grammar is also one file, [mtp.lark](https://github.com/aris-pub/mathterpiece/blob/main/docs/spec/mtp.lark).
 
 This page specifies the language. The parser accepts exactly the text
-that this page allows, and rejects everything else. Where the parser does not follow a rule yet, a
-note after the rule says what the parser does today and names the bead that will change it.
+that this page allows, and rejects everything else.
 
 ## How the grammar is written
 
