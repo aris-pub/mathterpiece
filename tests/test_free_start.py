@@ -9,16 +9,33 @@ from mathterpiece.nodes import Form, Name
 from mathterpiece.parse import ParseError, parse
 
 
-def test_it_parses_as_a_form_no_author_can_write():
+def test_it_parses_as_the_form_free():
     (decl,) = parse("(real k free@(+ 1 2))")
     form = decl.items[2]
     assert isinstance(form, Form)
-    assert isinstance(form.items[0], Name) and form.items[0].parts == ("free@",)
+    assert isinstance(form.items[0], Name) and form.items[0].parts == ("free",)
+    assert parse("(real k free@(+ 1 2))") == parse("(real k (free (+ 1 2)))")
 
 
 def test_it_is_followed_by_its_expression():
-    with pytest.raises(ParseError, match="free@ is followed by the expression"):
+    with pytest.raises(ParseError, match="free@ is followed directly by its item"):
         parse("(real k free@)")
+
+
+def test_the_form_with_parentheses_is_the_same():
+    a = doc("(real a 1 (>= 0)) (real k free@(* 2 a)) (scene s (circle c (r free@a)))")
+    b = doc("(real a 1 (>= 0)) (real k (free (* 2 a))) (scene s (circle c (r (free a))))")
+    assert a == b
+
+
+def test_it_takes_one_expression():
+    error("(real a 1) (real k (free a a))", "free takes one expression")
+    error("(real k (free))", "free takes one expression")
+
+
+def test_free_is_a_keyword():
+    error("(real free 1)", "'free' is reserved")
+    error("(func free ((real x)) x)", "'free' is reserved")
 
 
 def test_it_starts_free_from_an_expression_known_only_while_drawing():

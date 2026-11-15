@@ -220,7 +220,7 @@ Each keyword is the head of a form of the language.
 | Declarations of {term}`listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 | Declarations of functions, types and choreos | `func`, `colormap`, `type`, `interface`, `motif`, `variant`, `choreo` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
-| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as` |
+| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free` |
 | Steps of an animation | `move`, `wait`, `roll-dice`, `at-once`, `in-order` |
 :::
 

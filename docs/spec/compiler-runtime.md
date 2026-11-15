@@ -277,7 +277,7 @@ gap is closed by changing the language, never by showing an error to the reader.
 ```{rule} runtime-builds-live-model
 When a .mtpc loads, the runtime builds its live model, once, before any component draws: it turns
 every expression into a function, once, and gives every free variable and attribute its starting
-value, reading each `free@` start once ({doc}`compiled-format`, "Free and bound values"). Then it
+value, reading each `free` start once ({doc}`compiled-format`, "Free and bound values"). Then it
 keeps the live model current as the reader acts: after each write, it computes again only what
 depends on what changed, and the views draw again ({doc}`reaction`, {doc}`time`,
 {doc}`concurrency`).

@@ -137,7 +137,8 @@
 
 (ert-deftest mtp-mode-sets-free-starts-apart ()
   ;; free@ declares a free value though an expression follows it, so it must stand out.
-  (should (eq (mtp-mode-test--face-at "(real k free@(* 2 a))" "free@") 'mtp-mode-free-face)))
+  (should (eq (mtp-mode-test--face-at "(real k free@(* 2 a))" "free@") 'mtp-mode-free-face))
+  (should (eq (mtp-mode-test--face-at "(real k (free (* 2 a)))" "free") 'mtp-mode-free-face)))
 
 (ert-deftest mtp-mode-draws-nothing-in-italic ()
   ;; The author's rule: no italic. Every face the mode uses is its own, upright whatever the

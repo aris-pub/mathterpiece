@@ -142,16 +142,15 @@ class TestDocAt:
     @pytest.mark.parametrize(
         "src, msg",
         [
-            ("(real k 1 doc@x)", "doc@ is followed by its text in single quotes: doc@'text'"),
-            ("(real k 1 doc@$'x')", "doc@ is followed by its text in single quotes: doc@'text'"),
-            (
-                "(real k 1 note@'x')",
-                "'@' only follows doc and free, as in doc@'text' and free@(f x)",
-            ),
-            ("(real a@b 1)", "'@' only follows doc and free, as in doc@'text' and free@(f x)"),
+            ("(real k 1 doc@x)", "a doc is plain text, known when compiling: doc@'text'"),
+            ("(real k 1 doc@$'x')", "a doc is plain text, known when compiling: doc@'text'"),
+            ("(real k 1 note@'x')", "unknown constraint 'note'"),
         ],
     )
-    def test_at_follows_only_doc_and_takes_a_plain_string(self, src, msg):
+    def test_doc_at_takes_a_plain_string(self, src, msg):
+        error(src, msg)
+
+    def test_at_follows_only_a_name(self):
         with pytest.raises(ParseError) as exc:
-            parse(src)
-        assert exc.value.msg == msg
+            parse("(real k 1 'a'@x)")
+        assert exc.value.msg == "expected whitespace, '(', ')' or ';' after a string"

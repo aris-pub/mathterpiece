@@ -1,6 +1,6 @@
 """mtp fmt (docs/data-model.md, "The mtp command"): each line indented as the Emacs mode indents
 it, trailing spaces dropped, at most one blank line in a row, (doc 'text') written doc@'text',
-and nothing else changed."""
+(free X) written free@X where that means the same, and nothing else changed."""
 
 import re
 import shutil
@@ -183,6 +183,30 @@ def _emacs(src: str, tmp_path: Path) -> str:
 def test_a_doc_is_written_doc_at_and_goes_2_in(src, want, tmp_path):
     assert layout(src) == want
     assert _emacs(want, tmp_path) == want
+
+
+@pytest.mark.parametrize(
+    "src, want",
+    [
+        ("(real k (free (* 2 a)))\n", "(real k free@(* 2 a))\n"),
+        ("(circle c (fill (free green)) (r 1))\n", "(circle c (fill free@green) (r 1))\n"),
+        ("(real k (free 'a b'))\n", "(real k free@'a b')\n"),
+        ("(real k (free xs[0].a))\n", "(real k free@xs[0].a)\n"),
+        ("(f (free (g))x)\n", "(f free@(g)x)\n"),
+        # free@r@1 is an error, a@b is not a@(free x), and free@xy is one item where (free x)y
+        # holds two.
+        ("(real k (free r@1))\n", "(real k (free r@1))\n"),
+        ("(f a(free x))\n", "(f a(free x))\n"),
+        ("(f (free x)y)\n", "(f (free x)y)\n"),
+        ("(real k (free (f\na)))\n", "(real k (free (f\n               a)))\n"),
+        ("(real k (free a b))\n", "(real k (free a b))\n"),
+        ("(text_ '(free x)') ; (free y)\n", "(text_ '(free x)') ; (free y)\n"),
+    ],
+)
+def test_free_is_written_free_at_where_it_means_the_same(src, want):
+    assert layout(src) == want
+    if parse(src):
+        assert parse(want) == parse(src)
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)

@@ -1,11 +1,13 @@
 """mtp fmt: a source file in the house layout (docs/data-model.md, "The mtp command"). Each line
 is indented as the Emacs mode (editors/mtp-mode.el) indents it, trailing spaces are dropped, at
-most one blank line is kept in a row, (doc 'text') is written doc@'text', and nothing else
-changes: it works on lines, not on parsed forms, so comments and how the author broke the lines
-stay as written."""
+most one blank line is kept in a row, (doc 'text') is written doc@'text', (free X) is written
+free@X when it fits on its line, and nothing else changes: it works on lines, not on parsed forms,
+so comments and how the author broke the lines stay as written."""
 
 import re
 from dataclasses import dataclass, field
+
+from mathterpiece.parse import ParseError, parse
 
 # How many positional arguments each form takes before its body, counting its name: their lines go
 # 4 in from the form's opening parenthesis, its body's 2. The same table as the Emacs mode's.
@@ -111,6 +113,7 @@ NO_BODY = {
 }
 OPEN, CLOSE = "([", ")]"
 _DOC = re.compile(r"\(doc\s+('(?:[^'\\]|\\.)*')\s*\)")
+_FREE = re.compile(r"\(free\s+")
 
 
 @dataclass
@@ -134,7 +137,7 @@ def layout(src: str) -> str:
             if not line.strip():
                 blank += 1
                 continue
-            text = _doc_sugar(line.lstrip())
+            text = _sugar(line.lstrip())
             line = " " * (_indent(stack, text) if stack else 0) + text
         if out and blank:
             out.append("")
@@ -144,9 +147,10 @@ def layout(src: str) -> str:
     return "\n".join(out) + "\n"
 
 
-def _doc_sugar(line: str) -> str:
-    """The line with each (doc 'text') outside strings and comments written doc@'text'. It starts
-    outside a string: a line that starts inside one is left as it is."""
+def _sugar(line: str) -> str:
+    """The line with each (doc 'text') outside strings and comments written doc@'text', and each
+    (free X) that _free_sugar allows written free@X. It starts outside a string: a line that
+    starts inside one is left as it is."""
     out, i, in_string = [], 0, False
     while i < len(line):
         c = line[i]
@@ -162,10 +166,69 @@ def _doc_sugar(line: str) -> str:
             out.append("doc@" + m.group(1))
             i = m.end()
             continue
+        if c == "(" and (free := _free_sugar(line, i)) is not None:
+            out.append(free[0])
+            i = free[1]
+            continue
         in_string = c == "'"
         out.append(c)
         i += 1
     return "".join(out)
+
+
+def _free_sugar(line: str, i: int) -> tuple[str, int] | None:
+    """free@X, and where (free X) ends, for a (free X) at i that ends on the line and means the
+    same written free@X. The parser decides that, since the text around X decides it too."""
+    before = line[i - 1] if i else " "
+    if not (before.isspace() or before in "(["):
+        return None
+    m = _FREE.match(line, i)
+    if m is None:
+        return None
+    end = _item_end(line, m.end())
+    if end is None:
+        return None
+    item = line[m.end() : end]
+    close = end
+    while close < len(line) and line[close].isspace():
+        close += 1
+    if close == len(line) or line[close] != ")":
+        return None
+    # (free x)y holds two items, and free@xy one.
+    after = line[close + 1 : close + 2]
+    if after and not (after.isspace() or after in ")];(") and not item.endswith(")"):
+        return None
+    try:
+        if parse(f"(f free@{item})") != parse(f"(f (free {item}))"):
+            return None
+    except ParseError:
+        return None
+    return "free@" + item, close + 1
+
+
+def _item_end(line: str, start: int) -> int | None:
+    """Where the item that starts at start ends, when it ends on the line before a comment."""
+    depth, quoted, j = 0, False, start
+    while j < len(line):
+        c = line[j]
+        if quoted:
+            j += 2 if c == "\\" else 1
+            quoted = c != "'"
+            continue
+        if c == "'":
+            quoted = True
+        elif c in OPEN:
+            depth += 1
+        elif c in CLOSE:
+            if depth == 0:
+                return j
+            depth -= 1
+        elif c == ";":
+            return None
+        elif c.isspace() and depth == 0:
+            return j
+        j += 1
+    return None if quoted or depth else j
 
 
 def _indent(stack: list[_Frame], text: str) -> int:
