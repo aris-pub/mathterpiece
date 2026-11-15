@@ -346,7 +346,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
 | `palette` | sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
-| `scene` | core | `(scene N ITEM…)`: the one scene | {doc}`world-model` |
+| `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
 | `motif` | core | `(motif N PARAMS ITEM…)`: a template of shapes | {doc}`world-model` |
 | `variant` | core | `(variant N PARAMS SHAPE)`: a new type of shape | {doc}`types` |

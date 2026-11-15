@@ -29,6 +29,29 @@ tools that they already prefer.
 | the page | the author, with any tool for making web pages | the text, the elements that load .mtpc files, and the elements that place components |
 | the {term}`open page` | the reader's browser, from the page | the page with the runtime running in it, and one live model for each .mtpc that the page loads |
 
+The smallest world model that draws something has a scene with one circle and a canvas that
+draws the scene. This is the source smallest.mtp, 34 bytes:
+
+```{literalinclude} pages/smallest/smallest.mtp
+:language: mtp
+```
+
+```{mtpc-of} pages/smallest/smallest.mtp
+```
+
+The smallest page that shows the canvas, smallest.html, is the following, placed next to
+smallest.mtpc and mathterpiece.js:
+
+```{literalinclude} pages/smallest/smallest.html
+:language: html
+```
+
+```{raw} html
+<p><a href="pages/smallest/smallest.html">Open smallest.html</a>.</p>
+```
+
+An empty file is a world model too ({numref}`contexts-table`), but it has nothing to draw.
+
 ## The steps of compiling
 
 ```{rule} compile-steps

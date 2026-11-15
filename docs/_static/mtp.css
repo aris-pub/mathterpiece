@@ -100,3 +100,10 @@ iframe.mtp-page {
   border-radius: 6px;
   background: #fff;
 }
+
+/* A whole .mtpc is long: it scrolls inside its block. */
+div.mtpc-whole pre,
+pre.mtpc-whole {
+  max-height: 24rem;
+  overflow: auto;
+}

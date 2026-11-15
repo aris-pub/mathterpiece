@@ -257,6 +257,47 @@ class MtpExample(SphinxDirective):
         return [box]
 
 
+def _readable_json(value, indent: str = "") -> str:
+    """JSON with one line for each value that is short enough, and otherwise one line for each
+    member or item."""
+    flat = json.dumps(value, ensure_ascii=False, separators=(", ", ": "))
+    if len(indent) + len(flat) <= 96 or not isinstance(value, (dict, list)) or not value:
+        return flat
+    inner = indent + "  "
+    if isinstance(value, dict):
+        lines = [f"{inner}{json.dumps(k)}: {_readable_json(v, inner)}" for k, v in value.items()]
+        return "{\n" + ",\n".join(lines) + f"\n{indent}}}"
+    lines = [inner + _readable_json(v, inner) for v in value]
+    return "[\n" + ",\n".join(lines) + f"\n{indent}]"
+
+
+class MtpcOf(SphinxDirective):
+    """```{mtpc-of} pages/name/name.mtp
+    ```
+    The .mtpc of a source file, compiled while the spec is built, with its size in bytes as
+    written, and shown with line breaks added so that it can be read."""
+
+    required_arguments = 1
+
+    def run(self):
+        rel, path = self.env.relfn2path(self.arguments[0])
+        self.env.note_dependency(rel)
+        src = Path(path)
+        try:
+            mtpc = compiled(src.read_text(encoding="utf-8"), src)
+        except Exception as e:  # a parse or compile error, with its line and column
+            raise self.error(f"{src.name} does not compile: {e}") from None
+        size = len(mtpc.encode("utf-8"))
+        para = nodes.paragraph()
+        para += nodes.literal("", f"mtp compile {src.name}")
+        para += nodes.Text(
+            f" writes {src.stem}.mtpc, {size:,} bytes, shown here whole with line breaks added:"
+        )
+        shown = _readable_json(json.loads(mtpc))
+        code = nodes.literal_block(shown, shown, language="json", classes=["mtpc-whole"])
+        return [para, code]
+
+
 PLACED_CONTROLS = ("slider", "button", "play", "stepper", "toggle")
 
 GRAMMAR = Path(__file__).parent.parent / "spec" / "mtp.lark"
@@ -422,6 +463,7 @@ def setup(app: Sphinx):
     app.connect("doctree-resolved", _title_term_links)
     app.add_directive("mtp-example", MtpExample)
     app.add_directive("mtp-grammar", MtpGrammar)
+    app.add_directive("mtpc-of", MtpcOf)
     app.add_js_file("mathterpiece.js", type="module")
     app.add_js_file("mtp-terms.js", defer="defer")
     # The design system that draws the controls, as on the inventory page.

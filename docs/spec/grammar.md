@@ -239,7 +239,8 @@ docstring. Bead mtp-qiro fixes this.
 ## Bodies
 
 ```{rule} contexts
-Each body holds only the kinds of item that {numref}`contexts-table` gives for it, and the `let`
+Each body holds only the kinds of item that {numref}`contexts-table` gives for it, in the numbers
+that it gives, and the `let`
 and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a body is an error.
 ```
 
@@ -248,7 +249,7 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 
 | Body | Optional arguments | Other items | let, foreach | Compiler |
 |---|---|---|---|---|
-| The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. One `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes | `top_here`, `expand` |
+| The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. At most one `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes | `top_here`, `expand` |
 | The top level of a {term}`file to import` | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes | `_not_importable` |
 | `(scene name …)` | `(background …)`, `(transform …)` | Shapes: every shape, `group`, `row`, `column`, motif and variant instances. Variables. `exists-when` | yes | `scene_items` |
 | `(group name …)`, `(row name …)`, `(column name …)` | the optional arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes | `shape_here` |
@@ -268,7 +269,7 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(transition name target …)`, `(move target …)` | `like` first, then `from`, `to`, `duration`, `ease`, `path` | None | no body | `transition` |
 | `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, `(animation …)` ({numref}`animation-step`), the name of an animation or a transition, a use of a choreo | yes | `anim_body`, `steps` |
 | `(at-once …)`, `(in-order …)` | `(defaults …)` | The steps of an animation. Not: `loop` | yes | `steps` |
-| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content: names of shapes or of the scene, list literals, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes | `component`, `build_canvas` |
+| `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content, at least one item: names of shapes or of the scene, list literals, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes | `component`, `build_canvas` |
 | `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `build_readout` |
 | `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `listened` |
 | A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes | `component`, `writer` |
@@ -278,6 +279,17 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(defaults …)` of a formula | none | Items `(attribute value)` for the terms | yes | `formula_defaults` |
 | `(clip shape)` | none | Exactly one circle, rect, ellipse, triangle, polygon or ring | no | `clip` |
 | `(import file name…)` | none | The file, then the names to import, or no names to import the file whole | no | `imports` |
+:::
+
+So a source need not hold a scene: `(real a 1) (readout r $'{a}')` is a world model with a
+variable and a readout, and an empty file is a world model with nothing in it. A source with two
+scenes is an error. `(canvas v)` is an error, because a canvas holds at least one item of content,
+and `(canvas v s)` and `(canvas v c)` are allowed.
+
+:::{admonition} Code differs
+:class: note
+The error for a second scene is "a file has exactly one scene" (`compiler.py:4854`), and
+`(canvas v)` compiles, to a canvas that draws nothing. Bead mtp-ydd4.7.59.
 :::
 
 ```{rule} body-let-foreach
