@@ -46,8 +46,8 @@ reads it the same way. So `truex` is a {token}`mtp:NAME`, and not {token}`mtp:TR
 ```
 
 ```{rule} source-text
-A source is a sequence of Unicode characters. A file is read as UTF-8, with Python's universal
-newlines: each `\r\n` and each `\r` alone becomes `\n`. A byte order mark (U+FEFF) at the very
+A source is a sequence of Unicode characters. A file is read as UTF-8, and each `\r\n` and
+each `\r` alone becomes `\n`. A byte order mark (U+FEFF) at the very
 start of a source is ignored. The text has no other change.
 ```
 
@@ -83,7 +83,8 @@ literal, `;` and whitespace are text.
 ```
 
 So U+00A0 (no-break space), U+2028 (line separator), a form feed, a vertical tab and the other
-characters for which Python's `str.isspace()` is true are errors outside string literals and
+characters whose Unicode general category is Zs, or whose bidirectional class is WS, B or S, are
+errors outside string literals and
 comments. {doc}`grammar` gives the places where whitespace and comments may be written, and
 {numref}`interpolated-strings` the places inside an {term}`interpolated string`.
 
