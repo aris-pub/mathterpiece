@@ -256,9 +256,10 @@ are ordinary declarations of the files of `mathterpiece/stdlib/`, which a source
 `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self` and `doc`. The
 special forms of `compiler.py:122` (`SPECIAL`) and the types are forbidden only as the name of a
 function (`compiler.py:181`, `NOT_FUNCTION_NAMES`), so a variable may be named `if`, and a
-function may not take the name of a constant. docs/reference.md, "Functions" (line 124), has the
-same rule for constants, and is wrong. Bead mtp-ydd4.7.35 makes the compiler and the documents
-follow the rule.
+function may not take the name of a constant. A name bound by `let` is checked against neither
+(`_Compiler.let`, `compiler.py:6663`), so `(real v (let ((self 2)) self))` compiles, and `v` is 2.
+docs/reference.md, "Functions" (line 124), has the same rule for constants, and is wrong. Bead
+mtp-ydd4.7.35 makes the compiler and the documents follow the rule.
 :::
 
 ```{rule} reserved-characters

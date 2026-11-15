@@ -244,8 +244,8 @@ contradictions Q-core-24 to 26 and Q-evaluation-6.
 
 **Decided (2026-11-15):** nothing is left to the implementation: every source and every .mtpc has
 a behavior that the spec states. A rejected source gets an error that points to at least one rule
-that the source breaks, and may point to any or all of them. Nothing else about an error is
-prescribed ({numref}`conformance`). A .mtpc that matches the schema and breaks the spec is
+that the source breaks, and may point to any or all of them. An error points to a rule when it
+carries the label of the rule. Nothing else about an error is prescribed ({numref}`conformance`). A .mtpc that matches the schema and breaks the spec is
 corrupt. The compiler never writes one, the schema is made as strong as possible, and the runtime
 refuses every corrupt .mtpc and runs no part of it ({numref}`corrupt-mtpc`,
 {numref}`schema-strength`, {numref}`runtime-loads-mtpc`). An operation that has no value gives

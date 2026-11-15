@@ -32,7 +32,8 @@ LOCAL_PART = xfail("mtp-ydd4.7.5", "each part after the first of a name is read 
 LIKE_INSTANCE = xfail("mtp-ydd4.7.20", "like on an instance copies neither pointer-events nor clip")
 WAIT = xfail("mtp-ydd4.7.21", "wait makes no transition object, while its rewrite does")
 PALETTE_TYPE = xfail("mtp-ydd4.7.22", "a palette has the type palette, not namespace")
-NO_NOTE = pytest.mark.xfail(strict=True, reason="spec and code differ, no note")
+COND_ELSE = xfail("mtp-ydd4.7.46", "(cond (else V)) is marked const, while V is not")
+IMPORT_DOT = xfail("mtp-ydd4.7.47", "after (import F), (. F N) is an unknown name")
 POS_RANDOM = xfail(
     "mtp-ydd4.7.25", "pos compiles its point once, so a random call in it is one site"
 )
@@ -116,7 +117,7 @@ class TestSugarRewrites:
             FREE + "(real v (if a 1 (if b 2 3)))",
         )
 
-    @NO_NOTE
+    @COND_ELSE
     def test_cond_with_only_else(self):
         # The compiler makes v const, while (real v 3) is a free variable that a writer may write.
         same_meaning("(real v (cond (else 3)))", "(real v 3)")
@@ -197,7 +198,7 @@ class TestSugarRewrites:
         a = in_folder(tmp_path, lib, "(import lib)\n(real v (lib.twice 2))\n")
         assert a.get("v").value.value == 4
 
-    @NO_NOTE
+    @IMPORT_DOT
     def test_import_and_the_dot_form(self, tmp_path):
         lib = {"lib.mtp": "(real k 3 (const))\n"}
         m = in_folder(tmp_path, lib, "(import lib)\n(real v (. lib k))\n")

@@ -133,6 +133,20 @@ inputs, when folded and while drawing.
 At every other input, an operation never gives `none`.
 ```
 
+:::{admonition} Code differs
+:class: note
+- A folded call whose body gives `none` by this rule is a compile error for `min` and `max` of an
+  empty list, `range` with more than 1,000,000 items, and `xs[i]` outside -n to n - 1. For example,
+  with `(func f ((list[real] x)) (min x))`, `(f (as list[real] []))` is rejected, and so is
+  `(f 3)` with `(func f ((int x)) (. [1 2 3] x))`. `min` and `max` of a known empty list
+  (mathterpiece/compiler.py, line 2435) and a known position outside a list (line 6369) raise the
+  error directly, and not through `known_or_none` (line 2217), which gives `none` while a call is
+  folded. `range` gives `none` there, but the type of the body of `f` does not include `none`, so
+  `fold_call` raises the error again (lines 2527 to 2529). Bug mtp-ydd4.7.48.
+- `pick` always has a type that includes `none` (mathterpiece/compiler.py, line 2281), so
+  `(rand-seed sd 1) (real v (pick [1 2]))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
+:::
+
 So no operation gives an infinity or NaN: a real is always finite ({numref}`number-types`). The
 functions of the standard library are written in mtp, and give `none` where the built-ins that they call give
 `none` ({doc}`stdlib`).
@@ -204,6 +218,19 @@ A part of `none` is `none`: when `g[k]` is `none`, so is `g[k].pos`. An interpol
 part that is `none` is `none`. A collection function given `none` in place of its collection gives
 `none`.
 ```
+
+:::{admonition} Code differs
+:class: note
+- `_Compiler.call` (mathterpiece/compiler.py, lines 1962 to 1973) folds the body with an argument
+  that is `none`, also for a parameter whose type does not include `none`. So with
+  `(func h ((real x)) 5)`, a call of `h` with `none` gives 5. Bug mtp-ydd4.7.50.
+- `(reverse [1 (f 0)])`, with `(f 0)` known to be `none`, stops the compiler with a Python
+  `TypeError`, since `_Compiler.collection` takes the smallest and the largest known item to give
+  the range of the items (line 2679). Bug mtp-ydd4.7.51.
+- A collection function given a collection whose type includes `none` is a compile error, "the
+  collection given to map may be none" (`collection_items`, line 2820), so
+  `(map (if (= 1 2) [1] none) (fn ((int x)) x))` is rejected. Bug mtp-ydd4.7.52.
+:::
 
 By {numref}`sugar-rewrites`, `cond` and `when` are `if` forms, so the value of either is `none`
 only when the branch taken is `none`.

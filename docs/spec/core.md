@@ -143,8 +143,12 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
   (compiler.py:3074-3087, 3184-3197). The two .mtpc files differ by that object (mtp-ydd4.7.21).
 - A palette has the type `palette` (compiler.py:1454, types.py:148-162), and the namespace that it
   means has the type `namespace` (mtp-ydd4.7.22).
-- A seed is found by the type name `rand-seed` (compiler.py:7001-7003), so a variable of a type
-  declared `(type dice rand-seed)` is not a seed (mtp-ydd4.7.23).
+- `(cond (else V))` is folded to the value of `V` and, since it is not a literal, marked const
+  (compiler.py:5653-5657), so `(real v (cond (else 3)))` makes `v` a constant, while
+  `(real v 3)` is a free variable that a writer may write (mtp-ydd4.7.46).
+- `_through` (compiler.py:7280-7290) rewrites only a name of several parts, so after
+  `(import lib)`, `lib.k` is accepted, and `(. lib k)` is a compile error, "unknown name 'lib'"
+  (compiler.py:6056) (mtp-ydd4.7.47).
 - `cond` gives a literal list among its values the type of all its other values
   (compiler.py:6629-6641), while an `if` gives it the type of its other branch only
   (compiler.py:6494-6504) (mtp-08wd.2).

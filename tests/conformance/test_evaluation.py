@@ -15,7 +15,11 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-NO_NOTE = pytest.mark.xfail(strict=True, reason="spec and code differ, no note")
+FOLDED_NONE = xfail("mtp-ydd4.7.48", "min, max, range and xs[i] reject a folded call")
+PICK = xfail("mtp-ydd4.7.49", "pick always has a type that includes none")
+NONE_ARGUMENT = xfail("mtp-ydd4.7.50", "a call folds its body with an argument that is none")
+REVERSE = xfail("mtp-ydd4.7.51", "reverse of a known list that holds none raises TypeError")
+NONE_COLLECTION = xfail("mtp-ydd4.7.52", "a collection that may be none is rejected")
 WHOLE_FORMS = xfail("mtp-08wd.2", "cond, and and or are compiled whole")
 COPIES = xfail("mtp-08wd.1", "each copy of a foreach is proved with the value of its variable")
 RAND_BOUNDS = xfail("mtp-y7vp", "rand and rand-int do not check that lo is at most hi")
@@ -130,7 +134,7 @@ GIVES_NONE = [
     ("(range 0 1 (num x))", "int", "-1"),
     ("(* x x x)", "real", "1e150"),
 ]
-GIVES_NONE_NO_NOTE = [
+GIVES_NONE_FOLD_REJECTS = [
     ("(min x)", "list[real]", "(as list[real] [])"),
     ("(max x)", "list[real]", "(as list[real] [])"),
     ("(range 0 x (gap 1))", "int", "2000000"),
@@ -145,8 +149,8 @@ class TestOperationsThatGiveNone:
     def test_a_folded_call_gives_none(self, body, t, arg):
         assert value(f"(func f (({t} x)) {body}) (bool v (none? (f {arg})))", "v") is True
 
-    @NO_NOTE
-    @pytest.mark.parametrize("body, t, arg", GIVES_NONE_NO_NOTE)
+    @FOLDED_NONE
+    @pytest.mark.parametrize("body, t, arg", GIVES_NONE_FOLD_REJECTS)
     def test_a_folded_call_gives_none_and_is_not_rejected(self, body, t, arg):
         # Today the compiler rejects the call, as if its inputs were known in the prove step.
         assert value(f"(func f (({t} x)) {body}) (bool v (none? (f {arg})))", "v") is True
@@ -167,7 +171,7 @@ class TestOperationsThatGiveNone:
     def test_at_every_other_input_there_is_a_value(self, body, t, arg):
         assert value(f"(func f (({t} x)) {body}) (bool v (none? (f {arg})))", "v") is False
 
-    @NO_NOTE
+    @PICK
     def test_pick_on_a_list_that_is_not_empty_never_gives_none(self):
         accepted("(rand-seed sd 1) (real v (pick [1 2]))")
 
@@ -229,7 +233,7 @@ class TestNonePropagates:
     def test_a_parameter_that_allows_none(self):
         assert value("(func g ((real|none x)) (or? x 5)) (real v (g none))", "v") == 5
 
-    @NO_NOTE
+    @NONE_ARGUMENT
     def test_a_parameter_that_does_not_allow_none(self):
         # Today the body is evaluated, and the call gives 5.
         assert value(INVERSE + "(func h ((real x)) 5) (real|none v (h (f 0)))", "v") is None
@@ -247,7 +251,7 @@ class TestNonePropagates:
     def test_map_passes_none_through(self):
         assert value(INVERSE + "(list[real|none] v (map [1 0] f))", "v") == [1, None]
 
-    @NO_NOTE
+    @REVERSE
     def test_reverse_passes_none_through(self):
         # Today the compiler stops with a Python TypeError.
         assert value(INVERSE + "(list[real|none] v (reverse [1 (f 0)]))", "v") == [None, 1]
@@ -261,7 +265,7 @@ class TestNonePropagates:
     def test_an_interpolated_string_with_a_part_that_is_none(self):
         assert value(INVERSE + "(string|none v $'a{(f 0)}')", "v") is None
 
-    @NO_NOTE
+    @NONE_COLLECTION
     def test_a_collection_function_given_none(self):
         src = "(list[int]|none v (map (if (= 1 2) [1] none) (fn ((int x)) x)))"
         assert value(src, "v") is None

@@ -413,10 +413,11 @@ pick the other.
 - An implementation of the compiler conforms to this spec when, for every source and the files
   that it imports, it rejects the source if and only if this spec rejects it, and otherwise writes
   a .mtpc that has the meaning that {doc}`compiled-format` defines for the world model of the
-  source. A rejected source gets an error that points to at least one rule that the source breaks,
-  among the rules checked in the step that rejects the source ({numref}`step-rejects-or-passes`).
-  When the source breaks several of these rules, the error points to any one of them, to several,
-  or to all.
+  source. Every error that rejects a source carries the label of at least one rule that the source
+  breaks, among the rules checked in the step that rejects the source
+  ({numref}`step-rejects-or-passes`). The label of a rule is the name that this spec gives it, such
+  as `declare-before-use`. When the source breaks several of these rules, the error carries the
+  label of any one of them, of several, or of all.
 - An implementation of the runtime conforms when it loads every valid .mtpc of the versions that
   it implements, and builds and keeps current its live model as the parts from {doc}`world-model`
   to {doc}`accessibility` define.
@@ -425,3 +426,10 @@ pick the other.
 
 Each conforms only when it also obeys every rule of this part about it.
 ```
+
+:::{admonition} Code differs
+:class: note
+An error carries no label of a rule. `CompileError` (mathterpiece/compiler.py, line 402) and
+`ParseError` (mathterpiece/parse.py, line 39) hold only a message and a position. Bug
+mtp-ydd4.7.53.
+:::
