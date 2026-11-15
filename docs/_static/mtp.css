@@ -19,3 +19,20 @@
 .mtp-live {
   padding: 1rem;
 }
+.mtp-term-tip {
+  position: absolute;
+  z-index: 1000;
+  max-width: min(24rem, calc(100vw - 16px));
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--pst-color-border);
+  border-radius: 6px;
+  background: var(--pst-color-on-background);
+  color: var(--pst-color-text-base);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.15);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  pointer-events: none;
+}
+.mtp-term-tip strong {
+  font-weight: 600;
+}

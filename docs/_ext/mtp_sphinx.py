@@ -9,7 +9,9 @@
 - The directive `mtp-grammar` shows one section of the grammar, docs/spec/mtp.lark, as a list of
   productions in which each name links to its definition. tests/test_grammar.py checks the same
   file against the parser.
-- A link to a term of the glossary shows the term's definition when the mouse is over it.
+- A link to a term of the glossary shows the term and its definition in a box as soon as the mouse
+  is over it, or the link has the keyboard focus (_static/mtp-terms.js). The page carries them in
+  the link's title, which the script removes so that the browser shows no tooltip of its own.
 """
 
 import html
@@ -351,7 +353,7 @@ def _collect_terms(app, doctree):
             text = re.sub(r"\s*\((\s|,|and)*\)", "", text)
             for term in item.findall(nodes.term):
                 for ident in term["ids"]:
-                    env.mtp_terms[ident] = (env.docname, text)
+                    env.mtp_terms[ident] = (env.docname, f"{term.astext()}: {text}")
 
 
 def _purge_terms(app, env, docname):
@@ -403,6 +405,7 @@ def setup(app: Sphinx):
     app.add_directive("mtp-example", MtpExample)
     app.add_directive("mtp-grammar", MtpGrammar)
     app.add_js_file("mathterpiece.js", type="module")
+    app.add_js_file("mtp-terms.js", defer="defer")
     # The design system that draws the controls, as on the inventory page.
     app.add_css_file(BRAIID)
     app.connect("builder-inited", copy_runtime)
