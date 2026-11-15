@@ -34,17 +34,17 @@ tools that they already prefer.
 ```{rule} compile-steps
 The compiler turns a source into a .mtpc in five steps, in this order:
 
-1. **Parse.** The {term}`parser` reads the text into forms, by the syntax alone ({doc}`lexical`,
-   {doc}`grammar`). It looks up no name.
+1. **Parse.** The {term}`parser` reads the text into {term}`forms <form>`, by the syntax alone
+   ({doc}`lexical`, {doc}`grammar`). It looks up no {term}`name`.
 2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`sugar`
    form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). No value is
    computed and no type is used.
-3. **Prove.** Every expression is given a type, and every type, range, constraint and other
-   invariant that the spec requires is proved ({doc}`types`, {doc}`well-formedness`). This step
-   proves and does nothing else.
-4. **Expand.** Each `foreach` is written out as its copies, and each motif instance as the body of
-   its motif with the arguments of the instance. In the copies and the instances, the names built
-   from values are replaced ({numref}`names-from-values`).
+3. **Prove.** Every {term}`expression` is given a type, and every type, {term}`range`,
+   {term}`constraint` and other invariant that the spec requires is proved ({doc}`types`,
+   {doc}`well-formedness`). This step proves and does nothing else.
+4. **Expand.** Each `foreach` is written out as its copies, and each motif instance as the
+   {term}`body` of its motif with the arguments of the instance. In the copies and the instances,
+   the names built from values are replaced ({numref}`names-from-values`).
 5. **Fold and write.** Every expression known when compiling ({doc}`binding-time`) is replaced by
    its value, and the model is written as the .mtpc ({doc}`compiled-format`), with every type that
    the runtime needs.
@@ -52,7 +52,7 @@ The compiler turns a source into a .mtpc in five steps, in this order:
 
 So a check that the parts of a sugar form are known when compiling is made in the prove step, and
 every form that is not sugar, other than `foreach` and a motif instance, reaches the prove step as
-it is. Which forms are sugar, and the rewrite of each, are defined in {doc}`core`.
+it is. Which forms are sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
 
 ```{rule} prove-bodies-once
 The prove step proves each body once: the body of a function with each parameter ranging over
@@ -60,10 +60,11 @@ every value of its declared type, the body of a `foreach` with its variable rang
 value of its range, and the body of a motif with each parameter ranging over every value of its
 declared type and constraints. An imported motif is proved once, in the file that declares it.
 The copies that a `foreach` makes and the instances of a motif are not proved again. A motif body
-that is safe for only some values of a parameter is a compile error, unless the parameter declares
-a constraint that leaves out the other values. An expression is known in the prove step when it
-is known when compiling ({doc}`binding-time`) and does not read, inside the body of a `foreach`, a
-function or a motif, the variable of that `foreach` or a parameter of that function or motif.
+that is safe for only some values of a parameter is a {term}`compile error`, unless the parameter
+declares a constraint that leaves out the other values. An expression is known in the prove step
+when it is known when compiling ({doc}`binding-time`) and does not read, inside the body of a
+`foreach`, a function or a motif, the variable of that `foreach` or a parameter of that function or
+motif.
 ```
 
 So an error in such a body is about the body as written, and this implementation reports it once,
@@ -75,7 +76,7 @@ motif compiles.
 ```{rule} step-rejects-or-passes
 The parse, rewrite and prove steps each either reject the source or pass their output to the next
 step. The parse step rejects with a {term}`syntax error`, and the rewrite and prove steps with a
-{term}`compile error` ({doc}`errors`). When a step rejects the source, no later step runs. The
+compile error ({doc}`errors`). When a step rejects the source, no later step runs. The
 expand step and the fold and write step never reject a source that the prove step passed, so the
 compiler either rejects a source or writes a .mtpc that is valid by {doc}`compiled-format`, and
 never both.
@@ -97,12 +98,12 @@ So `(circle c (r (- 1 2)))` is a compile error in the prove step, since the rang
 :class: note
 Today the rewrite, prove, expand and fold steps are not separate, and expanding comes before
 proving. `_Compiler.run` in mathterpiece/compiler.py, line 586, goes through the top-level forms
-once, and each form is rewritten, expanded, checked and folded as it is reached. `foreach` copies
-are made one at a time by `_Compiler.expand` (line 828), and the body of a motif is compiled again
-for each instance by `_Compiler.instance` (line 4674), so each copy and each instance is proved on
-its own. `_Compiler.call` (lines 1962 to 1973) folds a call and then checks its constraint against
-the folded value. The new middle of the compiler (mtp-08wd) follows these rules. The order of the
-steps and proving each body once are mtp-08wd.1.
+once, and each form is rewritten, expanded, checked and {term}`folded <folding>` as it is reached.
+`foreach` copies are made one at a time by `_Compiler.expand` (line 828), and the body of a motif is
+compiled again for each instance by `_Compiler.instance` (line 4674), so each copy and each instance
+is proved on its own. `_Compiler.call` (lines 1962 to 1973) folds a call and then checks its
+constraint against the folded value. The new middle of the compiler (mtp-08wd) follows these rules.
+The order of the steps and proving each body once are mtp-08wd.1.
 :::
 
 ## The mtp command
@@ -110,13 +111,13 @@ steps and proving each body once are mtp-08wd.1.
 The mtp command runs on the illustrator's machine. It has six subcommands, and each runs the steps
 of compiling up to a point.
 
-Building a source is the five steps of compiling, then writing the inventory page. The inventory
-page holds the runtime, the .mtpc and the script of the inventory, all inside the page, so that it
-works when it is opened as a file. It also holds the opening comment of the source, the lines of
-HTML that load the runtime and the .mtpc, every component live with its name and the line of HTML
-that places it, every listener with what it does, and every token with its CSS variable and a
-control that restyles it. With `?record` at the end of its address, the page holds only one canvas and
-the play under it, on a 9:16 page.
+Building a source is the five steps of compiling, then writing the {term}`inventory page`. The
+inventory page holds the runtime, the .mtpc and the script of the inventory, all inside the page, so
+that it works when it is opened as a file. It also holds the opening {term}`comment` of the source,
+the lines of HTML that load the runtime and the .mtpc, every component live with its name and the
+line of HTML that places it, every {term}`listener` with what it does, and every token with its CSS
+variable and a control that restyles it. With `?record` at the end of its address, the page holds
+only one canvas and the play under it, on a 9:16 page.
 
 ```{rule} subcommands
 Each subcommand takes the path of one source file, and runs these steps:
@@ -163,11 +164,12 @@ one expression per line, in source order, each line indented by two spaces for e
 depth. A line holds the position of the expression as `line:column`, its kind, and its value, as
 follows:
 
-- `form`, `list`, `brackets` or `bar`, for an expression that holds others: a form, a list,
-  brackets or a broadened type. The expressions that it holds follow on the next lines.
-- `name` and the name, its parts joined by `.`, with `[…]` for each part that is an expression.
-  The expressions of those parts follow on the next lines.
-- `string with values`, for a string with values in it. Each part follows on the next lines:
+- `form`, `list`, `brackets` or `bar`, for an expression that holds others: a form, a {term}`list`,
+  {term}`brackets` or a {term}`broadened type`. The expressions that it holds follow on the next
+  lines.
+- `name` and the name, its {term}`parts <part>` joined by `.`, with `[…]` for each part that is an
+  expression. The expressions of those parts follow on the next lines.
+- `string with values`, for a {term}`string` with values in it. Each part follows on the next lines:
   `text` and the text, or the expression of the value.
 - `value` and, after a colon, its format, for a value inside a string.
 - `string` or `tex string`, and the string.
@@ -272,14 +274,14 @@ bytes ({doc}`compiled-format`, "Same source, same bytes").
 ```{rule} compiler-reads-files
 The compiler reads only the source file and the files that it imports, directly or through other
 imports. An import is looked for in the folder of the file that imports it, then in the standard
-library ({ref}`scope`, {doc}`stdlib`).
+{term}`library` ({ref}`scope`, {doc}`stdlib`).
 ```
 
 ```{rule} compiler-never-acts-while-drawing
 The compiler never does what happens only while drawing ({doc}`binding-time`). It never runs a
-writer: it never plays an animation, never performs a write that a control or a listener would
-perform, and never acts as a reader would. It never reads a page, its CSS or its color scheme, and
-so never folds a token: a token is written with its declared value, which the runtime uses where
+writer: it never plays an animation, never performs a write that a {term}`control` or a listener
+would perform, and never acts as a reader would. It never reads a page, its CSS or its color scheme,
+and so never folds a token: a token is written with its declared value, which the runtime uses where
 the page gives none.
 ```
 
@@ -324,14 +326,14 @@ When a .mtpc loads, the runtime builds its live model, once, before any componen
 every expression into a function, once, and gives every free variable and attribute its starting
 value, reading each `free@` start once ({doc}`compiled-format`, "Free and bound values"). Then it
 keeps the live model current as the reader acts: after each write, it computes again only what
-depends on what changed, and the views draw again ({doc}`reaction`, {doc}`time`,
+depends on what changed, and the {term}`views <view>` draw again ({doc}`reaction`, {doc}`time`,
 {doc}`concurrency`).
 ```
 
 ```{rule} runtime-serves-components
-The runtime defines one page element for each kind of {term}`view` and {term}`control`, and
+The runtime defines one page element for each kind of view and control, and
 serves each element that the page places: in each element, it draws the view or control of the
-element's model that the element's `name` attribute gives. A {term}`listener` has no element: it
+element's model that the element's `name` attribute gives. A listener has no element: it
 acts on each element that draws its shape or term, or, for a listener such as `on-view`, on its
 own view ({doc}`page-interface`, {doc}`lifecycle`).
 ```
@@ -367,7 +369,7 @@ runtime does not read it, so it does not pass from the compiler to the runtime.
 
 ```{rule} corrupt-mtpc
 A .mtpc that matches the schema of its version and breaks a rule of this spec is
-{term}`corrupt <corrupt .mtpc>`. Among the corrupt files are a .mtpc with a reference to an
+corrupt. Among the corrupt files are a .mtpc with a reference to an
 object or a function that it does not hold, one with an expression that can give a value of
 another type than the type written with it, one with a `deps` list that leaves out something that
 its expression can read, and one with an expression known when compiling that is not folded. The

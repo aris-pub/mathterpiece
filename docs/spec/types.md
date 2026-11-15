@@ -3,14 +3,16 @@
 
 This page defines the types of mtp, how a type is written, which values and objects each type
 holds, when a value of one type is accepted where another type is expected, and the type of each
-form. Every expression has a type, which the prove step works out ({numref}`compile-steps`), and
-the runtime never checks a type ({numref}`runtime-no-type-work-while-drawing`). How a value is
-held and computed is defined in {doc}`evaluation`, which objects there are and what their
-attributes are in {doc}`world-model`, and the types of the built-in functions in {doc}`stdlib`.
-What the prover proves about ranges, constraints and `none` is defined in {doc}`well-formedness`.
+{term}`form`. Every {term}`expression` has a type, which the prove step works out
+({numref}`compile-steps`), and the {term}`runtime` never checks a type
+({numref}`runtime-no-type-work-while-drawing`). How a value is held and computed is defined in
+{doc}`evaluation`, which objects there are and what their attributes are in {doc}`world-model`, and
+the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` proves about
+{term}`ranges <range>`, {term}`constraints <constraint>` and `none` is defined in
+{doc}`well-formedness`.
 
-This page specifies the language. Where the compiler does not follow a rule yet, a box marked "Code differs"
-gives what the code does and the bead that will change it.
+This page specifies the language. Where the {term}`compiler` does not follow a rule yet, a box
+marked "Code differs" gives what the code does and the bead that will change it.
 
 ## The types
 
@@ -30,14 +32,14 @@ These are the types of mtp:
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
 | `transition`, `animation` | as named | the transitions and the animations ({doc}`time`) |
 | `none` | `none` | the value `none` alone |
-| a broadened type | `T\|none` | the values of T, and `none` |
+| a {term}`broadened type` | `T\|none` | the values of T, and `none` |
 | a {term}`refined type` | `(T C…)` | the values of T that meet every constraint C ({numref}`constraints`) |
 | a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `curve`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
-| a motif type | the name of the motif | its instances ({numref}`motif-and-variant-types`) |
+| a motif type | the {term}`name` of the motif | its instances ({numref}`motif-and-variant-types`) |
 | a variant type | the name of the variant | its instances ({numref}`motif-and-variant-types`) |
 | `scene` | `scene` | the scene |
 | `namespace`, `formula`, `term` | never written | the namespaces, palettes included, the formulas and the terms |
-| a component type | never written | the components of one kind: `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
+| a {term}`component` type | never written | the components of one kind: `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
 | an {term}`interface` | `shape`, `positioned`, `sequence`, `sequence[T]`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
 | `rand-seed` | `rand-seed` | the values of `int` ({numref}`seed-variable`) |
 
@@ -45,31 +47,32 @@ There are no other types.
 ```
 
 Which of these are values and which are mutable objects is defined in {doc}`world-model`. A free
-variable of type `rand-seed` is a seed ({numref}`seed-variable`). `colormap` is another name for
-`func[real color]`, and `(maybe T)` another spelling of `T|none` ({numref}`sugar-rewrites`).
+variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`). `colormap` is another name
+for `func[real color]`, and `(maybe T)` another spelling of `T|none` ({numref}`sugar-rewrites`).
 
 :::{admonition} Code differs
 :class: note
 The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SEED`), so an int
-below 0 does not fit it. Bead mtp-ydd4.7.30.
+below 0 does not {term}`fit` it. Bead mtp-ydd4.7.30.
 :::
 
 ```{rule} type-notation
 Where a type is expected, the compiler reads these expressions as types, and every other
-expression there is a compile error:
+expression there is a {term}`compile error`:
 
-- The name of a built-in type of {numref}`the-types`, or a name declared by `interface`, `motif`
-  or `variant`, is that type, and a name declared by `type` is read by {numref}`sugar-rewrites`.
-- `list[T]` is a list type, with exactly one type in its brackets. `list` with no brackets is
-  allowed only as the head of a variable whose value is given, and the type of the variable is
-  then the type of its value.
+- The name of a {term}`built-in type` of {numref}`the-types`, or a name declared by `interface`,
+  `motif` or `variant`, is that type, and a name declared by `type` is read by
+  {numref}`sugar-rewrites`.
+- `list[T]` is a list type, with exactly one type in its {term}`brackets`. `list` with no brackets
+  is allowed only as the {term}`head` of a variable whose value is given, and the type of the
+  variable is then the type of its value.
 - `sequence` with no brackets, and `sequence[T]` with exactly one type in its brackets, are
   interfaces.
 - `func[T1 … Tn R]` is a function type, with one type or more in its brackets: the last is the
   result type, and the others are the types of the parameters, in order.
 - No other name is followed by brackets in a type.
-- `T|none` is a broadened type. It has exactly two words, the second is `none`, and the first is
-  a name, or a name followed by brackets, that gives a type that is not broadened.
+- `T|none` is a broadened type. It has exactly two {term}`words <word>`, the second is `none`, and
+  the first is a name, or a name followed by brackets, that gives a type that is not broadened.
 - `(T C…)` is a refined type: `T` is a type and each `C` is a constraint. `((T C…) D…)` is
   `(T C… D…)`, and `(T|none C…)` is `(T C…)|none`.
 - `none` is the type `none`, which is the type only of an expression. No declaration has the
@@ -82,7 +85,7 @@ type is written as `(real|none (>= 0))`, since a broadened type holds no form.
 ## Fitting
 
 ```{rule} fits
-A type A {term}`fits <fit>` a type B, and a value of type A is accepted where a value of type B is
+A type A fits a type B, and a value of type A is accepted where a value of type B is
 expected, exactly when one of these holds:
 
 1. A and B are the same type.
@@ -126,8 +129,8 @@ A list of constraints implies a constraint C exactly in these cases:
 ## Constraints
 
 ```{rule} constraints
-A {term}`constraint` is one of these forms. Each may refine only the types of its row, and its
-numbers and strings are literals:
+A constraint is one of these forms. Each may refine only the types of its row, and its
+numbers and {term}`strings <string>` are literals:
 
 | Constraint | Refines | Its values | Written with |
 |---|---|---|---|
@@ -166,7 +169,7 @@ written. A number written into an `int` is rounded as {numref}`rounding` gives. 
 not written leaves the variable or the attribute as it was.
 ```
 
-The number limit applies to every write too ({numref}`number-limit`). So with
+The {term}`number limit` applies to every write too ({numref}`number-limit`). So with
 `(real p 0.5 (>= 0) (<= 1))`, a slider whose move goes to 1.4 stops `p` at exactly 1. Which values
 a writer may write at all is defined in {numref}`written-values`.
 
@@ -205,7 +208,7 @@ own type.
 | Literal | Own type | Where a type is expected |
 |---|---|---|
 | a number | its kind ({numref}`number-literals`) | its kind must fit the expected type, without its constraints: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
-| a string or a TeX string | `string` | where a color is expected, it is a color, and must be `#` followed by 3, 4, 6 or 8 hex digits, a CSS color name, or `transparent`, in small or capital letters, with whitespace before or after. Where a refined string type is expected, it must be among its choices |
+| a string or a {term}`TeX string` | `string` | where a color is expected, it is a color, and must be `#` followed by 3, 4, 6 or 8 hex digits, a CSS color name, or `transparent`, in small or capital letters, with {term}`whitespace` before or after. Where a refined string type is expected, it must be among its choices |
 | `true`, `false` | `bool` | as its own type |
 | `none` | `none` | it must be a broadened type |
 | `[X…]` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, it has no own type, and is a compile error | where a point is expected, it must have two items, each a number, or a value whose type is a number type with `none`, and it is a point. Where `list[T]` is expected, each item has T expected |
@@ -215,8 +218,8 @@ A literal is checked against the constraints of the expected type by {numref}`co
 ```
 
 So `(circle c (fill 'red'))` gives a color, `(string s 'red')` a string, and
-`(list[color] swatches ['red' 'gold'])` a list of colors. A list in brackets is a literal even when
-its items are expressions, such as `[k 0]`. A point whose coordinate is `none` is `none`
+`(list[color] swatches ['red' 'gold'])` a list of colors. A {term}`list` in brackets is a literal
+even when its items are expressions, such as `[k 0]`. A point whose coordinate is `none` is `none`
 ({numref}`none-propagates`), so `[x y]` is of type `point|none` when the type of `x` includes
 `none`.
 
@@ -251,9 +254,9 @@ have that constraint in their types, with these lengths:
   `(length n)`: n
 - a bound variable or attribute whose expression has a known length: that length
 - `(if C A B)` whose branches have the same known length: that length
-- a call of a function declared with `func` whose body has a known length: that length
+- a call of a function declared with `func` whose {term}`body` has a known length: that length
 - a spread `g.A` of a group, and `g.members`: the number of members of the group
-- a list that a library function gives: the length that {doc}`stdlib` gives
+- a list that a {term}`library` function gives: the length that {doc}`stdlib` gives
 
 The items of a list have a known item length m when every item is a list of known length m. Such a
 list has `(length m)` in its item type.
@@ -272,7 +275,7 @@ A type includes `none` when it is `none` or a broadened type. An expression whos
 
 - an argument of a call, whose parameter's type does not include `none`: the type of the call
   then includes `none`
-- an argument of a built-in function or an operator, other than those of
+- an argument of a built-in function or an {term}`operator`, other than those of
   {numref}`none-never-a-condition`: the type of the result then includes `none`, except for the
   functions that {numref}`none-propagates` names
 
@@ -382,8 +385,9 @@ So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circ
 `(variant V PARAMS S)` declares the shape type V, whose base type is the type of the shape S
 ({numref}`contexts-table`): a built-in shape type, a motif type or a variant type. An instance of
 V has the attributes of its base and the parameters of V. Every attribute that S gives, a
-positional argument included, and `x` and `y` when S gives `pos`, is fixed by V: an instance of V
-that gives it is a compile error. A parameter of V never has the name of an attribute of its base.
+{term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: an instance
+of V that gives it is a compile error. A parameter of V never has the name of an attribute of its
+base.
 ```
 
 So by {numref}`fits`, a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))`
@@ -459,7 +463,7 @@ Each form has this type:
 | a call `(F A…)` of a function | the result type of F, broadened as {numref}`none-only-where-allowed` gives |
 | a call of a built-in function or an operator | the type that {doc}`stdlib` gives, {numref}`number-result-types` for arithmetic, broadened as {numref}`none-only-where-allowed` and {numref}`may-give-none` give |
 | `(= A B)`, `(!= A B)` | `bool` ({numref}`equality-operands`) |
-| an interpolated string | `string`, broadened when the type of one of its expressions includes `none` ({numref}`none-propagates`) |
+| an {term}`interpolated string` | `string`, broadened when the type of one of its expressions includes `none` ({numref}`none-propagates`) |
 | `(name S)` | the type of the declaration that it names ({numref}`names-from-values`) |
 | `(type-of X)` | `string`. X is compiled for its type only |
 | a declaration | the type that its head gives, as in {numref}`form-template` |

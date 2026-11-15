@@ -1,14 +1,15 @@
 (grammar)=
 # Grammar
 
-This page defines how the parser puts the words, strings and other pieces of text of
-{doc}`lexical` together into forms, the expressions that the parser produces, the template that every form follows, and the kinds of form
-that may be written in each body. The signatures of the forms, which list the arguments of each
-head, are not part of this page.
+This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`strings <string>` and
+other pieces of text of {doc}`lexical` together into {term}`forms <form>`, the
+{term}`expressions <expression>` that the parser produces, the template that every form follows, and
+the kinds of form that may be written in each {term}`body`. The signatures of the forms, which list
+the arguments of each {term}`head`, are not part of this page.
 
 This page specifies the language. Where the parser
-or the compiler does not follow a rule yet, a note after the rule says what the code does today
-and names the bead that will change it.
+or the {term}`compiler` does not follow a rule yet, a note after the rule says what the code does
+today and names the bead that will change it.
 
 ## The grammar of the parser
 
@@ -22,16 +23,17 @@ the name of a rule keeps the quoted text of that rule in the tree.
 ```
 
 ```{rule} top-level-forms
-A source is any number of {term}`forms <form>`, with or without whitespace and comments between
-them. Anything else at the top level of a source is an error. A source may hold no form at all.
+A source is any number of forms, with or without {term}`whitespace` and
+{term}`comments <comment>` between them. Anything else at the top level of a source is an error. A
+source may hold no form at all.
 ```
 
 ```{mtp-grammar} forms
 ```
 
-An {term}`expression` is one item of a source, of a form, of a list or of brackets: a form, a list,
-a word, a string or a free starting value. The first item of a form may be a head that ends with
-`_` ({numref}`unnamed-head`).
+An expression is one item of a source, of a form, of a {term}`list` or of {term}`brackets`:
+a form, a list, a word, a string or a {term}`free starting value`. The first item of a form may be a
+head that ends with `_` ({numref}`unnamed-head`).
 
 ```{rule} adjacent-items
 Among the items of a form, a list or brackets, whitespace or a comment separates every two
@@ -49,16 +51,16 @@ errors.
 ```
 
 ```{rule} lists
-A {term}`list` is written in square brackets, with its items separated as in
+A list is written in square brackets, with its items separated as in
 {numref}`adjacent-items`: `[]`, `[0 1]`, `[(f x) 'a']`. A `[` right after the `]` of a list starts
-{term}`brackets` after the list, which hold exactly one expression: `[a b c][h]`.
+brackets after the list, which hold exactly one expression: `[a b c][h]`.
 ```
 
 ```{rule} name-brackets
-A `[` right after a name, with no whitespace between them, starts brackets after the name, which
-hold one expression or more: `xs[0]`, `xs[(+ k 1)]`, `g['m1']`, `func[real real]`. Several pairs
-of brackets may follow each other, and after brackets, `.` and more parts may follow:
-`xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after whitespace starts a list: `xs [0]` is the
+A `[` right after a {term}`name`, with no whitespace between them, starts brackets after the name,
+which hold one expression or more: `xs[0]`, `xs[(+ k 1)]`, `g['m1']`, `func[real real]`. Several
+pairs of brackets may follow each other, and after brackets, `.` and more {term}`parts <part>` may
+follow: `xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after whitespace starts a list: `xs [0]` is the
 name `xs` and the list `[0]`.
 ```
 
@@ -72,8 +74,9 @@ name `xs` and the list `[0]`.
 
 ```{rule} broadened-types
 A {term}`broadened type` is two words or more joined by `|` with no whitespace between them, such
-as `real|none`. Its words are names, names followed by brackets, numbers, bools or operators. A
-broadened type is one expression, and the compiler reads it as a type ({doc}`types`).
+as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bools <bool>` or
+{term}`operators <operator>`. A broadened type is one expression, and the compiler reads it as a
+type ({doc}`types`).
 ```
 
 ### Heads
@@ -102,10 +105,10 @@ source. Each expression is one of these:
 | name | `p`, `p.pos.x`, `xs[0].y` | its parts, in order. Each part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
 | brackets | `[real real]` in `func[real real]` | its expressions, in order |
 | broadened type | `real\|none` | its words, as expressions, in order |
-| string | `'…'`, `tex'…'` | its text, and whether it is a TeX string |
-| interpolated string | `$'…'` | its pieces: text, the expression of each `{…}` with no format spec, and each `{…}` with a format spec |
+| string | `'…'`, `tex'…'` | its text, and whether it is a {term}`TeX string` |
+| {term}`interpolated string` | `$'…'` | its pieces: text, the expression of each `{…}` with no {term}`format spec`, and each `{…}` with a format spec |
 | `{…}` with a format spec | `{x:.2f}` | the expression and the format spec |
-| int, ratio, real, complex | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
+| {term}`int`, {term}`ratio`, {term}`real`, {term}`complex` | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
 | bool | `true`, `false` | the value |
 | none | `none` | nothing |
 
@@ -149,7 +152,7 @@ is given in {numref}`dot-part`.
 ```{rule} form-template
 Every declaration is written `(head name? positional… option… body…)`:
 
-- The {term}`head` is the first item, and it names the kind of thing declared. It is a name
+- The head is the first item, and it names the kind of thing declared. It is a name
   (`circle`, `real`, `motif`, `dial`), a name followed by brackets (`list[color]`, `func[real]`), a
   broadened type (`real|none`), or a form that gives a type (`((real (>= 0)) r 1)`).
 - The name, for a form that has one, is the second item ({numref}`declared-names`).
@@ -157,27 +160,27 @@ Every declaration is written `(head name? positional… option… body…)`:
   number of them, and some of them may be left out.
 - The {term}`optional arguments <optional argument>` come next
   ({numref}`optional-arguments-first`).
-- The docstring, for a form that has one, comes next ({numref}`docstrings`).
-- The {term}`body` comes last: any number of items, or none. The kinds of item in a body depend on
+- The {term}`docstring`, for a form that has one, comes next ({numref}`docstrings`).
+- The body comes last: any number of items, or none. The kinds of item in a body depend on
   the form ({numref}`contexts`).
 
 A call and a special form follow the same template: `(+ a b c)`, `(if c a b)`.
 ```
 
 ```{rule} declared-names
-The name of a declaration is a bare name of one part, `none`, a name string such as `#'dot-{k}'`,
-or `(name s)`. The string of a name string and of `(name s)` is known when compiling. `none` as the
-name means that the declaration has no name, as the head `head_` does ({numref}`unnamed-head`). A
-name in quotes is an error ("a name is written bare, not in quotes"), and so is a name that
-{numref}`declaration-names` does not allow.
+The name of a declaration is a bare name of one part, `none`, a {term}`name string` such as
+`#'dot-{k}'`, or `(name s)`. The string of a name string and of `(name s)` is known when compiling.
+`none` as the name means that the declaration has no name, as the head `head_` does
+({numref}`unnamed-head`). A name in quotes is an error ("a name is written bare, not in quotes"),
+and so is a name that {numref}`declaration-names` does not allow.
 ```
 
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
-optional argument: a listener, `(move …)`, an `(animation …)` inside a control or a listener,
-`(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`, `(term …)`, `(like …)`, every optional
-argument, every call and every special form. A view and a control always have a name, because their
-elements on the page give it, as `<mtp-canvas name="v">`.
+optional argument: a {term}`listener`, `(move …)`, an `(animation …)` inside a {term}`control` or a
+listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`, `(term …)`, `(like …)`, every
+optional argument, every call and every special form. A {term}`view` and a control always have a
+name, because their elements on the page give it, as `<mtp-canvas name="v">`.
 ```
 
 ```{rule} optional-arguments-first
@@ -245,8 +248,8 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 
 | Body | Optional arguments | Other items | let, foreach | Compiler |
 |---|---|---|---|---|
-| The top level of a source | none | `import`. Declarations of types (`type`), interfaces, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. One `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes | `top_here`, `expand` |
-| The top level of a file to import | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, seeds (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes | `_not_importable` |
+| The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. One `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes | `top_here`, `expand` |
+| The top level of a file to import | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes | `_not_importable` |
 | `(scene name …)` | `(background …)`, `(transform …)` | Shapes: every shape, `group`, `row`, `column`, motif and variant instances. Variables. `exists-when` | yes | `scene_items` |
 | `(group name …)`, `(row name …)`, `(column name …)` | the optional arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes | `shape_here` |
 | Any other shape, such as `(circle name …)` | the optional arguments of the shape | The string of a text, as a positional argument | no body | `shape_here` |
@@ -255,9 +258,9 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(motif name params …)` | none | Shapes. Variables that are bound or known when compiling. `exists-when`. Not: `animation` (a choreo is the template of animations), uses of choreos, `motif`, `scene` | yes | `instance` |
 | `(variant name params shape)` | none | Exactly one shape, which is not a group | no | `variant_decl` |
 | `(func name params body)` | none | Exactly one expression | no | `func_decl` |
-| `(type name base …)` | none | Constraints | yes | `type_decl` |
+| `(type name base …)` | none | {term}`Constraints <constraint>` | yes | `type_decl` |
 | `(interface name …)` | none | Items `(T attribute constraint…)` | yes | `interface_decl` |
-| `(namespace name …)` | none | Variables, namespaces, palettes. Not: functions, types, motifs, variants, shapes, components, transitions, animations, imports, interfaces, colormaps, choreos | yes | `namespace_decl` |
+| `(namespace name …)` | none | Variables, namespaces, palettes. Not: functions, types, motifs, variants, shapes, {term}`components <component>`, transitions, animations, imports, interfaces, colormaps, choreos | yes | `namespace_decl` |
 | `(palette name …)` | none | Items `(member color)`. Not: palettes, namespaces | yes | `palette_decl` |
 | `(formula name …)` | `(defaults …)`, at most once | Exactly one string, plain or TeX, known when compiling. `(term …)`, `exists-when`, variables. A `(term …)` and an `exists-when` of a term come after the string ({numref}`formula-terms`) | yes | `formula_decl` |
 | `(term name …)` | `(like t)` first, then items `(attribute value)`, `(tex …)` among them | None | no body | `term_form` |
