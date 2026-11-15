@@ -196,8 +196,9 @@ word
   A name, a number, an operator, a bool or `none` ({numref}`word-ends`).
 
 core form
-  A form that is neither sugar nor library. The prover proves core forms, and the runtime runs
-  them. See {numref}`kinds-of-form`.
+  A form that is not sugar, such as a form whose head is core or a call of a library function. The
+  prover proves core forms, and the runtime runs them. See {numref}`kinds-of-form` and
+  {numref}`library-form`.
 
 library
   The built-in functions and the files of the standard library. A call of a library function is
@@ -237,10 +238,10 @@ seed
   {doc}`evaluation`.
 
 site
-  The number that the compiler gives each place where a random function is written, counted from
-  0. Defined in {doc}`evaluation`.
+  The number that each call of a random function has, counted from 0 in the order of the calls in
+  the source after the rewrite step. Defined in {doc}`evaluation`.
 
 call depth limit
-  The constant `max-call-depth`, which is 256: when folding, a call of a function nested deeper
-  than it is a compile error. Defined in {doc}`evaluation`.
+  The constant `max-call-depth`, which is 256: a call known when compiling that, when folded, would
+  nest calls of functions deeper than it is a compile error. Defined in {doc}`evaluation`.
 ```

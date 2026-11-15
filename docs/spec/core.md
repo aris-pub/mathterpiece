@@ -37,8 +37,8 @@ standard library, which are written in mtp. A call of a library function is a ca
 core form. The library holds functions, constants and declarations, and no form of the language.
 ```
 
-By {numref}`declaration-names`, a declaration may take the name of a built-in function or
-constant, operators included, and from that declaration on, the name means the declared thing.
+By {numref}`declaration-names`, a declared function may take the name of a library function: after
+`(func + ((real a) (real b)) 7)`, `(+ 1 2)` is 7.
 
 The compiler rewrites every sugar form in the rewrite step, which comes before the prove step
 ({numref}`compile-steps`), so the {term}`prover` is given only core forms. The prove step proves
@@ -76,7 +76,9 @@ any other rewrite of the declaration that it copies.
 |---|---|---|
 | `N.A`, `N[X]` | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name is written as an expression or as the target of a writer. A head and the name of a declaration are not rewritten |
 | `(when C X)` | `(if C X none)` | Exactly two arguments |
-| `cond`, `and`, `or` | the `if` forms of {numref}`cond-and-or-as-if` | |
+| `(cond (C1 V1) MORE… (else V))`, `(cond (else V))` | `(if C1 V1 (cond MORE… (else V)))`, `V` | |
+| `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
+| `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | `(maybe T)`, in a type | `T\|none` | |
 | the type `colormap` | the type `func[real color]` | |
 | a type `N`, declared `(type N BASE C…)` | the type `(BASE C…)` | |
@@ -84,7 +86,7 @@ any other rewrite of the declaration that it copies.
 | `(rand ARGS…)`, and the same with `rand-int`, `pick` or `shuffle`, with no `(seed …)` | `(rand ARGS… (seed S))` | `S` is the only seed that the file declares or imports ({numref}`seed-variable`) |
 | `(roll-dice S)`, in an animation's body | `(move S (to (next-seed S)) (duration 0))` | `S` is a seed |
 | `(roll-dice)`, in an animation's body | `(roll-dice S)` | `S` as for a random function |
-| `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name. Only the imported declarations that the source uses, directly or through other declarations, are written in the .mtpc | `F.mtp` holds only what a file to import holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
+| `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a file to import holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | `F.mtp` declares each `Ni`, and the source declares none of them |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
 | `(K N (like M) ARGS…)` | `(K N ARGS… COPIED…)`. `COPIED…` is each item of the declaration of `M`, as written, after its own `(like …)` is rewritten, whose head `ARGS…` does not give. A positional string of a text is copied too. A `(pos P)` of `M` gives both `x` and `y`: when `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))` | `M` is a plain name. `K` is a shape head other than `group`, `row` and `column`, and `M` a shape of kind `K`. Or `M` is an instance of the motif or the variant `K`. Or `K` is `font` and `M` a font. Or `K` is `term` and `M` a term of the same formula, whose `(term …)` form comes before. Or the form is a `move` or a `transition`, and `M` is a transition declared at the top level |
@@ -102,6 +104,9 @@ any other rewrite of the declaration that it copies.
 | `(on-drag S M.pos ITEMS…)`, `(on-drag S M.x ITEMS…)`, `(on-drag S M.y ITEMS…)` | `(on-drag S (move M.pos (to pointer)) ITEMS…)`, `(on-drag S (move M.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move M.y (to (. pointer 1))) ITEMS…)` | `M` names the shape or the term `S` |
 | `(C A1 … Ak)`, a use of `(choreo C (P1 … Pn) BODY…)` | `(animation BODY…)`, with each `Pi` replaced by `Ai`, and each `Pi` for i above k by its default. The declaration of `C` is removed | k is at least the position of the last parameter with no default. `C` uses only choreos declared before it. The use is written where an animation or a step of an animation's body may be written. The prover proves that each `Ai` fits the type of `Pi` |
 ```
+
+Of the declarations that an `(import …)` puts in, the .mtpc holds only those that the source uses
+({numref}`mtpc-imported-declarations`).
 
 A use of a choreo written as a step of an animation's body becomes an `(animation …)` there, which
 is one step ({numref}`animation-step`). An argument of a choreo may be any expression that may be
@@ -185,8 +190,9 @@ follow the rule.
 `(foreach N X ITEMS…)`, where `X` is an int, means exactly `(foreach N (range X) ITEMS…)`.
 ```
 
-The int and the list are told apart by the type of `X`, so this form is core by
-{numref}`sugar-form`, as `(map n f)` is.
+So the two spellings mean the same, at all times, and every rule about the second applies to the
+first. The first is core, and not sugar, only because an int and a list are told apart by the type
+of `X` ({numref}`sugar-form`).
 
 ```{rule} foreach-bounded-length
 A `foreach` over a list whose length is known only while drawing makes as many copies as the upper
@@ -277,8 +283,8 @@ By {numref}`sugar-form`, each form below is core. Its meaning is defined in the 
 inventory.
 
 - **`(. X Y)`.** Whether `Y` is an attribute depends on `X` ({numref}`dot-part`).
-- **`foreach`.** The number of copies is a value. `(foreach i n …)`, with an int `n`, and
-  `(foreach x xs …)` are told apart by the type of the second item ({numref}`foreach-count`).
+- **`foreach`.** The number of copies is a value, and `(foreach i n …)` is told apart from
+  `(foreach x xs …)` by the type of the second item ({numref}`foreach-count`).
 - **A motif instance.** Its members are the motif's body with the values of its parameters, made in
   the expand step.
 - **A variant instance.** It is its base shape with the variant's parameters as attributes, some
@@ -307,8 +313,8 @@ inventory.
   `(map xs f)` by the type of `n`. This is part of the typing of the library function `map`
   ({doc}`stdlib`).
 - **The operators, `not`, `abs`, `or?`, `none?`, `some?`, `somes` and the box points.** They are
-  library functions, which the compiler reads itself. By {numref}`declaration-names`, a declared
-  function may take their names, as `(func + ((real a) (real b)) 7)`, after which `(+ 1 2)` is 7.
+  library functions, which the compiler reads itself ({numref}`library-form`), so a declared
+  function may take their names ({numref}`declaration-names`).
 
 (core-inventory)=
 ## Inventory of heads
@@ -459,7 +465,7 @@ The heads of this table that are written as words, from `.` to `type-of`, are ke
 | `name` | core | `(name S)`: the name whose text is `S`, known when compiling | {doc}`scope`, {numref}`names-from-values` |
 | `if` | core | `(if C A B)` | {doc}`evaluation` |
 | `when` | sugar | `(when C X)` | {numref}`sugar-rewrites` |
-| `cond`, `else`, `and`, `or` | sugar | | {numref}`cond-and-or-as-if` |
+| `cond`, `else`, `and`, `or` | sugar | | {numref}`sugar-rewrites` |
 | `let` | core | `(let ((N V)…) BODY)` | {doc}`scope`, {doc}`evaluation` |
 | `fn` | core | `(fn PARAMS BODY)`: a function written in place | {doc}`types`, {doc}`evaluation` |
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
@@ -484,11 +490,27 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `round`, `log`, `min`, `max`, `lerp`, `range` | with a varying number or type of arguments | compiler.py:2316-2444 |
 | `gap`, `num` | the third argument of `range` | compiler.py:2357-2407 |
 | `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds | compiler.py:2236-2314 |
+| `step`, `step-ease` | eases: `(step N)` gives the ease of N equal jumps, and `(step-ease P)` the ease that is 0 before P and 1 from P on | compiler.py:2918-2933 |
 | `seed` | the last argument of a random function, `(seed S)` | compiler.py:2245-2252 |
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections | compiler.py:2652-2795 |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box | compiler.py:5420-5440 |
 | `pi`, `tau`, `euler` | constants. builtins.py has `π`, `τ`, `infty` and `∞` too, which bead mtp-ydd4.7.33 removes | builtins.py:246-254 |
 | the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp | `mathterpiece/stdlib/` |
+
+A call of `step` or `step-ease` gives an ease, which is a function, so the two are library
+functions and not keywords. By {numref}`declaration-names`, a declaration named `step` or
+`step-ease` takes the place of the library function from that declaration on. Three files declare
+the name `step`: the parameter `step` of `grid` in mathterpiece/stdlib/marks.mtp, the parameter
+`step` of `best-in` in examples/bourgain-densities.mtp, and the variable `step` in
+examples/formula-values.mtp. None of them uses an ease `(step N)` after its declaration.
+
+:::{admonition} Code differs
+:class: note
+The compiler reads `(step N)` and `(step-ease P)` only as the whole value of an `ease`
+(compiler.py:2918-2933), and not as calls. So after `(real step 3)`, `(ease (step 2))` still
+compiles as the ease of two jumps, and `(step 2)` in any other place is the error "unknown
+function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
+:::
 
 ### Transitions and animations
 
@@ -496,9 +518,7 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 |---|---|---|---|
 | `move` | core | `(move TARGET ITEM…)`: a transition written in place | {doc}`time` |
 | `from`, `to`, `duration`, `path` | core | the parts of a transition | {doc}`time` |
-| `ease` | core | a function from 0 to 1, or one of the two forms below | {doc}`time` |
-| `step` as an ease | core | `(step N)`: N equal jumps | {doc}`time` |
-| `step-ease` | core | `(step-ease P)`: 0 before P and 1 from P on | {doc}`time` |
+| `ease` | core | a function from 0 to 1, such as the value of `(step N)` or `(step-ease P)` | {doc}`time` |
 | `like` in a transition or a move | sugar | | {numref}`sugar-rewrites` |
 | `animation` written inline | core | `(animation ITEM…)`, or `(animation N)` naming one, also as a step | {doc}`time`, {numref}`animation-step` |
 | an animation's body of several items | sugar | one `in-order` | {numref}`sugar-rewrites` |
@@ -599,7 +619,7 @@ documents are cut down in mtp-ydd4.7.
 | `doc@'…'`, `free@X`, `#'…'`, `[…][X]` | sugar, made by the parser | {numref}`shorthand-forms` |
 | `(H_ …)` | sugar, made by the parser | {numref}`unnamed-head` |
 | `N.A`, `N[X]` | sugar | {numref}`sugar-rewrites` |
-| `when`, `cond`, `and`, `or` | sugar | {numref}`sugar-rewrites`, {numref}`cond-and-or-as-if` |
+| `when`, `cond`, `and`, `or` | sugar | {numref}`sugar-rewrites` |
 | `(maybe T)`, `colormap` as a type, a name declared by `type` | sugar | {numref}`sugar-rewrites` |
 | `(range X)`, a random function with no `(seed …)` | sugar | {numref}`sugar-rewrites` |
 | `import`, `type`, `palette` | sugar | {numref}`sugar-rewrites` |
@@ -619,7 +639,7 @@ documents are cut down in mtp-ydd4.7.
 | `motif`, a motif instance, `self`, `defaults` on an instance | core | {doc}`world-model`, {doc}`scope` |
 | `variant`, a variant instance | core | {doc}`types`, {doc}`world-model` |
 | `func`, `func[T]`, `fn`, calls | core | {doc}`types`, {doc}`evaluation` |
-| `transition`, `move` and their parts, `step`, `step-ease` | core | {doc}`time` |
+| `transition`, `move` and their parts | core | {doc}`time` |
 | `animation`, `at-once`, `in-order`, `loop`, `defaults` in an animation | core | {doc}`time`, {numref}`animation-step` |
 | `foreach` | core | {numref}`foreach-count`, {numref}`foreach-bounded-length`, {doc}`binding-time` |
 | `let` | core | {doc}`scope`, {doc}`binding-time` |
@@ -640,5 +660,5 @@ documents are cut down in mtp-ydd4.7.
 | a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-translate` |
 | a condition | core | {doc}`reaction` |
 | the operators, `not`, `abs`, the `none` functions and the box points | library | {numref}`library-form` |
-| the built-in functions of builtins.py and the collections, `map` over an int included | library | {doc}`stdlib` |
+| the built-in functions of builtins.py and the collections, `map` over an int included, `step` and `step-ease` | library | {doc}`stdlib` |
 | the constants and the standard library files | library | {doc}`stdlib` |

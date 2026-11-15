@@ -119,9 +119,11 @@ characters of a name.
 
 ```{rule} no-part-after-form
 The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` and
-`(sort xs)[0]` are errors. The form `(. X Y)` reads a part of the value of a form
-({numref}`dot-form`).
+`(sort xs)[0]` are errors.
 ```
+
+A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-part`), as
+`(. (sort xs) 0)`.
 
 ```{mtp-grammar} closing-parenthesis
 ```
@@ -193,19 +195,21 @@ rule.
 
 ```{rule} literal-words
 The word `true` or `false` is a {term}`bool`. The word `none` is the literal `none`. Each of the
-words `+ - * / ^ < <= > >= = != .` is an {term}`operator`: a name of one part. A bool, `none`, an
-operator or a number is never followed directly by `[`: only a name may be followed by brackets.
+words `+ - * / ^ < <= > >= = != .` is an {term}`operator`: a name of one part, which is never
+followed directly by `[`.
 ```
 
-So `true[0]`, `none[0]` and `+[0]` are errors. `!=x` is not a word.
+So `+[0]` is an error. `true[0]`, `none[0]` and `3[0]` are errors too, since by
+{numref}`adjacent-items` only a form may follow a bool, `none` or a number directly. `!=x` is not a
+word.
 
 ## Keywords and built-in names
 
 ```{rule} keywords
-A {term}`keyword` is one of the words of {numref}`keywords-table`, and no other word. Each is the
-head of a form of the language: a declaration, a shape, an expression form, a step of an
-animation, a component or a listener, or one of `term`, `doc`, `exists-when` and `import`.
+A {term}`keyword` is one of the words of {numref}`keywords-table`, and no other word.
 ```
+
+Each keyword is the head of a form of the language.
 
 :::{table} The keywords, from the inventory of heads in {doc}`core`.
 :name: keywords-table
@@ -227,15 +231,15 @@ The heads of optional arguments, such as `x`, `r`, `size`, `gap`, `step`, `fill`
 such as `animation` or `move`, is a keyword.
 
 ```{rule} declaration-names
-No declaration takes as its name a keyword, a built-in type, `pointer` or `self`. This holds for
-every kind of declaration: a variable, a shape, a function, a parameter, a name bound by `let` or
-`foreach`, a member of a namespace, a palette or a formula, a motif, a font, and every other. The
-built-in types are `int`, `ratio`, `real`, `complex`, `bool`, `string`, `color`, `font`, `point`,
-`transform`, `rand-seed`, `list`, `maybe`, the shape types, and the interfaces `shape`,
-`positioned` and `sequence`. `pointer` is the name bound in the move of a drag, and `self` the
-instance being built in the body of a motif. A declaration may take the name of a built-in
-function or of a built-in constant (`pi`, `tau` and `euler`): from that declaration on, the name
-means the declared thing.
+No declaration takes as its name a keyword, a {term}`built-in type`, `pointer` or `self`. This
+holds for every kind of declaration: a variable, a shape, a function, a parameter, a name bound by
+`let` or `foreach`, a member of a namespace, a palette or a formula, a motif, a font, and every
+other. The built-in types are `int`, `ratio`, `real`, `complex`, `bool`, `string`, `color`, `font`,
+`point`, `transform`, `transition`, `animation`, `scene`, `func`, `rand-seed`, `list`, `maybe`, the
+shape types, and the interfaces `shape`, `positioned` and `sequence`. `pointer` is the name bound in
+the move of a drag, and `self` the instance being built in the body of a motif. A declaration may
+take the name of a built-in function, an operator included, or of a built-in constant (`pi`, `tau`
+and `euler`): from that declaration on, the name means the declared thing.
 ```
 
 So `(real if 1)`, `(circle line …)` and `(let ((self 2)) …)` are compile errors, and

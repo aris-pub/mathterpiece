@@ -8,3 +8,10 @@ for `int` and `real` of "Values" above, which allows them, is wrong. The compile
 (mathterpiece/mtpc.py, line 500), and the runtime reads them (web/src/runtime.ts, lines 932 and
 933). Bead mtp-ydd4.7.33 removes them from the compiler, the runtime, docs/mtpc.md and the schema.
 :::
+
+## Imported declarations
+
+```{rule} mtpc-imported-declarations
+Of the declarations that a source imports ({numref}`sugar-rewrites`), a .mtpc holds only those that
+the source uses, directly or through other declarations.
+```

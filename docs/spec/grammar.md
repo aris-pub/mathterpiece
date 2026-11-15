@@ -35,9 +35,10 @@ a word, a string or a free starting value. The first item of a form may be a hea
 
 ```{rule} adjacent-items
 Among the items of a form, a list or brackets, whitespace or a comment separates every two
-expressions, except where one of the two is a form. More exactly, an expression that ends with the `)` of a form, which is a form or a
-free starting value such as `free@(g)`, may be followed directly by any expression, and every
-other expression may be followed directly only by a form. So `(f a(b)c)`, `(f (a)b)` and
+expressions, except where one of the two is a form. More exactly, an expression that ends with the
+`)` of a form, which is a form or a free starting value such as `free@(g)`, may be followed
+directly by any expression that does not start with `.` or `[` ({numref}`no-part-after-form`), and
+every other expression may be followed directly only by a form. So `(f a(b)c)`, `(f (a)b)` and
 `(f 'x'(b))` hold three expressions after `f`, and `(f 'a''b')` and
 `(f [1]x)` are errors.
 ```
@@ -108,9 +109,11 @@ source. Each expression is one of these:
 | bool | `true`, `false` | the value |
 | none | `none` | nothing |
 
-An operator is a name of one part. In an interpolated string, each piece of text is as long as
-possible, so two pieces of text are never next to each other.
+In an interpolated string, each piece of text is as long as possible, so two pieces of text are
+never next to each other.
 ```
+
+An operator is a name of one part ({numref}`literal-words`).
 
 ```{rule} shorthand-forms
 The parser produces each spelling on the left as the form on the right:
@@ -136,25 +139,10 @@ the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ �
 `(none_ a)` is `(none none a)`.
 ```
 
-```{rule} dot-form
-`(. X Y)` reads the part `Y` of the value of `X`, where `X` is any expression. A name of several
-parts that is used as a value is a shorter spelling of `(. X Y)` forms, and means exactly what they
-mean: `p.r` means `(. p r)`, `p.r.s` means `(. (. p r) s)`, and `xs[0].y` means
-`(. (. xs 0) y)`.
-```
-
-The parser still produces such a name as one name ({numref}`parser-expressions`). {doc}`core`
-gives the meaning of `(. X Y)`.
-
-:::{admonition} Code differs
-:class: note
-The compiler reads the two spellings differently when `r` is also a declared name. In `p.r`, the
-part `r` is always the attribute named `r` (`compiler.py:5958`). In `(. p r)`, a bare name `r` is
-an attribute only when `p` has an attribute by that name, or when `r` is not declared and `p` is
-an object. Otherwise the value of `r` is the part (`compiler.py:6540`). So with `(int r 0)`
-declared and `p` a list, `(. p r)` is `p[r]`, while `p.r` is an error. Bead mtp-ydd4.7.5 makes
-`p.r` mean exactly `(. p r)`.
-:::
+The parser produces a name of several parts, such as `p.r` or `xs[0].y`, as one name
+({numref}`parser-expressions`). The rewrite step rewrites it into `(. X Y)` forms: `p.r` is
+`(. p r)`, and `xs[0].y` is `(. (. xs 0) y)` ({numref}`sugar-rewrites`). The meaning of `(. X Y)`
+is given in {numref}`dot-part`.
 
 ## The form template
 
@@ -167,12 +155,13 @@ Every declaration is written `(head name? positional… option… body…)`:
 - The name, for a form that has one, is the second item ({numref}`declared-names`).
 - The {term}`positional arguments <positional argument>` come next. Each kind of form has a fixed
   number of them, and some of them may be left out.
-- The {term}`optional arguments <optional argument>` come next, in any order
+- The {term}`optional arguments <optional argument>` come next
   ({numref}`optional-arguments-first`).
+- The docstring, for a form that has one, comes next ({numref}`docstrings`).
 - The {term}`body` comes last: any number of items, or none. The kinds of item in a body depend on
   the form ({numref}`contexts`).
 
-A call and a special form follow the same template, with no name: `(+ a b c)`, `(if c a b)`.
+A call and a special form follow the same template: `(+ a b c)`, `(if c a b)`.
 ```
 
 ```{rule} declared-names
@@ -194,8 +183,9 @@ elements on the page give it, as `<mtp-canvas name="v">`.
 ```{rule} optional-arguments-first
 An optional argument is a form, after the name and the positional arguments, whose head names one
 of the optional arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`. In every
-form, the optional arguments come before the body, in any order. An optional argument after the
-first item of the body is an error, such as "(x …) is an optional argument, so
+form, the optional arguments come before the body, in any order, except that a `(like …)` comes
+before every other optional argument. An optional argument after the first item of the body is an
+error, such as "(x …) is an optional argument, so
 it comes before the canvas's body" (`compiler.py:3599`).
 ```
 
@@ -210,10 +200,12 @@ Bead mtp-ydd4.7.11 makes these errors.
 
 ```{rule} optional-arguments-once
 Each optional argument appears at most once in a form: a second one is an error, such as "'fill' is
-given twice". `(pos p)` gives both `x` and `y`, so it does not appear together with either of them.
-`(like x)`, in the forms that allow it (a shape, a motif or variant instance, a transition, a move,
-a term and a font), comes before every other optional argument.
+given twice".
 ```
+
+Since `(pos P)` is `(x …) (y …)` ({numref}`sugar-rewrites`), a form that gives `pos` and also `x`
+or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like …)` are given in
+{numref}`sugar-rewrites`.
 
 ```{rule} docstrings
 Every declaration and every listener may have a docstring, `doc@'text'`, and at most one. The
@@ -267,11 +259,11 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(interface name …)` | none | Items `(T attribute constraint…)` | yes | `interface_decl` |
 | `(namespace name …)` | none | Variables, namespaces, palettes. Not: functions, types, motifs, variants, shapes, components, transitions, animations, imports, interfaces, colormaps, choreos | yes | `namespace_decl` |
 | `(palette name …)` | none | Items `(member color)`. Not: palettes, namespaces | yes | `palette_decl` |
-| `(formula name …)` | `(defaults …)`, at most once | Exactly one string, plain or TeX, known when compiling. `(term …)`, `exists-when`, variables. In the order of {numref}`formula-terms` | yes | `formula_decl` |
+| `(formula name …)` | `(defaults …)`, at most once | Exactly one string, plain or TeX, known when compiling. `(term …)`, `exists-when`, variables. A `(term …)` and an `exists-when` of a term come after the string ({numref}`formula-terms`) | yes | `formula_decl` |
 | `(term name …)` | `(like t)` first, then items `(attribute value)`, `(tex …)` among them | None | no body | `term_form` |
 | A variable, `(T name value? …)` | none | Constraints, such as `(>= 0)` | yes | `declared` |
 | `(transition name target …)`, `(move target …)` | `like` first, then `from`, `to`, `duration`, `ease`, `path` | None | no body | `transition` |
-| `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, the name of an animation or a transition, a use of a choreo | yes | `anim_body`, `steps` |
+| `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, `(animation …)` ({numref}`animation-step`), the name of an animation or a transition, a use of a choreo | yes | `anim_body`, `steps` |
 | `(at-once …)`, `(in-order …)` | `(defaults …)` | The steps of an animation. Not: `loop` | yes | `steps` |
 | `(canvas name …)` | `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content: names of shapes or of the scene, lists, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes | `component`, `build_canvas` |
 | `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes | `component`, `build_readout` |
