@@ -118,8 +118,7 @@ inventory page holds the runtime, the .mtpc and the script of the inventory, all
 that it works when it is opened as a file. It also holds the opening {term}`comment` of the source,
 the lines of HTML that load the runtime and the .mtpc, every component live with its name and the
 line of HTML that places it, every {term}`listener` with what it does, and every token with its CSS
-variable and an input that restyles it. With `?record` at the end of its address, the page holds
-only one canvas and the play under it, on a 9:16 page.
+variable and an input that restyles it.
 
 ```{rule} subcommands
 Each subcommand takes the path of one source file, and runs these steps:
