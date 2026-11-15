@@ -970,7 +970,7 @@ describe("listeners inside a view", () => {
 describe("quiet mode", () => {
   // mtp-16z: left and says have an on-live, so each starts quiet, with a switch to make it live;
   // right has none, and behaves as before. What is tied to a quiet view is put away.
-  const controls: [string, string][] = [["slider", "sl"], ["play", "p"], ["button", "b"], ["toggle", "t"], ["button", "free"]];
+  const controls: [string, string][] = [["slider", "sl"], ["play", "p"], ["button", "b"], ["toggle", "t"], ["button", "loose"]];
   const open = () =>
     page(
       `<mtp-canvas model="m" name="left"></mtp-canvas><mtp-canvas model="m" name="right"></mtp-canvas>` +
@@ -1004,7 +1004,7 @@ describe("quiet mode", () => {
   it("hides the controls tied only to quiet views, and no others", () => {
     open();
     expect([folded("sl"), folded("p"), folded("t")]).toEqual([true, true, true]);
-    expect([folded("b"), folded("free")]).toEqual([false, false]);
+    expect([folded("b"), folded("loose")]).toEqual([false, false]);
   });
 
   it("the switch makes the view live: its on-live plays and its controls unfold", () => {

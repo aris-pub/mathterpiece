@@ -93,7 +93,7 @@ Each call is compiled where it is written, so the colors it mixes stay the token
 
 #### Free starting values
 
-A value given by an expression is bound to it and follows it for as long as the page is open. `free@` makes the opposite: `(list bars free@(shuffled deal))` declares `bars` **free**, starting at the expression's value when the live model is built, and never following it after; any writer may then change it. It may be written wherever a variable's value or a shape's attribute is given, `(circle p (pos free@(meet l1 l2)))`, and nowhere else: not inside an expression. The expression may read whatever a bound expression in the same place may read, other starting values included. One known when compiling is that value, free and not `const`. A `const` variable and a token (a color or font variable) cannot start `free@`.
+A value given by an expression is bound to it and follows it for as long as the page is open. `free@` makes the opposite: `(list bars free@(shuffled deal))`, which is `(list bars (free (shuffled deal)))`, declares `bars` **free**, starting at the expression's value when the live model is built, and never following it after; any writer may then change it. It may be written wherever a variable's value or a shape's attribute is given, `(circle p (pos free@(meet l1 l2)))`, and nowhere else: not inside an expression. The expression may read whatever a bound expression in the same place may read, other starting values included. One known when compiling is that value, free and not `const`. A `const` variable and a token (a color or font variable) cannot start `free@`. `free` is a reserved word.
 
 
 #### Random values and seeds

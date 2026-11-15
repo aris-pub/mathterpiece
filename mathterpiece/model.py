@@ -37,7 +37,8 @@ class Attribute:
     expr: Expr | None = None
     # Set by a variant's body: no instance and no writer may change it.
     fixed: bool = False
-    # free@expr: free, starting at expr's value when the live model is built, never following it.
+    # free@expr or (free expr): free, starting at expr's value when the live model is built, never
+    # following it.
     start: Expr | None = None
 
     @property

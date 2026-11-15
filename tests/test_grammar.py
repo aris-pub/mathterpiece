@@ -98,10 +98,21 @@ ACCEPTED = [
     "(f $'{(g ; a comment\n x)}')",
     "(f $'{a:b}' $'{a.b:c}' $'{a[0].b:c}' $'{#'n-{k}'.x :y}')",
     "(f #'dot-{k}' #'dot-{k}'.pos #'row-{i}'[0] #'a{b}'.c.d[0].e #'{k}')",
-    "(f doc@'text')",
-    "(real k free@(* 2 a))",
-    "(f free@x free@[1] free@'s' free@free@(g))",
-    "(f free@(g)x (h)free@x)",
+    "(f doc@'text' doc@x)",
+    "(f a@b)",
+    "(circle c r@1 fill@'red' to@pointer.x free@green marks.grid@g)",
+    "(f r@1 r@-2.5 r@1/2 r@2i r@true r@false r@none r@'s' r@tex'\\q' r@$'k = {k}')",
+    "(f a-b?@x a?.b@x.y)",
+    "(f r@1(g) (h)r@x r@'s'(g))",
+    "(r@1 2)",
+    "(f [r@1 s@x])",
+    "(f $'{r@x}' $'{r@x:.2f}' $'{r@'s':>5}')",
+    "(real k (free (* 2 a)))",
+    "(real k free@(* 2 a) free@(mix a b)(g) r@(* 2 k))",
+    "(f free@(g)x (h)free@(g) free@(g)(h))",
+    "(f free@[1] pos@[1 2] pos@[a b][0] free@[])",
+    "(f f@#'a-{k}' f@#'a-{k}'.x r@a[0] r@a[0].b r@a|b r@+ r@. r@none|a)",
+    "(free@(g) x)",
     "(circle_ (r 1))",
     "(circle_(r 1))",
     "(line|none_ (r 1))",
@@ -172,11 +183,39 @@ REJECTED = [
     "(f a^b)",
     "(f a$b)",
     "(f a#b)",
-    "(f a@b)",
+    "(f @x)",
+    "(f a@)",
     "(f free@)",
     "(f free@ x)",
     "(f doc@ 'x')",
-    "(f doc@x)",
+    "(f r@ 1)",
+    "(f r @1)",
+    "(f r@;c\n1)",
+    "(f fill@free@green)",
+    "(f r@1@2)",
+    "(f r@a@2)",
+    "(f r@a.b@2)",
+    "(f free@(g).x)",
+    "(f free@(g)[0])",
+    "(f r@)",
+    "(f r@)(g)",
+    "(f [r@])",
+    "(f r@xs[0]@1)",
+    "(f r@@x)",
+    "(f #'a{b}'@1)",
+    "(f +@1)",
+    "(f .@1)",
+    "(f circle_@c)",
+    "(f none@1)",
+    "(f true@1)",
+    "(f 1@x)",
+    "(f a|r@1)",
+    "(f xs[0]@1)",
+    "(f xs[0].a@1)",
+    "(f r@1x)",
+    "(f r@'s'x)",
+    "(f r@$x)",
+    "(f r@1.x)",
     "(f _)",
     "(_ x)",
     "(f a_b)",
@@ -274,7 +313,7 @@ KNOWN_DIFFERENCES = {
     "(a.true_ x)": LITERAL_PARTS,
 }
 
-OPERATOR_NAMES = {"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!=", ".", "free@"}
+OPERATOR_NAMES = {"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!=", "."}
 NAME_PART = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
 
 
@@ -447,10 +486,7 @@ class Reading(Transformer):
     def expression(self, c):
         return c[0]
 
-    paren = plain = expression
-
-    def free(self, c):
-        return Form((Name(("free@",)), c[-1]))
+    paren = plain = plain_item = expression
 
     def list(self, c):
         whole = ListLit(tuple(c[0]))
@@ -526,8 +562,9 @@ class Reading(Transformer):
             return StrLit(_tex(t.value[4:-1]), tex=True)
         return StrLit(_decoded(t.value[1:-1]))
 
-    def doc(self, c):
-        return Form((Name(("doc",)), self.string([c[1]])))
+    def prefixed(self, c):
+        head, item = c
+        return Form((Name(tuple(head.value[:-1].split("."))), item))
 
     def _pieces(self, c):
         parts = []
@@ -631,10 +668,10 @@ def test_pending_steps_have_entries():
 
 # Pieces of text where the parser's choices lie, which random sources put together.
 PIECES = [
-    "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "$'", "#'", "tex'", "doc@", "free@",
+    "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "$'", "#'", "tex'", "doc@", "r@",
     "a", "b", "x_", "_", ".", "|", ":", "1", "-", "+", "2.5", "1/2", "/", "e", "i", "true",
     "none", "!=", "\\", "\\'", "\\n", "{{", "}}", '"', "@", "#", "$", "^", "*", "<=", "0", "{x:",
-    "$'{", "}'", "[0]", "a[", ".b", "(g)", "x:y", "?", "a-", "(c_ ",
+    "$'{", "}'", "[0]", "a[", ".b", "(g)", "x:y", "?", "a-", "(c_ ", "free@(",
 ]  # fmt: skip
 
 

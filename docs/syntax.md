@@ -48,13 +48,13 @@ Everything in a file is an expression: a literal, a name, or a form. Names may b
 
 ### Names
 
-A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`. These words are reserved and cannot be used as names: `scene`, `animation`, `transition`, `move`, `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`.
+A name refers to something declared: `theta`, `p`, `show-tan`. Names are written bare, never in quotes. Letters, digits and hyphens are allowed, and some built-in names end in `?`, like `none?`. These words are reserved and cannot be used as names: `scene`, `animation`, `transition`, `move`, `in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`, `doc`, `free`.
 
 ### Forms
 
 A form is a head followed by its parts, in parentheses: `(+ theta 10)`, `(circle p (r 0.08))`. The head says what the form is.
 
-One form has a shorter spelling: a docstring, `doc@'text'`, is `(doc 'text')` (reference, "Docstrings"). `free@expr` marks a free value that starts at `expr`'s value and never follows it, `(real k free@(* 2 a))` (reference, "Free starting values"); it has no longer spelling, so it always stands out. `@` is allowed nowhere else, in a name or on its own.
+A form with one item has a shorter spelling: `H@X` is `(H X)`, where `H` is a name and `X` is any expression that is not itself written with `@`. So `r@1` is `(r 1)`, the docstring `doc@'text'` is `(doc 'text')` (reference, "Docstrings"), and `free@(* 2 a)` is `(free (* 2 a))`, a free value that starts at the value of `(* 2 a)` and does not change when that value changes (reference, "Free starting values"). Nothing may be written between `H`, `@` and `X`. `fill@free@green` is an error, and so is `@` in any other place.
 
 A `;` starts a comment, which runs to the end of the line. Line breaks and indentation mean nothing; they are for reading.
 

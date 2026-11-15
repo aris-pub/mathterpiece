@@ -107,7 +107,7 @@ complex
   ({numref}`number-types`, {numref}`number-literals`).
 
 docstring
-  `doc@'text'`, which is `(doc 'text')`: plain text about a declaration, for the illustrator
+  `(doc 'text')`, usually written `doc@'text'`: plain text about a declaration, for the illustrator
   ({numref}`prefix-forms`, {numref}`docstrings`).
 
 form
@@ -119,7 +119,8 @@ format spec
   ({numref}`interpolated-strings`).
 
 free starting value
-  `free@X`, which is `(free@ X)` ({numref}`prefix-forms`).
+  `(free X)`, also written `free@X`: a free value that starts at the value of `X` and does not
+  change when `X` changes ({numref}`prefix-forms`, {doc}`core`).
 
 head
   The first item of a form ({numref}`form-template`).

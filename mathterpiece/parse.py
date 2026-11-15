@@ -199,36 +199,49 @@ class _Parser:
             raise ParseError("unexpected ']'", pos)
         if ch in RESERVED:
             raise ParseError(f"{ch!r} is reserved", pos)
-        if self.src.startswith("doc@", self.i):
-            return self.doc()
         if self.src.startswith("tex'", self.i):
             return self.tex_string()
-        if self.src.startswith("free@", self.i):
-            return self.free_start()
+        if self.prefix_end() is not None:
+            return self.prefixed()
         return self.atom()
 
-    def free_start(self) -> Form:
-        """free@expr: a free value that starts at expr's value and never follows it. Its head,
-        free@, is not a name an author can write, so only this spelling makes the form."""
-        pos = self.pos()
-        for _ in "free@":
-            self.advance()
-        if self.peek() in ("", " ", "\t", "\n", ")", "]"):
-            raise ParseError(
-                "free@ is followed by the expression its value starts at: free@(f x)", self.pos()
-            )
-        return Form((Name(("free@",), pos), self.node()), pos)
+    def prefix_end(self) -> int | None:
+        """Where the @ of H@X is, when the word that starts here holds one."""
+        j = self.i
+        while j < len(self.src) and not _ends_run(self.src[j]):
+            if self.in_braces and self.src[j] == ":":
+                return None
+            if self.src[j] == "@":
+                return j
+            j += 1
+        return None
 
-    def doc(self) -> Form:
-        """doc@'text', which is (doc 'text')."""
+    def prefixed(self) -> Form:
+        """H@X, which is (H X): H a name, X any expression but another H@X."""
         pos = self.pos()
-        for _ in "doc@":
+        end = self.prefix_end()
+        assert end is not None
+        head = self.src[self.i : end]
+        while self.i < end:
             self.advance()
-        if self.peek() != "'":
+        if not head:
+            raise ParseError("'@' follows the name of a head, as in r@1", pos)
+        if head in OPERATORS or head in (".", "true", "false", "none") or head.endswith("_"):
+            raise ParseError(f"'@' cannot follow {head!r}, only the name of a head", pos)
+        name = Name(tuple(_name_parts(head, pos)), pos)
+        self.advance()
+        return Form((name, self.prefixed_item(head)), pos)
+
+    def prefixed_item(self, head: str) -> Node:
+        ch = self.peek()
+        if not ch or ch.isspace() or ch in ");]":
             raise ParseError(
-                "doc@ is followed by its text in single quotes: doc@'text'", self.pos()
+                f"{head}@ is followed directly by its item, as in {head}@1", self.pos()
             )
-        return Form((Name(("doc",), pos), self.string()), pos)
+        starts_word = ch not in "'$#[(" and not self.src.startswith("tex'", self.i)
+        if starts_word and self.prefix_end() is not None:
+            raise ParseError(f"a prefixed form cannot follow {head}@: write ({head} …)", self.pos())
+        return self.node()
 
     def name_string(self) -> Node:
         """#'dot-{k}', which is (name $'dot-{k}'): the string with values filled in, read as a
@@ -348,7 +361,7 @@ class _Parser:
         if text == "none":
             return NoneLit(pos)
         if "@" in text:
-            raise ParseError("'@' only follows doc and free, as in doc@'text' and free@(f x)", pos)
+            raise ParseError("'@' follows only the name of a head, as in r@1", pos)
         if text == "_":
             raise ParseError("_ is not a name: write none, or head_ for a form with no name", pos)
         if (number := _number(text, pos)) is not None:

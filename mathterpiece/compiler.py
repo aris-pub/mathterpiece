@@ -98,7 +98,7 @@ from mathterpiece.types import (
 
 RESERVED = frozenset(
     "scene animation transition move in-order at-once when else true false none const self".split()
-    + ["doc"]
+    + ["doc", "free"]
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
@@ -6570,7 +6570,11 @@ class _Compiler:
             if e.known:
                 return _known(t, [v for v in e.value if v is not None])
             return Expr("somes", t, (e,), e.deps)
-        if head == "free@":
+        if head == "free":
+            if len(node.items) != 2:
+                raise CompileError(
+                    "free takes one expression: free@(f x) or (free (f x))", node.pos
+                )
             raise CompileError(
                 "free@ gives a variable or an attribute its starting value, so it is written only"
                 " in place of that value: (real k free@(f x))",
@@ -7008,7 +7012,7 @@ def _is_free_start(node) -> bool:
         isinstance(node, Form)
         and len(node.items) == 2
         and isinstance(node.items[0], Name)
-        and node.items[0].parts == ("free@",)
+        and node.items[0].parts == ("free",)
     )
 
 

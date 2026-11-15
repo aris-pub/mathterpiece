@@ -98,10 +98,10 @@ describe("a canvas with an on-view", () => {
 describe("the inputs of a canvas that is not ready", () => {
   it("are disabled until it is ready: a control that writes what it shows, and a listener in it", () => {
     const [rt, v] = ((r) => [r[1], r[2]] as const)(
-      page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-button model="m" name="go"></mtp-button><mtp-button model="m" name="free"></mtp-button>`),
+      page(`<mtp-canvas model="m" name="v"></mtp-canvas><mtp-button model="m" name="go"></mtp-button><mtp-button model="m" name="loose"></mtp-button>`),
     );
     expect(button("go").disabled).toBe(true);
-    expect(button("free").disabled).toBe(false);
+    expect(button("loose").disabled).toBe(false);
     expect(copy("go").hasAttribute("data-mtp-inactive")).toBe(false);
     button("go").click();
     pass(0.5);

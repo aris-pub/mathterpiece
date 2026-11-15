@@ -54,7 +54,7 @@ is written as it is.
 ## Rewrite rules
 
 The {term}`parser` makes the rewrites of the lexical shorthands while it reads the source:
-`doc@'text'`, `free@X`, a {term}`name string` `#'…'`, a part after a {term}`list` {term}`literal`,
+a prefixed form `H@X`, a {term}`name string` `#'…'`, a part after a {term}`list` {term}`literal`,
 `[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other sugar form is in the table of the rule below.
 
@@ -363,7 +363,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `font` | core | `(font N PART…)`: a font token, given by its parts | {doc}`world-model` |
 | `family`, `style`, `weight`, `size` | core | the parts of a font | {doc}`world-model` |
 | `like` in a font | sugar | copies the parts of another font | {numref}`sugar-rewrites` |
-| `free@` | core | a free value that starts at a computed value, only as a variable's value or an attribute's | {doc}`reaction`, {doc}`binding-time` |
+| `free` | core | `(free X)`: a free value that starts at the value of `X`, written only as the value of a variable or of an attribute | {doc}`reaction`, {doc}`binding-time` |
 | `>=`, `>`, `<=`, `<` with one number | core | a bound | {doc}`types` |
 | `length` | core | the length of a list | {doc}`types` |
 | `one-of` | core | the choices of a string | {doc}`types` |
@@ -478,7 +478,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `fn` | core | `(fn PARAMS BODY)`: a function written in place | {doc}`types`, {doc}`evaluation` |
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
 | `type-of` | core | `(type-of X)`: the type of `X`, as a string | {doc}`types` |
-| `free@` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
+| `free` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
 
@@ -596,7 +596,7 @@ their place. They are not forms of the language.
 
 | Head | Kind | Rewrite or defining page |
 |---|---|---|
-| `doc@'…'`, `free@X`, `#'…'`, `[…][X]` | sugar, made by the parser | {numref}`shorthand-forms` |
+| `H@X`, `#'…'`, `[…][X]` | sugar, made by the parser | {numref}`shorthand-forms` |
 | `(H_ …)` | sugar, made by the parser | {numref}`unnamed-head` |
 | `N.A`, `N[X]` | sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | sugar | {numref}`sugar-rewrites` |
@@ -623,7 +623,7 @@ their place. They are not forms of the language.
 | `foreach` | core | {numref}`foreach-count`, {numref}`foreach-bounded-length`, {doc}`binding-time` |
 | `let` | core | {doc}`scope`, {doc}`binding-time` |
 | `(T N …)`, a variable, `font` and its parts | core | {doc}`world-model`, {doc}`reaction` |
-| `free@` | core | {doc}`reaction`, {doc}`binding-time` |
+| `free` | core | {doc}`reaction`, {doc}`binding-time` |
 | the {term}`constraints <constraint>` `>=`, `>`, `<=`, `<`, `length`, `one-of`, `const`, `wrap` | core | {doc}`types` |
 | the type notation of "Type notation", but `maybe`, `colormap` and the names declared by `type` | core | {doc}`types` |
 | the twelve shapes | core | {doc}`world-model` |

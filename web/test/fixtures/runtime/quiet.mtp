@@ -21,7 +21,7 @@
 (button b (in left right) (animation (move clicks (to 0) (duration 0))))
 (bool told false)
 (toggle t told (in says))
-(button free (animation (move clicks (to 0) (duration 0))))
+(button loose (animation (move clicks (to 0) (duration 0))))
 ; Going live, wide narrows its view box to half: the view moves by a move.
 (canvas wide (x -10) (y -10) (width 20) (height 20) (pan false) (zoom false) s
   (on-live (animation (move wide.width (to 10) (duration 1)))))
