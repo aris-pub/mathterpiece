@@ -360,7 +360,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `colormap` | sugar | `func[real color]` | {numref}`sugar-rewrites` |
 | a name declared by `type` | sugar | the type that it names | {numref}`sugar-rewrites` |
 | a name declared by `interface`, `motif` or `variant` | core | that type | {doc}`types` |
-| `rand-seed` | core | the type of seeds, an int of at least 0 | {doc}`types`, {doc}`evaluation` |
+| `rand-seed` | core | the type of seeds, any int | {doc}`types`, {doc}`evaluation` |
 
 ### The scene, shapes and containers
 

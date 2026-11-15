@@ -27,6 +27,10 @@ component
   A view, a control or a listener: what the illustrator declares and the author places on a page.
   Defined in {doc}`compiler-runtime`.
 
+corrupt .mtpc
+  A .mtpc that matches the schema of its version and breaks a rule of this spec. The compiler
+  never writes one, and the runtime refuses every one. Defined in {doc}`compiler-runtime`.
+
 control
   A component that the reader presses, drags or clicks, and which writes the model: a slider, a
   button, a play, a stepper or a toggle. Defined in {doc}`compiler-runtime`.
@@ -238,17 +242,12 @@ site
   The number that the compiler gives each place where a random function is written, counted from
   0. Defined in {doc}`evaluation`.
 
-undefined
-  An operation is undefined at an input where it has no value, such as `(/ x 0)`. It gives `none`
-  when folded and while drawing, and is a compile error in the prove step when its inputs are
-  known when compiling. Defined in {doc}`evaluation`.
-
 call depth limit
-  The constant `max-call-depth`: a call of a function nested deeper than it gives `none`, the same
-  when folding and while drawing. Defined in {doc}`evaluation`.
+  The constant `max-call-depth`, which is 256: a call of a function nested deeper than it gives
+  `none`, the same when folding and while drawing. Defined in {doc}`evaluation`.
 
 real error bound
   The constant `max-real-error`: the most units in the last place by which a built-in function on
-  reals other than `+`, `-`, `*`, `/` and `sqrt` may differ from its exact value. The prover widens
+  reals other than `+`, `-`, `*`, `/` and `sqrt` can differ from its exact value. The prover widens
   every real range by it. Defined in {doc}`evaluation`.
 ```

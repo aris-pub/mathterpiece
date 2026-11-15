@@ -2,9 +2,9 @@
 # Evaluation
 
 This part defines how an expression is computed: the order in which its parts are evaluated, the
-forms that evaluate only some of their parts, the operations that are {term}`undefined` and
-where, how `none` propagates, the numbers and their limits, random values, equality, and how deep
-a chain of calls may go.
+forms that evaluate only some of their parts, the inputs at which an operation gives `none`, how
+`none` propagates, the numbers and their limits, random values, equality, and how deep a chain of
+calls can go.
 
 An expression is computed at one of two times ({doc}`binding-time`). When every value that it
 reads is known when compiling, the compiler computes it in the fold step and writes the value into
@@ -87,8 +87,8 @@ step, since the body is proved once for all their values ({numref}`prove-bodies-
 
 By {numref}`cond-and-or-as-if`, the same holds for the tests of a `cond` and the parts of an `and`
 or an `or`. `or?` and `let` are proved whole: every part is proved, also a part that the form
-would not evaluate because a value before it is known when compiling. An undefined operation with
-known inputs in such a part is a compile error ({numref}`undefined-gives-none`):
+would not evaluate because a value before it is known when compiling. An operation that gives
+`none` at known inputs in such a part is a compile error ({numref}`none-at-known-inputs`):
 
 ```mtp
 (real x 0 (const))
@@ -114,27 +114,31 @@ a call is folded does `cond` stop at the first test that is known to be true (li
 mtp-08wd.2.
 :::
 
-## Undefined values
+## Operations that give none
 
-```{rule} undefined-operations
-An operation is {term}`undefined` at these inputs, and at no others:
+```{rule} operations-that-give-none
+Besides an argument that is `none` ({numref}`none-propagates`), an operation gives `none` at these
+inputs, when folded and while drawing. Giving `none` never stops the figure.
 
-| Operation | Undefined at |
+| Operation | Gives `none` at |
 |---|---|
-| `+`, `-`, `*` | a result beyond the largest real, about 1.8 × 10³⁰⁸ |
-| `/` | a divisor of 0 |
+| every built-in function and operator | inputs that are all finite and a result beyond the largest real, about 1.8 × 10³⁰⁸. This is an overflow |
+| `+` | two infinities of opposite signs |
+| `-` | two infinities of the same sign |
+| `*` | 0 and an infinity |
+| `/` | a divisor of 0, and an infinity divided by an infinity |
 | `mod` | a divisor of 0 |
-| `^` | 0 to a negative power, a negative base to a power that is not an int, and a result beyond the largest real |
+| `^` | 0 to a negative power, and a negative base to a power that is not an int |
 | `sqrt` | an input below 0 |
-| `exp` | a result beyond the largest real |
 | `log` | an input of 0 or below, and a base of 0 or below or of 1 |
 | `min`, `max` | no items at all |
 | `tand`, `secd` | 90 + 180k degrees, for every int k |
 | `cscd`, `cotd` | 180k degrees, for every int k |
-| `tan`, `sec`, `csc`, `cot` | an input where the result is not a finite number. No real is exactly π/2, so this is only `csc` and `cot` at exactly 0 |
+| `tan`, `sec`, `csc`, `cot` | an input where the result is not a finite number. No real is exactly π/2, so for a finite input this is only `csc` and `cot` at exactly 0 |
 | `asin`, `acos`, `asind`, `acosd` | an input below -1 or above 1 |
 | `asec`, `acsc`, `asecd`, `acscd` | an input strictly between -1 and 1 |
 | `to-polar` | the point `[0 0]` |
+| `rand`, `rand-int` | a `lo` above `hi`, whatever the seed |
 | `pick` | an empty list |
 | `range` | a gap of 0, a negative count `num`, and more than 1,000,000 items |
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
@@ -142,51 +146,58 @@ An operation is {term}`undefined` at these inputs, and at no others:
 | a bound value with a constraint | a value that breaks the constraint ({doc}`types`) |
 | a call of a function | a call whose depth is above the call depth limit ({numref}`call-depth-limit`) |
 
-Every other built-in function and operator is undefined nowhere.
+At every other finite input, an operation never gives `none`.
 ```
 
-The functions of the standard library are written in mtp, and are undefined where the built-ins
-that they call are ({doc}`stdlib`).
+So an operation with inputs that are all finite never gives an infinity. The functions of the
+standard library are written in mtp, and give `none` where the built-ins that they call give
+`none` ({doc}`stdlib`).
 
-```{rule} undefined-gives-none
-In the fold step and while drawing, an undefined operation gives `none`. It never stops the
-figure, and never gives an infinity or a value that is not a number. In the prove step, an
-operation that is undefined at inputs known when compiling is a compile error, at the operation.
-The inputs may be written by the illustrator, or read from `const` variables. The variable of a
-`foreach` and the parameters of a motif or a function are not such inputs, since their bodies are
+```{rule} none-at-known-inputs
+In the prove step, an operation whose inputs are known when compiling ({doc}`binding-time`), and
+are among the inputs at which it gives `none` ({numref}`operations-that-give-none`), is a compile
+error, at the operation. So are `rand` and `rand-int` with both bounds known when compiling and
+`lo` above `hi`, although their seed is never known when compiling. The variable of a `foreach` and
+the parameters of a motif or a function are not known in the prove step, since their bodies are
 proved once ({numref}`prove-bodies-once`).
 ```
 
-So `(sqrt -1)` and `(or? (sqrt -1) 0)` are compile errors. In
-`(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, `(/ 1 i)` may be undefined, since `i` may be 0, so
-its type includes `none`, and `r` does not take `none`: this is a compile error at `(/ 1 i)` in the
-body. With `(r (or? (/ 1 i) 1))`, the scene compiles, and the copy for `i` = 0 has a radius of 1.
+So `(sqrt -1)`, `(or? (sqrt -1) 0)` and `(rand-int 10 3)` are compile errors. In
+`(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, `(/ 1 i)` gives `none` when `i` is 0, so its type
+includes `none`, and the type of `r` does not include `none`: this is a compile error at
+`(/ 1 i)` in the body. With `(r (or? (/ 1 i) 1))`, the scene compiles, and the copy for `i` = 0
+has a radius of 1.
 
 :::{admonition} Code differs
 :class: note
-The compiler proves each copy of a `foreach` with the value of its variable, so
-`(r (or? (/ 1 i) 1))` is rejected with "division by zero" at copy 0. mtp-08wd.1.
+- The compiler proves each copy of a `foreach` with the value of its variable, so
+  `(r (or? (/ 1 i) 1))` is rejected with "division by zero" at copy 0. mtp-08wd.1.
+- Neither `rand` nor `rand-int` checks that `lo` is at most `hi`. While drawing, `(rand-int 10 3)`
+  gives an int from 4 to 10 by the formula of {numref}`random-values`. The compiler gives the
+  result the range from `lo` to `hi` (mathterpiece/compiler.py, lines 2262 and 2273), here from 10
+  to 3, so it accepts `((int (>= 3) (<= 5)) b (rand-int 5 3))`. Bug mtp-y7vp.
 :::
 
 A function body is proved once, with each parameter ranging over its declared type
 ({numref}`prove-bodies-once`). A call whose arguments are all known when compiling is folded: the
-fold step computes the body with those arguments, and an undefined operation in the body gives
-`none` ({numref}`undefined-gives-none`). The illustrator wrote the body with parameters, not with
-known inputs, so an `or?` in the body can replace the `none` with a default (docs/type-system.md,
-section 5.c). With `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f
--1)` is 1. With `(func f ((real x)) (/ 1 x))`, the result type includes `none`, and `(f 0)` is
-`none`. `(func[real] f ((real x)) (/ 1 x))` is a compile error at `(/ 1 x)`, since its body may give
-`none` and its declared result does not include `none`.
+fold step computes the body with those arguments, and an operation in the body that gives `none`
+at those arguments gives `none` there too ({numref}`operations-that-give-none`). The illustrator
+wrote the body with parameters, not with known inputs, so an `or?` in the body can replace the
+`none` with a default (docs/type-system.md, section 5.c). With `(func[real] f ((real t)) (let ((b
+(or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f -1)` is 1. With `(func f ((real x)) (/ 1 x))`, the
+result type includes `none`, and `(f 0)` is `none`. `(func[real] f ((real x)) (/ 1 x))` is a
+compile error at `(/ 1 x)`, since its body gives `none` when `x` is 0 and its declared result does
+not include `none`.
 
-The compiler works out which expressions may be undefined from the ranges of their inputs, and
+The compiler works out which expressions can give `none` from the ranges of their inputs, and
 gives each such expression a type that includes `none` ({doc}`types`). The example below is live:
-at 90° the secant is undefined, and the readout holds its default text.
+the secant gives `none` at 90°, and there the readout holds its default text.
 
 ```{mtp-example}
-; sec θ is undefined at 90°, and there the readout holds its default text
+; sec θ has no value at 90°, and there the readout holds its default text
 (real theta 60 (>= 0) (<= 180))
 (slider turn (move theta (from 0) (to 180)) (label 'θ'))
-(readout r (or? $'sec θ = {(secd theta):.3f}' 'sec θ is undefined at 90°'))
+(readout r (or? $'sec θ = {(secd theta):.3f}' 'sec θ has no value at 90°'))
 ```
 
 ## How none propagates
@@ -227,22 +238,23 @@ argument is known to give `none` (mathterpiece/compiler.py, `apply_builtin`, lin
 
 ## Numbers
 
-There are four types of number ({doc}`types`). Each is held this way at both times:
+```{rule} number-types
+There are four types of number ({doc}`types`). Each is held this way, when folded and while
+drawing:
 
-| Type | When compiling and while drawing |
+| Type | Held as |
 |---|---|
 | `int` | an exact whole number |
 | `ratio` | an exact fraction |
-| `real` | an IEEE 754 binary64 number |
+| `real` | an IEEE 754 binary64 number that is not NaN. The infinities are reals ({numref}`infinity`) |
 | `complex` | two binary64 numbers |
+```
 
-Ints and ratios are exact ({numref}`number-literals`), and only a real may differ between the two
-times ({numref}`same-value-at-both-times`). So the runtime computes values of type `int` as exact
-whole numbers and values of type `ratio` as exact fractions, as the compiler does, and an operation
-on ints and ratios alone gives the same value when folded as while drawing.
-
-In the .mtpc, a ratio is written as its numerator and denominator in lowest terms
-({doc}`compiled-format`).
+So the runtime computes values of type `int` as exact whole numbers and values of type `ratio` as
+exact fractions, as the compiler does, and an operation on ints and ratios alone gives the same
+value when folded as while drawing. Only a real can differ between the two times
+({numref}`same-value-at-both-times`). In the .mtpc, a ratio is written as its numerator and
+denominator in lowest terms ({doc}`compiled-format`).
 
 :::{admonition} Code differs
 :class: note
@@ -267,37 +279,39 @@ An arithmetic operation gives the broadest type of its inputs, in the order `int
 `real`, `complex`, with these exceptions:
 
 - `/` of an int by an int gives a ratio.
-- `^` of an int to an int power gives an int when the power is at least 0, and a ratio when it may
-  be negative. With a complex input it gives a complex, and otherwise a real.
+- `^` of an int to an int power gives an int when the range of the power holds no negative int,
+  and a ratio otherwise. With a complex input it gives a complex, and otherwise a real.
 - `abs` of a complex gives a real.
 
-When the inputs of an operation include a ratio and a real, the ratio is converted to a real
-first.
+When the inputs of an operation include a real and an int or a ratio, the int or the ratio is
+first converted to the nearest real, and to the one of the two nearest reals whose last bit is 0
+when it lies exactly halfway between them.
 ```
 
 ### The limit of every number
 
 ```{rule} number-limit
-Every number lies within ±10¹⁵⁰, the {term}`number limit`:
+The {term}`number limit` is ±10¹⁵⁰:
 
-- A literal beyond it is a compile error, and so is a starting value known when compiling, also
-  one given with `free@`.
+- A literal beyond it is a compile error, and so is a finite starting value known when compiling
+  that is beyond it, also one given with `free@`.
 - A write of a number beyond it is clamped to it. So is each number of a point or a list that is
   written.
 - For the ranges that the prover proves, a value with no limit of its own lies within it.
 
-A computed result may go beyond the number limit. A result beyond the largest real, about 1.8 ×
-10³⁰⁸, is an overflow, and is undefined ({numref}`undefined-operations`).
+A computed result is not held to the number limit.
 ```
 
 With these limits, `(* 2 k)` or `(* 360 t)` can never overflow, while a product of several values
-with no limit of their own may (docs/type-system.md, section 5.c).
+with no limit of their own can (docs/type-system.md, section 5.c). An overflow gives `none`
+({numref}`operations-that-give-none`), and not the infinity that binary64 arithmetic gives.
 
 :::{admonition} Code differs
 :class: note
 - The compiler checks only literals against the limit (`_Compiler.literal`,
   mathterpiece/compiler.py, line 5882), so `(real k free@(* 1e100 1e100))` starts at 10²⁰⁰, and
-  `(real m (* k k))`, which the prover takes to be safe, is `none` while drawing. Bug mtp-mqbu.
+  `(real m (* k k))`, whose type the compiler gives without `none`, is `none` while drawing. Bug
+  mtp-mqbu.
 - `constrain` (web/src/runtime.ts, line 761) clamps a write only when the value is a single number.
   mtp-ydd4.7.18.
 - `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248), whose
@@ -307,40 +321,74 @@ with no limit of their own may (docs/type-system.md, section 5.c).
 
 ### Infinity
 
-```{rule} infinity-only-when-compiling
-`infty`, also written `∞`, is above every number, and `(- infty)` is below every number. Both lie
-beyond the number limit, and both are values known when compiling only:
-
-- When compiling, arithmetic carries them: `(+ infty 1)` is `infty` and `(/ 1 infty)` is 0.
-  `(- infty infty)`, `(* 0 infty)` and `(/ infty infty)` are undefined.
-- A variable that may hold one is `const`, and an attribute of a shape never holds one.
-- While drawing, a result that is infinite is undefined, so it gives `none`, as an overflow does.
+```{rule} infinity
+`infty`, also written `∞`, is a real above every finite number, and `(- infty)` is a real below
+every finite number. Both lie beyond the number limit, and both are values at both times, when
+folded and while drawing. The value of a variable that is not `const`, and the value of an
+attribute of a shape, are never infinite: when the range of such a value includes an infinity,
+this is a compile error at the value.
 ```
 
-:::{admonition} Open question Q-evaluation-4
-:class: warning
-An infinity known when compiling can be an input of an expression that is computed while drawing.
-In the .mtpc it is written as `"infty"` ({doc}`compiled-format`), and the runtime reads it as an
-infinite binary64 number (web/src/runtime.ts, line 932). With `(real big infty (const))` and a free
-`(real y 1)`, `(+ y big)` is `none` while drawing, since its result is infinite. With `y` known
-when compiling, the same expression is folded to `infty`. That breaks
-{numref}`same-value-at-both-times`, so the code as it is today is not an option. The options:
+By {numref}`real-error-bound`, `+`, `-`, `*`, `/` and `sqrt` with an infinite input give the
+binary64 result, except at the inputs at which they give `none`
+({numref}`operations-that-give-none`): `(+ infty 1)` is `infty`, `(/ 1 infty)` is 0, and
+`(- infty infty)`, `(* 0 infty)` and `(/ infty infty)` are `none`. So with `(real big infty
+(const))` and a free `(real y 1)`, `(+ y big)` is `infty` when folded and while drawing, and never
+`none`, and `(min (+ y big) 3)` is 3. `(real z (+ y big))` is a compile error, since `z` is not
+`const`, and so is `(circle c (r big))`. A write of an infinity is clamped to the number limit
+({numref}`number-limit`). In the .mtpc, an infinity is written as `"infty"` or `"-infty"`
+({doc}`compiled-format`).
 
-- (a) An expression computed while drawing never reads an infinity: reading a `const` that holds
-  one outside an expression that is folded is a compile error.
-- (b) The runtime carries infinities as the compiler does, and gives `none` only where the result
-  would reach a place that needs a finite number, such as an attribute of a shape.
+:::{admonition} Code differs
+:class: note
+While drawing, every built-in function gives `none` for a result that is infinite (`finite` in
+web/src/builtins.ts, line 29), also when an input is infinite. So `(+ y big)` above is `none` while
+drawing, and `infty` when folded. The compiler gives an expression that can be infinite a type
+that includes `none`, so it rejects a readout of `(min (+ y big) 3)` with "this value may be
+none". mtp-ydd4.7.28.
+:::
+
+:::{admonition} Open question Q-evaluation-10
+:class: warning
+What the built-in functions other than `+`, `-`, `*`, `/`, `sqrt` and the comparisons give at an
+infinite input. {numref}`real-error-bound` settles the five operations, and {numref}`infinity`
+settles the comparisons, `min` and `max`. For the others, such as `(sin infty)`,
+`(exp (- infty))`, `(atan infty)`, `(mod 3 infty)`, `(abs (- infty))` and `(round infty)`, no
+rule gives the result. Today the compiler rejects `(sin infty)` as an operation that gives `none`
+at known inputs, and carries an infinite result of an infinite input (mathterpiece/compiler.py,
+lines 7613 to 7617). The options, at both times:
+
+- (a) Each gives the limit of its exact value when that limit exists and has the result type of
+  the function, and `none` otherwise: `(exp (- infty))` is 0, `(atan infty)` is π/2, and
+  `(sin infty)` and `(round infty)` are `none`.
+- (b) Each gives `none` at an infinite input.
+:::
+
+:::{admonition} Open question Q-evaluation-11
+:class: warning
+What happens when an infinity reaches a place that needs a finite number, other than a variable
+that is not `const` or an attribute of a shape ({numref}`infinity`). Such places are the text of
+an interpolated string, as `$'{big}'`, an attribute of a view, a control or an animation, such as
+the duration of an animation, and a bound of `rand` or `rand-int`. Today the compiler writes an
+infinity in text as `∞` or `-∞` (`_infinity`, mathterpiece/compiler.py, line 7849), and the runtime
+as `inf` or `-inf` (web/src/format.ts, line 12). The options:
+
+- (a) Every such place is a compile error when the range of its value includes an infinity, as
+  for an attribute of a shape.
+- (b) Text holds `∞` or `-∞`, at both times, and every other such place is a compile error when
+  the range of its value includes an infinity.
 :::
 
 ### Rounding
 
 ```{rule} rounding
-Wherever a number is rounded, halves round away from zero, on the number's shortest exact decimal
-form, not on its binary value: 2.5 gives 3, -2.5 gives -3, 0.125 to two decimal places gives 0.13,
-and 2.675 to two decimal places gives 2.68. The rule applies to `round`, to a write into an int,
-and to the format spec of an interpolated string, such as `{x:.2f}`. `round` is undefined nowhere.
-A number written into an int is rounded after it is clamped to the int's range, so that it lands
-on the nearest int inside the range ({doc}`types`).
+Wherever a number is rounded, other than a channel of a mixed color
+({numref}`mixed-color-channels`), halves round away from zero, on the number's shortest exact
+decimal form, not on its binary value: 2.5 gives 3, -2.5 gives -3, 0.125 to two decimal places
+gives 0.13, and 2.675 to two decimal places gives 2.68. The rule applies to `round`, to a write
+into an int, and to the format spec of an interpolated string, such as `{x:.2f}`. `round` gives
+`none` at no finite input. A number written into an int is rounded after it is clamped to the
+int's range, so that it lands on the nearest int inside the range ({doc}`types`).
 ```
 
 The runtime rounds the value once before the constraints and once after them, so that an int that
@@ -356,25 +404,27 @@ runtime with `roundHalfAway` (web/src/builtins.ts, line 181). On 1,031 values fr
 position. Bug mtp-6yga.
 :::
 
-:::{admonition} Open question Q-evaluation-5
-:class: warning
-How the channels of a mixed color are rounded. By {numref}`same-value-at-both-times`, both times
-must give the same channels. Today the compiler rounds halves to even (Python's `round`,
-mathterpiece/colors.py, line 237), and the runtime rounds halves up (`Math.round`,
-web/src/builtins.ts, line 287). So `(mix '#000000' '#050505' 0.5)` is `#020202ff` when folded and
-`#030303ff` while drawing (bug mtp-nk2w). The options, at both times:
+```{rule} mixed-color-channels
+Each channel of a mixed color is rounded to a whole number, and a channel that lies exactly halfway
+between two whole numbers is rounded up, when folded and while drawing, as CSS `color-mix()` does
+in browsers.
+```
 
-- (a) The channels of a mixed color follow {numref}`rounding`.
-- (b) The channels round halves up, as CSS `color-mix()` does in browsers.
-- (c) Colors are not rounded until they are drawn, so the channels of a mixed color may be
-  fractions.
+So `(mix '#000000' '#050505' 0.5)` is `#030303ff`, since its channels are 2.5.
+
+:::{admonition} Code differs
+:class: note
+The compiler rounds halves to even (Python's `round`, mathterpiece/colors.py, line 237), and the
+runtime rounds halves up (`Math.round`, web/src/builtins.ts, line 287). So
+`(mix '#000000' '#050505' 0.5)` is `#020202ff` when folded and `#030303ff` while drawing. Bug
+mtp-nk2w.
 :::
 
 ## Randomness
 
 ```{rule} seed-variable
 Every random value is computed from a {term}`seed`: a free variable of the built-in type
-`rand-seed`, an int of at least 0. A random function follows the seed named in it with `(seed s)`,
+`rand-seed`, which is any int. A random function follows the seed named in it with `(seed s)`,
 or, without one, the only seed that the file declares or imports. In a file with several seeds,
 every random function is written with `(seed s)`. A `const` variable is not a seed.
 ```
@@ -404,21 +454,24 @@ For a seed value s, a site p and a whole number k, u(s, p, k) = h(s, p, k) / 2³
 up to 1, never 1.
 ```
 
+Since the hash uses each x only modulo 2³², two seeds that are equal modulo 2³² draw the same
+values, as 0, 2³² and -2³² do.
+
 ```{rule} random-values
 With s the value of the seed and p the site:
 
-- `(rand)` is u(s, p, 0), and `(rand lo hi)` is lo + u(s, p, 0) × (hi - lo): a real from `lo` up
-  to `hi`, never `hi`.
+- `(rand)` is u(s, p, 0), and `(rand lo hi)` is lo + u(s, p, 0) × (hi - lo): a real from `lo` to
+  `hi`.
 - `(rand-int lo hi)` is lo + ⌊u(s, p, 0) × (hi - lo + 1)⌋: an int from `lo` to `hi`, both included.
-- `(pick xs)` on a list of n items is the item at position ⌊u(s, p, 0) × n⌋, and `none` when the
-  list is empty.
+- `(pick xs)` on a list of n items, n at least 1, is the item at position ⌊u(s, p, 0) × n⌋.
 - `(shuffle xs)` is the items of `xs` in a new order: for i from n - 1 down to 1, the items at
   positions i and ⌊u(s, p, i) × (i + 1)⌋ are swapped.
 - `(next-seed s)` is h(s, 0x9e3779b9).
 ```
 
-These are the functions `unit`, `shuffle` and `nextSeed` of web/src/random.ts, and the case
-`rand` of `compile` in web/src/runtime.ts, line 1069.
+`rand` and `rand-int` with `lo` above `hi`, and `pick` on an empty list, give `none`
+({numref}`operations-that-give-none`). These are the functions `unit`, `shuffle` and `nextSeed` of
+web/src/random.ts, and the case `rand` of `compile` in web/src/runtime.ts, line 1069.
 
 ```{rule} random-never-folded
 A random value is known only while drawing ({doc}`binding-time`). The compiler never draws one and
@@ -456,20 +509,10 @@ A `rand` that follows a `const` seed, such as `(rand-seed s 3 (const))`, is a co
 one, (import rand), or declare one, (rand-seed dots 0)", although one is declared. The wording of
 a message is not normative ({numref}`what-is-normative`).
 
-:::{admonition} Open question Q-evaluation-6
-:class: warning
-Two points about random values are not settled:
-
-- **`lo` above `hi`.** Neither `rand` nor `rand-int` checks that `lo` is at most `hi`. With
-  `(rand-int 10 3)`, {numref}`random-values` gives an int from 4 to 10, not from 3 to 10. The
-  compiler gives the result the range from `lo` to `hi` (mathterpiece/compiler.py, lines 2262 and
-  2273), here from 10 to 3, so it accepts `((int (>= 3) (<= 5)) b (rand-int 5 3))`, which is a bug
-  in every case (mtp-y7vp). The options: (a) `lo` above `hi` is undefined, (b) the two are
-  swapped, (c) the compiler proves that `lo` is at most `hi`.
-- **Only the seed modulo 2³² counts.** The hash uses x mod 2³² (`x >>> 0`, web/src/random.ts,
-  line 9), so the seeds 0 and 2³² draw the same values, and so do 0 and 10¹⁵⁰. The options: (a) the
-  spec keeps {numref}`random-hash` as it is, and states this in a sentence, (b) `rand-seed` is
-  narrowed to ints below 2³².
+:::{admonition} Code differs
+:class: note
+The type `rand-seed` is an int of at least 0 (`RAND_SEED`, mathterpiece/types.py, line 143), so a
+seed that is below 0 is a compile error. mtp-ydd4.7.30.
 :::
 
 ## Equality
@@ -500,8 +543,8 @@ Values compare by content, and mutable objects by identity. `=` and `!=` never g
 ```
 
 Since `=` on reals is exact, `(= (sind 30) 0.5)` is false, since `(sind 30)` is
-0.49999999999999994. A real may differ in its last digits when folded and while drawing
-({numref}`real-error-bound`), so `=` on two reals that come from such functions may be true at one
+0.49999999999999994. A real can differ in its last digits when folded and while drawing
+({numref}`real-error-bound`), so `=` on two reals that come from such functions can be true at one
 time and false at the other.
 
 :::{admonition} Code differs
@@ -545,21 +588,21 @@ on without end is a chain of calls, and the call depth limit ends every chain.
 ```{rule} call-depth-limit
 The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
 of such calls that are still being computed when it starts. Calls of built-in functions do not
-count. `max-call-depth` is one constant of this spec, the {term}`call depth limit`, and it is the
-same when folding and while drawing. A call whose depth is above it is undefined
-({numref}`undefined-operations`). A function is recursive when its body names it, directly or
+count. `max-call-depth`, the {term}`call depth limit`, is 256, when folding and while drawing.
+A function is recursive when its body names it, directly or
 through the bodies of the functions that it names, and a call of a recursive function has a type
 that includes `none` ({doc}`types`).
 ```
 
 So in `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m 1)))))`, the inner call
-`(down (- m 1))` has the type `int|none`, so the body may give `none`, and the declaration is a
+`(down (- m 1))` has the type `int|none`, so the body can give `none`, and the declaration is a
 compile error. Written `(func down ((int m)) …)`, with the same body, the result type is
 `int|none`, and `(down 5)` is 5, when folded and while drawing. A call of `down` with an argument
-large enough to pass the limit gives `none`.
+large enough to pass the limit gives `none` ({numref}`operations-that-give-none`): `(down 255)`
+is 255, and `(down 256)` is `none`, since its innermost call has a depth of 257.
 
 Every computation ends, since every chain of calls is at most `max-call-depth` deep. A computation
-that ends may still take a long time, and the spec sets no limit on time.
+that ends can still run for a long time, and the spec sets no limit on time.
 
 :::{admonition} Code differs
 :class: note
@@ -578,21 +621,14 @@ that ends may still take a long time, and the spec sets no limit on time.
 mtp-ydd4.7.15.
 :::
 
-:::{admonition} Open question Q-evaluation-8
-:class: warning
-The value of `max-call-depth`. Neither the code nor the decisions give one. It must be small
-enough that every browser that the runtime supports can compute a chain of that depth, and large
-enough for the recursive functions of the examples: `best-in` in bourgain-densities.mtp, `koch` in
-koch-snowflake.mtp and `has-divisor` in ulam-spiral.mtp.
-:::
-
 (folding-and-drawing)=
 ## Folding and drawing compared
 
 ```{rule} same-value-at-both-times
 An expression gives the same value when it is folded as when it is computed while drawing, for the
-same values of what it reads, with one exception: a real may differ in its last digits
-({numref}`real-error-bound`), and so may a value computed from such a real.
+same values of what it reads, with one exception: a real that a built-in function other than
+`+`, `-`, `*`, `/` and `sqrt` gives can differ in its last digits, within the bound of
+{numref}`real-error-bound`, and so can a value computed from such a real.
 ```
 
 ```{rule} real-error-bound
@@ -614,6 +650,18 @@ function on reals. So a range that the prover proves holds at both times.
 A folded value is final: the .mtpc holds the value in place of the expression
 ({numref}`compile-steps`), so the runtime uses it as written and never computes it again.
 
+:::{admonition} Open question Q-evaluation-12
+:class: warning
+The value of `max-real-error`. {numref}`real-error-bound` and {numref}`prover-widens-reals` use it,
+and no rule gives it. ECMAScript sets no bound on the error of the functions of `Math` other than
+`Math.sqrt`, and CPython's `math` module uses the C library of the system. The options:
+
+- (a) A fixed number of units in the last place, such as 2, checked against every browser that the
+  runtime supports.
+- (b) The compiler and the runtime compute these functions with code of their own that gives the
+  correctly rounded result, so that the two times never differ.
+:::
+
 {numref}`same-value-at-both-times` follows the guides: docs/reference.md, line 613, has "One rule,
 the same in the compiler and the runtime", and the comment at line 1 of web/src/builtins.ts has "as
 the compiler folds them". The compiler computes with CPython and its `math` module, and the runtime
@@ -627,8 +675,8 @@ The two programs differ in these places, beyond what the rules above allow:
 |---|---|---|---|
 | ratios, and ints beyond 2⁵³ | exact | binary64 | mtp-ydd4.7.13 |
 | `round` of 10²⁸ or more | the compiler stops | rounds | mtp-6yga |
-| the channels of a mixed color | halves to even | halves up | mtp-nk2w, Q-evaluation-5 |
-| an infinite input | carried, `(+ y infty)` is `infty` | `none` | Q-evaluation-4 |
+| the channels of a mixed color | halves to even | halves up | mtp-nk2w |
+| an infinite input | carried, `(+ y infty)` is `infty` | `none` | mtp-ydd4.7.28 |
 | recursion | folded up to a depth of about 80 | computed up to the stack of the browser | mtp-ydd4.7.15 |
 | `mod` of reals | Python's `%`, which is exact | `a - b × ⌊a / b⌋`, so `(mod 5.5 0.1)` is 0 and not 0.0999999999999997 | mtp-ydd4.7.14 |
 | the functions in degrees, for large angles | converted to radians first, so `(cosd (+ 1e15 90))` is 0.98478… | `(x × π) / 180` first, so it is 0.98512… | mtp-ydd4.7.14 |

@@ -11,7 +11,7 @@ boxes of each part.
 | {doc}`lexical` | Q-lexical-1 to 10 |
 | {doc}`grammar` | Q-grammar-1 to 11 |
 | {doc}`core` | Q-core-1 to 27 |
-| {doc}`evaluation` | Q-evaluation-1 to 9 |
+| {doc}`evaluation` | Q-evaluation-1 to 12 |
 
 ## P1. When bodies are proved: once, or once per copy
 
@@ -101,6 +101,18 @@ the prover widens every real range outward to allow for it, and a folded value i
 ({numref}`same-value-at-both-times`, {numref}`real-error-bound`,
 {numref}`prover-widens-reals`).
 
+**Decided (2026-11-15):** ints and ratios are exact at both times ({numref}`number-types`). `+`,
+`-`, `*`, `/` and `sqrt` on reals give the same binary64 result at both times, and every other
+function on reals differs by at most `max-real-error` ({numref}`real-error-bound`). The ±10¹⁵⁰
+limit applies to every starting value known when compiling, and an overflow gives `none`
+({numref}`number-limit`, {numref}`operations-that-give-none`). Infinities are values at both
+times, so with `(real big infty (const))` and a free `(real y 1)`, `(+ y big)` is `infty` when
+folded and while drawing (Q-evaluation-4, {numref}`infinity`). The channels of a mixed color round
+halves up at both times, as CSS `color-mix()` does (Q-evaluation-5,
+{numref}`mixed-color-channels`). Still open: what the other built-in functions give at an infinite
+input (Q-evaluation-10), what happens when an infinity reaches another place that needs a finite
+number (Q-evaluation-11), and the value of `max-real-error` (Q-evaluation-12).
+
 ## P5. Equality for each type
 
 **Today.** `=` compares numbers exactly, points and lists item by item, and everything else by
@@ -127,7 +139,7 @@ overflow replaces the component with an error. Three examples use recursion: `be
 bourgain-densities.mtp, `koch` in koch-snowflake.mtp and `has-divisor` in ulam-spiral.mtp.
 
 **Options.**
-- **A depth limit.** A call nested deeper than a fixed limit is undefined, so it gives `none`,
+- **A depth limit.** A call nested deeper than a fixed limit gives `none`,
   the same limit at both times. Every expression then has a value. The prover proves nothing new.
 - **No recursion.** A function may not call itself, directly or through others. Every
   expression ends. The three examples are rewritten with `map`, `reduce` and `range`.
@@ -137,7 +149,9 @@ bourgain-densities.mtp, `koch` in koch-snowflake.mtp and `has-divisor` in ulam-s
 **Settles:** Q-evaluation-8.
 
 **Decided:** a depth limit, the same at both times, past which a call gives `none`
-({numref}`call-depth-limit`). Its value is still open (Q-evaluation-8).
+({numref}`call-depth-limit`).
+
+**Decided (2026-11-15):** `max-call-depth` is 256 (Q-evaluation-8).
 
 ## P7. What a name may contain, and what text the reader accepts
 
@@ -187,3 +201,16 @@ contradictions Q-core-24 to 26 and Q-evaluation-6.
 
 **Decided:** as proposed, and a runtime refuses a .mtpc that does not match the schema
 ({numref}`what-is-normative`, {numref}`format-version`, {numref}`runtime-loads-mtpc`).
+
+**Decided (2026-11-15):** nothing is left to the implementation: every source and every .mtpc has
+a behavior that the spec states. A rejected source gets an error that points to at least one rule
+that the source breaks, and may point to any or all of them. Nothing else about an error is
+prescribed ({numref}`conformance`). A .mtpc that matches the schema and breaks the spec is
+corrupt. The compiler never writes one, the schema is made as strong as possible, and the runtime
+refuses every corrupt .mtpc and runs no part of it ({numref}`corrupt-mtpc`,
+{numref}`schema-strength`, {numref}`runtime-loads-mtpc`). An operation that has no value gives
+`none`, and the words "gives `none`" are used for it, never "undefined"
+({numref}`operations-that-give-none`). `rand` and `rand-int` with `lo` above `hi` give `none`, and
+are a compile error when both bounds are known when compiling ({numref}`none-at-known-inputs`).
+Any int is a seed, and two seeds that are equal modulo 2³² draw the same values
+({numref}`seed-variable`, {numref}`random-hash`) (Q-evaluation-6).
