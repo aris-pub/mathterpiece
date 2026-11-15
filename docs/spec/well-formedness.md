@@ -269,7 +269,7 @@ When a value does not meet C:
 | a value known in the prove step | a compile error |
 | the value of a bound variable or attribute | {numref}`prover-finds-ranges` |
 | an argument of a call, of an instance or of a use of a choreo | a compile error |
-| the body of a function declared with a result type R | when R includes `none`, a call gives `none` where the value of the body breaks C, and the fold and write step writes the `check` for it. Otherwise a compile error |
+| the body of a function declared with a result type R | when R includes `none`, a call gives `none` where the value of the body breaks C, and the write step writes the `check` for it. Otherwise a compile error |
 | an item of a list literal whose item type is expected | a compile error |
 | a value that a writer writes | no proof: {numref}`written-values` |
 ```

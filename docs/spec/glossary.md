@@ -21,7 +21,7 @@ compile error
 
 compiler
   The program that turns a source file into a .mtpc, in the steps parse, rewrite, prove, expand,
-  and fold and write. Defined in {doc}`compiler-runtime`.
+  fold and write. Defined in {doc}`compiler-runtime`.
 
 component
   A view, a control or a listener: what the illustrator declares and the author places on a page.

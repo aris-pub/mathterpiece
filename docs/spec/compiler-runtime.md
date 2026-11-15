@@ -32,7 +32,7 @@ tools that they already prefer.
 ## The steps of compiling
 
 ```{rule} compile-steps
-The compiler turns a source into a .mtpc in five steps, in this order:
+The compiler turns a source into a .mtpc in six steps, in this order:
 
 1. **Parse.** The {term}`parser` reads the text into {term}`forms <form>`, by the syntax alone
    ({doc}`lexical`, {doc}`grammar`). It looks up no {term}`name`.
@@ -45,9 +45,10 @@ The compiler turns a source into a .mtpc in five steps, in this order:
 4. **Expand.** Each `foreach` is written out as its copies, and each motif instance as the
    {term}`body` of its motif with the arguments of the instance. In the copies and the instances,
    the names built from values are replaced ({numref}`names-from-values`).
-5. **Fold and write.** Every expression known when compiling ({doc}`binding-time`) is replaced by
-   its value, and the model is written as the .mtpc ({doc}`compiled-format`), with every type that
-   the runtime needs.
+5. **Fold.** Every expression known when compiling ({doc}`binding-time`) is replaced by its
+   value.
+6. **Write.** The model is written as the .mtpc ({doc}`compiled-format`), with every type that the
+   runtime needs.
 ```
 
 So a check that the parts of a sugar form are known when compiling is made in the prove step, and
@@ -77,7 +78,7 @@ motif compiles.
 The parse, rewrite and prove steps each either reject the source or pass their output to the next
 step. The parse step rejects with a {term}`syntax error`, and the rewrite and prove steps with a
 compile error ({doc}`errors`). When a step rejects the source, no later step runs. The
-expand step and the fold and write step never reject a source that the prove step passed, so the
+expand, fold and write steps never reject a source that the prove step passed, so the
 compiler either rejects a source or writes a .mtpc that is valid by {doc}`compiled-format`, and
 never both.
 ```
@@ -87,7 +88,7 @@ What the error of a rejected source holds is given in {numref}`conformance`.
 ```{rule} prover-finds-ranges
 To prove a range or a constraint, the {term}`prover` works out ranges ({numref}`ranges`,
 {numref}`range-rules`). The prover writes nothing into the model. Where the range of a bound
-value does not lie inside the constraint of the value, the prover gives the value a type that includes `none`, and the fold and write step writes the `check`
+value does not lie inside the constraint of the value, the prover gives the value a type that includes `none`, and the write step writes the `check`
 that this type needs ({doc}`compiled-format`).
 ```
 
@@ -111,7 +112,7 @@ The order of the steps and proving each body once are mtp-08wd.1.
 The mtp command runs on the illustrator's machine. It has six subcommands, and each runs the steps
 of compiling up to a point.
 
-Building a source is the five steps of compiling, then writing the {term}`inventory page`. The
+Building a source is the six steps of compiling, then writing the {term}`inventory page`. The
 inventory page holds the runtime, the .mtpc and the script of the inventory, all inside the page, so
 that it works when it is opened as a file. It also holds the opening {term}`comment` of the source,
 the lines of HTML that load the runtime and the .mtpc, every component live with its name and the
@@ -126,8 +127,8 @@ Each subcommand takes the path of one source file, and runs these steps:
 |---|---|---|
 | `mtp parse file` | parse | prints the expressions that the parser reads, and writes no file |
 | `mtp check file` | parse, rewrite and prove | prints `file: no errors` when there is no error, and writes no file |
-| `mtp compile file` | parse to fold and write | the .mtpc |
-| `mtp build file` | parse to fold and write, then the inventory page | the folder `build_name/`, `name` being the file name without `.mtp` |
+| `mtp compile file` | parse to write | the .mtpc |
+| `mtp build file` | parse to write, then the inventory page | the folder `build_name/`, `name` being the file name without `.mtp` |
 | `mtp serve file` | as `mtp build`, again each time the file or a file that it imports is saved | as `mtp build`, and serves the inventory page |
 | `mtp fmt file` | parse | the file itself, in a house layout |
 
