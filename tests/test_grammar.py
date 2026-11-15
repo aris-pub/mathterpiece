@@ -33,7 +33,7 @@ from mathterpiece.nodes import (
     RealLit,
     StrLit,
 )
-from mathterpiece.parse import ParseError, _Parser, parse
+from mathterpiece.parse import ParseError, parse
 
 ROOT = Path(__file__).parent.parent
 GRAMMAR = ROOT / "docs" / "spec" / "mtp.lark"
@@ -97,6 +97,8 @@ ACCEPTED = [
     "(f $'{[1 2]}' $'{'s'}' $'{a[0]}' $'{a|b}' $'{$'{a}' }')",
     "(f $'{(g ; a comment\n x)}')",
     "(f $'{a:b}' $'{a.b:c}' $'{a[0].b:c}' $'{#'n-{k}'.x :y}')",
+    "(f $'{$'{a}'}' $'{#'n-{k}'.x:y}' $'{[$'{a}' b]}' $'{'s':>5}' $'{$'{$'{a}'}'}')",
+    "(f $'{(g $'{a}' 's')}' $'{#'a{b}'[0]:x}' $'{[1 $'{a:y}'][0]:z}')",
     "(f #'dot-{k}' #'dot-{k}'.pos #'row-{i}'[0] #'a{b}'.c.d[0].e #'{k}')",
     "(f doc@'text' doc@x)",
     "(f a@b)",
@@ -248,159 +250,19 @@ REJECTED = [
     "(f none[0]x)",
 ]
 
-BOM = "mtp-ydd4.7.1"
-BLANKS = "mtp-ydd4.7.2"
-NAMES = "mtp-ydd4.7.3"
-DIGITS = "mtp-ydd4.7.4"
-NESTED_BRACES = "mtp-kzx2"
-BRACE_COMMENTS = "mtp-ydd4.7.31"
-LITERAL_PARTS = "mtp-ydd4.7.32"
-
 # Sources on which the grammar, which states the decided language, and today's parser differ.
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
 # source, test_known_difference fails, and the entry is removed.
-KNOWN_DIFFERENCES = {
-    "﻿(f)": BOM,
-    "﻿\n(f)": BOM,
-    "(f a)": BLANKS,
-    "(f a b)": BLANKS,
-    "　(f)": BLANKS,
-    "(f a!b)": NAMES,
-    "(f a?b)": NAMES,
-    "(f a*b)": NAMES,
-    "(f a=b)": NAMES,
-    "(f !=x)": NAMES,
-    "(f a')": NAMES,
-    "(f a'')": NAMES,
-    "(f a'b)": NAMES,
-    "(f f'(x))": NAMES,
-    "(f a:b)": NAMES,
-    "(f :a)": NAMES,
-    "(f :)": NAMES,
-    "(f θ)": NAMES,
-    "(f ünï)": NAMES,
-    "(f x²)": NAMES,
-    "(f a\x00b)": NAMES,
-    "(f a﻿b)": NAMES,
-    "(f xs[0]._)": NAMES,
-    "(f xs[0].tex'q')": NAMES,
-    "(f a|tex'q')": NAMES,
-    "(f a_)": NAMES,
-    "(f a b_)": NAMES,
-    "(f a|b_)": NAMES,
-    "(f a_.b)": NAMES,
-    "(f _.a)": NAMES,
-    "(f a._)": NAMES,
-    "(f _[0])": NAMES,
-    "(a_.b x)": NAMES,
-    "(f ٣)": DIGITS,
-    "(f 1/٣)": DIGITS,
-    "(f ١.٥)": DIGITS,
-    # After a string nested in braces ends, the parser reads the rest of the braces as if it were
-    # outside them.
-    "(f $'{$'{a}'}')": NESTED_BRACES,
-    "(f $'{#'n-{k}'.x:y}')": NESTED_BRACES,
-    "(f $'{[$'{a}' b]}')": NESTED_BRACES,
-    "(f $'{x ; a comment\n}')": BRACE_COMMENTS,
-    "(f $'{ ;c\n x}')": BRACE_COMMENTS,
-    "(f #'a{k ;c\n}')": BRACE_COMMENTS,
-    "(f true.x)": LITERAL_PARTS,
-    "(f none.x)": LITERAL_PARTS,
-    "(f x.none)": LITERAL_PARTS,
-    "(f p.true)": LITERAL_PARTS,
-    "(f xs[0].false)": LITERAL_PARTS,
-    "(f none[0])": LITERAL_PARTS,
-    "(a.true_ x)": LITERAL_PARTS,
-}
-
-OPERATOR_NAMES = {"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!=", "."}
-NAME_PART = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
-
-
-def _bad_name(node) -> bool:
-    """Whether a node holds a name part that the rule name-characters does not allow."""
-    if isinstance(node, Name):
-        if len(node.parts) == 1 and node.parts[0] in OPERATOR_NAMES:
-            return False
-        return any(
-            _bad_name(p) if not isinstance(p, str) else not NAME_PART.fullmatch(p)
-            for p in node.parts
-        )
-    if isinstance(node, (Form, ListLit, Bar, Brackets)):
-        return any(_bad_name(x) for x in node.items)
-    if isinstance(node, InterpStrLit):
-        return any(_bad_name(p) for p in node.parts if not isinstance(p, str))
-    if isinstance(node, Field):
-        return _bad_name(node.expr)
-    return False
-
-
-def _names_step(forms):
-    return None if any(_bad_name(f) for f in forms) else forms
-
-
-LITERALS = {"true", "false", "none"}
-
-
-def _literal_part(node) -> bool:
-    """Whether a node holds a name with a part that is exactly true, false or none."""
-    if isinstance(node, Name):
-        return any(p in LITERALS if isinstance(p, str) else _literal_part(p) for p in node.parts)
-    if isinstance(node, (Form, ListLit, Bar, Brackets)):
-        return any(_literal_part(x) for x in node.items)
-    if isinstance(node, InterpStrLit):
-        return any(_literal_part(p) for p in node.parts if not isinstance(p, str))
-    if isinstance(node, Field):
-        return _literal_part(node.expr)
-    return False
-
-
-def _literal_parts_step(forms):
-    return None if any(_literal_part(f) for f in forms) else forms
-
-
-class _NoCommentInBraces(_Parser):
-    """The parser once BRACE_COMMENTS is done: around the expression in the braces of an
-    interpolated string, whitespace and no comment."""
-
-    def __init__(self, src: str):
-        super().__init__(src)
-        self.around: list[bool] = []
-
-    def interp_part(self):
-        self.around.append(True)
-        try:
-            return super().interp_part()
-        finally:
-            self.around.pop()
-
-    def node(self):
-        # Inside the expression, such as a form in the braces, comments are allowed again.
-        saved, self.around = self.around, []
-        try:
-            return super().node()
-        finally:
-            self.around = saved
-
-    def skip_blank(self):
-        if not self.around:
-            return super().skip_blank()
-        while self.peek() and self.peek().isspace():
-            self.advance()
-        if self.peek() == ";":
-            raise ParseError("a comment in braces", self.pos())
-
+KNOWN_DIFFERENCES = {}
 
 # For the random sources, which no list could name in advance: the parser as it will be once each
-# bead is done. A step or a parser is removed together with the last KNOWN_DIFFERENCES entry of
-# its bead.
-PENDING_PARSERS = {BRACE_COMMENTS: _NoCommentInBraces}
-PENDING_STEPS = {NAMES: _names_step, LITERAL_PARTS: _literal_parts_step}
+# bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.
+PENDING_STEPS: dict = {}
 
 
 def parser_after_beads(src: str):
     try:
-        forms = _NoCommentInBraces(src).parse() if PENDING_PARSERS else parse(src)
+        forms = parse(src)
     except ParseError:
         return None
     for step in PENDING_STEPS.values():
@@ -663,7 +525,7 @@ def test_known_difference(grammar, src):
 
 def test_pending_steps_have_entries():
     # A step with no entry left models a change that the parser has made already.
-    assert {*PENDING_STEPS, *PENDING_PARSERS} <= set(KNOWN_DIFFERENCES.values())
+    assert set(PENDING_STEPS) <= set(KNOWN_DIFFERENCES.values())
 
 
 # Pieces of text where the parser's choices lie, which random sources put together.
