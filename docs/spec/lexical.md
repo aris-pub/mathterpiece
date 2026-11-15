@@ -35,8 +35,7 @@ Where several definitions in capitals could match there, the parser reads the on
 priority, and among those of the same priority, the one that matches the longest text.
 ```
 
-This is how Lark reads the grammar with `parser="lalr"` and `lexer="contextual"`, and the test
-reads it the same way. So `truex` is a {token}`mtp:NAME`, and not {token}`mtp:TRUE` followed by
+This is how Lark reads the grammar with `parser="lalr"` and `lexer="contextual"`. So `truex` is a {token}`mtp:NAME`, and not {token}`mtp:TRUE` followed by
 `x`. In the same way, `circle_` matches {token}`mtp:HEAD` only where a form may have its
 {term}`head` ({numref}`name-underscore`).
 
