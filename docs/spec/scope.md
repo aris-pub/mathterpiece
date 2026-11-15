@@ -3,12 +3,12 @@
 
 This page defines {term}`declarations <declaration>` and {term}`bindings <binding>`, the part of a
 source in which each {term}`name` may be used, and the declaration or binding to which each use of
-a name refers. Which
-characters a name holds is defined in {numref}`name-characters`, and which names a declaration may
-take in {numref}`keywords` and {numref}`declaration-names`. Which {term}`expressions <expression>`
-may read the scene, a formula or the page is defined in {doc}`binding-time`.
+a name refers. Which characters a name holds is defined in {numref}`name-characters`, and which
+names a declaration or a binding may take in {numref}`keywords` and {numref}`declaration-names`.
+Which {term}`expressions <expression>` may read the scene, a formula or the page is defined in
+{doc}`binding-time`.
 
-The rewrite step resolves every name to its declaration ({numref}`compile-steps`), so a source
+The rewrite step finds what each name refers to ({numref}`compile-steps`), so a source
 that breaks a rule of this page is rejected in the rewrite step. A name that is built from a value,
 `(name S)` with `S` reading a `foreach` name or a motif parameter, is resolved in the prove step
 instead ({numref}`names-from-values`). This page specifies the language.
@@ -34,12 +34,12 @@ canvas, such as `(on-click c (move a (to 0) (duration 1)))`, which creates a lis
 
 ```{rule} scopes
 A {term}`scope` is a part of a file in which some names may be used. These are the scopes of mtp,
-and the names that each one declares:
+and the names of each one:
 
-| Scope | Covers | Declares |
+| Scope | Covers | Names |
 |---|---|---|
 | the {term}`file scope` of a source or of a {term}`file to import` | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
-| the {term}`body` of a motif | the motif's body | the parameters of the motif, and every shape and variable that the body declares, at any depth |
+| the {term}`body` of a motif | the motif's body | the parameters of the motif, and every shape and variable declared in the body, at any depth |
 | a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and a choreo | the body | the parameters |
 | `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each value after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
@@ -48,9 +48,9 @@ and the names that each one declares:
 | the move of an `on-drag` | the move | `pointer` |
 
 The scope of a body is inside the scope of the form around it, and every scope is inside the file
-scope. A group, a row, a column and the scene make no scope of their own. The names that the
-items of a `let` or of a `foreach` written in a body declare belong to the scope of that body:
-only the names that the `let` or the `foreach` binds belong to its own scope.
+scope. A group, a row, a column and the scene make no scope of their own. The names that are
+declared in the items of a `let` or of a `foreach` written in a body belong to the scope of that
+body: only the names that the `let` or the `foreach` binds belong to its own scope.
 ```
 
 So the shapes of the scene, at any depth in its groups, are names of the file scope: a canvas, a
@@ -62,11 +62,12 @@ declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part
 a member of a motif's body is used from outside the body only through an instance, as `d1.face`.
 
 ```{rule} declare-before-use
-A use of a name refers only to a declaration that comes before the use, in every scope, imports
-included, with no exceptions. The order is the order of the source after the rewrite step, with
-each `foreach` read as its copies, in the order of the copy index. A declaration comes before a
-use when its form starts before the use. A use of a name inside the form that declares it is
-allowed only as {numref}`self-reference-today` allows.
+A use of a name refers only to a declaration or a binding that comes before the use, in every
+scope, with no exceptions, and a name that an import gives is used only after the import. The
+order is the order of the source after the rewrite step, with each `foreach` read as its copies, in
+the order of the copy index. A declaration, a binding or an import comes before a use when its
+form starts before the use. A use of a name inside the form that declares or binds it is allowed
+only as {numref}`self-reference-today` allows.
 ```
 
 So two functions never call each other, since one of them would name the other before its
@@ -82,26 +83,30 @@ The compiler reads every import of a file before any other form (`compiler.py:74
 so a name that an import gives may be used above the import. Bead mtp-ydd4.7.12.
 :::
 
-## Which declaration a name refers to
+## What a name refers to
 
 ```{rule} name-lookup
 A use of a bare name, and the first {term}`name part` of a name with several name parts, refers to
-the declaration that these steps find, in order:
+what these steps find, in order:
 
 1. Among the scopes around the use, from the innermost outwards to the file scope, the first that
-   declares the name before the use ({numref}`declare-before-use`).
+   has the name among its names before the use ({numref}`declare-before-use`). The use refers to
+   the declaration or the binding of the name in that scope, or, for a name that an import gives,
+   to the declaration in the imported file.
 2. A built-in function or a built-in constant of that name ({doc}`stdlib`).
 
-When neither step finds a declaration, the source is a {term}`compile error`.
+When neither step finds the name, the source is a {term}`compile error`.
 ```
 
 So an inner name hides an outer name of the same text inside its scope: a parameter, a `let`
 name and a `foreach` name hide a name of the file scope, and a member of a namespace hides a
-top-level name inside the namespace. A declaration in the file scope hides a built-in
-function or constant from that declaration on ({numref}`declaration-names`). The name parts of a
-name after its first are not looked up in any scope: `p.r` is `(. p r)` ({numref}`sugar-rewrites`),
+top-level name inside the namespace. A declaration in the file scope, and a name that an import
+gives, hide a built-in function or constant from that declaration or import on
+({numref}`declaration-names`). The name parts of a name after its first are not looked up in any
+scope: `p.r` is `(. p r)` ({numref}`sugar-rewrites`),
 and what `r` is in it is defined in {numref}`dot-name-part`. `pointer` is found only in the move of
-an `on-drag`, and is a compile error everywhere else, since no declaration takes it as its name.
+an `on-drag`, and is a compile error everywhere else, since no declaration and no binding takes
+it as its name.
 
 In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `(tenfold 2)` is
 20 whatever the slider gives the variable:
@@ -115,12 +120,12 @@ In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `
 ```
 
 ```{rule} one-declaration-per-scope
-In one scope, a name is declared at most once, whatever the kinds of the declarations. A
-variable, a shape, a function, a type, an {term}`interface`, a motif, a variant, a choreo, a
-{term}`component` and every other declaration share the names of their scope, and so do the names
-that imports give. In the same way, the parameters of one form, the names of one `let` and the names
-of one `foreach` are all different. A second declaration of a name in the same scope is a compile
-error.
+In one scope, a name is declared or bound at most once, whatever the kinds of the declarations
+and the bindings. A variable, a shape, a function, a type, an {term}`interface`, a motif, a
+variant, a choreo, a {term}`component` and every other declaration share the names of their
+scope, and so do the bindings and the names that imports give. In the same way, the parameters of
+one form, the names of one `let` and the names of one `foreach` are all different. A second
+declaration, binding or import of a name in the same scope is a compile error.
 ```
 
 So `(type unit real (>= 0) (<= 1))` followed by `(real unit 1)` is a compile error, and so is a
@@ -154,9 +159,9 @@ The file scope of an imported file, and the names that an import gives, are defi
 
 ## The keywords, the built-in names and `self`
 
-No declaration takes a {term}`keyword`, a {term}`built-in type`, `pointer` or `self` as its name
-({numref}`keywords`, {numref}`declaration-names`), and `true`, `false` and `none` are values and
-never names ({numref}`name-characters`). The built-in functions and constants are found only by
+No declaration and no binding takes a {term}`keyword`, a {term}`built-in type`, `pointer` or
+`self` as its name ({numref}`keywords`, {numref}`declaration-names`), and `true`, `false` and
+`none` are values and never names ({numref}`name-characters`). The built-in functions and constants are found only by
 the second step of {numref}`name-lookup`. The names of the standard {term}`library` are ordinary
 declarations of its files, which a source brings in with `import`, and are found as any other
 imported name.

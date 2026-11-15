@@ -74,8 +74,8 @@ expression there is a {term}`compile error`:
   the first is a name, or a name followed by brackets, that gives a type that is not broadened.
 - `(T C…)` is a refined type: `T` is a type and each `C` is a constraint. `((T C…) D…)` is
   `(T C… D…)`, and `(T|none C…)` is `(T C…)|none`.
-- `none` is the type `none`, which is the type only of an expression. No declaration has the
-  type `none`.
+- `none` is the type `none`, which is the type only of an expression. No declaration and no
+  binding has the type `none`.
 ```
 
 So `real|real`, `real|none|none` and `real[int]` are compile errors. A broadened type of a refined

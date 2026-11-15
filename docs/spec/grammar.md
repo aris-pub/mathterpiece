@@ -162,7 +162,8 @@ Every declaration is written `(head name? positional… option… body…)`:
 - The body comes last: any number of items, or none. The kinds of item in a body depend on
   the form ({numref}`contexts`).
 
-A call and a special form follow the same template: `(+ a b c)`, `(if c a b)`.
+A call, a special form, a `let`, a `foreach` and an `import` follow the same template: `(+ a b c)`,
+`(if c a b)`, `(import math dot)`.
 ```
 
 ```{rule} declared-names
