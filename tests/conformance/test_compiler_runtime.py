@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 from mtpc_check import errors as schema_errors
 
+from mathterpiece.build import compiled
 from mathterpiece.cli import main
 from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.mtpc import VERSION
@@ -442,6 +443,20 @@ class TestCompilerNeverActsWhileDrawing:
     def test_no_random_value_is_drawn(self):
         d = mtpc("(rand-seed sd 1) (real v (rand))")
         assert "bound" in obj(d, "v")["value"]
+
+
+@rule("any-compiler-any-runtime")
+class TestAnyCompilerAnyRuntime:
+    """Another compiler or runtime can only rely on what the format defines, so every .mtpc that
+    this compiler writes must match the schema of its version, which the runtime implements."""
+
+    @pytest.mark.parametrize(
+        "src", sorted((ROOT / "docs" / "spec" / "pages").glob("*/*.mtp")), ids=lambda p: p.name
+    )
+    def test_the_mtpc_of_each_example_page_matches_the_schema(self, src):
+        doc = json.loads(compiled(src.read_text(encoding="utf-8"), src))
+        assert schema_errors(doc) == []
+        assert doc["mtpc"] == VERSION
 
 
 @rule("mtpc-only-boundary")
