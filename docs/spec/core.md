@@ -505,12 +505,6 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `pi`, `tau`, `euler` | constants |
 | the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp |
 
-:::{admonition} Code differs
-:class: note
-builtins.py:246-254 also declares the constants `π`, `τ`, `infty` and `∞`. Bead mtp-ydd4.7.33
-removes them.
-:::
-
 A call of `step` or `step-ease` gives an ease, which is a function, so the two are library
 functions and not keywords. By {numref}`declaration-names`, a declaration or a binding named
 `step` or `step-ease` takes the place of the library function from that declaration or binding on.

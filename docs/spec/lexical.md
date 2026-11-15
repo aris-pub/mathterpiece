@@ -129,12 +129,6 @@ followed by `@` starts a prefixed form, at the start of an expression ({numref}`
 {term}`broadened type` or after a `.` that follows {term}`brackets`: `a|tex'q'`, `xs[0].tex'q'` and
 `a|r@1` are errors.
 
-:::{admonition} Code differs
-:class: note
-- `builtins.py:246` to `builtins.py:254` declare the constants `π`, `τ` and `∞`, which no source
-  can write by this rule. Bead mtp-ydd4.7.33 removes them, together with `infty`.
-:::
-
 ```{mtp-grammar} heads-with-no-name
 ```
 

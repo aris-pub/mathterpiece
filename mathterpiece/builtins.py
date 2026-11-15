@@ -245,10 +245,6 @@ SPECIAL_BUILTINS = {
 }  # fmt: skip
 CONSTANTS = {
     "pi": math.pi,
-    "π": math.pi,
     "tau": math.tau,
-    "τ": math.tau,
     "euler": math.e,
-    "infty": math.inf,
-    "∞": math.inf,
 }

@@ -1,7 +1,6 @@
 """Built-in functions and constants, and the color strings (docs/reference.md "Operators",
 "Functions", "Constants" and "Colors"; docs/type-system.md 5.c for where they are undefined)."""
 
-import json
 import math
 
 import pytest
@@ -135,42 +134,52 @@ class TestConstants:
         assert value("(real v euler)") == math.e
 
 
+# mtp-ydd4.7.33 removed the constants infty and ∞. The duration of an animation that loops
+# forever is still infinite, until the author decides what it is.
+FOREVER = "(real k 0) (animation a (loop) (move k (to 1) (duration 2)))"
+
+
 class TestInfinity:
-    # mtp-asl: infty and ∞ are the float infinity, above the ±10^150 bound. It appears only in
-    # values known when compiling; while drawing a result that is ∞ is none.
-    def test_the_constants(self):
-        assert value("(real v infty (const))") == math.inf
-        assert value("(real v (- infty) (const))") == -math.inf
+    # mtp-asl: infinity is above the ±10^150 bound. It appears only in values known when
+    # compiling; while drawing a result that is infinite is none.
+    def test_infty_is_not_a_built_in(self):
+        error("(real v infty)", "unknown name 'infty'")
+
+    def test_a_declaration_may_take_the_name_infty(self):
+        assert value("(real infty 2 (const)) (real v (* 2 infty))") == 4
+
+    def test_the_duration_of_an_animation_that_loops_forever(self):
+        assert value(f"{FOREVER} (real v a.duration (const))") == math.inf
+        assert value(f"{FOREVER} (real v (- a.duration) (const))") == -math.inf
 
     def test_arithmetic(self):
-        assert value("(real v (+ infty 1))") == math.inf
-        assert value("(real v (* 2 infty))") == math.inf
-        assert value("(real v (/ 1 infty))") == 0
-        assert value("(bool v (< 1e150 infty))") is True
-        assert value("(real v (sqrt infty))") == math.inf
+        assert value(f"{FOREVER} (real v (+ a.duration 1) (const))") == math.inf
+        assert value(f"{FOREVER} (real v (* 2 a.duration) (const))") == math.inf
+        assert value(f"{FOREVER} (real v (/ 1 a.duration))") == 0
+        assert value(f"{FOREVER} (bool v (< 1e150 a.duration))") is True
+        assert value(f"{FOREVER} (real v (sqrt a.duration) (const))") == math.inf
 
     def test_undefined_forms(self):
-        error("(real v (- infty infty))", "undefined")
-        error("(real v (* 0 infty))", "undefined")
-        error("(real v (sind infty))", "undefined at infty")
+        error(f"{FOREVER} (real v (- a.duration a.duration))", "undefined")
+        error(f"{FOREVER} (real v (* 0 a.duration))", "undefined")
+        error(f"{FOREVER} (real v (sind a.duration))", "undefined at infty")
 
     def test_only_a_variable_that_never_changes_holds_it(self):
-        error("(real k infty)", "k would hold infty")
-        error("(scene s (circle c (r infty)))", "c's r would be infty")
+        error(f"{FOREVER} (real v a.duration)", "v would hold infty")
+        error(f"{FOREVER} (scene s (circle c (r a.duration)))", "c's r would be infty")
 
     def test_a_result_that_may_be_infinite_while_drawing_may_be_none(self):
-        error("(real x 1) (real v (+ x infty))", "may be none")
-        model("(real x 1) (real|none v (+ x infty))")
-        assert typ("(real x 1) (bool v (< x infty))") == BOOL
+        error(f"{FOREVER} (real x 1) (real v (+ x a.duration))", "may be none")
+        model(f"{FOREVER} (real x 1) (real|none v (+ x a.duration))")
+        assert typ(f"{FOREVER} (real x 1) (bool v (< x a.duration))") == BOOL
 
     def test_shown_in_a_string(self):
-        assert value("(string v $'{infty}')") == "∞"
+        assert value(f"{FOREVER} (string v $'{{a.duration}}')") == "∞"
 
     def test_the_compiled_file(self):
-        d = doc("(real x 1) (bool b (< x infty))")
+        d = doc(f"{FOREVER} (real x 1) (real big a.duration (const)) (bool b (< x big))")
         assert errors(d) == []
-        bound = d["objects"][d["names"]["b"]]["value"]["bound"]
-        assert "infty" in json.dumps(bound)
+        assert d["objects"][d["names"]["big"]]["value"]["free"] == "infty"
 
 
 class TestFunctionsAsValues:

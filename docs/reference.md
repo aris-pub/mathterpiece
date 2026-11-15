@@ -121,7 +121,7 @@ A parameter list is one typed parameter `(real t 0.5)`, a list of them `((real t
 |---|---|---|---|---|
 | `(func name params body)`, `(func[T] name params body)` | required | the parameter list; the body, one expression, which never holds a declaration: a function computes, and a motif or a variant declares (syntax, "Values and objects") | none | none |
 
-`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself. A function may take the name of a built-in function, such as `sind` or `map`: from its declaration on, that name calls the illustrator's function, and above it, the built-in. It may not take the name of a special form (`if`, `let`, `foreach` …), a type (`real`, `circle`, `slider` …) or a constant (`pi`, `infty` …): that is a compile error.
+`func`'s parameters are always typed. Its result's type is worked out from the body, or written on the head, `func[T]`, with any constraints; the body must then be proved to fit it, and every call has that type and range. A result declared `T|none` may break its constraints: where it does, the call gives `none`. A function may call itself. A function may take the name of a built-in function, such as `sind` or `map`: from its declaration on, that name calls the illustrator's function, and above it, the built-in. It may not take the name of a special form (`if`, `let`, `foreach` …), a type (`real`, `circle`, `slider` …) or a constant (`pi`, `tau`, `euler`): that is a compile error.
 
     (func[point] ahead ((real d)) [d 0])                     ; [d 0] is a point
     (func[(real (>= 0) (<= 1))] nearness ((real x)) (/ (+ (sind x) 1) 2))
@@ -860,10 +860,9 @@ Motifs to draw over a world model: `(import marks axes grid)`, then `(axes_)` an
 
 | Name | Value |
 |---|---|
-| `pi`, `π` | 3.14159… |
-| `tau`, `τ` | 6.28318… |
+| `pi` | 3.14159… |
+| `tau` | 6.28318… |
 | `euler` | 2.71828… |
-| `infty`, `∞` | infinity, above every number; written `(- infty)` below them (see the type system, section 5.c) |
 
 ## Interpolated strings
 
