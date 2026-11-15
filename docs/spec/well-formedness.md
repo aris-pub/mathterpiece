@@ -8,7 +8,7 @@ proved. All of them are checked in the prove step ({numref}`compile-steps`), and
 breaks one is a compile error. The last section defines the {term}`prover`: exactly what it proves,
 and the ranges with which it proves it.
 
-This page states the language as the author decided it. Where the compiler does not follow a rule
+This page specifies the language. Where the compiler does not follow a rule
 yet, a box marked "Code differs" gives what the code does and the bead that will change it.
 
 ## No cycles

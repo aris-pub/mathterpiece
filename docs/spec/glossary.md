@@ -48,9 +48,9 @@ listener
   the model when the reader acts on a shape or a term, or when its view changes. Defined in
   {doc}`compiler-runtime`.
 
-live figure
-  The runtime and a page together, with one live model for each .mtpc that the page loads.
-  Defined in {doc}`compiler-runtime`.
+open page
+  A page open in the reader's browser, with the runtime and one live model for each .mtpc that the
+  page loads. Defined in {doc}`compiler-runtime`.
 
 live model
   The world model of one .mtpc, as the runtime holds it in memory while a page is open, with the

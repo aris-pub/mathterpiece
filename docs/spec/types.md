@@ -9,8 +9,7 @@ held and computed is defined in {doc}`evaluation`, which objects there are and w
 attributes are in {doc}`world-model`, and the types of the built-in functions in {doc}`stdlib`.
 What the prover proves about ranges, constraints and `none` is defined in {doc}`well-formedness`.
 
-This page states the language as the author decided it, from docs/type-system.md and the decisions
-of {doc}`open-questions`. Where the compiler does not follow a rule yet, a box marked "Code differs"
+This page specifies the language. Where the compiler does not follow a rule yet, a box marked "Code differs"
 gives what the code does and the bead that will change it.
 
 ## The types

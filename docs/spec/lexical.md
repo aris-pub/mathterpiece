@@ -9,7 +9,7 @@ grammar, in the file `docs/spec/mtp.lark`, written in the notation of the Lark p
 parser of the compiler, `mathterpiece/parse.py`, and checks that the two accept the same sources
 and produce the same forms.
 
-This page states the language as the author has decided it. The parser accepts exactly the text
+This page specifies the language. The parser accepts exactly the text
 that this page allows, and rejects everything else. Where the parser does not follow a rule yet, a
 note after the rule says what the parser does today and names the bead that will change it. The
 test lists each such source as a known difference, with its bead.

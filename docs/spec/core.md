@@ -8,9 +8,7 @@ meaning is defined.
 
 The inventory was built from `mathterpiece/compiler.py` and `mathterpiece/parse.py` as they are
 on 2026-11-14, and then checked against `docs/reference.md` and `docs/syntax.md`. Citations of
-the form `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page states the
-language as the author decided it on 2026-11-14 and 2026-11-15 (decisions P1, P2 and P3 of
-{doc}`open-questions`). Where the code does not yet follow a rule, a box marked "Code differs"
+the form `compiler.py:6471` name a file of `mathterpiece/` and a line in it. This page specifies the language. Where the code does not yet follow a rule, a box marked "Code differs"
 after the rule gives what the code does and the bead that will change it.
 
 (core-kinds)=

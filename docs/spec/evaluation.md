@@ -612,7 +612,7 @@ to 255, and `(down 256)` is a compile error, since its innermost call has a dept
 function is recursive when its body names it, directly or through the bodies of the functions that
 it names.
 
-By {numref}`no-errors-after-loading`, no call while drawing makes a figure fail. What happens while
+By {numref}`no-errors-after-loading`, no call while drawing makes a component fail. What happens while
 drawing to a call of a recursive function whose depth would pass `max-call-depth` is still open:
 
 :::{admonition} Open question Q-evaluation-13
