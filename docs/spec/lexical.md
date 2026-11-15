@@ -170,7 +170,7 @@ same decision, but the decision does not say whether letters are ASCII too. The 
 only ASCII letters, so `θ` and `ünï` are not names. Option A: keep ASCII letters only. Option B:
 allow every character for which Python's `str.isalpha()` is true, as `θ`. No source of the
 project has a name with a letter that is not ASCII. But the built-in constants `π`, `τ` and `∞`
-(`builtins.py:246` to `builtins.py:254`, and {numref}`infinity-only-when-compiling`) are names
+(`builtins.py:246` to `builtins.py:254`, and {numref}`infinity`) are names
 today. With option A, none of the three can be written. With option B, `π` and `τ` can, and `∞`
 cannot, since it is not a letter.
 :::

@@ -66,25 +66,27 @@ For example, `(motif dot ((real k)) (circle_ (r (/ 1 k))))` is a compile error a
 motif compiles.
 
 ```{rule} step-rejects-or-passes
-The parse, rewrite and prove steps each either reject the source with exactly one error, the first
-that the step finds, or pass their output to the next step. The parse step rejects with a
-{term}`syntax error`, and the rewrite and prove steps with a {term}`compile error`
-({doc}`errors`). When a step rejects the source, no later step runs. The expand step and the fold
-and write step never reject a source that the prove step passed, so the compiler either rejects a
-source with one error or writes a .mtpc that is valid by {doc}`compiled-format`, and never both.
+The parse, rewrite and prove steps each either reject the source or pass their output to the next
+step. The parse step rejects with a {term}`syntax error`, and the rewrite and prove steps with a
+{term}`compile error` ({doc}`errors`). When a step rejects the source, no later step runs. The
+expand step and the fold and write step never reject a source that the prove step passed, so the
+compiler either rejects a source or writes a .mtpc that is valid by {doc}`compiled-format`, and
+never both.
 ```
+
+What the error of a rejected source holds is given in {numref}`conformance`.
 
 ```{rule} prover-finds-ranges
 To prove a range or a constraint, the {term}`prover` works out the range of every number that an
 expression can give, from the ranges of its inputs ({numref}`prover-widens-reals`). For an
 expression known when compiling, that range holds its value. The prover writes nothing into the
-model. Where it cannot prove the constraint of a bound value, it gives the value a type that
-includes `none`, and the fold and write step writes the `check` that this type needs
-({doc}`compiled-format`).
+model. Where the range of a bound value does not lie inside the constraint of the value, the
+prover gives the value a type that includes `none`, and the fold and write step writes the `check`
+that this type needs ({doc}`compiled-format`).
 ```
 
 So `(circle c (r (- 1 2)))` is a compile error in the prove step, since the range of `(- 1 2)` is
--1 alone, and so is `(/ 1 0)`, since its divisor is 0 alone ({numref}`undefined-gives-none`).
+-1 alone, and so is `(/ 1 0)`, since its divisor is 0 alone ({numref}`none-at-known-inputs`).
 
 :::{admonition} Code differs
 :class: note
@@ -128,18 +130,18 @@ Every subcommand takes `-v`, given up to three times, which prints more of what 
 ```
 
 ```{rule} command-errors
-When a step rejects the source, when a file cannot be read or written, or when `mtp serve` cannot
-listen on its port, the subcommand writes no file, prints one line to standard error, and exits
-with status 1. For
-a rejected source, the line is the first error ({numref}`step-rejects-or-passes`), as
-`file:line:column: message`. `file` is the path given on the command line, or, for an error in an
-imported file, the name written in the `import` form, followed by `.mtp`. The wording of the line
-is not normative ({numref}`what-is-normative`).
+When the compiler rejects the source, the subcommand writes no file, prints the error of the
+source ({numref}`conformance`) to standard error, and exits with status 1. When a file cannot be
+read or written, or when `mtp serve` cannot listen on its port, the subcommand writes no file,
+prints one line that gives the reason to standard error, and exits with status 1.
 ```
 
-This implementation prints `file: no such file`, `file: cannot be read: it is a folder`,
-`file: cannot be read: it is not UTF-8 text`, or `file: cannot be read:` followed by the reason
-that the system gives, for a file that cannot be read.
+This implementation prints one line for a rejected source: the first error that it finds, as
+`file:line:column: message`. `file` is the path given on the command line, or, for an error in an
+imported file, the name written in the `import` form, followed by `.mtp`. For a file that cannot be
+read, it prints `file: no such file`, `file: cannot be read: it is a folder`, `file: cannot be
+read: it is not UTF-8 text`, or `file: cannot be read:` followed by the reason that the system
+gives.
 
 :::{admonition} Code differs
 :class: note
@@ -283,17 +285,19 @@ The runtime loads each .mtpc given by the `src` attribute of an `<mtp-model>` el
 from a file that it fetches or from a block in the page ({doc}`page-interface`). When the .mtpc
 cannot be fetched or read as JSON, the model fails to load, and the error takes the place of every
 component of that model on the page. The runtime reads only the versions of the .mtpc format that
-it implements, and refuses a .mtpc that does not match the schema of its version
-({doc}`compiled-format`): such a .mtpc fails to load too. For a .mtpc of another version, the
-error gives both versions.
+it implements. It refuses a .mtpc of another version, a .mtpc that does not match the schema of
+its version ({doc}`compiled-format`), and every {term}`corrupt <corrupt .mtpc>` .mtpc
+({numref}`corrupt-mtpc`). A .mtpc that the runtime refuses fails to load too, and the runtime runs
+no part of it. For a .mtpc of another version, the error gives both versions.
 ```
 
 :::{admonition} Code differs
 :class: note
 The runtime checks only the version (web/src/elements.ts, lines 100 to 103). A file that breaks the
-schema either makes the `Runtime` constructor throw, so that the model fails to load with that
-message, or throws later, when a component draws, or draws something wrong with no error. The
-schema docs/mtpc.schema.json is checked only by the tests (tests/mtpc_check.py). mtp-ydd4.7.16.
+schema or is corrupt either makes the `Runtime` constructor throw, so that the model fails to load
+with that message, or throws later, when a component draws, or draws something wrong with no
+error. The schema docs/mtpc.schema.json is checked only by the tests (tests/mtpc_check.py).
+mtp-ydd4.7.16, mtp-ydd4.7.27.
 :::
 
 ```{rule} runtime-builds-live-model
@@ -342,15 +346,22 @@ The inventory page holds the opening comment of the source, which is not in the 
 (`about` in mathterpiece/build.py). The mtp command writes that comment into the page, and the
 runtime does not read it, so it does not pass from the compiler to the runtime.
 
-```{rule} what-each-may-assume
-The runtime may assume that every .mtpc that matches the schema was written by a conforming
-compiler: that every reference in it is to an object or function that it holds, that every
-expression gives a value of the type written with it, that every `deps` list holds everything that
-its expression can read, and that everything known when compiling is folded. The runtime need not
-check any of these. This spec does not define what the runtime does with a .mtpc that matches the
-schema and breaks one of them. The compiler may assume that a conforming runtime reads every part
-of the .mtpc as {doc}`compiled-format` defines it, and nothing else about the runtime.
+```{rule} corrupt-mtpc
+A .mtpc that matches the schema of its version and breaks a rule of this spec is
+{term}`corrupt <corrupt .mtpc>`. Among the corrupt files are a .mtpc with a reference to an
+object or a function that it does not hold, one with an expression that can give a value of
+another type than the type written with it, one with a `deps` list that leaves out something that
+its expression can read, and one with an expression known when compiling that is not folded. The
+compiler never writes a corrupt .mtpc.
 ```
+
+```{rule} schema-strength
+The schema of each version of the format holds every rule of {doc}`compiled-format` that a JSON
+schema can express, so that as few corrupt files as possible match it.
+```
+
+So the runtime refuses a corrupt .mtpc ({numref}`runtime-loads-mtpc`), although it matches the
+schema. How the runtime finds that a .mtpc is corrupt is not part of this spec.
 
 ```{rule} format-version
 The compiler writes the version of the format that it implements in every .mtpc. Every change to
@@ -371,8 +382,9 @@ mtp-ydd4.7.17.
 ```{rule} what-is-normative
 These are normative, and every conforming implementation gives the same: which sources are
 accepted and which are rejected, the meaning of the .mtpc, and what the runtime does. These are
-not normative: the wording of error messages, the bytes of the .mtpc, what `mtp parse` prints, and
-the layout that `mtp fmt` writes.
+not normative: everything about an error beyond what {numref}`conformance` requires, such as its
+wording and the position that it gives, the bytes of the .mtpc, what `mtp parse` prints, and the
+layout that `mtp fmt` writes.
 ```
 
 So two conforming compilers may write different bytes for one source, as long as a runtime builds
@@ -383,10 +395,12 @@ pick the other.
 
 ```{rule} conformance
 - An implementation of the compiler conforms to this spec when, for every source and the files
-  that it imports, it rejects the source if and only if this spec rejects it, with a syntax error
-  or a compile error of a rule that the source breaks, and otherwise writes a .mtpc that has the
-  meaning that {doc}`compiled-format` defines for the world model of the source. When the source
-  breaks several rules, the error may be of any one of them.
+  that it imports, it rejects the source if and only if this spec rejects it, and otherwise writes
+  a .mtpc that has the meaning that {doc}`compiled-format` defines for the world model of the
+  source. A rejected source gets an error that points to at least one rule that the source breaks,
+  among the rules checked in the step that rejects the source ({numref}`step-rejects-or-passes`).
+  When the source breaks several of these rules, the error points to any one of them, to several,
+  or to all.
 - An implementation of the runtime conforms when it loads every valid .mtpc of the versions that
   it implements, and builds and keeps current its live model as the parts from {doc}`world-model`
   to {doc}`accessibility` define.
