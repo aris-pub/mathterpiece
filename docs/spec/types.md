@@ -386,12 +386,22 @@ So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circ
 V has the attributes of its base and the parameters of V. Every attribute that S gives, a
 {term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: an instance
 of V that gives it is a compile error. A parameter of V never has the name of an attribute of its
-base.
+base, and every parameter of V is read by an attribute that S gives: a parameter that no attribute
+of S reads is a compile error.
 ```
 
 So by {numref}`fits`, a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))`
 is accepted wherever a `rect` is, and `(bar b2 (width 2))` is a compile error. A writer never
-writes a fixed attribute ({numref}`writable-targets`).
+writes a fixed attribute ({numref}`writable-targets`). The parameters of a variant describe the
+shapes of its base that it keeps: a square is a rect described by one number,
+`(variant square ((real side 1)) (rect_ (width side) (height side)))`. A parameter that no attribute
+reads, such as `q` in `(variant bar ((real p 0) (real q 1)) (rect_ (width 0.8) (height (* 5 p))))`,
+would add an input that changes nothing in the shape, and is a compile error.
+
+:::{admonition} Code differs
+:class: note
+The compiler accepts a variant parameter that no attribute of its shape reads. mtp-ydd4.7.61.
+:::
 
 ## Functions
 
