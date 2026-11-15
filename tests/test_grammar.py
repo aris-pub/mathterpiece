@@ -97,6 +97,8 @@ ACCEPTED = [
     "(f $'{[1 2]}' $'{'s'}' $'{a[0]}' $'{a|b}' $'{$'{a}' }')",
     "(f $'{(g ; a comment\n x)}')",
     "(f $'{a:b}' $'{a.b:c}' $'{a[0].b:c}' $'{#'n-{k}'.x :y}')",
+    "(f $'{$'{a}'}' $'{#'n-{k}'.x:y}' $'{[$'{a}' b]}' $'{'s':>5}' $'{$'{$'{a}'}'}')",
+    "(f $'{(g $'{a}' 's')}' $'{#'a{b}'[0]:x}' $'{[1 $'{a:y}'][0]:z}')",
     "(f #'dot-{k}' #'dot-{k}'.pos #'row-{i}'[0] #'a{b}'.c.d[0].e #'{k}')",
     "(f doc@'text' doc@x)",
     "(f a@b)",
@@ -248,18 +250,10 @@ REJECTED = [
     "(f none[0]x)",
 ]
 
-NESTED_BRACES = "mtp-kzx2"
-
 # Sources on which the grammar, which states the decided language, and today's parser differ.
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
 # source, test_known_difference fails, and the entry is removed.
-KNOWN_DIFFERENCES = {
-    # After a string nested in braces ends, the parser reads the rest of the braces as if it were
-    # outside them.
-    "(f $'{$'{a}'}')": NESTED_BRACES,
-    "(f $'{#'n-{k}'.x:y}')": NESTED_BRACES,
-    "(f $'{[$'{a}' b]}')": NESTED_BRACES,
-}
+KNOWN_DIFFERENCES = {}
 
 # For the random sources, which no list could name in advance: the parser as it will be once each
 # bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.

@@ -286,12 +286,3 @@ same way at every depth. When a string literal nested in the expression in brace
 expression and the rest of the braces go on by the same rules as before the nested string literal.
 So `$'{$'{a}'}'` is the interpolated string whose braces hold the interpolated string `$'{a}'`, and
 in `$'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.
-
-:::{admonition} Code differs
-:class: note
-- `parse.py:505` sets `in_braces = True` when braces open, and `parse.py:509` sets it to `False`
-  when they close, instead of setting back the value that it had before. So after a string literal
-  nested in braces ends, the parser reads the rest of the outer braces as if it were outside braces:
-  `$'{$'{a}'}'` is an error, and in `$'{#'n-{k}'.x:y}'` the parser reads `x:y` as one name part.
-  Bead mtp-kzx2 fixes this.
-:::

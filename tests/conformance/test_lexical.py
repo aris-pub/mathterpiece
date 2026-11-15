@@ -36,7 +36,6 @@ def xfail(bead: str, why: str):
 
 
 KEYWORD_NAMES = xfail("mtp-ydd4.7.35", "the compiler forbids only a few names, not every keyword")
-NESTED_BRACES = xfail("mtp-kzx2", "the parser leaves braces when a string nested in them ends")
 
 
 @rule("grammar-in-context")
@@ -624,11 +623,9 @@ class TestInterpolatedStrings:
     def test_a_colon_in_a_nested_expression_is_an_error(self):
         syntax_error("(f $'{(g a:b)}')")
 
-    @NESTED_BRACES
     def test_braces_are_read_the_same_at_every_depth(self):
         assert items("(f $'{$'{a}'}')") == (InterpStrLit((InterpStrLit((name("a"),)),)),)
 
-    @NESTED_BRACES
     def test_after_a_nested_name_string_the_braces_go_on(self):
         (s,) = items("(f $'{#'n-{k}'.x:y}')")
         (field,) = s.parts

@@ -605,12 +605,13 @@ class _Parser:
         self.skip_space_in_braces()
         if self.peek() in ("}", ":", ""):
             raise ParseError("expected an expression inside braces", brace)
-        # Inside braces, ':' ends a name, so a format spec can follow it.
-        self.in_braces = True
+        # Inside braces, '}' and ':' may follow a string or a list. The old value is set back, since
+        # these braces may be inside a string that is itself inside braces, as in $'{$'{a}'}'.
+        outer, self.in_braces = self.in_braces, True
         try:
             expr = self.node()
         finally:
-            self.in_braces = False
+            self.in_braces = outer
         self.skip_space_in_braces()
         spec = None
         if self.peek() == ":":
