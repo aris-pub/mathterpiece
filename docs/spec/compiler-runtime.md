@@ -29,10 +29,6 @@ tools that they already prefer.
 | the page | the author, with any tool for making web pages | the text, the elements that load .mtpc files, and the elements that place components |
 | the {term}`open page` | the reader's browser, from the page | the page with the runtime running in it, and one live model for each .mtpc that the page loads |
 
-The {term}`inventory page`, which `mtp build` writes, is outside this table. The illustrator uses
-it to see the components of the world model live while working, and the author uses it to learn which components a world
-model has and how to place each one.
-
 ## The steps of compiling
 
 ```{rule} compile-steps
