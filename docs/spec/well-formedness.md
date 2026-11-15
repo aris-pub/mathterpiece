@@ -1,7 +1,7 @@
 (well-formedness)=
 # Well-formedness
 
-A world model whose names resolve ({ref}`scope`) and whose expressions have types ({doc}`types`)
+A {term}`world model` whose names resolve ({ref}`scope`) and whose expressions have types ({doc}`types`)
 must still pass the rules of this page: its dependencies form no cycle, its writers write only what
 may be written, the moves that run together do not write the same value, and every constraint is
 proved. All of them are checked in the prove step ({numref}`compile-steps`), and a source that

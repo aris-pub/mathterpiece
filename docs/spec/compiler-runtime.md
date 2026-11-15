@@ -9,7 +9,7 @@ The format of the .mtpc is defined in {doc}`compiled-format`, and is not repeate
 
 ## People and artifacts
 
-Three people take part. The {term}`illustrator` writes a world model as an `.mtp` source file.
+Three people take part. The {term}`illustrator` writes a {term}`world model` as an `.mtp` source file.
 The {term}`author` writes a page and places {term}`components <component>` of the world model in
 it. The {term}`reader` opens the page and acts on the components. One person may be both the
 illustrator and the author. The illustrator runs the compiler on their own machine, and the runtime

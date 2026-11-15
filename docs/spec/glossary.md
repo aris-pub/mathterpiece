@@ -280,4 +280,9 @@ range
 call depth limit
   The constant `max-call-depth`, which is 256: a call known when compiling that, when folded, would
   nest calls of functions deeper than it is a compile error. Defined in {doc}`evaluation`.
+
+world model
+  Everything that one `.mtp` source file defines, such as its shapes, variables and components.
+  The compiler builds it, the .mtpc stores it, and the runtime holds it as the live model. Defined
+  in {doc}`world-model`.
 ```
