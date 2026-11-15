@@ -256,7 +256,7 @@ class TestNamesAFunctionCannotTake:
             error(f"(func {word} (real x) x)", f"'{word}' is a type")
 
     def test_a_constant(self):
-        for word in ("pi", "τ", "infty"):
+        for word in ("pi", "tau", "infty"):
             error(f"(func {word} (real x) x)", f"'{word}' is a constant")
 
     def test_a_built_in_function_is_still_replaced(self):

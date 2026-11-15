@@ -28,6 +28,20 @@ from mathterpiece.nodes import (
 from mathterpiece.parse import ParseError, parse
 
 NO_NAME = "_ is not a name: write none, or head_ for a form with no name"
+UNDERSCORE = "an underscore may only end the head of a form, as in (circle_ (r 1))"
+COLON = (
+    "':' may only start the format spec in the braces of an interpolated string, as in $'{x:.2f}'"
+)
+
+
+def only_ascii(ch):
+    return f"a name holds only ASCII letters, digits and hyphens: {ch!r}"
+
+
+def letter_first(text):
+    return f"a name starts with an ASCII letter: {text!r}"
+
+
 MALFORMED = sorted((Path(__file__).parent / "malformed").glob("*.mtp"))
 
 
@@ -189,7 +203,7 @@ class TestRatio:
         atom_error(text, f"invalid number '{text}'")
 
     def test_a_slash_first_is_not_a_number(self):
-        atom_error("/2", "invalid name '/2'")
+        atom_error("/2", only_ascii("/"))
 
 
 class TestReal:
@@ -264,9 +278,22 @@ class TestOperators:
     def test_operator_as_head(self):
         assert parse("(+ a 1)") == (Form((n("+"), n("a"), IntLit(1))),)
 
-    @pytest.mark.parametrize("text", ["--", "->", "++", "<>", "==", "=>", "**", "+-", "<=="])
-    def test_unknown_operator_like_token_is_error(self, text):
-        atom_error(text, f"invalid name '{text}'")
+    @pytest.mark.parametrize(
+        "text, msg",
+        [
+            ("--", letter_first("--")),
+            ("->", letter_first("->")),
+            ("++", only_ascii("+")),
+            ("<>", only_ascii("<")),
+            ("==", only_ascii("=")),
+            ("=>", only_ascii("=")),
+            ("**", only_ascii("*")),
+            ("+-", only_ascii("+")),
+            ("<==", only_ascii("<")),
+        ],
+    )
+    def test_unknown_operator_like_token_is_error(self, text, msg):
+        atom_error(text, msg)
 
 
 class TestNames:
@@ -276,25 +303,10 @@ class TestNames:
             "disk",
             "show-label",
             "visible?",
-            "set!",
-            "a->b",
-            "x'",
-            "f'",
-            "g''",
-            "f'oo'",
             "x2",
-            "α₁",
-            "∂f",
-            "∇φ",
-            "ℝ",
-            "x′",
-            "δ",
-            "∞",
-            "!x",
-            "a+b",
-            "a*b",
-            "a<b",
-            "a=b",
+            "a-",
+            "a--b",
+            "X-1",
         ],
     )
     def test_valid_name(self, text):
@@ -306,32 +318,61 @@ class TestNames:
     def test_long_dotted_name(self):
         assert atom("ldisk.crc.x") == n("ldisk", "crc", "x")
 
-    def test_dotted_name_with_unicode_and_primes(self):
-        assert atom("α₁.x'") == n("α₁", "x'")
+    def test_dotted_name_with_question_marks(self):
+        assert atom("found?.empty?") == n("found?", "empty?")
 
+    # lexical.md, rule name-characters: ASCII letters, then letters, digits and hyphens, then
+    # an optional '?'.
     @pytest.mark.parametrize(
-        "text",
+        "text, msg, col",
         [
-            "-x",
-            "+x",
-            "*x",
-            "<x",
-            ">x",
-            "=x",
-            "^x",
-            "x^2",
-            "a/b",
-            "a$b",
-            ".x",
-            "x.",
-            "a..b",
-            "a.1",
-            "a.-b",
-            "teal_c",
+            ("-x", letter_first("-x"), 4),
+            ("+x", only_ascii("+"), 4),
+            ("*x", only_ascii("*"), 4),
+            ("<x", only_ascii("<"), 4),
+            (">x", only_ascii(">"), 4),
+            ("=x", only_ascii("="), 4),
+            ("^x", only_ascii("^"), 4),
+            ("!=x", only_ascii("!"), 4),
+            ("?x", letter_first("?x"), 4),
+            ("x^2", only_ascii("^"), 5),
+            ("a/b", only_ascii("/"), 5),
+            ("a$b", only_ascii("$"), 5),
+            ("set!", only_ascii("!"), 7),
+            ("a->b", only_ascii(">"), 6),
+            ("a*b", only_ascii("*"), 5),
+            ("x'", only_ascii("'"), 5),
+            ("f'(x)", only_ascii("'"), 5),
+            ("θ", only_ascii("θ"), 4),
+            ("x²", only_ascii("²"), 5),
+            ("α₁", only_ascii("α"), 4),
+            ("ab.ünï", only_ascii("ü"), 7),
+            ("a\x00b", "a name holds only ASCII letters, digits and hyphens: U+0000", 5),
+            (
+                "a\u200bb",
+                "a name holds only ASCII letters, digits and hyphens: U+200B (zero width space)",
+                5,
+            ),
+            ("a?b", "'?' may only end a part of a name: 'a?b'", 5),
+            ("a??", "'?' may only end a part of a name: 'a??'", 5),
+            (".x", letter_first(".x"), 4),
+            ("x.", "each '.' in a name is followed by a name part: 'x.'", 5),
+            ("a..b", "each '.' in a name is followed by a name part: 'a..b'", 5),
+            ("a.1", "each part of a name starts with an ASCII letter: 'a.1'", 6),
+            ("a.-b", "each part of a name starts with an ASCII letter: 'a.-b'", 6),
+            ("teal_c", UNDERSCORE, 8),
         ],
     )
-    def test_invalid_name(self, text):
-        atom_error(text, f"invalid name '{text}'")
+    def test_invalid_name(self, text, msg, col):
+        assert atom_error(text, msg) == Pos(1, col)
+
+    @pytest.mark.parametrize("src, col", [("(f :a)", 4), ("(f a:b)", 5), ("(f 'a' :)", 8)])
+    def test_a_colon_outside_braces(self, src, col):
+        assert error_at(src, COLON) == Pos(1, col)
+
+    @pytest.mark.parametrize("text", ["a|tex'q'", "xs[0].tex'q'"])
+    def test_a_tex_string_after_a_bar_or_a_dot(self, text):
+        atom_error(text, only_ascii("'"))
 
     def test_a_digit_first_is_read_as_a_number(self):
         atom_error("2.x", "invalid number '2.x'")
@@ -453,8 +494,8 @@ class TestInterpStr:
     def test_escapes(self):
         assert atom(r"$'it\'s {x}\n'") == InterpStrLit(("it's ", n("x"), "\n"))
 
-    def test_unicode_name(self):
-        assert atom("$'{α₁}'") == InterpStrLit((n("α₁"),))
+    def test_unicode_name_is_an_error(self):
+        atom_error("$'{α₁}'", only_ascii("α"))
 
     @pytest.mark.parametrize(
         "text, msg",
@@ -462,10 +503,11 @@ class TestInterpStr:
             ("$'{}'", "expected an expression inside braces"),
             ("$'{  }'", "expected an expression inside braces"),
             ("$'a } b'", "unmatched '}'; write '}}' for a literal brace"),
-            ("$'a {b'", "expected a single expression and '}' inside braces"),
+            ("$'a {b'", only_ascii("'")),
+            ("$'a {b c'", "expected a single expression and '}' inside braces"),
             ("$'{a b}'", "expected a single expression and '}' inside braces"),
-            ("$'{-x}'", "invalid name '-x'"),
-            ("$'{a.}'", "invalid name 'a.'"),
+            ("$'{-x}'", letter_first("-x")),
+            ("$'{a.}'", "each '.' in a name is followed by a name part: 'a.'"),
             (r"$'\t'", r"invalid escape '\t'"),
         ],
     )
@@ -556,7 +598,7 @@ class TestIndexing:
             ("g[0][1]", ("g", IntLit(0), IntLit(1))),
             ("g[h[0]]", ("g", n("h", IntLit(0)))),
             ("g[h[0].k]", ("g", n("h", IntLit(0), "k"))),
-            ("α₁[0].x'", ("α₁", IntLit(0), "x'")),
+            ("a1[0].x?", ("a1", IntLit(0), "x?")),
         ],
     )
     def test_valid(self, text, parts):
@@ -576,10 +618,12 @@ class TestIndexing:
             ("g[0", "expected ']' after '['"),
             ("g[0]x", "unexpected 'x' after index"),
             ("g[0].", "expected a name after '.'"),
-            ("g[0]..r", "invalid name '.r'"),
-            ("g[0].1", "invalid name '1'"),
+            ("g[0]..r", "each '.' in a name is followed by a name part: '.r'"),
+            ("g[0].1", "each part of a name starts with an ASCII letter: '1'"),
+            ("g[0].x'", only_ascii("'")),
+            ("g[0]:x", COLON),
             ("g[0]]", "unexpected ']'"),
-            ("g.[0]", "invalid name 'g.'"),
+            ("g.[0]", "each '.' in a name is followed by a name part: 'g.'"),
             ("1[0]", "only names can be indexed, got '1'"),
             ("1.5[0]", "only names can be indexed, got '1.5'"),
             ("true[0]", "only names can be indexed, got 'true'"),
@@ -823,7 +867,26 @@ class TestParsingNoName:
         )
 
     def test_a_name_holds_no_underscore(self):
-        error_at("(real a_b 1)", "invalid name 'a_b'")
+        assert error_at("(real a_b 1)", UNDERSCORE) == Pos(1, 8)
+
+    # lexical.md, rule name-underscore: only the head of a form may end with '_'.
+    @pytest.mark.parametrize(
+        "src, col",
+        [
+            ("(f x_)", 5),
+            ("(f a b_)", 7),
+            ("(f a|b_)", 7),
+            ("(f a_.b)", 5),
+            ("(f a._)", 6),
+            ("(f _.a)", 4),
+            ("(f _[0])", 4),
+            ("(a_.b x)", 3),
+            ("(a_|b x)", 3),
+            ("(f (g x_))", 8),
+        ],
+    )
+    def test_an_underscore_anywhere_but_the_end_of_a_head(self, src, col):
+        assert error_at(src, UNDERSCORE) == Pos(1, col)
 
 
 class TestParsingIndexingAListWrittenInPlace:
@@ -872,7 +935,7 @@ class TestNameStrings:
         )
 
     def test_hash_is_not_in_names(self):
-        error_at("(real a#b 1)", "invalid name 'a#b'")
+        error_at("(real a#b 1)", only_ascii("#"))
         error_at("(f #x)", "'#' starts a name string: #'dot-{k}'")
 
 

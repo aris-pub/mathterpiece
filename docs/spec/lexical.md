@@ -93,13 +93,6 @@ The characters `'`, `$`, `#`, `@`, `.`, `/` and `^` do not end a word, so `a$'x'
 are errors: none of them is one word. The grammar rejects them, as the parser does, because by
 {numref}`adjacent-items` only a form may follow a word with no whitespace between them.
 
-:::{admonition} Code differs
-:class: note
-`parse.py:319` ends a word at `:` only inside the braces of an interpolated string, so `a:b` is
-one word, and a name, everywhere else. Bead mtp-ydd4.7.3 changes this, together with the
-characters of a name.
-:::
-
 ```{rule} no-name-part-after-form
 The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` and
 `(sort xs)[0]` are errors.
@@ -138,12 +131,6 @@ followed by `@` starts a prefixed form, at the start of an expression ({numref}`
 
 :::{admonition} Code differs
 :class: note
-- `parse.py:27` (`NAME_EXCLUDED`) and `parse.py:82` (`_valid_name_part`) allow every character
-  but `( ) [ ] { } . / ; " $ ^ | @ #` and a few first characters. So the parser reads `a!b`, `a*b`,
-  `a=b`, `!=x`, `f'`, `a'b`, `a:b`, `θ`, `x²` and names that hold control characters or U+FEFF as
-  names, and `a|tex'q'` as the broadened type of the names `a` and `tex'q'`. Bead mtp-ydd4.7.3
-  makes the parser follow the rule. The lexer in `docs/_ext/mtp_sphinx.py` follows it
-  already.
 - `parse.py:346` compares only the whole word with `true`, `false` and `none`, and `parse.py:362`
   checks only `true` and `false` before brackets, so the parser reads `true.x`, `p.true`, `none.x`
   and `none[0]` as names. Bead mtp-ydd4.7.32 makes these errors.
@@ -163,14 +150,6 @@ matches {token}`mtp:HEAD`.
 So an underscore in any other place is an error: `x_` as an argument, `a_b`, `_x`, `_` alone,
 `a_.b`, `a._`, `_.a` and `_[0]`. An underscore at the end of the head of a form means that the form
 has no name ({numref}`unnamed-head`).
-
-:::{admonition} Code differs
-:class: note
-`parse.py:86` allows `_` at the end of every name part of every name, in any place, so the parser
-reads `(f x_)`, `a_.b`, `a._` and `_.a` as names, and `_[0]` too, because `parse.py:342` reads the
-brackets before `parse.py:352` rejects a lone `_`. Bead mtp-ydd4.7.3 makes the parser follow the
-rule.
-:::
 
 ## Bools, none and the operators
 

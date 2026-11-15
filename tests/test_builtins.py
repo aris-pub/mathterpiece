@@ -125,10 +125,10 @@ class TestPointsTransformsColors:
 
 
 class TestConstants:
-    # mtp-asl: pi, π, tau, τ and euler; infinity is in TestInfinity below.
+    # mtp-asl: pi, tau and euler; infinity is in TestInfinity below.
     def test_pi_and_tau(self):
-        assert value("(real v pi)") == value("(real v π)") == math.pi
-        assert value("(real v tau)") == value("(real v τ)") == math.tau
+        assert value("(real v pi)") == math.pi
+        assert value("(real v tau)") == math.tau
 
     def test_euler(self):
         # Decided 2026-10-28, lost in the rebuild.
@@ -140,7 +140,6 @@ class TestInfinity:
     # values known when compiling; while drawing a result that is ∞ is none.
     def test_the_constants(self):
         assert value("(real v infty (const))") == math.inf
-        assert value("(real v ∞ (const))") == math.inf
         assert value("(real v (- infty) (const))") == -math.inf
 
     def test_arithmetic(self):

@@ -35,10 +35,8 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-NAMES = xfail("mtp-ydd4.7.3", "the parser allows more characters in a name than the rule")
 DIGITS = xfail("mtp-ydd4.7.4", "the parser reads every Unicode decimal digit as a digit")
 LITERAL_PARTS = xfail("mtp-ydd4.7.32", "the parser reads true, false or none as a part of a name")
-UNICODE_CONSTANTS = xfail("mtp-ydd4.7.33", "the built-ins declare the constants π, τ and ∞")
 KEYWORD_NAMES = xfail("mtp-ydd4.7.35", "the compiler forbids only a few names, not every keyword")
 NESTED_BRACES = xfail("mtp-kzx2", "the parser leaves braces when a string nested in them ends")
 BRACE_COMMENTS = xfail("mtp-ydd4.7.31", "the parser skips a comment around the braced expression")
@@ -61,7 +59,6 @@ class TestGrammarInContext:
             form(name("circle"), NoneLit(), form(name("r"), IntLit(1))),
         )
 
-    @NAMES
     def test_the_same_text_as_an_argument_is_an_error(self):
         syntax_error("(f circle_)")
 
@@ -167,7 +164,6 @@ class TestWordEnds:
     def test_text_that_is_not_one_word_is_an_error(self, src):
         syntax_error(src)
 
-    @NAMES
     def test_a_quote_does_not_end_a_word(self):
         syntax_error("(f a'b)")
 
@@ -175,7 +171,6 @@ class TestWordEnds:
         assert items("(f a(g))") == (name("a"), form(name("g")))
         assert items("(f a;c\n)") == (name("a"),)
 
-    @NAMES
     def test_a_word_ends_at_a_colon(self):
         syntax_error("(f a:b)")
 
@@ -218,16 +213,16 @@ class TestNameCharacters:
         [
             "2x",
             "-x",
-            pytest.param("a?b", marks=NAMES),
-            pytest.param("x'", marks=NAMES),
-            pytest.param("a!b", marks=NAMES),
-            pytest.param("a*b", marks=NAMES),
-            pytest.param("a=b", marks=NAMES),
-            pytest.param("a:b", marks=NAMES),
-            pytest.param("θ", marks=NAMES),
-            pytest.param("π", marks=NAMES),
-            pytest.param("x²", marks=NAMES),
-            pytest.param("ünï", marks=NAMES),
+            "a?b",
+            "x'",
+            "a!b",
+            "a*b",
+            "a=b",
+            "a:b",
+            "θ",
+            "π",
+            "x²",
+            "ünï",
         ],
     )
     def test_not_names(self, text):
@@ -246,15 +241,12 @@ class TestNameCharacters:
     def test_a_part_that_is_true_false_or_none_is_an_error(self, text):
         syntax_error(f"(f {text})")
 
-    @pytest.mark.parametrize(
-        "text", [pytest.param("a|tex'q'", marks=NAMES), pytest.param("xs[0].tex'q'", marks=NAMES)]
-    )
+    @pytest.mark.parametrize("text", ["a|tex'q'", "xs[0].tex'q'"])
     def test_a_tex_string_after_a_bar_or_a_dot_is_an_error(self, text):
         syntax_error(f"(f {text})")
 
-    @UNICODE_CONSTANTS
     def test_pi_written_as_a_greek_letter_is_no_name(self):
-        compile_error("(real v π)")
+        syntax_error("(real v π)")
 
 
 @rule("name-underscore")
@@ -276,18 +268,25 @@ class TestNameUnderscore:
     @pytest.mark.parametrize(
         "text",
         [
-            pytest.param("x_", marks=NAMES),
+            "x_",
             "a_b",
             "_x",
             "_",
-            pytest.param("a_.b", marks=NAMES),
-            pytest.param("a._", marks=NAMES),
-            pytest.param("_.a", marks=NAMES),
-            pytest.param("_[0]", marks=NAMES),
+            "a_.b",
+            "a._",
+            "_.a",
+            "_[0]",
         ],
     )
     def test_an_underscore_in_any_other_place_is_an_error(self, text):
         syntax_error(f"(f {text})")
+
+    @pytest.mark.parametrize("src", ["(a_.b x)", "(a._ x)", "(a_|b x)", "(a_[0] x)", "(+_ x)"])
+    def test_an_underscore_inside_a_head_is_an_error(self, src):
+        syntax_error(src)
+
+    def test_an_underscore_after_the_last_part_of_a_head_with_several_parts(self):
+        assert forms("(a.b-c_ x)")[0].items == (name("a", "b-c"), NoneLit(), name("x"))
 
 
 @rule("literal-words")
@@ -306,7 +305,7 @@ class TestLiteralWords:
             "(f true[0])",
             pytest.param("(f none[0])", marks=LITERAL_PARTS),
             "(f 3[0])",
-            pytest.param("(f !=x)", marks=NAMES),
+            "(f !=x)",
         ],
     )
     def test_brackets_after_an_operator_a_bool_none_or_a_number_are_errors(self, src):
@@ -427,7 +426,7 @@ class TestReservedCharacters:
             '(f "x")',
             "(f $x)",
             "(f #x)",
-            pytest.param("(f :a)", marks=NAMES),
+            "(f :a)",
             "(f 'a':b)",
         ],
     )

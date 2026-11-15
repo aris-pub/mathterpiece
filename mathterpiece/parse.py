@@ -25,8 +25,8 @@ from mathterpiece.nodes import (
 OPERATORS = frozenset({"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!="})
 ESCAPES = {"'": "'", "\\": "\\", "n": "\n"}
 RESERVED = frozenset("[]{}")
-NAME_EXCLUDED = frozenset("[]{}./;\"$^()'|@#")
-NAME_BAD_START = frozenset("+-*<>=")
+NAME_PART_RE = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
+UNDERSCORE = "an underscore may only end the head of a form, as in (circle_ (r 1))"
 
 _UREAL = r"(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?"
 INT_RE = re.compile(r"[+-]?\d+")
@@ -86,7 +86,7 @@ def _is_delimiter(ch: str) -> bool:
 
 
 def _ends_run(ch: str) -> bool:
-    return _is_delimiter(ch) or ch in '[]{}"|'
+    return _is_delimiter(ch) or ch in '[]{}"|:'
 
 
 def _shown(ch: str) -> str:
@@ -109,12 +109,37 @@ def _check_char(ch: str, pos: Pos) -> None:
 
 
 def _valid_name_part(part: str) -> bool:
-    if not part or part[0].isdigit() or part[0] in NAME_BAD_START or part[0] == "'":
-        return False
-    # An underscore may only end a form's head, as in (circle_ …), which form() takes apart.
-    if "_" in part[:-1]:
-        return False
-    return not any(ch in NAME_EXCLUDED and ch != "'" for ch in part)
+    return NAME_PART_RE.fullmatch(part) is not None
+
+
+def _part_error(part: str, text: str, at: Pos, first: bool) -> ParseError | None:
+    """The error for a part of the name text that starts at at, or None if the part is right."""
+    if _valid_name_part(part):
+        return None
+    if not part:
+        if first:
+            return ParseError(f"a name starts with an ASCII letter: {text!r}", at)
+        dot = Pos(at.line, at.col - 1, at.file)
+        return ParseError(f"each '.' in a name is followed by a name part: {text!r}", dot)
+    for j, ch in enumerate(part):
+        where = Pos(at.line, at.col + j, at.file)
+        if ch.isascii() and ch.isalpha():
+            continue
+        if j and (ch.isascii() and ch.isdigit() or ch == "-"):
+            continue
+        if j and ch == "?" and j == len(part) - 1:
+            continue
+        if ch == "_":
+            return ParseError(UNDERSCORE, where)
+        if j == 0 and (ch.isascii() and ch.isdigit() or ch in "-?"):
+            if first:
+                return ParseError(f"a name starts with an ASCII letter: {text!r}", where)
+            return ParseError(f"each part of a name starts with an ASCII letter: {text!r}", where)
+        if ch == "?":
+            return ParseError(f"'?' may only end a part of a name: {text!r}", where)
+        shown = repr(ch) if ch.isprintable() else _shown(ch)
+        return ParseError(f"a name holds only ASCII letters, digits and hyphens: {shown}", where)
+    raise AssertionError(part)
 
 
 def _unnamed(head: Node) -> Node | None:
@@ -132,10 +157,16 @@ def _unnamed(head: Node) -> Node | None:
     return None
 
 
-def _name_parts(text: str, pos: Pos) -> list[str | Node]:
+def _name_parts(text: str, pos: Pos, after_dot: bool = False) -> list[str | Node]:
+    """The parts of the name text, which starts at pos; after_dot when text follows the '.' after
+    brackets, as in xs[0].x."""
     parts = text.split(".")
-    if not all(_valid_name_part(part) for part in parts):
-        raise ParseError(f"invalid name {text!r}", pos)
+    col = pos.col
+    for k, part in enumerate(parts):
+        first = k == 0 and not after_dot
+        if error := _part_error(part, text, Pos(pos.line, col, pos.file), first):
+            raise error
+        col += len(part) + 1
     return list(parts)
 
 
@@ -206,7 +237,7 @@ class _Parser:
                 raise ParseError("expected a form at the top level", pos)
             forms.append(self.form())
 
-    def node(self) -> Node:
+    def node(self, head: bool = False) -> Node:
         ch = self.peek()
         pos = self.pos()
         if ch == "(":
@@ -231,18 +262,22 @@ class _Parser:
             raise ParseError("unexpected ']'", pos)
         if ch in RESERVED:
             raise ParseError(f"{ch!r} is reserved", pos)
+        if ch == ":":
+            raise ParseError(
+                "':' may only start the format spec in the braces of an interpolated string, as"
+                " in $'{x:.2f}'",
+                pos,
+            )
         if self.src.startswith("tex'", self.i):
             return self.tex_string()
         if self.prefix_end() is not None:
             return self.prefixed()
-        return self.atom()
+        return self.atom(head)
 
     def prefix_end(self) -> int | None:
         """Where the @ of H@X is, when the word that starts here holds one."""
         j = self.i
         while j < len(self.src) and not _ends_run(self.src[j]):
-            if self.in_braces and self.src[j] == ":":
-                return None
             if self.src[j] == "@":
                 return j
             j += 1
@@ -297,7 +332,7 @@ class _Parser:
                 part = self.run()
                 if not part:
                     raise ParseError("expected a name after '.'", part_pos)
-                for name in _name_parts(part, part_pos):
+                for name in _name_parts(part, part_pos, after_dot=True):
                     whole = Form((Name((".",), at), whole, Name((name,), part_pos)), at)
             else:
                 index = self.list_items()
@@ -318,7 +353,7 @@ class _Parser:
             if self.peek() == ")":
                 self.advance()
                 break
-            items.append(self.node())
+            items.append(self.node(head=not items))
         if self.peek() in (".", "["):
             raise ParseError("a part cannot follow a form; use (. X Y)", self.pos())
         # (head_ …) is (head none …): the form has no name.
@@ -361,17 +396,14 @@ class _Parser:
 
     def run(self) -> str:
         start = self.i
-        # Inside braces, ':' starts a format spec, so it ends the name.
         while self.peek() and not _ends_run(self.peek()):
-            if self.in_braces and self.peek() == ":":
-                break
             _check_char(self.peek(), self.pos())
             self.advance()
         return self.src[start : self.i]
 
-    def atom(self) -> Node:
+    def atom(self, head: bool = False) -> Node:
         pos = self.pos()
-        node = self.operand()
+        node = self.operand(head)
         if self.peek() != "|":
             return node
         items = [node]
@@ -379,10 +411,11 @@ class _Parser:
             self.advance()
             if not self.peek() or _is_delimiter(self.peek()) or self.peek() in "|]":
                 raise ParseError("expected a type after '|'", self.pos())
-            items.append(self.operand())
+            items.append(self.operand(head))
         return Bar(tuple(items), pos)
 
-    def operand(self) -> Node:
+    def operand(self, head: bool = False) -> Node:
+        """A word; head is true when it may be the head of a form, and so end with '_'."""
         pos = self.pos()
         text = self.run()
         if not text:
@@ -403,6 +436,12 @@ class _Parser:
             return number
         if LOOKS_NUMERIC_RE.match(text):
             raise ParseError(f"invalid number {text!r}", pos)
+        # In (line|none_ …) only the last word of the head may end with '_'. form() takes it off.
+        if head and self.peek() != "|" and text.endswith("_"):
+            if text == "none_":
+                return Name((text,), pos)
+            *parts, last = _name_parts(text[:-1], pos)
+            return Name((*parts, f"{last}_"), pos)
         return Name(tuple(_name_parts(text, pos)), pos)
 
     def access(self, text: str, pos: Pos) -> Name:
@@ -436,9 +475,8 @@ class _Parser:
                 part = self.run()
                 if not part:
                     raise ParseError("expected a name after '.'", part_pos)
-                parts.extend(_name_parts(part, part_pos))
-        ends = _ends_run(self.peek()) or (self.in_braces and self.peek() == ":")
-        if self.peek() and not ends:
+                parts.extend(_name_parts(part, part_pos, after_dot=True))
+        if self.peek() and not _ends_run(self.peek()):
             _check_char(self.peek(), self.pos())
             raise ParseError(f"unexpected {self.peek()!r} after index", self.pos())
         return Name(tuple(parts), pos)

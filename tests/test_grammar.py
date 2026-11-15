@@ -248,7 +248,6 @@ REJECTED = [
     "(f none[0]x)",
 ]
 
-NAMES = "mtp-ydd4.7.3"
 DIGITS = "mtp-ydd4.7.4"
 NESTED_BRACES = "mtp-kzx2"
 BRACE_COMMENTS = "mtp-ydd4.7.31"
@@ -258,33 +257,6 @@ LITERAL_PARTS = "mtp-ydd4.7.32"
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
 # source, test_known_difference fails, and the entry is removed.
 KNOWN_DIFFERENCES = {
-    "(f a!b)": NAMES,
-    "(f a?b)": NAMES,
-    "(f a*b)": NAMES,
-    "(f a=b)": NAMES,
-    "(f !=x)": NAMES,
-    "(f a')": NAMES,
-    "(f a'')": NAMES,
-    "(f a'b)": NAMES,
-    "(f f'(x))": NAMES,
-    "(f a:b)": NAMES,
-    "(f :a)": NAMES,
-    "(f :)": NAMES,
-    "(f θ)": NAMES,
-    "(f ünï)": NAMES,
-    "(f x²)": NAMES,
-    "(f a\x00b)": NAMES,
-    "(f xs[0]._)": NAMES,
-    "(f xs[0].tex'q')": NAMES,
-    "(f a|tex'q')": NAMES,
-    "(f a_)": NAMES,
-    "(f a b_)": NAMES,
-    "(f a|b_)": NAMES,
-    "(f a_.b)": NAMES,
-    "(f _.a)": NAMES,
-    "(f a._)": NAMES,
-    "(f _[0])": NAMES,
-    "(a_.b x)": NAMES,
     "(f ٣)": DIGITS,
     "(f 1/٣)": DIGITS,
     "(f ١.٥)": DIGITS,
@@ -304,32 +276,6 @@ KNOWN_DIFFERENCES = {
     "(f none[0])": LITERAL_PARTS,
     "(a.true_ x)": LITERAL_PARTS,
 }
-
-OPERATOR_NAMES = {"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!=", "."}
-NAME_PART = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
-
-
-def _bad_name(node) -> bool:
-    """Whether a node holds a name part that the rule name-characters does not allow."""
-    if isinstance(node, Name):
-        if len(node.parts) == 1 and node.parts[0] in OPERATOR_NAMES:
-            return False
-        return any(
-            _bad_name(p) if not isinstance(p, str) else not NAME_PART.fullmatch(p)
-            for p in node.parts
-        )
-    if isinstance(node, (Form, ListLit, Bar, Brackets)):
-        return any(_bad_name(x) for x in node.items)
-    if isinstance(node, InterpStrLit):
-        return any(_bad_name(p) for p in node.parts if not isinstance(p, str))
-    if isinstance(node, Field):
-        return _bad_name(node.expr)
-    return False
-
-
-def _names_step(forms):
-    return None if any(_bad_name(f) for f in forms) else forms
-
 
 LITERALS = {"true", "false", "none"}
 
@@ -366,11 +312,11 @@ class _NoCommentInBraces(_Parser):
         finally:
             self.around.pop()
 
-    def node(self):
+    def node(self, head=False):
         # Inside the expression, such as a form in the braces, comments are allowed again.
         saved, self.around = self.around, []
         try:
-            return super().node()
+            return super().node(head)
         finally:
             self.around = saved
 
@@ -387,7 +333,7 @@ class _NoCommentInBraces(_Parser):
 # bead is done. A step or a parser is removed together with the last KNOWN_DIFFERENCES entry of
 # its bead.
 PENDING_PARSERS = {BRACE_COMMENTS: _NoCommentInBraces}
-PENDING_STEPS = {NAMES: _names_step, LITERAL_PARTS: _literal_parts_step}
+PENDING_STEPS = {LITERAL_PARTS: _literal_parts_step}
 
 
 def parser_after_beads(src: str):
