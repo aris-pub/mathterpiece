@@ -38,9 +38,9 @@ Among the items of a form, a list or brackets, whitespace or a comment separates
 expressions, except where one of the two is a form. More exactly, an expression that ends with the
 `)` of a form, which is a form or a free starting value such as `free@(g)`, may be followed
 directly by any expression that does not start with `.` or `[` ({numref}`no-part-after-form`), and
-every other expression may be followed directly only by a form. So `(f a(b)c)`, `(f (a)b)` and
-`(f 'x'(b))` hold three expressions after `f`, and `(f 'a''b')` and
-`(f [1]x)` are errors.
+every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
+expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
+errors.
 ```
 
 ### Lists and brackets

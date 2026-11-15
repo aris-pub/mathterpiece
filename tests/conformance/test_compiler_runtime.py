@@ -41,7 +41,7 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-NO_NOTE = pytest.mark.xfail(strict=True, reason="spec and code differ, no note")
+LABEL = xfail("mtp-ydd4.7.53", "an error carries no label of a rule")
 STEPS = xfail("mtp-08wd.1", "each copy of a foreach is proved with the value of its variable")
 NOT_WRITTEN = xfail("mtp-vrzc", "a folder that cannot be written prints a Python traceback")
 SERVE_IMPORTS = xfail("mtp-q02m", "mtp serve compares only the modification time of the source")
@@ -573,13 +573,14 @@ def _labels() -> set[str]:
 
 @rule("conformance")
 class TestConformance:
-    @NO_NOTE
-    def test_a_rejected_source_gets_an_error_that_names_a_rule(self):
-        # The rule asks that the error "points to" a rule that the source breaks. The only way
-        # that a test can check this is a label of the spec carried by the error.
+    @LABEL
+    def test_a_rejected_source_gets_an_error_that_carries_a_label(self):
         with pytest.raises(CompileError) as e:
             compile_source("(real a b) (real b 1)")
-        assert getattr(e.value, "rule", None) in _labels()
+        carried = set(getattr(e.value, "rules", ()))
+        # The source breaks both rules, so the error may carry either label or both.
+        assert carried and carried <= {"declare-before-use", "name-lookup"}
+        assert carried <= _labels()
 
     def test_an_accepted_source_gives_a_valid_mtpc(self):
         assert schema_errors(raw_mtpc(FIGURE)) == []
