@@ -118,7 +118,7 @@ Each subcommand takes the path of one source file, and runs these steps:
 
 | Subcommand | Steps | What it writes |
 |---|---|---|
-| `mtp parse file` | parse | prints the nodes that the parser reads, and writes no file |
+| `mtp parse file` | parse | prints the expressions that the parser reads, and writes no file |
 | `mtp check file` | parse, rewrite and prove | prints `file: no errors` when there is no error, and writes no file |
 | `mtp compile file` | parse to fold and write | the .mtpc |
 | `mtp build file` | parse to fold and write, then the inventory page | the folder `build_name/`, `name` being the file name without `.mtp` |
@@ -154,16 +154,16 @@ Python traceback and not one line. `mtp serve` stops in the same way when its po
 ### mtp parse
 
 What `mtp parse` prints is not normative ({numref}`what-is-normative`). This implementation prints
-one node per line, in source order, each line indented by two spaces
-for each level of depth. A line holds the position of the node as `line:column`, its kind, and
-its value, as follows:
+one expression per line, in source order, each line indented by two spaces for each level of
+depth. A line holds the position of the expression as `line:column`, its kind, and its value, as
+follows:
 
-- `form`, `list`, `brackets` or `bar`, for a node that holds others. The nodes that it holds
-  follow on the next lines.
+- `form`, `list`, `brackets` or `bar`, for an expression that holds others: a form, a list,
+  brackets or a broadened type. The expressions that it holds follow on the next lines.
 - `name` and the name, its parts joined by `.`, with `[…]` for each part that is an expression.
-  The nodes of those parts follow on the next lines.
+  The expressions of those parts follow on the next lines.
 - `string with values`, for a string with values in it. Each part follows on the next lines:
-  `text` and the text, or the node of the value.
+  `text` and the text, or the expression of the value.
 - `value` and, after a colon, its format, for a value inside a string.
 - `string` or `tex string`, and the string.
 - `none`, or `bool` and `true` or `false`.

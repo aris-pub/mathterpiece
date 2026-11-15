@@ -314,9 +314,9 @@ with no limit of their own can (docs/type-system.md, section 5.c). An overflow g
   mtp-mqbu.
 - `constrain` (web/src/runtime.ts, line 761) clamps a write only when the value is a single number.
   mtp-ydd4.7.18.
-- `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248), whose
-  `Undefined` error is not caught there, so an overflow stops the evaluation and does not give
-  `none`. Bug mtp-ec05.
+- `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248). On an overflow,
+  `+` throws the exception `Undefined` (web/src/builtins.ts, line 22), and `sum` does not catch it,
+  so the evaluation stops and does not give `none`. Bug mtp-ec05.
 :::
 
 ### Infinity

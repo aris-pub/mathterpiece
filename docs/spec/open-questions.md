@@ -153,17 +153,17 @@ bourgain-densities.mtp, `koch` in koch-snowflake.mtp and `has-divisor` in ulam-s
 
 **Decided (2026-11-15):** `max-call-depth` is 256 (Q-evaluation-8).
 
-## P7. What a name may contain, and what text the reader accepts
+## P7. What a name may contain, and what text the parser accepts
 
-**Proposed principle.** The reader accepts exactly the text that the spec allows, and rejects
+**Proposed principle.** The parser accepts exactly the text that the spec allows, and rejects
 everything else. The spec allows what the docs describe: names of letters, digits and hyphens,
-with an optional `?` at the end and `_` only after a head, ASCII blanks, ASCII digits, and a
+with an optional `?` at the end and `_` only after a head, ASCII whitespace, ASCII digits, and a
 byte order mark at the start.
 
 **Settles:** Q-lexical-1 to 9, and the lexer of the site (mtp-phpx).
 
 **Decided:** the parser accepts exactly what the spec allows: names of letters, digits and hyphens
-with an optional `?` at the end and `_` only right after a head, ASCII blanks and digits, and a
+with an optional `?` at the end and `_` only right after a head, ASCII whitespace and digits, and a
 byte order mark at the start of a file ignored.
 
 ## P8. Declare before use, everywhere
@@ -173,21 +173,21 @@ exceptions, imports included. Optional arguments come before the body, in any or
 
 **Settles:** `exists-when` that names a later member (Q-grammar-8), `import` after the forms that
 use it (Q-grammar-11), the items of a formula in any order (Q-grammar-9), and where a docstring
-may stand (Q-grammar-3).
+may be written (Q-grammar-3).
 
 **Decided:** a name is used only after its declaration in every scope, imports included, and
 optional arguments come before the body, in any order.
 
-## P9. `let` and `foreach` stand wherever declarations stand
+## P9. `let` and `foreach` may be written wherever declarations may be written
 
-**Proposed principle.** `let` and `foreach` may stand in every body that holds declarations or
-items, and nowhere else: not among the options of a shape.
+**Proposed principle.** `let` and `foreach` may be written in every body that holds declarations
+or items, and nowhere else: not among the optional arguments of a shape.
 
 **Settles:** Q-grammar-4 to 7. Q-grammar-10 (whether a listener on its own view names that view)
 is a separate question, already filed as mtp-6k7f.
 
-**Decided:** `let` and `foreach` may stand in every body that holds declarations or items, the top
-level included, and never among the arguments of a form.
+**Decided:** `let` and `foreach` may be written in every body that holds declarations or items, the
+top level included, and never among the arguments of a form.
 
 ## P10. What a conforming implementation must match
 

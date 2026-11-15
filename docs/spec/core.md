@@ -57,7 +57,7 @@ written as it is.
 (core-rewrites)=
 ## Rewrite rules
 
-The reader makes the rewrites of the lexical shorthands while it reads the source:
+The parser makes the rewrites of the lexical shorthands while it reads the source:
 `doc@'text'`, `free@X`, a name string `#'…'`, a part after a list, `[…][X]`
 ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other sugar form is in the table of the rule below.
@@ -74,7 +74,7 @@ any other rewrite of the declaration that it copies.
 
 | Written | Means exactly | Conditions |
 |---|---|---|
-| `N.A`, `N[X]` | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name stands as an expression or as the target of a writer. A head and the name of a declaration are not rewritten |
+| `N.A`, `N[X]` | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name is written as an expression or as the target of a writer. A head and the name of a declaration are not rewritten |
 | `(when C X)` | `(if C X none)` | Exactly two arguments |
 | `cond`, `and`, `or` | the `if` forms of {numref}`cond-and-or-as-if` | |
 | `(maybe T)`, in a type | `T\|none` | |
@@ -97,16 +97,16 @@ any other rewrite of the declaration that it copies.
 | `(pos free@[X Y])`, `(pos free@P)` | `(x free@X) (y free@Y)`, `(x free@(. P 0)) (y free@(. P 1))` | As for `(pos P)` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, `(wait)`, in an animation's body | `(move none (duration T))`, `(move none)` | |
-| `(animation OPTIONS… A B MORE…)`, and the body of a choreo | `(animation OPTIONS… (in-order A B MORE…))` | `OPTIONS…` are the `(defaults …)` and the `(loop …)` |
+| `(animation OPT… A B MORE…)`, and the body of a choreo | `(animation OPT… (in-order A B MORE…))` | `OPT…` are the optional arguments of the animation, the `(defaults …)` and the `(loop …)` |
 | `(K ITEMS… X MORE…)`, where `X` is a `(move …)` or a use of a choreo | `(K ITEMS… (animation X) MORE…)` | `K` is a control or a listener that has an animation (not a slider, an `on-drag` or an `on-pointermove`), and the form has at most one of an `(animation …)`, a `(move …)` and a use of a choreo |
-| `(C A1 … Ak)`, a use of `(choreo C (P1 … Pn) BODY…)` | `(animation BODY…)`, with each `Pi` replaced by `Ai`, and each `Pi` for i above k by its default. The declaration of `C` is removed | k is at least the position of the last parameter with no default. `C` uses only choreos declared before it. The use stands where an animation or a step of an animation's body stands. The prover proves that each `Ai` fits the type of `Pi` |
+| `(C A1 … Ak)`, a use of `(choreo C (P1 … Pn) BODY…)` | `(animation BODY…)`, with each `Pi` replaced by `Ai`, and each `Pi` for i above k by its default. The declaration of `C` is removed | k is at least the position of the last parameter with no default. `C` uses only choreos declared before it. The use is written where an animation or a step of an animation's body may be written. The prover proves that each `Ai` fits the type of `Pi` |
 ```
 
-A use of a choreo written as a step of an animation's body becomes an `(animation …)` there,
-which is one step ({numref}`animation-step`). An argument of a choreo may be any expression that
-the body accepts in the places where its parameter stands, so `(pulse (* 2 k))` is an error when
-the parameter is a duration, by {doc}`binding-time`, and is accepted when it is a `to`. A choreo
-whose parameters all have defaults also gives one use with every default, so that the prover
+A use of a choreo written as a step of an animation's body becomes an `(animation …)` there, which
+is one step ({numref}`animation-step`). An argument of a choreo may be any expression that may be
+written in the body in the places where its parameter is written, so `(pulse (* 2 k))` is an error
+when the parameter is a duration, by {doc}`binding-time`, and is accepted when it is a `to`. A
+choreo whose parameters all have defaults also gives one use with every default, so that the prover
 proves its body when nothing uses it. That use is not written in the .mtpc.
 
 Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
@@ -133,8 +133,8 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
   an item of `xs` (mtp-ydd4.7.5).
 - `(like M)` on an instance copies neither its `pointer-events` (compiler.py:4749, 4759-4762) nor
   its `clip` (mtp-ydd4.7.20).
-- `(wait T)` makes no transition object, while `(move none (duration T))` does (compiler.py:3074-3087,
-  3184-3197). The two .mtpc files differ by that object (mtp-ydd4.7.21).
+- `(wait T)` makes no transition object, while `(move none (duration T))` does
+  (compiler.py:3074-3087, 3184-3197). The two .mtpc files differ by that object (mtp-ydd4.7.21).
 - A palette has the type `palette` (compiler.py:1454, types.py:148-162), and the namespace that it
   means has the type `namespace` (mtp-ydd4.7.22).
 - A seed is found by the type name `rand-seed` (compiler.py:7001-7003), so a variable of a type
@@ -233,7 +233,8 @@ inventory.
   of a discrete map are worked out from them, so its rewrite needs their values. Each call is
   compiled where it is written, so that the colors that it mixes stay the tokens that they read.
 - **`exists-when`.** Its condition may read what is declared between the shape and the
-  `exists-when`, so it cannot be moved into the declaration of the shape ({numref}`declare-before-use`).
+  `exists-when`, so it cannot be moved into the declaration of the shape
+  ({numref}`declare-before-use`).
 - **`let`.** A rewrite that put each value in place of each use would compute it once for each use,
   with a site of its own for each random call. A rewrite into a variable needs the value's type.
 - **`(defaults …)` on an instance.** The members of an instance are made only in the expand step,
@@ -271,7 +272,7 @@ Applying P2 changes one figure: examples/two-canvases.mtp:58 and :63, `(foreach 
 (on-drag c c.pos))`, where each corner is a fixed-size group. Its corners would no longer move by
 their `translate`. No figure drags a plain group with a bare target.
 
-Options: (a) apply P2 as it stands, and change two-canvases.mtp to drag something else. (b) the
+Options: (a) apply P2 unchanged, and change two-canvases.mtp to drag something else. (b) the
 bare target is sugar for the move, and a drag's move of a group's own position is defined to move
 the group as the bare target does today: its members by the pointer's motion, or a fixed-size
 group by its `translate`. two-canvases.mtp does not change. (c) the bare target is core, and the
@@ -288,11 +289,11 @@ length known when compiling, which is the error "the length of the list a foreac
 must be known when compiling" (compiler.py:930-934).
 
 Applying P2 makes three figures stop compiling: examples/ball-puzzle.mtp:52 (`(foreach k size …)`,
-with the motif parameter `size` from 0 to 5), examples/spiral-of-copies.mtp:19
-(`(foreach k n …)`, with `n` from 1 to 60, set by a slider) and ~/blog/ball-puzzle/ball-puzzle.mtp:136
-(`(foreach j size …)`).
+with the motif parameter `size` from 0 to 5), examples/spiral-of-copies.mtp:19 (`(foreach k n …)`,
+with `n` from 1 to 60, set by a slider) and ~/blog/ball-puzzle/ball-puzzle.mtp:136 (`(foreach j size
+…)`).
 
-Options: (a) apply P2 as it stands: a count known only while drawing is an error, and the three
+Options: (a) apply P2 unchanged: a count known only while drawing is an error, and the three
 figures make a fixed number of copies, each with an `exists-when`. (b) a `foreach` over a list
 whose length is known only while drawing, with an upper bound, makes as many copies as the length
 can be at most, and copy k exists only while k is below the length. Then `(range n)` gives the
@@ -559,18 +560,18 @@ only in the code, as compile errors. `(maybe T)` is in syntax.md, section 10, an
 reference.md. Where the two documents and this spec disagree, the spec holds (P10). These
 documents are cut down in mtp-ydd4.7.
 
-- **A move in a canvas.** A canvas takes no move: its body holds no `move` ({numref}`contexts-table`).
-  reference.md, "Transitions and animations", which has a move "written only inside an animation,
-  a slider or a canvas", is wrong.
+- **A move in a canvas.** A canvas takes no move: its body holds no `move`
+  ({numref}`contexts-table`). reference.md, "Transitions and animations", which has a move "written
+  only inside an animation, a slider or a canvas", is wrong.
 - **`(when bool)` on a writer.** A writer acts while its `(active B)` is true, and a `when` item on
   a control or a listener is an error (see "Heads that are errors"). reference.md, "Writes and
   conditions" ("`(when bool)` is different: it decides whether the writer is active"), and
   syntax.md, section 8, which gives `(when on)` as an optional argument, are wrong.
 - **`doc` as a reserved word.** `doc` is reserved ({numref}`reserved-words`). syntax.md, "Names",
   which leaves it out of the reserved words, is wrong.
-- **The arguments of a choreo.** An argument may be any expression that the body accepts where its
-  parameter stands ({numref}`sugar-rewrites`). reference.md, "Transitions and animations"
-  ("Arguments are known when compiling … `(* 2 k)` is a compile error"), is wrong.
+- **The arguments of a choreo.** An argument may be any expression that may be written in the body
+  where its parameter is written ({numref}`sugar-rewrites`). reference.md, "Transitions and
+  animations" ("Arguments are known when compiling … `(* 2 k)` is a compile error"), is wrong.
 - **A palette's type.** A palette is a namespace, of type `namespace`. reference.md, "Palettes"
   ("its type, `palette`, refines `namespace`"), is wrong.
 
@@ -579,8 +580,8 @@ documents are cut down in mtp-ydd4.7.
 
 | Head | Kind | Rewrite or defining part |
 |---|---|---|
-| `doc@'…'`, `free@X`, `#'…'`, `[…][X]` | sugar, made by the reader | {numref}`shorthand-forms` |
-| `(H_ …)` | sugar, made by the reader | {numref}`unnamed-head` |
+| `doc@'…'`, `free@X`, `#'…'`, `[…][X]` | sugar, made by the parser | {numref}`shorthand-forms` |
+| `(H_ …)` | sugar, made by the parser | {numref}`unnamed-head` |
 | `N.A`, `N[X]` | sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | sugar | {numref}`sugar-rewrites`, {numref}`cond-and-or-as-if` |
 | `(maybe T)`, `colormap` as a type, a name declared by `type` | sugar | {numref}`sugar-rewrites` |

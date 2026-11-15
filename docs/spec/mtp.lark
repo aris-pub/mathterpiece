@@ -6,42 +6,42 @@
 // where it describes that section.
 
 //: file
-start: _BOM? _BLANK? (form _BLANK?)*
+start: _BOM? _WHITESPACE_OR_COMMENT? (form _WHITESPACE_OR_COMMENT?)*
 
 //: bom-token
 _BOM: /\ufeff/
 
 //: sequences
-form: "(" _BLANK? (items | head_items)? RPAR
-seq: _BLANK? items?
-items: chunk (_BLANK items?)?
-head_items: head_chunk (_BLANK items?)?
+form: "(" _WHITESPACE_OR_COMMENT? (items | head_items)? RPAR
+seq: _WHITESPACE_OR_COMMENT? items?
+items: chunk (_WHITESPACE_OR_COMMENT items?)?
+head_items: head_chunk (_WHITESPACE_OR_COMMENT items?)?
 chunk: plain (form chunk?)?
      | paren chunk?
 head_chunk: head (form chunk?)?
-node: paren | plain
+expression: paren | plain
 paren: form
      | FREE paren -> free
 plain: list | word | string | doc | interpolated
      | FREE plain -> free
 
 //: lists
-list: "[" seq "]" list_index*
-list_index: "[" _BLANK? node _BLANK? "]"
-index: "[" _BLANK? items "]"
+list: "[" seq "]" list_brackets*
+list_brackets: "[" _WHITESPACE_OR_COMMENT? expression _WHITESPACE_OR_COMMENT? "]"
+brackets: "[" _WHITESPACE_OR_COMMENT? items "]"
 
 //: words
 word: first ("|" first)* | name_string
-first: NAME tail? | number | boolean | operator
-tail: (index ("." PARTS)?)+
-name_string: name_text ("." PARTS | list_index)*
+first: NAME tail? | number | bool | operator
+tail: (brackets ("." PARTS)?)+
+name_string: name_text ("." PARTS | list_brackets)*
 
 //: heads
 head: HEAD | first ("|" first)* "|" HEAD
 
 //: literals
 number: INT | RATIO | REAL | IMAG | COMPLEX
-boolean: TRUE | FALSE
+bool: TRUE | FALSE
 !operator: "+" | "-" | "*" | "/" | "^" | "<" | "<=" | ">" | ">=" | "=" | "!=" | "."
 
 //: strings
@@ -49,10 +49,10 @@ string: STRING | TEX
 doc: DOC STRING
 interpolated: DOLLAR_QUOTE (TEXT | field)* QUOTE
 name_text: HASH_QUOTE TEXT? field (TEXT | field)* QUOTE
-field: "{" _BLANK? node _BLANK? FORMAT? "}"
+field: "{" _WHITESPACE_OR_COMMENT? expression _WHITESPACE_OR_COMMENT? FORMAT? "}"
 
-//: blank-tokens
-_BLANK: (/[ \t\n\r]/ | COMMENT)+
+//: whitespace-and-comments
+_WHITESPACE_OR_COMMENT: (/[ \t\n\r]/ | COMMENT)+
 COMMENT: ";" /[^\n]/*
 
 //: closing-token
