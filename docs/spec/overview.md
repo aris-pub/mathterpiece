@@ -3,9 +3,9 @@
 ## How rules are written
 
 Each rule of the spec is stated once, in a numbered box. Rules are numbered by page: Rule 2.1 is
-the first rule of page 2. A rule has a label as well as a number, and the spec, the tests, the
-{term}`compiler`'s errors and the documentation cite a rule by its label, so a citation keeps
-working when rules are added or moved. For example, the rule with the label `declare-before-use` is
+the first rule of page 2. A rule has a label as well as a number, and the spec and the errors of the
+{term}`compiler` cite a rule by its label ({numref}`conformance`), so a citation keeps working when
+rules are added or moved. For example, the rule with the label `declare-before-use` is
 stated in {ref}`scope`, and {numref}`declare-before-use` is a citation of it.
 
 ## Terms

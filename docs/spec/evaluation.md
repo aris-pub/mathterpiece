@@ -57,10 +57,9 @@ The compiler leaves out every `let` value that nothing reads, and the runtime ev
 before the body. So in
 `(let ((s (walk k))) (if c s 0))`, `walk` is called while drawing whether `c` is true or not.
 
-The collection functions call their function on the items in order. While drawing, `any` and
-`all` with a function stop at the first item at which the result is known. When folding, the
-compiler calls the function on every item first. By {numref}`evaluation-is-pure` the two give the
-same value.
+The collection functions call their function on the items in order. `any` and `all` with a function
+may stop at the first item at which the result is known: by {numref}`evaluation-is-pure`, the value
+is the same.
 
 ### Parts of these forms when compiling
 
