@@ -80,8 +80,8 @@ the column. An expression that the parser builds from a shorter spelling has the
 ```
 
 ```{rule} whitespace-and-comments
-{term}`Whitespace <whitespace>` is the four characters space (U+0020), tab (U+0009), line feed
-(U+000A) and carriage return (U+000D). A {term}`comment` starts with `;` and runs up to the next
+Whitespace is the four characters space (U+0020), tab (U+0009), line feed
+(U+000A) and carriage return (U+000D). A comment starts with `;` and runs up to the next
 line feed, or to the end of the source. Whitespace and comments have no meaning. Inside a string,
 `;` and whitespace are text.
 ```
@@ -101,7 +101,7 @@ limits whitespace to the four characters of the rule.
 ## Where words end
 
 ```{rule} word-ends
-A {term}`word` is a name, a number, an {term}`operator`, a {term}`bool` or `none`. From the first
+A word is a name, a number, an {term}`operator`, a {term}`bool` or `none`. From the first
 character of a word up to the next whitespace, the end of the source, or the next of the characters
 `( ) [ ] { } " | ; :`, the text is exactly one word. Text that starts where a word may start and is
 not one word up to there is an error.
@@ -131,7 +131,7 @@ A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-part
 
 ## Names
 
-A {term}`name` is a word that refers to something declared: `theta`, `p.pos`, `show-tan`. It is
+A name is a word that refers to something declared: `theta`, `p.pos`, `show-tan`. It is
 one or more {term}`parts <part>` joined by dots. `p.pos.x` is the name of the three parts `p`,
 `pos` and `x`.
 
@@ -196,8 +196,8 @@ rule.
 ```
 
 ```{rule} literal-words
-The word `true` or `false` is a {term}`bool`. The word `none` is the literal `none`. Each of the
-words `+ - * / ^ < <= > >= = != .` is an {term}`operator`: a name of one part, which is never
+The word `true` or `false` is a bool. The word `none` is the literal `none`. Each of the
+words `+ - * / ^ < <= > >= = != .` is an operator: a name of one part, which is never
 followed directly by `[`.
 ```
 
@@ -277,7 +277,7 @@ is an error. Strings are written in single quotes only.
 ```
 
 ```{rule} number-literals
-A {term}`digit` is one of the ASCII digits `0` to `9`. A word that matches one of the number
+A digit is one of the ASCII digits `0` to `9`. A word that matches one of the number
 definitions is a number, of the kind of the definition:
 
 - {token}`mtp:INT` is an {term}`int`, of any size. `007` is 7 and `+4` is 4.
@@ -309,13 +309,13 @@ parser reads `٣` as the int 3 and `1/٣` as a ratio. Bead mtp-ydd4.7.4 limits d
 ```
 
 ```{rule} string-literals
-A {term}`string` is written in single quotes. Inside it, `\'` is a quote, `\\` is a backslash and
+A string is written in single quotes. Inside it, `\'` is a quote, `\\` is a backslash and
 `\n` is a line feed. A backslash followed by any other character is an error. Every other
 character, a line feed included, is itself.
 ```
 
 ```{rule} tex-strings
-A {term}`TeX string` is written `tex'…'`. Inside it, `\'` is a quote, and every other character is
+A TeX string is written `tex'…'`. Inside it, `\'` is a quote, and every other character is
 itself: `\frac`, `\\` and `\q` stay as written. A backslash and the character after it are read
 together, so in `tex'a\\'` the string is `a\\` and the last quote closes it.
 ```
@@ -326,8 +326,8 @@ together, so in `tex'a\\'` the string is `a\\` and the last quote closes it.
 ```
 
 ```{rule} prefix-forms
-At the start of an expression, `doc@` followed directly by a string is a {term}`docstring`, and
-`free@` followed directly by an expression is a {term}`free starting value`. No whitespace or
+At the start of an expression, `doc@` followed directly by a string is a docstring, and
+`free@` followed directly by an expression is a free starting value. No whitespace or
 comment may be written between the prefix and the string or expression after it.
 {numref}`shorthand-forms` gives the form that each one is short for. `@` may not be written in
 any other place.
@@ -339,10 +339,10 @@ any other place.
 ```
 
 ```{rule} interpolated-strings
-An {term}`interpolated string` is written `$'…'`, and a {term}`name string` is written `#'…'`. Their
+An interpolated string is written `$'…'`, and a {term}`name string` is written `#'…'`. Their
 text has the escapes of {numref}`string-literals`, and in it `{{` is `{` and `}}` is `}`. A `{` that
 is not doubled opens braces, which hold one expression, with whitespace or nothing before and
-after it, then a {term}`format spec` or nothing, and last `}`. No comment may be written in the
+after it, then a format spec or nothing, and last `}`. No comment may be written in the
 braces, around the expression. A format spec is `:` followed by any characters but `{`, `}` and
 `'`. A `}` that is not doubled and does not close braces is an error. A name string holds braces
 at least once.

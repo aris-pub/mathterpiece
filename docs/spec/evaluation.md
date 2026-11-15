@@ -17,10 +17,10 @@ differs" follows the rule.
 ## Expressions change nothing
 
 ```{rule} evaluation-is-pure
-{term}`Evaluation <evaluation>` of an expression gives a value and changes nothing: no variable,
+Evaluation of an expression gives a value and changes nothing: no variable,
 no attribute, no {term}`seed` and no page element. The value depends only on the values that the
 expression reads: variables, attributes, parameters, `let` {term}`names <name>`, the
-{term}`seeds <seed>` of its random functions, and, for a read of a position, the frame of the
+seeds of its random functions, and, for a read of a position, the frame of the
 expression that reads it ({doc}`world-model`).
 ```
 
@@ -320,7 +320,7 @@ when it lies exactly halfway between them.
 ### The limit of every number
 
 ```{rule} number-limit
-Every number lies within the {term}`number limit`, from -10¹⁵⁰ to 10¹⁵⁰, when folded and while
+Every number lies within the number limit, from -10¹⁵⁰ to 10¹⁵⁰, when folded and while
 drawing:
 
 - The result of every operation and every built-in function is its exact value, rounded where it
@@ -405,7 +405,7 @@ mtp-nk2w.
 ## Randomness
 
 ```{rule} seed-variable
-Every random value is computed from a {term}`seed`: a free variable of the {term}`built-in type`
+Every random value is computed from a seed: a free variable of the {term}`built-in type`
 `rand-seed`, which is any int. A random function follows the seed named in it with `(seed s)`. A
 `const` variable is not a seed.
 ```
@@ -604,7 +604,7 @@ While drawing, how every chain ends is Q-evaluation-13, below.
 ```{rule} call-depth-limit
 The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
 of such calls that are still being computed when it starts. Calls of built-in functions do not
-count. `max-call-depth`, the {term}`call depth limit`, is 256. When a call is known in the prove
+count. `max-call-depth`, the call depth limit, is 256. When a call is known in the prove
 step and folding it would start a call whose depth is above `max-call-depth`, the call is a compile
 error of the prove step ({numref}`step-rejects-or-passes`).
 ```

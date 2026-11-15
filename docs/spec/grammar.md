@@ -23,7 +23,7 @@ the name of a rule keeps the quoted text of that rule in the tree.
 ```
 
 ```{rule} top-level-forms
-A source is any number of {term}`forms <form>`, with or without {term}`whitespace` and
+A source is any number of forms, with or without {term}`whitespace` and
 {term}`comments <comment>` between them. Anything else at the top level of a source is an error. A
 source may hold no form at all.
 ```
@@ -31,7 +31,7 @@ source may hold no form at all.
 ```{mtp-grammar} forms
 ```
 
-An {term}`expression` is one item of a source, of a form, of a {term}`list` or of {term}`brackets`:
+An expression is one item of a source, of a form, of a {term}`list` or of {term}`brackets`:
 a form, a list, a word, a string or a {term}`free starting value`. The first item of a form may be a
 head that ends with `_` ({numref}`unnamed-head`).
 
@@ -51,9 +51,9 @@ errors.
 ```
 
 ```{rule} lists
-A {term}`list` is written in square brackets, with its items separated as in
+A list is written in square brackets, with its items separated as in
 {numref}`adjacent-items`: `[]`, `[0 1]`, `[(f x) 'a']`. A `[` right after the `]` of a list starts
-{term}`brackets` after the list, which hold exactly one expression: `[a b c][h]`.
+brackets after the list, which hold exactly one expression: `[a b c][h]`.
 ```
 
 ```{rule} name-brackets
@@ -152,7 +152,7 @@ is given in {numref}`dot-part`.
 ```{rule} form-template
 Every declaration is written `(head name? positional… option… body…)`:
 
-- The {term}`head` is the first item, and it names the kind of thing declared. It is a name
+- The head is the first item, and it names the kind of thing declared. It is a name
   (`circle`, `real`, `motif`, `dial`), a name followed by brackets (`list[color]`, `func[real]`), a
   broadened type (`real|none`), or a form that gives a type (`((real (>= 0)) r 1)`).
 - The name, for a form that has one, is the second item ({numref}`declared-names`).
@@ -161,7 +161,7 @@ Every declaration is written `(head name? positional… option… body…)`:
 - The {term}`optional arguments <optional argument>` come next
   ({numref}`optional-arguments-first`).
 - The {term}`docstring`, for a form that has one, comes next ({numref}`docstrings`).
-- The {term}`body` comes last: any number of items, or none. The kinds of item in a body depend on
+- The body comes last: any number of items, or none. The kinds of item in a body depend on
   the form ({numref}`contexts`).
 
 A call and a special form follow the same template: `(+ a b c)`, `(if c a b)`.

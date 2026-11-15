@@ -85,7 +85,7 @@ type is written as `(real|none (>= 0))`, since a broadened type holds no form.
 ## Fitting
 
 ```{rule} fits
-A type A {term}`fits <fit>` a type B, and a value of type A is accepted where a value of type B is
+A type A fits a type B, and a value of type A is accepted where a value of type B is
 expected, exactly when one of these holds:
 
 1. A and B are the same type.
@@ -129,7 +129,7 @@ A list of constraints implies a constraint C exactly in these cases:
 ## Constraints
 
 ```{rule} constraints
-A {term}`constraint` is one of these forms. Each may refine only the types of its row, and its
+A constraint is one of these forms. Each may refine only the types of its row, and its
 numbers and {term}`strings <string>` are literals:
 
 | Constraint | Refines | Its values | Written with |

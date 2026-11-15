@@ -163,7 +163,7 @@ the prover, although it is always 0. It never counts, never searches for a value
 range only by the conditions of {numref}`if-narrowing`.
 
 ```{rule} ranges
-A {term}`range` is a closed interval of reals, from a lower end to an upper end, each of them an
+A range is a closed interval of reals, from a lower end to an upper end, each of them an
 int, a ratio or a binary64 number, the lower at most the upper. The prover works out a range for
 every expression of type `int`, `ratio` or `real`, with or without `none`. The range of an
 expression holds every value other than `none` that the expression can give, when

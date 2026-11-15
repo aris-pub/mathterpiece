@@ -76,7 +76,7 @@ motif compiles.
 ```{rule} step-rejects-or-passes
 The parse, rewrite and prove steps each either reject the source or pass their output to the next
 step. The parse step rejects with a {term}`syntax error`, and the rewrite and prove steps with a
-{term}`compile error` ({doc}`errors`). When a step rejects the source, no later step runs. The
+compile error ({doc}`errors`). When a step rejects the source, no later step runs. The
 expand step and the fold and write step never reject a source that the prove step passed, so the
 compiler either rejects a source or writes a .mtpc that is valid by {doc}`compiled-format`, and
 never both.
@@ -331,9 +331,9 @@ depends on what changed, and the {term}`views <view>` draw again ({doc}`reaction
 ```
 
 ```{rule} runtime-serves-components
-The runtime defines one page element for each kind of {term}`view` and {term}`control`, and
+The runtime defines one page element for each kind of view and control, and
 serves each element that the page places: in each element, it draws the view or control of the
-element's model that the element's `name` attribute gives. A {term}`listener` has no element: it
+element's model that the element's `name` attribute gives. A listener has no element: it
 acts on each element that draws its shape or term, or, for a listener such as `on-view`, on its
 own view ({doc}`page-interface`, {doc}`lifecycle`).
 ```
@@ -369,7 +369,7 @@ runtime does not read it, so it does not pass from the compiler to the runtime.
 
 ```{rule} corrupt-mtpc
 A .mtpc that matches the schema of its version and breaks a rule of this spec is
-{term}`corrupt <corrupt .mtpc>`. Among the corrupt files are a .mtpc with a reference to an
+corrupt. Among the corrupt files are a .mtpc with a reference to an
 object or a function that it does not hold, one with an expression that can give a value of
 another type than the type written with it, one with a `deps` list that leaves out something that
 its expression can read, and one with an expression known when compiling that is not folded. The
