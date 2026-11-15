@@ -54,13 +54,6 @@ A byte order mark at any other place, outside string literals and comments, is a
 is not whitespace ({numref}`whitespace-and-comments`) and not a character of a {term}`word`
 ({numref}`word-ends`).
 
-:::{admonition} Code differs
-:class: note
-`mathterpiece/cli.py:103` reads a file with `path.read_text(encoding="utf-8")`, which keeps the
-mark, and `parse.py:174` then raises "expected a form at the top level". Bead mtp-ydd4.7.1 makes
-the parser drop the mark.
-:::
-
 ```{rule} expression-positions
 Each expression that the parser produces has a position: the line and the column of its
 first character, counting from 1. A byte order mark at the start is not counted. A newline

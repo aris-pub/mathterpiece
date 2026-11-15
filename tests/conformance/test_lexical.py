@@ -35,7 +35,6 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-BOM = xfail("mtp-ydd4.7.1", "the parser keeps a byte order mark at the start")
 WHITESPACE = xfail("mtp-ydd4.7.2", "the parser reads every str.isspace() character as whitespace")
 NAMES = xfail("mtp-ydd4.7.3", "the parser allows more characters in a name than the rule")
 DIGITS = xfail("mtp-ydd4.7.4", "the parser reads every Unicode decimal digit as a digit")
@@ -79,11 +78,9 @@ class TestSourceText:
         d = json.loads((tmp_path / "f.mtpc").read_text(encoding="utf-8"))
         assert d["objects"][d["names"]["v"]]["value"]["free"] == "a\nb\nc"
 
-    @BOM
     def test_a_byte_order_mark_at_the_start_is_ignored(self):
         assert forms("﻿(f)") == forms("(f)")
 
-    @BOM
     def test_a_file_that_starts_with_a_byte_order_mark_compiles(self, tmp_path):
         src = tmp_path / "f.mtp"
         src.write_bytes("﻿(real v 1)\n".encode())
@@ -93,7 +90,6 @@ class TestSourceText:
     def test_a_byte_order_mark_between_forms_is_an_error(self):
         syntax_error("(f)﻿(g)")
 
-    @NAMES
     def test_a_byte_order_mark_inside_a_form_is_an_error(self):
         syntax_error("(f ﻿ a)")
 
@@ -111,7 +107,6 @@ class TestExpressionPositions:
         # A tab adds 1 to the column, like every character but a line feed.
         assert (x.pos.line, x.pos.col) == (2, 7)
 
-    @BOM
     def test_a_byte_order_mark_at_the_start_is_not_counted(self):
         (f,) = forms("﻿(f)")
         assert (f.pos.line, f.pos.col) == (1, 1)

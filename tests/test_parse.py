@@ -110,6 +110,34 @@ class TestComments:
         assert atom("'a;b'") == StrLit("a;b")
 
 
+BOM_ELSEWHERE = "a byte order mark (U+FEFF) may only be the first character of a source"
+
+
+class TestByteOrderMark:
+    def test_a_mark_at_the_start_is_dropped_and_not_counted(self):
+        (f,) = parse("﻿(f a)")
+        assert f == Form((n("f"), n("a")))
+        assert (f.pos.line, f.pos.col) == (1, 1)
+        assert f.items[1].pos == Pos(1, 4)
+
+    @pytest.mark.parametrize(
+        "src, pos",
+        [
+            ("(f)﻿(g)", Pos(1, 4)),
+            ("(f ﻿ a)", Pos(1, 4)),
+            ("(f a﻿b)", Pos(1, 5)),
+            ("(f\n  r@﻿1)", Pos(2, 5)),
+            ("(f $'{﻿x}')", Pos(1, 7)),
+            ("﻿﻿(f)", Pos(1, 1)),
+        ],
+    )
+    def test_a_mark_anywhere_else_is_an_error(self, src, pos):
+        assert error_at(src, BOM_ELSEWHERE) == pos
+
+    def test_a_mark_inside_a_string_is_text(self):
+        assert atom("'a﻿b'") == StrLit("a﻿b")
+
+
 class TestInt:
     @pytest.mark.parametrize(
         "text, value", [("3", 3), ("0", 0), ("-12", -12), ("+3", 3), ("007", 7)]

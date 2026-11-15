@@ -34,6 +34,7 @@ REAL_RE = re.compile(rf"[+-]?{_UREAL}")
 IMAG_RE = re.compile(rf"([+-]?{_UREAL})i")
 COMPLEX_RE = re.compile(rf"([+-]?{_UREAL})([+-]{_UREAL})i")
 LOOKS_NUMERIC_RE = re.compile(r"[+-]?\.?\d")
+BOM = "\ufeff"
 
 
 class ParseError(Exception):
@@ -77,6 +78,14 @@ def _is_delimiter(ch: str) -> bool:
 
 def _ends_run(ch: str) -> bool:
     return _is_delimiter(ch) or ch in '[]{}"|'
+
+
+def _check_char(ch: str, pos: Pos) -> None:
+    """Raises for a character that may not be written in a word."""
+    if ch == BOM:
+        raise ParseError(
+            "a byte order mark (U+FEFF) may only be the first character of a source", pos
+        )
 
 
 def _valid_name_part(part: str) -> bool:
@@ -163,6 +172,9 @@ class _Parser:
                 break
 
     def parse(self) -> tuple[Form, ...]:
+        # The mark is skipped without moving the column, so positions count from the next character.
+        if self.src.startswith(BOM):
+            self.i = 1
         forms: list[Form] = []
         while True:
             self.skip_blank()
@@ -223,6 +235,7 @@ class _Parser:
         assert end is not None
         head = self.src[self.i : end]
         while self.i < end:
+            _check_char(self.peek(), self.pos())
             self.advance()
         if not head:
             raise ParseError("'@' follows the name of a head, as in r@1", pos)
@@ -331,6 +344,7 @@ class _Parser:
         while self.peek() and not _ends_run(self.peek()):
             if self.in_braces and self.peek() == ":":
                 break
+            _check_char(self.peek(), self.pos())
             self.advance()
         return self.src[start : self.i]
 
