@@ -1,5 +1,7 @@
 # Specification
 
+This is the draft of version 1 of the specification ({numref}`spec-version`).
+
 The specification defines the mtp language: its syntax, what a world model means, and how an open page
 behaves. It is written for the people and agents who build mtp or implement it again. Every
 rule is stated once, here, and everything else links to it.

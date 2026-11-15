@@ -354,9 +354,11 @@ So the runtime refuses a corrupt .mtpc ({numref}`runtime-loads-mtpc`), although 
 schema. How the runtime finds that a .mtpc is corrupt is not part of this spec.
 
 ```{rule} spec-version
-Every .mtpc states the version of this spec that its compiler implements. The format of the .mtpc
-and its schema are part of this spec, so two .mtpc files that state the same version are read by
-the same rules.
+The versions of this spec are numbered 1, 2, 3 and so on. A version gets the next number when it
+is published, and the draft of a version states the number that it will have. Every .mtpc states,
+as the whole number in its member `mtpc`, the version of this spec that its compiler implements.
+The format of the .mtpc and its schema are part of this spec, so two .mtpc files that state the
+same version are read by the same rules.
 ```
 
 :::{admonition} Code differs
