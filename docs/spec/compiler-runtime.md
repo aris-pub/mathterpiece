@@ -426,7 +426,7 @@ pick the other.
   as `declare-before-use`. When the source breaks several of these rules, the error carries the
   label of any one of them, of several, or of all.
 - An implementation of the runtime conforms when it loads every valid .mtpc of the versions that
-  it implements, and builds and keeps current its live model as the parts from {doc}`world-model`
+  it implements, and builds and keeps current its live model as the pages from {doc}`world-model`
   to {doc}`accessibility` define.
 - An implementation of the mtp command conforms when its compiler conforms, and each of its
   subcommands runs the steps and writes the files that this page gives for it.
