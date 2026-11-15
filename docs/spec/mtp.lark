@@ -20,7 +20,10 @@ touching: plain (form touching?)?
 head_touching: head (form touching?)?
 expression: paren | plain
 paren: form
-plain: list | word | string | interpolated | prefixed
+     | PREFIX form -> prefixed
+plain: plain_item
+     | PREFIX plain_item -> prefixed
+plain_item: list | word | string | interpolated
 
 //: lists
 list: "[" list_items "]" list_brackets*
@@ -90,7 +93,6 @@ ESCAPE: /\\['\\n]/
 TEX.1: "tex'" (/[^'\\]/ | /\\[\s\S]/)* "'"
 
 //: prefixes
-prefixed: PREFIX (NAME | number | bool | NONE | string | interpolated)
 PREFIX.1: PARTS "@"
 
 //: interpolated-strings

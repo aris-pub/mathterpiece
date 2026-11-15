@@ -293,15 +293,15 @@ together, so in `tex'a\\'` the string is `a\\` and the last quote closes it.
 ```{rule} prefix-forms
 A name, `@` and an item, written with nothing between them, are short for the form of that name
 and that item: `H@X` is `(H X)`. H is a name that is not an operator and does not end with `_`. X
-is a name, a number, a bool literal, `none`, a string literal, a TeX string or an
-{term}`interpolated string`. X is never a form, a list, a {term}`name string` or another prefixed
-form. `@` may not be written in any other place.
+is any expression that is not itself a prefixed form. `@` may not be written in any other
+place.
 ```
 
 So `doc@'The dot.'` is the {term}`docstring` `(doc 'The dot.')`, `free@green` is the
 {term}`free starting value` `(free green)`, `r@1` is `(r 1)`, and `(circle c r@1 fill@'red')` is
-`(circle c (r 1) (fill 'red'))`. `free@(g)`, `fill@free@green`, `pos@[1 2]`, `+@1`, `circle_@c`,
-`r@ 1` and `r @1` are errors. The form `(H X)` must be allowed where it is written, by the same
+`(circle c (r 1) (fill 'red'))`. `free@(mix a b)` is `(free (mix a b))`, `r@(* 2 k)` is
+`(r (* 2 k))` and `pos@[1 2]` is `(pos [1 2])`. `fill@free@green`, `+@1`, `circle_@c`, `r@ 1` and
+`r @1` are errors. The form `(H X)` must be allowed where it is written, by the same
 rules as when it is written with parentheses: `if@c` is `(if c)`, which is an error.
 
 ## Interpolated strings and name strings
