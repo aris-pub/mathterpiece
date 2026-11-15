@@ -69,8 +69,8 @@ the other values. An expression is known in the prove step when it is known when
 choreo, the variable of that `foreach` or a parameter of that function, motif or choreo.
 ```
 
-So an error in such a body is about the body as written, and this implementation reports it once,
-at the body, and not once for each copy or instance. For example,
+So an error in such a body is about the body as written, and not about a copy or an instance. For
+example,
 `(motif dot ((real k)) (circle_ (r (/ 1 k))))` is a compile error at `(/ 1 k)`, since
 `k` may be 0, whatever the instances give for `k`. With `(real k 1 (>= 1))` as the parameter, the
 motif compiles.
@@ -143,13 +143,6 @@ read or written, or when `mtp serve` cannot listen on its port, the subcommand w
 prints one line that gives the reason to standard error, and exits with status 1.
 ```
 
-This implementation prints one line for a rejected source: the first error that it finds, as
-`file:line:column: message`. `file` is the path given on the command line, or, for an error in an
-imported file, the name written in the `import` form, followed by `.mtp`. For a file that cannot be
-read, it prints `file: no such file`, `file: cannot be read: it is a folder`, `file: cannot be
-read: it is not UTF-8 text`, or `file: cannot be read:` followed by the reason that the system
-gives.
-
 :::{admonition} Code differs
 :class: note
 `mtp compile` writes with `out.write_text` (mathterpiece/cli.py, line 72) and `mtp build` calls
@@ -160,22 +153,7 @@ Python traceback and not one line. `mtp serve` stops in the same way when its po
 
 ### mtp parse
 
-What `mtp parse` prints is not normative ({numref}`what-is-normative`). This implementation prints
-one expression per line, in source order, each line indented by two spaces for each level of
-depth. A line holds the position of the expression as `line:column`, its kind, and its value, as
-follows:
-
-- `form`, `list`, `brackets` or `bar`, for an expression that holds others: a form, a {term}`list`
-  {term}`literal`, {term}`brackets` or a {term}`broadened type`. The expressions that it holds
-  follow on the next lines.
-- `name` and the name, its {term}`name parts <name part>` joined by `.`, with `[…]` for each name
-  part that is an expression. The expressions of those name parts follow on the next lines.
-- `string with values`, for a {term}`string` literal with values in it. Each part follows on the
-  next lines: `text` and the text, or the expression of the value.
-- `value` and, after a colon, its format, for a value inside a string literal.
-- `string` or `tex string`, and its text.
-- `none`, or `bool` and `true` or `false`.
-- `int`, `ratio`, `real` or `complex`, and the number.
+What `mtp parse` prints is not normative ({numref}`what-is-normative`).
 
 ### mtp check
 
@@ -251,10 +229,6 @@ file that it writes has the same meaning as the file that it read. It writes the
 the result differs from it. It runs no step after parse. The layout is not normative
 ({numref}`what-is-normative`).
 ```
-
-In this implementation, each line is indented as the editor mode editors/mtp-mode.el indents it,
-spaces at the end of a line are dropped, at most one empty line is kept in a row, and
-`(doc 'text')` is written `doc@'text'` (mathterpiece/fmt.py).
 
 ## What the compiler must do and must never do
 

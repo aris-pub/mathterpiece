@@ -161,8 +161,7 @@ are `rand` and `rand-int` with both bounds known in the prove step and `lo` abov
 their seed is never known when compiling.
 ```
 
-So `(sqrt -1)`, `(or? (sqrt -1) 0)` and `(rand-int 10 3)` are compile errors, and this
-implementation reports each one at the operation. In
+So `(sqrt -1)`, `(or? (sqrt -1) 0)` and `(rand-int 10 3)` are compile errors. In
 `(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, `(/ 1 i)` gives `none` when `i` is 0, so its type
 includes `none`, and the type of `r` does not include `none`: this is a compile error at
 `(/ 1 i)` in the body. With `(r (or? (/ 1 i) 1))`, the scene compiles, and the copy for `i` = 0
