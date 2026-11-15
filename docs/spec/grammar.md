@@ -15,7 +15,21 @@ The rules below and the definitions of {doc}`lexical` are one grammar, [mtp.lark
 alternative written `a -> free` puts its result in the tree under the name `free`, and `!` before
 the name of a rule keeps the quoted text of that rule in the tree.
 
-### Files and forms
+### Forms and sources
+
+```{mtp-grammar} forms
+```
+
+```{rule} forms
+A form is a `(`, then any number of expressions, its items, then a `)`. An
+expression is a form, a {term}`list` literal, a word, a {term}`broadened type`, a
+string literal or an {term}`interpolated string`. A prefixed form such as `free@x` is a
+form ({numref}`prefix-forms`). The first item of a form is its head, and it may be a head
+that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
+```
+
+So `(circle c (r 1))` is a form with three items, whose head is `circle` and whose third item is
+the form `(r 1)`, and `(motif m () …)` holds the form `()`, an empty list of parameters.
 
 ```{mtp-grammar} file
 ```
@@ -25,14 +39,6 @@ A source is any number of forms, with or without {term}`whitespace` and
 {term}`comments <comment>` between them. Anything else at the top level of a source is an error. A
 source may hold no form at all.
 ```
-
-```{mtp-grammar} forms
-```
-
-An expression is one item of a source, of a form, of a {term}`list` literal or of {term}`brackets`:
-a form, a list literal, a word or a string literal. A prefixed form such as `free@x` is a form
-({numref}`prefix-forms`). The first item of
-a form may be a head that ends with `_` ({numref}`unnamed-head`).
 
 ```{rule} adjacent-items
 Among the items of a form, a list literal or brackets, whitespace or a comment separates every two
@@ -72,7 +78,7 @@ whitespace starts a list literal: `xs [0]` is the name `xs` and the list literal
 ```
 
 ```{rule} broadened-types
-A {term}`broadened type` is two words or more joined by `|` with no whitespace between them, such
+A broadened type is two words or more joined by `|` with no whitespace between them, such
 as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bool` literals or
 {term}`operators <operator>`. A broadened type is one expression, and the {term}`compiler` reads it as a
 type ({doc}`types`).
@@ -105,7 +111,7 @@ source. Each expression is one of these:
 | brackets | `[real real]` in `func[real real]` | its expressions, in order |
 | broadened type | `real\|none` | its words, as expressions, in order |
 | string literal | `'…'`, `tex'…'` | its text, and whether it is a {term}`TeX string` |
-| {term}`interpolated string` | `$'…'` | its pieces: text, the expression of each `{…}` with no {term}`format spec`, and each `{…}` with a format spec |
+| interpolated string | `$'…'` | its pieces: text, the expression of each `{…}` with no {term}`format spec`, and each `{…}` with a format spec |
 | `{…}` with a format spec | `{x:.2f}` | the expression and the format spec |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
 | bool literal | `true`, `false` | the value |

@@ -55,6 +55,26 @@ def dot(x, y):
     return form(D, x, y)
 
 
+@rule("forms")
+class TestForms:
+    def test_the_items_of_a_form_are_expressions(self):
+        assert forms("(circle c (r 1))") == (
+            form(name("circle"), name("c"), form(name("r"), IntLit(1))),
+        )
+
+    @pytest.mark.parametrize(
+        "src", ["(f [1 2])", "(f 'a')", "(f $'a{b}')", "(f real|none)", "(f 2.5)"]
+    )
+    def test_an_item_may_be_any_kind_of_expression(self, src):
+        assert len(items(src)) == 1
+
+    def test_a_prefixed_form_is_a_form(self):
+        assert items("(f r@1)") == (form(name("r"), IntLit(1)),)
+
+    def test_the_empty_form_has_no_items(self):
+        assert forms("(f ())") == (form(name("f"), form()),)
+
+
 @rule("top-level-forms")
 class TestTopLevelForms:
     @pytest.mark.parametrize("src", ["", "  ; only a comment\n", "(a)(b)", "\n(a)\n ; c\n(b)"])
