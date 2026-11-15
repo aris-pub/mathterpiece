@@ -38,7 +38,6 @@ def xfail(bead: str, why: str):
 LITERAL_PARTS = xfail("mtp-ydd4.7.32", "the parser reads true, false or none as a part of a name")
 KEYWORD_NAMES = xfail("mtp-ydd4.7.35", "the compiler forbids only a few names, not every keyword")
 NESTED_BRACES = xfail("mtp-kzx2", "the parser leaves braces when a string nested in them ends")
-BRACE_COMMENTS = xfail("mtp-ydd4.7.31", "the parser skips a comment around the braced expression")
 
 
 @rule("grammar-in-context")
@@ -604,9 +603,11 @@ class TestInterpolatedStrings:
     def test_a_comment_inside_a_form_in_the_braces(self):
         assert items("(f $'{(g ; c\n x)}')") == items("(f $'{(g x)}')")
 
-    @BRACE_COMMENTS
-    def test_a_comment_around_the_expression_is_an_error(self):
-        syntax_error("(f $'{x ; c\n}')")
+    @pytest.mark.parametrize(
+        "src", ["(f $'{x ; c\n}')", "(f $'{ ;c\n x}')", "(f #'a{k ;c\n}')", "(f $'{(g) ;c\n:>5}')"]
+    )
+    def test_a_comment_around_the_expression_is_an_error(self, src):
+        syntax_error(src)
 
     def test_a_name_string(self):
         assert items("(f #'dot-{k}')") == (form(name("name"), InterpStrLit(("dot-", name("k")))),)

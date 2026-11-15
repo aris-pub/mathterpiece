@@ -586,10 +586,20 @@ class _Parser:
             self.expect_delimiter()
         return InterpStrLit(tuple(parts), pos)
 
+    def skip_space_in_braces(self):
+        """Whitespace around the expression in braces. A comment there would run to the end of the
+        line, and so could hide the closing brace and the end of the string."""
+        while self.peek() and self.peek() in WHITESPACE:
+            self.advance()
+        if self.peek() == ";":
+            raise ParseError(
+                "no comment may be written in the braces of an interpolated string", self.pos()
+            )
+
     def interp_part(self) -> Node | Field:
         brace = self.pos()
         self.advance()
-        self.skip_blank()
+        self.skip_space_in_braces()
         if self.peek() in ("}", ":", ""):
             raise ParseError("expected an expression inside braces", brace)
         # Inside braces, ':' ends a name, so a format spec can follow it.
@@ -598,7 +608,7 @@ class _Parser:
             expr = self.node()
         finally:
             self.in_braces = False
-        self.skip_blank()
+        self.skip_space_in_braces()
         spec = None
         if self.peek() == ":":
             self.advance()

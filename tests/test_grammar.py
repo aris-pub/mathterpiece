@@ -33,7 +33,7 @@ from mathterpiece.nodes import (
     RealLit,
     StrLit,
 )
-from mathterpiece.parse import ParseError, _Parser, parse
+from mathterpiece.parse import ParseError, parse
 
 ROOT = Path(__file__).parent.parent
 GRAMMAR = ROOT / "docs" / "spec" / "mtp.lark"
@@ -249,7 +249,6 @@ REJECTED = [
 ]
 
 NESTED_BRACES = "mtp-kzx2"
-BRACE_COMMENTS = "mtp-ydd4.7.31"
 LITERAL_PARTS = "mtp-ydd4.7.32"
 
 # Sources on which the grammar, which states the decided language, and today's parser differ.
@@ -261,9 +260,6 @@ KNOWN_DIFFERENCES = {
     "(f $'{$'{a}'}')": NESTED_BRACES,
     "(f $'{#'n-{k}'.x:y}')": NESTED_BRACES,
     "(f $'{[$'{a}' b]}')": NESTED_BRACES,
-    "(f $'{x ; a comment\n}')": BRACE_COMMENTS,
-    "(f $'{ ;c\n x}')": BRACE_COMMENTS,
-    "(f #'a{k ;c\n}')": BRACE_COMMENTS,
     "(f true.x)": LITERAL_PARTS,
     "(f none.x)": LITERAL_PARTS,
     "(f x.none)": LITERAL_PARTS,
@@ -293,48 +289,14 @@ def _literal_parts_step(forms):
     return None if any(_literal_part(f) for f in forms) else forms
 
 
-class _NoCommentInBraces(_Parser):
-    """The parser once BRACE_COMMENTS is done: around the expression in the braces of an
-    interpolated string, whitespace and no comment."""
-
-    def __init__(self, src: str):
-        super().__init__(src)
-        self.around: list[bool] = []
-
-    def interp_part(self):
-        self.around.append(True)
-        try:
-            return super().interp_part()
-        finally:
-            self.around.pop()
-
-    def node(self, head=False):
-        # Inside the expression, such as a form in the braces, comments are allowed again.
-        saved, self.around = self.around, []
-        try:
-            return super().node(head)
-        finally:
-            self.around = saved
-
-    def skip_blank(self):
-        if not self.around:
-            return super().skip_blank()
-        while self.peek() and self.peek().isspace():
-            self.advance()
-        if self.peek() == ";":
-            raise ParseError("a comment in braces", self.pos())
-
-
 # For the random sources, which no list could name in advance: the parser as it will be once each
-# bead is done. A step or a parser is removed together with the last KNOWN_DIFFERENCES entry of
-# its bead.
-PENDING_PARSERS = {BRACE_COMMENTS: _NoCommentInBraces}
+# bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.
 PENDING_STEPS = {LITERAL_PARTS: _literal_parts_step}
 
 
 def parser_after_beads(src: str):
     try:
-        forms = _NoCommentInBraces(src).parse() if PENDING_PARSERS else parse(src)
+        forms = parse(src)
     except ParseError:
         return None
     for step in PENDING_STEPS.values():
@@ -597,7 +559,7 @@ def test_known_difference(grammar, src):
 
 def test_pending_steps_have_entries():
     # A step with no entry left models a change that the parser has made already.
-    assert {*PENDING_STEPS, *PENDING_PARSERS} <= set(KNOWN_DIFFERENCES.values())
+    assert set(PENDING_STEPS) <= set(KNOWN_DIFFERENCES.values())
 
 
 # Pieces of text where the parser's choices lie, which random sources put together.

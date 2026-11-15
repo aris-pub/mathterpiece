@@ -547,6 +547,24 @@ class TestNone:
         assert atom("[1 none]") == ListLit((IntLit(1), NoneLit()))
 
 
+class TestCommentsInBraces:
+    # lexical.md, rule interpolated-strings: no comment around the expression in braces.
+    @pytest.mark.parametrize(
+        "src, pos",
+        [
+            ("(f $'{x ; c\n}')", Pos(1, 9)),
+            ("(f $'{ ;c\n x}')", Pos(1, 8)),
+            ("(f #'a{k\n ;c\n}')", Pos(2, 2)),
+        ],
+    )
+    def test_a_comment_around_the_expression_is_an_error(self, src, pos):
+        msg = "no comment may be written in the braces of an interpolated string"
+        assert error_at(src, msg) == pos
+
+    def test_a_comment_inside_a_form_in_braces(self):
+        assert atom("$'{(g ; c\n x)}'") == InterpStrLit((Form((n("g"), n("x"))),))
+
+
 class TestExpressionsInBraces:
     # Each {…} in an interpolated string is an expression (syntax.md, section 2).
     @pytest.mark.parametrize(

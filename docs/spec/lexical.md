@@ -297,8 +297,4 @@ in `$'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.
   nested in braces ends, the parser reads the rest of the outer braces as if it were outside braces:
   `$'{$'{a}'}'` is an error, and in `$'{#'n-{k}'.x:y}'` the parser reads `x:y` as one name part.
   Bead mtp-kzx2 fixes this.
-- `parse.py:501` and `parse.py:510` skip whitespace around the expression with `skip_blank`,
-  which also skips comments, so the parser reads `$'{x ; c\n}'` as `$'{x}'`. Such a comment runs
-  to the end of the line, so it can hide the closing brace and the closing quote of the string
-  literal. Bead mtp-ydd4.7.31 makes it an error.
 :::
