@@ -8,7 +8,7 @@
 // this check and the schema. test/schema.test.ts checks that Ajv and this check give the same
 // answers.
 import SCHEMA from "virtual:mtpc-schema";
-import { FORMAT_VERSION } from "./doc.ts";
+import { SPEC_VERSION } from "./doc.ts";
 
 type Schema = boolean | { readonly [keyword: string]: unknown };
 
@@ -38,7 +38,7 @@ export function schemaProblem(doc: unknown): string | null {
   for (const step of steps) found = (found as Record<string | number, unknown>)[step];
   const path = steps.map((s) => `/${String(s).replaceAll("~", "~0").replaceAll("/", "~1")}`).join("");
   const where = path === "" ? "at the top level" : `at ${path}`;
-  return `the .mtpc does not match the schema of version ${FORMAT_VERSION}: ${where}, ${explain(first, found)}`;
+  return `the .mtpc does not match the schema of spec version ${SPEC_VERSION}: ${where}, ${explain(first, found)}`;
 }
 
 const made = new Map<Schema, Check>();
@@ -212,6 +212,11 @@ function make(schema: Schema): Check {
       return deepest && deepest.steps.length > 0 ? deepest : fail(true, keyword, () => ({ passingSchemas: null }));
     });
   }
+  if (s["not"] !== undefined) {
+    const banned = s["not"] as Schema;
+    const test = checker(banned);
+    checks.push((v, report) => (test(v, false) ? null : fail(report, "not", () => ({ schema: banned }))));
+  }
   if (s["if"] !== undefined) {
     const test = checker(s["if"] as Schema);
     const then = s["then"] === undefined ? null : checker(s["then"] as Schema);
@@ -231,34 +236,41 @@ function make(schema: Schema): Check {
   };
 }
 
-/** Where the test of an if looks, when it only asks that one place hold one plain value: the first
- * item of a list, or a member of an object that must be there. */
-function placeOf(test: unknown): { at: number | string; value: unknown } | null {
+/** Where the test of an if looks, when it only asks that one place hold one of a few plain
+ * values: the first item of a list, or a member of an object that must be there. */
+function placeOf(test: unknown): { at: number | string; values: unknown[] } | null {
   if (typeof test !== "object" || test === null) return null;
   const t = test as Record<string, unknown>;
   const keys = Object.keys(t).sort().join(" ");
-  const plain = (s: unknown) =>
-    typeof s === "object" && s !== null && Object.keys(s).join() === "const" && typeof (s as { const: unknown }).const !== "object";
+  const plain = (s: unknown): unknown[] | null => {
+    if (typeof s !== "object" || s === null) return null;
+    const k = Object.keys(s).join();
+    const found = k === "const" ? [(s as { const: unknown }).const] : k === "enum" ? (s as { enum: unknown[] }).enum : null;
+    return found?.every((v) => v === null || typeof v !== "object") ? found : null;
+  };
   const prefix = t["prefixItems"] as unknown[] | undefined;
-  if (keys === "prefixItems type" && t["type"] === "array" && prefix?.length === 1 && plain(prefix[0]))
-    return { at: 0, value: (prefix[0] as { const: unknown }).const };
+  if (keys === "prefixItems type" && t["type"] === "array" && prefix?.length === 1) {
+    const values = plain(prefix[0]);
+    if (values) return { at: 0, values };
+  }
   const properties = Object.entries((t["properties"] ?? {}) as object);
   const required = t["required"] as unknown[] | undefined;
   if (
     keys === "properties required type" &&
     t["type"] === "object" &&
     properties.length === 1 &&
-    plain(properties[0]![1]) &&
     required?.length === 1 &&
     required[0] === properties[0]![0]
-  )
-    return { at: properties[0]![0], value: (properties[0]![1] as { const: unknown }).const };
+  ) {
+    const values = plain(properties[0]![1]);
+    if (values) return { at: properties[0]![0], values };
+  }
   return null;
 }
 
 /** The checks of an allOf. The schema picks the form of an expression or an object by its first
- * item or its kind, with a long list of ifs that each test one value there. Such ifs are looked up
- * by that value, so that each expression and object runs one of them and not all. */
+ * item or its kind, with a long list of ifs that each test for one or a few values there. Such ifs
+ * are looked up by that value, so that each expression and object runs only the ifs that apply. */
 function allOf(parts: Schema[]): Check[] {
   const others: Check[] = [];
   const thens = new Map<unknown, Check[]>();
@@ -273,7 +285,7 @@ function allOf(parts: Schema[]): Check[] {
     }
     at = place.at;
     const then = checker(p["then"] as Schema);
-    thens.set(place.value, [...(thens.get(place.value) ?? []), then]);
+    for (const value of place.values) thens.set(value, [...(thens.get(value) ?? []), then]);
     all.push(then);
   }
   if (at === null) return others;
@@ -347,6 +359,8 @@ const KINDS: Record<string, string> = {
   null: "null",
 };
 
+const count = (n: unknown, noun: string): string => `${String(n)} ${noun}${n === 1 ? "" : "s"}`;
+
 const COMPARISONS: Record<string, string> = { ">=": "at least", ">": "more than", "<=": "at most", "<": "less than" };
 
 function explain(e: SchemaError, found: unknown): string {
@@ -370,13 +384,13 @@ function explain(e: SchemaError, found: unknown): string {
         : `${shown(found)} is not one of the allowed values`;
     }
     case "minItems":
-      return `the list must have at least ${String(p["limit"])} items`;
+      return `the list must have at least ${count(p["limit"], "item")}`;
     case "maxItems":
-      return `the list must have at most ${String(p["limit"])} items`;
+      return `the list must have at most ${count(p["limit"], "item")}`;
     case "minLength":
-      return `the string must have at least ${String(p["limit"])} characters`;
+      return `the string must have at least ${count(p["limit"], "character")}`;
     case "maxLength":
-      return `the string must have at most ${String(p["limit"])} characters`;
+      return `the string must have at most ${count(p["limit"], "character")}`;
     case "minimum":
     case "maximum":
     case "exclusiveMinimum":
@@ -390,6 +404,16 @@ function explain(e: SchemaError, found: unknown): string {
         : `${shown(found)} matches none of the forms that the schema allows here`;
     case "anyOf":
       return `${shown(found)} matches none of the forms that the schema allows here`;
+    case "not": {
+      // The schema bans a member with a not of a list of required members.
+      const banned = p["schema"] as Record<string, unknown>;
+      const members = banned["required"] as string[] | undefined;
+      if (Object.keys(banned).join() === "required" && members && members.length > 0)
+        return members.length === 1
+          ? `the member "${members[0]}" must not be here`
+          : `the members ${members.map((m) => `"${m}"`).join(", ")} must not all be here`;
+      return `${shown(found)} has a form that the schema does not allow here`;
+    }
     default:
       return `${shown(found)} is not allowed here`;
   }

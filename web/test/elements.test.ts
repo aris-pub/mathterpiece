@@ -905,7 +905,8 @@ describe("listeners inside a view", () => {
 
   // mtp-ydd4.7.17: in an older form of the .mtpc, a listener with no in, or with several views in
   // in, was heard in every view that shows its shape. The compiler writes one view in the in of
-  // every listener on a shape, and the runtime reads only that.
+  // every listener on a shape, and the schema allows only that, so the runtime refuses a file in
+  // the older form (mtp-ydd4.7.16).
   const withPad = (views: (file: Doc) => number[] | undefined) => {
     const file = doc("in-views");
     const pad = file.objects.find((o) => o.kind === "on-click" && o.shape === file.names["pad"] && o.in?.[0] === file.names["left"])!;
@@ -914,24 +915,22 @@ describe("listeners inside a view", () => {
     else pad.in = into;
     return file;
   };
-  const tapPads = (rt: Runtime) => {
+  const refused = (file: Doc) => {
+    const [model] = open(file);
+    expect(model.runtime).toBe(null);
     for (const canvas of ["left", "right"]) {
-      at(shape(rt, canvas, "pad"), "pointerdown");
-      at(shape(rt, canvas, "pad"), "pointerup");
+      const el = document.querySelector(`mtp-canvas[name="${canvas}"]`)!;
+      expect(el.querySelector("[data-mtp-id]")).toBe(null);
+      expect(el.querySelector(".mtp-error")!.textContent).toContain("does not match the schema");
     }
-    pass(0.1);
   };
 
-  it("hears nothing for a listener on a shape with no in", () => {
-    const [, rt, v] = open(withPad(() => undefined));
-    tapPads(rt);
-    expect([v("tapped-left"), v("tapped-right")]).toEqual([0, 1]);
+  it("refuses a file with a listener on a shape with no in", () => {
+    refused(withPad(() => undefined));
   });
 
-  it("hears nothing for a listener on a shape with several views in in", () => {
-    const [, rt, v] = open(withPad((file) => [file.names["left"]!, file.names["right"]!]));
-    tapPads(rt);
-    expect([v("tapped-left"), v("tapped-right")]).toEqual([0, 1]);
+  it("refuses a file with a listener on a shape with several views in in", () => {
+    refused(withPad((file) => [file.names["left"]!, file.names["right"]!]));
   });
 
   it("enters and follows the pointer in its view only", () => {

@@ -82,6 +82,22 @@ describe("rule runtime-loads-mtpc: the runtime refuses what it cannot run", () =
     }
   });
 
+  it("refuses a .mtpc with a listener in the older form, which has no in", () => {
+    const doc = compile(`(real k 1 (>= 0) (<= 10))
+(scene s (circle c (r k)))
+(canvas v s (on-click c (animation (move k (to (+ k 1)) (duration 0)))))
+(readout r $'k = {k:.1f}')
+`);
+    const at = doc.objects.findIndex((o) => o.kind === "on-click");
+    const listener = doc.objects[at] as unknown as Record<string, unknown>;
+    expect(listener["in"]).toBeTruthy();
+    delete listener["in"];
+    for (const error of refused(doc as unknown as Record<string, unknown>)) {
+      expect(error).toContain(`/objects/${at}`);
+      expect(error).toContain(`the member "in" is missing`);
+    }
+  });
+
   it.fails("refuses a corrupt .mtpc (mtp-ydd4.7.27: a corrupt file loads)", () => {
     const doc = compile(FIGURE);
     // The radius reads an object that the file does not hold.

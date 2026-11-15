@@ -34,6 +34,7 @@ const KEYWORDS: Record<string, "schema" | "list" | "map" | "data"> = {
   if: "schema",
   then: "schema",
   else: "schema",
+  not: "schema",
   $defs: "map",
   $schema: "data",
   $id: "data",
@@ -48,10 +49,16 @@ function unknownKeyword(schema: unknown, at: string): string | null {
     const kind = KEYWORDS[keyword];
     if (!kind) return `${keyword} at ${at}`;
     if (keyword === "$ref" && !String(sub).startsWith("#")) return `$ref to ${String(sub)} at ${at}`;
-    const subs =
-      kind === "schema" ? [sub] : kind === "list" ? (sub as unknown[]) : kind === "map" ? Object.values(sub as object) : [];
-    for (const s of subs) {
-      const found = unknownKeyword(s, `${at}/${keyword}`);
+    const subs: [string, unknown][] =
+      kind === "schema"
+        ? [["", sub]]
+        : kind === "list"
+          ? (sub as unknown[]).map((s, i) => [`/${i}`, s])
+          : kind === "map"
+            ? Object.entries(sub as object).map(([k, s]) => [`/${k}`, s])
+            : [];
+    for (const [step, s] of subs) {
+      const found = unknownKeyword(s, `${at}/${keyword}${step}`);
       if (found) return found;
     }
   }

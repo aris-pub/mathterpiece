@@ -80,3 +80,56 @@ describe("the runtime's schema check", () => {
     expect(refused).toBeGreaterThan(small.length * 10);
   });
 });
+
+type Listener = { kind: string; shape?: number | null; in?: number[] };
+
+/** Changes each listener that `which` picks, in every smaller file, one at a time, and checks that
+ * Ajv and the runtime's check both refuse the file, with the runtime's message holding `words`. */
+function refusesListeners(which: (l: Listener) => boolean, change: (l: Listener) => void, words: string): number {
+  let changed = 0;
+  for (const [name, doc] of small) {
+    const objects = (doc as { objects: Listener[] }).objects;
+    objects.forEach((listener, i) => {
+      if (!listener.kind.startsWith("on-") || !which(listener)) return;
+      const before = structuredClone(listener);
+      change(listener);
+      const ajvMatches = ajv(doc);
+      const found = schemaProblem(doc);
+      objects[i] = before;
+      expect(ajvMatches, `${name}, object ${i}`).toBe(false);
+      expect(found, `${name}, object ${i}`).toContain(`at /objects/${i}`);
+      expect(found, `${name}, object ${i}`).toContain(words);
+      changed++;
+    });
+  }
+  return changed;
+}
+
+describe("the runtime's schema check of listeners", () => {
+  it("refuses a listener on a shape with no in, as Ajv does", () => {
+    const n = refusesListeners(
+      (l) => l.shape != null,
+      (l) => delete l.in,
+      `the member "in" is missing`,
+    );
+    expect(n).toBeGreaterThan(0);
+  });
+
+  it("refuses a listener on a shape with two views in its in, as Ajv does", () => {
+    const n = refusesListeners(
+      (l) => l.shape != null,
+      (l) => (l.in = [l.in![0]!, l.in![0]! + 1]),
+      `the list must have at most 1 item`,
+    );
+    expect(n).toBeGreaterThan(0);
+  });
+
+  it("refuses an on-pointermove on its own view that has an in, as Ajv does", () => {
+    const n = refusesListeners(
+      (l) => l.kind === "on-pointermove" && l.shape === null,
+      (l) => (l.in = [0]),
+      `the member "in" must not be here`,
+    );
+    expect(n).toBeGreaterThan(0);
+  });
+});
