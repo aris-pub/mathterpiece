@@ -287,7 +287,7 @@ definitions is a number, of the kind of the definition:
   number. A real literal has a decimal point or an exponent: `2.5`, `1.`, `.5`, `1e3`, `1.5E-3`.
 - {token}`mtp:IMAG` is a {term}`complex` literal whose real part is 0, such as `2i` and `-1.5e3i`.
 - {token}`mtp:COMPLEX` is a complex literal with both parts, the real part first, such as `1+2i`
-  and `-1e+2-3.5i`. Each part is a real, so `1+2i` is `1.0 + 2.0i`.
+  and `-1e+2-3.5i`. Each number in it is read as a real, so `1+2i` is `1.0 + 2.0i`.
 
 The priorities of the grammar make a word the first of COMPLEX, IMAG, RATIO, REAL and INT that
 matches it whole.

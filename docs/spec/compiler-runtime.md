@@ -172,7 +172,7 @@ follows:
 - `string with values`, for a {term}`string` literal with values in it. Each part follows on the
   next lines: `text` and the text, or the expression of the value.
 - `value` and, after a colon, its format, for a value inside a string literal.
-- `string` or `tex string`, and the string.
+- `string` or `tex string`, and its text.
 - `none`, or `bool` and `true` or `false`.
 - `int`, `ratio`, `real` or `complex`, and the number.
 

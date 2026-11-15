@@ -218,8 +218,8 @@ A literal is checked against the constraints of the expected type by {numref}`co
 ```
 
 So `(circle c (fill 'red'))` gives a color, `(string s 'red')` a string, and
-`(list[color] swatches ['red' 'gold'])` a list of colors. A list in brackets is a literal
-even when its items are expressions, such as `[k 0]`. A point whose coordinate is `none` is `none`
+`(list[color] swatches ['red' 'gold'])` a list of colors. A list literal may have expressions
+as items, such as `[k 0]`. A point whose coordinate is `none` is `none`
 ({numref}`none-propagates`), so `[x y]` is of type `point|none` when the type of `x` includes
 `none`.
 

@@ -212,7 +212,7 @@ exceptions:
 - A call of a function whose parameter is declared `T|none`: the body is evaluated with `none` as
   the parameter. A parameter whose type does not include `none` makes the call `none`, and the body
   is not evaluated.
-- A list built from expressions, which holds `none` as an item. A point is the exception: a
+- A list literal, which holds `none` as an item. A point is the exception: a
   point with a coordinate that is `none` is `none`.
 - `if`, whose value is `none` only when the branch taken is `none`.
 - `map`, `reverse` and a read of a position of a list, which pass items that are `none` through.
