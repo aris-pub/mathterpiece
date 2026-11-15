@@ -1,9 +1,5 @@
 # Overview
 
-:::{note}
-The skeleton of this part: how the spec is written. The rest of the part is not drafted yet.
-:::
-
 ## How rules are written
 
 Each rule of the spec is stated once, in a numbered box. Rules are numbered by part: Rule 2.1 is
