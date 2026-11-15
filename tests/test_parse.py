@@ -546,6 +546,28 @@ class TestNone:
     def test_in_a_list(self):
         assert atom("[1 none]") == ListLit((IntLit(1), NoneLit()))
 
+    # lexical.md, rule name-characters: a name part is never exactly true, false or none.
+    @pytest.mark.parametrize(
+        "text, part, whole, col",
+        [
+            ("true.x", "true", "true.x", 4),
+            ("p.true", "true", "p.true", 6),
+            ("a.false.b", "false", "a.false.b", 6),
+            ("none.x", "none", "none.x", 4),
+            ("xs[0].none", "none", "none", 10),
+            ("r@none.x", "none", "none.x", 6),
+        ],
+    )
+    def test_a_literal_is_never_a_part_of_a_name(self, text, part, whole, col):
+        msg = f"{part!r} cannot be a part of a name: {whole!r}"
+        assert atom_error(text, msg) == Pos(1, col)
+
+    def test_none_cannot_be_indexed(self):
+        atom_error("none[0]", "only names can be indexed, got 'none'")
+
+    def test_a_head_with_a_literal_part(self):
+        assert error_at("(a.true_ x)", "'true' cannot be a part of a name: 'a.true'") == Pos(1, 4)
+
 
 class TestCommentsInBraces:
     # lexical.md, rule interpolated-strings: no comment around the expression in braces.

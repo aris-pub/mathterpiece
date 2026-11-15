@@ -131,9 +131,6 @@ followed by `@` starts a prefixed form, at the start of an expression ({numref}`
 
 :::{admonition} Code differs
 :class: note
-- `parse.py:346` compares only the whole word with `true`, `false` and `none`, and `parse.py:362`
-  checks only `true` and `false` before brackets, so the parser reads `true.x`, `p.true`, `none.x`
-  and `none[0]` as names. Bead mtp-ydd4.7.32 makes these errors.
 - `builtins.py:246` to `builtins.py:254` declare the constants `π`, `τ` and `∞`, which no source
   can write by this rule. Bead mtp-ydd4.7.33 removes them, together with `infty`.
 :::

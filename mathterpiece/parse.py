@@ -26,6 +26,7 @@ OPERATORS = frozenset({"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!="}
 ESCAPES = {"'": "'", "\\": "\\", "n": "\n"}
 RESERVED = frozenset("[]{}")
 NAME_PART_RE = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
+LITERALS = frozenset({"true", "false", "none"})
 UNDERSCORE = "an underscore may only end the head of a form, as in (circle_ (r 1))"
 
 # A digit is 0 to 9 only: \d would match every decimal digit of Unicode, such as ٣.
@@ -112,7 +113,7 @@ def _check_char(ch: str, pos: Pos) -> None:
 
 
 def _valid_name_part(part: str) -> bool:
-    return NAME_PART_RE.fullmatch(part) is not None
+    return NAME_PART_RE.fullmatch(part) is not None and part not in LITERALS
 
 
 def _part_error(part: str, text: str, at: Pos, first: bool) -> ParseError | None:
@@ -124,6 +125,8 @@ def _part_error(part: str, text: str, at: Pos, first: bool) -> ParseError | None
             return ParseError(f"a name starts with an ASCII letter: {text!r}", at)
         dot = Pos(at.line, at.col - 1, at.file)
         return ParseError(f"each '.' in a name is followed by a name part: {text!r}", dot)
+    if part in LITERALS:
+        return ParseError(f"{part!r} cannot be a part of a name: {text!r}", at)
     for j, ch in enumerate(part):
         where = Pos(at.line, at.col + j, at.file)
         if ch.isascii() and ch.isalpha():
@@ -297,7 +300,7 @@ class _Parser:
             self.advance()
         if not head:
             raise ParseError("'@' follows the name of a head, as in r@1", pos)
-        if head in OPERATORS or head in (".", "true", "false", "none") or head.endswith("_"):
+        if head in OPERATORS or head == "." or head in LITERALS or head.endswith("_"):
             raise ParseError(f"'@' cannot follow {head!r}, only the name of a head", pos)
         name = Name(tuple(_name_parts(head, pos)), pos)
         self.advance()
@@ -448,7 +451,7 @@ class _Parser:
         return Name(tuple(_name_parts(text, pos)), pos)
 
     def access(self, text: str, pos: Pos) -> Name:
-        if text in OPERATORS or text in ("true", "false") or LOOKS_NUMERIC_RE.match(text):
+        if text in OPERATORS or text in LITERALS or LOOKS_NUMERIC_RE.match(text):
             raise ParseError(f"only names can be indexed, got {text!r}", pos)
         parts = _name_parts(text, pos)
         while self.peek() == "[":

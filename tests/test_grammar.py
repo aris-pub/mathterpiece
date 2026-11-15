@@ -249,7 +249,6 @@ REJECTED = [
 ]
 
 NESTED_BRACES = "mtp-kzx2"
-LITERAL_PARTS = "mtp-ydd4.7.32"
 
 # Sources on which the grammar, which states the decided language, and today's parser differ.
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
@@ -260,38 +259,11 @@ KNOWN_DIFFERENCES = {
     "(f $'{$'{a}'}')": NESTED_BRACES,
     "(f $'{#'n-{k}'.x:y}')": NESTED_BRACES,
     "(f $'{[$'{a}' b]}')": NESTED_BRACES,
-    "(f true.x)": LITERAL_PARTS,
-    "(f none.x)": LITERAL_PARTS,
-    "(f x.none)": LITERAL_PARTS,
-    "(f p.true)": LITERAL_PARTS,
-    "(f xs[0].false)": LITERAL_PARTS,
-    "(f none[0])": LITERAL_PARTS,
-    "(a.true_ x)": LITERAL_PARTS,
 }
-
-LITERALS = {"true", "false", "none"}
-
-
-def _literal_part(node) -> bool:
-    """Whether a node holds a name with a part that is exactly true, false or none."""
-    if isinstance(node, Name):
-        return any(p in LITERALS if isinstance(p, str) else _literal_part(p) for p in node.parts)
-    if isinstance(node, (Form, ListLit, Bar, Brackets)):
-        return any(_literal_part(x) for x in node.items)
-    if isinstance(node, InterpStrLit):
-        return any(_literal_part(p) for p in node.parts if not isinstance(p, str))
-    if isinstance(node, Field):
-        return _literal_part(node.expr)
-    return False
-
-
-def _literal_parts_step(forms):
-    return None if any(_literal_part(f) for f in forms) else forms
-
 
 # For the random sources, which no list could name in advance: the parser as it will be once each
 # bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.
-PENDING_STEPS = {LITERAL_PARTS: _literal_parts_step}
+PENDING_STEPS: dict = {}
 
 
 def parser_after_beads(src: str):

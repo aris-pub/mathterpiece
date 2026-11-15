@@ -35,7 +35,6 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-LITERAL_PARTS = xfail("mtp-ydd4.7.32", "the parser reads true, false or none as a part of a name")
 KEYWORD_NAMES = xfail("mtp-ydd4.7.35", "the compiler forbids only a few names, not every keyword")
 NESTED_BRACES = xfail("mtp-kzx2", "the parser leaves braces when a string nested in them ends")
 
@@ -229,11 +228,15 @@ class TestNameCharacters:
     @pytest.mark.parametrize(
         "text",
         [
-            pytest.param("true.x", marks=LITERAL_PARTS),
-            pytest.param("p.true", marks=LITERAL_PARTS),
-            pytest.param("none.x", marks=LITERAL_PARTS),
-            pytest.param("xs[0].none", marks=LITERAL_PARTS),
-            pytest.param("none[0]", marks=LITERAL_PARTS),
+            "true.x",
+            "p.true",
+            "none.x",
+            "xs[0].none",
+            "none[0]",
+            "a.false.b",
+            "none.x[0]",
+            "r@none.x",
+            "#'a{k}'.true",
         ],
     )
     def test_a_part_that_is_true_false_or_none_is_an_error(self, text):
@@ -301,7 +304,7 @@ class TestLiteralWords:
         [
             "(f +[0])",
             "(f true[0])",
-            pytest.param("(f none[0])", marks=LITERAL_PARTS),
+            "(f none[0])",
             "(f 3[0])",
             "(f !=x)",
         ],
