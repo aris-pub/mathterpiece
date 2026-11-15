@@ -453,7 +453,7 @@ Each form has this type:
 | a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape or an instance, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
 | `(. X Y)` | the type of the attribute or the member Y of X ({numref}`dot-part`). An item of a list or a point: the item type. A member of a group by a key known only while drawing: the common type of the members. Each broadened as {numref}`may-give-none` gives |
 | a spread `g.A` | `list[U]`, U the meeting of the types of A of the members, with the number of members as its length |
-| `(if C A B)` | C has type `bool`. The type is the meeting of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`) |
+| `(if C A B)` | C has type `bool`. The type is the meeting of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
 | `(or? X D)` | the meeting of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
 | `(let (…) B)` | the type of B |
 | `(fn PARAMS B)` | {numref}`function-result-type` |

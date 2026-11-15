@@ -14,8 +14,8 @@ boxes of each part.
 | {doc}`evaluation` | Q-evaluation-1 to 13 |
 
 The drafts of {doc}`scope` and {doc}`well-formedness` raised three more: Q-scope-1, which the
-author has parked (bead mtp-9b4m), and Q-well-formedness-1 and Q-well-formedness-2, which no
-principle below settles.
+author has parked (bead mtp-9b4m), and Q-well-formedness-1 and Q-well-formedness-2, which are
+decided under P1 and P4.
 
 ## P1. When bodies are proved: once, or once per copy
 
@@ -42,6 +42,13 @@ the steps in {doc}`compiler-runtime`.
 copies and instances are not proved again ({numref}`prove-bodies-once`). In {doc}`core`, a form
 whose rewrite would need the value of a `foreach` name or a motif parameter is core
 ({numref}`names-from-values`).
+
+**Decided (2026-11-15):** a branch of an `if` is proved only for the values for which it runs. The
+spec lists exactly which conditions narrow the range of a name: a comparison with `=`, `!=`, `<`,
+`<=`, `>` or `>=` of the name with a number known in the prove step, and `cond`, `when`, `and` and
+`or` through their rewrites into `if`. No other condition narrows ({numref}`if-narrowing`)
+(Q-well-formedness-1). So examples/spiral-of-copies.mtp, which reads `dot-{(- k 1)}` only where
+`k` is not 0, compiles once the body of a `foreach` is proved once.
 
 ## P2. A shorthand means exactly its rewrite
 
@@ -116,6 +123,16 @@ value known when compiling ({numref}`number-limit`). The channels of a mixed col
 at both times, as CSS `color-mix()` does (Q-evaluation-5, {numref}`mixed-color-channels`).
 
 A type `real|infty`, with `real` finite, may be added later, when a figure needs it.
+
+**Decided (2026-11-15):** arithmetic saturates at the number limit. Every number, int, ratio or
+real, lies within -10¹⁵⁰ to 10¹⁵⁰. Every result of an operation or a built-in function is its exact
+value, correctly rounded for a real, and then clamped to the number limit, at both times, as a
+write already is. So no operation overflows, and no operation gives `none` because of the size of
+its result. Ints and ratios stay exact inside the limit. A literal beyond the limit is still a
+compile error ({numref}`number-limit`). This replaces "an overflow gives `none`" and the limit on
+starting values above. Every range of the prover lies within the number limit, and a division
+whose divisor has a range that holds 0 has the range of the whole number limit
+({numref}`range-rules`), so Q-well-formedness-2 goes away.
 
 ## P5. Equality for each type
 

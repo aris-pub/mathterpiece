@@ -73,7 +73,8 @@ step proves only the branch that is taken. The other branch is neither proved no
 
 So inside the body of a `foreach` or a motif, the prove step proves both branches of an `if` whose
 condition reads the variable of the `foreach` or a parameter of the motif, since the body is proved
-once for all their values. By {numref}`sugar-rewrites`, the same holds for the tests of a `cond`
+once for all their values. Each branch is proved for the values for which it runs
+({numref}`if-narrowing`). By {numref}`sugar-rewrites`, the same holds for the tests of a `cond`
 and the parts of an `and` or an `or`. `or?` and `let` are proved whole: every part is proved, also a part that the form
 would not evaluate because a value before it is known when compiling. An operation that gives
 `none` at known inputs in such a part is a compile error ({numref}`none-at-known-inputs`):
@@ -110,7 +111,6 @@ inputs, when folded and while drawing.
 
 | Operation | Gives `none` at |
 |---|---|
-| every built-in function and operator | an exact result whose nearest binary64 number is beyond the largest real, about 1.8 × 10³⁰⁸. This is an overflow |
 | `/` | a divisor of 0 |
 | `mod` | a divisor of 0 |
 | `^` | 0 to a negative power, and a negative base to a power that is not an int |
@@ -145,6 +145,8 @@ At every other input, an operation never gives `none`.
   `fold_call` raises the error again (lines 2527 to 2529). Bug mtp-ydd4.7.48.
 - `pick` always has a type that includes `none` (mathterpiece/compiler.py, line 2281), so
   `(rand-seed sd 1) (real v (pick [1 2]))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
+- A result beyond the largest binary64 number gives `none`, since the compiler and the runtime do
+  not clamp results to the number limit ({numref}`number-limit`). mtp-ydd4.7.54.
 :::
 
 So no operation gives an infinity or NaN: a real is always finite ({numref}`number-types`). The
@@ -317,33 +319,45 @@ when it lies exactly halfway between them.
 ### The limit of every number
 
 ```{rule} number-limit
-The {term}`number limit` is ±10¹⁵⁰:
+Every number lies within the {term}`number limit`, from -10¹⁵⁰ to 10¹⁵⁰, when folded and while
+drawing:
 
-- A literal beyond it is a compile error, and so is a finite starting value known when compiling
-  that is beyond it, also one given with `free@`.
-- A write of a number beyond it is clamped to it. So is each number of a point or a list that is
-  written.
-- For the ranges that the prover proves, a free value or a parameter with no limit of its own lies
-  within it ({numref}`range-rules`).
+- The result of every operation and every built-in function is its exact value, rounded where it
+  is a binary64 number by {numref}`correctly-rounded-reals`, and then clamped to the number limit.
+  This holds for each number of a result: an int, a ratio, a real, each part of a complex number,
+  and each number of a point or of a list.
+- A write of a number beyond the number limit is clamped to it. So is each number of a point or a
+  list that is written.
+- A literal beyond the number limit is a compile error.
 
-A computed result is not held to the number limit.
+An int and a ratio are clamped to exactly -10¹⁵⁰ or 10¹⁵⁰. A real is clamped to the binary64
+number nearest to 10¹⁵⁰, written `1e150`, which lies just below 10¹⁵⁰, or to minus that number.
 ```
 
-With these limits, `(* 2 k)` or `(* 360 t)` can never overflow, while a product of several values
-with no limit of their own can (docs/type-system.md, section 5.c). An overflow gives `none`
-({numref}`operations-that-give-none`), and not the infinity that binary64 arithmetic gives.
+So no operation overflows, and no operation gives `none` because of the size of its result. An
+int or a ratio inside the number limit stays exact. `(* 1e100 1e100)` is `1e150`, and
+`(* (^ 10 100) (^ 10 100))` is exactly 10¹⁵⁰. An operation with several arguments is one
+operation, so `(* 1e150 1e150 1e-200)` is `1e100`, since the exact product of the three is
+clamped once.
+
+A starting value known when compiling is a literal or a result, so a starting value beyond the
+number limit is always a literal: `(real k 1e200)` is a compile error, and
+`(real k (* 1e100 1e100))` and `(real k free@(* 1e100 1e100))` start at `1e150`. A literal is not
+clamped, because a literal is not the result of an operation.
 
 :::{admonition} Code differs
 :class: note
-- The compiler checks only literals against the limit (`_Compiler.literal`,
-  mathterpiece/compiler.py, line 5882), so `(real k free@(* 1e100 1e100))` starts at 10²⁰⁰, and
-  `(real m (* k k))`, whose type the compiler gives without `none`, is `none` while drawing. Bug
-  mtp-mqbu.
+- The compiler and the runtime do not clamp the result of an operation. The compiler folds
+  `(* 1e100 1e100)` to 10²⁰⁰, so `(real k (* 1e100 1e100))` starts at 10²⁰⁰. A folded result
+  beyond the largest binary64 number, about 1.8 × 10³⁰⁸, gives `none` in a folded call, as
+  `(* x x x)` at x = 1e150 does, and is otherwise the compile error "the result is too large for a
+  real" (mathterpiece/compiler.py, `_fold_number`, lines 7607 to 7623). While drawing, such a
+  result gives `none` (web/src/builtins.ts, `finite`, line 31). Bead mtp-ydd4.7.54.
+- `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248). When a sum is
+  beyond the largest binary64 number, `+` throws the exception `Undefined`, and `sum` does not
+  catch it, so the evaluation stops. Bug mtp-ec05, which mtp-ydd4.7.54 replaces.
 - `constrain` (web/src/runtime.ts, line 761) clamps a write only when the value is a single number.
   mtp-ydd4.7.18.
-- `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248). On an overflow,
-  `+` throws the exception `Undefined` (web/src/builtins.ts, line 22), and `sum` does not catch it,
-  so the evaluation stops and does not give `none`. Bug mtp-ec05.
 :::
 
 ### Rounding
@@ -643,9 +657,9 @@ same values of what it reads.
 ```
 
 ```{rule} correctly-rounded-reals
-Each built-in function and operator gives, as each binary64 number of its result (a real, a part
-of a complex number, a number of a point or of a list), the binary64 number nearest to the exact
-value at its binary64 inputs, and of the two nearest, the one whose last bit is 0 when the exact
+Each built-in function and operator rounds each binary64 number of its result (a real, a part of
+a complex number, a number of a point or of a list) from the exact value at its binary64 inputs to
+the nearest binary64 number, and of the two nearest, to the one whose last bit is 0 when the exact
 value lies exactly halfway between them. This holds when folding and while drawing.
 ```
 
@@ -655,7 +669,8 @@ degrees and radians. So `(sind 30)` is exactly 0.5, the functions in degrees giv
 multiples of 90 degrees, and `sum` gives its exact sum rounded once, not the result of adding its
 items one at a time.
 
-Rounding to the nearest binary64 number never puts two numbers in the opposite order. So when the
+Rounding to the nearest binary64 number never puts two numbers in the opposite order, and neither
+does clamping to the number limit ({numref}`number-limit`). So when the
 prover works out a bound of a range with the same functions, at the ends of an interval on which
 the exact function only rises or only falls, or as an exact value that is a binary64 number, such
 as 1 for the largest value of `sin`, every value computed at either time lies within the range.

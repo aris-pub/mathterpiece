@@ -231,7 +231,8 @@ match
   of a play or a stepper is read from the scene by matching. Defined in {doc}`evaluation`.
 
 number limit
-  ±10¹⁵⁰, the bound on every literal and every written number. Defined in {doc}`evaluation`.
+  ±10¹⁵⁰, the bound on every number. Every result and every write is clamped to it. Defined in
+  {doc}`evaluation`.
 
 seed
   A free variable of type `rand-seed`, from which random values are computed. Defined in

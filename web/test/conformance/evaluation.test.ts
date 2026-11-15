@@ -217,12 +217,20 @@ describe("rule number-limit: a write beyond the limit is clamped to it", () => {
     rt.write(rt.id("p"), null, [1e200, 0]);
     expect(v("p")).toEqual([1e150, 0]);
   });
+});
 
-  it.fails("an overflow in sum gives none (mtp-ec05: sum does not catch the overflow)", () => {
-    // Each item is 1e308 at k = 1e150, and their sum is beyond the largest real.
-    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real|none t (sum [(* k k 1e8) (* k k 1e8)]))`);
+describe("rule number-limit: a result is clamped to the limit", () => {
+  it.fails("a product (mtp-ydd4.7.54: results are not clamped)", () => {
+    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real|none t (* k k k))`);
     rt.write(rt.id("k"), null, 1e150);
-    expect(v("t")).toBe(null);
+    expect(v("t")).toBe(1e150);
+  });
+
+  it.fails("a sum (mtp-ydd4.7.54: results are not clamped)", () => {
+    // Each item is clamped to 1e150 at k = 1e150, and so is their sum.
+    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real|none t (sum [(* k k) (* k k)]))`);
+    rt.write(rt.id("k"), null, 1e150);
+    expect(v("t")).toBe(1e150);
   });
 });
 

@@ -272,8 +272,7 @@ For example, take this `foreach`:
 
 The prover proves its body once, for k from 0 to 4. In the branch of the `if` that is taken for k
 from 1 to 4, `#'d-{(- k 1)}'` names one of the copies `d-0` to `d-3`, each a circle that comes
-before. The prover can prove this only when it narrows the range of k in that branch, which is
-open question Q-well-formedness-1 in {doc}`well-formedness`.
+before, since the prover narrows the range of k in that branch to 1 to 4 ({numref}`if-narrowing`).
 
 :::{admonition} Code differs
 :class: note

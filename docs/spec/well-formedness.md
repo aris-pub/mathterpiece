@@ -154,26 +154,29 @@ The prover proves exactly these, and nothing else:
 6. The call depth limit of a call known in the prove step ({numref}`call-depth-limit`).
 7. The rules of this part before this section.
 
-For numbers, its only reasoning is the ranges of {numref}`ranges` and {numref}`range-rules`. It
-proves each body once ({numref}`prove-bodies-once`).
+For numbers, its only reasoning is the ranges of {numref}`ranges` and {numref}`range-rules`, and
+the narrowing of {numref}`if-narrowing`. It proves each body once ({numref}`prove-bodies-once`).
 ```
 
 So the prover never uses a relation between two values: in `(/ 1 (- k k))` the divisor may be 0 for
-the prover, although it is always 0. It never counts, never searches for a value, and never
-narrows a range by the condition of an `if` around it (Q-well-formedness-1).
+the prover, although it is always 0. It never counts, never searches for a value, and narrows a
+range only by the conditions of {numref}`if-narrowing`.
 
 ```{rule} ranges
-A {term}`range` is a closed interval of reals, from a lower end to an upper end, each of them a
-binary64 number, the lower at most the upper. The prover works out a range for every expression of
-type `int`, `ratio` or `real`, with or without `none`. The range of an expression holds every value
-other than `none` that the expression can give, when folded and while drawing.
+A {term}`range` is a closed interval of reals, from a lower end to an upper end, each of them an
+int, a ratio or a binary64 number, the lower at most the upper. The prover works out a range for
+every expression of type `int`, `ratio` or `real`, with or without `none`. The range of an
+expression holds every value other than `none` that the expression can give, when folded and while
+drawing.
 ```
 
-The prover works out each end of a range with the functions of {numref}`correctly-rounded-reals`,
-so by the argument that follows that rule, a range worked out at the ends of the ranges of the
-inputs holds every value that either time computes. An end has no mark for whether it is reached:
-the range of `(real k (> 0))` is from 0 to 10¹⁵⁰, the same as for `(real k (>= 0))`. A strict
-bound helps the prover only to meet the same strict bound by {numref}`fits`.
+The prover works out each end of a range with the functions that evaluation uses: exactly for
+ints and ratios ({numref}`number-types`), and with the functions of
+{numref}`correctly-rounded-reals` for reals. So by the argument that follows
+{numref}`correctly-rounded-reals`, a range worked out at the ends of the ranges of the inputs holds
+every value that either time computes. An end has no mark for whether it is reached: the range of
+`(real k (> 0))` is from 0 to `1e150`, the same as for `(real k (>= 0))`. A strict bound helps the
+prover only to meet the same strict bound by {numref}`fits`.
 
 ```{rule} range-rules
 The range of each expression is the following. Where the table gives several ranges, the range is
@@ -182,7 +185,7 @@ the part that they share.
 | Expression | Its range |
 |---|---|
 | a number known in the prove step | from the number to the number |
-| the range of a type | the ends that its comparisons give, a `(> c)` and a `(< c)` giving c, from lo to hi for `(wrap lo hi)`, and the number limit for a side with no bound ({numref}`number-limit`, Q-well-formedness-2) |
+| the range of a type | the ends that its comparisons give, a `(> c)` and a `(< c)` giving c, from lo to hi for `(wrap lo hi)`, and the end of the number limit for a side with no bound ({numref}`number-limit`) |
 | a read of a free variable or attribute | the range of its type |
 | a read of a bound variable or attribute | the range of its expression, and the range of the constraints of its declared type, each side with no bound left out. A read through a `translate` or a `transform` ({doc}`world-model`): the range of its type |
 | a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a library function, the range that {doc}`stdlib` gives it |
@@ -193,19 +196,23 @@ the part that they share.
 | `(- A)` | from minus the upper end of A to minus its lower end |
 | `(+ A B …)` | from the sum of the lower ends to the sum of the upper ends |
 | `(- A B …)` | from the lower end of A minus the upper ends of the others to the upper end of A minus their lower ends |
-| `(* A B …)` | from left to right: of two ranges, the smallest and the largest of the four products of their ends |
-| `(/ A B)` | when the range of B does not hold 0, the smallest and the largest of the four quotients of the ends. When it holds 0, every real: from minus the largest real to the largest real |
+| `(* A B …)` | the smallest and the largest of the products that take one end of the range of each argument |
+| `(/ A B)` | when the range of B does not hold 0, the smallest and the largest of the four quotients of the ends. When it holds 0, the whole number limit |
 | `(mod A B)` | from the smaller of 0 and the lower end of B to the larger of 0 and the upper end of B |
-| `(^ A B)` | when the lower end of A is 0 or more, the smallest and the largest of the four powers of the ends. When B is known in the prove step and is an int n, the smallest and the largest of the powers n of the ends of A, and 0 when the range of A holds 0 and n is above 0. Otherwise every real |
+| `(^ A B)` | when the lower end of A is 0 or more, the smallest and the largest of the four powers of the ends. When B is known in the prove step and is an int n, the smallest and the largest of the powers n of the ends of A, and 0 when the range of A holds 0 and n is above 0. Otherwise the whole number limit |
 | `(abs A)` | from 0 to the larger of minus the lower end and the upper end, when the range of A holds 0, and otherwise from the smaller to the larger of the absolute values of the ends |
-| `(if C A B)`, `(or? A D)` | from the smaller of the lower ends to the larger of the upper ends. With C known in the prove step, the range of the branch taken |
+| `(if C A B)`, `(or? A D)` | from the smaller of the lower ends to the larger of the upper ends. With C known in the prove step, the range of the branch taken. The range of each branch of an `if` is worked out with the ranges that {numref}`if-narrowing` gives, and a branch that never runs by that rule is left out |
 | a call of a function declared with `func`, outside its own body, not folded | the range of its body worked out again with the range of each parameter being the range of its argument, and the range of its result type. This only gives a range: the body is proved once |
-| a call of a function inside its own body | the range of its result type (Q-well-formedness-2) |
+| a call of a function inside its own body | the range of its result type |
 | a call of another library function | the range that {doc}`stdlib` gives for it |
 | any other expression | the range of its type |
 
-An end that is worked out beyond the largest real is replaced by the largest real, or by minus the
-largest real, and the operation may give `none` ({numref}`may-give-none`).
+Every range is clamped to the number limit, as the values of the expression are
+({numref}`number-limit`): an end beyond it is replaced by the end of the number limit, 10¹⁵⁰ or
+-10¹⁵⁰ for an int or a ratio, and `1e150` or `-1e150` for a real. The whole number limit is the
+range from the lower end to the upper end of the number limit. Each end in the table that is worked
+out from several ends, such as the sum of the lower ends, is one call of the operation on those
+ends, and is clamped once.
 ```
 
 The item type of a list in brackets whose items are not all known, and whose items all have ranges,
@@ -218,28 +225,20 @@ to 1 whatever `x` is, by the row for a call.
 
 :::{admonition} Code differs
 :class: note
-The compiler works out some ranges that do not hold every value that the expression can give,
-which {numref}`ranges` does not allow:
-
-- A divisor whose range holds 0 gives the range ±10¹⁵⁰ (`compiler.py:7718`, `_range_of`), though
-  `(/ 1 1e-200)` is 10²⁰⁰. examples/dials.mtp, line 60, compiles today and is a compile error by
-  {numref}`range-rules`, since `(* (or? (/ …) 0) (- d.hi d.lo))` may then overflow.
-- A read of a bound value with no bound of its own gets the range ±10¹⁵⁰ (`compiler.py:6085`,
-  `read`), though `(real m (* k k))` can be 10³⁰⁰.
-- `rad`, `turn` and `dist` give the range ±10¹⁵⁰ or 0 to 10¹⁵⁰ (`builtins.py`, `BUILTINS`),
-  though `(turn 1e150)` is 3.6 × 10¹⁵².
+- The compiler does not clamp a range to the number limit (`compiler.py:7698`, `_range_of`), and
+  gives `^` a type that includes `none` where an end of its range is beyond the largest binary64
+  number (`compiler.py:7569`, `_may_be_undefined`). So with `(real k 1)`,
+  `(real v (* k k) (<= 1e150))` is the error "v may break (<= 1e+150)", and `(real v (^ 2 k))` is
+  the error "v may be none". By {numref}`range-rules` both compile. Bead mtp-ydd4.7.54.
 - An argument whose type implies a strict constraint of its parameter is still checked by its range
   (`compiler.py:2134`, `arguments`), so a `(real a 1 (> 0))` given to a parameter
-  `((real (> 0)) x)` is the error "x may break (> 0)".
-
-Bead mtp-ydd4.7.45.
+  `((real (> 0)) x)` is the error "x may break (> 0)". Bead mtp-ydd4.7.45.
 :::
 
 ```{rule} may-give-none
 The type of an operation that is not folded includes `none` when the ranges of its arguments, each
-taken on its own, hold an input at which it gives `none` by {numref}`operations-that-give-none`,
-or when an end of the range of its result is worked out beyond the largest real
-({numref}`range-rules`). For a part of a list or a group:
+taken on its own, hold an input at which it gives `none` by {numref}`operations-that-give-none`.
+For a part of a list or a group:
 
 | Operation | Its type includes `none` unless |
 |---|---|
@@ -287,50 +286,48 @@ So `(real k 5 (<= 3))` is a compile error. With `(real a 1)` and
 (slider size (move k (from 1) (to 5)) (label 'k'))
 ```
 
-### Narrowing and unbounded values
+### Narrowing in an `if`
 
-:::{admonition} Open question Q-well-formedness-1
-:class: warning
-examples/spiral-of-copies.mtp, line 21, reads `#'dot-{(- k 1)}'` only in the branch of
-`(if (= k 0) …)` that is taken when `k` is not 0. The body of the `foreach` is proved once, for `k`
-from 0 to 59 ({numref}`prove-bodies-once`), and by {numref}`range-rules` the range of `k` is the
-same in both branches of the `if`, so for `k` = 0 the prover must prove that `dot--1` names a
-declaration ({numref}`names-from-values`), which it cannot. The figure stops compiling once bead
-mtp-08wd.1 is done, and so does the example after {numref}`names-from-values`. The compiler has no
-rule that narrows a range today: it proves each copy with its own value of `k`. The options:
+```{rule} if-narrowing
+A branch of an `if` is proved only for the values for which it runs. In `(if (OP N c) A B)`, where
+N is a name whose range the prover works out, c is a number known in the prove step, and OP is one
+of `=`, `!=`, `<`, `<=`, `>` and `>=`, the range of N in A is the part of its range for which the
+comparison holds, and in B the part for which it fails. With lo and hi the ends of the range of N:
 
-- (a) Narrowing in the branches of an `if`. In `(if (OP N c) A B)`, where N is a name whose range
-  the prover works out, c is a number known in the prove step, and OP is one of `=`, `!=`, `<`,
-  `<=`, `>` and `>=`, the range of N in A is the part of its range for which the comparison is
-  true, and in B the part for which it is false. For an int, `(< N c)` gives an upper end of c - 1
-  where it is true, and where N is known not to be c, an end that equals c moves by 1 toward the
-  other end. For a real, `<` and `>` give c as the end, since a range has no open end. No other
-  condition narrows. With this rule, `k` in the second branch of `(if (= k 0) …)` ranges from 1 to
-  59.
-- (b) No narrowing. The two figures are rewritten, for example with the first dot declared before
-  the `foreach` and `(foreach k (range 1 n) …)` for the others.
-:::
+- For an int N, the part in A is from the smallest to the largest of the ints from lo to hi for
+  which the comparison holds, and the part in B is the same for the ints for which it fails. So
+  with c an int from lo + 1 to hi, `(< N c)` gives A the upper end c - 1, and `(!= N c)` changes
+  the range only when c is lo or hi.
+- For a ratio or a real N, a part in which N is below c, or at most c, is from lo to the smaller of
+  hi and c, and a part in which N is above c, or at least c, is from the larger of lo and c to hi.
+  The part in which N is c is from c to c, and the part in which N is not c is from lo to hi.
+- When a part holds no int, for an int N, or when its lower end is above its upper end, or when lo
+  and hi are both c in the part in which N is not c, the branch never runs, and the prover proves
+  nothing in it.
 
-:::{admonition} Open question Q-well-formedness-2
-:class: warning
-By {numref}`range-rules`, a parameter whose type has no bound has the number limit as its range in
-its body, and so does a call of a function inside its own body ({numref}`number-limit`). But an
-argument can lie beyond the number limit: in `(f (* k k))`, with `k` a real with no bound, the
-argument can be 10³⁰⁰. A body proved for `x` from -10¹⁵⁰ to 10¹⁵⁰, such as `(* x x)`, then
-overflows while drawing, and gives `none` where its type does not include `none`. P11 does not allow this
-({numref}`no-errors-after-loading`), and the compiler does it today. The options:
+The range of N changes only for the reads of N in A and in B that read the same declaration as
+the N of the condition. A value that is computed from N outside the `if`, such as a `let` name,
+keeps its range. In an `if` inside A or B, the range of N is the part that the outer `if` gives.
+`cond`, `when`, `and` and `or` narrow through their rewrites into `if` ({numref}`sugar-rewrites`).
+No other condition narrows a range.
+```
 
-- (a) Each argument for a parameter whose type has no bound on a side, and the body of a function
-  whose declared result type has no bound on a side, is proved to lie within the number limit on
-  that side, as for a constraint ({numref}`constraint-proof`). Three sources stop compiling unless
-  their parameters get bounds: examples/bourgain-densities.mtp, line 70, at
-  `(+ a (* step half))`, examples/ulam-spiral.mtp, line 48, at `(+ x 1)`, and the example after
-  {numref}`call-depth-limit`, at `(- m 1)`. A bound on an argument that decreases, as in that
-  example, needs narrowing too (Q-well-formedness-1).
-- (b) A parameter whose type has no bound, and a call of a function inside its own body, have no
-  bound on that side: their range is every real. Ten examples stop compiling, since arithmetic in
-  a body may then overflow: bourgain-densities.mtp (line 64), bourgain-ornament.mtp (50),
-  bourgain-pair-at-level.mtp (42), colormaps.mtp (46), ease-race.mtp (38), function-machine.mtp
-  (24), koch-snowflake.mtp (21), line-styles.mtp (15), split-screen-race.mtp (37) and
-  ulam-spiral.mtp (12).
+So in examples/spiral-of-copies.mtp, line 21, where the body of the `foreach` is proved for `k`
+from 0 to 59 ({numref}`prove-bodies-once`), `k` in the second branch of `(if (= k 0) …)` is from 1
+to 59, so `#'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58`
+({numref}`names-from-values`). With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` gives `k` the
+range 0 to 2 in A and 3 to 5 in B, and `(if (> k 7) A B)` never runs A. With `(real x 1)`,
+`(if (> x 0) (sqrt x) 0)` is a `real`, since `x` in the first branch is from 0 to `1e150`. In
+`(if (> x 0) (/ 1 x) 0)`, `x` in the first branch has the same range, which holds 0, so
+`(/ 1 x)` may give `none` there: for a real, `>` gives the same ends as `>=`. In `(if (and (> k 0) (< k 3)) A B)`, the condition is the
+`if` of the rewrite of `and`, which is not a comparison, so the range of `k` in A is not narrowed.
+`(if (< 0 k) A B)`, with the name on the right, does not narrow either.
+
+:::{admonition} Code differs
+:class: note
+The compiler has no narrowing. So
+`(func[real] f (((int (>= 0) (<= 5)) k)) (if (= k 0) 0 (/ 1 k)))` is the error "this value may be
+none" at `(/ 1 k)`, although `k` in that branch is from 1 to 5. examples/spiral-of-copies.mtp
+compiles today only because the compiler proves each copy of a `foreach` with its own value of `k`
+(mtp-08wd.1). Bead mtp-ydd4.7.55.
 :::
