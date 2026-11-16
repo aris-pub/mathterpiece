@@ -1,10 +1,10 @@
-(real k -1 (>= -2) (<= 2))
+(real k -1 (>= -1) (<= 1))
 (real|none r (sqrt (- k)))
 (scene parabola
   (line_ (from [-2 0]) (to [2 0]) (stroke 'gray'))
   (parametric p (for t -2 2) [t (+ (* t t) k)] (stroke 'teal'))
   (circle|none lo (r 0.1) (pos [(- r) 0]) (fill 'crimson'))
   (circle|none hi (r 0.1) (pos [r 0]) (fill 'crimson')))
-(canvas c (x -2) (y -2.2) (width 4) (height 3.4) parabola)
-(slider shift (move k (from -2) (to 2)) (label 'k'))
+(canvas c parabola)
+(slider shift (move k (from -1) (to 1)) (label 'k'))
 (readout says (or? $'roots at ±{r:.2f}' 'no real roots'))
