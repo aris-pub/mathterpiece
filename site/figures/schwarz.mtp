@@ -1,15 +1,18 @@
 ; Cauchy–Schwarz, as two rectangles of height ‖v‖
 (point u [1.8 0.4]) (point v [0.5 1.4])
-(real nu (dist [0 0] u)) (real nv (dist [0 0] v))
+(real nu (dist [0 0] u))
+(real nv (dist [0 0] v))
 (point e (or? (* (/ 1 nv) v) [0 1]))  ; typechecked: v may be 0
-(real s (+ (* u.x e.x) (* u.y e.y))) (string lit '')
+(real s (+ (* u.x e.x) (* u.y e.y)))
+(string lit '')
 
 (scene plane
   (foreach k ['dot' 'bound']
     (let ((w (* (if (= k 'dot') s (* (sign s) nu)) e))
           (h (* nv (as point [e.y (- e.x)]))))
-      (polygon_ (points [[0 0] w (+ w h) h]) (opacity (if (= lit k) 0.45 0.12))
-        (fill (if (= k 'dot') 'slateblue' 'crimson')))))
+      (polygon_ (points [[0 0] w (+ w h) h])
+        (fill (if (= k 'dot') 'slateblue' 'crimson'))
+        (opacity (if (= lit k) 0.45 0.12)))))
   (line_ (from u) (to (* s e)) (stroke 'gray') (dash [4 4]))
   (group arrows (defaults (stroke-width 3) (head-end 'dart'))
     (line pu (from [0 0]) (to u) (stroke 'crimson'))
@@ -21,7 +24,6 @@
   (term rel (tex (if (< (* nv (- nu (abs s))) 0.005) '=' '\\le')))
   (term dot (background (if (= lit 'dot') 'lavender' none)))
   (term bound (background (if (= lit 'bound') 'lavender' none))))
-
 (canvas c (x -1.2) (y -1.5) (width 4) (height 3.8) plane
   (on-drag pu (move u (to pointer))) (on-drag pv (move v (to pointer))))
 (display shown cs (foreach k ['dot' 'bound']
