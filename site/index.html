@@ -63,7 +63,9 @@ nav .gh svg { width: 22px; height: 22px; display: block; fill: currentColor; }
 .hero-text { max-width: 640px; margin-bottom: 88px; }
 .eyebrow { font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 14px; font-weight: 600; }
 h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 20px; letter-spacing: -0.01em; text-wrap: balance; }
-.lede { font-size: 1.25rem; font-weight: 300; margin: 0 0 28px; max-width: 48ch; }
+.lede { font-size: 1.25rem; font-weight: 300; margin: 0 0 30px; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 6px; }
+.lede li { counter-increment: step; display: flex; gap: 14px; align-items: baseline; }
+.lede li::before { content: counter(step); font: 500 1.05rem/1 var(--serif); color: var(--accent-ink); border: 1.5px solid var(--accent); border-radius: 50%; width: 1.6em; height: 1.6em; display: inline-flex; align-items: center; justify-content: center; flex: none; transform: translateY(-0.1em); }
 .ctas { display: flex; gap: 14px; flex-wrap: wrap; }
 .btn { display: inline-block; padding: 12px 22px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 17px; }
 .btn.main { background: var(--accent); color: #fff; }
@@ -71,7 +73,8 @@ h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 20px; l
 .btn.second { border: 1px solid var(--line); color: var(--ink); background: var(--surface); }
 .demo { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .demo .source { background: var(--code-bg); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
-.demo .source pre { background: none; flex: 1; font-size: 14px; line-height: 1.7; padding: 22px 24px; }
+.demo .source pre { background: none; flex: 1; font-size: 14px; line-height: 1.7; padding: 22px 24px; overflow-x: auto; scrollbar-width: none; }
+.demo .source pre::-webkit-scrollbar { display: none; }
 .demo .result { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 16px 24px; }
 .demo .result mtp-canvas { display: block; width: 100%; max-width: 380px; margin: 0 auto; }
 .demo .result .controls { padding: 8px 0 0; max-width: 380px; width: 100%; margin: 0 auto; }
@@ -193,7 +196,11 @@ footer a { color: var(--soft); }
       <div class="hero-text">
         <p class="eyebrow">Explain. Explore. Experience.</p>
         <h1>Math you can touch.</h1>
-        <p class="lede">Declare what the figure is, does, and looks like. The compiler typechecks every possible state. The runtime makes it accessible and interactive.</p>
+        <ol class="lede">
+          <li>Declare what the figure is, does, and looks like.</li>
+          <li>The compiler typechecks every possible state.</li>
+          <li>The runtime makes it accessible and interactive.</li>
+        </ol>
           <div class="ctas">
             <a class="btn main" href="https://docs.mtp-lang.org/quickstart.html">Get started</a>
             <a class="btn second" href="/examples">See the examples</a>
