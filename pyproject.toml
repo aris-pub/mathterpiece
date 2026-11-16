@@ -1,7 +1,7 @@
 [project]
 name = "mathterpiece"
 version = "0.1.0"
-description = "A LISP-y DSL for generating interactive mathematical widgets"
+description = "A language for math you can touch: interactive, accessible, typesafe math figures for the web."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -10,6 +10,15 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = []
+
+keywords = ["math", "figures", "interactive", "accessibility", "svg", "visualization"]
+
+[project.urls]
+Homepage = "https://mtp-lang.org"
+Documentation = "https://docs.mtp-lang.org"
+Specification = "https://spec.mtp-lang.org"
+Source = "https://github.com/aris-pub/mathterpiece"
+Issues = "https://github.com/aris-pub/mathterpiece/issues"
 
 [project.scripts]
 mtp = "mathterpiece.cli:main"

@@ -1,9 +1,33 @@
 {
-  "name": "mathterpiece-web",
-  "private": true,
+  "name": "mathterpiece",
+  "version": "0.1.0",
+  "description": "A language for math you can touch: the web runtime that draws Mathterpiece figures as SVG inside web components.",
   "license": "MIT",
   "type": "module",
-  "description": "The mathterpiece web runtime: plays the .mtpc the compiler writes.",
+  "homepage": "https://mtp-lang.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aris-pub/mathterpiece.git",
+    "directory": "web"
+  },
+  "bugs": "https://github.com/aris-pub/mathterpiece/issues",
+  "keywords": [
+    "math",
+    "figures",
+    "interactive",
+    "accessibility",
+    "svg",
+    "web-components"
+  ],
+  "module": "./dist/mathterpiece.js",
+  "exports": {
+    ".": "./dist/mathterpiece.js"
+  },
+  "files": [
+    "dist/mathterpiece.js",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -16,9 +40,7 @@
     "playwright": "^1.64.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
-  },
-  "dependencies": {
+    "vitest": "^5.0.5",
     "mathjax-full": "3.2.2"
   }
 }
