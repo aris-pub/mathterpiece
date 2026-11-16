@@ -600,7 +600,7 @@ class TestTheFormTemplate:
         [
             ("(scene s (circle c) (background 'red'))", "background", "scene"),
             ("(scene s (group g (circle c) (fill 'red')))", "fill", "group"),
-            ("(scene s (circle c)) (canvas v c (x 1))", "x", "canvas"),
+            ("(scene s (circle c)) (canvas v c (pan false))", "pan", "canvas"),
             (
                 f"{K} (button b (animation (move k (to 1) (duration 1))) (> k 1) (label 'go'))",
                 "label",
@@ -622,7 +622,8 @@ class TestTheFormTemplate:
             "(scene s (background 'red') (circle c))",
             "(scene s (group g (translate [1 0]) (defaults (fill 'red') (stroke 'blue'))"
             " (circle c)))",
-            "(scene s (circle c)) (canvas v (x 1) (toggle-duration 1) c)",
+            "(scene s (circle c))"
+            " (canvas v (x 1) (toggle-duration 1) (y 1) (width 2) (height 2) c)",
             f"{K} (button b (label 'go') (animation (move k (to 1) (duration 1))) (> k 1))",
             f"{K} (animation a (defaults (duration 2)) (move k (to 1)))",
         ],

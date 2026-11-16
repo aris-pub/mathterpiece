@@ -113,6 +113,8 @@ export interface Obj {
   // canvases: what each shows, in drawing order
   shows?: Shown[];
   transition?: number | null;
+  // A canvas that gives no view box: each copy shows the box of its shapes, worked out on the page.
+  fit?: true;
 }
 
 /** What a canvas shows: a shape's id, or an item that gives a shape, none or a list of them. */

@@ -15,7 +15,7 @@
     (get-text-property (match-beginning 0) 'face)))
 
 (ert-deftest mtp-mode-highlights-keyword-arguments ()
-  (let ((src "(canvas view (x -8) (pan false)\n  pond\n  (on-view (animation (move rise (to 0) (duration 0.8) (ease 'ease-out')))))"))
+  (let ((src "(canvas view (x -8) (y -8) (width 16) (height 16) (pan false)\n  pond\n  (on-view (animation (move rise (to 0) (duration 0.8) (ease 'ease-out')))))"))
     (dolist (word '("x" "pan" "to 0" "duration" "ease"))
       (should (eq (mtp-mode-test--face-at src word) 'mtp-mode-keyword-face)))
     (should (eq (mtp-mode-test--face-at src "canvas") 'mtp-mode-form-head-face))

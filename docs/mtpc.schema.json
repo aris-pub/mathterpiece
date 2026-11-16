@@ -2172,11 +2172,49 @@
               "attrs": {
                 "$ref": "#/$defs/attrs"
               },
+              "fit": {
+                "const": true
+              },
               "doc": {
                 "type": "string"
               }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "if": {
+              "required": [
+                "fit"
+              ]
+            },
+            "then": {
+              "properties": {
+                "attrs": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "x"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "y"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "width"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "height"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
           }
         },
         {
