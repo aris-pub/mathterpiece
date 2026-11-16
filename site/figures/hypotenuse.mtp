@@ -1,8 +1,6 @@
 ; a right triangle: drag its corner, and the formula follows
 (point q [1.2 0.9])
-(real a (abs q.x))
-(real b (abs q.y))
-(real c (sqrt (+ (* a a) (* b b))))  ; typechecked
+(real c (sqrt (+ (^ q.x 2) (^ q.y 2))))  ; typechecked
 
 ; what the figure is
 (scene triangle
@@ -11,12 +9,11 @@
            (fill '#0e9ae9') (fill-opacity 0.12)
            (stroke '#0e9ae9'))
   (circle corner (r 0.08) (pos q) (fill '#ad71f2')))
-(formula pythagoras
-  tex'c = \sqrt{a^2 + b^2} = \term{value}{}'
-  (term value (tex $'{c:.2f}')))
+(formula pythagoras tex'c = \sqrt{a^2 + b^2} = \term{c}{}'
+  (term c (tex $'{c:.2f}')))
 
-; what it does: drag the corner, or tap it
-; and then tap where it goes
-(canvas v (x -0.3) (y -0.3) (width 2.2) (height 1.6) triangle
+; what it does: drag the corner, or tap it, then tap a spot
+(canvas v (x -0.3) (y -0.3) (width 2.2) (height 1.6)
+  triangle
   (on-drag corner (move q (to pointer))))
 (display shown pythagoras)
