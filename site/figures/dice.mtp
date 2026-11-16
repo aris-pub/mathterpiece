@@ -10,11 +10,10 @@
 (motif die ((int face 1 (>= 1) (<= 6)))
   (rect body (width 2) (height 2) (rx 0.3)
         ; what the figure looks like
-        (fill 'mediumslateblue') (fill-opacity 0.15)
-        (stroke 'mediumslateblue'))
+        (fill 'slateblue') (fill-opacity 0.15) (stroke 'slateblue'))
   (foreach j 6  ; typechecked: face - 1 is always a row of pips
     (circle_ (pos (* 0.55 (or? pips[(- face 1)][j] [0 0])))
-             (r 0.18) (fill 'mediumslateblue')
+             (r 0.18) (fill 'slateblue')
              (opacity (if (< j face) 1 0)))))
 (scene table
   (die left (face (rand-int 1 6)) (translate [-1.3 0]))

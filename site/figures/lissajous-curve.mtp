@@ -7,9 +7,8 @@
 
 ; what the figure is
 (scene curve
-  (polyline lissajous
-    (points (map (range 0 360 (num 721))
-      (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
+  (parametric lissajous (for t 0 360)
+    [(sind (+ (* a t) phase)) (sind (* b t))]
     ; what the figure looks like
     (stroke 'lightseagreen') (stroke-width 3)))
 

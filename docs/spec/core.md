@@ -85,6 +85,7 @@ before any other rewrite of the declaration that it copies.
 | `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
+| `(parametric N (for T LO HI) E ITEMS…)`, and `parametric_` with no `N` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ITEMS…)`, where `S` is the `S` of a `(samples S)` among `ITEMS…`, which the polyline does not get, or 361 when there is none | `T` is a name. At most one `(samples S)` |
 | `(K N (like M) ARGS…)` | `(K N ARGS… COPIED…)`. `COPIED…` is each item of the declaration of `M`, as written, after its own `(like …)` is rewritten, whose head `ARGS…` does not give. A positional {term}`string` of a text is copied too. A `(pos P)` of `M` gives both `x` and `y`: when `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))` | `M` is a plain name. `K` is a shape head other than `group`, `row` and `column`, and `M` a shape of kind `K`. Or `M` is an instance of the motif or the variant `K`. Or `K` is `font` and `M` a font. Or `K` is `term` and `M` a term of the same formula, whose `(term …)` form comes before. Or the form is a `move` or a `transition`, and `M` is a transition declared at the top level |
 | `(pointer-events B)`, on a group, a row, a column or an instance | the same container, with `(pointer-events B)` moved into its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `pointer-events` |
 | `(defaults (A V)…)`, on a group, a row or a column | the same container without it, with each `(A V)` added to each member, at any depth, that takes `A` from a container ({doc}`world-model`) and does not give `A`, the nearest container first. For a member that is an instance, `(A V)` is added to the instance's own `(defaults …)` | Each `A` is one that a container gives its members ({doc}`world-model`) |
@@ -340,6 +341,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
 | `palette` | sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
+| `parametric` | sugar | a polyline through the points of a parametric curve | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
