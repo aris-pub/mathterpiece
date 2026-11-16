@@ -336,8 +336,9 @@ The compiler checks the choices only of a value known when compiling (`compiler.
 ## Interfaces
 
 ```{rule} interfaces
-An interface is a type that no object has as its own type. A type satisfies an interface as
-follows:
+An interface is a type that no object has as its own type. An interface is the type of a parameter
+only: a variable is never declared with one, and such a declaration is a compile error. A type
+satisfies an interface as follows:
 
 | Interface | Satisfied by |
 |---|---|
@@ -364,17 +365,18 @@ The compiler has no interface `palette`: `(func f ((palette q)) 1)` is the error
 So `(func label-at ((positioned o) (string s)) …)` may be given points and shapes alike, and
 `(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not every shape has an `r`. A
 constraint of a declared interface is met only when the type of the attribute implies it: a
-namespace whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`. A
-variable declared with an interface holds an object, and is bound ({doc}`world-model`).
+namespace whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`. So
+`(inky look day)` and `(shape sel c)` are compile errors: a variable has a type, and an interface
+only says what a value must have.
 
 ```{mtp-example}
-; look holds one of two namespaces that fit the interface inky
+; the parameter colors of the motif disc takes either namespace, since both fit inky
 (interface inky (color ink) (color paper))
 (namespace day (color ink '#1f2a44') (color paper '#f6f1e7'))
 (namespace night (color ink '#e8e4d8') (color paper '#14161c'))
 (bool dark false)
-(inky look (if dark night day))
-(scene s (background look.paper) (circle c (r 1) (fill look.ink)))
+(motif disc ((inky colors)) (circle face (r 1) (fill colors.paper) (stroke colors.ink) (stroke-width 0.2)))
+(scene s (disc d (colors (if dark night day))))
 (canvas v (x -2) (y -2) (width 4) (height 4) s)
 (toggle mode dark (label 'dark'))
 ```

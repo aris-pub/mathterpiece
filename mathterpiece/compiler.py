@@ -1485,6 +1485,14 @@ class _Compiler:
         name, pos, t, node, first = self.declared(form, scope, parent is not None)
         if isinstance(_core(t), FuncT):
             raise CompileError("a variable cannot hold a function", pos)
+        if isinstance(_core(t), Interface):
+            # Interfaces are structural, so only a parameter is declared with one (the author,
+            # 2026-11-16).
+            raise CompileError(
+                f"{_core(t)} is an interface, so it is the type of a parameter only: declare the"
+                " variable with a type",
+                form.pos,
+            )
         if node is not None and self.shape_kind(node):
             # (shape sel (circle c …)) declares the circle where the variable is, and holds it.
             assert isinstance(node, Form)

@@ -48,13 +48,18 @@ class TestNamespaces:
     def test_only_what_the_interface_lists_is_read(self):
         error(f"{PALETTE} {DAY} (func f ((inky p)) p.gap)", "an inky has no attribute 'gap'")
 
-    def test_a_variable_holds_one(self):
-        model(f"{PALETTE} {DAY} {NIGHT} (inky look day) (color v look.ink)")
+    def test_no_variable_is_declared_with_one(self):
+        # The author, 2026-11-16: interfaces are structural, and a variable needs a type.
+        error(
+            f"{PALETTE} {DAY} (inky look day)",
+            "inky is an interface, so it is the type of a parameter only: declare the variable"
+            " with a type",
+        )
 
     def test_an_if_picks_one(self):
         model(
-            f"{PALETTE} {DAY} {NIGHT} (bool dark false) (inky look (if dark night day))"
-            " (scene s (circle c (fill look.ink)))"
+            f"{PALETTE} {DAY} {NIGHT} (bool dark false) (func ink-of ((inky p)) p.ink)"
+            " (scene s (circle c (fill (ink-of (if dark night day)))))"
         )
 
 
@@ -100,8 +105,8 @@ class TestConstraints:
     def test_reading_one_through_the_interface_knows_the_range(self):
         # The interface promises gap >= 0, so it may be a circle's radius.
         model(
-            f"{self.SPACED} (namespace n (real gap 1 (>= 0))) (spaced sp n)"
-            " (scene s (circle c (r sp.gap)))"
+            f"{self.SPACED} (namespace n (real gap 1 (>= 0))) (func gap-of ((spaced sp)) sp.gap)"
+            " (scene s (circle c (r (gap-of n))))"
         )
 
 
@@ -168,8 +173,8 @@ class TestMotifs:
 @pytest.mark.parametrize(
     "src",
     [
-        f"{PALETTE} {DAY} {NIGHT} (bool dark false) (inky look (if dark night day))"
-        " (scene s (circle c (fill look.ink)))",
+        f"{PALETTE} {DAY} {NIGHT} (bool dark false) (func ink-of ((inky p)) p.ink)"
+        " (scene s (circle c (fill (ink-of (if dark night day)))))",
         f"{PALETTE} {DAY} {NIGHT} (bool dark false)"
         " (motif card ((inky look)) (rect r (fill look.paper)))"
         " (scene s (card a (look day)) (card b (look (if dark night day))))",

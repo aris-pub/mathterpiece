@@ -2,10 +2,11 @@
 (namespace day (color ink '#1f2a44') (color paper '#f6f1e7') (real gap 0.4 (>= 0)))
 (namespace night (color ink '#e8e4d8') (color paper '#14161c') (real gap 1 (>= 0)))
 (bool dark false)
-(inky look (if dark night day))
+(func ink-of ((inky p)) p.ink)
+(func gap-of ((inky p)) p.gap)
 (motif card ((inky colors)) (circle face (fill colors.paper) (stroke colors.ink)))
 (scene s
-  (circle c (r look.gap) (fill look.ink))
+  (circle c (r (gap-of (if dark night day))) (fill (ink-of (if dark night day))))
   (card fixed (colors day))
   (card follows (colors (if dark night day))))
 (canvas v s)
