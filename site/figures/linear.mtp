@@ -1,0 +1,30 @@
+; a linear map: drag its two columns on the left,
+; and the right shows where the whole grid goes
+(point e1 [1 0.3])
+(point e2 [-0.4 1])
+(func f ((point v)) (+ (* v.x e1) (* v.y e2)))  ; typechecked
+(real det (- (* e1.x e2.y) (* e1.y e2.x)))
+
+; what the figure is: the plane, its image under f, and the columns
+(scene plane
+  (group domain (defaults (stroke 'gray') (fill-opacity 0.35))
+    (polygon_ (points [[0 0] [1 0] [1 1] [0 1]]) (fill 'slateblue'))
+    (foreach k (range -2 3 (gap 1))
+      (line_ (from [k -2]) (to [k 2])) (line_ (from [-2 k]) (to [2 k]))))
+  (group image (defaults (stroke 'gray') (fill-opacity 0.35))
+    (let ((s (+ e1 e2)))
+      ; what the figure looks like
+      (polygon_ (points [[0 0] e1 s e2])
+                (fill (if (> det 0) 'slateblue' 'crimson'))))
+    (foreach k (range -2 3 (gap 1))
+      (line_ (from (f [k -2])) (to (f [k 2])))
+      (line_ (from (f [-2 k])) (to (f [2 k])))))
+  (group arrows (defaults (stroke-width 4) (head-end 'dart'))
+    (line a1 (from [0 0]) (to e1) (stroke 'crimson'))
+    (line a2 (from [0 0]) (to e2) (stroke 'royalblue'))))
+
+; what it does: drag an arrow, and the image follows
+(canvas left (x -2.3) (y -2.3) (width 4.6) (height 4.6) domain arrows
+  (on-drag a1 (move e1 (to pointer))) (on-drag a2 (move e2 (to pointer))))
+(canvas right (x -3) (y -3) (width 6) (height 6) image arrows)
+(readout area $'det = {det:.2f}')
