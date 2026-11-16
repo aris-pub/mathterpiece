@@ -16,7 +16,9 @@
 ; what it does: the play moves m, and the reader moves n
 (canvas v chords)
 (play film (label 'play the times tables')
-  (animation (set m 2) (move m (to 12) (duration 30) (ease linear))))
+  (animation (set m 2)
+    (move m (to 12) (duration 30) (ease linear))))
 
 ; accessible and interactive: mouse, touch or keyboard
-(slider points (move n (from 12) (to 240)) (label 'points'))
+(slider points (move n (from 12) (to 240))
+  (label 'points'))
