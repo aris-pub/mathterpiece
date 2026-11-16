@@ -1,23 +1,29 @@
-; the logo's two brackets, three times as large: they close in on the m, turning half a turn
-; and fading, then open out
+; the logo, twice its size, drawn by mtp: mtp in the middle and the brackets at the corners;
+; t and p fade out, then the m moves to the center as the brackets close in on it with a full
+; turn, ending as in the logo
 (import ease cubic-in-out)
-(real s 1 (>= 0.3) (<= 1))
-(real phi 0 (wrap 0 360))
-(real o 1 (>= 0) (<= 1))
-(font logo (family '"Crimson Pro", Georgia, serif') (weight 600) (size 96))
+(real mx -148)
+(real tp 1 (>= 0) (<= 1))
+(real cx 180)
+(real cy 180)
+(real phi 0)
+(real o 0.35 (>= 0) (<= 1))
+(font logo (family '"Crimson Pro", Georgia, serif') (weight 600) (size 168))
+(color ink (light-dark '#51636f' '#ced6dc'))
 (scene b
-  (text m 'm' (font logo) (halign 'middle') (valign 'middle') (pos [0 8])
-        (fill (light-dark '#51636f' '#ced6dc')))
+  (text m 'm' (font logo) (pos [mx -34]) (fill ink))
+  (text rest 'tp' (font logo) (pos [(+ mx 141) -34]) (fill ink) (opacity tp))
   (group brackets (transform (rotate phi))
-                  (defaults (stroke '#ad71f2') (stroke-width 37) (fill none) (opacity o)
+                  (defaults (stroke '#ad71f2') (stroke-width 24.8) (fill none) (opacity o)
                             (line-cap 'round') (line-join 'round'))
-    (let ((c (* s [-150 150])) (down (+ c [0 -92])) (right (+ c [56 0])))
+    (let ((c [(- cx) cy]) (down (+ c [0 -61.4])) (right (+ c [37.2 0])))
       (polyline_ (points [down c right])))
-    (let ((c (* s [150 -150])) (up (+ c [0 92])) (left (+ c [-56 0])))
+    (let ((c [cx (- cy)]) (up (+ c [0 61.4])) (left (+ c [-37.2 0])))
       (polyline_ (points [up c left])))))
-(animation close (at-once (defaults (duration 1.3) (ease cubic-in-out))
-  (move s (to 0.5)) (move phi (to (+ phi 90))) (move o (to 0.55))))
-(animation open (at-once (defaults (duration 1.3) (ease cubic-in-out))
-  (move s (to 1)) (move phi (to (+ phi 90))) (move o (to 1))))
 (canvas v (x -210) (y -210) (width 420) (height 420) b
-  (on-ready (animation (loop) (wait 1.2) close (wait 1.2) open)))
+  (on-ready
+    (animation (wait 0.8)
+      (move tp (to 0) (duration 0.9))
+      (at-once (defaults (duration 1.6) (ease cubic-in-out))
+        (move mx (to -69.2)) (move cx (to 115.4)) (move cy (to 56.4))
+        (move phi (to 360)) (move o (to 1))))))
