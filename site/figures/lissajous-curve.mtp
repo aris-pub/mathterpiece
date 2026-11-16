@@ -21,6 +21,6 @@
   (on-ready (animation spin)))
 
 ; accessible and interactive: mouse, touch or keyboard
-(slider across (move a (from 1) (to 7)) (step 7) (label 'a'))
-(slider up (move b (from 1) (to 7)) (step 7) (label 'b'))
+(slider across (move a (from 1) (to 7)) (label 'a'))
+(slider up (move b (from 1) (to 7)) (label 'b'))
 (readout ratio $'a : b = {a} : {b}')

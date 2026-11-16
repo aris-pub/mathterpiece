@@ -789,3 +789,30 @@ class TestPriority:
             f"{K} (button w {MOVE} (exclusive))",
             r"\(exclusive\) is gone: give the writer a \(priority n\)",
         )
+
+
+class TestIntSliderStops:
+    # The author, 2026-11-16: a slider whose target is an int stops at each whole number by
+    # default, so (step …) is needed only for coarser stops.
+    def test_it_stops_at_each_whole_number(self):
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (move a (from 1) (to 7)))").get("s")
+        assert s.attrs["step"].value == 7
+
+    def test_downward_ends_count_the_same(self):
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (move a (from 7) (to 2)))").get("s")
+        assert s.attrs["step"].value == 6
+
+    def test_a_given_step_wins(self):
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (move a (from 1) (to 7)) (step 4))").get("s")
+        assert s.attrs["step"].value == 4
+
+    def test_a_real_target_has_no_stops(self):
+        s = model("(real a 3) (slider s (move a (from 1) (to 7)))").get("s")
+        assert "step" not in s.attrs
+
+    def test_ends_known_only_while_drawing(self):
+        error(
+            "(int top 7 (>= 2) (<= 9)) (int a 3 (>= 1) (<= 9))"
+            " (slider s (move a (from 1) (to top)))",
+            r"a slider on an int stops at each whole number from its from to its to",
+        )

@@ -557,7 +557,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | the target of `on-drag` written as a name | sugar | the move of the shape's position | {numref}`sugar-rewrites` |
 | `label` | core | a control's label | {doc}`page-interface`, {doc}`accessibility` |
 | `tex` in a label | core | a label given as LaTeX | {doc}`page-interface` |
-| `step` on a slider | core | the number of positions of its knob | {doc}`page-interface` |
+| `step` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `step` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | its bars, its rest between steps, its step names | {doc}`page-interface`, {doc}`time` |
 | `selected` on a button | core | whether it is the current choice | {doc}`page-interface`, {doc}`accessibility` |
 | `active` | core | whether the writer acts | {doc}`reaction` |
