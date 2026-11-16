@@ -1,0 +1,24 @@
+; the logo's two brackets, drawn by mtp, turning a quarter turn at a time,
+; with a curve between their corners
+(import ease cubic-in-out linear)
+(real phi 0 (wrap 0 360))
+(real t 0 (wrap 0 360))
+(func corner ((int k)) (polar 1.41 (+ 135 phi (* 180 k))))
+(func bracket ((int k))
+  (let ((c (corner k)) (a (+ phi (* 180 k))))
+    [(+ c (polar 0.62 (- a 90))) c (+ c (polar 0.62 a))]))
+(scene s
+  (group handles (defaults (stroke none))
+    (circle h1 (r 0.06) (pos (polar 0.75 (+ 60 phi t))) (fill 'royalblue'))
+    (circle h2 (r 0.06) (pos (polar 0.75 (+ 240 phi (- t)))) (fill 'crimson')))
+  (curve c (from (corner 0)) (to (corner 1)) (controls [h1.pos h2.pos])
+         (stroke 'mediumpurple') (stroke-width 4) (line-cap 'round'))
+  (group brackets (defaults (stroke '#ad71f2') (stroke-width 16)
+                            (line-cap 'round') (line-join 'round') (fill none))
+    (polyline_ (points (bracket 0)))
+    (polyline_ (points (bracket 1)))))
+(animation spin (loop) (move t (to 360) (duration 9) (ease linear)))
+(animation quarter (loop) (wait 2.5)
+  (move phi (to (+ phi 90)) (duration 1.4) (ease cubic-in-out)))
+(canvas v (x -1.6) (y -1.6) (width 3.2) (height 3.2) s
+  (on-ready (animation (at-once spin quarter))))
