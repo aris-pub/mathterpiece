@@ -1,5 +1,4 @@
-; the medians meet at one point and cut the triangle
-; into six triangles of equal area
+; the medians meet at one point, cutting six equal areas
 (import math clamp)
 (point a [-0.9 -0.6])
 (point b [0.9 -0.5])
@@ -8,9 +7,8 @@
 
 ; what the figure is
 (scene triangle
-  ; typechecked: each t holds three points, so t[2] exists
   (group sixths (defaults (stroke 'white') (stroke-width 2))
-    (foreach t [[a b c] [b c a] [c a b]]
+    (foreach t [[a b c] [b c a] [c a b]]  ; typechecked: t[2] exists
       (let ((m (lerp t[0] t[1] 0.5)))
         ; what the figure looks like
         (polygon_ (points [t[0] g m]) (fill 'cornflowerblue'))
