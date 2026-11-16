@@ -71,12 +71,12 @@ nav a { color: var(--ink); text-decoration: none; font-size: 17px; }
 nav a:hover { color: var(--accent-ink); }
 nav .theme { background: none; border: 0; padding: 4px; color: var(--ink); cursor: pointer; display: flex; }
 nav .theme svg { width: 22px; height: 22px; fill: currentColor; }
-nav .theme .sun { display: none; }
-:root[data-theme="dark"] nav .theme .moon { display: none; }
-:root[data-theme="dark"] nav .theme .sun { display: block; }
+.theme .sun { display: none; }
+:root[data-theme="dark"] .theme .moon { display: none; }
+:root[data-theme="dark"] .theme .sun { display: block; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) nav .theme .moon { display: none; }
-  :root:not([data-theme="light"]) nav .theme .sun { display: block; }
+  :root:not([data-theme="light"]) .theme .moon { display: none; }
+  :root:not([data-theme="light"]) .theme .sun { display: block; }
 }
 nav .gh svg { width: 22px; height: 22px; display: block; fill: currentColor; }
 
@@ -96,7 +96,8 @@ h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 6px; le
 .btn.second { border: 1px solid var(--line); color: var(--ink); background: var(--surface); }
 .demo { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .demo .source { background: var(--code-bg); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
-.demo .source pre { background: none; flex: 1; font-size: 14px; line-height: 1.7; padding: 22px 24px; overflow-x: auto; scrollbar-width: none; }
+.demo .source pre.mtp .ln { width: 1.8em; margin-right: 1em; }
+.demo .source pre { background: none; flex: 1; font-size: 14px; line-height: 1.7; padding: 22px 22px; overflow-x: auto; scrollbar-width: none; }
 .demo .source pre::-webkit-scrollbar { display: none; }
 .demo .result { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 16px 24px; }
 .demo .result mtp-canvas { display: block; width: 100%; max-width: 380px; margin: 0 auto; }
@@ -153,6 +154,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .result.paper .numbered { display: flex; align-items: center; justify-content: center; position: relative; padding: 4px 0; }
 .result.paper .numbered mtp-display { font-size: 24px; }
 .result.paper .eqno { position: absolute; right: 0; }
+.result.paper mtp-canvas { max-width: 290px; }
 .result.paper .caption { font-size: 16px; color: var(--soft); }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .tabs button { font: 500 16px/1 var(--sans); color: var(--soft); background: none; border: 1px solid transparent; border-radius: 999px; padding: 9px 16px; cursor: pointer; }
@@ -200,10 +202,12 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .demo .result:has(.hint-banner) { padding-bottom: 64px; }
 .hint-banner { position: absolute; bottom: 0; left: 0; right: 0; margin: 0; font-family: var(--sans); line-height: 1.4; display: flex; align-items: center; gap: 10px; padding: 12px 24px; font-size: 16px; color: var(--ink); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-top: 1px solid var(--line); }
 .hint-banner svg { color: var(--accent-ink); flex: none; }
-.to-top { position: fixed; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 18px rgba(30, 40, 60, 0.12); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 20; }
-.to-top.shown { opacity: 1; transform: none; pointer-events: auto; }
-.to-top:hover { border-color: var(--accent); }
-@media (prefers-reduced-motion: reduce) { .to-top { transition: none; } }
+.fabs { position: fixed; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; z-index: 20; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+.fabs.shown { opacity: 1; transform: none; pointer-events: auto; }
+.fab { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; padding: 0; box-shadow: 0 6px 18px rgba(30, 40, 60, 0.12); }
+.fab:hover { border-color: var(--accent); }
+.fab.theme svg { width: 20px; height: 20px; fill: currentColor; }
+@media (prefers-reduced-motion: reduce) { .fabs { transition: none; } }
 .use-copy a { color: var(--accent-ink); }
 .use-mock { min-width: 0; }
 .embed-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 28px; align-items: center; margin-top: 24px; }
@@ -293,6 +297,7 @@ footer { border-top: 1px solid var(--line); padding-block: 36px; font-size: 15px
 footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 footer ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
 footer a { color: var(--soft); }
+footer .motto { font: 600 13px/1.4 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); }
 
 .mock { position: fixed; bottom: 12px; right: 12px; background: var(--ink); color: var(--bg); font-size: 13px; padding: 4px 10px; border-radius: 4px; opacity: .8; }
 
@@ -700,7 +705,7 @@ footer a { color: var(--soft); }
 
   <section class="cta" id="start">
     <div class="wrap">
-      <h2>Make your first figure</h2>
+      <h2>Make your first <span class="name">Mathterpiece</span></h2>
       <p class="section-lede">Install mtp, declare a figure in a few lines, and put it on any page.</p>
       <div class="ctas">
         <a class="btn main" href="https://docs.mtp-lang.org/quickstart.html">Get started</a>
@@ -719,6 +724,7 @@ footer a { color: var(--soft); }
       <li><a href="https://github.com/aris-pub/mathterpiece">GitHub</a></li>
       <li><a href="/about">About</a></li>
     </ul>
+    <div class="motto">Explain. Explore. Experience.</div>
     <div>Part of <a href="https://aris.pub">The Aris Program</a></div>
   </div>
 </footer>
@@ -726,7 +732,7 @@ footer a { color: var(--soft); }
 <div class="mock">mockup</div>
 <script>
   // The toggle flips between light and dark, starting from the theme shown now.
-  document.querySelector("nav .theme").addEventListener("click", function () {
+  document.querySelectorAll(".theme").forEach((button) => button.addEventListener("click", function () {
     var root = document.documentElement;
     var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     var next = dark ? "light" : "dark";
@@ -734,7 +740,7 @@ footer a { color: var(--soft); }
     root.classList.remove("light-theme", "dark-theme");
     root.classList.add(next + "-theme");
     try { localStorage.setItem("mtp-theme", next); } catch (e) {}
-  });
+  }));
 </script>
 <script>
   // The gallery's tabs: one source and its figure at a time. A link may open one, as #sunflower.
@@ -796,11 +802,15 @@ footer a { color: var(--soft); }
   const useLinked = document.getElementById("use-" + location.hash.slice(1));
   if (useLinked) useLinked.click();
 </script>
-<button class="to-top" type="button" aria-label="Back to top"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg></button>
+<div class="fabs">
+  <button class="theme fab" type="button" aria-label="Switch between light and dark"><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button>
+  <button class="to-top fab" type="button" aria-label="Back to top"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg></button>
+</div>
 <script>
-  // The back-to-top button shows once the hero is out of view.
+  // The floating buttons, back to top and the theme toggle, show once the hero is out of view.
   const toTop = document.querySelector(".to-top");
-  const showTop = () => toTop.classList.toggle("shown", scrollY > innerHeight * 0.8);
+  const fabs = document.querySelector(".fabs");
+  const showTop = () => fabs.classList.toggle("shown", scrollY > innerHeight * 0.8);
   addEventListener("scroll", showTop, { passive: true });
   showTop();
   toTop.addEventListener("click", () => {
