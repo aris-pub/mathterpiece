@@ -177,13 +177,14 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .cta .ctas { justify-content: center; }
 
 /* Use cases */
-.usecases { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; align-items: start; }
-.use-copy { padding-top: 8px; }
-.use-list { display: flex; flex-direction: column; gap: 4px; grid-row: 1; grid-column: 1; }
-.use-list button { font: 500 1.25rem/1.3 var(--serif); text-align: left; color: var(--soft); background: none; border: 0; border-left: 2px solid var(--line); padding: 10px 16px; cursor: pointer; }
+.usecases { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.use-copy { padding: 30px 28px; }
+.use-list { display: flex; flex-direction: column; gap: 2px; grid-row: 1; grid-column: 1; background: var(--code-bg); border-right: 1px solid var(--line); padding: 18px 0; }
+.use-list button { font: 500 1.2rem/1.3 var(--serif); text-align: left; color: var(--soft); background: none; border: 0; border-left: 3px solid transparent; padding: 12px 20px; cursor: pointer; }
 .use-list button:hover { color: var(--ink); }
-.use-list button[aria-selected="true"] { color: var(--ink); border-left-color: var(--accent); }
-.use-panel { grid-row: 1; grid-column: 2; display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); gap: 36px; align-items: start; }
+.use-list button[aria-selected="true"] { color: var(--ink); background: var(--surface); border-left-color: var(--accent); }
+.use-panel { grid-row: 1; grid-column: 2; display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); align-items: stretch; }
+.use-stage { display: grid; align-items: center; padding: 28px; background: color-mix(in srgb, var(--accent) 6%, var(--bg)); border-left: 1px solid var(--line); }
 .use-panel[hidden] { display: grid; visibility: hidden; }
 .use-copy h3 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 12px; }
 .use-copy p { font-size: 17px; line-height: 1.6; color: var(--soft); margin: 0 0 12px; }
@@ -200,8 +201,9 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-mock.phone { width: 270px; margin: 0 auto; border: 10px solid #22282d; border-radius: 34px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
 @media (max-width: 860px) {
   .usecases { grid-template-columns: minmax(0, 1fr); }
-  .use-list { flex-direction: row; flex-wrap: wrap; }
-  .use-list button { border-left: 0; border-bottom: 2px solid var(--line); }
+  .use-list { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px; }
+  .use-list button { border-left: 0; border-bottom: 3px solid transparent; padding: 10px 12px; }
+  .use-stage { border-left: 0; border-top: 1px solid var(--line); }
   .use-list button[aria-selected="true"] { border-bottom-color: var(--accent); }
   .use-panel { grid-row: 2; grid-column: 1; grid-template-columns: minmax(0, 1fr); }
 }
@@ -227,11 +229,26 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .error { font: 14px/1.6 var(--mono); padding: 14px 18px; }
 .error .where { color: var(--soft); }
 .error .msg { color: var(--red); }
-.claim { font: 400 1.5rem/1.35 var(--serif); margin: 28px 0 0; max-width: 40ch; }
+.safe-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; list-style: none; margin: 0; padding: 0; }
+.safe-steps .label { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--ink); }
+.safe-steps .n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 600; flex: none; }
+.safe-steps .panel { display: flex; flex-direction: column; }
+.safe-steps pre.code { flex: 1; margin: 0; font: 13px/1.7 var(--mono); padding: 14px 16px; background: var(--code-bg); overflow-x: auto; }
+pre.mtp .mark { display: inline-block; min-width: calc(100% + 32px); margin: 0 -16px; padding: 0 16px; box-sizing: border-box; }
+pre.mtp.bad .mark { background: color-mix(in srgb, var(--red) 12%, transparent); }
+pre.mtp.fix .mark { background: color-mix(in srgb, var(--green) 14%, transparent); }
+.safe-steps .error { white-space: pre-wrap; }
+.safe-steps .why { font-size: 16px; color: var(--soft); margin: 0; padding: 0 18px 16px; }
+.safe-steps .live { padding: 16px 18px 0; display: grid; gap: 10px; }
+.safe-steps .live mtp-canvas { display: block; width: 100%; max-width: 240px; margin: 0 auto; }
+.safe-steps .live .why { padding: 0 0 16px; }
 
 /* Every figure gets */
-.gets { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
-.gets li { border-top: 2px solid var(--accent); padding-top: 12px; }
+.gets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px 28px; list-style: none; padding: 0; margin: 0; }
+.gets li { display: grid; gap: 4px; align-content: start; }
+.gets .ic { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 10px; color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.gets li .ic svg { width: 24px; height: 24px; flex: none; }
+.gets li .ic { font-size: 24px; }
 .gets b { display: block; font: 500 1.25rem/1.3 var(--serif); }
 .gets span { font-size: 16px; color: var(--soft); }
 
@@ -251,9 +268,9 @@ footer a { color: var(--soft); }
 .mock { position: fixed; bottom: 12px; right: 12px; background: var(--ink); color: var(--bg); font-size: 13px; padding: 4px 10px; border-radius: 4px; opacity: .8; }
 
 @media (max-width: 860px) {
-  .demo, .checked { grid-template-columns: 1fr; }
+  .demo, .checked, .safe-steps { grid-template-columns: 1fr; }
   .demo .source { border-right: 0; border-bottom: 1px solid var(--line); }
-  .steps, .examples, .uses { grid-template-columns: 1fr; }
+  .steps, .examples, .uses, .gets { grid-template-columns: 1fr; }
   nav ul { gap: 16px; }
 }
 </style>
@@ -266,6 +283,7 @@ footer a { color: var(--soft); }
 <mtp-model id="ornament" src="data/bourgain-ornament.mtpc"></mtp-model>
 <mtp-model id="hero" src="data/hero.mtpc"></mtp-model>
 <mtp-model id="g-schwarz" src="data/schwarz.mtpc"></mtp-model>
+<mtp-model id="g-roots" src="data/roots.mtpc"></mtp-model>
 <mtp-model id="g-dice" src="data/dice.mtpc"></mtp-model>
 <mtp-model id="g-birthday" src="data/birthday.mtpc"></mtp-model>
 <mtp-model id="g-medians" src="data/medians.mtpc"></mtp-model>
@@ -534,9 +552,9 @@ footer a { color: var(--soft); }
             <p class="first">A figure in a web-based paper that readers can explore, next to the claim that it shows.</p>
             <p>The page on the right is an RSM document. RSM is a markup language for papers that are read on the web, and the figure takes one block in its source. Drag <i>u</i> or <i>v</i> in the figure, or point at a side of the inequality.</p>
           </div>
-          <div class="use-mock browser">
+          <div class="use-stage"><div class="use-mock browser">
             <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe src="uses/paper/out/index.html" data-scroll="sec-ineq" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
-          </div>
+          </div></div>
         </div>
         <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
           <div class="use-copy">
@@ -544,19 +562,19 @@ footer a { color: var(--soft); }
             <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
             <p>Any slide tool that makes web pages can show a figure, such as reveal.js. When someone asks about a different triangle, you drag a corner and show them.</p>
           </div>
-          <div class="use-mock slide">
+          <div class="use-stage"><div class="use-mock slide">
             <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
-          </div>
+          </div></div>
         </div>
         <div class="use-panel" id="usep-notes" role="tabpanel" aria-labelledby="use-notes" hidden>
           <div class="use-copy">
             <h3>Notes and digestions</h3>
             <p class="first">A figure in course notes, or in a page that works through someone else's result, with the text around it.</p>
-            <p>The numbers in the text come from the figure, so the prose and the picture always agree. <a href="https://firsthandmath.com">Firsthand Math</a> publishes its digestions this way.</p>
+            <p>The numbers in the text come from the figure, so the prose and the picture always agree.</p>
           </div>
-          <div class="use-mock browser">
+          <div class="use-stage"><div class="use-mock browser">
             <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>course.example/probability/lecture-4</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe src="uses/notes.html" title="Notes and digestions: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
-          </div>
+          </div></div>
         </div>
         <div class="use-panel" id="usep-videos" role="tabpanel" aria-labelledby="use-videos" hidden>
           <div class="use-copy">
@@ -564,9 +582,9 @@ footer a { color: var(--soft); }
             <p class="first">A figure's animations, played and recorded from the same source as the page.</p>
             <p>The runtime has a recording mode that shows one figure on a vertical page, ready to record as a short. When you fix the figure, the page and the next recording both get the fix.</p>
           </div>
-          <div class="use-mock phone">
+          <div class="use-stage"><div class="use-mock phone">
             <div class="screen" style="aspect-ratio: 540 / 960" data-w="540"><iframe src="uses/video.html" title="Videos: an example page with a live figure" loading="lazy" style="width: 540px; height: 960px"></iframe></div>
-          </div>
+          </div></div>
         </div>
       </div>
     </div>
@@ -577,33 +595,64 @@ footer a { color: var(--soft); }
       <h2>Every figure gets the same care</h2>
       <p class="section-lede">These come with the runtime, so no figure has to build them again.</p>
       <ul class="gets">
-        <li><b>Keyboard</b><span>Sliders, buttons and players work from the keyboard.</span></li>
-        <li><b>Screen readers</b><span>Each control and each canvas carries a label written in the source.</span></li>
-        <li><b>Touch</b><span>Every drag also works by tapping.</span></li>
-        <li><b>Light and dark</b><span>Each color has a dark value, and the page picks.</span></li>
-        <li><b>Reduced motion</b><span>Animations respect the reader's setting.</span></li>
-        <li><b>Saved as data</b><span>A figure is a .mtpc file, so it keeps working when the runtime improves.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/></svg></span><b>Keyboard</b><span>Sliders, buttons and players work from the keyboard.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3l4-3.5v12l-4-3.5H4z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5M17.8 7a7 7 0 0 1 0 10"/></svg></span><b>Screen readers</b><span>Each control and each canvas carries a label written in the source.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.2" fill="currentColor"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="9" opacity="0.45"/></svg></span><b>Touch</b><span>Every drag also works by tapping.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></span><b>Light and dark</b><span>Each color has a dark value, and the page picks.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h6M3 12h4M3 15.5h6"/><circle cx="15.5" cy="12" r="4.5"/></svg></span><b>Reduced motion</b><span>Animations respect the reader's setting.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h7.5l4 4v14h-11.5z"/><path d="M14 3v4h4M9.5 12.5h5M9.5 16h5"/></svg></span><b>Saved as data</b><span>A figure is a .mtpc file, so it keeps working when the runtime improves.</span></li>
       </ul>
     </div>
   </section>
 
   <section id="checked">
     <div class="wrap">
-      <h2>Typesafe illustrations</h2>
-      <p class="section-lede">The compiler works out the range of every value. When a value could leave the range that a shape needs, the figure does not compile, and the error gives the line, the column and a way to fix it.</p>
-      <div class="checked">
-        <div class="panel">
-          <div class="label">circle.mtp</div>
-<pre>(real k 1 (>= 0) (<= 3))
-(slider size (move k (from 0) (to 3)))
-(scene s (circle c (r (- k 2))))</pre>
-        </div>
-        <div class="panel">
-          <div class="label">mtp check circle.mtp</div>
-          <div class="error"><span class="where">circle.mtp:3:23:</span> <span class="msg">c's r may break (>= 0): constrain what it reads so this can be proved, or declare c as circle|none</span></div>
-        </div>
-      </div>
-      <p class="claim">A figure that could draw something undefined, such as a circle with a negative radius, never reaches a reader.</p>
+      <h2>Typesafe figures</h2>
+      <p class="section-lede">The compiler works out every value that a figure can take, including values that may not exist. A figure that could draw something undefined does not compile, and the error gives the line, the column and a way to fix it.</p>
+      <ol class="safe-steps">
+        <li class="panel">
+          <div class="label"><span class="n">1</span>Write the figure</div>
+<pre class="mtp code bad" data-src="figures/roots-broken.mtp" data-mark="3"><span class="ln" aria-hidden="true"> 1</span><span class="c1">; the roots of x² + k</span>
+<span class="ln" aria-hidden="true"> 2</span><span class="p">(</span><span class="kd">real</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="m">-1</span><span class="w"> </span><span class="p">(</span><span class="o">&gt;=</span><span class="w"> </span><span class="m">-2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">&lt;=</span><span class="w"> </span><span class="m">2</span><span class="p">))</span>
+<span class="mark"><span class="ln" aria-hidden="true"> 3</span><span class="p">(</span><span class="kd">real</span><span class="w"> </span><span class="nv">r</span><span class="w"> </span><span class="p">(</span><span class="nb">sqrt</span><span class="w"> </span><span class="p">(</span><span class="o">-</span><span class="w"> </span><span class="nv">k</span><span class="p">)))</span></span>
+<span class="ln" aria-hidden="true"> 4</span><span class="p">(</span><span class="kd">scene</span><span class="w"> </span><span class="nv">graph</span>
+<span class="ln" aria-hidden="true"> 5</span><span class="w">  </span><span class="p">(</span><span class="kd">line_</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="p">[</span><span class="m">-2</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">[</span><span class="m">2</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'gray'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 6</span><span class="w">  </span><span class="p">(</span><span class="kd">parametric</span><span class="w"> </span><span class="kd">curve</span><span class="w"> </span><span class="p">(</span><span class="nv">for</span><span class="w"> </span><span class="nv">t</span><span class="w"> </span><span class="m">-2</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w"> </span><span class="p">[</span><span class="nv">t</span><span class="w"> </span><span class="p">(</span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">t</span><span class="w"> </span><span class="nv">t</span><span class="p">)</span><span class="w"> </span><span class="nv">k</span><span class="p">)]</span>
+<span class="ln" aria-hidden="true"> 7</span><span class="w">    </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'slateblue'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke-width</span><span class="w"> </span><span class="m">2</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 8</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">lo</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="p">[(</span><span class="o">-</span><span class="w"> </span><span class="nv">r</span><span class="p">)</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'crimson'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 9</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">hi</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="p">[</span><span class="nv">r</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'crimson'</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">10</span><span class="p">(</span><span class="kd">canvas</span><span class="w"> </span><span class="nv">c</span><span class="w"> </span><span class="p">(</span><span class="nv">x</span><span class="w"> </span><span class="m">-2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">y</span><span class="w"> </span><span class="m">-2.2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">width</span><span class="w"> </span><span class="m">4</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">height</span><span class="w"> </span><span class="m">3.4</span><span class="p">)</span><span class="w"> </span><span class="nv">graph</span><span class="p">)</span>
+<span class="ln" aria-hidden="true">11</span><span class="p">(</span><span class="kd">slider</span><span class="w"> </span><span class="nv">shift</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">-2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">2</span><span class="p">))</span><span class="w"> </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'k'</span><span class="p">))</span></pre>
+        </li>
+        <li class="panel">
+          <div class="label"><span class="n">2</span>The compiler refuses it</div>
+          <div class="error"><span class="where">$ mtp check roots.mtp</span>
+<span class="where">roots.mtp:3:9:</span> <span class="msg">r may be none: give it a default with (or? value default), or declare it real|none</span></div>
+          <p class="why">When k is above 0, &minus;k has no square root, so r has no value, and the two red dots would have no position.</p>
+        </li>
+        <li class="panel">
+          <div class="label"><span class="n">3</span>Say what happens when there are no roots</div>
+<pre class="mtp code fix" data-src="figures/roots.mtp" data-mark="3,8,9"><span class="ln" aria-hidden="true"> 1</span><span class="c1">; the roots of x² + k</span>
+<span class="ln" aria-hidden="true"> 2</span><span class="p">(</span><span class="kd">real</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="m">-1</span><span class="w"> </span><span class="p">(</span><span class="o">&gt;=</span><span class="w"> </span><span class="m">-2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">&lt;=</span><span class="w"> </span><span class="m">2</span><span class="p">))</span>
+<span class="mark"><span class="ln" aria-hidden="true"> 3</span><span class="p">(</span><span class="kd">real</span><span class="p">|</span><span class="kc">none</span><span class="w"> </span><span class="nv">r</span><span class="w"> </span><span class="p">(</span><span class="nb">sqrt</span><span class="w"> </span><span class="p">(</span><span class="o">-</span><span class="w"> </span><span class="nv">k</span><span class="p">)))</span></span>
+<span class="ln" aria-hidden="true"> 4</span><span class="p">(</span><span class="kd">scene</span><span class="w"> </span><span class="nv">graph</span>
+<span class="ln" aria-hidden="true"> 5</span><span class="w">  </span><span class="p">(</span><span class="kd">line_</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="p">[</span><span class="m">-2</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">[</span><span class="m">2</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'gray'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 6</span><span class="w">  </span><span class="p">(</span><span class="kd">parametric</span><span class="w"> </span><span class="kd">curve</span><span class="w"> </span><span class="p">(</span><span class="nv">for</span><span class="w"> </span><span class="nv">t</span><span class="w"> </span><span class="m">-2</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w"> </span><span class="p">[</span><span class="nv">t</span><span class="w"> </span><span class="p">(</span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">t</span><span class="w"> </span><span class="nv">t</span><span class="p">)</span><span class="w"> </span><span class="nv">k</span><span class="p">)]</span>
+<span class="ln" aria-hidden="true"> 7</span><span class="w">    </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'slateblue'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke-width</span><span class="w"> </span><span class="m">2</span><span class="p">))</span>
+<span class="mark"><span class="ln" aria-hidden="true"> 8</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="p">|</span><span class="kc">none</span><span class="w"> </span><span class="nv">lo</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="p">[(</span><span class="o">-</span><span class="w"> </span><span class="nv">r</span><span class="p">)</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'crimson'</span><span class="p">))</span></span>
+<span class="mark"><span class="ln" aria-hidden="true"> 9</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="p">|</span><span class="kc">none</span><span class="w"> </span><span class="nv">hi</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="p">[</span><span class="nv">r</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'crimson'</span><span class="p">)))</span></span>
+<span class="ln" aria-hidden="true">10</span><span class="p">(</span><span class="kd">canvas</span><span class="w"> </span><span class="nv">c</span><span class="w"> </span><span class="p">(</span><span class="nv">x</span><span class="w"> </span><span class="m">-2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">y</span><span class="w"> </span><span class="m">-2.2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">width</span><span class="w"> </span><span class="m">4</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">height</span><span class="w"> </span><span class="m">3.4</span><span class="p">)</span><span class="w"> </span><span class="nv">graph</span><span class="p">)</span>
+<span class="ln" aria-hidden="true">11</span><span class="p">(</span><span class="kd">slider</span><span class="w"> </span><span class="nv">shift</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">-2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">2</span><span class="p">))</span><span class="w"> </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'k'</span><span class="p">))</span></pre>
+        </li>
+        <li class="panel">
+          <div class="label"><span class="n">4</span>Every value of k draws</div>
+          <div class="live">
+            <mtp-canvas model="g-roots" name="c"></mtp-canvas>
+            <mtp-slider model="g-roots" name="shift"></mtp-slider>
+            <p class="why">Move k above 0. The roots disappear, and nothing breaks.</p>
+          </div>
+        </li>
+      </ol>
     </div>
   </section>
 

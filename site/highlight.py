@@ -13,7 +13,7 @@ SITE = Path(__file__).parent
 sys.path.insert(0, str(SITE.parent / "docs" / "_ext"))
 from mtp_sphinx import MtpLexer  # noqa: E402
 
-PRE = re.compile(r'(<pre class="mtp" data-src="([^"]+)">)(.*?)(</pre>)', re.S)
+PRE = re.compile(r'(<pre class="mtp[^"]*" data-src="([^"]+)"(?: data-mark="([^"]*)")?>)(.*?)(</pre>)', re.S)
 
 
 def fill(match: re.Match) -> str:
@@ -22,11 +22,15 @@ def fill(match: re.Match) -> str:
     # The mtp lexer has no token that spans lines, so each line of the output is one source line.
     lines = code.split("\n")
     width = len(str(len(lines)))
+    # data-mark="3,7" marks those lines, for a page that points at a line the reader should see.
+    marked = {int(n) for n in (match.group(3) or "").split(",") if n}
     numbered = "\n".join(
-        f'<span class="ln" aria-hidden="true">{i:>{width}}</span>{line}'
+        (f'<span class="mark">' if i in marked else "")
+        + f'<span class="ln" aria-hidden="true">{i:>{width}}</span>{line}'
+        + ("</span>" if i in marked else "")
         for i, line in enumerate(lines, 1)
     )
-    return match.group(1) + numbered + match.group(4)
+    return match.group(1) + numbered + match.group(5)
 
 
 page = SITE / "index.html"
