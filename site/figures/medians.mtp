@@ -1,29 +1,24 @@
-; the three medians of a triangle meet at one point,
-; wherever its corners go
+; the three medians of a triangle meet at one point
 (point a [-0.9 -0.6])
 (point b [0.9 -0.5])
 (point c [0.1 0.85])
-(point g (* (/ 1 3) (+ a b c)))  ; typechecked: a point
 
 ; what the figure is
 (scene triangle
-  (polygon sides (points [a b c])
+  (polygon sides (points [a b c]) (fill-opacity 0.12)
            ; what the figure looks like
-           (fill '#0e9ae9') (fill-opacity 0.12)
-           (stroke '#0e9ae9'))
-  (group medians
-    (defaults (stroke '#ad71f2') (stroke-width 2))
-    (line_ (from a) (to (lerp b c 0.5)))
-    (line_ (from b) (to (lerp c a 0.5)))
-    (line_ (from c) (to (lerp a b 0.5))))
-  (circle centroid (r 0.05) (pos g) (fill '#ad71f2'))
+           (fill '#0e9ae9') (stroke '#0e9ae9'))
+  ; typechecked: each t holds three points, so t[2] exists
+  (foreach t [[a b c] [b c a] [c a b]]
+    (line_ (from t[0]) (to (lerp t[1] t[2] 0.5))
+           (stroke '#ad71f2')))
   (circle ca (r 0.08) (pos a) (fill '#0e9ae9'))
   (circle cb (r 0.08) (pos b) (fill '#0e9ae9'))
   (circle cc (r 0.08) (pos c) (fill '#0e9ae9')))
 
-; what it does: drag a corner, or tap it
-; and then tap where it goes
-(canvas v (x -1.2) (y -1.1) (width 2.4) (height 2.2) triangle
+; what it does: drag a corner, or tap it, then tap a spot
+(canvas v (x -1.2) (y -1.1) (width 2.4) (height 2.2)
+  triangle
   (on-drag ca (move a (to pointer)))
   (on-drag cb (move b (to pointer)))
   (on-drag cc (move c (to pointer))))
