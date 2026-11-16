@@ -190,8 +190,6 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-copy p { font-size: 17px; line-height: 1.6; color: var(--soft); margin: 0 0 12px; }
 .use-copy p.first { color: var(--ink); font-size: 18px; }
 .use-copy a { color: var(--accent-ink); }
-.use-copy .embed-label { font-size: 14px; color: var(--soft); margin: 18px 0 6px; }
-.use-copy pre.embed { margin: 0; font: 12px/1.6 var(--mono); color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; white-space: pre; }
 .use-mock { min-width: 0; }
 .use-mock .screen { position: relative; overflow: hidden; background: #fff; width: 100%; }
 .use-mock iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; transform: scale(var(--s, 0.4)); }
@@ -553,15 +551,7 @@ footer a { color: var(--soft); }
           <div class="use-copy">
             <h3>Papers</h3>
             <p class="first">A figure in a web-based paper that readers can explore, next to the claim that it shows.</p>
-            <p class="embed-label">In the paper's RSM source:</p>
-<pre class="embed"><code>:html: {
-  :path: figs/schwarz.html
-}
-
-&lt;!-- figs/schwarz.html --&gt;
-&lt;mtp-model id=&quot;cs&quot; src=&quot;schwarz.mtpc&quot;&gt;&lt;/mtp-model&gt;
-&lt;mtp-display model=&quot;cs&quot; name=&quot;shown&quot;&gt;&lt;/mtp-display&gt;
-&lt;mtp-canvas model=&quot;cs&quot; name=&quot;c&quot;&gt;&lt;/mtp-canvas&gt;</code></pre>
+            <p>The figure sits next to the theorem that it illustrates. Readers drag <i>u</i> or <i>v</i>, or point at a side of the inequality, and check the claim for themselves.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
             <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe scrolling="no" src="uses/paper/out/index.html" data-scroll="sec-ineq" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
@@ -571,12 +561,7 @@ footer a { color: var(--soft); }
           <div class="use-copy">
             <h3>Slides</h3>
             <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
-            <p class="embed-label">In a reveal.js slide:</p>
-<pre class="embed"><code>&lt;section&gt;
-  &lt;h2&gt;The three medians meet at one point&lt;/h2&gt;
-  &lt;mtp-model id=&quot;m&quot; src=&quot;medians.mtpc&quot;&gt;&lt;/mtp-model&gt;
-  &lt;mtp-canvas model=&quot;m&quot; name=&quot;v&quot;&gt;&lt;/mtp-canvas&gt;
-&lt;/section&gt;</code></pre>
+            <p>Any slide tool that makes web pages can show a figure. When someone asks about a different triangle, you drag a corner and show them.</p>
           </div>
           <div class="use-stage"><div class="use-mock slide">
             <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe scrolling="no" src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
@@ -586,13 +571,7 @@ footer a { color: var(--soft); }
           <div class="use-copy">
             <h3>Lecture notes</h3>
             <p class="first">A figure in course notes, or in a page that works through someone else's result, with the text around it.</p>
-            <p class="embed-label">In the notes:</p>
-<pre class="embed"><code>&lt;p&gt;In a room of
-  &lt;mtp-slider model=&quot;b&quot; name=&quot;people&quot;&gt;&lt;/mtp-slider&gt;
-  &lt;mtp-readout model=&quot;b&quot; name=&quot;count&quot;&gt;&lt;/mtp-readout&gt;
-  people, the chance that some two of them share
-  a birthday is
-  &lt;mtp-readout model=&quot;b&quot; name=&quot;odds&quot;&gt;&lt;/mtp-readout&gt;.&lt;/p&gt;</code></pre>
+            <p>The numbers in the text come from the figure, so the prose and the picture always agree.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
             <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>course.example/probability/lecture-4</span></div><div class="screen" style="aspect-ratio: 760 / 846" data-w="760"><iframe scrolling="no" src="uses/notes.html" title="Lecture notes: an example page with a live figure" loading="lazy" style="width: 760px; height: 846px"></iframe></div>
@@ -602,8 +581,7 @@ footer a { color: var(--soft); }
           <div class="use-copy">
             <h3>Videos</h3>
             <p class="first">A figure's animations, played and recorded from the same source as the page.</p>
-            <p class="embed-label">To record, open the page with:</p>
-<pre class="embed"><code>lecture.html?record&amp;canvas=v</code></pre>
+            <p>Record the animation with any screen recorder. The page and the video come from one source, so a fix to the figure reaches both.</p>
           </div>
           <div class="use-stage"><div class="use-mock phone">
             <div class="screen" style="aspect-ratio: 540 / 960" data-w="540"><iframe scrolling="no" src="uses/video.html" title="Videos: an example page with a live figure" loading="lazy" style="width: 540px; height: 960px"></iframe></div>
@@ -631,7 +609,7 @@ footer a { color: var(--soft); }
   <section id="checked">
     <div class="wrap">
       <h2>Typesafe figures</h2>
-      <p class="section-lede">The compiler works out every value that a figure can take, including values that may not exist. A figure that could draw something undefined does not compile.</p>
+      <p class="section-lede">Figures never break in the reader&rsquo;s browser. The compiler works out every value that a figure can take, including values that may not exist. A figure that could draw something undefined does not compile.</p>
       <ol class="safe-steps">
         <li class="panel">
           <div class="label"><span class="n">1</span>Write the figure</div>
