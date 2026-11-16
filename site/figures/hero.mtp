@@ -7,14 +7,14 @@
   (circle rim (r 1) (fill none) (stroke 'gray'))
   (foreach k 200
     (line_ (from (spot k)) (to (spot (* m k)))
-           ; what it looks like
+           ; what the figure looks like
            (stroke (mix 'crimson' 'royalblue' (/ k 200)))
            (stroke-opacity 0.5))))
 
 ; what it does
 (animation sweep (loop)
-  (move m (to 12) (duration 40))
-  (move m (to 1) (duration 40)))
+  (move m (from 1) (to 12) (duration 40))
+  (move m (from 12) (to 1) (duration 40)))
 (canvas v (x -1.1) (y -1.1) (width 2.2) (height 2.2) s
   (on-ready (animation sweep)))
 
