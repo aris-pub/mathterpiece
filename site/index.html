@@ -134,6 +134,19 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .framed .brackets path { stroke-width: 14px; }
 .framed mtp-canvas { display: block; width: 100%; }
 
+/* Gallery */
+.gallery .demo[hidden] { display: none; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.tabs button { font: 500 16px/1 var(--sans); color: var(--soft); background: none; border: 1px solid transparent; border-radius: 999px; padding: 9px 16px; cursor: pointer; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--accent-ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+/* CTA */
+.cta { text-align: center; }
+.cta h2::after { content: ""; }
+.cta .section-lede { margin-left: auto; margin-right: auto; }
+.cta .ctas { justify-content: center; }
+
 /* Use cases */
 .uses { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; list-style: none; margin: 0; padding: 0; }
 .uses li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 20px; }
@@ -195,6 +208,9 @@ footer a { color: var(--soft); }
 <mtp-model id="liss" src="data/mini-lissajous.mtpc"></mtp-model>
 <mtp-model id="ornament" src="data/bourgain-ornament.mtpc"></mtp-model>
 <mtp-model id="hero" src="data/hero.mtpc"></mtp-model>
+<mtp-model id="g-sunflower" src="data/sunflower.mtpc"></mtp-model>
+<mtp-model id="g-lissajous" src="data/lissajous-curve.mtpc"></mtp-model>
+<mtp-model id="g-medians" src="data/medians.mtpc"></mtp-model>
 <mtp-model id="s1" src="data/step1.mtpc"></mtp-model>
 <mtp-model id="s2" src="data/step2.mtpc"></mtp-model>
 <mtp-model id="s3" src="data/step3.mtpc"></mtp-model>
@@ -263,8 +279,15 @@ footer a { color: var(--soft); }
           <mtp-canvas model="focus" name="v"></mtp-canvas>
         </div>
       </div>
-      <div class="demo">
-        <div class="source">
+      <div class="gallery">
+        <div class="tabs" role="tablist" aria-label="Examples">
+          <button role="tab" id="tab-chords" aria-controls="demo-chords" aria-selected="true">Chords in a circle</button>
+          <button role="tab" id="tab-sunflower" aria-controls="demo-sunflower" aria-selected="false">A sunflower</button>
+          <button role="tab" id="tab-lissajous" aria-controls="demo-lissajous" aria-selected="false">A Lissajous curve</button>
+          <button role="tab" id="tab-medians" aria-controls="demo-medians" aria-selected="false">Medians of a triangle</button>
+        </div>
+        <div class="demo" id="demo-chords" role="tabpanel" aria-labelledby="tab-chords">
+          <div class="source">
 <pre class="mtp" data-src="figures/hero.mtp"><span class="ln" aria-hidden="true"> 1</span><span class="c1">; chords in a circle: from each point k to the point m × k</span>
 <span class="ln" aria-hidden="true"> 2</span><span class="p">(</span><span class="kd">int</span><span class="w"> </span><span class="nv">n</span><span class="w"> </span><span class="m">200</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="p">))</span>
 <span class="ln" aria-hidden="true"> 3</span><span class="p">(</span><span class="kd">real</span><span class="w"> </span><span class="nv">m</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="p">(</span><span class="o">&gt;=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">&lt;=</span><span class="w"> </span><span class="m">12</span><span class="p">))</span><span class="w">  </span><span class="c1">; typechecked: m stays in 1 to 12</span>
@@ -272,11 +295,11 @@ footer a { color: var(--soft); }
 <span class="ln" aria-hidden="true"> 5</span>
 <span class="ln" aria-hidden="true"> 6</span><span class="c1">; what the figure is</span>
 <span class="ln" aria-hidden="true"> 7</span><span class="p">(</span><span class="kd">scene</span><span class="w"> </span><span class="nv">chords</span>
-<span class="ln" aria-hidden="true"> 8</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">rim</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="kc">none</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'gray'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 8</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">rim</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="kc">none</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'#8b9fad'</span><span class="p">))</span>
 <span class="ln" aria-hidden="true"> 9</span><span class="w">  </span><span class="p">(</span><span class="k">foreach</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="nv">n</span>
 <span class="ln" aria-hidden="true">10</span><span class="w">    </span><span class="p">(</span><span class="kd">line_</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="p">(</span><span class="nv">spot</span><span class="w"> </span><span class="nv">k</span><span class="p">))</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">(</span><span class="nv">spot</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">m</span><span class="w"> </span><span class="nv">k</span><span class="p">)))</span>
 <span class="ln" aria-hidden="true">11</span><span class="w">           </span><span class="c1">; what the figure looks like</span>
-<span class="ln" aria-hidden="true">12</span><span class="w">           </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="p">(</span><span class="nb">mix</span><span class="w"> </span><span class="s">'crimson'</span><span class="w"> </span><span class="s">'royalblue'</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="nv">n</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">12</span><span class="w">           </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="p">(</span><span class="nb">mix</span><span class="w"> </span><span class="s">'#ad71f2'</span><span class="w"> </span><span class="s">'#0e9ae9'</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="nv">n</span><span class="p">)))</span>
 <span class="ln" aria-hidden="true">13</span><span class="w">           </span><span class="p">(</span><span class="nv">stroke-opacity</span><span class="w"> </span><span class="m">0.5</span><span class="p">))))</span>
 <span class="ln" aria-hidden="true">14</span>
 <span class="ln" aria-hidden="true">15</span><span class="c1">; what it does</span>
@@ -290,10 +313,113 @@ footer a { color: var(--soft); }
 <span class="ln" aria-hidden="true">23</span><span class="p">(</span><span class="kd">slider</span><span class="w"> </span><span class="nv">times</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">m</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">12</span><span class="p">))</span>
 <span class="ln" aria-hidden="true">24</span><span class="w">  </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'multiplier m'</span><span class="p">))</span>
 <span class="ln" aria-hidden="true">25</span><span class="p">(</span><span class="kd">button</span><span class="w"> </span><span class="nv">again</span><span class="w"> </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'play'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kd">animation</span><span class="w"> </span><span class="nv">sweep</span><span class="p">))</span></pre>
+          </div>
+          <div class="result">
+            <mtp-canvas model="hero" name="v"></mtp-canvas>
+            <div class="controls hero-controls"><mtp-slider model="hero" name="times"></mtp-slider><mtp-button model="hero" name="again"></mtp-button></div>
+          </div>
         </div>
-        <div class="result">
-          <mtp-canvas model="hero" name="v"></mtp-canvas>
-          <div class="controls hero-controls"><mtp-slider model="hero" name="times"></mtp-slider><mtp-button model="hero" name="again"></mtp-button></div>
+        <div class="demo" id="demo-sunflower" role="tabpanel" aria-labelledby="tab-sunflower" hidden>
+          <div class="source">
+<pre class="mtp" data-src="figures/sunflower.mtp"><span class="ln" aria-hidden="true"> 1</span><span class="c1">; a sunflower: seed i sits at radius √i,</span>
+<span class="ln" aria-hidden="true"> 2</span><span class="c1">; turned i times the angle</span>
+<span class="ln" aria-hidden="true"> 3</span><span class="p">(</span><span class="kd">int</span><span class="w"> </span><span class="nv">n</span><span class="w"> </span><span class="m">300</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 4</span><span class="p">(</span><span class="kd">real</span><span class="w"> </span><span class="nv">angle</span><span class="w"> </span><span class="m">137.5</span><span class="w"> </span><span class="p">(</span><span class="o">&gt;=</span><span class="w"> </span><span class="m">130</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">&lt;=</span><span class="w"> </span><span class="m">145</span><span class="p">))</span><span class="w">  </span><span class="c1">; typechecked</span>
+<span class="ln" aria-hidden="true"> 5</span>
+<span class="ln" aria-hidden="true"> 6</span><span class="c1">; what the figure is</span>
+<span class="ln" aria-hidden="true"> 7</span><span class="p">(</span><span class="kd">scene</span><span class="w"> </span><span class="nv">sunflower</span>
+<span class="ln" aria-hidden="true"> 8</span><span class="w">  </span><span class="p">(</span><span class="k">foreach</span><span class="w"> </span><span class="nv">i</span><span class="w"> </span><span class="nv">n</span>
+<span class="ln" aria-hidden="true"> 9</span><span class="w">    </span><span class="p">(</span><span class="kd">circle_</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="p">(</span><span class="nb">polar</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="m">0.055</span><span class="w"> </span><span class="p">(</span><span class="nb">sqrt</span><span class="w"> </span><span class="nv">i</span><span class="p">))</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">i</span><span class="w"> </span><span class="nv">angle</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">10</span><span class="w">             </span><span class="c1">; what the figure looks like</span>
+<span class="ln" aria-hidden="true">11</span><span class="w">             </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.028</span><span class="p">)</span>
+<span class="ln" aria-hidden="true">12</span><span class="w">             </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="p">(</span><span class="nb">mix</span><span class="w"> </span><span class="s">'#f5a524'</span><span class="w"> </span><span class="s">'#ff6b6b'</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="nv">i</span><span class="w"> </span><span class="nv">n</span><span class="p">))))))</span>
+<span class="ln" aria-hidden="true">13</span>
+<span class="ln" aria-hidden="true">14</span><span class="c1">; what it does</span>
+<span class="ln" aria-hidden="true">15</span><span class="p">(</span><span class="kd">animation</span><span class="w"> </span><span class="nv">drift</span><span class="w"> </span><span class="p">(</span><span class="k">loop</span><span class="p">)</span>
+<span class="ln" aria-hidden="true">16</span><span class="w">  </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">angle</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">135</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">140</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">duration</span><span class="w"> </span><span class="m">20</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">17</span><span class="w">  </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">angle</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">140</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">135</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">duration</span><span class="w"> </span><span class="m">20</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">18</span><span class="p">(</span><span class="kd">canvas</span><span class="w"> </span><span class="nv">v</span><span class="w"> </span><span class="p">(</span><span class="nv">x</span><span class="w"> </span><span class="m">-1.05</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">y</span><span class="w"> </span><span class="m">-1.05</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">width</span><span class="w"> </span><span class="m">2.1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">height</span><span class="w"> </span><span class="m">2.1</span><span class="p">)</span>
+<span class="ln" aria-hidden="true">19</span><span class="w">  </span><span class="nv">sunflower</span>
+<span class="ln" aria-hidden="true">20</span><span class="w">  </span><span class="p">(</span><span class="kd">on-ready</span><span class="w"> </span><span class="p">(</span><span class="kd">animation</span><span class="w"> </span><span class="nv">drift</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">21</span>
+<span class="ln" aria-hidden="true">22</span><span class="c1">; accessible and interactive: mouse, touch or keyboard</span>
+<span class="ln" aria-hidden="true">23</span><span class="p">(</span><span class="kd">slider</span><span class="w"> </span><span class="nb">turn</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">angle</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">130</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">145</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">24</span><span class="w">  </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'angle in degrees'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">25</span><span class="p">(</span><span class="kd">button</span><span class="w"> </span><span class="nv">again</span><span class="w"> </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'play'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kd">animation</span><span class="w"> </span><span class="nv">drift</span><span class="p">))</span></pre>
+          </div>
+          <div class="result">
+            <mtp-canvas model="g-sunflower" name="v"></mtp-canvas>
+            <div class="controls hero-controls"><mtp-slider model="g-sunflower" name="turn"></mtp-slider><mtp-button model="g-sunflower" name="again"></mtp-button></div>
+          </div>
+        </div>
+        <div class="demo" id="demo-lissajous" role="tabpanel" aria-labelledby="tab-lissajous" hidden>
+          <div class="source">
+<pre class="mtp" data-src="figures/lissajous-curve.mtp"><span class="ln" aria-hidden="true"> 1</span><span class="c1">; a Lissajous curve: x = sin(a t + phase), y = sin(b t)</span>
+<span class="ln" aria-hidden="true"> 2</span><span class="p">(</span><span class="kd">import</span><span class="w"> </span><span class="nv">ease</span><span class="w"> </span><span class="nv">linear</span><span class="p">)</span>
+<span class="ln" aria-hidden="true"> 3</span><span class="p">(</span><span class="kd">int</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="p">(</span><span class="o">&gt;=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">&lt;=</span><span class="w"> </span><span class="m">7</span><span class="p">))</span><span class="w">  </span><span class="c1">; typechecked: whole numbers, 1 to 7</span>
+<span class="ln" aria-hidden="true"> 4</span><span class="p">(</span><span class="kd">int</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="p">(</span><span class="o">&gt;=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">&lt;=</span><span class="w"> </span><span class="m">7</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 5</span><span class="p">(</span><span class="kd">real</span><span class="w"> </span><span class="nv">phase</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="p">(</span><span class="nv">wrap</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">360</span><span class="p">))</span>
+<span class="ln" aria-hidden="true"> 6</span>
+<span class="ln" aria-hidden="true"> 7</span><span class="c1">; what the figure is</span>
+<span class="ln" aria-hidden="true"> 8</span><span class="p">(</span><span class="kd">scene</span><span class="w"> </span><span class="kd">curve</span>
+<span class="ln" aria-hidden="true"> 9</span><span class="w">  </span><span class="p">(</span><span class="kd">polyline</span><span class="w"> </span><span class="nv">lissajous</span>
+<span class="ln" aria-hidden="true">10</span><span class="w">    </span><span class="p">(</span><span class="nv">points</span><span class="w"> </span><span class="p">(</span><span class="nb">map</span><span class="w"> </span><span class="p">(</span><span class="nb">range</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">360</span><span class="w"> </span><span class="p">(</span><span class="nv">num</span><span class="w"> </span><span class="m">721</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">11</span><span class="w">                 </span><span class="p">(</span><span class="k">fn</span><span class="w"> </span><span class="nv">t</span><span class="w"> </span><span class="p">[(</span><span class="nb">sind</span><span class="w"> </span><span class="p">(</span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="nv">t</span><span class="p">)</span><span class="w"> </span><span class="nv">phase</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">12</span><span class="w">                        </span><span class="p">(</span><span class="nb">sind</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="nv">t</span><span class="p">))])))</span>
+<span class="ln" aria-hidden="true">13</span><span class="w">    </span><span class="c1">; what the figure looks like</span>
+<span class="ln" aria-hidden="true">14</span><span class="w">    </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'#1fb5a2'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke-width</span><span class="w"> </span><span class="m">3</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">line-join</span><span class="w"> </span><span class="s">'round'</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">15</span>
+<span class="ln" aria-hidden="true">16</span><span class="c1">; what it does</span>
+<span class="ln" aria-hidden="true">17</span><span class="p">(</span><span class="kd">animation</span><span class="w"> </span><span class="nv">spin</span><span class="w"> </span><span class="p">(</span><span class="k">loop</span><span class="p">)</span>
+<span class="ln" aria-hidden="true">18</span><span class="w">  </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">phase</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">0</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">360</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">duration</span><span class="w"> </span><span class="m">12</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">ease</span><span class="w"> </span><span class="nv">linear</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">19</span><span class="p">(</span><span class="kd">canvas</span><span class="w"> </span><span class="nv">v</span><span class="w"> </span><span class="p">(</span><span class="nv">x</span><span class="w"> </span><span class="m">-1.15</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">y</span><span class="w"> </span><span class="m">-1.15</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">width</span><span class="w"> </span><span class="m">2.3</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">height</span><span class="w"> </span><span class="m">2.3</span><span class="p">)</span><span class="w"> </span><span class="kd">curve</span>
+<span class="ln" aria-hidden="true">20</span><span class="w">  </span><span class="p">(</span><span class="kd">on-ready</span><span class="w"> </span><span class="p">(</span><span class="kd">animation</span><span class="w"> </span><span class="nv">spin</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">21</span>
+<span class="ln" aria-hidden="true">22</span><span class="c1">; accessible and interactive: mouse, touch or keyboard</span>
+<span class="ln" aria-hidden="true">23</span><span class="p">(</span><span class="kd">slider</span><span class="w"> </span><span class="nv">across</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">7</span><span class="p">))</span><span class="w"> </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'a'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">24</span><span class="p">(</span><span class="kd">slider</span><span class="w"> </span><span class="nv">up</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="m">7</span><span class="p">))</span><span class="w"> </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'b'</span><span class="p">))</span></pre>
+          </div>
+          <div class="result">
+            <mtp-canvas model="g-lissajous" name="v"></mtp-canvas>
+            <div class="controls hero-controls"><mtp-slider model="g-lissajous" name="across"></mtp-slider><mtp-slider model="g-lissajous" name="up"></mtp-slider></div>
+          </div>
+        </div>
+        <div class="demo" id="demo-medians" role="tabpanel" aria-labelledby="tab-medians" hidden>
+          <div class="source">
+<pre class="mtp" data-src="figures/medians.mtp"><span class="ln" aria-hidden="true"> 1</span><span class="c1">; the three medians of a triangle meet at one point,</span>
+<span class="ln" aria-hidden="true"> 2</span><span class="c1">; wherever its corners go</span>
+<span class="ln" aria-hidden="true"> 3</span><span class="p">(</span><span class="kd">point</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="p">[</span><span class="m">-0.9</span><span class="w"> </span><span class="m">-0.6</span><span class="p">])</span>
+<span class="ln" aria-hidden="true"> 4</span><span class="p">(</span><span class="kd">point</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="p">[</span><span class="m">0.9</span><span class="w"> </span><span class="m">-0.5</span><span class="p">])</span>
+<span class="ln" aria-hidden="true"> 5</span><span class="p">(</span><span class="kd">point</span><span class="w"> </span><span class="nv">c</span><span class="w"> </span><span class="p">[</span><span class="m">0.1</span><span class="w"> </span><span class="m">0.85</span><span class="p">])</span>
+<span class="ln" aria-hidden="true"> 6</span><span class="p">(</span><span class="kd">point</span><span class="w"> </span><span class="nv">g</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">3</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">+</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="nv">c</span><span class="p">)))</span><span class="w">  </span><span class="c1">; typechecked: a point</span>
+<span class="ln" aria-hidden="true"> 7</span>
+<span class="ln" aria-hidden="true"> 8</span><span class="c1">; what the figure is</span>
+<span class="ln" aria-hidden="true"> 9</span><span class="p">(</span><span class="kd">scene</span><span class="w"> </span><span class="kd">triangle</span>
+<span class="ln" aria-hidden="true">10</span><span class="w">  </span><span class="p">(</span><span class="kd">polygon</span><span class="w"> </span><span class="nv">sides</span><span class="w"> </span><span class="p">(</span><span class="nv">points</span><span class="w"> </span><span class="p">[</span><span class="nv">a</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="nv">c</span><span class="p">])</span>
+<span class="ln" aria-hidden="true">11</span><span class="w">           </span><span class="c1">; what the figure looks like</span>
+<span class="ln" aria-hidden="true">12</span><span class="w">           </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'#0e9ae9'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">fill-opacity</span><span class="w"> </span><span class="m">0.12</span><span class="p">)</span>
+<span class="ln" aria-hidden="true">13</span><span class="w">           </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'#0e9ae9'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">14</span><span class="w">  </span><span class="p">(</span><span class="kd">group</span><span class="w"> </span><span class="nv">medians</span>
+<span class="ln" aria-hidden="true">15</span><span class="w">    </span><span class="p">(</span><span class="k">defaults</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'#ad71f2'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke-width</span><span class="w"> </span><span class="m">2</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">16</span><span class="w">    </span><span class="p">(</span><span class="kd">line_</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="nv">a</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">(</span><span class="nb">lerp</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="nv">c</span><span class="w"> </span><span class="m">0.5</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">17</span><span class="w">    </span><span class="p">(</span><span class="kd">line_</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="nv">b</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">(</span><span class="nb">lerp</span><span class="w"> </span><span class="nv">c</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="m">0.5</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">18</span><span class="w">    </span><span class="p">(</span><span class="kd">line_</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="nv">c</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">(</span><span class="nb">lerp</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="m">0.5</span><span class="p">))))</span>
+<span class="ln" aria-hidden="true">19</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">centroid</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.05</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="nv">g</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'#ad71f2'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">20</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">ca</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.08</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="nv">a</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'#0e9ae9'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">21</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">cb</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.08</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="nv">b</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'#0e9ae9'</span><span class="p">))</span>
+<span class="ln" aria-hidden="true">22</span><span class="w">  </span><span class="p">(</span><span class="kd">circle</span><span class="w"> </span><span class="nv">cc</span><span class="w"> </span><span class="p">(</span><span class="nv">r</span><span class="w"> </span><span class="m">0.08</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">pos</span><span class="w"> </span><span class="nv">c</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="s">'#0e9ae9'</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">23</span>
+<span class="ln" aria-hidden="true">24</span><span class="c1">; what it does: drag a corner, or tap it</span>
+<span class="ln" aria-hidden="true">25</span><span class="c1">; and then tap where it goes</span>
+<span class="ln" aria-hidden="true">26</span><span class="p">(</span><span class="kd">canvas</span><span class="w"> </span><span class="nv">v</span><span class="w"> </span><span class="p">(</span><span class="nv">x</span><span class="w"> </span><span class="m">-1.2</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">y</span><span class="w"> </span><span class="m">-1.1</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">width</span><span class="w"> </span><span class="m">2.4</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">height</span><span class="w"> </span><span class="m">2.2</span><span class="p">)</span><span class="w"> </span><span class="kd">triangle</span>
+<span class="ln" aria-hidden="true">27</span><span class="w">  </span><span class="p">(</span><span class="kd">on-drag</span><span class="w"> </span><span class="nv">ca</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="nv">pointer</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">28</span><span class="w">  </span><span class="p">(</span><span class="kd">on-drag</span><span class="w"> </span><span class="nv">cb</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">b</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="nv">pointer</span><span class="p">)))</span>
+<span class="ln" aria-hidden="true">29</span><span class="w">  </span><span class="p">(</span><span class="kd">on-drag</span><span class="w"> </span><span class="nv">cc</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">c</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="nv">pointer</span><span class="p">))))</span></pre>
+          </div>
+          <div class="result">
+            <mtp-canvas model="g-medians" name="v"></mtp-canvas>
+            <div class="controls hero-controls"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -406,6 +532,17 @@ footer a { color: var(--soft); }
       <p class="more"><a href="/examples">All examples →</a></p>
     </div>
   </section>
+  <section class="cta" id="start">
+    <div class="wrap">
+      <h2>Make your first figure</h2>
+      <p class="section-lede">Install mtp, declare a figure in a few lines, and put it on any page.</p>
+      <div class="ctas">
+        <a class="btn main" href="https://docs.mtp-lang.org/quickstart.html">Get started</a>
+        <a class="btn second" href="/examples">See the examples</a>
+        <a class="btn second" href="https://github.com/aris-pub/mathterpiece">GitHub</a>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
@@ -432,6 +569,20 @@ footer a { color: var(--soft); }
     root.classList.add(next + "-theme");
     try { localStorage.setItem("mtp-theme", next); } catch (e) {}
   });
+</script>
+<script>
+  // The gallery's tabs: one source and its figure at a time. A link may open one, as #sunflower.
+  const tabs = [...document.querySelectorAll('.tabs [role="tab"]')];
+  const show = (tab) => {
+    for (const other of tabs) {
+      const on = other === tab;
+      other.setAttribute("aria-selected", String(on));
+      document.getElementById(other.getAttribute("aria-controls")).hidden = !on;
+    }
+  };
+  for (const tab of tabs) tab.addEventListener("click", () => show(tab));
+  const linked = document.getElementById("tab-" + location.hash.slice(1));
+  if (linked) show(linked);
 </script>
 </body>
 </html>

@@ -105,7 +105,7 @@ docs-publish: docs-build
 # build the landing page into site/: compile its figures and the examples it shows, and copy the runtime
 site-build: build-web
     mkdir -p site/data
-    for f in site/figures/hero.mtp site/figures/mini-*.mtp site/figures/step*.mtp; do uv run mtp compile "$f" -o "site/data/$(basename "$f" .mtp).mtpc"; done
+    for f in site/figures/hero.mtp site/figures/sunflower.mtp site/figures/lissajous-curve.mtp site/figures/medians.mtp site/figures/mini-*.mtp site/figures/step*.mtp; do uv run mtp compile "$f" -o "site/data/$(basename "$f" .mtp).mtpc"; done
     for e in lissajous times-tables pythagoras koch-snowflake golden-tour inversion bourgain-ornament; do uv run mtp compile "examples/$e.mtp" -o "site/data/$e.mtpc"; done
     cp web/dist/mathterpiece.js site/
     uv run --group docs python site/highlight.py

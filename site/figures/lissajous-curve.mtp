@@ -1,0 +1,24 @@
+; a Lissajous curve: x = sin(a t + phase), y = sin(b t)
+(import ease linear)
+(int a 3 (>= 1) (<= 7))  ; typechecked: whole numbers, 1 to 7
+(int b 2 (>= 1) (<= 7))
+(real phase 0 (wrap 0 360))
+
+; what the figure is
+(scene curve
+  (polyline lissajous
+    (points (map (range 0 360 (num 721))
+                 (fn t [(sind (+ (* a t) phase))
+                        (sind (* b t))])))
+    ; what the figure looks like
+    (stroke '#1fb5a2') (stroke-width 3) (line-join 'round')))
+
+; what it does
+(animation spin (loop)
+  (move phase (from 0) (to 360) (duration 12) (ease linear)))
+(canvas v (x -1.15) (y -1.15) (width 2.3) (height 2.3) curve
+  (on-ready (animation spin)))
+
+; accessible and interactive: mouse, touch or keyboard
+(slider across (move a (from 1) (to 7)) (label 'a'))
+(slider up (move b (from 1) (to 7)) (label 'b'))
