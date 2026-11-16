@@ -6,11 +6,11 @@
 
 ; what the figure is
 (scene curve
-  (polyline lissajous (stroke-width 3)
+  (polyline lissajous
     (points (map (range 0 360 (num 721))
       (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
     ; what the figure looks like
-    (stroke '#1fb5a2')))
+    (stroke '#1fb5a2') (stroke-width 3)))
 
 ; what it does
 (animation spin (loop)
@@ -21,6 +21,6 @@
   (on-ready (animation spin)))
 
 ; accessible and interactive: mouse, touch or keyboard
-(slider across (move a (from 1) (to 7)) (label 'a'))
-(slider up (move b (from 1) (to 7)) (label 'b'))
+(slider across (move a (from 1) (to 7)) (step 7) (label 'a'))
+(slider up (move b (from 1) (to 7)) (step 7) (label 'b'))
 (readout ratio $'a : b = {a} : {b}')
