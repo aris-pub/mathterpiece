@@ -1,13 +1,16 @@
-; chords in a circle, as a video: from each point k to the point m × k
+; chords in a circle, as a video: from each of n points k to the point m × k.
+; The play moves m; n is the reader's, so a pause, a new n and play carry on
 (import ease linear)
-(int n 200 (const))
+(int n 160 (>= 12) (<= 240))
 (real m 2 (>= 2) (<= 12))
 (func spot ((real k)) (polar 1 (turn (/ k n))))
 (scene chords
   (circle rim (r 1) (fill none) (stroke 'gray'))
   (foreach k n
     (line_ (from (spot k)) (to (spot (* m k)))
-           (stroke (mix 'crimson' 'royalblue' (/ k n))) (stroke-opacity 0.5))))
+           (stroke (mix 'crimson' 'royalblue' (min 1 (/ k n))))
+           (stroke-opacity 0.5))))
 (canvas v chords)
 (play film (label 'play the times tables')
   (animation (set m 2) (move m (to 12) (duration 30) (ease linear))))
+(slider points (move n (from 12) (to 240)) (label 'points'))
