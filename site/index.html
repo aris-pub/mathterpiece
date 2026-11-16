@@ -255,6 +255,16 @@ pre.mtp.bad .mark { background: color-mix(in srgb, var(--red) 12%, transparent);
 pre.mtp.fix .mark { background: color-mix(in srgb, var(--green) 14%, transparent); }
 .safe-steps .error { white-space: pre-wrap; }
 .safe-steps .why { font-size: 16px; color: var(--soft); margin: 0; padding: 0 18px 16px; }
+.safe-steps .term { flex: 1; display: flex; flex-direction: column; background: #1d2327; color: #d6dde2; }
+.safe-steps .term-bar { display: flex; align-items: center; gap: 6px; padding: 9px 12px; background: #262d32; border-bottom: 1px solid #323a40; }
+.safe-steps .term-bar i { width: 10px; height: 10px; border-radius: 50%; background: #4a545b; }
+.safe-steps .term-bar span { margin-left: 8px; font: 12px/1 var(--mono); color: #8d9aa3; }
+.safe-steps .term pre { flex: 1; margin: 0; padding: 14px 16px; font: 12.5px/1.75 var(--mono); white-space: pre-wrap; background: none; color: inherit; }
+.safe-steps .term .prompt { color: #b98af5; }
+.safe-steps .term .cmd { color: #f2f5f7; }
+.safe-steps .term .loc { color: #8d9aa3; }
+.safe-steps .term .msg { color: #ff8a8a; }
+.safe-steps .term .caret { display: inline-block; width: 0.6em; height: 1.1em; vertical-align: text-bottom; background: #d6dde2; opacity: 0.7; }
 .safe-between { font-size: 17px; line-height: 1.6; color: var(--soft); margin: 24px 0; }
 #checked .section-lede { max-width: none; }
 .roots-says { margin: 0; text-align: left; font: 500 17px/1.4 var(--mono); color: var(--accent-ink); }
@@ -648,8 +658,12 @@ footer a { color: var(--soft); }
         </li>
         <li class="panel">
           <div class="label"><span class="n">2</span>The compiler refuses it</div>
-          <div class="error"><span class="where">$ mtp check roots.mtp</span>
-<span class="where">roots.mtp:2:9:</span> <span class="msg">r may be none: give it a default with (or? value default), or declare it real|none</span></div>
+          <div class="term" role="img" aria-label="A terminal: mtp check roots.mtp reports roots.mtp:2:9: r may be none: give it a default with (or? value default), or declare it real|none">
+            <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>~/figures</span></div>
+<pre aria-hidden="true"><span class="prompt">$</span> <span class="cmd">mtp check roots.mtp</span>
+<span class="loc">roots.mtp:2:9:</span> <span class="msg">r may be none: give it a default with (or? value default), or declare it real|none</span>
+<span class="prompt">$</span> <span class="caret"></span></pre>
+          </div>
         </li>
       </ol>
       <p class="safe-between">When k is above 0, &minus;k has no square root, so r has no value, and the two red dots would have no position. The error says what to change, so a person or a coding agent can fix the figure.</p>
