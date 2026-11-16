@@ -19,7 +19,14 @@ PRE = re.compile(r'(<pre class="mtp" data-src="([^"]+)">)(.*?)(</pre>)', re.S)
 def fill(match: re.Match) -> str:
     src = (SITE / match.group(2)).read_text(encoding="utf-8").rstrip("\n")
     code = highlight(src, MtpLexer(), HtmlFormatter(nowrap=True)).rstrip("\n")
-    return match.group(1) + code + match.group(4)
+    # The mtp lexer has no token that spans lines, so each line of the output is one source line.
+    lines = code.split("\n")
+    width = len(str(len(lines)))
+    numbered = "\n".join(
+        f'<span class="ln" aria-hidden="true">{i:>{width}}</span>{line}'
+        for i, line in enumerate(lines, 1)
+    )
+    return match.group(1) + numbered + match.group(4)
 
 
 page = SITE / "index.html"
