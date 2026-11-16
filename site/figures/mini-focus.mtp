@@ -1,4 +1,4 @@
-; the logo, twice its size, drawn by mtp: mtp in the middle and the brackets at the corners.
+; the logo, twice its size, drawn by mtp: mtp in the middle and the brackets near its corners.
 ; In a loop, t and p fade out while the m moves to the center and the brackets close in on it
 ; with a full turn, ending as in the logo; then the same moves run back.
 (import ease cubic-in-out)
@@ -13,29 +13,33 @@
    [-2.37 -36.44] [-3.44 -35.87] [-4.38 -35.1] [-5.16 -34.16] [-5.73 -33.09]
    [-6.08 -31.92] [-6.2 -30.71]]
   (const))
-(real mx -141.9)
+(real a -4.5)
 (real tp 1 (>= 0) (<= 1))
-(real cx 180)
-(real cy 180)
+(real cx 145)
+(real cr 145)
+(real cy 145)
 (real phi 0)
 (real o 0.35 (>= 0) (<= 1))
 (font logo (family '"Crimson Pro", Georgia, serif') (weight 600) (size 168))
 (color ink (light-dark '#51636f' '#ced6dc'))
 (scene b
-  (text m 'm' (font logo) (pos [mx -34]) (fill ink))
-  (text rest 'tp' (font logo) (pos [(+ mx 137.2) -34]) (fill ink) (opacity tp))
+  ; m ends where tp starts, at a, so the two touch at any size: text is sized in pixels
+  (text m 'm' (font logo) (pos [a -34]) (halign 'end') (fill ink))
+  (text rest 'tp' (font logo) (pos [a -34]) (halign 'start') (fill ink) (opacity tp))
   (group brackets (transform (rotate phi))
                   (defaults (fill '#ad71f2') (stroke none) (opacity o))
     (polygon_ (points (map bracket (fn p (+ [(- cx) cy] (* 2 p))))))
-    (polygon_ (points (map bracket (fn p (- [cx (- cy)] (* 2 p))))))))
+    (polygon_ (points (map bracket (fn p (- [cr (- cy)] (* 2 p))))))))
 (animation cycle (loop)
   (wait 1.2)
   (at-once (defaults (duration 1.8) (ease cubic-in-out))
-    (move tp (to 0)) (move mx (to -69.2)) (move cx (to 115.4)) (move cy (to 56.4))
+    (move tp (to 0)) (move a (to 61.8)) (move cx (to 115.4)) (move cr (to 110))
+    (move cy (to 56.4))
     (move phi (to 360)) (move o (to 1)))
   (wait 1.6)
   (at-once (defaults (duration 1.8) (ease cubic-in-out))
-    (move tp (to 1)) (move mx (to -141.9)) (move cx (to 180)) (move cy (to 180))
+    (move tp (to 1)) (move a (to -4.5)) (move cx (to 145)) (move cr (to 145))
+    (move cy (to 145))
     (move phi (to 0)) (move o (to 0.35))))
 (canvas v (x -210) (y -210) (width 420) (height 420) b
   (on-ready (animation cycle)))

@@ -1,3 +1,0 @@
-(real k 1 (>= 0) (<= 3))
-(slider size (move k (from 0) (to 3)))
-(scene s (circle c (r (- k 2))))

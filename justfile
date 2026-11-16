@@ -102,10 +102,9 @@ docs-preview: docs-build
 docs-publish: docs-build
     npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/guide --site 9f784091-fca7-4dd6-bb50-b02944ec0963 --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
 
-# build the landing page into site/: compile its figures and the examples it shows, and copy the runtime
+# build the landing page into site/: compile its figures and copy the runtime
 site-build: build-web
     mkdir -p site/data
-    for f in site/figures/hero.mtp site/figures/birthday.mtp site/figures/medians.mtp site/figures/schwarz.mtp site/figures/roots.mtp site/figures/dice.mtp site/figures/mini-*.mtp site/figures/step*.mtp; do uv run mtp compile "$f" -o "site/data/$(basename "$f" .mtp).mtpc"; done
-    for e in lissajous times-tables pythagoras koch-snowflake golden-tour inversion bourgain-ornament; do uv run mtp compile "examples/$e.mtp" -o "site/data/$e.mtpc"; done
+    for f in site/figures/hero.mtp site/figures/birthday.mtp site/figures/medians.mtp site/figures/schwarz.mtp site/figures/roots.mtp site/figures/dice.mtp site/figures/mini-focus.mtp; do uv run mtp compile "$f" -o "site/data/$(basename "$f" .mtp).mtpc"; done
     cp web/dist/mathterpiece.js site/
     uv run --group docs python site/highlight.py
