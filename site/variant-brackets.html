@@ -81,6 +81,8 @@ h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 6px; le
 .demo .result mtp-canvas { display: block; width: 100%; max-width: 380px; margin: 0 auto; }
 .demo .result .controls { padding: 8px 0 0; max-width: 380px; width: 100%; margin: 0 auto; }
 .demo .result .controls mtp-slider { display: block; }
+.hero-controls { display: flex; gap: 16px; align-items: end; }
+.hero-controls mtp-slider { flex: 1; }
 
 /* The mtp lexer's classes, in the BRAIID colors. */
 pre.mtp .c1 { color: var(--soft); font-style: italic; }
@@ -256,7 +258,7 @@ footer a { color: var(--soft); }
         </div>
         <div class="result">
           <mtp-canvas model="hero" name="v"></mtp-canvas>
-          <div class="controls"><mtp-slider model="hero" name="times"></mtp-slider></div>
+          <div class="controls hero-controls"><mtp-slider model="hero" name="times"></mtp-slider><mtp-button model="hero" name="again"></mtp-button></div>
         </div>
       </div>
     </div>
