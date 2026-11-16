@@ -108,3 +108,11 @@ site-build: build-web
     for f in site/figures/hero.mtp site/figures/birthday.mtp site/figures/medians.mtp site/figures/schwarz.mtp site/figures/roots.mtp site/figures/dice.mtp site/figures/mini-focus.mtp; do uv run mtp compile "$f" -o "site/data/$(basename "$f" .mtp).mtpc"; done
     cp web/dist/mathterpiece.js site/
     uv run --group docs python site/highlight.py
+
+# build the landing page and publish it to its fixed draft address, https://draft--mtp-lang.netlify.app
+site-preview: site-build
+    npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir site --site feae9884-d86c-4a28-a4a7-cde90f9a78db --alias draft --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['deploy_url'])"
+
+# build the landing page and publish it at mtp-lang.org
+site-publish: site-build
+    npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir site --site feae9884-d86c-4a28-a4a7-cde90f9a78db --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
