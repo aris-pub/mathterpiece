@@ -1,4 +1,3 @@
-; the roots of x² + k
 (real k -1 (>= -2) (<= 2))
 (real r (sqrt (- k)))
 (scene graph
