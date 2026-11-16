@@ -9,7 +9,7 @@
     (let ((w (* (if (= k 'dot') s (* (sign s) nu)) e))
           (h (* nv (as point [e.y (- e.x)]))))
       (polygon_ (points [[0 0] w (+ w h) h]) (opacity (if (= lit k) 0.45 0.12))
-        (fill (if (= k 'dot') 'slateblue' 'gray')))))
+        (fill (if (= k 'dot') 'slateblue' 'crimson')))))
   (line_ (from u) (to (* s e)) (stroke 'gray') (dash [4 4]))
   (group arrows (defaults (stroke-width 3) (head-end 'dart'))
     (line pu (from [0 0]) (to u) (stroke 'crimson'))
