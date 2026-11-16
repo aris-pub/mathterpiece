@@ -1,25 +1,19 @@
 ; Cauchy–Schwarz, as two rectangles of height ‖v‖
-(point u [1.8 0.4])
-(point v [0.5 1.4])
+(point u [1.8 0.4]) (point v [0.5 1.4])
 (real nu (dist [0 0] u)) (real nv (dist [0 0] v))
 (point e (or? (* (/ 1 nv) v) [0 1]))  ; typechecked: v may be 0
-(real s (+ (* u.x e.x) (* u.y e.y)))
-(string lit '')
-(font var (size 22) (style 'italic') (family 'serif'))
+(real s (+ (* u.x e.x) (* u.y e.y))) (string lit '')
 
 (scene plane
   (foreach k ['dot' 'bound']
     (let ((w (* (if (= k 'dot') s (* (sign s) nu)) e))
           (h (* nv (as point [e.y (- e.x)]))))
-      (polygon_ (points [[0 0] w (+ w h) h]) (stroke none)
-        (fill (if (= k 'dot') 'slateblue' 'gray'))
-        (opacity (if (= lit k) 0.45 0.12)))))
+      (polygon_ (points [[0 0] w (+ w h) h]) (opacity (if (= lit k) 0.45 0.12))
+        (fill (if (= k 'dot') 'slateblue' 'gray')))))
   (line_ (from u) (to (* s e)) (stroke 'gray') (dash [4 4]))
   (group arrows (defaults (stroke-width 3) (head-end 'dart'))
     (line pu (from [0 0]) (to u) (stroke 'crimson'))
-    (line pv (from [0 0]) (to v) (stroke 'royalblue')))
-  (group names (defaults (font var) (halign 'middle') (valign 'middle'))
-    (text_ 'u' (pos (* 1.15 u))) (text_ 'v' (pos (* 1.15 v)))))
+    (line pv (from [0 0]) (to v) (stroke 'royalblue'))))
 (formula cs
   tex'\Big|\underbrace{\term{dot}{\langle u, v\rangle}}_{\term{a}{}}\Big|
       \term{rel}{} \underbrace{\term{bound}{\|u\|\,\|v\|}}_{\term{b}{}}'
