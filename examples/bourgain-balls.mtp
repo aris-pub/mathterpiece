@@ -10,7 +10,7 @@
 ; the dice are rolled.
 
 (import ease linear)
-(import rand)
+(import rand rand roll-dice)
 
 (import house paper ink soft red green)
 

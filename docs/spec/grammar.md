@@ -181,9 +181,9 @@ and so is a name that {numref}`declaration-names` does not allow.
 
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
-optional argument: a {term}`listener`, `(move …)`, an `(animation …)` inside a {term}`control` or a
-listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`, `(term …)`, `(like …)`, every
-optional argument, every call and every special form. A {term}`view` and a control always have a
+optional argument: a {term}`listener`, `(move …)`, `(set …)`, an `(animation …)` inside a
+{term}`control` or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
+`(term …)`, `(like …)`, every optional argument, every call and every special form. A {term}`view` and a control always have a
 name, because their elements on the page give it, as `<mtp-canvas name="v">`.
 ```
 
@@ -254,7 +254,7 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | Body | Optional arguments | Other items | let, foreach |
 |---|---|---|---|
 | The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. At most one `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes |
-| The top level of a {term}`file to import` | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A `let` or a `foreach` here holds no `import` | yes |
+| The top level of a {term}`file to import` | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. In a file of the standard library, also `(primitive …)` ({numref}`primitive-form`). A `let` or a `foreach` here holds no `import` | yes |
 | `(scene name …)` | `(background …)`, `(transform …)` | Shapes: every shape, `group`, `row`, `column`, motif and variant instances. Variables. `exists-when` | yes |
 | `(group name …)`, `(row name …)`, `(column name …)` | the optional arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes |
 | Any other shape, such as `(circle name …)` | the optional arguments of the shape | The string of a text, as a positional argument | no body |
@@ -271,12 +271,13 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(term name …)` | `(like t)` first, then items `(attribute value)`, `(tex …)` among them | None | no body |
 | A variable, `(T name value? …)` | none | Constraints, such as `(>= 0)` | yes |
 | `(transition name target …)`, `(move target …)` | `like` first, then `from`, `to`, `duration`, `ease`, `path` | None | no body |
-| `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `wait`, `roll-dice`, `at-once`, `in-order`, `(animation …)` ({numref}`animation-step`), the name of an animation or a transition, a use of a choreo | yes |
+| `(set target value)` | none | None | no body |
+| `(animation name …)`, `(animation …)` in a control or a listener, `(choreo name params …)` | `(defaults …)`, `(loop …)` | Steps: `move`, `set`, `wait`, `at-once`, `in-order`, `(animation …)` ({numref}`animation-step`), the name of an animation or a transition, a use of a choreo | yes |
 | `(at-once …)`, `(in-order …)` | `(defaults …)` | The steps of an animation. Not: `loop` | yes |
 | `(canvas name …)` | `x`, `y`, `width`, `height`, all four or none ({numref}`canvas-view-box`), `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content, at least one item: names of shapes or of the scene, list literals, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes |
 | `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes |
 | `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` ({numref}`listeners-in-views`) | yes |
-| A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes |
+| A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)`, `(set …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes |
 | A listener, inside the body of a view | its optional arguments, its animation among them. Not: `(in …)` | Its positional arguments: the shape or term that it listens to, and for some listeners a target. Conditions | yes |
 | `(defaults …)` of a group or an instance | none | Items `(attribute value)` for the members of the container | yes |
 | `(defaults …)` of an animation | none | `(duration …)`, `(ease …)` | yes |

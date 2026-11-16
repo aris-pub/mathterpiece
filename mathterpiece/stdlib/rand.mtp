@@ -1,4 +1,17 @@
-; The seed every random value follows when a file declares none of its own: (import rand), then
-; (rand), (shuffle xs) and the others follow rand.seed, and (roll-dice) rolls it.
+; Random values and seeds: (import rand rand-int roll-dice), then (rand-int 1 6) and (roll-dice),
+; or (import rand) and (rand.rand-int 1 6). Each random value follows the only seed of the file
+; that holds it: one that the file declares, such as (rand-seed dots 7), or one that an import
+; gives it. With none, it follows seed, declared here. Each call is a place of its own in the
+; random stream, so two calls of (rand-int 1 6) draw two values.
 
-(rand-seed seed 0 doc@'The seed random values follow when a file declares none, starting at 0.')
+(primitive rand doc@'(rand) is a real from 0 up to 1, and (rand lo hi) a real from lo to hi.')
+(primitive rand-int doc@'(rand-int lo hi) is an int from lo to hi, both included.')
+(primitive pick doc@'(pick xs) is one item of xs, or none when xs is empty.')
+(primitive shuffle doc@'(shuffle xs) is the items of xs in a new order.')
+(primitive next-seed doc@'(next-seed s) is the value that a roll writes into the seed s.')
+
+(rand-seed seed 0 doc@'The seed random values follow when a file has none, starting at 0.')
+
+(choreo roll-dice ((rand-seed s))
+  doc@'Gives the seed s its next value at once, so every random value that follows it changes.'
+  (set s (next-seed s)))

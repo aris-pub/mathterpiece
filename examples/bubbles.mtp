@@ -5,7 +5,7 @@
 
 (import house paper soft red green yellow blue code)
 (import ease cubic-out)
-(import rand)
+(import rand rand roll-dice)
 
 ; A damped spring: it starts from rest, goes past its end once and settles, as a ball on a
 ; spring does, and ends at exactly 1.

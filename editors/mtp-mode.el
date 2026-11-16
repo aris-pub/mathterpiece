@@ -13,7 +13,7 @@
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
-    "transition" "move" "wait" "roll-dice" "animation" "at-once" "in-order" "rand-seed"
+    "transition" "move" "set" "wait" "animation" "at-once" "in-order" "rand-seed" "primitive"
     "canvas" "readout" "display" "slider" "button" "play" "stepper" "toggle" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "on-ready" "on-live" "on-quiet" "on-show" "on-hide" "defaults" "clip" "loop" "labels"
@@ -114,7 +114,8 @@ takes a color apart from strings.")
     ("canvas" . 1) ("readout" . 2) ("slider" . 2) ("button" . 1) ("play" . 1) ("stepper" . 1)
     ("toggle" . 2)
     ;; Forms with no name.
-    ("move" . 1) ("at-once" . 0) ("in-order" . 0) ("step" . 1) ("on-drag" . 2) ("on-click" . 1)
+    ("move" . 1) ("set" . 2) ("at-once" . 0) ("in-order" . 0) ("step" . 1) ("on-drag" . 2)
+    ("on-click" . 1)
     ("on-release" . 1) ("on-dragstart" . 1) ("on-dragend" . 1) ("on-view" . 0) ("on-enter" . 1)
     ("on-leave" . 1) ("on-ready" . 0) ("on-live" . 0) ("on-quiet" . 0) ("on-show" . 1)
     ("on-hide" . 1)
@@ -147,7 +148,7 @@ its own is indented 4, like a positional argument, so it reads apart from the bo
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "on-ready" "on-live" "on-quiet" "on-show" "on-hide" "move" "transition" "font" "color"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
-    "colormap" "interface" "defaults" "term" "rand-seed")
+    "colormap" "interface" "defaults" "term" "rand-seed" "set")
   "Forms that take no body: every item after their positional arguments is indented 4.")
 
 (defconst mtp-mode--named

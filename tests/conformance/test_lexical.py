@@ -316,9 +316,9 @@ KEYWORDS = (
     "import type interface namespace palette colormap scene formula motif variant func "
     "transition animation choreo "
     "circle rect ellipse line triangle polyline polygon curve arc ring text group row column "
-    "let foreach exists-when term doc "
+    "primitive let foreach exists-when term doc "
     "name if when cond else and or fn type-of as "
-    "move wait roll-dice at-once in-order "
+    "move wait set at-once in-order "
     "canvas readout display slider button play stepper toggle "
     "on-drag on-click on-release on-dragstart on-dragend on-enter on-leave on-pointermove "
     "on-show on-hide on-view on-ready on-live on-quiet"
@@ -326,6 +326,7 @@ KEYWORDS = (
 # The keywords that today's compiler already forbids as the name of a variable.
 FORBIDDEN_TODAY = {
     "scene", "animation", "transition", "move", "in-order", "at-once", "when", "else", "doc",
+    "set", "primitive",
 }  # fmt: skip
 
 NOT_KEYWORDS = "x r size gap step fill duration like defaults loop const length wrap".split()

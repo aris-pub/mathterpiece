@@ -72,7 +72,12 @@ SPECIAL = {
     "wait",
     "loop",
 }
-BUILTIN = {*builtins.BUILTINS, *builtins.SPECIAL_BUILTINS, *compiler.COLLECTION}
+BUILTIN = {
+    *builtins.BUILTINS,
+    *builtins.SPECIAL_BUILTINS,
+    *builtins.PRIMITIVES,
+    *compiler.COLLECTION,
+}
 CONSTANT = {*builtins.CONSTANTS, "true", "false", "none", "self"}
 # A name part as docs/spec/lexical.md defines it (rule name-characters), and the _ that may end
 # the head of a form (rule name-underscore).

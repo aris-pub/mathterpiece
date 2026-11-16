@@ -23,6 +23,7 @@ function hash(...xs: number[]): number {
 const u = (s: number, p: number, k: number) => hash(s, p, k) / 2 ** 32;
 
 const RANDOM = `
+(import rand rand rand-int pick shuffle)
 (rand-seed s 7)
 (real a (rand))
 (real b (rand 2 5))
@@ -72,13 +73,13 @@ describe("rule random-values: each random function from the seed and its site", 
   });
 
   it("a roll of the dice writes next-seed", () => {
-    const [rt, v] = live(`(rand-seed s 7) (real a (rand))`);
+    const [rt, v] = live(`(import rand rand) (rand-seed s 7) (real a (rand))`);
     rt.write(rt.id("s"), null, hash(7, 0x9e3779b9));
     expect(v("a")).toBe(u(hash(7, 0x9e3779b9), 0, 0));
   });
 
   it.fails("rand-int with lo above hi gives none (mtp-y7vp: rand and rand-int do not check lo and hi)", () => {
-    const [rt, v] = live(`(rand-seed s 7) (int lo 1 (>= 0) (<= 10)) (int|none c (rand-int lo 3))`);
+    const [rt, v] = live(`(import rand rand-int) (rand-seed s 7) (int lo 1 (>= 0) (<= 10)) (int|none c (rand-int lo 3))`);
     rt.write(rt.id("lo"), null, 10);
     expect(v("c")).toBe(null);
   });

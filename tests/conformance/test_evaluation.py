@@ -8,6 +8,8 @@ import pytest
 
 from .support import accepted, compile_error, is_bound, mtpc, obj, value
 
+RAND = "(import rand rand rand-int pick shuffle next-seed roll-dice) "
+
 rule = pytest.mark.rule
 
 
@@ -185,7 +187,7 @@ class TestOperationsThatGiveNone:
 
     @PICK
     def test_pick_on_a_list_that_is_not_empty_never_gives_none(self):
-        accepted("(rand-seed sd 1) (real v (pick [1 2]))")
+        accepted(RAND + "(rand-seed sd 1) (real v (pick [1 2]))")
 
     def test_a_bound_value_that_may_break_its_constraint(self):
         m = accepted("(real k 1 (>= 0) (<= 2)) (real|none v (* 2 k) (<= 3))")
@@ -212,8 +214,8 @@ class TestNoneAtKnownInputs:
     @pytest.mark.parametrize(
         "src",
         [
-            "(rand-seed sd 1) (int b (rand-int 10 3))",
-            "(rand-seed sd 1) ((int (>= 3) (<= 5)) b (rand-int 5 3))",
+            RAND + "(rand-seed sd 1) (int b (rand-int 10 3))",
+            RAND + "(rand-seed sd 1) ((int (>= 3) (<= 5)) b (rand-int 5 3))",
         ],
     )
     def test_rand_with_known_bounds_in_the_wrong_order(self, src):
@@ -513,19 +515,49 @@ class TestMixedColorChannels:
 @rule("seed-variable")
 class TestSeedVariable:
     def test_a_random_function_follows_its_seed(self):
-        m = accepted("(rand-seed a 1) (rand-seed b 2) (real v (rand 0 1 (seed b)))")
+        m = accepted(RAND + "(rand-seed a 1) (rand-seed b 2) (real v (rand 0 1 (seed b)))")
         assert (m.id("b"), None) in m.get("v").value.deps
         assert (m.id("a"), None) not in m.get("v").value.deps
 
     def test_a_const_variable_is_not_a_seed(self):
-        compile_error("(rand-seed s 3 (const)) (real v (rand))")
+        compile_error(RAND + "(rand-seed s 3 (const)) (real v (rand))")
 
     @SEED_SIGN
     def test_a_seed_is_any_int(self):
-        accepted("(rand-seed s -1) (real v (rand))")
+        accepted(RAND + "(rand-seed s -1) (real v (rand))")
 
     def test_with_several_seeds_a_random_function_names_one(self):
-        compile_error("(rand-seed a 1) (rand-seed b 2) (real v (rand))")
+        compile_error(RAND + "(rand-seed a 1) (rand-seed b 2) (real v (rand))")
+
+
+@rule("default-seed")
+class TestDefaultSeed:
+    def test_the_only_seed_of_the_file_scope(self):
+        m = accepted(RAND + "(rand-seed a 1) (real v (rand))")
+        assert (m.id("a"), None) in m.get("v").value.deps
+
+    def test_a_seed_that_an_import_gives(self, tmp_path):
+        (tmp_path / "lib.mtp").write_text("(rand-seed hs 3)")
+        m = accepted(RAND + "(import lib hs) (real v (rand))", tmp_path / "a.mtp")
+        assert (m.id("lib.hs"), None) in m.get("v").value.deps
+
+    def test_with_no_variable_of_type_rand_seed_the_seed_of_rand(self):
+        m = accepted(RAND + "(real v (rand))")
+        assert (m.id("rand.seed"), None) in m.get("v").value.deps
+
+    def test_a_const_variable_of_type_rand_seed_is_not_a_seed(self):
+        compile_error(RAND + "(rand-seed s 3 (const)) (real v (rand))")
+        m = accepted(RAND + "(rand-seed s 3 (const)) (rand-seed t 4) (real v (rand))")
+        assert (m.id("t"), None) in m.get("v").value.deps
+
+    def test_a_seed_declared_after_the_use(self):
+        compile_error(RAND + "(real v (rand)) (rand-seed a 1)")
+
+    def test_several_seeds(self):
+        compile_error(RAND + "(rand-seed a 1) (rand-seed b 2) (real v (rand))")
+
+    def test_the_seed_of_rand_and_another(self, tmp_path):
+        compile_error("(import rand) (rand-seed a 1) (real v (rand.rand))", tmp_path / "a.mtp")
 
 
 def _sites(d: dict) -> dict:
@@ -541,21 +573,21 @@ def _sites(d: dict) -> dict:
 @rule("random-site")
 class TestRandomSite:
     def test_sites_count_from_0_in_the_order_of_the_text(self):
-        d = mtpc("(rand-seed s 1) (real a (rand)) (real b (rand)) (int c (rand-int 1 6))")
+        d = mtpc(RAND + "(rand-seed s 1) (real a (rand)) (real b (rand)) (int c (rand-int 1 6))")
         assert _sites(d) == {"a": 0, "b": 1, "c": 2}
 
     def test_each_copy_of_a_foreach_has_its_own_site(self):
-        d = mtpc("(rand-seed s 1) (foreach i 3 (real #'k-{i}' (rand)))")
+        d = mtpc(RAND + "(rand-seed s 1) (foreach i 3 (real #'k-{i}' (rand)))")
         assert _sites(d) == {"k-0": 0, "k-1": 1, "k-2": 2}
 
     @SITES
     def test_the_order_in_which_the_attributes_of_a_shape_are_written(self):
-        d = mtpc("(rand-seed sd 1) (scene s (circle c (r (rand 1 2)) (x (rand 0 5))))")
+        d = mtpc(RAND + "(rand-seed sd 1) (scene s (circle c (r (rand 1 2)) (x (rand 0 5))))")
         c = obj(d, "c")["attrs"]
         assert (c["r"]["bound"][2], c["x"]["bound"][2]) == (0, 1)
 
     def test_a_call_in_the_arguments_of_another_call_comes_after_it(self):
-        d = mtpc("(rand-seed sd 1) (real v (rand (rand 0 1) 5))")
+        d = mtpc(RAND + "(rand-seed sd 1) (real v (rand (rand 0 1) 5))")
         outer = obj(d, "v")["value"]["bound"]
         inner = outer[4] if outer[4][0] == "rand" else outer[3]
         assert outer[2] == 0 and inner[2] == 1
@@ -566,10 +598,10 @@ class TestRandomNeverFolded:
     @pytest.mark.parametrize(
         "src",
         [
-            "(rand-seed s 1) (real v (rand))",
-            "(rand-seed s 1) (int v (rand-int 1 6))",
-            "(rand-seed s 1) (real|none v (pick (as list[real] [1 2])))",
-            "(rand-seed s 1) (list[int] v (shuffle [1 2 3]))",
+            RAND + "(rand-seed s 1) (real v (rand))",
+            RAND + "(rand-seed s 1) (int v (rand-int 1 6))",
+            RAND + "(rand-seed s 1) (real|none v (pick (as list[real] [1 2])))",
+            RAND + "(rand-seed s 1) (list[int] v (shuffle [1 2 3]))",
         ],
     )
     def test_a_random_value_is_known_only_while_drawing(self, src):
