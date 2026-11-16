@@ -434,7 +434,11 @@ def write_pages(app: Sphinx):
     """Each folder of spec/pages holds a source and a page that places it. The page is written
     out with the compiled source and the runtime next to it, so it is served as an author would
     serve it, and a source that does not compile stops the build."""
-    for folder in sorted((Path(app.srcdir) / "spec" / "pages").iterdir()):
+    pages = Path(app.srcdir) / "spec" / "pages"
+    # The docs are a second project that uses this extension and has no pages of its own.
+    if not pages.is_dir():
+        return
+    for folder in sorted(pages.iterdir()):
         out = Path(app.outdir) / "spec" / "pages" / folder.name
         out.mkdir(parents=True, exist_ok=True)
         for src in sorted(folder.glob("*.mtp")):
