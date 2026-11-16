@@ -63,7 +63,8 @@ nav .gh svg { width: 22px; height: 22px; display: block; fill: currentColor; }
 .hero .wrap { padding-block: 64px 56px; }
 .hero-text { max-width: 640px; margin-bottom: 88px; }
 .eyebrow { font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 14px; font-weight: 600; }
-h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 20px; letter-spacing: -0.01em; text-wrap: balance; }
+h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+.tagline { font: 400 clamp(1.6rem, 3vw, 2.2rem)/1.2 var(--serif); margin: 0 0 24px; color: var(--soft); }
 .lede { font-size: 1.25rem; font-weight: 300; margin: 0 0 30px; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 6px; }
 .lede li { counter-increment: step; display: flex; gap: 14px; align-items: baseline; }
 .lede li::before { content: counter(step); font: 500 1.05rem/1 var(--serif); color: var(--accent-ink); border: 1.5px solid var(--accent); border-radius: 50%; width: 1.6em; height: 1.6em; display: inline-flex; align-items: center; justify-content: center; flex: none; transform: translateY(-0.1em); }
@@ -101,6 +102,14 @@ pre { margin: 0; background: var(--code-bg); padding: 14px 18px; overflow-x: aut
 pre .c { color: var(--soft); }
 pre .s { color: var(--green); }
 pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, transparent); margin: 0 -18px; padding: 0 18px; box-shadow: inset 3px 0 0 var(--accent); }
+
+.hero-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: center; margin-bottom: 88px; }
+.hero-top .hero-text { margin-bottom: 0; }
+@media (max-width: 860px) { .hero-top { grid-template-columns: 1fr; } }
+.framed { position: relative; aspect-ratio: 1 / 1; max-width: 440px; width: 100%; justify-self: center; display: grid; place-items: center; }
+.framed .brackets { position: absolute; inset: 0; width: 100%; height: 100%; }
+.framed .brackets path { stroke-width: 14px; }
+.framed mtp-canvas { display: block; width: 100%; }
 
 /* Use cases */
 .uses { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; list-style: none; margin: 0; padding: 0; }
@@ -158,6 +167,10 @@ footer a { color: var(--soft); }
 </head>
 <body>
 
+<mtp-model id="focus" src="data/mini-focus.mtpc"></mtp-model>
+<mtp-model id="sunflower" src="data/mini-sunflower.mtpc"></mtp-model>
+<mtp-model id="liss" src="data/mini-lissajous.mtpc"></mtp-model>
+<mtp-model id="ornament" src="data/bourgain-ornament.mtpc"></mtp-model>
 <mtp-model id="hero" src="data/hero.mtpc"></mtp-model>
 <mtp-model id="s1" src="data/step1.mtpc"></mtp-model>
 <mtp-model id="s2" src="data/step2.mtpc"></mtp-model>
@@ -204,9 +217,11 @@ footer a { color: var(--soft); }
 <main>
   <div class="hero">
     <div class="wrap">
+      <div class="hero-top">
       <div class="hero-text">
         <p class="eyebrow">Explain. Explore. Experience.</p>
-        <h1>Math you can touch.</h1>
+        <h1>Mathterpiece</h1>
+        <p class="tagline">Math you can touch.</p>
         <ol class="lede">
           <li>Declare what the figure is, does, and looks like.</li>
           <li>The compiler typechecks every possible state.</li>
@@ -216,6 +231,10 @@ footer a { color: var(--soft); }
             <a class="btn main" href="https://docs.mtp-lang.org/quickstart.html">Get started</a>
             <a class="btn second" href="/examples">See the examples</a>
           </div>
+      </div>
+        <div class="framed">
+          <mtp-canvas model="focus" name="v"></mtp-canvas>
+        </div>
       </div>
       <div class="demo">
         <div class="source">
