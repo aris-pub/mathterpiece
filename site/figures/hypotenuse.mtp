@@ -6,9 +6,9 @@
 (scene triangle
   (polygon sides (points [[0 0] [q.x 0] q])
            ; what the figure looks like
-           (fill '#0e9ae9') (fill-opacity 0.12)
-           (stroke '#0e9ae9'))
-  (circle corner (r 0.08) (pos q) (fill '#ad71f2')))
+           (fill 'cornflowerblue') (fill-opacity 0.12)
+           (stroke 'cornflowerblue'))
+  (circle corner (r 0.08) (pos q) (fill 'mediumslateblue')))
 (formula pythagoras tex'c = \sqrt{a^2 + b^2} = \term{c}{}'
   (term c (tex $'{c:.2f}')))
 
