@@ -234,6 +234,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .safe-steps .n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 600; flex: none; }
 .safe-steps .panel { display: flex; flex-direction: column; }
 .safe-steps pre.code { flex: 1; margin: 0; font: 13px/1.7 var(--mono); padding: 14px 16px; background: var(--code-bg); overflow-x: auto; }
+.safe-steps pre.mtp .ln { width: 1.4em; margin-right: 1em; }
 pre.mtp .mark { display: inline-block; min-width: calc(100% + 32px); margin: 0 -16px; padding: 0 16px; box-sizing: border-box; }
 pre.mtp.bad .mark { background: color-mix(in srgb, var(--red) 12%, transparent); }
 pre.mtp.fix .mark { background: color-mix(in srgb, var(--green) 14%, transparent); }
@@ -553,7 +554,7 @@ footer a { color: var(--soft); }
             <p>The page on the right is an RSM document. RSM is a markup language for papers that are read on the web, and the figure takes one block in its source. Drag <i>u</i> or <i>v</i> in the figure, or point at a side of the inequality.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
-            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe src="uses/paper/out/index.html" data-scroll="sec-ineq" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
+            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe scrolling="no" src="uses/paper/out/index.html" data-scroll="sec-ineq" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
           </div></div>
         </div>
         <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
@@ -563,7 +564,7 @@ footer a { color: var(--soft); }
             <p>Any slide tool that makes web pages can show a figure, such as reveal.js. When someone asks about a different triangle, you drag a corner and show them.</p>
           </div>
           <div class="use-stage"><div class="use-mock slide">
-            <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
+            <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe scrolling="no" src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
           </div></div>
         </div>
         <div class="use-panel" id="usep-notes" role="tabpanel" aria-labelledby="use-notes" hidden>
@@ -573,7 +574,7 @@ footer a { color: var(--soft); }
             <p>The numbers in the text come from the figure, so the prose and the picture always agree.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
-            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>course.example/probability/lecture-4</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe src="uses/notes.html" title="Notes and digestions: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
+            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>course.example/probability/lecture-4</span></div><div class="screen" style="aspect-ratio: 760 / 846" data-w="760"><iframe scrolling="no" src="uses/notes.html" title="Notes and digestions: an example page with a live figure" loading="lazy" style="width: 760px; height: 846px"></iframe></div>
           </div></div>
         </div>
         <div class="use-panel" id="usep-videos" role="tabpanel" aria-labelledby="use-videos" hidden>
@@ -583,7 +584,7 @@ footer a { color: var(--soft); }
             <p>The runtime has a recording mode that shows one figure on a vertical page, ready to record as a short. When you fix the figure, the page and the next recording both get the fix.</p>
           </div>
           <div class="use-stage"><div class="use-mock phone">
-            <div class="screen" style="aspect-ratio: 540 / 960" data-w="540"><iframe src="uses/video.html" title="Videos: an example page with a live figure" loading="lazy" style="width: 540px; height: 960px"></iframe></div>
+            <div class="screen" style="aspect-ratio: 540 / 960" data-w="540"><iframe scrolling="no" src="uses/video.html" title="Videos: an example page with a live figure" loading="lazy" style="width: 540px; height: 960px"></iframe></div>
           </div></div>
         </div>
       </div>
@@ -595,12 +596,12 @@ footer a { color: var(--soft); }
       <h2>Accessible, interactive, portable by default</h2>
       <p class="section-lede">These come with the runtime, so no figure has to build them again.</p>
       <ul class="gets">
-        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/></svg></span><b>Keyboard</b><span>Sliders, buttons and players work from the keyboard.</span></li>
-        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3l4-3.5v12l-4-3.5H4z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5M17.8 7a7 7 0 0 1 0 10"/></svg></span><b>Screen readers</b><span>Each control and each canvas carries a label written in the source.</span></li>
-        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.2" fill="currentColor"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="9" opacity="0.45"/></svg></span><b>Touch</b><span>Every drag also works by tapping.</span></li>
-        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></span><b>Light and dark</b><span>Each color has a dark value, and the page picks.</span></li>
-        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5h6M3 12h4M3 15.5h6"/><circle cx="15.5" cy="12" r="4.5"/></svg></span><b>Reduced motion</b><span>Animations respect the reader's setting.</span></li>
-        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h7.5l4 4v14h-11.5z"/><path d="M14 3v4h4M9.5 12.5h5M9.5 16h5"/></svg></span><b>Saved as data</b><span>A figure is a .mtpc file, so it keeps working when the runtime improves.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6m0 2a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2z" /> <path d="M6 10l0 .01" /> <path d="M10 10l0 .01" /> <path d="M14 10l0 .01" /> <path d="M18 10l0 .01" /> <path d="M6 14l0 .01" /> <path d="M18 14l0 .01" /> <path d="M10 14l4 .01" /></svg></span><b>Keyboard</b><span>Sliders, buttons and players work from the keyboard.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a7 7 0 1 1 13 3.6a10 10 0 0 1 -2 2a8 8 0 0 0 -2 3a4.5 4.5 0 0 1 -6.8 1.4" /> <path d="M10 10a3 3 0 1 1 5 2.2" /></svg></span><b>Screen readers</b><span>Each control and each canvas carries a label written in the source.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg></span><b>Touch</b><span>Every drag also works by tapping.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M12 17a5 5 0 0 0 0 -10v10" /></svg></span><b>Light and dark</b><span>Each color has a dark value, and the page picks.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5.636 19.364a9 9 0 1 1 12.728 0" /> <path d="M16 9l-4 4" /></svg></span><b>Reduced motion</b><span>Animations respect the reader's setting.</span></li>
+        <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16v-8l3 8v-8" /> <path d="M15 8a2 2 0 0 1 2 2v4a2 2 0 1 1 -4 0v-4a2 2 0 0 1 2 -2z" /> <path d="M1 8h3v6.5a1.5 1.5 0 0 1 -3 0v-.5" /> <path d="M7 15a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-2a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1h1a1 1 0 0 1 1 1" /></svg></span><b>Saved as data</b><span>A figure compiles to a JSON file, so it keeps working when the runtime improves.</span></li>
       </ul>
     </div>
   </section>
@@ -723,11 +724,15 @@ footer a { color: var(--soft); }
     for (const e of entries) e.target.style.setProperty("--s", e.contentRect.width / e.target.dataset.w);
   });
   for (const screen of document.querySelectorAll(".use-mock .screen")) fit.observe(screen);
-  // A framed page can open at a part of itself, such as the paper at its first section.
-  for (const frame of document.querySelectorAll(".use-mock iframe[data-scroll]")) {
+  // A framed page does not scroll, and can open at a part of itself, such as the paper at its
+  // first section.
+  for (const frame of document.querySelectorAll(".use-mock iframe")) {
     const open = () => {
-      const target = frame.contentDocument?.getElementById(frame.dataset.scroll);
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      const target = frame.dataset.scroll && doc.getElementById(frame.dataset.scroll);
       if (target) frame.contentWindow.scrollTo(0, target.getBoundingClientRect().top + frame.contentWindow.scrollY - 16);
+      doc.documentElement.style.overflow = "hidden";
     };
     frame.addEventListener("load", open);
     if (frame.contentDocument?.readyState === "complete") open();
