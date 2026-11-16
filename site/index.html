@@ -60,10 +60,10 @@ nav .gh svg { width: 22px; height: 22px; display: block; fill: currentColor; }
 
 /* Hero */
 .hero .wrap { padding-block: 64px 56px; }
-.hero-text { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: end; margin-bottom: 96px; }
+.hero-text { max-width: 640px; margin-bottom: 88px; }
 .eyebrow { font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 14px; font-weight: 600; }
-h1 { font: 400 clamp(2.6rem, 5vw, 3.9rem)/1.08 var(--serif); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
-.lede { font-size: 1.2rem; font-weight: 300; margin: 0 0 24px; max-width: 46ch; }
+h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 20px; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { font-size: 1.25rem; font-weight: 300; margin: 0 0 28px; max-width: 48ch; }
 .ctas { display: flex; gap: 14px; flex-wrap: wrap; }
 .btn { display: inline-block; padding: 12px 22px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 17px; }
 .btn.main { background: var(--accent); color: #fff; }
@@ -144,7 +144,7 @@ footer a { color: var(--soft); }
 .mock { position: fixed; bottom: 12px; right: 12px; background: var(--ink); color: var(--bg); font-size: 13px; padding: 4px 10px; border-radius: 4px; opacity: .8; }
 
 @media (max-width: 860px) {
-  .hero-text, .demo, .checked { grid-template-columns: 1fr; }
+  .demo, .checked { grid-template-columns: 1fr; }
   .demo .source { border-right: 0; border-bottom: 1px solid var(--line); }
   .steps, .examples, .uses { grid-template-columns: 1fr; }
   nav ul { gap: 16px; }
@@ -190,17 +190,13 @@ footer a { color: var(--soft); }
   <div class="hero">
     <div class="wrap">
       <div class="hero-text">
-        <div>
-          <p class="eyebrow">Explain. Explore. Experience.</p>
-          <h1>Math you can touch.</h1>
-        </div>
-        <div>
-          <p class="lede">Declare what the figure is, does, and looks like. The compiler typechecks every possible state. The runtime makes it accessible and interactive.</p>
+        <p class="eyebrow">Explain. Explore. Experience.</p>
+        <h1>Math you can touch.</h1>
+        <p class="lede">Declare what the figure is, does, and looks like. The compiler typechecks every possible state. The runtime makes it accessible and interactive.</p>
           <div class="ctas">
             <a class="btn main" href="https://docs.mtp-lang.org/quickstart.html">Get started</a>
             <a class="btn second" href="/examples">See the examples</a>
           </div>
-        </div>
       </div>
       <div class="demo">
         <div class="source">
