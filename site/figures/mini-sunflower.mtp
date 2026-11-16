@@ -1,0 +1,9 @@
+(real angle 137.5)
+(scene s
+  (foreach i 300
+    (circle_ (pos (polar (* 0.055 (sqrt i)) (* i angle))) (r 0.03)
+             (fill (mix 'goldenrod' 'orangered' (/ i 300))))))
+(canvas v (x -1.05) (y -1.05) (width 2.1) (height 2.1) s
+  (on-ready
+    (animation (loop) (move angle (to 140) (duration 15))
+                      (move angle (to 135) (duration 15)))))
