@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Video</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/aris-pub/rsm@main/braiid/braiid.css">
 <script type="module" src="/mathterpiece.js"></script>
 <style>
 :root { --bg: #fdfcfa; --ink: #22303a; --soft: #6b7d8a; --mark: #7d45c4; color-scheme: light; }
@@ -11,10 +12,12 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); }
 h1 { font: 600 46px/1.15 "Crimson Pro", Georgia, serif; margin: 0; }
 .sub { font: 400 26px/1.4 "Source Sans 3", sans-serif; color: var(--soft); margin: 14px 0 0; }
 mtp-canvas { display: block; width: 100%; }
+.player { width: 100%; display: grid; gap: 22px; }
+.player mtp-play { display: block; zoom: 1.4; }
 .mark { font: 600 22px/1 "Source Sans 3", sans-serif; color: var(--mark); }
 </style></head>
 <body><div class="short">
 <div><h1>Times tables on a circle</h1><p class="sub">Join each point k to the point m × k</p></div>
-<mtp-model id="c" src="/data/hero.mtpc"></mtp-model><mtp-canvas model="c" name="v"></mtp-canvas>
+<mtp-model id="c" src="/data/video.mtpc"></mtp-model><div class="player"><mtp-canvas model="c" name="v"></mtp-canvas><mtp-play model="c" name="film"></mtp-play></div>
 <div class="mark">made with mtp</div>
 </div></body></html>
