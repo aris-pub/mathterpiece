@@ -1,0 +1,14 @@
+; An animation that loops forever has no duration, so its duration is none (mtp-ydd4.7.33).
+; A value written past the limit of 10^150 is brought back to it (mtp-asl).
+; expect d null
+; expect known false
+; expect shown 10
+; expect sum null
+; write x 1e300
+; expect x 1e150
+(real x 3)
+(animation forever (loop) (move x (to 4) (duration 1)))
+(real|none d forever.duration)
+(bool known (some? forever.duration))
+(real shown (or? forever.duration 10))
+(real|none sum (+ x forever.duration))

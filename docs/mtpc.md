@@ -64,7 +64,7 @@ A value is plain JSON, read according to the type that always accompanies it:
 
 | Type | Written |
 |---|---|
-| `int`, `real` | a number; a real that is infinite, `"infty"` or `"-infty"`, since JSON has no infinity |
+| `int`, `real` | a number |
 | `ratio` | `[numerator, denominator]`, in lowest terms |
 | `complex` | `[re, im]` |
 | `bool` | `true`, `false` |

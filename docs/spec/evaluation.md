@@ -281,16 +281,6 @@ drawing, and the readout of the example below holds False at n = 1. `(+ (^ 2 60)
 mtp-ydd4.7.13.
 :::
 
-:::{admonition} Code differs
-:class: note
-The compiler and the runtime still have infinite reals. The constants `infty` and `∞` are infinite
-(builtins.py:246-254). The compiler carries an infinite result of an infinite input
-(mathterpiece/compiler.py, lines 7613 to 7617), writes it in text as `∞` (`_infinity`, line
-7841), and writes it in the .mtpc as `"infty"` or `"-infty"` (mathterpiece/mtpc.py, line 500).
-The runtime reads these (web/src/runtime.ts, lines 932 and 933), and writes an infinity in text
-as `inf` (web/src/format.ts, line 12). Bead mtp-ydd4.7.33 removes infinity from both.
-:::
-
 ```{mtp-example}
 ; at n = 1 the sum is exactly 3/10, when folded and while drawing
 (int n 1 (>= 0) (<= 10))
@@ -676,7 +666,6 @@ The two programs differ in these places, beyond what the rules above allow:
 | ratios, and ints beyond 2⁵³ | exact | binary64 | mtp-ydd4.7.13 |
 | `round` of 10²⁸ or more | the compiler stops | rounds | mtp-6yga |
 | the channels of a mixed color | halves to even | halves up | mtp-nk2w |
-| an infinite input | carried, `(+ y infty)` is `infty` | `none` | mtp-ydd4.7.33 |
 | the functions on reals other than `+`, `-`, `*`, `/` and `sqrt` | Python's `math` module, which is not correctly rounded | ECMAScript `Math`, which is not correctly rounded | mtp-ydd4.7.38 |
 | `sum` of reals | adds the items one at a time | adds the items one at a time | mtp-ydd4.7.38 |
 | recursion | folded up to a depth of about 80 | computed up to the stack of the browser | mtp-ydd4.7.15 |

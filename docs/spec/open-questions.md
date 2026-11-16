@@ -124,6 +124,11 @@ at both times, as CSS `color-mix()` does (Q-evaluation-5, {numref}`mixed-color-c
 
 A type `real|infty`, with `real` finite, may be added later, when a figure needs it.
 
+**Decided (2026-11-16):** an animation that loops forever has no duration, so its `duration` is
+`none`, and its type is `real|none`. `(real d a.duration)` is then a compile error by the rules on
+`none`, and `(real|none d a.duration)` gives `none`. An animation that ends has a duration that is
+a real. The rule goes on the time page.
+
 **Decided (2026-11-15):** arithmetic saturates at the number limit. Every number, int, ratio or
 real, lies within -10¹⁵⁰ to 10¹⁵⁰. Every result of an operation or a built-in function is its exact
 value, correctly rounded for a real, and then clamped to the number limit, at both times, as a

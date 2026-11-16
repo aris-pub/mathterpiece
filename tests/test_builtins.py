@@ -8,7 +8,7 @@ from helpers import bound, doc, error, model, typ, value
 from mtpc_check import errors
 
 from mathterpiece.colors import parse_color
-from mathterpiece.types import BOOL, INT, POINT, REAL, ListT, Maybe
+from mathterpiece.types import INT, POINT, REAL, ListT, Maybe
 
 
 class TestNumbers:
@@ -134,52 +134,55 @@ class TestConstants:
         assert value("(real v euler)") == math.e
 
 
-# mtp-ydd4.7.33 removed the constants infty and ∞. The duration of an animation that loops
-# forever is still infinite, until the author decides what it is.
+# mtp-ydd4.7.33 removed the constants infty and ∞. An animation that loops forever has no
+# duration, so its duration is none (the author, 2026-11-16).
 FOREVER = "(real k 0) (animation a (loop) (move k (to 1) (duration 2)))"
 
 
-class TestInfinity:
-    # mtp-asl: infinity is above the ±10^150 bound. It appears only in values known when
-    # compiling; while drawing a result that is infinite is none.
+class TestNoInfinity:
     def test_infty_is_not_a_built_in(self):
         error("(real v infty)", "unknown name 'infty'")
 
     def test_a_declaration_may_take_the_name_infty(self):
         assert value("(real infty 2 (const)) (real v (* 2 infty))") == 4
 
-    def test_the_duration_of_an_animation_that_loops_forever(self):
-        assert value(f"{FOREVER} (real v a.duration (const))") == math.inf
-        assert value(f"{FOREVER} (real v (- a.duration) (const))") == -math.inf
+    def test_the_duration_of_an_animation_that_loops_forever_is_none(self):
+        assert value(f"{FOREVER} (real|none v a.duration)") is None
+        assert value(f"{FOREVER} (real v (or? a.duration 10))") == 10
+        assert value(f"{FOREVER} (bool v (none? a.duration))") is True
 
-    def test_arithmetic(self):
-        assert value(f"{FOREVER} (real v (+ a.duration 1) (const))") == math.inf
-        assert value(f"{FOREVER} (real v (* 2 a.duration) (const))") == math.inf
-        assert value(f"{FOREVER} (real v (/ 1 a.duration))") == 0
-        assert value(f"{FOREVER} (bool v (< 1e150 a.duration))") is True
-        assert value(f"{FOREVER} (real v (sqrt a.duration) (const))") == math.inf
+    def test_a_slot_that_takes_no_none_says_why(self):
+        error(
+            f"{FOREVER} (real v a.duration)",
+            "v would be none, because a loops forever and so has no duration",
+        )
+        error(
+            f"{FOREVER} (scene s (circle c (r a.duration)))",
+            "c's r would be none, because a loops forever and so has no duration",
+        )
 
-    def test_undefined_forms(self):
-        error(f"{FOREVER} (real v (- a.duration a.duration))", "undefined")
-        error(f"{FOREVER} (real v (* 0 a.duration))", "undefined")
-        error(f"{FOREVER} (real v (sind a.duration))", "undefined at infty")
+    def test_arithmetic_on_it_follows_the_rules_on_none(self):
+        error(f"{FOREVER} (real v (+ a.duration 1))", "v may be none")
+        model(f"{FOREVER} (real|none v (+ a.duration 1))")
 
-    def test_only_a_variable_that_never_changes_holds_it(self):
-        error(f"{FOREVER} (real v a.duration)", "v would hold infty")
-        error(f"{FOREVER} (scene s (circle c (r a.duration)))", "c's r would be infty")
+    def test_an_animation_that_ends_has_a_real_duration(self):
+        assert (
+            value(
+                "(real k 0) (animation a (loop 3) (move k (to 1) (duration 2))) (real v a.duration)"
+            )
+            == 6
+        )
 
-    def test_a_result_that_may_be_infinite_while_drawing_may_be_none(self):
-        error(f"{FOREVER} (real x 1) (real v (+ x a.duration))", "may be none")
-        model(f"{FOREVER} (real x 1) (real|none v (+ x a.duration))")
-        assert typ(f"{FOREVER} (real x 1) (bool v (< x a.duration))") == BOOL
+    def test_one_that_plays_a_forever_loop_has_no_duration(self):
+        error(
+            f"{FOREVER} (animation b a (move k (to 0) (duration 1))) (real v b.duration)",
+            "would be none",
+        )
 
-    def test_shown_in_a_string(self):
-        assert value(f"{FOREVER} (string v $'{{a.duration}}')") == "∞"
-
-    def test_the_compiled_file(self):
-        d = doc(f"{FOREVER} (real x 1) (real big a.duration (const)) (bool b (< x big))")
+    def test_the_compiled_file_writes_none(self):
+        d = doc(f"{FOREVER} (real|none big a.duration)")
         assert errors(d) == []
-        assert d["objects"][d["names"]["big"]]["value"]["free"] == "infty"
+        assert "infty" not in str(d)
 
 
 class TestFunctionsAsValues:
