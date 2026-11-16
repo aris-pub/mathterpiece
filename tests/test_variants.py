@@ -66,18 +66,16 @@ class TestVariants:
 
 
 class TestShapeVariables:
-    def test_a_variable_holding_a_shape(self):
-        m = model("(scene s (circle p) (shape sel p))")
-        assert m.get("sel").value.expr.args[0] == m.id("p")
+    # The author, 2026-11-16: a variable needs a type, so none is declared with an interface.
+    def test_no_variable_holds_a_shape_through_an_interface(self):
+        msg = "shape is an interface, so it is the type of a parameter only"
+        error("(scene s (circle p) (shape sel p))", msg)
+        error("(scene s (shape sel (circle c (r 2))))", msg)
+        error("(scene s (circle p) (positioned sel p))", "positioned is an interface")
 
-    def test_declaring_the_shape_in_place(self):
-        m = model("(scene s (shape sel (circle c (r 2))))")
-        assert m.get("c").attrs["r"].value == 2
-        assert m.get("sel").value.expr.args[0] == m.id("c")
-
-    def test_it_reads_only_what_its_type_lists(self):
-        error("(scene s (circle p) (shape sel p) (real k sel.r))", "a shape has no attribute 'r'")
-        model("(scene s (circle p) (positioned sel p) (real k sel.x))")
+    def test_a_parameter_reads_only_what_its_type_lists(self):
+        error("(func f ((shape o)) o.r)", "a shape has no attribute 'r'")
+        model("(func f ((positioned o)) o.x) (scene s (circle p)) (real k (f p))")
 
 
 def test_a_variants_positional_value_is_fixed():
