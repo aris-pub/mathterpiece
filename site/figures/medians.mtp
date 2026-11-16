@@ -8,12 +8,12 @@
 ; what the figure is
 (scene triangle
   ; typechecked: each t holds three points, so t[2] exists
-  (foreach t [[a b c] [b c a] [c a b]]
-    (let ((m (lerp t[0] t[1] 0.5)))
-      ; what the figure looks like
-      (polygon_ (points [t[0] g m]) (fill 'cornflowerblue'))
-      (polygon_ (points [t[1] g m]) (fill 'mediumslateblue'))
-      (line_ (from t[2]) (to m) (stroke 'white') (stroke-width 2))))
+  (group sixths (defaults (stroke 'white') (stroke-width 2))
+    (foreach t [[a b c] [b c a] [c a b]]
+      (let ((m (lerp t[0] t[1] 0.5)))
+        ; what the figure looks like
+        (polygon_ (points [t[0] g m]) (fill 'cornflowerblue'))
+        (polygon_ (points [t[1] g m]) (fill 'mediumslateblue')))))
   (circle ca (r 0.08) (pos a) (fill 'mediumslateblue'))
   (circle cb (r 0.08) (pos b) (fill 'mediumslateblue'))
   (circle cc (r 0.08) (pos c) (fill 'mediumslateblue')))
