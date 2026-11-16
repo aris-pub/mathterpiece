@@ -142,8 +142,6 @@ At every other input, an operation never gives `none`.
   `fold_call` raises the error again (lines 2527 to 2529). Bug mtp-ydd4.7.48.
 - `pick` always has a type that includes `none` (mathterpiece/compiler.py, line 2281), so
   `(rand-seed sd 1) (real v (pick [1 2]))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
-- A result beyond the largest binary64 number gives `none`, since the compiler and the runtime do
-  not clamp results to the {term}`number limit` ({numref}`number-limit`). mtp-ydd4.7.54.
 :::
 
 So no operation gives an infinity or NaN: a real is always finite ({numref}`number-types`). The
@@ -333,17 +331,8 @@ clamped, because a literal is not the result of an operation.
 
 :::{admonition} Code differs
 :class: note
-- The compiler and the runtime do not clamp the result of an operation. The compiler folds
-  `(* 1e100 1e100)` to 10²⁰⁰, so `(real k (* 1e100 1e100))` starts at 10²⁰⁰. A folded result
-  beyond the largest binary64 number, about 1.8 × 10³⁰⁸, gives `none` in a folded call, as
-  `(* x x x)` at x = 1e150 does, and is otherwise the compile error "the result is too large for a
-  real" (mathterpiece/compiler.py, `_fold_number`, lines 7607 to 7623). While drawing, such a
-  result gives `none` (web/src/builtins.ts, `finite`, line 31). Bead mtp-ydd4.7.54.
-- `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248). When a sum is
-  beyond the largest binary64 number, `+` throws the exception `Undefined`, and `sum` does not
-  catch it, so the evaluation stops. Bead mtp-ydd4.7.54.
-- `constrain` (web/src/runtime.ts, line 761) clamps a write only when the value is a single number.
-  mtp-ydd4.7.18.
+`constrain` (web/src/runtime.ts, line 761) clamps a write only when the value is a single number.
+mtp-ydd4.7.18.
 :::
 
 ### Rounding
@@ -376,7 +365,7 @@ So `(mix '#000000' '#050505' 0.5)` is `#030303ff`, since its channels are 2.5.
 :::{admonition} Code differs
 :class: note
 The compiler rounds halves to even (Python's `round`, mathterpiece/colors.py, line 237), and the
-runtime rounds halves up (`Math.round`, web/src/builtins.ts, line 287). So
+runtime rounds halves up (`Math.round`, web/src/builtins.ts, line 389). So
 `(mix '#000000' '#050505' 0.5)` is `#020202ff` when folded and `#030303ff` while drawing. Bug
 mtp-nk2w.
 :::
@@ -543,7 +532,7 @@ Since `=` on reals is exact, `(= (+ 0.1 0.2) 0.3)` is false: the sum is 0.300000
 :class: note
 The compiler accepts `=` and `!=` with every type (mathterpiece/compiler.py, line 6443), so
 `(= sind sind)` and `(= t t)` for a transition `t` compile. While drawing, `equal`
-(web/src/builtins.ts, line 156) compares functions with `===`, and the runtime makes a new
+(web/src/builtins.ts, line 258) compares functions with `===`, and the runtime makes a new
 JavaScript function for each read of a function (web/src/runtime.ts, `functionValue` and
 `builtinValue`), so `(= f f)` is false. mtp-08wd.4.
 :::

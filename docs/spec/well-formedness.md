@@ -223,17 +223,6 @@ With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 
 `(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamp x 0 1)` has the range 0
 to 1 whatever `x` is, by the row for a call.
 
-:::{admonition} Code differs
-:class: note
-- The compiler does not clamp a range to the number limit (`compiler.py:7698`, `_range_of`), and
-  gives `^` a type that includes `none` where an end of its range is beyond the largest binary64
-  number (`compiler.py:7569`, `_may_be_undefined`). So with `(real k 1)`,
-  `(real v (* k k) (<= 1e150))` is the error "v may break (<= 1e+150)", and `(real v (^ 2 k))` is
-  the error "v may be none". By {numref}`range-rules` both compile. A result whose range passes
-  the largest binary64 number gets a type that includes `none` (`compiler.py:6748`), so with
-  `(real k 2 (> 0))`, `(real h (/ 1 k))` is the error "h may be none". Bead mtp-ydd4.7.54.
-:::
-
 ```{rule} may-give-none
 The type of an operation that is not folded includes `none` when the ranges of its arguments, each
 taken on its own, hold an input at which it gives `none` by {numref}`operations-that-give-none`.

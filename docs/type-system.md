@@ -173,7 +173,7 @@ An attribute accepts `none` only if its type says so: for built-in shapes, that 
 
 **What the compiler proves.** It reasons only with ranges, never anything cleverer, so every implementation accepts the same programs. This is deliberately simple, so every implementation agrees; it can be refined later. A variable's range comes from its constraints (`(real k 1 (>= 0) (<= 10))` is 0 to 10).
 
-**Every number lies within ±10¹⁵⁰:** a literal beyond it is a compile error, a write beyond it is clamped to it, and a value with no limit of its own has the range −10¹⁵⁰ to 10¹⁵⁰. A computed result may go beyond that bound; only one beyond the largest real (about 1.8 × 10³⁰⁸) overflows, and an overflow is undefined, so it gives `none`. With these limits, `(* 2 k)` or `(* 360 t)` can never overflow, while a product of several unlimited values may.
+**Every number lies within ±10¹⁵⁰:** a literal beyond it is a compile error, a write beyond it is clamped to it, and a value with no limit of its own has the range −10¹⁵⁰ to 10¹⁵⁰. Every computed result is clamped to it too, so no operation overflows, and a result is never `none` because of its size.
 
 Infinity, `infty` (or `∞`), and `(- infty)` lie beyond the bound, and appear only in values known when compiling: arithmetic carries them (`(+ infty 1)` is `infty`, `(/ 1 infty)` is 0), `(- infty infty)`, `(* 0 infty)` and `(/ infty infty)` are undefined, a variable that may hold one must be `const`, a shape's attribute is never one, and while drawing a result that is infinite is undefined, so it gives `none`, as an overflow does.
 
