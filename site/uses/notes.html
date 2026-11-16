@@ -26,6 +26,5 @@ main mtp-readout.pair { color: slateblue; } main mtp-readout.yours { color: crim
 <p>Give each of n people a birthday, chosen evenly from 365 days. The chance that no two of them share a birthday is a product with one factor for each person, so the chance that some two do is one minus that product.</p>
 <p>In a room of <mtp-model id="b" src="/data/birthday.mtpc"></mtp-model><mtp-slider model="b" name="people"></mtp-slider> <mtp-readout model="b" name="count"></mtp-readout> people, the chance that some two of them share a birthday is <mtp-readout class="pair" model="b" name="odds"></mtp-readout>. The chance that one of them shares your birthday is only <mtp-readout class="yours" model="b" name="mine"></mtp-readout>.</p>
 <mtp-canvas model="b" name="v"></mtp-canvas>
-<p><b>Exercise 4.3.</b> Find the smallest n for which the blue curve passes one half, and explain why the red curve grows so much more slowly.</p>
 </main>
 </body></html>
