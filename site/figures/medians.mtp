@@ -14,12 +14,11 @@
         ; what the figure looks like
         (polygon_ (points [t[0] g m]) (fill 'cornflowerblue'))
         (polygon_ (points [t[1] g m]) (fill 'mediumslateblue')))))
-  (circle ca (r 0.08) (pos a) (fill 'mediumslateblue'))
-  (circle cb (r 0.08) (pos b) (fill 'mediumslateblue'))
-  (circle cc (r 0.08) (pos c) (fill 'mediumslateblue')))
+  (foreach k 3 (circle #'corner-{k}' (r 0.08) (pos [a b c][k])
+                       (fill 'mediumslateblue'))))
 
 ; what it does: drag a corner, or tap it, then tap a spot
 (canvas v (x -1.2) (y -1.1) (width 2.4) (height 2.2) triangle
-  (on-drag ca (move a (to pointer)))
-  (on-drag cb (move b (to pointer)))
-  (on-drag cc (move c (to pointer))))
+  (on-drag corner-0 (move a (to pointer)))
+  (on-drag corner-1 (move b (to pointer)))
+  (on-drag corner-2 (move c (to pointer))))
