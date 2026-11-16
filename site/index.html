@@ -177,6 +177,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .cta .ctas { justify-content: center; }
 
 /* Use cases */
+#uses .section-lede { max-width: none; }
 .usecases { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .use-copy { padding: 20px 28px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .use-list { display: flex; flex-direction: column; gap: 2px; grid-row: 1; grid-column: 1; background: var(--code-bg); border-right: 1px solid var(--line); padding: 18px 0; }
@@ -190,7 +191,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-stage .use-mock.slide { max-width: 620px; }
 .use-panel[hidden] { display: grid; visibility: hidden; }
 .use-copy h3 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 12px; }
-.use-copy p { font-size: 16px; line-height: 1.55; color: var(--soft); margin: 0; max-width: 70ch; }
+.use-copy p { font-size: 16px; line-height: 1.55; color: var(--soft); margin: 0; }
 .use-copy p.first { color: var(--ink); font: 500 1.2rem/1.4 var(--serif); margin-bottom: 4px; }
 .use-copy a { color: var(--accent-ink); }
 .use-mock { min-width: 0; }
@@ -511,7 +512,7 @@ footer a { color: var(--soft); }
 <span class="ln" aria-hidden="true"> 9</span><span class="w">    </span><span class="p">(</span><span class="k">let</span><span class="w"> </span><span class="p">((</span><span class="nv">w</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">=</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="s">'dot'</span><span class="p">)</span><span class="w"> </span><span class="nv">s</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="nb">sign</span><span class="w"> </span><span class="nv">s</span><span class="p">)</span><span class="w"> </span><span class="nv">nu</span><span class="p">))</span><span class="w"> </span><span class="nv">e</span><span class="p">))</span>
 <span class="ln" aria-hidden="true">10</span><span class="w">          </span><span class="p">(</span><span class="nv">h</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">nv</span><span class="w"> </span><span class="p">(</span><span class="k">as</span><span class="w"> </span><span class="kd">point</span><span class="w"> </span><span class="p">[</span><span class="nv">e</span><span class="p">.</span><span class="na">y</span><span class="w"> </span><span class="p">(</span><span class="o">-</span><span class="w"> </span><span class="nv">e</span><span class="p">.</span><span class="na">x</span><span class="p">)]))))</span>
 <span class="ln" aria-hidden="true">11</span><span class="w">      </span><span class="p">(</span><span class="kd">polygon_</span><span class="w"> </span><span class="p">(</span><span class="nv">points</span><span class="w"> </span><span class="p">[[</span><span class="m">0</span><span class="w"> </span><span class="m">0</span><span class="p">]</span><span class="w"> </span><span class="nv">w</span><span class="w"> </span><span class="p">(</span><span class="o">+</span><span class="w"> </span><span class="nv">w</span><span class="w"> </span><span class="nv">h</span><span class="p">)</span><span class="w"> </span><span class="nv">h</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">opacity</span><span class="w"> </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">=</span><span class="w"> </span><span class="nv">lit</span><span class="w"> </span><span class="nv">k</span><span class="p">)</span><span class="w"> </span><span class="m">0.45</span><span class="w"> </span><span class="m">0.12</span><span class="p">))</span>
-<span class="ln" aria-hidden="true">12</span><span class="w">        </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">=</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="s">'dot'</span><span class="p">)</span><span class="w"> </span><span class="s">'slateblue'</span><span class="w"> </span><span class="s">'gray'</span><span class="p">)))))</span>
+<span class="ln" aria-hidden="true">12</span><span class="w">        </span><span class="p">(</span><span class="nv">fill</span><span class="w"> </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">=</span><span class="w"> </span><span class="nv">k</span><span class="w"> </span><span class="s">'dot'</span><span class="p">)</span><span class="w"> </span><span class="s">'slateblue'</span><span class="w"> </span><span class="s">'crimson'</span><span class="p">)))))</span>
 <span class="ln" aria-hidden="true">13</span><span class="w">  </span><span class="p">(</span><span class="kd">line_</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="nv">u</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="w"> </span><span class="nv">s</span><span class="w"> </span><span class="nv">e</span><span class="p">))</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'gray'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">dash</span><span class="w"> </span><span class="p">[</span><span class="m">4</span><span class="w"> </span><span class="m">4</span><span class="p">]))</span>
 <span class="ln" aria-hidden="true">14</span><span class="w">  </span><span class="p">(</span><span class="kd">group</span><span class="w"> </span><span class="nv">arrows</span><span class="w"> </span><span class="p">(</span><span class="k">defaults</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke-width</span><span class="w"> </span><span class="m">3</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">head-end</span><span class="w"> </span><span class="s">'dart'</span><span class="p">))</span>
 <span class="ln" aria-hidden="true">15</span><span class="w">    </span><span class="p">(</span><span class="kd">line</span><span class="w"> </span><span class="nv">pu</span><span class="w"> </span><span class="p">(</span><span class="nv">from</span><span class="w"> </span><span class="p">[</span><span class="m">0</span><span class="w"> </span><span class="m">0</span><span class="p">])</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="nv">u</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nv">stroke</span><span class="w"> </span><span class="s">'crimson'</span><span class="p">))</span>
@@ -555,7 +556,7 @@ footer a { color: var(--soft); }
         <div class="use-panel" id="usep-paper" role="tabpanel" aria-labelledby="use-paper">
           <div class="use-copy">
             <p class="first">A figure in a web-based paper that readers can explore, next to the claim that it shows.</p>
-            <p>The figure sits next to the theorem that it illustrates. Readers drag <i>u</i> or <i>v</i>, or point at a side of the inequality, and check the claim for themselves.</p>
+            <p>Readers drag <i>u</i> or <i>v</i>, or point at a side of the inequality, and check the claim for themselves.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
             <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe scrolling="no" src="uses/paper/out/index.html" data-scroll="sec-ineq" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
@@ -564,7 +565,7 @@ footer a { color: var(--soft); }
         <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
           <div class="use-copy">
             <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
-            <p>Any slide tool that makes web pages can show a figure. When someone asks about a different triangle, you drag a corner and show them.</p>
+            <p>Any slide tool that makes web pages can show a Mathterpiece figure. When someone asks about a different triangle, you drag a corner and show them.</p>
           </div>
           <div class="use-stage"><div class="use-mock slide">
             <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe scrolling="no" src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
@@ -572,7 +573,7 @@ footer a { color: var(--soft); }
         </div>
         <div class="use-panel" id="usep-notes" role="tabpanel" aria-labelledby="use-notes" hidden>
           <div class="use-copy">
-            <p class="first">A figure in course notes, or in a page that works through someone else's result, with the text around it.</p>
+            <p class="first">A figure in lecture notes or a digestion, with the text around it.</p>
             <p>The numbers in the text come from the figure, so the prose and the picture always agree.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
@@ -581,7 +582,7 @@ footer a { color: var(--soft); }
         </div>
         <div class="use-panel" id="usep-videos" role="tabpanel" aria-labelledby="use-videos" hidden>
           <div class="use-copy">
-            <p class="first">A figure's animations, played and recorded from the same source as the page.</p>
+            <p class="first">A video recorded from the same figure that readers explore on the page.</p>
             <p>Record the animation with any screen recorder. The page and the video come from one source, so a fix to the figure reaches both.</p>
           </div>
           <div class="use-stage"><div class="use-mock phone">
