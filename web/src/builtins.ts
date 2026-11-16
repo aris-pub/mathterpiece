@@ -1,6 +1,8 @@
 // The built-in functions (docs/reference.md "Functions" and "Operators"), as the compiler folds
 // them (mathterpiece/builtins.py). A built-in called where it is undefined gives none (null):
-// the compiler has already proved where that may happen and typed the result to allow it.
+// the compiler has already proved where that may happen and typed the result to allow it. Every
+// result is clamped to the number limit (Rule number-limit, docs/spec/evaluation.md), so a result
+// past the largest binary64 number is not none.
 import { nextSeed } from "./random.ts";
 
 export class Complex {
@@ -21,15 +23,98 @@ export type Transform = number[];
 /** Raised by a built-in where it is undefined; the caller turns it into none. */
 export class Undefined extends Error {}
 
-const MAX_REAL = Number.MAX_VALUE;
+/** The number limit: a real is clamped to 1e150, the binary64 number nearest to 10^150. */
+export const LIMIT = 1e150;
 
 function check(ok: boolean): void {
   if (!ok) throw new Undefined();
 }
 
-function finite(x: number): number {
-  check(Number.isFinite(x) && Math.abs(x) <= MAX_REAL);
-  return x;
+/** x clamped to the number limit. A NaN has no exact value to clamp, so it is undefined. */
+export function limit(x: number): number {
+  check(!Number.isNaN(x));
+  return x > LIMIT ? LIMIT : x < -LIMIT ? -LIMIT : x;
+}
+
+/** Each number of a value clamped: a number, each part of a complex, each number of a list. */
+export function clamp(v: unknown): unknown {
+  if (typeof v === "number") return limit(v);
+  if (v instanceof Complex) return new Complex(limit(v.re), limit(v.im));
+  if (Array.isArray(v)) return v.map(clamp);
+  return v;
+}
+
+function finiteValue(v: unknown): boolean {
+  if (typeof v === "number") return Number.isFinite(v);
+  if (v instanceof Complex) return Number.isFinite(v.re) && Number.isFinite(v.im);
+  return true;
+}
+
+const bits = new DataView(new ArrayBuffer(8));
+
+/** x as m * 2^e with m from 0.5 up to 1, as C's frexp gives it. */
+export function frexp(x: number): [number, number] {
+  if (x === 0 || !Number.isFinite(x)) return [x, 0];
+  let shift = 0;
+  bits.setFloat64(0, x);
+  if (((bits.getUint16(0) >> 4) & 0x7ff) === 0) {
+    // A subnormal number has no exponent bits to read, so it is first scaled into the normal ones.
+    shift = 64;
+    bits.setFloat64(0, x * 2 ** 64);
+  }
+  const high = bits.getUint16(0);
+  const e = ((high >> 4) & 0x7ff) - 1022;
+  bits.setUint16(0, (high & 0x800f) | (1022 << 4));
+  return [bits.getFloat64(0), e - shift];
+}
+
+/** m * 2^e, rounded once, as C's ldexp gives it, for m from 0.5 up to 1 or 0. */
+export function ldexp(m: number, e: number): number {
+  if (e > 1023) return e > 2100 ? m * Infinity : m * 2 ** 1023 * 2 ** (e - 1023);
+  // Below the normal numbers, m is first scaled to a normal number, which is exact, so that the
+  // last step is the only one that rounds.
+  if (e < -1022) return e < -2043 ? m * 0 : m * 2 ** (e + 1022) * 2 ** -1022;
+  return m * 2 ** e;
+}
+
+/**
+ * The product from left to right, with the binary exponent kept apart from the mantissas, as
+ * mathterpiece/builtins.py computes it. A step of the plain product past the largest binary64
+ * number gives an infinity, which no later factor can bring back within the number limit.
+ */
+export function scaledProduct(xs: unknown[]): unknown {
+  if (!xs.some((x) => x instanceof Complex)) {
+    let m = 1;
+    let e = 0;
+    for (const x of xs) {
+      const [f, k] = frexp(x as number);
+      const [g, j] = frexp(m * f);
+      m = g;
+      e += k + j;
+    }
+    return ldexp(m, e);
+  }
+  let re = 1;
+  let im = 0;
+  let e = 0;
+  for (const x of xs) {
+    const c = complex(x);
+    const k = frexp(Math.max(Math.abs(c.re), Math.abs(c.im)))[1];
+    const a = ldexpAny(c.re, -k);
+    const b = ldexpAny(c.im, -k);
+    [re, im] = [re * a - im * b, re * b + im * a];
+    const j = frexp(Math.max(Math.abs(re), Math.abs(im)))[1];
+    re = ldexpAny(re, -j);
+    im = ldexpAny(im, -j);
+    e += k + j;
+  }
+  return new Complex(ldexpAny(re, e), ldexpAny(im, e));
+}
+
+/** ldexp for any number: its mantissa and exponent are split first. */
+function ldexpAny(x: number, e: number): number {
+  const [m, k] = frexp(x);
+  return ldexp(m, k + e);
 }
 
 function complex(x: unknown): Complex {
@@ -73,6 +158,8 @@ function arc(x: number): number {
 
 const D = (x: number) => (x * 180) / Math.PI;
 
+// add and multiply give the result before it is clamped: an operation with several arguments is
+// one operation, and is clamped once.
 function add(a: unknown, b: unknown): unknown {
   if (Array.isArray(a)) return a.map((x, i) => add(x, (b as unknown[])[i]));
   if (isComplex(a, b)) {
@@ -80,7 +167,7 @@ function add(a: unknown, b: unknown): unknown {
     const y = complex(b);
     return new Complex(x.re + y.re, x.im + y.im);
   }
-  return finite((a as number) + (b as number));
+  return (a as number) + (b as number);
 }
 
 function negate(a: unknown): unknown {
@@ -99,7 +186,16 @@ function multiply(a: unknown, b: unknown): unknown {
     const y = complex(b);
     return new Complex(x.re * y.re - x.im * y.im, x.re * y.im + x.im * y.re);
   }
-  return finite((a as number) * (b as number));
+  return (a as number) * (b as number);
+}
+
+/** The product of the arguments, item by item for points and lists, clamped once. */
+export function times(xs: unknown[]): unknown {
+  const list = xs.find((x) => Array.isArray(x)) as unknown[] | undefined;
+  if (list) return list.map((_, i) => times(xs.map((x) => (Array.isArray(x) ? x[i] : x))));
+  let v = xs[0];
+  for (let i = 1; i < xs.length; i++) v = multiply(v, xs[i]);
+  return clamp(finiteValue(v) ? v : scaledProduct(xs));
 }
 
 function divide(a: unknown, b: unknown): unknown {
@@ -108,9 +204,9 @@ function divide(a: unknown, b: unknown): unknown {
     const y = complex(b);
     const d = y.re * y.re + y.im * y.im;
     check(d !== 0);
-    return new Complex((x.re * y.re + x.im * y.im) / d, (x.im * y.re - x.re * y.im) / d);
+    return clamp(new Complex((x.re * y.re + x.im * y.im) / d, (x.im * y.re - x.re * y.im) / d));
   }
-  return finite(ratio(a as number, b as number));
+  return limit(ratio(a as number, b as number));
 }
 
 function power(a: unknown, b: unknown): unknown {
@@ -119,17 +215,23 @@ function power(a: unknown, b: unknown): unknown {
     const y = complex(b);
     const r = Math.hypot(x.re, x.im);
     check(r !== 0 || y.re > 0);
+    if (r === 0) return new Complex(0, 0);
     const theta = Math.atan2(x.im, x.re);
     const lnr = Math.log(r);
-    const m = Math.exp(y.re * lnr - y.im * theta);
+    const lnm = y.re * lnr - y.im * theta;
+    const m = Math.exp(lnm);
     const angle = y.im * lnr + y.re * theta;
-    return new Complex(m * Math.cos(angle), m * Math.sin(angle));
+    if (Number.isFinite(m)) return clamp(new Complex(m * Math.cos(angle), m * Math.sin(angle)));
+    // Past the largest binary64 number, each part is found from its logarithm, so that a part
+    // that is exactly 0 stays 0, as mathterpiece/builtins.py computes it.
+    const part = (t: number) => (t === 0 ? 0 : Math.sign(t) * Math.exp(lnm + Math.log(Math.abs(t))));
+    return clamp(new Complex(part(Math.cos(angle)), part(Math.sin(angle))));
   }
   const x = a as number;
   const y = b as number;
   check(!(x === 0 && y < 0));
   check(!(x < 0 && !Number.isInteger(y)));
-  return finite(x ** y);
+  return limit(x ** y);
 }
 
 // No value is changed once made, so whether two long lists are equal is kept for the two: a
@@ -303,7 +405,7 @@ function log(x: number, base?: number): number {
 }
 
 type Impl = (...args: unknown[]) => unknown;
-const n = (f: (x: number) => number): Impl => (x) => finite(f(x as number));
+const n = (f: (x: number) => number): Impl => (x) => limit(f(x as number));
 
 /** Each built-in by its name in the reference. Collections are handled by the runtime. */
 // More items than this is undefined: a figure has no use for them, and a page would hang.
@@ -338,13 +440,13 @@ export const BUILTINS: Record<string, Impl> = {
   "next-seed": (s) => nextSeed(s as number),
   "points-mean": (ps) => pointsMean(ps as number[][]),
   range: (start, stop, by, step) => range(start as number, stop as number, by as string, step as number),
-  "+": (...xs) => (xs.length === 1 ? xs[0] : xs.reduce(add)),
-  "-": (...xs) => (xs.length === 1 ? negate(xs[0]) : xs.reduce((a, b) => add(a, negate(b)))),
-  "*": (...xs) => xs.reduce(multiply),
+  "+": (...xs) => clamp(xs.length === 1 ? xs[0] : xs.reduce(add)),
+  "-": (...xs) => clamp(xs.length === 1 ? negate(xs[0]) : xs.reduce((a, b) => add(a, negate(b)))),
+  "*": (...xs) => times(xs),
   "/": divide,
   "^": power,
   mod: (a, b) => mod(a as number, b as number),
-  abs: (x) => (x instanceof Complex ? Math.hypot(x.re, x.im) : Math.abs(x as number)),
+  abs: (x) => (x instanceof Complex ? limit(Math.hypot(x.re, x.im)) : Math.abs(x as number)),
   // Math.sign gives -0 for -0; the compiler's fold gives 0.
   sign: (x) => ((x as number) > 0 ? 1 : (x as number) < 0 ? -1 : 0),
   "=": equal,
@@ -358,14 +460,14 @@ export const BUILTINS: Record<string, Impl> = {
     check((x as number) >= 0);
     return Math.sqrt(x as number);
   },
-  round: (x, decimals) => roundHalfAway(x as number, (decimals as number | undefined) ?? 0),
+  round: (x, decimals) => limit(roundHalfAway(x as number, (decimals as number | undefined) ?? 0)),
   floor: n(Math.floor),
   ceil: n(Math.ceil),
   exp: n(Math.exp),
-  log: (x, b) => log(x as number, b as number | undefined),
+  log: (x, b) => limit(log(x as number, b as number | undefined)),
   min: (...xs) => extreme(Math.min, xs),
   max: (...xs) => extreme(Math.max, xs),
-  lerp: (a, b, t) => lerp(a, b, t as number),
+  lerp: (a, b, t) => clamp(lerp(a, b, t as number)),
   sin: n(Math.sin),
   cos: n(Math.cos),
   tan: n(Math.tan),
@@ -395,13 +497,13 @@ export const BUILTINS: Record<string, Impl> = {
   deg: n((x) => x),
   "to-rad": n((x) => (x * Math.PI) / 180),
   "to-turn": n((x) => x / 360),
-  polar: (r, a) => [(r as number) * cosd(a as number), (r as number) * sind(a as number)],
+  polar: (r, a) => clamp([(r as number) * cosd(a as number), (r as number) * sind(a as number)]),
   "to-polar": (p) => {
     const [x = 0, y = 0] = p as Point;
     check(x !== 0 || y !== 0);
-    return [Math.hypot(x, y), D(Math.atan2(y, x))];
+    return [limit(Math.hypot(x, y)), D(Math.atan2(y, x))];
   },
-  dist: (p, q) => Math.hypot(...(p as Point).map((x, i) => x - (q as Point)[i]!)),
+  dist: (p, q) => limit(Math.hypot(...(p as Point).map((x, i) => x - (q as Point)[i]!))),
   rotate: (deg) => {
     const c = cosd(deg as number);
     const s = sind(deg as number);

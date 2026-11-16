@@ -220,18 +220,71 @@ describe("rule number-limit: a write beyond the limit is clamped to it", () => {
 });
 
 describe("rule number-limit: a result is clamped to the limit", () => {
-  it.fails("a product (mtp-ydd4.7.54: results are not clamped)", () => {
-    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real|none t (* k k k))`);
+  it("a product", () => {
+    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real t (* k k k))`);
     rt.write(rt.id("k"), null, 1e150);
     expect(v("t")).toBe(1e150);
   });
 
-  it.fails("a sum (mtp-ydd4.7.54: results are not clamped)", () => {
+  it("a sum", () => {
     // Each item is clamped to 1e150 at k = 1e150, and so is their sum.
-    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real|none t (sum [(* k k) (* k k)]))`);
+    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real t (sum [(* k k) (* k k)]))`);
     rt.write(rt.id("k"), null, 1e150);
     expect(v("t")).toBe(1e150);
   });
+
+  it("an operation with several arguments is clamped once", () => {
+    const [rt, v] = live(`(real k 1) (real t (+ k k (- k)))`);
+    rt.write(rt.id("k"), null, 1e150);
+    expect(v("t")).toBe(1e150);
+  });
+
+  const cases: [string, string, number, number][] = [
+    ["a quotient", "(/ 1 k)", 1e-200, 1e150],
+    ["a power", "(^ k 400)", -10, 1e150],
+    ["a negative power", "(^ k 401)", -10, -1e150],
+    ["exp", "(exp k)", 1000, 1e150],
+    ["rad", "(rad k)", -1e150, -1e150],
+    ["csc", "(csc k)", 1e-300, 1e150],
+    ["lerp", "(lerp 0 k k)", 1e150, 1e150],
+  ];
+  for (const [what, expr, k, limit] of cases) {
+    it(what, () => {
+      const [rt, v] = live(`(real k 1) (real|none t ${expr})`);
+      rt.write(rt.id("k"), null, k);
+      expect(v("t")).toBe(limit);
+    });
+  }
+
+  it("each part of a complex", () => {
+    const [rt, v] = live(`(real k 1) (complex t (* (+ k (* k 1i)) k))`);
+    rt.write(rt.id("k"), null, 1e100);
+    const t = v("t") as { re: number; im: number };
+    expect([t.re, t.im]).toEqual([1e150, 1e150]);
+  });
+
+  it("each number of a point", () => {
+    const [rt, v] = live(`(real k 1) (point t (* [k (- k)] k))`);
+    rt.write(rt.id("k"), null, 1e100);
+    expect(v("t")).toEqual([1e150, -1e150]);
+  });
+});
+
+describe("rule same-value-at-both-times: a result past the limit", () => {
+  const cases: [string, (x: string) => string, number][] = [
+    ["a product of three", (x) => `(* ${x} ${x} ${x})`, 1e150],
+    ["a product past the largest binary64 number", (x) => `(* ${x} ${x} ${x} 1e-310)`, 1e150],
+    ["a power", (x) => `(^ ${x} 3.5)`, 1e100],
+    ["exp", (x) => `(exp ${x})`, 1000],
+    ["dist", (x) => `(dist [${x} 0] [(- ${x}) 0])`, 1e150],
+  ];
+  for (const [what, expr, x] of cases) {
+    it(what, () => {
+      const [rt, v] = live(`(real x 1 (>= 0)) (real folded ${expr(String(x))}) (real drawn ${expr("x")})`);
+      rt.write(rt.id("x"), null, x);
+      expect(v("drawn")).toBe(v("folded"));
+    });
+  }
 });
 
 describe("rule equality-by-content: shapes compare by identity while drawing", () => {
@@ -258,6 +311,31 @@ describe("rule operations-that-give-none: an operation while drawing", () => {
     const [rt, v] = live(`(real x 1 (>= -1) (<= 1)) (real|none q (/ 1 x))`);
     rt.write(rt.id("x"), null, 0);
     expect(v("q")).toBe(null);
+  });
+
+  const poles: [string, string, number][] = [
+    ["tand at 90 degrees", "(tand k)", 90],
+    ["secd at 270 degrees", "(secd k)", 270],
+    ["cotd at 180 degrees", "(cotd k)", 180],
+    ["csc at 0", "(csc k)", 0],
+    ["log at 0", "(log k)", 0],
+    ["a base of 1", "(log 2 k)", 1],
+    ["sqrt below 0", "(sqrt k)", -1],
+    ["asin above 1", "(asin k)", 2],
+    ["0 to a negative power", "(^ k -1)", 0],
+  ];
+  for (const [what, expr, k] of poles) {
+    it(`${what} gives none`, () => {
+      const [rt, v] = live(`(real k 1 (>= -1e6) (<= 1e6)) (real|none t ${expr})`);
+      rt.write(rt.id("k"), null, k);
+      expect(v("t")).toBe(null);
+    });
+  }
+
+  it("a result past the largest binary64 number is not none", () => {
+    const [rt, v] = live(`(real k 1) (real|none t (* k k k))`);
+    rt.write(rt.id("k"), null, 1e150);
+    expect(v("t")).toBe(1e150);
   });
 
   it("a position outside the list gives none", () => {

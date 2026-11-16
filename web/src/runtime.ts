@@ -7,6 +7,7 @@ import { curveBox } from "./curve.ts";
 import {
   BUILTINS,
   Complex,
+  LIMIT,
   Ref,
   Undefined,
   apply,
@@ -15,6 +16,7 @@ import {
   light,
   pointsMean,
   roundHalfAway,
+  scaledProduct,
   wrapInto,
 } from "./builtins.ts";
 import type { Clamp, Doc, Expr, Obj, Attribute, Type } from "./doc.ts";
@@ -25,7 +27,6 @@ import { shuffle, unit } from "./random.ts";
 
 export { cssVariable };
 
-const LIMIT = 1e150;
 // What an instance gives its members and reads from them, as a group does.
 const SPREAD = new Set([
   "fill",
@@ -71,16 +72,15 @@ const POINT_ATTRS = new Set(["from", "to", "a", "b", "c"]);
 const NONE_AWARE = new Set(["or?", "none?", "some?", "somes", "=", "!="]);
 // The types whose values are plain numbers.
 const NUMBERS = new Set(["real", "int", "ratio"]);
-// What the arithmetic built-ins give for two plain numbers, as builtins.ts does: a result that
-// is not a finite number is undefined, so none.
-const MAX_REAL = Number.MAX_VALUE;
-const finite = (x: number) => (Number.isFinite(x) && Math.abs(x) <= MAX_REAL ? x : null);
+// What the arithmetic built-ins give for two plain numbers, as builtins.ts does: a result is
+// clamped to the number limit, and a NaN, which has no value to clamp, is none.
+const limit = (x: number) => (Number.isNaN(x) ? null : x > LIMIT ? LIMIT : x < -LIMIT ? -LIMIT : x);
 const FAST: Record<string, (a: number, b: number) => number | boolean | null> = {
-  "+": (a, b) => finite(a + b),
-  "-": (a, b) => finite(a + -b),
-  "*": (a, b) => finite(a * b),
-  "/": (a, b) => (b === 0 ? null : finite(a / b)),
-  "^": (a, b) => ((a === 0 && b < 0) || (a < 0 && !Number.isInteger(b)) ? null : finite(a ** b)),
+  "+": (a, b) => limit(a + b),
+  "-": (a, b) => limit(a - b),
+  "*": (a, b) => limit(a * b),
+  "/": (a, b) => (b === 0 ? null : limit(a / b)),
+  "^": (a, b) => ((a === 0 && b < 0) || (a < 0 && !Number.isInteger(b)) ? null : limit(a ** b)),
   mod: (a, b) => (b === 0 ? null : a - b * Math.floor(a / b)),
   min: (a, b) => Math.min(a, b),
   max: (a, b) => Math.max(a, b),
@@ -1172,15 +1172,19 @@ export class Runtime {
     const exprs = parts.slice(1) as Expr[];
     const plain = exprs.every((x) => NUMBERS.has(this.core(x[1]) as string));
     if (plain && exprs.length > 2 && (name === "+" || name === "-" || name === "*")) {
-      // More than two plain numbers: the built-in goes from left to right, and a step that is not
-      // finite makes the whole none.
-      const step = FAST[name]!;
+      // More than two plain numbers: the built-in goes from left to right, and the result is
+      // clamped once, as an operation with several arguments is one operation.
       return (ctx) => {
         const vs = args.map((f) => f(ctx) as number | null);
         if (vs.includes(null)) return null;
-        let v: number | null = vs[0]!;
-        for (let i = 1; i < vs.length && v !== null; i++) v = step(v, vs[i]!) as number | null;
-        return isInt && typeof v === "number" ? Math.round(v) : v;
+        let v = vs[0]!;
+        for (let i = 1; i < vs.length; i++) {
+          const x = vs[i]!;
+          v = name === "+" ? v + x : name === "-" ? v - x : v * x;
+        }
+        if (name === "*" && !Number.isFinite(v)) v = scaledProduct(vs) as number;
+        const w = limit(v);
+        return isInt && w !== null ? Math.round(w) : w;
       };
     }
     if (fast && exprs.length === 2 && plain) {
@@ -1243,6 +1247,8 @@ export class Runtime {
         case "reduce":
           return items.reduce((acc, x) => (f as FnValue)([acc, x], ctx.frame), vs[1]);
         case "sum":
+          // "+" clamps the sum once. Each item lies within the number limit, so no step passes
+          // the largest binary64 number, and the sum is never none.
           return items.length === 0 ? 0 : (BUILTINS["+"]!(...items) as number);
         case "count":
           return vs.length === 1 ? items.length : items.filter((x) => call(x)).length;
