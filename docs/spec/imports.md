@@ -108,7 +108,8 @@ So inside house.mtp, a function reads the color `ink` of house.mtp by its bare n
 source and `(import colors red)` in house.mtp, the source may also write `(import house red)`.
 With `(import colors)` in house.mtp, `(import house colors)` is a compile error by
 {numref}`import-form`. The names of the standard library are ordinary declarations of its files,
-and a source brings them in as it brings in the names of any other file.
+and a source brings them in as it brings in the names of any other file. Among them are the
+random functions, which the file rand declares with `(primitive …)` ({numref}`primitive-form`).
 
 ```{rule} import-declares-names
 An `(import …)` gives its names at its place in the file.

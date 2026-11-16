@@ -77,7 +77,17 @@ CASES = [
     # reference.md "Controls": a toggle's value with a target.
     ("(bool b)\n(toggle t b (value true))", "2:13", "a toggle takes no (value …)"),
     # reference.md "Numbers": rand inside a function.
-    ("(func f (real x) (+ x (rand)))", "1:23", "rand inside a function is a compile error"),
+    (
+        "(import rand rand)\n(func f (real x) (+ x (rand)))",
+        "2:23",
+        "rand inside a function is a compile error",
+    ),
+    # docs/spec/scope.md, Rule name-lookup: a name of rand that the file does not import.
+    (
+        "(real k 0)\n(int v (rand-int 1 6))",
+        "2:8",
+        "rand-int comes from the standard library: (import rand rand-int)",
+    ),
 ]
 
 

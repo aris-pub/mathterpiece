@@ -13,7 +13,7 @@
     "circle" "rect" "ellipse" "line" "triangle" "polyline" "polygon" "arc" "ring" "text" "curve"
     "real" "int" "ratio" "complex" "bool" "string" "point" "list" "transform"
     "color" "font" "namespace" "palette" "interface" "colormap" "formula" "term"
-    "transition" "move" "set" "wait" "roll-dice" "animation" "at-once" "in-order" "rand-seed"
+    "transition" "move" "set" "wait" "animation" "at-once" "in-order" "rand-seed" "primitive"
     "canvas" "readout" "display" "slider" "button" "play" "stepper" "toggle" "on-drag" "on-click"
     "on-release" "on-dragstart" "on-dragend" "on-view" "on-enter" "on-leave" "on-pointermove"
     "on-ready" "on-live" "on-quiet" "on-show" "on-hide" "defaults" "clip" "loop" "labels"

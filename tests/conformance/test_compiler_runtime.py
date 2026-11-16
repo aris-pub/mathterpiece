@@ -31,6 +31,8 @@ from .support import (
     syntax_error,
 )
 
+RAND = "(import rand rand rand-int pick shuffle next-seed roll-dice) "
+
 rule = pytest.mark.rule
 
 
@@ -116,7 +118,7 @@ class TestStepRejectsOrPasses:
         "src",
         [
             FIGURE,
-            "(rand-seed s 1) (real v (rand))",
+            RAND + "(rand-seed s 1) (real v (rand))",
             "(real k 0) (button b (animation (move k (to 1) (duration 1))))",
         ],
     )
@@ -181,7 +183,7 @@ class TestCompilerSameBytes:
     def test_the_same_source_gives_the_same_bytes_in_two_processes(self, tmp_path):
         src = tmp_path / "f.mtp"
         src.write_text(
-            "(rand-seed sd 1) (real k 1 (>= 0) (<= 2))\n"
+            RAND + "(rand-seed sd 1) (real k 1 (>= 0) (<= 2))\n"
             "(scene s (foreach i 4 (circle #'c-{i}' (r (* k (rand 0 1))) (fill 'red'))))\n"
             "(canvas v s)\n"
         )
@@ -233,7 +235,7 @@ class TestCompilerNeverActsWhileDrawing:
         assert fill["bound"][0] == "read" and fill["bound"][2] == d["names"]["ink"]
 
     def test_no_random_value_is_drawn(self):
-        d = mtpc("(rand-seed sd 1) (real v (rand))")
+        d = mtpc(RAND + "(rand-seed sd 1) (real v (rand))")
         assert "bound" in obj(d, "v")["value"]
 
 

@@ -2,6 +2,7 @@
 docs/reference.md). Every declaration follows one body rule, (head name? positional… item…), and
 every expression is typed, with what it reads, its range, and its value when it is known."""
 
+import functools
 import itertools
 import math
 import re
@@ -18,6 +19,7 @@ from mathterpiece.builtins import (
     CONSTANTS,
     EXACT_LIMIT,
     LIMIT,
+    PRIMITIVES,
     SPECIAL_BUILTINS,
     Builtin,
     Undefined,
@@ -103,7 +105,7 @@ from mathterpiece.types import (
 
 RESERVED = frozenset(
     "scene animation transition move in-order at-once when else true false none const self".split()
-    + ["doc", "free", "set"]
+    + ["doc", "free", "set", "primitive"]
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
@@ -422,12 +424,12 @@ STDLIB = Path(__file__).parent / "stdlib"
 # What a namespace may not hold: it holds values only (the author, 2026-11-04).
 NOT_VALUES = {
     "func", "type", "motif", "variant", "scene", "transition", "animation", "import", "let",
-    "foreach", "interface", "colormap", "choreo",
+    "foreach", "interface", "colormap", "choreo", "primitive",
 }  # fmt: skip
 # What an imported file may declare at its top level, besides const variables.
 IMPORTABLE = {
     "color", "font", "func", "motif", "variant", "type", "import", "namespace", "interface",
-    "colormap", "palette", "choreo",
+    "colormap", "palette", "choreo", "primitive",
 }  # fmt: skip
 
 
@@ -514,6 +516,16 @@ class _Compiler:
         self.top_names: dict[tuple[str | None, str], str] = {}
         self.loaded: dict[Path, str] = {}
         self.loading: list[Path] = []
+        # Each imported file's path, by the name it is imported by, to tell the standard
+        # library's files from the others.
+        self.paths: dict[str, Path] = {}
+        # The keys of the names that each file's imports give it, and the seeds that each file
+        # declares, read from its text, so that a random value finds the default seed of its
+        # file (Rule default-seed) even when that seed is const or declared after it.
+        self.imported_keys: dict[str | None, set[str]] = {None: set()}
+        self.seed_decls: dict[str | None, list[tuple[str, Pos, bool]]] = {}
+        # The primitives that (primitive N) names, by the key the name is kept under.
+        self.primitives: dict[str, str] = _Names(self)
         # The top-level forms of imported files that are compiled, by their positions: the
         # others are not used (the author, 2026-11-04). None compiles all of them.
         self.keep: set[Pos] | None = None
@@ -591,6 +603,7 @@ class _Compiler:
         forms = tuple(_sets(f) for f in forms)
         self.keep = _used(forms, self.source)
         forms = self.imports(forms, None, self.source)
+        self.seed_decls[None] = _seed_decls(forms)
         for form, scope in self.expand(forms, {}, top=True):
             self.top(form, scope)
         for choreo in self.choreo_trials:
@@ -762,8 +775,10 @@ class _Compiler:
                 raise CompileError("import is (import file name…)", form.pos)
             name = str(target.parts[0])
             exports = self.load(name, path, form.pos)
+            keys = self.imported_keys.setdefault(file, set())
             if len(form.items) == 2:
                 whole[name] = exports
+                keys.update(exports.values())
                 continue
             for n in form.items[2:]:
                 if not (isinstance(n, Name) and len(n.parts) == 1):
@@ -774,18 +789,20 @@ class _Compiler:
                 if part in self.aliases[file]:
                     raise CompileError(f"'{part}' is already declared", n.pos)
                 self.aliases[file][part] = exports[part]
+                keys.add(exports[part])
                 self.top_names[(file, part)] = f"'{part}', imported from {name}.mtp ({n.pos})"
         return tuple(_through(f, whole) for f in rest) if whole else tuple(rest)
 
     def load(self, name: str, importer: Path | None, pos: Pos) -> dict[str, str]:
         """The names an imported file declares, by the keys they are kept under, compiling it
         the first time it is imported."""
-        if importer is None:
+        found = _find(name, importer)
+        if found is None and importer is None:
             raise CompileError(
                 "an import reads a file next to this one: compile it from a file", pos
             )
-        found = _find(name, importer)
         if found is None:
+            assert importer is not None
             raise CompileError(
                 f"no {name}.mtp next to {importer.name} or in the standard library", pos
             )
@@ -796,6 +813,7 @@ class _Compiler:
             return self.aliases[self.loaded[real]]
         if name in self.aliases:
             raise CompileError(f"two different files named {name}.mtp are imported", pos)
+        self.paths[name] = real
         forms = tuple(_sets(f) for f in parse(found.read_text(encoding="utf-8"), file=name))
         for form in forms:
             what = _not_importable(form)
@@ -810,6 +828,13 @@ class _Compiler:
         skipped = False
         try:
             items = self.imports(forms, name, found)
+            self.seed_decls[name] = _seed_decls(
+                [
+                    i
+                    for i in items
+                    if self.keep is None or _declared(i) is None or i.pos in self.keep
+                ]
+            )
             for item in items:
                 declared = _declared(item)
                 if self.keep is not None and declared is not None and item.pos not in self.keep:
@@ -1013,6 +1038,7 @@ class _Compiler:
             ("choreo", self.choreos),
             ("func", m.funcs),
             ("type", m.types),
+            ("primitive", self.primitives),
         ]
 
     def attach_doc(self, form: Form, doc: str, objects: int, keys: dict) -> None:
@@ -1070,6 +1096,8 @@ class _Compiler:
             return
         if head == "choreo":
             return self.choreo_decl(form)
+        if head == "primitive":
+            return self.primitive_decl(form)
         if self.choreo_of(form) is not None:
             raise CompileError(_USE_OUTSIDE, form.pos)
         if head in COMPONENTS:
@@ -1108,7 +1136,10 @@ class _Compiler:
                 f"{what} '{name}' would hide {hidden}: give it another name", node.pos
             )
         file = form.pos.file if form is self.top_form else None
-        if form is self.top_form and (name in self.aliases[form.pos.file] or name in self.aliases):
+        # The name of an imported file may not be declared again, but for the file's own
+        # declarations: rand.mtp declares rand.
+        imported = name in self.aliases and name != form.pos.file
+        if form is self.top_form and (name in self.aliases[form.pos.file] or imported):
             raise CompileError(f"'{name}' is already declared", node.pos)
         if form is self.top_form:
             what = self.top_head or ("func" if _typed_func(form) is not None else "variable")
@@ -1119,7 +1150,7 @@ class _Compiler:
             self.aliases[file][name] = f"{file}.{name}"
             return f"{file}.{name}", node.pos
         taken = self.model.names.keys() | self.model.funcs.keys() | self.model.types.keys()
-        taken |= self.choreos.keys()
+        taken |= self.choreos.keys() | self.primitives.keys()
         if self.bodies:
             taken = self.bodies[-1]["names"].keys() | self.bodies[-1]["attrs"]
         # A parameter hides a top-level name inside its function or motif, as in Python.
@@ -1636,6 +1667,29 @@ class _Compiler:
         if all(p.default is not None for p in params):
             self.choreo_trials.append(choreo)
 
+    def primitive_decl(self, form: Form) -> None:
+        """(primitive N): the name N for the compiler's primitive N, which only a file of the
+        standard library declares (the author, 2026-11-16; docs/spec/stdlib.md)."""
+        if self.stdlib_name(form.pos.file) is None:
+            raise CompileError("only a file of the standard library holds (primitive …)", form.pos)
+        if len(form.items) != 2 or not isinstance(form.items[1], Name):
+            raise CompileError("primitive is (primitive name)", form.pos)
+        key, pos = self.name_of(form)
+        assert key is not None
+        shown = key.rsplit(".", 1)[-1]
+        if shown not in PRIMITIVES:
+            raise CompileError(
+                "primitive names one of rand, rand-int, pick, shuffle and next-seed", pos
+            )
+        dict.__setitem__(self.primitives, key, shown)
+
+    def stdlib_name(self, file: str | None) -> str | None:
+        """The name of the standard library's file that file is, or None when it is another."""
+        path = self.source if file is None else self.paths.get(file)
+        if path is None or path.resolve().parent != STDLIB.resolve():
+            return None
+        return path.stem
+
     def choreo_trial(self, choreo: "_Choreo") -> None:
         args = {p.name: _default_arg(p) for p in choreo.params}
         objects, names, sites = len(self.model.objects), dict(self.model.names), self.rand_sites
@@ -1686,6 +1740,12 @@ class _Compiler:
         assert choreo is not None
         shown = choreo.name.rsplit(".", 1)[-1]
         given, params = form.items[1:], choreo.params
+        if not given and shown == "roll-dice" and self.stdlib_name(choreo.pos.file) == "rand":
+            # (roll-dice) rolls the default seed of the file that holds it, which no default
+            # of a parameter can name, since a default is read in rand.mtp (Rule
+            # sugar-rewrites).
+            seed = self.default_seed(form.pos)
+            return self.choreo_steps(choreo, {params[0].name: seed}, form.pos)
         least = max((k + 1 for k, p in enumerate(params) if p.default is None), default=0)
         if not least <= len(given) <= len(params):
             if least == len(params):
@@ -1713,6 +1773,12 @@ class _Compiler:
                     ) from None
                 raise
             named = isinstance(node, Name) and all(isinstance(x, str) for x in node.parts)
+            if _is_seed(p.type) and not (named and e.op == "read" and _is_seed(e.type)):
+                # A parameter that is a seed stands for the seed, which the body may move.
+                raise CompileError(
+                    f"the argument for {p.name} is the name of a seed, as in ({shown} dots)",
+                    node.pos,
+                )
             if not (e.known or named or e.op in ("obj", "func", "builtinfunc")):
                 raise CompileError(
                     "the arguments of a choreo are known when compiling: names of shapes,"
@@ -2267,7 +2333,7 @@ class _Compiler:
                 raise CompileError("(seed s) names one seed", named.pos)
             seed = self.seed_expr(named.items[1], scope)
         else:
-            seed = self.default_seed(pos, scope)
+            seed = self.default_seed(pos)
         site, self.rand_sites = self.rand_sites, self.rand_sites + 1
         if head == "rand":
             if len(given) not in (0, 2):
@@ -2310,22 +2376,62 @@ class _Compiler:
             i for i, o in enumerate(self.model.objects) if o.kind == "variable" and _is_seed(o.type)
         ]
 
-    def default_seed(self, pos: Pos, scope: dict) -> Expr:
-        """The only seed the file declares or imports, such as rand.seed after (import rand)."""
-        seeds = self.seeds()
-        if len(seeds) > 1:
+    def default_seed(self, pos: Pos) -> Expr:
+        """The default seed of the file that holds pos (Rule default-seed): the only seed among
+        the names of its file scope, or with no variable of type rand-seed there, the seed of
+        the standard library's rand.mtp."""
+        file = pos.file
+        objects = self.model.objects
+        imported = self.imported_keys.get(file, set())
+        own = [i for i in self.seeds() if objects[i].pos.file == file]
+        found = own + [i for i in self.seeds() if objects[i].name in imported and i not in own]
+        declared = {objects[i].pos for i in own}
+        # Read from the file's text: its seeds not declared yet, and its const ones, which are
+        # variables of type rand-seed but not seeds.
+        later = [
+            n for n, at, const in self.seed_decls.get(file, []) if not const and at not in declared
+        ]
+        const = [n for n, _, c in self.seed_decls.get(file, []) if c]
+        for key in imported:
+            source, _, name = key.rpartition(".")
+            if (name, True) in {(n, c) for n, _, c in self.seed_decls.get(source, [])}:
+                const.append(key)
+        if len(found) + len(later) > 1:
             raise CompileError(
                 "this file declares several seeds: name the one this follows, as"
                 " (rand 0 1 (seed dots))",
                 pos,
             )
-        if not seeds:
+        if later:
             raise CompileError(
-                "a random value follows a seed: import the standard one, (import rand), or declare"
-                " one, (rand-seed dots 0)",
+                f"the seed {later[0]} is declared after this: a random value follows a seed"
+                " declared before it",
                 pos,
             )
-        return self.read(seeds[0], None)
+        if found:
+            return self.read(found[0], None)
+        if const:
+            raise CompileError(
+                f"{const[0]} is const, so it is not a seed: a random value follows a seed that"
+                " is not const",
+                pos,
+            )
+        standard = next(
+            (
+                i
+                for i in self.seeds()
+                if self.stdlib_name(objects[i].pos.file) == "rand"
+                and objects[i].name.rsplit(".", 1)[-1] == "seed"
+            ),
+            None,
+        )
+        if standard is None:
+            raise CompileError(
+                "a random value follows a seed: declare one, (rand-seed dots 0), or import the"
+                " standard one, (import rand seed)",
+                pos,
+            )
+        return self.read(standard, None)
 
     def special_builtin(self, node: Form, head: str, given, scope: dict) -> Expr:
         """The built-ins whose arguments vary in number or type."""
@@ -3086,10 +3192,6 @@ class _Compiler:
                 out.append(
                     self.played(self.transition(item, scope, top=False), duration, ease, item.pos)
                 )
-            elif head == "roll-dice":
-                # (roll-dice s) stands for (move s (to (next-seed s)) (duration 0)) (mtp-bjn0).
-                assert isinstance(item, Form)
-                out.append(self.roll(item, scope))
             elif head == "wait":
                 # (wait t) stands for (move none (duration t)) (the author, 2026-11-03).
                 assert isinstance(item, Form)
@@ -3114,6 +3216,7 @@ class _Compiler:
                 assert isinstance(item, Form)
                 out.append(self.choreo_use(item, scope))
             else:
+                self.from_rand(head, item.pos)
                 raise CompileError(
                     "an animation holds moves, waits, at-once, in-order, the names of"
                     " animations and transitions, and uses of choreos"
@@ -3129,30 +3232,6 @@ class _Compiler:
         if not e.known:
             raise CompileError("a label is a string known when compiling", node.pos)
         return e.value
-
-    def roll(self, item: Form, scope: dict) -> tuple:
-        """(roll-dice) or (roll-dice s): an instant move of the seed to its next value."""
-        pos = item.pos
-        if len(item.items) > 2:
-            raise CompileError("roll-dice takes the seed it rolls, or none for the only one", pos)
-        if len(item.items) == 2:
-            target = item.items[1]
-            self.seed_expr(target, scope)
-        else:
-            # Kept under its full name, rand.seed for the standard one, which finds it from any
-            # file.
-            seed = self.default_seed(pos, scope)
-            target = Name((self.model.objects[seed.args[0]].name,), pos)
-        move = Form(
-            (
-                Name(("move",), pos),
-                target,
-                Form((Name(("to",), pos), Form((Name(("next-seed",), pos), target), pos)), pos),
-                Form((Name(("duration",), pos), IntLit(0, pos)), pos),
-            ),
-            pos,
-        )
-        return self.played(self.transition(move, scope, top=False), 0, None, pos)
 
     def check_together(self, parts, pos: Pos) -> None:
         """Moves that run at the same time read the same values when they start (mtp-lm24), so
@@ -3742,6 +3821,7 @@ class _Compiler:
                 raise CompileError(f"expected an item of a {obj.kind}, got a name", item.pos)
             if self.not_taken(item):
                 head = _head(item)
+                self.from_rand(head, item.pos)
                 who = obj.kind if obj.kind in LISTENERS else _a(obj.kind)
                 message = f"{who} takes no ({head} …)"
                 if head not in ARGUMENT_WORDS and obj.kind not in PLAY_NOTHING:
@@ -4292,6 +4372,7 @@ class _Compiler:
             or head in BUILTINS
             or head in SPECIAL_BUILTINS
             or head in self.model.funcs
+            or head in self.primitives
         )
 
     def shown_by(self, node: Node) -> Attribute:
@@ -6054,6 +6135,10 @@ class _Compiler:
             f = self.model.functions[fid]
             t = FuncT(tuple(p.type for p in f.params), f.result)
             return Expr("func", t, (fid, ()), f.deps)
+        if name in self.primitives:
+            # Each call of a random function is a place of its own in the stream, so a
+            # primitive is never a value.
+            raise CompileError(f"{name} is only called, as ({name} …)", pos)
         if name in self.model.names:
             return self.read(self.model.names[name], None)
         if name in CONSTANTS:
@@ -6061,7 +6146,15 @@ class _Compiler:
         if name in BUILTINS:
             b = BUILTINS[name]
             return Expr("builtinfunc", FuncT(b.params, _result(b)), (name,))
+        self.from_rand(name, pos)
         raise CompileError(f"unknown name '{name}'", pos)
+
+    def from_rand(self, name: str | None, pos: Pos) -> None:
+        """A compile error saying where name comes from, when name is not found and the
+        standard library's rand.mtp gives it: the random names are not built in (the author,
+        2026-11-16)."""
+        if name is not None and name in _rand_names(STDLIB):
+            raise CompileError(f"{name} comes from the standard library: (import rand {name})", pos)
 
     def read(self, i: int, attr: str | None) -> Expr:
         obj = self.model.objects[i]
@@ -6450,6 +6543,8 @@ class _Compiler:
                     return self.apply(local, node, scope)
             elif head in self.model.funcs:
                 return self.call(self.model.funcs[head], node, scope)
+            elif head in self.primitives:
+                return self.random(node, self.primitives[head], node.items[1:], scope)
         # The commonest heads, first: no head checked below is one of them.
         if head in ARITH:
             return self.arith(node.pos, head, self.operands(args, expected, scope))
@@ -6595,6 +6690,7 @@ class _Compiler:
             )
         if self.choreo_of(node) is not None:
             raise CompileError(_USE_OUTSIDE, node.pos)
+        self.from_rand(head, node.pos)
         raise CompileError(f"unknown function '{head}'", node.pos)
 
     def operands(self, nodes, expected: Type | None, scope: dict) -> list:
@@ -6992,9 +7088,7 @@ def _heads(nodes) -> frozenset[str]:
 
 
 # The heads of the forms an animation holds, besides uses of choreos.
-ANIMATION_ITEMS = (
-    *["move", "wait", "roll-dice", "at-once", "in-order", "foreach", "defaults", "step"],
-)
+ANIMATION_ITEMS = ("move", "wait", "at-once", "in-order", "foreach", "defaults", "step")
 
 
 def _in_order(steps: list) -> tuple:
@@ -7174,13 +7268,11 @@ def _a(thing) -> str:
     return f"{'an' if word[:1] in 'aeiou' else 'a'} {word}"
 
 
-def _find(name: str, importer: Path) -> Path | None:
+def _find(name: str, importer: Path | None) -> Path | None:
     """The file (import name) reads: the importing file's folder first, then the standard
-    library."""
-    return next(
-        (p for p in (importer.parent / f"{name}.mtp", STDLIB / f"{name}.mtp") if p.is_file()),
-        None,
-    )
+    library. A source compiled with no file of its own has only the standard library."""
+    folders = [STDLIB] if importer is None else [importer.parent, STDLIB]
+    return next((p for p in (f / f"{name}.mtp" for f in folders) if p.is_file()), None)
 
 
 def _declared(form: Node) -> str | None:
@@ -7213,7 +7305,11 @@ def _words(node, out: set[str]) -> set[str]:
             else:
                 _words(p, out)
     elif isinstance(node, (Form, ListLit, Brackets, Bar)):
-        for i in node.items:
+        items = node.items
+        if isinstance(node, Form) and _seed_item(node) is not None:
+            # The head of (seed s) uses no declaration named seed: s names the seed.
+            items = (*items[:-1], *items[-1].items[1:])
+        for i in items:
             _words(i, out)
     elif isinstance(node, InterpStrLit):
         for p in node.parts:
@@ -7222,6 +7318,94 @@ def _words(node, out: set[str]) -> set[str]:
     elif isinstance(node, Field):
         _words(node.expr, out)
     return out
+
+
+def _random_head(node: Node) -> str | None:
+    """The last part of the head of a form that may call a random function or roll-dice, by
+    any name an import gives it: rand-int, or rand.rand-int."""
+    if isinstance(node, Form) and node.items and isinstance(node.items[0], Name):
+        last = node.items[0].parts[-1]
+        if isinstance(last, str) and (last in RANDOM or last == "roll-dice"):
+            return last
+    return None
+
+
+def _seed_item(node: Node) -> Node | None:
+    """The (seed s) that ends a call of a random function, or None."""
+    if _random_head(node) not in RANDOM:
+        return None
+    assert isinstance(node, Form)
+    last = node.items[-1]
+    return last if len(node.items) > 1 and _head(last) == "seed" else None
+
+
+def _needs_default_seed(forms) -> bool:
+    """Whether forms hold, at any depth, a random call with no (seed …) or a roll-dice with no
+    argument: each follows the default seed of its file (Rule default-seed)."""
+    todo = list(forms)
+    while todo:
+        node = todo.pop()
+        head = _random_head(node)
+        if head in RANDOM and _seed_item(node) is None:
+            return True
+        if head == "roll-dice" and len(cast(Form, node).items) == 1:
+            return True
+        if isinstance(node, (Form, ListLit, Brackets, Bar)):
+            todo.extend(node.items)
+        elif isinstance(node, InterpStrLit):
+            todo.extend(p for p in node.parts if not isinstance(p, str))
+        elif isinstance(node, Field):
+            todo.append(node.expr)
+    return False
+
+
+def _seed_forms(forms) -> list[Form]:
+    """The forms among forms that declare a variable of type rand-seed, at the top level and in
+    the scene and its containers, read from the text: a type declared from rand-seed, as
+    (type dice rand-seed), declares such variables too."""
+    seeds = {"rand-seed"}
+    for f in forms:
+        if _head(f) == "type" and len(f.items) >= 3 and _one_part(f.items[2]) in seeds:
+            name = _one_part(f.items[1])
+            if name is not None:
+                seeds.add(name)
+    out: list[Form] = []
+
+    def walk(items):
+        for f in items:
+            head = _head(f)
+            if head in seeds and isinstance(f, Form) and len(f.items) > 1:
+                name = f.items[1]
+                if isinstance(name, Name) and len(name.parts) == 1:
+                    out.append(f)
+            elif head in ("scene", "group", "row", "column") and isinstance(f, Form):
+                walk(f.items[2:])
+
+    walk(forms)
+    return out
+
+
+def _seed_decls(forms) -> list[tuple[str, Pos, bool]]:
+    """Each variable of type rand-seed that forms declare: its name, where its name is written,
+    and whether it is const, and so not a seed."""
+    return [
+        (
+            str(cast(Name, f.items[1]).parts[0]),
+            f.items[1].pos,
+            any(_head(i) == "const" for i in f.items[2:]),
+        )
+        for f in _seed_forms(forms)
+    ]
+
+
+@functools.cache
+def _rand_names(stdlib: Path) -> frozenset[str]:
+    """The names that the standard library's rand.mtp gives."""
+    path = stdlib / "rand.mtp"
+    if not path.is_file():
+        return frozenset()
+    names = (_declared(f) for f in parse(path.read_text(encoding="utf-8"), file="rand"))
+    return frozenset(n for n in names if n is not None)
 
 
 def _sets(node):
@@ -7255,17 +7439,26 @@ def _used(forms, path: Path | None) -> set[Pos] | None:
     when it is written anywhere, even where it means something else, so nothing used is left
     out. A file that cannot be found or read is left for the compile to report."""
     files: dict[Path, tuple] = {}
+    # What each file read imports: each file found, with the names imported, or None for the
+    # file whole. The source is under its own path, None when it has no file.
+    imports: dict[Path | None, list[tuple[Path, tuple | None]]] = {}
 
     def read(forms, path):
+        edges = imports.setdefault(path, [])
         for form in forms:
             target = form.items[1] if _head(form) == "import" and len(form.items) > 1 else None
-            if not (isinstance(target, Name) and len(target.parts) == 1) or path is None:
+            if not (isinstance(target, Name) and len(target.parts) == 1):
                 continue
             name = str(target.parts[0])
             found = _find(name, path)
-            if found is None or found.resolve() in files:
+            if found is None:
                 continue
-            files[found.resolve()] = theirs = parse(found.read_text(encoding="utf-8"), file=name)
+            found = found.resolve()
+            named = tuple(_one_part(n) for n in form.items[2:]) if len(form.items) > 2 else None
+            edges.append((found, named))
+            if found in files:
+                continue
+            files[found] = theirs = parse(found.read_text(encoding="utf-8"), file=name)
             read(theirs, found)
 
     read(forms, path)
@@ -7275,22 +7468,60 @@ def _used(forms, path: Path | None) -> set[Pos] | None:
     for form in forms:
         if _head(form) != "import":
             _words(form, words)
-    # Something random follows a seed it does not name: the one rand.mtp declares (mtp-bjn0).
-    if words & (RANDOM | {"roll-dice"}):
-        words.add("seed")
     pending = [
         (f, _declared(f)) for theirs in files.values() for f in theirs if _head(f) != "import"
     ]
     keep: set[Pos] = set()
-    grew = True
-    while grew:
-        grew = False
-        for f, declared in pending:
-            if f.pos not in keep and (declared is None or declared in words):
-                keep.add(f.pos)
+
+    def grow():
+        grew = True
+        while grew:
+            grew = False
+            for f, declared in pending:
+                if f.pos not in keep and (declared is None or declared in words):
+                    keep.add(f.pos)
+                    _words(f, words)
+                    grew = True
+
+    grow()
+    # The seeds that random values follow without naming them (Rule default-seed): an import
+    # gives their names, so they are not among the words written.
+    seeds = {p: _seed_forms(theirs) for p, theirs in files.items()}
+    standard = STDLIB.resolve() / "rand.mtp"
+    extra: set[Pos] = set()
+    for edges in imports.values():
+        for found, named in edges:
+            if named is not None:
+                extra |= {f.pos for f in seeds[found] if _one_part(f.items[1]) in named}
+    for at, edges in imports.items():
+        theirs = forms if at == path else [f for f in files[at] if f.pos in keep]
+        if not _needs_default_seed(theirs):
+            continue
+        own = _seed_forms(forms) if at == path else seeds[at]
+        extra |= {f.pos for f in own}
+        given = bool(own)
+        for found, named in edges:
+            if named is None:
+                extra |= {f.pos for f in seeds[found]}
+                given = given or bool(seeds[found])
+            else:
+                given = given or any(_one_part(f.items[1]) in named for f in seeds[found])
+        if not given and standard in seeds:
+            extra |= {f.pos for f in seeds[standard]}
+    if not extra <= keep:
+        keep |= extra
+        for f, _ in pending:
+            if f.pos in extra:
                 _words(f, words)
-                grew = True
+        grow()
     return keep
+
+
+def _one_part(node: Node) -> str | None:
+    """The text of a name of one part, or None for any other node."""
+    if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
+        return node.parts[0]
+    return None
 
 
 def _not_importable(form: Node) -> str | None:

@@ -29,8 +29,10 @@ A form that needs a value or a type to be rewritten is core.
 
 ```{rule} library-form
 The library is the built-in functions, which are implemented natively, and the files of the
-standard library, which are written in mtp. A call of a library function is a call, which is a
-core form. The library holds functions, constants and declarations, and no form of the language.
+standard library, which are written in mtp. The file rand of the standard library also names the
+{term}`primitives <primitive>`, which are implemented natively too ({numref}`primitive-form`). A
+call of a library function is a call, which is a core form. The library holds functions, constants
+and declarations, and no form of the language.
 ```
 
 By {numref}`declaration-names`, a declared function may take the name of a library function: after
@@ -79,9 +81,8 @@ before any other rewrite of the declaration that it copies.
 | the type `colormap` | the type `func[real color]` | |
 | a type `N`, declared `(type N BASE C…)` | the type `(BASE C…)` | |
 | `(range X)` | `(range 0 X (gap 1))` | `X` is not a `(gap …)` or `(num …)` item |
-| `(rand ARGS…)`, and the same with `rand-int`, `pick` or `shuffle`, with no `(seed …)` | `(rand ARGS… (seed S))` | `S` is the only {term}`seed` that the file declares or imports ({numref}`seed-variable`) |
-| `(roll-dice S)`, in an animation's body | `(move S (to (next-seed S)) (duration 0))` | `S` is a seed |
-| `(roll-dice)`, in an animation's body | `(roll-dice S)` | `S` as for a random function |
+| `(R ARGS…)`, with `R` a name of the primitive `rand`, `rand-int`, `pick` or `shuffle` ({numref}`primitive-form`), and no `(seed …)` | `(R ARGS… (seed S))` | `S` is the {term}`default seed` of the file that holds the form ({numref}`default-seed`) |
+| `(D)`, with `D` a name of the choreo `roll-dice` of the file rand of the standard library ({ref}`stdlib-rand`) | `(D S)` | `S` as for a random function |
 | `(set V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
@@ -113,14 +114,19 @@ of its parameter. An argument may be any expression that may be written in the b
 where its parameter is written, so `(pulse (* 2 k))` is an error when the parameter is a duration,
 by {doc}`binding-time`, and is accepted when it is a `to`. A parameter stands for a value or a
 shape, never for a variable: a move in the body may move an attribute of a shape given as a
-parameter, such as `who.opacity`, and never the parameter itself.
+parameter, such as `who.opacity`, and never the parameter itself. The one exception is a parameter
+of type `rand-seed`, which stands for a seed: its argument is the name of a seed, and in the body
+the parameter is replaced by that seed and not by its value, so a move of the parameter moves the
+seed. Any other argument for such a parameter is a compile error, "the argument for P is the name
+of a seed, as in (C dots)". So the choreo `roll-dice` of the file rand,
+`(choreo roll-dice ((rand-seed s)) (set s (next-seed s)))`, moves the seed that its use names.
 
 :::{admonition} Code differs
 :class: note
 The compiler writes each use of a choreo out where it is written (compiler.py:1669-1729), proves
 the body again for each use, compiles a choreo whose parameters all have defaults once more without
-a use, and binds a parameter given a name to that name, so that a move of the parameter moves what
-it names (mtp-ydd4.7.56).
+a use, and binds a parameter that is not a seed and is given a name to that name, so that a move of
+the parameter moves what it names (mtp-ydd4.7.56).
 :::
 
 Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
@@ -350,6 +356,7 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `transition` | core | `(transition N TARGET ITEM…)`: a named trajectory | {doc}`time` |
 | `animation` | core | `(animation N ITEM…)`: a named animation | {doc}`time` |
 | `choreo` | core | `(choreo N PARAMS ITEM…)`: a template of moves, as a motif is a template of shapes | {doc}`time` |
+| `primitive` | core | `(primitive N)`, only in a file of the standard library: the name `N` for a {term}`primitive` | {numref}`primitive-form` |
 | `foreach` | core | copies of its declarations, made in the expand step | {doc}`binding-time` |
 | `(T N …)` for a type `T` | core | a variable, among them `color` and `font` tokens and `rand-seed` seeds | {doc}`world-model`, {doc}`reaction` |
 | {term}`components <component>` | core | {term}`views <view>` and controls (see "Components and their items") | {doc}`page-interface` |
@@ -498,13 +505,13 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `mix`, `lighten`, `darken`, `light-dark` | colors |
 | `round`, `log`, `min`, `max`, `lerp`, `range` | with a varying number or type of arguments |
 | `gap`, `num` | the third argument of `range` |
-| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds |
+| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds: {term}`primitives <primitive>`, which a source names only through the file rand of the standard library ({numref}`primitive-form`) |
 | `step`, `step-ease` | eases: `(step N)` gives the ease of N equal jumps, and `(step-ease P)` the ease that is 0 before P and 1 from P on |
 | `seed` | the last argument of a random function, `(seed S)` |
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
-| the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp |
+| the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
 
 A call of `step` or `step-ease` gives an ease, which is a function, so the two are library
 functions and not keywords. By {numref}`declaration-names`, a declaration or a binding named
@@ -534,7 +541,6 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | `foreach` in an animation's body | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
 | the name of an animation or a transition in a body | core | plays what it names | {doc}`time` |
 | `wait` | sugar | | {numref}`sugar-rewrites` |
-| `roll-dice` | sugar | | {numref}`sugar-rewrites` |
 | `set` | sugar | `(set V X)`: a move of no duration | {numref}`sugar-rewrites` |
 | a use of a choreo | core | the choreo's moves, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
 
@@ -597,7 +603,7 @@ their place. They are not forms of the language.
 | `N.A`, `N[X]` | sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | sugar | {numref}`sugar-rewrites` |
 | `(maybe T)`, `colormap` as a type, a name declared by `type` | sugar | {numref}`sugar-rewrites` |
-| `(range X)`, a random function with no `(seed …)` | sugar | {numref}`sugar-rewrites` |
+| `(range X)`, a random function with no `(seed …)`, `roll-dice` with no argument | sugar | {numref}`sugar-rewrites` |
 | `import`, `type`, `palette` | sugar | {numref}`sugar-rewrites` |
 | `like` | sugar, or core with a `(name …)` | {numref}`sugar-rewrites`, {numref}`names-from-values` |
 | `pointer-events` on a container | sugar | {numref}`sugar-rewrites` |
@@ -605,7 +611,7 @@ their place. They are not forms of the language.
 | `dash` with one argument, `pos` | sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | sugar | {numref}`sugar-rewrites` |
-| `wait`, `roll-dice`, `set`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
+| `wait`, `set`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
 | `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |
 | `scene`, `background`, `transform` in the scene | core | {doc}`world-model` |
@@ -615,6 +621,7 @@ their place. They are not forms of the language.
 | `func`, `func[T]`, `fn`, calls | core | {doc}`types`, {doc}`evaluation` |
 | `transition`, `move` and their parts | core | {doc}`time` |
 | `choreo` and its uses | core | {doc}`time`, {numref}`prove-bodies-once` |
+| `primitive` | core | {numref}`primitive-form` |
 | `animation`, `at-once`, `in-order`, `loop`, `defaults` in an animation | core | {doc}`time`, {numref}`animation-step` |
 | `foreach` | core | {numref}`foreach-count`, {numref}`foreach-bounded-length`, {doc}`binding-time` |
 | `let` | core | {doc}`scope`, {doc}`binding-time` |
@@ -636,4 +643,5 @@ their place. They are not forms of the language.
 | a condition | core | {doc}`reaction` |
 | the operators, `not`, `abs`, the `none` functions and the box points | library | {numref}`library-form` |
 | the built-in functions and the collections, `map` over an int included, `step` and `step-ease` | library | {doc}`stdlib` |
+| the primitives | library | {numref}`primitive-form` |
 | the constants and the standard library files | library | {doc}`stdlib` |

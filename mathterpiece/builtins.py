@@ -350,10 +350,11 @@ BUILTINS: dict[str, Builtin] = {
 }
 
 # Built-ins whose arguments vary in number or type, handled by the compiler itself.
-SPECIAL_BUILTINS = {
-    "round", "log", "min", "max", "lerp", "scale", "transform", "range",
-    "rand", "rand-int", "pick", "shuffle", "next-seed",
-}  # fmt: skip
+SPECIAL_BUILTINS = {"round", "log", "min", "max", "lerp", "scale", "transform", "range"}
+# The compiler's primitives: functions with no name of their own, which the standard library's
+# rand.mtp names with (primitive N), so a source uses them only through an import (the author,
+# 2026-11-16).
+PRIMITIVES = ("rand", "rand-int", "pick", "shuffle", "next-seed")
 CONSTANTS = {
     "pi": math.pi,
     "tau": math.tau,

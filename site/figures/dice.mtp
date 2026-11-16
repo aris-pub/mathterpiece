@@ -1,5 +1,5 @@
 ; two dice, drawn from one motif, rolled at random
-(import rand)
+(import rand rand-int roll-dice)
 (list[list[point]] pips
   [[[0 0]] [[-1 1] [1 -1]] [[-1 1] [0 0] [1 -1]]
    [[-1 1] [1 1] [-1 -1] [1 -1]]

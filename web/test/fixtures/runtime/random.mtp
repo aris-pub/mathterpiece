@@ -1,4 +1,5 @@
 ; Random values bound to seeds (mtp-bjn0).
+(import rand rand rand-int pick shuffle roll-dice)
 (rand-seed dots 7)
 (rand-seed bars 8)
 (real a (rand 2 3 (seed dots)))

@@ -96,8 +96,14 @@ what these steps find, in order:
    to the declaration in the imported file.
 2. A built-in function or a built-in constant of that name ({doc}`stdlib`).
 
-When neither step finds the name, the source is a {term}`compile error`.
+When neither step finds the name, the source is a {term}`compile error`. When the file rand of the
+standard library gives a name of that text ({ref}`stdlib-rand`), the message is "N comes from the
+standard library: (import rand N)", with `N` the name.
 ```
+
+So a source that calls `(rand-int 1 6)` and imports no `rand-int` is a compile error, "rand-int
+comes from the standard library: (import rand rand-int)", since the random functions, `seed` and
+`roll-dice` are not built in ({numref}`primitive-form`).
 
 So an inner name hides an outer name of the same text inside its scope: a parameter, a `let`
 name and a `foreach` name hide a name of the file scope, and a member of a namespace hides a
@@ -189,8 +195,8 @@ compile error by {numref}`one-declaration-per-scope`, since the body binds `self
 :::{admonition} Code differs
 :class: note
 `compiler.py:99` (`RESERVED`) forbids only the names `scene`, `animation`, `transition`, `move`,
-`in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`, `doc`, `free` and
-`set`, so the name `self` is refused everywhere. The special forms of `compiler.py:122` (`SPECIAL`) and the types
+`in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`, `doc`, `free`, `set`
+and `primitive`, so the name `self` is refused everywhere. The special forms of `compiler.py:122` (`SPECIAL`) and the types
 are forbidden only as the name of a function (`compiler.py:181`, `NOT_FUNCTION_NAMES`), so a
 variable may be named `if`, and a function may not take the name of a constant. A name bound by
 `let` is checked against neither (`_Compiler.let`, `compiler.py:6663`). Bead mtp-ydd4.7.35 makes
