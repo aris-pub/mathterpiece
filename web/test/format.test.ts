@@ -17,8 +17,6 @@ describe("pyStr, Python's str() of a float", () => {
     [1.2345e20, "1.2345e+20"],
     [0, "0.0"],
     [-0, "-0.0"],
-    [Infinity, "inf"],
-    [-Infinity, "-inf"],
     [NaN, "nan"],
   ])("%s", (x, text) => {
     expect(pyStr(x)).toBe(text);

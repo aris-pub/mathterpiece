@@ -9,8 +9,6 @@ export type Kind = "int" | "ratio" | "real" | "complex" | "str" | "bool" | strin
 /** Python's str() of a float: the shortest digits that read back the same. */
 export function pyStr(x: number): string {
   if (Number.isNaN(x)) return "nan";
-  if (x === Infinity) return "inf";
-  if (x === -Infinity) return "-inf";
   if (x === 0) return Object.is(x, -0) ? "-0.0" : "0.0";
   const sign = x < 0 ? "-" : "";
   const [mantissa, expText] = Math.abs(x).toExponential().split("e");

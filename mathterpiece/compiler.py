@@ -532,6 +532,8 @@ class _Compiler:
         # The object and attribute whose attribute is being compiled, so a message can name them:
         # (name, the shape's type or None for a variable, attribute or None).
         self.where: tuple | None = None
+        # Why a read at a position is none, for the message when none does not fit.
+        self.none_because: dict[Pos, str] = {}
         # The motif instances whose bodies are being compiled, innermost last: each with its
         # id, its members' names, its parameters and bound variables, and the path its
         # members are named by (None inside an anonymous instance).
@@ -2976,8 +2978,16 @@ class _Compiler:
             if len(items) == 1 and isinstance(items[0], Name):
                 return self.named(items[0], "animation")
         steps = self.anim_body(items, scope, pos)
-        # One that loops forever lasts ∞.
-        attrs = {"duration": Attribute(_with_const(REAL), _duration(steps))}
+        # One that loops forever has no duration, so its duration is none (the author,
+        # 2026-11-16, mtp-ydd4.7.33).
+        d = _duration(steps)
+        attrs = {
+            "duration": (
+                Attribute(_with_const(Maybe(REAL)), None)
+                if math.isinf(d)
+                else Attribute(_with_const(REAL), d)
+            )
+        }
         obj = Obj("animation", name, ANIMATION, attrs=attrs, pos=pos, data={"steps": steps})
         return self.add(obj)
 
@@ -5655,21 +5665,6 @@ class _Compiler:
         # can write it (mtpc.md, "Attributes").
         if not attribute.bound and not _is_literal(node) and not self.is_constant(node, scope):
             attribute.type = _with_const(attribute.type)
-        if not attribute.bound and _is_infinite(attribute.value):
-            # ∞ is only a value known when compiling: never drawn, never written (mtp-asl).
-            name, _, attr = self.where if self.where else (None, None, None)
-            if attr is not None:
-                raise CompileError(
-                    f"{name or 'this shape'}'s {attr} would be infty: only a const variable may be"
-                    " infty",
-                    node.pos,
-                )
-            if not _is_const(attribute.type):
-                raise CompileError(
-                    f"{name or 'this value'} would hold infty, which only a variable that never"
-                    " changes may: declare it (const)",
-                    node.pos,
-                )
         return attribute
 
     def is_constant(self, node: Node, scope) -> bool:
@@ -5802,7 +5797,11 @@ class _Compiler:
             if self.declared_interface(expected) is not None:
                 return e
             if _may_be_none(e.type) and not _may_be_none(target):
-                raise CompileError(self.may_be_none(expected), node.pos)
+                because = self.none_because.get(node.pos)
+                reason = self.may_be_none(expected)
+                if because:
+                    reason = reason.replace(" may be none:", f" would be none, because {because}:")
+                raise CompileError(reason, node.pos)
             if _core(e.type) == STRING and _core(target) == COLOR:
                 raise CompileError(
                     f"expected {expected}, got {e.type}: only a literal string becomes a color",
@@ -6134,6 +6133,11 @@ class _Compiler:
         if e.known and e.value is None:
             return e
         r = self.part_of(e, part, scope, pos)
+        if part == "duration" and e.op == "obj" and r.known and r.value is None:
+            obj = self.model.objects[e.args[0]]
+            if obj.kind == "animation":
+                name = obj.name or "this animation"
+                self.none_because[pos] = f"{name} loops forever and so has no duration"
         if _may_be_none(e.type) and not _may_be_none(r.type):
             return replace(r, type=_maybe(r.type))
         return r
@@ -7617,9 +7621,6 @@ def _fold_number(op: str, vals: list, pos: Pos):
     if isinstance(v, float) and math.isnan(v):
         shown = ", ".join(_value_str(x) for x in vals)
         raise CompileError(f"{op} is undefined at {shown}", pos)
-    # ∞ in gives ∞ out; ∞ from finite numbers is an overflow.
-    if _is_infinite(v) and any(_is_infinite(x) for x in vals):
-        return v
     if isinstance(v, (int, float, Fraction)) and not math.isfinite(v):
         raise CompileError("the result is too large for a real", pos)
     if isinstance(v, (int, Fraction)) and abs(v) > MAX_REAL:
@@ -7841,18 +7842,7 @@ def _show(c) -> str:
 
 def _value_str(v) -> str:
     """A value as an error message shows it to the illustrator."""
-    if _is_infinite(v):
-        return "infty" if v > 0 else "(- infty)"
     return str(v)
-
-
-def _is_infinite(v) -> bool:
-    return isinstance(v, float) and math.isinf(v)
-
-
-def _infinity(v: float) -> str:
-    """Infinity as a string shows it to the reader."""
-    return "∞" if v > 0 else "-∞"
 
 
 # What a format spec is tried on, to check it fits the type.
@@ -7899,8 +7889,6 @@ def _show_value(t: Type, v, spec: str) -> str:
     """A value shown in a string. Halves round away from zero on the number's shortest
     decimal form (reference.md, "Numbers"), so 2.675 to two attributes is 2.68."""
     base = _base(t)
-    if _is_infinite(v):
-        return _infinity(v)
     if base == INT:
         return format(int(v), spec)
     if base in (RATIO, REAL):

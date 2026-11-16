@@ -311,12 +311,11 @@ class TestLoops:
 
 
 class TestForeverDuration:
-    # The author, 2026-11-03: an animation that loops forever lasts ∞.
-    def test_it_lasts_infinity(self):
-        m = model(
-            f"{K} (animation a (loop) (move k (to 1) (duration 2))) (real d a.duration (const))"
-        )
-        assert m.get("d").value.value == float("inf")
+    # The author, 2026-11-16: an animation that loops forever has no duration, so its duration
+    # is none (mtp-ydd4.7.33).
+    def test_its_duration_is_none(self):
+        m = model(f"{K} (animation a (loop) (move k (to 1) (duration 2))) (real|none d a.duration)")
+        assert m.get("d").value.value is None
 
 
 class TestAnimationDefaults:

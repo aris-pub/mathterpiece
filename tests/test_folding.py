@@ -58,15 +58,11 @@ class TestCalls:
         error(f"{f} (real v (f 4))", "may be none")
         error(f"{f} (real a) (real v (f a))", "may be none")
 
-    def test_a_folded_none_the_function_type_does_not_allow(self):
-        # The ranges say sind is defined for every real, so f is a plain real, but the duration
-        # of an animation that loops forever is infinite, and known only when compiling: the
-        # undefined value is reported.
+    def test_the_duration_of_a_forever_loop_is_not_a_real_argument(self):
+        # An animation that loops forever has no duration (the author, 2026-11-16).
         forever = "(real k 0) (animation a (loop) (move k (to 1) (duration 2)))"
         f = "(func[real] f ((real x)) (sind x))"
-        error(f"{forever} {f} (real v (f a.duration))", "sind is undefined at infty")
-        g = "(func f ((real x)) (+ 1 (sind x)))"
-        error(f"{forever} {g} (real v (f a.duration))", "sind is undefined at infty")
+        error(f"{forever} {f} (real v (f a.duration))", "none")
 
     def test_functions_as_arguments(self):
         src = f"{DOUBLE} (func twice ((func[real real] f) (real x)) (f (f x)))"
