@@ -1,6 +1,6 @@
-; the logo, twice its size, drawn by mtp: mtp in the middle and the brackets at the corners;
-; t and p fade out, then the m moves to the center as the brackets close in on it with a full
-; turn, ending as in the logo. A click on the figure plays it again.
+; the logo, twice its size, drawn by mtp: mtp in the middle and the brackets at the corners.
+; In a loop, t and p fade out while the m moves to the center and the brackets close in on it
+; with a full turn, ending as in the logo; then the same moves run back.
 (import ease cubic-in-out)
 ; the top-left bracket of the exported logo, traced from its paths, in logo units, around the
 ; center of its outer corner; the bottom-right bracket is the same, turned half a turn
@@ -13,7 +13,7 @@
    [-2.37 -36.44] [-3.44 -35.87] [-4.38 -35.1] [-5.16 -34.16] [-5.73 -33.09]
    [-6.08 -31.92] [-6.2 -30.71]]
   (const))
-(real mx -148)
+(real mx -141.9)
 (real tp 1 (>= 0) (<= 1))
 (real cx 180)
 (real cy 180)
@@ -22,22 +22,20 @@
 (font logo (family '"Crimson Pro", Georgia, serif') (weight 600) (size 168))
 (color ink (light-dark '#51636f' '#ced6dc'))
 (scene b
-  (rect hit (width 420) (height 420) (fill 'white') (fill-opacity 0))
   (text m 'm' (font logo) (pos [mx -34]) (fill ink))
-  (text rest 'tp' (font logo) (pos [(+ mx 141) -34]) (fill ink) (opacity tp))
+  (text rest 'tp' (font logo) (pos [(+ mx 137.2) -34]) (fill ink) (opacity tp))
   (group brackets (transform (rotate phi))
                   (defaults (fill '#ad71f2') (stroke none) (opacity o))
     (polygon_ (points (map bracket (fn p (+ [(- cx) cy] (* 2 p))))))
     (polygon_ (points (map bracket (fn p (- [cx (- cy)] (* 2 p))))))))
-(animation intro
-  (at-once (defaults (duration 0))
-    (move mx (to -148)) (move tp (to 1)) (move cx (to 180)) (move cy (to 180))
-    (move phi (to 0)) (move o (to 0.35)))
-  (wait 0.8)
-  (move tp (to 0) (duration 0.9))
-  (at-once (defaults (duration 1.6) (ease cubic-in-out))
-    (move mx (to -69.2)) (move cx (to 115.4)) (move cy (to 56.4))
-    (move phi (to 360)) (move o (to 1))))
+(animation cycle (loop)
+  (wait 1.2)
+  (at-once (defaults (duration 1.8) (ease cubic-in-out))
+    (move tp (to 0)) (move mx (to -69.2)) (move cx (to 115.4)) (move cy (to 56.4))
+    (move phi (to 360)) (move o (to 1)))
+  (wait 1.6)
+  (at-once (defaults (duration 1.8) (ease cubic-in-out))
+    (move tp (to 1)) (move mx (to -141.9)) (move cx (to 180)) (move cy (to 180))
+    (move phi (to 0)) (move o (to 0.35))))
 (canvas v (x -210) (y -210) (width 420) (height 420) b
-  (on-ready (animation intro))
-  (on-click hit (animation intro)))
+  (on-ready (animation cycle)))
