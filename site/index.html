@@ -118,6 +118,7 @@ h1 { font: 400 clamp(2.8rem, 6vw, 4.4rem)/1.05 var(--serif); margin: 0 0 6px; le
 .demo .result .controls mtp-slider { display: block; }
 .hero-controls { display: flex; gap: 16px; align-items: end; }
 .hero-play { display: grid; gap: 12px; }
+#demo-chords .result mtp-canvas { max-width: 330px; }
 .hero-play mtp-play, .hero-play mtp-slider { display: block; }
 .hero-controls mtp-slider { flex: 1; }
 
@@ -680,6 +681,24 @@ footer .motto { font: 600 13px/1.4 var(--sans); letter-spacing: 0.08em; text-tra
     frame.addEventListener("load", () => { open(); setTimeout(open, 700); setTimeout(open, 2000); });
     if (frame.contentDocument?.readyState === "complete") open();
   }
+  // The video example plays when its tab opens, as a video would, unless the reader asked for
+  // reduced motion; a play that already runs is left alone.
+  const playVideo = () => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const doc = document.querySelector('#usep-videos iframe')?.contentDocument;
+    const model = doc?.querySelector("mtp-model");
+    const button = doc?.querySelector("mtp-play button");
+    if (!model?.hasAttribute("data-mtp-ready") || !button) return false;
+    if (button.getAttribute("aria-label") !== "pause") button.click();
+    return true;
+  };
+  document.getElementById("use-videos").addEventListener("click", () => {
+    if (playVideo() === false) {
+      const frame = document.querySelector('#usep-videos iframe');
+      const retry = setInterval(() => { if (playVideo() !== false) clearInterval(retry); }, 200);
+      frame.addEventListener("load", () => setTimeout(playVideo, 300), { once: true });
+    }
+  });
   const useLinked = document.getElementById("use-" + location.hash.slice(1));
   if (useLinked) useLinked.click();
 </script>
