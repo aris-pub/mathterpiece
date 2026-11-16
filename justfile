@@ -81,3 +81,7 @@ spec-linkcheck:
 # build the spec site and publish it to its fixed draft address on Netlify, https://draft--mtp-spec.netlify.app, to read on a phone
 spec-preview: spec-build
     npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/html --site d1eaf3d8-0626-4e13-a3a1-c9ed535b30da --alias draft --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['deploy_url'])"
+
+# build the spec site and publish it at https://spec.mtp-lang.org
+spec-publish: spec-build
+    npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/html --site d1eaf3d8-0626-4e13-a3a1-c9ed535b30da --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
