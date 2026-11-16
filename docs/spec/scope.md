@@ -98,7 +98,9 @@ what these steps find, in order:
 
 When neither step finds the name, the source is a {term}`compile error`. When the file rand of the
 standard library gives a name of that text ({ref}`stdlib-rand`), the message is "N comes from the
-standard library: (import rand N)", with `N` the name.
+standard library: (import rand N)", with `N` the name. When the name is `rand` and has a second
+name part `N` that the file rand gives, the message is "rand.N comes from the standard library:
+(import rand)".
 ```
 
 So a source that calls `(rand-int 1 6)` and imports no `rand-int` is a compile error, "rand-int

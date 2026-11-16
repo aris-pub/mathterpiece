@@ -196,6 +196,18 @@ class TestWhereTheNamesComeFrom:
     def test_a_name_of_rand_that_the_file_does_not_import(self, src, name):
         error(src, rf": {name} comes from the standard library: \(import rand {name}\)$")
 
+    @pytest.mark.parametrize(
+        "src, name",
+        [
+            ("(int v (rand.rand-int 1 6))", "rand-int"),
+            ("(real v rand.seed)", "seed"),
+            ("(animation a (rand.roll-dice))", "roll-dice"),
+            ("(button b (rand.roll-dice))", "roll-dice"),
+        ],
+    )
+    def test_a_name_of_rand_by_the_name_of_the_file(self, src, name):
+        error(src, rf": rand.{name} comes from the standard library: \(import rand\)$")
+
     def test_a_name_that_another_import_does_not_give(self):
         error(
             "(import rand rand) (int v (rand-int 1 6))",

@@ -3217,6 +3217,7 @@ class _Compiler:
                 out.append(self.choreo_use(item, scope))
             else:
                 self.from_rand(head, item.pos)
+                self.from_rand_whole(item)
                 raise CompileError(
                     "an animation holds moves, waits, at-once, in-order, the names of"
                     " animations and transitions, and uses of choreos"
@@ -3819,6 +3820,8 @@ class _Compiler:
         for item in items:
             if not isinstance(item, Form):
                 raise CompileError(f"expected an item of a {obj.kind}, got a name", item.pos)
+            if _head(item) is None and self.choreo_of(item) is None:
+                self.from_rand_whole(item)
             if self.not_taken(item):
                 head = _head(item)
                 self.from_rand(head, item.pos)
@@ -6043,7 +6046,11 @@ class _Compiler:
         first = node.parts[0]
         if not isinstance(first, str):
             raise CompileError("expected a name", node.pos)
-        e = self.lookup(first, scope, node.pos)
+        try:
+            e = self.lookup(first, scope, node.pos)
+        except CompileError:
+            self.from_rand_whole(node)
+            raise
         for part in node.parts[1:]:
             e = self.part(e, part, scope, node.pos)
         return e
@@ -6155,6 +6162,18 @@ class _Compiler:
         2026-11-16)."""
         if name is not None and name in _rand_names(STDLIB):
             raise CompileError(f"{name} comes from the standard library: (import rand {name})", pos)
+
+    def from_rand_whole(self, node: Node) -> None:
+        """The same for rand.N, the head of node or node itself, in a file that does not import
+        rand whole: an import of the whole file turns rand.N into a name of one part."""
+        name = node.items[0] if isinstance(node, Form) and node.items else node
+        if not isinstance(name, Name) or len(name.parts) < 2:
+            return
+        first, second = name.parts[:2]
+        if first == "rand" and isinstance(second, str) and second in _rand_names(STDLIB):
+            raise CompileError(
+                f"rand.{second} comes from the standard library: (import rand)", name.pos
+            )
 
     def read(self, i: int, attr: str | None) -> Expr:
         obj = self.model.objects[i]
@@ -6691,6 +6710,7 @@ class _Compiler:
         if self.choreo_of(node) is not None:
             raise CompileError(_USE_OUTSIDE, node.pos)
         self.from_rand(head, node.pos)
+        self.from_rand_whole(node)
         raise CompileError(f"unknown function '{head}'", node.pos)
 
     def operands(self, nodes, expected: Type | None, scope: dict) -> list:
