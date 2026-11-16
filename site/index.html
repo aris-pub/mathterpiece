@@ -111,6 +111,7 @@ pre.mtp .s, pre.mtp .s2, pre.mtp .si, pre.mtp .sx { color: var(--green); }
 pre.mtp .m, pre.mtp .mi, pre.mtp .mf { color: var(--blue); }
 pre.mtp .k, pre.mtp .kd, pre.mtp .kr, pre.mtp .nb, pre.mtp .nf { color: var(--accent-ink); font-weight: 500; }
 pre.mtp .na { color: var(--red); }
+pre.mtp .nt { color: var(--accent-ink); font-weight: 500; }
 pre.mtp .p { color: var(--soft); }
 pre.mtp .o { color: var(--ink); }
 pre.mtp .ln { display: inline-block; width: 2.2em; margin-right: 1.2em; text-align: right; color: var(--soft); opacity: 0.6; user-select: none; }
@@ -177,7 +178,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .cta .ctas { justify-content: center; }
 
 /* Use cases */
-#uses .section-lede { max-width: none; }
+#uses .section-lede, #gets .section-lede { max-width: none; }
 .usecases { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .use-copy { padding: 20px 28px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .use-list { display: flex; flex-direction: column; gap: 2px; grid-row: 1; grid-column: 1; background: var(--code-bg); border-right: 1px solid var(--line); padding: 18px 0; }
@@ -545,7 +546,7 @@ footer a { color: var(--soft); }
   <section id="uses">
     <div class="wrap">
       <h2>Your next paper, talk or course</h2>
-      <p class="section-lede">Drop a figure into any web-based paper, slide deck, set of notes or page.</p>
+      <p class="section-lede">Drop a Mathterpiece figure into any web-based paper, slide deck, set of notes or page.</p>
       <div class="usecases">
         <div class="use-list" role="tablist" aria-label="Use cases" aria-orientation="vertical">
           <button role="tab" id="use-paper" aria-controls="usep-paper" aria-selected="true">Papers</button>
@@ -565,7 +566,7 @@ footer a { color: var(--soft); }
         <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
           <div class="use-copy">
             <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
-            <p>Any slide tool that makes web pages can show a Mathterpiece figure. When someone asks about a different triangle, you drag a corner and show them.</p>
+            <p>Any slide tool that makes web pages can show a Mathterpiece figure, and you drag it to answer a question.</p>
           </div>
           <div class="use-stage"><div class="use-mock slide">
             <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe scrolling="no" src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
@@ -583,7 +584,7 @@ footer a { color: var(--soft); }
         <div class="use-panel" id="usep-videos" role="tabpanel" aria-labelledby="use-videos" hidden>
           <div class="use-copy">
             <p class="first">A video recorded from the same figure that readers explore on the page.</p>
-            <p>Record the animation with any screen recorder. The page and the video come from one source, so a fix to the figure reaches both.</p>
+            <p>Record it with any screen recorder, and a fix to the figure reaches the page and the video.</p>
           </div>
           <div class="use-stage"><div class="use-mock phone">
             <div class="screen" style="aspect-ratio: 540 / 960" data-w="540"><iframe scrolling="no" src="uses/video.html" title="Videos: an example page with a live figure" loading="lazy" style="width: 540px; height: 960px"></iframe></div>
@@ -592,9 +593,9 @@ footer a { color: var(--soft); }
       </div>
       <div class="embed-strip">
         <p>Every one of these pages holds its figure the same way: load the runtime, load the compiled figure, and place a view of it.</p>
-<pre><code>&lt;script type=&quot;module&quot; src=&quot;mathterpiece.js&quot;&gt;&lt;/script&gt;
-&lt;mtp-model id=&quot;cs&quot; src=&quot;schwarz.mtpc&quot;&gt;&lt;/mtp-model&gt;
-&lt;mtp-canvas model=&quot;cs&quot; name=&quot;c&quot;&gt;&lt;/mtp-canvas&gt;</code></pre>
+<pre class="mtp embed-code"><code><span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">"module"</span> <span class="na">src</span><span class="o">=</span><span class="s">"mathterpiece.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">mtp-model</span> <span class="na">id</span><span class="o">=</span><span class="s">"cs"</span> <span class="na">src</span><span class="o">=</span><span class="s">"schwarz.mtpc"</span><span class="p">&gt;&lt;/</span><span class="nt">mtp-model</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">mtp-canvas</span> <span class="na">model</span><span class="o">=</span><span class="s">"cs"</span> <span class="na">name</span><span class="o">=</span><span class="s">"c"</span><span class="p">&gt;&lt;/</span><span class="nt">mtp-canvas</span><span class="p">&gt;</span></code></pre>
       </div>
     </div>
   </section>
@@ -602,7 +603,7 @@ footer a { color: var(--soft); }
   <section id="gets">
     <div class="wrap">
       <h2>Accessible, interactive, portable by default</h2>
-      <p class="section-lede">These come with the runtime, so no figure has to build them again.</p>
+      <p class="section-lede">Every Mathterpiece figure gets these from the runtime, with no extra code.</p>
       <ul class="gets">
         <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6m0 2a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2z" /> <path d="M6 10l0 .01" /> <path d="M10 10l0 .01" /> <path d="M14 10l0 .01" /> <path d="M18 10l0 .01" /> <path d="M6 14l0 .01" /> <path d="M18 14l0 .01" /> <path d="M10 14l4 .01" /></svg></span><b>Keyboard</b><span>Sliders, buttons and players work from the keyboard.</span></li>
         <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a7 7 0 1 1 13 3.6a10 10 0 0 1 -2 2a8 8 0 0 0 -2 3a4.5 4.5 0 0 1 -6.8 1.4" /> <path d="M10 10a3 3 0 1 1 5 2.2" /></svg></span><b>Screen readers</b><span>Each control and each canvas carries a label written in the source.</span></li>
@@ -617,7 +618,7 @@ footer a { color: var(--soft); }
   <section id="checked">
     <div class="wrap">
       <h2>Typesafe figures</h2>
-      <p class="section-lede">Figures never break in the reader&rsquo;s browser. The compiler works out every value that a figure can take, including values that may not exist. A figure that could draw something undefined does not compile.</p>
+      <p class="section-lede">Mathterpiece figures never break in the reader&rsquo;s browser. The compiler works out every value that a figure can take, including values that may not exist. A figure that could draw something undefined does not compile.</p>
       <ol class="safe-steps">
         <li class="panel">
           <div class="label"><span class="n">1</span>Write the figure</div>
