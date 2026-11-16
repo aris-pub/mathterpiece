@@ -107,3 +107,45 @@ pre.mtpc-whole {
   max-height: 24rem;
   overflow: auto;
 }
+
+/* The look shared with mtp-lang.org: the Aris background, the Aris fonts and the BRAIID colors.
+   The logo is a stand-in until the exported files replace it. */
+html[data-theme="light"] {
+  --pst-color-background: #fafaf8;
+  --pst-color-on-background: #ffffff;
+  --pst-color-surface: #f3f2ef;
+  --pst-color-text-base: #3c4952;
+  --pst-color-text-muted: #6b7d8a;
+  --pst-color-border: #e3e6e8;
+  --pst-color-primary: #8b4dbf;
+  --pst-color-primary-bg: #f1e8fc;
+  --pst-color-secondary: #ad71f2;
+  --pst-color-link: #7d45c4;
+  --pst-color-link-hover: #8b4dbf;
+  --pst-color-inline-code: #7d45c4;
+}
+html[data-theme="dark"] {
+  --pst-color-background: #111518;
+  --pst-color-on-background: #13181b;
+  --pst-color-surface: #1a2024;
+  --pst-color-text-base: #ced6dc;
+  --pst-color-text-muted: #8a9aa6;
+  --pst-color-border: #273036;
+  --pst-color-primary: #b98af5;
+  --pst-color-primary-bg: #2a2236;
+  --pst-color-secondary: #b98af5;
+  --pst-color-link: #c9a3f7;
+  --pst-color-link-hover: #d8bdf9;
+  --pst-color-inline-code: #c9a3f7;
+}
+html {
+  --pst-font-family-base: "Source Sans 3", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --pst-font-family-heading: "Crimson Pro", Georgia, "Times New Roman", serif;
+  --pst-font-family-monospace: "Source Code Pro", ui-monospace, Menlo, monospace;
+}
+h1, h2, h3, h4, .bd-content h1, .bd-content h2, .bd-content h3 {
+  font-weight: 500;
+}
+.navbar-brand img.logo__image {
+  height: 2rem;
+}

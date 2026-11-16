@@ -22,5 +22,12 @@ highlight_language = "mtp"
 html_theme = "pydata_sphinx_theme"
 html_title = "mathterpiece docs"
 html_static_path = ["../_static"]
-html_css_files = ["mtp.css"]
+html_css_files = ["https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500&family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@300;400;600&display=swap", "mtp.css"]
+html_theme_options = {
+    "logo": {
+        "image_light": "_static/mtp-logo-light.svg",
+        "image_dark": "_static/mtp-logo-dark.svg",
+        "text": "docs",
+    },
+}
 exclude_patterns = ["_build", "conf.py"]
