@@ -1,15 +1,21 @@
-; cos θ and sin θ for a point on the unit circle: drag the point or turn the slider
+; cos θ and sin θ for a point on the unit circle
 (import house ink soft red green number)
 (import marks)
 (real theta 40 (wrap 0 360))
 (scene s
-  (marks.axes_ (left -1.3) (right 1.3) (bottom -1.3) (top 1.3) (stroke soft))
+  (marks.axes_ (left -1.3) (right 1.3) (bottom -1.3) (top 1.3)
+               (stroke soft))
   (circle rim (r 1) (fill none) (stroke ink) (stroke-width 1.5))
-  (line cos (from [0 0]) (to [(cosd theta) 0]) (stroke red) (stroke-width 4))
-  (line sin (from [(cosd theta) 0]) (to (polar 1 theta)) (stroke green) (stroke-width 4))
+  (line cos (from [0 0]) (to [(cosd theta) 0])
+            (stroke red) (stroke-width 4))
+  (line sin (from [(cosd theta) 0]) (to (polar 1 theta))
+            (stroke green) (stroke-width 4))
   (circle p (r 0.07) (pos (polar 1 theta)) (fill ink))
-  (text_ $'cos θ = {(cosd theta):+.2f}' (pos [-1.3 -1.5]) (fill red) (font number))
-  (text_ $'sin θ = {(sind theta):+.2f}' (pos [0.15 -1.5]) (fill green) (font number)))
+  (text_ $'cos θ = {(cosd theta):+.2f}' (pos [-1.3 -1.5])
+         (fill red) (font number))
+  (text_ $'sin θ = {(sind theta):+.2f}' (pos [0.15 -1.5])
+         (fill green) (font number)))
 (canvas v (x -1.4) (y -1.65) (width 2.8) (height 3.05) s
-  (on-drag p (move theta (to (. (or? (to-polar pointer) [1 theta]) 1)))))
+  (on-drag p
+    (move theta (to (. (or? (to-polar pointer) [1 theta]) 1)))))
 (slider turn (move theta (from 0) (to 360)) (label 'θ'))

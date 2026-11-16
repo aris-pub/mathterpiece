@@ -108,3 +108,4 @@ site-build: build-web
     for f in site/figures/hero.mtp site/figures/step*.mtp; do uv run mtp compile "$f" -o "site/data/$(basename "$f" .mtp).mtpc"; done
     for e in lissajous times-tables pythagoras koch-snowflake golden-tour inversion; do uv run mtp compile "examples/$e.mtp" -o "site/data/$e.mtpc"; done
     cp web/dist/mathterpiece.js site/
+    uv run --group docs python site/highlight.py
