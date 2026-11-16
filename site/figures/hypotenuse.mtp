@@ -1,27 +1,30 @@
-; a² + b² = c²: point at a term to light up its square
+; a² + b² = c²: point at a term or a square to light both
 (point q [1.2 0.9])
 (string lit '')
 (func glow ((string s)) (if (= lit s) 0.75 0.25))
+(choreo light ((string s)) (move lit (to s) (duration 0)))
 
 ; what the figure is
 (scene squares
   (let ((x q.x) (y q.y) (n (as point [(- y) x])) (m (+ q n)))
     ; what the figure looks like
-    (polygon_ (points [[0 0] [x 0] [x (- x)] [0 (- x)]])
-              (fill 'crimson') (fill-opacity (glow 'a')))
-    (polygon_ (points [[x 0] [(+ x y) 0] [(+ x y) y] [x y]])
-              (fill 'royalblue') (fill-opacity (glow 'b')))
-    (polygon_ (points [[0 0] q m n])
-              (fill 'mediumslateblue') (fill-opacity (glow 'c'))))
+    (polygon sq-a (points [[0 0] [x 0] [x (- x)] [0 (- x)]])
+             (fill 'crimson') (fill-opacity (glow 'a')))
+    (polygon sq-b (points [[x 0] [(+ x y) 0] [(+ x y) y] [x y]])
+             (fill 'royalblue') (fill-opacity (glow 'b')))
+    (polygon sq-c (points [[0 0] q m n])
+             (fill 'mediumslateblue') (fill-opacity (glow 'c'))))
   (circle corner (r 0.07) (pos q) (fill 'mediumslateblue')))
 (formula eq tex'\term{a}{a^2} + \term{b}{b^2} = \term{c}{c^2}'
   (term a (fill 'crimson')) (term b (fill 'royalblue'))
   (term c (fill 'mediumslateblue')))
 
-; what it does: drag the corner, point at a term
+; what it does: drag the corner, point at a term or a square
 (canvas v (x -1.4) (y -1.6) (width 3.8) (height 3.8) squares
-  (on-drag corner (move q (to pointer))))
-(display shown eq
-  (foreach s ['a' 'b' 'c']  ; typechecked: each term exists
-    (on-enter #'eq.{s}' (move lit (to s) (duration 0)))
-    (on-leave #'eq.{s}' (move lit (to '') (duration 0)))))
+  (on-drag corner (move q (to pointer)))
+  (foreach s ['a' 'b' 'c']
+    (on-enter #'sq-{s}' (light s)) (on-leave #'sq-{s}' (light ''))))
+(display shown eq (foreach s ['a' 'b' 'c']  ; typechecked: each term exists
+  (on-enter #'eq.{s}' (light s)) (on-leave #'eq.{s}' (light ''))))
+(readout areas
+  $'{(^ q.x 2):.2f} + {(^ q.y 2):.2f} = {(+ (^ q.x 2) (^ q.y 2)):.2f}')
