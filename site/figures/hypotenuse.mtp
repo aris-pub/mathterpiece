@@ -1,19 +1,27 @@
-; a right triangle: drag its corner, and the formula follows
+; a² + b² = c²: point at a term to light up its square
 (point q [1.2 0.9])
-(real c (sqrt (+ (^ q.x 2) (^ q.y 2))))  ; typechecked
+(string lit '')
+(func glow ((string s)) (if (= lit s) 0.75 0.25))
 
 ; what the figure is
-(scene triangle
-  (polygon sides (points [[0 0] [q.x 0] q])
-           ; what the figure looks like
-           (fill 'cornflowerblue') (fill-opacity 0.12)
-           (stroke 'cornflowerblue'))
-  (circle corner (r 0.08) (pos q) (fill 'mediumslateblue')))
-(formula pythagoras tex'c = \sqrt{a^2 + b^2} = \term{c}{}'
-  (term c (tex $'{c:.2f}')))
+(scene squares
+  (let ((x q.x) (y q.y) (n (as point [(- y) x])) (m (+ q n)))
+    ; what the figure looks like
+    (polygon_ (points [[0 0] [x 0] [x (- x)] [0 (- x)]])
+              (fill 'crimson') (fill-opacity (glow 'a')))
+    (polygon_ (points [[x 0] [(+ x y) 0] [(+ x y) y] [x y]])
+              (fill 'royalblue') (fill-opacity (glow 'b')))
+    (polygon_ (points [[0 0] q m n])
+              (fill 'mediumslateblue') (fill-opacity (glow 'c'))))
+  (circle corner (r 0.07) (pos q) (fill 'mediumslateblue')))
+(formula eq tex'\term{a}{a^2} + \term{b}{b^2} = \term{c}{c^2}'
+  (term a (fill 'crimson')) (term b (fill 'royalblue'))
+  (term c (fill 'mediumslateblue')))
 
-; what it does: drag the corner, or tap it, then tap a spot
-(canvas v (x -0.3) (y -0.3) (width 2.2) (height 1.6)
-  triangle
+; what it does: drag the corner, point at a term
+(canvas v (x -1.4) (y -1.6) (width 3.8) (height 3.8) squares
   (on-drag corner (move q (to pointer))))
-(display shown pythagoras)
+(display shown eq
+  (foreach s ['a' 'b' 'c']  ; typechecked: each term exists
+    (on-enter #'eq.{s}' (move lit (to s) (duration 0)))
+    (on-leave #'eq.{s}' (move lit (to '') (duration 0)))))
