@@ -5,11 +5,11 @@
 
 ; what the figure is
 (scene chords
-  (circle rim (r 1) (fill none) (stroke '#8b9fad'))
+  (circle rim (r 1) (fill none) (stroke 'gray'))
   (foreach k n
     (line_ (from (spot k)) (to (spot (* m k)))
            ; what the figure looks like
-           (stroke (mix '#ad71f2' '#0e9ae9' (/ k n)))
+           (stroke (mix 'crimson' 'royalblue' (/ k n)))
            (stroke-opacity 0.5))))
 
 ; what it does
