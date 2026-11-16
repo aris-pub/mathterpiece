@@ -492,34 +492,14 @@ footer a { color: var(--soft); }
   <section id="uses">
     <div class="wrap">
       <h2>Use cases</h2>
-      <p class="section-lede">One source makes a figure for each place where math is explained.</p>
+      <p class="section-lede">Drop a figure into any web-based paper, slide deck, set of notes or page.</p>
       <ul class="uses">
-        <li><b>Papers</b><span>A figure in a preprint that readers can explore, next to the claim that it shows.</span></li>
-        <li><b>Slides</b><span>A figure that you drag during a talk, in place of a series of still frames.</span></li>
-        <li><b>Lecture notes</b><span>A figure that students try for themselves, with the course text around it.</span></li>
+        <li><b>Papers</b><span>A figure in a web-based paper that readers can explore, next to the claim that it shows.</span></li>
+        <li><b>Slides</b><span>A figure in web-based slides that you drag during a talk, in place of a series of still frames.</span></li>
+        <li><b>Lecture notes</b><span>A figure in web-based course notes that students try for themselves.</span></li>
         <li><b>Digestions</b><span>A page that works through someone else's result, with a figure at each step.</span></li>
         <li><b>Videos</b><span>A figure's animations, played and recorded from the same source as the page.</span></li>
       </ul>
-    </div>
-  </section>
-
-  <section id="checked">
-    <div class="wrap">
-      <h2>The compiler checks every figure</h2>
-      <p class="section-lede">The compiler works out the range of every value. When a value could leave the range that a shape needs, the figure does not compile, and the error gives the line, the column and a way to fix it.</p>
-      <div class="checked">
-        <div class="panel">
-          <div class="label">circle.mtp</div>
-<pre>(real k 1 (>= 0) (<= 3))
-(slider size (move k (from 0) (to 3)))
-(scene s (circle c (r (- k 2))))</pre>
-        </div>
-        <div class="panel">
-          <div class="label">mtp check circle.mtp</div>
-          <div class="error"><span class="where">circle.mtp:3:23:</span> <span class="msg">c's r may break (>= 0): constrain what it reads so this can be proved, or declare c as circle|none</span></div>
-        </div>
-      </div>
-      <p class="claim">A figure that could draw something undefined, such as a circle with a negative radius, never reaches a reader.</p>
     </div>
   </section>
 
@@ -535,6 +515,26 @@ footer a { color: var(--soft); }
         <li><b>Reduced motion</b><span>Animations respect the reader's setting.</span></li>
         <li><b>Saved as data</b><span>A figure is a .mtpc file, so it keeps working when the runtime improves.</span></li>
       </ul>
+    </div>
+  </section>
+
+  <section id="checked">
+    <div class="wrap">
+      <h2>Typesafe illustrations</h2>
+      <p class="section-lede">The compiler works out the range of every value. When a value could leave the range that a shape needs, the figure does not compile, and the error gives the line, the column and a way to fix it.</p>
+      <div class="checked">
+        <div class="panel">
+          <div class="label">circle.mtp</div>
+<pre>(real k 1 (>= 0) (<= 3))
+(slider size (move k (from 0) (to 3)))
+(scene s (circle c (r (- k 2))))</pre>
+        </div>
+        <div class="panel">
+          <div class="label">mtp check circle.mtp</div>
+          <div class="error"><span class="where">circle.mtp:3:23:</span> <span class="msg">c's r may break (>= 0): constrain what it reads so this can be proved, or declare c as circle|none</span></div>
+        </div>
+      </div>
+      <p class="claim">A figure that could draw something undefined, such as a circle with a negative radius, never reaches a reader.</p>
     </div>
   </section>
 
