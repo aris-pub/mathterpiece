@@ -28,8 +28,7 @@ class TestNumbers:
         assert value("(int v (floor 2.7))") == 2 and value("(int v (ceil 2.1))") == 3
         assert value("(real v (log 100 10))") == pytest.approx(2)
         error("(real v (log 0))", "undefined")
-        assert typ("(real k) (real|none v (exp k))") == Maybe(REAL)
-        assert typ("(real k 1 (<= 100)) (real v (exp k))") == REAL
+        assert typ("(real k) (real v (exp k))") == REAL
 
     def test_sign(self):
         # mtp-a5np: sign behaves like abs wherever that applies.
@@ -287,12 +286,14 @@ class TestRangesFollowTheInput:
             == "real"
         )
 
-    def test_exp_of_an_unlimited_input_may_still_overflow(self):
-        assert isinstance(typ("(real x) (real|none v (exp x))"), Maybe)
+    def test_exp_of_an_unlimited_input_is_clamped(self):
+        # mtp-ydd4.7.54: exp past the number limit gives 1e150, not none.
+        assert typ("(real x) (real v (exp x))") == REAL
+        assert bound("(real x) (real v (exp x))").range == (0, 1e150)
 
     def test_rounding_a_very_large_range(self):
-        # A product of two unlimited values may reach 10^300; it has no decimals left to round.
-        assert bound("(real k) (int v (round (* k k)))").range[1] == pytest.approx(1e300)
+        # A product of two unlimited values is clamped to 1e150, which has no decimals left.
+        assert bound("(real k) (int v (round (* k k)))").range[1] == 1e150
 
     def test_a_range_that_holds_is_proved(self):
         model(self.X + "(scene s (circle c (r (* (log x 10) 2))))")

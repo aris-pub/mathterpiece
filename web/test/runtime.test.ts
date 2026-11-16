@@ -33,11 +33,11 @@ describe("recomputing only what changed", () => {
 });
 
 describe("arithmetic on two numbers", () => {
-  it("gives what the built-ins give, and none where they are undefined", () => {
+  it("gives what the built-ins give, clamped to the number limit, and none where they are undefined", () => {
     const rt = load("arith");
     const v = (name: string) => rt.value(rt.id(name));
-    expect(v("over")).toBe(-1);
-    expect(v("under")).toBe(-1);
+    expect(v("over")).toBe(1e150);
+    expect(v("under")).toBe(-1e150);
     expect(v("div")).toBe(-1);
     expect(v("sum")).toBe(BUILTINS["+"]!(0.1, 0.2));
     expect(v("diff")).toBe(BUILTINS["-"]!(0.1, 0.2));

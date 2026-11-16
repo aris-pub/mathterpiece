@@ -633,9 +633,9 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 
 | Function | Takes | Gives | Undefined |
 |---|---|---|---|
-| `+` `-` `*` | numbers, any count (`-` with one argument negates); points and lists of numbers of equal known length, item by item; `*` also takes real numbers among them, which multiply each item | the broadest input type | a result too large for a real |
+| `+` `-` `*` | numbers, any count (`-` with one argument negates); points and lists of numbers of equal known length, item by item; `*` also takes real numbers among them, which multiply each item | the broadest input type | never |
 | `/` | two numbers | an int over an int gives a ratio; otherwise the broadest input type | dividing by 0 |
-| `^` | two numbers | an int to a non-negative int power gives an int, to a negative int power a ratio; a complex input gives a complex; otherwise a real | 0 to a negative power; a negative base to a power that is not an int; a result too large for a real |
+| `^` | two numbers | an int to a non-negative int power gives an int, to a negative int power a ratio; a complex input gives a complex; otherwise a real | 0 to a negative power; a negative base to a power that is not an int |
 | `mod` | two numbers | number, with the sign of the divisor: `(mod -1 360)` is 359 | by 0 |
 | `abs` | a number | the same type; a complex gives a real | never |
 | `sign` | real | int: -1 below 0, 0 at 0, 1 above 0, so `(* (sign v) 5)` lies from -5 to 5 | never |
@@ -652,7 +652,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `sqrt` | real | real | negative input |
 | `round` | real, and optionally a number of decimal places `n` (an int; negative rounds to tens, hundreds, …) | int without `n`, real with it | never |
 | `floor` `ceil` | real | int | never |
-| `exp` | real | real | a result too large for a real |
+| `exp` | real | real | never |
 | `log` | real, and optionally a base (e if left out) | real | input 0 or below; base 0 or below, or 1 |
 | `min` `max` | reals and lists of reals, any count: a list counts as its items, so `(max g.r)` is the largest radius in a group `g` | real | no items at all, as from a list that may be empty |
 | `lerp` | `a`, `b`, `t` (reals or points) | the same type | never |

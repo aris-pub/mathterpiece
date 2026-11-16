@@ -1,7 +1,7 @@
 // The runtime's built-ins on their own (docs/reference.md, "Functions"); each mirrors the
 // compiler's folding in mathterpiece/builtins.py.
 import { describe, expect, it } from "vitest";
-import { BUILTINS, Complex, Undefined } from "../src/builtins.ts";
+import { BUILTINS, Complex, Undefined, frexp, ldexp, scaledProduct } from "../src/builtins.ts";
 
 const range = (start: number, stop: number, by: string, step: number) => BUILTINS.range!(start, stop, by, step) as number[];
 
@@ -83,5 +83,52 @@ describe("sign (mtp-a5np)", () => {
   it("gives -1 below 0, 0 at 0 and 1 above 0", () => {
     // toEqual tells -0 from 0, so this also checks that -0 gives 0, as Python's fold does.
     expect([-3, -0.5, 0, -0, 2.5].map((x) => BUILTINS.sign!(x))).toEqual([-1, -1, 0, 0, 1]);
+  });
+});
+
+// The expected values are what Python's math.frexp and math.ldexp, and scaled_product in
+// mathterpiece/builtins.py, give for the same inputs.
+describe("the product past the largest binary64 number", () => {
+  it("splits a number as frexp does", () => {
+    const cases: [number, [number, number]][] = [
+      [1, [0.5, 1]],
+      [-1, [-0.5, 1]],
+      [3, [0.75, 2]],
+      [1e150, [0.6109872726999209, 499]],
+      [5e-324, [0.5, -1073]],
+      [2.2250738585072014e-308, [0.5, -1021]],
+      [1e-310, [0.5752618031559393, -1029]],
+      [1.7976931348623157e308, [0.9999999999999999, 1024]],
+      [-7e-320, [-0.86474609375, -1060]],
+    ];
+    for (const [x, parts] of cases) expect(frexp(x)).toEqual(parts);
+  });
+
+  it("puts a number together again as ldexp does, rounding once", () => {
+    const cases: [number, number, number][] = [
+      [0.75, 1024, 1.348269851146737e308],
+      [0.75, 1023, 6.741349255733685e307],
+      [0.75, -1074, 5e-324],
+      [0.75, -1073, 1e-323],
+      [0.6, -1080, 0],
+      [0.999, -1050, 8.280757e-317],
+      [0.75, 2000, Infinity],
+      [-0.9, -1060, -7.2855e-320],
+    ];
+    for (const [m, e, x] of cases) expect(ldexp(m, e)).toBe(x);
+  });
+
+  it("multiplies from left to right with the exponent kept apart", () => {
+    expect(scaledProduct([1e150, 1e150, 1e150, 1e-310])).toBe(9.999999999999969e139);
+    expect(scaledProduct([1e150, -1e150, 1e150, 1e-300, 3])).toBe(-2.9999999999999998e150);
+    expect(scaledProduct([1e-200, 1e-200, 1e200, 1e200])).toBe(0.9999999999999998);
+    expect(scaledProduct([0.1, 0.2, 0.3])).toBe(0.1 * 0.2 * 0.3);
+    expect(scaledProduct([1e150, 1e150, 1e150, 0])).toBe(0);
+    const c = scaledProduct([new Complex(1e150, 1e150), new Complex(1e150, -3e149), 1e150, new Complex(1e-300, 2e-301)]);
+    expect(c).toEqual(new Complex(1.1599999999999999e150, 9.599999999999999e149));
+  });
+
+  it("clamps each part of a complex power", () => {
+    expect(BUILTINS["^"]!(new Complex(1e150, 0), 3)).toEqual(new Complex(1e150, 0));
   });
 });

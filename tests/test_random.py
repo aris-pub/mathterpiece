@@ -82,14 +82,14 @@ class TestRandomFunctions:
         src = "(rand-seed s 0) (real a 0) (real b 1)"
         m = model(f"{src} (real v (rand a b)) (real x (* (rand a b) 8))")
         assert m.get("v").value.expr.range == (-1e150, 1e150)
-        assert m.get("x").value.expr.range == (-8e150, 8e150)
+        assert m.get("x").value.expr.range == (-1e150, 1e150)
         assert model(f"{src} (real x (* (rand 0 10) 8))").get("x").value.expr.range == (0, 80)
 
     def test_rand_int_times_a_number_is_not_none(self):
         src = "(rand-seed s 0) (int a 0) (int b 1)"
         m = model(f"{src} (int v (rand-int a b)) (int x (* (rand-int a b) 8))")
         assert m.get("v").value.expr.range == (-1e150, 1e150)
-        assert m.get("x").value.expr.range == (-8e150, 8e150)
+        assert m.get("x").value.expr.range == (-1e150, 1e150)
         assert model(f"{src} (int x (* (rand-int 1 6) 8))").get("x").value.expr.range == (8, 48)
 
     def test_pick_may_be_none(self):
