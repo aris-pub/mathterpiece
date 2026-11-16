@@ -410,6 +410,58 @@ class CompileError(Exception):
         self.pos = pos
 
 
+PARAMETRIC_SAMPLES = 361
+
+
+def _rewrite_parametric(forms: tuple[Form, ...]) -> tuple[Form, ...]:
+    """Each (parametric N (for t LO HI) EXPR item…) as the polyline it stands for:
+    (polyline N (points (map (range LO HI (num S)) (fn t EXPR))) item…), S being 361 unless
+    (samples S) is given (the author, 2026-11-16). The formatter reads the source as written, so
+    only the compiler rewrites it."""
+    return tuple(_parametric(f) for f in forms)  # type: ignore[misc]
+
+
+def _parametric(node: Node) -> Node:
+    if isinstance(node, ListLit):
+        return replace(node, items=tuple(_parametric(i) for i in node.items))
+    if not isinstance(node, Form):
+        return node
+    items = tuple(_parametric(i) for i in node.items)
+    head = items[0] if items else None
+    if not (isinstance(head, Name) and head.parts == ("parametric",)):
+        return replace(node, items=items)
+    if len(items) < 4:
+        raise CompileError(
+            "a parametric curve is (parametric name (for t from to) expression item…)", node.pos
+        )
+    name, spec, expr, rest = items[1], items[2], items[3], items[4:]
+    if not (
+        isinstance(spec, Form)
+        and _head(spec) == "for"
+        and len(spec.items) == 4
+        and isinstance(spec.items[1], Name)
+        and len(spec.items[1].parts) == 1
+    ):
+        raise CompileError(
+            "a parametric curve's second item is (for t from to): the name of its parameter and"
+            " the ends of its range",
+            spec.pos,
+        )
+    given = [r for r in rest if _head(r) == "samples"]
+    if len(given) > 1:
+        raise CompileError("'samples' is given twice", given[1].pos)
+    if given and len(given[0].items) != 2:  # type: ignore[union-attr]
+        raise CompileError("(samples n) takes one number of points", given[0].pos)
+    pos = node.pos
+    count = given[0].items[1] if given else IntLit(PARAMETRIC_SAMPLES, pos)  # type: ignore[union-attr]
+    t, lo, hi = spec.items[1], spec.items[2], spec.items[3]
+    sampled = Form((Name(("range",), pos), lo, hi, Form((Name(("num",), pos), count), pos)), pos)
+    fn = Form((Name(("fn",), pos), t, expr), pos)
+    points = Form((Name(("points",), pos), Form((Name(("map",), pos), sampled, fn), pos)), pos)
+    rest = tuple(r for r in rest if _head(r) != "samples")
+    return Form((Name(("polyline",), head.pos), name, points, *rest), pos)
+
+
 def compile_source(src: str, path: Path | None = None) -> Model:
     """The model of a source; path, the file it is read from, is where its imports are found."""
     return compile_model(parse(src), path)
@@ -590,6 +642,7 @@ class _Compiler:
         return k
 
     def run(self, forms: tuple[Form, ...]) -> Model:
+        forms = _rewrite_parametric(forms)
         self.keep = _used(forms, self.source)
         forms = self.imports(forms, None, self.source)
         for form, scope in self.expand(forms, {}, top=True):
@@ -797,7 +850,7 @@ class _Compiler:
             return self.aliases[self.loaded[real]]
         if name in self.aliases:
             raise CompileError(f"two different files named {name}.mtp are imported", pos)
-        forms = parse(found.read_text(encoding="utf-8"), file=name)
+        forms = _rewrite_parametric(parse(found.read_text(encoding="utf-8"), file=name))
         for form in forms:
             what = _not_importable(form)
             if what is not None:
@@ -7276,7 +7329,9 @@ def _used(forms, path: Path | None) -> set[Pos] | None:
             found = _find(name, path)
             if found is None or found.resolve() in files:
                 continue
-            files[found.resolve()] = theirs = parse(found.read_text(encoding="utf-8"), file=name)
+            files[found.resolve()] = theirs = _rewrite_parametric(
+                parse(found.read_text(encoding="utf-8"), file=name)
+            )
             read(theirs, found)
 
     read(forms, path)
