@@ -8,7 +8,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 - **y points up** and x to the right, as in mathematics.
 - **Angles** are counterclockwise from the positive x axis. `(polar 1 90)` is straight up; `rotate` turns counterclockwise.
-- **A canvas's view box** is given by its lower-left corner (`x`, `y`) and its size (`width`, `height`), in scene units. The default is −10 to 10 in both directions. The whole view box is shown, scaled to fit the element and centered in it. A canvas's `transform` applies about the center of its view box. The reader may pan and zoom what the view box shows (see "Panning and zooming"), which changes only what the canvas shows, never the view box's attributes.
+- **A canvas's view box** is given by its lower-left corner (`x`, `y`) and its size (`width`, `height`), in scene units. A canvas gives all four of them or none: one that gives one, two or three is a compile error that names the missing ones. A canvas that gives none shows the box of its shapes as the runtime first draws them, texts included, with a margin on each side of 5% of the box's larger side, and keeps that box when its shapes move later (spec, "The view box of a canvas"). The whole view box is shown, scaled to fit the element and centered in it. A canvas's `transform` applies about the center of its view box. The reader may pan and zoom what the view box shows (see "Panning and zooming"), which changes only what the canvas shows, never the view box's attributes.
 - **Stroke widths and font sizes are in screen units** (CSS pixels): a line keeps the same thickness on screen, and text the same size, whatever the view box and however the canvas is scaled.
 - **Every shape has its own frame of reference.** It starts identical to the scene's; then the shape's `translate` and then its `transform` are applied (`translate` is the translation that comes first; `transform` is everything else, and may include further translations), and they apply to the shape and to everything below it in the scene tree. Both act about the origin of the container's frame, so `(rotate 30)` turns a shape around that origin, not around its own position; to turn a shape in place, put its offset inside the transform, after the rotation: `(transform (transform (rotate 30) (translate 6 -6)))`. A group's `translate` and `transform` are its own: they move its members, and are not spread over them.
 - **A position is written before the transforms of the shape's containers are applied.** `(group g (translate [5 0]) (circle p (x 1)))` places `p` at x = 1, then the group's translation moves it: it is drawn at 6. The illustrator never converts anything by hand: what is written is where the shape sits before its containers move it.
@@ -406,7 +406,7 @@ When `show` turns true, the canvas draws the orbit on over two seconds, and when
 A view with an `on-live` has a **quiet mode**: it starts **quiet**, at rest, and the reader makes it **live** to use it, and puts it back to quiet when done. A view without one has no quiet mode, and is as it would be without this section.
 
 ```
-(canvas view (width 600) (height 318)
+(canvas view (x 0) (y 0) (width 600) (height 318)
   space
   (on-live (animation (move view.width (to 400) (duration 0.4))))
   (on-quiet (animation (defaults (duration 0.4)) (at-once (move view.width (to 600)) (move share (to 1))))))
@@ -450,7 +450,7 @@ What an attribute is when the illustrator leaves it out:
 | text | `halign` `'start'`, `valign` `'baseline'` |
 | a font's parts | family: the page's font; style `'normal'`; weight 400; size 16 (screen pixels) |
 | scene `background` | `none` |
-| canvas view box | −10 to 10 in both directions |
+| canvas view box | the box of its shapes as first drawn, with a margin of 5% of its larger side on each side |
 | transition `ease` | none: a straight line |
 | transition `duration` | none: a move with no duration takes the default duration of the nearest animation, `at-once` or `in-order` around it, and is a compile error if there is none |
 | control `label` | the control's name |
@@ -851,7 +851,7 @@ Motifs to draw over a world model: `(import marks axes grid)`, then `(axes_)` an
 
 | Mark | Parameters | Draws |
 |---|---|---|
-| `axes` | `left`, `right`, `bottom`, `top` (from -10 to 10, the default view box), `stroke`, `arrows` (false) | the x and y axes through the origin, with a head at their positive ends when `arrows` is true |
+| `axes` | `left`, `right`, `bottom`, `top` (from -10 to 10), `stroke`, `arrows` (false) | the x and y axes through the origin, with a head at their positive ends when `arrows` is true |
 | `grid` | `left`, `right`, `bottom`, `top` (from -10 to 10), `step` (1), all `const`; `stroke`, `stroke-opacity` (0.25) | a faint line at every multiple of `step` between the bounds, across and up |
 | `angle-mark` | `from` (0), `to` (90), `r` (22), `label` (''), `stroke` | at its position, an arc of radius `r` from the direction `from` to the direction `to`, counterclockwise, and its label just outside the arc's middle; a right angle is marked with a square instead. It is a fixed-size group, so `r` is in screen pixels and the mark keeps its size when the reader zooms |
 | `measure` | `from` ([0 0]), `to` ([1 0]), `label` (''), `stroke` | a line from one point to the other with a bar at each end, and its label 6 screen pixels above the middle, whatever the zoom |
