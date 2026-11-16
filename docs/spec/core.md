@@ -82,6 +82,7 @@ before any other rewrite of the declaration that it copies.
 | `(rand ARGS…)`, and the same with `rand-int`, `pick` or `shuffle`, with no `(seed …)` | `(rand ARGS… (seed S))` | `S` is the only {term}`seed` that the file declares or imports ({numref}`seed-variable`) |
 | `(roll-dice S)`, in an animation's body | `(move S (to (next-seed S)) (duration 0))` | `S` is a seed |
 | `(roll-dice)`, in an animation's body | `(roll-dice S)` | `S` as for a random function |
+| `(set V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
@@ -534,6 +535,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | the name of an animation or a transition in a body | core | plays what it names | {doc}`time` |
 | `wait` | sugar | | {numref}`sugar-rewrites` |
 | `roll-dice` | sugar | | {numref}`sugar-rewrites` |
+| `set` | sugar | `(set V X)`: a move of no duration | {numref}`sugar-rewrites` |
 | a use of a choreo | core | the choreo's moves, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
 
 ### Components and their items
@@ -603,7 +605,7 @@ their place. They are not forms of the language.
 | `dash` with one argument, `pos` | sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | sugar | {numref}`sugar-rewrites` |
-| `wait`, `roll-dice`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
+| `wait`, `roll-dice`, `set`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
 | `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |
 | `scene`, `background`, `transform` in the scene | core | {doc}`world-model` |

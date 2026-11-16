@@ -189,8 +189,8 @@ compile error by {numref}`one-declaration-per-scope`, since the body binds `self
 :::{admonition} Code differs
 :class: note
 `compiler.py:99` (`RESERVED`) forbids only the names `scene`, `animation`, `transition`, `move`,
-`in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`, `doc` and `free`, so the
-name `self` is refused everywhere. The special forms of `compiler.py:122` (`SPECIAL`) and the types
+`in-order`, `at-once`, `when`, `else`, `true`, `false`, `none`, `const`, `self`, `doc`, `free` and
+`set`, so the name `self` is refused everywhere. The special forms of `compiler.py:122` (`SPECIAL`) and the types
 are forbidden only as the name of a function (`compiler.py:181`, `NOT_FUNCTION_NAMES`), so a
 variable may be named `if`, and a function may not take the name of a constant. A name bound by
 `let` is checked against neither (`_Compiler.let`, `compiler.py:6663`). Bead mtp-ydd4.7.35 makes

@@ -193,6 +193,25 @@ class TestSugarRewrites:
     def test_roll_dice_needs_a_seed(self):
         compile_error("(real k 1) (button b (animation (roll-dice k)))")
 
+    def test_set(self):
+        same_meaning(
+            "(real k 0) (button b (animation (set k 3)))",
+            "(real k 0) (button b (animation (move k (to 3) (duration 0))))",
+        )
+
+    def test_set_wherever_a_move_is_written(self):
+        same_meaning(
+            "(real k 0) (button b (set k 3))", "(real k 0) (button b (move k (to 3) (duration 0)))"
+        )
+        same_meaning(
+            SCENE + "(real k 0) (canvas v s (on-click p (set k 3)))",
+            SCENE + "(real k 0) (canvas v s (on-click p (move k (to 3) (duration 0))))",
+        )
+
+    def test_set_takes_a_target_and_a_value(self):
+        compile_error("(real k 0) (button b (animation (set k)))")
+        compile_error("(real k 0) (button b (animation (set k 1 2)))")
+
     def test_import(self, tmp_path):
         lib = {"lib.mtp": "(func twice ((real x)) (* 2 x))\n"}
         a = in_folder(tmp_path, lib, "(import lib)\n(real v (lib.twice 2))\n")

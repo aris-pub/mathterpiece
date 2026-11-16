@@ -108,7 +108,7 @@ describe("controls", () => {
 
   it("a control's label follows the expression it is given", () => {
     const [, rt] = page(
-      `<mtp-slider model="m" name="told"></mtp-slider><mtp-button model="m" name="set"></mtp-button>` +
+      `<mtp-slider model="m" name="told"></mtp-slider><mtp-button model="m" name="set-five"></mtp-button>` +
         `<mtp-toggle model="m" name="said"></mtp-toggle>`,
     );
     const text = () => ["mtp-slider", "mtp-button", "mtp-toggle"].map((t) => document.querySelector(t)!.textContent!.trim());
@@ -121,9 +121,9 @@ describe("controls", () => {
   // The author, 2026-11-09: a control's label may be LaTeX, (label (tex …)), typeset as a formula is.
   it("a label given as LaTeX is typeset, and follows its expression", () => {
     const file = doc("page");
-    for (const name of ["told", "set", "said"]) file.objects.find((o) => o.name === name)!["label-tex"] = true;
+    for (const name of ["told", "set-five", "said"]) file.objects.find((o) => o.name === name)!["label-tex"] = true;
     const [, rt] = page(
-      `<mtp-slider model="m" name="told"></mtp-slider><mtp-button model="m" name="set"></mtp-button>` +
+      `<mtp-slider model="m" name="told"></mtp-slider><mtp-button model="m" name="set-five"></mtp-button>` +
         `<mtp-toggle model="m" name="said"></mtp-toggle>`,
       file,
     );

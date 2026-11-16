@@ -36,6 +36,7 @@ INDENT = {
     **dict.fromkeys(["on-view", "on-ready", "on-live", "on-quiet"], 0),
     **dict.fromkeys(["at-once", "in-order", "defaults"], 0),
     "step": 1,
+    "set": 2,
     "on-drag": 2,
     "on-pointermove": 2,
     "when": 1,
@@ -109,7 +110,7 @@ NO_BODY = {
     *["on-dragstart", "on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet"],
     *["on-show", "on-hide"],
     *["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"],
-    *["colormap", "interface", "defaults", "term", "rand-seed"],
+    *["colormap", "interface", "defaults", "term", "rand-seed", "set"],
 }
 OPEN, CLOSE = "([", ")]"
 _DOC = re.compile(r"\(doc\s+('(?:[^'\\]|\\.)*')\s*\)")

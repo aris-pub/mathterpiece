@@ -103,7 +103,7 @@ from mathterpiece.types import (
 
 RESERVED = frozenset(
     "scene animation transition move in-order at-once when else true false none const self".split()
-    + ["doc", "free"]
+    + ["doc", "free", "set"]
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The optional arguments of controls and listeners; the rest of their items are conditions.
@@ -588,6 +588,7 @@ class _Compiler:
         return k
 
     def run(self, forms: tuple[Form, ...]) -> Model:
+        forms = tuple(_sets(f) for f in forms)
         self.keep = _used(forms, self.source)
         forms = self.imports(forms, None, self.source)
         for form, scope in self.expand(forms, {}, top=True):
@@ -795,7 +796,7 @@ class _Compiler:
             return self.aliases[self.loaded[real]]
         if name in self.aliases:
             raise CompileError(f"two different files named {name}.mtp are imported", pos)
-        forms = parse(found.read_text(encoding="utf-8"), file=name)
+        forms = tuple(_sets(f) for f in parse(found.read_text(encoding="utf-8"), file=name))
         for form in forms:
             what = _not_importable(form)
             if what is not None:
@@ -7221,6 +7222,31 @@ def _words(node, out: set[str]) -> set[str]:
     elif isinstance(node, Field):
         _words(node.expr, out)
     return out
+
+
+def _sets(node):
+    """node with every (set V X) in it written as the move it stands for,
+    (move V (to X) (duration 0)) (the author, 2026-11-16; Rule sugar-rewrites)."""
+    if isinstance(node, Form):
+        items = tuple(_sets(i) for i in node.items)
+        if _head(node) == "set":
+            if len(items) != 3:
+                raise CompileError("set is (set target value), as (set k 3)", node.pos)
+            p = node.pos
+            return Form(
+                (
+                    Name(("move",), p),
+                    items[1],
+                    Form((Name(("to",), p), items[2]), p),
+                    Form((Name(("duration",), p), IntLit(0, p)), p),
+                ),
+                p,
+            )
+        return node if items == node.items else replace(node, items=items)
+    if isinstance(node, (ListLit, Brackets, Bar)):
+        items = tuple(_sets(i) for i in node.items)
+        return node if items == node.items else replace(node, items=items)
+    return node
 
 
 def _used(forms, path: Path | None) -> set[Pos] | None:

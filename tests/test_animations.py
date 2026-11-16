@@ -580,3 +580,41 @@ class TestTogether:
             f"{K} (animation a (in-order (move k (to 1) (duration 1))"
             " (move k (to 2) (duration 1))))"
         )
+
+
+class TestSet:
+    """The author, 2026-11-16: (set V X) is sugar for (move V (to X) (duration 0)), written
+    wherever a move is written (docs/spec/core.md, Rule sugar-rewrites)."""
+
+    @pytest.mark.parametrize(
+        "written, rewrite",
+        [
+            ("(animation a (set k 3))", "(animation a (move k (to 3) (duration 0)))"),
+            (
+                "(animation a (set k 3) (move k (to 5) (duration 1)))",
+                "(animation a (move k (to 3) (duration 0)) (move k (to 5) (duration 1)))",
+            ),
+            ("(button b (set k (+ k 1)))", "(button b (move k (to (+ k 1)) (duration 0)))"),
+            (
+                "(button b (animation (defaults (duration 2)) (set k 3)))",
+                "(button b (animation (defaults (duration 2)) (move k (to 3) (duration 0))))",
+            ),
+            (
+                "(scene s (circle c (r 1))) (canvas v s (on-click c (set k 4)))",
+                "(scene s (circle c (r 1))) (canvas v s (on-click c (move k (to 4) (duration 0))))",
+            ),
+            (
+                "(choreo bump ((real x)) (set k x)) (button b (bump 2))",
+                "(choreo bump ((real x)) (move k (to x) (duration 0))) (button b (bump 2))",
+            ),
+        ],
+    )
+    def test_set_is_the_move_of_no_duration(self, written, rewrite):
+        assert doc(f"{K} {written}") == doc(f"{K} {rewrite}")
+
+    @pytest.mark.parametrize("form", ["(set k)", "(set k 1 2)", "(set)"])
+    def test_set_takes_a_target_and_a_value(self, form):
+        error(f"{K} (animation a {form})", r"set is \(set target value\), as \(set k 3\)")
+
+    def test_set_is_not_a_name(self):
+        error("(real set 1)", "'set' is reserved")
