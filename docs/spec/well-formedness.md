@@ -172,9 +172,11 @@ The prover works out each end of a range with the functions that {term}`evaluati
 for ints and ratios ({numref}`number-types`), and with the functions of
 {numref}`correctly-rounded-reals` for reals. So by the argument that follows
 {numref}`correctly-rounded-reals`, a range worked out at the ends of the ranges of the inputs holds
-every value that either time computes. An end has no mark for whether it is reached: the range of
-`(real k (> 0))` is from 0 to `1e150`, the same as for `(real k (>= 0))`. A strict bound helps the
-prover only to meet the same strict bound by {numref}`fits`.
+every value that either time computes. A strict bound gives the range the nearest value past its
+number that the type holds, as {numref}`if-narrowing` does: the range of `(real k (> 0))` is from
+the smallest binary64 number above 0 to `1e150`, so `(/ 1 k)` is a `real`, and the range of
+`(int n (> 0))` is from 1 to 10¹⁵⁰. A ratio has no smallest value above a number, so for a ratio,
+`(> c)` gives the end c, as `(>= c)` does.
 
 ```{rule} range-rules
 The range of each expression is the following. Where the table gives several ranges, the range is
@@ -183,7 +185,7 @@ the part that they share.
 | Expression | Its range |
 |---|---|
 | a number known in the prove step | from the number to the number |
-| the range of a type | the ends that its comparisons give, a `(> c)` and a `(< c)` giving c, from lo to hi for `(wrap lo hi)`, and the end of the {term}`number limit` for a side with no bound ({numref}`number-limit`) |
+| the range of a type | the ends that its comparisons give: c for a `(>= c)` and a `(<= c)`, and for a `(> c)` and a `(< c)` the nearest value past c that the type holds, which is the next int for an int, the next binary64 number for a real, and c for a ratio. From lo to hi for `(wrap lo hi)`, and the end of the {term}`number limit` for a side with no bound ({numref}`number-limit`) |
 | a read of a free variable or attribute | the range of its type |
 | a read of a bound variable or attribute | the range of its expression, and the range of the constraints of its declared type, each side with no bound left out. A read through a `translate` or a `transform` ({doc}`world-model`): the range of its type |
 | a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a {term}`library` function, the range that {doc}`stdlib` gives it |
@@ -227,10 +229,9 @@ to 1 whatever `x` is, by the row for a call.
   gives `^` a type that includes `none` where an end of its range is beyond the largest binary64
   number (`compiler.py:7569`, `_may_be_undefined`). So with `(real k 1)`,
   `(real v (* k k) (<= 1e150))` is the error "v may break (<= 1e+150)", and `(real v (^ 2 k))` is
-  the error "v may be none". By {numref}`range-rules` both compile. Bead mtp-ydd4.7.54.
-- An argument whose type implies a strict constraint of its parameter is still checked by its range
-  (`compiler.py:2134`, `arguments`), so a `(real a 1 (> 0))` given to a parameter
-  `((real (> 0)) x)` is the error "x may break (> 0)". Bead mtp-ydd4.7.45.
+  the error "v may be none". By {numref}`range-rules` both compile. A result whose range passes
+  the largest binary64 number gets a type that includes `none` (`compiler.py:6748`), so with
+  `(real k 2 (> 0))`, `(real h (/ 1 k))` is the error "h may be none". Bead mtp-ydd4.7.54.
 :::
 
 ```{rule} may-give-none
@@ -331,9 +332,9 @@ and `#'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58` ({numref}`nam
 
 With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` gives `k` the
 range 0 to 2 in A and 3 to 5 in B, and `(if (> k 7) A B)` never runs A. With `(real x 1)`,
-`(if (> x 0) (sqrt x) 0)` is a `real`, since `x` in the first branch is from 0 to `1e150`. In
-`(if (> x 0) (/ 1 x) 0)`, `x` in the first branch has the same range, which holds 0, so
-`(/ 1 x)` may give `none` there: for a real, `>` gives the same ends as `>=`. In `(if (and (> k 0) (< k 3)) A B)`, the condition is the
+`(if (> x 0) (sqrt x) 0)` is a `real`, since `x` in the first branch is from the smallest binary64
+number above 0 to `1e150`. In `(if (> x 0) (/ 1 x) 0)`, `x` in the first branch has the same range,
+which does not hold 0, so `(/ 1 x)` is a `real` there. In `(if (and (> k 0) (< k 3)) A B)`, the condition is the
 `if` of the rewrite of `and`, which is not a comparison, so the range of `k` in A is not narrowed.
 `(if (< 0 k) A B)`, with the name on the right, does not narrow either.
 
