@@ -11,7 +11,7 @@
     (points (map (range 0 360 (num 721))
       (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
     ; what the figure looks like
-    (stroke '#1fb5a2') (stroke-width 3)))
+    (stroke 'lightseagreen') (stroke-width 3)))
 
 ; what it does
 (animation spin (loop)
