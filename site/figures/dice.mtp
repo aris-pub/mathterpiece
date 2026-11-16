@@ -11,7 +11,7 @@
         (fill 'slateblue') (fill-opacity 0.15) (stroke 'slateblue'))
   (foreach j 6
     (circle_ (pos (* 0.55 (or? pips[(- face 1)][j] [0 0])))
-             (r 0.18) (fill 'slateblue') (opacity (if (< j face) 1 0)))))
+      (r 0.18) (fill 'slateblue') (opacity (if (< j face) 1 0)))))
 (scene table
   (group dice (foreach k n
     (die #'die-{k}' (face (rand-int 1 6))
