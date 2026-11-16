@@ -8,16 +8,17 @@
 @media (prefers-color-scheme: dark) { :root:not(.light-theme) { --bg: #222a30; --ink: #dfe5ea; --soft: #8b9aa5; --mark: #c9a3f7; color-scheme: dark; } }
 :root.dark-theme { --bg: #222a30; --ink: #dfe5ea; --soft: #8b9aa5; --mark: #c9a3f7; color-scheme: dark; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); }
-.short { width: 540px; height: 960px; box-sizing: border-box; padding: 90px 40px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; }
+.short { width: 540px; height: 960px; box-sizing: border-box; padding: 64px 40px 48px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; }
 h1 { font: 600 46px/1.15 "Crimson Pro", Georgia, serif; margin: 0; }
 .sub { font: 400 26px/1.4 "Source Sans 3", sans-serif; color: var(--soft); margin: 14px 0 0; }
 mtp-canvas { display: block; width: 100%; }
-.player { width: 100%; display: grid; gap: 22px; }
-.player mtp-play { display: block; zoom: 1.4; }
+.player { width: 100%; display: grid; gap: 14px; }
+.player mtp-canvas { max-width: 380px; margin: 0 auto; }
+.player mtp-play, .player mtp-slider { display: block; zoom: 1.4; }
 .mark { font: 600 22px/1 "Source Sans 3", sans-serif; color: var(--mark); }
 </style></head>
 <body><div class="short">
 <div><h1>Times tables on a circle</h1><p class="sub">Join each point k to the point m × k</p></div>
-<mtp-model id="c" src="/data/video.mtpc"></mtp-model><div class="player"><mtp-canvas model="c" name="v"></mtp-canvas><mtp-play model="c" name="film"></mtp-play></div>
+<mtp-model id="c" src="/data/video.mtpc"></mtp-model><div class="player"><mtp-canvas model="c" name="v"></mtp-canvas><mtp-play model="c" name="film"></mtp-play><mtp-slider model="c" name="points"></mtp-slider></div>
 <div class="mark">made with mtp</div>
 </div></body></html>
