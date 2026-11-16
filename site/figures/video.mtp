@@ -1,0 +1,13 @@
+; chords in a circle, as a video: from each point k to the point m × k
+(import ease linear)
+(int n 200 (const))
+(real m 2 (>= 2) (<= 12))
+(func spot ((real k)) (polar 1 (turn (/ k n))))
+(scene chords
+  (circle rim (r 1) (fill none) (stroke 'gray'))
+  (foreach k n
+    (line_ (from (spot k)) (to (spot (* m k)))
+           (stroke (mix 'crimson' 'royalblue' (/ k n))) (stroke-opacity 0.5))))
+(canvas v chords)
+(play film (label 'play the times tables')
+  (animation (set m 2) (move m (to 12) (duration 30) (ease linear))))
