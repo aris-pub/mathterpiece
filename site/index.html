@@ -197,8 +197,8 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-copy p.first { color: var(--ink); font: 500 1.45rem/1.35 var(--serif); margin-bottom: 4px; }
 .name { color: var(--accent-ink); font-weight: 600; }
 .demo .result { position: relative; }
-.demo .result:has(.hint-banner) { padding-top: 64px; }
-.hint-banner { position: absolute; top: 0; left: 0; right: 0; margin: 0; display: flex; align-items: center; gap: 10px; padding: 12px 24px; font-size: 16px; color: var(--ink); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-bottom: 1px solid var(--line); }
+.demo .result:has(.hint-banner) { padding-bottom: 64px; }
+.hint-banner { position: absolute; bottom: 0; left: 0; right: 0; margin: 0; font-family: var(--sans); line-height: 1.4; display: flex; align-items: center; gap: 10px; padding: 12px 24px; font-size: 16px; color: var(--ink); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-top: 1px solid var(--line); }
 .hint-banner svg { color: var(--accent-ink); flex: none; }
 .to-top { position: fixed; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 18px rgba(30, 40, 60, 0.12); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 20; }
 .to-top.shown { opacity: 1; transform: none; pointer-events: auto; }
@@ -420,9 +420,9 @@ footer a { color: var(--soft); }
 <span class="ln" aria-hidden="true">24</span><span class="p">(</span><span class="kd">button</span><span class="w"> </span><span class="nv">again</span><span class="w"> </span><span class="p">(</span><span class="nv">label</span><span class="w"> </span><span class="s">'play'</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kd">animation</span><span class="w"> </span><span class="nv">sweep</span><span class="p">))</span></pre>
           </div>
           <div class="result">
-            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg>Drag the slider, or press play.</p>
             <mtp-canvas model="hero" name="v"></mtp-canvas>
             <div class="controls hero-controls"><mtp-slider model="hero" name="times"></mtp-slider><mtp-button model="hero" name="again"></mtp-button></div>
+            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg><span>Drag the slider, or press play.</span></p>
           </div>
         </div>
         <div class="demo" id="demo-medians" role="tabpanel" aria-labelledby="tab-medians" hidden>
@@ -453,8 +453,8 @@ footer a { color: var(--soft); }
 <span class="ln" aria-hidden="true">24</span><span class="w">  </span><span class="p">(</span><span class="kd">on-drag</span><span class="w"> </span><span class="nv">dot-2</span><span class="w"> </span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="nv">c</span><span class="w"> </span><span class="p">(</span><span class="nv">to</span><span class="w"> </span><span class="p">(</span><span class="nv">keep</span><span class="w"> </span><span class="nv">pointer</span><span class="p">)))))</span></pre>
           </div>
           <div class="result">
-            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg>Drag a corner. The six areas stay equal.</p>
             <mtp-canvas model="g-medians" name="v"></mtp-canvas>
+            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg><span>Drag a corner. The six areas stay equal.</span></p>
           </div>
         </div>
         <div class="demo" id="demo-halves" role="tabpanel" aria-labelledby="tab-halves" hidden>
@@ -485,9 +485,9 @@ footer a { color: var(--soft); }
 <span class="ln" aria-hidden="true">24</span><span class="p">(</span><span class="kd">readout</span><span class="w"> </span><span class="nv">mine</span><span class="w"> </span><span class="si">$'{(* 100 (yours n)):.1f}%'</span><span class="p">)</span></pre>
           </div>
           <div class="result">
-            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg>Drag the slider in the sentence.</p>
             <mtp-canvas model="g-birthday" name="v"></mtp-canvas>
             <p class="prose">In a room of <mtp-slider model="g-birthday" name="people"></mtp-slider> <mtp-readout model="g-birthday" name="count"></mtp-readout> people, the chance that some two of them share a birthday is <mtp-readout class="pair" model="g-birthday" name="odds"></mtp-readout>. The chance that one of them shares your birthday is only <mtp-readout class="yours" model="g-birthday" name="mine"></mtp-readout>.</p>
+            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg><span>Drag the slider in the sentence.</span></p>
           </div>
         </div>
         <div class="demo" id="demo-dice" role="tabpanel" aria-labelledby="tab-dice" hidden>
@@ -518,10 +518,10 @@ footer a { color: var(--soft); }
 <span class="ln" aria-hidden="true">24</span><span class="p">(</span><span class="kd">readout</span><span class="w"> </span><span class="nv">total</span><span class="w"> </span><span class="si">$'{(sum (somes dice.face))}'</span><span class="p">)</span></pre>
           </div>
           <div class="result">
-            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg>Change the number of dice, then roll.</p>
             <mtp-canvas model="g-dice" name="v"></mtp-canvas>
             <div class="controls hero-controls"><mtp-slider model="g-dice" name="count"></mtp-slider><mtp-button model="g-dice" name="roll"></mtp-button></div>
             <p class="readout-line">The sum is <mtp-readout model="g-dice" name="total"></mtp-readout>.</p>
+            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg><span>Change the number of dice, then roll.</span></p>
           </div>
         </div>
         <div class="demo" id="demo-schwarz" role="tabpanel" aria-labelledby="tab-schwarz" hidden>
@@ -562,7 +562,8 @@ footer a { color: var(--soft); }
             <div class="numbered"><mtp-display model="g-schwarz" name="shown"></mtp-display><span class="eqno">(1)</span></div>
             <p>with equality exactly when <i>u</i> and <i>v</i> lie on one line.</p>
             <mtp-canvas model="g-schwarz" name="c"></mtp-canvas>
-            <p class="caption"><span class="thm">Figure 1.</span> Drag <i>u</i> or <i>v</i>. Point at a side of (1) to see it as a rectangle on <i>v</i>.</p>
+            <p class="caption"><span class="thm">Figure 1.</span> Both sides of (1) as rectangles of height &#x2016;<i>v</i>&#x2016;.</p>
+            <p class="hint-banner"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13v-8.5a1.5 1.5 0 0 1 3 0v7.5" /> <path d="M11 11.5v-2a1.5 1.5 0 1 1 3 0v2.5" /> <path d="M14 10.5a1.5 1.5 0 0 1 3 0v1.5" /> <path d="M17 11.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1 -6 6h-2h.208a6 6 0 0 1 -5.012 -2.7a69.74 69.74 0 0 1 -.196 -.3c-.312 -.479 -1.407 -2.388 -3.286 -5.728a1.5 1.5 0 0 1 .536 -2.022a1.867 1.867 0 0 1 2.28 .28l1.47 1.47" /></svg><span>Drag <i>u</i> or <i>v</i>, or point at a side of (1).</span></p>
           </div>
         </div>
       </div>
@@ -591,7 +592,7 @@ footer a { color: var(--soft); }
         </div>
         <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
           <div class="use-copy">
-            <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
+            <p class="first">A figure in web-based slides that you drag during a talk.</p>
             <p>Any slide tool that makes web pages can show a <span class="name">Mathterpiece</span> figure, and you drag it to answer a question.</p>
           </div>
           <div class="use-stage"><div class="use-mock slide">
@@ -618,7 +619,7 @@ footer a { color: var(--soft); }
         </div>
       </div>
       <div class="embed-strip">
-        <p>Every one of these pages holds its figure the same way: load the runtime, load the compiled figure, and place a view of it.</p>
+        <p>Every one of these pages holds its figure the same way: load the runtime, load the compiled figure, and place a view of it. Figures draw as SVG inside standard web components, so they work in any page or framework.</p>
 <pre class="mtp embed-code"><code><span class="p">&lt;</span><span class="nt">script</span> <span class="na">type</span><span class="o">=</span><span class="s">"module"</span> <span class="na">src</span><span class="o">=</span><span class="s">"mathterpiece.js"</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
 <span class="p">&lt;</span><span class="nt">mtp-model</span> <span class="na">id</span><span class="o">=</span><span class="s">"cs"</span> <span class="na">src</span><span class="o">=</span><span class="s">"schwarz.mtpc"</span><span class="p">&gt;&lt;/</span><span class="nt">mtp-model</span><span class="p">&gt;</span>
 <span class="p">&lt;</span><span class="nt">mtp-canvas</span> <span class="na">model</span><span class="o">=</span><span class="s">"cs"</span> <span class="na">name</span><span class="o">=</span><span class="s">"c"</span><span class="p">&gt;&lt;/</span><span class="nt">mtp-canvas</span><span class="p">&gt;</span></code></pre>
