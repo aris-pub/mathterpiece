@@ -46,7 +46,7 @@ class TestDeclaring:
         assert a["stroke"].value == "#ff0000ff" and a["line-cap"].value == "round"
 
     def test_a_ring_is_filled(self):
-        assert attrs("(scene s (ring a))")["fill"].value == "#000000ff"
+        assert attrs("(scene s (ring a))")["fill"].value == "light-dark(#000000ff, #ffffffff)"
 
     def test_the_angles_follow_a_variable(self):
         a = attrs("(real t 90) (scene s (arc a (to t)))")

@@ -123,3 +123,15 @@ class TestTheCompiledModel:
 
     def test_it_meets_the_schema(self):
         assert errors(json.loads(write(compile_source(self.SRC)))) == []
+
+
+class TestDefaultFill:
+    # The author, 2026-11-16 (mtp-wrxq): a shape or a text that gives no fill is black on a light
+    # page and white on a dark one, so every figure reads in both modes.
+    DEFAULT = "light-dark(#000000ff, #ffffffff)"
+
+    def test_a_shape(self):
+        assert model("(scene s (circle c))").get("c").attrs["fill"].value == self.DEFAULT
+
+    def test_a_text(self):
+        assert model("(scene s (text t 'a'))").get("t").attrs["fill"].value == self.DEFAULT

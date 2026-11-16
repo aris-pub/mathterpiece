@@ -34,7 +34,9 @@ class TestDeclaring:
         assert a["stroke"].value == "#ff0000ff" and a["line-cap"].value == "round"
 
     def test_a_polygon_is_filled_and_a_polyline_is_not(self):
-        assert model(f"(scene s (polygon p {PTS}))").get("p").attrs["fill"].value == "#000000ff"
+        assert model(f"(scene s (polygon p {PTS}))").get("p").attrs["fill"].value == (
+            "light-dark(#000000ff, #ffffffff)"
+        )
         # As a line's, a polyline's fill is never drawn.
         assert "fill" in model(f"(scene s (polyline p {PTS}))").get("p").attrs
 
