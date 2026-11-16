@@ -1,6 +1,7 @@
-; chords in a circle: from each point k to the point m × k
-(int n 200 (const))
-(real m 1 (>= 1) (<= 12))  ; typechecked: m stays in 1 to 12
+; chords in a circle: from each of n points k to the point m × k
+(import ease linear)
+(int n 160 (>= 12) (<= 240))
+(real m 2 (>= 2) (<= 12))  ; typechecked: m stays in 2 to 12
 (func spot ((real k)) (polar 1 (turn (/ k n))))
 
 ; what the figure is
@@ -9,16 +10,13 @@
   (foreach k n
     (line_ (from (spot k)) (to (spot (* m k)))
            ; what the figure looks like
-           (stroke (mix 'crimson' 'royalblue' (/ k n)))
+           (stroke (mix 'crimson' 'royalblue' (min 1 (/ k n))))
            (stroke-opacity 0.5))))
 
-; what it does
-(animation sweep (loop)
-  (move m (from 1) (to 12) (duration 40))
-  (move m (from 12) (to 1) (duration 40)))
-(canvas v chords (on-ready (animation sweep)))
+; what it does: the play moves m, and the reader moves n
+(canvas v chords)
+(play film (label 'play the times tables')
+  (animation (set m 2) (move m (to 12) (duration 30) (ease linear))))
 
 ; accessible and interactive: mouse, touch or keyboard
-(slider times (move m (from 1) (to 12))
-  (label 'multiplier m'))
-(button again (label 'play') (animation sweep))
+(slider points (move n (from 12) (to 240)) (label 'points'))
