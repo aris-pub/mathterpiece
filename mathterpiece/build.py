@@ -26,8 +26,17 @@ def compiled(src: str, path: Path | None = None) -> str:
     return write(compile_model(parse(src), path))
 
 
+# An installed package has no web/ folder: just package copies the built scripts here.
+PACKAGED = Path(__file__).parent / "runtime"
+
+
 def _bundle(file: str) -> str:
-    """One of the scripts in web/dist, built with pnpm when the source is newer than the build."""
+    """One of the scripts in web/dist, built with pnpm when the source is newer than the build.
+    Without the repo's web/ folder, as in an installed package, the copy shipped with it."""
+    if not (WEB / "src").is_dir():
+        if (PACKAGED / file).is_file():
+            return (PACKAGED / file).read_text(encoding="utf-8")
+        raise BuildError(f"this install of mathterpiece has no runtime: {PACKAGED / file} is missing")
     built = [WEB / "dist" / f for f in ("mathterpiece.js", "inventory.js")]
     sources = [p for p in (WEB / "src").rglob("*") if p.is_file()]
     if not sources:

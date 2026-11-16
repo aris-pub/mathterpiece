@@ -116,3 +116,11 @@ site-preview: site-build
 # build the landing page and publish it at mtp-lang.org
 site-publish: site-build
     npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir site --site feae9884-d86c-4a28-a4a7-cde90f9a78db --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
+
+# build both packages for release: the PyPI wheel and sdist in dist/, with the built runtime inside, and the npm tarball in web/
+package: build-web
+    mkdir -p mathterpiece/runtime
+    cp web/dist/mathterpiece.js web/dist/inventory.js mathterpiece/runtime/
+    uv build
+    cp LICENSE web/LICENSE
+    cd web && npm pack

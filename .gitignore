@@ -31,3 +31,7 @@ docs/_build/
 # Built by just site-build.
 site/data/
 site/mathterpiece.js
+# Copied in by just package, for the PyPI package.
+mathterpiece/runtime/
+web/mathterpiece-*.tgz
+web/LICENSE
