@@ -1,5 +1,10 @@
 # Mathterpiece
 
+A language for math you can touch.
+
+[Website](https://mtp-lang.org) · [Docs](https://docs.mtp-lang.org) ·
+[Specification](https://spec.mtp-lang.org) · [Quickstart](https://docs.mtp-lang.org/quickstart.html)
+
 Mathterpiece (mtp) is a small language for math figures that readers can drag, slide and play.
 You describe a figure in a `.mtp` file, in a Lisp-like syntax: its variables and their ranges, its
 shapes, and how each one depends on the others. The compiler checks it and writes a `.mtpc` file,
@@ -103,11 +108,10 @@ just check       # lint, type checks and both test suites
 
 ## Docs
 
-- [Syntax](docs/syntax.md): how a file is written.
-- [Reference](docs/reference.md): every form, function and constant.
-- [Type system](docs/type-system.md): types, ranges and none.
-- [Data model](docs/data-model.md): variables, attributes, who may write them, and the page.
-- [The .mtpc format](docs/mtpc.md), with its [JSON schema](docs/mtpc.schema.json).
+- [docs.mtp-lang.org](https://docs.mtp-lang.org): the guides, starting with the
+  [quickstart](https://docs.mtp-lang.org/quickstart.html).
+- [spec.mtp-lang.org](https://spec.mtp-lang.org): the specification of the language, every form
+  and every rule, and the compiled `.mtpc` format.
 
 ## License
 
