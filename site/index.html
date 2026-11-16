@@ -178,19 +178,25 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 
 /* Use cases */
 .usecases { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-.use-copy { padding: 30px 28px; }
+.use-copy { padding: 20px 28px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .use-list { display: flex; flex-direction: column; gap: 2px; grid-row: 1; grid-column: 1; background: var(--code-bg); border-right: 1px solid var(--line); padding: 18px 0; }
 .use-list button { font: 500 1.2rem/1.3 var(--serif); text-align: left; color: var(--soft); background: none; border: 0; border-left: 3px solid transparent; padding: 12px 20px; cursor: pointer; }
 .use-list button:hover { color: var(--ink); }
 .use-list button[aria-selected="true"] { color: var(--ink); background: var(--surface); border-left-color: var(--accent); }
-.use-panel { grid-row: 1; grid-column: 2; display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); align-items: stretch; }
-.use-stage { display: grid; align-items: center; padding: 28px; background: color-mix(in srgb, var(--accent) 6%, var(--bg)); border-left: 1px solid var(--line); }
+.use-panel { grid-row: 1; grid-column: 2; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.use-stage { display: grid; align-items: center; justify-items: center; padding: 28px; background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+.use-stage .use-mock { width: 100%; }
+.use-stage .use-mock.browser { max-width: 560px; }
+.use-stage .use-mock.slide { max-width: 680px; }
 .use-panel[hidden] { display: grid; visibility: hidden; }
 .use-copy h3 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 12px; }
-.use-copy p { font-size: 17px; line-height: 1.6; color: var(--soft); margin: 0 0 12px; }
-.use-copy p.first { color: var(--ink); font-size: 18px; }
+.use-copy p { font-size: 16px; line-height: 1.55; color: var(--soft); margin: 0; max-width: 70ch; }
+.use-copy p.first { color: var(--ink); font: 500 1.2rem/1.4 var(--serif); margin-bottom: 4px; }
 .use-copy a { color: var(--accent-ink); }
 .use-mock { min-width: 0; }
+.embed-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 28px; align-items: center; margin-top: 24px; }
+.embed-strip p { margin: 0; font-size: 17px; line-height: 1.55; color: var(--soft); }
+.embed-strip pre { margin: 0; font: 13px/1.7 var(--mono); color: var(--ink); background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; overflow-x: auto; }
 .use-mock .screen { position: relative; overflow: hidden; background: #fff; width: 100%; }
 .use-mock iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; transform: scale(var(--s, 0.4)); }
 .use-mock.browser { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.08); }
@@ -200,10 +206,9 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-mock.slide { border: 10px solid #22282d; border-radius: 12px; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
 .use-mock.phone { width: 270px; margin: 0 auto; border: 10px solid #22282d; border-radius: 34px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
 @media (max-width: 860px) {
-  .usecases { grid-template-columns: minmax(0, 1fr); }
+  .usecases, .embed-strip { grid-template-columns: minmax(0, 1fr); }
   .use-list { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px; }
   .use-list button { border-left: 0; border-bottom: 3px solid transparent; padding: 10px 12px; }
-  .use-stage { border-left: 0; border-top: 1px solid var(--line); }
   .use-list button[aria-selected="true"] { border-bottom-color: var(--accent); }
   .use-panel { grid-row: 2; grid-column: 1; grid-template-columns: minmax(0, 1fr); }
 }
@@ -549,7 +554,6 @@ footer a { color: var(--soft); }
         </div>
         <div class="use-panel" id="usep-paper" role="tabpanel" aria-labelledby="use-paper">
           <div class="use-copy">
-            <h3>Papers</h3>
             <p class="first">A figure in a web-based paper that readers can explore, next to the claim that it shows.</p>
             <p>The figure sits next to the theorem that it illustrates. Readers drag <i>u</i> or <i>v</i>, or point at a side of the inequality, and check the claim for themselves.</p>
           </div>
@@ -559,7 +563,6 @@ footer a { color: var(--soft); }
         </div>
         <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
           <div class="use-copy">
-            <h3>Slides</h3>
             <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
             <p>Any slide tool that makes web pages can show a figure. When someone asks about a different triangle, you drag a corner and show them.</p>
           </div>
@@ -569,7 +572,6 @@ footer a { color: var(--soft); }
         </div>
         <div class="use-panel" id="usep-notes" role="tabpanel" aria-labelledby="use-notes" hidden>
           <div class="use-copy">
-            <h3>Lecture notes</h3>
             <p class="first">A figure in course notes, or in a page that works through someone else's result, with the text around it.</p>
             <p>The numbers in the text come from the figure, so the prose and the picture always agree.</p>
           </div>
@@ -579,7 +581,6 @@ footer a { color: var(--soft); }
         </div>
         <div class="use-panel" id="usep-videos" role="tabpanel" aria-labelledby="use-videos" hidden>
           <div class="use-copy">
-            <h3>Videos</h3>
             <p class="first">A figure's animations, played and recorded from the same source as the page.</p>
             <p>Record the animation with any screen recorder. The page and the video come from one source, so a fix to the figure reaches both.</p>
           </div>
@@ -587,6 +588,12 @@ footer a { color: var(--soft); }
             <div class="screen" style="aspect-ratio: 540 / 960" data-w="540"><iframe scrolling="no" src="uses/video.html" title="Videos: an example page with a live figure" loading="lazy" style="width: 540px; height: 960px"></iframe></div>
           </div></div>
         </div>
+      </div>
+      <div class="embed-strip">
+        <p>Every one of these pages holds its figure the same way: load the runtime, load the compiled figure, and place a view of it.</p>
+<pre><code>&lt;script type=&quot;module&quot; src=&quot;mathterpiece.js&quot;&gt;&lt;/script&gt;
+&lt;mtp-model id=&quot;cs&quot; src=&quot;schwarz.mtpc&quot;&gt;&lt;/mtp-model&gt;
+&lt;mtp-canvas model=&quot;cs&quot; name=&quot;c&quot;&gt;&lt;/mtp-canvas&gt;</code></pre>
       </div>
     </div>
   </section>
