@@ -213,7 +213,8 @@ TRANSFORMS = {
     "transform": Argument(TRANSFORM, IDENTITY),
 }
 PAINTED = {
-    "fill": Argument(PAINT, "#000000ff"),
+    # Black on a light page and white on a dark one (the author, 2026-11-16, mtp-wrxq).
+    "fill": Argument(PAINT, "light-dark(#000000ff, #ffffffff)"),
     "stroke": Argument(PAINT, None),
     "stroke-width": Argument(NON_NEGATIVE, 1),
     "opacity": Argument(UNIT, 1),

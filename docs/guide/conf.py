@@ -22,7 +22,12 @@ highlight_language = "mtp"
 html_theme = "pydata_sphinx_theme"
 html_title = "mathterpiece docs"
 html_static_path = ["../_static"]
-html_css_files = ["https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500&family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@300;400;600&display=swap", "mtp.css"]
+# The Aris fonts, as on mtp-lang.org.
+FONTS = (
+    "https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500"
+    "&family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@300;400;600&display=swap"
+)
+html_css_files = [FONTS, "mtp.css"]
 html_theme_options = {
     "logo": {
         "image_light": "_static/mtp-logo-light.svg",
