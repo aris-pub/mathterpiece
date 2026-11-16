@@ -43,14 +43,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #111518; --surface: #13181b; --ink: #ced6dc; --logo-ink: #ced6dc; --soft: #8a9aa6; --line: #273036;
-    --accent: #b98af5; --accent-ink: #c9a3f7; --code-bg: #1a2024; --red: #f87172; --green: #37cab6; --blue: #38b4f8;
+    --bg: #1c2227; --surface: #222a30; --ink: #d6dde2; --logo-ink: #d6dde2; --soft: #94a3ae; --line: #354047;
+    --accent: #b98af5; --accent-ink: #c9a3f7; --code-bg: #283139; --red: #f87172; --green: #37cab6; --blue: #38b4f8;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #111518; --surface: #13181b; --ink: #ced6dc; --logo-ink: #ced6dc; --soft: #8a9aa6; --line: #273036;
-  --accent: #b98af5; --accent-ink: #c9a3f7; --code-bg: #1a2024; --red: #f87172; --green: #37cab6; --blue: #38b4f8;
+  --bg: #1c2227; --surface: #222a30; --ink: #d6dde2; --logo-ink: #d6dde2; --soft: #94a3ae; --line: #354047;
+  --accent: #b98af5; --accent-ink: #c9a3f7; --code-bg: #283139; --red: #f87172; --green: #37cab6; --blue: #38b4f8;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -131,7 +131,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 
 .hero-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: center; margin-bottom: 88px; }
 .hero-top .hero-text { margin-bottom: 0; }
-@media (max-width: 860px) { .hero-top { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .hero-top { grid-template-columns: 1fr; } .hero-top .framed { display: none; } }
 .framed { position: relative; aspect-ratio: 1 / 1; max-width: 440px; width: 100%; justify-self: center; display: grid; place-items: center; }
 .framed .brackets { position: absolute; inset: 0; width: 100%; height: 100%; }
 .framed .brackets path { stroke-width: 14px; }
@@ -202,7 +202,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .demo .result:has(.hint-banner) { padding-bottom: 64px; }
 .hint-banner { position: absolute; bottom: 0; left: 0; right: 0; margin: 0; font-family: var(--sans); line-height: 1.4; display: flex; align-items: center; gap: 10px; padding: 12px 24px; font-size: 16px; color: var(--ink); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-top: 1px solid var(--line); }
 .hint-banner svg { color: var(--accent-ink); flex: none; }
-.fabs { position: fixed; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column-reverse; gap: 10px; z-index: 20; }
+.fabs { position: fixed; right: max(20px, env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column-reverse; gap: 10px; z-index: 20; }
 .to-top { opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
 .to-top.shown { opacity: 1; transform: none; pointer-events: auto; }
 .fab { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; padding: 0; box-shadow: 0 6px 18px rgba(30, 40, 60, 0.12); }
@@ -300,7 +300,6 @@ footer ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; f
 footer a { color: var(--soft); }
 footer .motto { font: 600 13px/1.4 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); }
 
-.mock { position: fixed; bottom: 12px; right: 12px; background: var(--ink); color: var(--bg); font-size: 13px; padding: 4px 10px; border-radius: 4px; opacity: .8; }
 
 @media (max-width: 860px) {
   .demo, .checked, .safe-steps, .safe-steps .live { grid-template-columns: 1fr; }
@@ -373,6 +372,14 @@ footer .motto { font: 600 13px/1.4 var(--sans); letter-spacing: 0.08em; text-tra
         <div class="framed">
           <mtp-canvas model="focus" name="v"></mtp-canvas>
         </div>
+        <script>
+          // On a narrow screen the animated logo is not drawn at all: it and its model leave the
+          // page before the runtime loads them.
+          if (matchMedia("(max-width: 860px)").matches) {
+            document.querySelector(".hero-top .framed").remove();
+            document.getElementById("focus").remove();
+          }
+        </script>
       </div>
       <div class="gallery">
         <div class="tabs" role="tablist" aria-label="Examples">
@@ -714,7 +721,6 @@ footer .motto { font: 600 13px/1.4 var(--sans); letter-spacing: 0.08em; text-tra
   </div>
 </footer>
 
-<div class="mock">mockup</div>
 <script>
   // The toggle flips between light and dark, starting from the theme shown now. It listens on the
   // document, since the floating toggle comes later in the page than this script.
