@@ -298,6 +298,8 @@ class Writer:
             d["shows"] = [s if isinstance(s, int) else self.attribute(s) for s in o.data["shows"]]
             d["transition"] = o.data["transition"]
             d["attrs"] = attrs
+            if o.data.get("fit"):
+                d["fit"] = True
         elif kind == "readout":
             d["attrs"] = attrs
         elif kind in ("slider", "button", "play", "stepper"):

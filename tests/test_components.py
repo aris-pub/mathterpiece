@@ -163,12 +163,15 @@ class TestListeners:
 
 class TestViews:
     def test_a_canvas(self):
-        m = model("(bool on true) (scene s (circle c) (circle d)) (canvas v (x -3) c (when on d))")
+        m = model(
+            "(bool on true) (scene s (circle c) (circle d))"
+            " (canvas v (x -3) (y -3) (width 20) (height 6) c (when on d))"
+        )
         v = m.get("v")
         shows = v.data["shows"]
         assert shows[0] == m.id("c")
         assert shows[1].bound and (m.id("on"), None) in shows[1].expr.deps
-        assert v.attrs["x"].value == -3 and v.attrs["width"].value == 20
+        assert v.attrs["x"].value == -3 and v.attrs["height"].value == 6
 
     def test_a_canvas_pans_and_zooms_unless_told_not_to(self):
         m = model("(scene s (circle c)) (canvas v s) (canvas w (pan false) (zoom false) s)")

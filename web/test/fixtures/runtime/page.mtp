@@ -34,7 +34,7 @@
 (toggle slide on (animation (move k (to (if on 5 0)) (duration 1))))
 (toggle all lamps.lit)
 (readout r $'k = {k:.1f}')
-(canvas v s
+(canvas v (x -10) (y -10) (width 20) (height 20) s
   (on-drag dot dot.pos)
   (on-drag orbit (move k (to (let ((q (or? (to-polar pointer) [2 0]))) q[1]))))
   (on-drag pair pair.pos)

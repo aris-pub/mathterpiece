@@ -13,14 +13,14 @@
     (circle dot (pos [-5 0]) (r 1)))
   (circle knob (pos [5 0]) (r 1))
   (circle pad (pos [0 5]) (r 1)))
-(canvas left (pan false) (zoom false) s
+(canvas left (x -10) (y -10) (width 20) (height 20) (pan false) (zoom false) s
   (on-click dot (animation (move clicks (to (+ clicks 1)) (duration 0))))
   (on-click g (animation (move outer (to (+ outer 1)) (duration 0))))
   (on-enter dot (animation (move entered (to (+ entered 1)) (duration 0))))
   (on-pointermove dot p)
   (on-drag knob knob.pos)
   (on-click pad (animation (move tapped-left (to (+ tapped-left 1)) (duration 0)))))
-(canvas right (pan false) (zoom false) s
+(canvas right (x -10) (y -10) (width 20) (height 20) (pan false) (zoom false) s
   (on-click g (animation (move outer (to (+ outer 1)) (duration 0))))
   (on-click pad (animation (move tapped-right (to (+ tapped-right 1)) (duration 0)))))
 (button b (in left right) (animation (move clicks (to 0) (duration 0))))

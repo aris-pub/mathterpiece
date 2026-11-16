@@ -1,0 +1,6 @@
+; A canvas with no view box counts a text by its size as the page draws it (the author,
+; 2026-11-16): the box is the smallest that holds the text at the scale that the box gives it.
+(scene s
+  (circle c (r 1))
+  (text t 'a fairly long label' (pos [2 0]) (halign 'start') (valign 'middle')))
+(canvas v s)

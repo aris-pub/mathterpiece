@@ -22,8 +22,8 @@ FILES = sorted(
 
 
 def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
-    src = "(canvas\nview\n(x 1)\ns)\n"
-    assert layout(src) == "(canvas\n    view\n    (x 1)\n  s)\n"
+    src = "(canvas\nview\n(pan true)\ns)\n"
+    assert layout(src) == "(canvas\n    view\n    (pan true)\n  s)\n"
 
 
 # A keyword argument on a line of its own goes 4 in, like a positional argument, so it reads
@@ -44,8 +44,9 @@ def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
             "(group g\n    (defaults (fill red)\n        (stroke blue))\n  (circle c))\n",
         ),
         (
-            "(canvas view\n(width 2)\n(zoom true)\n(when on s)\nt\n(pan true))\n",
-            "(canvas view\n    (width 2)\n    (zoom true)\n  (when on s)\n  t\n    (pan true))\n",
+            "(canvas view\n(toggle-duration 2)\n(zoom true)\n(when on s)\nt\n(pan true))\n",
+            "(canvas view\n    (toggle-duration 2)\n    (zoom true)\n  (when on s)\n  t\n"
+            "    (pan true))\n",
         ),
         (
             "(animation a\n(loop)\n(move c.r 2\n(duration 1))\n(move c.r 1))\n",

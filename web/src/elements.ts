@@ -15,7 +15,7 @@ import { Pointer } from "./pointer.ts";
 import { Runtime } from "./runtime.ts";
 import { schemaProblem } from "./schema.ts";
 import { Showings } from "./standins.ts";
-import { DrawMemo, type Look, draw, elementsMade, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
+import { DrawMemo, type Look, draw, elementsMade, fitBox, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
 import { type Ease, applyEase } from "./transitions.ts";
 
 export { SPEC_VERSION };
@@ -539,6 +539,14 @@ export class MtpCanvas extends MtpPart {
     // by it (the author, 2026-11-08).
     const allows = (attr: "pan" | "zoom") => !rt.quiet.has(canvas) && Boolean(rt.value(canvas, attr));
     let wasQuiet = rt.quiet.has(canvas);
+    // A canvas with no view box of its own shows the box of its shapes as this copy first draws
+    // them, and keeps it (the author, 2026-11-16). A text's size in the scene follows the copy's
+    // width on screen, so the box is worked out again once, the first time the copy has a width:
+    // until then the page shows nothing of it.
+    const fits = Boolean(rt.objects[canvas]!.fit);
+    let fitted: number[] | undefined;
+    let sized = false;
+    const view = () => viewOf(rt, canvas, fitted);
     this.redraw = () => {
       toggles.follow();
       const quiet = rt.quiet.has(canvas);
@@ -550,7 +558,19 @@ export class MtpCanvas extends MtpPart {
       // Elsewhere a finger on the canvas scrolls the page.
       const action = allows("pan") || allows("zoom") || pointer.onCanvas ? "none" : "";
       if (svg.style.touchAction !== action) svg.style.touchAction = action;
-      draw(rt, canvas, svg, (k) => toggles.shownBy(k), look, memo, showings);
+      const shownBy = (k: number) => toggles.shownBy(k);
+      if (fits && !sized) {
+        fitted ??= fitBox(rt, canvas);
+        const width = svg.getBoundingClientRect?.().width ?? 0;
+        if (width > 0) {
+          // Drawn first with each text at its position, so that the texts are on the page to
+          // measure.
+          draw(rt, canvas, svg, shownBy, look, memo, showings, fitted);
+          fitted = fitBox(rt, canvas, svg, width, fitted);
+          sized = true;
+        }
+      }
+      draw(rt, canvas, svg, shownBy, look, memo, showings, fitted);
       const made = elementsMade();
       if (rt.clock !== shownAt || made !== madeAt || moded) {
         for (const el of svg.querySelectorAll<SVGElement>("[data-mtp-id]")) {
@@ -613,18 +633,18 @@ export class MtpCanvas extends MtpPart {
       return apply(invert([ctm.a, ctm.b, ctm.c, ctm.d, ctm.e, ctm.f]), at) as [number, number];
     };
     const toScene = (event: PointerEvent): [number, number] =>
-      apply(invert(viewOf(rt, canvas).toUser), toUser(event)) as [number, number];
+      apply(invert(view().toUser), toUser(event)) as [number, number];
     // The reader zooms between the canvas's bounds. Zoomed in, what is shown stays inside the
     // view box, so the reader never sees past what the author framed (the author, 2026-11-04);
     // zoomed out past it, the view box stays inside what is shown (the author, 2026-11-08).
     const inside = () => {
-      const [, , w, h] = viewOf(rt, canvas).box as [number, number, number, number];
+      const [, , w, h] = view().box as [number, number, number, number];
       const [mx, my] = [Math.abs(w - w / look.scale) / 2, Math.abs(h - h / look.scale) / 2];
       look.dx = Math.min(Math.max(look.dx, -mx), mx);
       look.dy = Math.min(Math.max(look.dy, -my), my);
     };
     const zoomAbout = (at: [number, number], by: number) => {
-      const [x, y, w, h] = viewOf(rt, canvas).box as [number, number, number, number];
+      const [x, y, w, h] = view().box as [number, number, number, number];
       const [cx, cy] = [x + w / 2, y + h / 2];
       const [lo, hi] = [rt.value(canvas, "zoom-min") as number, rt.value(canvas, "zoom-max") as number];
       const factor = Math.min(Math.max(look.scale * by, lo), hi) / look.scale;
@@ -633,7 +653,7 @@ export class MtpCanvas extends MtpPart {
       look.dy = at[1] + (cy + look.dy - at[1]) / factor - cy;
       look.scale *= factor;
       inside();
-      zoom(rt, canvas, svg, look);
+      zoom(rt, canvas, svg, look, fitted);
     };
     // The wheel zooms, and so does a pinch on a trackpad, which comes as a wheel with ctrl held.
     svg.addEventListener("wheel", (event) => {
@@ -644,12 +664,12 @@ export class MtpCanvas extends MtpPart {
     svg.addEventListener("dblclick", () => {
       if (!allows("pan") && !allows("zoom")) return;
       Object.assign(look, { scale: 1, dx: 0, dy: 0 });
-      zoom(rt, canvas, svg, look);
+      zoom(rt, canvas, svg, look, fitted);
     });
     // The pointers pressed where nothing is dragged, and where each is: one pans, two pinch.
     const touches = new Map<number, [number, number]>();
     const unitsPerPx = () =>
-      lookBox(viewOf(rt, canvas).box, look)[2]! / (svg.getBoundingClientRect?.().width || 640);
+      lookBox(view().box, look)[2]! / (svg.getBoundingClientRect?.().width || 640);
     const spread = () => {
       const [a, b] = [...touches.values()] as [[number, number], [number, number]];
       return { gap: Math.hypot(a[0] - b[0], a[1] - b[1]), mid: { clientX: (a[0] + b[0]) / 2, clientY: (a[1] + b[1]) / 2 } };
@@ -752,7 +772,7 @@ export class MtpCanvas extends MtpPart {
         inside();
         // A pan keeps the scale, so the shapes, whose text sizes follow the scale, stay as
         // drawn: only the view box moves.
-        svg.setAttribute("viewBox", lookBox(viewOf(rt, canvas).box, look).join(" "));
+        svg.setAttribute("viewBox", lookBox(view().box, look).join(" "));
       } else if (touches.size === 2) {
         const before = spread();
         touches.set(event.pointerId, [event.clientX, event.clientY]);

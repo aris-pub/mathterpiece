@@ -1444,10 +1444,7 @@ export class Runtime {
       if (boxes.length === 0) return null;
       const around = [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...boxes.map((b) => b![k]!)));
       const clip = o.clip === undefined ? null : this.box(o.clip, frame);
-      if (clip === null) return around;
-      // Each side moved into the clip's box: the two boxes' overlap, or, with none, a box of no
-      // size at the clip's edge nearest the members.
-      return around.map((n, k) => Math.min(Math.max(n, clip[k % 2]!), clip[(k % 2) + 2]!));
+      return clip === null ? around : cutTo(around, clip);
     }
     const v = (attr: string) => this.value(id, attr) as number;
     let corners: number[][];
@@ -1494,6 +1491,40 @@ export class Runtime {
     const xs = seen.map((c) => c[0]!);
     const ys = seen.map((c) => c[1]!);
     return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  }
+
+  /**
+   * The box [left, bottom, right, top], in the scene's own coordinates, around the shapes given
+   * that exist, or null when none does: what a canvas with no view box of its own shows. Each
+   * shape counts by its box, as box gives it, but a text by text(id), its box as drawn, or by its
+   * position when that is null. A container counts by its members, cut to its clip.
+   */
+  shownBox(ids: number[], text: (id: number) => number[] | null): number[] | null {
+    const boxes: number[][] = [];
+    for (const id of ids) {
+      const b = this.shownBoxOf(id, text);
+      if (b !== null) boxes.push(b);
+    }
+    return boxes.length === 0 ? null : [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...boxes.map((b) => b[k]!)));
+  }
+
+  private shownBoxOf(id: number, text: (id: number) => number[] | null): number[] | null {
+    const o = this.objects[id]!;
+    if (o.kind === "scene") return this.shownBox(o.members ?? [], text);
+    if (!this.exists(id)) return null;
+    if (o["fixed-size"]) return this.box(id, null);
+    if (o.kind === "group" || o.kind === "instance") {
+      const around = this.shownBox(o.members ?? [], text);
+      const clip = around === null || o.clip === undefined ? null : this.box(o.clip, null);
+      return clip === null ? around : cutTo(around!, clip);
+    }
+    if (o.kind === "text") {
+      const drawn = text(id);
+      if (drawn !== null) return drawn;
+      const [x, y] = this.attrOf(id, "pos", null) as number[];
+      return [x!, y!, x!, y!];
+    }
+    return this.box(id, null);
   }
 
   /** The transform from a shape's frame to its container frame's, or null when there is none. */
@@ -1666,6 +1697,12 @@ export function show(v: unknown, t: Type, spec: string): string {
 
 export function percent(x: number): string {
   return `${Number((100 * x).toFixed(6))}%`;
+}
+
+// Each side of a box [left, bottom, right, top] moved into a clip's box: the two boxes' overlap,
+// or, with none, a box of no size at the clip's edge nearest the first.
+function cutTo(box: number[], clip: number[]): number[] {
+  return box.map((n, k) => Math.min(Math.max(n, clip[k % 2]!), clip[(k % 2) + 2]!));
 }
 
 // A point on a box [left, bottom, right, top]: the middle of a side or a corner, pushed out by

@@ -115,6 +115,8 @@ WRITER_OPTIONS = {
 PLAY_NOTHING = ("slider", "on-drag", "on-pointermove")
 # The views (data-model.md, "Components"): what a listener or a control may belong to.
 VIEWS = ("canvas", "readout", "display")
+# A canvas's view box, which it gives whole or not at all (the author, 2026-11-16).
+VIEW_BOX = ("x", "y", "width", "height")
 # The listeners whose event goes up the scene tree, as in the DOM, unless one stops it.
 BUBBLES = ("on-click", "on-release", "on-dragstart", "on-dragend", "on-pointermove")
 # The whole number limit (Rule number-limit, evaluation.md), as a range.
@@ -3321,7 +3323,7 @@ class _Compiler:
             # One value is written to every member, at any depth, so it has their own type.
             return _join_all([self.writable_attr(m, attr, label, pos) for m in obj.members], pos)
         if attr not in obj.attrs:
-            raise CompileError(f"{_a(obj.kind)} has no attribute '{attr}'", pos)
+            raise _no_attribute(obj, attr, pos)
         return self.check_writable(obj, obj.attrs[attr], label, pos)
 
     def check_writable(self, obj: Obj, attribute: Attribute, label: str, pos: Pos) -> Type:
@@ -4220,14 +4222,22 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_canvas(self, obj: Obj, items: list, shape) -> None:
-        defaults = {"x": -10, "y": -10, "width": 20, "height": 20}
-        for attr, d in defaults.items():
-            node = self.take(items, attr)
-            obj.attrs[attr] = (
-                self.attribute(REAL, node, obj.pos, attr, scope=self.cscope)
-                if node
-                else Attribute(REAL, d)
+        # All four or none: with none, the runtime works the box out from the shapes as the page
+        # first draws them, since only the page can measure a text (the author, 2026-11-16).
+        given = {attr: self.take(items, attr) for attr in VIEW_BOX}
+        missing = [attr for attr, node in given.items() if node is None]
+        if missing and len(missing) < len(VIEW_BOX):
+            named = [attr for attr in VIEW_BOX if attr not in missing]
+            raise CompileError(
+                f"the canvas {obj.name} gives {_and(named)} but not {_and(missing)}: give all"
+                " four of x, y, width and height, or none of them to show the box of its shapes",
+                obj.pos,
             )
+        if missing:
+            obj.data["fit"] = True
+        for attr, node in given.items():
+            if node is not None:
+                obj.attrs[attr] = self.attribute(REAL, node, obj.pos, attr, scope=self.cscope)
         node = self.take(items, "transform")
         obj.attrs["transform"] = (
             self.attribute(TRANSFORM, node, obj.pos, "transform", scope=self.cscope)
@@ -6085,7 +6095,7 @@ class _Compiler:
             if attr not in obj.attrs and i in self.declaring:
                 raise self.self_read(i, obj.pos)
             if attr not in obj.attrs:
-                raise CompileError(f"{_a(obj.kind)} has no attribute '{attr}'", obj.pos)
+                raise _no_attribute(obj, attr, obj.pos)
             attribute = obj.attrs[attr]
             if obj.kind in SHAPE_ATTRS or (obj.kind == "instance" and attr in INSTANCE_ATTRS):
                 moves = self.moves(i)
@@ -6323,7 +6333,7 @@ class _Compiler:
             return Expr("spread", t, (Expr("obj", obj.type, (i,)), name), deps)
         if i in self.declaring:
             raise self.self_read(i, pos)
-        raise CompileError(f"{_a(obj.kind)} has no attribute '{name}'", pos)
+        raise _no_attribute(obj, name, pos)
 
     def not_from_inside(self, i: int, pos: Pos) -> None:
         """A read of group i whole includes every member of i, so a shape inside i, at any
@@ -7183,6 +7193,21 @@ def _a(thing) -> str:
     """thing with a or an before it, as its first letter is sounded."""
     word = str(thing)
     return f"{'an' if word[:1] in 'aeiou' else 'a'} {word}"
+
+
+def _no_attribute(obj: Obj, attr: str, pos: Pos) -> CompileError:
+    if obj.kind == "canvas" and obj.data.get("fit") and attr in VIEW_BOX:
+        return CompileError(
+            f"the canvas {obj.name} shows the box of its shapes, so it has no {attr}: give it"
+            " (x …) (y …) (width …) (height …) to read or move its view box",
+            pos,
+        )
+    return CompileError(f"{_a(obj.kind)} has no attribute '{attr}'", pos)
+
+
+def _and(words: list[str]) -> str:
+    """The words in a list as one would say them: "x", "x and y", "x, y and width"."""
+    return words[0] if len(words) == 1 else f"{', '.join(words[:-1])} and {words[-1]}"
 
 
 def _find(name: str, importer: Path) -> Path | None:

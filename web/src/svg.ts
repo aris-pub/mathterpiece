@@ -2,7 +2,7 @@
 // scene is flipped once at the top, and text is flipped back so its letters stay upright. Each
 // group and instance is a <g> with its own frame (docs/reference.md, "Coordinates").
 import { arcPath, ringPath } from "./arc.ts";
-import { Ref, apply, compose } from "./builtins.ts";
+import { Ref, apply, compose, invert } from "./builtins.ts";
 import { curvePath } from "./curve.ts";
 import { drawnPart, outlineOf, outlinePath } from "./outline.ts";
 import type { Expr } from "./doc.ts";
@@ -16,13 +16,18 @@ function matrix(m: number[]): string {
   return `matrix(${m.join(" ")})`;
 }
 
-/** The SVG's view box, and the transform from scene coordinates to the SVG's own. */
-export function viewOf(rt: Runtime, canvas: number): { box: number[]; toUser: number[] } {
+/**
+ * The SVG's view box, and the transform from scene coordinates to the SVG's own. fitted is the
+ * box [x, y, width, height] that a copy of a canvas with no view box of its own shows; without
+ * it, such a canvas shows the box of its shapes with each text at its position.
+ */
+export function viewOf(rt: Runtime, canvas: number, fitted?: number[]): { box: number[]; toUser: number[] } {
   const v = (a: string) => rt.value(canvas, a) as number;
   // The view box is given in the scene's own coordinates, which the scene's transform takes to
   // where they are drawn (mtp-y0gh): the region shown is the box around its corners there.
   const own = sceneTransform(rt);
-  const [x0, y0, w0, h0] = [v("x"), v("y"), v("width"), v("height")];
+  const given = rt.objects[canvas]!.fit ? (fitted ?? fitBox(rt, canvas)) : [v("x"), v("y"), v("width"), v("height")];
+  const [x0, y0, w0, h0] = given as [number, number, number, number];
   const corners = [
     [x0, y0],
     [x0 + w0, y0],
@@ -39,6 +44,98 @@ export function viewOf(rt: Runtime, canvas: number): { box: number[]; toUser: nu
   const t = rt.value(canvas, "transform") as number[];
   const view = compose([1, 0, 0, 1, -cx, -cy], t, [1, 0, 0, 1, cx, cy]);
   return { box: [x, -(y + height), width, height], toUser: compose(own, view, FLIP) };
+}
+
+// The margin around the box of a canvas's shapes, on each side, as a share of the box's larger
+// side, so that a line along an axis gets one across it too.
+const MARGIN = 0.05;
+// The square that a canvas shows around shapes of no size, and around none at all: as large as
+// the view box from -10 to 10.
+const EMPTY = 20;
+
+/**
+ * The box [x, y, width, height], in the scene's own coordinates, that a copy of a canvas with no
+ * view box of its own shows: the box around the shapes that its items give now, with a margin.
+ * svg is the copy drawn with the box drawnWith, and width its width on screen. A text's size on
+ * screen is fixed, so its size in the scene follows the box: the box is the smallest that holds
+ * each text as the copy draws it with that box. Without svg, or when no box holds them, as when a
+ * text is wider than the copy, each text counts by its position.
+ */
+export function fitBox(rt: Runtime, canvas: number, svg?: SVGSVGElement, width = 0, drawnWith?: number[]): number[] {
+  const view = rt.objects[canvas]!;
+  const items = itemsOf(view);
+  let k = 0;
+  const ids = (view.shows ?? []).flatMap((s) => (typeof s === "number" ? [s] : shapesOf(rt.evaluate(items[k++]!))));
+  const texts = svg && width > 0 && drawnWith ? drawnTexts(svg) : new Map<number, TextDrawn>();
+  // The box with each text grown about its position by a share of its size as drawn.
+  const grown = (by: number) =>
+    framed(
+      rt.shownBox(ids, (id) => {
+        const t = texts.get(id);
+        return t ? t.box.map((n, j) => t.at[j % 2]! + (n - t.at[j % 2]!) * by) : null;
+      }),
+    );
+  const positions = grown(0);
+  if (texts.size === 0) return positions;
+  // The scale of a box in units a pixel, as draw works it out, against the scale of the drawing.
+  const scaleOf = (box: number[]) => viewOf(rt, canvas, box).box[2]! / width;
+  const drawn = scaleOf(drawnWith!);
+  // Each round draws the texts at the scale of the last box, which can only grow the box, so the
+  // rounds climb to the smallest box that holds them, if there is one.
+  let by = 0;
+  let box = positions;
+  for (let round = 0; round < 200; round++) {
+    const next = scaleOf(box) / drawn;
+    if (Math.abs(next - by) <= 1e-9 * next) return box;
+    by = next;
+    box = grown(by);
+  }
+  return positions;
+}
+
+// A text as drawn: its box [left, bottom, right, top] and its position, in the scene's own
+// coordinates.
+interface TextDrawn {
+  box: number[];
+  at: number[];
+}
+
+// The texts a copy draws, by id, measured on the page. A text inside a fixed-size group counts
+// with its group, and a stand-in is not the shape.
+function drawnTexts(svg: SVGSVGElement): Map<number, TextDrawn> {
+  const out = new Map<number, TextDrawn>();
+  const top = svg.querySelector(":scope > g") as SVGGElement | null;
+  const toScreen = top?.getScreenCTM?.();
+  if (!top || !toScreen) return out;
+  const back = invert([toScreen.a, toScreen.b, toScreen.c, toScreen.d, toScreen.e, toScreen.f]);
+  for (const el of top.querySelectorAll<SVGTextElement>("text[data-mtp-id]")) {
+    if (el.closest("[data-mtp-fixed-size]") || el.hasAttribute("data-mtp-stand-in")) continue;
+    const b = el.getBBox?.();
+    const m = el.getScreenCTM?.();
+    if (!b || !m || (b.width === 0 && b.height === 0)) continue;
+    const to = compose([m.a, m.b, m.c, m.d, m.e, m.f], back);
+    const corners = [
+      [b.x, b.y],
+      [b.x + b.width, b.y],
+      [b.x, b.y + b.height],
+      [b.x + b.width, b.y + b.height],
+    ].map((c) => apply(to, c) as number[]);
+    const xs = corners.map((c) => c[0]!);
+    const ys = corners.map((c) => c[1]!);
+    const box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    out.set(Number(el.getAttribute("data-mtp-id")), { box, at: apply(to, [0, 0]) as number[] });
+  }
+  return out;
+}
+
+// A box [left, bottom, right, top], or none, as a view box [x, y, width, height] with its margin.
+function framed(box: number[] | null): number[] {
+  if (box === null) return [-EMPTY / 2, -EMPTY / 2, EMPTY, EMPTY];
+  const [l, b, r, t] = box as [number, number, number, number];
+  const [w, h] = [r - l, t - b];
+  if (w === 0 && h === 0) return [l - EMPTY / 2, b - EMPTY / 2, EMPTY, EMPTY];
+  const m = MARGIN * Math.max(w, h);
+  return [l - m, b - m, w + 2 * m, h + 2 * m];
 }
 
 function sceneTransform(rt: Runtime): number[] {
@@ -127,7 +224,8 @@ let svgs = 0;
  * Draws a canvas: what it shows, and the shapes each of its items gives. shownBy gives the k-th
  * item's shapes and how visible each is, from 0 (not drawn) to 1, for a canvas toggling them; by
  * default, the shapes the item gives now, each fully visible. memo keeps what is drawn for the
- * next drawing of the same SVG.
+ * next drawing of the same SVG. fitted is the box that the copy shows, for a canvas with no view
+ * box of its own (fitBox).
  */
 export function draw(
   rt: Runtime,
@@ -137,10 +235,11 @@ export function draw(
   look?: Look,
   memo?: DrawMemo,
   showing?: Showing,
+  fitted?: number[],
 ): SVGSVGElement {
   const out = svg ?? (document.createElementNS(NS, "svg") as SVGSVGElement);
   if (!prefixes.has(out)) prefixes.set(out, ++svgs);
-  const { box: authors, toUser } = viewOf(rt, canvas);
+  const { box: authors, toUser } = viewOf(rt, canvas, fitted);
   const box = lookBox(authors, look);
   setIfNew(out, "viewBox", box.join(" "));
   const view = rt.objects[canvas]!;
@@ -346,8 +445,8 @@ function setZoomed(el: Element, attr: string, value: string): void {
  * only the view box and what is sized in screen pixels change. Strokes need nothing, since SVG
  * keeps their widths on screen itself.
  */
-export function zoom(rt: Runtime, canvas: number, svg: SVGSVGElement, look: Look): void {
-  const box = lookBox(viewOf(rt, canvas).box, look);
+export function zoom(rt: Runtime, canvas: number, svg: SVGSVGElement, look: Look, fitted?: number[]): void {
+  const box = lookBox(viewOf(rt, canvas, fitted).box, look);
   svg.setAttribute("viewBox", box.join(" "));
   const unitsPerPx = unitsPerPxOf(svg, box);
   // What is inside a fixed-size group is already in pixels: only the group's scale changes.
