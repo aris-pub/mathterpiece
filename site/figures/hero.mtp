@@ -1,35 +1,23 @@
-; 200 points on a circle, and a chord from each point k
-; to the point m × k
-
-(import ease linear)
-
-; the multiplier, which the slider and the sweep move
-(real m 2 (>= 1) (<= 12))
-; whether m sweeps on its own, and which way it goes
-(bool sweeping true)
-(real dir 1)
-
-; point k sits k/200 of a turn round the unit circle
+; what the figure is
+(real m 2 (>= 1) (<= 12))  ; typechecked: m stays in 1 to 12
 (func spot ((real k)) (polar 1 (turn (/ k 200))))
 
+; what it looks like
 (scene s
   (circle rim (r 1) (fill none) (stroke 'gray'))
-  ; one chord for each k, from crimson to royal blue
   (foreach k 200
     (line_ (from (spot k)) (to (spot (* m k)))
            (stroke (mix 'crimson' 'royalblue' (/ k 200)))
            (stroke-opacity 0.5))))
 
-; while sweeping, m climbs to 12 and falls back to 1
+; what it does
 (animation sweep (loop)
-  (at-once (defaults (duration 0.1) (ease linear))
-    (move m (to (if sweeping (+ m (* 0.03 dir)) m)))
-    (move dir (to (if (>= m 12) -1 (if (<= m 1) 1 dir))))))
-
+  (move m (to 12) (duration 40))
+  (move m (to 1) (duration 40)))
 (canvas v (x -1.1) (y -1.1) (width 2.2) (height 2.2) s
   (on-ready (animation sweep)))
 
-; the reader moves m by hand, or switches the sweep
+; accessible and interactive: mouse, touch or keyboard
 (slider times (move m (from 1) (to 12))
   (label 'multiplier m'))
-(toggle sweep-on sweeping (label 'sweep') (animation sweep))
+(button again (label 'play') (animation sweep))
