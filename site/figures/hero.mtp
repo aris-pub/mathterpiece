@@ -4,7 +4,7 @@
 (func spot ((real k)) (polar 1 (turn (/ k n))))
 
 ; what the figure is
-(scene s
+(scene chords
   (circle rim (r 1) (fill none) (stroke 'gray'))
   (foreach k n
     (line_ (from (spot k)) (to (spot (* m k)))
@@ -16,7 +16,7 @@
 (animation sweep (loop)
   (move m (from 1) (to 12) (duration 40))
   (move m (from 12) (to 1) (duration 40)))
-(canvas v (x -1.1) (y -1.1) (width 2.2) (height 2.2) s
+(canvas v (x -1.1) (y -1.1) (width 2.2) (height 2.2) chords
   (on-ready (animation sweep)))
 
 ; accessible and interactive: mouse, touch or keyboard
