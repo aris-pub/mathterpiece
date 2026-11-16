@@ -3887,6 +3887,18 @@ class _Compiler:
             obj.attrs["step"] = self.attribute(
                 Refine(INT, ((">=", 2),)), step, obj.pos, "step", scope=self.cscope
             )
+        elif _core(tr.data["target"][2]) == INT:
+            # A slider on an int stops at each whole number (the author, 2026-11-16).
+            ends = [tr.attrs.get(end) for end in ("from", "to")]
+            if any(e is None or e.bound for e in ends):
+                raise CompileError(
+                    "a slider on an int stops at each whole number from its from to its to,"
+                    " so both must be known when compiling: write them as numbers, or give"
+                    " (step n)",
+                    node.pos,
+                )
+            low, high = (int(e.value) for e in ends)
+            obj.attrs["step"] = Attribute(Refine(INT, ((">=", 2),)), abs(high - low) + 1)
         obj.attrs["position"] = Attribute(UNIT, 0)
         self.active(obj, items)
         self.writer(obj, items, written)
