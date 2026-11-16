@@ -1,16 +1,23 @@
-; the logo's two brackets, as in the exported logo (arms 12.4 thick, vertical arm 30.7 and
-; horizontal arm 18.6 between the centers of their round ends), three times as large,
-; closing in and opening out
+; the logo's two brackets, three times as large: they close in on the m, turning half a turn
+; and fading, then open out
 (import ease cubic-in-out)
 (real s 1 (>= 0.3) (<= 1))
+(real phi 0 (wrap 0 360))
+(real o 1 (>= 0) (<= 1))
+(font logo (family '"Crimson Pro", Georgia, serif') (weight 600) (size 96))
 (scene b
-  (group brackets (defaults (stroke '#ad71f2') (stroke-width 37) (fill none)
+  (text m 'm' (font logo) (halign 'middle') (valign 'middle') (pos [0 8])
+        (fill (light-dark '#51636f' '#ced6dc')))
+  (group brackets (transform (rotate phi))
+                  (defaults (stroke '#ad71f2') (stroke-width 37) (fill none) (opacity o)
                             (line-cap 'round') (line-join 'round'))
     (let ((c (* s [-150 150])) (down (+ c [0 -92])) (right (+ c [56 0])))
       (polyline_ (points [down c right])))
     (let ((c (* s [150 -150])) (up (+ c [0 92])) (left (+ c [-56 0])))
       (polyline_ (points [up c left])))))
+(animation close (at-once (defaults (duration 1.3) (ease cubic-in-out))
+  (move s (to 0.5)) (move phi (to (+ phi 90))) (move o (to 0.55))))
+(animation open (at-once (defaults (duration 1.3) (ease cubic-in-out))
+  (move s (to 1)) (move phi (to (+ phi 90))) (move o (to 1))))
 (canvas v (x -210) (y -210) (width 420) (height 420) b
-  (on-ready
-    (animation (loop) (wait 1.5) (move s (to 0.45) (duration 1.3) (ease cubic-in-out))
-                      (wait 1.5) (move s (to 1) (duration 1.3) (ease cubic-in-out)))))
+  (on-ready (animation (loop) (wait 1.2) close (wait 1.2) open)))
