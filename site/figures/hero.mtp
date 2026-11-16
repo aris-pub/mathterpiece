@@ -1,5 +1,5 @@
 ; chords in a circle: from each point k to the point m × k
-(real m 2 (>= 1) (<= 12))  ; typechecked: m stays in 1 to 12
+(real m 1 (>= 1) (<= 12))  ; typechecked: m stays in 1 to 12
 (func spot ((real k)) (polar 1 (turn (/ k 200))))
 
 ; what the figure is
@@ -8,6 +8,7 @@
   (foreach k 200
     (line_ (from (spot k)) (to (spot (* m k)))
            ; what the figure looks like
+           ; typechecked: k/200 stays in 0 to 1, as mix needs
            (stroke (mix 'crimson' 'royalblue' (/ k 200)))
            (stroke-opacity 0.5))))
 
