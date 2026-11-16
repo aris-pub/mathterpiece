@@ -1,21 +1,26 @@
-; the birthday problem: the chance that some two of n people
-; share a birthday passes one half at just 23 people
-(int n 23 (>= 1) (<= 60))  ; typechecked: 1 to 60 people
-(func p ((int m))
+; the birthday problem: in a room of 23 people, some two of them
+; share a birthday more often than not, but rarely yours
+(int n 23 (>= 2) (<= 60))  ; typechecked: 2 to 60 people
+(func pair ((int m))
   (- 1 (reduce (range m) 1
          (fn ((real q) (int k)) (* q (/ (- 365 k) 365))))))
+(func yours ((int m)) (- 1 (^ (/ 364 365) (- m 1))))
 
-; what the figure is: p(m) for m from 1 to 60
+; what the figure is: both chances, for up to 60 people
 (scene chance
   (line_ (from [0 15]) (to [60 15]) (stroke 'gray') (dash [4 4]))
-  (polyline curve
-    (points (map (range 61) (fn ((int m)) [m (* 30 (p m))])))
-    ; what the figure looks like
-    (stroke 'slateblue') (stroke-width 3))
-  (circle now (r 1) (pos [n (* 30 (p n))]) (fill 'crimson')))
+  (line_ (from [n 0]) (to [n 30]) (stroke 'gray'))
+  ; what the figure looks like
+  (polyline_ (stroke 'slateblue') (stroke-width 3)
+    (points (map (range 61) (fn ((int m)) [m (* 30 (pair m))]))))
+  (polyline_ (stroke 'crimson') (stroke-width 3)
+    (points (map (range 61) (fn ((int m)) [m (* 30 (yours m))]))))
+  (circle_ (r 1) (pos [n (* 30 (pair n))]) (fill 'slateblue'))
+  (circle_ (r 1) (pos [n (* 30 (yours n))]) (fill 'crimson')))
 
 ; what it does: the slider and the numbers sit in the sentence
 (canvas v (x -2) (y -2) (width 64) (height 34) chance)
-(slider people (move n (from 1) (to 60)))
+(slider people (move n (from 2) (to 60)))
 (readout count $'{n}')
-(readout odds $'{(* 100 (p n)):.1f}%')
+(readout odds $'{(* 100 (pair n)):.1f}%')
+(readout mine $'{(* 100 (yours n)):.1f}%')

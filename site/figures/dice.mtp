@@ -3,16 +3,14 @@
 (int n 3 (>= 1) (<= 6))
 (list[list[point]] pips
   [[[0 0]] [[-1 1] [1 -1]] [[-1 1] [0 0] [1 -1]]
-   [[-1 1] [1 1] [-1 -1] [1 -1]]
-   [[-1 1] [1 1] [0 0] [-1 -1] [1 -1]]
+   [[-1 1] [1 1] [-1 -1] [1 -1]] [[-1 1] [1 1] [0 0] [-1 -1] [1 -1]]
    [[-1 1] [1 1] [-1 0] [1 0] [-1 -1] [1 -1]]] (const))
 
 ; what the figure is: a die, declared once and used n times
 (motif die ((int face 1 (>= 1) (<= 6)))
   (rect body (width 2) (height 2) (rx 0.3)
-        ; what the figure looks like
         (fill 'slateblue') (fill-opacity 0.15) (stroke 'slateblue'))
-  (foreach j 6  ; typechecked: face - 1 is always a row of pips
+  (foreach j 6
     (circle_ (pos (* 0.55 (or? pips[(- face 1)][j] [0 0])))
              (r 0.18) (fill 'slateblue') (opacity (if (< j face) 1 0)))))
 (scene table
