@@ -3,8 +3,8 @@ mtp lexer that the spec and the docs use. Run by just site-build, so the page sh
 source as it is.
 
 data-mark="3,7" marks those lines. data-diff="OTHER" shows FILE as one side of a diff against
-OTHER, which has the same number of lines: each line that differs is marked, and the characters
-that FILE has and OTHER lacks are marked again."""
+OTHER, which has the same number of lines: each line that differs is marked, and the
+tokens that FILE has and OTHER lacks are marked again."""
 
 import html
 import re
@@ -34,26 +34,25 @@ def short(token) -> str:
 
 
 def diffed(line: str, other: str) -> str:
-    """One line, highlighted, with the characters that it has and other lacks in chg spans."""
-    changed = [False] * len(line)
-    for op, _, _, j1, j2 in SequenceMatcher(None, other, line, autojunk=False).get_opcodes():
+    """One line, highlighted, with the tokens that it has and other lacks in chg spans. Whole
+    tokens are compared, so an insertion never starts inside a word."""
+    mine = [(short(tok), text) for tok, text in lex(line, MtpLexer()) if text != "\n"]
+    theirs = [text for tok, text in lex(other, MtpLexer()) if text != "\n"]
+    changed = [False] * len(mine)
+    opcodes = SequenceMatcher(None, theirs, [text for _, text in mine], autojunk=False).get_opcodes()
+    for op, _, _, j1, j2 in opcodes:
         if op in ("insert", "replace"):
             for j in range(j1, j2):
                 changed[j] = True
-    chars = []
-    for token, text in lex(line, MtpLexer()):
-        for ch in text:
-            if len(chars) < len(line):
-                chars.append((short(token), ch, changed[len(chars)]))
-    out, run = [], []
-    for c in chars + [None]:
-        if run and (c is None or (c[0], c[2]) != (run[0][0], run[0][2])):
-            classes = " ".join(x for x in (run[0][0], "chg" if run[0][2] else "") if x)
-            text = html.escape("".join(r[1] for r in run))
-            out.append(f'<span class="{classes}">{text}</span>' if classes else text)
-            run = []
-        if c is not None:
-            run.append(c)
+    # Tokens that were inserted next to each other share one chg span, so they read as one mark.
+    out, inside = [], False
+    for (cls, text), on in zip(mine, changed):
+        if on != inside:
+            out.append('<span class="chg">' if on else "</span>")
+            inside = on
+        out.append(f'<span class="{cls}">{html.escape(text)}</span>' if cls else html.escape(text))
+    if inside:
+        out.append("</span>")
     return "".join(out)
 
 
