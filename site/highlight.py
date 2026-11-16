@@ -24,10 +24,11 @@ def fill(match: re.Match) -> str:
     width = len(str(len(lines)))
     # data-mark="3,7" marks those lines, for a page that points at a line the reader should see.
     marked = {int(n) for n in (match.group(3) or "").split(",") if n}
-    numbered = "\n".join(
-        (f'<span class="mark">' if i in marked else "")
-        + f'<span class="ln" aria-hidden="true">{i:>{width}}</span>{line}'
-        + ("</span>" if i in marked else "")
+    # Each source line is a block of its own, so a narrow screen can wrap it and indent the rest
+    # under its start.
+    numbered = "".join(
+        f'<span class="line{" mark" if i in marked else ""}">'
+        + f'<span class="ln" aria-hidden="true">{i:>{width}}</span>{line or " "}</span>'
         for i, line in enumerate(lines, 1)
     )
     return match.group(1) + numbered + match.group(5)
