@@ -345,12 +345,21 @@ follows:
 | `positioned` | `point`, and every shape type, motif type and variant type but `group` |
 | `sequence` | every list type, `point` and `group` |
 | `sequence[T]` | `list[S]` when S fits T, `point` when `real` fits T, and `group`, when the common type of the members of the group ({numref}`common-type`) fits T |
+| `palette` | every namespace whose members are all colors, whatever their names and number. A palette made by `(palette …)` is one ({numref}`sugar-rewrites`) |
 | a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. For a namespace, the attributes are its members, and each namespace that a value may be satisfies the interface on its own |
 
 A value whose type is an interface is read only for what the interface gives: `translate` and
 `transform` for `shape`, `x`, `y` and `pos` for `positioned`, its items by position and its
-`length` for a `sequence`, and the attributes Ai for a declared interface.
+`length` for a `sequence`, and the attributes Ai for a declared interface. A member M of a value
+whose type is `palette` is read by its name and has the type `color|none`: it is `none` when the
+namespace has no member M.
 ```
+
+:::{admonition} Code differs
+:class: note
+The compiler has no interface `palette`: `(func f ((palette q)) 1)` is the error "unknown type
+'palette'" (`types.py:150`, `PALETTE`, is a type that a palette has as its own). Bead mtp-rdk2.
+:::
 
 So `(func label-at ((positioned o) (string s)) …)` may be given points and shapes alike, and
 `(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not every shape has an `r`. A

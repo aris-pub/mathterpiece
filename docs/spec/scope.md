@@ -167,7 +167,7 @@ function, a parameter, a name of a `let` or a `foreach`, a member of a namespace
 formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`,
 `complex`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`,
 `scene`, `func`, `rand-seed`, `list`, `maybe`, the shape types, and the
-interfaces `shape`, `positioned` and `sequence`. A declaration or a binding may
+interfaces `shape`, `positioned`, `sequence` and `palette`. A declaration or a binding may
 take the name of a built-in function, an operator included, or of a built-in constant (`pi`, `tau`
 and `euler`): from that declaration or binding on, the name refers to what it declares or binds
 ({numref}`name-lookup`).
