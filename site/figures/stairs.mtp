@@ -1,32 +1,31 @@
-; 1 + 2 + … + n = n(n + 1)/2: two staircases make a rectangle
+; 1 + 2 + … + n = n(n + 1)/2, for any n: two staircases of
+; 1, 2, …, n squares fit together into n columns of n + 1
 (import math clamp)
-(int n 5 (const))
-(real t 0 (>= 0) (<= 4))  ; typechecked: the proof has four steps
+(int n 5 (>= 1) (<= 6))  ; typechecked: the canvas fits n up to 6
+(real t 0 (>= 0) (<= 4))
 (real turn (clamp (- t 1) 0 1))
-(real out (- (clamp t 0 1) (clamp (- t 2) 0 1)))
-(point mid [(/ (- n 1) 2) (/ n 2)])
+(real out (* (/ (+ n 1) 2) (- (clamp t 0 1) (clamp (- t 2) 0 1))))
 
-; what the figure is: a staircase of 1, 2, …, n squares, twice
 (motif stairs ((color c 'slateblue'))
   (foreach i n
     (foreach j (+ i 1)
-      ; what the figure looks like
-      (rect_ (pos [i j]) (width 0.9) (height 0.9) (rx 0.1) (fill c)))))
+      (rect_ (pos [(- i (/ (- n 1) 2)) (- j (/ n 2))])
+             (width 0.9) (height 0.9) (rx 0.1) (fill c)))))
 (scene proof
-  (stairs first (translate [(* 3 out) 0]))
+  (stairs first (translate [out 0]))
   (stairs copy (c 'crimson') (defaults (opacity (clamp (* 3 t) 0 1)))
-    (transform (transform (translate (- mid.x) (- mid.y))
-      (rotate (* 180 turn)) (translate (- mid.x (* 3 out)) mid.y))))
-  (rect frame (pos mid) (width (+ n 0.3)) (height (+ n 1.3)) (rx 0.2)
+    (transform (transform (rotate (* 180 turn)) (translate (- out) 0))))
+  (rect frame (width (+ n 0.3)) (height (+ n 1.3)) (rx 0.2)
         (fill none) (stroke 'slateblue') (stroke-width 3)
         (opacity (clamp (- t 3) 0 1))))
 
-; what it does: each step of the proof is one move of t
-(canvas v (x -5) (y -1.5) (width 14) (height 8.4) proof)
+(canvas v (x -8.5) (y -4.6) (width 17) (height 9.2) proof)
+(slider size (move n (from 1) (to 6)) (label 'n'))
 (play steps (buttons true)
-  (labels '1 + 2 + 3 + 4 + 5' 'the same sum again'
-          'turned upside down' 'together they fill 5 × 6 squares'
-          'so twice the sum is 30, and the sum is 15')
+  (labels '1 + 2 + … + n' 'the same sum again' 'turned upside down'
+          'together: n columns of n + 1 squares'
+          'so twice the sum is n(n + 1)')
   (animation (set t 0) (move t (to 1) (duration 0.8))
     (move t (to 2) (duration 0.8)) (move t (to 3) (duration 0.8))
     (move t (to 4) (duration 0.5))))
+(readout sum $'1 + 2 + … + {n} = {(/ (* n (+ n 1)) 2):.0f}')
