@@ -1,15 +1,16 @@
 ; chords in a circle: from each point k to the point m × k
+(int n 200 (const))
 (real m 1 (>= 1) (<= 12))  ; typechecked: m stays in 1 to 12
-(func spot ((real k)) (polar 1 (turn (/ k 200))))
+(func spot ((real k)) (polar 1 (turn (/ k n))))
 
 ; what the figure is
 (scene s
   (circle rim (r 1) (fill none) (stroke 'gray'))
-  (foreach k 200
+  (foreach k n
     (line_ (from (spot k)) (to (spot (* m k)))
            ; what the figure looks like
-           ; typechecked: k/200 stays in 0 to 1, as mix needs
-           (stroke (mix 'crimson' 'royalblue' (/ k 200)))
+           ; typechecked: k/n stays in 0 to 1, as mix needs
+           (stroke (mix 'crimson' 'royalblue' (/ k n)))
            (stroke-opacity 0.5))))
 
 ; what it does
