@@ -9,7 +9,6 @@
   (foreach k n
     (line_ (from (spot k)) (to (spot (* m k)))
            ; what the figure looks like
-           ; typechecked: k/n stays in 0 to 1, as mix needs
            (stroke (mix 'crimson' 'royalblue' (/ k n)))
            (stroke-opacity 0.5))))
 
