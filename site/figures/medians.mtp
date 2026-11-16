@@ -1,11 +1,11 @@
 ; the medians meet at one point and cut the triangle
 ; into six triangles of equal area
+(import math clamp)
 (point a [-0.9 -0.6])
 (point b [0.9 -0.5])
 (point c [0.1 0.85])
 (point g (* (/ 1 3) (+ a b c)))
-(func keep ((point p))  ; a corner stays on the canvas
-  [(max -1.1 (min 1.1 p.x)) (max -1 (min 1 p.y))])
+(func keep ((point p)) [(clamp p.x -1.1 1.1) (clamp p.y -1 1)])
 
 ; what the figure is
 (scene triangle
@@ -15,13 +15,12 @@
       (let ((m (lerp t[0] t[1] 0.5)))
         ; what the figure looks like
         (polygon_ (points [t[0] g m]) (fill 'cornflowerblue'))
-        (polygon_ (points [t[1] g m]) (fill 'mediumslateblue')))))
+        (polygon_ (points [t[1] g m]) (fill 'slateblue')))))
   (foreach k 3
-    (circle #'corner-{k}' (r 0.08) (pos [a b c][k])
-            (fill 'mediumslateblue'))))
+    (circle #'dot-{k}' (r 0.08) (pos [a b c][k]) (fill 'slateblue'))))
 
 ; what it does: drag a corner, or tap it, then tap a spot
 (canvas v (x -1.2) (y -1.1) (width 2.4) (height 2.2) triangle
-  (on-drag corner-0 (move a (to (keep pointer))))
-  (on-drag corner-1 (move b (to (keep pointer))))
-  (on-drag corner-2 (move c (to (keep pointer)))))
+  (on-drag dot-0 (move a (to (keep pointer))))
+  (on-drag dot-1 (move b (to (keep pointer))))
+  (on-drag dot-2 (move c (to (keep pointer)))))
