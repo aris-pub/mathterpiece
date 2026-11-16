@@ -7675,14 +7675,29 @@ def _type_range(t: Type) -> Range:
         for c in t.constraints:
             if c[0] == "wrap":
                 return (float(c[1]), float(c[2]))
-            if c[0] in (">=", ">"):
+            if c[0] == ">=":
                 lo = max(lo, float(c[1]))
-            elif c[0] in ("<=", "<"):
+            elif c[0] == ">":
+                lo = max(lo, _past(t.base, c[1], 1))
+            elif c[0] == "<=":
                 hi = min(hi, float(c[1]))
+            elif c[0] == "<":
+                hi = min(hi, _past(t.base, c[1], -1))
         return (lo, hi)
     if t in NUMBERS[:3]:
         return UNBOUNDED
     return None
+
+
+def _past(base: Type, c, way: int) -> float:
+    """The value of base nearest to c on the side of way that a strict bound leaves, as
+    if-narrowing gives it (the author, 2026-11-16, mtp-msoz). A ratio has no such value, so it is
+    c."""
+    if base == INT:
+        return float(math.floor(c) + 1 if way > 0 else math.ceil(c) - 1)
+    if base == REAL:
+        return math.nextafter(float(c), way * math.inf)
+    return float(c)
 
 
 def _join(a: Type, b: Type, pos: Pos) -> Type:
