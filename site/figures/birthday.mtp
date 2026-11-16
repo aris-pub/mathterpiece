@@ -1,9 +1,7 @@
-; the birthday problem: in a room of 23 people, some two of them
-; share a birthday more often than not, but rarely yours
+; the birthday problem: among 23 people a shared birthday is likely
 (int n 23 (>= 2) (<= 60))  ; typechecked: 2 to 60 people
-(func pair ((int m))
-  (- 1 (reduce (range m) 1
-         (fn ((real q) (int k)) (* q (/ (- 365 k) 365))))))
+(func pair ((int m)) (- 1 (reduce (range m) 1
+  (fn ((real q) (int k)) (* q (/ (- 365 k) 365))))))
 (func yours ((int m)) (- 1 (^ (/ 364 365) (- m 1))))
 
 ; what the figure is: both chances, for up to 60 people
