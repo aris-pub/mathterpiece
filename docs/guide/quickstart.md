@@ -2,27 +2,20 @@
 
 This page takes you from nothing to a live figure on your own web page, in four steps.
 
-## 1. Get mtp
+## 1. Install mtp
 
-mtp is not yet published as a package, so you build it from its repository. You need
-[git](https://git-scm.com), [uv](https://docs.astral.sh/uv/), [Node](https://nodejs.org) with
-[pnpm](https://pnpm.io), and [just](https://just.systems).
+You need [uv](https://docs.astral.sh/uv/), which installs Python for you if you do not have it.
 
 ```sh
-git clone https://github.com/aris-pub/mathterpiece
-cd mathterpiece
-uv sync
-cd web && pnpm install && cd ..
-just build-web
+uv tool install mathterpiece
 ```
 
-`uv sync` installs the compiler, which gives you the `mtp` command through `uv run mtp`.
-`just build-web` builds the runtime, the file `web/dist/mathterpiece.js` that draws figures on a
-page.
+This gives you the `mtp` command. With pip instead, `pip install mathterpiece` does the same, and
+needs Python 3.13 or later.
 
 ## 2. Write a figure
 
-Save this as `circle.mtp` in the `mathterpiece` folder:
+Save this as `circle.mtp` in a folder of your own:
 
 ```{mtp-example}
 ; a point on the unit circle, with cos in red and sin in green
@@ -45,28 +38,29 @@ dragging the point moves `theta`. The slider `turn` moves `theta` too.
 ## 3. Check and compile it
 
 ```sh
-uv run mtp check circle.mtp
-uv run mtp compile circle.mtp
+mtp check circle.mtp
+mtp compile circle.mtp
 ```
 
 `mtp check` reports the first error, with its line and column, and writes nothing. When the
 figure is right, `mtp compile` writes `circle.mtpc`, the compiled figure.
 
-To see the figure while you edit it, run `uv run mtp serve circle.mtp` and open the address that
-it prints. The page reloads each time you save the file.
+To see the figure while you edit it, run `mtp serve circle.mtp` and open the address that it
+prints. The page reloads each time you save the file.
 
 ## 4. Put it on a page
 
-Copy `web/dist/mathterpiece.js` and `circle.mtpc` into the folder of your page, and write:
+Copy `circle.mtpc` into the folder of your page, and write:
 
 ```html
-<script type="module" src="mathterpiece.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/mathterpiece@0.1.0/dist/mathterpiece.js"></script>
 
 <mtp-model id="circle" src="circle.mtpc"></mtp-model>
 <mtp-canvas model="circle" name="v"></mtp-canvas>
 <p>Turn the point: <mtp-slider model="circle" name="turn"></mtp-slider></p>
 ```
 
+The first line loads the runtime, which draws figures, from the npm package `mathterpiece`.
 `<mtp-model>` loads the figure. `<mtp-canvas>` and `<mtp-slider>` place its canvas and its
 slider anywhere in the text, by the names that the source gives them.
 

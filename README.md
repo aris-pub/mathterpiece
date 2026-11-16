@@ -29,6 +29,20 @@ as a circle with a negative radius, does not compile.
 
 ## Install
 
+```sh
+uv tool install mathterpiece     # the compiler, which gives you the mtp command
+```
+
+A page loads the runtime from npm, through jsDelivr:
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/mathterpiece@0.1.0/dist/mathterpiece.js"></script>
+```
+
+The [quickstart](https://docs.mtp-lang.org/quickstart.html) walks through a first figure.
+
+## Work from the repository
+
 You need Python 3.13 or later with [uv](https://docs.astral.sh/uv/), and, for the web runtime,
 Node with [pnpm](https://pnpm.io/). [just](https://just.systems/) runs the common tasks.
 
