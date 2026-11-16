@@ -55,6 +55,7 @@ DECLARING = {
     "interface",
     "namespace",
     "palette",
+    "parametric",
     "formula",
     "term",
     "colormap",
