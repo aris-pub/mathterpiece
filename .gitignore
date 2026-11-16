@@ -28,3 +28,6 @@ web/perf/pages/
 # The spec site that Sphinx writes (just spec)
 docs/_build/
 .netlify/
+# Built by just site-build.
+site/data/
+site/mathterpiece.js

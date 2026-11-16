@@ -85,3 +85,26 @@ spec-preview: spec-build
 # build the spec site and publish it at https://spec.mtp-lang.org
 spec-publish: spec-build
     npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/html --site d1eaf3d8-0626-4e13-a3a1-c9ed535b30da --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
+
+# serve the docs at http://127.0.0.1:8821, building them again and reloading the page on each save
+docs:
+    uv run --group docs sphinx-autobuild -E -W --keep-going docs/guide docs/_build/guide --host 127.0.0.1 --port 8821 --watch docs/_ext --watch docs/_static
+
+# build the docs once into docs/_build/guide
+docs-build:
+    uv run --group docs sphinx-build -E -W --keep-going -b html -d docs/_build/guide-doctrees docs/guide docs/_build/guide
+
+# build the docs and publish them to their fixed draft address, https://draft--mtp-docs.netlify.app
+docs-preview: docs-build
+    npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/guide --site 9f784091-fca7-4dd6-bb50-b02944ec0963 --alias draft --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['deploy_url'])"
+
+# build the docs and publish them at https://docs.mtp-lang.org
+docs-publish: docs-build
+    npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/guide --site 9f784091-fca7-4dd6-bb50-b02944ec0963 --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
+
+# build the landing page into site/: compile its figures and the examples it shows, and copy the runtime
+site-build: build-web
+    mkdir -p site/data
+    for f in site/figures/step*.mtp; do uv run mtp compile "$f" -o "site/data/$(basename "$f" .mtp).mtpc"; done
+    for e in lissajous times-tables pythagoras koch-snowflake golden-tour inversion; do uv run mtp compile "examples/$e.mtp" -o "site/data/$e.mtpc"; done
+    cp web/dist/mathterpiece.js site/

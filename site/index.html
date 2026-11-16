@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mathterpiece</title>
+<meta name="description" content="A small language for math figures that readers can drag, slide and play.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500&family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@300;400;600&display=swap">
+<script type="module" src="mathterpiece.js"></script>
+<style>
+:root {
+  --bg: #fafaf8;
+  --surface: #ffffff;
+  --ink: #3c4952;
+  --soft: #6b7d8a;
+  --line: #e3e6e8;
+  --accent: #ad71f2;
+  --accent-ink: #7d45c4;
+  --code-bg: #f3f2ef;
+  --red: #db2728;
+  --green: #158c7f;
+  --serif: "Crimson Pro", Georgia, "Times New Roman", serif;
+  --sans: "Source Sans 3", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "Source Code Pro", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111518; --surface: #13181b; --ink: #ced6dc; --soft: #8a9aa6; --line: #273036;
+    --accent: #b98af5; --accent-ink: #c9a3f7; --code-bg: #1a2024; --red: #f87172; --green: #37cab6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111518; --surface: #13181b; --ink: #ced6dc; --soft: #8a9aa6; --line: #273036;
+  --accent: #b98af5; --accent-ink: #c9a3f7; --code-bg: #1a2024; --red: #f87172; --green: #37cab6;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 400 19px/1.7 var(--sans);
+}
+a { color: var(--accent-ink); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+
+/* Header */
+header { border-bottom: 1px solid var(--line); }
+header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 18px; }
+.logo { display: flex; align-items: center; text-decoration: none; color: var(--ink); }
+.logo svg { height: 40px; width: auto; }
+nav ul { display: flex; gap: 28px; list-style: none; margin: 0; padding: 0; align-items: center; }
+nav a { color: var(--ink); text-decoration: none; font-size: 17px; }
+nav a:hover { color: var(--accent-ink); }
+nav .gh svg { width: 22px; height: 22px; display: block; fill: currentColor; }
+
+/* Hero */
+.hero .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; padding-block: 72px 56px; }
+h1 { font: 400 clamp(2.6rem, 5vw, 3.9rem)/1.08 var(--serif); margin: 0 0 22px; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { font-size: 1.25rem; font-weight: 300; color: var(--ink); margin: 0 0 32px; max-width: 32ch; }
+.ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn { display: inline-block; padding: 12px 22px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 17px; }
+.btn.main { background: var(--accent); color: #fff; }
+.btn.main:hover { background: var(--accent-ink); }
+.btn.second { border: 1px solid var(--line); color: var(--ink); background: var(--surface); }
+.figure-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.figure-card .live { padding: 12px 12px 4px; }
+.figure-card .live mtp-canvas { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 360px; }
+.figure-card .controls { padding: 0 20px 14px; }
+.figure-card details { border-top: 1px solid var(--line); }
+.figure-card summary { cursor: pointer; padding: 10px 20px; font-size: 15px; color: var(--soft); }
+.hint { font-size: 15px; color: var(--soft); margin: 0 20px 10px; }
+
+/* Sections */
+section { padding-block: 64px; border-top: 1px solid var(--line); }
+h2 { font: 400 2.4rem/1.15 var(--serif); margin: 0 0 12px; }
+h2::after { content: "."; color: var(--accent); }
+.section-lede { font-size: 1.15rem; font-weight: 300; max-width: 60ch; margin: 0 0 36px; }
+
+pre { margin: 0; background: var(--code-bg); padding: 14px 18px; overflow-x: auto; font: 14px/1.6 var(--mono); color: var(--ink); }
+pre .c { color: var(--soft); }
+pre .s { color: var(--green); }
+pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, transparent); margin: 0 -18px; padding: 0 18px; box-shadow: inset 3px 0 0 var(--accent); }
+
+/* Steps */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.step h3 { font: 500 1.05rem/1.4 var(--sans); margin: 0; padding: 14px 18px 4px; }
+.step h3 span { color: var(--accent-ink); font-family: var(--serif); font-size: 1.3rem; margin-right: 6px; }
+.step p { margin: 0; padding: 0 18px 12px; font-size: 16px; color: var(--soft); }
+.step mtp-canvas { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 240px; }
+.step .controls { padding: 0 18px 10px; min-height: 52px; }
+.step pre { margin-top: auto; font-size: 13px; }
+
+/* Checked */
+.checked { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+.panel { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); min-width: 0; }
+.panel .label { font-size: 14px; color: var(--soft); padding: 10px 18px; border-bottom: 1px solid var(--line); }
+.error { font: 14px/1.6 var(--mono); padding: 14px 18px; }
+.error .where { color: var(--soft); }
+.error .msg { color: var(--red); }
+.claim { font: 400 1.5rem/1.35 var(--serif); margin: 28px 0 0; max-width: 40ch; }
+
+/* Every figure gets */
+.gets { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; list-style: none; padding: 0; margin: 0; }
+.gets li { border-top: 2px solid var(--accent); padding-top: 12px; }
+.gets b { display: block; font: 500 1.25rem/1.3 var(--serif); }
+.gets span { font-size: 16px; color: var(--soft); }
+
+/* Examples */
+.examples { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.example { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-decoration: none; color: var(--ink); min-width: 0; }
+.example mtp-canvas { display: block; width: 100%; aspect-ratio: 4 / 3; }
+.example div { padding: 10px 16px; font-size: 16px; border-top: 1px solid var(--line); }
+.more { margin-top: 28px; }
+
+/* Footer */
+footer { border-top: 1px solid var(--line); padding-block: 36px; font-size: 15px; color: var(--soft); }
+footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+footer ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+footer a { color: var(--soft); }
+
+.mock { position: fixed; bottom: 12px; right: 12px; background: var(--ink); color: var(--bg); font-size: 13px; padding: 4px 10px; border-radius: 4px; opacity: .8; }
+
+@media (max-width: 860px) {
+  .hero .wrap, .checked { grid-template-columns: 1fr; }
+  .steps, .examples { grid-template-columns: 1fr; }
+  nav ul { gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<mtp-model id="hero" src="data/step3.mtpc"></mtp-model>
+<mtp-model id="s1" src="data/step1.mtpc"></mtp-model>
+<mtp-model id="s2" src="data/step2.mtpc"></mtp-model>
+<mtp-model id="s3" src="data/step3.mtpc"></mtp-model>
+<mtp-model id="lissajous" src="data/lissajous.mtpc"></mtp-model>
+<mtp-model id="times" src="data/times-tables.mtpc"></mtp-model>
+<mtp-model id="pythagoras" src="data/pythagoras.mtpc"></mtp-model>
+<mtp-model id="koch" src="data/koch-snowflake.mtpc"></mtp-model>
+<mtp-model id="golden" src="data/golden-tour.mtpc"></mtp-model>
+<mtp-model id="inversion" src="data/inversion.mtpc"></mtp-model>
+
+<header>
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="Mathterpiece, home">
+      <!-- Stand-in for the exported logo: brackets in the Aris purple around "mtp". -->
+      <svg viewBox="0 0 150 56" role="img" aria-hidden="true">
+        <path d="M4 30 V10 a4 4 0 0 1 4 -4 H22" fill="none" stroke="#ad71f2" stroke-width="7" stroke-linecap="round"/>
+        <path d="M146 26 V46 a4 4 0 0 1 -4 4 H128" fill="none" stroke="#ad71f2" stroke-width="7" stroke-linecap="round"/>
+        <text x="75" y="38" text-anchor="middle" font-family="Crimson Pro, Georgia, serif" font-size="36" font-weight="500" fill="currentColor">mtp</text>
+      </svg>
+    </a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/examples">Examples</a></li>
+        <li><a href="https://docs.mtp-lang.org">Docs</a></li>
+        <li><a class="gh" href="https://github.com/aris-pub/mathterpiece" aria-label="GitHub">
+          <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <h1>Math figures that readers can drag, slide and play.</h1>
+        <p class="lede">Mathterpiece is a small language for interactive figures on the web. You write what a figure is, the compiler checks it, and any web page can draw it.</p>
+        <div class="ctas">
+          <a class="btn main" href="https://docs.mtp-lang.org">Get started</a>
+          <a class="btn second" href="/examples">See the examples</a>
+        </div>
+      </div>
+      <div class="figure-card">
+        <div class="live"><mtp-canvas model="hero" name="v"></mtp-canvas></div>
+        <p class="hint">Drag the point around the circle.</p>
+        <div class="controls"><mtp-slider model="hero" name="turn"></mtp-slider></div>
+        <details>
+          <summary>The source of this figure, 11 lines</summary>
+<pre><span class="c">; cos in red, sin in green, for a point at angle theta</span>
+(import house ink red green)
+(real theta 40 (wrap 0 360))
+(scene s
+  (circle rim (r 1) (fill none) (stroke ink))
+  (line cos (from [0 0]) (to [(cosd theta) 0]) (stroke red) (stroke-width 4))
+  (line sin (from [(cosd theta) 0]) (to (polar 1 theta)) (stroke green) (stroke-width 4))
+  (circle p (r 0.07) (pos (polar 1 theta)) (fill ink)))
+(canvas v (x -1.25) (y -1.25) (width 2.5) (height 2.5) s
+  (on-drag p (move theta (to (. (or? (to-polar pointer) [1 theta]) 1)))))
+(slider turn (move theta (from 0) (to 360)) (label <span class="s">'θ'</span>))</pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <section id="steps">
+    <div class="wrap">
+      <h2>One figure in three steps</h2>
+      <p class="section-lede">A figure is its variables and the shapes that depend on them. Add a control and readers can change a variable, and everything that reads it follows.</p>
+      <div class="steps">
+        <div class="step">
+          <h3><span>1</span>A still figure</h3>
+          <p>An angle, a circle, and the two lines that it sets.</p>
+          <mtp-canvas model="s1" name="v"></mtp-canvas>
+          <div class="controls"></div>
+<pre>(real theta 40 (wrap 0 360))
+(scene s
+  (circle rim (r 1) …)
+  (line cos … (to [(cosd theta) 0]))
+  (line sin … (to (polar 1 theta)))
+  (circle p … (pos (polar 1 theta))))
+(canvas v … s)</pre>
+        </div>
+        <div class="step">
+          <h3><span>2</span>Add a slider</h3>
+          <p>One line. The slider moves theta, and the lines follow.</p>
+          <mtp-canvas model="s2" name="v"></mtp-canvas>
+          <div class="controls"><mtp-slider model="s2" name="turn"></mtp-slider></div>
+<pre>(real theta 40 (wrap 0 360))
+(scene s …)
+(canvas v … s)
+<span class="add">(slider turn (move theta (from 0) (to 360)))</span></pre>
+        </div>
+        <div class="step">
+          <h3><span>3</span>Make the point draggable</h3>
+          <p>One more line. Dragging the point moves theta too.</p>
+          <mtp-canvas model="s3" name="v"></mtp-canvas>
+          <div class="controls"><mtp-slider model="s3" name="turn"></mtp-slider></div>
+<pre>(real theta 40 (wrap 0 360))
+(scene s …)
+(canvas v … s
+<span class="add">  (on-drag p (move theta (to …))))</span>
+(slider turn (move theta (from 0) (to 360)))</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="checked">
+    <div class="wrap">
+      <h2>The compiler checks every figure</h2>
+      <p class="section-lede">The compiler works out the range of every value. When a value could leave the range that a shape needs, the figure does not compile, and the error gives the line, the column and a way to fix it.</p>
+      <div class="checked">
+        <div class="panel">
+          <div class="label">circle.mtp</div>
+<pre>(real k 1 (>= 0) (<= 3))
+(slider size (move k (from 0) (to 3)))
+(scene s (circle c (r (- k 2))))</pre>
+        </div>
+        <div class="panel">
+          <div class="label">mtp check circle.mtp</div>
+          <div class="error"><span class="where">circle.mtp:3:23:</span> <span class="msg">c's r may break (>= 0): constrain what it reads so this can be proved, or declare c as circle|none</span></div>
+        </div>
+      </div>
+      <p class="claim">A figure that could draw something undefined, such as a circle with a negative radius, never reaches a reader.</p>
+    </div>
+  </section>
+
+  <section id="gets">
+    <div class="wrap">
+      <h2>Every figure gets the same care</h2>
+      <p class="section-lede">These come with the runtime, so no figure has to build them again.</p>
+      <ul class="gets">
+        <li><b>Keyboard</b><span>Sliders, buttons and players work from the keyboard.</span></li>
+        <li><b>Screen readers</b><span>Each control and each canvas carries a label written in the source.</span></li>
+        <li><b>Touch</b><span>Every drag also works by tapping.</span></li>
+        <li><b>Light and dark</b><span>Each color has a dark value, and the page picks.</span></li>
+        <li><b>Reduced motion</b><span>Animations respect the reader's setting.</span></li>
+        <li><b>Saved as data</b><span>A figure is a .mtpc file, so it keeps working when the runtime improves.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="examples">
+    <div class="wrap">
+      <h2>Examples</h2>
+      <p class="section-lede">Each one is a live figure. The examples page shows the source of each.</p>
+      <div class="examples">
+        <a class="example" href="/examples#lissajous"><mtp-canvas model="lissajous" name="view"></mtp-canvas><div>Lissajous curves</div></a>
+        <a class="example" href="/examples#times-tables"><mtp-canvas model="times" name="view"></mtp-canvas><div>Times tables on a circle</div></a>
+        <a class="example" href="/examples#pythagoras"><mtp-canvas model="pythagoras" name="view"></mtp-canvas><div>A proof of Pythagoras</div></a>
+        <a class="example" href="/examples#koch-snowflake"><mtp-canvas model="koch" name="view"></mtp-canvas><div>The Koch snowflake</div></a>
+        <a class="example" href="/examples#golden-tour"><mtp-canvas model="golden" name="view"></mtp-canvas><div>A sunflower and the golden angle</div></a>
+        <a class="example" href="/examples#inversion"><mtp-canvas model="inversion" name="view"></mtp-canvas><div>Inversion in a circle</div></a>
+      </div>
+      <p class="more"><a href="/examples">All examples →</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <ul>
+      <li><a href="https://docs.mtp-lang.org">Docs</a></li>
+      <li><a href="https://spec.mtp-lang.org">Spec</a></li>
+      <li><a href="https://github.com/aris-pub/mathterpiece">GitHub</a></li>
+      <li><a href="/about">About</a></li>
+    </ul>
+    <div>Part of <a href="https://aris.pub">The Aris Program</a></div>
+  </div>
+</footer>
+
+<div class="mock">mockup</div>
+</body>
+</html>

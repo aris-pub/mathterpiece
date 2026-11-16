@@ -1,5 +1,5 @@
-"""Sphinx configuration of the mtp site: the landing page, the specification and, later, the
-documentation. just spec serves it while it is being written."""
+"""Sphinx configuration of the spec, served at spec.mtp-lang.org. just spec serves it while it is
+being written. The docs are a second project in guide/, with a configuration of their own."""
 
 import sys
 from pathlib import Path
@@ -30,11 +30,14 @@ html_theme = "pydata_sphinx_theme"
 html_title = "mathterpiece"
 html_static_path = ["_static"]
 html_css_files = ["mtp.css"]
+# Netlify reads _redirects, which sends the root of spec.mtp-lang.org to the spec.
+html_extra_path = ["_root"]
 
 # The guides written before the spec are read only through the spec's parts that include them,
 # until the spec takes their place.
 exclude_patterns = [
     "_build",
+    "guide",
     "canvas-lifecycle.md",
     "concurrency-model.md",
     "data-model.md",
