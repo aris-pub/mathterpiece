@@ -341,7 +341,7 @@ clamped, because a literal is not the result of an operation.
   result gives `none` (web/src/builtins.ts, `finite`, line 31). Bead mtp-ydd4.7.54.
 - `sum` while drawing adds with the built-in `+` (web/src/runtime.ts, line 1248). When a sum is
   beyond the largest binary64 number, `+` throws the exception `Undefined`, and `sum` does not
-  catch it, so the evaluation stops. Bug mtp-ec05, which mtp-ydd4.7.54 replaces.
+  catch it, so the evaluation stops. Bead mtp-ydd4.7.54.
 - `constrain` (web/src/runtime.ts, line 761) clamps a write only when the value is a single number.
   mtp-ydd4.7.18.
 :::
@@ -669,8 +669,8 @@ The two programs differ in these places, beyond what the rules above allow:
 | the functions on reals other than `+`, `-`, `*`, `/` and `sqrt` | Python's `math` module, which is not correctly rounded | ECMAScript `Math`, which is not correctly rounded | mtp-ydd4.7.38 |
 | `sum` of reals | adds the items one at a time | adds the items one at a time | mtp-ydd4.7.38 |
 | recursion | folded up to a depth of about 80 | computed up to the stack of the browser | mtp-ydd4.7.15 |
-| `mod` of reals | Python's `%`, which is exact | `a - b × ⌊a / b⌋`, so `(mod 5.5 0.1)` is 0 and not 0.0999999999999997 | mtp-ydd4.7.14 |
-| the functions in degrees, for large angles | converted to radians first, so `(cosd (+ 1e15 90))` is 0.98478… | `(x × π) / 180` first, so it is 0.98512… | mtp-ydd4.7.14 |
+| `mod` of reals | Python's `%`, which is exact | `a - b × ⌊a / b⌋`, so `(mod 5.5 0.1)` is 0 and not 0.0999999999999997 | mtp-ydd4.7.38 |
+| the functions in degrees, for large angles | converted to radians first, so `(cosd (+ 1e15 90))` is 0.98478… | `(x × π) / 180` first, so it is 0.98512… | mtp-ydd4.7.38 |
 
 For `(cosd (+ 1e15 90))` the exact value is the cosine of 10 degrees, 0.98481…, so both times
 are wrong in the fourth digit. Elsewhere the two differ in the last bits, which
