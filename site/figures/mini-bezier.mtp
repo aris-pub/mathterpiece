@@ -1,0 +1,11 @@
+(real t 0 (wrap 0 360))
+(scene s
+  (circle h1 (r 0.07) (pos (+ [0.5 0.6] (polar 0.35 t))) (fill 'royalblue'))
+  (circle h2 (r 0.07) (pos (- [-0.5 -0.6] (polar 0.35 (* 2 t)))) (fill 'crimson'))
+  (group arms (defaults (stroke 'gray') (stroke-width 1) (dash [0.04 0.04]))
+    (line_ (from [-1 1]) (to h1.pos))
+    (line_ (from [1 -1]) (to h2.pos)))
+  (curve c (from [-1 1]) (to [1 -1]) (controls [h1.pos h2.pos])
+         (stroke 'mediumpurple') (stroke-width 5) (line-cap 'round')))
+(canvas v (x -1.02) (y -1.02) (width 2.04) (height 2.04) s
+  (on-ready (animation (loop) (move t (to 360) (duration 16)))))
