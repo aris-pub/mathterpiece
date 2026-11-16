@@ -184,10 +184,10 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-list button:hover { color: var(--ink); }
 .use-list button[aria-selected="true"] { color: var(--ink); background: var(--surface); border-left-color: var(--accent); }
 .use-panel { grid-row: 1; grid-column: 2; display: grid; grid-template-rows: auto minmax(0, 1fr); }
-.use-stage { display: grid; align-items: center; justify-items: center; padding: 28px; background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+.use-stage { display: grid; align-items: center; justify-items: center; padding: 24px; background: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
 .use-stage .use-mock { width: 100%; }
-.use-stage .use-mock.browser { max-width: 560px; }
-.use-stage .use-mock.slide { max-width: 680px; }
+.use-stage .use-mock.browser { max-width: 470px; }
+.use-stage .use-mock.slide { max-width: 620px; }
 .use-panel[hidden] { display: grid; visibility: hidden; }
 .use-copy h3 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 12px; }
 .use-copy p { font-size: 16px; line-height: 1.55; color: var(--soft); margin: 0; max-width: 70ch; }
@@ -204,7 +204,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-mock .chrome i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
 .use-mock .chrome span { margin-left: 10px; flex: 1; font: 12px/1 var(--mono); color: var(--soft); background: var(--surface); border-radius: 6px; padding: 6px 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .use-mock.slide { border: 10px solid #22282d; border-radius: 12px; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
-.use-mock.phone { width: 270px; margin: 0 auto; border: 10px solid #22282d; border-radius: 34px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
+.use-mock.phone { width: 240px; margin: 0 auto; border: 10px solid #22282d; border-radius: 34px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
 @media (max-width: 860px) {
   .usecases, .embed-strip { grid-template-columns: minmax(0, 1fr); }
   .use-list { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px; }
@@ -576,7 +576,7 @@ footer a { color: var(--soft); }
             <p>The numbers in the text come from the figure, so the prose and the picture always agree.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
-            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>course.example/probability/lecture-4</span></div><div class="screen" style="aspect-ratio: 760 / 846" data-w="760"><iframe scrolling="no" src="uses/notes.html" title="Lecture notes: an example page with a live figure" loading="lazy" style="width: 760px; height: 846px"></iframe></div>
+            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>course.example/probability/lecture-4</span></div><div class="screen" style="aspect-ratio: 760 / 660" data-w="760"><iframe scrolling="no" src="uses/notes.html" title="Lecture notes: an example page with a live figure" loading="lazy" style="width: 760px; height: 660px"></iframe></div>
           </div></div>
         </div>
         <div class="use-panel" id="usep-videos" role="tabpanel" aria-labelledby="use-videos" hidden>
@@ -731,6 +731,18 @@ footer a { color: var(--soft); }
     for (const e of entries) e.target.style.setProperty("--s", e.contentRect.width / e.target.dataset.w);
   });
   for (const screen of document.querySelectorAll(".use-mock .screen")) fit.observe(screen);
+  // A framed page takes the theme that the reader picked on this page, or follows the system
+  // when there is none, as this page does.
+  const matchTheme = (frame) => {
+    const root = frame.contentDocument?.documentElement;
+    if (!root) return;
+    const theme = document.documentElement.dataset.theme;
+    root.classList.remove("light-theme", "dark-theme");
+    if (theme) { root.classList.add(theme + "-theme"); root.dataset.theme = theme; }
+    else delete root.dataset.theme;
+  };
+  new MutationObserver(() => document.querySelectorAll(".use-mock iframe").forEach(matchTheme))
+    .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   // A framed page does not scroll, and can open at a part of itself, such as the paper at its
   // first section.
   for (const frame of document.querySelectorAll(".use-mock iframe")) {
@@ -740,8 +752,11 @@ footer a { color: var(--soft); }
       const target = frame.dataset.scroll && doc.getElementById(frame.dataset.scroll);
       if (target) frame.contentWindow.scrollTo(0, target.getBoundingClientRect().top + frame.contentWindow.scrollY - 16);
       doc.documentElement.style.overflow = "hidden";
+      matchTheme(frame);
     };
-    frame.addEventListener("load", open);
+    // The page's math and fonts can move the section after load, so the scroll is repeated once
+    // they have settled.
+    frame.addEventListener("load", () => { open(); setTimeout(open, 700); setTimeout(open, 2000); });
     if (frame.contentDocument?.readyState === "complete") open();
   }
   const useLinked = document.getElementById("use-" + location.hash.slice(1));

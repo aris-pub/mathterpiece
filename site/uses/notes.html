@@ -4,14 +4,17 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/aris-pub/rsm@main/braiid/braiid.css">
 <script type="module" src="/mathterpiece.js"></script>
 <style>
-html, body { margin: 0; background: #fff; color: #22303a; }
+:root { --bg: #ffffff; --ink: #22303a; --soft: #7a8791; --line: #e8e4f0; --kicker: #6d4bb0; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not(.light-theme) { --bg: #14191d; --ink: #dfe5ea; --soft: #8b9aa5; --line: #2a3238; --kicker: #b99af0; color-scheme: dark; } }
+:root.dark-theme { --bg: #14191d; --ink: #dfe5ea; --soft: #8b9aa5; --line: #2a3238; --kicker: #b99af0; color-scheme: dark; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
 body { font: 21px/1.6 "Crimson Pro", Georgia, serif; }
-.bar { font: 600 15px/1 "Source Sans 3", sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #6d4bb0; padding: 22px 40px; border-bottom: 1px solid #e8e4f0; }
+.bar { font: 600 15px/1 "Source Sans 3", sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--kicker); padding: 22px 40px; border-bottom: 1px solid var(--line); }
 main { max-width: 860px; padding: 28px 40px 40px; }
 h1 { font-weight: 600; font-size: 40px; line-height: 1.2; margin: 0 0 6px; }
-.sub { color: #7a8791; margin: 0 0 22px; font-size: 19px; }
+.sub { color: var(--soft); margin: 0 0 22px; font-size: 19px; }
 p { margin: 0 0 16px; }
-mtp-canvas { display: block; width: 100%; margin: 6px 0 14px; }
+mtp-canvas { display: block; width: 100%; max-width: 560px; margin: 6px auto 0; }
 main mtp-slider { display: inline-block; width: 150px; min-width: 0; vertical-align: middle; }
 main mtp-slider label { font-size: 0; }
 main mtp-slider .mtp-ticks { display: none; }
@@ -23,7 +26,6 @@ main mtp-readout.pair { color: slateblue; } main mtp-readout.yours { color: crim
 <main>
 <h1>4.2 The birthday problem</h1>
 <p class="sub">Products of many small factors can still add up quickly.</p>
-<p>Give each of n people a birthday, chosen evenly from 365 days. The chance that no two of them share a birthday is a product with one factor for each person, so the chance that some two do is one minus that product.</p>
 <p>In a room of <mtp-model id="b" src="/data/birthday.mtpc"></mtp-model><mtp-slider model="b" name="people"></mtp-slider> <mtp-readout model="b" name="count"></mtp-readout> people, the chance that some two of them share a birthday is <mtp-readout class="pair" model="b" name="odds"></mtp-readout>. The chance that one of them shares your birthday is only <mtp-readout class="yours" model="b" name="mine"></mtp-readout>.</p>
 <mtp-canvas model="b" name="v"></mtp-canvas>
 </main>
