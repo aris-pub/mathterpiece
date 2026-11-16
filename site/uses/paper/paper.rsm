@@ -1,0 +1,39 @@
+# Inner products and the area of a rectangle {
+  :label: paper
+}
+
+:abstract:
+
+  We give a picture of the Cauchy–Schwarz inequality in the plane. Both
+  sides of the inequality are areas of rectangles that share a side, and
+  the smaller rectangle lies inside the larger one.
+
+::
+
+## The inequality
+  {:label: sec-ineq}
+
+Let $u$ and $v$ be vectors in $\mathbb{R}^2$. The projection of $u$ onto
+the line through $v$ is never longer than $u$ itself, and multiplying both
+lengths by $\|v\|$ gives the following result.
+
+:theorem: {
+  :label: thm-cs
+  :title: Cauchy–Schwarz
+}
+
+  For all vectors $u$ and $v$ in $\mathbb{R}^2$, $|\langle u, v\rangle| \le \|u\|\,\|v\|$,
+  with equality exactly when $u$ and $v$ lie on one line.
+
+::
+
+:html: {
+  :label: fig-cs
+  :path: figs/schwarz.html
+}
+:caption: Drag $u$ or $v$. Point at a side of the inequality to see it as a
+rectangle of height $\|v\|$.
+::
+
+In :ref:fig-cs::, the shaded rectangles have the same height, and their
+lengths along $v$ are the projection of $u$ and the length of $u$.

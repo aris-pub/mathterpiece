@@ -31,3 +31,4 @@ docs/_build/
 # Built by just site-build.
 site/data/
 site/mathterpiece.js
+site/uses/paper/out/

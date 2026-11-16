@@ -177,6 +177,34 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .cta .ctas { justify-content: center; }
 
 /* Use cases */
+.usecases { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 32px; align-items: start; }
+.use-copy { padding-top: 8px; }
+.use-list { display: flex; flex-direction: column; gap: 4px; grid-row: 1; grid-column: 1; }
+.use-list button { font: 500 1.25rem/1.3 var(--serif); text-align: left; color: var(--soft); background: none; border: 0; border-left: 2px solid var(--line); padding: 10px 16px; cursor: pointer; }
+.use-list button:hover { color: var(--ink); }
+.use-list button[aria-selected="true"] { color: var(--ink); border-left-color: var(--accent); }
+.use-panel { grid-row: 1; grid-column: 2; display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); gap: 36px; align-items: start; }
+.use-panel[hidden] { display: grid; visibility: hidden; }
+.use-copy h3 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 12px; }
+.use-copy p { font-size: 17px; line-height: 1.6; color: var(--soft); margin: 0 0 12px; }
+.use-copy p.first { color: var(--ink); font-size: 18px; }
+.use-copy a { color: var(--accent-ink); }
+.use-mock { min-width: 0; }
+.use-mock .screen { position: relative; overflow: hidden; background: #fff; width: 100%; }
+.use-mock iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; transform: scale(var(--s, 0.4)); }
+.use-mock.browser { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.08); }
+.use-mock .chrome { display: flex; align-items: center; gap: 6px; padding: 10px 12px; background: var(--code-bg); border-bottom: 1px solid var(--line); }
+.use-mock .chrome i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.use-mock .chrome span { margin-left: 10px; flex: 1; font: 12px/1 var(--mono); color: var(--soft); background: var(--surface); border-radius: 6px; padding: 6px 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.use-mock.slide { border: 10px solid #22282d; border-radius: 12px; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
+.use-mock.phone { width: 270px; margin: 0 auto; border: 10px solid #22282d; border-radius: 34px; overflow: hidden; box-shadow: 0 10px 30px rgba(30, 40, 60, 0.12); }
+@media (max-width: 860px) {
+  .usecases { grid-template-columns: minmax(0, 1fr); }
+  .use-list { flex-direction: row; flex-wrap: wrap; }
+  .use-list button { border-left: 0; border-bottom: 2px solid var(--line); }
+  .use-list button[aria-selected="true"] { border-bottom-color: var(--accent); }
+  .use-panel { grid-row: 2; grid-column: 1; grid-template-columns: minmax(0, 1fr); }
+}
 .uses { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; list-style: none; margin: 0; padding: 0; }
 .uses li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 20px; }
 .uses b { display: block; font: 500 1.3rem/1.3 var(--serif); margin-bottom: 6px; }
@@ -493,13 +521,54 @@ footer a { color: var(--soft); }
     <div class="wrap">
       <h2>Use cases</h2>
       <p class="section-lede">Drop a figure into any web-based paper, slide deck, set of notes or page.</p>
-      <ul class="uses">
-        <li><b>Papers</b><span>A figure in a web-based paper that readers can explore, next to the claim that it shows.</span></li>
-        <li><b>Slides</b><span>A figure in web-based slides that you drag during a talk, in place of a series of still frames.</span></li>
-        <li><b>Lecture notes</b><span>A figure in web-based course notes that students try for themselves.</span></li>
-        <li><b>Digestions</b><span>A page that works through someone else's result, with a figure at each step.</span></li>
-        <li><b>Videos</b><span>A figure's animations, played and recorded from the same source as the page.</span></li>
-      </ul>
+      <div class="usecases">
+        <div class="use-list" role="tablist" aria-label="Use cases" aria-orientation="vertical">
+          <button role="tab" id="use-paper" aria-controls="usep-paper" aria-selected="true">Papers</button>
+          <button role="tab" id="use-slides" aria-controls="usep-slides" aria-selected="false">Slides</button>
+          <button role="tab" id="use-notes" aria-controls="usep-notes" aria-selected="false">Notes and digestions</button>
+          <button role="tab" id="use-videos" aria-controls="usep-videos" aria-selected="false">Videos</button>
+        </div>
+        <div class="use-panel" id="usep-paper" role="tabpanel" aria-labelledby="use-paper">
+          <div class="use-copy">
+            <h3>Papers</h3>
+            <p class="first">A figure in a web-based paper that readers can explore, next to the claim that it shows.</p>
+            <p>The page on the right is an RSM document. RSM is a markup language for papers that are read on the web, and the figure takes one block in its source. Drag <i>u</i> or <i>v</i> in the figure, or point at a side of the inequality.</p>
+          </div>
+          <div class="use-mock browser">
+            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe src="uses/paper/out/index.html" data-scroll="sec-ineq" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
+          </div>
+        </div>
+        <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
+          <div class="use-copy">
+            <h3>Slides</h3>
+            <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
+            <p>Any slide tool that makes web pages can show a figure, such as reveal.js. When someone asks about a different triangle, you drag a corner and show them.</p>
+          </div>
+          <div class="use-mock slide">
+            <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
+          </div>
+        </div>
+        <div class="use-panel" id="usep-notes" role="tabpanel" aria-labelledby="use-notes" hidden>
+          <div class="use-copy">
+            <h3>Notes and digestions</h3>
+            <p class="first">A figure in course notes, or in a page that works through someone else's result, with the text around it.</p>
+            <p>The numbers in the text come from the figure, so the prose and the picture always agree. <a href="https://firsthandmath.com">Firsthand Math</a> publishes its digestions this way.</p>
+          </div>
+          <div class="use-mock browser">
+            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>course.example/probability/lecture-4</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe src="uses/notes.html" title="Notes and digestions: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
+          </div>
+        </div>
+        <div class="use-panel" id="usep-videos" role="tabpanel" aria-labelledby="use-videos" hidden>
+          <div class="use-copy">
+            <h3>Videos</h3>
+            <p class="first">A figure's animations, played and recorded from the same source as the page.</p>
+            <p>The runtime has a recording mode that shows one figure on a vertical page, ready to record as a short. When you fix the figure, the page and the next recording both get the fix.</p>
+          </div>
+          <div class="use-mock phone">
+            <div class="screen" style="aspect-ratio: 540 / 960" data-w="540"><iframe src="uses/video.html" title="Videos: an example page with a live figure" loading="lazy" style="width: 540px; height: 960px"></iframe></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -589,6 +658,33 @@ footer a { color: var(--soft); }
   for (const tab of tabs) tab.addEventListener("click", () => show(tab));
   const linked = document.getElementById("tab-" + location.hash.slice(1));
   if (linked) show(linked);
+</script>
+<script>
+  // The use cases: one example page at a time. Each page is drawn at its own size and scaled to
+  // fit its frame, so it looks the same as it would in a full window.
+  const useTabs = [...document.querySelectorAll('.use-list [role="tab"]')];
+  for (const tab of useTabs) tab.addEventListener("click", () => {
+    for (const other of useTabs) {
+      const on = other === tab;
+      other.setAttribute("aria-selected", String(on));
+      document.getElementById(other.getAttribute("aria-controls")).hidden = !on;
+    }
+  });
+  const fit = new ResizeObserver((entries) => {
+    for (const e of entries) e.target.style.setProperty("--s", e.contentRect.width / e.target.dataset.w);
+  });
+  for (const screen of document.querySelectorAll(".use-mock .screen")) fit.observe(screen);
+  // A framed page can open at a part of itself, such as the paper at its first section.
+  for (const frame of document.querySelectorAll(".use-mock iframe[data-scroll]")) {
+    const open = () => {
+      const target = frame.contentDocument?.getElementById(frame.dataset.scroll);
+      if (target) frame.contentWindow.scrollTo(0, target.getBoundingClientRect().top + frame.contentWindow.scrollY - 16);
+    };
+    frame.addEventListener("load", open);
+    if (frame.contentDocument?.readyState === "complete") open();
+  }
+  const useLinked = document.getElementById("use-" + location.hash.slice(1));
+  if (useLinked) useLinked.click();
 </script>
 </body>
 </html>

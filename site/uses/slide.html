@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Slide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400&display=swap">
+<script type="module" src="/mathterpiece.js"></script>
+<style>
+html, body { margin: 0; background: #fff; color: #22303a; font-family: "Source Sans 3", sans-serif; }
+.slide { width: 1280px; height: 720px; box-sizing: border-box; padding: 56px 72px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr auto; gap: 0 48px; }
+h1 { grid-column: 1 / 3; font: 600 52px/1.15 "Source Sans 3", sans-serif; margin: 0 0 28px; }
+ul { margin: 0; padding-left: 1.1em; font-size: 30px; line-height: 1.5; align-self: center; }
+li + li { margin-top: 18px; }
+.fig { align-self: center; }
+mtp-canvas { display: block; width: 100%; }
+footer { grid-column: 1 / 3; display: flex; justify-content: space-between; font-size: 18px; color: #7a8791; border-top: 1px solid #e3e6e8; padding-top: 14px; }
+</style></head>
+<body><div class="slide">
+<h1>The three medians meet at one point</h1>
+<ul>
+<li>Each median joins a corner to the midpoint of the opposite side.</li>
+<li>They cut the triangle into six pieces of equal area.</li>
+<li>Drag a corner: the pieces stay equal.</li>
+</ul>
+<div class="fig"><mtp-model id="m" src="/data/medians.mtpc"></mtp-model><mtp-canvas model="m" name="v"></mtp-canvas></div>
+<footer><span>Geometry seminar</span><span>7 / 18</span></footer>
+</div></body></html>
