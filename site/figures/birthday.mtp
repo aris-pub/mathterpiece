@@ -1,0 +1,21 @@
+; the birthday problem: the chance that some two of n people
+; share a birthday passes one half at just 23 people
+(int n 23 (>= 1) (<= 60))  ; typechecked: 1 to 60 people
+(func p ((int m))
+  (- 1 (reduce (range m) 1
+         (fn ((real q) (int k)) (* q (/ (- 365 k) 365))))))
+
+; what the figure is: p(m) for m from 1 to 60
+(scene chance
+  (line_ (from [0 15]) (to [60 15]) (stroke 'gray') (dash [4 4]))
+  (polyline curve
+    (points (map (range 61) (fn ((int m)) [m (* 30 (p m))])))
+    ; what the figure looks like
+    (stroke 'slateblue') (stroke-width 3))
+  (circle now (r 1) (pos [n (* 30 (p n))]) (fill 'crimson')))
+
+; what it does: the slider and the numbers sit in the sentence
+(canvas v (x -2) (y -2) (width 64) (height 34) chance)
+(slider people (move n (from 1) (to 60)))
+(readout count $'{n}')
+(readout odds $'{(* 100 (p n)):.1f}%')
