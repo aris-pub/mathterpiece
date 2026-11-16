@@ -1,7 +1,6 @@
 """none: where it comes from, how it spreads, and where it must be handled (docs/type-system.md,
 section 5.c; the Undefined column in docs/reference.md)."""
 
-import pytest
 from helpers import bound, error, model, typ, value
 
 from mathterpiece.types import BOOL, RATIO, REAL, STRING, ListT, Maybe, Refine
@@ -28,10 +27,11 @@ class TestWhereItComesFrom:
         error("(real d (^ 0 -1))", "undefined")
         error("(real d (^ -8 0.5))", "undefined")
 
-    def test_a_result_too_large_for_a_real(self):
-        error("(real d (* 1e150 1e150 1e150))", "too large for a real")
-        assert typ("(real a) (real b) (real c) (real|none d (* a b c))", "d") == Maybe(REAL)
-        model("(real a) (real b) (real d (* a b))")
+    def test_a_result_beyond_the_number_limit_is_clamped(self):
+        # mtp-ydd4.7.54: Rule number-limit (evaluation.md) clamps every result, so an overflow is
+        # never none.
+        assert value("(real d (* 1e150 1e150 1e150))", "d") == 1e150
+        assert typ("(real a) (real b) (real c) (real d (* a b c))", "d") == REAL
 
     def test_a_literal_beyond_the_limit(self):
         error("(real d 1e151)", "beyond")
@@ -155,14 +155,12 @@ def test_an_if_between_a_written_list_and_none():
 class TestStrictBounds:
     # The author, 2026-11-16 (mtp-msoz): a strict bound gives the range the nearest value past it
     # that the type holds, as if-narrowing does (Rule ranges, well-formedness.md).
-    @pytest.mark.xfail(strict=True, reason="overflow gives none until mtp-ydd4.7.54")
     def test_a_real_above_0_is_never_0(self):
         assert typ("(real k 2 (> 0)) (real h (/ 1 k))", "h") == REAL
 
     def test_an_int_above_0_starts_at_1(self):
         assert typ("(int k 2 (> 0)) (ratio h (/ 1 k))", "h") == RATIO
 
-    @pytest.mark.xfail(strict=True, reason="overflow gives none until mtp-ydd4.7.54")
     def test_a_real_below_0_is_never_0(self):
         assert typ("(real k -2 (< 0)) (real h (/ 1 k))", "h") == REAL
 

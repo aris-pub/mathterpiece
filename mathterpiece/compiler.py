@@ -2,9 +2,9 @@
 docs/reference.md). Every declaration follows one body rule, (head name? positional… item…), and
 every expression is typed, with what it reads, its range, and its value when it is known."""
 
+import itertools
 import math
 import re
-import sys
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Context, Decimal
@@ -16,10 +16,15 @@ from mathterpiece import colors
 from mathterpiece.builtins import (
     BUILTINS,
     CONSTANTS,
+    EXACT_LIMIT,
+    LIMIT,
     SPECIAL_BUILTINS,
     Builtin,
     Undefined,
+    clamp,
     compose,
+    power,
+    product,
     range_by_count,
     range_by_gap,
 )
@@ -112,8 +117,7 @@ PLAY_NOTHING = ("slider", "on-drag", "on-pointermove")
 VIEWS = ("canvas", "readout", "display")
 # The listeners whose event goes up the scene tree, as in the DOM, unless one stops it.
 BUBBLES = ("on-click", "on-release", "on-dragstart", "on-dragend", "on-pointermove")
-# Every number lies within ±10^150 (type-system.md, "What the compiler proves").
-LIMIT = 1e150
+# The whole number limit (Rule number-limit, evaluation.md), as a range.
 UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 # The result of a function whose body is being compiled for the first time: a recursive call
 # has it, and the branch that does not recurse decides the real one.
@@ -183,9 +187,6 @@ NOT_FUNCTION_NAMES = (
     ("a type", {*PRIMS, *SHAPES, *INTERFACES, "list", "sequence", "func", *LAYOUTS, *COMPONENTS}),
     ("a constant", CONSTANTS),
 )
-# A computed result beyond the largest real overflows, which is undefined.
-MAX_REAL = sys.float_info.max
-WHOLE: tuple[float, float] = (-MAX_REAL, MAX_REAL)
 IDENTITY = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
 
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
@@ -907,7 +908,7 @@ class _Compiler:
         e = self.expr(node, None, scope)
         if _core(e.type) != INT or e.known or e.op == "obj":
             return None
-        hi = e.range[1] if e.range is not None else MAX_REAL
+        hi = e.range[1] if e.range is not None else LIMIT
         if hi >= LIMIT:
             raise CompileError(
                 "the count of a foreach is known when compiling, or has an upper bound, so the"
@@ -2207,12 +2208,14 @@ class _Compiler:
             return _known(Maybe(b.result), None)
         if all(a.known for a in args):
             values = [a.value for a in args]
+            # A transform and a color are not numbers, points or lists, so they are not clamped.
+            clamped = _core(b.result) not in (TRANSFORM, COLOR)
             return self.known_or_none(
-                b.result, lambda: self.fold_builtin(head, b.fold, values, pos)
+                b.result, lambda: self.fold_builtin(head, b.fold, values, pos, clamped)
             )
         ranges = [a.range if a.range is not None else UNBOUNDED for a in args]
         undefined = b.undefined is not None and b.undefined(ranges)
-        r = cast(Range, b.range(ranges) if callable(b.range) else b.range)
+        r = _clamp_range(cast(Range, b.range(ranges) if callable(b.range) else b.range))
         t = Maybe(b.result) if maybe or undefined else b.result
         return Expr(head, t, tuple(args), deps, r)
 
@@ -2228,9 +2231,10 @@ class _Compiler:
             self.fold_undefined.append(err)
             return _known(_maybe(t), None)
 
-    def fold_builtin(self, head: str, fold, values: list, pos: Pos):
+    def fold_builtin(self, head: str, fold, values: list, pos: Pos, clamped: bool = True):
         try:
-            return fold(*values)
+            v = fold(*values)
+            return clamp(v) if clamped else v
         except (Undefined, ValueError, ZeroDivisionError, OverflowError):
             shown = ", ".join(_value_str(v) for v in values)
             raise CompileError(f"{head} is undefined at {shown}", pos) from None
@@ -2263,8 +2267,6 @@ class _Compiler:
             if bounds and all(b.known for b in bounds):
                 r = (float(bounds[0].value), float(bounds[1].value))
             elif bounds:
-                # Stops at 10^150 for the same reason as sum's range. Up to the largest real,
-                # (* (rand a b) 8) could overflow (mtp-gvrf.13).
                 r = UNBOUNDED
             deps = frozenset().union(seed.deps, *(b.deps for b in bounds))
             return Expr("rand", REAL, (site, seed, *bounds), deps, r)
@@ -2761,13 +2763,10 @@ class _Compiler:
             if t not in NUMBERS:
                 raise CompileError(f"sum takes numbers, got {item}", node.pos)
             if coll.known:
-                return _known(t, sum(coll.value))
-            # Stops at 10^150 for the same reason as count's range. Up to the largest real,
-            # (* (sum xs) 8) could overflow (mtp-gvrf.8).
+                return _known(t, clamp(sum(coll.value)))
             return Expr("sum", t, (coll,), deps, UNBOUNDED)
         if head == "count":
-            # A count has no upper limit of its own, so its range stops at 10^150 as other
-            # ranges do. Up to the largest real, (* (count xs) 8) could overflow (mtp-pwjz).
+            # A count has no upper limit of its own, so its range stops at the number limit.
             if len(rest) > 1:
                 raise CompileError("count takes a collection and, optionally, a function", node.pos)
             if not rest:
@@ -5878,7 +5877,7 @@ class _Compiler:
         # A literal that is not none has the type of its attribute's other values.
         t = _inner(t)
         value = node.value
-        if isinstance(value, (int, float, Fraction)) and abs(value) > LIMIT:
+        if isinstance(value, (int, float, Fraction)) and abs(value) > EXACT_LIMIT:
             raise CompileError(f"{value} is beyond ±10^150, the limit of every number", node.pos)
         if t == COLOR or (isinstance(t, Maybe) and t.inner == COLOR):
             assert isinstance(node, StrLit)
@@ -6745,9 +6744,6 @@ class _Compiler:
         ranges = [a.range for a in args]
         r = _range_of(op, ranges)
         undefined = any(_may_be_none(a.type) for a in args) or _may_be_undefined(op, args)
-        if r is not None and (r[0] < -MAX_REAL or r[1] > MAX_REAL):
-            undefined = True
-            r = (max(r[0], -MAX_REAL), min(r[1], MAX_REAL))
         deps = frozenset().union(*(a.deps for a in args))
         return Expr(op, Maybe(t) if undefined else t, tuple(args), deps, r)
 
@@ -6779,7 +6775,7 @@ class _Compiler:
         if _may_be_none(a.type):
             t = Maybe(t)
         if a.known:
-            return _known(t, abs(a.value))
+            return _known(t, clamp(abs(a.value)))
         r = a.range
         if r is not None:
             r = (
@@ -7588,13 +7584,6 @@ def _may_be_undefined(op: str, args: list[Expr]) -> bool:
             return True
         if rb[0] < 0 and _core(exp.type) != INT:
             return True
-        for x in rb:
-            for y in re_:
-                try:
-                    if abs(math.pow(abs(x), y)) > MAX_REAL:
-                        return True
-                except (OverflowError, ZeroDivisionError, ValueError):
-                    return True
     return False
 
 
@@ -7604,7 +7593,7 @@ def _fold_items(t: Type, op: str, columns: list, pos: Pos):
 
 
 def _fold_number(op: str, vals: list, pos: Pos):
-    if op == "^":
+    if op == "^" and not any(isinstance(v, complex) for v in vals):
         a, b = vals
         if a == 0 and b < 0:
             raise CompileError("undefined: 0 to a negative power", pos)
@@ -7613,19 +7602,12 @@ def _fold_number(op: str, vals: list, pos: Pos):
         if isinstance(a, (int, Fraction)) and isinstance(b, int) and b < 0:
             a = Fraction(a)
     try:
-        v = _fold(op, vals)
+        return clamp(_fold(op, vals))
     except ZeroDivisionError:
         raise CompileError("division by zero", pos) from None
-    except OverflowError:
-        raise CompileError("the result is too large for a real", pos) from None
-    if isinstance(v, float) and math.isnan(v):
+    except Undefined:
         shown = ", ".join(_value_str(x) for x in vals)
-        raise CompileError(f"{op} is undefined at {shown}", pos)
-    if isinstance(v, (int, float, Fraction)) and not math.isfinite(v):
-        raise CompileError("the result is too large for a real", pos)
-    if isinstance(v, (int, Fraction)) and abs(v) > MAX_REAL:
-        raise CompileError("the result is too large for a real", pos)
-    return v
+        raise CompileError(f"{op} is undefined at {shown}", pos) from None
 
 
 def _gather(t: Type, items: list[Expr]) -> Expr:
@@ -7715,7 +7697,18 @@ def _union(a: Range, b: Range) -> Range:
     return (min(a[0], b[0]), max(a[1], b[1]))
 
 
+def _clamp_range(r: Range) -> Range:
+    """r with each end clamped to the number limit (Rule range-rules, well-formedness.md)."""
+    if r is None:
+        return None
+    return (min(max(r[0], -LIMIT), LIMIT), min(max(r[1], -LIMIT), LIMIT))
+
+
 def _range_of(op: str, ranges: Sequence[Range]) -> Range:
+    return _clamp_range(_unclamped_range(op, ranges))
+
+
+def _unclamped_range(op: str, ranges: Sequence[Range]) -> Range:
     if any(r is None for r in ranges):
         return None
     ranges = cast("Sequence[tuple[float, float]]", ranges)
@@ -7729,12 +7722,16 @@ def _range_of(op: str, ranges: Sequence[Range]) -> Range:
             lo, hi = lo - r[1], hi - r[0]
         return (lo, hi)
     if op == "*":
+        if len(ranges) <= 8:
+            # The product computed from left to right never falls as one factor grows while the
+            # others stay put, or never rises, so its extremes are at the corners.
+            ends = [product(list(c)) for c in itertools.product(*ranges)]
+            return (min(ends), max(ends))
         lo, hi = ranges[0]
         for r in ranges[1:]:
             ends = [lo * r[0], lo * r[1], hi * r[0], hi * r[1]]
-            ends = [0.0 if math.isnan(x) else x for x in ends]
             lo, hi = min(ends), max(ends)
-        return (lo, hi)
+        return (lo, hi) if math.isfinite(lo) and math.isfinite(hi) else UNBOUNDED
     if op == "/":
         a, b = ranges
         if b[0] <= 0 <= b[1]:
@@ -7758,9 +7755,10 @@ def _power_range(base: tuple[float, float], exp: tuple[float, float]) -> Range:
 
     def at(x: float, y: float) -> float:
         try:
-            return math.pow(x, y)
-        except (OverflowError, ValueError, ZeroDivisionError):
-            return math.copysign(MAX_REAL, x) if x != 0 else MAX_REAL
+            return clamp(float(power(x, y)))
+        except ZeroDivisionError:
+            # 0 to a negative power has no value, and near 0 the power grows past the limit.
+            return LIMIT
 
     if base[0] >= 0:
         ends = [at(x, y) for x in base for y in exp]
@@ -7771,7 +7769,7 @@ def _power_range(base: tuple[float, float], exp: tuple[float, float]) -> Range:
         if base[0] < 0 < base[1]:
             ends.append(at(0.0, n) if n > 0 else 1.0)
         return (min(ends), max(ends))
-    return WHOLE
+    return UNBOUNDED
 
 
 def _with_length(t: Type, n: int) -> Type:
@@ -7786,7 +7784,7 @@ def _with_range(t: Type, r: Range) -> Type:
     """t narrowed to the range r, where r tells more than t's own range."""
     if r is None or _core(t) not in NUMBERS[:3] or _may_be_none(t) or _wrap_of(t) is not None:
         return t
-    have = _type_range(t) or WHOLE
+    have = _type_range(t) or UNBOUNDED
     cs = []
     if r[0] > max(have[0], -LIMIT):
         cs.append((">=", r[0]))
@@ -7931,10 +7929,7 @@ def _fold(op: str, vals: list):
             out -= v
         return out
     if op == "*":
-        out = vals[0]
-        for v in vals[1:]:
-            out *= v
-        return out
+        return product(vals)
     if op == "/":
         a, b = vals
         if b == 0:
@@ -7943,7 +7938,7 @@ def _fold(op: str, vals: list):
             return Fraction(a, b)
         return a / b
     if op == "^":
-        return vals[0] ** vals[1]
+        return power(vals[0], vals[1])
     if op == "mod":
         a, b = vals
         if b == 0:

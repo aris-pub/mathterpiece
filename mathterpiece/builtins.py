@@ -1,18 +1,21 @@
 """The built-in functions (docs/reference.md "Functions"): what each takes and gives, how it is
 folded when its inputs are known, its range, and where it is undefined (type-system.md 5.c)."""
 
+import cmath
 import math
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
+from fractions import Fraction
 
 from mathterpiece import colors
 from mathterpiece.types import COLOR, INT, POINT, REAL, TRANSFORM, Refine, Type
 
-MAX_REAL = sys.float_info.max
-# A function's whole range, for a number with no limit of its own: every number lies within
-# ±10^150 (type-system.md, "What the compiler proves").
-WHOLE = (-1e150, 1e150)
+# Every number lies within -10^150 to 10^150 (Rule number-limit, docs/spec/evaluation.md). An int
+# or a ratio is clamped to exactly 10^150, and a real to 1e150, the binary64 number nearest to it.
+EXACT_LIMIT = 10**150
+LIMIT = 1e150
+# A function's whole range, for a number with no limit of its own.
+WHOLE = (-LIMIT, LIMIT)
 UNIT = Refine(REAL, ((">=", 0), ("<=", 1)))
 Range = tuple[float, float]
 
@@ -35,6 +38,116 @@ class Builtin:
 def _check(ok: bool) -> None:
     if not ok:
         raise Undefined
+
+
+def clamp(v):
+    """v with each of its numbers clamped to the number limit: an int, a ratio, a real, each part
+    of a complex, and each number of a point or a list. A NaN has no exact value to clamp, so it
+    is undefined."""
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, float):
+        _check(not math.isnan(v))
+        return min(max(v, -LIMIT), LIMIT)
+    if isinstance(v, int):
+        return min(max(v, -EXACT_LIMIT), EXACT_LIMIT)
+    if isinstance(v, Fraction):
+        return v if abs(v) <= EXACT_LIMIT else Fraction(EXACT_LIMIT if v > 0 else -EXACT_LIMIT)
+    if isinstance(v, complex):
+        return complex(clamp(v.real), clamp(v.imag))
+    if isinstance(v, tuple):
+        return tuple(clamp(x) for x in v)
+    if isinstance(v, list):
+        return [clamp(x) for x in v]
+    return v
+
+
+def finite(v) -> bool:
+    if isinstance(v, float):
+        return math.isfinite(v)
+    if isinstance(v, complex):
+        return cmath.isfinite(v)
+    return True
+
+
+def _ldexp(m: float, e: int) -> float:
+    try:
+        return math.ldexp(m, e)
+    except OverflowError:
+        return math.copysign(math.inf, m)
+
+
+def scaled_product(vals: list):
+    """The product of reals or complex numbers from left to right, with the binary exponent kept
+    apart from the mantissas. A step of the plain product past the largest binary64 number gives
+    an infinity, which no later factor can bring back within the number limit. Scaling by a power
+    of 2 is exact, so while no step of the plain product overflows or underflows, the two are
+    equal. web/src/builtins.ts computes it in the same steps."""
+    if not any(isinstance(v, complex) for v in vals):
+        m, e = 1.0, 0
+        for v in vals:
+            f, k = math.frexp(float(v))
+            m, j = math.frexp(m * f)
+            e += k + j
+        return _ldexp(m, e)
+    re, im, e = 1.0, 0.0, 0
+    for v in vals:
+        c = complex(v)
+        _, k = math.frexp(max(abs(c.real), abs(c.imag)))
+        a, b = math.ldexp(c.real, -k), math.ldexp(c.imag, -k)
+        re, im = re * a - im * b, re * b + im * a
+        _, j = math.frexp(max(abs(re), abs(im)))
+        re, im, e = math.ldexp(re, -j), math.ldexp(im, -j), e + k + j
+    return complex(_ldexp(re, e), _ldexp(im, e))
+
+
+def product(vals: list):
+    """The product of vals as an operation gives it: from left to right, and clamped once."""
+    out = vals[0]
+    for v in vals[1:]:
+        out *= v
+    if not finite(out):
+        out = scaled_product(vals)
+    return clamp(out)
+
+
+def power(a, b):
+    """a to the power b, before it is clamped. The caller has checked that a value exists."""
+    if isinstance(a, complex) or isinstance(b, complex):
+        try:
+            return a**b
+        except OverflowError:
+            return _polar_power(complex(a), complex(b))
+    negative = a < 0 and float(b).is_integer() and int(b) % 2 == 1
+    if isinstance(a, (int, Fraction)) and isinstance(b, int) and abs(a) not in (0, 1):
+        # An exact power past the limit by far has too many digits to work out, so its size is
+        # found from logarithms first. 520 bits leaves room for their rounding above 10^150.
+        if b * (math.log2(abs(a.numerator)) - math.log2(a.denominator)) > 520:
+            return type(a)(-EXACT_LIMIT if negative else EXACT_LIMIT)
+    try:
+        return a**b
+    except OverflowError:
+        return -math.inf if negative else math.inf
+
+
+def _polar_power(x: complex, y: complex) -> complex:
+    """x to the power y from |x| and the angle of x, as web/src/builtins.ts computes it, for a
+    result past the largest binary64 number. Each part is found from its logarithm, so a part
+    that is exactly 0 stays 0."""
+    lnr = math.log(abs(x))
+    theta = math.atan2(x.imag, x.real)
+    lnm = y.real * lnr - y.imag * theta
+    angle = y.imag * lnr + y.real * theta
+
+    def part(t: float) -> float:
+        if t == 0:
+            return 0.0
+        try:
+            return math.copysign(math.exp(lnm + math.log(abs(t))), t)
+        except OverflowError:
+            return math.copysign(math.inf, t)
+
+    return complex(part(math.cos(angle)), part(math.sin(angle)))
 
 
 # math.sin(math.pi) is 1.2e-16, not 0, so right angles in degrees are looked up instead.
@@ -101,15 +214,14 @@ def _exp(x: float) -> float:
     try:
         return math.exp(x)
     except OverflowError:
-        raise Undefined from None
+        return LIMIT
 
 
 def _exp_range(rs):
     """exp grows with its input, so the ends of the input's range give the result's (the
-    author, 2026-11-03); past the largest real it is undefined, so the range stops there."""
-    top = math.log(MAX_REAL)
+    author, 2026-11-03)."""
     lo, hi = rs[0]
-    return (math.exp(min(lo, top)), math.exp(min(hi, top)))
+    return (clamp(_exp(lo)), clamp(_exp(hi)))
 
 
 def _sign(x: float) -> int:
@@ -185,7 +297,7 @@ BUILTINS: dict[str, Builtin] = {
         math.floor, lambda rs: (math.floor(rs[0][0]), math.floor(rs[0][1])), result=INT
     ),
     "ceil": _unary(math.ceil, lambda rs: (math.ceil(rs[0][0]), math.ceil(rs[0][1])), result=INT),
-    "exp": _unary(_exp, _exp_range, lambda rs: rs[0][1] > math.log(MAX_REAL)),
+    "exp": _unary(_exp, _exp_range),
     "sin": _unary(math.sin, (-1.0, 1.0)),
     "cos": _unary(math.cos, (-1.0, 1.0)),
     "tan": _unary(math.tan),
@@ -227,8 +339,7 @@ BUILTINS: dict[str, Builtin] = {
     "to-turn": _unary(lambda x: x / 360),
     "polar": Builtin((REAL, REAL), POINT, lambda r, a: (r * cosd(a), r * sind(a)), None),
     "to-polar": Builtin((POINT,), POINT, _to_polar, None, lambda rs: True),
-    # dist has no upper limit of its own, so its range stops at 10^150 as the ranges of other
-    # functions do. Up to the largest real, (* (dist p q) 8) could overflow (mtp-ob7p).
+    # dist has no upper limit of its own, so its range stops at the number limit.
     "dist": Builtin((POINT, POINT), REAL, lambda p, q: math.dist(p, q), (0.0, WHOLE[1])),
     "rotate": Builtin((REAL,), TRANSFORM, _rotate, None),
     "translate": Builtin((REAL, REAL), TRANSFORM, lambda dx, dy: (1, 0, 0, 1, dx, dy), None),
