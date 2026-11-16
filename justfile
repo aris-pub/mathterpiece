@@ -109,4 +109,3 @@ site-build: build-web
     for e in lissajous times-tables pythagoras koch-snowflake golden-tour inversion bourgain-ornament; do uv run mtp compile "examples/$e.mtp" -o "site/data/$e.mtpc"; done
     cp web/dist/mathterpiece.js site/
     uv run --group docs python site/highlight.py
-    cd site/uses/paper && uv run --project {{env("RSM", home_directory() / "aris/rsm")}} rsm build paper.rsm -o out/index.html

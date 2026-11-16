@@ -194,6 +194,7 @@ pre .add { display: block; background: color-mix(in srgb, var(--accent) 18%, tra
 .use-copy h3 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 12px; }
 .use-copy p { font-size: 16px; line-height: 1.55; color: var(--soft); margin: 0; }
 .use-copy p.first { color: var(--ink); font: 500 1.2rem/1.4 var(--serif); margin-bottom: 4px; }
+.name { color: var(--accent-ink); }
 .use-copy a { color: var(--accent-ink); }
 .use-mock { min-width: 0; }
 .embed-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 28px; align-items: center; margin-top: 24px; }
@@ -347,7 +348,7 @@ footer a { color: var(--soft); }
       <div class="hero-top">
       <div class="hero-text">
         <p class="eyebrow">Explain. Explore. Experience.</p>
-        <h1>Mathterpiece</h1>
+        <h1><span class="name">Mathterpiece</span></h1>
         <p class="tagline">A language for math you can touch.</p>
         <ol class="lede">
           <li>Declare what the figure is, does, and looks like.</li>
@@ -546,7 +547,7 @@ footer a { color: var(--soft); }
   <section id="uses">
     <div class="wrap">
       <h2>Your next paper, talk or course</h2>
-      <p class="section-lede">Drop a Mathterpiece figure into any web-based paper, slide deck, set of notes or page.</p>
+      <p class="section-lede">Drop a <span class="name">Mathterpiece</span> figure into any web-based paper, slide deck, set of notes or page.</p>
       <div class="usecases">
         <div class="use-list" role="tablist" aria-label="Use cases" aria-orientation="vertical">
           <button role="tab" id="use-paper" aria-controls="usep-paper" aria-selected="true">Papers</button>
@@ -560,13 +561,13 @@ footer a { color: var(--soft); }
             <p>Readers drag <i>u</i> or <i>v</i>, or point at a side of the inequality, and check the claim for themselves.</p>
           </div>
           <div class="use-stage"><div class="use-mock browser">
-            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 720" data-w="760"><iframe scrolling="no" src="uses/paper/out/index.html" data-scroll="sec-ineq" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 720px"></iframe></div>
+            <div class="chrome" aria-hidden="true"><i></i><i></i><i></i><span>scholar.example/papers/cauchy-schwarz</span></div><div class="screen" style="aspect-ratio: 760 / 780" data-w="760"><iframe scrolling="no" src="uses/paper.html" title="Papers: an example page with a live figure" loading="lazy" style="width: 760px; height: 780px"></iframe></div>
           </div></div>
         </div>
         <div class="use-panel" id="usep-slides" role="tabpanel" aria-labelledby="use-slides" hidden>
           <div class="use-copy">
             <p class="first">A figure in web-based slides that you drag during a talk, in place of a series of still frames.</p>
-            <p>Any slide tool that makes web pages can show a Mathterpiece figure, and you drag it to answer a question.</p>
+            <p>Any slide tool that makes web pages can show a <span class="name">Mathterpiece</span> figure, and you drag it to answer a question.</p>
           </div>
           <div class="use-stage"><div class="use-mock slide">
             <div class="screen" style="aspect-ratio: 1280 / 720" data-w="1280"><iframe scrolling="no" src="uses/slide.html" title="Slides: an example page with a live figure" loading="lazy" style="width: 1280px; height: 720px"></iframe></div>
@@ -603,7 +604,7 @@ footer a { color: var(--soft); }
   <section id="gets">
     <div class="wrap">
       <h2>Accessible, interactive, portable by default</h2>
-      <p class="section-lede">Every Mathterpiece figure gets these from the runtime, with no extra code.</p>
+      <p class="section-lede">Every <span class="name">Mathterpiece</span> figure gets these from the runtime, with no extra code.</p>
       <ul class="gets">
         <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6m0 2a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2z" /> <path d="M6 10l0 .01" /> <path d="M10 10l0 .01" /> <path d="M14 10l0 .01" /> <path d="M18 10l0 .01" /> <path d="M6 14l0 .01" /> <path d="M18 14l0 .01" /> <path d="M10 14l4 .01" /></svg></span><b>Keyboard</b><span>Sliders, buttons and players work from the keyboard.</span></li>
         <li><span class="ic"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a7 7 0 1 1 13 3.6a10 10 0 0 1 -2 2a8 8 0 0 0 -2 3a4.5 4.5 0 0 1 -6.8 1.4" /> <path d="M10 10a3 3 0 1 1 5 2.2" /></svg></span><b>Screen readers</b><span>Each control and each canvas carries a label written in the source.</span></li>
@@ -618,7 +619,7 @@ footer a { color: var(--soft); }
   <section id="checked">
     <div class="wrap">
       <h2>Typesafe figures</h2>
-      <p class="section-lede">Mathterpiece figures never break in the reader&rsquo;s browser. The compiler works out every value that a figure can take, including values that may not exist. A figure that could draw something undefined does not compile.</p>
+      <p class="section-lede"><span class="name">Mathterpiece</span> figures never break in the reader&rsquo;s browser. The compiler works out every value that a figure can take, including values that may not exist. A figure that could draw something undefined does not compile.</p>
       <ol class="safe-steps">
         <li class="panel">
           <div class="label"><span class="n">1</span>Write the figure</div>

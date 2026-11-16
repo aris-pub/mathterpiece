@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Paper</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/aris-pub/rsm@main/braiid/braiid.css">
+<script type="module" src="/mathterpiece.js"></script>
+<style>
+:root { --bg: #ffffff; --ink: #22303a; --soft: #6b7883; --line: #e3e6e8; --rule: #b9a5e0; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not(.light-theme) { --bg: #14191d; --ink: #dfe5ea; --soft: #8b9aa5; --line: #2a3238; --rule: #6e55a3; color-scheme: dark; } }
+:root.dark-theme { --bg: #14191d; --ink: #dfe5ea; --soft: #8b9aa5; --line: #2a3238; --rule: #6e55a3; color-scheme: dark; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 21px/1.55 "Crimson Pro", Georgia, serif; }
+main { max-width: 680px; margin: 0 auto; padding: 36px 40px 30px; }
+h1 { font-weight: 600; font-size: 34px; line-height: 1.2; margin: 0 0 6px; }
+.meta { font: 15px/1.4 "Source Sans 3", sans-serif; color: var(--soft); margin: 0 0 22px; }
+h2 { font-weight: 600; font-size: 24px; margin: 0 0 8px; }
+p { margin: 0 0 14px; }
+.thm { border-left: 3px solid var(--rule); padding: 2px 0 2px 16px; margin: 0 0 16px; }
+.thm b { font-weight: 600; }
+figure { margin: 0; text-align: center; }
+mtp-display { display: block; font-size: 24px; margin: 4px 0 6px; }
+mtp-canvas { display: block; width: 100%; max-width: 250px; margin: 0 auto; }
+figcaption { font-size: 17px; color: var(--soft); text-align: left; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 6px; }
+</style></head>
+<body><main>
+<h1>Inner products and the area of a rectangle</h1>
+<p class="meta">Preprint · Section 1 of 4</p>
+<h2>1. The inequality</h2>
+<p>The projection of <i>u</i> onto the line through <i>v</i> is never longer than <i>u</i> itself. Multiplying both lengths by &#x2016;<i>v</i>&#x2016; gives the following result.</p>
+<div class="thm"><b>Theorem 1</b> (Cauchy&ndash;Schwarz). For all vectors <i>u</i> and <i>v</i> in &#x211D;<sup>2</sup>, the inequality below holds, with equality exactly when <i>u</i> and <i>v</i> lie on one line.</div>
+<figure>
+<mtp-model id="cs" src="/data/schwarz.mtpc"></mtp-model>
+<mtp-display model="cs" name="shown"></mtp-display>
+<mtp-canvas model="cs" name="c"></mtp-canvas>
+<figcaption><b>Figure 1.</b> Drag <i>u</i> or <i>v</i>. Point at a side of the inequality to see it as a rectangle of height &#x2016;<i>v</i>&#x2016;.</figcaption>
+</figure>
+</main></body></html>
