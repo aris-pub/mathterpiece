@@ -16,8 +16,7 @@
 (animation sweep (loop)
   (move m (from 1) (to 12) (duration 40))
   (move m (from 12) (to 1) (duration 40)))
-(canvas v (x -1.1) (y -1.1) (width 2.2) (height 2.2) chords
-  (on-ready (animation sweep)))
+(canvas v chords (on-ready (animation sweep)))
 
 ; accessible and interactive: mouse, touch or keyboard
 (slider times (move m (from 1) (to 12))
