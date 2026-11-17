@@ -57,8 +57,8 @@ The {term}`controls <control>` and the {term}`listeners <listener>` are the writ
 
 ```{rule} writable-targets
 The target of a writer and of a move is a name: a variable, an attribute of a shape, of an
-instance or of a term, or a member of a namespace or a formula, with a {term}`name string` allowed
-in place of a name ({numref}`shorthand-forms`). A target may be written only when it is free
+instance or of a term, or a member of a namespace or a formula, with `(name s)` allowed in place of
+a name ({numref}`names-from-values`). A target may be written only when it is free
 ({doc}`world-model`), its type does not hold `(const)`, it is not a token (a variable of type
 `color` or `font`), and it is not fixed by a variant ({numref}`motif-and-variant-types`). Besides:
 
