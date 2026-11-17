@@ -170,8 +170,8 @@ Every form is written `(head name? positional… named… docstring? body…)`.
   specifies. A head takes a fixed number of them. One that the head does not require may be left
   out only together with every positional argument after it.
 - The {term}`named arguments <named argument>` come next, in any order, each at most once
-  ({numref}`named-arguments-first`, {numref}`named-arguments-once`). Each is a form whose head
-  specifies.
+  ({numref}`named-arguments-first`, {numref}`named-arguments-once`). Each is a form whose head and
+  items are specified by the head.
 - The {term}`docstring`, for a declaration, comes next ({numref}`docstrings`).
 - The body comes last: any number of items, or none, of the kinds that the form specifies
   ({numref}`contexts`). Whatever a form takes in a varying number goes in its body: no positional
@@ -203,7 +203,9 @@ Some forms, taken apart by the template:
 ```
 
 ```{rule} declared-names
-The name of a declaration is a bare name with one name part, `none`, a {term}`name string` such as
+Almost every declaration has a name slot, its second item. The exceptions are rare: a
+{term}`listener` is a declaration with no name slot ({numref}`forms-with-no-name`). The name of a
+declaration is a bare name with one name part, `none`, a {term}`name string` such as
 `#'dot-{k}'`, or `(name s)`. The string of a name string and of `(name s)` is known when compiling.
 `none` as the name means that the declaration has no name, as the head `head_` does
 ({numref}`unnamed-head`). A scene, a formula, a {term}`view` and a {term}`control` must have a name,
@@ -286,7 +288,7 @@ or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like �
 {numref}`sugar-rewrites`.
 
 ```{rule} docstrings
-Every declaration and every listener may have a docstring, `doc@'text'`, and at most one. The
+Every declaration may have a docstring, `doc@'text'`, and at most one. The
 docstring comes after all the positional arguments and all the named arguments, and before the
 body. In a form that has no body, the docstring is the last item. Its string literal is plain: an
 interpolated string is an error.
