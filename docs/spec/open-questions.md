@@ -209,7 +209,7 @@ byte order mark at the start of a file ignored.
   (Q-grammar-1).
 - No declaration of any kind takes a keyword as its name: the head of a declaration, a shape, an
   expression form, a step, a component or a listener, or `term`, `doc`, `exists-when` or `import`
-  ({numref}`keywords`). The heads of optional arguments are not keywords. No declaration takes the
+  ({numref}`keywords`). The heads of named arguments are not keywords. No declaration takes the
   name of a built-in type, `pointer` or `self`. A declaration may take the name of a built-in
   function or constant, and from it on the name means the declared thing. `true`, `false` and
   `none` are values, never names. The names of the standard library are ordinary declarations
@@ -220,14 +220,14 @@ byte order mark at the start of a file ignored.
 ## P8. Declare before use, everywhere
 
 **Proposed principle.** A name is used only after its declaration, in every scope, with no
-exceptions, imports included. Optional arguments come before the body, in any order.
+exceptions, imports included. Named arguments come before the body, in any order.
 
 **Settles:** `exists-when` that names a later member (Q-grammar-8), `import` after the forms that
 use it (Q-grammar-11), the items of a formula in any order (Q-grammar-9), and where a docstring
 may be written (Q-grammar-3).
 
 **Decided:** a name is used only after its declaration in every scope, imports included, and
-optional arguments come before the body, in any order.
+named arguments come before the body, in any order.
 
 **Decided (2026-11-15):** a docstring comes after all the positional arguments and all the optional
 arguments, and before the body. A form that has no body has its docstring last
@@ -236,7 +236,7 @@ arguments, and before the body. A form that has no body has its docstring last
 ## P9. `let` and `foreach` may be written wherever declarations may be written
 
 **Proposed principle.** `let` and `foreach` may be written in every body that holds declarations
-or items, and nowhere else: not among the optional arguments of a shape.
+or items, and nowhere else: not among the named arguments of a shape.
 
 **Settles:** Q-grammar-4 to 7. Q-grammar-10 (whether a listener on its own view names that view)
 was a separate question, filed as mtp-6k7f.

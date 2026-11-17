@@ -532,7 +532,7 @@ class TestWhen:
         ],
     )
     def test_items_that_give_shapes_in_any_order(self, items, ops):
-        # mtp-1l12: an (if …) item after a (when …) item was taken for an optional argument.
+        # mtp-1l12: an (if …) item after a (when …) item was taken for a named argument.
         # A canvas gives a shape from one item at most (mtp-7i3j), so each item gives others.
         scene = "(bool show true) (scene s (circle a) (circle b) (circle c) (circle d))"
         m = model(f"{scene} (canvas v (pan false) {items})")

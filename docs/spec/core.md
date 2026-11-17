@@ -98,7 +98,7 @@ before any other rewrite of the declaration that it copies.
 | `(pos free@[X Y])`, `(pos free@P)` | `(x free@X) (y free@Y)`, `(x free@(. P 0)) (y free@(. P 1))` | As for `(pos P)` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, `(wait)`, in an animation's body | `(move none (duration T))`, `(move none)` | |
-| `(animation OPT… A B MORE…)`, and the body of a choreo | `(animation OPT… (in-order A B MORE…))` | `OPT…` are the {term}`optional arguments <optional argument>` of the animation, the `(defaults …)` and the `(loop …)` |
+| `(animation OPT… A B MORE…)`, and the body of a choreo | `(animation OPT… (in-order A B MORE…))` | `OPT…` are the {term}`named arguments <named argument>` of the animation, the `(defaults …)` and the `(loop …)` |
 | `(on-drag S M.pos ITEMS…)`, `(on-drag S M.x ITEMS…)`, `(on-drag S M.y ITEMS…)` | `(on-drag S (move M.pos (to pointer)) ITEMS…)`, `(on-drag S (move M.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move M.y (to (. pointer 1))) ITEMS…)` | `M` names the shape or the term `S` |
 ```
 

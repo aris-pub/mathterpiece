@@ -591,7 +591,7 @@ class TestForeachOverSeveral:
 
 
 class TestTheFormTemplate:
-    # syntax.md, section 8: a head, a name, positional arguments, optional arguments in any order,
+    # syntax.md, section 8: a head, a name, positional arguments, named arguments in any order,
     # then a body.
     K = "(real k 0 (>= 0) (<= 10))"
 
@@ -614,7 +614,7 @@ class TestTheFormTemplate:
         ],
     )
     def test_an_optional_argument_comes_before_the_body(self, src, arg, form):
-        error(src, rf"\({arg} …\) is an optional argument, so it comes before the {form}'s body")
+        error(src, rf"\({arg} …\) is a named argument, so it comes before the {form}'s body")
 
     @pytest.mark.parametrize(
         "src",

@@ -40,7 +40,7 @@ def xfail(bead: str, why: str):
 
 DOCSTRING_PLACE = xfail("mtp-ydd4.7.34", "the compiler takes a docstring from any place")
 MOTIF_DOCSTRING = xfail("mtp-qiro", "a variable in a motif's body may not have a docstring")
-OPTIONS_LAST = xfail("mtp-ydd4.7.11", "some forms allow an optional argument after the body")
+OPTIONS_LAST = xfail("mtp-ydd4.7.11", "some forms allow a named argument after the body")
 TOP_LET = xfail("mtp-ydd4.7.7", "a let at the top level is an error")
 BODY_LET = xfail("mtp-ydd4.7.8", "a let is an error in some bodies that hold items")
 ARGUMENT_LET = xfail("mtp-ydd4.7.9", "a let or a foreach among the arguments of a shape compiles")
@@ -304,7 +304,7 @@ class TestFormsWithNoName:
         compile_error("(real k 0 (>= 0) (<= 1)) (slider_ (move k (from 0) (to 1)))")
 
 
-@rule("optional-arguments-first")
+@rule("named-arguments-first")
 class TestOptionalArgumentsFirst:
     def test_in_any_order_before_the_body(self):
         assert mtpc("(scene s (circle c (r 1) (fill 'red')))") == mtpc(
@@ -331,7 +331,7 @@ class TestOptionalArgumentsFirst:
         compile_error("(formula f tex'x') (display d f (on-live (animation)) (kind 'block'))")
 
 
-@rule("optional-arguments-once")
+@rule("named-arguments-once")
 class TestOptionalArgumentsOnce:
     def test_twice_is_an_error(self):
         compile_error("(scene s (circle c (fill 'red') (fill 'blue')))")

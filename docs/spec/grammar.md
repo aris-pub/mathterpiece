@@ -160,7 +160,7 @@ is given in {numref}`dot-name-part`.
 ## The form template
 
 ```{rule} form-template
-Every form is written `(head name? positional… optional… docstring? body…)`:
+Every form is written `(head name? positional… named… docstring? body…)`:
 
 - The head is the first item. In a declaration, it names the kind of thing declared. It is a name
   (`circle`, `real`, `motif`, `dial`), a name followed by brackets (`list[color]`, `func[real]`), a
@@ -168,8 +168,8 @@ Every form is written `(head name? positional… optional… docstring? body…)
 - The name, for a form that has one, is the second item ({numref}`declared-names`).
 - The {term}`positional arguments <positional argument>` come next. Each kind of form has a fixed
   number of them, and some of them may be left out.
-- The {term}`optional arguments <optional argument>` come next
-  ({numref}`optional-arguments-first`).
+- The {term}`named arguments <named argument>` come next
+  ({numref}`named-arguments-first`).
 - The {term}`docstring`, for a form that has one, comes next ({numref}`docstrings`).
 - The body comes last: any number of items, or none. The kinds of item in a body depend on
   the form ({numref}`contexts`).
@@ -183,7 +183,7 @@ Some forms, taken apart by the template:
 ```{table}
 :class: form-parts
 
-| Form | Head | Name | Positional | Optional | Docstring | Body |
+| Form | Head | Name | Positional | Named | Docstring | Body |
 |---|---|---|---|---|---|---|
 | `(circle c (r 1) (fill 'crimson'))` | `circle` | `c` |  | `(r 1)`, `(fill 'crimson')` |  | no |
 | `(real k 1 (>= 0) (<= 3))` | `real` | `k` | `1` |  |  | yes |
@@ -214,9 +214,9 @@ compiling. `(circle 'c' (r 1))` is an error, since the name is in quotes, and so
 
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
-optional argument: a {term}`listener`, `(move …)`, `(set …)`, an `(animation …)` inside a
+named argument: a {term}`listener`, `(move …)`, `(set …)`, an `(animation …)` inside a
 {term}`control` or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
-`(term …)`, `(like …)`, every optional argument, every call and every special form. A {term}`view` and a control always have a
+`(term …)`, `(like …)`, every named argument, every call and every special form. A {term}`view` and a control always have a
 name, because their elements on the page give it, as `<mtp-canvas name="v">`.
 ```
 
@@ -228,24 +228,24 @@ So the second item of each of these is not a name:
 - `(let ((h (/ w 2))) (rect_ (width h)))`: `((h (/ w 2)))`, the bindings.
 - `(import math clamp)`: `math`, the file that the import reads.
 - `(term a (fill 'crimson'))`: `a`, the term that the form gives attributes to.
-- `(r 1)`, an optional argument: `1`, its value.
+- `(r 1)`, a named argument: `1`, its value.
 
 `(canvas v s)` and `(slider s (move k (from 0) (to 1)))` have the names `v` and `s`, and a canvas or
 a slider without a name is an error.
 
-```{rule} optional-arguments-first
-An optional argument is a form, after the name and the positional arguments, whose head names one
-of the optional arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`. In every
-form, the optional arguments come before the body, in any order, except that a `(like …)` comes
-before every other optional argument. An optional argument after the first item of the body is an
-error, such as "(x …) is an optional argument, so
+```{rule} named-arguments-first
+A named argument is a form, after the name and the positional arguments, whose head names one
+of the named arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`. In every
+form, the named arguments come before the body, in any order, except that a `(like …)` comes
+before every other named argument. A named argument after the first item of the body is an
+error, such as "(x …) is a named argument, so
 it comes before the canvas's body".
 ```
 
 So `(circle c (r 1) (fill 'red'))` and `(circle c (fill 'red') (r 1))` are the same form, and
 `(circle d (like c) (r 2))` is allowed. `(circle d (r 2) (like c))` is an error, since its
 `(like …)` is not first. `(canvas v s (x 0))` and `(group g (circle_ (r 1)) (defaults (fill 'red')))`
-are errors, since an optional argument comes after the first item of the body.
+are errors, since a named argument comes after the first item of the body.
 
 :::{admonition} Code differs
 :class: note
@@ -256,8 +256,8 @@ animations, of `at-once` and `in-order`, of canvases, of controls and of listene
 Bead mtp-ydd4.7.11 makes these errors.
 :::
 
-```{rule} optional-arguments-once
-Each optional argument appears at most once in a form: a second one is an error, such as "'fill' is
+```{rule} named-arguments-once
+Each named argument appears at most once in a form: a second one is an error, such as "'fill' is
 given twice".
 ```
 
@@ -270,13 +270,13 @@ or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like �
 
 ```{rule} docstrings
 Every declaration and every listener may have a docstring, `doc@'text'`, and at most one. The
-docstring comes after all the positional arguments and all the optional arguments, and before the
+docstring comes after all the positional arguments and all the named arguments, and before the
 body. In a form that has no body, the docstring is the last item. Its string literal is plain: an
 interpolated string is an error.
 ```
 
 So a docstring comes after the name, the positional arguments, the parameters of a function or a
-motif included, and the optional arguments. A variable in the body of a motif may have one, as any
+motif included, and the named arguments. A variable in the body of a motif may have one, as any
 other declaration. `(real k 1 doc@'d' (>= 0))`, `(func f ((real x)) doc@'d' (* 2 x))` and
 `(circle c (r 1) doc@'d')` are allowed. `(real k 1 (>= 0) doc@'d')`,
 `(func f ((real x)) (* 2 x) doc@'d')`, `(circle c doc@'d' (r 1))` and
@@ -289,8 +289,8 @@ before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an e
 :::{admonition} Code differs
 :class: note
 The compiler removes a docstring from any place after the name (`compiler.py:7322`, `_take_doc`),
-so a docstring before an optional argument or after the body compiles. About 22 forms of the
-examples have a docstring before an optional argument, such as a button, a play, an `on-ready` or
+so a docstring before a named argument or after the body compiles. About 22 forms of the
+examples have a docstring before a named argument, such as a button, a play, an `on-ready` or
 an `on-click` with a docstring before its `(animation …)`, and three formulas with a docstring
 before their `(defaults …)`. Bead mtp-ydd4.7.34 makes these errors and moves those docstrings. A
 variable in the body of a motif may not have a docstring: `(motif m () (real k 1 doc@'d') …)` is the error
@@ -309,15 +309,15 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 :::{table} The bodies of mtp. "let, foreach" is "yes" for a body that may hold a `let` and a `foreach` ({numref}`body-let-foreach`), and "no body" for a form that has no body.
 :name: contexts-table
 
-| Body | Optional arguments | Other items | let, foreach |
+| Body | Named arguments | Other items | let, foreach |
 |---|---|---|---|
 | The top level of a source | none | `import`. Declarations of types (`type`), {term}`interfaces <interface>`, namespaces, palettes, colormaps, functions (`func`, `func[T]`), motifs, variants, choreos, transitions and named animations. At most one `scene`. Formulas. Views (`canvas`, `readout`, `display`) and controls (`slider`, `button`, `play`, `stepper`, `toggle`). Variables of any type, `font` and `rand-seed` included. Not: shapes, listeners, `term`, uses of choreos. A `let` or a `foreach` here holds no `import` | yes |
 | The top level of a {term}`file to import` | none | Only `import` and declarations of colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps, choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. In a file of the standard library, also `(primitive …)` ({numref}`primitive-form`). A `let` or a `foreach` here holds no `import` | yes |
 | `(scene name …)` | `(background …)`, `(transform …)` | Shapes: every shape, `group`, `row`, `column`, motif and variant instances. Variables. `exists-when` | yes |
-| `(group name …)`, `(row name …)`, `(column name …)` | the optional arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes |
-| Any other shape, such as `(circle name …)` | the optional arguments of the shape | The string of a text, as a positional argument | no body |
-| A motif instance, `(M name …)` | its parameters, and the optional arguments of an instance: `x`, `y`, `pos`, `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `like` | None: "an instance of M takes no members" | no body |
-| A variant instance | the optional arguments of its base shape, and the parameters of the variant | None | no body |
+| `(group name …)`, `(row name …)`, `(column name …)` | the named arguments of a group: `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `fixed-size`, and for a row or a column `gap` and `align` | Shapes. `exists-when`. Not: variables | yes |
+| Any other shape, such as `(circle name …)` | the named arguments of the shape | The string of a text, as a positional argument | no body |
+| A motif instance, `(M name …)` | its parameters, and the named arguments of an instance: `x`, `y`, `pos`, `translate`, `transform`, `pointer-events`, `defaults`, `clip`, `like` | None: "an instance of M takes no members" | no body |
+| A variant instance | the named arguments of its base shape, and the parameters of the variant | None | no body |
 | `(motif name params …)` | none | Shapes. Variables that are bound or known when compiling. `exists-when`. Not: `animation` (a choreo is the template of animations), uses of choreos, `motif`, `scene` | yes |
 | `(variant name params shape)` | none | Exactly one shape, which is not a group | no |
 | `(func name params body)` | none | Exactly one expression | no |
@@ -335,8 +335,8 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(canvas name …)` | `x`, `y`, `width`, `height`, all four or none ({numref}`canvas-view-box`), `transform`, `pan`, `zoom`, `toggle-duration`, `toggle-ease` | Its content, at least one item: names of shapes or of the scene, list literals, and expressions that give a shape, `none` or a list of shapes, such as `(when c d)`. Listeners on its shapes, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet`, `on-pointermove` ({numref}`listeners-in-views`) | yes |
 | `(readout name value …)` | `(font f)` | The listeners `on-live` and `on-quiet` ({numref}`listeners-in-views`) | yes |
 | `(display name formula …)` | `(kind k)` | Listeners on the terms of its formula (`on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-drag`), `on-live`, `on-quiet` ({numref}`listeners-in-views`) | yes |
-| A control, such as `(slider name …)` | its optional arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)`, `(set …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes |
-| A listener, inside the body of a view | its optional arguments, its animation among them. Not: `(in …)` | Its positional arguments: the shape or term that it listens to, and for some listeners a target. Conditions | yes |
+| A control, such as `(slider name …)` | its named arguments, among them `(in view…)` and its animation, written `(animation …)`, `(move …)`, `(set …)` or a use of a choreo | Its positional argument: the move of a slider, the target of a toggle. Conditions, such as `(>= k 0)` | yes |
+| A listener, inside the body of a view | its named arguments, its animation among them. Not: `(in …)` | Its positional arguments: the shape or term that it listens to, and for some listeners a target. Conditions | yes |
 | `(defaults …)` of a group or an instance | none | Items `(attribute value)` for the members of the container | yes |
 | `(defaults …)` of an animation | none | `(duration …)`, `(ease …)` | yes |
 | `(defaults …)` of a formula | none | Items `(attribute value)` for the terms | yes |
@@ -364,11 +364,11 @@ import included, and nowhere else. Their items are of the kinds that the body ar
 ```
 
 The column "let, foreach" of {numref}`contexts-table` follows from this rule. So a `let` and a
-`foreach` may never be written among the positional arguments or the optional arguments of a form,
+`foreach` may never be written among the positional arguments or the named arguments of a form,
 in a form that has no body, or in a body that holds a fixed number of items, such as the body of a
 function or a variant. `(let ((k 2)) (real a k))` may be written at the top level, a `let` may be
 written among the steps of an animation, and `(circle c (let ((k 2)) (r k)))` is an error, because
-`(r k)` is an optional argument of the circle.
+`(r k)` is a named argument of the circle.
 
 :::{admonition} Code differs
 :class: note
@@ -401,8 +401,8 @@ In the scene and in the body of a motif, the compiler follows this. In a group,
 The string of a formula declares the terms that it marks with `\term{name}{…}`.
 ```
 
-The `(defaults …)` of a formula is an optional argument, so it comes before the body
-({numref}`optional-arguments-first`).
+The `(defaults …)` of a formula is a named argument, so it comes before the body
+({numref}`named-arguments-first`).
 The body holds the string, the terms, the `exists-when` forms and the variables. By
 {numref}`declare-before-use`, a `(term name …)` and an `exists-when` of a term come after the
 string. So `(formula f (defaults (padding 3)) tex'\term{a}{x}' (term a (fill 'red')))` is allowed,
@@ -434,7 +434,7 @@ imports is in {doc}`imports`.
 ## An example
 
 This file has each form in a body that allows it: a variable, its docstring and its constraints at
-the top level, the optional arguments of the scene before its shapes, a `foreach` of shapes in the
+the top level, the named arguments of the scene before its shapes, a `foreach` of shapes in the
 scene, and a canvas and a slider at the top level.
 
 ```{mtp-example}

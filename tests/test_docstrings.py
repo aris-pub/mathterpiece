@@ -1,4 +1,4 @@
-"""Docstrings: (doc 'text') is an optional argument every declaration takes. It is plain text,
+"""Docstrings: (doc 'text') is a named argument every declaration takes. It is plain text,
 known when compiling, for the illustrator and the author; it is written into the compiled model
 for objects and functions, and the inventory page shows it. The author, 2026-11-05: written as
 (doc …), never as a string at a fixed place; on every declaration; separate from a reader's
