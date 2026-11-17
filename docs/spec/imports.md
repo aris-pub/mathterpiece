@@ -4,7 +4,7 @@
 This page defines how a file uses the declarations of another `.mtp` file: how an `import` is
 written, which file it reads, what that file may hold, and which {term}`names <name>` the import
 gives. Three rules about imports are on other pages, next to rules of the same kind: where an
-`import` may be written is in {numref}`contexts-table`, the {term}`rewrites <rewrite>` of
+`import` may be written is in {doc}`grammar`, the {term}`rewrites <rewrite>` of
 `(import F)` and `(import F N…)` are in {numref}`sugar-rewrites`, and which imported declarations
 the {term}`.mtpc` holds is in {numref}`mtpc-imported-declarations`. The {term}`compiler` reads no
 file other than the source and the files that it imports ({numref}`compiler-reads-files`).
@@ -71,8 +71,10 @@ files named types.mtp.
 ## What a file to import holds
 
 ```{rule} import-file-holds
-A {term}`file to import` holds at its top level only the forms that {numref}`contexts-table` gives for the
-top level of a file to import. Any other form there is a compile error at that form, in every
+A {term}`file to import` holds at its top level only `import`, `let`, `foreach`, and declarations of
+colors, fonts, functions, motifs, variants, types, interfaces, namespaces, palettes, colormaps,
+choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A file of the standard
+library also holds `(primitive …)` ({numref}`primitive-form`). Any other form there is a compile error at that form, in every
 source that imports the file.
 ```
 

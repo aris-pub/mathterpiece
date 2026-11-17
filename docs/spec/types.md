@@ -407,8 +407,8 @@ So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circ
 
 ```{rule} motif-and-variant-types
 `(motif M PARAMS …)` declares the shape type M, whose objects are the instances of M.
-`(variant V PARAMS S)` declares the shape type V, whose base type is the type of the shape S
-({numref}`contexts-table`): a built-in shape type, a motif type or a variant type. An instance of
+`(variant V PARAMS S)` declares the shape type V, whose base type is the type of the shape S:
+a built-in shape type, a motif type or a variant type. An instance of
 V has the attributes of its base and the parameters of V. Every attribute that S gives, a
 {term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: an instance
 of V that gives it is a compile error. A parameter of V never has the name of an attribute of its

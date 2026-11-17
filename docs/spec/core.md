@@ -84,7 +84,7 @@ before any other rewrite of the declaration that it copies.
 | `(R ARGS…)`, with `R` a name of the primitive `rand`, `rand-int`, `pick` or `shuffle` ({numref}`primitive-form`), and no `(seed …)` | `(R ARGS… (seed S))` | `S` is the {term}`default seed` of the file that holds the form ({numref}`default-seed`) |
 | `(D)`, with `D` a name of the choreo `roll-dice` of the file rand of the standard library ({ref}`stdlib-rand`) | `(D S)` | `S` as for a random function |
 | `(set V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
-| `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`contexts-table`). A file imported several times, directly or through other files, is put in once |
+| `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`import-file-holds`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N (for T LO HI) E ITEMS…)`, and `parametric_` with no `N` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ITEMS…)`, where `S` is the `S` of a `(samples S)` among `ITEMS…`, which the polyline does not get, or 361 when there is none | `T` is a name. At most one `(samples S)` |
@@ -339,7 +339,11 @@ inventory.
 Each table lists the heads of one context. The column "Defined in" gives the page where a core
 form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the library.
 
+(top-level-heads)=
 ### Top-level forms
+
+The top level of a source holds only the heads of this table and `let`
+({numref}`body-let-foreach`), with at most one `scene`.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
@@ -363,6 +367,16 @@ form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the l
 | `(T N …)` for a type `T` | core | a variable, among them `color` and `font` tokens and `rand-seed` seeds | {doc}`world-model`, {doc}`reaction` |
 | {term}`components <component>` | core | {term}`views <view>` and controls (see "Components and their items") | {doc}`page-interface` |
 | `doc` | core | a {term}`docstring`, kept in the .mtpc | {doc}`compiled-format` |
+
+So a source need not hold a scene: `(real a 1) (readout r $'{a}')` is a world model with a
+variable and a readout, and an empty file is a world model with nothing in it. A source with two
+scenes is an error.
+
+:::{admonition} Code differs
+:class: note
+The error for a second scene is "a file has exactly one scene" (`compiler.py:4854`). Bead
+mtp-ydd4.7.59.
+:::
 
 ### Variables and constraints
 
@@ -576,6 +590,44 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | `in` | core | the views that a control belongs to | {doc}`page-interface`, {doc}`lifecycle` |
 | a condition | core | a bool form that limits what a writer writes | {doc}`reaction` |
 | `doc` on a component | core | its docstring | {doc}`compiled-format` |
+
+### Bodies
+
+:::{table} The bodies of mtp ({numref}`contexts`). A head that the table does not list has no body. "let, foreach" says whether the body may hold a `let` and a `foreach` ({numref}`body-let-foreach`).
+:name: bodies-table
+
+| Head | Its body | let, foreach |
+|---|---|---|
+| the top level of a source | the heads of {ref}`top-level-heads` | yes |
+| the top level of a {term}`file to import` | the forms of {numref}`import-file-holds` | yes |
+| `import` | the names to import, or none to import the whole file | no |
+| `scene` | shapes, variables, `exists-when` | yes |
+| `group`, `row`, `column` | shapes, `exists-when` | yes |
+| `motif` | shapes, variables that are bound or known when compiling, `exists-when` | yes |
+| `formula` | one string, plain or TeX, known when compiling, then terms, `exists-when` and variables ({numref}`formula-terms`) | yes |
+| `namespace` | variables, namespaces, palettes | yes |
+| `palette` | items `(member color)` | yes |
+| `interface` | items `(T attribute constraint…)` | yes |
+| `type`, a variable `(T name …)` | {term}`constraints <constraint>`, such as `(>= 0)` | yes |
+| `animation`, `choreo`, `at-once`, `in-order` | steps: `move`, `set`, `wait`, `at-once`, `in-order`, `(animation …)`, the name of an animation or a transition, a use of a choreo | yes |
+| `defaults` | items `(attribute value)`, and in an animation, `(duration …)` and `(ease …)` | yes |
+| `canvas` | at least one thing to draw: a name of a shape or of the scene, a list literal, or an expression that gives a shape, `none` or a list of shapes, such as `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
+| `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
+| a control, a listener | conditions, such as `(>= k 0)` | yes |
+| `let`, `foreach` | items of the kinds that the body around them holds | yes |
+| `in` | the views that a control belongs to | no |
+| `labels` | strings | no |
+| `transform` | transforms, such as `(rotate 90)` | no |
+| a call that takes any number of arguments, such as `(+ a b c)` | its arguments | no |
+:::
+
+So `(canvas v)` is an error, because a canvas holds at least one thing to draw, and `(canvas v s)`
+and `(canvas v c)` are allowed.
+
+:::{admonition} Code differs
+:class: note
+`(canvas v)` compiles, to a canvas that draws nothing. Bead mtp-ydd4.7.59.
+:::
 
 ### Heads that are errors
 

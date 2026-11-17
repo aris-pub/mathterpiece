@@ -58,7 +58,7 @@ smallest.mtpc and mathterpiece.js:
 <p><a href="pages/smallest/smallest.html">Open smallest.html</a>.</p>
 ```
 
-An empty file is a world model too ({numref}`contexts-table`), but it has nothing to draw.
+An empty file is a world model too ({numref}`top-level-forms`), but it has nothing to draw.
 
 ## The steps of compiling
 
