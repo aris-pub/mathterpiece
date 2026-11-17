@@ -202,22 +202,37 @@ Some forms, taken apart by the template:
 The name of a declaration is a bare name with one name part, `none`, a {term}`name string` such as
 `#'dot-{k}'`, or `(name s)`. The string of a name string and of `(name s)` is known when compiling.
 `none` as the name means that the declaration has no name, as the head `head_` does
-({numref}`unnamed-head`). A name in quotes is an error ("a name is written bare, not in quotes"),
-and so is a name that {numref}`declaration-names` does not allow.
+({numref}`unnamed-head`). A scene, a formula, a {term}`view` and a {term}`control` must have a name,
+and `none` is an error for them. Every other declaration may have the name `none`. A name in quotes
+is an error ("a name is written bare, not in quotes"), and so is a name that
+{numref}`declaration-names` does not allow.
 ```
+
+A scene is named because a canvas shows it by its name, a formula because a display shows it by its
+name, and a view and a control because the page places them by their names, as
+`<mtp-canvas name="v">`. Inside the compiler and the runtime, a declaration with no name is still a
+thing of its own, so nothing else needs a name.
+
+:::{admonition} Code differs
+:class: note
+The compiler allows a scene with no name, and refuses a function and a motif with no name. Bead
+mtp-ydd4.7.87 makes the first an error and allows the other two.
+:::
 
 So `(circle c (r 1))` has the name `c`, and `(circle none (r 1))` and `(circle_ (r 1))` have no
 name. Inside `(foreach k 3 …)`, `(circle #'dot-{k}' (r 1))` declares the circles `dot-0`, `dot-1`
 and `dot-2`, and `(circle (name s) (r 1))` takes its name from the string `s`, which is known when
-compiling. `(circle 'c' (r 1))` is an error, since the name is in quotes, and so is
-`(circle p.r (r 1))`, since its name has two name parts.
+compiling. `(real none 1)`, `(animation_ (move k (to 2)))` and `(func_ ((real x)) (* 2 x))` are
+allowed, and nothing can refer to them. `(canvas none s)`, `(slider_ (move k (from 0) (to 1)))`,
+`(scene_ (circle c (r 1)))` and `(formula none tex'x')` are errors, since those must have a name.
+`(circle 'c' (r 1))` is an error, since the name is in quotes, and so is `(circle p.r (r 1))`, since
+its name has two name parts.
 
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
 named argument: a {term}`listener`, `(move …)`, `(set …)`, an `(animation …)` inside a
 {term}`control` or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
-`(term …)`, `(like …)`, every named argument, every call and every special form. A {term}`view` and a control always have a
-name, because their elements on the page give it, as `<mtp-canvas name="v">`.
+`(term …)`, `(like …)`, every named argument, every call and every special form.
 ```
 
 So the second item of each of these is not a name:
@@ -230,8 +245,6 @@ So the second item of each of these is not a name:
 - `(term a (fill 'crimson'))`: `a`, the term that the form gives attributes to.
 - `(r 1)`, a named argument: `1`, its value.
 
-`(canvas v s)` and `(slider s (move k (from 0) (to 1)))` have the names `v` and `s`, and a canvas or
-a slider without a name is an error.
 
 ```{rule} named-arguments-first
 A named argument is a form, after the name and the positional arguments, whose head names one
