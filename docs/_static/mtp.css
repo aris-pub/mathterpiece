@@ -149,3 +149,25 @@ h1, h2, h3, h4, .bd-content h1, .bd-content h2, .bd-content h3 {
 .navbar-brand img.logo__image {
   height: 2rem;
 }
+
+/* A table that takes forms apart: each form on a row of its own, its parts on the line below. */
+table.form-parts tr { display: grid; grid-template-columns: 1fr 0.6fr 1.3fr 1.6fr 1.2fr minmax(3.5em, 0.5fr); }
+table.form-parts th:first-child, table.form-parts td:first-child { grid-column: 1 / -1; }
+table.form-parts td:first-child { border-bottom: 0; padding-bottom: 0; }
+table.form-parts th, table.form-parts td { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  /* On a narrow screen the parts wrap, each with its own label, and the headings go. */
+  table.form-parts thead { display: none; }
+  table.form-parts tr { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 0; }
+  table.form-parts td { border: 0; padding: 2px 0; }
+  table.form-parts td:first-child { flex-basis: 100%; }
+  /* Every part but the body's yes or no is code, so a cell with no code is a part that the form leaves out. */
+  table.form-parts td:nth-child(n+2):nth-child(-n+6):not(:has(code)) { display: none; }
+  table.form-parts td:nth-child(n+2)::before { display: block; font-size: 0.75em; opacity: 0.7; }
+  table.form-parts td:nth-child(2)::before { content: "head"; }
+  table.form-parts td:nth-child(3)::before { content: "name"; }
+  table.form-parts td:nth-child(4)::before { content: "positional"; }
+  table.form-parts td:nth-child(5)::before { content: "optional"; }
+  table.form-parts td:nth-child(6)::before { content: "docstring"; }
+  table.form-parts td:nth-child(7)::before { content: "body"; }
+}
