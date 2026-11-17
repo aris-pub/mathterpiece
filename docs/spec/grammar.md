@@ -96,6 +96,12 @@ broadened type whose last word is such a name. {numref}`unnamed-head` gives its 
 ```{mtp-grammar} strings
 ```
 
+A {token}`mtp:string` is a plain string or a {term}`TeX string`. An {term}`interpolated string`
+and a {term}`name string` hold text and expressions in braces, each expression with an optional
+{term}`format spec` after a colon, and a name string holds at least one expression.
+{numref}`string-literals` and {numref}`interpolated-strings` give the characters and the escapes
+inside each kind.
+
 ## The expressions that the parser produces
 
 ```{rule} parser-expressions
