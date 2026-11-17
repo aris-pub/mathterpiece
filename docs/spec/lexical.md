@@ -180,10 +180,10 @@ Each keyword is the head of a form of the language.
 | Steps of an animation | `move`, `wait`, `set`, `at-once`, `in-order` |
 :::
 
-The heads of {term}`optional arguments <optional argument>`, such as `x`, `r`, `size`, `gap`,
+The heads of {term}`named arguments <named argument>`, such as `x`, `r`, `size`, `gap`,
 `step`, `fill`, `duration`, `like`, `defaults` and `loop`, are not keywords, and neither are the
 heads of {term}`constraints <constraint>`, such as `const`, `length` and `wrap`. A word that is the
-head of an optional argument and also a keyword, such as `animation` or `move`, is a keyword.
+head of a named argument and also a keyword, such as `animation` or `move`, is a keyword.
 
 Which names no declaration and no binding may take is defined in {numref}`declaration-names`.
 

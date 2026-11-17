@@ -167,7 +167,7 @@ table.form-parts th, table.form-parts td { min-width: 0; overflow-wrap: anywhere
   table.form-parts td:nth-child(2)::before { content: "head"; }
   table.form-parts td:nth-child(3)::before { content: "name"; }
   table.form-parts td:nth-child(4)::before { content: "positional"; }
-  table.form-parts td:nth-child(5)::before { content: "optional"; }
+  table.form-parts td:nth-child(5)::before { content: "named"; }
   table.form-parts td:nth-child(6)::before { content: "docstring"; }
   table.form-parts td:nth-child(7)::before { content: "body"; }
 }

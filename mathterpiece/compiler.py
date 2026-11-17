@@ -108,7 +108,7 @@ RESERVED = frozenset(
     + ["doc", "free", "set", "primitive"]
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
-# The optional arguments of controls and listeners; the rest of their items are conditions.
+# The named arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
     *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
     *["rest", "in", "selected", "priority", "labels", "move"],
@@ -3539,7 +3539,7 @@ class _Compiler:
             # writer() reports an item that the writer does not take. If such an item counted as
             # the start of the body here, the option after it would get an error about its place.
             body = [it for it in body if _head(it) in WRITER_OPTIONS or not self.not_taken(it)]
-            # A use of a choreo stands for (animation …), an optional argument.
+            # A use of a choreo stands for (animation …), a named argument.
             self.options_first(
                 body,
                 lambda it: _head(it) in WRITER_OPTIONS or self.choreo_of(it) is not None,
@@ -3760,7 +3760,7 @@ class _Compiler:
                 body = True
             elif body:
                 raise CompileError(
-                    f"({_head(item)} …) is an optional argument, so it comes before the {what}'s"
+                    f"({_head(item)} …) is a named argument, so it comes before the {what}'s"
                     " body",
                     item.pos,
                 )
@@ -5347,7 +5347,7 @@ class _Compiler:
                     continue
                 if members:
                     raise CompileError(
-                        f"({_head(item)} …) is an optional argument, so it comes before the group's"
+                        f"({_head(item)} …) is a named argument, so it comes before the group's"
                         " body",
                         item.pos,
                     )

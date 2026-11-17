@@ -74,7 +74,7 @@ class TestCanvas:
     def test_an_option_after_a_listener(self):
         error(
             f"{SCENE} (canvas a s (on-click c {GO}) (pan false))",
-            r"\(pan …\) is an optional argument, so it comes before the canvas's body",
+            r"\(pan …\) is a named argument, so it comes before the canvas's body",
         )
 
     def test_it_keeps_its_options_and_conditions(self):

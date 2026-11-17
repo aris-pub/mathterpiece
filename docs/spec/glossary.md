@@ -87,7 +87,7 @@ digit
   One of the ASCII digits `0` to `9` ({numref}`number-literals`).
 
 body
-  The last items of a form, after its optional arguments. What a body may hold depends on the form
+  The last items of a form, after its named arguments. What a body may hold depends on the form
   ({numref}`contexts`).
 
 bool
@@ -162,6 +162,11 @@ name string
   `#'…'`: an interpolated string read as a name, which is `(name $'…')`
   ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
 
+named argument
+  A form after the name and the positional arguments of a form, whose head names one of the
+  named arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`
+  ({numref}`named-arguments-first`). Like a positional argument, it may be required or left out.
+
 expression
   One item of a source as the parser produces it: a form, a list literal, a word or a string
   literal ({numref}`parser-expressions`).
@@ -169,11 +174,6 @@ expression
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name with one name part
   ({numref}`literal-words`).
-
-optional argument
-  A form after the name and the positional arguments of a form, whose head names one of the
-  optional arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`
-  ({numref}`optional-arguments-first`).
 
 positional argument
   An item of a form that comes right after the name, known by its place ({numref}`form-template`).
