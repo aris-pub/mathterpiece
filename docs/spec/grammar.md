@@ -89,7 +89,8 @@ type ({doc}`types`).
 ```
 
 A {token}`mtp:head` is the head of a form that has no name: a name that ends with `_`, or a
-broadened type whose last word is such a name. {numref}`unnamed-head` gives its meaning.
+broadened type whose last word is such a name. The `_` at the end of a head stands for the missing
+name. {numref}`unnamed-head` gives its meaning.
 
 ### Strings
 
