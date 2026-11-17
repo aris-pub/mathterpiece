@@ -10,7 +10,7 @@ project = "mathterpiece"
 author = "Leo Torres"
 copyright = "2026, Leo Torres"
 
-extensions = ["myst_parser", "sphinxcontrib.mermaid", "mtp_sphinx"]
+extensions = ["myst_parser", "sphinxcontrib.mermaid", "mtp_sphinx", "spec_publish"]
 myst_fence_as_directive = ["mermaid"]
 myst_enable_extensions = ["colon_fence", "deflist"]
 myst_heading_anchors = 3
@@ -60,3 +60,8 @@ exclude_patterns = [
     "syntax.md",
     "type-system.md",
 ]
+
+# The pages of the spec that the author has approved. just spec-publish publishes these in full, the
+# glossary and the index of rules with them, and every other page as a stub with its title only
+# (docs/_ext/spec_publish.py).
+spec_approved = ["index", "overview", "compiler-runtime", "lexical", "glossary", "rules"]
