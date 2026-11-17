@@ -277,7 +277,7 @@ file scope
 
 file to import
   A `.mtp` file that another file imports with `import`. It holds only the forms that
-  {numref}`contexts-table` allows at its top level. Defined in {doc}`imports`.
+  {numref}`import-file-holds` allows at its top level. Defined in {doc}`imports`.
 
 value
   What an expression gives: a number, a bool, a string, a color, a font, a point, a transform, a

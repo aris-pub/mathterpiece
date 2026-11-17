@@ -94,7 +94,7 @@ the ends of a move into an {term}`int` are rounded. A `(length n)` is kept, so a
 declared `(length 2)` to a list of length 3 is a compile error.
 
 ```{rule} writer-conditions
-Each condition of a control or a listener ({numref}`contexts-table`) is a comparison `(OP A B)`, OP
+Each condition of a control or a listener ({numref}`bodies-table`) is a comparison `(OP A B)`, OP
 one of `<`, `<=`, `>` and `>=`, in which one side is a read of a variable or an attribute that the
 writer writes, and the other side, the limit, does not depend on that variable or attribute,
 directly or through bound values. Every other condition is a compile error.

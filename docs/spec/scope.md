@@ -84,6 +84,13 @@ The compiler reads every import of a file before any other form (`compiler.py:74
 so a name that an import gives may be used above the import. Bead mtp-ydd4.7.12.
 :::
 
+:::{admonition} Code differs
+:class: note
+In the scene and in the body of a motif, the compiler follows this. In a group,
+`compiler.py:5166` (`shape_here`) keeps every `exists-when` until all the members are declared, so
+`(group g (exists-when c true) (circle|none c))` compiles. Bead mtp-ydd4.7.10 makes it an error.
+:::
+
 ## What a name refers to
 
 ```{rule} name-lookup

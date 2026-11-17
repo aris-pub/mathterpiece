@@ -244,7 +244,7 @@ was a separate question, filed as mtp-6k7f.
 **Decided:** `let` and `foreach` may be written in every body that holds declarations or items, the
 top level included, and never among the arguments of a form. This includes the constraints of a
 variable or a type, the conditions of a writer, every `(defaults …)`, and the items of a palette
-and of an interface ({numref}`body-let-foreach`, {numref}`contexts-table`).
+and of an interface ({numref}`body-let-foreach`, {numref}`bodies-table`).
 
 **Decided (2026-11-11, mtp-6k7f):** every listener is written in the body of its view, acts only on
 what happens in that view, and has no `(in …)`. A listener on its own view leaves out the name of
