@@ -160,7 +160,7 @@ is given in {numref}`dot-name-part`.
 ## The form template
 
 ```{rule} form-template
-Every form is written `(head name? positional… optional… body…)`:
+Every form is written `(head name? positional… optional… docstring? body…)`:
 
 - The head is the first item. In a declaration, it names the kind of thing declared. It is a name
   (`circle`, `real`, `motif`, `dial`), a name followed by brackets (`list[color]`, `func[real]`), a
@@ -178,6 +178,22 @@ So a call `(+ a b c)`, a special form `(if c a b)` and an import `(import math d
 template, with no name.
 ```
 
+Some forms, taken apart by the template:
+
+| Form | Head | Name | Positional | Optional | Docstring | Body |
+|---|---|---|---|---|---|---|
+| `(circle c (r 1) (fill 'crimson'))` | `circle` | `c` | | `(r 1)`, `(fill 'crimson')` | | |
+| `(real k 1 (>= 0) (<= 3))` | `real` | `k` | `1` | | | `(>= 0)`, `(<= 3)` |
+| `(real k 1 doc@'the count' (>= 0))` | `real` | `k` | `1` | | `doc@'the count'` | `(>= 0)` |
+| `(list[color] cs ['red' 'blue'])` | `list[color]` | `cs` | `['red' 'blue']` | | | |
+| `((real (>= 0)) r 1)` | `(real (>= 0))` | `r` | `1` | | | |
+| `(line\|none l (from a) (to b))` | `line\|none` | `l` | | `(from a)`, `(to b)` | | |
+| `(func f ((real x)) (* 2 x))` | `func` | `f` | `((real x))` | | | `(* 2 x)` |
+| `(group g (defaults (fill 'red')) (circle_ (r 1)))` | `group` | `g` | | `(defaults (fill 'red'))` | | `(circle_ (r 1))` |
+| `(canvas v (x -2) (width 4) s)` | `canvas` | `v` | | `(x -2)`, `(width 4)` | | `s` |
+| `(slider s (move k (from 0) (to 1)) (label 'k'))` | `slider` | `s` | `(move k (from 0) (to 1))` | `(label 'k')` | | |
+| `(if c a b)` | `if` | | `c`, `a`, `b` | | | |
+
 ```{rule} declared-names
 The name of a declaration is a bare name with one name part, `none`, a {term}`name string` such as
 `#'dot-{k}'`, or `(name s)`. The string of a name string and of `(name s)` is known when compiling.
@@ -185,6 +201,12 @@ The name of a declaration is a bare name with one name part, `none`, a {term}`na
 ({numref}`unnamed-head`). A name in quotes is an error ("a name is written bare, not in quotes"),
 and so is a name that {numref}`declaration-names` does not allow.
 ```
+
+So `(circle c (r 1))` has the name `c`, and `(circle none (r 1))` and `(circle_ (r 1))` have no
+name. Inside `(foreach k 3 …)`, `(circle #'dot-{k}' (r 1))` declares the circles `dot-0`, `dot-1`
+and `dot-2`, and `(circle (name s) (r 1))` takes its name from the string `s`, which is known when
+compiling. `(circle 'c' (r 1))` is an error, since the name is in quotes, and so is
+`(circle p.r (r 1))`, since its name has two name parts.
 
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
@@ -194,6 +216,19 @@ optional argument: a {term}`listener`, `(move …)`, `(set …)`, an `(animation
 name, because their elements on the page give it, as `<mtp-canvas name="v">`.
 ```
 
+So the second item of each of these is not a name:
+
+- `(on-drag p (move k (to pointer)))`: `p`, the shape that the listener hears.
+- `(move k (to 1) (duration 0.5))`: `k`, the target that the move writes.
+- `(foreach k 3 (circle_ (r k)))`: `k`, the name that the foreach binds, and then `3`.
+- `(let ((h (/ w 2))) (rect_ (width h)))`: `((h (/ w 2)))`, the bindings.
+- `(import math clamp)`: `math`, the file that the import reads.
+- `(term a (fill 'crimson'))`: `a`, the term that the form gives attributes to.
+- `(r 1)`, an optional argument: `1`, its value.
+
+`(canvas v s)` and `(slider s (move k (from 0) (to 1)))` have the names `v` and `s`, and a canvas or
+a slider without a name is an error.
+
 ```{rule} optional-arguments-first
 An optional argument is a form, after the name and the positional arguments, whose head names one
 of the optional arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`. In every
@@ -202,6 +237,11 @@ before every other optional argument. An optional argument after the first item 
 error, such as "(x …) is an optional argument, so
 it comes before the canvas's body".
 ```
+
+So `(circle c (r 1) (fill 'red'))` and `(circle c (fill 'red') (r 1))` are the same form, and
+`(circle d (like c) (r 2))` is allowed. `(circle d (r 2) (like c))` is an error, since its
+`(like …)` is not first. `(canvas v s (x 0))` and `(group g (circle_ (r 1)) (defaults (fill 'red')))`
+are errors, since an optional argument comes after the first item of the body.
 
 :::{admonition} Code differs
 :class: note
@@ -216,6 +256,9 @@ Bead mtp-ydd4.7.11 makes these errors.
 Each optional argument appears at most once in a form: a second one is an error, such as "'fill' is
 given twice".
 ```
+
+So `(circle c (fill 'red') (fill 'blue'))` and `(circle c (r 1) (r 2))` are errors, and
+`(circle c (x 1) (y 2))` is allowed.
 
 Since `(pos P)` is `(x …) (y …)` ({numref}`sugar-rewrites`), a form that gives `pos` and also `x`
 or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like …)` are given in
@@ -234,6 +277,10 @@ other declaration. `(real k 1 doc@'d' (>= 0))`, `(func f ((real x)) doc@'d' (* 2
 `(circle c (r 1) doc@'d')` are allowed. `(real k 1 (>= 0) doc@'d')`,
 `(func f ((real x)) (* 2 x) doc@'d')`, `(circle c doc@'d' (r 1))` and
 `(button b doc@'d' (animation a))` are errors.
+`(button b (animation a) doc@'d')` and `(on-click p (animation a) doc@'d')` are allowed, and so is
+`(motif m ((real k 1)) doc@'d' (circle_ (r k)))`, whose docstring comes after its parameters and
+before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an error, and so is
+`(circle c doc@$'r = {r}')`, whose string is interpolated.
 
 :::{admonition} Code differs
 :class: note
