@@ -160,7 +160,7 @@ is given in {numref}`dot-name-part`.
 ## The form template
 
 ```{rule} form-template
-Every form is written `(head name? positional… option… body…)`:
+Every form is written `(head name? positional… optional… body…)`:
 
 - The head is the first item. In a declaration, it names the kind of thing declared. It is a name
   (`circle`, `real`, `motif`, `dial`), a name followed by brackets (`list[color]`, `func[real]`), a
