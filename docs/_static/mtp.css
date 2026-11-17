@@ -171,3 +171,8 @@ table.form-parts th, table.form-parts td { min-width: 0; overflow-wrap: anywhere
   table.form-parts td:nth-child(6)::before { content: "docstring"; }
   table.form-parts td:nth-child(7)::before { content: "body"; }
 }
+
+/* Inline mtp code is highlighted as code blocks are (mtp_sphinx.py, _highlight_inline): the parts
+   that the lexer leaves plain take the text's color, not the theme's purple for inline code. */
+code.mtp-inline { color: var(--pst-color-text-base); }
+code.mtp-inline.highlight { background-color: var(--pst-color-surface); }

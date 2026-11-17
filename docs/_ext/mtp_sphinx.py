@@ -23,7 +23,9 @@ from docutils import nodes
 from docutils.parsers.rst import directives
 from pygments.lexer import RegexLexer, bygroups
 from pygments.token import (
+    STANDARD_TYPES,
     Comment,
+    Error,
     Keyword,
     Name,
     Number,
@@ -458,6 +460,27 @@ def write_pages(app: Sphinx):
         (out / "mathterpiece.js").write_text(runtime(), encoding="utf-8")
 
 
+def _highlight_inline(app: Sphinx, doctree, docname: str) -> None:
+    """Inline code is highlighted as mtp, as code blocks are. Code that the lexer cannot read
+    without an error, such as a file name or HTML, and code inside a cross-reference stay plain."""
+    lexer = MtpLexer(ensurenl=False)
+    for lit in list(doctree.findall(nodes.literal)):
+        if "xref" in lit["classes"] or "mtp-inline" in lit["classes"]:
+            continue
+        if any(not isinstance(child, nodes.Text) for child in lit.children):
+            continue
+        tokens = list(lexer.get_tokens(lit.astext()))
+        if not tokens or any(tok in Error for tok, _ in tokens):
+            continue
+        lit.children = []
+        for tok, value in tokens:
+            while tok not in STANDARD_TYPES:
+                tok = tok.parent
+            short = STANDARD_TYPES[tok]
+            lit += nodes.inline(value, value, classes=[short]) if short else nodes.Text(value)
+        lit["classes"] += ["highlight", "mtp-inline"]
+
+
 def setup(app: Sphinx):
     app.add_lexer("mtp", MtpLexer)
     app.add_enumerable_node(rule_node, "rule", _rule_title, html=(visit_rule, depart_rule))
@@ -471,6 +494,7 @@ def setup(app: Sphinx):
     app.connect("env-purge-doc", _purge_terms)
     app.connect("env-merge-info", _merge_terms)
     app.connect("doctree-resolved", _title_term_links)
+    app.connect("doctree-resolved", _highlight_inline)
     app.add_directive("mtp-example", MtpExample)
     app.add_directive("mtp-grammar", MtpGrammar)
     app.add_directive("mtpc-of", MtpcOf)
