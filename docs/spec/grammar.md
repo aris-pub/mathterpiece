@@ -180,19 +180,23 @@ template, with no name.
 
 Some forms, taken apart by the template:
 
+```{table}
+:class: form-parts
+
 | Form | Head | Name | Positional | Optional | Docstring | Body |
 |---|---|---|---|---|---|---|
-| `(circle c (r 1) (fill 'crimson'))` | `circle` | `c` | | `(r 1)`, `(fill 'crimson')` | | |
-| `(real k 1 (>= 0) (<= 3))` | `real` | `k` | `1` | | | `(>= 0)`, `(<= 3)` |
-| `(real k 1 doc@'the count' (>= 0))` | `real` | `k` | `1` | | `doc@'the count'` | `(>= 0)` |
-| `(list[color] cs ['red' 'blue'])` | `list[color]` | `cs` | `['red' 'blue']` | | | |
-| `((real (>= 0)) r 1)` | `(real (>= 0))` | `r` | `1` | | | |
-| `(line\|none l (from a) (to b))` | `line\|none` | `l` | | `(from a)`, `(to b)` | | |
-| `(func f ((real x)) (* 2 x))` | `func` | `f` | `((real x))` | | | `(* 2 x)` |
-| `(group g (defaults (fill 'red')) (circle_ (r 1)))` | `group` | `g` | | `(defaults (fill 'red'))` | | `(circle_ (r 1))` |
-| `(canvas v (x -2) (width 4) s)` | `canvas` | `v` | | `(x -2)`, `(width 4)` | | `s` |
-| `(slider s (move k (from 0) (to 1)) (label 'k'))` | `slider` | `s` | `(move k (from 0) (to 1))` | `(label 'k')` | | |
-| `(if c a b)` | `if` | | `c`, `a`, `b` | | | |
+| `(circle c (r 1) (fill 'crimson'))` | `circle` | `c` |  | `(r 1)`, `(fill 'crimson')` |  | no |
+| `(real k 1 (>= 0) (<= 3))` | `real` | `k` | `1` |  |  | yes |
+| `(real k 1 doc@'the count' (>= 0))` | `real` | `k` | `1` |  | `doc@'the count'` | yes |
+| `(list[color] cs ['red' 'blue'])` | `list[color]` | `cs` | `['red' 'blue']` |  |  | no |
+| `((real (>= 0)) r 1)` | `(real (>= 0))` | `r` | `1` |  |  | no |
+| `(line\|none l (from a) (to b))` | `line\|none` | `l` |  | `(from a)`, `(to b)` |  | no |
+| `(func f ((real x)) (* 2 x))` | `func` | `f` | `((real x))` |  |  | yes |
+| `(group g (defaults (fill 'red')) (circle_ (r 1)))` | `group` | `g` |  | `(defaults (fill 'red'))` |  | yes |
+| `(canvas v (x -2) (width 4) s)` | `canvas` | `v` |  | `(x -2)`, `(width 4)` |  | yes |
+| `(slider s (move k (from 0) (to 1)) (label 'k'))` | `slider` | `s` | `(move k (from 0) (to 1))` | `(label 'k')` |  | no |
+| `(if c a b)` | `if` |  | `c`, `a`, `b` |  |  | no |
+```
 
 ```{rule} declared-names
 The name of a declaration is a bare name with one name part, `none`, a {term}`name string` such as
