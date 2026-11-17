@@ -160,19 +160,23 @@ is given in {numref}`dot-name-part`.
 ## The form template
 
 ```{rule} form-template
-Every form is written `(head name? positional… named… docstring? body…)`:
+Every form is written `(head name? positional… named… docstring? body…)`.
 
-- The head is the first item. In a declaration, it names the kind of thing declared. It is a name
-  (`circle`, `real`, `motif`, `dial`), a name followed by brackets (`list[color]`, `func[real]`), a
-  broadened type (`real|none`), or a form that gives a type (`((real (>= 0)) r 1)`).
-- The name, for a form that has one, is the second item ({numref}`declared-names`).
-- The {term}`positional arguments <positional argument>` come next. Each kind of form has a fixed
-  number of them, and some of them may be left out.
-- The {term}`named arguments <named argument>` come next
-  ({numref}`named-arguments-first`).
-- The {term}`docstring`, for a form that has one, comes next ({numref}`docstrings`).
-- The body comes last: any number of items, or none. The kinds of item in a body depend on
-  the form ({numref}`contexts`).
+- The head determines which of these the form has: whether it has a name, which positional and
+  named arguments it takes and which of them it requires, whether it may have a docstring, and
+  what its body may hold.
+- The name, for a declaration, if it takes one, is the second item ({numref}`declared-names`).
+- The {term}`positional arguments <positional argument>` come next, in the order that the head
+  specifies. A head takes a fixed number of them. One that the head does not require may be left
+  out only together with every positional argument after it.
+- The {term}`named arguments <named argument>` come next, in any order, each at most once
+  ({numref}`named-arguments-first`, {numref}`named-arguments-once`). Each is a form whose head
+  specifies.
+- The {term}`docstring`, for a declaration, comes next ({numref}`docstrings`).
+- The body comes last: any number of items, or none, of the kinds that the form specifies
+  ({numref}`contexts`). Whatever a form takes in a varying number goes in its body: no positional
+  argument and no named argument stands for several items. Whether the order of the items in the
+  body matters is specified by the head.
 
 So a call `(+ a b c)`, a special form `(if c a b)` and an import `(import math dot)` follow the
 template, with no name.
@@ -354,7 +358,7 @@ and `foreach` forms that {numref}`body-let-foreach` allows. Any other item in a 
 | `(defaults …)` of an animation | none | `(duration …)`, `(ease …)` | yes |
 | `(defaults …)` of a formula | none | Items `(attribute value)` for the terms | yes |
 | `(clip shape)` | none | Exactly one circle, rect, ellipse, triangle, polygon or ring | no |
-| `(import file name…)` | none | The file, then the names to import, or no names to import the file whole | no |
+| `(import file name…)` | none | The file, as its positional argument. Its body: the names to import, or no names to import the file whole | no |
 :::
 
 So a source need not hold a scene: `(real a 1) (readout r $'{a}')` is a world model with a
