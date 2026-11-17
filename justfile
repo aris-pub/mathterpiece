@@ -82,9 +82,13 @@ spec-linkcheck:
 spec-preview: spec-build
     npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/html --site d1eaf3d8-0626-4e13-a3a1-c9ed535b30da --alias draft --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['deploy_url'])"
 
-# build the spec site and publish it at https://spec.mtp-lang.org
-spec-publish: spec-build
-    npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/html --site d1eaf3d8-0626-4e13-a3a1-c9ed535b30da --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
+# build the spec with only the approved pages in full (spec_approved in docs/conf.py), the others as stubs, into docs/_build/published
+spec-build-published: spec-build
+    MTP_SPEC_APPROVED_ONLY=1 uv run --group docs sphinx-build -E -W --keep-going -b html -d docs/_build/doctrees-published docs docs/_build/published
+
+# publish the approved pages of the spec at https://spec.mtp-lang.org
+spec-publish: spec-build-published
+    npx -y --loglevel=silent netlify-cli@27.16.2 deploy --dir docs/_build/published --site d1eaf3d8-0626-4e13-a3a1-c9ed535b30da --prod --json | uv run --no-project python -c "import json, sys; print(json.load(sys.stdin)['url'])"
 
 # serve the docs at http://127.0.0.1:8821, building them again and reloading the page on each save
 docs:
