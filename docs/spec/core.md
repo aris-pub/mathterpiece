@@ -54,8 +54,8 @@ is written as it is.
 ## Rewrite rules
 
 The {term}`parser` makes the rewrites of the lexical shorthands while it reads the source:
-a prefixed form `H@X`, a {term}`name string` `#'…'`, a part after a {term}`list` {term}`literal`,
-`[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
+a prefixed form `H@X`, a {term}`name string` `#'…'`, a {term}`TeX string` `tex'…'`, a part after a
+{term}`list` {term}`literal`, `[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other syntactic sugar form is in the table of the rule below.
 
 (rewrite-when)=
@@ -475,7 +475,8 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 |---|---|---|---|
 | a {term}`TeX string` | core | the formula's LaTeX, which marks its terms | {doc}`world-model` |
 | `term` | core | `(term T ITEM…)`: a term's attributes | {doc}`world-model` |
-| `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding`, `tex` in a term | core | a term's attributes | {doc}`world-model` |
+| `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | a term's attributes | {doc}`world-model` |
+| `(tex S)` in a term | core | the LaTeX that the term shows | {doc}`world-model` |
 | `like` in a term | syntactic sugar | copies another term's form | {numref}`sugar-rewrites` |
 | `defaults` in a formula | syntactic sugar | attributes for every term | {numref}`sugar-rewrites` |
 | `exists-when` in a formula | core | when a term exists | {doc}`world-model` |
@@ -500,9 +501,17 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `fn` | core | `(fn PARAMS BODY)`: a function written in place | {doc}`types`, {doc}`evaluation` |
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
 | `type-of` | core | `(type-of X)`: the type of `X`, as a string | {doc}`types` |
+| `tex` | core | `(tex S)`: the string `S`, as LaTeX, which a formula, a term or a label typesets. `tex'…'` is syntactic sugar for it ({numref}`shorthand-forms`) | {doc}`types` |
 | `free` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
+
+:::{admonition} Code differs
+:class: note
+The parser reads `tex'…'` as a string literal marked as LaTeX (nodes.py, `StrLit`), not as the form
+`(tex S)`, and the compiler reads `(tex …)` only in a term (compiler.py:5226) and in a label
+(compiler.py:3865). Bead mtp-rry4 makes them follow the rule.
+:::
 
 ### Library functions
 
@@ -577,8 +586,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
 | the target of `on-drag` written as a name | syntactic sugar | the move of the shape's position | {numref}`sugar-rewrites` |
-| `label` | core | a control's label | {doc}`page-interface`, {doc}`accessibility` |
-| `tex` in a label | core | a label given as LaTeX | {doc}`page-interface` |
+| `label` | core | a control's label: a string, or `(tex S)` to typeset it as LaTeX | {doc}`page-interface`, {doc}`accessibility` |
 | `stops` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `stops` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | its bars, its rest between steps, its step names | {doc}`page-interface`, {doc}`time` |
 | `selected` on a button | core | whether it is the current choice | {doc}`page-interface`, {doc}`accessibility` |
