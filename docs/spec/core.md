@@ -29,21 +29,19 @@ A form that needs a value or a type to be rewritten is core.
 
 ```{rule} library-form
 The library is the built-in functions, which are implemented natively, and the files of the
-standard library, which are written in mtp. The file rand of the standard library also names the
-{term}`primitives <primitive>`, which are implemented natively too ({numref}`primitive-form`). A
-call of a library function is a call, which is a core form. The library holds functions, constants
+standard library, which are written in mtp. A call of a library function is a call, which is a
+core form. The library holds functions, constants
 and declarations, and no form of the language.
 ```
 
 By {numref}`declaration-names`, a declared function may take the name of a library function: after
 `(func + ((real a) (real b)) 7)`, `(+ 1 2)` is 7.
 
-The compiler rewrites every syntactic sugar form in the rewrite step, which comes before the prove step
-({numref}`compile-steps`), so the {term}`prover` is given only core forms. The prove step proves
-the {term}`body` of each `foreach`, motif and choreo once, before the expand step makes the
-copies, the instances and the uses ({numref}`prove-bodies-once`). So a form whose rewrite would need
-the value of a `foreach` name or of a parameter of a motif or a choreo is core: the prover proves
-it once for every value that the name may take, and the expand step replaces it ({numref}`names-from-values`).
+The compiler rewrites every syntactic sugar form before the prove step ({numref}`compile-steps`), so
+the {term}`prover` is given only core forms. The prover proves the {term}`body` of each `foreach`,
+motif and choreo only once, before any copies are made ({numref}`prove-bodies-once`). At that point
+the names of a `foreach` and the parameters of a motif or a choreo have no value yet, so a form
+whose rewrite would need one of their values is core ({numref}`names-from-values`).
 
 ### How a rewrite is written
 
