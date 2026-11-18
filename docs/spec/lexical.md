@@ -59,7 +59,7 @@ Each expression that the parser produces has a position: the line and the column
 first character, counting from 1. A byte order mark at the start is not counted. A newline
 (line feed, U+000A) starts a new line. Every other character, a tab included, adds 1 to the
 column. An expression that the parser builds from a shorter spelling has the position given in
-{numref}`shorthand-forms`.
+{numref}`parser-sugar`.
 ```
 
 ## Whitespace and comments

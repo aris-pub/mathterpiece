@@ -136,7 +136,7 @@ int
 
 interpolated string
   `f'…'`: text with expressions in braces, syntactic sugar for a `concat` form that joins the text and
-  the values, each written by `fmt` ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
+  the values, each written by `fmt` ({numref}`interpolated-strings`, {numref}`parser-sugar`).
 
 letter
   One of the ASCII letters `a` to `z` and `A` to `Z`, as a character of a name
@@ -160,7 +160,7 @@ name part
 
 name string
   `#'…'`: an interpolated string read as a name, which is `(name f'…')`
-  ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
+  ({numref}`interpolated-strings`, {numref}`parser-sugar`).
 
 named argument
   A form after the name and the positional arguments of a form, whose head names one of the

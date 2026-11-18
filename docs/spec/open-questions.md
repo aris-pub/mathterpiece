@@ -50,11 +50,11 @@ spec lists exactly which conditions narrow the range of a name: a comparison wit
 (Q-well-formedness-1). So examples/spiral-of-copies.mtp, which reads `dot-{(- k 1)}` only where
 `k` is not 0, compiles once the body of a `foreach` is proved once.
 
-## P2. A shorthand means exactly its rewrite
+## P2. Syntactic sugar means exactly its rewrite
 
 **Proposed principle.** Every syntactic sugar form means exactly the core forms that it rewrites into. Where
-the compiler gives a shorthand a different meaning today, the shorthand is wrong, and is changed
-to match its rewrite. A form that cannot be given a rewrite without computing a value or knowing
+the compiler gives a syntactic sugar form a different meaning today, the compiler is wrong, and
+is changed to match the rewrite. A form that cannot be given a rewrite without computing a value or knowing
 a type is core.
 
 **Settles:** `p.r` and `(. p r)` (Q-grammar-2, Q-core-1), `(wait t)` and `(move none (duration t))`
@@ -63,7 +63,7 @@ a type is core.
 `like` (Q-core-2), and the defaults of containers, animations and formulas (Q-core-15, 18, 21).
 Using a type to choose a rewrite makes the form core (Q-core-7, `map` over an int).
 
-**Decided:** a shorthand means exactly its rewrite, and where the code gives it another meaning,
+**Decided:** syntactic sugar means exactly its rewrite, and where the code gives it another meaning,
 the code is changed. A form that needs a value or a type to be rewritten is core
 ({numref}`sugar-form`, {numref}`sugar-rewrites`).
 
