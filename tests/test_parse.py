@@ -7,15 +7,14 @@ from fractions import Fraction
 from pathlib import Path
 
 import pytest
+from helpers import field, interp
 
 from mathterpiece.nodes import (
     Bar,
     BoolLit,
     Brackets,
     ComplexLit,
-    Field,
     Form,
-    InterpStrLit,
     IntLit,
     ListLit,
     Name,
@@ -30,7 +29,7 @@ from mathterpiece.parse import ParseError, parse
 NO_NAME = "_ is not a name: write none, or head_ for a form with no name"
 UNDERSCORE = "an underscore may only end the head of a form, as in (circle_ (r 1))"
 COLON = (
-    "':' may only start the format spec in the braces of an interpolated string, as in $'{x:.2f}'"
+    "':' may only start the format spec in the braces of an interpolated string, as in f'{x:.2f}'"
 )
 
 
@@ -102,7 +101,7 @@ class TestForms:
     def test_stray_close_paren(self):
         assert error_at("(a) )", "unexpected ')'") == Pos(1, 5)
 
-    @pytest.mark.parametrize("src", ["a", "'a'", "1", "true", "$'a'"])
+    @pytest.mark.parametrize("src", ["a", "'a'", "1", "true", "f'a'"])
     def test_toplevel_atom_is_error(self, src):
         error_at(src, "expected a form at the top level")
 
@@ -141,7 +140,7 @@ class TestByteOrderMark:
             ("(f ﻿ a)", Pos(1, 4)),
             ("(f a﻿b)", Pos(1, 5)),
             ("(f\n  r@﻿1)", Pos(2, 5)),
-            ("(f $'{﻿x}')", Pos(1, 7)),
+            ("(f f'{﻿x}')", Pos(1, 7)),
             ("﻿﻿(f)", Pos(1, 1)),
         ],
     )
@@ -350,7 +349,7 @@ class TestNames:
             ("a->b", only_ascii(">"), 6),
             ("a*b", only_ascii("*"), 5),
             ("x'", only_ascii("'"), 5),
-            ("f'(x)", only_ascii("'"), 5),
+            ("g'(x)", only_ascii("'"), 5),
             ("θ", only_ascii("θ"), 4),
             ("x²", only_ascii("²"), 5),
             ("α₁", only_ascii("α"), 4),
@@ -378,8 +377,8 @@ class TestNames:
     def test_a_colon_outside_braces(self, src, col):
         assert error_at(src, COLON) == Pos(1, col)
 
-    @pytest.mark.parametrize("text", ["a|tex'q'", "xs[0].tex'q'"])
-    def test_a_tex_string_after_a_bar_or_a_dot(self, text):
+    @pytest.mark.parametrize("text", ["a|f'q'", "xs[0].f'q'"])
+    def test_an_interpolated_string_after_a_bar_or_a_dot(self, text):
         atom_error(text, only_ascii("'"))
 
     def test_a_digit_first_is_read_as_a_number(self):
@@ -470,53 +469,53 @@ class TestStr:
 
 class TestInterpStr:
     def test_plain_text(self):
-        assert atom("$'plain'") == InterpStrLit(("plain",))
+        assert atom("f'plain'") == interp(("plain",))
 
     def test_empty(self):
-        assert atom("$''") == InterpStrLit(())
+        assert atom("f''") == interp(())
 
     def test_name(self):
-        assert atom("$'dot{i}'") == InterpStrLit(("dot", n("i")))
+        assert atom("f'dot{i}'") == interp(("dot", n("i")))
 
     def test_dotted_name(self):
-        assert atom("$'r = {disk.r}'") == InterpStrLit(("r = ", n("disk", "r")))
+        assert atom("f'r = {disk.r}'") == interp(("r = ", n("disk", "r")))
 
     def test_several_names(self):
-        assert atom("$'{a} and {b}'") == InterpStrLit((n("a"), " and ", n("b")))
+        assert atom("f'{a} and {b}'") == interp((n("a"), " and ", n("b")))
 
     def test_adjacent_names(self):
-        assert atom("$'{a}{b}'") == InterpStrLit((n("a"), n("b")))
+        assert atom("f'{a}{b}'") == interp((n("a"), n("b")))
 
     def test_whitespace_inside_braces(self):
-        assert atom("$'x { i } y'") == InterpStrLit(("x ", n("i"), " y"))
+        assert atom("f'x { i } y'") == interp(("x ", n("i"), " y"))
 
     def test_line_break_inside_braces(self):
-        assert atom("$'{\n i\n}'") == InterpStrLit((n("i"),))
+        assert atom("f'{\n i\n}'") == interp((n("i"),))
 
     def test_literal_braces(self):
-        assert atom("$'{{x}} and {{'") == InterpStrLit(("{x} and {",))
+        assert atom("f'{{x}} and {{'") == interp(("{x} and {",))
 
     def test_literal_braces_next_to_name(self):
-        assert atom("$'{{{i}}}'") == InterpStrLit(("{", n("i"), "}"))
+        assert atom("f'{{{i}}}'") == interp(("{", n("i"), "}"))
 
     def test_escapes(self):
-        assert atom(r"$'it\'s {x}\n'") == InterpStrLit(("it's ", n("x"), "\n"))
+        assert atom(r"f'it\'s {x}\n'") == interp(("it's ", n("x"), "\n"))
 
     def test_unicode_name_is_an_error(self):
-        atom_error("$'{α₁}'", only_ascii("α"))
+        atom_error("f'{α₁}'", only_ascii("α"))
 
     @pytest.mark.parametrize(
         "text, msg",
         [
-            ("$'{}'", "expected an expression inside braces"),
-            ("$'{  }'", "expected an expression inside braces"),
-            ("$'a } b'", "unmatched '}'; write '}}' for a literal brace"),
-            ("$'a {b'", only_ascii("'")),
-            ("$'a {b c'", "expected a single expression and '}' inside braces"),
-            ("$'{a b}'", "expected a single expression and '}' inside braces"),
-            ("$'{-x}'", letter_first("-x")),
-            ("$'{a.}'", "each '.' in a name is followed by a name part: 'a.'"),
-            (r"$'\t'", r"invalid escape '\t'"),
+            ("f'{}'", "expected an expression inside braces"),
+            ("f'{  }'", "expected an expression inside braces"),
+            ("f'a } b'", "unmatched '}'; write '}}' for a literal brace"),
+            ("f'a {b'", only_ascii("'")),
+            ("f'a {b c'", "expected a single expression and '}' inside braces"),
+            ("f'{a b}'", "expected a single expression and '}' inside braces"),
+            ("f'{-x}'", letter_first("-x")),
+            ("f'{a.}'", "each '.' in a name is followed by a name part: 'a.'"),
+            (r"f'\t'", r"invalid escape '\t'"),
         ],
     )
     def test_invalid(self, text, msg):
@@ -529,10 +528,10 @@ class TestInterpStr:
         atom_error("$", "'$' must be followed by a quote")
 
     def test_unterminated_reports_dollar(self):
-        assert error_at("(f $'abc", "unterminated string") == Pos(1, 4)
+        assert error_at("(f f'abc", "unterminated string") == Pos(1, 4)
 
     def test_followed_directly_by_token_is_error(self):
-        error_at("(f $'a'b)", "expected whitespace, '(', ')' or ';' after a string")
+        error_at("(f f'a'b)", "expected whitespace, '(', ')' or ';' after a string")
 
 
 class TestNone:
@@ -574,8 +573,8 @@ class TestCommentsInBraces:
     @pytest.mark.parametrize(
         "src, pos",
         [
-            ("(f $'{x ; c\n}')", Pos(1, 9)),
-            ("(f $'{ ;c\n x}')", Pos(1, 8)),
+            ("(f f'{x ; c\n}')", Pos(1, 9)),
+            ("(f f'{ ;c\n x}')", Pos(1, 8)),
             ("(f #'a{k\n ;c\n}')", Pos(2, 2)),
         ],
     )
@@ -584,7 +583,7 @@ class TestCommentsInBraces:
         assert error_at(src, msg) == pos
 
     def test_a_comment_inside_a_form_in_braces(self):
-        assert atom("$'{(g ; c\n x)}'") == InterpStrLit((Form((n("g"), n("x"))),))
+        assert atom("f'{(g ; c\n x)}'") == interp((Form((n("g"), n("x"))),))
 
 
 class TestExpressionsInBraces:
@@ -592,21 +591,21 @@ class TestExpressionsInBraces:
     @pytest.mark.parametrize(
         "text, part",
         [
-            ("$'{1}'", IntLit(1)),
-            ("$'{(f x)}'", Form((n("f"), n("x")))),
-            ("$'{'a'}'", StrLit("a")),
-            ("$'{none}'", NoneLit()),
-            ("$'{+}'", n("+")),
-            ("$'{[0 1]}'", ListLit((IntLit(0), IntLit(1)))),
-            ("$'{(or? x 0):.2f}'", Field(Form((n("or?"), n("x"), IntLit(0))), ".2f")),
-            ("$'{ (f x) :>8}'", Field(Form((n("f"), n("x"))), ">8")),
+            ("f'{1}'", IntLit(1)),
+            ("f'{(f x)}'", Form((n("f"), n("x")))),
+            ("f'{'a'}'", StrLit("a")),
+            ("f'{none}'", NoneLit()),
+            ("f'{+}'", n("+")),
+            ("f'{[0 1]}'", ListLit((IntLit(0), IntLit(1)))),
+            ("f'{(or? x 0):.2f}'", field(Form((n("or?"), n("x"), IntLit(0))), ".2f")),
+            ("f'{ (f x) :>8}'", field(Form((n("f"), n("x"))), ">8")),
         ],
     )
     def test_any_expression(self, text, part):
-        assert atom(text) == InterpStrLit((part,))
+        assert atom(text) == interp((part,))
 
     def test_a_string_inside_braces_has_its_own_quotes(self):
-        assert atom("$'a {(or? x 'n/a')} b'") == InterpStrLit(
+        assert atom("f'a {(or? x 'n/a')} b'") == interp(
             ("a ", Form((n("or?"), n("x"), StrLit("n/a"))), " b")
         )
 
@@ -698,22 +697,22 @@ class TestIndexing:
     @pytest.mark.parametrize(
         "text, parts",
         [
-            ("$'{g[0].r}'", (n("g", IntLit(0), "r"),)),
-            ("$'{ g[ i ] }'", (n("g", n("i")),)),
-            ("$'{g[(+ i 1)]}'", (n("g", Form((n("+"), n("i"), IntLit(1)))),)),
-            ("$'{g['a']}'", (n("g", StrLit("a")),)),
-            ("$'x {g[0]} y'", ("x ", n("g", IntLit(0)), " y")),
+            ("f'{g[0].r}'", (n("g", IntLit(0), "r"),)),
+            ("f'{ g[ i ] }'", (n("g", n("i")),)),
+            ("f'{g[(+ i 1)]}'", (n("g", Form((n("+"), n("i"), IntLit(1)))),)),
+            ("f'{g['a']}'", (n("g", StrLit("a")),)),
+            ("f'x {g[0]} y'", ("x ", n("g", IntLit(0)), " y")),
         ],
     )
     def test_inside_interpolated_string(self, text, parts):
-        assert atom(text) == InterpStrLit(parts)
+        assert atom(text) == interp(parts)
 
     @pytest.mark.parametrize(
         "text, msg",
         [
-            ("$'{g [0]}'", "expected a single expression and '}' inside braces"),
-            ("$'{g[0]x}'", "unexpected 'x' after index"),
-            ("$'{g[0}'", "expected ']' after '['"),
+            ("f'{g [0]}'", "expected a single expression and '}' inside braces"),
+            ("f'{g[0]x}'", "unexpected 'x' after index"),
+            ("f'{g[0}'", "expected ']' after '['"),
         ],
     )
     def test_invalid_inside_interpolated_string(self, text, msg):
@@ -726,7 +725,7 @@ class TestPositions:
         assert form.pos == Pos(2, 3)
 
     def test_atom_positions(self):
-        (form,) = parse("(circle 'a'\n  (r 1.5) $'x{i}' true)")
+        (form,) = parse("(circle 'a'\n  (r 1.5) f'x{i}' true)")
         head, name, r, interp, flag = form.items
         assert head.pos == Pos(1, 2)
         assert name.pos == Pos(1, 9)
@@ -746,10 +745,12 @@ class TestPositions:
         assert form.items[2].pos == Pos(2, 5)
 
     def test_name_inside_interp_has_position(self):
-        (form,) = parse("(f $'ab{ x }')")
-        interp = form.items[1]
-        assert isinstance(interp, InterpStrLit)
-        (_, name) = interp.parts
+        (form,) = parse("(f f'ab{ x }')")
+        whole = form.items[1]
+        assert isinstance(whole, Form)
+        (_, _, piece) = whole.items
+        assert isinstance(piece, Form)
+        name = piece.items[1]
         assert isinstance(name, Name)
         assert name.pos == Pos(1, 10)
 
@@ -817,27 +818,27 @@ class TestFormatSpecs:
     @pytest.mark.parametrize(
         "text, field",
         [
-            ("$'{x:.2f}'", Field(n("x"), ".2f")),
-            ("$'{g[0].r:>8.3f}'", Field(n("g", IntLit(0), "r"), ">8.3f")),
-            ("$'{x: >5}'", Field(n("x"), " >5")),
-            ("$'{ x :.1%}'", Field(n("x"), ".1%")),
+            ("f'{x:.2f}'", field(n("x"), ".2f")),
+            ("f'{g[0].r:>8.3f}'", field(n("g", IntLit(0), "r"), ">8.3f")),
+            ("f'{x: >5}'", field(n("x"), " >5")),
+            ("f'{ x :.1%}'", field(n("x"), ".1%")),
         ],
     )
     def test_field(self, text, field):
-        assert atom(text) == InterpStrLit((field,))
+        assert atom(text) == interp((field,))
 
     def test_with_text_around(self):
-        assert atom("$'area {a:.2f} m'") == InterpStrLit(("area ", Field(n("a"), ".2f"), " m"))
+        assert atom("f'area {a:.2f} m'") == interp(("area ", field(n("a"), ".2f"), " m"))
 
     def test_no_spec_stays_a_name(self):
-        assert atom("$'{x}'") == InterpStrLit((n("x"),))
+        assert atom("f'{x}'") == interp((n("x"),))
 
     @pytest.mark.parametrize(
         "text, msg",
         [
-            ("$'{x:{y}}'", "a format spec cannot hold braces"),
-            ("$'{x:.2f'", "expected a single expression and '}' inside braces"),
-            ("$'{:.2f}'", "expected an expression inside braces"),
+            ("f'{x:{y}}'", "a format spec cannot hold braces"),
+            ("f'{x:.2f'", "expected a single expression and '}' inside braces"),
+            ("f'{:.2f}'", "expected an expression inside braces"),
         ],
     )
     def test_invalid(self, text, msg):
@@ -965,15 +966,15 @@ def test_a_malformed_file_gives_one_error_where_it_is(path):
 
 
 class TestNameStrings:
-    # The author, 2026-11-06: #'dot-{k}' is (name $'dot-{k}'): values filled into the string,
+    # The author, 2026-11-06: #'dot-{k}' is (name f'dot-{k}'): values filled into the string,
     # which is then read as a name. Parts may follow it. One with nothing to fill in is an
     # error: write the name itself, or (name 'text').
     def test_it_is_the_name_form(self):
-        assert parse("(f #'dot-{k}')") == parse("(f (name $'dot-{k}'))")
+        assert parse("(f #'dot-{k}')") == parse("(f (name f'dot-{k}'))")
 
     def test_parts_may_follow(self):
-        assert parse("(f #'dot-{k}'.pos)") == parse("(f (. (name $'dot-{k}') pos))")
-        assert parse("(f #'row-{i}'[0].x)") == parse("(f (. (. (name $'row-{i}') 0) x))")
+        assert parse("(f #'dot-{k}'.pos)") == parse("(f (. (name f'dot-{k}') pos))")
+        assert parse("(f #'row-{i}'[0].x)") == parse("(f (. (. (name f'row-{i}') 0) x))")
 
     def test_with_nothing_to_fill_in(self):
         error_at(
@@ -988,33 +989,33 @@ class TestNameStrings:
 
 
 class TestTexStrings:
-    # The author, 2026-11-06: LaTeX is written in tex'…', where a backslash means nothing, so
+    # The author, 2026-11-06: LaTeX is written in $'…', where a backslash means nothing, so
     # the LaTeX reaches MathJax as written. \' is a quote, for primes; \\ is kept whole, so it
     # never escapes the quote after it.
     def test_backslashes_are_kept(self):
-        assert atom(r"tex'\frac1b \neq \nabla'") == StrLit(r"\frac1b \neq \nabla", tex=True)
+        assert atom(r"$'\frac1b \neq \nabla'") == StrLit(r"\frac1b \neq \nabla", tex=True)
 
     def test_a_quote(self):
-        assert atom(r"tex'f\'(x)'") == StrLit("f'(x)", tex=True)
+        assert atom(r"$'f\'(x)'") == StrLit("f'(x)", tex=True)
 
     def test_a_double_backslash_is_kept_whole(self):
-        assert atom(r"tex'a \\ b'") == StrLit(r"a \\ b", tex=True)
-        assert atom(r"tex'a \\'") == StrLit("a \\\\", tex=True)
+        assert atom(r"$'a \\ b'") == StrLit(r"a \\ b", tex=True)
+        assert atom(r"$'a \\'") == StrLit("a \\\\", tex=True)
 
     def test_braces_are_text(self):
-        assert atom(r"tex'\term{gap}{x^{2}}'") == StrLit(r"\term{gap}{x^{2}}", tex=True)
+        assert atom(r"$'\term{gap}{x^{2}}'") == StrLit(r"\term{gap}{x^{2}}", tex=True)
 
     def test_it_is_not_an_ordinary_string(self):
-        assert atom("tex'x'") != StrLit("x")
+        assert atom("$'x'") != StrLit("x")
 
     def test_line_breaks(self):
-        assert atom("tex'a\n  b'") == StrLit("a\n  b", tex=True)
+        assert atom("$'a\n  b'") == StrLit("a\n  b", tex=True)
 
     def test_unterminated_reports_its_start(self):
-        assert error_at(r"(f tex'\frac1b", "unterminated string") == Pos(1, 4)
+        assert error_at(r"(f $'\frac1b", "unterminated string") == Pos(1, 4)
 
     def test_followed_directly_by_token_is_error(self):
-        error_at("(f tex'a'b)", "expected whitespace, '(', ')' or ';' after a string")
+        error_at("(f $'a'b)", "expected whitespace, '(', ')' or ';' after a string")
 
     def test_tex_alone_is_a_name(self):
         assert atom("tex") == n("tex")

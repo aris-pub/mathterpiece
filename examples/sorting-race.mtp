@@ -89,10 +89,10 @@
   insertion-bars)
 
 (readout bubble-count
-    $'bubble sort: {(part bubble 2):.0f} comparisons, {(part bubble 3):.0f} trades'
+    f'bubble sort: {(part bubble 2):.0f} comparisons, {(part bubble 3):.0f} trades'
   doc@'How much work bubble sort has done.')
 (readout insertion-count
-    $'insertion sort: {(part insertion 2):.0f} comparisons, {(part insertion 3):.0f} trades'
+    f'insertion sort: {(part insertion 2):.0f} comparisons, {(part insertion 3):.0f} trades'
   doc@'How much work insertion sort has done.')
 ; Both make one comparison a step, so the one that needs fewer finishes first.
 (readout winner

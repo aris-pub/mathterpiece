@@ -88,7 +88,7 @@ would not evaluate because a value before it is known when compiling. An operati
 A folded call is computed by evaluating its body, not by proving it again, so a folded call of a
 function that calls itself ends at its base case. A `foreach` copy can start a chain, in which
 copy k reads copy k - 1 through a `(name …)` {term}`string`, as in `(if (= k 0) 1 (* 2 (. (name
-$'d-{(- k 1)}') x)))`. How such a name is proved when the body is proved once is defined in
+f'd-{(- k 1)}') x)))`. How such a name is proved when the body is proved once is defined in
 {numref}`names-from-values`.
 
 :::{admonition} Code differs
@@ -190,7 +190,7 @@ the secant gives `none` at 90°, and there the readout holds its default text.
 ; sec θ has no value at 90°, and there the readout holds its default text
 (real theta 60 (>= 0) (<= 180))
 (slider turn (move theta (from 0) (to 180)) (label 'θ'))
-(readout r (or? $'sec θ = {(secd theta):.3f}' 'sec θ has no value at 90°'))
+(readout r (or? f'sec θ = {(secd theta):.3f}' 'sec θ has no value at 90°'))
 ```
 
 ## How none propagates
@@ -283,7 +283,7 @@ mtp-ydd4.7.13.
 ; at n = 1 the sum is exactly 3/10, when folded and while drawing
 (int n 1 (>= 0) (<= 10))
 (slider pick (move n (from 0) (to 10)) (label 'n'))
-(readout r $'n/10 + 1/5 = 3/10 is {(= (+ (/ n 10) 1/5) 3/10)}')
+(readout r f'n/10 + 1/5 = 3/10 is {(= (+ (/ n 10) 1/5) 3/10)}')
 ```
 
 ```{rule} number-result-types

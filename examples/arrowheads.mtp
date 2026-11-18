@@ -47,11 +47,11 @@
 
     ; The ruler: as long as the sum, with a bar at each end.
     (let ((n (dist o s)))
-      (measure ruler (from [-2.2 -2.9]) (to [(+ -2.2 n) -2.9]) (label $'|a + b| = {n:.2f}')
+      (measure ruler (from [-2.2 -2.9]) (to [(+ -2.2 n) -2.9]) (label f'|a + b| = {n:.2f}')
                (stroke ink) (defaults (font code)))))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
-    (text_ $'(line sum (to s) (head-end \'{kind}\') (head-size {size:.1f}))' (pos [-4.6 3.4]))
+    (text_ f'(line sum (to s) (head-end \'{kind}\') (head-size {size:.1f}))' (pos [-4.6 3.4]))
     (text_ '(arc turn (from angle-of-a) (to angle-of-b) (head-end \'curved\'))' (pos [-4.6 2.95]))))
 
 (canvas view (x -5) (y -4) (width 10) (height 7.8) (pan false) (zoom false)

@@ -312,8 +312,8 @@ class TestSugarRewrites:
 
     def test_like_on_a_term(self):
         same_meaning(
-            "(formula f tex'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (like a)))",
-            "(formula f tex'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (fill 'red')))",
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (like a)))",
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (fill 'red')))",
         )
 
     def test_like_on_a_move(self):
@@ -363,10 +363,9 @@ class TestSugarRewrites:
 
     def test_defaults_in_a_formula(self):
         same_meaning(
-            "(formula f (defaults (fill 'red')) tex'\\term{a}{x}\\term{b}{y}' (term a (fill "
+            "(formula f (defaults (fill 'red')) $'\\term{a}{x}\\term{b}{y}' (term a (fill "
             "'blue')))",
-            "(formula f tex'\\term{a}{x}\\term{b}{y}' (term a (fill 'blue')) (term b (fill "
-            "'red')))",
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'blue')) (term b (fill 'red')))",
         )
 
     def test_dash_of_one_argument(self):

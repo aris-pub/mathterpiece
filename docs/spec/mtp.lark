@@ -46,7 +46,7 @@ bool: TRUE | FALSE
 
 //: strings
 string: STRING | TEX
-interpolated: DOLLAR_QUOTE (TEXT | braces)* QUOTE
+interpolated: F_QUOTE (TEXT | braces)* QUOTE
 name_string_text: HASH_QUOTE TEXT? braces (TEXT | braces)* QUOTE
 braces: "{" _WHITESPACE? expression _WHITESPACE? FORMAT? "}"
 
@@ -90,13 +90,13 @@ SIGN: /[+-]/
 //: string-literals
 STRING: "'" (/[^'\\]/ | ESCAPE)* "'"
 ESCAPE: /\\['\\n]/
-TEX.1: "tex'" (/[^'\\]/ | /\\[\s\S]/)* "'"
+TEX.1: "$'" (/[^'\\]/ | /\\[\s\S]/)* "'"
 
 //: prefixes
 PREFIX.1: PARTS "@"
 
 //: interpolated-strings
-DOLLAR_QUOTE: "$'"
+F_QUOTE.1: "f'"
 HASH_QUOTE: "#'"
 QUOTE: "'"
 TEXT: (/[^'\\{}]/ | ESCAPE | "{{" | "}}")+

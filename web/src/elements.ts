@@ -1086,9 +1086,9 @@ function labelOf(rt: Runtime, id: number): string {
   return String(rt.value(id, "label"));
 }
 
-/** What a control shows as its label: its text, or, for one given as (label (tex …)), its LaTeX
- * typeset as a formula is, named for a screen reader by the LaTeX. follow() brings it up to date
- * with the expression it is given. */
+/** What a control shows as its label: its text, or, for one given as a TeX string, (label $'…'),
+ * its LaTeX typeset as a formula is, named for a screen reader by the LaTeX. follow() brings it up
+ * to date with the expression it is given. */
 function labelPart(rt: Runtime, id: number): { node: Node; follow: () => void } {
   if (!rt.objects[id]!["label-tex"]) {
     const text = document.createTextNode(labelOf(rt, id));

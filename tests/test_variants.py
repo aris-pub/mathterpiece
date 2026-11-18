@@ -79,5 +79,5 @@ class TestShapeVariables:
 
 
 def test_a_variants_positional_value_is_fixed():
-    m = model("(func f (int n) $'{n}') (variant label () (text_ (f 1))) (scene s (label l))")
+    m = model("(func f (int n) f'{n}') (variant label () (text_ (f 1))) (scene s (label l))")
     assert m.get("l").attrs["value"].fixed

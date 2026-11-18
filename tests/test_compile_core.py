@@ -225,23 +225,23 @@ class TestRanges:
 class TestInterpolatedStrings:
     # reference.md, "Interpolated strings" and the rounding rule in "Numbers".
     def test_known_parts_fold(self):
-        assert value("(string s $'{(+ 1 2)} and {2.5}')", "s") == "3 and 2.5"
+        assert value("(string s f'{(+ 1 2)} and {2.5}')", "s") == "3 and 2.5"
 
     def test_a_real_shows_as_python_does(self):
-        assert value("(real k 1 (const)) (string s $'{k}')", "s") == "1.0"
+        assert value("(real k 1 (const)) (string s f'{k}')", "s") == "1.0"
 
     def test_a_format_spec(self):
-        assert value("(string s $'{2.675:.2f}')", "s") == "2.68"
-        assert value("(string s $'{-2.5:.0f}')", "s") == "-3"
-        assert value("(string s $'{0.125:.1%}')", "s") == "12.5%"
-        assert value("(string s $'{7:03d}')", "s") == "007"
-        assert value("(string s $'{1.5:>6.2f}')", "s") == "  1.50"
+        assert value("(string s f'{2.675:.2f}')", "s") == "2.68"
+        assert value("(string s f'{-2.5:.0f}')", "s") == "-3"
+        assert value("(string s f'{0.125:.1%}')", "s") == "12.5%"
+        assert value("(string s f'{7:03d}')", "s") == "007"
+        assert value("(string s f'{1.5:>6.2f}')", "s") == "  1.50"
 
     def test_a_spec_that_does_not_fit_the_type(self):
-        error("(string s $'{1.5:d}')", "'d' is not a format for a real")
+        error("(string s f'{1.5:d}')", "'d' is not a format for a real")
 
     def test_a_part_read_while_drawing(self):
-        m = model("(real k 1) (string s $'k = {k:.2f}')")
+        m = model("(real k 1) (string s f'k = {k:.2f}')")
         s = m.get("s").value
         assert s.bound
         assert s.expr.op == "format"
@@ -251,15 +251,15 @@ class TestInterpolatedStrings:
 class TestComputedNames:
     # syntax.md, section 4: (name s).
     def test_a_name_built_from_a_string(self):
-        m = model("(scene s (circle (name $'dot-{1}') (r 2)))")
+        m = model("(scene s (circle (name f'dot-{1}') (r 2)))")
         assert m.get("dot-1").attrs["r"].value == 2
 
     def test_referring_to_it(self):
-        m = model("(scene s (circle (name 'c0') (r 2)) (circle d (r (. (name $'c{0}') r))))")
+        m = model("(scene s (circle (name 'c0') (r 2)) (circle d (r (. (name f'c{0}') r))))")
         assert m.get("d").attrs["r"].deps >= {(m.id("c0"), "r")}
 
     def test_the_string_must_be_known_when_compiling(self):
-        error("(scene s (real k 1) (circle (name $'c{k}')))", "known when compiling")
+        error("(scene s (real k 1) (circle (name f'c{k}')))", "known when compiling")
 
     def test_the_built_name_follows_the_name_rules(self):
         error("(scene s (circle (name 'when')))", "'when' is reserved")
@@ -314,8 +314,8 @@ class TestTypeOf:
 class TestFormatExponents:
     # A format's exponent has at least two digits, as Python writes a float's: 1.235e+04.
     def test_padded(self):
-        assert value("(string s $'{12345.5:.3e}')", "s") == "1.235e+04"
-        assert value("(string s $'{0.00001:g}')", "s") == "1e-05"
+        assert value("(string s f'{12345.5:.3e}')", "s") == "1.235e+04"
+        assert value("(string s f'{0.00001:g}')", "s") == "1e-05"
 
 
 class TestAs:
@@ -436,7 +436,7 @@ class TestLetInBodies:
     def test_in_a_foreach(self):
         m = model(
             "(scene s (group g (foreach i 3 (let ((w (* 2 i)))"
-            " (circle (name $'a{i}') (r w)) (circle (name $'b{i}') (r (+ w 1)))))))"
+            " (circle (name f'a{i}') (r w)) (circle (name f'b{i}') (r (+ w 1)))))))"
         )
         assert [m.get(f"a{i}").attrs["r"].value for i in range(3)] == [0, 2, 4]
         assert [m.get(f"b{i}").attrs["r"].value for i in range(3)] == [1, 3, 5]
@@ -444,7 +444,7 @@ class TestLetInBodies:
     def test_a_value_known_only_while_drawing(self):
         m = model(
             "(real k 1 (>= 0))"
-            " (scene s (foreach i 2 (let ((w (* k i))) (circle (name $'c{i}') (r w)))))"
+            " (scene s (foreach i 2 (let ((w (* k i))) (circle (name f'c{i}') (r w)))))"
         )
         # r reads the variable that holds w, which follows k (mtp-gvrf.2).
         ((held, _),) = m.get("c1").attrs["r"].deps
@@ -476,19 +476,19 @@ class TestForeach:
     # mtp-2mvr: (foreach i 5 decl…) counts from 0 to 4; (foreach p xs decl…) takes each item of
     # a list whose length is known when compiling, and (foreach m g decl…) each member of a group.
     def test_over_a_count(self):
-        m = model("(scene s (foreach i 3 (circle (name $'c{i}') (r (+ i 1)))))")
+        m = model("(scene s (foreach i 3 (circle (name f'c{i}') (r (+ i 1)))))")
         assert [m.get(f"c{i}").attrs["r"].value for i in range(3)] == [1, 2, 3]
 
     def test_over_a_list(self):
         m = model(
-            "(list xs [4 5 6] (const)) (scene s (foreach x xs (circle (name $'c{x}') (r x))))"
+            "(list xs [4 5 6] (const)) (scene s (foreach x xs (circle (name f'c{x}') (r x))))"
         )
         assert m.get("c5").attrs["r"].value == 5
 
     def test_over_a_group(self):
         m = model(
             "(scene s (group g (circle a (r 1)) (circle b (r 2)))"
-            " (foreach p g (circle (name $'ring-{p.name}') (r (* 2 p.r)))))"
+            " (foreach p g (circle (name f'ring-{p.name}') (r (* 2 p.r)))))"
         )
         assert m.get("ring-b").attrs["r"].deps >= {(m.id("b"), "r")}
 
@@ -508,18 +508,18 @@ class TestForeach:
         assert [o.data["target"][0] for o in drags] == [m.id("a"), m.id("b")]
 
     def test_the_count_or_length_must_be_known_when_compiling(self):
-        assert model("(int n 2 (const)) (scene s (foreach i n (circle (name $'c{i}'))))").get("c1")
-        error("(int n 2) (scene s (foreach i n (circle (name $'c{i}'))))", "known when compiling")
+        assert model("(int n 2 (const)) (scene s (foreach i n (circle (name f'c{i}'))))").get("c1")
+        error("(int n 2) (scene s (foreach i n (circle (name f'c{i}'))))", "known when compiling")
 
     def test_inside_a_group(self):
-        m = model("(scene s (group g (foreach i 2 (circle (name $'m{i}')))))")
+        m = model("(scene s (group g (foreach i 2 (circle (name f'm{i}')))))")
         assert [m.objects[j].name for j in m.get("g").members] == ["m0", "m1"]
 
     def test_a_plain_name_is_declared_twice(self):
         error("(scene s (foreach i 2 (circle c)))", "'c' is already declared")
 
     def test_several_declarations(self):
-        m = model("(scene s (foreach i 2 (real (name $'k{i}') i) (circle (name $'c{i}'))))")
+        m = model("(scene s (foreach i 2 (real (name f'k{i}') i) (circle (name f'c{i}'))))")
         assert m.get("k1").value.value == 1
         assert m.get("c1")
 
@@ -533,7 +533,7 @@ class TestForeach:
     def test_repeat_is_gone(self):
         # mtp-091h: (repeat 2 i …) reads as a declaration of type repeat, which is not a type;
         # that is the error, rather than that 2 is not a name.
-        error("(scene s (repeat 2 i (circle (name $'c{i}'))))", "1:11: unknown type 'repeat'")
+        error("(scene s (repeat 2 i (circle (name f'c{i}'))))", "1:11: unknown type 'repeat'")
         error("(blah 2 i)", "1:2: unknown type 'blah'")
 
 
@@ -545,11 +545,11 @@ class TestForeachOverSeveral:
         return [o.name for o in model(src).objects if o.kind == "circle"]
 
     def test_every_combination_the_last_fastest(self):
-        src = "(scene s (foreach ((i 2) (j 3)) (circle (name $'c{i}{j}'))))"
+        src = "(scene s (foreach ((i 2) (j 3)) (circle (name f'c{i}{j}'))))"
         assert self.names(src) == ["c00", "c01", "c02", "c10", "c11", "c12"]
 
     def test_the_same_as_nested_foreach(self):
-        body = "(circle (name $'c{i}-{x}') (r (+ i x)))"
+        body = "(circle (name f'c{i}-{x}') (r (+ i x)))"
         nested = model(f"(list xs [4 5] (const)) (scene s (foreach i 2 (foreach x xs {body})))")
         flat = model(f"(list xs [4 5] (const)) (scene s (foreach ((i 2) (x xs)) {body}))")
         assert [(o.name, o.attrs["r"].value) for o in flat.objects if o.kind == "circle"] == [
@@ -557,18 +557,18 @@ class TestForeachOverSeveral:
         ]
 
     def test_a_source_reads_the_names_before_it(self):
-        src = "(scene s (foreach ((i 3) (j (range i))) (circle (name $'c{i}{j}'))))"
+        src = "(scene s (foreach ((i 3) (j (range i))) (circle (name f'c{i}{j}'))))"
         assert self.names(src) == ["c10", "c20", "c21"]
 
     def test_over_a_group_and_a_count(self):
         src = (
             "(scene s (group g (circle a) (circle b))"
-            " (foreach ((p g) (k 2)) (circle (name $'{p.name}{k}'))))"
+            " (foreach ((p g) (k 2)) (circle (name f'{p.name}{k}'))))"
         )
         assert self.names(src)[2:] == ["a0", "a1", "b0", "b1"]
 
     def test_inside_a_group_and_an_animation(self):
-        m = model("(scene s (group g (foreach ((i 2) (j 2)) (circle (name $'m{i}{j}')))))")
+        m = model("(scene s (group g (foreach ((i 2) (j 2)) (circle (name f'm{i}{j}')))))")
         assert len(m.get("g").members) == 4
         m = model(
             "(real k 0) (animation a (in-order (foreach ((i 2) (j 2))"
@@ -637,7 +637,7 @@ class TestForeachOverACountThatChanges:
     # The author, 2026-11-06: (foreach k n …) with n known only while drawing makes as many
     # copies as n can be at most, from its upper bound; copy k exists only while k < n.
     def test_as_many_copies_as_the_count_can_be(self):
-        m = model("(int n 5 (>= 3) (<= 12)) (scene s (foreach k n (circle (name $'d{k}'))))")
+        m = model("(int n 5 (>= 3) (<= 12)) (scene s (foreach k n (circle (name f'd{k}'))))")
         circles = [o for o in m.objects if o.kind == "circle"]
         assert len(circles) == 12
         assert all(isinstance(o.type, Maybe) and o.attrs["exists"].bound for o in circles)
@@ -648,20 +648,20 @@ class TestForeachOverACountThatChanges:
     def test_an_exists_when_joins_the_copys_condition(self):
         m = model(
             "(int n 3 (>= 0) (<= 3)) (real cut 2)"
-            " (scene s (foreach k n (circle (name $'c{k}'))"
-            " (exists-when (name $'c{k}') (< k cut))))"
+            " (scene s (foreach k n (circle (name f'c{k}'))"
+            " (exists-when (name f'c{k}') (< k cut))))"
         )
         assert m.get("c1").attrs["exists"].expr.op == "and"
 
     def test_a_member_of_a_copy_goes_with_its_container(self):
         m = model(
-            "(int n 1 (>= 0) (<= 2)) (scene s (foreach k n (group (name $'g{k}') (circle_))))"
+            "(int n 1 (>= 0) (<= 2)) (scene s (foreach k n (group (name f'g{k}') (circle_))))"
         )
         (c, _) = [o for o in m.objects if o.kind == "circle"]
         assert "exists" not in c.attrs and isinstance(c.type, Maybe)
 
     def test_a_known_count_is_as_before(self):
-        m = model("(scene s (foreach k 3 (circle (name $'d{k}'))))")
+        m = model("(scene s (foreach k 3 (circle (name f'd{k}'))))")
         assert not any("exists" in o.attrs for o in m.objects if o.kind == "circle")
 
 
@@ -670,8 +670,8 @@ class TestIfWithAKnownCondition:
     # branch it takes, so a foreach copy can start a chain: (if (= k 0) start (… previous …)).
     def test_each_copy_from_the_one_before(self):
         m = model(
-            "(scene s (foreach k 3 (circle (name $'d{k}')"
-            " (x (if (= k 0) 1 (* 2 (. (name $'d{(- k 1)}') x)))))))"
+            "(scene s (foreach k 3 (circle (name f'd{k}')"
+            " (x (if (= k 0) 1 (* 2 (. (name f'd{(- k 1)}') x)))))))"
         )
         assert [m.get(f"d{k}").attrs["x"].value for k in range(3)] == [1, 2, 4]
 

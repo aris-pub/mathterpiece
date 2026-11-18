@@ -19,6 +19,6 @@
 ; what it does: the slider and the numbers sit in the sentence
 (canvas v (x -2) (y -2) (width 64) (height 34) chance)
 (slider people (move n (from 2) (to 60)))
-(readout count $'{n}')
-(readout odds $'{(* 100 (pair n)):.1f}%')
-(readout mine $'{(* 100 (yours n)):.1f}%')
+(readout count f'{n}')
+(readout odds f'{(* 100 (pair n)):.1f}%')
+(readout mine f'{(* 100 (yours n)):.1f}%')

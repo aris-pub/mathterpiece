@@ -174,7 +174,7 @@ class TestFrames:
 class TestPositional:
     # syntax.md section 8: a positional argument is recognized by where it is.
     def test_a_texts_value_may_be_a_call(self):
-        m = model("(func f (int n) $'{n}') (int k) (scene s (text t (f k)))")
+        m = model("(func f (int n) f'{n}') (int k) (scene s (text t (f k)))")
         assert m.get("t").attrs["value"].expr.op == "call"
 
     def test_an_argument_first_is_still_an_argument(self):
@@ -244,8 +244,8 @@ class TestExistsWhen:
 
     def test_in_a_group_and_a_foreach(self):
         m = model(
-            "(scene s (real k 0) (group g (foreach i 3 (circle|none (name $'c{i}') (r 1))"
-            " (exists-when (name $'c{i}') (< i k)))))"
+            "(scene s (real k 0) (group g (foreach i 3 (circle|none (name f'c{i}') (r 1))"
+            " (exists-when (name f'c{i}') (< i k)))))"
         )
         assert m.get("c2").attrs["exists"].bound
 

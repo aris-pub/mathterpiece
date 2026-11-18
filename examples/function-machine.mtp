@@ -26,7 +26,7 @@
 (func[list[point]] trace ((func[real real] g)) (map (range left right (num 241)) (fn x [x (g x)])))
 
 ; A coefficient after a sign, as it reads after another term: '+ 2.0', '- 3.0'.
-(func[string] signed ((real v)) (if (< v 0) $'- {(abs v):.1f}' $'+ {v:.1f}'))
+(func[string] signed ((real v)) (if (< v 0) f'- {(abs v):.1f}' f'+ {v:.1f}'))
 
 (scene plot (background paper)
   (group grid
@@ -65,10 +65,10 @@
 (formula machine
   doc@'f(x) = ax² + bx + c, with the coefficients\' values.'
     (defaults (padding 3) (rounding 4))
-  tex'f(x) = \term{a}{} x^2 \term{b}{} x \term{c}{}'
-  (term a (tex $'{a:.1f}') (fill red))
-  (term b (tex (signed b)) (fill green))
-  (term c (tex (signed c)) (fill blue)))
+  $'f(x) = \term{a}{} x^2 \term{b}{} x \term{c}{}'
+  (term a f'{a:.1f}' (fill red))
+  (term b (signed b) (fill green))
+  (term c (signed c) (fill blue)))
 
 (display machine-line machine doc@'The formula, whose terms show what they add to the graph.'
   ; Pointing at a term shows what it adds to the graph; each term's piece is named after it.
@@ -88,8 +88,8 @@
                (vx (/ (- b) (* 2 a)))
                (vy (- c (/ (* b b) (* 4 a)))))
            (cond ((= a 0) 'With a = 0 the graph is a line, with no vertex.')
-                 ((< d 0) $'Vertex at ({vx:.2f}, {vy:.2f}). It never crosses the x axis.')
-                 ((= d 0) $'Vertex at ({vx:.2f}, 0): it touches the x axis there.')
-                 (else $'Vertex at ({vx:.2f}, {vy:.2f}). It crosses the x axis at {(/ (- (- b) (sqrt d)) (* 2 a)):.2f} and {(/ (+ (- b) (sqrt d)) (* 2 a)):.2f}.')))
+                 ((< d 0) f'Vertex at ({vx:.2f}, {vy:.2f}). It never crosses the x axis.')
+                 ((= d 0) f'Vertex at ({vx:.2f}, 0): it touches the x axis there.')
+                 (else f'Vertex at ({vx:.2f}, {vy:.2f}). It crosses the x axis at {(/ (- (- b) (sqrt d)) (* 2 a)):.2f} and {(/ (+ (- b) (sqrt d)) (* 2 a)):.2f}.')))
          '')
   doc@'The vertex and the roots.')

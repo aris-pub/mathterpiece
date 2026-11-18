@@ -68,7 +68,7 @@
   (foreach b bodies (on-drag b b.pos doc@'Moves the body.')))
 
 (readout energy
-    $'energy {(+ (kinetic v1) (kinetic v2) (kinetic v3) (potential b1.pos b2.pos)
+    f'energy {(+ (kinetic v1) (kinetic v2) (kinetic v3) (potential b1.pos b2.pos)
                (potential b1.pos b3.pos) (potential b2.pos b3.pos)):.5f}'
   doc@'The total energy: the bodies\' motion and their pull on each other.')
 

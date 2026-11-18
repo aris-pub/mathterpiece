@@ -18,10 +18,10 @@
   (circle hu (r 0.15) (pos u) (opacity 0))
   (circle hv (r 0.15) (pos v) (opacity 0)))
 (formula cs
-  tex'\Big|\underbrace{\term{dot}{\langle u, v\rangle}}_{\term{a}{}}\Big|
+  $'\Big|\underbrace{\term{dot}{\langle u, v\rangle}}_{\term{a}{}}\Big|
       \term{rel}{} \underbrace{\term{bound}{\|u\|\,\|v\|}}_{\term{b}{}}'
-  (term a (tex $'{(abs (* s nv)):.2f}')) (term b (tex $'{(* nu nv):.2f}'))
-  (term rel (tex (if (< (* nv (- nu (abs s))) 0.005) '=' '\\le')))
+  (term a f'{(abs (* s nv)):.2f}') (term b f'{(* nu nv):.2f}')
+  (term rel (if (< (* nv (- nu (abs s))) 0.005) '=' '\\le'))
   (term dot (background (if (= lit 'dot') 'lavender' none)))
   (term bound (background (if (= lit 'bound') 'lavender' none))))
 (canvas c (x -1.2) (y -1.5) (width 4) (height 3.8) plane

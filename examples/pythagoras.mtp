@@ -87,7 +87,7 @@
 (formula pythagoras
   doc@'The theorem, each square a term.'
     (defaults (padding 3) (rounding 4))
-  tex'\term{a2}{a^2} + \term{b2}{b^2} = \term{c2}{c^2}'
+  $'\term{a2}{a^2} + \term{b2}{b^2} = \term{c2}{c^2}'
   (term a2 (fill green) (background (if (= lit 'a') wash none)))
   (term b2 (fill yellow) (background (if (= lit 'b') wash none)))
   (term c2 (fill red) (background (if (= lit 'c') wash none))))
@@ -108,7 +108,7 @@
       doc@'Unlights them.')))
 
 (readout areas
-    $'a² + b² = {(* side-a side-a):.2f} + {(* side-b side-b):.2f} = {(+ (* side-a side-a) (* side-b side-b)):.2f} = c²'
+    f'a² + b² = {(* side-a side-a):.2f} + {(* side-b side-b):.2f} = {(+ (* side-a side-a) (* side-b side-b)):.2f} = c²'
   doc@'The two areas, for the a and b the slider sets.')
 
 (slider leg (move side-a (from 1) (to 4)) (label 'a') doc@'Sets a, with a + b kept at 5.')

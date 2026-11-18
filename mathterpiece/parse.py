@@ -8,9 +8,7 @@ from mathterpiece.nodes import (
     BoolLit,
     Brackets,
     ComplexLit,
-    Field,
     Form,
-    InterpStrLit,
     IntLit,
     ListLit,
     Name,
@@ -78,8 +76,6 @@ def _at(node: Node, pos: Pos) -> Node:
         return Name(tuple(p if isinstance(p, str) else _at(p, pos) for p in node.parts), pos)
     if isinstance(node, Form):
         return Form(tuple(_at(item, pos) for item in node.items), pos)
-    if isinstance(node, InterpStrLit):
-        return InterpStrLit(node.parts, pos)
     return replace(node, pos=pos)
 
 
@@ -255,7 +251,7 @@ class _Parser:
         if ch == "$":
             if self.peek(1) != "'":
                 raise ParseError("'$' must be followed by a quote", pos)
-            return self.interp_string()
+            return self.tex_string()
         if ch == "#":
             if self.peek(1) != "'":
                 raise ParseError("'#' starts a name string: #'dot-{k}'", pos)
@@ -271,11 +267,11 @@ class _Parser:
         if ch == ":":
             raise ParseError(
                 "':' may only start the format spec in the braces of an interpolated string, as"
-                " in $'{x:.2f}'",
+                " in f'{x:.2f}'",
                 pos,
             )
-        if self.src.startswith("tex'", self.i):
-            return self.tex_string()
+        if self.src.startswith("f'", self.i):
+            return self.interp_string()
         if self.prefix_end() is not None:
             return self.prefixed()
         return self.atom(head)
@@ -312,24 +308,24 @@ class _Parser:
             raise ParseError(
                 f"{head}@ is followed directly by its item, as in {head}@1", self.pos()
             )
-        starts_word = ch not in "'$#[(" and not self.src.startswith("tex'", self.i)
+        starts_word = ch not in "'$#[(" and not self.src.startswith("f'", self.i)
         if starts_word and self.prefix_end() is not None:
             raise ParseError(f"a prefixed form cannot follow {head}@: write ({head} …)", self.pos())
         return self.node()
 
     def name_string(self) -> Node:
-        """#'dot-{k}', which is (name $'dot-{k}'): the string with values filled in, read as a
+        """#'dot-{k}', which is (name f'dot-{k}'): the string with values filled in, read as a
         name. Parts may follow it, as they follow a name: #'dot-{k}'.pos, #'row-{i}'[0]."""
         pos = self.pos()
         # The string's own check for what follows it would refuse a part, so it is read here.
         text = self.interp_string(parts_may_follow=True)
-        if all(isinstance(part, str) for part in text.parts):
+        if all(isinstance(piece, StrLit) for piece in text.items[1:]):
             raise ParseError(
                 "a name string fills values into a name: with none, write the name itself, or"
                 " (name 'text')",
                 pos,
             )
-        whole: Node = Form((Name(("name",), pos), replace(text, pos=pos)), pos)
+        whole: Node = Form((Name(("name",), pos), text), pos)
         while self.peek() in (".", "["):
             at = self.pos()
             if self.peek() == ".":
@@ -525,11 +521,10 @@ class _Parser:
         return StrLit("".join(chars), pos)
 
     def tex_string(self) -> StrLit:
-        """tex'…': LaTeX, which uses backslashes everywhere, so only \\' is an escape. \\\\ is
+        """$'…': LaTeX, which uses backslashes everywhere, so only \\' is an escape. \\\\ is
         kept whole, so that it never escapes the quote after it."""
         pos = self.pos()
-        for _ in "tex":
-            self.advance()
+        self.advance()
         self.advance()
         chars: list[str] = []
         while True:
@@ -547,17 +542,20 @@ class _Parser:
         self.expect_delimiter()
         return StrLit("".join(chars), pos, tex=True)
 
-    def interp_string(self, parts_may_follow: bool = False) -> InterpStrLit:
-        """$'…', or the string of #'…': two characters open it."""
+    def interp_string(self, parts_may_follow: bool = False) -> Form:
+        """f'…', or the string of #'…': two characters open it. It is (concat PIECE…): each piece
+        of text, as long as possible, a string literal, each {X} (fmt X) and each {X:S}
+        (fmt X 'S'), each at the position of its text."""
         pos = self.pos()
         self.advance()
         self.advance()
-        parts: list[str | Node | Field] = []
+        parts: list[Node] = [Name(("concat",), pos)]
         text: list[str] = []
+        start = pos
 
         def flush():
             if text:
-                parts.append("".join(text))
+                parts.append(StrLit("".join(text), start))
                 text.clear()
 
         while True:
@@ -567,6 +565,8 @@ class _Parser:
             if ch == "'":
                 self.advance()
                 break
+            if not text:
+                start = self.pos()
             if ch == "\\":
                 text.append(self.escape(pos))
             elif ch == "{" and self.peek(1) == "{":
@@ -587,7 +587,7 @@ class _Parser:
         flush()
         if not parts_may_follow:
             self.expect_delimiter()
-        return InterpStrLit(tuple(parts), pos)
+        return Form(tuple(parts), pos)
 
     def skip_space_in_braces(self):
         """Whitespace around the expression in braces. A comment there would run to the end of the
@@ -599,14 +599,14 @@ class _Parser:
                 "no comment may be written in the braces of an interpolated string", self.pos()
             )
 
-    def interp_part(self) -> Node | Field:
+    def interp_part(self) -> Form:
         brace = self.pos()
         self.advance()
         self.skip_space_in_braces()
         if self.peek() in ("}", ":", ""):
             raise ParseError("expected an expression inside braces", brace)
         # Inside braces, '}' and ':' may follow a string or a list. The old value is set back, since
-        # these braces may be inside a string that is itself inside braces, as in $'{$'{a}'}'.
+        # these braces may be inside a string that is itself inside braces, as in f'{f'{a}'}'.
         outer, self.in_braces = self.in_braces, True
         try:
             expr = self.node()
@@ -616,13 +616,14 @@ class _Parser:
         spec = None
         if self.peek() == ":":
             self.advance()
-            start = self.i
+            at, start = self.pos(), self.i
             while self.peek() and self.peek() not in "{}'":
                 self.advance()
-            spec = self.src[start : self.i]
+            spec = StrLit(self.src[start : self.i], at)
             if self.peek() == "{":
                 raise ParseError("a format spec cannot hold braces", self.pos())
         if self.peek() != "}":
             raise ParseError("expected a single expression and '}' inside braces", brace)
         self.advance()
-        return expr if spec is None else Field(expr, spec)
+        head = Name(("fmt",), brace)
+        return Form((head, expr) if spec is None else (head, expr, spec), brace)

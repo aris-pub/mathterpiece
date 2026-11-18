@@ -3,14 +3,13 @@
 from fractions import Fraction
 
 import pytest
+from helpers import field, interp
 
 from mathterpiece.cli import main
 from mathterpiece.nodes import (
     BoolLit,
     ComplexLit,
-    Field,
     Form,
-    InterpStrLit,
     IntLit,
     NoneLit,
     RatioLit,
@@ -141,8 +140,8 @@ class TestWhitespaceAndComments:
             "(f [1]\xa0)",
             "(f xs[0]\xa0)",
             "(f r@\xa01)",
-            "(f $'{\xa0x}')",
-            "(f $'{x\xa0}')",
+            "(f f'{\xa0x}')",
+            "(f f'{x\xa0}')",
             "(f\ra)",
             "(f\r\na)",
         ],
@@ -156,7 +155,7 @@ class TestWhitespaceAndComments:
 
 @rule("word-ends")
 class TestWordEnds:
-    @pytest.mark.parametrize("src", ["(f a$'x')", "(f 1x)", "(f a#'x')"])
+    @pytest.mark.parametrize("src", ["(f af'x')", "(f 1x)", "(f a#'x')"])
     def test_text_that_is_not_one_word_is_an_error(self, src):
         syntax_error(src)
 
@@ -241,7 +240,7 @@ class TestNameCharacters:
     def test_a_part_that_is_true_false_or_none_is_an_error(self, text):
         syntax_error(f"(f {text})")
 
-    @pytest.mark.parametrize("text", ["a|tex'q'", "xs[0].tex'q'"])
+    @pytest.mark.parametrize("text", ["a|$'q'", "xs[0].$'q'"])
     def test_a_tex_string_after_a_bar_or_a_dot_is_an_error(self, text):
         syntax_error(f"(f {text})")
 
@@ -365,7 +364,7 @@ class TestDeclarationNames:
             pytest.param("(scene s (foreach if 2 (circle_ (r 1))))", marks=KEYWORD_NAMES),
             pytest.param("(namespace n (real if 1))", marks=KEYWORD_NAMES),
             pytest.param("(palette p (if 'red'))", marks=KEYWORD_NAMES),
-            pytest.param("(formula if tex'x')", marks=KEYWORD_NAMES),
+            pytest.param("(formula if $'x')", marks=KEYWORD_NAMES),
             pytest.param("(motif if () (circle_ (r 1)))", marks=KEYWORD_NAMES),
             pytest.param("(font if (size 12))", marks=KEYWORD_NAMES),
         ],
@@ -505,16 +504,16 @@ class TestStringLiterals:
 @rule("tex-strings")
 class TestTexStrings:
     def test_backslashes_stay_as_written(self):
-        assert items("(f tex'\\frac12' tex'\\q')") == (
+        assert items("(f $'\\frac12' $'\\q')") == (
             StrLit("\\frac12", tex=True),
             StrLit("\\q", tex=True),
         )
 
     def test_an_escaped_quote_is_a_quote(self):
-        assert items("(f tex'f\\'(x)')") == (StrLit("f'(x)", tex=True),)
+        assert items("(f $'f\\'(x)')") == (StrLit("f'(x)", tex=True),)
 
     def test_a_backslash_and_the_next_character_are_read_together(self):
-        assert items("(f tex'a\\\\')") == (StrLit("a\\\\", tex=True),)
+        assert items("(f $'a\\\\')") == (StrLit("a\\\\", tex=True),)
 
 
 @rule("prefix-forms")
@@ -543,11 +542,11 @@ class TestPrefixForms:
             ("(f f@#'a-{k}')", "(f (f #'a-{k}'))"),
             ("(f x@xs[0] y@a|b)", "(f (x xs[0]) (y a|b))"),
             (
-                "(f r@none s@true t@-1.5 u@tex'q' v@$'{k}')",
-                "(f (r none) (s true) (t -1.5) (u tex'q') (v $'{k}'))",
+                "(f r@none s@true t@-1.5 u@$'q' v@f'{k}')",
+                "(f (r none) (s true) (t -1.5) (u $'q') (v f'{k}'))",
             ),
             ("(f free@(g)x)", "(f (free (g)) x)"),
-            ("(f $'{r@x:.2f}')", "(f $'{(r x):.2f}')"),
+            ("(f f'{r@x:.2f}')", "(f f'{(r x):.2f}')"),
         ],
     )
     def test_it_is_the_form_of_the_head_and_the_item(self, src, written):
@@ -592,43 +591,43 @@ class TestPrefixForms:
 @rule("interpolated-strings")
 class TestInterpolatedStrings:
     def test_text_and_braces(self):
-        assert items("(f $'a = {a}')") == (InterpStrLit(("a = ", name("a"))),)
+        assert items("(f f'a = {a}')") == (interp(("a = ", name("a"))),)
 
     def test_doubled_braces_and_escapes(self):
-        assert items("(f $'{{x}}\\'')") == (InterpStrLit(("{x}'",)),)
+        assert items("(f f'{{x}}\\'')") == (interp(("{x}'",)),)
 
     def test_a_format_spec(self):
-        assert items("(f $'{x:.2f}')") == (InterpStrLit((Field(name("x"), ".2f"),)),)
+        assert items("(f f'{x:.2f}')") == (interp((field(name("x"), ".2f"),)),)
 
     def test_whitespace_around_the_expression(self):
-        assert items("(f $'{ x }')") == items("(f $'{x}')")
+        assert items("(f f'{ x }')") == items("(f f'{x}')")
 
     def test_a_comment_inside_a_form_in_the_braces(self):
-        assert items("(f $'{(g ; c\n x)}')") == items("(f $'{(g x)}')")
+        assert items("(f f'{(g ; c\n x)}')") == items("(f f'{(g x)}')")
 
     @pytest.mark.parametrize(
-        "src", ["(f $'{x ; c\n}')", "(f $'{ ;c\n x}')", "(f #'a{k ;c\n}')", "(f $'{(g) ;c\n:>5}')"]
+        "src", ["(f f'{x ; c\n}')", "(f f'{ ;c\n x}')", "(f #'a{k ;c\n}')", "(f f'{(g) ;c\n:>5}')"]
     )
     def test_a_comment_around_the_expression_is_an_error(self, src):
         syntax_error(src)
 
     def test_a_name_string(self):
-        assert items("(f #'dot-{k}')") == (form(name("name"), InterpStrLit(("dot-", name("k")))),)
+        assert items("(f #'dot-{k}')") == (form(name("name"), interp(("dot-", name("k")))),)
 
     @pytest.mark.parametrize(
-        "src", ["(f $'}')", "(f $'a}b')", "(f #'plain')", "(f $'{}')", "(f $'{a b}')"]
+        "src", ["(f f'}')", "(f f'a}b')", "(f #'plain')", "(f f'{}')", "(f f'{a b}')"]
     )
     def test_errors(self, src):
         syntax_error(src)
 
     def test_a_colon_in_a_nested_expression_is_an_error(self):
-        syntax_error("(f $'{(g a:b)}')")
+        syntax_error("(f f'{(g a:b)}')")
 
     def test_braces_are_read_the_same_at_every_depth(self):
-        assert items("(f $'{$'{a}'}')") == (InterpStrLit((InterpStrLit((name("a"),)),)),)
+        assert items("(f f'{f'{a}'}')") == (interp((interp((name("a"),)),)),)
 
     def test_after_a_nested_name_string_the_braces_go_on(self):
-        (s,) = items("(f $'{#'n-{k}'.x:y}')")
-        (field,) = s.parts
-        assert isinstance(field, Field) and field.spec == "y"
-        assert isinstance(field.expr, Form)
+        (s,) = items("(f f'{#'n-{k}'.x:y}')")
+        (_, piece) = s.items
+        assert isinstance(piece, Form) and piece.items[2] == StrLit("y")
+        assert isinstance(piece.items[1], Form)

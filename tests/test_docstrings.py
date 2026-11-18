@@ -64,7 +64,7 @@ ANIM = "(animation (move k (to 1) (duration 1)))"
         (f"(button go {ANIM} (doc 'D.'))", "button"),
         (f"(play go {ANIM} (doc 'D.'))", "play"),
         ("(bool on) (toggle t on (label 't') (doc 'D.'))", "toggle"),
-        ("(readout says $'{k}' (doc 'D.'))", "readout"),
+        ("(readout says f'{k}' (doc 'D.'))", "readout"),
     ],
 )
 def test_a_component_with_its_own_animation_keeps_the_doc(decl, kind):
@@ -119,7 +119,7 @@ def test_given_twice_is_an_error():
 
 
 def test_it_is_plain_text():
-    error("(real j 2) (real k 1 (doc $'k is {j}'))", r"a doc is plain text")
+    error("(real j 2) (real k 1 (doc f'k is {j}'))", r"a doc is plain text")
 
 
 def test_doc_is_reserved():
@@ -143,7 +143,7 @@ class TestDocAt:
         "src, msg",
         [
             ("(real k 1 doc@x)", "a doc is plain text, known when compiling: doc@'text'"),
-            ("(real k 1 doc@$'x')", "a doc is plain text, known when compiling: doc@'text'"),
+            ("(real k 1 doc@f'x')", "a doc is plain text, known when compiling: doc@'text'"),
             ("(real k 1 note@'x')", "unknown constraint 'note'"),
         ],
     )

@@ -13,7 +13,7 @@ frames.request = () => {};
 const FIGURE = `(real k 1 (>= 0) (<= 10))
 (scene s (circle c (r k)))
 (canvas v s)
-(readout r $'k = {k:.1f}')
+(readout r f'k = {k:.1f}')
 `;
 
 /** A page with one model and the given elements, loaded from a .mtpc. */
@@ -86,7 +86,7 @@ describe("rule runtime-loads-mtpc: the runtime refuses what it cannot run", () =
     const doc = compile(`(real k 1 (>= 0) (<= 10))
 (scene s (circle c (r k)))
 (canvas v s (on-click c (animation (move k (to (+ k 1)) (duration 0)))))
-(readout r $'k = {k:.1f}')
+(readout r f'k = {k:.1f}')
 `);
     const at = doc.objects.findIndex((o) => o.kind === "on-click");
     const listener = doc.objects[at] as unknown as Record<string, unknown>;

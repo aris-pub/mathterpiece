@@ -9,7 +9,7 @@ from mtpc_check import errors
 
 SCENE = "(real k 0) (scene s (circle c) (rect r))"
 GO = "(animation (move k (to 1) (duration 1)))"
-FORMULA = r"(formula f tex'\term{t}{x} + \term{all}{\term{top}{a}}')"
+FORMULA = r"(formula f $'\term{t}{x} + \term{all}{\term{top}{a}}')"
 
 
 def one(m, kind):
@@ -159,7 +159,7 @@ class TestReadout:
         assert one(m, kind).data["view"] == m.id("ro")
 
     def test_after_its_value(self):
-        m = model(f"(real k 0) (readout ro $'{{k}}' (on-live {GO}))")
+        m = model(f"(real k 0) (readout ro f'{{k}}' (on-live {GO}))")
         assert one(m, "on-live").data["view"] == m.id("ro")
 
 
@@ -234,7 +234,7 @@ class TestErrors:
 
     def test_a_term_of_another_formula(self):
         error(
-            rf"(real k 0) {FORMULA} (formula g tex'\term{{u}}{{y}}') (display e g"
+            rf"(real k 0) {FORMULA} (formula g $'\term{{u}}{{y}}') (display e g"
             rf" (on-click f.t {GO}))",
             "the display e shows g, not f, so f.t is never in it",
         )

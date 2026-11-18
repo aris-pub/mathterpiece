@@ -1,13 +1,12 @@
 """Conformance tests for docs/spec/grammar.md."""
 
 import pytest
+from helpers import field, interp
 
 from mathterpiece.nodes import (
     Bar,
     Brackets,
     ComplexLit,
-    Field,
-    InterpStrLit,
     IntLit,
     ListLit,
     NoneLit,
@@ -62,7 +61,7 @@ class TestForms:
         )
 
     @pytest.mark.parametrize(
-        "src", ["(f [1 2])", "(f 'a')", "(f $'a{b}')", "(f real|none)", "(f 2.5)"]
+        "src", ["(f [1 2])", "(f 'a')", "(f f'a{b}')", "(f real|none)", "(f 2.5)"]
     )
     def test_an_item_may_be_any_kind_of_expression(self, src):
         assert len(items(src)) == 1
@@ -182,9 +181,9 @@ class TestParserExpressions:
             ("xs[(f)]", name("xs", form(name("f")))),
             ("real|none", Bar((name("real"), NoneLit()))),
             ("'s'", StrLit("s")),
-            ("tex's'", StrLit("s", tex=True)),
-            ("$'a{x}'", InterpStrLit(("a", name("x")))),
-            ("$'{x:.2f}'", InterpStrLit((Field(name("x"), ".2f"),))),
+            ("$'s'", StrLit("s", tex=True)),
+            ("f'a{x}'", interp(("a", name("x")))),
+            ("f'{x:.2f}'", interp((field(name("x"), ".2f"),))),
             ("3", IntLit(3)),
             ("1/3", RatioLit(__import__("fractions").Fraction(1, 3))),
             ("2.5", RealLit(2.5)),
@@ -196,7 +195,7 @@ class TestParserExpressions:
         assert items(f"(f {text})") == (node,)
 
     def test_two_pieces_of_text_are_never_next_to_each_other(self):
-        assert items("(f $'a{{b}}c')") == (InterpStrLit(("a{b}c",)),)
+        assert items("(f f'a{{b}}c')") == (interp(("a{b}c",)),)
 
 
 @rule("shorthand-forms")
@@ -209,7 +208,7 @@ class TestShorthandForms:
         assert items("(f free@x)") == (form(name("free"), name("x")),)
 
     def test_name_string(self):
-        n = form(name("name"), InterpStrLit(("dot-", name("k"))))
+        n = form(name("name"), interp(("dot-", name("k"))))
         assert items("(f #'dot-{k}')") == (n,)
         assert items("(f #'dot-{k}'.a.b)") == (dot(dot(n, name("a")), name("b")),)
         assert items("(f #'dot-{k}'[i])") == (dot(n, name("i")),)
@@ -320,7 +319,7 @@ class TestOptionalArgumentsFirst:
 
     @OPTIONS_LAST
     def test_the_defaults_of_a_formula(self):
-        compile_error("(formula f tex'\\term{a}{x}' (term a (fill 'red')) (defaults (padding 3)))")
+        compile_error("(formula f $'\\term{a}{x}' (term a (fill 'red')) (defaults (padding 3)))")
 
     @OPTIONS_LAST
     def test_the_font_of_a_readout(self):
@@ -328,7 +327,7 @@ class TestOptionalArgumentsFirst:
 
     @OPTIONS_LAST
     def test_the_kind_of_a_display(self):
-        compile_error("(formula f tex'x') (display d f (on-live (animation)) (kind 'block'))")
+        compile_error("(formula f $'x') (display d f (on-live (animation)) (kind 'block'))")
 
 
 @rule("named-arguments-once")
@@ -373,7 +372,7 @@ class TestDocstrings:
         compile_error("(real k 1 doc@'a' doc@'b')")
 
     def test_an_interpolated_docstring_is_an_error(self):
-        rejected("(real k 1 (doc $'d{k}'))")
+        rejected("(real k 1 (doc f'd{k}'))")
 
     @MOTIF_DOCSTRING
     def test_a_variable_in_a_motif_body_may_have_one(self):
@@ -390,7 +389,7 @@ class TestContexts:
         [
             "(circle c (r 1))",
             "(scene s (circle c (r 1))) (on-click c)",
-            "(formula f tex'\\term{a}{x}') (term a (fill 'red'))",
+            "(formula f $'\\term{a}{x}') (term a (fill 'red'))",
             "(scene s (group g (real k 1) (circle c (r 1))))",
             "(scene s (motif m () (circle_ (r 1))))",
             "(scene s (circle c (r 1)) (canvas v s))",
@@ -418,7 +417,7 @@ class TestContexts:
             "(motif m ((real k 1 (>= 0))) (circle_ (r k))) (scene s (m a))",
             "(namespace n (real k 1) (namespace m (real j 2)))",
             "(palette p (a 'red') (b 'blue'))",
-            "(formula f tex'\\term{a}{x}' (term a (fill 'red')))",
+            "(formula f $'\\term{a}{x}' (term a (fill 'red')))",
         ],
     )
     def test_items_that_the_body_holds(self, src):
@@ -467,14 +466,14 @@ class TestBodyLetForeach:
 @rule("formula-terms")
 class TestFormulaTerms:
     def test_the_string_declares_its_terms(self):
-        accepted("(formula f (defaults (padding 3)) tex'\\term{a}{x}' (term a (fill 'red')))")
+        accepted("(formula f (defaults (padding 3)) $'\\term{a}{x}' (term a (fill 'red')))")
 
     def test_a_term_that_the_string_does_not_mark_is_an_error(self):
-        compile_error("(formula f tex'\\term{a}{x}' (term b (fill 'red')))")
+        compile_error("(formula f $'\\term{a}{x}' (term b (fill 'red')))")
 
     @OPTIONS_LAST
     def test_a_term_before_the_string_is_an_error(self):
-        compile_error("(formula f (term a (fill 'red')) tex'\\term{a}{x}')")
+        compile_error("(formula f (term a (fill 'red')) $'\\term{a}{x}')")
 
 
 @rule("listeners-in-views")

@@ -54,9 +54,9 @@
 
   ; Each caption sits the same way under its panel's center, so the two in a row line up.
   (group captions (defaults (fill soft) (font mono) (halign 'middle') (valign 'top'))
-    (text_ $'(line-cap \'{ends}\')' (pos (+ (cell 0 0) under)))
-    (text_ $'(line-join \'{corners}\')' (pos (+ (cell 1 0) under)))
-    (text_ $'(dash [{dash-length:.0f} {gap-length:.0f}])' (pos (+ (cell 0 1) under)))
+    (text_ f'(line-cap \'{ends}\')' (pos (+ (cell 0 0) under)))
+    (text_ f'(line-join \'{corners}\')' (pos (+ (cell 1 0) under)))
+    (text_ f'(dash [{dash-length:.0f} {gap-length:.0f}])' (pos (+ (cell 0 1) under)))
     (text_ '(move dashed.dash-offset …)' (pos (+ (cell 1 1) under)))))
 
 (canvas view (x -8) (y -4.8) (width 16) (height 9) (pan false) (zoom false)

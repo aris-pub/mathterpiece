@@ -37,13 +37,13 @@
         (rect #'bar-{i}' (pos [(+ -4 (* unit (+ start (/ d 2)))) -1.6])
             (width (- (* unit d) 0.06)) (height 0.36)
             (fill (if (= (mod i 2) 0) red green)) (fill-opacity 0.75))
-        (text_ $'{d:.1f} s' (pos [(+ -4 (* unit (+ start (/ d 2)))) -2.15]) (font number)
+        (text_ f'{d:.1f} s' (pos [(+ -4 (* unit (+ start (/ d 2)))) -2.15]) (font number)
             (fill soft) (halign 'middle') (valign 'middle')))))
 
   (line playhead (from [(+ -4 (* unit clock)) -1.95]) (to [(+ -4 (* unit clock)) -1.25])
       (stroke ink) (stroke-width 2))
 
-  (text_ $'hops.steps: {hops.steps.length} steps, {total:.1f} s in all' (pos [-4 3]) (font code)
+  (text_ f'hops.steps: {hops.steps.length} steps, {total:.1f} s in all' (pos [-4 3]) (font code)
       (fill soft) (halign 'start') (valign 'top')))
 
 (canvas view (x -4.6) (y -2.6) (width 9.2) (height 6) (pan false) (zoom false)
