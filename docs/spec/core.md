@@ -507,14 +507,6 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
 
-:::{admonition} Code differs
-:class: note
-The parser reads a TeX string written `tex'…'`, and an interpolated string written `$'…'` as a
-literal of its own (nodes.py, `StrLit` and `InterpStrLit`), not as a `concat` form. The compiler has
-no `concat` and no `fmt`, and has a form `(tex …)` in a term (compiler.py:5226) and in a label
-(compiler.py:3865). Bead mtp-rry4 makes them follow the rule.
-:::
-
 ### Library functions
 
 These heads name functions of the library. Each call is a core call ({numref}`library-form`).
