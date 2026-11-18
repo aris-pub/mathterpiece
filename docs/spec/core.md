@@ -29,11 +29,12 @@ A form that needs a value or a type to be rewritten is core.
 ```
 
 ```{rule} library-form
-The library is not a kind of form. It is the declarations that every source may use without
-declaring them: the built-in functions, which are implemented natively, and the files of the
-standard library, which are written in mtp. It holds functions, constants and declarations, and
-adds no form to the language: a call of a library function is a call, which is a core form, as a
-call of a function that the source declares is.
+The library is the functions, constants and other declarations that a source may use without
+declaring them. It has two parts: the built-in functions and constants, which are implemented
+natively and need no import, and the files of the standard library, which are written in mtp and
+are imported like any other file ({doc}`imports`). The library adds no form to the language: a call
+of a library function is a call, which is a core form, as a call of a function that the source
+declares is.
 ```
 
 By {numref}`declaration-names`, a declared function may take the name of a library function: after
