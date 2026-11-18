@@ -517,11 +517,10 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `polar`, `to-polar`, `dist` | points |
 | `rotate`, `translate`, `scale`, `transform` | transforms |
 | `mix`, `lighten`, `darken`, `light-dark` | colors |
-| `round`, `log`, `min`, `max`, `lerp`, `range` | with a varying number or type of arguments |
-| `gap`, `num` | the third argument of `range` |
-| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds: {term}`primitives <primitive>`, which a source names only through the file rand of the standard library ({numref}`primitive-form`) |
+| `round`, `log`, `min`, `max`, `lerp` | with a varying number or type of arguments |
+| `range` | `(range LO HI (gap G))`: the numbers from `LO`, `G` apart, up to `HI` and not including it. `(range LO HI (num N))`: `N` numbers evenly apart, from `LO` to `HI`, both included. `gap` and `num` are {term}`named arguments <named argument>` of `range` |
+| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds: {term}`primitives <primitive>`, which a source names only through the file rand of the standard library ({numref}`primitive-form`). `rand`, `rand-int`, `pick` and `shuffle` take the named argument `(seed S)` |
 | `steps` | an ease: `(steps N (at P))` gives the ease of N equal jumps, each at the fraction P of its interval, so jump k comes at (k − 1 + P)/N. P is from 0 to 1 and known when compiling, and is 1 when `(at …)` is left out. So `(steps 1 (at P))` is 0 before P and 1 from P on |
-| `seed` | the last argument of a random function, `(seed S)` |
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
