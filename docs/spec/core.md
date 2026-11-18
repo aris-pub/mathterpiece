@@ -520,23 +520,24 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `round`, `log`, `min`, `max`, `lerp`, `range` | with a varying number or type of arguments |
 | `gap`, `num` | the third argument of `range` |
 | `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds: {term}`primitives <primitive>`, which a source names only through the file rand of the standard library ({numref}`primitive-form`) |
-| `step`, `step-ease` | eases: `(step N)` gives the ease of N equal jumps, and `(step-ease P)` the ease that is 0 before P and 1 from P on |
+| `steps` | an ease: `(steps N (at P))` gives the ease of N equal jumps, each at the fraction P of its interval, so jump k comes at (k − 1 + P)/N. P is from 0 to 1 and known when compiling, and is 1 when `(at …)` is left out. So `(steps 1 (at P))` is 0 before P and 1 from P on |
 | `seed` | the last argument of a random function, `(seed S)` |
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
 | the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
 
-A call of `step` or `step-ease` gives an ease, which is a function, so the two are library
-functions and not keywords. By {numref}`declaration-names`, a declaration or a binding named
-`step` or `step-ease` takes the place of the library function from that declaration or binding on.
+A call of `steps` gives an ease, which is a function, so `steps` is a library function and not a
+keyword. By {numref}`declaration-names`, a declaration or a binding named `steps` takes the place
+of the library function from that declaration or binding on.
 
 :::{admonition} Code differs
 :class: note
-The compiler reads `(step N)` and `(step-ease P)` only as the whole value of an `ease`
-(compiler.py:2918-2933), and not as calls. So after `(real step 3)`, `(ease (step 2))` still
-compiles as the ease of two jumps, and `(step 2)` in any other place is the error "unknown
-function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
+The compiler has `(step N)`, whose jumps come at the start of each interval, and `(step-ease P)`,
+with one jump at P, in place of `steps` (compiler.py:3092-3107, web/src/transitions.ts:22). It reads
+them only as the whole value of an `ease`, and not as calls. So after `(real step 3)`,
+`(ease (step 2))` still compiles as the ease of two jumps, and `(step 2)` in any other place is the
+error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler follow the rule.
 :::
 
 ### Transitions and animations
@@ -545,7 +546,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 |---|---|---|---|
 | `move` | core | `(move TARGET ITEM…)`: a transition written in place | {doc}`time` |
 | `from`, `to`, `duration`, `path` | core | the parts of a transition | {doc}`time` |
-| `ease` | core | a function from 0 to 1, such as the value of `(step N)` or `(step-ease P)` | {doc}`time` |
+| `ease` | core | a function from 0 to 1, such as the value of `(steps N)` | {doc}`time` |
 | `like` in a transition or a move | syntactic sugar | | {numref}`sugar-rewrites` |
 | `animation` written inline | core | `(animation ITEM…)`, or `(animation N)` naming one, also as a step | {doc}`time`, {numref}`animation-step` |
 | an animation's body of several items | syntactic sugar | one `in-order` | {numref}`sugar-rewrites` |
@@ -694,6 +695,6 @@ their place. They are not forms of the language.
 | a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-translate` |
 | a condition | core | {doc}`reaction` |
 | the operators, `not`, `abs`, the `none` functions and the box points | library | {numref}`library-form` |
-| the built-in functions and the collections, `map` over an int included, `step` and `step-ease` | library | {doc}`stdlib` |
+| the built-in functions and the collections, `map` over an int included, `steps` | library | {doc}`stdlib` |
 | the primitives | library | {numref}`primitive-form` |
 | the constants and the standard library files | library | {doc}`stdlib` |
