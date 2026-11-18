@@ -41,6 +41,8 @@ html_theme_options = {
         "image_dark": "_static/mtp-logo-dark.svg",
         "text": "spec",
     },
+    # 0 makes each part of the sidebar a group that opens and closes.
+    "show_nav_level": 0,
 }
 # Netlify reads _redirects, which sends the root of spec.mtp-lang.org to the spec.
 html_extra_path = ["_root"]
