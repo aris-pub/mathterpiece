@@ -36,8 +36,8 @@ built-in function, or of a function of the standard library, is a call, which is
 call of a function that the source declares is.
 ```
 
-By {numref}`declaration-names`, a declared function may take the name of a built-in function: after
-`(func + ((real a) (real b)) 7)`, `(+ 1 2)` is 7.
+By {numref}`declaration-names`, a declared function may take the name of a built-in function that is
+not an operator: after `(func max ((real a) (real b)) b)`, `(max 1 2)` is 2.
 
 The compiler rewrites every syntactic sugar form before the prove step ({numref}`compile-steps`), so
 the {term}`prover` is given only core forms. The prover proves the {term}`body` of each `foreach`,

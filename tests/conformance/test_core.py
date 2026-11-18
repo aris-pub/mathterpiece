@@ -87,8 +87,12 @@ class TestBuiltIns:
         # A declaration of the source may take a name that the library declares.
         accepted("(func clamp ((real x)) x) (real v (clamp 5))")
 
-    def test_a_declared_function_takes_the_name_of_an_operator(self):
-        assert value("(func + ((real a) (real b)) 7) (real v (+ 1 2))", "v") == 7
+    def test_a_declared_function_takes_the_name_of_a_built_in(self):
+        assert value("(func max ((real a) (real b)) b) (real v (max 1 2))", "v") == 2
+
+    @xfail("mtp-9rj1", "a declaration may take the name of an operator")
+    def test_no_declaration_takes_the_name_of_an_operator(self):
+        compile_error("(func + ((real a) (real b)) 7)")
 
 
 FREE = "(bool a true) (bool b true) (bool c false)\n"
