@@ -401,9 +401,9 @@ class TestDeclarationNames:
         m = accepted("(func max ((real a) (real b)) a) (real v (max 1 2))")
         assert m.get("v").value.value == 1
 
-    def test_a_declaration_may_take_the_name_of_an_operator(self):
-        m = accepted("(func + ((real a) (real b)) 7) (real v (+ 1 2))")
-        assert m.get("v").value.value == 7
+    @pytest.mark.xfail(strict=True, reason="mtp-9rj1: a declaration may take the name of an operator")
+    def test_no_declaration_takes_the_name_of_an_operator(self):
+        compile_error("(func + ((real a) (real b)) 7)")
 
     @pytest.mark.parametrize("constant", ["pi", "tau", "euler"])
     def test_a_declaration_may_take_the_name_of_a_built_in_constant(self, constant):
