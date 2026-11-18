@@ -10,7 +10,7 @@ project = "mathterpiece"
 author = "Leo Torres"
 copyright = "2026, Leo Torres"
 
-extensions = ["myst_parser", "sphinxcontrib.mermaid", "mtp_sphinx", "spec_publish"]
+extensions = ["myst_parser", "sphinxcontrib.mermaid", "mtp_sphinx", "spec_publish", "spec_parts"]
 myst_fence_as_directive = ["mermaid"]
 myst_enable_extensions = ["colon_fence", "deflist"]
 myst_heading_anchors = 3
