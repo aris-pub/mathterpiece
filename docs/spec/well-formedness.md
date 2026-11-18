@@ -188,7 +188,7 @@ the part that they share.
 | the range of a type | the ends that its comparisons give: c for a `(>= c)` and a `(<= c)`, and for a `(> c)` and a `(< c)` the nearest value past c that the type holds, which is the next int for an int, the next binary64 number for a real, and c for a ratio. From lo to hi for `(wrap lo hi)`, and the end of the {term}`number limit` for a side with no bound ({numref}`number-limit`) |
 | a read of a free variable or attribute | the range of its type |
 | a read of a bound variable or attribute | the range of its expression, and the range of the constraints of its declared type, each side with no bound left out. A read through a `translate` or a `transform` ({doc}`world-model`): the range of its type |
-| a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a {term}`library` function, the range that {doc}`stdlib` gives it |
+| a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a {term}`built-in` function, the range that {doc}`stdlib` gives it |
 | a `let` name | the range of its value |
 | the name of a `foreach` over a count X | from 0 to the upper end of the range of X, minus 1 |
 | the name of a `foreach` over a list | the range of the items of the list |
@@ -204,7 +204,7 @@ the part that they share.
 | `(if C A B)`, `(or? A D)` | from the smaller of the lower ends to the larger of the upper ends. With C known in the prove step, the range of the branch taken. The range of each branch of an `if` is worked out with the ranges that {numref}`if-narrowing` gives, and a branch that never runs by that rule is left out |
 | a call of a function declared with `func`, outside its own body, not folded | the range of its body worked out again with the range of each parameter being the range of its argument, and the range of its result type. This only gives a range: the body is proved once |
 | a call of a function inside its own body | the range of its result type |
-| a call of another library function | the range that {doc}`stdlib` gives for it |
+| a call of another built-in function | the range that {doc}`stdlib` gives for it |
 | any other expression | the range of its type |
 
 Every range is clamped to the number limit, as the values of the expression are

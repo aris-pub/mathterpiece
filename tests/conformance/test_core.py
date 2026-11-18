@@ -69,8 +69,8 @@ class TestSugarForm:
         )
 
 
-@rule("library-form")
-class TestLibraryForm:
+@rule("built-ins")
+class TestBuiltIns:
     def test_a_library_name_may_be_declared_again(self):
         assert value("(func max ((real a) (real b)) b) (real v (max 1 2))", "v") == 2
 
@@ -564,7 +564,7 @@ class TestNamesFromValues:
         rejected("(scene s (foreach k 2 (circle #'d-{k}' (r #'d-{(+ k 1)}'.r))))")
 
 
-@rule("library-form")
+@rule("built-ins")
 @STEP_EASE
 def test_step_is_a_library_function_that_a_declaration_may_replace():
     compile_error(

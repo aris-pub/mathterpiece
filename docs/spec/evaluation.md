@@ -145,7 +145,7 @@ At every other input, an operation never gives `none`.
 :::
 
 So no operation gives an infinity or NaN: a real is always finite ({numref}`number-types`). The
-functions of the standard {term}`library` are written in mtp, and give `none` where the built-ins
+functions of the {term}`standard library` are written in mtp, and give `none` where the built-ins
 that they call give `none` ({doc}`stdlib`).
 
 ```{rule} none-at-known-inputs

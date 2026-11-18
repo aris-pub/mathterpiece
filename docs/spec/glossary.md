@@ -205,11 +205,15 @@ word
 core form
   A form that is not syntactic sugar, such as `(if c a b)` or a call of a function. The
   prover proves core forms, and the runtime runs them. See {numref}`kinds-of-form` and
-  {numref}`library-form`.
+  {numref}`built-ins`.
 
-library
-  The built-in functions and the files of the standard library. A call of a library function is
-  a core form. See {numref}`library-form`.
+built-in
+  A function, constant or type that every source has without declaring or importing it, such as
+  `+`, `pi` or `real`. A call of a built-in function is a core form. See {numref}`built-ins`.
+
+standard library
+  The files that come with mtp, such as `math` and `rand`, which a source imports like any other
+  file. See {numref}`built-ins` and {doc}`stdlib`.
 
 prover
   The part of the compiler that does the prove step: it checks types, proves ranges and

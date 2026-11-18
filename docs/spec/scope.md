@@ -192,7 +192,7 @@ So `(real if 1)` and `(circle line …)` are compile errors, and
 `(func max ((real a) (real b)) a)` and `(real pi 3)` are allowed. `scene`, `transition`,
 `animation` and `func` are both built-in types and keywords. `true`, `false` and `none` are values,
 never names ({numref}`name-characters`). The built-in functions and constants are found only by the
-second step of {numref}`name-lookup`. The names of the standard {term}`library` are not built-in:
+second step of {numref}`name-lookup`. The names of the {term}`standard library` are not built-ins:
 they are ordinary declarations of its files ({doc}`stdlib`), which a source brings in with
 `import`, and are found as any other imported name.
 

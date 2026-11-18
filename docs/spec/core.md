@@ -3,8 +3,8 @@
 
 On this page, every {term}`form` that the {term}`compiler` accepts is either a {term}`core form` or
 {term}`syntactic sugar`. Each syntactic sugar form is given as a {term}`rewrite` into core forms,
-and each core form with the page of the spec where its meaning is defined. The functions of the
-{term}`library` are listed in a table of their own.
+and each core form with the page of the spec where its meaning is defined. The built-in functions
+are listed in a table of their own.
 
 This page specifies the language.
 
@@ -28,16 +28,15 @@ name refers to.
 A form that needs a value or a type to be rewritten is core.
 ```
 
-```{rule} library-form
-The library is the functions, constants and other declarations that a source may use without
-declaring them. It has two parts: the built-in functions and constants, which are implemented
-natively and need no import, and the files of the standard library, which are written in mtp and
-are imported like any other file ({doc}`imports`). The library adds no form to the language: a call
-of a library function is a call, which is a core form, as a call of a function that the source
-declares is.
+```{rule} built-ins
+A {term}`built-in` is a function, constant or type that every source has without declaring or
+importing it. The {term}`standard library` is the set of files that come with mtp, which a source
+imports like any other file ({doc}`imports`). Neither adds a form to the language: a call of a
+built-in function, or of a function of the standard library, is a call, which is a core form, as a
+call of a function that the source declares is.
 ```
 
-By {numref}`declaration-names`, a declared function may take the name of a library function: after
+By {numref}`declaration-names`, a declared function may take the name of a built-in function: after
 `(func + ((real a) (real b)) 7)`, `(+ 1 2)` is 7.
 
 The compiler rewrites every syntactic sugar form before the prove step ({numref}`compile-steps`), so
@@ -328,17 +327,17 @@ inventory.
   play of `(animation (in-order (in-order a b)))` has one step, and a play of
   `(animation (in-order a b))` has two.
 - **`(map n f)` with an int `n`.** It means `(map (range n) f)`, and is told apart from
-  `(map xs f)` by the type of `n`. This is part of the typing of the library function `map`
+  `(map xs f)` by the type of `n`. This is part of the typing of the built-in function `map`
   ({doc}`stdlib`).
 - **The {term}`operators <operator>`, `not`, `abs`, `or?`, `none?`, `some?`, `somes` and the box
-  points.** They are library functions, which the compiler reads itself ({numref}`library-form`), so
+  points.** They are built-in functions, which the compiler reads itself ({numref}`built-ins`), so
   a declared function may take their names ({numref}`declaration-names`).
 
 (core-inventory)=
 ## Inventory of heads
 
 Each table lists the heads of one context. The column "Defined in" gives the page where a core
-form's meaning is defined, the rule for a syntactic sugar form, or {doc}`stdlib` for the library.
+form's meaning is defined, the rule for a syntactic sugar form, or {doc}`stdlib` for a built-in.
 
 (top-level-heads)=
 ### Top-level forms
@@ -510,9 +509,9 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
 
-### Library functions
+### Built-in functions and the standard library
 
-These heads name functions of the library. Each call is a core call ({numref}`library-form`).
+These heads name built-in functions, except the primitives, which the standard library names. Each call is a core call ({numref}`built-ins`).
 
 | Heads | What they are |
 |---|---|
@@ -532,9 +531,9 @@ These heads name functions of the library. Each call is a core call ({numref}`li
 | `pi`, `tau`, `euler` | constants |
 | the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
 
-A call of `steps` gives an ease, which is a function, so `steps` is a library function and not a
+A call of `steps` gives an ease, which is a function, so `steps` is a built-in function and not a
 keyword. By {numref}`declaration-names`, a declaration or a binding named `steps` takes the place
-of the library function from that declaration or binding on.
+of the built-in function from that declaration or binding on.
 
 :::{admonition} Code differs
 :class: note
@@ -711,7 +710,8 @@ their place. They are not forms of the language.
 | the fourteen listeners | core | {doc}`reaction`, {doc}`concurrency`, {doc}`lifecycle` |
 | a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-translate` |
 | a condition | core | {doc}`reaction` |
-| the operators, `not`, `abs`, the `none` functions and the box points | library | {numref}`library-form` |
-| the built-in functions and the collections, `map` over an int included, `steps` | library | {doc}`stdlib` |
-| the primitives | library | {numref}`primitive-form` |
-| the constants and the standard library files | library | {doc}`stdlib` |
+| the operators, `not`, `abs`, the `none` functions and the box points | built-in | {numref}`built-ins` |
+| the built-in functions and the collections, `map` over an int included, `steps` | built-in | {doc}`stdlib` |
+| the primitives | standard library | {numref}`primitive-form` |
+| the constants | built-in |
+| the files of the standard library | standard library | {doc}`stdlib` |
