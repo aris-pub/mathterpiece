@@ -64,4 +64,4 @@ exclude_patterns = [
 # The pages of the spec that the author has approved. just spec-publish publishes these in full, the
 # glossary and the index of rules with them, and every other page as a stub with its title only
 # (docs/_ext/spec_publish.py).
-spec_approved = ["index", "overview", "compiler-runtime", "lexical", "glossary", "rules"]
+spec_approved = ["index", "overview", "compiler-runtime", "lexical", "grammar", "glossary", "rules"]
