@@ -15,9 +15,8 @@ The head of a form is its first item ({numref}`form-template`): `if` in `(if c a
 `(circle p (r 1))`. An item of a form is also called by its head, so `(r 1)` is an `r` item.
 
 ```{rule} kinds-of-form
-Every form is either syntactic sugar ({numref}`sugar-form`) or a core form. What the parser
-reads as a form, such as `#'…'` and `f'…'`, is
-syntactic sugar too ({numref}`parser-sugar`). Which kind a form is depends on the whole form, not only on its head:
+Every form is either syntactic sugar ({numref}`sugar-form`) or a core form. Which kind a form is
+depends on the whole form, not only on its head:
 `(foreach ((a s) (b t)) …)` is syntactic sugar, and `(foreach a s …)` is core.
 ```
 
