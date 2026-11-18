@@ -570,7 +570,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove` | core | listeners on a shape or a term, or for `on-pointermove`, on its canvas | {doc}`reaction`, {doc}`concurrency` |
 | `on-show`, `on-hide` | core | listeners that play while a canvas starts or stops drawing a shape | {doc}`reaction`, {doc}`lifecycle` |
 | `on-view`, `on-ready`, `on-live`, `on-quiet` | core | listeners on their own view | {doc}`lifecycle` |
-| `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom` on a canvas | core | the view box and how the {term}`reader` may move it | {doc}`page-interface` |
+| `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom` on a canvas | core | the view box and how the {term}`reader` may move it. `(zoom LO HI)` lets the reader zoom from `LO` to `HI` times, and a canvas without it does not zoom. `(pan B)` says whether the reader may pan, and is `false` when it is left out | {doc}`page-interface` |
 | `toggle-duration`, `toggle-ease` | core | how a canvas fades its items in and out | {doc}`time`, {doc}`page-interface` |
 | a name, a list literal or an expression in a canvas | core | what the canvas draws | {doc}`page-interface` |
 | `font` on a readout | core | the readout's font | {doc}`page-interface` |
@@ -595,6 +595,13 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 :class: note
 The compiler shows a label written `(label $'…')` as typeset LaTeX, and any other label as plain
 text, so the spelling of a string changes its meaning. Bead mtp-z8x5 makes the compiler follow the rule.
+:::
+
+:::{admonition} Code differs
+:class: note
+A canvas without `(zoom …)` zooms from 1 to 10 times, `(zoom B)` turns zooming on or off, and a
+canvas without `(pan …)` pans (compiler.py:3790-3815, 4386-4391). Bead mtp-ff0r makes the compiler
+follow the rule.
 :::
 
 ### Bodies
