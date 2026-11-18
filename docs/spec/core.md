@@ -473,7 +473,7 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a {term}`TeX string` | core | the formula's LaTeX, which marks its terms | {doc}`world-model` |
+| a string known when compiling, plain or {term}`TeX <TeX string>` | core | the formula's LaTeX, which marks its terms | {doc}`world-model` |
 | `term` | core | `(term T ITEM…)`: a term's attributes | {doc}`world-model` |
 | `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | a term's attributes | {doc}`world-model` |
 | a string in a term | core | the LaTeX that the term shows | {doc}`world-model` |
