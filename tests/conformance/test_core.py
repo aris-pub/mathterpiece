@@ -49,12 +49,12 @@ RAND = "(import rand rand rand-int pick shuffle next-seed roll-dice) "
 
 @rule("kinds-of-form")
 class TestKindsOfForm:
-    def test_a_library_head_may_be_declared_again(self):
-        assert value("(func max ((real a) (real b)) b) (real v (max 1 2))", "v") == 2
-
-    @pytest.mark.parametrize("head", ["if", "when", "foreach", "circle"])
-    def test_a_core_or_sugar_head_may_not(self, head):
-        compile_error(f"(func {head} ((real a)) a)")
+    def test_one_head_begins_both_kinds(self):
+        # Two names in one foreach are syntactic sugar for two foreach forms of one name each.
+        same_meaning(
+            "(scene t (foreach ((a [1 2]) (b [3 4])) (circle #'c-{a}-{b}' (r a))))",
+            "(scene t (foreach a [1 2] (foreach b [3 4] (circle #'c-{a}-{b}' (r a)))))",
+        )
 
 
 @rule("sugar-form")
@@ -71,6 +71,13 @@ class TestSugarForm:
 
 @rule("library-form")
 class TestLibraryForm:
+    def test_a_library_name_may_be_declared_again(self):
+        assert value("(func max ((real a) (real b)) b) (real v (max 1 2))", "v") == 2
+
+    @pytest.mark.parametrize("head", ["if", "when", "foreach", "circle"])
+    def test_a_keyword_may_not(self, head):
+        compile_error(f"(func {head} ((real a)) a)")
+
     def test_a_call_of_a_built_in_is_a_call(self):
         assert value("(real v (max 1 2))", "v") == 2
 
