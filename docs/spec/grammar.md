@@ -166,8 +166,11 @@ Every form is written `(head name? positional… named… docstring? body…)`.
   specifies. A head takes a fixed number of them. One that the head does not require may be left
   out only together with every positional argument after it.
 - The {term}`named arguments <named argument>` come next, in any order, each at most once
-  ({numref}`named-arguments-first`, {numref}`named-arguments-once`). Each is a form whose head and
-  items are specified by the head.
+  ({numref}`named-arguments-first`, {numref}`named-arguments-once`). Each is a form whose head has
+  a meaning only inside the form that holds it, as `r` has only inside a circle, and whose items
+  are specified by the head that holds it: at most two positional arguments, and a body, but
+  never a named argument. So `(defaults (fill red) (stroke blue))` has only a body, whose items
+  are the attributes and values that it gives.
 - The {term}`docstring`, for a declaration, comes next ({numref}`docstrings`).
 - The body comes last: any number of items, or none, of the kinds that the form specifies
   ({numref}`contexts`). Whatever a form takes in a varying number goes in its body: no positional
