@@ -124,7 +124,7 @@ source. Each expression is one of these:
 
 An operator is a name with one name part ({numref}`literal-words`).
 
-```{rule} shorthand-forms
+```{rule} parser-sugar
 The parser produces each spelling on the left as the form on the right:
 
 | Written | Is the form |

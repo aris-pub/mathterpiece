@@ -198,8 +198,8 @@ class TestParserExpressions:
         assert items("(f f'a{{b}}c')") == (interp(("a{b}c",)),)
 
 
-@rule("shorthand-forms")
-class TestShorthandForms:
+@rule("parser-sugar")
+class TestParserSugar:
     def test_docstring(self):
         assert items("(f doc@'text')") == (form(name("doc"), StrLit("text")),)
 

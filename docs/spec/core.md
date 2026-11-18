@@ -15,9 +15,9 @@ The head of a form is its first item ({numref}`form-template`): `if` in `(if c a
 `(circle p (r 1))`. An item of a form is also called by its head, so `(r 1)` is an `r` item.
 
 ```{rule} kinds-of-form
-Every form is either syntactic sugar ({numref}`sugar-form`) or a core form, and so is every
-shorthand that the parser reads, such as `#'…'` and `f'…'`. A core form is a form that is not
-syntactic sugar. Which kind a form is depends on the whole form, not only on its head:
+Every form is either syntactic sugar ({numref}`sugar-form`) or a core form. A core form is a form
+that is not syntactic sugar. What the parser reads as a form, such as `#'…'` and `f'…'`, is
+syntactic sugar too ({numref}`parser-sugar`). Which kind a form is depends on the whole form, not only on its head:
 `(foreach ((a s) (b t)) …)` is syntactic sugar, and `(foreach a s …)` is core.
 ```
 
@@ -56,9 +56,9 @@ is written as it is.
 (core-rewrites)=
 ## Rewrite rules
 
-The {term}`parser` makes the rewrites of the lexical shorthands while it reads the source:
+The {term}`parser` rewrites some syntactic sugar while it reads the source:
 a prefixed form `H@X`, a {term}`name string` `#'…'`, an {term}`interpolated string` `f'…'`, a part
-after a {term}`list` {term}`literal`, `[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
+after a {term}`list` {term}`literal`, `[…][X]` ({numref}`parser-sugar`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other syntactic sugar form is in the table of the rule below.
 
 (rewrite-when)=
@@ -504,7 +504,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `fn` | core | `(fn PARAMS BODY)`: a function written in place | {doc}`types`, {doc}`evaluation` |
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
 | `type-of` | core | `(type-of X)`: the type of `X`, as a string | {doc}`types` |
-| `concat` | core | `(concat A B …)`: the strings `A`, `B`, … joined in order. An interpolated string `f'…'` is syntactic sugar for it ({numref}`shorthand-forms`) | {doc}`evaluation` |
+| `concat` | core | `(concat A B …)`: the strings `A`, `B`, … joined in order. An interpolated string `f'…'` is syntactic sugar for it ({numref}`parser-sugar`) | {doc}`evaluation` |
 | `fmt` | core | `(fmt X S)`: the value of `X` written as a string, by the {term}`format spec` `S`, in Python's format-spec mini-language. `S` is known when compiling, and is `''` when it is left out. `(concat)` is `''` | {doc}`evaluation` |
 | `free` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
@@ -668,7 +668,7 @@ their place. They are not forms of the language.
 
 | Head | Kind | Rewrite or defining page |
 |---|---|---|
-| `H@X`, `#'…'`, `[…][X]` | syntactic sugar, made by the parser | {numref}`shorthand-forms` |
+| `H@X`, `#'…'`, `[…][X]` | syntactic sugar, made by the parser | {numref}`parser-sugar` |
 | `(H_ …)` | syntactic sugar, made by the parser | {numref}`unnamed-head` |
 | `N.A`, `N[X]` | syntactic sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | syntactic sugar | {numref}`sugar-rewrites` |
