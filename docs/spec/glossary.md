@@ -203,7 +203,7 @@ word
   A name, a number, an operator, a bool literal or `none` ({numref}`word-ends`).
 
 core form
-  A form that is not syntactic sugar, such as a form whose head is core or a call of a library function. The
+  A form that is not syntactic sugar, such as `(if c a b)` or a call of a function. The
   prover proves core forms, and the runtime runs them. See {numref}`kinds-of-form` and
   {numref}`library-form`.
 

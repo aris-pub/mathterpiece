@@ -1,10 +1,10 @@
 (core)=
 # Core and derived forms
 
-On this page, every {term}`head` that the {term}`compiler` accepts is sorted into three kinds:
-{term}`core form`, {term}`syntactic sugar` and {term}`library`. Each syntactic sugar {term}`form` is given as a
-{term}`rewrite` into core forms. Each core form is given with the page of the spec where its
-meaning is defined.
+On this page, every {term}`form` that the {term}`compiler` accepts is either a {term}`core form` or
+{term}`syntactic sugar`. Each syntactic sugar form is given as a {term}`rewrite` into core forms,
+and each core form with the page of the spec where its meaning is defined. The functions of the
+{term}`library` are listed in a table of their own.
 
 This page specifies the language.
 
@@ -15,8 +15,10 @@ The head of a form is its first item ({numref}`form-template`): `if` in `(if c a
 `(circle p (r 1))`. An item of a form is also called by its head, so `(r 1)` is an `r` item.
 
 ```{rule} kinds-of-form
-Every head belongs to exactly one of three kinds: syntactic sugar ({numref}`sugar-form`), library
-({numref}`library-form`) or core. A head that is neither syntactic sugar nor library is core.
+Every form is either syntactic sugar ({numref}`sugar-form`) or a core form, and so is every
+shorthand that the parser reads, such as `#'…'` and `f'…'`. A core form is a form that is not
+syntactic sugar. Which kind a form is depends on the whole form, not only on its head:
+`(foreach ((a s) (b t)) …)` is syntactic sugar, and `(foreach a s …)` is core.
 ```
 
 ```{rule} sugar-form
@@ -28,10 +30,11 @@ A form that needs a value or a type to be rewritten is core.
 ```
 
 ```{rule} library-form
-The library is the built-in functions, which are implemented natively, and the files of the
-standard library, which are written in mtp. A call of a library function is a call, which is a
-core form. The library holds functions, constants
-and declarations, and no form of the language.
+The library is not a kind of form. It is the declarations that every source may use without
+declaring them: the built-in functions, which are implemented natively, and the files of the
+standard library, which are written in mtp. It holds functions, constants and declarations, and
+adds no form to the language: a call of a library function is a call, which is a core form, as a
+call of a function that the source declares is.
 ```
 
 By {numref}`declaration-names`, a declared function may take the name of a library function: after
