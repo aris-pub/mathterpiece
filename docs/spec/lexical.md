@@ -176,7 +176,7 @@ Each keyword is the head of a form of the language.
 | Declarations of {term}`listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 | Declarations of functions, types and choreos | `func`, `primitive`, `colormap`, `type`, `interface`, `motif`, `variant`, `choreo` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
-| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free`, `tex`, `concat`, `fmt` |
+| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free`, `concat`, `fmt` |
 | Steps of an animation | `move`, `wait`, `jump`, `at-once`, `in-order` |
 :::
 
@@ -232,7 +232,7 @@ character, a line feed included, is itself.
 A TeX string is written `$'…'`. Inside it, `\'` is a quote, and every other character is
 itself: `\frac`, `\\` and `\q` stay as written. A backslash and the character after it are read
 together, so in `$'a\\'` the string is `a\\` and the last quote closes it. Its value is a string
-marked as LaTeX, as the value of `(tex S)` is.
+marked as LaTeX.
 ```
 
 ## Prefixes

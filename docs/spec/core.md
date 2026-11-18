@@ -476,7 +476,7 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 | a {term}`TeX string` | core | the formula's LaTeX, which marks its terms | {doc}`world-model` |
 | `term` | core | `(term T ITEM…)`: a term's attributes | {doc}`world-model` |
 | `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | a term's attributes | {doc}`world-model` |
-| `(tex S)` in a term | core | the LaTeX that the term shows | {doc}`world-model` |
+| a string in a term | core | the LaTeX that the term shows | {doc}`world-model` |
 | `like` in a term | syntactic sugar | copies another term's form | {numref}`sugar-rewrites` |
 | `defaults` in a formula | syntactic sugar | attributes for every term | {numref}`sugar-rewrites` |
 | `exists-when` in a formula | core | when a term exists | {doc}`world-model` |
@@ -501,7 +501,6 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `fn` | core | `(fn PARAMS BODY)`: a function written in place | {doc}`types`, {doc}`evaluation` |
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
 | `type-of` | core | `(type-of X)`: the type of `X`, as a string | {doc}`types` |
-| `tex` | core | `(tex S)`: the string `S`, as LaTeX, which a formula, a term or a label typesets. A {term}`TeX string` `$'…'` is such a string, written directly ({numref}`tex-strings`) | {doc}`types` |
 | `concat` | core | `(concat A B …)`: the strings `A`, `B`, … joined in order. An interpolated string `f'…'` is syntactic sugar for it ({numref}`shorthand-forms`) | {doc}`evaluation` |
 | `fmt` | core | `(fmt X S)`: the value of `X` written as a string, by the {term}`format spec` `S`, in Python's format-spec mini-language. `S` is `''` when it is left out | {doc}`evaluation` |
 | `free` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
@@ -512,7 +511,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 :class: note
 The parser reads a TeX string written `tex'…'`, and an interpolated string written `$'…'` as a
 literal of its own (nodes.py, `StrLit` and `InterpStrLit`), not as a `concat` form. The compiler has
-no `concat` and no `fmt`, and reads `(tex …)` only in a term (compiler.py:5226) and in a label
+no `concat` and no `fmt`, and has a form `(tex …)` in a term (compiler.py:5226) and in a label
 (compiler.py:3865). Bead mtp-rry4 makes them follow the rule.
 :::
 
@@ -589,7 +588,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
 | the target of `on-drag` written as a name | syntactic sugar | the move of the shape's position | {numref}`sugar-rewrites` |
-| `label` | core | a control's label: a string, or `(tex S)` to typeset it as LaTeX | {doc}`page-interface`, {doc}`accessibility` |
+| `label` | core | a control's label: a string, or a {term}`TeX string` `$'…'` to typeset it as LaTeX | {doc}`page-interface`, {doc}`accessibility` |
 | `stops` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `stops` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | its bars, its rest between steps, its step names | {doc}`page-interface`, {doc}`time` |
 | `selected` on a button | core | whether it is the current choice | {doc}`page-interface`, {doc}`accessibility` |
