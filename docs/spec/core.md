@@ -54,8 +54,8 @@ is written as it is.
 ## Rewrite rules
 
 The {term}`parser` makes the rewrites of the lexical shorthands while it reads the source:
-a prefixed form `H@X`, a {term}`name string` `#'…'`, a {term}`TeX string` `tex'…'`, a part after a
-{term}`list` {term}`literal`, `[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
+a prefixed form `H@X`, a {term}`name string` `#'…'`, an {term}`interpolated string` `f'…'`, a part
+after a {term}`list` {term}`literal`, `[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other syntactic sugar form is in the table of the rule below.
 
 (rewrite-when)=
@@ -366,7 +366,7 @@ The top level of a source holds only the heads of this table and `let`
 | {term}`components <component>` | core | {term}`views <view>` and controls (see "Components and their items") | {doc}`page-interface` |
 | `doc` | core | a {term}`docstring`, kept in the .mtpc | {doc}`compiled-format` |
 
-So a source need not hold a scene: `(real a 1) (readout r $'{a}')` is a world model with a
+So a source need not hold a scene: `(real a 1) (readout r f'{a}')` is a world model with a
 variable and a readout, and an empty file is a world model with nothing in it. A source with two
 scenes is an error.
 
@@ -489,7 +489,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a literal | core | a number, string, TeX string, {term}`interpolated string`, bool, `none` or list literal | {doc}`lexical`, {doc}`types` |
+| a literal | core | a number, string, TeX string, bool, `none` or list literal | {doc}`lexical`, {doc}`types` |
 | a name | core | what the name refers to | {doc}`scope` |
 | a name with several name parts, `N.A`, `N[X]` | syntactic sugar | | {numref}`sugar-rewrites` |
 | `.` | core | `(. X Y)`: an attribute, member, item or key of `X` | {numref}`dot-name-part` |
@@ -501,15 +501,18 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `fn` | core | `(fn PARAMS BODY)`: a function written in place | {doc}`types`, {doc}`evaluation` |
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
 | `type-of` | core | `(type-of X)`: the type of `X`, as a string | {doc}`types` |
-| `tex` | core | `(tex S)`: the string `S`, as LaTeX, which a formula, a term or a label typesets. `tex'…'` is syntactic sugar for it ({numref}`shorthand-forms`) | {doc}`types` |
+| `tex` | core | `(tex S)`: the string `S`, as LaTeX, which a formula, a term or a label typesets. A {term}`TeX string` `$'…'` is such a string, written directly ({numref}`tex-strings`) | {doc}`types` |
+| `concat` | core | `(concat A B …)`: the strings `A`, `B`, … joined in order. An interpolated string `f'…'` is syntactic sugar for it ({numref}`shorthand-forms`) | {doc}`evaluation` |
+| `fmt` | core | `(fmt X S)`: the value of `X` written as a string, by the {term}`format spec` `S`, in Python's format-spec mini-language. `S` is `''` when it is left out | {doc}`evaluation` |
 | `free` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
 
 :::{admonition} Code differs
 :class: note
-The parser reads `tex'…'` as a string literal marked as LaTeX (nodes.py, `StrLit`), not as the form
-`(tex S)`, and the compiler reads `(tex …)` only in a term (compiler.py:5226) and in a label
+The parser reads a TeX string written `tex'…'`, and an interpolated string written `$'…'` as a
+literal of its own (nodes.py, `StrLit` and `InterpStrLit`), not as a `concat` form. The compiler has
+no `concat` and no `fmt`, and reads `(tex …)` only in a term (compiler.py:5226) and in a label
 (compiler.py:3865). Bead mtp-rry4 makes them follow the rule.
 :::
 

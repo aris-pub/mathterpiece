@@ -116,15 +116,10 @@ source. Each expression is one of these:
 | name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
 | brackets | `[real real]` in `func[real real]` | its expressions, in order |
 | broadened type | `real\|none` | its words, as expressions, in order |
-| string literal | `'…'`, `tex'…'` | its text, and whether it is a {term}`TeX string` |
-| interpolated string | `$'…'` | its pieces: text, the expression of each `{…}` with no {term}`format spec`, and each `{…}` with a format spec |
-| `{…}` with a format spec | `{x:.2f}` | the expression and the format spec |
+| string literal | `'…'`, `$'…'` | its text, and whether it is a {term}`TeX string` |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
 | bool literal | `true`, `false` | the value |
 | none | `none` | nothing |
-
-In an interpolated string, each piece of text is as long as possible, so two pieces of text are
-never next to each other.
 ```
 
 An operator is a name with one name part ({numref}`literal-words`).
@@ -135,11 +130,11 @@ The parser produces each spelling on the left as the form on the right:
 | Written | Is the form |
 |---|---|
 | `H@X`, such as `r@1` | `(H X)`, such as `(r 1)` ({numref}`prefix-forms`) |
-| `#'dot-{k}'` | `(name $'dot-{k}')` |
-| `#'dot-{k}'.a.b` | `(. (. (name $'dot-{k}') a) b)` |
-| `#'dot-{k}'[i]` | `(. (name $'dot-{k}') i)` |
+| `#'dot-{k}'` | `(name f'dot-{k}')` |
+| `#'dot-{k}'.a.b` | `(. (. (name f'dot-{k}') a) b)` |
+| `#'dot-{k}'[i]` | `(. (name f'dot-{k}') i)` |
 | `[a b c][h]` | `(. [a b c] h)` |
-| `tex'\frac{a}{b}'` | `(tex S)`, where `S` is the string between the quotes, read by {numref}`tex-strings` |
+| `f'x = {x:.2f}!'` | `(concat 'x = ' (fmt x '.2f') '!')`. Each piece of text, as long as possible, is a string literal, each `{X}` is `(fmt X)`, and each `{X:S}` is `(fmt X 'S')`, in the order of the text |
 
 The form has the position of the first character of its spelling. A `(. X Y)` that follows a name
 string has the position of its `.` or `[`.
@@ -231,7 +226,7 @@ name. Inside `(foreach k 3 …)`, `(circle #'dot-{k}' (r 1))` declares the circl
 and `dot-2`, and `(circle (name s) (r 1))` takes its name from the string `s`, which is known when
 compiling. `(real none 1)`, `(animation_ (move k (to 2)))` and `(func_ ((real x)) (* 2 x))` are
 allowed, and nothing can refer to them. `(canvas none s)`, `(slider_ (move k (from 0) (to 1)))`,
-`(scene_ (circle c (r 1)))` and `(formula none tex'x')` are errors, since those must have a name.
+`(scene_ (circle c (r 1)))` and `(formula none $'x')` are errors, since those must have a name.
 `(circle 'c' (r 1))` is an error, since the name is in quotes, and so is `(circle p.r (r 1))`, since
 its name has two name parts.
 
@@ -304,7 +299,7 @@ other declaration. `(real k 1 doc@'d' (>= 0))`, `(func f ((real x)) doc@'d' (* 2
 `(button b (animation a) doc@'d')` and `(on-click p (animation a) doc@'d')` are allowed, and so is
 `(motif m ((real k 1)) doc@'d' (circle_ (r k)))`, whose docstring comes after its parameters and
 before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an error, and so is
-`(circle c doc@$'r = {r}')`, whose string is interpolated.
+`(circle c doc@f'r = {r}')`, whose string is interpolated.
 
 :::{admonition} Code differs
 :class: note

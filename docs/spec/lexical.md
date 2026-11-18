@@ -123,11 +123,11 @@ So `theta`, `show-tan`, `x2`, `a-`, `none?`, `the-true-value`, `truex`, `p.empty
 `ball.on-floor?` are names. `2x`, `-x`, `a?b`, `x'`, `a!b`, `a*b`, `a=b`, `a:b`, `θ`, `π` and `x²`
 are not, and neither is any word that holds a character that is not ASCII. `true.x`, `p.true`,
 `none.x`, `xs[0].none` and `none[0]` are errors, since one of their name parts is `true` or `none`.
-Since no name holds `'` or `@`, text that starts with `tex'` is a {term}`TeX string`, and a name
-followed by `@` starts a prefixed form, at the start of an expression ({numref}`tex-strings`,
-{numref}`prefix-forms`). Both are errors in every other place, such as after `|` in a
-{term}`broadened type` or after a `.` that follows {term}`brackets`: `a|tex'q'`, `xs[0].tex'q'` and
-`a|r@1` are errors.
+Since no name holds `'` or `@`, text that starts with `f'` is an {term}`interpolated string`, and a
+name followed by `@` starts a prefixed form, at the start of an expression
+({numref}`interpolated-strings`, {numref}`prefix-forms`). Both are errors in every other place,
+such as after `|` in a {term}`broadened type` or after a `.` that follows {term}`brackets`:
+`a|f'q'`, `xs[0].f'q'` and `a|r@1` are errors.
 
 ```{mtp-grammar} heads-with-no-name
 ```
@@ -176,7 +176,7 @@ Each keyword is the head of a form of the language.
 | Declarations of {term}`listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 | Declarations of functions, types and choreos | `func`, `primitive`, `colormap`, `type`, `interface`, `motif`, `variant`, `choreo` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
-| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free`, `tex` |
+| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free`, `tex`, `concat`, `fmt` |
 | Steps of an animation | `move`, `wait`, `jump`, `at-once`, `in-order` |
 :::
 
@@ -229,10 +229,10 @@ character, a line feed included, is itself.
 ```
 
 ```{rule} tex-strings
-A TeX string is written `tex'…'`. Inside it, `\'` is a quote, and every other character is
+A TeX string is written `$'…'`. Inside it, `\'` is a quote, and every other character is
 itself: `\frac`, `\\` and `\q` stay as written. A backslash and the character after it are read
-together, so in `tex'a\\'` the string is `a\\` and the last quote closes it. The parser produces
-a TeX string as the form `(tex S)`, where `S` is that string ({numref}`shorthand-forms`).
+together, so in `$'a\\'` the string is `a\\` and the last quote closes it. Its value is a string
+marked as LaTeX, as the value of `(tex S)` is.
 ```
 
 ## Prefixes
@@ -260,7 +260,7 @@ rules as when it is written with parentheses: `if@c` is `(if c)`, which is an er
 ```
 
 ```{rule} interpolated-strings
-An interpolated string is written `$'…'`, and a {term}`name string` is written `#'…'`. Their
+An interpolated string is written `f'…'`, and a {term}`name string` is written `#'…'`. Their
 text has the escapes of {numref}`string-literals`, and in it `{{` is `{` and `}}` is `}`. A `{` that
 is not doubled opens braces, which hold one expression, with whitespace or nothing before and
 after it, then a format spec or nothing, and last `}`. No comment may be written in the
@@ -273,10 +273,10 @@ The parser keeps the format spec as written. This page does not give its meaning
 a word ({numref}`word-ends`), `{x:.2f}` holds the name `x` and the format spec `.2f`. A `:` in an
 expression nested in the expression in braces is an error, so `{(f a:b)}` is an error. A comment
 inside a form in the braces is allowed, since it is inside the form and not around the
-expression: `$'{(f ; c\n x)}'` holds the form `(f x)`. `$'{x ; c\n}'` is an error.
+expression: `f'{(f ; c\n x)}'` holds the form `(f x)`. `f'{x ; c\n}'` is an error.
 
 The grammar has no rule that depends on how deep braces are nested, so braces are read in the
 same way at every depth. When a string literal nested in the expression in braces ends, the
 expression and the rest of the braces go on by the same rules as before the nested string literal.
-So `$'{$'{a}'}'` is the interpolated string whose braces hold the interpolated string `$'{a}'`, and
-in `$'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.
+So `f'{f'{a}'}'` is the interpolated string whose braces hold the interpolated string `f'{a}'`, and
+in `f'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.

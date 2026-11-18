@@ -14,7 +14,7 @@ The `(defaults …)` of a formula is a named argument, so it comes before the bo
 ({numref}`named-arguments-first`).
 The body holds the string, the terms, the `exists-when` forms and the variables. By
 {numref}`declare-before-use`, a `(term name …)` and an `exists-when` of a term come after the
-string. So `(formula f (defaults (padding 3)) tex'\term{a}{x}' (term a (fill 'red')))` is allowed,
+string. So `(formula f (defaults (padding 3)) $'\term{a}{x}' (term a (fill 'red')))` is allowed,
 and the same formula with `(defaults …)` last, or with `(term a …)` before the string, is an error.
 
 :::{admonition} Code differs

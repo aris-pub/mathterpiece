@@ -135,8 +135,8 @@ int
   {numref}`number-literals`).
 
 interpolated string
-  `$'…'`: a string literal with expressions in braces, whose values are filled in
-  ({numref}`interpolated-strings`).
+  `f'…'`: text with expressions in braces, syntactic sugar for a `concat` form that joins the text and
+  the values, each written by `fmt` ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
 
 letter
   One of the ASCII letters `a` to `z` and `A` to `Z`, as a character of a name
@@ -159,7 +159,7 @@ name part
   `xs[0].pos` ({numref}`name-characters`, {numref}`name-brackets`).
 
 name string
-  `#'…'`: an interpolated string read as a name, which is `(name $'…')`
+  `#'…'`: an interpolated string read as a name, which is `(name f'…')`
   ({numref}`interpolated-strings`, {numref}`shorthand-forms`).
 
 named argument
@@ -196,8 +196,7 @@ string
   ({numref}`the-types`, {numref}`string-literals`).
 
 TeX string
-  `tex'…'`: syntactic sugar for `(tex S)`, a string of LaTeX, in which only `\'` is an escape
-  ({numref}`tex-strings`).
+  `$'…'`: a string literal of LaTeX, in which only `\'` is an escape ({numref}`tex-strings`).
 
 word
   A name, a number, an operator, a bool literal or `none` ({numref}`word-ends`).
