@@ -45,13 +45,6 @@ motif and choreo only once, before any copies are made ({numref}`prove-bodies-on
 the names of a `foreach` and the parameters of a motif or a choreo have no value yet, so a form
 whose rewrite would need one of their values is core ({numref}`names-from-values`).
 
-### How a rewrite is written
-
-A rewrite is a pair of mtp fragments: the form as written, then the core forms that it means. In
-a fragment, a name in capitals stands for any text of the kind that the rule names: `X` for an
-{term}`expression`, `N` for a name, `T` for a type, `ARGS…` for any number of items. Everything else
-is written as it is.
-
 (core-rewrites)=
 ## Rewrite rules
 
@@ -69,6 +62,9 @@ hold is a {term}`compile error`. A rewrite may move text or copy it, and each na
 copied text refers to what it referred to where it was written. A rewrite may give
 syntactic sugar forms, which are rewritten in turn, until no syntactic sugar form is left. A `(like …)` is rewritten
 before any other rewrite of the declaration that it copies.
+
+In the table, a name in capitals stands for any text that its row allows, and `…` after it for
+any number of such texts.
 
 | Written | Means exactly | Conditions |
 |---|---|---|
