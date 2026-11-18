@@ -434,7 +434,7 @@ The compiler accepts a variant parameter that no attribute of its shape reads. m
 ```{rule} function-types
 The values of a function type are the functions declared with `func`, the functions written with
 `fn`, the colormaps, the built-in functions, and the functions that a library function gives, such
-as the ease that `(step N)` gives. A type that is a function type, or holds one, as
+as the ease that `(steps N)` gives. A type that is a function type, or holds one, as
 `list[func[real real]]` does, is the type only of a parameter, a `let` name, an expression, and an
 attribute that {doc}`world-model` gives a function type, such as the `ease` of a transition. A
 variable and the declared result of a function never have such a type, and a declaration that
