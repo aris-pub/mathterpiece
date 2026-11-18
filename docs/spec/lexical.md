@@ -176,7 +176,7 @@ Each keyword is the head of a form of the language.
 | Declarations of {term}`listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 | Declarations of functions, types and choreos | `func`, `primitive`, `colormap`, `type`, `interface`, `motif`, `variant`, `choreo` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
-| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free` |
+| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free`, `tex` |
 | Steps of an animation | `move`, `wait`, `jump`, `at-once`, `in-order` |
 :::
 
@@ -231,7 +231,8 @@ character, a line feed included, is itself.
 ```{rule} tex-strings
 A TeX string is written `tex'…'`. Inside it, `\'` is a quote, and every other character is
 itself: `\frac`, `\\` and `\q` stay as written. A backslash and the character after it are read
-together, so in `tex'a\\'` the string is `a\\` and the last quote closes it.
+together, so in `tex'a\\'` the string is `a\\` and the last quote closes it. The parser produces
+a TeX string as the form `(tex S)`, where `S` is that string ({numref}`shorthand-forms`).
 ```
 
 ## Prefixes

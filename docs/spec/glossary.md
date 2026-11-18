@@ -196,7 +196,8 @@ string
   ({numref}`the-types`, {numref}`string-literals`).
 
 TeX string
-  `tex'…'`: a string literal of LaTeX, in which only `\'` is an escape ({numref}`tex-strings`).
+  `tex'…'`: syntactic sugar for `(tex S)`, a string of LaTeX, in which only `\'` is an escape
+  ({numref}`tex-strings`).
 
 word
   A name, a number, an operator, a bool literal or `none` ({numref}`word-ends`).

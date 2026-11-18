@@ -139,6 +139,7 @@ The parser produces each spelling on the left as the form on the right:
 | `#'dot-{k}'.a.b` | `(. (. (name $'dot-{k}') a) b)` |
 | `#'dot-{k}'[i]` | `(. (name $'dot-{k}') i)` |
 | `[a b c][h]` | `(. [a b c] h)` |
+| `tex'\frac{a}{b}'` | `(tex S)`, where `S` is the string between the quotes, read by {numref}`tex-strings` |
 
 The form has the position of the first character of its spelling. A `(. X Y)` that follows a name
 string has the position of its `.` or `[`.
