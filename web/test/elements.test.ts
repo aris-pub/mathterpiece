@@ -118,7 +118,7 @@ describe("controls", () => {
     expect(text()).toEqual(["k = 7", "set 7", "on with k = 7"]);
   });
 
-  // The author, 2026-11-09: a control's label may be LaTeX, (label (tex …)), typeset as a formula is.
+  // The author, 2026-11-09: a control's label may be LaTeX, (label $'…'), typeset as a formula is.
   it("a label given as LaTeX is typeset, and follows its expression", () => {
     const file = doc("page");
     for (const name of ["told", "set-five", "said"]) file.objects.find((o) => o.name === name)!["label-tex"] = true;

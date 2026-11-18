@@ -8,7 +8,7 @@ from mtpc_check import errors
 SCENE = "(real k 0) (scene s (circle c))"
 GO = "(animation (move k (to 1) (duration 1)))"
 BACK = "(animation (move k (to 0) (duration 1)))"
-FORMULA = r"(formula f tex'\term{t}{x}')"
+FORMULA = r"(formula f $'\term{t}{x}')"
 
 
 def views(a="", b=""):

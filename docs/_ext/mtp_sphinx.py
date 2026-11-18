@@ -115,9 +115,9 @@ class MtpLexer(RegexLexer):
         "root": [
             (r"\s+", Whitespace),
             (r";.*$", Comment.Single),
-            (r"\$'(\\.|[^'\\])*'", String.Interpol),
+            (r"f'(\\.|[^'\\])*'", String.Interpol),
             (r"#'(\\.|[^'\\])*'", String.Other),
-            (r"tex'(\\.|[^'\\])*'", String),
+            (r"\$'(\\.|[^'\\])*'", String),
             (r"'(\\.|[^'\\])*'", String),
             (r"(doc|free)@", Keyword),
             (r"[-+]?[0-9]+/[0-9]+", Number),

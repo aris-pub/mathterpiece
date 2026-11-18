@@ -127,7 +127,7 @@
 (formula bounds
   doc@'Equation (4.1): the squared stretch of the pair, bounded below and above.'
     (defaults (padding 3) (rounding 4))
-  tex'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
+  $'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
       \mathrel{\term{lo}{\le}} \frac{\mathbb E\,\big(d(x,A)-d(y,A)\big)^2}{d(x,y)^2}
       \mathrel{\term{hi}{\le}} P_h(p) + \term{b2}{\frac1{b^2}}'
   (term gap (fill green) (opacity (lit shown 'gap')))

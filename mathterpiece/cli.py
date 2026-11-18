@@ -134,16 +134,6 @@ def _tree(node, depth: int) -> Iterator[str]:
             for part in parts:
                 if not isinstance(part, str):
                     yield from _tree(part, depth + 1)
-        case nodes.InterpStrLit(parts):
-            yield f"{pad}{node.pos} string with values"
-            for part in parts:
-                if isinstance(part, str):
-                    yield f"{pad}  text {part!r}"
-                else:
-                    yield from _tree(part, depth + 1)
-        case nodes.Field(expr, spec):
-            yield f"{pad}{node.pos} value{f' :{spec}' if spec else ''}"
-            yield from _tree(expr, depth + 1)
         case nodes.StrLit(value, tex=tex):
             yield f"{pad}{node.pos} {'tex string' if tex else 'string'} {value!r}"
         case nodes.NoneLit():

@@ -40,7 +40,7 @@
   ; The stop's name in the halo's top-left corner, and the angle just under it.
   (group captions (defaults (fill chalk) (valign 'top'))
     (text title stop-name (pos (top-left halo 0.25)) (font heading))
-    (text degrees $'{sunflower.angle:.1f}°' (pos (+ title.pos [0 -0.9])) (font small)
+    (text degrees f'{sunflower.angle:.1f}°' (pos (+ title.pos [0 -0.9])) (font small)
         (opacity 0.6))))
 
 ; Each stop of the tour: the angle, its name, and whether the halo glows.

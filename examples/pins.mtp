@@ -38,11 +38,11 @@
     (line_ (from [0 0]) (to (polar 0.1 c))))
 
   (pin large (pos (polar 1 a)) (toward a) (tint red)
-       (label $'r = 1, {(mod a 360):.0f}°'))
+       (label f'r = 1, {(mod a 360):.0f}°'))
   (pin middle (pos (polar 0.5 b)) (toward b) (tint green)
-       (label $'r = 0.5, {(mod b 360):.0f}°'))
+       (label f'r = 0.5, {(mod b 360):.0f}°'))
   (pin small (pos (polar 0.1 c)) (toward c) (tint blue)
-       (label $'r = 0.1, {(mod c 360):.0f}°')))
+       (label f'r = 0.1, {(mod c 360):.0f}°')))
 
 (canvas view (x -2.4) (y -1.3) (width 4.8) (height 2.6) (zoom 1 40)
   doc@'The three circles and their pins.'

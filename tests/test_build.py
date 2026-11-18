@@ -21,7 +21,7 @@ FIGURE = """; A dot and a slider.
 (canvas v s)
 (slider size (move k (from 0) (to 2)) (label 'size'))
 (button back (animation (move k (to 1) (duration 0.5))))
-(readout says $'k = {k:.1f}')
+(readout says f'k = {k:.1f}')
 """
 
 

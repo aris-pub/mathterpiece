@@ -46,14 +46,14 @@
     (line radius (from [0 0]) (to handle.pos) (stroke-width 2))
     (text_ 'θ' (pos (polar 0.18 (/ theta 2))) (font variable))
     (text title 'the unit circle' (pos (+ (line-at 0) [0 0.15])) (font heading))
-    (text angle $'θ = {theta:5.1f}°' (pos (line-at 0)) (font number)))
+    (text angle f'θ = {theta:5.1f}°' (pos (line-at 0)) (font number)))
 
   ; The names sit beside their lines, centered on the spot given.
   (group cosine (defaults (stroke red) (fill red))
     (line across (from [0 0]) (to [handle.x 0]) (stroke-width 4))
     (text_ 'cos' (pos (+ across.pos [0 (* -0.1 above)])) (halign 'middle') (valign 'middle')
         (font small))
-    (text xs $'cos = {(cosd theta):+z.3f}' (pos (line-at 1)) (font number)))
+    (text xs f'cos = {(cosd theta):+z.3f}' (pos (line-at 1)) (font number)))
 
   ; sin's name goes inside the triangle under the radius, clear of the tangent line, unless the
   ; triangle is too thin for it.
@@ -62,7 +62,7 @@
     (text_ 'sin'
         (pos (+ up.pos [(* 0.12 right (if (< (abs handle.x) 0.45) 1 -1)) 0]))
         (halign 'middle') (valign 'middle') (font small))
-    (text ys $'sin = {(sind theta):+z.3f}' (pos (line-at 2)) (font number)))
+    (text ys f'sin = {(sind theta):+z.3f}' (pos (line-at 2)) (font number)))
 
   ; Where the tangent line at the point meets the x axis: at sec theta. At 90 and 270 degrees it
   ; never does: there this is none, and the lines and names that need it are not drawn.
@@ -82,7 +82,7 @@
         (pos (+ (lerp handle.pos [sec-x 0] (min 0.5 (/ 0.3 (dist handle.pos [sec-x 0]))))
                 (polar 0.1 theta)))
         (halign 'middle') (valign 'middle') (font small))
-    (text tans (or? $'tan = {(tand theta):+z.3f}' 'tan = ±∞')
+    (text tans (or? f'tan = {(tand theta):+z.3f}' 'tan = ±∞')
         (pos (line-at 3)) (font number)))
 
   ; sec runs along the x axis past cos, so its name goes on the part of the line beyond cos,
@@ -91,7 +91,7 @@
     (line|none sec (from [0 0]) (to [sec-x 0]) (stroke-width 2))
     (text|none_ 'sec' (pos [(max -1.9 (min 1.35 (/ (+ handle.x sec-x) 2))) (* -0.1 above)])
         (halign 'middle') (valign 'middle') (font small))
-    (text secs (or? $'sec = {(secd theta):+z.3f}' 'sec = ±∞')
+    (text secs (or? f'sec = {(secd theta):+z.3f}' 'sec = ±∞')
         (pos (line-at 4)) (font number)))
 
   ; Where the tangent line meets the y axis: at csc theta, none at 0 and 180 degrees.
@@ -104,14 +104,14 @@
         (pos (+ (lerp handle.pos [0 csc-y] (min 0.5 (/ 0.3 (dist handle.pos [0 csc-y]))))
                 (polar 0.1 theta)))
         (halign 'middle') (valign 'middle') (font small))
-    (text cots (or? $'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
+    (text cots (or? f'cot = {(cotd theta):+z.3f}' 'cot = ±∞')
         (pos (line-at 5)) (font number)))
 
   (group cosecant (defaults (stroke yellow) (fill yellow))
     (line|none csc (from [0 0]) (to [0 csc-y]) (stroke-width 2))
     (text|none_ 'csc' (pos [(* -0.12 right) (max -1.1 (min 1.1 (/ csc-y 2)))])
         (halign 'middle') (valign 'middle') (font small))
-    (text cscs (or? $'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
+    (text cscs (or? f'csc = {(cscd theta):+z.3f}' 'csc = ±∞')
         (pos (line-at 6)) (font number))))
 
 ; Which functions are shown. Only the canvas reads these bools: whether a line is shown is about
@@ -147,5 +147,5 @@
 
 (slider turn (move theta (from 0) (to 360)) (label 'θ'))
 
-(readout x-now $'{(cosd theta):+z.3f}' (font number) doc@'cos θ, for the text around the canvas.')
-(readout y-now $'{(sind theta):+z.3f}' (font number) doc@'sin θ, for the text around the canvas.')
+(readout x-now f'{(cosd theta):+z.3f}' (font number) doc@'cos θ, for the text around the canvas.')
+(readout y-now f'{(sind theta):+z.3f}' (font number) doc@'sin θ, for the text around the canvas.')

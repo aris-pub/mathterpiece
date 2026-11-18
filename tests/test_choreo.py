@@ -147,7 +147,7 @@ def test_eases_and_functions_as_arguments():
 
 def test_constants_and_known_values_as_arguments():
     same(
-        BASE + " (list xs [1 2] (const)) (button b (stop xs[1] $'at {(* 2 3)}'))",
+        BASE + " (list xs [1 2] (const)) (button b (stop xs[1] f'at {(* 2 3)}'))",
         BASE + " (list xs [1 2] (const)) (button b (animation (at-once (defaults (duration 8))"
         " (move k (to xs[1])) (move label (to 'at 6')))))",
     )

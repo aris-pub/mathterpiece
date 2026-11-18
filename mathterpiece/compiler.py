@@ -48,9 +48,7 @@ from mathterpiece.nodes import (
     BoolLit,
     Brackets,
     ComplexLit,
-    Field,
     Form,
-    InterpStrLit,
     IntLit,
     ListLit,
     Name,
@@ -103,9 +101,11 @@ from mathterpiece.types import (
     type_from_node,
 )
 
+# The core forms of strings (mtp-rry4): keywords, so no declaration or binding takes their names.
+STRING_FORMS = ("concat", "fmt")
 RESERVED = frozenset(
     "scene animation transition move in-order at-once when else true false none const self".split()
-    + ["doc", "free", "set", "primitive"]
+    + ["doc", "free", "set", "primitive", *STRING_FORMS]
 )
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The named arguments of controls and listeners; the rest of their items are conditions.
@@ -128,6 +128,7 @@ UNBOUNDED: tuple[float, float] = (-LIMIT, LIMIT)
 RECURSING = Prim("recursing")
 # Forms that are not calls, so a function of the same name never replaces them.
 SPECIAL = {"if", "when", "cond", "and", "or", "let", "name", ".", "fn", "foreach", "type-of", "as"}
+SPECIAL |= set(STRING_FORMS)
 # The shapes a container may be clipped to: ones with an inside.
 CLIPS = ("circle", "rect", "ellipse", "triangle", "polygon", "ring")
 # The points on a shape's box that placement gives: the middle of each side and each corner
@@ -1048,6 +1049,8 @@ class _Compiler:
             name = binding.items[0]
             if not isinstance(name, Name) or len(name.parts) != 1:
                 raise CompileError("expected a name", binding.pos)
+            if name.parts[0] in STRING_FORMS:
+                raise CompileError(f"'{name.parts[0]}' is reserved", name.pos)
             inner[name.parts[0]] = self.let_value(
                 name.parts[0], self.expr(binding.items[1], None, inner), binding.pos
             )
@@ -3861,12 +3864,8 @@ class _Compiler:
         self.priority(obj, items)
         if obj.kind not in LISTENERS:
             label = self.take(items, "label")
-            # (label (tex …)) gives the label as LaTeX, the form a term of a formula takes.
-            if _head(label) == "tex":
-                assert isinstance(label, Form)
-                if len(label.items) != 2:
-                    raise CompileError("(tex …) takes one string, the label's LaTeX", label.pos)
-                label = label.items[1]
+            # A label written as a TeX string, $'…', is LaTeX (the author, 2026-11-18).
+            if isinstance(label, StrLit) and label.tex:
                 obj.data["label-tex"] = True
             # By default a control's label is its name; one with no name has an empty label.
             obj.attrs["label"] = (
@@ -5083,7 +5082,7 @@ class _Compiler:
                 raise CompileError("the scene holds shapes and variables", item.pos)
 
     def formula_decl(self, form: Form, scope: dict) -> None:
-        """(formula name tex'…' item…): typeset math, beside the scene (the author, 2026-11-06).
+        """(formula name $'…' item…): typeset math, beside the scene (the author, 2026-11-06).
         Its LaTeX is fixed when compiling; each \\term{name}{…} in it is a term, an object
         named formula.name. Its other items are its own variables, read by their bare names by
         what follows them, (term name …) forms giving a term's attributes, and exists-when."""
@@ -5091,9 +5090,10 @@ class _Compiler:
         if name is None:
             raise CompileError("a formula needs a name", form.pos)
         items = list(form.items[2:])
-        texts = [it for it in items if isinstance(it, (StrLit, InterpStrLit))]
+        # An interpolated string, f'…', is a concat form: a string, but not a literal.
+        texts = [it for it in items if isinstance(it, StrLit) or _head(it) == "concat"]
         if not texts:
-            raise CompileError("a formula holds its LaTeX: (formula name tex'…')", form.pos)
+            raise CompileError("a formula holds its LaTeX: (formula name $'…')", form.pos)
         if len(texts) > 1:
             raise CompileError("a formula holds one LaTeX string", texts[1].pos)
         text = texts[0]
@@ -5196,8 +5196,9 @@ class _Compiler:
                     self.where = saved
 
     def term_form(self, form: Form, f: int, scope: dict, given: dict) -> None:
-        """(term name (like t) (attr value)…): a term's attributes, and its content as tex.
-        (like t) copies the arguments of t's form, given before, and the form's own win."""
+        """(term name (like t) (attr value)… S): a term's attributes, and S, a string, its
+        content as LaTeX, kept as its tex. (like t) copies the arguments of t's form, given
+        before, and the form's own win."""
         if len(form.items) < 2:
             raise CompileError("a term form names its term: (term name (attr value)…)", form.pos)
         m = self.formula_term(f, form.items[1])
@@ -5216,24 +5217,36 @@ class _Compiler:
                 raise CompileError(
                     f"(like {other}) copies a term's form given before this one", like.pos
                 )
-            heads = {_head(it) for it in own}
-            own = [it for it in given[other] if _head(it) not in heads] + own
+            heads = {self.term_item(it) for it in own}
+            own = [it for it in given[other] if self.term_item(it) not in heads] + own
         given[short] = own
+        strings = [it for it in own if self.term_item(it) is None]
+        if len(strings) > 1:
+            raise CompileError("a term holds one string, its LaTeX", strings[1].pos)
         for item in own:
-            head = _head(item)
-            if not isinstance(item, Form) or len(item.items) != 2 or head is None:
-                raise CompileError("a term takes attributes, as (opacity 0.5)", item.pos)
-            if head == "tex":
-                t: Type = STRING
+            head = self.term_item(item)
+            if head is None:
+                head, t, value = "tex", STRING, item
             elif head in TERM_ATTRS:
-                t = TERM_ATTRS[head].type
+                assert isinstance(item, Form)
+                if len(item.items) != 2:
+                    raise CompileError("a term takes attributes, as (opacity 0.5)", item.pos)
+                t, value = TERM_ATTRS[head].type, item.items[1]
             else:
                 raise CompileError(f"a term has no attribute '{head}'", item.pos)
             saved, self.where = self.where, (term.name, "term", head)
             try:
-                term.attrs[head] = self.attribute(t, item.items[1], item.pos, head, scope=scope)
+                term.attrs[head] = self.attribute(t, value, item.pos, head, scope=scope)
             finally:
                 self.where = saved
+
+    def term_item(self, item: Node) -> str | None:
+        """The attribute that an item of a term gives, the head of (attr value), or None for a
+        string: the term's LaTeX, which may be any expression (the author, 2026-11-18)."""
+        head = _head(item)
+        if head is None or self.is_expression(head) or head in ARITH or head in COMPARE:
+            return None
+        return head
 
     def term_exists(self, form: Form, f: int, scope: dict) -> None:
         """(exists-when name bool) in a formula: the term exists only while bool holds."""
@@ -6021,8 +6034,6 @@ class _Compiler:
             return self.list_literal(node, expected, scope)
         if isinstance(node, Name):
             return self.name(node, scope)
-        if isinstance(node, InterpStrLit):
-            return self.interp(node, scope)
         if isinstance(node, Bar):
             raise CompileError("type notation is not a value", node.pos)
         if isinstance(node, Form):
@@ -6092,32 +6103,45 @@ class _Compiler:
                     t = _with_range(t, (lo, hi))
         return _gather(ListT(t), items)
 
-    def interp(self, node: InterpStrLit, scope: dict) -> Expr:
+    def concat(self, node: Form, scope: dict) -> Expr:
+        """(concat A B …): the strings joined. f'…' is written as one, so it compiles to the
+        "format" expression that interpolated strings had before: the pieces of an argument
+        that is a "format" expression, such as (fmt x '.2f'), go into it."""
         parts: list = []
-        for part in node.parts:
-            if isinstance(part, str):
-                parts.append(part)
-                continue
-            inner, spec = (part.expr, part.spec) if isinstance(part, Field) else (part, "")
-            e = self.expr(inner, None, scope)
-            _check_spec(e.type, spec, part.pos)
+        for arg in node.items[1:]:
+            e = self.expr(arg, None, scope)
             if e.known and e.value is None:
                 return _known(Maybe(STRING), None)
+            if _base(_inner(e.type)) not in (STRING, NONE) and e.type != RECURSING:
+                raise CompileError(f"concat joins strings, got {e.type}", arg.pos)
             if e.known:
-                parts.append(_show_value(e.type, e.value, spec))
+                parts.append(e.value)
+            elif e.op == "format":
+                parts.extend(e.args)
             else:
-                parts.append((e, spec))
-        merged: list = []
-        for p in parts:
-            if isinstance(p, str) and merged and isinstance(merged[-1], str):
-                merged[-1] += p
-            else:
-                merged.append(p)
-        if all(isinstance(p, str) for p in merged):
-            return _known(STRING, "".join(merged))
-        exprs = [p[0] for p in merged if not isinstance(p, str)]
-        t = Maybe(STRING) if any(_may_be_none(e.type) for e in exprs) else STRING
-        return Expr("format", t, tuple(merged), frozenset().union(*(e.deps for e in exprs)))
+                parts.append((e, ""))
+        return _joined(parts)
+
+    def fmt(self, node: Form, scope: dict) -> Expr:
+        """(fmt X S): the value of X written as a string by the format spec S, '' when it is left
+        out. The "format" expression holds S as text, so S is known when compiling."""
+        if len(node.items) not in (2, 3):
+            raise CompileError("fmt takes a value and a format spec: (fmt x '.2f')", node.pos)
+        e = self.expr(node.items[1], None, scope)
+        spec = ""
+        if len(node.items) == 3:
+            given = self.expr(node.items[2], STRING, scope)
+            if not given.known:
+                raise CompileError(
+                    "the format spec of fmt must be known when compiling", node.items[2].pos
+                )
+            spec = given.value
+            _check_spec(e.type, spec, node.items[2].pos)
+        if e.known and e.value is None:
+            return _known(Maybe(STRING), None)
+        if e.known:
+            return _known(STRING, _show_value(e.type, e.value, spec))
+        return _joined([(e, spec)])
 
     def name(self, node: Name, scope: dict) -> Expr:
         first = node.parts[0]
@@ -6658,6 +6682,10 @@ class _Compiler:
                     "as gives a type only to a literal, such as (as color 'gold')", node.pos
                 )
             return self.expr(lit, self.type_of(type_node), scope)
+        if head == "concat":
+            return self.concat(node, scope)
+        if head == "fmt":
+            return self.fmt(node, scope)
         if head == "type-of":
             (a,) = self.args(node, 1)
             return _known(STRING, str(self.expr(a, None, scope).type))
@@ -6882,6 +6910,8 @@ class _Compiler:
             name = binding.items[0]
             if not isinstance(name, Name) or len(name.parts) != 1:
                 raise CompileError("expected a name", binding.pos)
+            if name.parts[0] in STRING_FORMS:
+                raise CompileError(f"'{name.parts[0]}' is reserved", name.pos)
             e = self.expr(binding.items[1], None, inner)
             if not share or e.known or e.op in _CHEAP or not _plain(e.type):
                 # Shapes and functions stay written out: what the compiler learns from them
@@ -7423,12 +7453,6 @@ def _words(node, out: set[str]) -> set[str]:
             items = (*items[:-1], *items[-1].items[1:])
         for i in items:
             _words(i, out)
-    elif isinstance(node, InterpStrLit):
-        for p in node.parts:
-            if not isinstance(p, str):
-                _words(p, out)
-    elif isinstance(node, Field):
-        _words(node.expr, out)
     return out
 
 
@@ -7464,10 +7488,6 @@ def _needs_default_seed(forms) -> bool:
             return True
         if isinstance(node, (Form, ListLit, Brackets, Bar)):
             todo.extend(node.items)
-        elif isinstance(node, InterpStrLit):
-            todo.extend(p for p in node.parts if not isinstance(p, str))
-        elif isinstance(node, Field):
-            todo.append(node.expr)
     return False
 
 
@@ -7674,12 +7694,6 @@ def _through(node, whole: dict):
         return replace(node, parts=parts)
     if isinstance(node, (Form, ListLit, Brackets, Bar)):
         return replace(node, items=tuple(_through(i, whole) for i in node.items))
-    if isinstance(node, InterpStrLit):
-        return replace(
-            node, parts=tuple(p if isinstance(p, str) else _through(p, whole) for p in node.parts)
-        )
-    if isinstance(node, Field):
-        return replace(node, expr=_through(node.expr, whole))
     return node
 
 
@@ -8240,6 +8254,22 @@ def _value_str(v) -> str:
 
 # What a format spec is tried on, to check it fits the type.
 _SAMPLES: dict[Type, object] = {INT: 1, RATIO: 1.5, REAL: 1.5, STRING: "a"}
+
+
+def _joined(parts: list) -> Expr:
+    """The "format" expression of pieces of text and (expression, spec) pairs, in order, or the
+    string itself when every piece is text."""
+    merged: list = []
+    for p in parts:
+        if isinstance(p, str) and merged and isinstance(merged[-1], str):
+            merged[-1] += p
+        else:
+            merged.append(p)
+    if all(isinstance(p, str) for p in merged):
+        return _known(STRING, "".join(merged))
+    exprs = [p[0] for p in merged if not isinstance(p, str)]
+    t = Maybe(STRING) if any(_may_be_none(e.type) for e in exprs) else STRING
+    return Expr("format", t, tuple(merged), frozenset().union(*(e.deps for e in exprs)))
 
 
 def _check_spec(t: Type, spec: str, pos: Pos) -> None:

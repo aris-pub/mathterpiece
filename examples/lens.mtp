@@ -59,7 +59,7 @@
   ; picture, below the swatches.
   (group forms (defaults (fill soft) (font code) (valign 'middle'))
     (text_
-        $'(group lens (clip (circle window (pos [{glass.x:.1f} {glass.y:.1f}]) (r {size:.1f}))) …)'
+        f'(group lens (clip (circle window (pos [{glass.x:.1f} {glass.y:.1f}]) (r {size:.1f}))) …)'
         (pos (bottom dull.land 0.45)) (halign 'middle'))
     (foreach k 4
       (text_ left-mixes[k] (pos (right dull.left-swatches[k] 0.2)))

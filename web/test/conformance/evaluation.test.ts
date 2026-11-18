@@ -132,7 +132,7 @@ describe("rule same-value-at-both-times: folded and drawn values are the same", 
     ["sqrt", (x) => `(sqrt ${x})`, "2", "real|none"],
     ["sin", (x) => `(sin ${x})`, "0.5"],
     ["round", (x) => `(round ${x})`, "2.5", "int"],
-    ["format", (x) => `$'{${x}:.2f}'`, "0.125", "string"],
+    ["format", (x) => `f'{${x}:.2f}'`, "0.125", "string"],
   ];
   for (const [what, expr, x, type] of cases) {
     it(what, () => {
@@ -198,7 +198,7 @@ describe("rule rounding: halves round away from zero while drawing", () => {
   });
 
   it("a format spec, on the shortest decimal form", () => {
-    const [rt, v] = live(`(real x 0 (>= 0) (<= 10)) (string s $'{x:.2f}')`);
+    const [rt, v] = live(`(real x 0 (>= 0) (<= 10)) (string s f'{x:.2f}')`);
     rt.write(rt.id("x"), null, 0.125);
     expect(v("s")).toBe("0.13");
     rt.write(rt.id("x"), null, 2.675);

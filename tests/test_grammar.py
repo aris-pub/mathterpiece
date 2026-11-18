@@ -22,9 +22,7 @@ from mathterpiece.nodes import (
     BoolLit,
     Brackets,
     ComplexLit,
-    Field,
     Form,
-    InterpStrLit,
     IntLit,
     ListLit,
     Name,
@@ -92,23 +90,23 @@ ACCEPTED = [
     "(f [] [ ] [1 2] [[1] [2]] [a b c][h] [a][0][1] [(f)(g)])",
     "(f real|none a|b|c 1|2 a[0]|b b|c[0] true|x .|a)",
     "(f 'a' 'it\\'s' 'back\\\\slash' 'line\\nbreak' '')",
-    "(f tex'\\frac12' tex'f\\'(x)' tex'a\\\\' tex'\\q')",
-    "(f $'x = {x}' $'{x:.2f}' $'{ x }' $'{x :>5}' $'{x:}' $'{{lit}}' $'}}' $'{(* 2 a)}')",
-    "(f $'{[1 2]}' $'{'s'}' $'{a[0]}' $'{a|b}' $'{$'{a}' }')",
-    "(f $'{(g ; a comment\n x)}')",
-    "(f $'{a:b}' $'{a.b:c}' $'{a[0].b:c}' $'{#'n-{k}'.x :y}')",
-    "(f $'{$'{a}'}' $'{#'n-{k}'.x:y}' $'{[$'{a}' b]}' $'{'s':>5}' $'{$'{$'{a}'}'}')",
-    "(f $'{(g $'{a}' 's')}' $'{#'a{b}'[0]:x}' $'{[1 $'{a:y}'][0]:z}')",
+    "(f $'\\frac12' $'f\\'(x)' $'a\\\\' $'\\q')",
+    "(f f'x = {x}' f'{x:.2f}' f'{ x }' f'{x :>5}' f'{x:}' f'{{lit}}' f'}}' f'{(* 2 a)}')",
+    "(f f'{[1 2]}' f'{'s'}' f'{a[0]}' f'{a|b}' f'{f'{a}' }')",
+    "(f f'{(g ; a comment\n x)}')",
+    "(f f'{a:b}' f'{a.b:c}' f'{a[0].b:c}' f'{#'n-{k}'.x :y}')",
+    "(f f'{f'{a}'}' f'{#'n-{k}'.x:y}' f'{[f'{a}' b]}' f'{'s':>5}' f'{f'{f'{a}'}'}')",
+    "(f f'{(g f'{a}' 's')}' f'{#'a{b}'[0]:x}' f'{[1 f'{a:y}'][0]:z}')",
     "(f #'dot-{k}' #'dot-{k}'.pos #'row-{i}'[0] #'a{b}'.c.d[0].e #'{k}')",
     "(f doc@'text' doc@x)",
     "(f a@b)",
     "(circle c r@1 fill@'red' to@pointer.x free@green marks.grid@g)",
-    "(f r@1 r@-2.5 r@1/2 r@2i r@true r@false r@none r@'s' r@tex'\\q' r@$'k = {k}')",
+    "(f r@1 r@-2.5 r@1/2 r@2i r@true r@false r@none r@'s' r@$'\\q' r@f'k = {k}')",
     "(f a-b?@x a?.b@x.y)",
     "(f r@1(g) (h)r@x r@'s'(g))",
     "(r@1 2)",
     "(f [r@1 s@x])",
-    "(f $'{r@x}' $'{r@x:.2f}' $'{r@'s':>5}')",
+    "(f f'{r@x}' f'{r@x:.2f}' f'{r@'s':>5}')",
     "(real k (free (* 2 a)))",
     "(real k free@(* 2 a) free@(mix a b)(g) r@(* 2 k))",
     "(f free@(g)x (h)free@(g) free@(g)(h))",
@@ -144,8 +142,8 @@ REJECTED = [
     "(f })",
     "(f a {)",
     "(f 'a)",
+    "(f f'a)",
     "(f $'a)",
-    "(f tex'a)",
     "(f 'a\\q')",
     "(f 'a'b)",
     "(f 'a''b')",
@@ -230,16 +228,16 @@ REJECTED = [
     "(f a|(b))",
     "(f a|[b])",
     "(f a|doc@'x')",
-    "(f $'{}')",
-    "(f $'{ }')",
-    "(f $'{:x}')",
-    "(f $'{a b}')",
-    "(f $'{(g)x}')",
-    "(f $'}')",
-    "(f $'a}b')",
-    "(f $'{x:{y}}')",
-    "(f $'{x:a'b}')",
-    "(f $'{(g a:b)}')",
+    "(f f'{}')",
+    "(f f'{ }')",
+    "(f f'{:x}')",
+    "(f f'{a b}')",
+    "(f f'{(g)x}')",
+    "(f f'}')",
+    "(f f'a}b')",
+    "(f f'{x:{y}}')",
+    "(f f'{x:a'b}')",
+    "(f f'{(g a:b)}')",
     "(f $x)",
     "(f #x)",
     "(f #'plain')",
@@ -421,7 +419,7 @@ class Reading(Transformer):
     def string(self, c):
         (t,) = c
         if t.type == "TEX":
-            return StrLit(_tex(t.value[4:-1]), tex=True)
+            return StrLit(_tex(t.value[2:-1]), tex=True)
         return StrLit(_decoded(t.value[1:-1]))
 
     def prefixed(self, c):
@@ -429,21 +427,24 @@ class Reading(Transformer):
         return Form((Name(tuple(head.value[:-1].split("."))), item))
 
     def _pieces(self, c):
-        parts = []
+        """(concat PIECE…), the form that the parser produces for f'…'."""
+        parts: list = [Name(("concat",))]
         for x in c:
             if isinstance(x, Token):
                 if x.type == "TEXT":
-                    parts.append(_decoded(x.value, braces=True))
+                    parts.append(StrLit(_decoded(x.value, braces=True)))
             else:
                 parts.append(x)
-        return InterpStrLit(tuple(parts))
+        return Form(tuple(parts))
 
     interpolated = name_string_text = _pieces
 
     def braces(self, c):
         expr = next(x for x in c if not isinstance(x, Token))
         spec = next((x.value[1:] for x in c if isinstance(x, Token) and x.type == "FORMAT"), None)
-        return expr if spec is None else Field(expr, spec)
+        if spec is None:
+            return Form((Name(("fmt",)), expr))
+        return Form((Name(("fmt",)), expr, StrLit(spec)))
 
 
 def load() -> Lark:
@@ -530,10 +531,10 @@ def test_pending_steps_have_entries():
 
 # Pieces of text where the parser's choices lie, which random sources put together.
 PIECES = [
-    "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "$'", "#'", "tex'", "doc@", "r@",
+    "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "f'", "#'", "$'", "doc@", "r@",
     "a", "b", "x_", "_", ".", "|", ":", "1", "-", "+", "2.5", "1/2", "/", "e", "i", "true",
     "none", "!=", "\\", "\\'", "\\n", "{{", "}}", '"', "@", "#", "$", "^", "*", "<=", "0", "{x:",
-    "$'{", "}'", "[0]", "a[", ".b", "(g)", "x:y", "?", "a-", "(c_ ", "free@(",
+    "f'{", "}'", "[0]", "a[", ".b", "(g)", "x:y", "?", "a-", "(c_ ", "free@(",
 ]  # fmt: skip
 
 

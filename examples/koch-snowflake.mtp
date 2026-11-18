@@ -56,12 +56,12 @@
       (fill yellow) (stroke ink) (stroke-width 1.5) (line-join 'round'))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
-    (text caption $'depth {depth:.2f}, zoomed {(^ 3 zoom-power):.1f} times' (pos code-at)
+    (text caption f'depth {depth:.2f}, zoomed {(^ 3 zoom-power):.1f} times' (pos code-at)
         (font variable) (fill ink))
-    (text_ $'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {level} {rise:.2f})))))'
+    (text_ f'(polygon flake (points (map (range {(* 3 pieces)}) (fn k (koch k {level} {rise:.2f})))))'
         (pos (+ code-at [0 -0.7])))
     (text_ (if (= level 0) '(koch k 0 h) is (corner k)'
-             $'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
+             f'(koch k {level} h) calls (koch (floor (/ k 4)) {(- level 1)} 1)')
         (pos (+ code-at [0 -1.25])))))
 
 (animation grow

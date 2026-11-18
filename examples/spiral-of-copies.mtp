@@ -21,7 +21,7 @@
           (pos (if (= k 0) [3 0] (turn #'dot-{(- k 1)}'.pos angle factor))))))
   ; The path through the dots that are there.
   (polyline_ (points (somes spiral.pos)) (stroke soft) (stroke-width 1))
-  (text_ $'{n} dots, each turned {angle:.0f}° and scaled by {factor:.2f}' (pos [-4.6 4.5])
+  (text_ f'{n} dots, each turned {angle:.0f}° and scaled by {factor:.2f}' (pos [-4.6 4.5])
       (font number) (fill ink) (halign 'start') (valign 'top')))
 
 (canvas view (x -5) (y -5) (width 10) (height 10) (pan false) (zoom false)

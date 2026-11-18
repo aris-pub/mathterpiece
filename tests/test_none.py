@@ -55,8 +55,8 @@ class TestHowItSpreads:
         assert typ("(point|none p) (real|none d p.x)", "d") == Maybe(REAL)
 
     def test_a_string_with_a_part_that_is_none(self):
-        assert typ("(real|none c) (string|none s $'c = {c:.2f}')", "s") == Maybe(STRING)
-        assert value("(real|none c none (const)) (string|none s $'{c}')", "s") is None
+        assert typ("(real|none c) (string|none s f'c = {c:.2f}')", "s") == Maybe(STRING)
+        assert value("(real|none c none (const)) (string|none s f'{c}')", "s") is None
 
     def test_equality(self):
         assert value("(bool b (= none none))", "b") is True

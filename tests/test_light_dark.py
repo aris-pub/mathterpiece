@@ -96,7 +96,7 @@ class TestReadingOne:
         assert value("(bool v (= (light-dark 'red' 'red') 'red'))") is True
 
     def test_as_text_it_is_its_css(self):
-        got = value("(string v (let ((c (light-dark '#1f2a44' '#e8e4d8'))) $'{c}'))")
+        got = value("(string v (let ((c (light-dark '#1f2a44' '#e8e4d8'))) f'{c}'))")
         assert got == NAVY_CREAM
 
     def test_its_channels_are_the_light_colors(self):

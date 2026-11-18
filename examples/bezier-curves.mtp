@@ -45,7 +45,7 @@
       (circle_ (pos (lerp d e t)) (r 0.1))))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
-    (text_ $'(curve quad (from p0) (to p1) (controls [k]))  t = {t:.2f}' (pos [-4.6 3.5]))
+    (text_ f'(curve quad (from p0) (to p1) (controls [k]))  t = {t:.2f}' (pos [-4.6 3.5]))
     (text_ '(curve cubic (from q0) (to q1) (controls [c1 c2]))' (pos [-4.6 3.05]))))
 
 (canvas view (x -5) (y -3) (width 10) (height 7) (pan false) (zoom false)

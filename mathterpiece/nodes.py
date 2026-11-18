@@ -27,14 +27,8 @@ class Name:
 class StrLit:
     value: str
     pos: Pos = field(default=NOPOS, compare=False)
-    # Written tex'…': LaTeX, read with no escapes but \'.
+    # Written $'…': LaTeX, read with no escapes but \'.
     tex: bool = False
-
-
-@dataclass(frozen=True, slots=True)
-class InterpStrLit:
-    parts: tuple["str | Node | Field", ...]
-    pos: Pos = field(default=NOPOS, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,14 +66,6 @@ class NoneLit:
     pos: Pos = field(default=NOPOS, compare=False)
 
 
-# {expr:spec} in an interpolated string: the expression shown with a Python format spec.
-@dataclass(frozen=True, slots=True)
-class Field:
-    expr: "Node"
-    spec: str
-    pos: Pos = field(default=NOPOS, compare=False)
-
-
 # [a b c]: a list of values, such as a point.
 @dataclass(frozen=True, slots=True)
 class ListLit:
@@ -111,7 +97,6 @@ Node = (
     Form
     | ListLit
     | StrLit
-    | InterpStrLit
     | IntLit
     | RatioLit
     | RealLit

@@ -155,7 +155,7 @@ def test_a_syntax_error_in_an_imported_file(tmp_path, capsys):
 
 def test_parse_marks_a_tex_string(tmp_path, capsys):
     src = tmp_path / "f.mtp"
-    src.write_text("(f tex'\\frac1b' 'a')\n")
+    src.write_text("(f $'\\frac1b' 'a')\n")
     main(["parse", str(src)])
     out = capsys.readouterr().out.splitlines()
-    assert out[2:] == ["  1:4 tex string '\\\\frac1b'", "  1:17 string 'a'"]
+    assert out[2:] == ["  1:4 tex string '\\\\frac1b'", "  1:15 string 'a'"]

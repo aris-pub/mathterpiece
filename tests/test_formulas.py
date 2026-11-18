@@ -1,5 +1,5 @@
 """Formulas (mtp-bz6h). The author, 2026-11-06: interactive typeset math, parallel to the scene's
-interactive geometry. (formula name tex'…') is a top-level declaration beside the scene, its
+interactive geometry. (formula name $'…') is a top-level declaration beside the scene, its
 LaTeX fixed when compiling, with terms marked \\term{name}{…}. Each term is an object,
 formula.name, whose attributes (term name …) gives: its color, opacity and existence, the
 adornments drawn around it without moving the glyphs, and its content as an expression, which
@@ -11,7 +11,7 @@ import pytest
 from helpers import doc, error, model
 
 BOUNDS = (
-    r"(formula bounds tex'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p) \mathrel{\term{lo}{\le}}"
+    r"(formula bounds $'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p) \mathrel{\term{lo}{\le}}"
     r" \frac{a}{b} \mathrel{\term{hi}{\le}} P_h(p) + \term{b2}{\frac1{b^2}}')"
 )
 
@@ -49,153 +49,151 @@ class TestDeclaring:
         assert (a["padding"].value, a["rounding"].value) == (2, 3)
 
     def test_terms_nest(self):
-        m = model(r"(formula f tex'\term{all}{\frac{\term{top}{a}}{b}}')")
+        m = model(r"(formula f $'\term{all}{\frac{\term{top}{a}}{b}}')")
         assert [m.objects[i].name for i in m.get("f").members] == ["f.all", "f.top"]
 
     def test_a_term_may_be_empty(self):
-        assert obj(r"(formula f tex'x = \term{v}{}')", "f.v").kind == "term"
+        assert obj(r"(formula f $'x = \term{v}{}')", "f.v").kind == "term"
 
     def test_a_doc(self):
-        assert obj("(formula f doc@'A sum.' tex'a+b')", "f").data["doc"] == "A sum."
+        assert obj("(formula f doc@'A sum.' $'a+b')", "f").data["doc"] == "A sum."
 
 
 class TestDeclaringErrors:
     def test_it_needs_a_name(self):
-        error("(formula_ tex'a')", "a formula needs a name")
+        error("(formula_ $'a')", "a formula needs a name")
 
     def test_it_holds_latex(self):
-        error("(formula f)", r"a formula holds its LaTeX: \(formula name tex'…'\)")
+        error("(formula f)", r"a formula holds its LaTeX: \(formula name \$'…'\)")
 
     def test_only_one_latex(self):
-        error("(formula f tex'a' tex'b')", "a formula holds one LaTeX string")
+        error("(formula f $'a' $'b')", "a formula holds one LaTeX string")
 
     def test_the_latex_is_known_when_compiling(self):
-        error("(real k 1) (formula f $'{k}')", "a formula's LaTeX is known when compiling")
+        error("(real k 1) (formula f f'{k}')", "a formula's LaTeX is known when compiling")
 
     def test_a_term_form_names_a_marked_term(self):
         error(
-            r"(formula f tex'\term{a}{x}' (term b (opacity 0.5)))",
+            r"(formula f $'\term{a}{x}' (term b (opacity 0.5)))",
             r"f has no term 'b': mark one in its LaTeX, \\term\{b\}\{…\}",
         )
 
     def test_a_term_is_marked_once(self):
-        error(r"(formula f tex'\term{a}{x} + \term{a}{y}')", "the term 'a' is marked twice")
+        error(r"(formula f $'\term{a}{x} + \term{a}{y}')", "the term 'a' is marked twice")
 
     def test_a_terms_form_is_given_once(self):
         error(
-            r"(formula f tex'\term{a}{x}' (term a (opacity 0.5)) (term a (fill 'red')))",
+            r"(formula f $'\term{a}{x}' (term a (opacity 0.5)) (term a (fill 'red')))",
             "the term 'a' is given twice",
         )
 
     def test_a_terms_name_is_a_name(self):
-        error(r"(formula f tex'\term{a b}{x}')", r"'a b' is not a term's name")
+        error(r"(formula f $'\term{a b}{x}')", r"'a b' is not a term's name")
 
     def test_braces_match(self):
-        error(r"(formula f tex'\frac{a}{b')", "the formula's LaTeX has a '{' that is never closed")
-        error(r"(formula f tex'a}')", r"the formula's LaTeX has a '}' that closes nothing")
+        error(r"(formula f $'\frac{a}{b')", "the formula's LaTeX has a '{' that is never closed")
+        error(r"(formula f $'a}')", r"the formula's LaTeX has a '}' that closes nothing")
 
     def test_escaped_braces_are_not_counted(self):
-        assert obj(r"(formula f tex'\{a\}')", "f").kind == "formula"
+        assert obj(r"(formula f $'\{a\}')", "f").kind == "formula"
 
     def test_no_shapes(self):
-        error("(formula f tex'a' (circle c))", "a formula holds its LaTeX, terms and variables")
+        error("(formula f $'a' (circle c))", "a formula holds its LaTeX, terms and variables")
 
     def test_only_at_the_top_level(self):
-        error("(scene s (formula f tex'a'))", "a formula is declared only at the top level")
+        error("(scene s (formula f $'a'))", "a formula is declared only at the top level")
 
     def test_a_term_takes_no_shape_attribute(self):
         error(
-            r"(formula f tex'\term{a}{x}' (term a (stroke 'red')))",
+            r"(formula f $'\term{a}{x}' (term a (stroke 'red')))",
             "a term has no attribute 'stroke'",
         )
 
 
 class TestContent:
     def test_a_terms_content_follows_an_expression(self):
-        m = model(r"(real q 0.3) (formula f tex'p = \term{v}{}' (term v (tex $'{q:.2f}')))")
+        m = model(r"(real q 0.3) (formula f $'p = \term{v}{}' (term v f'{q:.2f}'))")
         assert m.get("f.v").attrs["tex"].deps == {(m.id("q"), None)}
 
     def test_without_one_a_term_keeps_its_latex(self):
-        assert "tex" not in obj(r"(formula f tex'\term{v}{x}')", "f.v").attrs
+        assert "tex" not in obj(r"(formula f $'\term{v}{x}')", "f.v").attrs
 
 
 class TestExistence:
     def test_exists_when(self):
-        m = model(r"(bool shown false) (formula f tex'\term{a}{x}' (exists-when a shown))")
+        m = model(r"(bool shown false) (formula f $'\term{a}{x}' (exists-when a shown))")
         assert m.get("f.a").attrs["exists"].deps == {(m.id("shown"), None)}
 
     def test_exists_when_names_a_term(self):
         error(
-            r"(bool shown false) (formula f tex'\term{a}{x}' (exists-when b shown))",
+            r"(bool shown false) (formula f $'\term{a}{x}' (exists-when b shown))",
             "f has no term 'b'",
         )
 
 
 class TestVariables:
     def test_a_formulas_own_variable(self):
-        m = model(
-            r"(formula f (bool lit false) tex'\term{a}{x}' (term a (opacity (if lit 1 0.4))))"
-        )
+        m = model(r"(formula f (bool lit false) $'\term{a}{x}' (term a (opacity (if lit 1 0.4))))")
         assert m.get("f.a").attrs["opacity"].deps == {(m.id("f.lit"), None)}
 
     def test_a_writer_writes_it_by_its_full_name(self):
         m = model(
-            r"(formula f (bool lit false) tex'\term{a}{x}')"
+            r"(formula f (bool lit false) $'\term{a}{x}')"
             r" (display d f (on-click f.a (animation (move f.lit (to true) (duration 0.2)))))"
         )
         assert m.get("f.lit").kind == "variable"
 
     def test_only_the_formula_reads_it_by_its_bare_name(self):
-        error("(formula f (bool lit false) tex'a') (bool v lit)", "unknown name 'lit'")
+        error("(formula f (bool lit false) $'a') (bool v lit)", "unknown name 'lit'")
 
 
 class TestReading:
     # The author, 2026-11-06: formulas and scenes never read each other; they share only globals.
     def test_a_formula_reads_globals(self):
-        m = model(r"(real k 0.5 (>= 0) (<= 1)) (formula f tex'\term{a}{x}' (term a (opacity k)))")
+        m = model(r"(real k 0.5 (>= 0) (<= 1)) (formula f $'\term{a}{x}' (term a (opacity k)))")
         assert m.get("f.a").attrs["opacity"].deps == {(m.id("k"), None)}
 
     def test_a_formula_cannot_read_the_scene(self):
         error(
-            r"(scene s (real k 0.5)) (formula f tex'\term{a}{x}' (term a (opacity k)))",
+            r"(scene s (real k 0.5)) (formula f $'\term{a}{x}' (term a (opacity k)))",
             "a formula cannot read k: it belongs to the scene",
         )
 
     def test_nor_a_shape(self):
         error(
-            r"(scene s (circle c (r 0.5))) (formula f tex'\term{a}{x}' (term a (opacity c.r)))",
+            r"(scene s (circle c (r 0.5))) (formula f $'\term{a}{x}' (term a (opacity c.r)))",
             "a formula cannot read c: it belongs to the scene",
         )
 
     def test_the_scene_cannot_read_a_formula(self):
         error(
-            r"(formula f (real k 0.5) tex'\term{a}{x}') (scene s (circle c (r f.k)))",
+            r"(formula f (real k 0.5) $'\term{a}{x}') (scene s (circle c (r f.k)))",
             "the scene cannot read f.k: it belongs to the formula f",
         )
 
     def test_nor_a_terms_attribute(self):
         error(
-            r"(formula f tex'\term{a}{x}') (scene s (circle c (r f.a.opacity)))",
+            r"(formula f $'\term{a}{x}') (scene s (circle c (r f.a.opacity)))",
             "the scene cannot read f.a: it belongs to the formula f",
         )
 
     def test_one_formula_cannot_read_another(self):
         error(
-            r"(formula f (real k 0.5) tex'a') (formula g tex'\term{a}{x}' (term a (opacity f.k)))",
+            r"(formula f (real k 0.5) $'a') (formula g $'\term{a}{x}' (term a (opacity f.k)))",
             "a formula cannot read f.k: it belongs to the formula f",
         )
 
     def test_a_formula_cannot_read_a_component(self):
         error(
             r"(real k 0) (slider s (move k (from 0) (to 1)))"
-            r" (formula f tex'\term{a}{x}' (term a (opacity s.position)))",
+            r" (formula f $'\term{a}{x}' (term a (opacity s.position)))",
             "a formula cannot read s: it has page access",
         )
 
     def test_components_read_both(self):
         m = model(
-            r"(scene sc (real k 0.5)) (formula f (real j 1) tex'a')"
-            r" (readout r $'{k} {f.j}')"
+            r"(scene sc (real k 0.5)) (formula f (real j 1) $'a')"
+            r" (readout r f'{k} {f.j}')"
         )
         assert m.get("r").attrs["value"].deps == {(m.id("k"), None), (m.id("f.j"), None)}
 
@@ -203,7 +201,7 @@ class TestReading:
 class TestDefaultsAndLike:
     # mtp-mca1: a formula's (defaults …) give every term those attributes, and a term's own win;
     # (like t) copies an earlier term's arguments, and its own win.
-    AB = r"tex'\term{a}{x} + \term{b}{y}'"
+    AB = r"$'\term{a}{x} + \term{b}{y}'"
 
     def test_defaults_reach_every_term(self):
         m = model(
@@ -325,7 +323,7 @@ class TestCompiledModel:
 
     def test_a_range_a_term_cannot_prove(self):
         error(
-            r"(real k 0.5) (formula f tex'\term{a}{x}' (term a (opacity k)))",
+            r"(real k 0.5) (formula f $'\term{a}{x}' (term a (opacity k)))",
             r"f.a's opacity may break \(>= 0\): constrain what it reads so this can be proved$",
         )
 
@@ -341,7 +339,7 @@ def test_the_compiled_model_fits_the_schema():
     src = (
         "(string shown '') (real q 0.3 (>= 0) (<= 1)) "
         + BOUNDS[:-1]
-        + " (bool lit false) (term gap (fill 'teal') (tex $'{q:.2f}')) (exists-when lo lit))"
+        + " (bool lit false) (term gap (fill 'teal') f'{q:.2f}') (exists-when lo lit))"
         " (display eq bounds (kind 'inline')"
         " (on-click bounds.gap (animation (move shown (to 'gap') (duration 0.2)))))"
     )

@@ -170,7 +170,7 @@ class TestCompilerDecidesEarly:
         [
             ("(real v (* 2 (+ 1 2)))", 6),
             ("(func f ((real x)) (* 2 x)) (real v (f 3))", 6),
-            ("(string v $'{(* 2 3)}')", "6"),
+            ("(string v f'{(* 2 3)}')", "6"),
             ("(real v (if (> 2 1) 1 2))", 1),
         ],
     )

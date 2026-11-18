@@ -270,5 +270,5 @@ def test_the_keyword_tables_are_the_emacs_modes(tmp_path):
 
 def test_a_tex_string_is_read_as_a_string():
     # Its parentheses and brackets are LaTeX, and a \\ before its closing quote does not escape it.
-    src = "(scene s\n(text t tex'\\left( a \\\\'\n(fill red)))\n"
-    assert layout(src) == "(scene s\n  (text t tex'\\left( a \\\\'\n      (fill red)))\n"
+    src = "(scene s\n(text t $'\\left( a \\\\'\n(fill red)))\n"
+    assert layout(src) == "(scene s\n  (text t $'\\left( a \\\\'\n      (fill red)))\n"

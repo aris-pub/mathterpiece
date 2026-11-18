@@ -65,7 +65,7 @@
       (stroke-width 1) (stroke-opacity 0.4))
   (group labels (defaults (font number) (halign 'middle') (valign 'middle'))
     (foreach i 81
-      (text_ $'{(+ i 1)}' (pos (spiral (+ i 1)))
+      (text_ f'{(+ i 1)}' (pos (spiral (+ i 1)))
           (fill (if (or (prime? (+ i 1)) (= i 0)) paper soft)))))
 
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))

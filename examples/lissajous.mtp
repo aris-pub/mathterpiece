@@ -30,14 +30,14 @@
                    (fn t [(sind (+ (* a t) phase)) (sind (* b t))])))
       (stroke green) (stroke-width 3) (line-join 'round') (line-cap 'round'))
 
-  (text ratio $'a : b = {a} : {b}' (pos (top axes gap)) (halign 'middle') (valign 'bottom')
+  (text ratio f'a : b = {a} : {b}' (pos (top axes gap)) (halign 'middle') (valign 'bottom')
       (font variable) (fill ink))
 
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
     (let ((under (bottom-left axes gap)))
       (text_ '(polyline figure (points (map (range 0 360 (num 721))' (pos under))
       ; The second line is indented, as code that goes on would be.
-      (text_ $'  (fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
+      (text_ f'  (fn t [(sind (+ (* {a} t) {phase:.0f})) (sind (* {b} t))]))))'
           (pos (+ under [0 -0.14]))))))
 
 (canvas view (x -1.78) (y -1.67) (width 3.56) (height 3.17) (pan false) (zoom false)
@@ -54,4 +54,4 @@
   doc@'Turns the phase once every eight seconds, again and again, from where it is.'
     (animation (loop) (move spun (from 0) (to 360) (duration 8) (ease linear))))
 
-(readout ratio-now $'{a}:{b}' (font variable) doc@'The ratio a:b.')
+(readout ratio-now f'{a}:{b}' (font variable) doc@'The ratio a:b.')
