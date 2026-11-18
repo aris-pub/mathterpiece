@@ -231,8 +231,9 @@ character, a line feed included, is itself.
 ```{rule} tex-strings
 A TeX string is written `$'…'`. Inside it, `\'` is a quote, and every other character is
 itself: `\frac`, `\\` and `\q` stay as written. A backslash and the character after it are read
-together, so in `$'a\\'` the string is `a\\` and the last quote closes it. Its value is a string
-marked as LaTeX.
+together, so in `$'a\\'` the string is `a\\` and the last quote closes it. Its value is an
+ordinary string: `$` changes only how the text between the quotes is read, which lets LaTeX be
+written as it is.
 ```
 
 ## Prefixes

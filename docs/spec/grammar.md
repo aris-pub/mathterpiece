@@ -116,7 +116,7 @@ source. Each expression is one of these:
 | name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
 | brackets | `[real real]` in `func[real real]` | its expressions, in order |
 | broadened type | `real\|none` | its words, as expressions, in order |
-| string literal | `'…'`, `$'…'` | its text, and whether it is a {term}`TeX string` |
+| string literal | `'…'`, `$'…'` | its text |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
 | bool literal | `true`, `false` | the value |
 | none | `none` | nothing |
