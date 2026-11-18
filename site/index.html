@@ -67,6 +67,9 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* iOS Safari enlarges text on its own, for example when the phone turns; this keeps the sizes
+   that the page sets. It does not stop pinch zoom. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font: 400 19px/1.7 var(--sans);
