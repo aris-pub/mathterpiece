@@ -196,7 +196,8 @@ string
   ({numref}`the-types`, {numref}`string-literals`).
 
 TeX string
-  `$'…'`: a string literal of LaTeX, in which only `\'` is an escape ({numref}`tex-strings`).
+  `$'…'`: a string literal in which only `\'` is an escape, so backslashes are kept as written, as
+  LaTeX needs. Its value is an ordinary string ({numref}`tex-strings`).
 
 word
   A name, a number, an operator, a bool literal or `none` ({numref}`word-ends`).

@@ -473,7 +473,7 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a string known when compiling, plain or {term}`TeX <TeX string>` | core | the formula's LaTeX, which marks its terms | {doc}`world-model` |
+| a string known when compiling | core | the formula's LaTeX, which marks its terms | {doc}`world-model` |
 | `term` | core | `(term T ITEM…)`: a term's attributes | {doc}`world-model` |
 | `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | a term's attributes | {doc}`world-model` |
 | a string in a term | core | the LaTeX that the term shows | {doc}`world-model` |
@@ -580,7 +580,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
 | the target of `on-drag` written as a name | syntactic sugar | the move of the shape's position | {numref}`sugar-rewrites` |
-| `label` | core | a control's label: a string, or a {term}`TeX string` `$'…'` to typeset it as LaTeX | {doc}`page-interface`, {doc}`accessibility` |
+| `label` | core | a control's label, a string | {doc}`page-interface`, {doc}`accessibility` |
 | `stops` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `stops` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | its bars, its rest between steps, its step names | {doc}`page-interface`, {doc}`time` |
 | `selected` on a button | core | whether it is the current choice | {doc}`page-interface`, {doc}`accessibility` |
@@ -590,6 +590,12 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `in` | core | the views that a control belongs to | {doc}`page-interface`, {doc}`lifecycle` |
 | a condition | core | a bool form that limits what a writer writes | {doc}`reaction` |
 | `doc` on a component | core | its docstring | {doc}`compiled-format` |
+
+:::{admonition} Code differs
+:class: note
+The compiler shows a label written `(label $'…')` as typeset LaTeX, and any other label as plain
+text, so the spelling of a string changes its meaning. Bead mtp-z8x5 makes the compiler follow the rule.
+:::
 
 ### Bodies
 
