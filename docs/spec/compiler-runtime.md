@@ -67,7 +67,7 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 
 1. **Parse.** The {term}`parser` reads the text into {term}`forms <form>`, by the syntax alone
    ({doc}`lexical`, {doc}`grammar`). It looks up no {term}`name`.
-2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`sugar`
+2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`syntactic sugar`
    form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, `(pos [1 2])`
    becomes `(x 1) (y 2)`. No value is computed and no type is used.
 3. **Prove.** Every {term}`expression` is given a type, and every type, {term}`range`,
@@ -83,9 +83,9 @@ The compiler turns a source into a .mtpc in six steps, in this order:
    runtime needs.
 ```
 
-So a check that the parts of a sugar form are known when compiling is made in the prove step, and
+So a check that the parts of a syntactic sugar form are known when compiling is made in the prove step, and
 every core form other than `foreach`, a motif instance and a use of a choreo reaches the fold step
-as it is. Which forms are sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
+as it is. Which forms are syntactic sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
 
 ```{rule} prove-bodies-once
 The prove step proves each body once: the body of a function with each parameter ranging over

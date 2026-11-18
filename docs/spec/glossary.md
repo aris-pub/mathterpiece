@@ -202,7 +202,7 @@ word
   A name, a number, an operator, a bool literal or `none` ({numref}`word-ends`).
 
 core form
-  A form that is not sugar, such as a form whose head is core or a call of a library function. The
+  A form that is not syntactic sugar, such as a form whose head is core or a call of a library function. The
   prover proves core forms, and the runtime runs them. See {numref}`kinds-of-form` and
   {numref}`library-form`.
 
@@ -216,10 +216,10 @@ prover
   {numref}`compile-steps`.
 
 rewrite
-  A pair of mtp fragments: a sugar form, and the core forms that it means. See
+  A pair of mtp fragments: a syntactic sugar form, and the core forms that it means. See
   {numref}`sugar-rewrites`.
 
-sugar
+syntactic sugar
   A form that can be rewritten into core forms without computing any value and without using
   any type. Also called a derived form. See {numref}`sugar-form`.
 

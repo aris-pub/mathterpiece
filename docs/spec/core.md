@@ -2,7 +2,7 @@
 # Core and derived forms
 
 On this page, every {term}`head` that the {term}`compiler` accepts is sorted into three kinds:
-{term}`core form`, {term}`sugar` and {term}`library`. Each sugar {term}`form` is given as a
+{term}`core form`, {term}`syntactic sugar` and {term}`library`. Each syntactic sugar {term}`form` is given as a
 {term}`rewrite` into core forms. Each core form is given with the page of the spec where its
 meaning is defined.
 
@@ -15,12 +15,12 @@ The head of a form is its first item ({numref}`form-template`): `if` in `(if c a
 `(circle p (r 1))`. An item of a form is also called by its head, so `(r 1)` is an `r` item.
 
 ```{rule} kinds-of-form
-Every head belongs to exactly one of three kinds: sugar ({numref}`sugar-form`), library
-({numref}`library-form`) or core. A head that is neither sugar nor library is core.
+Every head belongs to exactly one of three kinds: syntactic sugar ({numref}`sugar-form`), library
+({numref}`library-form`) or core. A head that is neither syntactic sugar nor library is core.
 ```
 
 ```{rule} sugar-form
-A form is sugar if and only if it can be rewritten into core forms without computing any value and
+A form is syntactic sugar if and only if it can be rewritten into core forms without computing any value and
 without using any type. Looking up a {term}`name` is neither, since lexical scope is fixed by the
 text, so a rewrite may resolve a name and read the text of the declaration or the binding that the
 name refers to.
@@ -38,7 +38,7 @@ and declarations, and no form of the language.
 By {numref}`declaration-names`, a declared function may take the name of a library function: after
 `(func + ((real a) (real b)) 7)`, `(+ 1 2)` is 7.
 
-The compiler rewrites every sugar form in the rewrite step, which comes before the prove step
+The compiler rewrites every syntactic sugar form in the rewrite step, which comes before the prove step
 ({numref}`compile-steps`), so the {term}`prover` is given only core forms. The prove step proves
 the {term}`body` of each `foreach`, motif and choreo once, before the expand step makes the
 copies, the instances and the uses ({numref}`prove-bodies-once`). So a form whose rewrite would need
@@ -58,16 +58,16 @@ is written as it is.
 The {term}`parser` makes the rewrites of the lexical shorthands while it reads the source:
 a prefixed form `H@X`, a {term}`name string` `#'…'`, a part after a {term}`list` {term}`literal`,
 `[…][X]` ({numref}`shorthand-forms`), and a head that ends with `_` ({numref}`unnamed-head`). Every
-other sugar form is in the table of the rule below.
+other syntactic sugar form is in the table of the rule below.
 
 (rewrite-when)=
 (rewrite-roll-dice)=
 ```{rule} sugar-rewrites
-Each form in the first column of this table is sugar, and means exactly the core forms in the
-second column, when the conditions in the third column hold. A sugar form whose conditions do not
+Each form in the first column of this table is syntactic sugar, and means exactly the core forms in the
+second column, when the conditions in the third column hold. A syntactic sugar form whose conditions do not
 hold is a {term}`compile error`. A rewrite may move text or copy it, and each name in the moved or
 copied text refers to what it referred to where it was written. A rewrite may give
-sugar forms, which are rewritten in turn, until no sugar form is left. A `(like …)` is rewritten
+syntactic sugar forms, which are rewritten in turn, until no syntactic sugar form is left. A `(like …)` is rewritten
 before any other rewrite of the declaration that it copies.
 
 | Written | Means exactly | Conditions |
@@ -206,7 +206,7 @@ fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code foll
 ```
 
 So the two spellings mean the same, at all times, and every rule about the second applies to the
-first. The first is core, and not sugar, only because an int and a list are told apart by the type
+first. The first is core, and not syntactic sugar, only because an int and a list are told apart by the type
 of `X` ({numref}`sugar-form`).
 
 ```{rule} foreach-bounded-length
@@ -337,7 +337,7 @@ inventory.
 ## Inventory of heads
 
 Each table lists the heads of one context. The column "Defined in" gives the page where a core
-form's meaning is defined, the rule for a sugar form, or {doc}`stdlib` for the library.
+form's meaning is defined, the rule for a syntactic sugar form, or {doc}`stdlib` for the library.
 
 (top-level-heads)=
 ### Top-level forms
@@ -347,12 +347,12 @@ The top level of a source holds only the heads of this table and `let`
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `import` | sugar | `(import F)` or `(import F N…)`: the declarations of another file | {numref}`sugar-rewrites` |
-| `type` | sugar | `(type N BASE C…)`: a name for a {term}`refined type` | {numref}`sugar-rewrites` |
+| `import` | syntactic sugar | `(import F)` or `(import F N…)`: the declarations of another file | {numref}`sugar-rewrites` |
+| `type` | syntactic sugar | `(type N BASE C…)`: a name for a {term}`refined type` | {numref}`sugar-rewrites` |
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
-| `palette` | sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
-| `parametric` | sugar | a polyline through the points of a parametric curve | {numref}`sugar-rewrites` |
+| `palette` | syntactic sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
+| `parametric` | syntactic sugar | a polyline through the points of a parametric curve | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
@@ -386,7 +386,7 @@ mtp-ydd4.7.59.
 | `list` with no item type | core | a list whose item type is the type of its value | {doc}`types` |
 | `font` | core | `(font N PART…)`: a font token, given by its parts | {doc}`world-model` |
 | `family`, `style`, `weight`, `size` | core | the parts of a font | {doc}`world-model` |
-| `like` in a font | sugar | copies the parts of another font | {numref}`sugar-rewrites` |
+| `like` in a font | syntactic sugar | copies the parts of another font | {numref}`sugar-rewrites` |
 | `free` | core | `(free X)`: a free value that starts at the value of `X`, written only as the value of a variable or of an attribute | {doc}`reaction`, {doc}`binding-time` |
 | `>=`, `>`, `<=`, `<` with one number | core | a bound | {doc}`types` |
 | `length` | core | the length of a list | {doc}`types` |
@@ -405,9 +405,9 @@ mtp-ydd4.7.59.
 | `func[P… R]` | core | function types | {doc}`types` |
 | `T\|none` | core | a type that allows `none` | {doc}`types` |
 | `(T C…)` | core | a refined type | {doc}`types` |
-| `(maybe T)` | sugar | `T\|none` | {numref}`sugar-rewrites` |
-| `colormap` | sugar | `func[real color]` | {numref}`sugar-rewrites` |
-| a name declared by `type` | sugar | the type that it names | {numref}`sugar-rewrites` |
+| `(maybe T)` | syntactic sugar | `T\|none` | {numref}`sugar-rewrites` |
+| `colormap` | syntactic sugar | `func[real color]` | {numref}`sugar-rewrites` |
+| a name declared by `type` | syntactic sugar | the type that it names | {numref}`sugar-rewrites` |
 | a name declared by `interface`, `motif` or `variant` | core | that type | {doc}`types` |
 | `rand-seed` | core | the type of seeds, any int | {doc}`types`, {doc}`evaluation` |
 
@@ -433,14 +433,14 @@ mtp-ydd4.7.59.
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `font` | core | an attribute of the shape | {doc}`world-model` |
-| `pos` | sugar | `x` and `y` given as one point | {numref}`sugar-rewrites` |
+| `pos` | syntactic sugar | `x` and `y` given as one point | {numref}`sugar-rewrites` |
 | `dash` with two arguments | core | the dash lengths and `dash-offset` | {doc}`world-model` |
-| `dash` with one argument | sugar | an offset of 0 | {numref}`sugar-rewrites` |
-| `like` | sugar | copies another shape's arguments | {numref}`sugar-rewrites` |
-| `defaults` on a group, a row or a column | sugar | what a container gives its members | {numref}`sugar-rewrites` |
+| `dash` with one argument | syntactic sugar | an offset of 0 | {numref}`sugar-rewrites` |
+| `like` | syntactic sugar | copies another shape's arguments | {numref}`sugar-rewrites` |
+| `defaults` on a group, a row or a column | syntactic sugar | what a container gives its members | {numref}`sugar-rewrites` |
 | `clip` | core | a shape that the members are drawn inside | {doc}`world-model` |
 | `fixed-size` | core | a group whose members are measured in screen pixels | {doc}`world-model` |
-| `pointer-events` on a group, a row or a column | sugar | a default for the members | {numref}`sugar-rewrites` |
+| `pointer-events` on a group, a row or a column | syntactic sugar | a default for the members | {numref}`sugar-rewrites` |
 | `gap`, `align` | core | the spacing and alignment of a row or a column | {doc}`world-model` |
 
 ### Motifs and variants
@@ -452,11 +452,11 @@ mtp-ydd4.7.59.
 | `self` | core | the instance being built, inside a motif's body | {doc}`scope` |
 | a parameter given to an instance, `(P X)` | core | the parameter's value | {doc}`world-model` |
 | `x`, `y`, `translate`, `transform` on an instance | core | the instance's frame | {doc}`world-model` |
-| `pos` on an instance | sugar | as on a shape | {numref}`sugar-rewrites` |
+| `pos` on an instance | syntactic sugar | as on a shape | {numref}`sugar-rewrites` |
 | `clip` on an instance | core | as on a group | {doc}`world-model` |
 | `defaults` on an instance | core | what the instance gives the members that its motif makes | {doc}`world-model` |
-| `pointer-events` on an instance | sugar | a default for the members | {numref}`sugar-rewrites` |
-| `like` on an instance or a variant instance | sugar | copies another instance's items | {numref}`sugar-rewrites` |
+| `pointer-events` on an instance | syntactic sugar | a default for the members | {numref}`sugar-rewrites` |
+| `like` on an instance or a variant instance | syntactic sugar | copies another instance's items | {numref}`sugar-rewrites` |
 
 The rules about a declaration that reads itself or its container, such as a default that reads
 its own group, are to be redesigned around `self`. Until then, the rules of today hold
@@ -467,8 +467,8 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | a variable in a namespace | core | a member, kept as `N.M` | {doc}`world-model` |
-| `namespace`, `palette` in a namespace | core, sugar | a namespace inside a namespace | {doc}`world-model`, {numref}`sugar-rewrites` |
-| `(M C)` in a palette | sugar | `(color M C)` | {numref}`sugar-rewrites` |
+| `namespace`, `palette` in a namespace | core, syntactic sugar | a namespace inside a namespace | {doc}`world-model`, {numref}`sugar-rewrites` |
+| `(M C)` in a palette | syntactic sugar | `(color M C)` | {numref}`sugar-rewrites` |
 | `(T A C…)` in an interface | core | an attribute that an object must have | {doc}`types` |
 
 ### Formulas and terms
@@ -478,8 +478,8 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 | a {term}`TeX string` | core | the formula's LaTeX, which marks its terms | {doc}`world-model` |
 | `term` | core | `(term T ITEM…)`: a term's attributes | {doc}`world-model` |
 | `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding`, `tex` in a term | core | a term's attributes | {doc}`world-model` |
-| `like` in a term | sugar | copies another term's form | {numref}`sugar-rewrites` |
-| `defaults` in a formula | sugar | attributes for every term | {numref}`sugar-rewrites` |
+| `like` in a term | syntactic sugar | copies another term's form | {numref}`sugar-rewrites` |
+| `defaults` in a formula | syntactic sugar | attributes for every term | {numref}`sugar-rewrites` |
 | `exists-when` in a formula | core | when a term exists | {doc}`world-model` |
 | a variable in a formula | core | a member, kept as `F.M` | {doc}`world-model` |
 
@@ -492,12 +492,12 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 |---|---|---|---|
 | a literal | core | a number, string, TeX string, {term}`interpolated string`, bool, `none` or list literal | {doc}`lexical`, {doc}`types` |
 | a name | core | what the name refers to | {doc}`scope` |
-| a name with several name parts, `N.A`, `N[X]` | sugar | | {numref}`sugar-rewrites` |
+| a name with several name parts, `N.A`, `N[X]` | syntactic sugar | | {numref}`sugar-rewrites` |
 | `.` | core | `(. X Y)`: an attribute, member, item or key of `X` | {numref}`dot-name-part` |
 | `name` | core | `(name S)`: the name whose text is `S`, known when compiling | {doc}`scope`, {numref}`names-from-values` |
 | `if` | core | `(if C A B)` | {doc}`evaluation` |
-| `when` | sugar | `(when C X)` | {numref}`sugar-rewrites` |
-| `cond`, `else`, `and`, `or` | sugar | | {numref}`sugar-rewrites` |
+| `when` | syntactic sugar | `(when C X)` | {numref}`sugar-rewrites` |
+| `cond`, `else`, `and`, `or` | syntactic sugar | | {numref}`sugar-rewrites` |
 | `let` | core | `(let ((N V)…) BODY)` | {doc}`scope`, {doc}`evaluation` |
 | `fn` | core | `(fn PARAMS BODY)`: a function written in place | {doc}`types`, {doc}`evaluation` |
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
@@ -548,16 +548,16 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | `move` | core | `(move TARGET ITEM…)`: a transition written in place | {doc}`time` |
 | `from`, `to`, `duration`, `path` | core | the parts of a transition | {doc}`time` |
 | `ease` | core | a function from 0 to 1, such as the value of `(step N)` or `(step-ease P)` | {doc}`time` |
-| `like` in a transition or a move | sugar | | {numref}`sugar-rewrites` |
+| `like` in a transition or a move | syntactic sugar | | {numref}`sugar-rewrites` |
 | `animation` written inline | core | `(animation ITEM…)`, or `(animation N)` naming one, also as a step | {doc}`time`, {numref}`animation-step` |
-| an animation's body of several items | sugar | one `in-order` | {numref}`sugar-rewrites` |
+| an animation's body of several items | syntactic sugar | one `in-order` | {numref}`sugar-rewrites` |
 | `defaults` in an animation, `at-once` or `in-order` | core | a duration and an ease for the moves inside | {doc}`time` |
 | `loop` | core | `(loop)` or `(loop N)` | {doc}`time` |
 | `at-once`, `in-order` | core | items together, or one after another | {doc}`time` |
 | `foreach` in an animation's body | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
 | the name of an animation or a transition in a body | core | plays what it names | {doc}`time` |
-| `wait` | sugar | | {numref}`sugar-rewrites` |
-| `set` | sugar | `(set V X)`: a move of no duration | {numref}`sugar-rewrites` |
+| `wait` | syntactic sugar | | {numref}`sugar-rewrites` |
+| `set` | syntactic sugar | `(set V X)`: a move of no duration | {numref}`sugar-rewrites` |
 | a use of a choreo | core | the choreo's moves, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
 
 ### Components and their items
@@ -578,7 +578,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | the move of a slider | core | a `move` or the name of a transition, its first item | {doc}`page-interface`, {doc}`reaction` |
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
-| the target of `on-drag` written as a name | sugar | the move of the shape's position | {numref}`sugar-rewrites` |
+| the target of `on-drag` written as a name | syntactic sugar | the move of the shape's position | {numref}`sugar-rewrites` |
 | `label` | core | a control's label | {doc}`page-interface`, {doc}`accessibility` |
 | `tex` in a label | core | a label given as LaTeX | {doc}`page-interface` |
 | `step` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `step` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
@@ -652,20 +652,20 @@ their place. They are not forms of the language.
 
 | Head | Kind | Rewrite or defining page |
 |---|---|---|
-| `H@X`, `#'…'`, `[…][X]` | sugar, made by the parser | {numref}`shorthand-forms` |
-| `(H_ …)` | sugar, made by the parser | {numref}`unnamed-head` |
-| `N.A`, `N[X]` | sugar | {numref}`sugar-rewrites` |
-| `when`, `cond`, `and`, `or` | sugar | {numref}`sugar-rewrites` |
-| `(maybe T)`, `colormap` as a type, a name declared by `type` | sugar | {numref}`sugar-rewrites` |
-| `(range X)`, a random function with no `(seed …)`, `roll-dice` with no argument | sugar | {numref}`sugar-rewrites` |
-| `import`, `type`, `palette` | sugar | {numref}`sugar-rewrites` |
-| `like` | sugar, or core with a `(name …)` | {numref}`sugar-rewrites`, {numref}`names-from-values` |
-| `pointer-events` on a container | sugar | {numref}`sugar-rewrites` |
-| `defaults` on a group, a row or a column, and in a formula | sugar | {numref}`sugar-rewrites` |
-| `dash` with one argument, `pos` | sugar | {numref}`sugar-rewrites` |
-| `foreach` with a list of names | sugar | {numref}`sugar-rewrites` |
-| a name as the target of `on-drag` | sugar | {numref}`sugar-rewrites` |
-| `wait`, `set`, an animation's body of several items | sugar | {numref}`sugar-rewrites` |
+| `H@X`, `#'…'`, `[…][X]` | syntactic sugar, made by the parser | {numref}`shorthand-forms` |
+| `(H_ …)` | syntactic sugar, made by the parser | {numref}`unnamed-head` |
+| `N.A`, `N[X]` | syntactic sugar | {numref}`sugar-rewrites` |
+| `when`, `cond`, `and`, `or` | syntactic sugar | {numref}`sugar-rewrites` |
+| `(maybe T)`, `colormap` as a type, a name declared by `type` | syntactic sugar | {numref}`sugar-rewrites` |
+| `(range X)`, a random function with no `(seed …)`, `roll-dice` with no argument | syntactic sugar | {numref}`sugar-rewrites` |
+| `import`, `type`, `palette` | syntactic sugar | {numref}`sugar-rewrites` |
+| `like` | syntactic sugar, or core with a `(name …)` | {numref}`sugar-rewrites`, {numref}`names-from-values` |
+| `pointer-events` on a container | syntactic sugar | {numref}`sugar-rewrites` |
+| `defaults` on a group, a row or a column, and in a formula | syntactic sugar | {numref}`sugar-rewrites` |
+| `dash` with one argument, `pos` | syntactic sugar | {numref}`sugar-rewrites` |
+| `foreach` with a list of names | syntactic sugar | {numref}`sugar-rewrites` |
+| a name as the target of `on-drag` | syntactic sugar | {numref}`sugar-rewrites` |
+| `wait`, `set`, an animation's body of several items | syntactic sugar | {numref}`sugar-rewrites` |
 | `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |
 | `scene`, `background`, `transform` in the scene | core | {doc}`world-model` |

@@ -52,7 +52,7 @@ spec lists exactly which conditions narrow the range of a name: a comparison wit
 
 ## P2. A shorthand means exactly its rewrite
 
-**Proposed principle.** Every sugar form means exactly the core forms that it rewrites into. Where
+**Proposed principle.** Every syntactic sugar form means exactly the core forms that it rewrites into. Where
 the compiler gives a shorthand a different meaning today, the shorthand is wrong, and is changed
 to match its rewrite. A form that cannot be given a rewrite without computing a value or knowing
 a type is core.
@@ -67,7 +67,7 @@ Using a type to choose a rewrite makes the form core (Q-core-7, `map` over an in
 the code is changed. A form that needs a value or a type to be rewritten is core
 ({numref}`sugar-form`, {numref}`sugar-rewrites`).
 
-**Decided (2026-11-15):** `(on-drag p p.pos)` is sugar for `(on-drag p (move p.pos (to pointer)))`,
+**Decided (2026-11-15):** `(on-drag p p.pos)` is syntactic sugar for `(on-drag p (move p.pos (to pointer)))`,
 and `p.x` and `p.y` likewise, and the two spellings mean the same at all times. Dragging a group, a
 row or a column, fixed-size or not, writes its `translate`, for both spellings
 ({numref}`sugar-rewrites`, {numref}`drag-group-translate`) (Q-core-23). `(foreach k n …)` means
@@ -86,7 +86,7 @@ search for the only seed (Q-core-5), and a function that takes the name of an op
 (Q-core-20). Each is listed in {doc}`core` with the rewrite that it would have.
 
 **Decided:** P2 is applied form by form, and only the cases where that changes an existing figure
-are brought to the author. Sugar: `import`, `type`, `palette`, `pos`, the defaults of groups,
+are brought to the author. Syntactic sugar: `import`, `type`, `palette`, `pos`, the defaults of groups,
 rows, columns and formulas, and the search for the only seed. Core: `colormap`, variant
 instances, rows and columns, `exists-when`, `let`, the defaults of instances and of animations,
 and an `in-order` of one item. The operators are library functions ({numref}`library-form`),
