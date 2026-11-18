@@ -81,11 +81,11 @@ before any other rewrite of the declaration that it copies.
 | `(range X)` | `(range 0 X (gap 1))` | `X` is not a `(gap …)` or `(num …)` item |
 | `(R ARGS…)`, with `R` a name of the primitive `rand`, `rand-int`, `pick` or `shuffle` ({numref}`primitive-form`), and no `(seed …)` | `(R ARGS… (seed S))` | `S` is the {term}`default seed` of the file that holds the form ({numref}`default-seed`) |
 | `(D)`, with `D` a name of the choreo `roll-dice` of the file rand of the standard library ({ref}`stdlib-rand`) | `(D S)` | `S` as for a random function |
-| `(set V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
+| `(jump V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`import-file-holds`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
-| `(parametric N (for T LO HI) E ITEMS…)`, and `parametric_` with no `N` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ITEMS…)`, where `S` is the `S` of a `(samples S)` among `ITEMS…`, which the polyline does not get, or 361 when there is none | `T` is a name. At most one `(samples S)` |
+| `(parametric N (for T LO HI) E ITEMS…)` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ITEMS…)`, where `S` is the `S` of a `(samples S)` among `ITEMS…`, which the polyline does not get, or 361 when there is none | `T` is a name. At most one `(samples S)` |
 | `(K N (like M) ARGS…)` | `(K N ARGS… COPIED…)`. `COPIED…` is each item of the declaration of `M`, as written, after its own `(like …)` is rewritten, whose head `ARGS…` does not give. A positional {term}`string` of a text is copied too. A `(pos P)` of `M` gives both `x` and `y`: when `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))` | `M` is a plain name. `K` is a shape head other than `group`, `row` and `column`, and `M` a shape of kind `K`. Or `M` is an instance of the motif or the variant `K`. Or `K` is `font` and `M` a font. Or `K` is `term` and `M` a term of the same formula, whose `(term …)` form comes before. Or the form is a `move` or a `transition`, and `M` is a transition declared at the top level |
 | `(pointer-events B)`, on a group, a row, a column or an instance | the same container, with `(pointer-events B)` moved into its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `pointer-events` |
 | `(defaults (A V)…)`, on a group, a row or a column | the same container without it, with each `(A V)` added to each member, at any depth, that takes `A` from a container ({doc}`world-model`) and does not give `A`, the nearest container first. For a member that is an instance, `(A V)` is added to the instance's own `(defaults …)` | Each `A` is one that a container gives its members ({doc}`world-model`) |
@@ -118,7 +118,7 @@ of type `rand-seed`, which stands for a seed: its argument is the name of a seed
 the parameter is replaced by that seed and not by its value, so a move of the parameter moves the
 seed. Any other argument for such a parameter is a compile error, "the argument for P is the name
 of a seed, as in (C dots)". So the choreo `roll-dice` of the file rand,
-`(choreo roll-dice ((rand-seed s)) (set s (next-seed s)))`, moves the seed that its use names.
+`(choreo roll-dice ((rand-seed s)) (jump s (next-seed s)))`, moves the seed that its use names.
 
 :::{admonition} Code differs
 :class: note
@@ -555,7 +555,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | `foreach` in an animation's body | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
 | the name of an animation or a transition in a body | core | plays what it names | {doc}`time` |
 | `wait` | syntactic sugar | | {numref}`sugar-rewrites` |
-| `set` | syntactic sugar | `(set V X)`: a move of no duration | {numref}`sugar-rewrites` |
+| `jump` | syntactic sugar | `(jump V X)`: a move of no duration | {numref}`sugar-rewrites` |
 | a use of a choreo | core | the choreo's moves, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
 
 ### Components and their items
@@ -579,7 +579,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | the target of `on-drag` written as a name | syntactic sugar | the move of the shape's position | {numref}`sugar-rewrites` |
 | `label` | core | a control's label | {doc}`page-interface`, {doc}`accessibility` |
 | `tex` in a label | core | a label given as LaTeX | {doc}`page-interface` |
-| `step` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `step` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
+| `stops` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `stops` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | its bars, its rest between steps, its step names | {doc}`page-interface`, {doc}`time` |
 | `selected` on a button | core | whether it is the current choice | {doc}`page-interface`, {doc}`accessibility` |
 | `active` | core | whether the writer acts | {doc}`reaction` |
@@ -607,7 +607,7 @@ function". Bead mtp-ydd4.7.40 makes the compiler follow the rule.
 | `palette` | items `(member color)` | yes |
 | `interface` | items `(T attribute constraint…)` | yes |
 | `type`, a variable `(T name …)` | {term}`constraints <constraint>`, such as `(>= 0)` | yes |
-| `animation`, `choreo`, `at-once`, `in-order` | steps: `move`, `set`, `wait`, `at-once`, `in-order`, `(animation …)`, the name of an animation or a transition, a use of a choreo | yes |
+| `animation`, `choreo`, `at-once`, `in-order` | steps: `move`, `jump`, `wait`, `at-once`, `in-order`, `(animation …)`, the name of an animation or a transition, a use of a choreo | yes |
 | `defaults` | items `(attribute value)`, and in an animation, `(duration …)` and `(ease …)` | yes |
 | `canvas` | at least one thing to draw: a name of a shape or of the scene, a list literal, or an expression that gives a shape, `none` or a list of shapes, such as `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
 | `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
@@ -663,7 +663,7 @@ their place. They are not forms of the language.
 | `dash` with one argument, `pos` | syntactic sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | syntactic sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | syntactic sugar | {numref}`sugar-rewrites` |
-| `wait`, `set`, an animation's body of several items | syntactic sugar | {numref}`sugar-rewrites` |
+| `wait`, `jump`, an animation's body of several items | syntactic sugar | {numref}`sugar-rewrites` |
 | `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |
 | `scene`, `background`, `transform` in the scene | core | {doc}`world-model` |
