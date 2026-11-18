@@ -83,8 +83,8 @@
   doc@'Player 2\'s car, from close by, facing up.'
   circuit)
 
-(readout laps-1 $'player 1: lap {(+ 1 (floor (/ run-1 360)))}' doc@'Player 1\'s lap.')
-(readout laps-2 $'player 2: lap {(+ 1 (floor (/ run-2 360)))}' doc@'Player 2\'s lap.')
+(readout laps-1 f'player 1: lap {(+ 1 (floor (/ run-1 360)))}' doc@'Player 1\'s lap.')
+(readout laps-2 f'player 2: lap {(+ 1 (floor (/ run-2 360)))}' doc@'Player 2\'s lap.')
 
 (slider pedal-1 (move gas-1 (from 0) (to 1)) (label 'player 1') (in view-1 laps-1)
   doc@'Player 1\'s speed.')

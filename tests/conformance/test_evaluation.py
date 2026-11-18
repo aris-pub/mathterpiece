@@ -277,7 +277,7 @@ class TestNonePropagates:
         assert value("(func p ((real x)) [(/ 1 x) 0]) (real|none v (. (p 0) 0))", "v") is None
 
     def test_an_interpolated_string_with_a_part_that_is_none(self):
-        assert value(INVERSE + "(string|none v $'a{(f 0)}')", "v") is None
+        assert value(INVERSE + "(string|none v f'a{(f 0)}')", "v") is None
 
     @NONE_COLLECTION
     def test_a_collection_function_given_none(self):
@@ -495,7 +495,7 @@ class TestRounding:
         assert value("(real v (round 2.675 2))", "v") == 2.68
 
     def test_a_format_spec(self):
-        assert value("(string v $'{0.125:.2f} {2.675:.2f} {2.5:.0f}')", "v") == "0.13 2.68 3"
+        assert value("(string v f'{0.125:.2f} {2.675:.2f} {2.5:.0f}')", "v") == "0.13 2.68 3"
 
     @ROUND
     def test_round_gives_none_at_no_input(self):

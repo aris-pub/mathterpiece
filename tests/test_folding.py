@@ -243,7 +243,7 @@ class TestKeptFolds:
         assert m.get("b").value.value == "(real (const))"
 
     def test_zero_and_minus_zero(self):
-        src = "(func f (real x) $'{x}') (real z 0.0 (const)) (real n (- 0.0) (const))"
+        src = "(func f (real x) f'{x}') (real z 0.0 (const)) (real n (- 0.0) (const))"
         m = model(f"{src} (string a (f z)) (string b (f n))")
         assert (m.get("a").value.value, m.get("b").value.value) == ("0.0", "-0.0")
 

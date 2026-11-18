@@ -85,7 +85,7 @@ A small, complete use: a bar chart whose bars are declared with typed parameters
     (list[prob] probs [0.2 0.5 0.3] (length 3))
     (motif bar ((prob p 0.0) (int k 0))
       (rect col (pos [k 0]) (width 0.8) (height (* 5 p)))
-      (text label $'{p:.0%}' (pos [k (+ (* 5 p) 0.3)])))
+      (text label f'{p:.0%}' (pos [k (+ (* 5 p) 0.3)])))
 
 ## 5. Declaring new types
 
@@ -146,7 +146,7 @@ An argument passed to a constrained parameter, and an item of a list with constr
 
 **Where it comes from.** A function where it is undefined: `(/ x 0)`, `(secd 90)`, `(tand 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)`. When the author writes the inputs known when compiling, as in `(sqrt -1)` or `(or? (sqrt -1) 0)`, this is a compile error; while drawing it gives `none`, never an error and never infinity (`infty` is only a value known when compiling: see "What the compiler proves", below). A call of a function with known arguments is worked out while compiling, but the author wrote its body with parameters, so there an undefined value is `none`, as while drawing: with `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f -1)` is 1, and `(f 0)` of `(func f (real x) (/ 1 x))` is `none`. If that `none` reaches a place inside the function that cannot take `none`, or makes a function declared plain `T` give `none`, the undefined value is a compile error. Outside the function, the call's `none` is handled like any other. A lookup by a key known only while drawing, `g[side]`, may also give none. A point built from two numbers, `[x y]`, is none when either is. And an illustrator may write `none` on purpose.
 
-**How it behaves.** Anything computed from `none` is `none`: a function's result, a part of `none` (if `g[k]` is `none`, so is `g[k].pos`), and an interpolated string with a part that is `none` (`$'sec θ = {crossing:.3f}'` is `none` when `crossing` is). The exceptions are the forms that deal with `none` (below), equality (`(= none none)` is true, `(= none 3)` is false), and a function whose parameter is declared `T|none`: it receives `none` and runs its body. A parameter that does not accept `none` makes the call `none`. Conditions (`if`, `cond`, `and`, `or`, and the `when` of a canvas, control or listener) cannot decide anything with `none`, so they must always receive a value that cannot be `none`. Of the list operations, `sum`, `count`, `min`, `max`, `any`, `all` and `reduce` must not receive items that may be `none`; `map`, `reverse` and reading a position pass them through.
+**How it behaves.** Anything computed from `none` is `none`: a function's result, a part of `none` (if `g[k]` is `none`, so is `g[k].pos`), and an interpolated string with a part that is `none` (`f'sec θ = {crossing:.3f}'` is `none` when `crossing` is). The exceptions are the forms that deal with `none` (below), equality (`(= none none)` is true, `(= none 3)` is false), and a function whose parameter is declared `T|none`: it receives `none` and runs its body. A parameter that does not accept `none` makes the call `none`. Conditions (`if`, `cond`, `and`, `or`, and the `when` of a canvas, control or listener) cannot decide anything with `none`, so they must always receive a value that cannot be `none`. Of the list operations, `sum`, `count`, `min`, `max`, `any`, `all` and `reduce` must not receive items that may be `none`; `map`, `reverse` and reading a position pass them through.
 
 **Handling it.** Everywhere a value reaches the reader must handle a `none` that may arrive there, whatever its source: a shape, a readout, a condition, an interpolated string, a list operation, a write. Handling means giving it a default with `or?`, filtering it out of a list with `somes`, or, for a shape, declaring the shape itself `T|none`. A transition whose end may be `none` is a write: it is allowed only into a variable or attribute declared `T|none`, where a color mixes `none` as transparent and anything else changes to or from `none` at once, as a bool does (reference, "Transitions and animations"); a slider's ends are never `none`. Declaring a variable `T|none` is the illustrator's choice that the variable may hold `none`; it does not exempt what reads it. A `none` arrives unasked when it comes from a partial function or a lookup, or anything computed from them; an unasked `none` may not even pass silently into a variable declared plain `T`. Until every `none` is handled, the compiler stops. The forms:
 
@@ -163,7 +163,7 @@ An attribute accepts `none` only if its type says so: for built-in shapes, that 
     (line tan (from p.pos) (to [crossing 0]))           ; an error: the end may be none
     (line|none tan (from p.pos) (to [crossing 0]))      ; at 90° the line is absent
     (line tan2 (from p.pos) (to [(or? crossing 0) 0]))  ; or: a stand-in end
-    (readout r (or? $'sec θ = {crossing:.3f}' 'sec θ is undefined'))
+    (readout r (or? f'sec θ = {crossing:.3f}' 'sec θ is undefined'))
     (circle ring (r 1) (fill none) (stroke 'navy'))     ; fill accepts none: an outline
 
     (list[real|none] radii (map g (fn p (sqrt p.k))))        ; some square roots fail

@@ -16,7 +16,7 @@ A point on a circle, a slider and a drag that move it, and a number in the prose
     (canvas v s
       (on-drag p theta))
     (slider spin (move theta (from 0) (to 360)) (label 'angle'))
-    (readout r $'θ = {theta:.0f}°')
+    (readout r f'θ = {theta:.0f}°')
 
 - `(scene s …)` declares the scene, the mathematical content. Inside it: a variable `theta`, kept between 0 and 360, and three shapes.
 - `p`'s position is `(polar 1 theta)`, and `radius` ends at `p.pos`. These are not computed once: they hold at every moment, so when `theta` changes, both follow.
@@ -39,8 +39,8 @@ Everything in a file is an expression: a literal, a name, or a form. Names may b
 | `2.5` `1e-3` | reals |
 | `2i` | a complex number |
 | `'crimson'` | a string, in single quotes; `\'` is a quote, `\\` a backslash and `\n` a line break |
-| `tex'\frac1b'` | a TeX string: LaTeX, where a backslash means nothing, so `\frac` and `\\` stay as written; only `\'` is a quote, for primes, as in `tex'f\'(x)'` |
-| `$'θ = {theta:.0f}°'` | an interpolated string: each `{…}` is an expression, with an optional format after the colon |
+| `$'\frac1b'` | a TeX string: LaTeX, where a backslash means nothing, so `\frac` and `\\` stay as written; only `\'` is a quote, for primes, as in `$'f\'(x)'` |
+| `f'θ = {theta:.0f}°'` | an interpolated string: each `{…}` is an expression, with an optional format after the colon |
 | `#'dot-{k}'` | a name string: values filled in as in an interpolated string, then read as a name (section 4) |
 | `true` `false` | bools |
 | `none` | the value that does not exist |
@@ -79,7 +79,7 @@ A declaration creates an object and returns it. Its head is usually the type of 
 - **Names** are bare. Each name in the scene is unique, and visible everywhere after its declaration (section 9). A function may call itself.
 - **Shapes** are declared only inside the scene, a group, a motif or a variant, never at the top level.
 - **`none` as a name** declares something with no name: `(circle none (r 1))`. Any form that takes a name may be written with an underscore after its head instead: `(circle_ (r 1))` is `(circle none (r 1))`, `(line|none_ …)` is `(line|none none …)`, and `(marks.grid_ …)`, a motif of a file imported whole, is `(marks.grid none …)`. An underscore is allowed nowhere else, in a name or on its own. An object with no name has a `name` attribute that is `none`.
-- **A name string, `#'dot-{i}'`,** builds a name in a loop: values are filled in as in an interpolated string, and the result is read as a name. `(circle #'dot-{i}' …)` declares one, `#'dot-{k}'` refers to one, and parts may follow it as they follow any name: `#'dot-{(- k 1)}'.pos`. It is short for `(name $'dot-{i}')`, which also takes a string computed any other way; a name string with nothing to fill in is an error, since the name can be written itself. `#` is allowed nowhere else.
+- **A name string, `#'dot-{i}'`,** builds a name in a loop: values are filled in as in an interpolated string, and the result is read as a name. `(circle #'dot-{i}' …)` declares one, `#'dot-{k}'` refers to one, and parts may follow it as they follow any name: `#'dot-{(- k 1)}'.pos`. It is short for `(name f'dot-{i}')`, which also takes a string computed any other way; a name string with nothing to fill in is an error, since the name can be written itself. `#` is allowed nowhere else.
 - **Constraints** follow, and narrow what the object may be: `(real theta 40 (>= 0) (<= 360))`.
 
 ## 5. Function calls
@@ -122,7 +122,7 @@ A collection function's function takes its parameter's type from the items, and,
 A special form looks like a call but does something a function cannot: it evaluates only some of its parts, binds names, or stands for other expressions. The special forms are `if`, `cond`, `and`, `or`, `let`, `fn` (section 5), `.` (section 7), `name` (section 4), `as`, `foreach` and `type-of`; the reference, "Special forms", says exactly what each evaluates and when. Two of them in use:
 
     (if (> k 0) 'up' 'down')                      ; evaluates only the branch taken
-    (foreach i 5 (circle (name $'dot-{i}') …))    ; five circles, made when compiling
+    (foreach i 5 (circle (name f'dot-{i}') …))    ; five circles, made when compiling
 
 One item is recognized by its head and is not a special form: `(exists-when name c)` in a scene, group, `foreach` or motif body, which says when a shape exists (see the reference, "The scene and shapes"). `(when c x)` is a special form, an expression like `if`. In a control or a listener, `(active c)` is an optional argument.
 

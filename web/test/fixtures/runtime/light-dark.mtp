@@ -11,6 +11,6 @@
   (circle mixed (fill (mix ink paper t)))
   (circle picked (fill (light-dark (if b 'red' 'blue') ink)))
   (circle moved (fill '#000000'))
-  (text label (let ((c (lighten (light-dark '#000000' '#808080') t))) $'{c}')))
+  (text label (let ((c (lighten (light-dark '#000000' '#808080') t))) f'{c}')))
 (animation fade (move moved.fill (to (light-dark '#ffffff' '#000000')) (duration 1)))
 (canvas v s)

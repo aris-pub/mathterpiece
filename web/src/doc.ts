@@ -98,7 +98,7 @@ export interface Obj {
   as?: "inline" | "block";
   // on-view, on-ready, on-live, on-quiet: the view it listens to.
   view?: number;
-  // A control whose label is LaTeX, given as (label (tex …)).
+  // A control whose label is LaTeX, given as a TeX string, (label $'…').
   "label-tex"?: boolean;
   rest?: number;
   // A listener or a control: the views it belongs to, when its source names them (mtp-2juu.1).

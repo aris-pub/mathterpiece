@@ -19,7 +19,7 @@
   (string curve-name
       (cond ((= m 2) 'a cardioid')
             ((= m 3) 'a nephroid')
-            ((= m (round m)) $'{(round (- m 1))} cusps')
+            ((= m (round m)) f'{(round (- m 1))} cusps')
             (else '')))
 
   (group table (translate [0 0.6])
@@ -32,14 +32,14 @@
         (circle_ (pos p) (r 0.04)))))
 
   (group captions (defaults (font variable) (fill ink) (valign 'bottom'))
-    (text_ $'m = {m:.2f}' (pos (top-left table 0.7)))
+    (text_ f'm = {m:.2f}' (pos (top-left table 0.7)))
     (text_ curve-name (pos (top-right table 0.7)) (halign 'end')))
 
   ; The second line is indented, as the code would be in a file.
   (group forms (defaults (fill soft) (font code) (halign 'start') (valign 'top'))
     (let ((spacing 0.8) (first (+ (bottom-left table) [0 (- spacing)])))
       (text_ '(foreach k (range 200)' (pos first))
-      (text_ $'(line_ (from (spot k)) (to (spot (* {m:.2f} k)))))'
+      (text_ f'(line_ (from (spot k)) (to (spot (* {m:.2f} k)))))'
           (pos (+ first [0.5 (- spacing)]))))))
 
 (canvas view (x -9) (y -9.6) (width 18) (height 19) (pan false) (zoom false)

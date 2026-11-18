@@ -7,8 +7,8 @@
 
 (formula meets
   doc@'The probability that A meets exactly one half, with its value.'
-  tex'P_h(p) = 2q(1-q) \term{step}{= 2q - 2q^2} = \term{value}{}'
-  (term value (tex $'{(* 2 q (- 1 q)):.3f}'))
+  $'P_h(p) = 2q(1-q) \term{step}{= 2q - 2q^2} = \term{value}{}'
+  (term value f'{(* 2 q (- 1 q)):.3f}')
   (term step (fill (light-dark '#8a8478' '#a39d90')))
   (exists-when step step))
 

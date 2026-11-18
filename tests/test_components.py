@@ -188,11 +188,11 @@ class TestViews:
         assert m.get("v").data["shows"] == [m.id("s")]
 
     def test_a_readout(self):
-        m = model(f"{K} (readout r $'{{k:.2f}}')")
+        m = model(f"{K} (readout r f'{{k:.2f}}')")
         assert m.get("r").attrs["value"].expr.op == "format"
 
     def test_a_readout_that_may_be_none(self):
-        error("(real|none c) (readout r $'{c}')", "may be none")
+        error("(real|none c) (readout r f'{c}')", "may be none")
 
 
 class TestAccess:
@@ -382,8 +382,8 @@ class TestListenersInAForeach:
     def test_a_foreach_gives_a_listener_for_each_shape(self):
         src = (
             "(real k 0)"
-            "(scene s (foreach i 3 (circle (name $'c{i}'))))"
-            "(canvas v s (foreach i 3 (on-click (name $'c{i}')"
+            "(scene s (foreach i 3 (circle (name f'c{i}'))))"
+            "(canvas v s (foreach i 3 (on-click (name f'c{i}')"
             " (animation (move k (to i) (duration 0))))))"
         )
         m = model(src)
@@ -424,11 +424,11 @@ class TestCanvasToggles:
 
 
 def test_a_foreach_names_its_controls():
-    # Found 2026-11-03 in examples/rows.mtp: (name $'b{v}') on a control in a top-level foreach
+    # Found 2026-11-03 in examples/rows.mtp: (name f'b{v}') on a control in a top-level foreach
     # did not see v.
     m = model(
-        "(real k 0) (foreach v [1 2] (button (name $'b{v}')"
-        " (animation (move k (to v) (duration 0))) (label $'{v}')))"
+        "(real k 0) (foreach v [1 2] (button (name f'b{v}')"
+        " (animation (move k (to v) (duration 0))) (label f'{v}')))"
     )
     assert m.get("b1").kind == "button" and m.get("b2").kind == "button"
 
@@ -453,7 +453,7 @@ class TestEveryShownPartHasAName:
             "(slider_ (move k (from 0) (to 1)))",
             "(play_ (animation (move k (to 1) (duration 1))))",
             "(toggle_ none)",
-            "(readout_ $'{k}')",
+            "(readout_ f'{k}')",
             "(canvas_ s)",
         ):
             error(f"{self.K} {src}", "is placed on the page by its name, so it needs one")
@@ -693,16 +693,16 @@ class TestBubbling:
 
 
 class TestMathLabels:
-    # The author, 2026-11-09: a control's label may be LaTeX, (label (tex …)), the form a term of a
-    # formula takes, for every control with a label.
+    # The author, 2026-11-09: a control's label may be LaTeX, for every control with a label. The
+    # author, 2026-11-18: it is LaTeX when it is written as a TeX string, (label $'…').
     @pytest.mark.parametrize(
         "control",
         [
-            f"(button b {MOVE} (label (tex 'C_3')))",
-            f"(slider b {SLIDE} (label (tex 'C_3')))",
-            f"(play b {MOVE} (label (tex 'C_3')))",
-            f"(stepper b {MOVE} (label (tex 'C_3')))",
-            "(bool on) (toggle b on (label (tex 'C_3')))",
+            f"(button b {MOVE} (label $'C_3'))",
+            f"(slider b {SLIDE} (label $'C_3'))",
+            f"(play b {MOVE} (label $'C_3'))",
+            f"(stepper b {MOVE} (label $'C_3'))",
+            "(bool on) (toggle b on (label $'C_3'))",
         ],
     )
     def test_a_label_in_latex(self, control):
@@ -712,20 +712,17 @@ class TestMathLabels:
         assert b["label-tex"] is True
         assert errors(d) == []
 
-    def test_a_latex_label_reads_the_model(self):
-        b = model(f"{K} (foreach j 3 (button #'b-{{j}}' {MOVE} (label (tex $'C_{{j}}'))))").get(
-            "b-2"
-        )
-        assert b.attrs["label"].value == "C_2" and b.data["label-tex"] is True
+    def test_a_computed_label_is_plain(self):
+        b = model(f"{K} (foreach j 3 (button #'b-{{j}}' {MOVE} (label f'C_{{j}}')))").get("b-2")
+        assert b.attrs["label"].value == "C_2" and "label-tex" not in b.data
 
     def test_a_plain_label_is_not_latex(self):
         d = doc(f"{K} (button b {MOVE} (label 'go'))")
         (b,) = [o for o in d["objects"] if o.get("name") == "b"]
         assert "label-tex" not in b
 
-    def test_tex_takes_one_string(self):
-        error(f"{K} (button b {MOVE} (label (tex)))", r"\(tex …\) takes one string")
-        error(f"{K} (button b {MOVE} (label (tex 'a' 'b')))", r"\(tex …\) takes one string")
+    def test_there_is_no_tex_form(self):
+        error(f"{K} (button b {MOVE} (label (tex 'C_3')))", "unknown function 'tex'")
 
 
 # The author, 2026-11-13 (docs/concurrency-model.md): any writer, listener or control, may take

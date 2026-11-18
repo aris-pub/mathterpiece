@@ -81,13 +81,13 @@
   (cond ((= d 0) '⁰') ((= d 1) '¹') ((= d 2) '²') ((= d 3) '³') ((= d 4) '⁴')
         ((= d 5) '⁵') ((= d 6) '⁶') ((= d 7) '⁷') ((= d 8) '⁸') (else '⁹')))
 (func sup (int k)
-  (cond ((>= k 100) $'{(sup-digit (floor (/ k 100)))}{(sup-digit (mod (floor (/ k 10)) 10))}{(sup-digit (mod k 10))}')
-        ((>= k 10) $'{(sup-digit (floor (/ k 10)))}{(sup-digit (mod k 10))}')
+  (cond ((>= k 100) f'{(sup-digit (floor (/ k 100)))}{(sup-digit (mod (floor (/ k 10)) 10))}{(sup-digit (mod k 10))}')
+        ((>= k 10) f'{(sup-digit (floor (/ k 10)))}{(sup-digit (mod k 10))}')
         (else (sup-digit k))))
-(func fmt (real x)
-  (cond ((>= x 1000) $'≈ 10{(sup (round (log (max 1 (min x 1e150)) 10)))}')
-        ((>= x 10) $'{x:.1f}')
-        (else $'{x:.2f}')))
+(func number-text (real x)
+  (cond ((>= x 1000) f'≈ 10{(sup (round (log (max 1 (min x 1e150)) 10)))}')
+        ((>= x 10) f'{x:.1f}')
+        (else f'{x:.2f}')))
 
 ; The vertical position, in the bottom chart, of a distortion v.
 (list[real] ticks [1 2 5 10 100 1000] (const))
@@ -154,7 +154,7 @@
               (opacity (if (< shown[i] 0.002) 0 1))))))
     (group level-names (defaults (fill soft))
       (foreach i 10
-        (text_ $'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
+        (text_ f'{(+ i 1)}' (pos [(+ 54 (* i 41.2) 20.6) -149]) (halign 'middle') (font plain)
             (opacity
              (cond ((< shown[i] 0.002) 0)
                    ((< i (min L Lp)) 1)
@@ -194,7 +194,7 @@
     (group densities (defaults (fill soft))
       (foreach k 10
         (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
-          (text|none #'density-{k}' $'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
+          (text|none #'density-{k}' f'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
               (font tick))
           (exists-when #'density-{k}'
             (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467))))))
@@ -204,7 +204,7 @@
     ; placed by hand, since a text's width cannot be measured.
     (text_ 'density' (pos [(if all 266 238) -192]) (halign 'end') (font plain) (fill ink))
     (text_ 'p' (pos [(if all 270 242) -192]) (font var) (fill ink))
-    (text|none equals-p $' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill ink))
+    (text|none equals-p f' = 1/{(round (^ 2 te))}' (pos [251 -192]) (font plain) (fill ink))
     (exists-when equals-p (not all))
     (text_ 'distortion' (halign 'middle') (font plain) (fill ink)
         (transform (transform (rotate 90) (translate 13 -69))))
@@ -217,13 +217,13 @@
     (line all-line (from [54 (cy d-all)]) (to [466 (cy d-all)]) (stroke green)
         (stroke-width (if all 3.5 2.4)))
     ; The line's name, set bold with all densities.
-    (text|none all-plain $'all densities: {(fmt d-all)}, for every p'
+    (text|none all-plain f'all densities: {(number-text d-all)}, for every p'
         (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font plain) (fill green))
-    (text|none all-strong $'all densities: {(fmt d-all)}, for every p'
+    (text|none all-strong f'all densities: {(number-text d-all)}, for every p'
         (pos [466 (- (cy d-all) (if all 19 17))]) (halign 'end') (font strong) (fill green))
     (exists-when all-plain (not all))
     (exists-when all-strong all)
-    (text|none best-label $'best: {(fmt best-now[0])}'
+    (text|none best-label f'best: {(number-text best-now[0])}'
         (pos [(+ 54 (* (/ (- best-now[1] 0.5) lv) 412)) (+ (cy best-now[0]) 12)])
         (halign 'middle') (font strong) (fill one))
     (exists-when best-label floor)
@@ -238,7 +238,7 @@
     (line_ (from [mx (- (cy d-now) 7)]) (to t-handle.tip.pos) (stroke (if t-on one soft))
         (stroke-width 1) (stroke-opacity 0.7))
     (circle_ (pos [mx (cy d-now)]) (r 7) (fill one))
-    (text|none value-now (fmt d-now) (pos [(if (< mx 406) (+ mx 11) (- mx 11)) (+ (cy d-now) 9)])
+    (text|none value-now (number-text d-now) (pos [(if (< mx 406) (+ mx 11) (- mx 11)) (+ (cy d-now) 9)])
         (halign (if (< mx 406) 'start' 'end')) (font strong) (fill one))
     (exists-when value-now (not (and floor (< (abs (- te best-now[1])) 0.2)))))
   (exists-when marker (not all)))
@@ -332,7 +332,7 @@
     (label 'all')
   doc@'Shows all densities together.')
 
-(readout heading $'n = {(round (^ 2 L))} points, {L} levels'
+(readout heading f'n = {(round (^ 2 L))} points, {L} levels'
   doc@'The number of points and of levels.')
 (readout caption
     (cond ((= chapter 0)

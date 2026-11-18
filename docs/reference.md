@@ -220,7 +220,7 @@ A **formula** is typeset math, as the scene is geometry: `(formula name item…)
 ```
 (formula bounds
   doc@'The squared stretch of the pair, bounded below and above.'
-  tex'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
+  $'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
       \mathrel{\term{lo}{\le}} \frac{\mathbb E\,(d(x,A)-d(y,A))^2}{d(x,y)^2}
       \mathrel{\term{hi}{\le}} P_h(p) + \term{b2}{\frac1{b^2}}'
   (term gap (fill teal) (opacity (lit shown 'gap')) (background none) (padding 2) (rounding 3))
@@ -239,10 +239,10 @@ A **formula** is typeset math, as the scene is geometry: `(formula name item…)
   | `outline-width` | real, at least 0 | 1 | the outline's width, in screen pixels |
   | `padding` | real, at least 0 | 0 | how far the box and the outline reach past its glyphs, in screen pixels |
   | `rounding` | real, at least 0 | 0 | the radius of the box's and the outline's corners, in screen pixels |
-  | `tex` | string | its LaTeX | its content, in place of what the LaTeX marks |
+  | `tex` | string | its LaTeX | its content, in place of what the LaTeX marks. It is written as a string among the term's items, not as `(tex …)`: `(term v 'x')` |
 
-  The box and the outline never move the glyphs around them. As any attribute, each may be given by an expression, which it then follows, or by a value that a writer may write and move: `(move bounds.gap.background (to wash) (duration 0.2))` fades a box in. `tex` is how values enter a formula: with `\term{v}{}` in the LaTeX, `(term v (tex $'{(* 2 q (- 1 q)):.3f}'))` shows the value, typeset again when it changes.
-- **`(defaults (attr value)…)`**, an item of the formula, gives every term those attributes, the ones in the table above but `tex`: `(formula bounds (defaults (padding 3) (rounding 4)) tex'…' …)`. Each term gets its own copy, so a writer writing one term's padding leaves the others alone, and a term's own `(term …)` form wins over them. Once per formula.
+  The box and the outline never move the glyphs around them. As any attribute, each may be given by an expression, which it then follows, or by a value that a writer may write and move: `(move bounds.gap.background (to wash) (duration 0.2))` fades a box in. `tex` is how values enter a formula: with `\term{v}{}` in the LaTeX, `(term v f'{(* 2 q (- 1 q)):.3f}')` shows the value, typeset again when it changes.
+- **`(defaults (attr value)…)`**, an item of the formula, gives every term those attributes, the ones in the table above but `tex`: `(formula bounds (defaults (padding 3) (rounding 4)) $'…' …)`. Each term gets its own copy, so a writer writing one term's padding leaves the others alone, and a term's own `(term …)` form wins over them. Once per formula.
 - **`(term name (like t) …)`** starts from the arguments of `t`'s form, which comes before it, and its own win: `(term b2 (like gap) (fill coral))`. As everywhere, `(like …)` comes first.
 - **`(exists-when name bool)`** says when a term exists: while it does not, it is not shown, and the formula closes up around it.
 - **Variables** declared in a formula belong to it: what follows them in the formula reads them by their bare names, and outside it they are read and written by their full names, as `bounds.lit`.
@@ -311,13 +311,13 @@ A view, a control and a readout must have a name: a page places each by its name
 | Form | Name | Positional | Optional arguments | Body |
 |---|---|---|---|---|
 | `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling the shapes its items give, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene), and expressions that give a shape, none, or a list of them, such as `(when bool name)`, `(when bool [a b])` or `(if bool a b)`, drawn in the order written, each on top of those before it, each shape given by one item at most, and its listeners: on its shapes, `on-show` and `on-hide` included, and its own `on-view`, `on-ready`, `on-live`, `on-quiet` and `on-pointermove` |
-| `(readout name value)` | required | the string (a number is shown by interpolating it: `$'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | its `on-live` and `on-quiet` |
+| `(readout name value)` | required | the string (a number is shown by interpolating it: `f'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | its `on-live` and `on-quiet` |
 | `(display name formula)` | required | the formula it shows | `(kind k)`, known when compiling: `'block'` (the default) for a formula on its own line, or `'inline'` for one inside a paragraph | its listeners: `on-click`, `on-enter` and `on-leave` on the terms of its formula, and its own `on-live` and `on-quiet` |
-| `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)` or `(label (tex string))`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)`, `(in view…)`, `(priority n)` | conditions |
-| `(button name)` | required | none | `(animation …)`, `(label string)` or `(label (tex string))`, `(selected bool)`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
-| `(play name)` | required | none | `(animation …)`, `(label string)` or `(label (tex string))`, `(buttons bool)`, `(rest seconds)`, `(labels string…)`, one string known when compiling for each step, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
-| `(stepper name)` | required | none | `(animation …)` (required), `(label string)` or `(label (tex string))`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
-| `(toggle name target)` | required | the target: a `name`, the bool variable or attribute it writes | `(animation …)`, played after each flip, once the bool is written, `(label string)` or `(label (tex string))`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
+| `(slider name move)` | required | a move, or the name of a transition, with a target, `from` and `to`, and no `duration` or `ease` | `(label string)` or `(label $'…')`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)`, `(in view…)`, `(priority n)` | conditions |
+| `(button name)` | required | none | `(animation …)`, `(label string)` or `(label $'…')`, `(selected bool)`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
+| `(play name)` | required | none | `(animation …)`, `(label string)` or `(label $'…')`, `(buttons bool)`, `(rest seconds)`, `(labels string…)`, one string known when compiling for each step, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
+| `(stepper name)` | required | none | `(animation …)` (required), `(label string)` or `(label $'…')`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
+| `(toggle name target)` | required | the target: a `name`, the bool variable or attribute it writes | `(animation …)`, played after each flip, once the bool is written, `(label string)` or `(label $'…')`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
 | `(on-drag shape target)` | none | the shape; the target: the shape's own `pos`, `x` or `y`, or `(move target (to expr))`, whose `expr` reads `pointer` | `(active bool)`, `(priority n)` | conditions |
 | `(on-click shape)` | none | the shape, or a term of a formula | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(priority n)` | conditions |
 | `(on-release shape)` | none | the shape | `(animation …)`, `(active bool)`, `(stop-propagation bool)`, `(priority n)` | conditions |
@@ -351,7 +351,7 @@ Every listener is written inside the body of the view it acts in, after the view
 (display law motion
   (on-enter motion.v (animation (move lit (to true) (duration 0))))
   (on-leave motion.v (animation (move lit (to false) (duration 0)))))
-(readout says $'{speed:.1f} m/s'
+(readout says f'{speed:.1f} m/s'
   (on-live (animation (move speed (to 0) (duration 0.4)))))
 (slider speed-knob (move speed (from 0) (to 5)) (in view-1 says))
 ```
@@ -527,7 +527,7 @@ These are the rules for several writers acting on the same values, and for the m
 ### Controls
 
 - **Copies:** a page may show any view or control in more than one place, as when a block holding it is pinned beside the text. Each copy has its own page state (see the data model, "On the page"), and only the scene is shared. Two copies of a control are two writers (see "Concurrency").
-- **Label:** a control's label is plain text, `(label 'size')`, or LaTeX, `(label (tex $'C_{k}'))`, the form a term of a formula takes. Plain text is shown as written. LaTeX is typeset as a formula is, and a screen reader hears the LaTeX itself. Either may be an expression that reads the model, and the label follows it. A play and a stepper show no label: theirs only names them for a screen reader.
+- **Label:** a control's label is plain text, `(label 'size')`, or LaTeX, written as a TeX string, `(label $'C_{k}')`. Plain text is shown as written. LaTeX is typeset as a formula is, and a screen reader hears the LaTeX itself. A plain label may be an expression that reads the model, and the label follows it. Only a TeX string literal is LaTeX, so a label that is computed is plain text. A play and a stepper show no label: theirs only names them for a screen reader.
 - **Slider:** it shows its move's path as a track, and the reader scrubs along it: its knob runs from 0 to 1, its `position`, and the target lies that far along the path from `from` to `to`. Clicking the track jumps there; dragging the knob gives the speed. So the move must give a target, `from` and `to`, neither of which may be `none`, and may give a `path`, but no `duration` and no `ease`. With `(step n)` the knob stops at n evenly spaced positions.
 - **A slider follows its target:** when another writer changes the variable or attribute its move writes, the knob goes to the position whose value is closest to its new value. Its starting position is found the same way.
 - **Button:** a press plays its animation from the start, over time; a press while it runs starts it again. A button that also says which state is the current one, as one of a row choosing a value, takes `(selected bool)`: while it holds the button is filled with `--mtp-control-active`, and a screen reader hears it as pressed. `(button #'forbid-{k}' (animation (move w (to (+ k 2)) (duration 0.6))) (selected (= (round w) (+ k 2))))`. A button that only plays an animation takes none. Only a button takes `selected`.
@@ -617,7 +617,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 
 | Form | Evaluates |
 |---|---|
-| `(if c a b)` | `c`, then only `a` or `b`; when `c` is known when compiling, only the branch it takes is compiled, so a `foreach` copy can start a chain: `(x (if (= k 0) 1 (* 2 (. (name $'d-{(- k 1)}') x))))` |
+| `(if c a b)` | `c`, then only `a` or `b`; when `c` is known when compiling, only the branch it takes is compiled, so a `foreach` copy can start a chain: `(x (if (= k 0) 1 (* 2 (. (name f'd-{(- k 1)}') x))))` |
 | `(when c x)` | `c`, then `x` while it holds; otherwise none. It is `(if c x none)`, and takes one value: several go in a list, `(when c [a b])` |
 | `(cond (c1 v1) (c2 v2) … (else v))` | the tests in order, then only the value of the first that holds |
 | `(and a b …)` | left to right, stopping at the first false |
@@ -625,7 +625,7 @@ One rule, the same in the compiler and the runtime, wherever a number is rounded
 | `(let ((n1 v1) (n2 v2) …) body)` | each value, in order (each may use the names before it), then the body, a single expression; in a scene, group, foreach or motif body, its body holds declarations instead, as that body does, and each value is worked out where the `let` is written, once, however many declarations read its name (in a `foreach` or a motif, once in each copy or instance). Each value is worked out once each time the `let` is, however often its name is read, so `(let ((s (walk (- k 1)))) [(+ s.x s.y) (- s.x s.y)])` calls `walk` once |
 | `(fn params body)` | nothing until called; binds its parameters in its body. A single parameter may be a bare name, typed by where the function is used; several must all be typed |
 | `(. X Y)` | `X`, and `Y` unless it is an attribute name |
-| `(name s)` | `s`, a string, which becomes a name; `#'dot-{k}'` is short for `(name $'dot-{k}')`, and parts may follow it: `#'dot-{k}'.pos` |
+| `(name s)` | `s`, a string, which becomes a name; `#'dot-{k}'` is short for `(name f'dot-{k}')`, and parts may follow it: `#'dot-{k}'.pos` |
 | `(as T literal)` | nothing: the literal, with the type `T`, for a literal where nothing else gives it one, as in `(as color 'gold')` or `(as point [0 0])`; anything but a literal is a compile error |
 | `(type-of x)` | nothing while drawing: `x`, any one expression, is compiled only for its type, and the form gives that type as a string, for debugging. The string is known when compiling, even when `x` is not, and is the type as a type expression writes it: `'int'`, `'ratio'`, `'real'`, `'real\|none'`, `'list[int]'`, `'func[real real]'`, `'circle'`, `'group'`, `'slider'`; a named type, motif or variant by its name (`'unit'`, `'dial'`); a narrowed type with the constraints it was declared with, `'(real (>= 0))'` for `(real k 1 (>= 0))`. A range the compiler proves is not shown: `(type-of (sind k))` is `'real'`. A compile error in `x` is still an error, and a type is not an expression, so `(type-of int)` is an error |
 | `(foreach i n decl…)`, `(foreach x xs decl…)`, `(foreach ((i n) (x xs) …) decl…)` | when compiling: the declarations once for each `i` from 0 to n−1, or once for each item `x` of the list `xs` (`g.pos`, the list of every member's position, too; `(foreach i n …)` is `(foreach i (range n) …)`), or each member of a group `g`; the count, or the list's length, must be known when compiling, while the items may be known only while drawing. A count known only while drawing is allowed when it has an upper bound, `(int n 5 (>= 0) (<= 12))`: the `foreach` makes as many copies as it can be at most, and the shapes of copy `k` exist only while `k` is below the count, as if each had an `exists-when`; reading one that does not exist gives `none`. Without an upper bound it is a compile error. With several names, written as `let` writes its names, the declarations once for every combination, the last name changing fastest, as `foreach` nested in that order would give: `(foreach ((i 2) (j 3)) …)` goes through (0, 0), (0, 1), (0, 2), (1, 0) and on; each source may use the names before it, so `(foreach ((i 4) (j (range i))) …)` goes through the pairs with `j` below `i` |
@@ -736,7 +736,7 @@ A color literal is any CSS color: a name (`'crimson'`), `'#rrggbb'`, `'#rrggbbaa
 - **A color computed from light-dark colors is worked out for each mode on its own:** `mix`, `lighten`, `darken`, a colormap and a move between two colors mix the light values together and the dark values together, so `(mix ink paper 0.5)` is halfway between the two light values on a light page and between the two dark ones on a dark page. A plain color mixed with a light-dark one is mixed into both.
 - **Either argument may itself be a light-dark color:** the first gives its light value and the second its dark one, so `(light-dark ink '#ffffff')` is `ink` on a light page and white on a dark one.
 - **One value for both is one color:** `(light-dark 'red' '#ff0000')` is `'red'`, and so is a mix whose two modes come out the same.
-- **The figure itself never knows the mode;** only its drawing does. So two colors are equal when both of their modes are, a light-dark color shown as text, `$'{c}'` or a readout, reads as its CSS, `light-dark(#1f2a44ff, #e8e4d8ff)`, and its channels, `c.r`, `c.g`, `c.b` and `c.a`, are its light value's.
+- **The figure itself never knows the mode;** only its drawing does. So two colors are equal when both of their modes are, a light-dark color shown as text, `f'{c}'` or a readout, reads as its CSS, `light-dark(#1f2a44ff, #e8e4d8ff)`, and its channels, `c.r`, `c.g`, `c.b` and `c.a`, are its light value's.
 - **A token keeps its CSS variable:** a light-dark token `ink` is drawn as `var(--mtp-ink, light-dark(#1f2a44ff, #e8e4d8ff))`, so a page that sets `--mtp-ink` still restyles it, in one mode or, with `light-dark()` of its own, in both.
 
 ### Collections
@@ -867,8 +867,8 @@ Motifs to draw over a world model: `(import marks axes grid)`, then `(axes_)` an
 
 ## Interpolated strings
 
-`$'…{expr}…'` shows each `{expr}`, optionally followed by a format after a colon, using Python's format mini-language: `{x:.2f}` (2 decimals), `{x:+.3f}`, `{p:.0%}` (percent), `{n:d}`, `{x:e}`, `{x:g}`, with fill, alignment and width (`{x:>8.2f}`).
+`f'…{expr}…'` shows each `{expr}`, optionally followed by a format after a colon, using Python's format mini-language: `{x:.2f}` (2 decimals), `{x:+.3f}`, `{p:.0%}` (percent), `{n:d}`, `{x:e}`, `{x:g}`, with fill, alignment and width (`{x:>8.2f}`). It is short for a `concat` of its pieces, each `{x:S}` written `(fmt x 'S')`: `f'x = {x:.2f}!'` is `(concat 'x = ' (fmt x '.2f') '!')`. `(concat a b …)` joins strings, and `(fmt x)` and `(fmt x 'S')` write any value as a string; the format `S` is known when compiling. `+` adds numbers only.
 
 ## TeX strings
 
-`tex'…'` holds LaTeX as written, for MathJax to typeset: `tex'\Big(1-\frac1b\Big)^2'`. In an ordinary string a backslash starts an escape, so `'\frac'` is an error and `'\neq'` is a line break and `eq`; in a TeX string a backslash means nothing, and `\\` stays two backslashes, LaTeX's line break. The one escape is `\'`, a quote, for primes: `tex'f\'(x)'` is the LaTeX `f'(x)`. A TeX string is a string, and goes wherever one does; no values are filled into it.
+`$'…'` holds LaTeX as written, for MathJax to typeset: `$'\Big(1-\frac1b\Big)^2'`. In an ordinary string a backslash starts an escape, so `'\frac'` is an error and `'\neq'` is a line break and `eq`; in a TeX string a backslash means nothing, and `\\` stays two backslashes, LaTeX's line break. The one escape is `\'`, a quote, for primes: `$'f\'(x)'` is the LaTeX `f'(x)`. A TeX string is a string, and goes wherever one does; no values are filled into it.

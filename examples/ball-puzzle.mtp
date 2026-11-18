@@ -84,5 +84,5 @@
                                (fn p (any (range p.size)
                                           (fn j (let ((b (+ p.pos (turned p.cells[j] p.orient))))
                                                   (and (= b.x (mod k 11)) (= b.y (floor (/ k 11)))))))))))))
-      (if (= n 55) 'Solved: every hole is filled.' $'{n} of 55 holes filled'))
+      (if (= n 55) 'Solved: every hole is filled.' f'{n} of 55 holes filled'))
   doc@'How many holes the pieces fill.')

@@ -27,7 +27,7 @@
     (group rays (defaults (stroke ink) (stroke-width 2) (line-cap 'round'))
       (line_ (from [0 0]) (to [reach 0]))
       (line_ (from [0 0]) (to (polar reach theta))))
-    (text degrees $'{theta:.0f}°' (pos (polar 2.3 (/ theta 2))) (halign 'middle')
+    (text degrees f'{theta:.0f}°' (pos (polar 2.3 (/ theta 2))) (halign 'middle')
         (valign 'middle') (font variable) (fill ink))
     (circle tip (pos (polar reach theta)) (r 0.16) (fill red) (stroke paper)
         (stroke-width 2)))
@@ -52,12 +52,12 @@
             (fill (mix bright[(mod k 4)] paper (if (< k 4) 0 0.45))) (stroke none)))))
 
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
-    (text_ $'(arc mark (r 1.1) (to {theta:.0f}))' (pos (bottom track 0.5)))
-    (text_ $'(ring shade (r 1.7) (width 1.7) (to {theta:.0f}))'
+    (text_ f'(arc mark (r 1.1) (to {theta:.0f}))' (pos (bottom track 0.5)))
+    (text_ f'(ring shade (r 1.7) (width 1.7) (to {theta:.0f}))'
         (pos (+ (bottom track 0.5) [0 -0.45])))
     (text_ '(ring_ (r 3) (width 1.2)' (pos (bottom edge 0.5)))
-    (text_ $'(from 90) (to {(+ 90 (- share gap)):.0f}))' (pos (+ (bottom edge 0.5) [0 -0.45])))
-    (text_ $'{parts:.2f} of 8 parts' (pos (+ (bottom edge 0.5) [0 -0.9])))))
+    (text_ f'(from 90) (to {(+ 90 (- share gap)):.0f}))' (pos (+ (bottom edge 0.5) [0 -0.45])))
+    (text_ f'{parts:.2f} of 8 parts' (pos (+ (bottom edge 0.5) [0 -0.9])))))
 
 (canvas view (x -8.4) (y -5) (width 16.8) (height 8.6) (pan false) (zoom false)
   doc@'The angle with its arc and pie slice, and the ring cut into parts.'

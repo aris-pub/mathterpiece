@@ -14,7 +14,7 @@
   (on-drag knob knob.pos)
   (on-click dot (animation (move clicks (to (+ clicks 1)) (duration 0)))))
 (canvas right (pan false) (zoom false) s)
-(readout says $'k is {k}'
+(readout says f'k is {k}'
   (on-live (animation (move said (to 1) (duration 0)))))
 (slider sl (move k (from 0) (to 10)) (in left))
 (play p (in left) (animation (move k (to 5) (duration 1))))

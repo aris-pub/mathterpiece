@@ -41,7 +41,7 @@
 
   (group captions (defaults (fill soft) (font small) (halign 'middle') (valign 'top'))
     (let ((under 0.5))
-      (text_ $'a row, lined up by its {line-up}' (pos (bottom shelf under)))
+      (text_ f'a row, lined up by its {line-up}' (pos (bottom shelf under)))
       (text_ 'a column, lined up on the left' (pos (bottom bars under)))
       (text_ 'a column of rows' (pos (bottom grid under))))))
 

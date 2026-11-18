@@ -46,7 +46,7 @@
 
   (int popped-count (count bubbles (fn b b.popped)))
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'middle'))
-    (text_ $'(exists-when body (not popped)), popped: {popped-count} of 8'
+    (text_ f'(exists-when body (not popped)), popped: {popped-count} of 8'
         (pos (bottom water (+ largest 0.65))))))
 
 (canvas view (x -8) (y -5) (width 16) (height 10) (pan false) (zoom false)

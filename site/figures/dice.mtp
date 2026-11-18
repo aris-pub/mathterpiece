@@ -21,4 +21,4 @@
 (canvas v (x -7.4) (y -1.4) (width 14.8) (height 2.8) table)
 (slider count (move n (from 1) (to 6)) (label 'dice'))
 (button roll (animation (roll-dice)) (label 'roll'))
-(readout total $'{(sum (somes dice.face))}')
+(readout total f'{(sum (somes dice.face))}')

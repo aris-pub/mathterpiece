@@ -6,6 +6,26 @@ import pytest
 
 from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.mtpc import write
+from mathterpiece.nodes import Form, Name, StrLit
+
+
+def field(expr, spec):
+    """{expr:spec} in an interpolated string, as the parser produces it: (fmt expr 'spec')."""
+    return Form((Name(("fmt",)), expr, StrLit(spec)))
+
+
+def interp(parts):
+    """f'…' as the parser produces it, (concat PIECE…), from its parts: each text a string
+    literal, each field (fmt X 'S') as it is, and each other expression X (fmt X)."""
+    pieces = []
+    for p in parts:
+        if isinstance(p, str):
+            pieces.append(StrLit(p))
+        elif isinstance(p, Form) and p.items and p.items[0] == Name(("fmt",)):
+            pieces.append(p)
+        else:
+            pieces.append(Form((Name(("fmt",)), p)))
+    return Form((Name(("concat",)), *pieces))
 
 
 def model(src):

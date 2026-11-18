@@ -43,7 +43,7 @@
      '(bold-gauge' '(half-gauge']
     (const))
 ; A dial's value as it reads, to a tenth when its range is under 10.
-(func[string] reading ((gauge d)) (if (< (- d.hi d.lo) 10) $'{d.value:.1f}' $'{d.value:.0f}'))
+(func[string] reading ((gauge d)) (if (< (- d.hi d.lo) 10) f'{d.value:.1f}' f'{d.value:.0f}'))
 
 ; The space between two dials, along a row and down the column; the column has room under each
 ; dial for its reading and its declaration.
@@ -82,7 +82,7 @@
     (foreach k 6
       (let ((d [speed heat pressure thin bold half][k]))
         (text_ heads[k] (pos (bottom d 0.25)))
-        (text_ $'(value {(reading d)}))' (pos (bottom d 0.62))))))
+        (text_ f'(value {(reading d)}))' (pos (bottom d 0.62))))))
 
   (text fill-form '(move panel.fill (to …))' (pos (top panel 1)) (halign 'middle')
       (valign 'middle') (font code) (fill soft)))
