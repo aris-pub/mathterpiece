@@ -270,7 +270,7 @@ have that constraint in their types, with these lengths:
 - `(if C A B)` whose branches have the same known length: that length
 - a call of a function declared with `func` whose {term}`body` has a known length: that length
 - a spread `g.A` of a group, and `g.members`: the number of members of the group
-- a list that a {term}`library` function gives: the length that {doc}`stdlib` gives
+- a list that a {term}`built-in` function gives: the length that {doc}`stdlib` gives
 
 The items of a list have a known item length m when every item is a list of known length m. Such a
 list has `(length m)` in its item type.
@@ -433,7 +433,7 @@ The compiler accepts a variant parameter that no attribute of its shape reads. m
 
 ```{rule} function-types
 The values of a function type are the functions declared with `func`, the functions written with
-`fn`, the colormaps, the built-in functions, and the functions that a library function gives, such
+`fn`, the colormaps, the built-in functions, and the functions that a built-in function gives, such
 as the ease that `(steps N)` gives. A type that is a function type, or holds one, as
 `list[func[real real]]` does, is the type only of a parameter, a `let` name, an expression, and an
 attribute that {doc}`world-model` gives a function type, such as the `ease` of a transition. A

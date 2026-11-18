@@ -170,8 +170,8 @@ bytes ({doc}`compiled-format`, "Same source, same bytes").
 
 ```{rule} compiler-reads-files
 The compiler reads only the source file and the files that it imports, directly or through other
-imports. An import is looked for in the folder of the file that imports it, then in the standard
-{term}`library` ({ref}`scope`, {doc}`stdlib`).
+imports. An import is looked for in the folder of the file that imports it, then in the
+{term}`standard library` ({ref}`scope`, {doc}`stdlib`).
 ```
 
 ```{rule} compiler-never-acts-while-drawing

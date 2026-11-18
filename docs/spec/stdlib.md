@@ -1,4 +1,4 @@
-# Standard library
+# Built-ins and the standard library
 
 :::{note}
 Not drafted yet. This page defines: every built-in function and constant, and the files of the standard library.
@@ -8,7 +8,7 @@ Not drafted yet. This page defines: every built-in function and constant, and th
 ## Primitives
 
 The random functions are not built-in functions. The compiler implements them, and a source uses
-them only through the names that the file `rand` of the standard {term}`library` gives them.
+them only through the names that the file `rand` of the {term}`standard library` gives them.
 
 ```{rule} primitive-form
 A {term}`primitive` is one of the five functions `rand`, `rand-int`, `pick`, `shuffle` and

@@ -89,7 +89,7 @@ search for the only seed (Q-core-5), and a function that takes the name of an op
 are brought to the author. Syntactic sugar: `import`, `type`, `palette`, `pos`, the defaults of groups,
 rows, columns and formulas, and the search for the only seed. Core: `colormap`, variant
 instances, rows and columns, `exists-when`, `let`, the defaults of instances and of animations,
-and an `in-order` of one item. The operators are library functions ({numref}`library-form`),
+and an `in-order` of one item. The operators are built-in functions ({numref}`built-ins`),
 which a declared function may replace ({numref}`declaration-names`). The list is in {doc}`core`,
 "Summary".
 

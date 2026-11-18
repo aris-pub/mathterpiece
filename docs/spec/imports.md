@@ -44,8 +44,8 @@ library", with `S.mtp` the importing file.
 
 So `(import Colors)` finds no file when the only file of that name is colors.mtp, also on a file
 system that does not tell upper and lower case apart. A source next to a file colors.mtp of its own
-reads that file with `(import colors)`, and never the file colors.mtp of the standard
-{term}`library`.
+reads that file with `(import colors)`, and never the file colors.mtp of the
+{term}`standard library`.
 
 :::{admonition} Code differs
 :class: note
