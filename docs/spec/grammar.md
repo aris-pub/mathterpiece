@@ -236,7 +236,7 @@ its name has two name parts.
 
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
-named argument: a {term}`listener`, `(move …)`, `(set …)`, an `(animation …)` inside a
+named argument: a {term}`listener`, `(move …)`, `(jump …)`, an `(animation …)` inside a
 {term}`control` or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
 `(term …)`, `(like …)`, every named argument, every call and every special form.
 ```
