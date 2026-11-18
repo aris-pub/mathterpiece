@@ -47,7 +47,7 @@ These forms evaluate only some of their parts:
 | `(fn params body)` | nothing, until the function is called |
 ```
 
-`cond`, `and` and `or` are {term}`sugar` for `if` forms ({numref}`sugar-rewrites`). So, when
+`cond`, `and` and `or` are {term}`syntactic sugar` for `if` forms ({numref}`sugar-rewrites`). So, when
 compiling and while drawing, `cond` evaluates its tests in order, up to the first that is true, then
 the value of that clause only. `and` stops at the first part that is false, and `or` at the first
 part that is true. `(when c x)` is `(if c x none)` ({numref}`rewrite-when`), and evaluates its parts
