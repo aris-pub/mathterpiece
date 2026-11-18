@@ -502,7 +502,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `as` | core | `(as T LITERAL)`: a literal given a type | {doc}`types` |
 | `type-of` | core | `(type-of X)`: the type of `X`, as a string | {doc}`types` |
 | `concat` | core | `(concat A B …)`: the strings `A`, `B`, … joined in order. An interpolated string `f'…'` is syntactic sugar for it ({numref}`shorthand-forms`) | {doc}`evaluation` |
-| `fmt` | core | `(fmt X S)`: the value of `X` written as a string, by the {term}`format spec` `S`, in Python's format-spec mini-language. `S` is `''` when it is left out | {doc}`evaluation` |
+| `fmt` | core | `(fmt X S)`: the value of `X` written as a string, by the {term}`format spec` `S`, in Python's format-spec mini-language. `S` is known when compiling, and is `''` when it is left out. `(concat)` is `''` | {doc}`evaluation` |
 | `free` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
