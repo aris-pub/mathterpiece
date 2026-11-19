@@ -4,11 +4,27 @@
 Not drafted yet. This page defines: the objects, their attributes, identity, the tree of containers, values and mutable objects, and equality for each type.
 :::
 
+## Defaults of a container
+
+```{rule} container-defaults
+A `(defaults (A V)…)` on a group, a row or a column gives each `(A V)` to each of its members, at
+any depth, that takes `A` from a container and does not give `A` itself. When several containers
+give `A`, the nearest one wins. A member that is an instance gets `(A V)` in its own
+`(defaults …)`. Each `A` is one that a container gives its members, and any other is a
+{term}`compile error`.
+```
+
 ## Formulas
 
 ```{rule} formula-terms
 The string of a formula is any string expression whose value is known when compiling. It declares
 the terms that it marks with `\term{name}{…}`.
+```
+
+```{rule} formula-defaults
+A `(defaults (A V)…)` in a formula gives each `(A V)` to each term of the formula whose `(term …)`
+form does not give `A`, and to each term that has no `(term …)` form. The terms are those that the
+formula's string marks.
 ```
 
 The `(defaults …)` of a formula is a named argument, so it comes before the body

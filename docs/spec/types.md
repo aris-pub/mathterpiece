@@ -75,8 +75,8 @@ Where a type is expected, the {term}`compiler` reads these expressions as types,
 expression there is a {term}`compile error`:
 
 - The name of a {term}`built-in type` of {numref}`the-types`, or a name declared by `interface`,
-  `motif` or `variant`, is that type, and a name declared by `type` is read by
-  {numref}`sugar-rewrites`.
+  `motif` or `variant`, is that type, and a name declared by `(type N T C…)` is the
+  refined type `(T C…)`.
 - `list[T]` is a list type, with exactly one type in its {term}`brackets`. `list` with no brackets
   is allowed only as the {term}`head` of a variable whose value is given, and the type of the
   variable is then the type of its value.

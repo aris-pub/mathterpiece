@@ -41,7 +41,7 @@ These rules hold for a use of a name inside the form that declares or binds it:
    `g.length` may be read. The count and the {term}`list` of a `foreach` inside the group never read
    the group.
 5. A container never reads itself in its own `clip` or in its own `(defaults …)`, also once the
-   defaults are moved into its members ({numref}`sugar-rewrites`).
+   defaults are given to its members ({numref}`container-defaults`).
 
 Each read that items 2 to 5 forbid is a compile error.
 ```
