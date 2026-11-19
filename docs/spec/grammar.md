@@ -164,7 +164,8 @@ is given in {numref}`dot-name-part`.
 ## The form template
 
 ```{rule} form-template
-Every form is written `(head name? positional… named… docstring? body…)`.
+Every form is written `(head name? positional… named… docstring? body…)`. The signature of each
+head says which of these it has ({ref}`signatures`).
 
 - The head determines which of these the form has: whether it has a name, which positional and
   named arguments it takes and which of them it requires, whether it may have a docstring, and
