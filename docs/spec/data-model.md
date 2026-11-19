@@ -134,7 +134,8 @@ a motif is a template of shapes: each use of an animation is a movement of the a
 
 A shape's frame, which places it in its container, is not a thing of its own: it is a set of the
 shape's attributes with a joint meaning, `shift-x`, `shift-y`, `rotate`, `scale-x` and `scale-y`,
-as `pos` is the joint meaning of `x` and `y`. Each is free, bound or const on its own, so a slider
+as `pos` is the joint meaning of `x` and `y`; `shift` is the joint meaning of `shift-x` and
+`shift-y` in the same way. Each is free, bound or const on its own, so a slider
 may write `c.rotate` while `c.shift-x` follows an expression. There is no transform value. A frame
 is reused through a group, whose frame applies to every member, through `(defaults …)`, or through
 `(like …)`.

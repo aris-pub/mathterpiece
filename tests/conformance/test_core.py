@@ -39,6 +39,7 @@ MEMBER_BY_NAME = xfail("mtp-ydd4.7.19", "a member of a namespace is read as a ke
 ANIMATION_STEP = xfail("mtp-ydd4.7.26", "an animation's body does not accept the head animation")
 POINTER_EVENTS = xfail("mtp-327t", "pointer-events on a container is a default for its members")
 PARAMETRIC = xfail("mtp-of7a", "parametric is read as (parametric N (for T LO HI) E ...)")
+DRAG_SHIFT = xfail("mtp-67wi", "a group is dragged by its translate, not its shift")
 RANGE = xfail("mtp-z8i1", "range accepts (range n) and needs a gap or a num")
 BOUNDED_LIST = xfail("mtp-ydd4.7.37", "a foreach over a list whose length is not known is an error")
 STEP_EASE = xfail("mtp-ydd4.7.40", "step and step-ease are read only as the value of an ease")
@@ -382,9 +383,14 @@ class TestInventory:
 
 @rule("drag-group-shift")
 class TestDragGroupShift:
-    def test_a_drag_of_a_group_is_compiled(self):
-        # What the drag writes is shown by the runtime: web/test/conformance/core.test.ts.
-        accepted("(scene s (group g (circle c (r 1)))) (canvas v s (on-drag g g.pos))")
+    @DRAG_SHIFT
+    def test_a_group_is_dragged_by_its_shift(self):
+        accepted("(scene s (group g (circle c (r 1)))) (canvas v s (on-drag g g.shift))")
+
+    @DRAG_SHIFT
+    def test_a_drag_of_the_pos_of_a_group_is_an_error(self):
+        accepted("(scene s (group g (circle c (r 1)))) (canvas v s (on-drag g g.shift))")
+        compile_error("(scene s (group g (circle c (r 1)))) (canvas v s (on-drag g g.pos))")
 
 
 @rule("foreach-count")
