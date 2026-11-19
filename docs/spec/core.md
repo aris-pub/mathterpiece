@@ -555,7 +555,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | an animation's body of several items | syntactic sugar | one `in-order` | {numref}`sugar-rewrites` |
 | `defaults` in an animation, `at-once` or `in-order` | core | a duration and an ease for the moves inside | {doc}`time` |
 | `loop` | core | `(loop)` or `(loop N)` | {doc}`time` |
-| `at-once`, `in-order` | core | items together, or one after another | {doc}`time` |
+| `at-once`, `in-order` | core | animations whose members run together, or one after another, written wherever a movement goes | {doc}`time` |
 | `foreach` in an animation's body | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
 | the name of an animation or a movement in a body | core | plays what it names | {doc}`time` |
 | `wait` | syntactic sugar | `(wait T)`: a step of `T` seconds in which nothing moves. With `T` left out, it lasts as long as a move with no `(duration …)` | {numref}`sugar-rewrites` |
