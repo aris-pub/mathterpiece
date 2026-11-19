@@ -384,8 +384,8 @@ mtp-ydd4.7.59.
 | `>=`, `>`, `<=`, `<` with one number | core | a bound | {doc}`types` |
 | `length` | core | the length of a list | {doc}`types` |
 | `one-of` | core | the choices of a string | {doc}`types` |
-| `const` | core | a value that no writer may write | {doc}`types` |
-| `wrap` | core | an interval that a number wraps into | {doc}`types` |
+| `const` | core | a variable or an attribute that rejects every attempted write | {doc}`data-model` |
+| `mod` | core | `(mod T lo hi)`: a modular type, whose numbers wrap into an interval | {doc}`types` |
 
 ### Type notation
 
@@ -620,7 +620,7 @@ follow the rule.
 | `record` | variables, records, palettes | yes |
 | `palette` | items `(member color)` | yes |
 | `interface` | items `(T attribute constraint…)` | yes |
-| `type`, a variable `(T name …)` | {term}`constraints <constraint>`, such as `(>= 0)` | yes |
+| `type`, a variable `(T name …)` | {term}`conditions <condition>`, such as `(>= 0)` | yes |
 | `animation`, `score`, `in-order`, `at-once` | movements: `move`, `jump`, `wait`, a score, the name of a movement, a use of an animation | yes |
 | `defaults` | items `(attribute value)`, and in a score, `(duration …)`, `(ease …)` and `(lag …)` | yes |
 | `canvas` | at least one thing to draw: a name of a shape or of the scene, a list literal, or an expression that gives a shape, `none` or a list of shapes, such as `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
@@ -699,7 +699,7 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | `let` | core | {doc}`scope`, {doc}`binding-time` |
 | `(T N …)`, a variable, `font` and its parts | core | {doc}`world-model`, {doc}`reaction` |
 | `free` | core | {doc}`reaction`, {doc}`binding-time` |
-| the {term}`constraints <constraint>` `>=`, `>`, `<=`, `<`, `length`, `one-of`, `const`, `wrap` | core | {doc}`types` |
+| the conditions `>=`, `>`, `<=`, `<`, `length`, `one-of`, and `mod`, `is`, `&` | core | {doc}`types` |
 | the type notation of "Type notation", `colormap` included | core | {doc}`types` |
 | the twelve shapes | core | {doc}`world-model` |
 | `row`, `column`, `gap`, `align` | core | {doc}`world-model` |

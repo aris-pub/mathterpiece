@@ -8,7 +8,7 @@ This page defines the types of mtp, how a type is written, which {term}`values <
 ({numref}`runtime-no-type-work-while-drawing`). How a value is held and computed is defined in
 {doc}`evaluation`, which objects there are and what their attributes are in {doc}`world-model`, and
 the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` proves about
-{term}`ranges <range>`, {term}`constraints <constraint>` and `none` is defined in
+{term}`ranges <range>`, {term}`conditions <condition>` and `none` is defined in
 {doc}`well-formedness`.
 
 This page specifies the language.
@@ -19,17 +19,31 @@ This page specifies the language.
 A type is a named set of {term}`things <thing>`, values or objects, known when compiling: a set that
 a source can write. Every variable, attribute,
 parameter and expression has a type, and what it holds or gives is always in that set.
+
+A thing has no one type: its types are all the sets that it belongs to. A variable or an attribute
+has one type, its declared type, written where it is declared, conditions included. Every write
+into it and every read of it follows its declared type.
 ```
 
 So `bool` is the set of the values `true` and `false`, `(real (>= 0))` is the set of the reals that
 are not below 0, `real|none` is the set of the reals with `none` added, and `circle` is the set of
 the circles. A type that {term}`fits <fit>` another is a subset of it.
 
-A source makes new types from named ones in three ways, which differ only in how they are written:
-a union, `point|circle`, joins sets; a constraint, `(real (>= 0))`, keeps the things of a set that
-meet it; and an interface, `(interface inky (color ink))`, is the set of the things that have the
-attributes that it lists. `list[T]` and `func[P… R]` name the sets of the lists and the functions
+A source makes new types from named ones in four ways, which differ only in how they are written:
+a union, `point|circle`, joins sets; an intersection, `shape&round`, keeps the things that are in
+both; a condition, `(real (>= 0))`, keeps the things of a set that meet it; and an interface,
+`(interface inky (color ink))`, is the set of the things that have the attributes that it lists. `list[T]` and `func[P… R]` name the sets of the lists and the functions
 whose items, parameters and result are of the types in the brackets.
+
+```{rule} membership
+`(is X T)` gives `true` when the thing X is in the type T, and `false` otherwise. Where the type of
+X lies wholly inside T, or wholly outside it, the answer is known when compiling. Otherwise the
+runtime gives it. In the branch of an `if` that runs when `(is X T)` is true, X has the type T as
+well as its own, and in the other branch X is known not to be in T.
+```
+
+So in `(func size ((point|circle p)) (if (is p circle) p.r 0))`, `p.r` is read only when `p` is a
+circle, and `(is 3 real)` is `true` when compiling.
 
 ## The types
 
@@ -54,7 +68,10 @@ These are the types of mtp:
 | an animation type | the name of the animation | the movements that its uses make |
 | `none` | `none` | the value `none` alone |
 | a {term}`broadened type` | `T\|none` | the values of T, and `none` |
-| a {term}`refined type` | `(T C…)` | the values of T that meet every constraint C ({numref}`constraints`) |
+| a {term}`refined type` | `(T C…)` | the things of T that meet every condition C ({numref}`constraints`) |
+| a union | `T1\|T2\|…` | the things of each of the types |
+| an intersection | `T1&T2&…` | the things that are in every one of the types |
+| a modular type | `(mod int lo hi)`, `(mod real lo hi)` | the numbers from lo up to hi, hi left out, with arithmetic that wraps ({numref}`modular-types`) |
 | `shape` | `shape` | every shape: the shapes of every shape type, motif type and variant type |
 | a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
 | a motif type | the {term}`name` of the motif | its instances ({numref}`motif-and-variant-types`) |
@@ -117,7 +134,10 @@ expression there is a {term}`compile error`:
 - No other name is followed by brackets in a type.
 - `T1|T2|…` is a union: the set of the things of each of the types `T1`, `T2` and so on. Each is a
   name, or a name followed by brackets. `T|none` is the union of `T` and `none`, a broadened type.
-- `(T C…)` is a refined type: `T` is a type and each `C` is a constraint. `((T C…) D…)` is
+- `T1&T2&…` is an intersection: the set of the things that are in each of the types. Each is a
+  name, or a name followed by brackets.
+- `(mod T lo hi)` is a modular type, with `T` either `int` or `real` ({numref}`modular-types`).
+- `(T C…)` is a refined type: `T` is a type and each `C` is a condition. `((T C…) D…)` is
   `(T C… D…)`, and `(T|none C…)` is `(T C…)|none`.
 - `none` is the type `none`. It is never written as the type of a declaration or of a parameter:
   it is the type only of an expression, and of a name that a `let` binds to such an expression.
@@ -134,12 +154,13 @@ A type A fits a type B, and a value of type A is accepted where a value of type 
 expected, exactly when one of these holds:
 
 1. A and B are the same type.
-2. B is `U|none`, and A is `none`, or A is `V|none` and V fits U, or A is not broadened and fits
-   U.
+2. B is a union, and A fits one of its types; or A is a union, and each of its types fits B.
+   `T|none` is one such union.
 3. A is a variant type, and its base type fits B ({numref}`motif-and-variant-types`).
-4. A or B is a refined type, A without its constraints fits B without its constraints, and the
-   constraints of A imply each constraint of B ({numref}`constraint-implication`). `(const)` is
-   left out of both, since it limits the writes of a value and not the value.
+4. A or B is a refined type, A without its conditions fits B without its conditions, and the
+   conditions of A imply each condition of B ({numref}`constraint-implication`).
+10. B is an intersection, and A fits each of its types; or A is an intersection, and one of its
+    types fits B.
 5. A and B are number types, and A comes no later than B in the order `int`, `ratio`, `real`,
    `complex`.
 6. A is `list[S]`, B is `list[U]`, and S fits U.
@@ -147,7 +168,7 @@ expected, exactly when one of these holds:
 8. B is an interface, and A satisfies it ({numref}`interfaces`).
 9. A and B are `int` and `rand-seed`, in either order.
 
-No other type fits another.
+No other type fits another. A modular type fits only itself.
 ```
 
 So a broadened type fits only a broadened type, a list of ints fits a list of reals, and a
@@ -158,58 +179,71 @@ not fit is still accepted, because the prover proves that its value meets the co
 defined in {numref}`constraint-proof`.
 
 ```{rule} constraint-implication
-A list of constraints implies a constraint C exactly in these cases:
+A list of conditions implies a condition C exactly in these cases:
 
 | C | The list holds one of these |
 |---|---|
-| `(>= c)` | `(>= a)`, `(> a)` or `(wrap a b)`, with a at least c |
-| `(> c)` | `(> a)` with a at least c, or `(>= a)` or `(wrap a b)` with a above c |
-| `(<= c)` | `(<= a)` or `(< a)` with a at most c, or `(wrap b a)` with a at most c |
-| `(< c)` | `(< a)` or `(wrap b a)` with a at most c, or `(<= a)` with a below c |
+| `(>= c)` | `(>= a)` or `(> a)`, with a at least c |
+| `(> c)` | `(> a)` with a at least c, or `(>= a)` with a above c |
+| `(<= c)` | `(<= a)` or `(< a)` with a at most c |
+| `(< c)` | `(< a)` with a at most c, or `(<= a)` with a below c |
 | `(length n)` | `(length n)` |
-| `(one-of s…)` | a `(one-of t…)` whose strings are all among `s…` |
-| `(wrap a b)` | `(wrap a b)` |
+| `(one-of s…)` | a `(one-of t…)` whose values are all among `s…` |
 ```
 
-## Constraints
+## Conditions
 
 ```{rule} constraints
-A constraint is one of these forms. Each may refine only the types of its row, and its
-numbers and strings are {term}`literals <literal>`:
+A condition is a type written as the things that meet it, and `(T C…)` is the intersection of T with
+each condition C. A condition is one of these forms, each on the types of its row only, and its
+values are {term}`literals <literal>`:
 
-| Constraint | Refines | Its values | Written with |
+| Condition | On | The things that meet it | Written with |
 |---|---|---|---|
 | `(>= c)`, `(> c)`, `(<= c)`, `(< c)` | `int`, `ratio`, `real` | the numbers at least c, above c, at most c, below c | one number |
-| `(length n)` | `list[T]` | the lists of n items | one int, 0 or more |
-| `(one-of s1 … sk)` | `string` | the strings s1 to sk | one string literal or more |
-| `(const)` | every type | every value of the type ({numref}`writable-targets`) | nothing |
-| `(wrap lo hi)` | `int`, `ratio`, `real` | the numbers from lo up to hi, hi left out | two numbers, lo below hi, both ints for an `int` |
+| `(length n)` | `list[T]`, `string` | the lists or the strings of n items | one int, 0 or more |
+| `(one-of v1 … vk)` | every type whose values are written as literals: the numbers, `bool`, `string`, `color`, `point`, `list[T]` | the values v1 to vk | one literal or more |
 
-A type holds at most one `(wrap …)`, and a type that holds one holds no comparison. Any other
-form in the place of a constraint, and a constraint on a type outside its row, is a compile
-error.
+Any other form in the place of a condition, and a condition on a type outside its row, is a compile
+error. A type of objects takes no condition: an intersection with an interface does that job.
 ```
 
-What `(const)` means for writes is defined in {numref}`writable-targets`, and for when a value is
-known in {doc}`binding-time`.
+`(const)` is not a condition: a variable or an attribute is free, bound or const
+({numref}`variables`).
 
-```{rule} wrap-brings-in
-A number that enters a type that holds `(wrap lo hi)` is brought into its interval, and is never
-refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)), with `mod` as {doc}`stdlib` defines
-it, exact for ints and {term}`ratios <ratio>`. A number enters a type when it is the value of a
-variable or an attribute of the type, an argument for a parameter of the type, the result of a
-function declared with the type, or a write into a variable or an attribute of the type.
+:::{admonition} Code differs
+:class: note
+The compiler reads `(const)` and `(wrap lo hi)` as constraints, takes `(one-of …)` only on strings,
+and `(length n)` only on lists. Bead mtp-rk1i.
+:::
+
+## Modular types
+
+```{rule} modular-types
+`(mod T lo hi)`, with `T` either `int` or `real` and lo below hi, is the set of the numbers from lo
+up to hi, hi left out, with no order. A number that enters it is brought into its interval, and is
+never refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)), with `mod` as {doc}`stdlib`
+defines it. A number enters it when it is the value of a variable or an attribute of the type, an
+argument for a parameter of the type, the result of a function declared with the type, or a write
+into a variable or an attribute of the type. Adding or subtracting a number to a value of the type
+gives a value of the type. A value of the type takes no comparison, and `(as T X)` gives it as an
+ordinary number.
 ```
 
-So `(real theta 400 (wrap 0 360))` holds 40, and with `(type hour int (wrap 0 12))` and
-`(func[hour] later ((hour h) (int n)) (+ h n))`, `(later 9 5)` is 2. Arithmetic on a value of the
-type gives an ordinary number, so `(+ theta 30)` may be 380.
+So `((mod real 0 360) theta 400)` holds 40, `(+ theta 330)` is 10, and `(< theta 90)` is a compile
+error. With `(type hour (mod int 0 12))` and `(func[hour] later ((hour h) (int n)) (+ h n))`,
+`(later 9 5)` is 2.
+
+:::{admonition} Code differs
+:class: note
+The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`, `ratio` and
+`real`, whose arithmetic gives an ordinary number, so `(+ theta 30)` may be 380. Bead mtp-rk1i.
+:::
 
 ```{rule} writes-into-constraints
-A write of a number into a variable or an attribute brings it into the constraints of the type of
-what it is written into: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is
-brought into a `(wrap …)` by {numref}`wrap-brings-in`, and when it breaks a `(> c)` or a `(< c)`
-it is not written. A write of a string that is not among the choices of a `(one-of …)` is not
+A write of a number into a variable or an attribute brings it into the conditions of its declared
+type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
+type by {numref}`modular-types`, and when it breaks a `(> c)` or a `(< c)` it is not written. A write of a value that is not among the values of a `(one-of …)` is not
 written. A number written into an `int` is rounded as {numref}`rounding` gives. A value that is
 not written leaves the variable or the attribute as it was.
 ```
@@ -225,8 +259,8 @@ has no default, hold the value of their type:
 | Type | Its value |
 |---|---|
 | `int`, `ratio`, `real`, `complex` | 0 |
-| a refined number type that holds `(wrap lo hi)` | 0 brought into the interval ({numref}`wrap-brings-in`) |
-| a refined number type whose constraints 0 breaks | c, when the type holds `(>= c)`. With no `(>= c)`, the type has no value |
+| a modular type | 0 brought into the interval ({numref}`modular-types`) |
+| a refined number type whose conditions 0 breaks | c, when the type holds `(>= c)`. With no `(>= c)`, the type has no value |
 | `bool` | `false` |
 | `string` | `''` |
 | a refined string type with `(one-of s1 …)` | s1 |
@@ -446,8 +480,9 @@ So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circ
 
 ```{rule} motif-and-variant-types
 `(motif M PARAMS …)` declares the shape type M, whose objects are the instances of M.
-`(variant V PARAMS S)` declares the shape type V, whose base type is the type of the shape S:
-a built-in shape type, a motif type or a variant type. An instance of
+`(variant V PARAMS S)` declares the type V, whose base type is the type of S: a shape type, a motif
+type, a movement type, an animation type, a component type, or another variant type. V is a subtype
+of its base, while a new motif or a new animation is a type of its own, disjoint from every other. An instance of
 V has the attributes of its base and the parameters of V. Every attribute that S gives, a
 {term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: an instance
 of V that gives it is a compile error. A parameter of V never has the name of an attribute of its

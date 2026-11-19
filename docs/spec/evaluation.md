@@ -125,7 +125,7 @@ inputs, when folded and while drawing.
 | `range` | a gap of 0, a negative count `num`, and more than 1,000,000 items |
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
-| a bound value with a {term}`constraint` | a value that breaks the constraint ({doc}`types`) |
+| a bound value with a {term}`condition` | a value that breaks the constraint ({doc}`types`) |
 
 At every other input, an operation never gives `none`.
 ```
