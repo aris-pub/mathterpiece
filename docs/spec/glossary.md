@@ -339,9 +339,10 @@ move
   over a duration. Every control and listener that changes the model over time plays moves.
   Defined in {doc}`time`.
 
-in-order, at-once
-  A collection of movements, played one after another or together, as a row and a column are
-  collections of shapes. Defined in {doc}`time`.
+score
+  A collection of movements, each placed in time by its own lag, as a group is a collection of
+  shapes. `(in-order …)` and `(at-once …)` are scores whose members run one after another, or
+  together. Defined in {doc}`time`.
 
 motif
   A template of shapes, `(motif N PARAMS ITEM…)`. Each instance is the body of the motif with the

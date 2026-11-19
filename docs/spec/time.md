@@ -1,7 +1,7 @@
 # Time and animation
 
 :::{note}
-Not drafted yet. This page defines: moves, which are the unit of change over time, movements as functions of time, `in-order` and `at-once` as collections of movements, repeated with loops, as a row and a column are collections of shapes, and animations as templates of movements, as a motif is a template of shapes.
+Not drafted yet. This page defines: moves, which are the unit of change over time, movements as functions of time, scores as collections of movements, each member placed in time by its own lag, repeated with loops, as a group is a collection of shapes, with `in-order` and `at-once` as scores whose members run one after another or together, and animations as templates of movements, as a motif is a template of shapes.
 :::
 
 (animation-uses)=
