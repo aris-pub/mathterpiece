@@ -62,10 +62,10 @@ directly or through the files that it imports, is a compile error, "F.mtp import
 the files it imports".
 ```
 
-So a source next to a file types.mtp of its own that writes `(import types)` and `(import ease)` is
-a compile error: ease.mtp of the standard library writes `(import types unit)`, which reads
-types.mtp of the standard library, the folder of ease.mtp, and the source then holds two different
-files named types.mtp.
+So when a file of the standard library writes `(import colors …)`, a source next to a file
+colors.mtp of its own that imports both is a compile error: the file of the standard library reads
+colors.mtp of the standard library, its own folder, and the source then holds two different files
+named colors.mtp.
 
 ## What a file to import holds
 
