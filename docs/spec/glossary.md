@@ -94,6 +94,9 @@ bool
   A value of type `bool`: `true` or `false`. Written as the word `true` or `false`
   ({numref}`the-types`, {numref}`literal-words`).
 
+type
+  A set of values or a set of objects, known when compiling ({numref}`what-a-type-is`).
+
 built-in type
   One of the types that mtp gives, such as `real`, `point` or `circle`, whose name no declaration
   and no binding takes ({numref}`declaration-names`).
