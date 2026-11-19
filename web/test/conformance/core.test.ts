@@ -19,7 +19,7 @@ function drag(source: string, hit: string, from: Point, to: Point) {
 const group = (items: string, listener: string) =>
   `(scene s (group g ${items} (circle c (x 1) (r 1))))\n(canvas v s (${listener}))`;
 
-describe("rule drag-group-translate: a drag of a group writes its translate", () => {
+describe("rule drag-group-shift: a drag of a group writes its translate (shift-x and shift-y after mtp-1vyc)", () => {
   it.fails("a group that is not fixed-size (mtp-ydd4.7.36: the runtime moves each member)", () => {
     const v = drag(group("", "on-drag g g.pos"), "c", [1, 0], [3, 1]);
     expect(v("g", "translate")).toEqual([2, 1]);
