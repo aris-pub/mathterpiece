@@ -349,7 +349,7 @@ The top level of a source holds only the heads of this table and `let`
 | `parametric` | syntactic sugar | `(parametric N XS F ARGS…)`: a polyline through the points of the curve `F` at the values of the list `XS` | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
-| `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
+| `formula` | core | `(formula N TEX ITEM…)`: typeset math with terms, whose string `TEX` is its positional argument | {doc}`world-model` |
 | `motif` | core | `(motif N PARAMS ITEM…)`: a template of shapes | {doc}`world-model` |
 | `variant` | core | `(variant N PARAMS SHAPE)`: a new type of shape | {doc}`types` |
 | `func`, `func[T]` | core | `(func N PARAMS BODY)`: a named function | {doc}`types`, {doc}`evaluation` |
@@ -616,7 +616,7 @@ follow the rule.
 | `scene` | shapes, variables, `exists-when` | yes |
 | `group`, `row`, `column` | shapes, `exists-when` | yes |
 | `motif` | shapes, variables that are bound or known when compiling, `exists-when` | yes |
-| `formula` | one string, plain or TeX, known when compiling, then terms, `exists-when` and variables ({numref}`formula-terms`) | yes |
+| `formula` | terms, `exists-when` and variables. The string is its positional argument ({numref}`formula-terms`) | yes |
 | `record` | variables, records, palettes | yes |
 | `palette` | items `(member color)` | yes |
 | `interface` | items `(T attribute constraint…)` | yes |
