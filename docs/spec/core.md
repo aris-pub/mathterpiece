@@ -132,10 +132,14 @@ move, such as `(on-drag p (move k (to (. pointer 0))))`.
 
 ```{rule} like-copies
 `(K N (like M) ARGS…)` is syntactic sugar for `(K N ARGS… COPIED…)`. `COPIED…` holds each item of
-the declaration of `M`, as written in the source, whose head `ARGS…` does not give. A `(like …)` in
+the declaration of `M`, as written in the source, whose heads do not overlap with those in `ARGS…`. A `(like …)` in
 the declaration of `M` is rewritten first, and a `(like …)` is rewritten before any other rewrite of
 the declaration that holds it.
 ```
+
+For example, after `(circle a (r 1) (fill 'red') (stroke 'black'))`, the form
+`(circle b (like a) (r 2))` is syntactic sugar for `(circle b (r 2) (fill 'red') (stroke 'black'))`:
+`b` has every item of `a` but its radius, and a radius of 2.
 
 `M` is a plain name, and the form is one of these, or it is a {term}`compile error`:
 
@@ -145,7 +149,6 @@ the declaration that holds it.
 - `K` is `term`, and `M` is a term of the same formula whose `(term …)` form comes before.
 - The form is a `move` or a `transition`, and `M` is a transition declared at the top level.
 
-So `(circle b (like a) (r 2))` is a circle with every item of `a` but its radius, and a radius of 2.
 Two kinds of item are copied in a way of their own. The string of a text is copied too, though it
 is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and `y`, so when
 `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))`.
