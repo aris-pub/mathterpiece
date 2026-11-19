@@ -73,19 +73,19 @@ any number of such texts.
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | `(jump V X)` | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
-| `(parametric N F (domain LO HI) (samples S) ARGS…)` | `(polyline N (points (map (range LO HI (num S)) F)) ARGS…)`: the polyline through `S` points of the curve `F`, from `(F LO)` to `(F HI)` | `F` is a function from a {term}`real` to a point |
+| `(parametric N F XS ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a function from a {term}`real` to a point, and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, in an animation's body | `(move none (duration T))` | |
 | `(animation ARGS… A B MORE…)` | `(animation ARGS… (in-order A B MORE…))` | `ARGS…` are the {term}`named arguments <named argument>` of the animation |
-| `(choreo C PARAMS A B MORE…)` | `(choreo C PARAMS (in-order A B MORE…))` | `PARAMS` is the list of the choreo's parameters |
+| `(choreo C (P…) A B MORE…)` | `(choreo C (P…) (in-order A B MORE…))` | |
 | `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | `pointer` is the position of the pointer ({numref}`declarations-and-bindings`) |
 ```
 
-So `(parametric p (fn t [t (* t t)]) (domain -2 2) (stroke 'teal'))` is the parabola through 361
-points from [-2 4] to [2 4], and `(parametric p curve (domain 0 1))` draws a declared function
-`curve`.
+So `(parametric p (fn t [t (* t t)]) (range -2 2 (num 361)) (stroke 'teal'))` is the parabola
+through 361 points from [-2 4] to [2 4], and `(parametric p f (range 0 1 (num 50)))` draws a
+declared function `f`.
 
 :::{admonition} Code differs
 :class: note
@@ -336,7 +336,7 @@ The top level of a source holds only the heads of this table and `let`
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
 | `palette` | syntactic sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
-| `parametric` | syntactic sugar | `(parametric N F (domain LO HI) (samples S) ARGS…)`: a polyline through the points of the curve `F`, for the values from `LO` to `HI`. `S` is the number of points, 361 when `(samples …)` is left out. `domain` and `samples` are {term}`named arguments <named argument>` of `parametric` | {numref}`sugar-rewrites` |
+| `parametric` | syntactic sugar | `(parametric N F XS ARGS…)`: a polyline through the points of the curve `F` at the values of the list `XS` | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
@@ -382,7 +382,7 @@ mtp-ydd4.7.59.
 
 | Notation | Kind | What it is | Defined in |
 |---|---|---|---|
-| `int`, `ratio`, `real`, `complex`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
+| `int`, `ratio`, `real`, `complex`, `unit`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
 | `circle` and the other shape names | core | the shape types | {doc}`types` |
 | `shape`, `positioned`, `sequence`, `sequence[T]` | core | the built-in {term}`interfaces <interface>` | {doc}`types` |
 | `list[T]` | core | lists | {doc}`types` |
@@ -509,7 +509,7 @@ These heads name built-in functions, except the primitives, which the standard l
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
-| the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
+| the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
 
 :::{admonition} Code differs
 :class: note

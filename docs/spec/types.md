@@ -36,6 +36,7 @@ These are the types of mtp:
 | Type | Written | Its values or objects |
 |---|---|---|
 | `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
+| `unit` | `unit` | the same type as `(real (>= 0) (<= 1))`: the reals from 0 to 1 |
 | `bool` | `bool` | `true` and `false` |
 | `string` | `string` | the {term}`strings <string>`, TeX strings among them |
 | `color` | `color` | the colors ({doc}`world-model`) |
@@ -60,6 +61,12 @@ These are the types of mtp:
 
 There are no other types.
 ```
+
+:::{admonition} Code differs
+:class: note
+`unit` is not a built-in type: the file types of the standard library declares it, and a source
+imports it with `(import types unit)`. Bead mtp-vc5g makes it a built-in type and removes that file.
+:::
 
 Which of these are values and which are mutable objects is defined in {doc}`world-model`. A free
 variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`).
