@@ -67,7 +67,7 @@ a name ({numref}`names-from-values`). A target may be written only when it is fr
 - A target that stands for several values, as {doc}`concurrency`, section "Values", gives, is
   writable only when each of those values is: a `pos`, an attribute of a group or an instance that
   is not its own, and the `x`, the `y` and the `pos` of a line, a triangle, a polyline, a polygon
-  and a curve. An attribute of a container with no members is never a target.
+  and a bezier. An attribute of a container with no members is never a target.
 - A member of a group chosen by a position is chosen by a position known when compiling.
 - A move of an `on-show` or an `on-hide` writes the stand-in of its shape, so it may write an
   attribute of that shape that is bound ({doc}`lifecycle`).

@@ -382,7 +382,7 @@ mtp-ydd4.7.59.
 
 | Notation | Kind | What it is | Defined in |
 |---|---|---|---|
-| `int`, `ratio`, `real`, `complex`, `unit`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
+| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
 | `circle` and the other shape names | core | the shape types | {doc}`types` |
 | `shape`, `positioned`, `sequence`, `sequence[T]` | core | the built-in {term}`interfaces <interface>` | {doc}`types` |
 | `list[T]` | core | lists | {doc}`types` |
@@ -400,7 +400,7 @@ mtp-ydd4.7.59.
 |---|---|---|---|
 | `background` | core | the scene's background | {doc}`world-model` |
 | `transform` in the scene | core | how the scene's coordinates are drawn | {doc}`world-model` |
-| `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `curve`, `arc`, `ring`, `text` | core | the shapes | {doc}`world-model` |
+| `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text` | core | the shapes | {doc}`world-model` |
 | `group` | core | a container | {doc}`world-model` |
 | `row`, `column` | core | a group that places its members one after another | {doc}`world-model` |
 | `(M N …)` for a motif `M` | core | an instance, an object of kind `instance` | {doc}`world-model` |
@@ -509,7 +509,7 @@ These heads name built-in functions, except the primitives, which the standard l
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
-| the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
+| the files `colors`, `eases`, `fonts`, `marks`, `math`, `rand` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
 
 :::{admonition} Code differs
 :class: note

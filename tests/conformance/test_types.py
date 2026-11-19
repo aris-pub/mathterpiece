@@ -6,6 +6,8 @@ from .support import accepted, compile_error, same_meaning
 
 rule = pytest.mark.rule
 UNIT = pytest.mark.xfail(strict=True, reason="mtp-vc5g: unit is declared in the file types")
+EASE = pytest.mark.xfail(strict=True, reason="mtp-6kta: ease is not a type")
+BEZIER = pytest.mark.xfail(strict=True, reason="mtp-qnws: the shape bezier is named curve")
 
 
 @rule("type-notation")
@@ -29,3 +31,11 @@ class TestTheTypes:
     def test_unit_is_a_built_in_type(self):
         compile_error("(unit k 2)")
         accepted("(unit k 0.5)")
+
+    @EASE
+    def test_ease_is_a_built_in_type(self):
+        accepted("(ease e (fn ((unit t)) t))")
+
+    @BEZIER
+    def test_bezier_is_a_shape_type(self):
+        accepted("(scene s (bezier b (from [0 0]) (to [1 1])))")

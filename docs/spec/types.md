@@ -37,6 +37,7 @@ These are the types of mtp:
 |---|---|---|
 | `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
 | `unit` | `unit` | the same type as `(real (>= 0) (<= 1))`: the reals from 0 to 1 |
+| `ease` | `ease` | the same type as `func[unit real]`: the eases of a transition ({doc}`time`) |
 | `bool` | `bool` | `true` and `false` |
 | `string` | `string` | the {term}`strings <string>`, TeX strings among them |
 | `color` | `color` | the colors ({doc}`world-model`) |
@@ -49,7 +50,7 @@ These are the types of mtp:
 | `none` | `none` | the value `none` alone |
 | a {term}`broadened type` | `T\|none` | the values of T, and `none` |
 | a {term}`refined type` | `(T C…)` | the values of T that meet every constraint C ({numref}`constraints`) |
-| a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `curve`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
+| a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
 | a motif type | the {term}`name` of the motif | its instances ({numref}`motif-and-variant-types`) |
 | a variant type | the name of the variant | its instances ({numref}`motif-and-variant-types`) |
 | `scene` | `scene` | the scene |
@@ -64,8 +65,12 @@ There are no other types.
 
 :::{admonition} Code differs
 :class: note
-`unit` is not a built-in type: the file types of the standard library declares it, and a source
-imports it with `(import types unit)`. Bead mtp-vc5g makes it a built-in type and removes that file.
+- `unit` is not a built-in type: the file types of the standard library declares it, and a source
+  imports it with `(import types unit)`. Bead mtp-vc5g makes it a built-in type and removes that
+  file.
+- `ease` is not a type, and the file of eases of the standard library is named ease.mtp. Bead
+  mtp-6kta makes `ease` a built-in type and renames the file eases.mtp.
+- The shape `bezier` is named `curve`. Bead mtp-qnws renames it.
 :::
 
 Which of these are values and which are mutable objects is defined in {doc}`world-model`. A free
