@@ -59,3 +59,28 @@ class TestWhatATypeIs:
     @UNION
     def test_a_variable_whose_type_is_an_interface(self):
         accepted("(interface inky (color ink)) (namespace day (color ink 'navy')) (inky look day)")
+
+
+TYPES_REDESIGN = pytest.mark.xfail(
+    strict=True, reason="mtp-rk1i: the type calculus is not in the compiler"
+)
+
+
+@rule("membership")
+class TestMembership:
+    @TYPES_REDESIGN
+    def test_is_narrows_a_union(self):
+        accepted("(func size ((point|circle p)) (if (is p circle) p.r 0))")
+
+
+@rule("modular-types")
+class TestModularTypes:
+    @TYPES_REDESIGN
+    def test_a_modular_type_brings_a_value_in(self):
+        m = accepted("((mod real 0 360) theta 400 (const))")
+        assert m.get("theta").value.value == 40
+
+    @TYPES_REDESIGN
+    def test_a_modular_type_takes_no_comparison(self):
+        accepted("((mod real 0 360) theta 10)")
+        compile_error("((mod real 0 360) theta 10) (bool v (< theta 90))")

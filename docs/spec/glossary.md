@@ -308,9 +308,9 @@ fit
   A type A fits a type B when a value of type A is accepted where a value of type B is expected
   ({numref}`fits`).
 
-constraint
-  A form that refines a type to some of its values, such as `(>= 0)` or `(one-of 'a' 'b')`
-  ({numref}`constraints`).
+condition
+  A type written as the things that meet it, such as `(>= 0)` or `(one-of 'a' 'b')`. `(real (>= 0))`
+  is the intersection of `real` with it ({numref}`constraints`).
 
 refined type
   A type with constraints, written `(T C…)`, whose values are the values of T that meet every

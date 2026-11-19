@@ -4,7 +4,7 @@
 A {term}`world model` whose {term}`names <name>` resolve ({ref}`scope`) and whose
 {term}`expressions <expression>` have types ({doc}`types`) must still pass the rules of this page:
 its dependencies make no cycle, its writers write only what may be written, the moves that run
-together do not write the same value, and every {term}`constraint` is proved. All of them are
+together do not write the same value, and every {term}`condition` is proved. All of them are
 checked in the prove step ({numref}`compile-steps`), and a source that breaks one is a
 {term}`compile error`. The last section defines the {term}`prover`: exactly what it proves, and the
 {term}`ranges <range>` with which it proves it.
@@ -243,7 +243,7 @@ So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, 
 ```{rule} constraint-proof
 A value given where the expected type holds a constraint C meets C when one of these holds:
 
-- C is `(const)` or a `(wrap …)`, which every value meets ({numref}`wrap-brings-in`).
+- C is a modular type, which every value meets once brought in ({numref}`modular-types`).
 - The value is known in the prove step and meets C.
 - The type of the value fits the expected type with C as its only constraint ({numref}`fits`).
 - C is a comparison, and the range of the value lies inside it: its lower end is at least c for

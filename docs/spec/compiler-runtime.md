@@ -71,7 +71,7 @@ The compiler turns a source into a .mtpc in six steps, in this order:
    form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, `(pos [1 2])`
    becomes `(x 1) (y 2)`. No value is computed and no type is used.
 3. **Prove.** Every {term}`expression` is given a type, and every type, {term}`range`,
-   {term}`constraint` and other invariant that the spec requires is proved ({doc}`types`,
+   {term}`condition` and other invariant that the spec requires is proved ({doc}`types`,
    {doc}`well-formedness`). This step proves and does nothing else.
 4. **Expand.** Each `foreach` is written out as its copies, each motif instance as the
    {term}`body` of its motif with the arguments of the instance, and each use of an animation as the

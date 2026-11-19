@@ -182,7 +182,7 @@ Each keyword is the head of a form of the language.
 
 The heads of {term}`named arguments <named argument>`, such as `x`, `r`, `size`, `gap`,
 `stops`, `fill`, `duration`, `like`, `defaults` and `loop`, are not keywords, and neither are the
-heads of {term}`constraints <constraint>`, such as `const`, `length` and `wrap`.
+heads of {term}`conditions <condition>`, such as `length` and `one-of`, and `const`.
 
 Which names no declaration and no binding may take is defined in {numref}`declaration-names`.
 
