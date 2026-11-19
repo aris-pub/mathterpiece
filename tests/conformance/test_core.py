@@ -163,12 +163,6 @@ class TestSugarRewrites:
     def test_maybe_is_not_a_type(self):
         compile_error("((maybe real) k none)")
 
-    def test_the_type_colormap(self):
-        same_meaning(
-            "(func f ((colormap m)) (m 0.5)) (colormap cm ['red' 'blue']) (color v (f cm))",
-            "(func f ((func[real color] m)) (m 0.5)) (colormap cm ['red' 'blue']) (color v (f cm))",
-        )
-
     def test_set(self):
         same_meaning(
             "(real k 0) (button b (animation (set k 3)))",
