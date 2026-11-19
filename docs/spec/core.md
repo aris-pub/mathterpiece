@@ -81,6 +81,7 @@ any number of such texts.
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |
 | `(in-order ARGS… ITEMS…)`, `(at-once ARGS… ITEMS…)` | `(score ARGS… ITEMS…)`, with `(lag 1)` for `in-order`, or `(lag 0)` for `at-once`, added to its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `lag` |
 | `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | `pointer` is the position of the pointer ({numref}`declarations-and-bindings`) |
+| `(on-drag S S.shift ITEMS…)`, `(on-drag S S.shift-x ITEMS…)`, `(on-drag S S.shift-y ITEMS…)` | `(on-drag S (move S.shift (to pointer)) ITEMS…)`, `(on-drag S (move S.shift-x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.shift-y (to (. pointer 1))) ITEMS…)` | |
 ```
 
 So `(parametric p (range -2 2 (num 361)) (fn t [t (* t t)]) (stroke 'teal'))` is the parabola
@@ -169,21 +170,24 @@ so `(like M)` copies them.
 ### Dragging a group
 
 ```{rule} drag-group-shift
-In an `on-drag` on a group, a row or a column, whether its `fixed-size` is true or not, a move
-whose target is the `pos`, the `x` or the `y` of that same container writes the container's
-`shift-x` and `shift-y` in place of the target: both for `pos`, `shift-x` for `x`, and `shift-y`
-for `y`. In that move, `pointer` is `[shift-x shift-y]` of the container at the press plus the
-motion of the pointer since the press, in the frame of the container's container.
+A group, a row or a column is dragged by its `shift`, its `shift-x` or its `shift-y`. In an
+`on-drag` on such a container, whether its `fixed-size` is true or not, when the target is the
+container's own `shift`, `shift-x` or `shift-y`, `pointer` is the container's `shift` at the press
+plus the motion of the pointer since the press, in the frame of the container's container. A
+target that is the container's `pos`, `x` or `y` is a {term}`compile error`, "a group has no x of
+its own: drag its shift, as (on-drag g g.shift)".
 ```
 
-By {numref}`sugar-rewrites`, `(on-drag g g.pos)` is `(on-drag g (move g.pos (to pointer)))`, so
-both spellings move the group by its `shift-x` and `shift-y`. No member is written: the members are
-drawn in the frame of the group, so they move with it and keep their own positions.
+By {numref}`sugar-rewrites`, `(on-drag g g.shift)` is `(on-drag g (move g.shift (to pointer)))`.
+No member is written: the members are drawn in the frame of the group, so they move with it and keep
+their own positions. `(on-drag g g.x)` is an error twice over: `g.x` of a group is the list of the
+`x` of its members, and a drag writes one number.
 
 :::{admonition} Code differs
 :class: note
 A group has no `shift-x` and no `shift-y`: the compiler and the runtime give it a `translate`, and
-the drag writes that. Bead mtp-1vyc makes the parts of a frame attributes of the shape.
+the drag writes that, for `(on-drag g g.pos)` too. Bead mtp-1vyc makes the parts of a frame attributes of
+the shape, and bead mtp-67wi makes a drag of a group's `pos` an error.
 :::
 
 :::{admonition} Code differs
