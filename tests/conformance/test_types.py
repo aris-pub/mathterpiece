@@ -43,3 +43,10 @@ class TestTheTypes:
     @BEZIER
     def test_curve_is_a_built_in_type(self):
         accepted("(curve c (fn ((real t)) [t t]))")
+
+
+@rule("what-a-type-is")
+class TestWhatATypeIs:
+    def test_a_value_outside_the_set_is_an_error(self):
+        compile_error("((real (>= 0)) k -1)")
+        accepted("((real (>= 0)) k 1)")

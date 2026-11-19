@@ -13,6 +13,17 @@ the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` pr
 
 This page specifies the language.
 
+## What a type is
+
+```{rule} what-a-type-is
+A type is a set of values or a set of objects, known when compiling. Every variable, attribute,
+parameter and expression has a type, and what it holds or gives is always in that set.
+```
+
+So `bool` is the set of the values `true` and `false`, `(real (>= 0))` is the set of the reals that
+are not below 0, `real|none` is the set of the reals with `none` added, and `circle` is the set of
+the circles. A type that {term}`fits <fit>` another is a subset of it.
+
 ## The types
 
 ```{rule} the-types
