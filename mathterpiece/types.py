@@ -339,10 +339,6 @@ def type_from_node(node: "Node | str", named: "Mapping[str, Type] | None" = None
         if not node.items:
             raise TypeError_("() is not a type")
         head = node.items[0]
-        if isinstance(head, Name) and head.parts == ("maybe",):
-            if len(node.items) != 2:
-                raise TypeError_("maybe takes one type")
-            return Maybe(type_from_node(node.items[1], named))
         return refine(type_from_node(head, named), node.items[1:])
     if isinstance(node, NoneLit):
         return NONE

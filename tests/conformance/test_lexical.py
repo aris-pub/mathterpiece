@@ -378,7 +378,7 @@ class TestDeclarationNames:
             pytest.param(t, marks=KEYWORD_NAMES)
             for t in [
                 "int", "ratio", "real", "complex", "bool", "string", "color", "font", "point",
-                "transform", "func", "list", "maybe", "shape", "positioned",
+                "transform", "func", "list", "shape", "positioned",
                 "sequence",
             ]
         ],

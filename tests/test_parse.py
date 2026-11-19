@@ -871,9 +871,6 @@ class TestTypeNotation:
         (form,) = parse("((real (>= 0)) r 1)")
         assert form.items[0] == Form((n("real"), Form((n(">="), IntLit(0)))))
 
-    def test_maybe_is_a_form(self):
-        assert atom("(maybe real)") == Form((n("maybe"), n("real")))
-
     def test_several_items_in_a_part_read_parse(self):
         # Only the compiler knows g[0 1] is not in a type position, so it rejects it there.
         assert atom("g[0 1]") == n("g", Brackets((IntLit(0), IntLit(1))))

@@ -1,6 +1,6 @@
 import pytest
 
-from mathterpiece.nodes import Bar, Brackets, Form, IntLit, ListLit, Name, NoneLit, RealLit, StrLit
+from mathterpiece.nodes import Bar, Brackets, IntLit, ListLit, Name, NoneLit, RealLit, StrLit
 from mathterpiece.parse import parse
 from mathterpiece.types import (
     BOOL,
@@ -152,7 +152,6 @@ class TestTypeNotation:
             ("list[list[real]]", ListT(ListT(REAL))),
             ("real|none", Maybe(REAL)),
             ("list[real|none]", ListT(Maybe(REAL))),
-            ("(maybe real)", Maybe(REAL)),
             ("func[real real]", FuncT((REAL,), REAL)),
             ("func[real point real]", FuncT((REAL, POINT), REAL)),
             ("func[real]", FuncT((), REAL)),
@@ -172,6 +171,7 @@ class TestTypeNotation:
             ("list[a b]", "list takes one item type"),
             ("real[int]", "real takes no item type"),
             ("real|int", "only by none"),
+            ("(maybe real)", "unknown type 'maybe'"),
         ],
     )
     def test_invalid(self, text, message):
@@ -183,7 +183,6 @@ class TestTypeNotation:
         assert type_from_node(Name(("func", Brackets((Name(("real",)), Name(("real",))))))) == (
             FuncT((REAL,), REAL)
         )
-        assert type_from_node(Form((Name(("maybe",)), Name(("real",))))) == Maybe(REAL)
 
 
 class TestRefinement:

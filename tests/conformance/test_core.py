@@ -160,8 +160,8 @@ class TestSugarRewrites:
             FREE + "(bool v (if a true (if b true c)))", "v"
         )
 
-    def test_maybe(self):
-        same_meaning("((maybe real) k none)", "(real|none k none)")
+    def test_maybe_is_not_a_type(self):
+        compile_error("((maybe real) k none)")
 
     def test_the_type_colormap(self):
         same_meaning(

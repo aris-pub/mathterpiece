@@ -181,7 +181,7 @@ No declaration and no binding takes as its name a {term}`keyword` ({numref}`keyw
 function, a parameter, a name of a `let` or a `foreach`, a member of a namespace, a palette or a
 formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`,
 `complex`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`,
-`scene`, `func`, `rand-seed`, `list`, `maybe`, the shape types, and the
+`scene`, `func`, `rand-seed`, `list`, the shape types, and the
 interfaces `shape`, `positioned`, `sequence` and `palette`. Nor does it take the name of an
 {term}`operator`. A declaration or a binding may take the name of any other built-in function, or
 of a built-in constant (`pi`, `tau` and `euler`): from that declaration or binding on, the name refers to what it declares or binds

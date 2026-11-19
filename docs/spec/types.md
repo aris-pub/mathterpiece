@@ -62,7 +62,7 @@ There are no other types.
 
 Which of these are values and which are mutable objects is defined in {doc}`world-model`. A free
 variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`). `colormap` is another name
-for `func[real color]`, and `(maybe T)` another spelling of `T|none` ({numref}`sugar-rewrites`).
+for `func[real color]` ({numref}`sugar-rewrites`).
 
 :::{admonition} Code differs
 :class: note
