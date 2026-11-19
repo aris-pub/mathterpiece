@@ -73,7 +73,7 @@ any number of such texts.
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | `(jump V X)` | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
-| `(parametric N F XS ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
+| `(parametric N XS F ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
@@ -83,8 +83,8 @@ any number of such texts.
 | `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | `pointer` is the position of the pointer ({numref}`declarations-and-bindings`) |
 ```
 
-So `(parametric p (fn t [t (* t t)]) (range -2 2 (num 361)) (stroke 'teal'))` is the parabola
-through 361 points from [-2 4] to [2 4], and `(parametric p f (range 0 1 (num 50)))` draws a
+So `(parametric p (range -2 2 (num 361)) (fn t [t (* t t)]) (stroke 'teal'))` is the parabola
+through 361 points from [-2 4] to [2 4], and `(parametric p (range 0 1 (num 50)) f)` draws a
 declared function `f`.
 
 :::{admonition} Code differs
@@ -336,7 +336,7 @@ The top level of a source holds only the heads of this table and `let`
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
 | `palette` | syntactic sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
-| `parametric` | syntactic sugar | `(parametric N F XS ARGS…)`: a polyline through the points of the curve `F` at the values of the list `XS` | {numref}`sugar-rewrites` |
+| `parametric` | syntactic sugar | `(parametric N XS F ARGS…)`: a polyline through the points of the curve `F` at the values of the list `XS` | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
