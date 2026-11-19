@@ -73,7 +73,7 @@ any number of such texts.
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | `(jump V X)` | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
-| `(parametric N F XS ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a function from a {term}`real` to a point, and `XS` a list of reals |
+| `(parametric N F XS ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
@@ -382,7 +382,7 @@ mtp-ydd4.7.59.
 
 | Notation | Kind | What it is | Defined in |
 |---|---|---|---|
-| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
+| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `curve`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
 | `circle` and the other shape names | core | the shape types | {doc}`types` |
 | `shape`, `positioned`, `sequence`, `sequence[T]` | core | the built-in {term}`interfaces <interface>` | {doc}`types` |
 | `list[T]` | core | lists | {doc}`types` |
