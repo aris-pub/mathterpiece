@@ -245,7 +245,7 @@ class TestSugarRewrites:
             "(duration 1))))",
         )
 
-    def test_a_move_in_place_of_an_animation(self):
+    def test_a_control_plays_a_move_as_an_animation_of_that_move(self):
         same_meaning(
             "(real k 0) (button b (move k (to 1) (duration 1)))",
             "(real k 0) (button b (animation (move k (to 1) (duration 1))))",
