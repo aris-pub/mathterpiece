@@ -13,8 +13,8 @@ among it, is defined in {doc}`grammar`. This page specifies the language.
 
 ```{rule} values
 A value is a piece of data that never changes and has no identity: two values that are equal are
-the same value. The values are the numbers, the bools, the strings, the colors, the fonts, the
-points, the transforms, the lists and `none`. A value comes from a literal
+the same value. The values are the numbers, the bools, the strings, the colors, the points, the
+transforms, the lists and `none`. A value comes from a literal
 ({numref}`literal-types`) or from another expression.
 ```
 
@@ -32,8 +32,8 @@ Each of these gives a value:
 | `none` | `none` | `none` |
 | `(rotate 30)` | the rotation by 30 degrees | `transform` |
 
-Every value but a font and a transform can be written as a literal. A font comes from a `font`
-declaration, and a transform from a call such as `(rotate 30)`. Since a value never
+Every value but a transform can be written as a literal. A transform comes from a call such as
+`(rotate 30)`. Since a value never
 changes, nothing writes a value: a writer writes a variable or an attribute, which then holds a
 different value. A slider that writes `(real a 1)` puts 2 into `a`, and 1 is still 1.
 
@@ -143,6 +143,17 @@ A namespace is an object that consists only of the attributes that it is declare
 `(namespace n …)` declares a namespace, and `(ns …)` gives a new namespace each time that it is
 evaluated. Every attribute of a namespace that `(ns …)` gives is bound or const.
 ```
+
+A font is a namespace: `(font serif (family 'serif') (style 'normal') (weight 400) (size 12))`
+declares a namespace with the four attributes `family`, `style`, `weight` and `size`. A text applies
+it with `(face serif)`, and writing `serif.size` changes the size of every text that applies
+`serif`.
+
+:::{admonition} Code differs
+:class: note
+The compiler treats a font as a value: its parts can be read, as `f.size`, but not written, and a
+text applies one with `(font f)`. Bead mtp-1vyc makes fonts namespaces.
+:::
 
 For example, `(namespace style (real width 2 (>= 0) (<= 5)) (color ink 'navy'))` is an object with
 the two attributes `width` and `ink`, read as `style.width` and `style.ink`. Like any attribute,
