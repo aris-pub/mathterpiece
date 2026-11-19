@@ -74,7 +74,7 @@ any number of such texts.
 | the type `colormap` | the type `func[real color]` | |
 | `(jump V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
-| `(parametric N (for T LO HI) E ARGS…)` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ARGS…)`: the polyline through `S` points of the curve `E`, for `T` from `LO` to `HI`. `S` is given by the `(samples S)` of `ARGS…`, which the polyline does not get | `T` is a name |
+| `(parametric N F (domain LO HI) (samples S) ARGS…)` | `(polyline N (points (map (range LO HI (num S)) F)) ARGS…)`: the polyline through `S` points of the curve `F`, from `(F LO)` to `(F HI)` | `F` is a function from a {term}`real` to a point |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
@@ -85,6 +85,16 @@ any number of such texts.
 ```
 
 A use of a choreo is core, as a motif instance is ({ref}`choreo-uses`).
+
+So `(parametric p (fn t [t (* t t)]) (domain -2 2) (stroke 'teal'))` is the parabola through 361
+points from [-2 4] to [2 4], and `(parametric p curve (domain 0 1))` draws a declared function
+`curve`.
+
+:::{admonition} Code differs
+:class: note
+The compiler reads `parametric` as `(parametric N (for T LO HI) E ARGS…)`, with the curve written as
+an expression `E` of the name `T` (compiler.py:434). Bead mtp-of7a makes the compiler follow the rule.
+:::
 
 Since a copied random call is a {term}`site` of its own ({numref}`random-site`),
 `(pos (pick corners))` would draw `x` and `y` at two sites, so it is an error. A body `let` holds
@@ -329,7 +339,7 @@ The top level of a source holds only the heads of this table and `let`
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
 | `palette` | syntactic sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
-| `parametric` | syntactic sugar | a polyline through the points of a parametric curve. `(samples S)` gives the number of points, 361 when it is left out | {numref}`sugar-rewrites` |
+| `parametric` | syntactic sugar | `(parametric N F (domain LO HI) (samples S) ARGS…)`: a polyline through the points of the curve `F`, for the values from `LO` to `HI`. `S` is the number of points, 361 when `(samples …)` is left out. `domain` and `samples` are {term}`named arguments <named argument>` of `parametric` | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
