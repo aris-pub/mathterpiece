@@ -177,7 +177,7 @@ Each keyword is the head of a form of the language.
 | Declarations of functions, types and animations | `func`, `primitive`, `colormap`, `type`, `interface`, `motif`, `variant`, `animation` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
 | Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `rec`, `type-of`, `as`, `free`, `concat`, `fmt` |
-| Movements and their collections | `move`, `wait`, `jump`, `at-once`, `in-order` |
+| Movements and their collections | `move`, `wait`, `jump`, `score`, `lag`, `at-once`, `in-order` |
 :::
 
 The heads of {term}`named arguments <named argument>`, such as `x`, `r`, `size`, `gap`,

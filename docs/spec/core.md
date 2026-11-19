@@ -77,8 +77,9 @@ any number of such texts.
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
-| `(wait T)`, in an `in-order` or an `at-once` | `(move none (duration T))` | |
+| `(wait T)`, in a score | `(move none (duration T))` | |
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |
+| `(in-order ARGS… ITEMS…)`, `(at-once ARGS… ITEMS…)` | `(score ARGS… ITEMS…)`, with `(lag 1)` for `in-order`, or `(lag 0)` for `at-once`, added to its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `lag` |
 | `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | `pointer` is the position of the pointer ({numref}`declarations-and-bindings`) |
 ```
 
@@ -243,10 +244,10 @@ one, and `has_attr` finds no member of a namespace or a formula. So `(. marks ye
 reads the color `yellow` as a key (mtp-ydd4.7.19).
 :::
 
-### An `in-order` or an `at-once` written as a step
+### A score written as a step
 
 ```{rule} animation-step
-An `(in-order …)` or an `(at-once …)` written as a member of another is one step of it. It plays
+A score written as a member of another score is one step of it. It plays
 its own members, a `(loop …)` included, and the `(defaults …)` around it do not apply inside it.
 ```
 
@@ -313,12 +314,12 @@ inventory.
   with a site of its own for each random call. A rewrite into a variable needs the value's type.
 - **`(defaults …)` on an instance.** The members of an instance are made only in the expand step,
   so the prover proves that each value fits its attribute.
-- **`(defaults …)` in an `at-once` or an `in-order`.** A default ease does not apply
+- **`(defaults …)` in a score.** A default ease does not apply
   to a move of a {term}`bool`, a string or a choice, so writing the ease into each move needs the
   type of its target. A default duration also applies to the name of a movement in the body, which
   cannot be given a duration without making a new movement.
-- **An `in-order` or an `at-once` of one item.** It is one step, while its item may be several: a
-  play of `(in-order (in-order a b))` has one step, and a play of `(in-order a b)` has two.
+- **A score of one item.** It is one step, while its item may be several: a play of
+  `(in-order (in-order a b))` has one step, and a play of `(in-order a b)` has two.
 - **`(map n f)` with an int `n`.** It means `(map (range 0 n) f)`, and is told apart from
   `(map xs f)` by the type of `n`. This is part of the typing of the built-in function `map`
   ({doc}`stdlib`).
@@ -548,11 +549,13 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `ease` | core | a function from 0 to 1, such as the value of `(steps N)` | {doc}`time` |
 | `like` in a movement or a move | syntactic sugar | | {numref}`like-copies` |
 | an animation's body of several items | syntactic sugar | one `in-order` | {numref}`sugar-rewrites` |
-| `defaults` in an `at-once` or an `in-order` | core | a duration and an ease for the moves inside | {doc}`time` |
+| `defaults` in a score | core | a duration, an ease and a lag for the movements inside | {doc}`time` |
 | `loop` | core | `(loop)` or `(loop N)` | {doc}`time` |
-| `at-once`, `in-order` | core | animations whose members run together, or one after another, written wherever a movement goes | {doc}`time` |
-| `foreach` in an `in-order` or an `at-once` | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
-| the name of a movement, or of an animation with no parameters, in an `in-order` or an `at-once` | core | plays what it names | {doc}`time` |
+| `score` | core | `(score ITEM…)`: a collection of movements, each placed in time by its own `lag`, as a group is a collection of shapes, written wherever a movement goes | {doc}`time` |
+| `lag` | core | `(lag R)` on a movement: it starts once the member before it in its score is the fraction `R` of the way through. `R` is a number from 0 up, and the first member starts when the score starts | {doc}`time` |
+| `in-order`, `at-once` | syntactic sugar | a score whose members run one after another, or together | {numref}`sugar-rewrites` |
+| `foreach` in a score | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
+| the name of a movement, or of an animation with no parameters, in a score | core | plays what it names | {doc}`time` |
 | `wait` | syntactic sugar | `(wait T)`: a step of `T` seconds in which nothing moves. With `T` left out, it lasts as long as a move with no `(duration …)` | {numref}`sugar-rewrites` |
 | `jump` | syntactic sugar | `(jump V X)`: a move of no duration | {numref}`sugar-rewrites` |
 | a use of an animation | core | a movement of the animation's type, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
@@ -571,7 +574,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | a name, a list literal or an expression in a canvas | core | what the canvas draws | {doc}`page-interface` |
 | `font` on a readout | core | the readout's font | {doc}`page-interface` |
 | `kind` on a display | core | `'block'` or `'inline'` | {doc}`page-interface` |
-| a movement on a control or a listener | core | what the writer plays: a move, an `in-order`, an `at-once`, or a use of an animation. A writer has at most one | {doc}`reaction`, {doc}`time` |
+| a movement on a control or a listener | core | what the writer plays: a move, a score, or a use of an animation. A writer has at most one | {doc}`reaction`, {doc}`time` |
 | the move of a slider | core | a `move` or the name of a movement, its first item | {doc}`page-interface`, {doc}`reaction` |
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-shift` |
@@ -618,8 +621,8 @@ follow the rule.
 | `palette` | items `(member color)` | yes |
 | `interface` | items `(T attribute constraint…)` | yes |
 | `type`, a variable `(T name …)` | {term}`constraints <constraint>`, such as `(>= 0)` | yes |
-| `animation`, `at-once`, `in-order` | steps: `move`, `jump`, `wait`, `at-once`, `in-order`, the name of a movement, a use of an animation | yes |
-| `defaults` | items `(attribute value)`, and in an `at-once` or an `in-order`, `(duration …)` and `(ease …)` | yes |
+| `animation`, `score`, `in-order`, `at-once` | movements: `move`, `jump`, `wait`, a score, the name of a movement, a use of an animation | yes |
+| `defaults` | items `(attribute value)`, and in a score, `(duration …)`, `(ease …)` and `(lag …)` | yes |
 | `canvas` | at least one thing to draw: a name of a shape or of the scene, a list literal, or an expression that gives a shape, `none` or a list of shapes, such as `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
 | `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
 | a control, a listener | conditions, such as `(>= k 0)` | yes |
@@ -646,7 +649,7 @@ their place. They are not forms of the language.
 
 | Head | Where | The message, in short |
 |---|---|---|
-| `step` | in an `in-order` or an `at-once` | use `(labels …)` and `(in-order …)` |
+| `step` | in a score | use `(labels …)` and `(in-order …)` |
 | `autoplay` | on a control | use a canvas's `(on-ready …)` |
 | `exclusive` | on a writer | use `(priority n)` |
 | `when` | on a control or a listener | use `(active bool)` |
@@ -677,7 +680,7 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | `pos` | syntactic sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | syntactic sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | syntactic sugar | {numref}`sugar-rewrites` |
-| `wait`, `jump`, an animation's body of several items | syntactic sugar | {numref}`sugar-rewrites` |
+| `wait`, `jump`, `in-order`, `at-once`, an animation's body of several items | syntactic sugar | {numref}`sugar-rewrites` |
 | `import` | core | {doc}`imports` |
 | `type`, a name declared by `type` | core | {numref}`type-notation` |
 | `defaults` on a group, a row or a column, and in a formula | core | {numref}`container-defaults`, {numref}`formula-defaults` |
@@ -691,7 +694,7 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | `movement`, `move` and their parts | core | {doc}`time` |
 | `animation` and its uses | core | {doc}`time`, {numref}`prove-bodies-once` |
 | `primitive` | core | {numref}`primitive-form` |
-| `at-once`, `in-order`, `loop`, `defaults` in an `at-once` or an `in-order` | core | {doc}`time`, {numref}`animation-step` |
+| `score`, `lag`, `loop`, `defaults` in a score | core | {doc}`time`, {numref}`animation-step` |
 | `foreach` | core | {numref}`foreach-count`, {numref}`foreach-bounded-length`, {doc}`binding-time` |
 | `let` | core | {doc}`scope`, {doc}`binding-time` |
 | `(T N …)`, a variable, `font` and its parts | core | {doc}`world-model`, {doc}`reaction` |
