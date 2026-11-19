@@ -529,7 +529,7 @@ seed that is below 0 is a compile error. mtp-ydd4.7.30.
 
 ```{rule} equality-operands
 `(= a b)` and `(!= a b)` are a compile error unless the type of one side {term}`fits <fit>` the type
-of the other, or one side is `none`. They are a compile error on functions, transitions or
+of the other, or one side is `none`. They are a compile error on functions, movements or
 animations, or on values whose type holds one of them, such as a list of functions. A list of two
 numbers is not converted to a point for them: `(= p xs)`, with `p` a point and `xs` a list of ints,
 is a compile error. A list literal on one side is given the type of the other side, so `(= p [1 2])`
@@ -548,7 +548,7 @@ Values compare by content, and mutable objects by identity. `=` and `!=` never g
 | `point`, `list[T]`, `transform` | they have the same length, and the items at each position are equal |
 | `color` | they are the same color once parsed: `(= ink '#000080')` is true with `(color ink 'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS gives it |
 | `font` | every part is equal |
-| a shape, a group, a namespace, a formula, a term and every other mutable object | the two are the same object. Two circles with the same attributes are not equal |
+| a shape, a group, a record, a formula, a term and every other mutable object | the two are the same object. Two circles with the same attributes are not equal |
 ```
 
 Since `=` on reals is exact, `(= (+ 0.1 0.2) 0.3)` is false: the sum is 0.30000000000000004. By

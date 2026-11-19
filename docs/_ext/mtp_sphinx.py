@@ -56,6 +56,8 @@ DECLARING = {
     "type",
     "interface",
     "namespace",
+    "record",
+    "movement",
     "palette",
     "parametric",
     "formula",

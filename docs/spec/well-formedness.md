@@ -57,12 +57,12 @@ The {term}`controls <control>` and the {term}`listeners <listener>` are the writ
 
 ```{rule} writable-targets
 The target of a writer and of a move is a name: a variable, an attribute of a shape, of an
-instance or of a term, or a member of a namespace or a formula, with `(name s)` allowed in place of
+instance or of a term, or a member of a record or a formula, with `(name s)` allowed in place of
 a name ({numref}`names-from-values`). A target may be written only when it is free
 ({doc}`world-model`), its type does not hold `(const)`, it is not a token (a variable of type
 `color` or `font`), and it is not fixed by a variant ({numref}`motif-and-variant-types`). Besides:
 
-- A name that is not a variable or an attribute, such as a group or a namespace by its name alone,
+- A name that is not a variable or an attribute, such as a group or a record by its name alone,
   is never a target.
 - A target that stands for several values, as {doc}`concurrency`, section "Values", gives, is
   writable only when each of those values is: a `pos`, an attribute of a group or an instance that
@@ -83,7 +83,7 @@ not an error, and {doc}`concurrency` defines what happens when they meet.
 Each value that a write gives must {term}`fit` the type of its target ({numref}`fits`), with the
 comparisons, the wraps and the choices of the constraints of that type left out, since the write
 brings the value into those ({numref}`writes-into-constraints`). This holds for the `from` and the
-`to` of a move and of a transition, the `to` of the move of an `on-drag`, and the values of a
+`to` of a move and of a movement, the `to` of the move of an `on-drag`, and the values of a
 toggle and a slider. A value whose type includes `none` is written only into a target whose type
 includes `none`.
 ```

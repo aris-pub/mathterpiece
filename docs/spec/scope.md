@@ -44,7 +44,7 @@ and the names of each one:
 | a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and a choreo | the body | the parameters |
 | `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each value after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
-| a namespace or a palette | the items after each member | its members |
+| a record or a palette | the items after each member | its members |
 | a formula | the items of the formula | its variables, from the item after each, and its terms ({numref}`formula-terms`) |
 | the move of an `on-drag` | the move | `pointer` |
 
@@ -58,7 +58,7 @@ So the shapes of the scene, at any depth in its groups, are names of the file sc
 {term}`listener` and a readout name them. A copy that a `foreach` in the scene makes, such as
 `#'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
 parameter is used only in its body, and so a default of a parameter never reads another parameter.
-A member of a namespace, a palette or a formula is used by its bare name only inside that
+A member of a record, a palette or a formula is used by its bare name only inside that
 declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
 a member of a motif's body is used from outside the body only through an instance, as `d1.face`.
 
@@ -115,8 +115,8 @@ comes from the standard library: (import rand rand-int)", since the random funct
 `roll-dice` are not built in ({numref}`primitive-form`).
 
 So an inner name hides an outer name of the same text inside its scope: a parameter, a `let`
-name and a `foreach` name hide a name of the file scope, and a member of a namespace hides a
-top-level name inside the namespace. A declaration in the file scope, and a name that an import
+name and a `foreach` name hide a name of the file scope, and a member of a record hides a
+top-level name inside the record. A declaration in the file scope, and a name that an import
 gives, hide a built-in function or constant from that declaration or import on
 ({numref}`declaration-names`). The name parts of a name after its first are not looked up in any
 scope: `p.r` is `(. p r)` ({numref}`sugar-rewrites`),
@@ -178,9 +178,9 @@ The file scope of an imported file, and the names that an import gives, are defi
 ```{rule} declaration-names
 No declaration and no binding takes as its name a {term}`keyword` ({numref}`keywords`) or a
 {term}`built-in type`. This holds for every kind of declaration and binding: a variable, a shape, a
-function, a parameter, a name of a `let` or a `foreach`, a member of a namespace, a palette or a
+function, a parameter, a name of a `let` or a `foreach`, a member of a record, a palette or a
 formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`,
-`complex`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`,
+`complex`, `bool`, `string`, `color`, `font`, `point`, `transform`, `movement`, `animation`,
 `scene`, `func`, `rand-seed`, `list`, the shape types, and the
 interfaces `shape`, `positioned`, `sequence` and `palette`. Nor does it take the name of an
 {term}`operator`. A declaration or a binding may take the name of any other built-in function, or
@@ -189,7 +189,7 @@ of a built-in constant (`pi`, `tau` and `euler`): from that declaration or bindi
 ```
 
 So `(real if 1)` and `(circle line …)` are compile errors, and
-`(func max ((real a) (real b)) a)` and `(real pi 3)` are allowed. `scene`, `transition`,
+`(func max ((real a) (real b)) a)` and `(real pi 3)` are allowed. `scene`, `movement`,
 `animation` and `func` are both built-in types and keywords. `true`, `false` and `none` are values,
 never names ({numref}`name-characters`). The built-in functions and constants are found only by the
 second step of {numref}`name-lookup`. The names of the {term}`standard library` are not built-ins:

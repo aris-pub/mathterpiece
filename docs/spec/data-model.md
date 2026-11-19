@@ -2,11 +2,11 @@
 # Data model
 
 This page defines the things that the compiler builds from a source and that the runtime holds:
-values, variables, objects and namespaces. What the parser reads, {term}`literals <literal>`
+values, variables, objects and records. What the parser reads, {term}`literals <literal>`
 among it, is defined in {doc}`grammar`. This page specifies the language.
 
 <figure class="mtp-diagram" style="max-width: 35rem">
-<svg viewBox="0 0 560 392" role="img" aria-labelledby="mtp-dm-title"><title id="mtp-dm-title">Three columns. In the source: a literal and other expressions give values; declarations and some expressions give objects. A value never changes and has no identity. An object has an identity and attributes, each like a variable. A variable holds one value or one object, and is free, bound or const.</title><defs><marker id="mtp-dm-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mtp-d-headpath" d="M0 0 L10 5 L0 10 z"/></marker></defs><text class="mtp-d-label" x="90" y="20" text-anchor="middle">in the source</text><text class="mtp-d-label" x="280" y="20" text-anchor="middle">what it gives</text><text class="mtp-d-label" x="470" y="20" text-anchor="middle">what holds it</text><rect class="mtp-d-file" x="15" y="34" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="58" text-anchor="middle">literal</text><text class="mtp-d-code" x="90" y="80" text-anchor="middle">3  'hi'  [1 2]</text><line class="mtp-d-arrow" x1="165" y1="69" x2="213" y2="69" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="118" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="142" text-anchor="middle">expressions</text><text class="mtp-d-code" x="90" y="164" text-anchor="middle">(+ 1 2)  (sqrt 2)</text><line class="mtp-d-arrow" x1="165" y1="153" x2="213" y2="153" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="222" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="246" text-anchor="middle">declarations</text><text class="mtp-d-code" x="90" y="268" text-anchor="middle">(circle c …)</text><text class="mtp-d-code" x="90" y="284" text-anchor="middle">(func f …)</text><line class="mtp-d-arrow" x1="165" y1="257" x2="213" y2="257" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="306" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="330" text-anchor="middle">expressions</text><text class="mtp-d-code" x="90" y="352" text-anchor="middle">(if f a b)  g[0]</text><text class="mtp-d-code" x="90" y="368" text-anchor="middle">(fn …)  (ns …)</text><line class="mtp-d-arrow" x1="165" y1="341" x2="213" y2="341" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-part" x="215" y="34" width="130" height="154" rx="6"/><text class="mtp-d-name" x="280" y="96" text-anchor="middle">value</text><text class="mtp-d-sub" x="280" y="118" text-anchor="middle">never changes,</text><text class="mtp-d-sub" x="280" y="134" text-anchor="middle">has no identity</text><rect class="mtp-d-part" x="215" y="222" width="130" height="154" rx="6"/><text class="mtp-d-name" x="280" y="276" text-anchor="middle">object</text><text class="mtp-d-sub" x="280" y="298" text-anchor="middle">has an identity</text><text class="mtp-d-sub" x="280" y="314" text-anchor="middle">and attributes, each</text><text class="mtp-d-sub" x="280" y="330" text-anchor="middle">like a variable</text><rect class="mtp-d-part" x="395" y="160" width="150" height="90" rx="6"/><text class="mtp-d-name" x="470" y="184" text-anchor="middle">variable</text><text class="mtp-d-code" x="470" y="206" text-anchor="middle">(real a 1)</text><text class="mtp-d-sub" x="470" y="226" text-anchor="middle">free, bound or const</text><line class="mtp-d-arrow" x1="395" y1="182" x2="347" y2="140" marker-end="url(#mtp-dm-head)"/><line class="mtp-d-arrow" x1="395" y1="228" x2="347" y2="270" marker-end="url(#mtp-dm-head)"/><text class="mtp-d-label" x="470" y="150" text-anchor="middle">holds one</text></svg>
+<svg viewBox="0 0 560 392" role="img" aria-labelledby="mtp-dm-title"><title id="mtp-dm-title">Three columns. In the source: a literal and other expressions give values; declarations and some expressions give objects. A value never changes and has no identity. An object has an identity and attributes, each like a variable. A variable holds one value or one object, and is free, bound or const.</title><defs><marker id="mtp-dm-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mtp-d-headpath" d="M0 0 L10 5 L0 10 z"/></marker></defs><text class="mtp-d-label" x="90" y="20" text-anchor="middle">in the source</text><text class="mtp-d-label" x="280" y="20" text-anchor="middle">what it gives</text><text class="mtp-d-label" x="470" y="20" text-anchor="middle">what holds it</text><rect class="mtp-d-file" x="15" y="34" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="58" text-anchor="middle">literal</text><text class="mtp-d-code" x="90" y="80" text-anchor="middle">3  'hi'  [1 2]</text><line class="mtp-d-arrow" x1="165" y1="69" x2="213" y2="69" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="118" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="142" text-anchor="middle">expressions</text><text class="mtp-d-code" x="90" y="164" text-anchor="middle">(+ 1 2)  (sqrt 2)</text><line class="mtp-d-arrow" x1="165" y1="153" x2="213" y2="153" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="222" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="246" text-anchor="middle">declarations</text><text class="mtp-d-code" x="90" y="268" text-anchor="middle">(circle c …)</text><text class="mtp-d-code" x="90" y="284" text-anchor="middle">(func f …)</text><line class="mtp-d-arrow" x1="165" y1="257" x2="213" y2="257" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="306" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="330" text-anchor="middle">expressions</text><text class="mtp-d-code" x="90" y="352" text-anchor="middle">(if f a b)  g[0]</text><text class="mtp-d-code" x="90" y="368" text-anchor="middle">(fn …)  (rec …)</text><line class="mtp-d-arrow" x1="165" y1="341" x2="213" y2="341" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-part" x="215" y="34" width="130" height="154" rx="6"/><text class="mtp-d-name" x="280" y="96" text-anchor="middle">value</text><text class="mtp-d-sub" x="280" y="118" text-anchor="middle">never changes,</text><text class="mtp-d-sub" x="280" y="134" text-anchor="middle">has no identity</text><rect class="mtp-d-part" x="215" y="222" width="130" height="154" rx="6"/><text class="mtp-d-name" x="280" y="276" text-anchor="middle">object</text><text class="mtp-d-sub" x="280" y="298" text-anchor="middle">has an identity</text><text class="mtp-d-sub" x="280" y="314" text-anchor="middle">and attributes, each</text><text class="mtp-d-sub" x="280" y="330" text-anchor="middle">like a variable</text><rect class="mtp-d-part" x="395" y="160" width="150" height="90" rx="6"/><text class="mtp-d-name" x="470" y="184" text-anchor="middle">variable</text><text class="mtp-d-code" x="470" y="206" text-anchor="middle">(real a 1)</text><text class="mtp-d-sub" x="470" y="226" text-anchor="middle">free, bound or const</text><line class="mtp-d-arrow" x1="395" y1="182" x2="347" y2="140" marker-end="url(#mtp-dm-head)"/><line class="mtp-d-arrow" x1="395" y1="228" x2="347" y2="270" marker-end="url(#mtp-dm-head)"/><text class="mtp-d-label" x="470" y="150" text-anchor="middle">holds one</text></svg>
 </figure>
 
 ## Values
@@ -48,7 +48,7 @@ For example:
 
 | Declared | What the variable is |
 |---|---|
-| `(real a 1)` | free: it holds 1 when the page opens, and a slider or a transition may write it |
+| `(real a 1)` | free: it holds 1 when the page opens, and a slider or a movement may write it |
 | `(real b (* 2 a))` | bound: it always holds twice the value of `a`, and follows `a` when `a` changes |
 | `(real c 3 (const))` | const: it holds 3, and a slider that writes it is a compile error |
 | `(real_ 1)` | a compile error: a variable has a name |
@@ -80,11 +80,17 @@ do with it beyond holding its attributes, and it depends on the kind of object:
 | the scene and its shapes | drawn |
 | formulas and their terms | typeset |
 | views | laid out on the page |
-| controls and listeners | trigger transitions, when the reader acts |
-| transitions | executed: the runtime writes their targets over time |
+| controls and listeners | trigger movements, when the reader acts |
+| movements | executed: the runtime writes their targets over time |
 | functions | called |
-| namespaces | none |
+| records | none |
 ```
+
+:::{admonition} Code differs
+:class: note
+The compiler calls a movement a transition, declared with `(transition t TARGET …)`. Bead mtp-kir3
+renames it.
+:::
 
 :::{admonition} Code differs
 :class: note
@@ -93,11 +99,11 @@ Only shapes have the attribute `name` (`c.name` is `'c'`): `f.name` of a functio
 :::
 
 <figure class="mtp-diagram">
-<svg viewBox="0 0 480 410" role="img" aria-labelledby="mtp-dm2-title"><title id="mtp-dm2-title">The kinds of object: the scene, which holds shapes and groups, some of a motif or variant type, and is drawn; formulas, which hold terms and are typeset; transitions, which are moves, animations, or of a choreo type, and are executed when triggered; namespaces, which have only attributes; components, which are views, controls and listeners on the page; and functions, which are called.</title><rect class="mtp-d-part" x="15" y="16" width="250" height="156" rx="6"/><text class="mtp-d-name" x="140" y="38" text-anchor="middle">the scene</text><rect class="mtp-d-file" x="30" y="50" width="220" height="84" rx="6"/><text class="mtp-d-name" x="140" y="72" text-anchor="middle">shapes and groups</text><rect class="mtp-d-part" x="45" y="86" width="190" height="36" rx="6"/><text class="mtp-d-sub" x="140" y="109" text-anchor="middle">of a motif or variant type</text><text class="mtp-d-sub" x="140" y="156" text-anchor="middle">drawn</text><rect class="mtp-d-part" x="280" y="16" width="185" height="156" rx="6"/><text class="mtp-d-name" x="372" y="38" text-anchor="middle">a formula</text><rect class="mtp-d-file" x="300" y="50" width="145" height="44" rx="6"/><text class="mtp-d-name" x="372" y="77" text-anchor="middle">terms</text><text class="mtp-d-sub" x="372" y="156" text-anchor="middle">typeset</text><rect class="mtp-d-part" x="15" y="188" width="250" height="112" rx="6"/><text class="mtp-d-name" x="140" y="210" text-anchor="middle">transitions</text><rect class="mtp-d-file" x="30" y="222" width="220" height="48" rx="6"/><text class="mtp-d-sub" x="140" y="242" text-anchor="middle">moves, animations,</text><text class="mtp-d-sub" x="140" y="259" text-anchor="middle">or of a choreo type</text><text class="mtp-d-sub" x="140" y="288" text-anchor="middle">executed when triggered</text><rect class="mtp-d-part" x="280" y="188" width="185" height="112" rx="6"/><text class="mtp-d-name" x="372" y="210" text-anchor="middle">namespaces</text><text class="mtp-d-sub" x="372" y="240" text-anchor="middle">attributes only</text><rect class="mtp-d-part" x="15" y="316" width="300" height="80" rx="6"/><text class="mtp-d-name" x="165" y="340" text-anchor="middle">components</text><text class="mtp-d-sub" x="165" y="362" text-anchor="middle">views, controls and listeners, on the page:</text><text class="mtp-d-sub" x="165" y="380" text-anchor="middle">controls and listeners trigger transitions</text><rect class="mtp-d-part" x="330" y="316" width="135" height="80" rx="6"/><text class="mtp-d-name" x="397" y="340" text-anchor="middle">functions</text><text class="mtp-d-sub" x="397" y="366" text-anchor="middle">called</text></svg>
+<svg viewBox="0 0 480 410" role="img" aria-labelledby="mtp-dm2-title"><title id="mtp-dm2-title">The kinds of object: the scene, which holds shapes and groups, some of a motif or variant type, and is drawn; formulas, which hold terms and are typeset; movements, which are moves, animations, or of a choreo type, and are executed when triggered; records, which have only attributes; components, which are views, controls and listeners on the page; and functions, which are called.</title><rect class="mtp-d-part" x="15" y="16" width="250" height="156" rx="6"/><text class="mtp-d-name" x="140" y="38" text-anchor="middle">the scene</text><rect class="mtp-d-file" x="30" y="50" width="220" height="84" rx="6"/><text class="mtp-d-name" x="140" y="72" text-anchor="middle">shapes and groups</text><rect class="mtp-d-part" x="45" y="86" width="190" height="36" rx="6"/><text class="mtp-d-sub" x="140" y="109" text-anchor="middle">of a motif or variant type</text><text class="mtp-d-sub" x="140" y="156" text-anchor="middle">drawn</text><rect class="mtp-d-part" x="280" y="16" width="185" height="156" rx="6"/><text class="mtp-d-name" x="372" y="38" text-anchor="middle">a formula</text><rect class="mtp-d-file" x="300" y="50" width="145" height="44" rx="6"/><text class="mtp-d-name" x="372" y="77" text-anchor="middle">terms</text><text class="mtp-d-sub" x="372" y="156" text-anchor="middle">typeset</text><rect class="mtp-d-part" x="15" y="188" width="250" height="112" rx="6"/><text class="mtp-d-name" x="140" y="210" text-anchor="middle">movements</text><rect class="mtp-d-file" x="30" y="222" width="220" height="48" rx="6"/><text class="mtp-d-sub" x="140" y="242" text-anchor="middle">moves, animations,</text><text class="mtp-d-sub" x="140" y="259" text-anchor="middle">or of a choreo type</text><text class="mtp-d-sub" x="140" y="288" text-anchor="middle">executed when triggered</text><rect class="mtp-d-part" x="280" y="188" width="185" height="112" rx="6"/><text class="mtp-d-name" x="372" y="210" text-anchor="middle">records</text><text class="mtp-d-sub" x="372" y="240" text-anchor="middle">attributes only</text><rect class="mtp-d-part" x="15" y="316" width="300" height="80" rx="6"/><text class="mtp-d-name" x="165" y="340" text-anchor="middle">components</text><text class="mtp-d-sub" x="165" y="362" text-anchor="middle">views, controls and listeners, on the page:</text><text class="mtp-d-sub" x="165" y="380" text-anchor="middle">controls and listeners trigger movements</text><rect class="mtp-d-part" x="330" y="316" width="135" height="80" rx="6"/><text class="mtp-d-name" x="397" y="340" text-anchor="middle">functions</text><text class="mtp-d-sub" x="397" y="366" text-anchor="middle">called</text></svg>
 </figure>
 
-The objects are the scene and its shapes, the transitions, the formulas and
-their terms, the components (views, controls and listeners), the functions and the namespaces. A shape whose
+The objects are the scene and its shapes, the movements, the formulas and
+their terms, the components (views, controls and listeners), the functions and the records. A shape whose
 type is a motif or a variant is a shape like any other: only its type differs. For example, in
 
 ```mtp
@@ -148,16 +154,16 @@ The compiler treats functions as values: no variable may hold one (bead mtp-wppk
 on two functions compiles, with no result given by the spec.
 :::
 
-## Namespaces
+## Records
 
-```{rule} namespaces
-A namespace is an object that consists only of the attributes that it is declared with.
-`(namespace n …)` declares a namespace, and `(ns …)` gives a new namespace each time that it is
-evaluated. Every attribute of a namespace that `(ns …)` gives is bound or const.
+```{rule} records
+A record is an object that consists only of the attributes that it is declared with.
+`(record n …)` declares a record, and `(rec …)` gives a new record each time that it is
+evaluated. Every attribute of a record that `(rec …)` gives is bound or const.
 ```
 
-A font is a namespace: `(font serif (family 'serif') (style 'normal') (weight 400) (size 12))`
-declares a namespace with the four attributes `family`, `style`, `weight` and `size`. A text applies
+A font is a record: `(font serif (family 'serif') (style 'normal') (weight 400) (size 12))`
+declares a record with the four attributes `family`, `style`, `weight` and `size`. A text applies
 it with `(face serif)`, and writing `serif.size` changes the size of every text that applies
 `serif`.
 
@@ -167,18 +173,19 @@ The compiler treats a font as a value: its parts can be read, as `f.size`, but n
 text applies one with `(font f)`. Bead mtp-1vyc makes fonts namespaces.
 :::
 
-For example, `(namespace style (real width 2 (>= 0) (<= 5)) (color ink 'navy'))` is an object with
+For example, `(record style (real width 2 (>= 0) (<= 5)) (color ink 'navy'))` is an object with
 the two attributes `width` and `ink`, read as `style.width` and `style.ink`. Like any attribute,
 `style.width` may be written: `(slider s (move style.width (from 0) (to 5)))` writes it. Unlike a
-shape, a namespace is not drawn, and the compiler does nothing with it beyond holding its
+shape, a record is not drawn, and the compiler does nothing with it beyond holding its
 attributes.
 
-`(ns …)` is to `(namespace …)` as `(fn …)` is to `(func …)`. Since every attribute of a namespace
-that `(ns …)` gives is bound or const, no writer writes it, and a new namespace made each time that
-`(ns …)` is evaluated loses nothing. So `(var s (ns (real height k)))` holds a namespace whose
-`height` follows `k`, and `(var s (ns (real width 1)))` is a compile error, since `width` is free.
+`(rec …)` is to `(record …)` as `(fn …)` is to `(func …)`. Since every attribute of a record
+that `(rec …)` gives is bound or const, no writer writes it, and a new record made each time that
+`(rec …)` is evaluated loses nothing. So `(var s (rec (real height k)))` holds a record whose
+`height` follows `k`, and `(var s (rec (real width 1)))` is a compile error, since `width` is free.
 
 :::{admonition} Code differs
 :class: note
-No expression gives a namespace. Bead mtp-h732 adds `(ns …)`.
+The compiler calls a record a namespace, declared with `(namespace n …)`, and no expression gives
+one. Bead mtp-h732 renames it and adds `(rec …)`.
 :::

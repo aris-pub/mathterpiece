@@ -22,7 +22,7 @@ These are the types of mtp:
 |---|---|---|
 | `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
 | `unit` | `unit` | the same type as `(real (>= 0) (<= 1))`: the reals from 0 to 1 |
-| `ease` | `ease` | the same type as `func[unit real]`: the eases of a transition ({doc}`time`) |
+| `ease` | `ease` | the same type as `func[unit real]`: the eases of a movement ({doc}`time`) |
 | `curve` | `curve` | the same type as `func[real point]`: the curves of the plane, such as the one that `parametric` draws |
 | `bool` | `bool` | `true` and `false` |
 | `string` | `string` | the {term}`strings <string>`, TeX strings among them |
@@ -31,7 +31,7 @@ These are the types of mtp:
 | `point` | `point` | the pairs of {term}`reals <real>`, `x` and `y` |
 | a {term}`list` type | `list[T]` | the lists of any length whose items are of type T |
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
-| `transition`, `animation` | as named | the transitions and the animations ({doc}`time`) |
+| `movement`, `animation` | as named | the movements and the animations ({doc}`time`) |
 | `none` | `none` | the value `none` alone |
 | a {term}`broadened type` | `T\|none` | the values of T, and `none` |
 | a {term}`refined type` | `(T C…)` | the values of T that meet every constraint C ({numref}`constraints`) |
@@ -39,7 +39,7 @@ These are the types of mtp:
 | a motif type | the {term}`name` of the motif | its instances ({numref}`motif-and-variant-types`) |
 | a variant type | the name of the variant | its instances ({numref}`motif-and-variant-types`) |
 | `scene` | `scene` | the scene |
-| `namespace`, `formula`, `term` | never written | the namespaces, palettes included, the formulas and the terms |
+| `record`, `formula`, `term` | never written | the records, palettes included, the formulas and the terms |
 | a {term}`component` type | never written | the components of one kind: `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
 | an {term}`interface` | `shape`, `positioned`, `sequence`, `sequence[T]`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
 | `rand-seed` | `rand-seed` | the values of `int` ({numref}`seed-variable`) |
@@ -345,14 +345,14 @@ satisfies an interface as follows:
 | `positioned` | `point`, and every shape type, motif type and variant type but `group` |
 | `sequence` | every list type, `point` and `group` |
 | `sequence[T]` | `list[S]` when S fits T, `point` when `real` fits T, and `group`, when the common type of the members of the group ({numref}`common-type`) fits T |
-| `palette` | every namespace whose members are all colors, whatever their names and number. A palette made by `(palette …)` is one ({numref}`sugar-rewrites`) |
-| a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. For a namespace, the attributes are its members, and each namespace that a value may be satisfies the interface on its own |
+| `palette` | every record whose members are all colors, whatever their names and number. A palette made by `(palette …)` is one ({numref}`sugar-rewrites`) |
+| a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. For a record, the attributes are its members, and each record that a value may be satisfies the interface on its own |
 
 A value whose type is an interface is read only for what the interface gives: the attributes of
 the frame for `shape`, `x`, `y` and `pos` for `positioned`, its items by position and its
 `length` for a `sequence`, and the attributes Ai for a declared interface. A member M of a value
 whose type is `palette` is read by its name and has the type `color|none`: it is `none` when the
-namespace has no member M.
+record has no member M.
 ```
 
 :::{admonition} Code differs
@@ -364,7 +364,7 @@ The compiler has no interface `palette`: `(func f ((palette q)) 1)` is the error
 So `(func label-at ((positioned o) (string s)) …)` may be given points and shapes alike, and
 `(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not every shape has an `r`. A
 constraint of a declared interface is met only when the type of the attribute implies it: a
-namespace whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`. So
+record whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`. So
 `(inky look day)` and `(shape sel c)` are compile errors: a variable has a type, and an interface
 only says what a value must have.
 
@@ -435,7 +435,7 @@ The values of a function type are the functions declared with `func`, the functi
 `fn`, the colormaps, the built-in functions, and the functions that a built-in function gives, such
 as the ease that `(steps N)` gives. A type that is a function type, or holds one, as
 `list[func[real real]]` does, is the type only of a parameter, a `let` name, an expression, and an
-attribute that {doc}`world-model` gives a function type, such as the `ease` of a transition. A
+attribute that {doc}`world-model` gives a function type, such as the `ease` of a movement. A
 variable and the declared result of a function never have such a type, and a declaration that
 gives them one is a compile error.
 ```
