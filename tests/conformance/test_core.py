@@ -38,6 +38,7 @@ CHOREO_ARGUMENT = xfail("mtp-08wd.5", "an argument of a choreo must be known whe
 MEMBER_BY_NAME = xfail("mtp-ydd4.7.19", "a member of a namespace is read as a key, not by its name")
 ANIMATION_STEP = xfail("mtp-ydd4.7.26", "an animation's body does not accept the head animation")
 POINTER_EVENTS = xfail("mtp-327t", "pointer-events on a container is a default for its members")
+PARAMETRIC = xfail("mtp-of7a", "parametric is read as (parametric N (for T LO HI) E ...)")
 RANGE = xfail("mtp-z8i1", "range accepts (range n) and needs a gap or a num")
 BOUNDED_LIST = xfail("mtp-ydd4.7.37", "a foreach over a list whose length is not known is an error")
 STEP_EASE = xfail("mtp-ydd4.7.40", "step and step-ease are read only as the value of an ease")
@@ -186,6 +187,13 @@ class TestSugarRewrites:
     def test_set_takes_a_target_and_a_value(self):
         compile_error("(real k 0) (button b (animation (set k)))")
         compile_error("(real k 0) (button b (animation (set k 1 2)))")
+
+    @PARAMETRIC
+    def test_parametric(self):
+        same_meaning(
+            "(scene s (parametric p (fn t [t (* t t)]) (domain -2 2) (samples 5)))",
+            "(scene s (polyline p (points (map (range -2 2 (num 5)) (fn t [t (* t t)])))))",
+        )
 
     @PALETTE_TYPE
     def test_palette(self):
