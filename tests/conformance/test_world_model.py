@@ -26,6 +26,12 @@ class TestContainerDefaults:
     def test_a_default_that_no_container_gives(self):
         compile_error("(scene s (group g (defaults (r 2)) (circle c)))")
 
+    def test_pointer_events_in_defaults(self):
+        same_meaning(
+            "(scene s (group g (defaults (pointer-events false)) (circle c (r 1))))",
+            "(scene s (group g (circle c (r 1) (pointer-events false))))",
+        )
+
 
 @rule("formula-defaults")
 class TestFormulaDefaults:
