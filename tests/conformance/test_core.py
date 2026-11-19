@@ -185,7 +185,7 @@ class TestSugarRewrites:
     @PARAMETRIC
     def test_parametric(self):
         same_meaning(
-            "(scene s (parametric p (fn t [t (* t t)]) (range -2 2 (num 5))))",
+            "(scene s (parametric p (range -2 2 (num 5)) (fn t [t (* t t)])))",
             "(scene s (polyline p (points (map (range -2 2 (num 5)) (fn t [t (* t t)])))))",
         )
 

@@ -176,3 +176,12 @@ table.form-parts th, table.form-parts td { min-width: 0; overflow-wrap: anywhere
    that the lexer leaves plain take the text's color, not the theme's purple for inline code. */
 code.mtp-inline { color: var(--pst-color-text-base); }
 code.mtp-inline.highlight { background-color: var(--pst-color-surface); }
+
+/* The theme gives the left sidebar a quarter of the page and caps the article at 60em, which
+   leaves the tables of the spec too narrow. */
+@media (min-width: 960px) {
+  .bd-page-width { max-width: 100rem; }
+  .bd-sidebar-primary { --pst-sidebar-primary-width: 14rem; }
+  .bd-sidebar-secondary { --pst-sidebar-secondary: 14rem; }
+  .bd-main .bd-content .bd-article-container { max-width: none; }
+}
