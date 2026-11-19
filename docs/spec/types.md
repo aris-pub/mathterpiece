@@ -25,6 +25,12 @@ So `bool` is the set of the values `true` and `false`, `(real (>= 0))` is the se
 are not below 0, `real|none` is the set of the reals with `none` added, and `circle` is the set of
 the circles. A type that {term}`fits <fit>` another is a subset of it.
 
+A source makes new types from named ones in three ways, which differ only in how they are written:
+a union, `point|circle`, joins sets; a constraint, `(real (>= 0))`, keeps the things of a set that
+meet it; and an interface, `(interface inky (color ink))`, is the set of the things that have the
+attributes that it lists. `list[T]` and `func[P… R]` name the sets of the lists and the functions
+whose items, parameters and result are of the types in the brackets.
+
 ## The types
 
 ```{rule} the-types
