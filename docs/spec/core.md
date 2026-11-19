@@ -75,7 +75,6 @@ any number of such texts.
 | `(jump V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N (for T LO HI) E ARGS…)` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ARGS…)`: the polyline through `S` points of the curve `E`, for `T` from `LO` to `HI`. `S` is given by the `(samples S)` of `ARGS…`, which the polyline does not get | `T` is a name |
-| `(pointer-events B)`, on a group, a row, a column or an instance | the same container, with `(pointer-events B)` moved into its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `pointer-events` |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
@@ -147,13 +146,12 @@ is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and 
 Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
 of `M`'s container: `(circle b (like a))` outside the group of `a` has only what `a` was written
 with. The copy follows what `M`'s items read: if the radius of `M` is `(* 2 k)`, so is the radius
-of the copy. The defaults of an instance, and its `pointer-events` and its `clip`, are items of it,
+of the copy. The defaults of an instance, `pointer-events` among them, and its `clip` are items of it,
 so `(like M)` copies them.
 
 :::{admonition} Code differs
 :class: note
-`(like M)` on an instance copies neither its `pointer-events` (compiler.py:4749, 4759-4762) nor its
-`clip` (mtp-ydd4.7.20).
+`(like M)` on an instance does not copy its `clip` (mtp-ydd4.7.20).
 :::
 
 ### Dragging a group
@@ -417,7 +415,6 @@ mtp-ydd4.7.59.
 | `defaults` on a group, a row or a column | core | what a container gives its members | {numref}`container-defaults` |
 | `clip` | core | a shape that the members are drawn inside | {doc}`world-model` |
 | `fixed-size` | core | a group whose members are measured in screen pixels | {doc}`world-model` |
-| `pointer-events` on a group, a row or a column | syntactic sugar | a default for the members | {numref}`sugar-rewrites` |
 | `gap`, `align` | core | the spacing and alignment of a row or a column | {doc}`world-model` |
 
 ### Motifs and variants
@@ -432,7 +429,6 @@ mtp-ydd4.7.59.
 | `pos` on an instance | syntactic sugar | as on a shape | {numref}`sugar-rewrites` |
 | `clip` on an instance | core | as on a group | {doc}`world-model` |
 | `defaults` on an instance | core | what the instance gives the members that its motif makes | {doc}`world-model` |
-| `pointer-events` on an instance | syntactic sugar | a default for the members | {numref}`sugar-rewrites` |
 | `like` on an instance or a variant instance | syntactic sugar | copies another instance's items | {numref}`like-copies` |
 
 The rules about a declaration that reads itself or its container, such as a default that reads
@@ -645,6 +641,13 @@ their place. They are not forms of the language.
 | `dash-offset` | as an item | write `(dash [4 2] 1)` |
 | `move` | in a canvas | a canvas takes no move |
 | `term` | at the top level | a term is given inside its formula |
+| `pointer-events` | on a group, a row, a column or an instance | write `(defaults (pointer-events B))` |
+
+:::{admonition} Code differs
+:class: note
+The compiler accepts `(pointer-events B)` on a group, a row, a column or an instance as a default
+for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a compile error.
+:::
 
 (core-summary)=
 ## Summary
@@ -658,7 +661,6 @@ their place. They are not forms of the language.
 | `colormap` as a type | syntactic sugar | {numref}`sugar-rewrites` |
 | `palette`, `parametric` | syntactic sugar | {numref}`sugar-rewrites` |
 | `like` | syntactic sugar, or core with a `(name …)` | {numref}`like-copies`, {numref}`names-from-values` |
-| `pointer-events` on a container | syntactic sugar | {numref}`sugar-rewrites` |
 | `pos` | syntactic sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | syntactic sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | syntactic sugar | {numref}`sugar-rewrites` |

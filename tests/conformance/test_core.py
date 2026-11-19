@@ -28,7 +28,6 @@ def xfail(bead: str, why: str):
 
 
 LOCAL_PART = xfail("mtp-ydd4.7.5", "each part after the first of a name is read as an attribute")
-LIKE_INSTANCE = xfail("mtp-ydd4.7.20", "like on an instance copies neither pointer-events nor clip")
 WAIT = xfail("mtp-ydd4.7.21", "wait makes no transition object, while its rewrite does")
 PALETTE_TYPE = xfail("mtp-ydd4.7.22", "a palette has the type palette, not namespace")
 COND_ELSE = xfail("mtp-ydd4.7.46", "(cond (else V)) is marked const, while V is not")
@@ -38,6 +37,7 @@ POS_RANDOM = xfail(
 CHOREO_ARGUMENT = xfail("mtp-08wd.5", "an argument of a choreo must be known when compiling")
 MEMBER_BY_NAME = xfail("mtp-ydd4.7.19", "a member of a namespace is read as a key, not by its name")
 ANIMATION_STEP = xfail("mtp-ydd4.7.26", "an animation's body does not accept the head animation")
+POINTER_EVENTS = xfail("mtp-327t", "pointer-events on a container is a default for its members")
 RANGE = xfail("mtp-z8i1", "range accepts (range n) and needs a gap or a num")
 BOUNDED_LIST = xfail("mtp-ydd4.7.37", "a foreach over a list whose length is not known is an error")
 STEP_EASE = xfail("mtp-ydd4.7.40", "step and step-ease are read only as the value of an ease")
@@ -191,18 +191,6 @@ class TestSugarRewrites:
     def test_palette(self):
         same_meaning("(palette p (a 'red'))", "(namespace p (color a 'red'))")
 
-    def test_pointer_events_on_a_group(self):
-        same_meaning(
-            "(scene s (group g (pointer-events false) (circle c (r 1))))",
-            "(scene s (group g (defaults (pointer-events false)) (circle c (r 1))))",
-        )
-
-    def test_pointer_events_and_a_default_of_it(self):
-        compile_error(
-            "(scene s (group g (pointer-events false) (defaults (pointer-events true)) (circle c "
-            "(r 1))))"
-        )
-
     def test_pos_of_a_literal_list(self):
         same_meaning(
             "(scene s (circle c (pos [1 2]) (r 1)))", "(scene s (circle c (x 1) (y 2) (r 1)))"
@@ -355,12 +343,13 @@ class TestLikeCopies:
             "(duration 2))))",
         )
 
-    @LIKE_INSTANCE
-    def test_like_on_an_instance_copies_its_pointer_events(self):
+    def test_like_on_an_instance_copies_its_defaults(self):
         motif = "(motif m () (circle_ (r 1)))\n"
         same_meaning(
-            motif + "(scene s (m a (pointer-events false)) (m b (like a)))",
-            motif + "(scene s (m a (pointer-events false)) (m b (pointer-events false)))",
+            motif + "(scene s (m a (defaults (pointer-events false))) (m b (like a)))",
+            motif
+            + "(scene s (m a (defaults (pointer-events false))) "
+            + "(m b (defaults (pointer-events false))))",
         )
 
 
@@ -376,6 +365,11 @@ class TestInventory:
     @RANGE
     def test_range_of_one_argument_is_an_error(self):
         compile_error("(list[int] v (range 3))")
+
+    @POINTER_EVENTS
+    @pytest.mark.parametrize("head", ["group", "row", "column"])
+    def test_pointer_events_on_a_container_is_an_error(self, head):
+        compile_error(f"(scene s ({head} g (pointer-events false) (circle c (r 1))))")
 
     def test_dash_has_an_offset_of_0_by_default(self):
         same_meaning(
