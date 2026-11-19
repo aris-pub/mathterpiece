@@ -155,8 +155,10 @@ is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and 
 
 Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
 of `M`'s container: `(circle b (like a))` outside the group of `a` has only what `a` was written
-with. The copy follows what `M`'s items read: if the radius of `M` is `(* 2 k)`, so is the radius
-of the copy. The defaults of an instance, `pointer-events` among them, and its `clip` are items of it,
+with. A copied item that is bound is bound to the same expression in the copy: if the radius
+of `M` is bound to `(* 2 k)`, so is the radius of the copy, and both follow `k`. A copied item that
+is free is a free attribute of the copy, of its own, with the same start: with `(r free@2)`
+in `M`, the copy's radius starts at 2, and a writer of `M`'s radius does not write it. The defaults of an instance, `pointer-events` among them, and its `clip` are items of it,
 so `(like M)` copies them.
 
 :::{admonition} Code differs
