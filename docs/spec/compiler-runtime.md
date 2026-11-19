@@ -74,8 +74,8 @@ The compiler turns a source into a .mtpc in six steps, in this order:
    {term}`constraint` and other invariant that the spec requires is proved ({doc}`types`,
    {doc}`well-formedness`). This step proves and does nothing else.
 4. **Expand.** Each `foreach` is written out as its copies, each motif instance as the
-   {term}`body` of its motif with the arguments of the instance, and each use of a choreo as the
-   body of its choreo with the arguments of the use. In the copies, the instances and the uses,
+   {term}`body` of its motif with the arguments of the instance, and each use of an animation as the
+   body of its animation with the arguments of the use. In the copies, the instances and the uses,
    the names built from values are replaced ({numref}`names-from-values`).
 5. **Fold.** Every expression known when compiling ({doc}`binding-time`) is replaced by its
    value.
@@ -84,20 +84,20 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 ```
 
 So a check that the parts of a syntactic sugar form are known when compiling is made in the prove step, and
-every core form other than `foreach`, a motif instance and a use of a choreo reaches the fold step
+every core form other than `foreach`, a motif instance and a use of an animation reaches the fold step
 as it is. Which forms are syntactic sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
 
 ```{rule} prove-bodies-once
 The prove step proves each body once: the body of a function with each parameter ranging over
 every value of its declared type, the body of a `foreach` with its variable ranging over every
-value of its range, and the body of a motif or a choreo with each parameter ranging over every
-value of its declared type and constraints. An imported motif or choreo is proved once, in the file
+value of its range, and the body of a motif or an animation with each parameter ranging over every
+value of its declared type and constraints. An imported motif or animation is proved once, in the file
 that declares it. The copies that a `foreach` makes, the instances of a motif and the uses of a
-choreo are not proved again. A motif or choreo body that is safe for only some values of a
+animation are not proved again. A motif or animation body that is safe for only some values of a
 parameter is a {term}`compile error`, unless the parameter declares a constraint that leaves out
 the other values. An expression is known in the prove step when it is known when compiling
 ({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or a
-choreo, the variable of that `foreach` or a parameter of that function, motif or choreo.
+animation, the variable of that `foreach` or a parameter of that function, motif or animation.
 ```
 
 So an error in such a body is about the body as written, and not about a copy or an instance. For

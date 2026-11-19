@@ -450,7 +450,7 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 :::
 
 ```{rule} parameters
-A parameter `(T N DEFAULT?)` of a function, a motif, a variant or a choreo has the type T, which is
+A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which is
 always written, with its constraints. Its default, when it has one, fits T and is known when
 compiling, or is a function declared with `func` or a built-in function. A call or an instance that
 leaves out a parameter gives it its default, and when it has none, the value of T

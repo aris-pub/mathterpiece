@@ -21,8 +21,8 @@ through other bound values.
 
 By {numref}`declare-before-use`, an expression reads only declarations and bindings that come
 before it, so a cycle could only come from a read inside the {term}`form` of the declaration or the
-binding that is read. The rules of today for such reads are below. A choreo uses only choreos
-declared before it, so no choreo uses itself ({numref}`sugar-rewrites`), and no file imports itself
+binding that is read. The rules of today for such reads are below. An animation uses only animations
+declared before it, so no animation uses itself ({numref}`sugar-rewrites`), and no file imports itself
 ({numref}`import-same-file`). A function may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
 {numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13).
 
@@ -256,7 +256,7 @@ When a value does not meet C:
 |---|---|
 | a value known in the prove step | a compile error |
 | the value of a bound variable or attribute | {numref}`prover-finds-ranges` |
-| an argument of a call, of an instance or of a use of a choreo | a compile error |
+| an argument of a call, of an instance or of a use of an animation | a compile error |
 | the body of a function declared with a result type R | when R includes `none`, a call gives `none` where the value of the body breaks C, and the write step writes the `check` for it. Otherwise a compile error |
 | an item of a list literal whose item type is expected | a compile error |
 | a value that a writer writes | no proof: {numref}`written-values` |

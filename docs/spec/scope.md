@@ -16,10 +16,10 @@ instead ({numref}`names-from-values`). This page specifies the language.
 
 ```{rule} declarations-and-bindings
 A declaration is a {term}`form` that creates a new thing that can be addressed: a variable, an
-object, a function, a type or a choreo. The thing exists whether or not the source gives it a
+object, a function, a type or an animation. The thing exists whether or not the source gives it a
 name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
 for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
-parameters of a function, a motif, a variant or a choreo, are bindings. The language makes two
+parameters of a function, a motif, a variant or an animation, are bindings. The language makes two
 bindings of its own: the move of a drag binds `pointer` to the position of the pointer, and the
 body of a motif binds `self` to the instance being built. An `import` creates
 nothing either: it gives names to the things that the declarations of another file create
@@ -41,7 +41,7 @@ and the names of each one:
 |---|---|---|
 | the {term}`file scope` of a source or of a {term}`file to import` | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
 | the {term}`body` of a motif | the motif's body | the parameters of the motif, `self`, and every shape and variable declared in the body, at any depth |
-| a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and a choreo | the body | the parameters |
+| a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and an animation | the body | the parameters |
 | `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each value after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
 | a record or a palette | the items after each member | its members |
@@ -138,7 +138,7 @@ In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `
 ```{rule} one-declaration-per-scope
 In one scope, a name is declared or bound at most once, whatever the kinds of the declarations
 and the bindings. A variable, a shape, a function, a type, an {term}`interface`, a motif, a
-variant, a choreo, a {term}`component` and every other declaration share the names of their
+variant, an animation, a {term}`component` and every other declaration share the names of their
 scope, and so do the bindings and the names that imports give. In the same way, the parameters of
 one form, the names of one `let` and the names of one `foreach` are all different. A second
 declaration, binding or import of a name in the same scope is a compile error.
