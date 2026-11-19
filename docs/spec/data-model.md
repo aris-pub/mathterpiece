@@ -14,7 +14,7 @@ among it, is defined in {doc}`grammar`. This page specifies the language.
 ```{rule} values
 A value is a piece of data that never changes and has no identity: two values that are equal are
 the same value. The values are the numbers, the bools, the strings, the colors, the points, the
-transforms, the lists and `none`. A value comes from a literal
+lists and `none`. A value comes from a literal
 ({numref}`literal-types`) or from another expression.
 ```
 
@@ -30,10 +30,8 @@ Each of these gives a value:
 | `[1 2 3]` | the list of 1, 2 and 3 | `list[int]` |
 | `[0 1]`, where a point is expected | the point at x 0 and y 1 | `point` |
 | `none` | `none` | `none` |
-| `(rotate 30)` | the rotation by 30 degrees | `transform` |
 
-Every value but a transform can be written as a literal. A transform comes from a call such as
-`(rotate 30)`. Since a value never
+Every value can be written as a literal. Since a value never
 changes, nothing writes a value: a writer writes a variable or an attribute, which then holds a
 different value. A slider that writes `(real a 1)` puts 2 into `a`, and 1 is still 1.
 
@@ -117,6 +115,20 @@ type is a motif or a variant is a shape like any other: only its type differs. F
 - The third circle has no name, and is an object all the same.
 - `a` is a variable, not an object.
 - `c.name` is the string `'c'`, and the `name` of the third circle is `none`.
+
+A shape's frame, which places it in its container, is not a thing of its own: it is a set of the
+shape's attributes with a joint meaning, `shift-x`, `shift-y`, `rotate`, `scale-x` and `scale-y`,
+as `pos` is the joint meaning of `x` and `y`. Each is free, bound or const on its own, so a slider
+may write `c.rotate` while `c.shift-x` follows an expression. There is no transform value. A frame
+is reused through a group, whose frame applies to every member, through `(defaults …)`, or through
+`(like …)`.
+
+:::{admonition} Code differs
+:class: note
+The compiler has a type `transform`, whose values come from calls such as `(rotate 30)`, and a
+shape gives its frame with `(translate …)` and `(transform …)`. Bead mtp-1vyc makes the frame a set
+of attributes.
+:::
 
 ## Functions
 

@@ -29,7 +29,6 @@ These are the types of mtp:
 | `color` | `color` | the colors ({doc}`world-model`) |
 | `font` | `font` | the fonts, each given by a family, a style, a weight and a size |
 | `point` | `point` | the pairs of {term}`reals <real>`, `x` and `y` |
-| `transform` | `transform` | the affine transforms of the plane |
 | a {term}`list` type | `list[T]` | the lists of any length whose items are of type T |
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
 | `transition`, `animation` | as named | the transitions and the animations ({doc}`time`) |
@@ -56,6 +55,8 @@ There are no other types.
   file.
 - `ease` is not a type, and the file of eases of the standard library is named ease.mtp. Bead
   mtp-6kta makes `ease` a built-in type and renames the file eases.mtp.
+- The compiler has the type `transform`, which the spec does not have: a shape's frame is a set of
+  its attributes ({doc}`data-model`). Bead mtp-1vyc.
 - The shape `bezier` is named `curve`, and `curve` is not a type. Bead mtp-qnws renames the shape
   and makes `curve` a built-in type.
 :::
@@ -201,7 +202,6 @@ has no default, hold the value of their type:
 | `color` | black, `'#000000'` |
 | `font` | the font of the defaults of a font ({doc}`world-model`) |
 | `point` | `[0 0]` |
-| `transform` | the identity |
 | `list[T]` | `[]`, and with `(length n)`, n items, each the value of T |
 | `T\|none` | `none` |
 | every other type | no value |
@@ -348,8 +348,8 @@ satisfies an interface as follows:
 | `palette` | every namespace whose members are all colors, whatever their names and number. A palette made by `(palette …)` is one ({numref}`sugar-rewrites`) |
 | a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. For a namespace, the attributes are its members, and each namespace that a value may be satisfies the interface on its own |
 
-A value whose type is an interface is read only for what the interface gives: `translate` and
-`transform` for `shape`, `x`, `y` and `pos` for `positioned`, its items by position and its
+A value whose type is an interface is read only for what the interface gives: the attributes of
+the frame for `shape`, `x`, `y` and `pos` for `positioned`, its items by position and its
 `length` for a `sequence`, and the attributes Ai for a declared interface. A member M of a value
 whose type is `palette` is read by its name and has the type `color|none`: it is `none` when the
 namespace has no member M.
