@@ -109,15 +109,16 @@ expression there is a {term}`compile error`:
 - `func[T1 … Tn R]` is a function type, with one type or more in its brackets: the last is the
   result type, and the others are the types of the parameters, in order.
 - No other name is followed by brackets in a type.
-- `T|none` is a broadened type. It has exactly two {term}`words <word>`, the second is `none`, and
-  the first is a name, or a name followed by brackets, that gives a type that is not broadened.
+- `T1|T2|…` is a union: the set of the things of each of the types `T1`, `T2` and so on. Each is a
+  name, or a name followed by brackets. `T|none` is the union of `T` and `none`, a broadened type.
 - `(T C…)` is a refined type: `T` is a type and each `C` is a constraint. `((T C…) D…)` is
   `(T C… D…)`, and `(T|none C…)` is `(T C…)|none`.
 - `none` is the type `none`. It is never written as the type of a declaration or of a parameter:
   it is the type only of an expression, and of a name that a `let` binds to such an expression.
 ```
 
-So `real|real`, `real|none|none` and `real[int]` are compile errors. A broadened type of a refined
+So `real[int]` is a compile error, `real|real` is `real`, and `point|circle` is the set of the
+points and the circles. A broadened type of a refined
 type is written as `(real|none (>= 0))`, since a broadened type holds no form.
 
 ## Fitting
@@ -359,9 +360,9 @@ The compiler checks the choices only of a value known when compiling (`compiler.
 ## Interfaces
 
 ```{rule} interfaces
-An interface is a type that no object has as its own type. An interface is the type of a parameter
-only: a variable is never declared with one, and such a declaration is a compile error. A type
-satisfies an interface as follows:
+An interface is a type given by attributes: the set of the things that have the attributes that it
+lists, of the types that it gives them. It is a type like any other, and may be the type of a
+variable, an attribute or a parameter. A type satisfies an interface as follows:
 
 | Interface | Satisfied by |
 |---|---|
@@ -388,9 +389,18 @@ The compiler has no interface `palette`: `(func f ((palette q)) 1)` is the error
 So `(func label-at ((positioned o) (string s)) …)` may be given points and shapes alike, and
 `(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not every shape has an `r`. A
 constraint of a declared interface is met only when the type of the attribute implies it: a
-record whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`. So
-`(inky look day)` and `(shape sel c)` are compile errors: a variable has a type, and an interface
-only says what a value must have.
+record whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`.
+
+The named types form a hierarchy: every thing is a value or an object, and every object is of one
+kind, a shape, a movement, a record and so on. An interface cuts across it: `positioned` holds
+points, which are values, and shapes, which are objects.
+
+:::{admonition} Code differs
+:class: note
+The compiler joins a type only with `none`: `(func f ((point|circle p)) 1)` is the error "a type can
+be broadened only by none for now". An interface is the type of a parameter only, and a variable
+declared with one is a compile error. Bead mtp-mo3r.
+:::
 
 ```{mtp-example}
 ; the parameter colors of the motif disc takes either namespace, since both fit inky

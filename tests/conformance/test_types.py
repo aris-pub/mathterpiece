@@ -7,6 +7,7 @@ from .support import accepted, compile_error, same_meaning
 rule = pytest.mark.rule
 UNIT = pytest.mark.xfail(strict=True, reason="mtp-vc5g: unit is declared in the file types")
 EASE = pytest.mark.xfail(strict=True, reason="mtp-6kta: ease is not a type")
+UNION = pytest.mark.xfail(strict=True, reason="mtp-mo3r: a type joins only with none")
 BEZIER = pytest.mark.xfail(strict=True, reason="mtp-qnws: the shape bezier is named curve")
 
 
@@ -50,3 +51,11 @@ class TestWhatATypeIs:
     def test_a_value_outside_the_set_is_an_error(self):
         compile_error("((real (>= 0)) k -1)")
         accepted("((real (>= 0)) k 1)")
+
+    @UNION
+    def test_a_union_of_two_types(self):
+        accepted("(func f ((point|circle p)) 1)")
+
+    @UNION
+    def test_a_variable_whose_type_is_an_interface(self):
+        accepted("(interface inky (color ink)) (namespace day (color ink 'navy')) (inky look day)")
