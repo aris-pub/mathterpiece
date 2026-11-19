@@ -89,7 +89,8 @@ do with it beyond holding its attributes, and it depends on the kind of object:
 :::{admonition} Code differs
 :class: note
 The compiler calls a movement a transition, declared with `(transition t TARGET …)`. Bead mtp-kir3
-renames it.
+renames it. `(in-order …)` and `(at-once …)` are only items inside an animation, and a button
+that plays one is an error. Bead mtp-p7vg.
 :::
 
 :::{admonition} Code differs
@@ -104,7 +105,10 @@ Only shapes have the attribute `name` (`c.name` is `'c'`): `f.name` of a functio
 
 The objects are the scene and its shapes, the movements, the formulas and
 their terms, the components (views, controls and listeners), the functions and the records. A shape whose
-type is a motif or a variant is a shape like any other: only its type differs. For example, in
+type is a motif or a variant is a shape like any other: only its type differs. An animation is a
+movement that holds movements, as a group is a shape that holds shapes, and `(in-order …)` and
+`(at-once …)` are animations whose members run one after another or together, as a row and a
+column are groups whose members are laid out in a line. For example, in
 
 ```mtp
 (real a 1 (>= 0) (<= 2))
