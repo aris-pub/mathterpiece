@@ -374,14 +374,14 @@ mtp-nk2w.
 
 ```{rule} seed-variable
 Every random value is computed from a seed: a free variable of the {term}`built-in type`
-`rand-seed`, which is any int. A random function follows the seed named in it with `(seed s)`. A
-`const` variable is not a seed.
+`rand-seed`, which is any int. A random function follows the seed named in it with `(seed s)`, and, with no `(seed …)`, the
+{term}`default seed` of the file that holds it ({numref}`default-seed`). A `const` variable is not a
+seed.
 ```
 
 The random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed` are
 {term}`primitives <primitive>`, which a source names through the file rand of the standard library
-({numref}`primitive-form`). A random function written without `(seed …)` follows the default seed
-of the file that holds it ({numref}`sugar-rewrites`).
+({numref}`primitive-form`).
 
 ```{rule} default-seed
 The default seed of a file is the only seed among the names of its {term}`file scope`
@@ -497,7 +497,7 @@ another one changes the site of the later one, and with it the value that the la
 
 A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`: `roll-dice` is a choreo
 of the file rand ({ref}`stdlib-rand`), and `(roll-dice)` rolls the default seed
-({numref}`rewrite-roll-dice`). By {numref}`random-values`, a roll changes the random values that
+({numref}`default-seed`). By {numref}`random-values`, a roll changes the random values that
 follow `s`, and no others.
 
 `rand`, `rand-int`, `pick` and `shuffle` inside the body of a function are a compile error. A free variable may start at a random value with `free@`,

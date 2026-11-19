@@ -40,6 +40,7 @@ POS_RANDOM = xfail(
 CHOREO_ARGUMENT = xfail("mtp-08wd.5", "an argument of a choreo must be known when compiling")
 MEMBER_BY_NAME = xfail("mtp-ydd4.7.19", "a member of a namespace is read as a key, not by its name")
 ANIMATION_STEP = xfail("mtp-ydd4.7.26", "an animation's body does not accept the head animation")
+RANGE = xfail("mtp-z8i1", "range accepts (range n) and needs a gap or a num")
 BOUNDED_LIST = xfail("mtp-ydd4.7.37", "a foreach over a list whose length is not known is an error")
 STEP_EASE = xfail("mtp-ydd4.7.40", "step and step-ease are read only as the value of an ease")
 
@@ -174,59 +175,6 @@ class TestSugarRewrites:
         a = accepted("(type pos real (>= 0)) (pos k 1)").get("k").value.type
         b = accepted("((real (>= 0)) k 1)").get("k").value.type
         assert (a.base, a.constraints) == (b.base, b.constraints)
-
-    def test_range_of_one_argument(self):
-        same_meaning(
-            "(int n 3 (>= 0) (<= 5)) (list[int] v (range n))",
-            "(int n 3 (>= 0) (<= 5)) (list[int] v (range 0 n (gap 1)))",
-        )
-
-    def test_a_random_function_follows_the_default_seed(self):
-        same_meaning(
-            RAND + "(rand-seed s 1) (real v (rand 0 1))",
-            RAND + "(rand-seed s 1) (real v (rand 0 1 (seed s)))",
-        )
-
-    def test_by_any_name_that_an_import_gives(self, tmp_path):
-        a = in_folder(tmp_path, {}, "(import rand) (real v (rand.rand 0 1))")
-        assert (a.id("rand.seed"), None) in a.get("v").value.deps
-        compile_error("(import rand) (rand-seed s 1) (real v (rand.rand 0 1))", tmp_path / "a.mtp")
-
-    def test_a_seed_of_a_declared_type(self):
-        m = accepted(RAND + "(type dice rand-seed) (dice s 1) (real v (rand 0 1))")
-        assert (m.id("s"), None) in m.get("v").value.deps
-
-    def test_with_no_seed_the_seed_of_rand(self, tmp_path):
-        same_meaning(
-            "(import rand rand) (real v (rand 0 1))",
-            "(import rand rand seed) (real v (rand 0 1 (seed seed)))",
-            tmp_path / "a.mtp",
-        )
-
-    def test_roll_dice_with_no_seed(self):
-        same_meaning(
-            RAND + "(rand-seed s 1) (button b (animation (roll-dice)))",
-            RAND + "(rand-seed s 1) (button b (animation (roll-dice s)))",
-        )
-
-    def test_roll_dice_with_no_seed_by_the_name_of_the_file(self, tmp_path):
-        same_meaning(
-            "(import rand) (button b (animation (rand.roll-dice)))",
-            "(import rand) (button b (animation (rand.roll-dice rand.seed)))",
-            tmp_path / "a.mtp",
-        )
-
-    def test_roll_dice_is_its_choreo(self):
-        same_meaning(
-            RAND + "(rand-seed s 1) (button b (animation (roll-dice s)))",
-            RAND + "(rand-seed s 1) (button b (animation (set s (next-seed s))))",
-        )
-
-    def test_roll_dice_needs_a_seed(self):
-        compile_error(RAND + "(real k 1) (button b (animation (roll-dice k)))")
-
-    def test_roll_dice_with_several_seeds(self):
-        compile_error(RAND + "(rand-seed s 1) (rand-seed t 2) (button b (animation (roll-dice)))")
 
     def test_set(self):
         same_meaning(
@@ -379,12 +327,6 @@ class TestSugarRewrites:
             "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'blue')) (term b (fill 'red')))",
         )
 
-    def test_dash_of_one_argument(self):
-        same_meaning(
-            "(scene s (line l (to [1 1]) (dash [4 2])))",
-            "(scene s (line l (to [1 1]) (dash [4 2] 0)))",
-        )
-
     def test_pos_of_a_literal_list(self):
         same_meaning(
             "(scene s (circle c (pos [1 2]) (r 1)))", "(scene s (circle c (x 1) (y 2) (r 1)))"
@@ -485,6 +427,26 @@ class TestSugarRewrites:
         )
 
 
+class TestInventory:
+    # The heads of "Inventory of heads" that have a default given in their row.
+    @RANGE
+    def test_range_has_a_gap_of_1_by_default(self):
+        same_meaning(
+            "(int n 3 (>= 0) (<= 5)) (list[int] v (range 0 n))",
+            "(int n 3 (>= 0) (<= 5)) (list[int] v (range 0 n (gap 1)))",
+        )
+
+    @RANGE
+    def test_range_of_one_argument_is_an_error(self):
+        compile_error("(list[int] v (range 3))")
+
+    def test_dash_has_an_offset_of_0_by_default(self):
+        same_meaning(
+            "(scene s (line l (to [1 1]) (dash [4 2])))",
+            "(scene s (line l (to [1 1]) (dash [4 2] 0)))",
+        )
+
+
 @rule("drag-group-translate")
 class TestDragGroupTranslate:
     def test_a_drag_of_a_group_is_compiled(self):
@@ -497,7 +459,7 @@ class TestForeachCount:
     def test_a_count_means_a_range(self):
         same_meaning(
             "(scene s (foreach k 3 (circle #'c-{k}' (r 1))))",
-            "(scene s (foreach k (range 3) (circle #'c-{k}' (r 1))))",
+            "(scene s (foreach k (range 0 3 (gap 1)) (circle #'c-{k}' (r 1))))",
         )
 
 
@@ -510,7 +472,10 @@ class TestForeachBoundedLength:
 
     @BOUNDED_LIST
     def test_a_range_known_only_while_drawing(self):
-        d = mtpc("(int n 3 (>= 0) (<= 5)) (scene s (foreach k (range n) (circle #'c-{k}' (r 1))))")
+        d = mtpc(
+            "(int n 3 (>= 0) (<= 5)) "
+            "(scene s (foreach k (range 0 n (gap 1)) (circle #'c-{k}' (r 1))))"
+        )
         assert {f"c-{k}" for k in range(5)} <= set(d["names"])
 
     def test_with_no_upper_bound_it_is_an_error(self):

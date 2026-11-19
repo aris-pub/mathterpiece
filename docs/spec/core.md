@@ -54,7 +54,6 @@ after a {term}`list` {term}`literal`, `[…][X]` ({numref}`parser-sugar`), and a
 other syntactic sugar form is in the table of the rule below.
 
 (rewrite-when)=
-(rewrite-roll-dice)=
 ```{rule} sugar-rewrites
 Each form in the first column of this table is syntactic sugar, and means exactly the core forms in the
 second column, when the conditions in the third column hold. A syntactic sugar form whose conditions do not
@@ -75,9 +74,6 @@ any number of such texts.
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | the type `colormap` | the type `func[real color]` | |
 | a type `N`, declared `(type N BASE C…)` | the type `(BASE C…)` | |
-| `(range X)` | `(range 0 X (gap 1))` | `X` is not a `(gap …)` or `(num …)` item |
-| `(R ARGS…)`, with `R` a name of the primitive `rand`, `rand-int`, `pick` or `shuffle` ({numref}`primitive-form`), and no `(seed …)` | `(R ARGS… (seed S))` | `S` is the {term}`default seed` of the file that holds the form ({numref}`default-seed`) |
-| `(D)`, with `D` a name of the choreo `roll-dice` of the file rand of the standard library ({ref}`stdlib-rand`) | `(D S)` | `S` as for a random function |
 | `(jump V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`import-file-holds`). A file imported several times, directly or through other files, is put in once |
 | `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
@@ -87,7 +83,6 @@ any number of such texts.
 | `(pointer-events B)`, on a group, a row, a column or an instance | the same container, with `(pointer-events B)` moved into its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `pointer-events` |
 | `(defaults (A V)…)`, on a group, a row or a column | the same container without it, with each `(A V)` added to each member, at any depth, that takes `A` from a container ({doc}`world-model`) and does not give `A`, the nearest container first. For a member that is an instance, `(A V)` is added to the instance's own `(defaults …)` | Each `A` is one that a container gives its members ({doc}`world-model`) |
 | `(defaults (A V)…)`, in a formula | the same formula without it, with each `(A V)` added to the `(term T …)` form of each term `T` of the formula that does not give `A`, and a form `(term T (A V)…)` added for each term that has none | The terms are those marked in the formula's string |
-| `(dash L)` | `(dash L 0)` | |
 | `(pos [X Y])` | `(x X) (y Y)` | |
 | `(pos P)` | `(x (. P 0)) (y (. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(pos free@[X Y])`, `(pos free@P)` | `(x free@X) (y free@Y)`, `(x free@(. P 0)) (y free@(. P 1))` | As for `(pos P)` |
@@ -100,30 +95,7 @@ any number of such texts.
 Of the declarations that an `(import …)` puts in, the {term}`.mtpc` holds only those that the source
 uses ({numref}`mtpc-imported-declarations`).
 
-A use of a choreo, `(C A1 … Ak)`, is core, as a motif instance is. It is written where a move, an
-animation or a step of an animation's body may be written, and k is at least the position of the
-last parameter with no default. In the expand step it becomes an `(animation …)` whose body is the
-body of the choreo, with each parameter replaced by the value of its argument, or by its default
-when the use gives no argument for it. So a use written as a step of an animation's body is one
-step ({numref}`animation-step`). The prover proves that each argument {term}`fits <fit>` the type
-of its parameter. An argument may be any expression that may be written in the body in the places
-where its parameter is written, so `(pulse (* 2 k))` is an error when the parameter is a duration,
-by {doc}`binding-time`, and is accepted when it is a `to`. A parameter stands for a value or a
-shape, never for a variable: a move in the body may move an attribute of a shape given as a
-parameter, such as `who.opacity`, and never the parameter itself. The one exception is a parameter
-of type `rand-seed`, which stands for a seed: its argument is the name of a seed, and in the body
-the parameter is replaced by that seed and not by its value, so a move of the parameter moves the
-seed. Any other argument for such a parameter is a compile error, "the argument for P is the name
-of a seed, as in (C dots)". So the choreo `roll-dice` of the file rand,
-`(choreo roll-dice ((rand-seed s)) (jump s (next-seed s)))`, moves the seed that its use names.
-
-:::{admonition} Code differs
-:class: note
-The compiler writes each use of a choreo out where it is written (compiler.py:1669-1729), proves
-the body again for each use, compiles a choreo whose parameters all have defaults once more without
-a use, and binds a parameter that is not a seed and is given a name to that name, so that a move of
-the parameter moves what it names (mtp-ydd4.7.56).
-:::
+A use of a choreo is core, as a motif instance is ({ref}`choreo-uses`).
 
 Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
 of `M`'s container: `(circle b (like a))` outside the group of `a` has only what `a` was written
@@ -197,7 +169,7 @@ fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code foll
 ### `foreach` over a count or a list whose length is known only while drawing
 
 ```{rule} foreach-count
-`(foreach N X ITEMS…)`, where `X` is an {term}`int`, means exactly `(foreach N (range X) ITEMS…)`.
+`(foreach N X ITEMS…)`, where `X` is an {term}`int`, means exactly `(foreach N (range 0 X) ITEMS…)`.
 ```
 
 So the two spellings mean the same, at all times, and every rule about the second applies to the
@@ -212,12 +184,12 @@ below the {term}`number limit`, the `foreach` is a compile error.
 ```
 
 So with `(int n 3 (>= 0) (<= 5))`, which a slider writes, `(foreach k n …)` and
-`(foreach k (range n) …)` both make 5 copies, and copies 3 and 4 do not exist while `n` is 3.
+`(foreach k (range 0 n) …)` both make 5 copies, and copies 3 and 4 do not exist while `n` is 3.
 
 :::{admonition} Code differs
 :class: note
 The compiler makes the bounded copies for a count (compiler.py:880-915), but rejects a list whose
-length is known only while drawing, `(range n)` included, with "the length of the list a foreach
+length is known only while drawing, `(range 0 n)` included, with "the length of the list a foreach
 goes through must be known when compiling" (compiler.py:930-934). Bead mtp-ydd4.7.37 makes the
 compiler follow the rule.
 :::
@@ -321,7 +293,7 @@ inventory.
 - **An `in-order` or an `at-once` of one item.** It is one step, while its item may be several: a
   play of `(animation (in-order (in-order a b)))` has one step, and a play of
   `(animation (in-order a b))` has two.
-- **`(map n f)` with an int `n`.** It means `(map (range n) f)`, and is told apart from
+- **`(map n f)` with an int `n`.** It means `(map (range 0 n) f)`, and is told apart from
   `(map xs f)` by the type of `n`. This is part of the typing of the built-in function `map`
   ({doc}`stdlib`).
 - **The {term}`operators <operator>`, `not`, `abs`, `or?`, `none?`, `some?`, `somes` and the box
@@ -428,8 +400,7 @@ mtp-ydd4.7.59.
 |---|---|---|---|
 | `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `font` | core | an attribute of the shape | {doc}`world-model` |
 | `pos` | syntactic sugar | `x` and `y` given as one point | {numref}`sugar-rewrites` |
-| `dash` with two arguments | core | the dash lengths and `dash-offset` | {doc}`world-model` |
-| `dash` with one argument | syntactic sugar | an offset of 0 | {numref}`sugar-rewrites` |
+| `dash` | core | `(dash L O)`: the dash lengths `L`, and the offset `O`, which is 0 when it is left out | {doc}`world-model` |
 | `like` | syntactic sugar | copies another shape's arguments | {numref}`sugar-rewrites` |
 | `defaults` on a group, a row or a column | syntactic sugar | what a container gives its members | {numref}`sugar-rewrites` |
 | `clip` | core | a shape that the members are drawn inside | {doc}`world-model` |
@@ -517,13 +488,20 @@ These heads name built-in functions, except the primitives, which the standard l
 | `rotate`, `translate`, `scale`, `transform` | transforms |
 | `mix`, `lighten`, `darken`, `light-dark` | colors |
 | `round`, `log`, `min`, `max`, `lerp` | with a varying number or type of arguments |
-| `range` | `(range LO HI (gap G))`: the numbers from `LO`, `G` apart, up to `HI` and not including it. `(range LO HI (num N))`: `N` numbers evenly apart, from `LO` to `HI`, both included. `gap` and `num` are {term}`named arguments <named argument>` of `range` |
-| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds: {term}`primitives <primitive>`, which a source names only through the file rand of the standard library ({numref}`primitive-form`). `rand`, `rand-int`, `pick` and `shuffle` take the named argument `(seed S)` |
+| `range` | `(range LO HI (gap G))`: the numbers from `LO`, `G` apart, up to `HI` and not including it. `G` is 1 when the range gives neither `gap` nor `num`. `(range LO HI (num N))`: `N` numbers evenly apart, from `LO` to `HI`, both included. `gap` and `num` are {term}`named arguments <named argument>` of `range` |
+| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds: {term}`primitives <primitive>`, which a source names only through the file rand of the standard library ({numref}`primitive-form`). `rand`, `rand-int`, `pick` and `shuffle` take the named argument `(seed S)`, and follow the {term}`default seed` of the file that holds them when it is left out ({numref}`default-seed`) |
 | `steps` | an ease: `(steps N (at P))` gives the ease of N equal jumps, each at the fraction P of its interval, so jump k comes at (k − 1 + P)/N. P is from 0 to 1 and known when compiling, and is 1 when `(at …)` is left out. So `(steps 1 (at P))` is 0 before P and 1 from P on |
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
 | the files `colors`, `ease`, `fonts`, `marks`, `math`, `rand`, `types` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
+
+:::{admonition} Code differs
+:class: note
+The compiler accepts `(range n)` as `(range 0 n (gap 1))`, and rejects a `range` that gives
+neither `gap` nor `num`, such as `(range 0 n)`, with "range is (range n), (range start stop (gap g))
+or (range start stop (num n))". Bead mtp-z8i1 makes the compiler follow the rule.
+:::
 
 A call of `steps` gives an ease, which is a function, so `steps` is a built-in function and not a
 keyword. By {numref}`declaration-names`, a declaration or a binding named `steps` takes the place
@@ -666,12 +644,11 @@ their place. They are not forms of the language.
 | `N.A`, `N[X]` | syntactic sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | syntactic sugar | {numref}`sugar-rewrites` |
 | `colormap` as a type, a name declared by `type` | syntactic sugar | {numref}`sugar-rewrites` |
-| `(range X)`, a random function with no `(seed …)`, `roll-dice` with no argument | syntactic sugar | {numref}`sugar-rewrites` |
 | `import`, `type`, `palette` | syntactic sugar | {numref}`sugar-rewrites` |
 | `like` | syntactic sugar, or core with a `(name …)` | {numref}`sugar-rewrites`, {numref}`names-from-values` |
 | `pointer-events` on a container | syntactic sugar | {numref}`sugar-rewrites` |
 | `defaults` on a group, a row or a column, and in a formula | syntactic sugar | {numref}`sugar-rewrites` |
-| `dash` with one argument, `pos` | syntactic sugar | {numref}`sugar-rewrites` |
+| `pos` | syntactic sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | syntactic sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | syntactic sugar | {numref}`sugar-rewrites` |
 | `wait`, `jump`, an animation's body of several items | syntactic sugar | {numref}`sugar-rewrites` |
@@ -694,7 +671,7 @@ their place. They are not forms of the language.
 | the type notation of "Type notation", but `colormap` and the names declared by `type` | core | {doc}`types` |
 | the twelve shapes | core | {doc}`world-model` |
 | `row`, `column`, `gap`, `align` | core | {doc}`world-model` |
-| the attribute arguments of the shapes, `dash` with two arguments, `clip`, `fixed-size` | core | {doc}`world-model` |
+| the attribute arguments of the shapes, `dash`, `clip`, `fixed-size` | core | {doc}`world-model` |
 | `exists-when` | core | {doc}`world-model` |
 | `.` | core | {numref}`dot-name-part` |
 | `name` | core | {doc}`scope`, {numref}`names-from-values` |

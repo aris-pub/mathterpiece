@@ -71,11 +71,16 @@ the code is changed. A form that needs a value or a type to be rewritten is core
 and `p.x` and `p.y` likewise, and the two spellings mean the same at all times. Dragging a group, a
 row or a column, fixed-size or not, writes its `translate`, for both spellings
 ({numref}`sugar-rewrites`, {numref}`drag-group-translate`) (Q-core-23). `(foreach k n …)` means
-exactly `(foreach k (range n) …)`. A `foreach` over a count, or over a list whose length is known
+exactly `(foreach k (range 0 n) …)`. A `foreach` over a count, or over a list whose length is known
 only while drawing and has an upper bound, makes as many copies as the bound, and copy k exists
 only while k is below the count or the length ({numref}`foreach-count`,
 {numref}`foreach-bounded-length`) (Q-core-27). Since an int and a list are told apart by their
 type, `(foreach k n …)` stays core by {numref}`sugar-form`.
+
+**Decided (2026-11-19):** a form that leaves out an argument that has a default is core, and the
+default is given where its head is defined: `(dash L)`, a random function with no `(seed …)` and
+`(roll-dice)` are not rewrites. `(range X)` is removed: `(range LO HI)` with neither `gap` nor `num`
+has a gap of 1, so `(range 0 n)` replaces `(range n)` (mtp-z8i1).
 
 ## P3. Which forms are core
 
