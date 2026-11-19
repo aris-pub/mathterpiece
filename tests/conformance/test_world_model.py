@@ -37,7 +37,7 @@ class TestContainerDefaults:
 class TestFormulaDefaults:
     def test_defaults_in_a_formula(self):
         same_meaning(
-            "(formula f (defaults (fill 'red')) $'\\term{a}{x}\\term{b}{y}' (term a (fill "
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (defaults (fill 'red')) (term a (fill "
             "'blue')))",
             "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'blue')) (term b (fill 'red')))",
         )

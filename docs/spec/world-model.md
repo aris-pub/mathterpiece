@@ -17,8 +17,8 @@ give `A`, the nearest one wins. A member that is an instance gets `(A V)` in its
 ## Formulas
 
 ```{rule} formula-terms
-The string of a formula is any string expression whose value is known when compiling. It declares
-the terms that it marks with `\term{name}{…}`.
+The string of a formula is its positional argument, right after its name: any string expression whose
+value is known when compiling. It declares the terms that it marks with `\term{name}{…}`.
 ```
 
 ```{rule} formula-defaults
@@ -27,18 +27,18 @@ form does not give `A`, and to each term that has no `(term …)` form. The term
 formula's string marks.
 ```
 
-The `(defaults …)` of a formula is a named argument, so it comes before the body
-({numref}`named-arguments-first`).
-The body holds the string, the terms, the `exists-when` forms and the variables. By
-{numref}`declare-before-use`, a `(term name …)` and an `exists-when` of a term come after the
-string. So `(formula f (defaults (padding 3)) $'\term{a}{x}' (term a (fill 'red')))` is allowed,
-and the same formula with `(defaults …)` last, or with `(term a …)` before the string, is an error.
+The `(defaults …)` of a formula is a named argument, so it comes after the string and before the
+body ({numref}`named-arguments-first`). The body holds the terms, the `exists-when` forms and the
+variables. So `(formula f $'\term{a}{x}' (defaults (padding 3)) (term a (fill 'red')))` is allowed,
+as a text is written `(text t 'hi' …)`, and the same formula with the string after the
+`(defaults …)`, or after a `(term …)`, is an error.
 
 :::{admonition} Code differs
 :class: note
 `compiler.py:4905` (`formula_decl`) looks for the string, the `(defaults …)`, the terms, the
 `exists-when` and the variables at every place, so the string may come last, and `(defaults …)`
-may come after a `(term …)`. Bead mtp-ydd4.7.11 makes the compiler follow the rule.
+may come after a `(term …)`. Bead mtp-ydd4.7.11 makes the compiler follow the rule, with the string
+as the formula's positional argument (decided 2026-11-20).
 :::
 
 :::{admonition} Code differs
