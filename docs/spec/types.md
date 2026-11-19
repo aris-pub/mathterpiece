@@ -13,21 +13,6 @@ the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` pr
 
 This page specifies the language.
 
-## Values and objects
-
-```{rule} values-and-objects
-A value is what an expression gives: a number, a bool, a string, a color, a font, a
-point, a transform, a list, a function or `none`. A value never changes, and two values that are
-equal are the same value. An object is a thing that a {term}`declaration` creates in the
-{term}`world model` ({numref}`declarations-and-bindings`), such as the scene, a shape, a variable,
-a component, a transition or an animation. An object stays the same object while its value, or the
-values of its attributes, change.
-```
-
-So `(+ 1 2)` and `3` give the same value, and two circles declared with the same attributes are two
-objects. A variable `(real a 1)` is an object whose value is 1 when the page opens, and may change
-when a writer writes it.
-
 ## The types
 
 ```{rule} the-types

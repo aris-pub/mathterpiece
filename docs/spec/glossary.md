@@ -147,8 +147,8 @@ list
   expressions in square brackets, such as `[0 1]` ({numref}`the-types`, {numref}`lists`).
 
 literal
-  Text that writes a value directly, such as `2.5`, `'crimson'` or `[0 1]`
-  ({numref}`literal-types`).
+  A piece of source text that writes a value directly, such as `2.5`, `'crimson'` or `[0 1]`
+  ({numref}`literals`).
 
 name
   A word that refers to a declaration or a binding: name parts joined by dots, such as `p.pos.x`
@@ -285,13 +285,18 @@ file to import
   {numref}`import-file-holds` allows at its top level. Defined in {doc}`imports`.
 
 value
-  What an expression gives: a number, a bool, a string, a color, a font, a point, a transform, a
-  list, a function or `none`. A value never changes ({numref}`values-and-objects`).
+  A piece of data that never changes and has no identity, such as a number, a string, a list or a
+  function ({numref}`values`).
 
 object
-  A thing that a declaration creates in the world model, such as the scene, a shape, a variable, a
-  component, a transition or an animation. It stays the same object while its value or the values
-  of its attributes change ({numref}`values-and-objects`).
+  A thing that has an identity and attributes, each of which behaves like a variable, such as the
+  scene, a shape, a component or a namespace ({numref}`objects`).
+
+variable
+  A named holder of one value, which is free, bound or const ({numref}`variables`).
+
+namespace
+  An object that consists only of the attributes that it is declared with ({numref}`namespaces`).
 
 fit
   A type A fits a type B when a value of type A is accepted where a value of type B is expected

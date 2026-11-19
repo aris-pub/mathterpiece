@@ -32,6 +32,7 @@ core
 :numbered:
 :maxdepth: 2
 
+data-model
 scope
 imports
 types

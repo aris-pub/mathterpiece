@@ -15,8 +15,8 @@ instead ({numref}`names-from-values`). This page specifies the language.
 ## Declarations and bindings
 
 ```{rule} declarations-and-bindings
-A declaration is a {term}`form` that creates a new thing that can be addressed: an object of the
-world model, a function, a type or a choreo. The thing exists whether or not the source gives it a
+A declaration is a {term}`form` that creates a new thing that can be addressed: a variable, an
+object, a function, a type or a choreo. The thing exists whether or not the source gives it a
 name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
 for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
 parameters of a function, a motif, a variant or a choreo, are bindings. The language makes two
