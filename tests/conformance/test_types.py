@@ -39,3 +39,7 @@ class TestTheTypes:
     @BEZIER
     def test_bezier_is_a_shape_type(self):
         accepted("(scene s (bezier b (from [0 0]) (to [1 1])))")
+
+    @BEZIER
+    def test_curve_is_a_built_in_type(self):
+        accepted("(curve c (fn ((real t)) [t t]))")

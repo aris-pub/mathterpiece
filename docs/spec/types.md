@@ -38,6 +38,7 @@ These are the types of mtp:
 | `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
 | `unit` | `unit` | the same type as `(real (>= 0) (<= 1))`: the reals from 0 to 1 |
 | `ease` | `ease` | the same type as `func[unit real]`: the eases of a transition ({doc}`time`) |
+| `curve` | `curve` | the same type as `func[real point]`: the curves of the plane, such as the one that `parametric` draws |
 | `bool` | `bool` | `true` and `false` |
 | `string` | `string` | the {term}`strings <string>`, TeX strings among them |
 | `color` | `color` | the colors ({doc}`world-model`) |
@@ -70,7 +71,8 @@ There are no other types.
   file.
 - `ease` is not a type, and the file of eases of the standard library is named ease.mtp. Bead
   mtp-6kta makes `ease` a built-in type and renames the file eases.mtp.
-- The shape `bezier` is named `curve`. Bead mtp-qnws renames it.
+- The shape `bezier` is named `curve`, and `curve` is not a type. Bead mtp-qnws renames the shape
+  and makes `curve` a built-in type.
 :::
 
 Which of these are values and which are mutable objects is defined in {doc}`world-model`. A free
