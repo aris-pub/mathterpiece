@@ -38,26 +38,34 @@ These are the types of mtp:
 | `bool` | `bool` | `true` and `false` |
 | `string` | `string` | the {term}`strings <string>`, TeX strings among them |
 | `color` | `color` | the colors ({doc}`world-model`) |
-| `font` | `font` | the fonts, each given by a family, a style, a weight and a size |
+| `font` | `font` | the fonts: the records with a family, a style, a weight and a size |
 | `point` | `point` | the pairs of {term}`reals <real>`, `x` and `y` |
 | a {term}`list` type | `list[T]` | the lists of any length whose items are of type T |
+| `function` | `function` | every function |
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
-| `movement`, `animation` | as named | the movements and the animations ({doc}`time`) |
+| `movement` | `movement` | every movement: the moves, the scores and the movements of every animation type ({doc}`time`) |
+| an animation type | the name of the animation | the movements that its uses make |
 | `none` | `none` | the value `none` alone |
 | a {term}`broadened type` | `T\|none` | the values of T, and `none` |
 | a {term}`refined type` | `(T C…)` | the values of T that meet every constraint C ({numref}`constraints`) |
+| `shape` | `shape` | every shape: the shapes of every shape type, motif type and variant type |
 | a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
 | a motif type | the {term}`name` of the motif | its instances ({numref}`motif-and-variant-types`) |
 | a variant type | the name of the variant | its instances ({numref}`motif-and-variant-types`) |
 | `scene` | `scene` | the scene |
-| `record`, `formula`, `term` | never written | the records, palettes included, the formulas and the terms |
-| a {term}`component` type | never written | the components of one kind: `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
-| an {term}`interface` | `shape`, `positioned`, `sequence`, `sequence[T]`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
+| `record`, `formula`, `term` | as named | the records, palettes and fonts among them, the formulas, and the terms |
+| `component`, `view`, `control`, `listener` | as named | the components, the views, the controls and the listeners |
+| a {term}`component` type | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and the name of each listener | the components of that kind |
+| an {term}`interface` | `positioned`, `sequence`, `sequence[T]`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
 | `rand-seed` | `rand-seed` | the values of `int` ({numref}`seed-variable`) |
 | `colormap` | `colormap` | the same type as `func[real color]`: the functions from a real to a color |
 
 There are no other types.
 ```
+
+Each kind of object is a type: a named set of objects, as `shape` is the set of every shape. A type
+of one thing is a subset of the type of its kind: `circle` is a subset of `shape`, `canvas` of
+`view`, and `view` of `component`.
 
 :::{admonition} Code differs
 :class: note
@@ -68,6 +76,10 @@ There are no other types.
   mtp-6kta makes `ease` a built-in type and renames the file eases.mtp.
 - The compiler has the type `transform`, which the spec does not have: a shape's frame is a set of
   its attributes ({doc}`data-model`). Bead mtp-1vyc.
+- `record`, `formula`, `term`, `component`, `view`, `control`, `listener`, `function` and the
+  component types are not types that a source can write: `(func f ((canvas c)) 1)` is the error
+  "unknown type 'canvas'". `shape` is an interface, the type of a parameter only. `movement` and the
+  animation types are named `transition` and `animation`. Bead mtp-rk1i.
 - The shape `bezier` is named `curve`, and `curve` is not a type. Bead mtp-qnws renames the shape
   and makes `curve` a built-in type.
 :::
