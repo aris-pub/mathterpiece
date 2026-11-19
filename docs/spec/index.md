@@ -28,7 +28,7 @@ core
 ```
 
 ```{toctree}
-:caption: Names and types
+:caption: Data and types
 :numbered:
 :maxdepth: 2
 
