@@ -108,7 +108,6 @@ A type can also be written in place, as a **type expression**, anywhere a type g
     list[list[real]]
     (real (>= 0) (<= 1))                    ; a narrowed type
     real|none                               ; a broadened type, with the bar
-    (maybe real)                            ; the same, as a form
     list[(real (>= 0) (<= 1))]              ; narrowed items
     list[real|none]                         ; items that may be none
     list[real]|none                         ; a whole list, or none
@@ -142,7 +141,7 @@ An argument passed to a constrained parameter, and an item of a list with constr
 
 ### 5.c Broadening (none)
 
-`none` stands for a value that does not exist. For now it is the only way to broaden a type: `real|none`, or `(maybe real)`, is a real or none.
+`none` stands for a value that does not exist. For now it is the only way to broaden a type: `real|none` is a real or none.
 
 **Where it comes from.** A function where it is undefined: `(/ x 0)`, `(secd 90)`, `(tand 90)`, `(asin 2)`, `(log 0)`, `(sqrt -1)`. When the author writes the inputs known when compiling, as in `(sqrt -1)` or `(or? (sqrt -1) 0)`, this is a compile error; while drawing it gives `none`, never an error and never infinity (`infty` is only a value known when compiling: see "What the compiler proves", below). A call of a function with known arguments is worked out while compiling, but the author wrote its body with parameters, so there an undefined value is `none`, as while drawing: with `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f -1)` is 1, and `(f 0)` of `(func f (real x) (/ 1 x))` is `none`. If that `none` reaches a place inside the function that cannot take `none`, or makes a function declared plain `T` give `none`, the undefined value is a compile error. Outside the function, the call's `none` is handled like any other. A lookup by a key known only while drawing, `g[side]`, may also give none. A point built from two numbers, `[x y]`, is none when either is. And an illustrator may write `none` on purpose.
 

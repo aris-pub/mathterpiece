@@ -73,7 +73,6 @@ any number of such texts.
 | `(cond (C1 V1) MORE… (else V))`, `(cond (else V))` | `(if C1 V1 (cond MORE… (else V)))`, `V` | |
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
-| `(maybe T)`, in a type | `T\|none` | |
 | the type `colormap` | the type `func[real color]` | |
 | a type `N`, declared `(type N BASE C…)` | the type `(BASE C…)` | |
 | `(range X)` | `(range 0 X (gap 1))` | `X` is not a `(gap …)` or `(num …)` item |
@@ -401,7 +400,6 @@ mtp-ydd4.7.59.
 | `func[P… R]` | core | function types | {doc}`types` |
 | `T\|none` | core | a type that allows `none` | {doc}`types` |
 | `(T C…)` | core | a refined type | {doc}`types` |
-| `(maybe T)` | syntactic sugar | `T\|none` | {numref}`sugar-rewrites` |
 | `colormap` | syntactic sugar | `func[real color]` | {numref}`sugar-rewrites` |
 | a name declared by `type` | syntactic sugar | the type that it names | {numref}`sugar-rewrites` |
 | a name declared by `interface`, `motif` or `variant` | core | that type | {doc}`types` |
@@ -667,7 +665,7 @@ their place. They are not forms of the language.
 | `(H_ …)` | syntactic sugar, made by the parser | {numref}`unnamed-head` |
 | `N.A`, `N[X]` | syntactic sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | syntactic sugar | {numref}`sugar-rewrites` |
-| `(maybe T)`, `colormap` as a type, a name declared by `type` | syntactic sugar | {numref}`sugar-rewrites` |
+| `colormap` as a type, a name declared by `type` | syntactic sugar | {numref}`sugar-rewrites` |
 | `(range X)`, a random function with no `(seed …)`, `roll-dice` with no argument | syntactic sugar | {numref}`sugar-rewrites` |
 | `import`, `type`, `palette` | syntactic sugar | {numref}`sugar-rewrites` |
 | `like` | syntactic sugar, or core with a `(name …)` | {numref}`sugar-rewrites`, {numref}`names-from-values` |
@@ -693,7 +691,7 @@ their place. They are not forms of the language.
 | `(T N …)`, a variable, `font` and its parts | core | {doc}`world-model`, {doc}`reaction` |
 | `free` | core | {doc}`reaction`, {doc}`binding-time` |
 | the {term}`constraints <constraint>` `>=`, `>`, `<=`, `<`, `length`, `one-of`, `const`, `wrap` | core | {doc}`types` |
-| the type notation of "Type notation", but `maybe`, `colormap` and the names declared by `type` | core | {doc}`types` |
+| the type notation of "Type notation", but `colormap` and the names declared by `type` | core | {doc}`types` |
 | the twelve shapes | core | {doc}`world-model` |
 | `row`, `column`, `gap`, `align` | core | {doc}`world-model` |
 | the attribute arguments of the shapes, `dash` with two arguments, `clip`, `fixed-size` | core | {doc}`world-model` |
