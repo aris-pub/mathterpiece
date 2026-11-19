@@ -56,13 +56,13 @@ These are the types of mtp:
 | a {term}`component` type | never written | the components of one kind: `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
 | an {term}`interface` | `shape`, `positioned`, `sequence`, `sequence[T]`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
 | `rand-seed` | `rand-seed` | the values of `int` ({numref}`seed-variable`) |
+| `colormap` | `colormap` | the same type as `func[real color]`: the functions from a real to a color |
 
 There are no other types.
 ```
 
 Which of these are values and which are mutable objects is defined in {doc}`world-model`. A free
-variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`). `colormap` is another name
-for `func[real color]` ({numref}`sugar-rewrites`).
+variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`).
 
 :::{admonition} Code differs
 :class: note

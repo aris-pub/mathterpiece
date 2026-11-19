@@ -71,8 +71,7 @@ any number of such texts.
 | `(cond (C1 V1) MORE… (else V))`, `(cond (else V))` | `(if C1 V1 (cond MORE… (else V)))`, `V` | |
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
-| the type `colormap` | the type `func[real color]` | |
-| `(jump V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
+| `(jump V X)` | `(move V (to X) (duration 0))` | Exactly two arguments |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N F (domain LO HI) (samples S) ARGS…)` | `(polyline N (points (map (range LO HI (num S)) F)) ARGS…)`: the polyline through `S` points of the curve `F`, from `(F LO)` to `(F HI)` | `F` is a function from a {term}`real` to a point |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
@@ -81,10 +80,8 @@ any number of such texts.
 | `(wait T)`, in an animation's body | `(move none (duration T))` | |
 | `(animation ARGS… A B MORE…)` | `(animation ARGS… (in-order A B MORE…))` | `ARGS…` are the {term}`named arguments <named argument>` of the animation |
 | `(choreo C PARAMS A B MORE…)` | `(choreo C PARAMS (in-order A B MORE…))` | `PARAMS` is the list of the choreo's parameters |
-| `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | |
+| `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | `pointer` is the position of the pointer ({numref}`declarations-and-bindings`) |
 ```
-
-A use of a choreo is core, as a motif instance is ({ref}`choreo-uses`).
 
 So `(parametric p (fn t [t (* t t)]) (domain -2 2) (stroke 'teal'))` is the parabola through 361
 points from [-2 4] to [2 4], and `(parametric p curve (domain 0 1))` draws a declared function
@@ -392,7 +389,7 @@ mtp-ydd4.7.59.
 | `func[P… R]` | core | function types | {doc}`types` |
 | `T\|none` | core | a type that allows `none` | {doc}`types` |
 | `(T C…)` | core | a refined type | {doc}`types` |
-| `colormap` | syntactic sugar | `func[real color]` | {numref}`sugar-rewrites` |
+| `colormap` | core | `func[real color]` | {numref}`the-types` |
 | a name declared by `type` | core | the type that it names | {numref}`type-notation` |
 | a name declared by `interface`, `motif` or `variant` | core | that type | {doc}`types` |
 | `rand-seed` | core | the type of seeds, any int | {doc}`types`, {doc}`evaluation` |
@@ -668,7 +665,6 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | `(H_ …)` | syntactic sugar, made by the parser | {numref}`unnamed-head` |
 | `N.A`, `N[X]` | syntactic sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | syntactic sugar | {numref}`sugar-rewrites` |
-| `colormap` as a type | syntactic sugar | {numref}`sugar-rewrites` |
 | `palette`, `parametric` | syntactic sugar | {numref}`sugar-rewrites` |
 | `like` | syntactic sugar, or core with a `(name …)` | {numref}`like-copies`, {numref}`names-from-values` |
 | `pos` | syntactic sugar | {numref}`sugar-rewrites` |
@@ -694,7 +690,7 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | `(T N …)`, a variable, `font` and its parts | core | {doc}`world-model`, {doc}`reaction` |
 | `free` | core | {doc}`reaction`, {doc}`binding-time` |
 | the {term}`constraints <constraint>` `>=`, `>`, `<=`, `<`, `length`, `one-of`, `const`, `wrap` | core | {doc}`types` |
-| the type notation of "Type notation", but `colormap` | core | {doc}`types` |
+| the type notation of "Type notation", `colormap` included | core | {doc}`types` |
 | the twelve shapes | core | {doc}`world-model` |
 | `row`, `column`, `gap`, `align` | core | {doc}`world-model` |
 | the attribute arguments of the shapes, `dash`, `clip`, `fixed-size` | core | {doc}`world-model` |
