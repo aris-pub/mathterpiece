@@ -124,6 +124,14 @@ source. Each expression is one of these:
 
 An operator is a name with one name part ({numref}`literal-words`).
 
+```{rule} literals
+A literal is a piece of source text that writes a value directly: a number literal, a string
+literal, `true`, `false`, `none`, or a list literal whose items are literals.
+```
+
+What value a literal gives, and of what type, is defined in {numref}`literal-types`. Values are
+defined in {doc}`data-model`.
+
 ```{rule} parser-sugar
 The parser produces each spelling on the left as the form on the right:
 
