@@ -59,8 +59,7 @@ Each form in the first column of this table is syntactic sugar, and means exactl
 second column, when the conditions in the third column hold. A syntactic sugar form whose conditions do not
 hold is a {term}`compile error`. A rewrite may move text or copy it, and each name in the moved or
 copied text refers to what it referred to where it was written. A rewrite may give
-syntactic sugar forms, which are rewritten in turn, until no syntactic sugar form is left. A `(like …)` is rewritten
-before any other rewrite of the declaration that it copies.
+syntactic sugar forms, which are rewritten in turn, until no syntactic sugar form is left.
 
 In the table, a name in capitals stands for any text that its row allows, and `…` after it for
 any number of such texts.
@@ -73,35 +72,20 @@ any number of such texts.
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | the type `colormap` | the type `func[real color]` | |
-| a type `N`, declared `(type N BASE C…)` | the type `(BASE C…)` | |
 | `(jump V X)`, where a move may be written | `(move V (to X) (duration 0))` | Exactly two arguments |
-| `(import F)` | the top-level declarations of `F.mtp`, after its own rewrites, each under the name `F.N`. Each `F.N` and each `(. F N)` in the source is a use of that name | `F.mtp` holds only what a {term}`file to import` holds ({numref}`import-file-holds`). A file imported several times, directly or through other files, is put in once |
-| `(import F N1 N2…)` | the same, and each `Ni` in the source is a use of `F.Ni` | Each `Ni` is a name that `F.mtp` gives ({numref}`import-files`) |
 | `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
-| `(parametric N (for T LO HI) E ITEMS…)` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ITEMS…)`, where `S` is the `S` of a `(samples S)` among `ITEMS…`, which the polyline does not get, or 361 when there is none | `T` is a name. At most one `(samples S)` |
-| `(K N (like M) ARGS…)` | `(K N ARGS… COPIED…)`. `COPIED…` is each item of the declaration of `M`, as written, after its own `(like …)` is rewritten, whose head `ARGS…` does not give. A positional {term}`string` of a text is copied too. A `(pos P)` of `M` gives both `x` and `y`: when `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))` | `M` is a plain name. `K` is a shape head other than `group`, `row` and `column`, and `M` a shape of kind `K`. Or `M` is an instance of the motif or the variant `K`. Or `K` is `font` and `M` a font. Or `K` is `term` and `M` a term of the same formula, whose `(term …)` form comes before. Or the form is a `move` or a `transition`, and `M` is a transition declared at the top level |
+| `(parametric N (for T LO HI) E ARGS…)` | `(polyline N (points (map (range LO HI (num S)) (fn T E))) ARGS…)`: the polyline through `S` points of the curve `E`, for `T` from `LO` to `HI`. `S` is given by the `(samples S)` of `ARGS…`, which the polyline does not get | `T` is a name |
 | `(pointer-events B)`, on a group, a row, a column or an instance | the same container, with `(pointer-events B)` moved into its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `pointer-events` |
-| `(defaults (A V)…)`, on a group, a row or a column | the same container without it, with each `(A V)` added to each member, at any depth, that takes `A` from a container ({doc}`world-model`) and does not give `A`, the nearest container first. For a member that is an instance, `(A V)` is added to the instance's own `(defaults …)` | Each `A` is one that a container gives its members ({doc}`world-model`) |
-| `(defaults (A V)…)`, in a formula | the same formula without it, with each `(A V)` added to the `(term T …)` form of each term `T` of the formula that does not give `A`, and a form `(term T (A V)…)` added for each term that has none | The terms are those marked in the formula's string |
-| `(pos [X Y])` | `(x X) (y Y)` | |
-| `(pos P)` | `(x (. P 0)) (y (. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
-| `(pos free@[X Y])`, `(pos free@P)` | `(x free@X) (y free@Y)`, `(x free@(. P 0)) (y free@(. P 1))` | As for `(pos P)` |
+| `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
+| `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
-| `(wait T)`, `(wait)`, in an animation's body | `(move none (duration T))`, `(move none)` | |
-| `(animation OPT… A B MORE…)`, and the body of a choreo | `(animation OPT… (in-order A B MORE…))` | `OPT…` are the {term}`named arguments <named argument>` of the animation, the `(defaults …)` and the `(loop …)` |
-| `(on-drag S M.pos ITEMS…)`, `(on-drag S M.x ITEMS…)`, `(on-drag S M.y ITEMS…)` | `(on-drag S (move M.pos (to pointer)) ITEMS…)`, `(on-drag S (move M.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move M.y (to (. pointer 1))) ITEMS…)` | `M` names the shape or the term `S` |
+| `(wait T)`, in an animation's body | `(move none (duration T))` | |
+| `(animation ARGS… A B MORE…)` | `(animation ARGS… (in-order A B MORE…))` | `ARGS…` are the {term}`named arguments <named argument>` of the animation |
+| `(choreo C PARAMS A B MORE…)` | `(choreo C PARAMS (in-order A B MORE…))` | `PARAMS` is the list of the choreo's parameters |
+| `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | |
 ```
 
-Of the declarations that an `(import …)` puts in, the {term}`.mtpc` holds only those that the source
-uses ({numref}`mtpc-imported-declarations`).
-
 A use of a choreo is core, as a motif instance is ({ref}`choreo-uses`).
-
-Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
-of `M`'s container: `(circle b (like a))` outside the group of `a` has only what `a` was written
-with. The copy follows what `M`'s items read: if the radius of `M` is `(* 2 k)`, so is the radius
-of the copy. The defaults of an instance, and its `pointer-events` and its `clip`, are items of it,
-so `(like M)` copies them.
 
 Since a copied random call is a {term}`site` of its own ({numref}`random-site`),
 `(pos (pick corners))` would draw `x` and `y` at two sites, so it is an error. A body `let` holds
@@ -112,15 +96,12 @@ reads one value.
 :class: note
 The compiler makes these rewrites while it compiles each form, in the same functions that check
 it, and not in a step of their own (for example compiler.py:6471-6479 for `when`, 3074-3087 for
-`wait`, 3745-3764 for an animation item, 1669-1729 for a choreo use, 745-826 for imports,
-5543-5576 for the defaults of a group). Beads mtp-08wd.5, mtp-08wd.6, mtp-08wd.7, mtp-08wd.8
+`wait`, 3745-3764 for an animation item, 1669-1729 for a choreo use). Beads mtp-08wd.5, mtp-08wd.6, mtp-08wd.7, mtp-08wd.8
 and mtp-08wd.2 will make them in the rewrite step. Where the result differs today:
 
 - `p.r` is read as one name with {term}`name parts <name part>` (parse.py:337-395), and each name
   part after the first as an attribute (compiler.py:5953-5960), so with a local `r`, `xs.r` is an
   error while `(. xs r)` is an item of `xs` (mtp-ydd4.7.5).
-- `(like M)` on an instance copies neither its `pointer-events` (compiler.py:4749, 4759-4762) nor
-  its `clip` (mtp-ydd4.7.20).
 - `(wait T)` makes no transition object, while `(move none (duration T))` does
   (compiler.py:3074-3087, 3184-3197). The two .mtpc files differ by that object (mtp-ydd4.7.21).
 - A palette has the type `palette` (compiler.py:1454, types.py:148-162), and the namespace that it
@@ -128,9 +109,6 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
 - `(cond (else V))` is {term}`folded <folding>` to the value of `V` and, since it is not a literal,
   marked const (compiler.py:5653-5657), so `(real v (cond (else 3)))` makes `v` a constant, while
   `(real v 3)` is a free variable that a writer may write (mtp-ydd4.7.46).
-- `_through` (compiler.py:7280-7290) rewrites only a name with several name parts, so after
-  `(import lib)`, `lib.k` is accepted, and `(. lib k)` is a compile error, "unknown name 'lib'"
-  (compiler.py:6056) (mtp-ydd4.7.47).
 - `cond` gives a list literal among its values the type of all its other values
   (compiler.py:6629-6641), while an `if` gives it the type of its other branch only
   (compiler.py:6494-6504) (mtp-08wd.2).
@@ -143,6 +121,40 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
 So a bare name as the target of an `on-drag` is the position of the dragged shape, its `x` or its
 `y`, and any other bare name there is a compile error: `(on-drag p k)` must be written with a
 move, such as `(on-drag p (move k (to (. pointer 0))))`.
+
+### Copies with `like`
+
+```{rule} like-copies
+`(K N (like M) ARGS…)` is syntactic sugar for `(K N ARGS… COPIED…)`. `COPIED…` holds each item of
+the declaration of `M`, as written in the source, whose head `ARGS…` does not give. A `(like …)` in
+the declaration of `M` is rewritten first, and a `(like …)` is rewritten before any other rewrite of
+the declaration that holds it.
+```
+
+`M` is a plain name, and the form is one of these, or it is a {term}`compile error`:
+
+- `K` is a shape head other than `group`, `row` and `column`, and `M` is a shape of kind `K`.
+- `K` is a motif or a variant, and `M` is an instance of it.
+- `K` is `font`, and `M` is a font.
+- `K` is `term`, and `M` is a term of the same formula whose `(term …)` form comes before.
+- The form is a `move` or a `transition`, and `M` is a transition declared at the top level.
+
+So `(circle b (like a) (r 2))` is a circle with every item of `a` but its radius, and a radius of 2.
+Two kinds of item are copied in a way of their own. The string of a text is copied too, though it
+is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and `y`, so when
+`ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))`.
+
+Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
+of `M`'s container: `(circle b (like a))` outside the group of `a` has only what `a` was written
+with. The copy follows what `M`'s items read: if the radius of `M` is `(* 2 k)`, so is the radius
+of the copy. The defaults of an instance, and its `pointer-events` and its `clip`, are items of it,
+so `(like M)` copies them.
+
+:::{admonition} Code differs
+:class: note
+`(like M)` on an instance copies neither its `pointer-events` (compiler.py:4749, 4759-4762) nor its
+`clip` (mtp-ydd4.7.20).
+:::
 
 ### Dragging a group
 
@@ -236,7 +248,7 @@ A `(name S)`, and a `(like (name S))`, whose string `S` reads a name bound by a 
 parameter of a motif, are core. The prover proves, for every value that those names may take,
 that `S` gives the name of a declaration that comes before the form, and that every such
 declaration fits the form: for `(name S)`, a type that fits all of them, and for `(like …)`, the
-conditions of the row for `(like M)` in {numref}`sugar-rewrites`. The expand step replaces each
+conditions of {numref}`like-copies`. The expand step replaces each
 by the name that `S` gives in each copy, and then makes the `(like …)` copy of that row.
 ```
 
@@ -314,12 +326,12 @@ The top level of a source holds only the heads of this table and `let`
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `import` | syntactic sugar | `(import F)` or `(import F N…)`: the declarations of another file | {numref}`sugar-rewrites` |
-| `type` | syntactic sugar | `(type N BASE C…)`: a name for a {term}`refined type` | {numref}`sugar-rewrites` |
+| `import` | core | `(import F)` or `(import F N…)`: the declarations of another file | {doc}`imports` |
+| `type` | core | `(type N BASE C…)`: a name for a {term}`refined type` | {numref}`type-notation` |
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
 | `palette` | syntactic sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
-| `parametric` | syntactic sugar | a polyline through the points of a parametric curve | {numref}`sugar-rewrites` |
+| `parametric` | syntactic sugar | a polyline through the points of a parametric curve. `(samples S)` gives the number of points, 361 when it is left out | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
 | `formula` | core | `(formula N ITEM…)`: typeset math with terms | {doc}`world-model` |
@@ -353,7 +365,7 @@ mtp-ydd4.7.59.
 | `list` with no item type | core | a list whose item type is the type of its value | {doc}`types` |
 | `font` | core | `(font N PART…)`: a font token, given by its parts | {doc}`world-model` |
 | `family`, `style`, `weight`, `size` | core | the parts of a font | {doc}`world-model` |
-| `like` in a font | syntactic sugar | copies the parts of another font | {numref}`sugar-rewrites` |
+| `like` in a font | syntactic sugar | copies the parts of another font | {numref}`like-copies` |
 | `free` | core | `(free X)`: a free value that starts at the value of `X`, written only as the value of a variable or of an attribute | {doc}`reaction`, {doc}`binding-time` |
 | `>=`, `>`, `<=`, `<` with one number | core | a bound | {doc}`types` |
 | `length` | core | the length of a list | {doc}`types` |
@@ -373,7 +385,7 @@ mtp-ydd4.7.59.
 | `T\|none` | core | a type that allows `none` | {doc}`types` |
 | `(T C…)` | core | a refined type | {doc}`types` |
 | `colormap` | syntactic sugar | `func[real color]` | {numref}`sugar-rewrites` |
-| a name declared by `type` | syntactic sugar | the type that it names | {numref}`sugar-rewrites` |
+| a name declared by `type` | core | the type that it names | {numref}`type-notation` |
 | a name declared by `interface`, `motif` or `variant` | core | that type | {doc}`types` |
 | `rand-seed` | core | the type of seeds, any int | {doc}`types`, {doc}`evaluation` |
 
@@ -401,8 +413,8 @@ mtp-ydd4.7.59.
 | `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `font` | core | an attribute of the shape | {doc}`world-model` |
 | `pos` | syntactic sugar | `x` and `y` given as one point | {numref}`sugar-rewrites` |
 | `dash` | core | `(dash L O)`: the dash lengths `L`, and the offset `O`, which is 0 when it is left out | {doc}`world-model` |
-| `like` | syntactic sugar | copies another shape's arguments | {numref}`sugar-rewrites` |
-| `defaults` on a group, a row or a column | syntactic sugar | what a container gives its members | {numref}`sugar-rewrites` |
+| `like` | syntactic sugar | copies another shape's arguments | {numref}`like-copies` |
+| `defaults` on a group, a row or a column | core | what a container gives its members | {numref}`container-defaults` |
 | `clip` | core | a shape that the members are drawn inside | {doc}`world-model` |
 | `fixed-size` | core | a group whose members are measured in screen pixels | {doc}`world-model` |
 | `pointer-events` on a group, a row or a column | syntactic sugar | a default for the members | {numref}`sugar-rewrites` |
@@ -421,7 +433,7 @@ mtp-ydd4.7.59.
 | `clip` on an instance | core | as on a group | {doc}`world-model` |
 | `defaults` on an instance | core | what the instance gives the members that its motif makes | {doc}`world-model` |
 | `pointer-events` on an instance | syntactic sugar | a default for the members | {numref}`sugar-rewrites` |
-| `like` on an instance or a variant instance | syntactic sugar | copies another instance's items | {numref}`sugar-rewrites` |
+| `like` on an instance or a variant instance | syntactic sugar | copies another instance's items | {numref}`like-copies` |
 
 The rules about a declaration that reads itself or its container, such as a default that reads
 its own group, are to be redesigned around `self`. Until then, the rules of today hold
@@ -444,8 +456,8 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 | `term` | core | `(term T ITEM…)`: a term's attributes | {doc}`world-model` |
 | `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | a term's attributes | {doc}`world-model` |
 | a string in a term | core | the LaTeX that the term shows | {doc}`world-model` |
-| `like` in a term | syntactic sugar | copies another term's form | {numref}`sugar-rewrites` |
-| `defaults` in a formula | syntactic sugar | attributes for every term | {numref}`sugar-rewrites` |
+| `like` in a term | syntactic sugar | copies another term's form | {numref}`like-copies` |
+| `defaults` in a formula | core | attributes for every term | {numref}`formula-defaults` |
 | `exists-when` in a formula | core | when a term exists | {doc}`world-model` |
 | a variable in a formula | core | a member, kept as `F.M` | {doc}`world-model` |
 
@@ -523,7 +535,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `move` | core | `(move TARGET ITEM…)`: a transition written in place | {doc}`time` |
 | `from`, `to`, `duration`, `path` | core | the parts of a transition | {doc}`time` |
 | `ease` | core | a function from 0 to 1, such as the value of `(steps N)` | {doc}`time` |
-| `like` in a transition or a move | syntactic sugar | | {numref}`sugar-rewrites` |
+| `like` in a transition or a move | syntactic sugar | | {numref}`like-copies` |
 | `animation` written inline | core | `(animation ITEM…)`, or `(animation N)` naming one, also as a step | {doc}`time`, {numref}`animation-step` |
 | an animation's body of several items | syntactic sugar | one `in-order` | {numref}`sugar-rewrites` |
 | `defaults` in an animation, `at-once` or `in-order` | core | a duration and an ease for the moves inside | {doc}`time` |
@@ -531,7 +543,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `at-once`, `in-order` | core | items together, or one after another | {doc}`time` |
 | `foreach` in an animation's body | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
 | the name of an animation or a transition in a body | core | plays what it names | {doc}`time` |
-| `wait` | syntactic sugar | | {numref}`sugar-rewrites` |
+| `wait` | syntactic sugar | `(wait T)`: a step of `T` seconds in which nothing moves. With `T` left out, it lasts as long as a move with no `(duration …)` | {numref}`sugar-rewrites` |
 | `jump` | syntactic sugar | `(jump V X)`: a move of no duration | {numref}`sugar-rewrites` |
 | a use of a choreo | core | the choreo's moves, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
 
@@ -643,15 +655,17 @@ their place. They are not forms of the language.
 | `(H_ …)` | syntactic sugar, made by the parser | {numref}`unnamed-head` |
 | `N.A`, `N[X]` | syntactic sugar | {numref}`sugar-rewrites` |
 | `when`, `cond`, `and`, `or` | syntactic sugar | {numref}`sugar-rewrites` |
-| `colormap` as a type, a name declared by `type` | syntactic sugar | {numref}`sugar-rewrites` |
-| `import`, `type`, `palette` | syntactic sugar | {numref}`sugar-rewrites` |
-| `like` | syntactic sugar, or core with a `(name …)` | {numref}`sugar-rewrites`, {numref}`names-from-values` |
+| `colormap` as a type | syntactic sugar | {numref}`sugar-rewrites` |
+| `palette`, `parametric` | syntactic sugar | {numref}`sugar-rewrites` |
+| `like` | syntactic sugar, or core with a `(name …)` | {numref}`like-copies`, {numref}`names-from-values` |
 | `pointer-events` on a container | syntactic sugar | {numref}`sugar-rewrites` |
-| `defaults` on a group, a row or a column, and in a formula | syntactic sugar | {numref}`sugar-rewrites` |
 | `pos` | syntactic sugar | {numref}`sugar-rewrites` |
 | `foreach` with a list of names | syntactic sugar | {numref}`sugar-rewrites` |
 | a name as the target of `on-drag` | syntactic sugar | {numref}`sugar-rewrites` |
 | `wait`, `jump`, an animation's body of several items | syntactic sugar | {numref}`sugar-rewrites` |
+| `import` | core | {doc}`imports` |
+| `type`, a name declared by `type` | core | {numref}`type-notation` |
+| `defaults` on a group, a row or a column, and in a formula | core | {numref}`container-defaults`, {numref}`formula-defaults` |
 | `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |
 | `scene`, `background`, `transform` in the scene | core | {doc}`world-model` |
@@ -668,7 +682,7 @@ their place. They are not forms of the language.
 | `(T N …)`, a variable, `font` and its parts | core | {doc}`world-model`, {doc}`reaction` |
 | `free` | core | {doc}`reaction`, {doc}`binding-time` |
 | the {term}`constraints <constraint>` `>=`, `>`, `<=`, `<`, `length`, `one-of`, `const`, `wrap` | core | {doc}`types` |
-| the type notation of "Type notation", but `colormap` and the names declared by `type` | core | {doc}`types` |
+| the type notation of "Type notation", but `colormap` | core | {doc}`types` |
 | the twelve shapes | core | {doc}`world-model` |
 | `row`, `column`, `gap`, `align` | core | {doc}`world-model` |
 | the attribute arguments of the shapes, `dash`, `clip`, `fixed-size` | core | {doc}`world-model` |

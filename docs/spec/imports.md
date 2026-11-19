@@ -3,10 +3,9 @@
 
 This page defines how a file uses the declarations of another `.mtp` file: how an `import` is
 written, which file it reads, what that file may hold, and which {term}`names <name>` the import
-gives. Three rules about imports are on other pages, next to rules of the same kind: where an
-`import` may be written is in {doc}`grammar`, the {term}`rewrites <rewrite>` of
-`(import F)` and `(import F N…)` are in {numref}`sugar-rewrites`, and which imported declarations
-the {term}`.mtpc` holds is in {numref}`mtpc-imported-declarations`. The {term}`compiler` reads no
+gives. Two rules about imports are on other pages, next to rules of the same kind: where an
+`import` may be written is in {doc}`grammar`, and which imported declarations the {term}`.mtpc`
+holds is in {numref}`mtpc-imported-declarations`. The {term}`compiler` reads no
 file other than the source and the files that it imports ({numref}`compiler-reads-files`).
 
 The rewrite step reads every imported file ({numref}`compile-steps`), so a source that breaks a
@@ -56,7 +55,7 @@ source compiles, while on Linux the same source is a compile error. Bead mtp-ydd
 
 ```{rule} import-same-file
 Two imports read the same file when the two paths name one file on disk, links followed. A file
-imported several times, directly or through other files, is put in once ({numref}`sugar-rewrites`).
+imported several times, directly or through other files, is put in once ({numref}`import-puts-in`).
 Two different files of the same name imported into one source, directly or through other files,
 are a compile error, "two different files named F.mtp are imported". A file that imports itself,
 directly or through the files that it imports, is a compile error, "F.mtp imports itself, through
@@ -97,6 +96,21 @@ So whether a file to import is correct never depends on the source that imports 
 :::
 
 ## The names that an import gives
+
+```{rule} import-puts-in
+`(import F)` puts the top-level declarations of `F.mtp` into the source, after the rewrites of
+`F.mtp`, each under the name `F.N`, where `N` is its name in `F.mtp`. Each `F.N` and each `(. F N)`
+in the source is a use of that declaration. `(import F N1 N2…)` does the same, and each `Ni` in the
+source is also a use of `F.Ni`. A file imported several times, directly or through other files, is
+put in once.
+```
+
+:::{admonition} Code differs
+:class: note
+`_through` (compiler.py:7280-7290) reads only a name with several name parts, so after
+`(import lib)`, `lib.k` is accepted, and `(. lib k)` is a compile error, "unknown name 'lib'"
+(compiler.py:6056) (mtp-ydd4.7.47).
+:::
 
 ```{rule} import-files
 An imported file has a {term}`file scope` of its own: its forms use only the names that it

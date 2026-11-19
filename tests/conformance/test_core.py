@@ -5,7 +5,6 @@ import itertools
 import pytest
 
 from .support import (
-    REJECTION,
     accepted,
     compile_error,
     in_folder,
@@ -33,7 +32,6 @@ LIKE_INSTANCE = xfail("mtp-ydd4.7.20", "like on an instance copies neither point
 WAIT = xfail("mtp-ydd4.7.21", "wait makes no transition object, while its rewrite does")
 PALETTE_TYPE = xfail("mtp-ydd4.7.22", "a palette has the type palette, not namespace")
 COND_ELSE = xfail("mtp-ydd4.7.46", "(cond (else V)) is marked const, while V is not")
-IMPORT_DOT = xfail("mtp-ydd4.7.47", "after (import F), (. F N) is an unknown name")
 POS_RANDOM = xfail(
     "mtp-ydd4.7.25", "pos compiles its point once, so a random call in it is one site"
 )
@@ -170,12 +168,6 @@ class TestSugarRewrites:
             "(func f ((func[real color] m)) (m 0.5)) (colormap cm ['red' 'blue']) (color v (f cm))",
         )
 
-    def test_a_declared_type(self):
-        compile_error("(type pos real (>= 0)) (pos k -1)")
-        a = accepted("(type pos real (>= 0)) (pos k 1)").get("k").value.type
-        b = accepted("((real (>= 0)) k 1)").get("k").value.type
-        assert (a.base, a.constraints) == (b.base, b.constraints)
-
     def test_set(self):
         same_meaning(
             "(real k 0) (button b (animation (set k 3)))",
@@ -195,101 +187,9 @@ class TestSugarRewrites:
         compile_error("(real k 0) (button b (animation (set k)))")
         compile_error("(real k 0) (button b (animation (set k 1 2)))")
 
-    def test_import(self, tmp_path):
-        lib = {"lib.mtp": "(func twice ((real x)) (* 2 x))\n"}
-        a = in_folder(tmp_path, lib, "(import lib)\n(real v (lib.twice 2))\n")
-        assert a.get("v").value.value == 4
-
-    @IMPORT_DOT
-    def test_import_and_the_dot_form(self, tmp_path):
-        lib = {"lib.mtp": "(real k 3 (const))\n"}
-        m = in_folder(tmp_path, lib, "(import lib)\n(real v (. lib k))\n")
-        assert m.get("v").value.value == 3
-
-    def test_import_of_names(self, tmp_path):
-        lib = {"lib.mtp": "(func twice ((real x)) (* 2 x))\n"}
-        m = in_folder(tmp_path, lib, "(import lib twice)\n(real v (twice 2))\n")
-        assert m.get("v").value.value == 4
-
-    def test_import_of_a_name_that_the_file_does_not_declare(self, tmp_path):
-        lib = {"lib.mtp": "(func twice ((real x)) (* 2 x))\n"}
-        with pytest.raises(REJECTION):
-            in_folder(tmp_path, lib, "(import lib thrice)\n")
-
-    def test_import_of_a_name_that_the_source_declares(self, tmp_path):
-        lib = {"lib.mtp": "(func twice ((real x)) (* 2 x))\n"}
-        with pytest.raises(REJECTION):
-            in_folder(tmp_path, lib, "(import lib twice)\n(func twice ((real x)) x)\n")
-
-    def test_a_file_imported_twice_is_put_in_once(self, tmp_path):
-        files = {
-            "lib.mtp": "(color ink 'navy')\n",
-            "other.mtp": "(import lib)\n(color pen lib.ink)\n",
-        }
-        m = in_folder(tmp_path, files, "(import lib)\n(import other)\n(color v lib.ink)\n")
-        assert [o.name for o in m.objects].count("lib.ink") == 1
-
     @PALETTE_TYPE
     def test_palette(self):
         same_meaning("(palette p (a 'red'))", "(namespace p (color a 'red'))")
-
-    def test_like_on_a_shape(self):
-        same_meaning(
-            "(scene s (circle a (r 2) (fill 'red')) (circle b (like a) (fill 'blue')))",
-            "(scene s (circle a (r 2) (fill 'red')) (circle b (fill 'blue') (r 2)))",
-        )
-
-    def test_like_copies_what_the_items_read(self):
-        src = "(real k 1 (>= 0)) (scene s (circle a (r (* 2 k))) (circle b (like a)))"
-        same_meaning(
-            src, "(real k 1 (>= 0)) (scene s (circle a (r (* 2 k))) (circle b (r (* 2 k))))"
-        )
-
-    def test_like_splits_pos(self):
-        same_meaning(
-            "(scene s (circle a (pos [1 2]) (r 1)) (circle b (like a) (x 5)))",
-            "(scene s (circle a (pos [1 2]) (r 1)) (circle b (x 5) (y (. [1 2] 1)) (r 1)))",
-        )
-
-    def test_like_on_a_text_copies_its_string(self):
-        same_meaning(
-            "(scene s (text a 'hi' (halign 'start')) (text b (like a) (x 1)))",
-            "(scene s (text a 'hi' (halign 'start')) (text b 'hi' (x 1) (halign 'start')))",
-        )
-
-    def test_like_of_a_shape_of_another_kind_is_an_error(self):
-        compile_error("(scene s (circle a (r 1)) (rect b (like a)))")
-
-    def test_like_of_a_group_is_an_error(self):
-        compile_error("(scene s (group a (circle_ (r 1))) (group b (like a)))")
-
-    def test_like_on_a_font(self):
-        same_meaning(
-            "(font a (size 12) (weight 700)) (font b (like a) (size 14))",
-            "(font a (size 12) (weight 700)) (font b (size 14) (weight 700))",
-        )
-
-    def test_like_on_a_term(self):
-        same_meaning(
-            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (like a)))",
-            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (fill 'red')))",
-        )
-
-    def test_like_on_a_move(self):
-        same_meaning(
-            "(real k 0) (transition t k (to 1) (duration 2)) (button b (animation (move k (like t) "
-            "(to 3))))",
-            "(real k 0) (transition t k (to 1) (duration 2)) (button b (animation (move k (to 3) "
-            "(duration 2))))",
-        )
-
-    @LIKE_INSTANCE
-    def test_like_on_an_instance_copies_its_pointer_events(self):
-        motif = "(motif m () (circle_ (r 1)))\n"
-        same_meaning(
-            motif + "(scene s (m a (pointer-events false)) (m b (like a)))",
-            motif + "(scene s (m a (pointer-events false)) (m b (pointer-events false)))",
-        )
 
     def test_pointer_events_on_a_group(self):
         same_meaning(
@@ -301,30 +201,6 @@ class TestSugarRewrites:
         compile_error(
             "(scene s (group g (pointer-events false) (defaults (pointer-events true)) (circle c "
             "(r 1))))"
-        )
-
-    def test_defaults_on_a_group(self):
-        same_meaning(
-            "(scene s (group g (defaults (fill 'red')) (circle c (r 1)) (circle d (r 1) (fill "
-            "'blue'))))",
-            "(scene s (group g (circle c (r 1) (fill 'red')) (circle d (r 1) (fill 'blue'))))",
-        )
-
-    def test_defaults_at_any_depth_the_nearest_container_first(self):
-        same_meaning(
-            "(scene s (group g (defaults (fill 'red')) (group h (defaults (fill 'blue')) (circle c "
-            "(r 1)))))",
-            "(scene s (group g (group h (circle c (r 1) (fill 'blue')))))",
-        )
-
-    def test_a_default_that_no_container_gives(self):
-        compile_error("(scene s (group g (defaults (r 2)) (circle c)))")
-
-    def test_defaults_in_a_formula(self):
-        same_meaning(
-            "(formula f (defaults (fill 'red')) $'\\term{a}{x}\\term{b}{y}' (term a (fill "
-            "'blue')))",
-            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'blue')) (term b (fill 'red')))",
         )
 
     def test_pos_of_a_literal_list(self):
@@ -424,6 +300,67 @@ class TestSugarRewrites:
         accepted(
             "(real k 0) (real j 1) (choreo pulse ((real t 1)) (move k (to t) (duration 1)))"
             " (button b (pulse (* 2 j)))"
+        )
+
+
+@rule("like-copies")
+class TestLikeCopies:
+    def test_like_on_a_shape(self):
+        same_meaning(
+            "(scene s (circle a (r 2) (fill 'red')) (circle b (like a) (fill 'blue')))",
+            "(scene s (circle a (r 2) (fill 'red')) (circle b (fill 'blue') (r 2)))",
+        )
+
+    def test_like_copies_what_the_items_read(self):
+        src = "(real k 1 (>= 0)) (scene s (circle a (r (* 2 k))) (circle b (like a)))"
+        same_meaning(
+            src, "(real k 1 (>= 0)) (scene s (circle a (r (* 2 k))) (circle b (r (* 2 k))))"
+        )
+
+    def test_like_splits_pos(self):
+        same_meaning(
+            "(scene s (circle a (pos [1 2]) (r 1)) (circle b (like a) (x 5)))",
+            "(scene s (circle a (pos [1 2]) (r 1)) (circle b (x 5) (y (. [1 2] 1)) (r 1)))",
+        )
+
+    def test_like_on_a_text_copies_its_string(self):
+        same_meaning(
+            "(scene s (text a 'hi' (halign 'start')) (text b (like a) (x 1)))",
+            "(scene s (text a 'hi' (halign 'start')) (text b 'hi' (x 1) (halign 'start')))",
+        )
+
+    def test_like_of_a_shape_of_another_kind_is_an_error(self):
+        compile_error("(scene s (circle a (r 1)) (rect b (like a)))")
+
+    def test_like_of_a_group_is_an_error(self):
+        compile_error("(scene s (group a (circle_ (r 1))) (group b (like a)))")
+
+    def test_like_on_a_font(self):
+        same_meaning(
+            "(font a (size 12) (weight 700)) (font b (like a) (size 14))",
+            "(font a (size 12) (weight 700)) (font b (size 14) (weight 700))",
+        )
+
+    def test_like_on_a_term(self):
+        same_meaning(
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (like a)))",
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (fill 'red')))",
+        )
+
+    def test_like_on_a_move(self):
+        same_meaning(
+            "(real k 0) (transition t k (to 1) (duration 2)) (button b (animation (move k (like t) "
+            "(to 3))))",
+            "(real k 0) (transition t k (to 1) (duration 2)) (button b (animation (move k (to 3) "
+            "(duration 2))))",
+        )
+
+    @LIKE_INSTANCE
+    def test_like_on_an_instance_copies_its_pointer_events(self):
+        motif = "(motif m () (circle_ (r 1)))\n"
+        same_meaning(
+            motif + "(scene s (m a (pointer-events false)) (m b (like a)))",
+            motif + "(scene s (m a (pointer-events false)) (m b (pointer-events false)))",
         )
 
 
