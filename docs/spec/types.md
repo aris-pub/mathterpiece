@@ -16,7 +16,8 @@ This page specifies the language.
 ## What a type is
 
 ```{rule} what-a-type-is
-A type is a set of values or a set of objects, known when compiling. Every variable, attribute,
+A type is a named set of {term}`things <thing>`, values or objects, known when compiling: a set that
+a source can write. Every variable, attribute,
 parameter and expression has a type, and what it holds or gives is always in that set.
 ```
 

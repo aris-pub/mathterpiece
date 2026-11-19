@@ -95,7 +95,7 @@ bool
   ({numref}`the-types`, {numref}`literal-words`).
 
 type
-  A set of values or a set of objects, known when compiling ({numref}`what-a-type-is`).
+  A named set of things, values or objects, known when compiling ({numref}`what-a-type-is`).
 
 built-in type
   One of the types that mtp gives, such as `real`, `point` or `circle`, whose name no declaration
@@ -286,6 +286,9 @@ file scope
 file to import
   A `.mtp` file that another file imports with `import`. It holds only the forms that
   {numref}`import-file-holds` allows at its top level. Defined in {doc}`imports`.
+
+thing
+  A value or an object ({numref}`values`, {numref}`objects`).
 
 value
   A piece of data that never changes and has no identity, such as a number, a string or a list

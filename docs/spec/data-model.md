@@ -2,7 +2,7 @@
 # Data model
 
 This page defines the things that the compiler builds from a source and that the runtime holds:
-values, variables, objects and records. What the parser reads, {term}`literals <literal>`
+values, variables, objects and records. A thing is a value or an object. What the parser reads, {term}`literals <literal>`
 among it, is defined in {doc}`grammar`. This page specifies the language.
 
 <figure class="mtp-diagram" style="max-width: 35rem">
