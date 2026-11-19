@@ -265,7 +265,7 @@ site
 
 declaration
   A form that creates a new thing that can be addressed: an object of the world model, a function,
-  a type or a choreo, with a name or without one ({numref}`declarations-and-bindings`).
+  a type or an animation, with a name or without one ({numref}`declarations-and-bindings`).
 
 binding
   A name that a `let`, a `foreach` or a parameter gives to a value for a part of a source. A binding
@@ -336,18 +336,19 @@ world model
 
 move
   A form `(move T …)` that changes one target, such as a variable or an attribute, to a new value
-  over a duration. Every control, listener and animation that changes the model over time plays
-  moves. Defined in {doc}`time`.
+  over a duration. Every control and listener that changes the model over time plays moves.
+  Defined in {doc}`time`.
 
-animation
-  A collection of moves, played in order or at once, as a group is a collection of shapes. Defined
-  in {doc}`time`.
+in-order, at-once
+  A collection of movements, played one after another or together, as a row and a column are
+  collections of shapes. Defined in {doc}`time`.
 
 motif
   A template of shapes, `(motif N PARAMS ITEM…)`. Each instance is the body of the motif with the
   values of its parameters. Defined in {doc}`world-model`.
 
-choreo
-  A template of moves, `(choreo N PARAMS ITEM…)`, as a motif is a template of shapes. Each use is
-  the body of the choreo with the values of its parameters. Defined in {doc}`time`.
+animation
+  A template of movements, `(animation N PARAMS ITEM…)`, as a motif is a template of shapes. Each
+  use is a movement of the animation's type: its body, with the values of its parameters. Defined
+  in {doc}`time`.
 ```

@@ -43,11 +43,11 @@ The file `rand` of the standard library holds these declarations, and only these
 |---|---|---|
 | `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | `(primitive rand)` and so on | the primitives ({numref}`random-values`) |
 | `seed` | `(rand-seed seed 0)` | the {term}`seed` that a file with no seed of its own follows ({numref}`default-seed`) |
-| `roll-dice` | `(choreo roll-dice ((rand-seed s)) (jump s (next-seed s)))` | a choreo that gives the seed `s` its next value at once. `s` is the {term}`default seed` of the file that holds the use when the use gives no argument |
+| `roll-dice` | `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))` | an animation that gives the seed `s` its next value at once. `s` is the {term}`default seed` of the file that holds the use when the use gives no argument |
 
 So `(import rand rand-int roll-dice)` gives the names `rand-int` and `roll-dice`, and
 `(import rand)` gives `rand.rand-int`, `rand.roll-dice` and the others ({doc}`imports`).
-`(roll-dice s)` is a use of a choreo ({ref}`choreo-uses`): one step, which writes
+`(roll-dice s)` is a use of an animation ({ref}`animation-uses`): one step, which writes
 `(next-seed s)` into the seed `s`. `(roll-dice)` with no argument rolls the {term}`default seed`
 of the file that holds it ({numref}`default-seed`).
 

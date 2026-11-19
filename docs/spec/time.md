@@ -1,18 +1,18 @@
 # Time and animation
 
 :::{note}
-Not drafted yet. This page defines: moves, which are the unit of change over time, movements as functions of time, and animations as collections of moves, arranged with `in-order` and `at-once` and repeated with loops, as a group is a collection of shapes.
+Not drafted yet. This page defines: moves, which are the unit of change over time, movements as functions of time, `in-order` and `at-once` as collections of movements, repeated with loops, as a row and a column are collections of shapes, and animations as templates of movements, as a motif is a template of shapes.
 :::
 
-(choreo-uses)=
-## Uses of a choreo
+(animation-uses)=
+## Uses of an animation
 
-A use of a choreo, `(C A1 … Ak)`, is core, as a motif instance is. It is written where a move, an
-animation or a step of an animation's body may be written, and k is at least the position of the
-last parameter with no default. In the expand step it becomes an `(animation …)` whose body is the
-body of the choreo, with each parameter replaced by the value of its argument, or by its default
-when the use gives no argument for it. So a use written as a step of an animation's body is one
-step ({numref}`animation-step`). The prover proves that each argument {term}`fits <fit>` the type
+A use of an animation, `(C A1 … Ak)`, is core, as a shape of a motif type is. It is written where a
+movement may be written, and k is at least the position of the last parameter with no default. In
+the expand step it becomes an `(in-order …)` whose members are the body of the animation, with each
+parameter replaced by the value of its argument, or by its default when the use gives no argument
+for it. So a use written as a member of an `in-order` or an `at-once` is one step
+({numref}`animation-step`). The prover proves that each argument {term}`fits <fit>` the type
 of its parameter. An argument may be any expression that may be written in the body in the places
 where its parameter is written, so `(pulse (* 2 k))` is an error when the parameter is a duration,
 by {doc}`binding-time`, and is accepted when it is a `to`. A parameter stands for a value or a
@@ -21,8 +21,8 @@ parameter, such as `who.opacity`, and never the parameter itself. The one except
 of type `rand-seed`, which stands for a seed: its argument is the name of a seed, and in the body
 the parameter is replaced by that seed and not by its value, so a move of the parameter moves the
 seed. Any other argument for such a parameter is a compile error, "the argument for P is the name
-of a seed, as in (C dots)". So the choreo `roll-dice` of the file rand,
-`(choreo roll-dice ((rand-seed s)) (jump s (next-seed s)))`, moves the seed that its use names.
+of a seed, as in (C dots)". So the animation `roll-dice` of the file rand,
+`(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`, moves the seed that its use names.
 
 :::{admonition} Code differs
 :class: note

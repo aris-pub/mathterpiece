@@ -495,7 +495,7 @@ random value that follows it is drawn again ({doc}`reaction`). Since the sites a
 compiling, a change to the source that adds or removes a random function before
 another one changes the site of the later one, and with it the value that the later one draws.
 
-A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`: `roll-dice` is a choreo
+A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`: `roll-dice` is an animation
 of the file rand ({ref}`stdlib-rand`), and `(roll-dice)` rolls the default seed
 ({numref}`default-seed`). By {numref}`random-values`, a roll changes the random values that
 follow `s`, and no others.

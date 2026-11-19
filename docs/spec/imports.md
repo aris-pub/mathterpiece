@@ -72,7 +72,7 @@ named colors.mtp.
 ```{rule} import-file-holds
 A {term}`file to import` holds at its top level only `import`, `let`, `foreach`, and declarations of
 colors, fonts, functions, motifs, variants, types, interfaces, records, palettes, colormaps,
-choreos, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A file of the standard
+animations, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A file of the standard
 library also holds `(primitive …)` ({numref}`primitive-form`). Any other form there is a compile error at that form, in every
 source that imports the file.
 ```
