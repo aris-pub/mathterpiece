@@ -380,8 +380,8 @@ class TestInventory:
         )
 
 
-@rule("drag-group-translate")
-class TestDragGroupTranslate:
+@rule("drag-group-shift")
+class TestDragGroupShift:
     def test_a_drag_of_a_group_is_compiled(self):
         # What the drag writes is shown by the runtime: web/test/conformance/core.test.ts.
         accepted("(scene s (group g (circle c (r 1)))) (canvas v s (on-drag g g.pos))")

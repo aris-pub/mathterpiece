@@ -70,7 +70,7 @@ the code is changed. A form that needs a value or a type to be rewritten is core
 **Decided (2026-11-15):** `(on-drag p p.pos)` is syntactic sugar for `(on-drag p (move p.pos (to pointer)))`,
 and `p.x` and `p.y` likewise, and the two spellings mean the same at all times. Dragging a group, a
 row or a column, fixed-size or not, writes its `translate`, for both spellings
-({numref}`sugar-rewrites`, {numref}`drag-group-translate`) (Q-core-23). `(foreach k n …)` means
+({numref}`sugar-rewrites`, {numref}`drag-group-shift`) (Q-core-23). `(foreach k n …)` means
 exactly `(foreach k (range 0 n) …)`. A `foreach` over a count, or over a list whose length is known
 only while drawing and has an upper bound, makes as many copies as the bound, and copy k exists
 only while k is below the count or the length ({numref}`foreach-count`,

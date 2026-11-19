@@ -168,16 +168,23 @@ so `(like M)` copies them.
 
 ### Dragging a group
 
-```{rule} drag-group-translate
+```{rule} drag-group-shift
 In an `on-drag` on a group, a row or a column, whether its `fixed-size` is true or not, a move
 whose target is the `pos`, the `x` or the `y` of that same container writes the container's
-`translate` in place of the target: all of it for `pos`, its first number for `x`, and its second
-number for `y`. In that move, `pointer` is the `translate` of the container at the press plus the
+`shift-x` and `shift-y` in place of the target: both for `pos`, `shift-x` for `x`, and `shift-y`
+for `y`. In that move, `pointer` is `[shift-x shift-y]` of the container at the press plus the
 motion of the pointer since the press, in the frame of the container's container.
 ```
 
 By {numref}`sugar-rewrites`, `(on-drag g g.pos)` is `(on-drag g (move g.pos (to pointer)))`, so
-both spellings move the group by its `translate`, and the members keep their own positions.
+both spellings move the group by its `shift-x` and `shift-y`. No member is written: the members are
+drawn in the frame of the group, so they move with it and keep their own positions.
+
+:::{admonition} Code differs
+:class: note
+A group has no `shift-x` and no `shift-y`: the compiler and the runtime give it a `translate`, and
+the drag writes that. Bead mtp-1vyc makes the parts of a frame attributes of the shape.
+:::
 
 :::{admonition} Code differs
 :class: note
@@ -572,7 +579,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `move`, `animation` or a use of a choreo on a control or a listener | core | what the writer plays: one move, a collection of moves, or the moves of a choreo. A writer has at most one of them | {doc}`reaction`, {doc}`time` |
 | the move of a slider | core | a `move` or the name of a transition, its first item | {doc}`page-interface`, {doc}`reaction` |
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
-| the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-translate` |
+| the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-shift` |
 | the target of `on-drag` written as a name | syntactic sugar | the move of the shape's position | {numref}`sugar-rewrites` |
 | `label` | core | a control's label, a string | {doc}`page-interface`, {doc}`accessibility` |
 | `stops` on a slider | core | the number of positions of its knob. A slider whose target is an `int` and that gives no `stops` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
@@ -706,7 +713,7 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | `doc` | core | {doc}`compiled-format` |
 | the views, the controls and their items | core | {doc}`page-interface`, {doc}`reaction`, {doc}`concurrency` |
 | the fourteen listeners | core | {doc}`reaction`, {doc}`concurrency`, {doc}`lifecycle` |
-| a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-translate` |
+| a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-shift` |
 | a condition | core | {doc}`reaction` |
 | the operators, `not`, `abs`, the `none` functions and the box points | built-in | {numref}`built-ins` |
 | the built-in functions and the collections, `map` over an int included, `steps` | built-in | {doc}`stdlib` |
