@@ -170,13 +170,13 @@ Each keyword is the head of a form of the language.
 
 | Heads of | Keywords |
 |---|---|
-| Declarations of objects | `scene`, `formula`, `namespace`, `palette`, `transition`, `animation` |
+| Declarations of objects | `scene`, `formula`, `record`, `palette`, `movement`, `animation` |
 | Declarations of shapes and containers | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group`, `row`, `column`, `parametric` |
 | Declarations of {term}`components <component>` | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle` |
 | Declarations of {term}`listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 | Declarations of functions, types and choreos | `func`, `primitive`, `colormap`, `type`, `interface`, `motif`, `variant`, `choreo` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
-| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `type-of`, `as`, `free`, `concat`, `fmt` |
+| Expression forms | `.`, `name`, `if`, `when`, `cond`, `else`, `and`, `or`, `fn`, `rec`, `type-of`, `as`, `free`, `concat`, `fmt` |
 | Steps of an animation | `move`, `wait`, `jump`, `at-once`, `in-order` |
 :::
 

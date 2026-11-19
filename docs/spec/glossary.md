@@ -290,13 +290,13 @@ value
 
 object
   A thing that has an identity and attributes, each of which behaves like a variable, such as the
-  scene, a shape, a component, a function or a namespace ({numref}`objects`).
+  scene, a shape, a component, a function or a record ({numref}`objects`).
 
 variable
   A named holder of one value or one object, which is free, bound or const ({numref}`variables`).
 
-namespace
-  An object that consists only of the attributes that it is declared with ({numref}`namespaces`).
+record
+  An object that consists only of the attributes that it is declared with ({numref}`records`).
 
 fit
   A type A fits a type B when a value of type A is accepted where a value of type B is expected

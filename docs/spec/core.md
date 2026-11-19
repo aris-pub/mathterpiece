@@ -72,7 +72,7 @@ any number of such texts.
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | `(jump V X)` | `(move V (to X) (duration 0))` | Exactly two arguments |
-| `(palette N (M C)…)` | `(namespace N (color M C)…)` | Each item is `(M C)` |
+| `(palette N (M C)…)` | `(record N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N XS F ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
@@ -147,7 +147,7 @@ For example, after `(circle a (r 1) (fill 'red') (stroke 'black'))`, the form
 - `K` is a motif or a variant, and `M` is an instance of it.
 - `K` is `font`, and `M` is a font.
 - `K` is `term`, and `M` is a term of the same formula whose `(term …)` form comes before.
-- The form is a `move` or a `transition`, and `M` is a transition declared at the top level.
+- The form is a `move` or a `movement`, and `M` is a movement declared at the top level.
 
 Two kinds of item are copied in a way of their own. The string of a text is copied too, though it
 is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and `y`, so when
@@ -232,7 +232,7 @@ of `X`.
 ```
 
 So `p.r` is the attribute `r` of a circle `p`, and with `(let ((r 1)) xs.r)`, `xs.r` is item 1 of
-the list `xs`, as `(. xs r)` is. A member of a namespace, a palette, a formula or an instance is
+the list `xs`, as `(. xs r)` is. A member of a record, a palette, a formula or an instance is
 read by its name, even when another declaration or a binding has the same name. So with
 `(color yellow '#ffd700')` and `(palette marks (yellow '#e6c200') (blue '#0072b2'))` at the top
 level, `marks.yellow` is the member `yellow` of the palette, and not the color `yellow`.
@@ -317,8 +317,8 @@ inventory.
   so the prover proves that each value fits its attribute.
 - **`(defaults …)` in an animation, an `at-once` or an `in-order`.** A default ease does not apply
   to a move of a {term}`bool`, a string or a choice, so writing the ease into each move needs the
-  type of its target. A default duration also applies to the name of a transition in the body, which
-  cannot be given a duration without making a new transition.
+  type of its target. A default duration also applies to the name of a movement in the body, which
+  cannot be given a duration without making a new movement.
 - **An `in-order` or an `at-once` of one item.** It is one step, while its item may be several: a
   play of `(animation (in-order (in-order a b)))` has one step, and a play of
   `(animation (in-order a b))` has two.
@@ -346,8 +346,8 @@ The top level of a source holds only the heads of this table and `let`
 | `import` | core | `(import F)` or `(import F N…)`: the declarations of another file | {doc}`imports` |
 | `type` | core | `(type N BASE C…)`: a name for a {term}`refined type` | {numref}`type-notation` |
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
-| `namespace` | core | `(namespace N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
-| `palette` | syntactic sugar | `(palette N (M C)…)`: a namespace of colors | {numref}`sugar-rewrites` |
+| `record` | core | `(record N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
+| `palette` | syntactic sugar | `(palette N (M C)…)`: a record of colors | {numref}`sugar-rewrites` |
 | `parametric` | syntactic sugar | `(parametric N XS F ARGS…)`: a polyline through the points of the curve `F` at the values of the list `XS` | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
 | `scene` | core | `(scene N ITEM…)`: the scene, of which a source holds at most one | {doc}`world-model` |
@@ -355,7 +355,7 @@ The top level of a source holds only the heads of this table and `let`
 | `motif` | core | `(motif N PARAMS ITEM…)`: a template of shapes | {doc}`world-model` |
 | `variant` | core | `(variant N PARAMS SHAPE)`: a new type of shape | {doc}`types` |
 | `func`, `func[T]` | core | `(func N PARAMS BODY)`: a named function | {doc}`types`, {doc}`evaluation` |
-| `transition` | core | `(transition N TARGET ITEM…)`: a named trajectory | {doc}`time` |
+| `movement` | core | `(movement N TARGET ITEM…)`: a named trajectory | {doc}`time` |
 | `animation` | core | `(animation N ITEM…)`: a named animation | {doc}`time` |
 | `choreo` | core | `(choreo N PARAMS ITEM…)`: a template of moves, as a motif is a template of shapes | {doc}`time` |
 | `primitive` | core | `(primitive N)`, only in a file of the standard library: the name `N` for a {term}`primitive` | {numref}`primitive-form` |
@@ -394,7 +394,7 @@ mtp-ydd4.7.59.
 
 | Notation | Kind | What it is | Defined in |
 |---|---|---|---|
-| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `curve`, `bool`, `string`, `color`, `font`, `point`, `transform`, `transition`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
+| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `curve`, `bool`, `string`, `color`, `font`, `point`, `transform`, `movement`, `animation`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
 | `circle` and the other shape names | core | the shape types | {doc}`types` |
 | `shape`, `positioned`, `sequence`, `sequence[T]` | core | the built-in {term}`interfaces <interface>` | {doc}`types` |
 | `list[T]` | core | lists | {doc}`types` |
@@ -454,12 +454,12 @@ The rules about a declaration that reads itself or its container, such as a defa
 its own group, are to be redesigned around `self`. Until then, the rules of today hold
 ({numref}`self-reference-today`).
 
-### Namespaces, palettes and interfaces
+### Records, palettes and interfaces
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a variable in a namespace | core | a member, kept as `N.M` | {doc}`world-model` |
-| `namespace`, `palette` in a namespace | core, syntactic sugar | a namespace inside a namespace | {doc}`world-model`, {numref}`sugar-rewrites` |
+| a variable in a record | core | a member, kept as `N.M` | {doc}`world-model` |
+| `record`, `palette` in a record | core, syntactic sugar | a record inside a record | {doc}`world-model`, {numref}`sugar-rewrites` |
 | `(M C)` in a palette | syntactic sugar | `(color M C)` | {numref}`sugar-rewrites` |
 | `(T A C…)` in an interface | core | an attribute that an object must have | {doc}`types` |
 
@@ -543,21 +543,21 @@ them only as the whole value of an `ease`, and not as calls. So after `(real ste
 error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler follow the rule.
 :::
 
-### Transitions and animations
+### Movements and animations
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `move` | core | `(move TARGET ITEM…)`: a transition written in place | {doc}`time` |
-| `from`, `to`, `duration`, `path` | core | the parts of a transition | {doc}`time` |
+| `move` | core | `(move TARGET ITEM…)`: a movement written in place | {doc}`time` |
+| `from`, `to`, `duration`, `path` | core | the parts of a movement | {doc}`time` |
 | `ease` | core | a function from 0 to 1, such as the value of `(steps N)` | {doc}`time` |
-| `like` in a transition or a move | syntactic sugar | | {numref}`like-copies` |
+| `like` in a movement or a move | syntactic sugar | | {numref}`like-copies` |
 | `animation` written inline | core | `(animation ITEM…)`, or `(animation N)` naming one, also as a step | {doc}`time`, {numref}`animation-step` |
 | an animation's body of several items | syntactic sugar | one `in-order` | {numref}`sugar-rewrites` |
 | `defaults` in an animation, `at-once` or `in-order` | core | a duration and an ease for the moves inside | {doc}`time` |
 | `loop` | core | `(loop)` or `(loop N)` | {doc}`time` |
 | `at-once`, `in-order` | core | items together, or one after another | {doc}`time` |
 | `foreach` in an animation's body | core | puts its moves where it is written | {doc}`time`, {doc}`binding-time` |
-| the name of an animation or a transition in a body | core | plays what it names | {doc}`time` |
+| the name of an animation or a movement in a body | core | plays what it names | {doc}`time` |
 | `wait` | syntactic sugar | `(wait T)`: a step of `T` seconds in which nothing moves. With `T` left out, it lasts as long as a move with no `(duration …)` | {numref}`sugar-rewrites` |
 | `jump` | syntactic sugar | `(jump V X)`: a move of no duration | {numref}`sugar-rewrites` |
 | a use of a choreo | core | the choreo's moves, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
@@ -577,7 +577,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `font` on a readout | core | the readout's font | {doc}`page-interface` |
 | `kind` on a display | core | `'block'` or `'inline'` | {doc}`page-interface` |
 | `move`, `animation` or a use of a choreo on a control or a listener | core | what the writer plays: one move, a collection of moves, or the moves of a choreo. A writer has at most one of them | {doc}`reaction`, {doc}`time` |
-| the move of a slider | core | a `move` or the name of a transition, its first item | {doc}`page-interface`, {doc}`reaction` |
+| the move of a slider | core | a `move` or the name of a movement, its first item | {doc}`page-interface`, {doc}`reaction` |
 | the target of `toggle`, `on-pointermove` | core | a name | {doc}`reaction` |
 | the target of `on-drag` written as a move | core | `(move TARGET (to X))` | {doc}`reaction`, {numref}`drag-group-shift` |
 | the target of `on-drag` written as a name | syntactic sugar | the move of the shape's position | {numref}`sugar-rewrites` |
@@ -619,11 +619,11 @@ follow the rule.
 | `group`, `row`, `column` | shapes, `exists-when` | yes |
 | `motif` | shapes, variables that are bound or known when compiling, `exists-when` | yes |
 | `formula` | one string, plain or TeX, known when compiling, then terms, `exists-when` and variables ({numref}`formula-terms`) | yes |
-| `namespace` | variables, namespaces, palettes | yes |
+| `record` | variables, records, palettes | yes |
 | `palette` | items `(member color)` | yes |
 | `interface` | items `(T attribute constraint…)` | yes |
 | `type`, a variable `(T name …)` | {term}`constraints <constraint>`, such as `(>= 0)` | yes |
-| `animation`, `choreo`, `at-once`, `in-order` | steps: `move`, `jump`, `wait`, `at-once`, `in-order`, `(animation …)`, the name of an animation or a transition, a use of a choreo | yes |
+| `animation`, `choreo`, `at-once`, `in-order` | steps: `move`, `jump`, `wait`, `at-once`, `in-order`, `(animation …)`, the name of an animation or a movement, a use of a choreo | yes |
 | `defaults` | items `(attribute value)`, and in an animation, `(duration …)` and `(ease …)` | yes |
 | `canvas` | at least one thing to draw: a name of a shape or of the scene, a list literal, or an expression that gives a shape, `none` or a list of shapes, such as `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
 | `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
@@ -686,14 +686,14 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | `import` | core | {doc}`imports` |
 | `type`, a name declared by `type` | core | {numref}`type-notation` |
 | `defaults` on a group, a row or a column, and in a formula | core | {numref}`container-defaults`, {numref}`formula-defaults` |
-| `interface`, `namespace` | core | {doc}`types`, {doc}`world-model` |
+| `interface`, `record` | core | {doc}`types`, {doc}`world-model` |
 | `colormap` | core | {doc}`evaluation` |
 | `scene`, `background`, `transform` in the scene | core | {doc}`world-model` |
 | `formula`, `term` and the attributes of a term | core | {doc}`world-model` |
 | `motif`, a motif instance, `self`, `defaults` on an instance | core | {doc}`world-model`, {doc}`scope` |
 | `variant`, a variant instance | core | {doc}`types`, {doc}`world-model` |
 | `func`, `func[T]`, `fn`, calls | core | {doc}`types`, {doc}`evaluation` |
-| `transition`, `move` and their parts | core | {doc}`time` |
+| `movement`, `move` and their parts | core | {doc}`time` |
 | `choreo` and its uses | core | {doc}`time`, {numref}`prove-bodies-once` |
 | `primitive` | core | {numref}`primitive-form` |
 | `animation`, `at-once`, `in-order`, `loop`, `defaults` in an animation | core | {doc}`time`, {numref}`animation-step` |
