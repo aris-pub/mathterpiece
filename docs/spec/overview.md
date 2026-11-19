@@ -29,7 +29,7 @@ describes a head, and is not mtp source:
 (formula NAME TEX:string
   (doc:string '')
   ITEMS)
-  ITEMS := (many (either term exists-when variable))
+  ITEMS := (any (either term exists-when variable))
 ```
 
 - A word in capitals stands for what the form gives in its place: `NAME` for the declared name.
@@ -41,7 +41,7 @@ describes a head, and is not mtp source:
   `shape`, or a head, such as `rect`.
 - `(doc:string '')` is the docstring, which comes after the named arguments ({numref}`docstrings`).
 - `ITEMS` is the body. The line under the signature, `ITEMS := …`, says what the body holds, with
-  four forms: `(one X)` is exactly one X, `(some X)` is one X or more, `(many X)` is any number of
+  four forms: `(one X)` is exactly one X, `(some X)` is one X or more, `(any X)` is any number of
   X, none included, and `(either A B …)` is one of A, B and so on. The items come in the order
   written, and `EXPR:T` is any expression of type T.
 

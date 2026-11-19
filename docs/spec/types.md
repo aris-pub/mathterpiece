@@ -80,7 +80,7 @@ These are the types of mtp:
 | `record`, `formula`, `term` | as named | the records, palettes and fonts among them, the formulas, and the terms |
 | `component`, `view`, `control`, `listener` | as named | the components, the views, the controls and the listeners |
 | a {term}`component` type | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and the name of each listener | the components of that kind |
-| an {term}`interface` | `positioned`, `sequence`, `sequence[T]`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
+| an {term}`interface` | `positioned`, `sequence`, `sequence[T]`, `instant`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
 | `rand-seed` | `rand-seed` | the values of `int` ({numref}`seed-variable`) |
 | `colormap` | `colormap` | the same type as `func[real color]`: the functions from a real to a color |
 
@@ -409,6 +409,7 @@ variable, an attribute or a parameter. A type satisfies an interface as follows:
 | `shape` | every shape type, motif type and variant type |
 | `positioned` | `point`, and every shape type, motif type and variant type but `group` |
 | `sequence` | every list type, `point` and `group` |
+| `instant` | every movement whose `duration` is 0: a jump, and a score of jumps. It is `(interface instant ((real (one-of 0)) duration))` |
 | `sequence[T]` | `list[S]` when S fits T, `point` when `real` fits T, and `group`, when the common type of the members of the group ({numref}`common-type`) fits T |
 | `palette` | every record whose members are all colors, whatever their names and number. A palette made by `(palette …)` is one ({numref}`sugar-rewrites`) |
 | a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. For a record, the attributes are its members, and each record that a value may be satisfies the interface on its own |
