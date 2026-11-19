@@ -80,8 +80,8 @@ any number of such texts.
 | `(wait T)`, in a score | `(move none (duration T))` | |
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |
 | `(in-order ARGS… ITEMS…)`, `(at-once ARGS… ITEMS…)` | `(score ARGS… ITEMS…)`, with `(lag 1)` for `in-order`, or `(lag 0)` for `at-once`, added to its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `lag` |
-| `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1))) ITEMS…)` | `pointer` is the position of the pointer ({numref}`declarations-and-bindings`) |
-| `(on-drag S S.shift ITEMS…)`, `(on-drag S S.shift-x ITEMS…)`, `(on-drag S S.shift-y ITEMS…)` | `(on-drag S (move S.shift (to pointer)) ITEMS…)`, `(on-drag S (move S.shift-x (to (. pointer 0))) ITEMS…)`, `(on-drag S (move S.shift-y (to (. pointer 1))) ITEMS…)` | |
+| `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (move S.pos (to pointer) (duration 0)) ITEMS…)`, `(on-drag S (move S.x (to (. pointer 0)) (duration 0)) ITEMS…)`, `(on-drag S (move S.y (to (. pointer 1)) (duration 0)) ITEMS…)` | `pointer` is the position of the pointer ({numref}`declarations-and-bindings`) |
+| `(on-drag S S.shift ITEMS…)`, `(on-drag S S.shift-x ITEMS…)`, `(on-drag S S.shift-y ITEMS…)` | `(on-drag S (move S.shift (to pointer) (duration 0)) ITEMS…)`, `(on-drag S (move S.shift-x (to (. pointer 0)) (duration 0)) ITEMS…)`, `(on-drag S (move S.shift-y (to (. pointer 1)) (duration 0)) ITEMS…)` | |
 ```
 
 So `(parametric p (range -2 2 (num 361)) (fn t [t (* t t)]) (stroke 'teal'))` is the parabola
@@ -178,7 +178,8 @@ target that is the container's `pos`, `x` or `y` is a {term}`compile error`, "a 
 its own: drag its shift, as (on-drag g g.shift)".
 ```
 
-By {numref}`sugar-rewrites`, `(on-drag g g.shift)` is `(on-drag g (move g.shift (to pointer)))`.
+By {numref}`sugar-rewrites`, `(on-drag g g.shift)` is
+`(on-drag g (move g.shift (to pointer) (duration 0)))`.
 No member is written: the members are drawn in the frame of the group, so they move with it and keep
 their own positions. `(on-drag g g.x)` is an error twice over: `g.x` of a group is the list of the
 `x` of its members, and a drag writes one number.
