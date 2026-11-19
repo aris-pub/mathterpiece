@@ -6,6 +6,7 @@ from .support import accepted, compile_error
 
 rule = pytest.mark.rule
 UNNAMED = pytest.mark.xfail(strict=True, reason="mtp-1s8z: a variable with no name compiles")
+NAME = pytest.mark.xfail(strict=True, reason="mtp-teu1: only shapes have the attribute name")
 
 
 @rule("values")
@@ -31,6 +32,20 @@ class TestObjects:
     def test_two_circles_with_the_same_attributes_are_two_objects(self):
         m = accepted("(scene s (circle a (r 1)) (circle b (r 1)))")
         assert m.id("a") != m.id("b")
+
+    def test_a_shape_has_its_name(self):
+        assert accepted("(scene s (circle c (r 1))) (string v c.name)").get("v").value.value == "c"
+
+    @NAME
+    def test_a_function_has_its_name(self):
+        accepted("(func f ((real x)) x) (string v f.name)")
+
+
+@rule("functions")
+class TestFunctions:
+    def test_a_declared_function_is_called(self):
+        m = accepted("(func twice ((real x)) (* 2 x)) (real v (twice 2) (const))")
+        assert m.get("v").value.value == 4
 
 
 @rule("namespaces")

@@ -285,12 +285,12 @@ file to import
   {numref}`import-file-holds` allows at its top level. Defined in {doc}`imports`.
 
 value
-  A piece of data that never changes and has no identity, such as a number, a string, a list or a
-  function ({numref}`values`).
+  A piece of data that never changes and has no identity, such as a number, a string or a list
+  ({numref}`values`).
 
 object
   A thing that has an identity and attributes, each of which behaves like a variable, such as the
-  scene, a shape, a component or a namespace ({numref}`objects`).
+  scene, a shape, a component, a function or a namespace ({numref}`objects`).
 
 variable
   A named holder of one value or one object, which is free, bound or const ({numref}`variables`).
