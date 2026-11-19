@@ -40,7 +40,7 @@ different value. A slider that writes `(real a 1)` puts 2 into `a`, and 1 is sti
 ## Variables
 
 ```{rule} variables
-A variable is a named holder of one value. It is free, bound or const. A free variable holds its
+A variable is a named holder of one value or one object. It is free, bound or const. A free variable holds its
 value until a writer writes a new one. A bound variable holds the value of its expression at all
 times. A const variable rejects every attempted write. A variable with no name is a
 {term}`compile error`.
@@ -55,7 +55,12 @@ For example:
 | `(real c 3 (const))` | const: it holds 3, and a slider that writes it is a compile error |
 | `(real_ 1)` | a compile error: a variable has a name |
 
-A variable is not an object: it has no attributes, only its one value.
+A variable is not an object: it has no attributes, only what it holds.
+
+:::{admonition} Code differs
+:class: note
+No variable holds an object: there is no form to declare one. Bead mtp-wppk adds it.
+:::
 
 :::{admonition} Code differs
 :class: note

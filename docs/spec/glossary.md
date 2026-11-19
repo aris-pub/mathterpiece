@@ -293,7 +293,7 @@ object
   scene, a shape, a component or a namespace ({numref}`objects`).
 
 variable
-  A named holder of one value, which is free, bound or const ({numref}`variables`).
+  A named holder of one value or one object, which is free, bound or const ({numref}`variables`).
 
 namespace
   An object that consists only of the attributes that it is declared with ({numref}`namespaces`).
