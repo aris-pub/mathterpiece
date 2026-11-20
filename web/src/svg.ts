@@ -105,13 +105,16 @@ interface TextDrawn {
 function drawnTexts(svg: SVGSVGElement): Map<number, TextDrawn> {
   const out = new Map<number, TextDrawn>();
   const top = svg.querySelector(":scope > g") as SVGGElement | null;
-  const toScreen = top?.getScreenCTM?.();
-  if (!top || !toScreen) return out;
-  const back = invert([toScreen.a, toScreen.b, toScreen.c, toScreen.d, toScreen.e, toScreen.f]);
+  // Not getScreenCTM, which in Safari 26 on iOS leaves out the CSS transforms around the SVG
+  // (mtp-fuy1, WebKit bug 308970). The map from the SVG to the screen would apply to the group
+  // and to each text alike and cancel, so the maps to the SVG's own coordinates give the same.
+  const toSvg = top?.getCTM?.();
+  if (!top || !toSvg) return out;
+  const back = invert([toSvg.a, toSvg.b, toSvg.c, toSvg.d, toSvg.e, toSvg.f]);
   for (const el of top.querySelectorAll<SVGTextElement>("text[data-mtp-id]")) {
     if (el.closest("[data-mtp-fixed-size]") || el.hasAttribute("data-mtp-stand-in")) continue;
     const b = el.getBBox?.();
-    const m = el.getScreenCTM?.();
+    const m = el.getCTM?.();
     if (!b || !m || (b.width === 0 && b.height === 0)) continue;
     const to = compose([m.a, m.b, m.c, m.d, m.e, m.f], back);
     const corners = [
