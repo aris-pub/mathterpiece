@@ -311,50 +311,50 @@ The top level of a source holds only the heads of these tables, with at most one
 
 **Declarations of types**
 
-| Head | Kind | What it is | Defined in |
-|---|---|---|---|
-| `type` | core | a type declaration | {numref}`type-notation` |
-| `interface` | core | an interface declaration | {doc}`types` |
-| `motif` | core | a motif declaration | {doc}`world-model` |
-| `variant` | core | a variant declaration | {doc}`types` |
-| `animation` | core | an animation declaration | {doc}`time` |
+| Head | Kind | Defined in |
+|---|---|---|
+| `type` | core | {numref}`type-notation` |
+| `interface` | core | {doc}`types` |
+| `motif` | core | {doc}`world-model` |
+| `variant` | core | {doc}`types` |
+| `animation` | core | {doc}`time` |
 
 **Declarations of objects**
 
-| Head | Kind | What it is | Defined in |
-|---|---|---|---|
-| `scene` | core | the scene declaration | {doc}`world-model` |
-| `formula` | core | a formula declaration | {doc}`world-model` |
-| `record` | core | a record declaration | {doc}`world-model` |
-| `font` | core | a font declaration | {doc}`data-model` |
-| `palette` | syntactic sugar | a palette declaration | {numref}`sugar-rewrites` |
-| `parametric` | syntactic sugar | a polyline declaration | {numref}`sugar-rewrites` |
-| `movement` | core | a movement declaration | {doc}`time` |
-| {term}`components <component>` | core | component declarations | {doc}`page-interface` |
+| Head | Kind | Defined in |
+|---|---|---|
+| `scene` | core | {doc}`world-model` |
+| `formula` | core | {doc}`world-model` |
+| `record` | core | {doc}`world-model` |
+| `font` | core | {doc}`data-model` |
+| `palette` | syntactic sugar | {numref}`sugar-rewrites` |
+| `parametric` | syntactic sugar | {numref}`sugar-rewrites` |
+| `movement` | core | {doc}`time` |
+| {term}`components <component>` | core | {doc}`page-interface` |
 
 **Declarations of functions**
 
-| Head | Kind | What it is | Defined in |
-|---|---|---|---|
-| `func`, `func[T]` | core | a function declaration | {doc}`types`, {doc}`evaluation` |
-| `colormap` | core | a colormap declaration | {doc}`evaluation` |
-| `primitive` | core | a primitive declaration | {numref}`primitive-form` |
+| Head | Kind | Defined in |
+|---|---|---|
+| `func`, `func[T]` | core | {doc}`types`, {doc}`evaluation` |
+| `colormap` | core | {doc}`evaluation` |
+| `primitive` | core | {numref}`primitive-form` |
 
 **Declarations of variables**
 
-| Head | Kind | What it is | Defined in |
-|---|---|---|---|
-| `(T N …)` for a type `T` | core | a declaration of a variable that holds a value | {doc}`data-model`, {doc}`reaction` |
-| `var` | core | a declaration of a variable that holds an object | {doc}`data-model` |
+| Head | Kind | Defined in |
+|---|---|---|
+| `(T N …)` for a type `T` | core | {doc}`data-model`, {doc}`reaction` |
+| `var` | core | {doc}`data-model` |
 
 **Forms around declarations**
 
-| Head | Kind | What it is | Defined in |
-|---|---|---|---|
-| `import` | core | an import of another file's declarations | {doc}`imports` |
-| `let` | core | a let | {doc}`binding-time` |
-| `foreach` | core | a foreach | {doc}`binding-time` |
-| `doc` | core | a {term}`docstring` | {doc}`compiled-format` |
+| Head | Kind | Defined in |
+|---|---|---|
+| `import` | core | {doc}`imports` |
+| `let` | core | {doc}`binding-time` |
+| `foreach` | core | {doc}`binding-time` |
+| `doc` | core | {doc}`compiled-format` |
 
 So a source need not hold a scene: `(real a 1) (readout r f'{a}')` is a world model with a
 variable and a readout, and an empty file is a world model with nothing in it. A source with two
