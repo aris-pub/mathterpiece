@@ -213,12 +213,14 @@ of `X` ({numref}`sugar-form`).
 ```{rule} foreach-bounded-length
 A `foreach` over a list whose length is known only while drawing makes as many copies as the upper
 bound of that length that the prover proves ({numref}`prover-finds-ranges`). Copy k, counted from
-0, exists only while k is below the length. When the prover proves no upper bound of the length
+0, is `none` while k is not below the length. A copy that is `none` and then is not is the same
+object as before, with its attributes as they were, what writers wrote to them included. When the prover proves no upper bound of the length
 below the {term}`number limit`, the `foreach` is a compile error.
 ```
 
 So with `(int n 3 (>= 0) (<= 5))`, which a slider writes, `(foreach k n …)` and
-`(foreach k (range 0 n) …)` both make 5 copies, and copies 3 and 4 are `none` while `n` is 3.
+`(foreach k (range 0 n) …)` both make 5 copies, and copies 3 and 4 are `none` while `n` is 3. When `n` goes
+back to 5, copies 3 and 4 come back as they were.
 
 :::{admonition} Code differs
 :class: note
