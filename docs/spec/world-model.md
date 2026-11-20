@@ -35,14 +35,6 @@ as a text is written `(text t 'hi' …)`, and the same formula with the string a
 
 :::{admonition} Code differs
 :class: note
-`compiler.py:4905` (`formula_decl`) looks for the string, the `(defaults …)`, the terms, the
-`exists-when` and the variables at every place, so the string may come last, and `(defaults …)`
-may come after a `(term …)`. Bead mtp-ydd4.7.11 makes the compiler follow the rule, with the string
-as the formula's positional argument (decided 2026-11-20).
-:::
-
-:::{admonition} Code differs
-:class: note
 The compiler rejects a formula string that is not a literal, even when it is known when compiling:
 `(int n 2 (const)) (formula f f'x^{n}')` is the error "a formula's LaTeX is known when compiling".
 Bead mtp-33l1 makes the compiler follow the rule.
