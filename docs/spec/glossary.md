@@ -257,11 +257,6 @@ default seed
   it, or, when that file has no variable of type `rand-seed`, the seed of the file rand of the
   standard library. Defined in {doc}`evaluation`.
 
-primitive
-  One of the random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed`, which the
-  compiler implements and which a file of the standard library names with `(primitive N)`. Defined
-  in {doc}`stdlib`.
-
 site
   The number that each call of a random function has, counted from 0 in the order of the calls in
   the source after the rewrite step. Defined in {doc}`evaluation`.

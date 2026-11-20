@@ -73,7 +73,7 @@ named colors.mtp.
 A {term}`file to import` holds at its top level only `import`, `let`, `foreach`, and declarations of
 colors, fonts, functions, motifs, variants, types, interfaces, records, palettes, colormaps,
 animations, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. A file of the standard
-library also holds `(primitive …)` ({numref}`primitive-form`). Any other form there is a compile error at that form, in every
+library is never a .mtp that a source writes. Any other form there is a compile error at that form, in every
 source that imports the file.
 ```
 
@@ -125,7 +125,7 @@ source and `(import colors red)` in house.mtp, the source may also write `(impor
 With `(import colors)` in house.mtp, `(import house colors)` is a compile error by
 {numref}`import-form`. The names of the standard library are ordinary declarations of its files,
 and a source brings them in as it brings in the names of any other file. Among them are the
-random functions, which the file rand declares with `(primitive …)` ({numref}`primitive-form`).
+random functions of the file rand, which the compiler gives with no .mtp ({numref}`rand-module`).
 
 ```{rule} import-declares-names
 An `(import …)` gives its names at its place in the file.

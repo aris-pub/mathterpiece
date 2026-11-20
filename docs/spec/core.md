@@ -352,7 +352,6 @@ The listeners are declared in the body of a view, not at the top level ({numref}
 |---|---|---|
 | `func`, `func[T]` | core | {doc}`types`, {doc}`evaluation` |
 | `colormap` | core | {doc}`evaluation` |
-| `primitive` | core | {numref}`primitive-form` |
 
 **Declarations of variables**
 
@@ -509,7 +508,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 
 ### Built-in functions and the standard library
 
-These heads name built-in functions, except the primitives, which the standard library names. Each call is a core call ({numref}`built-ins`).
+These heads name built-in functions, except the random functions, which the file rand gives. Each call is a core call ({numref}`built-ins`).
 
 | Heads | What they are |
 |---|---|
@@ -522,12 +521,12 @@ These heads name built-in functions, except the primitives, which the standard l
 | `mix`, `lighten`, `darken`, `light-dark` | colors |
 | `round`, `log`, `min`, `max`, `lerp` | with a varying number or type of arguments |
 | `range` | `(range LO HI (gap G))`: the numbers from `LO`, `G` apart, up to `HI` and not including it. `G` is 1 when the range gives neither `gap` nor `num`. `(range LO HI (num N))`: `N` numbers evenly apart, from `LO` to `HI`, both included. `gap` and `num` are {term}`named arguments <named argument>` of `range` |
-| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds: {term}`primitives <primitive>`, which a source names only through the file rand of the standard library ({numref}`primitive-form`). `rand`, `rand-int`, `pick` and `shuffle` take the named argument `(seed S)`, and follow the {term}`default seed` of the file that holds them when it is left out ({numref}`default-seed`) |
+| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds, which a source names only through the file rand of the standard library ({numref}`rand-module`). `rand`, `rand-int`, `pick` and `shuffle` take the named argument `(seed S)`, and follow the {term}`default seed` of the file that holds them when it is left out ({numref}`default-seed`) |
 | `steps` | an ease: `(steps N (at P))` gives the ease of N equal jumps, each at the fraction P of its interval, so jump k comes at (k − 1 + P)/N. P is from 0 to 1 and known when compiling, and is 1 when `(at …)` is left out. So `(steps 1 (at P))` is 0 before P and 1 from P on |
 | `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
-| the files `colors`, `eases`, `fonts`, `marks`, `math`, `rand` | the standard library, written in mtp, and the file `rand` names the primitives ({ref}`stdlib-rand`) |
+| the files `colors`, `eases`, `fonts`, `marks`, `math`, `rand` | the standard library: files written in mtp, and the file `rand`, which the compiler gives ({ref}`stdlib-rand`) |
 
 :::{admonition} Code differs
 :class: note
