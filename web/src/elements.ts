@@ -4,7 +4,7 @@
 import { CONTROLS_CSS } from "./controls-style.ts";
 import { placeTicks } from "./ticks.ts";
 import { type How, Scheduler } from "./animate.ts";
-import { apply, invert } from "./builtins.ts";
+import { type Transform, apply, invert } from "./builtins.ts";
 import { Listeners, heardIn, holds } from "./click.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { type Doc, SPEC_VERSION, type Obj, itemsOf } from "./doc.ts";
@@ -587,6 +587,7 @@ export class MtpCanvas extends MtpPart {
     // Font sizes are in screen pixels, so the drawing depends on the canvas's size on screen.
     let width = 0;
     new ResizeObserver(() => {
+      forget();
       const now = svg.getBoundingClientRect().width;
       memo.width = now;
       if (now !== width) {
@@ -626,11 +627,24 @@ export class MtpCanvas extends MtpPart {
       return nearest(event.clientX, event.clientY) ?? hit;
     };
     // The pointer in the SVG's own coordinates, and in scene coordinates through the canvas's view.
+    let screen: Screen | null = null;
+    const measure = () => {
+      screen = screenOf(svg);
+    };
+    const forget = () => {
+      screen = null;
+    };
+    window.addEventListener("resize", forget, { passive: true });
+    document.addEventListener("scroll", forget, { passive: true, capture: true });
+    svg.addEventListener("pointerenter", measure);
     const toUser = (event: { clientX: number; clientY: number }): [number, number] => {
-      const ctm = svg.getScreenCTM?.();
       const at: [number, number] = [event.clientX, event.clientY];
-      if (!ctm) return at;
-      return apply(invert([ctm.a, ctm.b, ctm.c, ctm.d, ctm.e, ctm.f]), at) as [number, number];
+      const box = svg.viewBox?.baseVal;
+      if (!box || !box.width || !box.height) return at;
+      if (!screen || screen.aspect !== box.width / box.height) screen = screenOf(svg);
+      if (!screen) return at;
+      const [u, v] = apply(screen.back, at) as [number, number];
+      return [box.x + u * box.width, box.y + v * box.height];
     };
     const toScene = (event: PointerEvent): [number, number] =>
       apply(invert(view().toUser), toUser(event)) as [number, number];
@@ -715,6 +729,7 @@ export class MtpCanvas extends MtpPart {
       if (!touchy(event)) play(pointer.onto(null));
     });
     svg.addEventListener("pointerdown", (event) => {
+      measure();
       const touch = touchy(event);
       pressed = touch ? targetOf(event) : hitOf(event);
       held = touch && pressed !== null && reaches(pressed);
@@ -954,6 +969,52 @@ export class MtpReadout extends MtpPart {
   protected update(): void {
     this.say();
   }
+}
+
+// Where an SVG's view box is on the page: the map from the view box as the unit square, y down, to
+// client coordinates, inverted, and the view box's width over its height. Panning and zooming keep
+// that ratio, and then the map stays the same.
+interface Screen {
+  back: Transform;
+  aspect: number;
+}
+
+// Safari 26 on iOS leaves the CSS transforms of the HTML elements around an SVG out of
+// getScreenCTM (WebKit bug 308970, fixed in Safari 27), so a page that turns a canvas with CSS got
+// drags that went the wrong way (mtp-fuy1). The browser does draw the SVG turned, so this measures
+// where it draws three marks at corners of the view box. The center of a circle's bounding box is
+// where its center is drawn under any transform of the plane. The marks are on the page only
+// while they are measured.
+function screenOf(svg: SVGSVGElement): Screen | null {
+  const box = svg.viewBox?.baseVal;
+  if (!box || !box.width || !box.height || !svg.isConnected) return null;
+  const marks = document.createElementNS(SVG_NS, "g");
+  for (const [k, v] of Object.entries({ "aria-hidden": "true", "pointer-events": "none", fill: "none", stroke: "none" })) {
+    marks.setAttribute(k, v);
+  }
+  const r = Math.min(Math.abs(box.width), Math.abs(box.height)) / 100;
+  const circles = [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+  ].map(([u, v]) => {
+    const c = document.createElementNS(SVG_NS, "circle");
+    c.setAttribute("cx", String(box.x + u! * box.width));
+    c.setAttribute("cy", String(box.y + v! * box.height));
+    c.setAttribute("r", String(r));
+    marks.append(c);
+    return c;
+  });
+  svg.append(marks);
+  const [o, x, y] = circles.map((c) => {
+    const b = c.getBoundingClientRect();
+    return [b.left + b.width / 2, b.top + b.height / 2] as [number, number];
+  }) as [[number, number], [number, number], [number, number]];
+  marks.remove();
+  const map = [x[0] - o[0], x[1] - o[1], y[0] - o[0], y[1] - o[1], o[0], o[1]];
+  const det = map[0]! * map[3]! - map[1]! * map[2]!;
+  if (!Number.isFinite(det) || Math.abs(det) < 1e-9) return null;
+  return { back: invert(map), aspect: box.width / box.height };
 }
 
 // A formula's LaTeX is typeset again at most this often while a term's content changes, so a
