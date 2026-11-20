@@ -60,10 +60,10 @@
   ; plain click, and when a press that began elsewhere is let go over the bubble.
   (foreach b bubbles
     (on-click b.body (active (< (or? (dist b.body.pos b.pos) 1) 0.1))
-      doc@'Pops the bubble, when it is at home.'
         (animation
           (move b.burst (to 1) (duration 0.3) (ease cubic-out))
-          (move b.popped (to true) (duration 0))))
+          (move b.popped (to true) (duration 0)))
+      doc@'Pops the bubble, when it is at home.')
     (on-drag b.body b.body.pos doc@'Moves the bubble.')
     (on-dragend b.body (animation (move b.body.pos (to [0 0]) (duration 0.8) (ease spring)))
       doc@'Springs the bubble back home.')))

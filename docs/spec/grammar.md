@@ -300,12 +300,7 @@ before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an e
 
 :::{admonition} Code differs
 :class: note
-The compiler removes a docstring from any place after the name (`compiler.py:7322`, `_take_doc`),
-so a docstring before a named argument or after the body compiles. About 22 forms of the
-examples have a docstring before a named argument, such as a button, a play, an `on-ready` or
-an `on-click` with a docstring before its `(animation …)`, and three formulas with a docstring
-before their `(defaults …)`. Bead mtp-ydd4.7.34 makes these errors and moves those docstrings. A
-variable in the body of a motif may not have a docstring: `(motif m () (real k 1 doc@'d') …)` is the error
+A variable in the body of a motif may not have a docstring: `(motif m () (real k 1 doc@'d') …)` is the error
 "unknown constraint 'doc'", because `compiler.py:4822` (`body_variable`) does not remove the
 docstring. Bead mtp-qiro fixes this.
 :::

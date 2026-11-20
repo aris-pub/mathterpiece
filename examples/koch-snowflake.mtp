@@ -75,12 +75,13 @@
   doc@'The snowflake, magnified about its top tip.'
   flake
   (on-click flake (animation grow) doc@'Grows the snowflake again from the triangle.')
-  (on-ready doc@'Grows, rests, shrinks back to the triangle and rests, again and again.'
+  (on-ready
       (animation (loop)
         grow
         (wait 1.5)
         (move depth (to 0) (duration 3) (ease cubic-in-out))
-        (wait 0.8))))
+        (wait 0.8))
+    doc@'Grows, rests, shrinks back to the triangle and rests, again and again.'))
 (canvas text-below (x -5.5) (y (- code-at.y 1.75)) (width 11) (height 2) (pan false) (zoom false)
   doc@'The code under the snowflake.'
   forms)

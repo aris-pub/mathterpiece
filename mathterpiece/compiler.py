@@ -6,7 +6,7 @@ import functools
 import itertools
 import math
 import re
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, replace
 from decimal import ROUND_HALF_UP, Context, Decimal
 from fractions import Fraction
@@ -1066,10 +1066,59 @@ class _Compiler:
 
     # Declarations ------------------------------------------------------------------------
 
+    def in_body(self, form: Form) -> Callable[[Node, int], bool]:
+        """Whether an item of a declaration, at its index among the form's items, is in the
+        form's body rather than a positional or named argument. Only the place of a docstring
+        needs this, so a form that is wrong in another way is left to the code that compiles it."""
+        head = _head(form)
+        if head in ("type", "motif", "choreo", "variant", "func") or _typed_func(form):
+            return lambda it, j: j >= 3
+        if head in ("namespace", "palette", "interface"):
+            return lambda it, j: True
+        if head == "scene":
+            return lambda it, j: _head(it) not in ("background", "transform")
+        if head == "formula":
+            return lambda it, j: (
+                isinstance(it, Form) and _head(it) not in ("defaults", *STRING_FORMS)
+            )
+        if head == "animation":
+            return lambda it, j: _head(it) not in ("defaults", "loop")
+        if head in ("transition", "colormap", "primitive"):
+            return lambda it, j: False
+        if head == "canvas":
+            return lambda it, j: not self.canvas_option(it)
+        if head in ("readout", "display"):
+            return lambda it, j: self.holds_listeners(it)
+        if head in COMPONENTS:
+            # The shape heard by a listener, the target of a toggle and of an on-drag, and a
+            # slider's move are positional arguments. An on-pointermove on a shape starts with
+            # two names, the shape and its target, and one on the canvas with its target.
+            start = 1 if head in LISTENERS else 2
+            count = {"on-drag": 2, "toggle": 1, "slider": 1}.get(head, 0)
+            if head in (*ON_SHAPE, *SHOW_HIDE) and head != "on-drag":
+                count = 1
+            if head == "on-pointermove":
+                count = 2 if all(isinstance(it, Name) for it in form.items[1:3]) else 1
+            return lambda it, j: (
+                j >= start + count
+                and _head(it) not in WRITER_OPTIONS
+                and self.choreo_of(it) is None
+            )
+        found = self.shape_kind(form)
+        if found is not None:
+            if found[0] != "group":
+                return lambda it, j: False
+            return lambda it, j: (
+                self.shape_kind(it) is not None or _head(it) in ("exists-when", "let", "foreach")
+            )
+        if isinstance(form.items[0], Name) and form.items[0].parts == ("font",):
+            return lambda it, j: False
+        return lambda it, j: j >= 3 or (j == 2 and _is_constraint(it))
+
     def top(self, form: Node, scope: dict) -> None:
         doc = None
         if isinstance(form, Form):
-            form, doc = _take_doc(form)
+            form, doc = _take_doc(form, self.in_body(form))
         saved, self.here = self.here, form.pos.file
         outer, self.top_form = self.top_form, form
         outer_head, self.top_head = self.top_head, _head(form)
@@ -1556,7 +1605,7 @@ class _Compiler:
         return name, node.pos
 
     def variable(self, form: Form, parent: int | None, access: str, scope: dict) -> None:
-        form, doc = _take_doc(form)
+        form, doc = _take_doc(form, self.in_body(form))
         start = len(self.model.objects)
         self.variable_here(form, parent, access, scope)
         if doc is not None:
@@ -3526,20 +3575,7 @@ class _Compiler:
                 raise CompileError(f"a {kind} plays no animation: {_USE_OUTSIDE}", use.pos)
         # A canvas's body is what it shows and its listeners; a writer's is its conditions.
         if kind == "canvas":
-            # build_canvas() takes these before it reads the items, so (transform …) is always
-            # the option here, though transform is also a builtin.
-            options = ("x", "y", "width", "height", "transform", "pan", "zoom")
-            options += ("toggle-duration", "toggle-ease")
-            self.options_first(
-                items,
-                lambda it: (
-                    _head(it) in options
-                    or not isinstance(it, (Name, ListLit))
-                    and not self.is_expression(_head(it))
-                    and not self.holds_listeners(it)
-                ),
-                kind,
-            )
+            self.options_first(items, self.canvas_option, kind)
         if kind in ("readout", "display"):
             self.options_first(items, lambda it: not self.holds_listeners(it), kind)
         items = [it for it in items if not any(it is h for h in heard)]
@@ -3570,12 +3606,25 @@ class _Compiler:
             if _head(node) not in LISTENERS:
                 raise CompileError("a view's foreach or let holds listeners only", node.pos)
             assert isinstance(node, Form)
-            listener, doc = _take_doc(node, 1)
+            listener, doc = _take_doc(node, self.in_body(node), 1)
             j = self.component(listener, inner, i)
             if doc is not None:
                 self.model.objects[j].data["doc"] = doc
         self.cscope = scope
         return i
+
+    def canvas_option(self, item: Node) -> bool:
+        """Whether an item of a canvas is a named argument rather than an item of its body."""
+        # build_canvas() takes these before it reads the items, so (transform …) is always the
+        # option here, though transform is also a builtin.
+        options = ("x", "y", "width", "height", "transform", "pan", "zoom")
+        options += ("toggle-duration", "toggle-ease")
+        return (
+            _head(item) in options
+            or not isinstance(item, (Name, ListLit))
+            and not self.is_expression(_head(item))
+            and not self.holds_listeners(item)
+        )
 
     def holds_listeners(self, node: Node) -> bool:
         """Whether an item of a view's body is a listener, or a foreach or let around some."""
@@ -5303,7 +5352,7 @@ class _Compiler:
     def shape(self, form: Form, parent, scope: dict, spread=None, items=None, pre=()) -> int:
         doc = None
         if items is None:
-            form, doc = _take_doc(form)
+            form, doc = _take_doc(form, self.in_body(form))
         saved, self.here = self.here, form.pos.file
         try:
             i = self.shape_here(form, parent, scope, spread, items, pre)
@@ -7742,10 +7791,14 @@ def _points_mean(points: Expr) -> Expr:
     return Expr("points-mean", POINT, (points,), points.deps)
 
 
-def _take_doc(form: Form, start: int = 2) -> tuple[Form, str | None]:
+def _take_doc(
+    form: Form, in_body: Callable[[Node, int], bool], start: int = 2
+) -> tuple[Form, str | None]:
     """A declaration's doc@'text', which is (doc 'text'), taken out of its items from start:
     plain text, known when compiling, for the illustrator and the author; never a reader's
-    description (mtp-fl20). A listener has no name, so its doc may come right after its head."""
+    description (mtp-fl20). A listener has no name, so its doc may come right after its head.
+    in_body tells whether an item, at its index in the form without the doc, is in the body:
+    the doc comes after every argument and before the body (Rule docstrings)."""
     docs = [it for it in form.items[start:] if _head(it) == "doc"]
     if not docs:
         return form, None
@@ -7755,7 +7808,17 @@ def _take_doc(form: Form, start: int = 2) -> tuple[Form, str | None]:
     assert isinstance(item, Form)
     if len(item.items) != 2 or not isinstance(item.items[1], StrLit):
         raise CompileError("a doc is plain text, known when compiling: doc@'text'", item.pos)
+    at = next(k for k, it in enumerate(form.items) if it is item)
     rest = tuple(it for it in form.items if it is not item)
+    for j in range(start, len(rest)):
+        if j < at and in_body(rest[j], j):
+            raise CompileError(
+                f"the docstring comes before the body, so before {_shown(rest[j])}", item.pos
+            )
+        if j >= at and not in_body(rest[j], j):
+            raise CompileError(
+                f"{_shown(rest[j])} is an argument, so it comes before the docstring", rest[j].pos
+            )
     return Form(rest, form.pos), item.items[1].value
 
 

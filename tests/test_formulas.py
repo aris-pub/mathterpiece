@@ -56,7 +56,7 @@ class TestDeclaring:
         assert obj(r"(formula f $'x = \term{v}{}')", "f.v").kind == "term"
 
     def test_a_doc(self):
-        assert obj("(formula f doc@'A sum.' $'a+b')", "f").data["doc"] == "A sum."
+        assert obj("(formula f $'a+b' doc@'A sum.')", "f").data["doc"] == "A sum."
 
 
 class TestDeclaringErrors:

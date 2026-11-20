@@ -64,8 +64,8 @@
 
 (formula machine
   $'f(x) = \term{a}{} x^2 \term{b}{} x \term{c}{}'
-  doc@'f(x) = ax² + bx + c, with the coefficients\' values.'
     (defaults (padding 3) (rounding 4))
+  doc@'f(x) = ax² + bx + c, with the coefficients\' values.'
   (term a f'{a:.1f}' (fill red))
   (term b (signed b) (fill green))
   (term c (signed c) (fill blue)))

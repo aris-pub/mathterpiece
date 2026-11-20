@@ -51,7 +51,7 @@
 ; Slowly enough that each frame is still a curve the eye can follow. Each round turns the phase
 ; once, from where the slider set it.
 (play spin (label 'turn the phase')
-  doc@'Turns the phase once every eight seconds, again and again, from where it is.'
-    (animation (loop) (move spun (from 0) (to 360) (duration 8) (ease linear))))
+    (animation (loop) (move spun (from 0) (to 360) (duration 8) (ease linear)))
+  doc@'Turns the phase once every eight seconds, again and again, from where it is.')
 
 (readout ratio-now f'{a}:{b}' (font variable) doc@'The ratio a:b.')

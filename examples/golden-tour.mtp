@@ -62,10 +62,10 @@
 ; Each stop but the last rests a moment before the next.
 (play tour (buttons true) (rest 2.5)
     (labels 'A quarter turn' 'A third of a turn' 'Two fifths of a turn' 'The golden angle')
-  doc@'Plays the tour: a quarter turn, a third, two fifths, then the golden angle.'
-    (animation quarter third two-fifths golden))
+    (animation quarter third two-fifths golden)
+  doc@'Plays the tour: a quarter turn, a third, two fifths, then the golden angle.')
 
-(canvas view garden doc@'The sunflower and the name of its angle.'
+(canvas view doc@'The sunflower and the name of its angle.' garden
   (on-click sunflower (animation golden)
     doc@'Takes the flower to the golden angle, as the last stop of the tour does.'))
 (slider angle (move sunflower.angle (from 80) (to 180)) (label 'angle'))

@@ -24,14 +24,14 @@ def obj_doc(d, name):
         ("(scene s (circle c (r 1) (doc 'D.')))", "c"),
         ("(scene s (group g (doc 'D.') (circle_ (r 1))))", "g"),
         ("(motif m () (circle_ (r 1))) (scene s (m inst (doc 'D.')))", "inst"),
-        ("(scene s (circle c (r 1))) (canvas v s (doc 'D.'))", "v"),
+        ("(scene s (circle c (r 1))) (canvas v (doc 'D.') s)", "v"),
         ("(real k 1) (slider sl (move k (from 0) (to 2)) (doc 'D.'))", "sl"),
         ("(font note (size 14) (doc 'D.'))", "note"),
         ("(color ink '#000000' (doc 'D.'))", "ink"),
         ("(namespace theme (doc 'D.') (real gap 0.4))", "theme"),
         ("(palette brand (doc 'D.') (ink '#1f2a44'))", "brand"),
         ("(real k 0) (transition slide k (to 1) (duration 1) (doc 'D.'))", "slide"),
-        ("(real k 0) (animation go (move k (to 1) (duration 1)) (doc 'D.'))", "go"),
+        ("(real k 0) (animation go (doc 'D.') (move k (to 1) (duration 1)))", "go"),
     ],
 )
 def test_an_objects_doc_is_written_on_it(src, name):
@@ -87,9 +87,9 @@ def test_an_anonymous_shape_takes_one():
     "src, key",
     [
         ("(func f ((real x)) (doc 'D.') (* 2 x))", ("func", "f")),
-        ("(type unit real (>= 0) (<= 1) (doc 'D.'))", ("type", "unit")),
+        ("(type unit real (doc 'D.') (>= 0) (<= 1))", ("type", "unit")),
         ("(motif m () (doc 'D.') (circle_ (r 1)))", ("motif", "m")),
-        ("(interface inky (color ink) (doc 'D.'))", ("interface", "inky")),
+        ("(interface inky (doc 'D.') (color ink))", ("interface", "inky")),
         ("(colormap heat ['navy' 'white'] (doc 'D.'))", ("func", "heat")),
     ],
 )
@@ -108,7 +108,7 @@ def test_a_function_written_into_the_file_carries_its_doc():
 
 def test_it_changes_nothing_else():
     without = doc("(real k 1 (>= 0)) (scene s (circle c (r k))) (canvas v s)")
-    given = doc("(real k 1 (>= 0) (doc 'D.')) (scene s (circle c (r k))) (canvas v s)")
+    given = doc("(real k 1 (doc 'D.') (>= 0)) (scene s (circle c (r k))) (canvas v s)")
     for o in given["objects"]:
         o.pop("doc", None)
     assert given == without

@@ -37,7 +37,7 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-DOCSTRING_PLACE = xfail("mtp-ydd4.7.34", "the compiler takes a docstring from any place")
+ANIMATION = "(animation (move k (to 1) (duration 1)))"
 MOTIF_DOCSTRING = xfail("mtp-qiro", "a variable in a motif's body may not have a docstring")
 TOP_LET_SCOPE = xfail(
     "mtp-ydd4.7.7",
@@ -399,6 +399,15 @@ class TestDocstrings:
             "(func f ((real x)) doc@'d' (* 2 x))",
             "(scene s (circle c (r 1) doc@'d'))",
             "(scene s (circle c (r 1))) (canvas v s (on-click c doc@'d'))",
+            f"(real k 0) (button b {ANIMATION} doc@'d')",
+            f"(real k 0) (play p {ANIMATION} doc@'d')",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-click c {ANIMATION} doc@'d'))",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready {ANIMATION} doc@'d'))",
+            "(motif m ((real k 1 (>= 0))) doc@'d' (circle_ (r k)))",
+            "(scene s (group g (defaults (fill 'red')) doc@'d' (circle c (r 1))))",
+            "(formula f $'x' doc@'d')",
+            "(formula f $'\\term{a}{x}' (defaults (padding 3)) doc@'d' (term a (fill 'red')))",
+            "(scene s (circle c (r 1))) (canvas v (x 0) (y 0) (width 1) (height 1) doc@'d' s)",
         ],
     )
     def test_after_the_arguments_and_before_the_body(self, src):
@@ -407,13 +416,21 @@ class TestDocstrings:
     @pytest.mark.parametrize(
         "src",
         [
-            pytest.param("(real k 1 (>= 0) doc@'d')", marks=DOCSTRING_PLACE),
-            pytest.param("(func f ((real x)) (* 2 x) doc@'d')", marks=DOCSTRING_PLACE),
-            pytest.param("(scene s (circle c doc@'d' (r 1)))", marks=DOCSTRING_PLACE),
-            pytest.param(
-                "(real k 0) (button b doc@'d' (animation (move k (to 1) (duration 1))))",
-                marks=DOCSTRING_PLACE,
-            ),
+            "(real k 1 (>= 0) doc@'d')",
+            "(func f ((real x)) (* 2 x) doc@'d')",
+            "(scene s (circle c doc@'d' (r 1)))",
+            f"(real k 0) (button b doc@'d' {ANIMATION})",
+            f"(real k 0) (play p doc@'d' {ANIMATION})",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-click c doc@'d' {ANIMATION}))",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready doc@'d' {ANIMATION}))",
+            "(motif m () (circle_ (r 1)) doc@'d')",
+            "(scene s (group g (circle c (r 1)) doc@'d'))",
+            "(scene s (group g doc@'d' (defaults (fill 'red')) (circle c (r 1))))",
+            "(formula f doc@'d' $'x')",
+            "(formula f $'\\term{a}{x}' doc@'d' (defaults (padding 3)) (term a (fill 'red')))",
+            "(formula f $'\\term{a}{x}' (term a (fill 'red')) doc@'d')",
+            "(scene s (circle c (r 1))) (canvas v (x 0) (y 0) doc@'d' (width 1) (height 1) s)",
+            "(scene s (circle c (r 1))) (canvas v s doc@'d')",
         ],
     )
     def test_in_any_other_place_it_is_an_error(self, src):
