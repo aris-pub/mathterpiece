@@ -37,7 +37,7 @@ These rules hold for a use of a name inside the form that declares or binds it:
    group known when compiling, or through a function.
 4. A shape in a group, at any depth, never reads the group whole in its own form: an attribute of
    every member, such as `g.x`, a list function over `g.members`, a
-   function given `g.members`, or a member by a position known only while drawing. `(count g)` and
+   function given `g.members`, or a member by a position known only while drawing. `(count g.members)` and
    `g.length` may be read. The count and the {term}`list` of a `foreach` inside the group never read
    the group.
 5. A collection never reads itself in its own `clip` or in its own `(defaults …)`, also once the

@@ -171,8 +171,11 @@ named argument
   ({numref}`named-arguments-first`). Like a positional argument, it may be required or left out.
 
 expression
-  One item of a source as the parser produces it: a form, a list literal, a word or a string
-  literal ({numref}`parser-expressions`).
+  A literal, a name or a {term}`compound expression` ({doc}`data-model`).
+
+item
+  One piece of a source as the parser produces it: a form, a list literal, a word, a broadened
+  type, a string literal or an interpolated string ({numref}`parser-items`).
 
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name with one name part
