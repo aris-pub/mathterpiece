@@ -40,6 +40,8 @@ class Attribute:
     # free@expr or (free expr): free, starting at expr's value when the live model is built, never
     # following it.
     start: Expr | None = None
+    # A variable in a motif's body becomes an attribute of each instance, and keeps its doc.
+    doc: str | None = None
 
     @property
     def bound(self) -> bool:

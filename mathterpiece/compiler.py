@@ -5049,6 +5049,7 @@ class _Compiler:
         return i
 
     def body_variable(self, form: Form, obj: Obj, scope: dict) -> None:
+        form, doc = _take_doc(form, self.in_body(form))
         name, pos, t, node, first = self.declared(form, scope, True)
         if node is not None and _is_free_start(node):
             if _is_const(t):
@@ -5075,6 +5076,7 @@ class _Compiler:
             raise CompileError(
                 "a motif's body declares only bound variables; free state is a parameter", pos
             )
+        attribute.doc = doc
         obj.attrs[name] = attribute
         self.bodies[-1]["attrs"].add(name)
 

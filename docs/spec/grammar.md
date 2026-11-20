@@ -299,13 +299,6 @@ other declaration. `(real k 1 doc@'d' (>= 0))`, `(func f ((real x)) doc@'d' (* 2
 before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an error, and so is
 `(circle c doc@f'r = {r}')`, whose string is interpolated.
 
-:::{admonition} Code differs
-:class: note
-A variable in the body of a motif may not have a docstring: `(motif m () (real k 1 doc@'d') …)` is the error
-"unknown constraint 'doc'", because `compiler.py:4822` (`body_variable`) does not remove the
-docstring. Bead mtp-qiro fixes this.
-:::
-
 ## Bodies
 
 ```{rule} contexts

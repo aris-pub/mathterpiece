@@ -38,7 +38,6 @@ def xfail(bead: str, why: str):
 
 
 ANIMATION = "(animation (move k (to 1) (duration 1)))"
-MOTIF_DOCSTRING = xfail("mtp-qiro", "a variable in a motif's body may not have a docstring")
 TOP_LET_SCOPE = xfail(
     "mtp-ydd4.7.7",
     "a scene, func, motif or animation at the top level ignores the names that a let gives",
@@ -442,9 +441,27 @@ class TestDocstrings:
     def test_an_interpolated_docstring_is_an_error(self):
         rejected("(real k 1 (doc f'd{k}'))")
 
-    @MOTIF_DOCSTRING
-    def test_a_variable_in_a_motif_body_may_have_one(self):
-        accepted("(motif m () (real k 1 doc@'d') (circle c (r k)))")
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(motif m () (real k 1 doc@'d' (const)) (circle c (r k)))",
+            "(motif m ((real r 1 (>= 0))) (real d (* 2 r) doc@'d') (circle c (r d)))",
+        ],
+    )
+    def test_a_variable_in_a_motif_body_may_have_one(self, src):
+        accepted(src)
+
+    def test_a_variable_in_a_motif_body_keeps_its_docstring(self):
+        d = mtpc(
+            "(motif m ((real r 1 (>= 0))) (real d (* 2 r) doc@'twice r') (circle c (r d)))"
+            " (scene s (m a) (m b (r 2)))"
+        )
+        assert obj(d, "a")["attrs"]["d"]["doc"] == "twice r"
+        assert obj(d, "b")["attrs"]["d"]["doc"] == "twice r"
+        assert "doc" not in obj(d, "a")["attrs"]["r"]
+
+    def test_a_docstring_after_a_motif_body_variable_constraint_is_an_error(self):
+        compile_error("(motif m () (real k 1 (const) doc@'d') (circle c (r k)))")
 
     def test_the_docstring_is_kept(self):
         assert obj(mtpc("(real k 1 doc@'the radius')"), "k")["doc"] == "the radius"

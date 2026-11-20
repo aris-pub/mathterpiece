@@ -177,6 +177,8 @@ class Writer:
             d["free"] = self.value(p.type, p.value)
         if p.fixed:
             d["fixed"] = True
+        if p.doc is not None:
+            d["doc"] = p.doc
         return d
 
     def expr(self, e: Expr) -> list:

@@ -76,3 +76,14 @@ def test_it_still_rejects_what_is_wrong():
     assert errors(doc(variable({**good, "bound": ["read", "real", "x", None, None]}))) != []
     assert errors(doc({**variable(good), "kind": "nope"})) != []
     assert errors(doc({**variable(good), "token": "yes"})) != []
+
+
+def test_an_attribute_with_a_docstring():
+    # A variable in a motif's body becomes an attribute of each instance, with its docstring.
+    for value in (
+        {"type": "real", "free": 1},
+        {"type": "real", "bound": ["lit", "real", 1], "deps": []},
+        {"type": "real", "start": ["lit", "real", 1], "deps": []},
+    ):
+        assert errors(doc(variable({**value, "doc": "d"}))) == []
+        assert errors(doc(variable({**value, "doc": 1}))) != []
