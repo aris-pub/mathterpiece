@@ -7,7 +7,7 @@ import itertools
 import math
 import re
 from collections.abc import Callable, Iterator, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from decimal import ROUND_HALF_UP, Context, Decimal
 from fractions import Fraction
 from pathlib import Path
@@ -1167,8 +1167,11 @@ class _Compiler:
         head = _head(form)
         if not isinstance(form, Form):
             raise CompileError("expected a declaration", form.pos)
+        # No rule yet says what it means for these declarations to exist only while a copy of
+        # a foreach with a count known only while drawing exists, so they keep existing.
+        names = {k: v for k, v in scope.items() if k != EXISTS}
         if head == "type":
-            return self.type_decl(form)
+            return self.type_decl(form, names)
         if head == "namespace":
             self.namespace_decl(form, scope)
             return
@@ -1176,29 +1179,29 @@ class _Compiler:
             self.palette_decl(form, scope)
             return
         if head == "interface":
-            return self.interface_decl(form)
+            return self.interface_decl(form, names)
         if head == "scene":
-            return self.scene_decl(form)
+            return self.scene_decl(form, names)
         if head == "formula":
             return self.formula_decl(form, scope)
         if head == "term":
             raise CompileError("a term is given inside its formula", form.pos)
         if head == "motif":
-            return self.motif_decl(form)
+            return self.motif_decl(form, names)
         if head == "variant":
-            return self.variant_decl(form)
+            return self.variant_decl(form, names)
         if head == "func" or _typed_func(form) is not None:
-            return self.func_decl(form)
+            return self.func_decl(form, names)
         if head == "colormap":
-            return self.colormap_decl(form)
+            return self.colormap_decl(form, names)
         if head == "transition":
-            self.transition(form, {}, top=True)
+            self.transition(form, names, top=True)
             return
         if head == "animation":
-            self.animation(form, {}, named=True)
+            self.animation(form, names, named=True)
             return
         if head == "choreo":
-            return self.choreo_decl(form)
+            return self.choreo_decl(form, names)
         if head == "primitive":
             return self.primitive_decl(form)
         if self.choreo_of(form) is not None:
@@ -1381,8 +1384,8 @@ class _Compiler:
                 self.cursor = None
         return i
 
-    def type_decl(self, form: Form) -> None:
-        name, pos = self.name_of(form)
+    def type_decl(self, form: Form, scope: dict) -> None:
+        name, pos = self.name_of(form, scope)
         if name is None or len(form.items) < 3:
             raise CompileError("a type declaration is (type name base constraint…)", form.pos)
         base = self.type_of(form.items[2])
@@ -1448,10 +1451,10 @@ class _Compiler:
             inside[short] = self.read(m, None)
         return i
 
-    def interface_decl(self, form: Form) -> None:
+    def interface_decl(self, form: Form, scope: dict) -> None:
         """(interface name (T attribute constraint…) …): what an object must have to fit it, as
         the built-in interfaces do (mtp-ateh; type-system.md, section 6)."""
-        name, _ = self.name_of(form)
+        name, _ = self.name_of(form, scope)
         if name is None:
             raise CompileError("an interface needs a name", form.pos)
         members: dict[str, Type] = {}
@@ -1704,13 +1707,13 @@ class _Compiler:
             raise CompileError(str(e), rest[0].pos) from None
         return name, pos, t, node, first
 
-    def motif_decl(self, form: Form) -> None:
-        name, pos = self.name_of(form)
+    def motif_decl(self, form: Form, scope: dict) -> None:
+        name, pos = self.name_of(form, scope)
         if len(form.items) < 3:
             raise CompileError("a motif is (motif name parameters member…)", form.pos)
         if name in SHAPE_ATTRS or name in self.model.types:
             raise CompileError(f"'{name}' is already declared", pos)
-        params = self.params(form.items[2])
+        params = self.params(form.items[2], scope)
         for item in form.items[3:]:
             if _head(item) == "animation":
                 raise CompileError(
@@ -1722,13 +1725,13 @@ class _Compiler:
             if p.name in INSTANCE_ATTRS or p.name == "pos":
                 raise CompileError(f"every motif instance already has '{p.name}'", form.pos)
         if name is not None:
-            self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos)
+            self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos, dict(scope))
             self.model.types[name] = ShapeT(name)
             self.trial(name, form.pos)
             return
         # A source cannot write a name with a space, so this key cannot be the name of a motif.
         key = "motif with no name"
-        self.model.motifs[key] = MotifDef(key, params, form.items[3:], pos)
+        self.model.motifs[key] = MotifDef(key, params, form.items[3:], pos, dict(scope))
         self.model.types[key] = ShapeT(key)
         try:
             self.trial(key, form.pos)
@@ -1736,12 +1739,12 @@ class _Compiler:
             del self.model.motifs[key], self.model.types[key]
             self.shape_types.pop(key, None)
 
-    def choreo_decl(self, form: Form) -> None:
+    def choreo_decl(self, form: Form, scope: dict) -> None:
         """(choreo name parameters item…): a kind of animation, as a motif is a kind of shape
         (the author, 2026-11-11, mtp-h972). Its body holds what an animation's body holds. Each
         use, (name argument…), is written out as an ordinary animation with its arguments in
         place of the parameters, so the compiled file holds no choreo."""
-        name, pos = self.name_of(form)
+        name, pos = self.name_of(form, scope)
         if name is None or len(form.items) < 3:
             raise CompileError("a choreo is (choreo name parameters item…)", form.pos)
         if name in ANIMATION_ITEMS or name in ("loop", "choreo"):
@@ -1754,9 +1757,15 @@ class _Compiler:
                 " steps, the names of animations and transitions, and uses of choreos",
                 form.pos,
             )
-        params = self.params(form.items[2])
+        params = self.params(form.items[2], scope)
         choreo = _Choreo(
-            name, params, form.items[3:], pos, len(self.choreos), _heads(form.items[3:])
+            name,
+            params,
+            form.items[3:],
+            pos,
+            len(self.choreos),
+            _heads(form.items[3:]),
+            dict(scope),
         )
         dict.__setitem__(self.choreos, name, choreo)
         through = self.choreo_cycle(choreo)
@@ -1916,12 +1925,12 @@ class _Compiler:
         # The body reads its names as the file that declares the choreo sees them.
         saved, self.here = self.here, choreo.pos.file
         try:
-            return self.anim_body(list(choreo.body), dict(args), choreo.pos)
+            return self.anim_body(list(choreo.body), {**choreo.scope, **args}, choreo.pos)
         finally:
             self.here = saved
             self.playing.pop()
 
-    def colormap_decl(self, form: Form) -> None:
+    def colormap_decl(self, form: Form, scope: dict) -> None:
         """(colormap name [color…] (positions …) (discrete bool) (wrap-at x)): sugar for one
         function of a real, giving a color (the author, 2026-11-05). The positions are in the
         figure's own values: a start and an end, with the colors evenly spaced, or one per color;
@@ -1953,7 +1962,7 @@ class _Compiler:
             given[head] = item.items[1]
 
         def known(node: Node, t: Type, what: str):
-            e = self.expr(node, t, {})
+            e = self.expr(node, t, scope)
             if not e.known:
                 raise CompileError(f"a colormap's {what} must be known when compiling", node.pos)
             return e.value
@@ -2035,13 +2044,13 @@ class _Compiler:
         func = Form((name("func"), form.items[1], Form((name("real"), x), pos), body), pos)
         saved, self.top_form = self.top_form, func
         try:
-            self.func_decl(func)
+            self.func_decl(func, scope)
         finally:
             self.top_form = saved
         fid = len(self.model.functions) - 1
         self.model.functions[fid].inline = True
 
-    def func_decl(self, form: Form) -> None:
+    def func_decl(self, form: Form, scope: dict) -> None:
         written = _typed_func(form)
         if isinstance(written, Brackets):
             raise CompileError(
@@ -2049,7 +2058,7 @@ class _Compiler:
                 " variable cannot hold a function",
                 form.pos,
             )
-        name, pos = self.name_of(form)
+        name, pos = self.name_of(form, scope)
         if len(form.items) != 4:
             raise CompileError("a function is (func name parameters body)", form.pos)
         # A call by that name would never reach the function, or a read of the constant would
@@ -2057,17 +2066,18 @@ class _Compiler:
         taken = next((what for what, names in NOT_FUNCTION_NAMES if name in names), None)
         if taken is not None:
             raise CompileError(f"'{name}' is {taken}, so no function may take its name", pos)
-        params = self.params(form.items[2])
+        params = self.params(form.items[2], scope)
         fid = len(self.model.functions)
         declared = self.type_of(written) if written is not None else None
         f = FuncDef(name, params, declared or RECURSING, pos=pos, source=form.items[3])
+        f.scope = dict(scope)
         f.declared = declared
         self.model.functions.append(f)
         if name is not None:
             self.model.funcs[name] = fid
         if declared is not None:
             # Every call, a recursive one too, has the declared type and range.
-            body, reads = self.function_body(params, form.items[3], declared)
+            body, reads = self.function_body(params, form.items[3], declared, scope)
             body = self.within_result(name or "the function", declared, body, pos)
             f.body, f.deps = body, body.deps
             f.reads = {p.name: frozenset(reads[p.name]) for p in params if p.name in reads}
@@ -2075,7 +2085,7 @@ class _Compiler:
         # A recursive call gives RECURSING until the body's type is known; compile again with
         # that type until it no longer changes, since it may broaden (int, then ratio).
         for _ in range(len(NUMBERS) + 2):
-            body, reads = self.function_body(params, form.items[3])
+            body, reads = self.function_body(params, form.items[3], None, scope)
             if _inner(body.type) == RECURSING:
                 raise CompileError(f"{name} has no base case: every branch calls {name}", pos)
             if _sized(body) == f.result:
@@ -2142,7 +2152,9 @@ class _Compiler:
         args, deps, maybe = self.arguments(f.params, given, scope, node.pos)
         if f.inline and f.source is not None:
             return self.expr(
-                f.source, None, dict(zip((p.name for p in f.params), args, strict=True))
+                f.source,
+                None,
+                {**f.scope, **dict(zip((p.name for p in f.params), args, strict=True))},
             )
         t = f.result
         if maybe and t != RECURSING:
@@ -3195,7 +3207,7 @@ class _Compiler:
 
     def animation(self, form: Form, scope: dict, named: bool) -> int:
         if named:
-            name, pos = self.name_of(form)
+            name, pos = self.name_of(form, scope)
             items = form.items[2:]
         else:
             name, pos, items = None, form.pos, form.items[1:]
@@ -4742,8 +4754,8 @@ class _Compiler:
             dict.update(self.model.names, names)
             self.rand_sites = sites
 
-    def variant_decl(self, form: Form) -> None:
-        name, pos = self.name_of(form)
+    def variant_decl(self, form: Form, scope: dict) -> None:
+        name, pos = self.name_of(form, scope)
         if name is None or len(form.items) < 4:
             raise CompileError("a variant is (variant name parameters shape)", form.pos)
         if len(form.items) != 4 or not self.shape_kind(form.items[3]):
@@ -4757,7 +4769,7 @@ class _Compiler:
         base = found[0]
         if base == "group":
             raise CompileError("a group has no variants", body.pos)
-        params = self.params(form.items[2])
+        params = self.params(form.items[2], scope)
         taken = self.attrs_of(base)
         for p in params:
             if p.name in taken:
@@ -4771,7 +4783,9 @@ class _Compiler:
                 fixed |= {"x", "y"}
             elif head is not None:
                 fixed.add(head)
-        self.model.variants[name] = VariantDef(name, params, base, body, frozenset(fixed), pos)
+        self.model.variants[name] = VariantDef(
+            name, params, base, body, frozenset(fixed), pos, dict(scope)
+        )
         base_type = self.model.types.get(base, ShapeT(base))
         assert isinstance(base_type, ShapeT)
         self.model.types[name] = ShapeT(name, base_type)
@@ -4837,11 +4851,11 @@ class _Compiler:
                     rest.append((item, inner))
         written = {"variant": outer, "mine": dict(mine), "rest": list(rest)}
         i = len(self.model.objects)
-        body_scope = {p: (lambda p=p: self.read(i, p)) for p in params}
+        body_scope = {**v.scope, **{p: (lambda p=p: self.read(i, p)) for p in params}}
 
         def set_params(obj: Obj) -> None:
             for p in v.params:
-                node, inner = mine.get(p.name, (p.default, {}))
+                node, inner = mine.get(p.name, (p.default, v.scope))
                 first = _default_arg(p) if p.name not in mine else None
                 obj.attrs[p.name] = self.attribute(
                     p.type, node, form.pos, p.name, None, inner, first
@@ -4868,7 +4882,7 @@ class _Compiler:
         for node, scope in scoped:
             yield from self.expand([node], scope)
 
-    def params(self, node: Node) -> tuple[Param, ...]:
+    def params(self, node: Node, scope: dict | None = None) -> tuple[Param, ...]:
         """One parameter (real t 0.5), or a list of them ((real t 0.5) (color c 'red'))."""
         if not isinstance(node, Form):
             raise CompileError("expected a parameter such as (real t 0.5)", node.pos)
@@ -4879,14 +4893,14 @@ class _Compiler:
         for f in forms:
             if not isinstance(f, Form) or len(f.items) < 2:
                 raise CompileError("expected a parameter such as (real t 0.5)", f.pos)
-            name, pos, t, default, first = self.declared(f, {}, param=True)
+            name, pos, t, default, first = self.declared(f, scope or {}, param=True)
             if name is None:
                 raise CompileError("a parameter needs a name", pos)
             if any(p.name == name for p in out):
                 raise CompileError(f"'{name}' is already declared", pos)
             value = None
             if default is not None:
-                e = self.again(first, default, t, {})
+                e = self.again(first, default, t, scope or {})
                 # A function is fixed, so it may be a default too (the author, 2026-11-06).
                 if e.op in ("func", "builtinfunc") and (e.op == "builtinfunc" or not e.args[1]):
                     value = e
@@ -4997,7 +5011,7 @@ class _Compiler:
             for f in pre:
                 f(obj)
             for p in motif.params:
-                node, inner = given.get(p.name, (p.default, {}))
+                node, inner = given.get(p.name, (p.default, motif.scope))
                 at = _maybe(p.type) if absent else p.type
                 if node is None and (
                     isinstance(_core(p.type), (Interface, ShapeT)) or _core(p.type) == NAMESPACE
@@ -5028,7 +5042,7 @@ class _Compiler:
         self.bodies.append({"id": i, "names": {}, "attrs": set(params), "path": path})
         saved, self.frame = self.frame, i
         try:
-            for item, inner in self.expand(motif.body, {}):
+            for item, inner in self.expand(motif.body, motif.scope):
                 if _head(item) == "exists-when":
                     assert isinstance(item, Form)
                     self.exists_when(item, inner)
@@ -5078,25 +5092,25 @@ class _Compiler:
         obj.attrs[name] = attribute
         self.bodies[-1]["attrs"].add(name)
 
-    def scene_decl(self, form: Form) -> None:
+    def scene_decl(self, form: Form, scope: dict) -> None:
         if self.scene is not None:
             raise CompileError("a file has exactly one scene", form.pos)
-        name, pos = self.name_of(form)
+        name, pos = self.name_of(form, scope)
         if name is None:
             raise CompileError("a scene needs a name", form.pos)
         attrs = {"background": Attribute(PAINT, None), "transform": Attribute(TRANSFORM, IDENTITY)}
         self.scene = self.add(Obj("scene", name, SCENE, attrs=attrs, pos=pos))
         self.in_scene = True
         try:
-            self.scene_items(form, attrs)
+            self.scene_items(form, attrs, scope)
         finally:
             self.in_scene = False
 
-    def scene_items(self, form: Form, attrs: dict) -> None:
+    def scene_items(self, form: Form, attrs: dict, outer: dict) -> None:
         self.options_first(
             form.items[2:], lambda it: _head(it) in ("background", "transform"), "scene"
         )
-        for item, scope in self.expand(form.items[2:], {}):
+        for item, scope in self.expand(form.items[2:], outer):
             head = _head(item)
             if head == "background":
                 assert isinstance(item, Form)
@@ -7248,6 +7262,8 @@ class _Choreo:
     pos: Pos
     index: int
     uses: frozenset[str]
+    # The names of a let or a foreach around the declaration, which every use reads.
+    scope: dict = field(default_factory=dict)
 
     @property
     def names(self) -> set[str]:
