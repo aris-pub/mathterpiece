@@ -306,12 +306,13 @@ inventory.
 - **`(. X Y)`.** Whether `Y` is an attribute depends on `X` ({numref}`dot-name-part`).
 - **`foreach`.** The number of copies is a value, and `(foreach i n …)` is told apart from
   `(foreach x xs …)` by the type of the second item ({numref}`foreach-count`).
-- **A motif instance.** Its members are the motif's body with the values of its parameters, made in
-  the expand step.
-- **A use of an animation.** Its moves are the animation's body with the values of its parameters, made in
-  the expand step, as for a motif instance.
-- **A variant instance.** It is its base shape with the variant's parameters as attributes, some
-  attributes fixed, and the variant as its type. No core form of a shape carries these.
+- **A shape whose type is a motif.** Its members are the motif's body with the values of its
+  parameters, made in the expand step.
+- **A use of an animation.** Its movements are the animation's body with the values of its
+  parameters, made in the expand step, as for a shape whose type is a motif.
+- **A thing whose type is a variant.** It is a thing of its base type with the variant's parameters
+  as attributes, some attributes fixed, and the variant as its type. No other core form carries
+  these.
 - **`row` and `column`.** Each member is placed after the box of the member before. A rewrite into
   a group with a `translate` on each member would make each member read its own box, which
   depends on that translate.
@@ -323,8 +324,8 @@ inventory.
   ({numref}`declare-before-use`).
 - **`let`.** A rewrite that put each value in place of each use would compute it once for each use,
   with a site of its own for each random call. A rewrite into a variable needs the value's type.
-- **`(defaults …)` on an instance.** The members of an instance are made only in the expand step,
-  so the prover proves that each value fits its attribute.
+- **`(defaults …)` on a shape whose type is a motif.** Its members are made only in the expand
+  step, so the prover proves that each value fits its attribute.
 - **`(defaults …)` in a score.** A default ease does not apply
   to a move of a {term}`bool`, a string or a choice, so writing the ease into each move needs the
   type of its target. A default duration also applies to the name of a movement in the body, which
@@ -335,8 +336,9 @@ inventory.
   `(map xs f)` by the type of `n`. This is part of the typing of the built-in function `map`
   ({doc}`stdlib`).
 - **The {term}`operators <operator>`, `not`, `abs`, `or?`, `none?`, `some?`, `somes` and the box
-  points.** They are built-in functions, which the compiler reads itself ({numref}`built-ins`), so
-  a declared function may take their names ({numref}`declaration-names`).
+  points.** They are built-in functions, which the compiler reads itself ({numref}`built-ins`). A
+  declared function may take the name of any of them but an operator
+  ({numref}`declaration-names`).
 
 (core-inventory)=
 ## Inventory of heads
