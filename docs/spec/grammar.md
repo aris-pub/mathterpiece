@@ -117,6 +117,7 @@ source. Each expression is one of these:
 | brackets | `[real real]` in `func[real real]` | its expressions, in order |
 | broadened type | `real\|none` | its words, as expressions, in order |
 | string literal | `'…'`, `$'…'` | its text |
+| color literal | `#'…'` | the color ({numref}`color-literals`) |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
 | bool literal | `true`, `false` | the value |
 | none | `none` | nothing |
@@ -126,7 +127,7 @@ An operator is a name with one name part ({numref}`literal-words`).
 
 ```{rule} literals
 A literal is a piece of source text that writes a value directly: a number literal, a string
-literal, `true`, `false`, `none`, or a list literal whose items are literals.
+literal, a color literal, `true`, `false`, `none`, or a list literal whose items are literals.
 ```
 
 What value a literal gives, and of what type, is defined in {numref}`literal-types`. Values are

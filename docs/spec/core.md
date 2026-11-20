@@ -49,7 +49,7 @@ whose rewrite would need one of their values is core ({numref}`names-from-values
 ## Rewrite rules
 
 The {term}`parser` rewrites some syntactic sugar while it reads the source:
-a prefixed form `H@X`, a {term}`name string` `#'…'`, an {term}`interpolated string` `f'…'`, a part
+a prefixed form `H@X`, a {term}`name string` `@'…'`, an {term}`interpolated string` `f'…'`, a part
 after a {term}`list` {term}`literal`, `[…][X]` ({numref}`parser-sugar`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other syntactic sugar form is in the table of the rule below.
 

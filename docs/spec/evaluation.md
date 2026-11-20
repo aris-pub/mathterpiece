@@ -546,7 +546,7 @@ Values compare by content, and mutable objects by identity. `=` and `!=` never g
 | `complex` | both parts are equal. A complex whose second part is 0 equals the real of its first part |
 | `bool`, `string`, a choice | the two are exactly the same |
 | `point`, `list[T]`, `transform` | they have the same length, and the items at each position are equal |
-| `color` | they are the same color once parsed: `(= ink '#000080')` is true with `(color ink #'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS gives it |
+| `color` | they are the same color: `(= ink #'#000080')` is true with `(color ink #'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS gives it |
 | `font` | every part is equal |
 | a shape, a group, a record, a formula, a term and every other mutable object | the two are the same object. Two circles with the same attributes are not equal |
 ```
