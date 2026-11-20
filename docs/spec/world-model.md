@@ -1,16 +1,16 @@
 # World model
 
 :::{note}
-Not drafted yet. This page defines: the objects, their attributes, identity, the tree of containers, values and mutable objects, and equality for each type.
+Not drafted yet. This page defines: the objects, their attributes, identity, the tree of collections, values and mutable objects, and equality for each type.
 :::
 
-## Defaults of a container
+## Defaults of a collection
 
-```{rule} container-defaults
+```{rule} collection-defaults
 A `(defaults (A V)…)` on a group, a row or a column gives each `(A V)` to each of its members, at
-any depth, that takes `A` from a container and does not give `A` itself. When several containers
+any depth, that takes `A` from a collection and does not give `A` itself. When several collections
 give `A`, the nearest one wins. A member that is an instance gets `(A V)` in its own
-`(defaults …)`. Each `A` is one that a container gives its members, and any other is a
+`(defaults …)`. Each `A` is one that a collection gives its members, and any other is a
 {term}`compile error`.
 ```
 

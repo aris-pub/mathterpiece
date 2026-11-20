@@ -108,7 +108,7 @@ mtp-ydd4.7.59.
 | `list` with no item type | core | a type | {doc}`types` |
 | `mod` | core | a type | {numref}`modular-types` |
 
-## The scene, shapes and containers
+## The scene, shapes and collections
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
@@ -125,7 +125,7 @@ mtp-ydd4.7.59.
 | `foreach` in a body | core | a foreach | {doc}`binding-time` |
 | a variable in the scene | core | a variable declaration | {doc}`world-model` |
 
-## Arguments of shapes and containers
+## Arguments of shapes and collections
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
@@ -133,7 +133,7 @@ mtp-ydd4.7.59.
 | `pos` | syntactic sugar | a named argument | {numref}`sugar-rewrites` |
 | `dash` | core | a named argument | {doc}`world-model` |
 | `like` | syntactic sugar | a named argument | {numref}`like-copies` |
-| `defaults` on a group, a row or a column | core | a named argument | {numref}`container-defaults` |
+| `defaults` on a group, a row or a column | core | a named argument | {numref}`collection-defaults` |
 | `clip` | core | a named argument | {doc}`world-model` |
 | `fixed-size` | core | a named argument | {doc}`world-model` |
 | `gap`, `align` | core | named arguments of a row or a column | {doc}`world-model` |
@@ -152,7 +152,7 @@ mtp-ydd4.7.59.
 | `defaults` on an instance | core | a named argument | {doc}`world-model` |
 | `like` on an instance or a variant instance | syntactic sugar | a named argument | {numref}`like-copies` |
 
-The rules about a declaration that reads itself or its container, such as a default that reads
+The rules about a declaration that reads itself or its collection, such as a default that reads
 its own group, are to be redesigned around `self`. Until then, the rules of today hold
 ({numref}`self-reference-today`).
 
@@ -222,7 +222,7 @@ These heads name built-in functions, except the random functions, which the file
 | `range` | `(range LO HI (gap G))`: the numbers from `LO`, `G` apart, up to `HI` and not including it. `G` is 1 when the range gives neither `gap` nor `num`. `(range LO HI (num N))`: `N` numbers evenly apart, from `LO` to `HI`, both included. `gap` and `num` are {term}`named arguments <named argument>` of `range` |
 | `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | random values and seeds, which a source names only through the file rand of the standard library ({numref}`rand-module`). `rand`, `rand-int`, `pick` and `shuffle` take the named argument `(seed S)`, and follow the {term}`default seed` of the file that holds them when it is left out ({numref}`default-seed`) |
 | `steps` | an ease: `(steps N (at P))` gives the ease of N equal jumps, each at the fraction P of its interval, so jump k comes at (k − 1 + P)/N. P is from 0 to 1 and known when compiling, and is 1 when `(at …)` is left out. So `(steps 1 (at P))` is 0 before P and 1 from P on |
-| `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | collections |
+| `map`, `where`, `sort`, `reverse`, `reduce`, `sum`, `count`, `any`, `all` | lists |
 | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | points on a shape's box |
 | `pi`, `tau`, `euler` | constants |
 | the files `colors`, `eases`, `fonts`, `marks`, `math`, `rand` | the standard library: files written in mtp, and the file `rand`, which the compiler gives ({ref}`stdlib-rand`) |

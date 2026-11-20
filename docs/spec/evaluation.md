@@ -57,7 +57,7 @@ The compiler leaves out every `let` value that nothing reads, and the runtime ev
 before the body. So in
 `(let ((s (walk k))) (if c s 0))`, `walk` is called while drawing whether `c` is true or not.
 
-The collection functions call their function on the items in order. `any` and `all` with a function
+The list functions call their function on the items in order. `any` and `all` with a function
 may stop at the first item at which the result is known: by {numref}`evaluation-is-pure`, the value
 is the same.
 
@@ -211,8 +211,8 @@ exceptions:
 - `map`, `reverse` and a read of a position of a list, which pass items that are `none` through.
 
 A part of `none` is `none`: when `g[k]` is `none`, so is `g[k].pos`. An {term}`interpolated string`
-with a part that is `none` is `none`. A collection function given `none` in place of its collection
-gives `none`.
+with a part that is `none` is `none`. A list function given `none` in place of its list gives
+`none`.
 ```
 
 :::{admonition} Code differs
@@ -223,7 +223,7 @@ gives `none`.
 - `(reverse [1 (f 0)])`, with `(f 0)` known to be `none`, stops the compiler with a Python
   `TypeError`, since `_Compiler.collection` takes the smallest and the largest known item to give
   the range of the items (line 2679). Bug mtp-ydd4.7.51.
-- A collection function given a collection whose type includes `none` is a compile error, "the
+- A list function given a list whose type includes `none` is a compile error, "the
   collection given to map may be none" (`collection_items`, line 2820), so
   `(map (if (= 1 2) [1] none) (fn ((int x)) x))` is rejected. Bug mtp-ydd4.7.52.
 :::
