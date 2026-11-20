@@ -314,8 +314,8 @@ Only these change the type of a value where no form asks for it:
    list is accepted.
 3. A literal has the type that is expected where it is written ({numref}`literal-types`).
 
-Nothing else converts. A string is a color only as a literal, a real is never an int, and a point
-is never a list.
+Nothing else converts. A string is never a color, a real is never an int, and a point is never a
+list.
 ```
 
 So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, and a real becomes an

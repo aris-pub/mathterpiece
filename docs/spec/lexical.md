@@ -243,8 +243,7 @@ string, and a string is never read as a color.
 ```
 
 So `#'red'`, `#'#ff0000'` and `#'ff0000'` are the same color, and `#'#f00'` is too. No CSS color
-name is made only of hex digits, so a name and a hex color are never confused. `(fill #'red')` is a
-compile error, since `'red'` is a string.
+name is made only of hex digits, so a name and a hex color are never confused. `(fill 'red')` is a compile error, since `'red'` is a string.
 
 ## Prefixes
 
@@ -254,8 +253,8 @@ compile error, since `'red'` is a string.
 ```{rule} prefix-forms
 A name, `@` and an item, written with nothing between them, are short for the form of that name
 and that item: `H@X` is `(H X)`. H is a name that is not an operator and does not end with `_`. X
-is any expression that is not itself a prefixed form. `@` may not be written in any other
-place.
+is any expression that is not itself a prefixed form. Besides a name string `@'…'`
+({numref}`interpolated-strings`), `@` may not be written in any other place.
 ```
 
 So `doc@'The dot.'` is the {term}`docstring` `(doc 'The dot.')`, `free@green` is the
