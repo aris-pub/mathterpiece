@@ -56,7 +56,7 @@ body: only the names that the `let` or the `foreach` binds belong to its own sco
 
 So the shapes of the scene, at any depth in its groups, are names of the file scope: a canvas, a
 {term}`listener` and a readout name them. A copy that a `foreach` in the scene makes, such as
-`#'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
+`@'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
 parameter is used only in its body, and so a default of a parameter never reads another parameter.
 A member of a record, a palette or a formula is used by its bare name only inside that
 declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
@@ -147,7 +147,7 @@ declaration, binding or import of a name in the same scope is a compile error.
 So `(type unit real (>= 0) (<= 1))` followed by `(real unit 1)` is a compile error, and so is a
 shape of the scene that has the name of a top-level function. Since the scene makes no scope, two
 shapes in two groups of the scene never have the same name. Two copies of a `foreach` declare
-different names, as `#'dot-{k}'` does.
+different names, as `@'dot-{k}'` does.
 
 :::{admonition} Code differs
 :class: note

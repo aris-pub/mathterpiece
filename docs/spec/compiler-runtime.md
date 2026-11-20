@@ -91,10 +91,10 @@ as it is. Which forms are syntactic sugar, and the {term}`rewrite` of each, are 
 The prove step proves each body once: the body of a function with each parameter ranging over
 every value of its declared type, the body of a `foreach` with its variable ranging over every
 value of its range, and the body of a motif or an animation with each parameter ranging over every
-value of its declared type and constraints. An imported motif or animation is proved once, in the file
+value of its declared type and conditions. An imported motif or animation is proved once, in the file
 that declares it. The copies that a `foreach` makes, the instances of a motif and the uses of a
 animation are not proved again. A motif or animation body that is safe for only some values of a
-parameter is a {term}`compile error`, unless the parameter declares a constraint that leaves out
+parameter is a {term}`compile error`, unless the parameter declares a condition that leaves out
 the other values. An expression is known in the prove step when it is known when compiling
 ({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or a
 animation, the variable of that `foreach` or a parameter of that function, motif or animation.
@@ -118,9 +118,9 @@ never both.
 What the error of a rejected source holds is given in {numref}`conformance`.
 
 ```{rule} prover-finds-ranges
-To prove a range or a constraint, the {term}`prover` works out ranges ({numref}`ranges`,
+To prove a range or a condition, the {term}`prover` works out ranges ({numref}`ranges`,
 {numref}`range-rules`). The prover writes nothing into the model. Where the range of a bound
-value does not lie inside the constraint of the value, the prover gives the value a type that includes `none`, and the write step writes the `check`
+value does not lie inside the condition of the value, the prover gives the value a type that includes `none`, and the write step writes the `check`
 that this type needs ({doc}`compiled-format`).
 ```
 
@@ -266,8 +266,8 @@ loaded ({numref}`runtime-loads-mtpc`).
 
 This rule follows from a principle of the design of mtp: a state that breaks a rule of the spec
 cannot be represented. No source can declare such a state, since the compiler proves every type
-and constraint before the page opens. No reader can reach one, since a computation that has no
-value gives the value `none` instead of failing, and a write is brought into the constraints of
+and condition before the page opens. No reader can reach one, since a computation that has no
+value gives the value `none` instead of failing, and a write is brought into the conditions of
 what it is written into. For example, a line declared `line|none` is not drawn while it is `none`
 ({numref}`operations-that-give-none`, {doc}`evaluation`), and a write of -1 into a variable
 declared with `(>= 0)` writes 0 ({numref}`writes-into-constraints`). The principle is a goal of
@@ -307,7 +307,7 @@ stand-in ({doc}`page-interface`).
 ```{rule} runtime-no-type-work-while-drawing
 While drawing, the runtime never checks whether a value has its type, and never converts a value
 from one type to another. The compiler has proved every type, and every type that the runtime
-needs is written in the .mtpc. Bringing a written value into the constraints of what it is written
+needs is written in the .mtpc. Bringing a written value into the conditions of what it is written
 into, by clamping, rounding, wrapping or holding it ({doc}`types`), is part of what a write does,
 and is not a check of a type. How the runtime does this is not normative.
 ```

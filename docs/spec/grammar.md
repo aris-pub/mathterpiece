@@ -138,9 +138,9 @@ The parser produces each spelling on the left as the form on the right:
 | Written | Is the form |
 |---|---|
 | `H@X`, such as `r@1` | `(H X)`, such as `(r 1)` ({numref}`prefix-forms`) |
-| `#'dot-{k}'` | `(name f'dot-{k}')` |
-| `#'dot-{k}'.a.b` | `(. (. (name f'dot-{k}') a) b)` |
-| `#'dot-{k}'[i]` | `(. (name f'dot-{k}') i)` |
+| `@'dot-{k}'` | `(name f'dot-{k}')` |
+| `@'dot-{k}'.a.b` | `(. (. (name f'dot-{k}') a) b)` |
+| `@'dot-{k}'[i]` | `(. (name f'dot-{k}') i)` |
 | `[a b c][h]` | `(. [a b c] h)` |
 | `f'x = {x:.2f}!'` | `(concat 'x = ' (fmt x '.2f') '!')`. Each piece of text, as long as possible, is a string literal, each `{X}` is `(fmt X)`, and each `{X:S}` is `(fmt X 'S')`, in the order of the text |
 
@@ -234,7 +234,7 @@ mtp-ydd4.7.87 makes the first an error and allows the other two.
 :::
 
 So `(circle c (r 1))` has the name `c`, and `(circle none (r 1))` and `(circle_ (r 1))` have no
-name. Inside `(foreach k 3 …)`, `(circle #'dot-{k}' (r 1))` declares the circles `dot-0`, `dot-1`
+name. Inside `(foreach k 3 …)`, `(circle @'dot-{k}' (r 1))` declares the circles `dot-0`, `dot-1`
 and `dot-2`, and `(circle (name s) (r 1))` takes its name from the string `s`, which is known when
 compiling. `(real none 1)`, `(animation_ (move k (to 2)))` and `(func_ ((real x)) (* 2 x))` are
 allowed, and nothing can refer to them. `(canvas none s)`, `(slider_ (move k (from 0) (to 1)))`,
@@ -256,7 +256,7 @@ So the second item of each of these is not a name:
 - `(foreach k 3 (circle_ (r k)))`: `k`, the name that the foreach binds, and then `3`.
 - `(let ((h (/ w 2))) (rect_ (width h)))`: `((h (/ w 2)))`, the bindings.
 - `(import math clamp)`: `math`, the file that the import reads.
-- `(term a (fill 'crimson'))`: `a`, the term that the form gives attributes to.
+- `(term a (fill #'crimson'))`: `a`, the term that the form gives attributes to.
 - `(r 1)`, a named argument: `1`, its value.
 
 
@@ -269,9 +269,9 @@ error, such as "(x …) is a named argument, so
 it comes before the canvas's body".
 ```
 
-So `(circle c (r 1) (fill 'red'))` and `(circle c (fill 'red') (r 1))` are the same form, and
+So `(circle c (r 1) (fill #'red'))` and `(circle c (fill #'red') (r 1))` are the same form, and
 `(circle d (like c) (r 2))` is allowed. `(circle d (r 2) (like c))` is an error, since its
-`(like …)` is not first. `(canvas v s (x 0))` and `(group g (circle_ (r 1)) (defaults (fill 'red')))`
+`(like …)` is not first. `(canvas v s (x 0))` and `(group g (circle_ (r 1)) (defaults (fill #'red')))`
 are errors, since a named argument comes after the first item of the body.
 
 :::{admonition} Code differs
@@ -288,7 +288,7 @@ Each named argument appears at most once in a form: a second one is an error, su
 given twice".
 ```
 
-So `(circle c (fill 'red') (fill 'blue'))` and `(circle c (r 1) (r 2))` are errors, and
+So `(circle c (fill #'red') (fill #'blue'))` and `(circle c (r 1) (r 2))` are errors, and
 `(circle c (x 1) (y 2))` is allowed.
 
 Since `(pos P)` is `(x …) (y …)` ({numref}`sugar-rewrites`), a form that gives `pos` and also `x`
@@ -371,7 +371,7 @@ a `let` or a `foreach`. Everything else about imports is in {doc}`imports`.
 
 ## An example
 
-This file has each form in a body that allows it: a variable, its docstring and its constraints at
+This file has each form in a body that allows it: a variable, its docstring and its conditions at
 the top level, the named arguments of the scene before its shapes, a `foreach` of shapes in the
 scene, and a canvas and a slider at the top level.
 

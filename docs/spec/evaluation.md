@@ -125,7 +125,7 @@ inputs, when folded and while drawing.
 | `range` | a gap of 0, a negative count `num`, and more than 1,000,000 items |
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
-| a bound value with a {term}`condition` | a value that breaks the constraint ({doc}`types`) |
+| a bound value with a {term}`condition` | a value that breaks the condition ({doc}`types`) |
 
 At every other input, an operation never gives `none`.
 ```
@@ -360,7 +360,7 @@ between two whole numbers is rounded up, when folded and while drawing, as CSS `
 in browsers.
 ```
 
-So `(mix '#000000' '#050505' 0.5)` is `#030303ff`, since its channels are 2.5.
+So `(mix #'#000000' #'#050505' 0.5)` is `#030303ff`, since its channels are 2.5.
 
 :::{admonition} Code differs
 :class: note
@@ -546,7 +546,7 @@ Values compare by content, and mutable objects by identity. `=` and `!=` never g
 | `complex` | both parts are equal. A complex whose second part is 0 equals the real of its first part |
 | `bool`, `string`, a choice | the two are exactly the same |
 | `point`, `list[T]`, `transform` | they have the same length, and the items at each position are equal |
-| `color` | they are the same color once parsed: `(= ink '#000080')` is true with `(color ink 'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS gives it |
+| `color` | they are the same color once parsed: `(= ink '#000080')` is true with `(color ink #'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS gives it |
 | `font` | every part is equal |
 | a shape, a group, a record, a formula, a term and every other mutable object | the two are the same object. Two circles with the same attributes are not equal |
 ```

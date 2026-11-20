@@ -236,6 +236,23 @@ ordinary string: `$` changes only how the text between the quotes is read, which
 written as it is.
 ```
 
+```{rule} color-literals
+A color is written `#'…'`. Between the quotes is a CSS color name, `transparent`, or 3, 4, 6 or 8
+hex digits with a `#` before them or not, in small or capital letters. Its value is a color, never a
+string, and a string is never read as a color.
+```
+
+So `#'red'`, `#'#ff0000'` and `#'ff0000'` are the same color, and `#'#f00'` is too. No CSS color
+name is made only of hex digits, so a name and a hex color are never confused. `(fill #'red')` is a
+compile error, since `'red'` is a string.
+
+:::{admonition} Code differs
+:class: note
+The parser reads `#'…'` as a name string, and has no color literal: a color is written as a string
+where a color is expected, as `(fill 'red')`, and a name string as `#'…'`. The grammar shown on this
+page follows the parser. Bead mtp-c1hl.
+:::
+
 ## Prefixes
 
 ```{mtp-grammar} prefixes
@@ -249,8 +266,8 @@ place.
 ```
 
 So `doc@'The dot.'` is the {term}`docstring` `(doc 'The dot.')`, `free@green` is the
-{term}`free starting value` `(free green)`, `r@1` is `(r 1)`, and `(circle c r@1 fill@'red')` is
-`(circle c (r 1) (fill 'red'))`. `free@(mix a b)` is `(free (mix a b))`, `r@(* 2 k)` is
+{term}`free starting value` `(free green)`, `r@1` is `(r 1)`, and `(circle c r@1 fill@#'red')` is
+`(circle c (r 1) (fill #'red'))`. `free@(mix a b)` is `(free (mix a b))`, `r@(* 2 k)` is
 `(r (* 2 k))` and `pos@[1 2]` is `(pos [1 2])`. `fill@free@green`, `+@1`, `circle_@c`, `r@ 1` and
 `r @1` are errors. The form `(H X)` must be allowed where it is written, by the same
 rules as when it is written with parentheses: `if@c` is `(if c)`, which is an error.
@@ -261,7 +278,7 @@ rules as when it is written with parentheses: `if@c` is `(if c)`, which is an er
 ```
 
 ```{rule} interpolated-strings
-An interpolated string is written `f'…'`, and a {term}`name string` is written `#'…'`. Their
+An interpolated string is written `f'…'`, and a {term}`name string` is written `@'…'`. Their
 text has the escapes of {numref}`string-literals`, and in it `{{` is `{` and `}}` is `}`. A `{` that
 is not doubled opens braces, which hold one expression, with whitespace or nothing before and
 after it, then a format spec or nothing, and last `}`. No comment may be written in the
@@ -280,4 +297,4 @@ The grammar has no rule that depends on how deep braces are nested, so braces ar
 same way at every depth. When a string literal nested in the expression in braces ends, the
 expression and the rest of the braces go on by the same rules as before the nested string literal.
 So `f'{f'{a}'}'` is the interpolated string whose braces hold the interpolated string `f'{a}'`, and
-in `f'{#'n-{k}'.x:y}'` the braces hold `#'n-{k}'.x` and the format spec `y`.
+in `f'{@'n-{k}'.x:y}'` the braces hold `@'n-{k}'.x` and the format spec `y`.

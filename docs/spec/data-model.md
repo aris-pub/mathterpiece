@@ -184,7 +184,7 @@ The compiler treats a font as a value: its parts can be read, as `f.size`, but n
 text applies one with `(font f)`. Bead mtp-1vyc makes fonts namespaces.
 :::
 
-For example, `(record style (real width 2 (>= 0) (<= 5)) (color ink 'navy'))` is an object with
+For example, `(record style (real width 2 (>= 0) (<= 5)) (color ink #'navy'))` is an object with
 the two attributes `width` and `ink`, read as `style.width` and `style.ink`. Like any attribute,
 `style.width` may be written: `(slider s (move style.width (from 0) (to 5)))` writes it. Unlike a
 shape, a record is not drawn, and the compiler does nothing with it beyond holding its

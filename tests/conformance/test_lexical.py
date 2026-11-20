@@ -631,3 +631,20 @@ class TestInterpolatedStrings:
         (_, piece) = s.items
         assert isinstance(piece, Form) and piece.items[2] == StrLit("y")
         assert isinstance(piece.items[1], Form)
+
+
+COLOR_SIGIL = xfail("mtp-c1hl", "a color is written as a string, and #'...' is a name string")
+
+
+@rule("color-literals")
+class TestColorLiterals:
+    @COLOR_SIGIL
+    def test_three_spellings_of_one_color(self):
+        a = accepted("(color c #'red')").get("c").value.value
+        assert a == accepted("(color c #'#ff0000')").get("c").value.value
+        assert a == accepted("(color c #'ff0000')").get("c").value.value
+
+    @COLOR_SIGIL
+    def test_a_string_is_never_a_color(self):
+        accepted("(color c #'red')")
+        compile_error("(color c 'red')")

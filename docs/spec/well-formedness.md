@@ -81,7 +81,7 @@ not an error, and {doc}`concurrency` defines what happens when they meet.
 
 ```{rule} written-values
 Each value that a write gives must {term}`fit` the type of its target ({numref}`fits`), with the
-comparisons, the wraps and the choices of the constraints of that type left out, since the write
+comparisons, the wraps and the choices of the conditions of that type left out, since the write
 brings the value into those ({numref}`writes-into-constraints`). This holds for the `from` and the
 `to` of a move and of a movement, the `to` of the move of an `on-drag`, and the values of a
 toggle and a slider. A value whose type includes `none` is written only into a target whose type
@@ -142,7 +142,7 @@ for a member `c` of `g`.
 The prover proves exactly these, and nothing else:
 
 1. The type of every expression, and that it fits where it is given ({numref}`form-types`).
-2. That every value meets the constraints of the type expected where it is given
+2. That every value meets the conditions of the type expected where it is given
    ({numref}`constraint-proof`).
 3. Which operations may give `none`, and so which types include `none` ({numref}`may-give-none`),
    and that an operation whose inputs are known gives no `none` ({numref}`none-at-known-inputs`).
@@ -187,7 +187,7 @@ the part that they share.
 | a number known in the prove step | from the number to the number |
 | the range of a type | the ends that its comparisons give: c for a `(>= c)` and a `(<= c)`, and for a `(> c)` and a `(< c)` the nearest value past c that the type holds, which is the next int for an int, the next binary64 number for a real, and c for a ratio. From lo to hi for `(wrap lo hi)`, and the end of the {term}`number limit` for a side with no bound ({numref}`number-limit`) |
 | a read of a free variable or attribute | the range of its type |
-| a read of a bound variable or attribute | the range of its expression, and the range of the constraints of its declared type, each side with no bound left out. A read through a `translate` or a `transform` ({doc}`world-model`): the range of its type |
+| a read of a bound variable or attribute | the range of its expression, and the range of the conditions of its declared type, each side with no bound left out. A read through a `translate` or a `transform` ({doc}`world-model`): the range of its type |
 | a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` given to a {term}`built-in` function, the range that {doc}`stdlib` gives it |
 | a `let` name | the range of its value |
 | the name of a `foreach` over a count X | from 0 to the upper end of the range of X, minus 1 |
@@ -241,11 +241,11 @@ So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, 
 `right`, `arms[s]` is never `none` for a `side` `s`.
 
 ```{rule} constraint-proof
-A value given where the expected type holds a constraint C meets C when one of these holds:
+A value given where the expected type holds a condition C meets C when one of these holds:
 
 - C is a modular type, which every value meets once brought in ({numref}`modular-types`).
 - The value is known in the prove step and meets C.
-- The type of the value fits the expected type with C as its only constraint ({numref}`fits`).
+- The type of the value fits the expected type with C as its only condition ({numref}`fits`).
 - C is a comparison, and the range of the value lies inside it: its lower end is at least c for
   `(>= c)` and above c for `(> c)`, and its upper end is at most c for `(<= c)` and below c for
   `(< c)`.
@@ -309,7 +309,7 @@ binding as the N of the condition. A value that is computed from N outside the `
 
 In the source below, the body of the `foreach` is proved for `k` from 0 to 59
 ({numref}`prove-bodies-once`). So `k` in the second branch of `(if (= k 0) …)` is from 1 to 59,
-and `#'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58` ({numref}`names-from-values`).
+and `@'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58` ({numref}`names-from-values`).
 
 ```mtp
 (int n 24 (>= 1) (<= 60))

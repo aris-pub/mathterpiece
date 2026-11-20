@@ -175,7 +175,7 @@ So a broadened type fits only a broadened type, a list of ints fits a list of re
 function on every real fits where a function on the reals from 0 to 1 is expected:
 `func[real real]` fits `func[(real (>= 0) (<= 1)) real]`. A `(real (>= 0) (<= 1))` fits `real`
 and `(real (>= -1))`, and a `real` fits neither `(real (>= 0) (<= 1))` nor `(real (>= -1))`. Whether a value whose type does
-not fit is still accepted, because the prover proves that its value meets the constraints, is
+not fit is still accepted, because the prover proves that its value meets the conditions, is
 defined in {numref}`constraint-proof`.
 
 ```{rule} constraint-implication
@@ -264,7 +264,7 @@ has no default, hold the value of their type:
 | `bool` | `false` |
 | `string` | `''` |
 | a refined string type with `(one-of s1 …)` | s1 |
-| `color` | black, `'#000000'` |
+| `color` | black, `#'#000000'` |
 | `font` | the font of the defaults of a font ({doc}`world-model`) |
 | `point` | `[0 0]` |
 | `list[T]` | `[]`, and with `(length n)`, n items, each the value of T |
@@ -285,18 +285,19 @@ own type.
 
 | Literal | Own type | Where a type is expected |
 |---|---|---|
-| a number | its kind ({numref}`number-literals`) | its kind must fit the expected type, without its constraints: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
-| a string literal or a {term}`TeX string` | `string` | where a color is expected, it is a color, and must be `#` followed by 3, 4, 6 or 8 hex digits, a CSS color name, or `transparent`, in small or capital letters, with {term}`whitespace` before or after. Where a refined string type is expected, it must be among its choices |
+| a number | its kind ({numref}`number-literals`) | its kind must fit the expected type, without its conditions: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
+| a string literal or a {term}`TeX string` | `string` | where a refined string type is expected, it must be among its choices. It is never a color |
+| a color literal, `#'…'` | `color` | as its own type ({numref}`color-literals`) |
 | `true`, `false` | `bool` | as its own type |
 | `none` | `none` | it must be a broadened type |
 | `[X…]` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, it has no own type, and is a compile error | where a point is expected, it must have two items, each a number, or a value whose type is a number type with `none`, and it is a point. Where `list[T]` is expected, each item has T expected |
 | `(as T X)` | T | X has T expected. X must be a literal |
 
-A literal is checked against the constraints of the expected type by {numref}`constraint-proof`.
+A literal is checked against the conditions of the expected type by {numref}`constraint-proof`.
 ```
 
-So `(circle c (fill 'red'))` gives a color, `(string s 'red')` a string, and
-`(list[color] swatches ['red' 'gold'])` a list of colors. A list literal may have expressions
+So `(circle c (fill #'red'))` gives a color, `(string s 'red')` a string, and
+`(list[color] swatches [#'red' #'gold'])` a list of colors. A list literal may have expressions
 as items, such as `[k 0]`. A point whose coordinate is `none` is `none`
 ({numref}`none-propagates`), so `[x y]` is of type `point|none` when the type of `x` includes
 `none`.
@@ -324,7 +325,7 @@ since a writer may give it another length.
 
 ```{rule} known-lengths
 The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists
-have that constraint in their types, with these lengths:
+have that condition in their types, with these lengths:
 
 - a list literal, of n items: n
 - a list known when compiling: its length
@@ -429,7 +430,7 @@ The compiler has no interface `palette`: `(func f ((palette q)) 1)` is the error
 
 So `(func label-at ((positioned o) (string s)) …)` may be given points and shapes alike, and
 `(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not every shape has an `r`. A
-constraint of a declared interface is met only when the type of the attribute implies it: a
+condition of a declared interface is met only when the type of the attribute implies it: a
 record whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`.
 
 The named types form a hierarchy: every thing is a value or an object, and every object is of one
@@ -462,7 +463,7 @@ them fits, found this way for two types A and B:
 - When A fits B, it is B, and when B fits A, it is A.
 - When one is `none`, it is the other, broadened.
 - When one includes `none`, it is the meeting of the two without `none`, broadened.
-- Two number types meet at the later of the two, without constraints, in the order `int`,
+- Two number types meet at the later of the two, without conditions, in the order `int`,
   `ratio`, `real`, `complex`.
 - Two list types meet at the list type of the meeting of their item types.
 - Otherwise there is no meeting, and the source is a compile error.
@@ -527,7 +528,7 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 
 ```{rule} parameters
 A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which is
-always written, with its constraints. Its default, when it has one, fits T and is known when
+always written, with its conditions. Its default, when it has one, fits T and is known when
 compiling, or is a function declared with `func` or a built-in function. A call or an instance that
 leaves out a parameter gives it its default, and when it has none, the value of T
 ({numref}`type-values`). A call of a function declared with `func` gives at most as many arguments
@@ -580,7 +581,7 @@ Each form has this type:
 | `(free X)` | the type of X |
 
 Each expression that is given where a type is expected must fit that type ({numref}`fits`), after
-the conversions of {numref}`conversions`, or meet its constraints by {numref}`constraint-proof`.
+the conversions of {numref}`conversions`, or meet its conditions by {numref}`constraint-proof`.
 ```
 
 So `(int m (if on 1 2.5))` is a compile error, since the branches meet at `real`, and
