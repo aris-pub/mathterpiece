@@ -313,7 +313,7 @@ The top level of a source holds only the heads of these tables, with at most one
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `type` | core | a type declaration: a name for a {term}`refined type` | {numref}`type-notation` |
+| `type` | core | a type declaration | {numref}`type-notation` |
 | `interface` | core | an interface declaration | {doc}`types` |
 | `motif` | core | a motif declaration | {doc}`world-model` |
 | `variant` | core | a variant declaration | {doc}`types` |
@@ -323,38 +323,38 @@ The top level of a source holds only the heads of these tables, with at most one
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `scene` | core | the scene declaration, of which a source holds at most one | {doc}`world-model` |
-| `(formula NAME TEX:string ITEMS)` | core | a formula declaration, whose string `TEX` is its positional argument | {doc}`world-model` |
+| `scene` | core | the scene declaration | {doc}`world-model` |
+| `formula` | core | a formula declaration | {doc}`world-model` |
 | `record` | core | a record declaration | {doc}`world-model` |
-| `font` | core | a font declaration: a record of four attributes, which a text applies with `(face N)` | {doc}`data-model` |
-| `palette` | syntactic sugar | a palette declaration: a record of colors | {numref}`sugar-rewrites` |
-| `(parametric NAME XS:list[real] F:curve)` | syntactic sugar | a polyline declaration, through the points of the curve `F` at the values of the list `XS` | {numref}`sugar-rewrites` |
+| `font` | core | a font declaration | {doc}`data-model` |
+| `palette` | syntactic sugar | a palette declaration | {numref}`sugar-rewrites` |
+| `parametric` | syntactic sugar | a polyline declaration | {numref}`sugar-rewrites` |
 | `movement` | core | a movement declaration | {doc}`time` |
-| {term}`components <component>` | core | component declarations: {term}`views <view>` and controls (see "Components and their items") | {doc}`page-interface` |
+| {term}`components <component>` | core | component declarations | {doc}`page-interface` |
 
 **Declarations of functions**
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | `func`, `func[T]` | core | a function declaration | {doc}`types`, {doc}`evaluation` |
-| `colormap` | core | a colormap declaration: a function from a {term}`real` to a color | {doc}`evaluation` |
-| `primitive` | core | a primitive declaration, only in a file of the standard library | {numref}`primitive-form` |
+| `colormap` | core | a colormap declaration | {doc}`evaluation` |
+| `primitive` | core | a primitive declaration | {numref}`primitive-form` |
 
 **Declarations of variables**
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `(T N …)` for a type `T` | core | a variable declaration, of a variable that holds a value | {doc}`data-model`, {doc}`reaction` |
-| `(var NAME T DEFAULT)` | core | a variable declaration, of a variable that holds an object of type `T`, at first `DEFAULT` | {doc}`data-model` |
+| `(T N …)` for a type `T` | core | a declaration of a variable that holds a value | {doc}`data-model`, {doc}`reaction` |
+| `var` | core | a declaration of a variable that holds an object | {doc}`data-model` |
 
 **Forms around declarations**
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | `import` | core | an import of another file's declarations | {doc}`imports` |
-| `let` | core | a let: names for values, over the declarations that it holds ({numref}`body-let-foreach`) | {doc}`binding-time` |
-| `foreach` | core | a foreach: copies of the declarations that it holds, made in the expand step | {doc}`binding-time` |
-| `doc` | core | a {term}`docstring`, kept in the .mtpc | {doc}`compiled-format` |
+| `let` | core | a let | {doc}`binding-time` |
+| `foreach` | core | a foreach | {doc}`binding-time` |
+| `doc` | core | a {term}`docstring` | {doc}`compiled-format` |
 
 So a source need not hold a scene: `(real a 1) (readout r f'{a}')` is a world model with a
 variable and a readout, and an empty file is a world model with nothing in it. A source with two
@@ -370,17 +370,17 @@ mtp-ydd4.7.59.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `(T N VALUE C…)` | core | a variable declaration, free, bound or const | {doc}`world-model`, {doc}`reaction` |
-| `list` with no item type | core | a type: a list whose item type is the type of its value | {doc}`types` |
-| `font` | core | a font declaration, given by its parts | {doc}`world-model` |
+| `(T N VALUE C…)` | core | a variable declaration | {doc}`world-model`, {doc}`reaction` |
+| `list` with no item type | core | a type | {doc}`types` |
+| `font` | core | a font declaration | {doc}`world-model` |
 | `family`, `style`, `weight`, `size` | core | attributes of a font | {doc}`world-model` |
-| `like` in a font | syntactic sugar | a named argument of a font: copies the attributes of another font | {numref}`like-copies` |
-| `(free X)` | core | an expression, written only as the value of a variable or an attribute: a free value that starts at the value of `X` | {doc}`reaction`, {doc}`binding-time` |
+| `like` in a font | syntactic sugar | a named argument of a font | {numref}`like-copies` |
+| `free` | core | an expression | {doc}`reaction`, {doc}`binding-time` |
 | `>=`, `>`, `<=`, `<` with one number | core | conditions | {doc}`types` |
 | `length` | core | a condition | {doc}`types` |
 | `one-of` | core | a condition | {doc}`types` |
-| `const` | core | a named argument of a variable or an attribute, which then rejects every attempted write | {doc}`data-model` |
-| `mod` | core | a type: a modular type, whose numbers wrap into an interval | {doc}`types` |
+| `const` | core | a named argument of a variable or an attribute | {doc}`data-model` |
+| `mod` | core | a type | {doc}`types` |
 
 ### Type notation
 
@@ -393,54 +393,54 @@ mtp-ydd4.7.59.
 | `func[P… R]` | core | a function type | {doc}`types` |
 | `T\|none` | core | a union with `none` | {doc}`types` |
 | `(T C…)` | core | a refined type | {doc}`types` |
-| `colormap` | core | a type, the same as `func[real color]` | {numref}`the-types` |
+| `colormap` | core | a type | {numref}`the-types` |
 | a name declared by `type` | core | the type that it names | {numref}`type-notation` |
 | a name declared by `interface`, `motif` or `variant` | core | that type | {doc}`types` |
-| `rand-seed` | core | the type of seeds, any int | {doc}`types`, {doc}`evaluation` |
+| `rand-seed` | core | a type | {doc}`types`, {doc}`evaluation` |
 
 ### The scene, shapes and containers
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `background` | core | a named argument of the scene: its background | {doc}`world-model` |
-| `transform` in the scene | core | a named argument of the scene: how its coordinates are drawn | {doc}`world-model` |
+| `background` | core | a named argument of the scene | {doc}`world-model` |
+| `transform` in the scene | core | a named argument of the scene | {doc}`world-model` |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text` | core | shape declarations | {doc}`world-model` |
 | `group` | core | a group declaration | {doc}`world-model` |
-| `row`, `column` | core | group declarations, which place their members one after another | {doc}`world-model` |
+| `row`, `column` | core | group declarations | {doc}`world-model` |
 | `(M N …)` for a motif `M` | core | a declaration of a shape whose type is the motif | {doc}`world-model` |
 | `(V N …)` for a variant `V` | core | a declaration of a thing whose type is the variant | {doc}`world-model` |
 | `(H\|none N …)` for a shape head `H` | core | a declaration of a shape that may be `none` | {doc}`world-model` |
-| `exists-when` | core | a body item: its test says when the shape is not `none` | {doc}`world-model` |
-| `let` in a body | core | a let: values worked out once, where it is written | {doc}`binding-time` |
-| `foreach` in a body | core | a foreach: copies of declarations | {doc}`binding-time` |
-| a variable in the scene | core | a variable declaration, as at the top level | {doc}`world-model` |
+| `exists-when` | core | a body item | {doc}`world-model` |
+| `let` in a body | core | a let | {doc}`binding-time` |
+| `foreach` in a body | core | a foreach | {doc}`binding-time` |
+| a variable in the scene | core | a variable declaration | {doc}`world-model` |
 
 ### Arguments of shapes and containers
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `font` | core | named arguments of a shape: its attributes | {doc}`world-model` |
-| `pos` | syntactic sugar | a named argument: `x` and `y` given as one point | {numref}`sugar-rewrites` |
-| `(dash L:list[(real (>= 0))] O:real)` | core | a named argument: the dash lengths `L`, and the offset `O`, which is 0 when it is left out | {doc}`world-model` |
-| `like` | syntactic sugar | a named argument: copies another shape's arguments | {numref}`like-copies` |
-| `defaults` on a group, a row or a column | core | a named argument: what a container gives its members | {numref}`container-defaults` |
-| `clip` | core | a named argument: a shape that the members are drawn inside | {doc}`world-model` |
-| `fixed-size` | core | a named argument: the members are measured in screen pixels | {doc}`world-model` |
-| `gap`, `align` | core | named arguments of a row or a column: spacing and alignment | {doc}`world-model` |
+| `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `font` | core | named arguments of a shape | {doc}`world-model` |
+| `pos` | syntactic sugar | a named argument | {numref}`sugar-rewrites` |
+| `dash` | core | a named argument | {doc}`world-model` |
+| `like` | syntactic sugar | a named argument | {numref}`like-copies` |
+| `defaults` on a group, a row or a column | core | a named argument | {numref}`container-defaults` |
+| `clip` | core | a named argument | {doc}`world-model` |
+| `fixed-size` | core | a named argument | {doc}`world-model` |
+| `gap`, `align` | core | named arguments of a row or a column | {doc}`world-model` |
 
 ### Motifs and variants
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a parameter `(T N DEFAULT?)` | core | a parameter of a motif, a variant, a function or an animation | {doc}`types` |
-| a shape, a bound variable, `foreach`, `let` or `exists-when` in a motif's body | core | body items of a motif: the members and values of each shape of its type | {doc}`world-model` |
-| `self` | core | a name, inside a motif's body: the shape being built | {doc}`scope` |
-| a parameter given to an instance, `(P X)` | core | a named argument of a shape of a motif type: the parameter's value | {doc}`world-model` |
-| `x`, `y`, `translate`, `transform` on an instance | core | named arguments of a shape of a motif type: its frame | {doc}`world-model` |
-| `pos` on an instance | syntactic sugar | a named argument, as on a shape | {numref}`sugar-rewrites` |
-| `clip` on an instance | core | a named argument, as on a group | {doc}`world-model` |
-| `defaults` on an instance | core | a named argument: what the shape gives the members that its motif makes | {doc}`world-model` |
-| `like` on an instance or a variant instance | syntactic sugar | a named argument: copies another shape's items | {numref}`like-copies` |
+| a parameter `(T N DEFAULT?)` | core | a parameter | {doc}`types` |
+| a shape, a bound variable, `foreach`, `let` or `exists-when` in a motif's body | core | body items of a motif | {doc}`world-model` |
+| `self` | core | a name | {doc}`scope` |
+| a parameter given to an instance, `(P X)` | core | a named argument of a shape of a motif type | {doc}`world-model` |
+| `x`, `y`, `translate`, `transform` on an instance | core | named arguments of a shape of a motif type | {doc}`world-model` |
+| `pos` on an instance | syntactic sugar | a named argument | {numref}`sugar-rewrites` |
+| `clip` on an instance | core | a named argument | {doc}`world-model` |
+| `defaults` on an instance | core | a named argument | {doc}`world-model` |
+| `like` on an instance or a variant instance | syntactic sugar | a named argument | {numref}`like-copies` |
 
 The rules about a declaration that reads itself or its container, such as a default that reads
 its own group, are to be redesigned around `self`. Until then, the rules of today hold
@@ -450,23 +450,23 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a variable in a record | core | a body item: an attribute of the record, read as `N.M` | {doc}`world-model` |
-| `record`, `palette` in a record | core, syntactic sugar | a body item: a record inside a record | {doc}`world-model`, {numref}`sugar-rewrites` |
-| `(M C)` in a palette | syntactic sugar | a body item: `(color M C)` | {numref}`sugar-rewrites` |
-| `(T A C…)` in an interface | core | a body item: an attribute that the things of the interface have | {doc}`types` |
+| a variable in a record | core | a body item | {doc}`world-model` |
+| `record`, `palette` in a record | core, syntactic sugar | a body item | {doc}`world-model`, {numref}`sugar-rewrites` |
+| `(M C)` in a palette | syntactic sugar | a body item | {numref}`sugar-rewrites` |
+| `(T A C…)` in an interface | core | a body item | {doc}`types` |
 
 ### Formulas and terms
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a string known when compiling | core | the positional argument of a formula: its LaTeX, which marks its terms | {doc}`world-model` |
-| `term` | core | a body item of a formula: a term's attributes | {doc}`world-model` |
-| `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | named arguments of a term: its attributes | {doc}`world-model` |
-| a string in a term | core | the positional argument of a term: the LaTeX that it shows | {doc}`world-model` |
-| `like` in a term | syntactic sugar | a named argument: copies another term's form | {numref}`like-copies` |
-| `defaults` in a formula | core | a named argument: attributes for every term | {numref}`formula-defaults` |
-| `exists-when` in a formula | core | a body item: its test says when a term is not `none` | {doc}`world-model` |
-| a variable in a formula | core | a body item: an attribute of the formula, read as `F.M` | {doc}`world-model` |
+| a string known when compiling | core | the positional argument of a formula | {doc}`world-model` |
+| `term` | core | a body item of a formula | {doc}`world-model` |
+| `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | named arguments of a term | {doc}`world-model` |
+| a string in a term | core | the positional argument of a term | {doc}`world-model` |
+| `like` in a term | syntactic sugar | a named argument | {numref}`like-copies` |
+| `defaults` in a formula | core | a named argument | {numref}`formula-defaults` |
+| `exists-when` in a formula | core | a body item | {doc}`world-model` |
+| a variable in a formula | core | a body item | {doc}`world-model` |
 
 ### Special forms and other expressions
 
@@ -475,23 +475,23 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a literal | core | an expression: a number, string, TeX string, color, bool, `none` or list literal | {doc}`lexical`, {doc}`types` |
-| a name | core | an expression: what the name refers to | {doc}`scope` |
+| a literal | core | an expression | {doc}`lexical`, {doc}`types` |
+| a name | core | an expression | {doc}`scope` |
 | a name with several name parts, `N.A`, `N[X]` | syntactic sugar | an expression | {numref}`sugar-rewrites` |
-| `(. X Y)` | core | an expression: an attribute, member, item or key of `X` | {numref}`dot-name-part` |
-| `(name S:string)` | core | an expression: the name whose text is `S`, known when compiling | {doc}`scope`, {numref}`names-from-values` |
+| `.` | core | an expression | {numref}`dot-name-part` |
+| `name` | core | an expression | {doc}`scope`, {numref}`names-from-values` |
 | `if` | core | an expression | {doc}`evaluation` |
 | `when` | syntactic sugar | an expression | {numref}`sugar-rewrites` |
 | `cond`, `else`, `and`, `or` | syntactic sugar | expressions | {numref}`sugar-rewrites` |
 | `let` | core | an expression | {doc}`scope`, {doc}`evaluation` |
-| `fn` | core | an expression: a function written in place | {doc}`types`, {doc}`evaluation` |
-| `as` | core | an expression: a literal given a type | {doc}`types` |
-| `(type-of X)` | core | an expression: the type of `X`, as a string | {doc}`types` |
-| `(concat A:string B:string …)` | core | an expression: the strings `A`, `B`, … joined in order. An interpolated string `f'…'` is syntactic sugar for it ({numref}`parser-sugar`) | {doc}`evaluation` |
-| `(fmt X S:string)` | core | an expression: the value of `X` written as a string, by the {term}`format spec` `S`, in Python's format-spec mini-language. `S` is known when compiling, and is `''` when it is left out. `(concat)` is `''` | {doc}`evaluation` |
-| `free` | core | an expression only as the value of a variable or an attribute (see "Variables and conditions"). Anywhere else it is a compile error | {doc}`reaction` |
-| `(F A…)` for a declared function `F` | core | an expression: a call | {doc}`evaluation` |
-| `(L A…)` for a local function value `L` | core | an expression: a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
+| `fn` | core | an expression | {doc}`types`, {doc}`evaluation` |
+| `as` | core | an expression | {doc}`types` |
+| `type-of` | core | an expression | {doc}`types` |
+| `concat` | core | an expression | {doc}`evaluation` |
+| `fmt` | core | an expression | {doc}`evaluation` |
+| `free` | core | an expression | {doc}`reaction` |
+| `(F A…)` for a declared function `F` | core | an expression | {doc}`evaluation` |
+| `(L A…)` for a local function value `L` | core | an expression | {doc}`evaluation` |
 
 ### Built-in functions and the standard library
 
@@ -539,21 +539,21 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `move` | core | an expression: a movement written in place | {doc}`time` |
-| `from`, `to`, `duration`, `path` | core | named arguments of a movement: its attributes | {doc}`time` |
-| `ease` | core | a named argument of a movement: a function from 0 to 1, such as the value of `(steps N)` | {doc}`time` |
+| `move` | core | an expression | {doc}`time` |
+| `from`, `to`, `duration`, `path` | core | named arguments of a movement | {doc}`time` |
+| `ease` | core | a named argument of a movement | {doc}`time` |
 | `like` in a movement or a move | syntactic sugar | a named argument | {numref}`like-copies` |
-| an animation's body of several items | syntactic sugar | the body of an animation: one `in-order` | {numref}`sugar-rewrites` |
-| `defaults` in a score | core | a named argument: a duration, an ease and a lag for the movements inside | {doc}`time` |
-| `loop` | core | a named argument of a score: `(loop)` or `(loop N)` | {doc}`time` |
-| `score` | core | an expression: a collection of movements, each placed in time by its own `lag`, as a group is a collection of shapes, written wherever a movement goes | {doc}`time` |
-| `(lag R:(real (>= 0)))` | core | a named argument of a movement: it starts once the member before it in its score is the fraction `R` of the way through. `R` is a number from 0 up, and the first member starts when the score starts | {doc}`time` |
-| `in-order`, `at-once` | syntactic sugar | expressions: a score whose members run one after another, or together | {numref}`sugar-rewrites` |
-| `foreach` in a score | core | a body item: puts its movements where it is written | {doc}`time`, {doc}`binding-time` |
-| the name of a movement, or of an animation with no parameters, in a score | core | a body item: plays what it names | {doc}`time` |
-| `(wait T:(real (>= 0)))` | syntactic sugar | an expression: a step of `T` seconds in which nothing moves. With `T` left out, it lasts as long as a move with no `(duration …)` | {numref}`sugar-rewrites` |
-| `jump` | syntactic sugar | an expression: a move of no duration | {numref}`sugar-rewrites` |
-| a use of an animation | core | an expression: a movement of the animation's type, with the values of its arguments, as one step | {doc}`time`, {numref}`animation-step` |
+| an animation's body of several items | syntactic sugar | the body of an animation | {numref}`sugar-rewrites` |
+| `defaults` in a score | core | a named argument | {doc}`time` |
+| `loop` | core | a named argument of a score | {doc}`time` |
+| `score` | core | an expression | {doc}`time` |
+| `lag` | core | a named argument of a movement | {doc}`time` |
+| `in-order`, `at-once` | syntactic sugar | expressions | {numref}`sugar-rewrites` |
+| `foreach` in a score | core | a body item | {doc}`time`, {doc}`binding-time` |
+| the name of a movement, or of an animation with no parameters, in a score | core | a body item | {doc}`time` |
+| `wait` | syntactic sugar | an expression | {numref}`sugar-rewrites` |
+| `jump` | syntactic sugar | an expression | {numref}`sugar-rewrites` |
+| a use of an animation | core | an expression | {doc}`time`, {numref}`animation-step` |
 
 ### Components and their items
 
@@ -561,28 +561,28 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 |---|---|---|---|
 | `canvas`, `readout`, `display` | core | view declarations | {doc}`page-interface`, {doc}`lifecycle` |
 | `slider`, `button`, `play`, `stepper`, `toggle` | core | control declarations | {doc}`page-interface`, {doc}`reaction`, {doc}`concurrency` |
-| `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove` | core | listeners, in the body of a view, on a shape or a term, or for `on-pointermove`, on the canvas | {doc}`reaction`, {doc}`concurrency` |
+| `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove` | core | listeners | {doc}`reaction`, {doc}`concurrency` |
 | `on-show`, `on-hide` | core | listeners that play while a canvas starts or stops drawing a shape | {doc}`reaction`, {doc}`lifecycle` |
 | `on-view`, `on-ready`, `on-live`, `on-quiet` | core | listeners on their own view | {doc}`lifecycle` |
-| `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom` on a canvas | core | named arguments of a canvas: its view box and how the {term}`reader` may move it. `(zoom LO HI)` lets the reader zoom from `LO` to `HI` times, and a canvas without it does not zoom. `(pan B)` says whether the reader may pan, and is `false` when it is left out | {doc}`page-interface` |
-| `toggle-duration`, `toggle-ease` | core | named arguments of a canvas: how it fades its items in and out | {doc}`time`, {doc}`page-interface` |
-| a name, a list literal or an expression in a canvas | core | body items of a canvas: what it draws | {doc}`page-interface` |
-| `font` on a readout | core | a named argument of a readout: its font | {doc}`page-interface` |
-| `kind` on a display | core | a named argument of a display: `'block'` or `'inline'` | {doc}`page-interface` |
-| a movement on a control or a listener | core | a positional argument of a writer: what it plays, a move, a score, or a use of an animation. A writer has at most one | {doc}`reaction`, {doc}`time` |
-| the move of a slider | core | the positional argument of a slider: a `move` or the name of a movement | {doc}`page-interface`, {doc}`reaction` |
-| the target of `toggle`, `on-pointermove` | core | a positional argument: a name | {doc}`reaction` |
-| the target of `on-drag` written as a move | core | the positional argument of an `on-drag`: `(move TARGET (to X) (duration 0))` | {doc}`reaction`, {numref}`drag-group-shift` |
-| the target of `on-drag` written as a name | syntactic sugar | the positional argument of an `on-drag`: the move of the shape's position | {numref}`sugar-rewrites` |
-| `label` | core | a named argument of a control: its label, a string | {doc}`page-interface`, {doc}`accessibility` |
-| `stops` on a slider | core | a named argument of a slider: the number of positions of its knob. A slider whose target is an `int` and that gives no `stops` stops at each whole number from its `from` to its `to`, and both of these are then known when compiling, or the source is a {term}`compile error` | {doc}`page-interface` |
-| `buttons`, `rest`, `labels` on a play | core | named arguments of a play: its bars, its rest between steps, its step names | {doc}`page-interface`, {doc}`time` |
-| `selected` on a button | core | a named argument of a button: whether it is the current choice | {doc}`page-interface`, {doc}`accessibility` |
-| `active` | core | a named argument of a writer: whether it acts | {doc}`reaction` |
-| `priority` | core | a named argument of a writer: its priority | {doc}`concurrency` |
-| `stop-propagation` | core | a named argument of a listener: whether an event goes up the scene tree | {doc}`reaction` |
-| `in` | core | a named argument of a control: the views that it belongs to | {doc}`page-interface`, {doc}`lifecycle` |
-| a guard | core | a body item of a writer: a bool form that limits what it writes ({numref}`writer-guards`) | {doc}`reaction` |
+| `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom` on a canvas | core | named arguments of a canvas | {doc}`page-interface` |
+| `toggle-duration`, `toggle-ease` | core | named arguments of a canvas | {doc}`time`, {doc}`page-interface` |
+| a name, a list literal or an expression in a canvas | core | body items of a canvas | {doc}`page-interface` |
+| `font` on a readout | core | a named argument of a readout | {doc}`page-interface` |
+| `kind` on a display | core | a named argument of a display | {doc}`page-interface` |
+| a movement on a control or a listener | core | a positional argument of a writer | {doc}`reaction`, {doc}`time` |
+| the move of a slider | core | the positional argument of a slider | {doc}`page-interface`, {doc}`reaction` |
+| the target of `toggle`, `on-pointermove` | core | a positional argument | {doc}`reaction` |
+| the target of `on-drag` written as a move | core | the positional argument of an `on-drag` | {doc}`reaction`, {numref}`drag-group-shift` |
+| the target of `on-drag` written as a name | syntactic sugar | the positional argument of an `on-drag` | {numref}`sugar-rewrites` |
+| `label` | core | a named argument of a control | {doc}`page-interface`, {doc}`accessibility` |
+| `stops` on a slider | core | a named argument of a slider | {doc}`page-interface` |
+| `buttons`, `rest`, `labels` on a play | core | named arguments of a play | {doc}`page-interface`, {doc}`time` |
+| `selected` on a button | core | a named argument of a button | {doc}`page-interface`, {doc}`accessibility` |
+| `active` | core | a named argument of a writer | {doc}`reaction` |
+| `priority` | core | a named argument of a writer | {doc}`concurrency` |
+| `stop-propagation` | core | a named argument of a listener | {doc}`reaction` |
+| `in` | core | a named argument of a control | {doc}`page-interface`, {doc}`lifecycle` |
+| a guard | core | a body item of a writer | {doc}`reaction` |
 | `doc` on a component | core | its docstring | {doc}`compiled-format` |
 
 :::{admonition} Code differs
