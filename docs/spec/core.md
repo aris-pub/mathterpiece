@@ -281,13 +281,15 @@ For example, take this `foreach`:
 
 ```mtp
 (foreach k 5
-  (circle #'d-{k}' (pos [k 0]) (r (if (= k 0) 1 (/ #'d-{(- k 1)}'.r 2)))))
+  (circle #'d-{k}' (pos [k 0])
+    (r (if (= k 0) 1 (let ((prev #'d-{(- k 1)}')) (/ prev.r 2))))))
 ```
 
-The prover proves its body once, for k from 0 to 4. In the branch of the `if` that is taken for k
-from 1 to 4, `@'d-{(- k 1)}'` names one of the copies `d-0` to `d-3`, each a circle that comes
-before, since the prover narrows the {term}`range` of k in that branch to 1 to 4
-({numref}`if-narrowing`).
+Each circle has half the radius of the one before it, which `prev` names. The prover proves the body
+once, for k from 0 to 4. The `let` is in the branch of the `if` that is taken for k from 1 to 4, so
+`prev` names one of the copies `d-0` to `d-3`, each a circle that comes before, since the prover
+narrows the {term}`range` of k in that branch to 1 to 4 ({numref}`if-narrowing`). A `let` around
+the whole circle would name `d--1` when k is 0.
 
 :::{admonition} Code differs
 :class: note
