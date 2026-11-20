@@ -143,7 +143,6 @@
   ; is where it was going: the moves start together, so each reads the old to.
   (foreach i 32
     (on-click space[i]
-      doc@'Makes the point x or y, in place of the older of the two.'
         (animation (defaults (duration 0.4))
           (at-once
             ; Which point x and y sit on: an int jumps at the start, never passing the points between.
@@ -155,7 +154,8 @@
             (move x-t (from (if replace-x 0 x-t)) (to 1))
             (move y-t (from (if replace-x y-t 0)) (to 1))
             (move share (to 1))
-            (move replace-x (to (not replace-x)) (duration 0))))))
+            (move replace-x (to (not replace-x)) (duration 0))))
+      doc@'Makes the point x or y, in place of the older of the two.'))
   (on-live doc@'Brings out the controls.')
   (on-quiet (animation (move share (to 1) (duration 0.4)))
     doc@'Grows the balls back to δ/2, the figure at rest.'))

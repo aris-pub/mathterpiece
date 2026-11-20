@@ -18,7 +18,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ### Docstrings
 
-Every declaration may take `doc@'text'`, an optional argument that says what the declared thing is: `(func clamp ((real x) (real lo) (real hi)) doc@'x, kept between lo and hi.' (min hi (max lo x)))`, `(real k 1 (>= 0.2) (<= 3) doc@'The radius of the circle.')`, `(slider size (move k (from 0.2) (to 3)) doc@'Sets the radius of the circle.')`. It goes with the declaration's other optional arguments, and in a function or a motif after the parameters and before the body.
+Every declaration may take `doc@'text'`, an optional argument that says what the declared thing is: `(func clamp ((real x) (real lo) (real hi)) doc@'x, kept between lo and hi.' (min hi (max lo x)))`, `(real k 1 doc@'The radius of the circle.' (>= 0.2) (<= 3))`, `(slider size (move k (from 0.2) (to 3)) doc@'Sets the radius of the circle.')`. It goes with the declaration's other optional arguments, and in a function or a motif after the parameters and before the body.
 
 - **`doc@'text'` is `(doc 'text')`:** the reader makes one the other, and either may be written. `mtp fmt` writes `doc@'text'`, and puts a docstring on a line of its own 2 in, with the body, whatever form it documents.
 
@@ -219,10 +219,10 @@ A **formula** is typeset math, as the scene is geometry: `(formula name item…)
 
 ```
 (formula bounds
-  doc@'The squared stretch of the pair, bounded below and above.'
   $'\term{gap}{\Big(1-\frac1b\Big)^2} P_h(p)
       \mathrel{\term{lo}{\le}} \frac{\mathbb E\,(d(x,A)-d(y,A))^2}{d(x,y)^2}
       \mathrel{\term{hi}{\le}} P_h(p) + \term{b2}{\frac1{b^2}}'
+  doc@'The squared stretch of the pair, bounded below and above.'
   (term gap (fill teal) (opacity (lit shown 'gap')) (background none) (padding 2) (rounding 3))
   (term b2 (fill coral) (opacity (lit shown 'b2'))))
 ```

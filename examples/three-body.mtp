@@ -73,7 +73,6 @@
   doc@'The total energy: the bodies\' motion and their pull on each other.')
 
 (button run (label 'run')
-  doc@'Steps the bodies forward, a few steps each frame, until another writer takes over.'
     (animation (loop)
       (in-order (defaults (duration 0))
         (foreach k substeps
@@ -89,7 +88,8 @@
           (move trail-1 (to (shifted trail-1 b1.pos)))
           (move trail-2 (to (shifted trail-2 b2.pos)))
           (move trail-3 (to (shifted trail-3 b3.pos)))))
-      (wait 0.016)))
+      (wait 0.016))
+  doc@'Steps the bodies forward, a few steps each frame, until another writer takes over.')
 
 (animation clear-trails
   (at-once (defaults (duration 0))
@@ -98,7 +98,6 @@
     (move trail-3 (to []))))
 
 (button figure-eight (label 'figure eight')
-  doc@'The figure eight: the three chase each other along one curve.'
     (animation
       (at-once (defaults (duration 0.4) (ease cubic-in-out))
         (move b1.pos (to eight-at[0]))
@@ -107,10 +106,10 @@
         (move v1 (to eight-speed[0]) (duration 0))
         (move v2 (to eight-speed[1]) (duration 0))
         (move v3 (to eight-speed[2]) (duration 0))
-        clear-trails)))
+        clear-trails))
+  doc@'The figure eight: the three chase each other along one curve.')
 
 (button chaos (label 'chaos')
-  doc@'A start near the figure eight\'s, which soon falls apart.'
     (animation
       (at-once (defaults (duration 0.4) (ease cubic-in-out))
         (move b1.pos (to [1 0]))
@@ -119,21 +118,22 @@
         (move v1 (to [0 0.6]) (duration 0))
         (move v2 (to [-0.5 -0.2]) (duration 0))
         (move v3 (to [0.5 -0.4]) (duration 0))
-        clear-trails)))
+        clear-trails))
+  doc@'A start near the figure eight\'s, which soon falls apart.')
 
 (button rest (label 'stop all')
-  doc@'Stops every body where it is, so dragging sets where each starts from rest.'
     (animation
       (at-once (defaults (duration 0))
         (move v1 (to [0 0]))
         (move v2 (to [0 0]))
         (move v3 (to [0 0]))
-        clear-trails)))
+        clear-trails))
+  doc@'Stops every body where it is, so dragging sets where each starts from rest.')
 
 (button stop (label 'stop')
-  doc@'Stops the run where it is, keeping each body\'s position and velocity. Press run to go on.'
     (animation
       (at-once (defaults (duration 0))
         (move v1 (to v1))
         (move v2 (to v2))
-        (move v3 (to v3)))))
+        (move v3 (to v3))))
+  doc@'Stops the run where it is, keeping each body\'s position and velocity. Press run to go on.')
