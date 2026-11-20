@@ -312,8 +312,15 @@ not allow in the body is an error.
 `(foreach ((i n) (x list) …) item…)`, written in a body, are replaced by their items, with their names bound: once
 for `let`, and once for each value for `foreach`. A `let` and a `foreach` may be written in every
 body that {numref}`bodies-table` marks "yes", the top level of a source and of a file to import
-included, and nowhere else. Their items are of the kinds that the body around them holds.
+included, and nowhere else. Their items are of the kinds that the body around them holds, except
+that a `foreach` holds no scene, no motif and no function.
 ```
+
+:::{admonition} Code differs
+:class: note
+The compiler accepts a scene, a motif and a function in a `foreach` at the top level. Bead mtp-8qeb makes
+each a compile error.
+:::
 
 So a `let` and a `foreach` may never be written among the positional arguments or the named
 arguments of a form, or in a form that has no body, such as a function, whose expression is a
