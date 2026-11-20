@@ -20,6 +20,7 @@ export interface FreeAttribute {
   type: Type;
   free: unknown;
   fixed?: true;
+  doc?: string;
 }
 
 export interface BoundAttribute {
@@ -27,6 +28,7 @@ export interface BoundAttribute {
   bound: Expr;
   deps: [number, string | null][];
   fixed?: true;
+  doc?: string;
 }
 
 /** free@expr: free, starting at the expression's value when the live model is built. */
@@ -35,6 +37,7 @@ export interface StartAttribute {
   start: Expr;
   deps: [number, string | null][];
   fixed?: true;
+  doc?: string;
 }
 
 export type Attribute = FreeAttribute | BoundAttribute | StartAttribute;

@@ -114,7 +114,7 @@ A variable's value, every attribute of a mutable object, and every condition a c
     {"type": T, "bound": expr, "deps": [[id, attr], …]}
     {"type": T, "start": expr, "deps": [[id, attr], …]}
 
-with `"fixed": true` on a variant instance's fixed attributes.
+with `"fixed": true` on a variant instance's fixed attributes, and `"doc"`, a string, on an attribute of a motif instance that a variable in the motif's body gives, when that variable has a docstring, `doc@'text'`.
 
 - A **free** one holds its starting value. A writer may change it while drawing, unless its type has a `const` constraint, it is fixed, or its object is a token.
 - A **started** one, written `free@expr` or `(free expr)` in the source, is free, and its starting value is `expr`'s value, which the runtime reads once, when it builds the live model, and never again; `deps` lists what it reads, as for a bound one. From then on it is free like any other.
