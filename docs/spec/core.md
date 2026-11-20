@@ -239,10 +239,12 @@ of `X`.
 ```
 
 So `p.r` is the attribute `r` of a circle `p`, and with `(let ((r 1)) xs.r)`, `xs.r` is item 1 of
-the list `xs`, as `(. xs r)` is. A member of a record, a palette, a formula or an instance is
-read by its name, even when another declaration or a binding has the same name. So with
-`(color yellow '#ffd700')` and `(palette marks (yellow '#e6c200') (blue '#0072b2'))` at the top
-level, `marks.yellow` is the member `yellow` of the palette, and not the color `yellow`.
+the list `xs`, as `(. xs r)` is. An attribute or a member of an object is read by its name, even
+when another declaration or a binding has the same name: the attributes of a record, the terms of a
+formula, and the members of a shape whose type is a motif. A palette is a record
+({numref}`sugar-rewrites`), so with `(color yellow '#ffd700')` and
+`(palette marks (yellow '#e6c200') (blue '#0072b2'))` at the top level, `marks.yellow` is the
+attribute `yellow` of the record `marks`, and not the color `yellow`.
 
 :::{admonition} Code differs
 :class: note
