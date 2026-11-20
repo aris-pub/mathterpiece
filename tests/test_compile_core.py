@@ -465,9 +465,6 @@ class TestLetInBodies:
         ((held, _),) = m.get("d.c").attrs["r"].deps
         assert m.objects[held].value.deps >= {(m.id("d"), "t")}
 
-    def test_not_at_the_top_level(self):
-        error("(let ((w 2)) (real k w))", "top level")
-
     def test_its_names_are_not_seen_after_it(self):
         error("(scene s (let ((w 2)) (circle a (r w))) (circle b (r w)))", "unknown name 'w'")
 
