@@ -1663,7 +1663,7 @@ class _Compiler:
 
     def motif_decl(self, form: Form) -> None:
         name, pos = self.name_of(form)
-        if name is None or len(form.items) < 3:
+        if len(form.items) < 3:
             raise CompileError("a motif is (motif name parameters member…)", form.pos)
         if name in SHAPE_ATTRS or name in self.model.types:
             raise CompileError(f"'{name}' is already declared", pos)
@@ -1678,9 +1678,20 @@ class _Compiler:
         for p in params:
             if p.name in INSTANCE_ATTRS or p.name == "pos":
                 raise CompileError(f"every motif instance already has '{p.name}'", form.pos)
-        self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos)
-        self.model.types[name] = ShapeT(name)
-        self.trial(name, form.pos)
+        if name is not None:
+            self.model.motifs[name] = MotifDef(name, params, form.items[3:], pos)
+            self.model.types[name] = ShapeT(name)
+            self.trial(name, form.pos)
+            return
+        # A source cannot write a name with a space, so this key cannot be the name of a motif.
+        key = "motif with no name"
+        self.model.motifs[key] = MotifDef(key, params, form.items[3:], pos)
+        self.model.types[key] = ShapeT(key)
+        try:
+            self.trial(key, form.pos)
+        finally:
+            del self.model.motifs[key], self.model.types[key]
+            self.shape_types.pop(key, None)
 
     def choreo_decl(self, form: Form) -> None:
         """(choreo name parameters item…): a kind of animation, as a motif is a kind of shape
@@ -2002,7 +2013,7 @@ class _Compiler:
                 form.pos,
             )
         name, pos = self.name_of(form)
-        if name is None or len(form.items) != 4:
+        if len(form.items) != 4:
             raise CompileError("a function is (func name parameters body)", form.pos)
         # A call by that name would never reach the function, or a read of the constant would
         # get the function (the author, 2026-11-03).
@@ -2015,11 +2026,12 @@ class _Compiler:
         f = FuncDef(name, params, declared or RECURSING, pos=pos, source=form.items[3])
         f.declared = declared
         self.model.functions.append(f)
-        self.model.funcs[name] = fid
+        if name is not None:
+            self.model.funcs[name] = fid
         if declared is not None:
             # Every call, a recursive one too, has the declared type and range.
             body, reads = self.function_body(params, form.items[3], declared)
-            body = self.within_result(name, declared, body, pos)
+            body = self.within_result(name or "the function", declared, body, pos)
             f.body, f.deps = body, body.deps
             f.reads = {p.name: frozenset(reads[p.name]) for p in params if p.name in reads}
             return
@@ -5032,6 +5044,8 @@ class _Compiler:
         if self.scene is not None:
             raise CompileError("a file has exactly one scene", form.pos)
         name, pos = self.name_of(form)
+        if name is None:
+            raise CompileError("a scene needs a name", form.pos)
         attrs = {"background": Attribute(PAINT, None), "transform": Attribute(TRANSFORM, IDENTITY)}
         self.scene = self.add(Obj("scene", name, SCENE, attrs=attrs, pos=pos))
         self.in_scene = True

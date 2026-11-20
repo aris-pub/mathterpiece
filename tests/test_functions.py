@@ -184,6 +184,12 @@ class TestDeclaredResults:
             "f's result may break \\(>= 0\\)",
         )
 
+    def test_a_function_with_no_name_is_called_the_function(self):
+        error(
+            "(func[(real (>= 0) (<= 1))] none ((real x)) (* 2 x))",
+            "the function's result may break \\(>= 0\\)",
+        )
+
     def test_the_body_must_have_the_type(self):
         error("(func[bool] f ((real x)) (* 2 x))", "expected bool")
 

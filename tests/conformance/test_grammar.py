@@ -287,6 +287,52 @@ class TestDeclaredNames:
     def test_the_string_of_a_name_string_is_known_when_compiling(self):
         compile_error("(real j 1) (scene s (circle #'c-{j}' (r 1)))")
 
+    @pytest.mark.parametrize("src", ["(scene none (circle c (r 1)))", "(scene_ (circle c (r 1)))"])
+    def test_a_scene_must_have_a_name(self, src):
+        compile_error(src)
+
+    @pytest.mark.parametrize("src", ["(formula none $'x')", "(formula_ $'x')"])
+    def test_a_formula_must_have_a_name(self, src):
+        compile_error(src)
+
+    def test_a_view_must_have_a_name(self):
+        compile_error("(scene s (circle c (r 1))) (canvas none s)")
+
+    def test_a_control_must_have_a_name(self):
+        compile_error("(real k 0 (>= 0) (<= 1)) (slider none (move k (from 0) (to 1)))")
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(func none ((real x)) (* 2 x))",
+            "(func_ ((real x)) (* 2 x))",
+            "(func[real] none ((real x)) (* 2 x))",
+            "(func none ((real x)) x) (func none ((real y)) y)",
+        ],
+    )
+    def test_a_function_may_have_no_name(self, src):
+        accepted(src)
+
+    def test_the_body_of_a_function_with_no_name_is_compiled(self):
+        compile_error("(func_ ((real x)) (* 2 y))")
+        compile_error("(func[(real (>= 0) (<= 1))] none ((real x)) (* 2 x))")
+
+    @pytest.mark.parametrize(
+        "src",
+        [
+            "(motif none ((real k 1 (>= 0))) (circle c (r k)))",
+            "(motif_ ((real k 1 (>= 0))) (circle c (r k)))",
+            "(motif_ ((real k 1 (>= 0))) (circle c (r k)))"
+            " (motif_ ((real m 1 (>= 0))) (circle c (r m)))",
+            "(motif_ ((real k 1 (>= 0))) (circle c (r k))) (scene s (circle c (r 1)))",
+        ],
+    )
+    def test_a_motif_may_have_no_name(self, src):
+        accepted(src)
+
+    def test_the_body_of_a_motif_with_no_name_is_compiled(self):
+        compile_error("(motif_ ((real k 1 (>= 0))) (circle c (r m)))")
+
 
 @rule("forms-with-no-name")
 class TestFormsWithNoName:
@@ -395,7 +441,7 @@ class TestContexts:
             "(scene s (circle c (r 1)) (canvas v s))",
             "(namespace n (func f ((real x)) x))",
             "(palette p (palette q ('a' 'red')))",
-            "(variant v ((real k 1)) (circle (r k)) (circle (r k)))",
+            "(variant v ((real k 1 (>= 0))) (circle (r k)) (circle (r k)))",
             "(func f ((real x)) x x)",
             "(scene s (group g (clip (line (from [0 0]) (to [1 1]))) (circle c (r 1))))",
             "(real k 0) (scene s (circle c (r 1))) (canvas v s (move k (to 1)))",

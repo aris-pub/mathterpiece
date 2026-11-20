@@ -227,12 +227,6 @@ name, and a view and a control because the page places them by their names, as
 `<mtp-canvas name="v">`. Inside the compiler and the runtime, a declaration with no name is still a
 thing of its own, so nothing else needs a name.
 
-:::{admonition} Code differs
-:class: note
-The compiler allows a scene with no name, and refuses a function and a motif with no name. Bead
-mtp-ydd4.7.87 makes the first an error and allows the other two.
-:::
-
 So `(circle c (r 1))` has the name `c`, and `(circle none (r 1))` and `(circle_ (r 1))` have no
 name. Inside `(foreach k 3 …)`, `(circle @'dot-{k}' (r 1))` declares the circles `dot-0`, `dot-1`
 and `dot-2`, and `(circle (name s) (r 1))` takes its name from the string `s`, which is known when
