@@ -39,7 +39,6 @@ def xfail(bead: str, why: str):
 
 DOCSTRING_PLACE = xfail("mtp-ydd4.7.34", "the compiler takes a docstring from any place")
 MOTIF_DOCSTRING = xfail("mtp-qiro", "a variable in a motif's body may not have a docstring")
-OPTIONS_LAST = xfail("mtp-ydd4.7.11", "some forms allow a named argument after the body")
 TOP_LET = xfail("mtp-ydd4.7.7", "a let at the top level is an error")
 BODY_LET = xfail("mtp-ydd4.7.8", "a let is an error in some bodies that hold items")
 ARGUMENT_LET = xfail("mtp-ydd4.7.9", "a let or a foreach among the arguments of a shape compiles")
@@ -317,17 +316,20 @@ class TestOptionalArgumentsFirst:
         compile_error("(scene s (circle a (r 1)) (circle b (fill 'red') (like a)))")
         accepted("(scene s (circle a (r 1)) (circle b (like a) (fill 'red')))")
 
-    @OPTIONS_LAST
     def test_the_defaults_of_a_formula(self):
         compile_error("(formula f $'\\term{a}{x}' (term a (fill 'red')) (defaults (padding 3)))")
 
-    @OPTIONS_LAST
     def test_the_font_of_a_readout(self):
         compile_error("(font f (size 12)) (readout r 'x' (on-live (animation)) (font f))")
 
-    @OPTIONS_LAST
     def test_the_kind_of_a_display(self):
         compile_error("(formula f $'x') (display d f (on-live (animation)) (kind 'block'))")
+
+    def test_the_font_of_a_readout_before_its_listeners(self):
+        accepted("(font f (size 12)) (readout r 'x' (font f) (on-live (animation)))")
+
+    def test_the_kind_of_a_display_before_its_listeners(self):
+        accepted("(formula f $'x') (display d f (kind 'block') (on-live (animation)))")
 
 
 @rule("named-arguments-once")
@@ -468,16 +470,17 @@ class TestFormulaTerms:
     def test_the_string_declares_its_terms(self):
         accepted("(formula f $'\\term{a}{x}' (defaults (padding 3)) (term a (fill 'red')))")
 
-    @OPTIONS_LAST
     def test_the_string_after_the_defaults_is_an_error(self):
         compile_error("(formula f (defaults (padding 3)) $'\\term{a}{x}' (term a (fill 'red')))")
 
     def test_a_term_that_the_string_does_not_mark_is_an_error(self):
         compile_error("(formula f $'\\term{a}{x}' (term b (fill 'red')))")
 
-    @OPTIONS_LAST
     def test_a_term_before_the_string_is_an_error(self):
         compile_error("(formula f (term a (fill 'red')) $'\\term{a}{x}')")
+
+    def test_a_variable_before_the_string_is_an_error(self):
+        compile_error("(formula f (real k 1) $'x')")
 
 
 @rule("listeners-in-views")

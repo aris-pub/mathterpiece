@@ -5,8 +5,8 @@
 (color wash '#ffe08a')
 
 (formula f
-  (bool pointed false)
   $'\term{a}{x} + \term{b}{\frac{\term{c}{1}}{2}} = \term{v}{}'
+  (bool pointed false)
   (term a (fill 'teal') (opacity (if (= shown 'a') 1 0.4)) (padding 2) (rounding 3))
   (term c (outline 'red') (outline-width 2))
   (term v f'{q:.2f}')

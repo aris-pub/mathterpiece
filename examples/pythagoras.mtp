@@ -85,9 +85,9 @@
       doc@'Unlights them.')))
 
 (formula pythagoras
+  $'\term{a2}{a^2} + \term{b2}{b^2} = \term{c2}{c^2}'
   doc@'The theorem, each square a term.'
     (defaults (padding 3) (rounding 4))
-  $'\term{a2}{a^2} + \term{b2}{b^2} = \term{c2}{c^2}'
   (term a2 (fill green) (background (if (= lit 'a') wash none)))
   (term b2 (fill yellow) (background (if (= lit 'b') wash none)))
   (term c2 (fill red) (background (if (= lit 'c') wash none))))

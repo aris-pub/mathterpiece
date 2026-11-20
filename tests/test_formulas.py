@@ -133,18 +133,18 @@ class TestExistence:
 
 class TestVariables:
     def test_a_formulas_own_variable(self):
-        m = model(r"(formula f (bool lit false) $'\term{a}{x}' (term a (opacity (if lit 1 0.4))))")
+        m = model(r"(formula f $'\term{a}{x}' (bool lit false) (term a (opacity (if lit 1 0.4))))")
         assert m.get("f.a").attrs["opacity"].deps == {(m.id("f.lit"), None)}
 
     def test_a_writer_writes_it_by_its_full_name(self):
         m = model(
-            r"(formula f (bool lit false) $'\term{a}{x}')"
+            r"(formula f $'\term{a}{x}' (bool lit false))"
             r" (display d f (on-click f.a (animation (move f.lit (to true) (duration 0.2)))))"
         )
         assert m.get("f.lit").kind == "variable"
 
     def test_only_the_formula_reads_it_by_its_bare_name(self):
-        error("(formula f (bool lit false) $'a') (bool v lit)", "unknown name 'lit'")
+        error("(formula f $'a' (bool lit false)) (bool v lit)", "unknown name 'lit'")
 
 
 class TestReading:
@@ -167,7 +167,7 @@ class TestReading:
 
     def test_the_scene_cannot_read_a_formula(self):
         error(
-            r"(formula f (real k 0.5) $'\term{a}{x}') (scene s (circle c (r f.k)))",
+            r"(formula f $'\term{a}{x}' (real k 0.5)) (scene s (circle c (r f.k)))",
             "the scene cannot read f.k: it belongs to the formula f",
         )
 
@@ -179,7 +179,7 @@ class TestReading:
 
     def test_one_formula_cannot_read_another(self):
         error(
-            r"(formula f (real k 0.5) $'a') (formula g $'\term{a}{x}' (term a (opacity f.k)))",
+            r"(formula f $'a' (real k 0.5)) (formula g $'\term{a}{x}' (term a (opacity f.k)))",
             "a formula cannot read f.k: it belongs to the formula f",
         )
 
@@ -192,7 +192,7 @@ class TestReading:
 
     def test_components_read_both(self):
         m = model(
-            r"(scene sc (real k 0.5)) (formula f (real j 1) $'a')"
+            r"(scene sc (real k 0.5)) (formula f $'a' (real j 1))"
             r" (readout r f'{k} {f.j}')"
         )
         assert m.get("r").attrs["value"].deps == {(m.id("k"), None), (m.id("f.j"), None)}
@@ -205,26 +205,26 @@ class TestDefaultsAndLike:
 
     def test_defaults_reach_every_term(self):
         m = model(
-            f"(formula f (defaults (padding 3) (rounding 4)) {self.AB} (term a (fill 'red')))"
+            f"(formula f {self.AB} (defaults (padding 3) (rounding 4)) (term a (fill 'red')))"
         )
         assert m.get("f.a").attrs["padding"].value == 3
         assert m.get("f.b").attrs["rounding"].value == 4
 
     def test_a_terms_own_wins(self):
-        m = model(f"(formula f (defaults (padding 3)) {self.AB} (term a (padding 1)))")
+        m = model(f"(formula f {self.AB} (defaults (padding 3)) (term a (padding 1)))")
         assert m.get("f.a").attrs["padding"].value == 1
         assert m.get("f.b").attrs["padding"].value == 3
 
     def test_each_term_has_its_own(self):
-        m = model(f"(formula f (defaults (padding 3)) {self.AB})")
+        m = model(f"(formula f {self.AB} (defaults (padding 3)))")
         assert m.get("f.a").attrs["padding"] is not m.get("f.b").attrs["padding"]
 
     def test_defaults_are_term_attributes(self):
-        error(f"(formula f (defaults (tex 'z')) {self.AB})", "a formula's defaults are")
-        error(f"(formula f (defaults (r 1)) {self.AB})", "a formula's defaults are")
+        error(f"(formula f {self.AB} (defaults (tex 'z')))", "a formula's defaults are")
+        error(f"(formula f {self.AB} (defaults (r 1)))", "a formula's defaults are")
 
     def test_defaults_once(self):
-        error(f"(formula f (defaults (padding 1)) (defaults (padding 2)) {self.AB})", "twice")
+        error(f"(formula f {self.AB} (defaults (padding 1)) (defaults (padding 2)))", "twice")
 
     def test_like_copies_an_earlier_term(self):
         m = model(

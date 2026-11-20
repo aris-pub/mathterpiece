@@ -3534,6 +3534,8 @@ class _Compiler:
                 ),
                 kind,
             )
+        if kind in ("readout", "display"):
+            self.options_first(items, lambda it: not self.holds_listeners(it), kind)
         items = [it for it in items if not any(it is h for h in heard)]
         if kind not in ("canvas", "readout"):
             # A slider's first item is its move, and on-drag's and toggle's their target:
@@ -5097,8 +5099,13 @@ class _Compiler:
         if len(texts) > 1:
             raise CompileError("a formula holds one LaTeX string", texts[1].pos)
         text = texts[0]
+        if text is not items[0]:
+            raise CompileError(
+                "a formula's LaTeX comes right after its name: (formula name $'…' …)", text.pos
+            )
         if not isinstance(text, StrLit):
             raise CompileError("a formula's LaTeX is known when compiling", text.pos)
+        self.options_first(items[1:], lambda it: _head(it) == "defaults", "formula")
         i = self.add(
             Obj("formula", name, FORMULA, pos=pos, data={"members": {}, "tex": text.value})
         )

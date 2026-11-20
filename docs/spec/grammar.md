@@ -274,15 +274,6 @@ So `(circle c (r 1) (fill #'red'))` and `(circle c (fill #'red') (r 1))` are the
 `(like …)` is not first. `(canvas v s (x 0))` and `(group g (circle_ (r 1)) (defaults (fill #'red')))`
 are errors, since a named argument comes after the first item of the body.
 
-:::{admonition} Code differs
-:class: note
-The compiler checks this rule in the bodies of the scene, of groups, rows and columns, of
-animations, of `at-once` and `in-order`, of canvases, of controls and of listeners. It allows the
-`(defaults …)` of a formula after its other items (`compiler.py:4905`, `formula_decl`), the
-`(font f)` of a readout after its listeners, and the `(kind k)` of a display after its listeners.
-Bead mtp-ydd4.7.11 makes these errors.
-:::
-
 ```{rule} named-arguments-once
 Each named argument appears at most once in a form: a second one is an error, such as "'fill' is
 given twice".
