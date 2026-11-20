@@ -218,7 +218,7 @@ below the {term}`number limit`, the `foreach` is a compile error.
 ```
 
 So with `(int n 3 (>= 0) (<= 5))`, which a slider writes, `(foreach k n …)` and
-`(foreach k (range 0 n) …)` both make 5 copies, and copies 3 and 4 do not exist while `n` is 3.
+`(foreach k (range 0 n) …)` both make 5 copies, and copies 3 and 4 are `none` while `n` is 3.
 
 :::{admonition} Code differs
 :class: note
