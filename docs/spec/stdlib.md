@@ -4,46 +4,36 @@
 Not drafted yet. This page defines: every built-in function and constant, and the files of the standard library.
 :::
 
-(stdlib-primitives)=
-## Primitives
-
-The random functions are not built-in functions. The compiler implements them, and a source uses
-them only through the names that the file `rand` of the {term}`standard library` gives them.
-
-```{rule} primitive-form
-A {term}`primitive` is one of the five functions `rand`, `rand-int`, `pick`, `shuffle` and
-`next-seed`, defined in {numref}`random-values`. A primitive has no name until a file of the
-standard library declares one with `(primitive N)`: a {term}`declaration` of the function `N`,
-which is the primitive `N`. `(primitive N)` takes an optional `(doc …)` and no other item. It is
-written only at the top level of a file of the standard library, which is a file that the compiler
-reads from the folder of the standard library ({numref}`compiler-reads-files`).
-```
-
-A `(primitive N)` in any other place is a {term}`compile error`, "only a file of the standard
-library holds (primitive …)". An `N` that is not a primitive is a compile error, "primitive names
-one of rand, rand-int, pick, shuffle and next-seed", and so is a `(primitive …)` that holds anything
-but a name and a `(doc …)`, "primitive is (primitive name)". A file of the standard library that
-declares the same primitive twice is a compile error by {numref}`one-declaration-per-scope`.
-
-```{rule} primitive-calls
-A name that refers to a primitive is written only as the head of a call. Written in any other place,
-it is a compile error, "N is only called, as (N …)".
-```
-
-Each call of `rand`, `rand-int`, `pick` or `shuffle` has a {term}`site` of its own
-({numref}`random-site`), so a primitive is never a value. For example, after
-`(import rand rand)`, `(map xs rand)` is a compile error.
-
 (stdlib-rand)=
 ## The file rand
 
-The file `rand` of the standard library holds these declarations, and only these:
+```{rule} rand-module
+The file `rand` of the {term}`standard library` has no .mtp: the compiler gives its names, and
+`(import rand …)` reads them as it reads the names of any file ({doc}`imports`). It gives these
+names, and only these:
 
-| Name | Declaration | What it is |
-|---|---|---|
-| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | `(primitive rand)` and so on | the primitives ({numref}`random-values`) |
-| `seed` | `(rand-seed seed 0)` | the {term}`seed` that a file with no seed of its own follows ({numref}`default-seed`) |
-| `roll-dice` | `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))` | an animation that gives the seed `s` its next value at once. `s` is the {term}`default seed` of the file that holds the use when the use gives no argument |
+| Name | What it is |
+|---|---|
+| `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | the random functions ({numref}`random-values`), which the compiler implements |
+| `seed` | the {term}`seed` that a file with no seed of its own follows ({numref}`default-seed`), as if declared `(rand-seed seed 0)` |
+| `roll-dice` | an animation that gives the seed `s` its next value at once, as if declared `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`. `s` is the {term}`default seed` of the file that holds the use when the use gives no argument |
+```
+
+```{rule} random-calls
+A name that refers to a random function is written only as the head of a call. Written in any
+other place, it is a compile error, "N is only called, as (N …)".
+```
+
+Each call of `rand`, `rand-int`, `pick` or `shuffle` has a {term}`site` of its own
+({numref}`random-site`), so a random function is never a value. For example, after
+`(import rand rand)`, `(map xs rand)` is a compile error.
+
+:::{admonition} Code differs
+:class: note
+The compiler reads the file rand from `mathterpiece/stdlib/rand.mtp`, which names each random
+function with a form `(primitive N)` that only a file of the standard library may hold. Bead mtp-o3cc
+gives the names from the compiler and removes that form.
+:::
 
 So `(import rand rand-int roll-dice)` gives the names `rand-int` and `roll-dice`, and
 `(import rand)` gives `rand.rand-int`, `rand.roll-dice` and the others ({doc}`imports`).

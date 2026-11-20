@@ -380,8 +380,8 @@ seed.
 ```
 
 The random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed` are
-{term}`primitives <primitive>`, which a source names through the file rand of the standard library
-({numref}`primitive-form`).
+functions that a source names through the file rand of the standard library
+({numref}`rand-module`).
 
 ```{rule} default-seed
 The default seed of a file is the only seed among the names of its {term}`file scope`
@@ -410,7 +410,7 @@ These are the messages of the compile errors for a random function with no `(see
 | no variable of type `rand-seed`, and the file rand is not imported | "a random value follows a seed: declare one, (rand-seed dots 0), or import the standard one, (import rand seed)" |
 
 ```{rule} random-site
-Each call of the primitive `rand`, `rand-int`, `pick` or `shuffle`, by any name that an import gives
+Each call of the random function `rand`, `rand-int`, `pick` or `shuffle`, by any name that an import gives
 it, has a {term}`site`: a whole number. The sites are counted from 0, in the order in which the
 calls start in the text of the source after the rewrite step ({numref}`compile-steps`), read with
 these changes:
