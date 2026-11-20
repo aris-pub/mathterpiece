@@ -330,7 +330,21 @@ The top level of a source holds only the heads of these tables, with at most one
 | `palette` | syntactic sugar | {numref}`sugar-rewrites` |
 | `parametric` | syntactic sugar | {numref}`sugar-rewrites` |
 | `movement` | core | {doc}`time` |
-| {term}`components <component>` | core | {doc}`page-interface` |
+
+**Declarations of components**
+
+| Head | Kind | Defined in |
+|---|---|---|
+| `canvas` | core | {doc}`page-interface`, {doc}`lifecycle` |
+| `readout` | core | {doc}`page-interface` |
+| `display` | core | {doc}`page-interface` |
+| `slider` | core | {doc}`page-interface`, {doc}`reaction` |
+| `button` | core | {doc}`page-interface`, {doc}`reaction` |
+| `play` | core | {doc}`page-interface`, {doc}`time` |
+| `stepper` | core | {doc}`page-interface`, {doc}`time` |
+| `toggle` | core | {doc}`page-interface`, {doc}`reaction` |
+
+The listeners are declared in the body of a view, not at the top level ({numref}`listeners-in-views`).
 
 **Declarations of functions**
 
