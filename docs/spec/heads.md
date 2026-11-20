@@ -143,7 +143,7 @@ mtp-ydd4.7.59.
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | a parameter `(T N DEFAULT?)` | core | a parameter | {doc}`types` |
-| a shape, a bound variable, `foreach`, `let` or `exists-when` in a motif's body | core | body items of a motif | {doc}`world-model` |
+| a shape, a bound or const variable, `foreach`, `let` or `exists-when` in a motif's body | core | body items of a motif | {doc}`world-model` |
 | `self` | core | a name | {doc}`scope` |
 | a parameter given to an instance, `(P X)` | core | a named argument of a shape of a motif type | {doc}`world-model` |
 | `x`, `y`, `translate`, `transform` on an instance | core | named arguments of a shape of a motif type | {doc}`world-model` |
@@ -322,7 +322,7 @@ follow the rule.
 | `import` | the names to import, or none to import the whole file | no |
 | `scene` | shapes, variables, `exists-when` | yes |
 | `group`, `row`, `column` | shapes, `exists-when` | yes |
-| `motif` | shapes, variables that are bound or known when compiling, `exists-when` | yes |
+| `motif` | shapes, variables that are bound or const (never free: free state of each shape is a parameter, which becomes an attribute), `exists-when` | yes |
 | `formula` | terms, `exists-when` and variables. The string is its positional argument ({numref}`formula-terms`) | yes |
 | `record` | variables, records, palettes | yes |
 | `palette` | items `(member color)` | yes |
