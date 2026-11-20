@@ -308,6 +308,10 @@ fit
   A type A fits a type B when a value of type A is accepted where a value of type B is expected
   ({numref}`fits`).
 
+guard
+  A bool form in the body of a control or a listener, such as `(<= c.x 5)`, that limits what that
+  writer writes ({numref}`writer-guards`).
+
 condition
   A type written as the things that meet it, such as `(>= 0)` or `(one-of 'a' 'b')`. `(real (>= 0))`
   is the intersection of `real` with it ({numref}`constraints`).

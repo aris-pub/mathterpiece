@@ -19,7 +19,7 @@ The signature of `on-drag` ({ref}`signatures`):
 
 `SOURCE` is the shape or the term that the listener hears, and `MOVEMENT` is what each motion of the
 pointer plays: a movement that takes no time ({numref}`interfaces`), so a move with a duration is a
-compile error. The body holds the listener's conditions.
+compile error. The body holds the listener's guards ({numref}`writer-guards`).
 
 :::{admonition} Code differs
 :class: note

@@ -93,15 +93,16 @@ value to 0 or 2. `(move n (to 2.5))` into an `int` is a compile error, while the
 the ends of a move into an {term}`int` are rounded. A `(length n)` is kept, so a move of a list
 declared `(length 2)` to a list of length 3 is a compile error.
 
-```{rule} writer-conditions
-Each condition of a control or a listener ({numref}`bodies-table`) is a comparison `(OP A B)`, OP
+(writer-conditions)=
+```{rule} writer-guards
+Each guard of a control or a listener ({numref}`bodies-table`) is a comparison `(OP A B)`, OP
 one of `<`, `<=`, `>` and `>=`, in which one side is a read of a variable or an attribute that the
 writer writes, and the other side, the limit, does not depend on that variable or attribute,
-directly or through bound values. Every other condition is a compile error.
+directly or through bound values. Every other guard is a compile error.
 ```
 
-What a condition does to a write is defined in {doc}`reaction`. A writer that writes the `pos` of a
-shape writes its `x` and its `y` ({numref}`writable-targets`), so its conditions may limit either,
+What a guard does to a write is defined in {doc}`reaction`. A writer that writes the `pos` of a
+shape writes its `x` and its `y` ({numref}`writable-targets`), so its guards may limit either,
 as `(on-drag c c.pos (<= c.x 5) (>= c.y 0))`, and `c.pos.x` and `c.pos[0]` are `c.x`.
 
 :::{admonition} Code differs
