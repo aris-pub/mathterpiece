@@ -25,6 +25,7 @@ compiler-runtime
 lexical
 grammar
 core
+heads
 ```
 
 ```{toctree}
