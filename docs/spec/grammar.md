@@ -3,7 +3,7 @@
 
 This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`string`
 {term}`literals <literal>` and other pieces of text of {doc}`lexical` together into
-{term}`forms <form>`, the {term}`expressions <expression>` that the parser produces, the template
+{term}`forms <form>`, the items that the parser produces, the template
 that every form follows, and the kinds of form that may be written in each {term}`body`. The
 signatures of the forms, which list the arguments of each {term}`head`, are not part of this page.
 
@@ -21,8 +21,8 @@ the name of a rule keeps the quoted text of that rule in the tree.
 ```
 
 ```{rule} forms
-A form is a `(`, then any number of expressions, its items, then a `)`. An
-expression is a form, a {term}`list` literal, a word, a {term}`broadened type`, a
+A form is a `(`, then any number of items, then a `)`. An
+item is a form, a {term}`list` literal, a word, a {term}`broadened type`, a
 string literal or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
 that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
 ```
@@ -41,11 +41,11 @@ source may hold no form at all.
 
 ```{rule} adjacent-items
 Among the items of a form, a list literal or brackets, whitespace or a comment separates every two
-expressions, except where one of the two is a form. More exactly, an expression that ends with the
+items, except where one of the two is a form. More exactly, an item that ends with the
 `)` of a form, which is a form or a prefixed form such as `free@(g)`, may be followed
-directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
-and every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
-expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
+directly by any item that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
+and every other item may be followed directly only by a form. So `(f a(b)c)` holds three
+items after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
 errors.
 ```
 
@@ -79,7 +79,7 @@ whitespace starts a list literal: `xs [0]` is the name `xs` and the list literal
 ```{rule} broadened-types
 A broadened type is two words or more joined by `|` with no whitespace between them, such
 as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bool` literals or
-{term}`operators <operator>`. A broadened type is one expression, and the {term}`compiler` reads it as a
+{term}`operators <operator>`. A broadened type is one item, and the {term}`compiler` reads it as a
 type ({doc}`types`).
 ```
 
@@ -103,19 +103,19 @@ and a {term}`name string` hold text and expressions in braces, each expression w
 {numref}`string-literals` and {numref}`interpolated-strings` give the characters and the escapes
 inside each kind.
 
-## The expressions that the parser produces
+## What the parser produces
 
-```{rule} parser-expressions
-The parser produces the forms of a source as expressions, one for each form, in the order of the
-source. Each expression is one of these:
+```{rule} parser-items
+The parser produces the forms of a source as items, one for each form, in the order of the
+source. Each item is one of these:
 
-| Expression | Written | Holds |
+| Item | Written | Holds |
 |---|---|---|
 | form | `(…)` | its items, in order |
 | list literal | `[…]` | its items, in order |
-| name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
-| brackets | `[real real]` in `func[real real]` | its expressions, in order |
-| broadened type | `real\|none` | its words, as expressions, in order |
+| name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one item, or, when it holds more than one, the brackets |
+| brackets | `[real real]` in `func[real real]` | its items, in order |
+| broadened type | `real\|none` | its words, as items, in order |
 | string literal | `'…'`, `$'…'` | its text |
 | color literal | `#'…'` | the color ({numref}`color-literals`) |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
@@ -158,7 +158,7 @@ the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ �
 ```
 
 The parser produces a name with several name parts, such as `p.r` or `xs[0].y`, as one name
-({numref}`parser-expressions`). The rewrite step rewrites it into `(. X Y)` forms: `p.r` is
+({numref}`parser-items`). The rewrite step rewrites it into `(. X Y)` forms: `p.r` is
 `(. p r)`, and `xs[0].y` is `(. (. xs 0) y)` ({numref}`sugar-rewrites`). The meaning of `(. X Y)`
 is given in {numref}`dot-name-part`.
 
