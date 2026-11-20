@@ -873,7 +873,7 @@ class _Compiler:
             _sets(f)
             for f in _rewrite_parametric(parse(found.read_text(encoding="utf-8"), file=name))
         )
-        for form in forms:
+        for form in (f for top in forms for f in _held(top)):
             what = _not_importable(form)
             if what is not None:
                 raise CompileError(
@@ -1034,12 +1034,6 @@ class _Compiler:
 
     def body_let(self, node, scope: dict, top: bool) -> Iterator[tuple[Node, dict]]:
         """A let in a body (mtp-b13): its values are worked out where it is written."""
-        if top:
-            raise CompileError(
-                "a let holding declarations is written in a scene, group, foreach or motif body,"
-                " not at the top level",
-                node.pos,
-            )
         if len(node.items) < 2 or not isinstance(node.items[1], Form):
             raise CompileError("let is (let ((name value) …) declaration…)", node.pos)
         inner = dict(scope)
@@ -3763,8 +3757,7 @@ class _Compiler:
                 body = True
             elif body:
                 raise CompileError(
-                    f"({_head(item)} …) is a named argument, so it comes before the {what}'s"
-                    " body",
+                    f"({_head(item)} …) is a named argument, so it comes before the {what}'s body",
                     item.pos,
                 )
 
@@ -7656,6 +7649,17 @@ def _one_part(node: Node) -> str | None:
     if isinstance(node, Name) and len(node.parts) == 1 and isinstance(node.parts[0], str):
         return node.parts[0]
     return None
+
+
+def _held(form: Node) -> Iterator[Node]:
+    """The form, or the forms that a let or a foreach holds at any depth."""
+    head = _head(form)
+    if head not in ("let", "foreach") or not isinstance(form, Form):
+        yield form
+        return
+    plain = head == "let" or (len(form.items) > 1 and isinstance(form.items[1], Form))
+    for item in form.items[2 if plain else 3 :]:
+        yield from _held(item)
 
 
 def _not_importable(form: Node) -> str | None:

@@ -40,7 +40,10 @@ def xfail(bead: str, why: str):
 DOCSTRING_PLACE = xfail("mtp-ydd4.7.34", "the compiler takes a docstring from any place")
 MOTIF_DOCSTRING = xfail("mtp-qiro", "a variable in a motif's body may not have a docstring")
 OPTIONS_LAST = xfail("mtp-ydd4.7.11", "some forms allow a named argument after the body")
-TOP_LET = xfail("mtp-ydd4.7.7", "a let at the top level is an error")
+TOP_LET_SCOPE = xfail(
+    "mtp-ydd4.7.7",
+    "a scene, func, motif or animation at the top level ignores the names that a let gives",
+)
 BODY_LET = xfail("mtp-ydd4.7.8", "a let is an error in some bodies that hold items")
 ARGUMENT_LET = xfail("mtp-ydd4.7.9", "a let or a foreach among the arguments of a shape compiles")
 GROUP_EXISTS_WHEN = xfail("mtp-ydd4.7.10", "a group keeps every exists-when until its end")
@@ -430,9 +433,45 @@ class TestBodyLetForeach:
         d = mtpc("(foreach i 3 (real #'k-{i}' i))")
         assert {"k-0", "k-1", "k-2"} <= set(d["names"])
 
-    @TOP_LET
     def test_a_let_at_the_top_level(self):
         accepted("(let ((k 2)) (real a k))")
+
+    @TOP_LET_SCOPE
+    def test_a_let_at_the_top_level_holds_a_scene(self):
+        accepted("(let ((k 2)) (scene s (circle c (r k))))")
+
+    def test_a_let_in_a_foreach_at_the_top_level(self):
+        d = mtpc("(foreach i 3 (let ((k (* 2 i))) (real #'v-{i}' k)))")
+        assert {"v-0", "v-1", "v-2"} <= set(d["names"])
+
+    def test_a_let_at_the_top_level_of_a_file_to_import(self, tmp_path):
+        lib = {"lib.mtp": "(let ((k 2)) (real v k (const)))\n"}
+        in_folder(tmp_path, lib, "(import lib)\n(real w lib.v)\n")
+
+    def test_a_foreach_at_the_top_level_of_a_file_to_import(self, tmp_path):
+        lib = {"lib.mtp": "(foreach i 3 (real #'v{i}' i (const)))\n"}
+        in_folder(tmp_path, lib, "(import lib)\n(real w lib.v2)\n")
+
+    def test_a_let_in_a_foreach_in_a_file_to_import(self, tmp_path):
+        lib = {"lib.mtp": "(foreach i 3 (let ((k (* 2 i))) (real #'v{i}' k (const))))\n"}
+        in_folder(tmp_path, lib, "(import lib)\n(real w lib.v2)\n")
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "(let ((k 2)) (real v k))",
+            "(foreach i 3 (real #'v{i}' i))",
+            "(foreach i 3 (let ((k i)) (real #'v{i}' k)))",
+        ],
+    )
+    def test_a_file_to_import_holds_in_a_let_or_foreach_only_what_it_may(self, tmp_path, text):
+        with pytest.raises(REJECTION):
+            in_folder(tmp_path, {"lib.mtp": text + "\n"}, "(import lib)\n")
+
+    def test_a_file_to_import_holds_no_scene_in_a_let(self, tmp_path):
+        lib = {"lib.mtp": "(let ((k 2)) (scene s (circle c (r 1))))\n"}
+        with pytest.raises(REJECTION):
+            in_folder(tmp_path, lib, "(import lib)\n")
 
     def test_a_let_in_the_scene(self):
         accepted("(scene s (let ((k 2)) (circle c (r k))))")

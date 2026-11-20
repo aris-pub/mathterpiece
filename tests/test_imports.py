@@ -122,6 +122,9 @@ def test_a_list_that_is_not_const_is_not_imported(files):
         ("(real k 1) (canvas v)", "a variable that is not const"),
         ("(slider sl (move k (from 0) (to 1)))", "a slider"),
         ("(animation a (wait 1))", "an animation"),
+        ("(let ((w 1)) (real k w))", "a variable that is not const"),
+        ("(foreach i 2 (real #'k{i}' i))", "a variable that is not const"),
+        ("(foreach i 2 (let ((w i)) (scene #'s{i}')))", "a scene"),
     ],
 )
 def test_an_imported_file_holds_only_declarations(files, decl, what):
