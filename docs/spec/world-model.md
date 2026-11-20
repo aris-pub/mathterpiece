@@ -1,7 +1,7 @@
 # World model
 
 :::{note}
-Not drafted yet. This page defines: the objects, their attributes, identity, the tree of collections, values and mutable objects, and equality for each type.
+Not drafted yet. This page defines: the objects, their attributes, identity, the tree of collections, primitives and objects, and equality for each type.
 :::
 
 ## Defaults of a collection

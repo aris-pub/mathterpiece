@@ -118,7 +118,7 @@ mtp-ydd4.7.59.
 | `group` | core | a group declaration | {doc}`world-model` |
 | `row`, `column` | core | group declarations | {doc}`world-model` |
 | `(M N …)` for a motif `M` | core | a declaration of a shape whose type is the motif | {doc}`world-model` |
-| `(V N …)` for a variant `V` | core | a declaration of a thing whose type is the variant | {doc}`world-model` |
+| `(V N …)` for a variant `V` | core | a declaration of an object whose type is the variant | {doc}`world-model` |
 | `(H\|none N …)` for a shape head `H` | core | a declaration of a shape that may be `none` | {doc}`world-model` |
 | `exists-when` | core | a body item | {doc}`world-model` |
 | `let` in a body | core | a let | {doc}`binding-time` |
@@ -194,7 +194,8 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `name` | core | an expression | {doc}`scope`, {numref}`names-from-values` |
 | `if` | core | an expression | {doc}`evaluation` |
 | `when` | syntactic sugar | an expression | {numref}`sugar-rewrites` |
-| `cond`, `else`, `and`, `or` | syntactic sugar | expressions | {numref}`sugar-rewrites` |
+| `cond`, `and`, `or` | syntactic sugar | expressions | {numref}`sugar-rewrites` |
+| `else` | syntactic sugar | a clause of `cond` | {numref}`sugar-rewrites` |
 | `let` | core | an expression | {doc}`scope`, {doc}`evaluation` |
 | `fn` | core | an expression | {doc}`types`, {doc}`evaluation` |
 | `as` | core | an expression | {doc}`types` |

@@ -150,14 +150,14 @@ whose divisor has a range that holds 0 has the range of the whole number limit
 identity, so `(= f f)` is false while drawing for a function `f`. A second, tolerant comparison
 matches a play's steps and a canvas's rest.
 
-**Proposed principle.** Values compare by content: numbers exactly, points, lists and colours
-item by item, strings and choices exactly. Mutable objects, such as shapes, compare by identity.
+**Proposed principle.** Primitives compare by content: numbers exactly, points, lists and colours
+item by item, strings and choices exactly. Objects, such as shapes, compare by identity.
 Functions, transitions and animations cannot be compared, and comparing them is a compile error.
 The tolerant comparison is not equality: it gets its own name and is used only by the runtime.
 
 **Settles:** Q-evaluation-7.
 
-**Decided:** as proposed, values compare by content, mutable objects by identity, `=` on
+**Decided:** as proposed, primitives compare by content, objects by identity, `=` on
 functions, transitions and animations is a compile error, and the tolerant comparison is called
 matching and is used only by the runtime ({numref}`equality-by-content`,
 {numref}`equality-operands`, {numref}`matching`).

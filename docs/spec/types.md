@@ -1,9 +1,8 @@
 (types)=
 # Types
 
-This page defines the types of mtp, how a type is written, which {term}`values <value>` and
-{term}`objects <object>` each type holds, when a value of one type is accepted where another type is expected, and the type of each
-{term}`form`. Every {term}`expression` has a type, which the prove step works out
+This page defines the types of mtp, how a type is written, which {term}`values <value>` each type holds, when a value of one type is accepted where another type is expected, and the type of each
+expression and declaration. Every {term}`expression` and every declaration has a type, which the prove step works out
 ({numref}`compile-steps`), and the {term}`runtime` never checks a type
 ({numref}`runtime-no-type-work-while-drawing`). How a value is held and computed is defined in
 {doc}`evaluation`, which objects there are and what their attributes are in {doc}`world-model`, and
@@ -16,7 +15,7 @@ This page specifies the language.
 ## What a type is
 
 ```{rule} what-a-type-is
-A type is a named set of {term}`values <value>`, primitive values or objects, known when compiling: a set that
+A type is a named set of {term}`values <value>`, primitives or objects, known when compiling: a set that
 a source can write. Every variable, attribute,
 parameter and expression has a type, and what it holds or gives is always in that set.
 
@@ -50,7 +49,7 @@ circle, and `(is 3 real)` is `true` when compiling.
 ```{rule} the-types
 These are the types of mtp:
 
-| Type | Written | Its values or objects |
+| Type | Written | Its values |
 |---|---|---|
 | `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
 | `unit` | `unit` | the same type as `(real (>= 0) (<= 1))`: the reals from 0 to 1 |
@@ -108,7 +107,7 @@ of one kind of object is a subset of the type of its kind: `circle` is a subset 
   and makes `curve` a built-in type.
 :::
 
-Which of these are values and which are mutable objects is defined in {doc}`world-model`. A free
+Which of these are primitives and which are objects is defined in {doc}`world-model`. A free
 variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`).
 
 :::{admonition} Code differs
@@ -433,9 +432,9 @@ So `(func label-at ((positioned o) (string s)) …)` may be given points and sha
 condition of a declared interface is met only when the type of the attribute implies it: a
 record whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`.
 
-The named types form a hierarchy: every value is a primitive value or an object, and every object is of one
+The named types form a hierarchy: every value is a primitive or an object, and every object is of one
 kind, a shape, a movement, a record and so on. An interface cuts across it: `positioned` holds
-points, which are values, and shapes, which are objects.
+points, which are primitives, and shapes, which are objects.
 
 :::{admonition} Code differs
 :class: note
@@ -556,10 +555,10 @@ The type of a function declared with `func` is `func[P1 … Pn R]`, with the typ
 parameters and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY
 as R.
 
-## The type of each form
+## The type of each expression and declaration
 
 ```{rule} form-types
-Each form has this type:
+Each expression and each declaration has this type:
 
 | Form | Its type |
 |---|---|

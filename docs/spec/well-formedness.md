@@ -2,9 +2,9 @@
 # Well-formedness
 
 A {term}`world model` whose {term}`names <name>` resolve ({ref}`scope`) and whose
-{term}`expressions <expression>` have types ({doc}`types`) must still pass the rules of this page:
+{term}`expressions <expression>` and declarations have types ({doc}`types`) must still pass the rules of this page:
 its dependencies make no cycle, its writers write only what may be written, the moves that run
-together do not write the same value, and every {term}`condition` is proved. All of them are
+together do not write the same variable or attribute, and every {term}`condition` is proved. All of them are
 checked in the prove step ({numref}`compile-steps`), and a source that breaks one is a
 {term}`compile error`. The last section defines the {term}`prover`: exactly what it proves, and the
 {term}`ranges <range>` with which it proves it.
@@ -15,15 +15,15 @@ This page specifies the language.
 
 ```{rule} no-dependency-cycles
 The value of every bound variable and attribute is computed from the values that its expression
-reads ({doc}`reaction`). These reads make no cycle: no bound value reads itself, directly or
-through other bound values.
+reads ({doc}`reaction`). These reads make no cycle: no bound variable or attribute reads itself, directly
+or through other bound variables and attributes.
 ```
 
 By {numref}`declare-before-use`, an expression reads only declarations and bindings that come
 before it, so a cycle could only come from a read inside the {term}`form` of the declaration or the
 binding that is read. The rules of today for such reads are below. An animation uses only animations
 declared before it, so no animation uses itself ({numref}`sugar-rewrites`), and no file imports itself
-({numref}`import-same-file`). A function may call itself: a call is not a read of a value, and how deep a chain of calls goes is defined in
+({numref}`import-same-file`). A function may call itself: a call is not a read of a variable or an attribute, and how deep a chain of calls goes is defined in
 {numref}`call-depth-limit`, with the case of drawing still open (Q-evaluation-13).
 
 ```{rule} self-reference-today
@@ -64,8 +64,8 @@ a name ({numref}`names-from-values`). A target may be written only when it is fr
 
 - A name that is not a variable or an attribute, such as a group or a record by its name alone,
   is never a target.
-- A target that stands for several values, as {doc}`concurrency`, section "Values", gives, is
-  writable only when each of those values is: a `pos`, an attribute of a group or an instance that
+- A target that stands for several variables or attributes, as {doc}`concurrency`, section "Values",
+  gives, is writable only when each of them is: a `pos`, an attribute of a group or an instance that
   is not its own, and the `x`, the `y` and the `pos` of a line, a triangle, a polyline, a polygon
   and a bezier. An attribute of a collection with no members is never a target.
 - A member of a group chosen by a position is chosen by a position known when compiling.
@@ -76,7 +76,7 @@ Every other target is a compile error.
 ```
 
 So `(slider s (move m (from 0) (to 1)))` with `(real m (* 2 k))` is a compile error, and so is a
-move of a `(const)` variable or of a color variable. Two writers may write the same value: that is
+move of a `(const)` variable or of a color variable. Two writers may write the same variable or attribute: that is
 not an error, and {doc}`concurrency` defines what happens when they meet.
 
 ```{rule} written-values
@@ -98,7 +98,7 @@ declared `(length 2)` to a list of length 3 is a compile error.
 Each guard of a control or a listener ({numref}`bodies-table`) is a comparison `(OP A B)`, OP
 one of `<`, `<=`, `>` and `>=`, in which one side is a read of a variable or an attribute that the
 writer writes, and the other side, the limit, does not depend on that variable or attribute,
-directly or through bound values. Every other guard is a compile error.
+directly or through bound variables and attributes. Every other guard is a compile error.
 ```
 
 What a guard does to a write is defined in {doc}`reaction`. A writer that writes the `pos` of a
@@ -119,8 +119,8 @@ Bead mtp-ydd4.7.44.
 ## Moves that run at the same time
 
 ```{rule} moves-at-once
-Two parts of one `at-once` that write the same value at times that overlap are a compile error.
-The values that a move writes are those of {doc}`concurrency`, section "Values". The times are
+Two parts of one `at-once` that write the same variable or attribute at times that overlap are a compile error.
+The variables and attributes that a move writes are those of {doc}`concurrency`, section "Values". The times are
 these:
 
 - Each part of an `at-once` starts when the `at-once` starts, and the moves inside it start at the
@@ -142,7 +142,7 @@ for a member `c` of `g`.
 ```{rule} prover-proves
 The prover proves exactly these, and nothing else:
 
-1. The type of every expression, and that it fits where it is given ({numref}`form-types`).
+1. The type of every expression and every declaration, and that it fits where it is given ({numref}`form-types`).
 2. That every value meets the conditions of the type expected where it is given
    ({numref}`constraint-proof`).
 3. Which operations may give `none`, and so which types include `none` ({numref}`may-give-none`),
@@ -301,7 +301,7 @@ comparison holds, and in B the part for which it fails. With lo and hi the ends 
   nothing in it.
 
 The range of N changes only for the reads of N in A and in B that read the same declaration or
-binding as the N of the condition. A value that is computed from N outside the `if`, such as a
+binding as the N of the condition. A name whose value is computed from N outside the `if`, such as a
 `let` name, keeps its range. In an `if` inside A or B, the range of N is the part that the outer `if` gives.
 `(OP c N)` narrows as the comparison with N first that holds for the same values: `(< c N)` as
 `(> N c)`, and `(= c N)` as `(= N c)`. `cond`, `when`, `and` and `or` narrow through their

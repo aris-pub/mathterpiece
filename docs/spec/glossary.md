@@ -95,7 +95,7 @@ bool
   ({numref}`the-types`, {numref}`literal-words`).
 
 type
-  A named set of values, primitive values or objects, known when compiling ({numref}`what-a-type-is`).
+  A named set of values, primitives or objects, known when compiling ({numref}`what-a-type-is`).
 
 built-in type
   One of the types that mtp gives, such as `real`, `point` or `circle`, whose name no declaration
@@ -122,8 +122,8 @@ format spec
   ({numref}`interpolated-strings`).
 
 free starting value
-  `(free X)`, also written `free@X`: a free value that starts at the value of `X` and does not
-  change when `X` changes ({numref}`prefix-forms`, {doc}`core`).
+  `(free X)`, also written `free@X`: the start of a free variable or attribute, which holds the
+  value of `X` when the page opens and does not follow `X` when `X` changes ({numref}`prefix-forms`, {doc}`core`).
 
 head
   The first item of a form ({numref}`form-template`).
@@ -171,7 +171,7 @@ named argument
   ({numref}`named-arguments-first`). Like a positional argument, it may be required or left out.
 
 expression
-  A literal, a name or a {term}`compound expression` ({doc}`data-model`).
+  A literal, a name or a {term}`compound` ({doc}`data-model`).
 
 item
   One piece of a source as the parser produces it: a form, a list literal, a word, a broadened
@@ -265,8 +265,8 @@ site
   the source after the rewrite step. Defined in {doc}`evaluation`.
 
 declaration
-  A form that creates something new that can be addressed: an object of the world model, a function,
-  a type or an animation, with a name or without one ({numref}`declarations-and-bindings`).
+  A form that creates something new that can be addressed: a variable, an object of the world model,
+  a function, a type or an animation, with a name or without one ({numref}`declarations-and-bindings`).
 
 binding
   A name that a `let`, a `foreach` or a parameter gives to a value for a part of a source. A binding
@@ -286,7 +286,7 @@ file to import
   {numref}`import-file-holds` allows at its top level. Defined in {doc}`imports`.
 
 value
-  A primitive value or an object: what a container holds ({doc}`data-model`).
+  A primitive or an object: what a container holds ({doc}`data-model`).
 
 container
   A variable or an attribute. Each container holds one value ({doc}`data-model`).
@@ -294,7 +294,7 @@ container
 collection
   A group, a row, a column or a score: an object that holds other objects, its members.
 
-primitive value
+primitive
   A value that never changes and has no identity, such as a number, a string or a list
   ({numref}`values`).
 
@@ -302,8 +302,8 @@ clause
   A form that is part of the form around it and has no result of its own, such as a named
   argument, the guard of a control, or `exists-when` ({doc}`data-model`).
 
-compound expression
-  A form that is an expression: it evaluates to a primitive value, a type, an object or an attribute,
+compound
+  A form that is an expression: it evaluates to a primitive, a type, an object or an attribute,
   and creates nothing that a writer can write, such as `(+ 1 2)` or `(if f a b)` ({doc}`data-model`).
 
 object

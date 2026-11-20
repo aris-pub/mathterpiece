@@ -19,8 +19,8 @@ tools that they already prefer.
 A component is a view, a control or a listener. A {term}`view` shows the world model to the
 reader: a canvas draws shapes, a readout shows a line of text, and a display shows a formula. A
 {term}`control` is a slider, a button, a play, a stepper or a toggle, and the reader presses, drags
-or clicks it to change a value of the world model. A {term}`listener` is written inside a view and
-has no element of its own on the page: it changes a value of the world model when the reader acts
+or clicks it to write a variable or an attribute of the world model. A {term}`listener` is written inside a view and
+has no element of its own on the page: it writes a variable or an attribute of the world model when the reader acts
 on a shape or a term of that view, or when the view changes, for example when it comes into
 sight. The illustrator declares every component, and the author places each view and control on
 the page with an element of its own.
@@ -70,7 +70,7 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`syntactic sugar`
    form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, `(pos [1 2])`
    becomes `(x 1) (y 2)`. No value is computed and no type is used.
-3. **Prove.** Every {term}`expression` is given a type, and every type, {term}`range`,
+3. **Prove.** Every {term}`expression` and every declaration is given a type, and every type, {term}`range`,
    {term}`condition` and other invariant that the spec requires is proved ({doc}`types`,
    {doc}`well-formedness`). This step proves and does nothing else.
 4. **Expand.** The core forms whose rewrite needs a type or a value are rewritten, with the types
@@ -121,7 +121,7 @@ What the error of a rejected source holds is given in {numref}`conformance`.
 ```{rule} prover-finds-ranges
 To prove a range or a condition, the {term}`prover` works out ranges ({numref}`ranges`,
 {numref}`range-rules`). The prover writes nothing into the model. Where the range of a bound
-value does not lie inside the condition of the value, the prover gives the value a type that includes `none`, and the write step writes the `check`
+variable or attribute does not lie inside its condition, the prover gives the variable or attribute a type that includes `none`, and the write step writes the `check`
 that this type needs ({doc}`compiled-format`).
 ```
 
@@ -155,7 +155,7 @@ of a world model, and these are not part of this spec either.
 
 ## What the compiler must do and must never do
 
-The compiler resolves every name, gives every expression a type and proves it, and either rejects
+The compiler resolves every name, gives every expression and every declaration a type and proves it, and either rejects
 the source or writes a valid .mtpc, by {numref}`compile-steps` and {numref}`step-rejects-or-passes`.
 
 ```{rule} compiler-decides-early
@@ -223,7 +223,7 @@ When the reader opens the page, the browser and the runtime do the following, in
    block `<script type="application/json">` of the page that holds the .mtpc, as in
    `src="#dial-data"` ({doc}`page-interface`).
 3. The runtime builds the live model of dial.mtpc, once: the free variable `a` takes its
-   starting value 0.6, and every bound value is computed from it
+   starting value 0.6, and every bound variable and attribute is computed from it
    ({numref}`runtime-builds-live-model`). The page refers to this live model by the `id` attribute
    of the element, `dial`.
 4. In each element whose `model` attribute is `dial`, the runtime draws the component of
@@ -297,7 +297,7 @@ What a world model holds is decided by the illustrator alone: the objects of a l
 those that the source declares, and the runtime never adds an object to a live model or removes
 one. What the runtime draws beyond the objects of the live model changes only how a component
 looks. It is not an object of the live model, no expression and no writer of the world model reads
-it, and it never changes a value of the live model.
+it, and it never writes a variable or an attribute of the live model.
 ```
 
 For example, while an `on-show` or an `on-hide` plays, a canvas draws a stand-in in place of the
@@ -339,7 +339,7 @@ that a `foreach` makes is written out in the .mtpc ({numref}`compile-steps`).
 ```{rule} corrupt-mtpc
 A .mtpc that matches the schema of its version and breaks a rule of this spec is
 corrupt. Among the corrupt files are a .mtpc with a reference to an
-object or a function that it does not hold, one with an expression that can give a value of
+object that it does not hold, one with an expression that can give a value of
 another type than the type written with it, one with a `deps` list that leaves out something that
 its expression can read, and one with an expression known when compiling that is not folded. A
 conforming compiler never writes a corrupt .mtpc.

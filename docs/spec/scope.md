@@ -42,7 +42,7 @@ and the names of each one:
 | the {term}`file scope` of a source or of a {term}`file to import` | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
 | the {term}`body` of a motif | the motif's body | the parameters of the motif, `self`, and every shape and variable declared in the body, at any depth |
 | a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and an animation | the body | the parameters |
-| `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each value after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
+| `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each expression after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
 | a record or a palette | the items after each member | its members |
 | a formula | the items of the formula | its variables, from the item after each, and its terms ({numref}`formula-terms`) |
