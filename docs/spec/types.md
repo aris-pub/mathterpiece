@@ -16,11 +16,11 @@ This page specifies the language.
 ## What a type is
 
 ```{rule} what-a-type-is
-A type is a named set of {term}`things <thing>`, values or objects, known when compiling: a set that
+A type is a named set of {term}`values <value>`, primitive values or objects, known when compiling: a set that
 a source can write. Every variable, attribute,
 parameter and expression has a type, and what it holds or gives is always in that set.
 
-A thing has no one type: its types are all the sets that it belongs to. A variable or an attribute
+A value has no one type: its types are all the sets that it belongs to. A variable or an attribute
 has one type, its declared type, written where it is declared, conditions included. Every write
 into it and every read of it follows its declared type.
 ```
@@ -30,13 +30,13 @@ are not below 0, `real|none` is the set of the reals with `none` added, and `cir
 the circles. A type that {term}`fits <fit>` another is a subset of it.
 
 A source makes new types from named ones in four ways, which differ only in how they are written:
-a union, `point|circle`, joins sets; an intersection, `shape&round`, keeps the things that are in
-both; a condition, `(real (>= 0))`, keeps the things of a set that meet it; and an interface,
-`(interface inky (color ink))`, is the set of the things that have the attributes that it lists. `list[T]` and `func[P… R]` name the sets of the lists and the functions
+a union, `point|circle`, joins sets; an intersection, `shape&round`, keeps the values that are in
+both; a condition, `(real (>= 0))`, keeps the values of a set that meet it; and an interface,
+`(interface inky (color ink))`, is the set of the values that have the attributes that it lists. `list[T]` and `func[P… R]` name the sets of the lists and the functions
 whose items, parameters and result are of the types in the brackets.
 
 ```{rule} membership
-`(is X T)` gives `true` when the thing X is in the type T, and `false` otherwise. Where the type of
+`(is X T)` gives `true` when the value X is in the type T, and `false` otherwise. Where the type of
 X lies wholly inside T, or wholly outside it, the answer is known when compiling. Otherwise the
 runtime gives it. In the branch of an `if` that runs when `(is X T)` is true, X has the type T as
 well as its own, and in the other branch X is known not to be in T.
@@ -68,9 +68,9 @@ These are the types of mtp:
 | an animation type | the name of the animation | the movements that its uses make |
 | `none` | `none` | the value `none` alone |
 | a {term}`broadened type` | `T\|none` | the values of T, and `none` |
-| a {term}`refined type` | `(T C…)` | the things of T that meet every condition C ({numref}`constraints`) |
-| a union | `T1\|T2\|…` | the things of each of the types |
-| an intersection | `T1&T2&…` | the things that are in every one of the types |
+| a {term}`refined type` | `(T C…)` | the values of T that meet every condition C ({numref}`constraints`) |
+| a union | `T1\|T2\|…` | the values of each of the types |
+| an intersection | `T1&T2&…` | the values that are in every one of the types |
 | a modular type | `(mod int lo hi)`, `(mod real lo hi)` | the numbers from lo up to hi, hi left out, with arithmetic that wraps ({numref}`modular-types`) |
 | `shape` | `shape` | every shape: the shapes of every shape type, motif type and variant type |
 | a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
@@ -88,7 +88,7 @@ There are no other types.
 ```
 
 Each kind of object is a type: a named set of objects, as `shape` is the set of every shape. A type
-of one thing is a subset of the type of its kind: `circle` is a subset of `shape`, `canvas` of
+of one kind of object is a subset of the type of its kind: `circle` is a subset of `shape`, `canvas` of
 `view`, and `view` of `component`.
 
 :::{admonition} Code differs
@@ -132,9 +132,9 @@ expression there is a {term}`compile error`:
 - `func[T1 … Tn R]` is a function type, with one type or more in its brackets: the last is the
   result type, and the others are the types of the parameters, in order.
 - No other name is followed by brackets in a type.
-- `T1|T2|…` is a union: the set of the things of each of the types `T1`, `T2` and so on. Each is a
+- `T1|T2|…` is a union: the set of the values of each of the types `T1`, `T2` and so on. Each is a
   name, or a name followed by brackets. `T|none` is the union of `T` and `none`, a broadened type.
-- `T1&T2&…` is an intersection: the set of the things that are in each of the types. Each is a
+- `T1&T2&…` is an intersection: the set of the values that are in each of the types. Each is a
   name, or a name followed by brackets.
 - `(mod T lo hi)` is a modular type, with `T` either `int` or `real` ({numref}`modular-types`).
 - `(T C…)` is a refined type: `T` is a type and each `C` is a condition. `((T C…) D…)` is
@@ -194,11 +194,11 @@ A list of conditions implies a condition C exactly in these cases:
 ## Conditions
 
 ```{rule} constraints
-A condition is a type written as the things that meet it, and `(T C…)` is the intersection of T with
+A condition is a type written as the values that meet it, and `(T C…)` is the intersection of T with
 each condition C. A condition is one of these forms, each on the types of its row only, and its
 values are {term}`literals <literal>`:
 
-| Condition | On | The things that meet it | Written with |
+| Condition | On | The values that meet it | Written with |
 |---|---|---|---|
 | `(>= c)`, `(> c)`, `(<= c)`, `(< c)` | `int`, `ratio`, `real` | the numbers at least c, above c, at most c, below c | one number |
 | `(length n)` | `list[T]`, `string` | the lists or the strings of n items | one int, 0 or more |
@@ -364,7 +364,7 @@ Everywhere else, such an expression is a compile error.
 So a shape attribute that may be `none` is a compile error unless the type of the attribute
 includes `none`, as the types of `fill` and `stroke` do ({doc}`world-model`), or the shape is
 declared `T|none`. Every attribute of a shape declared `T|none` has a type that includes `none`,
-and so does every member of a container declared `T|none` and every read of such a shape or its
+and so does every member of a collection declared `T|none` and every read of such a shape or its
 attributes outside its own body. `(or? x d)`, `somes` and a shape declared `T|none` are the ways to
 handle `none` ({doc}`stdlib`).
 
@@ -401,7 +401,7 @@ The compiler checks the choices only of a value known when compiling (`compiler.
 ## Interfaces
 
 ```{rule} interfaces
-An interface is a type given by attributes: the set of the things that have the attributes that it
+An interface is a type given by attributes: the set of the values that have the attributes that it
 lists, of the types that it gives them. It is a type like any other, and may be the type of a
 variable, an attribute or a parameter. A type satisfies an interface as follows:
 
@@ -433,7 +433,7 @@ So `(func label-at ((positioned o) (string s)) …)` may be given points and sha
 condition of a declared interface is met only when the type of the attribute implies it: a
 record whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`.
 
-The named types form a hierarchy: every thing is a value or an object, and every object is of one
+The named types form a hierarchy: every value is a primitive value or an object, and every object is of one
 kind, a shape, a movement, a record and so on. An interface cuts across it: `positioned` holds
 points, which are values, and shapes, which are objects.
 

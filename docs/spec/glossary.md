@@ -95,7 +95,7 @@ bool
   ({numref}`the-types`, {numref}`literal-words`).
 
 type
-  A named set of things, values or objects, known when compiling ({numref}`what-a-type-is`).
+  A named set of values, primitive values or objects, known when compiling ({numref}`what-a-type-is`).
 
 built-in type
   One of the types that mtp gives, such as `real`, `point` or `circle`, whose name no declaration
@@ -262,7 +262,7 @@ site
   the source after the rewrite step. Defined in {doc}`evaluation`.
 
 declaration
-  A form that creates a new thing that can be addressed: an object of the world model, a function,
+  A form that creates something new that can be addressed: an object of the world model, a function,
   a type or an animation, with a name or without one ({numref}`declarations-and-bindings`).
 
 binding
@@ -282,19 +282,33 @@ file to import
   A `.mtp` file that another file imports with `import`. It holds only the forms that
   {numref}`import-file-holds` allows at its top level. Defined in {doc}`imports`.
 
-thing
-  A value or an object ({numref}`values`, {numref}`objects`).
-
 value
-  A piece of data that never changes and has no identity, such as a number, a string or a list
+  A primitive value or an object: what a container holds ({doc}`data-model`).
+
+container
+  A variable or an attribute. Each container holds one value ({doc}`data-model`).
+
+collection
+  A group, a row, a column or a score: an object that holds other objects, its members.
+
+primitive value
+  A value that never changes and has no identity, such as a number, a string or a list
   ({numref}`values`).
 
+clause
+  A form that is part of the form around it and has no result of its own, such as a named
+  argument, the guard of a control, or `exists-when` ({doc}`data-model`).
+
+compound expression
+  A form that is an expression: it evaluates to a primitive value, a type, an object or an attribute,
+  and creates nothing that a writer can write, such as `(+ 1 2)` or `(if f a b)` ({doc}`data-model`).
+
 object
-  A thing that has an identity and attributes, each of which behaves like a variable, such as the
+  A value that has an identity and attributes, each of which behaves like a variable, such as the
   scene, a shape, a component, a function or a record ({numref}`objects`).
 
 variable
-  A named holder of one value or one object, which is free, bound or const ({numref}`variables`).
+  A named holder of one value, which is free, bound or const ({numref}`variables`).
 
 record
   An object that consists only of the attributes that it is declared with ({numref}`records`).
@@ -308,11 +322,11 @@ guard
   writer writes ({numref}`writer-guards`).
 
 condition
-  A type written as the things that meet it, such as `(>= 0)` or `(one-of 'a' 'b')`. `(real (>= 0))`
+  A type written as the values that meet it, such as `(>= 0)` or `(one-of 'a' 'b')`. `(real (>= 0))`
   is the intersection of `real` with it ({numref}`constraints`).
 
 refined type
-  A type with conditions, written `(T C…)`, whose things are the things of T that meet every
+  A type with conditions, written `(T C…)`, whose values are the values of T that meet every
   condition ({numref}`the-types`, {numref}`constraints`).
 
 choice type

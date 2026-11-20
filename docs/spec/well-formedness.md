@@ -36,17 +36,17 @@ These rules hold for a use of a name inside the form that declares or binds it:
    their own form, whether directly, in a `free@` starting value, through a position on their
    group known when compiling, or through a function.
 4. A shape in a group, at any depth, never reads the group whole in its own form: an attribute of
-   every member, such as `g.x`, a collection function over the group or over `g.members`, a
+   every member, such as `g.x`, a list function over `g.members`, a
    function given `g.members`, or a member by a position known only while drawing. `(count g)` and
    `g.length` may be read. The count and the {term}`list` of a `foreach` inside the group never read
    the group.
-5. A container never reads itself in its own `clip` or in its own `(defaults …)`, also once the
-   defaults are given to its members ({numref}`container-defaults`).
+5. A collection never reads itself in its own `clip` or in its own `(defaults …)`, also once the
+   defaults are given to its members ({numref}`collection-defaults`).
 
 Each read that items 2 to 5 forbid is a compile error.
 ```
 
-The other cases of a declaration that reads itself or its container, such as an `exists-when` that
+The other cases of a declaration that reads itself or its collection, such as an `exists-when` that
 reads its own shape or a member that reads the `translate` of its group, are part of the same
 redesign (Q-scope-1), and this spec does not define them yet.
 
@@ -67,7 +67,7 @@ a name ({numref}`names-from-values`). A target may be written only when it is fr
 - A target that stands for several values, as {doc}`concurrency`, section "Values", gives, is
   writable only when each of those values is: a `pos`, an attribute of a group or an instance that
   is not its own, and the `x`, the `y` and the `pos` of a line, a triangle, a polyline, a polygon
-  and a bezier. An attribute of a container with no members is never a target.
+  and a bezier. An attribute of a collection with no members is never a target.
 - A member of a group chosen by a position is chosen by a position known when compiling.
 - A move of an `on-show` or an `on-hide` writes the stand-in of its shape, so it may write an
   attribute of that shape that is bound ({doc}`lifecycle`).
@@ -133,7 +133,7 @@ these:
 So `(at-once (move k (to 2) (duration 1)) (move k (to 3) (duration 1)))` is a compile error, and
 `(at-once (move k (to 0) (duration 0)) (in-order (wait 2) (move k (to 1))))` is not. For a
 polyline `pl`, `(at-once (move pl.x (to 3)) (move pl.points (to [[0 0] [2 0]])))` is a compile
-error, and `(at-once (move pl.x (to 3)) (move pl.y (to 3)))` is not. A container's `translate` and
+error, and `(at-once (move pl.x (to 3)) (move pl.y (to 3)))` is not. A collection's `translate` and
 `transform` are its own, so `(at-once (move g.translate (to [1 1])) (move c.x (to 3)))` is allowed
 for a member `c` of `g`.
 

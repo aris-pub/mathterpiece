@@ -155,7 +155,7 @@ is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and 
 `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))`.
 
 Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
-of `M`'s container: `(circle b (like a))` outside the group of `a` has only what `a` was written
+of `M`'s collection: `(circle b (like a))` outside the group of `a` has only what `a` was written
 with. A copied item that is bound is bound to the same expression in the copy: if the radius
 of `M` is bound to `(* 2 k)`, so is the radius of the copy, and both follow `k`. A copied item that
 is free is a free attribute of the copy, of its own, with the same start: with `(r free@2)`
@@ -171,10 +171,10 @@ so `(like M)` copies them.
 
 ```{rule} drag-group-shift
 A group, a row or a column is dragged by its `shift`, its `shift-x` or its `shift-y`. In an
-`on-drag` on such a container, whether its `fixed-size` is true or not, when the target is the
-container's own `shift`, `shift-x` or `shift-y`, `pointer` is the container's `shift` at the press
-plus the motion of the pointer since the press, in the frame of the container's container. A
-target that is the container's `pos`, `x` or `y` is a {term}`compile error`, "a group has no x of
+`on-drag` on such a collection, whether its `fixed-size` is true or not, when the target is the
+collection's own `shift`, `shift-x` or `shift-y`, `pointer` is the collection's `shift` at the press
+plus the motion of the pointer since the press, in the frame of the collection's collection. A
+target that is the collection's `pos`, `x` or `y` is a {term}`compile error`, "a group has no x of
 its own: drag its shift, as (on-drag g g.shift)".
 ```
 

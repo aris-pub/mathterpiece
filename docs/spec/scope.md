@@ -214,7 +214,7 @@ the compiler follow the rule.
 
 :::{admonition} Open question Q-scope-1 (parked)
 :class: warning
-Every rule about a declaration that reads itself or its container is to be redesigned around
+Every rule about a declaration that reads itself or its collection is to be redesigned around
 `self`, so that a declaration, a shape for example, refers to itself through `self`. Today `self`
 is bound only in the body of a motif ({numref}`declarations-and-bindings`). The redesign is parked,
 and the rules of today about a declaration that reads itself are in

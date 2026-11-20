@@ -60,7 +60,7 @@ a type is core.
 **Settles:** `p.r` and `(. p r)` (Q-grammar-2, Q-core-1), `(wait t)` and `(move none (duration t))`
 (Q-core-4), `cond`, `and` and `or` as `if` (Q-core-19, Q-evaluation-1), an `in-order` of one item
 (Q-core-22), `(on-drag p p.pos)` (Q-core-23), `(foreach i n …)` and `(range n)` (Q-core-27),
-`like` (Q-core-2), and the defaults of containers, animations and formulas (Q-core-15, 18, 21).
+`like` (Q-core-2), and the defaults of collections, animations and formulas (Q-core-15, 18, 21).
 Using a type to choose a rewrite makes the form core (Q-core-7, `map` over an int).
 
 **Decided:** syntactic sugar means exactly its rewrite, and where the code gives it another meaning,

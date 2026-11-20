@@ -7,8 +7,8 @@ from .support import compile_error, same_meaning
 rule = pytest.mark.rule
 
 
-@rule("container-defaults")
-class TestContainerDefaults:
+@rule("collection-defaults")
+class TestCollectionDefaults:
     def test_defaults_on_a_group(self):
         same_meaning(
             "(scene s (group g (defaults (fill #'red')) (circle c (r 1)) (circle d (r 1) (fill "
@@ -16,14 +16,14 @@ class TestContainerDefaults:
             "(scene s (group g (circle c (r 1) (fill #'red')) (circle d (r 1) (fill #'blue'))))",
         )
 
-    def test_defaults_at_any_depth_the_nearest_container_first(self):
+    def test_defaults_at_any_depth_the_nearest_collection_first(self):
         same_meaning(
             "(scene s (group g (defaults (fill #'red')) (group h (defaults (fill #'blue'))"
             " (circle c (r 1)))))",
             "(scene s (group g (group h (circle c (r 1) (fill #'blue')))))",
         )
 
-    def test_a_default_that_no_container_gives(self):
+    def test_a_default_that_no_collection_gives(self):
         compile_error("(scene s (group g (defaults (r 2)) (circle c)))")
 
     def test_pointer_events_in_defaults(self):
