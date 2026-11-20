@@ -13,6 +13,7 @@ from mathterpiece.nodes import (
     Bar,
     BoolLit,
     Brackets,
+    ColorLit,
     ComplexLit,
     Form,
     IntLit,
@@ -575,7 +576,7 @@ class TestCommentsInBraces:
         [
             ("(f f'{x ; c\n}')", Pos(1, 9)),
             ("(f f'{ ;c\n x}')", Pos(1, 8)),
-            ("(f #'a{k\n ;c\n}')", Pos(2, 2)),
+            ("(f @'a{k\n ;c\n}')", Pos(2, 2)),
         ],
     )
     def test_a_comment_around_the_expression_is_an_error(self, src, pos):
@@ -963,26 +964,81 @@ def test_a_malformed_file_gives_one_error_where_it_is(path):
 
 
 class TestNameStrings:
-    # The author, 2026-11-06: #'dot-{k}' is (name f'dot-{k}'): values filled into the string,
+    # The author, 2026-11-06: @'dot-{k}' is (name f'dot-{k}'): values filled into the string,
     # which is then read as a name. Parts may follow it. One with nothing to fill in is an
-    # error: write the name itself, or (name 'text').
+    # error: write the name itself, or (name 'text'). The author, 2026-11-19: it is written @'…',
+    # since #'…' is a color.
     def test_it_is_the_name_form(self):
-        assert parse("(f #'dot-{k}')") == parse("(f (name f'dot-{k}'))")
+        assert parse("(f @'dot-{k}')") == parse("(f (name f'dot-{k}'))")
 
     def test_parts_may_follow(self):
-        assert parse("(f #'dot-{k}'.pos)") == parse("(f (. (name f'dot-{k}') pos))")
-        assert parse("(f #'row-{i}'[0].x)") == parse("(f (. (. (name f'row-{i}') 0) x))")
+        assert parse("(f @'dot-{k}'.pos)") == parse("(f (. (name f'dot-{k}') pos))")
+        assert parse("(f @'row-{i}'[0].x)") == parse("(f (. (. (name f'row-{i}') 0) x))")
+
+    def test_after_a_prefix(self):
+        assert parse("(f fill@@'c-{k}')") == parse("(f (fill (name f'c-{k}')))")
 
     def test_with_nothing_to_fill_in(self):
         error_at(
-            "(f #'dot')",
+            "(f @'dot')",
             "a name string fills values into a name: with none, write the"
             " name itself, or (name 'text')",
         )
 
     def test_hash_is_not_in_names(self):
         error_at("(real a#b 1)", only_ascii("#"))
-        error_at("(f #x)", "'#' starts a name string: #'dot-{k}'")
+        error_at("(f #x)", "'#' starts a color: #'red'")
+
+    def test_an_at_sign_alone_is_an_error(self):
+        error_at("(f @x)", "'@' follows the name of a head, as in r@1")
+        error_at("(f @@'a{k}')", "'@' follows the name of a head, as in r@1")
+
+
+class TestColorLiterals:
+    # The author, 2026-11-19: a color is written #'…', with a CSS color name, transparent, or 3,
+    # 4, 6 or 8 hex digits, with a # or not, in small or capital letters.
+    RED = ColorLit("#ff0000ff")
+
+    @pytest.mark.parametrize(
+        "text", ["#'red'", "#'#ff0000'", "#'ff0000'", "#'#f00'", "#'f00'", "#'#FF0000'", "#'F00'"]
+    )
+    def test_each_spelling_of_red(self, text):
+        assert atom(text) == self.RED
+
+    @pytest.mark.parametrize(
+        "text, value",
+        [
+            ("#'#f008'", "#ff000088"),
+            ("#'f008'", "#ff000088"),
+            ("#'#ff000080'", "#ff000080"),
+            ("#'FF000080'", "#ff000080"),
+            ("#'transparent'", "#00000000"),
+            ("#'rebeccapurple'", "#663399ff"),
+        ],
+    )
+    def test_alpha_and_names(self, text, value):
+        assert atom(text) == ColorLit(value)
+
+    def test_it_is_not_a_string(self):
+        assert atom("#'red'") != StrLit("red")
+        assert atom("'red'") == StrLit("red")
+
+    def test_in_a_list_and_after_a_prefix(self):
+        assert atom("[#'red' #'f00']") == ListLit((self.RED, self.RED))
+        assert parse("(f fill@#'red')") == parse("(f (fill #'red'))")
+
+    @pytest.mark.parametrize(
+        "text",
+        ["#'nope'", "#''", "#'#'", "#'ff'", "#'fffff'", "#'#ff00000'", "#'##f00'", "#' red'"],
+    )
+    def test_not_a_color(self, text):
+        atom_error(text, f"{text[1:]} is not a color: write a CSS color name or hex digits")
+
+    def test_followed_directly_by_token_is_error(self):
+        error_at("(f #'red'b)", "expected whitespace, '(', ')' or ';' after a string")
+
+    def test_unterminated(self):
+        assert error_at("(f #'red", "unterminated string") == Pos(1, 4)
 
 
 class TestTexStrings:

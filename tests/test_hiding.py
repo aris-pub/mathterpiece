@@ -12,7 +12,7 @@ from mathterpiece.compiler import CompileError, compile_source
 def test_a_group_in_a_motif():
     # The case found: (stroke mark) read the group, not the color.
     error(
-        "(color mark 'red')\n"
+        "(color mark #'red')\n"
         "(motif m () (group mark (circle c (r 1))) (circle d (r 1) (stroke mark)))\n"
         "(scene s (m x))",
         r"^2:20: group 'mark' would hide the top-level color 'mark' \(1:8\)",
@@ -21,14 +21,14 @@ def test_a_group_in_a_motif():
 
 def test_a_shape_in_a_motif_with_no_instance():
     error(
-        "(color mark 'red') (motif m () (circle mark (r 1)))",
+        "(color mark #'red') (motif m () (circle mark (r 1)))",
         r"circle 'mark' would hide the top-level color 'mark' \(1:8\)",
     )
 
 
 def test_a_shape_in_a_group_in_a_motif():
     error(
-        "(color mark 'red') (motif m () (group g (circle mark (r 1)))) (scene s (m x))",
+        "(color mark #'red') (motif m () (group g (circle mark (r 1)))) (scene s (m x))",
         r"circle 'mark' would hide the top-level color 'mark'",
     )
 
@@ -54,7 +54,7 @@ def test_a_bound_variable_in_a_motif():
         ("(func[real] f ((real x)) x)", "func"),
         ("(motif f () (circle c (r 1)))", "motif"),
         ("(type f real (>= 0))", "type"),
-        ("(namespace f (color ink 'red'))", "namespace"),
+        ("(namespace f (color ink #'red'))", "namespace"),
     ],
 )
 def test_any_top_level_declaration(decl, what):
@@ -65,14 +65,14 @@ def test_any_top_level_declaration(decl, what):
 
 def test_a_shape_in_the_scene():
     error(
-        "(color mark 'red') (scene s (circle mark (r 1)))",
+        "(color mark #'red') (scene s (circle mark (r 1)))",
         r"circle 'mark' would hide the top-level color 'mark' \(1:8\)",
     )
 
 
 def test_a_shape_in_a_group_in_the_scene():
     error(
-        "(color mark 'red') (scene s (group g (circle mark (r 1))))",
+        "(color mark #'red') (scene s (group g (circle mark (r 1))))",
         r"circle 'mark' would hide the top-level color 'mark'",
     )
 
@@ -92,7 +92,7 @@ def test_a_shape_in_a_foreach():
 
 
 def test_a_name_imported_by_name(tmp_path):
-    (tmp_path / "house.mtp").write_text("(color ink '#1f2a44')\n")
+    (tmp_path / "house.mtp").write_text("(color ink #'#1f2a44')\n")
     path = tmp_path / "fig.mtp"
     path.write_text("(import house ink)\n(motif m () (circle ink (r 1)))\n")
     with pytest.raises(
@@ -102,7 +102,7 @@ def test_a_name_imported_by_name(tmp_path):
 
 
 def test_a_motif_in_an_imported_file(tmp_path):
-    (tmp_path / "house.mtp").write_text("(color ink 'red')\n(motif dot () (circle ink (r 1)))\n")
+    (tmp_path / "house.mtp").write_text("(color ink #'red')\n(motif dot () (circle ink (r 1)))\n")
     path = tmp_path / "fig.mtp"
     path.write_text("(import house)\n(scene s (house.dot x))\n")
     with pytest.raises(
@@ -112,7 +112,7 @@ def test_a_motif_in_an_imported_file(tmp_path):
 
 
 def test_a_file_whole_import_hides_nothing(tmp_path):
-    (tmp_path / "house.mtp").write_text("(color ink '#1f2a44')\n")
+    (tmp_path / "house.mtp").write_text("(color ink #'#1f2a44')\n")
     path = tmp_path / "fig.mtp"
     path.write_text("(import house)\n(motif m () (circle ink (r 1)))\n(scene s (m x))\n")
     compile_source(path.read_text(), path=path)

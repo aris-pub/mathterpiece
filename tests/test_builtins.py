@@ -120,7 +120,7 @@ class TestPointsTransformsColors:
         assert value("(transform v (transform (scale 2) (translate 1 0)))") == (2, 0, 0, 2, 1, 0)
 
     def test_colors(self):
-        m = model("(scene s (circle c (fill (mix 'black' 'white' 0.5))))")
+        m = model("(scene s (circle c (fill (mix #'black' #'white' 0.5))))")
         assert m.get("c").attrs["fill"].value == "#808080ff"
 
 

@@ -22,7 +22,7 @@ def moves(m, *names):
 class TestGroupArguments:
     # reference.md: on a group, x, y, pos and fill, stroke and the like are written on each member.
     def test_they_reach_every_member(self):
-        m = model("(scene s (group g (defaults (fill 'red')) (circle a) (rect b)))")
+        m = model("(scene s (group g (defaults (fill #'red')) (circle a) (rect b)))")
         assert m.get("a").attrs["fill"].value == m.get("b").attrs["fill"].value == "#ff0000ff"
 
     def test_through_nested_groups(self):
@@ -35,13 +35,15 @@ class TestGroupArguments:
             error(f"(scene s (group g (defaults {attr}) (circle a)))", "not x, y or pos")
 
     def test_a_member_that_gives_its_own_value_keeps_it(self):
-        m = model("(scene s (group g (defaults (fill 'red')) (circle a (fill 'blue')) (circle b)))")
+        m = model(
+            "(scene s (group g (defaults (fill #'red')) (circle a (fill #'blue')) (circle b)))"
+        )
         assert m.get("a").attrs["fill"].value == "#0000ffff"
         assert m.get("b").attrs["fill"].value == "#ff0000ff"
 
     def test_the_nearest_group_wins(self):
         m = model(
-            "(scene s (group g (defaults (fill 'red')) (group h (defaults (fill 'blue'))"
+            "(scene s (group g (defaults (fill #'red')) (group h (defaults (fill #'blue'))"
             " (circle a))))"
         )
         assert m.get("a").attrs["fill"].value == "#0000ffff"
@@ -49,7 +51,7 @@ class TestGroupArguments:
     def test_a_text_takes_no_stroke_from_a_group(self):
         # A stroke would outline a text's letters (reference.md, "The scene and shapes").
         src = (
-            "(group g (defaults (stroke 'red') (stroke-width 3) (fill 'blue')) (text t 'hi')"
+            "(group g (defaults (stroke #'red') (stroke-width 3) (fill #'blue')) (text t 'hi')"
             " (circle c))"
         )
         m = model(f"(scene s {src})")
@@ -59,7 +61,7 @@ class TestGroupArguments:
         assert m.get("c").attrs["stroke"].value == "#ff0000ff"
 
     def test_a_text_keeps_its_own_stroke(self):
-        m = model("(scene s (group g (defaults (stroke 'red')) (text t 'hi' (stroke 'blue'))))")
+        m = model("(scene s (group g (defaults (stroke #'red')) (text t 'hi' (stroke #'blue'))))")
         assert m.get("t").attrs["stroke"].value == "#0000ffff"
 
     def test_translate_is_the_groups_own(self):
@@ -124,7 +126,7 @@ class TestGroupPositionsInRange:
 
 class TestSceneReads:
     def test_background_and_length(self):
-        m = model("(scene s (background 'white') (circle a) (circle b) (int n s.length))")
+        m = model("(scene s (background #'white') (circle a) (circle b) (int n s.length))")
         assert m.get("n").value.value == 2
 
     def test_no_spreading(self):
@@ -210,8 +212,8 @@ class TestDefaults:
     # their own; a group's translate and transform stay its own.
     def test_fill_and_stroke_for_the_members(self):
         m = model(
-            "(scene s (group g (defaults (fill 'red') (stroke-width 2)) (circle c) (circle"
-            " d (fill 'blue'))))"
+            "(scene s (group g (defaults (fill #'red') (stroke-width 2)) (circle c) (circle"
+            " d (fill #'blue'))))"
         )
         assert m.get("c").attrs["fill"].value == "#ff0000ff"
         assert m.get("c").attrs["stroke-width"].value == 2
@@ -220,17 +222,17 @@ class TestDefaults:
     def test_text_settings_for_the_texts(self):
         m = model(
             "(font note (size 9))"
-            " (scene s (group g (defaults (font note) (halign 'middle') (fill 'red'))"
+            " (scene s (group g (defaults (font note) (halign 'middle') (fill #'red'))"
             " (text t 'a') (circle c)))"
         )
         assert m.get("t").attrs["halign"].value == "middle"
         assert m.get("c").attrs["fill"].value == "#ff0000ff"
 
     def test_a_group_has_no_fill_of_its_own(self):
-        error("(scene s (group g (fill 'red') (circle c)))", "give it in \\(defaults")
+        error("(scene s (group g (fill #'red') (circle c)))", "give it in \\(defaults")
 
     def test_translate_stays_the_groups_own(self):
-        m = model("(scene s (group g (translate [1 0]) (defaults (fill 'red')) (circle c)))")
+        m = model("(scene s (group g (translate [1 0]) (defaults (fill #'red')) (circle c)))")
         assert m.get("g").attrs["translate"].value == (1, 0)
 
 

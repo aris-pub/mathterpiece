@@ -22,7 +22,7 @@ class TestValues:
         assert bound("(complex z) (real i z.im)", "i").type == REAL
 
     def test_color_channels(self):
-        e = bound("(color ink '#ff000080') (real a ink.a)", "a")
+        e = bound("(color ink #'#ff000080') (real a ink.a)", "a")
         assert e.type == UNIT
 
     def test_lengths(self):

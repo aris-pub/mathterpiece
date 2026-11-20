@@ -509,7 +509,7 @@ and then never follows the seed.
 (rand-seed dots 7)
 (scene s
   (foreach i 12
-    (circle_ (pos [(rand 0 10) (rand 0 4)]) (r 0.2) (fill 'teal'))))
+    (circle_ (pos [(rand 0 10) (rand 0 4)]) (r 0.2) (fill #'teal'))))
 (canvas v (x 0) (y 0) (width 10) (height 4) s)
 (button roll (animation (roll-dice dots)) (label 'Roll'))
 ```

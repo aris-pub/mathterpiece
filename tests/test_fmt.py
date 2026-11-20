@@ -36,8 +36,8 @@ def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
             "(scene s\n    (background paper)\n  (circle c))\n",
         ),
         (
-            "(scene s\n(circle c (r 1)\n(fill 'red')))\n",
-            "(scene s\n  (circle c (r 1)\n      (fill 'red')))\n",
+            "(scene s\n(circle c (r 1)\n(fill #'red')))\n",
+            "(scene s\n  (circle c (r 1)\n      (fill #'red')))\n",
         ),
         (
             "(group g\n(defaults (fill red)\n(stroke blue))\n(circle c))\n",
@@ -85,9 +85,9 @@ def test_keyword_arguments_go_4_in_in_fmt_and_emacs(src, want, tmp_path):
 
 
 def test_the_members_of_a_namespace(tmp_path):
-    src = "(namespace theme\n(color ink 'navy')\n(namespace accents\n(color warm 'red')))\n"
+    src = "(namespace theme\n(color ink #'navy')\n(namespace accents\n(color warm #'red')))\n"
     want = (
-        "(namespace theme\n  (color ink 'navy')\n  (namespace accents\n    (color warm 'red')))\n"
+        "(namespace theme\n  (color ink #'navy')\n  (namespace accents\n    (color warm #'red')))\n"
     )
     assert layout(src) == want
     if shutil.which("emacs") is not None:

@@ -85,7 +85,7 @@ class TestCanvas:
 
     def test_in_a_foreach(self):
         m = model(
-            "(scene s (group g (foreach i 3 (circle #'d-{i}'))))"
+            "(scene s (group g (foreach i 3 (circle @'d-{i}'))))"
             " (canvas a s (foreach d g (on-drag d d.pos)))"
         )
         drags = [o for o in m.objects if o.kind == "on-drag"]
@@ -97,7 +97,7 @@ class TestCanvas:
         assert one(m, "on-drag").data["in"] == [m.id("a")]
 
     def test_in_a_foreach_around_the_canvas(self):
-        m = model(f"{SCENE} (foreach i 2 (canvas #'v-{{i}}' s (on-click c {GO})))")
+        m = model(f"{SCENE} (foreach i 2 (canvas @'v-{{i}}' s (on-click c {GO})))")
         clicks = [o for o in m.objects if o.kind == "on-click"]
         assert [o.data["in"] for o in clicks] == [[m.id("v-0")], [m.id("v-1")]]
 

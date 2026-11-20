@@ -340,7 +340,7 @@ class TestItemsAWriterDoesNotTake:
     argument that the writer does not take, at that item (mtp-843h). Before, it was read as a
     condition, and the error was about conditions."""
 
-    HEAD = f"{K} (bool on false) (color teal '#2a9d8f') (scene s (circle c))\n"
+    HEAD = f"{K} (bool on false) (color teal #'#2a9d8f') (scene s (circle c))\n"
 
     def where(self, src: str, message: str) -> str:
         with pytest.raises(CompileError) as exc:
@@ -713,7 +713,7 @@ class TestMathLabels:
         assert errors(d) == []
 
     def test_a_computed_label_is_plain(self):
-        b = model(f"{K} (foreach j 3 (button #'b-{{j}}' {MOVE} (label f'C_{{j}}')))").get("b-2")
+        b = model(f"{K} (foreach j 3 (button @'b-{{j}}' {MOVE} (label f'C_{{j}}')))").get("b-2")
         assert b.attrs["label"].value == "C_2" and "label-tex" not in b.data
 
     def test_a_plain_label_is_not_latex(self):

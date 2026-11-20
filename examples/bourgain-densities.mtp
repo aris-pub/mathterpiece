@@ -12,9 +12,9 @@
 
 ; BRAIID's grays: the tracks under the charts are gray-300, the grid lines gray-100, and one
 ; density gray-700 (gray-500's light value in dark, as bright as the green beside it).
-(color rule (light-dark '#c2ccd3' '#475662'))
-(color grid (light-dark '#edf0f2' '#2a3740'))
-(color one (light-dark '#5f7186' '#a9b7c1'))
+(color rule (light-dark #'#c2ccd3' #'#475662'))
+(color grid (light-dark #'#edf0f2' #'#2a3740'))
+(color one (light-dark #'#5f7186' #'#a9b7c1'))
 (font plain (size 13))
 (font tick (size 12))
 (font strong (size 13) (weight 600))
@@ -95,7 +95,7 @@
 (func cy (real v) (+ -114 (* (max 0 (min 1 (/ (log (max v 1) 10) 3))) 106)))
 
 ; Its tip is where a guide line ends.
-(motif handle ((color edge (light-dark '#5f7186' '#a9b7c1')) (real weight 1.5 (>= 0)))
+(motif handle ((color edge (light-dark #'#5f7186' #'#a9b7c1')) (real weight 1.5 (>= 0)))
   doc@'A pill with three grip lines, with its tip at the middle of its top edge.'
   (rect body (width 22) (height 12) (rx 6) (ry 6) (fill paper) (stroke edge) (stroke-width weight))
   (circle tip (pos [0 6]) (r 0) (fill none) (stroke none))
@@ -194,9 +194,9 @@
     (group densities (defaults (fill soft))
       (foreach k 10
         (let ((x (+ 54 (* (/ (+ k 0.5) lv) 412))))
-          (text|none #'density-{k}' f'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
+          (text|none @'density-{k}' f'1/{(^ 2 (+ k 1))}' (pos [x -147]) (halign 'middle')
               (font tick))
-          (exists-when #'density-{k}'
+          (exists-when @'density-{k}'
             (and (<= (+ k 1) L) (or (<= L 6) (= (mod k 2) 0)) (<= x 467))))))
     (line_ (from [54 -8]) (to [54 -130]) (stroke soft) (stroke-width 1))
     (line_ (from [54 -130]) (to [466 -130]) (stroke soft) (stroke-width 1))

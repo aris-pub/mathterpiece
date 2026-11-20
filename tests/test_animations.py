@@ -38,7 +38,7 @@ class TestTransitions:
         error(f"{K} (animation a (move k (to 'x') (duration 1)))", "expected real")
 
     def test_a_string_end_becomes_a_color(self):
-        m = model("(scene s (circle c)) (animation a (move c.fill (to 'red') (duration 1)))")
+        m = model("(scene s (circle c)) (animation a (move c.fill (to #'red') (duration 1)))")
         (t,) = [o for o in m.objects if o.kind == "transition"]
         assert t.attrs["to"].value == "#ff0000ff"
 
@@ -172,7 +172,7 @@ class TestSteps:
         [
             ("(real j 1) (real k (* 2 j))", "k is bound"),
             ("(real k 1 (const))", "k is const"),
-            ("(color k 'red')", "k is a token"),
+            ("(color k #'red')", "k is a token"),
         ],
     )
     def test_what_cannot_be_moved(self, src, message):
@@ -521,7 +521,7 @@ class TestTogether:
     NESTED = "(group g (group h (circle c1 (r 1))))"
     MEMBERS = {
         "r": (CIRCLES, "g.r (to 2)", "c1.r (to 3)", "c1.r"),
-        "by position": (CIRCLES, "g.fill (to 'red')", "g[1].fill (to 'blue')", "c2.fill"),
+        "by position": (CIRCLES, "g.fill (to #'red')", "g[1].fill (to #'blue')", "c2.fill"),
         "points": (
             "(group g (polyline pl (points [[0 0] [0 2]])))",
             "g.x (to 3)",
@@ -535,12 +535,12 @@ class TestTogether:
             "pl.points",
         ),
         "nested": (NESTED, "g.r (to 2)", "c1.r (to 3)", "c1.r"),
-        "nested group": (NESTED, "g.fill (to 'red')", "h.fill (to 'blue')", "c1.fill"),
-        "instance": ("(dot d)", "d.fill (to 'red')", "d.c.fill (to 'blue')", "c.fill"),
+        "nested group": (NESTED, "g.fill (to #'red')", "h.fill (to #'blue')", "c1.fill"),
+        "instance": ("(dot d)", "d.fill (to #'red')", "d.c.fill (to #'blue')", "c.fill"),
         "instance in a group": (
             "(group g (dot d))",
-            "g.fill (to 'red')",
-            "d.c.fill (to 'blue')",
+            "g.fill (to #'red')",
+            "d.c.fill (to #'blue')",
             "c.fill",
         ),
     }
@@ -564,7 +564,7 @@ class TestTogether:
             ("c1.r (to 2)", "c2.r (to 3)"),
             ("g.x (to 3)", "c1.y (to 3)"),
             ("d.x (to 3)", "d.c.x (to 3)"),
-            ("d.translate (to [1 1])", "d.c.fill (to 'red')"),
+            ("d.translate (to [1 1])", "d.c.fill (to #'red')"),
         ):
             steps(
                 f"(motif dot () (circle c (r 1))) (scene s {g}) (animation a (at-once"

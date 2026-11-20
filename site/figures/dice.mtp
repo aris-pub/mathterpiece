@@ -8,13 +8,13 @@
 ; what the figure is: a die, declared once and used n times
 (motif die ((int face 1 (>= 1) (<= 6)))
   (rect body (width 2) (height 2) (rx 0.3)
-        (fill 'slateblue') (fill-opacity 0.15) (stroke 'slateblue'))
+        (fill #'slateblue') (fill-opacity 0.15) (stroke #'slateblue'))
   (foreach j 6
     (circle_ (pos (* 0.55 (or? pips[(- face 1)][j] [0 0])))
-      (r 0.18) (fill 'slateblue') (opacity (if (< j face) 1 0)))))
+      (r 0.18) (fill #'slateblue') (opacity (if (< j face) 1 0)))))
 (scene table
   (group dice (foreach k n
-    (die #'die-{k}' (face (rand-int 1 6))
+    (die @'die-{k}' (face (rand-int 1 6))
          (translate [(* 2.4 (- k (/ (- n 1) 2))) 0])))))
 
 ; what it does

@@ -11,8 +11,8 @@ from mathterpiece import compiler
 from mathterpiece.compiler import CompileError, compile_source
 
 HOUSE = """; The house style.
-(color ink '#1f2a44')
-(color accent '#e76f51')
+(color ink #'#1f2a44')
+(color accent #'#e76f51')
 (font label (size 14))
 (real gap 0.4 (const))
 (type unit real (>= 0) (<= 1))
@@ -68,7 +68,7 @@ def test_a_name_the_file_does_not_declare(files):
 
 
 def test_the_file_reads_its_own_names(files):
-    m = build(files(house=HOUSE, fig="(import house darker) (color v (darker 'red'))"))
+    m = build(files(house=HOUSE, fig="(import house darker) (color v (darker #'red'))"))
     assert m.get("v").value.bound
 
 
@@ -123,8 +123,8 @@ def test_a_list_that_is_not_const_is_not_imported(files):
         ("(slider sl (move k (from 0) (to 1)))", "a slider"),
         ("(animation a (wait 1))", "an animation"),
         ("(let ((w 1)) (real k w))", "a variable that is not const"),
-        ("(foreach i 2 (real #'k{i}' i))", "a variable that is not const"),
-        ("(foreach i 2 (let ((w i)) (scene #'s{i}')))", "a scene"),
+        ("(foreach i 2 (real @'k{i}' i))", "a variable that is not const"),
+        ("(foreach i 2 (let ((w i)) (scene @'s{i}')))", "a scene"),
     ],
 )
 def test_an_imported_file_holds_only_declarations(files, decl, what):
@@ -133,12 +133,12 @@ def test_an_imported_file_holds_only_declarations(files, decl, what):
 
 def test_a_name_imported_and_declared(files):
     fails(
-        files(house=HOUSE, fig="(import house ink) (color ink 'red')"), "'ink' is already declared"
+        files(house=HOUSE, fig="(import house ink) (color ink #'red')"), "'ink' is already declared"
     )
 
 
 def test_an_error_inside_the_imported_file_names_it(files):
-    fails(files(house="(color ink (mix 'red' nope 0.5))", fig="(import house)"), "house.mtp:1:")
+    fails(files(house="(color ink (mix #'red' nope 0.5))", fig="(import house)"), "house.mtp:1:")
 
 
 def test_a_missing_file(files):
@@ -150,7 +150,7 @@ def test_a_cycle(files):
 
 
 def test_a_file_imported_twice_is_read_once(files):
-    base = "(color ink '#000000')"
+    base = "(color ink #'#000000')"
     house = "(import base ink) (func darker ((color c)) (mix c ink 0.5))"
     fig = "(import base) (import house darker) (color v (darker base.ink))"
     m = build(files(base=base, house=house, fig=fig))
@@ -159,19 +159,20 @@ def test_a_file_imported_twice_is_read_once(files):
 
 def test_names_an_imported_file_imported(files):
     # As Python: a name the file imported can be imported from it.
-    base = "(color ink '#000000')"
+    base = "(color ink #'#000000')"
     build(files(base=base, house="(import base ink)", fig="(import house ink) (color v ink)"))
 
 
 def test_the_standard_library_after_the_folder(files, tmp_path, monkeypatch):
     lib = tmp_path / "lib"
     lib.mkdir()
-    (lib / "css.mtp").write_text("(color gold '#ffd700')")
+    (lib / "css.mtp").write_text("(color gold #'#ffd700')")
     monkeypatch.setattr(compiler, "STDLIB", lib)
     build(files(fig="(import css gold) (color v gold)"))
     # The folder's own css.mtp wins.
     fails(
-        files(css="(color silver '#c0c0c0')", fig="(import css gold)"), "css.mtp declares no 'gold'"
+        files(css="(color silver #'#c0c0c0')", fig="(import css gold)"),
+        "css.mtp declares no 'gold'",
     )
 
 
@@ -208,16 +209,16 @@ def test_a_name_imported_by_name_but_never_used_is_dropped(files):
 
 
 def test_what_a_used_declaration_uses_is_kept(files):
-    m = build(files(house=HOUSE, fig="(import house darker) (color v (darker 'red'))"))
+    m = build(files(house=HOUSE, fig="(import house darker) (color v (darker #'red'))"))
     assert "house.ink" in m.names and "house.accent" not in m.names
     m = build(files(house=HOUSE, fig="(import house dot) (scene s (dot d))"))
     assert "house.dot" in m.motifs and "house.ink" in m.names and "house.accent" not in m.names
 
 
 def test_through_a_file_the_imported_file_imports(files):
-    base = "(color ink '#000000') (color paper '#ffffff')"
-    house = "(import base ink) (func darker ((color c)) (mix c ink 0.5)) (color loud 'red')"
-    m = build(files(base=base, house=house, fig="(import house darker) (color v (darker 'red'))"))
+    base = "(color ink #'#000000') (color paper #'#ffffff')"
+    house = "(import base ink) (func darker ((color c)) (mix c ink 0.5)) (color loud #'red')"
+    m = build(files(base=base, house=house, fig="(import house darker) (color v (darker #'red'))"))
     assert "base.ink" in m.names
     assert "base.paper" not in m.names and "house.loud" not in m.names
 
@@ -236,7 +237,9 @@ def test_the_written_file_has_no_unused_import(files):
 
 def test_an_unused_declaration_with_an_error_is_still_an_error(files):
     fails(
-        files(house="(color ink 'red') (color bad (mix 'red' nope 0.5))", fig="(import house ink)"),
+        files(
+            house="(color ink #'red') (color bad (mix #'red' nope 0.5))", fig="(import house ink)"
+        ),
         "house.mtp:1:",
     )
 
@@ -245,6 +248,6 @@ def test_an_imported_file_with_carriage_returns_and_a_byte_order_mark(files, tmp
     # lexical.md, rule source-text: a file is read with each \r\n and \r as \n, and without the
     # mark at its start.
     fig = files(fig="(import house ink) (scene s (circle c (fill ink)))")
-    text = "﻿; style\r\n(color ink 'red')\r(color x 'blue')"
+    text = "﻿; style\r\n(color ink #'red')\r(color x #'blue')"
     (tmp_path / "house.mtp").write_bytes(text.encode())
     assert "house.ink" in build(fig).names

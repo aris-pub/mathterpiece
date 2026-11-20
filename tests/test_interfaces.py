@@ -14,8 +14,8 @@ from mtpc_check import errors
 from mathterpiece.compiler import compile_source
 
 PALETTE = "(interface inky (color ink) (color paper))"
-DAY = "(namespace day (color ink '#1f2a44') (color paper '#f6f1e7') (real gap 0.4))"
-NIGHT = "(namespace night (color ink '#e8e4d8') (color paper '#14161c'))"
+DAY = "(namespace day (color ink #'#1f2a44') (color paper #'#f6f1e7') (real gap 0.4))"
+NIGHT = "(namespace night (color ink #'#e8e4d8') (color paper #'#14161c'))"
 
 
 class TestNamespaces:
@@ -27,13 +27,13 @@ class TestNamespaces:
 
     def test_a_missing_member(self):
         error(
-            f"{PALETTE} (namespace n (color ink 'red')) (func f ((inky p)) p.ink) (color v (f n))",
+            f"{PALETTE} (namespace n (color ink #'red')) (func f ((inky p)) p.ink) (color v (f n))",
             "n does not fit inky: it has no 'paper'",
         )
 
     def test_a_member_of_another_type(self):
         error(
-            f"{PALETTE} (namespace n (real ink 1) (color paper 'red')) (func f ((inky p)) p.ink)"
+            f"{PALETTE} (namespace n (real ink 1) (color paper #'red')) (func f ((inky p)) p.ink)"
             " (color v (f n))",
             "n does not fit inky: its ink is a real, not a color",
         )
@@ -41,7 +41,7 @@ class TestNamespaces:
     def test_a_nested_namespace(self):
         model(
             f"{PALETTE} (interface themed (inky colors))"
-            " (namespace t (namespace colors (color ink 'red') (color paper 'white')))"
+            " (namespace t (namespace colors (color ink #'red') (color paper #'white')))"
             " (func f ((themed x)) x.colors.ink) (color v (f t))"
         )
 
@@ -117,7 +117,7 @@ class TestDeclaring:
     def test_members_need_a_type_and_a_name(self):
         lists = re.escape("an interface lists (T name constraint…)")
         error("(interface i (ink))", lists)
-        error("(interface i (color ink 'red'))", lists)
+        error("(interface i (color ink #'red'))", lists)
 
     def test_two_members_of_the_same_name(self):
         error("(interface i (color ink) (real ink))", "'ink' is already declared")
@@ -151,7 +151,7 @@ class TestMotifs:
 
     def test_one_that_does_not_fit(self):
         error(
-            f"{PALETTE} {self.CARD} (namespace n (color ink 'red')) (scene s (card a (look n)))",
+            f"{PALETTE} {self.CARD} (namespace n (color ink #'red')) (scene s (card a (look n)))",
             "n does not fit inky: it has no 'paper'",
         )
 

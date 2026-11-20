@@ -146,6 +146,7 @@ def _tree(node, depth: int) -> Iterator[str]:
                 nodes.RatioLit: "ratio",
                 nodes.RealLit: "real",
                 nodes.ComplexLit: "complex",
+                nodes.ColorLit: "color",
             }[type(node)]
             yield f"{pad}{node.pos} {kind} {node.value}"
 

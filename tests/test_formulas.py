@@ -43,7 +43,7 @@ class TestDeclaring:
         assert (a["outline-width"].value, a["rounding"].value) == (1, 0)
 
     def test_a_terms_attributes(self):
-        src = BOUNDS[:-1] + " (term gap (fill 'teal') (opacity 0.4) (padding 2) (rounding 3)))"
+        src = BOUNDS[:-1] + " (term gap (fill #'teal') (opacity 0.4) (padding 2) (rounding 3)))"
         a = obj(src, "bounds.gap").attrs
         assert (a["fill"].value, a["opacity"].value) == ("#008080ff", 0.4)
         assert (a["padding"].value, a["rounding"].value) == (2, 3)
@@ -83,7 +83,7 @@ class TestDeclaringErrors:
 
     def test_a_terms_form_is_given_once(self):
         error(
-            r"(formula f $'\term{a}{x}' (term a (opacity 0.5)) (term a (fill 'red')))",
+            r"(formula f $'\term{a}{x}' (term a (opacity 0.5)) (term a (fill #'red')))",
             "the term 'a' is given twice",
         )
 
@@ -105,7 +105,7 @@ class TestDeclaringErrors:
 
     def test_a_term_takes_no_shape_attribute(self):
         error(
-            r"(formula f $'\term{a}{x}' (term a (stroke 'red')))",
+            r"(formula f $'\term{a}{x}' (term a (stroke #'red')))",
             "a term has no attribute 'stroke'",
         )
 
@@ -205,7 +205,7 @@ class TestDefaultsAndLike:
 
     def test_defaults_reach_every_term(self):
         m = model(
-            f"(formula f {self.AB} (defaults (padding 3) (rounding 4)) (term a (fill 'red')))"
+            f"(formula f {self.AB} (defaults (padding 3) (rounding 4)) (term a (fill #'red')))"
         )
         assert m.get("f.a").attrs["padding"].value == 3
         assert m.get("f.b").attrs["rounding"].value == 4
@@ -228,8 +228,8 @@ class TestDefaultsAndLike:
 
     def test_like_copies_an_earlier_term(self):
         m = model(
-            f"(formula f {self.AB} (term a (fill 'red') (padding 2))"
-            " (term b (like a) (fill 'blue')))"
+            f"(formula f {self.AB} (term a (fill #'red') (padding 2))"
+            " (term b (like a) (fill #'blue')))"
         )
         b = m.get("f.b").attrs
         assert b["padding"].value == 2 and b["fill"].value == "#0000ffff"
@@ -290,7 +290,7 @@ class TestListeners:
         m = model(
             BOUNDS[:-1] + " (term gap (background none)))"
             " (display eq bounds (on-enter bounds.gap"
-            " (animation (move bounds.gap.background (to 'gold') (duration 0.2)))))"
+            " (animation (move bounds.gap.background (to #'gold') (duration 0.2)))))"
         )
         assert m.get("bounds.gap").attrs["background"].value is None
 
@@ -305,7 +305,9 @@ class TestListeners:
 
 class TestCompiledModel:
     def test_a_formula_and_its_terms(self):
-        d = doc(BOUNDS[:-1] + " (term gap (fill 'teal')))" + " (display eq bounds (kind 'inline'))")
+        d = doc(
+            BOUNDS[:-1] + " (term gap (fill #'teal')))" + " (display eq bounds (kind 'inline'))"
+        )
         kinds = {o["name"]: o for o in d["objects"]}
         f = kinds["bounds"]
         assert f["kind"] == "formula" and f["tex"].startswith(r"\term{gap}")
@@ -339,7 +341,7 @@ def test_the_compiled_model_fits_the_schema():
     src = (
         "(string shown '') (real q 0.3 (>= 0) (<= 1)) "
         + BOUNDS[:-1]
-        + " (bool lit false) (term gap (fill 'teal') f'{q:.2f}') (exists-when lo lit))"
+        + " (bool lit false) (term gap (fill #'teal') f'{q:.2f}') (exists-when lo lit))"
         " (display eq bounds (kind 'inline')"
         " (on-click bounds.gap (animation (move shown (to 'gap') (duration 0.2)))))"
     )

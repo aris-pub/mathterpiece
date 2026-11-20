@@ -39,7 +39,7 @@
   (let ((low (bottom-left water)) (high (top-right water)))
     (group bubbles
       (foreach i 8
-        (bubble #'b{i}'
+        (bubble @'b{i}'
                 (pos [(rand low[0] high[0]) (- (rand low[1] high[1]) (* rise (rand 9 13)))])
                 (size (rand 0.55 largest))
                 (tint [red green yellow blue][(mod i 4)])))))

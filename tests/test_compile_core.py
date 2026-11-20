@@ -30,12 +30,12 @@ class TestVariables:
         assert k.value.value == 1
 
     def test_types_from_their_head(self):
-        m = model("(int n 3) (bool b true) (string s 'hi') (color c 'red') (list xs [1 2])")
+        m = model("(int n 3) (bool b true) (string s 'hi') (color c #'red') (list xs [1 2])")
         assert [m.get(x).value.type for x in "nbscx" if x != "x"] == [INT, BOOL, STRING, COLOR]
         assert m.get("xs").value.type == ListT(INT)
 
     def test_a_type_expression_heads_a_declaration(self):
-        m = model("(list[color] p ['red' 'gold']) (real|none c none)")
+        m = model("(list[color] p [#'red' #'gold']) (real|none c none)")
         assert m.get("p").value.type == ListT(COLOR)
         assert m.get("c").value.type == Maybe(REAL)
 
@@ -164,13 +164,13 @@ class TestExpressions:
         "shape",
         [
             "(circle c (pos [1 0]) (r (* 0.5 c.x)))",
-            "(circle c (r 1) (fill (if (> c.r 0) 'red' 'blue')))",
+            "(circle c (r 1) (fill (if (> c.r 0) #'red' #'blue')))",
             "(circle c (pos [1 0]) (r c.pos[0]))",
             "(line c (from [0 0]) (to [1 c.x]))",
             # Attributes that the compiler builds before the one that reads them (mtp-gvrf.9).
             "(circle c (opacity 0.5) (r c.opacity))",
             "(circle c (r c.opacity) (opacity 0.5))",
-            "(circle c (fill 'red') (stroke c.fill))",
+            "(circle c (fill #'red') (stroke c.fill))",
             "(rect c (width 1) (height c.width))",
             "(rect c (height 1) (width c.height))",
             "(line c (from [0 0]) (to c.from))",
@@ -199,10 +199,10 @@ class TestExpressions:
             ),
         )
 
-    def test_strings_as_colors(self):
-        m = model("(scene s (circle c (fill 'red')))")
+    def test_color_literals_as_colors(self):
+        m = model("(scene s (circle c (fill #'red')))")
         assert m.get("c").attrs["fill"].type == Maybe(COLOR)
-        error("(scene s (circle c (fill 'blurple')))", "'blurple' is not a color")
+        error("(scene s (circle c (fill 'red')))", "expected color, got string")
 
 
 class TestRanges:
@@ -322,13 +322,14 @@ class TestAs:
     # (as T literal) gives a literal its type in place.
     def test_a_color_and_a_point(self):
         m = model(
-            "(func shade (bool b) (if b (as color 'gold') (as color 'navy')))(color c (shade true))"
+            "(func shade (bool b) (if b (as color #'gold') (as color #'navy')))"
+            "(color c (shade true))"
         )
         assert m.functions[m.funcs["shade"]].result == COLOR
         assert value("(point p (+ [1 1] (as point [0 0])))", "p") == (1, 1)
 
     def test_only_a_literal(self):
-        error("(string s (as color 'blurple'))", "'blurple' is not a color")
+        error("(string s (as color 'red'))", "expected color, got string")
 
 
 class TestListRanges:
@@ -595,8 +596,8 @@ class TestTheFormTemplate:
     @pytest.mark.parametrize(
         "src, arg, form",
         [
-            ("(scene s (circle c) (background 'red'))", "background", "scene"),
-            ("(scene s (group g (circle c) (fill 'red')))", "fill", "group"),
+            ("(scene s (circle c) (background #'red'))", "background", "scene"),
+            ("(scene s (group g (circle c) (fill #'red')))", "fill", "group"),
             ("(scene s (circle c)) (canvas v c (pan false))", "pan", "canvas"),
             (
                 f"{K} (button b (animation (move k (to 1) (duration 1))) (> k 1) (label 'go'))",
@@ -616,8 +617,8 @@ class TestTheFormTemplate:
     @pytest.mark.parametrize(
         "src",
         [
-            "(scene s (background 'red') (circle c))",
-            "(scene s (group g (translate [1 0]) (defaults (fill 'red') (stroke 'blue'))"
+            "(scene s (background #'red') (circle c))",
+            "(scene s (group g (translate [1 0]) (defaults (fill #'red') (stroke #'blue'))"
             " (circle c)))",
             "(scene s (circle c))"
             " (canvas v (x 1) (toggle-duration 1) (y 1) (width 2) (height 2) c)",

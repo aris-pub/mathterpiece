@@ -6,4 +6,4 @@
 ; expect i.a.fill "#0000ffff"
 ; expect i.b.fill "#0000ffff"
 (motif m ((real u 0)) (circle a) (group inner (circle b)))
-(scene s (m i (defaults (fill 'red'))))
+(scene s (m i (defaults (fill #'red'))))

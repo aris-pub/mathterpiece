@@ -127,7 +127,7 @@ def test_fmt_leaves_a_file_with_a_syntax_error_alone(tmp_path, capsys):
 
 
 def test_compile_finds_imports_next_to_the_file(tmp_path):
-    (tmp_path / "house.mtp").write_text("(color ink '#1f2a44')\n")
+    (tmp_path / "house.mtp").write_text("(color ink #'#1f2a44')\n")
     src = tmp_path / "f.mtp"
     src.write_text("(import house ink) (scene s (circle c (fill ink)))\n")
     main(["compile", str(src)])
@@ -135,7 +135,7 @@ def test_compile_finds_imports_next_to_the_file(tmp_path):
 
 
 def test_an_error_in_an_imported_file_names_that_file(tmp_path, capsys):
-    (tmp_path / "house.mtp").write_text("(color ink (mix 'red' nope 0.5))\n")
+    (tmp_path / "house.mtp").write_text("(color ink (mix #'red' nope 0.5))\n")
     src = tmp_path / "f.mtp"
     src.write_text("(import house)\n")
     with pytest.raises(SystemExit):
@@ -144,7 +144,7 @@ def test_an_error_in_an_imported_file_names_that_file(tmp_path, capsys):
 
 
 def test_a_syntax_error_in_an_imported_file(tmp_path, capsys):
-    (tmp_path / "house.mtp").write_text("(color ink '#1f2a44'\n")
+    (tmp_path / "house.mtp").write_text("(color ink #'#1f2a44'\n")
     src = tmp_path / "f.mtp"
     src.write_text("(import house)\n")
     with pytest.raises(SystemExit) as exc:

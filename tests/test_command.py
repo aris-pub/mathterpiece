@@ -212,7 +212,7 @@ class TestMtpServe:
     def test_saving_an_imported_file_builds_again(self, tmp_path):
         from mathterpiece.serve import Server
 
-        (tmp_path / "lib.mtp").write_text("(color ink 'navy')\n")
+        (tmp_path / "lib.mtp").write_text("(color ink #'navy')\n")
         src = tmp_path / "fig.mtp"
         src.write_text("(import lib)\n(scene s (circle c (r 1) (fill lib.ink)))\n(canvas v s)\n")
         server = Server(src, port=0)
@@ -221,7 +221,7 @@ class TestMtpServe:
             url = f"http://127.0.0.1:{server.port}"
             before = int(_get(f"{url}/version"))
             time.sleep(0.05)
-            (tmp_path / "lib.mtp").write_text("(color ink 'teal')\n")
+            (tmp_path / "lib.mtp").write_text("(color ink #'teal')\n")
             server.check()
             assert int(_get(f"{url}/version")) > before
         finally:

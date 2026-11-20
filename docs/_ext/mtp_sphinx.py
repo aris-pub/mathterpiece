@@ -118,6 +118,7 @@ class MtpLexer(RegexLexer):
             (r"\s+", Whitespace),
             (r";.*$", Comment.Single),
             (r"f'(\\.|[^'\\])*'", String.Interpol),
+            (r"@'(\\.|[^'\\])*'", String.Other),
             (r"#'(\\.|[^'\\])*'", String.Other),
             (r"\$'(\\.|[^'\\])*'", String),
             (r"'(\\.|[^'\\])*'", String),

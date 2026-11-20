@@ -44,7 +44,7 @@ class TestImportPutsIn:
 
     def test_a_file_imported_twice_is_put_in_once(self, tmp_path):
         files = {
-            "lib.mtp": "(color ink 'navy')\n",
+            "lib.mtp": "(color ink #'navy')\n",
             "other.mtp": "(import lib)\n(color pen lib.ink)\n",
         }
         m = in_folder(tmp_path, files, "(import lib)\n(import other)\n(color v lib.ink)\n")

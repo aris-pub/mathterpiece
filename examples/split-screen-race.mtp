@@ -9,11 +9,11 @@
 
 (import house paper ink red green)
 
-(color grass (light-dark '#7fa66b' '#4a6b40'))
-(color asphalt (light-dark '#55585e' '#3a3c41'))
-(color glass '#cfe3ea')
-(color tyre '#22252a')
-(color lamp '#f4d35e')
+(color grass (light-dark #'#7fa66b' #'#4a6b40'))
+(color asphalt (light-dark #'#55585e' #'#3a3c41'))
+(color glass #'#cfe3ea')
+(color tyre #'#22252a')
+(color lamp #'#f4d35e')
 
 (motif car ((color paint))
   doc@'A race car seen from above, facing right, measured in pixels: wheels, a body with a

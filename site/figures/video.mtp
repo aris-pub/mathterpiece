@@ -5,10 +5,10 @@
 (real m 2 (>= 2) (<= 12))
 (func spot ((real k)) (polar 1 (turn (/ k n))))
 (scene chords
-  (circle rim (r 1) (fill none) (stroke 'gray'))
+  (circle rim (r 1) (fill none) (stroke #'gray'))
   (foreach k n
     (line_ (from (spot k)) (to (spot (* m k)))
-           (stroke (mix 'crimson' 'royalblue' (min 1 (/ k n))))
+           (stroke (mix #'crimson' #'royalblue' (min 1 (/ k n))))
            (stroke-opacity 0.5))))
 (canvas v chords)
 (play film (label 'play the times tables')

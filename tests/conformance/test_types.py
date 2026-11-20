@@ -24,8 +24,9 @@ class TestTypeNotation:
 class TestTheTypes:
     def test_the_type_colormap(self):
         same_meaning(
-            "(func f ((colormap m)) (m 0.5)) (colormap cm ['red' 'blue']) (color v (f cm))",
-            "(func f ((func[real color] m)) (m 0.5)) (colormap cm ['red' 'blue']) (color v (f cm))",
+            "(func f ((colormap m)) (m 0.5)) (colormap cm [#'red' #'blue']) (color v (f cm))",
+            "(func f ((func[real color] m)) (m 0.5)) (colormap cm [#'red' #'blue'])"
+            " (color v (f cm))",
         )
 
     @UNIT
@@ -58,7 +59,7 @@ class TestWhatATypeIs:
 
     @UNION
     def test_a_variable_whose_type_is_an_interface(self):
-        accepted("(interface inky (color ink)) (namespace day (color ink 'navy')) (inky look day)")
+        accepted("(interface inky (color ink)) (namespace day (color ink #'navy')) (inky look day)")
 
 
 TYPES_REDESIGN = pytest.mark.xfail(

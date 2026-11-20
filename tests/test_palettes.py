@@ -11,7 +11,7 @@ from mtpc_check import errors
 from mathterpiece.compiler import compile_source
 from mathterpiece.types import NAMESPACE, PALETTE, fits
 
-BRAND = "(palette brand (ink '#1f2a44') (paper '#f6f1e7') (soft (mix ink paper 0.5)))"
+BRAND = "(palette brand (ink #'#1f2a44') (paper #'#f6f1e7') (soft (mix ink paper 0.5)))"
 
 
 def test_members_are_read_through_it():
@@ -37,17 +37,17 @@ def test_it_fits_an_interface_as_a_namespace_does():
 
 def test_members_are_colors_only():
     error("(palette p (gap 0.4))", "expected color")
-    error("(palette p (palette q (ink 'red')))", "a palette holds colors, not another palette")
+    error("(palette p (palette q (ink #'red')))", "a palette holds colors, not another palette")
 
 
 def test_members_are_a_name_and_a_value():
     member = re.escape("a palette's member is (name color)")
-    error("(palette p (color ink 'red'))", member)
+    error("(palette p (color ink #'red'))", member)
     error("(palette p (ink))", member)
 
 
 def test_two_members_of_the_same_name():
-    error("(palette p (ink 'red') (ink 'blue'))", "'ink' is already declared")
+    error("(palette p (ink #'red') (ink #'blue'))", "'ink' is already declared")
 
 
 def test_a_token_named_by_the_palette():

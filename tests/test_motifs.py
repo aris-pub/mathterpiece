@@ -8,7 +8,7 @@ from mathterpiece.compiler import compile_source
 from mathterpiece.types import BOOL, REAL, Interface, ShapeT, fits
 
 DIAL = (
-    "(motif dial ((real t 0.5 (>= 0) (<= 1)) (color tint 'red'))"
+    "(motif dial ((real t 0.5 (>= 0) (<= 1)) (color tint #'red'))"
     "  (circle face (r 1) (fill tint))"
     "  (real angle (* 360 t))"
     "  (line hand (to [face.r 0])))"
@@ -49,7 +49,7 @@ class TestInstances:
         assert [m.objects[i].name for i in m.get("d1").members] == ["face", "hand"]
 
     def test_the_body_reads_its_parameters(self):
-        m = model(f"{DIAL} (scene s (dial d1 (tint 'blue')))")
+        m = model(f"{DIAL} (scene s (dial d1 (tint #'blue')))")
         assert m.get("d1").attrs["tint"].value == "#0000ffff"
         assert m.get("d1.face").attrs["fill"].deps == {(m.id("d1"), "tint")}
 
@@ -143,8 +143,8 @@ class TestShapeArguments:
         # mtp-4cw5: an instance behaves like a group: its members take its defaults, and a
         # member that gives its own value keeps it.
         m = model(
-            "(motif m (real u 0) (circle a) (circle b (stroke 'blue')))"
-            "(scene s (m i (defaults (stroke 'red'))))"
+            "(motif m (real u 0) (circle a) (circle b (stroke #'blue')))"
+            "(scene s (m i (defaults (stroke #'red'))))"
         )
         assert m.get("i.a").attrs["stroke"].value == "#ff0000ff"
         assert m.get("i.b").attrs["stroke"].value == "#0000ffff"
@@ -156,13 +156,14 @@ class TestShapeArguments:
 
     def test_no_fill_of_its_own(self):
         error(
-            "(motif m (real u 0) (circle a)) (scene s (m i (fill 'red')))", "give it in \\(defaults"
+            "(motif m (real u 0) (circle a)) (scene s (m i (fill #'red')))",
+            "give it in \\(defaults",
         )
 
     def test_reading_and_writing_go_to_every_member(self):
         m = model(
             "(motif m (real u 0) (circle a) (circle b)) (scene s (m i))"
-            " (list fs i.fill) (button go (animation (move i.fill (to 'red') (duration 1))))"
+            " (list fs i.fill) (button go (animation (move i.fill (to #'red') (duration 1))))"
         )
         deps = m.get("fs").value.expr.deps
         assert {(m.id("i.a"), "fill"), (m.id("i.b"), "fill")} <= deps
@@ -170,14 +171,14 @@ class TestShapeArguments:
     def test_a_write_reaches_members_inside_a_group(self):
         m = model(
             "(motif m (real u 0) (group inner (circle a) (circle b))) (scene s (m i))"
-            " (button go (animation (move i.fill (to 'red') (duration 1))))"
+            " (button go (animation (move i.fill (to #'red') (duration 1))))"
         )
         animation = m.objects[m.get("go").data["animation"]]
         assert animation.data["steps"][1] == (m.id("i"), "fill")
 
     def test_a_groups_defaults_reach_an_instances_members(self):
         m = model(
-            "(motif m (real u 0) (circle a)) (scene s (group g (defaults (fill 'red')) (m i)))"
+            "(motif m (real u 0) (circle a)) (scene s (group g (defaults (fill #'red')) (m i)))"
         )
         assert m.get("i.a").attrs["fill"].value == "#ff0000ff"
 
@@ -234,7 +235,7 @@ class TestOptionalInstances:
     # type, as a shape's attribute does.
     SRC = (
         "(int n 3) (motif dot ((bool shown true) (real size 1 (>= 0))) (circle_ (r size)))\n"
-        "(scene s (foreach i 5 (dot|none #'d-{i}' (shown (< i n))) (exists-when #'d-{i}' (< i n))))"
+        "(scene s (foreach i 5 (dot|none @'d-{i}' (shown (< i n))) (exists-when @'d-{i}' (< i n))))"
     )
 
     def test_a_parameter_given_a_value_never_none_keeps_its_type(self):
@@ -253,6 +254,6 @@ class TestOptionalInstances:
         # is never none there either.
         compile_source(
             "(int n 3) (motif dot ((bool wide false)) (circle_ (r (if wide 2 1))))\n"
-            "(scene s (foreach i 5 (dot|none #'d-{i}' (wide (< i 2)))"
-            " (exists-when #'d-{i}' (< i n))))"
+            "(scene s (foreach i 5 (dot|none @'d-{i}' (wide (< i 2)))"
+            " (exists-when @'d-{i}' (< i n))))"
         )

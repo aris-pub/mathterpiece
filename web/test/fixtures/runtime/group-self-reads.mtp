@@ -11,9 +11,9 @@
 (scene s
   (group verts
     (foreach i 3
-      (vertex #'v-{i}' (part parts[i]) (pos [0 (count parts (fn q (= q parts[i])))]))))
+      (vertex @'v-{i}' (part parts[i]) (pos [0 (count parts (fn q (= q parts[i])))]))))
   (group others
     (foreach i 3
-      (vertex #'w-{i}' (part free@0) (pos [20 (if (> i 0) others[(- i 1)].part 0)])))))
+      (vertex @'w-{i}' (part free@0) (pos [20 (if (> i 0) others[(- i 1)].part 0)])))))
 
 (canvas view (x -50) (y -50) (width 100) (height 100) s)

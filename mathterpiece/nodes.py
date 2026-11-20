@@ -31,6 +31,13 @@ class StrLit:
     tex: bool = False
 
 
+# #'red', #'#f00': the color as #rrggbbaa, however it was written.
+@dataclass(frozen=True, slots=True)
+class ColorLit:
+    value: str
+    pos: Pos = field(default=NOPOS, compare=False)
+
+
 @dataclass(frozen=True, slots=True)
 class IntLit:
     value: int
@@ -97,6 +104,7 @@ Node = (
     Form
     | ListLit
     | StrLit
+    | ColorLit
     | IntLit
     | RatioLit
     | RealLit

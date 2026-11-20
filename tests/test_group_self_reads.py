@@ -10,13 +10,13 @@ import pytest
 from helpers import error, model
 
 VERTEX = "(motif vertex ((int part 0)) (circle_ (r 10)))\n"
-DIAL = "(motif dial ((real t 0.5 (>= 0) (<= 1)) (color tint 'red')) (circle face (r 1)))\n"
+DIAL = "(motif dial ((real t 0.5 (>= 0) (<= 1)) (color tint #'red')) (circle face (r 1)))\n"
 K = "(int k 0 (>= 0) (<= 1))\n"
 
 PARTS = (
     VERTEX + "(list[int] parts [0 0 0] (length 3))\n"
     "(scene s (group verts (foreach i 3"
-    " (vertex #'v-{i}' (part parts[i]) (pos [0 (count parts (fn q (= q parts[i])))])))))"
+    " (vertex @'v-{i}' (part parts[i]) (pos [0 (count parts (fn q (= q parts[i])))])))))"
 )
 
 
@@ -29,7 +29,7 @@ def test_each_member_reads_the_list_of_every_member():
 
 def test_a_member_reads_other_members_by_a_position_known_when_compiling():
     m = model(
-        VERTEX + "(scene s (group verts (foreach i 3 (vertex #'v-{i}' (part free@0)"
+        VERTEX + "(scene s (group verts (foreach i 3 (vertex @'v-{i}' (part free@0)"
         " (pos [0 (if (> i 0) verts[(- i 1)].part 0)])))))"
     )
     for i in (1, 2):
@@ -84,7 +84,7 @@ def test_a_container_reads_other_shapes_in_its_clip_and_defaults():
 
 def test_a_group_whose_members_depend_on_how_many_it_has():
     error(
-        "(scene s (group g (circle a (r 1)) (foreach i (count g) (circle #'c-{i}' (r 1)))))",
+        "(scene s (group g (circle a (r 1)) (foreach i (count g) (circle @'c-{i}' (r 1)))))",
         r"the members of g depend on g itself",
     )
 
@@ -99,11 +99,11 @@ def self_read(name: str) -> str:
 @pytest.mark.parametrize(
     "src",
     [
-        VERTEX + "(scene s (group verts (foreach i 3 (vertex #'v-{i}' (part free@0)"
+        VERTEX + "(scene s (group verts (foreach i 3 (vertex @'v-{i}' (part free@0)"
         " (pos [0 (or? verts[i].part 0)])))))",
-        VERTEX + "(scene s (group verts (foreach i 3 (vertex #'v-{i}' (part free@0)"
+        VERTEX + "(scene s (group verts (foreach i 3 (vertex @'v-{i}' (part free@0)"
         " (pos [0 (count (range 3) (fn j (= (or? verts[j].part 0) 1)))])))))",
-        "(scene s (group verts (foreach i 3 (circle #'v-{i}' (r 1) (y verts[i].r)))))",
+        "(scene s (group verts (foreach i 3 (circle @'v-{i}' (r 1) (y verts[i].r)))))",
     ],
 )
 def test_a_member_reading_itself_through_the_group(src):

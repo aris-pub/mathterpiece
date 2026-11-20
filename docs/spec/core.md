@@ -282,8 +282,8 @@ For example, take this `foreach`:
 ```mtp
 (circle d-0 (pos [0 0]) (r 1))
 (foreach k (range 1 5)
-  (let ((prev #'d-{(- k 1)}'))
-    (circle #'d-{k}' (pos [k 0]) (r (/ prev.r 2)))))
+  (let ((prev @'d-{(- k 1)}'))
+    (circle @'d-{k}' (pos [k 0]) (r (/ prev.r 2)))))
 ```
 
 Each circle has half the radius of the one before it, which `prev` names. The prover proves the
@@ -293,6 +293,5 @@ before.
 :::{admonition} Code differs
 :class: note
 The compiler makes each copy first, and then compiles `(name S)` and `(like …)` with the values of
-that copy (compiler.py:1161-1167, compiler.py:5329-5341) (mtp-08wd.1). The example writes its name
-strings `#'…'`, as the compiler reads them today, in place of `@'…'` (mtp-c1hl).
+that copy (compiler.py:1161-1167, compiler.py:5329-5341) (mtp-08wd.1).
 :::

@@ -8,7 +8,7 @@
 
 (import house ink soft red green blue)
 ; Behind a term under the pointer: BRAIID's gray-100.
-(color wash (light-dark '#edf0f2' '#2a3740'))
+(color wash (light-dark #'#edf0f2' #'#2a3740'))
 (font tick (size 13))
 (font name-font (style 'italic') (size 15))
 
@@ -139,7 +139,7 @@
   ; Clicking a term shows what it explains, or clears it if it is shown. Each term but the first
   ; ≤ is named after the piece it shows; the first ≤ explains the same as the factor.
   (foreach piece ['gap' 'hi' 'b2']
-    (on-click #'bounds.{piece}'
+    (on-click @'bounds.{piece}'
         (animation (move shown (to (if (= shown piece) none piece)) (duration 0.25)))
       doc@'Highlights what the term explains.'))
   (on-click bounds.lo (animation (move shown (to (if (= shown 'gap') none 'gap')) (duration 0.25)))

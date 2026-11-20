@@ -10,7 +10,7 @@ CASES = [
     (
         "(string s 'red')\n(scene sc (circle d (fill s)))",
         "2:27",
-        "expected color|none, got string: only a literal string becomes a color",
+        "expected color|none, got string: a string is never a color",
     ),
     # type-system.md 5.b and 5.c: a bound value that may break its constraint.
     (

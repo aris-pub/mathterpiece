@@ -211,9 +211,9 @@ class TestParserSugar:
 
     def test_name_string(self):
         n = form(name("name"), interp(("dot-", name("k"))))
-        assert items("(f #'dot-{k}')") == (n,)
-        assert items("(f #'dot-{k}'.a.b)") == (dot(dot(n, name("a")), name("b")),)
-        assert items("(f #'dot-{k}'[i])") == (dot(n, name("i")),)
+        assert items("(f @'dot-{k}')") == (n,)
+        assert items("(f @'dot-{k}'.a.b)") == (dot(dot(n, name("a")), name("b")),)
+        assert items("(f @'dot-{k}'[i])") == (dot(n, name("i")),)
 
     def test_brackets_after_a_list(self):
         assert items("(f [a b c][h])") == (
@@ -223,12 +223,12 @@ class TestParserSugar:
     def test_the_position_of_the_form_is_its_first_character(self):
         (s,) = items("(f  doc@'x')")
         assert (s.pos.line, s.pos.col) == (1, 5)
-        (s,) = items("(f  #'d-{k}'.a)")
+        (s,) = items("(f  @'d-{k}'.a)")
         inner = s.items[1]
         assert (inner.pos.line, inner.pos.col) == (1, 5)
 
     def test_a_dot_form_after_a_name_string_has_the_position_of_its_dot(self):
-        (s,) = items("(f #'d-{k}'.a[0])")
+        (s,) = items("(f @'d-{k}'.a[0])")
         assert (s.pos.line, s.pos.col) == (1, 14)
         assert (s.items[1].pos.line, s.items[1].pos.col) == (1, 12)
 
@@ -255,11 +255,11 @@ class TestFormTemplate:
         "src",
         [
             "(real k 1 (>= 0))",
-            "(list[color] cs ['red' 'blue'])",
+            "(list[color] cs [#'red' #'blue'])",
             "(func[real] f ((real x)) x)",
             "(real|none k none)",
             "((real (>= 0)) r 1)",
-            "(scene s (circle c (r 1) (fill 'red')))",
+            "(scene s (circle c (r 1) (fill #'red')))",
         ],
     )
     def test_heads_of_each_kind(self, src):
@@ -272,7 +272,7 @@ class TestFormTemplate:
 @rule("declared-names")
 class TestDeclaredNames:
     def test_a_name_string(self):
-        d = mtpc("(scene s (foreach i 2 (circle #'d-{i}' (r 1))))")
+        d = mtpc("(scene s (foreach i 2 (circle @'d-{i}' (r 1))))")
         assert {"d-0", "d-1"} <= set(d["names"])
 
     def test_the_name_form(self):
@@ -287,7 +287,7 @@ class TestDeclaredNames:
         compile_error("(real 'k' 1)")
 
     def test_the_string_of_a_name_string_is_known_when_compiling(self):
-        compile_error("(real j 1) (scene s (circle #'c-{j}' (r 1)))")
+        compile_error("(real j 1) (scene s (circle @'c-{j}' (r 1)))")
 
     @pytest.mark.parametrize("src", ["(scene none (circle c (r 1)))", "(scene_ (circle c (r 1)))"])
     def test_a_scene_must_have_a_name(self, src):
@@ -354,19 +354,19 @@ class TestFormsWithNoName:
 @rule("named-arguments-first")
 class TestOptionalArgumentsFirst:
     def test_in_any_order_before_the_body(self):
-        assert mtpc("(scene s (circle c (r 1) (fill 'red')))") == mtpc(
-            "(scene s (circle c (fill 'red') (r 1)))"
+        assert mtpc("(scene s (circle c (r 1) (fill #'red')))") == mtpc(
+            "(scene s (circle c (fill #'red') (r 1)))"
         )
 
     def test_an_optional_argument_after_the_body_is_an_error(self):
-        compile_error("(scene s (circle c (r 1)) (background 'white'))")
+        compile_error("(scene s (circle c (r 1)) (background #'white'))")
 
     def test_like_comes_first(self):
-        compile_error("(scene s (circle a (r 1)) (circle b (fill 'red') (like a)))")
-        accepted("(scene s (circle a (r 1)) (circle b (like a) (fill 'red')))")
+        compile_error("(scene s (circle a (r 1)) (circle b (fill #'red') (like a)))")
+        accepted("(scene s (circle a (r 1)) (circle b (like a) (fill #'red')))")
 
     def test_the_defaults_of_a_formula(self):
-        compile_error("(formula f $'\\term{a}{x}' (term a (fill 'red')) (defaults (padding 3)))")
+        compile_error("(formula f $'\\term{a}{x}' (term a (fill #'red')) (defaults (padding 3)))")
 
     def test_the_font_of_a_readout(self):
         compile_error("(font f (size 12)) (readout r 'x' (on-live (animation)) (font f))")
@@ -384,7 +384,7 @@ class TestOptionalArgumentsFirst:
 @rule("named-arguments-once")
 class TestOptionalArgumentsOnce:
     def test_twice_is_an_error(self):
-        compile_error("(scene s (circle c (fill 'red') (fill 'blue')))")
+        compile_error("(scene s (circle c (fill #'red') (fill #'blue')))")
 
     def test_pos_and_x_give_x_twice(self):
         compile_error("(scene s (circle c (pos [1 2]) (x 3) (r 1)))")
@@ -404,9 +404,9 @@ class TestDocstrings:
             f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-click c {ANIMATION} doc@'d'))",
             f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready {ANIMATION} doc@'d'))",
             "(motif m ((real k 1 (>= 0))) doc@'d' (circle_ (r k)))",
-            "(scene s (group g (defaults (fill 'red')) doc@'d' (circle c (r 1))))",
+            "(scene s (group g (defaults (fill #'red')) doc@'d' (circle c (r 1))))",
             "(formula f $'x' doc@'d')",
-            "(formula f $'\\term{a}{x}' (defaults (padding 3)) doc@'d' (term a (fill 'red')))",
+            "(formula f $'\\term{a}{x}' (defaults (padding 3)) doc@'d' (term a (fill #'red')))",
             "(scene s (circle c (r 1))) (canvas v (x 0) (y 0) (width 1) (height 1) doc@'d' s)",
         ],
     )
@@ -425,10 +425,10 @@ class TestDocstrings:
             f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready doc@'d' {ANIMATION}))",
             "(motif m () (circle_ (r 1)) doc@'d')",
             "(scene s (group g (circle c (r 1)) doc@'d'))",
-            "(scene s (group g doc@'d' (defaults (fill 'red')) (circle c (r 1))))",
+            "(scene s (group g doc@'d' (defaults (fill #'red')) (circle c (r 1))))",
             "(formula f doc@'d' $'x')",
-            "(formula f $'\\term{a}{x}' doc@'d' (defaults (padding 3)) (term a (fill 'red')))",
-            "(formula f $'\\term{a}{x}' (term a (fill 'red')) doc@'d')",
+            "(formula f $'\\term{a}{x}' doc@'d' (defaults (padding 3)) (term a (fill #'red')))",
+            "(formula f $'\\term{a}{x}' (term a (fill #'red')) doc@'d')",
             "(scene s (circle c (r 1))) (canvas v (x 0) (y 0) doc@'d' (width 1) (height 1) s)",
             "(scene s (circle c (r 1))) (canvas v s doc@'d')",
         ],
@@ -457,12 +457,12 @@ class TestContexts:
         [
             "(circle c (r 1))",
             "(scene s (circle c (r 1))) (on-click c)",
-            "(formula f $'\\term{a}{x}') (term a (fill 'red'))",
+            "(formula f $'\\term{a}{x}') (term a (fill #'red'))",
             "(scene s (group g (real k 1) (circle c (r 1))))",
             "(scene s (motif m () (circle_ (r 1))))",
             "(scene s (circle c (r 1)) (canvas v s))",
             "(namespace n (func f ((real x)) x))",
-            "(palette p (palette q ('a' 'red')))",
+            "(palette p (palette q ('a' #'red')))",
             "(variant v ((real k 1 (>= 0))) (circle (r k)) (circle (r k)))",
             "(func f ((real x)) x x)",
             "(scene s (group g (clip (line (from [0 0]) (to [1 1]))) (circle c (r 1))))",
@@ -484,8 +484,8 @@ class TestContexts:
             "(scene s (group g (circle c (r 1)) (circle|none d (r 1)) (exists-when d true)))",
             "(motif m ((real k 1 (>= 0))) (circle_ (r k))) (scene s (m a))",
             "(namespace n (real k 1) (namespace m (real j 2)))",
-            "(palette p (a 'red') (b 'blue'))",
-            "(formula f $'\\term{a}{x}' (term a (fill 'red')))",
+            "(palette p (a #'red') (b #'blue'))",
+            "(formula f $'\\term{a}{x}' (term a (fill #'red')))",
         ],
     )
     def test_items_that_the_body_holds(self, src):
@@ -495,7 +495,7 @@ class TestContexts:
 @rule("body-let-foreach")
 class TestBodyLetForeach:
     def test_a_foreach_at_the_top_level(self):
-        d = mtpc("(foreach i 3 (real #'k-{i}' i))")
+        d = mtpc("(foreach i 3 (real @'k-{i}' i))")
         assert {"k-0", "k-1", "k-2"} <= set(d["names"])
 
     def test_a_let_at_the_top_level(self):
@@ -506,7 +506,7 @@ class TestBodyLetForeach:
         accepted("(let ((k 2)) (scene s (circle c (r k))))")
 
     def test_a_let_in_a_foreach_at_the_top_level(self):
-        d = mtpc("(foreach i 3 (let ((k (* 2 i))) (real #'v-{i}' k)))")
+        d = mtpc("(foreach i 3 (let ((k (* 2 i))) (real @'v-{i}' k)))")
         assert {"v-0", "v-1", "v-2"} <= set(d["names"])
 
     def test_a_let_at_the_top_level_of_a_file_to_import(self, tmp_path):
@@ -514,19 +514,19 @@ class TestBodyLetForeach:
         in_folder(tmp_path, lib, "(import lib)\n(real w lib.v)\n")
 
     def test_a_foreach_at_the_top_level_of_a_file_to_import(self, tmp_path):
-        lib = {"lib.mtp": "(foreach i 3 (real #'v{i}' i (const)))\n"}
+        lib = {"lib.mtp": "(foreach i 3 (real @'v{i}' i (const)))\n"}
         in_folder(tmp_path, lib, "(import lib)\n(real w lib.v2)\n")
 
     def test_a_let_in_a_foreach_in_a_file_to_import(self, tmp_path):
-        lib = {"lib.mtp": "(foreach i 3 (let ((k (* 2 i))) (real #'v{i}' k (const))))\n"}
+        lib = {"lib.mtp": "(foreach i 3 (let ((k (* 2 i))) (real @'v{i}' k (const))))\n"}
         in_folder(tmp_path, lib, "(import lib)\n(real w lib.v2)\n")
 
     @pytest.mark.parametrize(
         "text",
         [
             "(let ((k 2)) (real v k))",
-            "(foreach i 3 (real #'v{i}' i))",
-            "(foreach i 3 (let ((k i)) (real #'v{i}' k)))",
+            "(foreach i 3 (real @'v{i}' i))",
+            "(foreach i 3 (let ((k i)) (real @'v{i}' k)))",
         ],
     )
     def test_a_file_to_import_holds_in_a_let_or_foreach_only_what_it_may(self, tmp_path, text):
@@ -570,16 +570,16 @@ class TestBodyLetForeach:
 @rule("formula-terms")
 class TestFormulaTerms:
     def test_the_string_declares_its_terms(self):
-        accepted("(formula f $'\\term{a}{x}' (defaults (padding 3)) (term a (fill 'red')))")
+        accepted("(formula f $'\\term{a}{x}' (defaults (padding 3)) (term a (fill #'red')))")
 
     def test_the_string_after_the_defaults_is_an_error(self):
-        compile_error("(formula f (defaults (padding 3)) $'\\term{a}{x}' (term a (fill 'red')))")
+        compile_error("(formula f (defaults (padding 3)) $'\\term{a}{x}' (term a (fill #'red')))")
 
     def test_a_term_that_the_string_does_not_mark_is_an_error(self):
-        compile_error("(formula f $'\\term{a}{x}' (term b (fill 'red')))")
+        compile_error("(formula f $'\\term{a}{x}' (term b (fill #'red')))")
 
     def test_a_term_before_the_string_is_an_error(self):
-        compile_error("(formula f (term a (fill 'red')) $'\\term{a}{x}')")
+        compile_error("(formula f (term a (fill #'red')) $'\\term{a}{x}')")
 
     def test_a_variable_before_the_string_is_an_error(self):
         compile_error("(formula f (real k 1) $'x')")

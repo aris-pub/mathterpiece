@@ -506,10 +506,10 @@ class TestRounding:
 class TestMixedColorChannels:
     @MIX
     def test_a_channel_that_lies_halfway_rounds_up(self):
-        assert value("(color v (mix '#000000' '#050505' 0.5))", "v") == "#030303ff"
+        assert value("(color v (mix #'#000000' #'#050505' 0.5))", "v") == "#030303ff"
 
     def test_a_channel_that_does_not_lie_halfway(self):
-        assert value("(color v (mix '#000000' '#060606' 0.5))", "v") == "#030303ff"
+        assert value("(color v (mix #'#000000' #'#060606' 0.5))", "v") == "#030303ff"
 
 
 @rule("seed-variable")
@@ -624,7 +624,7 @@ class TestRandomSite:
         assert _sites(d) == {"a": 0, "b": 1, "c": 2}
 
     def test_each_copy_of_a_foreach_has_its_own_site(self):
-        d = mtpc(RAND + "(rand-seed s 1) (foreach i 3 (real #'k-{i}' (rand)))")
+        d = mtpc(RAND + "(rand-seed s 1) (foreach i 3 (real @'k-{i}' (rand)))")
         assert _sites(d) == {"k-0": 0, "k-1": 1, "k-2": 2}
 
     @SITES
@@ -699,7 +699,7 @@ class TestEqualityByContent:
             ("[1 2]", "[1 2]", True),
             ("[1 2]", "[1 2 3]", False),
             ("(as point [1 2])", "(as point [1 2])", True),
-            ("(as color 'navy')", "(as color '#000080')", True),
+            ("(as color #'navy')", "(as color #'#000080')", True),
         ],
     )
     def test_values_compare_by_content(self, a, b, result):

@@ -3,10 +3,10 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from mathterpiece.colors import parse_color
 from mathterpiece.nodes import (
     Bar,
     Brackets,
+    ColorLit,
     ComplexLit,
     Form,
     IntLit,
@@ -275,10 +275,10 @@ def _own_type(node: Node, expected: Type | None) -> Type:
         return COMPLEX
     if isinstance(node, StrLit):
         if expected == COLOR:
-            if parse_color(node.value) is None:
-                raise TypeError_(f"{node.value!r} is not a color")
-            return COLOR
+            raise TypeError_("expected color, got string: a color is written #'…', as #'red'")
         return STRING
+    if isinstance(node, ColorLit):
+        return COLOR
     if isinstance(node, ListLit):
         if expected == POINT:
             if len(node.items) != 2 or not all(fits(_own_type(i, REAL), REAL) for i in node.items):

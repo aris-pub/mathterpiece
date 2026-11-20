@@ -95,7 +95,7 @@ def fixed(m, name):
 
 def test_a_containers_defaults_give_it_to_the_groups_among_its_members():
     m = model(
-        "(scene s (group corners (defaults (fill 'black') (fixed-size true))"
+        "(scene s (group corners (defaults (fill #'black') (fixed-size true))"
         " (group a (translate [0 0]) (circle_ (r 9)))"
         " (group b (translate [1 0]) (circle_ (r 9)))"
         " (circle other (r 1))))"
