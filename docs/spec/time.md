@@ -15,7 +15,7 @@ for it. So a use written as a member of an `in-order` or an `at-once` is one ste
 ({numref}`animation-step`). The prover proves that each argument {term}`fits <fit>` the type
 of its parameter. An argument may be any expression that may be written in the body in the places
 where its parameter is written, so `(pulse (* 2 k))` is an error when the parameter is a duration,
-by {doc}`binding-time`, and is accepted when it is a `to`. A parameter stands for a value or a
+by {doc}`binding-time`, and is accepted when it is a `to`. A parameter stands for a value, such as a number or a
 shape, never for a variable: a move in the body may move an attribute of a shape given as a
 parameter, such as `who.opacity`, and never the parameter itself. The one exception is a parameter
 of type `rand-seed`, which stands for a seed: its argument is the name of a seed, and in the body

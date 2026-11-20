@@ -3,23 +3,23 @@
 
 This page defines the things that the compiler builds from a source and that the runtime holds in
 memory and manipulates: values, variables and attributes. A {term}`value` is a
-{term}`primitive value` or an {term}`object`. Variables and attributes are
+{term}`primitive` or an {term}`object`. Variables and attributes are
 {term}`containers <container>`: each holds one value.
 What the parser reads, {term}`literals <literal>` among it, is defined in {doc}`grammar`. This page
 specifies the language.
 
-<figure class="mtp-diagram" style="max-width: 35rem">
-<svg viewBox="0 0 560 408" role="img" aria-labelledby="mtp-dm-title"><title id="mtp-dm-title">Three columns: text in the source, values in the compiler or runtime, and variables in the compiler or runtime. In the source: a literal and other expressions give primitive values; declarations and some expressions give objects. A primitive value never changes and has no identity. An object has an identity and attributes, each like a variable. A variable holds one value, a primitive value or an object, and is free, bound or const.</title><defs><marker id="mtp-dm-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mtp-d-headpath" d="M0 0 L10 5 L0 10 z"/></marker></defs><text class="mtp-d-label" x="90" y="16" text-anchor="middle">text in the source</text><text class="mtp-d-label" x="280" y="16" text-anchor="middle">values in the</text><text class="mtp-d-label" x="280" y="30" text-anchor="middle">compiler or runtime</text><text class="mtp-d-label" x="470" y="16" text-anchor="middle">variables in the</text><text class="mtp-d-label" x="470" y="30" text-anchor="middle">compiler or runtime</text><g transform="translate(0,16)"><rect class="mtp-d-file" x="15" y="34" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="58" text-anchor="middle">literal</text><text class="mtp-d-code" x="90" y="80" text-anchor="middle">3  'hi'  [1 2]</text><line class="mtp-d-arrow" x1="165" y1="69" x2="213" y2="69" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="118" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="142" text-anchor="middle">expressions</text><text class="mtp-d-code" x="90" y="164" text-anchor="middle">(+ 1 2)  (sqrt 2)</text><line class="mtp-d-arrow" x1="165" y1="153" x2="213" y2="153" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="222" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="246" text-anchor="middle">declarations</text><text class="mtp-d-code" x="90" y="268" text-anchor="middle">(circle c …)</text><text class="mtp-d-code" x="90" y="284" text-anchor="middle">(func f …)</text><line class="mtp-d-arrow" x1="165" y1="257" x2="213" y2="257" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="306" width="150" height="70" rx="6"/><text class="mtp-d-name" x="90" y="330" text-anchor="middle">expressions</text><text class="mtp-d-code" x="90" y="352" text-anchor="middle">(if f a b)  g[0]</text><text class="mtp-d-code" x="90" y="368" text-anchor="middle">(fn …)  (rec …)</text><line class="mtp-d-arrow" x1="165" y1="341" x2="213" y2="341" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-part" x="215" y="34" width="130" height="154" rx="6"/><text class="mtp-d-name" x="280" y="96" text-anchor="middle">primitive value</text><text class="mtp-d-sub" x="280" y="118" text-anchor="middle">never changes,</text><text class="mtp-d-sub" x="280" y="134" text-anchor="middle">has no identity</text><rect class="mtp-d-part" x="215" y="222" width="130" height="154" rx="6"/><text class="mtp-d-name" x="280" y="276" text-anchor="middle">object</text><text class="mtp-d-sub" x="280" y="298" text-anchor="middle">has an identity</text><text class="mtp-d-sub" x="280" y="314" text-anchor="middle">and attributes, each</text><text class="mtp-d-sub" x="280" y="330" text-anchor="middle">like a variable</text><rect class="mtp-d-part" x="395" y="155" width="150" height="104" rx="6"/><text class="mtp-d-name" x="470" y="179" text-anchor="middle">variable</text><text class="mtp-d-code" x="470" y="201" text-anchor="middle">(real a 1)</text><text class="mtp-d-code" x="470" y="219" text-anchor="middle">(var sel shape c)</text><text class="mtp-d-sub" x="470" y="242" text-anchor="middle">free, bound or const</text><line class="mtp-d-arrow" x1="395" y1="182" x2="347" y2="140" marker-end="url(#mtp-dm-head)"/><line class="mtp-d-arrow" x1="395" y1="228" x2="347" y2="270" marker-end="url(#mtp-dm-head)"/><text class="mtp-d-label" x="470" y="145" text-anchor="middle">holds one</text></g></svg>
+<figure class="mtp-diagram" style="max-width: 37rem">
+<svg viewBox="0 0 590 508" role="img" aria-labelledby="mtp-dm-title"><title id="mtp-dm-title">Three columns: text in the source, values in the compiler or runtime, and containers in the compiler or runtime. Literals and some compounds give primitives. Declarations and other compounds give objects. Type declarations and names of types give types, which are held in the compiler only. A primitive never changes and has no identity. An object has an identity and attributes, each a container. A type is a set of values, known when compiling. A container is a variable or an attribute, holds one value, and is free, bound or const.</title><defs><marker id="mtp-dm-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mtp-d-headpath" d="M0 0 L10 5 L0 10 z"/></marker></defs><text class="mtp-d-label" x="105" y="16" text-anchor="middle">text in the source</text><text class="mtp-d-label" x="315" y="16" text-anchor="middle">values in the</text><text class="mtp-d-label" x="315" y="30" text-anchor="middle">compiler or runtime</text><text class="mtp-d-label" x="500" y="16" text-anchor="middle">containers in the</text><text class="mtp-d-label" x="500" y="30" text-anchor="middle">compiler or runtime</text><g transform="translate(0,16)"><rect class="mtp-d-file" x="15" y="34" width="180" height="70" rx="6"/><text class="mtp-d-name" x="105" y="58" text-anchor="middle">literals</text><text class="mtp-d-code" x="105" y="80" text-anchor="middle">3  'hi'  [1 2]</text><line class="mtp-d-arrow" x1="195" y1="69" x2="243" y2="69" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="118" width="180" height="70" rx="6"/><text class="mtp-d-name" x="105" y="142" text-anchor="middle">compounds</text><text class="mtp-d-code" x="105" y="164" text-anchor="middle">(+ 1 2)  (sqrt 2)</text><line class="mtp-d-arrow" x1="195" y1="153" x2="243" y2="153" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="222" width="180" height="70" rx="6"/><text class="mtp-d-name" x="105" y="246" text-anchor="middle">declarations</text><text class="mtp-d-code" x="105" y="268" text-anchor="middle">(circle c …)</text><text class="mtp-d-code" x="105" y="284" text-anchor="middle">(func f …)</text><line class="mtp-d-arrow" x1="195" y1="257" x2="243" y2="257" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="306" width="180" height="70" rx="6"/><text class="mtp-d-name" x="105" y="330" text-anchor="middle">compounds</text><text class="mtp-d-code" x="105" y="352" text-anchor="middle">(if f a b)</text><text class="mtp-d-code" x="105" y="368" text-anchor="middle">(fn …)  (rec …)</text><line class="mtp-d-arrow" x1="195" y1="341" x2="243" y2="341" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-file" x="15" y="410" width="180" height="70" rx="6"/><text class="mtp-d-name" x="105" y="434" text-anchor="middle">types</text><text class="mtp-d-code" x="105" y="456" text-anchor="middle">(type t …)</text><text class="mtp-d-code" x="105" y="472" text-anchor="middle">real|none</text><line class="mtp-d-arrow" x1="195" y1="445" x2="243" y2="445" marker-end="url(#mtp-dm-head)"/><rect class="mtp-d-part" x="245" y="34" width="140" height="154" rx="6"/><text class="mtp-d-name" x="315" y="96" text-anchor="middle">primitive</text><text class="mtp-d-sub" x="315" y="118" text-anchor="middle">never changes,</text><text class="mtp-d-sub" x="315" y="134" text-anchor="middle">has no identity</text><rect class="mtp-d-part" x="245" y="222" width="140" height="154" rx="6"/><text class="mtp-d-name" x="315" y="276" text-anchor="middle">object</text><text class="mtp-d-sub" x="315" y="298" text-anchor="middle">has an identity</text><text class="mtp-d-sub" x="315" y="314" text-anchor="middle">and attributes,</text><text class="mtp-d-sub" x="315" y="330" text-anchor="middle">each a container</text><text class="mtp-d-label" x="315" y="402" text-anchor="middle">types in the compiler</text><rect class="mtp-d-part" x="245" y="410" width="140" height="70" rx="6"/><text class="mtp-d-name" x="315" y="434" text-anchor="middle">type</text><text class="mtp-d-sub" x="315" y="454" text-anchor="middle">a set of values,</text><text class="mtp-d-sub" x="315" y="470" text-anchor="middle">known when compiling</text><rect class="mtp-d-part" x="425" y="155" width="150" height="104" rx="6"/><text class="mtp-d-name" x="500" y="179" text-anchor="middle">container</text><text class="mtp-d-sub" x="500" y="199" text-anchor="middle">a variable or</text><text class="mtp-d-sub" x="500" y="215" text-anchor="middle">an attribute</text><text class="mtp-d-sub" x="500" y="242" text-anchor="middle">free, bound or const</text><line class="mtp-d-arrow" x1="425" y1="182" x2="387" y2="140" marker-end="url(#mtp-dm-head)"/><line class="mtp-d-arrow" x1="425" y1="228" x2="387" y2="270" marker-end="url(#mtp-dm-head)"/><text class="mtp-d-label" x="500" y="145" text-anchor="middle">holds one</text></g></svg>
 </figure>
 
-A {term}`form` is a head and its items in parentheses. Each form is a {term}`compound expression`, a
+A {term}`form` is a head and its items in parentheses. Each form is a {term}`compound`, a
 declaration or a {term}`clause`.
 
-An expression is a literal, a name or a compound expression. A literal evaluates to a primitive value. A name
+An expression is a literal, a name or a compound. A literal evaluates to a primitive. A name
 refers to a type, a variable, an object or an attribute, and evaluates to what it refers to. A
 {term}`broadened type`, such as `real|none`, is a name of a type.
 
-A compound expression evaluates to a primitive value, a type, an object or an attribute. An object or
+A compound evaluates to a primitive, a type, an object or an attribute. An object or
 attribute that it gives already exists, except with the heads `fn`, `rec` and `move`: each of these
 gives a new object, and every attribute of that object is const or bound, never free, so no writer
 can write it ({numref}`functions`, {numref}`records`). So evaluating an expression never writes a
@@ -31,20 +31,20 @@ The arguments of a form are expressions, and the items of a body are declaration
 as a named argument, the guard of a control, or `exists-when` in a scene or a formula, is part of
 the form around it and has no result of its own.
 
-A `let` is a compound expression where it holds an expression, and a declaration where it holds
+A `let` is a compound where it holds an expression, and a declaration where it holds
 declarations. A `foreach` holds declarations and is always a declaration. An `import` declares the
 names that it brings in.
 
-## Primitive values
+## Primitives
 
 ```{rule} values
-A primitive value is a value that never changes and has no identity: two primitive values that are
-equal are the same value. The primitive values are the numbers, the bools, the strings, the colors,
-the points, the lists and `none`. A primitive value comes from a literal
+A primitive is a value that never changes and has no identity: two primitives that are
+equal are the same value. The primitives are the numbers, the bools, the strings, the colors,
+the points, the lists and `none`. A primitive comes from a literal
 ({numref}`literal-types`) or from another expression.
 ```
 
-Each of these gives a primitive value:
+Each of these gives a primitive:
 
 | Written | The value | Its type |
 |---|---|---|
@@ -57,7 +57,7 @@ Each of these gives a primitive value:
 | `[0 1]`, where a point is expected | the point at x 0 and y 1 | `point` |
 | `none` | `none` | `none` |
 
-Every primitive value can be written as a literal. Since a primitive value never
+Every primitive can be written as a literal. Since a primitive never
 changes, nothing writes one: a writer writes a variable or an attribute, which then holds a
 different value. A slider that writes `(real a 1)` puts 2 into `a`, and 1 is still 1.
 
@@ -176,19 +176,19 @@ of attributes.
 ## Identity
 
 ```{rule} identity
-Two primitive values are the same value exactly when they are equal. An object is the same object only as
+Two primitives are the same value exactly when they are equal. An object is the same object only as
 itself: each declaration, each copy that a `foreach` makes of a declaration, and each evaluation of
 `(fn …)`, `(rec …)` or `(move …)` creates an object of its own, and two objects created apart are
 two objects, however alike their attributes.
 ```
 
-So `[1 2]` written twice is one primitive value, while `(circle c (r 1))` and `(circle d (r 1))` are two
+So `[1 2]` written twice is one primitive, while `(circle c (r 1))` and `(circle d (r 1))` are two
 objects, and so are the copies `c-0` and `c-1` of `(foreach k 2 (circle @'c-{k}' (r 1)))`.
 
 A source usually works with an object through its attributes, as `c.r` or `style.width`, and with a
-primitive value by itself, as `3` or `'hi'`. A primitive value may have attributes too: a point has `x` and `y`, a
+primitive by itself, as `3` or `'hi'`. A primitive may have attributes too: a point has `x` and `y`, a
 color its channels `r`, `g`, `b` and `a`, a list and a string a `length`, and a complex number `re`
-and `im`. Reading an attribute of a primitive value gives a primitive value. Writing one puts a new value into the
+and `im`. Reading an attribute of a primitive gives a primitive. Writing one puts a new value into the
 variable or the attribute that holds it, and the old value does not change.
 
 ## Functions
@@ -205,7 +205,7 @@ may write, a new function made each time that `(fn …)` is evaluated loses noth
 
 :::{admonition} Code differs
 :class: note
-The compiler treats functions as primitive values: no variable may hold one (bead mtp-wppk), and `(= f g)`
+The compiler treats functions as primitives: no variable may hold one (bead mtp-wppk), and `(= f g)`
 on two functions compiles, with no result given by the spec.
 :::
 
@@ -224,7 +224,7 @@ it with `(face serif)`, and writing `serif.size` changes the size of every text 
 
 :::{admonition} Code differs
 :class: note
-The compiler treats a font as a primitive value: its parts can be read, as `f.size`, but not written, and a
+The compiler treats a font as a primitive: its parts can be read, as `f.size`, but not written, and a
 text applies one with `(font f)`. Bead mtp-1vyc makes fonts namespaces.
 :::
 

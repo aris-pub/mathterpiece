@@ -23,7 +23,7 @@ seeds of its random functions, and, for a read of a position, the frame of the
 expression that reads it ({doc}`world-model`).
 ```
 
-Only writers change values, and no expression is a writer ({doc}`reaction`).
+Only writers change variables and attributes, and no expression is a writer ({doc}`reaction`).
 
 ## Evaluation order
 
@@ -43,17 +43,17 @@ These forms evaluate only some of their parts:
 |---|---|
 | `(if c a b)` | `c`, then `a` when `c` is true, or `b` when it is false |
 | `(or? x d)` | `x`, then `d` only when `x` is `none` |
-| `(let ((n1 v1) (n2 v2) …) body)` | each value that the {term}`body` or a later value reads, once, in order, then the body. A value that nothing reads is not evaluated. A value that is read is evaluated before the body, even when the branch of the body that reads it is not taken |
+| `(let ((n1 v1) (n2 v2) …) body)` | each expression of a name that the {term}`body` or a later expression reads, once, in order, then the body. An expression that nothing reads is not evaluated. An expression that is read is evaluated before the body, even when the branch of the body that reads it is not taken |
 | `(fn params body)` | nothing, until the function is called |
 ```
 
 `cond`, `and` and `or` are {term}`syntactic sugar` for `if` forms ({numref}`sugar-rewrites`). So, when
 compiling and while drawing, `cond` evaluates its tests in order, up to the first that is true, then
-the value of that clause only. `and` stops at the first part that is false, and `or` at the first
+the value of that branch only. `and` stops at the first part that is false, and `or` at the first
 part that is true. `(when c x)` is `(if c x none)` ({numref}`rewrite-when`), and evaluates its parts
 in the same way.
 
-The compiler leaves out every `let` value that nothing reads, and the runtime evaluates the rest
+The compiler leaves out every `let` expression that nothing reads, and the runtime evaluates the rest
 before the body. So in
 `(let ((s (walk k))) (if c s 0))`, `walk` is called while drawing whether `c` is true or not.
 
@@ -125,7 +125,7 @@ inputs, when folded and while drawing.
 | `range` | a gap of 0, a negative count `num`, and more than 1,000,000 items |
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
-| a bound value with a {term}`condition` | a value that breaks the condition ({doc}`types`) |
+| a bound variable or attribute with a {term}`condition` | a value that breaks the condition ({doc}`types`) |
 
 At every other input, an operation never gives `none`.
 ```
@@ -537,7 +537,7 @@ compiles.
 ```
 
 ```{rule} equality-by-content
-Values compare by content, and mutable objects by identity. `=` and `!=` never give `none`:
+Primitives compare by content, and objects by identity. `=` and `!=` never give `none`:
 
 | Type | `(= a b)` is true when |
 |---|---|
@@ -548,7 +548,7 @@ Values compare by content, and mutable objects by identity. `=` and `!=` never g
 | `point`, `list[T]`, `transform` | they have the same length, and the items at each position are equal |
 | `color` | they are the same color: `(= ink #'#000080')` is true with `(color ink #'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS gives it |
 | `font` | every part is equal |
-| a shape, a group, a record, a formula, a term and every other mutable object | the two are the same object. Two circles with the same attributes are not equal |
+| a shape, a group, a record, a formula, a term and every other object | the two are the same object. Two circles with the same attributes are not equal |
 ```
 
 Since `=` on reals is exact, `(= (+ 0.1 0.2) 0.3)` is false: the sum is 0.30000000000000004. By
@@ -577,7 +577,7 @@ strings, choices and colors match only when they are exactly the same, and `none
 ```
 
 The runtime matches values to read the step of a play or a stepper from the scene, and to check
-whether the free values that a canvas's `on-view` moves still have their values from page load.
+whether the free variables and attributes that a canvas's `on-view` moves still hold their values from page load.
 
 While drawing, the runtime uses `=` to skip writes: a write of a value equal to the current one is
 skipped, and nothing that depends on it is computed again.
