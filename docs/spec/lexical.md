@@ -238,8 +238,9 @@ written as it is.
 
 ```{rule} color-literals
 A color is written `#'…'`. Between the quotes is a CSS color name, `transparent`, or 3, 4, 6 or 8
-hex digits with a `#` before them or not, in small or capital letters. Its value is a color, never a
-string, and a string is never read as a color.
+hex digits with a `#` before them or not, in small or capital letters. Any other text between the
+quotes is a syntax error. Its value is a color, never a string, and a string is never read as a
+color.
 ```
 
 So `#'red'`, `#'#ff0000'` and `#'ff0000'` are the same color, and `#'#f00'` is too. No CSS color
