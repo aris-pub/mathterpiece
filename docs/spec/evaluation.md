@@ -232,7 +232,7 @@ By {numref}`sugar-rewrites`, `cond` and `when` are `if` forms, so the value of e
 only when the branch taken is `none`.
 
 ```{rule} none-never-a-condition
-The condition of an `if` and the value of the `(active …)` of a {term}`control` or a
+The test of an `if` and the value of the `(active …)` of a {term}`control` or a
 {term}`listener` never receive `none`. Neither do the items given to `sum`, `count`, `min`, `max`,
 `any`, `all` and `reduce`. A form that might give them `none` is a compile error ({doc}`types`).
 ```

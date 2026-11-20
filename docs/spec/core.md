@@ -558,7 +558,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `priority` | core | the writer's priority | {doc}`concurrency` |
 | `stop-propagation` | core | whether an event goes up the scene tree | {doc}`reaction` |
 | `in` | core | the views that a control belongs to | {doc}`page-interface`, {doc}`lifecycle` |
-| a condition | core | a bool form that limits what a writer writes | {doc}`reaction` |
+| a guard | core | a bool form that limits what a writer writes ({numref}`writer-guards`) | {doc}`reaction` |
 | `doc` on a component | core | its docstring | {doc}`compiled-format` |
 
 :::{admonition} Code differs
@@ -596,7 +596,7 @@ follow the rule.
 | `defaults` | items `(attribute value)`, and in a score, `(duration …)`, `(ease …)` and `(lag …)` | yes |
 | `canvas` | at least one thing to draw: a name of a shape or of the scene, a list literal, or an expression that gives a shape, `none` or a list of shapes, such as `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
 | `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
-| a control, a listener | conditions, such as `(>= k 0)` | yes |
+| a control, a listener | guards, such as `(>= k 0)` | yes |
 | `let`, `foreach` | items of the kinds that the body around them holds | yes |
 | `in` | the views that a control belongs to | no |
 | `labels` | strings | no |
@@ -683,7 +683,7 @@ for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a com
 | the views, the controls and their items | core | {doc}`page-interface`, {doc}`reaction`, {doc}`concurrency` |
 | the fourteen listeners | core | {doc}`reaction`, {doc}`concurrency`, {doc}`lifecycle` |
 | a move as the target of `on-drag` | core | {doc}`reaction`, {numref}`drag-group-shift` |
-| a condition | core | {doc}`reaction` |
+| a guard | core | {doc}`reaction`, {numref}`writer-guards` |
 | the operators, `not`, `abs`, the `none` functions and the box points | built-in | {numref}`built-ins` |
 | the built-in functions and the collections, `map` over an int included, `steps` | built-in | {doc}`stdlib` |
 | the primitives | standard library | {numref}`primitive-form` |
