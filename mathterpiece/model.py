@@ -93,6 +93,8 @@ class MotifDef:
     params: tuple[Param, ...]
     body: tuple[Node, ...]
     pos: Pos = NOPOS
+    # The names of a let or a foreach around the declaration, which every instance reads.
+    scope: dict = field(default_factory=dict, compare=False)
 
 
 @dataclass
@@ -129,6 +131,8 @@ class VariantDef:
     # The attributes its body sets, x and y for pos.
     fixed: frozenset[str]
     pos: Pos = NOPOS
+    # The names of a let or a foreach around the declaration, which every instance reads.
+    scope: dict = field(default_factory=dict, compare=False)
 
 
 @dataclass

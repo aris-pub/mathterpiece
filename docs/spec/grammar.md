@@ -323,10 +323,6 @@ written among the steps of an animation, and `(circle c (let ((k 2)) (r k)))` is
 
 :::{admonition} Code differs
 :class: note
-- At the top level, a type, interface, scene, motif, variant, function, colormap, transition,
-  animation, choreo or primitive inside a `let` or a `foreach` cannot read the names that the
-  `let` or the `foreach` gives: `(let ((k 2)) (scene s (circle c (r k))))` is the error "unknown
-  name 'k'" (`compiler.py`, `top_here`). Bead mtp-ydd4.7.7 makes the names readable there.
 - A `let` is an error in the body of an animation, a choreo, an `at-once` and an `in-order`
   (`compiler.py:3018`, `steps`), though a `let` inside a `foreach` there compiles. `let` and
   `foreach` are errors in a namespace and a formula, and the body of a canvas, a readout or a
