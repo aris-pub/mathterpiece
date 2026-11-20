@@ -1,5 +1,5 @@
 """Strings (mtp-rry4, the author, 2026-11-18): $'…' is a TeX string literal, f'…' is syntactic
-sugar for (concat PIECE…), each {X} in it (fmt X) and each {X:S} (fmt X 'S'), #'…' is
+sugar for (concat PIECE…), each {X} in it (fmt X) and each {X:S} (fmt X 'S'), @'…' is
 (name f'…'), and concat and fmt are core forms and keywords (docs/spec/grammar.md,
 "shorthand-forms"; docs/spec/lexical.md, "tex-strings" and "interpolated-strings")."""
 
@@ -58,12 +58,12 @@ class TestParse:
         assert atom("f'{f'{a}'}'") == concat(fmt(concat(fmt(n("a")))))
 
     def test_name_string(self):
-        assert atom("#'dot-{k}'") == Form((n("name"), concat(StrLit("dot-"), fmt(n("k")))))
+        assert atom("@'dot-{k}'") == Form((n("name"), concat(StrLit("dot-"), fmt(n("k")))))
 
     def test_name_string_with_parts(self):
         inner = Form((n("name"), concat(StrLit("dot-"), fmt(n("k")))))
-        assert atom("#'dot-{k}'.a") == Form((n("."), inner, n("a")))
-        assert atom("#'dot-{k}'[0]") == Form((n("."), inner, IntLit(0)))
+        assert atom("@'dot-{k}'.a") == Form((n("."), inner, n("a")))
+        assert atom("@'dot-{k}'[0]") == Form((n("."), inner, IntLit(0)))
 
     def test_tex_string(self):
         assert atom(r"$'\frac{a}{b}'") == StrLit(r"\frac{a}{b}", tex=True)
@@ -102,7 +102,7 @@ class TestPositions:
         assert bang.pos == Pos(1, 17)
 
     def test_name_string(self):
-        (form,) = parse("(f #'a{k}')")
+        (form,) = parse("(f @'a{k}')")
         _, text = items(form.items[1])
         assert form.items[1].pos == Pos(1, 4) and text.pos == Pos(1, 4)
         assert items(text)[2].pos == Pos(1, 7)
@@ -328,7 +328,7 @@ class TestTex:
 
     def test_a_tex_string_is_a_string_elsewhere(self):
         assert value("(string v $'\\frac{a}{b}')") == "\\frac{a}{b}"
-        assert value("(color v $'red')") == value("(color v 'red')")
+        error("(color v $'red')", "expected color, got string")
 
     def test_tex_is_no_form(self):
         error("(string v (tex 'a'))", "unknown function 'tex'")
@@ -354,19 +354,19 @@ class TestTex:
     @pytest.mark.parametrize("text", ["'x'", "$'\\alpha'", "(if true 'x' 'y')", "s"])
     def test_any_string_expression_in_a_term(self, text):
         m = model(
-            f"(string s 'x' (const)) (formula f $'\\term{{v}}{{}}' (term v (fill 'red') {text}))"
+            f"(string s 'x' (const)) (formula f $'\\term{{v}}{{}}' (term v (fill #'red') {text}))"
         )
         assert m.get("f.v").attrs["tex"].value in ("x", "\\alpha")
 
     def test_a_term_holds_one_string(self):
         error(
-            r"(formula f $'\term{v}{}' (term v 'a' (fill 'red') 'b'))",
+            r"(formula f $'\term{v}{}' (term v 'a' (fill #'red') 'b'))",
             "a term holds one string, its LaTeX",
         )
 
     def test_like_copies_the_string(self):
         m = model(
-            r"(formula f $'\term{a}{} \term{b}{}' (term a 'x' (fill 'red')) (term b (like a)))"
+            r"(formula f $'\term{a}{} \term{b}{}' (term a 'x' (fill #'red')) (term b (like a)))"
         )
         assert m.get("f.b").attrs["tex"].value == "x"
 

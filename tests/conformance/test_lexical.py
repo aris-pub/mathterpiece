@@ -8,6 +8,7 @@ from helpers import field, interp
 from mathterpiece.cli import main
 from mathterpiece.nodes import (
     BoolLit,
+    ColorLit,
     ComplexLit,
     Form,
     IntLit,
@@ -234,7 +235,7 @@ class TestNameCharacters:
             "a.false.b",
             "none.x[0]",
             "r@none.x",
-            "#'a{k}'.true",
+            "@'a{k}'.true",
         ],
     )
     def test_a_part_that_is_true_false_or_none_is_an_error(self, text):
@@ -363,7 +364,7 @@ class TestDeclarationNames:
             pytest.param("(real v (let ((if 2)) if))", marks=KEYWORD_NAMES),
             pytest.param("(scene s (foreach if 2 (circle_ (r 1))))", marks=KEYWORD_NAMES),
             pytest.param("(namespace n (real if 1))", marks=KEYWORD_NAMES),
-            pytest.param("(palette p (if 'red'))", marks=KEYWORD_NAMES),
+            pytest.param("(palette p (if #'red'))", marks=KEYWORD_NAMES),
             pytest.param("(formula if $'x')", marks=KEYWORD_NAMES),
             pytest.param("(motif if () (circle_ (r 1)))", marks=KEYWORD_NAMES),
             pytest.param("(font if (size 12))", marks=KEYWORD_NAMES),
@@ -401,7 +402,9 @@ class TestDeclarationNames:
         m = accepted("(func max ((real a) (real b)) a) (real v (max 1 2))")
         assert m.get("v").value.value == 1
 
-    @pytest.mark.xfail(strict=True, reason="mtp-9rj1: a declaration may take the name of an operator")
+    @pytest.mark.xfail(
+        strict=True, reason="mtp-9rj1: a declaration may take the name of an operator"
+    )
     def test_no_declaration_takes_the_name_of_an_operator(self):
         compile_error("(func + ((real a) (real b)) 7)")
 
@@ -526,10 +529,10 @@ class TestPrefixForms:
         assert items("(f free@(g))") == (form(name("free"), form(name("g"))),)
 
     def test_an_optional_argument(self):
-        assert items("(circle c r@1 fill@'red')") == (
+        assert items("(circle c r@1 fill@#'red')") == (
             name("c"),
             form(name("r"), IntLit(1)),
-            form(name("fill"), StrLit("red")),
+            form(name("fill"), ColorLit("#ff0000ff")),
         )
 
     @pytest.mark.parametrize(
@@ -539,7 +542,7 @@ class TestPrefixForms:
             ("(f marks.grid@g)", "(f (marks.grid g))"),
             ("(f r@(* 2 k))", "(f (r (* 2 k)))"),
             ("(f pos@[1 2])", "(f (pos [1 2]))"),
-            ("(f f@#'a-{k}')", "(f (f #'a-{k}'))"),
+            ("(f f@@'a-{k}')", "(f (f @'a-{k}'))"),
             ("(f x@xs[0] y@a|b)", "(f (x xs[0]) (y a|b))"),
             (
                 "(f r@none s@true t@-1.5 u@$'q' v@f'{k}')",
@@ -570,7 +573,7 @@ class TestPrefixForms:
             "(f true@1)",
             "(f 1@x)",
             "(f #'a'@1)",
-            "(f #'a{b}'@1)",
+            "(f @'a{b}'@1)",
             "(f xs[0]@1)",
             "(f a|r@1)",
             "(f r@ 1)",
@@ -606,16 +609,16 @@ class TestInterpolatedStrings:
         assert items("(f f'{(g ; c\n x)}')") == items("(f f'{(g x)}')")
 
     @pytest.mark.parametrize(
-        "src", ["(f f'{x ; c\n}')", "(f f'{ ;c\n x}')", "(f #'a{k ;c\n}')", "(f f'{(g) ;c\n:>5}')"]
+        "src", ["(f f'{x ; c\n}')", "(f f'{ ;c\n x}')", "(f @'a{k ;c\n}')", "(f f'{(g) ;c\n:>5}')"]
     )
     def test_a_comment_around_the_expression_is_an_error(self, src):
         syntax_error(src)
 
     def test_a_name_string(self):
-        assert items("(f #'dot-{k}')") == (form(name("name"), interp(("dot-", name("k")))),)
+        assert items("(f @'dot-{k}')") == (form(name("name"), interp(("dot-", name("k")))),)
 
     @pytest.mark.parametrize(
-        "src", ["(f f'}')", "(f f'a}b')", "(f #'plain')", "(f f'{}')", "(f f'{a b}')"]
+        "src", ["(f f'}')", "(f f'a}b')", "(f @'plain')", "(f f'{}')", "(f f'{a b}')"]
     )
     def test_errors(self, src):
         syntax_error(src)
@@ -627,24 +630,26 @@ class TestInterpolatedStrings:
         assert items("(f f'{f'{a}'}')") == (interp((interp((name("a"),)),)),)
 
     def test_after_a_nested_name_string_the_braces_go_on(self):
-        (s,) = items("(f f'{#'n-{k}'.x:y}')")
+        (s,) = items("(f f'{@'n-{k}'.x:y}')")
         (_, piece) = s.items
         assert isinstance(piece, Form) and piece.items[2] == StrLit("y")
         assert isinstance(piece.items[1], Form)
 
 
-COLOR_SIGIL = xfail("mtp-c1hl", "a color is written as a string, and #'...' is a name string")
-
-
 @rule("color-literals")
 class TestColorLiterals:
-    @COLOR_SIGIL
     def test_three_spellings_of_one_color(self):
         a = accepted("(color c #'red')").get("c").value.value
         assert a == accepted("(color c #'#ff0000')").get("c").value.value
         assert a == accepted("(color c #'ff0000')").get("c").value.value
 
-    @COLOR_SIGIL
     def test_a_string_is_never_a_color(self):
         accepted("(color c #'red')")
         compile_error("(color c 'red')")
+
+    def test_a_string_in_a_fill_is_an_error(self):
+        accepted("(scene s (circle c (r 1) (fill #'red')))")
+        compile_error("(scene s (circle c (r 1) (fill 'red')))")
+
+    def test_a_color_is_never_a_string(self):
+        compile_error("(string s #'red')")

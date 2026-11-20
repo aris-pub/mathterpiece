@@ -11,7 +11,7 @@
 (int ended 0)
 (int started 0)
 (scene s
-  (rect band (pos [0 -6]) (width 16) (height 2) (fill '#ffffff') (fill-opacity 0) (stroke none))
+  (rect band (pos [0 -6]) (width 16) (height 2) (fill #'#ffffff') (fill-opacity 0) (stroke none))
   (rect other (pos [6 0]) (width 2) (height 2))
   (circle knob (pos [k 4]) (r 0.5))
   (circle dot (pos [-6 0]) (r 0.5))

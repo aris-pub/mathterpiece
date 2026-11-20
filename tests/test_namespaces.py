@@ -1,4 +1,4 @@
-"""Namespaces (mtp-4rc): (namespace theme (color ink '#1f2a44') (real gap 0.4)) declares one
+"""Namespaces (mtp-4rc): (namespace theme (color ink #'#1f2a44') (real gap 0.4)) declares one
 name, theme, a mutable object that is not drawn, whose members are read and written as
 attributes are, theme.ink like c.r. The author, 2026-11-04: it holds values of any type, free or
 bound, and other namespaces (colors.tab10.blue); its members read each other by bare name inside
@@ -21,7 +21,7 @@ def reads(m, name, attr="r"):
     return m.objects[e.args[0]].name
 
 
-THEME = "(namespace theme (color ink '#1f2a44') (color paper '#f6f1e7') (real gap 0.4 (>= 0)))"
+THEME = "(namespace theme (color ink #'#1f2a44') (color paper #'#f6f1e7') (real gap 0.4 (>= 0)))"
 
 
 class TestDeclaring:
@@ -41,7 +41,7 @@ class TestDeclaring:
         double = m.objects[m.names["theme.double"]].value.expr
         assert m.objects[double.args[1].args[0]].name == "theme.gap"
         m = model(
-            "(namespace theme (color ink 'navy') (color paper 'white')"
+            "(namespace theme (color ink #'navy') (color paper #'white')"
             " (color soft (mix ink paper 0.5))) (scene s (circle c (fill theme.soft)))"
         )
         assert m.get("c").attrs["fill"].bound
@@ -56,7 +56,7 @@ class TestDeclaring:
 
     def test_namespaces_nest(self):
         m = model(
-            "(namespace colors (namespace tab10 (color blue '#1f77b4') (color orange '#ff7f0e')))"
+            "(namespace colors (namespace tab10 (color blue #'#1f77b4') (color orange #'#ff7f0e')))"
             " (scene s (circle c (fill colors.tab10.blue)))"
         )
         assert m.get("c").attrs["fill"].bound
@@ -100,7 +100,7 @@ class TestWriting:
         )
 
     def test_not_a_token(self):
-        error(f"{THEME} (button b (animation (move theme.ink (to 'red') (duration 1))))", "token")
+        error(f"{THEME} (button b (animation (move theme.ink (to #'red') (duration 1))))", "token")
 
     def test_not_a_bound_or_const_member(self):
         error(
@@ -145,7 +145,7 @@ class TestWritten:
         d = json.loads(
             write(
                 compile_source(
-                    "(namespace colors (namespace tab10 (color blue '#1f77b4')))"
+                    "(namespace colors (namespace tab10 (color blue #'#1f77b4')))"
                     " (scene s (circle c (fill colors.tab10.blue)))"
                 )
             )

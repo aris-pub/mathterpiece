@@ -3,10 +3,12 @@ import unicodedata
 from dataclasses import replace
 from fractions import Fraction
 
+from mathterpiece.colors import parse_color
 from mathterpiece.nodes import (
     Bar,
     BoolLit,
     Brackets,
+    ColorLit,
     ComplexLit,
     Form,
     IntLit,
@@ -35,6 +37,7 @@ REAL_RE = re.compile(rf"[+-]?{_UREAL}")
 IMAG_RE = re.compile(rf"([+-]?{_UREAL})i")
 COMPLEX_RE = re.compile(rf"([+-]?{_UREAL})([+-]{_UREAL})i")
 LOOKS_NUMERIC_RE = re.compile(r"[+-]?\.?[0-9]")
+HEX_COLOR_RE = re.compile(r"#?([0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})")
 BOM = "\ufeff"
 WHITESPACE = " \t\n"
 # Characters that unicodedata gives no name.
@@ -172,6 +175,15 @@ def _name_parts(text: str, pos: Pos, after_dot: bool = False) -> list[str | Node
     return list(parts)
 
 
+def _color(text: str) -> str | None:
+    if m := HEX_COLOR_RE.fullmatch(text):
+        return parse_color(f"#{m[1]}")
+    # parse_color would also take a name with spaces around it, or with a # before it.
+    if text.isascii() and text.isalpha():
+        return parse_color(text)
+    return None
+
+
 def _number(text: str, pos: Pos) -> Node | None:
     if INT_RE.fullmatch(text):
         return IntLit(int(text), pos)
@@ -254,7 +266,9 @@ class _Parser:
             return self.tex_string()
         if ch == "#":
             if self.peek(1) != "'":
-                raise ParseError("'#' starts a name string: #'dot-{k}'", pos)
+                raise ParseError("'#' starts a color: #'red'", pos)
+            return self.color_literal()
+        if ch == "@" and self.peek(1) == "'":
             return self.name_string()
         if ch == '"':
             raise ParseError("double quotes are not allowed; use single quotes", pos)
@@ -308,14 +322,14 @@ class _Parser:
             raise ParseError(
                 f"{head}@ is followed directly by its item, as in {head}@1", self.pos()
             )
-        starts_word = ch not in "'$#[(" and not self.src.startswith("f'", self.i)
+        starts_word = ch not in "'$#[(" and not self.src.startswith(("f'", "@'"), self.i)
         if starts_word and self.prefix_end() is not None:
             raise ParseError(f"a prefixed form cannot follow {head}@: write ({head} …)", self.pos())
         return self.node()
 
     def name_string(self) -> Node:
-        """#'dot-{k}', which is (name f'dot-{k}'): the string with values filled in, read as a
-        name. Parts may follow it, as they follow a name: #'dot-{k}'.pos, #'row-{i}'[0]."""
+        """@'dot-{k}', which is (name f'dot-{k}'): the string with values filled in, read as a
+        name. Parts may follow it, as they follow a name: @'dot-{k}'.pos, @'row-{i}'[0]."""
         pos = self.pos()
         # The string's own check for what follows it would refuse a part, so it is read here.
         text = self.interp_string(parts_may_follow=True)
@@ -520,6 +534,24 @@ class _Parser:
         self.expect_delimiter()
         return StrLit("".join(chars), pos)
 
+    def color_literal(self) -> ColorLit:
+        """#'red', #'#f00' or #'f00': a CSS color name, transparent, or hex digits."""
+        pos = self.pos()
+        self.advance()
+        self.advance()
+        start = self.i
+        while self.peek() and self.peek() != "'":
+            self.advance()
+        if not self.peek():
+            raise ParseError("unterminated string", pos)
+        text = self.src[start : self.i]
+        self.advance()
+        value = _color(text)
+        if value is None:
+            raise ParseError(f"'{text}' is not a color: write a CSS color name or hex digits", pos)
+        self.expect_delimiter()
+        return ColorLit(value, pos)
+
     def tex_string(self) -> StrLit:
         """$'…': LaTeX, which uses backslashes everywhere, so only \\' is an escape. \\\\ is
         kept whole, so that it never escapes the quote after it."""
@@ -543,7 +575,7 @@ class _Parser:
         return StrLit("".join(chars), pos, tex=True)
 
     def interp_string(self, parts_may_follow: bool = False) -> Form:
-        """f'…', or the string of #'…': two characters open it. It is (concat PIECE…): each piece
+        """f'…', or the string of @'…': two characters open it. It is (concat PIECE…): each piece
         of text, as long as possible, a string literal, each {X} (fmt X) and each {X:S}
         (fmt X 'S'), each at the position of its text."""
         pos = self.pos()

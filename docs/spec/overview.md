@@ -58,8 +58,8 @@ compile stops the build. Each is shown as its source, then live:
 ; a point on a segment, and a slider and a drag that move it
 (scene s
   (real a 1 (>= 0) (<= 4))
-  (line track (from [0 0]) (to [4 0]) (stroke 'gray'))
-  (circle p (pos [a 0]) (r 0.15) (fill 'crimson')))
+  (line track (from [0 0]) (to [4 0]) (stroke #'gray'))
+  (circle p (pos [a 0]) (r 0.15) (fill #'crimson')))
 
 (canvas v (x -0.5) (y -0.5) (width 5) (height 1) s
   (on-drag p (move a (to pointer.x))))

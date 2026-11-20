@@ -14,7 +14,7 @@ from mathterpiece.compiler import CompileError, compile_source
 
 SCENE = (
     "(bool show false) (real k 0)"
-    " (scene s (circle c (r 1) (stroke '#000000')) (text label 'hi') (circle bound-x (x k))"
+    " (scene s (circle c (r 1) (stroke #'#000000')) (text label 'hi') (circle bound-x (x k))"
     "  (group g (circle a) (circle b)))"
 )
 FADE = (

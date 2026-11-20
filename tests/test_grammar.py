@@ -17,10 +17,12 @@ import pytest
 from lark import Lark, Token, Transformer
 from lark.exceptions import LarkError
 
+from mathterpiece.colors import parse_color
 from mathterpiece.nodes import (
     Bar,
     BoolLit,
     Brackets,
+    ColorLit,
     ComplexLit,
     Form,
     IntLit,
@@ -94,10 +96,12 @@ ACCEPTED = [
     "(f f'x = {x}' f'{x:.2f}' f'{ x }' f'{x :>5}' f'{x:}' f'{{lit}}' f'}}' f'{(* 2 a)}')",
     "(f f'{[1 2]}' f'{'s'}' f'{a[0]}' f'{a|b}' f'{f'{a}' }')",
     "(f f'{(g ; a comment\n x)}')",
-    "(f f'{a:b}' f'{a.b:c}' f'{a[0].b:c}' f'{#'n-{k}'.x :y}')",
-    "(f f'{f'{a}'}' f'{#'n-{k}'.x:y}' f'{[f'{a}' b]}' f'{'s':>5}' f'{f'{f'{a}'}'}')",
-    "(f f'{(g f'{a}' 's')}' f'{#'a{b}'[0]:x}' f'{[1 f'{a:y}'][0]:z}')",
-    "(f #'dot-{k}' #'dot-{k}'.pos #'row-{i}'[0] #'a{b}'.c.d[0].e #'{k}')",
+    "(f f'{a:b}' f'{a.b:c}' f'{a[0].b:c}' f'{@'n-{k}'.x :y}')",
+    "(f f'{f'{a}'}' f'{@'n-{k}'.x:y}' f'{[f'{a}' b]}' f'{'s':>5}' f'{f'{f'{a}'}'}')",
+    "(f f'{(g f'{a}' 's')}' f'{@'a{b}'[0]:x}' f'{[1 f'{a:y}'][0]:z}')",
+    "(f @'dot-{k}' @'dot-{k}'.pos @'row-{i}'[0] @'a{b}'.c.d[0].e @'{k}')",
+    "(f #'red' #'#ff0000' #'ff0000' #'#f00' #'F00' #'#FF000080' #'f008' #'transparent' #'Navy')",
+    "(f [#'red' #'blue'] fill@#'red' f'{#'red'}' f'{#'red':x}' #'red'(g))",
     "(f doc@'text' doc@x)",
     "(f a@b)",
     "(circle c r@1 fill@'red' to@pointer.x free@green marks.grid@g)",
@@ -111,7 +115,7 @@ ACCEPTED = [
     "(real k free@(* 2 a) free@(mix a b)(g) r@(* 2 k))",
     "(f free@(g)x (h)free@(g) free@(g)(h))",
     "(f free@[1] pos@[1 2] pos@[a b][0] free@[])",
-    "(f f@#'a-{k}' f@#'a-{k}'.x r@a[0] r@a[0].b r@a|b r@+ r@. r@none|a)",
+    "(f f@@'a-{k}' f@@'a-{k}'.x r@a[0] r@a[0].b r@a|b r@+ r@. r@none|a)",
     "(free@(g) x)",
     "(circle_ (r 1))",
     "(circle_(r 1))",
@@ -202,7 +206,7 @@ REJECTED = [
     "(f [r@])",
     "(f r@xs[0]@1)",
     "(f r@@x)",
-    "(f #'a{b}'@1)",
+    "(f @'a{b}'@1)",
     "(f +@1)",
     "(f .@1)",
     "(f circle_@c)",
@@ -240,10 +244,24 @@ REJECTED = [
     "(f f'{(g a:b)}')",
     "(f $x)",
     "(f #x)",
-    "(f #'plain')",
-    "(f #'a{b}'x)",
-    "(f #'a{b}'.)",
-    "(f #'a{b}'[])",
+    "(f @'plain')",
+    "(f #'nope')",
+    "(f #'')",
+    "(f #'#')",
+    "(f #'ff')",
+    "(f #'fffff')",
+    "(f #'#ff00000')",
+    "(f #'##f00')",
+    "(f #'#red')",
+    "(f #' red')",
+    "(f #'red'x)",
+    "(f #'red'.x)",
+    "(f #'red'[0])",
+    "(f #'re\\'d')",
+    "(f #'red)",
+    "(f @'a{b}'x)",
+    "(f @'a{b}'.)",
+    "(f @'a{b}'[])",
     "(f 'a':b)",
     "(f none[0]x)",
 ]
@@ -422,6 +440,10 @@ class Reading(Transformer):
             return StrLit(_tex(t.value[2:-1]), tex=True)
         return StrLit(_decoded(t.value[1:-1]))
 
+    def color(self, c):
+        text = c[0].value[2:-1]
+        return ColorLit(parse_color(text) or parse_color(f"#{text}"))
+
     def prefixed(self, c):
         head, item = c
         return Form((Name(tuple(head.value[:-1].split("."))), item))
@@ -531,10 +553,10 @@ def test_pending_steps_have_entries():
 
 # Pieces of text where the parser's choices lie, which random sources put together.
 PIECES = [
-    "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "f'", "#'", "$'", "doc@", "r@",
+    "(", ")", "[", "]", "{", "}", " ", "\n", ";c\n", "'", "f'", "#'", "@'", "$'", "doc@", "r@",
     "a", "b", "x_", "_", ".", "|", ":", "1", "-", "+", "2.5", "1/2", "/", "e", "i", "true",
     "none", "!=", "\\", "\\'", "\\n", "{{", "}}", '"', "@", "#", "$", "^", "*", "<=", "0", "{x:",
-    "f'{", "}'", "[0]", "a[", ".b", "(g)", "x:y", "?", "a-", "(c_ ", "free@(",
+    "f'{", "}'", "[0]", "a[", ".b", "(g)", "x:y", "?", "a-", "(c_ ", "free@(", "red", "#f00",
 ]  # fmt: skip
 
 

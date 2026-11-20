@@ -246,13 +246,6 @@ So `#'red'`, `#'#ff0000'` and `#'ff0000'` are the same color, and `#'#f00'` is t
 name is made only of hex digits, so a name and a hex color are never confused. `(fill #'red')` is a
 compile error, since `'red'` is a string.
 
-:::{admonition} Code differs
-:class: note
-The parser reads `#'…'` as a name string, and has no color literal: a color is written as a string
-where a color is expected, as `(fill 'red')`, and a name string as `#'…'`. The grammar shown on this
-page follows the parser. Bead mtp-c1hl.
-:::
-
 ## Prefixes
 
 ```{mtp-grammar} prefixes

@@ -3,7 +3,7 @@ from LO to HI, S being 361 unless (samples S) is given (the author, 2026-11-16).
 
 from helpers import error, model
 
-CURVE = "(scene s (parametric c (for t 0 360) [(cosd t) (sind t)] {} (stroke 'teal')))"
+CURVE = "(scene s (parametric c (for t 0 360) [(cosd t) (sind t)] {} (stroke #'teal')))"
 
 
 def points(src, name="c"):

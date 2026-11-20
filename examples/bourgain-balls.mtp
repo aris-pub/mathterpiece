@@ -17,12 +17,12 @@
 ; The bar's track, and its segments, one per j: BRAIID's gray-100, and shade 700 of its blue,
 ; yellow, purple, pink and gray, with the light value of shade 300 in dark (as house.mtp pairs
 ; shade 600 with 400), so the segment names in paper read on them.
-(color env (light-dark '#edf0f2' '#2a3740'))
-(color s1 (light-dark '#0361a1' '#7dcdfc'))
-(color s2 (light-dark '#b85c01' '#ffe446'))
-(color s3 (light-dark '#7629c7' '#d5b7fb'))
-(color s4 (light-dark '#be185d' '#f9a8d4'))
-(color s5 (light-dark '#5f7186' '#c2ccd3'))
+(color env (light-dark #'#edf0f2' #'#2a3740'))
+(color s1 (light-dark #'#0361a1' #'#7dcdfc'))
+(color s2 (light-dark #'#b85c01' #'#ffe446'))
+(color s3 (light-dark #'#7629c7' #'#d5b7fb'))
+(color s4 (light-dark #'#be185d' #'#f9a8d4'))
+(color s5 (light-dark #'#5f7186' #'#c2ccd3'))
 (font label (style 'italic') (size 17))
 (font tick-label (size 13))
 (font segment (size 12))
@@ -90,10 +90,10 @@
   ; Faint rings at ρ₁ to ρₖ around both points; the rest do not exist.
   (group rings (defaults (fill none) (stroke soft) (opacity 0.3))
     (foreach j 5
-      (circle|none #'x-ring-{j}' (pos x.pos) (r rho[j]))
-      (circle|none #'y-ring-{j}' (pos y.pos) (r rho[j]))
-      (exists-when #'x-ring-{j}' (< j k))
-      (exists-when #'y-ring-{j}' (< j k))))
+      (circle|none @'x-ring-{j}' (pos x.pos) (r rho[j]))
+      (circle|none @'y-ring-{j}' (pos y.pos) (r rho[j]))
+      (exists-when @'x-ring-{j}' (< j k))
+      (exists-when @'y-ring-{j}' (< j k))))
 
   (group pair
     (line_ (from x.pos) (to y.pos) (stroke soft) (stroke-width 1) (opacity 0.6))
@@ -122,19 +122,19 @@
         (rect_ (pos [(+ bar-left (* at edges[j]) (/ width 2)) bar-y]) (width width) (height 18)
             (fill segment-colors[j]))
         ; A segment's name, only once it is full and wide enough to hold it.
-        (text|none #'segment-{j}' f'j = {(+ j 1)}'
+        (text|none @'segment-{j}' f'j = {(+ j 1)}'
             (pos [(+ bar-left (* at (/ (+ edges[j] filled) 2))) (- bar-y 4.5)])
             (halign 'middle') (font segment) (fill paper))
-        (exists-when #'segment-{j}' (and (>= r (- rho[j] 1e-9)) (> width 26)))))
+        (exists-when @'segment-{j}' (and (>= r (- rho[j] 1e-9)) (> width 26)))))
     ; Ticks at 0 and ρ₁ to ρₖ; the last is δ/2.
     (group ticks (defaults (stroke ink) (stroke-width 1.2) (fill ink))
       (foreach j 6
-        (line|none #'tick-{j}' (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
+        (line|none @'tick-{j}' (from [(+ bar-left (* at edges[j])) (+ bar-y 14)])
             (to [(+ bar-left (* at edges[j])) (- bar-y 9)]))
-        (text|none #'tick-name-{j}' (if (= j k) 'δ/2' tick-names[j])
+        (text|none @'tick-name-{j}' (if (= j k) 'δ/2' tick-names[j])
             (pos [(+ bar-left (* at edges[j])) (+ bar-y 18)]) (halign 'middle') (font tick-label))
-        (exists-when #'tick-{j}' (<= j k))
-        (exists-when #'tick-name-{j}' (<= j k))))))
+        (exists-when @'tick-{j}' (<= j k))
+        (exists-when @'tick-name-{j}' (<= j k))))))
 
 (canvas the-space (x 0) (y -318) (width 600) (height 318)
   doc@'The points, the pair x and y, and the balls around them.'

@@ -7,14 +7,14 @@
 
 ; what the figure is
 (scene triangle
-  (group sixths (defaults (stroke 'white') (stroke-width 2))
+  (group sixths (defaults (stroke #'white') (stroke-width 2))
     (foreach t [[a b c] [b c a] [c a b]]  ; typechecked: t[2] exists
       (let ((m (lerp t[0] t[1] 0.5)))
         ; what the figure looks like
-        (polygon_ (points [t[0] g m]) (fill 'cornflowerblue'))
-        (polygon_ (points [t[1] g m]) (fill 'slateblue')))))
+        (polygon_ (points [t[0] g m]) (fill #'cornflowerblue'))
+        (polygon_ (points [t[1] g m]) (fill #'slateblue')))))
   (foreach k 3
-    (circle #'dot-{k}' (r 0.08) (pos [a b c][k]) (fill 'slateblue'))))
+    (circle @'dot-{k}' (r 0.08) (pos [a b c][k]) (fill #'slateblue'))))
 
 ; what it does: drag a corner, or tap it, then tap a spot
 (func keep ((point p)) [(clamp p.x -1.1 1.1) (clamp p.y -1 1)])

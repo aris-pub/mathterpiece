@@ -77,7 +77,7 @@ def test_not_on_a_const_variable():
 
 
 def test_not_on_a_token():
-    error("(color a '#ff0000') (color k free@a)", "a color variable is a token")
+    error("(color a #'#ff0000') (color k free@a)", "a color variable is a token")
 
 
 def test_a_position_written_whole():

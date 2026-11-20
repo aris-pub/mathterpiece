@@ -13,12 +13,12 @@ def attrs(src, name):
 
 class TestShapes:
     def test_the_arguments_x_was_written_with(self):
-        a = attrs("(scene s (circle c1 (r 2) (fill 'blue')) (circle c2 (like c1)))", "c2")
+        a = attrs("(scene s (circle c1 (r 2) (fill #'blue')) (circle c2 (like c1)))", "c2")
         assert (a["r"].value, a["fill"].value) == (2, "#0000ffff")
 
     def test_its_own_arguments_win(self):
         a = attrs(
-            "(scene s (circle c1 (r 2) (fill 'blue')) (circle c2 (like c1) (fill 'red')))", "c2"
+            "(scene s (circle c1 (r 2) (fill #'blue')) (circle c2 (like c1) (fill #'red')))", "c2"
         )
         assert (a["r"].value, a["fill"].value) == (2, "#ff0000ff")
 
@@ -49,7 +49,7 @@ class TestInstancesAndFonts:
     def test_a_motif_instance(self):
         m = model(
             "(motif dot ((real r 1 (>= 0))) (circle c (r r))) (scene s (dot d1 (r 3) (pos [1 1])"
-            " (defaults (fill 'red'))) (dot d2 (like d1) (pos [0 0])))"
+            " (defaults (fill #'red'))) (dot d2 (like d1) (pos [0 0])))"
         )
         d2 = m.get("d2")
         assert (d2.attrs["r"].value, d2.attrs["x"].value) == (3, 0)
@@ -58,7 +58,7 @@ class TestInstancesAndFonts:
     def test_a_variant_instance(self):
         a = attrs(
             "(variant big ((real k 2 (>= 0))) (circle c (r (* k 2))))"
-            " (scene s (big b1 (k 3) (fill 'red')) (big b2 (like b1) (k 4)))",
+            " (scene s (big b1 (k 3) (fill #'red')) (big b2 (like b1) (k 4)))",
             "b2",
         )
         assert (a["k"].value, a["fill"].value) == (4, "#ff0000ff")
@@ -90,7 +90,7 @@ def test_errors(src, msg):
 @pytest.mark.parametrize(
     "src",
     [
-        "(scene s (circle c1 (r 1)) (circle c2 (fill 'red') (like c1)))",
+        "(scene s (circle c1 (r 1)) (circle c2 (fill #'red') (like c1)))",
         "(motif dot ((real r 1 (>= 0))) (circle c (r r)))"
         " (scene s (dot d1) (dot d2 (pos [0 0]) (like d1)))",
         "(variant big ((real k 2 (>= 0))) (circle c (r (* k 2))))"

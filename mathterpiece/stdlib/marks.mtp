@@ -4,7 +4,7 @@
 ; none until given, and then the mark draws in ink: a parameter's default is known when
 ; compiling, and a token is not.
 
-(color ink '#3a4150' doc@'The color every mark is drawn in unless given another.')
+(color ink #'#3a4150' doc@'The color every mark is drawn in unless given another.')
 
 (motif axes ((real left -10) (real right 10) (real bottom -10) (real top 10)
              (color|none stroke none) (bool arrows false))

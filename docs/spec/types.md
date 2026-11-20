@@ -372,7 +372,7 @@ handle `none` ({doc}`stdlib`).
 ; at 90° the secant has no value: the line is declared line|none and is not drawn there
 (real theta 60 (>= 0) (<= 180))
 (scene s
-  (line|none tangent (from [0 0]) (to [(secd theta) 0]) (stroke 'crimson') (stroke-width 3))
+  (line|none tangent (from [0 0]) (to [(secd theta) 0]) (stroke #'crimson') (stroke-width 3))
   (circle p (pos (polar 1 theta)) (r 0.08)))
 (canvas v (x -3) (y -1.5) (width 6) (height 3) s)
 (slider turn (move theta (from 0) (to 180)) (label 'θ'))
@@ -447,8 +447,8 @@ declared with one is a compile error. Bead mtp-mo3r.
 ```{mtp-example}
 ; the parameter colors of the motif disc takes either namespace, since both fit inky
 (interface inky (color ink) (color paper))
-(namespace day (color ink '#1f2a44') (color paper '#f6f1e7'))
-(namespace night (color ink '#e8e4d8') (color paper '#14161c'))
+(namespace day (color ink #'#1f2a44') (color paper #'#f6f1e7'))
+(namespace night (color ink #'#e8e4d8') (color paper #'#14161c'))
 (bool dark false)
 (motif disc ((inky colors)) (circle face (r 1) (fill colors.paper) (stroke colors.ink) (stroke-width 0.2)))
 (scene s (disc d (colors (if dark night day))))

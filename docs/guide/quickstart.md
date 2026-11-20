@@ -21,10 +21,10 @@ Save this as `circle.mtp` in a folder of your own:
 ; a point on the unit circle, with cos in red and sin in green
 (real theta 40 (wrap 0 360))
 (scene s
-  (circle rim (r 1) (fill none) (stroke 'gray'))
-  (line cos (from [0 0]) (to [(cosd theta) 0]) (stroke 'crimson') (stroke-width 4))
-  (line sin (from [(cosd theta) 0]) (to (polar 1 theta)) (stroke 'seagreen') (stroke-width 4))
-  (circle p (r 0.07) (pos (polar 1 theta)) (fill 'slateblue')))
+  (circle rim (r 1) (fill none) (stroke #'gray'))
+  (line cos (from [0 0]) (to [(cosd theta) 0]) (stroke #'crimson') (stroke-width 4))
+  (line sin (from [(cosd theta) 0]) (to (polar 1 theta)) (stroke #'seagreen') (stroke-width 4))
+  (circle p (r 0.07) (pos (polar 1 theta)) (fill #'slateblue')))
 (canvas v (x -1.25) (y -1.25) (width 2.5) (height 2.5) s
   (on-drag p (move theta (to (. (or? (to-polar pointer) [1 theta]) 1)))))
 (slider turn (move theta (from 0) (to 360)) (label 'θ'))

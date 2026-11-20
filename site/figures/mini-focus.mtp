@@ -21,13 +21,13 @@
 (real phi 0)
 (real o 0.35 (>= 0) (<= 1))
 (font logo (family '"Crimson Pro", Georgia, serif') (weight 600) (size 168))
-(color ink (light-dark '#51636f' '#ced6dc'))
+(color ink (light-dark #'#51636f' #'#ced6dc'))
 (scene b
   ; m ends where tp starts, at a, so the two touch at any size: text is sized in pixels
   (text m 'm' (font logo) (pos [a -34]) (halign 'end') (fill ink))
   (text rest 'tp' (font logo) (pos [a -34]) (halign 'start') (fill ink) (opacity tp))
   (group brackets (transform (rotate phi))
-                  (defaults (fill '#ad71f2') (stroke none) (opacity o))
+                  (defaults (fill #'#ad71f2') (stroke none) (opacity o))
     (polygon_ (points (map bracket (fn p (+ [(- cx) cy] (* 2 p))))))
     (polygon_ (points (map bracket (fn p (- [cr (- cy)] (* 2 p))))))))
 (animation cycle (loop)

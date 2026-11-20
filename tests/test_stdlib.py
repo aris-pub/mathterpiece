@@ -290,4 +290,4 @@ class TestMarks:
         assert len(lines) == 8 + 3
 
     def test_a_mark_takes_a_color(self, tmp_path):
-        self.marks(tmp_path, "(axes x (stroke '#ff0000')) (measure y (stroke '#ff0000'))")
+        self.marks(tmp_path, "(axes x (stroke #'#ff0000')) (measure y (stroke #'#ff0000'))")

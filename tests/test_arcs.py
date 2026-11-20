@@ -42,7 +42,7 @@ class TestDeclaring:
         error("(scene s (ring a (width -1)))", "breaks")
 
     def test_an_arc_takes_the_stroke_attributes(self):
-        a = attrs("(scene s (arc a (stroke 'red') (dash [4 2]) (line-cap 'round')))")
+        a = attrs("(scene s (arc a (stroke #'red') (dash [4 2]) (line-cap 'round')))")
         assert a["stroke"].value == "#ff0000ff" and a["line-cap"].value == "round"
 
     def test_a_ring_is_filled(self):
@@ -59,12 +59,12 @@ class TestPosition:
         assert _core(m.get("v").value.expr.type) == POINT
 
     def test_written_by_a_drag(self):
-        model("(scene s (arc a (stroke 'black'))) (canvas v s (on-drag a a.pos))")
+        model("(scene s (arc a (stroke #'black'))) (canvas v s (on-drag a a.pos))")
 
     def test_an_angle_is_dragged_through_a_handle(self):
         # A handle on the arc's end is dragged, and its move gives the angle of the pointer.
         model(
-            "(real t 90) (scene s (arc a (to t) (stroke 'black'))"
+            "(real t 90) (scene s (arc a (to t) (stroke #'black'))"
             " (circle h (pos (polar 1 t)) (r 0.1)))"
             " (canvas v s"
             " (on-drag h (move t (to (let ((q (or? (to-polar pointer) [1 t]))) q[1])))))"
@@ -81,7 +81,7 @@ class TestClip:
 
 def test_the_compiled_file_passes_the_schema():
     src = (
-        "(real t 90) (scene s (arc a (r 2) (to t) (stroke 'black'))"
+        "(real t 90) (scene s (arc a (r 2) (to t) (stroke #'black'))"
         " (ring b (r 2) (width 1) (from 30) (to 120))"
         " (group g (clip (ring_ (r 3))) (circle c)))"
     )

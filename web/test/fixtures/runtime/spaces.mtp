@@ -1,4 +1,4 @@
-(scene s (background 'white')
+(scene s (background #'white')
   (text one 'x')
   (text lead '   x')
   (text single 'a b')

@@ -124,7 +124,7 @@ def test_free_and_bound_values():
 
 
 def test_values_by_type():
-    d = doc("(ratio r 1/3) (color c 'red') (point p [1 2]) (real|none n none)")
+    d = doc("(ratio r 1/3) (color c #'red') (point p [1 2]) (real|none n none)")
     v = {n: d["objects"][d["names"][n]] for n in "rcpn"}
     assert v["r"]["value"]["free"] == [1, 3]
     assert v["c"]["value"]["free"] == "#ff0000ff" and v["c"]["token"] is True

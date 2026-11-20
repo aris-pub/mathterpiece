@@ -358,10 +358,10 @@ scene, and a canvas and a slider at the top level.
 ```{mtp-example}
 (real k 1 doc@'The radius of the circle.' (>= 0.2) (<= 2))
 (scene s
-  (background (light-dark '#ffffff' '#13181b'))
-  (circle c (r k) (fill 'crimson'))
+  (background (light-dark #'#ffffff' #'#13181b'))
+  (circle c (r k) (fill #'crimson'))
   (foreach i 3
-    (circle #'dot-{i}' (x (+ 3 i)) (r 0.2) (fill 'gray'))))
+    (circle @'dot-{i}' (x (+ 3 i)) (r 0.2) (fill #'gray'))))
 (canvas v (x -3) (y -3) (width 9) (height 6) s)
 (slider size (move k (from 0.2) (to 2)) (label 'radius'))
 ```

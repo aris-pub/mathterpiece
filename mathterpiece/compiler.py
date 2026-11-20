@@ -30,7 +30,6 @@ from mathterpiece.builtins import (
     range_by_count,
     range_by_gap,
 )
-from mathterpiece.colors import parse_color
 from mathterpiece.model import (
     Attribute,
     Expr,
@@ -47,6 +46,7 @@ from mathterpiece.nodes import (
     Bar,
     BoolLit,
     Brackets,
+    ColorLit,
     ComplexLit,
     Form,
     IntLit,
@@ -1932,13 +1932,7 @@ class _Compiler:
         pos = form.pos
         if len(form.items) < 3 or not isinstance(form.items[2], ListLit):
             raise CompileError("a colormap is (colormap name [color…] keyword…)", pos)
-        # A quoted color in a branch is given its type, as (as color 'red') does by hand.
-        colors = [
-            Form((Name(("as",), c.pos), Name(("color",), c.pos), c), c.pos)
-            if isinstance(c, StrLit)
-            else c
-            for c in form.items[2].items
-        ]
+        colors = list(form.items[2].items)
         if len(colors) < 2:
             raise CompileError("a colormap needs at least two colors", form.items[2].pos)
         given: dict[str, Node] = {}
@@ -6050,7 +6044,7 @@ class _Compiler:
                 raise CompileError(reason, node.pos)
             if _core(e.type) == STRING and _core(target) == COLOR:
                 raise CompileError(
-                    f"expected {expected}, got {e.type}: only a literal string becomes a color",
+                    f"expected {expected}, got {e.type}: a string is never a color",
                     node.pos,
                 )
             if e.type == ComponentT("toggle") and e.op == "obj":
@@ -6089,7 +6083,7 @@ class _Compiler:
     def typed(self, node: Node, expected: Type | None, scope: dict) -> Expr:
         if isinstance(node, Form) and node.items:
             return self.form(node, expected, scope)
-        if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, NoneLit)):
+        if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, ColorLit, NoneLit)):
             return self.literal(node, expected)
         if isinstance(node, BoolLit):
             return _known(BOOL, node.value)
@@ -6107,7 +6101,7 @@ class _Compiler:
 
     def literal(
         self,
-        node: IntLit | RatioLit | RealLit | ComplexLit | StrLit | NoneLit,
+        node: IntLit | RatioLit | RealLit | ComplexLit | StrLit | ColorLit | NoneLit,
         expected: Type | None,
     ) -> Expr:
         if isinstance(node, NoneLit) and expected is None:
@@ -6124,9 +6118,6 @@ class _Compiler:
         value = node.value
         if isinstance(value, (int, float, Fraction)) and abs(value) > EXACT_LIMIT:
             raise CompileError(f"{value} is beyond ±10^150, the limit of every number", node.pos)
-        if t == COLOR or (isinstance(t, Maybe) and t.inner == COLOR):
-            assert isinstance(node, StrLit)
-            value = parse_color(node.value)
         return _known(t, value)
 
     def list_literal(self, node: ListLit, expected: Type | None, scope: dict) -> Expr:
@@ -6742,7 +6733,7 @@ class _Compiler:
             # section 3).
             if not (_is_literal(lit) or isinstance(lit, ListLit)):
                 raise CompileError(
-                    "as gives a type only to a literal, such as (as color 'gold')", node.pos
+                    "as gives a type only to a literal, such as (as point [0 0])", node.pos
                 )
             return self.expr(lit, self.type_of(type_node), scope)
         if head == "concat":
@@ -6896,7 +6887,7 @@ class _Compiler:
         ]
 
     def typed_like(self, node: Node, other: Type, scope: dict) -> Expr:
-        """In (= o.fill 'red'), the literal takes the other side's type."""
+        """In (= o.pos [1 2]), the literal takes the other side's type."""
         if isinstance(node, (StrLit, ListLit)):
             return self.expr(node, other, scope)
         return self.expr(node, None, scope)
@@ -7287,7 +7278,9 @@ def _in_order(steps: list) -> tuple:
 
 
 def _is_literal(node: Node) -> bool:
-    if isinstance(node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, BoolLit, NoneLit)):
+    if isinstance(
+        node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, ColorLit, BoolLit, NoneLit)
+    ):
         return True
     return isinstance(node, ListLit) and all(_is_literal(i) for i in node.items)
 

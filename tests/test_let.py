@@ -170,7 +170,7 @@ def test_a_let_in_a_nested_group_reads_in_the_inner_groups_frame():
 def test_a_let_in_a_foreach_in_a_group_reads_in_the_groups_frame():
     d = doc(
         "(real m 1) (scene sc (group g (translate [5 0]) (circle a (x m) (r 1))"
-        " (foreach i 2 (let ((p a.pos)) (circle #'b{i}' (pos p) (r 1))))))"
+        " (foreach i 2 (let ((p a.pos)) (circle @'b{i}' (pos p) (r 1))))))"
     )
     assert _frames(d, "b0") == {_index(d, "g")}
 

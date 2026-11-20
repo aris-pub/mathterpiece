@@ -5,8 +5,8 @@
 
 (import house paper ink soft)
 
-(color board-wood (light-dark '#e8dcc4' '#4a4235'))
-(color hole (light-dark '#cbbd9f' '#2f2a22'))
+(color board-wood (light-dark #'#e8dcc4' #'#4a4235'))
+(color hole (light-dark #'#cbbd9f' #'#2f2a22'))
 
 ; A piece's balls, as offsets from its first ball, in whole holes.
 (list[list[point]] shapes
@@ -26,8 +26,8 @@
 ; The pieces' colors are BRAIID's: twelve shades of its hues and gray, chosen to be easy to tell
 ; apart. The darkest blue would sink into a dark board, so on a dark page it is a light one.
 (list[color] paints
-    ['#db2728' '#f5862b' '#ffd31b' '#37cab6' '#157067' '#0e9ae9' '#7629c7' '#bb89f7' '#f472b6'
-     '#8b9fad' (light-dark '#0c456e' '#7dcdfc') '#973a15']
+    [#'#db2728' #'#f5862b' #'#ffd31b' #'#37cab6' #'#157067' #'#0e9ae9' #'#7629c7' #'#bb89f7' #'#f472b6'
+     #'#8b9fad' (light-dark #'#0c456e' #'#7dcdfc') #'#973a15']
     (const))
 ; Where each piece waits below the board before it is placed.
 (list[point] trays
@@ -61,7 +61,7 @@
       (circle_ (pos [i j]) (r 0.3))))
   (group pieces
     (foreach i 12
-      (piece #'piece-{i}' (cells shapes[i]) (size (count shapes[i])) (paint paints[i]) (pos trays[i])))))
+      (piece @'piece-{i}' (cells shapes[i]) (size (count shapes[i])) (paint paints[i]) (pos trays[i])))))
 
 (canvas view (x -1.5) (y -12) (width 21) (height 17.5) (pan false) (zoom false)
   doc@'The board, and the pieces waiting below it.'

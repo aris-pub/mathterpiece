@@ -53,8 +53,8 @@ class TestKindsOfForm:
     def test_one_head_begins_both_kinds(self):
         # Two names in one foreach are syntactic sugar for two foreach forms of one name each.
         same_meaning(
-            "(scene t (foreach ((a [1 2]) (b [3 4])) (circle #'c-{a}-{b}' (r a))))",
-            "(scene t (foreach a [1 2] (foreach b [3 4] (circle #'c-{a}-{b}' (r a)))))",
+            "(scene t (foreach ((a [1 2]) (b [3 4])) (circle @'c-{a}-{b}' (r a))))",
+            "(scene t (foreach a [1 2] (foreach b [3 4] (circle @'c-{a}-{b}' (r a)))))",
         )
 
 
@@ -192,7 +192,7 @@ class TestSugarRewrites:
 
     @PALETTE_TYPE
     def test_palette(self):
-        same_meaning("(palette p (a 'red'))", "(namespace p (color a 'red'))")
+        same_meaning("(palette p (a #'red'))", "(namespace p (color a #'red'))")
 
     def test_pos_of_a_literal_list(self):
         same_meaning(
@@ -220,16 +220,16 @@ class TestSugarRewrites:
 
     def test_foreach_of_several_names(self):
         same_meaning(
-            "(scene s (foreach ((i 2) (j 3)) (circle #'c-{i}-{j}' (r 1))))",
-            "(scene s (foreach i 2 (foreach j 3 (circle #'c-{i}-{j}' (r 1)))))",
+            "(scene s (foreach ((i 2) (j 3)) (circle @'c-{i}-{j}' (r 1))))",
+            "(scene s (foreach i 2 (foreach j 3 (circle @'c-{i}-{j}' (r 1)))))",
         )
         same_meaning(
-            "(scene s (foreach ((i 2)) (circle #'c-{i}' (r 1))))",
-            "(scene s (foreach i 2 (circle #'c-{i}' (r 1))))",
+            "(scene s (foreach ((i 2)) (circle @'c-{i}' (r 1))))",
+            "(scene s (foreach i 2 (circle @'c-{i}' (r 1))))",
         )
 
     def test_foreach_of_several_names_that_are_the_same(self):
-        compile_error("(scene s (foreach ((i 2) (i 3)) (circle #'c-{i}' (r 1))))")
+        compile_error("(scene s (foreach ((i 2) (i 3)) (circle @'c-{i}' (r 1))))")
 
     @WAIT
     def test_wait(self):
@@ -298,8 +298,8 @@ class TestSugarRewrites:
 class TestLikeCopies:
     def test_like_on_a_shape(self):
         same_meaning(
-            "(scene s (circle a (r 2) (fill 'red')) (circle b (like a) (fill 'blue')))",
-            "(scene s (circle a (r 2) (fill 'red')) (circle b (fill 'blue') (r 2)))",
+            "(scene s (circle a (r 2) (fill #'red')) (circle b (like a) (fill #'blue')))",
+            "(scene s (circle a (r 2) (fill #'red')) (circle b (fill #'blue') (r 2)))",
         )
 
     def test_like_copies_what_the_items_read(self):
@@ -334,8 +334,8 @@ class TestLikeCopies:
 
     def test_like_on_a_term(self):
         same_meaning(
-            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (like a)))",
-            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill 'red')) (term b (fill 'red')))",
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill #'red')) (term b (like a)))",
+            "(formula f $'\\term{a}{x}\\term{b}{y}' (term a (fill #'red')) (term b (fill #'red')))",
         )
 
     def test_like_on_a_move(self):
@@ -397,15 +397,15 @@ class TestDragGroupShift:
 class TestForeachCount:
     def test_a_count_means_a_range(self):
         same_meaning(
-            "(scene s (foreach k 3 (circle #'c-{k}' (r 1))))",
-            "(scene s (foreach k (range 0 3 (gap 1)) (circle #'c-{k}' (r 1))))",
+            "(scene s (foreach k 3 (circle @'c-{k}' (r 1))))",
+            "(scene s (foreach k (range 0 3 (gap 1)) (circle @'c-{k}' (r 1))))",
         )
 
 
 @rule("foreach-bounded-length")
 class TestForeachBoundedLength:
     def test_a_count_known_only_while_drawing_makes_its_upper_bound_of_copies(self):
-        d = mtpc("(int n 3 (>= 0) (<= 5)) (scene s (foreach k n (circle #'c-{k}' (r 1))))")
+        d = mtpc("(int n 3 (>= 0) (<= 5)) (scene s (foreach k n (circle @'c-{k}' (r 1))))")
         assert {f"c-{k}" for k in range(5)} <= set(d["names"])
         assert "c-5" not in d["names"]
 
@@ -413,12 +413,12 @@ class TestForeachBoundedLength:
     def test_a_range_known_only_while_drawing(self):
         d = mtpc(
             "(int n 3 (>= 0) (<= 5)) "
-            "(scene s (foreach k (range 0 n (gap 1)) (circle #'c-{k}' (r 1))))"
+            "(scene s (foreach k (range 0 n (gap 1)) (circle @'c-{k}' (r 1))))"
         )
         assert {f"c-{k}" for k in range(5)} <= set(d["names"])
 
     def test_with_no_upper_bound_it_is_an_error(self):
-        compile_error("(int n 3 (>= 0)) (scene s (foreach k n (circle #'c-{k}' (r 1))))")
+        compile_error("(int n 3 (>= 0)) (scene s (foreach k n (circle @'c-{k}' (r 1))))")
 
 
 @rule("dot-name-part")
@@ -442,7 +442,7 @@ class TestDotPart:
     def test_a_member_is_read_by_its_name(self):
         assert (
             value(
-                "(color yellow 'red') (namespace n (color yellow 'gold')) (color v (. n yellow))",
+                "(color yellow #'red') (namespace n (color yellow #'gold')) (color v (. n yellow))",
                 "v",
             )
             == "#ffd700ff"
@@ -463,13 +463,13 @@ class TestAnimationStep:
 class TestNamesFromValues:
     def test_a_name_built_from_the_variable_of_a_foreach(self):
         d = mtpc(
-            "(scene s (foreach k 3 (circle #'d-{k}' (pos [k 0])"
-            " (r (if (= k 0) 1 (/ #'d-{(- k 1)}'.r 2))))))"
+            "(scene s (foreach k 3 (circle @'d-{k}' (pos [k 0])"
+            " (r (if (= k 0) 1 (/ @'d-{(- k 1)}'.r 2))))))"
         )
         assert set(d["names"]) >= {"d-0", "d-1", "d-2"}
 
     def test_a_name_that_names_no_declaration_before_it_is_an_error(self):
-        rejected("(scene s (foreach k 2 (circle #'d-{k}' (r #'d-{(+ k 1)}'.r))))")
+        rejected("(scene s (foreach k 2 (circle @'d-{k}' (r @'d-{(+ k 1)}'.r))))")
 
 
 @rule("built-ins")

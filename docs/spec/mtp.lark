@@ -23,7 +23,7 @@ paren: form
      | PREFIX form -> prefixed
 plain: plain_item
      | PREFIX plain_item -> prefixed
-plain_item: list | word | string | interpolated
+plain_item: list | word | string | color | interpolated
 
 //: lists
 list: "[" list_items "]" list_brackets*
@@ -42,12 +42,13 @@ head: HEAD | one_word ("|" one_word)* "|" HEAD
 //: literals
 number: INT | RATIO | REAL | IMAG | COMPLEX
 bool: TRUE | FALSE
+color: COLOR
 !operator: "+" | "-" | "*" | "/" | "^" | "<" | "<=" | ">" | ">=" | "=" | "!=" | "."
 
 //: strings
 string: STRING | TEX
 interpolated: F_QUOTE (TEXT | braces)* QUOTE
-name_string_text: HASH_QUOTE TEXT? braces (TEXT | braces)* QUOTE
+name_string_text: AT_QUOTE TEXT? braces (TEXT | braces)* QUOTE
 braces: "{" _WHITESPACE? expression _WHITESPACE? FORMAT? "}"
 
 //: whitespace-and-comments
@@ -91,13 +92,44 @@ SIGN: /[+-]/
 STRING: "'" (/[^'\\]/ | ESCAPE)* "'"
 ESCAPE: /\\['\\n]/
 TEX.1: "$'" (/[^'\\]/ | /\\[\s\S]/)* "'"
+COLOR.1: "#'" (CSS_COLOR | "#"? HEX_COLOR) "'"
+HEX_COLOR: HEX~8 | HEX~6 | HEX~3..4
+HEX: /[0-9A-Fa-f]/
+CSS_COLOR: "aliceblue"i | "antiquewhite"i | "aqua"i | "aquamarine"i | "azure"i | "beige"i
+         | "bisque"i | "black"i | "blanchedalmond"i | "blue"i | "blueviolet"i | "brown"i
+         | "burlywood"i | "cadetblue"i | "chartreuse"i | "chocolate"i | "coral"i
+         | "cornflowerblue"i | "cornsilk"i | "crimson"i | "cyan"i | "darkblue"i | "darkcyan"i
+         | "darkgoldenrod"i | "darkgray"i | "darkgreen"i | "darkgrey"i | "darkkhaki"i
+         | "darkmagenta"i | "darkolivegreen"i | "darkorange"i | "darkorchid"i | "darkred"i
+         | "darksalmon"i | "darkseagreen"i | "darkslateblue"i | "darkslategray"i | "darkslategrey"i
+         | "darkturquoise"i | "darkviolet"i | "deeppink"i | "deepskyblue"i | "dimgray"i
+         | "dimgrey"i | "dodgerblue"i | "firebrick"i | "floralwhite"i | "forestgreen"i | "fuchsia"i
+         | "gainsboro"i | "ghostwhite"i | "gold"i | "goldenrod"i | "gray"i | "green"i
+         | "greenyellow"i | "grey"i | "honeydew"i | "hotpink"i | "indianred"i | "indigo"i
+         | "ivory"i | "khaki"i | "lavender"i | "lavenderblush"i | "lawngreen"i | "lemonchiffon"i
+         | "lightblue"i | "lightcoral"i | "lightcyan"i | "lightgoldenrodyellow"i | "lightgray"i
+         | "lightgreen"i | "lightgrey"i | "lightpink"i | "lightsalmon"i | "lightseagreen"i
+         | "lightskyblue"i | "lightslategray"i | "lightslategrey"i | "lightsteelblue"i
+         | "lightyellow"i | "lime"i | "limegreen"i | "linen"i | "magenta"i | "maroon"i
+         | "mediumaquamarine"i | "mediumblue"i | "mediumorchid"i | "mediumpurple"i
+         | "mediumseagreen"i | "mediumslateblue"i | "mediumspringgreen"i | "mediumturquoise"i
+         | "mediumvioletred"i | "midnightblue"i | "mintcream"i | "mistyrose"i | "moccasin"i
+         | "navajowhite"i | "navy"i | "oldlace"i | "olive"i | "olivedrab"i | "orange"i
+         | "orangered"i | "orchid"i | "palegoldenrod"i | "palegreen"i | "paleturquoise"i
+         | "palevioletred"i | "papayawhip"i | "peachpuff"i | "peru"i | "pink"i | "plum"i
+         | "powderblue"i | "purple"i | "rebeccapurple"i | "red"i | "rosybrown"i | "royalblue"i
+         | "saddlebrown"i | "salmon"i | "sandybrown"i | "seagreen"i | "seashell"i | "sienna"i
+         | "silver"i | "skyblue"i | "slateblue"i | "slategray"i | "slategrey"i | "snow"i
+         | "springgreen"i | "steelblue"i | "tan"i | "teal"i | "thistle"i | "tomato"i
+         | "transparent"i | "turquoise"i | "violet"i | "wheat"i | "white"i | "whitesmoke"i
+         | "yellow"i | "yellowgreen"i
 
 //: prefixes
 PREFIX.1: PARTS "@"
 
 //: interpolated-strings
 F_QUOTE.1: "f'"
-HASH_QUOTE: "#'"
+AT_QUOTE: "@'"
 QUOTE: "'"
 TEXT: (/[^'\\{}]/ | ESCAPE | "{{" | "}}")+
 FORMAT: ":" /[^{}']*/

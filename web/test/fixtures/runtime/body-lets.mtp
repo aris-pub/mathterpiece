@@ -11,10 +11,10 @@
 (scene sc
   (let ((pts (dots-of m)))
     (polyline trail (points pts))
-    (foreach k 5 (circle #'d{k}' (pos (or? pts[k] [0 0])) (r 1))))
+    (foreach k 5 (circle @'d{k}' (pos (or? pts[k] [0 0])) (r 1))))
   (foreach i 3
     (let ((w (* m (+ i 1))))
-      (circle #'w{i}' (r w))))
+      (circle @'w{i}' (r w))))
   (pair p (s m))
   (pair q (s (+ m 1))))
 

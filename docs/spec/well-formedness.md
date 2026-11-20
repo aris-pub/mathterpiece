@@ -270,7 +270,7 @@ So `(real k 5 (<= 3))` is a compile error. With `(real a 1)` and
 ```{mtp-example}
 ; k is at least 1, so the prover proves that 1/k is never none
 (real k 2 (>= 1) (<= 5))
-(scene s (circle c (r (/ 1 k)) (fill 'teal')))
+(scene s (circle c (r (/ 1 k)) (fill #'teal')))
 (canvas v (x -1.2) (y -1.2) (width 2.4) (height 2.4) s)
 (slider size (move k (from 1) (to 5)) (label 'k'))
 ```
@@ -316,8 +316,8 @@ and `@'dot-{(- k 1)}'` names one of the copies `dot-0` to `dot-58` ({numref}`nam
 (int n 24 (>= 1) (<= 60))
 (scene s
   (foreach k n
-    (circle #'dot-{k}' (r 0.1)
-      (pos (if (= k 0) [3 0] (* 0.9 #'dot-{(- k 1)}'.pos))))))
+    (circle @'dot-{k}' (r 0.1)
+      (pos (if (= k 0) [3 0] (* 0.9 @'dot-{(- k 1)}'.pos))))))
 ```
 
 With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` gives `k` the

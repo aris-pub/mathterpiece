@@ -1,6 +1,16 @@
 import pytest
 
-from mathterpiece.nodes import Bar, Brackets, IntLit, ListLit, Name, NoneLit, RealLit, StrLit
+from mathterpiece.nodes import (
+    Bar,
+    Brackets,
+    ColorLit,
+    IntLit,
+    ListLit,
+    Name,
+    NoneLit,
+    RealLit,
+    StrLit,
+)
 from mathterpiece.parse import parse
 from mathterpiece.types import (
     BOOL,
@@ -107,14 +117,14 @@ class TestLiterals:
         assert literal_type(RealLit(2.5), None) == REAL
         assert literal_type(IntLit(3), REAL) == REAL
 
-    def test_a_string_is_a_color_where_a_color_is_expected(self):
-        assert literal_type(StrLit("red"), None) == STRING
-        assert literal_type(StrLit("red"), COLOR) == COLOR
-        assert literal_type(StrLit("#ff000080"), COLOR) == COLOR
+    def test_a_color_literal_is_a_color(self):
+        assert literal_type(ColorLit("#ff0000ff"), None) == COLOR
+        assert literal_type(ColorLit("#ff000080"), COLOR) == COLOR
 
-    def test_a_string_that_is_not_a_color(self):
-        with pytest.raises(TypeError_, match="not a color"):
-            literal_type(StrLit("blurple"), COLOR)
+    def test_a_string_is_never_a_color(self):
+        assert literal_type(StrLit("red"), None) == STRING
+        with pytest.raises(TypeError_, match="expected color, got string"):
+            literal_type(StrLit("red"), COLOR)
 
     def test_none(self):
         assert literal_type(NoneLit(), Maybe(REAL)) == Maybe(REAL)
@@ -127,7 +137,7 @@ class TestLiterals:
         assert literal_type(ListLit((StrLit("red"),)), None) == ListT(STRING)
 
     def test_a_list_takes_the_type_expected_where_it_is(self):
-        assert literal_type(ListLit((StrLit("red"),)), ListT(COLOR)) == ListT(COLOR)
+        assert literal_type(ListLit((ColorLit("#ff0000ff"),)), ListT(COLOR)) == ListT(COLOR)
         assert literal_type(ListLit((IntLit(1), IntLit(2))), POINT) == POINT
 
     def test_a_point_needs_two_numbers(self):

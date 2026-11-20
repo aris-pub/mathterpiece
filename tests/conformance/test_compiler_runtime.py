@@ -73,7 +73,7 @@ class TestCompileSteps:
         parse("(f an-unknown-name (g))")
 
     def test_each_foreach_is_written_out_as_its_copies(self):
-        d = mtpc("(scene s (foreach i 3 (circle #'c-{i}' (r (+ i 1)))))")
+        d = mtpc("(scene s (foreach i 3 (circle @'c-{i}' (r (+ i 1)))))")
         assert [obj(d, f"c-{i}")["attrs"]["r"]["free"] for i in range(3)] == [1, 2, 3]
 
     def test_each_motif_instance_is_written_out(self):
@@ -157,7 +157,7 @@ class TestCompilerInputOutput:
         assert not any(f.suffix == ".mtpc" for f in tmp_path.iterdir())
 
     def test_the_compiler_reads_the_files_that_the_source_imports(self, tmp_path):
-        (tmp_path / "house.mtp").write_text("(color ink 'red')")
+        (tmp_path / "house.mtp").write_text("(color ink #'red')")
         src = tmp_path / "fig.mtp"
         src.write_text("(import house ink)\n(scene s (circle c (fill ink)))\n(canvas v s)\n")
         assert run("compile", str(src)) == 0
@@ -184,7 +184,7 @@ class TestCompilerSameBytes:
         src = tmp_path / "f.mtp"
         src.write_text(
             RAND + "(rand-seed sd 1) (real k 1 (>= 0) (<= 2))\n"
-            "(scene s (foreach i 4 (circle #'c-{i}' (r (* k (rand 0 1))) (fill 'red'))))\n"
+            "(scene s (foreach i 4 (circle @'c-{i}' (r (* k (rand 0 1))) (fill #'red'))))\n"
             "(canvas v s)\n"
         )
         outs = []
@@ -204,7 +204,7 @@ class TestCompilerSameBytes:
 @rule("compiler-reads-files")
 class TestCompilerReadsFiles:
     def test_an_import_is_looked_for_next_to_the_file_first(self, tmp_path):
-        files = {"colors.mtp": "(color mine 'teal')\n"}
+        files = {"colors.mtp": "(color mine #'teal')\n"}
         m = in_folder(tmp_path, files, "(import colors)\n(color v colors.mine)\n")
         assert "colors.mine" in m.names
 
@@ -213,7 +213,7 @@ class TestCompilerReadsFiles:
         assert "v" in m.names
 
     def test_through_other_imports(self, tmp_path):
-        files = {"a.mtp": "(import b)\n(color ink b.pen)\n", "b.mtp": "(color pen 'teal')\n"}
+        files = {"a.mtp": "(import b)\n(color ink b.pen)\n", "b.mtp": "(color pen #'teal')\n"}
         m = in_folder(tmp_path, files, "(import a)\n(color v a.ink)\n")
         assert "v" in m.names
 
@@ -229,7 +229,7 @@ class TestCompilerNeverActsWhileDrawing:
         assert obj(d, "k")["value"]["free"] == 0
 
     def test_a_token_is_written_with_its_declared_value_and_never_folded(self):
-        d = mtpc("(color ink 'navy') (scene s (circle c (r 1) (fill ink)))")
+        d = mtpc("(color ink #'navy') (scene s (circle c (r 1) (fill ink)))")
         assert obj(d, "ink")["value"]["free"] == "#000080ff"
         fill = obj(d, "c")["attrs"]["fill"]
         assert fill["bound"][0] == "read" and fill["bound"][2] == d["names"]["ink"]
@@ -256,7 +256,7 @@ class TestAnyCompilerAnyRuntime:
 @rule("mtpc-only-boundary")
 class TestMtpcOnlyBoundary:
     def test_every_copy_and_every_instance_is_in_the_mtpc(self):
-        d = mtpc("(motif m () (circle c (r 1))) (scene s (foreach i 2 (m #'a-{i}')))")
+        d = mtpc("(motif m () (circle c (r 1))) (scene s (foreach i 2 (m @'a-{i}')))")
         assert [o["kind"] for o in d["objects"]].count("circle") == 2
         assert {"a-0", "a-1"} <= set(d["names"])
 
@@ -423,8 +423,8 @@ class TestWhatIsNormative:
 
     def test_the_bytes_may_differ_while_the_meaning_is_the_same(self):
         # Two spellings with one meaning compile to one .mtpc, read as JSON.
-        assert mtpc("(scene s (circle c (r 1) (fill 'red')))") == mtpc(
-            "(scene s (circle c (fill 'red') (r 1)))"
+        assert mtpc("(scene s (circle c (r 1) (fill #'red')))") == mtpc(
+            "(scene s (circle c (fill #'red') (r 1)))"
         )
 
 

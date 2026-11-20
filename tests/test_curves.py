@@ -36,7 +36,7 @@ class TestDeclaring:
         )
 
     def test_heads_and_stroke(self):
-        a = model("(scene s (curve c (stroke 'red') (head-end 'dart')))").get("c").attrs
+        a = model("(scene s (curve c (stroke #'red') (head-end 'dart')))").get("c").attrs
         assert a["head-end"].value == "dart" and a["stroke"].value == "#ff0000ff"
 
     def test_no_position_of_its_own(self):

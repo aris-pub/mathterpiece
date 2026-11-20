@@ -27,7 +27,7 @@ class TestDeclaring:
 
     def test_they_take_the_stroke_attributes(self):
         a = (
-            model(f"(scene s (polyline p {PTS} (stroke 'red') (dash [4 2]) (line-cap 'round')))")
+            model(f"(scene s (polyline p {PTS} (stroke #'red') (dash [4 2]) (line-cap 'round')))")
             .get("p")
             .attrs
         )

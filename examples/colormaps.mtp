@@ -23,11 +23,11 @@
 
 ; Land and sea, by height above the sea: deep water up to 0, then sand at once, forest and snow.
 (palette terrain
-  (deep '#1d3557')
-  (shallow '#8ecae6')
-  (sand '#e9d8a6')
-  (forest '#52796f')
-  (snow '#f1faee'))
+  (deep #'#1d3557')
+  (shallow #'#8ecae6')
+  (sand #'#e9d8a6')
+  (forest #'#52796f')
+  (snow #'#f1faee'))
 (colormap land [terrain.deep terrain.shallow terrain.sand terrain.forest terrain.snow]
     (positions [-1 0 0 0.5 1]))
 
@@ -80,7 +80,7 @@
   ; Okabe and Ito by number: twelve dots, so the last four repeat the first four. Under them,
   ; the first eight again, each read by its name. Their black would vanish on a dark page, so
   ; there each dot has an edge; on a light page the edge is clear.
-  (color dot-edge (light-dark '#00000000' soft))
+  (color dot-edge (light-dark #'#00000000' soft))
   (group chart (translate [-4.6 -2.7]) (defaults (stroke dot-edge))
     (foreach k 12
       (circle_ (pos [(* 0.48 (- k 5.5)) 0]) (r 0.19) (fill (okabe-ito k)))))
@@ -120,7 +120,7 @@
   (on-drag handle (move angle (to (toward pointer angle))) doc@'Turns the wheel.'))
 
 (foreach m ['viridis' 'magma' 'cividis' 'blue-white-red']
-  (button #'pick-{m}' (animation (move scheme (to m) (duration 0))) (label m)
+  (button @'pick-{m}' (animation (move scheme (to m) (duration 0))) (label m)
     doc@'Draws the heatmap with this map.'))
 (toggle in-bands banded (label 'in bands')
   doc@'Draws the heatmap in four solid colors, with no mixing.')
