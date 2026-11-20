@@ -280,16 +280,15 @@ copy, and then makes the copy that {numref}`like-copies` gives.
 For example, take this `foreach`:
 
 ```mtp
-(foreach k 5
-  (let ((prev (when (> k 0) #'d-{(- k 1)}')))
-    (circle #'d-{k}' (pos [k 0]) (r (if (none? prev) 1 (/ prev.r 2))))))
+(circle d-0 (pos [0 0]) (r 1))
+(foreach k (range 1 5)
+  (let ((prev #'d-{(- k 1)}'))
+    (circle #'d-{k}' (pos [k 0]) (r (/ prev.r 2)))))
 ```
 
-Each circle has half the radius of the one before it, which `prev` names, and the first circle,
-whose `prev` is `none`, has the radius 1. The prover proves the body once, for k from 0 to 4. The
-name string is read only in the branch of the `when` that is taken for k from 1 to 4, so it names
-one of the copies `d-0` to `d-3`, each a circle that comes before, since the prover narrows the
-{term}`range` of k in that branch to 1 to 4 ({numref}`if-narrowing`).
+Each circle has half the radius of the one before it, which `prev` names. The prover proves the
+body once, for k from 1 to 4, so `prev` names one of `d-0` to `d-3`, each a circle that comes
+before.
 
 :::{admonition} Code differs
 :class: note
