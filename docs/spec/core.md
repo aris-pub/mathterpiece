@@ -307,8 +307,7 @@ form's meaning is defined, the rule for a syntactic sugar form, or {doc}`stdlib`
 (top-level-heads)=
 ### Top-level forms
 
-The top level of a source holds only the heads of this table and `let`
-({numref}`body-let-foreach`), with at most one `scene`.
+The top level of a source holds only the heads of this table, with at most one `scene`.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
@@ -316,6 +315,7 @@ The top level of a source holds only the heads of this table and `let`
 | `type` | core | `(type N BASE C…)`: a name for a {term}`refined type` | {numref}`type-notation` |
 | `interface` | core | `(interface N (T A C…)…)`: typed attributes that an object must have | {doc}`types` |
 | `record` | core | `(record N MEMBER…)`: a mutable object that is not drawn | {doc}`world-model` |
+| `font` | core | `(font N (family …) (style …) (weight …) (size …))`: a record of four attributes, which a text applies with `(face N)` | {doc}`data-model` |
 | `palette` | syntactic sugar | `(palette N (M C)…)`: a record of colors | {numref}`sugar-rewrites` |
 | `parametric` | syntactic sugar | `(parametric N XS F ARGS…)`: a polyline through the points of the curve `F` at the values of the list `XS` | {numref}`sugar-rewrites` |
 | `colormap` | core | `(colormap N [C…] ITEM…)`: a function from a {term}`real` to a color | {doc}`evaluation` |
@@ -328,7 +328,9 @@ The top level of a source holds only the heads of this table and `let`
 | `animation` | core | `(animation N (P…) ITEM…)`: a template of movements, as a motif is a template of shapes | {doc}`time` |
 | `primitive` | core | `(primitive N)`, only in a file of the standard library: the name `N` for a {term}`primitive` | {numref}`primitive-form` |
 | `foreach` | core | copies of its declarations, made in the expand step | {doc}`binding-time` |
-| `(T N …)` for a type `T` | core | a variable, among them `color` and `font` tokens and `rand-seed` seeds | {doc}`world-model`, {doc}`reaction` |
+| `let` | core | `(let ((N V)…) ITEM…)`: names for values, over the declarations that it holds ({numref}`body-let-foreach`) | {doc}`binding-time` |
+| `(T N …)` for a type `T` | core | a variable that holds a value, among them `color` tokens and `rand-seed` seeds | {doc}`data-model`, {doc}`reaction` |
+| `var` | core | `(var N T DEFAULT)`: a variable that holds an object of type `T` | {doc}`data-model` |
 | {term}`components <component>` | core | {term}`views <view>` and controls (see "Components and their items") | {doc}`page-interface` |
 | `doc` | core | a {term}`docstring`, kept in the .mtpc | {doc}`compiled-format` |
 
