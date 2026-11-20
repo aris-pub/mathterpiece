@@ -83,17 +83,12 @@ mtp-ydd4.7.59.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `(T N VALUE C…)` | core | a variable declaration | {doc}`world-model`, {doc}`reaction` |
-| `list` with no item type | core | a type | {doc}`types` |
-| `font` | core | a font declaration | {doc}`world-model` |
-| `family`, `style`, `weight`, `size` | core | attributes of a font | {doc}`world-model` |
-| `like` in a font | syntactic sugar | a named argument of a font | {numref}`like-copies` |
+| `(T N VALUE C…)` | core | a variable declaration | {numref}`variables`, {doc}`reaction` |
 | `free` | core | an expression | {doc}`reaction`, {doc}`binding-time` |
 | `>=`, `>`, `<=`, `<` with one number | core | conditions | {doc}`types` |
 | `length` | core | a condition | {doc}`types` |
 | `one-of` | core | a condition | {doc}`types` |
-| `const` | core | a named argument of a variable or an attribute | {doc}`data-model` |
-| `mod` | core | a type | {doc}`types` |
+| `const` | core | a named argument of a variable or an attribute | {numref}`variables` |
 
 ## Type notation
 
@@ -110,6 +105,8 @@ mtp-ydd4.7.59.
 | a name declared by `type` | core | the type that it names | {numref}`type-notation` |
 | a name declared by `interface`, `motif` or `variant` | core | that type | {doc}`types` |
 | `rand-seed` | core | a type | {doc}`types`, {doc}`evaluation` |
+| `list` with no item type | core | a type | {doc}`types` |
+| `mod` | core | a type | {numref}`modular-types` |
 
 ## The scene, shapes and containers
 
@@ -167,6 +164,8 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 | `record`, `palette` in a record | core, syntactic sugar | a body item | {doc}`world-model`, {numref}`sugar-rewrites` |
 | `(M C)` in a palette | syntactic sugar | a body item | {numref}`sugar-rewrites` |
 | `(T A C…)` in an interface | core | a body item | {doc}`types` |
+| `family`, `style`, `weight`, `size` | core | named arguments of a font | {doc}`data-model` |
+| `like` in a font | syntactic sugar | a named argument of a font | {numref}`like-copies` |
 
 ## Formulas and terms
 
