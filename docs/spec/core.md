@@ -25,7 +25,8 @@ A form is syntactic sugar if and only if it can be rewritten into core forms wit
 without using any type. Looking up a {term}`name` is neither, since lexical scope is fixed by the
 text, so a rewrite may resolve a name and read the text of the declaration or the binding that the
 name refers to.
-A form that needs a value or a type to be rewritten is core.
+A form that needs a value or a type to be rewritten is core, and is rewritten, if at all, in the
+expand step, once the prove step has worked out the types and the values ({numref}`compile-steps`).
 ```
 
 ```{rule} built-ins
@@ -296,49 +297,6 @@ The compiler makes each copy first, and then compiles `(name S)` and `(like …)
 that copy (compiler.py:1161-1167, compiler.py:5329-5341) (mtp-08wd.1). The example writes its name
 strings `#'…'`, as the compiler reads them today, in place of `@'…'` (mtp-c1hl).
 :::
-
-(core-core-forms)=
-## Forms that are core because a rewrite would need a value or a type
-
-By {numref}`sugar-form`, each form below is core. Its meaning is defined in the page named in the
-inventory.
-
-- **`(. X Y)`.** Whether `Y` is an attribute depends on `X` ({numref}`dot-name-part`).
-- **`foreach`.** The number of copies is a value, and `(foreach i n …)` is told apart from
-  `(foreach x xs …)` by the type of the second item ({numref}`foreach-count`).
-- **A shape whose type is a motif.** Its members are the motif's body with the values of its
-  parameters, made in the expand step.
-- **A use of an animation.** Its movements are the animation's body with the values of its
-  parameters, made in the expand step, as for a shape whose type is a motif.
-- **A thing whose type is a variant.** It is a thing of its base type with the variant's parameters
-  as attributes, some attributes fixed, and the variant as its type. No other core form carries
-  these.
-- **`row` and `column`.** Each member is placed after the box of the member before. A rewrite into
-  a group with a `translate` on each member would make each member read its own box, which
-  depends on that translate.
-- **`colormap`.** Its positions must be known when compiling and must not decrease, and the steps
-  of a discrete map are worked out from them, so its rewrite needs their values. Each call is
-  compiled where it is written, so that the colors that it mixes stay the tokens that they read.
-- **`exists-when`.** Its condition may read what is declared between the shape and the
-  `exists-when`, so it cannot be moved into the declaration of the shape
-  ({numref}`declare-before-use`).
-- **`let`.** A rewrite that put each value in place of each use would compute it once for each use,
-  with a site of its own for each random call. A rewrite into a variable needs the value's type.
-- **`(defaults …)` on a shape whose type is a motif.** Its members are made only in the expand
-  step, so the prover proves that each value fits its attribute.
-- **`(defaults …)` in a score.** A default ease does not apply
-  to a move of a {term}`bool`, a string or a choice, so writing the ease into each move needs the
-  type of its target. A default duration also applies to the name of a movement in the body, which
-  cannot be given a duration without making a new movement.
-- **A score of one item.** It is one step, while its item may be several: a play of
-  `(in-order (in-order a b))` has one step, and a play of `(in-order a b)` has two.
-- **`(map n f)` with an int `n`.** It means `(map (range 0 n) f)`, and is told apart from
-  `(map xs f)` by the type of `n`. This is part of the typing of the built-in function `map`
-  ({doc}`stdlib`).
-- **The {term}`operators <operator>`, `not`, `abs`, `or?`, `none?`, `some?`, `somes` and the box
-  points.** They are built-in functions, which the compiler reads itself ({numref}`built-ins`). A
-  declared function may take the name of any of them but an operator
-  ({numref}`declaration-names`).
 
 (core-inventory)=
 ## Inventory of heads

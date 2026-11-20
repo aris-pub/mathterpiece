@@ -73,10 +73,11 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 3. **Prove.** Every {term}`expression` is given a type, and every type, {term}`range`,
    {term}`condition` and other invariant that the spec requires is proved ({doc}`types`,
    {doc}`well-formedness`). This step proves and does nothing else.
-4. **Expand.** Each `foreach` is written out as its copies, each motif instance as the
-   {term}`body` of its motif with the arguments of the instance, and each use of an animation as the
-   body of its animation with the arguments of the use. In the copies, the instances and the uses,
-   the names built from values are replaced ({numref}`names-from-values`).
+4. **Expand.** The core forms whose rewrite needs a type or a value are rewritten, with the types
+   and the values that the prove step worked out. Each `foreach` is written out as its copies, each
+   shape whose type is a motif as the {term}`body` of its motif with its arguments, and each use of
+   an animation as the body of its animation with the arguments of the use. In the copies, the
+   shapes and the uses, the names built from values are replaced ({numref}`names-from-values`).
 5. **Fold.** Every expression known when compiling ({doc}`binding-time`) is replaced by its
    value.
 6. **Write.** The model is written as the .mtpc ({doc}`compiled-format`), with every type that the
