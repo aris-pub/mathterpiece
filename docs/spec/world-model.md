@@ -29,7 +29,7 @@ formula's string marks.
 
 The `(defaults …)` of a formula is a named argument, so it comes after the string and before the
 body ({numref}`named-arguments-first`). The body holds the terms, the `exists-when` forms and the
-variables. So `(formula f $'\term{a}{x}' (defaults (padding 3)) (term a (fill 'red')))` is allowed,
+variables. So `(formula f $'\term{a}{x}' (defaults (padding 3)) (term a (fill #'red')))` is allowed,
 as a text is written `(text t 'hi' …)`, and the same formula with the string after the
 `(defaults …)`, or after a `(term …)`, is an error.
 

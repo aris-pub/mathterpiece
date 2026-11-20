@@ -136,7 +136,7 @@ An import need not come before the forms that do not use its names. So
 `(scene s (circle c (fill colors.tab10-named.red))) (import colors)` is an error, and the same
 two forms in the other order are allowed. The names that an import gives share the file scope with
 the file's own declarations, so by {numref}`one-declaration-per-scope`, `(import house ink)`
-followed by `(color ink 'red')` is a compile error.
+followed by `(color ink #'red')` is a compile error.
 
 :::{admonition} Code differs
 :class: note

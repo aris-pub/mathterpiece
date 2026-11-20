@@ -162,7 +162,7 @@ name part
   `xs[0].pos` ({numref}`name-characters`, {numref}`name-brackets`).
 
 name string
-  `#'…'`: an interpolated string read as a name, which is `(name f'…')`
+  `@'…'`: an interpolated string read as a name, which is `(name f'…')`
   ({numref}`interpolated-strings`, {numref}`parser-sugar`).
 
 named argument
@@ -220,7 +220,7 @@ standard library
 
 prover
   The part of the compiler that does the prove step: it checks types, proves ranges and
-  constraints, and checks every invariant of the world model. It is given only core forms. See
+  conditions, and checks every invariant of the world model. It is given only core forms. See
   {numref}`compile-steps`.
 
 rewrite
@@ -313,8 +313,8 @@ condition
   is the intersection of `real` with it ({numref}`constraints`).
 
 refined type
-  A type with constraints, written `(T C…)`, whose values are the values of T that meet every
-  constraint ({numref}`the-types`, {numref}`constraints`).
+  A type with conditions, written `(T C…)`, whose things are the things of T that meet every
+  condition ({numref}`the-types`, {numref}`constraints`).
 
 choice type
   A string type refined by `(one-of …)` to a few strings ({numref}`choice-types`).

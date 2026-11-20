@@ -84,7 +84,7 @@ any number of such texts.
 | `(on-drag S S.shift ITEMS…)`, `(on-drag S S.shift-x ITEMS…)`, `(on-drag S S.shift-y ITEMS…)` | `(on-drag S (move S.shift (to pointer) (duration 0)) ITEMS…)`, `(on-drag S (move S.shift-x (to (. pointer 0)) (duration 0)) ITEMS…)`, `(on-drag S (move S.shift-y (to (. pointer 1)) (duration 0)) ITEMS…)` | |
 ```
 
-So `(parametric p (range -2 2 (num 361)) (fn t [t (* t t)]) (stroke 'teal'))` is the parabola
+So `(parametric p (range -2 2 (num 361)) (fn t [t (* t t)]) (stroke #'teal'))` is the parabola
 through 361 points from [-2 4] to [2 4], and `(parametric p (range 0 1 (num 50)) f)` draws a
 declared function `f`.
 
@@ -138,8 +138,8 @@ the declaration of `M` is rewritten first, and a `(like …)` is rewritten befor
 the declaration that holds it.
 ```
 
-For example, after `(circle a (r 1) (fill 'red') (stroke 'black'))`, the form
-`(circle b (like a) (r 2))` is syntactic sugar for `(circle b (r 2) (fill 'red') (stroke 'black'))`:
+For example, after `(circle a (r 1) (fill #'red') (stroke #'black'))`, the form
+`(circle b (like a) (r 2))` is syntactic sugar for `(circle b (r 2) (fill #'red') (stroke #'black'))`:
 `b` has every item of `a` but its radius, and a radius of 2.
 
 `M` is a plain name, and the form is one of these, or it is a {term}`compile error`:
@@ -242,8 +242,8 @@ So `p.r` is the attribute `r` of a circle `p`, and with `(let ((r 1)) xs.r)`, `x
 the list `xs`, as `(. xs r)` is. An attribute or a member of an object is read by its name, even
 when another declaration or a binding has the same name: the attributes of a record, the terms of a
 formula, and the members of a shape whose type is a motif. A palette is a record
-({numref}`sugar-rewrites`), so with `(color yellow '#ffd700')` and
-`(palette marks (yellow '#e6c200') (blue '#0072b2'))` at the top level, `marks.yellow` is the
+({numref}`sugar-rewrites`), so with `(color yellow #'#ffd700')` and
+`(palette marks (yellow #'#e6c200') (blue #'#0072b2'))` at the top level, `marks.yellow` is the
 attribute `yellow` of the record `marks`, and not the color `yellow`.
 
 :::{admonition} Code differs
@@ -272,9 +272,9 @@ choreo is compiled to its steps in place (compiler.py:1714-1729) (mtp-ydd4.7.26)
 A `(name S)`, and a `(like (name S))`, whose string `S` reads a name bound by a `foreach` or a
 parameter of a motif, are core. The prover proves, for every value that those names may take,
 that `S` gives the name of a declaration that comes before the form, and that every such
-declaration fits the form: for `(name S)`, a type that fits all of them, and for `(like …)`, the
-conditions of {numref}`like-copies`. The expand step replaces each
-by the name that `S` gives in each copy, and then makes the `(like …)` copy of that row.
+declaration fits the form: for `(name S)`, a type that fits all of them, and for `(like …)`, what
+{numref}`like-copies` requires. The expand step replaces each by the name that `S` gives in each
+copy, and then makes the copy that {numref}`like-copies` gives.
 ```
 
 For example, take this `foreach`:
@@ -285,14 +285,15 @@ For example, take this `foreach`:
 ```
 
 The prover proves its body once, for k from 0 to 4. In the branch of the `if` that is taken for k
-from 1 to 4, `#'d-{(- k 1)}'` names one of the copies `d-0` to `d-3`, each a circle that comes
+from 1 to 4, `@'d-{(- k 1)}'` names one of the copies `d-0` to `d-3`, each a circle that comes
 before, since the prover narrows the {term}`range` of k in that branch to 1 to 4
 ({numref}`if-narrowing`).
 
 :::{admonition} Code differs
 :class: note
 The compiler makes each copy first, and then compiles `(name S)` and `(like …)` with the values of
-that copy (compiler.py:1161-1167, compiler.py:5329-5341) (mtp-08wd.1).
+that copy (compiler.py:1161-1167, compiler.py:5329-5341) (mtp-08wd.1). The example writes its name
+strings `#'…'`, as the compiler reads them today, in place of `@'…'` (mtp-c1hl).
 :::
 
 (core-core-forms)=
@@ -380,7 +381,7 @@ The error for a second scene is "a file has exactly one scene" (`compiler.py:485
 mtp-ydd4.7.59.
 :::
 
-### Variables and constraints
+### Variables and conditions
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
@@ -503,7 +504,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `type-of` | core | `(type-of X)`: the type of `X`, as a string | {doc}`types` |
 | `concat` | core | `(concat A B …)`: the strings `A`, `B`, … joined in order. An interpolated string `f'…'` is syntactic sugar for it ({numref}`parser-sugar`) | {doc}`evaluation` |
 | `fmt` | core | `(fmt X S)`: the value of `X` written as a string, by the {term}`format spec` `S`, in Python's format-spec mini-language. `S` is known when compiling, and is `''` when it is left out. `(concat)` is `''` | {doc}`evaluation` |
-| `free` | core | see "Variables and constraints". In an expression it is a compile error | {doc}`reaction` |
+| `free` | core | see "Variables and conditions". In an expression it is a compile error | {doc}`reaction` |
 | `(F A…)` for a declared function `F` | core | a call | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a call of a function held by a parameter or a `let` name | {doc}`evaluation` |
 
