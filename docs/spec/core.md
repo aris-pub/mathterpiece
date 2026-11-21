@@ -154,6 +154,15 @@ For example, after `(circle a (r 1) (fill #'red') (stroke #'black'))`, the form
 - `K` is `font`, and `M` is a font.
 - `K` is `term`, and `M` is a term of the same formula whose `(term …)` form comes before.
 - The form is a `move` or a `movement`, and `M` is a movement declared at the top level.
+- `K` is a shape head or a motif, and `M` is a record. Then `COPIED…` holds, for each attribute `A`
+  of `M` that `K` takes and that `ARGS…` does not give, the item `(A M.A)`, bound to the attribute of
+  the record. An attribute of `M` that `K` does not take is left out.
+
+So after `(record style (color fill #'red') (real stroke-width 1))`, `(circle_ (r 1) (like style))`
+is `(circle_ (r 1) (fill style.fill) (stroke-width style.stroke-width))`, and writing `style.fill`
+changes the fill of every shape that has `(like style)`. A text with `(like style)` takes the same
+two attributes. A circle with `(like M)` takes the `r` of a record `M` that has one, and a text does
+not.
 
 Two kinds of item are copied in a way of their own. The string of a text is copied too, though it
 is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and `y`, so when
