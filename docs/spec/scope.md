@@ -41,6 +41,20 @@ The binding `pointer` is used like this:
 In the move of the `on-drag`, `pointer` is the position of the pointer, so dragging `p` writes the
 x of the pointer into `a`, and `p` moves with it.
 
+The binding `self` is used like this:
+
+```mtp
+(motif dot ((real size 1))
+  (circle c (r size))
+  (text_ self.name (pos (top c 0.2)) (halign 'middle') (valign 'bottom')))
+(scene s
+  (dot d1)
+  (dot d2 (size 0.5)))
+```
+
+In the body of `dot`, `self` is the shape being declared, so each `dot` writes its own name above
+its circle: `'d1'` above the circle of `d1`, and `'d2'` above the circle of `d2`.
+
 ## Scopes
 
 ```{rule} scopes
@@ -220,13 +234,4 @@ are forbidden only as the name of a function (`compiler.py:181`, `NOT_FUNCTION_N
 variable may be named `if`, and a function may not take the name of a constant. A name bound by
 `let` is checked against neither (`_Compiler.let`, `compiler.py:6663`). Bead mtp-ydd4.7.35 makes
 the compiler follow the rule.
-:::
-
-:::{admonition} Open question Q-scope-1 (parked)
-:class: warning
-Every rule about a declaration that reads itself or its collection is to be redesigned around
-`self`, so that a declaration, a shape for example, refers to itself through `self`. Today `self`
-is bound only in the body of a motif ({numref}`declarations-and-bindings`). The redesign is parked,
-and the rules of today about a declaration that reads itself are in
-{numref}`self-reference-today`.
 :::

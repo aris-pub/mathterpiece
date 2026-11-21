@@ -156,8 +156,7 @@ mtp-ydd4.7.59.
 | `like` on an `M` or on a `V`, for a variant `V` | syntactic sugar | a clause | {numref}`like-copies` |
 
 The rules about a declaration that reads itself or its collection, such as a default that reads
-its own group, are to be redesigned around `self`. Until then, the rules of today hold
-({numref}`self-reference-today`).
+its own group, are {numref}`self-reference-today` and {numref}`no-dependency-cycles`.
 
 ## Records, palettes and interfaces
 

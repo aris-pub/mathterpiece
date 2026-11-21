@@ -13,8 +13,8 @@ boxes of each part.
 | {doc}`core` | Q-core-1 to 27 |
 | {doc}`evaluation` | Q-evaluation-1 to 13 |
 
-The drafts of {doc}`scope` and {doc}`well-formedness` raised three more: Q-scope-1, which is
-parked (bead mtp-9b4m), and Q-well-formedness-1 and Q-well-formedness-2, which are
+The drafts of {doc}`scope` and {doc}`well-formedness` raised three more: Q-scope-1, decided on 2026-11-21 (a declaration may read its own
+attributes, by its name or through `self`, as long as no-dependency-cycles holds), and Q-well-formedness-1 and Q-well-formedness-2, which are
 decided under P1 and P4.
 
 ## P1. When bodies are proved: once, or once per copy

@@ -32,23 +32,21 @@ These rules hold for a use of a name inside the form that declares or binds it:
 1. A function may call itself in its own {term}`body`.
 2. A variable, a `let` name and a parameter never read themselves: `(real k (+ k 1))` is a compile
    error.
-3. A shape, including a shape of a variant or of a motif, never reads one of its own attributes in
-   its own form, whether directly, in a `free@` starting value, through a position on its
-   group known when compiling, or through a function.
-4. A shape in a group, at any depth, never reads the group whole in its own form: an attribute of
+3. A shape in a group, at any depth, never reads the group whole in its own form: an attribute of
    every member, such as `g.x`, a list function over `g.members`, a
    function given `g.members`, or a member by a position known only while drawing. `(count g.members)` and
    `g.length` may be read. The count and the {term}`list` of a `foreach` inside the group never read
    the group.
-5. A collection never reads itself in its own `clip` or in its own `(defaults …)`, also once the
+4. A collection never reads itself in its own `clip` or in its own `(defaults …)`, also once the
    defaults are given to its members ({numref}`collection-defaults`).
 
-Each read that items 2 to 5 forbid is a compile error.
+Each read that items 2 to 4 forbid is a compile error. A shape may read its own attributes, by
+its name or through `self`, as long as {numref}`no-dependency-cycles` holds.
 ```
 
 The other cases of a declaration that reads itself or its collection, such as an `exists-when` that
-reads its own shape or a member that reads the `translate` of its group, are part of the same
-redesign (Q-scope-1), and this spec does not define them yet.
+reads its own shape or a member that reads the `shift` of its group, are limited in the same way, by
+{numref}`no-dependency-cycles` only.
 
 ## What a writer may write
 
