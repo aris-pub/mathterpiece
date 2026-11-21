@@ -22,9 +22,10 @@ A literal evaluates to a primitive. A name refers to a type, a variable, an obje
 and evaluates to what it refers to.
 
 A compound evaluates to a primitive, a type, an object or an attribute. An object or attribute that
-it gives already exists, except with the heads `fn`, `rec` and `move`: each of these gives a new
-object, and every attribute of that object is const or bound, never free, so no writer can write it
-({numref}`functions`, {numref}`records`). So evaluating a compound never writes a variable or an
+it gives already exists, except with the heads `fn`, `rec`, `move` and `score`, and with `(A …)` for
+an animation `A`: each of these gives a new object. Every attribute of a record that `rec` gives is
+bound or const, and no writer may write an attribute of a function or of a movement, so no writer
+can write the new object ({numref}`functions`, {numref}`records`, {numref}`writable-targets`). So evaluating a compound never writes a variable or an
 attribute, and never creates a variable or an object that a writer can write.
 
 A declaration creates something new in the model: a variable, a type or an object.
