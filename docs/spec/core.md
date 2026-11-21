@@ -66,7 +66,11 @@ any number of such texts.
 
 | Written | Means exactly | Conditions |
 |---|---|---|
-| `N.A`, `N[X]` | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name is written as an expression or as the target of a writer. A head and the name of a declaration are not rewritten |
+| `N.A`, `N[X]`, where `N` does not name a type | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name is written as an expression or as the target of a writer. A head and the name of a declaration are not rewritten |
+| `T[X…]`, where `T` names a type | `(type-apply T X…)`: `list[int]` is `(type-apply list int)`, and `func[real real]` is `(type-apply func real real)` | |
+| `T1\|T2…` | `(type-union T1 T2…)`: `real\|none` is `(type-union real none)` | |
+| `T1&T2…` | `(type-intersect T1 T2…)`: `shape&round` is `(type-intersect shape round)` | |
+| `[X…]` | `(list-of X…)`: `[0 1]` is `(list-of 0 1)` | |
 | `(when C X)` | `(if C X none)` | Exactly two arguments |
 | `(cond (C1 V1) MORE… (else V))`, `(cond (else V))` | `(if C1 V1 (cond MORE… (else V)))`, `V` | |
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |

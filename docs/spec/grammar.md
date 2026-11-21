@@ -55,9 +55,10 @@ errors.
 ```
 
 ```{rule} lists
-A list literal is written in square brackets, with its items separated as in
-{numref}`adjacent-items`: `[]`, `[0 1]`, `[(f x) 'a']`. A `[` right after the `]` of a list literal
-starts brackets after the list literal, which hold exactly one expression: `[a b c][h]`.
+A list is written in square brackets, with its items separated as in
+{numref}`adjacent-items`: `[]`, `[0 1]`, `[(f x) 'a']`. It is syntactic sugar for the form
+`(list-of …)` with the same items ({numref}`sugar-rewrites`). A `[` right after the `]` of a list
+starts brackets after the list, which hold exactly one expression: `[a b c][h]`.
 ```
 
 ```{rule} name-brackets
@@ -65,7 +66,7 @@ A `[` right after a {term}`name`, with no whitespace between them, starts bracke
 which hold one expression or more: `xs[0]`, `xs[(+ k 1)]`, `g['m1']`, `func[real real]`. Several
 pairs of brackets may follow each other, and after brackets, `.` and more
 {term}`name parts <name part>` may follow: `xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after
-whitespace starts a list literal: `xs [0]` is the name `xs` and the list literal `[0]`.
+whitespace starts a list: `xs [0]` is the name `xs` and the list `[0]`.
 ```
 
 ### Words
@@ -79,8 +80,8 @@ whitespace starts a list literal: `xs [0]` is the name `xs` and the list literal
 ```{rule} broadened-types
 A broadened type is two words or more joined by `|` with no whitespace between them, such
 as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bool` literals or
-{term}`operators <operator>`. A broadened type is one expression, and the {term}`compiler` reads it as a
-type ({doc}`types`).
+{term}`operators <operator>`. A broadened type is syntactic sugar for the form `(type-union …)` of its words
+({numref}`sugar-rewrites`).
 ```
 
 ### Heads
@@ -103,19 +104,16 @@ and a {term}`name string` hold text and expressions in braces, each expression w
 {numref}`string-literals` and {numref}`interpolated-strings` give the characters and the escapes
 inside each kind.
 
-## The expressions that the parser produces
+## The expressions after syntactic sugar is rewritten
 
 ```{rule} parser-expressions
-The parser produces the forms of a source as expressions, one for each form, in the order of the
-source. Each expression is one of these:
+After every syntactic sugar is rewritten ({numref}`parser-sugar`, {numref}`sugar-rewrites`), each
+expression of a source is one of these:
 
 | Expression | Written | Holds |
 |---|---|---|
-| form | `(…)` | its items, in order |
-| list literal | `[…]` | its items, in order |
-| name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
-| brackets | `[real real]` in `func[real real]` | its expressions, in order |
-| broadened type | `real\|none` | its words, as expressions, in order |
+| form | `(…)` | its items, in order. Its head is a name, or a form that evaluates to a type |
+| name | `p`, `real` | its text |
 | string literal | `'…'`, `$'…'` | its text |
 | color literal | `#'…'` | the color ({numref}`color-literals`) |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
@@ -126,8 +124,8 @@ source. Each expression is one of these:
 An operator is a name with one name part ({numref}`literal-words`).
 
 ```{rule} literals
-A literal is a piece of source text that writes a value directly: a number literal, a string
-literal, a color literal, `true`, `false`, `none`, or a list literal whose items are literals.
+A literal is a piece of source text that writes a primitive directly: a number literal, a string
+literal, a color literal, `true`, `false` or `none`.
 ```
 
 What value a literal gives, and of what type, is defined in {numref}`literal-types`. Values are
@@ -137,7 +135,7 @@ Each expression is a literal, a name or a form. Each form is a {term}`compound`,
 {term}`clause`, by its head ({doc}`heads`).
 
 <figure class="mtp-diagram" style="max-width: 35rem">
-<svg viewBox="0 0 560 386" role="img" aria-labelledby="mtp-items-title"><title id="mtp-items-title">Five kinds of expression that the parser produces, one under the other: literals, names, compounds, declarations and clauses. All five are expressions. Compounds, declarations and clauses are forms. A literal gives a primitive, a name gives what it refers to, a compound gives a value or a type, a declaration creates a variable, a type or an object, and a clause gives nothing and is part of the form around it.</title><text class="mtp-d-label" x="305.0" y="18" text-anchor="middle">what the parser produces</text><rect class="mtp-d-file" x="120" y="30" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="55" text-anchor="start">literals</text><text class="mtp-d-code" x="134" y="76" text-anchor="start">3  'hi'  #'red'  [1 2]</text><text class="mtp-d-sub" x="478" y="65.0" text-anchor="end">gives a primitive</text><rect class="mtp-d-file" x="120" y="102" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="127" text-anchor="start">names</text><text class="mtp-d-code" x="134" y="148" text-anchor="start">a  p.pos.x  real|none</text><text class="mtp-d-sub" x="478" y="129.0" text-anchor="end">gives what it</text><text class="mtp-d-sub" x="478" y="145.0" text-anchor="end">refers to</text><rect class="mtp-d-file" x="120" y="174" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="199" text-anchor="start">compounds</text><text class="mtp-d-code" x="134" y="220" text-anchor="start">(+ 1 2)  (if f a b)</text><text class="mtp-d-sub" x="478" y="201.0" text-anchor="end">gives a value</text><text class="mtp-d-sub" x="478" y="217.0" text-anchor="end">or a type</text><rect class="mtp-d-file" x="120" y="246" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="271" text-anchor="start">declarations</text><text class="mtp-d-code" x="134" y="292" text-anchor="start">(real a 1)  (circle c …)</text><text class="mtp-d-sub" x="478" y="273.0" text-anchor="end">creates a variable,</text><text class="mtp-d-sub" x="478" y="289.0" text-anchor="end">a type or an object</text><rect class="mtp-d-file" x="120" y="318" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="343" text-anchor="start">clauses</text><text class="mtp-d-code" x="134" y="364" text-anchor="start">(r 1)  (else 0)</text><text class="mtp-d-sub" x="478" y="337.0" text-anchor="end">gives nothing, and is</text><text class="mtp-d-sub" x="478" y="353.0" text-anchor="end">part of the form</text><text class="mtp-d-sub" x="478" y="369.0" text-anchor="end">around it</text><path class="mtp-d-arrow" fill="none" d="M114 34 H104 V376 H114"/><text class="mtp-d-label" x="98" y="209" text-anchor="end">expressions</text><path class="mtp-d-arrow" fill="none" d="M496 178 H506 V376 H496"/><text class="mtp-d-label" x="512" y="281.0" text-anchor="start">forms</text></svg>
+<svg viewBox="0 0 560 386" role="img" aria-labelledby="mtp-items-title"><title id="mtp-items-title">Five kinds of expression that the parser produces, one under the other: literals, names, compounds, declarations and clauses. All five are expressions. Compounds, declarations and clauses are forms. A literal gives a primitive, a name gives what it refers to, a compound gives a value or a type, a declaration creates a variable, a type or an object, and a clause gives nothing and is part of the form around it.</title><text class="mtp-d-label" x="305.0" y="18" text-anchor="middle">what the parser produces</text><rect class="mtp-d-file" x="120" y="30" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="55" text-anchor="start">literals</text><text class="mtp-d-code" x="134" y="76" text-anchor="start">3  'hi'  #'red'  true</text><text class="mtp-d-sub" x="478" y="65.0" text-anchor="end">gives a primitive</text><rect class="mtp-d-file" x="120" y="102" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="127" text-anchor="start">names</text><text class="mtp-d-code" x="134" y="148" text-anchor="start">a  real  circle</text><text class="mtp-d-sub" x="478" y="129.0" text-anchor="end">gives what it</text><text class="mtp-d-sub" x="478" y="145.0" text-anchor="end">refers to</text><rect class="mtp-d-file" x="120" y="174" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="199" text-anchor="start">compounds</text><text class="mtp-d-code" x="134" y="220" text-anchor="start">(+ 1 2)  (list-of 1 2)</text><text class="mtp-d-sub" x="478" y="201.0" text-anchor="end">gives a value</text><text class="mtp-d-sub" x="478" y="217.0" text-anchor="end">or a type</text><rect class="mtp-d-file" x="120" y="246" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="271" text-anchor="start">declarations</text><text class="mtp-d-code" x="134" y="292" text-anchor="start">(real a 1)  (circle c …)</text><text class="mtp-d-sub" x="478" y="273.0" text-anchor="end">creates a variable,</text><text class="mtp-d-sub" x="478" y="289.0" text-anchor="end">a type or an object</text><rect class="mtp-d-file" x="120" y="318" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="343" text-anchor="start">clauses</text><text class="mtp-d-code" x="134" y="364" text-anchor="start">(r 1)  (else 0)</text><text class="mtp-d-sub" x="478" y="337.0" text-anchor="end">gives nothing, and is</text><text class="mtp-d-sub" x="478" y="353.0" text-anchor="end">part of the form</text><text class="mtp-d-sub" x="478" y="369.0" text-anchor="end">around it</text><path class="mtp-d-arrow" fill="none" d="M114 34 H104 V376 H114"/><text class="mtp-d-label" x="98" y="209" text-anchor="end">expressions</text><path class="mtp-d-arrow" fill="none" d="M496 178 H506 V376 H496"/><text class="mtp-d-label" x="512" y="281.0" text-anchor="start">forms</text></svg>
 </figure>
 
 ```{rule} parser-sugar
