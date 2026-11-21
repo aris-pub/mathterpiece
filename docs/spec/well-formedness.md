@@ -64,7 +64,7 @@ a name ({numref}`names-from-values`). A target may be written only when it is fr
 
 - A name that is not a variable or an attribute, such as a group or a record by its name alone,
   is never a target.
-- A target that stands for several variables or attributes, as {doc}`concurrency`, section "Values",
+- A target that stands for several variables or attributes, as {doc}`concurrency`, section "Containers",
   gives, is writable only when each of them is: a `pos`, an attribute of a group or an instance that
   is not its own, and the `x`, the `y` and the `pos` of a line, a triangle, a polyline, a polygon
   and a bezier. An attribute of a collection with no members is never a target.
@@ -120,7 +120,7 @@ Bead mtp-ydd4.7.44.
 
 ```{rule} moves-at-once
 Two parts of one `at-once` that write the same variable or attribute at times that overlap are a compile error.
-The variables and attributes that a move writes are those of {doc}`concurrency`, section "Values". The times are
+The variables and attributes that a move writes are those of {doc}`concurrency`, section "Containers". The times are
 these:
 
 - Each part of an `at-once` starts when the `at-once` starts, and the moves inside it start at the
