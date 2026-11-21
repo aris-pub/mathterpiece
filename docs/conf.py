@@ -21,6 +21,7 @@ numfig_secnum_depth = 1
 numfig_format = {
     "rule": "Rule %s",
     "figure": "Figure %s",
+    "diagram": "Figure %s",
     "table": "Table %s",
     "code-block": "Listing %s",
 }

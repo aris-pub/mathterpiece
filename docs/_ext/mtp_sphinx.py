@@ -9,6 +9,8 @@
 - The directive `mtp-grammar` shows one section of the grammar, docs/spec/mtp.lark, as a list of
   productions in which each name links to its definition. tests/test_grammar.py checks the same
   file against the parser.
+- The directive `diagram` shows one SVG file as a numbered figure with a caption and a label, so
+  that {numref}`label` cites it, and a link to the label opens the page at the figure.
 - A link to a term of the glossary shows the term and its definition in a box as soon as the mouse
   is over it, or the link has the keyboard focus (_static/mtp-terms.js). The page carries them in
   the link's title, which the script removes so that the browser shows no tooltip of its own.
@@ -172,6 +174,45 @@ class Rule(SphinxDirective):
         if not hasattr(self.env, "mtp_rules"):
             self.env.mtp_rules = {}
         self.env.mtp_rules[label] = (self.env.docname, node["ids"][0], text)
+        return [node]
+
+
+class diagram_node(nodes.General, nodes.Element):
+    pass
+
+
+def visit_diagram(self, node):
+    extra = {"style": f"max-width: {node['max_width']}"} if node.get("max_width") else {}
+    self.body.append(self.starttag(node, "figure", CLASS="mtp-diagram", **extra))
+    self.body.append(node["svg"])
+    self.body.append("<figcaption>")
+    self.add_fignumber(node)
+
+
+def depart_diagram(self, node):
+    self.body.append("</figcaption></figure>\n")
+
+
+class Diagram(SphinxDirective):
+    """```{diagram} label
+    :file: diagrams/name.svg
+    :max-width: 35rem
+
+    The caption.
+    ```"""
+
+    required_arguments = 1
+    has_content = True
+    option_spec = {"file": directives.unchanged_required, "max-width": directives.unchanged}
+
+    def run(self):
+        label = self.arguments[0]
+        rel, path = self.env.relfn2path(self.options["file"], self.env.docname)
+        self.env.note_dependency(rel)
+        node = diagram_node(label=label, svg=Path(path).read_text().strip(), max_width=self.options.get("max-width"))
+        node["names"].append(label)
+        self.state.document.note_explicit_target(node)
+        self.state.nested_parse(self.content, self.content_offset, node)
         return [node]
 
 
@@ -488,6 +529,8 @@ def setup(app: Sphinx):
     app.add_lexer("mtp", MtpLexer)
     app.add_enumerable_node(rule_node, "rule", _rule_title, html=(visit_rule, depart_rule))
     app.add_directive("rule", Rule)
+    app.add_enumerable_node(diagram_node, "diagram", lambda n: n.astext() or n.get("label", ""), html=(visit_diagram, depart_diagram))
+    app.add_directive("diagram", Diagram)
     app.add_node(rule_index_node)
     app.add_directive("rule-index", RuleIndex)
     app.connect("env-purge-doc", _purge_rules)

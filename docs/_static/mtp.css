@@ -185,3 +185,8 @@ code.mtp-inline.highlight { background-color: var(--pst-color-surface); }
   .bd-sidebar-secondary { --pst-sidebar-secondary: 14rem; }
   .bd-main .bd-content .bd-article-container { max-width: none; }
 }
+
+/* A diagram's number and caption read as one line of small text under it. */
+.mtp-diagram figcaption { font-size: 0.9rem; color: var(--pst-color-text-muted); }
+.mtp-diagram figcaption > p { display: inline; margin: 0; }
+.mtp-diagram figcaption .caption-number { font-weight: 600; font-style: normal; }
