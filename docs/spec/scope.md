@@ -55,6 +55,15 @@ The binding `self` is used like this:
 In the body of `dot`, `self` is the shape being declared, so each `dot` writes its own name above
 its circle: `'d1'` above the circle of `d1`, and `'d2'` above the circle of `d2`.
 
+Inside the body, the parameters, the shapes and the variables of the body are names already:
+`size` is `self.size`, and `c` is `self.c`. So `self` is needed only for the parts of the shape that
+have no name in the body: its `name`, the attributes that it has from its kind, such as `x`, `y`,
+`rotate` or `opacity`, which are given where the shape is declared, and the shape as a whole, as in
+`(f self)` or `(= self picked)`. Every read through `self` is limited by
+{numref}`no-dependency-cycles`: a text in the body may read `self.x`, since the position of the
+shape does not depend on the text, but `(pos (top self 0.2))` in the body is a compile error, since
+the box of the shape depends on the shapes in its body.
+
 ## Scopes
 
 ```{rule} scopes
