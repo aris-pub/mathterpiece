@@ -206,7 +206,7 @@ A function is an object whose only attribute is `name`, and whose behavior is to
 
 So `(func twice ((real x)) (* 2 x))` declares the function `twice`, whose `name` is `'twice'`, and
 `(map xs (fn ((real x)) (* 2 x)))` passes a function with no name to `map`. A variable holds a
-function as it holds any object: `(var f function twice)` declares a variable `f` that holds `twice`. Since a function has no attribute that a writer
+function as it holds any object: `(var f func twice)` declares a variable `f` that holds `twice`. Since a function has no attribute that a writer
 may write, nothing is lost when `(fn …)` makes a new function each time that it is evaluated.
 
 :::{admonition} Code differs
