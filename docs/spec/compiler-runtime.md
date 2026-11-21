@@ -70,7 +70,7 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`syntactic sugar`
    form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, `(pos [1 2])`
    becomes `(x 1) (y 2)`. No value is computed and no type is used.
-3. **Prove.** Every {term}`expression` and every declaration is given a type, and every type, {term}`range`,
+3. **Prove.** Every {term}`expression` except a {term}`clause` is given a type, and every type, {term}`range`,
    {term}`condition` and other invariant that the spec requires is proved ({doc}`types`,
    {doc}`well-formedness`). This step proves and does nothing else.
 4. **Expand.** The core forms whose rewrite needs a type or a value are rewritten, with the types
@@ -155,7 +155,7 @@ of a world model, and these are not part of this spec either.
 
 ## What the compiler must do and must never do
 
-The compiler resolves every name, gives every expression and every declaration a type and proves it, and either rejects
+The compiler resolves every name, gives every expression except a clause a type and proves it, and either rejects
 the source or writes a valid .mtpc, by {numref}`compile-steps` and {numref}`step-rejects-or-passes`.
 
 ```{rule} compiler-decides-early

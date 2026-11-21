@@ -89,7 +89,7 @@ class TestSourceText:
         assert items("(f 'é ∑ θ')") == (StrLit("é ∑ θ"),)
 
 
-@rule("item-positions")
+@rule("expression-positions")
 class TestExpressionPositions:
     def test_line_and_column_count_from_1(self):
         (f,) = forms("(f\n  (g)\tx)")

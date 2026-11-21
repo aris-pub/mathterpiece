@@ -164,7 +164,7 @@ class TestBroadenedTypes:
         assert m.get("k").value.value is None
 
 
-@rule("parser-items")
+@rule("parser-expressions")
 class TestParserExpressions:
     def test_one_expression_for_each_form_in_order(self):
         assert forms("(a) (b)") == (form(name("a")), form(name("b")))

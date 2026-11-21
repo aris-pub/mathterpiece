@@ -171,11 +171,8 @@ named argument
   ({numref}`named-arguments-first`). Like a positional argument, it may be required or left out.
 
 expression
-  A literal, a name or a {term}`compound` ({doc}`data-model`).
-
-item
-  One piece of a source as the parser produces it: a form, a list literal, a word, a broadened
-  type, a string literal or an interpolated string ({numref}`parser-items`).
+  One piece of a source as the parser produces it: a literal, a name or a form, which is a
+  {term}`compound`, a declaration or a {term}`clause` ({numref}`parser-expressions`).
 
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name with one name part
@@ -303,7 +300,7 @@ clause
   argument, the guard of a control, or `exists-when` ({doc}`data-model`).
 
 compound
-  A form that is an expression: it evaluates to a primitive, a type, an object or an attribute,
+  A form that evaluates to a primitive, a type, an object or an attribute,
   and creates nothing that a writer can write, such as `(+ 1 2)` or `(if f a b)` ({doc}`data-model`).
 
 object

@@ -3,7 +3,7 @@
 
 This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`string`
 {term}`literals <literal>` and other pieces of text of {doc}`lexical` together into
-{term}`forms <form>`, the items that the parser produces, the template
+{term}`forms <form>`, the {term}`expressions <expression>` that the parser produces, the template
 that every form follows, and the kinds of form that may be written in each {term}`body`. The
 signatures of the forms, which list the arguments of each {term}`head`, are not part of this page.
 
@@ -21,8 +21,8 @@ the name of a rule keeps the quoted text of that rule in the tree.
 ```
 
 ```{rule} forms
-A form is a `(`, then any number of items, then a `)`. An
-item is a form, a {term}`list` literal, a word, a {term}`broadened type`, a
+A form is a `(`, then any number of expressions, its items, then a `)`. An
+expression is a form, a {term}`list` literal, a word, a {term}`broadened type`, a
 string literal or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
 that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
 ```
@@ -41,11 +41,11 @@ source may hold no form at all.
 
 ```{rule} adjacent-items
 Among the items of a form, a list literal or brackets, whitespace or a comment separates every two
-items, except where one of the two is a form. More exactly, an item that ends with the
+expressions, except where one of the two is a form. More exactly, an expression that ends with the
 `)` of a form, which is a form or a prefixed form such as `free@(g)`, may be followed
-directly by any item that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
-and every other item may be followed directly only by a form. So `(f a(b)c)` holds three
-items after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
+directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
+and every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
+expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
 errors.
 ```
 
@@ -79,7 +79,7 @@ whitespace starts a list literal: `xs [0]` is the name `xs` and the list literal
 ```{rule} broadened-types
 A broadened type is two words or more joined by `|` with no whitespace between them, such
 as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bool` literals or
-{term}`operators <operator>`. A broadened type is one item, and the {term}`compiler` reads it as a
+{term}`operators <operator>`. A broadened type is one expression, and the {term}`compiler` reads it as a
 type ({doc}`types`).
 ```
 
@@ -103,19 +103,19 @@ and a {term}`name string` hold text and expressions in braces, each expression w
 {numref}`string-literals` and {numref}`interpolated-strings` give the characters and the escapes
 inside each kind.
 
-## What the parser produces
+## The expressions that the parser produces
 
-```{rule} parser-items
-The parser produces the forms of a source as items, one for each form, in the order of the
-source. Each item is one of these:
+```{rule} parser-expressions
+The parser produces the forms of a source as expressions, one for each form, in the order of the
+source. Each expression is one of these:
 
-| Item | Written | Holds |
+| Expression | Written | Holds |
 |---|---|---|
 | form | `(…)` | its items, in order |
 | list literal | `[…]` | its items, in order |
-| name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one item, or, when it holds more than one, the brackets |
-| brackets | `[real real]` in `func[real real]` | its items, in order |
-| broadened type | `real\|none` | its words, as items, in order |
+| name | `p`, `p.pos.x`, `xs[0].y` | its name parts, in order. Each name part is the text of a part between dots, or what a pair of brackets holds: its one expression, or, when it holds more than one, the brackets |
+| brackets | `[real real]` in `func[real real]` | its expressions, in order |
+| broadened type | `real\|none` | its words, as expressions, in order |
 | string literal | `'…'`, `$'…'` | its text |
 | color literal | `#'…'` | the color ({numref}`color-literals`) |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
@@ -133,11 +133,11 @@ literal, a color literal, `true`, `false`, `none`, or a list literal whose items
 What value a literal gives, and of what type, is defined in {numref}`literal-types`. Values are
 defined in {doc}`data-model`.
 
-Each item is a literal, a name or a form. Each form is a {term}`compound`, a declaration or a
-{term}`clause`, by its head ({doc}`heads`). Literals, names and compounds are {term}`expressions <expression>`.
+Each expression is a literal, a name or a form. Each form is a {term}`compound`, a declaration or a
+{term}`clause`, by its head ({doc}`heads`).
 
 <figure class="mtp-diagram" style="max-width: 35rem">
-<svg viewBox="0 0 560 386" role="img" aria-labelledby="mtp-items-title"><title id="mtp-items-title">Five kinds of item that the parser produces, one under the other: literals, names, compounds, declarations and clauses. Literals, names and compounds are expressions. Compounds, declarations and clauses are forms. A literal gives a primitive, a name gives what it refers to, a compound gives a value or a type, a declaration creates a variable, a type or an object, and a clause gives nothing and is part of the form around it.</title><text class="mtp-d-label" x="305.0" y="18" text-anchor="middle">items, as the parser produces them</text><rect class="mtp-d-file" x="120" y="30" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="55" text-anchor="start">literals</text><text class="mtp-d-code" x="134" y="76" text-anchor="start">3  'hi'  #'red'  [1 2]</text><text class="mtp-d-sub" x="478" y="65.0" text-anchor="end">gives a primitive</text><rect class="mtp-d-file" x="120" y="102" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="127" text-anchor="start">names</text><text class="mtp-d-code" x="134" y="148" text-anchor="start">a  p.pos.x  real|none</text><text class="mtp-d-sub" x="478" y="129.0" text-anchor="end">gives what it</text><text class="mtp-d-sub" x="478" y="145.0" text-anchor="end">refers to</text><rect class="mtp-d-file" x="120" y="174" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="199" text-anchor="start">compounds</text><text class="mtp-d-code" x="134" y="220" text-anchor="start">(+ 1 2)  (if f a b)</text><text class="mtp-d-sub" x="478" y="201.0" text-anchor="end">gives a value</text><text class="mtp-d-sub" x="478" y="217.0" text-anchor="end">or a type</text><rect class="mtp-d-file" x="120" y="246" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="271" text-anchor="start">declarations</text><text class="mtp-d-code" x="134" y="292" text-anchor="start">(real a 1)  (circle c …)</text><text class="mtp-d-sub" x="478" y="273.0" text-anchor="end">creates a variable,</text><text class="mtp-d-sub" x="478" y="289.0" text-anchor="end">a type or an object</text><rect class="mtp-d-file" x="120" y="318" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="343" text-anchor="start">clauses</text><text class="mtp-d-code" x="134" y="364" text-anchor="start">(r 1)  (else 0)</text><text class="mtp-d-sub" x="478" y="337.0" text-anchor="end">gives nothing, and is</text><text class="mtp-d-sub" x="478" y="353.0" text-anchor="end">part of the form</text><text class="mtp-d-sub" x="478" y="369.0" text-anchor="end">around it</text><path class="mtp-d-arrow" fill="none" d="M114 34 H104 V232 H114"/><text class="mtp-d-label" x="98" y="137.0" text-anchor="end">expressions</text><path class="mtp-d-arrow" fill="none" d="M496 178 H506 V376 H496"/><text class="mtp-d-label" x="512" y="281.0" text-anchor="start">forms</text></svg>
+<svg viewBox="0 0 560 386" role="img" aria-labelledby="mtp-items-title"><title id="mtp-items-title">Five kinds of expression that the parser produces, one under the other: literals, names, compounds, declarations and clauses. All five are expressions. Compounds, declarations and clauses are forms. A literal gives a primitive, a name gives what it refers to, a compound gives a value or a type, a declaration creates a variable, a type or an object, and a clause gives nothing and is part of the form around it.</title><text class="mtp-d-label" x="305.0" y="18" text-anchor="middle">what the parser produces</text><rect class="mtp-d-file" x="120" y="30" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="55" text-anchor="start">literals</text><text class="mtp-d-code" x="134" y="76" text-anchor="start">3  'hi'  #'red'  [1 2]</text><text class="mtp-d-sub" x="478" y="65.0" text-anchor="end">gives a primitive</text><rect class="mtp-d-file" x="120" y="102" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="127" text-anchor="start">names</text><text class="mtp-d-code" x="134" y="148" text-anchor="start">a  p.pos.x  real|none</text><text class="mtp-d-sub" x="478" y="129.0" text-anchor="end">gives what it</text><text class="mtp-d-sub" x="478" y="145.0" text-anchor="end">refers to</text><rect class="mtp-d-file" x="120" y="174" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="199" text-anchor="start">compounds</text><text class="mtp-d-code" x="134" y="220" text-anchor="start">(+ 1 2)  (if f a b)</text><text class="mtp-d-sub" x="478" y="201.0" text-anchor="end">gives a value</text><text class="mtp-d-sub" x="478" y="217.0" text-anchor="end">or a type</text><rect class="mtp-d-file" x="120" y="246" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="271" text-anchor="start">declarations</text><text class="mtp-d-code" x="134" y="292" text-anchor="start">(real a 1)  (circle c …)</text><text class="mtp-d-sub" x="478" y="273.0" text-anchor="end">creates a variable,</text><text class="mtp-d-sub" x="478" y="289.0" text-anchor="end">a type or an object</text><rect class="mtp-d-file" x="120" y="318" width="370" height="62" rx="6"/><text class="mtp-d-name" x="134" y="343" text-anchor="start">clauses</text><text class="mtp-d-code" x="134" y="364" text-anchor="start">(r 1)  (else 0)</text><text class="mtp-d-sub" x="478" y="337.0" text-anchor="end">gives nothing, and is</text><text class="mtp-d-sub" x="478" y="353.0" text-anchor="end">part of the form</text><text class="mtp-d-sub" x="478" y="369.0" text-anchor="end">around it</text><path class="mtp-d-arrow" fill="none" d="M114 34 H104 V376 H114"/><text class="mtp-d-label" x="98" y="209" text-anchor="end">expressions</text><path class="mtp-d-arrow" fill="none" d="M496 178 H506 V376 H496"/><text class="mtp-d-label" x="512" y="281.0" text-anchor="start">forms</text></svg>
 </figure>
 
 ```{rule} parser-sugar
@@ -165,7 +165,7 @@ the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ �
 ```
 
 The parser produces a name with several name parts, such as `p.r` or `xs[0].y`, as one name
-({numref}`parser-items`). The rewrite step rewrites it into `(. X Y)` forms: `p.r` is
+({numref}`parser-expressions`). The rewrite step rewrites it into `(. X Y)` forms: `p.r` is
 `(. p r)`, and `xs[0].y` is `(. (. xs 0) y)` ({numref}`sugar-rewrites`). The meaning of `(. X Y)`
 is given in {numref}`dot-name-part`.
 

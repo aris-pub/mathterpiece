@@ -2,7 +2,7 @@
 # Types
 
 This page defines the types of mtp, how a type is written, which {term}`values <value>` each type holds, when a value of one type is accepted where another type is expected, and the type of each
-expression and declaration. Every {term}`expression` and every declaration has a type, which the prove step works out
+expression. Every {term}`expression` except a {term}`clause` has a type, which the prove step works out
 ({numref}`compile-steps`), and the {term}`runtime` never checks a type
 ({numref}`runtime-no-type-work-while-drawing`). How a value is held and computed is defined in
 {doc}`evaluation`, which objects there are and what their attributes are in {doc}`world-model`, and
@@ -555,10 +555,10 @@ The type of a function declared with `func` is `func[P1 … Pn R]`, with the typ
 parameters and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY
 as R.
 
-## The type of each expression and declaration
+## The type of each expression
 
 ```{rule} form-types
-Each expression and each declaration has this type:
+Each expression except a clause has this type:
 
 | Form | Its type |
 |---|---|

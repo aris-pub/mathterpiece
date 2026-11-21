@@ -4,7 +4,7 @@
 This page defines the characters of a source, and the {term}`names <name>`, numbers,
 {term}`string` {term}`literals <literal>` and other pieces of text that the {term}`parser` reads
 whole. The next page, {doc}`grammar`, defines how the parser puts these pieces together into
-{term}`items <item>`, forms among them. The definitions of this
+{term}`expressions <expression>`, forms among them. The definitions of this
 page and the rules of the next page are one grammar, written in the notation of the Lark parser and
 shown in pieces on the two pages. The whole grammar is also one file, [mtp.lark](https://github.com/aris-pub/mathterpiece/blob/main/docs/spec/mtp.lark).
 
@@ -54,11 +54,11 @@ A byte order mark at any other place, outside string literals and comments, is a
 is not whitespace ({numref}`whitespace-and-comments`) and not a character of a {term}`word`
 ({numref}`word-ends`).
 
-```{rule} item-positions
-Each item that the parser produces has a position: the line and the column of its
+```{rule} expression-positions
+Each expression that the parser produces has a position: the line and the column of its
 first character, counting from 1. A byte order mark at the start is not counted. A newline
 (line feed, U+000A) starts a new line. Every other character, a tab included, adds 1 to the
-column. An item that the parser builds from a shorter spelling has the position given in
+column. An expression that the parser builds from a shorter spelling has the position given in
 {numref}`parser-sugar`.
 ```
 
@@ -124,7 +124,7 @@ So `theta`, `show-tan`, `x2`, `a-`, `none?`, `the-true-value`, `truex`, `p.empty
 are not, and neither is any word that holds a character that is not ASCII. `true.x`, `p.true`,
 `none.x`, `xs[0].none` and `none[0]` are errors, since one of their name parts is `true` or `none`.
 Since no name holds `'` or `@`, text that starts with `f'` is an {term}`interpolated string`, and a
-name followed by `@` starts a prefixed form, at the start of an item
+name followed by `@` starts a prefixed form, at the start of an expression
 ({numref}`interpolated-strings`, {numref}`prefix-forms`). Both are errors in every other place,
 such as after `|` in a {term}`broadened type` or after a `.` that follows {term}`brackets`:
 `a|f'q'`, `xs[0].f'q'` and `a|r@1` are errors.
@@ -252,9 +252,9 @@ name is made only of hex digits, so a name and a hex color are never confused. `
 ```
 
 ```{rule} prefix-forms
-A name, `@` and an item, written with nothing between them, are short for the form of that name
-and that item: `H@X` is `(H X)`. H is a name that is not an operator and does not end with `_`. X
-is any item that is not itself a prefixed form. Besides a name string `@'…'`
+A name, `@` and an expression, written with nothing between them, are short for the form of that name
+and that expression: `H@X` is `(H X)`. H is a name that is not an operator and does not end with `_`. X
+is any expression that is not itself a prefixed form. Besides a name string `@'…'`
 ({numref}`interpolated-strings`), `@` may not be written in any other place.
 ```
 

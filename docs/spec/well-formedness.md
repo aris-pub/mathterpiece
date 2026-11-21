@@ -2,7 +2,7 @@
 # Well-formedness
 
 A {term}`world model` whose {term}`names <name>` resolve ({ref}`scope`) and whose
-{term}`expressions <expression>` and declarations have types ({doc}`types`) must still pass the rules of this page:
+{term}`expressions <expression>` have types ({doc}`types`) must still pass the rules of this page:
 its dependencies make no cycle, its writers write only what may be written, the moves that run
 together do not write the same variable or attribute, and every {term}`condition` is proved. All of them are
 checked in the prove step ({numref}`compile-steps`), and a source that breaks one is a
@@ -142,7 +142,7 @@ for a member `c` of `g`.
 ```{rule} prover-proves
 The prover proves exactly these, and nothing else:
 
-1. The type of every expression and every declaration, and that it fits where it is given ({numref}`form-types`).
+1. The type of every expression except a clause, and that it fits where it is given ({numref}`form-types`).
 2. That every value meets the conditions of the type expected where it is given
    ({numref}`constraint-proof`).
 3. Which operations may give `none`, and so which types include `none` ({numref}`may-give-none`),
