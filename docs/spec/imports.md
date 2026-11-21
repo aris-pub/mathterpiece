@@ -54,7 +54,8 @@ source compiles, while on Linux the same source is a compile error. Bead mtp-ydd
 :::
 
 ```{rule} import-same-file
-Two imports read the same file when the two paths name one file on disk, links followed. A file
+Two imports read the same file when they find the same file on disk, also when one of them finds
+it through a symbolic link, a file that only points to another file. A file
 imported several times, directly or through other files, is put in once ({numref}`import-puts-in`).
 Two different files of the same name imported into one source, directly or through other files,
 are a compile error, "two different files named F.mtp are imported". A file that imports itself,
