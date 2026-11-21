@@ -30,8 +30,8 @@ in the frame of the collection that holds the shape or the term, when the moveme
 other expression reads the position of the pointer.
 ```
 
-So `(on-drag p (as q) (move a (to q.x)))` writes the x of the pointer into `a` at each motion of
-the pointer, and `(on-click board (as q) (move marker.pos (to q) (duration 0.3)))` moves a marker to
+So `(on-drag p (as ptr) (move a (to ptr.x)))` writes the x of the pointer into `a` at each motion of
+the pointer, and `(on-click board (as pointer) (move marker.pos (to pointer) (duration 0.3)))` moves a marker to
 the point where the reader clicked.
 
 :::{admonition} Code differs
