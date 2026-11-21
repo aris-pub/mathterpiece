@@ -28,9 +28,9 @@ So `bool` is the set of the values `true` and `false`, `(real (>= 0))` is the se
 are not below 0, `real|none` is the set of the reals with `none` added, and `circle` is the set of
 the circles. A type that {term}`fits <fit>` another is a subset of it.
 
-A source makes new types from named ones in four ways, which differ only in how they are written:
-a union, `point|circle`, joins sets; an intersection, `shape&round`, keeps the values that are in
-both; a condition, `(real (>= 0))`, keeps the values of a set that meet it; and an interface,
+A source makes new types from named ones in four ways, which differ only in how they are written.
+A union, `point|circle`, joins sets. An intersection, `shape&round`, keeps the values that are in
+both. A refined type, `(real (>= 0))`, keeps the values of a set that meet its conditions. An interface,
 `(interface inky (color ink))`, is the set of the values that have the attributes that it lists. `list[T]` and `func[P… R]` name the sets of the lists and the functions
 whose items, parameters and result are of the types in the brackets.
 
@@ -200,8 +200,8 @@ A list of conditions implies a condition C exactly in these cases:
 ## Conditions
 
 ```{rule} constraints
-A condition is a type written as the values that meet it, and `(T C…)` is the intersection of T with
-each condition C. A condition is one of these forms, each on the types of its row only, and its
+A condition is a clause that limits the values of the type in the form around it: `(T C…)` holds the
+values of T that meet every condition C. A condition has no meaning outside that form. A condition is one of these forms, each on the types of its row only, and its
 values are {term}`literals <literal>`:
 
 | Condition | On | The values that meet it | Written with |

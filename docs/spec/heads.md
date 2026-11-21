@@ -85,9 +85,9 @@ mtp-ydd4.7.59.
 |---|---|---|---|
 | `(T N VALUE C…)` | core | a declaration | {numref}`variables`, {doc}`reaction` |
 | `free` | core | a compound | {doc}`reaction`, {doc}`binding-time` |
-| `>=`, `>`, `<=`, `<` with one number | core | conditions | {doc}`types` |
-| `length` | core | a condition | {doc}`types` |
-| `one-of` | core | a condition | {doc}`types` |
+| `>=`, `>`, `<=`, `<` with one number | core | a clause | {doc}`types` |
+| `length` | core | a clause | {doc}`types` |
+| `one-of` | core | a clause | {doc}`types` |
 | `const` | core | a clause | {numref}`variables` |
 
 ## Type notation
