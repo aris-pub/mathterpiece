@@ -41,7 +41,7 @@ These rules hold for a use of a name inside the form that declares or binds it:
    defaults are given to its members ({numref}`collection-defaults`).
 
 Each read that items 2 to 4 forbid is a compile error. A shape may read its own attributes, by
-its name or through `self`, as long as {numref}`no-dependency-cycles` holds.
+its name or through the name of the `(as N)` of its motif, as long as {numref}`no-dependency-cycles` holds.
 ```
 
 The other cases of a declaration that reads itself or its collection, such as an `exists-when` that

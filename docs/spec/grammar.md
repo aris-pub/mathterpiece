@@ -265,7 +265,7 @@ named argument: a {term}`listener`, `(move …)`, `(jump …)`, an `(animation �
 
 So the second item of each of these is not a name:
 
-- `(on-drag p (at q) (move k (to q)))`: `p`, the shape that is dragged.
+- `(on-drag p (as q) (move k (to q)))`: `p`, the shape that is dragged.
 - `(move k (to 1) (duration 0.5))`: `k`, the target that the move writes.
 - `(foreach k 3 (circle_ (r k)))`: `k`, the name that the foreach binds, and then `3`.
 - `(let ((h (/ w 2))) (rect_ (width h)))`: `((h (/ w 2)))`, the bindings.

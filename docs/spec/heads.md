@@ -147,7 +147,7 @@ mtp-ydd4.7.59.
 | a shape or a bound or const variable in a motif's body | core | a declaration |
 | `foreach` or `let` in a motif's body | core | a special form | {doc}`world-model` |
 | `exists-when` in a motif's body | core | a clause | {doc}`world-model` |
-| `self` | core | a name | {doc}`scope` |
+| `as` in a motif | core | a clause | {doc}`scope` |
 | a parameter given to an `M`, for a motif `M`, `(P X)` | core | a clause | {doc}`world-model` |
 | `x`, `y`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y` on an `M` | core | a clause | {doc}`world-model` |
 | `pos` on an `M` | syntactic sugar | a clause | {numref}`sugar-rewrites` |
@@ -292,7 +292,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | the move of a slider | core | a compound | {doc}`page-interface`, {doc}`reaction` |
 | the target of `toggle` | core | a name | {doc}`reaction` |
 | `(on-pointermove T)` with a target `T` | syntactic sugar | a declaration | {numref}`sugar-rewrites` |
-| `at` on a listener that the pointer triggers | core | a clause | {numref}`pointer-binding` |
+| `as` on a listener that the pointer triggers | core | a clause | {numref}`pointer-binding` |
 | the target of `on-drag` written as a move | core | a compound | {doc}`reaction`, {numref}`drag-group-shift` |
 | the target of `on-drag` written as a name | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `label` | core | a clause | {doc}`page-interface`, {doc}`accessibility` |

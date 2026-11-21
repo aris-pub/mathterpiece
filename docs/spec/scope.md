@@ -19,9 +19,9 @@ makes the names of another file usable ({doc}`data-model`). What it creates exis
 the source gives it a name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
 for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
 parameters of a function, a motif, a variant or an animation, are bindings, and so is the name in
-the clause `(at N)` of a listener, which binds the position of the pointer ({numref}`pointer-binding`).
-The language makes one binding of its own: the body of a motif binds `self` to the shape being
-declared. The names that an `import`
+the optional clause `(as N)` of a motif or of a pointer listener. In a motif, `N` is the shape being
+declared, and in a listener, the position of the pointer ({numref}`pointer-binding`). The language
+binds no name of its own. The names that an `import`
 makes usable refer to what the declarations of another file create ({doc}`imports`).
 ```
 
@@ -30,39 +30,39 @@ So `(real a 1)`, `(circle c (r a))`, `(canvas v s)`, `(func twice ((real x)) (* 
 canvas, such as `(on-click c (move a (to 0) (duration 1)))`, which creates a listener with no name. In
 `(let ((k 2)) (circle c (r k)))`, the circle `c` is a declaration and `k` is a binding.
 
-A binding of `(at N)` is used like this:
+In a pointer listener, `(as N)` is used like this:
 
 ```mtp
 (real a 1 (>= 0) (<= 4))
 (scene s (circle p (pos [a 0]) (r 0.2)))
 (canvas v s
-  (on-drag p (at q) (move a (to q.x))))
+  (on-drag p (as q) (move a (to q.x))))
 ```
 
 In the movement of the `on-drag`, `q` is the position of the pointer, so dragging `p` writes the x
 of the pointer into `a`, and `p` moves with it.
 
-The binding `self` is used like this:
+In a motif, `(as N)` is used like this:
 
 ```mtp
-(motif dot ((real size 1))
+(motif dot ((real size 1)) (as me)
   (circle c (r size))
-  (text_ self.name (pos (top c 0.2)) (halign 'middle') (valign 'bottom')))
+  (text_ me.name (pos (top c 0.2)) (halign 'middle') (valign 'bottom')))
 (scene s
   (dot d1)
   (dot d2 (size 0.5)))
 ```
 
-In the body of `dot`, `self` is the shape being declared, so each `dot` writes its own name above
+In the body of `dot`, `me` is the shape being declared, so each `dot` writes its own name above
 its circle: `'d1'` above the circle of `d1`, and `'d2'` above the circle of `d2`.
 
 Inside the body, the parameters, the shapes and the variables of the body are names already:
-`size` is `self.size`, and `c` is `self.c`. So `self` is needed only for the parts of the shape that
+`size` is `me.size`, and `c` is `me.c`. So `(as N)` is needed only for the parts of the shape that
 have no name in the body: its `name`, the attributes that it has from its kind, such as `x`, `y`,
 `rotate` or `opacity`, which are given where the shape is declared, and the shape as a whole, as in
-`(f self)` or `(= self picked)`. Every read through `self` is limited by
-{numref}`no-dependency-cycles`: a text in the body may read `self.x`, since the position of the
-shape does not depend on the text, but `(pos (top self 0.2))` in the body is a compile error, since
+`(f me)` or `(= me picked)`. Every read through `me` is limited by
+{numref}`no-dependency-cycles`: a text in the body may read `me.x`, since the position of the
+shape does not depend on the text, but `(pos (top me 0.2))` in the body is a compile error, since
 the box of the shape depends on the shapes in its body.
 
 ## Scopes
@@ -74,13 +74,13 @@ and the names of each one:
 | Scope | Covers | Names |
 |---|---|---|
 | the {term}`file scope` of a source or of a {term}`file to import` | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
-| the {term}`body` of a motif | the motif's body | the parameters of the motif, `self`, and every shape and variable declared in the body, at any depth |
+| the {term}`body` of a motif | the motif's body | the parameters of the motif, the name of its `(as N)`, and every shape and variable declared in the body, at any depth |
 | a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and an animation | the body | the parameters |
 | `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each expression after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
 | a record or a palette | the items after each attribute | its attributes |
 | a formula | the items of the formula | its variables, from the item after each, and its terms ({numref}`formula-terms`) |
-| a listener with `(at N)` | its movement | `N` |
+| a listener with `(as N)` | its movement | `N` |
 
 The scope of a body is inside the scope of the form around it, and every scope is inside the file
 scope. A group, a row, a column and the scene make no scope of their own. The names that are
@@ -229,9 +229,7 @@ second step of {numref}`name-lookup`. The names of the {term}`standard library` 
 they are ordinary declarations of its files ({doc}`stdlib`), which a source brings in with
 `import`, and are found as any other imported name.
 
-A variable may be named `self`. Inside the body of a motif, the binding `self` hides a declaration
-named `self` ({numref}`name-lookup`). A member of a motif's body named `self` is a
-compile error by {numref}`one-declaration-per-scope`, since the body binds `self`.
+
 
 :::{admonition} Code differs
 :class: note

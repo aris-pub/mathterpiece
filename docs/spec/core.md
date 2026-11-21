@@ -85,9 +85,9 @@ any number of such texts.
 | `(wait T)`, in a score | `(move none (duration T))` | |
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |
 | `(in-order ARGS… ITEMS…)`, `(at-once ARGS… ITEMS…)` | `(score ARGS… ITEMS…)`, with `(lag 1)` for `in-order`, or `(lag 0)` for `at-once`, added to its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `lag` |
-| `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (at P) (move S.pos (to P) (duration 0)) ITEMS…)`, `(on-drag S (at P) (move S.x (to P.x) (duration 0)) ITEMS…)`, `(on-drag S (at P) (move S.y (to P.y) (duration 0)) ITEMS…)` | `P` is a name that the source does not use ({numref}`pointer-binding`) |
-| `(on-drag S S.shift ITEMS…)`, `(on-drag S S.shift-x ITEMS…)`, `(on-drag S S.shift-y ITEMS…)` | `(on-drag S (at P) (move S.shift (to P) (duration 0)) ITEMS…)`, `(on-drag S (at P) (move S.shift-x (to P.x) (duration 0)) ITEMS…)`, `(on-drag S (at P) (move S.shift-y (to P.y) (duration 0)) ITEMS…)` | `P` is a name that the source does not use |
-| `(on-pointermove T ITEMS…)`, where `T` is a target | `(on-pointermove (at P) (move T (to P) (duration 0)) ITEMS…)` | `P` is a name that the source does not use |
+| `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (as P) (move S.pos (to P) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.x (to P.x) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.y (to P.y) (duration 0)) ITEMS…)` | `P` is a name that the source does not use ({numref}`pointer-binding`) |
+| `(on-drag S S.shift ITEMS…)`, `(on-drag S S.shift-x ITEMS…)`, `(on-drag S S.shift-y ITEMS…)` | `(on-drag S (as P) (move S.shift (to P) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.shift-x (to P.x) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.shift-y (to P.y) (duration 0)) ITEMS…)` | `P` is a name that the source does not use |
+| `(on-pointermove T ITEMS…)`, where `T` is a target | `(on-pointermove (as P) (move T (to P) (duration 0)) ITEMS…)` | `P` is a name that the source does not use |
 ```
 
 So `(parametric p (range -2 2 (num 361)) (fn t [t (* t t)]) (stroke #'teal'))` is the parabola
@@ -133,7 +133,7 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
 
 So a qualified name as the target of an `on-drag` is the position of the dragged shape, its `x` or its
 `y`, and any other name there is a compile error: `(on-drag p k)` must be written with a
-move, such as `(on-drag p (at q) (move k (to q.x)))`.
+move, such as `(on-drag p (as q) (move k (to q.x)))`.
 
 ### Copies with `like`
 
@@ -186,14 +186,14 @@ When `K` is a motif, `(like M)` does not copy its `clip` (mtp-ydd4.7.20).
 ```{rule} drag-group-shift
 A group, a row or a column is dragged by its `shift`, its `shift-x` or its `shift-y`. In an
 `on-drag` on such a collection, whether its `fixed-size` is true or not, when the target is the
-collection's own `shift`, `shift-x` or `shift-y`, the name that `(at …)` binds is the collection's
+collection's own `shift`, `shift-x` or `shift-y`, the name that `(as …)` binds is the collection's
 `shift` at the press plus the motion of the pointer since the press, in the frame of the collection's collection. A
 target that is the collection's `pos`, `x` or `y` is a {term}`compile error`, "a group has no x of
 its own: drag its shift, as (on-drag g g.shift)".
 ```
 
 By {numref}`sugar-rewrites`, `(on-drag g g.shift)` is
-`(on-drag g (at q) (move g.shift (to q) (duration 0)))`, with a name `q` that the source does not use.
+`(on-drag g (as q) (move g.shift (to q) (duration 0)))`, with a name `q` that the source does not use.
 No member is written: the members are drawn in the frame of the group, so they move with it and keep
 their own positions. `(on-drag g g.x)` is an error twice over: `g.x` of a group is the list of the
 `x` of its members, and a drag writes one number.

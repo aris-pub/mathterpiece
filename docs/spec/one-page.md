@@ -49,8 +49,8 @@ The people, the files and the two programs ({numref}`people-and-programs`).
 
 :::{admonition} Code differs
 :class: note
-In the spec, the drag is written `(on-drag p (at q) (move a (to q.x)))`. The compiler does not have
-`(at …)` yet. Bead mtp-t8in.
+In the spec, the drag is written `(on-drag p (as q) (move a (to q.x)))`. The compiler does not have
+`(as …)` yet. Bead mtp-t8in.
 :::
 
 - `a` is a free variable: it holds 1 when the page opens, and a writer may change it.
