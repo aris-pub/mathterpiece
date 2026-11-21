@@ -9,7 +9,7 @@ Which {term}`expressions <expression>` may read the scene, a formula or the page
 
 The rewrite step finds what each name refers to ({numref}`compile-steps`), so a source
 that breaks a rule of this page is rejected in the rewrite step. A name that is built from a value,
-`(name S)` with `S` reading a `foreach` name or a motif parameter, is resolved in the prove step
+`(name S)` where `S` uses a `foreach` name or a motif parameter, is resolved in the prove step
 instead ({numref}`names-from-values`). This page specifies the language.
 
 ## Declarations and bindings
