@@ -5,8 +5,7 @@ This page defines what the compiler builds from a source and the runtime holds i
 manipulates: values, variables and attributes. A {term}`value` is a
 {term}`primitive` or an {term}`object`. Variables and attributes are
 {term}`containers <container>`: each holds one value.
-The expressions that the parser produces, {term}`literals <literal>` among them, are defined in {doc}`grammar`. This page
-specifies the language.
+The expressions that the parser produces, {term}`literals <literal>` among them, are defined in {doc}`grammar`.
 
 ```{diagram} values-containers-types
 :file: diagrams/values-containers-types.svg
