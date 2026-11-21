@@ -130,9 +130,9 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
   and is compiled once, then bound to the parameter (mtp-08wd.5).
 :::
 
-So a bare name as the target of an `on-drag` is the position of the dragged shape, its `x` or its
-`y`, and any other bare name there is a compile error: `(on-drag p k)` must be written with a
-move, such as `(on-drag p (move k (to (. pointer 0))))`.
+So a qualified name as the target of an `on-drag` is the position of the dragged shape, its `x` or its
+`y`, and any other name there is a compile error: `(on-drag p k)` must be written with a
+move, such as `(on-drag p (move k (to pointer.x)))`.
 
 ### Copies with `like`
 

@@ -223,7 +223,7 @@ Some forms, taken apart by the template:
 ```{rule} declared-names
 Almost every declaration has a name slot, its second item. The exceptions are rare: a
 {term}`listener` is a declaration with no name slot ({numref}`forms-with-no-name`). The name of a
-declaration is a bare name with one name part, `none`, or `(name s)`, whose string `s` is known
+declaration is a name, never a qualified name, or `none`, or `(name s)`, whose string `s` is known
 when compiling ({numref}`names-from-values`).
 `none` as the name means that the declaration has no name, as the head `head_` does
 ({numref}`unnamed-head`). A scene, a formula, a {term}`view` and a {term}`control` must have a name,
