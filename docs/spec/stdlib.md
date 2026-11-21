@@ -15,7 +15,7 @@ names, and only these:
 | Name | What it is |
 |---|---|
 | `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | the random functions ({numref}`random-values`), which the compiler implements |
-| `seed` | the {term}`seed` that a file with no seed of its own follows ({numref}`default-seed`), as if declared `(rand-seed seed 0)` |
+| `seed` | the {term}`seed` that a file with no seed of its own uses ({numref}`default-seed`), as if declared `(rand-seed seed 0)` |
 | `roll-dice` | an animation that gives the seed `s` its next value at once, as if declared `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`. `s` is the {term}`default seed` of the file that holds the use when the use gives no argument |
 ```
 
@@ -48,5 +48,5 @@ of the file that holds it ({numref}`default-seed`).
 (button roll (animation (roll-dice)) (label 'roll'))
 ```
 
-Here the source declares no seed, so `(rand-int 1 6)` follows `seed` of the file rand, which
+Here the source declares no seed, so `(rand-int 1 6)` uses `seed` of the file rand, which
 starts at 0, and the button `roll` gives that seed its next value.

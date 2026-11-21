@@ -7,7 +7,7 @@ rules: each word links to the page that defines it.
 
 mtp is a language for interactive mathematical illustrations. A source describes shapes, formulas
 and the variables that they depend on. A reader changes the variables with sliders, buttons,
-drags and clicks, and everything that depends on them follows.
+drags and clicks, and everything that depends on them updates.
 
 ## People
 
@@ -91,7 +91,7 @@ these:
 | Kind | Example | What it holds |
 |---|---|---|
 | free | `(real a 1)` | 1 when the page opens, until a writer writes a new value |
-| bound | `(real b (* 2 a))` | the value of its expression at all times, so `b` follows `a` |
+| bound | `(real b (* 2 a))` | the value of its expression at all times, so `b` updates when `a` changes |
 | const | `(real c 3 (const))` | 3, always. A writer of `c` is a compile error |
 
 A {term}`type` is a set of values, known when compiling, such as `real`, `(real (>= 0))`,
