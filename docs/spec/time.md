@@ -1,34 +1,42 @@
 # Time and animation
 
 :::{note}
-Not drafted yet. This page defines: moves, which are the unit of change over time, movements as functions of time, scores as collections of movements, each member placed in time by its own lag, repeated with loops, as a group is a collection of shapes, with `in-order` and `at-once` as scores whose members run one after another or together, and animations as templates of movements, as a motif is a template of shapes.
+Not drafted yet. This page defines moves, movements as functions of time, scores (collections of
+movements, each member placed in time by its own lag and repeated with loops), `in-order` and
+`at-once` (scores whose members run one after another or together), and animations, which are
+templates of movements.
 :::
 
 (animation-uses)=
-## Movements of an animation
+## `(A …)` for an animation `A`
 
-With an animation `C`, `(C A1 … Ak)` creates a `C`, which is a movement. It is core, as `(M …)` is for
-a motif `M`. It is written where a
-movement may be written, and k is at least the position of the last parameter with no default. In
-the expand step it becomes an `(in-order …)` whose members are the body of the animation, with each
-parameter replaced by the value of its argument, or by its default when it gives no argument
-for it. So a `(C …)` written as a member of an `in-order` or an `at-once` is one step
-({numref}`animation-step`). The prover proves that each argument {term}`fits <fit>` the type
-of its parameter. An argument may be any expression that may be written in the body in the places
-where its parameter is written, so `(pulse (* 2 k))` is an error when the parameter is a duration,
-by {doc}`binding-time`, and is accepted when it is a `to`. A parameter stands for a value, such as a number or a
-shape, never for a variable: a move in the body may move an attribute of a shape given as a
-parameter, such as `who.opacity`, and never the parameter itself. The one exception is a parameter
-of type `rand-seed`, which stands for a seed: its argument is the name of a seed, and in the body
-the parameter is replaced by that seed and not by its value, so a move of the parameter moves the
-seed. Any other argument for such a parameter is a compile error, "the argument for P is the name
-of a seed, as in (C dots)". So the animation `roll-dice` of the file rand,
-`(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`, moves the seed named in `(roll-dice s)`.
+With an animation `C`, `(C A1 … Ak)` creates a `C`, which is a movement. It is a core form, like
+`(M …)` for a motif `M`. It may be written where a movement may be written, and k must be at least
+the position of the last parameter with no default. In the expand step, the compiler replaces it
+with an `(in-order …)` whose members are the items of the body of the animation, with each
+parameter replaced by the value of its argument, or by its default when `(C …)` has no argument
+for it. So a `(C …)` written as a member of another score is one step of that score
+({numref}`animation-step`).
+
+The prover proves that each argument {term}`fits <fit>` the type of its parameter. An argument may
+be any expression that may be written in each place in the body where its parameter is written. So
+with a variable `k`, `(pulse (* 2 k))` is a compile error when the parameter of `pulse` is written
+as a duration, by the rules of {doc}`binding-time`, and is accepted when it is written as a `to`.
+
+A parameter is bound to a value, such as a number or a shape, and not to a variable. A move in the
+body may move an attribute of a shape that is the argument of a parameter, such as `who.opacity`,
+but may not move the parameter itself. The one exception is a parameter of type `rand-seed`: its
+argument must be the name of a seed, and in the body the parameter is replaced by that seed and not
+by its value, so a move of the parameter moves the seed. Any other argument for such a parameter is
+a compile error, "the argument for P is the name of a seed, as in (C dots)". So with the animation
+`roll-dice` of the file rand, `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`,
+`(roll-dice s)` creates a movement that moves the seed `s`.
 
 :::{admonition} Code differs
 :class: note
-The compiler writes each use of a choreo out where it is written (compiler.py:1669-1729), proves
-the body again for each use, compiles a choreo whose parameters all have defaults once more without
-a use, and binds a parameter that is not a seed and is given a name to that name, so that a move of
-the parameter moves what it names (mtp-ydd4.7.56).
+The compiler writes out each `(C …)` for a choreo `C` where it is written (compiler.py:1669-1729),
+and proves the body again for each one. It also compiles once on its own each choreo whose
+parameters all have defaults. It binds a parameter that is not a seed, and whose argument is a
+name, to that name, so that a move of the parameter moves what the name refers to
+(mtp-ydd4.7.56).
 :::

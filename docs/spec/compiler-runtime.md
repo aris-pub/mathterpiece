@@ -278,9 +278,9 @@ the design: where the spec still allows a state that breaks a rule, the spec has
 gap is closed by changing the language, never by showing an error to the reader.
 
 ```{rule} runtime-builds-live-model
-When a .mtpc loads, the runtime builds its live model, once, before any component draws: it turns
-every expression into a function, once, and gives every free variable and attribute its starting
-value, reading each `free` start once ({doc}`compiled-format`, "Free and bound values"). Then it
+When a .mtpc loads, the runtime builds its live model, once, before it draws any component: it turns
+every expression into a function, once, and sets every free container to its starting value,
+reading each `free` start once ({doc}`compiled-format`, "Free and bound containers"). Then it
 keeps the live model current as the reader acts: after each write, it computes again only what
 depends on what changed, and the views draw again ({doc}`reaction`, {doc}`time`,
 {doc}`concurrency`).
@@ -304,8 +304,8 @@ it, and it never writes a variable or an attribute of the live model.
 
 For example, while an `on-show` or an `on-hide` plays, the runtime draws a stand-in in the canvas in place of the
 shape: a copy of the shape that only this canvas has, which the movement writes. The shape in the
-live model keeps every attribute as it was, and when the animation ends, the canvas drops the
-stand-in ({doc}`page-interface`).
+live model keeps every attribute as it was, and when the movement ends, the runtime drops the
+stand-in.
 
 ```{rule} runtime-no-type-work-while-drawing
 While drawing, the runtime never checks whether a value has its type, and never converts a value

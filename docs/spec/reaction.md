@@ -18,9 +18,10 @@ The signature of `on-drag` ({ref}`signatures`):
   ITEMS := (any EXPR:bool)
 ```
 
-`SOURCE` is the shape or the term that the reader drags, and `MOVEMENT` is what each motion of the
-pointer plays: a movement that takes no time ({numref}`interfaces`), so a move with a duration is a
-compile error. The body holds the listener's guards ({numref}`writer-guards`).
+`SOURCE` is the shape or the term that the reader drags. `MOVEMENT` is the movement that the runtime
+executes at each motion of the pointer. Its type is `instant`, the movements that take no time
+({numref}`interfaces`), so a move whose duration is not 0 is a compile error. The items of the body
+are the guards of the listener ({numref}`writer-guards`).
 
 ```{rule} pointer-binding
 A listener that the pointer triggers, `on-drag`, `on-pointermove`, `on-click`, `on-release`,
@@ -36,6 +37,6 @@ the point where the reader clicked.
 
 :::{admonition} Code differs
 :class: note
-An `on-drag` takes only one move, which gives no duration, and the compiler has no interface
-`instant`. Beads mtp-rk1i and mtp-idcs.
+In the compiler, an `on-drag` holds exactly one move, written without a duration, and there is no
+interface `instant`. Beads mtp-rk1i and mtp-idcs.
 :::

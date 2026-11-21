@@ -2,79 +2,76 @@
 # Evaluation
 
 This page defines how an {term}`expression` is computed: the order in which its parts are
-{term}`evaluated <evaluation>`, the {term}`forms <form>` that evaluate only some of their parts, the
-inputs at which an operation gives `none`, how `none` propagates, the numbers and their limits,
-random values, equality, and how deep a chain of calls can go.
+{term}`evaluated <evaluation>`, the {term}`forms <form>` of which only some parts are evaluated,
+the inputs at which an operation results in `none`, how `none` propagates, the numbers and their
+limits, random values, equality, and how deep a chain of calls can go.
 
 An expression is computed at one of two times ({doc}`binding-time`). When every value that it
 reads is known when compiling, the {term}`compiler` computes it in the fold step and writes the
 value into the {term}`.mtpc` in place of the expression. This is {term}`folding`. Otherwise the
 {term}`runtime` computes it while drawing, again each time a value that it reads changes
-({doc}`reaction`). Every rule in this page applies at both times, unless the rule is stated for one
+({doc}`reaction`). Every rule on this page applies at both times, unless the rule is stated for one
 of them.
 
-## Expressions change nothing
+## Evaluation changes nothing
 
 ```{rule} evaluation-is-pure
-Evaluation of an expression gives a value and changes nothing: no variable,
-no attribute, no {term}`seed` and no page element. The value depends only on the values that the
-expression reads: variables, attributes, parameters, `let` {term}`names <name>`, the
+Evaluating an expression results in a value and changes nothing: no variable,
+no attribute, no {term}`seed` and no page element. The value depends only on what the
+expression reads: variables, attributes, {term}`bindings <binding>`, the
 seeds of its random functions, and, for a read of a position, the frame of the
 expression that reads it ({doc}`world-model`).
 ```
 
-Only writers change variables and attributes, and no expression is a writer ({doc}`reaction`).
-
 ## Evaluation order
 
 ```{rule} arguments-before-call
-A call of a function, a built-in function or an {term}`operator` evaluates every argument, then
-computes its result from their values. The forms of {numref}`forms-evaluate-some-parts` are the only
-exceptions.
+In a call of a function, a built-in function or an {term}`operator`, every argument is evaluated,
+and then the result is computed from their values. The forms of
+{numref}`forms-evaluate-some-parts` are the only exceptions.
 ```
 
 By {numref}`evaluation-is-pure`, and since every argument is evaluated, the order in which the
 arguments of one call are evaluated does not change the value.
 
 ```{rule} forms-evaluate-some-parts
-These forms evaluate only some of their parts:
+Only some of the parts of these forms are evaluated:
 
-| Form | Evaluates |
+| Form | The parts that are evaluated |
 |---|---|
 | `(if c a b)` | `c`, then `a` when `c` is true, or `b` when it is false |
 | `(or? x d)` | `x`, then `d` only when `x` is `none` |
-| `(let ((n1 v1) (n2 v2) …) body)` | each expression of a name that the {term}`body` or a later expression reads, once, in order, then the body. An expression that nothing reads is not evaluated. An expression that is read is evaluated before the body, even when the branch of the body that reads it is not taken |
+| `(let ((n1 v1) (n2 v2) …) body)` | the expression of each binding that the {term}`body` or a later expression reads, once, in order, then the body. An expression that nothing reads is not evaluated. An expression that is read is evaluated before the body, even when the branch of the body that reads it is not taken |
 | `(fn params body)` | nothing, until the function is called |
 ```
 
-`cond`, `and` and `or` are {term}`syntactic sugar` for `if` forms ({numref}`sugar-rewrites`). So, when
-compiling and while drawing, `cond` evaluates its tests in order, up to the first that is true, then
-the value of that branch only. `and` stops at the first part that is false, and `or` at the first
-part that is true. `(when c x)` is `(if c x none)` ({numref}`rewrite-when`), and evaluates its parts
-in the same way.
+So in `(let ((s (walk k))) (if c s 0))`, `walk` is called whether `c` is true or not.
 
-The compiler leaves out every `let` expression that nothing reads, and the runtime evaluates the rest
-before the body. So in
-`(let ((s (walk k))) (if c s 0))`, `walk` is called while drawing whether `c` is true or not.
+`cond`, `and` and `or` are {term}`syntactic sugar` for `if` forms ({numref}`sugar-rewrites`). So the
+tests of a `cond` are evaluated in order, up to the first that is true, and then only the value of
+that branch. The parts of an `and` are evaluated up to the first that is false, and those of an
+`or` up to the first that is true. `(when c x)` is `(if c x none)` ({numref}`rewrite-when`), and its
+parts are evaluated in the same way.
 
-The list functions call their function on the items in order. `any` and `all` with a function
-may stop at the first item at which the result is known: by {numref}`evaluation-is-pure`, the value
-is the same.
+The function passed to a list function is called on the items in order. `any` and `all` with a
+function may stop at the first item at which the result is known: by {numref}`evaluation-is-pure`,
+the value is the same.
 
-### Parts of these forms when compiling
+### Which parts the prove step proves
 
 ```{rule} known-condition-takes-one-branch
-When the condition of an `if` is known in the prove step ({numref}`prove-bodies-once`), the prove
+When the test of an `if` is known in the prove step ({numref}`prove-bodies-once`), the prove
 step proves only the branch that is taken. The other branch is neither proved nor folded.
 ```
 
 So inside the body of a `foreach` or a motif, the prove step proves both branches of an `if` whose
-condition reads the variable of the `foreach` or a parameter of the motif, since the body is proved
+test reads the binding of the `foreach` or a parameter of the motif, since the body is proved
 once for all their values. Each branch is proved for the values for which it runs
 ({numref}`if-narrowing`). By {numref}`sugar-rewrites`, the same holds for the tests of a `cond`
-and the parts of an `and` or an `or`. `or?` and `let` are proved whole: every part is proved, also a part that the form
-would not evaluate because a value before it is known when compiling. An operation that gives
-`none` at known inputs in such a part is a {term}`compile error` ({numref}`none-at-known-inputs`):
+and the parts of an `and` or an `or`. `or?` and `let` are proved whole: every part is proved, even a
+part that would not be evaluated because a value before it is known when compiling. An operation
+that results in `none` at known inputs in such a part is a {term}`compile error`
+({numref}`none-at-known-inputs`):
 
 ```mtp
 (real x 0 (const))
@@ -86,27 +83,27 @@ would not evaluate because a value before it is known when compiling. An operati
 ```
 
 A folded call is computed by evaluating its body, not by proving it again, so a folded call of a
-function that calls itself ends at its base case. A `foreach` copy can start a chain, in which
-copy k reads copy k - 1 through a `(name …)` {term}`string`, as in `(if (= k 0) 1 (* 2 (. (name
-f'd-{(- k 1)}') x)))`. How such a name is proved when the body is proved once is defined in
-{numref}`names-from-values`.
+function that calls itself ends at its base case. The copies of a `foreach` can form a chain, in
+which copy k reads copy k - 1 through `(name …)`, as in `(if (= k 0) 1 (* 2 (. (name
+f'd-{(- k 1)}') x)))`. {numref}`names-from-values` defines how the prover proves such a name when
+the body is proved once.
 
 :::{admonition} Code differs
 :class: note
-`cond`, `and` and `or` are compiled whole: every part is compiled, also a part that the form would
-not evaluate (mathterpiece/compiler.py, lines 6519 to 6531 for `and` and `or`, and 6608 to 6662
+`cond`, `and` and `or` are compiled whole: every part is compiled, even a part that would not be
+evaluated (mathterpiece/compiler.py, lines 6519 to 6531 for `and` and `or`, and 6608 to 6662
 for `cond`). So `b` and `c` in the example above are rejected with "division by zero". Only while
 a call is folded does `cond` stop at the first test that is known to be true (line 6614).
 mtp-08wd.2.
 :::
 
-## Operations that give none
+## Operations that result in none
 
 ```{rule} operations-that-give-none
-Besides an argument that is `none` ({numref}`none-propagates`), an operation gives `none` at these
-inputs, when folded and while drawing.
+Besides an argument that is `none` ({numref}`none-propagates`), an operation results in `none` at
+these inputs, when folded and while drawing.
 
-| Operation | Gives `none` at |
+| Operation | Results in `none` at |
 |---|---|
 | `/` | a divisor of 0 |
 | `mod` | a divisor of 0 |
@@ -116,7 +113,7 @@ inputs, when folded and while drawing.
 | `min`, `max` | no items at all |
 | `tand`, `secd` | 90 + 180k degrees, for every int k |
 | `cscd`, `cotd` | 180k degrees, for every int k |
-| `csc`, `cot` | 0. No {term}`real` is exactly π/2, so `tan` and `sec` give `none` at no input |
+| `csc`, `cot` | 0. No {term}`real` is exactly π/2, so `tan` and `sec` result in `none` at no input |
 | `asin`, `acos`, `asind`, `acosd` | an input below -1 or above 1 |
 | `asec`, `acsc`, `asecd`, `acscd` | an input strictly between -1 and 1 |
 | `to-polar` | the point `[0 0]` |
@@ -127,36 +124,36 @@ inputs, when folded and while drawing.
 | `g[k]` | a member that the group does not have |
 | a bound variable or attribute with a {term}`condition` | a value that breaks the condition ({doc}`types`) |
 
-At every other input, an operation never gives `none`.
+At every other input, an operation does not result in `none`.
 ```
 
 :::{admonition} Code differs
 :class: note
-- A folded call whose body gives `none` by this rule is a compile error for `min` and `max` of an
+- A folded call whose body results in `none` by this rule is a compile error for `min` and `max` of an
   empty list, `range` with more than 1,000,000 items, and `xs[i]` outside -n to n - 1. For example,
   with `(func f ((list[real] x)) (min x))`, `(f (as list[real] []))` is rejected, and so is
   `(f 3)` with `(func f ((int x)) (. [1 2 3] x))`. `min` and `max` of a known empty list
   (mathterpiece/compiler.py, line 2435) and a known position outside a list (line 6369) raise the
-  error directly, and not through `known_or_none` (line 2217), which gives `none` while a call is
-  folded. `range` gives `none` there, but the type of the body of `f` does not include `none`, so
+  error directly, and not through `known_or_none` (line 2217), which returns `none` while a call is
+  folded. `range` results in `none` there, but the type of the body of `f` does not include `none`, so
   `fold_call` raises the error again (lines 2527 to 2529). Bug mtp-ydd4.7.48.
 - `pick` always has a type that includes `none` (mathterpiece/compiler.py, line 2281), so
   `(rand-seed sd 1) (real v (pick [1 2]))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
 :::
 
-So no operation gives an infinity or NaN: a real is always finite ({numref}`number-types`). The
-functions of the {term}`standard library` are written in mtp, and give `none` where the built-ins
-that they call give `none` ({doc}`stdlib`).
+So no operation results in an infinity or NaN: a real is always finite ({numref}`number-types`).
+The functions of the {term}`standard library` are written in mtp, and result in `none` where the
+built-in functions that they call result in `none` ({doc}`stdlib`).
 
 ```{rule} none-at-known-inputs
 An operation whose inputs are known in the prove step ({numref}`prove-bodies-once`), and are among
-the inputs at which it gives `none` ({numref}`operations-that-give-none`), is a compile error. So
+the inputs at which it results in `none` ({numref}`operations-that-give-none`), is a compile error. So
 are `rand` and `rand-int` with both bounds known in the prove step and `lo` above `hi`, although
 their seed is never known when compiling.
 ```
 
 So `(sqrt -1)`, `(or? (sqrt -1) 0)` and `(rand-int 10 3)` are compile errors. In
-`(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, `(/ 1 i)` gives `none` when `i` is 0, so its type
+`(scene s (foreach i 3 (circle_ (r (/ 1 i)))))`, `(/ 1 i)` results in `none` when `i` is 0, so its type
 includes `none`, and the type of `r` does not include `none`: this is a compile error at
 `(/ 1 i)` in the body. With `(r (or? (/ 1 i) 1))`, the scene compiles, and the copy for `i` = 0
 has a radius of 1.
@@ -166,25 +163,23 @@ has a radius of 1.
 - The compiler proves each copy of a `foreach` with the value of its variable, so
   `(r (or? (/ 1 i) 1))` is rejected with "division by zero" at copy 0. mtp-08wd.1.
 - Neither `rand` nor `rand-int` checks that `lo` is at most `hi`. While drawing, `(rand-int 10 3)`
-  gives an int from 4 to 10 by the formula of {numref}`random-values`. The compiler gives the
-  result the {term}`range` from `lo` to `hi` (mathterpiece/compiler.py, lines 2262 and 2273), here
+  evaluates to an int from 4 to 10 by the formula of {numref}`random-values`. The compiler sets the
+  {term}`range` of the result from `lo` to `hi` (mathterpiece/compiler.py, lines 2262 and 2273), here
   from 10 to 3, so it accepts `((int (>= 3) (<= 5)) b (rand-int 5 3))`. Bug mtp-y7vp.
 :::
 
 A function body is proved once, with each parameter ranging over its declared type
 ({numref}`prove-bodies-once`). A call whose arguments are all known when compiling is folded: the
-fold step computes the body with those arguments, and an operation in the body that gives `none`
-at those arguments gives `none` there too ({numref}`operations-that-give-none`). The
-{term}`illustrator` wrote the body with parameters, not with known inputs, so an `or?` in the body
-can replace the `none` with a default. With
+fold step computes the body with those arguments, and an operation in the body that results in
+`none` at those arguments results in `none` there too ({numref}`operations-that-give-none`). So an
+`or?` in the body may replace the `none` with a default. With
 `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f -1)` is 1. With
 `(func f ((real x)) (/ 1 x))`, the result type includes `none`, and `(f 0)` is `none`.
-`(func[real] f ((real x)) (/ 1 x))` is a compile error at `(/ 1 x)`, since its body gives `none`
-when `x` is 0 and its declared result does not include `none`.
+`(func[real] f ((real x)) (/ 1 x))` is a compile error at `(/ 1 x)`, since its body results in
+`none` when `x` is 0 and its declared result type does not include `none`.
 
-The compiler works out which expressions can give `none` from the ranges of their inputs, and
-gives each such expression a type that includes `none` ({numref}`may-give-none`). The example below is live:
-the secant gives `none` at 90°, and there the readout holds its default text.
+The prover works out, from the ranges of their inputs, which expressions can result in `none`, and
+the type of each such expression includes `none` ({numref}`may-give-none`).
 
 ```{mtp-example}
 ; sec θ has no value at 90°, and there the readout holds its default text
@@ -196,57 +191,48 @@ the secant gives `none` at 90°, and there the readout holds its default text.
 ## How none propagates
 
 ```{rule} none-propagates
-An operation that receives `none` as an argument gives `none`, at both times, with these
+An operation with an argument that is `none` results in `none`, at both times, with these
 exceptions:
 
-- `or?`, `none?`, `some?` and `somes`, which give a value that is not `none` for an argument that
-  is `none` ({doc}`stdlib`).
+- `or?`, `none?`, `some?` and `somes`, which result in a value that is not `none` for an argument
+  that is `none` ({doc}`stdlib`).
 - `=` and `!=`, by {numref}`equality-by-content`.
-- A call of a function whose parameter is declared `T|none`: the body is evaluated with `none` as
-  the parameter. A parameter whose type does not include `none` makes the call `none`, and the body
-  is not evaluated.
-- A list literal, which holds `none` as an item. A point is the exception: a
-  point with a coordinate that is `none` is `none`.
+- A call of a function whose parameter has a type that includes `none`: the body is evaluated with
+  `none` as the parameter. A parameter whose type does not include `none` makes the call `none`,
+  and the body is not evaluated.
+- `(list-of …)`, which results in a list that holds `none` as an item. `(point-of …)` is not an
+  exception: a point with a coordinate that is `none` is `none`.
 - `if`, whose value is `none` only when the branch taken is `none`.
-- `map`, `reverse` and a read of a position of a list, which pass items that are `none` through.
+- `map`, `reverse` and a read of an item of a list, which pass items that are `none` through.
 
-A part of `none` is `none`: when `g[k]` is `none`, so is `g[k].pos`. An {term}`interpolated string`
-with a part that is `none` is `none`. A list function given `none` in place of its list gives
-`none`.
+An attribute of `none` is `none`: when `g[k]` is `none`, so is `g[k].pos`. An
+{term}`interpolated string` with a part that is `none` is `none`. A list function with `none` in
+place of its list results in `none`.
 ```
 
 :::{admonition} Code differs
 :class: note
 - `_Compiler.call` (mathterpiece/compiler.py, lines 1962 to 1973) folds the body with an argument
   that is `none`, also for a parameter whose type does not include `none`. So with
-  `(func h ((real x)) 5)`, a call of `h` with `none` gives 5. Bug mtp-ydd4.7.50.
+  `(func h ((real x)) 5)`, a call of `h` with `none` results in 5. Bug mtp-ydd4.7.50.
 - `(reverse [1 (f 0)])`, with `(f 0)` known to be `none`, stops the compiler with a Python
-  `TypeError`, since `_Compiler.collection` takes the smallest and the largest known item to give
+  `TypeError`, since `_Compiler.collection` uses the smallest and the largest known item to compute
   the range of the items (line 2679). Bug mtp-ydd4.7.51.
-- A list function given a list whose type includes `none` is a compile error, "the
+- A list function with a list whose type includes `none` is a compile error, "the
   collection given to map may be none" (`collection_items`, line 2820), so
   `(map (if (= 1 2) [1] none) (fn ((int x)) x))` is rejected. Bug mtp-ydd4.7.52.
 :::
 
-By {numref}`sugar-rewrites`, `cond` and `when` are `if` forms, so the value of either is `none`
-only when the branch taken is `none`.
-
 ```{rule} none-never-a-condition
 The test of an `if` and the value of the `(active …)` of a {term}`control` or a
-{term}`listener` never receive `none`. Neither do the items given to `sum`, `count`, `min`, `max`,
-`any`, `all` and `reduce`. A form that might give them `none` is a compile error ({doc}`types`).
+{term}`listener` are never `none`. Nor is an item of the list passed to `sum`, `count`, `min`,
+`max`, `any`, `all` or `reduce`. An expression that can evaluate to `none` in one of these places
+is a compile error ({doc}`types`).
 ```
 
-By {numref}`sugar-rewrites`, the tests of a `cond` and the parts of an `and` or an `or` that become
-the condition of an `if` never receive `none` either.
-
-Where `none` must stop, and the forms that stop it, are defined in {doc}`types`. A shape declared
-`T|none` is not drawn while it is `none`. `none` as a `fill` or a `stroke` means no fill or no
-stroke. In every other place that reaches the {term}`reader`, `none` is replaced with a default by
-`or?`, or left out of a list by `somes`.
-
-When compiling, a value known to be `none` propagates by the same rule: an operation with such an
-argument is known to give `none`.
+A shape declared `T|none` is not drawn while it is `none`, and `none` as a `fill` or a `stroke`
+means no fill or no stroke. In every other place that the {term}`reader` sees, `none` must be
+replaced with a default by `or?`, or left out of a list by `somes` ({doc}`types`).
 
 ## Numbers
 
@@ -261,12 +247,6 @@ drawing:
 | `real` | an IEEE 754 binary64 number that is finite: not an infinity and not NaN |
 | `complex` | two binary64 numbers |
 ```
-
-So the runtime computes values of type `int` as exact whole numbers and values of type `ratio` as
-exact fractions, as the compiler does, and an operation on ints and {term}`ratios <ratio>` alone
-gives the same value when folded as while drawing, as every other operation does
-({numref}`same-value-at-both-times`). In the .mtpc, a ratio is written as its numerator and
-denominator in lowest terms ({doc}`compiled-format`).
 
 :::{admonition} Code differs
 :class: note
@@ -289,24 +269,25 @@ mtp-ydd4.7.13.
 ```{rule} point-arithmetic
 The points form a vector space over the reals. `(+ p q)` and `(- p q)` add and subtract two points
 coordinate by coordinate, `(* r p)` and `(* p r)` multiply both coordinates of `p` by the real `r`,
-`(/ p r)` divides both by `r`, and `(- p)` negates both. The zero of the space is `(point-of 0 0)`.
+`(/ p r)` divides both by `r`, and `(- p)` negates both. The zero of the space is `[0 0]`.
 ```
 
 ```{rule} number-result-types
-An arithmetic operation gives the broadest type of its inputs, in the order `int`, `ratio`,
-`real`, `complex`, with these exceptions:
+The result of an arithmetic operation has the broadest type of its inputs, in the order `int`,
+`ratio`, `real`, `complex`, with these exceptions:
 
-- `/` of an int by an int gives a ratio.
-- `^` of an int to an int power gives an int when the range of the power holds no negative int,
-  and a ratio otherwise. With a {term}`complex` input it gives a complex, and otherwise a real.
-- `abs` of a complex gives a real.
+- `/` of an int by an int results in a ratio.
+- `^` of an int to an int power results in an int when the range of the power holds no negative
+  int, and in a ratio otherwise. With a {term}`complex` input it results in a complex, and
+  otherwise in a real.
+- `abs` of a complex results in a real.
 
 When the inputs of an operation include a real and an int or a ratio, the int or the ratio is
 first converted to the nearest real, and to the one of the two nearest reals whose last bit is 0
 when it lies exactly halfway between them.
 ```
 
-### The limit of every number
+### The number limit
 
 ```{rule} number-limit
 Every number lies within the number limit, from -10¹⁵⁰ to 10¹⁵⁰, when folded and while
@@ -316,15 +297,15 @@ drawing:
   is a binary64 number by {numref}`correctly-rounded-reals`, and then clamped to the number limit.
   This holds for each number of a result: an int, a ratio, a real, each part of a complex number,
   and each number of a point or of a list.
-- A write of a number beyond the number limit is clamped to it. So is each number of a point or a
-  list that is written.
+- A number beyond the number limit that is written into a container is clamped to it. So is each
+  number of a point or a list that is written.
 - A {term}`literal` beyond the number limit is a compile error.
 
 An int and a ratio are clamped to exactly -10¹⁵⁰ or 10¹⁵⁰. A real is clamped to the binary64
 number nearest to 10¹⁵⁰, written `1e150`, which lies just below 10¹⁵⁰, or to minus that number.
 ```
 
-So no operation overflows, and no operation gives `none` because of the size of its result. An
+So no operation overflows, and no operation results in `none` because of the size of its result. An
 int or a ratio inside the number limit stays exact. `(* 1e100 1e100)` is `1e150`, and
 `(* (^ 10 100) (^ 10 100))` is exactly 10¹⁵⁰. An operation with several arguments is one
 operation, so `(* 1e150 1e150 1e-200)` is `1e100`, since the exact product of the three is
@@ -345,12 +326,12 @@ mtp-ydd4.7.18.
 
 ```{rule} rounding
 Wherever a number is rounded, other than a channel of a mixed color
-({numref}`mixed-color-channels`), halves round away from zero, on the number's shortest exact
-decimal form, not on its binary value: 2.5 gives 3, -2.5 gives -3, 0.125 to two decimal places
-gives 0.13, and 2.675 to two decimal places gives 2.68. The rule applies to `round`, to a write
+({numref}`mixed-color-channels`), halves are rounded away from zero, on the number's shortest exact
+decimal form, not on its binary value: 2.5 is rounded to 3, -2.5 to -3, 0.125 to two decimal
+places to 0.13, and 2.675 to two decimal places to 2.68. The rule applies to `round`, to a write
 into an int, and to the {term}`format spec` of an interpolated string, such as `{x:.2f}`. `round`
-gives `none` at no input. A number written into an int is rounded after it is clamped to the int's
-range, so that it lands on the nearest int inside the range ({doc}`types`).
+results in `none` at no input. A number written into an int is rounded after it is clamped to the
+int's range, so that the result is the nearest int inside the range ({doc}`types`).
 ```
 
 :::{admonition} Code differs
@@ -380,14 +361,13 @@ mtp-nk2w.
 
 ```{rule} seed-variable
 Every random value is computed from a seed: a free variable of the {term}`built-in type`
-`rand-seed`, which is any int. A random function uses the seed named in it with `(seed s)`, and, with no `(seed …)`, the
-{term}`default seed` of the file that holds it ({numref}`default-seed`). A `const` variable is not a
-seed.
+`rand-seed`, whose values are the ints. A random function uses the seed named in it with
+`(seed s)`, and, with no `(seed …)`, the {term}`default seed` of the file that holds it
+({numref}`default-seed`). A `const` variable is not a seed.
 ```
 
-The random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed` are
-functions that a source names through the file rand of the standard library
-({numref}`rand-module`).
+The random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed` are declared in the file
+rand of the standard library ({numref}`rand-module`).
 
 ```{rule} default-seed
 The default seed of a file is the only seed among the names of its {term}`file scope`
@@ -397,13 +377,12 @@ imports that file, directly or through other files. In every other case, the fil
 seed.
 ```
 
-The file scope holds the names that the file declares at its top level and in its scene, before
-and after the random function, and the names that its imports give it ({doc}`imports`). So in a file with several seeds, every random function is written
-with `(seed s)`. A file that writes `(import rand rand-int)` and declares `(rand-seed dots 7)` has
-one seed, `dots`, since the import gives the name `rand-int` and no name for the seed of the file
-rand. A file that writes `(import rand)` has the name `rand.seed`, so with `(rand-seed dots 7)` it
-has two seeds. A seed of the file scope that is declared after a random function is its default
-seed too, and the random function is then a compile error by {numref}`declare-before-use`.
+So in a file with several seeds, every call of a random function must hold a `(seed …)`. A file that
+holds `(import rand rand-int)` and `(rand-seed dots 7)` has one seed, `dots`, since the import makes
+only the name `rand-int` usable, and no name for the seed of the file rand. A file that holds
+`(import rand)` may use the name `rand.seed`, so with `(rand-seed dots 7)` it has two seeds. A seed
+of the file scope that is declared after a random function is its default seed too, and the random
+function is then a compile error by {numref}`declare-before-use`.
 
 These are the messages of the compile errors for a random function with no `(seed …)`, and for a
 `(roll-dice)` with no argument:
@@ -416,23 +395,23 @@ These are the messages of the compile errors for a random function with no `(see
 | no variable of type `rand-seed`, and the file rand is not imported | "a random value uses a seed: declare one, (rand-seed dots 0), or import the standard one, (import rand seed)" |
 
 ```{rule} random-site
-Each call of the random function `rand`, `rand-int`, `pick` or `shuffle`, by any name that an import gives
-it, has a {term}`site`: a whole number. The sites are counted from 0, in the order in which the
-calls start in the text of the source after the rewrite step ({numref}`compile-steps`), read with
-these changes:
+Each call of the random function `rand`, `rand-int`, `pick` or `shuffle`, by any name that an
+import makes usable for it, has a {term}`site`: a whole number. The sites are counted from 0, in
+the order in which the calls start in the text of the source after the rewrite step
+({numref}`compile-steps`), read with these changes:
 
-- Each `(import …)` is read as the declarations that it puts in, in the order of the imported file.
+- Each `(import …)` is read as the declarations of the imported file, in their order in that file.
 - Each `foreach` is read as its copies, in the order of the copy index.
-- Each `(M …)`, for a motif `M`, is read as itself, followed by the body of `M`. The body of a
-  `motif` declaration is read only in each `M` that the source declares.
+- Each declaration `(M …)` of an `M`, for a motif `M`, is read as itself, followed by the body of
+  `M`. The body of a `motif` declaration is read only in each `M` that the source declares.
 
 A call that is written in the arguments of another call starts after it, and so comes after it. A
 call in a branch that is not taken has a site too. The site is written in the expression in the
 .mtpc ({doc}`compiled-format`).
 ```
 
-So each copy and each shape of a motif has sites of its own, and so does each copy of a call that a
-{term}`rewrite` makes. In
+So each copy and each shape declared with a motif has sites of its own, and so does each copy of a
+call that a {term}`rewrite` makes. In
 
 ```mtp
 (scene s
@@ -450,8 +429,8 @@ the outer and the inner call in its `x`, 3 and 4 for the copies of the `foreach`
 The compiler counts the sites in the order in which it compiles the calls (`_Compiler.random`,
 mathterpiece/compiler.py, line 2255). Within a shape, it compiles the attributes in the order of
 the shape's table of attributes (`SHAPE_ATTRS`, line 268), with `pos` last, and not in the order in
-which they are written. So in the example above it gives the `x` of `c` the sites 0 and 1, and the
-`r` of `c` the site 2. It also reads every `import` before any other form (line 745). Bead
+which they are written. So in the example above it assigns the sites 0 and 1 to the `x` of `c`,
+and the site 2 to the `r` of `c`. It also reads every `import` before any other form (line 745). Bead
 mtp-ydd4.7.39 makes the compiler follow the rule.
 :::
 
@@ -472,8 +451,8 @@ For a seed value s, a site p and a whole number k, u(s, p, k) = h(s, p, k) / 2³
 up to 1, never 1.
 ```
 
-Since the hash uses each x only modulo 2³², two seeds that are equal modulo 2³² draw the same
-values, as 0, 2³² and -2³² do.
+Since only each x modulo 2³² enters the hash, two seed values that are equal modulo 2³², such as 0,
+2³² and -2³², result in the same random values.
 
 ```{rule} random-values
 With s the value of the seed and p the site:
@@ -487,27 +466,26 @@ With s the value of the seed and p the site:
 - `(next-seed s)` is h(s, 0x9e3779b9).
 ```
 
-`rand` and `rand-int` with `lo` above `hi`, and `pick` on an empty list, give `none`
-({numref}`operations-that-give-none`).
-
 ```{rule} random-never-folded
 A random value is known only while drawing ({doc}`binding-time`).
 ```
 
-So the compiler never draws a random value ({numref}`compiler-never-acts-while-drawing`) and never
-folds one. By {numref}`random-values`, for one .mtpc, the same values of the seeds give the same
-random values, on every refresh and in every browser, and when a seed takes a new value, every
-random value that uses it is drawn again ({doc}`reaction`). Since the sites are counted when
-compiling, a change to the source that adds or removes a random function before
-another one changes the site of the later one, and with it the value that the later one draws.
+So the compiler never computes or folds a random value
+({numref}`compiler-never-acts-while-drawing`). By {numref}`random-values`, for one .mtpc, the same
+values of the seeds result in the same random values, on every refresh and in every browser, and
+when a seed holds a new value, every random value that uses it is computed again ({doc}`reaction`).
+Since the sites are counted when compiling, a change to the source that adds or removes a call of a
+random function before another call changes the site of the later call, and with it the value of
+the later call.
 
-A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`: `roll-dice` is an animation
-of the file rand ({ref}`stdlib-rand`), and `(roll-dice)` rolls the default seed
-({numref}`default-seed`). By {numref}`random-values`, a roll changes the random values that
-use `s`, and no others.
+`roll-dice` is an animation declared in the file rand ({ref}`stdlib-rand`). `(roll-dice s)`
+creates a movement that writes `(next-seed s)` into the seed `s`, and `(roll-dice)` is
+`(roll-dice d)`, with `d` the default seed ({numref}`default-seed`). Such a write is a roll.
+By {numref}`random-values`, a roll changes the random values that use `s`, and no others.
 
-`rand`, `rand-int`, `pick` and `shuffle` inside the body of a function are a compile error. A free variable may start at a random value with `free@`,
-and then never updates when the seed changes.
+A call of `rand`, `rand-int`, `pick` or `shuffle` inside the body of a function is a compile error.
+A free variable may start at a random value with `free@`, and then does not update when the seed
+changes.
 
 ```{mtp-example}
 ; every dot is drawn from the seed dots and the site of its rand
@@ -520,9 +498,6 @@ and then never updates when the seed changes.
 (button roll (animation (roll-dice dots)) (label 'Roll'))
 ```
 
-A `rand` that uses a `const` seed, such as `(rand-seed s 3 (const))`, is a compile error by
-{numref}`seed-variable`.
-
 :::{admonition} Code differs
 :class: note
 The type `rand-seed` is an int of at least 0 (`RAND_SEED`, mathterpiece/types.py, line 143), so a
@@ -531,19 +506,18 @@ seed that is below 0 is a compile error. mtp-ydd4.7.30.
 
 ## Equality
 
-`=` and `!=` take any two values of one type, and `!=` gives the opposite of `=`.
+`(!= a b)` is true exactly when `(= a b)` is false.
 
 ```{rule} equality-operands
 `(= a b)` and `(!= a b)` are a compile error unless the type of one side {term}`fits <fit>` the type
 of the other, or one side is `none`. They are a compile error on functions, movements or
-animations, or on values whose type holds one of them, such as a list of functions. A list of two
+animations, or on values whose type includes one of them, such as a list of functions. A list of two
 numbers is not converted to a point for them: `(= p xs)`, with `p` a point and `xs` a list of ints,
-is a compile error. A list literal on one side is given the type of the other side, so `(= p [1 2])`
-compiles.
+is a compile error, and `(= p [1 2])` compiles, since `[1 2]` is a point.
 ```
 
 ```{rule} equality-by-content
-Primitives compare by content, and objects by identity. `=` and `!=` never give `none`:
+Primitives are compared by content, and objects by identity. `=` and `!=` never result in `none`:
 
 | Type | `(= a b)` is true when |
 |---|---|
@@ -551,14 +525,13 @@ Primitives compare by content, and objects by identity. `=` and `!=` never give 
 | `int`, `ratio`, `real` | the two are the same number, exactly: 0 and -0 are equal, and an int and a real of the same value are equal |
 | `complex` | both parts are equal. A complex whose second part is 0 equals the real of its first part |
 | `bool`, `string`, a choice | the two are exactly the same |
-| `point`, `list[T]`, `transform` | they have the same length, and the items at each position are equal |
-| `color` | they are the same color: `(= ink #'#000080')` is true with `(color ink #'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS gives it |
+| `point`, `list[T]` | they have the same length, and the items at each position are equal |
+| `color` | they are the same color: `(= ink #'#000080')` is true with `(color ink #'navy')`. A light-dark color equals another when both of its modes do, and a color with the same value in both modes is one color. A token is compared by its value in the {term}`live model`, never by a value that the page's CSS sets for it |
 | `font` | every part is equal |
 | a shape, a group, a record, a formula, a term and every other object | the two are the same object. Two circles with the same attributes are not equal |
 ```
 
-Since `=` on reals is exact, `(= (+ 0.1 0.2) 0.3)` is false: the sum is 0.30000000000000004. By
-{numref}`same-value-at-both-times`, `=` gives the same result when folded as while drawing.
+Since `=` on reals is exact, `(= (+ 0.1 0.2) 0.3)` is false: the sum is 0.30000000000000004.
 
 :::{admonition} Code differs
 :class: note
@@ -579,11 +552,13 @@ Two values {term}`match` when they are equal, with one difference: two reals mat
 differ by at most 10⁻¹² or by at most a millionth of the larger of their sizes. Points and lists
 match when they have the same length and the items at each position match. {term}`Bools <bool>`,
 strings, choices and colors match only when they are exactly the same, and `none` matches only
-`none`. Only the runtime matches values: no form of the language matches two values.
+`none`. Only the runtime matches values: no form of the language evaluates to whether two values
+match.
 ```
 
 The runtime matches values to read the step of a play or a stepper from the scene, and to check
-whether the free variables and attributes that a canvas's `on-view` moves still hold their values from page load.
+whether the free variables and attributes that the `on-view` of a canvas writes still hold their
+values from page load.
 
 While drawing, the runtime uses `=` to skip writes: a write of a value equal to the current one is
 skipped, and nothing that depends on it is computed again.
@@ -592,10 +567,10 @@ skipped, and nothing that depends on it is computed again.
 ## Termination
 
 A function may call itself, directly, through other functions, or through a function value
-({numref}`self-reference-today`). There are no other loops: a `foreach` makes a number of copies known
-when compiling, and `range` gives at most 1,000,000 items. So the only computation that could go
-on without end is a chain of calls. When folding, the {term}`call depth limit` ends every chain.
-While drawing, how every chain ends is Q-evaluation-13, below.
+({numref}`self-reference-today`). There are no other loops: the number of copies of a `foreach` is
+known when compiling, and `range` results in at most 1,000,000 items. So the only computation that
+could go on without end is a chain of calls. When folding, every chain ends at the
+{term}`call depth limit`. How a chain ends while drawing is the open question Q-evaluation-13 below.
 
 ```{rule} call-depth-limit
 The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
@@ -607,23 +582,24 @@ error of the prove step ({numref}`step-rejects-or-passes`).
 
 So with `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m 1)))))`, `(down 255)` is folded
 to 255, and `(down 256)` is a compile error, since its innermost call has a depth of 257. A
-function is recursive when its body names it, directly or through the bodies of the functions that
-it names.
+function is recursive when its name is used in its body, or in the body of a function whose name is
+used there, at any depth.
 
-By {numref}`no-errors-after-loading`, no call while drawing makes a {term}`component` fail. What
+By {numref}`no-errors-after-loading`, no call while drawing may make a {term}`component` fail. What
 happens while drawing to a call of a recursive function whose depth would pass `max-call-depth` is
-still open:
+an open question:
 
 :::{admonition} Open question Q-evaluation-13
 :class: warning
 A call of a recursive function whose arguments are known only while drawing may reach a depth
 above `max-call-depth`, and no rule may make that an error while drawing
 ({numref}`no-errors-after-loading`). The same holds for a call in the body of a `foreach` or a
-motif that reads the variable or a parameter: it is not known in the prove step
-({numref}`prove-bodies-once`), so {numref}`call-depth-limit` does not reject it, and its arguments
-are known only once the expand step has made the copies and the shapes of each motif. The options:
+motif that reads the binding of the `foreach` or a parameter of the motif: it is not known in the
+prove step ({numref}`prove-bodies-once`), so {numref}`call-depth-limit` does not reject it, and its
+arguments are known only once the expand step has made the copies and the shapes declared with
+each motif. The options:
 
-- (a) The compiler rejects a recursive function unless the {term}`prover` can show that every call
+- (a) The compiler rejects a recursive function unless the {term}`prover` can prove that every call
   of it stays within `max-call-depth`.
 - (b) mtp has no recursion: a function may not call itself, directly or through other functions,
   and the depth limit goes away.
@@ -648,25 +624,25 @@ mtp-ydd4.7.15.
 :::
 
 (folding-and-drawing)=
-## Folding and drawing compared
+## The same value when folded and while drawing
 
 ```{rule} same-value-at-both-times
-An expression gives the same value when it is folded as when it is computed while drawing, for the
-same values of what it reads.
+An expression evaluates to the same value when it is folded as when it is computed while drawing,
+for the same values of what it reads.
 ```
 
 ```{rule} correctly-rounded-reals
-Each built-in function and operator rounds each binary64 number of its result (a real, a part of
-a complex number, a number of a point or of a list) from the exact value at its binary64 inputs to
-the nearest binary64 number, and of the two nearest, to the one whose last bit is 0 when the exact
-value lies exactly halfway between them. This holds when folding and while drawing.
+Each binary64 number of the result of a built-in function or an operator (a real, a part of a
+complex number, a number of a point or of a list) is rounded from the exact value at its binary64
+inputs to the nearest binary64 number, and of the two nearest, to the one whose last bit is 0 when
+the exact value lies exactly halfway between them. This holds when folding and while drawing.
 ```
 
 This holds for `+`, `-`, `*`, `/`, `sqrt`, the trigonometric functions in radians and in degrees,
 `exp`, `log`, `^`, `mod`, `dist`, `polar`, `lerp`, `sum`, `rand`, and the conversions between
-degrees and radians. So `(sind 30)` is exactly 0.5, the functions in degrees give exact values at
-multiples of 90 degrees, and `sum` gives its exact sum rounded once, not the result of adding its
-items one at a time.
+degrees and radians. So `(sind 30)` is exactly 0.5, the functions in degrees result in exact values at
+multiples of 90 degrees, and `sum` results in the exact sum rounded once, not in the result of
+adding its items one at a time.
 
 Rounding to the nearest binary64 number never puts two numbers in the opposite order, and neither
 does clamping to the number limit ({numref}`number-limit`). So when the
@@ -674,9 +650,6 @@ prover works out a bound of a range with the same functions, at the ends of an i
 the exact function only rises or only falls, or as an exact value that is a binary64 number, such
 as 1 for the largest value of `sin`, every value computed at either time lies within the range.
 The prover therefore does not widen the ranges that it works out ({numref}`prover-finds-ranges`).
-
-A folded value is final: the .mtpc holds the value in place of the expression
-({numref}`compile-steps`), so the runtime uses it as written and never computes it again.
 
 :::{admonition} Code differs
 :class: note

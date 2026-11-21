@@ -1,5 +1,5 @@
 # Accessibility
 
 :::{note}
-Not drafted yet. This page defines: what a screen reader and a keyboard get from each object.
+Not drafted yet. This page defines: what the runtime makes available to a screen reader and to the keyboard for each object.
 :::
