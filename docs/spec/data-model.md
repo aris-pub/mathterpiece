@@ -76,7 +76,8 @@ different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `
 ```{rule} variables
 A variable is a named holder of one value. It is free, bound or const. A free variable holds its
 value until a writer writes a new one. A bound variable holds the value of its expression at all
-times. A const variable can never be written. A variable with no name is a
+times. A variable whose expression reads another variable is bound, unless the expression is
+written with `free@`, and every other variable that is not const is free. A const variable can never be written. A variable with no name is a
 {term}`compile error`.
 ```
 
@@ -198,8 +199,8 @@ So `[1 2]` written twice is one primitive, while `(circle c (r 1))` and `(circle
 objects, and so are the copies `c-0` and `c-1` of `(foreach k 2 (circle @'c-{k}' (r 1)))`.
 
 An illustrator usually uses an object through its attributes, as `c.r` or `style.width`, and a
-primitive by itself, as `3` or `'hi'`. A primitive may have attributes too: a point has `x` and `y`, a
-color its channels `r`, `g`, `b` and `a`, a list and a string a `length`, and a complex number `re`
+primitive by itself, as `3` or `'hi'`. A primitive may have attributes too: a point has `x` and `y`, which are also its attributes `0`
+and `1`, a color its channels `r`, `g`, `b` and `a`, a list and a string a `length`, and a complex number `re`
 and `im`. Each item of a list is an attribute whose label is its position, so `xs[0]` is an attribute
 of `xs`. Reading an attribute of a primitive results in a primitive. Writing one puts a new value into the
 variable or the attribute that holds it, and the old value does not change.

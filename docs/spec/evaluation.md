@@ -286,6 +286,12 @@ mtp-ydd4.7.13.
 (readout r f'n/10 + 1/5 = 3/10 is {(= (+ (/ n 10) 1/5) 3/10)}')
 ```
 
+```{rule} point-arithmetic
+The points form a vector space over the reals. `(+ p q)` and `(- p q)` add and subtract two points
+coordinate by coordinate, `(* r p)` and `(* p r)` multiply both coordinates of `p` by the real `r`,
+`(/ p r)` divides both by `r`, and `(- p)` negates both. The zero of the space is `(point-of 0 0)`.
+```
+
 ```{rule} number-result-types
 An arithmetic operation gives the broadest type of its inputs, in the order `int`, `ratio`,
 `real`, `complex`, with these exceptions:
