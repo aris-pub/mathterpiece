@@ -100,7 +100,7 @@ mtp-ydd4.7.59.
 | `list[T]`, `sequence[T]`, `func[P… R]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `T1\|T2…`, such as `T\|none` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `T1&T2…`, such as `shape&round` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
-| `type-apply`, `type-union`, `type-intersect` | core | a compound | {doc}`types` |
+| `type-apply`, `type-union`, `type-intersect` | core | a compound | {numref}`type-forms` |
 | `(T C…)`, a refined type | core | a compound | {doc}`types` |
 | `colormap` | core | a type | {numref}`the-types` |
 | a name declared by `type` | core | the type that it names | {numref}`type-notation` |
@@ -201,7 +201,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `let` | core | a compound | {doc}`scope`, {doc}`evaluation` |
 | `fn` | core | a compound | {doc}`types`, {doc}`evaluation` |
 | `rec` | core | a compound | {numref}`records` |
-| `list-of` | core | a compound | {doc}`data-model` |
+| `list-of` | core | a compound | {numref}`values` |
 | a list `[X…]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `as` | core | a compound | {doc}`types` |
 | `type-of` | core | a compound | {doc}`types` |

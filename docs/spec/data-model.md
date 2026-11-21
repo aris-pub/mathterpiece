@@ -28,7 +28,8 @@ bound or const, and no writer may write an attribute of a function or of a movem
 can write the new object ({numref}`functions`, {numref}`records`, {numref}`writable-targets`). So evaluating a compound never writes a variable or an
 attribute, and never creates a variable or an object that a writer can write.
 
-A declaration creates something new in the model: a variable, a type or an object.
+A declaration creates something new in the model: a variable, a type or an object. An `import` is
+a declaration too: it makes the names of another file usable.
 
 A clause, such as a named argument, the guard of a control, or `exists-when` in a scene or a
 formula, is part of the form around it and has no result of its own.
@@ -36,7 +37,7 @@ formula, is part of the form around it and has no result of its own.
 The signature of each head gives which kinds of expression each of its arguments and its body
 may hold ({ref}`signatures`, {numref}`contexts`). A `let` is a compound where it holds a literal, a name or a compound, and a
 declaration where it holds declarations. A `foreach` holds declarations and is always a
-declaration. An `import` declares the names that it brings in.
+declaration. 
 
 ## Primitives
 
@@ -61,7 +62,8 @@ Each of these gives a primitive:
 | `none` | `none` | `none` |
 
 Numbers, bools, strings, colors and `none` are written as literals. Lists and points are given by
-compounds, such as `(list-of 0 1)`, which is also written `[0 1]`. Since a primitive never
+compounds, such as `(list-of 0 1)`, which is also written `[0 1]`. `(list-of X…)` gives the list of the values of
+its items, in order. Since a primitive never
 changes, nothing writes one: a writer writes a variable or an attribute, which then holds a
 different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
 

@@ -142,6 +142,13 @@ expression there is a {term}`compile error`:
   it is the type only of an expression, and of a name that a `let` binds to such an expression.
 ```
 
+```{rule} type-forms
+`(type-union T1 T2 …)` is the union of the types T1, T2 and so on, `(type-intersect T1 T2 …)` is
+their intersection, and `(type-apply T X…)` is the type T with the types X… in its brackets: `(type-apply
+list int)` is `list[int]`. A source writes them as `T1|T2…`, `T1&T2…` and `T[X…]`
+({numref}`sugar-rewrites`).
+```
+
 So `real[int]` is a compile error, `real|real` is `real`, and `point|circle` is the set of the
 points and the circles. A broadened type of a refined
 type is written as `(real|none (>= 0))`, since a broadened type holds no form.
