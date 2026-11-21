@@ -83,7 +83,9 @@ For example:
 | `(real_ 1)` | a compile error: a variable has a name |
 
 `(var NAME TYPE DEFAULT)` declares a variable that holds an object, with its declared type after its
-name: `(var sel shape c)` declares a variable `sel` that holds a shape, at first the circle `c`. A variable is not an object: it
+name: `(var sel shape c)` declares a variable `sel` that holds a shape, at first the circle `c`. `var`
+with a type of primitives, such as `(var p point [3 4])`, is a {term}`compile error`: such a variable
+is declared with its type as the head, `(point p [3 4])`. A variable is not an object: it
 has no attributes, only what it holds.
 
 :::{admonition} Code differs
