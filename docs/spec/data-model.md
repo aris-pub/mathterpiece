@@ -145,7 +145,7 @@ in time by its own `lag`, the fraction of the member before it that has run when
 member of a group places itself in space by its own position. `(in-order …)` is a score whose
 members have the lag 1, so each starts when the one before it ends, and `(at-once …)` is one whose
 members have the lag 0, so all start together. An animation is a template of movements, as
-a motif is a template of shapes: each use of an animation is a movement of the animation's type. For example, in
+a motif is a template of shapes: with an animation `A`, `(A …)` creates an `A`, which is a movement. For example, in
 
 ```mtp
 (real a 1 (>= 0) (<= 2))

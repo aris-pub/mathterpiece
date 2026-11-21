@@ -32,8 +32,8 @@ These rules hold for a use of a name inside the form that declares or binds it:
 1. A function may call itself in its own {term}`body`.
 2. A variable, a `let` name and a parameter never read themselves: `(real k (+ k 1))` is a compile
    error.
-3. A shape, a variant instance and a motif instance never read one of their own attributes in
-   their own form, whether directly, in a `free@` starting value, through a position on their
+3. A shape, including a shape of a variant or of a motif, never reads one of its own attributes in
+   its own form, whether directly, in a `free@` starting value, through a position on its
    group known when compiling, or through a function.
 4. A shape in a group, at any depth, never reads the group whole in its own form: an attribute of
    every member, such as `g.x`, a list function over `g.members`, a
@@ -56,8 +56,8 @@ The {term}`controls <control>` and the {term}`listeners <listener>` are the writ
 ({doc}`concurrency`). A writer writes its target, and the moves of its animation write theirs.
 
 ```{rule} writable-targets
-The target of a writer and of a move is a name: a variable, an attribute of a shape, of an
-instance or of a term, or a member of a record or a formula, with `(name s)` allowed in place of
+The target of a writer and of a move is a name: a variable, an attribute of a shape or of a
+term, or a member of a record or a formula, with `(name s)` allowed in place of
 a name ({numref}`names-from-values`). A target may be written only when it is free
 ({doc}`world-model`), its type does not hold `(const)`, it is not a token (a variable of type
 `color` or `font`), and it is not fixed by a variant ({numref}`motif-and-variant-types`). Besides:
@@ -65,7 +65,7 @@ a name ({numref}`names-from-values`). A target may be written only when it is fr
 - A name that is not a variable or an attribute, such as a group or a record by its name alone,
   is never a target.
 - A target that stands for several variables or attributes, as {doc}`concurrency`, section "Containers",
-  gives, is writable only when each of them is: a `pos`, an attribute of a group or an instance that
+  gives, is writable only when each of them is: a `pos`, an attribute of a group, or of a shape of a motif, that
   is not its own, and the `x`, the `y` and the `pos` of a line, a triangle, a polyline, a polygon
   and a bezier. An attribute of a collection with no members is never a target.
 - A member of a group chosen by a position is chosen by a position known when compiling.
@@ -257,7 +257,7 @@ When a value does not meet C:
 |---|---|
 | a value known in the prove step | a compile error |
 | the value of a bound variable or attribute | {numref}`prover-finds-ranges` |
-| an argument of a call, of an instance or of a use of an animation | a compile error |
+| an argument of a call, or of `(M …)` or `(A …)` for a motif `M` or an animation `A` | a compile error |
 | the body of a function declared with a result type R | when R includes `none`, a call gives `none` where the value of the body breaks C, and the write step writes the `check` for it. Otherwise a compile error |
 | an item of a list literal whose item type is expected | a compile error |
 | a value that a writer writes | no proof: {numref}`written-values` |

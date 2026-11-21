@@ -364,7 +364,7 @@ score
   together. Defined in {doc}`time`.
 
 motif
-  A template of shapes, `(motif N PARAMS ITEM…)`. Each instance is the body of the motif with the
+  A shape type, `(motif M PARAMS ITEM…)`. `(M N …)` declares an `M`: the body of the motif with the
   values of its parameters. Defined in {doc}`world-model`.
 
 animation

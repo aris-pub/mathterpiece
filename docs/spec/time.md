@@ -5,13 +5,14 @@ Not drafted yet. This page defines: moves, which are the unit of change over tim
 :::
 
 (animation-uses)=
-## Uses of an animation
+## Movements of an animation
 
-A use of an animation, `(C A1 … Ak)`, is core, as a shape of a motif type is. It is written where a
+With an animation `C`, `(C A1 … Ak)` creates a `C`, which is a movement. It is core, as `(M …)` is for
+a motif `M`. It is written where a
 movement may be written, and k is at least the position of the last parameter with no default. In
 the expand step it becomes an `(in-order …)` whose members are the body of the animation, with each
-parameter replaced by the value of its argument, or by its default when the use gives no argument
-for it. So a use written as a member of an `in-order` or an `at-once` is one step
+parameter replaced by the value of its argument, or by its default when it gives no argument
+for it. So a `(C …)` written as a member of an `in-order` or an `at-once` is one step
 ({numref}`animation-step`). The prover proves that each argument {term}`fits <fit>` the type
 of its parameter. An argument may be any expression that may be written in the body in the places
 where its parameter is written, so `(pulse (* 2 k))` is an error when the parameter is a duration,
@@ -22,7 +23,7 @@ of type `rand-seed`, which stands for a seed: its argument is the name of a seed
 the parameter is replaced by that seed and not by its value, so a move of the parameter moves the
 seed. Any other argument for such a parameter is a compile error, "the argument for P is the name
 of a seed, as in (C dots)". So the animation `roll-dice` of the file rand,
-`(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`, moves the seed that its use names.
+`(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`, moves the seed named in `(roll-dice s)`.
 
 :::{admonition} Code differs
 :class: note

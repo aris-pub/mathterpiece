@@ -417,15 +417,15 @@ these changes:
 
 - Each `(import …)` is read as the declarations that it puts in, in the order of the imported file.
 - Each `foreach` is read as its copies, in the order of the copy index.
-- Each motif instance is read as the instance, followed by the body of its motif. The body of a
-  `motif` declaration is read only in its instances.
+- Each `(M …)`, for a motif `M`, is read as itself, followed by the body of `M`. The body of a
+  `motif` declaration is read only in each `M` that the source declares.
 
 A call that is written in the arguments of another call starts after it, and so comes after it. A
 call in a branch that is not taken has a site too. The site is written in the expression in the
 .mtpc ({doc}`compiled-format`).
 ```
 
-So each copy and each instance has sites of its own, and so does each copy of a call that a
+So each copy and each shape of a motif has sites of its own, and so does each copy of a call that a
 {term}`rewrite` makes. In
 
 ```mtp
@@ -615,7 +615,7 @@ above `max-call-depth`, and no rule may make that an error while drawing
 ({numref}`no-errors-after-loading`). The same holds for a call in the body of a `foreach` or a
 motif that reads the variable or a parameter: it is not known in the prove step
 ({numref}`prove-bodies-once`), so {numref}`call-depth-limit` does not reject it, and its arguments
-are known only once the expand step has made the copies and the instances. The options:
+are known only once the expand step has made the copies and the shapes of each motif. The options:
 
 - (a) The compiler rejects a recursive function unless the {term}`prover` can show that every call
   of it stays within `max-call-depth`.

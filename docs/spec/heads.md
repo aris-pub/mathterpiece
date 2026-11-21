@@ -117,7 +117,7 @@ mtp-ydd4.7.59.
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text` | core | shape declarations | {doc}`world-model` |
 | `group` | core | a group declaration | {doc}`world-model` |
 | `row`, `column` | core | group declarations | {doc}`world-model` |
-| `(M N …)` for a motif `M` | core | a declaration of a shape whose type is the motif | {doc}`world-model` |
+| `(M N …)` for a motif `M` | core | a declaration of an `M` | {doc}`world-model` |
 | `(V N …)` for a variant `V` | core | a declaration of an object whose type is the variant | {doc}`world-model` |
 | `(H\|none N …)` for a shape head `H` | core | a declaration of a shape that may be `none` | {doc}`world-model` |
 | `exists-when` | core | a body item | {doc}`world-model` |
@@ -145,12 +145,12 @@ mtp-ydd4.7.59.
 | a parameter `(T N DEFAULT?)` | core | a parameter | {doc}`types` |
 | a shape, a bound or const variable, `foreach`, `let` or `exists-when` in a motif's body | core | body items of a motif | {doc}`world-model` |
 | `self` | core | a name | {doc}`scope` |
-| a parameter given to an instance, `(P X)` | core | a named argument of a shape of a motif type | {doc}`world-model` |
-| `x`, `y`, `translate`, `transform` on an instance | core | named arguments of a shape of a motif type | {doc}`world-model` |
-| `pos` on an instance | syntactic sugar | a named argument | {numref}`sugar-rewrites` |
-| `clip` on an instance | core | a named argument | {doc}`world-model` |
-| `defaults` on an instance | core | a named argument | {doc}`world-model` |
-| `like` on an instance or a variant instance | syntactic sugar | a named argument | {numref}`like-copies` |
+| a parameter given to an `M`, for a motif `M`, `(P X)` | core | a named argument of an `M` | {doc}`world-model` |
+| `x`, `y`, `translate`, `transform` on an `M` | core | named arguments of an `M` | {doc}`world-model` |
+| `pos` on an `M` | syntactic sugar | a named argument | {numref}`sugar-rewrites` |
+| `clip` on an `M` | core | a named argument | {doc}`world-model` |
+| `defaults` on an `M` | core | a named argument | {doc}`world-model` |
+| `like` on an `M` or on a `V`, for a variant `V` | syntactic sugar | a named argument | {numref}`like-copies` |
 
 The rules about a declaration that reads itself or its collection, such as a default that reads
 its own group, are to be redesigned around `self`. Until then, the rules of today hold
@@ -266,7 +266,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | the name of a movement, or of an animation with no parameters, in a score | core | a body item | {doc}`time` |
 | `wait` | syntactic sugar | an expression | {numref}`sugar-rewrites` |
 | `jump` | syntactic sugar | an expression | {numref}`sugar-rewrites` |
-| a use of an animation | core | an expression | {doc}`time`, {numref}`animation-step` |
+| `(A …)` for an animation `A` | core | an expression | {doc}`time`, {numref}`animation-step` |
 
 ## Components and their items
 
@@ -329,7 +329,7 @@ follow the rule.
 | `palette` | items `(member color)` | yes |
 | `interface` | items `(T attribute constraint…)` | yes |
 | `type`, a variable `(T name …)` | {term}`conditions <condition>`, such as `(>= 0)` | yes |
-| `animation`, `score`, `in-order`, `at-once` | movements: `move`, `jump`, `wait`, a score, the name of a movement, a use of an animation | yes |
+| `animation`, `score`, `in-order`, `at-once` | movements: `move`, `jump`, `wait`, a score, the name of a movement, `(A …)` for an animation `A` | yes |
 | `defaults` | items `(attribute value)`, and in a score, `(duration …)`, `(ease …)` and `(lag …)` | yes |
 | `canvas` | at least one thing to draw: a name of a shape or of the scene, a list literal, or an expression that gives a shape, `none` or a list of shapes, such as `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
 | `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
@@ -366,10 +366,10 @@ their place. They are not forms of the language.
 | `dash-offset` | as an item | write `(dash [4 2] 1)` |
 | `move` | in a canvas | a canvas takes no move |
 | `term` | at the top level | a term is given inside its formula |
-| `pointer-events` | on a group, a row, a column or an instance | write `(defaults (pointer-events B))` |
+| `pointer-events` | on a group, a row, a column or a shape of a motif | write `(defaults (pointer-events B))` |
 
 :::{admonition} Code differs
 :class: note
-The compiler accepts `(pointer-events B)` on a group, a row, a column or an instance as a default
+The compiler accepts `(pointer-events B)` on a group, a row, a column or a shape of a motif as a default
 for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a compile error.
 :::
