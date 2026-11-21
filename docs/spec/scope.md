@@ -18,9 +18,10 @@ A declaration is a {term}`form` that creates a variable, a type or an object, or
 makes the names of another file usable ({doc}`data-model`). What it creates exists whether or not
 the source gives it a name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
 for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
-parameters of a function, a motif, a variant or an animation, are bindings. The language makes two
-bindings of its own: the move of a drag binds `pointer` to the position of the pointer, and the
-body of a motif binds `self` to the shape being declared. The names that an `import`
+parameters of a function, a motif, a variant or an animation, are bindings, and so is the name in
+the clause `(at N)` of a listener, which binds the position of the pointer ({numref}`pointer-binding`).
+The language makes one binding of its own: the body of a motif binds `self` to the shape being
+declared. The names that an `import`
 makes usable refer to what the declarations of another file create ({doc}`imports`).
 ```
 
@@ -29,17 +30,17 @@ So `(real a 1)`, `(circle c (r a))`, `(canvas v s)`, `(func twice ((real x)) (* 
 canvas, such as `(on-click c (move a (to 0) (duration 1)))`, which creates a listener with no name. In
 `(let ((k 2)) (circle c (r k)))`, the circle `c` is a declaration and `k` is a binding.
 
-The binding `pointer` is used like this:
+A binding of `(at N)` is used like this:
 
 ```mtp
 (real a 1 (>= 0) (<= 4))
 (scene s (circle p (pos [a 0]) (r 0.2)))
 (canvas v s
-  (on-drag p (move a (to pointer.x))))
+  (on-drag p (at q) (move a (to q.x))))
 ```
 
-In the move of the `on-drag`, `pointer` is the position of the pointer, so dragging `p` writes the
-x of the pointer into `a`, and `p` moves with it.
+In the movement of the `on-drag`, `q` is the position of the pointer, so dragging `p` writes the x
+of the pointer into `a`, and `p` moves with it.
 
 The binding `self` is used like this:
 
@@ -79,7 +80,7 @@ and the names of each one:
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
 | a record or a palette | the items after each attribute | its attributes |
 | a formula | the items of the formula | its variables, from the item after each, and its terms ({numref}`formula-terms`) |
-| the move of an `on-drag` | the move | `pointer` |
+| a listener with `(at N)` | its movement | `N` |
 
 The scope of a body is inside the scope of the form around it, and every scope is inside the file
 scope. A group, a row, a column and the scene make no scope of their own. The names that are
@@ -154,9 +155,7 @@ top-level name inside the record. A declaration in the file scope, and a name th
 gives, hide a built-in function or constant from that declaration or import on
 ({numref}`declaration-names`). The name parts of a name after its first are not looked up in any
 scope: `p.r` is `(. p 'r')` ({numref}`sugar-rewrites`), where `'r'` is a label and not a name,
-and what it chooses is defined in {numref}`dot-name-part`. `pointer` is found only in the move of
-an `on-drag`, and is a compile error everywhere else, since no declaration and no binding takes
-it as its name.
+and what it chooses is defined in {numref}`dot-name-part`.
 
 In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `(tenfold 2)` is
 20 whatever value the slider writes into the variable:
@@ -230,9 +229,8 @@ second step of {numref}`name-lookup`. The names of the {term}`standard library` 
 they are ordinary declarations of its files ({doc}`stdlib`), which a source brings in with
 `import`, and are found as any other imported name.
 
-A variable may be named `pointer` or `self`. Inside the move of a drag, the binding `pointer` hides
-a declaration named `pointer`, and inside the body of a motif, the binding `self` hides a
-declaration named `self` ({numref}`name-lookup`). A member of a motif's body named `self` is a
+A variable may be named `self`. Inside the body of a motif, the binding `self` hides a declaration
+named `self` ({numref}`name-lookup`). A member of a motif's body named `self` is a
 compile error by {numref}`one-declaration-per-scope`, since the body binds `self`.
 
 :::{admonition} Code differs
