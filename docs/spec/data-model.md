@@ -10,7 +10,7 @@ specifies the language.
 
 ```{diagram} values-containers-types
 :file: diagrams/values-containers-types.svg
-:max-width: 37rem
+:max-width: 44rem
 
 Which expressions give primitives, objects and types, and which values a container holds.
 ```
