@@ -10,7 +10,9 @@ Not drafted yet. This page defines: the objects, their attributes, identity, the
 A `(defaults (A V)…)` on a group, a row or a column gives each `(A V)` to each of its members, at
 any depth, that takes `A` from a collection and does not give `A` itself. When several collections
 give `A`, the nearest one wins. A member of a motif's type gets `(A V)` in its own
-`(defaults …)`. Each `A` is one that a collection gives its members, and any other is a
+`(defaults …)`. A `(defaults (A V)…)` on a shape declared with a motif gives each `(A V)` to
+every shape in the body of its motif, at any depth, that takes `A` and does not give `A` itself,
+although that shape is not a collection ({doc}`data-model`). Each `A` is one that a collection gives its members, and any other is a
 {term}`compile error`.
 ```
 
