@@ -37,7 +37,7 @@ gives the names from the compiler and removes that form.
 
 So `(import rand rand-int roll-dice)` gives the names `rand-int` and `roll-dice`, and
 `(import rand)` gives `rand.rand-int`, `rand.roll-dice` and the others ({doc}`imports`).
-`(roll-dice s)` is a use of an animation ({ref}`animation-uses`): one step, which writes
+`(roll-dice s)` creates a `roll-dice`, which is a movement ({ref}`animation-uses`): one step, which writes
 `(next-seed s)` into the seed `s`. `(roll-dice)` with no argument rolls the {term}`default seed`
 of the file that holds it ({numref}`default-seed`).
 

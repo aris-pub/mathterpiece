@@ -87,7 +87,7 @@ The compiler turns a source into a .mtpc in six steps, in this order:
 ```
 
 So a check that the parts of a syntactic sugar form are known when compiling is made in the prove step, and
-every core form other than `foreach`, a motif instance and a use of an animation reaches the fold step
+every core form other than `foreach`, `(M …)` for a motif `M` and `(A …)` for an animation `A` reaches the fold step
 as it is. Which forms are syntactic sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
 
 ```{rule} prove-bodies-once
@@ -95,18 +95,18 @@ The prove step proves each body once: the body of a function with each parameter
 every value of its declared type, the body of a `foreach` with its variable ranging over every
 value of its range, and the body of a motif or an animation with each parameter ranging over every
 value of its declared type and conditions. An imported motif or animation is proved once, in the file
-that declares it. The copies that a `foreach` makes, the instances of a motif and the uses of a
-animation are not proved again. A motif or animation body that is safe for only some values of a
+that declares it. The copies that a `foreach` makes, and each `M` and `A` that a source declares for a motif `M`
+or an animation `A`, are not proved again. A motif or animation body that is safe for only some values of a
 parameter is a {term}`compile error`, unless the parameter declares a condition that leaves out
 the other values. An expression is known in the prove step when it is known when compiling
 ({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or a
 animation, the variable of that `foreach` or a parameter of that function, motif or animation.
 ```
 
-So an error in such a body is about the body as written, and not about a copy or an instance. For
+So an error in such a body is about the body as written, and not about a copy or about one `dot`. For
 example,
 `(motif dot ((real k)) (circle_ (r (/ 1 k))))` is a compile error at `(/ 1 k)`, since
-`k` may be 0, whatever the instances give for `k`. With `(real k 1 (>= 1))` as the parameter, the
+`k` may be 0, whatever each `dot` gives for `k`. With `(real k 1 (>= 1))` as the parameter, the
 motif compiles.
 
 ```{rule} step-rejects-or-passes
@@ -136,8 +136,8 @@ Today the rewrite, prove, expand and fold steps are not separate, and expanding 
 proving. `_Compiler.run` in mathterpiece/compiler.py, line 586, goes through the top-level forms
 once, and each form is rewritten, expanded, checked and {term}`folded <folding>` as it is reached.
 `foreach` copies are made one at a time by `_Compiler.expand` (line 828), and the body of a motif is
-compiled again for each instance by `_Compiler.instance` (line 4674), so each copy and each instance
-is proved on its own. `_Compiler.call` (lines 1962 to 1973) folds a call and then checks its
+compiled again for each shape of the motif by `_Compiler.instance` (line 4674), so each copy and each such
+shape is proved on its own. `_Compiler.call` (lines 1962 to 1973) folds a call and then checks its
 constraint against the folded value. The new middle of the compiler (mtp-08wd) follows these rules.
 The order of the steps and proving each body once are mtp-08wd.1.
 :::
@@ -335,7 +335,7 @@ elements, the values that its CSS gives the tokens, its color scheme, the pointe
 the clock.
 ```
 
-So the runtime never reads a source file, and every object, every motif instance and every copy
+So the runtime never reads a source file, and every object, every shape of a motif and every copy
 that a `foreach` makes is written out in the .mtpc ({numref}`compile-steps`).
 
 ```{rule} corrupt-mtpc

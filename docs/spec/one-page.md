@@ -113,7 +113,7 @@ Primitives, objects and containers ({numref}`values-containers-types`).
 | views: canvas, readout, display | lays them out on the page |
 | controls: slider, button, play, stepper, toggle | the reader acts on them, and they set off movements |
 | listeners, such as `on-drag` and `on-click` | the reader acts on a shape or a term, and they set off movements |
-| movements: `move`, `score`, a use of an animation | writes their targets over time |
+| movements: `move`, `score`, `(A …)` for an animation `A` | writes their targets over time |
 | functions | calls them |
 | records | holds their attributes |
 

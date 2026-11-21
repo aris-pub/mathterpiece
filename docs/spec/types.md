@@ -64,7 +64,7 @@ These are the types of mtp:
 | `function` | `function` | every function |
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
 | `movement` | `movement` | every movement: the moves, the scores and the movements of every animation type ({doc}`time`) |
-| an animation type | the name of the animation | the movements that its uses make |
+| an animation type | the name `A` of the animation | every `A` |
 | `none` | `none` | the value `none` alone |
 | a {term}`broadened type` | `T\|none` | the values of T, and `none` |
 | a {term}`refined type` | `(T C…)` | the values of T that meet every condition C ({numref}`constraints`) |
@@ -73,8 +73,8 @@ These are the types of mtp:
 | a modular type | `(mod int lo hi)`, `(mod real lo hi)` | the numbers from lo up to hi, hi left out, with arithmetic that wraps ({numref}`modular-types`) |
 | `shape` | `shape` | every shape: the shapes of every shape type, motif type and variant type |
 | a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
-| a motif type | the {term}`name` of the motif | its instances ({numref}`motif-and-variant-types`) |
-| a variant type | the name of the variant | its instances ({numref}`motif-and-variant-types`) |
+| a motif type | the {term}`name` `M` of the motif | every `M` ({numref}`motif-and-variant-types`) |
+| a variant type | the name `V` of the variant | every `V` ({numref}`motif-and-variant-types`) |
 | `scene` | `scene` | the scene |
 | `record`, `formula`, `term` | as named | the records, palettes and fonts among them, the formulas, and the terms |
 | `component`, `view`, `control`, `listener` | as named | the components, the views, the controls and the listeners |
@@ -252,7 +252,7 @@ The {term}`number limit` applies to every write too ({numref}`number-limit`). So
 a writer may write at all is defined in {numref}`written-values`.
 
 ```{rule} type-values
-A variable declared with no value, and a parameter that a call or an instance leaves out and that
+A variable declared with no value, and a parameter that a call, or a declaration whose head is a motif, leaves out and that
 has no default, hold the value of their type:
 
 | Type | Its value |
@@ -274,7 +274,7 @@ Leaving out the value of a type that has no value is a compile error.
 ```
 
 So `(real k (>= 1))` holds 1, `(real k (> 1))` is a compile error, and a motif's parameter whose
-type is an interface or a shape type is given in every instance.
+type is an interface or a shape type is given in every declaration whose head is the motif.
 
 ## Literals and conversions
 
@@ -480,13 +480,12 @@ So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circ
 ## Motifs and variants
 
 ```{rule} motif-and-variant-types
-`(motif M PARAMS …)` declares the shape type M, whose objects are the instances of M.
+`(motif M PARAMS …)` declares the shape type M, and `(M N …)` declares an M.
 `(variant V PARAMS S)` declares the type V, whose base type is the type of S: a shape type, a motif
 type, a movement type, an animation type, a component type, or another variant type. V is a subtype
-of its base, while a new motif or a new animation is a type of its own, disjoint from every other. An instance of
-V has the attributes of its base and the parameters of V. Every attribute that S gives, a
-{term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: an instance
-of V that gives it is a compile error. A parameter of V never has the name of an attribute of its
+of its base, while a new motif or a new animation is a type of its own, disjoint from every other. A V has the attributes of its base and the parameters of V. Every attribute that S gives, a
+{term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: a V that
+gives it is a compile error. A parameter of V never has the name of an attribute of its
 base, and every parameter of V is read by an attribute that S gives: a parameter that no attribute
 of S reads is a compile error.
 ```
@@ -528,7 +527,7 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 ```{rule} parameters
 A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which is
 always written, with its conditions. Its default, when it has one, fits T and is known when
-compiling, or is a function declared with `func` or a built-in function. A call or an instance that
+compiling, or is a function declared with `func` or a built-in function. A call, or a declaration whose head is a motif, that
 leaves out a parameter gives it its default, and when it has none, the value of T
 ({numref}`type-values`). A call of a function declared with `func` gives at most as many arguments
 as it has parameters, and leaves out only the last ones. A call of a function value, such as a
@@ -563,7 +562,7 @@ Each expression except a clause has this type:
 | Form | Its type |
 |---|---|
 | a literal | {numref}`literal-types` |
-| a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape or an instance, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
+| a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
 | `(. X Y)` | the type of the attribute or the member Y of X ({numref}`dot-name-part`). An item of a list or a point: the item type. A member of a group by a key known only while drawing: the common type of the members. Each broadened as {numref}`may-give-none` gives |
 | a spread `g.A` | `list[U]`, U the meeting of the types of A of the members, with the number of members as its length |
 | `(if C A B)` | C has type `bool`. The type is the meeting of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |

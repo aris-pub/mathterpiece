@@ -21,7 +21,7 @@ name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a 
 for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
 parameters of a function, a motif, a variant or an animation, are bindings. The language makes two
 bindings of its own: the move of a drag binds `pointer` to the position of the pointer, and the
-body of a motif binds `self` to the instance being built. An `import` creates
+body of a motif binds `self` to the shape being declared. An `import` creates
 nothing either: it gives names to the things that the declarations of another file create
 ({doc}`imports`).
 ```
@@ -60,7 +60,7 @@ So the shapes of the scene, at any depth in its groups, are names of the file sc
 parameter is used only in its body, and so a default of a parameter never reads another parameter.
 A member of a record, a palette or a formula is used by its bare name only inside that
 declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
-a member of a motif's body is used from outside the body only through an instance, as `d1.face`.
+a member of a motif's body is used from outside the body only through a shape of that motif, as `d1.face`.
 
 ```{rule} declare-before-use
 A use of a name refers only to a declaration or a binding that comes before the use, in every

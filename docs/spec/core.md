@@ -149,7 +149,7 @@ For example, after `(circle a (r 1) (fill #'red') (stroke #'black'))`, the form
 `M` is a plain name, and the form is one of these, or it is a {term}`compile error`:
 
 - `K` is a shape head other than `group`, `row` and `column`, and `M` is a shape of kind `K`.
-- `K` is a motif or a variant, and `M` is an instance of it.
+- `K` is a motif or a variant, and `M` is a `K`.
 - `K` is `font`, and `M` is a font.
 - `K` is `term`, and `M` is a term of the same formula whose `(term …)` form comes before.
 - The form is a `move` or a `movement`, and `M` is a movement declared at the top level.
@@ -163,12 +163,12 @@ of `M`'s collection: `(circle b (like a))` outside the group of `a` has only wha
 with. A copied item that is bound is bound to the same expression in the copy: if the radius
 of `M` is bound to `(* 2 k)`, so is the radius of the copy, and both update when `k` changes. A copied item that
 is free is a free attribute of the copy, of its own, with the same start: with `(r free@2)`
-in `M`, the copy's radius starts at 2, and a writer of `M`'s radius does not write it. The defaults of an instance, `pointer-events` among them, and its `clip` are items of it,
+in `M`, the copy's radius starts at 2, and a writer of `M`'s radius does not write it. When `K` is a motif, the defaults of `M`, `pointer-events` among them, and its `clip` are items of it,
 so `(like M)` copies them.
 
 :::{admonition} Code differs
 :class: note
-`(like M)` on an instance does not copy its `clip` (mtp-ydd4.7.20).
+When `K` is a motif, `(like M)` does not copy its `clip` (mtp-ydd4.7.20).
 :::
 
 ### Dragging a group
