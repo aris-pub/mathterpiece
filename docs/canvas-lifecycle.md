@@ -5,7 +5,10 @@ a readout) and its own listeners `on-view` and `on-ready`. No control is involve
 
 ## Timeline
 
-```mermaid
+```{mermaid}
+:caption: The timeline of a canvas and of its listeners on-view and on-ready.
+:name: canvas-timeline
+
 sequenceDiagram
   participant Page
   participant Copy as Canvas copy
