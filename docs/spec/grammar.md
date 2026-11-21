@@ -231,8 +231,8 @@ is an error ("a name is written bare, not in quotes"), and so is a name that
 {numref}`declaration-names` does not allow.
 ```
 
-A scene is named because a canvas shows it by its name, a formula because a display shows it by its
-name, and a view and a control because the page places them by their names, as
+A scene is named because a canvas holds its name, a formula because a display holds its
+name, and a view and a control because the author places each one on the page by its name, as
 `<mtp-canvas name="v">`. Inside the compiler and the runtime, a declaration with no name still creates its own variable,
 type or object, so no other declaration needs a name.
 
