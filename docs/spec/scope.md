@@ -86,35 +86,35 @@ body: only the names that the `let` or the `foreach` binds belong to its own sco
 ```
 
 A source holds at most one scene ({numref}`top-level-forms`), so the shapes of the scene can be names
-of the file scope without two scenes declaring the same name, and a canvas or a listener uses them
+of the file scope without two scenes declaring the same name, and a canvas or a listener may use them
 with no prefix, as `frame` or `triangles`. A source may hold several formulas, and two of them may
-each have a term `a`, so each formula makes a scope of its own, and its terms are used from outside
-it through the formula, as `pythagoras.c2`.
+each have a term `a`, so each formula makes a scope of its own, and its terms may be used outside
+it only through the formula, as `pythagoras.c2`.
 
 So the shapes of the scene, at any depth in its groups, are names of the file scope: the body of a canvas, a
-{term}`listener` and a readout use their names. A copy that a `foreach` in the scene makes, such as
-`@'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
-parameter is used only in its body, and so a default of a parameter never reads another parameter.
-An attribute of a record, and a member of a formula, is used by its name only inside
+{term}`listener` and a readout may use their names. A copy that a `foreach` in the scene makes, such as
+`@'dot-{k}'`, is a name of the file scope too, while `k` may be used only inside the `foreach`. A
+parameter may be used only in its body, and so a default of a parameter never reads another parameter.
+An attribute of a record, and a member of a formula, may be used by its name only inside
 that declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
-a shape or a variable declared in a motif's body is used from outside the body only as an attribute
+a shape or a variable declared in a motif's body may be used outside the body only as an attribute
 of a shape of that motif, as `d1.face` ({doc}`data-model`).
 
 ```{rule} declare-before-use
 A use of a name refers only to a declaration or a binding that comes before the use, in every
-scope, with no exceptions, and a name that an import gives is used only after the import. The
+scope, with no exceptions, and a name that an import makes usable may be used only after the import. The
 order is the order of the source after the rewrite step, with each `foreach` read as its copies, in
 the order of the copy index. A declaration, a binding or an import comes before a use when its
 form starts before the use. A use of a name inside the form that declares or binds it is allowed
 only as {numref}`self-reference-today` allows.
 ```
 
-So two functions never call each other, since one of them would use the name of the other before
-its declaration, and a function calls itself only by {numref}`self-reference-today`. A canvas comes
-after the scene in its body, a {term}`control` comes after the {term}`views <view>` named in its
-`(in …)`, and an `exists-when` comes after the shape named in it. Copy k of a `foreach` may
-name copy k - 1, which comes before it, and never copy k + 1. By {numref}`import-declares-names`, a
-name that an import gives is used only after the import.
+So two functions may not call each other, since one of them would use the name of the other before
+its declaration, and a function may call itself only by {numref}`self-reference-today`. A canvas must come
+after the scene in its body, a {term}`control` must come after the {term}`views <view>` named in its
+`(in …)`, and an `exists-when` must come after the shape named in it. Copy k of a `foreach` may
+use the name of copy k - 1, which comes before it, and may never use the name of copy k + 1. By {numref}`import-declares-names`, a
+name that an import makes usable may be used only after the import.
 
 :::{admonition} Code differs
 :class: note
