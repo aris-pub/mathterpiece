@@ -3,7 +3,7 @@
 
 This page defines how a file uses the declarations of another `.mtp` file: how an `import` is
 written, which file it reads, what that file may hold, and which {term}`names <name>` the import
-gives. Two rules about imports are on other pages, next to rules of the same kind: where an
+makes usable. Two rules about imports are on other pages, next to rules of the same kind: where an
 `import` may be written is in {doc}`grammar`, and which imported declarations the {term}`.mtpc`
 holds is in {numref}`mtpc-imported-declarations`. The {term}`compiler` reads no
 file other than the source and the files that it imports ({numref}`compiler-reads-files`).
@@ -17,8 +17,8 @@ rule of this page is rejected in the rewrite step.
 An import is `(import F)` or `(import F N1 N2…)`, with `F` and each `Ni` a name of one
 {term}`name part` ({numref}`name-characters`). `(import F)` imports the file `F.mtp` whole, and
 `(import F N1 N2…)` imports the names `N1`, `N2` and so on from `F.mtp`. Any other `import` is a
-{term}`compile error`, "import is (import file name…)", and so is an `Ni` that `F.mtp` does not
-give ({numref}`import-files`), "F.mtp gives no 'Ni'".
+{term}`compile error`, "import is (import file name…)", and so is an `Ni` that is not a name of
+`F.mtp` ({numref}`import-files`), "F.mtp has no name 'Ni'".
 ```
 
 So `(import colors)`, `(import math dot clamp)` and `(import house ink)` are imports, and
@@ -28,14 +28,14 @@ errors. A name given twice, as in `(import math dot dot)`, is a compile error by
 
 :::{admonition} Code differs
 :class: note
-The error for an `Ni` that `F.mtp` does not give reads "F.mtp declares no 'Ni'". mtp-ydd4.7.62.
+The error for an `Ni` that is not a name of `F.mtp` reads "F.mtp declares no 'Ni'". mtp-ydd4.7.62.
 :::
 
 ## Which file an import reads
 
 ```{rule} import-file-name
 `(import F …)` reads the file whose name is `F` followed by `.mtp`, looked for in the folders that
-{numref}`compiler-reads-files` gives, in that order. A file is found only when its name is `F.mtp`
+{numref}`compiler-reads-files` lists, in that order. A file is found only when its name is `F.mtp`
 character for character, upper and lower case included, on every file system. When neither folder
 holds such a file, the import is a compile error, "no F.mtp next to S.mtp or in the standard
 library", with `S.mtp` the importing file.
@@ -80,7 +80,7 @@ source that imports the file.
 ```{rule} import-proves-whole-file
 The compiler proves every declaration of an imported file, whether the source uses it or not. A
 declaration that breaks a rule of the spec is a compile error in every source that imports the
-file, and the error gives the line and column in the imported file.
+file, and the error has the line and the column in the imported file.
 ```
 
 So whether a file to import is correct never depends on the source that imports it.
@@ -95,13 +95,13 @@ So whether a file to import is correct never depends on the source that imports 
   check the declarations that nothing uses (`compiler.py:815-823`) (mtp-08wd.6).
 :::
 
-## The names that an import gives
+## The names that an import makes usable
 
 ```{rule} import-puts-in
-`(import F)` puts the top-level declarations of `F.mtp` into the source, after the rewrites of
-`F.mtp`, each under the name `F.N`, where `N` is its name in `F.mtp`. Each `F.N` and each `(. F N)`
-in the source is a use of that declaration. `(import F N1 N2…)` does the same, and each `Ni` in the
-source is also a use of `F.Ni`. A file imported several times, directly or through other files, is
+`(import F)` puts the names of `F.mtp` into the source, after the rewrites of `F.mtp`, each as the
+qualified name `F.N`, where `N` is its name in `F.mtp`: `F.N`, which is `(. F 'N')`, refers to that
+declaration. `(import F N1 N2…)` does the same, and each `Ni` in the source also refers to what
+`F.Ni` refers to. A file imported several times, directly or through other files, is
 put in once.
 ```
 
@@ -113,28 +113,28 @@ put in once.
 :::
 
 ```{rule} import-files
-An imported file has a {term}`file scope` of its own: its forms use only the names that it
-declares, binds and imports, and never a name of a file that imports it. A file gives a file
-that imports it its own top-level declarations and the names that it imports by name, with
-`(import G N…)`, and never the name of a file that it imports whole.
+An imported file has a {term}`file scope` of its own: its forms may use only the names that it
+declares, binds and imports, and never a name of a file that imports it. The names of a file are
+its own top-level declarations and the names that it imports by name, with `(import G N…)`. The
+name of a file that it imports whole is not one of its names.
 ```
 
-So inside house.mtp, a function reads the color `ink` of house.mtp by its bare name, and a
+So inside house.mtp, a function may read the color `ink` of house.mtp by its name, and a
 `let` name `ink` in it hides that color, by {numref}`name-lookup`. With `(import house ink)` in a
 source and `(import colors red)` in house.mtp, the source may also write `(import house red)`.
 With `(import colors)` in house.mtp, `(import house colors)` is a compile error by
 {numref}`import-form`. The names of the standard library are ordinary declarations of its files,
 and a source brings them in as it brings in the names of any other file. Among them are the
-random functions of the file rand, which the compiler gives with no .mtp ({numref}`rand-module`).
+random functions of the file rand, which the compiler declares itself, with no .mtp ({numref}`rand-module`).
 
 ```{rule} import-declares-names
-An `(import …)` gives its names at its place in the file.
+An `(import …)` makes its names usable from its place in the file on.
 ```
 
-By {numref}`declare-before-use`, a name that an import gives is then used only after the import.
+By {numref}`declare-before-use`, a name that an import makes usable may be used only after the import.
 An import need not come before the forms that do not use its names. So
 `(scene s (circle c (fill colors.tab10-named.red))) (import colors)` is an error, and the same
-two forms in the other order are allowed. The names that an import gives share the file scope with
+two forms in the other order are allowed. The names that an import makes usable share the file scope with
 the file's own declarations, so by {numref}`one-declaration-per-scope`, `(import house ink)`
 followed by `(color ink #'red')` is a compile error.
 
