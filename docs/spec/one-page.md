@@ -61,7 +61,8 @@ rewritten into the form that it is sugar for, for example:
 
 | Written | Means |
 |---|---|
-| `[0 1]` | `(list-of 0 1)` |
+| `[0 1]` | `(point-of 0 1)` |
+| `{0 1 2}` | `(list-of 0 1 2)` |
 | `p.pos.x` | `(. (. p 'pos') 'x')` |
 | `real\|none` | `(type-union real none)` |
 | `list[int]` | `(type-apply list int)` |
@@ -81,8 +82,8 @@ The five kinds of expression after syntactic sugar is rewritten ({numref}`kinds-
 
 ## Values, containers and types
 
-A {term}`value` is a {term}`primitive` or an {term}`object`. A primitive, such as the number `3`, the string `'hi'` or
-the list `[0 1]`, never changes and has no identity. An object, such as a circle, has an identity and
+A {term}`value` is a {term}`primitive` or an {term}`object`. A primitive, such as the number `3`, the string `'hi'`, the point `[0 1]` or
+the list `{0 1 2}`, never changes and has no identity. An object, such as a circle, has an identity and
 attributes.
 
 A {term}`container` is a variable or an attribute, and holds one value. Each container is one of

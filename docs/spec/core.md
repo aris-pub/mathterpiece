@@ -50,7 +50,7 @@ whose rewrite would need one of their values is core ({numref}`names-from-values
 
 The {term}`parser` rewrites some syntactic sugar while it reads the source:
 a prefixed form `H@X`, a {term}`name string` `@'…'`, an {term}`interpolated string` `f'…'`, a part
-after a {term}`list` written in brackets, `[…][X]` ({numref}`parser-sugar`), and a head that ends with `_` ({numref}`unnamed-head`). Every
+after a {term}`list` written in braces, `{…}[X]` ({numref}`parser-sugar`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other syntactic sugar form is in the table of the rule below.
 
 (rewrite-when)=
@@ -70,7 +70,8 @@ any number of such texts.
 | `T[X…]`, where `T` names a type | `(type-apply T X…)`: `list[int]` is `(type-apply list int)`, and `func[real real]` is `(type-apply func real real)` | |
 | `T1\|T2…` | `(type-union T1 T2…)`: `real\|none` is `(type-union real none)` | |
 | `T1&T2…` | `(type-intersect T1 T2…)`: `shape&round` is `(type-intersect shape round)` | |
-| `[X…]` | `(list-of X…)`: `[0 1]` is `(list-of 0 1)` | |
+| `{X…}` | `(list-of X…)`: `{0 1 2}` is `(list-of 0 1 2)` | |
+| `[X Y]` | `(point-of X Y)`: `[0 1]` is `(point-of 0 1)` | Exactly two items |
 | `(when C X)` | `(if C X none)` | Exactly two arguments |
 | `(cond (C1 V1) MORE… (else V))`, `(cond (else V))` | `(if C1 V1 (cond MORE… (else V)))`, `V` | |
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
@@ -79,7 +80,7 @@ any number of such texts.
 | `(palette N (M C)…)` | `(record N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N XS F ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
-| `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list written in brackets, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
+| `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not written `[X Y]`, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, in a score | `(move none (duration T))` | |
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |

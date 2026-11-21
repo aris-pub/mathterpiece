@@ -296,7 +296,8 @@ own type.
 | a color literal, `#'…'` | `color` | as its own type ({numref}`color-literals`) |
 | `true`, `false` | `bool` | as its own type |
 | `none` | `none` | it must be a broadened type |
-| `[X…]` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, it has no own type, and is a compile error | where a point is expected, it must have two items, each a number, or a value whose type is a number type with `none`, and it is a point. Where `list[T]` is expected, each item has T expected |
+| `{X…}` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, it has no own type, and is a compile error | where `list[T]` is expected, each item has T expected |
+| `[X Y]` | `point` | each of X and Y has `real` expected |
 | `(as T X)` | T | X has T expected. X must be a literal |
 
 A literal is checked against the conditions of the expected type by {numref}`constraint-proof`.
@@ -313,12 +314,7 @@ Only these change the type of a value where no form asks for it:
 
 1. A number is accepted where a later number type is expected ({numref}`fits`), and is then a
    value of that type, as {numref}`number-result-types` gives.
-2. Where a point is expected, a list of numbers whose length is known to be 2
-   ({numref}`known-lengths`), and whose type does not include `none`, is a point. Where a list of
-   points is expected, a list whose items are such lists, of a known item length 2, is a list of
-   points. Where a function whose result is a point is expected, a function whose result is such a
-   list is accepted.
-3. A literal has the type that is expected where it is written ({numref}`literal-types`).
+2. A literal has the type that is expected where it is written ({numref}`literal-types`).
 
 Nothing else converts. A string is never a color, a real is never an int, and a point is never a
 list.
@@ -326,8 +322,7 @@ list.
 
 So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, and a real becomes an
 int only through a function such as `round`, `floor` or `ceil`, or through a write into an int
-({numref}`writes-into-constraints`). A free list variable with no `(length n)` is never a point,
-since a writer may give it another length.
+({numref}`writes-into-constraints`).
 
 ```{rule} known-lengths
 The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists

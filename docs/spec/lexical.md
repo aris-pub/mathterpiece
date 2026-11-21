@@ -190,7 +190,7 @@ heads of {term}`conditions <condition>`, such as `length` and `one-of`, and `con
 Which names no declaration and no binding may take is defined in {numref}`declaration-names`.
 
 ```{rule} reserved-characters
-Outside a string literal, `{`, `}` and `"` are errors, and so is a `$` or a `#` that is not followed
+Outside a string literal, `"` is an error, `{` and `}` start and end a list ({numref}`lists`), and so is a `$` or a `#` that is not followed
 by `'`. Outside the {term}`format spec` of an interpolated string ({numref}`interpolated-strings`),
 `:` is an error. String literals are written in single quotes only.
 ```

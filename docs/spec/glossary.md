@@ -132,8 +132,8 @@ head
   {numref}`parser-expressions`).
 
 brackets
-  A `[…]` right after a name or after the `]` of a list, with no whitespace between them, such as
-  `xs[0]`, `[a b c][h]` or `func[real real]` ({numref}`lists`, {numref}`name-brackets`).
+  A `[…]` right after a name or after the `}` of a list, with no whitespace between them, such as
+  `xs[0]`, `{a b c}[h]` or `func[real real]` ({numref}`lists`, {numref}`name-brackets`).
 
 int
   A value of type `int`: an exact whole number, within the number limit. Written as a number
@@ -148,9 +148,14 @@ letter
   One of the ASCII letters `a` to `z` and `A` to `Z`, as a character of a name
   ({numref}`name-characters`).
 
+point
+  A primitive with two real coordinates, `x` and `y`, which are also its attributes `0` and `1`.
+  Given by the compound `(point-of X Y)`, which is also written `[X Y]`. The points form a vector
+  space ({numref}`values`, {numref}`point-arithmetic`).
+
 list
   A primitive of a list type `list[T]`: items of type T, in order, of any length. Given by the
-  compound `(list-of …)`, which is also written with its items in square brackets, such as `[0 1]` ({numref}`the-types`, {numref}`lists`).
+  compound `(list-of …)`, which is also written with its items in braces, such as `{0 1 2}` ({numref}`the-types`, {numref}`lists`).
 
 literal
   A number, a string, a color, `true`, `false` or `none`, written in the source, such as `2.5` or
