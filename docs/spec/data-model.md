@@ -140,7 +140,11 @@ The kinds of object, and what the compiler and the runtime do with each.
 
 The objects are the scene and its shapes, the movements, the formulas and
 their terms, the components (views, controls and listeners), the functions and the records. A shape whose
-type is a motif or a variant is a shape like any other: only its type differs. A score is a
+type is a motif or a variant is a shape like any other: only its type differs. It is not a
+collection. Each shape declared in the body of a motif is a const attribute of every shape of that
+motif, labelled with its name, and each variable declared in the body is an attribute of the same
+kind, bound or const: with `(motif dot ((real size 1)) (circle c (r size)))` and `(dot d1)`, `d1.c`
+holds the circle of `d1`, whose `name` is `'c'`. A score is a
 movement that holds movements, as a group is a shape that holds shapes: each member is placed
 in time by its own `lag`, the fraction of the member before it that has run when it starts, as each
 member of a group is placed in space by its own position. `(in-order …)` is a score whose
