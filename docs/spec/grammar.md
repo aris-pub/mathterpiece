@@ -195,7 +195,7 @@ head specifies which of these the form has ({ref}`signatures`).
   argument and no named argument stands for several items. Whether the order of the items in the
   body matters is specified by the head.
 
-So a call `(+ a b c)`, a special form `(if c a b)` and an import `(import math dot)` follow the
+So the compounds `(+ a b c)` and `(if c a b)` and the import `(import math dot)` follow the
 template, with no name.
 ```
 
@@ -249,7 +249,7 @@ its name has two name parts.
 These forms have no name, so their second item is their first positional argument or their first
 named argument: a {term}`listener`, `(move …)`, `(jump …)`, an `(animation …)` inside a
 {term}`control` or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
-`(term …)`, `(like …)`, every named argument, every call and every special form.
+`(term …)`, `(like …)`, every named argument and every other compound.
 ```
 
 So the second item of each of these is not a name:
