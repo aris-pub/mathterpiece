@@ -323,6 +323,20 @@ class TestNumberTypes:
         compile_error("(real v infty)")
 
 
+@rule("point-arithmetic")
+class TestPointArithmetic:
+    def test_points_add_coordinate_by_coordinate(self):
+        assert value("(point v (+ [1 2] [3 4]))", "v") == (4, 6)
+
+    def test_a_point_times_a_real(self):
+        assert value("(point v (* 2 [1 2]))", "v") == (2, 4)
+
+    @xfail("mtp-diqi", "no point-of, no division and no negation of a point")
+    def test_the_zero_and_the_other_operations(self):
+        assert value("(point v (- (/ [2 4] 2) (point-of 0 0)))", "v") == (1, 2)
+        assert value("(point v (- [1 2]))", "v") == (-1, -2)
+
+
 @rule("number-result-types")
 class TestNumberResultTypes:
     @pytest.mark.parametrize(

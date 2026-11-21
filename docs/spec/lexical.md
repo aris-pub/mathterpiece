@@ -280,7 +280,8 @@ is not doubled opens braces, which hold one expression, with whitespace or nothi
 after it, then a format spec or nothing, and last `}`. No comment may be written in the
 braces, around the expression. A format spec is `:` followed by any characters but `{`, `}` and
 `'`. A `}` that is not doubled and does not close braces is an error. A name string holds braces
-at least once.
+at least once. Since `{{` is `{`, a list ({numref}`lists`) written first in the braces has
+whitespace before it: `f'{ {a b} }'`.
 ```
 
 The parser keeps the format spec as written. This page does not give its meaning. Since `:` ends
