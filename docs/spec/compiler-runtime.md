@@ -296,7 +296,7 @@ own view ({doc}`page-interface`, {doc}`lifecycle`).
 
 ```{rule} runtime-adds-no-objects
 What a world model holds is decided by the illustrator alone: the objects of a live model are
-those specified in the source, through declarations and the compounds that give a new object
+those specified in the source, through declarations and the compounds that result in a new object
 ({doc}`data-model`), and the runtime adds or removes no other object. What the runtime draws beyond the objects of the live model changes only how a component
 looks. It is not an object of the live model, no expression and no writer of the world model reads
 it, and it never writes a variable or an attribute of the live model.

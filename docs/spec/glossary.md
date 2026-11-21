@@ -297,11 +297,11 @@ attribute
 
 function
   An object whose only attribute is `name`, and which the runtime calls. `(func f …)` declares a
-  function, and `(fn …)` gives a new function each time that it is evaluated ({numref}`functions`).
+  function, and each evaluation of `(fn …)` results in a new function ({numref}`functions`).
 
 movement
   An object that the runtime executes by writing its targets over time. `(move …)`, `(score …)`
-  and `(A …)` for an animation `A` each give a new movement ({numref}`objects`, {doc}`time`).
+  and `(A …)` for an animation `A` each result in a new movement ({numref}`objects`, {doc}`time`).
 
 container
   A variable or an attribute. Each container holds one value, and is free, bound or const
@@ -377,7 +377,7 @@ world model
   in {doc}`world-model`.
 
 move
-  A compound `(move T …)` that gives a new movement. When the runtime executes the movement, it
+  A compound `(move T …)` that results in a new movement. When the runtime executes the movement, it
   writes one target, a variable or an attribute, to a new value over a duration. Every control and
   listener that changes the model over time triggers movements.
   Defined in {doc}`time`.
@@ -393,7 +393,7 @@ motif
 
 animation
   A template of movements, `(animation N PARAMS ITEM…)`, as a motif is a template of shapes. With an
-  animation `A`, `(A …)` is a compound that gives a new `A`, which is a movement: the body of the
+  animation `A`, `(A …)` is a compound that results in a new `A`, which is a movement: the body of the
   animation with the values of its parameters. Defined
   in {doc}`time`.
 ```
