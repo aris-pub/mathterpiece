@@ -267,7 +267,8 @@ site
 
 declaration
   A form that creates a variable, a type or an object, with a name or without one, such as
-  `(real a 1)`, `(motif m …)` or `(circle c …)` ({numref}`declarations-and-bindings`).
+  `(real a 1)`, `(motif m …)` or `(circle c …)`, or an `import`, which makes the names of another
+  file usable ({numref}`declarations-and-bindings`).
 
 binding
   A name that a `let`, a `foreach` or a parameter gives to a value for a part of a source. A binding
