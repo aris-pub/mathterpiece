@@ -200,7 +200,8 @@ objects, and so are the copies `c-0` and `c-1` of `(foreach k 2 (circle @'c-{k}'
 An illustrator usually uses an object through its attributes, as `c.r` or `style.width`, and a
 primitive by itself, as `3` or `'hi'`. A primitive may have attributes too: a point has `x` and `y`, a
 color its channels `r`, `g`, `b` and `a`, a list and a string a `length`, and a complex number `re`
-and `im`. Reading an attribute of a primitive results in a primitive. Writing one puts a new value into the
+and `im`. Each item of a list is an attribute whose label is its position, so `xs[0]` is an attribute
+of `xs`. Reading an attribute of a primitive results in a primitive. Writing one puts a new value into the
 variable or the attribute that holds it, and the old value does not change.
 
 ## Functions
