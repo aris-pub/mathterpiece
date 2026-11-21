@@ -29,6 +29,18 @@ So `(real a 1)`, `(circle c (r a))`, `(canvas v s)`, `(func twice ((real x)) (* 
 canvas, such as `(on-click c (move a (to 0) (duration 1)))`, which creates a listener with no name. In
 `(let ((k 2)) (circle c (r k)))`, the circle `c` is a declaration and `k` is a binding.
 
+The binding `pointer` is used like this:
+
+```mtp
+(real a 1 (>= 0) (<= 4))
+(scene s (circle p (pos [a 0]) (r 0.2)))
+(canvas v s
+  (on-drag p (move a (to pointer.x))))
+```
+
+In the move of the `on-drag`, `pointer` is the position of the pointer, so dragging `p` writes the
+x of the pointer into `a`, and `p` moves with it.
+
 ## Scopes
 
 ```{rule} scopes
