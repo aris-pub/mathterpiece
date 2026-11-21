@@ -201,8 +201,8 @@ error.
 So inside a motif's body, a name declared at the top level always means the top-level
 declaration, unless a parameter, a `let` name or a `foreach` name hides it. A shape of the scene is
 not declared at the top level, so two motifs and the scene may each have a member `c`. A file
-imported whole gives only its own name ({numref}`import-puts-in`), so a member `ink` does not hide
-`house.ink`. A motif in an imported file follows the rule against that file's own top-level names.
+imported whole makes only its own name usable ({numref}`import-puts-in`), so a member `ink` does not hide
+`house.ink`. The same rule holds for a motif in an imported file, with that file's own top-level names.
 
 ## Imports
 
