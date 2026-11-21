@@ -72,14 +72,12 @@ named colors.mtp.
 
 ```{rule} import-file-holds
 A {term}`file to import` may hold at its top level only `import`, `let`, `foreach`, and declarations
-of types, functions, records, {term}`seeds <seed>`, and non-free variables. Any other form there is a compile error at that form, in every
-source that imports the file.
+of types, functions, records, {term}`seeds <seed>`, and non-free variables. Any other form there is a
+compile error.
 ```
 
 ```{rule} import-proves-whole-file
-The compiler proves every declaration of an imported file, whether the source uses it or not. A
-declaration that breaks a rule of the spec is a compile error in every source that imports the
-file, and the error has the line and the column in the imported file.
+The compiler proves every declaration of an imported file, whether the source uses it or not.
 ```
 
 So whether a file to import is correct never depends on the source that imports it.
@@ -97,11 +95,8 @@ So whether a file to import is correct never depends on the source that imports 
 ## The names that an import makes usable
 
 ```{rule} import-puts-in
-`(import F)` puts the names of `F.mtp` into the source, after the rewrites of `F.mtp`, each as the
-qualified name `F.N`, where `N` is its name in `F.mtp`: `F.N`, which is `(. F 'N')`, refers to that
-declaration. `(import F N1 N2…)` does the same, and each `Ni` in the source also refers to what
-`F.Ni` refers to. A file imported several times, directly or through other files, is
-put in once.
+`(import F)` makes each name `N` of `F.mtp` usable in the source as the {term}`qualified name`
+`F.N`. `(import F N1 N2…)` does the same, and also makes each `Ni` usable on its own.
 ```
 
 :::{admonition} Code differs
@@ -118,24 +113,16 @@ its own top-level declarations and the names that it imports by name, with `(imp
 name of a file that it imports whole is not one of its names.
 ```
 
-So inside house.mtp, a function may read the color `ink` of house.mtp by its name, and a
-`let` name `ink` in it hides that color, by {numref}`name-lookup`. With `(import house ink)` in a
-source and `(import colors red)` in house.mtp, the source may also write `(import house red)`.
-With `(import colors)` in house.mtp, `(import house colors)` is a compile error by
-{numref}`import-form`. The names of the standard library are ordinary declarations of its files,
-and a source brings them in as it brings in the names of any other file. Among them are the
-random functions of the file rand, which the compiler declares itself, with no .mtp ({numref}`rand-module`).
+So with `(import colors red)` in house.mtp, a source may write `(import house red)`, and with
+`(import colors)` in house.mtp, `(import house colors)` is a compile error. The files of the
+{term}`standard library` are imported like any other file ({doc}`stdlib`).
 
 ```{rule} import-declares-names
 An `(import …)` makes its names usable from its place in the file on.
 ```
 
-By {numref}`declare-before-use`, a name that an import makes usable may be used only after the import.
-An import need not come before the forms that do not use its names. So
-`(scene s (circle c (fill colors.tab10-named.red))) (import colors)` is an error, and the same
-two forms in the other order are allowed. The names that an import makes usable share the file scope with
-the file's own declarations, so by {numref}`one-declaration-per-scope`, `(import house ink)`
-followed by `(color ink #'red')` is a compile error.
+So `(scene s (circle c (fill colors.tab10-named.red))) (import colors)` is a compile error, and the same two
+forms in the other order are allowed.
 
 :::{admonition} Code differs
 :class: note
