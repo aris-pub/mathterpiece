@@ -215,10 +215,7 @@ The file scope of an imported file, and the names that an import gives, are defi
 No declaration and no binding takes as its name a {term}`keyword` ({numref}`keywords`) or a
 {term}`built-in type`. This holds for every kind of declaration and binding: a variable, a shape, a
 function, a parameter, a name of a `let` or a `foreach`, an attribute of a record, a member of a
-formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`,
-`complex`, `bool`, `string`, `color`, `font`, `point`, `movement`, `animation`,
-`scene`, `func`, `rand-seed`, `list`, the shape types, and the
-interfaces `shape`, `positioned`, `sequence` and `palette`. Nor does it take the name of an
+formula, a motif, a font, and every other. The built-in types are listed in {numref}`the-types`. Nor does it take the name of an
 {term}`operator`. A declaration or a binding may take the name of any other built-in function, or
 of a built-in constant (`pi`, `tau` and `euler`): from that declaration or binding on, the name refers to what it declares or binds
 ({numref}`name-lookup`).
