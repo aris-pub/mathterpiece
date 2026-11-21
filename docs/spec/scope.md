@@ -36,33 +36,33 @@ In a pointer listener, `(as N)` is used like this:
 (real a 1 (>= 0) (<= 4))
 (scene s (circle p (pos [a 0]) (r 0.2)))
 (canvas v s
-  (on-drag p (as q) (move a (to q.x))))
+  (on-drag p (as pointer) (move a (to pointer.x))))
 ```
 
-In the movement of the `on-drag`, `q` is the position of the pointer, so dragging `p` writes the x
+In the movement of the `on-drag`, `pointer` is the position of the pointer, so dragging `p` writes the x
 of the pointer into `a`, and `p` moves with it.
 
 In a motif, `(as N)` is used like this:
 
 ```mtp
-(motif dot ((real size 1)) (as me)
+(motif dot ((real size 1)) (as self)
   (circle c (r size))
-  (text_ me.name (pos (top c 0.2)) (halign 'middle') (valign 'bottom')))
+  (text_ self.name (pos (top c 0.2)) (halign 'middle') (valign 'bottom')))
 (scene s
   (dot d1)
   (dot d2 (size 0.5)))
 ```
 
-In the body of `dot`, `me` is the shape being declared, so each `dot` writes its own name above
+In the body of `dot`, `self` is the shape being declared, so each `dot` writes its own name above
 its circle: `'d1'` above the circle of `d1`, and `'d2'` above the circle of `d2`.
 
 Inside the body, the parameters, the shapes and the variables of the body are names already:
-`size` is `me.size`, and `c` is `me.c`. So `(as N)` is needed only for the parts of the shape that
+`size` is `self.size`, and `c` is `self.c`. So `(as N)` is needed only for the parts of the shape that
 have no name in the body: its `name`, the attributes that it has from its kind, such as `x`, `y`,
 `rotate` or `opacity`, which are given where the shape is declared, and the shape as a whole, as in
-`(f me)` or `(= me picked)`. Every read through `me` is limited by
-{numref}`no-dependency-cycles`: a text in the body may read `me.x`, since the position of the
-shape does not depend on the text, but `(pos (top me 0.2))` in the body is a compile error, since
+`(f self)` or `(= self picked)`. Every read through `self` is limited by
+{numref}`no-dependency-cycles`: a text in the body may read `self.x`, since the position of the
+shape does not depend on the text, but `(pos (top self 0.2))` in the body is a compile error, since
 the box of the shape depends on the shapes in its body.
 
 ## Scopes

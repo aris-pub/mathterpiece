@@ -133,7 +133,7 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
 
 So a qualified name as the target of an `on-drag` is the position of the dragged shape, its `x` or its
 `y`, and any other name there is a compile error: `(on-drag p k)` must be written with a
-move, such as `(on-drag p (as q) (move k (to q.x)))`.
+move, such as `(on-drag p (as ptr) (move k (to ptr.x)))`.
 
 ### Copies with `like`
 
@@ -193,7 +193,7 @@ its own: drag its shift, as (on-drag g g.shift)".
 ```
 
 By {numref}`sugar-rewrites`, `(on-drag g g.shift)` is
-`(on-drag g (as q) (move g.shift (to q) (duration 0)))`, with a name `q` that the source does not use.
+`(on-drag g (as P) (move g.shift (to P) (duration 0)))`, with a name `P` that the source does not use.
 No member is written: the members are drawn in the frame of the group, so they move with it and keep
 their own positions. `(on-drag g g.x)` is an error twice over: `g.x` of a group is the list of the
 `x` of its members, and a drag writes one number.

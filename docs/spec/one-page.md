@@ -49,7 +49,7 @@ The people, the files and the two programs ({numref}`people-and-programs`).
 
 :::{admonition} Code differs
 :class: note
-In the spec, the drag is written `(on-drag p (as q) (move a (to q.x)))`. The compiler does not have
+In the spec, the drag is written `(on-drag p (as ptr) (move a (to ptr.x)))`. The compiler does not have
 `(as …)` yet. Bead mtp-t8in.
 :::
 
