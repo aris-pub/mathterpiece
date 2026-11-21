@@ -257,6 +257,6 @@ whose `height` updates when `k` changes, and `(var s record (rec (real width 1))
 
 :::{admonition} Code differs
 :class: note
-The compiler calls a record a namespace, declared with `(namespace n …)`, and no expression gives
+The compiler calls a record a namespace, declared with `(namespace n …)`, and no expression results in
 one. Bead mtp-h732 renames it and adds `(rec …)`.
 :::
