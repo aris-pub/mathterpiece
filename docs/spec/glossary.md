@@ -128,7 +128,7 @@ free starting value
 head
   The first item of a form. The head of a compound or a declaration is a name, or a form that
   evaluates to a type. Whether a form is a
-  compound, a declaration or a clause depends on its head ({numref}`form-template`,
+  compound, a declaration, a clause or a special form depends on its head ({numref}`form-template`,
   {numref}`parser-expressions`).
 
 brackets
@@ -176,8 +176,8 @@ named argument
 
 expression
   Anything that the parser produces. After syntactic sugar is rewritten, each expression is a
-  literal, a name or a form, and each form is a {term}`compound`, a declaration or a
-  {term}`clause` ({numref}`parser-expressions`).
+  literal, a name or a form, and each form is a {term}`compound`, a declaration, a
+  {term}`clause` or a {term}`special form` ({numref}`parser-expressions`).
 
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name with one name part
@@ -313,6 +313,10 @@ collection
 primitive
   A value that never changes and has no identity, such as a number, a string or a list
   ({numref}`values`).
+
+special form
+  A `let` or a `foreach` written in a body. It is replaced by its items, which may be of any kind
+  that the body holds ({numref}`body-let-foreach`, {doc}`data-model`).
 
 clause
   A form that is part of the form around it and has no result of its own, such as a named

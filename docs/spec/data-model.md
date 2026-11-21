@@ -16,7 +16,8 @@ Which expressions give primitives and objects, and which values a container hold
 ```
 
 An {term}`expression` is a literal, a name or a {term}`form`. A form is a head and its items in
-parentheses, and each form is a {term}`compound`, a declaration or a {term}`clause`.
+parentheses, and each form is a {term}`compound`, a declaration, a {term}`clause` or a
+{term}`special form`.
 
 A literal evaluates to a primitive. A name refers to a type, a variable, an object or an attribute,
 and evaluates to what it refers to.
@@ -37,9 +38,9 @@ and has no result of its own. The names of a `let` and of a `foreach`, and the p
 function, a motif, a variant or an animation, are bindings ({numref}`declarations-and-bindings`).
 
 The signature of each head gives which kinds of expression each of its arguments and its body
-may hold ({ref}`signatures`, {numref}`contexts`). A `let` is a compound where it holds a literal, a name or a compound, and a
-declaration where it holds declarations. A `foreach` holds declarations and is always a
-declaration. 
+may hold ({ref}`signatures`, {numref}`contexts`). A special form is a `let` or a `foreach` written in a body: it is replaced by its items, which may be
+of any kind that the body holds ({numref}`body-let-foreach`). A `let` written in an argument holds one
+expression and is a compound. 
 
 ## Primitives
 

@@ -69,7 +69,7 @@ rewritten into the form that it is sugar for, for example:
 | `@'dot-{k}'` | `(name f'dot-{k}')` |
 
 After that, each expression is a {term}`literal`, a {term}`name` or a {term}`form`. A form is
-written in parentheses, and its first item is its {term}`head`. Whether the form is a {term}`compound`, a declaration or a {term}`clause`
+written in parentheses, and its first item is its {term}`head`. Whether the form is a {term}`compound`, a declaration, a {term}`clause` or a {term}`special form`
 depends on its head ({doc}`grammar`, {doc}`heads`).
 
 ```{diagram} one-page-kinds-of-expression

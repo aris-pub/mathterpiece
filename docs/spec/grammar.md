@@ -131,14 +131,14 @@ literal evaluates to a primitive.
 What value a literal gives, and of what type, is defined in {numref}`literal-types`. Values are
 defined in {doc}`data-model`.
 
-Each expression is a literal, a name or a form. Each form is a {term}`compound`, a declaration or a
-{term}`clause`, by its head ({doc}`heads`).
+Each expression is a literal, a name or a form. Each form is a {term}`compound`, a declaration, a
+{term}`clause` or a {term}`special form`, by its head and where it is written ({doc}`heads`).
 
 ```{diagram} kinds-of-expression
 :file: diagrams/kinds-of-expression.svg
 :max-width: 35rem
 
-The five kinds of expression after syntactic sugar is rewritten. Compounds, declarations and clauses are forms.
+The six kinds of expression after syntactic sugar is rewritten. Compounds, declarations, clauses and special forms are forms.
 ```
 
 ```{rule} parser-sugar
