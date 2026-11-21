@@ -32,8 +32,8 @@ A declaration creates something new in the model: a variable, a type or an objec
 A clause, such as a named argument, the guard of a control, or `exists-when` in a scene or a
 formula, is part of the form around it and has no result of its own.
 
-The arguments of a form are literals, names or compounds, and the items of a body are
-declarations. A `let` is a compound where it holds a literal, a name or a compound, and a
+The signature of each head says which kinds of expression each of its arguments and its body
+may hold ({ref}`signatures`, {numref}`contexts`). A `let` is a compound where it holds a literal, a name or a compound, and a
 declaration where it holds declarations. A `foreach` holds declarations and is always a
 declaration. An `import` declares the names that it brings in.
 
