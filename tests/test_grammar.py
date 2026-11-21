@@ -142,9 +142,12 @@ REJECTED = [
     "(a]",
     "(a [1)",
     '(f "x")',
-    "(f {a})",
     "(f })",
     "(f a {)",
+    "(f {a)",
+    "(f {a]",
+    "(f [a})",
+    "(f {a}x)",
     "(f 'a)",
     "(f f'a)",
     "(f $'a)",
@@ -266,14 +269,35 @@ REJECTED = [
     "(f none[0]x)",
 ]
 
+BRACE_LISTS = "mtp-diqi"
+
 # Sources on which the grammar, which states the decided language, and today's parser differ.
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
 # source, test_known_difference fails, and the entry is removed.
-KNOWN_DIFFERENCES = {}
+KNOWN_DIFFERENCES = {
+    # The parser does not read a list in braces yet.
+    "(f {a})": BRACE_LISTS,
+    "(list xs {1 2 3})": BRACE_LISTS,
+    "(f {})": BRACE_LISTS,
+    "(f { })": BRACE_LISTS,
+    "(f {a {b c}})": BRACE_LISTS,
+    "(f {a b}[0])": BRACE_LISTS,
+    "(f {a b c}[h])": BRACE_LISTS,
+    "(f {a ; c\n b})": BRACE_LISTS,
+    "(f {(g)(h)} {a}(g))": BRACE_LISTS,
+    "(f pos@{1 2} {[1 2] [3 4]})": BRACE_LISTS,
+    "({a} b)": BRACE_LISTS,
+    "(f f'{ {a b} }' f'{ {a}:x}')": BRACE_LISTS,
+}
 
 # For the random sources, which no list could name in advance: the parser as it will be once each
 # bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.
 PENDING_STEPS: dict = {}
+
+# A step on the parser's forms cannot model a bead that makes the parser accept new sources. For
+# such a bead, the random sources whose grammar tree holds one of these rules are not compared
+# while the bead is open.
+PENDING_RULES = {BRACE_LISTS: "list_in_braces"}
 
 
 def parser_after_beads(src: str):
@@ -371,6 +395,8 @@ class Reading(Transformer):
         for index in c[1:]:
             whole = _dot(whole, index)
         return whole
+
+    list_in_braces = list
 
     def list_brackets(self, c):
         return next(x for x in c if not isinstance(x, Token))
@@ -486,12 +512,16 @@ def test_no_conflicts(caplog):
     assert not [r.message for r in caplog.records if "conflict" in r.message.lower()]
 
 
-def read_grammar(grammar: Lark, src: str):
+def tree_of(grammar: Lark, src: str):
     try:
-        tree = grammar.parse(src)
+        return grammar.parse(src)
     except LarkError:
         return None
-    return Reading().transform(tree)
+
+
+def read_grammar(grammar: Lark, src: str):
+    tree = tree_of(grammar, src)
+    return None if tree is None else Reading().transform(tree)
 
 
 def read_both(grammar: Lark, src: str):
@@ -548,7 +578,7 @@ def test_known_difference(grammar, src):
 
 def test_pending_steps_have_entries():
     # A step with no entry left models a change that the parser has made already.
-    assert set(PENDING_STEPS) <= set(KNOWN_DIFFERENCES.values())
+    assert {*PENDING_STEPS, *PENDING_RULES} <= set(KNOWN_DIFFERENCES.values())
 
 
 # Pieces of text where the parser's choices lie, which random sources put together.
@@ -567,8 +597,11 @@ def test_random_sources(grammar):
         src = body if rng.random() < 0.3 else f"(f {body})"
         if src in KNOWN_DIFFERENCES:
             continue
+        tree = tree_of(grammar, src)
+        if tree is not None and any(next(tree.find_data(r), None) for r in PENDING_RULES.values()):
+            continue
         expected = parser_after_beads(src)
-        ours = read_grammar(grammar, src)
+        ours = None if tree is None else Reading().transform(tree)
         assert expected == ours, f"the parser and the grammar differ on {src!r}"
 
 

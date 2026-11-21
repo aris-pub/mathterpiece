@@ -190,7 +190,7 @@ heads of {term}`conditions <condition>`, such as `length` and `one-of`, and `con
 Which names no declaration and no binding may take is defined in {numref}`declaration-names`.
 
 ```{rule} reserved-characters
-Outside a string literal, `{`, `}` and `"` are errors, and so is a `$` or a `#` that is not followed
+Outside a string literal, `"` is an error, `{` and `}` start and end a list ({numref}`lists`), and so is a `$` or a `#` that is not followed
 by `'`. Outside the {term}`format spec` of an interpolated string ({numref}`interpolated-strings`),
 `:` is an error. String literals are written in single quotes only.
 ```
@@ -280,7 +280,8 @@ is not doubled opens braces, which hold one expression, with whitespace or nothi
 after it, then a format spec or nothing, and last `}`. No comment may be written in the
 braces, around the expression. A format spec is `:` followed by any characters but `{`, `}` and
 `'`. A `}` that is not doubled and does not close braces is an error. A name string holds braces
-at least once.
+at least once. Since `{{` is `{`, a list ({numref}`lists`) written first in the braces has
+whitespace before it: `f'{ {a b} }'`.
 ```
 
 The parser keeps the format spec as written. This page does not give its meaning. Since `:` ends

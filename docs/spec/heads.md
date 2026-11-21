@@ -203,7 +203,9 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `fn` | core | a compound | {doc}`types`, {doc}`evaluation` |
 | `rec` | core | a compound | {numref}`records` |
 | `list-of` | core | a compound | {numref}`values` |
-| a list `[X…]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
+| a list `{X…}` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
+| `point-of` | core | a compound | {numref}`values` |
+| a point `[X Y]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `as` | core | a compound | {doc}`types` |
 | `type-of` | core | a compound | {doc}`types` |
 | `concat` | core | a compound | {doc}`evaluation` |

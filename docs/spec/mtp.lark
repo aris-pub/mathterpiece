@@ -27,6 +27,7 @@ plain_item: list | word | string | color | interpolated
 
 //: lists
 list: "[" list_items "]" list_brackets*
+    | "{" list_items "}" list_brackets* -> list_in_braces
 list_brackets: "[" _whitespace_or_comment? expression _whitespace_or_comment? "]"
 brackets: "[" _whitespace_or_comment? items "]"
 

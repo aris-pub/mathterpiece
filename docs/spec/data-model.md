@@ -61,13 +61,14 @@ Each of these evaluates to a primitive:
 | `2.5` | the number 2.5 | `real` |
 | `'hi'` | the string hi | `string` |
 | `true` | true | `bool` |
-| `[1 2 3]` | the list of 1, 2 and 3 | `list[int]` |
-| `[0 1]`, where a point is expected | the point at x 0 and y 1 | `point` |
+| `{1 2 3}` | the list of 1, 2 and 3 | `list[int]` |
+| `[0 1]` | the point at x 0 and y 1 | `point` |
 | `none` | `none` | `none` |
 
 Numbers, bools, strings, colors and `none` are written as literals. Lists and points are given by
-compounds, such as `(list-of 0 1)`, which is also written `[0 1]`. `(list-of X…)` evaluates to the list of the values of
-its items, in order. Since a primitive never
+compounds: `(list-of X…)`, also written `{X…}`, evaluates to the list of the values of its items,
+in order, and `(point-of X Y)`, also written `[X Y]`, evaluates to the point with the coordinates `X`
+and `Y`. Since a primitive never
 changes, nothing writes one: a writer writes a variable or an attribute, which then holds a
 different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
 

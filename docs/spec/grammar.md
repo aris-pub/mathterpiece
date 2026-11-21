@@ -22,7 +22,7 @@ the name of a rule keeps the quoted text of that rule in the tree.
 
 ```{rule} forms
 A form is a `(`, then any number of expressions, its items, then a `)`. An
-expression is a form, a {term}`list` written in brackets, a word, a {term}`broadened type`, a
+expression is a form, a `[…]`, a `{…}`, a word, a {term}`broadened type`, a
 string literal, a color literal or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
 that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
 ```
@@ -40,7 +40,7 @@ source may hold no form at all.
 ```
 
 ```{rule} adjacent-items
-Among the items of a form, of a list written in brackets or of brackets, whitespace or a comment separates every two
+Among the items of a form, of a `[…]`, of a `{…}` or of brackets, whitespace or a comment separates every two
 expressions, except where one of the two is a form. More exactly, an expression that ends with the
 `)` of a form, which is a form or a prefixed form such as `free@(g)`, may be followed
 directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
@@ -55,10 +55,11 @@ errors.
 ```
 
 ```{rule} lists
-A list is written in square brackets, with its items separated as in
-{numref}`adjacent-items`: `[]`, `[0 1]`, `[(f x) 'a']`. It is syntactic sugar for the form
-`(list-of …)` with the same items ({numref}`sugar-rewrites`). A `[` right after the `]` of a list
-starts brackets after the list, which hold exactly one expression: `[a b c][h]`.
+A {term}`list` is written in braces, with its items separated as in {numref}`adjacent-items`:
+`{}`, `{0 1}`, `{(f x) 'a'}`. It is syntactic sugar for the form `(list-of …)` with the same items.
+A point is written in square brackets with two items, `[0 1]` or `[(f x) 2]`, and is syntactic
+sugar for `(point-of …)` with the same items ({numref}`sugar-rewrites`). A `[` right after the `}`
+of a list starts brackets after the list, which hold exactly one expression: `{a b c}[h]`.
 ```
 
 ```{rule} name-brackets
@@ -150,7 +151,7 @@ The parser produces each spelling on the left as the form on the right:
 | `@'dot-{k}'` | `(name f'dot-{k}')` |
 | `@'dot-{k}'.a.b` | `(. (. (name f'dot-{k}') 'a') 'b')` |
 | `@'dot-{k}'[i]` | `(. (name f'dot-{k}') i)` |
-| `[a b c][h]` | `(. [a b c] h)` |
+| `{a b c}[h]` | `(. {a b c} h)` |
 | `f'x = {x:.2f}!'` | `(concat 'x = ' (fmt x '.2f') '!')`. Each piece of text, as long as possible, is a string literal, each `{X}` is `(fmt X)`, and each `{X:S}` is `(fmt X 'S')`, in the order of the text |
 
 The form has the position of the first character of its spelling. A `(. X Y)` that follows a name
