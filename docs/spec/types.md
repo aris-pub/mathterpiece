@@ -61,7 +61,7 @@ These are the types of mtp:
 | `font` | `font` | the fonts: the records with a family, a style, a weight and a size |
 | `point` | `point` | the pairs of {term}`reals <real>`, `x` and `y` |
 | a {term}`list` type | `list[T]` | the lists of any length whose items are of type T |
-| `function` | `function` | every function |
+| `func` | `func` | every function |
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
 | `movement` | `movement` | every movement: the moves, the scores and the movements of every animation type ({doc}`time`) |
 | an animation type | the name `A` of the animation | every `A` |
@@ -99,7 +99,7 @@ of one kind of object is a subset of the type of its kind: `circle` is a subset 
   mtp-6kta makes `ease` a built-in type and renames the file eases.mtp.
 - The compiler has the type `transform`, which the spec does not have: a shape's frame is a set of
   its attributes ({doc}`data-model`). Bead mtp-1vyc.
-- `record`, `formula`, `term`, `component`, `view`, `control`, `listener`, `function` and the
+- `record`, `formula`, `term`, `component`, `view`, `control`, `listener`, `func` and the
   component types are not types that a source can write: `(func f ((canvas c)) 1)` is the error
   "unknown type 'canvas'". `shape` is an interface, the type of a parameter only. `movement` and the
   animation types are named `transition` and `animation`. Bead mtp-rk1i.
