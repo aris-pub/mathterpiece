@@ -45,7 +45,7 @@ expressions, except where one of the two is a form. More exactly, an expression 
 `)` of a form, which is a form or a prefixed form such as `free@(g)`, may be followed
 directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
 and every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
-expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f [1]x)` are
+expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f {1}x)` are
 errors.
 ```
 
@@ -67,7 +67,7 @@ A `[` right after a {term}`name`, with no whitespace between them, starts bracke
 which hold one expression or more: `xs[0]`, `xs[(+ k 1)]`, `g['m1']`, `func[real real]`. Several
 pairs of brackets may follow each other, and after brackets, `.` and more
 {term}`name parts <name part>` may follow: `xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after
-whitespace starts a list: `xs [0]` is the name `xs` and the list `[0]`.
+whitespace starts a point: `xs [0 1]` is the name `xs` and the point `[0 1]`.
 ```
 
 ### Words
@@ -210,7 +210,7 @@ Some forms, taken apart by the template:
 | `(circle c (r 1) (fill #'crimson'))` | `circle` | `c` |  | `(r 1)`, `(fill #'crimson')` |  | no |
 | `(real k 1 (>= 0) (<= 3))` | `real` | `k` | `1` |  |  | yes |
 | `(real k 1 doc@'the count' (>= 0))` | `real` | `k` | `1` |  | `doc@'the count'` | yes |
-| `(list[color] cs [#'red' #'blue'])` | `list[color]` | `cs` | `[#'red' #'blue']` |  |  | no |
+| `(list[color] cs {#'red' #'blue'})` | `list[color]` | `cs` | `{#'red' #'blue'}` |  |  | no |
 | `((real (>= 0)) r 1)` | `(real (>= 0))` | `r` | `1` |  |  | no |
 | `(line\|none l (from a) (to b))` | `line\|none` | `l` |  | `(from a)`, `(to b)` |  | no |
 | `(func f ((real x)) (* 2 x))` | `func` | `f` | `((real x))` |  |  | yes |
