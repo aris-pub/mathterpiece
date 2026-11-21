@@ -7,7 +7,7 @@ Each term that the spec defines, with the rule that defines it.
 
 .mtpc
 compiled model
-  The JSON file that the compiler writes for one world model, and the only thing that passes from
+  The JSON file that the compiler writes for one world model, and the only file that passes from
   the compiler to the runtime. Defined in {doc}`compiler-runtime`, and its format in
   {doc}`compiled-format`.
 
@@ -126,11 +126,13 @@ free starting value
   value of `X` when the page opens and does not update when `X` changes ({numref}`prefix-forms`, {doc}`core`).
 
 head
-  The first item of a form ({numref}`form-template`).
+  The first item of a form: a name, or a form that evaluates to a type. Whether a form is a
+  compound, a declaration or a clause depends on its head ({numref}`form-template`,
+  {numref}`parser-expressions`).
 
 brackets
-  A `[…]` right after a name or a list literal, which reads a part of it ({numref}`lists`,
-  {numref}`name-brackets`).
+  A `[…]` right after a name or after the `]` of a list, with no whitespace between them, such as
+  `xs[0]`, `[a b c][h]` or `func[real real]` ({numref}`lists`, {numref}`name-brackets`).
 
 int
   A value of type `int`: an exact whole number, within the number limit. Written as a number
@@ -146,16 +148,17 @@ letter
   ({numref}`name-characters`).
 
 list
-  A value of a list type `list[T]`: items of type T, in order, of any length. Written as
-  expressions in square brackets, such as `[0 1]` ({numref}`the-types`, {numref}`lists`).
+  A primitive of a list type `list[T]`: items of type T, in order, of any length. Given by the
+  compound `(list-of …)`, which is also written with its items in square brackets, such as `[0 1]` ({numref}`the-types`, {numref}`lists`).
 
 literal
-  A piece of source text that writes a value directly, such as `2.5`, `'crimson'` or `[0 1]`
-  ({numref}`literals`).
+  A number, a string, a color, `true`, `false` or `none`, written in the source, such as `2.5` or
+  `'crimson'`. A literal evaluates to a primitive ({numref}`literals`).
 
 name
-  A word that refers to a declaration or a binding: name parts joined by dots, such as `p.pos.x`
-  ({numref}`name-characters`).
+  A word that refers to a type, a variable, an object or an attribute, such as `p` or `real`.
+  Name parts joined by dots or brackets, such as `p.pos.x`, are syntactic sugar for `(. X Y)` forms
+  ({numref}`name-characters`, {numref}`sugar-rewrites`).
 
 name part
   A piece of a name: the text between two dots, or a pair of brackets, such as `pos` and `[0]` in
@@ -166,13 +169,14 @@ name string
   ({numref}`interpolated-strings`, {numref}`parser-sugar`).
 
 named argument
-  A form after the name and the positional arguments of a form, whose head names one of the
+  A {term}`clause` after the name and the positional arguments of a form, whose head names one of the
   named arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`
   ({numref}`named-arguments-first`). Like a positional argument, it may be required or left out.
 
 expression
-  One piece of a source as the parser produces it: a literal, a name or a form, which is a
-  {term}`compound`, a declaration or a {term}`clause` ({numref}`parser-expressions`).
+  Anything that the parser produces. After syntactic sugar is rewritten, each expression is a
+  literal, a name or a form, and each form is a {term}`compound`, a declaration or a
+  {term}`clause` ({numref}`parser-expressions`).
 
 operator
   One of the words `+ - * / ^ < <= > >= = != .`, read as a name with one name part
@@ -232,8 +236,8 @@ syntactic sugar
   any type. Also called a derived form. See {numref}`sugar-form`.
 
 evaluation
-  Computing the value of an expression, when compiling or while drawing. Evaluation changes
-  nothing. Defined in {doc}`evaluation`.
+  Computing the value of an expression, when compiling or while drawing. Evaluation writes no
+  variable and no attribute, and creates no variable and no object that a writer can write. Defined in {doc}`evaluation`.
 
 folding
   Computing an expression whose inputs are all known when compiling, and writing its value into
@@ -262,8 +266,8 @@ site
   the source after the rewrite step. Defined in {doc}`evaluation`.
 
 declaration
-  A form that creates something new that can be addressed: a variable, an object of the world model,
-  a function, a type or an animation, with a name or without one ({numref}`declarations-and-bindings`).
+  A form that creates a variable, a type or an object, with a name or without one, such as
+  `(real a 1)`, `(motif m …)` or `(circle c …)` ({numref}`declarations-and-bindings`).
 
 binding
   A name that a `let`, a `foreach` or a parameter gives to a value for a part of a source. A binding
@@ -285,8 +289,21 @@ file to import
 value
   A primitive or an object: what a container holds ({doc}`data-model`).
 
+attribute
+  A container that belongs to an object, such as `r` of a circle. Like a variable, it holds one
+  value, and is free, bound or const ({numref}`objects`).
+
+function
+  An object whose only attribute is `name`, and which the runtime calls. `(func f …)` declares a
+  function, and `(fn …)` gives a new function each time that it is evaluated ({numref}`functions`).
+
+movement
+  An object that the runtime executes by writing its targets over time. `(move …)`, `(score …)`
+  and `(A …)` for an animation `A` each give a new movement ({numref}`objects`, {doc}`time`).
+
 container
-  A variable or an attribute. Each container holds one value ({doc}`data-model`).
+  A variable or an attribute. Each container holds one value, and is free, bound or const
+  ({doc}`data-model`).
 
 collection
   A group, a row, a column or a score: an object that holds other objects, its members.
@@ -354,13 +371,14 @@ world model
   in {doc}`world-model`.
 
 move
-  A form `(move T …)` that changes one target, such as a variable or an attribute, to a new value
-  over a duration. Every control and listener that changes the model over time plays moves.
+  A compound `(move T …)` that gives a new movement. When the runtime executes the movement, it
+  writes one target, a variable or an attribute, to a new value over a duration. Every control and
+  listener that changes the model over time triggers movements.
   Defined in {doc}`time`.
 
 score
-  A collection of movements, each placed in time by its own lag, as a group is a collection of
-  shapes. `(in-order …)` and `(at-once …)` are scores whose members run one after another, or
+  A movement that holds movements, its members, as a group is a shape that holds shapes. Each
+  member is placed in time by its own lag, and a score is a collection. `(in-order …)` and `(at-once …)` are scores whose members run one after another, or
   together. Defined in {doc}`time`.
 
 motif
@@ -368,7 +386,8 @@ motif
   values of its parameters. Defined in {doc}`world-model`.
 
 animation
-  A template of movements, `(animation N PARAMS ITEM…)`, as a motif is a template of shapes. Each
-  use is a movement of the animation's type: its body, with the values of its parameters. Defined
+  A template of movements, `(animation N PARAMS ITEM…)`, as a motif is a template of shapes. With an
+  animation `A`, `(A …)` is a compound that gives a new `A`, which is a movement: the body of the
+  animation with the values of its parameters. Defined
   in {doc}`time`.
 ```

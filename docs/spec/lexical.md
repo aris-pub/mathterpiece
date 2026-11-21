@@ -165,7 +165,7 @@ A {term}`keyword` is one of the words of {numref}`keywords-table`, and no other 
 
 Each keyword is the head of a form of the language.
 
-:::{table} The keywords, from the inventory of heads in {doc}`core`.
+:::{table} The keywords, from the inventory of heads in {doc}`heads`.
 :name: keywords-table
 
 | Heads of | Keywords |
@@ -176,7 +176,7 @@ Each keyword is the head of a form of the language.
 | Declarations of {term}`listeners <listener>` | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove`, `on-show`, `on-hide`, `on-view`, `on-ready`, `on-live`, `on-quiet` |
 | Declarations of functions, types and animations | `func`, `colormap`, `type`, `interface`, `motif`, `variant`, `animation` |
 | Other items of {term}`bodies <body>` | `import`, `let`, `foreach`, `exists-when`, `term`, `doc` |
-| Expression forms | `.`, `name`, `if`, `when`, `cond`, `and`, `or`, `fn`, `rec`, `type-of`, `as`, `free`, `concat`, `fmt` |
+| Compounds | `.`, `name`, `if`, `when`, `cond`, `and`, `or`, `fn`, `rec`, `type-of`, `as`, `free`, `concat`, `fmt` |
 | Movements and their collections | `move`, `wait`, `jump`, `score`, `lag`, `at-once`, `in-order` |
 :::
 

@@ -2,7 +2,7 @@
 
 Two programs implement mtp. The {term}`compiler` turns a source file into a {term}`.mtpc`, and
 the {term}`runtime` turns a .mtpc into a {term}`live model` in a browser. This page defines what
-each program must do and must never do, the .mtpc as the only thing that passes between the two programs, and what an implementation of either
+each program must do and must never do, the .mtpc as the only file that passes between the two programs, and what an implementation of either
 program must do to conform to this spec.
 The format of the .mtpc is defined in {doc}`compiled-format`, and is not repeated here.
 
@@ -39,7 +39,7 @@ The illustrator, the author and the reader, the files that each one makes or use
 | the page | the author, with any tool for making web pages | the text, the elements that load .mtpc files, and the elements that place components |
 | the {term}`open page` | the reader's browser, from the page | the page with the runtime running in it, and one live model for each .mtpc that the page loads |
 
-The smallest world model that draws something has a scene with one circle and a canvas that
+The smallest world model that has something to draw has a scene with one circle and a canvas that
 draws the scene. This is the source smallest.mtp, 34 bytes:
 
 ```{literalinclude} pages/smallest/smallest.mtp
@@ -49,7 +49,7 @@ draws the scene. This is the source smallest.mtp, 34 bytes:
 ```{mtpc-of} pages/smallest/smallest.mtp
 ```
 
-The smallest page that shows the canvas, smallest.html, is the following, placed next to
+The smallest page that places the canvas, smallest.html, is the following, placed next to
 smallest.mtpc and mathterpiece.js:
 
 ```{literalinclude} pages/smallest/smallest.html
@@ -77,9 +77,9 @@ The compiler turns a source into a .mtpc in six steps, in this order:
    {doc}`well-formedness`). This step proves and does nothing else.
 4. **Expand.** The core forms whose rewrite needs a type or a value are rewritten, with the types
    and the values that the prove step worked out. Each `foreach` is written out as its copies, each
-   shape whose type is a motif as the {term}`body` of its motif with its arguments, and each use of
-   an animation as the body of its animation with the arguments of the use. In the copies, the
-   shapes and the uses, the names built from values are replaced ({numref}`names-from-values`).
+   shape whose type is a motif as the {term}`body` of its motif with its arguments, and each `(A …)` for
+   an animation `A` as the body of `A` with the arguments of that `(A …)`. In the copies, the
+   shapes and the movements, the names built from values are replaced ({numref}`names-from-values`).
 5. **Fold.** Every expression known when compiling ({doc}`binding-time`) is replaced by its
    value.
 6. **Write.** The model is written as the .mtpc ({doc}`compiled-format`), with every type that the
@@ -95,11 +95,11 @@ The prove step proves each body once: the body of a function with each parameter
 every value of its declared type, the body of a `foreach` with its variable ranging over every
 value of its range, and the body of a motif or an animation with each parameter ranging over every
 value of its declared type and conditions. An imported motif or animation is proved once, in the file
-that declares it. The copies that a `foreach` makes, and each `M` and `A` that a source declares for a motif `M`
-or an animation `A`, are not proved again. A motif or animation body that is safe for only some values of a
-parameter is a {term}`compile error`, unless the parameter declares a condition that leaves out
+that declares it. The copies that a `foreach` makes, each `(M …)` for a motif `M`, and each `(A …)` for an
+animation `A` are not proved again. A motif or animation body that is safe for only some values of a
+parameter is a {term}`compile error`, unless the parameter is declared with a condition that leaves out
 the other values. An expression is known in the prove step when it is known when compiling
-({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or a
+({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or an
 animation, the variable of that `foreach` or a parameter of that function, motif or animation.
 ```
 
@@ -133,13 +133,13 @@ So `(circle c (r (- 1 2)))` is a compile error in the prove step, since the rang
 :::{admonition} Code differs
 :class: note
 Today the rewrite, prove, expand and fold steps are not separate, and expanding comes before
-proving. `_Compiler.run` in mathterpiece/compiler.py, line 586, goes through the top-level forms
-once, and each form is rewritten, expanded, checked and {term}`folded <folding>` as it is reached.
+proving. `_Compiler.run` in mathterpiece/compiler.py, line 586, loops once over the top-level forms,
+and rewrites, expands, checks and {term}`folds <folding>` each form in turn.
 `foreach` copies are made one at a time by `_Compiler.expand` (line 828), and the body of a motif is
 compiled again for each shape of the motif by `_Compiler.instance` (line 4674), so each copy and each such
 shape is proved on its own. `_Compiler.call` (lines 1962 to 1973) folds a call and then checks its
 constraint against the folded value. The new middle of the compiler (mtp-08wd) follows these rules.
-The order of the steps and proving each body once are mtp-08wd.1.
+Bead mtp-08wd.1 changes the compiler to use this order of steps and to prove each body once.
 :::
 
 ## Running the compiler
@@ -152,8 +152,8 @@ The compiler is given one source file. It reads that file and the files that it 
 
 How the compiler is run, such as the name of a command, its options, where it writes the .mtpc and
 what it prints, is not part of this spec ({numref}`what-is-normative`). An implementation may offer
-other tools with the compiler, such as a formatter for sources or a page that shows every component
-of a world model, and these are not part of this spec either.
+other tools with the compiler, such as a formatter for sources or a page on which every component
+of a world model is placed, and these are not part of this spec either.
 
 ## What the compiler must do and must never do
 
@@ -190,8 +190,8 @@ So the compiler never draws a random value, since a random value is known only w
 
 ## From the .mtpc to the open page
 
-This section follows one world model from its source to an open page. It states no rule: the
-rules are in the sections after it and in {doc}`page-interface`.
+In this section, one world model is taken from its source to an open page. This section has no
+rules: the rules are in the sections after it and in {doc}`page-interface`.
 
 The illustrator writes the source dial.mtp:
 
@@ -224,7 +224,7 @@ When the reader opens the page, the browser and the runtime do the following, in
    dial.mtpc, and checks it ({numref}`runtime-loads-mtpc`). The `src` attribute may instead name a
    block `<script type="application/json">` of the page that holds the .mtpc, as in
    `src="#dial-data"` ({doc}`page-interface`).
-3. The runtime builds the live model of dial.mtpc, once: the free variable `a` takes its
+3. The runtime builds the live model of dial.mtpc, once: the free variable `a` is given its
    starting value 0.6, and every bound variable and attribute is computed from it
    ({numref}`runtime-builds-live-model`). The page refers to this live model by the `id` attribute
    of the element, `dial`.
@@ -236,14 +236,14 @@ When the reader opens the page, the browser and the runtime do the following, in
    `now` are computed again, and the canvas and the readout draw again
    ({numref}`runtime-builds-live-model`).
 
-The page needs nothing else: it holds no script of its own, and calls no function of the runtime.
+Nothing else is needed in the page: it holds no script of its own and calls no function of the runtime.
 
 ## What the runtime must do and must never do
 
 ```{rule} runtime-loads-mtpc
 The runtime loads each .mtpc given by the `src` attribute of an `<mtp-model>` element, once,
 from a file that it fetches or from a block in the page ({doc}`page-interface`). When the .mtpc
-cannot be fetched or read as JSON, the model fails to load, and the error takes the place of every
+cannot be fetched or read as JSON, the model fails to load, and the runtime puts the error in place of every
 component of that model on the page. The runtime reads only .mtpc files that state a version of
 this spec that it implements, and which versions those are is not normative. It refuses a .mtpc of
 another version, a .mtpc that does not match the schema of
@@ -268,10 +268,10 @@ loaded ({numref}`runtime-loads-mtpc`).
 ```
 
 This rule follows from a principle of the design of mtp: a state that breaks a rule of the spec
-cannot be represented. No source can declare such a state, since the compiler proves every type
+cannot be represented. No source can hold such a state, since the compiler proves every type
 and condition before the page opens. No reader can reach one, since a computation that has no
-value gives the value `none` instead of failing, and a write is brought into the conditions of
-what it is written into. For example, a line declared `line|none` is not drawn while it is `none`
+value gives the value `none` instead of failing, and a written value is brought into the conditions of
+the container that it is written into. For example, a line declared `line|none` is not drawn while it is `none`
 ({numref}`operations-that-give-none`, {doc}`evaluation`), and a write of -1 into a variable
 declared with `(>= 0)` writes 0 ({numref}`writes-into-constraints`). The principle is a goal of
 the design: where the spec still allows a state that breaks a rule, the spec has a gap, and the
@@ -310,7 +310,7 @@ stand-in ({doc}`page-interface`).
 ```{rule} runtime-no-type-work-while-drawing
 While drawing, the runtime never checks whether a value has its type, and never converts a value
 from one type to another. The compiler has proved every type, and every type that the runtime
-needs is written in the .mtpc. Bringing a written value into the conditions of what it is written
+needs is written in the .mtpc. Bringing a written value into the conditions of the container that it is written
 into, by clamping, rounding, wrapping or holding it ({doc}`types`), is part of what a write does,
 and is not a check of a type. How the runtime does this is not normative.
 ```
@@ -325,11 +325,11 @@ and every conforming runtime makes the same open page from both files.
 ```
 
 So an implementation of the compiler and an implementation of the runtime can be built apart, by
-different people and in different languages, and the .mtpc is the only thing that each needs to
-know of the other. This is why the format of the .mtpc is defined in full in {doc}`compiled-format`.
+different people and in different languages, and the format of the .mtpc is all that the builders of each need to
+know about the other. This is why the format of the .mtpc is defined in full in {doc}`compiled-format`.
 
 ```{rule} mtpc-only-boundary
-The .mtpc is the only thing that passes from the compiler to the runtime. No other file, no call
+The .mtpc is the only file that passes from the compiler to the runtime. No other file, no call
 and no shared state passes between them. Besides the .mtpc, the runtime reads only the page: its
 elements, the values that its CSS gives the tokens, its color scheme, the pointer, the keyboard and
 the clock.
@@ -379,9 +379,9 @@ order, so one compiler may write `{"r": 1, "x": 0}` where another writes `{"x": 
 
 ```{rule} conformance
 - An implementation of the compiler conforms to this spec when, for every source and the files
-  that it imports, it rejects the source if and only if this spec rejects it, and otherwise writes
+  that it imports, it rejects the source if and only if the source breaks a rule of this spec, and otherwise writes
   a .mtpc that has the meaning that {doc}`compiled-format` defines for the world model of the
-  source. Every error that rejects a source carries the label of at least one rule that the source
+  source. Every error with which the compiler rejects a source carries the label of at least one rule that the source
   breaks, among the rules checked in the step that rejects the source
   ({numref}`step-rejects-or-passes`). The label of a rule is the name that this spec gives it, such
   as `declare-before-use`. When the source breaks several of these rules, the error carries the

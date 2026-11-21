@@ -1,11 +1,11 @@
 # mtp in one page
 
-This page lists the main words of mtp, with their meanings, diagrams and one example. It holds no
+This page lists the main terms of mtp, with their meanings, diagrams and one example. It holds no
 rules: each word links to the page that defines it.
 
 ## What mtp is
 
-mtp is a language for interactive mathematical illustrations. A source describes shapes, formulas
+mtp is a language for interactive mathematical illustrations. In a source, the illustrator declares shapes, formulas
 and the variables that they depend on. A reader changes the variables with sliders, buttons,
 drags and clicks, and everything that depends on them updates.
 
@@ -23,7 +23,7 @@ One person may be both the illustrator and the author.
 
 The {term}`compiler` turns an `.mtp` source into a `.mtpc` file, on the illustrator's machine. The
 {term}`runtime`, `mathterpiece.js`, runs in the reader's browser. It reads the `.mtpc` and keeps
-one {term}`live model` for it, and it draws the components that the page places
+one {term}`live model` for it, and it draws the components that the author places in the page
 ({doc}`compiler-runtime`).
 
 ```{diagram} one-page-people-and-programs
@@ -56,8 +56,8 @@ The people, the files and the two programs ({numref}`people-and-programs`).
 
 ## Expressions
 
-A source is a list of expressions. Before anything else, every piece of syntactic sugar is
-rewritten into its full form, for example:
+A source is any number of forms. Before anything else, every piece of syntactic sugar is
+rewritten into the form that it is sugar for, for example:
 
 | Written | Means |
 |---|---|
@@ -69,8 +69,8 @@ rewritten into its full form, for example:
 | `@'dot-{k}'` | `(name f'dot-{k}')` |
 
 After that, each expression is a {term}`literal`, a {term}`name` or a {term}`form`. A form is
-written in parentheses, and its first item is its {term}`head`. The head decides whether the form
-is a {term}`compound`, a declaration or a {term}`clause` ({doc}`grammar`, {doc}`heads`).
+written in parentheses, and its first item is its {term}`head`. Whether the form is a {term}`compound`, a declaration or a {term}`clause`
+depends on its head ({doc}`grammar`, {doc}`heads`).
 
 ```{diagram} one-page-kinds-of-expression
 :file: diagrams/kinds-of-expression.svg
@@ -81,8 +81,8 @@ The five kinds of expression after syntactic sugar is rewritten ({numref}`kinds-
 
 ## Values, containers and types
 
-A {term}`value` is a {term}`primitive` or an {term}`object`. A primitive, such as `3`, `'hi'` or
-`[0 1]`, never changes and has no identity. An object, such as a circle, has an identity and
+A {term}`value` is a {term}`primitive` or an {term}`object`. A primitive, such as the number `3`, the string `'hi'` or
+the list `[0 1]`, never changes and has no identity. An object, such as a circle, has an identity and
 attributes.
 
 A {term}`container` is a variable or an attribute, and holds one value. Each container is one of
@@ -111,8 +111,8 @@ Primitives, objects and containers ({numref}`values-containers-types`).
 | the scene and its shapes | draws them |
 | formulas and their terms | typesets them |
 | views: canvas, readout, display | lays them out on the page |
-| controls: slider, button, play, stepper, toggle | the reader acts on them, and they set off movements |
-| listeners, such as `on-drag` and `on-click` | the reader acts on a shape or a term, and they set off movements |
+| controls: slider, button, play, stepper, toggle | starts their movements when the reader acts on them |
+| listeners, such as `on-drag` and `on-click` | starts their movements when the reader acts on a shape or a term |
 | movements: `move`, `score`, `(A …)` for an animation `A` | writes their targets over time |
 | functions | calls them |
 | records | holds their attributes |
