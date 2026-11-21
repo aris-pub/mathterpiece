@@ -272,7 +272,7 @@ choreo `C` is compiled to its steps in place (compiler.py:1714-1729) (mtp-ydd4.7
 ### Names built from values
 
 ```{rule} names-from-values
-A `(name S)`, and a `(like (name S))`, whose string `S` reads a name bound by a `foreach` or a
+A `(name S)`, and a `(like (name S))`, whose string `S` uses a name bound by a `foreach` or a
 parameter of a motif, are core. The prover proves, for every value that those names may take,
 that `S` gives the name of a declaration that comes before the form, and that every such
 declaration fits the form: for `(name S)`, a type that fits all of them, and for `(like …)`, what
