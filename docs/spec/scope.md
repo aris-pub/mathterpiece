@@ -85,6 +85,12 @@ declared in the items of a `let` or of a `foreach` written in a body belong to t
 body: only the names that the `let` or the `foreach` binds belong to its own scope.
 ```
 
+A source holds at most one scene ({numref}`top-level-forms`), so the shapes of the scene can be names
+of the file scope without two scenes declaring the same name, and a canvas or a listener uses them
+with no prefix, as `frame` or `triangles`. A source may hold several formulas, and two of them may
+each have a term `a`, so each formula makes a scope of its own, and its terms are used from outside
+it through the formula, as `pythagoras.c2`.
+
 So the shapes of the scene, at any depth in its groups, are names of the file scope: the body of a canvas, a
 {term}`listener` and a readout use their names. A copy that a `foreach` in the scene makes, such as
 `@'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
