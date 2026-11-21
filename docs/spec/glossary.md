@@ -296,8 +296,9 @@ value
   A primitive or an object: what a container holds ({doc}`data-model`).
 
 attribute
-  A container that belongs to an object, such as `r` of a circle. Like a variable, it holds one
-  value, and is free, bound or const ({numref}`objects`).
+  A container that belongs to a value, such as `r` of a circle or the item `xs[0]` of a list, whose
+  label is its position. Like a variable, it holds one value, and is free, bound or const
+  ({numref}`objects`).
 
 function
   An object whose only attribute is `name`, and which the runtime calls. `(func f …)` declares a
