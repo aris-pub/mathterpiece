@@ -69,6 +69,6 @@ compile. Each is shown as its source, then live:
 
 :::{admonition} Code differs
 :class: note
-The compiler has no `(at …)` clause yet, so this example reads the position of the pointer through
-the name `pointer`. In the spec, the drag is written `(on-drag p (at q) (move a (to q.x)))`. Bead mtp-t8in.
+The compiler has no `(as …)` clause yet, so this example reads the position of the pointer through
+the name `pointer`. In the spec, the drag is written `(on-drag p (as q) (move a (to q.x)))`. Bead mtp-t8in.
 :::

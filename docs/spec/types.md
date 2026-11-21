@@ -482,7 +482,9 @@ So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circ
 ## Motifs and variants
 
 ```{rule} motif-and-variant-types
-`(motif M PARAMS …)` declares the shape type M, and `(M N …)` declares an M.
+`(motif M PARAMS …)` declares the shape type M, and `(M N …)` declares an M. The motif may hold
+the clause `(as N)` after its parameters, which binds `N` in its body to the shape being declared
+({numref}`declarations-and-bindings`).
 `(variant V PARAMS S)` declares the type V, whose base type is the type of S: a shape type, a motif
 type, a movement type, an animation type, a component type, or another variant type. V is a subtype
 of its base, while a new motif or a new animation is a type of its own, disjoint from every other. A V has the attributes of its base and the parameters of V. Every attribute that S gives, a
