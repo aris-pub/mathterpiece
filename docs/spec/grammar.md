@@ -301,8 +301,8 @@ motif included, and the named arguments. A variable in the body of a motif may h
 other declaration. `(real k 1 doc@'d' (>= 0))`, `(func f ((real x)) doc@'d' (* 2 x))` and
 `(circle c (r 1) doc@'d')` are allowed. `(real k 1 (>= 0) doc@'d')`,
 `(func f ((real x)) (* 2 x) doc@'d')`, `(circle c doc@'d' (r 1))` and
-`(button b doc@'d' (animation a))` are errors.
-`(button b (animation a) doc@'d')` and `(on-click p (animation a) doc@'d')` are allowed, and so is
+`(button b doc@'d' (move a (to 1)))` are errors.
+`(button b (move a (to 1)) doc@'d')` and `(on-click p (move a (to 1)) doc@'d')` are allowed, and so is
 `(motif m ((real k 1)) doc@'d' (circle_ (r k)))`, whose docstring comes after its parameters and
 before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an error, and so is
 `(circle c doc@f'r = {r}')`, whose string is interpolated.
