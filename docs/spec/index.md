@@ -9,6 +9,12 @@ rule is stated once, here, and everything else links to it.
 The first drafts left questions open: {doc}`open-questions` groups them by principle.
 
 ```{toctree}
+:maxdepth: 1
+
+one-page
+```
+
+```{toctree}
 :caption: Introduction
 :numbered:
 :maxdepth: 2
