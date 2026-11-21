@@ -135,6 +135,16 @@ defined in {doc}`data-model`.
 Each expression is a literal, a name or a form. Each form is a {term}`compound`, a declaration, a
 {term}`clause` or a {term}`special form`, by its head and where it is written ({doc}`heads`).
 
+A clause, such as a named argument, `exists-when` in a scene or a formula, or a {term}`binding` and the
+list that holds it, as `(k 2)` and `((k 2))` in `(let ((k 2)) …)`, is part of the form around it
+and has no result of its own. The names of a `let` and of a `foreach`, and the parameters of a
+function, a motif, a variant or an animation, are bindings ({numref}`declarations-and-bindings`).
+
+The signature of each head lists which kinds of expression each of its arguments and its body
+may hold ({ref}`signatures`, {numref}`contexts`). A special form is a `let` or a `foreach` written in a body: it is replaced by its items, which may be
+of any kind that the body holds ({numref}`body-let-foreach`). A `let` written in an argument holds one
+expression and is a compound.
+
 ```{diagram} kinds-of-expression
 :file: diagrams/kinds-of-expression.svg
 :max-width: 35rem

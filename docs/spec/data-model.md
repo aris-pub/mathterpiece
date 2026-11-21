@@ -15,9 +15,8 @@ specifies the language.
 Which expressions result in primitives and which in objects, and which values a container holds.
 ```
 
-An {term}`expression` is a literal, a name or a {term}`form`. A form is a head and its items in
-parentheses, and each form is a {term}`compound`, a declaration, a {term}`clause` or a
-{term}`special form`.
+The kinds of {term}`expression` are defined in {doc}`grammar` ({numref}`kinds-of-expression`). Evaluating
+each kind results in the following.
 
 A literal evaluates to a primitive. A name refers to a type, a variable, an object or a binding,
 and evaluates to what it refers to.
@@ -33,15 +32,7 @@ attribute, and never creates a variable or an object that a writer can write.
 A declaration creates something new in the model: a variable, a type or an object. An `import` is
 a declaration too: it makes the names of another file usable.
 
-A clause, such as a named argument, `exists-when` in a scene or a formula, or a {term}`binding` and the
-list that holds it, as `(k 2)` and `((k 2))` in `(let ((k 2)) …)`, is part of the form around it
-and has no result of its own. The names of a `let` and of a `foreach`, and the parameters of a
-function, a motif, a variant or an animation, are bindings ({numref}`declarations-and-bindings`).
-
-The signature of each head lists which kinds of expression each of its arguments and its body
-may hold ({ref}`signatures`, {numref}`contexts`). A special form is a `let` or a `foreach` written in a body: it is replaced by its items, which may be
-of any kind that the body holds ({numref}`body-let-foreach`). A `let` written in an argument holds one
-expression and is a compound. 
+A {term}`clause` and a {term}`special form` have no result of their own ({doc}`grammar`).
 
 ## Primitives
 
@@ -65,10 +56,10 @@ Each of these evaluates to a primitive:
 | `[0 1]` | the point at x 0 and y 1 | `point` |
 | `none` | `none` | `none` |
 
-Numbers, bools, strings, colors and `none` are written as literals. Lists and points are given by
-compounds: `(list-of X…)`, also written `{X…}`, evaluates to the list of the values of its items,
-in order, and `(point-of X Y)`, also written `[X Y]`, evaluates to the point with the coordinates `X`
-and `Y`. Since a primitive never
+Numbers, bools, strings, colors and `none` are written as literals. Lists and points result from
+compounds: `(list-of X…)` evaluates to the list of the values of its items, in order, and
+`(point-of X Y)` evaluates to the point with the coordinates `X` and `Y` ({numref}`lists` gives how
+they are written). Since a primitive never
 changes, nothing writes one: a writer writes a variable or an attribute, which then holds a
 different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
 
