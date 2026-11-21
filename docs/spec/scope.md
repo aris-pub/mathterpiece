@@ -75,8 +75,8 @@ and the names of each one:
 |---|---|---|
 | the {term}`file scope` | the whole source | every declaration at the top level, every name that an `import` makes usable ({numref}`import-declares-names`), and every declaration in the scene, at any depth |
 | the {term}`body` of a motif, a variant, an animation, a function, a record or a formula | the body | the parameters of the form, the name of its `(as N)`, and every declaration in the body, at any depth |
-| a `let` | each expression after a name's own, and the items of the `let` | the names that it binds |
-| a `foreach` | each source after a name's own, and the items of the `foreach` | the names that it binds |
+| a `let` | for each name, the expressions given to the names after it, and the items of the `let` | the names that it binds |
+| a `foreach` | the items of the `foreach` | the name that it binds |
 | a listener with `(as N)` | its movement | `N` |
 
 The scope of a body is inside the scope of the form around it, and every scope is inside the file
