@@ -345,8 +345,8 @@ guard
   `(<= c.x 5)`, that limits what that writer writes ({numref}`writer-guards`).
 
 condition
-  A type written as the values that meet it, such as `(>= 0)` or `(one-of 'a' 'b')`. `(real (>= 0))`
-  is the intersection of `real` with it ({numref}`constraints`).
+  A clause that limits the values of the type in the form around it, such as `(>= 0)` or
+  `(one-of 'a' 'b')`: `(real (>= 0))` holds the reals that are at least 0 ({numref}`constraints`).
 
 refined type
   A type with conditions, written `(T C…)`, whose values are the values of T that meet every
