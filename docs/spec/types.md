@@ -489,7 +489,8 @@ of its base, while a new motif or a new animation is a type of its own, disjoint
 {term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: a V that
 gives it is a compile error. A parameter of V never has the name of an attribute of its
 base, and every parameter of V is read by an attribute that S gives: a parameter that no attribute
-of S reads is a compile error.
+of S reads is a compile error. When `S` gives `(defaults …)` and a V gives `(defaults …)` too, the V
+has both, and where both give the same attribute, the default of `S` wins.
 ```
 
 So by {numref}`fits`, a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))`
