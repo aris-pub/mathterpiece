@@ -108,7 +108,7 @@ put in once.
 :::{admonition} Code differs
 :class: note
 `_through` (compiler.py:7280-7290) reads only a name with several name parts, so after
-`(import lib)`, `lib.k` is accepted, and `(. lib k)` is a compile error, "unknown name 'lib'"
+`(import lib)`, `lib.k` is accepted, and `(. lib 'k')` is a compile error, "unknown name 'lib'"
 (compiler.py:6056) (mtp-ydd4.7.47).
 :::
 

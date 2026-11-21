@@ -62,7 +62,7 @@ rewritten into the form that it is sugar for, for example:
 | Written | Means |
 |---|---|
 | `[0 1]` | `(list-of 0 1)` |
-| `p.pos.x` | `(. (. p pos) x)` |
+| `p.pos.x` | `(. (. p 'pos') 'x')` |
 | `real\|none` | `(type-union real none)` |
 | `list[int]` | `(type-apply list int)` |
 | `r@1` | `(r 1)` |

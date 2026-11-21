@@ -66,7 +66,7 @@ any number of such texts.
 
 | Written | Means exactly | Conditions |
 |---|---|---|
-| `N.A`, `N[X]`, where `N` does not name a type | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name is written as an expression, as the target of a writer or as a head: `(marks.grid g …)` is `((. marks grid) g …)`. The name of a declaration is not rewritten |
+| `N.A`, `N[X]`, where `N` does not name a type | `(. N 'A')`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p 'pos') 'x')`, and `g[0].r` is `(. (. g 0) 'r')` | The name is written as an expression, as the target of a writer or as a head: `(marks.grid g …)` is `((. marks 'grid') g …)`. The name of a declaration is not rewritten |
 | `T[X…]`, where `T` names a type | `(type-apply T X…)`: `list[int]` is `(type-apply list int)`, and `func[real real]` is `(type-apply func real real)` | |
 | `T1\|T2…` | `(type-union T1 T2…)`: `real\|none` is `(type-union real none)` | |
 | `T1&T2…` | `(type-intersect T1 T2…)`: `shape&round` is `(type-intersect shape round)` | |
@@ -236,14 +236,17 @@ compiler follow the rule.
 ### The form `.`
 
 ```{rule} dot-name-part
-In `(. X Y)`, where `Y` is a bare name with one name part, the form evaluates to the attribute or the member of `X`
-that has that name, when `X` has one. Otherwise `Y` is an expression, and its value is a position or a key
-of `X`.
+In `(. X K)`, `K` is any expression. When `K` evaluates to a string, the form evaluates to the attribute
+of `X` with that label, or to the member of the group `X` with that name. When `K` evaluates to a
+number, the form evaluates to the item of `X` at that position, or to the member of the group `X` at
+that position. A `K` that chooses an attribute is known when compiling. A member of a group with the
+name of an attribute of that group is a compile error.
 ```
 
-So `p.r` is the attribute `r` of a circle `p`, and with `(let ((r 1)) xs.r)`, `xs.r` is item 1 of
-the list `xs`, as `(. xs r)` is. An attribute or a member of an object is read by its name, even
-when another declaration or a binding has the same name: the attributes of a record, the terms of a
+So `p.r` is `(. p 'r')`, the attribute `r` of a circle `p`, `(. g (concat 'shift-' 'x'))` is the
+attribute `shift-x` of a group `g`, and with `(let ((k 1)) xs[k])`, `xs[k]` is item 1 of the list
+`xs`. The text after a dot is a label and not a name, so it chooses the attribute or the member
+even when another declaration or a binding has the same name: the attributes of a record, the terms of a
 formula, and the members of a shape whose type is a motif. A palette is a record
 ({numref}`sugar-rewrites`), so with `(color yellow #'#ffd700')` and
 `(palette marks (yellow #'#e6c200') (blue #'#0072b2'))` at the top level, `marks.yellow` is the
