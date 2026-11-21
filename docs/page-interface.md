@@ -86,8 +86,9 @@ The box is made as follows.
   no margin. When no shape counts, because every item gives `none` or nothing exists at that
   moment, the canvas shows the box from -10 to 10 on both axes. A box with a width and no height,
   or a height and no width, gets its margin as any other box does.
-- **Transform, pan and zoom.** The canvas's `transform` applies about the center of the box. The
-  box is worked out from the shapes before the transform, so a transform can move shapes out of
+- **Frame, pan and zoom.** The canvas's frame, its `shift-x`, `shift-y`, `rotate`, `scale-x` and
+  `scale-y`, applies about the center of the box, as a shape's frame does ({doc}`data-model`). The
+  box is worked out from the shapes before the frame applies, so a frame can move shapes out of
   the view, as it can on a canvas that gives its own box. The reader pans and zooms from this box
   as from a box that the canvas gives, and a double click goes back to it.
 - **Before a copy has a size.** The runtime can measure a text only in a copy that has a size on

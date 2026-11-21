@@ -114,7 +114,7 @@ mtp-ydd4.7.59.
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | `background` | core | a clause | {doc}`world-model` |
-| `transform` in the scene | core | a clause | {doc}`world-model` |
+| `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y` in the scene | core | a clause | {doc}`world-model` |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text` | core | a declaration | {doc}`world-model` |
 | `group` | core | a declaration | {doc}`world-model` |
 | `row`, `column` | core | a declaration | {doc}`world-model` |
@@ -282,7 +282,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove` | core | a declaration | {doc}`reaction`, {doc}`concurrency` |
 | `on-show`, `on-hide`, listeners that play while a canvas starts or stops drawing a shape | core | a declaration | {doc}`reaction`, {doc}`lifecycle` |
 | `on-view`, `on-ready`, `on-live`, `on-quiet`, listeners on their own view | core | a declaration | {doc}`lifecycle` |
-| `x`, `y`, `width`, `height`, `transform`, `pan`, `zoom` on a canvas | core | a clause | {doc}`page-interface` |
+| `x`, `y`, `width`, `height`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y`, `pan`, `zoom` on a canvas | core | a clause | {doc}`page-interface` |
 | `toggle-duration`, `toggle-ease` | core | a clause | {doc}`time`, {doc}`page-interface` |
 | a name or a compound in a canvas, such as `s`, `[s t]` or `(when c d)` | core | a name or a compound | {doc}`page-interface` |
 | `font` on a readout | core | a clause | {doc}`page-interface` |
