@@ -1,8 +1,8 @@
 (data-model)=
 # Data model
 
-This page defines the values, variables and attributes that the compiler builds from a source and that the runtime holds in
-memory and manipulates: values, variables and attributes. A {term}`value` is a
+This page defines what the compiler builds from a source and the runtime holds in memory and
+manipulates: values, variables and attributes. A {term}`value` is a
 {term}`primitive` or an {term}`object`. Variables and attributes are
 {term}`containers <container>`: each holds one value.
 The expressions that the parser produces, {term}`literals <literal>` among them, are defined in {doc}`grammar`. This page
