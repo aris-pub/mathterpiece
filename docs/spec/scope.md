@@ -9,20 +9,19 @@ Which {term}`expressions <expression>` may read the scene, a formula or the page
 
 The rewrite step finds what each name refers to ({numref}`compile-steps`), so a source
 that breaks a rule of this page is rejected in the rewrite step. A name built from a string,
-`(name S)`, is resolved in the prove step instead ({numref}`names-from-values`). This page specifies the language.
+`(name S)`, is resolved in the prove step instead ({numref}`names-from-values`).
 
 ## Declarations and bindings
 
 ```{rule} declarations-and-bindings
-A declaration is a {term}`form` that creates a new thing that can be addressed: a variable, an
-object, a function, a type or an animation. The thing exists whether or not the source gives it a
-name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
+A declaration is a {term}`form` that creates a variable, a type or an object, or, for an `import`,
+makes the names of another file usable ({doc}`data-model`). What it creates exists whether or not
+the source gives it a name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
 for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
 parameters of a function, a motif, a variant or an animation, are bindings. The language makes two
 bindings of its own: the move of a drag binds `pointer` to the position of the pointer, and the
-body of a motif binds `self` to the shape being declared. An `import` creates
-nothing either: it gives names to the things that the declarations of another file create
-({doc}`imports`).
+body of a motif binds `self` to the shape being declared. The names that an `import`
+makes usable refer to what the declarations of another file create ({doc}`imports`).
 ```
 
 So `(real a 1)`, `(circle c (r a))`, `(canvas v s)`, `(func twice ((real x)) (* 2 x))` and
@@ -43,7 +42,7 @@ and the names of each one:
 | a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and an animation | the body | the parameters |
 | `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each expression after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
 | `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
-| a record or a palette | the items after each member | its members |
+| a record or a palette | the items after each attribute | its attributes |
 | a formula | the items of the formula | its variables, from the item after each, and its terms ({numref}`formula-terms`) |
 | the move of an `on-drag` | the move | `pointer` |
 
@@ -53,12 +52,12 @@ declared in the items of a `let` or of a `foreach` written in a body belong to t
 body: only the names that the `let` or the `foreach` binds belong to its own scope.
 ```
 
-So the shapes of the scene, at any depth in its groups, are names of the file scope: a canvas, a
-{term}`listener` and a readout name them. A copy that a `foreach` in the scene makes, such as
+So the shapes of the scene, at any depth in its groups, are names of the file scope: the body of a canvas, a
+{term}`listener` and a readout use their names. A copy that a `foreach` in the scene makes, such as
 `@'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
 parameter is used only in its body, and so a default of a parameter never reads another parameter.
-A member of a record, a palette or a formula is used by its bare name only inside that
-declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
+An attribute of a record or a palette, and a member of a formula, is used by its name only inside
+that declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
 a member of a motif's body is used from outside the body only through a shape of that motif, as `d1.face`.
 
 ```{rule} declare-before-use
@@ -70,10 +69,10 @@ form starts before the use. A use of a name inside the form that declares or bin
 only as {numref}`self-reference-today` allows.
 ```
 
-So two functions never call each other, since one of them would name the other before its
-declaration, and a function calls itself only by {numref}`self-reference-today`. A canvas comes
-after the scene that it draws, a {term}`control` comes after the {term}`views <view>` that its
-`(in …)` names, and an `exists-when` comes after the shape that it names. Copy k of a `foreach` may
+So two functions never call each other, since one of them would use the name of the other before
+its declaration, and a function calls itself only by {numref}`self-reference-today`. A canvas comes
+after the scene in its body, a {term}`control` comes after the {term}`views <view>` named in its
+`(in …)`, and an `exists-when` comes after the shape named in it. Copy k of a `foreach` may
 name copy k - 1, which comes before it, and never copy k + 1. By {numref}`import-declares-names`, a
 name that an import gives is used only after the import.
 
@@ -93,8 +92,8 @@ In the scene and in the body of a motif, the compiler follows this. In a group,
 ## What a name refers to
 
 ```{rule} name-lookup
-A use of a bare name, and the first {term}`name part` of a name with several name parts, refers to
-what these steps find, in order:
+A use of a name, and the first {term}`name part` of a {term}`qualified name`, refers to what these
+steps find, in order:
 
 1. Among the scopes around the use, from the innermost outwards to the file scope, the first that
    has the name among its names before the use ({numref}`declare-before-use`). The use refers to
@@ -114,7 +113,7 @@ comes from the standard library: (import rand rand-int)", since the random funct
 `roll-dice` are not built in ({numref}`rand-module`).
 
 So an inner name hides an outer name of the same text inside its scope: a parameter, a `let`
-name and a `foreach` name hide a name of the file scope, and a member of a record hides a
+name and a `foreach` name hide a name of the file scope, and an attribute of a record hides a
 top-level name inside the record. A declaration in the file scope, and a name that an import
 gives, hide a built-in function or constant from that declaration or import on
 ({numref}`declaration-names`). The name parts of a name after its first are not looked up in any
@@ -124,7 +123,7 @@ an `on-drag`, and is a compile error everywhere else, since no declaration and n
 it as its name.
 
 In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `(tenfold 2)` is
-20 whatever the slider gives the variable:
+20 whatever value the slider writes into the variable:
 
 ```{mtp-example}
 ; the parameter x hides the variable x inside tenfold
@@ -177,9 +176,9 @@ The file scope of an imported file, and the names that an import gives, are defi
 ```{rule} declaration-names
 No declaration and no binding takes as its name a {term}`keyword` ({numref}`keywords`) or a
 {term}`built-in type`. This holds for every kind of declaration and binding: a variable, a shape, a
-function, a parameter, a name of a `let` or a `foreach`, a member of a record, a palette or a
+function, a parameter, a name of a `let` or a `foreach`, an attribute of a record or a palette, a member of a
 formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`,
-`complex`, `bool`, `string`, `color`, `font`, `point`, `transform`, `movement`, `animation`,
+`complex`, `bool`, `string`, `color`, `font`, `point`, `movement`, `animation`,
 `scene`, `func`, `rand-seed`, `list`, the shape types, and the
 interfaces `shape`, `positioned`, `sequence` and `palette`. Nor does it take the name of an
 {term}`operator`. A declaration or a binding may take the name of any other built-in function, or
@@ -189,7 +188,7 @@ of a built-in constant (`pi`, `tau` and `euler`): from that declaration or bindi
 
 So `(real if 1)` and `(circle line …)` are compile errors, and
 `(func max ((real a) (real b)) a)` and `(real pi 3)` are allowed. `scene`, `movement`,
-`animation` and `func` are both built-in types and keywords. `true`, `false` and `none` are values,
+`animation` and `func` are both built-in types and keywords. `true`, `false` and `none` are literals,
 never names ({numref}`name-characters`). The built-in functions and constants are found only by the
 second step of {numref}`name-lookup`. The names of the {term}`standard library` are not built-ins:
 they are ordinary declarations of its files ({doc}`stdlib`), which a source brings in with

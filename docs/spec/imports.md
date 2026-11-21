@@ -9,7 +9,7 @@ holds is in {numref}`mtpc-imported-declarations`. The {term}`compiler` reads no
 file other than the source and the files that it imports ({numref}`compiler-reads-files`).
 
 The rewrite step reads every imported file ({numref}`compile-steps`), so a source that breaks a
-rule of this page is rejected in the rewrite step. This page specifies the language.
+rule of this page is rejected in the rewrite step.
 
 ## How an import is written
 

@@ -9,7 +9,7 @@ checked in the prove step ({numref}`compile-steps`), and a source that breaks on
 {term}`compile error`. The last section defines the {term}`prover`: exactly what it proves, and the
 {term}`ranges <range>` with which it proves it.
 
-This page specifies the language.
+
 
 ## No cycles
 

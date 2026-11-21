@@ -5,7 +5,7 @@ On this page, every {term}`form` that the {term}`compiler` accepts is either a {
 {term}`syntactic sugar`. Each syntactic sugar form is given as a {term}`rewrite` into core forms.
 Every head, with its kind and the page that defines it, is listed in {doc}`heads`.
 
-This page specifies the language.
+
 
 (core-kinds)=
 ## Kinds of form

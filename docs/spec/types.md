@@ -10,7 +10,7 @@ the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` pr
 {term}`ranges <range>`, {term}`conditions <condition>` and `none` is defined in
 {doc}`well-formedness`.
 
-This page specifies the language.
+
 
 ## What a type is
 

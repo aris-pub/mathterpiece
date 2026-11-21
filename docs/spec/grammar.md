@@ -7,7 +7,7 @@ This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`s
 that every form follows, and the kinds of form that may be written in each {term}`body`. The
 signatures of the forms, which list the arguments of each {term}`head`, are not part of this page.
 
-This page specifies the language.
+
 
 ## The grammar of the parser
 

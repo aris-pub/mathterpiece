@@ -8,7 +8,7 @@ whole. The next page, {doc}`grammar`, defines how the parser puts these pieces t
 page and the rules of the next page are one grammar, written in the notation of the Lark parser and
 shown in pieces on the two pages. The whole grammar is also one file, [mtp.lark](https://github.com/aris-pub/mathterpiece/blob/main/docs/spec/mtp.lark).
 
-This page specifies the language. The parser accepts exactly the text
+The parser accepts exactly the text
 that this page allows, and rejects everything else.
 
 ## How the grammar is written
