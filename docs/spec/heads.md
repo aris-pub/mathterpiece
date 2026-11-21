@@ -67,7 +67,7 @@ The listeners are declared in the body of a view, not at the top level ({numref}
 | `import` | core | {doc}`imports` |
 | `let` | core | {doc}`binding-time` |
 | `foreach` | core | {doc}`binding-time` |
-| `doc` | core | {doc}`compiled-format` |
+| `doc` | core | {numref}`docstrings` |
 
 So a source need not hold a scene: `(real a 1) (readout r f'{a}')` is a world model with a
 variable and a readout, and an empty file is a world model with nothing in it. A source with two
@@ -94,7 +94,7 @@ mtp-ydd4.7.59.
 
 | Notation | Kind | What it is | Defined in |
 |---|---|---|---|
-| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `curve`, `bool`, `string`, `color`, `font`, `point`, `transform`, `movement`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
+| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `curve`, `bool`, `string`, `color`, `point`, `movement`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
 | `circle` and the other shape names | core | the shape types | {doc}`types` |
 | `shape`, `positioned`, `sequence`: the built-in types and {term}`interfaces <interface>` | core | a name | {doc}`types` |
 | `list[T]`, `sequence[T]`, `func[P… R]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
@@ -130,7 +130,7 @@ mtp-ydd4.7.59.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `x`, `y`, `translate`, `transform`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `face` | core | a clause | {doc}`world-model` |
+| `x`, `y`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `face` | core | a clause | {doc}`world-model` |
 | `pos` | syntactic sugar | a clause | {numref}`sugar-rewrites` |
 | `dash` | core | a clause | {doc}`world-model` |
 | `like` | syntactic sugar | a clause | {numref}`like-copies` |
@@ -149,7 +149,7 @@ mtp-ydd4.7.59.
 | `exists-when` in a motif's body | core | a clause | {doc}`world-model` |
 | `self` | core | a name | {doc}`scope` |
 | a parameter given to an `M`, for a motif `M`, `(P X)` | core | a clause | {doc}`world-model` |
-| `x`, `y`, `translate`, `transform` on an `M` | core | a clause | {doc}`world-model` |
+| `x`, `y`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y` on an `M` | core | a clause | {doc}`world-model` |
 | `pos` on an `M` | syntactic sugar | a clause | {numref}`sugar-rewrites` |
 | `clip` on an `M` | core | a clause | {doc}`world-model` |
 | `defaults` on an `M` | core | a clause | {doc}`world-model` |
@@ -223,7 +223,6 @@ These names are built-in functions and constants, except the random functions, w
 | `sqrt`, `sign`, `floor`, `ceil`, `exp` | numbers |
 | `sin`, `cos`, `tan`, `sec`, `csc`, `cot`, `sind`, `cosd`, `tand`, `secd`, `cscd`, `cotd`, `asin`, `acos`, `atan`, `acot`, `asec`, `acsc`, `asind`, `acosd`, `atand`, `acotd`, `asecd`, `acscd`, `rad`, `turn`, `deg`, `to-rad`, `to-turn` | angles |
 | `polar`, `to-polar`, `dist` | points |
-| `rotate`, `translate`, `scale`, `transform` | transforms |
 | `mix`, `lighten`, `darken`, `light-dark` | colors |
 | `round`, `log`, `min`, `max`, `lerp` | with a varying number or type of arguments |
 | `range` | `(range LO HI (gap G))`: the numbers from `LO`, `G` apart, up to `HI` and not including it. `G` is 1 when the range gives neither `gap` nor `num`. `(range LO HI (num N))`: `N` numbers evenly apart, from `LO` to `HI`, both included. `gap` and `num` are {term}`named arguments <named argument>` of `range` |
@@ -327,6 +326,7 @@ follow the rule.
 | the top level of a source | the heads of {ref}`top-level-heads` | yes |
 | the top level of a {term}`file to import` | the forms of {numref}`import-file-holds` | yes |
 | `import` | the names to import, or none to import the whole file | no |
+| `func` | one expression: a literal, a name or a compound | no |
 | `scene` | shapes, variables, `exists-when` | yes |
 | `group`, `row`, `column` | shapes, `exists-when` | yes |
 | `motif` | shapes, variables that are bound or const (never free: free state of each shape is a parameter, which becomes an attribute), `exists-when` | yes |
@@ -343,7 +343,6 @@ follow the rule.
 | `let`, `foreach` | items of the kinds that the body around them holds | yes |
 | `in` | the views that a control belongs to | no |
 | `labels` | strings | no |
-| `transform` | transforms, such as `(rotate 90)` | no |
 | a call that takes any number of arguments, such as `(+ a b c)` | its arguments | no |
 :::
 
