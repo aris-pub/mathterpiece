@@ -110,7 +110,7 @@ complex
   ({numref}`number-types`, {numref}`number-literals`).
 
 docstring
-  `(doc 'text')`, usually written `doc@'text'`: plain text about a declaration, for the illustrator
+  `(doc 'text')`, usually written `doc@'text'`: plain text about a declaration or a whole file, for the illustrator
   ({numref}`prefix-forms`, {numref}`docstrings`).
 
 form

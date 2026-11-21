@@ -161,8 +161,8 @@ string has the position of its `.` or `[`.
 When the head of a form is a {token}`mtp:head`, the parser removes the `_` and puts `none` in as
 the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ …)` is
 `(marks.grid none …)`. When the head is a broadened type, this rule applies to its last word, so
-`(line|none_ …)` is `(line|none none …)`. The head `none_` becomes the literal `none`:
-`(none_ a)` is `(none none a)`.
+`(line|none_ …)` is `(line|none none …)`. The head `none_` is a
+{term}`compile error`: a variable of type `none` could only ever hold `none`.
 ```
 
 The parser produces a name with several name parts, such as `p.r` or `xs[0].y`, as one name
@@ -292,7 +292,8 @@ or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like �
 ```{rule} docstrings
 Every declaration may have a docstring, `doc@'text'`, and at most one. The
 docstring comes after all the positional arguments and all the named arguments, and before the
-body. In a form that has no body, the docstring is the last item. Its string literal is plain: an
+body. In a form that has no body, the docstring is the last item. A source, and a file to import,
+may also have one docstring at its top level, which documents the whole file. Its string literal is plain: an
 interpolated string is an error.
 ```
 
@@ -330,9 +331,9 @@ The compiler accepts a scene, a motif and a function in a `foreach` at the top l
 each a compile error.
 :::
 
-So a `let` and a `foreach` may never be written among the positional arguments or the named
-arguments of a form, or in a form that has no body, such as a function, whose expression is a
-positional argument. `(let ((k 2)) (real a k))` may be written at the top level, a `let` may be
+So a `let` and a `foreach` may never be written as special forms among the positional arguments or the
+named arguments of a form, or in the body of a function, which holds one expression: there a `let`
+is a compound, and a `foreach` is an error. `(let ((k 2)) (real a k))` may be written at the top level, a `let` may be
 written among the steps of an animation, and `(circle c (let ((k 2)) (r k)))` is an error, because
 `(r k)` is a named argument of the circle.
 
