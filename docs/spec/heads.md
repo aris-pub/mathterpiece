@@ -286,7 +286,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `on-view`, `on-ready`, `on-live`, `on-quiet`, listeners on their own view | core | a declaration | {doc}`lifecycle` |
 | `x`, `y`, `width`, `height`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y`, `pan`, `zoom` on a canvas | core | a clause | {doc}`page-interface` |
 | `toggle-duration`, `toggle-ease` | core | a clause | {doc}`time`, {doc}`page-interface` |
-| a name or a compound in a canvas, such as `s`, `[s t]` or `(when c d)` | core | a name or a compound | {doc}`page-interface` |
+| a name or a compound in a canvas, such as `s`, `{s t}` or `(when c d)` | core | a name or a compound | {doc}`page-interface` |
 | `font` on a readout | core | a clause | {doc}`page-interface` |
 | `kind` on a display | core | a clause | {doc}`page-interface` |
 | a movement on a control or a listener | core | a positional argument of a writer | {doc}`reaction`, {doc}`time` |
@@ -339,7 +339,7 @@ follow the rule.
 | `type`, a variable `(T name …)` | {term}`conditions <condition>`, such as `(>= 0)` | yes |
 | `animation`, `score`, `in-order`, `at-once` | movements: `move`, `jump`, `wait`, a score, the name of a movement, `(A …)` for an animation `A` | yes |
 | `defaults` | items `(attribute value)`, and in a score, `(duration …)`, `(ease …)` and `(lag …)` | yes |
-| `canvas` | at least one name or compound that gives a shape, the scene, `none` or a list of shapes, such as `s`, `[s t]` or `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
+| `canvas` | at least one name or compound that evaluates to a shape, the scene, `none` or a list of shapes, such as `s`, `{s t}` or `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
 | `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
 | a control, a listener | guards, such as `(>= k 0)` | yes |
 | `let`, `foreach` | items of the kinds that the body around them holds | yes |
@@ -348,7 +348,7 @@ follow the rule.
 | a call that takes any number of arguments, such as `(+ a b c)` | its arguments | no |
 :::
 
-So `(canvas v)` is an error, because the body of a canvas holds at least one name or compound that gives a shape, the scene, `none` or a list of shapes, and `(canvas v s)`
+So `(canvas v)` is an error, because the body of a canvas holds at least one name or compound that evaluates to a shape, the scene, `none` or a list of shapes, and `(canvas v s)`
 and `(canvas v c)` are allowed.
 
 :::{admonition} Code differs
@@ -370,7 +370,7 @@ their place. They are not forms of the language.
 | `when` | on a control or a listener | use `(active bool)` |
 | `value` | on a toggle | give the bool its start where it is declared |
 | `buttons` | on a stepper | a stepper stops after each step |
-| `dash-offset` | as an item | write `(dash [4 2] 1)` |
+| `dash-offset` | as an item | write `(dash {4 2} 1)` |
 | `move` | in a canvas | a canvas takes no move |
 | `term` | at the top level | a term is given inside its formula |
 | `pointer-events` | on a group, a row, a column or a shape of a motif | write `(defaults (pointer-events B))` |
