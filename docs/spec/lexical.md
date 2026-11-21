@@ -106,9 +106,10 @@ A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-name
 
 ## Names
 
-A name is a word that refers to something declared: `theta`, `p.pos`, `show-tan`. It is
-one or more {term}`name parts <name part>` joined by dots. `p.pos.x` is the name of the three name
-parts `p`, `pos` and `x`.
+A name is a word that refers to a type, a variable, an object or an attribute: `theta`, `p.pos`,
+`show-tan`. It is one or more {term}`name parts <name part>` joined by dots. `p.pos.x` is the name of
+the three name parts `p`, `pos` and `x`. After syntactic sugar is rewritten, a name with several name
+parts is a `(. X Y)` form ({numref}`sugar-rewrites`).
 
 ```{mtp-grammar} names
 ```

@@ -16,8 +16,8 @@ runs in the reader's browser. mtp requires no particular tool for making the pag
 use any software for making web pages, an AI assistant included, and is encouraged to use the
 tools that they already prefer.
 
-A component is a view, a control or a listener. A {term}`view` shows the world model to the
-reader: a canvas draws shapes, a readout shows a line of text, and a display shows a formula. A
+A component is a view, a control or a listener. A {term}`view` is where the runtime draws part of the world
+model for the reader: shapes in a canvas, a line of text in a readout and a formula in a display. A
 {term}`control` is a slider, a button, a play, a stepper or a toggle, and the reader presses, drags
 or clicks it to write a variable or an attribute of the world model. A {term}`listener` is written inside a view and
 has no element of its own on the page: it writes a variable or an attribute of the world model when the reader acts
@@ -296,14 +296,14 @@ own view ({doc}`page-interface`, {doc}`lifecycle`).
 
 ```{rule} runtime-adds-no-objects
 What a world model holds is decided by the illustrator alone: the objects of a live model are
-those that the source declares, and the runtime never adds an object to a live model or removes
-one. What the runtime draws beyond the objects of the live model changes only how a component
+those specified in the source, through declarations and the compounds that give a new object
+({doc}`data-model`), and the runtime adds or removes no other object. What the runtime draws beyond the objects of the live model changes only how a component
 looks. It is not an object of the live model, no expression and no writer of the world model reads
 it, and it never writes a variable or an attribute of the live model.
 ```
 
-For example, while an `on-show` or an `on-hide` plays, a canvas draws a stand-in in place of the
-shape: a copy of the shape that only this canvas has, which the animation moves. The shape in the
+For example, while an `on-show` or an `on-hide` plays, the runtime draws a stand-in in the canvas in place of the
+shape: a copy of the shape that only this canvas has, which the movement writes. The shape in the
 live model keeps every attribute as it was, and when the animation ends, the canvas drops the
 stand-in ({doc}`page-interface`).
 

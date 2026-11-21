@@ -50,9 +50,9 @@ The people, the files and the two programs ({numref}`people-and-programs`).
 - `a` is a free variable: it holds 1 when the page opens, and a writer may change it.
 - The circle `p` is a shape. Its `pos` is bound to `[a 0]`, so the circle moves whenever `a`
   changes.
-- The canvas `v` is a view: it draws the scene `s`. The slider `push` is a control, and
+- The canvas `v` is a view: the runtime draws the scene `s` in it. The slider `push` is a control, and
   `on-drag` is a listener. Both write `a` with a movement, `(move a …)`.
-- The readout `r` is a view that shows `a` as text.
+- The readout `r` is a view: the runtime writes `a` in it as text.
 
 ## Expressions
 

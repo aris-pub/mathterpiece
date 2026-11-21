@@ -66,7 +66,7 @@ any number of such texts.
 
 | Written | Means exactly | Conditions |
 |---|---|---|
-| `N.A`, `N[X]`, where `N` does not name a type | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name is written as an expression or as the target of a writer. A head and the name of a declaration are not rewritten |
+| `N.A`, `N[X]`, where `N` does not name a type | `(. N A)`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p pos) x)`, and `g[0].r` is `(. (. g 0) r)` | The name is written as an expression, as the target of a writer or as a head: `(marks.grid g …)` is `((. marks grid) g …)`. The name of a declaration is not rewritten |
 | `T[X…]`, where `T` names a type | `(type-apply T X…)`: `list[int]` is `(type-apply list int)`, and `func[real real]` is `(type-apply func real real)` | |
 | `T1\|T2…` | `(type-union T1 T2…)`: `real\|none` is `(type-union real none)` | |
 | `T1&T2…` | `(type-intersect T1 T2…)`: `shape&round` is `(type-intersect shape round)` | |
