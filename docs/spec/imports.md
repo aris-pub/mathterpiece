@@ -70,7 +70,7 @@ named colors.mtp.
 ## What a file to import holds
 
 ```{rule} import-file-holds
-A {term}`file to import` holds at its top level only `import`, `let`, `foreach`, and declarations of
+A {term}`file to import` may hold at its top level only `import`, `let`, `foreach`, and declarations of
 colors, fonts, functions, motifs, variants, types, interfaces, records, palettes, colormaps,
 animations, {term}`seeds <seed>` (`rand-seed`) and variables that are `const`. Any other form there is a compile error at that form, in every
 source that imports the file.
