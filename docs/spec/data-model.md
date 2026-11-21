@@ -31,8 +31,10 @@ attribute, and never creates a variable or an object that a writer can write.
 A declaration creates something new in the model: a variable, a type or an object. An `import` is
 a declaration too: it makes the names of another file usable.
 
-A clause, such as a named argument, the guard of a control, or `exists-when` in a scene or a
-formula, is part of the form around it and has no result of its own.
+A clause, such as a named argument, `exists-when` in a scene or a formula, or a {term}`binding` and the
+list that holds it, as `(k 2)` and `((k 2))` in `(let ((k 2)) …)`, is part of the form around it
+and has no result of its own. The names of a `let` and of a `foreach`, and the parameters of a
+function, a motif, a variant or an animation, are bindings ({numref}`declarations-and-bindings`).
 
 The signature of each head gives which kinds of expression each of its arguments and its body
 may hold ({ref}`signatures`, {numref}`contexts`). A `let` is a compound where it holds a literal, a name or a compound, and a

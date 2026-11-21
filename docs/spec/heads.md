@@ -88,7 +88,7 @@ mtp-ydd4.7.59.
 | `>=`, `>`, `<=`, `<` with one number | core | conditions | {doc}`types` |
 | `length` | core | a condition | {doc}`types` |
 | `one-of` | core | a condition | {doc}`types` |
-| `const` | core | a named argument of a variable or an attribute | {numref}`variables` |
+| `const` | core | a clause | {numref}`variables` |
 
 ## Type notation
 
@@ -143,7 +143,7 @@ mtp-ydd4.7.59.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a parameter `(T N DEFAULT?)` | core | a parameter | {doc}`types` |
+| a parameter `(T N DEFAULT?)` | core | a clause | {doc}`types` |
 | a shape, a bound or const variable, `foreach` or `let` in a motif's body | core | a declaration | {doc}`world-model` |
 | `exists-when` in a motif's body | core | a clause | {doc}`world-model` |
 | `self` | core | a name | {doc}`scope` |
@@ -165,7 +165,7 @@ its own group, are to be redesigned around `self`. Until then, the rules of toda
 | a variable in a record | core | a declaration | {doc}`world-model` |
 | `record`, `palette` in a record | core, syntactic sugar | a declaration | {doc}`world-model`, {numref}`sugar-rewrites` |
 | `(M C)` in a palette | syntactic sugar | a declaration | {numref}`sugar-rewrites` |
-| `(T A C…)` in an interface | core | a body item | {doc}`types` |
+| `(T A C…)` in an interface | core | a clause | {doc}`types` |
 | `family`, `style`, `weight`, `size` | core | a clause | {doc}`data-model` |
 | `like` in a font | syntactic sugar | a clause | {numref}`like-copies` |
 
@@ -300,7 +300,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `priority` | core | a clause | {doc}`concurrency` |
 | `stop-propagation` | core | a clause | {doc}`reaction` |
 | `in` | core | a clause | {doc}`page-interface`, {doc}`lifecycle` |
-| a guard | core | a body item of a writer | {doc}`reaction` |
+| a guard | core | a compound | {doc}`reaction` |
 | `doc` on a component | core | a clause | {doc}`compiled-format` |
 
 :::{admonition} Code differs
