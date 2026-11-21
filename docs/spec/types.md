@@ -48,7 +48,7 @@ These are the types of mtp:
 | `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
 | `unit` | `unit` | the same type as `(real (>= 0) (<= 1))`: the reals from 0 to 1 |
 | `ease` | `ease` | the same type as `func[unit real]`: the eases of a movement ({doc}`time`) |
-| `curve` | `curve` | the same type as `func[real point]`: the curves of the plane, such as the one that `parametric` draws |
+| `curve` | `curve` | the same type as `func[real point]`: the curves of the plane, such as the curve of a `parametric` |
 | `bool` | `bool` | `true` and `false` |
 | `string` | `string` | the {term}`strings <string>`, the strings of formulas among them |
 | `color` | `color` | the colors ({doc}`world-model`) |
@@ -117,8 +117,8 @@ other expression there is a {term}`compile error`:
   `motif`, `variant` or `animation` declares. A name declared by `(type N T C…)` is the refined type
   `(T C…)`. `list` with no item type may be only the {term}`head` of a variable whose value is given,
   and the type of the variable is then the type of its value.
-- `(type-apply T X…)`, with `T` one of `list`, `sequence` and `func`. `list` and `sequence` take
-  exactly one type, the type of the items. `func` takes one type or more: the last is the result
+- `(type-apply T X…)`, with `T` one of `list`, `sequence` and `func`. With `list` and `sequence`,
+  `X…` is exactly one type, the type of the items. With `func`, `X…` is one type or more: the last is the result
   type, and the others are the types of the parameters, in order.
 - `(type-union T1 T2 …)` and `(type-intersect T1 T2 …)` ({numref}`type-forms`).
 - `(mod T lo hi)`, a modular type, with `T` either `int` or `real` ({numref}`modular-types`).
@@ -196,7 +196,7 @@ types of its row only, and its values are known when compiling:
 | `(one-of v1 … vk)` | the numbers, `bool`, `string`, `color`, `point`, `list[T]` | the values v1 to vk | one value or more |
 
 Any other form in the place of a condition, and a condition on a type outside its row, is a compile
-error. A type of objects takes no condition: an intersection with an interface does that job.
+error. A type of objects may not have a condition: an intersection with an interface limits it instead.
 ```
 
 `(const)` is not a condition: a variable or an attribute is free, bound or const
@@ -217,7 +217,7 @@ never refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)), with `mod` as 
 defines it. A number enters it when it is the value of a variable or an attribute of the type, an
 argument for a parameter of the type, the result of a function declared with the type, or a write
 into a variable or an attribute of the type. Adding a number to a value of the type, or subtracting one
-from it, results in a value of the type. A value of the type takes no comparison.
+from it, results in a value of the type. A value of the type may not be compared with `<`, `>`, `<=` or `>=`.
 ```
 
 So `((mod real 0 360) theta 400)` holds 40, `(+ theta 330)` is 10, and `(< theta 90)` is a compile

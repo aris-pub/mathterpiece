@@ -4,36 +4,37 @@
 Not drafted yet. This page defines: the objects, their attributes, identity, the tree of collections, primitives and objects, and equality for each type.
 :::
 
-## Defaults of a collection
+## Defaults on a collection and on a shape declared with a motif
 
 ```{rule} collection-defaults
-A `(defaults (A V)…)` on a group, a row or a column gives each `(A V)` to each of its members, at
-any depth, that takes `A` from a collection and does not give `A` itself. When several collections
-give `A`, the nearest one wins. A member of a motif's type gets `(A V)` in its own
-`(defaults …)`. A `(defaults (A V)…)` on a shape declared with a motif gives each `(A V)` to
-every shape in the body of its motif, at any depth, that takes `A` and does not give `A` itself,
-although that shape is not a collection ({doc}`data-model`). Each `A` is one that a collection gives its members, and any other is a
-{term}`compile error`.
+A `(defaults (A V)…)` on a group, a row or a column sets `A` to `V` on each of its members, at any
+depth, for which a collection may set `A`, and whose declaration does not set `A`. When several
+collections set `A`, the nearest one applies. For a member declared with a motif, each `(A V)` is
+added to its own `(defaults …)`. A `(defaults (A V)…)` on a shape declared with a motif sets `A` to
+`V` on every shape in the body of its motif, at any depth, that has the attribute `A` and whose
+declaration does not set `A`, although the shape declared with the motif is not a collection
+({doc}`data-model`). Each `A` must be an attribute that a collection may set on its members, and
+any other `A` is a {term}`compile error`.
 ```
 
 ## Formulas
 
 ```{rule} formula-terms
-The string of a formula is its positional argument, right after its name: any string expression whose
-value is known when compiling. It declares the terms that it marks with `\term{name}{…}`.
+The string of a formula is its positional argument, right after its name: any expression that
+evaluates to a string known when compiling. The formula has a term `N` for each `\term{N}{…}` in
+the string.
 ```
 
 ```{rule} formula-defaults
-A `(defaults (A V)…)` in a formula gives each `(A V)` to each term of the formula whose `(term …)`
-form does not give `A`, and to each term that has no `(term …)` form. The terms are those that the
-formula's string marks.
+A `(defaults (A V)…)` in a formula sets `A` to `V` on each term of the formula whose `(term …)` form
+does not set `A`, and on each term that has no `(term …)` form.
 ```
 
-The `(defaults …)` of a formula is a named argument, so it comes after the string and before the
-body ({numref}`named-arguments-first`). The body holds the terms, the `exists-when` forms and the
-variables. So `(formula f $'\term{a}{x}' (defaults (padding 3)) (term a (fill #'red')))` is allowed,
-as a text is written `(text t 'hi' …)`, and the same formula with the string after the
-`(defaults …)`, or after a `(term …)`, is an error.
+The `(defaults …)` of a formula is a named argument, so it must come after the string and before
+the body ({numref}`named-arguments-first`). The body may hold `(term …)` forms, `exists-when` forms
+and variables. So `(formula f $'\term{a}{x}' (defaults (padding 3)) (term a (fill #'red')))` is
+allowed, and the same formula with the string after the `(defaults …)`, or after a `(term …)`, is a
+compile error.
 
 :::{admonition} Code differs
 :class: note

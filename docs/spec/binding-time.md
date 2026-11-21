@@ -13,7 +13,7 @@ control or a listener: no expression in the scene, in a formula, or in a variabl
 function outside a component reads one.
 ```
 
-So `(button b (selected (= mode 'a')))` may read `mode`, and a readout may read the value of a
-slider's target, but `(circle c (r push.selected))` in the scene, with `push` a button, is a
+So `(button b (selected (= mode 'a')))` may read `mode`, and a readout may read the variable that
+a slider writes, but `(circle c (r push.selected))` in the scene, with `push` a button, is a
 {term}`compile error`, and so is `(real r (if push.selected 2 1))` at the top level, since the scene
 could read the button through `r`.
