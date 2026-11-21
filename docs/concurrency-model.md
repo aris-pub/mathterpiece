@@ -96,4 +96,4 @@ the scene's containers (mtp-wjtd notes).
 
 Not about writers meeting, so outside the model: two moves of one animation at the same time
 (a compile error), a move reading its `from` and `to` when it starts, and a slider's knob
-following its target.
+updating when its target changes.

@@ -78,7 +78,7 @@ For example:
 | Declared | What the variable is |
 |---|---|
 | `(real a 1)` | free: it holds 1 when the page opens, and a slider or a movement may write it |
-| `(real b (* 2 a))` | bound: it always holds twice the value of `a`, and follows `a` when `a` changes |
+| `(real b (* 2 a))` | bound: it always holds twice the value of `a`, and updates when `a` changes |
 | `(real c 3 (const))` | const: it holds 3, and a slider that writes it is a compile error |
 | `(real_ 1)` | a compile error: a variable has a name |
 
@@ -167,7 +167,7 @@ A shape's frame, which places it in its collection, is not a value of its own: i
 shape's attributes with a joint meaning, `shift-x`, `shift-y`, `rotate`, `scale-x` and `scale-y`,
 as `pos` is the joint meaning of `x` and `y`; `shift` is the joint meaning of `shift-x` and
 `shift-y` in the same way. Each is free, bound or const on its own, so a slider
-may write `c.rotate` while `c.shift-x` follows an expression. There is no transform value. A frame
+may write `c.rotate` while `c.shift-x` is bound to an expression. There is no transform value. A frame
 is reused through a group, whose frame applies to every member, through `(defaults …)`, or through
 `(like …)`.
 
@@ -242,7 +242,7 @@ attributes.
 `(rec …)` is to `(record …)` as `(fn …)` is to `(func …)`. Since every attribute of a record
 that `(rec …)` gives is bound or const, no writer writes it, and a new record made each time that
 `(rec …)` is evaluated loses nothing. So `(var s record (rec (real height k)))` holds a record
-whose `height` follows `k`, and `(var s record (rec (real width 1)))` is a compile error, since
+whose `height` updates when `k` changes, and `(var s record (rec (real width 1)))` is a compile error, since
 `width` is free.
 
 :::{admonition} Code differs

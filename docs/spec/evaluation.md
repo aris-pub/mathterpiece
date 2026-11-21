@@ -374,7 +374,7 @@ mtp-nk2w.
 
 ```{rule} seed-variable
 Every random value is computed from a seed: a free variable of the {term}`built-in type`
-`rand-seed`, which is any int. A random function follows the seed named in it with `(seed s)`, and, with no `(seed …)`, the
+`rand-seed`, which is any int. A random function uses the seed named in it with `(seed s)`, and, with no `(seed …)`, the
 {term}`default seed` of the file that holds it ({numref}`default-seed`). A `const` variable is not a
 seed.
 ```
@@ -404,10 +404,10 @@ These are the messages of the compile errors for a random function with no `(see
 
 | When | Message |
 |---|---|
-| several seeds | "this file declares several seeds: name the one this follows, as (rand 0 1 (seed dots))" |
-| the default seed is declared after it | "the seed N is declared after this: a random value follows a seed declared before it" |
-| only `const` variables of type `rand-seed` | "N is const, so it is not a seed: a random value follows a seed that is not const" |
-| no variable of type `rand-seed`, and the file rand is not imported | "a random value follows a seed: declare one, (rand-seed dots 0), or import the standard one, (import rand seed)" |
+| several seeds | "this file declares several seeds: name the one this uses, as (rand 0 1 (seed dots))" |
+| the default seed is declared after it | "the seed N is declared after this: a random value uses a seed declared before it" |
+| only `const` variables of type `rand-seed` | "N is const, so it is not a seed: a random value uses a seed that is not const" |
+| no variable of type `rand-seed`, and the file rand is not imported | "a random value uses a seed: declare one, (rand-seed dots 0), or import the standard one, (import rand seed)" |
 
 ```{rule} random-site
 Each call of the random function `rand`, `rand-int`, `pick` or `shuffle`, by any name that an import gives
@@ -491,17 +491,17 @@ A random value is known only while drawing ({doc}`binding-time`).
 So the compiler never draws a random value ({numref}`compiler-never-acts-while-drawing`) and never
 folds one. By {numref}`random-values`, for one .mtpc, the same values of the seeds give the same
 random values, on every refresh and in every browser, and when a seed takes a new value, every
-random value that follows it is drawn again ({doc}`reaction`). Since the sites are counted when
+random value that uses it is drawn again ({doc}`reaction`). Since the sites are counted when
 compiling, a change to the source that adds or removes a random function before
 another one changes the site of the later one, and with it the value that the later one draws.
 
 A roll, `(roll-dice s)`, is a write of `(next-seed s)` into the seed `s`: `roll-dice` is an animation
 of the file rand ({ref}`stdlib-rand`), and `(roll-dice)` rolls the default seed
 ({numref}`default-seed`). By {numref}`random-values`, a roll changes the random values that
-follow `s`, and no others.
+use `s`, and no others.
 
 `rand`, `rand-int`, `pick` and `shuffle` inside the body of a function are a compile error. A free variable may start at a random value with `free@`,
-and then never follows the seed.
+and then never updates when the seed changes.
 
 ```{mtp-example}
 ; every dot is drawn from the seed dots and the site of its rand
@@ -514,7 +514,7 @@ and then never follows the seed.
 (button roll (animation (roll-dice dots)) (label 'Roll'))
 ```
 
-A `rand` that follows a `const` seed, such as `(rand-seed s 3 (const))`, is a compile error by
+A `rand` that uses a `const` seed, such as `(rand-seed s 3 (const))`, is a compile error by
 {numref}`seed-variable`.
 
 :::{admonition} Code differs

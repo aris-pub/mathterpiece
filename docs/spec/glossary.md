@@ -123,7 +123,7 @@ format spec
 
 free starting value
   `(free X)`, also written `free@X`: the start of a free variable or attribute, which holds the
-  value of `X` when the page opens and does not follow `X` when `X` changes ({numref}`prefix-forms`, {doc}`core`).
+  value of `X` when the page opens and does not update when `X` changes ({numref}`prefix-forms`, {doc}`core`).
 
 head
   The first item of a form ({numref}`form-template`).
@@ -253,7 +253,7 @@ seed
   {doc}`evaluation`.
 
 default seed
-  The seed that a random function with no `(seed …)` follows: the only seed of the file that holds
+  The seed that a random function with no `(seed …)` uses: the only seed of the file that holds
   it, or, when that file has no variable of type `rand-seed`, the seed of the file rand of the
   standard library. Defined in {doc}`evaluation`.
 
