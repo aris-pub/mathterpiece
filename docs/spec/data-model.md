@@ -12,7 +12,7 @@ specifies the language.
 :file: diagrams/values-containers-types.svg
 :max-width: 44rem
 
-Which expressions give primitives, objects and types, and which values a container holds.
+Which expressions give primitives and objects, and which values a container holds.
 ```
 
 An {term}`expression` is a literal, a name or a {term}`form`. A form is a head and its items in
