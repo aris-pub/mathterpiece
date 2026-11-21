@@ -1,11 +1,11 @@
 (data-model)=
 # Data model
 
-This page defines the things that the compiler builds from a source and that the runtime holds in
+This page defines the values, variables and attributes that the compiler builds from a source and that the runtime holds in
 memory and manipulates: values, variables and attributes. A {term}`value` is a
 {term}`primitive` or an {term}`object`. Variables and attributes are
 {term}`containers <container>`: each holds one value.
-What the parser reads, {term}`literals <literal>` among it, is defined in {doc}`grammar`. This page
+The expressions that the parser produces, {term}`literals <literal>` among them, are defined in {doc}`grammar`. This page
 specifies the language.
 
 ```{diagram} values-containers-types
@@ -33,7 +33,7 @@ A declaration creates something new in the model: a variable, a type or an objec
 A clause, such as a named argument, the guard of a control, or `exists-when` in a scene or a
 formula, is part of the form around it and has no result of its own.
 
-The signature of each head says which kinds of expression each of its arguments and its body
+The signature of each head gives which kinds of expression each of its arguments and its body
 may hold ({ref}`signatures`, {numref}`contexts`). A `let` is a compound where it holds a literal, a name or a compound, and a
 declaration where it holds declarations. A `foreach` holds declarations and is always a
 declaration. An `import` declares the names that it brings in.
@@ -63,14 +63,14 @@ Each of these gives a primitive:
 Numbers, bools, strings, colors and `none` are written as literals. Lists and points are given by
 compounds, such as `(list-of 0 1)`, which is also written `[0 1]`. Since a primitive never
 changes, nothing writes one: a writer writes a variable or an attribute, which then holds a
-different value. A slider that writes `(real a 1)` puts 2 into `a`, and 1 is still 1.
+different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
 
 ## Variables
 
 ```{rule} variables
 A variable is a named holder of one value. It is free, bound or const. A free variable holds its
 value until a writer writes a new one. A bound variable holds the value of its expression at all
-times. A const variable rejects every attempted write. A variable with no name is a
+times. A const variable can never be written. A variable with no name is a
 {term}`compile error`.
 ```
 
@@ -84,7 +84,7 @@ For example:
 | `(real_ 1)` | a compile error: a variable has a name |
 
 `(var NAME TYPE DEFAULT)` declares a variable that holds an object, with its declared type after its
-name: `(var sel shape c)` holds a shape, at first the circle `c`. A variable is not an object: it
+name: `(var sel shape c)` declares a variable `sel` that holds a shape, at first the circle `c`. A variable is not an object: it
 has no attributes, only what it holds.
 
 :::{admonition} Code differs
@@ -141,9 +141,9 @@ The kinds of object, and what the compiler and the runtime do with each.
 The objects are the scene and its shapes, the movements, the formulas and
 their terms, the components (views, controls and listeners), the functions and the records. A shape whose
 type is a motif or a variant is a shape like any other: only its type differs. A score is a
-movement that holds movements, as a group is a shape that holds shapes: each member places itself
+movement that holds movements, as a group is a shape that holds shapes: each member is placed
 in time by its own `lag`, the fraction of the member before it that has run when it starts, as each
-member of a group places itself in space by its own position. `(in-order …)` is a score whose
+member of a group is placed in space by its own position. `(in-order …)` is a score whose
 members have the lag 1, so each starts when the one before it ends, and `(at-once …)` is one whose
 members have the lag 0, so all start together. An animation is a template of movements, as
 a motif is a template of shapes: with an animation `A`, `(A …)` creates an `A`, which is a movement. For example, in
@@ -166,7 +166,7 @@ a motif is a template of shapes: with an animation `A`, `(A …)` creates an `A`
 
 A shape's frame, which places it in its collection, is not a value of its own: it is a set of the
 shape's attributes with a joint meaning, `shift-x`, `shift-y`, `rotate`, `scale-x` and `scale-y`,
-as `pos` is the joint meaning of `x` and `y`; `shift` is the joint meaning of `shift-x` and
+as `pos` is the joint meaning of `x` and `y`. `shift` is the joint meaning of `shift-x` and
 `shift-y` in the same way. Each is free, bound or const on its own, so a slider
 may write `c.rotate` while `c.shift-x` is bound to an expression. There is no transform value. A frame
 is reused through a group, whose frame applies to every member, through `(defaults …)`, or through
@@ -184,14 +184,14 @@ of attributes.
 ```{rule} identity
 Two primitives are the same value exactly when they are equal. An object is the same object only as
 itself: each declaration, each copy that a `foreach` makes of a declaration, and each evaluation of
-`(fn …)`, `(rec …)` or `(move …)` creates an object of its own, and two objects created apart are
+`(fn …)`, `(rec …)`, `(move …)`, `(score …)` or `(A …)` for an animation `A` creates an object of its own, and two objects created apart are
 two objects, however alike their attributes.
 ```
 
 So `[1 2]` written twice is one primitive, while `(circle c (r 1))` and `(circle d (r 1))` are two
 objects, and so are the copies `c-0` and `c-1` of `(foreach k 2 (circle @'c-{k}' (r 1)))`.
 
-A source usually works with an object through its attributes, as `c.r` or `style.width`, and with a
+An illustrator usually uses an object through its attributes, as `c.r` or `style.width`, and a
 primitive by itself, as `3` or `'hi'`. A primitive may have attributes too: a point has `x` and `y`, a
 color its channels `r`, `g`, `b` and `a`, a list and a string a `length`, and a complex number `re`
 and `im`. Reading an attribute of a primitive gives a primitive. Writing one puts a new value into the
@@ -206,8 +206,8 @@ A function is an object whose only attribute is `name`, and whose behavior is to
 
 So `(func twice ((real x)) (* 2 x))` declares the function `twice`, whose `name` is `'twice'`, and
 `(map xs (fn ((real x)) (* 2 x)))` passes a function with no name to `map`. A variable holds a
-function as it holds any object: `(var f function twice)`. Since a function has no attribute that a writer
-may write, a new function made each time that `(fn …)` is evaluated loses nothing.
+function as it holds any object: `(var f function twice)` declares a variable `f` that holds `twice`. Since a function has no attribute that a writer
+may write, nothing is lost when `(fn …)` makes a new function each time that it is evaluated.
 
 :::{admonition} Code differs
 :class: note
@@ -234,15 +234,15 @@ The compiler treats a font as a primitive: its parts can be read, as `f.size`, b
 text applies one with `(font f)`. Bead mtp-1vyc makes fonts namespaces.
 :::
 
-For example, `(record style (real width 2 (>= 0) (<= 5)) (color ink #'navy'))` is an object with
+For example, `(record style (real width 2 (>= 0) (<= 5)) (color ink #'navy'))` declares an object with
 the two attributes `width` and `ink`, read as `style.width` and `style.ink`. Like any attribute,
 `style.width` may be written: `(slider s (move style.width (from 0) (to 5)))` writes it. Unlike a
 shape, a record is not drawn, and the compiler does nothing with it beyond holding its
 attributes.
 
 `(rec …)` is to `(record …)` as `(fn …)` is to `(func …)`. Since every attribute of a record
-that `(rec …)` gives is bound or const, no writer writes it, and a new record made each time that
-`(rec …)` is evaluated loses nothing. So `(var s record (rec (real height k)))` holds a record
+that `(rec …)` gives is bound or const, no writer writes it, and nothing is lost when `(rec …)` makes a new record
+each time that it is evaluated. So `(var s record (rec (real height k)))` declares a variable `s` that holds a record
 whose `height` updates when `k` changes, and `(var s record (rec (real width 1)))` is a compile error, since
 `width` is free.
 

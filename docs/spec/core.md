@@ -50,7 +50,7 @@ whose rewrite would need one of their values is core ({numref}`names-from-values
 
 The {term}`parser` rewrites some syntactic sugar while it reads the source:
 a prefixed form `H@X`, a {term}`name string` `@'…'`, an {term}`interpolated string` `f'…'`, a part
-after a {term}`list` {term}`literal`, `[…][X]` ({numref}`parser-sugar`), and a head that ends with `_` ({numref}`unnamed-head`). Every
+after a {term}`list` written in brackets, `[…][X]` ({numref}`parser-sugar`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other syntactic sugar form is in the table of the rule below.
 
 (rewrite-when)=
@@ -79,7 +79,7 @@ any number of such texts.
 | `(palette N (M C)…)` | `(record N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N XS F ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
-| `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list literal, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
+| `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not a list written in brackets, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, in a score | `(move none (duration T))` | |
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |
@@ -100,14 +100,14 @@ an expression `E` of the name `T` (compiler.py:434). Bead mtp-of7a makes the com
 
 Since a copied random call is a {term}`site` of its own ({numref}`random-site`),
 `(pos (pick corners))` would draw `x` and `y` at two sites, so it is an error. A body `let` holds
-the point once: `(let ((q (pick corners))) (circle c (pos q)))` is `(x (. q 0)) (y (. q 1))`, which
+the point once: in `(let ((q (pick corners))) (circle c (pos q)))`, `(pos q)` is `(x (. q 0)) (y (. q 1))`, which
 reads one value.
 
 :::{admonition} Code differs
 :class: note
 The compiler makes these rewrites while it compiles each form, in the same functions that check
 it, and not in a step of their own (for example compiler.py:6471-6479 for `when`, 3074-3087 for
-`wait`, 3745-3764 for an animation item, 1669-1729 for a choreo use). Beads mtp-08wd.5, mtp-08wd.6, mtp-08wd.7, mtp-08wd.8
+`wait`, 3745-3764 for an animation item, 1669-1729 for `(C …)` with a choreo `C`). Beads mtp-08wd.5, mtp-08wd.6, mtp-08wd.7, mtp-08wd.8
 and mtp-08wd.2 will make them in the rewrite step. Where the result differs today:
 
 - `p.r` is read as one name with {term}`name parts <name part>` (parse.py:337-395), and each name
@@ -119,8 +119,8 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
   means has the type `namespace` (mtp-ydd4.7.22).
 - `(cond (else V))` is {term}`folded <folding>` to the value of `V` and, since it is not a literal,
   marked const (compiler.py:5653-5657), so `(real v (cond (else 3)))` makes `v` a constant, while
-  `(real v 3)` is a free variable that a writer may write (mtp-ydd4.7.46).
-- `cond` gives a list literal among its values the type of all its other values
+  `(real v 3)` declares a free variable that a writer may write (mtp-ydd4.7.46).
+- `cond` gives a list written in brackets among its values the type of all its other values
   (compiler.py:6629-6641), while an `if` gives it the type of its other branch only
   (compiler.py:6494-6504) (mtp-08wd.2).
 - `(pos P)` compiles `P` once and splits it (compiler.py:5594-5611), so a random call in `P` is
@@ -158,11 +158,10 @@ Two kinds of item are copied in a way of their own. The string of a text is copi
 is a positional argument and has no head. A `(pos P)` of `M` gives both `x` and `y`, so when
 `ARGS…` gives exactly one of them, `COPIED…` holds the other, `(x (. P 0))` or `(y (. P 1))`.
 
-Since `(like M)` copies what `M` was written with in the source, a copy does not get the defaults
-of `M`'s collection: `(circle b (like a))` outside the group of `a` has only what `a` was written
-with. A copied item that is bound is bound to the same expression in the copy: if the radius
-of `M` is bound to `(* 2 k)`, so is the radius of the copy, and both update when `k` changes. A copied item that
-is free is a free attribute of the copy, of its own, with the same start: with `(r free@2)`
+Since `(like M)` copies the items that are written in the declaration of `M`, a copy does not get the defaults
+of `M`'s collection: `(circle b (like a))` outside the group of `a` has only the items that are written in the declaration of `a`. When an attribute of `M` is bound, the same attribute of the copy is bound to the same expression: if the radius
+of `M` is bound to `(* 2 k)`, so is the radius of the copy, and both update when `k` changes. When an attribute of `M`
+is free, the same attribute of the copy is a different free attribute with the same starting value: with `(r free@2)`
 in `M`, the copy's radius starts at 2, and a writer of `M`'s radius does not write it. When `K` is a motif, the defaults of `M`, `pointer-events` among them, and its `clip` are items of it,
 so `(like M)` copies them.
 
@@ -222,7 +221,7 @@ object as before, with its attributes as they were, what writers wrote to them i
 below the {term}`number limit`, the `foreach` is a compile error.
 ```
 
-So with `(int n 3 (>= 0) (<= 5))`, which a slider writes, `(foreach k n …)` and
+So with `(int n 3 (>= 0) (<= 5))` and a slider that writes `n`, `(foreach k n …)` and
 `(foreach k (range 0 n) …)` both make 5 copies, and copies 3 and 4 are `none` while `n` is 3. When `n` goes
 back to 5, copies 3 and 4 come back as they were.
 
@@ -237,8 +236,8 @@ compiler follow the rule.
 ### The form `.`
 
 ```{rule} dot-name-part
-In `(. X Y)`, where `Y` is a bare name with one name part, `Y` is the attribute or the member of `X`
-of that name, when `X` has one. Otherwise `Y` is an expression, and its value is a position or a key
+In `(. X Y)`, where `Y` is a bare name with one name part, the form evaluates to the attribute or the member of `X`
+that has that name, when `X` has one. Otherwise `Y` is an expression, and its value is a position or a key
 of `X`.
 ```
 
@@ -261,13 +260,13 @@ reads the color `yellow` as a key (mtp-ydd4.7.19).
 
 ```{rule} animation-step
 A score written as a member of another score is one step of it. It plays
-its own members, a `(loop …)` included, and the `(defaults …)` around it do not apply inside it.
+its own members with its own `(loop …)`, and the `(defaults …)` of the score around it do not apply inside it.
 ```
 
 :::{admonition} Code differs
 :class: note
-An animation's body does not accept the head `animation` (compiler.py:3097-3103). A use of a
-choreo is compiled to its steps in place (compiler.py:1714-1729) (mtp-ydd4.7.26).
+An animation's body does not accept the head `animation` (compiler.py:3097-3103). `(C …)` for a
+choreo `C` is compiled to its steps in place (compiler.py:1714-1729) (mtp-ydd4.7.26).
 :::
 
 ### Names built from values

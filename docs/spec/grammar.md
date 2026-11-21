@@ -2,8 +2,8 @@
 # Grammar
 
 This page defines how the {term}`parser` puts the {term}`words <word>`, {term}`string`
-{term}`literals <literal>` and other pieces of text of {doc}`lexical` together into
-{term}`forms <form>`, the {term}`expressions <expression>` that the parser produces, the template
+{term}`literals <literal>` and other pieces of text of {doc}`lexical` together into the
+{term}`expressions <expression>` that the parser produces, {term}`forms <form>` among them. It also defines the template
 that every form follows, and the kinds of form that may be written in each {term}`body`. The
 signatures of the forms, which list the arguments of each {term}`head`, are not part of this page.
 
@@ -22,8 +22,8 @@ the name of a rule keeps the quoted text of that rule in the tree.
 
 ```{rule} forms
 A form is a `(`, then any number of expressions, its items, then a `)`. An
-expression is a form, a {term}`list` literal, a word, a {term}`broadened type`, a
-string literal or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
+expression is a form, a {term}`list` written in brackets, a word, a {term}`broadened type`, a
+string literal, a color literal or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
 that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
 ```
 
@@ -40,7 +40,7 @@ source may hold no form at all.
 ```
 
 ```{rule} adjacent-items
-Among the items of a form, a list literal or brackets, whitespace or a comment separates every two
+Among the items of a form, of a list written in brackets or of brackets, whitespace or a comment separates every two
 expressions, except where one of the two is a form. More exactly, an expression that ends with the
 `)` of a form, which is a form or a prefixed form such as `free@(g)`, may be followed
 directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
@@ -124,8 +124,8 @@ expression of a source is one of these:
 An operator is a name with one name part ({numref}`literal-words`).
 
 ```{rule} literals
-A literal is a piece of source text that writes a primitive directly: a number literal, a string
-literal, a color literal, `true`, `false` or `none`.
+A literal is a number literal, a string literal, a color literal, `true`, `false` or `none`. A
+literal evaluates to a primitive.
 ```
 
 What value a literal gives, and of what type, is defined in {numref}`literal-types`. Values are
@@ -174,7 +174,7 @@ is given in {numref}`dot-name-part`.
 
 ```{rule} form-template
 Every form is written `(head name? positional… named… docstring? body…)`. The signature of each
-head says which of these it has ({ref}`signatures`).
+head specifies which of these the form has ({ref}`signatures`).
 
 - The head determines which of these the form has: whether it has a name, which positional and
   named arguments it takes and which of them it requires, whether it may have a docstring, and
@@ -186,7 +186,7 @@ head says which of these it has ({ref}`signatures`).
 - The {term}`named arguments <named argument>` come next, in any order, each at most once
   ({numref}`named-arguments-first`, {numref}`named-arguments-once`). Each is a form whose head has
   a meaning only inside the form that holds it, as `r` has only inside a circle, and whose items
-  are specified by the head that holds it: at most two positional arguments, and a body, but
+  are specified by the head of the form that holds it: at most two positional arguments, and a body, but
   never a named argument. So `(defaults (fill red) (stroke blue))` has only a body, whose items
   are the attributes and values that it gives.
 - The {term}`docstring`, for a declaration, comes next ({numref}`docstrings`).
@@ -206,14 +206,14 @@ Some forms, taken apart by the template:
 
 | Form | Head | Name | Positional | Named | Docstring | Body |
 |---|---|---|---|---|---|---|
-| `(circle c (r 1) (fill 'crimson'))` | `circle` | `c` |  | `(r 1)`, `(fill 'crimson')` |  | no |
+| `(circle c (r 1) (fill #'crimson'))` | `circle` | `c` |  | `(r 1)`, `(fill #'crimson')` |  | no |
 | `(real k 1 (>= 0) (<= 3))` | `real` | `k` | `1` |  |  | yes |
 | `(real k 1 doc@'the count' (>= 0))` | `real` | `k` | `1` |  | `doc@'the count'` | yes |
-| `(list[color] cs ['red' 'blue'])` | `list[color]` | `cs` | `['red' 'blue']` |  |  | no |
+| `(list[color] cs [#'red' #'blue'])` | `list[color]` | `cs` | `[#'red' #'blue']` |  |  | no |
 | `((real (>= 0)) r 1)` | `(real (>= 0))` | `r` | `1` |  |  | no |
 | `(line\|none l (from a) (to b))` | `line\|none` | `l` |  | `(from a)`, `(to b)` |  | no |
 | `(func f ((real x)) (* 2 x))` | `func` | `f` | `((real x))` |  |  | yes |
-| `(group g (defaults (fill 'red')) (circle_ (r 1)))` | `group` | `g` |  | `(defaults (fill 'red'))` |  | yes |
+| `(group g (defaults (fill #'red')) (circle_ (r 1)))` | `group` | `g` |  | `(defaults (fill #'red'))` |  | yes |
 | `(canvas v (x -2) (width 4) s)` | `canvas` | `v` |  | `(x -2)`, `(width 4)` |  | yes |
 | `(slider s (move k (from 0) (to 1)) (label 'k'))` | `slider` | `s` | `(move k (from 0) (to 1))` | `(label 'k')` |  | no |
 | `(if c a b)` | `if` |  | `c`, `a`, `b` |  |  | no |
@@ -233,8 +233,8 @@ is an error ("a name is written bare, not in quotes"), and so is a name that
 
 A scene is named because a canvas shows it by its name, a formula because a display shows it by its
 name, and a view and a control because the page places them by their names, as
-`<mtp-canvas name="v">`. Inside the compiler and the runtime, a declaration with no name is still a
-thing of its own, so nothing else needs a name.
+`<mtp-canvas name="v">`. Inside the compiler and the runtime, a declaration with no name still creates its own variable,
+type or object, so no other declaration needs a name.
 
 So `(circle c (r 1))` has the name `c`, and `(circle none (r 1))` and `(circle_ (r 1))` have no
 name. Inside `(foreach k 3 …)`, `(circle @'dot-{k}' (r 1))` declares the circles `dot-0`, `dot-1`
@@ -254,12 +254,12 @@ named argument: a {term}`listener`, `(move …)`, `(jump …)`, an `(animation �
 
 So the second item of each of these is not a name:
 
-- `(on-drag p (move k (to pointer)))`: `p`, the shape that the listener hears.
+- `(on-drag p (move k (to pointer)))`: `p`, the shape that is dragged.
 - `(move k (to 1) (duration 0.5))`: `k`, the target that the move writes.
 - `(foreach k 3 (circle_ (r k)))`: `k`, the name that the foreach binds, and then `3`.
 - `(let ((h (/ w 2))) (rect_ (width h)))`: `((h (/ w 2)))`, the bindings.
 - `(import math clamp)`: `math`, the file that the import reads.
-- `(term a (fill #'crimson'))`: `a`, the term that the form gives attributes to.
+- `(term a (fill #'crimson'))`: `a`, the term that gets the attributes of the form.
 - `(r 1)`, a named argument: `1`, its value.
 
 
@@ -287,7 +287,7 @@ So `(circle c (fill #'red') (fill #'blue'))` and `(circle c (r 1) (r 2))` are er
 
 Since `(pos P)` is `(x …) (y …)` ({numref}`sugar-rewrites`), a form that gives `pos` and also `x`
 or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like …)` are given in
-{numref}`sugar-rewrites`.
+{numref}`like-copies`.
 
 ```{rule} docstrings
 Every declaration may have a docstring, `doc@'text'`, and at most one. The
