@@ -1,43 +1,37 @@
 (types)=
 # Types
 
-This page defines the types of mtp, how a type is written, which {term}`values <value>` each type holds, when a value of one type is accepted where another type is expected, and the type of each
-expression. Every {term}`expression` except a {term}`clause` has a type, which the prove step works out
-({numref}`compile-steps`), and the {term}`runtime` never checks a type
-({numref}`runtime-no-type-work-while-drawing`). How a value is held and computed is defined in
-{doc}`evaluation`, which objects there are and what their attributes are in {doc}`world-model`, and
-the types of the built-in functions in {doc}`stdlib`. What the {term}`prover` proves about
-{term}`ranges <range>`, {term}`conditions <condition>` and `none` is defined in
-{doc}`well-formedness`.
-
-
+This page defines the types of mtp, how a type is written, which {term}`values <value>` each type
+holds, when a value of one type is accepted where another type is expected, and the type of each
+expression. The prove step works out every type ({numref}`compile-steps`), and the {term}`runtime`
+never checks one ({numref}`runtime-no-type-work-while-drawing`).
 
 ## What a type is
 
 ```{rule} what-a-type-is
-A type is a named set of {term}`values <value>`, primitives or objects, known when compiling: a set that
-a source can write. Every variable, attribute,
-parameter and expression has a type, and what it holds or gives is always in that set.
+A type is a set of {term}`values <value>`, known when compiling, that a source can write. Every
+variable, attribute, parameter and expression has a type, and every value that it holds or
+evaluates to is in that set.
 
 A value has no one type: its types are all the sets that it belongs to. A variable or an attribute
-has one type, its declared type, written where it is declared, conditions included. Every write
-into it and every read of it follows its declared type.
+has one type, its declared type, written where it is declared, conditions included, and every value
+written into it is of that type.
 ```
 
 So `bool` is the set of the values `true` and `false`, `(real (>= 0))` is the set of the reals that
 are not below 0, `real|none` is the set of the reals with `none` added, and `circle` is the set of
 the circles. A type that {term}`fits <fit>` another is a subset of it.
 
-A source makes new types from named ones in four ways, which differ only in how they are written.
-A union, `point|circle`, joins sets. An intersection, `shape&round`, keeps the values that are in
-both. A refined type, `(real (>= 0))`, keeps the values of a set that meet its conditions. An interface,
-`(interface inky (color ink))`, is the set of the values that have the attributes that it lists. `list[T]` and `func[P… R]` name the sets of the lists and the functions
-whose items, parameters and result are of the types in the brackets.
+A source makes new types from other types in four ways. A union, `point|circle`, joins sets. An
+intersection, `shape&round`, keeps the values that are in both. A refined type, `(real (>= 0))`, keeps
+the values of a set that meet its conditions. An interface, `(interface inky (color ink))`, is the
+set of the values that have the attributes that it lists. `list[T]` and `func[P… R]` are the sets of
+the lists and of the functions whose items, parameters and result are of the types in the brackets.
 
 ```{rule} membership
-`(is X T)` gives `true` when the value X is in the type T, and `false` otherwise. Where the type of
-X lies wholly inside T, or wholly outside it, the answer is known when compiling. Otherwise the
-runtime gives it. In the branch of an `if` that runs when `(is X T)` is true, X has the type T as
+`(is X T)` evaluates to `true` when the value of X is in the type T, and to `false` otherwise.
+Where the type of X lies wholly inside T, or wholly outside it, the result is known when compiling.
+Otherwise the runtime works it out while drawing. In the branch of an `if` that runs when `(is X T)` is true, X has the type T as
 well as its own, and in the other branch X is known not to be in T.
 ```
 
@@ -56,17 +50,16 @@ These are the types of mtp:
 | `ease` | `ease` | the same type as `func[unit real]`: the eases of a movement ({doc}`time`) |
 | `curve` | `curve` | the same type as `func[real point]`: the curves of the plane, such as the one that `parametric` draws |
 | `bool` | `bool` | `true` and `false` |
-| `string` | `string` | the {term}`strings <string>`, TeX strings among them |
+| `string` | `string` | the {term}`strings <string>`, the strings of formulas among them |
 | `color` | `color` | the colors ({doc}`world-model`) |
 | `font` | `font` | the fonts: the records with a family, a style, a weight and a size |
-| `point` | `point` | the pairs of {term}`reals <real>`, `x` and `y` |
+| `point` | `point` | the points: two {term}`reals <real>`, `x` and `y` ({numref}`values`) |
 | a {term}`list` type | `list[T]` | the lists of any length whose items are of type T |
 | `func` | `func` | every function |
 | a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
 | `movement` | `movement` | every movement: the moves, the scores and the movements of every animation type ({doc}`time`) |
 | an animation type | the name `A` of the animation | every `A` |
 | `none` | `none` | the value `none` alone |
-| a {term}`broadened type` | `T\|none` | the values of T, and `none` |
 | a {term}`refined type` | `(T C…)` | the values of T that meet every condition C ({numref}`constraints`) |
 | a union | `T1\|T2\|…` | the values of each of the types |
 | an intersection | `T1&T2&…` | the values that are in every one of the types |
@@ -107,7 +100,7 @@ of one kind of object is a subset of the type of its kind: `circle` is a subset 
   and makes `curve` a built-in type.
 :::
 
-Which of these are primitives and which are objects is defined in {doc}`world-model`. A free
+Which of these are primitives and which are objects is defined in {doc}`data-model`. A free
 variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`).
 
 :::{admonition} Code differs
@@ -117,29 +110,23 @@ The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SE
 :::
 
 ```{rule} type-notation
-Where a type is expected, the {term}`compiler` reads these expressions as types, and every other
-expression there is a {term}`compile error`:
+After syntactic sugar is rewritten, these expressions are types where a type is expected, and every
+other expression there is a {term}`compile error`:
 
-- The name of a {term}`built-in type` of {numref}`the-types`, or a name declared by `interface`,
-  `motif` or `variant`, is that type, and a name declared by `(type N T C…)` is the
-  refined type `(T C…)`.
-- `list[T]` is a list type, with exactly one type in its {term}`brackets`. `list` with no brackets
-  is allowed only as the {term}`head` of a variable whose value is given, and the type of the
-  variable is then the type of its value.
-- `sequence` with no brackets, and `sequence[T]` with exactly one type in its brackets, are
-  interfaces.
-- `func[T1 … Tn R]` is a function type, with one type or more in its brackets: the last is the
-  result type, and the others are the types of the parameters, in order.
-- No other name is followed by brackets in a type.
-- `T1|T2|…` is a union: the set of the values of each of the types `T1`, `T2` and so on. Each is a
-  name, or a name followed by brackets. `T|none` is the union of `T` and `none`, a broadened type.
-- `T1&T2&…` is an intersection: the set of the values that are in each of the types. Each is a
-  name, or a name followed by brackets.
-- `(mod T lo hi)` is a modular type, with `T` either `int` or `real` ({numref}`modular-types`).
-- `(T C…)` is a refined type: `T` is a type and each `C` is a condition. `((T C…) D…)` is
-  `(T C… D…)`, and `(T|none C…)` is `(T C…)|none`.
-- `none` is the type `none`. It is never written as the type of a declaration or of a parameter:
-  it is the type only of an expression, and of a name that a `let` binds to such an expression.
+- The name of a {term}`built-in type` of {numref}`the-types`, or of a type that `type`, `interface`,
+  `motif`, `variant` or `animation` declares. A name declared by `(type N T C…)` is the refined type
+  `(T C…)`. `list` with no item type may be only the {term}`head` of a variable whose value is given,
+  and the type of the variable is then the type of its value.
+- `(type-apply T X…)`, with `T` one of `list`, `sequence` and `func`. `list` and `sequence` take
+  exactly one type, the type of the items. `func` takes one type or more: the last is the result
+  type, and the others are the types of the parameters, in order.
+- `(type-union T1 T2 …)` and `(type-intersect T1 T2 …)` ({numref}`type-forms`).
+- `(mod T lo hi)`, a modular type, with `T` either `int` or `real` ({numref}`modular-types`).
+- `(T C…)`, a refined type: `T` is a type and each `C` is a condition. `((T C…) D…)` is `(T C… D…)`,
+  and the conditions of a union with `none` apply to its other types: `(real|none (>= 0))` is
+  `(real (>= 0))|none`.
+- `none`, the type `none`. It is never the declared type of a declaration or of a parameter: it is
+  the type only of an expression, and of a name that a `let` binds to such an expression.
 ```
 
 ```{rule} type-forms
@@ -150,8 +137,7 @@ list int)` is `list[int]`. A source writes them as `T1|T2…`, `T1&T2…` and `T
 ```
 
 So `real[int]` is a compile error, `real|real` is `real`, and `point|circle` is the set of the
-points and the circles. A broadened type of a refined
-type is written as `(real|none (>= 0))`, since a broadened type holds no form.
+points and the circles.
 
 ## Fitting
 
@@ -160,25 +146,24 @@ A type A fits a type B, and a value of type A is accepted where a value of type 
 expected, exactly when one of these holds:
 
 1. A and B are the same type.
-2. B is a union, and A fits one of its types; or A is a union, and each of its types fits B.
-   `T|none` is one such union.
-3. A is a variant type, and its base type fits B ({numref}`motif-and-variant-types`).
-4. A or B is a refined type, A without its conditions fits B without its conditions, and the
+2. B is a union, and A fits one of its types. A is a union, and each of its types fits B.
+3. B is an intersection, and A fits each of its types. A is an intersection, and one of its types
+   fits B.
+4. A is a variant type, and its base type fits B ({numref}`motif-and-variant-types`).
+5. A or B is a refined type, A without its conditions fits B without its conditions, and the
    conditions of A imply each condition of B ({numref}`constraint-implication`).
-10. B is an intersection, and A fits each of its types; or A is an intersection, and one of its
-    types fits B.
-5. A and B are number types, and A comes no later than B in the order `int`, `ratio`, `real`,
+6. A and B are number types, and A comes no later than B in the order `int`, `ratio`, `real`,
    `complex`.
-6. A is `list[S]`, B is `list[U]`, and S fits U.
-7. A is `func[P1 … Pn R]`, B is `func[Q1 … Qn S]`, with the same n, each Qi fits Pi, and R fits S.
-8. B is an interface, and A satisfies it ({numref}`interfaces`).
-9. A and B are `int` and `rand-seed`, in either order.
+7. A is `list[S]`, B is `list[U]`, and S fits U.
+8. A is `func[P1 … Pn R]`, B is `func[Q1 … Qn S]`, with the same n, each Qi fits Pi, and R fits S.
+9. B is an interface, and A satisfies it ({numref}`interfaces`).
+10. A and B are `int` and `rand-seed`, in either order.
 
 No other type fits another. A modular type fits only itself.
 ```
 
-So a broadened type fits only a broadened type, a list of ints fits a list of reals, and a
-function on every real fits where a function on the reals from 0 to 1 is expected:
+So `real` fits `real|none`, while `real|none` does not fit `real`, a list of ints fits a list of
+reals, and a function on every real fits where a function on the reals from 0 to 1 is expected:
 `func[real real]` fits `func[(real (>= 0) (<= 1)) real]`. A `(real (>= 0) (<= 1))` fits `real`
 and `(real (>= -1))`, and a `real` fits neither `(real (>= 0) (<= 1))` nor `(real (>= -1))`. Whether a value whose type does
 not fit is still accepted, because the prover proves that its value meets the conditions, is
@@ -201,14 +186,14 @@ A list of conditions implies a condition C exactly in these cases:
 
 ```{rule} constraints
 A condition is a clause that limits the values of the type in the form around it: `(T C…)` holds the
-values of T that meet every condition C. A condition has no meaning outside that form. A condition is one of these forms, each on the types of its row only, and its
-values are {term}`literals <literal>`:
+values of T that meet every condition C. A condition has no meaning outside that form. A condition is one of these forms, each on the
+types of its row only, and its values are known when compiling:
 
 | Condition | On | The values that meet it | Written with |
 |---|---|---|---|
 | `(>= c)`, `(> c)`, `(<= c)`, `(< c)` | `int`, `ratio`, `real` | the numbers at least c, above c, at most c, below c | one number |
 | `(length n)` | `list[T]`, `string` | the lists or the strings of n items | one int, 0 or more |
-| `(one-of v1 … vk)` | every type whose values are written as literals: the numbers, `bool`, `string`, `color`, `point`, `list[T]` | the values v1 to vk | one literal or more |
+| `(one-of v1 … vk)` | the numbers, `bool`, `string`, `color`, `point`, `list[T]` | the values v1 to vk | one value or more |
 
 Any other form in the place of a condition, and a condition on a type outside its row, is a compile
 error. A type of objects takes no condition: an intersection with an interface does that job.
@@ -231,9 +216,8 @@ up to hi, hi left out, with no order. A number that enters it is brought into it
 never refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)), with `mod` as {doc}`stdlib`
 defines it. A number enters it when it is the value of a variable or an attribute of the type, an
 argument for a parameter of the type, the result of a function declared with the type, or a write
-into a variable or an attribute of the type. Adding or subtracting a number to a value of the type
-gives a value of the type. A value of the type takes no comparison, and `(as T X)` gives it as an
-ordinary number.
+into a variable or an attribute of the type. Adding a number to a value of the type, or subtracting one
+from it, results in a value of the type. A value of the type takes no comparison.
 ```
 
 So `((mod real 0 360) theta 400)` holds 40, `(+ theta 330)` is 10, and `(< theta 90)` is a compile
@@ -250,7 +234,7 @@ The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`
 A write of a number into a variable or an attribute brings it into the conditions of its declared
 type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
 type by {numref}`modular-types`, and when it breaks a `(> c)` or a `(< c)` it is not written. A write of a value that is not among the values of a `(one-of …)` is not
-written. A number written into an `int` is rounded as {numref}`rounding` gives. A value that is
+written. A number written into an `int` is rounded as {numref}`rounding` states. A value that is
 not written leaves the variable or the attribute as it was.
 ```
 
@@ -273,8 +257,8 @@ has no default, hold the value of their type:
 | `color` | black, `#'#000000'` |
 | `font` | the font of the defaults of a font ({doc}`world-model`) |
 | `point` | `[0 0]` |
-| `list[T]` | `[]`, and with `(length n)`, n items, each the value of T |
-| `T\|none` | `none` |
+| `list[T]` | `{}`, and with `(length n)`, n items, each the value of T |
+| a union with `none` | `none` |
 | every other type | no value |
 
 Leaving out the value of a type that has no value is a compile error.
@@ -292,28 +276,22 @@ own type.
 | Literal | Own type | Where a type is expected |
 |---|---|---|
 | a number | its kind ({numref}`number-literals`) | its kind must fit the expected type, without its conditions: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
-| a string literal or a {term}`TeX string` | `string` | where a refined string type is expected, it must be among its choices. It is never a color |
+| a string literal or a {term}`TeX string` | `string` | where a refined string type is expected, it must be among its choices |
 | a color literal, `#'…'` | `color` | as its own type ({numref}`color-literals`) |
 | `true`, `false` | `bool` | as its own type |
-| `none` | `none` | it must be a broadened type |
-| `{X…}` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, it has no own type, and is a compile error | where `list[T]` is expected, each item has T expected |
-| `[X Y]` | `point` | each of X and Y has `real` expected |
-| `(as T X)` | T | X has T expected. X must be a literal |
+| `none` | `none` | the expected type must include `none` |
 
 A literal is checked against the conditions of the expected type by {numref}`constraint-proof`.
 ```
 
-So `(circle c (fill #'red'))` gives a color, `(string s 'red')` a string, and
-`(list[color] swatches [#'red' #'gold'])` a list of colors. A list literal may have expressions
-as items, such as `[k 0]`. A point whose coordinate is `none` is `none`
-({numref}`none-propagates`), so `[x y]` is of type `point|none` when the type of `x` includes
-`none`.
+So in `(circle c (fill #'red'))`, `#'red'` is a color, and in `(string s 'red')`, `'red'` is a
+string.
 
 ```{rule} conversions
 Only these change the type of a value where no form asks for it:
 
 1. A number is accepted where a later number type is expected ({numref}`fits`), and is then a
-   value of that type, as {numref}`number-result-types` gives.
+   value of that type, as {numref}`number-result-types` states.
 2. A literal has the type that is expected where it is written ({numref}`literal-types`).
 
 Nothing else converts. A string is never a color, a real is never an int, and a point is never a
@@ -328,7 +306,7 @@ int only through a function such as `round`, `floor` or `ceil`, or through a wri
 The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists
 have that condition in their types, with these lengths:
 
-- a list literal, of n items: n
+- `(list-of X…)` with n items: n
 - a list known when compiling: its length
 - a variable, an attribute, a parameter or a declared result whose declared type holds
   `(length n)`: n
@@ -336,21 +314,21 @@ have that condition in their types, with these lengths:
 - `(if C A B)` whose branches have the same known length: that length
 - a call of a function declared with `func` whose {term}`body` has a known length: that length
 - a spread `g.A` of a group, and `g.members`: the number of members of the group
-- a list that a {term}`built-in` function gives: the length that {doc}`stdlib` gives
+- a call of a {term}`built-in` function: the length that {doc}`stdlib` states
 
 The items of a list have a known item length m when every item is a list of known length m. Such a
 list has `(length m)` in its item type.
 ```
 
-So the length of `(list corners [[side 0] [0 0]])` is known, and its items have length 2 at every
-position, even when `side` is known only while drawing. A free list variable has a known length
+So the length of `(list xs {side 0 1})` is known, 3, even when `side` is known only while
+drawing. A free list variable has a known length
 only when it is declared with `(length n)`, and its items never have a known item length, since a
-write may give them another one.
+writer may write lists of another length into them.
 
-## none and broadened types
+## none
 
 ```{rule} none-only-where-allowed
-A type includes `none` when it is `none` or a broadened type. An expression whose type includes
+A type includes `none` when it is `none` or a union that holds `none`. An expression whose type includes
 `none` may be given only where the expected type includes `none`, with these exceptions:
 
 - an argument of a call, whose parameter's type does not include `none`: the type of the call
@@ -402,8 +380,8 @@ The compiler checks the choices only of a value known when compiling (`compiler.
 ## Interfaces
 
 ```{rule} interfaces
-An interface is a type given by attributes: the set of the values that have the attributes that it
-lists, of the types that it gives them. It is a type like any other, and may be the type of a
+An interface is a type defined by attributes: the set of the values that have the attributes that
+it lists, of the types that it states. It is a type like any other, and may be the type of a
 variable, an attribute or a parameter. A type satisfies an interface as follows:
 
 | Interface | Satisfied by |
@@ -413,14 +391,14 @@ variable, an attribute or a parameter. A type satisfies an interface as follows:
 | `sequence` | every list type, `point` and `group` |
 | `instant` | every movement whose `duration` is 0: a jump, and a score of jumps. It is `(interface instant ((real (one-of 0)) duration))` |
 | `sequence[T]` | `list[S]` when S fits T, `point` when `real` fits T, and `group`, when the common type of the members of the group ({numref}`common-type`) fits T |
-| `palette` | every record whose members are all colors, whatever their names and number. A palette made by `(palette …)` is one ({numref}`sugar-rewrites`) |
-| a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. For a record, the attributes are its members, and each record that a value may be satisfies the interface on its own |
+| `palette` | every record whose attributes are all colors, whatever their names and number. A record made by `(palette …)` is one ({numref}`sugar-rewrites`) |
+| a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. Each record that a value may be satisfies the interface on its own |
 
-A value whose type is an interface is read only for what the interface gives: the attributes of
+A value whose type is an interface may be read only through what the interface lists: the attributes of
 the frame for `shape`, `x`, `y` and `pos` for `positioned`, its items by position and its
-`length` for a `sequence`, and the attributes Ai for a declared interface. A member M of a value
-whose type is `palette` is read by its name and has the type `color|none`: it is `none` when the
-record has no member M.
+`length` for a `sequence`, and the attributes Ai for a declared interface. An attribute M of a value
+whose type is `palette` may be read by its label, and has the type `color|none`: it is `none` when
+the record has no attribute M.
 ```
 
 :::{admonition} Code differs
@@ -462,18 +440,18 @@ Where the types of several values meet in one type, the type is the narrowest ty
 them fits, found this way for two types A and B:
 
 - When A fits B, it is B, and when B fits A, it is A.
-- When one is `none`, it is the other, broadened.
-- When one includes `none`, it is the meeting of the two without `none`, broadened.
+- When one is `none`, it is the union of the other and `none`.
+- When one includes `none`, it is the union of `none` and the meeting of the two without `none`.
 - Two number types meet at the later of the two, without conditions, in the order `int`,
   `ratio`, `real`, `complex`.
 - Two list types meet at the list type of the meeting of their item types.
 - Otherwise there is no meeting, and the source is a compile error.
 
-The branches of an `if` and the items of a list literal meet this way, except that the
+The branches of an `if` and the items of a `(list-of …)` meet this way, except that the
 branches of an `if` meet at the expected type when it is a declared interface that both satisfy.
 The members of a group meet otherwise: at their type when all have the same type, else at
-`positioned` when all satisfy it, else at `shape`, and broadened when the type of one of them
-includes `none`.
+`positioned` when all satisfy it, else at `shape`, with `none` added when the type of one of
+them includes `none`.
 ```
 
 So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circles and rects is
@@ -487,12 +465,12 @@ the clause `(as N)` after its parameters, such as `(as me)`, which binds `N` in 
 ({numref}`declarations-and-bindings`).
 `(variant V PARAMS S)` declares the type V, whose base type is the type of S: a shape type, a motif
 type, a movement type, an animation type, a component type, or another variant type. V is a subtype
-of its base, while a new motif or a new animation is a type of its own, disjoint from every other. A V has the attributes of its base and the parameters of V. Every attribute that S gives, a
-{term}`positional argument` included, and `x` and `y` when S gives `pos`, is fixed by V: a V that
-gives it is a compile error. A parameter of V never has the name of an attribute of its
-base, and every parameter of V is read by an attribute that S gives: a parameter that no attribute
-of S reads is a compile error. When `S` gives `(defaults …)` and a V gives `(defaults …)` too, the V
-has both, and where both give the same attribute, the default of `S` wins.
+of its base, while a new motif or a new animation is a type of its own, disjoint from every other. A V has the attributes of its base and the parameters of V. Every attribute that S sets, a
+{term}`positional argument` included, and `x` and `y` when S sets `pos`, is fixed by V: a V that
+sets it is a compile error. A parameter of V never has the name of an attribute of its
+base, and every parameter of V is read by an attribute that S sets: a parameter that no attribute
+of S reads is a compile error. When `S` has `(defaults …)` and a V has `(defaults …)` too, the V
+has both, and where both set the same attribute, the default of `S` wins.
 ```
 
 So by {numref}`fits`, a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))`
@@ -512,12 +490,12 @@ The compiler accepts a variant parameter that no attribute of its shape reads. m
 
 ```{rule} function-types
 The values of a function type are the functions declared with `func`, the functions written with
-`fn`, the colormaps, the built-in functions, and the functions that a built-in function gives, such
-as the ease that `(steps N)` gives. A type that is a function type, or holds one, as
+`fn`, the colormaps, the built-in functions, and the functions that calls of built-in functions result in,
+such as the ease that `(steps N)` evaluates to. A type that is a function type, or holds one, as
 `list[func[real real]]` does, is the type only of a parameter, a `let` name, an expression, and an
-attribute that {doc}`world-model` gives a function type, such as the `ease` of a movement. A
-variable and the declared result of a function never have such a type, and a declaration that
-gives them one is a compile error.
+attribute whose type is a function type in {doc}`world-model`, such as the `ease` of a movement. A
+variable and the declared result of a function may not have such a type: a declaration that
+declares one with it is a compile error.
 ```
 
 `=` on such a value is a compile error ({numref}`equality-operands`).
@@ -532,11 +510,11 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 ```{rule} parameters
 A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which is
 always written, with its conditions. Its default, when it has one, fits T and is known when
-compiling, or is a function declared with `func` or a built-in function. A call, or a declaration whose head is a motif, that
-leaves out a parameter gives it its default, and when it has none, the value of T
-({numref}`type-values`). A call of a function declared with `func` gives at most as many arguments
-as it has parameters, and leaves out only the last ones. A call of a function value, such as a
-parameter, gives exactly as many arguments as its type has parameters.
+compiling, or is a function declared with `func` or a built-in function. When a call, or a declaration whose head is a motif, leaves out a parameter, the parameter takes its
+default, and when it has none, the value of T ({numref}`type-values`). A call of a function declared
+with `func` may have at most as many arguments as the function has parameters, and may leave out only
+the last ones. A call of a function value, such as a parameter, must have exactly as many arguments
+as its type has parameters.
 ```
 
 A parameter of `fn` may be written as a bare name when the function is given where its type is
@@ -562,25 +540,28 @@ as R.
 ## The type of each expression
 
 ```{rule} form-types
-Each expression except a clause has this type:
+Each expression except a clause and a special form has this type:
 
-| Form | Its type |
+| Expression | Its type |
 |---|---|
 | a literal | {numref}`literal-types` |
 | a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
-| `(. X Y)` | the type of the attribute or the member Y of X ({numref}`dot-name-part`). An item of a list or a point: the item type. A member of a group by a key known only while drawing: the common type of the members. Each broadened as {numref}`may-give-none` gives |
+| `(. X K)` | the type of the attribute or the member that K chooses ({numref}`dot-name-part`). An item of a list: the item type. A coordinate of a point: `real`. A member of a group chosen while drawing: the common type of the members. Each with `none` added as {numref}`may-give-none` states |
+| `(list-of X…)` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
+| `(point-of X Y)` | `point`, each of X and Y with `real` expected. With `none` added when the type of X or of Y includes `none` ({numref}`none-propagates`) |
+| `(as T X)` | T. X has T expected, and must be a literal |
 | a spread `g.A` | `list[U]`, U the meeting of the types of A of the members, with the number of members as its length |
 | `(if C A B)` | C has type `bool`. The type is the meeting of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
 | `(or? X D)` | the meeting of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
 | `(let (…) B)` | the type of B |
 | `(fn PARAMS B)` | {numref}`function-result-type` |
-| a call `(F A…)` of a function | the result type of F, broadened as {numref}`none-only-where-allowed` gives |
-| a call of a built-in function or an operator | the type that {doc}`stdlib` gives, {numref}`number-result-types` for arithmetic, broadened as {numref}`none-only-where-allowed` and {numref}`may-give-none` give |
+| a call `(F A…)` of a function | the result type of F, with `none` added as {numref}`none-only-where-allowed` states |
+| a call of a built-in function or an operator | the result type in {doc}`stdlib`, {numref}`number-result-types` for arithmetic, with `none` added as {numref}`none-only-where-allowed` and {numref}`may-give-none` state |
 | `(= A B)`, `(!= A B)` | `bool` ({numref}`equality-operands`) |
-| an {term}`interpolated string` | `string`, broadened when the type of one of its expressions includes `none` ({numref}`none-propagates`) |
+| an {term}`interpolated string` | `string`, with `none` added when the type of one of its expressions includes `none` ({numref}`none-propagates`) |
 | `(name S)` | the type of the declaration that it names ({numref}`names-from-values`) |
 | `(type-of X)` | `string`. X is compiled for its type only |
-| a declaration | the type that its head gives, as in {numref}`form-template` |
+| a declaration | the type of what it declares |
 | `(free X)` | the type of X |
 
 Each expression that is given where a type is expected must fit that type ({numref}`fits`), after
@@ -588,4 +569,4 @@ the conversions of {numref}`conversions`, or meet its conditions by {numref}`con
 ```
 
 So `(int m (if on 1 2.5))` is a compile error, since the branches meet at `real`, and
-`(real k n)` with an int `n` gives `k` the value of `n` as a real.
+with an int `n`, `(real k n)` holds the value of `n` as a real.
