@@ -72,7 +72,7 @@ named colors.mtp.
 
 ```{rule} import-file-holds
 A {term}`file to import` may hold at its top level only `import`, `let`, `foreach`, and declarations
-of types, functions, records, {term}`seeds <seed>`, and variables that are not free. Any other form there is a compile error at that form, in every
+of types, functions, records, {term}`seeds <seed>`, and non-free variables. Any other form there is a compile error at that form, in every
 source that imports the file.
 ```
 
