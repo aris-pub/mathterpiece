@@ -101,7 +101,7 @@ A {term}`type` is a set of values, known when compiling, such as `real`, `(real 
 :file: diagrams/values-containers-types.svg
 :max-width: 44rem
 
-Primitives, objects, types and containers ({numref}`values-containers-types`).
+Primitives, objects and containers ({numref}`values-containers-types`).
 ```
 
 ## Objects
