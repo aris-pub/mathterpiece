@@ -47,6 +47,12 @@ The people, the files and the two programs ({numref}`people-and-programs`).
 (readout r f'a = {a:.2f}')
 ```
 
+:::{admonition} Code differs
+:class: note
+In the spec, the drag is written `(on-drag p (at q) (move a (to q.x)))`. The compiler does not have
+`(at …)` yet. Bead mtp-t8in.
+:::
+
 - `a` is a free variable: it holds 1 when the page opens, and a writer may change it.
 - The circle `p` is a shape. Its `pos` is bound to `[a 0]`, so the circle moves whenever `a`
   changes.

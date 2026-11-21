@@ -290,7 +290,9 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `kind` on a display | core | a clause | {doc}`page-interface` |
 | a movement on a control or a listener | core | a positional argument of a writer | {doc}`reaction`, {doc}`time` |
 | the move of a slider | core | a compound | {doc}`page-interface`, {doc}`reaction` |
-| the target of `toggle`, `on-pointermove` | core | a positional argument | {doc}`reaction` |
+| the target of `toggle` | core | a name | {doc}`reaction` |
+| `(on-pointermove T)` with a target `T` | syntactic sugar | a declaration | {numref}`sugar-rewrites` |
+| `at` on a listener that the pointer triggers | core | a clause | {numref}`pointer-binding` |
 | the target of `on-drag` written as a move | core | a compound | {doc}`reaction`, {numref}`drag-group-shift` |
 | the target of `on-drag` written as a name | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `label` | core | a clause | {doc}`page-interface`, {doc}`accessibility` |
