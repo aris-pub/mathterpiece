@@ -157,9 +157,13 @@ literal
   `'crimson'`. A literal evaluates to a primitive ({numref}`literals`).
 
 name
-  A word that refers to a type, a variable, an object or an attribute, such as `p` or `real`.
-  Name parts joined by dots or brackets, such as `p.pos.x`, are syntactic sugar for `(. X Y)` forms
-  ({numref}`name-characters`, {numref}`sugar-rewrites`).
+  A word that refers to a type, a variable, an object or a binding, such as `p` or `real`
+  ({numref}`name-characters`).
+
+qualified name
+  Two or more name parts joined by dots, such as `p.pos.x`. It is syntactic sugar for `(. X K)`
+  forms whose `K` is a string: `p.pos.x` is `(. (. p 'pos') 'x')` ({numref}`sugar-rewrites`,
+  {numref}`dot-name-part`).
 
 name part
   A piece of a name: the text between two dots, or a pair of brackets, such as `pos` and `[0]` in

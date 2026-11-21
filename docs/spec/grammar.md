@@ -148,7 +148,7 @@ The parser produces each spelling on the left as the form on the right:
 |---|---|
 | `H@X`, such as `r@1` | `(H X)`, such as `(r 1)` ({numref}`prefix-forms`) |
 | `@'dot-{k}'` | `(name f'dot-{k}')` |
-| `@'dot-{k}'.a.b` | `(. (. (name f'dot-{k}') a) b)` |
+| `@'dot-{k}'.a.b` | `(. (. (name f'dot-{k}') 'a') 'b')` |
 | `@'dot-{k}'[i]` | `(. (name f'dot-{k}') i)` |
 | `[a b c][h]` | `(. [a b c] h)` |
 | `f'x = {x:.2f}!'` | `(concat 'x = ' (fmt x '.2f') '!')`. Each piece of text, as long as possible, is a string literal, each `{X}` is `(fmt X)`, and each `{X:S}` is `(fmt X 'S')`, in the order of the text |
@@ -165,9 +165,9 @@ the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ â
 {term}`compile error`: a variable of type `none` could only ever hold `none`.
 ```
 
-The parser produces a name with several name parts, such as `p.r` or `xs[0].y`, as one name
+The parser produces a qualified name, such as `p.r` or `xs[0].y`, as one name
 ({numref}`parser-expressions`). The rewrite step rewrites it into `(. X Y)` forms: `p.r` is
-`(. p r)`, and `xs[0].y` is `(. (. xs 0) y)` ({numref}`sugar-rewrites`). The meaning of `(. X Y)`
+`(. p 'r')`, and `xs[0].y` is `(. (. xs 0) 'y')` ({numref}`sugar-rewrites`). The meaning of `(. X K)`
 is given in {numref}`dot-name-part`.
 
 ## The form template

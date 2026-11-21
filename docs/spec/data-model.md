@@ -19,7 +19,7 @@ An {term}`expression` is a literal, a name or a {term}`form`. A form is a head a
 parentheses, and each form is a {term}`compound`, a declaration, a {term}`clause` or a
 {term}`special form`.
 
-A literal evaluates to a primitive. A name refers to a type, a variable, an object or an attribute,
+A literal evaluates to a primitive. A name refers to a type, a variable, an object or a binding,
 and evaluates to what it refers to.
 
 Evaluating a compound results in one of these: a primitive, a type, an object or an attribute

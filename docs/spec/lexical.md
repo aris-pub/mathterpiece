@@ -106,10 +106,12 @@ A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-name
 
 ## Names
 
-A name is a word that refers to a type, a variable, an object or an attribute: `theta`, `p.pos`,
-`show-tan`. It is one or more {term}`name parts <name part>` joined by dots. `p.pos.x` is the name of
-the three name parts `p`, `pos` and `x`. After syntactic sugar is rewritten, a name with several name
-parts is a `(. X Y)` form ({numref}`sugar-rewrites`).
+A name is a word that refers to a type, a variable, an object or a binding: `theta`, `show-tan`.
+A {term}`qualified name` is two or more {term}`name parts <name part>` joined by dots, such as
+`p.pos`: `p.pos.x` is the qualified name of the three name parts `p`, `pos` and `x`. After syntactic
+sugar is rewritten, a qualified name is a `(. X K)` form whose `K` is a string: `p.pos` is
+`(. p 'pos')` ({numref}`sugar-rewrites`). A name part after a dot is not a name: it is the label of an
+attribute or the name of a member, and means nothing on its own.
 
 ```{mtp-grammar} names
 ```
@@ -121,7 +123,7 @@ nothing. A name part is never exactly `true`, `false` or `none`.
 ```
 
 So `theta`, `show-tan`, `x2`, `a-`, `none?`, `the-true-value`, `truex`, `p.empty?`, `found?.x` and
-`ball.on-floor?` are names. `2x`, `-x`, `a?b`, `x'`, `a!b`, `a*b`, `a=b`, `a:b`, `θ`, `π` and `x²`
+`ball.on-floor?` are names or qualified names. `2x`, `-x`, `a?b`, `x'`, `a!b`, `a*b`, `a=b`, `a:b`, `θ`, `π` and `x²`
 are not, and neither is any word that holds a character that is not ASCII. `true.x`, `p.true`,
 `none.x`, `xs[0].none` and `none[0]` are errors, since one of their name parts is `true` or `none`.
 Since no name holds `'` or `@`, text that starts with `f'` is an {term}`interpolated string`, and a

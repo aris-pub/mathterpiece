@@ -118,8 +118,8 @@ name and a `foreach` name hide a name of the file scope, and a member of a recor
 top-level name inside the record. A declaration in the file scope, and a name that an import
 gives, hide a built-in function or constant from that declaration or import on
 ({numref}`declaration-names`). The name parts of a name after its first are not looked up in any
-scope: `p.r` is `(. p r)` ({numref}`sugar-rewrites`),
-and what `r` is in it is defined in {numref}`dot-name-part`. `pointer` is found only in the move of
+scope: `p.r` is `(. p 'r')` ({numref}`sugar-rewrites`), where `'r'` is a label and not a name,
+and what it chooses is defined in {numref}`dot-name-part`. `pointer` is found only in the move of
 an `on-drag`, and is a compile error everywhere else, since no declaration and no binding takes
 it as its name.
 
