@@ -112,7 +112,7 @@ expression of a source is one of these:
 
 | Expression | Written | Holds |
 |---|---|---|
-| form | `(…)` | its items, in order. Its head is a name, or a form that evaluates to a type |
+| form | `(…)` | its items, in order. The head of a compound or a declaration is a name, or a form that evaluates to a type |
 | name | `p`, `real` | its text |
 | string literal | `'…'`, `$'…'` | its text |
 | color literal | `#'…'` | the color ({numref}`color-literals`) |

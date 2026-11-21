@@ -126,7 +126,8 @@ free starting value
   value of `X` when the page opens and does not update when `X` changes ({numref}`prefix-forms`, {doc}`core`).
 
 head
-  The first item of a form: a name, or a form that evaluates to a type. Whether a form is a
+  The first item of a form. The head of a compound or a declaration is a name, or a form that
+  evaluates to a type. Whether a form is a
   compound, a declaration or a clause depends on its head ({numref}`form-template`,
   {numref}`parser-expressions`).
 
@@ -315,7 +316,7 @@ primitive
 
 clause
   A form that is part of the form around it and has no result of its own, such as a named
-  argument, the guard of a control, or `exists-when` ({doc}`data-model`).
+  argument, `exists-when`, or a binding such as `(k 2)` in `(let ((k 2)) …)` ({doc}`data-model`).
 
 compound
   A form that evaluates to a primitive, a type, an object or an attribute,
@@ -336,8 +337,8 @@ fit
   ({numref}`fits`).
 
 guard
-  A bool form in the body of a control or a listener, such as `(<= c.x 5)`, that limits what that
-  writer writes ({numref}`writer-guards`).
+  A compound that evaluates to a bool, in the body of a control or a listener, such as
+  `(<= c.x 5)`, that limits what that writer writes ({numref}`writer-guards`).
 
 condition
   A type written as the values that meet it, such as `(>= 0)` or `(one-of 'a' 'b')`. `(real (>= 0))`
