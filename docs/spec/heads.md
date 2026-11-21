@@ -122,8 +122,8 @@ mtp-ydd4.7.59.
 | `(V N …)` for a variant `V` | core | a declaration | {doc}`world-model` |
 | `(H\|none N …)` for a shape head `H` | core | a declaration | {doc}`world-model` |
 | `exists-when` | core | a clause | {doc}`world-model` |
-| `let` in a body | core | a declaration | {doc}`binding-time` |
-| `foreach` in a body | core | a declaration | {doc}`binding-time` |
+| `let` in a body | core | a special form | {doc}`binding-time` |
+| `foreach` in a body | core | a special form | {doc}`binding-time` |
 | a variable in the scene | core | a declaration | {doc}`world-model` |
 
 ## Arguments of shapes and collections
@@ -144,7 +144,8 @@ mtp-ydd4.7.59.
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | a parameter `(T N DEFAULT?)` | core | a clause | {doc}`types` |
-| a shape, a bound or const variable, `foreach` or `let` in a motif's body | core | a declaration | {doc}`world-model` |
+| a shape or a bound or const variable in a motif's body | core | a declaration |
+| `foreach` or `let` in a motif's body | core | a special form | {doc}`world-model` |
 | `exists-when` in a motif's body | core | a clause | {doc}`world-model` |
 | `self` | core | a name | {doc}`scope` |
 | a parameter given to an `M`, for a motif `M`, `(P X)` | core | a clause | {doc}`world-model` |
@@ -267,7 +268,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `score` | core | a compound | {doc}`time` |
 | `lag` | core | a clause | {doc}`time` |
 | `in-order`, `at-once` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
-| `foreach` in a score | core | a body item | {doc}`time`, {doc}`binding-time` |
+| `foreach` in a score | core | a special form | {doc}`time`, {doc}`binding-time` |
 | the name of a movement, or of an animation with no parameters, in a score | core | a body item | {doc}`time` |
 | `wait` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `jump` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
