@@ -68,18 +68,15 @@ the box of the shape depends on the shapes in its body.
 ## Scopes
 
 ```{rule} scopes
-A {term}`scope` is a part of a file in which some names may be used. These are the scopes of mtp,
+A {term}`scope` is a part of a source in which some names may be used. These are the scopes of mtp,
 and the names of each one:
 
 | Scope | Covers | Names |
 |---|---|---|
-| the {term}`file scope` of a source or of a {term}`file to import` | the whole file | every declaration at the top level, every name that an `import` gives ({numref}`import-declares-names`), and every declaration in the scene and in its groups, rows and columns, at any depth |
-| the {term}`body` of a motif | the motif's body | the parameters of the motif, the name of its `(as N)`, and every shape and variable declared in the body, at any depth |
-| a function `(func N PARAMS BODY)`, a function `(fn PARAMS BODY)`, a variant and an animation | the body | the parameters |
-| `(let ((N1 V1) … (Nk Vk)) …)`, in an expression or in a body | each expression after `Vi`, and the body or the items of the `let` | `N1` to `Nk`, each `Ni` from `V(i+1)` on |
-| `foreach` | each source after the source of a name, and the items of the `foreach` | the names that it binds, each from the next source on |
-| a record or a palette | the items after each attribute | its attributes |
-| a formula | the items of the formula | its variables, from the item after each, and its terms ({numref}`formula-terms`) |
+| the {term}`file scope` | the whole source | every declaration at the top level, every name that an `import` makes usable ({numref}`import-declares-names`), and every declaration in the scene, at any depth |
+| the {term}`body` of a motif, a variant, an animation, a function, a record or a formula | the body | the parameters of the form, the name of its `(as N)`, and every declaration in the body, at any depth |
+| a `let` | each expression after a name's own, and the items of the `let` | the names that it binds |
+| a `foreach` | each source after a name's own, and the items of the `foreach` | the names that it binds |
 | a listener with `(as N)` | its movement | `N` |
 
 The scope of a body is inside the scope of the form around it, and every scope is inside the file
@@ -92,7 +89,7 @@ So the shapes of the scene, at any depth in its groups, are names of the file sc
 {term}`listener` and a readout use their names. A copy that a `foreach` in the scene makes, such as
 `@'dot-{k}'`, is a name of the file scope too, while `k` is used only inside the `foreach`. A
 parameter is used only in its body, and so a default of a parameter never reads another parameter.
-An attribute of a record or a palette, and a member of a formula, is used by its name only inside
+An attribute of a record, and a member of a formula, is used by its name only inside
 that declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
 a shape or a variable declared in a motif's body is used from outside the body only as an attribute
 of a shape of that motif, as `d1.face` ({doc}`data-model`).
@@ -211,7 +208,7 @@ The file scope of an imported file, and the names that an import gives, are defi
 ```{rule} declaration-names
 No declaration and no binding takes as its name a {term}`keyword` ({numref}`keywords`) or a
 {term}`built-in type`. This holds for every kind of declaration and binding: a variable, a shape, a
-function, a parameter, a name of a `let` or a `foreach`, an attribute of a record or a palette, a member of a
+function, a parameter, a name of a `let` or a `foreach`, an attribute of a record, a member of a
 formula, a motif, a font, and every other. The built-in types are `int`, `ratio`, `real`,
 `complex`, `bool`, `string`, `color`, `font`, `point`, `movement`, `animation`,
 `scene`, `func`, `rand-seed`, `list`, the shape types, and the

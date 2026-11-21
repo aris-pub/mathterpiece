@@ -76,7 +76,7 @@ These are the types of mtp:
 | a motif type | the {term}`name` `M` of the motif | every `M` ({numref}`motif-and-variant-types`) |
 | a variant type | the name `V` of the variant | every `V` ({numref}`motif-and-variant-types`) |
 | `scene` | `scene` | the scene |
-| `record`, `formula`, `term` | as named | the records, palettes and fonts among them, the formulas, and the terms |
+| `record`, `formula`, `term` | as named | the records, fonts among them, the formulas, and the terms |
 | `component`, `view`, `control`, `listener` | as named | the components, the views, the controls and the listeners |
 | a {term}`component` type | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and the name of each listener | the components of that kind |
 | an {term}`interface` | `positioned`, `sequence`, `sequence[T]`, `instant`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
