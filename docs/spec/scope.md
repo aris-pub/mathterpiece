@@ -84,7 +84,8 @@ So the shapes of the scene, at any depth in its groups, are names of the file sc
 parameter is used only in its body, and so a default of a parameter never reads another parameter.
 An attribute of a record or a palette, and a member of a formula, is used by its name only inside
 that declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name-part`. In the same way,
-a member of a motif's body is used from outside the body only through a shape of that motif, as `d1.face`.
+a shape or a variable declared in a motif's body is used from outside the body only as an attribute
+of a shape of that motif, as `d1.face` ({doc}`data-model`).
 
 ```{rule} declare-before-use
 A use of a name refers only to a declaration or a binding that comes before the use, in every
