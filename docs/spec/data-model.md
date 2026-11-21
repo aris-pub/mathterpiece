@@ -12,7 +12,7 @@ specifies the language.
 :file: diagrams/values-containers-types.svg
 :max-width: 44rem
 
-Which expressions give primitives and objects, and which values a container holds.
+Which expressions result in primitives and which in objects, and which values a container holds.
 ```
 
 An {term}`expression` is a literal, a name or a {term}`form`. A form is a head and its items in
@@ -22,11 +22,12 @@ parentheses, and each form is a {term}`compound`, a declaration, a {term}`clause
 A literal evaluates to a primitive. A name refers to a type, a variable, an object or an attribute,
 and evaluates to what it refers to.
 
-A compound evaluates to a primitive, a type, an object or an attribute. An object or attribute that
-it gives already exists, except with the heads `fn`, `rec`, `move` and `score`, and with `(A …)` for
-an animation `A`: each of these gives a new object. Every attribute of a record that `rec` gives is
-bound or const, and no writer may write an attribute of a function or of a movement, so no writer
-can write the new object ({numref}`functions`, {numref}`records`, {numref}`writable-targets`). So evaluating a compound never writes a variable or an
+Evaluating a compound results in one of these: a primitive, a type, an object or an attribute
+that already exists, or a new object. The only compounds that result in a new object are those
+with the heads `fn`, `rec`, `move` and `score`, and `(A …)` for an animation `A`. No writer can write
+that new object: every attribute of a record that results from `rec` is bound or const, and no writer
+may write an attribute of a function or of a movement ({numref}`functions`, {numref}`records`,
+{numref}`writable-targets`). So evaluating a compound never writes a variable or an
 attribute, and never creates a variable or an object that a writer can write.
 
 A declaration creates something new in the model: a variable, a type or an object. An `import` is
@@ -37,7 +38,7 @@ list that holds it, as `(k 2)` and `((k 2))` in `(let ((k 2)) …)`, is part of 
 and has no result of its own. The names of a `let` and of a `foreach`, and the parameters of a
 function, a motif, a variant or an animation, are bindings ({numref}`declarations-and-bindings`).
 
-The signature of each head gives which kinds of expression each of its arguments and its body
+The signature of each head lists which kinds of expression each of its arguments and its body
 may hold ({ref}`signatures`, {numref}`contexts`). A special form is a `let` or a `foreach` written in a body: it is replaced by its items, which may be
 of any kind that the body holds ({numref}`body-let-foreach`). A `let` written in an argument holds one
 expression and is a compound. 
@@ -51,7 +52,7 @@ the points, the lists and `none`. A primitive comes from a literal
 ({numref}`literal-types`), from a name or from a compound.
 ```
 
-Each of these gives a primitive:
+Each of these evaluates to a primitive:
 
 | Written | The value | Its type |
 |---|---|---|
@@ -65,7 +66,7 @@ Each of these gives a primitive:
 | `none` | `none` | `none` |
 
 Numbers, bools, strings, colors and `none` are written as literals. Lists and points are given by
-compounds, such as `(list-of 0 1)`, which is also written `[0 1]`. `(list-of X…)` gives the list of the values of
+compounds, such as `(list-of 0 1)`, which is also written `[0 1]`. `(list-of X…)` evaluates to the list of the values of
 its items, in order. Since a primitive never
 changes, nothing writes one: a writer writes a variable or an attribute, which then holds a
 different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
@@ -199,14 +200,14 @@ objects, and so are the copies `c-0` and `c-1` of `(foreach k 2 (circle @'c-{k}'
 An illustrator usually uses an object through its attributes, as `c.r` or `style.width`, and a
 primitive by itself, as `3` or `'hi'`. A primitive may have attributes too: a point has `x` and `y`, a
 color its channels `r`, `g`, `b` and `a`, a list and a string a `length`, and a complex number `re`
-and `im`. Reading an attribute of a primitive gives a primitive. Writing one puts a new value into the
+and `im`. Reading an attribute of a primitive results in a primitive. Writing one puts a new value into the
 variable or the attribute that holds it, and the old value does not change.
 
 ## Functions
 
 ```{rule} functions
 A function is an object whose only attribute is `name`, and whose behavior is to be called.
-`(func f …)` declares a function, and `(fn …)` gives a new function each time that it is evaluated.
+`(func f …)` declares a function, and each evaluation of `(fn …)` results in a new function.
 ```
 
 So `(func twice ((real x)) (* 2 x))` declares the function `twice`, whose `name` is `'twice'`, and
@@ -224,8 +225,8 @@ on two functions compiles, with no result given by the spec.
 
 ```{rule} records
 A record is an object that consists only of the attributes that it is declared with.
-`(record n …)` declares a record, and `(rec …)` gives a new record each time that it is
-evaluated. Every attribute of a record that `(rec …)` gives is bound or const.
+`(record n …)` declares a record, and each evaluation of `(rec …)` results in a new
+record. Every attribute of a record that results from `(rec …)` is bound or const.
 ```
 
 A font is a record: `(font serif (family 'serif') (style 'normal') (weight 400) (size 12))`
@@ -246,7 +247,7 @@ shape, a record is not drawn, and the compiler does nothing with it beyond holdi
 attributes.
 
 `(rec …)` is to `(record …)` as `(fn …)` is to `(func …)`. Since every attribute of a record
-that `(rec …)` gives is bound or const, no writer writes it, and nothing is lost when `(rec …)` makes a new record
+that results from `(rec …)` is bound or const, no writer writes it, and nothing is lost when `(rec …)` makes a new record
 each time that it is evaluated. So `(var s record (rec (real height k)))` declares a variable `s` that holds a record
 whose `height` updates when `k` changes, and `(var s record (rec (real width 1)))` is a compile error, since
 `width` is free.
