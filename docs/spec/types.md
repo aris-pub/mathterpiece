@@ -279,28 +279,21 @@ writer may write lists of another length into them.
 ## none
 
 ```{rule} none-only-where-allowed
-A type includes `none` when it is `none` or a union that holds `none`. By {numref}`fits`, an expression
-whose type includes `none` may be written only where the expected type includes `none`, with one
-exception: it may be an argument of a call whose parameter's type does not include `none`, and the
-type of the call then includes `none`. For a built-in function or an {term}`operator`, this holds
-except for the functions of {numref}`none-never-a-condition` and {numref}`none-propagates`.
+A type includes `none` when it is `none` or a union with `none`. A value of such a type may be written
+where the expected type does not include `none` only as an argument of a call. The call then
+evaluates to `none` whenever that argument is `none`, and its type includes `none`. A few built-in
+functions treat `none` in their own way ({numref}`none-never-a-condition`, {numref}`none-propagates`).
 ```
 
-So a shape attribute that may be `none` is a compile error unless the type of the attribute
-includes `none`, as the types of `fill` and `stroke` do ({doc}`world-model`), or the shape is
-declared `T|none`. Every attribute of a shape declared `T|none` has a type that includes `none`,
-and so does every member of a collection declared `T|none` and every read of such a shape or its
-attributes outside its own body. `(or? x d)`, `somes` and a shape declared `T|none` are the ways to
-handle `none` ({doc}`stdlib`).
+So a `none` passes through a calculation until it reaches a place whose type includes `none`, such
+as a shape declared `T|none`, where the shape is then not drawn, or `(or? X D)`, which replaces it
+with `D`. Below, the secant has no value at 90°, so `(secd theta)` is `none`, the point is `none`, and
+the line is not drawn:
 
 ```{mtp-example}
-; at 90° the secant has no value: the line is declared line|none and is not drawn there
-(real theta 60 (>= 0) (<= 180))
-(scene s
-  (line|none tangent (from [0 0]) (to [(secd theta) 0]) (stroke #'crimson') (stroke-width 3))
-  (circle p (pos (polar 1 theta)) (r 0.08)))
-(canvas v (x -3) (y -1.5) (width 6) (height 3) s)
-(slider turn (move theta (from 0) (to 180)) (label 'θ'))
+(real theta 90)
+(scene s (line|none tangent (from [0 0]) (to [(secd theta) 0])))
+(canvas v (x -3) (y -1) (width 6) (height 2) s)
 ```
 
 ## Choice types
