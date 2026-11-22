@@ -417,10 +417,13 @@ The compiler accepts a variant parameter that no attribute of its shape reads. m
 
 ```{rule} function-types
 The type of a function declared with `func` is `func[P1 … Pn R]`, with the types of its parameters
-and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY as R. A
-variable and the result of a function may not have a type that is a function type or holds one, as
-`list[func[real real]]` does.
+and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY as R. No
+variable may hold a function, or a value that holds a function, such as a list of functions. No
+function may evaluate to a function, or to a value that holds one.
 ```
+
+So `(list[func[real real]] fs {sind cosd})` and `(func g () sind)` are compile errors, while a
+parameter may be a function, as in `(func twice ((func[real real] f) (real x)) (f (f x)))`.
 
 :::{admonition} Code differs
 :class: note
