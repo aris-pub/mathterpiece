@@ -435,7 +435,7 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 ```{rule} parameters
 A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which
 must be written, with its conditions. Its default, when it has one, must be of type T and known when
-compiling, or be a function declared with `func` or a built-in function. A parameter that is left out
+compiling. A parameter that is left out
 holds its default, or the default value of T ({numref}`type-values`). A call of a function declared
 with `func` may have at most as many arguments as the function has parameters, and may leave out only
 the last ones. A call of a function value, such as a parameter, must have exactly as many arguments

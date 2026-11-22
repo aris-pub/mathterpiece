@@ -4,6 +4,12 @@
 Not drafted yet. This page defines: what is known when compiling and what only while drawing, and what may read the scene or the page.
 :::
 
+## Known when compiling
+
+```{rule} functions-known-when-compiling
+Every function declared with `func`, and every built-in function, is known when compiling.
+```
+
 ## What may read what
 
 ```{rule} what-reads-what
