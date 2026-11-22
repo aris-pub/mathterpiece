@@ -39,7 +39,7 @@ A {term}`clause` and a {term}`special form` have no result of their own ({doc}`g
 A primitive is a value that never changes and has no identity: two primitives that are
 equal are the same value. The primitives are the numbers, the bools, the strings, the colors,
 the points, the lists and `none`. A primitive comes from a literal
-({numref}`literal-types`), from a name or from a compound.
+({numref}`form-types`), from a name or from a compound.
 ```
 
 Each of these evaluates to a primitive:

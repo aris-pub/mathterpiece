@@ -152,8 +152,9 @@ points and the circles.
 ## Subtypes
 
 ```{rule} fits
-A type A is a {term}`subtype` of a type B exactly when A is a subset of B. A value of type A is
-accepted where a value of type B is expected exactly when A is a subtype of B.
+A type A is a {term}`subtype` of a type B, and B is a {term}`supertype` of A, exactly when A is a
+subset of B. A value of type A is accepted where a value of type B is expected exactly when A is a
+subtype of B.
 ```
 
 So `real` is a subtype of `real|none`, a list of ints of a list of reals, and `func[real real]` of
@@ -239,21 +240,7 @@ since its type holds neither a `(>= c)` nor a `(<= c)`, so it has no default val
 value, so it must be given wherever it has no default of its own. No variable and no parameter is
 ever left without a value.
 
-## Literals and conversions
-
-```{rule} literal-types
-A literal has the type that is expected where it is written. Where no type is expected, it has its
-own type.
-
-| Literal | Own type | Where a type is expected |
-|---|---|---|
-| a number | its kind ({numref}`number-literals`) | its kind must be a subtype of the expected type, without its conditions: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
-| a string literal or a {term}`TeX string` | `string` | where a refined string type is expected, it must be among its choices |
-| `true`, `false` | `bool` | as its own type |
-| `none` | `none` | the expected type must include `none` |
-
-A literal is checked against the conditions of the expected type by {numref}`constraint-proof`.
-```
+## Conversions
 
 ```{rule} conversions
 No value is converted from one type to another unless a form asks for it, such as `round`,
@@ -504,7 +491,7 @@ Each expression except a clause and a special form has this type:
 
 | Expression | Its type |
 |---|---|
-| a literal | {numref}`literal-types` |
+| a literal | `int`, `ratio`, `real` or `complex` for a number, by how it is written ({numref}`number-literals`), `string` for a string literal or a {term}`TeX string`, `bool` for `true` and `false`, and `none` for `none` |
 | a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
 | `(. X K)` | the type of the attribute or the member that K chooses ({numref}`dot-name-part`). An item of a list: the item type. A coordinate of a point: `real`. A member of a group chosen while drawing: the common type of the members. Each with `none` added as {numref}`may-give-none` states |
 | `(list-of X…)` | a list of the common type of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
