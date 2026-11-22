@@ -243,7 +243,7 @@ ever left without a value.
 ## Conversions
 
 ```{rule} conversions
-No value is converted from one type to another unless a form asks for it, such as `round`,
+No value is converted from one type to another unless a form asks for it, such as `floor`,
 `color-of` or `unwrap`.
 ```
 
