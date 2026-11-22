@@ -148,6 +148,7 @@ def visit_rule(self, node):
     self.body.append(self.starttag(node, "div", CLASS="mtp-rule"))
     self.body.append('<p class="mtp-rule-head">')
     self.add_fignumber(node)
+    self.body.append(f'<span class="mtp-rule-label">{html.escape(node.get("label", ""))}</span>')
     self.body.append("</p>")
 
 
@@ -304,9 +305,26 @@ class MtpExample(SphinxDirective):
 
         code = nodes.literal_block(src, src, language="mtp")
         live = nodes.raw("", '<div class="mtp-live">' + "\n".join(parts) + "</div>", format="html")
-        box = nodes.container(classes=["mtp-example"])
+        box = example_node()
+        box["names"].append(f"example-{mid}")
+        self.state.document.note_explicit_target(box)
         box += [code, live]
         return [box]
+
+
+class example_node(nodes.General, nodes.Element):
+    pass
+
+
+def visit_example(self, node):
+    self.body.append(self.starttag(node, "div", CLASS="mtp-example"))
+    self.body.append('<p class="mtp-example-head">')
+    self.add_fignumber(node)
+    self.body.append('</p><div class="mtp-example-body">')
+
+
+def depart_example(self, node):
+    self.body.append("</div></div>\n")
 
 
 def _readable_json(value, indent: str = "") -> str:
@@ -541,6 +559,7 @@ def setup(app: Sphinx):
     app.connect("env-merge-info", _merge_terms)
     app.connect("doctree-resolved", _title_term_links)
     app.connect("doctree-resolved", _highlight_inline)
+    app.add_enumerable_node(example_node, "example", lambda n: "example", html=(visit_example, depart_example))
     app.add_directive("mtp-example", MtpExample)
     app.add_directive("mtp-grammar", MtpGrammar)
     app.add_directive("mtpc-of", MtpcOf)
