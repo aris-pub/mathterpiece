@@ -64,7 +64,7 @@ font, and it is not fixed by a variant ({numref}`motif-and-variant-types`).
 Also:
 
 - The name of an object, such as a group or a record, may not be a target.
-- A target that stands for several containers ({doc}`concurrency`, section "Containers") may be
+- A target that stands for several containers ({doc}`concurrency`, the part "Containers") may be
   written only when each of them may be written. Such targets are a `pos`, an attribute of a group
   that stands for the attributes of its members, and the `x`, the `y` and the `pos` of a
   line, a triangle, a polyline, a polygon and a bezier. An attribute of a collection with no
@@ -122,7 +122,7 @@ Bead mtp-ydd4.7.44.
 
 ```{rule} moves-at-once
 Two moves of one score that write the same container at times that overlap are a compile error.
-The containers that a move writes are defined in {doc}`concurrency`, section "Containers". The
+The containers that a move writes are defined in {doc}`concurrency`, in the part "Containers". The
 times are these:
 
 - Each move starts at the time that {doc}`time` defines for it in the score.
