@@ -51,7 +51,7 @@ computed once, in the fold step when X is known when compiling, and otherwise wh
 and it does not update when X changes. The container is free either way.
 ```
 
-So `(real r free@(* 2 c))`, with `c` const, starts at 6, and a slider may write it.
+So with `(real c 3 (const))`, `(real r free@(* 2 c))` starts at 6, and a slider may write it.
 `(list[int] order free@(shuffle (range 16)))` starts in an order that is drawn when the page opens,
 and keeps it until a writer writes `order`.
 
