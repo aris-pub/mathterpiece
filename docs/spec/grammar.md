@@ -23,7 +23,7 @@ the name of a rule keeps the quoted text of that rule in the tree.
 ```{rule} forms
 A form is a `(`, then any number of expressions, its items, then a `)`. An
 expression is a form, a `[…]`, a `{…}`, a word, a {term}`broadened type`, a
-string literal, a color literal or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
+string literal, a color string or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
 that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
 ```
 
@@ -116,7 +116,6 @@ expression of a source is one of these:
 | form | `(…)` | its items, in order. The head of a compound or a declaration is a name, or a form that evaluates to a type |
 | name | `p`, `real` | its text |
 | string literal | `'…'`, `$'…'` | its text |
-| color literal | `#'…'` | the color ({numref}`color-literals`) |
 | {term}`int`, {term}`ratio`, {term}`real` or {term}`complex` literal | `3`, `1/3`, `2.5`, `1+2i` | the value ({numref}`number-literals`) |
 | bool literal | `true`, `false` | the value |
 | none | `none` | nothing |
@@ -125,7 +124,7 @@ expression of a source is one of these:
 An operator is a name with one name part ({numref}`literal-words`).
 
 ```{rule} literals
-A literal is a number literal, a string literal, a color literal, `true`, `false` or `none`. A
+A literal is a number literal, a string literal, `true`, `false` or `none`. A
 literal evaluates to a primitive.
 ```
 
@@ -159,6 +158,7 @@ The parser produces each spelling on the left as the form on the right:
 |---|---|
 | `H@X`, such as `r@1` | `(H X)`, such as `(r 1)` ({numref}`prefix-forms`) |
 | `@'dot-{k}'` | `(name f'dot-{k}')` |
+| `#'red'`, `#'#{h}'` | `(color-of f'red')`, `(color-of f'#{h}')` ({numref}`color-literals`) |
 | `@'dot-{k}'.a.b` | `(. (. (name f'dot-{k}') 'a') 'b')` |
 | `@'dot-{k}'[i]` | `(. (name f'dot-{k}') i)` |
 | `{a b c}[h]` | `(. {a b c} h)` |

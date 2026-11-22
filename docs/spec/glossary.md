@@ -174,6 +174,10 @@ name part
   A piece of a name: the text between two dots, or a pair of brackets, such as `pos` and `[0]` in
   `xs[0].pos` ({numref}`name-characters`, {numref}`name-brackets`).
 
+color string
+  `#'…'`, syntactic sugar for `(color-of f'…')`, which evaluates to the color that the text names
+  ({numref}`color-literals`).
+
 name string
   `@'…'`: an interpolated string read as a name, which is `(name f'…')`
   ({numref}`interpolated-strings`, {numref}`parser-sugar`).

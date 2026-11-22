@@ -55,8 +55,8 @@ Each of these evaluates to a primitive:
 | `[0 1]` | the point at x 0 and y 1 | `point` |
 | `none` | `none` | `none` |
 
-Numbers, bools, strings, colors and `none` are written as literals. Lists and points result from
-compounds: `(list-of X…)` evaluates to the list of the values of its items, in order, and
+Numbers, bools, strings and `none` are written as literals. Colors, lists and points result from
+compounds: `(color-of S)` evaluates to the color that the string `S` names ({numref}`color-literals`), `(list-of X…)` evaluates to the list of the values of its items, in order, and
 `(point-of X Y)` evaluates to the point with the coordinates `X` and `Y` ({numref}`lists` gives how
 they are written). Since a primitive never
 changes, nothing writes one: a writer writes a variable or an attribute, which then holds a

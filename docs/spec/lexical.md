@@ -240,14 +240,24 @@ written as it is.
 ```
 
 ```{rule} color-literals
-A color is written `#'…'`. Between the quotes is a CSS color name, `transparent`, or 3, 4, 6 or 8
-hex digits with a `#` before them or not, in small or capital letters. Any other text between the
-quotes is a syntax error. Its value is a color, never a string, and a string is never read as a
-color.
+A color is written `#'…'`, a color string, which is syntactic sugar for `(color-of f'…')`: its text
+is the text of an {term}`interpolated string`. `(color-of S)` evaluates to the color that the string
+`S` names: a CSS color name, `transparent`, or 3, 4, 6 or 8 hex digits with a `#` before them or
+not, in small or capital letters. When `S` is known when compiling, any other text is a
+{term}`compile error`, and the type is `color`. When `S` is known only while drawing, any other text
+evaluates to `none`, and the type is `color|none`. A string is never read as a color without
+`color-of`.
 ```
 
-So `#'red'`, `#'#ff0000'` and `#'ff0000'` are the same color, and `#'#f00'` is too. No CSS color
+So `#'red'`, `#'#ff0000'` and `#'ff0000'` are the same color, and `#'#f00'` is too, and
+`#'#{h}'` is the color whose hex digits are the string `h`. No CSS color
 name is made only of hex digits, so a name and a hex color are never confused. `(fill 'red')` is a compile error, since `'red'` is a string.
+
+:::{admonition} Code differs
+:class: note
+The compiler reads `#'…'` as a color literal, whose text holds no braces, and has no `color-of` and
+no `rgb`. Bead mtp-ivdt.
+:::
 
 ## Prefixes
 
@@ -274,7 +284,8 @@ rules as when it is written with parentheses: `if@c` is `(if c)`, which is an er
 ```
 
 ```{rule} interpolated-strings
-An interpolated string is written `f'…'`, and a {term}`name string` is written `@'…'`. Their
+An interpolated string is written `f'…'`, a {term}`name string` is written `@'…'`, and a color
+string is written `#'…'` ({numref}`color-literals`). Their
 text has the escapes of {numref}`string-literals`, and in it `{{` is `{` and `}}` is `}`. A `{` that
 is not doubled opens braces, which hold one expression, with whitespace or nothing before and
 after it, then a format spec or nothing, and last `}`. No comment may be written in the
