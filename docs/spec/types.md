@@ -9,24 +9,23 @@ never checks one ({numref}`runtime-no-type-work-while-drawing`).
 ## What a type is
 
 ```{rule} what-a-type-is
-A type is a set of {term}`values <value>`, known when compiling, that a source can write. Every
-variable, attribute, parameter and expression has a type, and every value that it holds or
-evaluates to is in that set.
-
-A value has no one type: its types are all the sets that it belongs to. A variable or an attribute
-has one type, its declared type, written where it is declared, conditions included, and every value
-written into it is of that type.
+A type is a set of {term}`values <value>`. A value may belong to many types. Every container,
+parameter and expression has one type, known when compiling: for a container, its declared type,
+conditions included. Every value that it holds or evaluates to belongs to that type.
 ```
 
-So `bool` is the set of the values `true` and `false`, `(real (>= 0))` is the set of the reals that
-are not below 0, `real|none` is the set of the reals with `none` added, and `circle` is the set of
-the circles. A type that {term}`fits <fit>` another is a subset of it.
+So `bool` is the set `{true, false}`, `circle` is the set of all circles, and `(real (>= 0))` is
+the set of the reals that are not below 0. The types are combined as sets:
 
-A source makes new types from other types in four ways. A union, `point|circle`, joins sets. An
-intersection, `shape&round`, keeps the values that are in both. A refined type, `(real (>= 0))`, keeps
-the values of a set that meet its conditions. An interface, `(interface inky (color ink))`, is the
-set of the values that have the attributes that it lists. `list[T]` and `func[P… R]` are the sets of
-the lists and of the functions whose items, parameters and result are of the types in the brackets.
+| Type | As a set |
+|---|---|
+| `T1\|T2` | the union of T1 and T2 |
+| `T1&T2` | the intersection of T1 and T2 |
+| `(T C…)` | the subset of T whose values meet every condition C |
+| `(interface N (T A)…)` | the set of the values that have each attribute A, of type T |
+| `list[T]` | the set of the lists whose items all belong to T |
+
+A type that {term}`fits <fit>` another is a subset of it ({numref}`fits`).
 
 ```{rule} membership
 `(is X T)` evaluates to `true` when the value of X is in the type T, and to `false` otherwise.
