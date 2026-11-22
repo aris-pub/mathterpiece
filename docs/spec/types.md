@@ -152,35 +152,16 @@ points and the circles.
 ## Fitting
 
 ```{rule} fits
-A type A fits a type B, and a value of type A is accepted where a value of type B is expected, when
-A is a subset of B, with one exception: when A or B is a refined type, A fits B only when A without
-its conditions fits B without its conditions, and the conditions of A imply each condition of B by
-the table of {numref}`constraint-implication`.
+A type A fits a type B, and a value of type A is accepted where a value of type B is expected,
+exactly when A is a subset of B.
 ```
-
-The exception exists because the compiler compares conditions by that table, not by their values.
-So `(real (>= 0))` fits `(real (>= -1))`, since `(>= 0)` implies `(>= -1)` by the table. But
-`(int (> 0))` does not fit `(int (>= 1))`, although the two are the same set of ints: no row of the
-table lets `(> 0)` imply `(>= 1)`. A modular type such as `(mod real 0 360)` is not a subset of
-`real`, so it fits only itself.
 
 So `real` fits `real|none`, a list of ints fits a list of reals, and `func[real real]` fits
-`func[unit real]`, since a function on every real is also a function on the reals from 0 to 1. A
-value whose type does not fit may still be accepted when the prover proves that it meets the
-conditions ({numref}`constraint-proof`).
-
-```{rule} constraint-implication
-A list of conditions implies a condition C exactly in these cases:
-
-| C | The list holds one of these |
-|---|---|
-| `(>= c)` | `(>= a)` or `(> a)`, with a at least c |
-| `(> c)` | `(> a)` with a at least c, or `(>= a)` with a above c |
-| `(<= c)` | `(<= a)` or `(< a)` with a at most c |
-| `(< c)` | `(< a)` with a at most c, or `(<= a)` with a below c |
-| `(length n)` | `(length n)` |
-| `(one-of s…)` | a `(one-of t…)` whose values are all among `s…` |
-```
+`func[unit real]`, since a function on every real is also a function on the reals from 0 to 1. For
+refined types, the conditions are compared as sets: `(real (>= 0))` fits `(real (>= -1))`, and
+`(int (> 0))` fits `(int (>= 1))`, since both are the ints from 1 up. A modular type such as
+`(mod real 0 360)` is not a subset of `real`, so it fits only itself. A value whose type does not fit
+may still be accepted when the prover proves that it meets the conditions ({numref}`constraint-proof`).
 
 ## Conditions
 
