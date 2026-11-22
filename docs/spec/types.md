@@ -79,8 +79,9 @@ from these, as {numref}`what-a-type-is` lists:
 :file: diagrams/builtin-types.svg
 :max-width: 48rem
 
-The built-in types as sets, each box inside the boxes of the types that hold it. `angle` and `unit`
-overlap `int` and `ratio`, and `writer` overlaps `component`. Interfaces are not drawn, since each one holds values from several boxes:
+The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
+and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which fits only itself, so it
+is not inside `real`. Interfaces are not drawn, since each one holds values from several boxes:
 `positioned` holds the points and most shapes.
 ```
 
