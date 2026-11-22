@@ -49,7 +49,7 @@ from these, as {numref}`what-a-type-is` lists:
 |---|---|---|
 | `int`, `ratio`, `real`, `complex` | the numbers of each kind | {numref}`number-types` |
 | `unit` | the reals from 0 to 1 | the same type as `(real (>= 0) (<= 1))` |
-| `angle` | the angles in degrees, from 0 up to 360 | the same type as `(mod real 0 360)` ({numref}`modular-types`) |
+| `angle` | the angles in degrees, from 0 up to 360 | the same type as `(mod real 0 360)` ({numref}`modular-types`). The trigonometric functions in degrees take an angle, and their inverses evaluate to one |
 | `bool` | `true` and `false` | |
 | `string` | the {term}`strings <string>` | the strings of formulas among them |
 | `color` | the colors | {numref}`color-literals` |
@@ -165,7 +165,7 @@ expected, exactly when one of these holds:
 9. B is an interface, and A satisfies it ({numref}`interfaces`).
 10. A and B are `int` and `rand-seed`, in either order.
 
-No other type fits another. A modular type fits only itself, and is converted to its number type by {numref}`conversions`.
+No other type fits another. A modular type fits only itself.
 ```
 
 So `real` fits `real|none`, while `real|none` does not fit `real`, a list of ints fits a list of
@@ -223,12 +223,13 @@ never refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)), with `mod` as 
 defines it. A number enters it when it is the value of a variable or an attribute of the type, an
 argument for a parameter of the type, the result of a function declared with the type, or a write
 into a variable or an attribute of the type. Adding a number to a value of the type, or subtracting one
-from it, results in a value of the type. A value of the type may not be compared with `<`, `>`, `<=` or `>=`.
+from it, results in a value of the type. A value of the type may not be compared with `<`, `>`, `<=` or `>=`. `(unwrap X)`, with X of the type,
+evaluates to the number of X as an ordinary T.
 ```
 
 So `((mod real 0 360) theta 400)` holds 40, `(+ theta 330)` is 10, and `(< theta 90)` is a compile
 error. With `(type hour (mod int 0 12))` and `(func[hour] later ((hour h) (int n)) (+ h n))`,
-`(later 9 5)` is 2, and `(real a theta)` holds `theta` as an ordinary real.
+`(later 9 5)` is 2, and `(real a (unwrap theta))` holds `theta` as an ordinary real.
 
 :::{admonition} Code differs
 :class: note
@@ -298,8 +299,6 @@ Only these change the type of a value where no form asks for it:
 1. A number is accepted where a later number type is expected ({numref}`fits`), and is then a
    value of that type, as {numref}`number-result-types` states.
 2. A literal has the type that is expected where it is written ({numref}`literal-types`).
-3. A value of a modular type `(mod T lo hi)` is accepted where `T` is expected, as its number
-   ({numref}`modular-types`).
 
 Nothing else converts. A string is never a color, a real is never an int, and a point is never a
 list.
