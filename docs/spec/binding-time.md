@@ -10,7 +10,7 @@ Not drafted yet. This page defines: what is known when compiling and what only w
 Every expression may read the scene and the formulas. The views, the controls and the listeners
 may read each other. Only an expression in a view, a control or a listener may read a view, a
 control or a listener: no expression in the scene, in a formula, or in a variable, a record or a
-function outside a component reads one.
+function outside a {term}`page object` reads one.
 ```
 
 So `(button b (selected (= mode 'a')))` may read `mode`, and a readout may read the variable that

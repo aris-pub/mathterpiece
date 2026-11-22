@@ -276,7 +276,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `jump` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `(A …)` for an animation `A` | core | a compound | {doc}`time`, {numref}`animation-step` |
 
-## Components and their items
+## Page objects and their items
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|

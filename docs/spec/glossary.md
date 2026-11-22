@@ -24,7 +24,7 @@ compiler
   fold and write. Defined in {doc}`compiler-runtime`.
 
 component
-  A view, a control or a listener: what the illustrator declares and the author places on a page.
+  A view or a control: what the author places on a page.
   Defined in {doc}`compiler-runtime`.
 
 corrupt .mtpc
@@ -39,8 +39,15 @@ illustrator
   The person who writes a world model as an `.mtp` source file. Defined in
   {doc}`compiler-runtime`.
 
+writer
+  A control or a listener: a page object that writes the model. Defined in {doc}`compiler-runtime`.
+
+page object
+  A view, a control or a listener: what the reader sees or acts on in a page. Defined in
+  {doc}`compiler-runtime`.
+
 listener
-  A component that is written inside a view and has no page element of its own, and which writes
+  A page object that is written inside a view and has no page element of its own, and which writes
   the model when the reader acts on a shape or a term, or when its view changes. Defined in
   {doc}`compiler-runtime`.
 
@@ -57,7 +64,7 @@ parser
   alone. Defined in {doc}`compiler-runtime`.
 
 reader
-  The person who opens a page and acts on its components. Defined in {doc}`compiler-runtime`.
+  The person who opens a page and acts on its page objects. Defined in {doc}`compiler-runtime`.
 
 runtime
   The program that runs in the reader's browser, loads each .mtpc that a page names, builds its

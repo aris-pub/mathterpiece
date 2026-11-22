@@ -10,13 +10,14 @@ The format of the .mtpc is defined in {doc}`compiled-format`, and is not repeate
 
 Three people take part. The {term}`illustrator` writes a {term}`world model` as an `.mtp` source file.
 The {term}`author` writes a page and places {term}`components <component>` of the world model in
-it. The {term}`reader` opens the page and acts on the components. One person may be both the
+it. The {term}`reader` opens the page and acts on its {term}`page objects <page object>`. One person may be both the
 illustrator and the author. The illustrator runs the compiler on their own machine, and the runtime
 runs in the reader's browser. mtp requires no particular tool for making the page: the author may
 use any software for making web pages, an AI assistant included, and is encouraged to use the
 tools that they already prefer.
 
-A component is a view, a control or a listener. A {term}`view` is where the runtime draws part of the world
+A page object is a view, a control or a listener. A component is a view or a control: the author
+places each one on the page. A control and a listener are {term}`writers <writer>`. A {term}`view` is where the runtime draws part of the world
 model for the reader: shapes in a canvas, a line of text in a readout and a formula in a display. A
 {term}`control` is a slider, a button, a play, a stepper or a toggle, and the reader presses, drags
 or clicks it to write a variable or an attribute of the world model. A {term}`listener` is written inside a view and
