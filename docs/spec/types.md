@@ -334,16 +334,16 @@ degree, and the two are gone at 90 only:
 ## Choice types
 
 ```{rule} choice-types
-A {term}`choice type` is a refined type `(string (one-of s…))`. A value of a choice type is a
-string, so a choice type is a subtype of `string`.
+A {term}`choice type` is a refined type `(string (one-of s…))`.
 ```
 
-By {numref}`constraint-proof`, a value whose type is not a subtype of a choice type meets its
-`(one-of …)` only when it is known in the prove step and is among its choices. So with `(type side string (one-of 'left' 'right'))`, `(side s 'up')` is a compile error, and a
-string variable that a writer may change never becomes a `side`. The alignments of a text, the caps
-and joins of a stroke, the heads of a line and the style of a font are choice types
-({doc}`world-model`). A write of a string that is not a choice is not written
-({numref}`writes-into-constraints`).
+So with `(type side string (one-of 'left' 'right'))`, a `side` is a string, and a string is a
+`side` only when the prover proves that it is among the choices ({numref}`constraint-proof`):
+`(side s 'left')` is allowed, `(side s 'up')` is a compile error, and so is `(side s q)` for a free
+string variable `q`, since a writer may write any string into `q`. A write of a string that is not
+among the choices into a `side` has no effect ({numref}`writes-into-constraints`). The alignments
+of a text, the caps and joins of a stroke, the heads of a line and the style of a font are choice
+types ({doc}`world-model`).
 
 :::{admonition} Code differs
 :class: note
