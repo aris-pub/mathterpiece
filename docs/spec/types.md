@@ -153,12 +153,16 @@ points and the circles.
 
 ```{rule} fits
 A type A fits a type B, and a value of type A is accepted where a value of type B is expected, when
-A is a subset of B, with two exceptions:
-
-1. A modular type fits only itself.
-2. When A or B is a refined type, A fits B only when A without its conditions fits B without its
-   conditions, and the conditions of A imply each condition of B by {numref}`constraint-implication`.
+A is a subset of B, with one exception: when A or B is a refined type, A fits B only when A without
+its conditions fits B without its conditions, and the conditions of A imply each condition of B by
+the table of {numref}`constraint-implication`.
 ```
+
+The exception exists because the compiler compares conditions by that table, not by their values.
+So `(real (>= 0))` fits `(real (>= -1))`, since `(>= 0)` implies `(>= -1)` by the table. But
+`(int (> 0))` does not fit `(int (>= 1))`, although the two are the same set of ints: no row of the
+table lets `(> 0)` imply `(>= 1)`. A modular type such as `(mod real 0 360)` is not a subset of
+`real`, so it fits only itself.
 
 So `real` fits `real|none`, a list of ints fits a list of reals, and `func[real real]` fits
 `func[unit real]`, since a function on every real is also a function on the reals from 0 to 1. A
