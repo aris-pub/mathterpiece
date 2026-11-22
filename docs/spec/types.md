@@ -60,7 +60,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `curve` | the curves of the plane | the same type as `func[real point]` |
 | `colormap` | the functions from a real to a color | the same type as `func[real color]` |
 | `rand-seed` | the ints | a free variable of this type is a {term}`seed` ({numref}`seed-variable`) |
-| `shape` | every shape | |
+| `shape` | every shape | the union of every shape type, motif type and variant type |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind | a row and a column are of type `group` |
 | `M`, for a motif `M` | every `M` | {numref}`motif-and-variant-types` |
 | `V`, for a variant `V` | every `V` | {numref}`motif-and-variant-types` |
@@ -71,7 +71,8 @@ from these, as {numref}`what-a-type-is` lists:
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
-| `positioned`, `instant`, `palette`, and each declared interface | the values that have the attributes that it lists | an {term}`interface` ({numref}`interfaces`) |
+| `palette` | the records whose attributes are all colors, whatever their names and number | a record made by `(palette …)` is one ({numref}`sugar-rewrites`). An attribute M of a palette may be read by its label, and has the type `color|none`: it is `none` when the palette has no attribute M |
+| `positioned`, `instant`, and each declared interface | the values that have the attributes that it lists | an {term}`interface` ({numref}`interfaces`) |
 
 ```
 
@@ -81,9 +82,8 @@ from these, as {numref}`what-a-type-is` lists:
 
 The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
 and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which is a subtype only of itself, so it
-is not inside `real`. Of the interfaces, `palette` and `instant` are drawn, inside `record` and `movement`. The others
-are not, since each one holds values from several boxes: `positioned` holds the points and most
-shapes.
+is not inside `real`. `palette` is drawn inside `record`, and the interface `instant` inside `movement`. `positioned` is not
+drawn, since it holds values from several boxes: the points and most shapes.
 ```
 
 :::{admonition} Code differs
@@ -355,21 +355,14 @@ The compiler checks the choices only of a value known when compiling (`compiler.
 ## Interfaces
 
 ```{rule} interfaces
-An interface is a type defined by attributes: the set of the values that have the attributes that
-it lists, of the types that it states. These are its subtypes:
+An interface `(interface N (T1 A1 C1…) …)` is the set of the values that have each attribute Ai, of
+a subtype of `(Ti Ci…)`. A value whose type is an interface may be read only through the attributes
+Ai. These interfaces are built in:
 
-| Interface | Its subtypes |
+| Interface | Definition |
 |---|---|
-| `shape` | every shape type, motif type and variant type |
-| `positioned` | `point`, and every shape type, motif type and variant type but `group` |
-| `instant` | every movement whose `duration` is 0: a jump, and a score of jumps. It is `(interface instant ((real (one-of 0)) duration))` |
-| `palette` | every record whose attributes are all colors, whatever their names and number. A record made by `(palette …)` is one ({numref}`sugar-rewrites`) |
-| a declared interface, `(interface N (T1 A1 C1…) …)` | every type whose values all have each attribute Ai, of a subtype of `(Ti C1…)` |
-
-A value whose type is an interface may be read only through what the interface lists: the attributes of
-the frame for `shape`, `x`, `y` and `pos` for `positioned`, and the attributes Ai for a declared interface. An attribute M of a value
-whose type is `palette` may be read by its label, and has the type `color|none`: it is `none` when
-the record has no attribute M.
+| `positioned` | `(interface positioned (real x) (real y))` |
+| `instant` | `(interface instant (real duration (one-of 0)))` |
 ```
 
 :::{admonition} Code differs
