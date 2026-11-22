@@ -277,7 +277,6 @@ own type.
 |---|---|---|
 | a number | its kind ({numref}`number-literals`) | its kind must fit the expected type, without its conditions: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
 | a string literal or a {term}`TeX string` | `string` | where a refined string type is expected, it must be among its choices |
-| a color literal, `#'…'` | `color` | as its own type ({numref}`color-literals`) |
 | `true`, `false` | `bool` | as its own type |
 | `none` | `none` | the expected type must include `none` |
 
@@ -548,6 +547,7 @@ Each expression except a clause and a special form has this type:
 | a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
 | `(. X K)` | the type of the attribute or the member that K chooses ({numref}`dot-name-part`). An item of a list: the item type. A coordinate of a point: `real`. A member of a group chosen while drawing: the common type of the members. Each with `none` added as {numref}`may-give-none` states |
 | `(list-of X…)` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
+| `(color-of S)` | `color` when S is known when compiling, `color\|none` otherwise ({numref}`color-literals`) |
 | `(point-of X Y)` | `point`, each of X and Y with `real` expected. With `none` added when the type of X or of Y includes `none` ({numref}`none-propagates`) |
 | `(as T X)` | T. X has T expected, and must be a literal |
 | a spread `g.A` | `list[U]`, U the meeting of the types of A of the members, with the number of members as its length |

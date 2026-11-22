@@ -74,6 +74,7 @@ rewritten into the form that it is sugar for, for example:
 | `list[int]` | `(type-apply list int)` |
 | `r@1` | `(r 1)` |
 | `@'dot-{k}'` | `(name f'dot-{k}')` |
+| `#'red'` | `(color-of f'red')` |
 
 After that, each expression is a {term}`literal`, a {term}`name` or a {term}`form`. A form is
 written in parentheses, and its first item is its {term}`head`. Whether the form is a {term}`compound`, a declaration, a {term}`clause` or a {term}`special form`
