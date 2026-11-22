@@ -291,7 +291,27 @@ A few built-in functions treat `none` in their own way ({numref}`none-never-a-co
 {numref}`none-propagates`).
 ```
 
-In the example below, the line tangent to the unit circle at the angle `theta` meets the x-axis at
+In the first example, `s` is `none`, so the call `(* 2 s)` is `none` too, and its type is
+`real|none`. `d` may hold it, since its type includes `none`, but `e` may not:
+
+```mtp
+(real theta 90)
+(real|none s (secd theta))
+(real|none d (* 2 s))
+(real e (* 2 s))          ; compile error: the type of e does not include none
+```
+
+In the second example, `r` is `none`, so the circle `c`, declared `circle|none`, is `none` and is
+not drawn. The circle `k` is not declared with `none`, so its `r` may not be `none`:
+
+```mtp
+(real|none r none)
+(scene s
+  (circle|none c (pos [0 0]) (r r))
+  (circle k (pos [0 0]) (r r)))   ; compile error: k is not declared circle|none
+```
+
+In the third example, the line tangent to the unit circle at the angle `theta` meets the x-axis at
 x = sec θ. At 90° the tangent line is parallel to the x-axis and never meets it, so `(secd theta)` is
 `none`. By the first case, the call `(point-of (secd theta) 0)`, written `[(secd theta) 0]`, is
 `none` too. By the second case, the segment `tangent` and the point `q`, declared `line|none` and
