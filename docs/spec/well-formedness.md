@@ -83,7 +83,7 @@ move of a const variable or of a color variable. Two writers may write the same 
 {doc}`concurrency` defines what happens then.
 
 ```{rule} written-values
-Each value that a writer writes must {term}`fit` the type of its target ({numref}`fits`), with the
+The type of each value that a writer writes must be a {term}`subtype` of the type of its target ({numref}`fits`), with the
 comparisons, the wraps and the `(one-of …)` of that type left out, since the write brings the value
 into those ({numref}`writes-into-constraints`). This holds for the `from` and the `to` of a move
 and of a movement, and for the values of a toggle and of a slider. A value whose type includes
@@ -144,7 +144,7 @@ is allowed for a member `c` of `g`.
 ```{rule} prover-proves
 The prover proves exactly these, and nothing else:
 
-1. The type of every expression except a clause, and that it fits where it is written
+1. The type of every expression except a clause, and that it is a subtype of the type expected where it is written
    ({numref}`form-types`).
 2. That every value meets the conditions of the type expected where it is written
    ({numref}`constraint-proof`).
@@ -153,7 +153,7 @@ The prover proves exactly these, and nothing else:
    `none` ({numref}`none-at-known-inputs`).
 4. An upper bound of the count, or of the length of the list, of a `foreach` that is known only
    while drawing ({numref}`foreach-bounded-length`).
-5. That each `(name S)` evaluates to an object whose type fits where it is written
+5. That each `(name S)` evaluates to an object whose type is a subtype of the type expected where it is written
    ({numref}`names-from-values`).
 6. That a call known in the prove step stays within the {term}`call depth limit`
    ({numref}`call-depth-limit`).
@@ -251,7 +251,7 @@ A value written where the expected type holds a condition C meets C when one of 
 
 - C is a modular type, which every value meets once brought in ({numref}`modular-types`).
 - The value is known in the prove step and meets C.
-- The type of the value fits the expected type with C as its only condition ({numref}`fits`).
+- The type of the value is a subtype of the expected type with C as its only condition ({numref}`fits`).
 - C is a comparison, and the range of the value lies inside it: its lower end is at least c for
   `(>= c)` and above c for `(> c)`, and its upper end is at most c for `(<= c)` and below c for
   `(< c)`.

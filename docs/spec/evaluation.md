@@ -509,7 +509,7 @@ seed that is below 0 is a compile error. mtp-ydd4.7.30.
 `(!= a b)` is true exactly when `(= a b)` is false.
 
 ```{rule} equality-operands
-`(= a b)` and `(!= a b)` are a compile error unless the type of one side {term}`fits <fit>` the type
+`(= a b)` and `(!= a b)` are a compile error unless the type of one side is a {term}`subtype` of the type
 of the other, or one side is `none`. They are a compile error on functions, movements or
 animations, or on values whose type includes one of them, such as a list of functions. A list of two
 numbers is not converted to a point for them: `(= p xs)`, with `p` a point and `xs` a list of ints,
