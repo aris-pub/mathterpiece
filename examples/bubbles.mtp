@@ -42,7 +42,7 @@
         (bubble @'b{i}'
                 (pos [(rand low[0] high[0]) (- (rand low[1] high[1]) (* rise (rand 9 13)))])
                 (size (rand 0.55 largest))
-                (tint [red green yellow blue][(mod i 4)])))))
+                (tint {red green yellow blue}[(mod i 4)])))))
 
   (int popped-count (count bubbles (fn b b.popped)))
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'middle'))

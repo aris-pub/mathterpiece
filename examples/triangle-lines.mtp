@@ -30,7 +30,7 @@
 ; window that ends 1 under the rail, above the captions, so lines that run far past the
 ; triangle, as altitudes and the Euler line do when it is obtuse, do not cross them.
 (real rail-y -3 (const))
-(list[point] window [[-8 6.5] [8 6.5] [8 (- rail-y 1)] [-8 (- rail-y 1)]] (const))
+(list[point] window {[-8 6.5] [8 6.5] [8 (- rail-y 1)] [-8 (- rail-y 1)]} (const))
 ; The gap between a point and its name.
 (real gap 0.1 (const))
 
@@ -72,11 +72,11 @@
       (line|none_ (from (reach-from C FC H)) (to (reach-to C FC H)))
       ; Where a foot lands beyond its side, the side is drawn on to it, thin and dashed.
       (line|none_ (from FA) (to (lerp B C (max 0 (min 1 (/ (dot (- FA B) (- C B)) (* a a))))))
-          (stroke-width 1) (dash [4 4]))
+          (stroke-width 1) (dash {4 4}))
       (line|none_ (from FB) (to (lerp C A (max 0 (min 1 (/ (dot (- FB C) (- A C)) (* b b))))))
-          (stroke-width 1) (dash [4 4]))
+          (stroke-width 1) (dash {4 4}))
       (line|none_ (from FC) (to (lerp A B (max 0 (min 1 (/ (dot (- FC A) (- B A)) (* c c))))))
-          (stroke-width 1) (dash [4 4]))
+          (stroke-width 1) (dash {4 4}))
       (circle|none h-dot (pos H) (r 0.14) (stroke none))
       (text|none_ 'H' (pos (top-right h-dot gap)) (valign 'bottom') (font variable)))
 

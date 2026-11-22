@@ -128,7 +128,7 @@ class MtpLexer(RegexLexer):
             (r"[-+]?[0-9]+/[0-9]+", Number),
             (rf"[-+]?{UREAL}([-+]{UREAL}i|i)?", Number),
             (r"(\.)(" + NAME + ")", bygroups(Punctuation, Name.Attribute)),
-            (r"[()\[\]|]", Punctuation),
+            (r"[(){}\[\]|]", Punctuation),
             (NAME, _word),
             (OPERATOR, Operator),
             (r".", Text),

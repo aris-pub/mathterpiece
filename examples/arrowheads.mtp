@@ -29,7 +29,7 @@
         (b (- b-tip.pos o))
         (s (+ a-tip.pos b-tip.pos (- o))))
     (group plane
-      (group construction (defaults (stroke soft) (stroke-width 1.5) (dash [5 5]))
+      (group construction (defaults (stroke soft) (stroke-width 1.5) (dash {5 5}))
         (line_ (from a-tip.pos) (to s))
         (line_ (from b-tip.pos) (to s)))
       (group vectors (defaults (stroke-width 3) (head-end kind) (head-size size))
@@ -60,7 +60,7 @@
   (on-drag a-tip a-tip.pos doc@'Moves the tip of a.')
   (on-drag b-tip b-tip.pos doc@'Moves the tip of b.'))
 
-(foreach k ['dart' 'curved' 'open' 'bar' 'dot']
+(foreach k {'dart' 'curved' 'open' 'bar' 'dot'}
   (button @'pick-{k}' (animation (move kind (to k) (duration 0))) (label k)
     doc@'Ends the three vectors in this head.'))
 (slider head-size (move size (from 0.5) (to 2.5)) (label 'head size'))

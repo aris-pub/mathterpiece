@@ -34,7 +34,7 @@ class TestDeclaring:
 
     def test_the_angles_are_numbers(self):
         # Not points, as a line's from and to are.
-        error("(scene s (arc a (from [0 0])))", "expected real")
+        error("(scene s (arc a (from {0 0})))", "expected real")
         error("(scene s (ring a (to 'up')))", "expected real")
 
     def test_the_radius_and_the_width_are_not_negative(self):
@@ -42,7 +42,7 @@ class TestDeclaring:
         error("(scene s (ring a (width -1)))", "breaks")
 
     def test_an_arc_takes_the_stroke_attributes(self):
-        a = attrs("(scene s (arc a (stroke #'red') (dash [4 2]) (line-cap 'round')))")
+        a = attrs("(scene s (arc a (stroke #'red') (dash {4 2}) (line-cap 'round')))")
         assert a["stroke"].value == "#ff0000ff" and a["line-cap"].value == "round"
 
     def test_a_ring_is_filled(self):

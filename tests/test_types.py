@@ -8,6 +8,7 @@ from mathterpiece.nodes import (
     ListLit,
     Name,
     NoneLit,
+    PointLit,
     RealLit,
     StrLit,
 )
@@ -138,11 +139,21 @@ class TestLiterals:
 
     def test_a_list_takes_the_type_expected_where_it_is(self):
         assert literal_type(ListLit((ColorLit("#ff0000ff"),)), ListT(COLOR)) == ListT(COLOR)
-        assert literal_type(ListLit((IntLit(1), IntLit(2))), POINT) == POINT
+
+    def test_a_point_is_not_a_list(self):
+        # mtp-diqi: {1 2} is a list and [1 2] a point, whatever is expected.
+        assert literal_type(PointLit((IntLit(1), IntLit(2))), None) == POINT
+        assert literal_type(PointLit((IntLit(1), IntLit(2))), POINT) == POINT
+        with pytest.raises(TypeError_, match=r"^expected point, got list\[int\]$"):
+            literal_type(ListLit((IntLit(1), IntLit(2))), POINT)
+        with pytest.raises(TypeError_, match=r"^expected list\[real\], got point$"):
+            literal_type(PointLit((IntLit(1), IntLit(2))), ListT(REAL))
 
     def test_a_point_needs_two_numbers(self):
         with pytest.raises(TypeError_, match=r"^a point is two numbers, \[x y\]$"):
-            literal_type(ListLit((IntLit(1),)), POINT)
+            literal_type(PointLit((IntLit(1),)), POINT)
+        with pytest.raises(TypeError_, match=r"^a point is two numbers, \[x y\]$"):
+            literal_type(PointLit((IntLit(1), IntLit(2), IntLit(3))), None)
 
     def test_an_empty_list_needs_an_expected_type(self):
         assert literal_type(ListLit(()), ListT(REAL)) == ListT(REAL)

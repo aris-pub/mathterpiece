@@ -131,14 +131,14 @@ At every other input, an operation does not result in `none`.
 :class: note
 - A folded call whose body results in `none` by this rule is a compile error for `min` and `max` of an
   empty list, `range` with more than 1,000,000 items, and `xs[i]` outside -n to n - 1. For example,
-  with `(func f ((list[real] x)) (min x))`, `(f (as list[real] []))` is rejected, and so is
-  `(f 3)` with `(func f ((int x)) (. [1 2 3] x))`. `min` and `max` of a known empty list
+  with `(func f ((list[real] x)) (min x))`, `(f (as list[real] {}))` is rejected, and so is
+  `(f 3)` with `(func f ((int x)) (. {1 2 3} x))`. `min` and `max` of a known empty list
   (mathterpiece/compiler.py, line 2435) and a known position outside a list (line 6369) raise the
   error directly, and not through `known_or_none` (line 2217), which returns `none` while a call is
   folded. `range` results in `none` there, but the type of the body of `f` does not include `none`, so
   `fold_call` raises the error again (lines 2527 to 2529). Bug mtp-ydd4.7.48.
 - `pick` always has a type that includes `none` (mathterpiece/compiler.py, line 2281), so
-  `(rand-seed sd 1) (real v (pick [1 2]))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
+  `(rand-seed sd 1) (real v (pick {1 2}))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
 :::
 
 So no operation results in an infinity or NaN: a real is always finite ({numref}`number-types`).
@@ -215,12 +215,12 @@ place of its list results in `none`.
 - `_Compiler.call` (mathterpiece/compiler.py, lines 1962 to 1973) folds the body with an argument
   that is `none`, also for a parameter whose type does not include `none`. So with
   `(func h ((real x)) 5)`, a call of `h` with `none` results in 5. Bug mtp-ydd4.7.50.
-- `(reverse [1 (f 0)])`, with `(f 0)` known to be `none`, stops the compiler with a Python
+- `(reverse {1 (f 0)})`, with `(f 0)` known to be `none`, stops the compiler with a Python
   `TypeError`, since `_Compiler.collection` uses the smallest and the largest known item to compute
   the range of the items (line 2679). Bug mtp-ydd4.7.51.
 - A list function with a list whose type includes `none` is a compile error, "the
   collection given to map may be none" (`collection_items`, line 2820), so
-  `(map (if (= 1 2) [1] none) (fn ((int x)) x))` is rejected. Bug mtp-ydd4.7.52.
+  `(map (if (= 1 2) {1} none) (fn ((int x)) x))` is rejected. Bug mtp-ydd4.7.52.
 :::
 
 ```{rule} none-never-a-condition

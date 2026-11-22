@@ -11,7 +11,7 @@ KINDS = ["dart", "curved", "open", "bar", "dot"]
 
 
 @pytest.mark.parametrize(
-    "shape", ["(line l (to [3 0]))", "(polyline l (points [[0 0] [1 1]]))", "(arc l)"]
+    "shape", ["(line l (to [3 0]))", "(polyline l (points {[0 0] [1 1]}))", "(arc l)"]
 )
 def test_the_shapes_with_ends_take_heads(shape):
     a = model(f"(scene s {shape})").get("l").attrs
@@ -50,7 +50,7 @@ def test_a_head_can_follow_a_variable():
 def test_the_compiled_file_passes_the_schema():
     d = doc(
         "(scene s (line l (head-end 'dart') (head-start 'bar') (head-size 1.5))"
-        " (arc a (head-end 'curved')) (polyline p (points [[0 0] [1 0]]) (head-end 'dot')))"
+        " (arc a (head-end 'curved')) (polyline p (points {[0 0] [1 0]}) (head-end 'dot')))"
     )
     assert errors(d) == []
 

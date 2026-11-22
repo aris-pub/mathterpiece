@@ -39,8 +39,8 @@
 
 ; How each dial's declaration starts, in the order the dials are placed.
 (list[string] heads
-    ['(gauge (lo 0) (hi 120)' '(gauge (lo -20) (hi 40)' '(gauge (lo 0) (hi 6)' '(thin-gauge'
-     '(bold-gauge' '(half-gauge']
+    {'(gauge (lo 0) (hi 120)' '(gauge (lo -20) (hi 40)' '(gauge (lo 0) (hi 6)' '(thin-gauge'
+     '(bold-gauge' '(half-gauge'}
     (const))
 ; A dial's value as it reads, to a tenth when its range is under 10.
 (func[string] reading ((gauge d)) (if (< (- d.hi d.lo) 10) f'{d.value:.1f}' f'{d.value:.0f}'))
@@ -76,11 +76,11 @@
   ; Each dial's reading, to a tenth when its range is under 10, and under the dial the
   ; declaration that makes it, with its value as it is now.
   (group readings (defaults (fill ink) (font number) (halign 'middle') (valign 'middle'))
-    (foreach d [speed heat pressure thin bold half]
+    (foreach d {speed heat pressure thin bold half}
       (text_ (reading d) (pos (+ d.pos [0 -0.55])))))
   (group forms (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (foreach k 6
-      (let ((d [speed heat pressure thin bold half][k]))
+      (let ((d {speed heat pressure thin bold half}[k]))
         (text_ heads[k] (pos (bottom d 0.25)))
         (text_ f'(value {(reading d)}))' (pos (bottom d 0.62))))))
 
@@ -92,7 +92,7 @@
   board
   ; The knob is a ring, and its middle is not part of it, so a press there reaches the needle
   ; under it: the needle can be dragged too. Each dial's own lo and hi limit its drag.
-  (foreach d [speed heat pressure thin bold half]
+  (foreach d {speed heat pressure thin bold half}
     ; The needle turns from start, sweep degrees for the whole range: its angle gives the value.
     (on-drag d.knob (move d.value (to (value-at d pointer)))
       doc@'Turns the dial by its knob.' (>= d.value d.lo) (<= d.value d.hi))

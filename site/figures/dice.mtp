@@ -1,9 +1,9 @@
 ; up to six dice, all made from one motif, rolled at random
 (import rand rand-int roll-dice)
 (int n 3 (>= 1) (<= 6))
-(list[list[point]] pips [[[0 0]] [[-1 1] [1 -1]] [[-1 1] [0 0] [1 -1]]
-  [[-1 1] [1 1] [-1 -1] [1 -1]] [[-1 1] [1 1] [0 0] [-1 -1] [1 -1]]
-  [[-1 1] [1 1] [-1 0] [1 0] [-1 -1] [1 -1]]] (const))
+(list[list[point]] pips {{[0 0]} {[-1 1] [1 -1]} {[-1 1] [0 0] [1 -1]}
+  {[-1 1] [1 1] [-1 -1] [1 -1]} {[-1 1] [1 1] [0 0] [-1 -1] [1 -1]}
+  {[-1 1] [1 1] [-1 0] [1 0] [-1 -1] [1 -1]}} (const))
 
 ; what the figure is: a die, declared once and used n times
 (motif die ((int face 1 (>= 1) (<= 6)))

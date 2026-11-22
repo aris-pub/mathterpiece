@@ -20,6 +20,7 @@ from mathterpiece.nodes import (
     ListLit,
     Name,
     NoneLit,
+    PointLit,
     Pos,
     RatioLit,
     RealLit,
@@ -393,8 +394,8 @@ class TestNames:
         [
             ("[", "expected ']' after '['"),
             ("]", "unexpected ']'"),
-            ("{", "'{' is reserved"),
-            ("}", "'}' is reserved"),
+            ("{", "a space must come before '{'"),
+            ("}", "unexpected '}'"),
         ],
     )
     def test_brackets_not_allowed_in_names(self, ch, msg):
@@ -403,10 +404,10 @@ class TestNames:
     @pytest.mark.parametrize(
         "ch, msg",
         [
-            ("[", "expected ']' to close the list"),
+            ("[", "expected ']' to close the point"),
             ("]", "unexpected ']'"),
-            ("{", "'{' is reserved"),
-            ("}", "'}' is reserved"),
+            ("{", "expected '}' to close the list"),
+            ("}", "unexpected '}'"),
         ],
     )
     def test_unmatched_brackets_outside_strings_are_errors(self, ch, msg):
@@ -544,7 +545,7 @@ class TestNone:
         assert atom("nonesuch") == n("nonesuch")
 
     def test_in_a_list(self):
-        assert atom("[1 none]") == ListLit((IntLit(1), NoneLit()))
+        assert atom("{1 none}") == ListLit((IntLit(1), NoneLit()))
 
     # lexical.md, rule name-characters: a name part is never exactly true, false or none.
     @pytest.mark.parametrize(
@@ -597,7 +598,8 @@ class TestExpressionsInBraces:
             ("f'{'a'}'", StrLit("a")),
             ("f'{none}'", NoneLit()),
             ("f'{+}'", n("+")),
-            ("f'{[0 1]}'", ListLit((IntLit(0), IntLit(1)))),
+            ("f'{[0 1]}'", PointLit((IntLit(0), IntLit(1)))),
+            ("f'{ {0 1} }'", ListLit((IntLit(0), IntLit(1)))),
             ("f'{(or? x 0):.2f}'", field(Form((n("or?"), n("x"), IntLit(0))), ".2f")),
             ("f'{ (f x) :>8}'", field(Form((n("f"), n("x"))), ">8")),
         ],
@@ -772,7 +774,10 @@ class TestNodes:
             node.value = 2  # ty: ignore[invalid-assignment]
 
 
-class TestListLiteral:
+class TestPointLiteral:
+    # grammar.md, rule lists: a point is written in brackets, [X Y], sugar for (point-of X Y).
+    # The parser reads brackets with any number of items, as the grammar does, and the compiler
+    # rejects a point that has not two (core.md, rule sugar-rewrites).
     @pytest.mark.parametrize(
         "text, items",
         [
@@ -782,18 +787,31 @@ class TestListLiteral:
             ("[ 1.5\n -2 ]", (RealLit(1.5), IntLit(-2))),
             ("[k (* 2 k)]", (n("k"), Form((n("*"), IntLit(2), n("k"))))),
             ("[a.x g[0].r]", (n("a", "x"), n("g", IntLit(0), "r"))),
-            ("[[1 2] 3]", (ListLit((IntLit(1), IntLit(2))), IntLit(3))),
+            ("[[1 2] 3]", (PointLit((IntLit(1), IntLit(2))), IntLit(3))),
         ],
     )
     def test_items(self, text, items):
-        assert atom(text) == ListLit(items)
+        assert atom(text) == PointLit(items)
 
-    def test_a_space_separates_a_name_from_a_list(self):
-        (form,) = parse("(f g [0])")
-        assert form.items[1:] == (n("g"), ListLit((IntLit(0),)))
+    def test_a_point_is_not_a_list(self):
+        assert atom("[1 2]") != ListLit((IntLit(1), IntLit(2)))
+
+    def test_points_in_a_list(self):
+        assert atom("{[0 0] [1 2]}") == ListLit(
+            (PointLit((IntLit(0), IntLit(0))), PointLit((IntLit(1), IntLit(2))))
+        )
+
+    def test_a_space_separates_a_name_from_a_point(self):
+        (form,) = parse("(f g [0 1])")
+        assert form.items[1:] == (n("g"), PointLit((IntLit(0), IntLit(1))))
 
     def test_no_space_indexes(self):
         assert atom("g[0]") == n("g", IntLit(0))
+        row = Form((n("name"), interp(("row-", n("i")))))
+        assert atom("@'row-{i}'[0]") == Form((n("."), row, IntLit(0)))
+
+    def test_a_position_after_a_point(self):
+        assert atom("[a b][0]") == Form((n("."), PointLit((n("a"), n("b"))), IntLit(0)))
 
     def test_position(self):
         (form,) = parse("(f\n  [1 2])")
@@ -802,10 +820,10 @@ class TestListLiteral:
     @pytest.mark.parametrize(
         "src, msg",
         [
-            ("(f [1 2)", "expected ']' to close the list"),
+            ("(f [1 2)", "expected ']' to close the point"),
             ("(f [1", "unclosed '['"),
             ("(f ])", "unexpected ']'"),
-            ("(f [1]x)", "unexpected 'x' after a list"),
+            ("(f [1]x)", "unexpected 'x' after a point"),
         ],
     )
     def test_invalid(self, src, msg):
@@ -813,6 +831,69 @@ class TestListLiteral:
 
     def test_not_at_the_top_level(self):
         error_at("[1 2]", "expected a form at the top level")
+
+
+class TestListInBraces:
+    # grammar.md, rule lists: a list is written in braces, {…}, sugar for (list-of …).
+    @pytest.mark.parametrize(
+        "text, items",
+        [
+            ("{1 2 3}", (IntLit(1), IntLit(2), IntLit(3))),
+            ("{1 2}", (IntLit(1), IntLit(2))),
+            ("{}", ()),
+            ("{ }", ()),
+            ("{ 1.5\n -2 }", (RealLit(1.5), IntLit(-2))),
+            ("{'a' #'red'}", (StrLit("a"), ColorLit("#ff0000ff"))),
+            ("{k (* 2 k)}", (n("k"), Form((n("*"), IntLit(2), n("k"))))),
+            ("{a.x g[0].r}", (n("a", "x"), n("g", IntLit(0), "r"))),
+            ("{{1 2} 3}", (ListLit((IntLit(1), IntLit(2))), IntLit(3))),
+            ("{a ; c\n b}", (n("a"), n("b"))),
+        ],
+    )
+    def test_items(self, text, items):
+        assert atom(text) == ListLit(items)
+
+    def test_a_position_after_the_list(self):
+        assert atom("{a b c}[h]") == Form((n("."), ListLit((n("a"), n("b"), n("c"))), n("h")))
+
+    def test_a_form_may_touch_it(self):
+        (form,) = parse("(f {(g)(h)} {a}(g))")
+        assert form.items[1:] == (
+            ListLit((Form((n("g"),)), Form((n("h"),)))),
+            ListLit((n("a"),)),
+            Form((n("g"),)),
+        )
+
+    def test_after_a_prefix(self):
+        assert atom("pos@{1 2}") == Form((n("pos"), ListLit((IntLit(1), IntLit(2)))))
+
+    def test_in_the_braces_of_an_interpolated_string(self):
+        assert atom("f'{ {a b} }'") == interp((ListLit((n("a"), n("b"))),))
+        assert atom("f'{ {a}:x}'") == interp((field(ListLit((n("a"),)), "x"),))
+
+    def test_as_a_head(self):
+        (form,) = parse("({a} b)")
+        assert form.items == (ListLit((n("a"),)), n("b"))
+
+    def test_position(self):
+        (form,) = parse("(f\n  {1 2})")
+        assert form.items[1].pos == Pos(2, 3)
+
+    @pytest.mark.parametrize(
+        "src, msg",
+        [
+            ("(f {1 2)", "expected '}' to close the list"),
+            ("(f {1 2]", "expected '}' to close the list"),
+            ("(f [1 2})", "expected ']' to close the point"),
+            ("(f {1", "unclosed '{'"),
+            ("(f })", "unexpected '}'"),
+            ("(f {1}x)", "unexpected 'x' after a list"),
+            ("(f a{1})", "a space must come before '{'"),
+            ("(f xs[0]{1})", "a space must come before '{'"),
+        ],
+    )
+    def test_invalid(self, src, msg):
+        error_at(src, msg)
 
 
 class TestFormatSpecs:
@@ -937,22 +1018,23 @@ class TestParsingNoName:
 
 
 class TestParsingIndexingAListWrittenInPlace:
-    # mtp-4vx: [a b c][h] is (. [a b c] h). test_compile_core.py has what the compiler makes of it;
+    # mtp-4vx: {a b c}[h] is (. {a b c} h). test_compile_core.py has what the compiler makes of it;
     # TestPartForm has (f (g x)[0]), which is an error.
     def test_a_list_then_a_position(self):
-        e = atom("[a b c][h]")
+        e = atom("{a b c}[h]")
         assert isinstance(e, Form)
         assert e.items[0] == Name((".",))
         assert isinstance(e.items[1], ListLit) and e.items[2] == Name(("h",))
 
     def test_positions_one_after_another(self):
-        e = atom("[[1 2] [3 4]][1][0]")
+        e = atom("{[1 2] [3 4]}[1][0]")
         assert e.items[0] == Name((".",)) and e.items[2] == IntLit(0)
         inner = e.items[1]
         assert isinstance(inner, Form) and inner.items[2] == IntLit(1)
 
     def test_one_expression_in_the_brackets(self):
-        error_at("(f [a b][0 1])", "brackets after a list hold one position")
+        error_at("(f {a b}[0 1])", "brackets after a list hold one position")
+        error_at("(f [a b][0 1])", "brackets after a point hold one position")
 
 
 @pytest.mark.parametrize("path", MALFORMED, ids=[f.stem for f in MALFORMED])
@@ -1024,7 +1106,7 @@ class TestColorLiterals:
         assert atom("'red'") == StrLit("red")
 
     def test_in_a_list_and_after_a_prefix(self):
-        assert atom("[#'red' #'f00']") == ListLit((self.RED, self.RED))
+        assert atom("{#'red' #'f00'}") == ListLit((self.RED, self.RED))
         assert parse("(f fill@#'red')") == parse("(f (fill #'red'))")
 
     @pytest.mark.parametrize(

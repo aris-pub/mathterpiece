@@ -9,5 +9,5 @@
 (real k 2)
 (point p (* k [1 2]))
 (point q (* [1 2] 3))
-(list xs (* k [1 2 3]))
-(list mixed (* 0.5 [1 2 3] 1))
+(list xs (* k {1 2 3}))
+(list mixed (* 0.5 {1 2 3} 1))

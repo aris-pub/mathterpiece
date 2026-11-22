@@ -14,7 +14,7 @@ DIAL = "(motif dial ((real t 0.5 (>= 0) (<= 1)) (color tint #'red')) (circle fac
 K = "(int k 0 (>= 0) (<= 1))\n"
 
 PARTS = (
-    VERTEX + "(list[int] parts [0 0 0] (length 3))\n"
+    VERTEX + "(list[int] parts {0 0 0} (length 3))\n"
     "(scene s (group verts (foreach i 3"
     " (vertex @'v-{i}' (part parts[i]) (pos [0 (count parts (fn q (= q parts[i])))])))))"
 )

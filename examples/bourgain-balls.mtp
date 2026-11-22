@@ -78,9 +78,9 @@
   (list dx (sort (map space (fn p (dist x.pos p.pos))) (fn d d)))
   (list dy (sort (map space (fn p (dist y.pos p.pos))) (fn d d)))
   ; ρ₁ to ρ₅: the 2ʲ-th nearest distance (index 2ʲ - 1), for x or y, whichever is larger.
-  (list rho (map [1 3 7 15 31] (fn i (min (max dx[i] dy[i]) h))))
+  (list rho (map {1 3 7 15 31} (fn i (min (max dx[i] dy[i]) h))))
   ; 0, then ρ₁ to ρ₅: segment j of the bar covers [edges[j], edges[j + 1]].
-  (list edges [0 rho[0] rho[1] rho[2] rho[3] rho[4]])
+  (list edges {0 rho[0] rho[1] rho[2] rho[3] rho[4]})
   ; The first j with ρⱼ = δ/2.
   (int k (+ 1 (count rho (fn q (< q (- h 1e-9))))))
   ; Scene units per unit of distance along the bar. x and y are never the same point, so h is
@@ -108,8 +108,8 @@
       (text_ 'x' (pos (top-right x 2.5)))
       (text_ 'y' (pos (top-right y 2.5)))))
 
-  (list[color] segment-colors [s1 s2 s3 s4 s5])
-  (list[string] tick-names ['0' 'ρ₁' 'ρ₂' 'ρ₃' 'ρ₄' 'ρ₅'] (const))
+  (list[color] segment-colors {s1 s2 s3 s4 s5})
+  (list[string] tick-names {'0' 'ρ₁' 'ρ₂' 'ρ₃' 'ρ₄' 'ρ₅'} (const))
 
   ; Segment j covers [ρⱼ₋₁, ρⱼ], filled up to r. Past k the ρⱼ all equal δ/2, so those
   ; segments are empty. A rect's position is its center.

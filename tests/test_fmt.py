@@ -114,7 +114,7 @@ def test_a_call_with_no_argument_on_its_line():
 
 
 def test_a_list_lines_up_inside_its_bracket():
-    assert layout("(list xs [1 2\n3])\n") == "(list xs [1 2\n          3])\n"
+    assert layout("(list xs {1 2\n3})\n") == "(list xs {1 2\n          3})\n"
 
 
 def test_an_index_is_not_an_item():
@@ -210,7 +210,28 @@ def test_free_is_written_free_at_where_it_means_the_same(src, want):
         assert parse(want) == parse(src)
 
 
-@pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)
+# These files hold a list in braces over several lines, which the Emacs mode indents as a call.
+BRACES_OVER_LINES = {
+    ROOT / "examples" / f"{name}.mtp"
+    for name in ("ball-puzzle", "colormaps", "dials", "placement", "three-body")
+} | {ROOT / "mathterpiece" / "stdlib" / f"{name}.mtp" for name in ("colors", "marks")}
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        pytest.param(
+            p,
+            marks=pytest.mark.xfail(
+                reason="mtp-bpy1: the Emacs mode does not indent a list in braces", strict=True
+            ),
+        )
+        if p in BRACES_OVER_LINES
+        else p
+        for p in FILES
+    ],
+    ids=lambda p: p.stem,
+)
 def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
     emacs = [line.rstrip() for line in _emacs(path.read_text(), tmp_path).split("\n")]
     ours = [line.rstrip() for line in layout(path.read_text()).split("\n")]
@@ -218,8 +239,9 @@ def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
     assert [x for x in ours if x] == [x for x in emacs if x]
 
 
-# A list is data, not a call: its later lines go under its first item, as do those of a form
-# whose head is not a name.
+# Text in brackets is data, not a call: its later lines go under its first item, as do those of a
+# form whose head is not a name. The layout reads only the text, so these sources hold brackets
+# with any number of items, which the compiler would reject as points.
 @pytest.mark.parametrize(
     "src, want",
     [
@@ -233,9 +255,29 @@ def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
         ("(real v ((f a) b\nc))\n", "(real v ((f a) b\n         c))\n"),
     ],
 )
-def test_a_list_lines_up_under_its_first_item_in_fmt_and_emacs(src, want, tmp_path):
+def test_brackets_line_up_under_their_first_item_in_fmt_and_emacs(src, want, tmp_path):
     assert layout(src) == want
     assert _emacs(src, tmp_path) == want
+
+
+# A list in braces lines up as text in brackets does. The Emacs mode does not do it yet
+# (mtp-bpy1), so only fmt is checked.
+@pytest.mark.parametrize(
+    "src, want",
+    [
+        (
+            "(list[color] hues {red green yellow blue\n(mix red paper 0.45)})\n",
+            "(list[color] hues {red green yellow blue\n                   (mix red paper 0.45)})\n",
+        ),
+        ("(list xs {1 2\n3})\n", "(list xs {1 2\n          3})\n"),
+        ("(list xs {(f a) b\nc})\n", "(list xs {(f a) b\n          c})\n"),
+        ("(list xs {\na b\nc})\n", "(list xs {\n          a b\n          c})\n"),
+        ("(list ps {[0 0]\n[1 1]})\n", "(list ps {[0 0]\n          [1 1]})\n"),
+        ("(f {a\nb} (g\nc))\n", "(f {a\n    b} (g\n        c))\n"),
+    ],
+)
+def test_a_list_in_braces_lines_up_under_its_first_item(src, want):
+    assert layout(src) == want
 
 
 def test_the_table_is_the_emacs_modes():

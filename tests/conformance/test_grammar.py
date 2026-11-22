@@ -10,6 +10,7 @@ from mathterpiece.nodes import (
     IntLit,
     ListLit,
     NoneLit,
+    PointLit,
     RatioLit,
     RealLit,
     StrLit,
@@ -74,7 +75,7 @@ class TestTopLevelForms:
     def test_any_number_of_forms(self, src):
         forms(src)
 
-    @pytest.mark.parametrize("src", ["x", "'s'", "[1]", "(a)x", "1", "(a) )"])
+    @pytest.mark.parametrize("src", ["x", "'s'", "[1 2]", "{1}", "(a)x", "1", "(a) )"])
     def test_anything_else_is_an_error(self, src):
         syntax_error(src)
 
@@ -102,18 +103,32 @@ class TestAdjacentItems:
 @rule("lists")
 class TestLists:
     def test_lists(self):
-        assert items("(f [] [0 1] [(g x) 'a'])") == (
+        assert items("(f {} {0 1} {(g x) 'a'})") == (
             ListLit(()),
             ListLit((IntLit(0), IntLit(1))),
             ListLit((form(name("g"), name("x")), StrLit("a"))),
         )
 
+    def test_points(self):
+        assert items("(f [0 1] [(f x) 2])") == (
+            PointLit((IntLit(0), IntLit(1))),
+            PointLit((form(name("f"), name("x")), IntLit(2))),
+        )
+
+    def test_a_point_has_exactly_two_items(self):
+        # The parser reads [1 2 3]; the compiler rejects it (core.md, rule sugar-rewrites).
+        assert items("(f [1 2 3])") == (PointLit((IntLit(1), IntLit(2), IntLit(3))),)
+        compile_error("(point p [1 2 3])")
+        compile_error("(point p [1])")
+
     def test_brackets_after_a_list(self):
-        assert items("(f [a b c][h])") == (
+        assert items("(f {a b c}[h])") == (
             dot(ListLit((name("a"), name("b"), name("c"))), name("h")),
         )
 
-    @pytest.mark.parametrize("src", ["(f [1][0 1])", "(f [1][])", "(f [1)"])
+    @pytest.mark.parametrize(
+        "src", ["(f {1}[0 1])", "(f {1}[])", "(f {1)", "(f [1][0 1])", "(f [1)"]
+    )
     def test_brackets_after_a_list_hold_exactly_one_expression(self, src):
         syntax_error(src)
 
@@ -139,8 +154,8 @@ class TestNameBrackets:
             name("a", IntLit(0), "b", IntLit(1)),
         )
 
-    def test_a_bracket_after_whitespace_starts_a_list(self):
-        assert items("(f xs [0])") == (name("xs"), ListLit((IntLit(0),)))
+    def test_a_bracket_after_whitespace_starts_a_point(self):
+        assert items("(f xs [0 1])") == (name("xs"), PointLit((IntLit(0), IntLit(1))))
 
     @pytest.mark.parametrize("src", ["(f xs[])", "(f xs[0)", "(f xs[0].)"])
     def test_errors(self, src):
@@ -173,7 +188,8 @@ class TestParserExpressions:
         "text, node",
         [
             ("(g x)", form(name("g"), name("x"))),
-            ("[1]", ListLit((IntLit(1),))),
+            ("{1}", ListLit((IntLit(1),))),
+            ("[1 2]", PointLit((IntLit(1), IntLit(2)))),
             ("p.pos.x", name("p", "pos", "x")),
             ("xs[0].y", name("xs", IntLit(0), "y")),
             ("xs[(f)]", name("xs", form(name("f")))),
@@ -212,7 +228,7 @@ class TestParserSugar:
         assert items("(f @'dot-{k}'[i])") == (dot(n, name("i")),)
 
     def test_brackets_after_a_list(self):
-        assert items("(f [a b c][h])") == (
+        assert items("(f {a b c}[h])") == (
             dot(ListLit((name("a"), name("b"), name("c"))), name("h")),
         )
 
@@ -251,7 +267,7 @@ class TestFormTemplate:
         "src",
         [
             "(real k 1 (>= 0))",
-            "(list[color] cs [#'red' #'blue'])",
+            "(list[color] cs {#'red' #'blue'})",
             "(func[real] f ((real x)) x)",
             "(real|none k none)",
             "((real (>= 0)) r 1)",
@@ -523,7 +539,7 @@ class TestBodyLetForeach:
         assert m.get("c").attrs["r"].value == 2
 
     def test_a_scene_in_a_foreach_reads_its_names(self):
-        m = accepted("(foreach i [2] (scene @'s{i}' (circle c (r i))))")
+        m = accepted("(foreach i {2} (scene @'s{i}' (circle c (r i))))")
         assert m.get("c").attrs["r"].value == 2
         assert "s2" in m.names
 
@@ -562,7 +578,7 @@ class TestBodyLetForeach:
 
     def test_an_animation_in_a_foreach_reads_its_names(self):
         m = accepted(
-            "(real a 0) (foreach i [1 2] (animation @'an{i}' (move a (to i) (duration i))))"
+            "(real a 0) (foreach i {1 2} (animation @'an{i}' (move a (to i) (duration i))))"
         )
         assert m.get("an2").attrs["duration"].value == 2
 
@@ -582,7 +598,7 @@ class TestBodyLetForeach:
 
     def test_a_choreo_in_a_foreach_reads_its_names(self):
         m = accepted(
-            "(real a 0) (foreach i [1 2] (choreo @'go{i}' () (move a (to i) (duration i))))"
+            "(real a 0) (foreach i {1 2} (choreo @'go{i}' () (move a (to i) (duration i))))"
             " (animation an (go2))"
         )
         assert m.get("an").attrs["duration"].value == 2
@@ -606,13 +622,13 @@ class TestBodyLetForeach:
 
     def test_a_colormap_in_a_let_reads_its_names(self):
         m = accepted(
-            "(let ((c #'red') (k 2)) (colormap cm [c #'blue'] (positions [0 k])))"
+            "(let ((c #'red') (k 2)) (colormap cm {c #'blue'} (positions {0 k})))"
             " (color v (cm 0)) (color w (cm 2))"
         )
         assert m.get("v").value.value != m.get("w").value.value
 
     def test_a_colormap_in_a_foreach_reads_its_names(self):
-        accepted("(foreach i 2 (colormap @'cm{i}' [#'red' #'blue'] (positions [0 (+ i 1)])))")
+        accepted("(foreach i 2 (colormap @'cm{i}' {#'red' #'blue'} (positions {0 (+ i 1)})))")
 
     def test_a_let_in_a_foreach_at_the_top_level(self):
         d = mtpc("(foreach i 3 (let ((k (* 2 i))) (real @'v-{i}' k)))")
@@ -739,8 +755,8 @@ class TestLiterals:
             "(string w 'crimson')",
             "(bool w true)",
             "(real|none w none)",
-            "(list[real] w [0 1])",
-            "(list[list[real]] w [[1 2] [3 4]])",
+            "(list[real] w {0 1})",
+            "(list[list[real]] w {{1 2} {3 4}})",
         ],
     )
     def test_a_literal_writes_a_value(self, decl):

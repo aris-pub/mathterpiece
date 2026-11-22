@@ -28,8 +28,8 @@ const RANDOM = `
 (real a (rand))
 (real b (rand 2 5))
 (int c (rand-int 1 6))
-(real|none d (pick (as list[real] [10 20 30])))
-(list[int] e (shuffle [1 2 3 4]))
+(real|none d (pick (as list[real] {10 20 30})))
+(list[int] e (shuffle {1 2 3 4}))
 `;
 
 describe("rule random-hash: the hash of a seed, a site and a number", () => {
@@ -229,7 +229,7 @@ describe("rule number-limit: a result is clamped to the limit", () => {
 
   it("a sum", () => {
     // Each item is clamped to 1e150 at k = 1e150, and so is their sum.
-    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real t (sum [(* k k) (* k k)]))`);
+    const [rt, v] = live(`(real k 1 (>= 0) (<= 1e150)) (real t (sum {(* k k) (* k k)}))`);
     rt.write(rt.id("k"), null, 1e150);
     expect(v("t")).toBe(1e150);
   });
@@ -340,7 +340,7 @@ describe("rule operations-that-give-none: an operation while drawing", () => {
   });
 
   it("a position outside the list gives none", () => {
-    const [rt, v] = live(`(int i 0 (>= 0) (<= 5)) (int|none q (. [1 2 3] i))`);
+    const [rt, v] = live(`(int i 0 (>= 0) (<= 5)) (int|none q (. {1 2 3} i))`);
     rt.write(rt.id("i"), null, 3);
     expect(v("q")).toBe(null);
     rt.write(rt.id("i"), null, 2);

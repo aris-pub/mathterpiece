@@ -52,7 +52,7 @@ CASES = [
     ("(scene s (circle c))\n(real k s.r)", "2:9", "a scene has no attribute 'r'"),
     # type-system.md "What the compiler proves" and "Known lengths".
     ("(real k 1e151)", "1:9", "1e+151 is beyond ±10^150, the limit of every number"),
-    ("(list xs [1 2] (const))\n(real k xs[2])", "2:9", "position 2 is out of range"),
+    ("(list xs {1 2} (const))\n(real k xs[2])", "2:9", "position 2 is out of range"),
     # syntax.md section 7: self outside a motif's body.
     ("(scene s (circle c (r self.r)))", "1:23", "self is used only in a motif's body"),
     # reference.md "Defaults": no value to leave out.

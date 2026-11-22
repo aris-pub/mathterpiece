@@ -27,8 +27,8 @@
 (real level3 -162 (const))
 (real axis 40 (const))
 ; The middles of the four pairs, and of the two halves.
-(list mid [85 145 205 265] (const))
-(list half [115 235] (const))
+(list mid {85 145 205 265} (const))
+(list half {115 235} (const))
 
 (motif bracket ((real left 0) (real right 0) (real from 0) (real to 0))
   doc@'Down from two clusters at left and right, and across at the depth where they merge.'
@@ -50,7 +50,7 @@
 (scene tree
   (group axes (defaults (stroke soft) (stroke-width 1) (fill soft) (halign 'end') (font tick))
     (line_ (from [axis top]) (to [axis level3]))
-    (foreach depth [level1 level2 level3]
+    (foreach depth {level1 level2 level3}
       (line_ (from [(- axis 4) depth]) (to [axis depth])))
     (text_ '0' (pos [(- axis 7) (- top 4)]))
     (text_ 'b' (pos [(- axis 7) (- level1 4)]))
@@ -138,7 +138,7 @@
 (display eq bounds doc@'Equation (4.1), whose terms pick what the tree highlights.'
   ; Clicking a term shows what it explains, or clears it if it is shown. Each term but the first
   ; ≤ is named after the piece it shows; the first ≤ explains the same as the factor.
-  (foreach piece ['gap' 'hi' 'b2']
+  (foreach piece {'gap' 'hi' 'b2'}
     (on-click @'bounds.{piece}'
         (animation (move shown (to (if (= shown piece) none piece)) (duration 0.25)))
       doc@'Highlights what the term explains.'))

@@ -14,6 +14,7 @@ from mathterpiece.nodes import (
     Name,
     Node,
     NoneLit,
+    PointLit,
     RatioLit,
     RealLit,
     StrLit,
@@ -279,11 +280,11 @@ def _own_type(node: Node, expected: Type | None) -> Type:
         return STRING
     if isinstance(node, ColorLit):
         return COLOR
+    if isinstance(node, PointLit):
+        if len(node.items) != 2 or not all(fits(_own_type(i, REAL), REAL) for i in node.items):
+            raise TypeError_("a point is two numbers, [x y]")
+        return POINT
     if isinstance(node, ListLit):
-        if expected == POINT:
-            if len(node.items) != 2 or not all(fits(_own_type(i, REAL), REAL) for i in node.items):
-                raise TypeError_("a point is two numbers, [x y]")
-            return POINT
         item = expected.item if isinstance(expected, ListT) else None
         if not node.items:
             if item is None:

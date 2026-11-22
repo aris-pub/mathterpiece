@@ -164,7 +164,7 @@ def test_two_items_giving_one_shape_is_an_error():
         r"v gives c from two items: write one \(when …\) with one condition",
     )
     error(BASE + " (canvas v c (when show c))", r"v gives c from two items")
-    error(BASE + " (canvas v (if show c a) (when show [b c]))", r"v gives c from two")
+    error(BASE + " (canvas v (if show c a) (when show {b c}))", r"v gives c from two")
 
 
 def test_one_item_with_one_condition_is_fine():

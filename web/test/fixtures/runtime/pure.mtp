@@ -9,4 +9,4 @@
 (real b (scaled 3))
 (int e (fact n))
 (real g (uses-scaled 2))
-(real h (first-x [[k 1]]))
+(real h (first-x {[k 1]}))

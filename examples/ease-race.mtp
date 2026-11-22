@@ -21,7 +21,7 @@
 (real overhang 0.6 (const))
 ; Lane i's middle, from the top lane down.
 (func lane ((int i)) (- 3 (* lane-gap i)))
-(list[string] ease-names ['linear' 'cubic-in' 'cubic-out' 'cubic-in-out' '(step 5)' 'bounce'] (const))
+(list[string] ease-names {'linear' 'cubic-in' 'cubic-out' 'cubic-in-out' '(step 5)' 'bounce'} (const))
 
 (scene track (background paper)
 
@@ -40,7 +40,7 @@
   (group balls (defaults (stroke none))
     (foreach i 6
       (circle @'ball-{i}' (x start) (y (lane i)) (r 0.34)
-          (fill [red green yellow blue][(mod i 4)]))))
+          (fill {red green yellow blue}[(mod i 4)]))))
 
   (group captions (defaults (fill soft) (font code) (halign 'middle') (valign 'top'))
     (text_ '(animation (loop) (at-once …) (in-order …))' (pos (bottom lanes 0.6)))

@@ -63,7 +63,7 @@ class TestDeclaring:
 
     def test_values_of_any_type(self):
         model(
-            "(namespace n (real a 1) (int b 2) (point p [1 2]) (list[real] xs [1 2 3])"
+            "(namespace n (real a 1) (int b 2) (point p [1 2]) (list[real] xs {1 2 3})"
             " (bool on true) (string s 'hi') (font label (size 14)))"
             " (scene s (circle c (pos n.p)))"
         )

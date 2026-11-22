@@ -34,25 +34,25 @@
      0))
 
 ; Each face, as its corners in the order that runs one way round from outside.
-(list[int] face-a [0 0 0 1] (const))
-(list[int] face-b [1 2 3 3] (const))
-(list[int] face-c [2 3 1 2] (const))
+(list[int] face-a {0 0 0 1} (const))
+(list[int] face-b {1 2 3 3} (const))
+(list[int] face-c {2 3 1 2} (const))
 
 ; Each edge, as its ends and the two faces it borders.
-(list[int] edge-from [0 0 0 1 2 3] (const))
-(list[int] edge-to [1 2 3 2 3 1] (const))
-(list[int] edge-face [0 0 1 0 1 2] (const))
-(list[int] edge-other-face [2 1 2 3 3 3] (const))
+(list[int] edge-from {0 0 0 1 2 3} (const))
+(list[int] edge-to {1 2 3 2 3 1} (const))
+(list[int] edge-face {0 0 1 0 1 2} (const))
+(list[int] edge-other-face {2 1 2 3 3 3} (const))
 
 (scene ornament
   (real yaw 0 (wrap 0 360))
   ; Each corner on the screen.
-  (list[point] on-screen (map [0 1 2 3] (fn k [(turned-x k yaw) (- (screen-y k yaw))])))
+  (list[point] on-screen (map {0 1 2 3} (fn k [(turned-x k yaw) (- (screen-y k yaw))])))
   ; Whether each face faces the viewer.
-  (list front (map [0 1 2 3] (fn f (facing face-a[f] face-b[f] face-c[f] yaw))))
+  (list front (map {0 1 2 3} (fn f (facing face-a[f] face-b[f] face-c[f] yaw))))
   ; How near each corner is, from 0 (far) to 1 (near). Depth stays within the height, but the
   ; compiler cannot prove it from depth's body, so it is clamped to show it.
-  (list near (map [0 1 2 3] (fn k (clamp (/ (+ (depth k yaw) height) (* 2 height)) 0 1))))
+  (list near (map {0 1 2 3} (fn k (clamp (/ (+ (depth k yaw) height) (* 2 height)) 0 1))))
 
   ; An edge is drawn in full when either face it borders faces the viewer.
   (group edges (defaults (stroke ink) (stroke-width 1.1))

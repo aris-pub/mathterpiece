@@ -424,7 +424,6 @@ class TestReservedCharacters:
     @pytest.mark.parametrize(
         "src",
         [
-            "(f {a})",
             "(f })",
             '(f "x")',
             "(f $x)",

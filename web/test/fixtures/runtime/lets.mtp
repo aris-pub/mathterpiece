@@ -12,7 +12,7 @@
 
 ; A let's name read inside a fn, and an inner let that reuses an outer name.
 (real m 3)
-(list[real] scaled (let ((f (* m 2))) (map [1 2 3] (fn v (* v f)))))
+(list[real] scaled (let ((f (* m 2))) (map {1 2 3} (fn v (* v f)))))
 (real hidden (let ((a (* m 2))) (let ((b a) (a (+ m 1))) (+ (* 100 b) a))))
 
 (scene s (circle c (pos far) (r 1)))

@@ -54,6 +54,7 @@ from mathterpiece.nodes import (
     Name,
     Node,
     NoneLit,
+    PointLit,
     Pos,
     RatioLit,
     RealLit,
@@ -225,7 +226,7 @@ PAINTED = {
     "opacity": Argument(UNIT, 1),
     "fill-opacity": Argument(UNIT, 1),
     "stroke-opacity": Argument(UNIT, 1),
-    # Written together as (dash [lengths…] offset), the offset optional (mtp-5of).
+    # Written together as (dash {lengths…} offset), the offset optional (mtp-5of).
     "dash": Argument(ListT(NON_NEGATIVE), []),
     "dash-offset": Argument(REAL, 0),
     "line-cap": Argument(LINE_CAP, "butt"),
@@ -425,7 +426,7 @@ def _rewrite_parametric(forms: tuple[Form, ...]) -> tuple[Form, ...]:
 
 
 def _parametric(node: Node) -> Node:
-    if isinstance(node, ListLit):
+    if isinstance(node, (ListLit, PointLit)):
         return replace(node, items=tuple(_parametric(i) for i in node.items))
     if not isinstance(node, Form):
         return node
@@ -1700,6 +1701,8 @@ class _Compiler:
                 raise CompileError("a plain list needs a value to take its item type from", pos)
             first = self.expr(node, None, scope)
             t = first.type
+            if not isinstance(_core(t), ListT) and t != RECURSING:
+                raise CompileError(f"expected a list, got {t}", node.pos)
         try:
             if rest:
                 t = refine(t, rest)
@@ -1931,7 +1934,7 @@ class _Compiler:
             self.playing.pop()
 
     def colormap_decl(self, form: Form, scope: dict) -> None:
-        """(colormap name [color…] (positions …) (discrete bool) (wrap-at x)): sugar for one
+        """(colormap name {color…} (positions …) (discrete bool) (wrap-at x)): sugar for one
         function of a real, giving a color (the author, 2026-11-05). The positions are in the
         figure's own values: a start and an end, with the colors evenly spaced, or one per color;
         with none, 0 and 1. Between two positions the colors mix in a straight line, or with
@@ -1940,7 +1943,7 @@ class _Compiler:
         reaching it at x, and wraps around."""
         pos = form.pos
         if len(form.items) < 3 or not isinstance(form.items[2], ListLit):
-            raise CompileError("a colormap is (colormap name [color…] keyword…)", pos)
+            raise CompileError("a colormap is (colormap name {color…} keyword…)", pos)
         colors = list(form.items[2].items)
         if len(colors) < 2:
             raise CompileError("a colormap needs at least two colors", form.items[2].pos)
@@ -1973,7 +1976,7 @@ class _Compiler:
         if "positions" in given:
             at = given["positions"]
             if not isinstance(at, ListLit):
-                raise CompileError("positions are a list: [start end], or one per color", at.pos)
+                raise CompileError("positions are a list: {start end}, or one per color", at.pos)
             ps = [float(known(p, REAL, "positions")) for p in at.items]
             if discrete and len(ps) != 2:
                 raise CompileError(
@@ -2579,7 +2582,7 @@ class _Compiler:
         elif head == "lerp":
             self.count(head, given, 3, 3, pos)
             first = self.expr(given[0], None, scope)
-            point = isinstance(given[0], ListLit) or _core(first.type) == POINT
+            point = _core(first.type) == POINT
             t = POINT if point else REAL
             params = (Param("a", t), Param("b", t), Param("t", REAL))
             b = Builtin((t, t, REAL), t, _lerp, UNBOUNDED if t == REAL else None)
@@ -2879,11 +2882,7 @@ class _Compiler:
             and all(
                 fits(_loose(_inner(a)), _loose(b)) for a, b in zip(params, ft.params, strict=True)
             )
-            and (
-                result is None
-                or fits(_loose(ft.result), _loose(result))
-                or (_core(result) == POINT and _is_pair(ft.result))
-            )
+            and (result is None or fits(_loose(ft.result), _loose(result)))
         )
         if not ok:
             want = " ".join(str(t) for t in (*params, result if result is not None else "…"))
@@ -5564,7 +5563,7 @@ class _Compiler:
             if n not in (1, 2):
                 raise CompileError(
                     "a curve has one control or two, and how many must be known when compiling:"
-                    " (controls [k]) or (controls [k1 k2])",
+                    " (controls {k}) or (controls {k1 k2})",
                     given.get("controls", (form,))[0].pos,
                 )
         if clip is not None:
@@ -6044,8 +6043,6 @@ class _Compiler:
         # A constraint is checked on the value (known) or its range (settle), not on its type.
         target = _loose(expected) if expected is not None else None
         if target is not None and not fits(_loose(e.type), target):
-            e = self.as_point(e, expected) or self.as_points(e, expected) or e
-        if target is not None and not fits(_loose(e.type), target):
             assert expected is not None
             reason = self.misfit(e, expected)
             if reason is not None:
@@ -6105,6 +6102,8 @@ class _Compiler:
             return _known(BOOL, node.value)
         if isinstance(node, ListLit):
             return self.list_literal(node, expected, scope)
+        if isinstance(node, PointLit):
+            return self.point_literal(node, scope)
         if isinstance(node, Name):
             return self.name(node, scope)
         if isinstance(node, Bar):
@@ -6136,15 +6135,16 @@ class _Compiler:
             raise CompileError(f"{value} is beyond ±10^150, the limit of every number", node.pos)
         return _known(t, value)
 
+    def point_literal(self, node: PointLit, scope: dict) -> Expr:
+        """[x y], which is (point-of x y): a point, whatever is expected of it."""
+        if len(node.items) != 2:
+            raise CompileError("a point is two numbers, [x y]", node.pos)
+        return _gather(POINT, [self.expr(i, Maybe(REAL), scope) for i in node.items])
+
     def list_literal(self, node: ListLit, expected: Type | None, scope: dict) -> Expr:
         attribute = expected.base if isinstance(expected, Refine) else expected
         if isinstance(attribute, Maybe):
             attribute = attribute.inner
-        if attribute == POINT:
-            items = [self.expr(i, Maybe(REAL), scope) for i in node.items]
-            if len(items) != 2:
-                raise CompileError("a point is two numbers, [x y]", node.pos)
-            return _gather(POINT, items)
         item = attribute.item if isinstance(attribute, ListT) else None
         if not node.items:
             if item is None:
@@ -6228,70 +6228,8 @@ class _Compiler:
 
     def expect(self, e: Expr, t: Type, pos: Pos) -> Expr:
         if not fits(_loose(e.type), _loose(t)):
-            point = self.as_point(e, t) or self.as_points(e, t)
-            if point is None:
-                raise CompileError(f"expected {t}, got {e.type}", pos)
-            return point
+            raise CompileError(f"expected {t}, got {e.type}", pos)
         return e
-
-    def as_point(self, e: Expr, t: Type) -> Expr | None:
-        """e as a point, where t is one and e is a list of two numbers whose length is known when
-        compiling (mtp-vrf9; type-system.md, section 3); otherwise None."""
-        lt = _core(e.type)
-        if _core(t) != POINT or isinstance(e.type, Maybe) or not isinstance(lt, ListT):
-            return None
-        if _core(lt.item) not in (INT, RATIO, REAL) or self.length_of(e, set()) != 2:
-            return None
-        if e.op == "list":
-            return _gather(POINT, list(e.args))
-        if e.known:
-            return _known(POINT, tuple(e.value))
-        return replace(e, type=POINT)
-
-    def as_points(self, e: Expr, t: Type) -> Expr | None:
-        """e as a list of points, where t is one and e is a list whose items are all lists of two
-        numbers, a length known when compiling (mtp-gvrf.3); otherwise None."""
-        want, lt = _core(t), _core(e.type)
-        if not (isinstance(want, ListT) and _core(want.item) == POINT and isinstance(lt, ListT)):
-            return None
-        if isinstance(e.type, Maybe) or isinstance(lt.item, Maybe):
-            return None
-        if not isinstance(_core(lt.item), ListT) or _item_length(e) != 2:
-            return None
-        if _core(_core(lt.item).item) not in (INT, RATIO, REAL):
-            return None
-        out = ListT(POINT)
-        n = _length(e)
-        if n is not None:
-            out = _with_length(out, n)
-        if e.op == "list":
-            items = [self.as_point(a, POINT) for a in e.args]
-            if any(a is None for a in items):
-                return None
-            return _gather(out, items)
-        if e.known:
-            return _known(out, [tuple(v) for v in e.value])
-        return replace(e, type=out)
-
-    def length_of(self, e: Expr, seen: set) -> int | None:
-        """A list's length, when it is known when compiling."""
-        if isinstance(e.type, Refine):
-            for c in e.type.constraints:
-                if c[0] == "length":
-                    return c[1]
-        if e.known:
-            return len(e.value) if isinstance(e.value, (list, tuple)) else None
-        if e.op == "list":
-            return len(e.args)
-        if e.op == "if":
-            a, b = (self.length_of(x, seen) for x in e.args[1:3])
-            return a if a == b else None
-        if e.op == "call" and e.args[0] not in seen:
-            body = self.model.functions[e.args[0]].body
-            return None if body is None else self.length_of(body, seen | {e.args[0]})
-        if e.op == "part" and isinstance(e.args[1], Expr):
-            return _item_length(e.args[0])
-        return None
 
     def lookup(self, name: str, scope: dict, pos: Pos) -> Expr:
         if name in scope:
@@ -6737,7 +6675,7 @@ class _Compiler:
                 return self.random(node, self.primitives[head], node.items[1:], scope)
         # The commonest heads, first: no head checked below is one of them.
         if head in ARITH:
-            return self.arith(node.pos, head, self.operands(args, expected, scope))
+            return self.arith(node.pos, head, [self.expr(a, None, scope) for a in args])
         if head in COMPARE or head in ("=", "!="):
             a, b = self.args(node, 2)
             ea = self.expr(a, None, scope)
@@ -6745,9 +6683,9 @@ class _Compiler:
             return self.compare(node, head, ea, eb)
         if head == "as":
             type_node, lit = self.args(node, 2)
-            # A list in brackets is a literal even when it holds expressions (type-system.md,
-            # section 3).
-            if not (_is_literal(lit) or isinstance(lit, ListLit)):
+            # A list or a point written in place is a literal even when it holds expressions
+            # (type-system.md, section 3).
+            if not (_is_literal(lit) or isinstance(lit, (ListLit, PointLit))):
                 raise CompileError(
                     "as gives a type only to a literal, such as (as point [0 0])", node.pos
                 )
@@ -6774,7 +6712,7 @@ class _Compiler:
             # (when c x) is (if c x none) (the author, 2026-11-04).
             if len(args) != 2:
                 raise CompileError(
-                    "when takes a condition and one value; give several in a list: (when c [a b])",
+                    "when takes a condition and one value; give several in a list: (when c {a b})",
                     node.pos,
                 )
             ifs = Form((Name(("if",), node.pos), args[0], args[1], NoneLit(node.pos)), node.pos)
@@ -6789,7 +6727,7 @@ class _Compiler:
             # base case, and in a foreach copy so (if (= k 0) start (… previous copy …)) works.
             if c.known:
                 # Outside a fold the branch taken is the if's whole value, so it meets what is
-                # expected of the if, as a literal [1 0] becomes a point.
+                # expected of the if, as an empty list {} takes its item type from it.
                 return self.expr(
                     args[1] if c.value else args[2], branch if self.folding else expected, scope
                 )
@@ -6887,20 +6825,6 @@ class _Compiler:
         self.from_rand(head, node.pos)
         self.from_rand_whole(node)
         raise CompileError(f"unknown function '{head}'", node.pos)
-
-    def operands(self, nodes, expected: Type | None, scope: dict) -> list:
-        """An operator's operands. A literal list such as [1 2] is a point when the attribute or
-        another operand is one, as a literal takes its attribute's type; so is one inside
-        arithmetic in an operand, as in (+ (* r [1 0]) o) (mtp-mlwj). Those operands are compiled
-        after the others, once it is known whether a point is wanted, so each is compiled once."""
-        others = [None if _holds_literal(n) else self.expr(n, None, scope) for n in nodes]
-        point = (expected is not None and _core(expected) == POINT) or any(
-            o is not None and _core(o.type) == POINT for o in others
-        )
-        return [
-            o if o is not None else self.expr(n, POINT if point else None, scope)
-            for n, o in zip(nodes, others, strict=True)
-        ]
 
     def typed_like(self, node: Node, other: Type, scope: dict) -> Expr:
         """In (= o.pos [1 2]), the literal takes the other side's type."""
@@ -7300,7 +7224,7 @@ def _is_literal(node: Node) -> bool:
         node, (IntLit, RatioLit, RealLit, ComplexLit, StrLit, ColorLit, BoolLit, NoneLit)
     ):
         return True
-    return isinstance(node, ListLit) and all(_is_literal(i) for i in node.items)
+    return isinstance(node, (ListLit, PointLit)) and all(_is_literal(i) for i in node.items)
 
 
 # The random functions: each draws from a seed, at the place it is written (mtp-bjn0).
@@ -7520,7 +7444,7 @@ def _words(node, out: set[str]) -> set[str]:
                 out.add(p.removesuffix("_"))
             else:
                 _words(p, out)
-    elif isinstance(node, (Form, ListLit, Brackets, Bar)):
+    elif isinstance(node, (Form, ListLit, PointLit, Brackets, Bar)):
         items = node.items
         if isinstance(node, Form) and _seed_item(node) is not None:
             # The head of (seed s) uses no declaration named seed: s names the seed.
@@ -7560,7 +7484,7 @@ def _needs_default_seed(forms) -> bool:
             return True
         if head == "roll-dice" and len(cast(Form, node).items) == 1:
             return True
-        if isinstance(node, (Form, ListLit, Brackets, Bar)):
+        if isinstance(node, (Form, ListLit, PointLit, Brackets, Bar)):
             todo.extend(node.items)
     return False
 
@@ -7633,7 +7557,7 @@ def _sets(node):
                 p,
             )
         return node if items == node.items else replace(node, items=items)
-    if isinstance(node, (ListLit, Brackets, Bar)):
+    if isinstance(node, (ListLit, PointLit, Brackets, Bar)):
         items = tuple(_sets(i) for i in node.items)
         return node if items == node.items else replace(node, items=items)
     return node
@@ -7777,20 +7701,9 @@ def _through(node, whole: dict):
                 raise CompileError(f"{parts[0]}.mtp declares no '{part}'", node.pos)
             parts = (exports[part], *parts[2:])
         return replace(node, parts=parts)
-    if isinstance(node, (Form, ListLit, Brackets, Bar)):
+    if isinstance(node, (Form, ListLit, PointLit, Brackets, Bar)):
         return replace(node, items=tuple(_through(i, whole) for i in node.items))
     return node
-
-
-def _holds_literal(node: Node) -> bool:
-    """Whether node is a literal list, or arithmetic with one among its operands at any depth."""
-    if isinstance(node, ListLit):
-        return True
-    return (
-        isinstance(node, Form)
-        and _head(node) in ("+", "-", "*", "/")
-        and any(_holds_literal(n) for n in node.items[1:])
-    )
 
 
 def _points_mean(points: Expr) -> Expr:
@@ -7871,15 +7784,15 @@ def _fixed_size_value(form: Form) -> bool:
 
 
 def _dash(item: Node) -> dict[str, Node]:
-    """(dash [lengths…] offset) as its two attributes."""
+    """(dash {lengths…} offset) as its two attributes."""
     if _head(item) == "dash-offset":
         raise CompileError(
-            "the offset is dash's second argument, after the lengths: (dash [4 2] 1)", item.pos
+            "the offset is dash's second argument, after the lengths: (dash {4 2} 1)", item.pos
         )
     assert isinstance(item, Form)
     if len(item.items) not in (2, 3):
         raise CompileError(
-            f"dash takes a list of lengths and an offset, such as (dash [4 2] 1), got"
+            f"dash takes a list of lengths and an offset, such as (dash {{4 2}} 1), got"
             f" {_shown(item)}",
             item.pos,
         )
@@ -7997,17 +7910,6 @@ def _sized(e: Expr) -> Type:
     if m is not None and _length_constraint(_inner(core.item)) is None:
         t = _with_item_length(t, m)
     return t
-
-
-def _is_pair(t: Type) -> bool:
-    """Whether t is a list of two numbers, which is a point where a point is expected."""
-    core = _core(t)
-    return (
-        not isinstance(t, Maybe)
-        and isinstance(core, ListT)
-        and _core(core.item) in (INT, RATIO, REAL)
-        and _length_constraint(_inner(t)) == 2
-    )
 
 
 def _length_constraint(t: Type) -> int | None:

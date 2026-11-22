@@ -372,7 +372,7 @@ class TestForeachInAnAnimation:
         assert s[0] == "at-once" and len(s) == 4 and all(x[0] == "move" for x in s[1:])
 
     def test_one_after_another(self):
-        m = model(f"{K} (animation an (foreach v [1 2 3] (move k (to v) (duration 1))))")
+        m = model(f"{K} (animation an (foreach v {{1 2 3}} (move k (to v) (duration 1))))")
         assert m.get("an").attrs["duration"].value == 3
 
     def test_with_waits_and_a_count(self):
@@ -479,11 +479,11 @@ class TestTogether:
     # mtp-bvrp: a write of such a shape's x, y or pos writes these attributes, as the runtime
     # counts them since mtp-gzs9.
     PLACED = {
-        "polyline": ("(polyline sh (points [[0 0] [0 2]]))", {"points": "[[0 0] [2 0]]"}),
-        "polygon": ("(polygon sh (points [[0 0] [2 0] [2 2]]))", {"points": "[[0 0] [1 0] [1 1]]"}),
+        "polyline": ("(polyline sh (points {[0 0] [0 2]}))", {"points": "{[0 0] [2 0]}"}),
+        "polygon": ("(polygon sh (points {[0 0] [2 0] [2 2]}))", {"points": "{[0 0] [1 0] [1 1]}"}),
         "curve": (
-            "(curve sh (from [0 0]) (to [2 0]) (controls [[1 1]]))",
-            {"from": "[1 1]", "to": "[3 1]", "controls": "[[2 2]]"},
+            "(curve sh (from [0 0]) (to [2 0]) (controls {[1 1]}))",
+            {"from": "[1 1]", "to": "[3 1]", "controls": "{[2 2]}"},
         ),
         "line": ("(line sh (from [0 0]) (to [2 0]))", {"from": "[1 1]", "to": "[3 1]"}),
         "triangle": (
@@ -507,7 +507,7 @@ class TestTogether:
 
     def test_x_and_y_and_two_ends_are_fine(self):
         for shape, first, second in (
-            ("(polyline sh (points [[0 0] [0 2]]))", "x (to 3)", "y (to 3)"),
+            ("(polyline sh (points {[0 0] [0 2]}))", "x (to 3)", "y (to 3)"),
             ("(line sh (from [0 0]) (to [2 0]))", "from (to [1 1])", "to (to [3 1])"),
         ):
             steps(
@@ -523,13 +523,13 @@ class TestTogether:
         "r": (CIRCLES, "g.r (to 2)", "c1.r (to 3)", "c1.r"),
         "by position": (CIRCLES, "g.fill (to #'red')", "g[1].fill (to #'blue')", "c2.fill"),
         "points": (
-            "(group g (polyline pl (points [[0 0] [0 2]])))",
+            "(group g (polyline pl (points {[0 0] [0 2]})))",
             "g.x (to 3)",
-            "pl.points (to [[0 0] [2 0]])",
+            "pl.points (to {[0 0] [2 0]})",
             "pl.points",
         ),
         "pos and x": (
-            "(group g (polyline pl (points [[0 0] [0 2]])))",
+            "(group g (polyline pl (points {[0 0] [0 2]})))",
             "g.pos (to [3 3])",
             "pl.x (to 3)",
             "pl.points",

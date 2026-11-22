@@ -64,7 +64,7 @@
 (func lower ((pair l) (pair r)) (if (<= l[0] r[0]) l r))
 (func[pair] best-in ((real LL) (real a (>= 0)) (real step (>= 0) (<= 1)) (int n))
   (if (<= n 1)
-      (lower [(spread LL a) a] [(spread LL a) a])
+      (lower {(spread LL a) a} {(spread LL a) a})
     (let ((half (floor (/ n 2))))
       (lower (best-in LL a step half)
              (best-in LL (max 0 (+ a (* step half))) step (- n half))))))
@@ -72,7 +72,7 @@
   (let ((coarse (best-in LL 0.3 0.05 (+ 15 (* 20 (round LL))))))
     (best-in LL (max 0 (- (or? coarse[1] 1) 0.05)) 0.005 21)))
 ; Only the tour shows the best density, and only at 4, 6, 8 and 10 levels.
-(list bests [(best 4) (best 6) (best 8) (best 10)] (const))
+(list bests {(best 4) (best 6) (best 8) (best 10)} (const))
 (func best-of (real LL)
   (cond ((= LL 4) bests[0]) ((= LL 6) bests[1]) ((= LL 8) bests[2]) (else bests[3])))
 
@@ -90,8 +90,8 @@
         (else f'{x:.2f}')))
 
 ; The vertical position, in the bottom chart, of a distortion v.
-(list[real] ticks [1 2 5 10 100 1000] (const))
-(list[string] tick-names ['1' '2' '5' '10' '100' '1000'] (const))
+(list[real] ticks {1 2 5 10 100 1000} (const))
+(list[string] tick-names {'1' '2' '5' '10' '100' '1000'} (const))
 (func cy (real v) (+ -114 (* (max 0 (min 1 (/ (log (max v 1) 10) 3))) 106)))
 
 ; Its tip is where a guide line ends.
@@ -142,7 +142,7 @@
       (text_ '0.5' (pos [48 -75]))
       (text_ '1' (pos [48 -12])))
     (line worst-line (from [54 (+ -134 (* 126 worst))]) (to [466 (+ -134 (* 126 worst))])
-        (stroke soft) (stroke-width 1) (stroke-opacity 0.8) (dash [4 3]))
+        (stroke soft) (stroke-width 1) (stroke-opacity 0.8) (dash {4 3}))
     ; Level i + 1.
     ; The bars stand on the axis, 41.2 apart. A bar too short to see is transparent: in a row,
     ; one that did not exist would let the bars after it slide out of their levels.
@@ -171,7 +171,7 @@
           (edge (if n-on (if all green one) soft)) (weight (if n-on 1.5 1)))
   (line n-guide (from [(+ 54 (* lv 41.2)) -8]) (to n-handle.tip.pos)
       (stroke (if n-on (if all green one) soft)) (stroke-width 1)
-      (stroke-opacity (if n-on 0.7 0.45)) (dash [4 3]))
+      (stroke-opacity (if n-on 0.7 0.45)) (dash {4 3}))
   ; What the reader grabs: an area wider than the handle, as wide as a level.
   (rect n-grab (pos [(+ 54 (* L 41.2)) -168]) (width 41.2) (height 24) (fill paper)
       (opacity 0))

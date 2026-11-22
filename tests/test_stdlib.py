@@ -67,8 +67,8 @@ def test_each_file_declares_what_is_tested_here(name):
 
 class TestMath:
     def test_dot(self, tmp_path):
-        assert value(tmp_path, "(import math dot)", "(dot [1 2 3] [4 5 6])") == 32
-        assert value(tmp_path, "(import math dot)", "(dot [1 2] [1 2 3])") is None
+        assert value(tmp_path, "(import math dot)", "(dot {1 2 3} {4 5 6})") == 32
+        assert value(tmp_path, "(import math dot)", "(dot {1 2} {1 2 3})") is None
 
     def test_clamp(self, tmp_path):
         for x, want in ((-1, 0), (0.5, 0.5), (3, 1)):
@@ -81,7 +81,7 @@ class TestMath:
         assert got == [0, 0.5, 1]
 
     def test_mean(self, tmp_path):
-        assert value(tmp_path, "(import math mean)", "(mean [1 2 6])") == 3
+        assert value(tmp_path, "(import math mean)", "(mean {1 2 6})") == 3
 
     def test_norm_and_normalize(self, tmp_path):
         assert value(tmp_path, "(import math norm)", "(norm [3 4])") == 5

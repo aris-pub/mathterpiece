@@ -30,12 +30,12 @@ class TestVariables:
         assert k.value.value == 1
 
     def test_types_from_their_head(self):
-        m = model("(int n 3) (bool b true) (string s 'hi') (color c #'red') (list xs [1 2])")
+        m = model("(int n 3) (bool b true) (string s 'hi') (color c #'red') (list xs {1 2})")
         assert [m.get(x).value.type for x in "nbscx" if x != "x"] == [INT, BOOL, STRING, COLOR]
         assert m.get("xs").value.type == ListT(INT)
 
     def test_a_type_expression_heads_a_declaration(self):
-        m = model("(list[color] p [#'red' #'gold']) (real|none c none)")
+        m = model("(list[color] p {#'red' #'gold'}) (real|none c none)")
         assert m.get("p").value.type == ListT(COLOR)
         assert m.get("c").value.type == Maybe(REAL)
 
@@ -271,7 +271,7 @@ class TestParts:
     def test_the_part_form(self):
         m = model("(scene s (circle c (r 2)) (circle d (r (. c r))))")
         assert m.get("d").attrs["r"].deps >= {(m.id("c"), "r")}
-        assert value("(list xs [4 5] (const)) (real k (. xs 1))", "k") == 5
+        assert value("(list xs {4 5} (const)) (real k (. xs 1))", "k") == 5
 
     def test_pos_is_x_and_y(self):
         m = model("(scene s (circle c (x 1) (y 2)) (circle d (pos c.pos)))")
@@ -364,10 +364,10 @@ class TestBoundListLength:
     # lengths").
     def test_a_bound_list_keeps_its_length(self):
         # So reading item 1 gives a real, never none.
-        assert model("(real k 1) (list xs [k (* 2 k)]) (real d (. xs 1))").get("d").type == REAL
+        assert model("(real k 1) (list xs {k (* 2 k)}) (real d (. xs 1))").get("d").type == REAL
 
     def test_a_free_list_does_not(self):
-        error("(list[real] xs [1 2]) (real d (. xs 1))", "may be none")
+        error("(list[real] xs {1 2}) (real d (. xs 1))", "may be none")
 
 
 class TestMixedNumbers:
@@ -376,7 +376,7 @@ class TestMixedNumbers:
         assert value("(bool b (< 2/5 0.4))", "b") is False
 
     def test_an_int_and_a_narrowed_real_meet_as_reals(self):
-        xs = model("(real h 1 (>= 0)) (list xs [0 h])").get("xs").value
+        xs = model("(real h 1 (>= 0)) (list xs {0 h})").get("xs").value
         assert xs.expr.type == ListT(Refine(REAL, ((">=", 0),)))
 
 
@@ -401,10 +401,10 @@ class TestListLiterals:
 class TestIndexingAListWrittenInPlace:
     # mtp-4vx: [a b c][h] reads item h of the list, as (. [a b c] h) does.
     def test_a_position_known_when_compiling(self):
-        assert value("(real v [10 20 30][1])", "v") == 20
+        assert value("(real v {10 20 30}[1])", "v") == 20
 
     def test_a_position_known_only_while_drawing(self):
-        m = compile_source("(int h 0 (>= 0) (<= 2)) (real v [10 20 30][h])")
+        m = compile_source("(int h 0 (>= 0) (<= 2)) (real v {10 20 30}[h])")
         assert m.get("v").value.bound
 
 
@@ -479,7 +479,7 @@ class TestForeach:
 
     def test_over_a_list(self):
         m = model(
-            "(list xs [4 5 6] (const)) (scene s (foreach x xs (circle (name f'c{x}') (r x))))"
+            "(list xs {4 5 6} (const)) (scene s (foreach x xs (circle (name f'c{x}') (r x))))"
         )
         assert m.get("c5").attrs["r"].value == 5
 
@@ -548,8 +548,8 @@ class TestForeachOverSeveral:
 
     def test_the_same_as_nested_foreach(self):
         body = "(circle (name f'c{i}-{x}') (r (+ i x)))"
-        nested = model(f"(list xs [4 5] (const)) (scene s (foreach i 2 (foreach x xs {body})))")
-        flat = model(f"(list xs [4 5] (const)) (scene s (foreach ((i 2) (x xs)) {body}))")
+        nested = model(f"(list xs {{4 5}} (const)) (scene s (foreach i 2 (foreach x xs {body})))")
+        flat = model(f"(list xs {{4 5}} (const)) (scene s (foreach ((i 2) (x xs)) {body}))")
         assert [(o.name, o.attrs["r"].value) for o in flat.objects if o.kind == "circle"] == [
             (o.name, o.attrs["r"].value) for o in nested.objects if o.kind == "circle"
         ]
