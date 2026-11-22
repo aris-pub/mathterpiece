@@ -390,29 +390,6 @@ declared with one is a compile error. Bead mtp-mo3r.
 (readout out f'area of c = {(area c):.2f}, area of d = {(area d):.2f}')
 ```
 
-## Common type
-
-```{rule} common-type
-The common type of two types A and B is the smallest type that holds both, found this way:
-
-- When A is a subtype of B, it is B, and when B is a subtype of A, it is A.
-- When one is `none`, it is the union of the other and `none`.
-- When one includes `none`, it is the union of `none` and the common type of the two without `none`.
-- For two number types, it is the later of the two, without conditions, in the order `int`, `ratio`,
-  `real`, `complex`.
-- For two list types, it is the list type of the common type of their item types.
-- Otherwise there is none, and the source is a compile error.
-
-The type of the branches of an `if` and of the items of a `(list-of …)` is their common type, except
-that the type of the branches of an `if` is the expected type when it is a declared interface that
-both are subtypes of. The type of the members of a group is found otherwise: their type when all have the
-same type, else `positioned` when all are subtypes of it, else `shape`, with `none` added when the type of
-one of them includes `none`.
-```
-
-So the common type of the branches of `(if on 1 2.5)` is `real`, and `g[k]` on a group of circles and rects is
-`positioned`, so `g[k].x` may be read.
-
 ## Motifs and variants
 
 ```{rule} motif-and-variant-types
@@ -481,8 +458,8 @@ the expected type.
 The result type of `(func[R] N PARAMS BODY)` is R. The result type of `(func N PARAMS BODY)` is
 worked out from BODY, in which each call of N has a result type of its own:
 
-1. T0 is the type of BODY when each call of N in BODY meets every type at that type
-   ({numref}`common-type`), so that `(if (<= m 0) 0 (+ 1 (N …)))` has type `int`.
+1. T0 is the type of BODY when each call of N in BODY has the type with no values, which adds
+   nothing to a union, so that `(if (<= m 0) 0 (+ 1 (N …)))` has type `int`.
 2. T(k + 1) is the type of BODY when each call of N in BODY has the type Tk.
 3. The result type is the first Tk that equals T(k + 1).
 
@@ -501,15 +478,15 @@ Each expression except a clause and a special form has this type:
 | Expression | Its type |
 |---|---|
 | a literal | `int`, `ratio`, `real` or `complex` for a number, by how it is written ({numref}`number-literals`), `string` for a string literal or a {term}`TeX string`, `bool` for `true` and `false`, and `none` for `none` |
-| a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
-| `(. X K)` | the type of the attribute or the member that K chooses ({numref}`dot-name-part`). An item of a list: the item type. A coordinate of a point: `real`. A member of a group chosen while drawing: the common type of the members. Each with `none` added as {numref}`may-give-none` states |
-| `(list-of X…)` | a list of the common type of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
+| a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the union of the types of the members for a `foreach` over a group, and the function type of a function |
+| `(. X K)` | the type of the attribute or the member that K chooses ({numref}`dot-name-part`). An item of a list: the item type. A coordinate of a point: `real`. A member of a group chosen while drawing: the union of the types of the members. When the type of X is a union, K may choose an attribute only when every type in the union has it, and the type is the union of their types of that attribute. Each with `none` added as {numref}`may-give-none` states |
+| `(list-of X…)` | a list of the union of the types of its items. With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
 | `(color-of S)` | `color` when S is known when compiling, `color\|none` otherwise ({numref}`color-literals`) |
 | `(point-of X Y)` | `point`, each of X and Y with `real` expected. With `none` added when the type of X or of Y includes `none` ({numref}`none-propagates`) |
 | `(as T X)` | T. X may be any expression whose type is a subtype of T: `as` states the type of X and never changes its value. So `(as list[real] {})` and `(as func[real real] (fn x (* 2 x)))` are allowed, and `(as int 2.5)` is a compile error |
-| a spread `g.A` | `list[U]`, U the common type of the A of the members, with the number of members as its length. A member that has no A contributes `none`, and `none` is then added to U |
-| `(if C A B)` | C has type `bool`. The type is the common type of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
-| `(or? X D)` | the common type of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
+| a spread `g.A` | `list[U]`, U the union of the types of the A of the members, with the number of members as its length. A member that has no A contributes `none`, and `none` is then added to U |
+| `(if C A B)` | C has type `bool`. The type is the union of the types of A and B. When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
+| `(or? X D)` | the union of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
 | `(let (…) B)` | the type of B |
 | `(fn PARAMS B)` | {numref}`function-result-type` |
 | a call `(F A…)` of a function | the result type of F, with `none` added as {numref}`none-only-where-allowed` states |
@@ -525,5 +502,5 @@ The type of each expression that is given where a type is expected must be a sub
 the conversions of {numref}`conversions`, or meet its conditions by {numref}`constraint-proof`.
 ```
 
-So `(int m (if on 1 2.5))` is a compile error, since the common type of the branches is `real`, and
+So `(int m (if on 1 2.5))` is a compile error, since the type of the branches is `int|real`, which is `real`, and
 with an int `n`, `(real k n)` holds the value of `n` as a real.
