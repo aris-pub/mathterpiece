@@ -331,7 +331,7 @@ class TestPointArithmetic:
     def test_a_point_times_a_real(self):
         assert value("(point v (* 2 [1 2]))", "v") == (2, 4)
 
-    @xfail("mtp-diqi", "no point-of, no division and no negation of a point")
+    @xfail("mtp-5ir0", "no point-of, and no division of a point")
     def test_the_zero_and_the_other_operations(self):
         assert value("(point v (- (/ [2 4] 2) (point-of 0 0)))", "v") == (1, 2)
         assert value("(point v (- [1 2]))", "v") == (-1, -2)
