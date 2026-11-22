@@ -42,38 +42,38 @@ circle, and `(is 3 real)` is `true` when compiling.
 ```{rule} the-types
 These are the types of mtp:
 
-| Type | Written | Its values |
+| Type | Its values | Notes |
 |---|---|---|
-| `int`, `ratio`, `real`, `complex` | as named | the numbers of {numref}`number-types` |
-| `unit` | `unit` | the same type as `(real (>= 0) (<= 1))`: the reals from 0 to 1 |
-| `ease` | `ease` | the same type as `func[unit real]`: the eases of a movement ({doc}`time`) |
-| `curve` | `curve` | the same type as `func[real point]`: the curves of the plane, such as the curve of a `parametric` |
-| `bool` | `bool` | `true` and `false` |
-| `string` | `string` | the {term}`strings <string>`, the strings of formulas among them |
-| `color` | `color` | the colors ({doc}`world-model`) |
-| `font` | `font` | the fonts: the records with a family, a style, a weight and a size |
-| `point` | `point` | the points: two {term}`reals <real>`, `x` and `y` ({numref}`values`) |
-| a {term}`list` type | `list[T]` | the lists of any length whose items are of type T |
-| `func` | `func` | every function |
-| a function type | `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R |
-| `movement` | `movement` | every movement: the moves, the scores and the movements of every animation type ({doc}`time`) |
-| an animation type | the name `A` of the animation | every `A` |
-| `none` | `none` | the value `none` alone |
-| a {term}`refined type` | `(T C…)` | the values of T that meet every condition C ({numref}`constraints`) |
-| a union | `T1\|T2\|…` | the values of each of the types |
-| an intersection | `T1&T2&…` | the values that are in every one of the types |
-| a modular type | `(mod int lo hi)`, `(mod real lo hi)` | the numbers from lo up to hi, hi left out, with arithmetic that wraps ({numref}`modular-types`) |
-| `shape` | `shape` | every shape: the shapes of every shape type, motif type and variant type |
-| a shape type | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind. A row and a column are of type `group` |
-| a motif type | the {term}`name` `M` of the motif | every `M` ({numref}`motif-and-variant-types`) |
-| a variant type | the name `V` of the variant | every `V` ({numref}`motif-and-variant-types`) |
-| `scene` | `scene` | the scene |
-| `record`, `formula`, `term` | as named | the records, fonts among them, the formulas, and the terms |
-| `component`, `view`, `control`, `listener` | as named | the components, the views, the controls and the listeners |
-| a {term}`component` type | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and the name of each listener | the components of that kind |
-| an {term}`interface` | `positioned`, `sequence`, `sequence[T]`, `instant`, or the name of a declared interface | no object of its own: the objects whose types satisfy it ({numref}`interfaces`) |
-| `rand-seed` | `rand-seed` | the values of `int` ({numref}`seed-variable`) |
-| `colormap` | `colormap` | the same type as `func[real color]`: the functions from a real to a color |
+| `int`, `ratio`, `real`, `complex` | the numbers of each kind | {numref}`number-types` |
+| `unit` | the reals from 0 to 1 | the same type as `(real (>= 0) (<= 1))` |
+| `bool` | `true` and `false` | |
+| `string` | the {term}`strings <string>` | the strings of formulas among them |
+| `color` | the colors | {numref}`color-literals` |
+| `point` | the points | two reals, `x` and `y` ({numref}`values`) |
+| `none` | `none` alone | |
+| `list[T]` | the lists whose items are of type T | |
+| `func` | every function | |
+| `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R | |
+| `ease` | the eases of a movement | the same type as `func[unit real]` ({doc}`time`) |
+| `curve` | the curves of the plane | the same type as `func[real point]` |
+| `colormap` | the functions from a real to a color | the same type as `func[real color]` |
+| `rand-seed` | the ints | a free variable of this type is a {term}`seed` ({numref}`seed-variable`) |
+| `(T C…)` | the values of T that meet every condition C | a {term}`refined type` ({numref}`constraints`) |
+| `T1\|T2\|…` | the values of each of the types | a union |
+| `T1&T2&…` | the values that are in every one of the types | an intersection |
+| `(mod int lo hi)`, `(mod real lo hi)` | the numbers from lo up to hi, hi left out | a modular type, whose arithmetic wraps ({numref}`modular-types`) |
+| `shape` | every shape | |
+| `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind | a row and a column are of type `group` |
+| `M`, for a motif `M` | every `M` | {numref}`motif-and-variant-types` |
+| `V`, for a variant `V` | every `V` | {numref}`motif-and-variant-types` |
+| `scene` | the scene | |
+| `formula`, `term` | the formulas, and the terms | |
+| `record`, `font` | the records, and the fonts | a font is a record with a family, a style, a weight and a size |
+| `movement` | every movement | the moves, the scores and every `A` |
+| `A`, for an animation `A` | every `A` | {doc}`time` |
+| `component`, `view`, `control`, `listener` | the components, the views, the controls and the listeners | |
+| `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
+| `positioned`, `sequence`, `sequence[T]`, `instant`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
 
 There are no other types.
 ```
