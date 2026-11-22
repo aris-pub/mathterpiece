@@ -152,32 +152,18 @@ points and the circles.
 ## Fitting
 
 ```{rule} fits
-A type A fits a type B, and a value of type A is accepted where a value of type B is
-expected, exactly when one of these holds:
+A type A fits a type B, and a value of type A is accepted where a value of type B is expected, when
+A is a subset of B, with two exceptions:
 
-1. A and B are the same type.
-2. B is a union, and A fits one of its types. A is a union, and each of its types fits B.
-3. B is an intersection, and A fits each of its types. A is an intersection, and one of its types
-   fits B.
-4. A is a variant type, and its base type fits B ({numref}`motif-and-variant-types`).
-5. A or B is a refined type, A without its conditions fits B without its conditions, and the
-   conditions of A imply each condition of B ({numref}`constraint-implication`).
-6. A and B are number types, and A comes no later than B in the order `int`, `ratio`, `real`,
-   `complex`.
-7. A is `list[S]`, B is `list[U]`, and S fits U.
-8. A is `func[P1 … Pn R]`, B is `func[Q1 … Qn S]`, with the same n, each Qi fits Pi, and R fits S.
-9. B is an interface, and A satisfies it ({numref}`interfaces`).
-10. A and B are `int` and `rand-seed`, in either order.
-
-No other type fits another. A modular type fits only itself.
+1. A modular type fits only itself.
+2. When A or B is a refined type, A fits B only when A without its conditions fits B without its
+   conditions, and the conditions of A imply each condition of B by {numref}`constraint-implication`.
 ```
 
-So `real` fits `real|none`, while `real|none` does not fit `real`, a list of ints fits a list of
-reals, and a function on every real fits where a function on the reals from 0 to 1 is expected:
-`func[real real]` fits `func[(real (>= 0) (<= 1)) real]`. A `(real (>= 0) (<= 1))` fits `real`
-and `(real (>= -1))`, and a `real` fits neither `(real (>= 0) (<= 1))` nor `(real (>= -1))`. Whether a value whose type does
-not fit is still accepted, because the prover proves that its value meets the conditions, is
-defined in {numref}`constraint-proof`.
+So `real` fits `real|none`, a list of ints fits a list of reals, and `func[real real]` fits
+`func[unit real]`, since a function on every real is also a function on the reals from 0 to 1. A
+value whose type does not fit may still be accepted when the prover proves that it meets the
+conditions ({numref}`constraint-proof`).
 
 ```{rule} constraint-implication
 A list of conditions implies a condition C exactly in these cases:
