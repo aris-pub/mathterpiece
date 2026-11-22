@@ -8,7 +8,7 @@
 
 ; Trial division by 5, 7, 11, 13, 17, 19, …: every prime above 3 is one more or one less than a
 ; multiple of 6, so only those divisors need trying, which keeps compiling fast.
-(func has-divisor ((int n) (int d))
+(func[bool] has-divisor ((int n) (int d))
   (cond ((> (* d d) n) false)
         ((= (mod n d) 0) true)
         ((= (mod n (+ d 2)) 0) true)
