@@ -215,16 +215,16 @@ The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`
 
 ```{rule} type-values
 A variable declared with no value, and a parameter with no default that is left out, hold the
-default value of their type:
+default value of their type, given by the first row of this table that matches the type:
 
 | Type | Its default value |
 |---|---|
+| a {term}`choice type` | its first choice that meets its other conditions |
 | `int`, `ratio`, `real`, `complex` | 0 |
 | a modular type | 0 brought into the interval ({numref}`modular-types`) |
 | a refined number type whose conditions 0 breaks | c, when the type holds `(>= c)`. Otherwise c, when the type holds `(<= c)`. Otherwise none |
 | `bool` | `false` |
 | `string` | `''` |
-| a refined string type with `(one-of s1 …)` | s1 |
 | `color` | black, `#'#000000'` |
 | `font` | the font of the defaults of a font ({doc}`world-model`) |
 | `point` | `[0 0]` |
@@ -334,7 +334,8 @@ degree, and the two are gone at 90 only:
 ## Choice types
 
 ```{rule} choice-types
-A {term}`choice type` is a refined type `(string (one-of s…))`.
+A {term}`choice type` is a refined type whose conditions include a `(one-of v1 …)`. Its values are
+the choices v1 … that meet its other conditions.
 ```
 
 So with `(type side string (one-of 'left' 'right'))`, a `side` is a string, and a string is a
