@@ -15,7 +15,7 @@ drags and clicks, and everything that depends on them updates.
 |---|---|
 | {term}`illustrator` | writes a {term}`world model` as an `.mtp` source file |
 | {term}`author` | writes a web page and places components of the world model in it |
-| {term}`reader` | opens the page and acts on the components |
+| {term}`reader` | opens the page and acts on its page objects |
 
 One person may be both the illustrator and the author.
 
