@@ -283,7 +283,7 @@ A type includes `none` when it is `none` or a union with `none`. A value of such
 where the expected type does not include `none` only in these two places:
 
 - as an argument of a call: the call then evaluates to `none` whenever that argument is `none`, and
-  its type includes `none`
+  the type of the call includes `none`
 - as an attribute of a shape declared `T|none`: the shape is then `none` whenever that attribute is
   `none`, and is not drawn ({numref}`none-propagates`)
 
@@ -291,14 +291,16 @@ A few built-in functions treat `none` in their own way ({numref}`none-never-a-co
 {numref}`none-propagates`).
 ```
 
-In the example below, the secant has no value at 90°, so `(secd theta)` is `none`. By the first
+In the example below, the secant has no value at 90°, so `(secd theta)` is `none` there. By the first
 case, the call `(point-of (secd theta) 0)`, written `[(secd theta) 0]`, is `none` too. By the second
-case, the line declared `line|none` is then `none`, and is not drawn:
+case, the line declared `line|none` is then `none`, and is not drawn. Move the slider to 90 to see
+the line go:
 
 ```{mtp-example}
-(real theta 90)
-(scene s (line|none tangent (from [0 0]) (to [(secd theta) 0])))
+(real theta 60 (>= 0) (<= 180))
+(scene s (line|none tangent (from [0 0]) (to [(secd theta) 0]) (stroke #'crimson') (stroke-width 3)))
 (canvas v (x -3) (y -1) (width 6) (height 2) s)
+(slider turn (move theta (from 0) (to 180)) (label 'θ'))
 ```
 
 ## Choice types
