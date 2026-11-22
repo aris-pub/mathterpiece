@@ -235,7 +235,7 @@ Leaving out the value of a type that has no default value is a compile error.
 ```
 
 So `(real k (>= 1))` holds 1, `(real k (<= -1))` holds -1, and `(real k (> 1))` is a compile error,
-since 1 does not meet `(> 1)`. A parameter whose type is a shape type or an interface has no default
+since its type holds neither a `(>= c)` nor a `(<= c)`, so it has no default value. A parameter whose type is a shape type or an interface has no default
 value, so it must be given wherever it has no default of its own. No variable and no parameter is
 ever left without a value.
 
