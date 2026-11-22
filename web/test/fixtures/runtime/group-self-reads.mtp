@@ -6,7 +6,7 @@
 
 (motif vertex ((int part 0)) (circle_ (r 10)))
 
-(list[int] parts [0 0 0] (length 3))
+(list[int] parts {0 0 0} (length 3))
 
 (scene s
   (group verts

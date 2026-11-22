@@ -5,13 +5,13 @@
 (real s (+ (* u.x e.x) (* u.y e.y))) (string lit '')
 
 (scene plane
-  (foreach k ['dot' 'bound']
+  (foreach k {'dot' 'bound'}
     (let ((w (* (if (= k 'dot') s (* (sign s) nu)) e))
           (h (* nv (as point [e.y (- e.x)]))))
-      (polygon_ (points [[0 0] w (+ w h) h])
+      (polygon_ (points {[0 0] w (+ w h) h})
         (fill (if (= k 'dot') #'slateblue' #'crimson'))
         (opacity (if (= lit k) 0.45 0.12)))))
-  (line_ (from u) (to (* s e)) (stroke #'gray') (dash [4 4]))
+  (line_ (from u) (to (* s e)) (stroke #'gray') (dash {4 4}))
   (group arrows (defaults (stroke-width 3) (head-end 'dart'))
     (line_ (from [0 0]) (to u) (stroke #'crimson'))
     (line_ (from [0 0]) (to v) (stroke #'royalblue')))
@@ -26,5 +26,5 @@
   (term bound (background (if (= lit 'bound') #'lavender' none))))
 (canvas c (x -1.2) (y -1.5) (width 4) (height 3.8) plane
   (on-drag hu (move u (to pointer))) (on-drag hv (move v (to pointer))))
-(display shown cs (foreach k ['dot' 'bound']
+(display shown cs (foreach k {'dot' 'bound'}
   (on-enter @'cs.{k}' (set lit k)) (on-leave @'cs.{k}' (set lit ''))))

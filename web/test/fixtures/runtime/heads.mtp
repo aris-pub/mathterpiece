@@ -4,7 +4,7 @@
   (line big (from [0 1]) (to [4 1]) (stroke #'red') (stroke-width 2) (head-end 'dart')
       (head-size 1.5))
   (arc turn (r 2) (to 90) (stroke #'blue') (head-end 'curved'))
-  (polyline path (points [[0 -1] [2 -2] [4 -1]]) (stroke #'black') (head-end 'dot')
+  (polyline path (points {[0 -1] [2 -2] [4 -1]}) (stroke #'black') (head-end 'dot')
       (head-start 'open'))
   (line bare (from [0 3]) (to [4 3]) (head-end 'dart'))
   (line maybe (from [0 4]) (to [4 4]) (stroke #'black') (head-end (if on 'dart' none))))

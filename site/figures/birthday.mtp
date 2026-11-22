@@ -6,7 +6,7 @@
 
 ; what the figure is: both chances, for up to 60 people
 (scene chance
-  (line_ (from [0 15]) (to [60 15]) (stroke #'gray') (dash [4 4]))
+  (line_ (from [0 15]) (to [60 15]) (stroke #'gray') (dash {4 4}))
   (line_ (from [n 0]) (to [n 30]) (stroke #'gray'))
   ; what the figure looks like
   (polyline_ (stroke #'slateblue') (stroke-width 3)
