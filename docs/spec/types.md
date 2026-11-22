@@ -210,17 +210,17 @@ The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`
 `real`, whose arithmetic gives an ordinary number, so `(+ theta 30)` may be 380. Bead mtp-rk1i.
 :::
 
-## Values of a type when none is given
+## Default values
 
 ```{rule} type-values
-A variable declared with no value, and a parameter that a call, or a declaration whose head is a motif, leaves out and that
-has no default, hold the value of their type:
+A variable declared with no value, and a parameter with no default that a call or a declaration
+leaves out, hold the default value of their type:
 
-| Type | Its value |
+| Type | Its default value |
 |---|---|
 | `int`, `ratio`, `real`, `complex` | 0 |
 | a modular type | 0 brought into the interval ({numref}`modular-types`) |
-| a refined number type whose conditions 0 breaks | c, when the type holds `(>= c)`. With no `(>= c)`, the type has no value |
+| a refined number type whose conditions 0 breaks | c, when the type holds `(>= c)`. With no `(>= c)`, the type has no default value |
 | `bool` | `false` |
 | `string` | `''` |
 | a refined string type with `(one-of s1 …)` | s1 |
@@ -229,9 +229,9 @@ has no default, hold the value of their type:
 | `point` | `[0 0]` |
 | `list[T]` | `{}`, and with `(length n)`, n items, each the value of T |
 | a union with `none` | `none` |
-| every other type | no value |
+| every other type | none: the variable or the parameter must be given a value |
 
-Leaving out the value of a type that has no value is a compile error.
+Leaving out the value of a type that has no default value is a compile error.
 ```
 
 So `(real k (>= 1))` holds 1, `(real k (> 1))` is a compile error, and a motif's parameter whose
