@@ -21,9 +21,11 @@ the set of the reals that are not below 0. The types are combined as sets:
 |---|---|
 | `T1\|T2` | the union of T1 and T2 |
 | `T1&T2` | the intersection of T1 and T2 |
-| `(T C…)` | the subset of T whose values meet every condition C |
-| `(interface N (T A)…)` | the set of the values that have each attribute A, of type T |
+| `(T C…)` | the subset of T whose values meet every condition C ({numref}`constraints`) |
+| `(interface N (T A)…)` | the set of the values that have each attribute A, of type T ({numref}`interfaces`) |
 | `list[T]` | the set of the lists whose items all belong to T |
+| `func[P1 … Pn R]` | the set of the functions of n parameters, of types P1 to Pn, whose result belongs to R |
+| `(mod int lo hi)`, `(mod real lo hi)` | the set of the numbers from lo up to hi, hi left out, with arithmetic that wraps ({numref}`modular-types`) |
 
 A type that {term}`fits <fit>` another is a subset of it ({numref}`fits`).
 
@@ -40,7 +42,8 @@ circle, and `(is 3 real)` is `true` when compiling.
 ## The types
 
 ```{rule} the-types
-These are the types of mtp:
+These are the built-in types of mtp, and the types that a source declares. Every other type is built
+from these, as {numref}`what-a-type-is` lists:
 
 | Type | Its values | Notes |
 |---|---|---|
@@ -51,17 +54,11 @@ These are the types of mtp:
 | `color` | the colors | {numref}`color-literals` |
 | `point` | the points | two reals, `x` and `y` ({numref}`values`) |
 | `none` | `none` alone | |
-| `list[T]` | the lists whose items are of type T | |
 | `func` | every function | |
-| `func[P1 … Pn R]` | the functions of n parameters, of types P1 to Pn, whose result is of type R | |
 | `ease` | the eases of a movement | the same type as `func[unit real]` ({doc}`time`) |
 | `curve` | the curves of the plane | the same type as `func[real point]` |
 | `colormap` | the functions from a real to a color | the same type as `func[real color]` |
 | `rand-seed` | the ints | a free variable of this type is a {term}`seed` ({numref}`seed-variable`) |
-| `(T C…)` | the values of T that meet every condition C | a {term}`refined type` ({numref}`constraints`) |
-| `T1\|T2\|…` | the values of each of the types | a union |
-| `T1&T2&…` | the values that are in every one of the types | an intersection |
-| `(mod int lo hi)`, `(mod real lo hi)` | the numbers from lo up to hi, hi left out | a modular type, whose arithmetic wraps ({numref}`modular-types`) |
 | `shape` | every shape | |
 | `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text`, `group` | the shapes of that kind | a row and a column are of type `group` |
 | `M`, for a motif `M` | every `M` | {numref}`motif-and-variant-types` |
@@ -73,9 +70,17 @@ These are the types of mtp:
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `component`, `view`, `control`, `listener` | the components, the views, the controls and the listeners | |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
-| `positioned`, `sequence`, `sequence[T]`, `instant`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
+| `positioned`, `sequence`, `sequence[T]`, `instant`, `palette`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
 
-There are no other types.
+```
+
+```{diagram} builtin-types
+:file: diagrams/builtin-types.svg
+:max-width: 48rem
+
+The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps
+`int` and `ratio`. Interfaces are not drawn, since each one holds values from several boxes:
+`positioned` holds the points and most shapes.
 ```
 
 Each kind of object is a type: a named set of objects, as `shape` is the set of every shape. A type
