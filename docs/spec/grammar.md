@@ -128,7 +128,7 @@ A literal is a number literal, a string literal, `true`, `false` or `none`. A
 literal evaluates to a primitive.
 ```
 
-What value a literal gives, and of what type, is defined in {numref}`literal-types`. Values are
+The type of a literal is given in {numref}`form-types`. Values are
 defined in {doc}`data-model`.
 
 Each expression is a literal, a name or a form. Each form is a {term}`compound`, a declaration, a
