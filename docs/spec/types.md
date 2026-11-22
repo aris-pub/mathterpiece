@@ -279,16 +279,11 @@ writer may write lists of another length into them.
 ## none
 
 ```{rule} none-only-where-allowed
-A type includes `none` when it is `none` or a union that holds `none`. An expression whose type includes
-`none` may be given only where the expected type includes `none`, with these exceptions:
-
-- an argument of a call, whose parameter's type does not include `none`: the type of the call
-  then includes `none`
-- an argument of a built-in function or an {term}`operator`, other than those of
-  {numref}`none-never-a-condition`: the type of the result then includes `none`, except for the
-  functions that {numref}`none-propagates` names
-
-Everywhere else, such an expression is a compile error.
+A type includes `none` when it is `none` or a union that holds `none`. By {numref}`fits`, an expression
+whose type includes `none` may be written only where the expected type includes `none`, with one
+exception: it may be an argument of a call whose parameter's type does not include `none`, and the
+type of the call then includes `none`. For a built-in function or an {term}`operator`, this holds
+except for the functions of {numref}`none-never-a-condition` and {numref}`none-propagates`.
 ```
 
 So a shape attribute that may be `none` is a compile error unless the type of the attribute
