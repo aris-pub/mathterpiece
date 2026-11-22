@@ -159,7 +159,7 @@ expected, exactly when one of these holds:
 9. B is an interface, and A satisfies it ({numref}`interfaces`).
 10. A and B are `int` and `rand-seed`, in either order.
 
-No other type fits another. A modular type fits only itself.
+No other type fits another. A modular type fits only itself, and is converted to its number type by {numref}`conversions`.
 ```
 
 So `real` fits `real|none`, while `real|none` does not fit `real`, a list of ints fits a list of
@@ -222,7 +222,7 @@ from it, results in a value of the type. A value of the type may not be compared
 
 So `((mod real 0 360) theta 400)` holds 40, `(+ theta 330)` is 10, and `(< theta 90)` is a compile
 error. With `(type hour (mod int 0 12))` and `(func[hour] later ((hour h) (int n)) (+ h n))`,
-`(later 9 5)` is 2.
+`(later 9 5)` is 2, and `(real a theta)` holds `theta` as an ordinary real.
 
 :::{admonition} Code differs
 :class: note
@@ -292,6 +292,8 @@ Only these change the type of a value where no form asks for it:
 1. A number is accepted where a later number type is expected ({numref}`fits`), and is then a
    value of that type, as {numref}`number-result-types` states.
 2. A literal has the type that is expected where it is written ({numref}`literal-types`).
+3. A value of a modular type `(mod T lo hi)` is accepted where `T` is expected, as its number
+   ({numref}`modular-types`).
 
 Nothing else converts. A string is never a color, a real is never an int, and a point is never a
 list.
