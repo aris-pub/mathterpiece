@@ -364,15 +364,9 @@ Ai. These interfaces are built in:
 | `instant` | `(interface instant (real duration (one-of 0)))` |
 ```
 
-:::{admonition} Code differs
-:class: note
-The compiler has a type `palette`, which a record made by `(palette …)` has as its own
-(`types.py:150`, `PALETTE`). In the spec, such a record is of type `record`. Bead mtp-rdk2.
-:::
-
 So `(func label-at ((positioned o) (string s)) …)` may be given points, which are primitives, and
-shapes, which are objects. `(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not
-every shape has an `r`. A record whose `r` is a plain `real` is not a subtype of
+shapes, which are objects. `(func f ((positioned o)) o.r)` is a compile error, since `positioned`
+lists no `r`. A record whose `r` is a plain `real` is not a subtype of
 `(interface round (real r (>= 0)))`, since `real` is not a subtype of `(real (>= 0))`.
 
 :::{admonition} Code differs
@@ -382,11 +376,11 @@ be broadened only by none for now". An interface is the type of a parameter only
 declared with one is a compile error. Bead mtp-mo3r.
 :::
 
-```{mtp-example}
-; the parameter colors of the motif disc takes either namespace, since both are subtypes of inky
+```mtp
+; day and night are both subtypes of inky, so either may be given as the colors of a disc
 (interface inky (color ink) (color paper))
-(namespace day (color ink #'#1f2a44') (color paper #'#f6f1e7'))
-(namespace night (color ink #'#e8e4d8') (color paper #'#14161c'))
+(record day (color ink #'#1f2a44') (color paper #'#f6f1e7'))
+(record night (color ink #'#e8e4d8') (color paper #'#14161c'))
 (bool dark false)
 (motif disc ((inky colors)) (circle face (r 1) (fill colors.paper) (stroke colors.ink) (stroke-width 0.2)))
 (scene s (disc d (colors (if dark night day))))
