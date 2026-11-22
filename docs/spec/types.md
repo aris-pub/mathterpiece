@@ -81,8 +81,9 @@ from these, as {numref}`what-a-type-is` lists:
 
 The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
 and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which fits only itself, so it
-is not inside `real`. Interfaces are not drawn, since each one holds values from several boxes:
-`positioned` holds the points and most shapes.
+is not inside `real`. Of the interfaces, `palette` and `instant` are drawn, inside `record` and `movement`. The others
+are not, since each one holds values from several boxes: `positioned` holds the points and most
+shapes.
 ```
 
 :::{admonition} Code differs
