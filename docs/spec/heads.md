@@ -94,7 +94,7 @@ mtp-ydd4.7.59.
 
 | Notation | Kind | What it is | Defined in |
 |---|---|---|---|
-| `int`, `ratio`, `real`, `complex`, `unit`, `ease`, `curve`, `bool`, `string`, `color`, `point`, `movement`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
+| `int`, `ratio`, `real`, `complex`, `unit`, `angle`, `ease`, `curve`, `bool`, `string`, `color`, `point`, `movement`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
 | `circle` and the other shape names | core | the shape types | {doc}`types` |
 | `shape`, `positioned`, `sequence`: the built-in types and {term}`interfaces <interface>` | core | a name | {doc}`types` |
 | `list[T]`, `sequence[T]`, `func[P… R]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
