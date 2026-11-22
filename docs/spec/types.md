@@ -71,7 +71,6 @@ from these, as {numref}`what-a-type-is` lists:
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
-| `palette` | the records whose attributes are all colors, whatever their names and number | a record made by `(palette …)` is one ({numref}`sugar-rewrites`). An attribute M of a palette may be read by its label, and has the type `color|none`: it is `none` when the palette has no attribute M |
 | `positioned`, `instant`, and each declared interface | the values that have the attributes that it lists | an {term}`interface` ({numref}`interfaces`) |
 
 ```
@@ -82,7 +81,7 @@ from these, as {numref}`what-a-type-is` lists:
 
 The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
 and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which is a subtype only of itself, so it
-is not inside `real`. `palette` is drawn inside `record`, and the interface `instant` inside `movement`. `positioned` is not
+is not inside `real`. The interface `instant` is drawn inside `movement`. `positioned` is not
 drawn, since it holds values from several boxes: the points and most shapes.
 ```
 
@@ -367,8 +366,8 @@ Ai. These interfaces are built in:
 
 :::{admonition} Code differs
 :class: note
-The compiler has no interface `palette`: `(func f ((palette q)) 1)` is the error "unknown type
-'palette'" (`types.py:150`, `PALETTE`, is a type that a palette has as its own). Bead mtp-rdk2.
+The compiler has a type `palette`, which a record made by `(palette …)` has as its own
+(`types.py:150`, `PALETTE`). In the spec, such a record is of type `record`. Bead mtp-rdk2.
 :::
 
 So `(func label-at ((positioned o) (string s)) …)` may be given points, which are primitives, and
