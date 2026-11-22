@@ -328,7 +328,7 @@ mtp-ydd4.7.18.
 Wherever a number is rounded, other than a channel of a mixed color
 ({numref}`mixed-color-channels`), halves are rounded away from zero, on the number's shortest exact
 decimal form, not on its binary value: 2.5 is rounded to 3, -2.5 to -3, 0.125 to two decimal
-places to 0.13, and 2.675 to two decimal places to 2.68. The rule applies to `round`, to a write
+places to 0.13, and 2.675 to two decimal places to 2.68. The rule applies to `round`, to `places`, to a write
 into an int, and to the {term}`format spec` of an interpolated string, such as `{x:.2f}`. `round`
 results in `none` at no input. A number written into an int is rounded after it is clamped to the
 int's range, so that the result is the nearest int inside the range ({doc}`types`).
