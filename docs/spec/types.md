@@ -291,16 +291,23 @@ A few built-in functions treat `none` in their own way ({numref}`none-never-a-co
 {numref}`none-propagates`).
 ```
 
-In the example below, the secant has no value at 90°, so `(secd theta)` is `none` there. By the first
-case, the call `(point-of (secd theta) 0)`, written `[(secd theta) 0]`, is `none` too. By the second
-case, the line declared `line|none` is then `none`, and is not drawn. `theta` is an int, so the slider
-stops at every degree, and the line is gone at 90 only:
+In the example below, the line tangent to the unit circle at the angle `theta` meets the x-axis at
+x = sec θ. At 90° the tangent line is parallel to the x-axis and never meets it, so `(secd theta)` is
+`none`. By the first case, the call `(point-of (secd theta) 0)`, written `[(secd theta) 0]`, is
+`none` too. By the second case, the segment `tangent` and the point `q`, declared `line|none` and
+`circle|none`, are then `none`, and are not drawn. `theta` is an int, so the slider stops at every
+degree, and the two are gone at 90 only:
 
 ```{mtp-example}
-(int theta 80 (>= 70) (<= 110))
-(scene s (line|none tangent (from [0 0]) (to [(secd theta) 0]) (stroke #'crimson') (stroke-width 3)))
-(canvas v (x -8) (y -1) (width 16) (height 2) s)
-(slider turn (move theta (from 70) (to 110)) (label 'θ'))
+(int theta 60 (>= 20) (<= 160))
+(scene s
+  (line axis (from [-4 0]) (to [4 0]) (stroke #'gray'))
+  (circle rim (pos [0 0]) (r 1) (fill none) (stroke #'gray'))
+  (line radius (from [0 0]) (to (polar 1 theta)) (stroke #'gray'))
+  (line|none tangent (from (polar 1 theta)) (to [(secd theta) 0]) (stroke #'crimson') (stroke-width 3))
+  (circle|none q (pos [(secd theta) 0]) (r 0.08) (fill #'crimson')))
+(canvas v (x -4) (y -1.5) (width 8) (height 3) s)
+(slider turn (move theta (from 20) (to 160)) (label 'θ'))
 (readout r f'θ = {theta}°')
 ```
 
