@@ -393,26 +393,23 @@ declared with one is a compile error. Bead mtp-mo3r.
 ## Motifs and variants
 
 ```{rule} motif-and-variant-types
-`(motif M PARAMS …)` declares the shape type M, and `(M N …)` declares an M. The motif may hold
-the clause `(as N)` after its parameters, such as `(as me)`, which binds `N` in its body to the shape being declared
-({numref}`declarations-and-bindings`).
+`(motif M PARAMS …)` declares the shape type M, and `(M N …)` declares an M.
 `(variant V PARAMS S)` declares the type V, whose base type is the type of S: a shape type, a motif
 type, a movement type, an animation type, a component type, or another variant type. V is a subtype
-of its base, while a new motif or a new animation is a type of its own, disjoint from every other. A V has the attributes of its base and the parameters of V. Every attribute that S sets, a
-{term}`positional argument` included, and `x` and `y` when S sets `pos`, is fixed by V: a V that
-sets it is a compile error. A parameter of V never has the name of an attribute of its
-base, and every parameter of V is read by an attribute that S sets: a parameter that no attribute
-of S reads is a compile error. When `S` has `(defaults …)` and a V has `(defaults …)` too, the V
-has both, and where both set the same attribute, the default of `S` wins.
+of its base, while each motif and each animation is a type of its own, disjoint from every other. A V
+has the attributes of its base and the parameters of V. Every attribute that S sets, a
+{term}`positional argument` included, and `x` and `y` when S sets `pos`, is fixed by V: a V may not
+set it, and a writer may not write it ({numref}`writable-targets`). A parameter of V may not have the
+name of an attribute of its base, and must be read by an attribute that S sets. When S has
+`(defaults …)` and a V has `(defaults …)` too, the V has both, and where both set the same attribute,
+the default of S wins.
 ```
 
-So by {numref}`fits`, a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))`
-is accepted wherever a `rect` is, and `(bar b2 (width 2))` is a compile error. A writer never
-writes a fixed attribute ({numref}`writable-targets`). The parameters of a variant describe the
-shapes of its base that it keeps: a square is a rect described by one number,
-`(variant square ((real side 1)) (rect_ (width side) (height side)))`. A parameter that no attribute
-reads, such as `q` in `(variant bar ((real p 0) (real q 1)) (rect_ (width 0.8) (height (* 5 p))))`,
-would add an input that changes nothing in the shape, and is a compile error.
+So a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))` is accepted
+wherever a `rect` is, `(bar b2 (width 2))` is a compile error, and so is
+`(variant bar ((real p 0) (real q 1)) (rect_ (width 0.8) (height (* 5 p))))`, since no attribute
+reads `q`. A square is a rect with one parameter:
+`(variant square ((real side 1)) (rect_ (width side) (height side)))`.
 
 :::{admonition} Code differs
 :class: note
