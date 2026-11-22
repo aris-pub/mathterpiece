@@ -393,22 +393,19 @@ declared with one is a compile error. Bead mtp-mo3r.
 ## Motifs and variants
 
 ```{rule} motif-and-variant-types
-`(motif M PARAMS …)` declares the shape type M, and `(M N …)` declares an M.
-`(variant V PARAMS S)` declares the type V, whose base type is the type of S: a shape type, a motif
-type, a movement type, an animation type, a component type, or another variant type. V is a subtype
-of its base, while each motif and each animation is a type of its own, disjoint from every other. A V
-has the attributes of its base and the parameters of V. Every attribute that S sets, a
-{term}`positional argument` included, and `x` and `y` when S sets `pos`, is fixed by V: a V may not
-set it, and a writer may not write it ({numref}`writable-targets`). A parameter of V may not have the
-name of an attribute of its base, and must be read by an attribute that S sets. When S has
-`(defaults …)` and a V has `(defaults …)` too, the V has both, and where both set the same attribute,
-the default of S wins.
+`(motif M PARAMS …)` declares the type M, a shape type, and `(animation A PARAMS …)` the type A, a
+movement type. Each is disjoint from every other type.
+`(variant V PARAMS S)` declares the type V, a subtype of the type of S. A V has the attributes of
+the type of S and the parameters of V. The attributes that S sets are fixed: a V may not set them,
+and a writer may not write them. Each parameter of V must be read by S, and may not have the name of
+an attribute of the type of S. Where S and a V both set a default for the same attribute, the
+default of S wins.
 ```
 
 So a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))` is accepted
 wherever a `rect` is, `(bar b2 (width 2))` is a compile error, and so is
-`(variant bar ((real p 0) (real q 1)) (rect_ (width 0.8) (height (* 5 p))))`, since no attribute
-reads `q`. A square is a rect with one parameter:
+`(variant bar ((real p 0) (real q 1)) (rect_ (width 0.8) (height (* 5 p))))`, since S does not
+read `q`. A square is a rect with one parameter:
 `(variant square ((real side 1)) (rect_ (width side) (height side)))`.
 
 :::{admonition} Code differs
