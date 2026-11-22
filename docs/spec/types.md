@@ -557,7 +557,7 @@ Each expression except a clause and a special form has this type:
 | `(list-of X…)` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
 | `(color-of S)` | `color` when S is known when compiling, `color\|none` otherwise ({numref}`color-literals`) |
 | `(point-of X Y)` | `point`, each of X and Y with `real` expected. With `none` added when the type of X or of Y includes `none` ({numref}`none-propagates`) |
-| `(as T X)` | T. X has T expected, and must be a literal |
+| `(as T X)` | T. X may be any expression that fits T: `as` states the type of X and never changes its value. So `(as list[real] {})` and `(as func[real real] (fn x (* 2 x)))` are allowed, and `(as int 2.5)` is a compile error |
 | a spread `g.A` | `list[U]`, U the meeting of the types of A of the members, with the number of members as its length |
 | `(if C A B)` | C has type `bool`. The type is the meeting of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
 | `(or? X D)` | the meeting of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
