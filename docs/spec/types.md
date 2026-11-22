@@ -367,7 +367,7 @@ Ai. These interfaces are built in:
 So `(func label-at ((positioned o) (string s)) …)` may be given points, which are primitives, and
 shapes, which are objects. `(func f ((positioned o)) o.r)` is a compile error, since `positioned`
 lists no `r`. A record whose `r` is a plain `real` is not a subtype of
-`(interface round (real r (>= 0)))`, since `real` is not a subtype of `(real (>= 0))`.
+`(interface radial (real r (>= 0)))`, since `real` is not a subtype of `(real (>= 0))`.
 
 :::{admonition} Code differs
 :class: note
@@ -376,16 +376,18 @@ be broadened only by none for now". An interface is the type of a parameter only
 declared with one is a compile error. Bead mtp-mo3r.
 :::
 
-```mtp
-; day and night are both subtypes of inky, so either may be given as the colors of a disc
-(interface inky (color ink) (color paper))
-(record day (color ink #'#1f2a44') (color paper #'#f6f1e7'))
-(record night (color ink #'#e8e4d8') (color paper #'#14161c'))
-(bool dark false)
-(motif disc ((inky colors)) (circle face (r 1) (fill colors.paper) (stroke colors.ink) (stroke-width 0.2)))
-(scene s (disc d (colors (if dark night day))))
-(canvas v (x -2) (y -2) (width 4) (height 4) s)
-(toggle mode dark (label 'dark'))
+```{mtp-example}
+; the circle c and the dot d both have a real r, so both are subtypes of radial, and either may be given to area
+(interface radial (real r))
+(func area ((radial o)) (* pi o.r o.r))
+(motif dot ((real r 0.5 (>= 0))) (circle face (r r) (fill #'steelblue')))
+(real size 0.6 (>= 0.2) (<= 1))
+(scene s
+  (circle c (pos [-1.2 0]) (r size) (fill #'crimson'))
+  (dot d (pos [1.2 0]) (r (/ size 2))))
+(canvas v (x -2.5) (y -1.2) (width 5) (height 2.4) s)
+(slider grow (move size (from 0.2) (to 1)) (label 'size'))
+(readout out f'area of c = {(area c):.2f}, area of d = {(area d):.2f}')
 ```
 
 ## Common type
