@@ -238,6 +238,24 @@ def test_a_list_lines_up_under_its_first_item_in_fmt_and_emacs(src, want, tmp_pa
     assert _emacs(src, tmp_path) == want
 
 
+@pytest.mark.parametrize(
+    "src, want",
+    [
+        (
+            "(list[color] hues {red green yellow blue\n(mix red paper 0.45)})\n",
+            "(list[color] hues {red green yellow blue\n                   (mix red paper 0.45)})\n",
+        ),
+        ("(list xs {1 2\n3})\n", "(list xs {1 2\n          3})\n"),
+        ("(list xs {(f a) b\nc})\n", "(list xs {(f a) b\n          c})\n"),
+        ("(list xs {\na b\nc})\n", "(list xs {\n          a b\n          c})\n"),
+        ("(list ps {[0 0]\n[1 1]})\n", "(list ps {[0 0]\n          [1 1]})\n"),
+        ("(f {a\nb} (g\nc))\n", "(f {a\n    b} (g\n        c))\n"),
+    ],
+)
+def test_a_list_in_braces_lines_up_under_its_first_item(src, want):
+    assert layout(src) == want
+
+
 def test_the_table_is_the_emacs_modes():
     el = (ROOT / "editors/mtp-mode.el").read_text()
     pairs = dict(re.findall(r'\("([a-z-]+)" \. (\d+)\)', el))

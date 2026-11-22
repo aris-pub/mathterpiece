@@ -112,7 +112,7 @@ NO_BODY = {
     *["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"],
     *["colormap", "interface", "defaults", "term", "rand-seed", "set"],
 }
-OPEN, CLOSE = "([", ")]"
+OPEN, CLOSE = "([{", ")]}"
 _DOC = re.compile(r"\(doc\s+('(?:[^'\\]|\\.)*')\s*\)")
 _FREE = re.compile(r"\(free\s+")
 
@@ -181,7 +181,7 @@ def _free_sugar(line: str, i: int) -> tuple[str, int] | None:
     """free@X, and where (free X) ends, for a (free X) at i that ends on the line and means the
     same written free@X. The parser decides that, since the text around X decides it too."""
     before = line[i - 1] if i else " "
-    if not (before.isspace() or before in "(["):
+    if not (before.isspace() or before in OPEN):
         return None
     m = _FREE.match(line, i)
     if m is None:
@@ -197,7 +197,7 @@ def _free_sugar(line: str, i: int) -> tuple[str, int] | None:
         return None
     # (free x)y holds two items, and free@xy one.
     after = line[close + 1 : close + 2]
-    if after and not (after.isspace() or after in ")];(") and not item.endswith(")"):
+    if after and not (after.isspace() or after in CLOSE + ";(") and not item.endswith(")"):
         return None
     try:
         if parse(f"(f free@{item})") != parse(f"(f (free {item}))"):
@@ -234,7 +234,7 @@ def _item_end(line: str, start: int) -> int | None:
 
 def _indent(stack: list[_Frame], text: str) -> int:
     f = stack[-1]
-    if f.bracket == "[" or f.head is None:
+    if f.bracket in "[{" or f.head is None:
         return f.col + 1
     # A docstring reads with the body, whatever form it documents.
     if text.startswith("doc@"):
@@ -257,7 +257,7 @@ def _indent(stack: list[_Frame], text: str) -> int:
     before = len(f.items) - 1
     if before < count or base in NO_BODY:
         return f.col + 4
-    head = re.match(r"\(([^\s()\[\]';]+)", text)
+    head = re.match(r"\(([^\s(){}\[\]';]+)", text)
     if head is not None and head.group(1) in KEYWORDS.get(base, ()):
         return f.col + 4
     return f.col + 2

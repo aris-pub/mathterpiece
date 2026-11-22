@@ -90,6 +90,19 @@ ACCEPTED = [
     "(f xs[0] xs[-1] xs[(+ k 1)] g['m1'] xs[ 0 ] f[real real] xs[0][1])",
     "(f xs[0].a xs[0].a.b[1].c xs[0].truex xs[none])",
     "(f [] [ ] [1 2] [[1] [2]] [a b c][h] [a][0][1] [(f)(g)])",
+    "(f {a})",
+    "(list xs {1 2 3})",
+    "(f {})",
+    "(f { })",
+    "(f {a {b c}})",
+    "(f {a b}[0])",
+    "(f {a b c}[h])",
+    "(f {a ; c\n b})",
+    "(f {(g)(h)} {a}(g))",
+    "(f pos@{1 2} {[1 2] [3 4]})",
+    "({a} b)",
+    "(f f'{ {a b} }' f'{ {a}:x}')",
+    "(f {'a'} {#'red'} {f'{a}'} {@'n-{k}'} {r@1} {a|b} {xs[0]} {@'a{b}'[0]})",
     "(f real|none a|b|c 1|2 a[0]|b b|c[0] true|x .|a)",
     "(f 'a' 'it\\'s' 'back\\\\slash' 'line\\nbreak' '')",
     "(f $'\\frac12' $'f\\'(x)' $'a\\\\' $'\\q')",
@@ -269,26 +282,10 @@ REJECTED = [
     "(f none[0]x)",
 ]
 
-BRACE_LISTS = "mtp-diqi"
-
 # Sources on which the grammar, which states the decided language, and today's parser differ.
 # Each one names the bead that will change the parser. Once the parser follows the spec on a
 # source, test_known_difference fails, and the entry is removed.
-KNOWN_DIFFERENCES = {
-    # The parser does not read a list in braces yet.
-    "(f {a})": BRACE_LISTS,
-    "(list xs {1 2 3})": BRACE_LISTS,
-    "(f {})": BRACE_LISTS,
-    "(f { })": BRACE_LISTS,
-    "(f {a {b c}})": BRACE_LISTS,
-    "(f {a b}[0])": BRACE_LISTS,
-    "(f {a b c}[h])": BRACE_LISTS,
-    "(f {a ; c\n b})": BRACE_LISTS,
-    "(f {(g)(h)} {a}(g))": BRACE_LISTS,
-    "(f pos@{1 2} {[1 2] [3 4]})": BRACE_LISTS,
-    "({a} b)": BRACE_LISTS,
-    "(f f'{ {a b} }' f'{ {a}:x}')": BRACE_LISTS,
-}
+KNOWN_DIFFERENCES: dict = {}
 
 # For the random sources, which no list could name in advance: the parser as it will be once each
 # bead is done. A step is removed together with the last KNOWN_DIFFERENCES entry of its bead.
@@ -297,7 +294,7 @@ PENDING_STEPS: dict = {}
 # A step on the parser's forms cannot model a bead that makes the parser accept new sources. For
 # such a bead, the random sources whose grammar tree holds one of these rules are not compared
 # while the bead is open.
-PENDING_RULES = {BRACE_LISTS: "list_in_braces"}
+PENDING_RULES: dict = {}
 
 
 def parser_after_beads(src: str):

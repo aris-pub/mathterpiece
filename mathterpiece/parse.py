@@ -24,7 +24,6 @@ from mathterpiece.nodes import (
 
 OPERATORS = frozenset({"+", "-", "*", "/", "^", "<", "<=", ">", ">=", "=", "!="})
 ESCAPES = {"'": "'", "\\": "\\", "n": "\n"}
-RESERVED = frozenset("[]{}")
 NAME_PART_RE = re.compile(r"[A-Za-z][A-Za-z0-9-]*\??")
 LITERALS = frozenset({"true", "false", "none"})
 UNDERSCORE = "an underscore may only end the head of a form, as in (circle_ (r 1))"
@@ -272,12 +271,10 @@ class _Parser:
             return self.name_string()
         if ch == '"':
             raise ParseError("double quotes are not allowed; use single quotes", pos)
-        if ch == "[":
+        if ch in "[{":
             return self.list_literal()
-        if ch == "]":
-            raise ParseError("unexpected ']'", pos)
-        if ch in RESERVED:
-            raise ParseError(f"{ch!r} is reserved", pos)
+        if ch in "]}":
+            raise ParseError(f"unexpected {ch!r}", pos)
         if ch == ":":
             raise ParseError(
                 "':' may only start the format spec in the braces of an interpolated string, as"
@@ -318,11 +315,11 @@ class _Parser:
 
     def prefixed_item(self, head: str) -> Node:
         ch = self.peek()
-        if not ch or ch in WHITESPACE or ch in ");]":
+        if not ch or ch in WHITESPACE or ch in ");]}":
             raise ParseError(
                 f"{head}@ is followed directly by its item, as in {head}@1", self.pos()
             )
-        starts_word = ch not in "'$#[(" and not self.src.startswith(("f'", "@'"), self.i)
+        starts_word = ch not in "'$#[{(" and not self.src.startswith(("f'", "@'"), self.i)
         if starts_word and self.prefix_end() is not None:
             raise ParseError(f"a prefixed form cannot follow {head}@: write ({head} …)", self.pos())
         return self.node()
@@ -377,8 +374,8 @@ class _Parser:
             items = [head, NoneLit(items[0].pos), *items[1:]]
         return Form(tuple(items), pos)
 
-    # A [ that starts a value opens a list; one right after a name indexes it (see access), and
-    # one right after a list too: [a b c][h] is (. [a b c] h).
+    # A [ or { that starts a value opens a list; a [ right after a name indexes it (see access),
+    # and one right after a list too: {a b c}[h] is (. {a b c} h).
     def list_literal(self) -> Node:
         whole: Node = self.list_items()
         while self.peek() == "[":
@@ -388,7 +385,7 @@ class _Parser:
                 raise ParseError("brackets after a list hold one position", bracket)
             whole = Form((Name((".",), bracket), whole, index.items[0]), whole.pos)
         if self.peek() and not (
-            _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
+            _is_delimiter(self.peek()) or self.peek() in "]}" or self.ends_braces()
         ):
             _check_char(self.peek(), self.pos())
             raise ParseError(f"unexpected {self.peek()!r} after a list", self.pos())
@@ -396,17 +393,18 @@ class _Parser:
 
     def list_items(self) -> ListLit:
         pos = self.pos()
-        self.advance()
+        opening = self.advance()
+        closing = "]" if opening == "[" else "}"
         items: list[Node] = []
         while True:
             self.skip_blank()
             if not self.peek():
-                raise ParseError("unclosed '['", pos)
-            if self.peek() == "]":
+                raise ParseError(f"unclosed {opening!r}", pos)
+            if self.peek() == closing:
                 self.advance()
                 break
-            if self.peek() == ")":
-                raise ParseError("expected ']' to close the list", self.pos())
+            if self.peek() in ")]}":
+                raise ParseError(f"expected {closing!r} to close the list", self.pos())
             items.append(self.node())
         return ListLit(tuple(items), pos)
 
@@ -420,15 +418,18 @@ class _Parser:
     def atom(self, head: bool = False) -> Node:
         pos = self.pos()
         node = self.operand(head)
-        if self.peek() != "|":
-            return node
-        items = [node]
-        while self.peek() == "|":
-            self.advance()
-            if not self.peek() or _is_delimiter(self.peek()) or self.peek() in "|]":
-                raise ParseError("expected a type after '|'", self.pos())
-            items.append(self.operand(head))
-        return Bar(tuple(items), pos)
+        if self.peek() == "|":
+            items = [node]
+            while self.peek() == "|":
+                self.advance()
+                if not self.peek() or _is_delimiter(self.peek()) or self.peek() in "|]}":
+                    raise ParseError("expected a type after '|'", self.pos())
+                items.append(self.operand(head))
+            node = Bar(tuple(items), pos)
+        # A word ends at '{', so {…} right after it would otherwise be read as an item of its own.
+        if self.peek() == "{":
+            raise ParseError("a space must come before '{'", self.pos())
+        return node
 
     def operand(self, head: bool = False) -> Node:
         """A word; head is true when it may be the head of a form, and so end with '_'."""
@@ -474,11 +475,7 @@ class _Parser:
                 raise ParseError("unclosed '['", bracket)
             items = [self.node()]
             self.skip_blank()
-            while (
-                self.peek()
-                and self.peek() not in "])"
-                and not (self.in_braces and self.peek() == "}")
-            ):
+            while self.peek() and self.peek() not in "])}":
                 items.append(self.node())
                 self.skip_blank()
             if self.peek() != "]":
@@ -503,7 +500,7 @@ class _Parser:
 
     def expect_delimiter(self):
         if self.peek() and not (
-            _is_delimiter(self.peek()) or self.peek() == "]" or self.ends_braces()
+            _is_delimiter(self.peek()) or self.peek() in "]}" or self.ends_braces()
         ):
             _check_char(self.peek(), self.pos())
             raise ParseError("expected whitespace, '(', ')' or ';' after a string", self.pos())
