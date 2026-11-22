@@ -224,7 +224,8 @@ These names are built-in functions and constants, except the random functions, w
 | `+`, `-`, `*`, `/`, `^`, `mod`, `=`, `!=`, `<`, `<=`, `>`, `>=` | the operators |
 | `not`, `abs`, `or?`, `none?`, `some?`, `somes` | logic, absolute value and `none` |
 | `sqrt`, `sign`, `floor`, `ceil`, `exp` | numbers |
-| `sin`, `cos`, `tan`, `sec`, `csc`, `cot`, `sind`, `cosd`, `tand`, `secd`, `cscd`, `cotd`, `asin`, `acos`, `atan`, `acot`, `asec`, `acsc`, `asind`, `acosd`, `atand`, `acotd`, `asecd`, `acscd`, `rad`, `turn`, `deg`, `to-rad`, `to-turn` | angles |
+| `unwrap` | `(unwrap X)`, with X of a modular type `(mod T lo hi)`, evaluates to the number of X as an ordinary T ({numref}`modular-types`) |
+| `sin`, `cos`, `tan`, `sec`, `csc`, `cot`, `sind`, `cosd`, `tand`, `secd`, `cscd`, `cotd`, `asin`, `acos`, `atan`, `acot`, `asec`, `acsc`, `asind`, `acosd`, `atand`, `acotd`, `asecd`, `acscd`, `rad`, `turn`, `deg`, `to-rad`, `to-turn` | angles. The functions in degrees (`sind` and the others ending in `d`) take a `real` or an `angle`, and the inverse functions in degrees (`asind` and the others) evaluate to an `angle` |
 | `polar`, `to-polar`, `dist` | points |
 | `rgb`, `mix`, `lighten`, `darken`, `light-dark` | colors. `(rgb R G B)` and `(rgb R G B A)` evaluate to the color with the red, green, blue and alpha channels R, G, B and A, each a real from 0 to 1, and A is 1 when it is left out |
 | `round`, `log`, `min`, `max`, `lerp` | with a varying number or type of arguments |
