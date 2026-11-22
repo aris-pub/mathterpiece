@@ -431,25 +431,24 @@ declared with one is a compile error. Bead mtp-mo3r.
 ```
 
 ```{rule} common-type
-Where the types of several values meet in one type, the type is the narrowest type that each of
-them fits, found this way for two types A and B:
+The common type of two types A and B is the smallest type that holds both, found this way:
 
 - When A fits B, it is B, and when B fits A, it is A.
 - When one is `none`, it is the union of the other and `none`.
-- When one includes `none`, it is the union of `none` and the meeting of the two without `none`.
-- Two number types meet at the later of the two, without conditions, in the order `int`,
-  `ratio`, `real`, `complex`.
-- Two list types meet at the list type of the meeting of their item types.
-- Otherwise there is no meeting, and the source is a compile error.
+- When one includes `none`, it is the union of `none` and the common type of the two without `none`.
+- For two number types, it is the later of the two, without conditions, in the order `int`, `ratio`,
+  `real`, `complex`.
+- For two list types, it is the list type of the common type of their item types.
+- Otherwise there is none, and the source is a compile error.
 
-The branches of an `if` and the items of a `(list-of …)` meet this way, except that the
-branches of an `if` meet at the expected type when it is a declared interface that both satisfy.
-The members of a group meet otherwise: at their type when all have the same type, else at
-`positioned` when all satisfy it, else at `shape`, with `none` added when the type of one of
-them includes `none`.
+The type of the branches of an `if` and of the items of a `(list-of …)` is their common type, except
+that the type of the branches of an `if` is the expected type when it is a declared interface that
+both satisfy. The type of the members of a group is found otherwise: their type when all have the
+same type, else `positioned` when all satisfy it, else `shape`, with `none` added when the type of
+one of them includes `none`.
 ```
 
-So the branches of `(if on 1 2.5)` meet at `real`, and `g[k]` on a group of circles and rects is
+So the common type of the branches of `(if on 1 2.5)` is `real`, and `g[k]` on a group of circles and rects is
 `positioned`, so `g[k].x` may be read.
 
 ## Motifs and variants
@@ -542,13 +541,13 @@ Each expression except a clause and a special form has this type:
 | a literal | {numref}`literal-types` |
 | a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the common type of the members for a `foreach` over a group, and the function type of a function |
 | `(. X K)` | the type of the attribute or the member that K chooses ({numref}`dot-name-part`). An item of a list: the item type. A coordinate of a point: `real`. A member of a group chosen while drawing: the common type of the members. Each with `none` added as {numref}`may-give-none` states |
-| `(list-of X…)` | a list of the meeting of the types of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
+| `(list-of X…)` | a list of the common type of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
 | `(color-of S)` | `color` when S is known when compiling, `color\|none` otherwise ({numref}`color-literals`) |
 | `(point-of X Y)` | `point`, each of X and Y with `real` expected. With `none` added when the type of X or of Y includes `none` ({numref}`none-propagates`) |
 | `(as T X)` | T. X may be any expression that fits T: `as` states the type of X and never changes its value. So `(as list[real] {})` and `(as func[real real] (fn x (* 2 x)))` are allowed, and `(as int 2.5)` is a compile error |
-| a spread `g.A` | `list[U]`, U the meeting of the types of A of the members, with the number of members as its length |
-| `(if C A B)` | C has type `bool`. The type is the meeting of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
-| `(or? X D)` | the meeting of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
+| a spread `g.A` | `list[U]`, U the common type of the A of the members, with the number of members as its length. A member that has no A contributes `none`, and `none` is then added to U |
+| `(if C A B)` | C has type `bool`. The type is the common type of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
+| `(or? X D)` | the common type of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
 | `(let (…) B)` | the type of B |
 | `(fn PARAMS B)` | {numref}`function-result-type` |
 | a call `(F A…)` of a function | the result type of F, with `none` added as {numref}`none-only-where-allowed` states |
@@ -564,5 +563,5 @@ Each expression that is given where a type is expected must fit that type ({numr
 the conversions of {numref}`conversions`, or meet its conditions by {numref}`constraint-proof`.
 ```
 
-So `(int m (if on 1 2.5))` is a compile error, since the branches meet at `real`, and
+So `(int m (if on 1 2.5))` is a compile error, since the common type of the branches is `real`, and
 with an int `n`, `(real k n)` holds the value of `n` as a real.
