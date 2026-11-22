@@ -416,16 +416,11 @@ The compiler accepts a variant parameter that no attribute of its shape reads. m
 ## Functions
 
 ```{rule} function-types
-The values of a function type are the functions declared with `func`, the functions written with
-`fn`, the colormaps, the built-in functions, and the functions that calls of built-in functions result in,
-such as the ease that `(steps N)` evaluates to. A type that is a function type, or holds one, as
-`list[func[real real]]` does, is the type only of a parameter, a `let` name, an expression, and an
-attribute whose type is a function type in {doc}`world-model`, such as the `ease` of a movement. A
-variable and the declared result of a function may not have such a type: a declaration that
-declares one with it is a compile error.
+The type of a function declared with `func` is `func[P1 … Pn R]`, with the types of its parameters
+and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY as R. A
+variable and the result of a function may not have a type that is a function type or holds one, as
+`list[func[real real]]` does.
 ```
-
-`=` on such a value is a compile error ({numref}`equality-operands`).
 
 :::{admonition} Code differs
 :class: note
@@ -435,18 +430,18 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 :::
 
 ```{rule} parameters
-A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which is
-always written, with its conditions. Its default, when it has one, is of a subtype of T and is known when
-compiling, or is a function declared with `func` or a built-in function. When a call, or a declaration whose head is a motif, leaves out a parameter, the parameter takes its
-default, and when it has none, the value of T ({numref}`type-values`). A call of a function declared
+A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which
+must be written, with its conditions. Its default, when it has one, must be of type T and known when
+compiling, or be a function declared with `func` or a built-in function. A parameter that is left out
+holds its default, or the default value of T ({numref}`type-values`). A call of a function declared
 with `func` may have at most as many arguments as the function has parameters, and may leave out only
 the last ones. A call of a function value, such as a parameter, must have exactly as many arguments
-as its type has parameters.
+as its type has parameters. A parameter of `fn` may be written as a bare name when the function is
+given where a function type is expected, and its type is then the type of that parameter in the
+expected type.
 ```
 
-A parameter of `fn` may be written as a bare name when the function is given where its type is
-expected, as for the function of `map` ({doc}`stdlib`): `(map xs (fn x (* 2 x)))`. Its type is then
-the expected type.
+So in `(map xs (fn x (* 2 x)))`, with `xs` a `list[real]`, `x` is a real ({doc}`stdlib`).
 
 ```{rule} function-result-type
 The result type of `(func[R] N PARAMS BODY)` is R. The result type of `(func N PARAMS BODY)` is
@@ -459,10 +454,6 @@ worked out from BODY, in which each call of N has a result type of its own:
 
 When every branch of BODY calls N, or when T5 does not equal T6, the function is a compile error.
 ```
-
-The type of a function declared with `func` is `func[P1 … Pn R]`, with the types of its
-parameters and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY
-as R.
 
 ## The type of each expression
 
