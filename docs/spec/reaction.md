@@ -40,3 +40,16 @@ the point where the reader clicked.
 In the compiler, an `on-drag` holds exactly one move, written without a duration, and there is no
 interface `instant`. Beads mtp-rk1i and mtp-idcs.
 :::
+
+## What a write does to a number
+
+```{rule} writes-into-constraints
+A write of a number into a {term}`container` brings it into the conditions of its declared type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
+type by {numref}`modular-types`, and when it breaks a `(> c)` or a `(< c)` it is not written. A write of a value that is not among the values of a `(one-of …)` is not
+written. A number written into an `int` is rounded as {numref}`rounding` states. A value that is
+not written leaves the container as it was.
+```
+
+The {term}`number limit` applies to every write too ({numref}`number-limit`). So with
+`(real p 0.5 (>= 0) (<= 1))`, a slider whose move goes to 1.4 stops `p` at exactly 1. Which values
+a writer may write at all is defined in {numref}`written-values`.

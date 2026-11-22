@@ -237,18 +237,6 @@ The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`
 `real`, whose arithmetic gives an ordinary number, so `(+ theta 30)` may be 380. Bead mtp-rk1i.
 :::
 
-```{rule} writes-into-constraints
-A write of a number into a variable or an attribute brings it into the conditions of its declared
-type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
-type by {numref}`modular-types`, and when it breaks a `(> c)` or a `(< c)` it is not written. A write of a value that is not among the values of a `(one-of …)` is not
-written. A number written into an `int` is rounded as {numref}`rounding` states. A value that is
-not written leaves the variable or the attribute as it was.
-```
-
-The {term}`number limit` applies to every write too ({numref}`number-limit`). So with
-`(real p 0.5 (>= 0) (<= 1))`, a slider whose move goes to 1.4 stops `p` at exactly 1. Which values
-a writer may write at all is defined in {numref}`written-values`.
-
 ```{rule} type-values
 A variable declared with no value, and a parameter that a call, or a declaration whose head is a motif, leaves out and that
 has no default, hold the value of their type:
