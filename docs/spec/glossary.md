@@ -381,8 +381,7 @@ choice type
   A type refined by `(one-of …)` to a few values ({numref}`choice-types`).
 
 interface
-  A type that no object has as its own type, which every type with what it lists satisfies, such
-  as `shape` or a type declared with `interface` ({numref}`interfaces`).
+  The set of the values that have the attributes that it lists, such as `shape` or a type declared with `interface` ({numref}`interfaces`).
 
 known length
   The length of a list when it is known when compiling, as a `(length n)` in its type

@@ -71,7 +71,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
-| `positioned`, `instant`, `palette`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
+| `positioned`, `instant`, `palette`, and each declared interface | the values that have the attributes that it lists | an {term}`interface` ({numref}`interfaces`) |
 
 ```
 
@@ -356,16 +356,15 @@ The compiler checks the choices only of a value known when compiling (`compiler.
 
 ```{rule} interfaces
 An interface is a type defined by attributes: the set of the values that have the attributes that
-it lists, of the types that it states. It is a type like any other, and may be the type of a
-variable, an attribute or a parameter. A type satisfies an interface as follows:
+it lists, of the types that it states. These are its subtypes:
 
-| Interface | Satisfied by |
+| Interface | Its subtypes |
 |---|---|
 | `shape` | every shape type, motif type and variant type |
 | `positioned` | `point`, and every shape type, motif type and variant type but `group` |
 | `instant` | every movement whose `duration` is 0: a jump, and a score of jumps. It is `(interface instant ((real (one-of 0)) duration))` |
 | `palette` | every record whose attributes are all colors, whatever their names and number. A record made by `(palette …)` is one ({numref}`sugar-rewrites`) |
-| a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a subtype of `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. Each record that a value may be satisfies the interface on its own |
+| a declared interface, `(interface N (T1 A1 C1…) …)` | every type whose values all have each attribute Ai, of a subtype of `(Ti C1…)` |
 
 A value whose type is an interface may be read only through what the interface lists: the attributes of
 the frame for `shape`, `x`, `y` and `pos` for `positioned`, and the attributes Ai for a declared interface. An attribute M of a value
@@ -379,14 +378,10 @@ The compiler has no interface `palette`: `(func f ((palette q)) 1)` is the error
 'palette'" (`types.py:150`, `PALETTE`, is a type that a palette has as its own). Bead mtp-rdk2.
 :::
 
-So `(func label-at ((positioned o) (string s)) …)` may be given points and shapes alike, and
-`(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not every shape has an `r`. A
-condition of a declared interface is met only when the type of the attribute implies it: a
-record whose `r` is a plain `real` does not satisfy `(interface round (real r (>= 0)))`.
-
-The named types form a hierarchy: every value is a primitive or an object, and every object is of one
-kind, a shape, a movement, a record and so on. An interface cuts across it: `positioned` holds
-points, which are primitives, and shapes, which are objects.
+So `(func label-at ((positioned o) (string s)) …)` may be given points, which are primitives, and
+shapes, which are objects. `(func area ((shape o)) (* pi o.r o.r))` is a compile error, since not
+every shape has an `r`. A record whose `r` is a plain `real` is not a subtype of
+`(interface round (real r (>= 0)))`, since `real` is not a subtype of `(real (>= 0))`.
 
 :::{admonition} Code differs
 :class: note
@@ -396,7 +391,7 @@ declared with one is a compile error. Bead mtp-mo3r.
 :::
 
 ```{mtp-example}
-; the parameter colors of the motif disc takes either namespace, since both satisfy inky
+; the parameter colors of the motif disc takes either namespace, since both are subtypes of inky
 (interface inky (color ink) (color paper))
 (namespace day (color ink #'#1f2a44') (color paper #'#f6f1e7'))
 (namespace night (color ink #'#e8e4d8') (color paper #'#14161c'))
@@ -406,6 +401,8 @@ declared with one is a compile error. Bead mtp-mo3r.
 (canvas v (x -2) (y -2) (width 4) (height 4) s)
 (toggle mode dark (label 'dark'))
 ```
+
+## Common type
 
 ```{rule} common-type
 The common type of two types A and B is the smallest type that holds both, found this way:
@@ -420,8 +417,8 @@ The common type of two types A and B is the smallest type that holds both, found
 
 The type of the branches of an `if` and of the items of a `(list-of …)` is their common type, except
 that the type of the branches of an `if` is the expected type when it is a declared interface that
-both satisfy. The type of the members of a group is found otherwise: their type when all have the
-same type, else `positioned` when all satisfy it, else `shape`, with `none` added when the type of
+both are subtypes of. The type of the members of a group is found otherwise: their type when all have the
+same type, else `positioned` when all are subtypes of it, else `shape`, with `none` added when the type of
 one of them includes `none`.
 ```
 
