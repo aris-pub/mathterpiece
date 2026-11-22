@@ -23,7 +23,7 @@ By {numref}`declare-before-use`, an expression reads only declarations and bindi
 before it, so a cycle could only come from a read inside the {term}`form` of the declaration or the
 binding that is read. The rule below lists such reads. A call of a function is not a read of a
 container, so a function that calls itself makes no cycle. The depth of a chain of calls is limited
-by {numref}`call-depth-limit`, and the limit while drawing is still open (Q-evaluation-13).
+by {numref}`call-depth-limit`.
 
 ```{rule} self-reference-today
 These rules hold for a use of a name inside the form that declares or binds it:
@@ -39,7 +39,7 @@ These rules hold for a use of a name inside the form that declares or binds it:
 4. The `clip` and the `(defaults …)` of a collection may not read the collection, also after the
    defaults are given to its members ({numref}`collection-defaults`).
 
-Each read that items 2 to 4 forbid is a compile error. A shape may read its own attributes, by
+A shape may read its own attributes, by
 its name or through the name that the `(as N)` of its motif binds, as long as
 {numref}`no-dependency-cycles` holds.
 ```
@@ -59,15 +59,14 @@ or of a formula, or an item of a list at a position known when compiling. It is 
 name or a qualified name, with `(name S)` allowed in place of a name ({numref}`names-from-values`).
 Writing an item puts a new list into the container that holds the list, and may be done only when
 that container may be written.
-A target may be written only when it is free ({numref}`variables`), it is not a token (a variable
-of type `color` or `font`), and it is not fixed by a variant ({numref}`motif-and-variant-types`).
+A target may be written only when it is free ({numref}`variables`), it is not a color variable or a
+font, and it is not fixed by a variant ({numref}`motif-and-variant-types`).
 Also:
 
 - The name of an object, such as a group or a record, may not be a target.
 - A target that stands for several containers ({doc}`concurrency`, section "Containers") may be
   written only when each of them may be written. Such targets are a `pos`, an attribute of a group
-  that stands for the attributes of its members, an attribute of a shape declared with a motif that
-  stands for the attributes of the shapes of its body, and the `x`, the `y` and the `pos` of a
+  that stands for the attributes of its members, and the `x`, the `y` and the `pos` of a
   line, a triangle, a polyline, a polygon and a bezier. An attribute of a collection with no
   members may not be a target.
 - In a target, a member of a group chosen by its position must be chosen by a position known when
@@ -83,9 +82,10 @@ move of a const variable or of a color variable. Two writers may write the same 
 {doc}`concurrency` defines what happens then.
 
 ```{rule} written-values
-The type of each value that a writer writes must be a {term}`subtype` of the type of its target ({numref}`fits`), with the
-comparisons, the wraps and the `(one-of …)` of that type left out, since the write brings the value
-into those ({numref}`writes-into-constraints`). This holds for the `from` and the `to` of a move
+The type of each value that a writer writes must be a {term}`subtype` of the type of its target
+({numref}`fits`), with the comparisons and the `(one-of …)` of that type left out, and with a modular
+type read as its number type, since the write brings the value into those
+({numref}`writes-into-constraints`, {numref}`modular-types`). This holds for the `from` and the `to` of a move
 and of a movement, and for the values of a toggle and of a slider. A value whose type includes
 `none` may be written only into a target whose type includes `none`.
 ```
@@ -121,12 +121,11 @@ Bead mtp-ydd4.7.44.
 ## Moves that run at the same time
 
 ```{rule} moves-at-once
-Two members of one `at-once` that write the same container at times that overlap are a compile
-error. The containers that a move writes are defined in {doc}`concurrency`, section "Containers".
-The times are these:
+Two moves of one score that write the same container at times that overlap are a compile error.
+The containers that a move writes are defined in {doc}`concurrency`, section "Containers". The
+times are these:
 
-- Each member of an `at-once` starts when the `at-once` starts, and the moves inside it start at
-  the times defined in {doc}`time`.
+- Each move starts at the time that {doc}`time` defines for it in the score.
 - A move writes from its start up to its start plus its duration, and a loop that never ends
   writes forever.
 - Two times overlap when they start at the same instant, or when each starts before the other ends.
@@ -193,7 +192,7 @@ the part that they share.
 | a number known in the prove step | from the number to the number |
 | the range of a type | the ends set by its comparisons: c for a `(>= c)` and a `(<= c)`, and for a `(> c)` and a `(< c)` the nearest value past c that the type holds, which is the next int for an int, the next binary64 number for a real, and c for a ratio. From lo to hi for a modular type `(mod T lo hi)`, and the end of the {term}`number limit` for a side with no bound ({numref}`number-limit`) |
 | a read of a free container | the range of its type |
-| a read of a bound container | the range of its expression, and the range of the conditions of its declared type, each side with no bound left out. A read that is converted through a frame ({doc}`world-model`): the range of its type |
+| a read of a bound container | the range of its expression, and the range of the conditions of its declared type, each side with no bound left out |
 | a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` passed to a {term}`built-in` function, the range that {doc}`stdlib` lists for it |
 | a `let` name | the range of its value |
 | the name of a `foreach` over a count X | from 0 to the upper end of the range of X, minus 1 |
@@ -219,11 +218,13 @@ Every range is clamped to the number limit, as the values of the expression are
 range from the lower end to the upper end of the number limit. Each end in the table that is worked
 out from several ends, such as the sum of the lower ends, is one call of the operation on those
 ends, and is clamped once.
+
+The item type of a `(list-of …)` whose items are not all known in the prove step, and whose items
+all have ranges, holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the
+largest upper end of the items.
 ```
 
-The item type of a `(list-of …)` whose items are not all known, and whose items all have ranges,
-holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the largest upper end of
-the items. So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
+So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
 
 With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 5 k)`, -5 to 5. With
 `(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamp x 0 1)` has the range 0
@@ -249,7 +250,6 @@ So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, 
 ```{rule} constraint-proof
 A value written where the expected type holds a condition C meets C when one of these holds:
 
-- C is a modular type, which every value meets once brought in ({numref}`modular-types`).
 - The value is known in the prove step and meets C.
 - The type of the value is a subtype of the expected type with C as its only condition ({numref}`fits`).
 - C is a comparison, and the range of the value lies inside it: its lower end is at least c for
@@ -331,7 +331,6 @@ With `(int k 1 (>= 0) (<= 5))`, `(if (< k 3) A B)` sets the range of `k` to 0 to
 `(if (> x 0) (/ 1 x) 0)`, `x` in the first branch has the same range, which does not hold 0, so
 `(/ 1 x)` is a `real` there. In `(if (and (> k 0) (< k 3)) A B)`, the condition is the `if` of the
 rewrite of `and`, which is not a comparison, so the range of `k` in A is not narrowed.
-`(if (< 0 k) A B)`, with the name on the right, does not narrow either.
 
 :::{admonition} Code differs
 :class: note
