@@ -213,14 +213,14 @@ The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`
 ## Default values
 
 ```{rule} type-values
-A variable declared with no value, and a parameter with no default that a call or a declaration
-leaves out, hold the default value of their type:
+A variable declared with no value, and a parameter with no default that is left out, hold the
+default value of their type:
 
 | Type | Its default value |
 |---|---|
 | `int`, `ratio`, `real`, `complex` | 0 |
 | a modular type | 0 brought into the interval ({numref}`modular-types`) |
-| a refined number type whose conditions 0 breaks | c, when the type holds `(>= c)`. With no `(>= c)`, the type has no default value |
+| a refined number type whose conditions 0 breaks | c, when the type holds `(>= c)`. Otherwise c, when the type holds `(<= c)`. Otherwise none |
 | `bool` | `false` |
 | `string` | `''` |
 | a refined string type with `(one-of s1 …)` | s1 |
@@ -234,8 +234,10 @@ leaves out, hold the default value of their type:
 Leaving out the value of a type that has no default value is a compile error.
 ```
 
-So `(real k (>= 1))` holds 1, `(real k (> 1))` is a compile error, and a motif's parameter whose
-type is an interface or a shape type must be given in every declaration whose head is the motif.
+So `(real k (>= 1))` holds 1, `(real k (<= -1))` holds -1, and `(real k (> 1))` is a compile error,
+since 1 does not meet `(> 1)`. A parameter whose type is a shape type or an interface has no default
+value, so it must be given wherever it has no default of its own. No variable and no parameter is
+ever left without a value.
 
 ## Literals and conversions
 
