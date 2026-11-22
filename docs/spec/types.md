@@ -255,23 +255,16 @@ own type.
 A literal is checked against the conditions of the expected type by {numref}`constraint-proof`.
 ```
 
-So in `(circle c (fill #'red'))`, `#'red'` is a color, and in `(string s 'red')`, `'red'` is a
-string.
-
 ```{rule} conversions
-Only these change the type of a value where no form asks for it:
-
-1. A number is accepted where a later number type is expected ({numref}`fits`), and is then a
-   value of that type, as {numref}`number-result-types` states.
-2. A literal has the type that is expected where it is written ({numref}`literal-types`).
-
-Nothing else converts. A string is never a color, a real is never an int, and a point is never a
-list.
+No value is converted from one type to another unless a form asks for it, such as `round`,
+`color-of` or `unwrap`.
 ```
 
-So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, and a real becomes an
-int only through a function such as `round`, `floor` or `ceil`, or through a write into an int
-({numref}`writes-into-constraints`).
+So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, while
+`(circle d (fill (color-of s)))` is allowed. An int is accepted where a real is expected because
+`int` is a subtype of `real` ({numref}`fits`), not because it is converted.
+
+## Known lengths
 
 ```{rule} known-lengths
 The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists
@@ -281,7 +274,7 @@ have that condition in their types, with these lengths:
 - a list known when compiling: its length
 - a variable, an attribute, a parameter or a declared result whose declared type holds
   `(length n)`: n
-- a bound variable or attribute whose expression has a known length: that length
+- a bound container whose expression has a known length: that length
 - `(if C A B)` whose branches have the same known length: that length
 - a call of a function declared with `func` whose {term}`body` has a known length: that length
 - a spread `g.A` of a group, and `g.members`: the number of members of the group
