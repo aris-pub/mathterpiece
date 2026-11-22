@@ -27,14 +27,14 @@ class TestValues:
 
     def test_lengths(self):
         assert value("(int n (. 'abc' length))", "n") == 3
-        assert value("(list xs [1 2 3] (const)) (int n xs.length)", "n") == 3
-        assert value("(list[real] xs [1 2] (length 2)) (int n xs.length)", "n") == 2
-        assert bound("(list[real] xs [1 2]) (int n xs.length)", "n").type == INT
+        assert value("(list xs {1 2 3} (const)) (int n xs.length)", "n") == 3
+        assert value("(list[real] xs {1 2} (length 2)) (int n xs.length)", "n") == 2
+        assert bound("(list[real] xs {1 2}) (int n xs.length)", "n").type == INT
 
     def test_a_list_length_times_a_number_is_not_none(self):
         # mtp-pwjz: as with count, the range of a list's length stops at 10^150.
-        assert bound("(list[real] xs [1 2]) (int n xs.length)", "n").range == (0, 1e150)
-        assert typ("(list[real] xs [1 2]) (real x (* xs.length 8))", "x") == INT
+        assert bound("(list[real] xs {1 2}) (int n xs.length)", "n").range == (0, 1e150)
+        assert typ("(list[real] xs {1 2}) (real x (* xs.length 8))", "x") == INT
 
 
 class TestTransitionsAndAnimations:
@@ -84,37 +84,37 @@ class TestDash:
         assert a["dash"].value == [] and a["dash-offset"].value == 0
 
     def test_lengths_and_offset(self):
-        a = model("(scene s (line l (dash [4 2 1 2] 3)))").get("l").attrs
+        a = model("(scene s (line l (dash {4 2 1 2} 3)))").get("l").attrs
         assert a["dash"].value == [4, 2, 1, 2] and a["dash-offset"].value == 3
 
     def test_the_offset_is_optional(self):
-        a = model("(scene s (line l (dash [4 2])))").get("l").attrs
+        a = model("(scene s (line l (dash {4 2})))").get("l").attrs
         assert a["dash"].value == [4, 2] and a["dash-offset"].value == 0
 
     def test_the_offset_may_follow_a_variable(self):
-        m = model("(real phase 0) (scene s (line l (dash [4 2] phase)))")
+        m = model("(real phase 0) (scene s (line l (dash {4 2} phase)))")
         assert m.get("l").attrs["dash-offset"].bound
 
     def test_lengths_are_not_negative(self):
-        error("(scene s (line l (dash [4 -2])))", "breaks")
+        error("(scene s (line l (dash {4 -2})))", "breaks")
 
     def test_lengths_come_in_a_list(self):
         error("(scene s (line l (dash 4 2)))", "expected list")
-        error("(scene s (line l (dash [4 2] 1 2)))", "a list of lengths and an offset")
+        error("(scene s (line l (dash {4 2} 1 2)))", "a list of lengths and an offset")
         error("(scene s (line l (dash-offset 1)))", "the offset is dash's second argument")
 
     def test_a_container_gives_it_to_its_members(self):
-        m = model("(scene s (group g (defaults (dash [4 2] 1)) (line a) (line b (dash [1 1]))))")
+        m = model("(scene s (group g (defaults (dash {4 2} 1)) (line a) (line b (dash {1 1}))))")
         a, b = m.get("a").attrs, m.get("b").attrs
         assert a["dash"].value == [4, 2] and a["dash-offset"].value == 1
         assert b["dash"].value == [1, 1] and b["dash-offset"].value == 0
 
     def test_a_text_takes_none_from_a_container(self):
-        m = model("(scene s (group g (defaults (dash [4 2])) (text t 'hi')))")
+        m = model("(scene s (group g (defaults (dash {4 2})) (text t 'hi')))")
         assert m.get("t").attrs["dash"].value == []
 
     def test_given_twice(self):
-        error("(scene s (line l (dash [4 2]) (dash [1 1])))", "given twice")
+        error("(scene s (line l (dash {4 2}) (dash {1 1})))", "given twice")
 
 
 class TestLineEnds:
@@ -140,18 +140,18 @@ class TestDashOffset:
     # The author, 2026-11-03: the offset is an attribute of its own, dash-offset, which a figure
     # may read and an animation may move.
     def test_read(self):
-        m = model("(scene s (line l (dash [4 2] 3)) (real v l.dash-offset))")
+        m = model("(scene s (line l (dash {4 2} 3)) (real v l.dash-offset))")
         e = m.get("v").value.expr
         assert e.op == "read" and e.type == REAL
 
     def test_moved_by_an_animation(self):
         m = model(
-            "(scene s (line l (dash [4 2]))) (animation a (move l.dash-offset (to 6) (duration 1)))"
+            "(scene s (line l (dash {4 2}))) (animation a (move l.dash-offset (to 6) (duration 1)))"
         )
         assert m.get("a").data["steps"][1] == (m.id("l"), "dash-offset")
 
     def test_a_containers_offset_is_every_members(self):
         m = model(
-            "(scene s (group g (defaults (dash [4 2] 1)) (line a) (line b)) (list v g.dash-offset))"
+            "(scene s (group g (defaults (dash {4 2} 1)) (line a) (line b)) (list v g.dash-offset))"
         )
         assert m.get("v").value.expr.type.base == ListT(REAL)

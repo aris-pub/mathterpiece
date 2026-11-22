@@ -43,7 +43,7 @@ class TestTheFunction:
     def test_where_a_color_goes(self):
         m = model(
             "(palette p (ink (light-dark #'#1f2a44' #'#e8e4d8')))"
-            "(colormap heat [(light-dark #'#000000' #'#ffffff') #'#ff0000'])"
+            "(colormap heat {(light-dark #'#000000' #'#ffffff') #'#ff0000'})"
             "(scene s (group g (defaults (stroke (light-dark #'#999999' #'#5a5f6b')))"
             " (circle c (fill (light-dark #'#999999' #'#5a5f6b'))) (circle d)))"
         )
@@ -85,7 +85,7 @@ class TestColorsComputedFromThem:
         assert got == "#ff0000ff"
 
     def test_a_colormap(self):
-        src = "(colormap heat [(light-dark #'#000000' #'#ffffff') #'#ff0000'])"
+        src = "(colormap heat {(light-dark #'#000000' #'#ffffff') #'#ff0000'})"
         got = value(f"{src} (color v (heat 0.5))")
         light = value("(color v (mix #'#000000' #'#ff0000' 0.5))")
         dark = value("(color v (mix #'#ffffff' #'#ff0000' 0.5))")

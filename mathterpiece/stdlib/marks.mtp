@@ -36,8 +36,8 @@
     (arc|none turn (r r) (from from) (to to))
     (exists-when turn (!= (mod (- to from) 360) 90))
     (polyline|none corner
-        (points [(polar (* 0.7 r) from) (+ (polar (* 0.7 r) from) (polar (* 0.7 r) to))
-                 (polar (* 0.7 r) to)]))
+        (points {(polar (* 0.7 r) from) (+ (polar (* 0.7 r) from) (polar (* 0.7 r) to))
+                 (polar (* 0.7 r) to)}))
     (exists-when corner (= (mod (- to from) 360) 90))
     (text_ label (pos (polar (+ r 12) (+ from (/ (mod (- to from) 360) 2)))) (fill (or? stroke ink))
         (stroke none) (halign 'middle') (valign 'middle'))))

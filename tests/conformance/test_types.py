@@ -24,8 +24,8 @@ class TestTypeNotation:
 class TestTheTypes:
     def test_the_type_colormap(self):
         same_meaning(
-            "(func f ((colormap m)) (m 0.5)) (colormap cm [#'red' #'blue']) (color v (f cm))",
-            "(func f ((func[real color] m)) (m 0.5)) (colormap cm [#'red' #'blue'])"
+            "(func f ((colormap m)) (m 0.5)) (colormap cm {#'red' #'blue'}) (color v (f cm))",
+            "(func f ((func[real color] m)) (m 0.5)) (colormap cm {#'red' #'blue'})"
             " (color v (f cm))",
         )
 

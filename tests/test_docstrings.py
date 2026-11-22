@@ -90,7 +90,7 @@ def test_an_anonymous_shape_takes_one():
         ("(type unit real (doc 'D.') (>= 0) (<= 1))", ("type", "unit")),
         ("(motif m () (doc 'D.') (circle_ (r 1)))", ("motif", "m")),
         ("(interface inky (doc 'D.') (color ink))", ("interface", "inky")),
-        ("(colormap heat [#'navy' #'white'] (doc 'D.'))", ("func", "heat")),
+        ("(colormap heat {#'navy' #'white'} (doc 'D.'))", ("func", "heat")),
     ],
 )
 def test_what_is_not_an_object_keeps_its_doc_in_the_compiler(src, key):

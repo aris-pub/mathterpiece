@@ -32,7 +32,7 @@
     (circle_ (r 1) (stroke red))
     (circle_ (r 0.5) (stroke green))
     (circle_ (r 0.1) (stroke blue)))
-  (group radii (defaults (stroke soft) (stroke-width 1) (dash [3 4]))
+  (group radii (defaults (stroke soft) (stroke-width 1) (dash {3 4}))
     (line_ (from [0 0]) (to (polar 1 a)))
     (line_ (from [0 0]) (to (polar 0.5 b)))
     (line_ (from [0 0]) (to (polar 0.1 c))))

@@ -9,7 +9,7 @@ from mtpc_check import errors
 from mathterpiece.compiler import _core
 from mathterpiece.types import POINT, REAL, ListT
 
-PTS = "(points [[0 0] [4 0] [4 2]])"
+PTS = "(points {[0 0] [4 0] [4 2]})"
 
 
 class TestDeclaring:
@@ -22,12 +22,12 @@ class TestDeclaring:
         assert model("(scene s (polyline p))").get("p").attrs["points"].value == []
 
     def test_points_are_a_list_of_points(self):
-        error("(scene s (polyline p (points [1 2 3])))", "expected point")
+        error("(scene s (polyline p (points {1 2 3})))", "expected point")
         error("(scene s (polyline p (points 3)))", "expected list")
 
     def test_they_take_the_stroke_attributes(self):
         a = (
-            model(f"(scene s (polyline p {PTS} (stroke #'red') (dash [4 2]) (line-cap 'round')))")
+            model(f"(scene s (polyline p {PTS} (stroke #'red') (dash {{4 2}}) (line-cap 'round')))")
             .get("p")
             .attrs
         )
@@ -56,7 +56,7 @@ class TestPosition:
         assert _core(bound(src + " (point v p.pos)").type) == POINT
 
     def test_while_drawing(self):
-        e = bound("(real k 1) (scene s (polyline p (points [[0 0] [k 0]]))) (real v p.x)")
+        e = bound("(real k 1) (scene s (polyline p (points {[0 0] [k 0]}))) (real v p.x)")
         assert _core(e.type) == REAL
 
     def test_writing_it_moves_every_point(self):
@@ -65,7 +65,7 @@ class TestPosition:
 
     def test_bound_points_cannot_be_moved_by_their_position(self):
         error(
-            "(real k 1) (scene s (polyline p (points [[0 0] [k 0]])))"
+            "(real k 1) (scene s (polyline p (points {[0 0] [k 0]})))"
             " (animation a (move p.x (to 5) (duration 1)))",
             "bound",
         )
@@ -85,7 +85,7 @@ class TestAsAClip:
 
 def test_the_compiled_file():
     d = doc(
-        f"(real k 1) (scene s (polyline p (points [[0 0] [k 1]])) (polygon q {PTS})) (real v p.x)"
+        f"(real k 1) (scene s (polyline p (points {{[0 0] [k 1]}})) (polygon q {PTS})) (real v p.x)"
     )
     assert errors(d) == []
     assert d["objects"][d["names"]["p"]]["kind"] == "polyline"

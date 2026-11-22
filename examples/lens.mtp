@@ -29,18 +29,18 @@
   (real side 0.4 (const))
   (column left-swatches (translate (+ (bottom-left land) [0.5 -1.2])) (gap 0.2)
       (defaults (stroke none))
-    (foreach c [sky.fill sun.fill far-left.fill near.fill]
+    (foreach c {sky.fill sun.fill far-left.fill near.fill}
       (rect_ (width side) (height side) (fill c))))
   (column right-swatches (translate (+ (bottom land) [0.6 -1.2])) (gap 0.2) (defaults (stroke none))
-    (foreach c [field.fill tree-0.fill house.fill roof.fill]
+    (foreach c {field.fill tree-0.fill house.fill roof.fill}
       (rect_ (width side) (height side) (fill c)))))
 
 ; How each swatch's color is made, in the order the swatches are stacked.
 (list[string] left-mixes
-    ['(mix yellow paper 0.7)' '(lighten yellow 0.3)' '(mix blue paper 0.45)' '(mix green yellow 0.35)']
+    {'(mix yellow paper 0.7)' '(lighten yellow 0.3)' '(mix blue paper 0.45)' '(mix green yellow 0.35)'}
     (const))
 (list[string] right-mixes
-    ['(darken green 0.25)' '(darken green 0.5)' '(lighten red 0.45)' '(darken red 0.15)']
+    {'(darken green 0.25)' '(darken green 0.5)' '(lighten red 0.45)' '(darken red 0.15)'}
     (const))
 
 (scene view-scene (background paper)

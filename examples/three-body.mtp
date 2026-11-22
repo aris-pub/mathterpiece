@@ -39,21 +39,21 @@
   (map (range trail-length) (fn i (if (= i 0) new (or? trail[(- i 1)] new)))))
 
 ; The figure eight's start (Chenciner and Montgomery), where the page begins.
-(list[point] eight-at [[0.97000436 -0.24308753] [-0.97000436 0.24308753] [0 0]] (const))
-(list[point] eight-speed [[0.466203685 0.43236573] [0.466203685 0.43236573]
-                          [-0.93240737 -0.86473146]]
+(list[point] eight-at {[0.97000436 -0.24308753] [-0.97000436 0.24308753] [0 0]} (const))
+(list[point] eight-speed {[0.466203685 0.43236573] [0.466203685 0.43236573]
+                          [-0.93240737 -0.86473146]}
     (const))
 
 (point v1 free@eight-speed[0])
 (point v2 free@eight-speed[1])
 (point v3 free@eight-speed[2])
-(list[point] trail-1 [])
-(list[point] trail-2 [])
-(list[point] trail-3 [])
+(list[point] trail-1 {})
+(list[point] trail-2 {})
+(list[point] trail-3 {})
 
 (scene sky (background paper)
   (group trails (defaults (stroke-width 2) (line-cap 'round'))
-    (foreach ((t [trail-1 trail-2 trail-3]) (i (- trail-length 1)))
+    (foreach ((t {trail-1 trail-2 trail-3}) (i (- trail-length 1)))
       (line|none_ (from t[i]) (to t[(+ i 1)])
           (stroke (cond ((= t trail-1) red) ((= t trail-2) green) (else yellow)))
           (stroke-opacity (- 1 (/ i trail-length))))))
@@ -93,9 +93,9 @@
 
 (animation clear-trails
   (at-once (defaults (duration 0))
-    (move trail-1 (to []))
-    (move trail-2 (to []))
-    (move trail-3 (to []))))
+    (move trail-1 (to {}))
+    (move trail-2 (to {}))
+    (move trail-3 (to {}))))
 
 (button figure-eight (label 'figure eight')
     (animation

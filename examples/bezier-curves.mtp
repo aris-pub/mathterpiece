@@ -21,12 +21,12 @@
     (circle q1 (like q0) (pos [4.5 -2.2])))
 
   (group curves (defaults (stroke-width 3) (head-end 'dart'))
-    (curve quad (from p0.pos) (to p1.pos) (controls [k.pos]) (stroke red))
-    (curve cubic (from q0.pos) (to q1.pos) (controls [c1.pos c2.pos]) (stroke green)))
+    (curve quad (from p0.pos) (to p1.pos) (controls {k.pos}) (stroke red))
+    (curve cubic (from q0.pos) (to q1.pos) (controls {c1.pos c2.pos}) (stroke green)))
 
-  (group polygons (defaults (stroke soft) (stroke-width 1) (dash [4 4]))
-    (polyline_ (points [p0.pos k.pos p1.pos]))
-    (polyline_ (points [q0.pos c1.pos c2.pos q1.pos])))
+  (group polygons (defaults (stroke soft) (stroke-width 1) (dash {4 4}))
+    (polyline_ (points {p0.pos k.pos p1.pos}))
+    (polyline_ (points {q0.pos c1.pos c2.pos q1.pos})))
 
   ; De Casteljau at t: each level a fraction t along the segments of the one before, with
   ; (lerp p q t), the point a fraction t of the way from p to q.
@@ -40,7 +40,7 @@
           (c (lerp c2.pos q1.pos t))
           (d (lerp a b t))
           (e (lerp b c t)))
-      (polyline_ (points [a b c]) (fill none))
+      (polyline_ (points {a b c}) (fill none))
       (line_ (from d) (to e))
       (circle_ (pos (lerp d e t)) (r 0.1))))
 

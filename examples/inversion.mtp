@@ -19,7 +19,7 @@
   ; Everything else lets the pointer through, so the dot under it never hides the circle.
   (group marks (pointer-events false)
     (line_ (from [0 0]) (to (if (> (norm q) (norm p)) q p)) (stroke soft) (stroke-width 1)
-        (dash [4 4]))
+        (dash {4 4}))
     (circle_ (r 0.04) (fill ink))
     (group names (defaults (font variable) (fill ink) (halign 'middle') (valign 'middle'))
       (text_ 'p' (pos (- p along)))

@@ -95,9 +95,9 @@ class TestHandling:
         error("(real|none c) (real d (if (some? c) (* 2 c) 0))", "may be none")
 
     def test_somes(self):
-        t = typ("(list[real|none] xs [1 none 2]) (list[real] ys (somes xs))", "ys")
+        t = typ("(list[real|none] xs {1 none 2}) (list[real] ys (somes xs))", "ys")
         assert t == ListT(REAL)
-        assert value("(list[real|none] xs [1 none 2] (const)) (list ys (somes xs))", "ys") == [1, 2]
+        assert value("(list[real|none] xs {1 none 2} (const)) (list ys (somes xs))", "ys") == [1, 2]
 
     def test_somes_takes_a_list(self):
         error("(real k) (list[real] ys (somes k))", "somes takes a list")
@@ -105,15 +105,15 @@ class TestHandling:
 
 class TestLists:
     def test_a_fixed_position_on_a_list_of_known_length(self):
-        assert typ("(real k) (real d (. [k 2] 0))", "d") == REAL
-        assert typ("(list[real] xs [1 2] (length 2)) (real d xs[1])", "d") == REAL
-        error("(list[real] xs [1 2] (length 2)) (real d xs[2])", "out of range")
+        assert typ("(real k) (real d (. {k 2} 0))", "d") == REAL
+        assert typ("(list[real] xs {1 2} (length 2)) (real d xs[1])", "d") == REAL
+        error("(list[real] xs {1 2} (length 2)) (real d xs[2])", "out of range")
 
     def test_a_list_of_unknown_length(self):
-        error("(list[real] xs [1 2]) (real d xs[0])", "may be none")
+        error("(list[real] xs {1 2}) (real d xs[0])", "may be none")
 
     def test_a_position_known_only_while_drawing(self):
-        assert typ("(int i) (real k) (real|none d (. [k 2] i))", "d") == Maybe(REAL)
+        assert typ("(int i) (real k) (real|none d (. {k 2} i))", "d") == Maybe(REAL)
 
 
 class TestShapes:
@@ -147,7 +147,7 @@ def test_or_on_a_value_known_when_compiling_is_not_none():
 def test_an_if_between_a_written_list_and_none():
     # Found 2026-11-04 adding when: the list took its type from the none branch.
     # With nothing outside to give the if a type.
-    for src in ("(if c [1 2] none)", "(if c none [1 2])"):
+    for src in ("(if c {1 2} none)", "(if c none {1 2})"):
         shown = value(f"(bool c true) (string v (type-of {src}))")
         assert "list[int]" in shown and shown.endswith("|none")
 

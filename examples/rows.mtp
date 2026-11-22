@@ -52,7 +52,7 @@
 (slider spacing (move gap (from 0) (to 1)) (label 'gap'))
 (slider size (move grow (from 0.4) (to 1.6)) (label 'size'))
 
-(foreach alignment ['top' 'middle' 'bottom']
+(foreach alignment {'top' 'middle' 'bottom'}
   (button @'my-{alignment}' (animation (move line-up (to alignment) (duration 0.5)))
       (label alignment) doc@'Lines the row up by its top, middle or bottom.'))
 

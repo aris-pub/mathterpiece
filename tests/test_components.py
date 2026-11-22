@@ -427,7 +427,7 @@ def test_a_foreach_names_its_controls():
     # Found 2026-11-03 in examples/rows.mtp: (name f'b{v}') on a control in a top-level foreach
     # did not see v.
     m = model(
-        "(real k 0) (foreach v [1 2] (button (name f'b{v}')"
+        "(real k 0) (foreach v {1 2} (button (name f'b{v}')"
         " (animation (move k (to v) (duration 0))) (label f'{v}')))"
     )
     assert m.get("b1").kind == "button" and m.get("b2").kind == "button"
@@ -518,7 +518,7 @@ class TestWhen:
         )
 
     def test_a_canvas_shows_what_an_item_gives(self):
-        for item in ("(when show a)", "(when show [a b])", "(if show a b)", "[a b]"):
+        for item in ("(when show a)", "(when show {a b})", "(if show a b)", "{a b}"):
             model(f"{self.S} (canvas v {item})")
 
     @pytest.mark.parametrize(
@@ -527,8 +527,8 @@ class TestWhen:
             ("(when show a) (if show c d) b", ["if", "if", "b"]),
             ("(if show c d) (when show a) b", ["if", "if", "b"]),
             ("(when show a) b (if show c d)", ["if", "b", "if"]),
-            ("(when show a) [c d] b", ["if", "list", "b"]),
-            ("[c d] (when show a) b", ["list", "if", "b"]),
+            ("(when show a) {c d} b", ["if", "list", "b"]),
+            ("{c d} (when show a) b", ["list", "if", "b"]),
         ],
     )
     def test_items_that_give_shapes_in_any_order(self, items, ops):
@@ -547,7 +547,7 @@ class TestWhen:
 
     def test_the_compiled_file(self):
         # One item per shape (mtp-7i3j), so the when gives only b.
-        d = doc(f"{self.S} (canvas v a (when show [b]))")
+        d = doc(f"{self.S} (canvas v a (when show {{b}}))")
         assert errors(d) == []
         shows = d["objects"][d["names"]["v"]]["shows"]
         assert shows[0] == d["names"]["a"] and "bound" in shows[1]

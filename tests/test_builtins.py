@@ -48,7 +48,7 @@ class TestNumbers:
 
     def test_sign_is_not_item_by_item_as_abs_is_not(self):
         error("(point p [1 -2]) (point v (sign p))", "point")
-        error("(list v (sign [1 -2]))", "list")
+        error("(list v (sign {1 -2}))", "list")
 
     def test_an_authors_sign_wins_from_its_declaration_on(self):
         src = "(int a (sign -4)) (func[real] sign ((real v)) (* 10 v)) (real b (sign -4))"
@@ -56,8 +56,8 @@ class TestNumbers:
 
     def test_min_max(self):
         assert value("(real v (max 1 5 3))") == 5
-        assert value("(real v (min [4 2 8]))") == 2
-        assert value("(real v (min [4 2 8] 1))") == 1
+        assert value("(real v (min {4 2 8}))") == 2
+        assert value("(real v (min {4 2 8} 1))") == 1
 
     def test_min_max_of_lists_and_reals_mixed(self):
         m = model("(scene s (group g (circle a) (circle b)) (real v (min g.r 5)))")
@@ -112,8 +112,8 @@ class TestPointsTransformsColors:
 
     def test_point_arithmetic(self):
         assert value("(point v (+ [1 2] [3 4]))") == (4, 6)
-        assert value("(list v (* [1 2 3] [2 2 2]))") == [2, 4, 6]
-        error("(list v (+ [1 2] [1 2 3]))", "equal length")
+        assert value("(list v (* {1 2 3} {2 2 2}))") == [2, 4, 6]
+        error("(list v (+ {1 2} {1 2 3}))", "equal length")
 
     def test_transforms(self):
         assert value("(transform v (translate 1 2))") == (1, 0, 0, 1, 1, 2)
@@ -188,7 +188,7 @@ class TestNoInfinity:
 
 class TestFunctionsAsValues:
     def test_a_built_in_passed_by_name(self):
-        m = model("(real k) (list v (map [k 4] sqrt))")
+        m = model("(real k) (list v (map {k 4} sqrt))")
         assert m.get("v").value.expr.args[1].op == "builtinfunc"
 
     def test_a_declared_function_replaces_a_built_in(self):
@@ -214,20 +214,20 @@ class TestNumberTimesList:
     # mtp-y4x: a number times a point or a list multiplies each item.
     def test_folds(self):
         assert value("(point v (* 2 [1 2]))") == (2, 4)
-        assert value("(list v (* [1 2 3] 2))") == [2, 4, 6]
-        assert value("(list v (* 0.5 [1 2] 2))") == [1, 2]
+        assert value("(list v (* {1 2 3} 2))") == [2, 4, 6]
+        assert value("(list v (* 0.5 {1 2} 2))") == [1, 2]
 
     def test_the_item_type_widens_with_the_number(self):
-        assert typ("(real k) (list v (* k [1 2]))").base == ListT(REAL)
-        assert typ("(int k) (list v (* k [1 2]))").base == ListT(INT)
+        assert typ("(real k) (list v (* k {1 2}))").base == ListT(REAL)
+        assert typ("(int k) (list v (* k {1 2}))").base == ListT(INT)
 
     def test_the_result_keeps_the_length(self):
         # So a fixed position on it never gives none.
-        assert typ("(real k) (list xs (* k [1 2])) (real v xs[1])") == REAL
-        assert typ("(real k) (list xs (+ [k 1] [1 2])) (real v xs[1])") == REAL
+        assert typ("(real k) (list xs (* k {1 2})) (real v xs[1])") == REAL
+        assert typ("(real k) (list xs (+ {k 1} {1 2})) (real v xs[1])") == REAL
 
     def test_only_multiplication_takes_a_number_with_a_list(self):
-        error("(list v (+ 1 [1 2]))", "all points or all lists")
+        error("(list v (+ 1 {1 2}))", "all points or all lists")
 
 
 class TestColorStrings:
@@ -317,7 +317,7 @@ class TestWrittenPointsInArithmetic:
         assert typ("(real r 2) (point o [1 1]) (point v (+ o (* r [1 0])))") == POINT
 
     def test_lists_stay_lists(self):
-        assert typ("(real r 2) (list v (* r [1 0 2]))").base == ListT(REAL)
+        assert typ("(real r 2) (list v (* r {1 0 2}))").base == ListT(REAL)
 
     def test_rand_inside_is_drawn_once(self):
         m = model(RAND + "(rand-seed s 0) (point o [1 1]) (point v (+ (* (rand) [1 0]) o))")

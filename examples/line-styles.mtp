@@ -44,12 +44,12 @@
 
   ; A dash pattern from the sliders, with the ends the buttons pick.
   (line pattern (translate (cell 0 1)) (from [(- half) 0]) (to [half 0]) (stroke ink)
-      (stroke-width (/ width 2)) (dash [dash-length gap-length]) (line-cap ends))
+      (stroke-width (/ width 2)) (dash {dash-length gap-length}) (line-cap ends))
 
   ; Marching dashes: the animation moves the ring's dash-offset by two patterns.
   (group march-panel (translate (cell 1 1))
     (circle dot (r 0.5) (fill red) (stroke none))
-    (circle dashed (r 1.4) (fill none) (stroke green) (stroke-width 3) (dash [9 6])
+    (circle dashed (r 1.4) (fill none) (stroke green) (stroke-width 3) (dash {9 6})
         (line-cap 'round')))
 
   ; Each caption sits the same way under its panel's center, so the two in a row line up.

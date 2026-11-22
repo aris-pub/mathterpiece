@@ -148,11 +148,11 @@ TODAY = [
     ("pi", "e", "3.141593e+00"),
     ("(/ 4 2)", None, "2.0"),
     ("(/ 4 2)", ".3g", "2"),
-    ("[1 2]", None, "[1, 2]"),
-    ("[1 2]", "", "[1, 2]"),
-    ("[true false]", None, "[True, False]"),
-    ("['a' 'b']", None, "['a', 'b']"),
-    ("[none 1]", None, "[None, 1]"),
+    ("{1 2}", None, "[1, 2]"),
+    ("{1 2}", "", "[1, 2]"),
+    ("{true false}", None, "[True, False]"),
+    ("{'a' 'b'}", None, "['a', 'b']"),
+    ("{none 1}", None, "[None, 1]"),
     ("true", None, "True"),
     ("false", "", "False"),
     ("'abc'", None, "abc"),
@@ -168,7 +168,7 @@ class TestFmt:
     def test_as_braces_gave(self, x, spec, text):
         written = f"(fmt {x})" if spec is None else f"(fmt {x} '{spec}')"
         assert value(f"(string|none v {written})") == text
-        braces = f"{{{x}}}" if spec is None else f"{{{x}:{spec}}}"
+        braces = f"{{ {x} }}" if spec is None else f"{{ {x}:{spec}}}"
         assert value(f"(string|none v f'{braces}')") == text
 
     def test_a_point(self):
@@ -180,7 +180,7 @@ class TestFmt:
             ("3", "^9.3", "int"),
             ("1/3", "x", "ratio"),
             ("true", ".2f", "bool"),
-            ("[1 2]", ".2f", "list[int]"),
+            ("{1 2}", ".2f", "list[int]"),
             ("none", ".2f", "none"),
             ("'abc'", ".1%", "string"),
         ],
@@ -305,7 +305,7 @@ class TestConcat:
         assert value("(string|none v (concat 'a' none))") is None
         assert value("(string|none v (concat 'a' (fmt none)))") is None
 
-    @pytest.mark.parametrize("x, t", [("1", "int"), ("true", "bool"), ("[1 2]", "list[int]")])
+    @pytest.mark.parametrize("x, t", [("1", "int"), ("true", "bool"), ("{1 2}", "list[int]")])
     def test_an_argument_that_is_not_a_string(self, x, t):
         error(f"(string v (concat 'a' {x}))", re.escape(f"concat joins strings, got {t}"))
 

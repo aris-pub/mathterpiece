@@ -210,7 +210,28 @@ def test_free_is_written_free_at_where_it_means_the_same(src, want):
         assert parse(want) == parse(src)
 
 
-@pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)
+# These files hold a list in braces over several lines, which the Emacs mode indents as a call.
+BRACES_OVER_LINES = {
+    ROOT / "examples" / f"{name}.mtp"
+    for name in ("ball-puzzle", "colormaps", "dials", "placement", "three-body")
+} | {ROOT / "mathterpiece" / "stdlib" / f"{name}.mtp" for name in ("colors", "marks")}
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        pytest.param(
+            p,
+            marks=pytest.mark.xfail(
+                reason="mtp-bpy1: the Emacs mode does not indent a list in braces", strict=True
+            ),
+        )
+        if p in BRACES_OVER_LINES
+        else p
+        for p in FILES
+    ],
+    ids=lambda p: p.stem,
+)
 def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
     emacs = [line.rstrip() for line in _emacs(path.read_text(), tmp_path).split("\n")]
     ours = [line.rstrip() for line in layout(path.read_text()).split("\n")]

@@ -22,7 +22,7 @@ def expr(src, name):
 
 class TestMap:
     def test_over_a_list(self):
-        e = expr("(real k) (list ys (map [k 2] (fn x (* 2 x))))", "ys")
+        e = expr("(real k) (list ys (map {k 2} (fn x (* 2 x))))", "ys")
         assert e.op == "map"
         assert e.type == Refine(ListT(REAL), (("length", 2),))
 
@@ -33,11 +33,11 @@ class TestMap:
         assert e.type == Refine(ListT(RADIUS), (("length", 2),))
 
     def test_a_named_function(self):
-        m = model("(func double (real x) (* 2 x)) (real k) (list ys (map [k] double))")
+        m = model("(func double (real x) (* 2 x)) (real k) (list ys (map {k} double))")
         assert m.get("ys").value.expr.args[1].op == "func"
 
     def test_the_function_must_fit_the_items(self):
-        error("(list ys (map ['a'] (fn (real x) x)))", "expected func")
+        error("(list ys (map {'a'} (fn (real x) x)))", "expected func")
 
     def test_the_result_has_a_known_length(self):
         # So reading item 1 gives a real, never none.
@@ -55,7 +55,7 @@ class TestWhereSortReverse:
         assert {(m.id("a"), "r"), (m.id("b"), "r")} <= m.get("k").value.deps
 
     def test_reverse(self):
-        assert model("(list ys (reverse [1 2 3]))").get("ys").value.value == [3, 2, 1]
+        assert model("(list ys (reverse {1 2 3}))").get("ys").value.value == [3, 2, 1]
 
     def test_sort_needs_a_real_key(self):
         error(f"(scene s {G} (list xs (sort g (fn p 'a'))))", "expected real, got string")
@@ -71,20 +71,20 @@ class TestCountSumReduce:
         # mtp-pwjz: the range of count reached the largest real, so a product of it could
         # overflow and was inferred as maybe none. A value with no upper limit of its own stops
         # at 10^150 (type-system.md, "What the compiler proves").
-        assert expr("(list[real] xs [1 2]) (int n (count xs))", "n").range == (0, 1e150)
-        src = "(list[real] xs [1 2]) (real k) (real x (* (count (where xs (fn x (> x k)))) 8))"
+        assert expr("(list[real] xs {1 2}) (int n (count xs))", "n").range == (0, 1e150)
+        src = "(list[real] xs {1 2}) (real k) (real x (* (count (where xs (fn x (> x k)))) 8))"
         assert typ(src, "x") == INT
 
     def test_sum(self):
-        assert model("(real k (sum [1 2 3.5]))").get("k").value.value == 6.5
-        assert expr("(real j) (real k (sum [j 1]))", "k").type == REAL
+        assert model("(real k (sum {1 2 3.5}))").get("k").value.value == 6.5
+        assert expr("(real j) (real k (sum {j 1}))", "k").type == REAL
 
     def test_sum_times_a_number_is_not_none(self):
         # mtp-gvrf.8: the range of sum reached the largest real, so a product of it could
         # overflow and was inferred as maybe none. A value with no upper limit of its own stops
         # at 10^150 (type-system.md, "What the compiler proves").
-        assert expr("(list[real] xs [1 2]) (real s (sum xs))", "s").range == (-1e150, 1e150)
-        assert typ("(list[real] xs [1 2]) (real x (* (sum xs) 8))", "x") == REAL
+        assert expr("(list[real] xs {1 2}) (real s (sum xs))", "s").range == (-1e150, 1e150)
+        assert typ("(list[real] xs {1 2}) (real x (* (sum xs) 8))", "x") == REAL
 
     def test_reduce(self):
         src = f"(scene s {G} (real total (reduce g 0 (fn ((real t) (circle p)) (+ t p.r)))))"
@@ -92,13 +92,13 @@ class TestCountSumReduce:
         assert (m.id("b"), "r") in m.get("total").value.deps
 
     def test_any_and_all(self):
-        assert model("(bool b (any [false true]))").get("b").value.value is True
+        assert model("(bool b (any {false true}))").get("b").value.value is True
         assert expr(f"(scene s {G} (bool ok (all g (fn p (> p.r 0)))))", "ok").type == BOOL
 
     def test_items_that_may_be_none(self):
-        error("(list[real|none] xs [1 none]) (real k (sum xs))", "may be none")
-        error("(list[real|none] xs [1 none]) (int n (count xs))", "may be none")
-        e = expr("(list[real|none] xs [1 none]) (list ys (reverse xs))", "ys")
+        error("(list[real|none] xs {1 none}) (real k (sum xs))", "may be none")
+        error("(list[real|none] xs {1 none}) (int n (count xs))", "may be none")
+        e = expr("(list[real|none] xs {1 none}) (list ys (reverse xs))", "ys")
         assert e.type == ListT(Maybe(REAL))
 
 
@@ -144,19 +144,19 @@ class TestMapTypedByItsList:
     # mtp-dqj: map's function takes its parameter's type and range from the list's items, and its
     # result's type from the type expected of the map.
     def test_the_declared_item_type_reaches_a_literal_in_the_function(self):
-        m = model("(real s) (list[point] corners (map [0 1 2 3] (fn k [(* s k) 0])))")
+        m = model("(real s) (list[point] corners (map {0 1 2 3} (fn k [(* s k) 0])))")
         t = m.get("corners").value.expr.type
         assert t.base == ListT(POINT)
 
     def test_a_folded_map_takes_the_declared_item_type(self):
-        m = model("(list[point] corners (map [0 1] (fn k [k 0])))")
+        m = model("(list[point] corners (map {0 1} (fn k [k 0])))")
         assert m.get("corners").value.value == [(0, 0), (1, 0)]
 
     def test_the_parameter_takes_the_range_of_a_known_lists_items(self):
         # face[f] on a four-item list is proved in range, so it is never none.
         m = model(
-            "(real s) (list[int] face [3 1 2 0] (const))"
-            " (list[int] picks (map [0 1 2 3] (fn f (+ face[f] (floor s)))))"
+            "(real s) (list[int] face {3 1 2 0} (const))"
+            " (list[int] picks (map {0 1 2 3} (fn f (+ face[f] (floor s)))))"
         )
         assert m.get("picks").value.expr.type.base == ListT(INT)
 
@@ -164,33 +164,33 @@ class TestMapTypedByItsList:
         # Found writing examples/animation-steps.mtp: ((int j)) dropped the items' range, so
         # xs[j] needed (somes …) though every j was a position of xs.
         m = model(
-            "(real s) (list[int] face [3 1 2 0] (const))"
-            " (list[int] picks (map [0 1 2 3] (fn ((int f)) (+ face[f] (floor s)))))"
+            "(real s) (list[int] face {3 1 2 0} (const))"
+            " (list[int] picks (map {0 1 2 3} (fn ((int f)) (+ face[f] (floor s)))))"
         )
         assert m.get("picks").value.expr.type.base == ListT(INT)
 
     def test_a_map_worked_out_with_no_none_has_no_none(self):
         # Over an empty range the parameter has no range, but no item is none either.
         m = model(
-            "(list xs [1 2 3] (const)) (int n 0 (const))"
+            "(list xs {1 2 3} (const)) (int n 0 (const))"
             " (real v (sum (map n (fn ((int j)) xs[j]))))"
         )
         assert m.get("v").value.value == 0
 
     def test_a_position_proved_in_range_is_never_none(self):
-        m = model("(list[int] face [3 1 2 0] (const)) (int f 0 (>= 0) (<= 3)) (int k face[f])")
+        m = model("(list[int] face {3 1 2 0} (const)) (int f 0 (>= 0) (<= 3)) (int k face[f])")
         assert m.get("k").value.expr.type == INT
 
     def test_a_position_that_may_be_out_of_range_may_be_none(self):
         error(
-            "(list[int] face [3 1 2 0] (const)) (int f 0 (>= 0) (<= 4)) (int k face[f])",
+            "(list[int] face {3 1 2 0} (const)) (int f 0 (>= 0) (<= 4)) (int k face[f])",
             "may be none",
         )
 
     def test_the_type_expected_of_an_argument_reaches_the_function(self):
         m = model(
             "(func first-x ((list[point] ps)) (or? ps[0].x 0)) (real s)"
-            " (real x (first-x (map [1 2] (fn k [(* s k) 0]))))"
+            " (real x (first-x (map {1 2} (fn k [(* s k) 0]))))"
         )
         assert m.get("x").value.bound
 

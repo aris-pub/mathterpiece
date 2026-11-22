@@ -130,7 +130,7 @@ class TestRandomFunctions:
 
     def test_the_same_mtpc_as_before(self):
         # A source that imports the names compiles to what the built-ins compiled to.
-        d = doc(RAND + "(rand-seed dots 7) (real v (rand 2 3)) (list[int] w (shuffle [1 2 3]))")
+        d = doc(RAND + "(rand-seed dots 7) (real v (rand 2 3)) (list[int] w (shuffle {1 2 3}))")
         v = d["objects"][d["names"]["v"]]["value"]["bound"]
         assert v[0] == "rand" and v[3] == ["read", v[3][1], d["names"]["dots"], None, None]
         assert errors(d) == []
@@ -153,12 +153,12 @@ class TestRandomFunctions:
         assert model(f"{src} (int x (* (rand-int 1 6) 8))").get("x").value.expr.range == (8, 48)
 
     def test_pick_may_be_none(self):
-        m = model(RAND + "(rand-seed s 0) (string|none v (pick ['a' 'b']))")
+        m = model(RAND + "(rand-seed s 0) (string|none v (pick {'a' 'b'}))")
         assert m.get("v").value.expr.op == "pick"
-        error(RAND + "(rand-seed s 0) (string v (pick ['a' 'b']))", "may be none")
+        error(RAND + "(rand-seed s 0) (string v (pick {'a' 'b'}))", "may be none")
 
     def test_shuffle_keeps_the_items_type(self):
-        m = model(RAND + "(rand-seed s 0) (list[int] v (shuffle [1 2 3]))")
+        m = model(RAND + "(rand-seed s 0) (list[int] v (shuffle {1 2 3}))")
         assert m.get("v").value.expr.op == "shuffle"
 
     def test_not_inside_a_function_for_now(self):
@@ -170,7 +170,7 @@ class TestRandomFunctions:
 
     def test_a_primitive_is_only_called(self):
         error(
-            RAND + "(rand-seed s 0) (list v (map [1 2] rand))",
+            RAND + "(rand-seed s 0) (list v (map {1 2} rand))",
             r"rand is only called, as \(rand …\)",
         )
 
@@ -185,8 +185,8 @@ class TestWhereTheNamesComeFrom:
         [
             ("(rand-seed s 0) (int v (rand-int 1 6))", "rand-int"),
             ("(rand-seed s 0) (real v (rand))", "rand"),
-            ("(rand-seed s 0) (string|none v (pick ['a']))", "pick"),
-            ("(rand-seed s 0) (list[int] v (shuffle [1 2]))", "shuffle"),
+            ("(rand-seed s 0) (string|none v (pick {'a'}))", "pick"),
+            ("(rand-seed s 0) (list[int] v (shuffle {1 2}))", "shuffle"),
             ("(rand-seed s 0) (rand-seed t (next-seed s))", "next-seed"),
             ("(real v seed)", "seed"),
             ("(rand-seed s 0) (animation a (roll-dice s))", "roll-dice"),

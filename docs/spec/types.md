@@ -428,7 +428,7 @@ parameter may be a function, as in `(func twice ((func[real real] f) (real x)) (
 :::{admonition} Code differs
 :class: note
 The compiler refuses a variable whose type is a function type (`compiler.py:1484`,
-`variable_here`), but accepts `(list fs [sind cosd])`, a variable of type `list[func[real real]]`,
+`variable_here`), but accepts `(list fs {sind cosd})`, a variable of type `list[func[real real]]`,
 and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 :::
 

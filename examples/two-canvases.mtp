@@ -40,7 +40,7 @@
     (let ((o (circumcenter ca.pos cb.pos cc.pos)))
       (circle|none circumcircle (pos o) (r (dist o ca.pos)) (fill none) (stroke red)
           (stroke-width 2))
-      (group radii (defaults (stroke red) (stroke-width 1) (dash [4 4]))
+      (group radii (defaults (stroke red) (stroke-width 1) (dash {4 4}))
         (foreach c corners
           (line|none_ (from o) (to c.pos))))
       (group|none center (translate o) (fixed-size true)

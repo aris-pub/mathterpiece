@@ -45,9 +45,9 @@ class TestCalls:
         error("(real v (or? (/ 1 0) 0))", "division by zero")
 
     def test_other_undefined_forms_in_a_fold(self):
-        f = "(func f ((real g)) (count (or? (range 0 1 (gap g)) [])))"
+        f = "(func f ((real g)) (count (or? (range 0 1 (gap g)) {})))"
         assert value(f"{f} (int v (f 0))") == 0
-        f = "(func f ((real k)) (or? (* [1 2] (/ 1 k)) [0 0]))"
+        f = "(func f ((real k)) (or? (* {1 2} (/ 1 k)) {0 0}))"
         assert value(f"{f} (list v (f 0))") == [0, 0]
         assert value(f"{f} (list v (f 2))") == [0.5, 1]
 
@@ -80,26 +80,26 @@ class TestCalls:
 
 class TestCollections:
     def test_map(self):
-        assert value(f"{DOUBLE} (list ys (map [1 2] double))", "ys") == [2, 4]
-        assert value("(list ys (map [1 2] (fn x (* x x))))", "ys") == [1, 4]
+        assert value(f"{DOUBLE} (list ys (map {{1 2}} double))", "ys") == [2, 4]
+        assert value("(list ys (map {1 2} (fn x (* x x))))", "ys") == [1, 4]
 
     def test_where_sort_count_reduce(self):
-        assert value("(list ys (where [3 1 2] (fn x (> x 1))))", "ys") == [3, 2]
-        assert value("(list ys (sort [3 1 2] (fn x (- 0 x))))", "ys") == [3, 2, 1]
-        assert value("(int n (count [3 1 2] (fn x (> x 1))))", "n") == 2
-        assert value("(int n (reduce [1 2 3] 0 (fn ((int t) (int x)) (+ t x))))", "n") == 6
-        assert value("(bool b (all [1 2] (fn x (> x 0))))", "b") is True
+        assert value("(list ys (where {3 1 2} (fn x (> x 1))))", "ys") == [3, 2]
+        assert value("(list ys (sort {3 1 2} (fn x (- 0 x))))", "ys") == [3, 2, 1]
+        assert value("(int n (count {3 1 2} (fn x (> x 1))))", "n") == 2
+        assert value("(int n (reduce {1 2 3} 0 (fn ((int t) (int x)) (+ t x))))", "n") == 6
+        assert value("(bool b (all {1 2} (fn x (> x 0))))", "b") is True
 
     def test_a_function_undefined_at_an_item(self):
-        src = "(list[real|none] v (map [-1 4] (fn ((real x)) (sqrt x))))"
+        src = "(list[real|none] v (map {-1 4} (fn ((real x)) (sqrt x))))"
         assert value(src) == [None, 2]
-        assert value("(list v (map [-1 4] (fn ((real x)) (or? (sqrt x) 0))))") == [0, 2]
+        assert value("(list v (map {-1 4} (fn ((real x)) (or? (sqrt x) 0))))") == [0, 2]
         f = "(func[real] f ((real t)) (or? (sqrt t) 0))"
-        assert value(f"{f} (list v (map [-1 4] f))") == [0, 2]
-        assert value(f"{f} (real v (reduce [-1 4] 0 (fn ((real s) (real x)) (+ s (f x)))))") == 2
+        assert value(f"{f} (list v (map {{-1 4}} f))") == [0, 2]
+        assert value(f"{f} (real v (reduce {{-1 4}} 0 (fn ((real s) (real x)) (+ s (f x)))))") == 2
 
     def test_a_captured_known_name(self):
-        assert value("(list ys (let ((k 10)) (map [1 2] (fn x (* k x)))))", "ys") == [10, 20]
+        assert value("(list ys (let ((k 10)) (map {1 2} (fn x (* k x)))))", "ys") == [10, 20]
 
 
 class TestFoldedValues:
@@ -154,7 +154,7 @@ class TestFoldedValues:
     def test_a_literal_list_is_still_free(self):
         from mathterpiece.compiler import _is_const
 
-        assert not _is_const(model("(list xs [1 2])").get("xs").value.type)
+        assert not _is_const(model("(list xs {1 2})").get("xs").value.type)
 
 
 def test_a_parameters_default_is_known_when_compiling():
@@ -181,18 +181,18 @@ class TestWorkDoneOnce:
         return counts
 
     def test_a_plain_list(self, folds):
-        src = f"{DOUBLE} (list ys (map [1 2 3] double))"
+        src = f"{DOUBLE} (list ys (map {{1 2 3}} double))"
         src += " (scene s (foreach y ys (circle_ (r y))))"
         assert value(src, "ys") == [2, 4, 6]
         assert folds["double"] == 3
 
     def test_a_plain_list_with_a_constraint(self, folds):
-        assert value(f"{DOUBLE} (list ys (map [1 2 3] double) (const))", "ys") == [2, 4, 6]
+        assert value(f"{DOUBLE} (list ys (map {{1 2 3}} double) (const))", "ys") == [2, 4, 6]
         assert folds["double"] == 3
-        error(f"{DOUBLE} (list ys (map [1 2 3] double) (length 2))", "breaks")
+        error(f"{DOUBLE} (list ys (map {{1 2 3}} double) (length 2))", "breaks")
 
     def test_a_plain_list_in_a_motif_body(self, folds):
-        src = f"{DOUBLE} (motif m (real k 1) (list ys (map [1 2 3] double)) (circle c (r 1)))"
+        src = f"{DOUBLE} (motif m (real k 1) (list ys (map {{1 2 3}} double)) (circle c (r 1)))"
         model(src + " (scene s (m a))")
         one = folds.pop("double")
         model(src + " (scene s (m a) (m b))")
@@ -200,11 +200,11 @@ class TestWorkDoneOnce:
         assert folds["double"] - one == 3
 
     def test_a_plain_list_as_a_default(self, folds):
-        model(f"{DOUBLE} (func f (list ys (map [1 2 3] double)) (count ys)) (int n (f))")
+        model(f"{DOUBLE} (func f (list ys (map {{1 2 3}} double)) (count ys)) (int n (f))")
         assert folds["double"] == 3
 
     def test_a_motif_parameters_default(self, folds):
-        src = f"{DOUBLE} (motif m (list ys (map [1 2 3] double)) (circle c (r 1)))"
+        src = f"{DOUBLE} (motif m (list ys (map {{1 2 3}} double)) (circle c (r 1)))"
         model(src + " (scene s (m a) (m b))")
         assert folds["double"] == 3
 
@@ -258,5 +258,5 @@ class TestKeptFolds:
 
     def test_a_fn_is_not_kept(self, bodies):
         # Each fn gets a new id, and an id is used again once a fold deletes its fn.
-        model("(list ys (map [1 1 1] (fn x (* x 2))))")
+        model("(list ys (map {1 1 1} (fn x (* x 2))))")
         assert bodies[None] == 3

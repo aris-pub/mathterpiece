@@ -53,8 +53,8 @@ class TestKindsOfForm:
     def test_one_head_begins_both_kinds(self):
         # Two names in one foreach are syntactic sugar for two foreach forms of one name each.
         same_meaning(
-            "(scene t (foreach ((a [1 2]) (b [3 4])) (circle @'c-{a}-{b}' (r a))))",
-            "(scene t (foreach a [1 2] (foreach b [3 4] (circle @'c-{a}-{b}' (r a)))))",
+            "(scene t (foreach ((a {1 2}) (b {3 4})) (circle @'c-{a}-{b}' (r a))))",
+            "(scene t (foreach a {1 2} (foreach b {3 4} (circle @'c-{a}-{b}' (r a)))))",
         )
 
 
@@ -114,8 +114,8 @@ class TestSugarRewrites:
     @LOCAL_PART
     def test_a_part_is_rewritten_with_the_name_in_scope(self):
         same_meaning(
-            "(list[real] xs [3 4]) (real v (let ((r 1)) xs.r))",
-            "(list[real] xs [3 4]) (real v (let ((r 1)) (. xs r)))",
+            "(list[real] xs {3 4}) (real v (let ((r 1)) xs.r))",
+            "(list[real] xs {3 4}) (real v (let ((r 1)) (. xs r)))",
         )
 
     def test_when(self):
@@ -208,7 +208,7 @@ class TestSugarRewrites:
     @POS_RANDOM
     def test_pos_of_a_random_point_is_an_error(self):
         compile_error(
-            RAND + "(rand-seed sd 1) (list[point] corners [[0 0] [1 1]] (const))"
+            RAND + "(rand-seed sd 1) (list[point] corners {[0 0] [1 1]} (const))"
             " (scene s (circle c (pos (or? (pick corners) [0 0])) (r 1)))"
         )
 
@@ -311,7 +311,7 @@ class TestLikeCopies:
     def test_like_splits_pos(self):
         same_meaning(
             "(scene s (circle a (pos [1 2]) (r 1)) (circle b (like a) (x 5)))",
-            "(scene s (circle a (pos [1 2]) (r 1)) (circle b (x 5) (y (. [1 2] 1)) (r 1)))",
+            "(scene s (circle a (pos [1 2]) (r 1)) (circle b (x 5) (y (. {1 2} 1)) (r 1)))",
         )
 
     def test_like_on_a_text_copies_its_string(self):
@@ -376,8 +376,8 @@ class TestInventory:
 
     def test_dash_has_an_offset_of_0_by_default(self):
         same_meaning(
-            "(scene s (line l (to [1 1]) (dash [4 2])))",
-            "(scene s (line l (to [1 1]) (dash [4 2] 0)))",
+            "(scene s (line l (to [1 1]) (dash {4 2})))",
+            "(scene s (line l (to [1 1]) (dash {4 2} 0)))",
         )
 
 
@@ -428,7 +428,7 @@ class TestDotPart:
         assert m.get("v").value.expr.args[:2] == (m.id("q"), "r")
 
     def test_a_position(self):
-        assert value("(list[real] xs [3 4] (const)) (real v (. xs 1))", "v") == 4
+        assert value("(list[real] xs {3 4} (const)) (real v (. xs 1))", "v") == 4
 
     def test_a_member_of_a_group_by_its_position(self):
         m = accepted(SCENE + "(real v (. (. g 0) r))")
@@ -436,7 +436,7 @@ class TestDotPart:
 
     @LOCAL_PART
     def test_a_name_that_is_no_attribute_is_an_expression(self):
-        assert value("(list[real] xs [3 4] (const)) (real v (let ((r 1)) xs.r))", "v") == 4
+        assert value("(list[real] xs {3 4} (const)) (real v (let ((r 1)) xs.r))", "v") == 4
 
     @MEMBER_BY_NAME
     def test_a_member_is_read_by_its_name(self):

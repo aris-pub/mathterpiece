@@ -33,7 +33,7 @@ def test_a_known_value_is_folded_as_before():
 def test_a_shape_stays_written_out():
     d = doc(
         "(int i 0 (>= 0) (<= 1)) (scene sc (circle a (r 1)) (circle b (r 2)))"
-        " (real v (let ((c [a b][i])) c.r))"
+        " (real v (let ((c {a b}[i])) c.r))"
     )
     assert _ops(_value_of(d, "v"), "let") == []
 
@@ -123,7 +123,7 @@ def test_a_known_value_in_a_body_is_folded_as_before():
 def test_a_shape_in_a_body_stays_written_out():
     d = doc(
         "(int i 0 (>= 0) (<= 1))"
-        " (scene sc (circle a (r 1)) (circle b (r 2)) (let ((c [a b][i])) (circle_ (r c.r))))"
+        " (scene sc (circle a (r 1)) (circle b (r 2)) (let ((c {a b}[i])) (circle_ (r c.r))))"
     )
     assert _held(d) == []
 
@@ -178,7 +178,7 @@ def test_a_let_in_a_foreach_in_a_group_reads_in_the_groups_frame():
 def test_a_foreach_in_a_group_reads_its_list_in_the_groups_frame():
     d = doc(
         "(real m 1) (scene sc (group g (translate [5 0]) (circle a (x m) (r 1))"
-        " (foreach q [a.pos] (circle b (pos q) (r 1)))))"
+        " (foreach q {a.pos} (circle b (pos q) (r 1)))))"
     )
     assert _frames(d, "b") == {_index(d, "g")}
 

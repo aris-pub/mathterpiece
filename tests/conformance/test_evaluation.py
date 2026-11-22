@@ -135,11 +135,11 @@ GIVES_NONE = [
     ("(range 0 1 (num x))", "int", "-1"),
 ]
 GIVES_NONE_FOLD_REJECTS = [
-    ("(min x)", "list[real]", "(as list[real] [])"),
-    ("(max x)", "list[real]", "(as list[real] [])"),
+    ("(min x)", "list[real]", "(as list[real] {})"),
+    ("(max x)", "list[real]", "(as list[real] {})"),
     ("(range 0 x (gap 1))", "int", "2000000"),
-    ("(. [1 2 3] x)", "int", "3"),
-    ("(. [1 2 3] x)", "int", "-4"),
+    ("(. {1 2 3} x)", "int", "3"),
+    ("(. {1 2 3} x)", "int", "-4"),
 ]
 
 
@@ -158,14 +158,14 @@ class TestOperationsThatGiveNone:
     @pytest.mark.parametrize(
         "body, t, arg",
         [
-            ("(. [1 2 3] x)", "int", "-3"),
-            ("(. [1 2 3] x)", "int", "2"),
+            ("(. {1 2 3} x)", "int", "-3"),
+            ("(. {1 2 3} x)", "int", "2"),
             ("(tand x)", "real", "45"),
             ("(sqrt x)", "real", "0"),
             ("(asin x)", "real", "1"),
             ("(asec x)", "real", "1"),
             ("(log 2 x)", "real", "2"),
-            ("(min x)", "list[real]", "[1]"),
+            ("(min x)", "list[real]", "{1}"),
         ],
     )
     def test_at_every_other_input_there_is_a_value(self, body, t, arg):
@@ -187,7 +187,7 @@ class TestOperationsThatGiveNone:
 
     @PICK
     def test_pick_on_a_list_that_is_not_empty_never_gives_none(self):
-        accepted(RAND + "(rand-seed sd 1) (real v (pick [1 2]))")
+        accepted(RAND + "(rand-seed sd 1) (real v (pick {1 2}))")
 
     def test_a_bound_value_that_may_break_its_constraint(self):
         m = accepted("(real k 1 (>= 0) (<= 2)) (real|none v (* 2 k) (<= 3))")
@@ -253,7 +253,7 @@ class TestNonePropagates:
         assert value(INVERSE + "(func h ((real x)) 5) (real|none v (h (f 0)))", "v") is None
 
     def test_a_list_holds_none(self):
-        assert value(INVERSE + "(list[real|none] v [1 (f 0)])", "v") == [1, None]
+        assert value(INVERSE + "(list[real|none] v {1 (f 0)})", "v") == [1, None]
 
     def test_a_point_with_a_coordinate_that_is_none_is_none(self):
         assert value(INVERSE + "(point|none v [1 (f 0)])", "v") is None
@@ -263,25 +263,25 @@ class TestNonePropagates:
         assert value(INVERSE + "(real|none v (if (= 1 2) 3 (f 0)))", "v") is None
 
     def test_map_passes_none_through(self):
-        assert value(INVERSE + "(list[real|none] v (map [1 0] f))", "v") == [1, None]
+        assert value(INVERSE + "(list[real|none] v (map {1 0} f))", "v") == [1, None]
 
     @REVERSE
     def test_reverse_passes_none_through(self):
         # Today the compiler stops with a Python TypeError.
-        assert value(INVERSE + "(list[real|none] v (reverse [1 (f 0)]))", "v") == [None, 1]
+        assert value(INVERSE + "(list[real|none] v (reverse {1 (f 0)}))", "v") == [None, 1]
 
     def test_a_read_of_a_position_passes_none_through(self):
-        assert value(INVERSE + "(real|none v (. [1 (f 0)] 1))", "v") is None
+        assert value(INVERSE + "(real|none v (. {1 (f 0)} 1))", "v") is None
 
     def test_a_part_of_none_is_none(self):
-        assert value("(func p ((real x)) [(/ 1 x) 0]) (real|none v (. (p 0) 0))", "v") is None
+        assert value("(func p ((real x)) {(/ 1 x) 0}) (real|none v (. (p 0) 0))", "v") is None
 
     def test_an_interpolated_string_with_a_part_that_is_none(self):
         assert value(INVERSE + "(string|none v f'a{(f 0)}')", "v") is None
 
     @NONE_COLLECTION
     def test_a_collection_function_given_none(self):
-        src = "(list[int]|none v (map (if (= 1 2) [1] none) (fn ((int x)) x)))"
+        src = "(list[int]|none v (map (if (= 1 2) {1} none) (fn ((int x)) x)))"
         assert value(src, "v") is None
 
 
@@ -298,7 +298,7 @@ class TestNoneNeverACondition:
 
     @pytest.mark.parametrize("f", ["sum", "min", "max", "count"])
     def test_the_items_of_a_collection_function(self, f):
-        compile_error(INVERSE + f"(real v ({f} [1 (f 0)]))")
+        compile_error(INVERSE + f"(real v ({f} {{1 (f 0)}}))")
 
 
 @rule("number-types")
@@ -426,7 +426,7 @@ class TestNumberLimit:
             ("(^ 10.0 400)", 1e150),
             ("(^ -10.0 401)", -1e150),
             ("(^ 1e150 1.5)", 1e150),
-            ("(sum [1e150 1e150])", 1e150),
+            ("(sum {1e150 1e150})", 1e150),
             ("(abs 1e150+1e150i)", 1e150),
         ],
     )
@@ -461,7 +461,7 @@ class TestNumberLimit:
 
     def test_each_number_of_a_point_or_a_list_is_clamped(self):
         assert value("(point v (* [1e100 -1e100] 1e100))", "v") == (1e150, -1e150)
-        assert value("(list[real] v (+ [1e150 1] [1e150 1]))", "v") == [1e150, 2]
+        assert value("(list[real] v (+ {1e150 1} {1e150 1}))", "v") == [1e150, 2]
         assert value("(point v (polar 1e150 45))", "v") == pytest.approx(
             (1e150 / 2**0.5, 1e150 / 2**0.5)
         )
@@ -661,8 +661,8 @@ class TestRandomNeverFolded:
         [
             RAND + "(rand-seed s 1) (real v (rand))",
             RAND + "(rand-seed s 1) (int v (rand-int 1 6))",
-            RAND + "(rand-seed s 1) (real|none v (pick (as list[real] [1 2])))",
-            RAND + "(rand-seed s 1) (list[int] v (shuffle [1 2 3]))",
+            RAND + "(rand-seed s 1) (real|none v (pick (as list[real] {1 2})))",
+            RAND + "(rand-seed s 1) (list[int] v (shuffle {1 2 3}))",
         ],
     )
     def test_a_random_value_is_known_only_while_drawing(self, src):
@@ -672,7 +672,7 @@ class TestRandomNeverFolded:
 @rule("equality-operands")
 class TestEqualityOperands:
     def test_a_point_and_a_list_of_ints(self):
-        compile_error("(point p [1 2] (const)) (list[int] xs [1 2] (const)) (bool v (= p xs))")
+        compile_error("(point p [1 2] (const)) (list[int] xs {1 2} (const)) (bool v (= p xs))")
 
     def test_a_literal_list_takes_the_type_of_the_other_side(self):
         assert value("(point p [1 2] (const)) (bool v (= p [1 2]))", "v") is True
@@ -689,7 +689,7 @@ class TestEqualityOperands:
         [
             "(bool v (= sind sind))",
             "(real k 0) (transition t k (to 1) (duration 1)) (bool v (= t t))",
-            "(bool v (!= [sind] [cosd]))",
+            "(bool v (!= {sind} {cosd}))",
         ],
     )
     def test_functions_transitions_and_animations(self, src):
@@ -710,8 +710,8 @@ class TestEqualityByContent:
             ("'a'", "'a'", True),
             ("'a'", "'A'", False),
             ("true", "true", True),
-            ("[1 2]", "[1 2]", True),
-            ("[1 2]", "[1 2 3]", False),
+            ("{1 2}", "{1 2}", True),
+            ("{1 2}", "{1 2 3}", False),
             ("(as point [1 2])", "(as point [1 2])", True),
             ("(as color #'navy')", "(as color #'#000080')", True),
         ],
@@ -758,4 +758,4 @@ class TestCorrectlyRoundedReals:
     def test_sum_rounds_once(self):
         # The exact sum of the three doubles rounds to 0.6, while adding them one at a time gives
         # 0.6000000000000001.
-        assert value("(real v (sum [0.1 0.2 0.3]))", "v") == 0.6
+        assert value("(real v (sum {0.1 0.2 0.3}))", "v") == 0.6

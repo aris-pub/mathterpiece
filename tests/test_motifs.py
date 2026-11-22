@@ -210,7 +210,7 @@ class TestBodyLists:
     def test_a_bound_list_in_a_body_keeps_its_length(self):
         # So v[i] is never none, and each radius is a real.
         m = compile_source(
-            "(motif m ((real a 1)) (list v [a a]) (foreach i 2 (circle_ (r (+ 1 (abs v[i]))))))"
+            "(motif m ((real a 1)) (list v {a a}) (foreach i 2 (circle_ (r (+ 1 (abs v[i]))))))"
             " (scene s (m m1))"
         )
         circles = [o for o in m.objects if o.kind == "circle"]

@@ -16,10 +16,10 @@
 (import colors okabe-ito okabe-ito-named viridis magma cividis blue-white-red)
 
 ; Round a wheel: four colors a quarter turn apart, the last mixing back into the first by 360.
-(colormap wheel [red yellow green blue] (positions [0 270]) (wrap-at 360))
+(colormap wheel {red yellow green blue} (positions {0 270}) (wrap-at 360))
 
 ; Bands: each of four colors one solid step.
-(colormap bands [blue green yellow red] (discrete true))
+(colormap bands {blue green yellow red} (discrete true))
 
 ; Land and sea, by height above the sea: deep water up to 0, then sand at once, forest and snow.
 (palette terrain
@@ -28,8 +28,8 @@
   (sand #'#e9d8a6')
   (forest #'#52796f')
   (snow #'#f1faee'))
-(colormap land [terrain.deep terrain.shallow terrain.sand terrain.forest terrain.snow]
-    (positions [-1 0 0 0.5 1]))
+(colormap land {terrain.deep terrain.shallow terrain.sand terrain.forest terrain.snow}
+    (positions {-1 0 0 0.5 1}))
 
 ; Two bumps over the unit square, from 0 to about 1.
 (func bumps ((real u) (real w))
@@ -86,9 +86,9 @@
       (circle_ (pos [(* 0.48 (- k 5.5)) 0]) (r 0.19) (fill (okabe-ito k)))))
   (group named (translate [-4.6 -4.05]) (defaults (stroke dot-edge))
     (foreach k 8
-      (let ((names [okabe-ito-named.orange okabe-ito-named.sky-blue okabe-ito-named.bluish-green
+      (let ((names {okabe-ito-named.orange okabe-ito-named.sky-blue okabe-ito-named.bluish-green
                     okabe-ito-named.yellow okabe-ito-named.blue okabe-ito-named.vermillion
-                    okabe-ito-named.reddish-purple okabe-ito-named.black]))
+                    okabe-ito-named.reddish-purple okabe-ito-named.black}))
         (circle_ (pos [(* 0.48 (- k 3.5)) 0]) (r 0.19) (fill names[k])))))
 
   ; The wheel: 36 parts of a ring, each the color of its middle angle, and a handle outside it.
@@ -119,7 +119,7 @@
   heat coast chart named dial forms
   (on-drag handle (move angle (to (toward pointer angle))) doc@'Turns the wheel.'))
 
-(foreach m ['viridis' 'magma' 'cividis' 'blue-white-red']
+(foreach m {'viridis' 'magma' 'cividis' 'blue-white-red'}
   (button @'pick-{m}' (animation (move scheme (to m) (duration 0))) (label m)
     doc@'Draws the heatmap with this map.'))
 (toggle in-bands banded (label 'in bands')
