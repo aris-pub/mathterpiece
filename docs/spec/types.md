@@ -85,10 +85,6 @@ is not inside `real`. Interfaces are not drawn, since each one holds values from
 `positioned` holds the points and most shapes.
 ```
 
-Each kind of object is a type: a named set of objects, as `shape` is the set of every shape. A type
-of one kind of object is a subset of the type of its kind: `circle` is a subset of `shape`, `canvas` of
-`view`, and `view` of `component`.
-
 :::{admonition} Code differs
 :class: note
 - `unit` is not a built-in type: the file types of the standard library declares it, and a source
