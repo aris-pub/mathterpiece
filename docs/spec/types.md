@@ -21,7 +21,7 @@ the set of the reals that are not below 0. The types are combined as sets:
 |---|---|
 | `T1\|T2` | the union of T1 and T2 |
 | `T1&T2` | the intersection of T1 and T2 |
-| `(T C…)` | the subset of T whose values meet every condition C ({numref}`constraints`) |
+| `(T C…)` | the subset of T whose values meet every condition C ({numref}`constraints`). `((T C…) D…)` is `(T C… D…)`, and the conditions of a union with `none` apply to its other types: `(real\|none (>= 0))` is `(real (>= 0))\|none` |
 | `(interface N (T A)…)` | the set of the values that have each attribute A, of type T ({numref}`interfaces`) |
 | `list[T]` | the set of the lists whose items all belong to T |
 | `func[P1 … Pn R]` | the set of the functions of n parameters, of types P1 to Pn, whose result belongs to R |
@@ -54,7 +54,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `string` | the {term}`strings <string>` | the strings of formulas among them |
 | `color` | the colors | {numref}`color-literals` |
 | `point` | the points | two reals, `x` and `y` ({numref}`values`) |
-| `none` | `none` alone | |
+| `none` | `none` alone | never the declared type of a declaration or of a parameter, only of an expression and of a `let` name bound to one |
 | `func` | every function | |
 | `ease` | the eases of a movement | the same type as `func[unit real]` ({doc}`time`) |
 | `curve` | the curves of the plane | the same type as `func[real point]` |
@@ -113,29 +113,36 @@ The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SE
 :::
 
 ```{rule} type-notation
-After syntactic sugar is rewritten, these expressions are types where a type is expected, and every
-other expression there is a {term}`compile error`:
+Types are not values: no container holds a type, and no expression that evaluates to a value may
+stand for one. These expressions evaluate to types:
 
-- The name of a {term}`built-in type` of {numref}`the-types`, or of a type that `type`, `interface`,
-  `motif`, `variant` or `animation` declares. A name declared by `(type N T C…)` is the refined type
-  `(T C…)`. `list` with no item type may be only the {term}`head` of a variable whose value is given,
-  and the type of the variable is then the type of its value.
-- `(type-apply T X…)`, with `T` one of `list`, `sequence` and `func`. With `list` and `sequence`,
-  `X…` is exactly one type, the type of the items. With `func`, `X…` is one type or more: the last is the result
-  type, and the others are the types of the parameters, in order.
-- `(type-union T1 T2 …)` and `(type-intersect T1 T2 …)` ({numref}`type-forms`).
-- `(mod T lo hi)`, a modular type, with `T` either `int` or `real` ({numref}`modular-types`).
-- `(T C…)`, a refined type: `T` is a type and each `C` is a condition. `((T C…) D…)` is `(T C… D…)`,
-  and the conditions of a union with `none` apply to its other types: `(real|none (>= 0))` is
-  `(real (>= 0))|none`.
-- `none`, the type `none`. It is never the declared type of a declaration or of a parameter: it is
-  the type only of an expression, and of a name that a `let` binds to such an expression.
+- the name of a built-in type ({numref}`the-types`), or of a type that `type`, `interface`, `motif`,
+  `variant` or `animation` declares
+- `(type-apply …)`, `(type-union …)` and `(type-intersect …)` ({numref}`type-forms`)
+- `(mod T lo hi)` ({numref}`modular-types`) and `(T C…)` ({numref}`constraints`)
+
+These places expect a type, and only an expression that evaluates to a type may be written there:
+
+- the head of a declaration of a variable or of an object, such as `real` in `(real a 1)` or `circle`
+  in `(circle c …)`, and the `TYPE` of `(var NAME TYPE DEFAULT)`
+- the type of a parameter, `(T N DEFAULT?)`, and of an interface item, `(T A C…)`
+- the `T` of `(type N T C…)`, the result type `R` of `(func[R] …)`, and the `T` of `(is X T)` and of
+  `(as T X)`
+- every item of `(type-apply …)`, `(type-union …)` and `(type-intersect …)`, the `T` of `(mod T lo
+  hi)`, and the `T` of `(T C…)`
+
+An expression that evaluates to a type, written anywhere else, is a {term}`compile error`, and so is
+an expression that evaluates to a value, written where a type is expected.
 ```
 
 ```{rule} type-forms
 `(type-union T1 T2 …)` is the union of the types T1, T2 and so on, `(type-intersect T1 T2 …)` is
 their intersection, and `(type-apply T X…)` is the type T with the types X… in its brackets: `(type-apply
-list int)` is `list[int]`. A source writes them as `T1|T2…`, `T1&T2…` and `T[X…]`
+list int)` is `list[int]`. In `(type-apply T X…)`, `T` is `list`, `sequence` or `func`. With `list`
+and `sequence`, `X…` is exactly one type, the type of the items. With `func`, `X…` is one type or
+more: the last is the result type, and the others are the types of the parameters, in order. `list`
+with no item type may be written only as the head of a variable whose value is given, and the type
+of the variable is then the type of its value. A source writes them as `T1|T2…`, `T1&T2…` and `T[X…]`
 ({numref}`sugar-rewrites`).
 ```
 
