@@ -293,14 +293,15 @@ A few built-in functions treat `none` in their own way ({numref}`none-never-a-co
 
 In the example below, the secant has no value at 90°, so `(secd theta)` is `none` there. By the first
 case, the call `(point-of (secd theta) 0)`, written `[(secd theta) 0]`, is `none` too. By the second
-case, the line declared `line|none` is then `none`, and is not drawn. Move the slider to 90 to see
-the line go:
+case, the line declared `line|none` is then `none`, and is not drawn. `theta` is an int, so the slider
+stops at every degree, and the line is gone at 90 only:
 
 ```{mtp-example}
-(real theta 60 (>= 0) (<= 180))
+(int theta 80 (>= 70) (<= 110))
 (scene s (line|none tangent (from [0 0]) (to [(secd theta) 0]) (stroke #'crimson') (stroke-width 3)))
-(canvas v (x -3) (y -1) (width 6) (height 2) s)
-(slider turn (move theta (from 0) (to 180)) (label 'θ'))
+(canvas v (x -8) (y -1) (width 16) (height 2) s)
+(slider turn (move theta (from 70) (to 110)) (label 'θ'))
+(readout r f'θ = {theta}°')
 ```
 
 ## Choice types
