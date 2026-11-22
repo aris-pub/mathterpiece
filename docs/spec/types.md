@@ -459,29 +459,29 @@ Each expression except a clause and a special form has this type:
 | Expression | Its type |
 |---|---|
 | a literal | `int`, `ratio`, `real` or `complex` for a number, by how it is written ({numref}`number-literals`), `string` for a string literal or a {term}`TeX string`, `bool` for `true` and `false`, and `none` for `none` |
-| a name | the type of what it refers to ({numref}`name-lookup`): the declared type of a variable, its value's type when the variable is a plain `list`, the type of a shape, the type of a parameter, the type of the value of a `let` name, `int` for the name of a `foreach` over a count, the item type for a `foreach` over a list, the union of the types of the members for a `foreach` over a group, and the function type of a function |
+| a name | the type of what it refers to ({numref}`name-lookup`). For a variable declared `list` with no item type, and for a `let` name, the type of its value. For the name of a `foreach`: `int` over a count, the item type over a list, and the union of the types of the members over a group |
 | `(. X K)` | the type of the attribute or the member that K chooses ({numref}`dot-name-part`). An item of a list: the item type. A coordinate of a point: `real`. A member of a group chosen while drawing: the union of the types of the members. When the type of X is a union, K may choose an attribute only when every type in the union has it, and the type is the union of their types of that attribute. Each with `none` added as {numref}`may-give-none` states |
-| `(list-of X…)` | a list of the union of the types of its items. With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
+| `(list-of X…)` | a list of the union of the types of its items. With no items, or only `none` items, a compile error, unless `list[T]` is expected, and the type is then `list[T]` |
 | `(color-of S)` | `color` when S is known when compiling, `color\|none` otherwise ({numref}`color-literals`) |
-| `(point-of X Y)` | `point`, each of X and Y with `real` expected. With `none` added when the type of X or of Y includes `none` ({numref}`none-propagates`) |
+| `(point-of X Y)` | `point`, with `none` added as {numref}`none-only-where-allowed` states |
 | `(as T X)` | T. X may be any expression whose type is a subtype of T: `as` states the type of X and never changes its value. So `(as list[real] {})` and `(as func[real real] (fn x (* 2 x)))` are allowed, and `(as int 2.5)` is a compile error |
 | a spread `g.A` | `list[U]`, U the union of the types of the A of the members, with the number of members as its length. A member that has no A contributes `none`, and `none` is then added to U |
 | `(if C A B)` | C has type `bool`. The type is the union of the types of A and B. When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
 | `(or? X D)` | the union of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
 | `(let (…) B)` | the type of B |
-| `(fn PARAMS B)` | {numref}`function-result-type` |
+| `(fn PARAMS B)` | {numref}`function-types` |
 | a call `(F A…)` of a function | the result type of F, with `none` added as {numref}`none-only-where-allowed` states |
 | a call of a built-in function or an operator | the result type in {doc}`stdlib`, {numref}`number-result-types` for arithmetic, with `none` added as {numref}`none-only-where-allowed` and {numref}`may-give-none` state |
 | `(= A B)`, `(!= A B)` | `bool` ({numref}`equality-operands`) |
 | an {term}`interpolated string` | `string`, with `none` added when the type of one of its expressions includes `none` ({numref}`none-propagates`) |
 | `(name S)` | the type of the declaration that it names ({numref}`names-from-values`) |
-| `(type-of X)` | `string`. X is compiled for its type only |
+| `(type-of X)` | `string`. X is not evaluated |
 | a declaration | the type of what it declares |
 | `(free X)` | the type of X |
 
-The type of each expression that is given where a type is expected must be a subtype of that type ({numref}`fits`), after
-the conversions of {numref}`conversions`, or meet its conditions by {numref}`constraint-proof`.
+The type of each expression that is given where a type is expected must be a subtype of that type
+({numref}`fits`), or the expression must meet its conditions by {numref}`constraint-proof`.
 ```
 
-So `(int m (if on 1 2.5))` is a compile error, since the type of the branches is `int|real`, which is `real`, and
-with an int `n`, `(real k n)` holds the value of `n` as a real.
+So `(int m (if on 1 2.5))` is a compile error, since the type of the branches is `int|real`, which is
+`real`, while `(real k n)` with an int `n` is allowed, since `int` is a subtype of `real`.
