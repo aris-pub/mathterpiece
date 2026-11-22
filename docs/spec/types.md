@@ -447,15 +447,8 @@ expected type.
 So in `(map xs (fn x (* 2 x)))`, with `xs` a `list[real]`, `x` is a real ({doc}`stdlib`).
 
 ```{rule} function-result-type
-The result type of `(func[R] N PARAMS BODY)` is R. The result type of `(func N PARAMS BODY)` is
-worked out from BODY, in which each call of N has a result type of its own:
-
-1. T0 is the type of BODY when each call of N in BODY has the type with no values, which adds
-   nothing to a union, so that `(if (<= m 0) 0 (+ 1 (N …)))` has type `int`.
-2. T(k + 1) is the type of BODY when each call of N in BODY has the type Tk.
-3. The result type is the first Tk that equals T(k + 1).
-
-When every branch of BODY calls N, or when T5 does not equal T6, the function is a compile error.
+The result type of `(func[R] N PARAMS BODY)` is R. The result type of `(func N PARAMS BODY)` is the
+type of BODY. A recursive function, one that calls itself, must declare its result type.
 ```
 
 ## The type of each expression

@@ -62,7 +62,7 @@
 ; [distortion exponent].
 (type pair list[real] (length 2))
 (func lower ((pair l) (pair r)) (if (<= l[0] r[0]) l r))
-(func best-in ((real LL) (real a (>= 0)) (real step (>= 0) (<= 1)) (int n))
+(func[pair] best-in ((real LL) (real a (>= 0)) (real step (>= 0) (<= 1)) (int n))
   (if (<= n 1)
       (lower [(spread LL a) a] [(spread LL a) a])
     (let ((half (floor (/ n 2))))
