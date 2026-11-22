@@ -280,15 +280,20 @@ writer may write lists of another length into them.
 
 ```{rule} none-only-where-allowed
 A type includes `none` when it is `none` or a union with `none`. A value of such a type may be written
-where the expected type does not include `none` only as an argument of a call. The call then
-evaluates to `none` whenever that argument is `none`, and its type includes `none`. A few built-in
-functions treat `none` in their own way ({numref}`none-never-a-condition`, {numref}`none-propagates`).
+where the expected type does not include `none` only in these two places:
+
+- as an argument of a call: the call then evaluates to `none` whenever that argument is `none`, and
+  its type includes `none`
+- as an attribute of a shape declared `T|none`: the shape is then `none` whenever that attribute is
+  `none`, and is not drawn ({numref}`none-propagates`)
+
+A few built-in functions treat `none` in their own way ({numref}`none-never-a-condition`,
+{numref}`none-propagates`).
 ```
 
-So a `none` passes through a calculation until it reaches a place whose type includes `none`, such
-as a shape declared `T|none`, where the shape is then not drawn, or `(or? X D)`, which replaces it
-with `D`. Below, the secant has no value at 90°, so `(secd theta)` is `none`, the point is `none`, and
-the line is not drawn:
+In the example below, the secant has no value at 90°, so `(secd theta)` is `none`. By the first
+case, the call `(point-of (secd theta) 0)`, written `[(secd theta) 0]`, is `none` too. By the second
+case, the line declared `line|none` is then `none`, and is not drawn:
 
 ```{mtp-example}
 (real theta 90)
