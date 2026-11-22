@@ -27,7 +27,7 @@ the set of the reals that are not below 0. The types are combined as sets:
 | `func[P1 … Pn R]` | the set of the functions of n parameters, of types P1 to Pn, whose result belongs to R |
 | `(mod int lo hi)`, `(mod real lo hi)` | the set of the numbers from lo up to hi, hi left out, with arithmetic that wraps ({numref}`modular-types`) |
 
-A type that {term}`fits <fit>` another is a subset of it ({numref}`fits`).
+A type that is a subset of another is a {term}`subtype` of it ({numref}`fits`).
 
 ```{rule} membership
 `(is X T)` evaluates to `true` when the value of X is in the type T, and to `false` otherwise.
@@ -80,7 +80,7 @@ from these, as {numref}`what-a-type-is` lists:
 :max-width: 48rem
 
 The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
-and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which fits only itself, so it
+and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which is a subtype only of itself, so it
 is not inside `real`. Of the interfaces, `palette` and `instant` are drawn, inside `record` and `movement`. The others
 are not, since each one holds values from several boxes: `positioned` holds the points and most
 shapes.
@@ -109,7 +109,7 @@ variable of type `rand-seed` is a {term}`seed` ({numref}`seed-variable`).
 :::{admonition} Code differs
 :class: note
 The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SEED`), so an
-{term}`int` below 0 does not {term}`fit` it. Bead mtp-ydd4.7.30.
+{term}`int` below 0 does not belong to it. Bead mtp-ydd4.7.30.
 :::
 
 ```{rule} type-notation
@@ -149,19 +149,19 @@ of the variable is then the type of its value. A source writes them as `T1|T2…
 So `real[int]` is a compile error, `real|real` is `real`, and `point|circle` is the set of the
 points and the circles.
 
-## Fitting
+## Subtypes
 
 ```{rule} fits
-A type A fits a type B, and a value of type A is accepted where a value of type B is expected,
-exactly when A is a subset of B.
+A type A is a {term}`subtype` of a type B exactly when A is a subset of B. A value of type A is
+accepted where a value of type B is expected exactly when A is a subtype of B.
 ```
 
-So `real` fits `real|none`, a list of ints fits a list of reals, and `func[real real]` fits
+So `real` is a subtype of `real|none`, a list of ints of a list of reals, and `func[real real]` of
 `func[unit real]`, since a function on every real is also a function on the reals from 0 to 1. For
-refined types, the conditions are compared as sets: `(real (>= 0))` fits `(real (>= -1))`, and
-`(int (> 0))` fits `(int (>= 1))`, since both are the ints from 1 up. A modular type such as
-`(mod real 0 360)` is not a subset of `real`, so it fits only itself. A value whose type does not fit
-may still be accepted when the prover proves that it meets the conditions ({numref}`constraint-proof`).
+refined types, the conditions are compared as sets: `(real (>= 0))` is a subtype of `(real (>= -1))`, and
+`(int (> 0))` is a subtype of `(int (>= 1))`, since both are the ints from 1 up. A modular type such as
+`(mod real 0 360)` is not a subset of `real`, so it is a subtype only of itself. A value whose type is not a
+subtype of the expected type may still be accepted when the prover proves that it meets the conditions ({numref}`constraint-proof`).
 
 ## Conditions
 
@@ -245,7 +245,7 @@ own type.
 
 | Literal | Own type | Where a type is expected |
 |---|---|---|
-| a number | its kind ({numref}`number-literals`) | its kind must fit the expected type, without its conditions: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
+| a number | its kind ({numref}`number-literals`) | its kind must be a subtype of the expected type, without its conditions: `1` where a real is expected is a real, and `2.5` where an int is expected is a compile error |
 | a string literal or a {term}`TeX string` | `string` | where a refined string type is expected, it must be among its choices |
 | `true`, `false` | `bool` | as its own type |
 | `none` | `none` | the expected type must include `none` |
@@ -330,10 +330,10 @@ handle `none` ({doc}`stdlib`).
 
 ```{rule} choice-types
 A {term}`choice type` is a refined type `(string (one-of s…))`. A value of a choice type is a
-string, so it fits `string`.
+string, so a choice type is a subtype of `string`.
 ```
 
-By {numref}`constraint-proof`, a value whose type does not fit a choice type meets its
+By {numref}`constraint-proof`, a value whose type is not a subtype of a choice type meets its
 `(one-of …)` only when it is known in the prove step and is among its choices. So with `(type side string (one-of 'left' 'right'))`, `(side s 'up')` is a compile error, and a
 string variable that a writer may change never becomes a `side`. The alignments of a text, the caps
 and joins of a stroke, the heads of a line and the style of a font are choice types
@@ -359,7 +359,7 @@ variable, an attribute or a parameter. A type satisfies an interface as follows:
 | `positioned` | `point`, and every shape type, motif type and variant type but `group` |
 | `instant` | every movement whose `duration` is 0: a jump, and a score of jumps. It is `(interface instant ((real (one-of 0)) duration))` |
 | `palette` | every record whose attributes are all colors, whatever their names and number. A record made by `(palette …)` is one ({numref}`sugar-rewrites`) |
-| a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. Each record that a value may be satisfies the interface on its own |
+| a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a subtype of `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. Each record that a value may be satisfies the interface on its own |
 
 A value whose type is an interface may be read only through what the interface lists: the attributes of
 the frame for `shape`, `x`, `y` and `pos` for `positioned`, and the attributes Ai for a declared interface. An attribute M of a value
@@ -390,7 +390,7 @@ declared with one is a compile error. Bead mtp-mo3r.
 :::
 
 ```{mtp-example}
-; the parameter colors of the motif disc takes either namespace, since both fit inky
+; the parameter colors of the motif disc takes either namespace, since both satisfy inky
 (interface inky (color ink) (color paper))
 (namespace day (color ink #'#1f2a44') (color paper #'#f6f1e7'))
 (namespace night (color ink #'#e8e4d8') (color paper #'#14161c'))
@@ -404,7 +404,7 @@ declared with one is a compile error. Bead mtp-mo3r.
 ```{rule} common-type
 The common type of two types A and B is the smallest type that holds both, found this way:
 
-- When A fits B, it is B, and when B fits A, it is A.
+- When A is a subtype of B, it is B, and when B is a subtype of A, it is A.
 - When one is `none`, it is the union of the other and `none`.
 - When one includes `none`, it is the union of `none` and the common type of the two without `none`.
 - For two number types, it is the later of the two, without conditions, in the order `int`, `ratio`,
@@ -474,7 +474,7 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 
 ```{rule} parameters
 A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which is
-always written, with its conditions. Its default, when it has one, fits T and is known when
+always written, with its conditions. Its default, when it has one, is of a subtype of T and is known when
 compiling, or is a function declared with `func` or a built-in function. When a call, or a declaration whose head is a motif, leaves out a parameter, the parameter takes its
 default, and when it has none, the value of T ({numref}`type-values`). A call of a function declared
 with `func` may have at most as many arguments as the function has parameters, and may leave out only
@@ -515,7 +515,7 @@ Each expression except a clause and a special form has this type:
 | `(list-of X…)` | a list of the common type of its items ({numref}`common-type`). With no items, or only `none` items, a compile error, unless `list[T]` is expected: each item then has T expected |
 | `(color-of S)` | `color` when S is known when compiling, `color\|none` otherwise ({numref}`color-literals`) |
 | `(point-of X Y)` | `point`, each of X and Y with `real` expected. With `none` added when the type of X or of Y includes `none` ({numref}`none-propagates`) |
-| `(as T X)` | T. X may be any expression that fits T: `as` states the type of X and never changes its value. So `(as list[real] {})` and `(as func[real real] (fn x (* 2 x)))` are allowed, and `(as int 2.5)` is a compile error |
+| `(as T X)` | T. X may be any expression whose type is a subtype of T: `as` states the type of X and never changes its value. So `(as list[real] {})` and `(as func[real real] (fn x (* 2 x)))` are allowed, and `(as int 2.5)` is a compile error |
 | a spread `g.A` | `list[U]`, U the common type of the A of the members, with the number of members as its length. A member that has no A contributes `none`, and `none` is then added to U |
 | `(if C A B)` | C has type `bool`. The type is the common type of A and B ({numref}`common-type`). When C is known in the prove step, the type of the branch taken ({numref}`known-condition-takes-one-branch`). When one branch never runs by {numref}`if-narrowing`, the type of the other branch |
 | `(or? X D)` | the common type of the type of X without `none` and the type of D. When the type of X does not include `none`, the type of X |
@@ -530,7 +530,7 @@ Each expression except a clause and a special form has this type:
 | a declaration | the type of what it declares |
 | `(free X)` | the type of X |
 
-Each expression that is given where a type is expected must fit that type ({numref}`fits`), after
+The type of each expression that is given where a type is expected must be a subtype of that type ({numref}`fits`), after
 the conversions of {numref}`conversions`, or meet its conditions by {numref}`constraint-proof`.
 ```
 

@@ -289,7 +289,7 @@ choreo `C` is compiled to its steps in place (compiler.py:1714-1729) (mtp-ydd4.7
 `(name S)`, where `S` is an expression that evaluates to a string, evaluates to the object whose
 name is that string, among the declarations that come before the form. So `(name obj.name)` is
 `obj`. `(like (name S))` copies that object ({numref}`like-copies`). The prover proves, for every
-string that `S` may evaluate to, that such an object exists and that its type fits where the form
+string that `S` may evaluate to, that such an object exists and that its type is a subtype of the type expected where the form
 is written.
 ```
 

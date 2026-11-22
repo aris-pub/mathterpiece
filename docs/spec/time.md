@@ -18,7 +18,7 @@ parameter replaced by the value of its argument, or by its default when `(C …)
 for it. So a `(C …)` written as a member of another score is one step of that score
 ({numref}`animation-step`).
 
-The prover proves that each argument {term}`fits <fit>` the type of its parameter. An argument may
+The prover proves that the type of each argument is a {term}`subtype` of the type of its parameter. An argument may
 be any expression that may be written in each place in the body where its parameter is written. So
 with a variable `k`, `(pulse (* 2 k))` is a compile error when the parameter of `pulse` is written
 as a duration, by the rules of {doc}`binding-time`, and is accepted when it is written as a `to`.
