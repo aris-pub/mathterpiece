@@ -19,6 +19,11 @@
 .mtp-live {
   padding: 1rem;
 }
+/* A canvas fills the width of its container, which makes a small figure huge on a wide screen. */
+.mtp-live mtp-canvas {
+  display: block;
+  max-width: 26rem;
+}
 .mtp-term-tip {
   position: absolute;
   z-index: 1000;
