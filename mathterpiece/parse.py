@@ -16,6 +16,7 @@ from mathterpiece.nodes import (
     Name,
     Node,
     NoneLit,
+    PointLit,
     Pos,
     RatioLit,
     RealLit,
@@ -348,10 +349,10 @@ class _Parser:
                 for name in _name_parts(part, part_pos, after_dot=True):
                     whole = Form((Name((".",), at), whole, Name((name,), part_pos)), at)
             else:
-                index = self.list_items()
-                if len(index.items) != 1:
+                index = self.items_in("brackets")
+                if len(index) != 1:
                     raise ParseError("brackets after a name hold one position", at)
-                whole = Form((Name((".",), at), whole, index.items[0]), at)
+                whole = Form((Name((".",), at), whole, index[0]), at)
         self.expect_delimiter()
         return whole
 
@@ -374,24 +375,28 @@ class _Parser:
             items = [head, NoneLit(items[0].pos), *items[1:]]
         return Form(tuple(items), pos)
 
-    # A [ or { that starts a value opens a list; a [ right after a name indexes it (see access),
-    # and one right after a list too: {a b c}[h] is (. {a b c} h).
+    # A { that starts a value opens a list, and a [ a point; a [ right after a name indexes it
+    # (see access), and one right after a list or a point too: {a b c}[h] is (. {a b c} h).
     def list_literal(self) -> Node:
-        whole: Node = self.list_items()
+        what = "list" if self.peek() == "{" else "point"
+        pos = self.pos()
+        items = self.items_in(what)
+        whole: Node = ListLit(items, pos) if what == "list" else PointLit(items, pos)
         while self.peek() == "[":
             bracket = self.pos()
-            index = self.list_items()
-            if len(index.items) != 1:
-                raise ParseError("brackets after a list hold one position", bracket)
-            whole = Form((Name((".",), bracket), whole, index.items[0]), whole.pos)
+            index = self.items_in("brackets")
+            if len(index) != 1:
+                raise ParseError(f"brackets after a {what} hold one position", bracket)
+            whole = Form((Name((".",), bracket), whole, index[0]), whole.pos)
         if self.peek() and not (
             _is_delimiter(self.peek()) or self.peek() in "]}" or self.ends_braces()
         ):
             _check_char(self.peek(), self.pos())
-            raise ParseError(f"unexpected {self.peek()!r} after a list", self.pos())
+            raise ParseError(f"unexpected {self.peek()!r} after a {what}", self.pos())
         return whole
 
-    def list_items(self) -> ListLit:
+    def items_in(self, what: str) -> tuple[Node, ...]:
+        """The items between a [ and its ], or a { and its }; what names them in an error."""
         pos = self.pos()
         opening = self.advance()
         closing = "]" if opening == "[" else "}"
@@ -404,9 +409,9 @@ class _Parser:
                 self.advance()
                 break
             if self.peek() in ")]}":
-                raise ParseError(f"expected {closing!r} to close the list", self.pos())
+                raise ParseError(f"expected {closing!r} to close the {what}", self.pos())
             items.append(self.node())
-        return ListLit(tuple(items), pos)
+        return tuple(items)
 
     def run(self) -> str:
         start = self.i

@@ -69,7 +69,7 @@ def test_parse_prints_the_forms_with_their_positions(tmp_path, capsys):
     main(["parse", str(src)])
     out = capsys.readouterr().out
     assert out.splitlines()[:4] == ["2:1 form", "  2:2 name real", "  2:7 name k", "  2:9 real 1.5"]
-    assert "      3:25 list" in out
+    assert "      3:25 point" in out
     assert not (tmp_path / "f.mtpc").exists()
 
 

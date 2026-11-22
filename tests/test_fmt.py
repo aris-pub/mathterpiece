@@ -114,7 +114,7 @@ def test_a_call_with_no_argument_on_its_line():
 
 
 def test_a_list_lines_up_inside_its_bracket():
-    assert layout("(list xs [1 2\n3])\n") == "(list xs [1 2\n          3])\n"
+    assert layout("(list xs {1 2\n3})\n") == "(list xs {1 2\n          3})\n"
 
 
 def test_an_index_is_not_an_item():
@@ -239,8 +239,9 @@ def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
     assert [x for x in ours if x] == [x for x in emacs if x]
 
 
-# A list is data, not a call: its later lines go under its first item, as do those of a form
-# whose head is not a name.
+# Text in brackets is data, not a call: its later lines go under its first item, as do those of a
+# form whose head is not a name. The layout reads only the text, so these sources hold brackets
+# with any number of items, which the compiler would reject as points.
 @pytest.mark.parametrize(
     "src, want",
     [
@@ -254,11 +255,13 @@ def test_every_file_is_indented_as_emacs_indents_it(path, tmp_path):
         ("(real v ((f a) b\nc))\n", "(real v ((f a) b\n         c))\n"),
     ],
 )
-def test_a_list_lines_up_under_its_first_item_in_fmt_and_emacs(src, want, tmp_path):
+def test_brackets_line_up_under_their_first_item_in_fmt_and_emacs(src, want, tmp_path):
     assert layout(src) == want
     assert _emacs(src, tmp_path) == want
 
 
+# A list in braces lines up as text in brackets does. The Emacs mode does not do it yet
+# (mtp-bpy1), so only fmt is checked.
 @pytest.mark.parametrize(
     "src, want",
     [

@@ -29,6 +29,7 @@ from mathterpiece.nodes import (
     ListLit,
     Name,
     NoneLit,
+    PointLit,
     RatioLit,
     RealLit,
     StrLit,
@@ -388,12 +389,16 @@ class Reading(Transformer):
     paren = plain = plain_item = expression
 
     def list(self, c):
-        whole = ListLit(tuple(c[0]))
+        whole = PointLit(tuple(c[0]))
         for index in c[1:]:
             whole = _dot(whole, index)
         return whole
 
-    list_in_braces = list
+    def list_in_braces(self, c):
+        whole = ListLit(tuple(c[0]))
+        for index in c[1:]:
+            whole = _dot(whole, index)
+        return whole
 
     def list_brackets(self, c):
         return next(x for x in c if not isinstance(x, Token))

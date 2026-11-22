@@ -514,7 +514,7 @@ class TestWhen:
     def test_one_value(self):
         error(
             f"{self.S} (canvas v (when show a b))",
-            r"give several in a list: \(when c \[a b\]\)",
+            r"give several in a list: \(when c \{a b\}\)",
         )
 
     def test_a_canvas_shows_what_an_item_gives(self):

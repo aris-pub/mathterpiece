@@ -122,7 +122,7 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
 - `(cond (else V))` is {term}`folded <folding>` to the value of `V` and, since it is not a literal,
   marked const (compiler.py:5653-5657), so `(real v (cond (else 3)))` makes `v` a constant, while
   `(real v 3)` declares a free variable that a writer may write (mtp-ydd4.7.46).
-- `cond` gives a list written in brackets among its values the type of all its other values
+- `cond` gives a list written in braces among its values the type of all its other values
   (compiler.py:6629-6641), while an `if` gives it the type of its other branch only
   (compiler.py:6494-6504) (mtp-08wd.2).
 - `(pos P)` compiles `P` once and splits it (compiler.py:5594-5611), so a random call in `P` is

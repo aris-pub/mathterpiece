@@ -123,8 +123,19 @@ def _tree(node, depth: int) -> Iterator[str]:
     its depth."""
     pad = "  " * depth
     match node:
-        case nodes.Form(items) | nodes.ListLit(items) | nodes.Brackets(items) | nodes.Bar(items):
-            kinds = {nodes.Form: "form", nodes.ListLit: "list", nodes.Brackets: "brackets"}
+        case (
+            nodes.Form(items)
+            | nodes.ListLit(items)
+            | nodes.PointLit(items)
+            | nodes.Brackets(items)
+            | nodes.Bar(items)
+        ):
+            kinds = {
+                nodes.Form: "form",
+                nodes.ListLit: "list",
+                nodes.PointLit: "point",
+                nodes.Brackets: "brackets",
+            }
             yield f"{pad}{node.pos} {kinds.get(type(node), 'bar')}"
             for item in items:
                 yield from _tree(item, depth + 1)

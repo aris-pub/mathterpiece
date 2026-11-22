@@ -73,9 +73,17 @@ class NoneLit:
     pos: Pos = field(default=NOPOS, compare=False)
 
 
-# [a b c]: a list of values, such as a point.
+# {a b c}: a list.
 @dataclass(frozen=True, slots=True)
 class ListLit:
+    items: tuple["Node", ...]
+    pos: Pos = field(default=NOPOS, compare=False)
+
+
+# [x y]: a point. The parser reads any number of items, as the grammar does, and the compiler
+# rejects a point that has not two.
+@dataclass(frozen=True, slots=True)
+class PointLit:
     items: tuple["Node", ...]
     pos: Pos = field(default=NOPOS, compare=False)
 
@@ -103,6 +111,7 @@ class Form:
 Node = (
     Form
     | ListLit
+    | PointLit
     | StrLit
     | ColorLit
     | IntLit
