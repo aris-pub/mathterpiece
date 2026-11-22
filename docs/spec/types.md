@@ -193,13 +193,11 @@ and `(length n)` only on lists. Bead mtp-rk1i.
 
 ```{rule} modular-types
 `(mod T lo hi)`, with `T` either `int` or `real` and lo below hi, is the set of the numbers from lo
-up to hi, hi left out, with no order. A number that enters it is brought into its interval, and is
-never refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)), with `mod` as {doc}`stdlib`
-defines it. A number enters it when it is the value of a variable or an attribute of the type, an
-argument for a parameter of the type, the result of a function declared with the type, or a write
-into a variable or an attribute of the type. Adding a number to a value of the type, or subtracting one
-from it, results in a value of the type. A value of the type may not be compared with `<`, `>`, `<=` or `>=`. `(unwrap X)`, with X of the type,
-evaluates to the number of X as an ordinary T.
+up to hi, hi left out, with no order. A number v that a container, a parameter or a function result
+of the type receives is never refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)). Adding a
+number to a value of the type, or subtracting one from it, results in a value of the type. A value of
+the type may not be compared with `<`, `>`, `<=` or `>=`. `(unwrap X)`, with X of the type, evaluates
+to the number of X as an ordinary T.
 ```
 
 So `((mod real 0 360) theta 400)` holds 40, `(+ theta 330)` is 10, and `(< theta 90)` is a compile
@@ -211,6 +209,8 @@ error. With `(type hour (mod int 0 12))` and `(func[hour] later ((hour h) (int n
 The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`, `ratio` and
 `real`, whose arithmetic gives an ordinary number, so `(+ theta 30)` may be 380. Bead mtp-rk1i.
 :::
+
+## Values of a type when none is given
 
 ```{rule} type-values
 A variable declared with no value, and a parameter that a call, or a declaration whose head is a motif, leaves out and that
@@ -235,7 +235,7 @@ Leaving out the value of a type that has no value is a compile error.
 ```
 
 So `(real k (>= 1))` holds 1, `(real k (> 1))` is a compile error, and a motif's parameter whose
-type is an interface or a shape type is given in every declaration whose head is the motif.
+type is an interface or a shape type must be given in every declaration whose head is the motif.
 
 ## Literals and conversions
 
