@@ -71,7 +71,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
-| `positioned`, `sequence`, `sequence[T]`, `instant`, `palette`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
+| `positioned`, `instant`, `palette`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
 
 ```
 
@@ -138,8 +138,8 @@ an expression that evaluates to a value, written where a type is expected.
 ```{rule} type-forms
 `(type-union T1 T2 …)` is the union of the types T1, T2 and so on, `(type-intersect T1 T2 …)` is
 their intersection, and `(type-apply T X…)` is the type T with the types X… in its brackets: `(type-apply
-list int)` is `list[int]`. In `(type-apply T X…)`, `T` is `list`, `sequence` or `func`. With `list`
-and `sequence`, `X…` is exactly one type, the type of the items. With `func`, `X…` is one type or
+list int)` is `list[int]`. In `(type-apply T X…)`, `T` is `list` or `func`. With `list`,
+`X…` is exactly one type, the type of the items. With `func`, `X…` is one type or
 more: the last is the result type, and the others are the types of the parameters, in order. `list`
 with no item type may be written only as the head of a variable whose value is given, and the type
 of the variable is then the type of its value. A source writes them as `T1|T2…`, `T1&T2…` and `T[X…]`
@@ -386,15 +386,12 @@ variable, an attribute or a parameter. A type satisfies an interface as follows:
 |---|---|
 | `shape` | every shape type, motif type and variant type |
 | `positioned` | `point`, and every shape type, motif type and variant type but `group` |
-| `sequence` | every list type, `point` and `group` |
 | `instant` | every movement whose `duration` is 0: a jump, and a score of jumps. It is `(interface instant ((real (one-of 0)) duration))` |
-| `sequence[T]` | `list[S]` when S fits T, `point` when `real` fits T, and `group`, when the common type of the members of the group ({numref}`common-type`) fits T |
 | `palette` | every record whose attributes are all colors, whatever their names and number. A record made by `(palette …)` is one ({numref}`sugar-rewrites`) |
 | a declared interface, `(interface N (T1 A1 C1…) …)` | a type whose objects all have each attribute Ai, of a type that fits `(Ti C1…)`, or that satisfies Ti when Ti is a declared interface. Each record that a value may be satisfies the interface on its own |
 
 A value whose type is an interface may be read only through what the interface lists: the attributes of
-the frame for `shape`, `x`, `y` and `pos` for `positioned`, its items by position and its
-`length` for a `sequence`, and the attributes Ai for a declared interface. An attribute M of a value
+the frame for `shape`, `x`, `y` and `pos` for `positioned`, and the attributes Ai for a declared interface. An attribute M of a value
 whose type is `palette` may be read by its label, and has the type `color|none`: it is `none` when
 the record has no attribute M.
 ```

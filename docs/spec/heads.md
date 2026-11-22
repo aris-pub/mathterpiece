@@ -96,8 +96,8 @@ mtp-ydd4.7.59.
 |---|---|---|---|
 | `int`, `ratio`, `real`, `complex`, `unit`, `angle`, `ease`, `curve`, `bool`, `string`, `color`, `point`, `movement`, `none`, `scene` | core | the {term}`built-in types <built-in type>` | {doc}`types` |
 | `circle` and the other shape names | core | the shape types | {doc}`types` |
-| `shape`, `positioned`, `sequence`: the built-in types and {term}`interfaces <interface>` | core | a name | {doc}`types` |
-| `list[T]`, `sequence[T]`, `func[P… R]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
+| `shape`, `positioned`: the built-in types and {term}`interfaces <interface>` | core | a name | {doc}`types` |
+| `list[T]`, `func[P… R]` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `T1\|T2…`, such as `T\|none` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `T1&T2…`, such as `shape&round` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `type-apply`, `type-union`, `type-intersect` | core | a compound | {numref}`type-forms` |
