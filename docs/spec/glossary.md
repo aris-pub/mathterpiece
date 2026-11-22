@@ -378,7 +378,7 @@ refined type
   condition ({numref}`the-types`, {numref}`constraints`).
 
 choice type
-  A string type refined by `(one-of …)` to a few strings ({numref}`choice-types`).
+  A type refined by `(one-of …)` to a few values ({numref}`choice-types`).
 
 interface
   A type that no object has as its own type, which every type with what it lists satisfies, such
