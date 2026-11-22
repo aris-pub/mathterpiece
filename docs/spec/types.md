@@ -49,6 +49,7 @@ from these, as {numref}`what-a-type-is` lists:
 |---|---|---|
 | `int`, `ratio`, `real`, `complex` | the numbers of each kind | {numref}`number-types` |
 | `unit` | the reals from 0 to 1 | the same type as `(real (>= 0) (<= 1))` |
+| `angle` | the angles in degrees, from 0 up to 360 | the same type as `(mod real 0 360)` ({numref}`modular-types`) |
 | `bool` | `true` and `false` | |
 | `string` | the {term}`strings <string>` | the strings of formulas among them |
 | `color` | the colors | {numref}`color-literals` |
@@ -68,7 +69,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `record`, `font` | the records, and the fonts | a font is a record with a family, a style, a weight and a size |
 | `movement` | every movement | the moves, the scores and every `A` |
 | `A`, for an animation `A` | every `A` | {doc}`time` |
-| `component`, `view`, `control`, `listener` | the components, the views, the controls and the listeners | |
+| `component`, `view`, `control`, `listener`, `writer` | the components, the views, the controls, the listeners, and the writers | a component is a view or a control, and a writer is a control or a listener |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
 | `positioned`, `sequence`, `sequence[T]`, `instant`, `palette`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
 
@@ -78,8 +79,8 @@ from these, as {numref}`what-a-type-is` lists:
 :file: diagrams/builtin-types.svg
 :max-width: 48rem
 
-The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps
-`int` and `ratio`. Interfaces are not drawn, since each one holds values from several boxes:
+The built-in types as sets, each box inside the boxes of the types that hold it. `angle` and `unit`
+overlap `int` and `ratio`, and `writer` overlaps `component`. Interfaces are not drawn, since each one holds values from several boxes:
 `positioned` holds the points and most shapes.
 ```
 
