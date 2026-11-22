@@ -69,7 +69,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `record`, `font` | the records, and the fonts | a font is a record with a family, a style, a weight and a size |
 | `movement` | every movement | the moves, the scores and every `A` |
 | `A`, for an animation `A` | every `A` | {doc}`time` |
-| `component`, `view`, `control`, `listener`, `writer` | the components, the views, the controls, the listeners, and the writers | a component is a view or a control, and a writer is a control or a listener |
+| `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
 | `positioned`, `sequence`, `sequence[T]`, `instant`, `palette`, and each declared interface | the values whose types satisfy it | an {term}`interface` ({numref}`interfaces`) |
 

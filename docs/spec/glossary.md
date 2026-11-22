@@ -43,7 +43,8 @@ writer
   A control or a listener: a page object that writes the model. Defined in {doc}`compiler-runtime`.
 
 page object
-  A view, a control or a listener: what the reader sees or acts on in a page. Defined in
+  A view, a control or a listener: what the reader sees or acts on in a page. Its type is
+  `page-object`. Defined in
   {doc}`compiler-runtime`.
 
 listener
