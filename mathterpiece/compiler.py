@@ -111,7 +111,7 @@ RESERVED = frozenset(
 CONSTRAINT_HEADS = COMPARE | {"length", "one-of", "const", "wrap"}
 # The named arguments of controls and listeners; the rest of their items are conditions.
 WRITER_OPTIONS = {
-    *["animation", "label", "step", "buttons", "value", "active", "autoplay", "stop-propagation"],
+    *["animation", "label", "stops", "buttons", "value", "active", "autoplay", "stop-propagation"],
     *["rest", "in", "selected", "priority", "labels", "move"],
 }
 # The writers that play no animation: their effect is a gesture.
@@ -567,6 +567,12 @@ def _slider_as_move(items: list, pos: Pos) -> list:
     """(slider s (animation (move k (from 0) (to 1))) …), whose animation is one instant move
     (the author, 2026-11-23), as the form that the rest of the compiler reads: (slider s (move k
     (from 0) (to 1)) …)."""
+    old = next((it for it in items if _head(it) == "step"), None)
+    if old is not None:
+        raise CompileError(
+            "a slider takes (stops n), the number of positions its knob stops at, not (step n)",
+            old.pos,
+        )
     first = items[0] if items else None
     if first is not None and _head(first) not in WRITER_OPTIONS and _head(first) != "doc":
         raise CompileError(
@@ -802,7 +808,7 @@ class _Compiler:
         out = set(self.written(o.data.get("animation")))
         if o.data.get("target") is not None:
             out.add(tuple(o.data["target"]))
-        for attr in ("step", "playing", "position"):
+        for attr in ("step", "stops", "playing", "position"):
             if attr in o.attrs:
                 out.add((i, attr))
         return out
@@ -4126,10 +4132,10 @@ class _Compiler:
         )
         obj.data["animation"] = animation
         written = self.written(animation)
-        step = self.take(items, "step")
-        if step is not None:
-            obj.attrs["step"] = self.attribute(
-                Refine(INT, ((">=", 2),)), step, obj.pos, "step", scope=self.cscope
+        stops = self.take(items, "stops")
+        if stops is not None:
+            obj.attrs["stops"] = self.attribute(
+                Refine(INT, ((">=", 2),)), stops, obj.pos, "stops", scope=self.cscope
             )
         elif _core(tr.data["target"][2]) == INT:
             # A slider on an int stops at each whole number (the author, 2026-11-16).
@@ -4138,11 +4144,11 @@ class _Compiler:
                 raise CompileError(
                     "a slider on an int stops at each whole number from its from to its to,"
                     " so both must be known when compiling: write them as numbers, or give"
-                    " (step n)",
+                    " (stops n)",
                     node.pos,
                 )
             low, high = (int(e.value) for e in ends)
-            obj.attrs["step"] = Attribute(Refine(INT, ((">=", 2),)), abs(high - low) + 1)
+            obj.attrs["stops"] = Attribute(Refine(INT, ((">=", 2),)), abs(high - low) + 1)
         obj.attrs["position"] = Attribute(UNIT, 0)
         self.active(obj, items)
         self.writer(obj, items, written)

@@ -16,13 +16,28 @@ SLIDE = "(animation (move k (from 0) (to 5)))"
 
 class TestControls:
     def test_a_slider(self):
-        s = model(f"{K} (slider s {SLIDE} (step 5) (label 'size'))").get("s")
+        s = model(f"{K} (slider s {SLIDE} (stops 5) (label 'size'))").get("s")
         assert (s.kind, s.type, s.access) == ("slider", ComponentT("slider"), "page")
-        assert s.attrs["step"].value == 5 and s.attrs["label"].value == "size"
+        assert s.attrs["stops"].value == 5 and s.attrs["label"].value == "size"
         assert s.attrs["position"].value == 0
+        assert "step" not in s.attrs
 
-    def test_a_slider_step_is_at_least_two(self):
-        error(f"{K} (slider s {SLIDE} (step 1))", r"breaks \(>= 2\)")
+    def test_a_slider_writes_its_stops_under_stops(self):
+        d = doc(f"{K} (slider s {SLIDE} (stops 5))")
+        (s,) = [o for o in d["objects"] if o["kind"] == "slider"]
+        assert s["attrs"]["stops"]["free"] == 5 and "step" not in s["attrs"]
+        assert errors(d) == []
+
+    def test_a_slider_stops_is_at_least_two(self):
+        error(f"{K} (slider s {SLIDE} (stops 1))", r"breaks \(>= 2\)")
+
+    # The author, 2026-11-18: the argument is (stops n), and (step n) is the ease's head.
+    @pytest.mark.parametrize(
+        "src",
+        [f"{K} (slider s {SLIDE} (step 5))", f"{K} (slider s (step 5) {SLIDE})"],
+    )
+    def test_a_slider_step_is_an_error_that_names_stops(self, src):
+        error(src, r"\(stops n\)")
 
     def test_play(self):
         p = model(f"{K} (play p {MOVE} (buttons true))").get("p")
@@ -361,11 +376,11 @@ class TestItemsAWriterDoesNotTake:
             (f"(canvas t s (on-click c {MOVE} (color teal)))", "on-click takes no (color …)"),
             (f"(button t {MOVE} (> k 1) (color teal))", "a button takes no (color …)"),
             # An argument of another control.
-            (f"(button t {MOVE} (step 2))", "a button takes no (step …)"),
+            (f"(button t {MOVE} (stops 2))", "a button takes no (stops …)"),
         ],
     )
     def test_the_error_is_at_the_item(self, src, message):
-        col = src.index("(color") if "(color" in src else src.index("(step")
+        col = src.index("(color") if "(color" in src else src.index("(stops")
         assert self.where(src, message) == f"2:{col + 1}"
 
     def test_a_word_that_names_nothing_may_be_a_misspelled_choreo(self):
@@ -793,22 +808,22 @@ class TestPriority:
 
 class TestIntSliderStops:
     # The author, 2026-11-16: a slider whose target is an int stops at each whole number by
-    # default, so (step …) is needed only for coarser stops.
+    # default, so (stops …) is needed only for coarser stops.
     def test_it_stops_at_each_whole_number(self):
         s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 1) (to 7))))").get("s")
-        assert s.attrs["step"].value == 7
+        assert s.attrs["stops"].value == 7
 
     def test_downward_ends_count_the_same(self):
         s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 7) (to 2))))").get("s")
-        assert s.attrs["step"].value == 6
+        assert s.attrs["stops"].value == 6
 
-    def test_a_given_step_wins(self):
-        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 1) (to 7))) (step 4))").get("s")
-        assert s.attrs["step"].value == 4
+    def test_given_stops_win(self):
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 1) (to 7))) (stops 4))").get("s")
+        assert s.attrs["stops"].value == 4
 
     def test_a_real_target_has_no_stops(self):
         s = model("(real a 3) (slider s (animation (move a (from 1) (to 7))))").get("s")
-        assert "step" not in s.attrs
+        assert "stops" not in s.attrs
 
     def test_ends_known_only_while_drawing(self):
         error(
