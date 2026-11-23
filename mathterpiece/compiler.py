@@ -4107,6 +4107,9 @@ class _Compiler:
             )
         if "ease" in tr.attrs:
             raise CompileError("a slider's move takes no ease: its animation is instant", node.pos)
+        # The runtime scrubs a slider's move over its whole length, so the (duration 0) that the
+        # source states is not written into the .mtpc.
+        del tr.attrs["duration"]
         if "from" not in tr.data["ends"] or "to" not in tr.data["ends"]:
             raise CompileError("a slider's move needs both (from …) and (to …)", node.pos)
         # Its knob runs along a track between two values, so neither end may be none.
