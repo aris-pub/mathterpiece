@@ -52,7 +52,11 @@ SHAPES = OPEN_SHAPES | {"circle", "ellipse", "rect", "polygon", "ring", "triangl
 def _sources() -> list[tuple[str, str, Path | None]]:
     found = []
     for p in sorted((ROOT / "examples").glob("*.mtp")):
-        if p.stem != "house":
+        # colormaps.mtp is built on colormaps, whose colors are not checked: a colormap shows a
+        # value by its color, and its ends come close to the page's colors on purpose (the author,
+        # 2026-11-23). The compiler folds those colors into plain ones, so they cannot be told
+        # apart, and the whole example is left out until the new compiler can mark them.
+        if p.stem not in ("house", "colormaps"):
             found.append((f"examples/{p.name}", p.read_text(encoding="utf-8"), p))
     for p in sorted((ROOT / "site" / "figures").glob("*.mtp")):
         found.append((f"site/figures/{p.name}", p.read_text(encoding="utf-8"), p))
