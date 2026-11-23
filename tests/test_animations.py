@@ -62,7 +62,7 @@ class TestTransitions:
 
     def test_a_sliders_ends_are_never_none(self):
         error(
-            "(real|none m 2) (slider s (move m (from 0) (to none)))",
+            "(real|none m 2) (slider s m (from 0) (to none))",
             "a slider's ends may not be none",
         )
 

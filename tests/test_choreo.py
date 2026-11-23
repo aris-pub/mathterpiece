@@ -236,7 +236,7 @@ def test_the_examples_pass_the_schema():
         ),
         ("(real k 0) (choreo f () (wait 1)) (foreach i 2 (f))", "declares an animation"),
         (BASE + " (canvas v s (fade-in c))", "a canvas plays no animation"),
-        (BASE + " (slider sl (fade-in c))", "a slider plays no animation"),
+        (BASE + " (slider sl k (from 0) (to 1) (fade-in c))", "a slider plays no animation"),
         (BASE + " (button b (fade-in c) (animation (wait 1)))", "'animation' is given twice"),
         # Names that are not choreos.
         (BASE + " (button b (animation (fade c)))", "'fade' is not a choreo"),

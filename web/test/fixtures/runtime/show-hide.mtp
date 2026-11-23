@@ -38,7 +38,7 @@
   (on-show right (fade-in right 2)))
 (canvas tint (when show c)
   (on-show c (animation (at-once (draw-on c 0) (move c.stroke (from #'#ff0000') (duration 1))))))
-(slider ks (move k (from 0) (to 10)))
+(slider ks k (from 0) (to 10))
 (canvas opening label (when lit glow)
   (on-show label (fade-in label 2))
   (on-show glow (fade-in glow 2))

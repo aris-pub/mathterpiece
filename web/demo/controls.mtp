@@ -18,7 +18,7 @@
   (rect box (pos [-5 5]) (width size) (height size) (fill #'royalblue'))
   (circle sun (pos [5 5]) (r 0.7) (fill #'gold'))
   (text label f'{angle:.0f}°' (pos [0 -1]) (halign 'middle') (font label-font)))
-(slider turn (move angle (from 0) (to 360)) (label 'angle'))
+(slider turn angle (from 0) (to 360) (label 'angle'))
 (button grow
   (animation (move size (to 3) (duration 1) (ease cubic-in-out))
     (move size (to 1) (duration 1)))

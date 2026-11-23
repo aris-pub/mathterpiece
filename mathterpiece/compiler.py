@@ -552,14 +552,31 @@ def _is_constraint(node: Node) -> bool:
 
 
 
+def _sliders(node):
+    """node with every slider in it read by _slider_as_move, before docstrings and the order of
+    named arguments are checked, so that (from …) and (to …) count as named arguments."""
+    if not isinstance(node, Form):
+        return node
+    items = tuple(_sliders(it) for it in node.items)
+    if _head(node) == "slider" and len(items) >= 3:
+        items = (*items[:2], *_slider_as_move(list(items[2:]), node.pos))
+    return Form(items, node.pos)
+
+
 def _slider_as_move(items: list, pos: Pos) -> list:
-    """(slider s k (from 0) (to 1) …), with the target written directly (the author,
+    """(slider s k (from 0) (to 1) …), which names its target directly (the author,
     2026-11-23), as the move that the rest of the compiler reads: (slider s (move k (from 0)
-    (to 1)) …). A slider whose first item is already a move or a transition is left as it is."""
-    if not items or not any(_head(it) in ("from", "to") for it in items[1:]):
+    (to 1)) …). The clauses of a move stay in the move, so a slider's (duration …) is still
+    reported as a move's."""
+    if items and _head(items[0]) == "move":
+        raise CompileError(
+            "a slider names its target directly: (slider s k (from 0) (to 1))", items[0].pos
+        )
+    if not items:
         return items
-    parts = [it for it in items[1:] if _head(it) in ("from", "to", "path")]
-    rest = [it for it in items[1:] if _head(it) not in ("from", "to", "path")]
+    clauses = ("from", "to", "path", "duration", "ease", "lag")
+    parts = [it for it in items[1:] if _head(it) in clauses]
+    rest = [it for it in items[1:] if _head(it) not in clauses]
     return [Form((Name(("move",), pos), items[0], *parts), pos), *rest]
 
 class _Compiler:
@@ -667,7 +684,7 @@ class _Compiler:
         return k
 
     def run(self, forms: tuple[Form, ...]) -> Model:
-        forms = tuple(_sets(f) for f in _rewrite_parametric(forms))
+        forms = tuple(_sets(_sliders(f)) for f in _rewrite_parametric(forms))
         self.keep = _used(forms, self.source)
         forms = self.imports(forms, None, self.source)
         self.seed_decls[None] = _seed_decls(forms)
@@ -3572,8 +3589,6 @@ class _Compiler:
                     f"a {kind} is placed on the page by its name, so it needs one", pos
                 )
             items, shape = list(form.items[2:]), None
-            if kind == "slider":
-                items = _slider_as_move(items, form.pos)
             if kind in VIEWS:
                 heard = [it for it in items if self.holds_listeners(it)]
         obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
@@ -4055,7 +4070,7 @@ class _Compiler:
         # A slider's move is the path its knob scrubs: the reader gives the speed, so it has
         # no duration and no ease, and both ends are fixed (reference.md, "Controls").
         if not items or not (_head(items[0]) == "move" or isinstance(items[0], Name)):
-            raise CompileError("a slider is (slider name move item…)", obj.pos)
+            raise CompileError("a slider is (slider name target (from …) (to …) item…)", obj.pos)
         node = items.pop(0)
         if isinstance(node, Name):
             tid = self.named(node, "transition")
