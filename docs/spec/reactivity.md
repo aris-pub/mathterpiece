@@ -8,7 +8,7 @@ Not drafted yet. This page defines: the state of an open page, its starting stat
 
 The signature of `on-drag` ({ref}`signatures`):
 
-```text
+```mtp-sig
 (on-drag SOURCE:shape|term MOVEMENT:instant
   (as:NAME none)
   (active:bool true)
