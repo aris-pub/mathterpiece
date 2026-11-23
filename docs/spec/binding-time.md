@@ -64,7 +64,7 @@ control or a listener: no expression in the scene, in a formula, or in a variabl
 function outside a {term}`page object` may read one.
 ```
 
-So `(button b (selected (= mode 'a')))` may read `mode`, and a readout may read the variable that
-a slider writes, but `(circle c (r push.selected))` in the scene, with `push` a button, is a
-{term}`compile error`, and so is `(real r (if push.selected 2 1))` at the top level, since the scene
-could read the button through `r`.
+So `(button b (active (= mode 'a')))` may read `mode`, and a readout may read the variable that
+a slider writes, but `(circle c (r size.position))` in the scene, with `size` a slider, is a
+{term}`compile error`, and so is `(real r (if (> size.position 2) 2 1))` at the top level, since the
+scene could read the slider through `r`.
