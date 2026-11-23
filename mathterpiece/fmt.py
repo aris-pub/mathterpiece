@@ -19,7 +19,7 @@ INDENT = {
         ["polyline", "polygon", "arc", "ring", "font", "animation", "canvas", "namespace"], 1
     ),
     **dict.fromkeys(["palette", "curve", "formula", "term"], 1),
-    **dict.fromkeys(["button", "play", "stepper", "interface"], 1),
+    "interface": 1,
     "text": 2,
     **dict.fromkeys(
         ["real", "int", "ratio", "complex", "bool", "string", "point", "list", "transform"], 2
@@ -27,7 +27,7 @@ INDENT = {
     "rand-seed": 2,
     **dict.fromkeys(["color", "type", "motif", "variant", "func", "transition", "readout"], 2),
     "choreo": 2,
-    "slider": 1,
+    **dict.fromkeys(["slider", "button", "play", "stepper"], 2),
     "display": 2,
     "colormap": 2,
     "toggle": 2,

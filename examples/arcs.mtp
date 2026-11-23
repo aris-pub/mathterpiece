@@ -66,5 +66,5 @@
   (on-view (animation (move grow (to 1) (duration 1.4) (ease cubic-out)))
     doc@'Sweeps the ring into place.'))
 
-(slider count (animation (move parts (from 1) (to 8) (duration 0))) (label 'parts')
+(slider count (move parts (from 1) (to 8) (duration 0)) (label 'parts')
   doc@'Cuts the ring on the right into that many parts.')

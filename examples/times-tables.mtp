@@ -53,9 +53,9 @@
 (animation eight-cusps (move m (to 9) (duration 3) (ease cubic-in-out)))
 
 ; Each stop but the last rests a moment before the next.
-(play tour (label 'play the tour') (buttons true) (rest 1.2)
+(play tour (in-order cardioid nephroid four-cusps eight-cusps)
+    (label 'play the tour') (buttons true) (rest 1.2)
     (labels 'm = 2, a cardioid' 'm = 3, a nephroid' 'm = 5, four cusps' 'm = 9, eight cusps')
-    (animation cardioid nephroid four-cusps eight-cusps)
   doc@'Plays the tour: m = 2, 3, 5, then 9.')
 
-(slider times (animation (move m (from 1) (to 12) (duration 0))) (label 'multiplier m'))
+(slider times (move m (from 1) (to 12) (duration 0)) (label 'multiplier m'))

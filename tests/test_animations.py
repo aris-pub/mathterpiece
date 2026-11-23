@@ -62,7 +62,7 @@ class TestTransitions:
 
     def test_a_sliders_ends_are_never_none(self):
         error(
-            "(real|none m 2) (slider s (animation (move m (from 0) (to none) (duration 0))))",
+            "(real|none m 2) (slider s (move m (from 0) (to none) (duration 0)))",
             "a slider's ends may not be none",
         )
 
@@ -292,8 +292,12 @@ class TestLoops:
         error(f"{K} (animation a (move k (to 1) (duration 1)) (loop))", "before")
 
     def test_an_inline_animation_loops(self):
-        m = model(f"{K} (button b (animation (loop 2) (move k (to 1) (duration 1))))")
-        a = m.objects[m.get("b").data["animation"]]
+        m = model(
+            f"{K} (scene s (circle c)) (canvas v s"
+            " (on-click c (animation (loop 2) (move k (to 1) (duration 1)))))"
+        )
+        (click,) = [o for o in m.objects if o.kind == "on-click"]
+        a = m.objects[click.data["animation"]]
         assert a.data["steps"][0] == "loop"
 
     def test_a_looping_animation_named_in_another_keeps_its_loop(self):
@@ -596,8 +600,8 @@ class TestSet:
             ),
             ("(button b (set k (+ k 1)))", "(button b (move k (to (+ k 1)) (duration 0)))"),
             (
-                "(button b (animation (defaults (duration 2)) (set k 3)))",
-                "(button b (animation (defaults (duration 2)) (move k (to 3) (duration 0))))",
+                "(button b (in-order (defaults (duration 2)) (set k 3)))",
+                "(button b (in-order (defaults (duration 2)) (move k (to 3) (duration 0))))",
             ),
             (
                 "(scene s (circle c (r 1))) (canvas v s (on-click c (set k 4)))",

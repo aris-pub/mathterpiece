@@ -14,7 +14,7 @@
   (group circles (circle_ (r 1)) (circle_ (pos [4 0]) (r 2)))
   (group dots (dot_ (k 10)) (dot_ (k 20)))
   (group boxes (rect_ (x 0) (width 2) (height 2)) (rect_ (x 4) (width 4) (height 2))))
-(button b (animation (move dots[1].k (to 20) (duration 0))))
+(button b (move dots[1].k (to 20) (duration 0)))
 (real radii (sum circles.r))
 (real ks (sum dots.k))
 (real xs (let ((s (reduce circles.pos [0 0] (fn ((point acc) (point p)) (+ acc p))))) s.x))

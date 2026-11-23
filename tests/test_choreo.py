@@ -29,13 +29,13 @@ def same(a: str, b: str) -> None:
 
 def test_a_use_in_a_button_is_the_hand_written_animation():
     same(
-        BASE + " (button b (animation (fade-in c)))",
-        BASE + " (button b (animation (move c.opacity (to 1) (duration 0.4))))",
+        BASE + " (button b (fade-in c))",
+        BASE + " (button b (move c.opacity (to 1) (duration 0.4)))",
     )
 
 
 def test_a_use_may_stand_as_the_animation_itself():
-    same(BASE + " (button b (fade-in c))", BASE + " (button b (animation (fade-in c)))")
+    same(BASE + " (button b (fade-in c))", BASE + " (button b (fade-in c))")
     same(
         BASE + " (canvas v s (on-click c (fade-in d 2)))",
         BASE + " (canvas v s (on-click c (animation (fade-in d 2))))",
@@ -45,7 +45,7 @@ def test_a_use_may_stand_as_the_animation_itself():
 def test_a_use_stands_among_the_optional_arguments():
     same(
         BASE + " (button b (fade-in c) (label 'go') (<= c.opacity 1))",
-        BASE + " (button b (label 'go') (animation (fade-in c)) (<= c.opacity 1))",
+        BASE + " (button b (fade-in c) (label 'go') (<= c.opacity 1))",
     )
 
 
@@ -57,19 +57,18 @@ def test_the_mtpc_holds_no_trace_of_the_choreo():
 
 def test_arguments_in_order_and_defaults():
     same(
-        BASE + " (play p (animation (stop 120 'a third' 10)))",
-        BASE + " (play p (animation (at-once (defaults (duration 10))"
-        " (move k (to 120)) (move label (to 'a third')))))",
+        BASE + " (play p (stop 120 'a third' 10))",
+        BASE + " (play p (at-once (defaults (duration 10))"
+        " (move k (to 120)) (move label (to 'a third'))))",
     )
     same(
-        BASE + " (play p (animation (stop 90)))",
-        BASE + " (play p (animation (at-once (defaults (duration 8))"
-        " (move k (to 90)) (move label (to '')))))",
+        BASE + " (play p (stop 90))",
+        BASE + " (play p (at-once (defaults (duration 8)) (move k (to 90)) (move label (to ''))))",
     )
 
 
 def test_a_named_animation_made_from_one_use():
-    m = model(BASE + " (animation third (stop 120 'a third' 10)) (play p (animation third))")
+    m = model(BASE + " (animation third (stop 120 'a third' 10)) (play p third)")
     assert m.get("third").attrs["duration"].value == 10
     same(
         BASE + " (animation third (stop 120 'a third' 10))",
@@ -80,8 +79,8 @@ def test_a_named_animation_made_from_one_use():
 
 def test_each_use_in_a_stepper_is_one_step():
     same(
-        BASE + " (stepper st (animation (fade-in c) (stop 1 'one' 2)))",
-        BASE + " (stepper st (animation (move c.opacity (to 1) (duration 0.4))"
+        BASE + " (stepper st (in-order (fade-in c) (stop 1 'one' 2)))",
+        BASE + " (stepper st (in-order (move c.opacity (to 1) (duration 0.4))"
         " (at-once (defaults (duration 2)) (move k (to 1)) (move label (to 'one')))))",
     )
 
@@ -89,8 +88,8 @@ def test_each_use_in_a_stepper_is_one_step():
 def test_a_use_of_several_items_is_one_step_as_a_named_animation_is():
     two = "(choreo both ((shape a) (shape b)) (fade-in a) (fade-in b))"
     same(
-        BASE + f" {two} (stepper st (animation (both c d) (wait 1)))",
-        BASE + " (stepper st (animation (in-order (move c.opacity (to 1) (duration 0.4))"
+        BASE + f" {two} (stepper st (in-order (both c d) (wait 1)))",
+        BASE + " (stepper st (in-order (in-order (move c.opacity (to 1) (duration 0.4))"
         " (move d.opacity (to 1) (duration 0.4))) (wait 1)))",
     )
 
@@ -98,18 +97,18 @@ def test_a_use_of_several_items_is_one_step_as_a_named_animation_is():
 def test_a_use_alone_gives_its_steps():
     tour = "(choreo tour () (move k (to 1) (duration 1)) (move k (to 0) (duration 1)))"
     same(
-        BASE + f" {tour} (play p (animation (tour)))",
-        BASE + " (play p (animation (move k (to 1) (duration 1)) (move k (to 0) (duration 1))))",
+        BASE + f" {tour} (play p (tour))",
+        BASE + " (play p (in-order (move k (to 1) (duration 1)) (move k (to 0) (duration 1))))",
     )
-    same(BASE + f" {tour} (play p (tour))", BASE + f" {tour} (play p (animation (tour)))")
+    same(BASE + f" {tour} (play p (tour))", BASE + f" {tour} (play p (tour))")
 
 
 def test_nested_uses_pass_their_parameters_on():
     pair = "(choreo pair ((shape a) (shape b) (real t 1)) (at-once (fade-in a t) (fade-in b t)))"
     same(
         BASE + f" {pair} (button go (pair c d 3))",
-        BASE + " (button go (animation (at-once (move c.opacity (to 1) (duration 3))"
-        " (move d.opacity (to 1) (duration 3)))))",
+        BASE + " (button go (at-once (move c.opacity (to 1) (duration 3))"
+        " (move d.opacity (to 1) (duration 3))))",
     )
 
 
@@ -117,19 +116,19 @@ def test_a_parameter_given_a_variable_is_its_target():
     bump = "(choreo bump ((real x) (real to 1)) (move x (to to) (duration 1)))"
     same(
         SCENE + f" {bump} (button b (bump k 5))",
-        SCENE + " (button b (animation (move k (to 5) (duration 1))))",
+        SCENE + " (button b (move k (to 5) (duration 1)))",
     )
     same(
         SCENE + f" {bump} (button b (bump c.r))",
-        SCENE + " (button b (animation (move c.r (to 1) (duration 1))))",
+        SCENE + " (button b (move c.r (to 1) (duration 1)))",
     )
 
 
 def test_a_variable_given_as_a_value_is_read_when_the_move_starts():
     same(
         BASE + " (real j 0) (button b (stop j))",
-        BASE + " (real j 0) (button b (animation (at-once (defaults (duration 8))"
-        " (move k (to j)) (move label (to '')))))",
+        BASE + " (real j 0) (button b (at-once (defaults (duration 8))"
+        " (move k (to j)) (move label (to ''))))",
     )
 
 
@@ -141,15 +140,15 @@ def test_eases_and_functions_as_arguments():
     )
     same(
         src + " (button b (go 2))",
-        src + " (button b (animation (move k (to 2) (duration 1) (ease sq))))",
+        src + " (button b (move k (to 2) (duration 1) (ease sq)))",
     )
 
 
 def test_constants_and_known_values_as_arguments():
     same(
         BASE + " (list xs {1 2} (const)) (button b (stop xs[1] f'at {(* 2 3)}'))",
-        BASE + " (list xs {1 2} (const)) (button b (animation (at-once (defaults (duration 8))"
-        " (move k (to xs[1])) (move label (to 'at 6')))))",
+        BASE + " (list xs {1 2} (const)) (button b (at-once (defaults (duration 8))"
+        " (move k (to xs[1])) (move label (to 'at 6'))))",
     )
 
 
@@ -169,8 +168,8 @@ def test_a_choreo_keeps_its_doc_in_the_compiler():
 
 def test_uses_in_a_foreach():
     same(
-        BASE + " (play p (animation (foreach w {c d} (fade-in w))))",
-        BASE + " (play p (animation (fade-in c) (fade-in d)))",
+        BASE + " (play p (in-order (foreach w {c d} (fade-in w))))",
+        BASE + " (play p (in-order (fade-in c) (fade-in d)))",
     )
 
 
@@ -182,8 +181,8 @@ def test_a_shape_that_may_not_exist_is_an_argument_as_in_the_inline_move():
     # argument that may be none too (type-system.md 5.c).
     fade = "(choreo fade-out ((shape x)) (move x.opacity (to 0) (duration 1)))"
     same(
-        MAYBE + f" {fade} (play p (animation (fade-out gone))) (canvas v s)",
-        MAYBE + " (play p (animation (move gone.opacity (to 0) (duration 1)))) (canvas v s)",
+        MAYBE + f" {fade} (play p (fade-out gone)) (canvas v s)",
+        MAYBE + " (play p (move gone.opacity (to 0) (duration 1))) (canvas v s)",
     )
 
 
@@ -191,7 +190,7 @@ def test_a_value_that_may_be_none_is_an_argument_as_in_the_inline_move():
     bump = "(choreo bump ((real x) (real to 1)) (move x (to to) (duration 1)))"
     same(
         "(real|none m 2)" + f" {bump} (button b (bump m))",
-        "(real|none m 2) (button b (animation (move m (to 1) (duration 1))))",
+        "(real|none m 2) (button b (move m (to 1) (duration 1)))",
     )
 
 
@@ -202,14 +201,14 @@ def test_an_argument_that_may_be_none_is_refused_where_the_inline_move_refuses_i
         "may be none",
     )
     error(
-        "(real|none m 2) (real k 0) (button b (animation (move k (to m) (duration 1))))",
+        "(real|none m 2) (real k 0) (button b (move k (to m) (duration 1)))",
         "may be none",
     )
 
 
 def test_the_examples_pass_the_schema():
     assert (
-        errors(doc(BASE + " (animation third (stop 120)) (play p (animation third (fade-in c)))"))
+        errors(doc(BASE + " (animation third (stop 120)) (play p (in-order third (fade-in c)))"))
         == []
     )
 
@@ -236,12 +235,15 @@ def test_the_examples_pass_the_schema():
         ),
         ("(real k 0) (choreo f () (wait 1)) (foreach i 2 (f))", "declares an animation"),
         (BASE + " (canvas v s (fade-in c))", "a canvas plays no animation"),
-        (BASE + " (slider sl (animation (move k (from 0) (to 1) (duration 0))) (fade-in c))", "a slider plays no animation"),
-        (BASE + " (button b (fade-in c) (animation (wait 1)))", "'animation' is given twice"),
+        (
+            BASE + " (slider sl (move k (from 0) (to 1) (duration 0)) (fade-in c))",
+            "a slider plays no animation",
+        ),
+        (BASE + " (button b (wait 1) (fade-in c))", "a button takes one movement"),
         # Names that are not choreos.
-        (BASE + " (button b (animation (fade c)))", "'fade' is not a choreo"),
-        (BASE + " (play p (animation (wait 1) (fade c)))", "'fade' is not a choreo"),
         (BASE + " (button b (fade c))", "'fade' is not a choreo"),
+        (BASE + " (play p (in-order (wait 1) (fade c)))", "'fade' is not a choreo"),
+        (BASE + " (stepper st (fade c))", "'fade' is not a choreo"),
         # Declarations.
         (SCENE + " (choreo f ((real x)))", "a choreo holds what an animation's body holds"),
         (SCENE + " (choreo move () (wait 1))", "'move' is reserved"),

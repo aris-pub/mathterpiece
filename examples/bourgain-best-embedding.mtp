@@ -69,5 +69,5 @@
     (move v.pos (to [1 0]))
     (move w.pos (to [2 0]))))
 
-(button best (animation optimum) (label 'show the optimum'))
-(button collapse (animation on-a-line) (label 'collapse onto a line'))
+(button best optimum (label 'show the optimum'))
+(button collapse on-a-line (label 'collapse onto a line'))

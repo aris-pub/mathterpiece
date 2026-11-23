@@ -77,7 +77,7 @@ Also:
 Every other target is a compile error.
 ```
 
-So `(slider s (animation (move m (from 0) (to 1) (duration 0))))` with `(real m (* 2 k))` is a compile error, and so is a
+So `(slider s (move m (from 0) (to 1) (duration 0)))` with `(real m (* 2 k))` is a compile error, and so is a
 move of a const variable or of a color variable. Two writers may write the same container, and
 {doc}`concurrency` defines what happens then.
 
@@ -277,7 +277,7 @@ So `(real k 5 (<= 3))` is a compile error. With `(real a 1)` and
 (real k 2 (>= 1) (<= 5))
 (scene s (circle c (r (/ 1 k)) (fill #'teal')))
 (canvas v (x -1.2) (y -1.2) (width 2.4) (height 2.4) s)
-(slider size (animation (move k (from 1) (to 5) (duration 0))) (label 'k'))
+(slider size (move k (from 1) (to 5) (duration 0)) (label 'k'))
 ```
 
 ### Narrowing in an `if`

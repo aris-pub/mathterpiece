@@ -292,8 +292,7 @@ class TestNoneNeverACondition:
 
     def test_active(self):
         compile_error(
-            "(bool|none c none) (real k 0)"
-            " (button b (active c) (animation (move k (to 1) (duration 1))))"
+            "(bool|none c none) (real k 0) (button b (move k (to 1) (duration 1)) (active c))"
         )
 
     @pytest.mark.parametrize("f", ["sum", "min", "max", "count"])
@@ -597,28 +596,28 @@ class TestDefaultSeed:
 
     def test_roll_dice_with_no_seed(self):
         same_meaning(
-            RAND + "(rand-seed s 1) (button b (animation (roll-dice)))",
-            RAND + "(rand-seed s 1) (button b (animation (roll-dice s)))",
+            RAND + "(rand-seed s 1) (button b (roll-dice))",
+            RAND + "(rand-seed s 1) (button b (roll-dice s))",
         )
 
     def test_roll_dice_with_no_seed_by_the_name_of_the_file(self, tmp_path):
         same_meaning(
-            "(import rand) (button b (animation (rand.roll-dice)))",
-            "(import rand) (button b (animation (rand.roll-dice rand.seed)))",
+            "(import rand) (button b (rand.roll-dice))",
+            "(import rand) (button b (rand.roll-dice rand.seed))",
             tmp_path / "a.mtp",
         )
 
     def test_roll_dice_is_its_choreo(self):
         same_meaning(
-            RAND + "(rand-seed s 1) (button b (animation (roll-dice s)))",
-            RAND + "(rand-seed s 1) (button b (animation (set s (next-seed s))))",
+            RAND + "(rand-seed s 1) (button b (roll-dice s))",
+            RAND + "(rand-seed s 1) (button b (set s (next-seed s)))",
         )
 
     def test_roll_dice_needs_a_seed(self):
-        compile_error(RAND + "(real k 1) (button b (animation (roll-dice k)))")
+        compile_error(RAND + "(real k 1) (button b (roll-dice k))")
 
     def test_roll_dice_with_several_seeds(self):
-        compile_error(RAND + "(rand-seed s 1) (rand-seed t 2) (button b (animation (roll-dice)))")
+        compile_error(RAND + "(rand-seed s 1) (rand-seed t 2) (button b (roll-dice))")
 
 
 def _sites(d: dict) -> dict:

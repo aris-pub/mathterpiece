@@ -313,7 +313,7 @@ class TestConcat:
         error("(string v (+ 'a' 'b'))", "takes numbers, got string")
 
 
-MOVE = "(real k 0) (button b (animation (move k (to 1) (duration 1))) {})"
+MOVE = "(real k 0) (button b (move k (to 1) (duration 1)) {})"
 
 
 def button(label):

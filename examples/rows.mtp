@@ -49,11 +49,11 @@
   doc@'The rows and columns, and their captions.'
   rows captions)
 
-(slider spacing (animation (move gap (from 0) (to 1) (duration 0))) (label 'gap'))
-(slider size (animation (move grow (from 0.4) (to 1.6) (duration 0))) (label 'size'))
+(slider spacing (move gap (from 0) (to 1) (duration 0)) (label 'gap'))
+(slider size (move grow (from 0.4) (to 1.6) (duration 0)) (label 'size'))
 
 (foreach alignment {'top' 'middle' 'bottom'}
-  (button @'my-{alignment}' (animation (move line-up (to alignment) (duration 0.5)))
+  (button @'my-{alignment}' (move line-up (to alignment) (duration 0.5))
       (label alignment) doc@'Lines the row up by its top, middle or bottom.'))
 
 (toggle circle-in-row with-circle (label 'the circle')
