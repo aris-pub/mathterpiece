@@ -38,11 +38,11 @@ The top level of a source holds only forms whose heads are in these tables, with
 | `canvas` | core | {doc}`page-interface`, {doc}`lifecycle` |
 | `readout` | core | {doc}`page-interface` |
 | `display` | core | {doc}`page-interface` |
-| `slider` | core | {doc}`page-interface`, {doc}`reaction` |
-| `button` | core | {doc}`page-interface`, {doc}`reaction` |
+| `slider` | core | {doc}`page-interface`, {doc}`reactivity` |
+| `button` | core | {doc}`page-interface`, {doc}`reactivity` |
 | `play` | core | {doc}`page-interface`, {doc}`time` |
 | `stepper` | core | {doc}`page-interface`, {doc}`time` |
-| `toggle` | core | {doc}`page-interface`, {doc}`reaction` |
+| `toggle` | core | {doc}`page-interface`, {doc}`reactivity` |
 
 The listeners are declared in the body of a view, not at the top level ({numref}`listeners-in-views`).
 
@@ -57,7 +57,7 @@ The listeners are declared in the body of a view, not at the top level ({numref}
 
 | Head | Kind | Defined in |
 |---|---|---|
-| `(T N …)` for a type `T` | core | {doc}`data-model`, {doc}`reaction` |
+| `(T N …)` for a type `T` | core | {doc}`data-model`, {doc}`reactivity` |
 | `var` | core | {doc}`data-model` |
 
 **Imports, `let`, `foreach` and `doc`**
@@ -83,8 +83,8 @@ mtp-ydd4.7.59.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `(T N VALUE C…)` | core | a declaration | {numref}`variables`, {doc}`reaction` |
-| `free` | core | a compound | {doc}`reaction`, {doc}`binding-time` |
+| `(T N VALUE C…)` | core | a declaration | {numref}`variables`, {doc}`reactivity` |
+| `free` | core | a compound | {doc}`reactivity`, {doc}`binding-time` |
 | `>=`, `>`, `<=`, `<` with one number | core | a clause | {doc}`types` |
 | `length` | core | a clause | {doc}`types` |
 | `one-of` | core | a clause | {doc}`types` |
@@ -211,7 +211,7 @@ The heads of this table that are written as {term}`words <word>`, from `.` to `t
 | `type-of` | core | a compound | {doc}`types` |
 | `concat` | core | a compound | {doc}`evaluation` |
 | `fmt` | core | a compound | {doc}`evaluation` |
-| `free` | core | a compound | {doc}`reaction` |
+| `free` | core | a compound | {doc}`reactivity` |
 | `(F A…)` for a declared function `F` | core | a compound | {doc}`evaluation` |
 | `(L A…)` for a local function value `L` | core | a compound | {doc}`evaluation` |
 
@@ -283,29 +283,29 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
 | `canvas`, `readout`, `display` | core | a declaration | {doc}`page-interface`, {doc}`lifecycle` |
-| `slider`, `button`, `play`, `stepper`, `toggle` | core | a declaration | {doc}`page-interface`, {doc}`reaction`, {doc}`concurrency` |
-| `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove` | core | a declaration | {doc}`reaction`, {doc}`concurrency` |
-| `on-show`, `on-hide`, listeners that play while a canvas starts or stops drawing a shape | core | a declaration | {doc}`reaction`, {doc}`lifecycle` |
+| `slider`, `button`, `play`, `stepper`, `toggle` | core | a declaration | {doc}`page-interface`, {doc}`reactivity`, {doc}`concurrency` |
+| `on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-pointermove` | core | a declaration | {doc}`reactivity`, {doc}`concurrency` |
+| `on-show`, `on-hide`, listeners that play while a canvas starts or stops drawing a shape | core | a declaration | {doc}`reactivity`, {doc}`lifecycle` |
 | `on-view`, `on-ready`, `on-live`, `on-quiet`, listeners on their own view | core | a declaration | {doc}`lifecycle` |
 | `x`, `y`, `width`, `height`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y`, `pan`, `zoom` on a canvas | core | a clause | {doc}`page-interface` |
 | `toggle-duration`, `toggle-ease` | core | a clause | {doc}`time`, {doc}`page-interface` |
 | a name or a compound in a canvas, such as `s`, `{s t}` or `(when c d)` | core | a name or a compound | {doc}`page-interface` |
 | `font` on a readout | core | a clause | {doc}`page-interface` |
 | `kind` on a display | core | a clause | {doc}`page-interface` |
-| a movement on a control or a listener | core | a positional argument of a writer | {doc}`reaction`, {doc}`time` |
-| the target of `toggle` | core | a name | {doc}`reaction` |
+| a movement on a control or a listener | core | a positional argument of a writer | {doc}`reactivity`, {doc}`time` |
+| the target of `toggle` | core | a name | {doc}`reactivity` |
 | `(on-pointermove T)` with a target `T` | syntactic sugar | a declaration | {numref}`sugar-rewrites` |
 | `as` on a listener that the pointer triggers | core | a clause | {numref}`pointer-binding` |
-| the target of `on-drag` written as a move | core | a compound | {doc}`reaction`, {numref}`drag-group-shift` |
+| the target of `on-drag` written as a move | core | a compound | {doc}`reactivity`, {numref}`drag-group-shift` |
 | the target of `on-drag` written as a name | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `label` | core | a clause | {doc}`page-interface`, {doc}`accessibility` |
 | `stops` on a slider | core | a clause | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | a clause | {doc}`page-interface`, {doc}`time` |
-| `active` | core | a clause | {doc}`reaction` |
+| `active` | core | a clause | {doc}`reactivity` |
 | `priority` | core | a clause | {doc}`concurrency` |
-| `stop-propagation` | core | a clause | {doc}`reaction` |
+| `stop-propagation` | core | a clause | {doc}`reactivity` |
 | `in` | core | a clause | {doc}`page-interface`, {doc}`lifecycle` |
-| a guard | core | a compound | {doc}`reaction` |
+| a guard | core | a compound | {doc}`reactivity` |
 | `doc` on a component | core | a clause | {doc}`compiled-format` |
 
 :::{admonition} Code differs

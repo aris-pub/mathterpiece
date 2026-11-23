@@ -15,7 +15,7 @@ proves, and the {term}`ranges <range>` that it uses to prove it.
 
 ```{rule} no-dependency-cycles
 The value of every bound container is computed from the values that its expression reads
-({doc}`reaction`). These reads make no cycle: no bound container reads itself, directly or through
+({doc}`reactivity`). These reads make no cycle: no bound container reads itself, directly or through
 other bound containers.
 ```
 
@@ -103,7 +103,7 @@ and the other side, the limit, does not depend on that container, directly or th
 containers. Every other guard is a compile error.
 ```
 
-What a guard does to a write is defined in {doc}`reaction`. A writer that writes the `pos` of a
+What a guard does to a write is defined in {doc}`reactivity`. A writer that writes the `pos` of a
 shape writes its `x` and its `y` ({numref}`writable-targets`), so its guards may limit either,
 as in `(on-drag c c.pos (<= c.x 5) (>= c.y 0))`, and `c.pos.x` and `c.pos[0]` are the same as `c.x`.
 

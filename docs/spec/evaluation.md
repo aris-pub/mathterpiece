@@ -10,7 +10,7 @@ An expression is computed at one of two times ({doc}`binding-time`). When every 
 reads is known when compiling, the {term}`compiler` computes it in the fold step and writes the
 value into the {term}`.mtpc` in place of the expression. This is {term}`folding`. Otherwise the
 {term}`runtime` computes it while drawing, again each time a value that it reads changes
-({doc}`reaction`). Every rule on this page applies at both times, unless the rule is stated for one
+({doc}`reactivity`). Every rule on this page applies at both times, unless the rule is stated for one
 of them.
 
 ## Evaluation changes nothing
@@ -473,7 +473,7 @@ A random value is known only while drawing ({doc}`binding-time`).
 So the compiler never computes or folds a random value
 ({numref}`compiler-never-acts-while-drawing`). By {numref}`random-values`, for one .mtpc, the same
 values of the seeds result in the same random values, on every refresh and in every browser, and
-when a seed holds a new value, every random value that uses it is computed again ({doc}`reaction`).
+when a seed holds a new value, every random value that uses it is computed again ({doc}`reactivity`).
 Since the sites are counted when compiling, a change to the source that adds or removes a call of a
 random function before another call changes the site of the later call, and with it the value of
 the later call.
