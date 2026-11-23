@@ -71,7 +71,8 @@ from these, as {numref}`what-a-type-is` lists:
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
-| `positioned`, `instant`, and each declared interface | the values that have the attributes that it lists | an {term}`interface` ({numref}`interfaces`) |
+| `instant` | the movements whose duration is 0 | `movement&zero-duration` ({numref}`interfaces`) |
+| `positioned`, `zero-duration`, and each declared interface | the values that have the attributes that it lists | an {term}`interface` ({numref}`interfaces`) |
 
 ```
 
@@ -81,7 +82,7 @@ from these, as {numref}`what-a-type-is` lists:
 
 The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
 and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which is a subtype only of itself, so it
-is not inside `real`. The interface `instant` is drawn inside `movement`. `positioned` is not
+is not inside `real`. `instant` is drawn inside `movement`. `positioned` is not
 drawn, since it holds values from several boxes: the points and most shapes.
 ```
 
@@ -361,7 +362,9 @@ Ai. These interfaces are built in:
 | Interface | Definition |
 |---|---|
 | `positioned` | `(interface positioned (real x) (real y))` |
-| `instant` | `(interface instant (real duration (one-of 0)))` |
+| `zero-duration` | `(interface zero-duration (real duration (one-of 0)))` |
+
+The type `instant` is `(type instant movement&zero-duration)`: the movements whose duration is 0.
 ```
 
 So `(func label-at ((positioned o) (string s)) …)` may be given points, which are primitives, and
