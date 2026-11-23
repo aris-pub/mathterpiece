@@ -168,7 +168,7 @@ In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `
 (real x 1 (>= 0) (<= 4))
 (func tenfold ((real x)) (* 10 x))
 (readout r f'x = {x:.1f}, (tenfold 2) = {(tenfold 2)}, (tenfold x) = {(tenfold x):.0f}')
-(slider change (animation (move x (from 0) (to 4) (duration 0))) (label 'x'))
+(slider change (move x (from 0) (to 4) (duration 0)) (label 'x'))
 ```
 
 ```{rule} one-declaration-per-scope

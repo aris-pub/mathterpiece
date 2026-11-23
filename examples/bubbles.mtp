@@ -71,12 +71,11 @@
 ; A bubble brought back shrinks from its burst into place; one that never popped has a burst of
 ; 0 and does not change.
 (button bring-back
-    (animation
-      (at-once (defaults (duration 0.5) (ease cubic-out))
-        (foreach b bubbles
-          (move b.popped (to false) (duration 0))
-          (move b.burst (to 0)))))
+    (at-once (defaults (duration 0.5) (ease cubic-out))
+      (foreach b bubbles
+        (move b.popped (to false) (duration 0))
+        (move b.burst (to 0))))
     (label 'bring the bubbles back'))
 
-(button new-bubbles (animation (roll-dice)) (label 'new bubbles')
+(button new-bubbles (roll-dice) (label 'new bubbles')
   doc@'Places and sizes every bubble again.')

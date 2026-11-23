@@ -22,7 +22,7 @@ class TestDeclareBeforeUse:
             "(scene s (circle c (r k)) (real k 1 (>= 0)))",
             "(scene s (circle c (r 1)) (circle d (like e)) (circle e (r 2)))",
             "(namespace n (real a n.b) (real b 1))",
-            "(real k 0) (button b (animation a)) (animation a (move k (to 1) (duration 1)))",
+            "(real k 0) (button b a) (animation a (move k (to 1) (duration 1)))",
         ],
     )
     def test_a_name_used_before_its_declaration_is_an_error(self, src):

@@ -163,7 +163,7 @@ class TestShapeArguments:
     def test_reading_and_writing_go_to_every_member(self):
         m = model(
             "(motif m (real u 0) (circle a) (circle b)) (scene s (m i))"
-            " (list fs i.fill) (button go (animation (move i.fill (to #'red') (duration 1))))"
+            " (list fs i.fill) (button go (move i.fill (to #'red') (duration 1)))"
         )
         deps = m.get("fs").value.expr.deps
         assert {(m.id("i.a"), "fill"), (m.id("i.b"), "fill")} <= deps
@@ -171,7 +171,7 @@ class TestShapeArguments:
     def test_a_write_reaches_members_inside_a_group(self):
         m = model(
             "(motif m (real u 0) (group inner (circle a) (circle b))) (scene s (m i))"
-            " (button go (animation (move i.fill (to #'red') (duration 1))))"
+            " (button go (move i.fill (to #'red') (duration 1)))"
         )
         animation = m.objects[m.get("go").data["animation"]]
         assert animation.data["steps"][1] == (m.id("i"), "fill")

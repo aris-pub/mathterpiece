@@ -10,8 +10,8 @@ from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.types import BOOL, ComponentT, Maybe
 
 K = "(real k 0 (>= 0) (<= 10))"
-MOVE = "(animation (move k (to 5) (duration 1)))"
-SLIDE = "(animation (move k (from 0) (to 5) (duration 0)))"
+MOVE = "(move k (to 5) (duration 1))"
+SLIDE = "(move k (from 0) (to 5) (duration 0))"
 
 
 class TestControls:
@@ -74,7 +74,7 @@ class TestControls:
         assert m.get("past").value.deps == {(m.id("s"), "step")}
 
     def test_a_stepper_needs_an_animation(self):
-        error("(stepper s (label 'hints'))", r"a stepper needs an \(animation …\)")
+        error("(stepper s (label 'hints'))", "a stepper takes its movement right after its name")
 
     def test_a_stepper_has_one_stop_per_step(self):
         error(f"{K} (stepper s {MOVE} (buttons true))", r"a stepper takes no \(buttons …\)")
@@ -299,7 +299,7 @@ class TestReleaseListeners:
 
 class TestButtons:
     def test_a_button(self):
-        m = model(f"{K} (button b (animation (move k (to 5) (duration 1))))")
+        m = model(f"{K} (button b (move k (to 5) (duration 1)))")
         b = m.get("b")
         assert b.kind == "button"
         assert m.objects[b.data["animation"]].kind == "animation"
@@ -307,14 +307,11 @@ class TestButtons:
         assert b.access == "page"
 
     def test_a_named_animation(self):
-        m = model(f"{K} (animation a (move k (to 5) (duration 1))) (button b (animation a))")
+        m = model(f"{K} (animation a (move k (to 5) (duration 1))) (button b a)")
         assert m.get("b").data["animation"] == m.id("a")
 
     def test_conditions_clamp_what_is_written(self):
-        m = model(
-            f"{K} (real lim 3) (button b (animation (move k (to 5) (duration 1)))"
-            " (<= k lim) (> 1 k))"
-        )
+        m = model(f"{K} (real lim 3) (button b (move k (to 5) (duration 1)) (<= k lim) (> 1 k))")
         c = m.get("b").data["conditions"]
         assert [(x["target"], x["op"]) for x in c] == [
             ((m.id("k"), None), "<="),
@@ -323,7 +320,7 @@ class TestButtons:
         assert (m.id("lim"), None) in c[0]["limit"].deps
 
     def test_a_condition_that_is_not_a_limit(self):
-        src = f"{K} (real j) (button b (animation (move k (to 5) (duration 1)))"
+        src = f"{K} (real j) (button b (move k (to 5) (duration 1))"
         error(f"{src} (> j 1))", "compares an attribute this writer writes")
         error(f"{src} (> k (* 2 k)))", "compares an attribute this writer writes")
 
@@ -331,7 +328,7 @@ class TestButtons:
     # (kind 'buttons') (the author, 2026-11-23).
     def test_a_button_takes_no_selected(self):
         error(
-            f"{K} (button b (animation (move k (to 5) (duration 1))) (selected true))",
+            f"{K} (button b (move k (to 5) (duration 1)) (selected true))",
             r"a button takes no \(selected …\), and 'selected' is not a choreo$",
         )
 
@@ -355,7 +352,7 @@ class TestItemsAWriterDoesNotTake:
             ("(toggle t on (label 'a circle') (color teal))", "a toggle takes no (color …)"),
             ("(toggle t on (color teal) (label 'a circle'))", "a toggle takes no (color …)"),
             (f"(button t {MOVE} (color teal))", "a button takes no (color …)"),
-            (f"(button t (color teal) {MOVE})", "a button takes no (color …)"),
+            (f"(button t {MOVE} (color teal))", "a button takes no (color …)"),
             (f"(slider t {SLIDE} (color teal))", "a slider takes no (color …)"),
             (f"(play t {MOVE} (color teal))", "a play takes no (color …)"),
             (f"(stepper t {MOVE} (color teal))", "a stepper takes no (color …)"),
@@ -429,7 +426,7 @@ def test_a_foreach_names_its_controls():
     # did not see v.
     m = model(
         "(real k 0) (foreach v {1 2} (button (name f'b{v}')"
-        " (animation (move k (to v) (duration 0))) (label f'{v}')))"
+        " (move k (to v) (duration 0)) (label f'{v}')))"
     )
     assert m.get("b1").kind == "button" and m.get("b2").kind == "button"
 
@@ -450,7 +447,7 @@ class TestEveryShownPartHasAName:
     def test_controls_views_and_readouts(self):
         for src in (
             "(button_ (animation (move k (to 1) (duration 0))))",
-            "(button none (animation (move k (to 1) (duration 0))))",
+            "(button none (move k (to 1) (duration 0)))",
             "(slider_ (animation (move k (from 0) (to 1))))",
             "(play_ (animation (move k (to 1) (duration 1))))",
             "(toggle_ none)",
@@ -497,7 +494,7 @@ class TestZoomBounds:
 
 def test_a_control_takes_no_when():
     error(
-        "(real k 0 (>= 0) (<= 1)) (button b (animation (move k (to 1) (duration 0))) (when true))",
+        "(real k 0 (>= 0) (<= 1)) (button b (move k (to 1) (duration 0)) (when true))",
         "active",
     )
 
@@ -670,7 +667,7 @@ class TestBubbling:
             (f"(on-enter c (stop-propagation true) {MOVE}))", "on-enter"),
             (f"(on-leave c (stop-propagation true) {MOVE}))", "on-leave"),
             ("(on-drag c c.pos (stop-propagation true)))", "on-drag"),
-            (f") (button b (stop-propagation true) {MOVE})", "button"),
+            (f") (button b {MOVE} (stop-propagation true))", "button"),
         ],
     )
     def test_only_what_bubbles_takes_it(self, decl, kind):
@@ -796,39 +793,46 @@ class TestIntSliderStops:
     # The author, 2026-11-16: a slider whose target is an int stops at each whole number by
     # default, so (stops …) is needed only for coarser stops.
     def test_it_stops_at_each_whole_number(self):
-        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 1) (to 7) (duration 0))))").get("s")
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (move a (from 1) (to 7) (duration 0)))").get(
+            "s"
+        )
         assert s.attrs["stops"].value == 7
 
     def test_downward_ends_count_the_same(self):
-        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 7) (to 2) (duration 0))))").get("s")
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (move a (from 7) (to 2) (duration 0)))").get(
+            "s"
+        )
         assert s.attrs["stops"].value == 6
 
     def test_given_stops_win(self):
-        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 1) (to 7) (duration 0))) (stops 4))").get("s")
+        s = model(
+            "(int a 3 (>= 1) (<= 7)) (slider s (move a (from 1) (to 7) (duration 0)) (stops 4))"
+        ).get("s")
         assert s.attrs["stops"].value == 4
 
     def test_a_real_target_has_no_stops(self):
-        s = model("(real a 3) (slider s (animation (move a (from 1) (to 7) (duration 0))))").get("s")
+        s = model("(real a 3) (slider s (move a (from 1) (to 7) (duration 0)))").get("s")
         assert "stops" not in s.attrs
 
     def test_ends_known_only_while_drawing(self):
         error(
             "(int top 7 (>= 2) (<= 9)) (int a 3 (>= 1) (<= 9))"
-            " (slider s (animation (move a (from 1) (to top) (duration 0))))",
+            " (slider s (move a (from 1) (to top) (duration 0)))",
             r"a slider on an int stops at each whole number from its from to its to",
         )
 
 
 def test_a_slider_takes_one_instant_move():
-    # The author, 2026-11-23: a slider takes (animation …) like every control, and the
-    # animation is one move with (duration 0): a move's default duration is 1 s. Naming the
-    # target directly, or a move with no duration or another duration, is an error.
+    # The author, 2026-11-23: a slider takes its movement right after its name, as a button, a
+    # play and a stepper do, and the movement is one move with (duration 0): a move's default
+    # duration is 1 s. Naming the target directly, (animation …), or a move with no duration or
+    # another duration, is an error.
     from tests.helpers import doc, error
 
     head = "(real a 1 (>= 0) (<= 4)) (scene s (circle c (pos [a 0]) (r 0.2)))\n"
-    assert doc(head + "(slider push (label 'a') (animation (move a (from 0) (to 4) (duration 0))))")
-    assert doc(head + "(slider push (animation (move a (from 0) (to 4) (duration 0))))")
-    error(head + "(slider push a (from 0) (to 4))", "takes its move in")
-    error(head + "(slider push (move a (from 0) (to 4)))", "needs \\(animation")
-    error(head + "(slider push (animation (move a (from 0) (to 4) (duration 1))))", "instant")
-    error(head + "(slider push (animation (move a (from 0) (to 4))))", "duration 0")
+    assert doc(head + "(slider push (move a (from 0) (to 4) (duration 0)) (label 'a'))")
+    assert doc(head + "(slider push (move a (from 0) (to 4) (duration 0)))")
+    error(head + "(slider push a (from 0) (to 4))", "one instant move")
+    error(head + "(slider push (animation (move a (from 0) (to 4) (duration 0))))", "not in")
+    error(head + "(slider push (move a (from 0) (to 4) (duration 1)))", "instant")
+    error(head + "(slider push (move a (from 0) (to 4)))", "duration 0")

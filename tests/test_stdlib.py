@@ -160,7 +160,7 @@ class TestEases:
         # The file and a move's (ease …) share a name, and do not clash.
         src = (
             "(import ease) (real k 0) (scene s (circle c (x k)))"
-            " (button b (animation (move k (to 1) (duration 1) (ease ease.back-out))))"
+            " (button b (move k (to 1) (duration 1) (ease ease.back-out)))"
             " (import types) (types.unit u 0.5)"
         )
         path = tmp_path / "fig.mtp"
@@ -170,7 +170,7 @@ class TestEases:
     def test_a_move_takes_one(self, tmp_path):
         src = (
             "(import ease bounce-out) (real k 0) (scene s (circle c (x k)))"
-            " (button b (animation (move k (to 1) (duration 1) (ease bounce-out))))"
+            " (button b (move k (to 1) (duration 1) (ease bounce-out)))"
         )
         path = tmp_path / "fig.mtp"
         path.write_text(src)

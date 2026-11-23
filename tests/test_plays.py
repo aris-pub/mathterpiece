@@ -13,26 +13,26 @@ S = f"{K} {J} (scene s (circle c (r k)))"
 
 class TestPlayAttributes:
     def test_a_play_has_a_step_and_playing_only(self):
-        p = model(f"{K} (play p (animation {UP}))").get("p")
+        p = model(f"{K} (play p {UP})").get("p")
         assert (p.attrs["playing"].value, p.attrs["step"].value) == (False, 0)
         assert "time" not in p.attrs
 
     def test_a_play_has_no_time(self):
-        error(f"{K} (play p (animation {UP})) (real later (+ p.time 1))", "time")
+        error(f"{K} (play p {UP}) (real later (+ p.time 1))", "time")
 
     def test_a_stepper_starts_at_step_0(self):
-        s = model(f"{K} (stepper s (animation {UP}))").get("s")
+        s = model(f"{K} (stepper s {UP})").get("s")
         assert s.attrs["step"].value == 0
 
 
 class TestAutoplayIsGone:
     def test_autoplay_is_a_compile_error(self):
-        error(f"{S} (play p (autoplay) (animation {UP}))", r"\(autoplay\) is gone")
-        error(f"{S} (canvas v s) (play p (autoplay v) (animation {UP}))", r"\(autoplay\) is gone")
-        error(f"{K} (stepper s (autoplay) (animation {UP}))", r"\(autoplay\) is gone")
+        error(f"{S} (play p {UP} (autoplay))", r"\(autoplay\) is gone")
+        error(f"{S} (canvas v s) (play p {UP} (autoplay v))", r"\(autoplay\) is gone")
+        error(f"{K} (stepper s {UP} (autoplay))", r"\(autoplay\) is gone")
 
     def test_the_compiled_play_has_no_autoplay(self):
-        d = doc(f"{K} (play p (animation {UP}))")
+        d = doc(f"{K} (play p {UP})")
         (p,) = [o for o in d["objects"] if o["kind"] == "play"]
         assert "autoplay" not in p
         assert errors(d) == []
@@ -40,45 +40,45 @@ class TestAutoplayIsGone:
 
 class TestLabels:
     def test_the_step_form_is_gone(self):
-        error(f"{K} (play p (animation (step 'Up' {UP}) {DOWN}))", r"\(step …\) is gone")
+        error(f"{K} (play p (in-order (step 'Up' {UP}) {DOWN}))", r"\(step …\) is gone")
 
     def test_a_play_takes_one_label_per_step(self):
-        d = doc(f"{K} (play p (labels 'Up' 'Down') (animation {UP} {DOWN}))")
+        d = doc(f"{K} (play p (in-order {UP} {DOWN}) (labels 'Up' 'Down'))")
         (p,) = [o for o in d["objects"] if o["kind"] == "play"]
         assert p["labels"] == ["Up", "Down"]
         assert errors(d) == []
 
     def test_one_step_takes_one_label(self):
         both = "(at-once (move k (to 2) (duration 1)) (move j (to 1) (duration 1)))"
-        p = model(f"{K} {J} (play p (labels 'All') (animation {both}))").get("p")
+        p = model(f"{K} {J} (play p {both} (labels 'All'))").get("p")
         assert p.data["labels"] == ["All"]
 
     def test_the_count_of_labels_is_the_count_of_steps(self):
-        error(f"{K} (play p (labels 'Up') (animation {UP} {DOWN}))", "2 steps, but 1 label")
-        error(f"{K} (play p (labels 'a' 'b' 'c') (animation {UP} {DOWN}))", "2 steps, but 3")
+        error(f"{K} (play p (in-order {UP} {DOWN}) (labels 'Up'))", "2 steps, but 1 label")
+        error(f"{K} (play p (in-order {UP} {DOWN}) (labels 'a' 'b' 'c'))", "2 steps, but 3")
 
     def test_labels_count_the_steps_of_a_loop(self):
-        p = model(f"{K} (play p (labels 'a' 'b') (animation (loop) {UP} {DOWN}))").get("p")
+        p = model(f"{K} (animation a (loop) {UP} {DOWN}) (play p a (labels 'a' 'b'))").get("p")
         assert p.data["labels"] == ["a", "b"]
 
     def test_a_label_is_a_string_known_when_compiling(self):
-        error(f"{K} (play p (labels (+ k 1)) (animation {UP}))", "a label is a string")
-        error(f"(string t 'x') {K} (play p (labels t) (animation {UP}))", "known when compiling")
+        error(f"{K} (play p {UP} (labels (+ k 1)))", "a label is a string")
+        error(f"(string t 'x') {K} (play p {UP} (labels t))", "known when compiling")
 
     def test_without_labels_none_are_written(self):
-        d = doc(f"{K} (play p (animation {UP} {DOWN}))")
+        d = doc(f"{K} (play p (in-order {UP} {DOWN}))")
         (p,) = [o for o in d["objects"] if o["kind"] == "play"]
         assert "labels" not in p
 
     def test_only_a_play_takes_labels(self):
-        error(f"{K} (stepper s (labels 'a') (animation {UP}))", r"only a play takes \(labels")
-        error(f"{K} (button b (labels 'a') (animation {UP}))", r"only a play takes \(labels")
+        error(f"{K} (stepper s {UP} (labels 'a'))", r"only a play takes \(labels")
+        error(f"{K} (button b {UP} (labels 'a'))", r"only a play takes \(labels")
 
 
 class TestAMoveIsAnAnimation:
     def test_a_button_takes_a_move(self):
         a = doc(f"{K} (button b (move k (to 2) (duration 0.4)))")
-        b = doc(f"{K} (button b (animation (move k (to 2) (duration 0.4))))")
+        b = doc(f"{K} (button b (move k (to 2) (duration 0.4)))")
         assert a == b
 
     def test_a_play_a_toggle_and_a_listener_take_a_move(self):
@@ -91,8 +91,8 @@ class TestAMoveIsAnAnimation:
         ):
             assert errors(doc(src)) == []
 
-    def test_a_move_and_an_animation_are_the_animation_twice(self):
-        error(f"{K} (button b {UP} (animation {DOWN}))", "'animation' is given twice")
+    def test_a_button_takes_one_movement(self):
+        error(f"{K} (button b {DOWN} {UP})", "a button takes one movement")
 
 
 class TestStepsCanBeWorkedOut:
@@ -174,7 +174,7 @@ class TestCanvasesOfAControl:
 
     def test_a_control_writing_a_shapes_own_attribute(self):
         # d is in g, which v shows, and some may show d.
-        src = self.SRC + " (slider sl (animation (move d.r (from 0) (to 3) (duration 0))))"
+        src = self.SRC + " (slider sl (move d.r (from 0) (to 3) (duration 0)))"
         d = doc(src)
         assert self.canvases(src, "sl") == sorted([d["names"]["v"], d["names"]["some"]])
 
@@ -186,7 +186,7 @@ class TestCanvasesOfAControl:
     def test_a_control_writing_a_value_of_two_canvases(self):
         src = (
             self.SRC
-            + " (play p (animation (move j (to 1) (duration 1)) (move far (to 2) (duration 1))))"
+            + " (play p (in-order (move j (to 1) (duration 1)) (move far (to 2) (duration 1))))"
         )
         d = doc(src)
         assert self.canvases(src, "p") == sorted([d["names"][n] for n in ("v", "w", "some")])

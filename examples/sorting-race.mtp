@@ -105,10 +105,10 @@
   doc@'Which sort finished first.')
 
 ; One comparison each every 0.12 seconds: taken is an int, so it moves up by one at a time.
-(play run (label 'race')
-    (move taken (from 0) (to most) (duration (* most 0.12)))
+(play run (move taken (from 0) (to most) (duration (* most 0.12)))
+    (label 'race')
   doc@'Steps both sorts, one comparison each, until both are done.')
 
-(button shuffle (label 'shuffle')
-    (animation (in-order (rand.roll-dice) (move taken (to 0) (duration 0))))
+(button shuffle (in-order (rand.roll-dice) (move taken (to 0) (duration 0)))
+    (label 'shuffle')
   doc@'Puts new shuffled bars in front of both sorts and starts them again.')
