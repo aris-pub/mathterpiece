@@ -184,7 +184,7 @@ the type of each such expression includes `none` ({numref}`may-give-none`).
 ```{mtp-example}
 ; sec θ has no value at 90°, and there the readout holds its default text
 (real theta 60 (>= 0) (<= 180))
-(slider turn (move theta (from 0) (to 180)) (label 'θ'))
+(slider turn theta (from 0) (to 180) (label 'θ'))
 (readout r (or? f'sec θ = {(secd theta):.3f}' 'sec θ has no value at 90°'))
 ```
 
@@ -262,7 +262,7 @@ mtp-ydd4.7.13.
 ```{mtp-example}
 ; at n = 1 the sum is exactly 3/10, when folded and while drawing
 (int n 1 (>= 0) (<= 10))
-(slider pick (move n (from 0) (to 10)) (label 'n'))
+(slider pick n (from 0) (to 10) (label 'n'))
 (readout r f'n/10 + 1/5 = 3/10 is {(= (+ (/ n 10) 1/5) 3/10)}')
 ```
 
