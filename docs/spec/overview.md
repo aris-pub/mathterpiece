@@ -28,8 +28,7 @@ to describe heads. A signature is not mtp source:
 
 (formula NAME TEX:string
   (doc:string '')
-  ITEMS)
-  ITEMS := (any (either term exists-when variable))
+  ITEMS:(term|exists-when|variable)*)
 ```
 
 - A word in capitals stands for the expression that is written in its place: `NAME` for the declared name.
@@ -40,15 +39,12 @@ to describe heads. A signature is not mtp source:
 - `(like T)` stands for every argument in the signature of T, which is a type, such as
   `shape`, or a head, such as `rect`.
 - `(doc:string '')` is the docstring, which comes after the named arguments ({numref}`docstrings`).
-- `ITEMS` is the body. The line under the signature, `ITEMS := …`, gives what the body may hold, with
-  four forms: `(one X)` is exactly one X, `(some X)` is one X or more, `(any X)` is any number of
-  X, zero included, and `(either A B …)` is one of A, B and so on. The items come in the order
-  written, and `EXPR:T` is any expression of type T.
-- A named argument may hold several items, written the same way: `(in VIEWS)`, with
-  `VIEWS := (any EXPR:view)` on a line below. A named argument whose items are `(any …)` may be left
-  out, and then it holds no items.
-- When the description of a body is short, it may be written in place of its word, on the same line:
-  `(in (any EXPR:view))`.
+- `X:K*`, last in a signature, is the body, called X in the spec: any number of items, zero included.
+  `X:K+` is one item or more. K says what each item may be: a type, for an expression of that type,
+  or a head, for a form with that head. `K1|K2` is either of them. The items come in the order
+  written.
+- A named argument may hold several items, written the same way: `(in VIEWS:view*)`. A named argument
+  whose items are marked `*` may be left out, and then it holds no items.
 
 ## Terms
 

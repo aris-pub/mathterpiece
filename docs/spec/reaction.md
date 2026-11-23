@@ -14,13 +14,12 @@ The signature of `on-drag` ({ref}`signatures`):
   (active:bool true)
   (priority:(int (>= 1) (<= 1000)) 700)
   (doc:string '')
-  ITEMS)
-  ITEMS := (any EXPR:bool)
+  CONDITIONS:bool*)
 ```
 
 `SOURCE` is the shape or the term that the reader drags. `MOVEMENT` is the movement that the runtime
 executes at each motion of the pointer. Its type is `instant`, the movements whose duration is 0
-({numref}`interfaces`), so a move whose duration is not 0 is a compile error. The items of the body
+({numref}`interfaces`), so a move whose duration is not 0 is a compile error. `CONDITIONS`
 are the guards of the listener ({numref}`writer-guards`).
 
 ```{rule} pointer-binding
