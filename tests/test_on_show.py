@@ -132,7 +132,7 @@ def test_a_stand_in_may_move_an_attribute_bound_in_the_scene():
         " (fade-in bound-x) (move bound-x.x (from -2) (duration 1))))))"
     )
     assert errors(d) == []
-    error(BASE + " (button go (move bound-x.x (to 1)))", r"bound")
+    error(BASE + " (button go (animation (move bound-x.x (to 1))))", r"bound")
 
 
 def test_a_group_on_show_covers_every_member():

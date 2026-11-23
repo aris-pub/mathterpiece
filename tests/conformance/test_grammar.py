@@ -39,7 +39,7 @@ def xfail(bead: str, why: str):
     return pytest.mark.xfail(strict=True, reason=f"{bead}: {why}")
 
 
-MOVE = "(move k (to 1) (duration 1))"
+ANIMATION = "(animation (move k (to 1) (duration 1)))"
 BODY_LET = xfail("mtp-ydd4.7.8", "a let is an error in some bodies that hold items")
 ARGUMENT_LET = xfail("mtp-ydd4.7.9", "a let or a foreach among the arguments of a shape compiles")
 GROUP_EXISTS_WHEN = xfail("mtp-ydd4.7.10", "a group keeps every exists-when until its end")
@@ -313,9 +313,7 @@ class TestDeclaredNames:
         compile_error("(scene s (circle c (r 1))) (canvas none s)")
 
     def test_a_control_must_have_a_name(self):
-        compile_error(
-            "(real k 0 (>= 0) (<= 1)) (slider none (move k (from 0) (to 1) (duration 0)))"
-        )
+        compile_error("(real k 0 (>= 0) (<= 1)) (slider none (animation (move k (from 0) (to 1) (duration 0))))")
 
     @pytest.mark.parametrize(
         "src",
@@ -353,7 +351,7 @@ class TestDeclaredNames:
 @rule("forms-with-no-name")
 class TestFormsWithNoName:
     def test_the_second_item_of_a_move_is_its_target(self):
-        accepted("(real k 0) (button b (move k (to 1) (duration 1)))")
+        accepted("(real k 0) (button b (animation (move k (to 1) (duration 1))))")
 
     def test_a_listener_has_no_name(self):
         accepted("(scene s (circle c (r 1))) (canvas v s (on-click c))")
@@ -413,10 +411,10 @@ class TestDocstrings:
             "(func f ((real x)) doc@'d' (* 2 x))",
             "(scene s (circle c (r 1) doc@'d'))",
             "(scene s (circle c (r 1))) (canvas v s (on-click c doc@'d'))",
-            f"(real k 0) (button b {MOVE} doc@'d')",
-            f"(real k 0) (play p {MOVE} doc@'d')",
-            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-click c {MOVE} doc@'d'))",
-            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready {MOVE} doc@'d'))",
+            f"(real k 0) (button b {ANIMATION} doc@'d')",
+            f"(real k 0) (play p {ANIMATION} doc@'d')",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-click c {ANIMATION} doc@'d'))",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready {ANIMATION} doc@'d'))",
             "(motif m ((real k 1 (>= 0))) doc@'d' (circle_ (r k)))",
             "(scene s (group g (defaults (fill #'red')) doc@'d' (circle c (r 1))))",
             "(formula f $'x' doc@'d')",
@@ -433,10 +431,10 @@ class TestDocstrings:
             "(real k 1 (>= 0) doc@'d')",
             "(func f ((real x)) (* 2 x) doc@'d')",
             "(scene s (circle c doc@'d' (r 1)))",
-            f"(real k 0) (button b doc@'d' {MOVE})",
-            f"(real k 0) (play p doc@'d' {MOVE})",
-            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-click c doc@'d' {MOVE}))",
-            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready doc@'d' {MOVE}))",
+            f"(real k 0) (button b doc@'d' {ANIMATION})",
+            f"(real k 0) (play p doc@'d' {ANIMATION})",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-click c doc@'d' {ANIMATION}))",
+            f"(real k 0) (scene s (circle c (r 1))) (canvas v s (on-ready doc@'d' {ANIMATION}))",
             "(motif m () (circle_ (r 1)) doc@'d')",
             "(scene s (group g (circle c (r 1)) doc@'d'))",
             "(scene s (group g doc@'d' (defaults (fill #'red')) (circle c (r 1))))",

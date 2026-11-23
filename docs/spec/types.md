@@ -327,7 +327,7 @@ degree, and the two are gone at 90 only:
   (line|none tangent (from (polar 1 theta)) (to [(secd theta) 0]) (stroke #'crimson') (stroke-width 3))
   (circle|none q (pos [(secd theta) 0]) (r 0.08) (fill #'crimson')))
 (canvas v (x -4) (y -1.5) (width 8) (height 3) s)
-(slider turn (move theta (from 20) (to 160) (duration 0)) (label 'θ'))
+(slider turn (animation (move theta (from 20) (to 160) (duration 0))) (label 'θ'))
 (readout r f'θ = {theta}°')
 ```
 
@@ -389,7 +389,7 @@ declared with one is a compile error. Bead mtp-mo3r.
   (circle c (pos [-1.2 0]) (r size) (fill #'crimson'))
   (dot d (pos [1.2 0]) (r (/ size 2))))
 (canvas v (x -2.5) (y -1.2) (width 5) (height 2.4) s)
-(slider grow (move size (from 0.2) (to 1) (duration 0)) (label 'size'))
+(slider grow (animation (move size (from 0.2) (to 1) (duration 0))) (label 'size'))
 (readout out f'area of c = {(area c):.2f}, area of d = {(area d):.2f}')
 ```
 

@@ -72,24 +72,23 @@
                (potential b1.pos b3.pos) (potential b2.pos b3.pos)):.5f}'
   doc@'The total energy: the bodies\' motion and their pull on each other.')
 
-(animation run-forever (loop)
-  (in-order (defaults (duration 0))
-    (foreach k substeps
-      (at-once
-        (move v1 (to (+ v1 (* dt (+ (pull b1.pos b2.pos) (pull b1.pos b3.pos))))))
-        (move v2 (to (+ v2 (* dt (+ (pull b2.pos b1.pos) (pull b2.pos b3.pos))))))
-        (move v3 (to (+ v3 (* dt (+ (pull b3.pos b1.pos) (pull b3.pos b2.pos)))))))
-      (at-once
-        (move b1.pos (to (+ b1.pos (* dt v1))))
-        (move b2.pos (to (+ b2.pos (* dt v2))))
-        (move b3.pos (to (+ b3.pos (* dt v3))))))
-    (at-once
-      (move trail-1 (to (shifted trail-1 b1.pos)))
-      (move trail-2 (to (shifted trail-2 b2.pos)))
-      (move trail-3 (to (shifted trail-3 b3.pos)))))
-  (wait 0.016))
-
-(button run run-forever (label 'run')
+(button run (label 'run')
+    (animation (loop)
+      (in-order (defaults (duration 0))
+        (foreach k substeps
+          (at-once
+            (move v1 (to (+ v1 (* dt (+ (pull b1.pos b2.pos) (pull b1.pos b3.pos))))))
+            (move v2 (to (+ v2 (* dt (+ (pull b2.pos b1.pos) (pull b2.pos b3.pos))))))
+            (move v3 (to (+ v3 (* dt (+ (pull b3.pos b1.pos) (pull b3.pos b2.pos)))))))
+          (at-once
+            (move b1.pos (to (+ b1.pos (* dt v1))))
+            (move b2.pos (to (+ b2.pos (* dt v2))))
+            (move b3.pos (to (+ b3.pos (* dt v3))))))
+        (at-once
+          (move trail-1 (to (shifted trail-1 b1.pos)))
+          (move trail-2 (to (shifted trail-2 b2.pos)))
+          (move trail-3 (to (shifted trail-3 b3.pos)))))
+      (wait 0.016))
   doc@'Steps the bodies forward, a few steps each frame, until another writer takes over.')
 
 (animation clear-trails
@@ -98,43 +97,43 @@
     (move trail-2 (to {}))
     (move trail-3 (to {}))))
 
-(button figure-eight
-    (at-once (defaults (duration 0.4) (ease cubic-in-out))
-      (move b1.pos (to eight-at[0]))
-      (move b2.pos (to eight-at[1]))
-      (move b3.pos (to eight-at[2]))
-      (move v1 (to eight-speed[0]) (duration 0))
-      (move v2 (to eight-speed[1]) (duration 0))
-      (move v3 (to eight-speed[2]) (duration 0))
-      clear-trails)
-    (label 'figure eight')
+(button figure-eight (label 'figure eight')
+    (animation
+      (at-once (defaults (duration 0.4) (ease cubic-in-out))
+        (move b1.pos (to eight-at[0]))
+        (move b2.pos (to eight-at[1]))
+        (move b3.pos (to eight-at[2]))
+        (move v1 (to eight-speed[0]) (duration 0))
+        (move v2 (to eight-speed[1]) (duration 0))
+        (move v3 (to eight-speed[2]) (duration 0))
+        clear-trails))
   doc@'The figure eight: the three chase each other along one curve.')
 
-(button chaos
-    (at-once (defaults (duration 0.4) (ease cubic-in-out))
-      (move b1.pos (to [1 0]))
-      (move b2.pos (to [-0.6 0.5]))
-      (move b3.pos (to [-0.3 -0.7]))
-      (move v1 (to [0 0.6]) (duration 0))
-      (move v2 (to [-0.5 -0.2]) (duration 0))
-      (move v3 (to [0.5 -0.4]) (duration 0))
-      clear-trails)
-    (label 'chaos')
+(button chaos (label 'chaos')
+    (animation
+      (at-once (defaults (duration 0.4) (ease cubic-in-out))
+        (move b1.pos (to [1 0]))
+        (move b2.pos (to [-0.6 0.5]))
+        (move b3.pos (to [-0.3 -0.7]))
+        (move v1 (to [0 0.6]) (duration 0))
+        (move v2 (to [-0.5 -0.2]) (duration 0))
+        (move v3 (to [0.5 -0.4]) (duration 0))
+        clear-trails))
   doc@'A start near the figure eight\'s, which soon falls apart.')
 
-(button rest
-    (at-once (defaults (duration 0))
-      (move v1 (to [0 0]))
-      (move v2 (to [0 0]))
-      (move v3 (to [0 0]))
-      clear-trails)
-    (label 'stop all')
+(button rest (label 'stop all')
+    (animation
+      (at-once (defaults (duration 0))
+        (move v1 (to [0 0]))
+        (move v2 (to [0 0]))
+        (move v3 (to [0 0]))
+        clear-trails))
   doc@'Stops every body where it is, so dragging sets where each starts from rest.')
 
-(button stop
-    (at-once (defaults (duration 0))
-      (move v1 (to v1))
-      (move v2 (to v2))
-      (move v3 (to v3)))
-    (label 'stop')
+(button stop (label 'stop')
+    (animation
+      (at-once (defaults (duration 0))
+        (move v1 (to v1))
+        (move v2 (to v2))
+        (move v3 (to v3))))
   doc@'Stops the run where it is, keeping each body\'s position and velocity. Press run to go on.')

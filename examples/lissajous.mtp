@@ -44,14 +44,14 @@
   doc@'The curve, its axes and the ratio a:b.'
   axes figure ratio forms)
 
-(slider freq-a (move a (from 1) (to 7) (duration 0)) (stops 7) (label 'frequency a, across'))
-(slider freq-b (move b (from 1) (to 7) (duration 0)) (stops 7) (label 'frequency b, up'))
-(slider turn (move base (from 0) (to 360) (duration 0)) (label 'phase'))
+(slider freq-a (animation (move a (from 1) (to 7) (duration 0))) (stops 7) (label 'frequency a, across'))
+(slider freq-b (animation (move b (from 1) (to 7) (duration 0))) (stops 7) (label 'frequency b, up'))
+(slider turn (animation (move base (from 0) (to 360) (duration 0))) (label 'phase'))
 
 ; Slowly enough that each frame is still a curve the eye can follow. Each round turns the phase
 ; once, from where the slider set it.
-(animation spin-forever (loop) (move spun (from 0) (to 360) (duration 8) (ease linear)))
-(play spin spin-forever (label 'turn the phase')
+(play spin (label 'turn the phase')
+    (animation (loop) (move spun (from 0) (to 360) (duration 8) (ease linear)))
   doc@'Turns the phase once every eight seconds, again and again, from where it is.')
 
 (readout ratio-now f'{a}:{b}' (font variable) doc@'The ratio a:b.')

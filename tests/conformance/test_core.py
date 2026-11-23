@@ -166,8 +166,8 @@ class TestSugarRewrites:
 
     def test_set(self):
         same_meaning(
-            "(real k 0) (button b (set k 3))",
-            "(real k 0) (button b (move k (to 3) (duration 0)))",
+            "(real k 0) (button b (animation (set k 3)))",
+            "(real k 0) (button b (animation (move k (to 3) (duration 0))))",
         )
 
     def test_set_wherever_a_move_is_written(self):
@@ -180,8 +180,8 @@ class TestSugarRewrites:
         )
 
     def test_set_takes_a_target_and_a_value(self):
-        compile_error("(real k 0) (button b (set k))")
-        compile_error("(real k 0) (button b (set k 1 2))")
+        compile_error("(real k 0) (button b (animation (set k)))")
+        compile_error("(real k 0) (button b (animation (set k 1 2)))")
 
     @PARAMETRIC
     def test_parametric(self):
@@ -234,8 +234,8 @@ class TestSugarRewrites:
     @WAIT
     def test_wait(self):
         same_meaning(
-            "(real k 0) (button b (in-order (wait 1) (move k (to 1) (duration 1))))",
-            "(real k 0) (button b (in-order (move none (duration 1)) (move k (to 1) (duration "
+            "(real k 0) (button b (animation (wait 1) (move k (to 1) (duration 1))))",
+            "(real k 0) (button b (animation (move none (duration 1)) (move k (to 1) (duration "
             "1))))",
         )
 
@@ -249,12 +249,13 @@ class TestSugarRewrites:
     def test_a_control_plays_a_move_as_an_animation_of_that_move(self):
         same_meaning(
             "(real k 0) (button b (move k (to 1) (duration 1)))",
-            "(real k 0) (button b (move k (to 1) (duration 1)))",
+            "(real k 0) (button b (animation (move k (to 1) (duration 1))))",
         )
 
     def test_a_move_and_an_animation_on_one_control(self):
         compile_error(
-            "(real k 0) (button b (move k (to 2) (duration 1)) (move k (to 1) (duration 1)))"
+            "(real k 0) (button b (move k (to 1) (duration 1)) (animation (move k (to 2) (duration "
+            "1))))"
         )
 
     # What the two spellings of a drag do is checked with the runtime, in
@@ -270,14 +271,14 @@ class TestSugarRewrites:
         same_meaning(
             "(real k 0) (choreo pulse ((real t 1)) (move k (to t) (duration 1))) (button b (pulse "
             "2))",
-            "(real k 0) (button b (move k (to 2) (duration 1)))",
+            "(real k 0) (button b (animation (move k (to 2) (duration 1))))",
         )
 
     def test_a_use_of_a_choreo_with_a_default(self):
         same_meaning(
             "(real k 0) (choreo pulse ((real t 1)) (move k (to t) (duration 1))) (button b "
             "(pulse))",
-            "(real k 0) (button b (move k (to 1) (duration 1)))",
+            "(real k 0) (button b (animation (move k (to 1) (duration 1))))",
         )
 
     def test_a_use_of_a_choreo_with_too_few_arguments(self):
@@ -339,9 +340,10 @@ class TestLikeCopies:
 
     def test_like_on_a_move(self):
         same_meaning(
-            "(real k 0) (transition t k (to 1) (duration 2)) (button b (move k (like t) (to 3)))",
-            "(real k 0) (transition t k (to 1) (duration 2)) (button b (move k (to 3) "
-            "(duration 2)))",
+            "(real k 0) (transition t k (to 1) (duration 2)) (button b (animation (move k (like t) "
+            "(to 3))))",
+            "(real k 0) (transition t k (to 1) (duration 2)) (button b (animation (move k (to 3) "
+            "(duration 2))))",
         )
 
     def test_like_on_an_instance_copies_its_defaults(self):
@@ -474,5 +476,6 @@ class TestNamesFromValues:
 @STEP_EASE
 def test_step_is_a_library_function_that_a_declaration_may_replace():
     compile_error(
-        "(real step 3) (real k 0) (button b (move k (to 1) (duration 1) (ease (step 2))))"
+        "(real step 3) (real k 0) (button b (animation (move k (to 1) (duration 1) (ease (step "
+        "2)))))"
     )

@@ -116,9 +116,6 @@ WRITER_OPTIONS = {
 }
 # The writers that play no animation: their effect is a gesture.
 PLAY_NOTHING = ("slider", "on-drag", "on-pointermove")
-# The controls whose movement is a positional argument right after their name (the author,
-# 2026-11-23).
-EFFECT_FIRST = ("slider", "button", "play", "stepper")
 # The views (data-model.md, "Components"): what a listener or a control may belong to.
 VIEWS = ("canvas", "readout", "display")
 # A canvas's view box, which it gives whole or not at all (the author, 2026-11-16).
@@ -554,6 +551,51 @@ def _is_constraint(node: Node) -> bool:
     return head not in COMPARE or len(node.items) == 2
 
 
+
+def _sliders(node):
+    """node with every slider in it read by _slider_as_move, before docstrings and the order of
+    named arguments are checked, so that (from …) and (to …) count as named arguments."""
+    if not isinstance(node, Form):
+        return node
+    items = tuple(_sliders(it) for it in node.items)
+    if _head(node) == "slider" and len(items) >= 3:
+        items = (*items[:2], *_slider_as_move(list(items[2:]), node.pos))
+    return Form(items, node.pos)
+
+
+def _slider_as_move(items: list, pos: Pos) -> list:
+    """(slider s (animation (move k (from 0) (to 1))) …), whose animation is one instant move
+    (the author, 2026-11-23), as the form that the rest of the compiler reads: (slider s (move k
+    (from 0) (to 1)) …)."""
+    old = next((it for it in items if _head(it) == "step"), None)
+    if old is not None:
+        raise CompileError(
+            "a slider takes (stops n), the number of positions its knob stops at, not (step n)",
+            old.pos,
+        )
+    first = items[0] if items else None
+    if first is not None and _head(first) not in WRITER_OPTIONS and _head(first) != "doc":
+        raise CompileError(
+            "a slider takes its move in (animation …): "
+            "(slider s (animation (move k (from 0) (to 1))))",
+            getattr(first, "pos", pos),
+        )
+    given = [it for it in items if _head(it) == "animation"]
+    if not given:
+        raise CompileError(
+            "a slider needs (animation (move k (from …) (to …))), one instant move", pos
+        )
+    if len(given) > 1:
+        raise CompileError("'animation' is given twice", given[1].pos)
+    body = given[0].items[1:]
+    if len(body) != 1 or _head(body[0]) != "move":
+        raise CompileError(
+            "a slider's animation is one instant move: (animation (move k (from …) (to …)))",
+            given[0].pos,
+        )
+    rest = [it for it in items if it is not given[0]]
+    return [body[0], *rest]
+
 class _Compiler:
     def __init__(self, path: Path | None = None):
         self.model = Model()
@@ -659,7 +701,7 @@ class _Compiler:
         return k
 
     def run(self, forms: tuple[Form, ...]) -> Model:
-        forms = tuple(_sets(f) for f in _rewrite_parametric(forms))
+        forms = tuple(_sets(_sliders(f)) for f in _rewrite_parametric(forms))
         self.keep = _used(forms, self.source)
         forms = self.imports(forms, None, self.source)
         self.seed_decls[None] = _seed_decls(forms)
@@ -1095,10 +1137,10 @@ class _Compiler:
             return lambda it, j: self.holds_listeners(it)
         if head in COMPONENTS:
             # The shape heard by a listener, the target of a toggle and of an on-drag, and the
-            # movement of a control are positional arguments. An on-pointermove on a shape starts
-            # with two names, the shape and its target, and one on the canvas with its target.
+            # move that _sliders takes out of a slider's animation are positional arguments. An on-pointermove on a shape starts with
+            # two names, the shape and its target, and one on the canvas with its target.
             start = 1 if head in LISTENERS else 2
-            count = {"on-drag": 2, "toggle": 1, **dict.fromkeys(EFFECT_FIRST, 1)}.get(head, 0)
+            count = {"on-drag": 2, "toggle": 1, "slider": 1}.get(head, 0)
             if head in (*ON_SHAPE, *SHOW_HIDE) and head != "on-drag":
                 count = 1
             if head == "on-pointermove":
@@ -3588,10 +3630,9 @@ class _Compiler:
             self.options_first(items, lambda it: not self.holds_listeners(it), kind)
         items = [it for it in items if not any(it is h for h in heard)]
         if kind not in ("canvas", "readout"):
-            # The first item of a slider, a button, a play and a stepper is its movement, and
-            # that of an on-drag and a toggle their target: positional arguments.
-            first = (*EFFECT_FIRST, "on-drag", "on-pointermove", "toggle")
-            body = items[1:] if kind in first else items
+            # A slider's first item is its move, and on-drag's and toggle's their target:
+            # positional arguments.
+            body = items[1:] if kind in ("slider", "on-drag", "on-pointermove", "toggle") else items
             # writer() reports an item that the writer does not take. If such an item counted as
             # the start of the body here, the option after it would get an error about its place.
             body = [it for it in body if _head(it) in WRITER_OPTIONS or not self.not_taken(it)]
@@ -4027,80 +4068,22 @@ class _Compiler:
             else None
         )
 
-    def is_movement(self, node: Node) -> bool:
-        return (
-            isinstance(node, Name)
-            or _head(node) in ("move", "wait", "in-order", "at-once")
-            or self.choreo_of(node) is not None
-        )
-
-    def effect(self, obj: Obj, items: list) -> Node:
-        """The movement of a slider, a button, a play or a stepper, taken out of its items: a
-        positional argument right after its name (the author, 2026-11-23)."""
-        move = "(from 0) (to 1) (duration 0)" if obj.kind == "slider" else "(to 1) (duration 2)"
-        shown = f"({obj.kind} {obj.name} (move k {move}) …)"
-        old = next((it for it in items if _head(it) == "animation"), None)
-        if old is not None:
-            raise CompileError(
-                f"a {obj.kind} takes its movement right after its name, not in (animation …):"
-                f" {shown}",
-                old.pos,
-            )
-        if not items or not self.is_movement(items[0]):
-            first = items[0] if items else None
-            message = f"a {obj.kind} takes its movement right after its name"
-            if first is not None:
-                # A form that the writer does not take may be a use of a choreo that is not
-                # declared, or not imported from the standard library.
-                self.from_rand_whole(first)
-                head = _head(first)
-                self.from_rand(head, first.pos)
-                if self.not_taken(first) and head not in ARGUMENT_WORDS:
-                    message += f", and '{head}' is not a choreo"
-            raise CompileError(f"{message}: {shown}", getattr(first, "pos", obj.pos))
-        node = items.pop(0)
-        again = next(
-            (it for it in items if _head(it) == "move" or self.choreo_of(it) is not None), None
-        )
-        if again is not None:
-            raise CompileError(
-                f"a {obj.kind} takes one movement: write several in (in-order …) or (at-once …)",
-                again.pos,
-            )
-        return node
-
-    def played_effect(self, obj: Obj, items: list) -> set:
-        """The movement of a button, a play or a stepper, compiled as an inline animation of one
-        item, as (animation …) on it was before."""
-        node = self.effect(obj, items)
-        form = Form((Name(("animation",), node.pos), node), node.pos)
-        animation = self.animation(form, self.cscope, named=False)
-        obj.data["animation"] = animation
-        return self.written(animation)
-
     def build_button(self, obj: Obj, items: list, shape) -> None:
-        written = self.played_effect(obj, items)
+        written = self.animated(obj, items)
         self.active(obj, items)
         self.writer(obj, items, written)
 
     def build_slider(self, obj: Obj, items: list, shape) -> None:
         # A slider's move is the path its knob scrubs: the reader gives the speed, so it has
         # no duration and no ease, and both ends are fixed (reference.md, "Controls").
-        old = next((it for it in items if _head(it) == "step"), None)
-        if old is not None:
-            raise CompileError(
-                "a slider takes (stops n), the number of positions its knob stops at, not (step n)",
-                old.pos,
-            )
-        node = self.effect(obj, items)
-        if _head(node) != "move":
-            raise CompileError(
-                "a slider's movement is one instant move:"
-                f" (slider {obj.name} (move k (from 0) (to 1) (duration 0)) …)",
-                node.pos,
-            )
-        assert isinstance(node, Form)
-        tid = self.transition(node, self.cscope, top=False)
+        if not items or not (_head(items[0]) == "move" or isinstance(items[0], Name)):
+            raise CompileError("a slider is (slider name (animation (move k (from …) (to …))) item…)", obj.pos)
+        node = items.pop(0)
+        if isinstance(node, Name):
+            tid = self.named(node, "transition")
+        else:
+            assert isinstance(node, Form)
+            tid = self.transition(node, self.cscope, top=False)
         tr = self.model.objects[tid]
         if tr.data["target"] is None:
             raise CompileError("a slider's move needs a target", node.pos)
@@ -4109,9 +4092,11 @@ class _Compiler:
         # A move with no duration takes the default of 1 s, so a slider's move states its 0.
         duration = tr.attrs.get("duration")
         if duration is None or duration.bound or duration.value != 0:
-            raise CompileError("a slider's move is instant: give it (duration 0)", node.pos)
+            raise CompileError(
+                "a slider's animation is instant: give its move (duration 0)", node.pos
+            )
         if "ease" in tr.attrs:
-            raise CompileError("a slider's move takes no ease: it is instant", node.pos)
+            raise CompileError("a slider's move takes no ease: its animation is instant", node.pos)
         # The runtime scrubs a slider's move over its whole length, so the (duration 0) that the
         # source states is not written into the .mtpc.
         del tr.attrs["duration"]
@@ -4163,7 +4148,7 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_play(self, obj: Obj, items: list, shape) -> None:
-        written = self.played_effect(obj, items)
+        written = self.animated(obj, items)
         buttons = self.take(items, "buttons")
         obj.attrs["buttons"] = self.attribute(BOOL, buttons, obj.pos, "buttons", scope=self.cscope)
         self.labels(obj, items)
@@ -4180,8 +4165,8 @@ class _Compiler:
         self.writer(obj, items, written)
 
     def build_stepper(self, obj: Obj, items: list, shape) -> None:
-        """(stepper name EFFECT): the reader moves through the steps of EFFECT one at a time,
-        with no clock, so it has one stop per step and nothing starts it (the author,
+        """(stepper name (animation …)): the reader moves through the animation's steps one at a
+        time, with no clock, so it has one stop per step and nothing starts it (the author,
         2026-11-10)."""
         found = next((it for it in items if _head(it) == "buttons"), None)
         if found is not None:
@@ -4189,7 +4174,11 @@ class _Compiler:
                 "a stepper takes no (buttons …): it stops after each step, and the reader moves it",
                 found.pos,
             )
-        written = self.played_effect(obj, items)
+        written = self.animated(obj, items)
+        if obj.data["animation"] is None:
+            raise CompileError(
+                "a stepper needs an (animation …): the steps it moves through", obj.pos
+            )
         obj.attrs["playing"] = Attribute(BOOL, False)
         obj.attrs["step"] = Attribute(INT, 0)
         self.active(obj, items)

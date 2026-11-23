@@ -312,24 +312,23 @@
 
 ; The original holds 8 seconds after steps 1 and 2 with a countdown on the play button, and
 ; enters Explore after step 3.
-(play tour
-    (in-order
+(play tour (buttons true) (labels 'One density' 'The floor rises with n' 'All densities')
+    (animation
       (in-order one-density (wait 8))
       (in-order floor-rises (wait 8))
       (in-order all-densities to-explore-from-all))
-    (buttons true) (labels 'One density' 'The floor rises with n' 'All densities')
   doc@'Plays the tour: one density, the floor rising with n, then all densities.')
 
-(button explore to-explore (label 'Explore')
+(button explore (animation to-explore) (label 'Explore')
   doc@'Skips to Explore, the end of the tour.')
 (button single-density
-    (at-once (defaults (duration 0)) (move mix (to 0)) (move exploring (to true))
-      (move floor (to false)) (move g (to 1)))
+    (animation (at-once (defaults (duration 0)) (move mix (to 0)) (move exploring (to true))
+                 (move floor (to false)) (move g (to 1))))
     (label 'one')
   doc@'Shows one density.')
 (button all-of-them
-    (at-once (defaults (duration 0)) (move mix (to 1)) (move exploring (to true))
-      (move floor (to false)) (move g (to 1)))
+    (animation (at-once (defaults (duration 0)) (move mix (to 1)) (move exploring (to true))
+                 (move floor (to false)) (move g (to 1))))
     (label 'all')
   doc@'Shows all densities together.')
 

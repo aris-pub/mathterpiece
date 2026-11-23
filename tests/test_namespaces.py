@@ -90,34 +90,27 @@ class TestWriting:
     def test_a_free_member(self):
         model(
             f"{THEME} (scene s (circle c (r theme.gap)))"
-            " (slider sl (move theme.gap (from 0) (to 1) (duration 0)))"
+            " (slider sl (animation (move theme.gap (from 0) (to 1) (duration 0))))"
         )
 
     def test_a_nested_member(self):
         model(
             "(namespace a (namespace b (real k 1 (>= 0)))) (scene s (circle c (r a.b.k)))"
-            " (slider sl (move a.b.k (from 0) (to 2) (duration 0)))"
+            " (slider sl (animation (move a.b.k (from 0) (to 2) (duration 0))))"
         )
 
     def test_not_a_token(self):
-        error(f"{THEME} (button b (move theme.ink (to #'red') (duration 1)))", "token")
+        error(f"{THEME} (button b (animation (move theme.ink (to #'red') (duration 1))))", "token")
 
     def test_not_a_bound_or_const_member(self):
         error(
-            "(namespace n (real a 1) (real b (* 2 a)))"
-            " (slider sl (move n.b (from 0) (to 1) (duration 0)))",
+            "(namespace n (real a 1) (real b (* 2 a))) (slider sl (animation (move n.b (from 0) (to 1) (duration 0))))",
             "bound",
         )
-        error(
-            "(namespace n (real a 1 (const))) (slider sl (move n.a (from 0) (to 2) (duration 0)))",
-            "const",
-        )
+        error("(namespace n (real a 1 (const))) (slider sl (animation (move n.a (from 0) (to 2) (duration 0))))", "const")
 
     def test_not_the_namespace_itself(self):
-        error(
-            f"{THEME} (slider sl (move theme (from 0) (to 1) (duration 0)))",
-            "theme is not a variable",
-        )
+        error(f"{THEME} (slider sl (animation (move theme (from 0) (to 1) (duration 0))))", "theme is not a variable")
 
 
 class TestImported:

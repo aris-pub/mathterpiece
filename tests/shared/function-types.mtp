@@ -11,4 +11,4 @@
 (func u (sequence[circle] gr) (let ((n (count gr (fn p (> p.r 0))))) f'{n}'))
 (scene s (counter q) (group pts (circle_ (r 1)) (circle_ (r 2)))
   (text t1 (f q.i)) (text t2 (g q.i)) (text t3 (h a)) (text t4 (u pts)))
-(button b (at-once (move q.i (to 2) (duration 0)) (move a (to 3) (duration 0))))
+(button b (animation (at-once (move q.i (to 2) (duration 0)) (move a (to 3) (duration 0)))))

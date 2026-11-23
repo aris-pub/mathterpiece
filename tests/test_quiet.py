@@ -6,8 +6,8 @@ from helpers import doc, error, model
 from mtpc_check import errors
 
 SCENE = "(real k 0) (scene s (circle c))"
-GO = "(move k (to 1) (duration 1))"
-BACK = "(move k (to 0) (duration 1))"
+GO = "(animation (move k (to 1) (duration 1)))"
+BACK = "(animation (move k (to 0) (duration 1)))"
 FORMULA = r"(formula f $'\term{t}{x}')"
 
 
@@ -79,7 +79,7 @@ class TestErrors:
 
 class TestCompiled:
     def test_written(self):
-        d = doc(f"{views(f'(on-live {GO}) (on-quiet {BACK})')} (button bt {GO} (in a))")
+        d = doc(f"{views(f'(on-live {GO}) (on-quiet {BACK})')} (button bt (in a) {GO})")
         assert errors(d) == []
         live = next(o for o in d["objects"] if o["kind"] == "on-live")
         quiet = next(o for o in d["objects"] if o["kind"] == "on-quiet")

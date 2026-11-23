@@ -120,8 +120,8 @@
   (on-drag handle (move angle (to (toward pointer angle))) doc@'Turns the wheel.'))
 
 (foreach m {'viridis' 'magma' 'cividis' 'blue-white-red'}
-  (button @'pick-{m}' (move scheme (to m) (duration 0)) (label m)
+  (button @'pick-{m}' (animation (move scheme (to m) (duration 0))) (label m)
     doc@'Draws the heatmap with this map.'))
 (toggle in-bands banded (label 'in bands')
   doc@'Draws the heatmap in four solid colors, with no mixing.')
-(slider sea-level (move sea (from -0.6) (to 0.6) (duration 0)) (label 'sea level'))
+(slider sea-level (animation (move sea (from -0.6) (to 0.6) (duration 0))) (label 'sea level'))

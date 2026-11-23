@@ -70,10 +70,7 @@ def test_a_forms_positional_arguments_and_keywords_go_4_in_and_its_body_2():
             "(readout r v\n    (font f)\n  (on-live\n      (animation a)))\n",
         ),
         ("(real v 1\n(>= 0))\n", "(real v 1\n    (>= 0))\n"),
-        (
-            "(slider s\n(label 'v')\n(active true))\n",
-            "(slider s\n    (label 'v')\n    (active true))\n",
-        ),
+        ("(slider s\n(label 'v')\n(active true))\n", "(slider s\n    (label 'v')\n    (active true))\n"),
         ("(if a\nb\nc)\n", "(if a\n    b\n  c)\n"),
         ("(foreach i 2\n(circle_))\n", "(foreach i 2\n  (circle_))\n"),
         (
@@ -102,9 +99,9 @@ def test_a_form_with_no_name_has_one_positional_fewer():
 
 
 def test_a_form_with_a_list_where_its_name_would_be():
-    # As an animation written inside a listener: (animation (in-order …)) has no name.
-    src = "(on-view\n(animation\n(in-order a b)))\n"
-    assert layout(src) == "(on-view\n    (animation\n      (in-order a b)))\n"
+    # As an animation written inside a control: (animation (in-order …)) has no name.
+    src = "(play p\n(animation\n(in-order a b)))\n"
+    assert layout(src) == "(play p\n    (animation\n      (in-order a b)))\n"
 
 
 def test_a_call_lines_up_with_its_first_argument():

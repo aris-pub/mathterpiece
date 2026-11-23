@@ -226,7 +226,7 @@ Some forms, taken apart by the template:
 | `(func f ((real x)) (* 2 x))` | `func` | `f` | `((real x))` |  |  | yes |
 | `(group g (defaults (fill #'red')) (circle_ (r 1)))` | `group` | `g` |  | `(defaults (fill #'red'))` |  | yes |
 | `(canvas v (x -2) (width 4) s)` | `canvas` | `v` |  | `(x -2)`, `(width 4)` |  | yes |
-| `(slider s (move k (from 0) (to 1) (duration 0)) (label 'k'))` | `slider` | `s` | `(move k (from 0) (to 1) (duration 0))` | `(label 'k')` |  | no |
+| `(slider s (label 'k') (animation (move k (from 0) (to 1) (duration 0))))` | `slider` | `s` |  | `(label 'k')`, `(animation (move k (from 0) (to 1)))` |  | no |
 | `(if c a b)` | `if` |  | `c`, `a`, `b` |  |  | no |
 ```
 
@@ -251,7 +251,7 @@ So `(circle c (r 1))` has the name `c`, and `(circle none (r 1))` and `(circle_ 
 name. Inside `(foreach k 3 …)`, `(circle @'dot-{k}' (r 1))` declares the circles `dot-0`, `dot-1`
 and `dot-2`, and `(circle (name s) (r 1))` takes its name from the string `s`, which is known when
 compiling. `(real none 1)`, `(animation_ (move k (to 2)))` and `(func_ ((real x)) (* 2 x))` are
-allowed, and nothing can refer to them. `(canvas none s)`, `(slider_ (move k (from 0) (to 1) (duration 0)))`,
+allowed, and nothing can refer to them. `(canvas none s)`, `(slider_ (animation (move k (from 0) (to 1))))`,
 `(scene_ (circle c (r 1)))` and `(formula none $'x')` are errors, since those must have a name.
 `(circle 'c' (r 1))` is an error, since the name is in quotes, and so is `(circle p.r (r 1))`, since
 its name has two name parts.
@@ -259,7 +259,7 @@ its name has two name parts.
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
 named argument: a {term}`listener`, `(move …)`, `(jump …)`, an `(animation …)` inside a
-toggle or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
+{term}`control` or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
 `(term …)`, `(like …)`, every named argument and every other compound.
 ```
 
@@ -380,5 +380,5 @@ scene, and a canvas and a slider at the top level.
   (foreach i 3
     (circle @'dot-{i}' (x (+ 3 i)) (r 0.2) (fill #'gray'))))
 (canvas v (x -3) (y -3) (width 9) (height 6) s)
-(slider size (move k (from 0.2) (to 2) (duration 0)) (label 'radius'))
+(slider size (animation (move k (from 0.2) (to 2) (duration 0))) (label 'radius'))
 ```

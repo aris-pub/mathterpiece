@@ -69,8 +69,8 @@ CASES = [
     ),
     # reference.md "Writes and conditions": a condition that is not a limit.
     (
-        "(real k)\n(real j)\n(button b (move k (to 1) (duration 1)) (> j 1))",
-        "3:40",
+        "(real k)\n(real j)\n(button b (animation (move k (to 1) (duration 1))) (> j 1))",
+        "3:52",
         "a condition compares an attribute this writer writes with a limit that does not depend on"
         " it, such as (>= k 0)",
     ),

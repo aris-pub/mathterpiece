@@ -19,8 +19,8 @@ FIGURE = """; A dot and a slider.
 (real k 1 (>= 0) (<= 2))
 (scene s (circle c (r k)))
 (canvas v s)
-(slider size (move k (from 0) (to 2) (duration 0)) (label 'size'))
-(button back (move k (to 1) (duration 0.5)))
+(slider size (animation (move k (from 0) (to 2) (duration 0))) (label 'size'))
+(button back (animation (move k (to 1) (duration 0.5))))
 (readout says f'k = {k:.1f}')
 """
 

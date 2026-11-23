@@ -13,5 +13,5 @@
   (exists-when step step))
 
 (display meets-line meets (kind 'inline') doc@'The formula, inside a sentence.')
-(slider qs (move q (from 0) (to 1) (duration 0)) (label 'q') doc@'Sets q.')
+(slider qs (animation (move q (from 0) (to 1) (duration 0))) (label 'q') doc@'Sets q.')
 (toggle steps step (label 'show a step') doc@'Shows the middle step.')

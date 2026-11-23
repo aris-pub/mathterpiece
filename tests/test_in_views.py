@@ -8,7 +8,7 @@ from helpers import doc, error, model
 from mtpc_check import errors
 
 SCENE = "(real k 0) (scene s (circle c) (rect r))"
-GO = "(move k (to 1) (duration 1))"
+GO = "(animation (move k (to 1) (duration 1)))"
 FORMULA = r"(formula f $'\term{t}{x} + \term{all}{\term{top}{a}}')"
 
 
@@ -299,9 +299,9 @@ class TestOwnViewNamed:
 
 
 CONTROLS = [
-    ("slider", "(slider sl (move k (from 0) (to 1) (duration 0)) (in a))"),
-    ("button", f"(button bt {GO} (in a))"),
-    ("play", f"(play pl {GO} (in a))"),
+    ("slider", "(slider sl (animation (move k (from 0) (to 1) (duration 0))) (in a))"),
+    ("button", f"(button bt (in a) {GO})"),
+    ("play", f"(play pl (in a) {GO})"),
     ("toggle", "(bool on) (toggle tg on (in a))"),
 ]
 
@@ -314,17 +314,16 @@ class TestControls:
 
     def test_any_view(self):
         m = model(
-            f"{two_canvases()} {FORMULA} (display d f) (readout ro 'x')"
-            f" (button bt {GO} (in a ro d))"
+            f"{two_canvases()} {FORMULA} (display d f) (readout ro 'x') (button bt (in a ro d))"
         )
         assert one(m, "button").data["in"] == [m.id("a"), m.id("ro"), m.id("d")]
 
     def test_more_than_one_view(self):
-        m = model(f"{two_canvases()} (button bt {GO} (in a b))")
+        m = model(f"{two_canvases()} (button bt (in a b))")
         assert one(m, "button").data["in"] == [m.id("a"), m.id("b")]
 
     def test_without_it_no_view(self):
-        assert one(model(f"{two_canvases()} (button bt {GO})"), "button").data["in"] is None
+        assert one(model(f"{two_canvases()} (button bt)"), "button").data["in"] is None
 
     @pytest.mark.parametrize("kind,src", CONTROLS)
     def test_it_is_written(self, kind, src):
@@ -334,40 +333,35 @@ class TestControls:
         assert errors(d) == []
 
     def test_without_it_nothing_is_written(self):
-        d = doc(f"{two_canvases()} (button bt {GO})")
+        d = doc(f"{two_canvases()} (button bt)")
         assert "in" not in next(o for o in d["objects"] if o["kind"] == "button")
 
     def test_not_a_view(self):
-        error(
-            f"{two_canvases()} (button bt {GO}) (button bu {GO} (in bt))",
-            "bt is a button, not a view",
-        )
+        error(f"{two_canvases()} (button bt) (button bu (in bt))", "bt is a button, not a view")
 
     def test_a_variable_is_not_a_view(self):
-        error(f"{two_canvases()} (button bt {GO} (in k))", "k is a variable, not a view")
+        error(f"{two_canvases()} (button bt (in k))", "k is a variable, not a view")
 
     def test_an_unknown_name(self):
-        error(f"{two_canvases()} (button bt {GO} (in nowhere))", "unknown view 'nowhere'")
+        error(f"{two_canvases()} (button bt (in nowhere))", "unknown view 'nowhere'")
 
     def test_a_view_declared_later(self):
         error(
-            f"(real k 0) (scene s (circle c)) (button bt {GO} (in a)) (canvas a s)",
+            f"(real k 0) (scene s (circle c)) (button bt (in a) {GO}) (canvas a s)",
             "unknown view 'a': a control names views declared before it",
         )
 
     def test_not_a_name(self):
-        error(
-            f"{two_canvases()} (button bt {GO} (in 1))", r"\(in …\) names views, such as \(in a b\)"
-        )
+        error(f"{two_canvases()} (button bt (in 1))", r"\(in …\) names views, such as \(in a b\)")
 
     def test_at_least_one(self):
-        error(f"{two_canvases()} (button bt {GO} (in))", r"\(in …\) names at least one view")
+        error(f"{two_canvases()} (button bt (in))", r"\(in …\) names at least one view")
 
     def test_twice_in_one(self):
-        error(f"{two_canvases()} (button bt {GO} (in a a))", "a is named twice")
+        error(f"{two_canvases()} (button bt (in a a))", "a is named twice")
 
     def test_given_twice(self):
-        error(f"{two_canvases()} (button bt {GO} (in a) (in b))", "'in' is given twice")
+        error(f"{two_canvases()} (button bt (in a) (in b))", "'in' is given twice")
 
     @pytest.mark.parametrize(
         "view", ["(canvas v (in a) s)", "(readout v 'x' (in a))", "(display v f (in a))"]

@@ -120,7 +120,7 @@ def test_a_list_that_is_not_const_is_not_imported(files):
         ("(scene s (circle c))", "a scene"),
         ("(real k 1)", "a variable that is not const"),
         ("(real k 1) (canvas v)", "a variable that is not const"),
-        ("(slider sl (move k (from 0) (to 1) (duration 0)))", "a slider"),
+        ("(slider sl (animation (move k (from 0) (to 1) (duration 0))))", "a slider"),
         ("(animation a (wait 1))", "an animation"),
         ("(let ((w 1)) (real k w))", "a variable that is not const"),
         ("(foreach i 2 (real @'k{i}' i))", "a variable that is not const"),

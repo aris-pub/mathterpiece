@@ -50,4 +50,4 @@
   doc@'The dot, the timeline of the steps, and the playhead.'
   board)
 
-(play run show doc@'Plays the hops, with the playhead along the timeline.')
+(play run (animation show) doc@'Plays the hops, with the playhead along the timeline.')

@@ -600,7 +600,7 @@ class TestTheFormTemplate:
             ("(scene s (group g (circle c) (fill #'red')))", "fill", "group"),
             ("(scene s (circle c)) (canvas v c (pan false))", "pan", "canvas"),
             (
-                f"{K} (button b (move k (to 1) (duration 1)) (> k 1) (label 'go'))",
+                f"{K} (button b (animation (move k (to 1) (duration 1))) (> k 1) (label 'go'))",
                 "label",
                 "button",
             ),
@@ -622,7 +622,7 @@ class TestTheFormTemplate:
             " (circle c)))",
             "(scene s (circle c))"
             " (canvas v (x 1) (toggle-duration 1) (y 1) (width 2) (height 2) c)",
-            f"{K} (button b (move k (to 1) (duration 1)) (label 'go') (> k 1))",
+            f"{K} (button b (label 'go') (animation (move k (to 1) (duration 1))) (> k 1))",
             f"{K} (animation a (defaults (duration 2)) (move k (to 1)))",
         ],
     )

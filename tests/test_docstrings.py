@@ -25,7 +25,7 @@ def obj_doc(d, name):
         ("(scene s (group g (doc 'D.') (circle_ (r 1))))", "g"),
         ("(motif m () (circle_ (r 1))) (scene s (m inst (doc 'D.')))", "inst"),
         ("(scene s (circle c (r 1))) (canvas v (doc 'D.') s)", "v"),
-        ("(real k 1) (slider sl (move k (from 0) (to 2) (duration 0)) (doc 'D.'))", "sl"),
+        ("(real k 1) (slider sl (animation (move k (from 0) (to 2) (duration 0))) (doc 'D.'))", "sl"),
         ("(font note (size 14) (doc 'D.'))", "note"),
         ("(color ink #'#000000' (doc 'D.'))", "ink"),
         ("(namespace theme (doc 'D.') (real gap 0.4))", "theme"),
@@ -50,19 +50,19 @@ def test_a_listener_has_no_name_and_still_takes_one():
     assert next(o for o in d["objects"] if o["kind"] == "on-drag")["doc"] == "D."
 
 
-MOVE = "(move k (to 1) (duration 1))"
+ANIM = "(animation (move k (to 1) (duration 1)))"
 
 
 @pytest.mark.parametrize(
     "decl, kind",
     [
-        (f"(canvas w s (on-click c {MOVE} (doc 'D.')))", "on-click"),
-        (f"(canvas w s (on-release c {MOVE} (doc 'D.')))", "on-release"),
-        (f"(canvas w s (on-dragstart c {MOVE} (doc 'D.')))", "on-dragstart"),
-        (f"(canvas w s (on-dragend c {MOVE} (doc 'D.')))", "on-dragend"),
-        (f"(canvas w s (on-view {MOVE} (doc 'D.')))", "on-view"),
-        (f"(button go {MOVE} (doc 'D.'))", "button"),
-        (f"(play go {MOVE} (doc 'D.'))", "play"),
+        (f"(canvas w s (on-click c {ANIM} (doc 'D.')))", "on-click"),
+        (f"(canvas w s (on-release c {ANIM} (doc 'D.')))", "on-release"),
+        (f"(canvas w s (on-dragstart c {ANIM} (doc 'D.')))", "on-dragstart"),
+        (f"(canvas w s (on-dragend c {ANIM} (doc 'D.')))", "on-dragend"),
+        (f"(canvas w s (on-view {ANIM} (doc 'D.')))", "on-view"),
+        (f"(button go {ANIM} (doc 'D.'))", "button"),
+        (f"(play go {ANIM} (doc 'D.'))", "play"),
         ("(bool on) (toggle t on (label 't') (doc 'D.'))", "toggle"),
         ("(readout says f'{k}' (doc 'D.'))", "readout"),
     ],

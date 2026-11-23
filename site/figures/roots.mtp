@@ -6,5 +6,5 @@
   (circle|none lo (r 0.1) (pos [(- r) 0]) (fill #'crimson'))
   (circle|none hi (r 0.1) (pos [r 0]) (fill #'crimson')))
 (canvas c parabola)
-(slider shift (move k (from -1) (to 1) (duration 0)) (label 'k'))
+(slider shift (animation (move k (from -1) (to 1) (duration 0))) (label 'k'))
 (readout says (or? f'roots at ±{r:.2f}' 'no real roots'))
