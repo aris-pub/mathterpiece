@@ -83,7 +83,7 @@ from these, as {numref}`what-a-type-is` lists:
 
 The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
 and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which is a subtype only of itself, so it
-is not inside `real`. `instant` is drawn inside `movement`, overlapping `move` and `score`, since some moves and some scores take no time. `positioned` is not
+is not inside `real`. `instant` is drawn inside `movement`. `positioned` is not
 drawn, since it holds values from several boxes: the points and most shapes.
 ```
 
