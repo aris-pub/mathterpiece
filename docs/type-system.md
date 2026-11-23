@@ -308,7 +308,7 @@ Every declared object has a `name` attribute, a string, or `none` for one declar
 | motif instances | their parameters and bound variables, `a.t`, `disk.area`; their members, `a.tip`; their shape arguments, `a.x`, `a.fill`, … |
 | variant instances | their parameters, and every attribute of their base, `b1.p`, `b1.x` |
 | font | `family`, `style`, `weight`, `size` |
-| slider | `label`, `position` (0 to 1), `step` (the number of positions its knob stops at, if given) |
+| slider | `label`, `position` (0 to 1), `stops` (the number of positions its knob stops at, if given) |
 | play | `label`, `step` (the step playing or paused in, or else the highest step whose state the scene is in, from 1 to the number of steps, and 0 in explore mode, defined in the reference, "States and explore mode"), `playing` (while it runs), `buttons` |
 | stepper | `label`, `step` (as a play's: the step playing, or else the highest step whose state the scene is in, and 0 in explore mode), `playing` (while a step plays) |
 | button, toggle | `label`; a toggle's `value` |

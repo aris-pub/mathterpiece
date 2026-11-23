@@ -1226,8 +1226,8 @@ export class MtpSlider extends MtpPart {
     const how = howOf(rt.objects[id]!, true);
     const input = document.createElement("input");
     input.type = "range";
-    const stops = rt.objects[id]!.attrs?.step ? (rt.value(id, "step") as number) : null;
-    // With (step n) the knob stops at n evenly spaced stops.
+    const stops = rt.objects[id]!.attrs?.stops ? (rt.value(id, "stops") as number) : null;
+    // With (stops n) the knob stops at n evenly spaced stops.
     input.min = "0";
     input.max = stops === null ? "1000" : String(stops - 1);
     input.step = "1";
