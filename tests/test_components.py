@@ -816,3 +816,14 @@ class TestIntSliderStops:
             " (slider s (move a (from 1) (to top)))",
             r"a slider on an int stops at each whole number from its from to its to",
         )
+
+
+def test_a_slider_names_its_target_directly():
+    # The author, 2026-11-23: (slider s k (from 0) (to 4)), with the target written directly,
+    # means the same as the older (slider s (move k (from 0) (to 4))).
+    from tests.helpers import doc
+
+    head = "(real a 1 (>= 0) (<= 4)) (scene s (circle c (pos [a 0]) (r 0.2)))\n"
+    new = doc(head + "(slider push a (from 0) (to 4) (label 'a'))")
+    old = doc(head + "(slider push (move a (from 0) (to 4)) (label 'a'))")
+    assert new == old

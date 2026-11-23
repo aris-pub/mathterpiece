@@ -551,6 +551,17 @@ def _is_constraint(node: Node) -> bool:
     return head not in COMPARE or len(node.items) == 2
 
 
+
+def _slider_as_move(items: list, pos: Pos) -> list:
+    """(slider s k (from 0) (to 1) …), with the target written directly (the author,
+    2026-11-23), as the move that the rest of the compiler reads: (slider s (move k (from 0)
+    (to 1)) …). A slider whose first item is already a move or a transition is left as it is."""
+    if not items or not any(_head(it) in ("from", "to") for it in items[1:]):
+        return items
+    parts = [it for it in items[1:] if _head(it) in ("from", "to", "path")]
+    rest = [it for it in items[1:] if _head(it) not in ("from", "to", "path")]
+    return [Form((Name(("move",), pos), items[0], *parts), pos), *rest]
+
 class _Compiler:
     def __init__(self, path: Path | None = None):
         self.model = Model()
@@ -3561,6 +3572,8 @@ class _Compiler:
                     f"a {kind} is placed on the page by its name, so it needs one", pos
                 )
             items, shape = list(form.items[2:]), None
+            if kind == "slider":
+                items = _slider_as_move(items, form.pos)
             if kind in VIEWS:
                 heard = [it for it in items if self.holds_listeners(it)]
         obj = Obj(kind, name, ComponentT(kind), "page", pos=pos)
