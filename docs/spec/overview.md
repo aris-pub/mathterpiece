@@ -44,6 +44,11 @@ to describe heads. A signature is not mtp source:
   four forms: `(one X)` is exactly one X, `(some X)` is one X or more, `(any X)` is any number of
   X, zero included, and `(either A B …)` is one of A, B and so on. The items come in the order
   written, and `EXPR:T` is any expression of type T.
+- A named argument may hold several items, written the same way: `(in VIEWS)`, with
+  `VIEWS := (any EXPR:view)` on a line below. A named argument whose items are `(any …)` may be left
+  out, and then it holds no items.
+- When the description of a body is short, it may be written in place of its word, on the same line:
+  `(in (any EXPR:view))`.
 
 ## Terms
 
