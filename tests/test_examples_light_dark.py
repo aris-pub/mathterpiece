@@ -14,7 +14,8 @@ A scene's background is checked only when it is not paper, since paper matches t
 purpose. Shapes are checked against their scene's background when it is not paper, and against
 the page otherwise. A color with some transparency is checked as it looks drawn over that
 background, with its alpha times the shape's opacities. A color that is none or that has zero
-opacity, and a stroke of zero width, are not checked. A block of the docs that does not compile
+opacity, and a stroke of zero width, are not checked. Nor are colors drawn with an alpha below 0.5,
+which are faint areas behind the marks (the author, 2026-11-23). A block of the docs that does not compile
 on its own, such as an error example, is skipped."""
 
 import itertools
@@ -310,6 +311,11 @@ def _colors(values: Values, ident: int, attr: str) -> list:
     return _distinct(out)
 
 
+# A color drawn with an alpha below this is a faint area behind the marks, not a mark that must
+# be seen, so it is not checked (the author, 2026-11-23). WCAG's 3:1 is for marks that carry
+# meaning.
+FAINT = 0.5
+
 # examples/house.mtp's paper. A background with this value is paper even when it does not read
 # the token, as in a spec block that writes the color out.
 PAPER = "light-dark(#ffffffff, #13181bff)"
@@ -388,7 +394,7 @@ def _compiled(index: int):
                 for mode in PAGES:
                     rgba = _rgba(color, mode)
                     alpha = _alpha(rgba) * opacity
-                    if alpha == 0:
+                    if alpha < FAINT:
                         continue
                     case = f"{name}:{mode}:{rgba}:on:{bg[mode]}"
                     ratio = contrast(_over(rgba, alpha, bg[mode]), bg[mode])
