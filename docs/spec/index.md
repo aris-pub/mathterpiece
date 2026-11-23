@@ -61,6 +61,7 @@ lifecycle
 :maxdepth: 2
 
 page-interface
+controls
 accessibility
 ```
 
