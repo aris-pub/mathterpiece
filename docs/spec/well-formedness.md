@@ -25,7 +25,7 @@ binding that is read. The rule below lists such reads. A call of a function is n
 container, so a function that calls itself makes no cycle. The depth of a chain of calls is limited
 by {numref}`call-depth-limit`.
 
-```{rule} self-reference-today
+```{rule} self-reference
 These rules hold for a use of a name inside the form that declares or binds it:
 
 1. A function may call itself in its own {term}`body`.
@@ -59,7 +59,7 @@ or of a formula, or an item of a list at a position known when compiling. It is 
 name or a qualified name, with `(name S)` allowed in place of a name ({numref}`names-from-values`).
 Writing an item puts a new list into the container that holds the list, and may be done only when
 that container may be written.
-A target may be written only when it is free ({numref}`variables`), it is not a color variable or a
+A target may be written only when it is free ({numref}`variables`), it is not a
 font, and it is not fixed by a variant ({numref}`motif-and-variant-types`).
 Also:
 
@@ -77,16 +77,16 @@ Also:
 Every other target is a compile error.
 ```
 
-So `(slider s (animation (move m (from 0) (to 1) (duration 0))))` with `(real m (* 2 k))` is a compile error, and so is a
-move of a const variable or of a color variable. Two writers may write the same container, and
+So `(slider s m (from 0) (to 1))` with `(real m (* 2 k))` is a compile error, and so is a move of a
+const variable. Two writers may write the same container, and
 {doc}`concurrency` defines what happens then.
 
 ```{rule} written-values
 The type of each value that a writer writes must be a {term}`subtype` of the type of its target
-({numref}`fits`), with the comparisons and the `(one-of …)` of that type left out, and with a modular
+({numref}`subtypes`), with the comparisons and the `(one-of …)` of that type left out, and with a modular
 type read as its number type, since the write brings the value into those
 ({numref}`writes-into-constraints`, {numref}`modular-types`). This holds for the `from` and the `to` of a move
-and of a movement, and for the values of a toggle and of a slider. A value whose type includes
+and of a movement, and for the values that a jumper writes ({numref}`jumpers-and-movers`). A value whose type includes
 `none` may be written only into a target whose type includes `none`.
 ```
 
@@ -251,7 +251,7 @@ So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, 
 A value written where the expected type holds a condition C meets C when one of these holds:
 
 - The value is known in the prove step and meets C.
-- The type of the value is a subtype of the expected type with C as its only condition ({numref}`fits`).
+- The type of the value is a subtype of the expected type with C as its only condition ({numref}`subtypes`).
 - C is a comparison, and the range of the value lies inside it: its lower end is at least c for
   `(>= c)` and above c for `(> c)`, and its upper end is at most c for `(<= c)` and below c for
   `(< c)`.

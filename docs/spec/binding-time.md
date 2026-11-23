@@ -13,8 +13,8 @@ An expression is known when compiling when it is one of these:
 - a literal
 - a function declared with `func`, or a built-in function
 - a name that refers to an object, such as a shape or a record
-- a const container, unless it is a color variable or a font
-- a bound container whose expression is known when compiling, unless it is a color variable or a font
+- a const container, unless it is a font
+- a bound container whose expression is known when compiling, unless it is a font
 - the name of a `let` or a `foreach`, in each copy, when the value bound to it is known when compiling
 - a parameter, in a call or a declaration whose argument for it is known when compiling
 - a form whose evaluated parts are all known when compiling, unless it is a call of `rand`,
@@ -24,8 +24,8 @@ Every other expression is known only while drawing.
 ```
 
 So a free container is known only while drawing, since a writer may write it, and so is every
-expression that reads one. A color variable and a font are known only while drawing, since the page
-may give them other values through its CSS ({numref}`mtpc-only-boundary`). A random value is known
+expression that reads one. A font is known only while drawing, since the page
+may give it other values through its CSS ({numref}`mtpc-only-boundary`). A random value is known
 only while drawing ({numref}`random-never-folded`).
 
 ```mtp
@@ -33,7 +33,6 @@ only while drawing ({numref}`random-never-folded`).
 (real c 3 (const))      ; const: known when compiling
 (real d (* 2 c))        ; bound to an expression known when compiling: known when compiling, and folded to 6
 (real e (* 2 a))        ; bound to an expression that reads a free variable: known only while drawing
-(color ink #'navy')     ; a color variable: known only while drawing
 ```
 
 ## `foreach` and `free`

@@ -27,7 +27,7 @@ the set of the reals that are not below 0. The types are combined as sets:
 | `func[P1 … Pn R]` | the set of the functions of n parameters, of types P1 to Pn, whose result belongs to R |
 | `(mod int lo hi)`, `(mod real lo hi)` | the set of the numbers from lo up to hi, hi left out, with arithmetic that wraps ({numref}`modular-types`) |
 
-A type that is a subset of another is a {term}`subtype` of it ({numref}`fits`).
+A type that is a subset of another is a {term}`subtype` of it ({numref}`subtypes`).
 
 ```{rule} membership
 `(is X T)` evaluates to `true` when the value of X is in the type T, and to `false` otherwise.
@@ -153,7 +153,7 @@ points and the circles.
 
 ## Subtypes
 
-```{rule} fits
+```{rule} subtypes
 A type A is a {term}`subtype` of a type B, and B is a {term}`supertype` of A, exactly when A is a
 subset of B. A value of type A is accepted where a value of type B is expected exactly when A is a
 subtype of B.
@@ -251,7 +251,7 @@ No value is converted from one type to another unless a form asks for it, such a
 
 So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, while
 `(circle d (fill (color-of s)))` is allowed. An int is accepted where a real is expected because
-`int` is a subtype of `real` ({numref}`fits`), not because it is converted.
+`int` is a subtype of `real` ({numref}`subtypes`), not because it is converted.
 
 ## Known lengths
 
@@ -485,7 +485,7 @@ Each expression except a clause and a special form has this type:
 | `(free X)` | the type of X |
 
 The type of each expression that is given where a type is expected must be a subtype of that type
-({numref}`fits`), or the expression must meet its conditions by {numref}`constraint-proof`.
+({numref}`subtypes`), or the expression must meet its conditions by {numref}`constraint-proof`.
 ```
 
 So `(int m (if on 1 2.5))` is a compile error, since the type of the branches is `int|real`, which is
