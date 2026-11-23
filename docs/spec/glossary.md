@@ -359,11 +359,11 @@ record
   An object that consists only of the attributes that it is declared with ({numref}`records`).
 
 supertype
-  A type B is a supertype of a type A exactly when A is a subtype of B ({numref}`fits`).
+  A type B is a supertype of a type A exactly when A is a subtype of B ({numref}`subtypes`).
 
 subtype
   A type A is a subtype of a type B exactly when A is a subset of B. A value of type A is accepted
-  where a value of type B is expected exactly then ({numref}`fits`).
+  where a value of type B is expected exactly then ({numref}`subtypes`).
 
 guard
   A compound that evaluates to a bool, in the body of a control or a listener, such as

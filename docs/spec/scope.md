@@ -106,11 +106,11 @@ scope, with no exceptions, and a name that an import makes usable may be used on
 order is the order of the source after the rewrite step, with each `foreach` read as its copies, in
 the order of the copy index. A declaration, a binding or an import comes before a use when its
 form starts before the use. A use of a name inside the form that declares or binds it is allowed
-only as {numref}`self-reference-today` allows.
+only as {numref}`self-reference` allows.
 ```
 
 So two functions may not call each other, since one of them would use the name of the other before
-its declaration, and a function may call itself only by {numref}`self-reference-today`. A canvas must come
+its declaration, and a function may call itself only by {numref}`self-reference`. A canvas must come
 after the scene in its body, a {term}`control` must come after the {term}`views <view>` named in its
 `(in …)`, and an `exists-when` must come after the shape named in it. Copy k of a `foreach` may
 use the name of copy k - 1, which comes before it, and may never use the name of copy k + 1. By {numref}`import-declares-names`, a

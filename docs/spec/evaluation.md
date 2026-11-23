@@ -567,7 +567,7 @@ skipped, and nothing that depends on it is computed again.
 ## Termination
 
 A function may call itself, directly, through other functions, or through a function value
-({numref}`self-reference-today`). There are no other loops: the number of copies of a `foreach` is
+({numref}`self-reference`). There are no other loops: the number of copies of a `foreach` is
 known when compiling, and `range` results in at most 1,000,000 items. So the only computation that
 could go on without end is a chain of calls. When folding, every chain ends at the
 {term}`call depth limit`. How a chain ends while drawing is the open question Q-evaluation-13 below.

@@ -182,7 +182,7 @@ imports. An import is looked for in the folder of the file that imports it, then
 The compiler never does what happens only while drawing ({doc}`binding-time`). It never runs a
 writer: it never plays an animation, never performs a write that a control or a listener
 would perform, and never acts as a reader would. It never reads a page, its CSS or its color scheme,
-and so never folds a token: a token is written with its declared value, which the runtime uses where
+and so never folds a font: a font is written with its declared value, which the runtime uses where
 the page gives none.
 ```
 
@@ -332,7 +332,7 @@ know about the other. This is why the format of the .mtpc is defined in full in 
 ```{rule} mtpc-only-boundary
 The .mtpc is the only file that passes from the compiler to the runtime. No other file, no call
 and no shared state passes between them. Besides the .mtpc, the runtime reads only the page: its
-elements, the values that its CSS gives the tokens, its color scheme, the pointer, the keyboard and
+elements, the values that its CSS gives the fonts, its color scheme, the pointer, the keyboard and
 the clock.
 ```
 
