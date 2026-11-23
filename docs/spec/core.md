@@ -77,6 +77,7 @@ any number of such texts.
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | `(jump V X)` | `(move V (to X) (duration 0))` | Exactly two arguments |
+| `(move V (from F) ARGS…)` | `(in-order (jump V F) (move V ARGS…))` | A move has no `from` of its own: it starts from the current value of `V` |
 | `(palette N (M C)…)` | `(record N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N XS F ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
