@@ -100,8 +100,9 @@ by the arrow keys, or by dragging sideways on its label (scrubbing). The buttons
 add or subtract the step, and ten steps with Shift. Scrubbing moves the value one step every few
 pixels. The mouse wheel does not change it.
 
-- `(buttons false)` leaves out the − and + buttons, and `(typing false)` turns typing off. With
-  both, the value is drawn with a dotted underline, to show that it can be scrubbed.
+- `(buttons false)` leaves out the − and + buttons, and `(typing false)` turns typing off, so the
+  value is shown as plain text. With both, the value is drawn with a dotted underline, to show that
+  it can be scrubbed.
 - A typed value is written only when the reader commits it: with Enter, with Tab, or by leaving the
   field. Until then the field shows what is typed, and the target does not change.
 - A committed value is written by {numref}`writes-into-constraints`. When it is not written, or is
@@ -139,7 +140,8 @@ one option per line with a round mark. A multi-select has `'menu'` and `'buttons
 ```{rule} multi-select
 Choosing an option of a multi-select adds its value to the target list, and choosing it again
 removes it. The list holds the chosen values in the order of the options in the source, whatever
-the order in which they were chosen. Any number of options may be chosen, none included.
+the order in which they were chosen. Any number of options may be chosen, none included. A value in
+the target list that is no option is shown as nothing chosen, never as an error.
 ```
 
 For example:
