@@ -1355,15 +1355,11 @@ export class MtpButton extends MtpPart {
       const player = playerFor(rt, rt.objects[id]!);
       if (player) scheduler.start(player, this, howOf(rt.objects[id]!, true));
     });
-    // Only a button given (selected bool) says whether it is the current choice; any other is
-    // not a toggle button, and says nothing.
-    const chooses = rt.objects[id]!.attrs?.selected !== undefined;
     button.dataset.mtpInput = "button";
     this.gate = () => {
       button.disabled = !usable(rt, id);
       this.pageState({ inactive: !activeOf(rt, id) });
       text.follow();
-      if (chooses) button.setAttribute("aria-pressed", String(Boolean(rt.value(id, "selected"))));
     };
     this.gate();
     this.replaceChildren(button);

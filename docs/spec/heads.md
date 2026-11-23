@@ -301,7 +301,6 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `label` | core | a clause | {doc}`page-interface`, {doc}`accessibility` |
 | `stops` on a slider | core | a clause | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | a clause | {doc}`page-interface`, {doc}`time` |
-| `selected` on a button | core | a clause | {doc}`page-interface`, {doc}`accessibility` |
 | `active` | core | a clause | {doc}`reaction` |
 | `priority` | core | a clause | {doc}`concurrency` |
 | `stop-propagation` | core | a clause | {doc}`reaction` |
