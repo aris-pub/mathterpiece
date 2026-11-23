@@ -49,7 +49,7 @@ well-formedness
 
 world-model
 evaluation
-reaction
+reactivity
 time
 concurrency
 lifecycle

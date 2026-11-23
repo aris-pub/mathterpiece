@@ -283,7 +283,7 @@ When a .mtpc loads, the runtime builds its live model, once, before it draws any
 every expression into a function, once, and sets every free container to its starting value,
 reading each `free` start once ({doc}`compiled-format`, "Free and bound containers"). Then it
 keeps the live model current as the reader acts: after each write, it computes again only what
-depends on what changed, and the views draw again ({doc}`reaction`, {doc}`time`,
+depends on what changed, and the views draw again ({doc}`reactivity`, {doc}`time`,
 {doc}`concurrency`).
 ```
 
