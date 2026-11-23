@@ -68,6 +68,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `formula`, `term` | the formulas, and the terms | |
 | `record`, `font` | the records, and the fonts | a font is a record with a family, a style, a weight and a size |
 | `movement` | every movement | the moves, the scores and every `A` |
+| `score` | the scores | the movements made by `score`, `in-order` and `at-once` |
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
 | `jumper`, `mover` | the controls that write one value directly, by jumps, and the controls that play a movement | a control is a jumper or a mover. The jumpers are the slider, the range slider, the dial, the number field, the text field, the toggle, the select and the multi-select. The movers are the button, the play and the stepper |
@@ -83,7 +84,7 @@ from these, as {numref}`what-a-type-is` lists:
 
 The built-in types as sets, each box inside the boxes of the types that hold it. `unit` overlaps `int`
 and `ratio`, and `writer` overlaps `component`. `angle` is a modular type, which is a subtype only of itself, so it
-is not inside `real`. `instant` is drawn inside `movement`. `positioned` is not
+is not inside `real`. `instant` is drawn inside `movement`, overlapping `score`, since some scores take no time. `positioned` is not
 drawn, since it holds values from several boxes: the points and most shapes.
 ```
 
