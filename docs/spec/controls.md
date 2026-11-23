@@ -11,21 +11,23 @@ toggle in older forms, and none of the other controls. Bead mtp-9e62.
 
 ## What every control takes
 
-```{rule} control-arguments
+````{rule} control-arguments
 Every control takes these arguments, which the signatures below write as `(like control)`:
 
-    (control
-      (label:string '')
-      (active:bool true)
-      (in VIEWS:view*)
-      (priority:(int (>= 1) (<= 1000)) 500)
-      (doc:string '')
-      CONDITIONS:bool*)
+```mtp-sig
+(control
+  (label:string '')
+  (active:bool true)
+  (in VIEWS:view*)
+  (priority:(int (>= 1) (<= 1000)) 500)
+  (doc:string '')
+  CONDITIONS:bool*)
+```
 
 `label` is the text shown with the control, a string or a {term}`TeX string`. `VIEWS` are the views
 that the control belongs to ({numref}`listeners-in-views`). `CONDITIONS` are the guards of the
 control ({numref}`writer-guards`).
-```
+````
 
 ## Jumpers and movers
 
@@ -40,23 +42,37 @@ movement that may take any time.
 
 ## The jumpers
 
-```{rule} jumper-signatures
-    (slider NAME TARGET:real (from:real) (to:real) (step:real none) (ticks:real none) (like control))
-    (range-slider NAME LOW:real HIGH:real (from:real) (to:real) (step:real none) (ticks:real none)
-      (like control))
-    (dial NAME TARGET:mod (step:real none) (ticks:real none) (like control))
-    (number-field NAME TARGET:real (step:real 1) (buttons:bool true) (typing:bool true)
-      (like control))
-    (text-field NAME TARGET:string (like control))
-    (toggle NAME TARGET:bool (like control))
-    (select NAME TARGET (kind:(string (one-of 'menu' 'buttons' 'radio')) 'menu') (like control)
-      OPTIONS:opt+)
-    (multi-select NAME TARGET (kind:(string (one-of 'menu' 'buttons' 'checkbox')) 'menu')
-      (like control) OPTIONS:opt+)
+````{rule} jumper-signatures
+```mtp-sig
+(slider NAME TARGET:real
+  (from:real) (to:real)
+  (step:real none) (ticks:real none)
+  (like control))
+(range-slider NAME LOW:real HIGH:real
+  (from:real) (to:real)
+  (step:real none) (ticks:real none)
+  (like control))
+(dial NAME TARGET:mod
+  (step:real none) (ticks:real none)
+  (like control))
+(number-field NAME TARGET:real
+  (step:real 1) (buttons:bool true) (typing:bool true)
+  (like control))
+(text-field NAME TARGET:string (like control))
+(toggle NAME TARGET:bool (like control))
+(select NAME TARGET
+  (kind:(string (one-of 'menu' 'buttons' 'radio')) 'menu')
+  (like control)
+  OPTIONS:opt+)
+(multi-select NAME TARGET
+  (kind:(string (one-of 'menu' 'buttons' 'checkbox')) 'menu')
+  (like control)
+  OPTIONS:opt+)
+```
 
 `TARGET:mod` is a target whose type is a modular type, written with the head `mod`. In a select,
 `TARGET` is a container of any type, and in a multi-select a container whose type is a list.
-```
+````
 
 ```{rule} slider-and-dial
 A slider and a dial are the same control on two kinds of number. The thumb of a slider runs along a
@@ -146,16 +162,20 @@ For example:
 
 ## The movers
 
-```{rule} mover-signatures
-    (button NAME EFFECT:movement (like control))
-    (play NAME EFFECT:movement (buttons:bool false) (rest:(real (>= 0)) 0) (labels LABELS:string*)
-      (like control))
-    (stepper NAME EFFECT:movement (like control))
+````{rule} mover-signatures
+```mtp-sig
+(button NAME EFFECT:movement (like control))
+(play NAME EFFECT:movement
+  (buttons:bool false) (rest:(real (>= 0)) 0)
+  (labels LABELS:string*)
+  (like control))
+(stepper NAME EFFECT:movement (like control))
+```
 
 `EFFECT` is required. A press of a button plays its effect from the start. A play plays its effect
 and lets the reader scrub it, and a stepper goes through its steps one at a time
 ({doc}`time`).
-```
+````
 
 ```mtp
 (button b (move k (to 1) (duration 2)) (label 'go'))

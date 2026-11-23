@@ -14,7 +14,7 @@ stated in {ref}`scope`, and {numref}`declare-before-use` is a citation of it.
 A signature gives a head with all of its arguments, and the type of each. The spec uses signatures
 to describe heads. A signature is not mtp source:
 
-```text
+```mtp-sig
 (circle NAME
   (like shape)
   (r:(real (>= 0)) 1)

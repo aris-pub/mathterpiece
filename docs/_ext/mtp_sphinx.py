@@ -23,12 +23,13 @@ from pathlib import Path
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from pygments.lexer import RegexLexer, bygroups
+from pygments.lexer import RegexLexer, bygroups, default
 from pygments.token import (
     STANDARD_TYPES,
     Comment,
     Error,
     Keyword,
+    Literal,
     Name,
     Number,
     Operator,
@@ -108,6 +109,38 @@ def _word(lexer, match):
     else:
         kind = Name.Variable
     yield match.start(), kind, match.group(0)
+
+
+class MtpSigLexer(RegexLexer):
+    """Signatures, written ```mtp-sig (Overview, "How signatures are written"). The author,
+    2026-11-23: the head in bold, each type in gray and each default in brown. The colors come
+    from mtp.css, which reads the token classes k (the head), nb (a type) and l (a default)."""
+
+    name = "mtp-sig"
+    aliases = ["mtp-sig"]
+    tokens = {
+        "root": [
+            (r"^(\()([a-z][\w-]*)", bygroups(Punctuation, Keyword)),
+            (r":", Name.Builtin, "type"),
+            (r"\s+", Whitespace),
+            (r"[()]", Punctuation),
+            (r"'[^']*'", String),
+            (r"[^\s():']+", Name),
+        ],
+        # A type runs to the first space or ')' outside its own parentheses. A default is the one
+        # item between a type and the ')' that closes a named argument.
+        "type": [
+            (r"\(", Name.Builtin, "type-parens"),
+            (r"[\w|*+?.-]+", Name.Builtin),
+            (r"( )('[^']*'|[^\s()']+)(?=\))", bygroups(Whitespace, Literal), "#pop"),
+            default("#pop"),
+        ],
+        "type-parens": [
+            (r"\(", Name.Builtin, "#push"),
+            (r"\)", Name.Builtin, "#pop"),
+            (r"[^()]+", Name.Builtin),
+        ],
+    }
 
 
 class MtpLexer(RegexLexer):
@@ -545,6 +578,7 @@ def _highlight_inline(app: Sphinx, doctree, docname: str) -> None:
 
 def setup(app: Sphinx):
     app.add_lexer("mtp", MtpLexer)
+    app.add_lexer("mtp-sig", MtpSigLexer)
     app.add_enumerable_node(rule_node, "rule", _rule_title, html=(visit_rule, depart_rule))
     app.add_directive("rule", Rule)
     app.add_enumerable_node(diagram_node, "diagram", lambda n: n.astext() or n.get("label", ""), html=(visit_diagram, depart_diagram))

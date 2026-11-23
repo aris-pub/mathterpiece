@@ -222,3 +222,34 @@ code.mtp-inline.highlight { background-color: var(--pst-color-surface); }
 .mtp-diagram figcaption { font-size: 0.9rem; color: var(--pst-color-text-muted); }
 .mtp-diagram figcaption > p { display: inline; margin: 0; }
 .mtp-diagram figcaption .caption-number { font-weight: 600; font-style: normal; }
+
+/* A signature (```mtp-sig, the author, 2026-11-23): no box, one argument or group per line, the
+   head in bold, each type in gray and each default in brown. */
+html { --mtp-sig-default: #9a5b00; }
+html[data-theme="dark"] { --mtp-sig-default: #e0a456; }
+div.highlight-mtp-sig pre {
+  background: none; border: 0; box-shadow: none; padding: 0.25rem 0; line-height: 1.6;
+}
+div.highlight-mtp-sig .highlight { background: none; }
+/* The theme colors code tokens with selectors such as html[data-theme=light] .highlight .k, so
+   these need html[data-theme] to win. */
+html[data-theme] div.highlight-mtp-sig .highlight :is(.n, .p, .s, .w) { color: var(--pst-color-text-base); }
+html[data-theme] div.highlight-mtp-sig .highlight .k { color: var(--pst-color-text-base); font-weight: 600; }
+html[data-theme] div.highlight-mtp-sig .highlight .nb { color: var(--pst-color-text-muted); }
+html[data-theme] div.highlight-mtp-sig .highlight .l { color: var(--mtp-sig-default); }
+
+/* Tables (the author, 2026-11-23): no stripes, a thin line between rows, column headings in small
+   gray capitals, and the code in the first column in bold, in the text's color, with no box. */
+.bd-content table.table { border: 0; }
+.bd-content table.table :is(th, td) { border: 0; border-top: 1px solid var(--pst-color-border); background: none; }
+.bd-content table.table tbody tr { background: none; }
+.bd-content table.table thead, .bd-content table.table thead tr { border: 0; background: none; }
+.bd-content table.table thead th {
+  border-top: 0; border-bottom: 0; background: none;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--pst-color-text-muted);
+}
+html[data-theme] .bd-content table.table td:first-child code {
+  font-weight: 600; background: none; border: 0; padding: 0; color: var(--pst-color-text-base);
+}
+html[data-theme] .bd-content table.table td:first-child code * { color: inherit; }
