@@ -78,9 +78,9 @@
     (on-leave @'machine.{t}' (animation (move focus (to none) (duration 0)))
       doc@'Hides it again.')))
 
-(slider a-knob (animation (move a (from -2) (to 2))) (label 'a') doc@'Sets a.')
-(slider b-knob (animation (move b (from -5) (to 5))) (label 'b') doc@'Sets b.')
-(slider c-knob (animation (move c (from -5) (to 5))) (label 'c') doc@'Sets c.')
+(slider a-knob (animation (move a (from -2) (to 2) (duration 0))) (label 'a') doc@'Sets a.')
+(slider b-knob (animation (move b (from -5) (to 5) (duration 0))) (label 'b') doc@'Sets b.')
+(slider c-knob (animation (move c (from -5) (to 5) (duration 0))) (label 'c') doc@'Sets c.')
 
 ; Where the graph turns and where it crosses the x axis, in words.
 (readout facts

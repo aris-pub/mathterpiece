@@ -111,7 +111,7 @@
     f'a² + b² = {(* side-a side-a):.2f} + {(* side-b side-b):.2f} = {(+ (* side-a side-a) (* side-b side-b)):.2f} = c²'
   doc@'The two areas, for the a and b the slider sets.')
 
-(slider leg (animation (move side-a (from 1) (to 4))) (label 'a') doc@'Sets a, with a + b kept at 5.')
+(slider leg (animation (move side-a (from 1) (to 4) (duration 0))) (label 'a') doc@'Sets a, with a + b kept at 5.')
 
 (button rearrange (label 'rearrange')
     (animation (move layout (to (if (> layout 0.5) 0 1)) (duration 2.4)))

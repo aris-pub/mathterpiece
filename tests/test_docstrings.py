@@ -25,7 +25,7 @@ def obj_doc(d, name):
         ("(scene s (group g (doc 'D.') (circle_ (r 1))))", "g"),
         ("(motif m () (circle_ (r 1))) (scene s (m inst (doc 'D.')))", "inst"),
         ("(scene s (circle c (r 1))) (canvas v (doc 'D.') s)", "v"),
-        ("(real k 1) (slider sl (animation (move k (from 0) (to 2))) (doc 'D.'))", "sl"),
+        ("(real k 1) (slider sl (animation (move k (from 0) (to 2) (duration 0))) (doc 'D.'))", "sl"),
         ("(font note (size 14) (doc 'D.'))", "note"),
         ("(color ink #'#000000' (doc 'D.'))", "ink"),
         ("(namespace theme (doc 'D.') (real gap 0.4))", "theme"),

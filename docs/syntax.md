@@ -15,7 +15,7 @@ A point on a circle, a slider and a drag that move it, and a number in the prose
 
     (canvas v s
       (on-drag p theta))
-    (slider spin (animation (move theta (from 0) (to 360))) (label 'angle'))
+    (slider spin (animation (move theta (from 0) (to 360) (duration 0))) (label 'angle'))
     (readout r f'θ = {theta:.0f}°')
 
 - `(scene s …)` declares the scene, the mathematical content. Inside it: a variable `theta`, kept between 0 and 360, and three shapes.
@@ -188,7 +188,7 @@ Each form decides whether it has a name, which positional arguments it takes and
 | `(choreo fade-in ((shape who)) (move who.opacity (to 1)))` | `fade-in` | its parameters, `((shape who))` | none | a move of `who.opacity` |
 | `(transition slide none (to 5) (duration 1))` | `slide` | the target, here `none` | `(to 5)`, `(duration 1)` | none |
 | `(animation grow (defaults (duration 1)) (move theta (like slide)) (wait 0.5))` | `grow` | none | `(defaults (duration 1))` | a move of `theta` along `slide`, then a wait of half a second |
-| `(slider spin (animation (move theta (from 0) (to 360))) (label 'angle'))` | `spin` | the move | `(label 'angle')` | none |
+| `(slider spin (animation (move theta (from 0) (to 360) (duration 0))) (label 'angle'))` | `spin` | the move | `(label 'angle')` | none |
 | `(canvas v (pan false) a b (when show c))` | `v` | none | `(pan false)` | `a`, `b`, `(when show c)` |
 | `(on-drag p theta)` | none | `p`, `theta` | none | none |
 

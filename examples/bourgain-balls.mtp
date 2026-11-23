@@ -166,7 +166,7 @@
 (button new-points (animation (roll-dice)) (label 'new points') (in the-space)
   doc@'Draws the 32 points again.')
 
-(slider radius (animation (move share (from 0) (to 1))) (label 'r') (in the-space)
+(slider radius (animation (move share (from 0) (to 1) (duration 0))) (label 'r') (in the-space)
   doc@'Sets r, the radius of both balls.')
 
 (play grow (in the-space) (animation (move share (from 0) (to 1) (duration 3.6) (ease linear)))

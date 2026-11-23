@@ -242,7 +242,7 @@ text applies one with `(font f)`. Bead mtp-1vyc makes fonts namespaces.
 
 For example, `(record style (real width 2 (>= 0) (<= 5)) (color ink #'navy'))` declares an object with
 the two attributes `width` and `ink`, read as `style.width` and `style.ink`. Like any attribute,
-`style.width` may be written: `(slider s (animation (move style.width (from 0) (to 5))))` writes it. A shape takes the attributes of a record as a style with
+`style.width` may be written: `(slider s (animation (move style.width (from 0) (to 5) (duration 0))))` writes it. A shape takes the attributes of a record as a style with
 `(like style)` ({numref}`like-copies`). Unlike a shape, a record is not drawn, and the compiler does nothing with it beyond holding its
 attributes.
 

@@ -9,4 +9,4 @@
   (circle d (fill theme.soft))
   (circle e (fill theme.accents.warm)))
 (canvas v s)
-(slider sl (animation (move theme.gap (from 0) (to 2))) (label 'gap'))
+(slider sl (animation (move theme.gap (from 0) (to 2) (duration 0))) (label 'gap'))

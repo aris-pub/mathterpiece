@@ -20,5 +20,5 @@
     (move m (to 12) (duration 30) (ease linear))))
 
 ; accessible and interactive: mouse, touch or keyboard
-(slider points (animation (move n (from 12) (to 240)))
+(slider points (animation (move n (from 12) (to 240) (duration 0)))
   (label 'points'))

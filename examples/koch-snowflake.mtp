@@ -86,5 +86,5 @@
   doc@'The code under the snowflake.'
   forms)
 
-(slider depth-slider (animation (move depth (from 0) (to 4))) (label 'depth'))
-(slider zoom-slider (animation (move zoom-power (from 0) (to 3))) (label 'zoom, in powers of 3'))
+(slider depth-slider (animation (move depth (from 0) (to 4) (duration 0))) (label 'depth'))
+(slider zoom-slider (animation (move zoom-power (from 0) (to 3) (duration 0))) (label 'zoom, in powers of 3'))

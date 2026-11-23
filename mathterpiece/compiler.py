@@ -4099,10 +4099,11 @@ class _Compiler:
             raise CompileError("a slider's move needs a target", node.pos)
         # The animation of a slider is instant: a duration, when given, is 0 (the author,
         # 2026-11-23). An ease has nothing to ease.
+        # A move with no duration takes the default of 1 s, so a slider's move states its 0.
         duration = tr.attrs.get("duration")
-        if duration is not None and (duration.bound or duration.value != 0):
+        if duration is None or duration.bound or duration.value != 0:
             raise CompileError(
-                "a slider's animation is instant: its move's duration is 0", node.pos
+                "a slider's animation is instant: give its move (duration 0)", node.pos
             )
         if "ease" in tr.attrs:
             raise CompileError("a slider's move takes no ease: its animation is instant", node.pos)

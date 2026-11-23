@@ -313,7 +313,7 @@ class TestDeclaredNames:
         compile_error("(scene s (circle c (r 1))) (canvas none s)")
 
     def test_a_control_must_have_a_name(self):
-        compile_error("(real k 0 (>= 0) (<= 1)) (slider none (animation (move k (from 0) (to 1))))")
+        compile_error("(real k 0 (>= 0) (<= 1)) (slider none (animation (move k (from 0) (to 1) (duration 0))))")
 
     @pytest.mark.parametrize(
         "src",
