@@ -299,7 +299,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | the target of `on-drag` written as a move | core | a compound | {doc}`reactivity`, {numref}`drag-group-shift` |
 | the target of `on-drag` written as a name | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `label` | core | a clause | {doc}`page-interface`, {doc}`accessibility` |
-| `stops` on a slider | core | a clause | {doc}`page-interface` |
+| `step` on a slider, a dial and a number field | core | a clause | {doc}`page-interface` |
 | `buttons`, `rest`, `labels` on a play | core | a clause | {doc}`page-interface`, {doc}`time` |
 | `active` | core | a clause | {doc}`reactivity` |
 | `priority` | core | a clause | {doc}`concurrency` |
