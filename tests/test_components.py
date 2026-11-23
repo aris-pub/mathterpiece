@@ -11,7 +11,7 @@ from mathterpiece.types import BOOL, ComponentT, Maybe
 
 K = "(real k 0 (>= 0) (<= 10))"
 MOVE = "(animation (move k (to 5) (duration 1)))"
-SLIDE = "k (from 0) (to 5)"
+SLIDE = "(animation (move k (from 0) (to 5)))"
 
 
 class TestControls:
@@ -330,7 +330,7 @@ class TestButtons:
 
     def test_only_a_button_takes_selected(self):
         error(
-            f"{K} (slider s k (from 0) (to 5) (selected true))",
+            f"{K} (slider s (animation (move k (from 0) (to 5))) (selected true))",
             r"only a button takes \(selected …\), not a slider",
         )
 
@@ -450,7 +450,7 @@ class TestEveryShownPartHasAName:
         for src in (
             "(button_ (animation (move k (to 1) (duration 0))))",
             "(button none (animation (move k (to 1) (duration 0))))",
-            "(slider_ k (from 0) (to 1))",
+            "(slider_ (animation (move k (from 0) (to 1))))",
             "(play_ (animation (move k (to 1) (duration 1))))",
             "(toggle_ none)",
             "(readout_ f'{k}')",
@@ -795,34 +795,38 @@ class TestIntSliderStops:
     # The author, 2026-11-16: a slider whose target is an int stops at each whole number by
     # default, so (step …) is needed only for coarser stops.
     def test_it_stops_at_each_whole_number(self):
-        s = model("(int a 3 (>= 1) (<= 7)) (slider s a (from 1) (to 7))").get("s")
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 1) (to 7))))").get("s")
         assert s.attrs["step"].value == 7
 
     def test_downward_ends_count_the_same(self):
-        s = model("(int a 3 (>= 1) (<= 7)) (slider s a (from 7) (to 2))").get("s")
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 7) (to 2))))").get("s")
         assert s.attrs["step"].value == 6
 
     def test_a_given_step_wins(self):
-        s = model("(int a 3 (>= 1) (<= 7)) (slider s a (from 1) (to 7) (step 4))").get("s")
+        s = model("(int a 3 (>= 1) (<= 7)) (slider s (animation (move a (from 1) (to 7))) (step 4))").get("s")
         assert s.attrs["step"].value == 4
 
     def test_a_real_target_has_no_stops(self):
-        s = model("(real a 3) (slider s a (from 1) (to 7))").get("s")
+        s = model("(real a 3) (slider s (animation (move a (from 1) (to 7))))").get("s")
         assert "step" not in s.attrs
 
     def test_ends_known_only_while_drawing(self):
         error(
             "(int top 7 (>= 2) (<= 9)) (int a 3 (>= 1) (<= 9))"
-            " (slider s a (from 1) (to top))",
+            " (slider s (animation (move a (from 1) (to top))))",
             r"a slider on an int stops at each whole number from its from to its to",
         )
 
 
-def test_a_slider_names_its_target_directly():
-    # The author, 2026-11-23: (slider s k (from 0) (to 4)), with the target written directly.
-    # The older form, with a move, is an error.
+def test_a_slider_takes_one_instant_move():
+    # The author, 2026-11-23: a slider takes (animation …) like every control, and the
+    # animation is one instant move. Naming the target directly, or a duration other than 0,
+    # is an error.
     from tests.helpers import doc, error
 
     head = "(real a 1 (>= 0) (<= 4)) (scene s (circle c (pos [a 0]) (r 0.2)))\n"
-    assert doc(head + "(slider push a (from 0) (to 4) (label 'a'))")
-    error(head + "(slider push (move a (from 0) (to 4)) (label 'a'))", "names its target directly")
+    assert doc(head + "(slider push (label 'a') (animation (move a (from 0) (to 4))))")
+    assert doc(head + "(slider push (animation (move a (from 0) (to 4) (duration 0))))")
+    error(head + "(slider push a (from 0) (to 4))", "takes its move in")
+    error(head + "(slider push (move a (from 0) (to 4)))", "needs \\(animation")
+    error(head + "(slider push (animation (move a (from 0) (to 4) (duration 1))))", "instant")

@@ -44,9 +44,9 @@
   doc@'The curve, its axes and the ratio a:b.'
   axes figure ratio forms)
 
-(slider freq-a a (from 1) (to 7) (step 7) (label 'frequency a, across'))
-(slider freq-b b (from 1) (to 7) (step 7) (label 'frequency b, up'))
-(slider turn base (from 0) (to 360) (label 'phase'))
+(slider freq-a (animation (move a (from 1) (to 7))) (step 7) (label 'frequency a, across'))
+(slider freq-b (animation (move b (from 1) (to 7))) (step 7) (label 'frequency b, up'))
+(slider turn (animation (move base (from 0) (to 360))) (label 'phase'))
 
 ; Slowly enough that each frame is still a curve the eye can follow. Each round turns the phase
 ; once, from where the slider set it.

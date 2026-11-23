@@ -49,8 +49,8 @@
   doc@'The rows and columns, and their captions.'
   rows captions)
 
-(slider spacing gap (from 0) (to 1) (label 'gap'))
-(slider size grow (from 0.4) (to 1.6) (label 'size'))
+(slider spacing (animation (move gap (from 0) (to 1))) (label 'gap'))
+(slider size (animation (move grow (from 0.4) (to 1.6))) (label 'size'))
 
 (foreach alignment {'top' 'middle' 'bottom'}
   (button @'my-{alignment}' (animation (move line-up (to alignment) (duration 0.5)))

@@ -99,12 +99,12 @@
     (on-drag d.needle (move d.value (to (value-at d pointer)))
       doc@'Turns the dial by its needle.' (>= d.value d.lo) (<= d.value d.hi))))
 
-(slider speed-slider speed.value (from 0) (to 120) (label 'speed'))
-(slider heat-slider heat.value (from -20) (to 40) (label 'temperature'))
-(slider pressure-slider pressure.value (from 0) (to 6) (label 'pressure'))
-(slider thin-slider thin.value (from 0) (to 100) (label 'thin dial'))
-(slider bold-slider bold.value (from 0) (to 100) (label 'bold dial'))
-(slider half-slider half.value (from 0) (to 100) (label 'half dial'))
+(slider speed-slider (animation (move speed.value (from 0) (to 120))) (label 'speed'))
+(slider heat-slider (animation (move heat.value (from -20) (to 40))) (label 'temperature'))
+(slider pressure-slider (animation (move pressure.value (from 0) (to 6))) (label 'pressure'))
+(slider thin-slider (animation (move thin.value (from 0) (to 100))) (label 'thin dial'))
+(slider bold-slider (animation (move bold.value (from 0) (to 100))) (label 'bold dial'))
+(slider half-slider (animation (move half.value (from 0) (to 100))) (label 'half dial'))
 
 (button green-faces (animation (move panel.fill (to green) (duration 0.5) (ease cubic-in-out)))
     (label 'green faces'))

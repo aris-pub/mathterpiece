@@ -87,9 +87,9 @@
 (readout laps-1 f'player 1: lap {(+ 1 (floor (/ run-1 360)))}' doc@'Player 1\'s lap.')
 (readout laps-2 f'player 2: lap {(+ 1 (floor (/ run-2 360)))}' doc@'Player 2\'s lap.')
 
-(slider pedal-1 gas-1 (from 0) (to 1) (label 'player 1') (in view-1 laps-1)
+(slider pedal-1 (animation (move gas-1 (from 0) (to 1))) (label 'player 1') (in view-1 laps-1)
   doc@'Player 1\'s speed.')
-(slider pedal-2 gas-2 (from 0) (to 1) (label 'player 2') (in view-2 laps-2)
+(slider pedal-2 (animation (move gas-2 (from 0) (to 1))) (label 'player 2') (in view-2 laps-2)
   doc@'Player 2\'s speed.')
 
 (toggle race racing (label 'race') (in map) doc@'Starts and stops the race.')

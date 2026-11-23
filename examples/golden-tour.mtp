@@ -68,4 +68,4 @@
 (canvas view doc@'The sunflower and the name of its angle.' garden
   (on-click sunflower (animation golden)
     doc@'Takes the flower to the golden angle, as the last stop of the tour does.'))
-(slider angle sunflower.angle (from 80) (to 180) (label 'angle'))
+(slider angle (animation (move sunflower.angle (from 80) (to 180))) (label 'angle'))

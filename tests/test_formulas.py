@@ -185,7 +185,7 @@ class TestReading:
 
     def test_a_formula_cannot_read_a_component(self):
         error(
-            r"(real k 0) (slider s k (from 0) (to 1))"
+            r"(real k 0) (slider s (animation (move k (from 0) (to 1))))"
             r" (formula f $'\term{a}{x}' (term a (opacity s.position)))",
             "a formula cannot read s: it has page access",
         )

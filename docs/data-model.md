@@ -166,7 +166,7 @@ Every variable, and every attribute of a mutable object, is either **free** or *
 
     (real k 1)                     ; free: a slider may write it
     (circle c (r (* 2 k)))         ; c.r is bound: it is always twice k
-    (slider s k (from 0) (to 3))
+    (slider s (animation (move k (from 0) (to 3))))
 
 So every change starts at something free, and spreads to everything bound to it: when the slider writes `k`, `c.r` follows at once, and so does anything that reads `c.r`. The runtime recomputes only what reads what changed. A free variable with the `const` constraint can never be written, so it is known when compiling and costs nothing while drawing.
 

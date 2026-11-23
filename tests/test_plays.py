@@ -174,7 +174,7 @@ class TestCanvasesOfAControl:
 
     def test_a_control_writing_a_shapes_own_attribute(self):
         # d is in g, which v shows, and some may show d.
-        src = self.SRC + " (slider sl d.r (from 0) (to 3))"
+        src = self.SRC + " (slider sl (animation (move d.r (from 0) (to 3))))"
         d = doc(src)
         assert self.canvases(src, "sl") == sorted([d["names"]["v"], d["names"]["some"]])
 

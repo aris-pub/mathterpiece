@@ -18,7 +18,7 @@ Every form, built-in function and constant in mtp. Each entry says exactly which
 
 ### Docstrings
 
-Every declaration may take `doc@'text'`, an optional argument that says what the declared thing is: `(func clamp ((real x) (real lo) (real hi)) doc@'x, kept between lo and hi.' (min hi (max lo x)))`, `(real k 1 doc@'The radius of the circle.' (>= 0.2) (<= 3))`, `(slider size k (from 0.2) (to 3) doc@'Sets the radius of the circle.')`. It goes with the declaration's other optional arguments, and in a function or a motif after the parameters and before the body.
+Every declaration may take `doc@'text'`, an optional argument that says what the declared thing is: `(func clamp ((real x) (real lo) (real hi)) doc@'x, kept between lo and hi.' (min hi (max lo x)))`, `(real k 1 doc@'The radius of the circle.' (>= 0.2) (<= 3))`, `(slider size (animation (move k (from 0.2) (to 3))) doc@'Sets the radius of the circle.')`. It goes with the declaration's other optional arguments, and in a function or a motif after the parameters and before the body.
 
 - **`doc@'text'` is `(doc 'text')`:** the reader makes one the other, and either may be written. `mtp fmt` writes `doc@'text'`, and puts a docstring on a line of its own 2 in, with the body, whatever form it documents.
 
@@ -61,7 +61,7 @@ A shape or a variable declared inside the scene, a group or a motif may not take
 
 - **What it holds:** variables of any type, free or bound, each declared as at the top level, and other namespaces: `(namespace colors (namespace tab10 (color blue '#1f77b4')))` gives `colors.tab10.blue`. A function, a type, a motif, a variant, a shape or a component in it is a compile error.
 - **Names:** inside it, a member reads the members declared before it by their bare names, and they win over names outside: `(color soft (mix ink paper 0.5))`. Outside it, they are read only through it, `theme.soft`. A member it does not have is a compile error.
-- **Writing:** a writer writes a free member by its full name, `(slider s theme.gap (from 0) (to 1))`, under the same rules as any variable: not a bound one, not a `const` one, not a token. The namespace itself is never written.
+- **Writing:** a writer writes a free member by its full name, `(slider s (animation (move theme.gap (from 0) (to 1))))`, under the same rules as any variable: not a bound one, not a `const` one, not a token. The namespace itself is never written.
 - **Tokens:** a color or font member is a token, and its CSS variable is named by the namespace: `--mtp-theme-ink`, `--mtp-colors-tab10-blue`. A namespace declared in an imported file adds the file's name, `--mtp-house-theme-ink`.
 
 ### Interfaces
@@ -313,7 +313,7 @@ A view, a control and a readout must have a name: a page places each by its name
 | `(canvas name)` | required | none | `(toggle-duration t)` and `(toggle-ease e)`, for toggling the shapes its items give, `(x real)` `(y real)` `(width real)` `(height real)`, `(transform transform)`, `(pan bool)`, `(zoom bool)` or `(zoom lo hi)` | bare names of shapes to show (the scene's name shows the whole scene), and expressions that give a shape, none, or a list of them, such as `(when bool name)`, `(when bool [a b])` or `(if bool a b)`, drawn in the order written, each on top of those before it, each shape given by one item at most, and its listeners: on its shapes, `on-show` and `on-hide` included, and its own `on-view`, `on-ready`, `on-live`, `on-quiet` and `on-pointermove` |
 | `(readout name value)` | required | the string (a number is shown by interpolating it: `f'{k:.2f}'`) | `(font font)`, a declared font variable, the only way to set its font | its `on-live` and `on-quiet` |
 | `(display name formula)` | required | the formula it shows | `(kind k)`, known when compiling: `'block'` (the default) for a formula on its own line, or `'inline'` for one inside a paragraph | its listeners: `on-click`, `on-enter` and `on-leave` on the terms of its formula, and its own `on-live` and `on-quiet` |
-| `(slider name target)` | required | the target: a `name`, the number variable or attribute it writes | `(from v)` and `(to v)` (required), `(path curve)`, `(label string)` or `(label $'…')`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)`, `(in view…)`, `(priority n)` | conditions |
+| `(slider name)` | required | none | `(animation …)` (required), one instant move with a target, `from` and `to`, and a `path` or no `path`, `(label string)` or `(label $'…')`, `(step int)` (the number of positions its knob stops at, at least 2), `(active bool)`, `(in view…)`, `(priority n)` | conditions |
 | `(button name)` | required | none | `(animation …)`, `(label string)` or `(label $'…')`, `(selected bool)`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
 | `(play name)` | required | none | `(animation …)`, `(label string)` or `(label $'…')`, `(buttons bool)`, `(rest seconds)`, `(labels string…)`, one string known when compiling for each step, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
 | `(stepper name)` | required | none | `(animation …)` (required), `(label string)` or `(label $'…')`, `(active bool)`, `(in view…)`, `(priority n)` | conditions |
@@ -353,7 +353,7 @@ Every listener is written inside the body of the view it acts in, after the view
   (on-leave motion.v (animation (move lit (to false) (duration 0)))))
 (readout says f'{speed:.1f} m/s'
   (on-live (animation (move speed (to 0) (duration 0.4)))))
-(slider speed-knob speed (from 0) (to 5) (in view-1 says))
+(slider speed-knob (animation (move speed (from 0) (to 5))) (in view-1 says))
 ```
 
 - **A canvas** holds listeners on the shapes it may show (`on-drag`, `on-click`, `on-release`, `on-dragstart`, `on-dragend`, `on-enter`, `on-leave`, `on-show`, `on-hide`, and `on-pointermove` on a shape) and its own: `on-view`, `on-ready`, `on-live`, `on-quiet`, and `on-pointermove` with only a target, which follows the pointer anywhere over the canvas. **A display** holds listeners on the terms of its formula (`on-click`, `on-enter`, `on-leave`) and its own `on-live` and `on-quiet`. **A readout** holds its `on-live` and `on-quiet`.
@@ -411,7 +411,7 @@ A view with an `on-live` has a **quiet mode**: it starts **quiet**, at rest, and
   space
   (on-live (animation (move view.width (to 400) (duration 0.4))))
   (on-quiet (animation (defaults (duration 0.4)) (at-once (move view.width (to 600)) (move share (to 1))))))
-(slider radius share (from 0) (to 1) (in view))
+(slider radius (animation (move share (from 0) (to 1))) (in view))
 ```
 
 - **The quiet look** is the figure as its starting values give it. **The live look** is wherever the `on-live`'s animation takes it: a move of a variable, of a shape's attribute, or of the view's own, such as a canvas's `width` to narrow its view box.
@@ -493,7 +493,7 @@ These are the rules for several writers acting on the same values, and for the m
 - **Owners.** Each value has at most one owner: the running writer whose write of it was last accepted. A writer owns a value from its first accepted write, whether or not that write changes the value, until it stops running.
 - **The rule.** A write by a writer A of a value that another writer B owns is accepted when A's priority is higher than B's, or the same and A was triggered after B. Otherwise it is rejected. A write of a value no other writer owns is accepted. An accepted write is brought into the value's constraints, and A owns the value; if B owned it, B is cancelled. A writer's own conditions bring each write into them before it is made, as always.
 - **Cancelled and rejected.** A cancelled writer stops writing every value, and what it already wrote stays. A rejected write cancels nothing, and its writer writes that value no more for the rest of its effect, while it goes on writing its other values. A writer triggered again, a button pressed again say, starts a new effect, and writes every value again. A writer never cancels itself: a press on a button while its animation runs starts the animation again.
-- **For example,** with `(play tour (animation (move k (to 5) (duration 4))))` and `(slider size k (from 0) (to 10))`, moving the knob while `tour` plays cancels `tour`, and `k` follows the knob from then on. While the reader holds the knob, a button pressed to move `k` is rejected on `k`, being of a lower priority, and writes its other values. A canvas's `(on-view (animation (move k (to 0) (duration 1))))` that starts while the reader's `tour` plays is rejected on `k`, and `tour` plays on. One that started before the reader presses `tour` is cancelled by the press. A toggle flipped after a play was pressed was triggered later, so it wins the toggle's bool.
+- **For example,** with `(play tour (animation (move k (to 5) (duration 4))))` and `(slider size (animation (move k (from 0) (to 10))))`, moving the knob while `tour` plays cancels `tour`, and `k` follows the knob from then on. While the reader holds the knob, a button pressed to move `k` is rejected on `k`, being of a lower priority, and writes its other values. A canvas's `(on-view (animation (move k (to 0) (duration 1))))` that starts while the reader's `tour` plays is rejected on `k`, and `tour` plays on. One that started before the reader presses `tour` is cancelled by the press. A toggle flipped after a play was pressed was triggered later, so it wins the toggle's bool.
 - **A drag** writes from its first move to the release. A grab that moves nothing writes nothing, so it owns nothing, and a play that runs plays on. While the reader holds a shape, an `on-view`, an `on-enter` or an `on-dragstart` that would move it is rejected on the values the drag owns, and writes its other values: the shape keeps following the pointer. The release still plays the drag's `on-dragend`.
 - **A slider:** a press on its track or its knob, through the release, is one gesture, of priority 700, triggered by the press. Its first write jumps to the point pressed, and it writes as the pointer moves, until the release, as a drag does. A press that changes nothing writes nothing. An arrow key on a slider is a trigger of the reader's, of priority 500, whose effect is an animation of one move that takes no time.
 - **A toggle's flip** is one effect: a move of the bool to `(not target)` that takes no time, then the toggle's animation. So the toggle owns its bool until its animation ends.

@@ -58,6 +58,6 @@
   (on-drag ball ball.pos doc@'Moves the ball.')
   (on-drag pennant pennant.pos doc@'Moves the flag.'))
 
-(slider width w (from 0.5) (to 5) (label 'width') doc@'Sets the card\'s width.')
-(slider height h (from 0.5) (to 3) (label 'height') doc@'Sets the card\'s height.')
-(slider spin turn (from 0) (to 90) (label 'turn') doc@'Turns the card.')
+(slider width (animation (move w (from 0.5) (to 5))) (label 'width') doc@'Sets the card\'s width.')
+(slider height (animation (move h (from 0.5) (to 3))) (label 'height') doc@'Sets the card\'s height.')
+(slider spin (animation (move turn (from 0) (to 90))) (label 'turn') doc@'Turns the card.')

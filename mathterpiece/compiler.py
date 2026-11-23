@@ -564,20 +564,31 @@ def _sliders(node):
 
 
 def _slider_as_move(items: list, pos: Pos) -> list:
-    """(slider s k (from 0) (to 1) …), which names its target directly (the author,
-    2026-11-23), as the move that the rest of the compiler reads: (slider s (move k (from 0)
-    (to 1)) …). The clauses of a move stay in the move, so a slider's (duration …) is still
-    reported as a move's."""
-    if items and _head(items[0]) == "move":
+    """(slider s (animation (move k (from 0) (to 1))) …), whose animation is one instant move
+    (the author, 2026-11-23), as the form that the rest of the compiler reads: (slider s (move k
+    (from 0) (to 1)) …)."""
+    first = items[0] if items else None
+    if first is not None and _head(first) not in WRITER_OPTIONS and _head(first) != "doc":
         raise CompileError(
-            "a slider names its target directly: (slider s k (from 0) (to 1))", items[0].pos
+            "a slider takes its move in (animation …): "
+            "(slider s (animation (move k (from 0) (to 1))))",
+            getattr(first, "pos", pos),
         )
-    if not items:
-        return items
-    clauses = ("from", "to", "path", "duration", "ease", "lag")
-    parts = [it for it in items[1:] if _head(it) in clauses]
-    rest = [it for it in items[1:] if _head(it) not in clauses]
-    return [Form((Name(("move",), pos), items[0], *parts), pos), *rest]
+    given = [it for it in items if _head(it) == "animation"]
+    if not given:
+        raise CompileError(
+            "a slider needs (animation (move k (from …) (to …))), one instant move", pos
+        )
+    if len(given) > 1:
+        raise CompileError("'animation' is given twice", given[1].pos)
+    body = given[0].items[1:]
+    if len(body) != 1 or _head(body[0]) != "move":
+        raise CompileError(
+            "a slider's animation is one instant move: (animation (move k (from …) (to …)))",
+            given[0].pos,
+        )
+    rest = [it for it in items if it is not given[0]]
+    return [body[0], *rest]
 
 class _Compiler:
     def __init__(self, path: Path | None = None):
@@ -1119,8 +1130,8 @@ class _Compiler:
         if head in ("readout", "display"):
             return lambda it, j: self.holds_listeners(it)
         if head in COMPONENTS:
-            # The shape heard by a listener, the target of a toggle and of an on-drag, and a
-            # slider's move are positional arguments. An on-pointermove on a shape starts with
+            # The shape heard by a listener, the target of a toggle and of an on-drag, and the
+            # move that _sliders takes out of a slider's animation are positional arguments. An on-pointermove on a shape starts with
             # two names, the shape and its target, and one on the canvas with its target.
             start = 1 if head in LISTENERS else 2
             count = {"on-drag": 2, "toggle": 1, "slider": 1}.get(head, 0)
@@ -4070,7 +4081,7 @@ class _Compiler:
         # A slider's move is the path its knob scrubs: the reader gives the speed, so it has
         # no duration and no ease, and both ends are fixed (reference.md, "Controls").
         if not items or not (_head(items[0]) == "move" or isinstance(items[0], Name)):
-            raise CompileError("a slider is (slider name target (from …) (to …) item…)", obj.pos)
+            raise CompileError("a slider is (slider name (animation (move k (from …) (to …))) item…)", obj.pos)
         node = items.pop(0)
         if isinstance(node, Name):
             tid = self.named(node, "transition")
@@ -4080,11 +4091,15 @@ class _Compiler:
         tr = self.model.objects[tid]
         if tr.data["target"] is None:
             raise CompileError("a slider's move needs a target", node.pos)
-        for part in ("duration", "ease"):
-            if part in tr.attrs:
-                raise CompileError(
-                    f"a slider's move takes no {part}: the reader moves the knob", node.pos
-                )
+        # The animation of a slider is instant: a duration, when given, is 0 (the author,
+        # 2026-11-23). An ease has nothing to ease.
+        duration = tr.attrs.get("duration")
+        if duration is not None and (duration.bound or duration.value != 0):
+            raise CompileError(
+                "a slider's animation is instant: its move's duration is 0", node.pos
+            )
+        if "ease" in tr.attrs:
+            raise CompileError("a slider's move takes no ease: its animation is instant", node.pos)
         if "from" not in tr.data["ends"] or "to" not in tr.data["ends"]:
             raise CompileError("a slider's move needs both (from …) and (to …)", node.pos)
         # Its knob runs along a track between two values, so neither end may be none.

@@ -27,7 +27,7 @@ Save this as `circle.mtp` in a folder of your own:
   (circle p (r 0.07) (pos (polar 1 theta)) (fill #'slateblue')))
 (canvas v (x -1.25) (y -1.25) (width 2.5) (height 2.5) s
   (on-drag p (move theta (to (. (or? (to-polar pointer) [1 theta]) 1)))))
-(slider turn theta (from 0) (to 360) (label 'θ'))
+(slider turn (animation (move theta (from 0) (to 360))) (label 'θ'))
 ```
 
 The figure above is live: drag the point or move the slider. The file declares one variable,

@@ -72,4 +72,4 @@
   dull lens glass forms
   (on-drag glass glass.pos doc@'Moves the lens.'))
 
-(slider lens-size size (from 0.8) (to 3) (label 'lens size'))
+(slider lens-size (animation (move size (from 0.8) (to 3))) (label 'lens size'))

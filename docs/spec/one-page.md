@@ -43,7 +43,7 @@ The people, the files and the two programs ({numref}`people-and-programs`).
 
 (canvas v (x -0.5) (y -0.5) (width 5) (height 1) s
   (on-drag p (move a (to pointer.x))))
-(slider push a (from 0) (to 4) (label 'a'))
+(slider push (animation (move a (from 0) (to 4))) (label 'a'))
 (readout r f'a = {a:.2f}')
 ```
 

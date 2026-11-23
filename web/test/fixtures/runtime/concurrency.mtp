@@ -21,7 +21,7 @@
 (button grow-one (animation (move c1.r (to 2) (duration 1))))
 (button hold-one (animation (move c1.r (to 2) (duration 1))) (priority 900))
 (play tour (animation (move k (to 10) (duration 2))))
-(slider sl k (from 0) (to 10))
+(slider sl (animation (move k (from 0) (to 10))))
 ; Its on-view is not the reader's doing.
 (canvas v s
   (on-view (animation (move k (to 4) (duration 1)))))
@@ -41,7 +41,7 @@
   (on-view (animation (move d.x (to 8) (duration 1)))))
 ; Writers of a high priority whose writes take no time.
 (point p [0 0])
-(slider locked k (from 0) (to 10) (priority 900))
+(slider locked (animation (move k (from 0) (to 10))) (priority 900))
 (button jump (animation (move p (to [1 1]) (duration 1))))
 (canvas pm s
   (on-pointermove p))

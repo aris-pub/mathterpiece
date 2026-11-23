@@ -58,4 +58,4 @@
     (animation cardioid nephroid four-cusps eight-cusps)
   doc@'Plays the tour: m = 2, 3, 5, then 9.')
 
-(slider times m (from 1) (to 12) (label 'multiplier m'))
+(slider times (animation (move m (from 1) (to 12))) (label 'multiplier m'))

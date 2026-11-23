@@ -27,7 +27,7 @@ INDENT = {
     "rand-seed": 2,
     **dict.fromkeys(["color", "type", "motif", "variant", "func", "transition", "readout"], 2),
     "choreo": 2,
-    "slider": 2,
+    "slider": 1,
     "display": 2,
     "colormap": 2,
     "toggle": 2,

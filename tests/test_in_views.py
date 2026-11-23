@@ -299,7 +299,7 @@ class TestOwnViewNamed:
 
 
 CONTROLS = [
-    ("slider", "(slider sl k (from 0) (to 1) (in a))"),
+    ("slider", "(slider sl (animation (move k (from 0) (to 1))) (in a))"),
     ("button", f"(button bt (in a) {GO})"),
     ("play", f"(play pl (in a) {GO})"),
     ("toggle", "(bool on) (toggle tg on (in a))"),

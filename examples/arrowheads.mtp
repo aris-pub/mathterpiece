@@ -63,4 +63,4 @@
 (foreach k {'dart' 'curved' 'open' 'bar' 'dot'}
   (button @'pick-{k}' (animation (move kind (to k) (duration 0))) (label k)
     doc@'Ends the three vectors in this head.'))
-(slider head-size size (from 0.5) (to 2.5) (label 'head size'))
+(slider head-size (animation (move size (from 0.5) (to 2.5))) (label 'head size'))
