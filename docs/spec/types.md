@@ -70,6 +70,7 @@ from these, as {numref}`what-a-type-is` lists:
 | `movement` | every movement | the moves, the scores and every `A` |
 | `A`, for an animation `A` | every `A` | {doc}`time` |
 | `page-object`, `component`, `view`, `control`, `listener`, `writer` | the page objects, the components, the views, the controls, the listeners, and the writers | a page object is a view, a control or a listener, a component is a view or a control, and a writer is a control or a listener |
+| `jumper`, `mover` | the controls that write one value directly, by jumps, and the controls that play a movement | a control is a jumper or a mover. The jumpers are the slider, the range slider, the dial, the number field, the text field, the toggle, the select and the multi-select. The movers are the button, the play and the stepper |
 | `canvas`, `readout`, `display`, `slider`, `button`, `play`, `stepper`, `toggle`, and each listener head | the components of that kind | |
 | `instant` | the movements whose duration is 0 | `movement&zero-duration` ({numref}`interfaces`) |
 | `positioned`, `zero-duration`, and each declared interface | the values that have the attributes that it lists | an {term}`interface` ({numref}`interfaces`) |
