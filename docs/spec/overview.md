@@ -63,7 +63,7 @@ compile. Each is shown as its source, then live:
 
 (canvas v (x -0.5) (y -0.5) (width 5) (height 1) s
   (on-drag p (move a (to pointer.x))))
-(slider push (move a (from 0) (to 4)) (label 'a'))
+(slider push a (from 0) (to 4) (label 'a'))
 (readout r f'a = {a:.2f}')
 ```
 

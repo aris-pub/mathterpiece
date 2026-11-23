@@ -51,5 +51,5 @@ not written leaves the container as it was.
 ```
 
 The {term}`number limit` applies to every write too ({numref}`number-limit`). So with
-`(real p 0.5 (>= 0) (<= 1))`, a slider whose move goes to 1.4 stops `p` at exactly 1. Which values
+`(real p 0.5 (>= 0) (<= 1))`, a slider whose `to` is 1.4 stops `p` at exactly 1. Which values
 a writer may write at all is defined in {numref}`written-values`.

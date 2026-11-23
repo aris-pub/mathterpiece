@@ -226,7 +226,7 @@ Some forms, taken apart by the template:
 | `(func f ((real x)) (* 2 x))` | `func` | `f` | `((real x))` |  |  | yes |
 | `(group g (defaults (fill #'red')) (circle_ (r 1)))` | `group` | `g` |  | `(defaults (fill #'red'))` |  | yes |
 | `(canvas v (x -2) (width 4) s)` | `canvas` | `v` |  | `(x -2)`, `(width 4)` |  | yes |
-| `(slider s (move k (from 0) (to 1)) (label 'k'))` | `slider` | `s` | `(move k (from 0) (to 1))` | `(label 'k')` |  | no |
+| `(slider s k (from 0) (to 1) (label 'k'))` | `slider` | `s` | `k` | `(from 0)`, `(to 1)`, `(label 'k')` |  | no |
 | `(if c a b)` | `if` |  | `c`, `a`, `b` |  |  | no |
 ```
 
@@ -380,5 +380,5 @@ scene, and a canvas and a slider at the top level.
   (foreach i 3
     (circle @'dot-{i}' (x (+ 3 i)) (r 0.2) (fill #'gray'))))
 (canvas v (x -3) (y -3) (width 9) (height 6) s)
-(slider size (move k (from 0.2) (to 2)) (label 'radius'))
+(slider size k (from 0.2) (to 2) (label 'radius'))
 ```

@@ -136,7 +136,7 @@ A write while drawing (from a slider, a drag or an animation) is brought into th
 An argument passed to a constrained parameter, and an item of a list with constrained items, follow the rule for bound values: unless the compiler can prove they fit, it is a compile error.
 
     (real p 0.5 (>= 0) (<= 1))
-    (slider s (move p (from 0) (to 1.4)))   ; p stops at exactly 1
+    (slider s p (from 0) (to 1.4))   ; p stops at exactly 1
     (int n 8 (const))                                   ; known when compiling: usable as a foreach count
 
 ### 5.c Broadening (none)
