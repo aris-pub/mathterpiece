@@ -101,6 +101,7 @@ class Box(Node):
     overlaps: list[Overlap] = field(default_factory=list)
     min_w: float = 0.0
     extra_bottom: float = 0.0
+    extra_right: float = 0.0
 
     def lines(self) -> list[tuple[str, str]]:
         out = [(self.title_cls, self.title)] if self.title is not None else []
@@ -131,6 +132,10 @@ class Band(Overlap):
 
 class Frame(Overlap):
     pass
+
+
+class SideBand(Overlap):
+    """A band that crosses the right edge of its target, with its label beside it."""
 
 
 def box(title, *children, **kw) -> Box:
@@ -185,6 +190,10 @@ def prepare(node: Node, parent: Box | None = None) -> None:
     for c in node.children:
         prepare(c, node)
     for ov in node.overlaps:
+        if isinstance(ov, SideBand):
+            for leaf in leaf_targets(node, ov)[1]:
+                leaf.extra_right = BAND_DEPTH
+            continue
         if not isinstance(ov, Band):
             continue
         # A band enters the bottom of each innermost target, so those targets get room below their
@@ -213,7 +222,7 @@ def measure(node: Node) -> None:
     tw, th = lines_size(node.lines())
     if not node.children:
         px, py = TINY_PAD if node.tiny else LEAF_PAD
-        node.w = max(tw, node.min_w) + 2 * px
+        node.w = max(tw, node.min_w) + 2 * px + node.extra_right
         node.h = th + 2 * py + node.extra_bottom
         return
     for c in node.children:
@@ -284,6 +293,14 @@ def arrange(node: Box) -> None:
 def place_overlap(container: Box, ov: Overlap) -> None:
     targets, leaves = leaf_targets(container, ov)
     _, th = lines_size(ov.lines())
+    if isinstance(ov, SideBand):
+        r = rel_rect(leaves[0], container)
+        lw, _ = lines_size(ov.lines())
+        h = max(th + 2 * BAND_PAD, r[3] - r[1] - 2 * BAND_INSET)
+        mid = (r[1] + r[3]) / 2
+        x0 = r[2] - BAND_DEPTH
+        ov.lx, ov.ly, ov.w, ov.h = x0, mid - h / 2, BAND_DEPTH + BAND_LABEL_GAP + lw + BAND_PAD, h
+        return
     if isinstance(ov, Band):
         leaf_rects = [rel_rect(t, container) for t in leaves]
         x0 = min(r[0] for r in leaf_rects) + BAND_INSET
@@ -355,7 +372,7 @@ def draw(node: Node, depth: int, out: list[str], overlaps: list[Overlap]) -> Non
         if node.align == "start":
             draw_lines(out, lines, node.x + px, top, "start")
         else:
-            draw_lines(out, lines, node.x + node.w / 2, top, "middle")
+            draw_lines(out, lines, node.x + (node.w - node.extra_right) / 2, top, "middle")
     for c in node.children:
         draw(c, depth + 1, out, overlaps)
 
@@ -363,6 +380,12 @@ def draw(node: Node, depth: int, out: list[str], overlaps: list[Overlap]) -> Non
 def draw_overlap(ov: Overlap, container_targets: list[Box], out: list[str]) -> None:
     out.append(rect(ov.x, ov.y, ov.w, ov.h, OVERLAP_STYLE))
     lines = ov.lines()
+    if isinstance(ov, SideBand):
+        right = max(t.x + t.w for t in container_targets)
+        _, th = lines_size(lines)
+        lw, _ = lines_size(lines)
+        draw_lines(out, lines, right + BAND_LABEL_GAP + lw / 2, ov.y + (ov.h - th) / 2, "middle")
+        return
     if isinstance(ov, Band):
         low = max(t.y + t.h for t in container_targets)
         draw_lines(out, lines, ov.x + ov.w / 2, low + BAND_LABEL_GAP, "middle")
@@ -408,7 +431,7 @@ OBJECTS = box(
             gap=12),
         box("movement",
             group(box("score"), direction="row",
-                  overlaps=[Band("instant", ("score",),
+                  overlaps=[SideBand("instant", ("score",),
                                  ("the movements that", "take no time"))]),
             group(animation("A1"), animation("A2"), dots(), direction="row"),
             gap=12),
