@@ -33,7 +33,7 @@ to describe heads. A signature is not mtp source:
 
 - A word in capitals stands for the expression that is written in its place: `NAME` for the declared name.
 - `X:T` is a {term}`positional argument`, called X in the spec, of type T. The positional arguments
-  come in the order of the signature.
+  come in the order of the signature. `X:T?` is a positional argument that may be left out.
 - `(A:T D)` is a {term}`named argument <named argument>` `A` of type T, whose default is D. `(A:T)`, with no
   default, is a named argument that every form with this head must have.
 - `(like T)` stands for every argument in the signature of T, which is a type, such as
