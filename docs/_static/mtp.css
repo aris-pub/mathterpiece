@@ -254,15 +254,21 @@ html[data-theme] .bd-content table.table td:first-child code {
 }
 html[data-theme] .bd-content table.table td:first-child code * { color: inherit; }
 
-/* The button that copies a rule's address (mtp-rules.js), after its label: an outlined button with
-   a link icon and the words Copy link, in the link color, so it is seen at a glance. */
-.mtp-rule-tail { display: inline-flex; align-items: center; gap: 0.5rem; }
-.mtp-rule-copy {
-  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.55rem;
-  border: 1px solid var(--pst-color-link); border-radius: 999px; background: none; cursor: pointer;
-  color: var(--pst-color-link); font: 600 0.8rem/1.4 var(--pst-font-family-base);
+/* The rule's label and the button that copies its address (mtp-rules.js) are two outlined pills
+   after the rule's number, both quiet: thin outlines mixed toward the page. */
+.mtp-rule-tail { display: inline-flex; align-items: center; gap: 0.4rem; }
+.mtp-rule-head .mtp-rule-label {
+  padding: 0.05rem 0.55rem; border-radius: 999px; line-height: 1.4;
+  border: 1px solid color-mix(in srgb, var(--pst-color-text-muted) 40%, transparent);
 }
-.mtp-rule-copy svg { width: 0.9rem; height: 0.9rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
-.mtp-rule-copy:hover { background: var(--pst-color-primary-bg); }
+.mtp-rule-copy {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.05rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--pst-color-link) 40%, transparent); border-radius: 999px;
+  background: none; cursor: pointer;
+  color: color-mix(in srgb, var(--pst-color-link) 80%, var(--pst-color-background));
+  font: 600 0.78rem/1.4 var(--pst-font-family-base);
+}
+.mtp-rule-copy svg { width: 0.85rem; height: 0.85rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.mtp-rule-copy:hover { color: var(--pst-color-link); border-color: var(--pst-color-link); }
 .mtp-rule-copy:focus-visible { outline: 2px solid var(--pst-color-primary); outline-offset: 1px; }
-.mtp-rule-copy.mtp-copied { background: var(--pst-color-link); color: var(--pst-color-background); }
+.mtp-rule-copy.mtp-copied { background: var(--pst-color-link); border-color: var(--pst-color-link); color: var(--pst-color-background); }
