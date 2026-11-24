@@ -7,6 +7,8 @@ expressions may read the scene, the formulas and the page objects.
 
 ## Known when compiling
 
+This rule exists to decide which expressions the compiler computes and which it leaves to the runtime.
+
 ```{rule} known-when-compiling
 An expression is known when compiling when it is one of these:
 
@@ -37,12 +39,16 @@ only while drawing ({numref}`random-never-folded`).
 
 ## `foreach` and `free`
 
+This rule exists to specify when the copies of a `foreach` are made.
+
 ```{rule} foreach-copies
 A `foreach` over a list whose length is known when compiling ({numref}`known-lengths`) makes one
 copy of its items for each item of the list, in the expand step ({numref}`compile-steps`). A
 `foreach` over a list whose length is known only while drawing makes its copies by
 {numref}`foreach-bounded-length`.
 ```
+
+This rule exists to specify when the starting value of a free container is computed, since it never updates after.
 
 ```{rule} free-starting-value
 `(free X)` is the starting value of a free container: the value of X when the page opens. It is
@@ -55,6 +61,8 @@ So with `(real c 3 (const))`, `(real r free@(* 2 c))` starts at 6, and a slider 
 and keeps it until a writer writes to `order`.
 
 ## What may read what
+
+This rule exists so that a world model means the same whatever page shows it, since the scene and the formulas may read nothing that belongs to a page.
 
 ```{rule} what-reads-what
 Every expression may read the scene and the formulas. The views, the controls and the listeners

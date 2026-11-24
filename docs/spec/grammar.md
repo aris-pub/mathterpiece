@@ -20,6 +20,8 @@ the name of a rule keeps the quoted text of that rule in the tree.
 ```{mtp-grammar} forms
 ```
 
+This rule exists to define the form, from which the parser builds every source.
+
 ```{rule} forms
 A form is a `(`, then any number of expressions, its items, then a `)`. An
 expression is a form, a `[…]`, a `{…}`, a word, a {term}`broadened type`, a
@@ -33,11 +35,15 @@ the form `(r 1)`, and `(motif m () …)` holds the form `()`, an empty list of p
 ```{mtp-grammar} file
 ```
 
+This rule exists to specify what the parser accepts at the top level of a source.
+
 ```{rule} top-level-forms
 A source is any number of forms, with or without {term}`whitespace` and
 {term}`comments <comment>` between them. Anything else at the top level of a source is an error. A
 source may hold no form at all.
 ```
+
+This rule exists so that the parser can always tell where one item of a form ends and the next begins.
 
 ```{rule} adjacent-items
 Among the items of a form, of a `[…]`, of a `{…}` or of brackets, whitespace or a comment separates every two
@@ -54,6 +60,8 @@ errors.
 ```{mtp-grammar} lists
 ```
 
+This rule exists to specify how the parser reads a list and a point, which are written in brackets and not as forms.
+
 ```{rule} lists
 A {term}`list` is written in braces, with its items separated as in {numref}`adjacent-items`:
 `{}`, `{0 1}`, `{(f x) 'a'}`. It is syntactic sugar for the form `(list-of …)` with the same items.
@@ -61,6 +69,8 @@ A point is written in square brackets with two items, `[0 1]` or `[(f x) 2]`, an
 sugar for `(point-of …)` with the same items ({numref}`sugar-rewrites`). A `[` right after the `}`
 of a list starts brackets after the list, which hold exactly one expression: `{a b c}[h]`.
 ```
+
+This rule exists to specify how the parser reads an item or an attribute written after a name.
 
 ```{rule} name-brackets
 A `[` right after a {term}`name`, with no whitespace between them, starts brackets after the name,
@@ -77,6 +87,8 @@ whitespace starts a point: `xs [0 1]` is the name `xs` and the point `[0 1]`.
 
 ```{mtp-grammar} literals
 ```
+
+This rule exists to specify how the parser reads a type written with `|`.
 
 ```{rule} broadened-types
 A broadened type is two words or more joined by `|` with no whitespace between them, such
@@ -107,6 +119,8 @@ inside each kind.
 
 ## The expressions after syntactic sugar is rewritten
 
+This rule exists to list every kind of expression that the parser passes on, so that later steps have no other kind to handle.
+
 ```{rule} parser-expressions
 After every syntactic sugar is rewritten ({numref}`parser-sugar`, {numref}`sugar-rewrites`), each
 expression of a source is one of these:
@@ -122,6 +136,8 @@ expression of a source is one of these:
 ```
 
 An operator is a name with one name part ({numref}`literal-words`).
+
+This rule exists to define which expressions are literals, which several later rules refer to.
 
 ```{rule} literals
 A literal is a number literal, a string literal, `true`, `false` or `none`. A
@@ -151,6 +167,8 @@ expression and is a compound.
 The six kinds of expression after syntactic sugar is rewritten. Compounds, declarations, clauses and special forms are forms.
 ```
 
+This rule exists so that every compiler turns each short spelling into the same form.
+
 ```{rule} parser-sugar
 The parser produces each spelling on the left as the form on the right:
 
@@ -168,6 +186,8 @@ The form has the position of the first character of its spelling. A `(. X Y)` th
 string has the position of its `.` or `[`.
 ```
 
+This rule exists to specify the form that the parser makes from a head that ends with `_`.
+
 ```{rule} unnamed-head
 When the head of a form is a {token}`mtp:head`, the parser removes the `_` and puts `none` in as
 the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ …)` is
@@ -182,6 +202,8 @@ The parser produces a qualified name, such as `p.r` or `xs[0].y`, as one name
 is given in {numref}`dot-name-part`.
 
 ## The form template
+
+This rule exists so that the parts of every form come in the same order, and the compiler can tell each part by its place.
 
 ```{rule} form-template
 Every form is written `(head name? positional… named… docstring? body…)`. The signature of each
@@ -230,6 +252,8 @@ Some forms, taken apart by the template:
 | `(if c a b)` | `if` |  | `c`, `a`, `b` |  |  | no |
 ```
 
+This rule exists so that the compiler can find the name of every declaration in the same place.
+
 ```{rule} declared-names
 Almost every declaration has a name slot, its second item. The exceptions are rare: a
 {term}`listener` is a declaration with no name slot ({numref}`forms-with-no-name`). The name of a
@@ -256,6 +280,8 @@ allowed, and nothing can refer to them. `(canvas none s)`, `(slider_ (animation 
 `(circle 'c' (r 1))` is an error, since the name is in quotes, and so is `(circle p.r (r 1))`, since
 its name has two name parts.
 
+This rule exists so that the compiler does not read the first argument of these forms as a name.
+
 ```{rule} forms-with-no-name
 These forms have no name, so their second item is their first positional argument or their first
 named argument: a {term}`listener`, `(move …)`, `(jump …)`, an `(animation …)` inside a
@@ -274,6 +300,8 @@ So the second item of each of these is not a name:
 - `(r 1)`, a named argument: `1`, its value.
 
 
+This rule exists so that the compiler can tell named arguments from the body by their place.
+
 ```{rule} named-arguments-first
 A named argument is a form, after the name and the positional arguments, whose head names one
 of the named arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`. In every
@@ -288,6 +316,8 @@ So `(circle c (r 1) (fill #'red'))` and `(circle c (fill #'red') (r 1))` are the
 `(like …)` is not first. `(canvas v s (x 0))` and `(group g (circle_ (r 1)) (defaults (fill #'red')))`
 are errors, since a named argument comes after the first item of the body.
 
+This rule exists because a form with two values for one named argument would have no single meaning.
+
 ```{rule} named-arguments-once
 Each named argument appears at most once in a form: a second one is an error, such as "'fill' is
 given twice".
@@ -299,6 +329,8 @@ So `(circle c (fill #'red') (fill #'blue'))` and `(circle c (r 1) (r 2))` are er
 Since `(pos P)` is `(x …) (y …)` ({numref}`sugar-rewrites`), a form that gives `pos` and also `x`
 or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like …)` are given in
 {numref}`like-copies`.
+
+This rule exists to fix where a docstring goes, so that the compiler can tell it from the other items.
 
 ```{rule} docstrings
 Every declaration may have a docstring, `doc@'text'`, and at most one. The
@@ -321,11 +353,15 @@ before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an e
 
 ## Bodies
 
+This rule exists so that the compiler can reject an item that has no meaning in the body where it is written.
+
 ```{rule} contexts
 The head specifies what the body of a form may hold, and {numref}`bodies-table` gives it for each
 head that has a body. A head that the table does not list has no body. An item that the head does
 not allow in the body is an error.
 ```
+
+This rule exists to specify what `let` and `foreach` become when written in a body, and where they may be written.
 
 ```{rule} body-let-foreach
 `(let ((name value) …) item…)`, `(foreach i n item…)`, `(foreach x list item…)` and

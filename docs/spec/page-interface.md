@@ -3,6 +3,8 @@
 
 ## Listeners in views
 
+This rule exists so that a listener acts only in the view where the reader can see what it acts on.
+
 ```{rule} listeners-in-views
 The runtime triggers a listener only for events in the view in whose body the listener is written.
 A listener on the view that holds it is written without the name of the view: `(on-view (move …))`,

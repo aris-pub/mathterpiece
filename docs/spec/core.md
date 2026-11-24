@@ -13,11 +13,15 @@ Every head, with its kind and the page that defines it, is listed in {doc}`heads
 The head of a form is its first item ({numref}`form-template`): `if` in `(if c a b)`, `circle` in
 `(circle p (r 1))`. An item of a form is also called by its head, so `(r 1)` is an `r` item.
 
+This rule exists so that the rewrite step can tell, for each form, whether it has to rewrite it.
+
 ```{rule} kinds-of-form
 Every form is either syntactic sugar ({numref}`sugar-form`) or a core form. Which kind a form is
 depends on the whole form, not only on its head:
 `(foreach ((a s) (b t)) …)` is syntactic sugar, and `(foreach a s …)` is core.
 ```
+
+This rule exists to define which forms the rewrite step may rewrite, so that it never needs a value or a type, which the prove step works out only later.
 
 ```{rule} sugar-form
 A form is syntactic sugar if and only if it can be rewritten into core forms without computing any value and
@@ -27,6 +31,8 @@ name refers to.
 A form that needs a value or a type to be rewritten is core, and is rewritten, if at all, in the
 expand step, once the prove step has worked out the types and the values ({numref}`compile-steps`).
 ```
+
+This rule exists so that the compiler treats a built-in or a function of the standard library like any other function, with no form of its own.
 
 ```{rule} built-ins
 A {term}`built-in` is a function, constant or type that every source has without declaring or
@@ -52,6 +58,8 @@ The {term}`parser` rewrites some syntactic sugar while it reads the source:
 a prefixed form `H@X`, a {term}`name string` `@'…'`, an {term}`interpolated string` `f'…'`, a part
 after a {term}`list` written in braces, `{…}[X]` ({numref}`parser-sugar`), and a head that ends with `_` ({numref}`unnamed-head`). Every
 other syntactic sugar form is in the table of the rule below.
+
+This rule exists so that every compiler rewrites each sugar form into the same core forms.
 
 (rewrite-when)=
 ```{rule} sugar-rewrites
@@ -138,6 +146,8 @@ move, such as `(on-drag p (as ptr) (move k (to ptr.x)))`.
 
 ### Copies with `like`
 
+This rule exists to specify exactly which items the compiler copies for a `(like …)`.
+
 ```{rule} like-copies
 `(K N (like M) ARGS…)` is syntactic sugar for `(K N ARGS… COPIED…)`. `COPIED…` holds each item of
 the declaration of `M`, as written in the source, whose heads do not overlap with those in `ARGS…`. A `(like …)` in
@@ -184,6 +194,8 @@ When `K` is a motif, `(like M)` does not copy its `clip` (mtp-ydd4.7.20).
 
 ### Dragging a group
 
+This rule exists because a group has no position of its own, so a drag of a group needs a stated target.
+
 ```{rule} drag-group-shift
 A group, a row or a column is dragged by its `shift`, its `shift-x` or its `shift-y`. In an
 `on-drag` on such a collection, whether its `fixed-size` is true or not, when the target is the
@@ -217,6 +229,8 @@ fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code foll
 
 ### `foreach` over a count or a list whose length is known only while drawing
 
+This rule exists so that the compiler handles a `foreach` over a count as a `foreach` over a range, with nothing else to specify.
+
 ```{rule} foreach-count
 `(foreach N X ITEMS…)`, where `X` is an {term}`int`, means exactly `(foreach N (range 0 X) ITEMS…)`.
 ```
@@ -224,6 +238,8 @@ fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code foll
 So the two spellings mean the same, at all times, and every rule about the second applies to the
 first. The first is core, and not syntactic sugar, only because an int and a list are told apart by the type
 of `X` ({numref}`sugar-form`).
+
+This rule exists because the compiler must write out every copy of a `foreach` before the page opens, while the length of its list may change while drawing.
 
 ```{rule} foreach-bounded-length
 A `foreach` over a list whose length is known only while drawing makes as many copies as the upper
@@ -246,6 +262,8 @@ compiler follow the rule.
 :::
 
 ### The form `.`
+
+This rule exists to specify what `(. X K)` evaluates to for each kind of `K`, since one form reads attributes, items and members.
 
 ```{rule} dot-name-part
 In `(. X K)`, `K` is any expression. When `K` evaluates to a string, the form evaluates to the attribute
@@ -273,6 +291,8 @@ reads the color `yellow` as a key (mtp-ydd4.7.19).
 
 ### A score written as a step
 
+This rule exists to specify how the runtime plays a score inside another score.
+
 ```{rule} animation-step
 A score written as a member of another score is one step of it. It plays
 its own members with its own `(loop …)`, and the `(defaults …)` of the score around it do not apply inside it.
@@ -285,6 +305,8 @@ choreo `C` is compiled to its steps in place (compiler.py:1714-1729) (mtp-ydd4.7
 :::
 
 ### Names built from values
+
+This rule exists so that a source can declare and refer to names built from values, such as one name for each copy of a `foreach`.
 
 ```{rule} names-from-values
 `(name S)`, where `S` is an expression that evaluates to a string, stands for the name that the

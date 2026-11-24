@@ -13,6 +13,8 @@ that breaks a rule of this page is rejected in the rewrite step. A name built fr
 
 ## Declarations and bindings
 
+This rule exists to separate the forms that create something from the forms that only name a value.
+
 ```{rule} declarations-and-bindings
 A declaration is a {term}`form` that creates a variable, a type or an object, or, for an `import`,
 makes the names of another file usable ({doc}`data-model`). What it creates exists whether or not
@@ -67,6 +69,8 @@ the box of the shape depends on the shapes in its body.
 
 ## Scopes
 
+This rule exists to determine, at each place in a source, which names may be used there.
+
 ```{rule} scopes
 A {term}`scope` is a part of a source in which some names may be used. These are the scopes of mtp,
 and the names of each one:
@@ -100,6 +104,8 @@ that declaration, and elsewhere through it, as `theme.ink`, by {numref}`dot-name
 a shape or a variable declared in a motif's body may be used outside the body only as an attribute
 of a shape of that motif, as `d1.face` ({doc}`data-model`).
 
+This rule exists so that the compiler can resolve every name in one pass, and so that no value can depend on a value declared after it.
+
 ```{rule} declare-before-use
 A use of a name refers only to a declaration or a binding that comes before the use, in every
 scope, with no exceptions, and a name that an import makes usable may be used only after the import. The
@@ -130,6 +136,8 @@ In the scene and in the body of a motif, the compiler follows this. In a group,
 :::
 
 ## What a name refers to
+
+This rule exists so that every compiler resolves each name to the same declaration.
 
 ```{rule} name-lookup
 A use of a name, and the first {term}`name part` of a {term}`qualified name`, refers to what these
@@ -171,6 +179,8 @@ In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `
 (slider change (animation (move x (from 0) (to 4) (duration 0))) (label 'x'))
 ```
 
+This rule exists so that every name in a scope refers to exactly one thing.
+
 ```{rule} one-declaration-per-scope
 In one scope, a name is declared or bound at most once, whatever the kinds of the declarations
 and the bindings. A variable, a shape, a function, a type, an {term}`interface`, a motif, a
@@ -192,6 +202,8 @@ The compiler does not check that the names of one `let` are all different (`comp
 mtp-ydd4.7.41.
 :::
 
+This rule exists so that a name inside a motif never means something other than the same name at the top level of its file.
+
 ```{rule} motif-names-hide-nothing
 A shape or a variable declared in the body of a motif never takes a name that the file declares at
 its top level, or that an `(import F N…)` gives, before the motif. Such a declaration is a compile
@@ -210,6 +222,8 @@ The file scope of an imported file, and the names that an import gives, are defi
 {doc}`imports`.
 
 ## Names that no declaration or binding takes
+
+This rule exists so that a keyword or a built-in type always means the same thing wherever it is written.
 
 ```{rule} declaration-names
 No declaration and no binding may take as its name a {term}`keyword` ({numref}`keywords`) or a

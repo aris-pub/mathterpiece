@@ -6,6 +6,8 @@ Not drafted yet. This page defines: the objects, their attributes, identity, the
 
 ## Defaults on a collection and on a shape declared with a motif
 
+This rule exists so that a group, a row or a column can set an attribute once for all its members.
+
 ```{rule} collection-defaults
 A `(defaults (A V)…)` on a group, a row or a column sets `A` to `V` on each of its members, at any
 depth, for which a collection may set `A`, and whose declaration does not set `A`. When several
@@ -19,11 +21,15 @@ any other `A` is a {term}`compile error`.
 
 ## Formulas
 
+This rule exists so that every term of a formula is known when compiling.
+
 ```{rule} formula-terms
 The string of a formula is its positional argument, right after its name: any expression that
 evaluates to a string known when compiling. The formula has a term `N` for each `\term{N}{…}` in
 the string.
 ```
+
+This rule exists so that a formula can set an attribute once for all its terms.
 
 ```{rule} formula-defaults
 A `(defaults (A V)…)` in a formula sets `A` to `V` on each term of the formula whose `(term …)` form

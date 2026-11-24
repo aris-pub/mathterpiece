@@ -35,6 +35,8 @@ A {term}`clause` and a {term}`special form` have no result of their own ({doc}`g
 
 ## Primitives
 
+This rule exists to define the primitives, which the rest of the spec tells apart from objects.
+
 ```{rule} values
 A primitive is a value that never changes and has no identity: two primitives that are
 equal are the same value. The primitives are the numbers, the bools, the strings, the colors,
@@ -63,6 +65,8 @@ changes, nothing writes to one: a writer writes to a variable or an attribute, w
 different value. When a slider writes 2 to the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
 
 ## Variables
+
+This rule exists to define the three kinds of variable, which decide what a writer may write to and what the runtime computes again.
 
 ```{rule} variables
 A variable is a named holder of one value. It is free, bound or const. A free variable holds its
@@ -99,6 +103,8 @@ compile error.
 :::
 
 ## Objects
+
+This rule exists to define objects, which keep their identity while their attributes change.
 
 ```{rule} objects
 An object is a value that has an identity and attributes. Each attribute behaves like a variable:
@@ -185,6 +191,8 @@ of attributes.
 
 ## Identity
 
+This rule exists so that the compiler and the runtime agree on when two values are the same object.
+
 ```{rule} identity
 Two primitives are the same value exactly when they are equal. An object is the same object only as
 itself: each declaration, each copy that a `foreach` makes of a declaration, and each evaluation of
@@ -205,6 +213,8 @@ container that holds the primitive, and the old value does not change.
 
 ## Functions
 
+This rule exists to define what a function is in the data model, and that it has no attribute that can change.
+
 ```{rule} functions
 A function is an object whose only attribute is `name`, and whose behavior is to be called.
 `(func f …)` declares a function, and each evaluation of `(fn …)` results in a new function.
@@ -222,6 +232,8 @@ on two functions compiles, with no result given by the spec.
 :::
 
 ## Records
+
+This rule exists to define the record, an object that holds named values and is not drawn.
 
 ```{rule} records
 A record is an object that consists only of the attributes that it is declared with.

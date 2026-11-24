@@ -3,6 +3,8 @@
 
 ## Imported declarations
 
+This rule exists so that a .mtpc holds no more than its page can use.
+
 ```{rule} mtpc-imported-declarations
 Of the declarations that a source imports ({numref}`import-puts-in`), a .mtpc holds only those that
 the source uses, directly or through other declarations.

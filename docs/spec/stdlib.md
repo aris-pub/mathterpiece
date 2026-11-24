@@ -7,6 +7,8 @@ Not drafted yet. This page defines: every built-in function and constant, and th
 (stdlib-rand)=
 ## The file rand
 
+This rule exists because random functions need a seed and a site that the compiler provides, so the file rand cannot be written in mtp.
+
 ```{rule} rand-module
 The file `rand` of the {term}`standard library` has no .mtp file: the compiler provides its names,
 and `(import rand …)` makes them usable in the same way as the names of any other file
@@ -18,6 +20,8 @@ and `(import rand …)` makes them usable in the same way as the names of any ot
 | `seed` | the {term}`seed` that a file with no seed of its own uses ({numref}`default-seed`), as if declared `(rand-seed seed 0)` |
 | `roll-dice` | an animation, as if declared `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`: each `roll-dice` writes the next value of the seed `s` to `s` at once. In a `(roll-dice)` with no argument, `s` is the {term}`default seed` of the file that holds the `(roll-dice)` |
 ```
+
+This rule exists so that each use of a random function is a call with a site of its own.
 
 ```{rule} random-calls
 A name that refers to a random function may be written only as the head of a call. Written

@@ -15,6 +15,8 @@ of them.
 
 ## Evaluation changes nothing
 
+This rule exists so that the compiler may compute an expression ahead of time, and the runtime again at any time, and get the same value with no side effects.
+
 ```{rule} evaluation-is-pure
 Evaluating an expression results in a value and changes nothing: no variable,
 no attribute, no {term}`seed` and no page element. The value depends only on what the
@@ -24,6 +26,8 @@ expression that reads it ({doc}`world-model`).
 ```
 
 ## What a name means
+
+This rule exists so that the place where a name is written determines whether it declares, gives a value or names a container.
 
 ```{rule} what-a-name-means
 A name means one of three things, by where it is written:
@@ -44,6 +48,8 @@ to the circle, and `a` in `(slider s a (from 0) (to 2))` means the container `a`
 
 ## Evaluation order
 
+This rule exists to fix the order of evaluation, so that every compiler and runtime compute a call the same way.
+
 ```{rule} arguments-before-call
 In a call of a function, a built-in function or an {term}`operator`, every argument is evaluated,
 and then the result is computed from their values. The forms of
@@ -52,6 +58,8 @@ and then the result is computed from their values. The forms of
 
 By {numref}`evaluation-is-pure`, and since every argument is evaluated, the order in which the
 arguments of one call are evaluated does not change the value.
+
+This rule exists so that a part that is not evaluated, such as the untaken branch of an `if`, can never make an error or a `none`.
 
 ```{rule} forms-evaluate-some-parts
 Only some of the parts of these forms are evaluated:
@@ -77,6 +85,8 @@ function may stop at the first item at which the result is known: by {numref}`ev
 the value is the same.
 
 ### Which parts the prove step proves
+
+This rule exists so that a branch that can never run does not stop a source from compiling.
 
 ```{rule} known-condition-takes-one-branch
 When the test of an `if` is known in the prove step ({numref}`check-bodies-once`), the prove
@@ -117,6 +127,8 @@ mtp-08wd.2.
 :::
 
 ## Operations that result in none
+
+This rule exists to list where an operation has no value, so that the compiler and the runtime give `none` at the same inputs.
 
 ```{rule} operations-that-give-none
 Besides an argument that is `none` ({numref}`none-propagates`), an operation results in `none` at
@@ -164,6 +176,8 @@ So no operation results in an infinity or NaN: a real is always finite ({numref}
 The functions of the {term}`standard library` are written in mtp, and result in `none` where the
 built-in functions that they call result in `none` ({doc}`stdlib`).
 
+This rule exists so that an operation known to have no value is reported when compiling, rather than giving `none` on the page.
+
 ```{rule} none-at-known-inputs
 An operation whose inputs are known in the prove step ({numref}`check-bodies-once`), and are among
 the inputs at which it results in `none` ({numref}`operations-that-give-none`), is a compile error. So
@@ -209,6 +223,8 @@ the type of each such expression includes `none` ({numref}`may-give-none`).
 
 ## How none propagates
 
+This rule exists so that the runtime never stops on a missing value: `none` passes through to where it is handled.
+
 ```{rule} none-propagates
 An operation with an argument that is `none` results in `none`, at both times, with these
 exceptions:
@@ -242,6 +258,8 @@ place of its list results in `none`.
   `(map (if (= 1 2) {1} none) (fn ((int x)) x))` is rejected. Bug mtp-ydd4.7.52.
 :::
 
+This rule exists because a test or a count that meets `none` has no value that the runtime could use.
+
 ```{rule} none-never-a-condition
 The test of an `if` and the value of the `(active …)` of a {term}`control` or a
 {term}`listener` are never `none`. Nor is an item of the list passed to `sum`, `count`, `min`,
@@ -254,6 +272,8 @@ means no fill or no stroke. In every other place that the {term}`reader` sees, `
 replaced with a default by `or?`, or left out of a list by `somes` ({doc}`types`).
 
 ## Numbers
+
+This rule exists so that the compiler and the runtime hold every number the same way, and so compute the same results.
 
 ```{rule} number-types
 There are four types of number ({doc}`types`). Each is held this way, when folded and while
@@ -285,11 +305,15 @@ mtp-ydd4.7.13.
 (readout r f'n/10 + 1/5 = 3/10 is {(= (+ (/ n 10) 1/5) 3/10)}')
 ```
 
+This rule exists to define arithmetic on points, which the runtime uses for positions.
+
 ```{rule} point-arithmetic
 The points form a vector space over the reals. `(+ p q)` and `(- p q)` add and subtract two points
 coordinate by coordinate, `(* r p)` and `(* p r)` multiply both coordinates of `p` by the real `r`,
 `(/ p r)` divides both by `r`, and `(- p)` negates both. The zero of the space is `[0 0]`.
 ```
+
+This rule exists so that the compiler can give every arithmetic result a type before it is computed.
 
 ```{rule} number-result-types
 The result of an arithmetic operation has the broadest type of its inputs, in the order `int`,
@@ -307,6 +331,8 @@ when it lies exactly halfway between them.
 ```
 
 ### The number limit
+
+This rule exists so that no number ever overflows, at either time.
 
 ```{rule} number-limit
 Every number lies within the number limit, from -10¹⁵⁰ to 10¹⁵⁰, when folded and while
@@ -343,6 +369,8 @@ mtp-ydd4.7.18.
 
 ### Rounding
 
+This rule exists so that every compiler and runtime round a number to the same result.
+
 ```{rule} rounding
 Wherever a number is rounded, other than a channel of a mixed color
 ({numref}`mixed-color-channels`), halves are rounded away from zero, on the number's shortest exact
@@ -359,6 +387,8 @@ int's range, so that the result is the nearest int inside the range ({doc}`types
 `(int r (round 1e28))` raises `decimal.InvalidOperation`, which is not a compile error and has no
 position. Bug mtp-6yga.
 :::
+
+This rule exists so that a color that the compiler mixes matches the color that a browser mixes.
 
 ```{rule} mixed-color-channels
 Each channel of a mixed color is rounded to a whole number, and a channel that lies exactly halfway
@@ -378,6 +408,8 @@ mtp-nk2w.
 
 ## Randomness
 
+This rule exists so that every random value can be computed again from a seed, and is the same on every page and in every compiler.
+
 ```{rule} seed-variable
 Every random value is computed from a seed: a free variable of the {term}`built-in type`
 `rand-seed`, whose values are the ints. A random function uses the seed named in it with
@@ -387,6 +419,8 @@ Every random value is computed from a seed: a free variable of the {term}`built-
 
 The random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed` are declared in the file
 rand of the standard library ({numref}`rand-module`).
+
+This rule exists so that a random function with no `(seed …)` still has exactly one seed.
 
 ```{rule} default-seed
 The default seed of a file is the only seed among the names of its {term}`file scope`
@@ -412,6 +446,8 @@ These are the messages of the compile errors for a random function with no `(see
 | the default seed is declared after it | "the seed N is declared after this: a random value uses a seed declared before it" |
 | only `const` variables of type `rand-seed` | "N is const, so it is not a seed: a random value uses a seed that is not const" |
 | no variable of type `rand-seed`, and the file rand is not imported | "a random value uses a seed: declare one, (rand-seed dots 0), or import the standard one, (import rand seed)" |
+
+This rule exists so that two calls of a random function in one source give different values from the same seed.
 
 ```{rule} random-site
 Each call of the random function `rand`, `rand-int`, `pick` or `shuffle`, by any name that an
@@ -453,6 +489,8 @@ and the site 2 to the `r` of `c`. It also reads every `import` before any other 
 mtp-ydd4.7.39 makes the compiler follow the rule.
 :::
 
+This rule exists so that every runtime computes the same random value from the same seed and site.
+
 ```{rule} random-hash
 The hash h of whole numbers x₁, …, xₙ is a whole number below 2³², computed with every product taken modulo
 2³², every xor and shift on 32-bit numbers, and `>>` the shift that fills with zeros:
@@ -473,6 +511,8 @@ up to 1, never 1.
 Since only each x modulo 2³² enters the hash, two seed values that are equal modulo 2³², such as 0,
 2³² and -2³², result in the same random values.
 
+This rule exists so that every runtime turns the same hash into the same random value.
+
 ```{rule} random-values
 With s the value of the seed and p the site:
 
@@ -484,6 +524,8 @@ With s the value of the seed and p the site:
   positions i and ⌊u(s, p, i) × (i + 1)⌋ are swapped.
 - `(next-seed s)` is h(s, 0x9e3779b9).
 ```
+
+This rule exists because a seed may change while drawing, so the compiler must never compute a random value ahead of time.
 
 ```{rule} random-never-folded
 A random value is known only while drawing ({doc}`binding-time`).
@@ -527,6 +569,8 @@ seed that is below 0 is a compile error. mtp-ydd4.7.30.
 
 `(!= a b)` is true exactly when `(= a b)` is false.
 
+This rule exists so that the compiler rejects an `=` whose result could only ever be false, or that would compare things with no equality.
+
 ```{rule} equality-operands
 `(= a b)` and `(!= a b)` are a compile error unless the type of one side is a {term}`subtype` of the type
 of the other, or one side is `none`. They are a compile error on functions, movements or
@@ -534,6 +578,8 @@ animations, or on values whose type includes one of them, such as a list of func
 numbers is not converted to a point for them: `(= p xs)`, with `p` a point and `xs` a list of ints,
 is a compile error, and `(= p [1 2])` compiles, since `[1 2]` is a point.
 ```
+
+This rule exists to fix when two values are equal, so that every compiler and runtime give the same result.
 
 ```{rule} equality-by-content
 Primitives are compared by content, and objects by identity. `=` and `!=` never result in `none`:
@@ -566,6 +612,8 @@ JavaScript function for each read of a function (web/src/runtime.ts, `functionVa
 The runtime uses a separate, tolerant comparison to check whether the scene is in a state. It is
 not equality.
 
+This rule exists so that the runtime can recognize a value that a play or a stepper reached, even after small errors of rounding.
+
 ```{rule} matching
 Two values {term}`match` when they are equal, with one difference: two reals match when they
 differ by at most 10⁻¹² or by at most a millionth of the larger of their sizes. Points and lists
@@ -590,6 +638,8 @@ A function may call itself, directly, through other functions, or through a func
 known when compiling, and `range` results in at most 1,000,000 items. So the only computation that
 could go on without end is a chain of calls. When folding, every chain ends at the
 {term}`call depth limit`. How a chain ends while drawing is the open question Q-evaluation-13 below.
+
+This rule exists so that a function that calls itself can never run forever, when compiling or while drawing.
 
 ```{rule} call-depth-limit
 The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
@@ -645,10 +695,14 @@ mtp-ydd4.7.15.
 (folding-and-drawing)=
 ## The same value when folded and while drawing
 
+This rule exists so that whether the compiler folds an expression never changes what the page shows.
+
 ```{rule} same-value-at-both-times
 An expression evaluates to the same value when it is folded as when it is computed while drawing,
 for the same values of what it reads.
 ```
+
+This rule exists so that the compiler and every runtime compute each built-in function to the same bits.
 
 ```{rule} correctly-rounded-reals
 Each binary64 number of the result of a built-in function or an operator (a real, a part of a

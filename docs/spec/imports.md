@@ -13,6 +13,8 @@ rule of this page is rejected in the rewrite step.
 
 ## How an import is written
 
+This rule exists to fix the two ways of writing an import, so that the compiler rejects every other way.
+
 ```{rule} import-form
 An import is `(import F)` or `(import F N1 N2…)`, with `F` and each `Ni` a name of one
 {term}`name part` ({numref}`name-characters`). `(import F)` imports the file `F.mtp` whole, and
@@ -32,6 +34,8 @@ The error for an `Ni` that is not a name of `F.mtp` reads "F.mtp declares no 'Ni
 :::
 
 ## Which file an import reads
+
+This rule exists so that an import finds the same file on every file system.
 
 ```{rule} import-file-name
 `(import F …)` reads the file whose name is `F` followed by `.mtp`, looked for in the folders that
@@ -53,6 +57,8 @@ file system does not tell upper and lower case apart, `(import Colors)` reads co
 source compiles, while on Linux the same source is a compile error. Bead mtp-ydd4.7.57.
 :::
 
+This rule exists so that a file imported several times is put in once, and its declarations are not declared twice.
+
 ```{rule} import-same-file
 Two imports read the same file when they find the same file on disk, also when one of them finds
 it through a symbolic link, a file that only points to another file. A file
@@ -70,11 +76,15 @@ named colors.mtp.
 
 ## What a file to import holds
 
+This rule exists so that importing a file adds nothing to the page that the source did not declare itself.
+
 ```{rule} import-file-holds
 A {term}`file to import` may hold at its top level only `import`, `let`, `foreach`, and declarations
 of types, functions, records, {term}`seeds <seed>`, and non-free variables. Any other form there is a
 compile error.
 ```
+
+This rule exists so that an error in an imported file is found whether or not a source uses the part that holds it.
 
 ```{rule} import-checks-whole-file
 The compiler checks every declaration of an imported file, whether the source uses it or not.
@@ -94,6 +104,8 @@ So whether a file to import is correct never depends on the source that imports 
 
 ## The names that an import makes usable
 
+This rule exists to specify the names under which a source may use what it imports.
+
 ```{rule} import-puts-in
 `(import F)` makes each name `N` of `F.mtp` usable in the source as the {term}`qualified name`
 `F.N`. `(import F N1 N2…)` does the same, and also makes each `Ni` usable on its own.
@@ -106,6 +118,8 @@ So whether a file to import is correct never depends on the source that imports 
 (compiler.py:6056) (mtp-ydd4.7.47).
 :::
 
+This rule exists so that a file means the same thing whichever file imports it.
+
 ```{rule} import-files
 An imported file has a {term}`file scope` of its own: its forms may use only the names that it
 declares, binds and imports, and never a name of a file that imports it. The names of a file are
@@ -116,6 +130,8 @@ name of a file that it imports whole is not one of its names.
 So with `(import colors red)` in house.mtp, a source may write `(import house red)`, and with
 `(import colors)` in house.mtp, `(import house colors)` is a compile error. The files of the
 {term}`standard library` are imported like any other file ({doc}`stdlib`).
+
+This rule exists so that an imported name follows the same order as every other name (declare before use).
 
 ```{rule} import-declares-names
 An `(import …)` makes its names usable from its place in the file on.

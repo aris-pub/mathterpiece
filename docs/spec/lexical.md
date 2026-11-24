@@ -29,6 +29,8 @@ is a rule of {doc}`grammar`. In a definition:
   0.
 - The tree of forms does not keep the text of a definition whose name starts with `_`.
 
+This rule exists so that the parser reads the same text the same way wherever two definitions of the grammar could both match.
+
 ```{rule} grammar-in-context
 At each place in a source, the parser reads only the text that the grammar allows at that place.
 Where several definitions in capitals could match there, the parser reads the one of the highest
@@ -44,6 +46,8 @@ This is how Lark reads the grammar with `parser="lalr"` and `lexer="contextual"`
 ```{mtp-grammar} bom
 ```
 
+This rule exists so that the parser reads the same characters whatever system wrote the file.
+
 ```{rule} source-text
 A source is a sequence of Unicode characters. A file is read as UTF-8, and each `\r\n` and
 each `\r` alone becomes `\n`. A byte order mark (U+FEFF) at the very
@@ -53,6 +57,8 @@ start of a source is ignored. The text has no other change.
 A byte order mark at any other place, outside string literals and comments, is an error, because it
 is not whitespace ({numref}`whitespace-and-comments`) and not a character of a {term}`word`
 ({numref}`word-ends`).
+
+This rule exists so that every compiler gives an error the same line and column.
 
 ```{rule} expression-positions
 Each expression that the parser produces has a position: the line and the column of its
@@ -66,6 +72,8 @@ column. An expression that the parser builds from a shorter spelling has the pos
 
 ```{mtp-grammar} whitespace-and-comments
 ```
+
+This rule exists to specify what the parser skips between expressions.
 
 ```{rule} whitespace-and-comments
 Whitespace is the three characters space (U+0020), tab (U+0009) and newline
@@ -82,6 +90,8 @@ errors outside string literals and comments. {doc}`grammar` gives the places whe
 
 ## Where words end
 
+This rule exists so that the parser splits text into words the same way in every compiler.
+
 ```{rule} word-ends
 A word is a name, a number, an {term}`operator`, a {term}`bool` literal or `none`. From the first
 character of a word up to the next whitespace, the end of the source, or the next of the characters
@@ -92,6 +102,8 @@ not one word up to there is an error.
 The characters `'`, `$`, `#`, `@`, `.`, `/` and `^` do not end a word, so `a$'x'`, `1x` and `a'b`
 are errors: none of them is one word. The grammar rejects them, as the parser does, because by
 {numref}`adjacent-items` only a form may follow a word with no whitespace between them.
+
+This rule exists because the parser has no way to read an attribute or an item of a form, so `(sort xs).x` must be an error rather than be read some other way.
 
 ```{rule} no-name-part-after-form
 The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` and
@@ -116,6 +128,8 @@ attribute or the name of a member, and means nothing on its own.
 ```{mtp-grammar} names
 ```
 
+This rule exists to specify which text the parser reads as a name.
+
 ```{rule} name-characters
 Each name part starts with a {term}`letter`, one of the ASCII letters `a` to `z` and `A` to
 `Z`. Then come any number of letters, {term}`digits <digit>` and hyphens (`-`). Last comes `?`, or
@@ -135,6 +149,8 @@ such as after `|` in a {term}`broadened type` or after a `.` that follows {term}
 ```{mtp-grammar} heads-with-no-name
 ```
 
+This rule exists so that the parser can tell a head with no name from a name that holds an underscore.
+
 ```{rule} name-underscore
 An underscore may be written only at the very end of the head of a form, right after its last
 name part: `(circle_ (r 1))`, `(marks.grid_ …)`, `(line|none_ …)` and `(none_ a)`. Such a head
@@ -150,6 +166,8 @@ has no name ({numref}`unnamed-head`).
 ```{mtp-grammar} bools-and-none
 ```
 
+This rule exists to specify which words the parser reads as bools, as `none` and as operators, and not as names.
+
 ```{rule} literal-words
 The word `true` or `false` is a bool literal. The word `none` is the literal `none`. Each of the
 words `+ - * / ^ < <= > >= = != .` is an operator: a name with one name part, which is never
@@ -161,6 +179,8 @@ So `+[0]` is an error. `true[0]`, `none[0]` and `3[0]` are errors too, since by
 is not a word.
 
 ## Keywords
+
+This rule exists to fix the words that a source may not use as names.
 
 ```{rule} keywords
 A {term}`keyword` is one of the words of {numref}`keywords-table`, and no other word.
@@ -189,6 +209,8 @@ heads of {term}`conditions <condition>`, such as `length` and `one-of`, and `con
 
 Which names no declaration and no binding may take is defined in {numref}`declaration-names`.
 
+This rule exists to keep characters free for syntax that the parser may need later, and to give each other character one meaning.
+
 ```{rule} reserved-characters
 Outside a string literal, `"` is an error, `{` and `}` start and end a list ({numref}`lists`), and so is a `$` or a `#` that is not followed
 by `'`. Outside the {term}`format spec` of an interpolated string ({numref}`interpolated-strings`),
@@ -199,6 +221,8 @@ by `'`. Outside the {term}`format spec` of an interpolated string ({numref}`inte
 
 ```{mtp-grammar} numbers
 ```
+
+This rule exists so that the parser reads every number to the same value and the same kind in every compiler.
 
 ```{rule} number-literals
 A digit is one of the ASCII digits `0` to `9`. A word that matches one of the number
@@ -225,11 +249,15 @@ number, and the difference of 2 and 1 is written `(- 2 1)`.
 ```{mtp-grammar} string-literals
 ```
 
+This rule exists to specify which text the parser reads as a string, and what each escape stands for.
+
 ```{rule} string-literals
 A string literal is written in single quotes. Inside it, `\'` is a quote, `\\` is a backslash and
 `\n` is a line feed. A backslash followed by any other character is an error. Every other
 character, a line feed included, is itself.
 ```
+
+This rule exists so that TeX can be written with its backslashes as they are, without an escape for each one.
 
 ```{rule} tex-strings
 A TeX string is written `$'…'`. Inside it, `\'` is a quote, and every other character is
@@ -238,6 +266,8 @@ together, so in `$'a\\'` the string is `a\\` and the last quote closes it. Its v
 ordinary string: `$` changes only how the text between the quotes is read, which lets LaTeX be
 written as it is.
 ```
+
+This rule exists to specify which text the compiler reads as a color.
 
 ```{rule} color-literals
 A color is written `#'…'`, a color string, which is syntactic sugar for `(color-of f'…')`: its text
@@ -264,6 +294,8 @@ no `rgb`. Bead mtp-ivdt.
 ```{mtp-grammar} prefixes
 ```
 
+This rule exists to specify how the parser reads `H@X`, a short way of writing a form of one name and one expression.
+
 ```{rule} prefix-forms
 A name, `@` and an expression, written with nothing between them, are short for the form of that name
 and that expression: `H@X` is `(H X)`. H is a name that is not an operator and does not end with `_`. X
@@ -282,6 +314,8 @@ rules as when it is written with parentheses: `if@c` is `(if c)`, which is an er
 
 ```{mtp-grammar} interpolated-strings
 ```
+
+This rule exists to specify how the parser reads a string with expressions inside it, and what each part becomes.
 
 ```{rule} interpolated-strings
 An interpolated string is written `f'…'`, a {term}`name string` is written `@'…'`, and a color
