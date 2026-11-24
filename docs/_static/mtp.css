@@ -254,19 +254,15 @@ html[data-theme] .bd-content table.table td:first-child code {
 }
 html[data-theme] .bd-content table.table td:first-child code * { color: inherit; }
 
-/* The button that copies a rule's address (mtp-rules.js), after its label. */
-.mtp-rule-tail { display: inline-flex; align-items: center; gap: 0.35rem; }
+/* The button that copies a rule's address (mtp-rules.js), after its label: an outlined button with
+   a link icon and the words Copy link, in the link color, so it is seen at a glance. */
+.mtp-rule-tail { display: inline-flex; align-items: center; gap: 0.5rem; }
 .mtp-rule-copy {
-  display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; padding: 0;
-  border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer;
-  color: var(--pst-color-text-muted);
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.55rem;
+  border: 1px solid var(--pst-color-link); border-radius: 999px; background: none; cursor: pointer;
+  color: var(--pst-color-link); font: 600 0.8rem/1.4 var(--pst-font-family-base);
 }
-.mtp-rule-copy svg { width: 0.95rem; height: 0.95rem; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
-.mtp-rule-copy:hover { color: var(--pst-color-primary); border-color: var(--pst-color-border); }
+.mtp-rule-copy svg { width: 0.9rem; height: 0.9rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.mtp-rule-copy:hover { background: var(--pst-color-primary-bg); }
 .mtp-rule-copy:focus-visible { outline: 2px solid var(--pst-color-primary); outline-offset: 1px; }
-.mtp-rule-copy.mtp-copied { color: var(--pst-color-primary); }
-.mtp-rule-copy.mtp-copied::after {
-  content: "Copied"; position: absolute; transform: translate(-50%, -1.6rem); left: 50%;
-  font: 600 0.75rem var(--pst-font-family-base); color: var(--pst-color-primary); white-space: nowrap;
-}
-.mtp-rule-copy { position: relative; }
+.mtp-rule-copy.mtp-copied { background: var(--pst-color-link); color: var(--pst-color-background); }

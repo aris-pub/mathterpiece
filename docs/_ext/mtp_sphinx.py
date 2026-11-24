@@ -190,7 +190,7 @@ def visit_rule(self, node):
         f'<button type="button" class="mtp-rule-copy" data-anchor="{anchor}" '
         'aria-label="Copy the link to this rule" title="Copy the link to this rule">'
         '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3M7 4.5l1.2-1.2a2.5 2.5 0 0 1 3.5 3.5L10.5 8'
-        'M9 11.5l-1.2 1.2a2.5 2.5 0 0 1-3.5-3.5L5.5 8"/></svg></button>'
+        'M9 11.5l-1.2 1.2a2.5 2.5 0 0 1-3.5-3.5L5.5 8"/></svg><span class="mtp-copy-text">Copy link</span></button>'
     )
     self.body.append("</span></p>")
 
