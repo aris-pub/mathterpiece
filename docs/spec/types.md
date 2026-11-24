@@ -401,7 +401,8 @@ declared with one is a compile error. Bead mtp-mo3r.
 `(motif M PARAMS …)` declares the type M, a shape type, and `(animation A PARAMS …)` the type A, a
 movement type. Each is disjoint from every other type.
 `(variant V PARAMS S)` declares the type V, a subtype of the type of S. A V has the attributes of
-the type of S and the parameters of V. The attributes that S sets are const: a V may not set them. Each parameter of V must be read by S, and may not have the name of
+the type of S and the parameters of V. An attribute that S sets is const when its expression reads no parameter of V, and bound
+otherwise. A V may not set it. Each parameter of V must be read by S, and may not have the name of
 an attribute of the type of S. Where S and a V both set a default for the same attribute, the
 default of S wins.
 ```

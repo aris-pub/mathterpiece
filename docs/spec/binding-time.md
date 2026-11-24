@@ -13,7 +13,7 @@ An expression is known when compiling when it is one of these:
 - a literal
 - a function declared with `func`, or a built-in function
 - a name that refers to an object, such as a shape or a record
-- a const container, unless it is a font
+- a const container
 - a bound container whose expression is known when compiling, unless it is a font
 - the name of a `let` or a `foreach`, in each copy, when the value bound to it is known when compiling
 - a parameter, in a call or a declaration whose argument for it is known when compiling
