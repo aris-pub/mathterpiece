@@ -257,8 +257,3 @@ html[data-theme] .bd-content table.table td:first-child code * { color: inherit;
   background: var(--pst-color-link); color: var(--pst-color-background);
   font-size: 0.75rem; font-weight: 600;
 }
-
-/* Running text keeps to about 75 characters a line, while tables and examples may use the whole
-   width that the article has. */
-.bd-article :is(p, ul, ol, dl, .mtp-rule, .admonition, div.highlight-mtp-sig) { max-width: 44rem; }
-.bd-article .mtp-rule :is(p, ul, ol) { max-width: none; }
