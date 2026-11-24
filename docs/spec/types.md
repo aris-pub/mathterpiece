@@ -344,7 +344,7 @@ So with `(type side string (one-of 'left' 'right'))`, a `side` is a string, and 
 `side` only when the prover proves that it is among the choices ({numref}`constraint-proof`):
 `(side s 'left')` is allowed, `(side s 'up')` is a compile error, and so is `(side s q)` for a free
 string variable `q`, since a writer may write any string to `q`. A write of a string that is not
-among the choices to a `side` has no effect ({numref}`writes-to-constraints`). The alignments
+among the choices to a `side` has no effect ({numref}`writes-to-conditions`). The alignments
 of a text, the caps and joins of a stroke, the heads of a line and the style of a font are choice
 types ({doc}`world-model`).
 

@@ -36,7 +36,7 @@ It replaces the rules in reference.md, section "Concurrency", which were written
      the first accepted write to the release, and an `on-pointermove`.
 5. **Constraints.** Each side clamps a write.
    - **Writer side:** the guards of the writer clamp a write before it is emitted.
-   - **Container side:** the type constraints of the container clamp a write when it is accepted.
+   - **Container side:** the conditions of the container's type are enforced on a write when it is accepted ({numref}`writes-to-conditions`).
 
 `(exclusive)` is removed from the language.
 
