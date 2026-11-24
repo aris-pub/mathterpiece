@@ -302,7 +302,7 @@ writer may write lists of another length to them.
 
 ## none
 
-This rule exists so that `none` reaches a place that does not expect it only where the compiler can say what happens next.
+This rule exists so that a missing value never stops the page: a `none` may go into a call, which then gives `none`, or into a shape, which is then not drawn, and nowhere else.
 
 ```{rule} none-only-where-allowed
 A type includes `none` when it is `none` or a union with `none`. A value of such a type may be written
