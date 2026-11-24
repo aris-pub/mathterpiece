@@ -181,8 +181,18 @@ def visit_rule(self, node):
     self.body.append(self.starttag(node, "div", CLASS="mtp-rule"))
     self.body.append('<p class="mtp-rule-head">')
     self.add_fignumber(node)
+    anchor = html.escape(node["ids"][0]) if node["ids"] else ""
+    # The label and a button that copies the rule's address, so a rule can be cited by its link
+    # (the author, 2026-11-24). mtp-rules.js does the copying.
+    self.body.append('<span class="mtp-rule-tail">')
     self.body.append(f'<span class="mtp-rule-label">{html.escape(node.get("label", ""))}</span>')
-    self.body.append("</p>")
+    self.body.append(
+        f'<button type="button" class="mtp-rule-copy" data-anchor="{anchor}" '
+        'aria-label="Copy the link to this rule" title="Copy the link to this rule">'
+        '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 9.5l3-3M7 4.5l1.2-1.2a2.5 2.5 0 0 1 3.5 3.5L10.5 8'
+        'M9 11.5l-1.2 1.2a2.5 2.5 0 0 1-3.5-3.5L5.5 8"/></svg></button>'
+    )
+    self.body.append("</span></p>")
 
 
 def depart_rule(self, node):
@@ -599,6 +609,7 @@ def setup(app: Sphinx):
     app.add_directive("mtpc-of", MtpcOf)
     app.add_js_file("mathterpiece.js", type="module")
     app.add_js_file("mtp-terms.js", defer="defer")
+    app.add_js_file("mtp-rules.js", defer="defer")
     # The design system that draws the controls, as on the inventory page.
     app.add_css_file(BRAIID)
     app.connect("builder-inited", copy_runtime)
