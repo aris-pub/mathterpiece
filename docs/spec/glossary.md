@@ -32,7 +32,7 @@ corrupt .mtpc
   never writes one, and the runtime refuses every one. Defined in {doc}`compiler-runtime`.
 
 control
-  A component that the reader presses, drags or clicks, and which writes the model: a slider, a
+  A component that the reader presses, drags or clicks, and which writes to the model: a slider, a
   button, a play, a stepper or a toggle. Defined in {doc}`compiler-runtime`.
 
 illustrator
@@ -40,7 +40,7 @@ illustrator
   {doc}`compiler-runtime`.
 
 writer
-  A control or a listener: a page object that writes the model. Defined in {doc}`compiler-runtime`.
+  A control or a listener: a page object that writes to the model. Defined in {doc}`compiler-runtime`.
 
 page object
   A view, a control or a listener: what the reader sees or acts on in a page. Its type is
@@ -48,7 +48,7 @@ page object
   {doc}`compiler-runtime`.
 
 listener
-  A page object that is written inside a view and has no page element of its own, and which writes
+  A page object that is written inside a view and has no page element of its own, and which writes to
   the model when the reader acts on a shape or a term, or when its view changes. Defined in
   {doc}`compiler-runtime`.
 
@@ -258,8 +258,8 @@ syntactic sugar
   any type. Also called a derived form. See {numref}`sugar-form`.
 
 evaluation
-  Computing the value of an expression, when compiling or while drawing. Evaluation writes no
-  variable and no attribute, and creates no variable and no object that a writer can write. Defined in {doc}`evaluation`.
+  Computing the value of an expression, when compiling or while drawing. Evaluation writes to no
+  variable and no attribute, and creates no variable and no object that a writer can write to. Defined in {doc}`evaluation`.
 
 folding
   Computing an expression whose inputs are all known when compiling, and writing its value into
@@ -322,7 +322,7 @@ function
   function, and each evaluation of `(fn …)` results in a new function ({numref}`functions`).
 
 movement
-  An object that the runtime executes by writing its targets over time. `(move …)`, `(score …)`
+  An object that the runtime executes by writing to its targets over time. `(move …)`, `(score …)`
   and `(A …)` for an animation `A` each result in a new movement ({numref}`objects`, {doc}`time`).
 
 container
@@ -346,7 +346,7 @@ clause
 
 compound
   A form that evaluates to a primitive, a type, an object or an attribute,
-  and creates nothing that a writer can write, such as `(+ 1 2)` or `(if f a b)` ({doc}`data-model`).
+  and creates nothing that a writer can write to, such as `(+ 1 2)` or `(if f a b)` ({doc}`data-model`).
 
 object
   A value that has an identity and attributes, each of which behaves like a variable, such as the
@@ -402,7 +402,7 @@ world model
 
 move
   A compound `(move T …)` that results in a new movement. When the runtime executes the movement, it
-  writes one target, a variable or an attribute, to a new value over a duration. Every control and
+  writes to one target, a variable or an attribute, over a duration, ending at a new value. Every control and
   listener that changes the model over time triggers movements.
   Defined in {doc}`time`.
 

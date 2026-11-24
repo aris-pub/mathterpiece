@@ -1,6 +1,6 @@
 # Controls
 
-A control is a {term}`component` that the reader acts on to write the world model. This page gives
+A control is a {term}`component` that the reader acts on to write to the world model. This page gives
 the signature of each control ({ref}`signatures`) and what each one writes.
 
 :::{admonition} Code differs
@@ -33,7 +33,7 @@ control ({numref}`writer-guards`).
 
 ```{rule} jumpers-and-movers
 A control is a `jumper` or a `mover` ({numref}`the-types`). A jumper names one container, its
-target, and writes a value into it by a jump each time the reader acts on it: it takes no movement.
+target, and writes a value to it by a jump each time the reader acts on it: it takes no movement.
 A mover takes a movement, its effect, and plays it when the reader acts on it.
 ```
 
@@ -89,7 +89,7 @@ the interval of its modular type, so turning past its end wraps around. On both:
 ```
 
 ```{rule} range-slider
-A range slider has two thumbs on one track and writes `LOW` and `HIGH`. A thumb that is dragged into
+A range slider has two thumbs on one track and writes to `LOW` and `HIGH`. A thumb that is dragged into
 the other stops there, so `LOW` is never above `HIGH`. It takes no `(path …)`: its track is always
 straight.
 ```
@@ -105,7 +105,7 @@ pixels. The mouse wheel does not change it.
   it can be scrubbed.
 - A typed value is written only when the reader commits it: with Enter, with Tab, or by leaving the
   field. Until then the field shows what is typed, and the target does not change.
-- A committed value is written by {numref}`writes-into-constraints`. When it is not written, or is
+- A committed value is written by {numref}`writes-to-constraints`. When it is not written, or is
   brought into the range of the target's conditions, the field shows the target's value and its
   box shows a red outline for a moment, and a screen reader is told the same.
 ```
@@ -118,7 +118,7 @@ the box shows a red outline for a moment.
 
 ```{rule} toggle
 A toggle shows a checkbox with its target's value and its label. A click writes `(not TARGET)`. A
-toggle holds no value of its own: when anything else writes its target, the checkbox shows the new
+toggle holds no value of its own: when anything else writes to its target, the checkbox shows the new
 value.
 ```
 
@@ -126,7 +126,7 @@ value.
 The options of a select are its body. `(opt V L?)` is one option: the value V and, when it is given,
 the label L shown for it, a string or a {term}`TeX string`. An option without a label shows its
 value. The type of each V must be a {term}`subtype` of the type of the target, or, in a
-multi-select, of the item type of the target. Choosing an option writes it into the target at once.
+multi-select, of the item type of the target. Choosing an option writes it to the target at once.
 When the target holds a value that is no option, the select shows no option chosen.
 ```
 

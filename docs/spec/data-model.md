@@ -23,10 +23,10 @@ and evaluates to what it refers to.
 Evaluating a compound results in one of these: a primitive, a type, an object or an attribute
 that already exists, or a new object. The only compounds that result in a new object are those
 with the heads `fn`, `rec`, `move` and `score`, and `(A …)` for an animation `A`. No writer can write
-that new object: every attribute of a record that results from `rec` is bound or const, and no writer
-may write an attribute of a function or of a movement ({numref}`functions`, {numref}`records`,
-{numref}`writable-targets`). So evaluating a compound never writes a variable or an
-attribute, and never creates a variable or an object that a writer can write.
+to that new object: every attribute of a record that results from `rec` is bound or const, and no writer
+may write to an attribute of a function or of a movement ({numref}`functions`, {numref}`records`,
+{numref}`writable-targets`). So evaluating a compound never writes to a variable or an
+attribute, and never creates a variable or an object that a writer can write to.
 
 A declaration creates something new in the model: a variable, a type or an object. An `import` is
 a declaration too: it makes the names of another file usable.
@@ -59,8 +59,8 @@ Numbers, bools, strings and `none` are written as literals. Colors, lists and po
 compounds: `(color-of S)` evaluates to the color that the string `S` names ({numref}`color-literals`), `(list-of X…)` evaluates to the list of the values of its items, in order, and
 `(point-of X Y)` evaluates to the point with the coordinates `X` and `Y` ({numref}`lists` gives how
 they are written). Since a primitive never
-changes, nothing writes one: a writer writes a variable or an attribute, which then holds a
-different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
+changes, nothing writes to one: a writer writes to a variable or an attribute, which then holds a
+different value. When a slider writes 2 to the variable `a` of `(real a 1)`, `a` holds 2, and 1 is still 1.
 
 ## Variables
 
@@ -68,7 +68,7 @@ different value. When a slider writes 2 into the variable `a` of `(real a 1)`, `
 A variable is a named holder of one value. It is free, bound or const. A free variable holds its
 value until a writer writes a new one. A bound variable holds the value of its expression at all
 times. A variable whose expression reads another variable is bound, unless the expression is
-written with `free@`, and every other variable that is not const is free. A const variable can never be written. A variable with no name is a
+written with `free@`, and every other variable that is not const is free. A const variable can never be written to. A variable with no name is a
 {term}`compile error`.
 ```
 
@@ -76,9 +76,9 @@ For example:
 
 | Declared | What the variable is |
 |---|---|
-| `(real a 1)` | free: it holds 1 when the page opens, and a slider or a movement may write it |
+| `(real a 1)` | free: it holds 1 when the page opens, and a slider or a movement may write to it |
 | `(real b (* 2 a))` | bound: it always holds twice the value of `a`, and updates when `a` changes |
-| `(real c 3 (const))` | const: it holds 3, and a slider that writes it is a compile error |
+| `(real c 3 (const))` | const: it holds 3, and a slider that writes to it is a compile error |
 | `(real_ 1)` | a compile error: a variable has a name |
 
 `(var NAME TYPE DEFAULT)` declares a variable that holds an object, with its declared type after its
@@ -113,7 +113,7 @@ do with it beyond holding its attributes, and it depends on the kind of object:
 | formulas and their terms | typeset |
 | views | laid out on the page |
 | controls and listeners | trigger movements, when the reader acts |
-| movements | executed: the runtime writes their targets over time |
+| movements | executed: the runtime writes to their targets over time |
 | functions | called |
 | records | none |
 ```
@@ -161,8 +161,8 @@ a motif is a template of shapes: with an animation `A`, `(A …)` creates an `A`
 ```
 
 - `c` is an object with the attributes `r`, `x`, `y`, `fill` and the others of a circle. Its `r`
-  is free, so a slider may write `c.r`, and its `x` is bound to `(* 2 a)`.
-- `c` and `d` are two objects, though they are declared with the same attributes. Writing `c.r`
+  is free, so a slider may write to `c.r`, and its `x` is bound to `(* 2 a)`.
+- `c` and `d` are two objects, though they are declared with the same attributes. Writing to `c.r`
   leaves `d.r` as it is.
 - The third circle has no name, and is an object all the same.
 - `a` is a variable, not an object.
@@ -172,7 +172,7 @@ A shape's frame, which places it in its collection, is not a value of its own: i
 shape's attributes with a joint meaning, `shift-x`, `shift-y`, `rotate`, `scale-x` and `scale-y`,
 as `pos` is the joint meaning of `x` and `y`. `shift` is the joint meaning of `shift-x` and
 `shift-y` in the same way. Each is free, bound or const on its own, so a slider
-may write `c.rotate` while `c.shift-x` is bound to an expression. There is no transform value. A frame
+may write to `c.rotate` while `c.shift-x` is bound to an expression. There is no transform value. A frame
 is reused through a group, whose frame applies to every member, through `(defaults …)`, or through
 `(like …)`.
 
@@ -198,9 +198,9 @@ objects, and so are the copies `c-0` and `c-1` of `(foreach k 2 (circle @'c-{k}'
 An illustrator usually uses an object through its attributes, as `c.r` or `style.width`, and a
 primitive by itself, as `3` or `'hi'`. A primitive may have attributes too: a point has `x` and `y`, which are also its attributes `0`
 and `1`, a color its channels `r`, `g`, `b` and `a`, a list and a string a `length`, and a complex number `re`,
-`im`, `mod`, its modulus, and `arg`, its argument, an `angle` in degrees. Writing `c.arg` puts into
+`im`, `mod`, its modulus, and `arg`, its argument, an `angle` in degrees. Writing to `c.arg` puts into
 the container a complex number with the same modulus and the new argument. Each item of a list is an attribute whose label is its position, so `xs[0]` is an attribute
-of `xs`. Reading an attribute of a primitive results in a primitive. Writing one puts a new value into the
+of `xs`. Reading an attribute of a primitive results in a primitive. Writing to one puts a new value into the
 container that holds the primitive, and the old value does not change.
 
 ## Functions
@@ -213,7 +213,7 @@ A function is an object whose only attribute is `name`, and whose behavior is to
 So `(func twice ((real x)) (* 2 x))` declares the function `twice`, whose `name` is `'twice'`, and
 `(map xs (fn ((real x)) (* 2 x)))` passes a function with no name to `map`. A variable holds a
 function as it holds any object: `(var f func twice)` declares a variable `f` that holds `twice`. Since a function has no attribute that a writer
-may write, nothing is lost when `(fn …)` makes a new function each time that it is evaluated.
+may write to, nothing is lost when `(fn …)` makes a new function each time that it is evaluated.
 
 :::{admonition} Code differs
 :class: note
@@ -231,23 +231,23 @@ record. Every attribute of a record that results from `(rec …)` is bound or co
 
 A font is a record: `(font serif (family 'serif') (style 'normal') (weight 400) (size 12))`
 declares a record with the four attributes `family`, `style`, `weight` and `size`. A text applies
-it with `(face serif)`, and writing `serif.size` changes the size of every text that applies
+it with `(face serif)`, and writing to `serif.size` changes the size of every text that applies
 `serif`.
 
 :::{admonition} Code differs
 :class: note
-The compiler treats a font as a primitive: its parts can be read, as `f.size`, but not written, and a
+The compiler treats a font as a primitive: its parts can be read, as `f.size`, but not written to, and a
 text applies one with `(font f)`. Bead mtp-1vyc makes fonts namespaces.
 :::
 
 For example, `(record style (real width 2 (>= 0) (<= 5)) (color ink #'navy'))` declares an object with
 the two attributes `width` and `ink`, read as `style.width` and `style.ink`. Like any attribute,
-`style.width` may be written: `(slider s (animation (move style.width (from 0) (to 5) (duration 0))))` writes it. A shape takes the attributes of a record as a style with
+`style.width` may be written to: `(slider s style.width (from 0) (to 5))` writes to it. A shape takes the attributes of a record as a style with
 `(like style)` ({numref}`like-copies`). Unlike a shape, a record is not drawn, and the compiler does nothing with it beyond holding its
 attributes.
 
 `(rec …)` is to `(record …)` as `(fn …)` is to `(func …)`. Since every attribute of a record
-that results from `(rec …)` is bound or const, no writer writes it, and nothing is lost when `(rec …)` makes a new record
+that results from `(rec …)` is bound or const, no writer writes to it, and nothing is lost when `(rec …)` makes a new record
 each time that it is evaluated. So `(var s record (rec (real height k)))` declares a variable `s` that holds a record
 whose `height` updates when `k` changes, and `(var s record (rec (real width 1)))` is a compile error, since
 `width` is free.

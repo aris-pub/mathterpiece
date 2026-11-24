@@ -253,7 +253,7 @@ drawing:
 The runtime divides the two numbers of a ratio when it loads the .mtpc (web/src/runtime.ts, lines
 934 to 937), and computes ints and ratios as binary64 numbers (web/src/builtins.ts). The compiler
 computes them exactly, with Python's `Fraction` and ints (mathterpiece/compiler.py, `_fold`, line
-7913). So with `(int n 1)`, which a slider writes, `(= (+ (/ n 10) 1/5) 3/10)` is false while
+7913). So with `(int n 1)`, which a slider writes to, `(= (+ (/ n 10) 1/5) 3/10)` is false while
 drawing, and the readout of the example below holds False at n = 1. `(+ (^ 2 60) 1)` is folded to
 1152921504606846977, and the runtime reads that value from the .mtpc as 1152921504606846976.
 mtp-ydd4.7.13.
@@ -297,7 +297,7 @@ drawing:
   is a binary64 number by {numref}`correctly-rounded-reals`, and then clamped to the number limit.
   This holds for each number of a result: an int, a ratio, a real, each part of a complex number,
   and each number of a point or of a list.
-- A number beyond the number limit that is written into a container is clamped to it. So is each
+- A number beyond the number limit that is written to a container is clamped to it. So is each
   number of a point or a list that is written.
 - A {term}`literal` beyond the number limit is a compile error.
 
@@ -329,8 +329,8 @@ Wherever a number is rounded, other than a channel of a mixed color
 ({numref}`mixed-color-channels`), halves are rounded away from zero, on the number's shortest exact
 decimal form, not on its binary value: 2.5 is rounded to 3, -2.5 to -3, 0.125 to two decimal
 places to 0.13, and 2.675 to two decimal places to 2.68. The rule applies to `round`, to `places`, to a write
-into an int, and to the {term}`format spec` of an interpolated string, such as `{x:.2f}`. `round`
-results in `none` at no input. A number written into an int is rounded after it is clamped to the
+to an int, and to the {term}`format spec` of an interpolated string, such as `{x:.2f}`. `round`
+results in `none` at no input. A number written to an int is rounded after it is clamped to the
 int's range, so that the result is the nearest int inside the range ({doc}`types`).
 ```
 
@@ -479,7 +479,7 @@ random function before another call changes the site of the later call, and with
 the later call.
 
 `roll-dice` is an animation declared in the file rand ({ref}`stdlib-rand`). `(roll-dice s)`
-creates a movement that writes `(next-seed s)` into the seed `s`, and `(roll-dice)` is
+creates a movement that writes `(next-seed s)` to the seed `s`, and `(roll-dice)` is
 `(roll-dice d)`, with `d` the default seed ({numref}`default-seed`). Such a write is a roll.
 By {numref}`random-values`, a roll changes the random values that use `s`, and no others.
 
@@ -557,7 +557,7 @@ match.
 ```
 
 The runtime matches values to read the step of a play or a stepper from the scene, and to check
-whether the free variables and attributes that the `on-view` of a canvas writes still hold their
+whether the free variables and attributes that the `on-view` of a canvas writes to still hold their
 values from page load.
 
 While drawing, the runtime uses `=` to skip writes: a write of a value equal to the current one is

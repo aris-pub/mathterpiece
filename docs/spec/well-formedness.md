@@ -3,8 +3,8 @@
 
 A source whose {term}`names <name>` resolve ({ref}`scope`) and whose
 {term}`expressions <expression>` have types ({doc}`types`) must also meet the rules of this page:
-its dependencies make no cycle, its writers write only containers that may be written, the moves
-that run together do not write the same container, and every {term}`condition` is proved. The
+its dependencies make no cycle, its writers write only to containers that may be written to, the moves
+that run together do not write to the same container, and every {term}`condition` is proved. The
 compiler checks all of them in the prove step ({numref}`compile-steps`), and a source that breaks
 one is a {term}`compile error`. The last section defines the {term}`prover`: exactly what it
 proves, and the {term}`ranges <range>` that it uses to prove it.
@@ -48,46 +48,46 @@ Every other read of a declaration in its own form, or of its collection, such as
 that reads its own shape or a member that reads the `shift` of its group, is limited only by
 {numref}`no-dependency-cycles`.
 
-## What a writer may write
+## What a writer may write to
 
 The {term}`controls <control>` and the {term}`listeners <listener>` are the writers
-({doc}`concurrency`). A writer writes its target and the targets of the moves in its movements.
+({doc}`concurrency`). A writer writes to its target and to the targets of the moves in its movements.
 
 ```{rule} writable-targets
 The target of a writer or of a move is a variable, an attribute of a shape, of a term, of a record
 or of a formula, or an item of a list at a position known when compiling. It is written as a
 name or a qualified name, with `(name S)` allowed in place of a name ({numref}`names-from-values`).
-Writing an item puts a new list into the container that holds the list, and may be done only when
-that container may be written.
-A target may be written only when it is free ({numref}`variables`), it is not a
+Writing to an item puts a new list into the container that holds the list, and may be done only when
+that container may be written to.
+A target may be written to only when it is free ({numref}`variables`), it is not a
 font, and it is not fixed by a variant ({numref}`motif-and-variant-types`).
 Also:
 
 - The name of an object, such as a group or a record, may not be a target.
 - A target that stands for several containers ({doc}`concurrency`, the part "Containers") may be
-  written only when each of them may be written. Such targets are a `pos`, an attribute of a group
+  written to only when each of them may be written to. Such targets are a `pos`, an attribute of a group
   that stands for the attributes of its members, and the `x`, the `y` and the `pos` of a
   line, a triangle, a polyline, a polygon and a bezier. An attribute of a collection with no
   members may not be a target.
 - In a target, a member of a group chosen by its position must be chosen by a position known when
   compiling.
-- A move of an `on-show` or an `on-hide` writes the stand-in of its shape, so it may write an
+- A move of an `on-show` or an `on-hide` writes to the stand-in of its shape, so it may write to an
   attribute of that shape that is bound ({doc}`lifecycle`).
 
 Every other target is a compile error.
 ```
 
 So `(slider s m (from 0) (to 1))` with `(real m (* 2 k))` is a compile error, and so is a move of a
-const variable. Two writers may write the same container, and
+const variable. Two writers may write to the same container, and
 {doc}`concurrency` defines what happens then.
 
 ```{rule} written-values
 The type of each value that a writer writes must be a {term}`subtype` of the type of its target
 ({numref}`subtypes`), with the comparisons and the `(one-of …)` of that type left out, and with a modular
 type read as its number type, since the write brings the value into those
-({numref}`writes-into-constraints`, {numref}`modular-types`). This holds for the `from` and the `to` of a move
+({numref}`writes-to-constraints`, {numref}`modular-types`). This holds for the `from` and the `to` of a move
 and of a movement, and for the values that a jumper writes ({numref}`jumpers-and-movers`). A value whose type includes
-`none` may be written only into a target whose type includes `none`.
+`none` may be written only to a target whose type includes `none`.
 ```
 
 So `(move k (to (* 3 a)))` into `(real k 1 (>= 0) (<= 2))` compiles, and a value below 0 is
@@ -98,13 +98,13 @@ kept, so a move into a list declared `(length 2)` with a `to` of length 3 is a c
 (writer-conditions)=
 ```{rule} writer-guards
 Each guard of a control or a listener ({numref}`bodies-table`) must be a comparison `(OP A B)`, OP
-one of `<`, `<=`, `>` and `>=`, in which one side is a read of a container that the writer writes,
+one of `<`, `<=`, `>` and `>=`, in which one side is a read of a container that the writer writes to,
 and the other side, the limit, does not depend on that container, directly or through bound
 containers. Every other guard is a compile error.
 ```
 
-What a guard does to a write is defined in {doc}`reactivity`. A writer that writes the `pos` of a
-shape writes its `x` and its `y` ({numref}`writable-targets`), so its guards may limit either,
+What a guard does to a write is defined in {doc}`reactivity`. A writer that writes to the `pos` of a
+shape writes to its `x` and its `y` ({numref}`writable-targets`), so its guards may limit either,
 as in `(on-drag c c.pos (<= c.x 5) (>= c.y 0))`, and `c.pos.x` and `c.pos[0]` are the same as `c.x`.
 
 :::{admonition} Code differs
@@ -121,8 +121,8 @@ Bead mtp-ydd4.7.44.
 ## Moves that run at the same time
 
 ```{rule} moves-at-once
-Two moves of one score that write the same container at times that overlap are a compile error.
-The containers that a move writes are defined in {doc}`concurrency`, in the part "Containers". The
+Two moves of one score that write to the same container at times that overlap are a compile error.
+The containers that a move writes to are defined in {doc}`concurrency`, in the part "Containers". The
 times are these:
 
 - Each move starts at the time that {doc}`time` defines for it in the score.

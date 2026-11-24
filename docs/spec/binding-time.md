@@ -23,7 +23,7 @@ An expression is known when compiling when it is one of these:
 Every other expression is known only while drawing.
 ```
 
-So a free container is known only while drawing, since a writer may write it, and so is every
+So a free container is known only while drawing, since a writer may write to it, and so is every
 expression that reads one. A font is known only while drawing, since the page
 may give it other values through its CSS ({numref}`mtpc-only-boundary`). A random value is known
 only while drawing ({numref}`random-never-folded`).
@@ -50,9 +50,9 @@ computed once, in the fold step when X is known when compiling, and otherwise wh
 and it does not update when X changes. The container is free either way.
 ```
 
-So with `(real c 3 (const))`, `(real r free@(* 2 c))` starts at 6, and a slider may write it.
+So with `(real c 3 (const))`, `(real r free@(* 2 c))` starts at 6, and a slider may write to it.
 `(list[int] order free@(shuffle (range 16)))` starts in an order that is drawn when the page opens,
-and keeps it until a writer writes `order`.
+and keeps it until a writer writes to `order`.
 
 ## What may read what
 
@@ -64,6 +64,6 @@ function outside a {term}`page object` may read one.
 ```
 
 So `(button b (active (= mode 'a')))` may read `mode`, and a readout may read the variable that
-a slider writes, but `(circle c (r size.position))` in the scene, with `size` a slider, is a
+a slider writes to, but `(circle c (r size.position))` in the scene, with `size` a slider, is a
 {term}`compile error`, and so is `(real r (if (> size.position 2) 2 1))` at the top level, since the
 scene could read the slider through `r`.

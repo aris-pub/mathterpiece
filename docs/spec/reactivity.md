@@ -30,7 +30,7 @@ in the frame of the collection that holds the shape or the term, when the moveme
 other expression reads the position of the pointer.
 ```
 
-So `(on-drag p (as ptr) (move a (to ptr.x)))` writes the x of the pointer into `a` at each motion of
+So `(on-drag p (as ptr) (move a (to ptr.x)))` writes the x of the pointer to `a` at each motion of
 the pointer, and `(on-click board (as pointer) (move marker.pos (to pointer) (duration 0.3)))` moves a marker to
 the point where the reader clicked.
 
@@ -42,10 +42,10 @@ interface `instant`. Beads mtp-rk1i and mtp-idcs.
 
 ## What a write does to a number
 
-```{rule} writes-into-constraints
-A write of a number into a {term}`container` brings it into the conditions of its declared type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
+```{rule} writes-to-constraints
+A write of a number to a {term}`container` brings it into the conditions of its declared type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
 type by {numref}`modular-types`, and when it breaks a `(> c)` or a `(< c)` it is not written. A write of a value that is not among the values of a `(one-of …)` is not
-written. A number written into an `int` is rounded as {numref}`rounding` states. A value that is
+written. A number written to an `int` is rounded as {numref}`rounding` states. A value that is
 not written leaves the container as it was.
 ```
 

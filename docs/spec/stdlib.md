@@ -16,7 +16,7 @@ and `(import rand …)` makes them usable in the same way as the names of any ot
 |---|---|
 | `rand`, `rand-int`, `pick`, `shuffle`, `next-seed` | the random functions ({numref}`random-values`), which the compiler implements |
 | `seed` | the {term}`seed` that a file with no seed of its own uses ({numref}`default-seed`), as if declared `(rand-seed seed 0)` |
-| `roll-dice` | an animation, as if declared `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`: each `roll-dice` writes the next value of the seed `s` into `s` at once. In a `(roll-dice)` with no argument, `s` is the {term}`default seed` of the file that holds the `(roll-dice)` |
+| `roll-dice` | an animation, as if declared `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`: each `roll-dice` writes the next value of the seed `s` to `s` at once. In a `(roll-dice)` with no argument, `s` is the {term}`default seed` of the file that holds the `(roll-dice)` |
 ```
 
 ```{rule} random-calls
@@ -38,7 +38,7 @@ Bead mtp-o3cc makes the compiler provide the names, and removes that form.
 So `(import rand rand-int roll-dice)` makes the names `rand-int` and `roll-dice` usable, and
 `(import rand)` makes `rand.rand-int`, `rand.roll-dice` and the others usable ({doc}`imports`).
 `(roll-dice s)` creates a `roll-dice`, which is a movement ({ref}`animation-uses`) of one step: a
-write of `(next-seed s)` into the seed `s`.
+write of `(next-seed s)` to the seed `s`.
 
 ```mtp
 (import rand rand-int roll-dice)
@@ -48,4 +48,4 @@ write of `(next-seed s)` into the seed `s`.
 ```
 
 Here the source declares no seed, so `(rand-int 1 6)` uses the seed `seed` of the file rand, which
-starts at 0, and the button `roll` writes the next value of that seed into it.
+starts at 0, and the button `roll` writes the next value of that seed to it.
