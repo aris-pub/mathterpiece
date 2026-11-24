@@ -1,8 +1,10 @@
-/* The look is not designed yet: this only sets rules and examples apart from the text. */
+/* A rule is a tinted panel with rounded corners, with room above and below it (the author,
+   2026-11-24, board RuleBox, option A). */
 .mtp-rule {
-  border-left: 3px solid var(--pst-color-primary);
-  padding: 0.1rem 0 0.1rem 1rem;
-  margin: 1rem 0;
+  background: color-mix(in srgb, var(--pst-color-primary) 7%, var(--pst-color-background));
+  border-radius: 8px;
+  padding: 0.85rem 1.25rem 0.25rem;
+  margin: 1.4rem 0 1.6rem;
 }
 .mtp-rule-head {
   display: flex;
@@ -255,3 +257,8 @@ html[data-theme] .bd-content table.table td:first-child code * { color: inherit;
   background: var(--pst-color-link); color: var(--pst-color-background);
   font-size: 0.75rem; font-weight: 600;
 }
+
+/* Running text keeps to about 75 characters a line, while tables and examples may use the whole
+   width that the article has. */
+.bd-article :is(p, ul, ol, dl, .mtp-rule, .admonition, div.highlight-mtp-sig) { max-width: 44rem; }
+.bd-article .mtp-rule :is(p, ul, ol) { max-width: none; }
