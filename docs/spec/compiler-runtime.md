@@ -20,8 +20,8 @@ A page object is a view, a control or a listener. A component is a view or a con
 places each one on the page. A control and a listener are {term}`writers <writer>`. A {term}`view` is where the runtime draws part of the world
 model for the reader: shapes in a canvas, a line of text in a readout and a formula in a display. A
 {term}`control` is a slider, a button, a play, a stepper or a toggle, and the reader presses, drags
-or clicks it to write a variable or an attribute of the world model. A {term}`listener` is written inside a view and
-has no element of its own on the page: it writes a variable or an attribute of the world model when the reader acts
+or clicks it to write to a variable or an attribute of the world model. A {term}`listener` is written inside a view and
+has no element of its own on the page: it writes to a variable or an attribute of the world model when the reader acts
 on a shape or a term of that view, or when the view changes, for example when it comes into
 sight. The illustrator declares every component, and the author places each view and control on
 the page with an element of its own.
@@ -123,7 +123,7 @@ What the error of a rejected source holds is given in {numref}`conformance`.
 
 ```{rule} prover-finds-ranges
 To prove a range or a condition, the {term}`prover` works out ranges ({numref}`ranges`,
-{numref}`range-rules`). The prover writes nothing into the model. Where the range of a bound
+{numref}`range-rules`). The prover writes nothing to the model. Where the range of a bound
 variable or attribute does not lie inside its condition, the prover gives the variable or attribute a type that includes `none`, and the write step writes the `check`
 that this type needs ({doc}`compiled-format`).
 ```
@@ -233,7 +233,7 @@ When the reader opens the page, the browser and the runtime do the following, in
    that live model that the element's `name` attribute gives: the canvas `v`, the slider `turn` and
    the readout `now` ({numref}`runtime-serves-components`). The author may place these elements
    anywhere in the page, inside a sentence too.
-5. When the reader drags the slider, the slider writes `a`. The position of `dot` and the text of
+5. When the reader drags the slider, the slider writes to `a`. The position of `dot` and the text of
    `now` are computed again, and the canvas and the readout draw again
    ({numref}`runtime-builds-live-model`).
 
@@ -272,9 +272,9 @@ This rule follows from a principle of the design of mtp: a state that breaks a r
 cannot be represented. No source can hold such a state, since the compiler proves every type
 and condition before the page opens. No reader can reach one, since a computation that has no
 value gives the value `none` instead of failing, and a written value is brought into the conditions of
-the container that it is written into. For example, a line declared `line|none` is not drawn while it is `none`
-({numref}`operations-that-give-none`, {doc}`evaluation`), and a write of -1 into a variable
-declared with `(>= 0)` writes 0 ({numref}`writes-into-constraints`). The principle is a goal of
+the container that it is written to. For example, a line declared `line|none` is not drawn while it is `none`
+({numref}`operations-that-give-none`, {doc}`evaluation`), and a write of -1 to a variable
+declared with `(>= 0)` writes 0 ({numref}`writes-to-constraints`). The principle is a goal of
 the design: where the spec still allows a state that breaks a rule, the spec has a gap, and the
 gap is closed by changing the language, never by showing an error to the reader.
 
@@ -300,11 +300,11 @@ What a world model holds is decided by the illustrator alone: the objects of a l
 those specified in the source, through declarations and the compounds that result in a new object
 ({doc}`data-model`), and the runtime adds or removes no other object. What the runtime draws beyond the objects of the live model changes only how a component
 looks. It is not an object of the live model, no expression and no writer of the world model reads
-it, and it never writes a variable or an attribute of the live model.
+it, and it never writes to a variable or an attribute of the live model.
 ```
 
 For example, while an `on-show` or an `on-hide` plays, the runtime draws a stand-in in the canvas in place of the
-shape: a copy of the shape that only this canvas has, which the movement writes. The shape in the
+shape: a copy of the shape that only this canvas has, which the movement writes to. The shape in the
 live model keeps every attribute as it was, and when the movement ends, the runtime drops the
 stand-in.
 
@@ -312,7 +312,7 @@ stand-in.
 While drawing, the runtime never checks whether a value has its type, and never converts a value
 from one type to another. The compiler has proved every type, and every type that the runtime
 needs is written in the .mtpc. Bringing a written value into the conditions of the container that it is written
-into, by clamping, rounding, wrapping or holding it ({doc}`types`), is part of what a write does,
+to, by clamping, rounding, wrapping or holding it ({doc}`types`), is part of what a write does,
 and is not a check of a type. How the runtime does this is not normative.
 ```
 

@@ -39,7 +39,7 @@ ready from the start, and its `on-ready` is triggered when the page loads.
    because its values had already changed, is ready because its canvas is ready.
 5. **`on-view`** has priority 1000. Until a canvas is ready, every input that belongs to it is
    disabled, and each is enabled once the canvas is ready. An input belongs to a canvas when it is
-   a listener inside the body of the canvas, or a control that writes a container on which a shape
+   a listener inside the body of the canvas, or a control that writes to a container on which a shape
    drawn in the canvas depends (the compiler finds these controls).
 6. **`on-ready`** is triggered once, when the canvas becomes ready. Its movement may be any
    movement. It has priority 300.

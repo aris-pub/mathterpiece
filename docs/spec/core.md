@@ -122,7 +122,7 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
   means has the type `namespace` (mtp-ydd4.7.22).
 - `(cond (else V))` is {term}`folded <folding>` to the value of `V` and, since it is not a literal,
   marked const (compiler.py:5653-5657), so `(real v (cond (else 3)))` makes `v` a constant, while
-  `(real v 3)` declares a free variable that a writer may write (mtp-ydd4.7.46).
+  `(real v 3)` declares a free variable that a writer may write to (mtp-ydd4.7.46).
 - `cond` gives a list written in braces among its values the type of all its other values
   (compiler.py:6629-6641), while an `if` gives it the type of its other branch only
   (compiler.py:6494-6504) (mtp-08wd.2).
@@ -161,7 +161,7 @@ For example, after `(circle a (r 1) (fill #'red') (stroke #'black'))`, the form
   the record. An attribute of `M` that `K` does not take is left out.
 
 So after `(record style (color fill #'red') (real stroke-width 1))`, `(circle_ (r 1) (like style))`
-is `(circle_ (r 1) (fill style.fill) (stroke-width style.stroke-width))`, and writing `style.fill`
+is `(circle_ (r 1) (fill style.fill) (stroke-width style.stroke-width))`, and writing to `style.fill`
 changes the fill of every shape that has `(like style)`. A text with `(like style)` takes the same
 two attributes. A circle with `(like M)` takes the `r` of a record `M` that has one, and a text does
 not.
@@ -174,7 +174,7 @@ Since `(like M)` copies the items that are written in the declaration of `M`, a 
 of `M`'s collection: `(circle b (like a))` outside the group of `a` has only the items that are written in the declaration of `a`. When an attribute of `M` is bound, the same attribute of the copy is bound to the same expression: if the radius
 of `M` is bound to `(* 2 k)`, so is the radius of the copy, and both update when `k` changes. When an attribute of `M`
 is free, the same attribute of the copy is a different free attribute with the same starting value: with `(r free@2)`
-in `M`, the copy's radius starts at 2, and a writer of `M`'s radius does not write it. When `K` is a motif, the defaults of `M`, `pointer-events` among them, and its `clip` are items of it,
+in `M`, the copy's radius starts at 2, and a writer of `M`'s radius does not write to it. When `K` is a motif, the defaults of `M`, `pointer-events` among them, and its `clip` are items of it,
 so `(like M)` copies them.
 
 :::{admonition} Code differs
@@ -195,14 +195,14 @@ its own: drag its shift, as (on-drag g g.shift)".
 
 By {numref}`sugar-rewrites`, `(on-drag g g.shift)` is
 `(on-drag g (as P) (move g.shift (to P) (duration 0)))`, with a name `P` that the source does not use.
-No member is written: the members are drawn in the frame of the group, so they move with it and keep
+No member is written to: the members are drawn in the frame of the group, so they move with it and keep
 their own positions. `(on-drag g g.x)` is an error twice over: `g.x` of a group is the list of the
 `x` of its members, and a drag writes one number.
 
 :::{admonition} Code differs
 :class: note
 A group has no `shift-x` and no `shift-y`: the compiler and the runtime give it a `translate`, and
-the drag writes that, for `(on-drag g g.pos)` too. Bead mtp-1vyc makes the parts of a frame attributes of
+the drag writes to that, for `(on-drag g g.pos)` too. Bead mtp-1vyc makes the parts of a frame attributes of
 the shape, and bead mtp-67wi makes a drag of a group's `pos` an error.
 :::
 
@@ -210,8 +210,8 @@ the shape, and bead mtp-67wi makes a drag of a group's `pos` an error.
 :class: note
 For a bare target, the {term}`runtime` moves each member of a group that is not fixed-size by the
 motion of the pointer (web/src/drag.ts:113-117, drag.ts:155-162), and moves a fixed-size group by
-its `translate` (drag.ts:108-111, drag.ts:149-153). For a move, it writes the group's `x` and `y`
-(drag.ts:138-147), and the compiler marks the `translate` as what the drag writes only for a
+its `translate` (drag.ts:108-111, drag.ts:149-153). For a move, it writes to the group's `x` and `y`
+(drag.ts:138-147), and the compiler marks the `translate` as what the drag writes to only for a
 fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code follow the rule.
 :::
 
@@ -233,7 +233,7 @@ object as before, with its attributes as they were, what writers wrote to them i
 below the {term}`number limit`, the `foreach` is a compile error.
 ```
 
-So with `(int n 3 (>= 0) (<= 5))` and a slider that writes `n`, `(foreach k n …)` and
+So with `(int n 3 (>= 0) (<= 5))` and a slider that writes to `n`, `(foreach k n …)` and
 `(foreach k (range 0 n) …)` both make 5 copies, and copies 3 and 4 are `none` while `n` is 3. When `n` goes
 back to 5, copies 3 and 4 come back as they were.
 

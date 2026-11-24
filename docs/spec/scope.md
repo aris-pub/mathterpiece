@@ -40,7 +40,7 @@ In a pointer listener, `(as N)` is used like this:
 ```
 
 In the movement of the `on-drag`, `pointer` is the position of the pointer, so dragging `p` writes the x
-of the pointer into `a`, and `p` moves with it.
+of the pointer to `a`, and `p` moves with it.
 
 In a motif, `(as N)` is used like this:
 
@@ -53,7 +53,7 @@ In a motif, `(as N)` is used like this:
   (dot d2 (size 0.5)))
 ```
 
-In the body of `dot`, `self` is the shape being declared, so each `dot` writes its own name above
+In the body of `dot`, `self` is the shape being declared, so each `dot` shows its own name above
 its circle: `'d1'` above the circle of `d1`, and `'d2'` above the circle of `d2`.
 
 Inside the body, the parameters, the shapes and the variables of the body are names already:
@@ -161,7 +161,7 @@ scope: `p.r` is `(. p 'r')` ({numref}`sugar-rewrites`), where `'r'` is a label a
 and what it chooses is defined in {numref}`dot-name-part`.
 
 In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `(tenfold 2)` is
-20 whatever value the slider writes into the variable:
+20 whatever value the slider writes to the variable:
 
 ```{mtp-example}
 ; the parameter x hides the variable x inside tenfold

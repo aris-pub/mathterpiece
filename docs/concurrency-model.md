@@ -7,10 +7,10 @@ It replaces the rules in reference.md, section "Concurrency", which were written
 
 1. **Writers.** The controls and the listeners. A writer has a trigger and an effect. The
    effect is either a movement, which is known when the writer is triggered, or a gesture: an
-   `on-drag`, a slider's knob while the reader holds it, and an `on-pointermove`, which write each
+   `on-drag`, a slider's knob while the reader holds it, and an `on-pointermove`, which emit writes each
    time the pointer moves. A writer is triggered, then emits writes to its containers until its
    effect ends, it is released, or it is cancelled. A writer that emits writes is running.
-   `on-show` and `on-hide` write only the stand-ins of a canvas, which no other writer writes, so
+   `on-show` and `on-hide` emit writes only to the stand-ins of a canvas, and no other writer emits writes to them, so
    they meet only each other, and the one triggered later wins (reference, "Showing and hiding").
 2. **Containers.** The free variables and the free attributes, which writes change. A write to an
    attribute of a group is a write to the same attribute of each member. The `pos` of a shape is
@@ -49,8 +49,8 @@ A write from writer A reaches container v.
 2. Otherwise the write is accepted: it is clamped by v's constraints, and A becomes v's owner.
    If B owned v, B is cancelled on all its containers.
 
-A rejected write cancels nothing. A writer whose write to a container is rejected does not write
-that container again for the rest of its effect, and goes on writing its other containers. A writer
+A rejected write cancels nothing. A writer whose write to a container is rejected emits no more writes
+to that container for the rest of its effect, and goes on emitting writes to its other containers. A writer
 that is triggered again starts a new effect. A writer that ends or is released owns nothing after
 that.
 
@@ -67,10 +67,10 @@ stepper from the containers of the scene (mtp-wjtd notes).
 - **Q2 (author, 2026-11-13).** Each container is decided on its own, for every writer: a writer
   whose writes are rejected on some containers still has its other writes accepted. A play pressed
   while the reader holds a drag on k moves only its other containers.
-- **Q3 (author, 2026-11-13).** A rejected writer stops writing that container for the rest of its
+- **Q3 (author, 2026-11-13).** A rejected writer stops emitting writes to that container for the rest of its
   effect, so it does not become the owner of the container when the owner ends.
-- **Open.** A toggle's flip takes no time, so its writer ends as soon as it has written and owns
-  nothing after. A play that had not yet written the bool then writes it later, and the write
+- **Open.** A toggle's flip takes no time, so its writer ends as soon as it has emitted its write and owns
+  nothing after. A play that had not yet emitted a write to the bool then emits it later, and the write
   is accepted. The runtime does this now, until the author decides.
 
 ## The earlier cases under the model
@@ -81,13 +81,13 @@ stepper from the containers of the scene (mtp-wjtd notes).
 | Reader writer running, `on-view` newcomer | newcomer refused | **changes**: the `on-view` wins, at priority 1000 (the author, 2026-11-13) |
 | Page writer running, any newcomer | newcomer wins | unchanged |
 | `(exclusive)` writer running, any newcomer | newcomer refused | removed: a higher `(priority n)` instead |
-| Held drag, `on-enter` onto another shape writing the dragged container | `on-enter` cancels the drag | **changes**: rejected (lower priority), its other writes accepted |
-| Held drag, `on-view` writing the dragged container | refused | **changes**: the `on-view` wins, at priority 1000 |
+| Held drag, `on-enter` onto another shape writing to the dragged container | `on-enter` cancels the drag | **changes**: rejected (lower priority), its other writes accepted |
+| Held drag, `on-view` writing to the dragged container | refused | **changes**: the `on-view` wins, at priority 1000 |
 | Grab with no move, play running on the container | play runs on | unchanged (no write, no ownership) |
-| Held slider knob, reader newcomer writing its container | newcomer cancels the slider | **changes**: rejected (lower priority), as for a drag |
+| Held slider knob, reader newcomer writing to its container | newcomer cancels the slider | **changes**: rejected (lower priority), as for a drag |
 | Slider step from the keyboard | a newcomer of its own | unchanged (reader, not a gesture) |
 | Paused play or stepper | not running | unchanged (owns nothing) |
-| Another writer writes a container of a play | explore mode | not concurrency: the step is read from the scene |
+| Another writer writes to a container of a play | explore mode | not concurrency: the step is read from the scene |
 | A writer never cancels itself | stated as a rule | unchanged (A is already the owner) |
 | Attribute of a group, `pos`, the `x` of a polyline | stated case by case | unchanged (a write to each container) |
 | The `x` and the `y` of a polyline | did not meet | unchanged (the `x` and the `y` of each point are containers) |
@@ -97,9 +97,9 @@ stepper from the containers of the scene (mtp-wjtd notes).
 | Inactive writer `(active false)` | cannot be triggered, what runs goes on | unchanged (not triggered, nothing else changes) |
 | The runtime starts or stops drawing a shape in a canvas | writes nothing | unchanged (not a writer) |
 | A write that changes nothing | skipped | still skipped, but the writer becomes the owner (part 3) |
-| An `on-ready` loop | no other writer may write its containers | an ordinary writer of priority 300 (the author, 2026-11-13) |
+| An `on-ready` loop | no other writer may write to its containers | an ordinary writer of priority 300 (the author, 2026-11-13) |
 | `on-view` sped up by a press | built | removed (author, 2026-11-12) |
 
 These cases are outside the model, since no two writers meet in them: two moves in one score that
-write the same container at the same time (a compile error), a move that reads its `from` and `to`
+write to the same container at the same time (a compile error), a move that reads its `from` and `to`
 when it starts, and a slider's knob that updates when its target changes.

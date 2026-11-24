@@ -9,7 +9,7 @@ Status: approved by the author, 2026-11-13. Not built yet.
    yes or no state, and holds a value otherwise. At every change of the page state of an element,
    the runtime fires one `mtp-state` event on that element.
 2. **Values of the scene.** The values of the scene are not page state, and the runtime never sets
-   them as attributes. A script may read them from `<mtp-model>`, and may not write them.
+   them as attributes. A script may read them from `<mtp-model>`, and may not write to them.
 3. **Driving.** A script may act on an element only through its inputs, as a reader does. Each
    part of an element that the reader presses, clicks or drags is an input, and has the attribute
    `data-mtp-input="name"`, with a name that is unique within its element. No element has methods
@@ -50,7 +50,7 @@ A canvas that has one, two or three of them is a compile error, and the message 
 the names of the missing ones. In a canvas with all four, the runtime draws the box whose
 lower-left corner is the point [`x` `y`] and whose size is `width` by `height`, in the coordinates
 of the scene. A canvas with none of them has no attributes `x`, `y`, `width` and `height`, so an
-expression that reads one of them, or a writer that writes one, is a compile error.
+expression that reads one of them, or a writer that writes to one, is a compile error.
 ```
 
 So in `(canvas v (x -3) (y -2) (width 6) (height 4) s)`, the runtime draws the box from -3 to 3

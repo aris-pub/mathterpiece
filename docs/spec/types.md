@@ -276,7 +276,7 @@ list has `(length m)` in its item type.
 So the length of `(list xs {side 0 1})` is known, 3, even when `side` is known only while
 drawing. A free list variable has a known length
 only when it is declared with `(length n)`, and its items never have a known item length, since a
-writer may write lists of another length into them.
+writer may write lists of another length to them.
 
 ## none
 
@@ -343,8 +343,8 @@ the choices v1 … that meet its other conditions.
 So with `(type side string (one-of 'left' 'right'))`, a `side` is a string, and a string is a
 `side` only when the prover proves that it is among the choices ({numref}`constraint-proof`):
 `(side s 'left')` is allowed, `(side s 'up')` is a compile error, and so is `(side s q)` for a free
-string variable `q`, since a writer may write any string into `q`. A write of a string that is not
-among the choices into a `side` has no effect ({numref}`writes-into-constraints`). The alignments
+string variable `q`, since a writer may write any string to `q`. A write of a string that is not
+among the choices to a `side` has no effect ({numref}`writes-to-constraints`). The alignments
 of a text, the caps and joins of a stroke, the heads of a line and the style of a font are choice
 types ({doc}`world-model`).
 
@@ -402,7 +402,7 @@ declared with one is a compile error. Bead mtp-mo3r.
 movement type. Each is disjoint from every other type.
 `(variant V PARAMS S)` declares the type V, a subtype of the type of S. A V has the attributes of
 the type of S and the parameters of V. The attributes that S sets are fixed: a V may not set them,
-and a writer may not write them. Each parameter of V must be read by S, and may not have the name of
+and a writer may not write to them. Each parameter of V must be read by S, and may not have the name of
 an attribute of the type of S. Where S and a V both set a default for the same attribute, the
 default of S wins.
 ```

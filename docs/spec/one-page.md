@@ -57,8 +57,8 @@ In the spec, the drag is written `(on-drag p (as ptr) (move a (to ptr.x)))`. The
 - The circle `p` is a shape. Its `pos` is bound to `[a 0]`, so the circle moves whenever `a`
   changes.
 - The canvas `v` is a view: the runtime draws the scene `s` in it. The slider `push` is a control, and
-  `on-drag` is a listener. Both write `a` with a movement, `(move a …)`.
-- The readout `r` is a view: the runtime writes `a` in it as text.
+  `on-drag` is a listener. Both write to `a` with a movement, `(move a …)`.
+- The readout `r` is a view: the runtime shows `a` in it as text.
 
 ## Expressions
 
@@ -121,7 +121,7 @@ Primitives, objects and containers ({numref}`values-containers-types`).
 | views: canvas, readout, display | lays them out on the page |
 | controls: slider, button, play, stepper, toggle | starts their movements when the reader acts on them |
 | listeners, such as `on-drag` and `on-click` | starts their movements when the reader acts on a shape or a term |
-| movements: `move`, `score`, `(A …)` for an animation `A` | writes their targets over time |
+| movements: `move`, `score`, `(A …)` for an animation `A` | writes to their targets over time |
 | functions | calls them |
 | records | holds their attributes |
 
