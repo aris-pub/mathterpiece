@@ -23,6 +23,25 @@ seeds of its random functions, and, for a read of a position, the frame of the
 expression that reads it ({doc}`world-model`).
 ```
 
+## What a name means
+
+```{rule} what-a-name-means
+A name means one of three things, by where it is written:
+
+- Where a declaration gives its name, the name declares the variable, the object or the function.
+- In an expression, the name evaluates to what it refers to: the value that a variable holds, the
+  value bound to a `let` or `foreach` name, the object, or the function. A name never evaluates to
+  a name.
+- As the target of a writer or of a move, the name means the container, not the value that it holds
+  ({numref}`writable-targets`).
+
+`(name S)` and a name string `@'…'` mean what the name that they spell means where they are written
+({numref}`names-from-values`).
+```
+
+So with `(real a 1)` and `(circle c (r a))`, `a` in `(r a)` evaluates to 1, `c` in `c.r` evaluates
+to the circle, and `a` in `(slider s a (from 0) (to 2))` means the container `a`.
+
 ## Evaluation order
 
 ```{rule} arguments-before-call
