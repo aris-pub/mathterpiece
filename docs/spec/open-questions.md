@@ -17,38 +17,38 @@ The drafts of {doc}`scope` and {doc}`well-formedness` raised three more: Q-scope
 attributes, by its name or through `self`, as long as no-dependency-cycles holds), and Q-well-formedness-1 and Q-well-formedness-2, which are
 decided under P1 and P4.
 
-## P1. When bodies are proved: once, or once per copy
+## P1. When bodies are checked: once, or once per copy
 
 **Today.** The compiler expands each `foreach` into its copies and each motif into its instances,
-and then proves every copy and every instance on its own, with the actual values of `i` or of the
-parameters. Proving and folding are interleaved, because a copy can only be proved once its
+and then checks every copy and every instance on its own, with the actual values of `i` or of the
+parameters. Checking and folding are interleaved, because a copy can only be checked once its
 values are known.
 
 **The question.** The prover must be as small as possible. Two designs are possible:
 
-- **Prove, then expand.** A `foreach` body is proved once, with `i` ranging over its known range,
-  and a motif body is proved once, with each parameter ranging over its declared type and
-  constraints. Expanding then needs no proof. Errors point at the body as written. An imported
-  motif is proved once. A body that is safe only for some values of a parameter is rejected,
+- **Check, then expand.** A `foreach` body is checked once, with `i` ranging over its known range,
+  and a motif body is checked once, with each parameter ranging over its declared type and
+  constraints. Expanding then needs no check. Errors point at the body as written. An imported
+  motif is checked once. A body that is safe only for some values of a parameter is rejected,
   unless the parameter declares a constraint that makes it safe.
-- **Expand, then prove** (as today). Each copy is proved with its actual values, which proves more
+- **Expand, then check** (as today). Each copy is checked with its actual values, which accepts more
   programs. The prover runs once per copy, and an error in a motif body is reported for one
   instance.
 
 **Settles:** Q-compiler-runtime-1, Q-compiler-runtime-2, Q-core-3, Q-core-6, and the order of
 the steps in {doc}`compiler-runtime`.
 
-**Decided:** prove, then expand: each `foreach` body and each motif body is proved once, and the
-copies and instances are not proved again ({numref}`prove-bodies-once`). In {doc}`core`, a form
+**Decided:** check, then expand: each `foreach` body and each motif body is checked once, and the
+copies and instances are not checked again ({numref}`check-bodies-once`). In {doc}`core`, a form
 whose rewrite would need the value of a `foreach` name or a motif parameter is core
 ({numref}`names-from-values`).
 
-**Decided (2026-11-15):** a branch of an `if` is proved only for the values for which it runs. The
+**Decided (2026-11-15):** a branch of an `if` is checked only for the values for which it runs. The
 spec lists exactly which conditions narrow the range of a name: a comparison with `=`, `!=`, `<`,
 `<=`, `>` or `>=` of the name with a number known in the prove step, and `cond`, `when`, `and` and
 `or` through their rewrites into `if`. No other condition narrows ({numref}`if-narrowing`)
 (Q-well-formedness-1). So examples/spiral-of-copies.mtp, which reads `dot-{(- k 1)}` only where
-`k` is not 0, compiles once the body of a `foreach` is proved once.
+`k` is not 0, compiles once the body of a `foreach` is checked once.
 
 ## P2. Syntactic sugar means exactly its rewrite
 

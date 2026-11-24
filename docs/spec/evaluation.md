@@ -79,13 +79,13 @@ the value is the same.
 ### Which parts the prove step proves
 
 ```{rule} known-condition-takes-one-branch
-When the test of an `if` is known in the prove step ({numref}`prove-bodies-once`), the prove
-step proves only the branch that is taken. The other branch is neither proved nor folded.
+When the test of an `if` is known in the prove step ({numref}`check-bodies-once`), the prove
+step checks only the branch that is taken. The other branch is neither checked nor folded.
 ```
 
-So inside the body of a `foreach` or a motif, the prove step proves both branches of an `if` whose
-test reads the binding of the `foreach` or a parameter of the motif, since the body is proved
-once for all their values. Each branch is proved for the values for which it runs
+So inside the body of a `foreach` or a motif, the prove step checks both branches of an `if` whose
+test reads the binding of the `foreach` or a parameter of the motif, since the body is checked
+once for all their values. Each branch is checked for the values for which it runs
 ({numref}`if-narrowing`). By {numref}`sugar-rewrites`, the same holds for the tests of a `cond`
 and the parts of an `and` or an `or`. `or?` and `let` are proved whole: every part is proved, even a
 part that would not be evaluated because a value before it is known when compiling. An operation
@@ -101,11 +101,11 @@ that results in `none` at known inputs in such a part is a {term}`compile error`
 (real e (if (= x 0) 0 'not a number'))       ; compiles: the string is never proved
 ```
 
-A folded call is computed by evaluating its body, not by proving it again, so a folded call of a
+A folded call is computed by evaluating its body, not by checking it again, so a folded call of a
 function that calls itself ends at its base case. The copies of a `foreach` can form a chain, in
 which copy k reads copy k - 1 through `(name …)`, as in `(if (= k 0) 1 (* 2 (. (name
 f'd-{(- k 1)}') x)))`. {numref}`names-from-values` defines how the prover proves such a name when
-the body is proved once.
+the body is checked once.
 
 :::{admonition} Code differs
 :class: note
@@ -165,7 +165,7 @@ The functions of the {term}`standard library` are written in mtp, and result in 
 built-in functions that they call result in `none` ({doc}`stdlib`).
 
 ```{rule} none-at-known-inputs
-An operation whose inputs are known in the prove step ({numref}`prove-bodies-once`), and are among
+An operation whose inputs are known in the prove step ({numref}`check-bodies-once`), and are among
 the inputs at which it results in `none` ({numref}`operations-that-give-none`), is a compile error. So
 are `rand` and `rand-int` with both bounds known in the prove step and `lo` above `hi`, although
 their seed is never known when compiling.
@@ -179,7 +179,7 @@ has a radius of 1.
 
 :::{admonition} Code differs
 :class: note
-- The compiler proves each copy of a `foreach` with the value of its variable, so
+- The compiler checks each copy of a `foreach` with the value of its variable, so
   `(r (or? (/ 1 i) 1))` is rejected with "division by zero" at copy 0. mtp-08wd.1.
 - Neither `rand` nor `rand-int` checks that `lo` is at most `hi`. While drawing, `(rand-int 10 3)`
   evaluates to an int from 4 to 10 by the formula of {numref}`random-values`. The compiler sets the
@@ -187,8 +187,8 @@ has a radius of 1.
   from 10 to 3, so it accepts `((int (>= 3) (<= 5)) b (rand-int 5 3))`. Bug mtp-y7vp.
 :::
 
-A function body is proved once, with each parameter ranging over its declared type
-({numref}`prove-bodies-once`). A call whose arguments are all known when compiling is folded: the
+A function body is checked once, with each parameter ranging over its declared type
+({numref}`check-bodies-once`). A call whose arguments are all known when compiling is folded: the
 fold step computes the body with those arguments, and an operation in the body that results in
 `none` at those arguments results in `none` there too ({numref}`operations-that-give-none`). So an
 `or?` in the body may replace the `none` with a default. With
@@ -614,7 +614,7 @@ A call of a recursive function whose arguments are known only while drawing may 
 above `max-call-depth`, and no rule may make that an error while drawing
 ({numref}`no-errors-after-loading`). The same holds for a call in the body of a `foreach` or a
 motif that reads the binding of the `foreach` or a parameter of the motif: it is not known in the
-prove step ({numref}`prove-bodies-once`), so {numref}`call-depth-limit` does not reject it, and its
+prove step ({numref}`check-bodies-once`), so {numref}`call-depth-limit` does not reject it, and its
 arguments are known only once the expand step has made the copies and the shapes declared with
 each motif. The options:
 

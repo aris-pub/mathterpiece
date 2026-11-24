@@ -76,8 +76,8 @@ of types, functions, records, {term}`seeds <seed>`, and non-free variables. Any 
 compile error.
 ```
 
-```{rule} import-proves-whole-file
-The compiler proves every declaration of an imported file, whether the source uses it or not.
+```{rule} import-checks-whole-file
+The compiler checks every declaration of an imported file, whether the source uses it or not.
 ```
 
 So whether a file to import is correct never depends on the source that imports it.
