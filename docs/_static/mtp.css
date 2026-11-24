@@ -6,9 +6,8 @@
 }
 .mtp-rule-head {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
-  gap: 1rem;
+  gap: 0.5rem;
   font-weight: 600;
   margin: 0 0 0.25rem;
 }
@@ -252,7 +251,7 @@ html[data-theme] .bd-content table.table td:first-child code * { color: inherit;
 .mtp-rule-head .mtp-rule-link { color: var(--pst-color-link); }
 .mtp-rule-head .mtp-rule-link .caption-number { color: inherit; }
 .mtp-rule-copied {
-  margin-left: 0.5rem; padding: 0.05rem 0.4rem; border-radius: 4px;
+  padding: 0.05rem 0.4rem; border-radius: 4px;
   background: var(--pst-color-link); color: var(--pst-color-background);
   font-size: 0.75rem; font-weight: 600;
 }
