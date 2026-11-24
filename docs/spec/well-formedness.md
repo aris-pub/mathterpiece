@@ -55,7 +55,7 @@ The {term}`controls <control>` and the {term}`listeners <listener>` are the writ
 
 ```{rule} writable-targets
 The target of a writer or of a move is a free container ({numref}`variables`), written as a name
-or a qualified name, with `(name S)` allowed in place of a name ({numref}`names-from-values`). Also:
+or a qualified name ({numref}`what-a-name-means`). Also:
 
 - A target that stands for several containers ({doc}`concurrency`, the part "Containers") may be
   written to only when each of them is free. Such targets are a `pos`, an attribute of a group that
