@@ -42,10 +42,10 @@ interface `instant`. Beads mtp-rk1i and mtp-idcs.
 
 ## What a write does to a number
 
-```{rule} writes-to-constraints
+```{rule} writes-to-conditions
 A write of a number to a {term}`container` brings it into the conditions of its declared type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
 type by {numref}`modular-types`, and when it breaks a `(> c)` or a `(< c)` it is not written. A write of a value that is not among the values of a `(one-of …)` is not
-written. A number written to an `int` is rounded as {numref}`rounding` states. A value that is
+written, and neither is a write of a list whose length breaks a `(length n)`. A number written to an `int` is rounded as {numref}`rounding` states. A value that is
 not written leaves the container as it was.
 ```
 

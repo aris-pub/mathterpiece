@@ -105,7 +105,7 @@ pixels. The mouse wheel does not change it.
   it can be scrubbed.
 - A typed value is written only when the reader commits it: with Enter, with Tab, or by leaving the
   field. Until then the field shows what is typed, and the target does not change.
-- A committed value is written by {numref}`writes-to-constraints`. When it is not written, or is
+- A committed value is written by {numref}`writes-to-conditions`. When it is not written, or is
   brought into the range of the target's conditions, the field shows the target's value and its
   box shows a red outline for a moment, and a screen reader is told the same.
 ```

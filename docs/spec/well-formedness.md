@@ -75,18 +75,15 @@ const variable. Two writers may write to the same container, and
 {doc}`concurrency` defines what happens then.
 
 ```{rule} written-values
-The type of each value that a writer writes must be a {term}`subtype` of the type of its target
-({numref}`subtypes`), with the comparisons and the `(one-of …)` of that type left out, and with a modular
-type read as its number type, since the write brings the value into those
-({numref}`writes-to-constraints`, {numref}`modular-types`). This holds for the `from` and the `to` of a move
-and of a movement, and for the values that a jumper writes ({numref}`jumpers-and-movers`). A value whose type includes
-`none` may be written only to a target whose type includes `none`.
+The compiler checks a written value against the type of its target without its conditions. Each
+write enforces the conditions while drawing ({numref}`writes-to-conditions`).
 ```
 
-So `(move k (to (* 3 a)))` into `(real k 1 (>= 0) (<= 2))` compiles, and a value below 0 is
-written as 0, and a value above 2 as 2. `(move n (to 2.5))` into an `int` is a compile error,
-while the values between the ends of a move into an {term}`int` are rounded. A `(length n)` is
-kept, so a move into a list declared `(length 2)` with a `to` of length 3 is a compile error.
+So with `(real k 1 (>= 0) (<= 2))`, `(move k (to (* 3 a)))` compiles, and a value below 0 is
+written as 0, and a value above 2 as 2. With an {term}`int` `n`, `(move n (to 2.5))` is a compile
+error, since 2.5 is not an int, and the values between the ends of a move to `n` are rounded. A
+move to a list declared `(length 2)` with a `to` of length 3 compiles, and no list of length 3 is
+written.
 
 (writer-conditions)=
 ```{rule} writer-guards
@@ -102,9 +99,8 @@ as in `(on-drag c c.pos (<= c.x 5) (>= c.y 0))`, and `c.pos.x` and `c.pos[0]` ar
 
 :::{admonition} Code differs
 :class: note
-- The compiler checks the end of a move against its target without the constraints of the target
-  (`_loose` in `compiler.py:5794`, `checked`), so a move of a list declared `(length 2)` to a list
-  of three items compiles.
+- The runtime does not refuse a list of the wrong length: `constrain` brings only a single number
+  into its conditions ({doc}`evaluation`, the note under {numref}`number-limit`).
 - The compiler refuses a guard only when its limit reads the target directly (`compiler.py:4486`,
   `condition`), so a limit that reads the target through a bound variable compiles.
 
