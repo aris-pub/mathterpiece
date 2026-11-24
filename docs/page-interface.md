@@ -44,6 +44,8 @@ several copies on the page, they match the attributes of the copy that changed t
 
 ## The view box of a canvas
 
+This rule exists so that the runtime always has a whole box to draw, never part of one.
+
 ```{rule} canvas-view-box
 A canvas must have all four of the named arguments `x`, `y`, `width` and `height`, or none of them.
 A canvas that has one, two or three of them is a compile error, and the message of the error holds
@@ -56,6 +58,8 @@ expression that reads one of them, or a writer that writes to one, is a compile 
 So in `(canvas v (x -3) (y -2) (width 6) (height 4) s)`, the runtime draws the box from -3 to 3
 across and from -2 to 2 up, in `(canvas v s)` the box around the shapes of `s`, and
 `(canvas v (x -3) (width 6) s)` is a compile error whose message holds the names `y` and `height`.
+
+This rule exists so that a canvas with no box given still shows all of its shapes.
 
 ```{rule} canvas-fit
 In a canvas with none of `x`, `y`, `width` and `height`, the runtime draws the box around the shapes

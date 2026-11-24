@@ -8,6 +8,8 @@ never checks one ({numref}`runtime-no-type-work-while-drawing`).
 
 ## What a type is
 
+This rule exists to define what a type is, so that every check of the prove step is a question about sets of values.
+
 ```{rule} what-a-type-is
 A type is a set of {term}`values <value>`. A value may belong to many types. Every container,
 parameter and expression has one type, known when compiling: for a container, its declared type,
@@ -29,6 +31,8 @@ the set of the reals that are not below 0. The types are combined as sets:
 
 A type that is a subset of another is a {term}`subtype` of it ({numref}`subtypes`).
 
+This rule exists to specify when `(is X T)` is worked out by the compiler and when by the runtime.
+
 ```{rule} membership
 `(is X T)` evaluates to `true` when the value of X is in the type T, and to `false` otherwise.
 Where the type of X lies wholly inside T, or wholly outside it, the result is known when compiling.
@@ -40,6 +44,8 @@ So in `(func size ((point|circle p)) (if (is p circle) p.r 0))`, `p.r` is read o
 circle, and `(is 3 real)` is `true` when compiling.
 
 ## The types
+
+This rule exists to list the types from which every other type is built.
 
 ```{rule} the-types
 These are the built-in types of mtp, and the types that a source declares. Every other type is built
@@ -114,6 +120,8 @@ The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SE
 {term}`int` below 0 does not belong to it. Bead mtp-ydd4.7.30.
 :::
 
+This rule exists so that the compiler can tell, from where an expression is written, whether it stands for a type or for a value.
+
 ```{rule} type-notation
 Types are not values: no container holds a type, and no expression that evaluates to a value may
 stand for one. These expressions evaluate to types:
@@ -137,6 +145,8 @@ An expression that evaluates to a type, written anywhere else, is a {term}`compi
 an expression that evaluates to a value, written where a type is expected.
 ```
 
+This rule exists to specify the type that each type form stands for.
+
 ```{rule} type-forms
 `(type-union T1 T2 …)` is the union of the types T1, T2 and so on, `(type-intersect T1 T2 …)` is
 their intersection, and `(type-apply T X…)` is the type T with the types X… in its brackets: `(type-apply
@@ -153,6 +163,8 @@ points and the circles.
 
 ## Subtypes
 
+This rule exists to define when a value of one type is accepted where another type is expected, which every type check uses.
+
 ```{rule} subtypes
 A type A is a {term}`subtype` of a type B, and B is a {term}`supertype` of A, exactly when A is a
 subset of B. A value of type A is accepted where a value of type B is expected exactly when A is a
@@ -167,6 +179,8 @@ refined types, the conditions are compared as sets: `(real (>= 0))` is a subtype
 subtype of the expected type may still be accepted when the prover proves that it meets the conditions ({numref}`constraint-proof`).
 
 ## Conditions
+
+This rule exists to fix the conditions that a type may have, so that the prover handles a known set of them.
 
 ```{rule} constraints
 A condition is a clause that limits the values of the type in the form around it: `(T C…)` holds the
@@ -194,6 +208,8 @@ and `(length n)` only on lists. Bead mtp-rk1i.
 
 ## Modular types
 
+This rule exists so that a number that wraps around, such as an angle, never has to be refused.
+
 ```{rule} modular-types
 `(mod T lo hi)`, with `T` either `int` or `real` and lo below hi, is the set of the numbers from lo
 up to hi, hi left out, with no order. A number v that a container, a parameter or a function result
@@ -214,6 +230,8 @@ The compiler has no modular types. It has the constraint `(wrap lo hi)` on `int`
 :::
 
 ## Default values
+
+This rule exists so that a variable or a parameter given no value still holds a value of its type.
 
 ```{rule} type-values
 A variable declared with no value, and a parameter with no default that is left out, hold the
@@ -244,6 +262,8 @@ ever left without a value.
 
 ## Conversions
 
+This rule exists so that no value changes type without a form in the source that asks for it.
+
 ```{rule} conversions
 No value is converted from one type to another unless a form asks for it, such as `round`,
 `color-of` or `unwrap`.
@@ -254,6 +274,8 @@ So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, whil
 `int` is a subtype of `real` ({numref}`subtypes`), not because it is converted.
 
 ## Known lengths
+
+This rule exists so that the prover can tell which lists have a length known when compiling, which the reads of items and some `foreach` forms need.
 
 ```{rule} known-lengths
 The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists
@@ -279,6 +301,8 @@ only when it is declared with `(length n)`, and its items never have a known ite
 writer may write lists of another length to them.
 
 ## none
+
+This rule exists so that `none` reaches a place that does not expect it only where the compiler can say what happens next.
 
 ```{rule} none-only-where-allowed
 A type includes `none` when it is `none` or a union with `none`. A value of such a type may be written
@@ -335,6 +359,8 @@ degree, and the two are gone at 90 only:
 
 ## Choice types
 
+This rule exists to define the choice types, which selects and some attributes use.
+
 ```{rule} choice-types
 A {term}`choice type` is a refined type whose conditions include a `(one-of v1 …)`. Its values are
 the choices v1 … that meet its other conditions.
@@ -355,6 +381,8 @@ The compiler checks the choices only of a value known when compiling (`compiler.
 :::
 
 ## Interfaces
+
+This rule exists so that a function or a motif can accept every value that has some attributes, whatever its type.
 
 ```{rule} interfaces
 An interface `(interface N (T1 A1 C1…) …)` is the set of the values that have each attribute Ai, of
@@ -397,6 +425,8 @@ declared with one is a compile error. Bead mtp-mo3r.
 
 ## Motifs and variants
 
+This rule exists to specify the types that a motif, an animation and a variant declare, and how they relate to other types.
+
 ```{rule} motif-and-variant-types
 `(motif M PARAMS …)` declares the type M, a shape type, and `(animation A PARAMS …)` the type A, a
 movement type. Each is disjoint from every other type.
@@ -420,6 +450,8 @@ The compiler accepts a variant parameter that no attribute of its shape reads. m
 
 ## Functions
 
+This rule exists so that every function is known when compiling, which the prover needs in order to check each call.
+
 ```{rule} function-types
 The type of a function declared with `func` is `func[P1 … Pn R]`, with the types of its parameters
 and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY as R. No
@@ -437,6 +469,8 @@ The compiler refuses a variable whose type is a function type (`compiler.py:1484
 and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 :::
 
+This rule exists so that the type of every parameter and the value of every default are known before the compiler checks a body.
+
 ```{rule} parameters
 A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which
 must be written, with its conditions. Its default, when it has one, must be of type T and known when
@@ -451,12 +485,16 @@ expected type.
 
 So in `(map xs (fn x (* 2 x)))`, with `xs` a `list[real]`, `x` is a real ({doc}`stdlib`).
 
+This rule exists so that the compiler can give a type to every call, a call of a recursive function included.
+
 ```{rule} function-result-type
 The result type of `(func[R] N PARAMS BODY)` is R. The result type of `(func N PARAMS BODY)` is the
 type of BODY. A recursive function, one that calls itself, must declare its result type.
 ```
 
 ## The type of each expression
+
+This rule exists so that every compiler gives each expression the same type.
 
 ```{rule} form-types
 Each expression except a clause and a special form has this type:

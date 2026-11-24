@@ -22,6 +22,8 @@ executes at each motion of the pointer. Its type is `instant`, the movements who
 ({numref}`interfaces`), so a move whose duration is not 0 is a compile error. `CONDITIONS`
 are the guards of the listener ({numref}`writer-guards`).
 
+This rule exists so that a listener can read where the pointer is, in the frame of the shape that it drags.
+
 ```{rule} pointer-binding
 A listener that the pointer triggers, `on-drag`, `on-pointermove`, `on-click`, `on-release`,
 `on-dragstart`, `on-dragend`, `on-enter` or `on-leave`, may hold the optional clause `(as N)`, with `N` a
@@ -41,6 +43,8 @@ interface `instant`. Beads mtp-rk1i and mtp-idcs.
 :::
 
 ## What a write does to a number
+
+This rule exists so that a container always holds a value that meets the conditions of its type, whatever a writer writes.
 
 ```{rule} writes-to-conditions
 A write of a number to a {term}`container` brings it into the conditions of its declared type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular

@@ -11,6 +11,8 @@ toggle in older forms, and none of the other controls. Bead mtp-9e62.
 
 ## What every control takes
 
+This rule exists so that every control takes the same common arguments, which the signatures below then need not repeat.
+
 ````{rule} control-arguments
 Every control takes these arguments, which the signatures below write as `(like control)`:
 
@@ -31,6 +33,8 @@ control ({numref}`writer-guards`).
 
 ## Jumpers and movers
 
+This rule exists to separate the controls that write to a container directly from those that play a movement, since the runtime handles the two kinds differently.
+
 ```{rule} jumpers-and-movers
 A control is a `jumper` or a `mover` ({numref}`the-types`). A jumper names one container, its
 target, and writes a value to it by a jump each time the reader acts on it: it takes no movement.
@@ -41,6 +45,8 @@ So a slider writes its number at once, wherever the reader drags its thumb, and 
 movement that may take any time.
 
 ## The jumpers
+
+This rule exists to fix the arguments of each jumper, so that the compiler can check every control in a source.
 
 ````{rule} jumper-signatures
 ```mtp-sig
@@ -74,6 +80,8 @@ movement that may take any time.
 `TARGET` is a container of any type, and in a multi-select a container whose type is a list.
 ````
 
+This rule exists so that the runtime draws and handles a slider and a dial the same way, apart from wrapping.
+
 ```{rule} slider-and-dial
 A slider and a dial are the same control on two kinds of number. The thumb of a slider runs along a
 straight track from `from` to `to`. The thumb of a dial runs around a ring, and one full turn covers
@@ -88,11 +96,15 @@ the interval of its modular type, so turning past its end wraps around. On both:
   step when there is a `(step …)`, and none otherwise.
 ```
 
+This rule exists to specify how the runtime keeps the two values of a range slider in order.
+
 ```{rule} range-slider
 A range slider has two thumbs on one track and writes to `LOW` and `HIGH`. A thumb that is dragged into
 the other stops there, so `LOW` is never above `HIGH`. It takes no `(path …)`: its track is always
 straight.
 ```
+
+This rule exists to specify every way in which the reader changes a number field, and when the runtime writes the value.
 
 ```{rule} number-field
 A number field shows its target's value. The reader changes it by typing, by the − and + buttons,
@@ -110,17 +122,23 @@ pixels. The mouse wheel does not change it.
   box shows a red outline for a moment, and a screen reader is told the same.
 ```
 
+This rule exists to specify when the runtime writes the text of a text field, and what it shows when the text is refused.
+
 ```{rule} text-field
 A text field shows its target's string. A typed string is written only when the reader commits it,
 as in a number field. A string that breaks the conditions of the target's type is not written, and
 the box shows a red outline for a moment.
 ```
 
+This rule exists to specify what a toggle writes, and that it always shows the current value of its target.
+
 ```{rule} toggle
 A toggle shows a checkbox with its target's value and its label. A click writes `(not TARGET)`. A
 toggle holds no value of its own: when anything else writes to its target, the checkbox shows the new
 value.
 ```
+
+This rule exists to specify how the options of a select are written, and how the compiler checks their values.
 
 ```{rule} select-options
 The options of a select are its body. `(opt V L?)` is one option: the value V and, when it is given,
@@ -130,12 +148,16 @@ multi-select, of the item type of the target. Choosing an option writes it to th
 When the target holds a value that is no option, the select shows no option chosen.
 ```
 
+This rule exists to fix the ways in which the runtime may draw a select.
+
 ```{rule} select-kinds
 `kind` chooses how a select is drawn: `'menu'`, a button that shows the chosen option and opens a
 list of all of them, `'buttons'`, every option as one of a row of connected buttons, and `'radio'`,
 one option per line with a round mark. A multi-select has `'menu'` and `'buttons'` too, and
 `'checkbox'`, one checkbox per option.
 ```
+
+This rule exists so that the list that a multi-select writes has one order, whatever order the reader chose in.
 
 ```{rule} multi-select
 Choosing an option of a multi-select adds its value to the target list, and choosing it again
@@ -163,6 +185,8 @@ For example:
 ```
 
 ## The movers
+
+This rule exists to fix the arguments of each mover, so that the compiler can check every control in a source.
 
 ````{rule} mover-signatures
 ```mtp-sig
