@@ -13,6 +13,8 @@ proves, and the {term}`ranges <range>` that it uses to prove it.
 
 ## No cycles
 
+This rule exists because the runtime computes a bound container from the containers that it reads, and a cycle gives that computation no place to start.
+
 ```{rule} no-dependency-cycles
 The value of every bound container is computed from the values that its expression reads
 ({doc}`reactivity`). These reads make no cycle: no bound container reads itself, directly or through
@@ -24,6 +26,8 @@ before it, so a cycle could only come from a read inside the {term}`form` of the
 binding that is read. The rule below lists such reads. A call of a function is not a read of a
 container, so a function that calls itself makes no cycle. The depth of a chain of calls is limited
 by {numref}`call-depth-limit`.
+
+This rule exists because a form that reads what it declares could need a value before there is one, and the compiler must reject those cases before the page opens.
 
 ```{rule} self-reference
 These rules hold for a use of a name inside the form that declares or binds it:
@@ -53,6 +57,8 @@ that reads its own shape or a member that reads the `shift` of its group, is lim
 The {term}`controls <control>` and the {term}`listeners <listener>` are the writers
 ({doc}`concurrency`). A writer writes to its target and to the targets of the moves in its movements.
 
+This rule exists because the runtime keeps a bound or const container equal to its expression, so a write to one would have no effect.
+
 ```{rule} writable-targets
 The target of a writer or of a move is a free container ({numref}`variables`), written as a name
 or a qualified name ({numref}`what-a-name-means`). Also:
@@ -74,6 +80,8 @@ So `(slider s m (from 0) (to 1))` with `(real m (* 2 k))` is a compile error, an
 const variable. Two writers may write to the same container, and
 {doc}`concurrency` defines what happens then.
 
+This rule exists to specify which part of a write the compiler checks, and which part the runtime enforces.
+
 ```{rule} written-values
 The compiler checks a written value against the type of its target without its conditions. Each
 write enforces the conditions while drawing ({numref}`writes-to-conditions`).
@@ -84,6 +92,8 @@ written as 0, and a value above 2 as 2. With an {term}`int` `n`, `(move n (to 2.
 error, since 2.5 is not an int, and the values between the ends of a move to `n` are rounded. A
 move to a list declared `(length 2)` with a `to` of length 3 compiles, and no list of length 3 is
 written.
+
+This rule exists because the runtime clamps each write to the guards of its writer, which is possible only when each guard bounds the written container.
 
 (writer-conditions)=
 ```{rule} writer-guards
@@ -109,6 +119,8 @@ Bead mtp-ydd4.7.44.
 
 ## Moves that run at the same time
 
+This rule exists because two moves of one score that write to the same container at once would leave the value of the container undefined.
+
 ```{rule} moves-at-once
 Two moves of one score that write to the same container at times that overlap are a compile error.
 The containers that a move writes to are defined in {doc}`concurrency`, in the part "Containers". The
@@ -129,6 +141,8 @@ is allowed for a member `c` of `g`.
 
 ## The prover
 
+This rule exists to fix exactly what the prover proves, so that every conforming compiler accepts and rejects the same sources.
+
 ```{rule} prover-proves
 The prover proves exactly these, and nothing else:
 
@@ -148,12 +162,14 @@ The prover proves exactly these, and nothing else:
 7. The rules of the sections above.
 
 For numbers, the prover uses only the ranges of {numref}`ranges` and {numref}`range-rules`, and
-the narrowing of {numref}`if-narrowing`. It proves each body once ({numref}`prove-bodies-once`).
+the narrowing of {numref}`if-narrowing`. It checks each body once ({numref}`check-bodies-once`).
 ```
 
 So the prover never uses a relation between two values: the range of the divisor of
 `(/ 1 (- k k))` holds values other than 0, although the divisor is always 0. The prover never
 counts and never searches for a value.
+
+This rule exists to define the ranges that the prover works with, which the rules after it use.
 
 ```{rule} ranges
 A range is a closed interval of {term}`reals <real>`, from a lower end to an upper end, each of them
@@ -172,6 +188,8 @@ every value that is computed when folding and while drawing. By the row for the 
 to `1e150`, so `(/ 1 k)` is a `real`, and the range of `(int n (> 0))` is from 1 to 10¹⁵⁰. A ratio
 has no smallest value above a number, so for a ratio, the end of `(> c)` is c, as for `(>= c)`.
 
+This rule exists so that every compiler works out the same range for each expression.
+
 ```{rule} range-rules
 The range of each expression is the following. Where the table lists several ranges, the range is
 the part that they share.
@@ -182,7 +200,7 @@ the part that they share.
 | the range of a type | the ends set by its comparisons: c for a `(>= c)` and a `(<= c)`, and for a `(> c)` and a `(< c)` the nearest value past c that the type holds, which is the next int for an int, the next binary64 number for a real, and c for a ratio. From lo to hi for a modular type `(mod T lo hi)`, and the end of the {term}`number limit` for a side with no bound ({numref}`number-limit`) |
 | a read of a free container | the range of its type |
 | a read of a bound container | the range of its expression, and the range of the conditions of its declared type, each side with no bound left out |
-| a parameter, in its body | the range of its type ({numref}`prove-bodies-once`), and for a parameter of an `fn` passed to a {term}`built-in` function, the range that {doc}`stdlib` lists for it |
+| a parameter, in its body | the range of its type ({numref}`check-bodies-once`), and for a parameter of an `fn` passed to a {term}`built-in` function, the range that {doc}`stdlib` lists for it |
 | a `let` name | the range of its value |
 | the name of a `foreach` over a count X | from 0 to the upper end of the range of X, minus 1 |
 | the name of a `foreach` over a list | the range of the items of the list |
@@ -196,7 +214,7 @@ the part that they share.
 | `(^ A B)` | when the lower end of A is 0 or more, the smallest and the largest of the four powers of the ends. When B is known in the prove step and is an int n, the smallest and the largest of the powers n of the ends of A, and 0 when the range of A holds 0 and n is above 0. Otherwise the whole number limit |
 | `(abs A)` | from 0 to the larger of minus the lower end and the upper end, when the range of A holds 0, and otherwise from the smaller to the larger of the absolute values of the ends |
 | `(if C A B)`, `(or? A D)` | from the smaller of the lower ends to the larger of the upper ends. With C known in the prove step, the range of the branch taken. The range of each branch of an `if` is worked out with the ranges that {numref}`if-narrowing` sets, and a branch that never runs by that rule is left out |
-| a call of a function declared with `func`, outside its own body, not folded | the range of its body worked out again with the range of each parameter being the range of its argument, and the range of its result type. This row sets only a range: the body is proved once |
+| a call of a function declared with `func`, outside its own body, not folded | the range of its body worked out again with the range of each parameter being the range of its argument, and the range of its result type. This row sets only a range: the body is checked once |
 | a call of a function inside its own body | the range of its result type |
 | a call of another built-in function | the range that {doc}`stdlib` lists for it |
 | any other expression | the range of its type |
@@ -219,6 +237,8 @@ With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 
 `(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamp x 0 1)` has the range 0
 to 1 whatever `x` is, by the row for a call.
 
+This rule exists to determine which operations may result in `none`, and so which types must include `none`.
+
 ```{rule} may-give-none
 The type of an operation that is not folded includes `none` when the ranges of its arguments, each
 taken on its own, hold an input at which it evaluates to `none` by
@@ -235,6 +255,8 @@ So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, 
 `(int f 0 (>= 0) (<= 3))`, `xs[f]` on a bound list of four items is never `none`. With
 `(type side string (one-of 'left' 'right'))` and a group `arms` whose members are named `left` and
 `right`, `arms[s]` is never `none` for a `side` `s`.
+
+This rule exists to specify when the prover counts a condition as proved, and what the compiler does when it is not.
 
 ```{rule} constraint-proof
 A value written where the expected type holds a condition C meets C when one of these holds:
@@ -271,8 +293,10 @@ So `(real k 5 (<= 3))` is a compile error. With `(real a 1)` and
 
 ### Narrowing in an `if`
 
+This rule exists so that the prover accepts a branch of an `if` that is safe only because of the test of the `if`.
+
 ```{rule} if-narrowing
-A branch of an `if` is proved only for the values for which it runs. In `(if (OP N c) A B)`, where
+A branch of an `if` is checked only for the values for which it runs. In `(if (OP N c) A B)`, where
 N is a name whose range the prover works out, c is a number known in the prove step, and OP is one
 of `=`, `!=`, `<`, `<=`, `>` and `>=`, the range of N in A is the part of its range for which the
 comparison holds, and in B the part for which it fails. With lo and hi the ends of the range of N:
@@ -291,7 +315,7 @@ comparison holds, and in B the part for which it fails. With lo and hi the ends 
   and a part in which N is above c, or at least c, is from the larger of lo and c to hi. The part in
   which N is c is from c to c, and the part in which N is not c is from lo to hi.
 - When a part holds no int, for an int N, or when its lower end is above its upper end, or when lo
-  and hi are both c in the part in which N is not c, the branch never runs, and the prover proves
+  and hi are both c in the part in which N is not c, the branch never runs, and the prover checks
   nothing in it.
 
 The range of N changes only for the reads of N in A and in B that read the same declaration or
@@ -302,8 +326,8 @@ as `(> N c)`, and `(= c N)` as `(= N c)`. `cond`, `when`, `and` and `or` narrow 
 {term}`rewrites <rewrite>` into `if` ({numref}`sugar-rewrites`). No other condition narrows a range.
 ```
 
-In the source below, the body of the `foreach` is proved for `k` from 0 to 59
-({numref}`prove-bodies-once`). So `k` in the second branch of `(if (= k 0) …)` is from 1 to 59,
+In the source below, the body of the `foreach` is checked for `k` from 0 to 59
+({numref}`check-bodies-once`). So `k` in the second branch of `(if (= k 0) …)` is from 1 to 59,
 and `@'dot-{(- k 1)}'` refers to one of the copies `dot-0` to `dot-58` ({numref}`names-from-values`).
 
 ```mtp
@@ -326,6 +350,6 @@ rewrite of `and`, which is not a comparison, so the range of `k` in A is not nar
 The compiler has no narrowing. So
 `(func[real] f (((int (>= 0) (<= 5)) k)) (if (= k 0) 0 (/ 1 k)))` is the error "this value may be
 none" at `(/ 1 k)`, although `k` in that branch is from 1 to 5. examples/spiral-of-copies.mtp
-compiles today only because the compiler proves each copy of a `foreach` with its own value of `k`
+compiles today only because the compiler checks each copy of a `foreach` with its own value of `k`
 (mtp-08wd.1). Bead mtp-ydd4.7.55.
 :::

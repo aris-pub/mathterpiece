@@ -35,7 +35,7 @@ a compile error, "the argument for P is the name of a seed, as in (C dots)". So 
 :::{admonition} Code differs
 :class: note
 The compiler writes out each `(C …)` for a choreo `C` where it is written (compiler.py:1669-1729),
-and proves the body again for each one. It also compiles once on its own each choreo whose
+and checks the body again for each one. It also compiles once on its own each choreo whose
 parameters all have defaults. It binds a parameter that is not a seed, and whose argument is a
 name, to that name, so that a move of the parameter moves what the name refers to
 (mtp-ydd4.7.56).

@@ -40,8 +40,8 @@ By {numref}`declaration-names`, a declared function may take the name of a built
 not an operator: after `(func max ((real a) (real b)) b)`, `(max 1 2)` is 2.
 
 The compiler rewrites every syntactic sugar form before the prove step ({numref}`compile-steps`), so
-the {term}`prover` is given only core forms. The prover proves the {term}`body` of each `foreach`,
-motif and animation only once, before any copies are made ({numref}`prove-bodies-once`). At that point
+the {term}`prover` is given only core forms. The prover checks the {term}`body` of each `foreach`,
+motif and animation only once, before any copies are made ({numref}`check-bodies-once`). At that point
 the names of a `foreach` and the parameters of a motif or an animation have no value yet, so a form
 whose rewrite would need one of their values is core ({numref}`names-from-values`).
 

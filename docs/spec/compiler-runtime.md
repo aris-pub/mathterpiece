@@ -91,13 +91,13 @@ So a check that the parts of a syntactic sugar form are known when compiling is 
 every core form other than `foreach`, `(M …)` for a motif `M` and `(A …)` for an animation `A` reaches the fold step
 as it is. Which forms are syntactic sugar, and the {term}`rewrite` of each, are defined in {doc}`core`.
 
-```{rule} prove-bodies-once
-The prove step proves each body once: the body of a function with each parameter ranging over
+```{rule} check-bodies-once
+The prove step checks each body once: the body of a function with each parameter ranging over
 every value of its declared type, the body of a `foreach` with its variable ranging over every
 value of its range, and the body of a motif or an animation with each parameter ranging over every
-value of its declared type and conditions. An imported motif or animation is proved once, in the file
+value of its declared type and conditions. An imported motif or animation is checked once, in the file
 that declares it. The copies that a `foreach` makes, each `(M …)` for a motif `M`, and each `(A …)` for an
-animation `A` are not proved again. A motif or animation body that is safe for only some values of a
+animation `A` are not checked again. A motif or animation body that is safe for only some values of a
 parameter is a {term}`compile error`, unless the parameter is declared with a condition that leaves out
 the other values. An expression is known in the prove step when it is known when compiling
 ({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or an
@@ -138,9 +138,9 @@ proving. `_Compiler.run` in mathterpiece/compiler.py, line 586, loops once over 
 and rewrites, expands, checks and {term}`folds <folding>` each form in turn.
 `foreach` copies are made one at a time by `_Compiler.expand` (line 828), and the body of a motif is
 compiled again for each shape of the motif by `_Compiler.instance` (line 4674), so each copy and each such
-shape is proved on its own. `_Compiler.call` (lines 1962 to 1973) folds a call and then checks its
+shape is checked on its own. `_Compiler.call` (lines 1962 to 1973) folds a call and then checks its
 constraint against the folded value. The new middle of the compiler (mtp-08wd) follows these rules.
-Bead mtp-08wd.1 changes the compiler to use this order of steps and to prove each body once.
+Bead mtp-08wd.1 changes the compiler to use this order of steps and to check each body once.
 :::
 
 ## Running the compiler
@@ -269,7 +269,7 @@ loaded ({numref}`runtime-loads-mtpc`).
 ```
 
 This rule follows from a principle of the design of mtp: a state that breaks a rule of the spec
-cannot be represented. No source can hold such a state, since the compiler proves every type
+cannot be represented. No source can hold such a state, since the compiler checks every type
 and condition before the page opens. No reader can reach one, since a computation that has no
 value gives the value `none` instead of failing, and a written value is brought into the conditions of
 the container that it is written to. For example, a line declared `line|none` is not drawn while it is `none`
@@ -310,7 +310,7 @@ stand-in.
 
 ```{rule} runtime-no-type-work-while-drawing
 While drawing, the runtime never checks whether a value has its type, and never converts a value
-from one type to another. The compiler has proved every type, and every type that the runtime
+from one type to another. The compiler has checked every type, and every type that the runtime
 needs is written in the .mtpc. Bringing a written value into the conditions of the container that it is written
 to, by clamping, rounding, wrapping or holding it ({doc}`types`), is part of what a write does,
 and is not a check of a type. How the runtime does this is not normative.
