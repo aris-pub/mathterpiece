@@ -231,8 +231,8 @@ record. Every attribute of a record that results from `(rec …)` is bound or co
 
 A font is a record: `(font serif (family 'serif') (style 'normal') (weight 400) (size 12))`
 declares a record with the four attributes `family`, `style`, `weight` and `size`. A text applies
-it with `(face serif)`, and writing to `serif.size` changes the size of every text that applies
-`serif`.
+it with `(face serif)`. Every attribute of a font is bound to the page: it holds its declared value,
+or the value that the page's CSS gives it, so no writer may write to it.
 
 :::{admonition} Code differs
 :class: note

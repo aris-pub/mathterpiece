@@ -54,23 +54,16 @@ The {term}`controls <control>` and the {term}`listeners <listener>` are the writ
 ({doc}`concurrency`). A writer writes to its target and to the targets of the moves in its movements.
 
 ```{rule} writable-targets
-The target of a writer or of a move is a variable, an attribute of a shape, of a term, of a record
-or of a formula, or an item of a list at a position known when compiling. It is written as a
-name or a qualified name, with `(name S)` allowed in place of a name ({numref}`names-from-values`).
-Writing to an item puts a new list into the container that holds the list, and may be done only when
-that container may be written to.
-A target may be written to only when it is free ({numref}`variables`), it is not a
-font, and it is not fixed by a variant ({numref}`motif-and-variant-types`).
-Also:
+The target of a writer or of a move is a free container ({numref}`variables`), written as a name
+or a qualified name, with `(name S)` allowed in place of a name ({numref}`names-from-values`). Also:
 
-- The name of an object, such as a group or a record, may not be a target.
 - A target that stands for several containers ({doc}`concurrency`, the part "Containers") may be
-  written to only when each of them may be written to. Such targets are a `pos`, an attribute of a group
-  that stands for the attributes of its members, and the `x`, the `y` and the `pos` of a
-  line, a triangle, a polyline, a polygon and a bezier. An attribute of a collection with no
-  members may not be a target.
-- In a target, a member of a group chosen by its position must be chosen by a position known when
-  compiling.
+  written to only when each of them is free. Such targets are a `pos`, an attribute of a group that
+  stands for the attributes of its members, and the `x`, the `y` and the `pos` of a line, a
+  triangle, a polyline, a polygon and a bezier. An attribute of a collection with no members may not
+  be a target.
+- An item of a list, and a member of a group chosen by its position, must be chosen by a position
+  known when compiling. Writing to an item puts a new list into the container that holds the list.
 - A move of an `on-show` or an `on-hide` writes to the stand-in of its shape, so it may write to an
   attribute of that shape that is bound ({doc}`lifecycle`).
 
