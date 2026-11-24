@@ -6,11 +6,14 @@ document.addEventListener("click", (event) => {
   if (!button) return;
   const url = `${location.origin}${location.pathname}#${button.dataset.anchor}`;
   const done = () => {
+    const text = button.querySelector(".mtp-copy-text");
     button.classList.add("mtp-copied");
     button.setAttribute("aria-label", "Link copied");
+    if (text) text.textContent = "Copied";
     setTimeout(() => {
       button.classList.remove("mtp-copied");
       button.setAttribute("aria-label", "Copy the link to this rule");
+      if (text) text.textContent = "Copy link";
     }, 1500);
   };
   if (navigator.clipboard) {
