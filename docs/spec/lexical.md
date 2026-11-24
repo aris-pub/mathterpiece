@@ -103,7 +103,7 @@ The characters `'`, `$`, `#`, `@`, `.`, `/` and `^` do not end a word, so `a$'x'
 are errors: none of them is one word. The grammar rejects them, as the parser does, because by
 {numref}`adjacent-items` only a form may follow a word with no whitespace between them.
 
-This rule exists because the parser has no way to read an attribute or an item of a form, so `(sort xs).x` must be an error rather than be read some other way.
+This rule exists to keep the syntax uniform and easy to read and to parse: only a name is followed by `.` or `[`.
 
 ```{rule} no-name-part-after-form
 The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` and
@@ -209,7 +209,7 @@ heads of {term}`conditions <condition>`, such as `length` and `one-of`, and `con
 
 Which names no declaration and no binding may take is defined in {numref}`declaration-names`.
 
-This rule exists to keep characters free for syntax that the parser may need later, and to give each other character one meaning.
+This rule exists so that names stay plain text, and so that these characters are never mistaken for part of other syntax.
 
 ```{rule} reserved-characters
 Outside a string literal, `"` is an error, `{` and `}` start and end a list ({numref}`lists`), and so is a `$` or a `#` that is not followed
