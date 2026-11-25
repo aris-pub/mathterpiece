@@ -1,0 +1,77 @@
+; The standard library as designed on 2026-11-25, for the new compiler. Written to the spec, and
+; checked by hand only: no compiler builds it yet. Bead mtp-ydd4.6 holds the decisions.
+; marks: marks drawn over a figure, each visible with no arguments, in the default style's ink,
+; which an instance overrides with (stroke …).
+
+(import style ink)
+
+(motif axes ((real left -10) (real right 10) (real bottom -10) (real top 10)
+             (real|none ticks none) (bool numbers true) (color|none stroke none) (bool arrows false))
+  doc@'The x and y axes through the origin. With (ticks s), a tick every s along each axis, from
+0, with its number beside it unless numbers is false.'
+  (group lines (defaults (stroke (or? stroke ink)) (stroke-width 1)
+                   (head-end (if arrows 'dart' none)))
+    (line_ (from [left 0]) (to [right 0]))
+    (line_ (from [0 bottom]) (to [0 top])))
+  ; Each tick is in screen pixels, so it keeps its size when the reader zooms, as angle-mark does.
+  (foreach v (or? (where (range (* ticks (ceil (/ left ticks))) (+ right (/ ticks 2)) (gap ticks))
+                         (fn ((real v)) (!= v 0)))
+                  {})
+    (group (fixed-size true) (translate [v 0]) (defaults (stroke (or? stroke ink)) (stroke-width 1))
+      (line_ (from [0 -4]) (to [0 4]))
+      (text|none_ (fmt v) (pos [0 -8]) (fill (or? stroke ink)) (stroke none) (halign 'middle')
+          (valign 'top'))
+      (exists-when text numbers)))
+  (foreach v (or? (where (range (* ticks (ceil (/ bottom ticks))) (+ top (/ ticks 2)) (gap ticks))
+                         (fn ((real v)) (!= v 0)))
+                  {})
+    (group (fixed-size true) (translate [0 v]) (defaults (stroke (or? stroke ink)) (stroke-width 1))
+      (line_ (from [-4 0]) (to [4 0]))
+      (text|none_ (fmt v) (pos [-8 0]) (fill (or? stroke ink)) (stroke none) (halign 'end')
+          (valign 'middle'))
+      (exists-when text numbers))))
+
+; A foreach makes one line per count, so the bounds and the step are known when compiling.
+(motif grid ((real left -10 (const)) (real right 10 (const)) (real bottom -10 (const))
+             (real top 10 (const)) (real step 1 (const) (> 0)) (color|none stroke none)
+             (real stroke-opacity 0.25 (>= 0) (<= 1)))
+  doc@'A line at every step from left to right, and from bottom to top, counting from 0.'
+  (group lines (defaults (stroke (or? stroke ink)) (stroke-width 1) (stroke-opacity stroke-opacity))
+    (foreach k (+ 1 (- (floor (/ right step)) (ceil (/ left step))))
+      (line_ (from [(* step (+ k (ceil (/ left step)))) bottom])
+          (to [(* step (+ k (ceil (/ left step)))) top])))
+    (foreach k (+ 1 (- (floor (/ top step)) (ceil (/ bottom step))))
+      (line_ (from [left (* step (+ k (ceil (/ bottom step))))])
+          (to [right (* step (+ k (ceil (/ bottom step))))])))))
+
+
+; In screen pixels, so it keeps its size when the reader zooms, as a label does. A right angle is
+; marked with a square, as geometry does.
+(motif angle-mark ((real from 0) (real to 90) (real r 22 (>= 0)) (string label '')
+                   (color|none stroke none))
+  doc@'The angle at its position from the direction from to the direction to, counterclockwise.'
+  (group mark (fixed-size true) (defaults (stroke (or? stroke ink)) (stroke-width 1.5) (fill none))
+    (arc|none turn (r r) (from from) (to to))
+    (exists-when turn (!= (mod (- to from) 360) 90))
+    (polyline|none corner
+        (points {(polar (* 0.7 r) from) (+ (polar (* 0.7 r) from) (polar (* 0.7 r) to))
+                 (polar (* 0.7 r) to)}))
+    (exists-when corner (= (mod (- to from) 360) 90))
+    (text_ label (pos (polar (+ r 12) (+ from (/ (mod (- to from) 360) 2)))) (fill (or? stroke ink))
+        (stroke none) (halign 'middle') (valign 'middle'))))
+
+
+(motif measure ((point from [0 0]) (point to [1 0]) (string label '') (color|none stroke none))
+  doc@'A length from one point to another, with a bar at each end and its label above.'
+  (line_ (from from) (to to) (stroke (or? stroke ink)) (stroke-width 1.5) (head-start 'bar')
+      (head-end 'bar'))
+  ; The label is 6 screen pixels above the middle, whatever the zoom.
+  (group above (fixed-size true) (translate (* 0.5 (+ from to)))
+    (text_ label (pos [0 6]) (fill (or? stroke ink)) (halign 'middle') (valign 'bottom'))))
+
+(func tick-gap ((real span))
+  doc@'A round spacing for the ticks of an axis span long: 1, 2 or 5 times a power of ten,
+giving about five ticks.'
+  (let ((raw (/ span 5))
+        (p (^ 10 (floor (log raw 10)))))
+    (first {p (* 2 p) (* 5 p) (* 10 p)} (fn ((real s)) (>= s raw)))))

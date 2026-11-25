@@ -1,0 +1,37 @@
+; The standard library as designed on 2026-11-25, for the new compiler. Written to the spec, and
+; checked by hand only: no compiler builds it yet. Bead mtp-ydd4.6 holds the decisions.
+; math: functions on numbers.
+
+(func clamped ((real x) (real lo) (real hi))
+  doc@'x, kept between lo and hi.'
+  (min hi (max lo x)))
+
+(func smoothstep ((real a) (real b) (real x))
+  doc@'0 up to a, 1 from b on, and a smooth S between, flat at both ends; none when a is b.'
+  (let ((t (clamped (/ (- x a) (- b a)) 0 1)))
+    (* t t (- 3 (* 2 t)))))
+
+(func mean ((list[real] xs))
+  doc@'The mean of a list\'s items; none for an empty list.'
+  (/ (sum xs) (count xs)))
+
+(func sigmoid ((real x))
+  doc@'The logistic curve: 1 / (1 + e^−x), from 0 far left to 1 far right, 1/2 at 0.'
+  (/ 1 (+ 1 (exp (- x)))))
+
+(func rescaled ((real x) (real a) (real b) (real c) (real d))
+  doc@'x moved from the interval a to b onto the interval c to d, in proportion: a gives c and b
+gives d. none when a is b.'
+  (+ c (* (- d c) (/ (- x a) (- b a)))))
+
+(func[int] factorial ((int n (>= 0)))
+  doc@'n! = 1 · 2 · … · n, and 0! = 1.'
+  (reduce (range 1 (+ n 1)) 1 (fn ((int p) (int k)) (* p k))))
+
+(func[int] binomial ((int n (>= 0)) (int k (>= 0)))
+  doc@'The number of ways to choose k things out of n, n! / (k! (n − k)!); 0 when k is above n.'
+  (if (> k n) 0 (/ (factorial n) (* (factorial k) (factorial (- n k))))))
+
+(func[int] gcd ((int a) (int b))
+  doc@'The greatest common divisor of a and b, by Euclid\'s algorithm; (gcd 0 0) is 0.'
+  (if (= b 0) (abs a) (gcd b (mod a b))))

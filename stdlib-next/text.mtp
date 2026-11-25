@@ -1,0 +1,19 @@
+; The standard library as designed on 2026-11-25, for the new compiler. Written to the spec, and
+; checked by hand only: no compiler builds it yet. Bead mtp-ydd4.6 holds the decisions.
+; text: helpers for plain-text labels, which are not typeset.
+
+(list[string] subscript-digits {'₀' '₁' '₂' '₃' '₄' '₅' '₆' '₇' '₈' '₉'} (const))
+
+(func[string] subscript ((int n))
+  doc@'n written in subscript digits, as the index in C₁₂; a minus sign before a negative n.'
+  (cond ((< n 0) (concat '₋' (subscript (- n))))
+        ((< n 10) (or? subscript-digits[n] ''))
+        (else (concat (subscript (floor (/ n 10))) (subscript (mod n 10))))))
+
+(list[string] superscript-digits {'⁰' '¹' '²' '³' '⁴' '⁵' '⁶' '⁷' '⁸' '⁹'} (const))
+
+(func[string] superscript ((int n))
+  doc@'n written in superscript digits, as the power in x²; a minus sign before a negative n.'
+  (cond ((< n 0) (concat '⁻' (superscript (- n))))
+        ((< n 10) (or? superscript-digits[n] ''))
+        (else (concat (superscript (floor (/ n 10))) (superscript (mod n 10))))))

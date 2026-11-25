@@ -1,0 +1,55 @@
+; The standard library as designed on 2026-11-25, for the new compiler. Written to the spec, and
+; checked by hand only: no compiler builds it yet. Bead mtp-ydd4.6 holds the decisions.
+; colors: palettes for telling series and categories apart, and colormaps for showing a value as a
+; color. Each palette is a record named by hue, so (var pal tab10 okabe-ito) can swap it whole,
+; and an author who wants numbers writes the list: {tab10.blue tab10.orange …}.
+
+(palette okabe-ito
+  doc@'Okabe and Ito\'s eight colors, made to be told apart from each other under the common kinds of
+color blindness, which makes them a good choice for plots. They are not made for contrast with the
+page: on a light page, orange, sky-blue and yellow are faint. On a dark page black becomes a
+near-white, and the others are as published.'
+  (orange #'#e69f00')
+  (sky-blue #'#56b4e9')
+  (bluish-green #'#009e73')
+  (yellow #'#f0e442')
+  (blue #'#0072b2')
+  (vermillion #'#d55e00')
+  (reddish-purple #'#cc79a7')
+  (black (light-dark #'#000000' #'#e8edf0')))
+
+(palette tab10
+  doc@'Matplotlib\'s ten default colors, made to look distinct to readers with typical color vision,
+on both pages. They are not made for color blindness: under protanopia orange and green look the
+same. They are not made for contrast with the page either: on a light page, orange, pink, olive
+and cyan are faint.'
+  (blue #'#1f77b4')
+  (orange #'#ff7f0e')
+  (green #'#2ca02c')
+  (red #'#d62728')
+  (purple #'#9467bd')
+  (brown #'#8c564b')
+  (pink #'#e377c2')
+  (gray #'#7f7f7f')
+  (olive #'#bcbd22')
+  (cyan #'#17becf'))
+
+; Colormaps from 0 to 1, each 17 colors evenly spaced, sampled from matplotlib's own: so close to
+; them that the difference does not show. A world model gives its values its own way, for
+; example (viridis (/ depth 50)).
+(colormap viridis
+    {#'#440154' #'#48186a' #'#472d7b' #'#424086' #'#3b528b' #'#33638d' #'#2c728e' #'#26828e' #'#21918c'
+     #'#1fa088' #'#28ae80' #'#3fbc73' #'#5ec962' #'#84d44b' #'#addc30' #'#d8e219' #'#fde725'}
+  doc@'Dark purple through blue and green to yellow, from 0 to 1.')
+(colormap magma
+    {#'#000004' #'#0a0822' #'#1d1147' #'#36106b' #'#51127c' #'#6a1c81' #'#832681' #'#9c2e7f' #'#b73779'
+     #'#d0416f' #'#e75263' #'#f56b5c' #'#fc8961' #'#fea772' #'#fec488' #'#fde2a3' #'#fcfdbf'}
+  doc@'Black through purple and red to pale yellow, from 0 to 1.')
+(colormap cividis
+    {#'#00224e' #'#002e6a' #'#1a386f' #'#32436d' #'#434e6c' #'#535a6d' #'#61656f' #'#6f7073' #'#7d7c78'
+     #'#8c8878' #'#9b9476' #'#aba072' #'#bcae6c' #'#cdbb63' #'#dec958' #'#f0d846' #'#fee838'}
+  doc@'Blue to yellow, readable with the common kinds of color blindness.')
+(colormap blue-white-red
+    {#'#053061' #'#2166ac' #'#4393c3' #'#92c5de' #'#d1e5f0' #'#f7f7f7' #'#fddbc7' #'#f4a582' #'#d6604d'
+     #'#b2182b' #'#67001f'}
+  doc@'For values on either side of a middle: ColorBrewer\'s eleven, blue to white to red.')
