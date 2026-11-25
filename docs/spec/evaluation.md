@@ -147,7 +147,7 @@ these inputs, when folded and while drawing.
 | `csc`, `cot` | 0. No {term}`real` is exactly π/2, so `tan` and `sec` result in `none` at no input |
 | `asin`, `acos`, `asind`, `acosd` | an input below -1 or above 1 |
 | `asec`, `acsc`, `asecd`, `acscd` | an input strictly between -1 and 1 |
-| `to-polar` | the point `[0 0]` |
+| `.arg`, the argument of a point or a complex number | the point `[0 0]` and the complex number 0 |
 | `rand`, `rand-int` | a `lo` above `hi`, whatever the seed |
 | `pick` | an empty {term}`list` |
 | `range` | a gap of 0, a negative count `num`, and more than 1,000,000 items |
