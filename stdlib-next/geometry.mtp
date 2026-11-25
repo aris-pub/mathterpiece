@@ -3,6 +3,8 @@
 ; geometry: points, segments and circles. A point has x, y, mod and arg, so its distance from
 ; [0 0] is p.mod and its angle is p.arg.
 
+(import math clamped)
+
 (interface segment (point from) (point to))
 (interface sized (real width) (real height))
 
@@ -72,3 +74,15 @@ none when they do not meet or share a center.'
     ; Three points on one line make d 0, and dividing by 0 gives none.
     [(/ (+ (* sp (- q.y r.y)) (* sq (- r.y p.y)) (* sr (- p.y q.y))) d)
      (/ (+ (* sp (- r.x q.x)) (* sq (- p.x r.x)) (* sr (- q.x p.x))) d)]))
+
+(func nearest-point-on-segment ((point p) (segment a))
+  doc@'The point of the segment a nearest to p: its projection onto the line through a, kept
+between the two ends. none when a has no length.'
+  (let ((d (- a.to a.from))
+        (t (clamped (/ (dot (- p a.from) d) (dot d d)) 0 1)))
+    (+ a.from (* t d))))
+
+(func has-point? ((list[point] ps) (point p))
+  doc@'Whether p is one of the points of ps, as on a grid: points are equal only when both of their
+numbers are.'
+  (any (map ps (fn ((point q)) (= q p)))))
