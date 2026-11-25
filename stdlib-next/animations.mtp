@@ -1,0 +1,24 @@
+; The standard library as designed on 2026-11-25, for the new compiler. Written to the spec, and
+; checked by hand only: no compiler builds it yet. Bead mtp-ydd4.6 holds the decisions.
+; animations: the animations that figures use most, each played on a shape, as in
+; (button show (fade-in c)).
+
+(animation fade-in ((shape s) (real duration 0.4))
+  doc@'s comes into view: its opacity goes from 0 to 1.'
+  (move s.opacity (from 0) (to 1) (duration duration)))
+
+(animation fade-out ((shape s) (real duration 0.4))
+  doc@'s goes out of view: its opacity goes to 0.'
+  (move s.opacity (to 0) (duration duration)))
+
+(animation draw-on ((shape s) (real duration 0.8))
+  doc@'s is drawn along its outline from its start, as if by a pen.'
+  (move s.drawn (from 0) (to 1) (duration duration)))
+
+(animation pulse ((shape s) (real size 1.2) (real duration 0.5))
+  doc@'s grows to size and back, once, to draw the eye to it.'
+  (in-order
+    (at-once (move s.scale-x (to size) (duration (/ duration 2)))
+             (move s.scale-y (to size) (duration (/ duration 2))))
+    (at-once (move s.scale-x (to 1) (duration (/ duration 2)))
+             (move s.scale-y (to 1) (duration (/ duration 2))))))

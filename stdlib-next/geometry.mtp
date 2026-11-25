@@ -1,0 +1,74 @@
+; The standard library as designed on 2026-11-25, for the new compiler. Written to the spec, and
+; checked by hand only: no compiler builds it yet. Bead mtp-ydd4.6 holds the decisions.
+; geometry: points, segments and circles. A point has x, y, mod and arg, so its distance from
+; [0 0] is p.mod and its angle is p.arg.
+
+(interface segment (point from) (point to))
+(interface sized (real width) (real height))
+
+(func dot ((point a) (point b))
+  doc@'The dot product of two points read as vectors.'
+  (+ (* a.x b.x) (* a.y b.y)))
+
+(func cross ((point a) (point b))
+  doc@'The 2D cross product, the signed area of the parallelogram: positive when b turns left of a.'
+  (- (* a.x b.y) (* a.y b.x)))
+
+(func normalized ((point p))
+  doc@'The point in the same direction as p at distance 1; none for [0 0].'
+  (* p (/ 1 p.mod)))
+
+(func midpoint ((point a) (point b))
+  doc@'The point halfway between a and b.'
+  (* (+ a b) 0.5))
+
+(func line-meet ((segment a) (segment b))
+  doc@'Where the lines through a and b meet; none when they are parallel.'
+  (let ((r (- a.to a.from))
+        (s (- b.to b.from)))
+    ; Parallel lines make the cross product 0, and dividing by 0 gives none.
+    (+ a.from (* (/ (cross (- b.from a.from) s) (cross r s)) r))))
+
+(func line-circle-meet ((segment a) (circle c))
+  doc@'Where the line through a meets the circle c: two points, the same point twice when the
+line touches it, and none when it misses.'
+  (let ((d (- a.to a.from))
+        (f (- a.from [c.x c.y]))
+        (k (/ (dot f d) (dot d d)))
+        ; The square root of a negative number is none: the line misses the circle.
+        (h (sqrt (- (* k k) (/ (- (dot f f) (* c.r c.r)) (dot d d))))))
+    (somes {(+ a.from (* (- (- k) h) d))
+            (+ a.from (* (+ (- k) h) d))})))
+
+(func circle-meet ((circle c) (circle d))
+  doc@'Where the circles c and d meet: two points, the same point twice when they touch, and
+none when they do not meet or share a center.'
+  (let ((p [c.x c.y])
+        (q [d.x d.y])
+        (n (dist p q))
+        (a (/ (+ (- (* c.r c.r) (* d.r d.r)) (* n n)) (* 2 n)))
+        (h (sqrt (- (* c.r c.r) (* a a))))
+        (m (+ p (* (/ a n) (- q p))))
+        (u (* (/ 1 n) [(- (- q.y p.y)) (- q.x p.x)])))
+    (somes {(+ m (* h u)) (- m (* h u))})))
+
+(func projection ((point p) (segment a))
+  doc@'The point of the line through a nearest to p; none when a has no length.'
+  (let ((d (- a.to a.from)))
+    (+ a.from (* (/ (dot (- p a.from) d) (dot d d)) d))))
+
+(func angle-bisector ((point p) (point vertex) (point q))
+  doc@'The segment from vertex that halves the angle from p to q, as long as the shorter arm.'
+  (let ((u (- p vertex))
+        (v (- q vertex))
+        (w (normalized (+ (normalized u) (normalized v)))))
+    (rec (point from vertex)
+         (point to (+ vertex (* (min u.mod v.mod) w))))))
+
+(func circumcenter ((point p) (point q) (point r))
+  doc@'The center of the circle through p, q and r; none when the three lie on one line.'
+  (let ((d (* 2 (+ (* p.x (- q.y r.y)) (* q.x (- r.y p.y)) (* r.x (- p.y q.y)))))
+        (sp (dot p p)) (sq (dot q q)) (sr (dot r r)))
+    ; Three points on one line make d 0, and dividing by 0 gives none.
+    [(/ (+ (* sp (- q.y r.y)) (* sq (- r.y p.y)) (* sr (- p.y q.y))) d)
+     (/ (+ (* sp (- r.x q.x)) (* sq (- p.x r.x)) (* sr (- q.x p.x))) d)]))

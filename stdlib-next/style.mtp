@@ -1,0 +1,50 @@
+; The standard library as designed on 2026-11-25, for the new compiler. Written to the spec, and
+; checked by hand only: no compiler builds it yet. Bead mtp-ydd4.6 holds the decisions.
+
+; style: mtp's default style. A shape with no colors of its own is drawn in it: an outline in
+; ink, with no fill. Every color has a value for a light page and one for a dark page.
+
+; The hues. Each passes 3:1 on its paper, and the eight stay apart under the common kinds of
+; color blindness as far as Okabe and Ito's eight do on a light page, and farther on a dark one.
+(color red (light-dark #'#ac2e2b' #'#f26b6c'))
+(color orange (light-dark #'#c0522b' #'#f79a41'))
+(color yellow (light-dark #'#d57a01' #'#ffd31b'))
+(color green (light-dark #'#71a05b' #'#98df96'))
+(color teal (light-dark #'#158c7f' #'#39cbb5'))
+(color blue (light-dark #'#0561b3' #'#6aa2ce'))
+(color purple (light-dark #'#8b3be2' #'#a37cff'))
+(color pink (light-dark #'#e54393' #'#c16291'))
+
+; The grays, BRAIID's scale, by distance from the paper: gray-0 is the paper itself, and
+; gray-1000 is the farthest from it, black on a light page and near-white on a dark one.
+(color gray-0 (light-dark #'#ffffff' #'#13181b'))
+(color gray-50 (light-dark #'#fcfefe' #'#1c242a'))
+(color gray-100 (light-dark #'#edf0f2' #'#2a3740'))
+(color gray-200 (light-dark #'#dae1e5' #'#38454f'))
+(color gray-300 (light-dark #'#c2ccd3' #'#475662'))
+(color gray-400 (light-dark #'#b3bfc7' #'#566877'))
+(color gray-500 (light-dark #'#a9b7c1' #'#67798a'))
+(color gray-600 (light-dark #'#8b9fad' #'#7a8a99'))
+(color gray-700 (light-dark #'#5f7186' #'#8c9ba8'))
+(color gray-800 (light-dark #'#51636f' #'#a0acb7'))
+(color gray-900 (light-dark #'#3c4952' #'#b5bfc8'))
+(color gray-950 (light-dark #'#13181b' #'#ced6dc'))
+(color gray-1000 (light-dark #'#000000' #'#e8edf0'))
+
+; The roles, each one of the colors above. A site restyles a figure by changing these.
+(color paper gray-0 doc@'The page.')
+(color ink gray-900 doc@'Text and lines.')
+(color soft gray-700 doc@'Guides and helper lines, the lightest gray that passes 3:1 on both pages.')
+(color accent blue doc@'The one color for what matters most in a figure.')
+
+; The fonts by kind. math is CSS's generic family for fonts made to set mathematics.
+(font serif (family '"Source Serif 4", Georgia, serif'))
+(font sans (family '"Source Sans 3", system-ui, sans-serif'))
+(font mono (family '"Source Code Pro", ui-monospace, monospace'))
+(font math (family '"Latin Modern Math", "STIX Two Math", "Cambria Math", math'))
+
+; The fonts by role, each one of the fonts above with a style and a size.
+(font text (like sans) (size 16) doc@'Labels and running text.')
+(font variable (like serif) (style 'italic') (size 18) doc@'Names of variables, such as x.')
+(font number (like mono) (size 14) doc@'Numbers in readouts and on axes.')
+(font code (like mono) (size 13) doc@'Source code.')
