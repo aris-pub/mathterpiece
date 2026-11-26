@@ -1,4 +1,4 @@
-"""Conformance tests of the rule operations-that-give-none (docs/spec/evaluation.md)."""
+"""Conformance tests of the rule expressions-that-give-none (docs/spec/evaluation.md)."""
 
 from ._shared import (
     FOLDED_NONE,
@@ -13,7 +13,7 @@ from ._shared import (
 )
 
 
-@rule("operations-that-give-none")
+@rule("expressions-that-give-none")
 class TestOperationsThatGiveNone:
     @pytest.mark.parametrize("body, t, arg", GIVES_NONE)
     def test_a_folded_call_gives_none(self, body, t, arg):

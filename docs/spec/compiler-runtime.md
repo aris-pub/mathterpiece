@@ -270,7 +270,7 @@ cannot be represented. No source can hold such a state, since the compiler check
 and condition before the page opens. No reader can reach one, since a computation that has no
 value gives the value `none` instead of failing, and a written value is brought into the conditions of
 the container that it is written to. For example, a line declared `line|none` is not drawn while it is `none`
-({numref}`operations-that-give-none`, {doc}`evaluation`), and a write of -1 to a variable
+({numref}`expressions-that-give-none`, {doc}`evaluation`), and a write of -1 to a variable
 declared with `(>= 0)` writes 0 ({numref}`writes-to-conditions`). The principle is a goal of
 the design: where the spec still allows a state that breaks a rule, the spec has a gap, and the
 gap is closed by changing the language, never by showing an error to the reader.

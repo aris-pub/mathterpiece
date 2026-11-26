@@ -1,8 +1,8 @@
-// Conformance tests of the rule operations-that-give-none (docs/spec/evaluation.md).
+// Conformance tests of the rule expressions-that-give-none (docs/spec/evaluation.md).
 import { describe, expect, it } from "vitest";
 import { live } from "../compile.ts";
 
-describe("rule operations-that-give-none: an operation while drawing", () => {
+describe("rule expressions-that-give-none: an expression while drawing", () => {
   it("division by zero gives none", () => {
     const [rt, v] = live(`(real x 1 (>= -1) (<= 1)) (real|none q (/ 1 x))`);
     rt.write(rt.id("x"), null, 0);
