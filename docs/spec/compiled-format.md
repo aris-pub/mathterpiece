@@ -17,7 +17,7 @@ The format describes what the compiler writes today, which differs from the spec
 - It has the type and the value `transform`, and the attributes `translate` and `transform`, where
   the spec has the frame attributes `shift`, `rotate`, `scale-x` and so on. Bead mtp-1vyc.
 - It has `transition` objects and `animation` objects with steps, where the spec has movements,
-  scores with lags, and animations as templates. Beads mtp-kir3, mtp-cg47 and mtp-idcs.
+  movement groups with lags, and animations as templates. Beads mtp-kir3, mtp-cg47 and mtp-idcs.
 - It has the types `namespace` and `palette`, and writes a font as a value, where the spec has
   records, and a font is a record. Beads mtp-h732 and mtp-1vyc.
 - It writes a shape declared with a motif with members, where the spec makes such a shape one shape

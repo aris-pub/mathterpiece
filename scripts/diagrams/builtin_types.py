@@ -430,8 +430,8 @@ OBJECTS = box(
             group(motif("M1"), motif("M2"), dots(), direction="row"),
             gap=12),
         box("movement",
-            group(box("score"), direction="row",
-                  overlaps=[SideBand("instant", ("score",),
+            group(box("movement-group"), direction="row",
+                  overlaps=[SideBand("instant", ("movement-group",),
                                  ("the movements that", "take no time"))]),
             group(animation("A1"), animation("A2"), dots(), direction="row"),
             gap=12),
@@ -467,8 +467,8 @@ DESCRIPTION = (
     "holds a box for each shape type (circle, rect, ellipse, line, triangle, polyline, polygon, "
     "bezier, arc, ring, text and group) and every motif type, and each motif holds its variants: "
     "motif M1 holds variants M11 and M12, and motif M2 holds variants M21 and M22. movement "
-    "holds score and every animation type, and each animation holds its variants: "
-    "animation A1 holds variants A11 and A12, and animation A2 holds variants A21 and A22. instant is inside movement and overlaps score. "
+    "holds movement-group and every animation type, and each animation holds its variants: "
+    "animation A1 holds variants A11 and A12, and animation A2 holds variants A21 and A22. instant is inside movement and overlaps movement-group. "
     "ease, curve and colormap are "
     "inside func, font is inside record, and scene, formula and term are separate. page-object "
     "holds component, which holds view and control, and listener. control holds jumper and "

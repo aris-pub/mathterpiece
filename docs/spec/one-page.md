@@ -121,10 +121,10 @@ Primitives, objects and containers ({numref}`values-containers-types`).
 | views: canvas, readout, display | lays them out on the page |
 | controls: slider, button, play, stepper, toggle | starts their movements when the reader acts on them |
 | listeners, such as `on-drag` and `on-click` | starts their movements when the reader acts on a shape or a term |
-| movements: `move`, `score`, `(A …)` for an animation `A` | writes to their targets over time |
+| movements: `move`, `with-lag`, `(A …)` for an animation `A` | writes to their targets over time |
 | functions | calls them |
 | records | holds their attributes |
 
 A {term}`collection` holds other objects, its members: a group, a row or a column holds shapes,
-and a score holds movements. A motif is a type of shape that the illustrator declares, and an
+and a movement group holds movements. A motif is a type of shape that the illustrator declares, and an
 animation is a type of movement ({doc}`data-model`).

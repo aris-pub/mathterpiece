@@ -92,7 +92,7 @@ stepper from the containers of the scene (mtp-wjtd notes).
 | Attribute of a group, `pos`, the `x` of a polyline | stated case by case | unchanged (a write to each container) |
 | The `x` and the `y` of a polyline | did not meet | unchanged (the `x` and the `y` of each point are containers) |
 | Copies of a control | two writers | unchanged (two writers of the same priority) |
-| Refused newcomer: none of its moves happen | stated as a rule | **changes**: see Q2 |
+| Refused newcomer: none of its movements happen | stated as a rule | **changes**: see Q2 |
 | Newcomer meeting several running writers | refused if any refuses | **changes**: decided per container, see Q2 |
 | Inactive writer `(active false)` | cannot be triggered, what runs goes on | unchanged (not triggered, nothing else changes) |
 | The runtime starts or stops drawing a shape in a canvas | writes nothing | unchanged (not a writer) |
@@ -100,6 +100,6 @@ stepper from the containers of the scene (mtp-wjtd notes).
 | An `on-ready` loop | no other writer may write to its containers | an ordinary writer of priority 300 (the author, 2026-11-13) |
 | `on-view` sped up by a press | built | removed (author, 2026-11-12) |
 
-These cases are outside the model, since no two writers meet in them: two moves in one score that
-write to the same container at the same time (a compile error), a move that reads its `from` and `to`
+These cases are outside the model, since no two writers meet in them: two movements in one movement group that
+write to the same container at the same time (a compile error), a movement that reads its `from` and `to`
 when it starts, and a slider's knob that updates when its target changes.

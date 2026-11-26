@@ -19,7 +19,7 @@ The signature of `on-drag` ({ref}`signatures`):
 
 `SOURCE` is the shape or the term that the reader drags. `MOVEMENT` is the movement that the runtime
 executes at each motion of the pointer. Its type is `instant`, the movements whose duration is 0
-({numref}`interfaces`), so a move whose duration is not 0 is a compile error. `CONDITIONS`
+({numref}`interfaces`), so a `(move …)` whose duration is not 0 is a compile error. `CONDITIONS`
 are the guards of the listener ({numref}`writer-guards`).
 
 This rule exists so that a listener can read where the pointer is, in the frame of the shape that it drags.
@@ -37,7 +37,7 @@ the point where the reader clicked.
 
 :::{admonition} Code differs
 :class: note
-In the compiler, an `on-drag` holds exactly one move, written without a duration, and there is no
+In the compiler, an `on-drag` holds exactly one `(move …)`, written without a duration, and there is no
 interface `instant`. Beads mtp-rk1i and mtp-idcs.
 :::
 
