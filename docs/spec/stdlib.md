@@ -24,8 +24,8 @@ and `(import rand …)` makes them usable in the same way as the names of any ot
 This rule exists so that each use of a random function is a call with a site of its own.
 
 ```{rule} random-calls
-A name that refers to a random function may be written only as the head of a call. Written
-anywhere else, it is a compile error, "N is only called, as (N …)".
+A name that refers to a random function may be written only as the head of a call, and anywhere else
+is a compile error, "N is only called, as (N …)".
 ```
 
 Each call of `rand`, `rand-int`, `pick` or `shuffle` has a {term}`site` of its own
