@@ -23,10 +23,10 @@ the name of a rule keeps the quoted text of that rule in the tree.
 This rule exists to define the form, from which the parser builds every source.
 
 ```{rule} forms
-A form is a `(`, then any number of expressions, its items, then a `)`. An
-expression is a form, a `[…]`, a `{…}`, a word, a {term}`broadened type`, a
-string literal, a color string or an {term}`interpolated string`. The first item of a form is its head, and it may be a head
-that ends with `_` ({numref}`unnamed-head`). The form `()` has no items and no head.
+A form is `(`, any number of expressions (its items), then `)`. An expression is a form, a `[…]`, a
+`{…}`, a word, a {term}`broadened type`, a string literal, a color string or an
+{term}`interpolated string`. The first item is the form's head, which may end with `_`
+({numref}`unnamed-head`). The form `()` has no items and no head.
 ```
 
 So `(circle c (r 1))` is a form with three items, whose head is `circle` and whose third item is
@@ -38,21 +38,18 @@ the form `(r 1)`, and `(motif m () …)` holds the form `()`, an empty list of p
 This rule exists to specify what the parser accepts at the top level of a source.
 
 ```{rule} top-level-forms
-A source is any number of forms, with or without {term}`whitespace` and
-{term}`comments <comment>` between them. Anything else at the top level of a source is an error. A
-source may hold no form at all.
+A source is any number of forms, with {term}`whitespace` and {term}`comments <comment>` between them,
+and nothing else.
 ```
 
 This rule exists so that the parser can always tell where one item of a form ends and the next begins.
 
 ```{rule} adjacent-items
-Among the items of a form, of a `[…]`, of a `{…}` or of brackets, whitespace or a comment separates every two
-expressions, except where one of the two is a form. More exactly, an expression that ends with the
-`)` of a form, which is a form or a prefixed form such as `free@(g)`, may be followed
-directly by any expression that does not start with `.` or `[` ({numref}`no-name-part-after-form`),
-and every other expression may be followed directly only by a form. So `(f a(b)c)` holds three
-expressions after `f`, `(f (a)b)` and `(f 'x'(b))` hold two, and `(f 'a''b')` and `(f {1}x)` are
-errors.
+Within a form, a `[…]`, a `{…}` or brackets, two expressions are separated by whitespace or a
+comment unless one of them is a form. More exactly, an expression that ends with a form's `)` may be
+followed directly by any expression that does not start with `.` or `[`, and any other expression
+may be followed directly only by a form. So `(f a(b)c)` holds three items after `f`, and
+`(f 'a''b')` is an error.
 ```
 
 ### Lists and brackets
@@ -63,21 +60,19 @@ errors.
 This rule exists to specify how the parser reads a list and a point, which are written in brackets and not as forms.
 
 ```{rule} lists
-A {term}`list` is written in braces, with its items separated as in {numref}`adjacent-items`:
-`{}`, `{0 1}`, `{(f x) 'a'}`. It is syntactic sugar for the form `(list-of …)` with the same items.
-A point is written in square brackets with two items, `[0 1]` or `[(f x) 2]`, and is syntactic
-sugar for `(point-of …)` with the same items ({numref}`sugar-rewrites`). A `[` right after the `}`
-of a list starts brackets after the list, which hold exactly one expression: `{a b c}[h]`.
+A {term}`list` is written in braces, `{0 1}`, and is syntactic sugar for `(list-of …)` with the same
+items. A point is written in square brackets with two items, `[0 1]`, and is sugar for
+`(point-of …)` ({numref}`sugar-rewrites`). A `[` right after a list's `}` starts brackets holding
+one expression: `{a b c}[h]`.
 ```
 
 This rule exists to specify how the parser reads an item or an attribute written after a name.
 
 ```{rule} name-brackets
-A `[` right after a {term}`name`, with no whitespace between them, starts brackets after the name,
-which hold one expression or more: `xs[0]`, `xs[(+ k 1)]`, `g['m1']`, `func[real real]`. Several
-pairs of brackets may follow each other, and after brackets, `.` and more
-{term}`name parts <name part>` may follow: `xs[0].pos.x`, `m[0][1]`, `a[0].b[1]`. A `[` after
-whitespace starts a point: `xs [0 1]` is the name `xs` and the point `[0 1]`.
+A `[` right after a {term}`name` starts brackets holding one expression or more: `xs[0]`,
+`func[real real]`. Brackets may follow brackets, and `.` and more {term}`name parts <name part>` may
+follow them: `a[0].b[1]`. A `[` after whitespace starts a point: `xs [0 1]` is the name `xs` and
+the point `[0 1]`.
 ```
 
 ### Words
@@ -91,10 +86,9 @@ whitespace starts a point: `xs [0 1]` is the name `xs` and the point `[0 1]`.
 This rule exists to specify how the parser reads a type written with `|`.
 
 ```{rule} broadened-types
-A broadened type is two words or more joined by `|` with no whitespace between them, such
-as `real|none`. Its words are names, names followed by brackets, numbers, {term}`bool` literals or
-{term}`operators <operator>`. A broadened type is syntactic sugar for the form `(type-union …)` of its words
-({numref}`sugar-rewrites`).
+A broadened type is two or more words joined by `|` with no whitespace, such as `real|none`, each a
+name, a name with brackets, a number, a {term}`bool` literal or an {term}`operator <operator>`. It is
+syntactic sugar for `(type-union …)` of its words ({numref}`sugar-rewrites`).
 ```
 
 ### Heads
@@ -140,8 +134,8 @@ An operator is a name with one name part ({numref}`literal-words`).
 This rule exists to define which expressions are literals, which several later rules refer to.
 
 ```{rule} literals
-A literal is a number literal, a string literal, `true`, `false` or `none`. A
-literal evaluates to a primitive.
+A literal is a number literal, a string literal, `true`, `false` or `none`, and it evaluates to a
+primitive.
 ```
 
 The type of a literal is given in {numref}`form-types`. Values are
@@ -189,11 +183,10 @@ string has the position of its `.` or `[`.
 This rule exists to specify the form that the parser makes from a head that ends with `_`.
 
 ```{rule} unnamed-head
-When the head of a form is a {token}`mtp:head`, the parser removes the `_` and puts `none` in as
-the second item: `(circle_ (r 1))` is `(circle none (r 1))`, and `(marks.grid_ …)` is
-`(marks.grid none …)`. When the head is a broadened type, this rule applies to its last word, so
-`(line|none_ …)` is `(line|none none …)`. The head `none_` is a
-{term}`compile error`: a variable of type `none` could only ever hold `none`.
+When a form's head ends with `_`, the parser removes the `_` and puts `none` in as the second item:
+`(circle_ (r 1))` is `(circle none (r 1))`. For a broadened type, this applies to its last word:
+`(line|none_ …)` is `(line|none none …)`. The head `none_` is a {term}`compile error`, since a variable
+of type `none` could only hold `none`.
 ```
 
 The parser produces a qualified name, such as `p.r` or `xs[0].y`, as one name
@@ -206,30 +199,18 @@ is given in {numref}`dot-name-part`.
 This rule exists so that the parts of every form come in the same order, and the compiler can tell each part by its place.
 
 ```{rule} form-template
-Every form is written `(head name? positional… named… docstring? body…)`. The signature of each
-head specifies which of these the form has ({ref}`signatures`).
+Every form is written `(head name? positional… named… docstring? body…)`, and its head's signature
+says which of these it has ({ref}`signatures`):
 
-- The head determines which of these the form has: whether it has a name, which positional and
-  named arguments it takes and which of them it requires, whether it may have a docstring, and
-  what its body may hold.
-- The name, for a declaration, if it takes one, is the second item ({numref}`declared-names`).
-- The {term}`positional arguments <positional argument>` come next, in the order that the head
-  specifies. A head takes a fixed number of them. One that the head does not require may be left
-  out only together with every positional argument after it.
-- The {term}`named arguments <named argument>` come next, in any order, each at most once
-  ({numref}`named-arguments-first`, {numref}`named-arguments-once`). Each is a form whose head has
-  a meaning only inside the form that holds it, as `r` has only inside a circle, and whose items
-  are specified by the head of the form that holds it: at most two positional arguments, and a body, but
-  never a named argument. So `(defaults (fill red) (stroke blue))` has only a body, whose items
-  are the attributes and values that it gives.
-- The {term}`docstring`, for a declaration, comes next ({numref}`docstrings`).
-- The body comes last: any number of items, or none, of the kinds that the form specifies
-  ({numref}`contexts`). Whatever a form takes in a varying number goes in its body: no positional
-  argument and no named argument stands for several items. Whether the order of the items in the
-  body matters is specified by the head.
-
-So the compounds `(+ a b c)` and `(if c a b)` and the import `(import math dot)` follow the
-template, with no name.
+- The name, for a declaration that takes one, is the second item ({numref}`declared-names`).
+- The {term}`positional arguments <positional argument>` come next, in the head's order, a fixed number
+  of them. One that is not required may be left out only with every one after it.
+- The {term}`named arguments <named argument>` come next ({numref}`named-arguments-first`). Each is a form
+  whose head means something only inside the form that holds it, as `r` does in a circle, and which
+  holds at most two positional arguments and a body, never a named argument.
+- The {term}`docstring` comes next ({numref}`docstrings`).
+- The body comes last ({numref}`contexts`). Whatever a form takes in a varying number goes in its body,
+  and the head says whether the body's order matters.
 ```
 
 Some forms, taken apart by the template:
@@ -255,14 +236,11 @@ Some forms, taken apart by the template:
 This rule exists so that the compiler can find the name of every declaration in the same place.
 
 ```{rule} declared-names
-Almost every declaration has a name slot, its second item. The exceptions are rare: a
-{term}`listener` is a declaration with no name slot ({numref}`forms-with-no-name`). The name of a
-declaration is a name, never a qualified name, or `none`, or `(name s)`, whose string `s` is known
-when compiling ({numref}`names-from-values`).
-`none` as the name means that the declaration has no name, as the head `head_` does
-({numref}`unnamed-head`). A scene, a formula, a {term}`view` and a {term}`control` must have a name,
-and `none` is an error for them. Every other declaration may have the name `none`. A name in quotes
-is an error ("a name is written bare, not in quotes"), and so is a name that
+Almost every declaration has a name as its second item, a listener being the exception
+({numref}`forms-with-no-name`). The name is a name, never a qualified name, or `(name s)` with `s` known
+when compiling ({numref}`names-from-values`), or `none`, which means the declaration has no name
+({numref}`unnamed-head`). A scene, a formula, a {term}`view` and a {term}`control` must have a name. A name in
+quotes is an error ("a name is written bare, not in quotes"), and so is a name that
 {numref}`declaration-names` does not allow.
 ```
 
@@ -283,10 +261,9 @@ its name has two name parts.
 This rule exists so that the compiler does not read the first argument of these forms as a name.
 
 ```{rule} forms-with-no-name
-These forms have no name, so their second item is their first positional argument or their first
-named argument: a {term}`listener`, `(move …)`, `(jump …)`, an `(animation …)` inside a
-{term}`control` or a listener, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`,
-`(term …)`, `(like …)`, every named argument and every other compound.
+These forms have no name, so their second item is their first argument: a {term}`listener`, `(move …)`,
+`(jump …)`, `(foreach …)`, `(let …)`, `(exists-when …)`, `(import …)`, `(term …)`, `(like …)`,
+every named argument and every other compound.
 ```
 
 So the second item of each of these is not a name:
@@ -303,12 +280,10 @@ So the second item of each of these is not a name:
 This rule exists so that the compiler can tell named arguments from the body by their place.
 
 ```{rule} named-arguments-first
-A named argument is a form, after the name and the positional arguments, whose head names one
-of the named arguments that the form allows, such as `(r 1)` in `(circle c (r 1))`. In every
-form, the named arguments come before the body, in any order, except that a `(like …)` comes
-before every other named argument. A named argument after the first item of the body is an
-error, such as "(x …) is a named argument, so
-it comes before the canvas's body".
+A named argument is a form whose head names one of the named arguments that the form allows, such as
+`(r 1)` in `(circle c (r 1))`. Named arguments come after the positional arguments and before the
+body, in any order, except that `(like …)` comes first. A named argument in the body is an error, such
+as "(x …) is a named argument, so it comes before the canvas's body".
 ```
 
 So `(circle c (r 1) (fill #'red'))` and `(circle c (fill #'red') (r 1))` are the same form, and
@@ -319,8 +294,7 @@ are errors, since a named argument comes after the first item of the body.
 This rule exists because a form with two values for one named argument would have no single meaning.
 
 ```{rule} named-arguments-once
-Each named argument appears at most once in a form: a second one is an error, such as "'fill' is
-given twice".
+A named argument appears at most once in a form: a second is an error, such as "'fill' is given twice".
 ```
 
 So `(circle c (fill #'red') (fill #'blue'))` and `(circle c (r 1) (r 2))` are errors, and
@@ -333,11 +307,9 @@ or `y` gives `x` or `y` twice, and is an error. The forms that allow a `(like �
 This rule exists to fix where a docstring goes, so that the compiler can tell it from the other items.
 
 ```{rule} docstrings
-Every declaration may have a docstring, `doc@'text'`, and at most one. The
-docstring comes after all the positional arguments and all the named arguments, and before the
-body. In a form that has no body, the docstring is the last item. A source, and a file to import,
-may also have one docstring at its top level, which documents the whole file. Its string literal is plain: an
-interpolated string is an error.
+A declaration may have one docstring, `doc@'text'`, after its arguments and before its body. A source
+and a file to import may each have one at the top level, for the whole file. A docstring is a plain
+string literal: an interpolated string is an error.
 ```
 
 So a docstring comes after the name, the positional arguments, the parameters of a function or a
@@ -356,20 +328,18 @@ before its body. A second docstring, as in `(circle c doc@'d' doc@'e')`, is an e
 This rule exists so that the compiler can reject an item that has no meaning in the body where it is written.
 
 ```{rule} contexts
-The head specifies what the body of a form may hold, and {numref}`bodies-table` gives it for each
-head that has a body. A head that the table does not list has no body. An item that the head does
-not allow in the body is an error.
+The head says what the body of a form may hold ({numref}`bodies-table`). A head that the table does not
+list has no body, and an item that the head does not allow in the body is an error.
 ```
 
 This rule exists to specify what `let` and `foreach` become when written in a body, and where they may be written.
 
 ```{rule} body-let-foreach
-`(let ((name value) …) item…)`, `(foreach i n item…)`, `(foreach x list item…)` and
-`(foreach ((i n) (x list) …) item…)`, written in a body, are replaced by their items, with their names bound: once
-for `let`, and once for each value for `foreach`. A `let` and a `foreach` may be written in every
-body that {numref}`bodies-table` marks "yes", the top level of a source and of a file to import
-included, and nowhere else. Their items are of the kinds that the body around them holds, except
-that a `foreach` holds no scene, no motif and no function.
+A `let` or a `foreach` written in a body, such as `(let ((name value) …) item…)` or
+`(foreach i n item…)`, is replaced by its items, with its names bound: once for `let`, and once for
+each value for `foreach`. They may be written in every body that {numref}`bodies-table` marks "yes",
+the top level of a source and of a file to import included, and nowhere else. Their items are of the
+kinds that the body around them holds, except that a `foreach` holds no scene, motif or function.
 ```
 
 :::{admonition} Code differs
