@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from helpers import doc as _doc
+from hypothesis import settings
 
 from mathterpiece.compiler import CompileError, compile_source
 from mathterpiece.model import Model
@@ -21,6 +22,15 @@ ROOT = Path(__file__).parent.parent.parent
 SPEC = ROOT / "docs" / "spec"
 # What a step of compiling raises when it rejects a source.
 REJECTION = (ParseError, CompileError)
+
+
+def examples(n: int) -> settings:
+    """Hypothesis settings for a property test that tries n generated inputs.
+
+    There is no deadline, since the first compile of a run also imports the compiler. Failing
+    examples are not saved, so that a run writes nothing into the repository: each test that
+    fails today names its smallest failing example with @example instead."""
+    return settings(max_examples=n, deadline=None, database=None)
 
 
 def forms(src: str) -> tuple:

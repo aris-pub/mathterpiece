@@ -4,6 +4,7 @@ from fractions import Fraction
 
 import pytest
 from helpers import field, interp
+from hypothesis import strategies as st
 
 from mathterpiece.cli import main
 from mathterpiece.nodes import (
@@ -21,6 +22,7 @@ from mathterpiece.nodes import (
 from ..support import (
     accepted,
     compile_error,
+    examples,
     form,
     forms,
     items,
@@ -71,6 +73,58 @@ FORBIDDEN_TODAY = {
 
 NOT_KEYWORDS = "x r size gap step fill duration like defaults loop const length wrap".split()
 
+LITERAL_WORDS = ("true", "false", "none")
+
+NAME_PARTS = st.from_regex(r"[A-Za-z][A-Za-z0-9-]{0,8}\??", fullmatch=True).filter(
+    lambda part: part not in LITERAL_WORDS
+)
+
+QUALIFIED_NAMES = st.lists(NAME_PARTS, min_size=1, max_size=3).map(".".join)
+
+SIGNS = st.sampled_from(["", "+", "-"])
+
+# Leading zeros are allowed, so that 007 is a number too.
+DIGITS = st.builds(lambda zeros, n: "0" * zeros + str(n), st.integers(0, 2), st.integers(0, 10**20))
+
+# The exponent stays small enough that every real lies far inside the binary64 numbers.
+EXPONENTS = st.builds(
+    lambda e, sign, n: f"{e}{sign}{n}", st.sampled_from("eE"), SIGNS, st.integers(0, 280)
+)
+
+
+@st.composite
+def unsigned_reals(draw, plain: bool = False) -> str:
+    """The text of a real with no sign. A real needs a point or an exponent, and when plain is
+    true the text may also be digits alone, as each part of a complex number may."""
+    whole = draw(DIGITS)
+    kind = draw(st.sampled_from(["point", "point only", "fraction only", "digits"]))
+    text = {
+        "point": f"{whole}.{draw(DIGITS)}",
+        "point only": f"{whole}.",
+        "fraction only": f".{draw(DIGITS)}",
+        "digits": whole,
+    }[kind]
+    if (kind == "digits" and not plain) or draw(st.booleans()):
+        text += draw(EXPONENTS)
+    return text
+
+
+INTS = st.builds(lambda sign, digits: sign + digits, SIGNS, DIGITS)
+REALS = st.builds(lambda sign, text: sign + text, SIGNS, unsigned_reals())
+NUMBERS = st.one_of(
+    INTS,
+    REALS,
+    st.builds(lambda n, d: f"{n}/{d}", INTS, st.integers(1, 10**6)),
+    st.builds(lambda sign, text: f"{sign}{text}i", SIGNS, unsigned_reals(plain=True)),
+)
+# Every kind of word: a name, a number, an operator, a bool literal and none.
+WORDS = st.one_of(
+    QUALIFIED_NAMES,
+    NUMBERS,
+    st.sampled_from("+ - * / ^ < <= > >= = != .".split()),
+    st.sampled_from(LITERAL_WORDS),
+)
+
 __all__ = [
     "Fraction",
     "pytest",
@@ -88,6 +142,7 @@ __all__ = [
     "StrLit",
     "accepted",
     "compile_error",
+    "examples",
     "form",
     "forms",
     "items",
@@ -100,4 +155,15 @@ __all__ = [
     "KEYWORDS",
     "FORBIDDEN_TODAY",
     "NOT_KEYWORDS",
+    "st",
+    "LITERAL_WORDS",
+    "NAME_PARTS",
+    "QUALIFIED_NAMES",
+    "SIGNS",
+    "DIGITS",
+    "unsigned_reals",
+    "INTS",
+    "REALS",
+    "NUMBERS",
+    "WORDS",
 ]
