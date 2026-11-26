@@ -150,7 +150,7 @@ and for `rand.N` it is "rand.N comes from the standard library: (import rand)".
 
 So a source that calls `(rand-int 1 6)` and imports no `rand-int` is a compile error, "rand-int
 comes from the standard library: (import rand rand-int)", since the random functions, `seed` and
-`roll-dice` are not built in ({numref}`rand-module`).
+`dice-roll` are not built in ({numref}`rand-module`).
 
 So an inner name hides an outer name of the same text inside its scope: a parameter, a `let`
 name and a `foreach` name hide a name of the file scope, and an attribute of a record hides a

@@ -99,11 +99,11 @@ are errors: none of them is one word. The grammar rejects them, as the parser do
 This rule exists to keep the syntax uniform and easy to read and to parse: only a name is followed by `.` or `[`.
 
 ```{rule} no-name-part-after-form
-The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` is an error.
+The `)` that closes a form is never followed directly by `.` or `[`: `(sorted xs).x` is an error.
 ```
 
 A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-name-part`), as
-`(. (sort xs) 0)`.
+`(. (sorted xs) 0)`.
 
 ```{mtp-grammar} closing-parenthesis
 ```

@@ -147,7 +147,7 @@ these inputs, when folded and while drawing.
 | `asec`, `acsc`, `asecd`, `acscd` | an input strictly between -1 and 1 |
 | `.arg`, the argument of a point or a complex number | the point `[0 0]` and the complex number 0 |
 | `rand`, `rand-int` | a `lo` above `hi`, whatever the seed |
-| `pick` | an empty {term}`list` |
+| `choice` | an empty {term}`list` |
 | `range` | a gap of 0, a negative count `num`, and more than 1,000,000 items |
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
@@ -166,8 +166,8 @@ At every other input, an operation does not result in `none`.
   error directly, and not through `known_or_none` (line 2217), which returns `none` while a call is
   folded. `range` results in `none` there, but the type of the body of `f` does not include `none`, so
   `fold_call` raises the error again (lines 2527 to 2529). Bug mtp-ydd4.7.48.
-- `pick` always has a type that includes `none` (mathterpiece/compiler.py, line 2281), so
-  `(rand-seed sd 1) (real v (pick {1 2}))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
+- `choice` always has a type that includes `none` (mathterpiece/compiler.py, line 2281), so
+  `(rand-seed sd 1) (real v (choice {1 2}))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
 :::
 
 So no operation results in an infinity or NaN: a real is always finite ({numref}`number-types`).
@@ -231,7 +231,7 @@ An operation with an argument that is `none` gives `none`, at both times, except
   whose type does not include `none` makes the call `none` without evaluating the body.
 - `(list-of …)`, which gives a list holding `none`. A point with a coordinate that is `none` is `none`.
 - `if`, which is `none` only when the branch taken is
-- `map`, `reverse` and a read of a list's item, which pass `none` items through
+- `map`, `reversed` and a read of a list's item, which pass `none` items through
 
 An attribute of `none` is `none`, so is an {term}`interpolated string` with a part that is `none`, and so
 is a list function given `none` for its list.
@@ -242,7 +242,7 @@ is a list function given `none` for its list.
 - `_Compiler.call` (mathterpiece/compiler.py, lines 1962 to 1973) folds the body with an argument
   that is `none`, also for a parameter whose type does not include `none`. So with
   `(func h ((real x)) 5)`, a call of `h` with `none` results in 5. Bug mtp-ydd4.7.50.
-- `(reverse {1 (f 0)})`, with `(f 0)` known to be `none`, stops the compiler with a Python
+- `(reversed {1 (f 0)})`, with `(f 0)` known to be `none`, stops the compiler with a Python
   `TypeError`, since `_Compiler.collection` uses the smallest and the largest known item to compute
   the range of the items (line 2679). Bug mtp-ydd4.7.51.
 - A list function with a list whose type includes `none` is a compile error, "the
@@ -399,7 +399,7 @@ whose values are the ints. A random function uses the seed of its `(seed s)`, or
 {term}`default seed` of its file ({numref}`default-seed`). A const variable is not a seed.
 ```
 
-The random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed` are declared in the file
+The random functions `rand`, `rand-int`, `choice`, `shuffled` and `next-seed` are declared in the file
 rand of the standard library ({numref}`rand-module`).
 
 This rule exists so that a random function with no `(seed …)` still has exactly one seed.
@@ -419,7 +419,7 @@ of the file scope that is declared after a random function is its default seed t
 function is then a compile error by {numref}`declare-before-use`.
 
 These are the messages of the compile errors for a random function with no `(seed …)`, and for a
-`(roll-dice)` with no argument:
+`(dice-roll)` with no argument:
 
 | When | Message |
 |---|---|
@@ -431,7 +431,7 @@ These are the messages of the compile errors for a random function with no `(see
 This rule exists so that two calls of a random function in one source give different values from the same seed.
 
 ```{rule} random-site
-Each call of the random function `rand`, `rand-int`, `pick` or `shuffle`, by any name that an
+Each call of the random function `rand`, `rand-int`, `choice` or `shuffled`, by any name that an
 import makes usable for it, has a {term}`site`: a whole number. The sites are counted from 0, in
 the order in which the calls start in the text of the source after the rewrite step
 ({numref}`compile-steps`), read with these changes:
@@ -500,8 +500,8 @@ With s the value of the seed and p the site:
 - `(rand)` is u(s, p, 0), and `(rand lo hi)` is lo + u(s, p, 0) × (hi - lo): a real from `lo` to
   `hi`.
 - `(rand-int lo hi)` is lo + ⌊u(s, p, 0) × (hi - lo + 1)⌋: an int from `lo` to `hi`, both included.
-- `(pick xs)` on a list of n items, n at least 1, is the item at position ⌊u(s, p, 0) × n⌋.
-- `(shuffle xs)` is the items of `xs` in a new order: for i from n - 1 down to 1, the items at
+- `(choice xs)` on a list of n items, n at least 1, is the item at position ⌊u(s, p, 0) × n⌋.
+- `(shuffled xs)` is the items of `xs` in a new order: for i from n - 1 down to 1, the items at
   positions i and ⌊u(s, p, i) × (i + 1)⌋ are swapped.
 - `(next-seed s)` is h(s, 0x9e3779b9).
 ```
@@ -520,12 +520,12 @@ Since the sites are counted when compiling, a change to the source that adds or 
 random function before another call changes the site of the later call, and with it the value of
 the later call.
 
-`roll-dice` is an animation declared in the file rand ({ref}`stdlib-rand`). `(roll-dice s)`
-creates a movement that writes `(next-seed s)` to the seed `s`, and `(roll-dice)` is
-`(roll-dice d)`, with `d` the default seed ({numref}`default-seed`). Such a write is a roll.
+`dice-roll` is an animation declared in the file rand ({ref}`stdlib-rand`). `(dice-roll s)`
+creates a movement that writes `(next-seed s)` to the seed `s`, and `(dice-roll)` is
+`(dice-roll d)`, with `d` the default seed ({numref}`default-seed`). Such a write is a roll.
 By {numref}`random-values`, a roll changes the random values that use `s`, and no others.
 
-A call of `rand`, `rand-int`, `pick` or `shuffle` inside the body of a function is a compile error.
+A call of `rand`, `rand-int`, `choice` or `shuffled` inside the body of a function is a compile error.
 A free variable may start at a random value with `free@`, and then does not update when the seed
 changes.
 
@@ -542,6 +542,9 @@ changes.
 
 :::{admonition} Code differs
 :class: note
+The compiler names `dice-roll` `roll-dice`, `choice` `pick` and `shuffled` `shuffle`, as the live example
+above does, and writes a control's movement as `(animation …)`.
+
 The type `rand-seed` is an int of at least 0 (`RAND_SEED`, mathterpiece/types.py, line 143), so a
 seed that is below 0 is a compile error. mtp-ydd4.7.30.
 :::

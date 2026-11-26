@@ -79,7 +79,7 @@ type, `(foreach k n …)` stays core by {numref}`sugar-form`.
 
 **Decided (2026-11-19):** a form that leaves out an argument that has a default is core, and the
 default is given where its head is defined: `(dash L)`, a random function with no `(seed …)` and
-`(roll-dice)` are not rewrites. `(range X)` is removed: `(range LO HI)` with neither `gap` nor `num`
+`(dice-roll)` are not rewrites. `(range X)` is removed: `(range LO HI)` with neither `gap` nor `num`
 has a gap of 1, so `(range 0 n)` replaces `(range n)` (mtp-z8i1).
 
 ## P3. Which forms are core

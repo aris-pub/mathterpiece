@@ -84,7 +84,7 @@ any number of such texts.
 | `(palette N (M C)…)` | `(record N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N XS F ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
-| `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not written `[X Y]`, and holds no call of `rand`, `rand-int`, `pick` or `shuffle` |
+| `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not written `[X Y]`, and holds no call of `rand`, `rand-int`, `choice` or `shuffled` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
 | `(wait T)`, in a score | `(move none (duration T))` | |
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |
@@ -105,8 +105,8 @@ an expression `E` of the name `T` (compiler.py:434). Bead mtp-of7a makes the com
 :::
 
 Since a copied random call is a {term}`site` of its own ({numref}`random-site`),
-`(pos (pick corners))` would draw `x` and `y` at two sites, so it is an error. A body `let` holds
-the point once: in `(let ((q (pick corners))) (circle c (pos q)))`, `(pos q)` is `(x (. q 0)) (y (. q 1))`, which
+`(pos (choice corners))` would draw `x` and `y` at two sites, so it is an error. A body `let` holds
+the point once: in `(let ((q (choice corners))) (circle c (pos q)))`, `(pos q)` is `(x (. q 0)) (y (. q 1))`, which
 reads one value.
 
 :::{admonition} Code differs

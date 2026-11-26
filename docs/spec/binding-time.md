@@ -20,7 +20,7 @@ An expression is known when compiling when it is:
 - a `let` or `foreach` name whose value is known when compiling, in each copy
 - a parameter whose argument is known when compiling
 - a form whose evaluated parts are all known when compiling, except a call of `rand`, `rand-int`,
-  `pick` or `shuffle`
+  `choice` or `shuffled`
 
 Every other expression is known only while drawing.
 ```
@@ -56,7 +56,7 @@ update when X changes, and the container is free either way.
 ```
 
 So with `(real c 3 (const))`, `(real r free@(* 2 c))` starts at 6, and a slider may write to it.
-`(list[int] order free@(shuffle (range 16)))` starts in an order that is drawn when the page opens,
+`(list[int] order free@(shuffled (range 16)))` starts in an order that is drawn when the page opens,
 and keeps it until a writer writes to `order`.
 
 ## What may read what
