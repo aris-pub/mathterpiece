@@ -570,7 +570,7 @@ Primitives are compared by content, and objects by identity. `=` and `!=` never 
 | Type | `(= a b)` is true when |
 |---|---|
 | `none` | both are `none`. `(= none x)` is false for every `x` that is not `none` |
-| `int`, `ratio`, `real` | the two are the same number, exactly: 0 and -0 are equal, and an int and a real of the same value are equal |
+| `int`, `ratio`, `real` | the two are the same number, exactly: 0 and -0 are equal. An int or a ratio compared with a real first becomes the nearest real, as in arithmetic ({numref}`number-result-types`), so `(= a b)` is true exactly when `(- a b)` is 0: `(= 1/3 0.3333333333333333)` is true |
 | `complex` | both parts are equal. A complex whose second part is 0 equals the real of its first part |
 | `bool`, `string`, a choice | the two are exactly the same |
 | `point`, `list[T]` | they have the same length, and the items at each position are equal |
