@@ -129,7 +129,7 @@ The prover proves exactly the following, and nothing else:
    value meets each condition of the expected type ({numref}`constraint-proof`).
 2. That the type of every expression that may give `none` includes `none` ({numref}`may-give-none`),
    and that no expression whose arguments are all known while compiling, such as `(sqrt -1)`, gives
-   `none` ({numref}`none-at-known-inputs`).
+   `none` ({numref}`none-at-known-arguments`).
 3. That the length of each `foreach` that is known only while drawing has an upper bound below
    10¹⁵⁰, the {term}`number limit` ({numref}`foreach-bounded-length`).
 4. That for every value of `S`, an object named by `S` is declared before each `(name S)`
@@ -161,7 +161,7 @@ expression can take, folded or while drawing.
 The prover works out each end of a range with the functions that {term}`evaluation` uses: exactly
 for ints and ratios ({numref}`number-types`), and with the functions of
 {numref}`correctly-rounded-reals` for reals. So by the argument after
-{numref}`correctly-rounded-reals`, a range worked out at the ends of the ranges of the inputs holds
+{numref}`correctly-rounded-reals`, a range worked out at the ends of the ranges of the arguments holds
 every value that is computed when folding and while drawing. By the row for the range of a type in
 {numref}`range-rules`, the range of `(real k (> 0))` is from the smallest binary64 number above 0
 to `1e150`, so `(/ 1 k)` is a `real`, and the range of `(int n (> 0))` is from 1 to 10¹⁵⁰. A ratio
@@ -220,7 +220,7 @@ This rule exists to determine which expressions may result in `none`, and so whi
 
 ```{rule} may-give-none
 The type of an expression that is not folded includes `none` when the ranges of its arguments, each
-taken on its own, hold an input at which it evaluates to `none` by
+taken on its own, hold values at which the expression evaluates to `none` by
 {numref}`expressions-that-give-none`. For an item of a list and a member of a group:
 
 | Expression | Its type includes `none` unless |

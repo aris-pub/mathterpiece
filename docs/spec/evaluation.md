@@ -3,7 +3,7 @@
 
 This page defines how an {term}`expression` is computed: the order in which its parts are
 {term}`evaluated <evaluation>`, the {term}`forms <form>` of which only some parts are evaluated,
-the inputs at which an expression results in `none`, how `none` propagates, the numbers and their
+the arguments at which an expression results in `none`, how `none` propagates, the numbers and their
 limits, random values, equality, and how deep a chain of calls can go.
 
 An expression is computed at one of two times ({doc}`binding-time`). When every value that it
@@ -97,8 +97,8 @@ once for all their values. Each branch is checked for the values for which it ru
 ({numref}`if-narrowing`). By {numref}`sugar-rewrites`, the same holds for the tests of a `cond`
 and the parts of an `and` or an `or`. `or?` and `let` are proved whole: every part is proved, even a
 part that would not be evaluated because a value before it is known when compiling. An expression
-that results in `none` at known inputs in such a part is a {term}`compile error`
-({numref}`none-at-known-inputs`):
+that results in `none` at known arguments in such a part is a {term}`compile error`
+({numref}`none-at-known-arguments`):
 
 ```mtp
 (real x 0 (const))
@@ -126,25 +126,25 @@ mtp-08wd.2.
 
 ## Expressions that result in none
 
-This rule exists to list where an expression has no value, so that the compiler and the runtime give `none` at the same inputs.
+This rule exists to list where an expression has no value, so that the compiler and the runtime give `none` for the same arguments.
 
 ```{rule} expressions-that-give-none
 Besides an argument that is `none` ({numref}`none-propagates`), an expression results in `none` at
-these inputs, when folded and while drawing.
+these arguments, when folded and while drawing.
 
 | Expression | Results in `none` at |
 |---|---|
 | `/` | a divisor of 0 |
 | `mod` | a divisor of 0 |
 | `^` | 0 to a negative power, and a negative base to a power that is not an {term}`int` |
-| `sqrt` | an input below 0 |
-| `log` | an input of 0 or below, and a base of 0 or below or of 1 |
+| `sqrt` | an argument below 0 |
+| `log` | an argument of 0 or below, and a base of 0 or below or of 1 |
 | `min`, `max` | no items at all |
 | `tand`, `secd` | 90 + 180k degrees, for every int k |
 | `cscd`, `cotd` | 180k degrees, for every int k |
-| `csc`, `cot` | 0. No {term}`real` is exactly π/2, so `tan` and `sec` result in `none` at no input |
-| `asin`, `acos`, `asind`, `acosd` | an input below -1 or above 1 |
-| `asec`, `acsc`, `asecd`, `acscd` | an input strictly between -1 and 1 |
+| `csc`, `cot` | 0. No {term}`real` is exactly π/2, so `tan` and `sec` result in `none` at no argument |
+| `asin`, `acos`, `asind`, `acosd` | an argument below -1 or above 1 |
+| `asec`, `acsc`, `asecd`, `acscd` | an argument strictly between -1 and 1 |
 | `.arg`, the argument of a point or a complex number | the point `[0 0]` and the complex number 0 |
 | `rand`, `rand-int` | a `lo` above `hi`, whatever the seed |
 | `choice` | an empty {term}`list` |
@@ -153,7 +153,7 @@ these inputs, when folded and while drawing.
 | `g[k]` | a member that the group does not have |
 | a bound variable or attribute with a {term}`condition` | a value that breaks the condition ({doc}`types`) |
 
-At every other input, an expression does not result in `none`.
+At every other argument, an expression does not result in `none`.
 ```
 
 :::{admonition} Code differs
@@ -176,7 +176,7 @@ built-in functions that they call result in `none` ({doc}`stdlib`).
 
 This rule exists so that an expression known to have no value is reported when compiling, rather than giving `none` on the page.
 
-```{rule} none-at-known-inputs
+```{rule} none-at-known-arguments
 An expression whose arguments are known in the prove step ({numref}`check-bodies-once`) and give `none` by
 {numref}`expressions-that-give-none` is a compile error, and so are `rand` and `rand-int` with both bounds
 known and `lo` above `hi`, though their seed is never known when compiling.
@@ -208,7 +208,7 @@ fold step computes the body with those arguments, and an expression in the body 
 `(func[real] f ((real x)) (/ 1 x))` is a compile error at `(/ 1 x)`, since its body results in
 `none` when `x` is 0 and its declared result type does not include `none`.
 
-The prover works out, from the ranges of their inputs, which expressions can result in `none`, and
+The prover works out, from the ranges of their arguments, which expressions can result in `none`, and
 the type of each such expression includes `none` ({numref}`may-give-none`).
 
 ```{mtp-example}
@@ -307,12 +307,12 @@ The points form a vector space over the reals: `+` and `-` work coordinate by co
 This rule exists so that the compiler can give every arithmetic result a type before it is computed.
 
 ```{rule} number-result-types
-An arithmetic result has the broadest type of its inputs, in the order `int`, `ratio`, `real`, `complex`,
+An arithmetic result has the broadest type of its arguments, in the order `int`, `ratio`, `real`, `complex`,
 except that:
 
 - `/` of two ints gives a ratio
 - `^` of an int to an int power gives an int when the power's range holds no negative int, and a ratio
-  otherwise. With a {term}`complex` input it gives a complex, and otherwise a real.
+  otherwise. With a {term}`complex` argument it gives a complex, and otherwise a real.
 - `abs` of a complex gives a real
 
 Where a real meets an int or a ratio, the int or the ratio is first converted to the nearest real, ties
@@ -685,7 +685,7 @@ This rule exists so that the compiler and every runtime compute each built-in fu
 
 ```{rule} correctly-rounded-reals
 Each binary64 number in the result of a built-in function or an operator is the binary64 number nearest
-to the exact value at its inputs, ties going to the one whose last bit is 0, at both times.
+to the exact value at its arguments, ties going to the one whose last bit is 0, at both times.
 ```
 
 This holds for `+`, `-`, `*`, `/`, `sqrt`, the trigonometric functions in radians and in degrees,

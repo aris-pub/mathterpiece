@@ -262,7 +262,7 @@ evaluation
   variable and no attribute, and creates no variable and no object that a writer can write to. Defined in {doc}`evaluation`.
 
 folding
-  Computing an expression whose inputs are all known when compiling, and writing its value into
+  Computing an expression whose arguments are all known when compiling, and writing its value into
   the .mtpc in place of the expression. Defined in {doc}`evaluation`.
 
 match

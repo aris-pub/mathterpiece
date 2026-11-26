@@ -1,4 +1,4 @@
-"""Conformance tests of the rule none-at-known-inputs (docs/spec/evaluation.md)."""
+"""Conformance tests of the rule none-at-known-arguments (docs/spec/evaluation.md)."""
 
 from ._shared import (
     COPIES,
@@ -13,7 +13,7 @@ from ._shared import (
 )
 
 
-@rule("none-at-known-inputs")
+@rule("none-at-known-arguments")
 class TestNoneAtKnownInputs:
     @pytest.mark.parametrize(
         "src",

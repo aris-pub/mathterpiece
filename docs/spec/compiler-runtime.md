@@ -123,7 +123,7 @@ container does not lie inside its conditions, the type of the container includes
 ```
 
 So `(circle c (r (- 1 2)))` is a compile error in the prove step, since the range of `(- 1 2)` is
--1 alone, and so is `(/ 1 0)`, since its divisor is 0 alone ({numref}`none-at-known-inputs`).
+-1 alone, and so is `(/ 1 0)`, since its divisor is 0 alone ({numref}`none-at-known-arguments`).
 
 :::{admonition} Code differs
 :class: note
