@@ -1,5 +1,6 @@
 """What the conformance tests of docs/spec/evaluation.md share: imports, sources and helpers."""
 
+import math
 from fractions import Fraction
 
 import pytest
@@ -7,6 +8,19 @@ import pytest
 from ..support import accepted, compile_error, in_folder, is_bound, mtpc, obj, same_meaning, value
 
 RAND = "(import rand rand rand-int pick shuffle next-seed roll-dice) "
+
+# The binary64 number nearest to 10^150, to which a real is clamped.
+REAL_LIMIT = 1e150
+
+
+def clamped(exact: Fraction) -> float:
+    """An exact value rounded to the nearest binary64 number, then clamped to the number limit."""
+    try:
+        x = float(exact)
+    except OverflowError:
+        x = math.inf if exact > 0 else -math.inf
+    return max(-REAL_LIMIT, min(REAL_LIMIT, x))
+
 
 rule = pytest.mark.rule
 
@@ -109,6 +123,8 @@ __all__ = [
     "same_meaning",
     "value",
     "RAND",
+    "REAL_LIMIT",
+    "clamped",
     "rule",
     "xfail",
     "FOLDED_NONE",

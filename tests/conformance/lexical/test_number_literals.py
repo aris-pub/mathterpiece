@@ -1,16 +1,30 @@
 """Conformance tests of the rule number-literals (docs/spec/lexical.md)."""
 
+from hypothesis import example, given
+
 from ._shared import (
+    DIGITS,
+    INTS,
+    REALS,
+    SIGNS,
     ComplexLit,
     Fraction,
     IntLit,
     RatioLit,
     RealLit,
+    examples,
     items,
     pytest,
     rule,
+    st,
     syntax_error,
+    unsigned_reals,
 )
+
+
+def read(text: str):
+    (got,) = items(f"(f {text})")
+    return got
 
 
 @rule("number-literals")
@@ -37,16 +51,54 @@ class TestNumberLiterals:
         ],
     )
     def test_each_kind_of_number(self, text, node):
-        (got,) = items(f"(f {text})")
+        got = read(text)
         assert got == node
         assert type(got) is type(node)
 
-    def test_a_real_is_the_nearest_double(self):
-        (got,) = items("(f 0.1)")
-        assert got.value == 0.1
+    @examples(300)
+    @given(INTS)
+    def test_an_int_of_any_size(self, text):
+        got = read(text)
+        assert type(got) is IntLit
+        assert got.value == int(text)
+
+    @examples(300)
+    @given(SIGNS, DIGITS, DIGITS.filter(lambda d: int(d) != 0))
+    def test_a_ratio_is_reduced_with_the_sign_on_the_numerator(self, sign, n, d):
+        got = read(f"{sign}{n}/{d}")
+        assert type(got) is RatioLit
+        assert got.value == Fraction(int(sign + n), int(d))
+
+    @examples(100)
+    @given(SIGNS, DIGITS, st.integers(1, 3))
+    def test_a_denominator_of_0_is_an_error(self, sign, n, zeros):
+        syntax_error(f"(f {sign}{n}/{'0' * zeros})")
+
+    # Python's float() gives the binary64 number nearest to a decimal.
+    @examples(300)
+    @example("0.1")
+    @given(REALS)
+    def test_a_real_is_the_nearest_binary64_number(self, text):
+        got = read(text)
+        assert type(got) is RealLit
+        assert got.value == float(text)
+
+    @examples(300)
+    @given(SIGNS, unsigned_reals(plain=True))
+    def test_an_imaginary_number_has_real_part_0(self, sign, text):
+        got = read(f"{sign}{text}i")
+        assert type(got) is ComplexLit
+        assert got.value == complex(0, float(sign + text))
+
+    @examples(300)
+    @given(SIGNS, unsigned_reals(plain=True), st.sampled_from("+-"), unsigned_reals(plain=True))
+    def test_each_part_of_a_complex_number_is_read_as_a_real(self, sign, re, sign_im, im):
+        got = read(f"{sign}{re}{sign_im}{im}i")
+        assert type(got) is ComplexLit
+        assert got.value == complex(float(sign + re), float(sign_im + im))
 
     def test_each_part_of_a_complex_number_is_a_real(self):
-        (got,) = items("(f 1+2i)")
+        got = read("1+2i")
         assert isinstance(got.value.real, float) and isinstance(got.value.imag, float)
 
     @pytest.mark.parametrize("src", ["(f 1/0)", "(f 1/-2)", "(f 1-2)", "(f 1e)", "(f 1/2/3)"])

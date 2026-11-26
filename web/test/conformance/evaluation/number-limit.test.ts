@@ -1,18 +1,45 @@
 // Conformance tests of the rule number-limit (docs/spec/evaluation.md).
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { live } from "../compile.ts";
+import { clamp } from "./shared.ts";
+
+const NUMBERS = fc.double({ noNaN: true, noDefaultInfinity: true });
 
 describe("rule number-limit: a write beyond the limit is clamped to it", () => {
   it("a number", () => {
     const [rt, v] = live(`(real k 0)`);
-    rt.write(rt.id("k"), null, 1e200);
-    expect(v("k")).toBe(1e150);
+    fc.assert(
+      fc.property(NUMBERS, (x) => {
+        rt.write(rt.id("k"), null, x);
+        return v("k") === clamp(x);
+      }),
+      { numRuns: 1000, examples: [[1e200]] },
+    );
   });
 
-  it.fails("each number of a point (mtp-ydd4.7.18: constrain clamps only a single number)", () => {
+  it.fails("each number of a point (mtp-ydd4.7.18: constrain clamps only a single number, so [1.0000000000000002e150 0] stays as written)", () => {
     const [rt, v] = live(`(point p [0 0])`);
-    rt.write(rt.id("p"), null, [1e200, 0]);
-    expect(v("p")).toEqual([1e150, 0]);
+    fc.assert(
+      fc.property(NUMBERS, NUMBERS, (x, y) => {
+        rt.write(rt.id("p"), null, [x, y]);
+        expect(v("p")).toEqual([clamp(x), clamp(y)]);
+      }),
+      { numRuns: 1000, examples: [[1.0000000000000002e150, 0], [1e200, 0]], endOnFailure: true },
+    );
+  });
+});
+
+describe("rule number-limit: a product of two reals is rounded, then clamped", () => {
+  it("a generated product", () => {
+    const [rt, v] = live(`(real k 1) (real t (* k k))`);
+    fc.assert(
+      fc.property(NUMBERS, (x) => {
+        rt.write(rt.id("k"), null, x);
+        return v("t") === clamp(clamp(x) * clamp(x));
+      }),
+      { numRuns: 1000 },
+    );
   });
 });
 

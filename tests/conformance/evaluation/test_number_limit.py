@@ -1,13 +1,48 @@
 """Conformance tests of the rule number-limit (docs/spec/evaluation.md)."""
 
-from ._shared import Fraction, accepted, compile_error, mtpc, obj, pytest, rule, value
+from hypothesis import example, given
+from hypothesis import strategies as st
+
+from ..support import examples
+from ._shared import (
+    REAL_LIMIT,
+    Fraction,
+    accepted,
+    clamped,
+    compile_error,
+    mtpc,
+    obj,
+    pytest,
+    rule,
+    value,
+)
+
+LIMIT = 10**150
+INTS = st.integers(-LIMIT, LIMIT)
+REALS = st.floats(-REAL_LIMIT, REAL_LIMIT)
 
 
 @rule("number-limit")
 class TestNumberLimit:
-    @pytest.mark.parametrize("lit", ["1e151", "-1e151", "1" + "0" * 151])
-    def test_a_literal_beyond_the_limit(self, lit):
+    @examples(200)
+    @example("1e151")
+    @example("-1e151")
+    @given(
+        st.builds(
+            lambda sign, m, e: f"{sign}{m}e{e}",
+            st.sampled_from(["", "-"]),
+            st.floats(1, 10, exclude_max=True),
+            st.integers(151, 300),
+        )
+    )
+    def test_a_real_literal_beyond_the_limit(self, lit):
         compile_error(f"(real v {lit})")
+
+    @examples(200)
+    @example(10**151)
+    @given(st.integers(LIMIT + 1, 10**300).flatmap(lambda n: st.sampled_from([n, -n])))
+    def test_an_int_literal_beyond_the_limit(self, n):
+        compile_error(f"(int v {n})")
 
     def test_a_literal_at_the_limit(self):
         accepted("(real v 1e150)")
@@ -35,6 +70,19 @@ class TestNumberLimit:
 
     def test_an_int_inside_the_limit_stays_exact(self):
         assert value("(int v (+ (^ 10 149) 1))", "v") == 10**149 + 1
+
+    @examples(300)
+    @given(st.sampled_from("+-*"), INTS, INTS)
+    def test_an_int_result_is_exact_then_clamped_to_exactly_the_limit(self, op, a, b):
+        exact = {"+": a + b, "-": a - b, "*": a * b}[op]
+        assert value(f"(int v ({op} {a} {b}))", "v") == max(-LIMIT, min(LIMIT, exact))
+
+    @examples(300)
+    @given(st.sampled_from("+-*"), REALS, REALS)
+    def test_a_real_result_is_rounded_then_clamped(self, op, a, b):
+        x, y = Fraction(a), Fraction(b)
+        exact = {"+": x + y, "-": x - y, "*": x * y}[op]
+        assert value(f"(real v ({op} {a!r} {b!r}))", "v") == clamped(exact)
 
     def test_an_operation_with_several_arguments_is_clamped_once(self):
         # Clamped after each product, the value would be 1e-50.

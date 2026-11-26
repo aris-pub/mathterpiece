@@ -1,5 +1,9 @@
 """Conformance tests of the rule sugar-rewrites (docs/spec/core.md)."""
 
+from hypothesis import example, given
+from hypothesis import strategies as st
+
+from ..support import examples
 from ._shared import (
     CHOREO_ARGUMENT,
     COND_ELSE,
@@ -13,13 +17,40 @@ from ._shared import (
     WAIT,
     accepted,
     compile_error,
-    itertools,
     pytest,
     rule,
     same_meaning,
     typ,
     value,
+    xfail,
 )
+
+BOOLS = st.lists(st.booleans(), min_size=1, max_size=6)
+# The free bools of FREE.
+TESTS = st.sampled_from(["a", "b", "c"])
+
+
+def known(bools) -> str:
+    return " ".join(f"(bool k{i} {str(b).lower()} (const))" for i, b in enumerate(bools))
+
+
+def and_rewrite(args) -> str:
+    if len(args) == 1:
+        return args[0]
+    return f"(if {args[0]} {and_rewrite(args[1:])} false)"
+
+
+def or_rewrite(args) -> str:
+    if len(args) == 1:
+        return args[0]
+    return f"(if {args[0]} true {or_rewrite(args[1:])})"
+
+
+def cond_rewrite(clauses, last) -> str:
+    if not clauses:
+        return last
+    (c, v), *more = clauses
+    return f"(if {c} {v} {cond_rewrite(more, last)})"
 
 
 @rule("sugar-rewrites")
@@ -47,10 +78,14 @@ class TestSugarRewrites:
     def test_when_takes_exactly_two_arguments(self):
         compile_error(FREE + "(real|none v (when a 1 2))")
 
-    def test_cond(self):
+    @examples(100)
+    @example([("a", 1), ("b", 2)], 3)
+    @given(st.lists(st.tuples(TESTS, st.integers(0, 9)), min_size=1, max_size=4), st.integers(0, 9))
+    def test_cond(self, clauses, last):
+        written = " ".join(f"({c} {v})" for c, v in clauses)
         same_meaning(
-            FREE + "(real v (cond (a 1) (b 2) (else 3)))",
-            FREE + "(real v (if a 1 (if b 2 3)))",
+            FREE + f"(real v (cond {written} (else {last})))",
+            FREE + f"(real v {cond_rewrite(clauses, last)})",
         )
 
     @COND_ELSE
@@ -58,23 +93,35 @@ class TestSugarRewrites:
         # The compiler makes v const, while (real v 3) is a free variable that a writer may write.
         same_meaning("(real v (cond (else 3)))", "(real v 3)")
 
-    @pytest.mark.parametrize("a, b, c", list(itertools.product([True, False], repeat=3)))
-    def test_and(self, a, b, c):
-        known = f"(bool a {str(a).lower()} (const)) (bool b {str(b).lower()} (const))"
-        known += f" (bool c {str(c).lower()} (const))"
-        assert value(known + " (bool v (and a b c))", "v") == value(
-            known + " (bool v (if a (if b c false) false))", "v"
+    @examples(100)
+    @example([True, True, False])
+    @example([False])
+    @given(BOOLS)
+    def test_and(self, bools):
+        names = [f"k{i}" for i in range(len(bools))]
+        assert value(known(bools) + f" (bool v (and {' '.join(names)}))", "v") == value(
+            known(bools) + f" (bool v {and_rewrite(names)})", "v"
         )
-        assert value(known + " (bool v (and a))", "v") == a
 
-    @pytest.mark.parametrize("a, b, c", list(itertools.product([True, False], repeat=3)))
-    def test_or(self, a, b, c):
-        known = f"(bool a {str(a).lower()} (const)) (bool b {str(b).lower()} (const))"
-        known += f" (bool c {str(c).lower()} (const))"
-        assert value(known + " (bool v (or a b c))", "v") == value(
-            known + " (bool v (if a true (if b true c)))", "v"
+    @examples(100)
+    @example([False, False, True])
+    @example([True])
+    @given(BOOLS)
+    def test_or(self, bools):
+        names = [f"k{i}" for i in range(len(bools))]
+        assert value(known(bools) + f" (bool v (or {' '.join(names)}))", "v") == value(
+            known(bools) + f" (bool v {or_rewrite(names)})", "v"
         )
-        assert value(known + " (bool v (or a))", "v") == a
+
+    @xfail("mtp-08wd.2", "and and or are compiled whole: (bool v (and a)) differs from (bool v a)")
+    @examples(50)
+    @example("and", ["a"])
+    @given(st.sampled_from(["and", "or"]), st.lists(TESTS, min_size=1, max_size=4))
+    def test_and_and_or_mean_exactly_their_rewrite(self, head, tests):
+        rewrite = and_rewrite if head == "and" else or_rewrite
+        same_meaning(
+            FREE + f"(bool v ({head} {' '.join(tests)}))", FREE + f"(bool v {rewrite(tests)})"
+        )
 
     def test_and_and_or_have_the_type_of_their_rewrite(self):
         assert typ(FREE + "(bool v (and a b c))", "v") == typ(
@@ -141,15 +188,18 @@ class TestSugarRewrites:
             "(scene s (circle c (x free@1) (y free@2) (r 1)))",
         )
 
-    def test_foreach_of_several_names(self):
-        same_meaning(
-            "(scene s (foreach ((i 2) (j 3)) (circle @'c-{i}-{j}' (r 1))))",
-            "(scene s (foreach i 2 (foreach j 3 (circle @'c-{i}-{j}' (r 1)))))",
-        )
-        same_meaning(
-            "(scene s (foreach ((i 2)) (circle @'c-{i}' (r 1))))",
-            "(scene s (foreach i 2 (circle @'c-{i}' (r 1))))",
-        )
+    @examples(50)
+    @example([2, 3])
+    @example([2])
+    @given(st.lists(st.integers(1, 3), min_size=1, max_size=3))
+    def test_foreach_of_several_names(self, counts):
+        names = [f"i{n}" for n in range(len(counts))]
+        shape = "(circle @'c" + "".join(f"-{{{n}}}" for n in names) + "' (r 1))"
+        written = " ".join(f"({n} {c})" for n, c in zip(names, counts, strict=True))
+        rewrite = shape
+        for n, c in reversed(list(zip(names, counts, strict=True))):
+            rewrite = f"(foreach {n} {c} {rewrite})"
+        same_meaning(f"(scene s (foreach ({written}) {shape}))", f"(scene s {rewrite})")
 
     def test_foreach_of_several_names_that_are_the_same(self):
         compile_error("(scene s (foreach ((i 2) (i 3)) (circle @'c-{i}' (r 1))))")
