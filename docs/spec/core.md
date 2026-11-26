@@ -16,30 +16,25 @@ The head of a form is its first item ({numref}`form-template`): `if` in `(if c a
 This rule exists so that the rewrite step can tell, for each form, whether it has to rewrite it.
 
 ```{rule} kinds-of-form
-Every form is either syntactic sugar ({numref}`sugar-form`) or a core form. Which kind a form is
-depends on the whole form, not only on its head:
-`(foreach ((a s) (b t)) …)` is syntactic sugar, and `(foreach a s …)` is core.
+Every form is either syntactic sugar ({numref}`sugar-form`) or a core form, by the whole form and not
+only its head: `(foreach ((a s) (b t)) …)` is sugar, and `(foreach a s …)` is core.
 ```
 
 This rule exists to define which forms the rewrite step may rewrite, so that it never needs a value or a type, which the prove step works out only later.
 
 ```{rule} sugar-form
-A form is syntactic sugar if and only if it can be rewritten into core forms without computing any value and
-without using any type. Looking up a {term}`name` is neither, since lexical scope is fixed by the
-text, so a rewrite may resolve a name and read the text of the declaration or the binding that the
-name refers to.
-A form that needs a value or a type to be rewritten is core, and is rewritten, if at all, in the
-expand step, once the prove step has worked out the types and the values ({numref}`compile-steps`).
+A form is syntactic sugar exactly when it can be rewritten into core forms without computing a value
+or using a type. A rewrite may resolve a {term}`name` and read the text of what the name refers to,
+since lexical scope is fixed by the text. Every other form is core, and is rewritten, if at all, in
+the expand step ({numref}`compile-steps`).
 ```
 
 This rule exists so that the compiler treats a built-in or a function of the standard library like any other function, with no form of its own.
 
 ```{rule} built-ins
 A {term}`built-in` is a function, constant or type that every source has without declaring or
-importing it. The {term}`standard library` is the set of files that come with mtp, which a source
-imports like any other file ({doc}`imports`). Neither adds a form to the language: a call of a
-built-in function, or of a function of the standard library, is a call, which is a core form, as a
-call of a function that the source declares is.
+importing it. The {term}`standard library` is the set of files that come with mtp, imported like any
+other file ({doc}`imports`). Neither adds a form: a call of either is a call, a core form.
 ```
 
 By {numref}`declaration-names`, a declared function may take the name of a built-in function that is
@@ -77,7 +72,7 @@ any number of such texts.
 | `N.A`, `N[X]`, where `N` does not name a type | `(. N 'A')`, `(. N X)`. A chain is rewritten from left to right: `p.pos.x` is `(. (. p 'pos') 'x')`, and `g[0].r` is `(. (. g 0) 'r')` | The name is written as an expression, as the target of a writer or as a head: `(marks.grid g …)` is `((. marks 'grid') g …)`. The name of a declaration is not rewritten |
 | `T[X…]`, where `T` names a type | `(type-apply T X…)`: `list[int]` is `(type-apply list int)`, and `func[real real]` is `(type-apply func real real)` | |
 | `T1\|T2…` | `(type-union T1 T2…)`: `real\|none` is `(type-union real none)` | |
-| `T1&T2…` | `(type-intersect T1 T2…)`: `shape&round` is `(type-intersect shape round)` | |
+| `T1&T2…` | `(type-intersect T1 T2…)`: `shape&positioned` is `(type-intersect shape positioned)` | |
 | `{X…}` | `(list-of X…)`: `{0 1 2}` is `(list-of 0 1 2)` | |
 | `[X Y]` | `(point-of X Y)`: `[0 1]` is `(point-of 0 1)` | Exactly two items |
 | `(when C X)` | `(if C X none)` | Exactly two arguments |
@@ -149,10 +144,9 @@ move, such as `(on-drag p (as ptr) (move k (to ptr.x)))`.
 This rule exists to specify exactly which items the compiler copies for a `(like …)`.
 
 ```{rule} like-copies
-`(K N (like M) ARGS…)` is syntactic sugar for `(K N ARGS… COPIED…)`. `COPIED…` holds each item of
-the declaration of `M`, as written in the source, whose heads do not overlap with those in `ARGS…`. A `(like …)` in
-the declaration of `M` is rewritten first, and a `(like …)` is rewritten before any other rewrite of
-the declaration that holds it.
+`(K N (like M) ARGS…)` is syntactic sugar for `(K N ARGS… COPIED…)`, where `COPIED…` is each item of
+the declaration of `M`, as written, whose head is not among those of `ARGS…`. The `(like …)` of `M`
+is rewritten first, and a `(like …)` before any other rewrite of the declaration that holds it.
 ```
 
 For example, after `(circle a (r 1) (fill #'red') (stroke #'black'))`, the form
@@ -197,12 +191,11 @@ When `K` is a motif, `(like M)` does not copy its `clip` (mtp-ydd4.7.20).
 This rule exists because a group has no position of its own, so a drag of a group needs a stated target.
 
 ```{rule} drag-group-shift
-A group, a row or a column is dragged by its `shift`, its `shift-x` or its `shift-y`. In an
-`on-drag` on such a collection, whether its `fixed-size` is true or not, when the target is the
-collection's own `shift`, `shift-x` or `shift-y`, the name that `(as …)` binds is the collection's
-`shift` at the press plus the motion of the pointer since the press, in the frame of the collection's collection. A
-target that is the collection's `pos`, `x` or `y` is a {term}`compile error`, "a group has no x of
-its own: drag its shift, as (on-drag g g.shift)".
+A group, a row or a column is dragged by its `shift`, `shift-x` or `shift-y`. In an `on-drag` whose
+target is one of these, the name that `(as …)` binds is the `shift` at the press plus the pointer's
+motion since, in the frame of the collection's own collection. A target that is the collection's
+`pos`, `x` or `y` is a {term}`compile error`, "a group has no x of its own: drag its shift, as
+(on-drag g g.shift)".
 ```
 
 By {numref}`sugar-rewrites`, `(on-drag g g.shift)` is
@@ -232,7 +225,7 @@ fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code foll
 This rule exists so that the compiler handles a `foreach` over a count as a `foreach` over a range, with nothing else to specify.
 
 ```{rule} foreach-count
-`(foreach N X ITEMS…)`, where `X` is an {term}`int`, means exactly `(foreach N (range 0 X) ITEMS…)`.
+`(foreach N X ITEMS…)`, with `X` an {term}`int`, is `(foreach N (range 0 X) ITEMS…)`.
 ```
 
 So the two spellings mean the same, at all times, and every rule about the second applies to the
@@ -243,10 +236,10 @@ This rule exists because the compiler must write out every copy of a `foreach` b
 
 ```{rule} foreach-bounded-length
 A `foreach` over a list whose length is known only while drawing makes as many copies as the upper
-bound of that length that the prover proves ({numref}`prover-finds-ranges`). Copy k, counted from
-0, is `none` while k is not below the length. A copy that is `none` and then is not is the same
-object as before, with its attributes as they were, what writers wrote to them included. When the prover proves no upper bound of the length
-below the {term}`number limit`, the `foreach` is a compile error.
+bound of that length that the prover proves ({numref}`prover-finds-ranges`), and is a compile error
+when no bound below the {term}`number limit` is proved. Copy k, from 0, is `none` while k is not below
+the length. A copy that becomes `none` and comes back is the same object, with its attributes as
+they were.
 ```
 
 So with `(int n 3 (>= 0) (<= 5))` and a slider that writes to `n`, `(foreach k n …)` and
@@ -266,11 +259,10 @@ compiler follow the rule.
 This rule exists to specify what `(. X K)` evaluates to for each kind of `K`, since one form reads attributes, items and members.
 
 ```{rule} dot-name-part
-In `(. X K)`, `K` is any expression. When `K` evaluates to a string, the form evaluates to the attribute
-of `X` with that label, or to the member of the group `X` with that name. When `K` evaluates to a
-number, the form evaluates to the item of `X` at that position, or to the member of the group `X` at
-that position. A `K` that chooses an attribute is known when compiling. A member of a group with the
-name of an attribute of that group is a compile error.
+In `(. X K)`, `K` is any expression. A string `K` gives the attribute of `X` with that label, or the
+member of the group `X` with that name. A number `K` gives the item or the member at that position. A
+`K` that chooses an attribute is known when compiling. A member named like an attribute of its group
+is a compile error.
 ```
 
 So `p.r` is `(. p 'r')`, the attribute `r` of a circle `p`, `(. g (concat 'shift-' 'x'))` is the
@@ -294,8 +286,8 @@ reads the color `yellow` as a key (mtp-ydd4.7.19).
 This rule exists to specify how the runtime plays a score inside another score.
 
 ```{rule} animation-step
-A score written as a member of another score is one step of it. It plays
-its own members with its own `(loop …)`, and the `(defaults …)` of the score around it do not apply inside it.
+A score inside another score is one step of it. It plays its members with its own `(loop …)`, and the
+`(defaults …)` of the outer score do not apply inside it.
 ```
 
 :::{admonition} Code differs
@@ -309,12 +301,10 @@ choreo `C` is compiled to its steps in place (compiler.py:1714-1729) (mtp-ydd4.7
 This rule exists so that a source can declare and refer to names built from values, such as one name for each copy of a `foreach`.
 
 ```{rule} names-from-values
-`(name S)`, where `S` is an expression that evaluates to a string, stands for the name that the
-string spells. Where a declaration gives its name, it declares that name. In an expression, it
-evaluates to the object with that name, among the declarations that come before the form. So `(name obj.name)` is
-`obj`. `(like (name S))` copies that object ({numref}`like-copies`). The prover proves, for every
-string that `S` may evaluate to, that such an object exists and that its type is a subtype of the type expected where the form
-is written.
+`(name S)`, with `S` a string, stands for the name that `S` spells: it declares that name where a
+declaration gives its name, and in an expression it is the object of that name declared before it.
+So `(name obj.name)` is `obj`. The prover proves, for every value of `S`, that such an object exists
+and that its type is a subtype of the type expected there.
 ```
 
 For example, take this `foreach`:
