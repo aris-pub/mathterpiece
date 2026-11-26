@@ -10,17 +10,17 @@ expressions may read the scene, the formulas and the page objects.
 This rule exists to decide which expressions the compiler computes and which it leaves to the runtime.
 
 ```{rule} known-when-compiling
-An expression is known when compiling when it is one of these:
+An expression is known when compiling when it is:
 
 - a literal
 - a function declared with `func`, or a built-in function
-- a name that refers to an object, such as a shape or a record
+- a name that refers to an object
 - a const container
 - a bound container whose expression is known when compiling, unless it is a font
-- the name of a `let` or a `foreach`, in each copy, when the value bound to it is known when compiling
-- a parameter, in a call or a declaration whose argument for it is known when compiling
-- a form whose evaluated parts are all known when compiling, unless it is a call of `rand`,
-  `rand-int`, `pick` or `shuffle`
+- a `let` or `foreach` name whose value is known when compiling, in each copy
+- a parameter whose argument is known when compiling
+- a form whose evaluated parts are all known when compiling, except a call of `rand`, `rand-int`,
+  `pick` or `shuffle`
 
 Every other expression is known only while drawing.
 ```
@@ -42,18 +42,17 @@ only while drawing ({numref}`random-never-folded`).
 This rule exists to specify when the copies of a `foreach` are made.
 
 ```{rule} foreach-copies
-A `foreach` over a list whose length is known when compiling ({numref}`known-lengths`) makes one
-copy of its items for each item of the list, in the expand step ({numref}`compile-steps`). A
-`foreach` over a list whose length is known only while drawing makes its copies by
+A `foreach` over a list of length known when compiling ({numref}`known-lengths`) makes one copy of its
+items per item, in the expand step ({numref}`compile-steps`). Otherwise it makes its copies by
 {numref}`foreach-bounded-length`.
 ```
 
 This rule exists to specify when the starting value of a free container is computed, since it never updates after.
 
 ```{rule} free-starting-value
-`(free X)` is the starting value of a free container: the value of X when the page opens. It is
-computed once, in the fold step when X is known when compiling, and otherwise when the page opens,
-and it does not update when X changes. The container is free either way.
+`(free X)` is the starting value of a free container: the value of X when the page opens, computed
+once, in the fold step when X is known when compiling and otherwise when the page opens. It does not
+update when X changes, and the container is free either way.
 ```
 
 So with `(real c 3 (const))`, `(real r free@(* 2 c))` starts at 6, and a slider may write to it.
@@ -65,10 +64,8 @@ and keeps it until a writer writes to `order`.
 This rule exists so that a world model means the same whatever page shows it, since the scene and the formulas may read nothing that belongs to a page.
 
 ```{rule} what-reads-what
-Every expression may read the scene and the formulas. The views, the controls and the listeners
-may read each other. Only an expression in a view, a control or a listener may read a view, a
-control or a listener: no expression in the scene, in a formula, or in a variable, a record or a
-function outside a {term}`page object` may read one.
+Every expression may read the scene and the formulas. Only an expression in a view, a control or a
+listener may read a view, a control or a listener.
 ```
 
 So `(button b (active (= mode 'a')))` may read `mode`, and a readout may read the variable that
