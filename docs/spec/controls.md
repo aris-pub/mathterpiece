@@ -101,14 +101,15 @@ This rule exists to specify how the runtime keeps the two values of a range slid
 
 ```{rule} range-slider
 A range slider has two thumbs on one straight track and writes to `LOW` and `HIGH`. A thumb dragged into
-the other stops there, so `LOW` is never above `HIGH`.
+the other stops there, so `LOW` is never above `HIGH`. A press on the track away from both thumbs
+moves the nearer one there.
 ```
 
 This rule exists to specify every way in which the reader changes a number field, and when the runtime writes the value.
 
 ```{rule} number-field
 A number field shows its target's value. The reader changes it by typing, by the − and + buttons, by
-the arrow keys, which add or subtract the step, or ten steps with Shift, or by dragging sideways on
+the up and down arrow keys, which add or subtract the step, or ten steps with Shift, or by dragging sideways on
 its label (scrubbing), one step every few pixels. The mouse wheel does not change it.
 
 - `(buttons false)` leaves out the buttons, and `(typing false)` turns typing off and shows the value as
@@ -125,7 +126,9 @@ This rule exists to specify when the runtime writes the text of a text field, an
 ```{rule} text-field
 A text field shows its target's string. A typed string is written only when committed, as in a number
 field, and a string that breaks the target's conditions is not written, with a red outline on the box
-for a moment.
+for a moment. In a number field and a text field, while typed text is not committed, the arrow keys
+move the text cursor as in any text box, and Escape drops the typed text and shows the target's value
+again.
 ```
 
 This rule exists to specify what a toggle writes, and that it always shows the current value of its target.
@@ -147,8 +150,8 @@ holds no option's value, no option is shown chosen.
 This rule exists to fix the ways in which the runtime may draw a select.
 
 ```{rule} select-kinds
-`kind` sets how a select is drawn: `'menu'`, a button showing the chosen option that opens the list of
-all of them, `'buttons'`, a row of connected buttons, or `'radio'`, one option per line with a round mark.
+`kind` sets how a select is drawn: `'menu'`, a button showing the chosen option, or the control's label when none is
+chosen, that opens the list of all of them, `'buttons'`, a row of connected buttons, or `'radio'`, one option per line with a round mark.
 A multi-select has `'menu'`, `'buttons'` and `'checkbox'`, one checkbox per option.
 ```
 
