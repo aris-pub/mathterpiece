@@ -50,6 +50,18 @@ class TestEvaluationIsPure:
         assert obj(d, "v")["value"]["free"] == 6
 
 
+@rule("what-a-name-means")
+class TestWhatANameMeans:
+    def test_a_name_in_an_expression_gives_the_value_that_it_holds(self):
+        assert value("(real a 3 (const)) (real v (* 2 a))", "v") == 6
+
+    def test_a_name_as_a_target_means_the_container(self):
+        target = "(slider s (animation (move a (from 0) (to 1) (duration 0))))"
+        accepted("(real a 1) " + target)
+        # A const container cannot be written to, so the name as a target is refused.
+        compile_error("(real a 1 (const)) " + target)
+
+
 @rule("arguments-before-call")
 class TestArgumentsBeforeCall:
     def test_an_argument_that_the_body_does_not_read_is_evaluated(self):

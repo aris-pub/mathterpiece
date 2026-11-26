@@ -85,7 +85,7 @@ class TestCompileSteps:
         assert obj(mtpc("(real v (* 2 (+ 1 2)))"), "v")["value"]["free"] == 6
 
 
-@rule("prove-bodies-once")
+@rule("check-bodies-once")
 class TestProveBodiesOnce:
     def test_a_motif_body_is_proved_for_every_value_of_its_parameters(self):
         compile_error("(motif dot ((real k)) (circle_ (r (/ 1 k))))")
