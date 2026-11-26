@@ -278,7 +278,7 @@ refuses every corrupt .mtpc and runs no part of it ({numref}`corrupt-mtpc`,
 {numref}`schema-strength`, {numref}`runtime-loads-mtpc`). An operation that has no value gives
 `none`, and the words "gives `none`" are used for it, never "undefined"
 ({numref}`expressions-that-give-none`). `rand` and `rand-int` with `lo` above `hi` give `none`, and
-are a compile error when both bounds are known when compiling ({numref}`none-at-known-inputs`).
+are a compile error when both bounds are known when compiling ({numref}`none-at-known-arguments`).
 Any int is a seed, and two seeds that are equal modulo 2³² draw the same values
 ({numref}`seed-variable`, {numref}`random-hash`) (Q-evaluation-6).
 
