@@ -98,7 +98,14 @@ export interface Obj {
   tex?: string;
   term?: string;
   formula?: number;
-  as?: "inline" | "block";
+  // A display: inside a paragraph or as a block. A select or a multi-select: how it is drawn.
+  as?: "inline" | "block" | "menu" | "buttons" | "radio" | "checkbox";
+  // A range slider's two targets.
+  low?: [number, string | null];
+  high?: [number, string | null];
+  // A select's or a multi-select's options, in the order of the source: each a value, with a
+  // label, plain or a TeX string, when it has one.
+  options?: { value: Attribute; label?: Attribute; "label-tex"?: true }[];
   // on-view, on-ready, on-live, on-quiet: the view it listens to.
   view?: number;
   // A control whose label is LaTeX, given as a TeX string, (label $'…').

@@ -87,3 +87,52 @@ def test_an_attribute_with_a_docstring():
     ):
         assert errors(doc(variable({**value, "doc": "d"}))) == []
         assert errors(doc(variable({**value, "doc": 1}))) != []
+
+
+def control(kind, **keys):
+    return {
+        "kind": kind,
+        "type": {"component": kind},
+        "access": "page",
+        "name": "c",
+        "conditions": [],
+        "active": None,
+        **keys,
+    }
+
+
+def test_the_jumpers_of_the_controls_page():
+    # The compiler cannot write these yet: docs/mtpc.md gives their form, and the runtime's tests
+    # load them written by hand.
+    real = {"type": "real", "free": 0}
+    nothing = {"type": {"union": ["real", "none"]}, "free": None}
+    yes = {"type": "bool", "free": True}
+    label = {"label": {"type": "string", "free": ""}}
+    track = {**label, "from": real, "to": real, "step": nothing, "ticks": nothing}
+    option = {
+        "value": {"type": "string", "free": "a"},
+        "label": {"type": "string", "free": "x"},
+        "label-tex": True,
+    }
+    k = variable({"type": "real", "free": 0})
+    for c in (
+        control("slider", target=[0, None], attrs=track),
+        control("range-slider", low=[0, None], high=[0, None], attrs=track),
+        control("dial", target=[0, None], attrs={**label, "step": nothing, "ticks": nothing}),
+        control(
+            "number-field",
+            target=[0, None],
+            attrs={**label, "step": real, "buttons": yes, "typing": yes},
+        ),
+        control("text-field", target=[0, None], attrs=label),
+        control("select", target=[0, None], attrs=label, options=[option], **{"as": "radio"}),
+        control(
+            "multi-select", target=[0, None], attrs=label, options=[option], **{"as": "checkbox"}
+        ),
+    ):
+        assert errors(doc(k, c)) == [], c["kind"]
+    assert errors(doc(k, control("slider", target=[0, None], attrs=label))) != []
+    wrong = control("select", target=[0, None], attrs=label, options=[option], **{"as": "checkbox"})
+    assert errors(doc(k, wrong)) != []
+    empty = control("select", target=[0, None], attrs=label, options=[], **{"as": "menu"})
+    assert errors(doc(k, empty)) != []

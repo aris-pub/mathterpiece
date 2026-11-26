@@ -3,8 +3,12 @@
 // mode. A page that shows controls must load braiid.css. Their font is the interface's, as in
 // Studio, not the document's, so they look the same whatever typeface the reader picks.
 
+// The jumpers (docs/spec/controls.md) are listed apart, since they share parts that the other controls do not have.
+const JUMPERS = "mtp-slider, mtp-range-slider, mtp-dial, mtp-number-field, mtp-text-field, mtp-select, mtp-multi-select";
+const ALL = `${JUMPERS}, mtp-button, mtp-play, mtp-stepper, mtp-toggle`;
+
 export const CONTROLS_CSS = `
-mtp-slider, mtp-button, mtp-play, mtp-stepper, mtp-toggle {
+${ALL} {
   font-family: "Source Sans 3", sans-serif;
   color: var(--text-body);
 }
@@ -13,7 +17,7 @@ mtp-slider, mtp-button, mtp-play, mtp-stepper, mtp-toggle {
    dragging, focused from the keyboard, or a play playing. A page sets them with
    --mtp-control-rest and --mtp-control-active; where it sets neither, both are BRAIID's accent,
    as before there were two. --mtp-c is the one a control draws with now. */
-mtp-slider, mtp-button, mtp-play, mtp-stepper {
+${JUMPERS}, mtp-button, mtp-play, mtp-stepper {
   --mtp-rest: var(--mtp-control-rest, var(--primary-700));
   --mtp-active: var(--mtp-control-active, var(--primary-700));
 }
@@ -244,6 +248,208 @@ mtp-toggle label {
 }
 mtp-toggle input { accent-color: var(--mtp-c); width: 1rem; height: 1rem; margin: 0; }
 
+/* The jumpers (docs/spec/controls.md), drawn from the parts that the author chose on 2026-11-22
+   (the Near BRAIID look, option A for every part): a label in the text color, a track of a 1px
+   line with a 2px fill, a raised thumb with a dot in its middle that grows while it is held, short
+   ticks with their values, boxes and buttons outlined as a button is, and the chosen option in the
+   highlight color. Each draws in its rest color, and in its active color while the reader holds
+   it or it has the focus from the keyboard, as the other controls do. */
+:is(${JUMPERS}) {
+  --mtp-c: var(--mtp-rest);
+  --mtp-thumb: light-dark(#ffffff, #38454f);
+  --mtp-thumb-shadow: light-dark(rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.6));
+  --mtp-hilite: var(--primary-200, #bae3fd);
+  --mtp-error: var(--text-error, #d92d20);
+}
+:is(${JUMPERS}):is([data-mtp-held], :has(:focus-visible)) { --mtp-c: var(--mtp-active); }
+:is(${JUMPERS}) .mtp-jumper { display: flex; flex-direction: column; gap: 0.25rem; }
+:is(${JUMPERS}) .mtp-label {
+  font-size: 0.875rem; font-weight: 600; color: var(--text-body);
+}
+mtp-slider:has(.mtp-track), mtp-range-slider { display: inline-block; min-width: 12rem; }
+
+/* A straight track. The thumb's center runs from half a thumb in from each end, and --a and --b
+   are where the fill starts and ends, from 0 to 1. */
+:is(${JUMPERS}) .mtp-track {
+  --a: 0; --b: 0;
+  position: relative; height: 1.5rem; cursor: pointer; touch-action: none;
+}
+mtp-range-slider .mtp-track { cursor: default; }
+:is(${JUMPERS}) .mtp-track::before {
+  content: ""; position: absolute; left: 8px; right: 8px; top: 50%;
+  height: 1px; transform: translateY(-50%); background: var(--border-primary);
+}
+:is(${JUMPERS}) .mtp-fill {
+  position: absolute; top: 50%; height: 2px; transform: translateY(-50%); border-radius: 1px;
+  left: calc(8px + var(--a) * (100% - 16px)); width: calc((var(--b) - var(--a)) * (100% - 16px));
+  background: var(--mtp-c);
+}
+:is(${JUMPERS}) .mtp-thumb {
+  position: absolute; top: 50%; left: calc(8px + var(--u, 0) * (100% - 16px)); z-index: 1;
+  width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--mtp-thumb);
+  box-shadow: 0 1px 3px var(--mtp-thumb-shadow), 0 0 0 1px var(--border-primary);
+  cursor: grab; touch-action: none;
+}
+/* A larger area than the thumb draws, for 44px touch targets. */
+:is(${JUMPERS}) .mtp-thumb::before { content: ""; position: absolute; inset: -14px; border-radius: 50%; }
+:is(${JUMPERS}) .mtp-thumb::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%);
+  background: var(--mtp-c);
+  transition: width 0.12s ease, height 0.12s ease;
+}
+:is(${JUMPERS})[data-mtp-held] .mtp-thumb:focus::after, :is(${JUMPERS}) .mtp-thumb:active::after { width: 10px; height: 10px; }
+:is(${JUMPERS})[data-mtp-held] .mtp-thumb:focus { cursor: grabbing; }
+:is(${JUMPERS}) .mtp-thumb:focus-visible { outline: 2px solid var(--border-action, Highlight); outline-offset: 2px; }
+:is(${JUMPERS}) [data-disabled], :is(${JUMPERS}) :disabled { cursor: not-allowed; opacity: 0.5; }
+:is(${JUMPERS}) [data-disabled] .mtp-thumb { cursor: not-allowed; }
+
+/* The ticks under a track, each where the thumb's center stands for its value, with the value
+   under it. */
+:is(${JUMPERS}) div.mtp-ticks {
+  position: relative; height: 1.25rem; margin-top: -0.25rem;
+  font-size: 0.75rem; color: var(--text-subtle); font-variant-numeric: tabular-nums;
+}
+:is(${JUMPERS}) div.mtp-ticks:empty { display: none; }
+:is(${JUMPERS}) div.mtp-ticks [data-value] {
+  position: absolute; top: 0; left: calc(8px + var(--u) * (100% - 16px));
+  width: 1px; height: 5px; background: currentColor;
+}
+:is(${JUMPERS}) div.mtp-ticks [data-value]::after {
+  content: attr(data-value);
+  position: absolute; top: 6px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+}
+
+/* A dial: the ring, the arc from the start to the thumb, the ticks inside the ring as on a clock,
+   and the value in the middle. The ring takes a press over a band wider than it draws. */
+mtp-dial { display: inline-block; }
+mtp-dial .mtp-dial-face { position: relative; width: 7rem; height: 7rem; touch-action: none; }
+mtp-dial svg { display: block; width: 100%; height: 100%; overflow: visible; }
+mtp-dial .mtp-ring { fill: none; stroke: var(--border-primary); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+mtp-dial .mtp-arc {
+  fill: none; stroke: var(--mtp-c); stroke-width: 2px; stroke-linecap: round; vector-effect: non-scaling-stroke;
+}
+mtp-dial .mtp-tick { stroke: var(--text-subtle); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+mtp-dial .mtp-ring-hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; cursor: pointer; }
+mtp-dial [data-disabled] .mtp-ring-hit { cursor: not-allowed; }
+mtp-dial .mtp-dial-value {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font-size: 0.875rem; font-weight: 600; color: var(--mtp-rest); font-variant-numeric: tabular-nums;
+}
+
+/* A number field and a text field: the label above a box outlined as a button is. A number
+   field's label, and its value when it has neither buttons nor typing, can be dragged sideways. */
+:is(mtp-number-field, mtp-text-field) { display: inline-block; }
+:is(mtp-number-field, mtp-text-field) .mtp-box {
+  display: inline-flex; align-items: center; align-self: flex-start;
+  min-height: 2rem; box-sizing: border-box;
+  border: 1px solid var(--border-primary); border-radius: var(--radius-lg, 0.5rem);
+  background: var(--surface-page);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+:is(mtp-number-field, mtp-text-field) .mtp-box:has(:focus-visible) {
+  outline: 2px solid var(--border-action, Highlight); outline-offset: 2px;
+}
+:is(mtp-number-field, mtp-text-field) .mtp-box.mtp-refused {
+  border-color: var(--mtp-error); box-shadow: 0 0 0 1px var(--mtp-error);
+}
+:is(mtp-number-field, mtp-text-field) .mtp-box input {
+  font: 600 0.875rem/1.2 "Source Sans 3", sans-serif; font-variant-numeric: tabular-nums;
+  width: 5rem; padding: 0.375rem 0.5rem; margin: 0; border: 0; outline: none;
+  background: transparent; color: var(--mtp-rest); text-align: center;
+}
+mtp-text-field { min-width: 14rem; }
+mtp-text-field .mtp-box { display: flex; align-self: stretch; }
+mtp-text-field .mtp-box input { flex: 1; width: auto; min-width: 0; font-weight: 400; color: var(--text-body); text-align: left; }
+mtp-number-field .mtp-value {
+  padding: 0.375rem 0.5rem; min-width: 2.5rem; text-align: center;
+  font: 600 0.875rem/1.2 "Source Sans 3", sans-serif; font-variant-numeric: tabular-nums; color: var(--mtp-rest);
+}
+mtp-number-field .mtp-value:focus-visible { outline: none; }
+mtp-number-field .mtp-box:not(:has(button)):has(.mtp-scrub) { border-color: transparent; background: none; }
+mtp-number-field .mtp-scrub { text-decoration: underline dotted; text-underline-offset: 3px; }
+mtp-number-field .mtp-scrubber { cursor: ew-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+mtp-number-field .mtp-field-button {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: 2rem; height: 2rem; padding: 0; margin: -1px; border: 0; border-radius: var(--radius-lg, 0.5rem);
+  background: transparent; color: var(--mtp-c);
+  font: 600 1rem/1 "Source Sans 3", sans-serif; cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+mtp-number-field .mtp-field-button:hover:not(:disabled) { background: var(--surface-hover); }
+mtp-number-field .mtp-field-button:active:not(:disabled) { background: var(--mtp-hilite); }
+/* What a screen reader is told of a refused commit, unseen. */
+:is(${JUMPERS}) .mtp-live {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* A select and a multi-select: a menu button that opens a list, a row of connected buttons, or one
+   radio button or checkbox per line. */
+:is(mtp-select, mtp-multi-select) { display: inline-block; }
+:is(mtp-select, mtp-multi-select) .mtp-menu { position: relative; align-self: flex-start; }
+:is(mtp-select, mtp-multi-select) .mtp-menu-button, :is(mtp-select, mtp-multi-select) .mtp-segment {
+  position: relative;
+  font: 600 0.875rem/1.2 "Source Sans 3", sans-serif;
+  padding: 0.375rem 0.75rem; margin: 0;
+  border: 1px solid var(--border-primary); border-radius: var(--radius-lg, 0.5rem);
+  background: var(--surface-page); color: var(--mtp-c);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+:is(mtp-select, mtp-multi-select) .mtp-menu-button {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  min-width: 8rem; min-height: 2rem; text-align: left;
+}
+:is(mtp-select, mtp-multi-select) .mtp-menu-button svg {
+  flex: none; width: 1rem; height: 1rem;
+  fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
+}
+:is(mtp-select, mtp-multi-select) :is(.mtp-menu-button, .mtp-segment):hover:not(:disabled) {
+  background: var(--surface-hover); border-color: var(--primary-300);
+}
+:is(mtp-select, mtp-multi-select) :is(.mtp-menu-button, .mtp-segment, .mtp-listbox):focus-visible {
+  outline: 2px solid var(--border-action, Highlight); outline-offset: 2px; z-index: 2;
+}
+:is(mtp-select, mtp-multi-select) .mtp-listbox {
+  position: absolute; z-index: 10; top: calc(100% + 4px); left: 0; min-width: 100%; box-sizing: border-box;
+  padding: 0.25rem; border: 1px solid var(--border-primary); border-radius: var(--radius-lg, 0.5rem);
+  background: var(--surface-page); box-shadow: 0 4px 12px var(--mtp-thumb-shadow);
+}
+:is(mtp-select, mtp-multi-select) .mtp-listbox[hidden] { display: none; }
+:is(mtp-select, mtp-multi-select) .mtp-option {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.375rem 0.625rem; border-radius: calc(var(--radius-lg, 0.5rem) - 2px);
+  font-size: 0.875rem; white-space: nowrap; cursor: pointer;
+}
+:is(mtp-select, mtp-multi-select) .mtp-option:is(:hover, .mtp-active) { background: var(--surface-hover); }
+:is(mtp-select, mtp-multi-select) .mtp-option[aria-selected="true"] { color: var(--mtp-rest); font-weight: 600; }
+mtp-multi-select .mtp-option::before {
+  content: ""; flex: none; width: 1rem; height: 1rem; box-sizing: border-box;
+  border: 1px solid var(--border-primary); border-radius: 3px;
+}
+mtp-multi-select .mtp-option[aria-selected="true"]::before {
+  content: "\\2713"; display: grid; place-items: center; font-size: 0.75rem; line-height: 1;
+  background: var(--mtp-hilite); border-color: var(--mtp-rest); color: var(--mtp-rest);
+}
+:is(mtp-select, mtp-multi-select) .mtp-segments { display: inline-flex; align-self: flex-start; }
+:is(mtp-select, mtp-multi-select) .mtp-segment { border-radius: 0; margin-left: -1px; }
+:is(mtp-select, mtp-multi-select) .mtp-segment:first-child {
+  margin-left: 0; border-radius: var(--radius-lg, 0.5rem) 0 0 var(--radius-lg, 0.5rem);
+}
+:is(mtp-select, mtp-multi-select) .mtp-segment:last-child {
+  border-radius: 0 var(--radius-lg, 0.5rem) var(--radius-lg, 0.5rem) 0;
+}
+:is(mtp-select, mtp-multi-select) .mtp-segment:only-child { border-radius: var(--radius-lg, 0.5rem); }
+:is(mtp-select, mtp-multi-select) .mtp-segment:is([aria-checked="true"], [aria-pressed="true"]) {
+  z-index: 1; background: var(--mtp-hilite); border-color: var(--mtp-rest);
+}
+:is(mtp-select, mtp-multi-select) .mtp-marks { display: flex; flex-direction: column; gap: 0.375rem; }
+:is(mtp-select, mtp-multi-select) .mtp-mark { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer; }
+:is(mtp-select, mtp-multi-select) .mtp-mark input { accent-color: var(--mtp-c); width: 1rem; height: 1rem; margin: 0; }
+:is(mtp-select, mtp-multi-select) .mtp-mark input:focus-visible { outline: 2px solid var(--border-action, Highlight); outline-offset: 2px; }
+
 /* A shape a tap selected, which the next tap moves (the tap alternative to a drag). Chromium
    draws no outline on the shapes inside an SVG, so the ring is a shadow, sized in the view box's
    units (--mtp-unit is one pixel's worth). */
@@ -256,10 +462,10 @@ mtp-canvas .mtp-selected {
 
 /* Quiet mode (mtp-16z). A control tied only to quiet views is folded away; while it folds or
    unfolds it is still drawn, clipped to the height it is passing through. */
-:is(mtp-slider, mtp-button, mtp-play, mtp-stepper, mtp-toggle)[data-mtp-folded]:not([data-mtp-folding]) {
+:is(${ALL})[data-mtp-folded]:not([data-mtp-folding]) {
   display: none !important;
 }
-:is(mtp-slider, mtp-button, mtp-play, mtp-stepper, mtp-toggle)[data-mtp-folding] { overflow: hidden; }
+:is(${ALL})[data-mtp-folding] { overflow: hidden; }
 
 /* The switch of a view with a quiet mode: a hand to make it live, a cross to put it back. It sits
    in the view's top right corner, or in the line for a readout or an inline formula, and is drawn
@@ -297,6 +503,7 @@ mtp-canvas .mtp-selected {
 .mtp-switch.mtp-switch-inline svg { width: 0.875rem; height: 0.875rem; }
 
 @media (prefers-reduced-motion: reduce) {
-  mtp-button button, mtp-play .mtp-play-button, mtp-stepper .mtp-step-button, .mtp-switch { transition: none; }
+  mtp-button button, mtp-play .mtp-play-button, mtp-stepper .mtp-step-button, .mtp-switch,
+  :is(${JUMPERS}) :is(.mtp-thumb::after, .mtp-box, .mtp-segment, .mtp-menu-button, .mtp-field-button) { transition: none; }
 }
 `;

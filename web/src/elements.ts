@@ -4,15 +4,27 @@
 import { CONTROLS_CSS } from "./controls-style.ts";
 import { placeTicks } from "./ticks.ts";
 import { type How, Scheduler } from "./animate.ts";
-import { type Transform, apply, invert } from "./builtins.ts";
+import { type Transform, apply, equal, invert } from "./builtins.ts";
 import { Listeners, heardIn, holds } from "./click.ts";
 import { Lifecycle } from "./lifecycle.ts";
-import { type Doc, SPEC_VERSION, type Obj, itemsOf } from "./doc.ts";
+import { type Doc, SPEC_VERSION, type Obj, type Type, itemsOf } from "./doc.ts";
 import { Drags } from "./drag.ts";
 import { latexOf, termClass, typeset } from "./math.ts";
 import { Player, type Span } from "./player.ts";
 import { Pointer } from "./pointer.ts";
-import { Runtime } from "./runtime.ts";
+import {
+  type Scale,
+  chosenIn,
+  fractionOf,
+  parseNumber,
+  snap,
+  stepFrom,
+  tickValues,
+  tidy,
+  toggledList,
+  valueAt,
+} from "./jumpers.ts";
+import { Runtime, show } from "./runtime.ts";
 import { schemaProblem } from "./schema.ts";
 import { Showings } from "./standins.ts";
 import { DrawMemo, type Look, draw, elementsMade, fitBox, lookBox, shapesOf, viewOf, zoom } from "./svg.ts";
@@ -1151,13 +1163,18 @@ function labelOf(rt: Runtime, id: number): string {
  * its LaTeX typeset as a formula is, named for a screen reader by the LaTeX. follow() brings it up
  * to date with the expression it is given. */
 function labelPart(rt: Runtime, id: number): { node: Node; follow: () => void } {
-  if (!rt.objects[id]!["label-tex"]) {
-    const text = document.createTextNode(labelOf(rt, id));
+  return textPart(() => labelOf(rt, id), Boolean(rt.objects[id]!["label-tex"]));
+}
+
+/** A text that follow() brings up to date with what text() gives: plain, or LaTeX typeset. */
+function textPart(text: () => string, tex: boolean): { node: Node; follow: () => void } {
+  if (!tex) {
+    const node = document.createTextNode(text());
     return {
-      node: text,
+      node,
       follow: () => {
-        const now = labelOf(rt, id);
-        if (text.data !== now) text.data = now;
+        const now = text();
+        if (node.data !== now) node.data = now;
       },
     };
   }
@@ -1166,7 +1183,7 @@ function labelPart(rt: Runtime, id: number): { node: Node; follow: () => void } 
   math.setAttribute("role", "img");
   let shown: string | null = null;
   const follow = () => {
-    const latex = labelOf(rt, id);
+    const latex = text();
     if (latex === shown) return;
     shown = latex;
     math.replaceChildren(typeset(latex, false));
@@ -1222,6 +1239,13 @@ export class MtpSlider extends MtpPart {
 
   protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
     const id = this.find(rt, "slider");
+    // A slider that names its target is a jumper (docs/spec/controls.md). One with an animation
+    // is of the older form, which the runtime still reads.
+    const target = rt.objects[id]!.target;
+    if (target) {
+      this.follow = trackControl(this, rt, scheduler, id, [target], (state) => this.pageState(state));
+      return;
+    }
     const player = playerFor(rt, rt.objects[id]!);
     const how = howOf(rt.objects[id]!, true);
     const input = document.createElement("input");
@@ -1387,8 +1411,12 @@ const EPS = 1e-9;
 // other control.
 function takesKeys(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
-  return el.isContentEditable || el.closest("input, textarea, select, button, [role=slider], mtp-slider, mtp-toggle, mtp-button") !== null;
+  return el.isContentEditable || el.closest(TAKE_KEYS) !== null;
 }
+const TAKE_KEYS = [
+  "input, textarea, select, button, [role=slider], [role=spinbutton], [role=listbox]",
+  "mtp-slider, mtp-toggle, mtp-button, mtp-range-slider, mtp-dial, mtp-number-field, mtp-text-field, mtp-select, mtp-multi-select",
+].join(", ");
 // What has the keys of a play: on a page with only one, they work from anywhere on it.
 const KEYED = "mtp-play, mtp-stepper";
 
@@ -1892,8 +1920,9 @@ export class MtpToggle extends MtpPart {
         this.show();
         return;
       }
-      // A click on a mixed toggle sets every member to true.
-      const v = input.indeterminate ? true : input.checked;
+      // A click writes (not TARGET) (docs/spec/controls.md, rule toggle), and on a mixed toggle
+      // sets every member to true.
+      const v = members ? input.indeterminate || input.checked : !rt.value(id, "value");
       const how = howOf(obj, true);
       const player = playerFor(rt, obj);
       // One effect (the author, 2026-11-13): the flip, a move that takes no time, then the
@@ -1920,6 +1949,903 @@ export class MtpToggle extends MtpPart {
   }
 }
 
+// The jumpers (docs/spec/controls.md, rule jumpers-and-movers): each writes one value to its
+// target by a jump each time the reader acts on it, and always shows the target's value.
+
+type Target = [number, string | null];
+type PageState = (state: Record<string, string | boolean>) => void;
+
+// Ids for the parts that refer to each other, such as a box and its label.
+let parts = 0;
+const partId = () => `mtp-part-${++parts}`;
+
+// How far, in CSS pixels, the pointer moves while scrubbing a number field for each step. The
+// same on every field (the author, 2026-11-23).
+const SCRUB_PX = 4;
+// How long, in milliseconds, the red outline of a refused or changed commit stays.
+const REFUSED_MS = 1500;
+// The half width of a thumb: its center runs from this far in from each end of a track.
+const THUMB_HALF = 8;
+
+/** The type of a target, as written in the .mtpc. */
+function targetType(rt: Runtime, [id, attr]: Target): Type {
+  return rt.typeOf(rt.holders(id, attr)[0] ?? id, attr) ?? "real";
+}
+
+/** A value brought into the writer's guards on its target (docs/spec/well-formedness.md, rule
+ * writer-guards). */
+function guarded(rt: Runtime, writer: Obj, [id, attr]: Target, v: unknown): unknown {
+  if (typeof v !== "number") return v;
+  let x = v;
+  for (const c of writer.conditions ?? []) if (c.target[0] === id && c.target[1] === attr) x = rt.clamp(c, x);
+  return x;
+}
+
+/** One jump of a control's target, decided as every write of a writer is (docs/concurrency-model.md).
+ * Gives false when the write was rejected. */
+function jumpTo(rt: Runtime, scheduler: Scheduler, source: object, writer: Obj, target: Target, v: unknown): boolean {
+  return scheduler.instant(source, howOf(writer, true), () => rt.write(target[0], target[1], guarded(rt, writer, target, v)));
+}
+
+/**
+ * A press, the moves after it and its release, as one gesture of the reader's: a held writer
+ * until the release (docs/concurrency-model.md). move is called at the press and at each move,
+ * and no longer once another writer cancels the gesture. The release may come anywhere on the
+ * page, so the window hears the moves and the release.
+ */
+function hold(source: object, scheduler: Scheduler, writer: Obj, down: PointerEvent, move: (e: PointerEvent) => void, end: () => void): void {
+  let cut = false;
+  scheduler.grip(source, howOf(writer, true), () => (cut = true));
+  const onMove = (e: PointerEvent) => {
+    if (!cut) move(e);
+  };
+  const release = () => {
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", release);
+    window.removeEventListener("pointercancel", release);
+    scheduler.letGo(source);
+    end();
+  };
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", release);
+  window.addEventListener("pointercancel", release);
+  move(down);
+}
+
+/** The control's label, in a span that its inputs name as their label. */
+function labelSpan(rt: Runtime, id: number): { span: HTMLSpanElement; follow: () => void } {
+  const text = labelPart(rt, id);
+  const span = document.createElement("span");
+  span.className = "mtp-label";
+  span.id = partId();
+  span.append(text.node);
+  return { span, follow: text.follow };
+}
+
+/** A part that tells a screen reader of a refused commit, unseen. */
+function liveRegion(): HTMLSpanElement {
+  const live = document.createElement("span");
+  live.className = "mtp-live";
+  live.setAttribute("aria-live", "polite");
+  return live;
+}
+
+/** Shows a red outline on a box for a moment, and tells a screen reader the same. */
+function refuse(box: HTMLElement, live: HTMLElement, message: string): void {
+  box.classList.remove("mtp-refused");
+  clearTimeout(Number(box.dataset.mtpRefused ?? 0));
+  box.classList.add("mtp-refused");
+  box.dataset.mtpRefused = String(setTimeout(() => box.classList.remove("mtp-refused"), REFUSED_MS));
+  live.textContent = message;
+}
+
+/** What a number is shown as, by its target's type, as a readout shows it with no format. */
+function shownNumber(rt: Runtime, type: Type, v: unknown): string {
+  return show(v, rt.core(type), "");
+}
+
+/** The arrow keys that move a thumb, as the ARIA slider pattern has them: a step up or down, or
+ * to an end. */
+function thumbKey(key: string): number | "start" | "end" | null {
+  if (key === "ArrowRight" || key === "ArrowUp") return 1;
+  if (key === "ArrowLeft" || key === "ArrowDown") return -1;
+  if (key === "Home") return "start";
+  if (key === "End") return "end";
+  return null;
+}
+
+/** A thumb, a slider for assistive technology, that takes the keys. */
+function makeThumb(input: string): HTMLSpanElement {
+  const thumb = document.createElement("span");
+  thumb.className = "mtp-thumb";
+  thumb.setAttribute("role", "slider");
+  thumb.dataset.mtpInput = input;
+  return thumb;
+}
+
+function setThumb(thumb: HTMLElement, v: number, min: number, max: number, text: string, on: boolean): void {
+  thumb.setAttribute("aria-valuenow", String(v));
+  thumb.setAttribute("aria-valuemin", String(min));
+  thumb.setAttribute("aria-valuemax", String(max));
+  thumb.setAttribute("aria-valuetext", text);
+  thumb.tabIndex = on ? 0 : -1;
+  if (on) thumb.removeAttribute("aria-disabled");
+  else thumb.setAttribute("aria-disabled", "true");
+}
+
+/** The ticks of a scale, as short lines under the track with their values, rebuilt only when
+ * the values change. */
+function tickRow(): { row: HTMLDivElement; set: (s: Scale, values: number[]) => void } {
+  const row = document.createElement("div");
+  row.className = "mtp-ticks";
+  row.setAttribute("aria-hidden", "true");
+  let shown = "";
+  const set = (s: Scale, values: number[]) => {
+    const key = JSON.stringify([s.lo, s.hi, values]);
+    if (key === shown) return;
+    shown = key;
+    row.replaceChildren(
+      ...values.map((v) => {
+        const mark = document.createElement("span");
+        mark.dataset.value = String(v);
+        mark.style.setProperty("--u", String(Number(fractionOf(s, v).toFixed(6))));
+        return mark;
+      }),
+    );
+  };
+  return { row, set };
+}
+
+/**
+ * A slider that names its target, or a range slider (docs/spec/controls.md, rules slider-and-dial
+ * and range-slider): a label, then a straight track with one thumb per target and its ticks. A
+ * press on the track moves the one thumb there, a drag of a thumb moves it, and the arrow keys
+ * step it. A range slider's thumb dragged into the other stops there. Gives what brings it up to
+ * date.
+ */
+function trackControl(part: HTMLElement, rt: Runtime, scheduler: Scheduler, id: number, targets: Target[], state: PageState): () => void {
+  const obj = rt.objects[id]!;
+  const ranged = targets.length === 2;
+  const label = labelSpan(rt, id);
+  const track = document.createElement("div");
+  track.className = "mtp-track";
+  const fill = document.createElement("span");
+  fill.className = "mtp-fill";
+  track.append(fill);
+  const thumbs = targets.map((_, k) => makeThumb(ranged ? (k === 0 ? "low" : "high") : "thumb"));
+  track.append(...thumbs);
+  // A press on the track of a range slider, off its thumbs, is not settled, so only a slider's
+  // track is an input.
+  if (!ranged) {
+    track.dataset.mtpInput = "track";
+    thumbs[0]!.setAttribute("aria-labelledby", label.span.id);
+  }
+  const ticks = tickRow();
+  const wrap = document.createElement("div");
+  wrap.className = "mtp-jumper";
+  wrap.append(label.span, track, ticks.row);
+  part.replaceChildren(wrap);
+
+  const scale = (): Scale => {
+    const step = rt.value(id, "step") as number | null;
+    const int = targets.every((t) => rt.core(targetType(rt, t)) === "int");
+    return { lo: rt.value(id, "from") as number, hi: rt.value(id, "to") as number, step, int, wrap: false };
+  };
+  const valueOfTarget = (k: number): number => {
+    const v = rt.value(targets[k]![0], targets[k]![1]);
+    return typeof v === "number" ? v : scale().lo;
+  };
+  let held = false;
+  const refresh = () => {
+    const s = scale();
+    const on = usable(rt, id);
+    const name = labelOf(rt, id);
+    const u = targets.map((_, k) => fractionOf(s, valueOfTarget(k)));
+    thumbs.forEach((thumb, k) => {
+      const v = valueOfTarget(k);
+      thumb.style.setProperty("--u", String(u[k]));
+      setThumb(thumb, v, Math.min(s.lo, s.hi), Math.max(s.lo, s.hi), shownNumber(rt, targetType(rt, targets[k]!), v), on);
+      if (ranged) thumb.setAttribute("aria-label", `${name}${name ? ", " : ""}${k === 0 ? "low" : "high"}`);
+    });
+    track.style.setProperty("--a", String(ranged ? Math.min(u[0]!, u[1]!) : 0));
+    track.style.setProperty("--b", String(ranged ? Math.max(u[0]!, u[1]!) : u[0]!));
+    track.toggleAttribute("data-disabled", !on);
+    ticks.set(s, tickValues(s, rt.value(id, "ticks") as number | null));
+    label.follow();
+    state({ inactive: !activeOf(rt, id), held });
+  };
+  // A range slider's low thumb stops at the high one, and the high one at the low one.
+  const kept = (k: number, v: number): number => {
+    if (!ranged) return v;
+    return k === 0 ? Math.min(v, valueOfTarget(1)) : Math.max(v, valueOfTarget(0));
+  };
+  const write = (k: number, v: number) => {
+    jumpTo(rt, scheduler, part, obj, targets[k]!, kept(k, v));
+    refresh();
+  };
+  const along = (e: PointerEvent): number => {
+    const box = track.getBoundingClientRect();
+    const room = box.width - 2 * THUMB_HALF;
+    return room > 0 ? Math.min(Math.max((e.clientX - box.left - THUMB_HALF) / room, 0), 1) : 0;
+  };
+  track.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || !usable(rt, id)) return;
+    const hit = thumbs.findIndex((t) => t === e.target || t.contains(e.target as Node));
+    if (ranged && hit < 0) return;
+    const k = Math.max(hit, 0);
+    e.preventDefault();
+    thumbs[k]!.focus();
+    held = true;
+    hold(
+      part,
+      scheduler,
+      obj,
+      e,
+      (m) => write(k, valueAt(scale(), along(m))),
+      () => {
+        held = false;
+        refresh();
+      },
+    );
+  });
+  thumbs.forEach((thumb, k) =>
+    thumb.addEventListener("keydown", (e) => {
+      const move = thumbKey(e.key);
+      if (move === null || e.altKey || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      if (!usable(rt, id)) return;
+      const s = scale();
+      write(k, move === "start" ? snap(s, s.lo) : move === "end" ? snap(s, s.hi) : stepFrom(s, valueOfTarget(k), move));
+    }),
+  );
+  refresh();
+  return refresh;
+}
+
+export class MtpRangeSlider extends MtpPart {
+  private refresh: () => void = () => {};
+
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const id = this.find(rt, "range-slider");
+    const obj = rt.objects[id]!;
+    this.refresh = trackControl(this, rt, scheduler, id, [obj.low!, obj.high!], (state) => this.pageState(state));
+  }
+
+  protected update(): void {
+    this.refresh();
+  }
+}
+
+// The dial's ring, in the units of its drawing, which is 100 across with its center at 0.
+const RING_R = 40;
+
+/** The point on a dial's ring at a fraction of a turn, from the top, clockwise. */
+function onRing(f: number, r = RING_R): [number, number] {
+  const a = f * 2 * Math.PI;
+  return [r * Math.sin(a), -r * Math.cos(a)];
+}
+
+/**
+ * A dial (docs/spec/controls.md, rule slider-and-dial, and the author, 2026-11-23): the raised thumb
+ * on a ring, the arc from the start filled, the value in the middle, and ticks inside the ring as
+ * on a clock. One turn covers the interval of its target's modular type, from the top clockwise,
+ * so turning past the end wraps. A press on the ring moves the thumb there, a drag turns it, and
+ * the arrow keys step it.
+ */
+export class MtpDial extends MtpPart {
+  private refresh: () => void = () => {};
+
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const id = this.find(rt, "dial");
+    const obj = rt.objects[id]!;
+    const target = obj.target!;
+    const type = targetType(rt, target);
+    const wrapped = rt.constraintsOf(type).find((c) => c[0] === "wrap");
+    if (!wrapped) throw new Error(`the target of the dial ${String(obj.name)} is not of a modular type`);
+    const [lo, hi] = [wrapped[1] as number, wrapped[2] as number];
+    const int = rt.core(type) === "int";
+    const scale = (): Scale => ({ lo, hi, step: rt.value(id, "step") as number | null, int, wrap: true });
+
+    const label = labelSpan(rt, id);
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "-50 -50 100 100");
+    svg.setAttribute("aria-hidden", "true");
+    const shape = (tag: string, cls: string, attrs: Record<string, string> = {}) => {
+      const el = document.createElementNS(SVG_NS, tag);
+      el.setAttribute("class", cls);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    };
+    const ring = shape("circle", "mtp-ring", { r: String(RING_R) });
+    const arc = shape("path", "mtp-arc");
+    const tickMarks = shape("g", "mtp-ticks");
+    const hit = shape("circle", "mtp-ring-hit", { r: String(RING_R) });
+    hit.setAttribute("data-mtp-input", "ring");
+    svg.append(ring, arc, tickMarks, hit);
+    const thumb = makeThumb("thumb");
+    thumb.setAttribute("aria-labelledby", label.span.id);
+    const value = document.createElement("span");
+    value.className = "mtp-dial-value";
+    value.setAttribute("aria-hidden", "true");
+    const face = document.createElement("div");
+    face.className = "mtp-dial-face";
+    face.append(svg, value, thumb);
+    const wrap = document.createElement("div");
+    wrap.className = "mtp-jumper mtp-dial";
+    wrap.append(label.span, face);
+    this.replaceChildren(wrap);
+
+    const now = (): number => {
+      const v = rt.value(target[0], target[1]);
+      return typeof v === "number" ? v : lo;
+    };
+    let held = false;
+    let ticksShown = "";
+    this.refresh = () => {
+      const s = scale();
+      const v = now();
+      const f = fractionOf(s, v);
+      const [x, y] = onRing(f);
+      thumb.style.left = `${50 + x}%`;
+      thumb.style.top = `${50 + y}%`;
+      arc.setAttribute("d", f > 0 ? `M 0 ${-RING_R} A ${RING_R} ${RING_R} 0 ${f > 0.5 ? 1 : 0} 1 ${x} ${y}` : "");
+      const text = shownNumber(rt, type, v);
+      value.textContent = text;
+      const on = usable(rt, id);
+      setThumb(thumb, v, lo, hi, text, on);
+      face.toggleAttribute("data-disabled", !on);
+      const values = tickValues(s, rt.value(id, "ticks") as number | null);
+      if (JSON.stringify(values) !== ticksShown) {
+        ticksShown = JSON.stringify(values);
+        tickMarks.replaceChildren(
+          ...values.map((t) => {
+            const [x1, y1] = onRing(fractionOf(s, t), RING_R - 5);
+            const [x2, y2] = onRing(fractionOf(s, t), RING_R - 9);
+            return shape("line", "mtp-tick", { x1: String(x1), y1: String(y1), x2: String(x2), y2: String(y2), "data-value": String(t) });
+          }),
+        );
+      }
+      label.follow();
+      this.pageState({ inactive: !activeOf(rt, id), held });
+    };
+    const write = (v: number) => {
+      jumpTo(rt, scheduler, this, obj, target, v);
+      this.refresh();
+    };
+    const turned = (e: PointerEvent): number => {
+      const box = svg.getBoundingClientRect();
+      const dx = e.clientX - (box.left + box.width / 2);
+      const dy = e.clientY - (box.top + box.height / 2);
+      const a = Math.atan2(dx, -dy) / (2 * Math.PI);
+      return a < 0 ? a + 1 : a;
+    };
+    face.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || !usable(rt, id)) return;
+      if (e.target !== hit && e.target !== thumb && !thumb.contains(e.target as Node)) return;
+      e.preventDefault();
+      thumb.focus();
+      held = true;
+      hold(
+        this,
+        scheduler,
+        obj,
+        e,
+        (m) => write(valueAt(scale(), turned(m))),
+        () => {
+          held = false;
+          this.refresh();
+        },
+      );
+    });
+    // A ring has no ends, so Home and End do nothing on a dial.
+    thumb.addEventListener("keydown", (e) => {
+      const move = thumbKey(e.key);
+      if (typeof move !== "number" || e.altKey || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      if (usable(rt, id)) write(stepFrom(scale(), now(), move));
+    });
+    this.refresh();
+  }
+
+  protected update(): void {
+    this.refresh();
+  }
+}
+
+/**
+ * A number field (docs/spec/controls.md, rule number-field, and the author, 2026-11-23): its label,
+ * which the reader may drag sideways to scrub, then a box with the − and + buttons and the value,
+ * which the reader may type into. The arrow keys and the buttons add or subtract the step, or ten
+ * steps with Shift. A typed value is written only when committed.
+ */
+export class MtpNumberField extends MtpPart {
+  private refresh: () => void = () => {};
+
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const id = this.find(rt, "number-field");
+    const obj = rt.objects[id]!;
+    const target = obj.target!;
+    const type = targetType(rt, target);
+    const buttons = Boolean(rt.value(id, "buttons"));
+    const typing = Boolean(rt.value(id, "typing"));
+
+    const label = labelSpan(rt, id);
+    label.span.dataset.mtpInput = "scrub";
+    label.span.classList.add("mtp-scrubber");
+    const box = document.createElement("div");
+    box.className = "mtp-box";
+    const live = liveRegion();
+    let field: HTMLElement;
+    if (typing) {
+      const text = document.createElement("input");
+      text.type = "text";
+      text.inputMode = "decimal";
+      text.autocomplete = "off";
+      text.spellcheck = false;
+      text.dataset.mtpInput = "box";
+      field = text;
+    } else {
+      field = document.createElement("span");
+      field.className = "mtp-value";
+      field.dataset.mtpInput = "value";
+      // With neither buttons nor typing, the value is underlined as the sign that it can be
+      // scrubbed (the author, 2026-11-23).
+      if (!buttons) field.classList.add("mtp-scrub", "mtp-scrubber");
+    }
+    field.setAttribute("role", "spinbutton");
+    field.setAttribute("aria-labelledby", label.span.id);
+    const stepButton = (name: "minus" | "plus") => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `mtp-field-button mtp-${name}`;
+      b.dataset.mtpInput = name;
+      b.textContent = name === "minus" ? "−" : "+";
+      b.setAttribute("aria-label", name === "minus" ? "decrease" : "increase");
+      // The focus stays in the box, as the buttons repeat what the arrow keys do there.
+      b.tabIndex = -1;
+      b.addEventListener("click", (e) => stepBy((name === "minus" ? -1 : 1) * (e.shiftKey ? 10 : 1)));
+      return b;
+    };
+    const minus = buttons ? stepButton("minus") : null;
+    const plus = buttons ? stepButton("plus") : null;
+    box.append(...[minus, field, plus].filter((n): n is HTMLElement => n !== null));
+    const wrap = document.createElement("div");
+    wrap.className = "mtp-jumper mtp-field";
+    wrap.append(label.span, box, live);
+    this.replaceChildren(wrap);
+
+    const now = (): number => {
+      const v = rt.value(target[0], target[1]);
+      return typeof v === "number" ? v : 0;
+    };
+    const step = () => rt.value(id, "step") as number;
+    // Whether the box holds text typed and not yet committed: it then shows that text.
+    let dirty = false;
+    let held = false;
+    this.refresh = () => {
+      const v = now();
+      const text = shownNumber(rt, type, v);
+      if (field instanceof HTMLInputElement) {
+        if (!dirty && field.value !== text) field.value = text;
+      } else field.textContent = text;
+      field.setAttribute("aria-valuenow", String(v));
+      field.setAttribute("aria-valuetext", text);
+      const on = usable(rt, id);
+      if (field instanceof HTMLInputElement) field.disabled = !on;
+      else {
+        field.tabIndex = on ? 0 : -1;
+        if (on) field.removeAttribute("aria-disabled");
+        else field.setAttribute("aria-disabled", "true");
+      }
+      for (const b of [minus, plus]) if (b) b.disabled = !on;
+      label.follow();
+      this.pageState({ inactive: !activeOf(rt, id), held });
+    };
+    const write = (v: number) => {
+      jumpTo(rt, scheduler, this, obj, target, v);
+      this.refresh();
+    };
+    const stepBy = (n: number) => {
+      if (!usable(rt, id)) return;
+      dirty = false;
+      const v = now();
+      write(tidy(v + n * step(), v, step()));
+    };
+    const commit = () => {
+      if (!(field instanceof HTMLInputElement) || !dirty) return;
+      const typed = field.value;
+      dirty = false;
+      const v = parseNumber(typed);
+      if (v !== null && usable(rt, id)) jumpTo(rt, scheduler, this, obj, target, v);
+      this.refresh();
+      field.value = shownNumber(rt, type, now());
+      if (v === null || !equal(now(), v)) refuse(box, live, `${typed.trim()} is not allowed. The value is ${field.value}.`);
+    };
+    field.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && field instanceof HTMLInputElement) {
+        e.preventDefault();
+        commit();
+        return;
+      }
+      if ((e.key !== "ArrowUp" && e.key !== "ArrowDown") || e.altKey || e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      stepBy((e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : 1));
+    });
+    if (field instanceof HTMLInputElement) {
+      field.addEventListener("input", () => (dirty = true));
+      // Tab leaves the field, so it commits too.
+      field.addEventListener("blur", commit);
+    }
+    const scrub = (e: PointerEvent) => {
+      if (e.button !== 0 || !usable(rt, id)) return;
+      e.preventDefault();
+      commit();
+      const x0 = e.clientX;
+      const v0 = now();
+      let last = 0;
+      held = true;
+      hold(
+        this,
+        scheduler,
+        obj,
+        e,
+        (m) => {
+          const n = Math.trunc((m.clientX - x0) / SCRUB_PX) * (m.shiftKey ? 10 : 1);
+          if (n === last) return;
+          last = n;
+          write(tidy(v0 + n * step(), v0, step()));
+        },
+        () => {
+          held = false;
+          this.refresh();
+        },
+      );
+    };
+    label.span.addEventListener("pointerdown", scrub);
+    if (field.classList.contains("mtp-scrub")) field.addEventListener("pointerdown", scrub);
+    this.refresh();
+  }
+
+  protected update(): void {
+    this.refresh();
+  }
+}
+
+/**
+ * A text field (docs/spec/controls.md, rule text-field): its label above a box, in the number
+ * field's style. A typed string is written only when committed, and one that breaks the target's
+ * conditions is not written.
+ */
+export class MtpTextField extends MtpPart {
+  private refresh: () => void = () => {};
+
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const id = this.find(rt, "text-field");
+    const obj = rt.objects[id]!;
+    const target = obj.target!;
+    const label = labelSpan(rt, id);
+    const box = document.createElement("div");
+    box.className = "mtp-box";
+    const field = document.createElement("input");
+    field.type = "text";
+    field.autocomplete = "off";
+    field.dataset.mtpInput = "box";
+    field.setAttribute("aria-labelledby", label.span.id);
+    box.append(field);
+    const live = liveRegion();
+    const wrap = document.createElement("div");
+    wrap.className = "mtp-jumper mtp-field mtp-text";
+    wrap.append(label.span, box, live);
+    this.replaceChildren(wrap);
+
+    const now = () => String(rt.value(target[0], target[1]) ?? "");
+    let dirty = false;
+    this.refresh = () => {
+      if (!dirty && field.value !== now()) field.value = now();
+      field.disabled = !usable(rt, id);
+      label.follow();
+      this.pageState({ inactive: !activeOf(rt, id) });
+    };
+    const commit = () => {
+      if (!dirty) return;
+      const typed = field.value;
+      dirty = false;
+      if (usable(rt, id)) jumpTo(rt, scheduler, this, obj, target, typed);
+      field.value = now();
+      this.refresh();
+      if (now() !== typed) refuse(box, live, `“${typed}” is not allowed.`);
+    };
+    field.addEventListener("input", () => (dirty = true));
+    field.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      commit();
+    });
+    field.addEventListener("blur", commit);
+    this.refresh();
+  }
+
+  protected update(): void {
+    this.refresh();
+  }
+}
+
+/** An option of a select, with what it is shown as: its label, or its value. */
+interface Choice {
+  value: () => unknown;
+  text: () => { node: Node; follow: () => void };
+}
+
+function choicesOf(rt: Runtime, obj: Obj): Choice[] {
+  return (obj.options ?? []).map((o) => {
+    const value = () => rt.evaluate(o.value);
+    const label = o.label;
+    const shown = label ? () => String(rt.evaluate(label)) : () => show(value(), rt.core(o.value.type), "");
+    return { value, text: () => textPart(shown, Boolean(label && o["label-tex"])) };
+  });
+}
+
+/**
+ * A select or a multi-select (docs/spec/controls.md, rules select-options, select-kinds and
+ * multi-select). Choosing an option writes at once: a select writes the option, and a multi-select
+ * the list with the option added or removed, in the options' order. A target that holds no
+ * option's value shows no option chosen. Gives what brings it up to date.
+ */
+function choiceControl(part: HTMLElement, rt: Runtime, scheduler: Scheduler, id: number, many: boolean, state: PageState): () => void {
+  const obj = rt.objects[id]!;
+  const target = obj.target!;
+  const choices = choicesOf(rt, obj);
+  const label = labelSpan(rt, id);
+  const wrap = document.createElement("div");
+  wrap.className = "mtp-jumper mtp-choice";
+  wrap.append(label.span);
+  part.replaceChildren(wrap);
+
+  const list = (): unknown[] => {
+    const v = rt.value(target[0], target[1]);
+    return Array.isArray(v) ? v : [];
+  };
+  const chosen = (): boolean[] => {
+    const values = choices.map((c) => c.value());
+    if (many) return chosenIn(list(), values);
+    const now = rt.value(target[0], target[1]);
+    const at = values.findIndex((v) => equal(v, now));
+    return values.map((_, i) => i === at);
+  };
+  const choose = (i: number) => {
+    if (!usable(rt, id)) return;
+    const v = many ? toggledList(list(), choices.map((c) => c.value()), i) : choices[i]!.value();
+    jumpTo(rt, scheduler, part, obj, target, v);
+    refresh();
+  };
+  const follows: (() => void)[] = [label.follow];
+  const as = obj.as ?? "menu";
+  let paint: (on: boolean, picked: boolean[]) => void;
+
+  if (as === "menu") {
+    const menu = document.createElement("div");
+    menu.className = "mtp-menu";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = partId();
+    button.className = "mtp-menu-button";
+    button.dataset.mtpInput = "menu";
+    button.setAttribute("aria-haspopup", "listbox");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-labelledby", `${label.span.id} ${button.id}`);
+    const shownText = document.createElement("span");
+    shownText.className = "mtp-menu-text";
+    button.append(shownText);
+    button.insertAdjacentHTML("beforeend", CHEVRON_ICON);
+    const box = document.createElement("div");
+    box.id = partId();
+    box.className = "mtp-listbox";
+    box.setAttribute("role", "listbox");
+    box.setAttribute("aria-labelledby", label.span.id);
+    box.tabIndex = -1;
+    box.hidden = true;
+    if (many) box.setAttribute("aria-multiselectable", "true");
+    button.setAttribute("aria-controls", box.id);
+    // The text of each option in the list, and a second one that the button shows when it is chosen.
+    const inButton = choices.map((c) => {
+      const t = c.text();
+      follows.push(t.follow);
+      const span = document.createElement("span");
+      span.className = "mtp-menu-item";
+      span.append(t.node);
+      return span;
+    });
+    const options = choices.map((c, i) => {
+      const t = c.text();
+      follows.push(t.follow);
+      const o = document.createElement("div");
+      o.id = `${box.id}-${i + 1}`;
+      o.className = "mtp-option";
+      o.setAttribute("role", "option");
+      o.dataset.mtpInput = `option-${i + 1}`;
+      o.append(t.node);
+      o.addEventListener("click", () => pick(i));
+      return o;
+    });
+    box.append(...options);
+    menu.append(button, box);
+    wrap.append(menu);
+    let active = 0;
+    const activate = (i: number) => {
+      active = Math.min(Math.max(i, 0), options.length - 1);
+      options.forEach((o, j) => o.classList.toggle("mtp-active", j === active));
+      box.setAttribute("aria-activedescendant", options[active]!.id);
+    };
+    const outside = (e: Event) => {
+      if (!menu.contains(e.target as Node)) close(false);
+    };
+    const open = () => {
+      if (!usable(rt, id)) return;
+      box.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      const at = chosen().indexOf(true);
+      activate(at < 0 ? 0 : at);
+      box.focus();
+      document.addEventListener("pointerdown", outside, true);
+    };
+    const close = (refocus: boolean) => {
+      if (box.hidden) return;
+      box.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+      document.removeEventListener("pointerdown", outside, true);
+      if (refocus) button.focus();
+    };
+    // A select closes once an option is chosen. A multi-select stays open, since the reader may
+    // choose several.
+    const pick = (i: number) => {
+      activate(i);
+      choose(i);
+      if (!many) close(true);
+    };
+    button.addEventListener("click", () => (box.hidden ? open() : close(true)));
+    button.addEventListener("keydown", (e) => {
+      if (!["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) return;
+      e.preventDefault();
+      open();
+    });
+    box.addEventListener("keydown", (e) => {
+      const moves: Record<string, number> = { ArrowDown: active + 1, ArrowUp: active - 1, Home: 0, End: options.length - 1 };
+      if (e.key in moves) {
+        e.preventDefault();
+        activate(moves[e.key]!);
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        pick(active);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        close(true);
+      } else if (e.key === "Tab") close(false);
+    });
+    paint = (on, picked) => {
+      button.disabled = !on;
+      if (!on) close(false);
+      options.forEach((o, i) => o.setAttribute("aria-selected", String(picked[i])));
+      const parts: Node[] = [];
+      inButton.forEach((span, i) => {
+        if (!picked[i]) return;
+        if (parts.length) parts.push(document.createTextNode(", "));
+        parts.push(span);
+      });
+      shownText.replaceChildren(...parts);
+    };
+  } else if (as === "buttons") {
+    const row = document.createElement("div");
+    row.className = "mtp-segments";
+    row.setAttribute("role", many ? "group" : "radiogroup");
+    row.setAttribute("aria-labelledby", label.span.id);
+    const segments = choices.map((c, i) => {
+      const t = c.text();
+      follows.push(t.follow);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mtp-segment";
+      b.dataset.mtpInput = `option-${i + 1}`;
+      if (!many) b.setAttribute("role", "radio");
+      b.append(t.node);
+      b.addEventListener("click", () => choose(i));
+      return b;
+    });
+    // In a radio group the arrow keys move to the next option and choose it, and Tab reaches
+    // only the chosen one, as the ARIA radio group pattern has it.
+    if (!many)
+      segments.forEach((b, i) =>
+        b.addEventListener("keydown", (e) => {
+          const by = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+          if (!by) return;
+          e.preventDefault();
+          const j = (i + by + segments.length) % segments.length;
+          segments[j]!.focus();
+          choose(j);
+        }),
+      );
+    row.append(...segments);
+    wrap.append(row);
+    paint = (on, picked) => {
+      const first = picked.indexOf(true);
+      segments.forEach((b, i) => {
+        b.disabled = !on;
+        if (many) b.setAttribute("aria-pressed", String(picked[i]));
+        else {
+          b.setAttribute("aria-checked", String(picked[i]));
+          b.tabIndex = i === (first < 0 ? 0 : first) ? 0 : -1;
+        }
+      });
+    };
+  } else {
+    // 'radio' for a select, 'checkbox' for a multi-select: one native input per line.
+    const group = document.createElement("div");
+    group.className = "mtp-marks";
+    group.setAttribute("role", many ? "group" : "radiogroup");
+    group.setAttribute("aria-labelledby", label.span.id);
+    const name = partId();
+    const marks = choices.map((c, i) => {
+      const t = c.text();
+      follows.push(t.follow);
+      const line = document.createElement("label");
+      line.className = "mtp-mark";
+      const mark = document.createElement("input");
+      mark.type = many ? "checkbox" : "radio";
+      mark.name = name;
+      mark.dataset.mtpInput = `option-${i + 1}`;
+      mark.addEventListener("change", () => choose(i));
+      const text = document.createElement("span");
+      text.append(t.node);
+      line.append(mark, text);
+      group.append(line);
+      return mark;
+    });
+    wrap.append(group);
+    paint = (on, picked) => {
+      marks.forEach((m, i) => {
+        m.disabled = !on;
+        m.checked = picked[i]!;
+      });
+    };
+  }
+
+  const refresh = () => {
+    for (const f of follows) f();
+    paint(usable(rt, id), chosen());
+    state({ inactive: !activeOf(rt, id) });
+  };
+  refresh();
+  return refresh;
+}
+
+// The menu button's mark (Tabler's chevron-down), drawn as the stepper's chevrons are.
+const CHEVRON_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6l6 -6"/></svg>';
+
+export class MtpSelect extends MtpPart {
+  private refresh: () => void = () => {};
+
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const id = this.find(rt, "select");
+    this.refresh = choiceControl(this, rt, scheduler, id, false, (state) => this.pageState(state));
+  }
+
+  protected update(): void {
+    this.refresh();
+  }
+}
+
+export class MtpMultiSelect extends MtpPart {
+  private refresh: () => void = () => {};
+
+  protected setup(_model: MtpModel, rt: Runtime, scheduler: Scheduler): void {
+    const id = this.find(rt, "multi-select");
+    this.refresh = choiceControl(this, rt, scheduler, id, true, (state) => this.pageState(state));
+  }
+
+  protected update(): void {
+    this.refresh();
+  }
+}
+
 const ELEMENTS: [string, CustomElementConstructor][] = [
   ["mtp-model", MtpModel],
   ["mtp-canvas", MtpCanvas],
@@ -1930,6 +2856,12 @@ const ELEMENTS: [string, CustomElementConstructor][] = [
   ["mtp-play", MtpPlay],
   ["mtp-stepper", MtpStepper],
   ["mtp-toggle", MtpToggle],
+  ["mtp-range-slider", MtpRangeSlider],
+  ["mtp-dial", MtpDial],
+  ["mtp-number-field", MtpNumberField],
+  ["mtp-text-field", MtpTextField],
+  ["mtp-select", MtpSelect],
+  ["mtp-multi-select", MtpMultiSelect],
 ];
 
 export function define(): void {
