@@ -74,8 +74,8 @@ The compiler turns a source into a .mtpc in six steps, in this order:
    ({doc}`lexical`, {doc}`grammar`).
 2. **Rewrite.** Each {term}`name` is resolved to its declaration ({ref}`scope`), and each
    {term}`syntactic sugar` form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`).
-3. **Prove.** Each {term}`expression` except a {term}`clause` gets a type, and each {term}`condition` and
-   {term}`range` is proved ({doc}`types`, {doc}`well-formedness`).
+3. **Prove.** Each {term}`expression` except a {term}`clause` gets a type, each clause is checked against
+   the form around it, and each {term}`condition` and {term}`range` is proved ({doc}`types`, {doc}`well-formedness`).
 4. **Expand.** The forms that need a type or a value to be rewritten are rewritten, and each
    `foreach`, motif and animation is written out as its copies, with the names built from values
    replaced ({numref}`names-from-values`).
