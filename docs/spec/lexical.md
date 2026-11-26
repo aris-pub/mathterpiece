@@ -32,9 +32,8 @@ is a rule of {doc}`grammar`. In a definition:
 This rule exists so that the parser reads the same text the same way wherever two definitions of the grammar could both match.
 
 ```{rule} grammar-in-context
-At each place in a source, the parser reads only the text that the grammar allows at that place.
-Where several definitions in capitals could match there, the parser reads the one of the highest
-priority, and among those of the same priority, the one that matches the longest text.
+The parser reads, at each place, only what the grammar allows there. Where several definitions
+in capitals match, it reads the one of the highest priority, and among those, the longest match.
 ```
 
 This is how Lark reads the grammar with `parser="lalr"` and `lexer="contextual"`. So `truex` is a {token}`mtp:NAME`, and not {token}`mtp:TRUE` followed by
@@ -49,9 +48,8 @@ This is how Lark reads the grammar with `parser="lalr"` and `lexer="contextual"`
 This rule exists so that the parser reads the same characters whatever system wrote the file.
 
 ```{rule} source-text
-A source is a sequence of Unicode characters. A file is read as UTF-8, and each `\r\n` and
-each `\r` alone becomes `\n`. A byte order mark (U+FEFF) at the very
-start of a source is ignored. The text has no other change.
+A source is a sequence of Unicode characters, read from a UTF-8 file. Each `\r\n` and each lone `\r`
+becomes `\n`, and a byte order mark (U+FEFF) at the very start is dropped. Nothing else changes.
 ```
 
 A byte order mark at any other place, outside string literals and comments, is an error, because it
@@ -61,11 +59,9 @@ is not whitespace ({numref}`whitespace-and-comments`) and not a character of a {
 This rule exists so that every compiler gives an error the same line and column.
 
 ```{rule} expression-positions
-Each expression that the parser produces has a position: the line and the column of its
-first character, counting from 1. A byte order mark at the start is not counted. A newline
-(line feed, U+000A) starts a new line. Every other character, a tab included, adds 1 to the
-column. An expression that the parser builds from a shorter spelling has the position given in
-{numref}`parser-sugar`.
+Each expression has a position: the line and column of its first character, both counted from 1.
+A newline starts a new line, and every other character, a tab included, adds 1 to the column. An
+expression built from a shorter spelling has the position given in {numref}`parser-sugar`.
 ```
 
 ## Whitespace and comments
@@ -76,10 +72,8 @@ column. An expression that the parser builds from a shorter spelling has the pos
 This rule exists to specify what the parser skips between expressions.
 
 ```{rule} whitespace-and-comments
-Whitespace is the three characters space (U+0020), tab (U+0009) and newline
-(line feed, U+000A). A comment starts with `;` and runs up to the next newline, or to the end of
-the source. Whitespace and comments have no meaning. Inside a string
-literal, `;` and whitespace are text.
+Whitespace is space, tab and newline. A comment runs from `;` to the next newline or the end of the
+source. Neither has any meaning, except inside a string literal, where both are text.
 ```
 
 A source holds no carriage return, since {numref}`source-text` turns each one into a newline. So
@@ -93,10 +87,9 @@ errors outside string literals and comments. {doc}`grammar` gives the places whe
 This rule exists so that the parser splits text into words the same way in every compiler.
 
 ```{rule} word-ends
-A word is a name, a number, an {term}`operator`, a {term}`bool` literal or `none`. From the first
-character of a word up to the next whitespace, the end of the source, or the next of the characters
-`( ) [ ] { } " | ; :`, the text is exactly one word. Text that starts where a word may start and is
-not one word up to there is an error.
+A word is a name, a number, an {term}`operator`, a {term}`bool` literal or `none`. A word runs from its
+first character up to whitespace, the end of the source, or one of `( ) [ ] { } " | ; :`, and that
+text must be exactly one word.
 ```
 
 The characters `'`, `$`, `#`, `@`, `.`, `/` and `^` do not end a word, so `a$'x'`, `1x` and `a'b`
@@ -106,8 +99,7 @@ are errors: none of them is one word. The grammar rejects them, as the parser do
 This rule exists to keep the syntax uniform and easy to read and to parse: only a name is followed by `.` or `[`.
 
 ```{rule} no-name-part-after-form
-The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` and
-`(sort xs)[0]` are errors.
+The `)` that closes a form is never followed directly by `.` or `[`: `(sort xs).x` is an error.
 ```
 
 A part of the value of a form is read with the form `(. X Y)` ({numref}`dot-name-part`), as
@@ -131,9 +123,8 @@ attribute or the name of a member, and means nothing on its own.
 This rule exists to specify which text the parser reads as a name.
 
 ```{rule} name-characters
-Each name part starts with a {term}`letter`, one of the ASCII letters `a` to `z` and `A` to
-`Z`. Then come any number of letters, {term}`digits <digit>` and hyphens (`-`). Last comes `?`, or
-nothing. A name part is never exactly `true`, `false` or `none`.
+A name part is an ASCII {term}`letter`, then any number of letters, {term}`digits <digit>` and hyphens,
+then `?` or nothing. A name part is never `true`, `false` or `none`.
 ```
 
 So `theta`, `show-tan`, `x2`, `a-`, `none?`, `the-true-value`, `truex`, `p.empty?`, `found?.x` and
@@ -152,9 +143,8 @@ such as after `|` in a {term}`broadened type` or after a `.` that follows {term}
 This rule exists so that the parser can tell a head with no name from a name that holds an underscore.
 
 ```{rule} name-underscore
-An underscore may be written only at the very end of the head of a form, right after its last
-name part: `(circle_ (r 1))`, `(marks.grid_ …)`, `(line|none_ …)` and `(none_ a)`. Such a head
-matches {token}`mtp:HEAD`.
+An underscore may end the head of a form, right after its last name part, as in `(circle_ (r 1))`,
+and may appear nowhere else. Such a head matches {token}`mtp:HEAD`.
 ```
 
 So an underscore in any other place is an error: `x_` as an argument, `a_b`, `_x`, `_` alone,
@@ -169,9 +159,8 @@ has no name ({numref}`unnamed-head`).
 This rule exists to specify which words the parser reads as bools, as `none` and as operators, and not as names.
 
 ```{rule} literal-words
-The word `true` or `false` is a bool literal. The word `none` is the literal `none`. Each of the
-words `+ - * / ^ < <= > >= = != .` is an operator: a name with one name part, which is never
-followed directly by `[`.
+`true` and `false` are the bool literals, and `none` is the literal `none`. `+ - * / ^ < <= > >= =
+!= .` are the operators, names of one name part that are never followed directly by `[`.
 ```
 
 So `+[0]` is an error. `true[0]`, `none[0]` and `3[0]` are errors too, since by
@@ -183,7 +172,7 @@ is not a word.
 This rule exists to fix the words that a source may not use as names.
 
 ```{rule} keywords
-A {term}`keyword` is one of the words of {numref}`keywords-table`, and no other word.
+A {term}`keyword` is a word of {numref}`keywords-table`.
 ```
 
 Each keyword is the head of a form of the language.
@@ -212,9 +201,9 @@ Which names no declaration and no binding may take is defined in {numref}`declar
 This rule exists so that names stay plain text, and so that these characters are never mistaken for part of other syntax.
 
 ```{rule} reserved-characters
-Outside a string literal, `"` is an error, `{` and `}` start and end a list ({numref}`lists`), and so is a `$` or a `#` that is not followed
-by `'`. Outside the {term}`format spec` of an interpolated string ({numref}`interpolated-strings`),
-`:` is an error. String literals are written in single quotes only.
+Outside a string literal, `"` is an error, and so is a `$` or a `#` not followed by `'`. Outside a
+{term}`format spec` ({numref}`interpolated-strings`), `:` is an error. `{` and `}` start and end a list
+({numref}`lists`). String literals take single quotes only.
 ```
 
 ## Numbers
@@ -225,20 +214,16 @@ by `'`. Outside the {term}`format spec` of an interpolated string ({numref}`inte
 This rule exists so that the parser reads every number to the same value and the same kind in every compiler.
 
 ```{rule} number-literals
-A digit is one of the ASCII digits `0` to `9`. A word that matches one of the number
-definitions is a number, of the kind of the definition:
+A digit is an ASCII digit `0` to `9`. A word that matches a number definition is a number of that
+kind, the first of COMPLEX, IMAG, RATIO, REAL and INT that matches it whole:
 
-- {token}`mtp:INT` is an {term}`int` literal, of any size. `007` is 7 and `+4` is 4.
-- {token}`mtp:RATIO` is a {term}`ratio` literal: the exact fraction of two ints, reduced, so `-2/4`
-  is `-1/2`. Only the numerator has a sign. A denominator of 0 is an error.
-- {token}`mtp:REAL` is a {term}`real` literal: the double-precision float nearest to the decimal
-  number. A real literal has a decimal point or an exponent: `2.5`, `1.`, `.5`, `1e3`, `1.5E-3`.
-- {token}`mtp:IMAG` is a {term}`complex` literal whose real part is 0, such as `2i` and `-1.5e3i`.
-- {token}`mtp:COMPLEX` is a complex literal with both parts, the real part first, such as `1+2i`
-  and `-1e+2-3.5i`. Each number in it is read as a real, so `1+2i` is `1.0 + 2.0i`.
-
-The priorities of the grammar make a word the first of COMPLEX, IMAG, RATIO, REAL and INT that
-matches it whole.
+- {token}`mtp:INT` is an {term}`int`, of any size: `007` is 7 and `+4` is 4.
+- {token}`mtp:RATIO` is a {term}`ratio`, an exact fraction reduced, with the sign on the numerator only:
+  `-2/4` is `-1/2`. A denominator of 0 is an error.
+- {token}`mtp:REAL` is a {term}`real`, the binary64 number nearest to the decimal, with a decimal point or
+  an exponent: `2.5`, `1.`, `.5`, `1e3`.
+- {token}`mtp:IMAG` is a {term}`complex` with real part 0, such as `2i`.
+- {token}`mtp:COMPLEX` is a complex with both parts, real first, each read as a real: `1+2i`.
 ```
 
 So `٣` (ARABIC-INDIC DIGIT THREE) and `²` are not digits. `1-2` is an error, since it is no
@@ -252,31 +237,25 @@ number, and the difference of 2 and 1 is written `(- 2 1)`.
 This rule exists to specify which text the parser reads as a string, and what each escape stands for.
 
 ```{rule} string-literals
-A string literal is written in single quotes. Inside it, `\'` is a quote, `\\` is a backslash and
-`\n` is a line feed. A backslash followed by any other character is an error. Every other
-character, a line feed included, is itself.
+A string literal is in single quotes. Inside it, `\'` is a quote, `\\` a backslash and `\n` a line
+feed. Any other backslash is an error, and every other character, a line feed included, is itself.
 ```
 
 This rule exists so that TeX can be written with its backslashes as they are, without an escape for each one.
 
 ```{rule} tex-strings
-A TeX string is written `$'…'`. Inside it, `\'` is a quote, and every other character is
-itself: `\frac`, `\\` and `\q` stay as written. A backslash and the character after it are read
-together, so in `$'a\\'` the string is `a\\` and the last quote closes it. Its value is an
-ordinary string: `$` changes only how the text between the quotes is read, which lets LaTeX be
-written as it is.
+A TeX string is written `$'…'`. Inside it, `\'` is a quote and every other character is itself, so
+`\frac` and `\\` stay as written. A backslash and the next character are read as a pair, so in
+`$'a\\'` the last quote closes the string. Its value is an ordinary string.
 ```
 
 This rule exists to specify which text the compiler reads as a color.
 
 ```{rule} color-literals
-A color is written `#'…'`, a color string, which is syntactic sugar for `(color-of f'…')`: its text
-is the text of an {term}`interpolated string`. `(color-of S)` evaluates to the color that the string
-`S` names: a CSS color name, `transparent`, or 3, 4, 6 or 8 hex digits with a `#` before them or
-not, in small or capital letters. When `S` is known when compiling, any other text is a
-{term}`compile error`, and the type is `color`. When `S` is known only while drawing, any other text
-evaluates to `none`, and the type is `color|none`. A string is never read as a color without
-`color-of`.
+A color is written `#'…'`, syntactic sugar for `(color-of f'…')`. `(color-of S)` is the color that `S`
+names: a CSS color name, `transparent`, or 3, 4, 6 or 8 hex digits, with or without `#`, in either
+case. Any other text is a {term}`compile error` when `S` is known when compiling, and otherwise gives
+`none`, so the type is then `color|none`. A string is read as a color only through `color-of`.
 ```
 
 So `#'red'`, `#'#ff0000'` and `#'ff0000'` are the same color, and `#'#f00'` is too, and
@@ -297,10 +276,9 @@ no `rgb`. Bead mtp-ivdt.
 This rule exists to specify how the parser reads `H@X`, a short way of writing a form of one name and one expression.
 
 ```{rule} prefix-forms
-A name, `@` and an expression, written with nothing between them, are short for the form of that name
-and that expression: `H@X` is `(H X)`. H is a name that is not an operator and does not end with `_`. X
-is any expression that is not itself a prefixed form. Besides a name string `@'…'`
-({numref}`interpolated-strings`), `@` may not be written in any other place.
+`H@X`, written with nothing between its parts, is `(H X)`, where H is a name that is neither an
+operator nor ends with `_`, and X is any expression that is not itself a prefixed form. Besides a
+name string `@'…'` ({numref}`interpolated-strings`), `@` appears nowhere else.
 ```
 
 So `doc@'The dot.'` is the {term}`docstring` `(doc 'The dot.')`, `free@green` is the
@@ -318,15 +296,12 @@ rules as when it is written with parentheses: `if@c` is `(if c)`, which is an er
 This rule exists to specify how the parser reads a string with expressions inside it, and what each part becomes.
 
 ```{rule} interpolated-strings
-An interpolated string is written `f'…'`, a {term}`name string` is written `@'…'`, and a color
-string is written `#'…'` ({numref}`color-literals`). Their
-text has the escapes of {numref}`string-literals`, and in it `{{` is `{` and `}}` is `}`. A `{` that
-is not doubled opens braces, which hold one expression, with whitespace or nothing before and
-after it, then a format spec or nothing, and last `}`. No comment may be written in the
-braces, around the expression. A format spec is `:` followed by any characters but `{`, `}` and
-`'`. A `}` that is not doubled and does not close braces is an error. A name string holds braces
-at least once. Since `{{` is `{`, a list ({numref}`lists`) written first in the braces has
-whitespace before it: `f'{ {a b} }'`.
+An interpolated string is `f'…'`, a {term}`name string` `@'…'`, and a color string `#'…'`
+({numref}`color-literals`). Their text has the escapes of {numref}`string-literals`, and `{{` and `}}`
+stand for `{` and `}`. A single `{` opens braces holding one expression, then an optional format spec,
+then `}`, with no comment inside. A format spec is `:` followed by any characters but `{`, `}` and
+`'`. A stray `}` is an error, and a name string holds braces at least once. A list written first in
+the braces needs whitespace before it: `f'{ {a b} }'`.
 ```
 
 The parser keeps the format spec as written. This page does not give its meaning. Since `:` ends
