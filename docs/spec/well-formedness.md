@@ -127,7 +127,8 @@ The prover proves exactly the following, and nothing else:
 1. That every expression, except a clause, is accepted where it is written: its type without
    conditions is a subtype of the expected type without conditions ({numref}`form-types`), and its
    value meets each condition of the expected type ({numref}`constraint-proof`).
-2. That the type of every expression that may give `none` includes `none` ({numref}`may-give-none`),
+2. That the type of every expression that may give `none` includes `none` ({numref}`may-give-none`,
+   {numref}`none-from-items-and-members`),
    and that no expression whose arguments are all known while compiling, such as `(sqrt -1)`, gives
    `none` ({numref}`none-at-known-arguments`).
 3. That the length of each `foreach` that is known only while drawing has an upper bound below
@@ -219,19 +220,28 @@ to 1 whatever `x` is, by the row for a call.
 This rule exists to determine which expressions may result in `none`, and so which types must include `none`.
 
 ```{rule} may-give-none
-The type of an expression that is not folded includes `none` when the ranges of its arguments, each
-taken on its own, hold values at which the expression evaluates to `none` by
-{numref}`expressions-that-give-none`. For an item of a list and a member of a group:
+The type of an expression that is not folded, other than `xs[i]` and `g[k]`
+({numref}`none-from-items-and-members`), includes `none` when the ranges of its arguments, each taken
+on its own, hold values at which the expression evaluates to `none` by
+{numref}`expressions-that-give-none`.
+```
 
-| Expression | Its type includes `none` unless |
+So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, a `real`.
+
+This rule exists because one argument of `xs[i]` and of `g[k]` is a list or a group, which has no range, so the prover decides whether they may give `none` from the length of the list or the members of the group.
+
+```{rule} none-from-items-and-members
+The type of `xs[i]`, an item of a list, and of `g[k]`, a member of a group, when not folded, includes
+`none` except in these cases:
+
+| Expression | Its type does not include `none` when |
 |---|---|
 | `xs[i]`, an item of a list | the length n of `xs` is known ({numref}`known-lengths`), and the range of `i` lies within -n to n - 1 |
 | `g[k]`, a member of a group by an int | the range of `k` lies within -n to n - 1, n being the number of members |
 | `g[k]`, a member of a group by a {term}`string` | the type of `k` is a {term}`choice type` whose choices are all names of members of `g` |
 ```
 
-So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, a `real`. With
-`(int f 0 (>= 0) (<= 3))`, `xs[f]` on a bound list of four items is never `none`. With
+So with `(int f 0 (>= 0) (<= 3))`, `xs[f]` on a bound list of four items is never `none`. With
 `(type side string (one-of 'left' 'right'))` and a group `arms` whose members are named `left` and
 `right`, `arms[s]` is never `none` for a `side` `s`.
 
