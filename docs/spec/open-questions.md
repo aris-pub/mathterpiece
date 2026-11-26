@@ -122,7 +122,7 @@ function on reals gives the correctly rounded binary64 result of its exact value
 so folding and drawing never differ, and the prover does not widen ranges
 ({numref}`correctly-rounded-reals`, {numref}`same-value-at-both-times`) (Q-evaluation-9,
 Q-evaluation-12). Infinity is removed from the language: `infty` is not a name, a real is finite,
-and an overflow gives `none` ({numref}`number-types`, {numref}`operations-that-give-none`)
+and an overflow gives `none` ({numref}`number-types`, {numref}`expressions-that-give-none`)
 (Q-evaluation-4, Q-evaluation-10, Q-evaluation-11). The ±10¹⁵⁰ limit applies to every starting
 value known when compiling ({numref}`number-limit`). The channels of a mixed color round halves up
 at both times, as CSS `color-mix()` does (Q-evaluation-5, {numref}`mixed-color-channels`).
@@ -277,7 +277,7 @@ corrupt. The compiler never writes one, the schema is made as strong as possible
 refuses every corrupt .mtpc and runs no part of it ({numref}`corrupt-mtpc`,
 {numref}`schema-strength`, {numref}`runtime-loads-mtpc`). An operation that has no value gives
 `none`, and the words "gives `none`" are used for it, never "undefined"
-({numref}`operations-that-give-none`). `rand` and `rand-int` with `lo` above `hi` give `none`, and
+({numref}`expressions-that-give-none`). `rand` and `rand-int` with `lo` above `hi` give `none`, and
 are a compile error when both bounds are known when compiling ({numref}`none-at-known-inputs`).
 Any int is a seed, and two seeds that are equal modulo 2³² draw the same values
 ({numref}`seed-variable`, {numref}`random-hash`) (Q-evaluation-6).

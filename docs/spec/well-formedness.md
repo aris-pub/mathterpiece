@@ -122,19 +122,24 @@ Bead mtp-ydd4.7.44.
 This rule exists to fix exactly what the prover proves, so that every conforming compiler accepts and rejects the same sources.
 
 ```{rule} prover-proves
-The prover proves exactly these, and nothing else:
+The prover proves exactly the following, and nothing else:
 
-1. The type of every expression except a clause, and that it is a subtype of the type expected where
-   it is written ({numref}`form-types`).
-2. That every value meets the conditions of that type ({numref}`constraint-proof`).
-3. Which operations may give `none`, and so which types include it ({numref}`may-give-none`), and that
-   an operation with known inputs does not ({numref}`none-at-known-inputs`).
-4. An upper bound of the length of a `foreach` that is known only while drawing
-   ({numref}`foreach-bounded-length`).
-5. That each `(name S)` is an object whose type is a subtype of the type expected where it is
-   written ({numref}`names-from-values`).
-6. That a call known in the prove step stays within the {term}`call depth limit` ({numref}`call-depth-limit`).
-7. The rules of the sections above.
+1. That every expression, except a clause, is accepted where it is written: its type without
+   conditions is a subtype of the expected type without conditions ({numref}`form-types`), and its
+   value meets each condition of the expected type ({numref}`constraint-proof`).
+2. That the type of every expression that may give `none` includes `none` ({numref}`may-give-none`),
+   and that no expression whose arguments are all known while compiling, such as `(sqrt -1)`, gives
+   `none` ({numref}`none-at-known-inputs`).
+3. That the length of each `foreach` that is known only while drawing has an upper bound below
+   10¹⁵⁰, the {term}`number limit` ({numref}`foreach-bounded-length`).
+4. That for every value of `S`, an object named by `S` is declared before each `(name S)`
+   ({numref}`names-from-values`).
+5. That each call known while compiling stays within the {term}`call depth limit`
+   ({numref}`call-depth-limit`).
+6. That every clause has a head that the form around it takes: as a named argument
+   ({numref}`named-arguments-first`), or as an item of its body ({numref}`contexts`).
+7. That the source meets {numref}`no-dependency-cycles` to {numref}`writer-guards` and
+   {numref}`movements-at-once`.
 
 For numbers it uses only the ranges of {numref}`ranges` and {numref}`range-rules` and the narrowing of
 {numref}`if-narrowing`, and it checks each body once ({numref}`check-bodies-once`).
@@ -197,7 +202,7 @@ Every range is clamped to the number limit, as the values of the expression are
 ({numref}`number-limit`): an end beyond it is replaced by the end of the number limit, 10¹⁵⁰ or
 -10¹⁵⁰ for an int or a ratio, and `1e150` or `-1e150` for a real. The whole number limit is the
 range from the lower end to the upper end of the number limit. Each end in the table that is worked
-out from several ends, such as the sum of the lower ends, is one call of the operation on those
+out from several ends, such as the sum of the lower ends, is one call of the same function on those
 ends, and is clamped once.
 
 The item type of a `(list-of …)` whose items are not all known in the prove step, and whose items
@@ -211,14 +216,14 @@ With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 
 `(func clamped ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamped x 0 1)` has the range 0
 to 1 whatever `x` is, by the row for a call.
 
-This rule exists to determine which operations may result in `none`, and so which types must include `none`.
+This rule exists to determine which expressions may result in `none`, and so which types must include `none`.
 
 ```{rule} may-give-none
-The type of an operation that is not folded includes `none` when the ranges of its arguments, each
+The type of an expression that is not folded includes `none` when the ranges of its arguments, each
 taken on its own, hold an input at which it evaluates to `none` by
-{numref}`operations-that-give-none`. For an item of a list and a member of a group:
+{numref}`expressions-that-give-none`. For an item of a list and a member of a group:
 
-| Operation | Its type includes `none` unless |
+| Expression | Its type includes `none` unless |
 |---|---|
 | `xs[i]`, an item of a list | the length n of `xs` is known ({numref}`known-lengths`), and the range of `i` lies within -n to n - 1 |
 | `g[k]`, a member of a group by an int | the range of `k` lies within -n to n - 1, n being the number of members |

@@ -3,7 +3,7 @@
 
 This page defines how an {term}`expression` is computed: the order in which its parts are
 {term}`evaluated <evaluation>`, the {term}`forms <form>` of which only some parts are evaluated,
-the inputs at which an operation results in `none`, how `none` propagates, the numbers and their
+the inputs at which an expression results in `none`, how `none` propagates, the numbers and their
 limits, random values, equality, and how deep a chain of calls can go.
 
 An expression is computed at one of two times ({doc}`binding-time`). When every value that it
@@ -96,7 +96,7 @@ test reads the binding of the `foreach` or a parameter of the motif, since the b
 once for all their values. Each branch is checked for the values for which it runs
 ({numref}`if-narrowing`). By {numref}`sugar-rewrites`, the same holds for the tests of a `cond`
 and the parts of an `and` or an `or`. `or?` and `let` are proved whole: every part is proved, even a
-part that would not be evaluated because a value before it is known when compiling. An operation
+part that would not be evaluated because a value before it is known when compiling. An expression
 that results in `none` at known inputs in such a part is a {term}`compile error`
 ({numref}`none-at-known-inputs`):
 
@@ -124,15 +124,15 @@ a call is folded does `cond` stop at the first test that is known to be true (li
 mtp-08wd.2.
 :::
 
-## Operations that result in none
+## Expressions that result in none
 
-This rule exists to list where an operation has no value, so that the compiler and the runtime give `none` at the same inputs.
+This rule exists to list where an expression has no value, so that the compiler and the runtime give `none` at the same inputs.
 
-```{rule} operations-that-give-none
-Besides an argument that is `none` ({numref}`none-propagates`), an operation results in `none` at
+```{rule} expressions-that-give-none
+Besides an argument that is `none` ({numref}`none-propagates`), an expression results in `none` at
 these inputs, when folded and while drawing.
 
-| Operation | Results in `none` at |
+| Expression | Results in `none` at |
 |---|---|
 | `/` | a divisor of 0 |
 | `mod` | a divisor of 0 |
@@ -153,7 +153,7 @@ these inputs, when folded and while drawing.
 | `g[k]` | a member that the group does not have |
 | a bound variable or attribute with a {term}`condition` | a value that breaks the condition ({doc}`types`) |
 
-At every other input, an operation does not result in `none`.
+At every other input, an expression does not result in `none`.
 ```
 
 :::{admonition} Code differs
@@ -170,15 +170,15 @@ At every other input, an operation does not result in `none`.
   `(rand-seed sd 1) (real v (choice {1 2}))` is rejected with "v may be none". Bug mtp-ydd4.7.49.
 :::
 
-So no operation results in an infinity or NaN: a real is always finite ({numref}`number-types`).
+So no expression results in an infinity or NaN: a real is always finite ({numref}`number-types`).
 The functions of the {term}`standard library` are written in mtp, and result in `none` where the
 built-in functions that they call result in `none` ({doc}`stdlib`).
 
-This rule exists so that an operation known to have no value is reported when compiling, rather than giving `none` on the page.
+This rule exists so that an expression known to have no value is reported when compiling, rather than giving `none` on the page.
 
 ```{rule} none-at-known-inputs
-An operation whose inputs are known in the prove step ({numref}`check-bodies-once`) and give `none` by
-{numref}`operations-that-give-none` is a compile error, and so are `rand` and `rand-int` with both bounds
+An expression whose arguments are known in the prove step ({numref}`check-bodies-once`) and give `none` by
+{numref}`expressions-that-give-none` is a compile error, and so are `rand` and `rand-int` with both bounds
 known and `lo` above `hi`, though their seed is never known when compiling.
 ```
 
@@ -200,8 +200,8 @@ has a radius of 1.
 
 A function body is checked once, with each parameter ranging over its declared type
 ({numref}`check-bodies-once`). A call whose arguments are all known when compiling is folded: the
-fold step computes the body with those arguments, and an operation in the body that results in
-`none` at those arguments results in `none` there too ({numref}`operations-that-give-none`). So an
+fold step computes the body with those arguments, and an expression in the body that results in
+`none` at those arguments results in `none` there too ({numref}`expressions-that-give-none`). So an
 `or?` in the body may replace the `none` with a default. With
 `(func[real] f ((real t)) (let ((b (or? (sqrt t) 0))) (if (> t 0) b 1)))`, `(f -1)` is 1. With
 `(func f ((real x)) (/ 1 x))`, the result type includes `none`, and `(f 0)` is `none`.
@@ -223,7 +223,7 @@ the type of each such expression includes `none` ({numref}`may-give-none`).
 This rule exists so that the runtime never stops on a missing value: `none` passes through to where it is handled.
 
 ```{rule} none-propagates
-An operation with an argument that is `none` gives `none`, at both times, except:
+An expression with an argument that is `none` gives `none`, at both times, except:
 
 - `or?`, `none?`, `some?` and `somes`, which give a value that is not `none` ({doc}`stdlib`)
 - `=` and `!=` ({numref}`equality-by-content`)
@@ -326,7 +326,7 @@ This rule exists so that no number ever overflows, at either time.
 ```{rule} number-limit
 Every number lies within the number limit, -10¹⁵⁰ to 10¹⁵⁰, at both times:
 
-- Every operation and built-in function gives its exact value, rounded where it is a binary64 number by
+- Every call of an operator or a built-in function gives its exact value, rounded where it is a binary64 number by
   {numref}`correctly-rounded-reals`, then clamped to the limit, number by number, the parts of complex
   numbers, points and lists included.
 - A number written to a container is clamped to the limit, number by number.
@@ -336,16 +336,16 @@ An int or a ratio is clamped to exactly -10¹⁵⁰ or 10¹⁵⁰, and a real to
 nearest to 10¹⁵⁰, just below it, or to minus that number.
 ```
 
-So no operation overflows, and no operation results in `none` because of the size of its result. An
+So no call overflows, and no call results in `none` because of the size of its result. An
 int or a ratio inside the number limit stays exact. `(* 1e100 1e100)` is `1e150`, and
-`(* (^ 10 100) (^ 10 100))` is exactly 10¹⁵⁰. An operation with several arguments is one
-operation, so `(* 1e150 1e150 1e-200)` is `1e100`, since the exact product of the three is
+`(* (^ 10 100) (^ 10 100))` is exactly 10¹⁵⁰. A call with several arguments is one
+call, so `(* 1e150 1e150 1e-200)` is `1e100`, since the exact product of the three is
 clamped once.
 
 A starting value known when compiling is a literal or a result, so a starting value beyond the
 number limit is always a literal: `(real k 1e200)` is a compile error, and
 `(real k (* 1e100 1e100))` and `(real k free@(* 1e100 1e100))` start at `1e150`. A literal is not
-clamped, because a literal is not the result of an operation.
+clamped, because a literal is not the result of a call.
 
 :::{admonition} Code differs
 :class: note
