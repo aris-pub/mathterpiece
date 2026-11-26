@@ -16,11 +16,10 @@ rule of this page is rejected in the rewrite step.
 This rule exists to fix the two ways of writing an import, so that the compiler rejects every other way.
 
 ```{rule} import-form
-An import is `(import F)` or `(import F N1 N2…)`, with `F` and each `Ni` a name of one
-{term}`name part` ({numref}`name-characters`). `(import F)` imports the file `F.mtp` whole, and
-`(import F N1 N2…)` imports the names `N1`, `N2` and so on from `F.mtp`. Any other `import` is a
-{term}`compile error`, "import is (import file name…)", and so is an `Ni` that is not a name of
-`F.mtp` ({numref}`import-files`), "F.mtp has no name 'Ni'".
+An import is `(import F)`, which imports the file `F.mtp` whole, or `(import F N1 N2…)`, which imports
+those names from it, with `F` and each `Ni` a name of one {term}`name part`. Any other `import` is a
+{term}`compile error`, "import is (import file name…)", and so is an `Ni` that `F.mtp` does not have
+({numref}`import-files`), "F.mtp has no name 'Ni'".
 ```
 
 So `(import colors)`, `(import math dot clamp)` and `(import house ink)` are imports, and
@@ -38,11 +37,10 @@ The error for an `Ni` that is not a name of `F.mtp` reads "F.mtp declares no 'Ni
 This rule exists so that an import finds the same file on every file system.
 
 ```{rule} import-file-name
-`(import F …)` reads the file whose name is `F` followed by `.mtp`, looked for in the folders that
-{numref}`compiler-reads-files` lists, in that order. A file is found only when its name is `F.mtp`
-character for character, upper and lower case included, on every file system. When neither folder
-holds such a file, the import is a compile error, "no F.mtp next to S.mtp or in the standard
-library", with `S.mtp` the importing file.
+`(import F …)` reads the file `F.mtp`, looked for in the folders of {numref}`compiler-reads-files`, in
+order, and found only when its name matches character for character, case included, on every file
+system. When no folder holds it, the import is a compile error, "no F.mtp next to S.mtp or in the
+standard library", with `S.mtp` the importing file.
 ```
 
 So `(import Colors)` finds no file when the only file of that name is colors.mtp, also on a file
@@ -60,13 +58,11 @@ source compiles, while on Linux the same source is a compile error. Bead mtp-ydd
 This rule exists so that a file imported several times is put in once, and its declarations are not declared twice.
 
 ```{rule} import-same-file
-Two imports read the same file when they find the same file on disk, also when one of them finds
-it through a symbolic link, a file that only points to another file. A file
-imported several times, directly or through other files, is put in once ({numref}`import-puts-in`).
-Two different files of the same name imported into one source, directly or through other files,
-are a compile error, "two different files named F.mtp are imported". A file that imports itself,
-directly or through the files that it imports, is a compile error, "F.mtp imports itself, through
-the files it imports".
+Two imports read the same file when they find the same file on disk, through a symbolic link or not.
+A file imported several times, directly or not, is put in once ({numref}`import-puts-in`). Two
+different files of the same name imported into one source are a compile error, "two different files
+named F.mtp are imported", and so is a file that imports itself, directly or not, "F.mtp imports
+itself, through the files it imports".
 ```
 
 So when a file of the standard library writes `(import colors …)`, a source next to a file
@@ -79,8 +75,8 @@ named colors.mtp.
 This rule exists so that importing a file adds nothing to the page that the source did not declare itself.
 
 ```{rule} import-file-holds
-A {term}`file to import` may hold at its top level only `import`, `let`, `foreach`, and declarations
-of types, functions, records, {term}`seeds <seed>`, and non-free variables. Any other form there is a
+At its top level, a {term}`file to import` may hold only `import`, `let`, `foreach`, and declarations of
+types, functions, records, {term}`seeds <seed>` and variables that are not free. Anything else there is a
 compile error.
 ```
 
@@ -107,8 +103,8 @@ So whether a file to import is correct never depends on the source that imports 
 This rule exists to specify the names under which a source may use what it imports.
 
 ```{rule} import-puts-in
-`(import F)` makes each name `N` of `F.mtp` usable in the source as the {term}`qualified name`
-`F.N`. `(import F N1 N2…)` does the same, and also makes each `Ni` usable on its own.
+`(import F)` makes each name `N` of `F.mtp` usable as the {term}`qualified name` `F.N`, and
+`(import F N1 N2…)` also makes each `Ni` usable on its own.
 ```
 
 :::{admonition} Code differs
@@ -121,10 +117,9 @@ This rule exists to specify the names under which a source may use what it impor
 This rule exists so that a file means the same thing whichever file imports it.
 
 ```{rule} import-files
-An imported file has a {term}`file scope` of its own: its forms may use only the names that it
-declares, binds and imports, and never a name of a file that imports it. The names of a file are
-its own top-level declarations and the names that it imports by name, with `(import G N…)`. The
-name of a file that it imports whole is not one of its names.
+An imported file has a {term}`file scope` of its own, and may use only the names that it declares,
+binds and imports, never one of a file that imports it. Its names are its top-level declarations and
+the names that it imports with `(import G N…)`, not the name of a file that it imports whole.
 ```
 
 So with `(import colors red)` in house.mtp, a source may write `(import house red)`, and with

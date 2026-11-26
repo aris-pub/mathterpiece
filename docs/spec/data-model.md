@@ -38,10 +38,9 @@ A {term}`clause` and a {term}`special form` have no result of their own ({doc}`g
 This rule exists to define the primitives, which the rest of the spec tells apart from objects.
 
 ```{rule} values
-A primitive is a value that never changes and has no identity: two primitives that are
-equal are the same value. The primitives are the numbers, the bools, the strings, the colors,
-the points, the lists and `none`. A primitive comes from a literal
-({numref}`form-types`), from a name or from a compound.
+A primitive is a value that never changes and has no identity: two equal primitives are the same
+value. The primitives are the numbers, the bools, the strings, the colors, the points, the lists and
+`none`.
 ```
 
 Each of these evaluates to a primitive:
@@ -69,11 +68,11 @@ different value. When a slider writes 2 to the variable `a` of `(real a 1)`, `a`
 This rule exists to define the three kinds of variable, which decide what a writer may write to and what the runtime computes again.
 
 ```{rule} variables
-A variable is a named holder of one value. It is free, bound or const. A free variable holds its
-value until a writer writes a new one. A bound variable holds the value of its expression at all
-times. A variable whose expression reads another variable is bound, unless the expression is
-written with `free@`, and every other variable that is not const is free. A const variable can never be written to. A variable with no name is a
-{term}`compile error`.
+A variable is a named holder of one value, and is free, bound or const. A free variable holds its
+value until a writer writes a new one, and a bound variable always holds the value of its
+expression. A variable whose expression reads another variable is bound, unless the expression is
+written with `free@`, and every other variable that is not const is free. A const variable can never
+be written to. A variable with no name is a {term}`compile error`.
 ```
 
 For example:
@@ -107,11 +106,10 @@ compile error.
 This rule exists to define objects, which keep their identity while their attributes change.
 
 ```{rule} objects
-An object is a value that has an identity and attributes. Each attribute behaves like a variable:
-it holds one value, and it is free, bound or const. An object stays the same object while the
-values of its attributes change. Every object has the const attribute `name`: the string of its
-name, or `none` when it has none. The behavior of an object is what the compiler and the runtime
-do with it beyond holding its attributes, and it depends on the kind of object:
+An object is a value with an identity and attributes. Each attribute is like a variable: it holds one
+value, and is free, bound or const. An object stays the same object while its attributes change.
+Every object has the const attribute `name`, the string of its name or `none`. What the compiler and
+the runtime do with an object beyond holding its attributes is its behavior:
 
 | Object | Behavior |
 |---|---|
@@ -194,10 +192,9 @@ of attributes.
 This rule exists so that the compiler and the runtime agree on when two values are the same object.
 
 ```{rule} identity
-Two primitives are the same value exactly when they are equal. An object is the same object only as
-itself: each declaration, each copy that a `foreach` makes of a declaration, and each evaluation of
-`(fn …)`, `(rec …)`, `(move …)`, `(score …)` or `(A …)` for an animation `A` creates an object of its own, and two objects created apart are
-two objects, however alike their attributes.
+An object is the same object only as itself. Each declaration, each copy that a `foreach` makes, and
+each evaluation of `(fn …)`, `(rec …)`, `(move …)`, `(score …)` or `(A …)` for an animation `A`
+creates an object of its own, however alike two such objects are.
 ```
 
 So `[1 2]` written twice is one primitive, while `(circle c (r 1))` and `(circle d (r 1))` are two
@@ -217,8 +214,8 @@ container that holds the primitive, and the old value does not change.
 This rule exists to define what a function is in the data model, and that it has no attribute that can change.
 
 ```{rule} functions
-A function is an object whose only attribute is `name`, and whose behavior is to be called.
-`(func f …)` declares a function, and each evaluation of `(fn …)` results in a new function.
+A function is an object whose only attribute is `name`, and whose behavior is to be called. `(func f …)`
+declares one, and each evaluation of `(fn …)` gives a new one.
 ```
 
 So `(func twice ((real x)) (* 2 x))` declares the function `twice`, whose `name` is `'twice'`, and
@@ -237,9 +234,8 @@ on two functions compiles, with no result given by the spec.
 This rule exists to define the record, an object that holds named values and is not drawn.
 
 ```{rule} records
-A record is an object that consists only of the attributes that it is declared with.
-`(record n …)` declares a record, and each evaluation of `(rec …)` results in a new
-record. Every attribute of a record that results from `(rec …)` is bound or const.
+A record is an object with only the attributes that it is declared with. `(record n …)` declares one,
+and each evaluation of `(rec …)` gives a new one, whose attributes are all bound or const.
 ```
 
 A font is a record: `(font serif (family 'serif') (style 'normal') (weight 400) (size 12))`

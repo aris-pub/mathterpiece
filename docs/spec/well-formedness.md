@@ -97,10 +97,10 @@ This rule exists because the runtime clamps each write to the guards of its writ
 
 (writer-conditions)=
 ```{rule} writer-guards
-Each guard of a control or a listener ({numref}`bodies-table`) must be a comparison `(OP A B)`, OP
-one of `<`, `<=`, `>` and `>=`, in which one side is a read of a container that the writer writes to,
-and the other side, the limit, does not depend on that container, directly or through bound
-containers. Every other guard is a compile error.
+Each guard of a control or a listener ({numref}`bodies-table`) is a comparison `(OP A B)`, with OP one
+of `<`, `<=`, `>` and `>=`, one side a read of a container that the writer writes to, and the other
+side, the limit, not depending on that container, directly or through bound containers. Any other
+guard is a compile error.
 ```
 
 What a guard does to a write is defined in {doc}`reactivity`. A writer that writes to the `pos` of a
@@ -122,14 +122,10 @@ Bead mtp-ydd4.7.44.
 This rule exists because two moves of one score that write to the same container at once would leave the value of the container undefined.
 
 ```{rule} moves-at-once
-Two moves of one score that write to the same container at times that overlap are a compile error.
-The containers that a move writes to are defined in {doc}`concurrency`, in the part "Containers". The
-times are these:
-
-- Each move starts at the time that {doc}`time` defines for it in the score.
-- A move writes from its start up to its start plus its duration, and a loop that never ends
-  writes forever.
-- Two times overlap when they start at the same instant, or when each starts before the other ends.
+Two moves of one score that write to the same container ({doc}`concurrency`, "Containers") at times
+that overlap are a compile error. A move writes from its start, set by {doc}`time`, up to its start plus
+its duration, and a loop that never ends writes forever. Two times overlap when they start at the same
+instant, or when each starts before the other ends.
 ```
 
 So `(at-once (move k (to 2) (duration 1)) (move k (to 3) (duration 1)))` is a compile error, and
@@ -146,23 +142,20 @@ This rule exists to fix exactly what the prover proves, so that every conforming
 ```{rule} prover-proves
 The prover proves exactly these, and nothing else:
 
-1. The type of every expression except a clause, and that it is a subtype of the type expected where it is written
-   ({numref}`form-types`).
-2. That every value meets the conditions of the type expected where it is written
-   ({numref}`constraint-proof`).
-3. Which operations may evaluate to `none`, and so which types include `none`
-   ({numref}`may-give-none`), and that an operation whose inputs are known does not evaluate to
-   `none` ({numref}`none-at-known-inputs`).
-4. An upper bound of the count, or of the length of the list, of a `foreach` that is known only
-   while drawing ({numref}`foreach-bounded-length`).
-5. That each `(name S)` evaluates to an object whose type is a subtype of the type expected where it is written
-   ({numref}`names-from-values`).
-6. That a call known in the prove step stays within the {term}`call depth limit`
-   ({numref}`call-depth-limit`).
+1. The type of every expression except a clause, and that it is a subtype of the type expected where
+   it is written ({numref}`form-types`).
+2. That every value meets the conditions of that type ({numref}`constraint-proof`).
+3. Which operations may give `none`, and so which types include it ({numref}`may-give-none`), and that
+   an operation with known inputs does not ({numref}`none-at-known-inputs`).
+4. An upper bound of the length of a `foreach` that is known only while drawing
+   ({numref}`foreach-bounded-length`).
+5. That each `(name S)` is an object whose type is a subtype of the type expected where it is
+   written ({numref}`names-from-values`).
+6. That a call known in the prove step stays within the {term}`call depth limit` ({numref}`call-depth-limit`).
 7. The rules of the sections above.
 
-For numbers, the prover uses only the ranges of {numref}`ranges` and {numref}`range-rules`, and
-the narrowing of {numref}`if-narrowing`. It checks each body once ({numref}`check-bodies-once`).
+For numbers it uses only the ranges of {numref}`ranges` and {numref}`range-rules` and the narrowing of
+{numref}`if-narrowing`, and it checks each body once ({numref}`check-bodies-once`).
 ```
 
 So the prover never uses a relation between two values: the range of the divisor of
@@ -172,11 +165,10 @@ counts and never searches for a value.
 This rule exists to define the ranges that the prover works with, which the rules after it use.
 
 ```{rule} ranges
-A range is a closed interval of {term}`reals <real>`, from a lower end to an upper end, each of them
-an int, a {term}`ratio` or a binary64 number, the lower at most the upper. The prover works out a
-range for every expression of type `int`, `ratio` or `real`, and of a union of one of them with
-`none`. The range of an expression holds every value other than `none` to which the expression can
-evaluate, when {term}`folded <folding>` and while drawing.
+A range is a closed interval of {term}`reals <real>`, its ends each an int, a {term}`ratio` or a
+binary64 number, the lower at most the upper. The prover works out a range for every expression of
+type `int`, `ratio` or `real`, or a union of one with `none`, holding every value but `none` that the
+expression can take, folded or while drawing.
 ```
 
 The prover works out each end of a range with the functions that {term}`evaluation` uses: exactly

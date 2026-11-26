@@ -6,9 +6,8 @@
 This rule exists so that a listener acts only in the view where the reader can see what it acts on.
 
 ```{rule} listeners-in-views
-The runtime triggers a listener only for events in the view in whose body the listener is written.
-A listener on the view that holds it is written without the name of the view: `(on-view (move …))`,
-`(on-pointermove T)`.
+The runtime triggers a listener only for events in the view whose body holds it. A listener on that
+view itself is written without the view's name: `(on-view (move …))`.
 ```
 
 A listener may be written only in the body of a view, and only in these views:

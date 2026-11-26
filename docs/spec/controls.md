@@ -36,9 +36,9 @@ control ({numref}`writer-guards`).
 This rule exists to separate the controls that write to a container directly from those that play a movement, since the runtime handles the two kinds differently.
 
 ```{rule} jumpers-and-movers
-A control is a `jumper` or a `mover` ({numref}`the-types`). A jumper names one container, its
-target, and writes a value to it by a jump each time the reader acts on it: it takes no movement.
-A mover takes a movement, its effect, and plays it when the reader acts on it.
+A control is a `jumper` or a `mover` ({numref}`the-types`). A jumper names one container, its target,
+and writes a value to it by a jump each time the reader acts on it, with no movement. A mover takes a
+movement, its effect, and plays it when the reader acts on it.
 ```
 
 So a slider writes its number at once, wherever the reader drags its thumb, and a button plays a
@@ -83,87 +83,80 @@ This rule exists to fix the arguments of each jumper, so that the compiler can c
 This rule exists so that the runtime draws and handles a slider and a dial the same way, apart from wrapping.
 
 ```{rule} slider-and-dial
-A slider and a dial are the same control on two kinds of number. The thumb of a slider runs along a
-straight track from `from` to `to`. The thumb of a dial runs around a ring, and one full turn covers
-the interval of its modular type, so turning past its end wraps around. On both:
+A slider and a dial are one control on two kinds of number. A slider's thumb runs along a straight
+track from `from` to `to`. A dial's thumb runs around a ring, one full turn covering its modular type's
+interval, so it wraps. On both:
 
-- The reader clicks on the track or the ring to move the thumb there, drags the thumb, or steps it
-  with the arrow keys.
-- With `(step s)`, the thumb stops every s from the start, and an arrow key moves it one step.
-  Without it, the thumb of a real target moves smoothly and an arrow key moves it 1/100 of the
-  range, and the thumb of an int target stops at each whole number.
-- With `(ticks s)`, a tick is drawn every s from the start. Without it, a tick is drawn at each
-  step when there is a `(step …)`, and none otherwise.
+- The reader clicks on the track or ring to move the thumb there, drags the thumb, or steps it with the
+  arrow keys.
+- With `(step s)`, the thumb stops every s from the start, and an arrow key moves one step. Without it,
+  a real target moves smoothly, an arrow key moving 1/100 of the range, and an int target stops at each
+  whole number.
+- With `(ticks s)`, a tick is drawn every s from the start. Without it, there is a tick at each step,
+  and none when there is no step.
 ```
 
 This rule exists to specify how the runtime keeps the two values of a range slider in order.
 
 ```{rule} range-slider
-A range slider has two thumbs on one track and writes to `LOW` and `HIGH`. A thumb that is dragged into
-the other stops there, so `LOW` is never above `HIGH`. It takes no `(path …)`: its track is always
-straight.
+A range slider has two thumbs on one straight track and writes to `LOW` and `HIGH`. A thumb dragged into
+the other stops there, so `LOW` is never above `HIGH`.
 ```
 
 This rule exists to specify every way in which the reader changes a number field, and when the runtime writes the value.
 
 ```{rule} number-field
-A number field shows its target's value. The reader changes it by typing, by the − and + buttons,
-by the arrow keys, or by dragging sideways on its label (scrubbing). The buttons and the arrow keys
-add or subtract the step, and ten steps with Shift. Scrubbing moves the value one step every few
-pixels. The mouse wheel does not change it.
+A number field shows its target's value. The reader changes it by typing, by the − and + buttons, by
+the arrow keys, which add or subtract the step, or ten steps with Shift, or by dragging sideways on
+its label (scrubbing), one step every few pixels. The mouse wheel does not change it.
 
-- `(buttons false)` leaves out the − and + buttons, and `(typing false)` turns typing off, so the
-  value is shown as plain text. With both, the value is drawn with a dotted underline, to show that
-  it can be scrubbed.
-- A typed value is written only when the reader commits it: with Enter, with Tab, or by leaving the
-  field. Until then the field shows what is typed, and the target does not change.
-- A committed value is written by {numref}`writes-to-conditions`. When it is not written, or is
-  brought into the range of the target's conditions, the field shows the target's value and its
-  box shows a red outline for a moment, and a screen reader is told the same.
+- `(buttons false)` leaves out the buttons, and `(typing false)` turns typing off and shows the value as
+  plain text. With both, the value has a dotted underline, to show that it can be scrubbed.
+- A typed value is written only when the reader commits it, with Enter, with Tab or by leaving the
+  field. Until then the target does not change.
+- A committed value is written by {numref}`writes-to-conditions`. When it is refused or brought into
+  range, the field shows the target's value, its box shows a red outline for a moment, and a screen
+  reader is told the same.
 ```
 
 This rule exists to specify when the runtime writes the text of a text field, and what it shows when the text is refused.
 
 ```{rule} text-field
-A text field shows its target's string. A typed string is written only when the reader commits it,
-as in a number field. A string that breaks the conditions of the target's type is not written, and
-the box shows a red outline for a moment.
+A text field shows its target's string. A typed string is written only when committed, as in a number
+field, and a string that breaks the target's conditions is not written, with a red outline on the box
+for a moment.
 ```
 
 This rule exists to specify what a toggle writes, and that it always shows the current value of its target.
 
 ```{rule} toggle
-A toggle shows a checkbox with its target's value and its label. A click writes `(not TARGET)`. A
-toggle holds no value of its own: when anything else writes to its target, the checkbox shows the new
-value.
+A toggle shows a checkbox with its target's value and its label, and a click writes `(not TARGET)`. It
+holds no value of its own, so it always shows the target's current value.
 ```
 
 This rule exists to specify how the options of a select are written, and how the compiler checks their values.
 
 ```{rule} select-options
-The options of a select are its body. `(opt V L?)` is one option: the value V and, when it is given,
-the label L shown for it, a string or a {term}`TeX string`. An option without a label shows its
-value. The type of each V must be a {term}`subtype` of the type of the target, or, in a
-multi-select, of the item type of the target. Choosing an option writes it to the target at once.
-When the target holds a value that is no option, the select shows no option chosen.
+A select's body is its options. `(opt V L?)` is the value V with an optional label L, a string, and an
+option without one shows its value. Each V must be of a {term}`subtype` of the target's type, or, in a
+multi-select, of its item type. Choosing an option writes it to the target at once. When the target
+holds no option's value, no option is shown chosen.
 ```
 
 This rule exists to fix the ways in which the runtime may draw a select.
 
 ```{rule} select-kinds
-`kind` chooses how a select is drawn: `'menu'`, a button that shows the chosen option and opens a
-list of all of them, `'buttons'`, every option as one of a row of connected buttons, and `'radio'`,
-one option per line with a round mark. A multi-select has `'menu'` and `'buttons'` too, and
-`'checkbox'`, one checkbox per option.
+`kind` sets how a select is drawn: `'menu'`, a button showing the chosen option that opens the list of
+all of them, `'buttons'`, a row of connected buttons, or `'radio'`, one option per line with a round mark.
+A multi-select has `'menu'`, `'buttons'` and `'checkbox'`, one checkbox per option.
 ```
 
 This rule exists so that the list that a multi-select writes has one order, whatever order the reader chose in.
 
 ```{rule} multi-select
-Choosing an option of a multi-select adds its value to the target list, and choosing it again
-removes it. The list holds the chosen values in the order of the options in the source, whatever
-the order in which they were chosen. Any number of options may be chosen, none included. A value in
-the target list that is no option is shown as nothing chosen, never as an error.
+Choosing an option of a multi-select adds its value to the target list, and choosing it again removes it.
+The list keeps the options' order in the source, and may hold any number of them, none included. A value
+in the list that is no option is shown as nothing chosen, never as an error.
 ```
 
 For example:
