@@ -41,8 +41,10 @@ def citations() -> dict[str, list[str]]:
     """Each label that a conformance test cites, with the files that cite it."""
     cited: dict[str, list[str]] = {}
     here = ROOT / "tests" / "conformance"
-    files = [(p, PY_CITATION) for p in sorted(here.glob("test_*.py")) if p.name != "test_labels.py"]
-    files += [(p, TS_CITATION) for p in sorted((ROOT / "web/test/conformance").glob("*.test.ts"))]
+    files = [
+        (p, PY_CITATION) for p in sorted(here.rglob("test_*.py")) if p.name != "test_labels.py"
+    ]
+    files += [(p, TS_CITATION) for p in sorted((ROOT / "web/test/conformance").rglob("*.test.ts"))]
     for path, pattern in files:
         for label in pattern.findall(path.read_text(encoding="utf-8")):
             cited.setdefault(label, []).append(path.name)
