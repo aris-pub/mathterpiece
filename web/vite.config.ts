@@ -102,7 +102,7 @@ export default defineConfig(({ mode }) => {
       projects: [
         {
           extends: true,
-          test: { name: "unit", environment: "happy-dom", include: ["test/*.test.ts", "test/conformance/*.test.ts"] },
+          test: { name: "unit", environment: "happy-dom", include: ["test/*.test.ts", "test/conformance/**/*.test.ts"] },
         },
         // What happy-dom cannot do, such as CSS variables and color-mix, runs in a real browser.
         {
