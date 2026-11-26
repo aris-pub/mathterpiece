@@ -8,7 +8,19 @@ import re
 from .support import ROOT, SPEC
 
 # The parts that are drafted. The rules of the other parts get tests once those parts are drafted.
-DRAFTED = ["overview", "compiler-runtime", "lexical", "grammar", "core", "evaluation"]
+DRAFTED = [
+    "overview",
+    "compiler-runtime",
+    "lexical",
+    "grammar",
+    "core",
+    "evaluation",
+    "data-model",
+    "scope",
+    "imports",
+    "types",
+    "binding-time",
+]
 
 RULE = re.compile(r"^```\{rule\} ([a-z0-9-]+)\s*$", re.M)
 PY_CITATION = re.compile(r"""\brule\(\s*["']([a-z0-9-]+)["']\s*\)""")
