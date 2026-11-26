@@ -25,11 +25,10 @@ are the guards of the listener ({numref}`writer-guards`).
 This rule exists so that a listener can read where the pointer is, in the frame of the shape that it drags.
 
 ```{rule} pointer-binding
-A listener that the pointer triggers, `on-drag`, `on-pointermove`, `on-click`, `on-release`,
-`on-dragstart`, `on-dragend`, `on-enter` or `on-leave`, may hold the optional clause `(as N)`, with `N` a
-name. `N` is then a {term}`binding` in the listener's movement: the position of the pointer, a point,
-in the frame of the collection that holds the shape or the term, when the movement starts. No
-other expression reads the position of the pointer.
+A listener that the pointer triggers (`on-drag`, `on-pointermove`, `on-click`, `on-release`,
+`on-dragstart`, `on-dragend`, `on-enter`, `on-leave`) may hold `(as N)`. `N` is then a {term}`binding` in
+its movement: the pointer's position, a point in the frame of the collection that holds the shape or
+term, when the movement starts. No other expression reads the pointer's position.
 ```
 
 So `(on-drag p (as ptr) (move a (to ptr.x)))` writes the x of the pointer to `a` at each motion of
@@ -47,10 +46,11 @@ interface `instant`. Beads mtp-rk1i and mtp-idcs.
 This rule exists so that a container always holds a value that meets the conditions of its type, whatever a writer writes.
 
 ```{rule} writes-to-conditions
-A write of a number to a {term}`container` brings it into the conditions of its declared type: below a `(>= c)` it becomes c, above a `(<= c)` it becomes c, it is brought into a modular
-type by {numref}`modular-types`, and when it breaks a `(> c)` or a `(< c)` it is not written. A write of a value that is not among the values of a `(one-of …)` is not
-written, and neither is a write of a list whose length breaks a `(length n)`. A number written to an `int` is rounded as {numref}`rounding` states. A value that is
-not written leaves the container as it was.
+A write of a number to a {term}`container` brings it into the conditions of its declared type: below a
+`(>= c)` it becomes c, above a `(<= c)` it becomes c, into a modular type it wraps by
+{numref}`modular-types`, and a number that breaks a `(> c)` or a `(< c)` is not written. A value outside a
+`(one-of …)`, and a list whose length breaks a `(length n)`, are not written either. A number written
+to an `int` is rounded by {numref}`rounding`. A value not written leaves the container as it was.
 ```
 
 The {term}`number limit` applies to every write too ({numref}`number-limit`). So with
