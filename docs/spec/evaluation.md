@@ -35,7 +35,7 @@ A name means one of three things, by where it is written:
 - In an expression, the name evaluates to what it refers to: the value that a variable holds, the
   value bound to a `let` or `foreach` name, the object, or the function. A name never evaluates to
   a name.
-- As the target of a writer or of a move, the name means the container, not the value that it holds
+- As the target of a writer or of a movement, the name means the container, not the value that it holds
   ({numref}`writable-targets`).
 
 `(name S)` and a name string `@'…'` mean what the name that they spell means where they are written

@@ -22,7 +22,7 @@ and evaluates to what it refers to.
 
 Evaluating a compound results in one of these: a primitive, a type, an object or an attribute
 that already exists, or a new object. The only compounds that result in a new object are those
-with the heads `fn`, `rec`, `move` and `score`, and `(A …)` for an animation `A`. No writer can write
+with the heads `fn`, `rec`, `move` and `with-lag`, and `(A …)` for an animation `A`. No writer can write
 to that new object: every attribute of a record that results from `rec` is bound or const, and no writer
 may write to an attribute of a function or of a movement ({numref}`functions`, {numref}`records`,
 {numref}`writable-targets`). So evaluating a compound never writes to a variable or an
@@ -126,8 +126,8 @@ the runtime do with an object beyond holding its attributes is its behavior:
 :class: note
 The compiler calls a movement a transition, declared with `(transition t TARGET …)`. Bead mtp-kir3
 renames it. The compiler calls the template of movements a choreo, declared with
-`(choreo …)`, its `(animation …)` is a collection of moves, and `(in-order …)` and `(at-once …)` are
-only items inside an animation. Bead mtp-cg47. There is no `score` and no `lag`: bead mtp-idcs.
+`(choreo …)`, its `(animation …)` is a collection of movements, and `(in-order …)` and `(at-once …)` are
+only items inside an animation. Bead mtp-cg47. There is no `with-lag` and no `lag`: bead mtp-idcs.
 :::
 
 :::{admonition} Code differs
@@ -148,10 +148,10 @@ type is a motif or a variant is a shape like any other: only its type differs. I
 collection. Each shape declared in the body of a motif is a const attribute of every shape of that
 motif, labelled with its name, and each variable declared in the body is an attribute of the same
 kind, bound or const: with `(motif dot ((real size 1)) (circle c (r size)))` and `(dot d1)`, `d1.c`
-holds the circle of `d1`, whose `name` is `'c'`. A score is a
-movement that holds movements, as a group is a shape that holds shapes: each member is placed
+holds the circle of `d1`, whose `name` is `'c'`. A movement group,
+which `(with-lag …)` makes, is a movement that holds movements, as a group is a shape that holds shapes: each member is placed
 in time by its own `lag`, the fraction of the member before it that has run when it starts, as each
-member of a group is placed in space by its own position. `(in-order …)` is a score whose
+member of a group is placed in space by its own position. `(in-order …)` is a movement group whose
 members have the lag 1, so each starts when the one before it ends, and `(at-once …)` is one whose
 members have the lag 0, so all start together. An animation is a template of movements, as
 a motif is a template of shapes: with an animation `A`, `(A …)` creates an `A`, which is a movement. For example, in
@@ -193,7 +193,7 @@ This rule exists so that the compiler and the runtime agree on when two values a
 
 ```{rule} identity
 An object is the same object only as itself. Each declaration, each copy that a `foreach` makes, and
-each evaluation of `(fn …)`, `(rec …)`, `(move …)`, `(score …)` or `(A …)` for an animation `A`
+each evaluation of `(fn …)`, `(rec …)`, `(move …)`, `(with-lag …)` or `(A …)` for an animation `A`
 creates an object of its own, however alike two such objects are.
 ```
 

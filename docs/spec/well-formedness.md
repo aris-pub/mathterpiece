@@ -3,7 +3,7 @@
 
 A source whose {term}`names <name>` resolve ({ref}`scope`) and whose
 {term}`expressions <expression>` have types ({doc}`types`) must also meet the rules of this page:
-its dependencies make no cycle, its writers write only to containers that may be written to, the moves
+its dependencies make no cycle, its writers write only to containers that may be written to, the movements
 that run together do not write to the same container, and every {term}`condition` is proved. The
 compiler checks all of them in the prove step ({numref}`compile-steps`), and a source that breaks
 one is a {term}`compile error`. The last section defines the {term}`prover`: exactly what it
@@ -55,7 +55,7 @@ that reads its own shape or a member that reads the `shift` of its group, is lim
 ## What a writer may write to
 
 The {term}`controls <control>` and the {term}`listeners <listener>` are the writers
-({doc}`concurrency`). A writer writes to its target and to the targets of the moves in its movements.
+({doc}`concurrency`). A writer writes to its target and to the targets of its movements.
 
 This rule exists because the runtime keeps a bound or const container equal to its expression, so a write to one would have no effect.
 
@@ -70,14 +70,14 @@ or a qualified name ({numref}`what-a-name-means`). Also:
   be a target.
 - An item of a list, and a member of a group chosen by its position, must be chosen by a position
   known when compiling. Writing to an item puts a new list into the container that holds the list.
-- A move of an `on-show` or an `on-hide` writes to the stand-in of its shape, so it may write to an
+- A movement of an `on-show` or an `on-hide` writes to the stand-in of its shape, so it may write to an
   attribute of that shape that is bound ({doc}`lifecycle`).
 
 Every other target is a compile error.
 ```
 
-So `(slider s m (from 0) (to 1))` with `(real m (* 2 k))` is a compile error, and so is a move of a
-const variable. Two writers may write to the same container, and
+So `(slider s m (from 0) (to 1))` with `(real m (* 2 k))` is a compile error, and so is a movement whose
+target is a const variable. Two writers may write to the same container, and
 {doc}`concurrency` defines what happens then.
 
 This rule exists to specify which part of a write the compiler checks, and which part the runtime enforces.
@@ -89,8 +89,8 @@ write enforces the conditions while drawing ({numref}`writes-to-conditions`).
 
 So with `(real k 1 (>= 0) (<= 2))`, `(move k (to (* 3 a)))` compiles, and a value below 0 is
 written as 0, and a value above 2 as 2. With an {term}`int` `n`, `(move n (to 2.5))` is a compile
-error, since 2.5 is not an int, and the values between the ends of a move to `n` are rounded. A
-move to a list declared `(length 2)` with a `to` of length 3 compiles, and no list of length 3 is
+error, since 2.5 is not an int, and the values between the ends of a movement to `n` are rounded. A
+movement to a list declared `(length 2)` with a `to` of length 3 compiles, and no list of length 3 is
 written.
 
 This rule exists because the runtime clamps each write to the guards of its writer, which is possible only when each guard bounds the written container.
@@ -118,11 +118,11 @@ Bead mtp-ydd4.7.44.
 
 ## Moves that run at the same time
 
-This rule exists because two moves of one score that write to the same container at once would leave the value of the container undefined.
+This rule exists because two movements of one movement group that write to the same container at once would leave the value of the container undefined.
 
-```{rule} moves-at-once
-Two moves of one score that write to the same container ({doc}`concurrency`, "Containers") at times
-that overlap are a compile error. A move writes from its start, set by {doc}`time`, up to its start plus
+```{rule} movements-at-once
+Two movements of one movement group that write to the same container ({doc}`concurrency`, "Containers") at times
+that overlap are a compile error. A movement writes from its start, set by {doc}`time`, up to its start plus
 its duration, and a loop that never ends writes forever. Two times overlap when they start at the same
 instant, or when each starts before the other ends.
 ```

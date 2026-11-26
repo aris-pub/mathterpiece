@@ -322,7 +322,7 @@ function
   function, and each evaluation of `(fn …)` results in a new function ({numref}`functions`).
 
 movement
-  An object that the runtime executes by writing to its targets over time. `(move …)`, `(score …)`
+  An object that the runtime executes by writing to its targets over time. `(move …)`, `(with-lag …)`
   and `(A …)` for an animation `A` each result in a new movement ({numref}`objects`, {doc}`time`).
 
 container
@@ -330,7 +330,7 @@ container
   ({doc}`data-model`).
 
 collection
-  A group, a row, a column or a score: an object that holds other objects, its members.
+  A group, a row, a column or a movement group: an object that holds other objects, its members.
 
 primitive
   A value that never changes and has no identity, such as a number, a string or a list
@@ -406,9 +406,10 @@ move
   listener that changes the model over time triggers movements.
   Defined in {doc}`time`.
 
-score
-  A movement that holds movements, its members, as a group is a shape that holds shapes. Each
-  member is placed in time by its own lag, and a score is a collection. `(in-order …)` and `(at-once …)` are scores whose members run one after another, or
+movement group
+  A movement that holds movements, its members, as a group is a shape that holds shapes, made by
+  `(with-lag …)`. Each member is placed in time by its own lag, and a movement group is a collection.
+  `(in-order …)` and `(at-once …)` are movement groups whose members run one after another, or
   together. Defined in {doc}`time`.
 
 motif

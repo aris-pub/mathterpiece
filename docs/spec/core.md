@@ -80,15 +80,15 @@ any number of such texts.
 | `(and A B MORE…)`, `(and A)` | `(if A (and B MORE…) false)`, `A` | |
 | `(or A B MORE…)`, `(or A)` | `(if A true (or B MORE…))`, `A` | |
 | `(jump V X)` | `(move V (to X) (duration 0))` | Exactly two arguments |
-| `(move V (from F) ARGS…)` | `(in-order (jump V F) (move V ARGS…))` | A move has no `from` of its own: it starts from the current value of `V` |
+| `(move V (from F) ARGS…)` | `(in-order (jump V F) (move V ARGS…))` | A `(move …)` has no `from` of its own: it starts from the current value of `V` |
 | `(palette N (M C)…)` | `(record N (color M C)…)` | Each item is `(M C)` |
 | `(parametric N XS F ARGS…)` | `(polyline N (points (map XS F)) ARGS…)`: the polyline through the points of the curve `F` at the values of `XS`, in order | `F` is a `curve` ({numref}`the-types`), and `XS` a list of reals |
 | `(pos [X Y])`, `(pos free@[X Y])` | `(x X) (y Y)`, `(x free@X) (y free@Y)` | |
 | `(pos P)`, `(pos free@P)` | `(x (. P 0)) (y (. P 1))`, `(x free@(. P 0)) (y free@(. P 1))` | `P` is not written `[X Y]`, and holds no call of `rand`, `rand-int`, `choice` or `shuffled` |
 | `(foreach ((N1 S1) (N2 S2) MORE…) ITEMS…)`, `(foreach ((N S)) ITEMS…)` | `(foreach N1 S1 (foreach ((N2 S2) MORE…) ITEMS…))`, `(foreach N S ITEMS…)` | The names are all different |
-| `(wait T)`, in a score | `(move none (duration T))` | |
+| `(wait T)`, in a movement group | `(move none (duration T))` | |
 | `(animation N (P…) A B MORE…)` | `(animation N (P…) (in-order A B MORE…))` | |
-| `(in-order ARGS… ITEMS…)`, `(at-once ARGS… ITEMS…)` | `(score ARGS… ITEMS…)`, with `(lag 1)` for `in-order`, or `(lag 0)` for `at-once`, added to its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `lag` |
+| `(in-order ARGS… ITEMS…)`, `(at-once ARGS… ITEMS…)` | `(with-lag ARGS… ITEMS…)`, with `(lag 1)` for `in-order`, or `(lag 0)` for `at-once`, added to its `(defaults …)`, which is added when it has none | Its `(defaults …)` gives no `lag` |
 | `(on-drag S S.pos ITEMS…)`, `(on-drag S S.x ITEMS…)`, `(on-drag S S.y ITEMS…)` | `(on-drag S (as P) (move S.pos (to P) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.x (to P.x) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.y (to P.y) (duration 0)) ITEMS…)` | `P` is a name that the source does not use ({numref}`pointer-binding`) |
 | `(on-drag S S.shift ITEMS…)`, `(on-drag S S.shift-x ITEMS…)`, `(on-drag S S.shift-y ITEMS…)` | `(on-drag S (as P) (move S.shift (to P) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.shift-x (to P.x) (duration 0)) ITEMS…)`, `(on-drag S (as P) (move S.shift-y (to P.y) (duration 0)) ITEMS…)` | `P` is a name that the source does not use |
 | `(on-pointermove T ITEMS…)`, where `T` is a target | `(on-pointermove (as P) (move T (to P) (duration 0)) ITEMS…)` | `P` is a name that the source does not use |
@@ -137,7 +137,7 @@ and mtp-08wd.2 will make them in the rewrite step. Where the result differs toda
 
 So a qualified name as the target of an `on-drag` is the position of the dragged shape, its `x` or its
 `y`, and any other name there is a compile error: `(on-drag p k)` must be written with a
-move, such as `(on-drag p (as ptr) (move k (to ptr.x)))`.
+`(move …)`, such as `(on-drag p (as ptr) (move k (to ptr.x)))`.
 
 ### Copies with `like`
 
@@ -215,7 +215,7 @@ the shape, and bead mtp-67wi makes a drag of a group's `pos` an error.
 :class: note
 For a bare target, the {term}`runtime` moves each member of a group that is not fixed-size by the
 motion of the pointer (web/src/drag.ts:113-117, drag.ts:155-162), and moves a fixed-size group by
-its `translate` (drag.ts:108-111, drag.ts:149-153). For a move, it writes to the group's `x` and `y`
+its `translate` (drag.ts:108-111, drag.ts:149-153). For a `(move …)`, it writes to the group's `x` and `y`
 (drag.ts:138-147), and the compiler marks the `translate` as what the drag writes to only for a
 fixed-size group (compiler.py:4009-4021). Bead mtp-ydd4.7.36 makes the code follow the rule.
 :::
@@ -281,13 +281,13 @@ one, and `has_attr` finds no member of a namespace or a formula. So `(. marks ye
 reads the color `yellow` as a key (mtp-ydd4.7.19).
 :::
 
-### A score written as a step
+### A movement group written as a step
 
-This rule exists to specify how the runtime plays a score inside another score.
+This rule exists to specify how the runtime plays a movement group inside another one.
 
 ```{rule} animation-step
-A score inside another score is one step of it. It plays its members with its own `(loop …)`, and the
-`(defaults …)` of the outer score do not apply inside it.
+A movement group inside another one is one step of it. It plays its members with its own `(loop …)`, and the
+`(defaults …)` of the outer group do not apply inside it.
 ```
 
 :::{admonition} Code differs

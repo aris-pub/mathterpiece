@@ -43,8 +43,8 @@ ready from the start, and its `on-ready` is triggered when the page loads.
    drawn in the canvas depends (the compiler finds these controls).
 6. **`on-ready`** is triggered once, when the canvas becomes ready. Its movement may be any
    movement. It has priority 300.
-7. **Compile errors:** an `on-view` may not loop, and a move in an `on-view` may not have a `to`
-   expression that depends on the target of the move.
+7. **Compile errors:** an `on-view` may not loop, and a movement in an `on-view` may not have a `to`
+   expression that depends on the target of the movement.
 8. **Still images** are captured at the moment a canvas becomes ready.
 9. **The page is ready** once every canvas, display and readout on it is ready. A display or a
    readout has no `on-view`, so it is ready from the start. The page is static: no view or control

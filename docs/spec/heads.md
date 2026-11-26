@@ -265,15 +265,15 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | `move` | core | a compound | {doc}`time` |
 | `from`, `to`, `duration`, `path` | core | a clause | {doc}`time` |
 | `ease` | core | a clause | {doc}`time` |
-| `like` in a movement or a move | syntactic sugar | a clause | {numref}`like-copies` |
+| `like` in a form that makes a movement | syntactic sugar | a clause | {numref}`like-copies` |
 | an animation's body of several items | syntactic sugar | the body of an animation | {numref}`sugar-rewrites` |
-| `defaults` in a score | core | a clause | {doc}`time` |
+| `defaults` in a movement group | core | a clause | {doc}`time` |
 | `loop` | core | a clause | {doc}`time` |
-| `score` | core | a compound | {doc}`time` |
+| `with-lag` | core | a compound | {doc}`time` |
 | `lag` | core | a clause | {doc}`time` |
 | `in-order`, `at-once` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
-| `foreach` in a score | core | a special form | {doc}`time`, {doc}`binding-time` |
-| the name of a movement, or of an animation with no parameters, in a score | core | a body item | {doc}`time` |
+| `foreach` in a movement group | core | a special form | {doc}`time`, {doc}`binding-time` |
+| the name of a movement, or of an animation with no parameters, in a movement group | core | a body item | {doc}`time` |
 | `wait` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `jump` | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `(A …)` for an animation `A` | core | a compound | {doc}`time`, {numref}`animation-step` |
@@ -296,7 +296,7 @@ error "unknown function". Beads mtp-ydd4.7.40 and mtp-6a4r make the compiler fol
 | the target of `toggle` | core | a name | {doc}`reactivity` |
 | `(on-pointermove T)` with a target `T` | syntactic sugar | a declaration | {numref}`sugar-rewrites` |
 | `as` on a listener that the pointer triggers | core | a clause | {numref}`pointer-binding` |
-| the target of `on-drag` written as a move | core | a compound | {doc}`reactivity`, {numref}`drag-group-shift` |
+| the target of `on-drag` written as a `(move …)` | core | a compound | {doc}`reactivity`, {numref}`drag-group-shift` |
 | the target of `on-drag` written as a name | syntactic sugar | a compound | {numref}`sugar-rewrites` |
 | `label` | core | a clause | {doc}`page-interface`, {doc}`accessibility` |
 | `step` on a slider, a dial and a number field | core | a clause | {doc}`page-interface` |
@@ -340,8 +340,8 @@ follow the rule.
 | `palette` | items `(member color)` | yes |
 | `interface` | items `(T attribute condition…)` | yes |
 | `type`, a variable `(T name …)` | {term}`conditions <condition>`, such as `(>= 0)` | yes |
-| `animation`, `score`, `in-order`, `at-once` | movements: `move`, `jump`, `wait`, a score, the name of a movement, `(A …)` for an animation `A` | yes |
-| `defaults` | items `(attribute value)`, and in a score, `(duration …)`, `(ease …)` and `(lag …)` | yes |
+| `animation`, `with-lag`, `in-order`, `at-once` | movements: `move`, `jump`, `wait`, a movement group, the name of a movement, `(A …)` for an animation `A` | yes |
+| `defaults` | items `(attribute value)`, and in a movement group, `(duration …)`, `(ease …)` and `(lag …)` | yes |
 | `canvas` | at least one name or compound that evaluates to a shape, the scene, `none` or a list of shapes, such as `s`, `{s t}` or `(when c d)`. Listeners ({numref}`listeners-in-views`) | yes |
 | `readout`, `display` | listeners ({numref}`listeners-in-views`) | yes |
 | a control, a listener | guards, such as `(>= k 0)` | yes |
@@ -367,14 +367,14 @@ their place. They are not forms of the language.
 
 | Head | Where | The message, in short |
 |---|---|---|
-| `step` | in a score | use `(labels …)` and `(in-order …)` |
+| `step` | in a movement group | use `(labels …)` and `(in-order …)` |
 | `autoplay` | on a control | use a canvas's `(on-ready …)` |
 | `exclusive` | on a writer | use `(priority n)` |
 | `when` | on a control or a listener | use `(active bool)` |
 | `value` | on a toggle | give the bool its start where it is declared |
 | `buttons` | on a stepper | a stepper stops after each step |
 | `dash-offset` | as an item | write `(dash {4 2} 1)` |
-| `move` | in a canvas | a canvas takes no move |
+| `move` | in a canvas | a canvas takes no `(move …)` |
 | `term` | at the top level | a term is given inside its formula |
 | `pointer-events` | on a group, a row, a column or a shape of a motif | write `(defaults (pointer-events B))` |
 
