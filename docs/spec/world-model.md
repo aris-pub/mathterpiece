@@ -9,14 +9,12 @@ Not drafted yet. This page defines: the objects, their attributes, identity, the
 This rule exists so that a group, a row or a column can set an attribute once for all its members.
 
 ```{rule} collection-defaults
-A `(defaults (A V)…)` on a group, a row or a column sets `A` to `V` on each of its members, at any
-depth, for which a collection may set `A`, and whose declaration does not set `A`. When several
-collections set `A`, the nearest one applies. For a member declared with a motif, each `(A V)` is
-added to its own `(defaults …)`. A `(defaults (A V)…)` on a shape declared with a motif sets `A` to
-`V` on every shape in the body of its motif, at any depth, that has the attribute `A` and whose
-declaration does not set `A`, although the shape declared with the motif is not a collection
-({doc}`data-model`). Each `A` must be an attribute that a collection may set on its members, and
-any other `A` is a {term}`compile error`.
+A `(defaults (A V)…)` on a group, a row or a column sets `A` to `V` on each member, at any depth, that a
+collection may set `A` on and whose declaration does not set `A`, the nearest collection winning. On a
+member declared with a motif, each `(A V)` is added to its own `(defaults …)`. On a shape declared with
+a motif, which is not a collection ({doc}`data-model`), it sets `A` on every shape of the motif's body,
+at any depth, that has `A` and does not set it. Each `A` must be an attribute that a collection may set
+on its members, or it is a {term}`compile error`.
 ```
 
 ## Formulas
@@ -24,16 +22,15 @@ any other `A` is a {term}`compile error`.
 This rule exists so that every term of a formula is known when compiling.
 
 ```{rule} formula-terms
-The string of a formula is its positional argument, right after its name: any expression that
-evaluates to a string known when compiling. The formula has a term `N` for each `\term{N}{…}` in
-the string.
+A formula's string is its positional argument, any expression that evaluates to a string known when
+compiling. The formula has a term `N` for each `\term{N}{…}` in it.
 ```
 
 This rule exists so that a formula can set an attribute once for all its terms.
 
 ```{rule} formula-defaults
-A `(defaults (A V)…)` in a formula sets `A` to `V` on each term of the formula whose `(term …)` form
-does not set `A`, and on each term that has no `(term …)` form.
+A `(defaults (A V)…)` in a formula sets `A` to `V` on each term whose `(term …)` form does not set `A`,
+or that has no `(term …)` form.
 ```
 
 The `(defaults …)` of a formula is a named argument, so it must come after the string and before
