@@ -285,6 +285,12 @@ export class Runtime {
     return t;
   }
 
+  /** The constraints of a type, with those of each type it refines, as a control reads its
+   * target's range from them. */
+  constraintsOf(t: Type): [string, ...unknown[]][] {
+    return this.constraints(t);
+  }
+
   private constraints(t: Type): [string, ...unknown[]][] {
     t = this.resolve(t);
     while (typeof t === "object" && "union" in t) t = this.resolve(t.union[0]);

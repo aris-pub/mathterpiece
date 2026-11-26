@@ -6,7 +6,10 @@ import { dark, light } from "./builtins.ts";
 import { cssVariable } from "./css.ts";
 import type { Doc, Obj } from "./doc.ts";
 
-const ELEMENTS = new Set(["canvas", "readout", "display", "slider", "toggle", "button", "play", "stepper"]);
+const ELEMENTS = new Set([
+  ...["canvas", "readout", "display", "slider", "toggle", "button", "play", "stepper"],
+  ...["range-slider", "dial", "number-field", "text-field", "select", "multi-select"],
+]);
 const LISTENERS = new Set([
   ...["on-drag", "on-click", "on-release", "on-dragstart", "on-dragend", "on-view"],
   ...["on-enter", "on-leave", "on-pointermove", "on-live", "on-quiet", "on-show", "on-hide"],

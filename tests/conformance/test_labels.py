@@ -22,7 +22,7 @@ DRAFTED = [
     "binding-time",
 ]
 
-RULE = re.compile(r"^```\{rule\} ([a-z0-9-]+)\s*$", re.M)
+RULE = re.compile(r"^`{3,}\{rule\} ([a-z0-9-]+)\s*$", re.M)
 PY_CITATION = re.compile(r"""\brule\(\s*["']([a-z0-9-]+)["']\s*\)""")
 TS_CITATION = re.compile(r"""\bdescribe\(\s*["'`]rule ([a-z0-9-]+):""")
 
