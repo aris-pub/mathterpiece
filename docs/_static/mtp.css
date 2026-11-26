@@ -257,3 +257,7 @@ html[data-theme] .bd-content table.table td:first-child code * { color: inherit;
   background: var(--pst-color-link); color: var(--pst-color-background);
   font-size: 0.75rem; font-weight: 600;
 }
+
+/* The sentence that says why a rule exists sits in the rule's panel, under its number, quieter than
+   the rule itself. */
+.mtp-rule p.mtp-rule-purpose { color: var(--pst-color-text-muted); font-size: 0.95em; margin: 0 0 0.5rem; }
