@@ -47,12 +47,11 @@ several copies on the page, they match the attributes of the copy that changed t
 This rule exists so that the runtime always has a whole box to draw, never part of one.
 
 ```{rule} canvas-view-box
-A canvas must have all four of the named arguments `x`, `y`, `width` and `height`, or none of them.
-A canvas that has one, two or three of them is a compile error, and the message of the error holds
-the names of the missing ones. In a canvas with all four, the runtime draws the box whose
-lower-left corner is the point [`x` `y`] and whose size is `width` by `height`, in the coordinates
-of the scene. A canvas with none of them has no attributes `x`, `y`, `width` and `height`, so an
-expression that reads one of them, or a writer that writes to one, is a compile error.
+A canvas has all four of the named arguments `x`, `y`, `width` and `height`, or none. One, two or three of
+them is a compile error whose message names the missing ones. With all four, the runtime draws the box
+of size `width` by `height` whose lower-left corner is [`x` `y`], in the scene's coordinates. With none,
+the canvas has no attributes `x`, `y`, `width` and `height`, so reading or writing to one is a compile
+error.
 ```
 
 So in `(canvas v (x -3) (y -2) (width 6) (height 4) s)`, the runtime draws the box from -3 to 3
@@ -62,11 +61,10 @@ across and from -2 to 2 up, in `(canvas v s)` the box around the shapes of `s`, 
 This rule exists so that a canvas with no box given still shows all of its shapes.
 
 ```{rule} canvas-fit
-In a canvas with none of `x`, `y`, `width` and `height`, the runtime draws the box around the shapes
-of the canvas, with a margin on each side of 5% of the larger of the box's width and height. The
-runtime works the box out for each copy of the canvas on the page, from the shapes of the canvas at
-the first time that it draws that copy at a size on screen, and then keeps it. The box stays the
-same when the shapes move, appear or disappear later, and when the copy changes size on screen.
+In a canvas with none of `x`, `y`, `width` and `height`, the runtime draws the box around the canvas's
+shapes, with a margin on each side of 5% of the box's larger side. It works the box out for each copy
+of the canvas on the page, from the shapes when it first draws that copy at a size on screen, and
+then keeps it, whatever the shapes or the copy's size do later.
 ```
 
 The runtime works the box out as follows.
