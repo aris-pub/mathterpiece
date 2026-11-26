@@ -160,7 +160,8 @@ This rule exists so that the list that a multi-select writes has one order, what
 ```{rule} multi-select
 Choosing an option of a multi-select adds its value to the target list, and choosing it again removes it.
 The list keeps the options' order in the source, and may hold any number of them, none included. A value
-in the list that is no option is shown as nothing chosen, never as an error.
+in the list that is no option, which another writer may have put there, is shown as nothing chosen,
+never as an error, and stays in the list after the chosen options.
 ```
 
 For example:

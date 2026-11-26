@@ -124,10 +124,12 @@ export function chosenIn(list: unknown[], options: unknown[]): boolean[] {
   return options.map((o) => list.some((v) => equal(v, o)));
 }
 
-/** The list after the reader chooses option i: with it added, or removed when it was there, and
- * always in the order of the options. A value in the list that is no option is not kept. */
+/** The list after the reader chooses option i: with it added, or removed when it was there. The
+ * chosen options come in the order of the options, then the values that are no option, which another
+ * writer may have put there, in their own order (the author, 2026-11-26). */
 export function toggledList(list: unknown[], options: unknown[], i: number): unknown[] {
   const chosen = chosenIn(list, options);
   chosen[i] = !chosen[i];
-  return options.filter((_, j) => chosen[j]);
+  const others = list.filter((v) => !options.some((o) => equal(v, o)));
+  return [...options.filter((_, j) => chosen[j]), ...others];
 }

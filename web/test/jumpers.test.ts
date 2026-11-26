@@ -147,6 +147,11 @@ describe("a multi-select's list", () => {
     expect(toggledList(["parabola", "circle"], options, 1)).toEqual(["circle", "ellipse", "parabola"]);
   });
 
+  it("keeps the values that are no option, after the chosen options, in their own order", () => {
+    expect(toggledList(["spiral", "circle", "helix"], options, 1)).toEqual(["circle", "ellipse", "spiral", "helix"]);
+    expect(toggledList(["spiral", "circle"], options, 0)).toEqual(["spiral"]);
+  });
+
   it("may become empty", () => {
     expect(toggledList(["circle"], options, 0)).toEqual([]);
   });
