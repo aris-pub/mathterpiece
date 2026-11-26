@@ -7,6 +7,9 @@
 const JUMPERS = "mtp-slider, mtp-range-slider, mtp-dial, mtp-number-field, mtp-text-field, mtp-select, mtp-multi-select";
 const ALL = `${JUMPERS}, mtp-button, mtp-play, mtp-stepper, mtp-toggle`;
 
+/** The labels on which the runtime draws a checkbox or a radio button, each followed by tail. */
+const marks = (tail: string) => `mtp-toggle label${tail}, :is(mtp-select, mtp-multi-select) .mtp-mark${tail}`;
+
 export const CONTROLS_CSS = `
 ${ALL} {
   font-family: "Source Sans 3", sans-serif;
@@ -25,10 +28,9 @@ mtp-toggle {
   --mtp-rest: var(--mtp-control-rest, var(--primary-600));
   --mtp-active: var(--mtp-control-active, var(--primary-600));
 }
-mtp-slider input, mtp-button button, mtp-toggle input { --mtp-c: var(--mtp-rest); }
+mtp-slider input, mtp-button button { --mtp-c: var(--mtp-rest); }
 mtp-slider input:active, mtp-slider input:focus-visible,
-mtp-button button:active, mtp-button button:focus-visible,
-mtp-toggle input:active, mtp-toggle input:focus-visible { --mtp-c: var(--mtp-active); }
+mtp-button button:active, mtp-button button:focus-visible { --mtp-c: var(--mtp-active); }
 
 mtp-slider { display: inline-block; min-width: 12rem; }
 mtp-slider label {
@@ -243,10 +245,51 @@ mtp-stepper .mtp-dot[aria-current="step"] {
 /* In explore mode the dots are dimmed, as a play's bars are, and the count reads – / N. */
 mtp-stepper[data-mtp-exploring] .mtp-dot { opacity: 0.45; }
 
+mtp-toggle { --mtp-hilite: var(--primary-200, #bae3fd); }
 mtp-toggle label {
   display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;
 }
-mtp-toggle input { accent-color: var(--mtp-c); width: 1rem; height: 1rem; margin: 0; }
+
+/* The checkbox of a toggle and of a multi-select of kind 'checkbox', and the radio button of a
+   select of kind 'radio', drawn in the design that the author approved on 2026-11-22: off, an
+   empty box outlined in the line color, and on, a box in the highlight color outlined in the
+   active color, with a check mark, a dot for a radio button, or a bar for a mixed toggle. The
+   browser's own box is not used, since accent-color cannot draw this. The native input stays in
+   the page, unseen and over the drawn box, so that the keyboard and screen readers still reach it
+   and a press on the box reaches it through its label. The states are in :where(), so that a
+   page that draws the box itself, as Firsthand Math does for its toggle, wins over every one. */
+${marks(" input")} {
+  position: absolute; left: 0; top: 50%; width: 16px; height: 16px; margin: 0;
+  transform: translateY(-50%); opacity: 0; pointer-events: none;
+}
+${marks("")} { position: relative; }
+${marks("::before")} {
+  content: ""; flex: none; box-sizing: border-box; width: 16px; height: 16px; border-radius: 3px;
+  border: 1px solid var(--border-primary); background: var(--surface-page);
+}
+mtp-select .mtp-mark::before { border-radius: 50%; }
+${marks(":where(:hover)::before")} { border-color: var(--primary-300); }
+${marks(":where(:has(input:checked, input:indeterminate))::before")} {
+  background: var(--mtp-hilite); border-color: var(--mtp-active);
+}
+${marks(":where(:has(input:focus-visible))::before")} {
+  outline: 2px solid var(--border-action, Highlight); outline-offset: 2px;
+}
+/* The check mark is two sides of a small box, turned 45 degrees, so that it does not hang on a
+   font. */
+mtp-toggle label:where(:has(input:checked))::after, mtp-multi-select .mtp-mark:where(:has(input:checked))::after {
+  content: ""; position: absolute; left: 5px; top: 50%; width: 4px; height: 8px; box-sizing: content-box;
+  border: solid var(--mtp-active); border-width: 0 2px 2px 0; transform: translateY(-60%) rotate(45deg);
+}
+mtp-toggle label:where(:has(input:indeterminate))::after {
+  content: ""; position: absolute; left: 4px; top: 50%; width: 8px; height: 2px; border-radius: 1px;
+  transform: translateY(-50%); background: var(--mtp-active);
+}
+mtp-select .mtp-mark:where(:has(input:checked))::after {
+  content: ""; position: absolute; left: 5px; top: 50%; width: 6px; height: 6px; border-radius: 50%;
+  transform: translateY(-50%); background: var(--mtp-active);
+}
+${marks(":where(:has(input:disabled))")} { cursor: not-allowed; opacity: 0.5; }
 
 /* The jumpers (docs/spec/controls.md), drawn from the parts that the author chose on 2026-11-22
    (the Near BRAIID look, option A for every part): a label in the text color, a track of a 1px
@@ -274,7 +317,6 @@ mtp-slider:has(.mtp-track), mtp-range-slider { display: inline-block; min-width:
   --a: 0; --b: 0;
   position: relative; height: 1.5rem; cursor: pointer; touch-action: none;
 }
-mtp-range-slider .mtp-track { cursor: default; }
 :is(${JUMPERS}) .mtp-track::before {
   content: ""; position: absolute; left: 8px; right: 8px; top: 50%;
   height: 1px; transform: translateY(-50%); background: var(--border-primary);
@@ -406,6 +448,9 @@ mtp-number-field .mtp-field-button:active:not(:disabled) { background: var(--mtp
   flex: none; width: 1rem; height: 1rem;
   fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round;
 }
+/* With nothing chosen, the button shows the label in a quieter color, so that the label does not
+   look like a chosen option. */
+:is(mtp-select, mtp-multi-select) .mtp-placeholder { color: var(--text-subtle); }
 :is(mtp-select, mtp-multi-select) :is(.mtp-menu-button, .mtp-segment):hover:not(:disabled) {
   background: var(--surface-hover); border-color: var(--primary-300);
 }
@@ -447,8 +492,6 @@ mtp-multi-select .mtp-option[aria-selected="true"]::before {
 }
 :is(mtp-select, mtp-multi-select) .mtp-marks { display: flex; flex-direction: column; gap: 0.375rem; }
 :is(mtp-select, mtp-multi-select) .mtp-mark { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer; }
-:is(mtp-select, mtp-multi-select) .mtp-mark input { accent-color: var(--mtp-c); width: 1rem; height: 1rem; margin: 0; }
-:is(mtp-select, mtp-multi-select) .mtp-mark input:focus-visible { outline: 2px solid var(--border-action, Highlight); outline-offset: 2px; }
 
 /* A shape a tap selected, which the next tap moves (the tap alternative to a drag). Chromium
    draws no outline on the shapes inside an SVG, so the ring is a shadow, sized in the view box's

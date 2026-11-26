@@ -28,6 +28,18 @@ async function open(tag: string, v: object, c: object): Promise<MtpModel> {
   return model;
 }
 
+// Tokens that BRAIID would set, so that the colors that a control is drawn in can be told apart.
+const ACTIVE = "rgb(0, 0, 200)";
+const SUBTLE = "rgb(100, 100, 100)";
+const HILITE = "rgb(186, 227, 253)";
+function tokens(): void {
+  const root = document.documentElement.style;
+  root.setProperty("--mtp-control-rest", ACTIVE);
+  root.setProperty("--mtp-control-active", ACTIVE);
+  root.setProperty("--text-subtle", SUBTLE);
+  root.setProperty("--primary-200", HILITE);
+}
+
 const box = (el: Element) => el.getBoundingClientRect();
 const center = (el: Element): [number, number] => {
   const b = box(el);
@@ -117,5 +129,89 @@ describe("the jumpers in a browser", () => {
     await tap(center(document.querySelectorAll("mtp-select .mtp-option")[1]!));
     expect(model.runtime!.value(0, null)).toBe("b");
     expect(getComputedStyle(list).display).toBe("none");
+  });
+
+  it("a menu with nothing chosen shows its label in its button, in a quieter color than a chosen option's", async () => {
+    tokens();
+    await open(
+      "mtp-select",
+      variable("w", "string", "z"),
+      control("select", { target: [0, null], as: "menu", options: [{ value: free("string", "a") }, { value: free("string", "b") }], attrs: { label: free("string", "w") } }),
+    );
+    expect(getComputedStyle(document.querySelector("mtp-select .mtp-placeholder")!).color).toBe(SUBTLE);
+    expect(getComputedStyle(document.querySelector("mtp-select .mtp-menu-text")!).color).toBe(ACTIVE);
+  });
+
+  it("a toggle's checkbox is drawn by the runtime, with the native checkbox unseen in the page", async () => {
+    tokens();
+    const model = await open(
+      "mtp-toggle",
+      variable("b", "bool", false),
+      control("toggle", {
+        target: [0, null],
+        animation: null,
+        attrs: { label: free("string", "show"), value: { type: "bool", bound: ["read", "bool", 0, null, null], deps: [[0, null]] } },
+      }),
+    );
+    const input = document.querySelector("mtp-toggle input") as HTMLInputElement;
+    const label = document.querySelector("mtp-toggle label")!;
+    expect(input.type).toBe("checkbox");
+    expect(getComputedStyle(input).opacity).toBe("0");
+    const drawn = () => getComputedStyle(label, "::before");
+    const mark = () => getComputedStyle(label, "::after");
+    expect([drawn().width, drawn().height]).toEqual(["16px", "16px"]);
+    expect(drawn().backgroundColor).not.toBe(HILITE);
+    expect(mark().content).toBe("none");
+    // A press on the drawn box reaches the native checkbox through its label.
+    const b = box(label);
+    await tap([b.left + 8, b.top + b.height / 2]);
+    expect(model.runtime!.value(0, null)).toBe(true);
+    expect(input.checked).toBe(true);
+    expect(drawn().backgroundColor).toBe(HILITE);
+    expect(drawn().borderTopColor).toBe(ACTIVE);
+    expect(mark().content).not.toBe("none");
+    expect(mark().borderRightColor).toBe(ACTIVE);
+    // The mixed state, of a toggle whose group's members differ, is a bar.
+    input.checked = false;
+    input.indeterminate = true;
+    expect(drawn().backgroundColor).toBe(HILITE);
+    expect([mark().width, mark().height, mark().backgroundColor]).toEqual(["8px", "2px", ACTIVE]);
+  });
+
+  it("a drawn checkbox shows a focus ring when the native checkbox has the focus from the keyboard", async () => {
+    tokens();
+    await open(
+      "mtp-multi-select",
+      variable("l", { list: "string" }, []),
+      control("multi-select", { target: [0, null], as: "checkbox", options: [{ value: free("string", "a") }], attrs: { label: free("string", "l") } }),
+    );
+    const line = document.querySelector("mtp-multi-select .mtp-mark")!;
+    expect(getComputedStyle(line, "::before").outlineStyle).toBe("none");
+    // A key pressed before the focus moves makes the browser count the focus as from the keyboard.
+    await session.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Shift", code: "ShiftLeft", windowsVirtualKeyCode: 16 });
+    await session.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code: "ShiftLeft", windowsVirtualKeyCode: 16 });
+    (line.querySelector("input") as HTMLInputElement).focus();
+    expect(getComputedStyle(line, "::before").outlineStyle).toBe("solid");
+    expect(getComputedStyle(line, "::before").outlineWidth).toBe("2px");
+  });
+
+  it("a select's radio buttons are drawn by the runtime as round marks", async () => {
+    tokens();
+    const model = await open(
+      "mtp-select",
+      variable("w", "string", "a"),
+      control("select", { target: [0, null], as: "radio", options: [{ value: free("string", "a") }, { value: free("string", "b") }], attrs: { label: free("string", "w") } }),
+    );
+    const [first, second] = [...document.querySelectorAll("mtp-select .mtp-mark")];
+    expect(getComputedStyle(first!.querySelector("input")!).opacity).toBe("0");
+    expect(getComputedStyle(first!, "::before").borderTopLeftRadius).toBe("50%");
+    expect(getComputedStyle(first!, "::before").backgroundColor).toBe(HILITE);
+    expect(getComputedStyle(first!, "::after").backgroundColor).toBe(ACTIVE);
+    expect(getComputedStyle(first!, "::after").borderTopLeftRadius).toBe("50%");
+    expect(getComputedStyle(second!, "::after").content).toBe("none");
+    const b = box(second!);
+    await tap([b.left + 8, b.top + b.height / 2]);
+    expect(model.runtime!.value(0, null)).toBe("b");
+    expect(getComputedStyle(second!, "::before").borderTopColor).toBe(ACTIVE);
   });
 });

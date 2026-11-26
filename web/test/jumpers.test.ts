@@ -7,6 +7,7 @@ import {
   fractionOf,
   keyAmount,
   parseNumber,
+  pressedThumb,
   snap,
   stepFrom,
   tickValues,
@@ -97,6 +98,24 @@ describe("a dial's scale", () => {
 
   it("has its ticks in one turn, the end left out since it is the start", () => {
     expect(tickValues(ring(0, 360, 90), null)).toEqual([0, 90, 180, 270]);
+  });
+});
+
+describe("the thumb of a range slider that a press on its track moves", () => {
+  it("is the nearer one", () => {
+    expect(pressedThumb(2, 6, 1)).toBe(0);
+    expect(pressedThumb(2, 6, 3.9)).toBe(0);
+    expect(pressedThumb(2, 6, 4.1)).toBe(1);
+    expect(pressedThumb(2, 6, 9)).toBe(1);
+  });
+
+  it("is the low one when the press is midway between them", () => {
+    expect(pressedThumb(2, 6, 4)).toBe(0);
+  });
+
+  it("is the one on the press's side when both are on one spot, so that it can move there", () => {
+    expect(pressedThumb(5, 5, 7)).toBe(1);
+    expect(pressedThumb(5, 5, 3)).toBe(0);
   });
 });
 

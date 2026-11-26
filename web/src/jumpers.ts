@@ -1,6 +1,7 @@
 // The arithmetic of the jumpers (docs/spec/controls.md): where the thumb of a slider, a range
-// slider or a dial stops, what an arrow key moves it by, where its ticks are, how a typed number
-// is read, and what list a multi-select writes. The elements that draw them are in elements.ts.
+// slider or a dial stops, which thumb of a range slider a press on its track moves, what an arrow
+// key moves it by, where its ticks are, how a typed number is read, and what list a multi-select
+// writes. The elements that draw them are in elements.ts.
 import { equal, roundHalfAway, wrapInto } from "./builtins.ts";
 
 /**
@@ -80,6 +81,14 @@ export function stepFrom(s: Scale, v: number, n: number): number {
   const dir = s.hi >= s.lo ? 1 : -1;
   const amount = keyAmount(s);
   return snap(s, tidy(v + n * amount * dir, v, amount));
+}
+
+/** The thumb of a range slider that a press at the value v moves: the low one (0) when v is at
+ * or below the middle of the two thumbs' values, else the high one (1). This is the nearer thumb,
+ * and the low one when the press is midway. When both thumbs sit on one spot, it is the thumb on
+ * the side of the press, since the other one could not move there. */
+export function pressedThumb(low: number, high: number, v: number): 0 | 1 {
+  return v > (low + high) / 2 ? 1 : 0;
 }
 
 // More ticks than this could not be told apart, and would only slow the page down.
