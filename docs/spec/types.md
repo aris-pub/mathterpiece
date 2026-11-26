@@ -11,9 +11,9 @@ never checks one ({numref}`runtime-no-type-work-while-drawing`).
 This rule exists to define what a type is, so that every check of the prove step is a question about sets of values.
 
 ```{rule} what-a-type-is
-A type is a set of {term}`values <value>`. A value may belong to many types. Every container,
-parameter and expression has one type, known when compiling: for a container, its declared type,
-conditions included. Every value that it holds or evaluates to belongs to that type.
+A type is a set of {term}`values <value>`, and a value may belong to many types. Every container,
+parameter and expression has one type, known when compiling, to which every value that it holds or
+evaluates to belongs. A container's type is its declared type, conditions included.
 ```
 
 So `bool` is the set `{true, false}`, `circle` is the set of all circles, and `(real (>= 0))` is
@@ -34,10 +34,10 @@ A type that is a subset of another is a {term}`subtype` of it ({numref}`subtypes
 This rule exists to specify when `(is X T)` is worked out by the compiler and when by the runtime.
 
 ```{rule} membership
-`(is X T)` evaluates to `true` when the value of X is in the type T, and to `false` otherwise.
-Where the type of X lies wholly inside T, or wholly outside it, the result is known when compiling.
-Otherwise the runtime works it out while drawing. In the branch of an `if` that runs when `(is X T)` is true, X has the type T as
-well as its own, and in the other branch X is known not to be in T.
+`(is X T)` is `true` when the value of X is in the type T, and `false` otherwise. It is known when
+compiling where the type of X lies wholly inside or wholly outside T, and is otherwise worked out while
+drawing. In the branch of an `if` that runs when it is true, X has the type T as well as its own, and in
+the other, X is known not to be in T.
 ```
 
 So in `(func size ((point|circle p)) (if (is p circle) p.r 0))`, `p.r` is read only when `p` is a
@@ -123,39 +123,32 @@ The compiler gives `rand-seed` the constraint `(>= 0)` (`types.py:143`, `RAND_SE
 This rule exists so that the compiler can tell, from where an expression is written, whether it stands for a type or for a value.
 
 ```{rule} type-notation
-Types are not values: no container holds a type, and no expression that evaluates to a value may
-stand for one. These expressions evaluate to types:
+Types are not values: no container holds one. These expressions evaluate to types:
 
 - the name of a built-in type ({numref}`the-types`), or of a type that `type`, `interface`, `motif`,
   `variant` or `animation` declares
 - `(type-apply …)`, `(type-union …)` and `(type-intersect …)` ({numref}`type-forms`)
 - `(mod T lo hi)` ({numref}`modular-types`) and `(T C…)` ({numref}`constraints`)
 
-These places expect a type, and only an expression that evaluates to a type may be written there:
+They may be written only where a type is expected, and only they may be written there:
 
-- the head of a declaration of a variable or of an object, such as `real` in `(real a 1)` or `circle`
-  in `(circle c …)`, and the `TYPE` of `(var NAME TYPE DEFAULT)`
+- the head of a declaration, such as `real` in `(real a 1)`, and the `TYPE` of `(var NAME TYPE DEFAULT)`
 - the type of a parameter, `(T N DEFAULT?)`, and of an interface item, `(T A C…)`
-- the `T` of `(type N T C…)`, the result type `R` of `(func[R] …)`, and the `T` of `(is X T)` and of
-  `(as T X)`
-- every item of `(type-apply …)`, `(type-union …)` and `(type-intersect …)`, the `T` of `(mod T lo
-  hi)`, and the `T` of `(T C…)`
+- the `T` of `(type N T C…)`, the `R` of `(func[R] …)`, and the `T` of `(is X T)` and `(as T X)`
+- every item of the three type forms, the `T` of `(mod T lo hi)`, and the `T` of `(T C…)`
 
-An expression that evaluates to a type, written anywhere else, is a {term}`compile error`, and so is
-an expression that evaluates to a value, written where a type is expected.
+A type written anywhere else, or a value written where a type is expected, is a {term}`compile error`.
 ```
 
 This rule exists to specify the type that each type form stands for.
 
 ```{rule} type-forms
-`(type-union T1 T2 …)` is the union of the types T1, T2 and so on, `(type-intersect T1 T2 …)` is
-their intersection, and `(type-apply T X…)` is the type T with the types X… in its brackets: `(type-apply
-list int)` is `list[int]`. In `(type-apply T X…)`, `T` is `list` or `func`. With `list`,
-`X…` is exactly one type, the type of the items. With `func`, `X…` is one type or
-more: the last is the result type, and the others are the types of the parameters, in order. `list`
-with no item type may be written only as the head of a variable whose value is given, and the type
-of the variable is then the type of its value. A source writes them as `T1|T2…`, `T1&T2…` and `T[X…]`
-({numref}`sugar-rewrites`).
+`(type-union T1 T2 …)` is the union of the types, `(type-intersect T1 T2 …)` their intersection, and
+`(type-apply T X…)` is `T` with the types `X…` in its brackets, written `T|…`, `T&…` and `T[…]`
+({numref}`sugar-rewrites`). In `(type-apply T X…)`, `T` is `list`, with exactly one `X`, the item type,
+or `func`, with one `X` or more, the last the result type and the others the parameter types in order.
+`list` with no item type may only be the head of a variable whose value is given, and the variable then
+has the type of its value.
 ```
 
 So `real[int]` is a compile error, `real|real` is `real`, and `point|circle` is the set of the
@@ -166,9 +159,8 @@ points and the circles.
 This rule exists to define when a value of one type is accepted where another type is expected, which every type check uses.
 
 ```{rule} subtypes
-A type A is a {term}`subtype` of a type B, and B is a {term}`supertype` of A, exactly when A is a
-subset of B. A value of type A is accepted where a value of type B is expected exactly when A is a
-subtype of B.
+A type A is a {term}`subtype` of a type B, and B a {term}`supertype` of A, exactly when A is a subset of
+B. A value of type A is accepted where B is expected exactly when A is a subtype of B.
 ```
 
 So `real` is a subtype of `real|none`, a list of ints of a list of reals, and `func[real real]` of
@@ -211,12 +203,11 @@ and `(length n)` only on lists. Bead mtp-rk1i.
 This rule exists so that a number that wraps around, such as an angle, never has to be refused.
 
 ```{rule} modular-types
-`(mod T lo hi)`, with `T` either `int` or `real` and lo below hi, is the set of the numbers from lo
-up to hi, hi left out, with no order. A number v that a container, a parameter or a function result
-of the type receives is never refused: it is replaced by lo + ((v - lo) `mod` (hi - lo)). Adding a
-number to a value of the type, or subtracting one from it, results in a value of the type. A value of
-the type may not be compared with `<`, `>`, `<=` or `>=`. `(unwrap X)`, with X of the type, evaluates
-to the number of X as an ordinary T.
+`(mod T lo hi)`, with `T` either `int` or `real` and lo below hi, is the set of the numbers from lo up to
+hi, hi left out, with no order. A number v that a container, a parameter or a function result of the
+type receives is never refused but replaced by lo + ((v - lo) `mod` (hi - lo)). Adding or subtracting a
+number gives a value of the type, and comparing with `<`, `>`, `<=` or `>=` is not allowed. `(unwrap X)`
+is the number of X as an ordinary T.
 ```
 
 So `((mod real 0 360) theta 400)` holds 40, `(+ theta 330)` is 10, and `(< theta 90)` is a compile
@@ -265,8 +256,7 @@ ever left without a value.
 This rule exists so that no value changes type without a form in the source that asks for it.
 
 ```{rule} conversions
-No value is converted from one type to another unless a form asks for it, such as `round`,
-`color-of` or `unwrap`.
+No value changes type unless a form asks for it, such as `round`, `color-of` or `unwrap`.
 ```
 
 So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, while
@@ -278,21 +268,17 @@ So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, whil
 This rule exists so that the prover can tell which lists have a length known when compiling, which the reads of items and some `foreach` forms need.
 
 ```{rule} known-lengths
-The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists
-have that condition in their types, with these lengths:
+The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists have it:
 
 - `(list-of X…)` with n items: n
 - a list known when compiling: its length
-- a variable, an attribute, a parameter or a declared result whose declared type holds
-  `(length n)`: n
-- a bound container whose expression has a known length: that length
-- `(if C A B)` whose branches have the same known length: that length
-- a call of a function declared with `func` whose {term}`body` has a known length: that length
-- a spread `g.A` of a group, and `g.members`: the number of members of the group
+- a container, a parameter or a declared result whose declared type holds `(length n)`: n
+- a bound container, an `if` or a call of a `func` whose expression, branches or body have the same
+  known length: that length
+- a spread `g.A` of a group, and `g.members`: the number of members
 - a call of a {term}`built-in` function: the length that {doc}`stdlib` states
 
-The items of a list have a known item length m when every item is a list of known length m. Such a
-list has `(length m)` in its item type.
+When every item of a list is a list of known length m, the list has `(length m)` in its item type.
 ```
 
 So the length of `(list xs {side 0 1})` is known, 3, even when `side` is known only while
@@ -305,16 +291,15 @@ writer may write lists of another length to them.
 This rule exists so that a missing value never stops the page: a `none` may go into a call, which then gives `none`, or into a shape, which is then not drawn, and nowhere else.
 
 ```{rule} none-only-where-allowed
-A type includes `none` when it is `none` or a union with `none`. A value of such a type may be written
-where the expected type does not include `none` only in these two places:
+A type includes `none` when it is `none` or a union with `none`. A value of such a type may go where the
+expected type does not include `none` only:
 
-- as an argument of a call: the call then evaluates to `none` whenever that argument is `none`, and
-  the type of the call includes `none`
-- as an attribute of a shape declared `T|none`: the shape is then `none` whenever that attribute is
-  `none`, and is not drawn ({numref}`none-propagates`)
+- as an argument of a call, which then evaluates to `none` whenever that argument is `none`, and whose
+  type includes `none`
+- as an attribute of a shape declared `T|none`, which is then `none`, and not drawn, whenever that
+  attribute is `none` ({numref}`none-propagates`)
 
-A few built-in functions treat `none` in their own way ({numref}`none-never-a-condition`,
-{numref}`none-propagates`).
+A few built-in functions treat `none` in their own way ({numref}`none-never-a-condition`).
 ```
 
 In the first example, `s` is `none`, so the call `(* 2 s)` is `none` too, and its type is
@@ -362,8 +347,8 @@ degree, and the two are gone at 90 only:
 This rule exists to define the choice types, which selects and some attributes use.
 
 ```{rule} choice-types
-A {term}`choice type` is a refined type whose conditions include a `(one-of v1 …)`. Its values are
-the choices v1 … that meet its other conditions.
+A {term}`choice type` is a refined type with a `(one-of v1 …)` among its conditions. Its values are the
+choices that meet its other conditions.
 ```
 
 So with `(type side string (one-of 'left' 'right'))`, a `side` is a string, and a string is a
@@ -428,13 +413,12 @@ declared with one is a compile error. Bead mtp-mo3r.
 This rule exists to specify the types that a motif, an animation and a variant declare, and how they relate to other types.
 
 ```{rule} motif-and-variant-types
-`(motif M PARAMS …)` declares the type M, a shape type, and `(animation A PARAMS …)` the type A, a
-movement type. Each is disjoint from every other type.
-`(variant V PARAMS S)` declares the type V, a subtype of the type of S. A V has the attributes of
-the type of S and the parameters of V. An attribute that S sets is const when its expression reads no parameter of V, and bound
-otherwise. A V may not set it. Each parameter of V must be read by S, and may not have the name of
-an attribute of the type of S. Where S and a V both set a default for the same attribute, the
-default of S wins.
+`(motif M PARAMS …)` declares the shape type M, and `(animation A PARAMS …)` the movement type A, each
+disjoint from every other type. `(variant V PARAMS S)` declares the type V, a subtype of the type of S,
+with the attributes of S's type and the parameters of V. An attribute that S sets is const when its
+expression reads no parameter of V and bound otherwise, and a V may not set it. Each parameter of V
+must be read by S and may not be named like an attribute of S's type. Where S and a V both set a
+default for one attribute, the default of S wins.
 ```
 
 So a `bar` declared `(variant bar ((real p 0)) (rect_ (width 0.8) (height (* 5 p))))` is accepted
@@ -453,10 +437,9 @@ The compiler accepts a variant parameter that no attribute of its shape reads. m
 This rule exists so that every function is known when compiling, which the prover needs in order to check each call.
 
 ```{rule} function-types
-The type of a function declared with `func` is `func[P1 … Pn R]`, with the types of its parameters
-and its result type. The type of `(fn PARAMS BODY)` is the same, with the type of BODY as R. No
-variable may hold a function, or a value that holds a function, such as a list of functions. No
-function may evaluate to a function, or to a value that holds one.
+A function declared with `func` has the type `func[P1 … Pn R]`, its parameter types and result type, and
+`(fn PARAMS BODY)` the same with BODY's type as R. No variable may hold a function, and no function may
+evaluate to one, nor to a value that holds one, such as a list of functions.
 ```
 
 So `(list[func[real real]] fs {sind cosd})` and `(func g () sind)` are compile errors, while a
@@ -472,15 +455,11 @@ and `(func g () sind)`, whose result is a function. Bead mtp-ydd4.7.43.
 This rule exists so that the type of every parameter and the value of every default are known before the compiler checks a body.
 
 ```{rule} parameters
-A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, which
-must be written, with its conditions. Its default, when it has one, must be of type T and known when
-compiling. A parameter that is left out
-holds its default, or the default value of T ({numref}`type-values`). A call of a function declared
-with `func` may have at most as many arguments as the function has parameters, and may leave out only
-the last ones. A call of a function value, such as a parameter, must have exactly as many arguments
-as its type has parameters. A parameter of `fn` may be written as a bare name when the function is
-given where a function type is expected, and its type is then the type of that parameter in the
-expected type.
+A parameter `(T N DEFAULT?)` of a function, a motif, a variant or an animation has the type T, written
+with its conditions. Its default, if any, is of type T and known when compiling. A parameter left out
+holds its default, or the default value of T ({numref}`type-values`). A call of a `func` may leave out only
+its last arguments, and a call of a function value, such as a parameter, gives all of them. A parameter
+of `fn` may be a bare name where a function type is expected, and then has that type's parameter type.
 ```
 
 So in `(map xs (fn x (* 2 x)))`, with `xs` a `list[real]`, `x` is a real ({doc}`stdlib`).
@@ -488,8 +467,8 @@ So in `(map xs (fn x (* 2 x)))`, with `xs` a `list[real]`, `x` is a real ({doc}`
 This rule exists so that the compiler can give a type to every call, a call of a recursive function included.
 
 ```{rule} function-result-type
-The result type of `(func[R] N PARAMS BODY)` is R. The result type of `(func N PARAMS BODY)` is the
-type of BODY. A recursive function, one that calls itself, must declare its result type.
+The result type of `(func[R] N PARAMS BODY)` is R, and of `(func N PARAMS BODY)` the type of BODY. A
+function that calls itself must declare its result type.
 ```
 
 ## The type of each expression
