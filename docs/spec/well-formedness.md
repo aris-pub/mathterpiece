@@ -98,9 +98,8 @@ This rule exists because the runtime clamps each write to the guards of its writ
 (writer-conditions)=
 ```{rule} writer-guards
 Each guard of a control or a listener ({numref}`bodies-table`) is a comparison `(OP A B)`, with OP one
-of `<`, `<=`, `>` and `>=`, one side a read of a container that the writer writes to, and the other
-side, the limit, not depending on that container, directly or through bound containers. Any other
-guard is a compile error.
+of `<`, `<=`, `>` and `>=`. A is a container that the writer writes to. B is the limit, which must not
+depend on A, directly or through bound containers. Any other guard is a compile error.
 ```
 
 What a guard does to a write is defined in {doc}`reactivity`. A writer that writes to the `pos` of a
