@@ -490,6 +490,24 @@ def _definition_text(node) -> str:
     return "".join(_definition_text(child) for child in node.children)
 
 
+def _purpose_into_rule(app, doctree):
+    """Moves the sentence that says why a rule exists, written just before the rule, into the rule's
+    panel, under its number (the author, 2026-11-26)."""
+    for rule in list(doctree.findall(rule_node)):
+        parent = rule.parent
+        i = parent.index(rule) - 1
+        while i >= 0 and isinstance(parent[i], nodes.target):
+            i -= 1
+        if i < 0 or not isinstance(parent[i], nodes.paragraph):
+            continue
+        para = parent[i]
+        if not para.astext().startswith("This rule exists"):
+            continue
+        parent.remove(para)
+        para["classes"].append("mtp-rule-purpose")
+        rule.insert(0, para)
+
+
 def _collect_terms(app, doctree):
     env = app.env
     if not hasattr(env, "mtp_terms"):
@@ -593,6 +611,7 @@ def setup(app: Sphinx):
     app.connect("env-merge-info", _merge_rules)
     app.connect("doctree-resolved", _fill_rule_index)
     app.connect("doctree-read", _collect_terms)
+    app.connect("doctree-read", _purpose_into_rule)
     app.connect("env-purge-doc", _purge_terms)
     app.connect("env-merge-info", _merge_terms)
     app.connect("doctree-resolved", _title_term_links)
