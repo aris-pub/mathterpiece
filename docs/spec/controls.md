@@ -62,7 +62,7 @@ This rule exists to fix the arguments of each jumper, so that the compiler can c
   (step:real none) (ticks:real none)
   (like control))
 (number-field NAME TARGET:real
-  (step:real 1) (buttons:bool true) (typing:bool true)
+  (step:(real (> 0)) 1) (buttons:bool true) (typing:bool true)
   (like control))
 (text-field NAME TARGET:string (like control))
 (toggle NAME TARGET:bool (like control))
@@ -89,6 +89,7 @@ interval, so it wraps. On both:
 
 - The reader clicks on the track or ring to move the thumb there, drags the thumb, or steps it with the
   arrow keys.
+- A `step` or a `ticks` that is 0 or below is a compile error.
 - With `(step s)`, the thumb stops every s from the start, and an arrow key moves one step. Without it,
   a real target moves smoothly, an arrow key moving 1/100 of the range, and an int target stops at each
   whole number.
