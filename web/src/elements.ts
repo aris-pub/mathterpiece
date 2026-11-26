@@ -17,6 +17,7 @@ import {
   chosenIn,
   fractionOf,
   parseNumber,
+  pressedThumb,
   snap,
   stepFrom,
   tickValues,
@@ -2099,7 +2100,7 @@ function tickRow(): { row: HTMLDivElement; set: (s: Scale, values: number[]) => 
 /**
  * A slider that names its target, or a range slider (docs/spec/controls.md, rules slider-and-dial
  * and range-slider): a label, then a straight track with one thumb per target and its ticks. A
- * press on the track moves the one thumb there, a drag of a thumb moves it, and the arrow keys
+ * press on the track moves the nearer thumb there, a drag of a thumb moves it, and the arrow keys
  * step it. A range slider's thumb dragged into the other stops there. Gives what brings it up to
  * date.
  */
@@ -2114,12 +2115,8 @@ function trackControl(part: HTMLElement, rt: Runtime, scheduler: Scheduler, id: 
   track.append(fill);
   const thumbs = targets.map((_, k) => makeThumb(ranged ? (k === 0 ? "low" : "high") : "thumb"));
   track.append(...thumbs);
-  // A press on the track of a range slider, off its thumbs, is not settled, so only a slider's
-  // track is an input.
-  if (!ranged) {
-    track.dataset.mtpInput = "track";
-    thumbs[0]!.setAttribute("aria-labelledby", label.span.id);
-  }
+  track.dataset.mtpInput = "track";
+  if (!ranged) thumbs[0]!.setAttribute("aria-labelledby", label.span.id);
   const ticks = tickRow();
   const wrap = document.createElement("div");
   wrap.className = "mtp-jumper";
@@ -2171,8 +2168,10 @@ function trackControl(part: HTMLElement, rt: Runtime, scheduler: Scheduler, id: 
   track.addEventListener("pointerdown", (e) => {
     if (e.button !== 0 || !usable(rt, id)) return;
     const hit = thumbs.findIndex((t) => t === e.target || t.contains(e.target as Node));
-    if (ranged && hit < 0) return;
-    const k = Math.max(hit, 0);
+    // A press on a range slider's track off its thumbs moves the nearer thumb there (the
+    // author, 2026-11-26).
+    const s = scale();
+    const k = hit >= 0 ? hit : ranged ? pressedThumb(valueOfTarget(0), valueOfTarget(1), s.lo + along(e) * (s.hi - s.lo)) : 0;
     e.preventDefault();
     thumbs[k]!.focus();
     held = true;
@@ -2356,7 +2355,8 @@ export class MtpDial extends MtpPart {
  * A number field (docs/spec/controls.md, rule number-field, and the author, 2026-11-23): its label,
  * which the reader may drag sideways to scrub, then a box with the − and + buttons and the value,
  * which the reader may type into. The arrow keys and the buttons add or subtract the step, or ten
- * steps with Shift. A typed value is written only when committed.
+ * steps with Shift. A typed value is written only when committed, and Escape drops it (the
+ * author, 2026-11-26).
  */
 export class MtpNumberField extends MtpPart {
   private refresh: () => void = () => {};
@@ -2467,6 +2467,16 @@ export class MtpNumberField extends MtpPart {
         commit();
         return;
       }
+      if (e.key === "Escape" && field instanceof HTMLInputElement) {
+        if (!dirty) return;
+        e.preventDefault();
+        dirty = false;
+        this.refresh();
+        return;
+      }
+      // While the box holds typed text, the arrow keys move the text cursor, as in any text box
+      // (the author, 2026-11-26).
+      if (dirty) return;
       if ((e.key !== "ArrowUp" && e.key !== "ArrowDown") || e.altKey || e.ctrlKey || e.metaKey) return;
       e.preventDefault();
       stepBy((e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : 1));
@@ -2514,7 +2524,7 @@ export class MtpNumberField extends MtpPart {
 /**
  * A text field (docs/spec/controls.md, rule text-field): its label above a box, in the number
  * field's style. A typed string is written only when committed, and one that breaks the target's
- * conditions is not written.
+ * conditions is not written. Escape drops the typed string (the author, 2026-11-26).
  */
 export class MtpTextField extends MtpPart {
   private refresh: () => void = () => {};
@@ -2557,9 +2567,14 @@ export class MtpTextField extends MtpPart {
     };
     field.addEventListener("input", () => (dirty = true));
     field.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter") return;
-      e.preventDefault();
-      commit();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+      } else if (e.key === "Escape" && dirty) {
+        e.preventDefault();
+        dirty = false;
+        this.refresh();
+      }
     });
     field.addEventListener("blur", commit);
     this.refresh();
@@ -2636,6 +2651,14 @@ function choiceControl(part: HTMLElement, rt: Runtime, scheduler: Scheduler, id:
     const shownText = document.createElement("span");
     shownText.className = "mtp-menu-text";
     button.append(shownText);
+    // With nothing chosen, the button shows the control's label (the author, 2026-11-26). A screen
+    // reader already reads the label as the button's name, so it does not read this one.
+    const placeholder = document.createElement("span");
+    placeholder.className = "mtp-placeholder";
+    placeholder.setAttribute("aria-hidden", "true");
+    const placeholderText = labelPart(rt, id);
+    follows.push(placeholderText.follow);
+    placeholder.append(placeholderText.node);
     button.insertAdjacentHTML("beforeend", CHEVRON_ICON);
     const box = document.createElement("div");
     box.id = partId();
@@ -2731,7 +2754,7 @@ function choiceControl(part: HTMLElement, rt: Runtime, scheduler: Scheduler, id:
         if (parts.length) parts.push(document.createTextNode(", "));
         parts.push(span);
       });
-      shownText.replaceChildren(...parts);
+      shownText.replaceChildren(...(parts.length ? parts : [placeholder]));
     };
   } else if (as === "buttons") {
     const row = document.createElement("div");
