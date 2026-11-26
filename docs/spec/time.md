@@ -29,8 +29,8 @@ but may not move the parameter itself. The one exception is a parameter of type 
 argument must be the name of a seed, and in the body the parameter is replaced by that seed and not
 by its value, so a move of the parameter moves the seed. Any other argument for such a parameter is
 a compile error, "the argument for P is the name of a seed, as in (C dots)". So with the animation
-`roll-dice` of the file rand, `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`,
-`(roll-dice s)` creates a movement that moves the seed `s`.
+`dice-roll` of the file rand, `(animation roll-dice ((rand-seed s)) (jump s (next-seed s)))`,
+`(dice-roll s)` creates a movement that moves the seed `s`.
 
 :::{admonition} Code differs
 :class: note

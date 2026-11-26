@@ -226,7 +226,7 @@ largest upper end of the items.
 So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
 
 With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 5 k)`, -5 to 5. With
-`(func clamp ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamp x 0 1)` has the range 0
+`(func clamped ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamped x 0 1)` has the range 0
 to 1 whatever `x` is, by the row for a call.
 
 This rule exists to determine which operations may result in `none`, and so which types must include `none`.
